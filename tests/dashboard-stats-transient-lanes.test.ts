@@ -111,7 +111,8 @@ describe("dashboard My Shifts date contract", () => {
   it("preserves an event's all-day calendar date for staff shift rows", () => {
     const route = source("src/app/api/dashboard/route.ts");
     const types = source("src/app/(app)/dashboard-types.ts");
-    const column = source("src/app/(app)/dashboard/my-gear-column.tsx");
+    const agenda = source("src/lib/home-agenda.ts");
+    const eventCards = source("src/app/(app)/dashboard/event-cards.tsx");
     const myShiftType = types.slice(
       types.indexOf("export type MyShift ="),
       types.indexOf("export type MyEventWork ="),
@@ -123,12 +124,13 @@ describe("dashboard My Shifts date contract", () => {
 
     expect(myShiftType).toContain("allDay: boolean;");
     expect(myShiftsPayload).toContain("allDay: ev.allDay");
-    // The event's own flag decides the all-day treatment, so a stray call
-    // window on an all-day event cannot restore a clock time to the row.
-    expect(column).toContain("const isAllDayDisplay = s.event.allDay || isFullDayDefault;");
-    expect(column).toContain("formatDayLabel(displayDate, now, isAllDayDisplay)");
-    // ...and the same flag suppresses the call window itself.
-    expect(column).toContain('s.workerType === "ST" && !s.event.allDay');
+    // My events cards replaced the My Shifts rows. The event's own flag
+    // decides the all-day treatment first, so a stray call window on an
+    // all-day event cannot restore a clock time to the card...
+    expect(agenda).toContain("if (work.event.allDay) return { at: work.event.startsAt, timed: false, isCall: false };");
+    expect(eventCards).toContain("!card.hasReportTime && card.event.allDay");
+    // ...and only a Student assignment can name a call time.
+    expect(agenda).toContain('work.shift.workerType === "ST" && work.shift.callStartsAt');
     // The payload never sends a call window for an all-day event to begin with.
     expect(myShiftsPayload).toContain('a.shift.workerType === "ST" && !ev.allDay');
   });

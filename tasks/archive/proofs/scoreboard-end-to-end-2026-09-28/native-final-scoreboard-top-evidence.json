@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "1c62814365f89eb377689495ba8f1eb4f85a9d9e",
+  "sourcePatchSha256": "25761138267dc7ab261d297921b053b4e52d007448b3f840f00da74ee38d2225",
+  "settings": {
+    "device": "iPhone 18 Pro Max / iOS 27.0 / 7BD40061-5741-4B92-B19C-3950F3C99DC3",
+    "viewport": [
+      440.0,
+      956.0
+    ],
+    "fixture": "ScoreboardFixtureAPI original 27-game season, legacy optional-field payload",
+    "role": "STAFF fixture; no authenticated network",
+    "route": "GT_PERFORMANCE_SCENARIO=scoreboard / testScoreboardStateCaptures / scoreboard-top",
+    "appearance": "light",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "Static September-December 2026 fixture dates; simulator status bar 9:41",
+    "scroll": [
+      0,
+      0
+    ]
+  },
+  "imageSha256": "51c915493cfdc433abe919511061c8aaef89d67d7076873daae88e2a61a0a2b2",
+  "dimensions": [
+    1320,
+    2868
+  ]
+}

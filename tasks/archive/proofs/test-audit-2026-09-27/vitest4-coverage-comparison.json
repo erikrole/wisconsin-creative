@@ -1,0 +1,119 @@
+{
+  "sameCasesAndResults": true,
+  "casesHash": "044505bf931d160460638897f9a367eb561ca4a542d7f3ea6a45e3f28663e669",
+  "sameCoverageFiles": true,
+  "beforeFileCount": 98,
+  "afterFileCount": 98,
+  "addedFiles": [],
+  "removedFiles": [],
+  "before": {
+    "s": {
+      "total": 30949,
+      "covered": 23404,
+      "percent": 75.6211832369382
+    },
+    "f": {
+      "total": 906,
+      "covered": 746,
+      "percent": 82.33995584988962
+    },
+    "b": {
+      "total": 6506,
+      "covered": 5029,
+      "percent": 77.29787888103289
+    }
+  },
+  "after": {
+    "s": {
+      "total": 10442,
+      "covered": 7422,
+      "percent": 71.07833748324076
+    },
+    "f": {
+      "total": 2135,
+      "covered": 1548,
+      "percent": 72.50585480093677
+    },
+    "b": {
+      "total": 8991,
+      "covered": 5528,
+      "percent": 61.48370592815037
+    }
+  },
+  "samples": [
+    {
+      "file": "src/lib/services/kiosk-item-transfer.ts",
+      "before": {
+        "s": {
+          "total": 86,
+          "covered": 0,
+          "percent": 0
+        },
+        "f": {
+          "total": 1,
+          "covered": 0,
+          "percent": 0
+        },
+        "b": {
+          "total": 1,
+          "covered": 0,
+          "percent": 0
+        }
+      },
+      "after": {
+        "s": {
+          "total": 76,
+          "covered": 0,
+          "percent": 0
+        },
+        "f": {
+          "total": 18,
+          "covered": 0,
+          "percent": 0
+        },
+        "b": {
+          "total": 76,
+          "covered": 0,
+          "percent": 0
+        }
+      }
+    },
+    {
+      "file": "src/lib/services/sport-setup.ts",
+      "before": {
+        "s": {
+          "total": 129,
+          "covered": 0,
+          "percent": 0
+        },
+        "f": {
+          "total": 1,
+          "covered": 1,
+          "percent": 100
+        },
+        "b": {
+          "total": 1,
+          "covered": 1,
+          "percent": 100
+        }
+      },
+      "after": {
+        "s": {
+          "total": 49,
+          "covered": 0,
+          "percent": 0
+        },
+        "f": {
+          "total": 15,
+          "covered": 0,
+          "percent": 0
+        },
+        "b": {
+          "total": 22,
+          "covered": 0,
+          "percent": 0
+        }
+      }
+    }
+  ]
+}

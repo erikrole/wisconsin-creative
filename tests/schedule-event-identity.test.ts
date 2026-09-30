@@ -10,6 +10,7 @@ import {
   parseEventResult,
   scheduleVenueDisplayName,
   scheduleVenueParts,
+  splitEventQualifier,
 } from "@/lib/schedule-event-identity";
 
 describe("schedule event identity normalization", () => {
@@ -20,6 +21,34 @@ describe("schedule event identity normalization", () => {
   it("normalizes rankings and school-name boilerplate from opponents", () => {
     expect(normalizeOpponentName("No. 9 University of Illinois")).toBe("Illinois");
     expect(normalizeOpponentName("#12 Louisville University - Invitational")).toBe("Louisville - Invitational");
+  });
+
+  it("drops game-day promotions from opponent identity but keeps competition qualifiers", () => {
+    expect(normalizeOpponentName("Michigan State- Homecoming")).toBe("Michigan State");
+    expect(normalizeOpponentName("Penn State – Whiteout Game")).toBe("Penn State");
+    expect(normalizeOpponentName("Ohio State (Stripe the Stadium)")).toBe("Ohio State");
+    expect(normalizeOpponentName("Northwestern | Homecoming")).toBe("Northwestern");
+    expect(normalizeOpponentName("#5 Purdue - Senior Night")).toBe("Purdue");
+    expect(normalizeOpponentName("Iowa - Military Appreciation Day")).toBe("Iowa");
+    expect(normalizeOpponentName("Louisville - Invitational")).toBe("Louisville - Invitational");
+    expect(normalizeOpponentName("Minnesota-Duluth")).toBe("Minnesota-Duluth");
+    expect(normalizeOpponentName("Saint Mary's (CA)")).toBe("Saint Mary's (CA)");
+  });
+
+  it("classifies a themed game as a game against the real opponent", () => {
+    expect(
+      classifySourceEvent({ rawSummary: "Wisconsin Athletics Football vs Michigan State- Homecoming", rawLocationText: "Madison, WI" }),
+    ).toMatchObject({ sportCode: "FB", opponent: "Michigan State", site: "HOME" });
+    expect(
+      classifySourceEvent({ rawSummary: "Wisconsin Athletics Football: Homecoming Parade" }),
+    ).toMatchObject({ sportCode: "FB", opponent: null });
+  });
+
+  it("splits promotion qualifiers off titles without breaking names", () => {
+    expect(splitEventQualifier("Football vs Iowa (Homecoming)")).toEqual({ primary: "Football vs Iowa", qualifier: "Homecoming" });
+    expect(splitEventQualifier("Football vs Iowa: White Out")).toEqual({ primary: "Football vs Iowa", qualifier: "White Out" });
+    expect(splitEventQualifier("Football: Homecoming Parade")).toEqual({ primary: "Football: Homecoming Parade", qualifier: null });
+    expect(splitEventQualifier("Softball vs Texas A&M-Corpus Christi")).toEqual({ primary: "Softball vs Texas A&M-Corpus Christi", qualifier: null });
   });
 
   it("keeps abbreviated team names in all caps", () => {

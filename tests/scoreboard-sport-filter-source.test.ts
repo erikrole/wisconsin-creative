@@ -10,19 +10,11 @@ describe("profile Scoreboard sport filter", () => {
     expect(tab).not.toContain('season: "2026-27"');
   });
 
-  it("holds its options from an unfiltered read", () => {
-    // The route narrows its own breakdowns (scoreboard.test.ts), so a filtered
-    // response only carries the sports that survived the filter.
-    expect(tab).toContain("const [sportOptions, setSportOptions] = useState<SportOption[]>([]);");
-    expect(tab).toContain(
-      "const isUnfiltered = resultFilter === \"all\" && sportFilter === \"all\" && siteFilter === \"all\";",
-    );
-    // Only a settled, unfiltered response may replace the held list.
-    expect(tab).toContain("if (!data || !isUnfiltered || loading || refreshing) return;");
+  it("uses season facets with an older-server fallback", () => {
+    expect(tab).toContain("data.facets?.sports");
     expect(tab).toContain("needsUnfilteredBootstrap");
     expect(tab).toContain("`/api/users/${userId}/scoreboard?limit=1`");
-    // The dropdown must never be built from whatever the current response holds.
-    expect(tab).not.toContain("data.bySport.filter((bucket) => bucket.key !== null)");
+    expect(tab).toContain("loadedUrl !== requestUrl");
   });
 
   it("names a selected sport the option list does not carry", () => {

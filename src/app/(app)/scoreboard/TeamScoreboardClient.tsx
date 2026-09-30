@@ -30,7 +30,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { BucketBar, RankMark, RecordMeter, ScoreboardDataRegion } from "@/components/scoreboard/ScoreboardVisuals";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { useFetch } from "@/hooks/use-fetch";
+import { useScoreboardRead } from "@/hooks/use-scoreboard-read";
 import { formatRelativeTime } from "@/lib/format";
 import { rateLabel, recordLabel } from "@/lib/scoreboard-digest";
 import {
@@ -42,7 +42,7 @@ import {
   personScoreboardPath,
   scoreboardPersonMatches,
   teamScoreboardApiUrl,
-  teamScoreboardFiltersEqual,
+  teamScoreboardPath,
   writeTeamScoreboardSearchParams,
   type TeamScoreboardFilterKey,
   type TeamScoreboardFilterState,
@@ -176,7 +176,7 @@ function ScoreboardErrorState({ error, onRetry }: { error: string | false; onRet
     <Alert variant="destructive">
       <AlertCircle className="size-4" />
       <AlertTitle>Scoreboard unavailable</AlertTitle>
-      <AlertDescription className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center">
+      <AlertDescription className="col-start-2 mt-2 flex flex-col gap-3 sm:flex-row sm:items-center">
         <p>
           {error === "network"
             ? "Couldn’t reach the server. Check the connection and try again."
@@ -203,14 +203,14 @@ function LeaderboardTable({
 }) {
   return (
     <>
-      <div className="hidden md:block">
+      <div className="hidden lg:block">
         <div
           role="table"
           aria-label="Per-person Scoreboard rankings. Open a name to view that person's shared Scoreboard."
         >
           <div
             role="row"
-            className="grid grid-cols-[4rem_minmax(0,1fr)_5.5rem_6rem_7rem] border-b bg-muted/30 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+            className="grid grid-cols-[4rem_minmax(0,1fr)_5.5rem_6rem_7rem] border-b bg-muted/30 px-4 text-xs font-semibold text-muted-foreground"
           >
             <span role="columnheader" className="flex h-10 items-center">Rank</span>
             <span role="columnheader" className="flex h-10 items-center">Person</span>
@@ -262,7 +262,7 @@ function LeaderboardTable({
         </div>
       </div>
 
-      <div className="divide-y md:hidden">
+      <div className="divide-y lg:hidden">
         {rows.map(({ person, metrics, rank }) => {
           const isYou = currentUserId === person.userId;
           return (
@@ -286,6 +286,9 @@ function LeaderboardTable({
                 <p className="mt-0.5 text-xs tabular-nums text-muted-foreground">
                   {metrics.eventsWorked} {metrics.eventsWorked === 1 ? "event" : "events"} · {recordLabel(metrics)} record · {rateLabel(metrics.winRate)}
                 </p>
+                {showRateEligibility && metrics.games < minimumRateGames ? (
+                  <p className="mt-0.5 text-xs text-muted-foreground">Needs {minimumRateGames} resolved games for win-rate ranking</p>
+                ) : null}
               </div>
             </Link>
           );
@@ -317,6 +320,9 @@ function ScoreboardFilterSelect({
         </SelectTrigger>
         <SelectContent className="max-h-[320px]">
           <SelectItem value={ALL_FILTERS}>{allLabel}</SelectItem>
+          {value !== ALL_FILTERS && !options.some((option) => option.key === value) ? (
+            <SelectItem value={value}>{value}</SelectItem>
+          ) : null}
           {options.map((option) => (
             <SelectItem key={option.key} value={option.key}>{option.label}</SelectItem>
           ))}
@@ -411,23 +417,15 @@ function TeamScoreboardExplorer() {
   const [query, setQuery] = useState("");
   const [clock, setClock] = useState(() => new Date());
   const apiUrl = useMemo(() => scoreboardUrl(filters), [filters]);
-  const { data, loading, refreshing, error, lastRefreshed, reload } = useFetch<TeamScoreboard>({
+  const { data, loading, refreshing, error, lastRefreshed, reload } = useScoreboardRead<TeamScoreboard>({
     url: apiUrl,
-    returnTo: "/scoreboard",
-    refetchOnFocus: false,
-    keepPreviousData: true,
+    returnTo: teamScoreboardPath(filters, sort),
   });
 
   useEffect(() => {
     const interval = window.setInterval(() => setClock(new Date()), 60_000);
     return () => window.clearInterval(interval);
   }, []);
-
-  useEffect(() => {
-    if (!error || !data) return;
-    const lastLoadedFilters = filtersFromTeamScoreboardResponse(data.filters);
-    if (!teamScoreboardFiltersEqual(lastLoadedFilters, filters)) setFilters(lastLoadedFilters);
-  }, [data, error, filters, setFilters]);
 
   const rankedPeople = useMemo(() => {
     if (!data) return [];
@@ -558,6 +556,7 @@ function TeamScoreboardExplorer() {
                     size="icon"
                     className="h-10 w-10"
                     onClick={reload}
+                    disabled={refreshing}
                     aria-label="Refresh Scoreboard"
                   >
                     <RefreshCw className={cn("size-4", refreshing && "animate-spin")} />
@@ -602,20 +601,30 @@ function TeamScoreboardExplorer() {
           <OperationalActiveFilterChips filters={activeFilters} />
         </OperationalToolbar>
 
+        {error ? (
+          <Alert role="alert">
+            <AlertCircle className="size-4" />
+            <AlertTitle>Couldn’t refresh Scoreboard</AlertTitle>
+            <AlertDescription className="col-start-2 flex flex-wrap items-center justify-between gap-3">
+              <p>Showing the last loaded totals for {scopeLabel}. Retry to apply the selected filters.</p>
+              <Button variant="outline" onClick={reload} disabled={refreshing}>Retry</Button>
+            </AlertDescription>
+          </Alert>
+        ) : null}
         <ScoreboardDataRegion refreshing={refreshing}>
           <Card className="p-5 shadow-xs sm:p-6">
             <div className="flex flex-col gap-4">
               <div className="flex items-start justify-between gap-4">
-                <div>
+                <div className="min-w-0">
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                     Team record
                   </p>
-                  <div className="mt-1.5 flex items-baseline gap-3">
-                    <p className="text-4xl font-bold tracking-tight tabular-nums">{recordLabel(selectedTotals)}</p>
-                    <span className="text-sm text-muted-foreground">{scopeLabel}</span>
+                  <div className="mt-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                    <p className="shrink-0 text-4xl font-bold tracking-tight tabular-nums">{recordLabel(selectedTotals)}</p>
+                    <span className="min-w-0 break-words text-sm text-muted-foreground">{scopeLabel}</span>
                   </div>
                 </div>
-                <div className="text-right">
+                <div className="shrink-0 text-right">
                   <p className="text-xl font-semibold tabular-nums">{rateLabel(selectedTotals.winRate)}</p>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Win rate</p>
                 </div>
@@ -643,7 +652,7 @@ function TeamScoreboardExplorer() {
                 </div>
               </div>
 
-              <div className="flex flex-col gap-3 border-t border-border/50 pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-3 border-t border-border/50 pt-4 lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex min-w-0 items-start gap-3">
                   <span className="mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
                     <Sparkles className="size-4" aria-hidden="true" />
@@ -660,7 +669,7 @@ function TeamScoreboardExplorer() {
                 {eventLeader && (
                   <Link
                     prefetch={false}
-                    href={personScoreboardPath(eventLeader.person.userId, filters, sort)}
+                    href={personScoreboardPath(eventLeader.person.userId, loadedFilters, sort)}
                     className="flex min-w-56 items-center gap-2.5 rounded-lg border bg-background px-3 py-2.5 no-underline transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <UserAvatar name={eventLeader.person.name} avatarUrl={eventLeader.person.avatarUrl} size="md" />
@@ -729,7 +738,7 @@ function TeamScoreboardExplorer() {
             ) : (
               <LeaderboardTable
                 rows={visiblePeople}
-                hrefForPerson={(userId) => personScoreboardPath(userId, filters, sort)}
+                hrefForPerson={(userId) => personScoreboardPath(userId, loadedFilters, sort)}
                 minimumRateGames={data.methodology.minimumGamesForWinRate}
                 currentUserId={currentUserId}
                 showRateEligibility={sort === "rate"}
@@ -737,7 +746,7 @@ function TeamScoreboardExplorer() {
             )}
           </ReportSectionCard>
 
-          <div className="mt-4 grid items-start gap-4 lg:grid-cols-2">
+          <div className="grid items-start gap-4 lg:grid-cols-2">
             <ReportSectionCard
               title="By sport"
               description="Select a row to stack its sport with the current filters."
@@ -795,7 +804,7 @@ function TeamScoreboardExplorer() {
             </ReportSectionCard>
           </div>
 
-          <Collapsible className="mt-4">
+          <Collapsible>
             <CollapsibleTrigger asChild>
               <Button variant="ghost" className="h-10 px-0 text-xs text-muted-foreground">
                 How these numbers count

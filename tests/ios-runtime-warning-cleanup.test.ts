@@ -30,8 +30,9 @@ describe("iOS runtime warning cleanup", () => {
     expect(thumbnails).toContain("config.urlCache = thumbnailURLCache");
     expect(thumbnails).toContain("config.requestCachePolicy = .returnCacheDataElseLoad");
     expect(thumbnails).toContain("request.cachePolicy = .returnCacheDataElseLoad");
-    expect(thumbnails).toContain("ThumbnailCache.shared.image(for: cacheKey)");
-    expect(thumbnails).toContain("ThumbnailCache.shared.store(image, for: cacheKey)");
+    expect(thumbnails).toContain("ThumbnailCache.shared.thumbnail(");
+    expect(thumbnails).toContain("NSCache<NSString, UIImage>");
+    expect(thumbnails).toContain("cache.totalCostLimit = 20_000_000");
   });
 
   it("keeps image decode and profile crop rendering off the main actor", () => {

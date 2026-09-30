@@ -88,7 +88,8 @@ describe("iOS native control cleanup", () => {
     expect(actions).not.toContain(".buttonStyle(.glass)");
     expect(actions).toMatch(/Label\("Cancel Booking"[\s\S]*?\.buttonStyle\(\.bordered\)[\s\S]*?\.buttonBorderShape\(\.capsule\)[\s\S]*?\.controlSize\(\.large\)/);
     expect(extendBar).not.toContain(".buttonStyle(.glass)");
-    expect(extendBar).toMatch(/Label\("Extend Return Date"[\s\S]*?\.buttonStyle\(\.bordered\)[\s\S]*?\.buttonBorderShape\(\.capsule\)[\s\S]*?\.controlSize\(\.large\)/);
+    // Extend shortens to "Extend" when Nudge shares the bar.
+    expect(extendBar).toMatch(/Label\(nudge == nil \? "Extend Return Date" : "Extend"[\s\S]*?\.buttonStyle\(\.bordered\)[\s\S]*?\.buttonBorderShape\(\.capsule\)[\s\S]*?\.controlSize\(\.large\)/);
     expect(extendBar).toContain(".background(.ultraThinMaterial)");
     expect(extendBar).not.toContain("Divider()");
   });

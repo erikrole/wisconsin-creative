@@ -1,0 +1,74 @@
+{
+  "title": "Your Day on Home",
+  "eyebrow": "Web + iOS · Wisconsin Creative · 2026-09-25",
+  "lede": "Home now answers what needs you right now, what's next, and what your week looks like. Shifts and their gear sit together in one place.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "iOS Home, worked events",
+      "note": "Same homeAgenda fixture, device, appearance and scroll. The before image was built from an isolated HEAD worktree with only the fixture and test files copied in. Timestamps differ by minutes because the fixture is relative to the capture hour.",
+      "pairs": [
+        {
+          "title": "Top of Home",
+          "sub": "Staff user with a game tonight, a road game tomorrow with gear reserved, and a return Sunday.",
+          "before": "ios-agenda-before.png",
+          "beforeCap": "Nothing flagged tonight's game as having no gear, and the Minnesota reservation did not appear anywhere on Home: event-linked gear was dropped from the standalone rows and the event row left gear out.",
+          "after": "ios-agenda-after.png",
+          "afterCap": "A dismissible Prep Gear banner above the greeting, a This Week strip, and a gear line on every event row (\"Gear pickup 6:00 AM\", \"No gear reserved\").",
+          "beforeEvidence": "ios-agenda-before.capture.json",
+          "afterEvidence": "ios-agenda-after.capture.json"
+        },
+        {
+          "title": "Existing Home fixture",
+          "sub": "Overdue, due-today, and upcoming gear.",
+          "before": "ios-home-before.png",
+          "beforeCap": "Overdue sat in the stat tile and the first queue row.",
+          "after": "ios-home-after.png",
+          "afterCap": "One red banner names the overdue kit, when it was due, and where to return it, with a View Checkout action. The week strip shows returns across the week.",
+          "beforeEvidence": "ios-home-before.capture.json",
+          "afterEvidence": "ios-home-after.capture.json"
+        }
+      ]
+    },
+    {
+      "heading": "Web dashboard, My work column",
+      "note": "Static render of the real MyGearColumn component using the app's built CSS, with the same fixture on both sides (source attached as web-render-fixture.ts.txt). This is not an authenticated page: this branch has no preview environment yet.",
+      "pairs": [
+        {
+          "title": "My events replaces My shifts",
+          "sub": "Three worked events, one linked reservation, one standalone reservation.",
+          "before": "web-column-before.png",
+          "beforeCap": "The Minnesota reservation appeared twice: under My reservations, and again as a Reserved badge on the shift. Shift rows had no time for staff, no area, and no call note.",
+          "after": "web-column-after.png",
+          "afterCap": "One card per event with call or start time, location, area, call note, and the gear state inline. My reservations keeps only the standalone kit.",
+          "beforeEvidence": "web-column-before.capture.json",
+          "afterEvidence": "web-column-after.capture.json"
+        }
+      ]
+    },
+    {
+      "heading": "Web dashboard, Your day",
+      "note": "After-only: none of this existed before. Same static render and fixture.",
+      "shots": [
+        { "image": "web-agenda-after.png", "tag": "After", "title": "Your day row", "wide": true,
+          "cap": "One context banner, Next up with a live countdown (\"in 10h 30m\"), and This week with shift, pickup, and return dots, above the My work column." }
+      ]
+    }
+  ],
+  "changes": [
+    { "h": "Shifts and gear lived apart", "was": "Web listed a reservation both under My reservations and as a badge on its shift. iOS hid event-linked gear from Home entirely.", "now": "Each worked event carries its own gear state on both platforms, and My reservations drops what an event card already shows." },
+    { "h": "Nothing said what needs you now", "was": "Urgency was spread across stat tiles, lane colours, and the queue.", "now": "At most one banner, in a fixed order: your overdue gear, your pickup, today's game with no gear, a return due later today. Dismissal lasts the day. Web and iOS share the order and wording (parity test)." },
+    { "h": "No sense of the week", "was": "Web had no time-aware section; iOS showed only Next Up rows.", "now": "A seven-day strip on both platforms and a Next up card with a countdown on web. Staff events anchor on the event start and never name a call time." },
+    { "h": "Nudges were invisible to colleagues", "was": "A nudge's sent state lived in one screen's memory.", "now": "Overdue rows and Booking detail show \"Nudged 20m ago by …\" from the audit log, and within the hour the button reads as sent." }
+  ],
+  "verification": [
+    "Full vitest suite: 701 files, 4,969 tests pass, including new home-agenda (14), home-agenda-parity (4), and nudge-history (6) tests, plus four updated Home contracts.",
+    "TypeScript, ESLint, npm run build:app, verify:docs, and git diff --check all pass.",
+    "Wisconsin iOS simulator build passes. HomeScreenshotUITests capture on the dedicated iPhone 18 Pro Max capture device; ios:project:check passes after regenerating with XcodeGen and restoring the schemes."
+  ],
+  "notes": [
+    "No signed-in web check: this branch has no preview environment until its PR runs Managed previews.",
+    "iOS captures use fixtures, so they only show presentation. The personal pickups field (myPendingPickups) and the 10-shift payload need a real signed-in check.",
+    "iOS keeps its existing Next Up queue rather than adding a separate Next up card."
+  ]
+}

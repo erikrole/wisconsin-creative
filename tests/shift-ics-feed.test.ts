@@ -238,6 +238,7 @@ describe("shift ICS feed hardening", () => {
     const res = await GET(request(), { params: Promise.resolve({ token: validToken }) });
     const body = await res.text();
 
+    expect(body).toContain("SUMMARY:Video: FB vs Michigan State - Homecoming");
     expect(body).toContain("DTSTART;VALUE=DATE:20261003");
     expect(body).toContain("DTEND;VALUE=DATE:20261004");
     expect(body).toContain(`SEQUENCE:${Math.floor(new Date("2026-08-11T12:00:00.000Z").getTime() / 1000) + 1}`);
@@ -265,6 +266,7 @@ describe("shift ICS feed hardening", () => {
             event: {
               id: "event-all-day",
               summary: "Wisconsin Athletics Football vs Michigan State- Homecoming",
+              subtitle: "White Out",
               startsAt: new Date("2026-10-03T00:00:00.000Z"),
               endsAt: new Date("2026-10-04T00:00:00.000Z"),
               allDay: true,
@@ -287,6 +289,8 @@ describe("shift ICS feed hardening", () => {
     expect(body).toContain("DTSTART:20261003T170000Z");
     expect(body).toContain("DTEND:20261003T210000Z");
     expect(body).not.toContain("DTSTART;VALUE=DATE");
+    // The operator's Label replaces the feed's promotion text.
+    expect(body).toContain("SUMMARY:Video: FB vs Michigan State - White Out");
   });
 
   it("folds long content lines per RFC 5545 without splitting multi-byte characters", async () => {

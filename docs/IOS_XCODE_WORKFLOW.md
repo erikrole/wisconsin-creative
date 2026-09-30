@@ -1,6 +1,6 @@
 # iOS Xcode Workflow
 
-Last refreshed: 2026-07-17
+Last refreshed: 2026-09-28
 
 This is the default path for debugging, testing, and reviewing the native Wisconsin Creative iOS app.
 
@@ -25,14 +25,14 @@ Any gate that exits non-zero aborts the run with that status. A run only prints
 `OK: iOS Xcode verification passed` when every gate above actually ran and passed.
 
 The XCTest destination is resolved to a **UDID** at runtime from `xcrun simctl list
-devices available` — `iPhone 16 Pro` for `Wisconsin`, `iPad Air 11-inch (M4)` for `WisconsinKiosk` (stand-in for the managed iPad Air 11-inch (M2) kiosks),
-preferring a booted device and otherwise the newest runtime that has one. A
+devices available` — `iPhone 18 Pro Max` for `Wisconsin`, `iPad Air 11-inch (M4)` for `WisconsinKiosk` (stand-in for the managed iPad Air 11-inch (M2) kiosks),
+using iOS 26.5 for Kiosk, then preferring a booted matching device. The main app prefers a booted device and otherwise the newest runtime that has one. `IOS_SIMULATOR_RUNTIME` deliberately overrides the runtime filter. A
 `name=...,OS=latest` destination is matched only against the newest installed runtime,
 so it fails outright for a device such as the iPhone 16 Pro that is installed under an
 older runtime. If the device is not available the script stops and lists the available
 simulators rather than substituting another one, per the AGENTS.md simulator policy.
 
-The script sets `-derivedDataPath` to `${TMPDIR}/gear-tracker-xcode-derived-data` by default. That keeps command-line builds out of Xcode's shared DerivedData and avoids the build database lock failures that happen when multiple `xcodebuild` processes hit the same location.
+The script sets `-derivedDataPath` to `${TMPDIR}/gear-tracker-xcode-derived-data` by default. Kiosk uses `${TMPDIR}/gear-tracker-kiosk-xcode-derived-data` so the two schemes do not share a build database. That keeps command-line builds out of Xcode's shared DerivedData and avoids the build database lock failures that happen when multiple `xcodebuild` processes hit the same location.
 
 Useful variants:
 
@@ -74,10 +74,10 @@ Use these defaults:
 
 - Scheme: `Wisconsin` for the main app, `WisconsinKiosk` for the dedicated kiosk target.
 - Configuration: `Debug` for local debugging and review.
-- Destination: the newest installed iPhone Simulator for main-app review. Use the newest installed iPad simulator for `WisconsinKiosk` checks; the kiosk target requires iOS 26 or later.
+- Destination: iPhone 18 Pro Max for main-app review; iPad Air 11-inch (M4), iOS 26.5 for `WisconsinKiosk`. Stop if the required destination is missing.
 - Bundle identifier: keep `com.erikrole.Wisconsin` unless you intentionally want a separate install and Keychain identity.
 
-Regenerate the project only after adding, moving, or removing Swift files:
+Regenerate the project after changing `ios/project.yml` or adding, moving, or removing source files. Review the diff and preserve unrelated local changes:
 
 ```bash
 cd ios
@@ -85,6 +85,26 @@ xcodegen generate
 cd ..
 npm run ios:project:check
 ```
+
+## Main app build settings
+
+`Wisconsin`, its Live Activities/widget extension, and the unit/UI test targets enable compilation caching. Debug keeps normal unoptimized debugging; coverage is opt-in for the main scheme, and WisconsinPerformance keeps coverage disabled. Xcode otherwise instruments the Markdown package in Release when the scheme gathers coverage, even with target-level coverage disabled. Both shipping targets set `ENABLE_CODE_COVERAGE=NO` for Release while retaining `-O`, whole-module optimization and dSYM symbols. Profile and Archive use Release.
+
+The generated app product is `Wisconsin Creative.app`, matching the test host and shared schemes. `ios:project:check` compares all three shared schemes as well as the project and entitlements. Device support, signing, bundle IDs, entitlements, and version numbers are unchanged.
+
+For a dedicated main-app coverage run:
+
+```bash
+xcodebuild -project ios/Wisconsin.xcodeproj -scheme Wisconsin -configuration Debug \
+  -destination 'platform=iOS Simulator,name=iPhone 18 Pro Max,OS=27.0' \
+  -derivedDataPath /tmp/wisconsin-coverage -enableCodeCoverage YES test
+```
+
+## Kiosk build settings
+
+`WisconsinKiosk` and its test host are iPad-only; Mac Catalyst, Designed for iPad on Mac, and Vision destinations are disabled. Compilation caching is enabled for both targets. Debug keeps normal unoptimized debugging and XCTest coverage; coverage is scoped to Kiosk. Release explicitly disables coverage instrumentation with `ENABLE_CODE_COVERAGE=NO` while retaining the existing `-O`, whole-module optimization, and dSYM settings. Profile and Archive continue to use Release.
+
+The generated product reference and scheme both name `Wisconsin Kiosk.app`; the bundle ID, signing team, deployment baseline, landscape/full-screen behavior, and Kiosk icon remain unchanged. The existing `UIRequiresFullScreen` deprecation warning is retained because the accepted kiosk landscape contract still requires it.
 
 ## Debugging Path
 

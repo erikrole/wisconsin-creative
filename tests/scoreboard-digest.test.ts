@@ -171,9 +171,9 @@ describe("scoreboard digest", () => {
 
   it("keeps the two season totals apart, filtered or not", () => {
     expect(totalsSentence({ eventsWorked: 38, resolvedGames: 26, isFiltered: false, seasonResolvedGames: 26 }))
-      .toBe("38 events worked this season, 26 with a recorded result.");
+      .toBe("38 events worked this season, 26 official games.");
     expect(totalsSentence({ eventsWorked: 4, resolvedGames: 0, isFiltered: false, seasonResolvedGames: 0 }))
-      .toBe("4 events worked this season, none with a recorded result yet.");
+      .toBe("4 events worked this season, none in the official record yet.");
     // Under a filter the two numbers measure different sets, so the sentence
     // names which is which instead of joining them.
     expect(totalsSentence({ eventsWorked: 38, resolvedGames: 3, isFiltered: true, seasonResolvedGames: 26 }))

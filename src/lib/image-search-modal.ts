@@ -4,6 +4,18 @@ const SEARCH_BIAS = "product photo white background";
 const B_AND_H_SITE_OPERATOR = "site:bhphotovideo.com";
 const MAX_DISPLAY_SEARCH_RESULTS = 8;
 
+/** B&H's own search is available even when the image-search provider is unavailable. */
+export function buildBandHWebsiteSearchUrl(query: string) {
+  const normalized = query.replace(/\s+/g, " ").trim();
+  if (!normalized) return null;
+  const url = new URL("https://www.bhphotovideo.com/c/search");
+  url.searchParams.set("Ntt", normalized);
+  url.searchParams.set("N", "0");
+  url.searchParams.set("InitialSearch", "yes");
+  url.searchParams.set("sts", "ma");
+  return url.toString();
+}
+
 type MergeImageSearchOptions = {
   primaryLimit?: number;
 };

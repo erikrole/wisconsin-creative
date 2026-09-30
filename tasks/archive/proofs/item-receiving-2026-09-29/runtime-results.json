@@ -1,0 +1,24 @@
+[
+  {
+    "width": 1280,
+    "route": "/items",
+    "role": "ADMIN isolated preview",
+    "draftResumed": true,
+    "uniqueBatchRows": 3,
+    "existingFamilyOptions": 1,
+    "upfrontParent": true,
+    "inventoryWrites": [],
+    "pageErrors": []
+  },
+  {
+    "width": 768,
+    "route": "/items",
+    "role": "ADMIN isolated preview",
+    "draftResumed": true,
+    "uniqueBatchRows": 3,
+    "existingFamilyOptions": 1,
+    "upfrontParent": true,
+    "inventoryWrites": [],
+    "pageErrors": []
+  }
+]

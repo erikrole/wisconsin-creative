@@ -87,4 +87,20 @@ describe("operational title normalization", () => {
     expect(editRoute).toContain("? normalizeManualEventTitle(body.summary)");
     expect(editRoute).toContain("patch.summary = derived");
   });
+
+describe("title case hardening", () => {
+  it.each([
+    ["1st round", "1st Round"],
+    ["texas a&m vs at&t", "Texas A&M vs AT&T"],
+    ["q&a with the ad", "Q&A with the AD"],
+    ["vs iowa", "vs Iowa"],
+    ["DJ night", "DJ Night"],
+    ["MEDIA DAY", "Media Day"],
+    ["o'brien's retirement", "O'Brien's Retirement"],
+    ["mcdonald's all-american game", "McDonald's All-American Game"],
+    ["it's a go", "It's a Go"],
+  ])("%s -> %s", (input, expected) => {
+    expect(normalizeManualEventTitle(input)).toBe(expected);
+  });
+});
 });

@@ -1,0 +1,35 @@
+
+ RUN  v3.2.6 /Users/role/Code/wisconsin-creative
+
+ ❯ tests/passkey-auth.test.ts (9 tests | 1 failed | 8 skipped) 6ms
+   ↓ passkey authentication > requires current-password reauthentication before starting enrollment
+   ↓ passkey authentication > does not create an enrollment ceremony when reauthentication fails
+   ↓ passkey authentication > returns an actionable conflict and retires the ceremony for a duplicate credential
+   ↓ passkey authentication > names an unnamed credential after the client that enrolled it
+   ↓ passkey authentication > keeps a name the person typed
+   ↓ passkey authentication > permission-gates and password-protects owned passkey revocation
+   ↓ passkey authentication > verifies a discoverable assertion and issues the normal session
+   ↓ passkey authentication > rejects a valid assertion when its owning user is inactive
+   × passkey authentication > does not accept a ceremony that has already been consumed 5ms
+     → expected "spy" to be called 1 times, but got 0 times
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 8 skipped (9)
+   Start at  00:15:11
+   Duration  350ms (transform 83ms, setup 7ms, collect 195ms, tests 6ms, environment 0ms, prepare 27ms)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/passkey-auth.test.ts > passkey authentication > does not accept a ceremony that has already been consumed
+AssertionError: expected "spy" to be called 1 times, but got 0 times
+ ❯ tests/passkey-auth.test.ts:445:48
+    444| 
+    445|     expect(response.status).toBe(401);
+    446|     expect(createSession).not.toHaveBeenCalled();
+       |         ^
+    447|   });
+    448| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

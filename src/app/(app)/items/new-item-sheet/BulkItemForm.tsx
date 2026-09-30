@@ -15,6 +15,8 @@ import type {
   RequiredFieldProgress,
 } from "./types";
 import type { CategoryOption } from "@/types/category";
+import { Switch } from "@/components/ui/switch";
+import type { BulkDraft } from "@/lib/item-intake-draft";
 import { generateQrCode } from "./helpers";
 import { FormFieldError, FormRow } from "@/components/form-layout";
 import {
@@ -31,6 +33,8 @@ import { ItemImageDraftField } from "./ItemImageDraftField";
 import type { DraftItemImage } from "@/lib/item-image-draft";
 
 export interface BulkFormHandle {
+  getDraft(): BulkDraft;
+  restoreDraft(draft: BulkDraft): void;
   validate(): FormValidationIssue | null;
   getSubmitPayload(): {
     url: string;
@@ -45,12 +49,16 @@ export interface BulkFormHandle {
   focusField(fieldId: string): void;
 }
 
+import type { ItemImageSuggestionStatus } from "@/lib/item-image-suggestion";
+
 interface Props {
   categories: CategoryOption[];
   locations: Location[];
   open: boolean;
   trackingMode: "units" | "quantity";
   image: DraftItemImage | null;
+  imageSuggestionStatus: ItemImageSuggestionStatus;
+  onImageSearchSeedChange: (query: string) => void;
   onChooseImage: (searchQuery: string) => void;
   onClearImage: () => void;
   onProgressChange: (progress: RequiredFieldProgress) => void;
@@ -72,6 +80,8 @@ export const BulkItemForm = forwardRef<BulkFormHandle, Props>(
     open,
     trackingMode,
     image,
+    imageSuggestionStatus,
+    onImageSearchSeedChange,
     onChooseImage,
     onClearImage,
     onProgressChange,
@@ -81,11 +91,16 @@ export const BulkItemForm = forwardRef<BulkFormHandle, Props>(
   }, ref) {
     const [bulkMode, setBulkMode] = useState<BulkMode>("new");
     const [bulkName, setBulkName] = useState("");
+    useEffect(() => {
+      onImageSearchSeedChange(bulkMode === "new" ? bulkName : "");
+    }, [bulkMode, bulkName, onImageSearchSeedChange]);
+
     const [categoryId, setCategoryId] = useState("");
     const [locationId, setLocationId] = useState("");
     const [bulkQrCode, setBulkQrCode] = useState("");
-    const [initialQuantity, setInitialQuantity] = useState("0");
-    const [imageOpen, setImageOpen] = useState(false);
+    const [initialQuantity, setInitialQuantity] = useState("1");
+    const [imageOpen, setImageOpen] = useState(true);
+    const [emptyFamily, setEmptyFamily] = useState(false);
 
     const [existingBulkSkus, setExistingBulkSkus] = useState<BulkSkuOption[]>([]);
     const [existingItemsState, setExistingItemsState] = useState<ExistingItemsState>("idle");
@@ -97,10 +112,10 @@ export const BulkItemForm = forwardRef<BulkFormHandle, Props>(
 
     const bulkNameInputRef = useRef<HTMLInputElement>(null);
     const locationOptions = locations.map((location) => ({ value: location.id, label: location.name }));
-    const quantityOnlyBulkSkus = existingBulkSkus.filter((sku) => !sku.trackByNumber);
+    const quantityOnlyBulkSkus = existingBulkSkus.filter((sku) => sku.trackByNumber === (trackingMode === "units"));
 
     useEffect(() => {
-      if (!open || trackingMode !== "quantity") return;
+      if (!open) return;
       const controller = new AbortController();
       setExistingItemsState("loading");
       setExistingItemsError("");
@@ -109,7 +124,7 @@ export const BulkItemForm = forwardRef<BulkFormHandle, Props>(
           const res = await fetch("/api/bulk-skus?limit=200", { signal: controller.signal });
           if (handleAuthRedirect(res)) return;
           if (!res.ok) {
-            const message = await parseErrorMessage(res, "Count-tracked items could not load.");
+            const message = await parseErrorMessage(res, "Matching items could not load.");
             if (!controller.signal.aborted) {
               setExistingItemsState("error");
               setExistingItemsError(message);
@@ -120,7 +135,7 @@ export const BulkItemForm = forwardRef<BulkFormHandle, Props>(
           if (!controller.signal.aborted) {
             if (!json || !Array.isArray(json.data)) {
               setExistingItemsState("error");
-              setExistingItemsError("Count-tracked items returned an unreadable response. Retry before adding stock.");
+              setExistingItemsError("Matching items returned an unreadable response. Retry before adding stock.");
               return;
             }
             setExistingBulkSkus(json.data);
@@ -131,16 +146,13 @@ export const BulkItemForm = forwardRef<BulkFormHandle, Props>(
             setExistingItemsState("error");
             setExistingItemsError(error instanceof Error && error.name === "AbortError"
               ? ""
-              : "Count-tracked items could not load. Check your connection and retry.");
+              : "Matching items could not load. Check your connection and retry.");
           }
         }
       })();
       return () => controller.abort();
     }, [existingItemsReload, open, trackingMode]);
 
-    useEffect(() => {
-      if (trackingMode === "units") setBulkMode("new");
-    }, [trackingMode]);
 
     useEffect(() => {
       onOperationChange(bulkMode === "existing" ? "adjust" : "create");
@@ -157,10 +169,12 @@ export const BulkItemForm = forwardRef<BulkFormHandle, Props>(
         return;
       }
       onProgressChange({
-        completed: [bulkName.trim(), categoryId, locationId, bulkQrCode.trim()].filter(Boolean).length,
-        total: 4,
+        completed: [bulkName.trim(), categoryId, locationId, bulkQrCode.trim(),
+          ...(trackingMode === "units" ? [Number.isInteger(Number(initialQuantity)) && Number(initialQuantity) <= MAX_NUMBERED_UNITS_PER_CREATE && (emptyFamily ? Number(initialQuantity) === 0 : Number(initialQuantity) > 0)] : []),
+        ].filter(Boolean).length,
+        total: trackingMode === "units" ? 5 : 4,
       });
-    }, [addQty, bulkMode, bulkName, bulkQrCode, categoryId, locationId, onOperationChange, onProgressChange, selectedBulkSkuId]);
+    }, [addQty, bulkMode, bulkName, bulkQrCode, categoryId, locationId, onOperationChange, onProgressChange, selectedBulkSkuId, trackingMode, initialQuantity, emptyFamily]);
 
     const nameMissing = validationAttempted && bulkMode === "new" && !bulkName.trim();
     const categoryMissing = validationAttempted && bulkMode === "new" && !categoryId;
@@ -172,7 +186,7 @@ export const BulkItemForm = forwardRef<BulkFormHandle, Props>(
       && bulkMode === "existing"
       && (!Number.isInteger(parsedAddQuantity)
         || parsedAddQuantity < 1
-        || parsedAddQuantity > MAX_BULK_QUANTITY_PER_LINE);
+        || parsedAddQuantity > (trackingMode === "units" ? MAX_NUMBERED_UNITS_PER_CREATE : MAX_BULK_QUANTITY_PER_LINE));
     const parsedInitialQuantity = Number(initialQuantity);
     const initialQuantityMax = trackingMode === "units"
       ? MAX_NUMBERED_UNITS_PER_CREATE
@@ -188,6 +202,13 @@ export const BulkItemForm = forwardRef<BulkFormHandle, Props>(
     }
 
     useImperativeHandle(ref, () => ({
+      getDraft() { return { bulkMode, bulkName, categoryId, locationId, bulkQrCode, initialQuantity, selectedBulkSkuId, addQty, emptyFamily }; },
+      restoreDraft(draft) {
+        setBulkMode(draft.bulkMode); setBulkName(draft.bulkName); setCategoryId(draft.categoryId);
+        setLocationId(draft.locationId); setBulkQrCode(draft.bulkQrCode); setInitialQuantity(draft.initialQuantity);
+        setSelectedBulkSkuId(draft.selectedBulkSkuId); setAddQty(draft.addQty); setEmptyFamily(draft.emptyFamily);
+        setImageOpen(true);
+      },
       validate() {
         setValidationAttempted(true);
         if (bulkMode === "new") {
@@ -195,6 +216,9 @@ export const BulkItemForm = forwardRef<BulkFormHandle, Props>(
           if (!categoryId) return { message: "Select a category to continue.", fieldId: "new-bulk-item-category" };
           if (!locationId) return { message: "Select a location to continue.", fieldId: "new-bulk-item-location" };
           if (!bulkQrCode.trim()) return { message: "Enter or generate a QR code to continue.", fieldId: "new-bulk-item-qr-code" };
+          if (trackingMode === "units" && parsedInitialQuantity === 0 && !emptyFamily) {
+            return { message: "Enter the units received, or explicitly choose Create an empty family.", fieldId: "new-bulk-item-initial-quantity" };
+          }
           if (!Number.isInteger(parsedInitialQuantity) || parsedInitialQuantity < 0) {
             return { message: "Initial quantity must be a whole number of zero or more.", fieldId: "new-bulk-item-initial-quantity" };
           }
@@ -208,19 +232,20 @@ export const BulkItemForm = forwardRef<BulkFormHandle, Props>(
           }
         } else {
           if (existingItemsState === "loading") {
-            return { message: "Wait for count-tracked items to finish loading.", fieldId: "existing-bulk-item" };
+            return { message: "Wait for matching items to finish loading.", fieldId: "existing-bulk-item" };
           }
           if (existingItemsState === "error") {
-            return { message: "Retry count-tracked items before adding stock.", fieldId: "retry-existing-bulk-items" };
+            return { message: "Retry matching items before adding stock.", fieldId: "retry-existing-bulk-items" };
           }
           if (quantityOnlyBulkSkus.length === 0) {
-            return { message: "No active count-tracked items are available. Choose Create new item.", fieldId: "bulk-new" };
+            return { message: "No active matching items are available. Choose Create new item.", fieldId: "bulk-new" };
           }
+          if (selectedBulkSkuId && !quantityOnlyBulkSkus.some(sku => sku.id === selectedBulkSkuId)) return { message: "Choose an active family with this tracking style.", fieldId: "existing-bulk-item" };
           if (!selectedBulkSkuId) return { message: "Select an item to continue.", fieldId: "existing-bulk-item" };
           if (!Number.isInteger(parsedAddQuantity) || parsedAddQuantity < 1) {
             return { message: "Quantity received must be a whole number of at least 1.", fieldId: "existing-bulk-item-add-quantity" };
           }
-          if (parsedAddQuantity > MAX_BULK_QUANTITY_PER_LINE) {
+          if (parsedAddQuantity > initialQuantityMax) {
             return {
               message: `Quantity received cannot exceed ${MAX_BULK_QUANTITY_PER_LINE.toLocaleString()}.`,
               fieldId: "existing-bulk-item-add-quantity",
@@ -233,8 +258,10 @@ export const BulkItemForm = forwardRef<BulkFormHandle, Props>(
         if (bulkMode === "existing") {
           const sku = quantityOnlyBulkSkus.find((item) => item.id === selectedBulkSkuId);
           return {
-            url: `/api/bulk-skus/${selectedBulkSkuId}/adjust`,
-            body: { quantityDelta: parsedAddQuantity, reason: "Added through Add item" },
+            url: `/api/bulk-skus/${selectedBulkSkuId}/${trackingMode === "units" ? "units" : "adjust"}`,
+            body: trackingMode === "units"
+              ? { count: parsedAddQuantity, reason: "Received through Add item" }
+              : { quantityDelta: parsedAddQuantity, reason: "Received through Add item" },
             label: sku?.name || "Item",
             createsCatalogRecord: false,
             handoffHref: `/items/bulk-${selectedBulkSkuId}`,
@@ -264,10 +291,11 @@ export const BulkItemForm = forwardRef<BulkFormHandle, Props>(
         setCategoryId("");
         setLocationId("");
         setBulkQrCode("");
-        setInitialQuantity("0");
+        setInitialQuantity("1");
         setSelectedBulkSkuId("");
         setAddQty("1");
-        setImageOpen(false);
+        setImageOpen(true);
+        setEmptyFamily(false);
         setValidationAttempted(false);
       },
       focus() {
@@ -277,25 +305,23 @@ export const BulkItemForm = forwardRef<BulkFormHandle, Props>(
     }));
 
     return (
-      <fieldset disabled={disabled} className="contents" onInputCapture={onInteract}>
-        {trackingMode === "quantity" && (
+      <fieldset disabled={disabled} className="contents" onChange={onInteract}>
+        {(
           <FormSection
-            title="Stock action"
+            title="Receiving action"
             badge={bulkMode === "new" ? "Create new" : "Add stock"}
             badgeVariant={bulkMode === "new" ? "green" : "orange"}
-            description="Create a count-tracked record or increase stock for an existing one."
+            description="Create a new family or receive a shipment into an existing one."
           >
             <RadioGroup
               name="bulk-mode"
+              aria-label="Receiving action"
               value={bulkMode}
               onValueChange={(value) => {
                 const nextMode = value as BulkMode;
                 onInteract();
                 setValidationAttempted(false);
                 setBulkMode(nextMode);
-                if (nextMode === "existing") {
-                  onClearImage();
-                }
               }}
               disabled={disabled}
               className="grid gap-2 sm:grid-cols-2"
@@ -304,7 +330,7 @@ export const BulkItemForm = forwardRef<BulkFormHandle, Props>(
                 <RadioGroupItem value="new" id="bulk-new" className="mt-0.5" />
                 <span>
                   <span className="block font-medium">Create new item</span>
-                  <span className="mt-1 block text-xs font-normal leading-relaxed text-muted-foreground">Start one new count-tracked catalog row.</span>
+                  <span className="mt-1 block text-xs font-normal leading-relaxed text-muted-foreground">Create a new product family.</span>
                 </span>
               </Label>
               <Label htmlFor="bulk-existing" className="min-h-16 cursor-pointer items-start gap-3 rounded-md border border-border/60 p-3 has-[[data-state=checked]]:border-primary/50 has-[[data-state=checked]]:bg-primary/5">
@@ -326,7 +352,7 @@ export const BulkItemForm = forwardRef<BulkFormHandle, Props>(
               badgeVariant={trackingMode === "units" ? "purple" : "green"}
               description={trackingMode === "units"
                 ? "Name, category, location, and family QR create one catalog row with numbered units beneath it."
-                : "Name, category, location, and stock QR create one count-tracked catalog row."}
+                : "Name, category, location, and stock QR create one stock item."}
             >
               <FormRow label="Item name" htmlFor="new-bulk-item-name" required>
                 <Input
@@ -415,11 +441,16 @@ export const BulkItemForm = forwardRef<BulkFormHandle, Props>(
                 {qrCodeMissing && <FormFieldError id="new-bulk-item-qr-code-error">QR code is required.</FormFieldError>}
               </FormRow>
 
-              <FormRow label={trackingMode === "units" ? "Initial units" : "Initial quantity"} htmlFor="new-bulk-item-initial-quantity">
+              {trackingMode === "units" && <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="empty-item-family">Create an empty family (no units received)</Label>
+                <Switch id="empty-item-family" checked={emptyFamily} onCheckedChange={value => { onInteract(); setEmptyFamily(value); setInitialQuantity(value ? "0" : "1"); }} />
+              </div>}
+              <FormRow label={trackingMode === "units" ? "Units received" : "Initial quantity"} htmlFor="new-bulk-item-initial-quantity">
                 <Input
                   id="new-bulk-item-initial-quantity"
                   name="initialQuantity"
                   value={initialQuantity}
+                  disabled={trackingMode === "units" && emptyFamily}
                   onChange={(event) => setInitialQuantity(event.target.value)}
                   type="number"
                   min="0"
@@ -456,6 +487,7 @@ export const BulkItemForm = forwardRef<BulkFormHandle, Props>(
             >
               <ItemImageDraftField
                 image={image}
+              suggestionStatus={imageSuggestionStatus}
                 disabled={disabled}
                 onChoose={() => onChooseImage(bulkName)}
                 onClear={onClearImage}
@@ -465,18 +497,18 @@ export const BulkItemForm = forwardRef<BulkFormHandle, Props>(
           </>
         ) : (
           <FormSection
-            title="Add stock"
+            title={trackingMode === "units" ? "Receive numbered units" : "Add stock"}
             badge="Existing item"
             badgeVariant="orange"
-            description="Choose the count-tracked item and record how many units arrived."
+            description="Choose the existing family and record how many arrived."
           >
             {existingItemsState === "loading" ? (
-              <OperationalLoadingState title="Loading count-tracked items" rows={2} className="px-0 py-1" />
+              <OperationalLoadingState title="Loading matching items" rows={2} className="px-0 py-1" />
             ) : existingItemsState === "error" ? (
               <Alert variant="destructive">
                 <AlertCircleIcon className="size-4" />
                 <AlertDescription className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <span>{existingItemsError || "Count-tracked items could not load."}</span>
+                  <span>{existingItemsError || "Matching items could not load."}</span>
                   <Button
                     id="retry-existing-bulk-items"
                     type="button"
@@ -489,7 +521,7 @@ export const BulkItemForm = forwardRef<BulkFormHandle, Props>(
                 </AlertDescription>
               </Alert>
             ) : quantityOnlyBulkSkus.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No active count-tracked items are available. Create one instead.</p>
+              <p className="text-sm text-muted-foreground">No active matching items are available. Create one instead.</p>
             ) : (
               <>
                 <FormRow label="Item" htmlFor="existing-bulk-item" required>
@@ -536,7 +568,7 @@ export const BulkItemForm = forwardRef<BulkFormHandle, Props>(
                     name="addQuantity"
                     type="number"
                     min="1"
-                    max={MAX_BULK_QUANTITY_PER_LINE}
+                    max={initialQuantityMax}
                     step="1"
                     value={addQty}
                     onChange={(event) => setAddQty(event.target.value)}
@@ -548,7 +580,7 @@ export const BulkItemForm = forwardRef<BulkFormHandle, Props>(
                   />
                   {addQuantityInvalid && (
                     <FormFieldError id="existing-bulk-item-add-quantity-error">
-                      Enter a whole number from 1 to {MAX_BULK_QUANTITY_PER_LINE.toLocaleString()}.
+                      Enter a whole number from 1 to {initialQuantityMax.toLocaleString()}.
                     </FormFieldError>
                   )}
                 </FormRow>

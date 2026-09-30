@@ -1,0 +1,112 @@
+{
+  "title": "An easier start on iOS",
+  "eyebrow": "Wisconsin Creative \u00b7 Local native review",
+  "lede": "Create an account with less repetition, then fill in profile details one clear step at a time.",
+  "stats": [
+    {
+      "k": "Password entry",
+      "v": "2 \u2192 1",
+      "n": "Visibility toggle replaces confirmation."
+    },
+    {
+      "k": "Verification",
+      "v": "53 tests passed",
+      "n": "8 native, 3 simulator UI, 42 API/source tests."
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Matched before and after",
+      "note": "Same iPhone 18 Pro Max, local fixtures, light appearance, default text size, initial scroll, and hidden software keyboard. Captured from separate source snapshots; receipts below.",
+      "pairs": [
+        {
+          "title": "Create an account",
+          "before": "registration-before.png",
+          "after": "registration-after.png",
+          "beforeEvidence": "registration-before.evidence.json",
+          "afterEvidence": "registration-after.evidence.json"
+        },
+        {
+          "title": "Student contact details",
+          "before": "welcomeStudent-before.png",
+          "after": "welcomeStudent-after.png",
+          "beforeEvidence": "welcomeStudent-before.evidence.json",
+          "afterEvidence": "welcomeStudent-after.evidence.json"
+        },
+        {
+          "title": "Staff email setup",
+          "before": "welcomeStaff-before.png",
+          "after": "welcomeStaff-after.png",
+          "beforeEvidence": "welcomeStaff-before.evidence.json",
+          "afterEvidence": "welcomeStaff-after.evidence.json"
+        },
+        {
+          "title": "Optional sizes",
+          "before": "welcomeApparel-before.png",
+          "after": "welcomeApparel-after.png",
+          "beforeEvidence": "welcomeApparel-before.evidence.json",
+          "afterEvidence": "welcomeApparel-after.evidence.json"
+        }
+      ]
+    },
+    {
+      "heading": "Recovery and optional photo",
+      "note": "After-only interaction evidence. Writes are deliberately rejected by the fixture; no real account or profile was changed.",
+      "shots": [
+        {
+          "image": "interactions/618CEAB4-0012-452E-987A-BBBA013017BE.png",
+          "title": "Phone save recovery",
+          "cap": "The phone remains editable after a rejected save."
+        },
+        {
+          "image": "interactions/8E095359-5E93-4575-95EA-EA441A626B30.png",
+          "title": "Optional photo",
+          "cap": "Skip sizes, then finish without a photo or return to sizes."
+        }
+      ]
+    },
+    {
+      "heading": "Larger text",
+      "note": "After-only Accessibility Large captures. Long forms scroll; the profile footer remains available. This is not a full accessibility audit.",
+      "shots": [
+        {
+          "image": "registration-accessibility.png",
+          "title": "Registration at Accessibility Large"
+        },
+        {
+          "image": "welcomeApparel-accessibility.png",
+          "title": "Sizes at Accessibility Large"
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Less repetition",
+      "was": "Enter and confirm a password; short passwords appear as errors while typing.",
+      "now": "Enter once, reveal if needed, and see neutral length guidance."
+    },
+    {
+      "h": "A clearer path",
+      "was": "Step and field counts compete; actions share a compact row.",
+      "now": "One step count, a full-width primary action, and explicit optional details."
+    },
+    {
+      "h": "Reliable data entry",
+      "was": "Pasted +1 numbers lose a digit; stale resume hints can introduce hidden steps.",
+      "now": "Preserve the ten local digits, constrain resume to role-visible steps, and continue in displayed order."
+    }
+  ],
+  "verification": [
+    "Wisconsin simulator build and 8 native model/draft tests passed.",
+    "3 XCTest UI tests passed: password entry/reveal and registration failure, phone save recovery, optional-step navigation.",
+    "42 focused Vitest API/source-contract tests passed.",
+    "TypeScript, targeted ESLint, native drift, docs verification, and diff whitespace checks passed.",
+    "The phone regression fails against preserved original Swift source: (160) 855-5121 instead of (608) 555-1212."
+  ],
+  "notes": [
+    "Local, uncommitted changes only; unrelated work preserved.",
+    "Authenticated account creation and durable profile saves are not proven by fixtures. Physical-device AutoFill and photo selection/crop remain unverified.",
+    "No time-to-complete claim, production deployment, or TestFlight distribution."
+  ]
+}

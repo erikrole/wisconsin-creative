@@ -1,0 +1,3088 @@
+"use client";
+
+import { FormEvent, type ComponentType, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { AlertCircleIcon, CheckCircle2Icon, CopyPlusIcon, LayersIcon, PackageIcon, ScanLineIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge, type BadgeProps } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Sheet,
+  SheetBody,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import ChooseImageModal from "@/components/ChooseImageModal";
+import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
+import { cn } from "@/lib/utils";
+
+import type {
+  FormValidationIssue,
+  NewItemSheetProps,
+  ItemKind,
+  RequiredFieldProgress,
+  SerializedIntakeTemplate,
+} from "./new-item-sheet/types";
+import { SectionHeading, SuccessFlash } from "@/components/form-layout";
+import {
+  SerializedItemForm,
+  type SerializedFormHandle,
+  type SerializedSubmitEntry,
+} from "./new-item-sheet/SerializedItemForm";
+import { BulkItemForm, type BulkFormHandle } from "./new-item-sheet/BulkItemForm";
+import {
+  persistDraftItemImage,
+  type DraftItemImage,
+} from "@/lib/item-image-draft";
+import { getRepeatTagBase } from "./new-item-sheet/repeat-tags";
+import {
+  buildSerializedIntakeTemplate,
+  type SerializedTemplateSource,
+} from "./new-item-sheet/serialized-template";
+import { serializedUnitFieldId } from "./new-item-sheet/serialized-batch";
+
+type ImageStatus = "none" | "saved" | "failed";
+
+type CreatedHandoff = {
+  kind: ItemKind;
+  label: string;
+  href: string;
+  openLabel: string;
+  successMessage: string;
+  description: string;
+  createdRecord: boolean;
+  imageEndpoint: string | null;
+  failedImageEndpoints?: string[];
+  imageStatus: ImageStatus;
+  imageError: string;
+  repeatTemplate?: SerializedIntakeTemplate;
+  continuationTemplate?: SerializedIntakeTemplate;
+  heading?: string;
+  batch?: {
+    attempted: number;
+    created: number;
+    failures: SerializedBatchFailure[];
+  };
+};
+
+type SerializedBatchFailure = {
+  unitKey: string;
+  assetTag: string;
+  message: string;
+  fieldId: string;
+};
+
+type SubmissionProgress = {
+  phase: "records" | "images";
+  current: number;
+  total: number;
+};
+
+type ItemCreateResponse = {
+  data?: {
+    id?: string;
+  };
+};
+
+type SerializedSourceResponse = {
+  data?: unknown;
+};
+
+type RelatedAssetResponse = {
+  data?: Array<{ assetTag?: string | null }>;
+};
+
+function parseSerializedTemplateSource(value: unknown): SerializedTemplateSource | null {
+  if (!value || typeof value !== "object") return null;
+  const source = value as Record<string, unknown>;
+  if (typeof source.id !== "string" || typeof source.assetTag !== "string") return null;
+  const nestedId = (nested: unknown) => {
+    if (!nested || typeof nested !== "object") return null;
+    const id = (nested as Record<string, unknown>).id;
+    return typeof id === "string" ? { id } : null;
+  };
+  return {
+    id: source.id,
+    assetTag: source.assetTag,
+    name: typeof source.name === "string" ? source.name : null,
+    brand: typeof source.brand === "string" ? source.brand : null,
+    model: typeof source.model === "string" ? source.model : null,
+    linkUrl: typeof source.linkUrl === "string" ? source.linkUrl : null,
+    imageUrl: typeof source.imageUrl === "string" ? source.imageUrl : null,
+    location: nestedId(source.location),
+    category: nestedId(source.category),
+    department: nestedId(source.department),
+    parentAsset: nestedId(source.parentAsset),
+    availableForReservation: typeof source.availableForReservation === "boolean" ? source.availableForReservation : true,
+    availableForCheckout: typeof source.availableForCheckout === "boolean" ? source.availableForCheckout : true,
+    availableForCustody: typeof source.availableForCustody === "boolean" ? source.availableForCustody : true,
+  };
+}
+
+type KindOption = {
+  kind: ItemKind;
+  id: string;
+  title: string;
+  badge: string;
+  badgeVariant: BadgeProps["variant"];
+  description: string;
+  examples: string;
+  outcome: string;
+  icon: ComponentType<{ className?: string }>;
+};
+
+const KIND_OPTIONS: KindOption[] = [
+  {
+    kind: "standard",
+    id: "kind-standard",
+    title: "Standard",
+    badge: "Serialized",
+    badgeVariant: "blue",
+    description: "Track each item separately.",
+    examples: "Cameras, lenses, laptops",
+    outcome: "Create one item or a batch, each with its own asset tag and QR code.",
+    icon: ScanLineIcon,
+  },
+  {
+    kind: "units",
+    id: "kind-units",
+    title: "Units",
+    badge: "Numbered family",
+    badgeVariant: "purple",
+    description: "Scan units from a shared pool.",
+    examples: "Batteries, radios, card readers",
+    outcome: "Creates a family record plus numbered units for kiosk pickup and return.",
+    icon: LayersIcon,
+  },
+  {
+    kind: "quantity",
+    id: "kind-quantity",
+    title: "Quantity",
+    badge: "Count stock",
+    badgeVariant: "green",
+    description: "Track a count without scanning units.",
+    examples: "Tape, zip ties, cleaning supplies",
+    outcome: "Creates or updates one stock record and tracks the count on hand.",
+    icon: PackageIcon,
+  },
+];
+
+function optionForKind(kind: ItemKind) {
+  return KIND_OPTIONS.find((option) => option.kind === kind) ?? KIND_OPTIONS[0]!;
+}
+
+function payloadSuccessMessage(label: string, createdRecord: boolean) {
+  if (!createdRecord) {
+    return `"${label}" stock updated successfully.`;
+  }
+  return `"${label}" created successfully.`;
+}
+
+function batchFailureFieldId(entry: SerializedSubmitEntry, message: string) {
+  if (message.startsWith("Serial number")) {
+    return serializedUnitFieldId(entry.unit, "serial");
+  }
+  if (message.startsWith("QR code")) {
+    return serializedUnitFieldId(entry.unit, "qr");
+  }
+  return serializedUnitFieldId(entry.unit, "asset-tag");
+}
+
+function SummaryRow({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4 px-2 py-3">
+      <span className="mt-0.5 shrink-0 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+        {label}
+      </span>
+      <div className="min-w-0 text-right text-sm font-medium">{children}</div>
+    </div>
+  );
+}
+
+export function NewItemSheet({
+  open,
+  onOpenChange,
+  locations,
+  departments,
+  categories,
+  onCreated,
+  sourceAssetId = null,
+}: NewItemSheetProps) {
+  const router = useRouter();
+  const [kind, setKind] = useState<ItemKind>("standard");
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [successMsg, setSuccessMsg] = useState("");
+  const submittingRef = useRef(false);
+  const successTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const [createdHandoff, setCreatedHandoff] = useState<CreatedHandoff | null>(null);
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [imageSearchQuery, setImageSearchQuery] = useState("");
+  const [imageDraft, setImageDraft] = useState<DraftItemImage | null>(null);
+  const [imageRetrying, setImageRetrying] = useState(false);
+  const [requiredProgress, setRequiredProgress] = useState<RequiredFieldProgress>({ completed: 0, total: 4 });
+  const [bulkOperation, setBulkOperation] = useState<"create" | "adjust">("create");
+  const [dirty, setDirty] = useState(false);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+  const [pendingKind, setPendingKind] = useState<ItemKind | null>(null);
+  const [serializedTemplate, setSerializedTemplate] = useState<SerializedIntakeTemplate | null>(null);
+  const [sourceLoading, setSourceLoading] = useState(false);
+  const [sourceLoadError, setSourceLoadError] = useState("");
+  const [sourceLoadVersion, setSourceLoadVersion] = useState(0);
+  const [serializedUnitCount, setSerializedUnitCount] = useState(1);
+  const [submissionProgress, setSubmissionProgress] = useState<SubmissionProgress | null>(null);
+  const [deferredImageEndpoints, setDeferredImageEndpoints] = useState<string[]>([]);
+  const [batchContinuationTemplate, setBatchContinuationTemplate] = useState<SerializedIntakeTemplate | null>(null);
+
+  const serializedRef = useRef<SerializedFormHandle>(null);
+  const bulkRef = useRef<BulkFormHandle>(null);
+  const sheetBodyRef = useRef<HTMLDivElement>(null);
+  const sourceLoadRef = useRef(0);
+  const resetAll = useCallback(() => {
+    sourceLoadRef.current += 1;
+    setError("");
+    setSuccessMsg("");
+    setKind("standard");
+    setCreatedHandoff(null);
+    setShowImageModal(false);
+    setImageSearchQuery("");
+    setImageDraft(null);
+    setImageRetrying(false);
+    setRequiredProgress({ completed: 0, total: 4 });
+    setBulkOperation("create");
+    setDirty(false);
+    setShowDiscardConfirm(false);
+    setPendingKind(null);
+    setSerializedTemplate(null);
+    setSourceLoading(false);
+    setSourceLoadError("");
+    setSerializedUnitCount(1);
+    setSubmissionProgress(null);
+    setDeferredImageEndpoints([]);
+    setBatchContinuationTemplate(null);
+    serializedRef.current?.reset();
+    bulkRef.current?.reset();
+  }, []);
+
+  function showSuccessMessage(msg: string) {
+    setSuccessMsg(msg);
+    clearTimeout(successTimer.current);
+    successTimer.current = setTimeout(() => setSuccessMsg(""), 3000);
+  }
+
+  useEffect(() => () => clearTimeout(successTimer.current), []);
+
+  useEffect(() => {
+    if (!open || !sourceAssetId) return;
+    const requestId = ++sourceLoadRef.current;
+    const controller = new AbortController();
+    setKind("standard");
+    setSerializedTemplate(null);
+    setSourceLoadError("");
+    setSourceLoading(true);
+    setImageDraft(null);
+    setSerializedUnitCount(1);
+    setSubmissionProgress(null);
+    setDeferredImageEndpoints([]);
+    setBatchContinuationTemplate(null);
+
+    void (async () => {
+      try {
+        const sourceRes = await fetch(`/api/assets/${sourceAssetId}`, { signal: controller.signal });
+        if (handleAuthRedirect(sourceRes)) return;
+        if (!sourceRes.ok) {
+          throw new Error(await parseErrorMessage(sourceRes, "Could not load the source item."));
+        }
+        const sourceJson = await parseJsonSafely<SerializedSourceResponse>(sourceRes);
+        const source = parseSerializedTemplateSource(sourceJson?.data);
+        if (!source) {
+          throw new Error("The source item returned an unreadable response.");
+        }
+        if (source.parentAsset) {
+          throw new Error("Attached items need a parent selection. Start a blank item instead.");
+        }
+
+        let relatedAssets: Array<{ assetTag?: string | null }> = [];
+        const repeatBase = getRepeatTagBase(source.assetTag);
+        try {
+          const relatedRes = await fetch(
+            `/api/assets?q=${encodeURIComponent(repeatBase)}&limit=200&include_accessories=true`,
+            { signal: controller.signal },
+          );
+          if (handleAuthRedirect(relatedRes)) return;
+          if (relatedRes.ok) {
+            const relatedJson = await parseJsonSafely<RelatedAssetResponse>(relatedRes);
+            if (Array.isArray(relatedJson?.data)) relatedAssets = relatedJson.data;
+          }
+        } catch (relatedError) {
+          if (relatedError instanceof Error && relatedError.name === "AbortError") return;
+          // The source tag still provides a safe sequential fallback.
+        }
+
+        if (requestId !== sourceLoadRef.current || controller.signal.aborted) return;
+        const template = buildSerializedIntakeTemplate(source, relatedAssets);
+        setSerializedTemplate(template);
+        setImageDraft(
+          typeof source.imageUrl === "string" && source.imageUrl.startsWith("https://")
+            ? { kind: "remote", url: source.imageUrl, previewUrl: source.imageUrl }
+            : null,
+        );
+        setImageSearchQuery(template.productLabel);
+        setDirty(true);
+      } catch (sourceError) {
+        if (sourceError instanceof Error && sourceError.name === "AbortError") return;
+        if (requestId !== sourceLoadRef.current) return;
+        setSourceLoadError(sourceError instanceof Error ? sourceError.message : "Could not load the source item.");
+      } finally {
+        if (requestId === sourceLoadRef.current) setSourceLoading(false);
+      }
+    })();
+
+    return () => controller.abort();
+  }, [open, sourceAssetId, sourceLoadVersion]);
+
+  const markInteraction = useCallback(() => {
+    setError("");
+    setDirty(true);
+  }, []);
+
+  function focusValidationIssue(issue: FormValidationIssue) {
+    setError(issue.message);
+    if (kind === "standard") {
+      serializedRef.current?.focusField(issue.fieldId);
+    } else {
+      bulkRef.current?.focusField(issue.fieldId);
+    }
+  }
+
+  function showFormError(message: string, fieldId?: string) {
+    setError(message);
+    if (fieldId) {
+      if (kind === "standard") serializedRef.current?.focusField(fieldId);
+      else bulkRef.current?.focusField(fieldId);
+      return;
+    }
+    requestAnimationFrame(() => sheetBodyRef.current?.scrollTo({ top: 0, behavior: "smooth" }));
+  }
+
+  function startBlankSerializedItem() {
+    sourceLoadRef.current += 1;
+    setKind("standard");
+    setSerializedTemplate(null);
+    setSourceLoading(false);
+    setSourceLoadError("");
+    setImageDraft(null);
+    setImageSearchQuery("");
+    setRequiredProgress({ completed: 0, total: 4 });
+    setSerializedUnitCount(1);
+    setSubmissionProgress(null);
+    setDeferredImageEndpoints([]);
+    setBatchContinuationTemplate(null);
+    setDirty(false);
+    serializedRef.current?.reset();
+    requestAnimationFrame(() => serializedRef.current?.focus());
+  }
+
+  function changeKind(nextKind: ItemKind) {
+    sourceLoadRef.current += 1;
+    serializedRef.current?.reset();
+    bulkRef.current?.reset();
+    setError("");
+    setSuccessMsg("");
+    setSerializedTemplate(null);
+    setSourceLoading(false);
+    setSourceLoadError("");
+    setImageDraft(null);
+    setImageSearchQuery("");
+    setRequiredProgress({ completed: 0, total: 4 });
+    setSerializedUnitCount(1);
+    setSubmissionProgress(null);
+    setDeferredImageEndpoints([]);
+    setBatchContinuationTemplate(null);
+    setBulkOperation("create");
+    setDirty(false);
+    setKind(nextKind);
+    setPendingKind(null);
+  }
+
+  function closeAndReset() {
+    onOpenChange(false);
+    resetAll();
+  }
+
+  function requestClose() {
+    if (submitting) return;
+    if (createdHandoff) {
+      onCreated();
+      closeAndReset();
+      return;
+    }
+    if (dirty) {
+      setShowDiscardConfirm(true);
+      return;
+    }
+    closeAndReset();
+  }
+
+  function finishCreatedHandoff(mode: "another" | "similar" | "remaining" | "open" | "list") {
+    if (!createdHandoff) return;
+    const handoff = createdHandoff;
+    onCreated();
+    if (mode === "remaining" && handoff.batch?.failures.length) {
+      setError("");
+      setSuccessMsg("");
+      setCreatedHandoff(null);
+      setImageRetrying(false);
+      setSubmissionProgress(null);
+      setDeferredImageEndpoints(handoff.failedImageEndpoints ?? []);
+      setBatchContinuationTemplate(handoff.continuationTemplate ?? null);
+      setDirty(true);
+      showSuccessMessage(`${handoff.batch.created} created. Only the ${handoff.batch.failures.length} unfinished ${handoff.batch.failures.length === 1 ? "item remains" : "items remain"}.`);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => serializedRef.current?.focus());
+      });
+    } else if (mode === "similar" && handoff.repeatTemplate) {
+      setError("");
+      setSuccessMsg("");
+      setKind("standard");
+      setCreatedHandoff(null);
+      setSerializedTemplate(handoff.repeatTemplate);
+      setImageRetrying(false);
+      setRequiredProgress({ completed: 0, total: 4 });
+      setSerializedUnitCount(handoff.repeatTemplate.batchSize ?? 1);
+      setSubmissionProgress(null);
+      setDeferredImageEndpoints([]);
+      setBatchContinuationTemplate(null);
+      setBulkOperation("create");
+      setDirty(true);
+      showSuccessMessage(`Product details kept from "${handoff.label}". Enter the new serials and shipment details.`);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => serializedRef.current?.focus());
+      });
+    } else if (mode === "another") {
+      resetAll();
+      showSuccessMessage(handoff.createdRecord
+        ? `"${handoff.label}" created. Ready for the next item.`
+        : `"${handoff.label}" stock updated. Ready for the next item.`);
+      requestAnimationFrame(() => {
+        serializedRef.current?.focus();
+      });
+    } else {
+      onOpenChange(false);
+      resetAll();
+      if (mode === "open") {
+        router.push(handoff.href);
+      }
+    }
+  }
+
+  async function persistCreatedImage(endpoint: string) {
+    if (!imageDraft) {
+      return { imageStatus: "none" as const, imageError: "" };
+    }
+
+    try {
+      await persistDraftItemImage(endpoint, imageDraft);
+      return { imageStatus: "saved" as const, imageError: "" };
+    } catch (imageError) {
+      return {
+        imageStatus: "failed" as const,
+        imageError: imageError instanceof Error
+          ? imageError.message
+          : "The item was created, but its image could not be saved.",
+      };
+    }
+  }
+
+  async function retryCreatedImage() {
+    if (!createdHandoff || !imageDraft || imageRetrying) return;
+    const batchEndpoints = createdHandoff.failedImageEndpoints ?? [];
+    if (batchEndpoints.length === 0 && !createdHandoff.imageEndpoint) return;
+    setImageRetrying(true);
+    if (batchEndpoints.length === 0 && createdHandoff.imageEndpoint) {
+      const imageResult = await persistCreatedImage(createdHandoff.imageEndpoint);
+      setCreatedHandoff((current) => current
+        ? { ...current, ...imageResult }
+        : current);
+    } else {
+      const failedEndpoints: string[] = [];
+      let firstError = "";
+      for (const endpoint of batchEndpoints) {
+        const result = await persistCreatedImage(endpoint);
+        if (result.imageStatus === "failed") {
+          failedEndpoints.push(endpoint);
+          firstError ||= result.imageError;
+        }
+      }
+      setCreatedHandoff((current) => current
+        ? {
+            ...current,
+            failedImageEndpoints: failedEndpoints,
+            imageStatus: failedEndpoints.length === 0 ? "saved" : "failed",
+            imageError: failedEndpoints.length === 0
+              ? ""
+              : `${failedEndpoints.length} ${failedEndpoints.length === 1 ? "image still needs" : "images still need"} attention. ${firstError}`,
+          }
+        : current);
+    }
+    setImageRetrying(false);
+  }
+
+  async function submitSerializedBatch(
+    entries: SerializedSubmitEntry[],
+    repeatTemplate: SerializedIntakeTemplate,
+  ) {
+    const created: Array<{ id: string | null; assetTag: string; imageEndpoint: string | null }> = [];
+    const failures: SerializedBatchFailure[] = [];
+
+    for (let index = 0; index < entries.length; index += 1) {
+      const entry = entries[index]!;
+      setSubmissionProgress({ phase: "records", current: index + 1, total: entries.length });
+
+      let res: globalThis.Response;
+      try {
+        res = await fetch("/api/assets", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(entry.body),
+        });
+      } catch {
+        const message = "The request could not reach the server. Check your connection and try again.";
+        for (const remaining of entries.slice(index)) {
+          failures.push({
+            unitKey: remaining.unit.key,
+            assetTag: remaining.unit.assetTag,
+            message,
+            fieldId: serializedUnitFieldId(remaining.unit, "asset-tag"),
+          });
+        }
+        break;
+      }
+
+      if (handleAuthRedirect(res)) {
+        const unfinishedKeys = [
+          ...failures.map((failure) => failure.unitKey),
+          ...entries.slice(index).map((remaining) => remaining.unit.key),
+        ];
+        serializedRef.current?.retainUnits(unfinishedKeys);
+        setSerializedUnitCount(unfinishedKeys.length);
+        if (created.length > 0) onCreated();
+        return;
+      }
+
+      if (!res.ok) {
+        const message = await parseErrorMessage(res, "Failed to create this item. Please try again.");
+        failures.push({
+          unitKey: entry.unit.key,
+          assetTag: entry.unit.assetTag,
+          message,
+          fieldId: batchFailureFieldId(entry, message),
+        });
+        continue;
+      }
+
+      const json = await parseJsonSafely<ItemCreateResponse>(res);
+      const createdId = json?.data?.id;
+      created.push({
+        id: createdId ?? null,
+        assetTag: entry.unit.assetTag,
+        imageEndpoint: imageDraft && createdId ? `/api/assets/${createdId}/image` : null,
+      });
+    }
+
+    if (failures.length > 0) {
+      serializedRef.current?.retainUnits(failures.map((failure) => failure.unitKey));
+      setSerializedUnitCount(failures.length);
+    }
+
+    if (created.length === 0) {
+      setDirty(true);
+      const firstFailure = failures[0];
+      if (firstFailure) {
+        showFormError(
+          `${failures.length} ${failures.length === 1 ? "item needs" : "items need"} attention. ${firstFailure.assetTag}: ${firstFailure.message}`,
+          firstFailure.fieldId,
+        );
+      } else {
+        showFormError("No items were created. Review the unit identities and try again.");
+        requestAnimationFrame(() => serializedRef.current?.focus());
+      }
+      return;
+    }
+
+    const failedImageEndpoints: string[] = [];
+    let firstImageError = "";
+    const imageEndpoints = [
+      ...deferredImageEndpoints,
+      ...created.flatMap((createdItem) => createdItem.imageEndpoint ? [createdItem.imageEndpoint] : []),
+    ];
+    if (imageDraft) {
+      for (let index = 0; index < imageEndpoints.length; index += 1) {
+        const endpoint = imageEndpoints[index]!;
+        setSubmissionProgress({ phase: "images", current: index + 1, total: imageEndpoints.length });
+        const imageResult = await persistCreatedImage(endpoint);
+        if (imageResult.imageStatus === "failed") {
+          failedImageEndpoints.push(endpoint);
+          firstImageError ||= imageResult.imageError;
+        }
+      }
+    }
+    setDeferredImageEndpoints([]);
+    setBatchContinuationTemplate(null);
+
+    const productLabel = repeatTemplate.productLabel || created[0]!.assetTag || "Item";
+    const firstLinkedItem = created.find((item) => item.id);
+    const allRecordsCreated = failures.length === 0;
+    const imageStatus: ImageStatus = !imageDraft || imageEndpoints.length === 0
+      ? "none"
+      : failedImageEndpoints.length > 0
+        ? "failed"
+        : "saved";
+    setCreatedHandoff({
+      kind: "standard",
+      label: productLabel,
+      heading: `${created.length} ${productLabel} ${created.length === 1 ? "item is" : "items are"} ready`,
+      href: firstLinkedItem?.id ? `/items/${firstLinkedItem.id}` : "/items",
+      openLabel: firstLinkedItem ? "Open first item" : "Open item list",
+      successMessage: allRecordsCreated
+        ? `All ${created.length} physical items were created successfully.`
+        : `${created.length} created successfully; ${failures.length} ${failures.length === 1 ? "item needs" : "items need"} attention.`,
+      description: allRecordsCreated
+        ? "Review the first item, add another matching shipment, or return to the refreshed list."
+        : "Fix only the unfinished rows. The items already created will not be submitted again.",
+      createdRecord: true,
+      imageEndpoint: null,
+      failedImageEndpoints,
+      imageStatus,
+      imageError: failedImageEndpoints.length > 0
+        ? `${failedImageEndpoints.length} of ${imageEndpoints.length} ${failedImageEndpoints.length === 1 ? "image needs" : "images need"} attention. ${firstImageError}`
+        : "",
+      repeatTemplate: allRecordsCreated ? repeatTemplate : undefined,
+      continuationTemplate: repeatTemplate,
+      batch: {
+        attempted: entries.length,
+        created: created.length,
+        failures,
+      },
+    });
+    setDirty(!allRecordsCreated);
+  }
+
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError("");
+    setSuccessMsg("");
+
+    if (submittingRef.current) return;
+
+    try {
+      let res: globalThis.Response;
+      let label = "";
+      let bulkHandoffHref: string | null = null;
+      let bulkHandoffLabel = "Open item";
+      let createsCatalogRecord = true;
+      let repeatTemplate: SerializedIntakeTemplate | undefined;
+
+      if (kind === "standard") {
+        const validationIssue = serializedRef.current?.validate();
+        if (validationIssue) {
+          focusValidationIssue(validationIssue);
+          return;
+        }
+        const entries = serializedRef.current!.getSubmitEntries();
+        repeatTemplate = batchContinuationTemplate ?? serializedRef.current!.getRepeatTemplate();
+        if (entries.length > 1 || batchContinuationTemplate || deferredImageEndpoints.length > 0) {
+          setSubmitting(true);
+          submittingRef.current = true;
+          await submitSerializedBatch(entries, repeatTemplate);
+          return;
+        }
+        const body = entries[0]!.body;
+        label = (body.assetTag as string) || (body.name as string) || "Asset";
+
+        setSubmitting(true);
+        submittingRef.current = true;
+        res = await fetch("/api/assets", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+      } else {
+        const validationIssue = bulkRef.current?.validate();
+        if (validationIssue) {
+          focusValidationIssue(validationIssue);
+          return;
+        }
+        const payload = bulkRef.current!.getSubmitPayload();
+        if (!payload) return;
+        label = payload.label;
+        bulkHandoffHref = payload.handoffHref ?? null;
+        bulkHandoffLabel = payload.openLabel ?? bulkHandoffLabel;
+        createsCatalogRecord = payload.createsCatalogRecord;
+
+        setSubmitting(true);
+        submittingRef.current = true;
+        res = await fetch(payload.url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload.body),
+        });
+      }
+
+      if (handleAuthRedirect(res)) return;
+
+      if (!res.ok) {
+        const message = await parseErrorMessage(res, bulkOperation === "adjust"
+          ? "Failed to add stock. Please try again."
+          : "Failed to create item. Please try again.");
+        const conflictFieldId = kind === "standard"
+          ? message.startsWith("Asset tag")
+            ? "new-item-asset-tag"
+            : message.startsWith("Serial number")
+              ? "new-item-serial-number"
+              : message.startsWith("QR code")
+                ? "new-item-qr-code"
+                : undefined
+          : undefined;
+        showFormError(message, conflictFieldId);
+        return;
+      }
+
+      const json = await parseJsonSafely<ItemCreateResponse>(res);
+
+      const createdId = json?.data?.id;
+      const handoffHref = createsCatalogRecord
+        ? createdId
+          ? kind === "standard"
+            ? `/items/${createdId}`
+            : `/items/bulk-${createdId}`
+          : null
+        : bulkHandoffHref;
+      if (!handoffHref) {
+        onCreated();
+        setDirty(false);
+        showFormError(
+          `The item was ${createsCatalogRecord ? "created" : "updated"}, but its item link is unavailable. Refresh the list before continuing.`,
+        );
+        return;
+      }
+
+      const imageEndpoint = imageDraft && createsCatalogRecord && createdId
+        ? kind === "standard"
+          ? `/api/assets/${createdId}/image`
+          : `/api/bulk-skus/${createdId}/image`
+        : null;
+      const imageResult = imageEndpoint
+        ? await persistCreatedImage(imageEndpoint)
+        : { imageStatus: "none" as const, imageError: "" };
+      setCreatedHandoff({
+        kind,
+        label,
+        href: handoffHref,
+        openLabel: bulkHandoffLabel,
+        successMessage: payloadSuccessMessage(label, createsCatalogRecord),
+        description: kind === "standard"
+          ? "Open the item to review its identity, booking policy, and activity."
+          : kind === "units"
+            ? "Open the item to review availability, numbered units, thresholds, and activity."
+            : createsCatalogRecord
+              ? "Open the item to review availability, stock, thresholds, and activity."
+              : "Open the item to review the updated stock and activity.",
+        createdRecord: createsCatalogRecord,
+        imageEndpoint,
+        repeatTemplate,
+        ...imageResult,
+      });
+      setDirty(false);
+    } catch {
+      showFormError("You are offline or the request could not reach the server. Check your connection and try again.");
+    } finally {
+      setSubmitting(false);
+      submittingRef.current = false;
+      setSubmissionProgress(null);
+    }
+  }
+
+  // Every creation path ends in the same explicit handoff.
+  const showPostCreate = !!createdHandoff;
+
+  const selectedKind = optionForKind(kind);
+  const SelectedKindIcon = selectedKind.icon;
+  const singleSubmitLabel = kind === "quantity" && bulkOperation === "adjust" ? "Add stock" : "Create item";
+  const submitLabel = kind === "standard" && serializedUnitCount > 1
+    ? `Create ${serializedUnitCount} items`
+    : singleSubmitLabel;
+  const requiredComplete = requiredProgress.completed === requiredProgress.total;
+
+  return (
+    <>
+      <Sheet
+        open={open}
+        onOpenChange={(nextOpen) => {
+          if (nextOpen) {
+            onOpenChange(true);
+            return;
+          }
+          requestClose();
+        }}
+      >
+      <SheetContent className="sm:max-w-2xl">
+        <SheetHeader>
+          <SheetTitle>Add item</SheetTitle>
+          <SheetDescription>
+            Choose how you track this gear, then add its details.
+          </SheetDescription>
+        </SheetHeader>
+
+        <SheetBody ref={sheetBodyRef} className="px-4 py-5 sm:px-6 sm:py-6">
+          {showPostCreate ? (
+            <div className="flex flex-col gap-4">
+              <div className="rounded-md border border-border/60 bg-background p-5 shadow-xs">
+                <div className="flex items-start gap-3">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-[var(--green-bg)] text-[var(--green-text)]">
+                    <CheckCircle2Icon className="size-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <Badge variant={optionForKind(createdHandoff?.kind ?? kind).badgeVariant} size="sm">
+                      {optionForKind(createdHandoff?.kind ?? kind).badge}
+                    </Badge>
+                    <h3 className="mt-2 text-lg font-semibold tracking-tight text-balance">
+                      {createdHandoff?.heading ?? `${createdHandoff?.label ?? "Item"} is ready`}
+                    </h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {createdHandoff?.successMessage ?? "Saved successfully."}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-5 divide-y divide-border/70 border-y border-border/70">
+                  <SummaryRow label="Status">
+                    <Badge variant="gray" size="sm">
+                      {createdHandoff?.batch
+                        ? `${createdHandoff.batch.created} created`
+                        : createdHandoff?.createdRecord ? "Created" : "Stock updated"}
+                    </Badge>
+                  </SummaryRow>
+                  <SummaryRow label="Tracking">
+                    {optionForKind(createdHandoff?.kind ?? kind).title}
+                  </SummaryRow>
+                  {createdHandoff?.batch && (
+                    <SummaryRow label="Batch">
+                      {createdHandoff.batch.failures.length === 0
+                        ? `${createdHandoff.batch.created} of ${createdHandoff.batch.attempted} complete`
+                        : `${createdHandoff.batch.created} complete, ${createdHandoff.batch.failures.length} unfinished`}
+                    </SummaryRow>
+                  )}
+                  {createdHandoff?.imageStatus !== "none" && (
+                    <SummaryRow label="Image">
+                      <Badge
+                        variant={createdHandoff.imageStatus === "saved" ? "blue" : "red"}
+                        size="sm"
+                      >
+                        {createdHandoff.imageStatus === "saved" ? "Saved" : "Needs attention"}
+                      </Badge>
+                    </SummaryRow>
+                  )}
+                  <SummaryRow label="Next">
+                    <span className="text-muted-foreground">{createdHandoff?.description}</span>
+                  </SummaryRow>
+                </div>
+              </div>
+
+              {createdHandoff?.batch && createdHandoff.batch.failures.length > 0 && (
+                <Alert className="border-[var(--orange)]/30 bg-[var(--orange-bg)] text-[var(--orange-text)]">
+                  <AlertCircleIcon className="size-4" />
+                  <AlertTitle>{createdHandoff.batch.failures.length} {createdHandoff.batch.failures.length === 1 ? "item needs" : "items need"} attention</AlertTitle>
+                  <AlertDescription>
+                    <ul className="mt-2 list-disc space-y-1 pl-5">
+                      {createdHandoff.batch.failures.slice(0, 5).map((failure) => (
+                        <li key={failure.unitKey}>
+                          <span className="font-medium">{failure.assetTag}</span>: {failure.message}
+                        </li>
+                      ))}
+                    </ul>
+                    {createdHandoff.batch.failures.length > 5 && (
+                      <p className="mt-2">And {createdHandoff.batch.failures.length - 5} more unfinished items.</p>
+                    )}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {createdHandoff?.imageStatus === "failed" && (
+                <Alert variant="destructive">
+                  <AlertCircleIcon className="size-4" />
+                  <AlertDescription className="flex flex-col items-start gap-3">
+                    <span>
+                      {createdHandoff.batch ? "Items created, but their images need attention." : "Item created, but its image needs attention."} {createdHandoff.imageError}
+                    </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-10"
+                    loading={imageRetrying}
+                    onClick={retryCreatedImage}
+                  >
+                    Retry image
+                  </Button>
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          ) : (
+            <form id="new-item-form" onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
+              {/* ── Tracking style ── */}
+              <section className="flex flex-col gap-3">
+                <SectionHeading>Tracking style</SectionHeading>
+                <RadioGroup
+                  className="grid grid-cols-1 gap-2 sm:grid-cols-3"
+                  name="item-kind"
+                  value={kind}
+                  aria-label="Tracking style"
+                  onValueChange={(value) => {
+                    const nextKind = value as ItemKind;
+                    if (nextKind === kind) return;
+                    if (dirty) setPendingKind(nextKind);
+                    else changeKind(nextKind);
+                  }}
+                  disabled={submitting || sourceLoading}
+                >
+                  {KIND_OPTIONS.map((option) => {
+                    const Icon = option.icon;
+                    const selected = kind === option.kind;
+                    return (
+                      <label
+                        key={option.kind}
+                        htmlFor={option.id}
+                        className={cn(
+                          "flex min-w-0 cursor-pointer gap-3 rounded-lg border p-3 transition-colors focus-within:ring-2 focus-within:ring-ring sm:flex-col",
+                          selected
+                            ? "border-primary/55 bg-primary/5"
+                            : "border-border/55 bg-background hover:bg-muted/40",
+                        )}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div
+                            className={cn(
+                              "flex size-8 shrink-0 items-center justify-center rounded-md",
+                              selected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
+                            )}
+                          >
+                            <Icon className="size-4" aria-hidden="true" />
+                          </div>
+                          <RadioGroupItem value={option.kind} id={option.id} />
+                        </div>
+                        <div className="min-w-0">
+                          <span className="block text-sm font-semibold">{option.title}</span>
+                          <span className="mt-1 block text-xs leading-relaxed text-foreground">{option.description}</span>
+                          <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">{option.examples}</span>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </RadioGroup>
+                <div className="flex items-start gap-2 rounded-md border border-border/50 bg-muted/25 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
+                  <SelectedKindIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+                  <p>
+                    <span className="font-medium text-foreground">{selectedKind.description}</span>{" "}
+                    {selectedKind.outcome}
+                  </p>
+                </div>
+              </section>
+
+              {successMsg && <SuccessFlash message={successMsg} />}
+
+              {error && (
+                <Alert id="new-item-form-error" variant="destructive" role="alert">
+                  <AlertCircleIcon className="size-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              {kind === "standard" ? sourceLoading ? (
+                <Alert aria-live="polite">
+                  <CopyPlusIcon className="size-4" />
+                  <AlertTitle>Loading product details</AlertTitle>
+                  <AlertDescription>
+                    Reusing the source item&apos;s product, category, location, image, and workflow defaults.
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <>
+                  {sourceLoadError && (
+                    <Alert variant="destructive">
+                      <AlertCircleIcon className="size-4" />
+                      <AlertTitle>Could not reuse this item</AlertTitle>
+                      <AlertDescription className="flex flex-col items-start gap-3">
+                        <span>{sourceLoadError} No new item was created.</span>
+                        <div className="flex flex-wrap gap-2">
+                          <Button type="button" variant="outline" className="h-10" onClick={() => setSourceLoadVersion((version) => version + 1)}>
+                            Retry source
+                          </Button>
+                          <Button type="button" variant="outline" className="h-10" onClick={startBlankSerializedItem}>
+                            Start blank
+                          </Button>
+                        </div>
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  {serializedTemplate && (
+                    <Alert className="border-[var(--blue)]/25 bg-[var(--blue-bg)] text-[var(--blue-text)]">
+                      <CopyPlusIcon className="size-4" />
+                      <AlertTitle>
+                        {serializedUnitCount > 1
+                          ? `Adding ${serializedUnitCount} ${serializedTemplate.productLabel} items`
+                          : `Adding another ${serializedTemplate.productLabel}`}
+                      </AlertTitle>
+                      <AlertDescription className="flex flex-col items-start gap-3">
+                        <span>
+                          Product details, category, location, image, link, and workflow settings came from {serializedTemplate.sourceLabel}. Serial, QR, campus tag, purchase, warranty, fiscal year, and notes are new for {serializedUnitCount > 1 ? "this shipment" : "this item"}.
+                        </span>
+                        <Button type="button" variant="outline" className="h-10" onClick={startBlankSerializedItem}>
+                          Start a different item
+                        </Button>
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  <SerializedItemForm
+                    ref={serializedRef}
+                    categories={categories}
+                    departments={departments}
+                    locations={locations}
+                    image={imageDraft}
+                    template={serializedTemplate}
+                    onChooseImage={(searchQuery) => {
+                      setImageSearchQuery(searchQuery);
+                      setShowImageModal(true);
+                    }}
+                    onClearImage={() => {
+                      setImageDraft(null);
+                      markInteraction();
+                    }}
+                    onProgressChange={setRequiredProgress}
+                    onUnitCountChange={setSerializedUnitCount}
+                    onInteract={markInteraction}
+                    disabled={submitting}
+                  />
+                </>
+              ) : (
+                <BulkItemForm
+                  ref={bulkRef}
+                  categories={categories}
+                  locations={locations}
+                  open={open}
+                  trackingMode={kind}
+                  image={imageDraft}
+                  onChooseImage={(searchQuery) => {
+                    setImageSearchQuery(searchQuery);
+                    setShowImageModal(true);
+                  }}
+                  onClearImage={() => {
+                    setImageDraft(null);
+                    markInteraction();
+                  }}
+                  onProgressChange={setRequiredProgress}
+                  onOperationChange={setBulkOperation}
+                  onInteract={markInteraction}
+                  disabled={submitting}
+                />
+              )}
+            </form>
+          )}
+        </SheetBody>
+
+        <SheetFooter className="flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+          {showPostCreate ? (
+            <>
+              <div className="flex-1" />
+              <Button
+                variant="outline"
+                type="button"
+                className="h-10"
+                onClick={() => finishCreatedHandoff("list")}
+              >
+                Return to list
+              </Button>
+              {createdHandoff && (
+                <Button
+                  variant="outline"
+                  type="button"
+                  className="h-10"
+                  onClick={() => finishCreatedHandoff("open")}
+                >
+                  {createdHandoff.openLabel}
+                </Button>
+              )}
+              {createdHandoff?.batch?.failures.length ? (
+                <Button
+                  type="button"
+                  className="h-10"
+                  onClick={() => finishCreatedHandoff("remaining")}
+                >
+                  Fix {createdHandoff.batch.failures.length} remaining
+                </Button>
+              ) : (
+                <>
+                  {createdHandoff?.repeatTemplate && (
+                    <Button
+                      variant="outline"
+                      type="button"
+                      className="h-10"
+                      onClick={() => finishCreatedHandoff("another")}
+                    >
+                      Add different item
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    className="h-10"
+                    onClick={() => finishCreatedHandoff(createdHandoff?.repeatTemplate ? "similar" : "another")}
+                  >
+                    {createdHandoff?.repeatTemplate
+                      ? createdHandoff.batch ? "Add another shipment" : "Add another like this"
+                      : "Add another item"}
+                  </Button>
+                </>
+              )}
+            </>
+          ) : (
+            <>
+              <div role="status" aria-live="polite" className="flex-1 text-xs text-muted-foreground sm:mr-auto">
+                {submissionProgress
+                  ? submissionProgress.phase === "records"
+                    ? `Creating item ${submissionProgress.current} of ${submissionProgress.total}`
+                    : `Saving image ${submissionProgress.current} of ${submissionProgress.total}`
+                  : requiredComplete
+                    ? "Required fields complete"
+                    : `${requiredProgress.completed} of ${requiredProgress.total} required fields complete`}
+              </div>
+              <div className="grid grid-cols-2 gap-2 sm:contents">
+                <Button className="h-10" variant="outline" type="button" disabled={submitting} onClick={requestClose}>
+                  Cancel
+                </Button>
+                <Button className="h-10" type="submit" form="new-item-form" loading={submitting} disabled={sourceLoading}>
+                  {submitLabel}
+                </Button>
+              </div>
+            </>
+          )}
+        </SheetFooter>
+      </SheetContent>
+
+      </Sheet>
+
+      <ChooseImageModal
+        mode="draft"
+        open={showImageModal}
+        onClose={() => setShowImageModal(false)}
+        initialSelection={imageDraft}
+        searchQuery={imageSearchQuery}
+        onDraftChanged={(selection) => {
+          setImageDraft(selection);
+          markInteraction();
+        }}
+      />
+
+      <AlertDialog open={pendingKind !== null} onOpenChange={(nextOpen) => { if (!nextOpen) setPendingKind(null); }}>
+        <AlertDialogContent onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          document.getElementById(optionForKind(kind).id)?.focus();
+        }}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Switch to {pendingKind ? optionForKind(pendingKind).title : "another tracking style"}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Switching clears the details and image in this draft. Keep editing to retain them.
+              {batchContinuationTemplate && " Items already created will stay in your inventory."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="h-10">Keep editing</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" className="h-10" onClick={() => {
+              if (pendingKind) changeKind(pendingKind);
+            }}>
+              Clear draft and switch
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showDiscardConfirm} onOpenChange={setShowDiscardConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard this item?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The item has not been created. Closing now will clear the fields and any staged image.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="h-10">Keep editing</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              className="h-10"
+              onClick={closeAndReset}
+            >
+              Discard item
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
+"use client";
+
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
+import { ClipboardPaste, Dices, Plus, RefreshCw, Trash2, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+
+import type {
+  Department,
+  FormValidationIssue,
+  Location,
+  ParentSearchResult,
+  RequiredFieldProgress,
+  SerializedIntakeTemplate,
+} from "./types";
+import type { CategoryOption } from "@/types/category";
+import { generateQrCode, useParentSearch, FISCAL_YEARS } from "./helpers";
+import { FormFieldError, FormRow, FormRow2Col } from "@/components/form-layout";
+import { FormCombobox, CategoryCombobox } from "@/components/FormCombobox";
+import { handleAuthRedirect, parseJsonSafely } from "@/lib/errors";
+import { buildSerializedItemSubmitBody, isValidUsdPriceInput } from "./serialized-submit";
+import { FormSection } from "./FormSection";
+import {
+  getNextSequentialAssetTag,
+  getRepeatTagBase,
+  summarizeRepeatTags,
+  type RepeatTagSummary,
+} from "./repeat-tags";
+import { ItemImageDraftField } from "./ItemImageDraftField";
+import {
+  buildItemImageSearchSeed,
+  type DraftItemImage,
+} from "@/lib/item-image-draft";
+import {
+  MAX_SERIALIZED_BATCH_SIZE,
+  applyPastedSerialNumbers,
+  countReadySerializedUnits,
+  getSerializedUnitDraftErrors,
+  parsePastedSerialNumbers,
+  regenerateSerializedUnitTags,
+  resizeSerializedUnitDrafts,
+  serializedUnitFieldId,
+  updateSerializedUnitAssetTag,
+  validateSerializedUnitDrafts,
+  type SerializedUnitDraft,
+} from "./serialized-batch";
+
+export type SerializedSubmitEntry = {
+  unit: SerializedUnitDraft;
+  body: Record<string, unknown>;
+};
+
+export interface SerializedFormHandle {
+  validate(): FormValidationIssue | null;
+  getSubmitBody(): Record<string, unknown>;
+  getSubmitEntries(): SerializedSubmitEntry[];
+  getRepeatTemplate(): SerializedIntakeTemplate;
+  retainUnits(unitKeys: string[]): void;
+  reset(): void;
+  focus(): void;
+  focusField(fieldId: string): void;
+}
+
+interface Props {
+  categories: CategoryOption[];
+  departments: Department[];
+  locations: Location[];
+  image: DraftItemImage | null;
+  onChooseImage: (searchQuery: string) => void;
+  onClearImage: () => void;
+  onProgressChange: (progress: RequiredFieldProgress) => void;
+  onUnitCountChange: (count: number) => void;
+  onInteract: () => void;
+  template?: SerializedIntakeTemplate | null;
+  disabled?: boolean;
+}
+
+type AssetSearchResponse = {
+  data?: Array<{
+    assetTag?: string | null;
+  }>;
+};
+
+const PRODUCT_DETAIL_FIELD_IDS = new Set([
+  "new-item-name",
+  "new-item-brand",
+  "new-item-model",
+  "new-item-serial-number",
+  "new-item-department",
+  "new-item-uw-asset-tag",
+]);
+
+const PROCUREMENT_FIELD_IDS = new Set([
+  "new-item-purchase-date",
+  "new-item-purchase-price",
+  "new-item-warranty-date",
+  "new-item-residual-value",
+  "new-item-fiscal-year",
+  "new-item-link-url",
+  "new-item-notes",
+]);
+
+export const SerializedItemForm = forwardRef<SerializedFormHandle, Props>(
+  function SerializedItemForm({
+    categories,
+    departments,
+    locations,
+    image,
+    onChooseImage,
+    onClearImage,
+    onProgressChange,
+    onUnitCountChange,
+    onInteract,
+    template = null,
+    disabled = false,
+  }, ref) {
+    const [categoryId, setCategoryId] = useState("");
+    const [locationId, setLocationId] = useState("");
+    const [departmentId, setDepartmentId] = useState("");
+    const [fiscalYear, setFiscalYear] = useState("");
+
+    const [assetTag, setAssetTag] = useState("");
+    const [itemName, setItemName] = useState("");
+    const [brand, setBrand] = useState("");
+    const [model, setModel] = useState("");
+    const [serialNumber, setSerialNumber] = useState("");
+    const [purchaseDate, setPurchaseDate] = useState("");
+    const [purchasePrice, setPurchasePrice] = useState("");
+    const [warrantyDate, setWarrantyDate] = useState("");
+    const [residualValue, setResidualValue] = useState("");
+    const [linkUrl, setLinkUrl] = useState("");
+    const [uwAssetTag, setUwAssetTag] = useState("");
+    const [userNotes, setUserNotes] = useState("");
+    const [qrCodeValue, setQrCodeValue] = useState("");
+    const [extraUnits, setExtraUnits] = useState<SerializedUnitDraft[]>([]);
+    const [showSerialPaste, setShowSerialPaste] = useState(false);
+    const [serialPasteValue, setSerialPasteValue] = useState("");
+    const unitKeyRef = useRef(1);
+
+    const [productDetailsOpen, setProductDetailsOpen] = useState(false);
+    const [procurementOpen, setProcurementOpen] = useState(false);
+    const [settingsOpen, setSettingsOpen] = useState(false);
+    const [validationAttempted, setValidationAttempted] = useState(false);
+
+    const [assetTagError, setAssetTagError] = useState("");
+    const [assetTagSummary, setAssetTagSummary] = useState<RepeatTagSummary | null>(null);
+    const assetTagCheckRef = useRef(0);
+    const assetTagInputRef = useRef<HTMLInputElement>(null);
+    useEffect(() => {
+      const trimmed = assetTag.trim();
+      if (!trimmed) {
+        setAssetTagError("");
+        setAssetTagSummary(null);
+        return;
+      }
+
+      const id = ++assetTagCheckRef.current;
+      const debounce = setTimeout(async () => {
+        const repeatBase = getRepeatTagBase(trimmed);
+        try {
+          const res = await fetch(`/api/assets?q=${encodeURIComponent(repeatBase)}&limit=200&include_accessories=true`);
+          if (id !== assetTagCheckRef.current) return;
+          if (handleAuthRedirect(res)) return;
+          if (!res.ok) return;
+          const data = await parseJsonSafely<AssetSearchResponse>(res);
+          const match = data?.data?.some((asset) => asset.assetTag === trimmed);
+          setAssetTagError(match ? "Asset tag already in use" : "");
+          setAssetTagSummary(summarizeRepeatTags(trimmed, data?.data ?? []));
+        } catch {
+          // The create route remains authoritative when the advisory lookup is unavailable.
+        }
+      }, 160);
+
+      return () => clearTimeout(debounce);
+    }, [assetTag]);
+
+    const [availableForReservation, setAvailableForReservation] = useState(true);
+    const [availableForCheckout, setAvailableForCheckout] = useState(true);
+    const [availableForCustody, setAvailableForCustody] = useState(true);
+    const [isAccessory, setIsAccessory] = useState(false);
+    const [parentAsset, setParentAsset] = useState<ParentSearchResult | null>(null);
+    const parentSearch = useParentSearch();
+    const units = useMemo<SerializedUnitDraft[]>(() => [{
+      key: "unit-primary",
+      assetTag,
+      serialNumber,
+      qrCodeValue,
+      uwAssetTag,
+    }, ...extraUnits], [assetTag, extraUnits, qrCodeValue, serialNumber, uwAssetTag]);
+
+    function unitFactory() {
+      return {
+        qrCode: generateQrCode,
+        key: () => `batch-unit-${unitKeyRef.current++}`,
+      };
+    }
+
+    function currentUnits(): SerializedUnitDraft[] {
+      return units;
+    }
+
+    function replaceUnits(nextUnits: SerializedUnitDraft[], resetTagAdvisory = false) {
+      const [first, ...rest] = nextUnits;
+      if (!first) return;
+      setAssetTag(first.assetTag);
+      setSerialNumber(first.serialNumber);
+      setQrCodeValue(first.qrCodeValue);
+      setUwAssetTag(first.uwAssetTag);
+      setExtraUnits(rest);
+      if (resetTagAdvisory) {
+        setAssetTagError("");
+        setAssetTagSummary(null);
+      }
+    }
+
+    function updateUnit(unitKey: string, field: keyof Omit<SerializedUnitDraft, "key">, value: string) {
+      if (field === "assetTag") {
+        replaceUnits(updateSerializedUnitAssetTag(currentUnits(), unitKey, value), unitKey === "unit-primary");
+        return;
+      }
+      replaceUnits(currentUnits().map((unit) => unit.key === unitKey ? { ...unit, [field]: value } : unit));
+    }
+
+    function setUnitCount(value: number) {
+      onInteract();
+      replaceUnits(resizeSerializedUnitDrafts(currentUnits(), value, unitFactory()));
+    }
+
+    useEffect(() => {
+      if (!template) return;
+      const firstQrCode = generateQrCode();
+      setAssetTag(template.assetTag);
+      setItemName(template.name);
+      setBrand(template.brand);
+      setModel(template.model);
+      setCategoryId(template.categoryId);
+      setLocationId(template.locationId);
+      setDepartmentId(template.departmentId);
+      setLinkUrl(template.linkUrl);
+      setAvailableForReservation(template.availableForReservation);
+      setAvailableForCheckout(template.availableForCheckout);
+      setAvailableForCustody(template.availableForCustody);
+
+      // These values describe the new physical unit and must never be copied.
+      setSerialNumber("");
+      setQrCodeValue(firstQrCode);
+      setUwAssetTag("");
+      setPurchaseDate("");
+      setPurchasePrice("");
+      setWarrantyDate("");
+      setResidualValue("");
+      setFiscalYear("");
+      setUserNotes("");
+      setIsAccessory(false);
+      setParentAsset(null);
+      setAssetTagError("");
+      setAssetTagSummary(null);
+      setProductDetailsOpen(false);
+      setProcurementOpen(false);
+      setSettingsOpen(false);
+      setValidationAttempted(false);
+      const seededUnits = resizeSerializedUnitDrafts([{
+        key: "unit-primary",
+        assetTag: template.assetTag,
+        serialNumber: "",
+        qrCodeValue: firstQrCode,
+        uwAssetTag: "",
+      }], template.batchSize ?? 1, unitFactory());
+      setExtraUnits(seededUnits.slice(1));
+      setShowSerialPaste(false);
+      setSerialPasteValue("");
+    }, [template]);
+
+    const batchMode = units.length > 1;
+    const unitDraftErrors = useMemo(() => getSerializedUnitDraftErrors(units), [units]);
+    const readyUnitCount = countReadySerializedUnits(units);
+    const assetTagRequired = !isAccessory;
+    const departmentOptions = departments.map((department) => ({ value: department.id, label: department.name }));
+    const locationOptions = locations.map((location) => ({ value: location.id, label: location.name }));
+    const fiscalYearOptions = FISCAL_YEARS.map((year) => ({ value: year, label: year }));
+
+    const assetTagMissing = validationAttempted && assetTagRequired && !assetTag.trim();
+    const categoryMissing = validationAttempted && !categoryId;
+    const locationMissing = validationAttempted && !locationId;
+    const qrCodeMissing = validationAttempted && !qrCodeValue.trim();
+    const purchasePriceInvalid = validationAttempted && !isValidUsdPriceInput(purchasePrice);
+    const parentMissing = validationAttempted && isAccessory && !parentAsset;
+
+    const productDetailCount = [
+      itemName.trim(),
+      brand.trim(),
+      model.trim(),
+      !template && !batchMode && serialNumber.trim(),
+      departmentId,
+      !template && !batchMode && uwAssetTag.trim(),
+      (template || batchMode) && linkUrl.trim(),
+      image,
+    ].filter(Boolean).length;
+    const procurementCount = [
+      purchaseDate,
+      purchasePrice.trim(),
+      warrantyDate,
+      residualValue,
+      fiscalYear,
+      linkUrl.trim(),
+      userNotes.trim(),
+    ].filter(Boolean).length;
+    const policyCustomized = isAccessory
+      || !availableForReservation
+      || !availableForCheckout
+      || !availableForCustody;
+
+    useEffect(() => {
+      const requiredValues = batchMode
+        ? [
+            Boolean(categoryId),
+            Boolean(locationId),
+            ...units.flatMap((unit, index) => [
+              Boolean(unit.assetTag.trim()
+                && !unitDraftErrors.has(serializedUnitFieldId(unit, "asset-tag"))
+                && (index > 0 || !assetTagError)),
+              Boolean(unit.qrCodeValue.trim() && !unitDraftErrors.has(serializedUnitFieldId(unit, "qr"))),
+            ]),
+          ]
+        : [
+            assetTagRequired ? Boolean(assetTag.trim() && !assetTagError) : Boolean(parentAsset),
+            Boolean(categoryId),
+            Boolean(locationId),
+            Boolean(qrCodeValue.trim()),
+          ];
+      onProgressChange({
+        completed: requiredValues.filter(Boolean).length,
+        total: requiredValues.length,
+      });
+    }, [assetTag, assetTagError, assetTagRequired, batchMode, categoryId, locationId, onProgressChange, parentAsset, qrCodeValue, unitDraftErrors, units]);
+
+    useEffect(() => {
+      onUnitCountChange(units.length);
+    }, [onUnitCountChange, units.length]);
+
+    function focusField(fieldId: string) {
+      if (PRODUCT_DETAIL_FIELD_IDS.has(fieldId)) setProductDetailsOpen(true);
+      if (PROCUREMENT_FIELD_IDS.has(fieldId)) setProcurementOpen(true);
+      if (fieldId === "new-item-parent-search") setSettingsOpen(true);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => document.getElementById(fieldId)?.focus());
+      });
+    }
+
+    useImperativeHandle(ref, () => ({
+      validate() {
+        setValidationAttempted(true);
+        if (batchMode) {
+          if (!categoryId) {
+            return { message: "Select a category to continue.", fieldId: "new-item-category" };
+          }
+          if (!locationId) {
+            return { message: "Select a location to continue.", fieldId: "new-item-location" };
+          }
+          const unitIssue = validateSerializedUnitDrafts(units);
+          if (unitIssue) return unitIssue;
+          if (assetTagError) {
+            return { message: assetTagError, fieldId: serializedUnitFieldId(units[0]!, "asset-tag") };
+          }
+          if (!isValidUsdPriceInput(purchasePrice)) {
+            return {
+              message: "Enter purchase price as a USD amount, for example 1299.99.",
+              fieldId: "new-item-purchase-price",
+            };
+          }
+          return null;
+        }
+        if (assetTagRequired && !assetTag.trim()) {
+          return { message: "Enter an asset tag to continue.", fieldId: "new-item-asset-tag" };
+        }
+        if (assetTag.trim() && assetTagError) {
+          return { message: assetTagError, fieldId: "new-item-asset-tag" };
+        }
+        if (!categoryId) {
+          return { message: "Select a category to continue.", fieldId: "new-item-category" };
+        }
+        if (!locationId) {
+          return { message: "Select a location to continue.", fieldId: "new-item-location" };
+        }
+        if (!qrCodeValue.trim()) {
+          return { message: "Enter or generate a QR code to continue.", fieldId: "new-item-qr-code" };
+        }
+        if (isAccessory && !parentAsset) {
+          return { message: "Select a parent item for this attachment.", fieldId: "new-item-parent-search" };
+        }
+        if (!isValidUsdPriceInput(purchasePrice)) {
+          return {
+            message: "Enter purchase price as a USD amount, for example 1299.99.",
+            fieldId: "new-item-purchase-price",
+          };
+        }
+        return null;
+      },
+      getSubmitBody() {
+        return buildSubmitBody(units[0]!);
+      },
+      getSubmitEntries() {
+        return units.map((unit) => ({ unit, body: buildSubmitBody(unit) }));
+      },
+      getRepeatTemplate() {
+        const lastUnit = units.at(-1) ?? units[0]!;
+        const productLabel = itemName.trim()
+          || [brand.trim(), model.trim()].filter(Boolean).join(" ")
+          || lastUnit.assetTag.trim();
+        return {
+          key: `repeat:${lastUnit.assetTag.trim()}:${lastUnit.qrCodeValue.trim()}`,
+          sourceLabel: lastUnit.assetTag.trim(),
+          productLabel,
+          assetTag: getNextSequentialAssetTag(lastUnit.assetTag),
+          batchSize: units.length,
+          name: itemName.trim(),
+          brand: brand.trim(),
+          model: model.trim(),
+          categoryId,
+          locationId,
+          departmentId,
+          linkUrl: linkUrl.trim(),
+          availableForReservation,
+          availableForCheckout,
+          availableForCustody,
+        };
+      },
+      retainUnits(unitKeys) {
+        const keys = new Set(unitKeys);
+        const retained = units.filter((unit) => keys.has(unit.key));
+        if (retained.length > 0) replaceUnits(retained, true);
+        setValidationAttempted(false);
+      },
+      reset() {
+        setCategoryId("");
+        setLocationId("");
+        setDepartmentId("");
+        setFiscalYear("");
+        setAssetTag("");
+        setAssetTagError("");
+        setAssetTagSummary(null);
+        setItemName("");
+        setBrand("");
+        setModel("");
+        setSerialNumber("");
+        setPurchaseDate("");
+        setPurchasePrice("");
+        setWarrantyDate("");
+        setResidualValue("");
+        setLinkUrl("");
+        setUwAssetTag("");
+        setUserNotes("");
+        setQrCodeValue("");
+        setExtraUnits([]);
+        setShowSerialPaste(false);
+        setSerialPasteValue("");
+        setAvailableForReservation(true);
+        setAvailableForCheckout(true);
+        setAvailableForCustody(true);
+        setIsAccessory(false);
+        setParentAsset(null);
+        setProductDetailsOpen(false);
+        setProcurementOpen(false);
+        setSettingsOpen(false);
+        setValidationAttempted(false);
+        parentSearch.clear();
+      },
+      focus() {
+        assetTagInputRef.current?.focus();
+      },
+      focusField,
+    }));
+
+    function buildSubmitBody(unit: SerializedUnitDraft) {
+      return buildSerializedItemSubmitBody({
+          assetTag: unit.assetTag,
+          itemName,
+          brand,
+          model,
+          serialNumber: unit.serialNumber,
+          qrCodeValue: unit.qrCodeValue,
+          locationId,
+          categoryId,
+          departmentId,
+          purchaseDate,
+          purchasePrice,
+          warrantyDate,
+          residualValue,
+          linkUrl,
+          uwAssetTag: unit.uwAssetTag,
+          fiscalYear,
+          userNotes,
+          availableForReservation,
+          availableForCheckout,
+          availableForCustody,
+          isAccessory,
+          parentAssetId: parentAsset?.id,
+          parentAsset: parentAsset
+            ? {
+                assetTag: parentAsset.assetTag,
+                name: parentAsset.name,
+                brand: parentAsset.brand,
+                model: parentAsset.model,
+              }
+            : undefined,
+        });
+    }
+
+    return (
+      <fieldset disabled={disabled} className="contents" onChange={onInteract}>
+        <FormSection
+          title="Essentials"
+          badge={isAccessory ? "Attachment intake" : batchMode ? `${units.length} physical items` : "Fast intake"}
+          badgeVariant="blue"
+          description={isAccessory
+            ? "Category, location, QR code, and a parent item are required. A blank visible tag becomes a quiet internal attachment tag."
+            : batchMode
+              ? "Category and location apply to every item. Each physical identity stays editable below."
+            : template
+              ? `Product defaults came from ${template.sourceLabel}. Confirm the suggested tag, category, location, and generated QR code.`
+              : "Fast intake needs the asset tag, category, location, and QR code. Product details can be filled in later."}
+        >
+          {!isAccessory && (
+            <FormRow label="Physical items" htmlFor="new-item-batch-size" required>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="new-item-batch-size"
+                  name="batchSize"
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={MAX_SERIALIZED_BATCH_SIZE}
+                  value={units.length}
+                  onChange={(event) => setUnitCount(Number(event.target.value))}
+                  className="h-10 w-24"
+                  aria-describedby="new-item-batch-size-help"
+                />
+                <span id="new-item-batch-size-help" className="text-xs text-muted-foreground">
+                  One record per physical item, up to {MAX_SERIALIZED_BATCH_SIZE}.
+                </span>
+              </div>
+            </FormRow>
+          )}
+
+          {!batchMode && (
+            <FormRow label="Asset tag" htmlFor="new-item-asset-tag" required={assetTagRequired}>
+              <Input
+                id="new-item-asset-tag"
+                name="assetTag"
+                ref={assetTagInputRef}
+                value={assetTag}
+                onChange={(event) => {
+                  setAssetTag(event.target.value);
+                  setAssetTagError("");
+                  setAssetTagSummary(null);
+                }}
+                placeholder={isAccessory ? "Optional for attachments" : "Unique tag name"}
+                autoComplete="off"
+                required={assetTagRequired}
+                aria-invalid={Boolean(assetTagError || assetTagMissing) || undefined}
+                aria-describedby={assetTagError || assetTagMissing ? "new-item-asset-tag-error" : undefined}
+                className="h-10"
+              />
+              {(assetTagError || assetTagMissing) && (
+                <FormFieldError id="new-item-asset-tag-error">
+                  {assetTagError || "Asset tag is required."}
+                </FormFieldError>
+              )}
+              {isAccessory && !assetTag.trim() && (
+                <p className="mt-1.5 text-sm text-muted-foreground">
+                  Leave blank for an internal tag; the physical label can stay QR-only.
+                </p>
+              )}
+              {!assetTagError && assetTagSummary && assetTag.trim() && (
+                <p className="mt-1.5 text-sm text-muted-foreground">
+                  {`${assetTagSummary.existingCount} existing ${assetTagSummary.base} ${assetTagSummary.existingCount === 1 ? "item" : "items"}. Suggested next tag: ${assetTagSummary.nextTag}.`}
+                </p>
+              )}
+            </FormRow>
+          )}
+
+          <FormRow label="Category" htmlFor="new-item-category" required>
+            <CategoryCombobox
+              id="new-item-category"
+              value={categoryId}
+              onValueChange={(value) => {
+                onInteract();
+                setCategoryId(value);
+              }}
+              categories={categories}
+              triggerClassName="h-10"
+              ariaInvalid={categoryMissing}
+              ariaDescribedBy={categoryMissing ? "new-item-category-error" : undefined}
+            />
+            {categoryMissing && <FormFieldError id="new-item-category-error">Category is required.</FormFieldError>}
+          </FormRow>
+
+          <FormRow label="Location" htmlFor="new-item-location" required>
+            <FormCombobox
+              id="new-item-location"
+              value={locationId}
+              onValueChange={(value) => {
+                onInteract();
+                setLocationId(value);
+              }}
+              options={locationOptions}
+              placeholder="Select a location"
+              searchPlaceholder="Search locations..."
+              emptyLabel="No location found."
+              triggerClassName="h-10"
+              ariaInvalid={locationMissing}
+              ariaDescribedBy={locationMissing ? "new-item-location-error" : undefined}
+            />
+            {locationMissing && <FormFieldError id="new-item-location-error">Location is required.</FormFieldError>}
+          </FormRow>
+
+          {!batchMode && (
+            <FormRow label="QR code" htmlFor="new-item-qr-code" required>
+              <div className="flex gap-2">
+                <Input
+                  id="new-item-qr-code"
+                  name="qrCodeValue"
+                  value={qrCodeValue}
+                  onChange={(event) => setQrCodeValue(event.target.value)}
+                  placeholder="Scan, enter, or generate a code"
+                  autoComplete="off"
+                  required
+                  aria-invalid={qrCodeMissing || undefined}
+                  aria-describedby={qrCodeMissing ? "new-item-qr-code-error" : undefined}
+                  className="h-10 flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="size-10"
+                  title="Generate QR code"
+                  aria-label="Generate QR code"
+                  onClick={() => {
+                    onInteract();
+                    setQrCodeValue(generateQrCode());
+                  }}
+                >
+                  <Dices className="size-4" />
+                </Button>
+              </div>
+              {qrCodeMissing && <FormFieldError id="new-item-qr-code-error">QR code is required.</FormFieldError>}
+            </FormRow>
+          )}
+        </FormSection>
+
+        {batchMode && (
+          <FormSection
+            title="Unit identities"
+            badge={`${readyUnitCount} of ${units.length} ready`}
+            badgeVariant={readyUnitCount === units.length ? "blue" : "orange"}
+            description="Tags and QR codes are required per item. Serial and UW tags stay optional but unique to the physical unit."
+          >
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10"
+                onClick={() => setShowSerialPaste((visible) => !visible)}
+              >
+                <ClipboardPaste className="size-4" />
+                Paste serials
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10"
+                onClick={() => {
+                  onInteract();
+                  replaceUnits(regenerateSerializedUnitTags(units), true);
+                }}
+              >
+                <RefreshCw className="size-4" />
+                Regenerate tags
+              </Button>
+            </div>
+
+            {showSerialPaste && (
+              <div className="flex flex-col gap-2 rounded-md border border-border/60 bg-muted/20 p-3">
+                <Label htmlFor="new-item-batch-serial-paste">Serial-number column</Label>
+                <Textarea
+                  id="new-item-batch-serial-paste"
+                  value={serialPasteValue}
+                  onChange={(event) => setSerialPasteValue(event.target.value)}
+                  placeholder={"S001\nS002\nS003"}
+                  rows={4}
+                  autoComplete="off"
+                  className="resize-y font-mono text-sm"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Paste a spreadsheet column, tab-separated cells, or comma-separated serials. Extra values add rows, up to {MAX_SERIALIZED_BATCH_SIZE}.
+                </p>
+                <div className="flex flex-wrap justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="h-10"
+                    onClick={() => {
+                      setShowSerialPaste(false);
+                      setSerialPasteValue("");
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    className="h-10"
+                    disabled={parsePastedSerialNumbers(serialPasteValue).length === 0}
+                    onClick={() => {
+                      const serials = parsePastedSerialNumbers(serialPasteValue);
+                      if (serials.length === 0) return;
+                      onInteract();
+                      replaceUnits(applyPastedSerialNumbers(units, serials, unitFactory()));
+                      setShowSerialPaste(false);
+                      setSerialPasteValue("");
+                    }}
+                  >
+                    Apply {parsePastedSerialNumbers(serialPasteValue).length || ""} serials
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-col gap-3">
+              {units.map((unit, index) => {
+                const tagFieldId = serializedUnitFieldId(unit, "asset-tag");
+                const serialFieldId = serializedUnitFieldId(unit, "serial");
+                const qrFieldId = serializedUnitFieldId(unit, "qr");
+                const uwTagFieldId = serializedUnitFieldId(unit, "uw-tag");
+                const rawTagError = index === 0 && assetTagError
+                  ? assetTagError
+                  : unitDraftErrors.get(tagFieldId) ?? "";
+                const rawSerialError = unitDraftErrors.get(serialFieldId) ?? "";
+                const rawQrError = unitDraftErrors.get(qrFieldId) ?? "";
+                const tagError = rawTagError === "Asset tag is required." && !validationAttempted ? "" : rawTagError;
+                const qrError = rawQrError === "QR code is required." && !validationAttempted ? "" : rawQrError;
+                const rowReady = !rawTagError && !rawSerialError && !rawQrError;
+                const nextSerialFieldId = units[index + 1]
+                  ? serializedUnitFieldId(units[index + 1]!, "serial")
+                  : qrFieldId;
+
+                return (
+                  <div key={unit.key} className="rounded-lg border border-border/60 bg-background p-3 shadow-xs">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold">Item {index + 1}</span>
+                        <Badge variant={rowReady ? "gray" : "orange"} size="sm">
+                          {rowReady ? "Identity ready" : "Needs attention"}
+                        </Badge>
+                      </div>
+                      {index > 0 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="size-10"
+                          aria-label={`Remove item ${index + 1}`}
+                          onClick={() => {
+                            onInteract();
+                            replaceUnits(units.filter((candidate) => candidate.key !== unit.key));
+                          }}
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      )}
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor={tagFieldId}>Asset tag <span className="text-destructive">*</span></Label>
+                        <Input
+                          id={tagFieldId}
+                          ref={index === 0 ? assetTagInputRef : undefined}
+                          value={unit.assetTag}
+                          onChange={(event) => updateUnit(unit.key, "assetTag", event.target.value)}
+                          autoComplete="off"
+                          aria-invalid={Boolean(tagError) || undefined}
+                          aria-describedby={tagError ? `${tagFieldId}-error` : undefined}
+                          className="h-10"
+                        />
+                        {tagError && <FormFieldError id={`${tagFieldId}-error`}>{tagError}</FormFieldError>}
+                      </div>
+
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor={serialFieldId}>Serial number</Label>
+                        <Input
+                          id={serialFieldId}
+                          value={unit.serialNumber}
+                          onChange={(event) => updateUnit(unit.key, "serialNumber", event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key !== "Enter") return;
+                            event.preventDefault();
+                            document.getElementById(nextSerialFieldId)?.focus();
+                          }}
+                          placeholder="Scan or enter serial"
+                          autoComplete="off"
+                          aria-invalid={Boolean(rawSerialError) || undefined}
+                          aria-describedby={rawSerialError ? `${serialFieldId}-error` : undefined}
+                          className="h-10"
+                        />
+                        {rawSerialError && <FormFieldError id={`${serialFieldId}-error`}>{rawSerialError}</FormFieldError>}
+                      </div>
+
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor={qrFieldId}>QR code <span className="text-destructive">*</span></Label>
+                        <div className="flex gap-2">
+                          <Input
+                            id={qrFieldId}
+                            value={unit.qrCodeValue}
+                            onChange={(event) => updateUnit(unit.key, "qrCodeValue", event.target.value)}
+                            placeholder="Scan, enter, or generate"
+                            autoComplete="off"
+                            aria-invalid={Boolean(qrError) || undefined}
+                            aria-describedby={qrError ? `${qrFieldId}-error` : undefined}
+                            className="h-10 flex-1"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="size-10"
+                            aria-label={`Generate QR code for item ${index + 1}`}
+                            onClick={() => {
+                              onInteract();
+                              updateUnit(unit.key, "qrCodeValue", generateQrCode());
+                            }}
+                          >
+                            <Dices className="size-4" />
+                          </Button>
+                        </div>
+                        {qrError && <FormFieldError id={`${qrFieldId}-error`}>{qrError}</FormFieldError>}
+                      </div>
+
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor={uwTagFieldId}>UW Asset Tag</Label>
+                        <Input
+                          id={uwTagFieldId}
+                          value={unit.uwAssetTag}
+                          onChange={(event) => updateUnit(unit.key, "uwAssetTag", event.target.value)}
+                          placeholder="Campus asset tag"
+                          autoComplete="off"
+                          className="h-10"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="h-10 self-start"
+              disabled={units.length >= MAX_SERIALIZED_BATCH_SIZE}
+              onClick={() => setUnitCount(units.length + 1)}
+            >
+              <Plus className="size-4" />
+              Add item row
+            </Button>
+          </FormSection>
+        )}
+
+        {(template || batchMode) && (
+          <FormSection
+            title={batchMode ? "Shipment details" : "New unit details"}
+            badge={batchMode ? `Applies to ${units.length} items` : "Different for this item"}
+            badgeVariant="orange"
+            description={batchMode
+              ? "Purchase, warranty, fiscal year, and notes apply to every item in this new shipment."
+              : "Serial, campus tag, purchase, warranty, and notes were intentionally left blank for this physical item."}
+          >
+            {!batchMode && (
+              <>
+                <FormRow label="Serial number" htmlFor="new-item-serial-number">
+                  <Input id="new-item-serial-number" name="serialNumber" value={serialNumber} onChange={(event) => setSerialNumber(event.target.value)} placeholder="Manufacturer serial" autoComplete="off" className="h-10" />
+                </FormRow>
+
+                <FormRow label="UW Asset Tag" htmlFor="new-item-uw-asset-tag">
+                  <Input id="new-item-uw-asset-tag" name="uwAssetTag" value={uwAssetTag} onChange={(event) => setUwAssetTag(event.target.value)} placeholder="Campus asset tag number" autoComplete="off" className="h-10" />
+                </FormRow>
+              </>
+            )}
+
+            <FormRow2Col label="Purchase">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="new-item-purchase-date" className="text-xs text-muted-foreground">Date</Label>
+                <Input id="new-item-purchase-date" name="purchaseDate" value={purchaseDate} onChange={(event) => setPurchaseDate(event.target.value)} type="date" autoComplete="off" className="h-10" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="new-item-purchase-price" className="text-xs text-muted-foreground">Price (USD)</Label>
+                <div className="flex h-10 rounded-md border border-input bg-background shadow-xs transition-[color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50 has-[input[aria-invalid=true]]:border-destructive has-[input[aria-invalid=true]]:ring-[3px] has-[input[aria-invalid=true]]:ring-destructive/20">
+                  <span className="flex items-center border-r px-3 text-sm text-muted-foreground">$</span>
+                  <Input
+                    id="new-item-purchase-price"
+                    name="purchasePrice"
+                    value={purchasePrice}
+                    onChange={(event) => setPurchasePrice(event.target.value)}
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    autoComplete="off"
+                    aria-label="Purchase price in US dollars"
+                    aria-invalid={purchasePriceInvalid || undefined}
+                    aria-describedby={purchasePriceInvalid ? "new-item-purchase-price-error" : undefined}
+                    className="h-full border-0 shadow-none focus-visible:ring-0"
+                  />
+                </div>
+                {purchasePriceInvalid && (
+                  <FormFieldError id="new-item-purchase-price-error">Use a USD amount such as 1299.99.</FormFieldError>
+                )}
+              </div>
+            </FormRow2Col>
+
+            <FormRow2Col label="Warranty">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="new-item-warranty-date" className="text-xs text-muted-foreground">Date</Label>
+                <Input id="new-item-warranty-date" name="warrantyDate" value={warrantyDate} onChange={(event) => setWarrantyDate(event.target.value)} type="date" autoComplete="off" className="h-10" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="new-item-residual-value" className="text-xs text-muted-foreground">Residual value</Label>
+                <Input id="new-item-residual-value" name="residualValue" value={residualValue} onChange={(event) => setResidualValue(event.target.value)} type="number" min="0" step="0.01" placeholder="0" autoComplete="off" className="h-10" />
+              </div>
+            </FormRow2Col>
+
+            <FormRow label="Fiscal year" htmlFor="new-item-fiscal-year">
+              <FormCombobox
+                id="new-item-fiscal-year"
+                value={fiscalYear}
+                onValueChange={(value) => {
+                  onInteract();
+                  setFiscalYear(value);
+                }}
+                options={fiscalYearOptions}
+                placeholder="Select fiscal year"
+                searchPlaceholder="Search..."
+                emptyLabel="No match."
+                allowClear
+                triggerClassName="h-10"
+              />
+            </FormRow>
+
+            <FormRow label="Notes" htmlFor="new-item-notes">
+              <Textarea
+                id="new-item-notes"
+                name="notes"
+                value={userNotes}
+                onChange={(event) => setUserNotes(event.target.value)}
+                placeholder="Condition, included parts, or intake context"
+                autoComplete="off"
+                rows={3}
+                className="resize-none"
+              />
+            </FormRow>
+          </FormSection>
+        )}
+
+        <FormSection
+          title="Product details"
+          badge={productDetailCount > 0 ? `${productDetailCount} added` : "Optional"}
+          badgeVariant={productDetailCount > 0 ? "blue" : "secondary"}
+          description={batchMode
+            ? "Shared name, brand, model, department, product link, and image."
+            : template
+              ? "Copied name, brand, model, department, product link, and image."
+              : "Name, brand, model, serial, department, campus tag, and image."}
+          collapsible
+          open={productDetailsOpen}
+          onOpenChange={setProductDetailsOpen}
+        >
+          <FormRow label="Name" htmlFor="new-item-name">
+            <Input id="new-item-name" name="name" value={itemName} onChange={(event) => setItemName(event.target.value)} placeholder="e.g. Sony A7III Camera" autoComplete="off" className="h-10" />
+          </FormRow>
+
+          <FormRow2Col label="Brand / Model">
+            <Input id="new-item-brand" name="brand" value={brand} onChange={(event) => setBrand(event.target.value)} placeholder="e.g. Sony" aria-label="Brand" autoComplete="off" className="h-10" />
+            <Input id="new-item-model" name="model" value={model} onChange={(event) => setModel(event.target.value)} placeholder="e.g. A7III" aria-label="Model" autoComplete="off" className="h-10" />
+          </FormRow2Col>
+
+          {!template && !batchMode && (
+            <FormRow label="Serial number" htmlFor="new-item-serial-number">
+              <Input id="new-item-serial-number" name="serialNumber" value={serialNumber} onChange={(event) => setSerialNumber(event.target.value)} placeholder="Manufacturer serial" autoComplete="off" className="h-10" />
+            </FormRow>
+          )}
+
+          <FormRow label="Department" htmlFor="new-item-department">
+            <FormCombobox
+              id="new-item-department"
+              value={departmentId}
+              onValueChange={(value) => {
+                onInteract();
+                setDepartmentId(value);
+              }}
+              options={departmentOptions}
+              placeholder="Select a department"
+              searchPlaceholder="Search departments..."
+              emptyLabel="No department found."
+              triggerClassName="h-10"
+            />
+          </FormRow>
+
+          {!template && !batchMode && (
+            <FormRow label="UW Asset Tag" htmlFor="new-item-uw-asset-tag">
+              <Input id="new-item-uw-asset-tag" name="uwAssetTag" value={uwAssetTag} onChange={(event) => setUwAssetTag(event.target.value)} placeholder="Campus asset tag number" autoComplete="off" className="h-10" />
+            </FormRow>
+          )}
+
+          {(template || batchMode) && (
+            <FormRow label="Product link" htmlFor="new-item-link-url">
+              <Input id="new-item-link-url" name="linkUrl" value={linkUrl} onChange={(event) => setLinkUrl(event.target.value)} type="url" placeholder="https://..." autoComplete="off" className="h-10" />
+            </FormRow>
+          )}
+
+          <ItemImageDraftField
+            image={image}
+            disabled={disabled}
+            onChoose={() => onChooseImage(buildItemImageSearchSeed(itemName, brand, model, assetTag))}
+            onClear={onClearImage}
+            embedded
+          />
+        </FormSection>
+
+        {!template && !batchMode && <FormSection
+          title="Purchasing & notes"
+          badge={procurementCount > 0 ? `${procurementCount} added` : "Optional"}
+          badgeVariant={procurementCount > 0 ? "blue" : "secondary"}
+          description="Purchase, warranty, fiscal year, product link, and operator notes."
+          collapsible
+          open={procurementOpen}
+          onOpenChange={setProcurementOpen}
+        >
+          <FormRow2Col label="Purchase">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="new-item-purchase-date" className="text-xs text-muted-foreground">Date</Label>
+              <Input id="new-item-purchase-date" name="purchaseDate" value={purchaseDate} onChange={(event) => setPurchaseDate(event.target.value)} type="date" autoComplete="off" className="h-10" />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="new-item-purchase-price" className="text-xs text-muted-foreground">Price (USD)</Label>
+              <div className="flex h-10 rounded-md border border-input bg-background shadow-xs transition-[color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50 has-[input[aria-invalid=true]]:border-destructive has-[input[aria-invalid=true]]:ring-[3px] has-[input[aria-invalid=true]]:ring-destructive/20">
+                <span className="flex items-center border-r px-3 text-sm text-muted-foreground">$</span>
+                <Input
+                  id="new-item-purchase-price"
+                  name="purchasePrice"
+                  value={purchasePrice}
+                  onChange={(event) => setPurchasePrice(event.target.value)}
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="0.00"
+                  autoComplete="off"
+                  aria-label="Purchase price in US dollars"
+                  aria-invalid={purchasePriceInvalid || undefined}
+                  aria-describedby={purchasePriceInvalid ? "new-item-purchase-price-error" : undefined}
+                  className="h-full border-0 shadow-none focus-visible:ring-0"
+                />
+              </div>
+              {purchasePriceInvalid && (
+                <FormFieldError id="new-item-purchase-price-error">Use a USD amount such as 1299.99.</FormFieldError>
+              )}
+            </div>
+          </FormRow2Col>
+
+          <FormRow2Col label="Warranty">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="new-item-warranty-date" className="text-xs text-muted-foreground">Date</Label>
+              <Input id="new-item-warranty-date" name="warrantyDate" value={warrantyDate} onChange={(event) => setWarrantyDate(event.target.value)} type="date" autoComplete="off" className="h-10" />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="new-item-residual-value" className="text-xs text-muted-foreground">Residual value</Label>
+              <Input id="new-item-residual-value" name="residualValue" value={residualValue} onChange={(event) => setResidualValue(event.target.value)} type="number" min="0" step="0.01" placeholder="0" autoComplete="off" className="h-10" />
+            </div>
+          </FormRow2Col>
+
+          <FormRow label="Fiscal year" htmlFor="new-item-fiscal-year">
+            <FormCombobox
+              id="new-item-fiscal-year"
+              value={fiscalYear}
+              onValueChange={(value) => {
+                onInteract();
+                setFiscalYear(value);
+              }}
+              options={fiscalYearOptions}
+              placeholder="Select fiscal year"
+              searchPlaceholder="Search..."
+              emptyLabel="No match."
+              allowClear
+              triggerClassName="h-10"
+            />
+          </FormRow>
+
+          <FormRow label="Link" htmlFor="new-item-link-url">
+            <Input id="new-item-link-url" name="linkUrl" value={linkUrl} onChange={(event) => setLinkUrl(event.target.value)} type="url" placeholder="https://..." autoComplete="off" className="h-10" />
+          </FormRow>
+
+          <FormRow label="Notes" htmlFor="new-item-notes">
+            <Textarea
+              id="new-item-notes"
+              name="notes"
+              value={userNotes}
+              onChange={(event) => setUserNotes(event.target.value)}
+              placeholder="Condition, included parts, or intake context"
+              autoComplete="off"
+              rows={3}
+              className="resize-none"
+            />
+          </FormRow>
+        </FormSection>}
+
+        <FormSection
+          title="Workflow settings"
+          badge={isAccessory ? "Attachment" : policyCustomized ? "Customized" : "Defaults on"}
+          badgeVariant={isAccessory ? "orange" : policyCustomized ? "blue" : "gray"}
+          description="Attachment relationship and future reservation, checkout, and custody eligibility."
+          collapsible
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+        >
+          <div className="flex min-h-11 items-center justify-between gap-4">
+            <div>
+              <Label htmlFor="new-item-is-accessory" className="text-sm font-medium">Item is an attachment</Label>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {batchMode ? "Batch intake creates standalone items. Switch back to one item to create an attachment." : "Tie this part to a parent camera or other item."}
+              </p>
+            </div>
+            <Switch
+              id="new-item-is-accessory"
+              name="isAccessory"
+              checked={isAccessory}
+              disabled={batchMode}
+              onCheckedChange={(value) => {
+                onInteract();
+                setIsAccessory(value);
+                if (value) {
+                  setAvailableForReservation(false);
+                  setAvailableForCheckout(false);
+                  setAvailableForCustody(false);
+                } else {
+                  setParentAsset(null);
+                  parentSearch.clear();
+                  setAvailableForReservation(true);
+                  setAvailableForCheckout(true);
+                  setAvailableForCustody(true);
+                }
+              }}
+            />
+          </div>
+
+          {isAccessory && (
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="new-item-parent-search">Parent item <span className="text-destructive">*</span></Label>
+              {parentAsset ? (
+                <div className="flex min-h-10 items-center gap-2 rounded-md border bg-muted/50 px-3 py-1.5 text-sm">
+                  <span className="min-w-0 flex-1 truncate">
+                    <span className="font-medium">{parentAsset.assetTag}</span>
+                    {" — "}
+                    {parentAsset.name || `${parentAsset.brand} ${parentAsset.model}`}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="size-10"
+                    aria-label="Clear parent item"
+                    onClick={() => {
+                      onInteract();
+                      setParentAsset(null);
+                      parentSearch.clear();
+                    }}
+                  >
+                    <X className="size-4" />
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <Input
+                    id="new-item-parent-search"
+                    name="parentAssetSearch"
+                    value={parentSearch.query}
+                    onChange={(event) => parentSearch.setQuery(event.target.value)}
+                    placeholder="Search by parent tag, brand, or model"
+                    autoComplete="off"
+                    aria-invalid={parentMissing || undefined}
+                    aria-describedby={parentMissing ? "new-item-parent-search-error" : undefined}
+                    className="h-10"
+                  />
+                  {parentMissing && <FormFieldError id="new-item-parent-search-error">Parent item is required.</FormFieldError>}
+                  {parentSearch.searching && <p className="px-1 text-xs text-muted-foreground">Searching...</p>}
+                  {parentSearch.results.length > 0 && (
+                    <div className="divide-y rounded-md border text-sm">
+                      {parentSearch.results.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          className="min-h-10 w-full px-3 py-2 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                          onClick={() => {
+                            onInteract();
+                            setParentAsset(item);
+                            parentSearch.clear();
+                          }}
+                        >
+                          <span className="font-medium">{item.assetTag}</span>
+                          {" — "}
+                          {item.name || `${item.brand} ${item.model}`}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Attachments remain findable but cannot be reserved or checked out independently.
+              </p>
+            </div>
+          )}
+
+          {!isAccessory && (
+            <div className="flex flex-col divide-y divide-border/60">
+              {[
+                {
+                  id: "new-item-available-for-reservation",
+                  label: "Available for reservation",
+                  description: "May be selected for future reservations.",
+                  checked: availableForReservation,
+                  onCheckedChange: setAvailableForReservation,
+                },
+                {
+                  id: "new-item-available-for-checkout",
+                  label: "Available for check out",
+                  description: "May be selected for immediate kiosk checkout.",
+                  checked: availableForCheckout,
+                  onCheckedChange: setAvailableForCheckout,
+                },
+                {
+                  id: "new-item-available-for-custody",
+                  label: "Available for custody",
+                  description: "May be taken into custody by a user.",
+                  checked: availableForCustody,
+                  onCheckedChange: setAvailableForCustody,
+                },
+              ].map((setting) => (
+                <div key={setting.id} className="flex min-h-14 items-center justify-between gap-4 py-2 first:pt-0 last:pb-0">
+                  <div>
+                    <Label htmlFor={setting.id} className="text-sm font-medium">{setting.label}</Label>
+                    <p className="mt-1 text-xs text-muted-foreground">{setting.description}</p>
+                  </div>
+                  <Switch
+                    id={setting.id}
+                    name={setting.id.replace("new-item-", "")}
+                    checked={setting.checked}
+                    onCheckedChange={(value) => {
+                      onInteract();
+                      setting.onCheckedChange(value);
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </FormSection>
+      </fieldset>
+    );
+  },
+);
+
+"use client";
+
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { AlertCircleIcon, Dices } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+
+import type {
+  BulkMode,
+  FormValidationIssue,
+  Location,
+  RequiredFieldProgress,
+} from "./types";
+import type { CategoryOption } from "@/types/category";
+import { generateQrCode } from "./helpers";
+import { FormFieldError, FormRow } from "@/components/form-layout";
+import {
+  FormCombobox,
+  CategoryCombobox,
+  BulkSkuCombobox,
+  type BulkSkuOption,
+} from "@/components/FormCombobox";
+import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
+import { MAX_BULK_QUANTITY_PER_LINE, MAX_NUMBERED_UNITS_PER_CREATE } from "@/lib/request-limits";
+import { OperationalLoadingState } from "@/components/OperationalLoadingState";
+import { FormSection } from "./FormSection";
+import { ItemImageDraftField } from "./ItemImageDraftField";
+import type { DraftItemImage } from "@/lib/item-image-draft";
+
+export interface BulkFormHandle {
+  validate(): FormValidationIssue | null;
+  getSubmitPayload(): {
+    url: string;
+    body: Record<string, unknown>;
+    label: string;
+    createsCatalogRecord: boolean;
+    handoffHref?: string;
+    openLabel?: string;
+  } | null;
+  reset(): void;
+  focus(): void;
+  focusField(fieldId: string): void;
+}
+
+interface Props {
+  categories: CategoryOption[];
+  locations: Location[];
+  open: boolean;
+  trackingMode: "units" | "quantity";
+  image: DraftItemImage | null;
+  onChooseImage: (searchQuery: string) => void;
+  onClearImage: () => void;
+  onProgressChange: (progress: RequiredFieldProgress) => void;
+  onOperationChange: (operation: "create" | "adjust") => void;
+  onInteract: () => void;
+  disabled?: boolean;
+}
+
+type BulkSkuListResponse = {
+  data?: BulkSkuOption[];
+};
+
+type ExistingItemsState = "idle" | "loading" | "ready" | "error";
+
+export const BulkItemForm = forwardRef<BulkFormHandle, Props>(
+  function BulkItemForm({
+    categories,
+    locations,
+    open,
+    trackingMode,
+    image,
+    onChooseImage,
+    onClearImage,
+    onProgressChange,
+    onOperationChange,
+    onInteract,
+    disabled = false,
+  }, ref) {
+    const [bulkMode, setBulkMode] = useState<BulkMode>("new");
+    const [bulkName, setBulkName] = useState("");
+    const [categoryId, setCategoryId] = useState("");
+    const [locationId, setLocationId] = useState("");
+    const [bulkQrCode, setBulkQrCode] = useState("");
+    const [initialQuantity, setInitialQuantity] = useState("0");
+    const [imageOpen, setImageOpen] = useState(false);
+
+    const [existingBulkSkus, setExistingBulkSkus] = useState<BulkSkuOption[]>([]);
+    const [existingItemsState, setExistingItemsState] = useState<ExistingItemsState>("idle");
+    const [existingItemsError, setExistingItemsError] = useState("");
+    const [existingItemsReload, setExistingItemsReload] = useState(0);
+    const [selectedBulkSkuId, setSelectedBulkSkuId] = useState("");
+    const [addQty, setAddQty] = useState("1");
+    const [validationAttempted, setValidationAttempted] = useState(false);
+
+    const bulkNameInputRef = useRef<HTMLInputElement>(null);
+    const locationOptions = locations.map((location) => ({ value: location.id, label: location.name }));
+    const quantityOnlyBulkSkus = existingBulkSkus.filter((sku) => !sku.trackByNumber);
+
+    useEffect(() => {
+      if (!open || trackingMode !== "quantity") return;
+      const controller = new AbortController();
+      setExistingItemsState("loading");
+      setExistingItemsError("");
+      (async () => {
+        try {
+          const res = await fetch("/api/bulk-skus?limit=200", { signal: controller.signal });
+          if (handleAuthRedirect(res)) return;
+          if (!res.ok) {
+            const message = await parseErrorMessage(res, "Count-tracked items could not load.");
+            if (!controller.signal.aborted) {
+              setExistingItemsState("error");
+              setExistingItemsError(message);
+            }
+            return;
+          }
+          const json = await parseJsonSafely<BulkSkuListResponse>(res);
+          if (!controller.signal.aborted) {
+            if (!json || !Array.isArray(json.data)) {
+              setExistingItemsState("error");
+              setExistingItemsError("Count-tracked items returned an unreadable response. Retry before adding stock.");
+              return;
+            }
+            setExistingBulkSkus(json.data);
+            setExistingItemsState("ready");
+          }
+        } catch (error) {
+          if (!controller.signal.aborted) {
+            setExistingItemsState("error");
+            setExistingItemsError(error instanceof Error && error.name === "AbortError"
+              ? ""
+              : "Count-tracked items could not load. Check your connection and retry.");
+          }
+        }
+      })();
+      return () => controller.abort();
+    }, [existingItemsReload, open, trackingMode]);
+
+    useEffect(() => {
+      if (trackingMode === "units") setBulkMode("new");
+    }, [trackingMode]);
+
+    useEffect(() => {
+      onOperationChange(bulkMode === "existing" ? "adjust" : "create");
+      if (bulkMode === "existing") {
+        onProgressChange({
+          completed: [
+            Boolean(selectedBulkSkuId),
+            Number.isInteger(Number(addQty))
+              && Number(addQty) >= 1
+              && Number(addQty) <= MAX_BULK_QUANTITY_PER_LINE,
+          ].filter(Boolean).length,
+          total: 2,
+        });
+        return;
+      }
+      onProgressChange({
+        completed: [bulkName.trim(), categoryId, locationId, bulkQrCode.trim()].filter(Boolean).length,
+        total: 4,
+      });
+    }, [addQty, bulkMode, bulkName, bulkQrCode, categoryId, locationId, onOperationChange, onProgressChange, selectedBulkSkuId]);
+
+    const nameMissing = validationAttempted && bulkMode === "new" && !bulkName.trim();
+    const categoryMissing = validationAttempted && bulkMode === "new" && !categoryId;
+    const locationMissing = validationAttempted && bulkMode === "new" && !locationId;
+    const qrCodeMissing = validationAttempted && bulkMode === "new" && !bulkQrCode.trim();
+    const selectedItemMissing = validationAttempted && bulkMode === "existing" && !selectedBulkSkuId;
+    const parsedAddQuantity = Number(addQty);
+    const addQuantityInvalid = validationAttempted
+      && bulkMode === "existing"
+      && (!Number.isInteger(parsedAddQuantity)
+        || parsedAddQuantity < 1
+        || parsedAddQuantity > MAX_BULK_QUANTITY_PER_LINE);
+    const parsedInitialQuantity = Number(initialQuantity);
+    const initialQuantityMax = trackingMode === "units"
+      ? MAX_NUMBERED_UNITS_PER_CREATE
+      : MAX_BULK_QUANTITY_PER_LINE;
+    const initialQuantityInvalid = validationAttempted
+      && bulkMode === "new"
+      && (!Number.isInteger(parsedInitialQuantity)
+        || parsedInitialQuantity < 0
+        || parsedInitialQuantity > initialQuantityMax);
+
+    function focusField(fieldId: string) {
+      requestAnimationFrame(() => document.getElementById(fieldId)?.focus());
+    }
+
+    useImperativeHandle(ref, () => ({
+      validate() {
+        setValidationAttempted(true);
+        if (bulkMode === "new") {
+          if (!bulkName.trim()) return { message: "Enter an item name to continue.", fieldId: "new-bulk-item-name" };
+          if (!categoryId) return { message: "Select a category to continue.", fieldId: "new-bulk-item-category" };
+          if (!locationId) return { message: "Select a location to continue.", fieldId: "new-bulk-item-location" };
+          if (!bulkQrCode.trim()) return { message: "Enter or generate a QR code to continue.", fieldId: "new-bulk-item-qr-code" };
+          if (!Number.isInteger(parsedInitialQuantity) || parsedInitialQuantity < 0) {
+            return { message: "Initial quantity must be a whole number of zero or more.", fieldId: "new-bulk-item-initial-quantity" };
+          }
+          if (parsedInitialQuantity > initialQuantityMax) {
+            return {
+              message: trackingMode === "units"
+                ? `Create at most ${MAX_NUMBERED_UNITS_PER_CREATE} numbered units at once.`
+                : `Initial quantity cannot exceed ${MAX_BULK_QUANTITY_PER_LINE.toLocaleString()}.`,
+              fieldId: "new-bulk-item-initial-quantity",
+            };
+          }
+        } else {
+          if (existingItemsState === "loading") {
+            return { message: "Wait for count-tracked items to finish loading.", fieldId: "existing-bulk-item" };
+          }
+          if (existingItemsState === "error") {
+            return { message: "Retry count-tracked items before adding stock.", fieldId: "retry-existing-bulk-items" };
+          }
+          if (quantityOnlyBulkSkus.length === 0) {
+            return { message: "No active count-tracked items are available. Choose Create new item.", fieldId: "bulk-new" };
+          }
+          if (!selectedBulkSkuId) return { message: "Select an item to continue.", fieldId: "existing-bulk-item" };
+          if (!Number.isInteger(parsedAddQuantity) || parsedAddQuantity < 1) {
+            return { message: "Quantity received must be a whole number of at least 1.", fieldId: "existing-bulk-item-add-quantity" };
+          }
+          if (parsedAddQuantity > MAX_BULK_QUANTITY_PER_LINE) {
+            return {
+              message: `Quantity received cannot exceed ${MAX_BULK_QUANTITY_PER_LINE.toLocaleString()}.`,
+              fieldId: "existing-bulk-item-add-quantity",
+            };
+          }
+        }
+        return null;
+      },
+      getSubmitPayload() {
+        if (bulkMode === "existing") {
+          const sku = quantityOnlyBulkSkus.find((item) => item.id === selectedBulkSkuId);
+          return {
+            url: `/api/bulk-skus/${selectedBulkSkuId}/adjust`,
+            body: { quantityDelta: parsedAddQuantity, reason: "Added through Add item" },
+            label: sku?.name || "Item",
+            createsCatalogRecord: false,
+            handoffHref: `/items/bulk-${selectedBulkSkuId}`,
+            openLabel: "Open item",
+          };
+        }
+        const selectedCategory = categories.find((category) => category.id === categoryId);
+        return {
+          url: "/api/bulk-skus",
+          body: {
+            name: bulkName.trim(),
+            category: selectedCategory?.name ?? "Uncategorized",
+            ...(categoryId ? { categoryId } : {}),
+            locationId,
+            binQrCodeValue: bulkQrCode.trim(),
+            initialQuantity: parsedInitialQuantity,
+            trackByNumber: trackingMode === "units",
+          },
+          label: bulkName.trim() || "Item",
+          createsCatalogRecord: true,
+          openLabel: "Open item",
+        };
+      },
+      reset() {
+        setBulkMode("new");
+        setBulkName("");
+        setCategoryId("");
+        setLocationId("");
+        setBulkQrCode("");
+        setInitialQuantity("0");
+        setSelectedBulkSkuId("");
+        setAddQty("1");
+        setImageOpen(false);
+        setValidationAttempted(false);
+      },
+      focus() {
+        bulkNameInputRef.current?.focus();
+      },
+      focusField,
+    }));
+
+    return (
+      <fieldset disabled={disabled} className="contents" onChange={onInteract}>
+        {trackingMode === "quantity" && (
+          <FormSection
+            title="Stock action"
+            badge={bulkMode === "new" ? "Create new" : "Add stock"}
+            badgeVariant={bulkMode === "new" ? "green" : "orange"}
+            description="Create a count-tracked record or increase stock for an existing one."
+          >
+            <RadioGroup
+              name="bulk-mode"
+              value={bulkMode}
+              onValueChange={(value) => {
+                const nextMode = value as BulkMode;
+                onInteract();
+                setValidationAttempted(false);
+                setBulkMode(nextMode);
+                if (nextMode === "existing") {
+                  onClearImage();
+                }
+              }}
+              disabled={disabled}
+              className="grid gap-2 sm:grid-cols-2"
+            >
+              <Label htmlFor="bulk-new" className="min-h-16 cursor-pointer items-start gap-3 rounded-md border border-border/60 p-3 has-[[data-state=checked]]:border-primary/50 has-[[data-state=checked]]:bg-primary/5">
+                <RadioGroupItem value="new" id="bulk-new" className="mt-0.5" />
+                <span>
+                  <span className="block font-medium">Create new item</span>
+                  <span className="mt-1 block text-xs font-normal leading-relaxed text-muted-foreground">Start one new count-tracked catalog row.</span>
+                </span>
+              </Label>
+              <Label htmlFor="bulk-existing" className="min-h-16 cursor-pointer items-start gap-3 rounded-md border border-border/60 p-3 has-[[data-state=checked]]:border-primary/50 has-[[data-state=checked]]:bg-primary/5">
+                <RadioGroupItem value="existing" id="bulk-existing" className="mt-0.5" />
+                <span>
+                  <span className="block font-medium">Add to existing</span>
+                  <span className="mt-1 block text-xs font-normal leading-relaxed text-muted-foreground">Record an incoming shipment.</span>
+                </span>
+              </Label>
+            </RadioGroup>
+          </FormSection>
+        )}
+
+        {bulkMode === "new" ? (
+          <>
+            <FormSection
+              title="Essentials"
+              badge={trackingMode === "units" ? "Numbered family" : "Count stock"}
+              badgeVariant={trackingMode === "units" ? "purple" : "green"}
+              description={trackingMode === "units"
+                ? "Name, category, location, and family QR create one catalog row with numbered units beneath it."
+                : "Name, category, location, and stock QR create one count-tracked catalog row."}
+            >
+              <FormRow label="Item name" htmlFor="new-bulk-item-name" required>
+                <Input
+                  id="new-bulk-item-name"
+                  name="bulkName"
+                  ref={bulkNameInputRef}
+                  value={bulkName}
+                  onChange={(event) => setBulkName(event.target.value)}
+                  placeholder={trackingMode === "units" ? "e.g. Sony BP-U70 Battery" : "e.g. Gaff Tape"}
+                  autoComplete="off"
+                  required
+                  aria-invalid={nameMissing || undefined}
+                  aria-describedby={nameMissing ? "new-bulk-item-name-error" : undefined}
+                  className="h-10"
+                />
+                {nameMissing && <FormFieldError id="new-bulk-item-name-error">Item name is required.</FormFieldError>}
+              </FormRow>
+
+              <FormRow label="Category" htmlFor="new-bulk-item-category" required>
+                <CategoryCombobox
+                  id="new-bulk-item-category"
+                  value={categoryId}
+                  onValueChange={(value) => {
+                    onInteract();
+                    setCategoryId(value);
+                  }}
+                  categories={categories}
+                  disabled={disabled}
+                  triggerClassName="h-10"
+                  ariaInvalid={categoryMissing}
+                  ariaDescribedBy={categoryMissing ? "new-bulk-item-category-error" : undefined}
+                />
+                {categoryMissing && <FormFieldError id="new-bulk-item-category-error">Category is required.</FormFieldError>}
+              </FormRow>
+
+              <FormRow label="Location" htmlFor="new-bulk-item-location" required>
+                <FormCombobox
+                  id="new-bulk-item-location"
+                  value={locationId}
+                  onValueChange={(value) => {
+                    onInteract();
+                    setLocationId(value);
+                  }}
+                  options={locationOptions}
+                  placeholder="Select a location"
+                  searchPlaceholder="Search locations..."
+                  emptyLabel="No location found."
+                  disabled={disabled}
+                  triggerClassName="h-10"
+                  ariaInvalid={locationMissing}
+                  ariaDescribedBy={locationMissing ? "new-bulk-item-location-error" : undefined}
+                />
+                {locationMissing && <FormFieldError id="new-bulk-item-location-error">Location is required.</FormFieldError>}
+              </FormRow>
+
+              <FormRow label={trackingMode === "units" ? "Family QR code" : "Stock QR code"} htmlFor="new-bulk-item-qr-code" required>
+                <div className="flex gap-2">
+                  <Input
+                    id="new-bulk-item-qr-code"
+                    name="bulkQrCode"
+                    value={bulkQrCode}
+                    onChange={(event) => setBulkQrCode(event.target.value)}
+                    placeholder="Scan, enter, or generate a code"
+                    autoComplete="off"
+                    required
+                    aria-invalid={qrCodeMissing || undefined}
+                    aria-describedby={qrCodeMissing ? "new-bulk-item-qr-code-error" : undefined}
+                    className="h-10 flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="size-10"
+                    title="Generate QR code"
+                    aria-label="Generate QR code"
+                    onClick={() => {
+                      onInteract();
+                      setBulkQrCode(generateQrCode());
+                    }}
+                    disabled={disabled}
+                  >
+                    <Dices className="size-4" />
+                  </Button>
+                </div>
+                {qrCodeMissing && <FormFieldError id="new-bulk-item-qr-code-error">QR code is required.</FormFieldError>}
+              </FormRow>
+
+              <FormRow label={trackingMode === "units" ? "Initial units" : "Initial quantity"} htmlFor="new-bulk-item-initial-quantity">
+                <Input
+                  id="new-bulk-item-initial-quantity"
+                  name="initialQuantity"
+                  value={initialQuantity}
+                  onChange={(event) => setInitialQuantity(event.target.value)}
+                  type="number"
+                  min="0"
+                  max={initialQuantityMax}
+                  step="1"
+                  autoComplete="off"
+                  aria-invalid={initialQuantityInvalid || undefined}
+                  aria-describedby={initialQuantityInvalid ? "new-bulk-item-initial-quantity-error" : undefined}
+                  className="h-10"
+                />
+                {initialQuantityInvalid && (
+                  <FormFieldError id="new-bulk-item-initial-quantity-error">
+                    {trackingMode === "units"
+                      ? `Enter a whole number from 0 to ${MAX_NUMBERED_UNITS_PER_CREATE}.`
+                      : `Enter a whole number from 0 to ${MAX_BULK_QUANTITY_PER_LINE.toLocaleString()}.`}
+                  </FormFieldError>
+                )}
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  {trackingMode === "units"
+                    ? "Creates permanent unit numbers now; exact units bind during kiosk pickup and return."
+                    : "Sets the starting stock count at this location."}
+                </p>
+              </FormRow>
+            </FormSection>
+
+            <FormSection
+              title="Product image"
+              badge={image ? "Selected" : "Optional"}
+              badgeVariant={image ? "blue" : "secondary"}
+              description="Search, paste a URL, or upload a file before creating the item."
+              collapsible
+              open={imageOpen}
+              onOpenChange={setImageOpen}
+            >
+              <ItemImageDraftField
+                image={image}
+                disabled={disabled}
+                onChoose={() => onChooseImage(bulkName)}
+                onClear={onClearImage}
+                embedded
+              />
+            </FormSection>
+          </>
+        ) : (
+          <FormSection
+            title="Add stock"
+            badge="Existing item"
+            badgeVariant="orange"
+            description="Choose the count-tracked item and record how many units arrived."
+          >
+            {existingItemsState === "loading" ? (
+              <OperationalLoadingState title="Loading count-tracked items" rows={2} className="px-0 py-1" />
+            ) : existingItemsState === "error" ? (
+              <Alert variant="destructive">
+                <AlertCircleIcon className="size-4" />
+                <AlertDescription className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <span>{existingItemsError || "Count-tracked items could not load."}</span>
+                  <Button
+                    id="retry-existing-bulk-items"
+                    type="button"
+                    variant="outline"
+                    className="h-10"
+                    onClick={() => setExistingItemsReload((value) => value + 1)}
+                  >
+                    Retry
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            ) : quantityOnlyBulkSkus.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No active count-tracked items are available. Create one instead.</p>
+            ) : (
+              <>
+                <FormRow label="Item" htmlFor="existing-bulk-item" required>
+                  <BulkSkuCombobox
+                    id="existing-bulk-item"
+                    value={selectedBulkSkuId}
+                    onValueChange={(value) => {
+                      onInteract();
+                      setSelectedBulkSkuId(value);
+                    }}
+                    skus={quantityOnlyBulkSkus}
+                    triggerClassName="h-10"
+                    ariaInvalid={selectedItemMissing}
+                    ariaDescribedBy={selectedItemMissing ? "existing-bulk-item-error" : undefined}
+                  />
+                  {selectedItemMissing && <FormFieldError id="existing-bulk-item-error">Item is required.</FormFieldError>}
+                </FormRow>
+
+                {selectedBulkSkuId && (() => {
+                  const sku = quantityOnlyBulkSkus.find((item) => item.id === selectedBulkSkuId);
+                  if (!sku) return null;
+                  const quantity = sku.balances.reduce((sum, balance) => sum + balance.onHandQuantity, 0);
+                  return (
+                    <div className="grid gap-2 rounded-md border bg-muted/30 px-4 py-3 text-sm sm:grid-cols-3">
+                      <div>
+                        <span className="block text-xs text-muted-foreground">Current stock</span>
+                        <span className="font-medium tabular-nums">{quantity}</span>
+                      </div>
+                      <div>
+                        <span className="block text-xs text-muted-foreground">Category</span>
+                        <span>{sku.categoryRel?.name ?? "—"}</span>
+                      </div>
+                      <div>
+                        <span className="block text-xs text-muted-foreground">Location</span>
+                        <span>{sku.location.name}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                <FormRow label="Quantity received" htmlFor="existing-bulk-item-add-quantity" required>
+                  <Input
+                    id="existing-bulk-item-add-quantity"
+                    name="addQuantity"
+                    type="number"
+                    min="1"
+                    max={MAX_BULK_QUANTITY_PER_LINE}
+                    step="1"
+                    value={addQty}
+                    onChange={(event) => setAddQty(event.target.value)}
+                    autoComplete="off"
+                    required
+                    aria-invalid={addQuantityInvalid || undefined}
+                    aria-describedby={addQuantityInvalid ? "existing-bulk-item-add-quantity-error" : undefined}
+                    className="h-10"
+                  />
+                  {addQuantityInvalid && (
+                    <FormFieldError id="existing-bulk-item-add-quantity-error">
+                      Enter a whole number from 1 to {MAX_BULK_QUANTITY_PER_LINE.toLocaleString()}.
+                    </FormFieldError>
+                  )}
+                </FormRow>
+              </>
+            )}
+          </FormSection>
+        )}
+      </fieldset>
+    );
+  },
+);

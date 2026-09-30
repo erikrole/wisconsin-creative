@@ -27,12 +27,16 @@ export type PersonScoreboardFilterState = {
   result: PersonScoreboardResultFilter;
   sport: string;
   site: PersonScoreboardSiteFilter;
+  venue: string;
+  opponent: string;
 };
 
 export const EMPTY_PERSON_SCOREBOARD_FILTERS: PersonScoreboardFilterState = {
   result: "all",
   sport: "all",
   site: "all",
+  venue: "all",
+  opponent: "all",
 };
 
 type SearchReader = Pick<URLSearchParams, "get">;
@@ -127,10 +131,16 @@ export function parsePersonScoreboardFilters(params: SearchReader): PersonScoreb
   const result = params.get("result");
   const site = params.get("site");
   const sport = params.get("sportCode")?.trim() ?? "";
+  const dimension = (key: "venue" | "opponent") => {
+    const value = params.get(key)?.trim();
+    return value && value !== SCOREBOARD_ALL_FILTER ? value : "all";
+  };
   return {
     result: result === "WIN" || result === "LOSS" || result === "TIE" ? result : "all",
-    sport: sport && sport !== "all" ? sport : "all",
+    sport: sport && sport !== "all" && sport !== SCOREBOARD_ALL_FILTER ? sport : "all",
     site: site === "HOME" || site === "AWAY" || site === "NEUTRAL" ? site : "all",
+    venue: dimension("venue"),
+    opponent: dimension("opponent"),
   };
 }
 
@@ -144,8 +154,13 @@ export function writePersonScoreboardSearchParams(
   else params.set("sportCode", filters.sport);
   if (filters.site === "all") params.delete("site");
   else params.set("site", filters.site);
+  for (const key of ["venue", "opponent"] as const) {
+    if (filters[key] === "all") params.delete(key);
+    else params.set(key, filters[key]);
+  }
 }
 
 export function personScoreboardHasFilters(filters: PersonScoreboardFilterState): boolean {
-  return filters.result !== "all" || filters.sport !== "all" || filters.site !== "all";
+  return filters.result !== "all" || filters.sport !== "all" || filters.site !== "all"
+    || filters.venue !== "all" || filters.opponent !== "all";
 }

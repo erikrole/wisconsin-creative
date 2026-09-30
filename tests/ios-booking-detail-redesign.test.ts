@@ -34,8 +34,9 @@ describe("iOS Booking Detail Item Detail alignment", () => {
     expect(detail).toContain("if canExtendBooking");
     expect(detail).toContain("BookingExtendBar(");
     expect(detail).toContain(".background(.ultraThinMaterial)");
-    expect(detail).toContain('Label("Extend Return Date", systemImage: "clock.arrow.circlepath")');
-    expect(detail).toMatch(/Label\("Extend Return Date"[\s\S]*?\.buttonStyle\(\.bordered\)/);
+    // Extend shortens to "Extend" when Nudge shares the bar.
+    expect(detail).toContain('Label(nudge == nil ? "Extend Return Date" : "Extend", systemImage: "clock.arrow.circlepath")');
+    expect(detail).toMatch(/Label\(nudge == nil \? "Extend Return Date"[\s\S]*?\.buttonStyle\(\.bordered\)/);
     expect(detail).toContain("if canCancelBooking");
     expect(detail).toContain('Label("Cancel Booking", systemImage: "xmark.circle")');
   });

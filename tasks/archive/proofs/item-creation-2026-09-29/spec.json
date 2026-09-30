@@ -1,0 +1,71 @@
+{
+  "title": "Clearer item creation, safer drafts",
+  "eyebrow": "Wisconsin Creative \u00b7 Local UI review",
+  "lede": "Choose tracking by the gear you have, enter details reliably, and confirm before clearing a draft.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "Tracking choices",
+      "note": "Matched real-component fixtures, with retained original source. APIs are intercepted; these captures do not prove record persistence.",
+      "pairs": [
+        {
+          "title": "Desktop",
+          "before": "before-1280.png",
+          "after": "after-1280.png",
+          "beforeEvidence": "before-1280-evidence.json",
+          "afterEvidence": "after-1280-evidence.json",
+          "beforeCap": "Technical labels; descriptions are only shown for the selected style.",
+          "afterCap": "All choices explain the tracking method and give recognizable examples."
+        },
+        {
+          "title": "Tablet",
+          "before": "before-768.png",
+          "after": "after-768.png",
+          "beforeEvidence": "before-768-evidence.json",
+          "afterEvidence": "after-768-evidence.json",
+          "beforeCap": "Technical labels; descriptions are only shown for the selected style.",
+          "afterCap": "All choices explain the tracking method and give recognizable examples."
+        },
+        {
+          "title": "Narrow screen smoke",
+          "before": "before-390.png",
+          "after": "after-390.png",
+          "beforeEvidence": "before-390-evidence.json",
+          "afterEvidence": "after-390-evidence.json",
+          "beforeCap": "Technical labels; descriptions are only shown for the selected style.",
+          "afterCap": "All choices explain the tracking method and give recognizable examples."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Reliable text entry",
+      "was": "Draft tracking ran during input capture and could reset text before its change handler read it. Reproduced in the authenticated preview.",
+      "now": "Both forms record draft changes after field handlers have accepted input."
+    },
+    {
+      "h": "Protected tracking changes",
+      "was": "Changing tracking style could discard entered details immediately.",
+      "now": "An edited draft requires Clear draft and switch. Keep editing preserves values; unchanged choices remain quick."
+    },
+    {
+      "h": "Clearer choices and feedback",
+      "was": "Technical tracking badges and forced focus into the form.",
+      "now": "Visible examples, responsive cards, keyboard navigation within the choices, and announced footer progress."
+    }
+  ],
+  "verification": [
+    "23 focused tests passed.",
+    "TypeScript and scoped ESLint passed.",
+    "Authenticated isolated branch preview: text entry, cancel preservation, and confirmed switch passed; zero browser runtime errors; no inventory saved.",
+    "Chromium fixtures at 1280, 768, and 390 pixels: draft preservation, confirmed reset, family-to-family reset, keyboard selection, and no horizontal overflow passed.",
+    "Final npm run build:app passed; one pre-existing unused-variable warning in Sidebar.tsx.",
+    "Docs verification and git diff --check passed."
+  ],
+  "notes": [
+    "No commit or deployment. Existing unrelated workspace changes were preserved.",
+    "Fixture baseline snapshots include the three original creation files; other shared components and styles are the same for both captures.",
+    "See results.json and authenticated-results.json for interaction results. Confirmation captures are saved separately as confirm-*.png."
+  ]
+}

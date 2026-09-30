@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "1c62814365f89eb377689495ba8f1eb4f85a9d9e",
+  "sourcePatchSha256": "201ff1ae1e79bbdc02212bb59c5f30fe269b0b8d42dda9da6d1cdf8ff51df484",
+  "settings": {
+    "device": "Chromium desktop",
+    "viewport": [
+      1280,
+      1000
+    ],
+    "fixture": "sol-item-recovery-v1",
+    "role": "staff fixture",
+    "route": "/items/stock-draft",
+    "appearance": "light",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "2026-09-29T17:00:00Z",
+    "scroll": [
+      0,
+      306
+    ]
+  },
+  "imageSha256": "cd9a6943e632c86f5efda190b8dddecc952954bbc6b8c66535f0ceb925657b1f",
+  "dimensions": [
+    1280,
+    1000
+  ]
+}

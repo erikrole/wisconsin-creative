@@ -1,0 +1,87 @@
+{
+  "title": "Item creation: Sol recovery review",
+  "eyebrow": "Wisconsin Creative \u00b7 local 6.1 Sol review",
+  "lede": "Keep unfinished inventory intake recoverable and protect edited drafts. Existing tracking choices remain intact.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "Matched local fixture evidence",
+      "note": "Baseline is the exact pre-review dirty source snapshot; actual React forms are bundled. API mutation results are fixture responses, with no database inventory writes. Same viewport, clock, source data and scroll settings.",
+      "pairs": [
+        {
+          "title": "Unfinished batch recovery",
+          "sub": "1280 CSS px; same fixture steps and scroll.",
+          "before": "before-recovered-1280.png",
+          "beforeCap": "The failed row reopened blank.",
+          "after": "after-recovered-1280.png",
+          "afterCap": "The failed identity, organization, QR and shipment notes survive.",
+          "beforeEvidence": "before-recovered-1280-evidence.json",
+          "afterEvidence": "after-recovered-1280-evidence.json"
+        },
+        {
+          "title": "Copied product notice",
+          "sub": "1280 CSS px; same fixture steps and scroll.",
+          "before": "before-copy-details-1280.png",
+          "beforeCap": "Description occupied the narrow icon column.",
+          "after": "after-copy-details-1280.png",
+          "afterCap": "Description uses the full content column.",
+          "beforeEvidence": "before-copy-details-1280-evidence.json",
+          "afterEvidence": "after-copy-details-1280-evidence.json"
+        },
+        {
+          "title": "Quantity draft image",
+          "sub": "1280 CSS px; same fixture steps and scroll.",
+          "before": "before-stock-draft-1280.png",
+          "beforeCap": "Switching to existing stock erased the staged image.",
+          "after": "after-stock-draft-1280.png",
+          "afterCap": "Switching back restores the new-item draft and image.",
+          "beforeEvidence": "before-stock-draft-1280-evidence.json",
+          "afterEvidence": "after-stock-draft-1280-evidence.json"
+        },
+        {
+          "title": "Tablet batch recovery",
+          "sub": "768 CSS px; same fixture steps and scroll.",
+          "before": "before-recovered-768.png",
+          "beforeCap": "The remaining row lost its identity.",
+          "after": "after-recovered-768.png",
+          "afterCap": "The remaining row stays ready to correct and retry.",
+          "beforeEvidence": "before-recovered-768-evidence.json",
+          "afterEvidence": "after-recovered-768-evidence.json"
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Partial batches retain unfinished work",
+      "was": "The handoff unmounted the form; Fix remaining reopened blank.",
+      "now": "Intake stays mounted and hidden during the handoff. Retained keys and error focus stay valid; hidden intake cannot resubmit. Leaving unfinished rows requires confirmation."
+    },
+    {
+      "h": "Copy resets are deliberate",
+      "was": "Start a different item or retry source could clear edited details immediately.",
+      "now": "Keep editing preserves the copied draft and returns focus; confirmation clears it."
+    },
+    {
+      "h": "Quantity switches preserve new intake",
+      "was": "Add to existing cleared the staged image while other create fields survived.",
+      "now": "New-item details and image survive the round trip; adjusting existing stock keeps its record image unchanged."
+    },
+    {
+      "h": "Copy notices stay readable",
+      "was": "Descriptions after a title occupied the 1rem icon column.",
+      "now": "Scoped creation notices use the full content column."
+    }
+  ],
+  "verification": [
+    "26 focused tests, TypeScript, scoped lint and final application build passed. Build reports the pre-existing Sidebar unused-state warning.",
+    "Local Chromium fixture at 1280, 768 and 390 CSS px: partial success, retry-only-unfinished, conflict focus, hidden submit guard, canceled partial exit followed by regular discard, copy reset cancel/confirm, Quantity image preservation. No page errors.",
+    "Authenticated branch preview at 1280 and 768 CSS px: typing, tracking cancel/focus and confirm, Quantity image/name round trip, discard cancel/confirm. No inventory mutation attempts or failed API responses. Background analytics requests were blocked."
+  ],
+  "notes": [
+    "Local-only changes. No staging, commit, push or deployment.",
+    "Partial-batch POST responses were intercepted fixtures; this proves client recovery behavior, not database persistence or server mutation semantics.",
+    "Phone-width web is smoke coverage; native iOS remains the primary phone workflow.",
+    "Earlier immutable proof files remain intact in the parent directory."
+  ]
+}

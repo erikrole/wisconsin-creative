@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { AlertCircle, CalendarDays, ChevronDown, ChevronUp, Flag, Home, Route, Trophy } from "lucide-react";
-import { useFetch } from "@/hooks/use-fetch";
+import { AlertCircle, CalendarDays, ChevronDown, ChevronUp, Flag, Home, RefreshCw, Route, Trophy } from "lucide-react";
+import { useScoreboardRead } from "@/hooks/use-scoreboard-read";
 import {
   classifyError,
   handleAuthRedirect,
@@ -141,8 +141,7 @@ function resultSpokenLabel(result: ScoreboardEvent["result"]): string {
 }
 
 /** Recent form, newest first — the question anyone with a record asks next. */
-function FormStrip({ games }: { games: ScoreboardEvent[] }) {
-  const streak = currentStreak(games);
+function FormStrip({ games, streak }: { games: ScoreboardEvent[]; streak: ReturnType<typeof currentStreak> }) {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -185,12 +184,18 @@ function SeasonCard({
   isFiltered: boolean;
   seasonResolvedGames: number | null;
 }) {
-  const form = recentForm(games.filter((game) => game.result !== null));
+  const form = scoreboard.recentResults ?? recentForm(games);
+  const streak = scoreboard.streak === undefined ? currentStreak(games) : scoreboard.streak && {
+    ...scoreboard.streak,
+    isWin: scoreboard.streak.result === "WIN",
+    label: `${scoreboard.streak.count} straight ${scoreboard.streak.result === "WIN" ? "wins" : scoreboard.streak.result === "LOSS" ? "losses" : "ties"}`,
+  };
   const sentence = totalsSentence({
     eventsWorked: scoreboard.summary.eventsWorked,
     resolvedGames: scoreboard.summary.games,
     isFiltered,
     seasonResolvedGames,
+    matchingEventsWorked: scoreboard.summary.matchingEventsWorked,
   });
   const highlights = isFiltered ? [] : scoreboardHighlights(scoreboard);
 
@@ -217,7 +222,7 @@ function SeasonCard({
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-muted-foreground">{sentence}</p>
-          {showsForm && form.length > 0 ? <FormStrip games={form} /> : null}
+          {showsForm && form.length > 0 ? <FormStrip games={form} streak={streak} /> : null}
         </div>
       </div>
 
@@ -449,10 +454,10 @@ function GamesCard({
           <div className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
             <Trophy className="size-5" aria-hidden="true" />
           </div>
-          <p className="text-sm font-medium">{hasFilters ? "No games match these filters" : "No worked events on record"}</p>
+          <p className="text-sm font-medium">{hasFilters ? "No events match these filters" : "No worked events on record"}</p>
           <p className="max-w-md text-sm text-muted-foreground">
             {hasFilters
-              ? "Try another result, sport, or site filter."
+              ? "Remove a filter or clear them to see more of the season."
               : "Completed events will appear here when this person has worked them."}
           </p>
           {hasFilters ? (
@@ -551,9 +556,12 @@ function UserScoreboardExplorer({
   const resultFilter = filters.result;
   const sportFilter = filters.sport;
   const siteFilter = filters.site;
+  const venueFilter = filters.venue;
+  const opponentFilter = filters.opponent;
   const setResultFilter = (value: ResultFilter) => setFilters((current) => ({ ...current, result: value }));
   const setSportFilter = (value: string) => setFilters((current) => ({ ...current, sport: value }));
   const setSiteFilter = (value: SiteFilter) => setFilters((current) => ({ ...current, site: value }));
+  const setDimensionFilter = (key: "venue" | "opponent", value: string) => setFilters((current) => ({ ...current, [key]: value }));
   const [dimension, setDimension] = useState<Dimension>("sport");
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState<FetchErrorKind | null>(null);
@@ -569,30 +577,31 @@ function UserScoreboardExplorer({
   // response only knows its own subtotal, and the season card has to be able to
   // say what fraction of the season is on screen.
   const [seasonResolvedGames, setSeasonResolvedGames] = useState<number | null>(null);
-  const scoreboardReturnTo = returnTo ?? `/users/${userId}?tab=scoreboard`;
+  const returnUrl = new URL(returnTo ?? `/users/${userId}?tab=scoreboard`, "https://scoreboard.invalid");
+  writePersonScoreboardSearchParams(returnUrl.searchParams, filters);
+  const scoreboardReturnTo = `${returnUrl.pathname}${returnUrl.search}`;
 
   const requestUrl = useMemo(() => {
     const params = new URLSearchParams({ limit: String(INITIAL_LIMIT) });
     if (resultFilter !== "all") params.set("result", resultFilter);
     if (sportFilter !== "all") params.set("sportCode", sportFilter);
     if (siteFilter !== "all") params.set("site", siteFilter);
+    if (venueFilter !== "all") params.set("venue", venueFilter);
+    if (opponentFilter !== "all") params.set("opponent", opponentFilter);
     return `/api/users/${userId}/scoreboard?${params.toString()}`;
-  }, [resultFilter, siteFilter, sportFilter, userId]);
+  }, [resultFilter, siteFilter, sportFilter, venueFilter, opponentFilter, userId]);
   const loadingMoreRef = useRef(false);
   const loadMoreAbortRef = useRef<AbortController | null>(null);
   const requestUrlRef = useRef(requestUrl);
 
-  const { data, loading, refreshing, error, reload } = useFetch<UserScoreboard>({
+  const { data, loadedUrl, loading, refreshing, error, reload } = useScoreboardRead<UserScoreboard>({
     url: requestUrl,
     returnTo: scoreboardReturnTo,
-    keepPreviousData: true,
-    refetchOnFocus: false,
-    transform: (json) => (json.data as UserScoreboard),
   });
 
   const needsUnfilteredBootstrap = personScoreboardHasFilters(filters);
   useEffect(() => {
-    if (!needsUnfilteredBootstrap) return;
+    if (!needsUnfilteredBootstrap || !data || data.facets) return;
     const controller = new AbortController();
     void (async () => {
       try {
@@ -610,7 +619,7 @@ function UserScoreboardExplorer({
       }
     })();
     return () => controller.abort();
-  }, [needsUnfilteredBootstrap, scoreboardReturnTo, userId]);
+  }, [needsUnfilteredBootstrap, scoreboardReturnTo, userId, data]);
 
   useEffect(() => {
     requestUrlRef.current = requestUrl;
@@ -622,22 +631,22 @@ function UserScoreboardExplorer({
     setExtraEvents({ requestUrl, events: [], nextCursor: undefined });
 
     return () => loadMoreAbortRef.current?.abort();
-  }, [requestUrl]);
+  }, [requestUrl, data]);
 
-  const isUnfiltered = resultFilter === "all" && sportFilter === "all" && siteFilter === "all";
+  const isUnfiltered = !personScoreboardHasFilters(filters);
 
   useEffect(() => {
     // `keepPreviousData` keeps the last response on screen while a changed URL
     // refetches, so a settled read is the only one whose filters are known to
     // match the controls.
-    if (!data || !isUnfiltered || loading || refreshing) return;
+    if (!data || !isUnfiltered || loading || refreshing || error || loadedUrl !== requestUrl) return;
     const next = toSportOptions(data.bySport);
     // Same sports in the same order means the same list; replacing it would
     // re-render every consumer for nothing.
     const signature = (options: SportOption[]) => options.map((option) => option.key).join("|");
     setSportOptions((current) => (signature(current) === signature(next) ? current : next));
     setSeasonResolvedGames(data.summary.games);
-  }, [data, isUnfiltered, loading, refreshing]);
+  }, [data, isUnfiltered, loading, refreshing, error, loadedUrl, requestUrl]);
 
   const isCurrentPage = extraEvents.requestUrl === requestUrl;
   const events = useMemo(
@@ -649,7 +658,7 @@ function UserScoreboardExplorer({
     : data?.nextCursor;
 
   const loadMore = useCallback(async () => {
-    if (!nextCursor || refreshing || loadingMoreRef.current) return;
+    if (!nextCursor || refreshing || error || loadedUrl !== requestUrl || loadingMoreRef.current) return;
     const controller = new AbortController();
     loadMoreAbortRef.current = controller;
     loadingMoreRef.current = true;
@@ -682,7 +691,7 @@ function UserScoreboardExplorer({
         setLoadingMore(false);
       }
     }
-  }, [nextCursor, refreshing, requestUrl, scoreboardReturnTo]);
+  }, [nextCursor, refreshing, error, loadedUrl, requestUrl, scoreboardReturnTo]);
 
   const clearFilters = useCallback(() => {
     setFilters({ ...EMPTY_PERSON_SCOREBOARD_FILTERS });
@@ -695,7 +704,7 @@ function UserScoreboardExplorer({
       <Alert variant="destructive">
         <AlertCircle className="size-4" />
         <AlertTitle>Scoreboard unavailable</AlertTitle>
-        <AlertDescription className="mt-2 flex flex-col gap-3">
+        <AlertDescription className="col-start-2 mt-2 flex flex-col gap-3">
           <p>We couldn’t load this profile’s Scoreboard record.</p>
           <Button variant="outline" onClick={reload} className="h-10 w-fit">Retry</Button>
         </AlertDescription>
@@ -706,9 +715,11 @@ function UserScoreboardExplorer({
   if (!data) return null;
 
   const hasFilters = personScoreboardHasFilters(filters);
+  const loadedFilters = parsePersonScoreboardFilters(new URL(loadedUrl, "https://scoreboard.invalid").searchParams);
+  const loadedHasFilters = personScoreboardHasFilters(loadedFilters);
   // With no filter on, this response is the unfiltered read, so the list comes
   // straight from it and the control does not flicker in on first paint.
-  const listedSports = isUnfiltered ? toSportOptions(data.bySport) : sportOptions;
+  const listedSports = data.facets?.sports ?? (isUnfiltered ? toSportOptions(data.bySport) : sportOptions);
   // A selected code the held list does not carry still has to name itself. The
   // trigger falling back to "All sports" would report a filter that is not the
   // one in effect.
@@ -731,6 +742,12 @@ function UserScoreboardExplorer({
       key: "site",
       label: `Site: ${SITE_FILTERS.find((option) => option.value === siteFilter)?.label ?? siteFilter}`,
       onRemove: () => setSiteFilter("all"),
+    },
+    venueFilter === "all" ? null : {
+      key: "venue", label: `Venue: ${venueFilter}`, onRemove: () => setDimensionFilter("venue", "all"),
+    },
+    opponentFilter === "all" ? null : {
+      key: "opponent", label: `Opponent: ${opponentFilter}`, onRemove: () => setDimensionFilter("opponent", "all"),
     },
   ].filter((filter): filter is OperationalActiveFilter => filter !== null);
 
@@ -777,16 +794,46 @@ function UserScoreboardExplorer({
                 ))}
               </SelectContent>
             </Select>
+            {(["venue", "opponent"] as const).map((key) => {
+              const options = data.facets?.[key === "venue" ? "venues" : "opponents"] ?? [];
+              if (!options.length && filters[key] === "all") return null;
+              const choices = filters[key] === "all" || options.some((option) => option.key === filters[key])
+                ? options : [...options, { key: filters[key], label: filters[key] }];
+              return (
+                <Select key={key} value={filters[key]} onValueChange={(value) => setDimensionFilter(key, value)}>
+                  <SelectTrigger className="h-10 w-[190px] text-xs" aria-label={`Filter scoreboard ${key}`}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{key === "venue" ? "All venues" : "All opponents"}</SelectItem>
+                    {choices.map((option) => <SelectItem key={option.key} value={option.key}>{option.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              );
+            })}
             {hasFilters ? (
               <Button variant="ghost" size="sm" className="h-10" onClick={clearFilters}>
                 Clear filters
               </Button>
             ) : null}
+            <Button variant="ghost" size="icon" onClick={reload} disabled={refreshing} aria-label="Refresh person Scoreboard">
+              <RefreshCw className={refreshing ? "size-4 animate-spin motion-reduce:animate-none" : "size-4"} />
+            </Button>
           </div>
         </div>
         <OperationalActiveFilterChips filters={activeFilters} />
       </OperationalToolbar>
 
+      {error ? (
+        <Alert role="alert">
+          <AlertCircle className="size-4" />
+          <AlertTitle>Couldn’t refresh Scoreboard</AlertTitle>
+          <AlertDescription className="col-start-2 flex flex-wrap items-center justify-between gap-3">
+            <p>The last loaded record is still shown. Retry to apply the selected filters.</p>
+            <Button variant="outline" onClick={reload} disabled={refreshing}>Retry</Button>
+          </AlertDescription>
+        </Alert>
+      ) : null}
       <ScoreboardDataRegion refreshing={refreshing}>
         <div className="flex flex-col gap-4">
           <SeasonCard
@@ -794,24 +841,24 @@ function UserScoreboardExplorer({
             games={events}
             // A run of results only means something when every result is eligible;
             // under a Wins filter "last five" is five wins by construction.
-            showsForm={resultFilter === "all"}
-            isFiltered={hasFilters}
-            seasonResolvedGames={seasonResolvedGames}
+            showsForm={loadedFilters.result === "all"}
+            isFiltered={loadedHasFilters}
+            seasonResolvedGames={data.seasonGames ?? seasonResolvedGames}
           />
 
           <div className="grid items-start gap-4 lg:grid-cols-2">
             <BreakdownCard
               scoreboard={data}
-              isFiltered={hasFilters}
+              isFiltered={loadedHasFilters}
               dimension={dimension}
               onDimensionChange={setDimension}
             />
             <GamesCard
               events={events}
               total={data.eventCount}
-              hasFilters={hasFilters}
+              hasFilters={loadedHasFilters}
               refreshing={refreshing}
-              nextCursor={nextCursor}
+              nextCursor={error ? null : nextCursor}
               loadingMore={loadingMore}
               loadMoreError={loadMoreError}
               loadMore={loadMore}
@@ -836,7 +883,7 @@ export default function UserScoreboardTab({
 }) {
   return (
     <Suspense fallback={<ScoreboardSkeleton />}>
-      <UserScoreboardExplorer userId={userId} returnTo={returnTo} linkEvents={linkEvents} />
+      <UserScoreboardExplorer key={userId} userId={userId} returnTo={returnTo} linkEvents={linkEvents} />
     </Suspense>
   );
 }

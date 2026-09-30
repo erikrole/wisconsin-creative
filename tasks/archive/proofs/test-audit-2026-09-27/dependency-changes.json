@@ -1,0 +1,67 @@
+[
+  {
+    "package": "node_modules/@vitest/coverage-v8",
+    "before": "3.2.6",
+    "after": "3.2.7"
+  },
+  {
+    "package": "node_modules/@vitest/expect",
+    "before": "3.2.6",
+    "after": "3.2.7"
+  },
+  {
+    "package": "node_modules/@vitest/mocker",
+    "before": "3.2.6",
+    "after": "3.2.7"
+  },
+  {
+    "package": "node_modules/@vitest/pretty-format",
+    "before": "3.2.6",
+    "after": "3.2.7"
+  },
+  {
+    "package": "node_modules/@vitest/runner",
+    "before": "3.2.6",
+    "after": "3.2.7"
+  },
+  {
+    "package": "node_modules/@vitest/snapshot",
+    "before": "3.2.6",
+    "after": "3.2.7"
+  },
+  {
+    "package": "node_modules/@vitest/spy",
+    "before": "3.2.6",
+    "after": "3.2.7"
+  },
+  {
+    "package": "node_modules/@vitest/utils",
+    "before": "3.2.6",
+    "after": "3.2.7"
+  },
+  {
+    "package": "node_modules/expect-type",
+    "before": "1.3.0",
+    "after": "1.4.0"
+  },
+  {
+    "package": "node_modules/qs",
+    "before": "6.15.3",
+    "after": "6.16.0"
+  },
+  {
+    "package": "node_modules/tinyspy",
+    "before": "4.0.4",
+    "after": "4.0.6"
+  },
+  {
+    "package": "node_modules/vite",
+    "before": "7.3.5",
+    "after": "7.3.6"
+  },
+  {
+    "package": "node_modules/vitest",
+    "before": "3.2.6",
+    "after": "3.2.7"
+  }
+]

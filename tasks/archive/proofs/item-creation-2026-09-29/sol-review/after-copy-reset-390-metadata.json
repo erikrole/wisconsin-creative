@@ -1,0 +1,23 @@
+{
+  "sourceRevision": "1c62814365f89eb377689495ba8f1eb4f85a9d9e",
+  "sourcePatchSha256": "f96018315434e2cfdbe42abdbe5053170b9a283756945761e6ec07dc7d15f80e",
+  "settings": {
+    "device": "Chromium desktop",
+    "viewport": [
+      390,
+      1000
+    ],
+    "fixture": "sol-item-recovery-v1",
+    "role": "staff fixture",
+    "route": "/items/copy-reset",
+    "appearance": "light",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "2026-09-29T17:00:00Z",
+    "scroll": [
+      0,
+      0
+    ]
+  }
+}

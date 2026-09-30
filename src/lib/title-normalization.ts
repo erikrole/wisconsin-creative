@@ -40,7 +40,15 @@ const ALWAYS_UPPERCASE_TERMS = new Set([
   "UW", "NIL", "VIP", "UX",
   // "AD" is always athletic director in this product, never the article "ad".
   "AD",
+  // Production and event shorthand
+  "DJ", "PA", "PPV", "PR", "QB",
 ]);
+
+/** "vs" is a connector even as the first word ("vs Iowa"). */
+const ALWAYS_LOWERCASE_TERMS = new Set(["vs"]);
+
+/** Short letter groups joined by "&" are initialisms: "Texas A&M", "AT&T", "Q&A". */
+const AMPERSAND_INITIALISM_PATTERN = /(?<![\p{L}\p{N}])\p{L}{1,2}(?:&\p{L}{1,2})+(?![\p{L}\p{N}])/gu;
 
 const WORD_PATTERN = /[\p{L}\p{N}]+(?:['’][\p{L}\p{N}]+)*/gu;
 
@@ -70,6 +78,9 @@ export function normalizeTeamAbbreviations(value: string): string {
 function normalizeOperationalTitle(value: string): string {
   const title = value.trim().replace(/\s+/g, " ");
   const words = [...title.matchAll(WORD_PATTERN)];
+  // An operator who typed "DJ" or "LED" in a mixed-case title meant it. A
+  // title typed entirely in caps ("MEDIA DAY") carries no such intent.
+  const titleHasLowercase = /\p{Ll}/u.test(title);
 
   return title.replace(WORD_PATTERN, (word, offset: number) => {
     const normalizedCode = word.toUpperCase();
@@ -88,12 +99,29 @@ function normalizeOperationalTitle(value: string): string {
 
     const wordIndex = words.findIndex((match) => match.index === offset);
     const lower = word.toLocaleLowerCase("en-US");
+    if (ALWAYS_LOWERCASE_TERMS.has(lower)) return lower;
     const isEdgeWord = wordIndex === 0 || wordIndex === words.length - 1;
     if (!isEdgeWord && LOWERCASE_TITLE_WORDS.has(lower)) return lower;
 
     if (/\p{Ll}.*\p{Lu}/u.test(word)) return word;
-    return lower.replace(/\p{L}/u, (letter) => letter.toLocaleUpperCase("en-US"));
-  });
+    if (titleHasLowercase && word.length >= 2 && word.length <= 3 && /^\p{Lu}+$/u.test(word)) return word;
+    // Ordinals and numbered words keep their letters lowercase: "1st", "4th".
+    if (/^\p{N}/u.test(word)) return lower;
+    return capitalizeNameWord(lower);
+  }).replace(AMPERSAND_INITIALISM_PATTERN, (match) => match.toLocaleUpperCase("en-US"));
+}
+
+function upperFirst(value: string): string {
+  return value.replace(/\p{L}/u, (letter) => letter.toLocaleUpperCase("en-US"));
+}
+
+/** Title-case one lowercase word, keeping "O'Brien" and "McDonald's" shapes. */
+function capitalizeNameWord(lower: string): string {
+  const elided = /^([dlo])(['’])(\p{L}{2,}.*)$/u.exec(lower);
+  if (elided && !/^s$/u.test(elided[3]!)) return `${upperFirst(elided[1]!)}${elided[2]}${upperFirst(elided[3]!)}`;
+  const mc = /^mc(\p{L}{3,}.*)$/u.exec(lower);
+  if (mc) return `Mc${upperFirst(mc[1]!)}`;
+  return upperFirst(lower);
 }
 
 export const normalizeBookingTitle = normalizeOperationalTitle;

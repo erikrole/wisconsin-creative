@@ -67,8 +67,9 @@ vi.mock("@/lib/services/signatures", () => ({
 
 vi.mock("@/lib/badges", () => ({
   badgesEnabled: vi.fn(),
-  badges: { onShiftsWorked: vi.fn() },
 }));
+
+vi.mock("@/lib/badges/evaluator", () => ({ onShiftsWorked: vi.fn() }));
 
 vi.mock("@/lib/badges/worked-evidence", () => ({
   recentlyWorkedEventUsers: vi.fn(),
@@ -84,8 +85,10 @@ import { pollFirmwareWatchTargets } from "@/lib/services/firmware-watch";
 import { getScheduleAutomationDigest } from "@/lib/services/schedule-automation";
 import { refreshCompanionProjection } from "@/lib/services/companion-projection";
 import { cleanupPendingSignatureArtifacts } from "@/lib/services/signatures";
-import { badges, badgesEnabled } from "@/lib/badges";
+import { badgesEnabled } from "@/lib/badges";
+import { onShiftsWorked } from "@/lib/badges/evaluator";
 import { recentlyWorkedEventUsers } from "@/lib/badges/worked-evidence";
+import { recordJobRun } from "@/lib/services/job-runs";
 import { GET } from "@/app/api/cron/morning-refresh/route";
 
 const mockDb = db as unknown as {
@@ -101,7 +104,7 @@ function request() {
 
 describe("morning refresh cron route", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     vi.spyOn(console, "error").mockImplementation(() => {});
     mockDb.calendarSource.findMany.mockResolvedValue([]);
     mockDb.calendarEvent.updateMany.mockResolvedValue({ count: 0 });
@@ -243,17 +246,17 @@ describe("morning refresh cron route", () => {
 
     expect(res.status).toBe(200);
     expect(body.shiftBadgeUsers).toBe(3);
-    expect(badges.onShiftsWorked).toHaveBeenNthCalledWith(
+    expect(onShiftsWorked).toHaveBeenNthCalledWith(
       1,
       { userId: "scheduled-user" },
       { notify: true },
     );
-    expect(badges.onShiftsWorked).toHaveBeenNthCalledWith(
+    expect(onShiftsWorked).toHaveBeenNthCalledWith(
       2,
       { userId: "backfilled-user" },
       { notify: false },
     );
-    expect(badges.onShiftsWorked).toHaveBeenNthCalledWith(
+    expect(onShiftsWorked).toHaveBeenNthCalledWith(
       3,
       { userId: "late-assigned-user" },
       { notify: false },
@@ -310,6 +313,8 @@ describe("morning refresh cron route", () => {
     const body = await res.json();
 
     expect(res.status).toBe(200);
+    expect(body.ok).toBe(false);
+    expect(recordJobRun).toHaveBeenCalledWith(expect.objectContaining({ outcome: "failed" }));
     expect(body.syncResults).toEqual([
       expect.objectContaining({
         sourceId: "source-1",
@@ -326,7 +331,7 @@ describe("morning refresh cron route", () => {
     }));
   });
 
-  it("syncs calendar sources with bounded concurrency and reports carry-over", async () => {
+  it("syncs calendar sources sequentially and reports completed work", async () => {
     mockDb.calendarSource.findMany.mockResolvedValue(
       Array.from({ length: 7 }, (_, i) => ({ id: `source-${i}`, name: `Source ${i}` })),
     );
@@ -344,9 +349,8 @@ describe("morning refresh cron route", () => {
     const body = await res.json();
 
     expect(res.status).toBe(200);
-    // Serial would peak at 1; unbounded would peak at 7.
-    expect(peakInFlight).toBeGreaterThan(1);
-    expect(peakInFlight).toBeLessThanOrEqual(3);
+    // D-026 requires sequential source processing.
+    expect(peakInFlight).toBe(1);
     expect(body.syncResults).toHaveLength(7);
     expect(body.sourcesProcessed).toBe(7);
     expect(body.sourcesSkipped).toBe(0);
@@ -358,10 +362,12 @@ describe("morning refresh cron route", () => {
     mockDb.calendarSource.findMany.mockResolvedValue(
       Array.from({ length: 9 }, (_, i) => ({ id: `source-${i}`, name: `Source ${i}` })),
     );
-    // Each batch burns more than the 8s budget, so only the first one runs.
-    const realNow = Date.now;
-    let ticks = 0;
-    vi.spyOn(Date, "now").mockImplementation(() => realNow() + (ticks += 5000));
+    let clock = 0;
+    vi.spyOn(Date, "now").mockImplementation(() => clock);
+    vi.mocked(syncCalendarSource).mockImplementation(async () => {
+      clock += 9000;
+      return { added: 0, updated: 0, cancelled: 0, skipped: 0, errors: [] };
+    });
 
     const res = await GET(request(), { params: Promise.resolve({}) });
     const body = await res.json();
@@ -371,6 +377,8 @@ describe("morning refresh cron route", () => {
     expect(body.sourcesSkipped).toBeGreaterThan(0);
     expect(body.syncResults.length + body.sourcesSkipped).toBe(9);
     expect(body.deadlineExceeded).toBe(true);
+    expect(body.sourcesProcessed).toBe(body.syncResults.length);
+    expect(body.ok).toBe(false);
   });
 
   it("evaluates shift badges with bounded concurrency", async () => {
@@ -384,7 +392,7 @@ describe("morning refresh cron route", () => {
     );
     let inFlight = 0;
     let peakInFlight = 0;
-    vi.mocked(badges.onShiftsWorked).mockImplementation(async () => {
+    vi.mocked(onShiftsWorked).mockImplementation(async () => {
       inFlight += 1;
       peakInFlight = Math.max(peakInFlight, inFlight);
       await new Promise((resolve) => setTimeout(resolve, 1));
@@ -414,4 +422,54 @@ describe("morning refresh cron route", () => {
     expect(body.pendingPickups).toMatchObject({ scanned: 2, expired: 1, failed: 0 });
     expect(body.maintenanceFailures).toEqual(["scheduleAutomation"]);
   });
+  it.each(["shiftGroupsArchived", "eventsArchived"])("isolates %s failure and completes cleanup", async (step) => {
+    const model = step === "shiftGroupsArchived" ? mockDb.shiftGroup : mockDb.calendarEvent;
+    model.updateMany.mockRejectedValue(new Error("database unavailable"));
+    const body = await (await GET(request(), { params: Promise.resolve({}) })).json();
+    expect(body.ok).toBe(false);
+    expect(body.maintenanceFailures).toContain(step);
+    expect(body.tradesExpired).toBe(1);
+    expect(cleanupPendingSignatureArtifacts).toHaveBeenCalledOnce();
+  });
+
+  it("reports returned maintenance failures even when promises resolve", async () => {
+    vi.mocked(pollFirmwareWatchTargets).mockResolvedValue({ checked: 1, changed: 0, baselined: 0, failed: 1, skipped: 0, notificationsCreated: 0, errors: [] });
+    const body = await (await GET(request(), { params: Promise.resolve({}) })).json();
+    expect(body.ok).toBe(false);
+    expect(body.maintenanceFailures).toContain("firmwareWatch");
+    expect(recordJobRun).toHaveBeenCalledWith(expect.objectContaining({ outcome: "failed" }));
+  });
+
+  it("does not attribute shift generation failures to calendar health", async () => {
+    mockDb.calendarSource.findMany.mockResolvedValue([{ id: "source-1", name: "UW" }]);
+    vi.mocked(generateShiftsForNewEvents).mockRejectedValue(new Error("generation failed"));
+    const body = await (await GET(request(), { params: Promise.resolve({}) })).json();
+    expect(body.ok).toBe(false);
+    expect(updateCalendarSyncHealth).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ result: expect.objectContaining({ errors: [], added: 0 }) }));
+    expect(body.syncResults[0].shiftGenerationError).toBe("generation failed");
+  });
+
+  it("counts badge failures separately while continuing independent evaluations", async () => {
+    vi.mocked(badgesEnabled).mockReturnValue(true);
+    vi.mocked(recentlyWorkedEventUsers).mockResolvedValue([
+      { userId: "one", hasAddedWorker: false, hasBackfilledAssignment: false },
+      { userId: "two", hasAddedWorker: false, hasBackfilledAssignment: false },
+    ]);
+    vi.mocked(onShiftsWorked).mockRejectedValueOnce(new Error("failed"));
+    const body = await (await GET(request(), { params: Promise.resolve({}) })).json();
+    expect(body).toMatchObject({ ok: false, shiftBadgeUsers: 1, shiftBadgeUsersFailed: 1, shiftBadgeUsersRemaining: 0 });
+    expect(body.maintenanceFailures).toContain("shiftBadges");
+    expect(expireOpenTrades).toHaveBeenCalledOnce();
+  });
+
+  it("reports failed health persistence without losing the successful sync", async () => {
+    mockDb.calendarSource.findMany.mockResolvedValue([{ id: "source-1", name: "UW" }]);
+    vi.mocked(updateCalendarSyncHealth).mockRejectedValue(new Error("write failed"));
+    const body = await (await GET(request(), { params: Promise.resolve({}) })).json();
+    expect(body.ok).toBe(false);
+    expect(body.maintenanceFailures).toContain("calendarHealth:source-1");
+    expect(body.syncResults[0]).toMatchObject({ eventsAdded: 0, eventsUpdated: 0 });
+    expect(updateCalendarSyncHealth).toHaveBeenCalledOnce();
+  });
+
 });

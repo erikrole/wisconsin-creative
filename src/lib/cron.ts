@@ -3,8 +3,10 @@ import { NextResponse } from "next/server";
 import { withHandler } from "@/lib/api";
 
 function safeCompare(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
+  const actual = Buffer.from(a);
+  const expected = Buffer.from(b);
+  if (actual.length !== expected.length) return false;
+  return timingSafeEqual(actual, expected);
 }
 
 function validateCronRequest(req: Request): NextResponse | null {

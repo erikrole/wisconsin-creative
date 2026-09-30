@@ -1,5 +1,7 @@
 "use client";
 
+import type { SerializedDraft } from "@/lib/item-intake-draft";
+
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { ClipboardPaste, Dices, Plus, RefreshCw, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -55,7 +57,9 @@ export type SerializedSubmitEntry = {
 };
 
 export interface SerializedFormHandle {
-  validate(): FormValidationIssue | null;
+  getDraft(): SerializedDraft;
+  restoreDraft(draft: SerializedDraft): void;
+  validate(ignoreExistingTag?: boolean): FormValidationIssue | null;
   getSubmitBody(): Record<string, unknown>;
   getSubmitEntries(): SerializedSubmitEntry[];
   getRepeatTemplate(): SerializedIntakeTemplate;
@@ -65,11 +69,15 @@ export interface SerializedFormHandle {
   focusField(fieldId: string): void;
 }
 
+import type { ItemImageSuggestionStatus } from "@/lib/item-image-suggestion";
+
 interface Props {
   categories: CategoryOption[];
   departments: Department[];
   locations: Location[];
   image: DraftItemImage | null;
+  imageSuggestionStatus: ItemImageSuggestionStatus;
+  onImageSearchSeedChange: (query: string) => void;
   onChooseImage: (searchQuery: string) => void;
   onClearImage: () => void;
   onProgressChange: (progress: RequiredFieldProgress) => void;
@@ -110,6 +118,8 @@ export const SerializedItemForm = forwardRef<SerializedFormHandle, Props>(
     departments,
     locations,
     image,
+    imageSuggestionStatus,
+    onImageSearchSeedChange,
     onChooseImage,
     onClearImage,
     onProgressChange,
@@ -137,11 +147,16 @@ export const SerializedItemForm = forwardRef<SerializedFormHandle, Props>(
     const [userNotes, setUserNotes] = useState("");
     const [qrCodeValue, setQrCodeValue] = useState("");
     const [extraUnits, setExtraUnits] = useState<SerializedUnitDraft[]>([]);
+    useEffect(() => {
+      onImageSearchSeedChange(buildItemImageSearchSeed(itemName, brand, model));
+    }, [itemName, brand, model, onImageSearchSeedChange]);
+
+    const [primaryUnitKey, setPrimaryUnitKey] = useState("unit-primary");
     const [showSerialPaste, setShowSerialPaste] = useState(false);
     const [serialPasteValue, setSerialPasteValue] = useState("");
     const unitKeyRef = useRef(1);
 
-    const [productDetailsOpen, setProductDetailsOpen] = useState(false);
+    const [productDetailsOpen, setProductDetailsOpen] = useState(true);
     const [procurementOpen, setProcurementOpen] = useState(false);
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [validationAttempted, setValidationAttempted] = useState(false);
@@ -185,12 +200,12 @@ export const SerializedItemForm = forwardRef<SerializedFormHandle, Props>(
     const [parentAsset, setParentAsset] = useState<ParentSearchResult | null>(null);
     const parentSearch = useParentSearch();
     const units = useMemo<SerializedUnitDraft[]>(() => [{
-      key: "unit-primary",
+      key: primaryUnitKey,
       assetTag,
       serialNumber,
       qrCodeValue,
       uwAssetTag,
-    }, ...extraUnits], [assetTag, extraUnits, qrCodeValue, serialNumber, uwAssetTag]);
+    }, ...extraUnits], [assetTag, extraUnits, primaryUnitKey, qrCodeValue, serialNumber, uwAssetTag]);
 
     function unitFactory() {
       return {
@@ -206,6 +221,7 @@ export const SerializedItemForm = forwardRef<SerializedFormHandle, Props>(
     function replaceUnits(nextUnits: SerializedUnitDraft[], resetTagAdvisory = false) {
       const [first, ...rest] = nextUnits;
       if (!first) return;
+      setPrimaryUnitKey(first.key);
       setAssetTag(first.assetTag);
       setSerialNumber(first.serialNumber);
       setQrCodeValue(first.qrCodeValue);
@@ -219,7 +235,7 @@ export const SerializedItemForm = forwardRef<SerializedFormHandle, Props>(
 
     function updateUnit(unitKey: string, field: keyof Omit<SerializedUnitDraft, "key">, value: string) {
       if (field === "assetTag") {
-        replaceUnits(updateSerializedUnitAssetTag(currentUnits(), unitKey, value), unitKey === "unit-primary");
+        replaceUnits(updateSerializedUnitAssetTag(currentUnits(), unitKey, value), unitKey === units[0]?.key);
         return;
       }
       replaceUnits(currentUnits().map((unit) => unit.key === unitKey ? { ...unit, [field]: value } : unit));
@@ -233,6 +249,7 @@ export const SerializedItemForm = forwardRef<SerializedFormHandle, Props>(
     useEffect(() => {
       if (!template) return;
       const firstQrCode = generateQrCode();
+      setPrimaryUnitKey("unit-primary");
       setAssetTag(template.assetTag);
       setItemName(template.name);
       setBrand(template.brand);
@@ -259,7 +276,7 @@ export const SerializedItemForm = forwardRef<SerializedFormHandle, Props>(
       setParentAsset(null);
       setAssetTagError("");
       setAssetTagSummary(null);
-      setProductDetailsOpen(false);
+      setProductDetailsOpen(true);
       setProcurementOpen(false);
       setSettingsOpen(false);
       setValidationAttempted(false);
@@ -343,6 +360,16 @@ export const SerializedItemForm = forwardRef<SerializedFormHandle, Props>(
     }, [onUnitCountChange, units.length]);
 
     function focusField(fieldId: string) {
+      if (!batchMode) {
+        const first = units[0]!;
+        const singleFieldIds = {
+          [serializedUnitFieldId(first, "asset-tag")]: "new-item-asset-tag",
+          [serializedUnitFieldId(first, "serial")]: "new-item-serial-number",
+          [serializedUnitFieldId(first, "qr")]: "new-item-qr-code",
+          [serializedUnitFieldId(first, "uw-tag")]: "new-item-uw-asset-tag",
+        };
+        fieldId = singleFieldIds[fieldId] ?? fieldId;
+      }
       if (PRODUCT_DETAIL_FIELD_IDS.has(fieldId)) setProductDetailsOpen(true);
       if (PROCUREMENT_FIELD_IDS.has(fieldId)) setProcurementOpen(true);
       if (fieldId === "new-item-parent-search") setSettingsOpen(true);
@@ -352,7 +379,34 @@ export const SerializedItemForm = forwardRef<SerializedFormHandle, Props>(
     }
 
     useImperativeHandle(ref, () => ({
-      validate() {
+      getDraft() { return { categoryId, locationId, departmentId, fiscalYear, itemName, brand, model, purchaseDate, purchasePrice, warrantyDate, residualValue, linkUrl, userNotes, availableForReservation, availableForCheckout, availableForCustody, isAccessory, parentAsset, units }; },
+      restoreDraft(draft) {
+        setCategoryId(draft.categoryId);
+        setLocationId(draft.locationId);
+        setDepartmentId(draft.departmentId);
+        setFiscalYear(draft.fiscalYear);
+        setItemName(draft.itemName);
+        setBrand(draft.brand);
+        setModel(draft.model);
+        setPurchaseDate(draft.purchaseDate);
+        setPurchasePrice(draft.purchasePrice);
+        setWarrantyDate(draft.warrantyDate);
+        setResidualValue(draft.residualValue);
+        setLinkUrl(draft.linkUrl);
+        setUserNotes(draft.userNotes);
+        setAvailableForReservation(draft.availableForReservation);
+        setAvailableForCheckout(draft.availableForCheckout);
+        setAvailableForCustody(draft.availableForCustody);
+        setIsAccessory(draft.isAccessory);
+        setParentAsset(draft.parentAsset);
+        unitKeyRef.current = Math.max(unitKeyRef.current, ...draft.units.map(unit => Number(unit.key.match(/^batch-unit-(\d+)$/)?.[1] ?? 0) + 1));
+        replaceUnits(draft.units, true);
+        setProductDetailsOpen(true);
+        setProcurementOpen(true);
+        setSettingsOpen(draft.isAccessory);
+      },
+
+      validate(ignoreExistingTag = false) {
         setValidationAttempted(true);
         if (batchMode) {
           if (!categoryId) {
@@ -363,7 +417,7 @@ export const SerializedItemForm = forwardRef<SerializedFormHandle, Props>(
           }
           const unitIssue = validateSerializedUnitDrafts(units);
           if (unitIssue) return unitIssue;
-          if (assetTagError) {
+          if (assetTagError && !ignoreExistingTag) {
             return { message: assetTagError, fieldId: serializedUnitFieldId(units[0]!, "asset-tag") };
           }
           if (!isValidUsdPriceInput(purchasePrice)) {
@@ -377,7 +431,7 @@ export const SerializedItemForm = forwardRef<SerializedFormHandle, Props>(
         if (assetTagRequired && !assetTag.trim()) {
           return { message: "Enter an asset tag to continue.", fieldId: "new-item-asset-tag" };
         }
-        if (assetTag.trim() && assetTagError) {
+        if (assetTag.trim() && assetTagError && !ignoreExistingTag) {
           return { message: assetTagError, fieldId: "new-item-asset-tag" };
         }
         if (!categoryId) {
@@ -436,6 +490,7 @@ export const SerializedItemForm = forwardRef<SerializedFormHandle, Props>(
         setValidationAttempted(false);
       },
       reset() {
+        setPrimaryUnitKey("unit-primary");
         setCategoryId("");
         setLocationId("");
         setDepartmentId("");
@@ -463,7 +518,7 @@ export const SerializedItemForm = forwardRef<SerializedFormHandle, Props>(
         setAvailableForCustody(true);
         setIsAccessory(false);
         setParentAsset(null);
-        setProductDetailsOpen(false);
+        setProductDetailsOpen(true);
         setProcurementOpen(false);
         setSettingsOpen(false);
         setValidationAttempted(false);
@@ -511,7 +566,172 @@ export const SerializedItemForm = forwardRef<SerializedFormHandle, Props>(
     }
 
     return (
-      <fieldset disabled={disabled} className="contents" onInputCapture={onInteract}>
+      <fieldset disabled={disabled} className="contents" onChange={onInteract}>
+        <FormSection
+          title="Product details"
+          badge={productDetailCount > 0 ? `${productDetailCount} added` : "Optional"}
+          badgeVariant={productDetailCount > 0 ? "blue" : "secondary"}
+          description={batchMode
+            ? "Shared name, brand, model, department, product link, and image."
+            : template
+              ? "Copied name, brand, model, department, product link, and image."
+              : "Name, brand, model, serial, department, campus tag, and image."}
+          collapsible
+          open={productDetailsOpen}
+          onOpenChange={setProductDetailsOpen}
+        >
+          <FormRow label="Name" htmlFor="new-item-name">
+            <Input id="new-item-name" name="name" value={itemName} onChange={(event) => setItemName(event.target.value)} placeholder="e.g. Sony A7III Camera" autoComplete="off" className="h-10" />
+          </FormRow>
+
+          <FormRow2Col label="Brand / Model">
+            <Input id="new-item-brand" name="brand" value={brand} onChange={(event) => setBrand(event.target.value)} placeholder="e.g. Sony" aria-label="Brand" autoComplete="off" className="h-10" />
+            <Input id="new-item-model" name="model" value={model} onChange={(event) => setModel(event.target.value)} placeholder="e.g. A7III" aria-label="Model" autoComplete="off" className="h-10" />
+          </FormRow2Col>
+
+          {!template && !batchMode && (
+            <FormRow label="Serial number" htmlFor="new-item-serial-number">
+              <Input id="new-item-serial-number" name="serialNumber" value={serialNumber} onChange={(event) => setSerialNumber(event.target.value)} placeholder="Manufacturer serial" autoComplete="off" className="h-10" />
+            </FormRow>
+          )}
+
+          <FormRow label="Department" htmlFor="new-item-department">
+            <FormCombobox
+              id="new-item-department"
+              value={departmentId}
+              onValueChange={(value) => {
+                onInteract();
+                setDepartmentId(value);
+              }}
+              options={departmentOptions}
+              placeholder="Select a department"
+              searchPlaceholder="Search departments..."
+              emptyLabel="No department found."
+              triggerClassName="h-10"
+            />
+          </FormRow>
+
+          {!template && !batchMode && (
+            <FormRow label="UW Asset Tag" htmlFor="new-item-uw-asset-tag">
+              <Input id="new-item-uw-asset-tag" name="uwAssetTag" value={uwAssetTag} onChange={(event) => setUwAssetTag(event.target.value)} placeholder="Campus asset tag number" autoComplete="off" className="h-10" />
+            </FormRow>
+          )}
+
+          {(template || batchMode) && (
+            <FormRow label="Product link" htmlFor="new-item-link-url">
+              <Input id="new-item-link-url" name="linkUrl" value={linkUrl} onChange={(event) => setLinkUrl(event.target.value)} type="url" placeholder="https://..." autoComplete="off" className="h-10" />
+            </FormRow>
+          )}
+
+          <ItemImageDraftField
+            image={image}
+            suggestionStatus={imageSuggestionStatus}
+            disabled={disabled}
+            onChoose={() => onChooseImage(buildItemImageSearchSeed(itemName, brand, model, assetTag))}
+            onClear={onClearImage}
+            embedded
+          />
+        </FormSection>
+        <FormSection title="Physical relationship" description="Standalone gear or a part attached to another item.">
+          <div className="flex min-h-11 items-center justify-between gap-4">
+            <div>
+              <Label htmlFor="new-item-is-accessory" className="text-sm font-medium">Item is an attachment</Label>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {batchMode ? "Batch intake creates standalone items. Switch back to one item to create an attachment." : "Tie this part to a parent camera or other item."}
+              </p>
+            </div>
+            <Switch
+              id="new-item-is-accessory"
+              name="isAccessory"
+              checked={isAccessory}
+              disabled={batchMode}
+              onCheckedChange={(value) => {
+                onInteract();
+                setIsAccessory(value);
+                if (value) setSettingsOpen(true);
+                if (value) {
+                  setAvailableForReservation(false);
+                  setAvailableForCheckout(false);
+                  setAvailableForCustody(false);
+                } else {
+                  setParentAsset(null);
+                  parentSearch.clear();
+                  setAvailableForReservation(true);
+                  setAvailableForCheckout(true);
+                  setAvailableForCustody(true);
+                }
+              }}
+            />
+          </div>
+          {isAccessory && (
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="new-item-parent-search">Parent item <span className="text-destructive">*</span></Label>
+              {parentAsset ? (
+                <div className="flex min-h-10 items-center gap-2 rounded-md border bg-muted/50 px-3 py-1.5 text-sm">
+                  <span className="min-w-0 flex-1 truncate">
+                    <span className="font-medium">{parentAsset.assetTag}</span>
+                    {" — "}
+                    {parentAsset.name || `${parentAsset.brand} ${parentAsset.model}`}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="size-10"
+                    aria-label="Clear parent item"
+                    onClick={() => {
+                      onInteract();
+                      setParentAsset(null);
+                      parentSearch.clear();
+                    }}
+                  >
+                    <X className="size-4" />
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <Input
+                    id="new-item-parent-search"
+                    name="parentAssetSearch"
+                    value={parentSearch.query}
+                    onChange={(event) => parentSearch.setQuery(event.target.value)}
+                    placeholder="Search by parent tag, brand, or model"
+                    autoComplete="off"
+                    aria-invalid={parentMissing || undefined}
+                    aria-describedby={parentMissing ? "new-item-parent-search-error" : undefined}
+                    className="h-10"
+                  />
+                  {parentMissing && <FormFieldError id="new-item-parent-search-error">Parent item is required.</FormFieldError>}
+                  {parentSearch.searching && <p className="px-1 text-xs text-muted-foreground">Searching...</p>}
+                  {parentSearch.results.length > 0 && (
+                    <div className="divide-y rounded-md border text-sm">
+                      {parentSearch.results.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          className="min-h-10 w-full px-3 py-2 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                          onClick={() => {
+                            onInteract();
+                            setParentAsset(item);
+                            parentSearch.clear();
+                          }}
+                        >
+                          <span className="font-medium">{item.assetTag}</span>
+                          {" — "}
+                          {item.name || `${item.brand} ${item.model}`}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Attachments remain findable but cannot be reserved or checked out independently.
+              </p>
+            </div>
+          )}
+
+        </FormSection>
         <FormSection
           title="Essentials"
           badge={isAccessory ? "Attachment intake" : batchMode ? `${units.length} physical items` : "Fast intake"}
@@ -964,70 +1184,6 @@ export const SerializedItemForm = forwardRef<SerializedFormHandle, Props>(
           </FormSection>
         )}
 
-        <FormSection
-          title="Product details"
-          badge={productDetailCount > 0 ? `${productDetailCount} added` : "Optional"}
-          badgeVariant={productDetailCount > 0 ? "blue" : "secondary"}
-          description={batchMode
-            ? "Shared name, brand, model, department, product link, and image."
-            : template
-              ? "Copied name, brand, model, department, product link, and image."
-              : "Name, brand, model, serial, department, campus tag, and image."}
-          collapsible
-          open={productDetailsOpen}
-          onOpenChange={setProductDetailsOpen}
-        >
-          <FormRow label="Name" htmlFor="new-item-name">
-            <Input id="new-item-name" name="name" value={itemName} onChange={(event) => setItemName(event.target.value)} placeholder="e.g. Sony A7III Camera" autoComplete="off" className="h-10" />
-          </FormRow>
-
-          <FormRow2Col label="Brand / Model">
-            <Input id="new-item-brand" name="brand" value={brand} onChange={(event) => setBrand(event.target.value)} placeholder="e.g. Sony" aria-label="Brand" autoComplete="off" className="h-10" />
-            <Input id="new-item-model" name="model" value={model} onChange={(event) => setModel(event.target.value)} placeholder="e.g. A7III" aria-label="Model" autoComplete="off" className="h-10" />
-          </FormRow2Col>
-
-          {!template && !batchMode && (
-            <FormRow label="Serial number" htmlFor="new-item-serial-number">
-              <Input id="new-item-serial-number" name="serialNumber" value={serialNumber} onChange={(event) => setSerialNumber(event.target.value)} placeholder="Manufacturer serial" autoComplete="off" className="h-10" />
-            </FormRow>
-          )}
-
-          <FormRow label="Department" htmlFor="new-item-department">
-            <FormCombobox
-              id="new-item-department"
-              value={departmentId}
-              onValueChange={(value) => {
-                onInteract();
-                setDepartmentId(value);
-              }}
-              options={departmentOptions}
-              placeholder="Select a department"
-              searchPlaceholder="Search departments..."
-              emptyLabel="No department found."
-              triggerClassName="h-10"
-            />
-          </FormRow>
-
-          {!template && !batchMode && (
-            <FormRow label="UW Asset Tag" htmlFor="new-item-uw-asset-tag">
-              <Input id="new-item-uw-asset-tag" name="uwAssetTag" value={uwAssetTag} onChange={(event) => setUwAssetTag(event.target.value)} placeholder="Campus asset tag number" autoComplete="off" className="h-10" />
-            </FormRow>
-          )}
-
-          {(template || batchMode) && (
-            <FormRow label="Product link" htmlFor="new-item-link-url">
-              <Input id="new-item-link-url" name="linkUrl" value={linkUrl} onChange={(event) => setLinkUrl(event.target.value)} type="url" placeholder="https://..." autoComplete="off" className="h-10" />
-            </FormRow>
-          )}
-
-          <ItemImageDraftField
-            image={image}
-            disabled={disabled}
-            onChoose={() => onChooseImage(buildItemImageSearchSeed(itemName, brand, model, assetTag))}
-            onClear={onClearImage}
-            embedded
-          />
-        </FormSection>
 
         {!template && !batchMode && <FormSection
           title="Purchasing & notes"
@@ -1118,108 +1274,11 @@ export const SerializedItemForm = forwardRef<SerializedFormHandle, Props>(
           title="Workflow settings"
           badge={isAccessory ? "Attachment" : policyCustomized ? "Customized" : "Defaults on"}
           badgeVariant={isAccessory ? "orange" : policyCustomized ? "blue" : "gray"}
-          description="Attachment relationship and future reservation, checkout, and custody eligibility."
+          description="Future reservation, checkout, and custody eligibility."
           collapsible
           open={settingsOpen}
           onOpenChange={setSettingsOpen}
         >
-          <div className="flex min-h-11 items-center justify-between gap-4">
-            <div>
-              <Label htmlFor="new-item-is-accessory" className="text-sm font-medium">Item is an attachment</Label>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {batchMode ? "Batch intake creates standalone items. Switch back to one item to create an attachment." : "Tie this part to a parent camera or other item."}
-              </p>
-            </div>
-            <Switch
-              id="new-item-is-accessory"
-              name="isAccessory"
-              checked={isAccessory}
-              disabled={batchMode}
-              onCheckedChange={(value) => {
-                onInteract();
-                setIsAccessory(value);
-                if (value) {
-                  setAvailableForReservation(false);
-                  setAvailableForCheckout(false);
-                  setAvailableForCustody(false);
-                } else {
-                  setParentAsset(null);
-                  parentSearch.clear();
-                  setAvailableForReservation(true);
-                  setAvailableForCheckout(true);
-                  setAvailableForCustody(true);
-                }
-              }}
-            />
-          </div>
-
-          {isAccessory && (
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="new-item-parent-search">Parent item <span className="text-destructive">*</span></Label>
-              {parentAsset ? (
-                <div className="flex min-h-10 items-center gap-2 rounded-md border bg-muted/50 px-3 py-1.5 text-sm">
-                  <span className="min-w-0 flex-1 truncate">
-                    <span className="font-medium">{parentAsset.assetTag}</span>
-                    {" — "}
-                    {parentAsset.name || `${parentAsset.brand} ${parentAsset.model}`}
-                  </span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="size-10"
-                    aria-label="Clear parent item"
-                    onClick={() => {
-                      onInteract();
-                      setParentAsset(null);
-                      parentSearch.clear();
-                    }}
-                  >
-                    <X className="size-4" />
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  <Input
-                    id="new-item-parent-search"
-                    name="parentAssetSearch"
-                    value={parentSearch.query}
-                    onChange={(event) => parentSearch.setQuery(event.target.value)}
-                    placeholder="Search by parent tag, brand, or model"
-                    autoComplete="off"
-                    aria-invalid={parentMissing || undefined}
-                    aria-describedby={parentMissing ? "new-item-parent-search-error" : undefined}
-                    className="h-10"
-                  />
-                  {parentMissing && <FormFieldError id="new-item-parent-search-error">Parent item is required.</FormFieldError>}
-                  {parentSearch.searching && <p className="px-1 text-xs text-muted-foreground">Searching...</p>}
-                  {parentSearch.results.length > 0 && (
-                    <div className="divide-y rounded-md border text-sm">
-                      {parentSearch.results.map((item) => (
-                        <button
-                          key={item.id}
-                          type="button"
-                          className="min-h-10 w-full px-3 py-2 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                          onClick={() => {
-                            onInteract();
-                            setParentAsset(item);
-                            parentSearch.clear();
-                          }}
-                        >
-                          <span className="font-medium">{item.assetTag}</span>
-                          {" — "}
-                          {item.name || `${item.brand} ${item.model}`}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </>
-              )}
-              <p className="text-xs text-muted-foreground">
-                Attachments remain findable but cannot be reserved or checked out independently.
-              </p>
-            </div>
-          )}
 
           {!isAccessory && (
             <div className="flex flex-col divide-y divide-border/60">

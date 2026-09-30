@@ -1,0 +1,68 @@
+{
+  "title": "Receiving items with confidence",
+  "eyebrow": "Items \u00b7 Local review",
+  "lede": "All eight receiving-flow findings addressed: clearer setup, recoverable receiving, and usable next steps.",
+  "sections": [
+    {
+      "heading": "Creation choices and product details",
+      "note": "Matched dirty-source snapshots and identical empty-draft fixture settings. Desktop/tablet are the primary web workflow; phone width is smoke coverage.",
+      "pairs": [
+        {
+          "title": "1280px Add item",
+          "before": "before-1280.png",
+          "after": "after-1280.png",
+          "beforeEvidence": "before-1280-evidence.json",
+          "afterEvidence": "after-1280-evidence.json",
+          "beforeCap": "Generic tracking names and collapsed product details.",
+          "afterCap": "Physical tracking explained and product/photo fields visible."
+        },
+        {
+          "title": "768px Add item",
+          "before": "before-768.png",
+          "after": "after-768.png",
+          "beforeEvidence": "before-768-evidence.json",
+          "afterEvidence": "after-768-evidence.json",
+          "beforeCap": "Generic tracking names and collapsed product details.",
+          "afterCap": "Physical tracking explained and product/photo fields visible."
+        },
+        {
+          "title": "390px Add item",
+          "before": "before-390.png",
+          "after": "after-390.png",
+          "beforeEvidence": "before-390-evidence.json",
+          "afterEvidence": "after-390-evidence.json",
+          "beforeCap": "Generic tracking names and collapsed product details.",
+          "afterCap": "Physical tracking explained and product/photo fields visible."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Safe retries and recoverable drafts",
+      "was": "Interrupted stock changes could be applied again, and refresh lost receiving context.",
+      "now": "Actor/body-bound transaction receipts replay committed results. Browser drafts retain identities, shipment details, partial handoffs and failed images; files must be reattached."
+    },
+    {
+      "h": "Physical setup and receiving",
+      "was": "Attachment choice was buried; numbered families started empty and could not receive into an existing family here.",
+      "now": "Parent choice is upfront. Receive into an existing numbered family, default to one unit, or explicitly create an empty family."
+    },
+    {
+      "h": "Product review and next steps",
+      "was": "Photos were less visible and failed-image recovery only retried the same source.",
+      "now": "Review product details and photos directly, reject unrelated model/accessory suggestions, replace failed photos, and print or download labels after receiving."
+    }
+  ],
+  "verification": [
+    "78 focused tests passed; TypeScript, scoped lint, application build and docs checks passed.",
+    "Two tests against an isolated disposable PostgreSQL cluster proved concurrent identical requests change stock once and receipt failures roll stock back. This is local database proof, not hosted inventory acceptance.",
+    "Actual component fixtures checked lost responses, malformed successes, partial batch refresh/replay, new shipments, draft discard, existing-family units, upfront parent choice and failed-photo replacement.",
+    "Authenticated isolated ADMIN preview at 1280 and 768px restored product/batch drafts, kept row identities unique, loaded existing families, and exposed the upfront parent picker. No inventory mutations or page errors."
+  ],
+  "notes": [
+    "Recovery screenshots: partial-handoff.png and failed-photo.png (after-only fixtures). Authenticated draft screenshots: authenticated-draft-1280.png and authenticated-draft-768.png.",
+    "The saved Brave key remains invalid. Automatic photo matching has fixture proof; live provider acceptance remains open. Keyless B&H search, pasted photo and upload remain available.",
+    "No commit, deployment, native changes, or production persistence claim."
+  ]
+}

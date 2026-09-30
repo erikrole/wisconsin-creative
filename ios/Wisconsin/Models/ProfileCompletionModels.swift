@@ -27,6 +27,20 @@ enum ProfileCompletionStep: String, Codable, CaseIterable, Identifiable {
         }
     }
 
+    /// A stale server hint must never introduce a step hidden for this role.
+    static func startingStep(for role: String, suggested: ProfileCompletionStep?) -> ProfileCompletionStep {
+        let steps = visibleSteps(for: role)
+        if let suggested, steps.contains(suggested) { return suggested }
+        return steps.first ?? .photo
+    }
+
+    /// Continue follows the displayed order, including after editing an earlier step.
+    func nextStep(for role: String) -> ProfileCompletionStep? {
+        let steps = Self.visibleSteps(for: role)
+        guard let index = steps.firstIndex(of: self), index + 1 < steps.count else { return nil }
+        return steps[index + 1]
+    }
+
     var title: String {
         switch self {
         case .email: "Confirm your email addresses"

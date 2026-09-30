@@ -1,0 +1,61 @@
+{
+ "title": "Edit Reservation Items",
+ "eyebrow": "iOS \u00b7 Wisconsin Creative",
+ "lede": "People who own a reservation can now add or remove items from the Edit Booking sheet instead of going to the web app.",
+ "stats": [],
+ "sections": [
+  {
+   "heading": "After (no matched before)",
+   "note": "After-only. I did not build a matching before capture. Before, this sheet had no Items row, and its footnote said gear was read-only on the phone. Captured on iPhone 18 Pro Max, iOS 27, light mode, fixture scenarios booking-edit-reservation and booking-edit-items.",
+   "pairs": [],
+   "shots": [
+    {
+     "image": "after-booking-edit-reservation.png",
+     "title": "Edit Booking",
+     "cap": "New Items row on a reservation."
+    },
+    {
+     "image": "after-booking-edit-items.png",
+     "title": "Edit Items",
+     "cap": "The New Reservation picker with this reservation's items selected. LENS-032 is blocked as unavailable."
+    }
+   ]
+  }
+ ],
+ "changes": [
+  {
+   "h": "Items on the Edit Booking sheet",
+   "was": "Gear was read-only on iOS. Changing it meant going to the web app.",
+   "now": "Reservations show an Items row with a count. Tapping it opens the same picker as New Reservation, with a Done button."
+  },
+  {
+   "h": "Unavailable items are blocked",
+   "was": "\u2014",
+   "now": "The picker checks availability without counting this reservation against itself, so conflicting items can't be added. Save stays disabled while items conflict, are still being checked, or none are left."
+  },
+  {
+   "h": "Checkouts unchanged",
+   "was": "Kiosk only.",
+   "now": "Still kiosk only. The Items row appears only on reservations."
+  },
+  {
+   "h": "Partly picked-up reservations",
+   "was": "Picked-up items could be removed, and supply counts could be capped below the units already checked out. The server then rejected the save.",
+   "now": "Picked-up items are locked in the picker. Supply limits count this reservation's held units again, and the Items row shows 'N picked up'."
+  },
+  {
+   "h": "Return-time check",
+   "was": "Checked the saved items even after they were edited.",
+   "now": "Checks the edited items."
+  }
+ ],
+ "verification": [
+  "xcodebuild Wisconsin (iPhone 18 Pro Max simulator): BUILD SUCCEEDED",
+  "vitest iOS source-contract tests for the changed files: all passed (new checks for locked gear and return-time checks against edited items)",
+  "vitest server tests update-booking, collaborator-booking-routes, booking-lifecycle-route-contract: 64/64 passed",
+  "Fixture captures inspected (the locked picked-up state was not captured)"
+ ],
+ "notes": [
+  "I have not tested a signed-in save against the preview server. The server's handling of item edits is covered by the update-booking tests."
+ ]
+}

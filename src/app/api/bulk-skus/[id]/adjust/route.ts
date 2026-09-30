@@ -1,10 +1,10 @@
-import { BulkMovementKind, Prisma } from "@prisma/client";
+import { intakeTransaction } from "@/lib/intake-receipt";
+import { BulkMovementKind } from "@prisma/client";
 import { withAuth } from "@/lib/api";
-import { db } from "@/lib/db";
 import { HttpError, ok } from "@/lib/http";
 import { requirePermission } from "@/lib/rbac";
 import { adjustBulkSchema } from "@/lib/validation";
-import { createAuditEntry } from "@/lib/audit";
+import { createAuditEntryTx } from "@/lib/audit";
 
 const MAX_ON_HAND_QUANTITY = 1_000_000;
 
@@ -12,7 +12,7 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
   requirePermission(user.role, "bulk_sku", "adjust");
   const body = adjustBulkSchema.parse(await req.json());
 
-  const result = await db.$transaction(async (tx) => {
+  const result = await intakeTransaction(req, user, `bulk:${params.id}:adjust`, body, async (tx) => {
     const sku = await tx.bulkSku.findUnique({ where: { id: params.id } });
     if (!sku) {
       throw new HttpError(404, "Bulk SKU not found");
@@ -67,17 +67,14 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
       }
     });
 
+    await createAuditEntryTx(tx, {
+      actorId: user.id, actorRole: user.role, entityType: "bulk_sku", entityId: params.id,
+      action: "adjust", before: { onHandQuantity: current },
+      after: { quantityDelta: body.quantityDelta, reason: body.reason, current, next },
+    });
     return { current, next };
-  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
-
-  await createAuditEntry({
-    actorId: user.id,
-    actorRole: user.role,
-    entityType: "bulk_sku",
-    entityId: params.id,
-    action: "adjust",
-    after: { quantityDelta: body.quantityDelta, reason: body.reason, ...result },
   });
+
 
   return ok({ data: result });
 });

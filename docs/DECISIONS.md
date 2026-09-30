@@ -43,7 +43,7 @@
 - D-033: Database enforces one active allocation per asset
 - D-034: Badge achievements are event-sourced, flag-gated, and profile-first
 - D-035: Daily maintenance work is consolidated into morning-refresh
-- D-036: Product image search is Brave-backed and human-picked
+- D-036: Product image search is Brave-backed with reviewable intake suggestions
 - D-037: Bulk onboarding uses an invitation-scoped account lifecycle
 - D-038: Firmware watch uses official source adapters and silent baselines
 - D-039: Kiosk sessions slide on activity and survive reinstalls via Keychain
@@ -818,7 +818,7 @@ These are non-negotiable integrity constraints. Every feature must preserve them
 
 ---
 
-## D-036: Product Image Search Is Brave-Backed and Human-Picked
+## D-036: Product Image Search Is Brave-Backed with Reviewable Intake Suggestions
 - Date: 2026-05-20
 - Status: Accepted
 - Context:
@@ -831,7 +831,8 @@ These are non-negotiable integrity constraints. Every feature must preserve them
   - Seed searches from product title, brand, model, or item-family name when available.
   - Bias outbound searches toward product photos on white backgrounds while keeping the visible field editable.
   - Prefer B&H image candidates through Brave's `site:bhphotovideo.com` operator, then merge broader product-photo-biased Brave results so B&H source links do not monopolize the grid when retailer previews are blocked.
-  - Keep the human in the loop: staff selects a result, sees the source domain, and the app re-hosts the chosen URL through the existing image endpoint.
+  - Sep 29 approved intake refinement: automatically stage the first loadable B&H product hero only when its title matches the requested model and query words; exclude unrelated accessory results. Generic names remain manual. Staff can review, change, or remove the suggestion before saving; replacement remains human-picked. The app re-hosts the chosen URL through the existing image endpoint.
+  - A keyless fallback opens an editable B&H product search in a separate tab. Staff can paste a direct photo address or upload a file; pasted photos must load before selection. Product-page URLs are not scraped.
   - Do not scrape B&H, Google Images HTML, retailer pages, or CDN pages.
   - Do not write metadata from search results into item identity fields.
 - Consequences:
@@ -842,6 +843,7 @@ These are non-negotiable integrity constraints. Every feature must preserve them
   - Search route requires `asset.edit`, validates query length, and rate-limits by user.
   - Result saves must continue through Blob re-hosting endpoints so stored item photos are app-owned.
   - Provider failures and quota exhaustion must leave paste URL and upload available.
+  - B&H's own search can open in a new tab using an editable product query without a provider key. Staff copy the photo's image address into the picker or upload a saved photo; product-page HTML is not scraped. Pasted B&H image URLs use the existing static-host normalization and must load before selection.
 
 ---
 

@@ -53,6 +53,7 @@ done
 read -r -d '' REGISTRY <<'EOF' || true
 # View / sheet                         | audit slug                  | status
 HomeView.swift                         | dashboard                   | audit
+HomeAgenda.swift                       | dashboard                   | audit
 BookingsView.swift                     | bookings                    | audit
 BookingDetailView.swift                | booking-detail              | audit
 CreateBookingSheet.swift               | create-booking              | audit

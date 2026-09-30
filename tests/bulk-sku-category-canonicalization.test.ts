@@ -47,6 +47,7 @@ vi.mock("@/lib/db", () => ({
 
 vi.mock("@/lib/audit", () => ({
   createAuditEntry: mocks.createAuditEntry,
+  createAuditEntryTx: vi.fn(),
 }));
 
 vi.mock("@sentry/nextjs", () => ({

@@ -29,6 +29,15 @@ describe("iOS asynchronous request ownership", () => {
     );
     const perform = apiClient.slice(apiClient.indexOf("private func perform"));
 
+    // The worker hop is another account-switch boundary, not only the network
+    // await. Native tests exercise the decoder; this guards its API wiring.
+    expect(perform).toMatch(
+      /case 200\.\.\.299:[\s\S]*?await APIResponseDecoder\.decode[\s\S]*?throw APIError\.decodingError\(error\)\s*\}[\s\S]*?guard authSessionBoundary\.owns\(requestBoundary\)[\s\S]*?Task\.checkCancellation\(\)[\s\S]*?return result/,
+    );
+    expect(perform).toMatch(
+      /await APIResponseDecoder\.decode[\s\S]*?catch \{[\s\S]*?guard authSessionBoundary\.owns\(requestBoundary\)[\s\S]*?Task\.checkCancellation\(\)[\s\S]*?throw APIError\.decodingError\(error\)/,
+    );
+
     expect(authenticatedData).toMatch(
       /let requestBoundary = authSessionBoundary\.capture\(\)[\s\S]*?session\.data\(for: request\)[\s\S]*?guard authSessionBoundary\.owns\(requestBoundary\) else \{\s*throw APIError\.sessionChanged\s*\}/,
     );

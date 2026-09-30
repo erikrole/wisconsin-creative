@@ -1,0 +1,102 @@
+{
+  "title": "Less work at startup. Shared work on iOS.",
+  "eyebrow": "Wisconsin Creative \u00b7 Web + iOS \u00b7 Local performance pass",
+  "lede": "Measured improvements to shared startup, optional dialogs, API decoding and image loading. Existing behavior and work are preserved; authenticated and physical-device measurements remain a separate gate.",
+  "stats": [
+    {
+      "k": "Home initial JavaScript",
+      "v": "9.4% less",
+      "n": "407,302 \u2192 369,116 gzip bytes, route plus layouts.",
+      "tone": "good"
+    },
+    {
+      "k": "Cold fixture query requests",
+      "v": "2 \u2192 1",
+      "n": "Five repeated trials; the subtree now mounts once.",
+      "tone": "good"
+    },
+    {
+      "k": "Concurrent thumbnail work",
+      "v": "24 \u2192 1",
+      "n": "Downloads and image objects for 24 rows sharing one image.",
+      "tone": "good"
+    },
+    {
+      "k": "Native decode placement",
+      "v": "Off the UI thread",
+      "n": "Verified with real response decoding; total CPU is not reduced.",
+      "tone": "good"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "The same form, loaded when needed",
+      "note": "Real production form, synthetic Staff identity, same styles and provider, 1440\u00d71000 viewport and fixed clock. Both pairs are byte-identical. Opening, failed-save input retention, snoozing and reopening passed in the local fixture; authenticated saving is unverified.",
+      "pairs": [
+        {
+          "title": "Manual opening",
+          "sub": "Closed returning-user forms defer their module; the first manual click still opens the same email step.",
+          "before": "profile-before.png",
+          "after": "profile-after.png",
+          "beforeEvidence": "profile-before-evidence.json",
+          "afterEvidence": "profile-after-evidence.json",
+          "beforeCap": "Original form from the saved pre-edit source.",
+          "afterCap": "Same form behind the new loading boundary.",
+          "wide": true
+        },
+        {
+          "title": "Failed save",
+          "sub": "The save error and edited email remain visible. Snooze and reopening also pass.",
+          "before": "profile-error-before.png",
+          "after": "profile-error-after.png",
+          "beforeEvidence": "profile-error-before-evidence.json",
+          "afterEvidence": "profile-error-after-evidence.json",
+          "beforeCap": "Original form from the saved pre-edit source.",
+          "afterCap": "Same form behind the new loading boundary.",
+          "wide": true
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Eight routes carry less startup JavaScript",
+      "was": "The shared shell eagerly included optional profile form and badge code.",
+      "now": "On-demand loading lowers initial gzip bytes by / 9.4%; /items 6.6%; /bookings 6.9%; /schedule 3.6%; /reservations/new 3.9%; /users 7.7%; /resources 6.6%; /signatures 4.7%. These are build measurements, not page-load latency."
+    },
+    {
+      "h": "One page mount through cache restoration",
+      "was": "The provider changed type after mounting. Cold and corrupt-cache fixtures issued two query requests and two effect requests.",
+      "now": "One mount and one of each request. A fresh persisted dashboard needs zero query requests. Denied storage safely uses memory. All 20 browser trials passed."
+    },
+    {
+      "h": "Native rows share thumbnail work",
+      "was": "24 simultaneous cold-cache consumers created 24 requests and 24 decoded images in the fixture.",
+      "now": "One request and one shared image. Tests cover size/scale, one-row and all-row cancellation, retry, and sign-out isolation. This is a request/allocation reduction, not a physical-device scrolling claim."
+    },
+    {
+      "h": "API decoding leaves the UI thread",
+      "was": "Median synchronous decoding occupied the main actor for 0.259 ms at 30 assets, 2.457 ms at 300, and 23.967 ms at the 3,000-row stress size.",
+      "now": "Thread-probe tests confirm off-main decoding. Total medians are 0.296 / 2.590 / 25.290 ms; overall CPU work is not reduced. The client rechecks account ownership and cancellation before publication."
+    },
+    {
+      "h": "Broad native measurements are stable",
+      "was": "Median Debug simulator launch 2.212 s; Items CPU 1.028 s; equipment CPU 0.931 s.",
+      "now": "Launch 2.166 s; Items CPU 1.020 s; equipment CPU 0.944 s. Ranges overlap. No broad launch/scroll improvement is claimed; these fixtures bypass the optimized decoding and images."
+    }
+  ],
+  "verification": [
+    "Full web suite: 5,019 passing tests and one existing skip. Production app builds and final TypeScript check passed.",
+    "Final native unit run: 93 XCTest + 93 Swift Testing cases passed. Three before/after interaction benchmarks passed on iPhone 18 Pro Max / iOS 27.0.",
+    "Unsigned generic-iOS Release build and XcodeGen consistency check passed. Affected Swift source-contract tests passed.",
+    "Focused lint on changed files passed. Full lint still fails on the unchanged vendored QR library at public/qrcode/vendor/jsQR.js:23.",
+    "Raw JSON samples, source provenance and review receipts are retained beside this page; full build/test logs remain in the private .tmp benchmark directory.",
+    "Docs/reference verification, native drift/audit inventory, migration-directory check and final diff check passed."
+  ],
+  "notes": [
+    "Local source changes only. No staging, commit, push, deployment or app distribution.",
+    "Bundle bytes, fixture request counts and thread placement are measured separately. No production load-time, broad simulator speedup or physical-device performance claim is made.",
+    "Automatic approval review rejected preview setup because it can provision external resources, mutate preview database/credentials and persist environment state. Authenticated route/API benchmarking requires approval for that isolated environment.",
+    "The next slice is repeated authenticated cold/warm route measurement, median/p95 API timings and physical iPhone 16 Pro Release traces with realistic photos. The summary.md file in this folder contains all route numbers and repeatable commands."
+  ]
+}

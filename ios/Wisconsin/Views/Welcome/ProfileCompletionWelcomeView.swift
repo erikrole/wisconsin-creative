@@ -21,6 +21,7 @@ struct ProfileCompletionWelcomeView: View {
     @State private var isLoadingPhoto = false
     @State private var photoLoadError: String?
     @FocusState private var focusedField: WelcomeFocusField?
+    @AccessibilityFocusState private var headingFocused: Bool
 
     private var user: CurrentUser? { session.currentUser }
     private var data: ProfileCompletionResponse? { completionStore.response }
@@ -29,7 +30,6 @@ struct ProfileCompletionWelcomeView: View {
         ProfileCompletionStep.visibleSteps(for: profile?.role ?? user?.role ?? "STUDENT")
     }
     private var stepIndex: Int { max(0, visibleSteps.firstIndex(of: currentStep) ?? 0) }
-    private var isStudent: Bool { profile?.role == "STUDENT" }
     private var hasSimplePhoneStep: Bool { ProfileCompletionDraft.hasSimplePhoneStep(for: profile?.role ?? "") }
     private var isLastStep: Bool { stepIndex == visibleSteps.count - 1 }
 
@@ -48,7 +48,7 @@ struct ProfileCompletionWelcomeView: View {
                     WelcomeLoadingView()
                 }
             }
-            .background(Color(.systemGroupedBackground))
+            .background(Color(.systemBackground))
             .navigationBarHidden(true)
         }
         .task(id: user?.id) {
@@ -57,7 +57,10 @@ struct ProfileCompletionWelcomeView: View {
             hydrateIfNeeded()
         }
         .onChange(of: completionStore.response) { _, _ in hydrateIfNeeded() }
-        .onChange(of: currentStep) { _, _ in scheduleInitialFocus() }
+        .task(id: currentStep) {
+            do { try await Task.sleep(for: .milliseconds(360)) } catch { return }
+            headingFocused = true
+        }
         .onChange(of: photoSelection) { _, item in
             guard let item else { return }
             Task { await loadPhoto(item) }
@@ -92,44 +95,42 @@ struct ProfileCompletionWelcomeView: View {
             WelcomeHeaderView(
                 name: data.profile.name,
                 stepIndex: stepIndex,
-                stepCount: visibleSteps.count,
-                completedCount: data.completion.completedCount,
-                totalCount: data.completion.totalCount
+                stepCount: visibleSteps.count
             )
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 22) {
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text(stepTitle)
-                            .font(.title2.weight(.bold))
-                            .fixedSize(horizontal: false, vertical: true)
-                        Text(stepDescription)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    .id("heading-\(currentStep.rawValue)")
-                    .transition(stepTransition)
+            ZStack {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+                        WelcomeStepHeading(
+                            symbol: stepSymbol,
+                            title: stepTitle,
+                            detail: stepDescription,
+                            isOptional: isOptionalStep
+                        )
+                        .accessibilityFocused($headingFocused)
 
-                    stepContent(data)
-                        .id("body-\(currentStep.rawValue)")
-                        .transition(stepTransition)
+                        stepContent(data)
 
-                    if let error = completionStore.error {
-                        Label(error, systemImage: "exclamationmark.triangle.fill")
-                            .font(.footnote)
-                            .foregroundStyle(Color.statusText(.red))
-                            .padding(12)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(Color.statusBackground(.red), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        if let error = completionStore.error {
+                            Label(error, systemImage: "exclamationmark.triangle.fill")
+                                .font(.footnote)
+                                .foregroundStyle(Color.statusText(.red))
+                                .padding(14)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(Color.statusBackground(.red), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        }
                     }
+                    .padding(.horizontal, 28)
+                    .padding(.bottom, 24)
+                    .frame(maxWidth: 560)
+                    .frame(maxWidth: .infinity)
                 }
-                .padding(24)
-                .frame(maxWidth: 680)
-                .frame(maxWidth: .infinity)
-                .animation(reduceMotion ? .easeOut(duration: 0.12) : .snappy(duration: 0.22), value: currentStep)
+                .scrollDismissesKeyboard(.interactively)
+                .defaultScrollAnchor(.top)
+                .id(currentStep)
+                .transition(stepTransition)
             }
-            .scrollDismissesKeyboard(.interactively)
+            .clipped()
 
             footer
         }
@@ -182,7 +183,7 @@ struct ProfileCompletionWelcomeView: View {
             showsBack: stepIndex > 0,
             primaryTitle: primaryFooterTitle,
             primaryEnabled: canUsePrimaryFooterAction,
-            isSaving: completionStore.isSaving,
+            isSaving: completionStore.isSaving || isLoadingPhoto,
             onReminder: snooze,
             onBack: moveBack,
             onPrimary: performPrimaryFooterAction
@@ -201,19 +202,38 @@ struct ProfileCompletionWelcomeView: View {
     }
 
     private var stepTitle: String {
-        if currentStep == .phones && hasSimplePhoneStep { return "Add your phone number" }
-        return currentStep.title
+        switch currentStep {
+        case .email: return "Your team email"
+        case .phones: return "Stay connected"
+        case .wiscard: return "Your Wiscard"
+        case .student: return "Your student details"
+        case .apparel: return "Find your fit"
+        case .photo: return "A familiar face"
+        case .unknown: return currentStep.title
+        }
+    }
+
+    private var stepSymbol: String {
+        switch currentStep {
+        case .email: "envelope"
+        case .phones: "phone"
+        case .wiscard: "person.text.rectangle"
+        case .student: "graduationcap"
+        case .apparel: "tshirt"
+        case .photo: "person.crop.circle"
+        case .unknown: "person"
+        }
     }
 
     private var stepDescription: String {
         switch currentStep {
-        case .email: "Your campus email is your site login. Add your required Athletics email."
-        case .phones where hasSimplePhoneStep: "Add the personal phone number we should use to reach you."
-        case .phones: "Identify any number already on your account, then add the other contact number."
-        case .wiscard: "Type the card number and issue code printed on your card. This is used for kiosk identification."
-        case .student: "Tell us your current year and when you expect to graduate."
-        case .apparel: "Choose the sizing systems that make clothing and shoe orders unambiguous."
-        case .photo: "A clear photo helps teammates recognize you across the roster, schedule, and kiosk."
+        case .email: "You’ll sign in with your campus email. Add your Athletics email for team communication."
+        case .phones where hasSimplePhoneStep: "What’s the best number for day-of updates and quick questions?"
+        case .phones: "Add your personal and work numbers so the team knows how to reach you. No work phone? Just say so below."
+        case .wiscard: "Have your Wiscard handy. Its card number and issue code help identify you at the gear kiosk."
+        case .student: "Choose your year and expected graduation. You can update these later in Profile."
+        case .apparel: "Help us get team clothing and shoes in the right sizes."
+        case .photo: "Help teammates recognize you on the roster, schedule, and at the gear kiosk."
         case .unknown: ""
         }
     }
@@ -221,8 +241,8 @@ struct ProfileCompletionWelcomeView: View {
     private var stepTransition: AnyTransition {
         guard !reduceMotion else { return .opacity }
         return .asymmetric(
-            insertion: .offset(y: direction * 8).combined(with: .opacity),
-            removal: .offset(y: direction * -8).combined(with: .opacity)
+            insertion: .offset(x: direction * 32).combined(with: .opacity),
+            removal: .offset(x: direction * -24).combined(with: .opacity)
         )
     }
 
@@ -236,18 +256,18 @@ struct ProfileCompletionWelcomeView: View {
     private func hydrateIfNeeded() {
         guard !didHydrate, let data else { return }
         draft.hydrate(from: data.profile)
-        currentStep = data.completion.firstIncompleteStep.flatMap { $0 == .unknown ? nil : $0 }
-            ?? visibleSteps.first
-            ?? .photo
+        currentStep = ProfileCompletionStep.startingStep(
+            for: data.profile.role, suggested: data.completion.firstIncompleteStep
+        )
         didHydrate = true
-        scheduleInitialFocus()
     }
 
     private func move(to step: ProfileCompletionStep, direction: Double) {
         self.direction = direction
         completionStore.clearError()
         focusedField = nil
-        withAnimation(reduceMotion ? .easeOut(duration: 0.12) : .snappy(duration: 0.22)) {
+        headingFocused = false
+        withAnimation(reduceMotion ? .easeOut(duration: 0.12) : .snappy(duration: 0.34, extraBounce: 0)) {
             currentStep = step
         }
         Haptics.selection()
@@ -275,14 +295,14 @@ struct ProfileCompletionWelcomeView: View {
             }
             Haptics.success()
             if next.completion.profileComplete { return }
-            let nextStep = next.completion.firstIncompleteStep
-                ?? visibleSteps[safe: stepIndex + 1]
-                ?? currentStep
+            let nextStep = currentStep.nextStep(for: next.profile.role) ?? currentStep
             if nextStep != currentStep { move(to: nextStep, direction: 1) }
         }
     }
 
     private func performPrimaryFooterAction() {
+        guard !completionStore.isSaving, !isLoadingPhoto else { return }
+        focusedField = nil
         if isOptionalStep && !canContinue {
             skipOptionalStep()
         } else {
@@ -323,24 +343,6 @@ struct ProfileCompletionWelcomeView: View {
     private func continuePastLoadFailure() {
         guard let user else { return }
         completionStore.continueForSession(for: user.id)
-    }
-
-    private func scheduleInitialFocus() {
-        let step = currentStep
-        let field: WelcomeFocusField? = switch step {
-        case .email: .athleticsEmail
-        case .phones: .personalPhone
-        case .wiscard: .wiscardNumber
-        case .apparel where draft.topSizeChoice == "OTHER": .topSizeOther
-        case .apparel where draft.shoeSizeChoice == "OTHER": .shoeSizeOther
-        default: nil
-        }
-        guard let field else { return }
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(250))
-            guard currentStep == step else { return }
-            focusedField = field
-        }
     }
 
     private func loadPhoto(_ item: PhotosPickerItem) async {

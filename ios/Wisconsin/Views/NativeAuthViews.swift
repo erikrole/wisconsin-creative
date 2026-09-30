@@ -31,7 +31,7 @@ struct NativeRegistrationView: View {
     @State private var name = ""
     @State private var email = ""
     @State private var password = ""
-    @State private var confirmPassword = ""
+    @State private var showsPassword = false
     @State private var formError: String?
     @State private var isSubmitting = false
     private let emailIsLocked: Bool
@@ -41,7 +41,6 @@ struct NativeRegistrationView: View {
         case name
         case email
         case password
-        case confirmPassword
     }
 
     private var normalizedEmail: String {
@@ -52,7 +51,6 @@ struct NativeRegistrationView: View {
         !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
             Self.isValidEmail(normalizedEmail) &&
             password.count >= 8 &&
-            password == confirmPassword &&
             !isSubmitting
     }
 
@@ -63,97 +61,116 @@ struct NativeRegistrationView: View {
     }
 
     var body: some View {
-        Form {
-            Section {
-                Text("Your invited email is approved. Create a password, then add the details needed for work.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+        ScrollView {
+            VStack(spacing: 24) {
+                WelcomeStepHeading(
+                    symbol: "person.crop.circle.badge.plus",
+                    title: "Welcome to the team",
+                    detail: "Start with your name and a password. We’ll help you set up your profile next."
+                )
 
-                TextField("Full name", text: $name)
-                    .textContentType(.name)
-                    .focused($focusedField, equals: .name)
-                    .submitLabel(.next)
-                    .onSubmit { focusedField = emailIsLocked ? .password : .email }
+                WelcomeFormCard {
+                    VStack(alignment: .leading, spacing: 18) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            WelcomeFieldLabel(title: "Full name")
+                            TextField("Full name", text: $name)
+                                .textContentType(.name)
+                                .focused($focusedField, equals: .name)
+                                .submitLabel(.next)
+                                .onSubmit { focusedField = emailIsLocked ? .password : .email }
+                                .modifier(WelcomeTextFieldStyle())
+                        }
+                        VStack(alignment: .leading, spacing: 8) {
+                            WelcomeFieldLabel(title: "Email", detail: emailIsLocked ? "Your invitation" : nil)
+                            TextField("Email", text: $email)
+                                .textInputAutocapitalization(.never)
+                                .keyboardType(.emailAddress)
+                                .textContentType(.username)
+                                .autocorrectionDisabled()
+                                .focused($focusedField, equals: .email)
+                                .submitLabel(.next)
+                                .onSubmit { focusedField = .password }
+                                .disabled(emailIsLocked)
+                                .modifier(WelcomeTextFieldStyle())
+                        }
+                        AuthEmailDomainNote(email: email)
+                        VStack(alignment: .leading, spacing: 8) {
+                            WelcomeFieldLabel(title: "Password")
+                            HStack(spacing: 0) {
+                                Group {
+                                    if showsPassword {
+                                        TextField("Password", text: $password)
+                                    } else {
+                                        SecureField("Password", text: $password)
+                                    }
+                                }
+                                .textContentType(.newPassword)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                                .focused($focusedField, equals: .password)
+                                .submitLabel(.go)
+                                .onSubmit { submit() }
 
-                if !name.isEmpty && name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    Text("Enter your name.")
-                        .font(.footnote)
-                        .foregroundStyle(Color.statusText(.red))
-                }
-
-                TextField("Email", text: $email)
-                    .textInputAutocapitalization(.never)
-                    .keyboardType(.emailAddress)
-                    // `.username`, not `.emailAddress`: this is the account the
-                    // password below belongs to, and it is what iOS files the
-                    // saved credential under.
-                    .textContentType(.username)
-                    .autocorrectionDisabled()
-                    .focused($focusedField, equals: .email)
-                    .submitLabel(.next)
-                    .onSubmit { focusedField = .password }
-                    .disabled(emailIsLocked)
-
-                if !email.isEmpty && !Self.isValidEmail(normalizedEmail) {
-                    Text("Use a valid email address.")
-                        .font(.footnote)
-                        .foregroundStyle(Color.statusText(.red))
-                }
-
-                AuthEmailDomainNote(email: email)
-
-                SecureField("Password", text: $password)
-                    .textContentType(.newPassword)
-                    .focused($focusedField, equals: .password)
-                    .submitLabel(.next)
-                    .onSubmit { focusedField = .confirmPassword }
-
-                if !password.isEmpty && password.count < 8 {
-                    Text("Use at least 8 characters.")
-                        .font(.footnote)
-                        .foregroundStyle(Color.statusText(.red))
-                }
-
-                SecureField("Confirm password", text: $confirmPassword)
-                    .textContentType(.newPassword)
-                    .focused($focusedField, equals: .confirmPassword)
-                    .submitLabel(.done)
-                    .onSubmit { submit() }
-
-                if !confirmPassword.isEmpty && password != confirmPassword {
-                    Text("Passwords do not match.")
-                        .font(.footnote)
-                        .foregroundStyle(Color.statusText(.red))
+                                Button {
+                                    showsPassword.toggle()
+                                    focusedField = .password
+                                } label: {
+                                    Image(systemName: showsPassword ? "eye.slash" : "eye")
+                                        .foregroundStyle(.secondary)
+                                        .frame(minWidth: 44, minHeight: 44)
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel(showsPassword ? "Hide password" : "Show password")
+                                .accessibilityValue(showsPassword ? "Password visible" : "Password hidden")
+                            }
+                            .padding(.leading, 14)
+                            .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            Label("At least 8 characters", systemImage: password.count >= 8 ? "checkmark.circle.fill" : "info.circle")
+                                .font(.footnote)
+                                .foregroundStyle(password.count >= 8 ? Color.statusText(.green) : .secondary)
+                        }
+                    }
                 }
 
                 if let formError {
                     Label(formError, systemImage: "exclamationmark.triangle.fill")
                         .font(.footnote)
                         .foregroundStyle(Color.statusText(.red))
-                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(14)
+                        .background(Color.statusBackground(.red), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                 }
             }
-
-            Section {
-                Button {
-                    submit()
-                } label: {
-                    HStack {
-                        Spacer()
-                        if isSubmitting {
-                            ProgressView()
-                                .controlSize(.small)
-                            Text("Creating account…")
-                        } else {
-                            Text("Create account")
-                        }
-                        Spacer()
-                    }
-                }
-                .disabled(!canSubmit)
-            }
+            .padding(.horizontal, 28)
+            .padding(.bottom, 24)
+            .frame(maxWidth: 560)
+            .frame(maxWidth: .infinity)
         }
-        .navigationTitle("Set up account")
+        .background(Color(.systemBackground))
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            VStack(spacing: 12) {
+                Button(action: submit) {
+                    HStack(spacing: 8) {
+                        if isSubmitting { ProgressView() }
+                        Text(isSubmitting ? "Creating account…" : "Create account")
+                            .fontWeight(.semibold)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 40)
+                }
+                .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.roundedRectangle(radius: 18))
+                .controlSize(.large)
+                .disabled(!canSubmit)
+                Text("You can finish your profile at your own pace.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.horizontal, 28)
+            .padding(.vertical, 16)
+            .background(.regularMaterial)
+        }
+        .navigationTitle("Account setup")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
@@ -168,11 +185,10 @@ struct NativeRegistrationView: View {
             formError = nil
         }
         .onChange(of: password) { _, _ in formError = nil }
-        .onChange(of: confirmPassword) { _, _ in formError = nil }
-        .onAppear { focusedField = .name }
     }
 
     private func submit() {
+        guard !isSubmitting else { return }
         guard let validationError else {
             focusedField = nil
             formError = nil
@@ -210,9 +226,6 @@ struct NativeRegistrationView: View {
         }
         if password.count < 8 {
             return "Password must be at least 8 characters."
-        }
-        if password != confirmPassword {
-            return "Passwords do not match."
         }
         return nil
     }

@@ -84,6 +84,26 @@ final class ProfileCompletionModelsTests: XCTestCase {
         XCTAssertTrue(draft.canContinue(.email, profile: profile))
     }
 
+    func testResumeIgnoresStepsHiddenForTheRole() {
+        XCTAssertEqual(ProfileCompletionStep.startingStep(for: "STUDENT", suggested: .email), .phones)
+        XCTAssertEqual(ProfileCompletionStep.startingStep(for: "COLLABORATOR", suggested: .wiscard), .photo)
+        XCTAssertEqual(ProfileCompletionStep.startingStep(for: "STAFF", suggested: .unknown), .email)
+        XCTAssertEqual(ProfileCompletionStep.startingStep(for: "STUDENT", suggested: .apparel), .apparel)
+    }
+
+    func testContinueMovesForwardAfterRevisitingAStep() {
+        XCTAssertEqual(ProfileCompletionStep.phones.nextStep(for: "STUDENT"), .wiscard)
+        XCTAssertEqual(ProfileCompletionStep.wiscard.nextStep(for: "STAFF"), .apparel)
+        XCTAssertEqual(ProfileCompletionStep.apparel.nextStep(for: "STUDENT"), .photo)
+        XCTAssertNil(ProfileCompletionStep.photo.nextStep(for: "COLLABORATOR"))
+    }
+
+    func testPastedUSCountryCodeKeepsAllTenPhoneDigits() {
+        XCTAssertEqual(ProfileCompletionDraft.formatPhone("+1 (608) 555-1212"), "(608) 555-1212")
+        XCTAssertEqual(ProfileCompletionDraft.formatPhone("6085551212"), "(608) 555-1212")
+        XCTAssertEqual(ProfileCompletionDraft.formatPhone("1608555121"), "(160) 855-5121")
+    }
+
     private func profile(role: String) throws -> ProfileCompletionProfile {
         let json = """
         {"id":"user-1","name":"Bucky Badger","role":"\(role)","email":"bucky@wisc.edu"}

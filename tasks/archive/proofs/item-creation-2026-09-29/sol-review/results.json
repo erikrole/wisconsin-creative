@@ -1,0 +1,155 @@
+[
+  {
+    "variant": "before",
+    "width": 1280,
+    "scenario": "partial-batch",
+    "recoveredTag": "",
+    "posts": [
+      "CAM 17",
+      "CAM 18"
+    ],
+    "errors": []
+  },
+  {
+    "variant": "before",
+    "width": 1280,
+    "scenario": "copy-reset",
+    "confirmation": false,
+    "errors": []
+  },
+  {
+    "variant": "before",
+    "width": 1280,
+    "scenario": "stock-draft",
+    "imageRetained": false,
+    "errors": []
+  },
+  {
+    "variant": "before",
+    "width": 768,
+    "scenario": "partial-batch",
+    "recoveredTag": "",
+    "posts": [
+      "CAM 17",
+      "CAM 18"
+    ],
+    "errors": []
+  },
+  {
+    "variant": "before",
+    "width": 768,
+    "scenario": "copy-reset",
+    "confirmation": false,
+    "errors": []
+  },
+  {
+    "variant": "before",
+    "width": 768,
+    "scenario": "stock-draft",
+    "imageRetained": false,
+    "errors": []
+  },
+  {
+    "variant": "before",
+    "width": 390,
+    "scenario": "partial-batch",
+    "recoveredTag": "",
+    "posts": [
+      "CAM 17",
+      "CAM 18"
+    ],
+    "errors": []
+  },
+  {
+    "variant": "before",
+    "width": 390,
+    "scenario": "copy-reset",
+    "confirmation": false,
+    "errors": []
+  },
+  {
+    "variant": "before",
+    "width": 390,
+    "scenario": "stock-draft",
+    "imageRetained": false,
+    "errors": []
+  },
+  {
+    "variant": "after",
+    "width": 1280,
+    "scenario": "partial-batch",
+    "recoveredTag": "CAM 18",
+    "posts": [
+      "CAM 17",
+      "CAM 18",
+      "CAM 18"
+    ],
+    "errors": []
+  },
+  {
+    "variant": "after",
+    "width": 1280,
+    "scenario": "copy-reset",
+    "confirmation": true,
+    "errors": []
+  },
+  {
+    "variant": "after",
+    "width": 1280,
+    "scenario": "stock-draft",
+    "imageRetained": true,
+    "errors": []
+  },
+  {
+    "variant": "after",
+    "width": 768,
+    "scenario": "partial-batch",
+    "recoveredTag": "CAM 18",
+    "posts": [
+      "CAM 17",
+      "CAM 18",
+      "CAM 18"
+    ],
+    "errors": []
+  },
+  {
+    "variant": "after",
+    "width": 768,
+    "scenario": "copy-reset",
+    "confirmation": true,
+    "errors": []
+  },
+  {
+    "variant": "after",
+    "width": 768,
+    "scenario": "stock-draft",
+    "imageRetained": true,
+    "errors": []
+  },
+  {
+    "variant": "after",
+    "width": 390,
+    "scenario": "partial-batch",
+    "recoveredTag": "CAM 18",
+    "posts": [
+      "CAM 17",
+      "CAM 18",
+      "CAM 18"
+    ],
+    "errors": []
+  },
+  {
+    "variant": "after",
+    "width": 390,
+    "scenario": "copy-reset",
+    "confirmation": true,
+    "errors": []
+  },
+  {
+    "variant": "after",
+    "width": 390,
+    "scenario": "stock-draft",
+    "imageRetained": true,
+    "errors": []
+  }
+]

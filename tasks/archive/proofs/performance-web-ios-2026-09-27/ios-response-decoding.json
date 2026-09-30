@@ -1,0 +1,83 @@
+{
+  "device": "iPhone 18 Pro Max",
+  "runtime": "iOS 27.0",
+  "configuration": "Debug",
+  "offMainThreadProbe": "passed",
+  "samples": [
+    {
+      "bytes": 12121,
+      "concurrentTotalAfterMs": [
+        0.323958,
+        0.295834,
+        0.304875,
+        0.296041,
+        0.292875,
+        0.274,
+        0.3045
+      ],
+      "mainActorBeforeMs": [
+        0.283041,
+        0.272417,
+        0.251458,
+        0.260291,
+        0.257458,
+        0.259375,
+        0.253334
+      ],
+      "note": "Synthetic API assets; current production decoder vs former cached synchronous decoder; total decode CPU is not eliminated",
+      "rows": 30,
+      "baselineMainActorMedianMs": 0.259375,
+      "concurrentTotalMedianMs": 0.296041
+    },
+    {
+      "bytes": 122071,
+      "concurrentTotalAfterMs": [
+        2.589625,
+        2.586,
+        2.597542,
+        2.890917,
+        2.555833,
+        2.550084,
+        2.691875
+      ],
+      "mainActorBeforeMs": [
+        2.737417,
+        2.457417,
+        2.442541,
+        2.5575,
+        2.529041,
+        2.455875,
+        2.3585
+      ],
+      "note": "Synthetic API assets; current production decoder vs former cached synchronous decoder; total decode CPU is not eliminated",
+      "rows": 300,
+      "baselineMainActorMedianMs": 2.457417,
+      "concurrentTotalMedianMs": 2.589625
+    },
+    {
+      "bytes": 1229671,
+      "concurrentTotalAfterMs": [
+        25.290083,
+        24.248666,
+        23.821875,
+        24.796625,
+        26.816708,
+        26.648875,
+        27.492084
+      ],
+      "mainActorBeforeMs": [
+        24.903167,
+        23.171583,
+        23.966583,
+        23.48175,
+        23.928334,
+        25.631125,
+        26.071709
+      ],
+      "note": "Synthetic API assets; current production decoder vs former cached synchronous decoder; total decode CPU is not eliminated",
+      "rows": 3000,
+      "baselineMainActorMedianMs": 23.966583,
+      "concurrentTotalMedianMs": 25.290083
+    }
+  ]
+}

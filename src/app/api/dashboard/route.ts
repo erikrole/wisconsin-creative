@@ -12,6 +12,7 @@ import { hasCollaboratorCapability } from "@/lib/collaborator-access";
 import { studentCallTimeAppliesToEvent } from "@/lib/shift-call-windows";
 import { gearStatusForBooking, gearStatusPriority } from "@/lib/booking-status-display";
 import { unique } from "@/lib/utils";
+import { readLastNudges, type LastNudge } from "@/lib/services/nudge-history";
 
 const DASHBOARD_LIMIT = { max: 30, windowMs: 60_000 };
 
@@ -189,6 +190,9 @@ export const GET = withAuth(async (req, { user }) => {
     maintenanceAssetsResult,
     // Lost bulk units summary (admin only)
     lostBulkUnitsRawResult,
+    // Personal pending pickups for the web context banner; the personal
+    // scope already has them in pendingPickups.
+    myPendingPickupsRawResult,
   ] = await Promise.allSettled([
     countsPromise,
     // Team checkouts (excl. me)
@@ -336,7 +340,9 @@ export const GET = withAuth(async (req, { user }) => {
         },
       },
       orderBy: { shift: { startsAt: "asc" } },
-      take: 5,
+      // Ten rather than five so the Home week strip rarely runs out before
+      // day seven; lists still show at most five.
+      take: 10,
       include: {
         shift: {
           include: {
@@ -393,6 +399,21 @@ export const GET = withAuth(async (req, { user }) => {
           _count: { id: true },
         })
       : Promise.resolve([]),
+    // Same shape as the personal pendingPickups lane: own requests only and
+    // never shared travel-case custody, which is not attributed to a person.
+    gearHidden || isPersonalOnly ? Promise.resolve(null) : db.booking.findMany({
+      where: {
+        OR: [
+          { kind: "RESERVATION", status: "BOOKED", startsAt: { lte: now } },
+          { kind: "CHECKOUT", status: "PENDING_PICKUP" },
+        ],
+        requesterUserId: user.id,
+        custodyScope: "PERSON",
+      },
+      orderBy: { startsAt: "asc" },
+      take: 5,
+      include: bookingInclude,
+    }),
   ]);
   const partialFailures: string[] = [];
   const bookingRowsFallback: Array<Parameters<typeof toBookingSummary>[0]> = [];
@@ -425,6 +446,7 @@ export const GET = withAuth(async (req, { user }) => {
     id: string;
     title: string;
     requesterUserId: string;
+    custodyScope: string;
     requester: { name: string; avatarUrl: string | null };
     serializedItems: Array<{ asset: { id: string; assetTag: string; name: string | null; imageUrl: string | null } }>;
     startsAt: Date;
@@ -583,6 +605,10 @@ export const GET = withAuth(async (req, { user }) => {
     ...toBookingSummary(p, now, false),
     status: "PENDING_PICKUP",
   }));
+  const myPendingPickupsRaw = settledValue(myPendingPickupsRawResult, null, "myPendingPickups", partialFailures);
+  const myPendingPickups = myPendingPickupsRaw === null
+    ? (isPersonalOnly ? pendingPickups : [])
+    : myPendingPickupsRaw.map((p) => ({ ...toBookingSummary(p, now, false), status: "PENDING_PICKUP" }));
 
   const events = upcomingEvents.map((e) => {
     // Collect assigned users across all shifts (include shift area for tooltip)
@@ -642,8 +668,22 @@ export const GET = withAuth(async (req, { user }) => {
     };
   });
 
+  // Nudge history is staff context: who already chased this borrower. A
+  // failed read degrades to "no history" rather than failing the dashboard.
+  let lastNudges = new Map<string, LastNudge>();
+  if (user.role === "STAFF" || user.role === "ADMIN") {
+    try {
+      lastNudges = await readLastNudges(topOverdue.map((b) => b.id));
+    } catch (error) {
+      console.error("[dashboard] lastNudges failed", error);
+      partialFailures.push("lastNudges");
+    }
+  }
+
   const overdueItems = topOverdue.map((b) => ({
     bookingId: b.id,
+    isShared: b.custodyScope === "SHARED",
+    lastNudge: lastNudges.get(b.id) ?? null,
     bookingTitle: displayBookingTitle(b.title),
     requesterName: b.requester.name,
     requesterInitials: getInitials(b.requester.name),
@@ -805,6 +845,7 @@ export const GET = withAuth(async (req, { user }) => {
         total: pendingPickupTotalCount,
         items: pendingPickups,
       },
+      myPendingPickups,
       staleReservations: {
         total: staleReservationTotalCount,
         items: staleReservations,

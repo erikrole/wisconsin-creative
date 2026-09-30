@@ -1,0 +1,72 @@
+{
+  "node": "v22.23.3",
+  "vitest": "3.2.6",
+  "filesBefore": [
+    "tests/schedule-assign-source.test.ts",
+    "tests/schedule-working-copy-route-source.test.ts",
+    "tests/schedule-working-copy-mutation-guard.test.ts"
+  ],
+  "filesAfter": "tests/schedule-authoring-source.test.ts",
+  "preservedAssertions": true,
+  "workers": 2,
+  "rows": [
+    {
+      "lane": "baseline",
+      "warmup": true,
+      "wallMs": 387.08670800000004,
+      "tests": 23,
+      "namesHash": "1b9e73ee1b8bc203619c39ca8ea4cd349ef74bae9c4a38653e80b10334bea3fe"
+    },
+    {
+      "lane": "aggregate",
+      "warmup": true,
+      "wallMs": 300.108792,
+      "tests": 23,
+      "namesHash": "1b9e73ee1b8bc203619c39ca8ea4cd349ef74bae9c4a38653e80b10334bea3fe"
+    },
+    {
+      "lane": "aggregate",
+      "warmup": false,
+      "wallMs": 309.851041,
+      "tests": 23,
+      "namesHash": "1b9e73ee1b8bc203619c39ca8ea4cd349ef74bae9c4a38653e80b10334bea3fe"
+    },
+    {
+      "lane": "baseline",
+      "warmup": false,
+      "wallMs": 387.55729199999996,
+      "tests": 23,
+      "namesHash": "1b9e73ee1b8bc203619c39ca8ea4cd349ef74bae9c4a38653e80b10334bea3fe"
+    },
+    {
+      "lane": "baseline",
+      "warmup": false,
+      "wallMs": 383.455291,
+      "tests": 23,
+      "namesHash": "1b9e73ee1b8bc203619c39ca8ea4cd349ef74bae9c4a38653e80b10334bea3fe"
+    },
+    {
+      "lane": "aggregate",
+      "warmup": false,
+      "wallMs": 291.973125,
+      "tests": 23,
+      "namesHash": "1b9e73ee1b8bc203619c39ca8ea4cd349ef74bae9c4a38653e80b10334bea3fe"
+    },
+    {
+      "lane": "aggregate",
+      "warmup": false,
+      "wallMs": 293.3566249999999,
+      "tests": 23,
+      "namesHash": "1b9e73ee1b8bc203619c39ca8ea4cd349ef74bae9c4a38653e80b10334bea3fe"
+    },
+    {
+      "lane": "baseline",
+      "warmup": false,
+      "wallMs": 368.3588749999999,
+      "tests": 23,
+      "namesHash": "1b9e73ee1b8bc203619c39ca8ea4cd349ef74bae9c4a38653e80b10334bea3fe"
+    }
+  ],
+  "baselineMedianMs": 383.455291,
+  "aggregateMedianMs": 293.3566249999999
+}

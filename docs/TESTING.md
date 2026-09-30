@@ -1,34 +1,41 @@
 # Testing Guide
 
-Last refreshed: 2026-09-17
+Last refreshed: 2026-09-27
 
 ## Overview
 
 The automated test suite uses Vitest in the Node.js environment. Tests live in `tests/` and follow `tests/<feature>.test.ts`.
 
-Current static inventory:
+Latest executed evidence (2026-09-27): 703 Vitest files, 5,019 passing cases, and one existing gated skip on Node 22.23.3 and Vitest 4.1.11, including the full shuffled coverage run (seed `260927`, four workers). See the [test audit and follow-ups](../tasks/audit-tests-2026-09-27.md) for the inventory, prior failures, cleanup decisions, and measured performance. Source-contract tests inspect source text; they do not execute Swift or replace browser/device proof.
 
-- 391 test files under `tests/`
-- 2,331 `it()` / `test()` declarations by static grep
-- 55 iOS source-contract files named `ios-*.test.ts`
-- 79 source or contract files with `source` or `contract` in the filename
-- 66 route-focused files with `route` in the filename
-- 35 current `BUG:` references across 11 files
-
-Refresh the inventory with:
+Refresh static orientation counts with:
 
 ```bash
-find tests -name '*.test.ts' -type f | wc -l
+rg --files tests | rg '\.test\.(ts|mjs)$' | wc -l
 rg -n '\b(it|test)\s*\(' tests --glob '*.test.ts' | wc -l
-find tests -name 'ios-*.test.ts' -type f | wc -l
-find tests -name '*.test.ts' -type f | rg '/[^/]*(source|contract)[^/]*\.test\.ts$' | wc -l
-find tests -name '*.test.ts' -type f | rg '/[^/]*route[^/]*\.test\.ts$' | wc -l
+rg --files tests | rg '/ios-.*\.test\.ts$' | wc -l
+rg --files tests | rg '/[^/]*(source|contract)[^/]*\.test\.ts$' | wc -l
+rg --files tests | rg '/[^/]*route[^/]*\.test\.ts$' | wc -l
 rg -n 'BUG:' tests --glob '*.test.ts'
 ```
 
 These counts are orientation data, not a coverage guarantee. Use focused tests and the required gates for the code touched by a slice.
 
-The 2026-07-17 adversarial baseline is 391 files and 2,464 passing runtime tests. The normal full suite, the instrumented coverage run, and shuffled full-suite runs with seeds `1701`, `1702`, and `20260717` all passed without skips. The measured critical-server scope is 70.80% statements/lines, 78.03% branches, and 77.35% functions across `src/lib/services/**`, `src/lib/api.ts`, `src/lib/rbac.ts`, and `src/lib/permissions.ts`. `npm run test:coverage` enforces non-regression floors of 70% statements/lines and 75% branches/functions. These percentages describe the configured critical-server scope, not the entire Next.js or Swift codebase.
+For the eight real PostgreSQL custody transaction and route checks, use Node 22 and local PostgreSQL tools (`initdb`, `pg_ctl`, and `createdb`) on macOS or Linux:
+
+```bash
+npm run test:postgres:custody
+```
+
+The runner creates a disposable cluster under the canonical `/tmp` directory (`/private/tmp` on macOS), disables TCP, builds a fresh schema from `prisma/schema.prisma`, runs `tests/postgres/*.postgres.ts` through `vitest.postgres.config.ts`, and stops/removes that cluster on normal completion or a failed command. It overwrites database environment variables and accepts no external database URL. The tests also reject a URL outside the disposable socket path before connecting. They use Prisma's native PostgreSQL transport and real wrapper, route, service, receipt, and audit code; only device authentication and post-response notification delivery are mocked.
+
+The cases protect complete rollback after a late database failure, receipt read-back, competing transfers forced to overlap at the database write, simultaneous HTTP retries with one committed result and one live-activity scheduling callback, definitive rejection replay, and clearable changed/expired/unreadable handoffs. Temporary mutation controls prove the race case fails under weaker isolation or missing serialization retry. The local command took 3.60s including setup/cleanup; the eight cases took 958ms. These checks remain separate from the default suite and its existing skip.
+
+The same command is wired into the existing PostgreSQL CI job, using `pg_config --bindir` to locate the runner's PostgreSQL tools; a hosted run is pending. The [GitHub runner image inventory](https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2404-Readme.md#postgresql) documents the available PostgreSQL installation. Local proof uses PostgreSQL 17.11. These checks do not prove Neon transport, migration-only constraints/triggers/sequences, real device authentication, external notification delivery, or deployed/device acceptance.
+
+The measured critical-server scope is 73.18% statements, 63.28% branches, 75.74% functions, and 76.00% lines across `src/lib/services/**`, `src/lib/api.ts`, `src/lib/rbac.ts`, and `src/lib/permissions.ts`. These percentages describe the configured 98-file critical-server scope, not the entire Next.js or Swift codebase. Static declaration counts also differ from executed case counts because of parameterized tests.
+
+On 2026-09-27 the user accepted the Vitest 4 AST-aware measurement baseline. The same tests and source files were measured; the old remapper had overstated branch/function coverage, including 100% on an unexecuted service. Subsequent custody-transfer and bulk-scheduling service tests raised the measured baseline. `npm run test:coverage` now enforces floors of **70% statements, 63.28% branches, 75.74% functions, and 70% lines**. Raise the floors as meaningful owner tests improve coverage; do not lower them to accommodate later regressions or narrow the included files to make the gate pass. Test isolation and the existing gated integration skip are unchanged.
 
 ## Verification Gates
 
@@ -79,6 +86,35 @@ Default local closeout for web/API cleanup slices:
 Run `npm test` when shared behavior, auth, route wrappers, booking lifecycle, or broad service helpers change enough that focused files do not cover the risk. For iOS source slices, also run `npm run drift:ios` and `npm run audit:ios:gaps`; use `npm run ios:xcode:verify` for serialized Xcode compile proof. Use XcodeBuildMCP or Simulator screenshots when Swift runtime, navigation, visual layout, or UI proof is part of the slice. The full native workflow lives in `docs/IOS_XCODE_WORKFLOW.md`.
 
 For operator-facing booking freshness work, add authenticated browser proof after the focused automated gates: create or mutate one visible booking from another authenticated client, confirm Dashboard counts/rows and `/bookings` list rows converge without using the manual refresh button, verify an already-open booking detail sheet updates for the changed booking id, then reload Dashboard to prove persisted cache does not resurrect stale rows. Store proof notes or screenshots under `tasks/archive/proofs/`.
+
+## Local Performance Benchmarks
+
+For local performance regression evidence without credentials or external data:
+
+```bash
+# Real provider, production React and SSR hydration: cold, warm, corrupt and denied storage.
+node scripts/benchmark-query-provider.mjs --verify /tmp/query-provider-results.json
+
+# Run after build:app; includes unique JS chunks from the route and parent layouts.
+node scripts/benchmark-web-bundles.mjs /tmp/web-bundles.json
+
+# Real profile form against synthetic identity/save responses.
+node scripts/benchmark-profile-completion.mjs --output /tmp/profile-performance
+```
+
+The profile script accepts `--baseline /absolute/path/to/saved/ProfileCompletionWizard.tsx` for a saved pre-change implementation; it never rewrites the checkout. These component fixtures do not replace authenticated route/server proof. Build first, then run standalone TypeScript checks: Next regenerates the generated types during a build.
+
+For real authenticated routes and APIs, attach the current branch's signed isolated preview using [the shared agent runbook](PREVIEW_ENVIRONMENTS.md#reusable-performance-preview--2026-09-28), bring its migrations current, then run on Node 22:
+
+```sh
+node scripts/benchmark-authenticated-preview.mjs --build --samples 5
+```
+
+This starts and stops a separate local production-mode server. It signs in through the real UI and records five cold/warm samples for Home, Items, Bookings, Schedule and Signatures, one 390px rendered check per route, and eight API timing/payload samples. Credentials remain in memory; a new ignored output directory preserves prior runs. Source/build fingerprints, metric definitions, raw samples, dataset counts and limitations accompany `results.json`. Fresh browser contexts do not simulate an asleep database or serverless cold start. The small-sample p95 is a nearest-rank estimate, not a production percentile. Repeated runs reuse the branch's existing resources; they never provision or deploy.
+
+The read-settled metric waits for document load and 500ms without outstanding GET/HEAD requests. It includes that observation delay. Background POST response/completion state is retained separately: whole-network idle did not settle for acknowledged product-event/app-open requests in the first live probe. The harness never stubs those requests. Treat a visible heading, settled reads, and full interaction readiness as different measures.
+
+Native `WisconsinPerformance` owns the existing five-iteration launch/scroll and three-iteration equipment scenarios. `APIResponseDecodingTests` records matched 30/300/3,000-row decoding samples and verifies off-main execution. `ThumbnailLoadingTests` measures concurrent cold-cache requests/allocations and tests retry, size/scale, cancellation and sign-out isolation. Use the mandated simulator destinations, retain raw samples, and distinguish Debug simulator regression checks from Release physical-device results. The [2026-09-27 performance ledger](../tasks/performance-web-ios-plan-2026-09-27.md) tracks current evidence.
 
 ## Authenticated Playwright Smoke
 

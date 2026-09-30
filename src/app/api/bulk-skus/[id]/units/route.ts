@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { intakeTransaction } from "@/lib/intake-receipt";
 import { withAuth } from "@/lib/api";
 import { db } from "@/lib/db";
 import { HttpError, ok } from "@/lib/http";
@@ -28,7 +28,7 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
   const { id } = params;
   const body = addBulkUnitsSchema.parse(await req.json());
 
-  const result = await db.$transaction(async (tx) => {
+  const result = await intakeTransaction(req, user, `bulk:${params.id}:units`, body, async (tx) => {
     const sku = await tx.bulkSku.findUnique({ where: { id } });
     if (!sku) throw new HttpError(404, "Bulk SKU not found");
     if (!sku.trackByNumber) throw new HttpError(400, "This SKU does not track by number");
@@ -131,7 +131,7 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
       after: added,
     });
     return added;
-  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  });
 
   return ok({ data: result }, 201);
 });

@@ -1,0 +1,64 @@
+{
+  "title": "Nudge on iOS Booking Detail",
+  "eyebrow": "iOS \u00b7 Wisconsin Creative \u00b7 2026-09-25",
+  "lede": "Staff looking at an overdue checkout on their phone can now remind the borrower without switching to the web dashboard.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "Overdue checkout, staff view",
+      "note": "Same fixture, device, appearance and scroll. The baseline was captured from an isolated HEAD worktree with only the fixture and test harness files copied in; BookingDetailView and APIClient are the pre-change source. Clock is relative to launch, so the minute shown differs by one.",
+      "pairs": [
+        {
+          "title": "Bottom action bar",
+          "sub": "Volleyball vs Nebraska, two hours overdue.",
+          "before": "before-overdue.png",
+          "beforeCap": "Extend was the only action. Reminding the borrower meant opening the web dashboard.",
+          "after": "after-overdue.png",
+          "afterCap": "Nudge sits beside Extend, in red to match the overdue state.",
+          "beforeEvidence": "before-overdue.capture.json",
+          "afterEvidence": "after-overdue.capture.json"
+        }
+      ]
+    },
+    {
+      "heading": "After a tap",
+      "note": "After-only: the baseline has no Nudge to tap. Captured in the same UI test run against the fixture's stubbed nudge route.",
+      "shots": [
+        {
+          "image": "after-sent-history.png",
+          "tag": "After tap",
+          "title": "Nudge sent with history",
+          "cap": "Green Nudge Sent plus the shared history line (\"Nudged just now by \u2026\"). Colleagues opening this booking within the hour see the same line and a sent button."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Nudge was web-only",
+      "was": "Only the web dashboard's overdue banner could send a nudge; the iOS app had no call to the nudge route.",
+      "now": "Booking Detail shows Nudge for an open, past-due checkout when the server grants the nudge action. That hides it from Students and from shared travel-case checkouts."
+    },
+    {
+      "h": "Clear sending and sent states",
+      "was": "Not applicable on iOS.",
+      "now": "The button shows a spinner while sending, then a green Nudge Sent confirmation, and ignores further taps. Failures, including the server's return grace period, show inline under the booking."
+    },
+    {
+      "h": "Nobody could see who already nudged",
+      "was": "The sent state lived in one screen's memory; a reload or a second staff member saw a fresh Nudge button.",
+      "now": "Dashboard overdue rows and booking detail read the latest nudge from the audit log: \"Nudged 20m ago by Erik\". Within the hour the button shows as sent. Shared travel-case checkouts no longer offer Nudge on the web banner."
+    }
+  ],
+  "verification": [
+    "BookingNudgeScreenshotUITests.testOverdueNudgeCaptures passed on the iPhone 18 Pro Max simulator: Nudge rendered, the tap reached the sent state.",
+    "Baseline testOverdueNudgeBaselineCaptures passed in the isolated worktree.",
+    "Wisconsin simulator build succeeded; tests/ios-booking-nudge-contract.test.ts passes (3 tests).",
+    "tests/nudge-history.test.ts (6) plus the full vitest suite: 700 files pass after updating two Extend-label contracts."
+  ],
+  "notes": [
+    "Fixture captures prove presentation only. Not verified: a real nudge against the API as Staff, push delivery to the borrower, or the grace-period error on a device.",
+    "Home still lists only the viewer's own checkouts; staff reach this screen from Bookings or the Overdue report.",
+    "The web overdue banner change was not browser-verified; it needs an authenticated dev:preview session with an overdue checkout."
+  ]
+}

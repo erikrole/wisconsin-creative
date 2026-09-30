@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { SearchIcon, ClipboardCheckIcon, CalendarCheckIcon, BellIcon, UserIcon, LayoutGridIcon, LayersIcon, BookOpenIcon, ArrowRightIcon } from "lucide-react";
@@ -38,11 +39,13 @@ import { BOOKING_CHANGE_SYNC_EVENT } from "@/hooks/use-booking-change-sync";
 import { NOTIFICATION_COUNT_CHANGED_EVENT } from "@/lib/notification-count-sync";
 import { ProfileCompletionWizard } from "@/components/profile-completion/ProfileCompletionWizard";
 import { hasDashboardCountFailure } from "@/app/(app)/dashboard-types";
-import {
-  BadgeEarnedCelebration,
-  type EarnedBadgeReward,
-} from "@/components/badges/BadgeEarnedCelebration";
+import type { EarnedBadgeReward } from "@/components/badges/BadgeEarnedCelebration";
 import { RolePreviewBanner, RolePreviewControl } from "@/components/RolePreviewControl";
+
+const BadgeEarnedCelebration = dynamic(
+  () => import("@/components/badges/BadgeEarnedCelebration").then((module) => module.BadgeEarnedCelebration),
+  { ssr: false },
+);
 
 type EntitySearchResult = {
   type: "item" | "checkout" | "reservation" | "user" | "guide";
@@ -207,7 +210,7 @@ function AppTopBar({
       />
       {!isCollaborator && (
         <button
-          className="flex h-10 min-h-10 max-w-2xl flex-1 items-center gap-2 rounded-md border border-border/80 bg-background px-3 text-[13px] text-muted-foreground transition-[border-color,background-color,color,box-shadow] duration-150 hover:border-foreground/25 hover:text-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 max-md:hidden [&_svg]:shrink-0"
+          className="flex h-10 min-h-10 min-w-0 max-w-2xl flex-1 items-center gap-2 rounded-md border border-border/80 bg-background px-3 text-[13px] text-muted-foreground transition-[border-color,background-color,color,box-shadow] duration-150 hover:border-foreground/25 hover:text-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 max-md:hidden [&_svg]:shrink-0"
           onClick={onSearch}
           type="button"
           aria-keyshortcuts="Meta+K Control+K"
@@ -749,6 +752,11 @@ export default function AppShell({
   }
 
   if (!user) return null;
+
+  // Signing owns the iPad viewport so the canvas and Save stay together.
+  if (/^\/signatures\/[^/]+\/capture\/[^/]+\/?$/.test(pathname)) {
+    return <><RolePreviewBanner user={user} />{children}</>;
+  }
 
   return (
     <SidebarProvider defaultOpen={defaultSidebarOpen}>

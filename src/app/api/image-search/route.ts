@@ -67,6 +67,7 @@ export const GET = withAuth(async (req, { user }) => {
       configured: outcome.status !== "unconfigured",
       provider: outcome.provider,
       quotaExceeded: outcome.status === "quota",
+      ...(outcome.status === "failed" ? { failed: true } : {}),
       results: outcome.status === "ok" ? outcome.results : [],
     },
   });

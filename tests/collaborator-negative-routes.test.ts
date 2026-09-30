@@ -1,8 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Role } from "@prisma/client";
 
+const dbMock = vi.hoisted(() => ({
+  booking: { findMany: vi.fn() },
+  shiftAssignment: { count: vi.fn(), findMany: vi.fn() },
+  asset: { findUnique: vi.fn() },
+  bookingSerializedItem: { findMany: vi.fn() },
+}));
+
 vi.mock("@/lib/auth", () => ({ requireAuth: vi.fn() }));
-vi.mock("@/lib/db", () => ({ db: {} }));
+vi.mock("@/lib/db", () => ({ db: dbMock }));
 vi.mock("@/lib/services/licenses", () => ({
   listAllCodes: vi.fn(),
   listCodes: vi.fn(),
@@ -80,8 +87,9 @@ function request(path: string, method = "GET") {
 }
 
 beforeEach(() => {
-  vi.clearAllMocks();
+  vi.resetAllMocks();
   vi.mocked(requireAuth).mockResolvedValue(collaborator);
+  vi.mocked(getAllowedBookingActions).mockReturnValue([]);
 });
 
 describe("collaborator default-deny route matrix", () => {
@@ -144,29 +152,41 @@ describe("collaborator default-deny route matrix", () => {
     expect(response.status).toBe(403);
   });
 
-  // Positive control: the denials above must come from the role gate, not from
-  // a route that fails for everybody under the stubbed db. A student is refused
-  // by neither gate, so these calls get past authorization and die later.
+  // These controls must reach successful reads through the real role gates.
   it.each([
-    [
-      "the booking calendar",
-      () => getBookingCalendar(
+    {
+      label: "the booking calendar",
+      setup: () => dbMock.booking.findMany.mockResolvedValue([]),
+      invoke: () => getBookingCalendar(
         request("/api/calendar?from=2026-01-01T00:00:00.000Z&to=2026-02-01T00:00:00.000Z"),
         { params: Promise.resolve({}) },
       ),
-    ],
-    [
-      "my-shifts",
-      () => getMyShifts(request("/api/my-shifts"), { params: Promise.resolve({}) }),
-    ],
-    [
-      "asset insights",
-      () => getAssetInsights(request("/api/assets/asset-1/insights"), { params: Promise.resolve({ id: "asset-1" }) }),
-    ],
-  ])("still admits a student to %s", async (_label, invoke) => {
+      body: { data: [] },
+    },
+    {
+      label: "my-shifts",
+      setup: () => {
+        dbMock.shiftAssignment.count.mockResolvedValue(0);
+        dbMock.shiftAssignment.findMany.mockResolvedValue([]);
+      },
+      invoke: () => getMyShifts(request("/api/my-shifts"), { params: Promise.resolve({}) }),
+      body: { data: [], userId: collaborator.id, total: 0, limit: 5, offset: 0 },
+    },
+    {
+      label: "asset insights",
+      setup: () => {
+        dbMock.asset.findUnique.mockResolvedValue({ id: "asset-1", purchasePrice: null, purchaseDate: null });
+        dbMock.bookingSerializedItem.findMany.mockResolvedValue([]);
+      },
+      invoke: () => getAssetInsights(request("/api/assets/asset-1/insights"), { params: Promise.resolve({ id: "asset-1" }) }),
+      body: { data: { all: { totalBookings: 0, utilizationPct: 0, topBorrowers: [] } } },
+    },
+  ])("still admits a student to $label", async ({ setup, invoke, body }) => {
     vi.mocked(requireAuth).mockResolvedValue({ ...collaborator, role: Role.STUDENT, capabilities: [] });
+    setup();
     const response = await invoke();
-    expect(response.status).not.toBe(403);
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject(body);
   });
 
   it("returns 404 for another user's booking instead of exposing its existence", async () => {

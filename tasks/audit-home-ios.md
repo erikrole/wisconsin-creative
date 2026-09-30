@@ -74,7 +74,7 @@ bulk units) is correct, logging is count-only (no PII).
       and `counts.myDueToday`, not the team totals. Pinned by
       `tests/ios-home-queue-honesty.test.ts` so a scope refactor cannot quietly put
       team numbers over a personal queue.
-- [ ] [Perf] `/api/dashboard?scope=ios-home` still ships `teamCheckouts`,
+- [ ] [Perf] **Decoder half done 2026-09-25** (`decodeIfPresent`; server trim still open, ship only after that build is the minimum). `/api/dashboard?scope=ios-home` still ships `teamCheckouts`,
       `teamReservations`, `upcomingEvents`, `overdueItems` that iOS barely uses,
       and `DashboardData.init` decodes them non-optionally
       (`DashboardModels.swift:221-238`) — payload trim opportunity, but the

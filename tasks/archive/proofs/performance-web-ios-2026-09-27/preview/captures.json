@@ -1,0 +1,88 @@
+{
+  "capturedAt": "2026-09-28T12:07:32.335Z",
+  "sourceHash": "c522916932ab8c3bf7bfc144699f716c9583cb3236f4f1fd45a85083bcca418b",
+  "buildId": "R8hrCeBQgERYbPXeJ2h8F",
+  "scope": "After-only synthetic authenticated preview, light, en-US, America/Chicago, reduced motion; no before/after latency claim",
+  "captures": [
+    {
+      "file": "home-cold.png",
+      "sha256": "ca78208becd2bc037652cd6ea97f1729c061d731067865e2f1f099abd0cc9e7e",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "home-narrow-mobile.png",
+      "sha256": "d0569c1d4169151baf1d319d320349a83b4ac260a5a595fd9de64f9c6dcf8492",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "items-cold.png",
+      "sha256": "78d24eecffb44bfa5abef0402a38bb4e154598b4cab4f0b020cc6e6cea2598b4",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "items-narrow-mobile.png",
+      "sha256": "9a17d305bb6a0ab626dfea236f5cad6663961fc47eabb03c2c6384a42c4ba052",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "bookings-cold.png",
+      "sha256": "8021fb74bbf85651241daa7b850282d4c2c75e58de9962db83a3bb840b739931",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "bookings-narrow-mobile.png",
+      "sha256": "077779467c0d65b28255ecb0f12a7adcd25b0582ff929ec472aa4f287305e482",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "schedule-cold.png",
+      "sha256": "67cd85df4122124db8ab6119e475ab7535d97f09dcc8fdf74aa668449c5f7ba1",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "schedule-narrow-mobile.png",
+      "sha256": "aa24a23f049a6e643f6994b4b6af28892a7af1c51b65b4f72ad1fe3482a46b3b",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "signatures-cold.png",
+      "sha256": "e6a38ee843eb770f1660b1d0d202f005380a35e775db4101e5d200e7356548fa",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "signatures-narrow-mobile.png",
+      "sha256": "896dad2a313f40252f758366df368105c11c43987ebbbd8d2eeabc85814bfad2",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    }
+  ]
+}

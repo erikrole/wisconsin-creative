@@ -1,0 +1,115 @@
+{
+  "node": "v22.23.3",
+  "seed": 260927,
+  "helperComparisons": 10003,
+  "fullWindowComparisons": 4000,
+  "allEqual": true,
+  "measuredScope": "Synthetic CPU-only computation of all four windows; excludes authentication, database, HTTP and rendering.",
+  "results": [
+    {
+      "name": "small",
+      "bookings": 20,
+      "durationDays": 7,
+      "fourWindowCompute": true,
+      "baselineMedianMs": 0.11133874999999989,
+      "optimizedMedianMs": 0.09749000000000024,
+      "improvementPct": 12.438391844707851,
+      "rows": [
+        {
+          "before": 0.12539791000000036,
+          "after": 0.10969582999999944
+        },
+        {
+          "after": 0.10840375000000108,
+          "before": 0.11005084000000011
+        },
+        {
+          "before": 0.10974125000000072,
+          "after": 0.09683917000000065
+        },
+        {
+          "after": 0.09749000000000024,
+          "before": 0.11154333999999949
+        },
+        {
+          "before": 0.11133874999999989,
+          "after": 0.0960429099999999
+        },
+        {
+          "after": 0.0963595799999996,
+          "before": 0.10934875000000034
+        }
+      ]
+    },
+    {
+      "name": "large-history",
+      "bookings": 1000,
+      "durationDays": 180,
+      "fourWindowCompute": true,
+      "baselineMedianMs": 27.898062500000016,
+      "optimizedMedianMs": 4.552220799999986,
+      "improvementPct": 83.68266326738646,
+      "rows": [
+        {
+          "before": 28.028808400000003,
+          "after": 4.750662499999999
+        },
+        {
+          "after": 4.621375000000012,
+          "before": 27.80446669999999
+        },
+        {
+          "before": 28.286924999999997,
+          "after": 4.487862500000006
+        },
+        {
+          "after": 4.523545800000011,
+          "before": 27.898062500000016
+        },
+        {
+          "before": 27.854712500000005,
+          "after": 4.552220799999986
+        },
+        {
+          "after": 4.484470899999996,
+          "before": 27.808404199999995
+        }
+      ]
+    },
+    {
+      "name": "overlap-stress",
+      "bookings": 1000,
+      "durationDays": 1825,
+      "fourWindowCompute": true,
+      "baselineMedianMs": 125.47469466666674,
+      "optimizedMedianMs": 4.577055333333344,
+      "improvementPct": 96.35220843095682,
+      "rows": [
+        {
+          "before": 127.08916666666664,
+          "after": 4.588347333333331
+        },
+        {
+          "after": 4.577055333333344,
+          "before": 125.3452636666666
+        },
+        {
+          "before": 125.4555416666667,
+          "after": 4.556305666666655
+        },
+        {
+          "after": 4.602027999999943,
+          "before": 125.47469466666674
+        },
+        {
+          "before": 125.24368066666678,
+          "after": 4.53143066666659
+        },
+        {
+          "after": 4.573875000000044,
+          "before": 126.32233333333322
+        }
+      ]
+    }
+  ]
+}

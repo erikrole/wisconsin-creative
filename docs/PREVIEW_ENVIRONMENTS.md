@@ -1,6 +1,6 @@
 # Preview environments and agent handoffs
 
-Owner: infrastructure. Updated 2026-09-22. Accepted architecture: [D-063](DECISIONS.md#d-063-branch-owned-previews-and-one-automatic-production-build).
+Owner: infrastructure. Updated 2026-09-28. Accepted architecture: [D-063](DECISIONS.md#d-063-branch-owned-previews-and-one-automatic-production-build).
 
 ## Current rollout boundary
 
@@ -26,6 +26,33 @@ npm run preview:doctor
 The same branch keeps its database, fixtures, session secret, and file stores. Different branches get different resources. A database connection is accepted only after its endpoint, database, branch and signed sanitized-template ancestry agree. Invalid existing state fails closed. Never reset a branch to solve an authentication error.
 
 The server prints its actual loopback URL. Its deterministic port changes when necessary to avoid another checkout; an explicitly requested occupied port fails without killing anything. `auth:local` uses that server's port and cookie name. Changing Git branches stops the old server. `.next/dev` and `.next/build` separate local outputs, with process locks preventing two writers to the same output. Vercel uses its standard `.next` directory. Do not bypass these wrappers with raw Next commands.
+
+## Reusable performance preview — 2026-09-28
+
+The approved retained environment for `claude/kiosk-multi-lens` is provisioned. Codex and Claude use the same branch state and commands above; they do not each create a database. Its Neon child is `br-raspy-sun-au47wnog`, endpoint `ep-bold-dew-aue5cozq`, with three branch-specific public/private stores. It is **pinned** for continuing work. Repeated setup and encrypted handoff retrieval preserve its identity. Database signature, migration health, normal synthetic-admin sign-in, storage readback, and private-store access checks passed. See the [performance ledger](../tasks/performance-web-ios-plan-2026-09-27.md) and [non-secret provisioning receipt](../tasks/archive/proofs/performance-web-ios-2026-09-27/preview-provisioning.json).
+
+On this computer, Claude can continue in the same checkout immediately. On another computer, check out the same branch and use an authenticated Vercel account with access to the resource project, then run `preview:setup` or `preview:attach`. The remote handoff supplies application credentials; it does not transfer uncommitted source files or install agent tools. Do not paste private state into either chat. Data changes by either agent are visible to both, so coordinate conflicting tests. A new Git branch receives its own environment.
+
+For repeatable authenticated performance measurements on Node 22:
+
+```sh
+npm run preview:setup
+npm run preview:doctor
+# After any pending migrations have been applied through dev:preview or preview:migrate:
+node scripts/benchmark-authenticated-preview.mjs --build --samples 5
+```
+
+If this computer's default Node is a different major version, the cached temporary runtime also works without changing the global installation:
+
+```sh
+npm exec --yes --package=node@22 --package=npm@11.17.0 -- node scripts/benchmark-authenticated-preview.mjs --build --samples 5
+```
+
+The benchmark builds with isolated preview settings, starts its own production-mode server on an available loopback port, signs in through the normal browser UI, measures Home, Items, Bookings, Schedule and Signatures, checks a narrow mobile viewport, and samples eight authenticated APIs through the browser's session. It stops only its own server. Each run gets a new ignored `.tmp/preview-benchmarks/` directory; the result includes source/build identity, raw samples, request/status counts, transfer sizes and dataset counts. Build/server logs and screenshots stay local. Only reviewed non-secret results belong in retained evidence. Omitting `--build` uses the existing production build and labels its source provenance unverified, unless `--reuse-build-report <prior-results.json>` verifies a matching source fingerprint, build ID, preview branch and Node version. A failed later measurement can still prove that its earlier build succeeded; the new run must complete its own measurements.
+
+Cold means a fresh browser cache against an awake server/database; warm means a reload with retained browser cache and persisted queries. Heading visibility and completed data reads are separate measures. Background event POSTs are recorded separately because successful response headers did not reliably yield browser request-completion events; the harness does not intercept or suppress them. These are synthetic local baselines, not hosted cold starts, production load times, or iOS device measurements. Hold source, dataset, runtime and viewport steady for before/after comparisons. The benchmark script and local application changes remain uncommitted until a separate source-control action is requested.
+
+Native performance tests retain the existing simulator fixture harness. The installed iOS app still allows only its production and App Review hosts; creating this environment does not redirect native logins to it. A native preview connection and physical-device Release profiling remain separate work.
 
 ## Resources and limits
 

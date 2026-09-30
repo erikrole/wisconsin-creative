@@ -13,8 +13,9 @@ export function createQueryClient() {
     defaultOptions: {
       queries: {
         staleTime: 60_000,
-        // 24h keeps persisted cache useful across sessions.
-        gcTime: 24 * 60 * 60_000,
+        // Browsers keep persisted data for 24h. Server clients are request-local:
+        // no GC timer should retain a completed request's cache for that long.
+        gcTime: typeof window === "undefined" ? Infinity : 24 * 60 * 60_000,
         retry: 1,
         refetchOnWindowFocus: false,
         refetchOnReconnect: true,
@@ -39,10 +40,16 @@ export const QUERY_CACHE_STORAGE_KEY = "gear-tracker:query-cache";
 // instead of a skeleton on every visit. Only dashboard + booking-detail are
 // persisted; list/settings queries are cheap enough to refetch.
 export function getQueryPersistOptions() {
-  if (typeof window === "undefined") return null;
+  let storage: Storage | undefined;
+  try {
+    if (typeof window !== "undefined") storage = window.localStorage;
+  } catch {
+    // Browsers can deny storage access. The persister's no-storage behavior
+    // still completes restoration, leaving ordinary in-memory queries usable.
+  }
   return {
     persister: createSyncStoragePersister({
-      storage: window.localStorage,
+      storage,
       key: QUERY_CACHE_STORAGE_KEY,
       throttleTime: 1_000, // write at most once per second
     }),

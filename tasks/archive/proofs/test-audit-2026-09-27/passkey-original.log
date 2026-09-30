@@ -1,0 +1,10 @@
+
+ RUN  v3.2.6 /Users/role/Code/wisconsin-creative
+
+ ✓ tests/passkey-auth.test.ts (9 tests | 8 skipped) 4ms
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 8 skipped (9)
+   Start at  00:15:11
+   Duration  367ms (transform 91ms, setup 8ms, collect 225ms, tests 4ms, environment 0ms, prepare 33ms)
+

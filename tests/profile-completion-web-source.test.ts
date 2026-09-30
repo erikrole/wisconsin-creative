@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 describe("profile completion web wiring", () => {
-  const wizard = readFileSync("src/components/profile-completion/ProfileCompletionWizard.tsx", "utf8");
+  const wizard = readFileSync("src/components/profile-completion/ProfileCompletionDialog.tsx", "utf8");
   const notice = readFileSync("src/components/profile-completion/ProfileCompletionNotice.tsx", "utf8");
   const shell = readFileSync("src/components/AppShell.tsx", "utf8");
   const profilePage = readFileSync("src/app/(app)/users/[id]/page.tsx", "utf8");

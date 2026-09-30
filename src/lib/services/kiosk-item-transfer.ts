@@ -34,14 +34,24 @@ export async function transferKioskItems(args: {
     if (serialized.length !== args.assetIds.length || units.length !== args.bulkUnitIds.length || serialized.length + units.length === 0) throw new HttpError(409, "Some selected items are no longer out on this checkout. Refresh and select again.");
     const allocations = await tx.assetAllocation.findMany({ where: { assetId: { in: args.assetIds }, active: true, kind: "CHECKOUT" } });
     if (allocations.length !== serialized.length || allocations.some((item) => item.bookingId !== source.id || item.endsAt.getTime() !== source.endsAt.getTime())) throw new HttpError(409, "An item's custody record needs reconciliation before transfer");
-    const target = args.targetUserId ? await tx.user.findFirst({ where: { id: args.targetUserId, ...kioskRosterUserWhere() }, select: { id: true, name: true } }) : null;
-    if (!args.targetBookingId && !target) throw new HttpError(400, "Choose the person or checkout receiving these items");
     const destination = args.targetBookingId ? await tx.booking.findUnique({ where: { id: args.targetBookingId }, include: {
-      accountabilityExclusion: true, scanSessions: { where: { phase: "CHECKIN", status: "OPEN" } },
+      events: true, accountabilityExclusion: true, scanSessions: { where: { phase: "CHECKIN", status: "OPEN" } },
     } }) : null;
-    if (args.targetBookingId && (!destination || destination.id === source.id || destination.kind !== "CHECKOUT" || destination.status !== "OPEN" || destination.locationId !== source.locationId || destination.endsAt.getTime() !== source.endsAt.getTime() || destination.scanSessions.length || (destination.accountabilityExclusion && !destination.accountabilityExclusion.restoredAt))) throw new HttpError(409, "Choose an open checkout at the same location with the same due time, or create a checkout for the recipient");
+    const sourceEventIds = new Set(source.events.map(({ eventId }) => eventId));
+    if (args.targetBookingId && (
+      !destination || destination.id === source.id || destination.kind !== "CHECKOUT" || destination.status !== "OPEN"
+      || destination.custodyScope !== "PERSON" || destination.startsAt.getTime() > Date.now()
+      || destination.locationId !== source.locationId || destination.endsAt.getTime() !== source.endsAt.getTime()
+      || destination.title !== source.title || destination.eventId !== source.eventId || destination.sportCode !== source.sportCode
+      || destination.sourceReservationId !== source.sourceReservationId
+      || destination.events.length !== sourceEventIds.size || destination.events.some(({ eventId }) => !sourceEventIds.has(eventId))
+      || destination.scanSessions.length || (destination.accountabilityExclusion && !destination.accountabilityExclusion.restoredAt)
+    )) throw new HttpError(409, "Choose a matching open personal checkout with the same events, purpose, location, due time, and reservation, or create a checkout for the recipient");
+    const recipientId = destination?.requesterUserId ?? args.targetUserId;
+    const target = recipientId ? await tx.user.findFirst({ where: { id: recipientId, ...kioskRosterUserWhere() }, select: { id: true, name: true } }) : null;
+    if (!target) throw new HttpError(args.targetBookingId ? 409 : 400, "Choose an active person from the kiosk roster to receive these items");
     const receiving = destination ?? await tx.booking.create({ data: {
-      kind: "CHECKOUT", status: "OPEN", custodyScope: "PERSON", requesterUserId: target!.id,
+      kind: "CHECKOUT", status: "OPEN", custodyScope: "PERSON", requesterUserId: target.id,
       title: source.title, startsAt: source.startsAt, endsAt: source.endsAt, locationId: source.locationId,
       createdBy: actor.id, sourceReservationId: source.sourceReservationId,
       eventId: source.eventId, sportCode: source.sportCode, pickupKioskDeviceId: source.pickupKioskDeviceId,
@@ -87,7 +97,7 @@ export async function transferKioskItems(args: {
       [receiving.id, "kiosk_items_transferred_in"],
     ];
     for (const [entityId, action] of auditEntries) await createAuditEntryTx(tx, { actorId: actor.id, actorRole: actor.role, entityType: "booking", entityId, action, before: { sourceSnapshot: source.updatedAt.toISOString(), custodyScope: source.custodyScope, requesterId: source.custodyScope === "PERSON" ? source.requesterUserId : null }, after: evidence });
-    const response = { success: true, targetBookingId: receiving.id, sourceClosed, itemCount: serialized.length + units.length, message: `${serialized.length + units.length} items transferred to ${target?.name ?? receiving.title}`, endsAt: receiving.endsAt };
+    const response = { success: true, targetBookingId: receiving.id, sourceClosed, itemCount: serialized.length + units.length, message: `${serialized.length + units.length} items transferred to ${destination?.title ?? target.name}`, endsAt: receiving.endsAt };
     await finishKioskOperationReceiptTx(tx, args.receipt, response);
     return response;
   }, { isolationLevel: "Serializable" }));

@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Dashboard
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-09-18
+- Last Updated: 2026-09-25
 - Status: Active — V3 shipped, reliability + UX polish complete
 - Version: V3
 
@@ -29,13 +29,13 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 
 ## Information Architecture (Top to Bottom)
 1. Overdue Banner (global)
-2. Action Lanes
+2. Your day (personal, hidden when the viewer has nothing this week): one context banner, Next up, This week strip
+3. Action Lanes
    - Check-outs needing action
    - Pending pickup handoffs
    - Stale reservations needing cleanup
    - Reservations needing action
-3. My Gear in Custody cards
-4. Drafts section (recover in-progress reservation/checkout drafts)
+4. My work: My events (one card per worked event with its gear), My checkouts, My reservations (event-linked gear excluded), Drafts
 5. Sport filter chips shipped (V4). Location filter deferred.
 
 ## Section Specs
@@ -93,6 +93,18 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
   - Render as a transient red attention card only when present.
   - Link to `/bookings?tab=reservations&filter=overdue`.
   - Do not increment checkout overdue stats or the overdue checkout banner.
+
+### 3c) Your day
+- Source: `src/lib/home-agenda.ts` (web) mirrored by `ios/Wisconsin/Views/HomeAgenda.swift`; parity pinned by `tests/home-agenda-parity.test.ts`.
+- Context banner: at most one, in priority order: own overdue checkout, own pickup ready or late (never shared custody, via `myPendingPickups`), today's worked event with no gear, own return due later today. Dismissal lasts the local day.
+- Next up (web): the soonest timed commitment in the next 12 hours that the banner is not already about, with a countdown. Event-linked pickups fold into their event. iOS keeps its existing Next Up queue.
+- This week: seven days from today with shift, pickup, and return dots. The payload returns up to 10 shift assignments so the strip rarely runs short.
+- Staff timing is set outside Schedule: Staff events anchor on the event start and never name a call time.
+- Filters do not apply: what needs the viewer should not disappear behind a sport chip.
+
+### 3d) My events
+- One card per worked event: sport and matchup, day, Student call time or event start, location, area, call note, and the event's gear state (Gear out, Ready for pickup, Pickup time, or Prep gear).
+- Gear shown on an event card is removed from My reservations so it is not listed twice.
 
 ### 4) My Gear in Custody
 - Purpose: personal accountability and due urgency.
@@ -186,6 +198,11 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 7. Add regression tests for permissions, window filtering (7 days), and overdue consistency.
 
 ## Change Log
+
+- 2026-09-28: **Authenticated local performance baseline retained.** The approved pinned branch preview passed repeated Home, Items, Bookings, Schedule and Signatures loads across desktop and narrow mobile, with actual synthetic-admin login and eight sampled APIs. Home's fresh-browser heading median was 181 ms; its full Dashboard API median was 664 ms. These are distinct after-only local measurements, not production or before/after speedup claims. The [shared-preview report](../tasks/archive/proofs/performance-web-ios-2026-09-27/shared-preview.md) records raw samples, request counts, dataset size and repeatable Claude/Codex commands. The shared asset-list and Dashboard API paths are the next measured profiling targets.
+- 2026-09-27: **Shared web startup work reduced (local).** Cache restoration retains one authenticated component tree instead of remounting it. A production-React browser fixture measured initial effect/query requests falling from two to one, and a fresh persisted dashboard from one query request to zero. Denied storage falls back to in-memory queries. Optional profile form and badge artwork load when needed. Home's initial route-plus-layout JavaScript fell from 407,302 to 369,116 gzip bytes in matched app builds (9.4%); this is bundle evidence, not production load latency. See the [benchmark ledger](../tasks/performance-web-ios-plan-2026-09-27.md) for fixture, authentication, and deployment boundaries.
+
+- 2026-09-25: **Your day and My events (local).** Web adds one context banner, a Next up card with countdown, and a seven-day strip above the columns; My shifts becomes My events with gear on each card and event-linked reservations no longer duplicated. iOS Home adds the same banner above the greeting, the This Week strip, and a gear line on event rows (event-linked gear was previously absent from Home). The payload adds `myPendingPickups` (own, PERSON custody) and returns up to 10 shift assignments. Overdue rows and Booking detail show the latest staff nudge ("Nudged 20m ago by …") from the audit log; a nudge within the hour reads as sent, and shared checkouts no longer offer Nudge. Authenticated web proof is blocked until this branch has a preview environment.
 
 - 2026-09-22: **macOS companion 1.0.5 polish.** Overdue rows now say "Was due …" instead of "Due …". The Companion data health row shows a refresh glyph, and a spinner while refreshing, in place of a navigation chevron. Booking detail responds to Esc (back) and Return (open in Wisconsin Creative), has a Copy Ref button, and scrolls to the top when a booking opens. Booking cards have a context menu (Show Details, Open in Wisconsin Creative, Copy Reference). Open-booking links use the shared query-encoded deep-link builder. Release builds no longer include coverage instrumentation. A Debug-only `GEAROPS_FIXTURE=glance` mode makes review captures repeatable. The Developer ID signed build is installed locally; notarization is still a separate gate. Review: `tasks/archive/proofs/gearops-menu-bar-polish-2026-09-22/review.html`.
 

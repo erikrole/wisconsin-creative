@@ -1,0 +1,54 @@
+The files belonging to this database system will be owned by user "role".
+This user must also own the server process.
+
+The database cluster will be initialized with locale "C".
+The default text search configuration will be set to "english".
+
+Data page checksums are disabled.
+
+creating directory /private/tmp/wc-custody-pg-pNo3C8/data ... ok
+creating subdirectories ... ok
+selecting dynamic shared memory implementation ... posix
+selecting default "max_connections" ... 100
+selecting default "shared_buffers" ... 128MB
+selecting default time zone ... America/Chicago
+creating configuration files ... ok
+running bootstrap script ... ok
+performing post-bootstrap initialization ... ok
+syncing data to disk ... ok
+
+Success. You can now start the database server using:
+
+    pg_ctl -D /private/tmp/wc-custody-pg-pNo3C8/data -l logfile start
+
+waiting for server to start.... done
+server started
+Loaded Prisma config from prisma.config.ts.
+
+Prisma config detected, skipping environment variable loading.
+Prisma schema loaded from prisma/schema.prisma
+Datasource "db": PostgreSQL database "custody_test", schema "public" at "localhost:5432"
+
+🚀  Your database is now in sync with your Prisma schema. Done in 342ms
+┌─────────────────────────────────────────────────────────┐
+│  Update available 6.19.3 -> 8.0.0-rc.17                 │
+│                                                         │
+│  This is a major update - please follow the guide at    │
+│  https://pris.ly/d/major-version-upgrade                │
+│                                                         │
+│  Run the following to update                            │
+│    npm i --save-dev prisma@latest                       │
+│    npm i @prisma/client@latest                          │
+└─────────────────────────────────────────────────────────┘
+
+
+ RUN  v4.1.11 /Users/role/Code/wisconsin-creative
+
+
+ Test Files  2 passed (2)
+      Tests  11 passed (11)
+   Start at  22:28:09
+   Duration  2.22s (transform 136ms, setup 18ms, import 496ms, tests 1.55s, environment 0ms)
+
+waiting for server to shut down.... done
+server stopped

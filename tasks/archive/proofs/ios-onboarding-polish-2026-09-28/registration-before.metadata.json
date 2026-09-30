@@ -1,0 +1,23 @@
+{
+  "sourceRevision": "1c62814365f89eb377689495ba8f1eb4f85a9d9e",
+  "sourcePatchSha256": "958b0b0ec0280ef66813c72306b4d25a4f93bd699e58be3705ced72c9da73967",
+  "settings": {
+    "device": "iPhone 18 Pro Max / iOS 27.0",
+    "viewport": [
+      440,
+      956
+    ],
+    "fixture": "registration / WelcomeHarnessFixture v1",
+    "role": "signed out",
+    "route": "registration",
+    "appearance": "light",
+    "textSize": "default",
+    "locale": "en_US",
+    "timezone": "America/Chicago (host default; no time-relative content)",
+    "clock": "status bar 09:41; 2026-09-28",
+    "scroll": [
+      0,
+      0
+    ]
+  }
+}

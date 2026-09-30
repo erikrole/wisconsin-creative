@@ -11,10 +11,10 @@ Wisconsin Creative is a Next.js App Router application with a companion native i
 |---|---:|
 | App pages | 89 |
 | App layouts | 8 |
-| API route handlers | 337 |
-| Service files | 94 |
-| Component files | 163 |
-| Test files | 694 |
+| API route handlers | 339 |
+| Service files | 95 |
+| Component files | 164 |
+| Test files | 703 |
 
 ## Oversized Source Watchlist
 
@@ -23,7 +23,7 @@ Informational only. These are the largest TypeScript and TSX files under `src/`;
 | File | Lines |
 |---|---:|
 | `src/lib/services/bookings-lifecycle.ts` | 3348 |
-| `src/lib/services/signatures.ts` | 2051 |
+| `src/lib/services/signatures.ts` | 2366 |
 | `src/lib/services/notifications.ts` | 1966 |
 | `src/app/(app)/schedule/_components/ListView.tsx` | 1938 |
 | `src/lib/services/reports.ts` | 1932 |
@@ -34,13 +34,13 @@ Informational only. These are the largest TypeScript and TSX files under `src/`;
 | `src/lib/services/shift-trades.ts` | 1560 |
 | `src/app/(app)/bulk-inventory/batteries/page.tsx` | 1554 |
 | `src/app/(app)/users/[id]/UserInfoTab.tsx` | 1543 |
+| `src/app/(app)/items/new-item-sheet.tsx` | 1480 |
 | `src/components/ActivityTimeline.tsx` | 1387 |
 | `src/app/(app)/schedule/_components/WorkingCrewEditor.tsx` | 1356 |
-| `src/app/(app)/items/new-item-sheet/SerializedItemForm.tsx` | 1272 |
+| `src/app/(app)/items/new-item-sheet/SerializedItemForm.tsx` | 1331 |
+| `src/app/api/assets/route.ts` | 1275 |
 | `src/hooks/use-schedule-data.ts` | 1269 |
-| `src/app/api/assets/route.ts` | 1264 |
 | `src/app/(app)/accountability/AccountabilityClient.tsx` | 1260 |
-| `src/app/(app)/items/new-item-sheet.tsx` | 1222 |
 | `src/lib/services/schedule-working-copy.ts` | 1190 |
 
 ## High-Level Data Flow

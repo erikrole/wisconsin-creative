@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   eventEndsAt: vi.fn(),
@@ -52,10 +52,13 @@ function request() {
 }
 
 const context = { params: Promise.resolve({ id: "group-1" }) };
+const now = new Date("2026-09-01T20:00:00.000Z");
 
 describe("past-event Schedule backfill route", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(now);
     mocks.mutate.mockResolvedValue({ workingVersion: 3, marker: "mutated" });
     mocks.getEditor.mockResolvedValue({ marker: "published" });
     mocks.rebase.mockResolvedValue({ workingVersion: 4, marker: "rebased" });
@@ -64,8 +67,15 @@ describe("past-event Schedule backfill route", () => {
     mocks.onShiftsWorked.mockResolvedValue(undefined);
   });
 
-  it("publishes an ended-event edit immediately and keeps recognition silent", async () => {
-    mocks.eventEndsAt.mockResolvedValue(new Date("2026-08-25T20:00:00.000Z"));
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it.each([
+    ["ended", new Date(now.getTime() - 1)],
+    ["ending-now", now],
+  ])("publishes an %s-event edit immediately and keeps recognition silent", async (_label, endsAt) => {
+    mocks.eventEndsAt.mockResolvedValue(endsAt);
 
     const response = await run(request(), context);
 
@@ -128,7 +138,7 @@ describe("past-event Schedule backfill route", () => {
   });
 
   it("keeps a future-event edit on the existing release timer", async () => {
-    mocks.eventEndsAt.mockResolvedValue(new Date("2026-09-25T20:00:00.000Z"));
+    mocks.eventEndsAt.mockResolvedValue(new Date(now.getTime() + 1));
 
     const response = await run(request(), context);
 

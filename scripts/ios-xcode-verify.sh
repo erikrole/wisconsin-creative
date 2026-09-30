@@ -12,8 +12,11 @@ XCODEBUILD_FLAGS=()
 
 if [[ "$SCHEME" == "WisconsinKiosk" ]]; then
   SIMULATOR_NAME="${IOS_SIMULATOR_NAME:-iPad Air 11-inch (M4)}"
+  SIMULATOR_RUNTIME="${IOS_SIMULATOR_RUNTIME:-26.5}"
+  DERIVED_DATA_PATH="${IOS_DERIVED_DATA_PATH:-${TMPDIR:-/tmp}/gear-tracker-kiosk-xcode-derived-data}"
 else
   SIMULATOR_NAME="${IOS_SIMULATOR_NAME:-iPhone 18 Pro Max}"
+  SIMULATOR_RUNTIME="${IOS_SIMULATOR_RUNTIME:-}"
 fi
 
 # Resolve a simulator UDID by exact device name.
@@ -24,10 +27,11 @@ fi
 # while iOS 27.0 is also present, and the `name=` form fails with
 # "Unable to find a device matching the provided destination specifier".
 # Matching UDIDs out of `xcrun simctl list devices available` avoids that:
+# restrict to the requested runtime first (Kiosk defaults to iOS 26.5), then
 # prefer a booted device, otherwise the newest runtime that has one.
 resolve_simulator_udid() {
   local device_name="$1"
-  xcrun simctl list devices available 2>/dev/null | awk -v name="$device_name" '
+  xcrun simctl list devices available 2>/dev/null | awk -v name="$device_name" -v required_runtime="$SIMULATOR_RUNTIME" '
     function vercmp(a, b,   as, bs, na, nb, i, x, y, n) {
       na = split(a, as, ".")
       nb = split(b, bs, ".")
@@ -50,6 +54,7 @@ resolve_simulator_udid() {
       next
     }
     runtime_os == "iOS" {
+      if (required_runtime != "" && runtime_version != required_runtime) next
       line = $0
       sub(/^[ \t]+/, "", line)
       sub(/[ \t]+$/, "", line)
@@ -81,7 +86,7 @@ if [[ -n "${IOS_TEST_DESTINATION:-}" ]]; then
 else
   SIMULATOR_UDID="$(resolve_simulator_udid "$SIMULATOR_NAME")" || SIMULATOR_UDID=""
   if [[ -z "$SIMULATOR_UDID" ]]; then
-    printf '\nFAIL: no available "%s" simulator found.\n' "$SIMULATOR_NAME" >&2
+    printf '\nFAIL: no available "%s" simulator found (required runtime: %s).\n' "$SIMULATOR_NAME" "${SIMULATOR_RUNTIME:-any}" >&2
     printf 'AGENTS.md fixes this destination. Install the missing device/runtime rather\n' >&2
     printf 'than substituting another simulator, or set IOS_SIMULATOR_NAME /\n' >&2
     printf 'IOS_TEST_DESTINATION deliberately.\n\n' >&2

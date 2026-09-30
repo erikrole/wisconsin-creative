@@ -105,8 +105,9 @@ function shift(overrides: Record<string, unknown> = {}) {
 
 beforeEach(() => {
   transactionCalls.length = 0;
-  vi.clearAllMocks();
+  vi.resetAllMocks();
   mockTx.shiftAssignment.findMany.mockResolvedValue([]);
+  mockTx.shiftGroupWorkingCopy.deleteMany.mockResolvedValue({ count: 1 });
 });
 
 describe("schedule publication state", () => {
@@ -1031,10 +1032,17 @@ describe("publishShiftGroup drift detection", () => {
   it("publishes when the draft id matches and keeps legacy callers version-only", async () => {
     for (const expectedDraftId of [draftStartedAt.toISOString(), undefined]) {
       const group = groupWithDraft([]);
+      const publishedGroup = {
+        ...group,
+        workingCopy: null,
+        publishedAt: new Date("2026-08-05T20:00:00.000Z"),
+        publishedById: "staff-1",
+      };
       mockTx.shiftGroup.findUnique.mockReset();
       mockTx.shiftGroup.findUnique
         .mockResolvedValueOnce(group)
-        .mockResolvedValue({ ...group, workingCopy: null });
+        .mockResolvedValue(publishedGroup);
+      mockTx.shiftGroup.update.mockResolvedValue(publishedGroup);
 
       mockTx.shiftGroupWorkingCopy.deleteMany.mockResolvedValue({ count: 1 });
 
@@ -1045,9 +1053,17 @@ describe("publishShiftGroup drift detection", () => {
 
   it("lets a drift-free draft remove an empty pre-draft slot", async () => {
     const group = groupWithDraft([liveShift("shift-old", new Date("2026-08-04T10:00:00.000Z"), false)]);
+    const publishedGroup = {
+      ...group,
+      shifts: [],
+      workingCopy: null,
+      publishedAt: new Date("2026-08-05T20:00:00.000Z"),
+      publishedById: "staff-1",
+    };
     mockTx.shiftGroup.findUnique
       .mockResolvedValueOnce(group)
-      .mockResolvedValue({ ...group, shifts: [], workingCopy: null });
+      .mockResolvedValue(publishedGroup);
+    mockTx.shiftGroup.update.mockResolvedValue(publishedGroup);
     mockTx.shiftAssignment.findMany.mockResolvedValue([]);
 
     await publishShiftGroup("group-1", "staff-1", 7);
@@ -1358,15 +1374,19 @@ describe("publish drift uses the recorded base shift set", () => {
    * would call it drift forever and the draft could never be published.
    */
   it("treats a removal of a previously adopted shift as a removal, not drift", async () => {
+    const publishedGroup = {
+      ...groupWith({ baseShiftIds: ["shift-adopted"] }, []),
+      workingCopy: null,
+      publishedAt: new Date("2026-08-05T20:00:00.000Z"),
+      publishedById: "staff-1",
+    };
     mockTx.shiftGroup.findUnique
       .mockResolvedValueOnce(groupWith(
         { baseShiftIds: ["shift-adopted"] },
         [shiftRow("shift-adopted", afterDraft)],
       ))
-      .mockResolvedValue({
-        ...groupWith({ baseShiftIds: ["shift-adopted"] }, []),
-        workingCopy: null,
-      });
+      .mockResolvedValue(publishedGroup);
+    mockTx.shiftGroup.update.mockResolvedValue(publishedGroup);
     mockTx.shiftAssignment.findMany.mockResolvedValue([]);
 
     await publishShiftGroup("group-1", "staff-1", 9);

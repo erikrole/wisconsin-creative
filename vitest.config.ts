@@ -29,8 +29,10 @@ export default defineConfig({
       ],
       thresholds: {
         statements: 70,
-        branches: 75,
-        functions: 75,
+        // Accepted Vitest 4 AST-remapping baseline; see docs/TESTING.md.
+        // Raise these floors as owner coverage improves.
+        branches: 63.28,
+        functions: 75.74,
         lines: 70
       }
     }

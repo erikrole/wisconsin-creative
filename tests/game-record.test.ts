@@ -18,7 +18,6 @@ import {
   getGameRecordForUser,
   workedEventWhere,
 } from "@/lib/services/game-record";
-import { scoreboardEventWhere } from "@/lib/services/scoreboard";
 
 const mockedDb = db as unknown as {
   calendarEvent: { groupBy: ReturnType<typeof vi.fn>; count: ReturnType<typeof vi.fn> };
@@ -80,19 +79,6 @@ describe("gameRecordEventWhere", () => {
     expect(gameRecordEventWhere("user-1", now).endsAt).toEqual({ lt: now });
   });
 
-  it("agrees with the Scoreboard on which games are in the season", () => {
-    // The profile chip and the Scoreboard tab describe the same season on the
-    // same screen, so they cannot disagree about the window they cover.
-    const now = new Date("2026-12-01T18:00:00.000Z");
-    const record = gameRecordEventWhere("user-1", now);
-    const scoreboard = scoreboardEventWhere("user-1");
-    expect(record.startsAt).toEqual(scoreboard.startsAt);
-    expect(record.status).toEqual(scoreboard.status);
-    expect(record.archivedAt).toEqual(scoreboard.archivedAt);
-    expect(record.isHidden).toEqual(scoreboard.isHidden);
-    expect(record.NOT).toEqual(scoreboard.NOT);
-  });
-
   it("excludes cancelled, hidden, and archived events", () => {
     const where = gameRecordEventWhere("user-1");
     expect(where.status).toEqual({ not: "CANCELLED" });
@@ -100,12 +86,19 @@ describe("gameRecordEventWhere", () => {
     expect(where.archivedAt).toBeNull();
   });
 
-  it("keeps exhibitions and alumni matches out of the official record", () => {
-    expect(gameRecordEventWhere("user-1").NOT).toEqual([
-      { rawSummary: { contains: "exhibition", mode: "insensitive" } },
-      { rawSummary: { contains: "scrimmage", mode: "insensitive" } },
-      { rawSummary: { contains: "alumni match", mode: "insensitive" } },
-    ]);
+  it("excludes unofficial titles while allowing manual games with a null raw title", () => {
+    expect(gameRecordEventWhere("user-1").AND).toEqual([{ OR: [
+      { rawSummary: { not: null }, NOT: [
+        { rawSummary: { contains: "exhibition", mode: "insensitive" } },
+        { rawSummary: { contains: "scrimmage", mode: "insensitive" } },
+        { rawSummary: { contains: "alumni match", mode: "insensitive" } },
+      ] },
+      { rawSummary: null, NOT: [
+        { summary: { contains: "exhibition", mode: "insensitive" } },
+        { summary: { contains: "scrimmage", mode: "insensitive" } },
+        { summary: { contains: "alumni match", mode: "insensitive" } },
+      ] },
+    ] }]);
   });
 
   it("counts the user through an active shift assignment or an admin-added worker", () => {

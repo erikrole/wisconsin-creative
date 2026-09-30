@@ -7,6 +7,7 @@ import SwiftUI
 /// Selected gear lives in the system bottom toolbar and a cart sheet.
 struct CreateBookingEquipmentPicker: View {
     @Bindable var vm: CreateBookingViewModel
+    var reviewTitle = "Review"
     let onReview: () -> Void
 
     @State private var showCart = false
@@ -323,7 +324,7 @@ struct CreateBookingEquipmentPicker: View {
                     Text(
                         vm.selectedLocationMismatchCount > 0
                             ? "Fix Location"
-                            : (vm.selectedConflictCount == 0 ? "Review" : "Resolve Conflicts")
+                            : (vm.selectedConflictCount == 0 ? reviewTitle : "Resolve Conflicts")
                     )
                     .fontWeight(.semibold)
                 }
@@ -357,6 +358,10 @@ struct CreateBookingEquipmentPicker: View {
     // MARK: - Tap handling
 
     private func handleAssetTap(_ asset: Asset) {
+        if vm.isLocked(asset) {
+            Haptics.warning()
+            return
+        }
         if vm.selectedAssetIds.contains(asset.id) {
             vm.toggleAsset(asset)
             Haptics.selection()

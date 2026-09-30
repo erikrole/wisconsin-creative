@@ -1,0 +1,567 @@
+group	file	line	target	matcher	expected
+1	tests/ios-browse-tab.test.ts	37	ios/Wisconsin/Views/BrowseView.swift	toContain	GuidesView(wrapsInNavigationStack: false)
+1	tests/ios-guides-native-page.test.ts	95	ios/Wisconsin/Views/BrowseView.swift	toContain	GuidesView(wrapsInNavigationStack: false)
+1	tests/ios-guides-native-page.test.ts	97	ios/Wisconsin/Views/BrowseView.swift	toContain	GuidesView(wrapsInNavigationStack: false)
+1	tests/ios-guides-native-page.test.ts	107	ios/Wisconsin/Views/BrowseView.swift	toContain	GuidesView(wrapsInNavigationStack: false)
+1	tests/ios-settings-first-class.test.ts	49	ios/Wisconsin/Views/BrowseView.swift	toContain	GuidesView(wrapsInNavigationStack: false)
+2	tests/ios-browse-tab.test.ts	38	ios/Wisconsin/Views/BrowseView.swift	toContain	LicensesView(wrapsInNavigationStack: false)
+2	tests/ios-licenses-native-page.test.ts	43	ios/Wisconsin/Views/BrowseView.swift	toContain	LicensesView(wrapsInNavigationStack: false)
+2	tests/ios-licenses-native-page.test.ts	45	ios/Wisconsin/Views/BrowseView.swift	toContain	LicensesView(wrapsInNavigationStack: false)
+2	tests/ios-licenses-native-page.test.ts	203	ios/Wisconsin/Views/BrowseView.swift	toContain	LicensesView(wrapsInNavigationStack: false)
+2	tests/ios-settings-first-class.test.ts	50	ios/Wisconsin/Views/BrowseView.swift	toContain	LicensesView(wrapsInNavigationStack: false)
+3	tests/ios-api-contract.test.ts	58	ios/Wisconsin/Core/APIClient.swift	toContain	bulkItems: bulkItems
+3	tests/ios-api-contract.test.ts	482	ios/Wisconsin/Core/APIClient.swift	toContain	bulkItems: bulkItems
+3	tests/ios-create-booking-picker-parity.test.ts	75	ios/Wisconsin/Core/APIClient.swift	toContain	bulkItems: bulkItems
+3	tests/ios-create-booking-picker-parity.test.ts	480	ios/Wisconsin/Core/APIClient.swift	toContain	bulkItems: bulkItems
+4	tests/ios-checkout-return-live-activity-source.test.ts	18	ios/Wisconsin/App/WisconsinApp.swift	toContain	GearTrackerRouteParser.parse(url)
+4	tests/ios-deep-link-routing.test.ts	24	ios/Wisconsin/App/WisconsinApp.swift	toContain	GearTrackerRouteParser.parse(url)
+4	tests/ios-home-screen-widgets.test.ts	121	ios/Wisconsin/App/WisconsinApp.swift	toContain	GearTrackerRouteParser.parse(url)
+4	tests/ios-main-kiosk-target-split.test.ts	30	ios/Wisconsin/App/WisconsinApp.swift	toContain	GearTrackerRouteParser.parse(url)
+5	tests/ios-checkout-return-live-activity-source.test.ts	19	ios/Wisconsin/App/WisconsinApp.swift	toContain	appState.apply(route)
+5	tests/ios-deep-link-routing.test.ts	25	ios/Wisconsin/App/WisconsinApp.swift	toContain	appState.apply(route)
+5	tests/ios-home-screen-widgets.test.ts	122	ios/Wisconsin/App/WisconsinApp.swift	toContain	appState.apply(route)
+5	tests/ios-main-kiosk-target-split.test.ts	31	ios/Wisconsin/App/WisconsinApp.swift	toContain	appState.apply(route)
+6	tests/ios-notification-categories-profile.test.ts	50	ios/Wisconsin/Views/NotificationSettingsView.swift	toContain	Text("In-app notifications always show in your inbox, regardless of these settings.")
+6	tests/ios-notification-categories-profile.test.ts	65	ios/Wisconsin/Views/NotificationSettingsView.swift	toContain	Text("In-app notifications always show in your inbox, regardless of these settings.")
+6	tests/ios-settings-detail-menus.test.ts	40	ios/Wisconsin/Views/NotificationSettingsView.swift	toContain	Text("In-app notifications always show in your inbox, regardless of these settings.")
+6	tests/ios-settings-first-class.test.ts	63	ios/Wisconsin/Views/NotificationSettingsView.swift	toContain	Text("In-app notifications always show in your inbox, regardless of these settings.")
+7	tests/schedule-crew-parity.test.ts	53	src/app/(app)/schedule/_components/ListView.tsx	toContain	<WorkingCrewEditor
+7	tests/schedule-role-display-source.test.ts	54	src/app/(app)/schedule/_components/ListView.tsx	toContain	<WorkingCrewEditor
+7	tests/schedule-role-display-source.test.ts	68	src/app/(app)/schedule/_components/ListView.tsx	toContain	<WorkingCrewEditor
+7	tests/schedule-ui-polish-source.test.ts	49	src/app/(app)/schedule/_components/ListView.tsx	toContain	<WorkingCrewEditor
+8	tests/event-crew-setup-source.test.ts	13	src/app/(app)/schedule/_components/ListView.tsx	toContain	Set up crew
+8	tests/schedule-source-truth-smoke-contract.test.ts	198	src/app/(app)/schedule/_components/ListView.tsx	toContain	Set up crew
+8	tests/schedule-ui-polish-source.test.ts	45	src/app/(app)/schedule/_components/ListView.tsx	toContain	Set up crew
+9	tests/event-crew-setup-source.test.ts	17	src/app/(app)/schedule/_components/ListView.tsx	toContain	Manage crew
+9	tests/schedule-source-truth-smoke-contract.test.ts	197	src/app/(app)/schedule/_components/ListView.tsx	toContain	Manage crew
+9	tests/schedule-ui-polish-source.test.ts	44	src/app/(app)/schedule/_components/ListView.tsx	toContain	Manage crew
+10	tests/ios-accessibility-layout-hardening.test.ts	49	ios/Wisconsin/Views/NotificationSettingsView.swift	toContain	title: "Push alerts"
+10	tests/ios-settings-detail-menus.test.ts	41	ios/Wisconsin/Views/NotificationSettingsView.swift	toContain	title: "Push alerts"
+10	tests/student-field-contracts.test.ts	355	ios/Wisconsin/Views/NotificationSettingsView.swift	toContain	title: "Push alerts"
+11	tests/ios-accessibility-layout-hardening.test.ts	51	ios/Wisconsin/Views/NotificationSettingsView.swift	not.toContain	Pause Alerts
+11	tests/ios-settings-detail-menus.test.ts	69	ios/Wisconsin/Views/NotificationSettingsView.swift	not.toContain	Pause Alerts
+11	tests/student-field-contracts.test.ts	358	ios/Wisconsin/Views/NotificationSettingsView.swift	not.toContain	Pause Alerts
+12	tests/ios-api-contract.test.ts	57	ios/Wisconsin/Core/APIClient.swift	toContain	let bulkItems: [BulkReservationRequest]
+12	tests/ios-api-contract.test.ts	481	ios/Wisconsin/Core/APIClient.swift	toContain	let bulkItems: [BulkReservationRequest]
+12	tests/ios-create-booking-picker-parity.test.ts	479	ios/Wisconsin/Core/APIClient.swift	toContain	let bulkItems: [BulkReservationRequest]
+13	tests/ios-browse-tab.test.ts	39	ios/Wisconsin/Views/BrowseView.swift	toContain	UsersView(wrapsInNavigationStack: false)
+13	tests/ios-browse-tab.test.ts	71	ios/Wisconsin/Views/BrowseView.swift	toContain	UsersView(wrapsInNavigationStack: false)
+13	tests/ios-settings-first-class.test.ts	51	ios/Wisconsin/Views/BrowseView.swift	toContain	UsersView(wrapsInNavigationStack: false)
+14	tests/ios-main-kiosk-target-split.test.ts	38	ios/Wisconsin/Views/SettingsView.swift	not.toContain	Staff Tools
+14	tests/ios-settings-first-class.test.ts	25	ios/Wisconsin/Views/SettingsView.swift	not.toContain	Staff Tools
+14	tests/ios-settings-first-class.test.ts	36	ios/Wisconsin/Views/SettingsView.swift	not.toContain	Staff Tools
+15	tests/ios-notification-categories-profile.test.ts	49	ios/Wisconsin/Views/NotificationSettingsView.swift	toContain	Text("Notification Types")
+15	tests/ios-notification-categories-profile.test.ts	64	ios/Wisconsin/Views/NotificationSettingsView.swift	toContain	Text("Notification Types")
+15	tests/ios-settings-detail-menus.test.ts	42	ios/Wisconsin/Views/NotificationSettingsView.swift	toContain	Text("Notification Types")
+16	tests/ios-schedule-availability-trade-redesign.test.ts	16	ios/Wisconsin/Views/AvailabilityView.swift	toContain	stride(from: 0, through: 23 * 60 + 45, by: 15)
+16	tests/ios-schedule-edit-times-post-trade-redesign.test.ts	19	ios/Wisconsin/Views/AvailabilityView.swift	toContain	stride(from: 0, through: 23 * 60 + 45, by: 15)
+16	tests/student-field-contracts.test.ts	390	ios/Wisconsin/Views/AvailabilityView.swift	toContain	stride(from: 0, through: 23 * 60 + 45, by: 15)
+17	tests/ios-schedule-availability-trade-redesign.test.ts	42	ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift	toContain	title: "Trade Posts"
+17	tests/schedule-open-work-source.test.ts	113	ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift	toContain	title: "Trade Posts"
+17	tests/student-field-contracts.test.ts	276	ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift	toContain	title: "Trade Posts"
+18	tests/ios-schedule-availability-trade-redesign.test.ts	43	ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift	toContain	title: "Open Shifts"
+18	tests/schedule-open-work-source.test.ts	114	ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift	toContain	title: "Open Shifts"
+18	tests/student-field-contracts.test.ts	277	ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift	toContain	title: "Open Shifts"
+19	tests/ios-settings-detail-menus.test.ts	38	ios/Wisconsin/Views/NotificationSettingsView.swift	toContain	title: "Delivery status"
+19	tests/ios-settings-first-class.test.ts	58	ios/Wisconsin/Views/NotificationSettingsView.swift	toContain	title: "Delivery status"
+19	tests/student-field-contracts.test.ts	356	ios/Wisconsin/Views/NotificationSettingsView.swift	toContain	title: "Delivery status"
+20	tests/kiosk-only-web-affordances-source.test.ts	17	src/app/(app)/events/[id]/_components/EventHeader.tsx	toContain	Reserve gear for this event
+20	tests/schedule-gear-readiness-source.test.ts	26	src/app/(app)/events/[id]/_components/EventHeader.tsx	toContain	Reserve gear for this event
+20	tests/schedule-source-truth-smoke-contract.test.ts	173	src/app/(app)/events/[id]/_components/EventHeader.tsx	toContain	Reserve gear for this event
+21	tests/list-state-preservation-source.test.ts	45	src/hooks/use-schedule-data.ts	toContain	params.set("queue", queue)
+21	tests/schedule-queue-source-contract.test.ts	10	src/hooks/use-schedule-data.ts	toContain	params.set("queue", queue)
+21	tests/schedule-source-truth-smoke-contract.test.ts	79	src/hooks/use-schedule-data.ts	toContain	params.set("queue", queue)
+22	tests/operational-status-rail-source.test.ts	35	src/app/(app)/schedule/_components/ScheduleReadiness.tsx	toContain	<ScheduleRecentActivity
+22	tests/schedule-source-truth-smoke-contract.test.ts	232	src/app/(app)/schedule/_components/ScheduleReadiness.tsx	toContain	<ScheduleRecentActivity
+22	tests/schedule-ui-review-fixes.test.ts	57	src/app/(app)/schedule/_components/ScheduleReadiness.tsx	toContain	<ScheduleRecentActivity
+23	tests/operational-status-rail-source.test.ts	36	src/app/(app)/schedule/_components/ScheduleReadiness.tsx	toContain	feed={(
+23	tests/schedule-source-truth-smoke-contract.test.ts	233	src/app/(app)/schedule/_components/ScheduleReadiness.tsx	toContain	feed={(
+23	tests/schedule-ui-review-fixes.test.ts	58	src/app/(app)/schedule/_components/ScheduleReadiness.tsx	toContain	feed={(
+24	tests/schedule-assign-source.test.ts	50	src/app/api/shift-groups/[id]/publish/route.ts	toContain	requirePermission(user.role, "shift", "publish_now")
+24	tests/schedule-source-truth-smoke-contract.test.ts	156	src/app/api/shift-groups/[id]/publish/route.ts	toContain	requirePermission(user.role, "shift", "publish_now")
+24	tests/schedule-working-copy-mutation-guard.test.ts	97	src/app/api/shift-groups/[id]/publish/route.ts	toContain	requirePermission(user.role, "shift", "publish_now")
+25	tests/schedule-assign-source.test.ts	53	src/app/api/shift-groups/[id]/publish/route.ts	toContain	requireWorkingCopy: true
+25	tests/schedule-source-truth-smoke-contract.test.ts	157	src/app/api/shift-groups/[id]/publish/route.ts	toContain	requireWorkingCopy: true
+25	tests/schedule-working-copy-mutation-guard.test.ts	99	src/app/api/shift-groups/[id]/publish/route.ts	toContain	requireWorkingCopy: true
+26	tests/schedule-source-truth-smoke-contract.test.ts	153	src/app/(app)/schedule/_components/WorkingCrewEditor.tsx	toContain	/publish
+26	tests/schedule-working-copy-mutation-guard.test.ts	100	src/app/(app)/schedule/_components/WorkingCrewEditor.tsx	toContain	/publish
+26	tests/schedule-working-copy-route-source.test.ts	43	src/app/(app)/schedule/_components/WorkingCrewEditor.tsx	toContain	/publish
+27	tests/schedule-working-copy-mutation-guard.test.ts	80	src/lib/services/schedule-working-copy.ts	toContain	Prisma.TransactionIsolationLevel.Serializable
+27	tests/schedule-working-copy-route-source.test.ts	13	src/lib/services/schedule-working-copy.ts	toContain	Prisma.TransactionIsolationLevel.Serializable
+27	tests/schedule-working-copy-route-source.test.ts	33	src/lib/services/schedule-working-copy.ts	toContain	Prisma.TransactionIsolationLevel.Serializable
+28	tests/admin-health-status-indicators-source.test.ts	18	src/app/(app)/operations/OperationsClient.tsx	toContain	const railItems: OperationalStatusRailItem[]
+28	tests/operational-status-rail-source.test.ts	38	src/app/(app)/operations/OperationsClient.tsx	toContain	const railItems: OperationalStatusRailItem[]
+29	tests/admin-health-status-indicators-source.test.ts	21	src/app/(app)/operations/OperationsClient.tsx	toContain	<OperationalStatusRail
+29	tests/operational-status-rail-source.test.ts	37	src/app/(app)/operations/OperationsClient.tsx	toContain	<OperationalStatusRail
+30	tests/all-day-events-have-no-call-time.test.ts	35	src/app/api/kiosk/dashboard/route.ts	toContain	callStartsAt: allDay ? null : callStartsAt
+30	tests/ios-kiosk-all-day-contract.test.ts	14	src/app/api/kiosk/dashboard/route.ts	toContain	callStartsAt: allDay ? null : callStartsAt
+31	tests/app-shell-search-source.test.ts	20	src/components/AppShell.tsx	toContain	e.key === "k"
+31	tests/web-sidebar-source.test.ts	86	src/components/AppShell.tsx	toContain	e.key === "k"
+32	tests/badge-catalog-rebalance.test.ts	125	prisma/migrations/0110_badge_rewards/migration.sql	toContain	'first_scan', 'scan_10', 'scan_25', 'scan_50', 'scan_100', 'zero_errors'
+32	tests/kiosk-checkout-scan-badges.test.ts	22	prisma/migrations/0110_badge_rewards/migration.sql	toContain	'first_scan', 'scan_10', 'scan_25', 'scan_50', 'scan_100', 'zero_errors'
+33	tests/badge-catalog-rebalance.test.ts	126	prisma/migrations/0110_badge_rewards/migration.sql	toContain	"active" = false
+33	tests/kiosk-checkout-scan-badges.test.ts	23	prisma/migrations/0110_badge_rewards/migration.sql	toContain	"active" = false
+34	tests/badges-celebration-ui.test.ts	27	src/components/badges/BadgeEarnedCelebration.tsx	toContain	See on shelf
+34	tests/badges-mvp-polish.test.ts	65	src/components/badges/BadgeEarnedCelebration.tsx	toContain	See on shelf
+35	tests/badges-mvp-polish.test.ts	58	src/app/(app)/users/[id]/UserBadgesTab.tsx	toContain	OnTimeStreakRow
+35	tests/ios-badge-icon-coverage.test.ts	192	src/app/(app)/users/[id]/UserBadgesTab.tsx	toContain	OnTimeStreakRow
+36	tests/booking-detail-custody-contract.test.ts	17	src/app/(app)/bookings/BookingDetailPage.tsx	not.toContain	actions.completeCheckin
+36	tests/web-booking-detail-ios-alignment-source.test.ts	33	src/app/(app)/bookings/BookingDetailPage.tsx	not.toContain	actions.completeCheckin
+37	tests/booking-detail-custody-contract.test.ts	32	src/app/(app)/bookings/BookingDetailPage.tsx	not.toContain	actions.convert
+37	tests/web-booking-detail-ios-alignment-source.test.ts	34	src/app/(app)/bookings/BookingDetailPage.tsx	not.toContain	actions.convert
+38	tests/booking-wizard-kit-fetching-source.test.ts	34	src/components/booking-wizard/BookingWizard.tsx	not.toContain	value: selectedKit
+38	tests/ios-kit-calling-source.test.ts	27	src/components/booking-wizard/BookingWizard.tsx	not.toContain	value: selectedKit
+39	tests/claim-surfaces-source.test.ts	22	src/app/(app)/schedule/_components/ListView.tsx	toContain	<ClaimsPausedNotice
+39	tests/ios-schedule-mvp-parity.test.ts	56	src/app/(app)/schedule/_components/ListView.tsx	toContain	<ClaimsPausedNotice
+40	tests/claim-surfaces-source.test.ts	37	src/app/api/shift-groups/route.ts	toContain	viewerRequestByShiftId
+40	tests/crew-pending-review.test.ts	83	src/app/api/shift-groups/route.ts	toContain	viewerRequestByShiftId
+41	tests/claim-surfaces-source.test.ts	39	src/app/api/shift-groups/route.ts	toContain	claimsPaused: Boolean(g.workingCopy)
+41	tests/ios-schedule-mvp-parity.test.ts	48	src/app/api/shift-groups/route.ts	toContain	claimsPaused: Boolean(g.workingCopy)
+42	tests/claim-surfaces-source.test.ts	52	ios/Wisconsin/Core/APIClient.swift	toContain	func allMyShifts(
+42	tests/ios-api-contract.test.ts	131	ios/Wisconsin/Core/APIClient.swift	toContain	func allMyShifts(
+43	tests/claim-surfaces-source.test.ts	69	ios/Wisconsin/Views/ScheduleView.swift	toContain	orderedPersonalShiftsByEvent
+43	tests/ios-schedule-mvp-parity.test.ts	8	ios/Wisconsin/Views/ScheduleView.swift	toContain	orderedPersonalShiftsByEvent
+44	tests/claim-surfaces-source.test.ts	70	ios/Wisconsin/Views/ScheduleView.swift	toContain	collapsedCombinedScheduleEvents(Array(rawEventsById.values))
+44	tests/ios-schedule-mvp-parity.test.ts	19	ios/Wisconsin/Views/ScheduleView.swift	toContain	collapsedCombinedScheduleEvents(Array(rawEventsById.values))
+45	tests/claim-surfaces-source.test.ts	82	src/app/api/shift-assignments/pickup/handler.ts	toContain	notifyPickupRequestReviewers(assignment.id)
+45	tests/schedule-instant-pickup-source.test.ts	23	src/app/api/shift-assignments/pickup/handler.ts	toContain	notifyPickupRequestReviewers(assignment.id)
+46	tests/claim-surfaces-source.test.ts	90	src/lib/services/claim-review-notifications.ts	toContain	visibleActiveUserWhere({ role: "ADMIN" })
+46	tests/trade-board-review-surface.test.ts	86	src/lib/services/claim-review-notifications.ts	toContain	visibleActiveUserWhere({ role: "ADMIN" })
+47	tests/combined-schedule-events-source.test.ts	13	src/app/(app)/schedule/page.tsx	toContain	combineSuggestion={isStaff ? leadingCombineSuggestion : null}
+47	tests/schedule-ui-review-fixes.test.ts	81	src/app/(app)/schedule/page.tsx	toContain	combineSuggestion={isStaff ? leadingCombineSuggestion : null}
+48	tests/combined-schedule-events-source.test.ts	16	src/app/(app)/schedule/_components/ScheduleRecentActivity.tsx	toContain	May share a crew
+48	tests/schedule-ui-review-fixes.test.ts	66	src/app/(app)/schedule/_components/ScheduleRecentActivity.tsx	toContain	May share a crew
+49	tests/crew-pending-review.test.ts	87	src/lib/services/schedule-working-copy.ts	toContain	pendingClaims
+49	tests/schedule-working-copy-route-source.test.ts	63	src/lib/services/schedule-working-copy.ts	toContain	pendingClaims
+50	tests/crew-pending-review.test.ts	88	src/lib/services/schedule-working-copy.ts	toContain	pendingTrades
+50	tests/schedule-working-copy-route-source.test.ts	64	src/lib/services/schedule-working-copy.ts	toContain	pendingTrades
+51	tests/crew-pending-review.test.ts	89	src/app/(app)/schedule/_components/WorkingCrewEditor.tsx	toContain	<CrewPendingReview
+51	tests/schedule-working-copy-route-source.test.ts	61	src/app/(app)/schedule/_components/WorkingCrewEditor.tsx	toContain	<CrewPendingReview
+52	tests/dashboard-pending-pickup-link.test.ts	47	src/lib/services/dashboard-counts.ts	toContain	0::bigint AS stale_reservations
+52	tests/dashboard-stats-transient-lanes.test.ts	74	src/lib/services/dashboard-counts.ts	toContain	0::bigint AS stale_reservations
+53	tests/dashboard-stats-transient-lanes.test.ts	133	src/lib/home-agenda.ts	toContain	work.shift.workerType === "ST" && work.shift.callStartsAt
+53	tests/schedule-role-display-source.test.ts	105	src/lib/home-agenda.ts	toContain	work.shift.workerType === "ST" && work.shift.callStartsAt
+54	tests/detail-page-header-source.test.ts	85	src/components/booking-details/BookingHeader.tsx	toContain	aria-label="Booking summary"
+54	tests/web-booking-detail-ios-alignment-source.test.ts	9	src/components/booking-details/BookingHeader.tsx	toContain	aria-label="Booking summary"
+55	tests/email-first-onboarding-source.test.ts	19	src/app/register/page.tsx	toContain	redirect(target)
+55	tests/onboarding-status-page-source.test.ts	34	src/app/register/page.tsx	toContain	redirect(target)
+56	tests/event-crew-setup-source.test.ts	14	src/app/(app)/schedule/_components/ListView.tsx	toContain	Use Home defaults
+56	tests/schedule-ui-polish-source.test.ts	46	src/app/(app)/schedule/_components/ListView.tsx	toContain	Use Home defaults
+57	tests/event-crew-setup-source.test.ts	15	src/app/(app)/schedule/_components/ListView.tsx	toContain	Use Away defaults
+57	tests/schedule-ui-polish-source.test.ts	47	src/app/(app)/schedule/_components/ListView.tsx	toContain	Use Away defaults
+58	tests/event-crew-setup-source.test.ts	16	src/app/(app)/schedule/_components/ListView.tsx	toContain	Start empty
+58	tests/schedule-ui-polish-source.test.ts	48	src/app/(app)/schedule/_components/ListView.tsx	toContain	Start empty
+59	tests/event-detail-all-day-edit.test.ts	17	src/components/event-editor/EventEditorFields.tsx	toContain	Existing gear reservation windows stay unchanged
+59	tests/schedule-source-truth-smoke-contract.test.ts	269	src/components/event-editor/EventEditorFields.tsx	toContain	Existing gear reservation windows stay unchanged
+60	tests/event-detail-all-day-edit.test.ts	23	src/app/api/calendar-events/[id]/route.ts	toContain	patch.timingLocked = true
+60	tests/schedule-source-truth-smoke-contract.test.ts	276	src/app/api/calendar-events/[id]/route.ts	toContain	patch.timingLocked = true
+61	tests/ios-27-native-chrome.test.ts	12	ios/Wisconsin/Core/PerformanceInstrumentation.swift	toContain	MXMetricManager.shared.add(self)
+61	tests/ios-swiftui-performance.test.ts	73	ios/Wisconsin/Core/PerformanceInstrumentation.swift	toContain	MXMetricManager.shared.add(self)
+62	tests/ios-27-native-chrome.test.ts	13	ios/Wisconsin/Core/PerformanceInstrumentation.swift	not.toMatch	/\bMetricManager\b/
+62	tests/ios-swiftui-performance.test.ts	74	ios/Wisconsin/Core/PerformanceInstrumentation.swift	not.toMatch	/\bMetricManager\b/
+63	tests/ios-27-native-chrome.test.ts	14	ios/Wisconsin/Core/PerformanceInstrumentation.swift	not.toContain	iOS 27
+63	tests/ios-swiftui-performance.test.ts	75	ios/Wisconsin/Core/PerformanceInstrumentation.swift	not.toContain	iOS 27
+64	tests/ios-27-native-chrome.test.ts	15	ios/Wisconsin/Core/PerformanceInstrumentation.swift	not.toContain	#available(iOS 27
+64	tests/ios-swiftui-performance.test.ts	76	ios/Wisconsin/Core/PerformanceInstrumentation.swift	not.toContain	#available(iOS 27
+65	tests/ios-all-day-calendar-date.test.ts	39	ios/Wisconsin/Models/ScheduleModels.swift	toContain	if endsAt <= now { return .past }
+65	tests/ios-event-detail-temporal-state.test.ts	14	ios/Wisconsin/Models/ScheduleModels.swift	toContain	if endsAt <= now { return .past }
+66	tests/ios-all-day-calendar-date.test.ts	40	ios/Wisconsin/Models/ScheduleModels.swift	toContain	if startsAt <= now { return .live }
+66	tests/ios-event-detail-temporal-state.test.ts	15	ios/Wisconsin/Models/ScheduleModels.swift	toContain	if startsAt <= now { return .live }
+67	tests/ios-all-day-calendar-date.test.ts	78	ios/Wisconsin/Models/ScheduleModels.swift	toContain	guard let opponent, !opponent.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+67	tests/ios-schedule-venue-parity.test.ts	30	ios/Wisconsin/Models/ScheduleModels.swift	toContain	guard let opponent, !opponent.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+68	tests/ios-api-contract.test.ts	55	ios/Wisconsin/Core/APIClient.swift	toContain	struct BulkReservationRequest: Codable, Equatable
+68	tests/ios-create-booking-picker-parity.test.ts	73	ios/Wisconsin/Core/APIClient.swift	toContain	struct BulkReservationRequest: Codable, Equatable
+69	tests/ios-api-contract.test.ts	56	ios/Wisconsin/Core/APIClient.swift	toContain	bulkItems: [BulkReservationRequest] = []
+69	tests/ios-create-booking-picker-parity.test.ts	74	ios/Wisconsin/Core/APIClient.swift	toContain	bulkItems: [BulkReservationRequest] = []
+70	tests/ios-api-contract.test.ts	74	ios/Wisconsin/Views/BookingsView.swift	toContain	UserAvatarView(name: booking.requester.name, avatarUrl: booking.requester.avatarUrl
+70	tests/ios-bookings-empty-state.test.ts	59	ios/Wisconsin/Views/BookingsView.swift	toContain	UserAvatarView(name: booking.requester.name, avatarUrl: booking.requester.avatarUrl
+71	tests/ios-api-contract.test.ts	132	ios/Wisconsin/Core/APIClient.swift	toContain	.init(name: "offset", value: "\(offset)")
+71	tests/ios-scoreboard-wiring.test.ts	46	ios/Wisconsin/Core/APIClient.swift	toContain	.init(name: "offset", value: "\(offset)")
+72	tests/ios-api-contract.test.ts	195	ios/Wisconsin/Views/GuidesView.swift	toContain	.accessibilityLabel("Step \(number). \(text.plain)")
+72	tests/ios-guides-native-page.test.ts	79	ios/Wisconsin/Views/GuidesView.swift	toContain	.accessibilityLabel("Step \(number). \(text.plain)")
+73	tests/ios-api-contract.test.ts	199	ios/Wisconsin/Views/GuidesView.swift	not.toContain	.toolbar(.hidden, for: .tabBar)
+73	tests/ios-navigation-hig-remediation.test.ts	26	ios/Wisconsin/Views/GuidesView.swift	not.toContain	.toolbar(.hidden, for: .tabBar)
+74	tests/ios-api-contract.test.ts	272	ios/Wisconsin/Views/Search/GlobalSearchSheet.swift	toContain	ItemFamilyResultRow(family: family, showsReserveAction: true)
+74	tests/ios-search-hig-remediation.test.ts	43	ios/Wisconsin/Views/Search/GlobalSearchSheet.swift	toContain	ItemFamilyResultRow(family: family, showsReserveAction: true)
+75	tests/ios-api-contract.test.ts	291	ios/Wisconsin/Core/APIClient.swift	toContain	includeAccessories: Bool = false
+75	tests/student-field-contracts.test.ts	300	ios/Wisconsin/Core/APIClient.swift	toContain	includeAccessories: Bool = false
+76	tests/ios-api-contract.test.ts	295	ios/Wisconsin/Views/ItemsView.swift	toContain	var sortOption: SortOption = .popular
+76	tests/items-ui-source.test.ts	74	ios/Wisconsin/Views/ItemsView.swift	toContain	var sortOption: SortOption = .popular
+77	tests/ios-api-contract.test.ts	297	ios/Wisconsin/Views/ItemsView.swift	not.toContain	includeAccessories: true
+77	tests/student-field-contracts.test.ts	302	ios/Wisconsin/Views/ItemsView.swift	not.toContain	includeAccessories: true
+78	tests/ios-api-contract.test.ts	301	ios/Wisconsin/Views/ItemsView.swift	toContain	drafts.start({
+78	tests/ios-browse-tab.test.ts	56	ios/Wisconsin/Views/ItemsView.swift	toContain	drafts.start({
+79	tests/ios-api-contract.test.ts	308	ios/Wisconsin/Views/ItemDetailView.swift	toContain	Label("Attachments", systemImage: "shippingbox")
+79	tests/ios-item-detail-hierarchy.test.ts	55	ios/Wisconsin/Views/ItemDetailView.swift	toContain	Label("Attachments", systemImage: "shippingbox")
+80	tests/ios-api-contract.test.ts	345	ios/Wisconsin/Kiosk/KioskModels.swift	toContain	let requesterId: String?
+80	tests/kiosk-active-checkout-edit-source.test.ts	41	ios/Wisconsin/Kiosk/KioskModels.swift	toContain	let requesterId: String?
+81	tests/ios-api-contract.test.ts	358	ios/Wisconsin/Kiosk/KioskAPIClient.swift	toContain	formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+81	tests/ios-kiosk-reservation-pickup-contract.test.ts	116	ios/Wisconsin/Kiosk/KioskAPIClient.swift	toContain	formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+82	tests/ios-api-contract.test.ts	373	src/app/api/kiosk/student/[userId]/route.ts	toContain	pendingPickups: [
+82	tests/ios-kiosk-reservation-pickup-contract.test.ts	15	src/app/api/kiosk/student/[userId]/route.ts	toContain	pendingPickups: [
+83	tests/ios-api-contract.test.ts	374	src/app/api/kiosk/student/[userId]/route.ts	toContain	...pendingPickups.map
+83	tests/ios-kiosk-reservation-pickup-contract.test.ts	16	src/app/api/kiosk/student/[userId]/route.ts	toContain	...pendingPickups.map
+84	tests/ios-api-contract.test.ts	375	src/app/api/kiosk/student/[userId]/route.ts	toContain	...dueReservations.map
+84	tests/ios-kiosk-reservation-pickup-contract.test.ts	17	src/app/api/kiosk/student/[userId]/route.ts	toContain	...dueReservations.map
+85	tests/ios-api-contract.test.ts	434	ios/Wisconsin/Kiosk/KioskCheckoutView.swift	toContain	Step 1 of 2 · Checkout details
+85	tests/ios-kiosk-checkout-details-polish.test.ts	115	ios/Wisconsin/Kiosk/KioskCheckoutView.swift	toContain	Step 1 of 2 · Checkout details
+86	tests/ios-api-contract.test.ts	439	src/app/api/kiosk/checkout/complete/route.ts	toContain	loadKitEquipmentPlan
+86	tests/ios-kit-calling-source.test.ts	45	src/app/api/kiosk/checkout/complete/route.ts	toContain	loadKitEquipmentPlan
+87	tests/ios-api-contract.test.ts	440	ios/Wisconsin/Kiosk/KioskAPIClient.swift	toContain	func kioskKits(
+87	tests/ios-kit-calling-source.test.ts	46	ios/Wisconsin/Kiosk/KioskAPIClient.swift	toContain	func kioskKits(
+88	tests/ios-api-contract.test.ts	441	ios/Wisconsin/Kiosk/KioskAPIClient.swift	toContain	requester_user_id
+88	tests/ios-kit-calling-source.test.ts	47	ios/Wisconsin/Kiosk/KioskAPIClient.swift	toContain	requester_user_id
+89	tests/ios-api-contract.test.ts	446	ios/Wisconsin/Kiosk/KioskCheckoutView.swift	toContain	KioskCheckoutKitPicker
+89	tests/ios-kit-calling-source.test.ts	49	ios/Wisconsin/Kiosk/KioskCheckoutView.swift	toContain	KioskCheckoutKitPicker
+90	tests/ios-api-contract.test.ts	539	ios/Wisconsin/Models/Models.swift	toContain	try container.encodeIfPresent(categories, forKey: .categories)
+90	tests/ios-notification-categories-profile.test.ts	42	ios/Wisconsin/Models/Models.swift	toContain	try container.encodeIfPresent(categories, forKey: .categories)
+91	tests/ios-api-contract.test.ts	595	ios/Wisconsin/Models/ShiftTradeModels.swift	toContain	struct OpenWorkResponse: Codable
+91	tests/schedule-open-work-source.test.ts	99	ios/Wisconsin/Models/ShiftTradeModels.swift	toContain	struct OpenWorkResponse: Codable
+92	tests/ios-app-intents.test.ts	72	ios/Wisconsin/Views/AppTabView.swift	toContain	GearTrackerAppIntentHandoff.shared.consumePendingDestination()
+92	tests/ios-quick-actions-spotlight.test.ts	54	ios/Wisconsin/Views/AppTabView.swift	toContain	GearTrackerAppIntentHandoff.shared.consumePendingDestination()
+93	tests/ios-appstate-refresh.test.ts	21	ios/Wisconsin/Views/HomeView.swift	toContain	await appState.refresh(forceRefresh: forceRefresh)
+93	tests/ios-launch-lifecycle-performance.test.ts	56	ios/Wisconsin/Views/HomeView.swift	toContain	await appState.refresh(forceRefresh: forceRefresh)
+94	tests/ios-async-request-ownership.test.ts	11	ios/Wisconsin/Core/SessionStore.swift	toContain	guard authRequests.owns(requestToken) else { return }
+94	tests/ios-forced-password.test.ts	22	ios/Wisconsin/Core/SessionStore.swift	toContain	guard authRequests.owns(requestToken) else { return }
+95	tests/ios-booking-actions-edit-reservation-setup.test.ts	65	ios/Wisconsin/Core/APIClient.swift	toContain	forHTTPHeaderField: "X-Booking-Updated-At"
+95	tests/student-field-contracts.test.ts	91	ios/Wisconsin/Core/APIClient.swift	toContain	forHTTPHeaderField: "X-Booking-Updated-At"
+96	tests/ios-booking-actions-edit-reservation-setup.test.ts	66	ios/Wisconsin/Core/APIClient.swift	not.toContain	If-Unmodified-Since
+96	tests/student-field-contracts.test.ts	93	ios/Wisconsin/Core/APIClient.swift	not.toContain	If-Unmodified-Since
+97	tests/ios-booking-actions-edit-reservation-setup.test.ts	71	ios/Wisconsin/Core/APIClient.swift	toContain	excludeBookingId: booking.id
+97	tests/ios-checkout-return-live-activity-source.test.ts	115	ios/Wisconsin/Core/APIClient.swift	toContain	excludeBookingId: booking.id
+98	tests/ios-booking-actions-edit-reservation-setup.test.ts	83	ios/Wisconsin/Views/CreateBookingSheet.swift	toContain	BrandSectionHeader("Pickup Location")
+98	tests/ios-create-booking-picker-parity.test.ts	418	ios/Wisconsin/Views/CreateBookingSheet.swift	toContain	BrandSectionHeader("Pickup Location")
+99	tests/ios-booking-detail-redesign.test.ts	34	ios/Wisconsin/Views/BookingDetailView.swift	toContain	if canExtendBooking
+99	tests/student-field-contracts.test.ts	332	ios/Wisconsin/Views/BookingDetailView.swift	toContain	if canExtendBooking
+100	tests/ios-booking-detail-redesign.test.ts	40	ios/Wisconsin/Views/BookingDetailView.swift	toContain	if canCancelBooking
+100	tests/student-field-contracts.test.ts	333	ios/Wisconsin/Views/BookingDetailView.swift	toContain	if canCancelBooking
+101	tests/ios-booking-list-sort-contract.test.ts	16	ios/Wisconsin/Core/APIClient.swift	toContain	items.append(.init(name: "sort", value: sort))
+101	tests/ios-create-booking-picker-parity.test.ts	85	ios/Wisconsin/Core/APIClient.swift	toContain	items.append(.init(name: "sort", value: sort))
+102	tests/ios-booking-list-sort-contract.test.ts	57	ios/Wisconsin/Views/BookingsView.swift	toContain	booking.kind == .reservation ? booking.startsAt : booking.endsAt
+102	tests/ios-bookings-empty-state.test.ts	39	ios/Wisconsin/Views/BookingsView.swift	toContain	booking.kind == .reservation ? booking.startsAt : booking.endsAt
+103	tests/ios-booking-list-sort-contract.test.ts	60	ios/Wisconsin/Views/BookingsView.swift	toContain	sortedBookings = bookings.sorted(by: Self.operationalTimeSort)
+103	tests/ios-bookings-empty-state.test.ts	40	ios/Wisconsin/Views/BookingsView.swift	toContain	sortedBookings = bookings.sorted(by: Self.operationalTimeSort)
+104	tests/ios-booking-list-sort-contract.test.ts	71	ios/Wisconsin/Views/BookingsView.swift	toContain	APIClient.shared.bookings(
+104	tests/student-field-contracts.test.ts	113	ios/Wisconsin/Views/BookingsView.swift	toContain	APIClient.shared.bookings(
+105	tests/ios-browse-tab.test.ts	35	ios/Wisconsin/Views/BrowseView.swift	toContain	TeamScoreboardView(wrapsInNavigationStack: false)
+105	tests/ios-scoreboard-wiring.test.ts	21	ios/Wisconsin/Views/BrowseView.swift	toContain	TeamScoreboardView(wrapsInNavigationStack: false)
+106	tests/ios-browse-tab.test.ts	55	ios/Wisconsin/Views/ItemsView.swift	toContain	placement: .navigationBarDrawer(displayMode: .always)
+106	tests/ios-native-control-cleanup.test.ts	47	ios/Wisconsin/Views/ItemsView.swift	toContain	placement: .navigationBarDrawer(displayMode: .always)
+107	tests/ios-checkout-return-live-activity-source.test.ts	142	ios/Wisconsin/LiveActivities/CheckoutReturnLiveActivityManager.swift	toContain	.checkouts(activeOnly: false, status: .open
+107	tests/ios-system-hardening-contract.test.ts	282	ios/Wisconsin/LiveActivities/CheckoutReturnLiveActivityManager.swift	toContain	.checkouts(activeOnly: false, status: .open
+108	tests/ios-create-booking-picker-parity.test.ts	42	ios/Wisconsin/Views/CreateBookingSheet.swift	toContain	Image(systemName: "barcode.viewfinder")
+108	tests/ios-native-control-cleanup.test.ts	71	ios/Wisconsin/Views/CreateBookingSheet.swift	toContain	Image(systemName: "barcode.viewfinder")
+109	tests/ios-create-booking-picker-parity.test.ts	43	ios/Wisconsin/Views/CreateBookingSheet.swift	toContain	.accessibilityLabel("Scan equipment")
+109	tests/ios-native-control-cleanup.test.ts	72	ios/Wisconsin/Views/CreateBookingSheet.swift	toContain	.accessibilityLabel("Scan equipment")
+110	tests/ios-create-booking-picker-parity.test.ts	118	ios/Wisconsin/Views/CreateBooking/CreateBookingEquipmentPicker.swift	toContain	let displayedAssetGroups = vm.displayedAssetGroups
+110	tests/ios-swiftui-performance.test.ts	28	ios/Wisconsin/Views/CreateBooking/CreateBookingEquipmentPicker.swift	toContain	let displayedAssetGroups = vm.displayedAssetGroups
+111	tests/ios-create-booking-picker-parity.test.ts	200	ios/Wisconsin/Views/CreateBookingSheet.swift	toContain	vm.usesEventLinkedSetup ? .event : .manual
+111	tests/ios-reservation-drafts-contract.test.ts	170	ios/Wisconsin/Views/CreateBookingSheet.swift	toContain	vm.usesEventLinkedSetup ? .event : .manual
+112	tests/ios-create-booking-picker-parity.test.ts	334	ios/Wisconsin/Views/CreateBookingSheet.swift	toContain	Picker(selection: browseCategorySelection)
+112	tests/ios-native-control-cleanup.test.ts	70	ios/Wisconsin/Views/CreateBookingSheet.swift	toContain	Picker(selection: browseCategorySelection)
+113	tests/ios-create-booking-picker-parity.test.ts	439	ios/Wisconsin/Views/CreateBooking/CreateBookingEquipmentPicker.swift	toContain	ToolbarItem(placement: .bottomBar)
+113	tests/ios-native-control-cleanup.test.ts	65	ios/Wisconsin/Views/CreateBooking/CreateBookingEquipmentPicker.swift	toContain	ToolbarItem(placement: .bottomBar)
+114	tests/ios-create-booking-picker-parity.test.ts	551	ios/Wisconsin/Views/EventDetailSheet.swift	not.toContain	BookingDetailView
+114	tests/ios-schedule-ui-cleanup.test.ts	137	ios/Wisconsin/Views/EventDetailSheet.swift	not.toContain	BookingDetailView
+115	tests/ios-deep-link-routing.test.ts	26	ios/Wisconsin/App/AppDelegate.swift	toContain	GearTrackerRouteParser.parseNotification(userInfo:
+115	tests/ios-notifications-tapthrough.test.ts	51	ios/Wisconsin/App/AppDelegate.swift	toContain	GearTrackerRouteParser.parseNotification(userInfo:
+116	tests/ios-deep-link-routing.test.ts	31	ios/Wisconsin/Views/NotificationsSheet.swift	toContain	GearTrackerRouteParser.parseNotification(payload:
+116	tests/ios-notifications-tapthrough.test.ts	67	ios/Wisconsin/Views/NotificationsSheet.swift	toContain	GearTrackerRouteParser.parseNotification(payload:
+117	tests/ios-deep-link-routing.test.ts	32	ios/Wisconsin/Views/NotificationsSheet.swift	toContain	onRoute?(route)
+117	tests/ios-notifications-read-recovery.test.ts	39	ios/Wisconsin/Views/NotificationsSheet.swift	toContain	onRoute?(route)
+118	tests/ios-forced-password.test.ts	17	ios/Wisconsin/Core/APIClient.swift	toContain	request(path: "/api/me/change-password", method: "POST")
+118	tests/ios-settings-detail-menus.test.ts	107	ios/Wisconsin/Core/APIClient.swift	toContain	request(path: "/api/me/change-password", method: "POST")
+119	tests/ios-forced-password.test.ts	21	ios/Wisconsin/Core/SessionStore.swift	toContain	let user = try await APIClient.shared.me()
+119	tests/ios-role-preview-source.test.ts	23	ios/Wisconsin/Core/SessionStore.swift	toContain	let user = try await APIClient.shared.me()
+120	tests/ios-forced-password.test.ts	23	ios/Wisconsin/Core/SessionStore.swift	toContain	currentUser = user
+120	tests/ios-launch-lifecycle-performance.test.ts	22	ios/Wisconsin/Core/SessionStore.swift	toContain	currentUser = user
+121	tests/ios-guides-native-page.test.ts	72	ios/Wisconsin/Views/GuidesView.swift	toContain	.navigationTitle(displayedGuide.title)
+121	tests/ios-navigation-hig-remediation.test.ts	25	ios/Wisconsin/Views/GuidesView.swift	toContain	.navigationTitle(displayedGuide.title)
+122	tests/ios-home-afm-header-source.test.ts	55	ios/Wisconsin/Views/HomeView.swift	toContain	AllClearEmptyState(openSearch: { appState.presentSearch() })
+122	tests/ios-tabbar-stability.test.ts	60	ios/Wisconsin/Views/HomeView.swift	toContain	AllClearEmptyState(openSearch: { appState.presentSearch() })
+123	tests/ios-home-afm-header-source.test.ts	57	ios/Wisconsin/Views/HomeView.swift	toContain	Label("Search or Scan", systemImage: "magnifyingglass")
+123	tests/ios-tabbar-stability.test.ts	63	ios/Wisconsin/Views/HomeView.swift	toContain	Label("Search or Scan", systemImage: "magnifyingglass")
+124	tests/ios-home-afm-header-source.test.ts	113	ios/Wisconsin/Views/HomeView.swift	toContain	guard workerType == "ST", let callStartsAt else { return nil }
+124	tests/schedule-role-display-source.test.ts	114	ios/Wisconsin/Views/HomeView.swift	toContain	guard workerType == "ST", let callStartsAt else { return nil }
+125	tests/ios-home-queue-honesty.test.ts	43	src/app/api/dashboard/route.ts	toContain	const isIosHomeScope = scope === "ios-home"
+125	tests/student-field-contracts.test.ts	34	src/app/api/dashboard/route.ts	toContain	const isIosHomeScope = scope === "ios-home"
+126	tests/ios-home-queue-honesty.test.ts	44	src/app/api/dashboard/route.ts	toContain	const isPersonalOnly = isIosHomeScope || isCollaborator;
+126	tests/student-field-contracts.test.ts	75	src/app/api/dashboard/route.ts	toContain	const isPersonalOnly = isIosHomeScope || isCollaborator;
+127	tests/ios-home-screen-widgets.test.ts	105	ios/Wisconsin/Views/HomeView.swift	toContain	GearWidgetPublisher.publish(from: loadedDashboard)
+127	tests/ios-quick-actions-spotlight.test.ts	124	ios/Wisconsin/Views/HomeView.swift	toContain	GearWidgetPublisher.publish(from: loadedDashboard)
+128	tests/ios-item-detail-hierarchy.test.ts	28	ios/Wisconsin/Views/ItemDetailView.swift	toContain	.navigationTitle(asset?.itemListPrimaryTitle ?? "Item")
+128	tests/ios-navigation-hig-remediation.test.ts	31	ios/Wisconsin/Views/ItemDetailView.swift	toContain	.navigationTitle(asset?.itemListPrimaryTitle ?? "Item")
+129	tests/ios-items-retired-reserve-gating.test.ts	10	ios/Wisconsin/Views/ItemsView.swift	toContain	Label("Reserve", systemImage: "plus.circle")
+129	tests/ios-long-press-actions.test.ts	140	ios/Wisconsin/Views/ItemsView.swift	toContain	Label("Reserve", systemImage: "plus.circle")
+130	tests/ios-kiosk-actionable-availability.test.ts	8	ios/Wisconsin/Kiosk/KioskCheckoutView.swift	toContain	let candidateCart = updated + [cartItem]
+130	tests/ios-kiosk-rapid-scan-atomicity.test.ts	29	ios/Wisconsin/Kiosk/KioskCheckoutView.swift	toContain	let candidateCart = updated + [cartItem]
+131	tests/ios-kiosk-actionable-availability.test.ts	9	ios/Wisconsin/Kiosk/KioskCheckoutView.swift	toContain	refreshAvailability(for: candidateCart, applyResult: false)
+131	tests/ios-kiosk-rapid-scan-atomicity.test.ts	30	ios/Wisconsin/Kiosk/KioskCheckoutView.swift	toContain	refreshAvailability(for: candidateCart, applyResult: false)
+132	tests/ios-kiosk-actionable-availability.test.ts	11	ios/Wisconsin/Kiosk/KioskCheckoutView.swift	toContain	Scan rejected; it was not added.
+132	tests/ios-kiosk-scan-rejection-sound.test.ts	33	ios/Wisconsin/Kiosk/KioskCheckoutView.swift	toContain	Scan rejected; it was not added.
+133	tests/ios-kiosk-availability-status.test.ts	34	ios/Wisconsin/Kiosk/KioskPickupView.swift	toContain	"Can't add this item"
+133	tests/ios-kiosk-reservation-pickup-contract.test.ts	119	ios/Wisconsin/Kiosk/KioskPickupView.swift	toContain	"Can't add this item"
+134	tests/ios-kiosk-availability-status.test.ts	35	ios/Wisconsin/Kiosk/KioskPickupView.swift	toContain	presentBlockedAdd
+134	tests/ios-kiosk-reservation-pickup-contract.test.ts	120	ios/Wisconsin/Kiosk/KioskPickupView.swift	toContain	presentBlockedAdd
+135	tests/ios-kiosk-checkout-details-polish.test.ts	29	ios/Wisconsin/Kiosk/KioskCheckoutView.swift	toContain	KioskAdaptiveSplit { _ in
+135	tests/ios-kiosk-windowing-cleanup.test.ts	53	ios/Wisconsin/Kiosk/KioskCheckoutView.swift	toContain	KioskAdaptiveSplit { _ in
+136	tests/ios-kiosk-checkout-details-polish.test.ts	30	ios/Wisconsin/Kiosk/KioskCheckoutView.swift	toContain	KioskSideRail(isCompact: isCompact)
+136	tests/ios-kiosk-windowing-cleanup.test.ts	54	ios/Wisconsin/Kiosk/KioskCheckoutView.swift	toContain	KioskSideRail(isCompact: isCompact)
+137	tests/ios-kiosk-checkout-details-polish.test.ts	61	ios/Wisconsin/Kiosk/KioskCheckoutView.swift	toContain	KioskNativeTextField(
+137	tests/ios-kiosk-scanner-focus.test.ts	65	ios/Wisconsin/Kiosk/KioskCheckoutView.swift	toContain	KioskNativeTextField(
+138	tests/ios-kiosk-idle-sleep-mode.test.ts	9	ios/Wisconsin/Kiosk/KioskIdleView.swift	toContain	private let refreshInterval: TimeInterval = 5 * 60
+138	tests/kiosk-neon-compute-budget.test.ts	32	ios/Wisconsin/Kiosk/KioskIdleView.swift	toContain	private let refreshInterval: TimeInterval = 5 * 60
+139	tests/ios-kiosk-idle-sleep-mode.test.ts	13	ios/Wisconsin/Kiosk/KioskStore.swift	toContain	private static let heartbeatInterval: UInt64 = 300_000_000_000
+139	tests/kiosk-neon-compute-budget.test.ts	20	ios/Wisconsin/Kiosk/KioskStore.swift	toContain	private static let heartbeatInterval: UInt64 = 300_000_000_000
+140	tests/ios-kiosk-idle-sleep-mode.test.ts	18	ios/Wisconsin/Kiosk/KioskStore.swift	toContain	private static let heartbeatIdleInterval: UInt64 = 3_600_000_000_000
+140	tests/kiosk-neon-compute-budget.test.ts	21	ios/Wisconsin/Kiosk/KioskStore.swift	toContain	private static let heartbeatIdleInterval: UInt64 = 3_600_000_000_000
+141	tests/ios-kiosk-liquid-glass.test.ts	24	ios/Wisconsin/Kiosk/KioskCheckoutDetailSheet.swift	toContain	Image(systemName: "trash.fill")
+141	tests/kiosk-active-checkout-edit-source.test.ts	69	ios/Wisconsin/Kiosk/KioskCheckoutDetailSheet.swift	toContain	Image(systemName: "trash.fill")
+142	tests/ios-kiosk-liquid-glass.test.ts	25	ios/Wisconsin/Kiosk/KioskCheckoutDetailSheet.swift	not.toContain	Label("Remove", systemImage: "minus.circle.fill")
+142	tests/kiosk-active-checkout-edit-source.test.ts	71	ios/Wisconsin/Kiosk/KioskCheckoutDetailSheet.swift	not.toContain	Label("Remove", systemImage: "minus.circle.fill")
+143	tests/ios-kiosk-reservation-pickup-contract.test.ts	37	ios/Wisconsin/Kiosk/KioskAPIClient.swift	toContain	Body(actorId: actorId, scanValue: scanValue)
+143	tests/shared-checkout-custody-source.test.ts	61	ios/Wisconsin/Kiosk/KioskAPIClient.swift	toContain	Body(actorId: actorId, scanValue: scanValue)
+144	tests/ios-kiosk-scanner-focus.test.ts	98	ios/Wisconsin/Kiosk/KioskCheckoutDetailSheet.swift	toContain	HIDScannerField(isEnabled: shouldListenForItemScans)
+144	tests/kiosk-active-checkout-edit-source.test.ts	55	ios/Wisconsin/Kiosk/KioskCheckoutDetailSheet.swift	toContain	HIDScannerField(isEnabled: shouldListenForItemScans)
+145	tests/ios-kiosk-scanner-focus.test.ts	99	ios/Wisconsin/Kiosk/KioskCheckoutDetailSheet.swift	toContain	scannerCaptureEnabled
+145	tests/kiosk-active-checkout-edit-source.test.ts	58	ios/Wisconsin/Kiosk/KioskCheckoutDetailSheet.swift	toContain	scannerCaptureEnabled
+146	tests/ios-kiosk-scanner-focus.test.ts	100	ios/Wisconsin/Kiosk/KioskCheckoutDetailSheet.swift	toContain	!titleFocused
+146	tests/kiosk-active-checkout-edit-source.test.ts	59	ios/Wisconsin/Kiosk/KioskCheckoutDetailSheet.swift	toContain	!titleFocused
+147	tests/ios-kiosk-scanner-focus.test.ts	110	ios/Wisconsin/Kiosk/KioskCheckoutDetailSheet.swift	not.toContain	placeholder: "Scan or type item"
+147	tests/kiosk-active-checkout-edit-source.test.ts	60	ios/Wisconsin/Kiosk/KioskCheckoutDetailSheet.swift	not.toContain	placeholder: "Scan or type item"
+148	tests/ios-launch-experience.test.ts	98	ios/Wisconsin/App/WisconsinApp.swift	not.toContain	WindowLaunchStillHost
+148	tests/ios-system-hardening-contract.test.ts	255	ios/Wisconsin/App/WisconsinApp.swift	not.toContain	WindowLaunchStillHost
+149	tests/ios-launch-experience.test.ts	99	ios/Wisconsin/App/WisconsinApp.swift	not.toContain	WindowPrivacyShieldHost
+149	tests/ios-system-hardening-contract.test.ts	256	ios/Wisconsin/App/WisconsinApp.swift	not.toContain	WindowPrivacyShieldHost
+150	tests/ios-launch-experience.test.ts	100	ios/Wisconsin/App/WisconsinApp.swift	not.toContain	UIImage(named: "LaunchLockup")
+150	tests/ios-system-hardening-contract.test.ts	258	ios/Wisconsin/App/WisconsinApp.swift	not.toContain	UIImage(named: "LaunchLockup")
+151	tests/ios-launch-experience.test.ts	101	ios/Wisconsin/App/WisconsinApp.swift	not.toContain	UIImage(systemName: "lock.shield.fill")
+151	tests/ios-system-hardening-contract.test.ts	259	ios/Wisconsin/App/WisconsinApp.swift	not.toContain	UIImage(systemName: "lock.shield.fill")
+152	tests/ios-licenses-native-page.test.ts	33	src/app/api/licenses/route.ts	toContain	claim.userId === user.id
+152	tests/licenses-ui-privacy-contract.test.ts	8	src/app/api/licenses/route.ts	toContain	claim.userId === user.id
+153	tests/ios-licenses-native-page.test.ts	35	src/app/api/licenses/route.ts	toContain	name: claim.user.name
+153	tests/licenses-ui-privacy-contract.test.ts	10	src/app/api/licenses/route.ts	toContain	name: claim.user.name
+154	tests/ios-licenses-native-page.test.ts	36	src/app/api/licenses/route.ts	toContain	avatarUrl: claim.user.avatarUrl
+154	tests/licenses-ui-privacy-contract.test.ts	11	src/app/api/licenses/route.ts	toContain	avatarUrl: claim.user.avatarUrl
+155	tests/ios-licenses-native-page.test.ts	110	ios/Wisconsin/Views/LicensesView.swift	toContain	canRevealCode && !code.code.isEmpty ? code.code : "Code hidden until claimed"
+155	tests/ios-long-press-actions.test.ts	159	ios/Wisconsin/Views/LicensesView.swift	toContain	canRevealCode && !code.code.isEmpty ? code.code : "Code hidden until claimed"
+156	tests/ios-main-kiosk-target-split.test.ts	36	ios/Wisconsin/Views/SettingsView.swift	not.toContain	Scanner Debugger
+156	tests/ios-settings-first-class.test.ts	35	ios/Wisconsin/Views/SettingsView.swift	not.toContain	Scanner Debugger
+157	tests/ios-main-kiosk-target-split.test.ts	37	ios/Wisconsin/Views/SettingsView.swift	not.toContain	Link Sticker Codes
+157	tests/ios-settings-first-class.test.ts	34	ios/Wisconsin/Views/SettingsView.swift	not.toContain	Link Sticker Codes
+158	tests/ios-native-control-cleanup.test.ts	17	ios/Wisconsin/Views/Search/GlobalSearchSheet.swift	toContain	var showsCancelButton = true
+158	tests/ios-tabbar-stability.test.ts	64	ios/Wisconsin/Views/Search/GlobalSearchSheet.swift	toContain	var showsCancelButton = true
+159	tests/ios-native-control-cleanup.test.ts	18	ios/Wisconsin/Views/Search/GlobalSearchSheet.swift	toContain	if showsCancelButton
+159	tests/ios-tabbar-stability.test.ts	65	ios/Wisconsin/Views/Search/GlobalSearchSheet.swift	toContain	if showsCancelButton
+160	tests/ios-native-control-cleanup.test.ts	25	ios/Wisconsin/Views/Search/GlobalSearchSheet.swift	toContain	Label("Scan QR code", systemImage: "qrcode.viewfinder")
+160	tests/ios-tabbar-stability.test.ts	62	ios/Wisconsin/Views/Search/GlobalSearchSheet.swift	toContain	Label("Scan QR code", systemImage: "qrcode.viewfinder")
+161	tests/ios-native-control-cleanup.test.ts	45	ios/Wisconsin/Views/ItemsView.swift	toContain	.searchable(
+161	tests/student-field-contracts.test.ts	293	ios/Wisconsin/Views/ItemsView.swift	toContain	.searchable(
+162	tests/ios-native-control-cleanup.test.ts	46	ios/Wisconsin/Views/ItemsView.swift	toContain	text: $vm.searchText
+162	tests/student-field-contracts.test.ts	294	ios/Wisconsin/Views/ItemsView.swift	toContain	text: $vm.searchText
+163	tests/ios-native-control-cleanup.test.ts	48	ios/Wisconsin/Views/ItemsView.swift	toContain	ToolbarItemGroup(placement: .topBarTrailing)
+163	tests/student-field-contracts.test.ts	296	ios/Wisconsin/Views/ItemsView.swift	toContain	ToolbarItemGroup(placement: .topBarTrailing)
+164	tests/ios-native-control-cleanup.test.ts	49	ios/Wisconsin/Views/ItemsView.swift	toContain	Label("Favorites", systemImage: vm.favoritesOnly ? "star.fill" : "star")
+164	tests/student-field-contracts.test.ts	297	ios/Wisconsin/Views/ItemsView.swift	toContain	Label("Favorites", systemImage: vm.favoritesOnly ? "star.fill" : "star")
+165	tests/ios-native-control-cleanup.test.ts	50	ios/Wisconsin/Views/ItemsView.swift	toContain	AssetStatusFilterMenu(selected: $vm.selectedStatuses)
+165	tests/student-field-contracts.test.ts	298	ios/Wisconsin/Views/ItemsView.swift	toContain	AssetStatusFilterMenu(selected: $vm.selectedStatuses)
+166	tests/ios-native-control-cleanup.test.ts	51	ios/Wisconsin/Views/ItemsView.swift	toContain	ItemSortMenu(selected: $vm.sortOption)
+166	tests/student-field-contracts.test.ts	299	ios/Wisconsin/Views/ItemsView.swift	toContain	ItemSortMenu(selected: $vm.sortOption)
+167	tests/ios-notification-categories-profile.test.ts	52	ios/Wisconsin/Views/NotificationSettingsView.swift	toContain	pauseButton(title: "Pause 1 hour"
+167	tests/ios-settings-detail-menus.test.ts	44	ios/Wisconsin/Views/NotificationSettingsView.swift	toContain	pauseButton(title: "Pause 1 hour"
+168	tests/ios-notification-categories-profile.test.ts	55	ios/Wisconsin/Views/NotificationSettingsView.swift	toContain	Label("Resume now", systemImage: "bell.fill")
+168	tests/ios-settings-detail-menus.test.ts	45	ios/Wisconsin/Views/NotificationSettingsView.swift	toContain	Label("Resume now", systemImage: "bell.fill")
+169	tests/ios-notification-categories-profile.test.ts	81	ios/Wisconsin/Core/Preferences.swift	toContain	error = nil
+169	tests/ios-notification-delivery-truth.test.ts	29	ios/Wisconsin/Core/Preferences.swift	toContain	error = nil
+170	tests/ios-notifications-read-recovery.test.ts	11	ios/Wisconsin/Core/APIClient.swift	toContain	private struct SuccessResponse: Decodable
+170	tests/ios-notifications-token-honesty.test.ts	63	ios/Wisconsin/Core/APIClient.swift	toContain	private struct SuccessResponse: Decodable
+171	tests/ios-notifications-token-honesty.test.ts	58	ios/Wisconsin/Core/APIClient.swift	toContain	let requestBoundary = authSessionBoundary.capture()
+171	tests/ios-system-correctness-contract.test.ts	155	ios/Wisconsin/Core/APIClient.swift	toContain	let requestBoundary = authSessionBoundary.capture()
+172	tests/ios-offline-and-maintenance.test.ts	39	ios/Wisconsin/Views/BookingsView.swift	not.toContain	GearStore.shared.cachedBookings
+172	tests/student-field-contracts.test.ts	128	ios/Wisconsin/Views/BookingsView.swift	not.toContain	GearStore.shared.cachedBookings
+173	tests/ios-role-preview-source.test.ts	50	ios/Wisconsin/App/WisconsinApp.swift	toContain	if user.isReadOnlyRolePreview
+173	tests/ios-system-hardening-contract.test.ts	179	ios/Wisconsin/App/WisconsinApp.swift	toContain	if user.isReadOnlyRolePreview
+174	tests/ios-schedule-availability-trade-redesign.test.ts	17	ios/Wisconsin/Views/AvailabilityView.swift	toContain	One-off days and ranges
+174	tests/student-field-contracts.test.ts	384	ios/Wisconsin/Views/AvailabilityView.swift	toContain	One-off days and ranges
+175	tests/ios-schedule-availability-trade-redesign.test.ts	18	ios/Wisconsin/Core/APIClient.swift	toContain	func updateAvailabilityBlock(
+175	tests/student-field-contracts.test.ts	399	ios/Wisconsin/Core/APIClient.swift	toContain	func updateAvailabilityBlock(
+176	tests/ios-schedule-availability-trade-redesign.test.ts	28	ios/Wisconsin/Views/ScheduleView.swift	toContain	Label("My Availability", systemImage: "calendar.badge.clock")
+176	tests/student-field-contracts.test.ts	146	ios/Wisconsin/Views/ScheduleView.swift	toContain	Label("My Availability", systemImage: "calendar.badge.clock")
+177	tests/ios-schedule-availability-trade-redesign.test.ts	46	ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift	not.toContain	title: "Available Now"
+177	tests/schedule-open-work-source.test.ts	115	ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift	not.toContain	title: "Available Now"
+178	tests/ios-schedule-availability-trade-redesign.test.ts	52	ios/Wisconsin/Models/ShiftTradeModels.swift	toContain	let viewerAvailabilityContext: ShiftAvailabilityContext?
+178	tests/schedule-open-work-source.test.ts	103	ios/Wisconsin/Models/ShiftTradeModels.swift	toContain	let viewerAvailabilityContext: ShiftAvailabilityContext?
+179	tests/ios-schedule-availability-trade-redesign.test.ts	54	ios/Wisconsin/Models/ShiftTradeModels.swift	toContain	let availabilityContext: ShiftAvailabilityContext?
+179	tests/schedule-open-work-source.test.ts	104	ios/Wisconsin/Models/ShiftTradeModels.swift	toContain	let availabilityContext: ShiftAvailabilityContext?
+180	tests/ios-schedule-availability-trade-redesign.test.ts	55	ios/Wisconsin/Models/ShiftTradeModels.swift	toContain	let viewerCanClaim: Bool?
+180	tests/schedule-open-work-source.test.ts	105	ios/Wisconsin/Models/ShiftTradeModels.swift	toContain	let viewerCanClaim: Bool?
+181	tests/ios-schedule-availability-trade-redesign.test.ts	57	ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift	toContain	trade.viewerCanClaim ?? (!isStaff && trade.viewerAvailabilityContext?.blocking != true)
+181	tests/schedule-open-work-source.test.ts	122	ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift	toContain	trade.viewerCanClaim ?? (!isStaff && trade.viewerAvailabilityContext?.blocking != true)
+182	tests/ios-schedule-availability-trade-redesign.test.ts	69	ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift	toContain	TradeBoardActionErrorBanner(
+182	tests/ios-trade-board-recovery.test.ts	10	ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift	toContain	TradeBoardActionErrorBanner(
+183	tests/ios-schedule-availability-trade-redesign.test.ts	74	ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift	toContain	TradeBoardSourceErrorRow(
+183	tests/schedule-open-work-source.test.ts	124	ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift	toContain	TradeBoardSourceErrorRow(
+184	tests/ios-schedule-filters-calendar-management-redesign.test.ts	23	ios/Wisconsin/Views/Schedule/ScheduleQuickFilterBar.swift	toContain	ForEach(HomeAwayFilter.allCases
+184	tests/ios-schedule-ui-cleanup.test.ts	38	ios/Wisconsin/Views/Schedule/ScheduleQuickFilterBar.swift	toContain	ForEach(HomeAwayFilter.allCases
+185	tests/ios-schedule-mvp-parity.test.ts	28	ios/Wisconsin/Core/APIClient.swift	toContain	func publishWorkingSchedule
+185	tests/ios-schedule-working-copy.test.ts	18	ios/Wisconsin/Core/APIClient.swift	toContain	func publishWorkingSchedule
+186	tests/ios-schedule-mvp-parity.test.ts	31	ios/Wisconsin/Views/EventDetailSheet.swift	toContain	Apply correction now
+186	tests/ios-schedule-working-copy.test.ts	50	ios/Wisconsin/Views/EventDetailSheet.swift	toContain	Apply correction now
+187	tests/ios-schedule-ui-cleanup.test.ts	24	ios/Wisconsin/Views/ScheduleView.swift	not.toContain	Picker("Schedule view"
+187	tests/student-field-contracts.test.ts	137	ios/Wisconsin/Views/ScheduleView.swift	not.toContain	Picker("Schedule view"
+188	tests/ios-schedule-ui-cleanup.test.ts	69	ios/Wisconsin/Views/Schedule/ScheduleEventRow.swift	toContain	(isMine ? Color.myShiftSurface : Color.cardSurface)
+188	tests/ios-schedule-windowed-scrolling.test.ts	124	ios/Wisconsin/Views/Schedule/ScheduleEventRow.swift	toContain	(isMine ? Color.myShiftSurface : Color.cardSurface)
+189	tests/ios-schedule-ui-cleanup.test.ts	151	ios/Wisconsin/Views/EventDetailSheet.swift	toContain	CoverageChip(coverage: coverage, showsLabel: true)
+189	tests/ios-schedule-venue-parity.test.ts	89	ios/Wisconsin/Views/EventDetailSheet.swift	toContain	CoverageChip(coverage: coverage, showsLabel: true)
+190	tests/ios-schedule-venue-parity.test.ts	72	ios/Wisconsin/Core/SemanticTones.swift	toContain	func venueTone(isHome: Bool?) -> StatusTone
+190	tests/semantic-tone-sources.test.ts	24	ios/Wisconsin/Core/SemanticTones.swift	toContain	func venueTone(isHome: Bool?) -> StatusTone
+191	tests/ios-schedule-venue-parity.test.ts	73	ios/Wisconsin/Core/SemanticTones.swift	toContain	func venueRailColor(isHome: Bool?) -> Color
+191	tests/semantic-tone-sources.test.ts	25	ios/Wisconsin/Core/SemanticTones.swift	toContain	func venueRailColor(isHome: Bool?) -> Color
+192	tests/ios-schedule-windowed-scrolling.test.ts	125	ios/Wisconsin/Views/EventDetailSheet.swift	toContain	.brandCard(fill: Color.myShiftSurface)
+192	tests/student-field-contracts.test.ts	207	ios/Wisconsin/Views/EventDetailSheet.swift	toContain	.brandCard(fill: Color.myShiftSurface)
+193	tests/ios-settings-detail-menus.test.ts	70	ios/Wisconsin/Views/NotificationSettingsView.swift	not.toContain	Email alerts
+193	tests/student-field-contracts.test.ts	359	ios/Wisconsin/Views/NotificationSettingsView.swift	not.toContain	Email alerts
+194	tests/ios-settings-first-class.test.ts	47	ios/Wisconsin/Views/AppTabView.swift	toContain	Tab("Users", systemImage: "person.2", value: 5)
+194	tests/student-field-contracts.test.ts	105	ios/Wisconsin/Views/AppTabView.swift	toContain	Tab("Users", systemImage: "person.2", value: 5)
+195	tests/item-detail-firmware-display.test.ts	22	src/app/(app)/items/[id]/ItemInfoTab.tsx	toContain	Identity
+195	tests/item-info-sidebar-hardening.test.ts	43	src/app/(app)/items/[id]/ItemInfoTab.tsx	toContain	Identity
+196	tests/items-filter-options.test.ts	139	src/app/(app)/items/page.tsx	toContain	actionLabel={canOfferCreateItem ? "Add item" : undefined}
+196	tests/items-ui-source.test.ts	27	src/app/(app)/items/page.tsx	toContain	actionLabel={canOfferCreateItem ? "Add item" : undefined}
+197	tests/list-state-preservation-source.test.ts	46	src/hooks/use-schedule-data.ts	toContain	params.delete("queue")
+197	tests/schedule-queue-source-contract.test.ts	11	src/hooks/use-schedule-data.ts	toContain	params.delete("queue")
+198	tests/macos-gearops-security-source.test.ts	62	macos/GearOps/CompanionCredentialStore.swift	toContain	kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+198	tests/macos-gearops-source.test.ts	309	macos/GearOps/CompanionCredentialStore.swift	toContain	kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+199	tests/onboarding-dialog-source.test.ts	12	src/components/onboarding/OnboardingDialog.tsx	toContain	Users set their own password the first time they sign in.
+199	tests/users-location-options-state.test.ts	19	src/components/onboarding/OnboardingDialog.tsx	toContain	Users set their own password the first time they sign in.
+200	tests/onboarding-dialog-source.test.ts	53	src/components/onboarding/OnboardingDialog.tsx	toContain	name="bulkInvitationRows"
+200	tests/users-location-options-state.test.ts	20	src/components/onboarding/OnboardingDialog.tsx	toContain	name="bulkInvitationRows"
+201	tests/onboarding-dialog-source.test.ts	55	src/components/onboarding/OnboardingDialog.tsx	toContain	name="singleInvitationEmail"
+201	tests/users-location-options-state.test.ts	21	src/components/onboarding/OnboardingDialog.tsx	toContain	name="singleInvitationEmail"
+202	tests/onboarding-dialog-source.test.ts	67	src/app/(app)/users/page.tsx	toContain	Add users
+202	tests/users-sweeping-ui-contract.test.ts	64	src/app/(app)/users/page.tsx	toContain	Add users
+203	tests/schedule-assign-source.test.ts	16	src/app/(app)/schedule/assign/_components/AssignmentCell.tsx	toContain	openShifts.length
+203	tests/schedule-role-display-source.test.ts	40	src/app/(app)/schedule/assign/_components/AssignmentCell.tsx	toContain	openShifts.length
+204	tests/schedule-assign-source.test.ts	17	src/app/(app)/schedule/assign/_components/AssignmentCell.tsx	not.toContain	fetch(
+204	tests/schedule-source-truth-smoke-contract.test.ts	115	src/app/(app)/schedule/assign/_components/AssignmentCell.tsx	not.toContain	fetch(
+205	tests/schedule-assign-source.test.ts	19	src/app/(app)/schedule/assign/_components/AssignmentCell.tsx	not.toContain	CallWindowEditor
+205	tests/schedule-role-display-source.test.ts	87	src/app/(app)/schedule/assign/_components/AssignmentCell.tsx	not.toContain	CallWindowEditor
+206	tests/schedule-assign-source.test.ts	37	src/app/(app)/events/[id]/_components/ShiftCoverageCard.tsx	toContain	<WorkingCrewEditor
+206	tests/schedule-source-truth-smoke-contract.test.ts	123	src/app/(app)/events/[id]/_components/ShiftCoverageCard.tsx	toContain	<WorkingCrewEditor
+207	tests/schedule-assign-source.test.ts	39	src/app/(app)/events/[id]/_components/ShiftCoverageCard.tsx	not.toContain	Apply recommended assignments
+207	tests/schedule-source-truth-smoke-contract.test.ts	125	src/app/(app)/events/[id]/_components/ShiftCoverageCard.tsx	not.toContain	Apply recommended assignments
+208	tests/schedule-assign-source.test.ts	51	src/app/api/shift-groups/[id]/publish/route.ts	toContain	publishShiftGroup(
+208	tests/schedule-working-copy-mutation-guard.test.ts	98	src/app/api/shift-groups/[id]/publish/route.ts	toContain	publishShiftGroup(
+209	tests/schedule-assign-source.test.ts	80	src/app/api/shift-assignments/[id]/approve/route.ts	toContain	approveRequest(id, { id: user.id, role: user.role })
+209	tests/schedule-instant-pickup-source.test.ts	81	src/app/api/shift-assignments/[id]/approve/route.ts	toContain	approveRequest(id, { id: user.id, role: user.role })
+210	tests/schedule-assign-source.test.ts	82	src/lib/services/shift-assignments.ts	toContain	dispatchScheduleAssignmentNotifications(result.id, "approved")
+210	tests/schedule-instant-pickup-source.test.ts	86	src/lib/services/shift-assignments.ts	toContain	dispatchScheduleAssignmentNotifications(result.id, "approved")
+211	tests/schedule-assign-source.test.ts	83	src/lib/services/shift-assignments.ts	toContain	action: actor ? "shift_request_approved" : "shift_request_auto_approved"
+211	tests/schedule-instant-pickup-source.test.ts	85	src/lib/services/shift-assignments.ts	toContain	action: actor ? "shift_request_approved" : "shift_request_auto_approved"
+212	tests/schedule-automation-source.test.ts	37	src/app/(app)/schedule/_components/ScheduleAutomationDigest.tsx	toContain	Suggestions only
+212	tests/schedule-source-truth-smoke-contract.test.ts	93	src/app/(app)/schedule/_components/ScheduleAutomationDigest.tsx	toContain	Suggestions only
+213	tests/schedule-automation-source.test.ts	38	src/app/(app)/schedule/_components/ScheduleAutomationDigest.tsx	toContain	onShowQueue(action.queue)
+213	tests/schedule-source-truth-smoke-contract.test.ts	95	src/app/(app)/schedule/_components/ScheduleAutomationDigest.tsx	toContain	onShowQueue(action.queue)
+214	tests/schedule-automation-source.test.ts	39	src/app/(app)/schedule/_components/ScheduleAutomationDigest.tsx	toContain	onOpenTradeBoard()
+214	tests/schedule-source-truth-smoke-contract.test.ts	96	src/app/(app)/schedule/_components/ScheduleAutomationDigest.tsx	toContain	onOpenTradeBoard()
+215	tests/schedule-crew-parity.test.ts	37	src/app/(app)/schedule/_components/WorkingCrewEditor.tsx	toContain	/working-copy
+215	tests/schedule-working-copy-route-source.test.ts	42	src/app/(app)/schedule/_components/WorkingCrewEditor.tsx	toContain	/working-copy
+216	tests/schedule-gear-readiness-source.test.ts	10	src/app/(app)/schedule/_components/ListView.tsx	not.toContain	Reserve gear
+216	tests/schedule-source-truth-smoke-contract.test.ts	164	src/app/(app)/schedule/_components/ListView.tsx	not.toContain	Reserve gear
+217	tests/schedule-gear-readiness-source.test.ts	11	src/app/(app)/schedule/_components/ListView.tsx	not.toContain	/reservations/new?
+217	tests/schedule-source-truth-smoke-contract.test.ts	165	src/app/(app)/schedule/_components/ListView.tsx	not.toContain	/reservations/new?
+218	tests/schedule-gear-readiness-source.test.ts	23	src/app/(app)/events/[id]/_components/ShiftCoverageCard.tsx	not.toContain	Missing Gear (
+218	tests/schedule-source-truth-smoke-contract.test.ts	170	src/app/(app)/events/[id]/_components/ShiftCoverageCard.tsx	not.toContain	Missing Gear (
+219	tests/schedule-gear-readiness-source.test.ts	24	src/app/(app)/events/[id]/page.tsx	not.toContain	Missing Gear (
+219	tests/schedule-source-truth-smoke-contract.test.ts	171	src/app/(app)/events/[id]/page.tsx	not.toContain	Missing Gear (
+220	tests/schedule-gear-readiness-source.test.ts	25	src/app/(app)/events/[id]/page.tsx	not.toContain	EventGearCard
+220	tests/schedule-source-truth-smoke-contract.test.ts	172	src/app/(app)/events/[id]/page.tsx	not.toContain	EventGearCard
+221	tests/schedule-gear-readiness-source.test.ts	32	src/app/(app)/schedule/_components/ScheduleReadiness.tsx	toContain	label: "Assignee changes"
+221	tests/schedule-source-truth-smoke-contract.test.ts	228	src/app/(app)/schedule/_components/ScheduleReadiness.tsx	toContain	label: "Assignee changes"
+222	tests/schedule-gear-readiness-source.test.ts	34	src/app/(app)/schedule/_components/ListView.tsx	not.toContain	Review changes
+222	tests/schedule-source-truth-smoke-contract.test.ts	179	src/app/(app)/schedule/_components/ListView.tsx	not.toContain	Review changes
+223	tests/schedule-gear-readiness-source.test.ts	35	src/app/(app)/schedule/_components/ListView.tsx	not.toContain	Unpublished changes
+223	tests/schedule-source-truth-smoke-contract.test.ts	180	src/app/(app)/schedule/_components/ListView.tsx	not.toContain	Unpublished changes
+224	tests/schedule-gear-readiness-source.test.ts	36	src/app/(app)/events/[id]/_components/ShiftCoverageCard.tsx	not.toContain	Recent schedule changes
+224	tests/schedule-source-truth-smoke-contract.test.ts	182	src/app/(app)/events/[id]/_components/ShiftCoverageCard.tsx	not.toContain	Recent schedule changes
+225	tests/schedule-gear-readiness-source.test.ts	37	src/app/(app)/events/[id]/_components/EventActivityCard.tsx	toContain	Activity
+225	tests/schedule-source-truth-smoke-contract.test.ts	183	src/app/(app)/events/[id]/_components/EventActivityCard.tsx	toContain	Activity
+226	tests/schedule-gear-readiness-source.test.ts	38	src/app/(app)/events/[id]/_components/EventActivityCard.tsx	toContain	Needs review
+226	tests/schedule-source-truth-smoke-contract.test.ts	184	src/app/(app)/events/[id]/_components/EventActivityCard.tsx	toContain	Needs review
+227	tests/schedule-instant-pickup-source.test.ts	19	src/app/api/shift-assignments/pickup/handler.ts	toContain	pickupOpenShift(body.shiftId, user.id)
+227	tests/schedule-open-work-source.test.ts	62	src/app/api/shift-assignments/pickup/handler.ts	toContain	pickupOpenShift(body.shiftId, user.id)
+228	tests/schedule-instant-pickup-source.test.ts	21	src/app/api/shift-assignments/pickup/handler.ts	toContain	dispatchScheduleAssignmentNotifications(assignment.id, "requested")
+228	tests/schedule-open-work-source.test.ts	64	src/app/api/shift-assignments/pickup/handler.ts	toContain	dispatchScheduleAssignmentNotifications(assignment.id, "requested")
+229	tests/schedule-open-work-source.test.ts	8	src/components/TradeBoard.tsx	toContain	OpenWorkShift
+229	tests/schedule-source-truth-smoke-contract.test.ts	159	src/components/TradeBoard.tsx	toContain	OpenWorkShift
+230	tests/schedule-open-work-source.test.ts	10	src/components/TradeBoard.tsx	toContain	/api/schedule/open-work
+230	tests/schedule-source-truth-smoke-contract.test.ts	160	src/components/TradeBoard.tsx	toContain	/api/schedule/open-work
+231	tests/schedule-open-work-source.test.ts	31	src/components/TradeBoard.tsx	toContain	Claim shift
+231	tests/schedule-source-truth-smoke-contract.test.ts	161	src/components/TradeBoard.tsx	toContain	Claim shift
+232	tests/schedule-open-work-source.test.ts	32	src/components/TradeBoard.tsx	toContain	Request sent for Admin approval
+232	tests/schedule-source-truth-smoke-contract.test.ts	162	src/components/TradeBoard.tsx	toContain	Request sent for Admin approval
+233	tests/schedule-open-work-source.test.ts	52	src/lib/services/schedule-open-work.ts	toContain	filters.role === "ADMIN"
+233	tests/trade-board-review-surface.test.ts	85	src/lib/services/schedule-open-work.ts	toContain	filters.role === "ADMIN"
+234	tests/schedule-open-work-source.test.ts	108	ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift	toContain	.navigationTitle("Trade Board")
+234	tests/student-field-contracts.test.ts	274	ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift	toContain	.navigationTitle("Trade Board")
+235	tests/schedule-open-work-source.test.ts	109	ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift	toContain	APIClient.shared.scheduleOpenWork(area: areaFilter)
+235	tests/student-field-contracts.test.ts	275	ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift	toContain	APIClient.shared.scheduleOpenWork(area: areaFilter)
+236	tests/schedule-open-work-source.test.ts	116	ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift	toContain	My Posts
+236	tests/student-field-contracts.test.ts	278	ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift	toContain	My Posts
+237	tests/schedule-open-work-source.test.ts	117	ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift	toContain	Waiting or Blocked
+237	tests/student-field-contracts.test.ts	279	ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift	toContain	Waiting or Blocked
+238	tests/schedule-open-work-source.test.ts	118	ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift	toContain	An admin reviews this before you're on the schedule.
+238	tests/student-field-contracts.test.ts	284	ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift	toContain	An admin reviews this before you're on the schedule.
+239	tests/schedule-open-work-source.test.ts	121	ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift	toContain	Canceling removes the post; the shift stays assigned to you.
+239	tests/student-field-contracts.test.ts	283	ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift	toContain	Canceling removes the post; the shift stays assigned to you.
+240	tests/schedule-open-work-source.test.ts	123	ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift	toContain	var canReview: Bool { currentUserRole == "ADMIN" }
+240	tests/trade-board-review-surface.test.ts	92	ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift	toContain	var canReview: Bool { currentUserRole == "ADMIN" }
+241	tests/schedule-queue-source-contract.test.ts	9	src/hooks/use-schedule-data.ts	toContain	searchParams.get("queue")
+241	tests/schedule-source-truth-smoke-contract.test.ts	78	src/hooks/use-schedule-data.ts	toContain	searchParams.get("queue")
+242	tests/schedule-queue-source-contract.test.ts	13	src/hooks/use-schedule-data.ts	toContain	filterEntriesForScheduleQueue
+242	tests/schedule-source-truth-smoke-contract.test.ts	80	src/hooks/use-schedule-data.ts	toContain	filterEntriesForScheduleQueue
+243	tests/schedule-queue-source-contract.test.ts	49	src/app/(app)/schedule/page.tsx	toContain	initialStatusFilter={canReviewClaims && data.filters.queue === "trade-approval" ? "CLAIMED" : undefined}
+243	tests/schedule-source-truth-smoke-contract.test.ts	81	src/app/(app)/schedule/page.tsx	toContain	initialStatusFilter={canReviewClaims && data.filters.queue === "trade-approval" ? "CLAIMED" : undefined}
+244	tests/schedule-source-truth-smoke-contract.test.ts	116	src/app/(app)/schedule/_components/WorkingCrewEditor.tsx	toContain	/working-copy/candidate-scores?
+244	tests/schedule-working-copy-route-source.test.ts	84	src/app/(app)/schedule/_components/WorkingCrewEditor.tsx	toContain	/working-copy/candidate-scores?
+245	tests/schedule-source-truth-smoke-contract.test.ts	134	src/app/(app)/events/[id]/_components/ShiftCoverageCard.tsx	not.toContain	CrewTemplateReviewButton
+245	tests/schedule-template-review-source.test.ts	21	src/app/(app)/events/[id]/_components/ShiftCoverageCard.tsx	not.toContain	CrewTemplateReviewButton
+246	tests/schedule-source-truth-smoke-contract.test.ts	135	src/components/ShiftDetailPanel.tsx	not.toContain	CrewTemplateReviewButton
+246	tests/schedule-template-review-source.test.ts	22	src/components/ShiftDetailPanel.tsx	not.toContain	CrewTemplateReviewButton
+247	tests/schedule-source-truth-smoke-contract.test.ts	136	src/app/(app)/events/[id]/_components/ShiftCoverageCard.tsx	not.toContain	Review template
+247	tests/schedule-template-review-source.test.ts	23	src/app/(app)/events/[id]/_components/ShiftCoverageCard.tsx	not.toContain	Review template
+248	tests/schedule-source-truth-smoke-contract.test.ts	137	src/components/ShiftDetailPanel.tsx	not.toContain	Review template
+248	tests/schedule-template-review-source.test.ts	24	src/components/ShiftDetailPanel.tsx	not.toContain	Review template
+249	tests/schedule-source-truth-smoke-contract.test.ts	148	src/app/(app)/schedule/_components/WorkingCrewEditor.tsx	toContain	formatScheduleReleaseCountdown
+249	tests/schedule-working-copy-route-source.test.ts	46	src/app/(app)/schedule/_components/WorkingCrewEditor.tsx	toContain	formatScheduleReleaseCountdown
+250	tests/schedule-source-truth-smoke-contract.test.ts	149	src/lib/schedule-release.ts	toContain	Release scheduled in
+250	tests/schedule-working-copy-route-source.test.ts	47	src/lib/schedule-release.ts	toContain	Release scheduled in
+251	tests/schedule-source-truth-smoke-contract.test.ts	154	src/app/(app)/schedule/_components/WorkingCrewEditor.tsx	toContain	Publish now
+251	tests/schedule-working-copy-route-source.test.ts	44	src/app/(app)/schedule/_components/WorkingCrewEditor.tsx	toContain	Publish now
+252	tests/schedule-source-truth-smoke-contract.test.ts	222	src/app/(app)/schedule/_components/ScheduleFilters.tsx	toContain	allowedCodes={sportCodesInWindow}
+252	tests/schedule-ui-review-fixes.test.ts	17	src/app/(app)/schedule/_components/ScheduleFilters.tsx	toContain	allowedCodes={sportCodesInWindow}
+253	tests/schedule-source-truth-smoke-contract.test.ts	234	src/app/(app)/schedule/_components/ScheduleReadiness.tsx	toContain	recentScheduleSyncItems(health)
+253	tests/schedule-ui-review-fixes.test.ts	61	src/app/(app)/schedule/_components/ScheduleReadiness.tsx	toContain	recentScheduleSyncItems(health)
+254	tests/schedule-source-truth-smoke-contract.test.ts	235	src/app/(app)/schedule/_components/ScheduleReadiness.tsx	not.toContain	Nothing needs attention
+254	tests/schedule-ui-review-fixes.test.ts	63	src/app/(app)/schedule/_components/ScheduleReadiness.tsx	not.toContain	Nothing needs attention
+255	tests/schedule-source-truth-smoke-contract.test.ts	254	src/app/(app)/schedule/_components/NewEventSheet.tsx	toContain	EventEditorFields
+255	tests/web-event-schedule-quarter-hour.test.ts	53	src/app/(app)/schedule/_components/NewEventSheet.tsx	toContain	EventEditorFields
+256	tests/schedule-three-view-polish.test.ts	58	src/app/(app)/schedule/_components/CalendarView.tsx	toContain	<SchedulePeriodNavigator
+256	tests/schedule-ui-polish-source.test.ts	16	src/app/(app)/schedule/_components/CalendarView.tsx	toContain	<SchedulePeriodNavigator
+257	tests/schedule-ui-polish-source.test.ts	29	src/app/(app)/schedule/_components/ScheduleFilters.tsx	toContain	aria-pressed={filters.myShiftsOnly}
+257	tests/schedule-ui-review-fixes.test.ts	30	src/app/(app)/schedule/_components/ScheduleFilters.tsx	toContain	aria-pressed={filters.myShiftsOnly}
+258	tests/schedule-working-copy-mutation-guard.test.ts	77	src/app/api/shift-groups/[id]/working-copy/route.ts	toContain	requirePermission(user.role, "shift", "manage")
+258	tests/schedule-working-copy-route-source.test.ts	9	src/app/api/shift-groups/[id]/working-copy/route.ts	toContain	requirePermission(user.role, "shift", "manage")
+259	tests/schedule-working-copy-mutation-guard.test.ts	78	src/app/api/shift-groups/[id]/working-copy/route.ts	toContain	enforceRateLimit
+259	tests/schedule-working-copy-route-source.test.ts	10	src/app/api/shift-groups/[id]/working-copy/route.ts	toContain	enforceRateLimit
+260	tests/schedule-working-copy-mutation-guard.test.ts	115	src/app/(app)/schedule/_components/WorkingCrewEditor.tsx	toContain	Apply correction now
+260	tests/schedule-working-copy-route-source.test.ts	45	src/app/(app)/schedule/_components/WorkingCrewEditor.tsx	toContain	Apply correction now
+261	tests/shift-trade-withdrawal-contract.test.ts	31	src/components/TradeBoard.tsx	toContain	/api/shift-trades/${trade.id}/withdraw
+261	tests/trade-board-review-surface.test.ts	13	src/components/TradeBoard.tsx	toContain	/api/shift-trades/${trade.id}/withdraw
+262	tests/shift-trade-withdrawal-contract.test.ts	41	src/components/TradeBoard.tsx	toContain	Auto-approval check by
+262	tests/trade-board-review-surface.test.ts	57	src/components/TradeBoard.tsx	toContain	Auto-approval check by
+263	tests/signature-capture.test.ts	154	src/app/(app)/signatures/[id]/capture/[memberId]/SignatureCapturePage.tsx	toContain	invalidateSignatureCollectionCaches
+263	tests/signature-client-cache.test.ts	49	src/app/(app)/signatures/[id]/capture/[memberId]/SignatureCapturePage.tsx	toContain	invalidateSignatureCollectionCaches
+264	tests/user-profile-annotations.test.ts	15	src/app/(app)/users/[id]/UserInfoTab.tsx	not.toContain	label="Slack handle"
+264	tests/users-profile-overhaul-source.test.ts	26	src/app/(app)/users/[id]/UserInfoTab.tsx	not.toContain	label="Slack handle"
+265	tests/users-sweeping-ui-contract.test.ts	18	src/app/(app)/users/page.tsx	toContain	<AnimatePresence initial={false} mode="popLayout">
+265	tests/users-ui-polish-source.test.ts	24	src/app/(app)/users/page.tsx	toContain	<AnimatePresence initial={false} mode="popLayout">

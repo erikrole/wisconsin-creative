@@ -1,7 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { createContext, useContext, useState } from "react";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { getQueryClient, getQueryPersistOptions } from "@/lib/query-client";
 
@@ -19,30 +18,15 @@ export function QueryProvider({
   userId: string;
 }) {
   const [queryClient] = useState(() => getQueryClient());
-  const [queryPersistOptions, setQueryPersistOptions] = useState<ReturnType<typeof getQueryPersistOptions>>(null);
+  const [queryPersistOptions] = useState(getQueryPersistOptions);
 
-  useEffect(() => {
-    setQueryPersistOptions(getQueryPersistOptions());
-  }, []);
-
-  if (queryPersistOptions) {
-    return (
-      <PersistQueryClientProvider
-        client={queryClient}
-        persistOptions={queryPersistOptions}
-      >
-        <AuthenticatedQueryUserContext.Provider value={userId}>
-          {children}
-        </AuthenticatedQueryUserContext.Provider>
-      </PersistQueryClientProvider>
-    );
-  }
-
+  // Keep the same tree through hydration and cache restoration. Switching
+  // provider types after mount remounts every page and restarts its requests.
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider client={queryClient} persistOptions={queryPersistOptions}>
       <AuthenticatedQueryUserContext.Provider value={userId}>
         {children}
       </AuthenticatedQueryUserContext.Provider>
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
 }

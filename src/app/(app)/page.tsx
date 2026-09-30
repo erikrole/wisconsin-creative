@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence } from "motion/react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,8 @@ import { FlaggedItemsBanner } from "./dashboard/flagged-items-banner";
 import { ProfileCompletionBanner } from "./dashboard/profile-completion-banner";
 import { LostBulkUnitsCard } from "./dashboard/lost-bulk-units-card";
 import { MyGearColumn } from "./dashboard/my-gear-column";
+import { PersonalAgenda } from "./dashboard/personal-agenda";
+import type { AgendaInput } from "@/lib/home-agenda";
 import { TeamActivityColumn } from "./dashboard/team-activity-column";
 import { PageTransition } from "@/components/ui/motion";
 import type { CreateBookingContext } from "./dashboard-types";
@@ -129,6 +131,15 @@ function InternalDashboardPage() {
     }
   };
 
+  // Personal agenda ignores dashboard filters: what needs you now shouldn't
+  // disappear because a sport chip is selected.
+  const agendaInput = useMemo<AgendaInput | null>(() => data ? {
+    myCheckouts: data.myCheckouts.items,
+    myReservations: data.myReservations,
+    myPendingPickups: data.myPendingPickups ?? [],
+    myEventWork: data.myEventWork,
+  } : null, [data]);
+
   if (fetchError) {
     return (
       <EmptyState
@@ -166,7 +177,9 @@ function InternalDashboardPage() {
       data.drafts.length === 0 && data.myShifts.length === 0 &&
       data.flaggedItems.length === 0 && data.lostBulkUnits.length === 0
     : false;
-  const isFirstRun = statsEmpty && (data ? dataEmpty : true);
+  // Wait for the full payload: zero stats alone can't tell a new install from
+  // a returning user whose rows haven't loaded yet.
+  const isFirstRun = statsEmpty && dataEmpty;
   const dashboardRailItems: OperationalStatusRailItem[] = stats ? [
     ...(stats.overdue > 0 ? [{
       id: "overdue",
@@ -381,6 +394,16 @@ function InternalDashboardPage() {
           </DashboardStateSurface>
         )}
       </AnimatePresence>
+
+      {/* ══════ Your day: one banner, Next up, this week ══════ */}
+      {agendaInput && (
+        <PersonalAgenda
+          input={agendaInput}
+          now={now}
+          onSelectBooking={setSelectedBookingId}
+          onCreateBooking={handleCreateBooking}
+        />
+      )}
 
       {/* ══════ Two-Column Split ══════ */}
       <AnimatePresence initial={false} mode="popLayout">

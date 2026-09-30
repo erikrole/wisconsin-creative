@@ -1,0 +1,15 @@
+{
+  "before": {
+    "rows": 24,
+    "requests": 24,
+    "decodedImages": 24,
+    "elapsedMs": 82.458584
+  },
+  "after": {
+    "rows": 24,
+    "requests": 1,
+    "decodedImages": 1,
+    "elapsedMs": 54.450834
+  },
+  "scope": "24 simultaneous requests for one 44pt thumbnail at 3x, cold in-memory cache; ephemeral URLSession, URLProtocol fixture, 50ms image response. Baseline faithfully extracted the former per-row load sequence. Counts prove coalescing; single timing samples do not establish a latency percentage."
+}

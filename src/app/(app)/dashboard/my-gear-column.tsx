@@ -7,15 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ClipboardCheckIcon, CalendarCheckIcon } from "lucide-react";
 import { ScaleIn } from "@/components/ui/motion";
-import { formatDayLabel, formatRelativeTime } from "@/lib/format";
-import { sportLabel } from "@/lib/sports";
-import { formatCallTime, isFullDayBoundaryWindow } from "@/lib/shift-call-windows";
-import { GearAvatarStack } from "./dashboard-avatars";
+import { formatRelativeTime } from "@/lib/format";
 import { DashboardBookingRow, dashboardBookingAccent } from "./booking-row";
 import { DashboardFooterLink, DashboardSectionHeader } from "./section-header";
 import type { DashboardData, CreateBookingContext } from "../dashboard-types";
 import type { FilteredDashboardData } from "@/hooks/use-dashboard-filters";
 import { DashboardStateSurface } from "./dashboard-motion";
+import { MyEventsCard } from "./event-cards";
 
 type Props = {
   data: DashboardData;
@@ -40,17 +38,30 @@ export function MyGearColumn({
   onDeleteDraft,
   onCreateBooking,
 }: Props) {
+  const visibleMyEventWork = filtered?.myEventWork ?? data.myEventWork;
+  // Gear for an event the viewer works is shown on that event's card, so the
+  // reservation list keeps only what stands on its own.
+  const eventGearIds = new Set(visibleMyEventWork.flatMap((work) => work.gearBookings.map((b) => b.id)));
   const visibleMyCheckouts = filtered?.myCheckouts ?? data.myCheckouts.items;
-  const visibleMyReservations = filtered?.myReservations ?? data.myReservations;
-  const visibleMyShifts = filtered?.myShifts ?? data.myShifts;
+  const visibleMyReservations = (filtered?.myReservations ?? data.myReservations).filter((r) => !eventGearIds.has(r.id));
   const myCheckoutsCount = filtered ? visibleMyCheckouts.length : data.myCheckouts.total;
-  const myReservationsCount = filtered ? visibleMyReservations.length : data.myReservations.length;
-  const myShiftsCount = filtered ? visibleMyShifts.length : data.myShifts.length;
+  const myReservationsCount = visibleMyReservations.length;
   const personalGearEmpty = visibleMyCheckouts.length === 0 && visibleMyReservations.length === 0;
 
   return (
     <div className="flex flex-col gap-4">
-      <span className="px-0.5 text-xs font-semibold text-muted-foreground">My gear</span>
+      <span className="px-0.5 text-xs font-semibold text-muted-foreground">My work</span>
+
+      {visibleMyEventWork.length > 0 && (
+        <ScaleIn delay={0}>
+          <MyEventsCard
+            eventWork={visibleMyEventWork}
+            now={now}
+            onSelectBooking={onSelectBooking}
+            onCreateBooking={onCreateBooking}
+          />
+        </ScaleIn>
+      )}
 
       {personalGearEmpty ? (
         <ScaleIn delay={0}>
@@ -139,79 +150,6 @@ export function MyGearColumn({
           </Card>
           </ScaleIn>
         </>
-      )}
-
-      {/* My Shifts */}
-      {visibleMyShifts.length > 0 && (
-        <ScaleIn delay={0.1}>
-        <Card elevation="flat">
-          <DashboardSectionHeader title="My shifts" href="/schedule" count={myShiftsCount} />
-          <CardContent className="p-0">
-            {visibleMyShifts.map((s) => {
-              const gearLabel = s.gearStatus === "checked_out" ? "Gear out" : s.gearStatus === "reserved" ? "Reserved" : s.gearStatus === "draft" ? "Draft" : null;
-              const eventTitle = s.event.opponent
-                ? `${s.event.isHome === false ? "at" : "vs"} ${s.event.opponent}`
-                : s.event.summary;
-              // Only Student assignments have a report time. Staff rows use
-              // the event date and leave the call-time position empty.
-              // An all-day event never has a call time, whatever window a slot
-              // may still carry, so the event's own flag decides first.
-              const studentCallWindow = s.workerType === "ST" && !s.event.allDay && s.callStartsAt && s.callEndsAt
-                ? { startsAt: s.callStartsAt, endsAt: s.callEndsAt }
-                : null;
-              const isFullDayDefault = studentCallWindow ? isFullDayBoundaryWindow(studentCallWindow) : false;
-              const isAllDayDisplay = s.event.allDay || isFullDayDefault;
-              const displayDate = studentCallWindow?.startsAt ?? s.event.startsAt;
-              return (
-                <div key={s.id} className="group flex min-h-16 w-full items-center justify-between gap-3 px-4 py-2.5 transition-colors hover:bg-muted/45 [&+&]:border-t [&+&]:border-border/40">
-                  <Link
-                    href={`/events/${s.event.id}`}
-                    className="flex min-w-0 flex-1 flex-col gap-0.5 rounded-sm no-underline outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                    aria-label={`Open ${s.event.sportCode ? `${sportLabel(s.event.sportCode)} ` : ""}${eventTitle}`}
-                  >
-                    <span className="text-sm font-bold text-foreground truncate">
-                      {s.event.sportCode && <span className="text-xs font-bold mr-1">{sportLabel(s.event.sportCode)}</span>}
-                      <span className="text-muted-foreground font-normal">{eventTitle}</span>
-                    </span>
-                    <span className="flex items-center gap-1 text-xs text-muted-foreground leading-snug">
-                      {formatDayLabel(displayDate, now, isAllDayDisplay)}
-                      {studentCallWindow && !isFullDayDefault && `, Call ${formatCallTime(studentCallWindow)}`}
-                      {s.event.locationName && ` \u00B7 ${s.event.locationName}`}
-                    </span>
-                  </Link>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {gearLabel ? (
-                      <>
-                        <GearAvatarStack items={s.gearItems} totalCount={s.gearItemCount} />
-                        <Badge variant={s.gearStatus === "checked_out" ? "blue" : s.gearStatus === "reserved" ? "purple" : "gray"}>
-                          {gearLabel}
-                        </Badge>
-                      </>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-10"
-                        onClick={() => onCreateBooking?.({
-                          kind: "RESERVATION",
-                          title: eventTitle,
-                          startsAt: s.event.startsAt,
-                          endsAt: s.event.endsAt,
-                          locationId: s.event.locationId || undefined,
-                          eventId: s.event.id,
-                          sportCode: s.event.sportCode || undefined,
-                        })}
-                      >
-                        Prep gear
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
-        </ScaleIn>
       )}
 
       {/* Drafts */}

@@ -1,0 +1,12 @@
+{
+  "before": {
+    "sourceRevision": "1c62814365f89eb377689495ba8f1eb4f85a9d9e",
+    "sourcePatchSha256": "dfca26d5c67fa346e3abfa0018bca534e059aeb3c8fbed2526ac357e7a04ff45",
+    "snapshot": ".tmp/performance-2026-09-27/profile-capture-source-before.json"
+  },
+  "after": {
+    "sourceRevision": "1c62814365f89eb377689495ba8f1eb4f85a9d9e",
+    "sourcePatchSha256": "265350a63313cff2fb686e04381cd847806e512badc58d2f840d7fdc69d26a68",
+    "snapshot": ".tmp/performance-2026-09-27/profile-capture-source-after.json"
+  }
+}

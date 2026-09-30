@@ -240,14 +240,18 @@ struct DashboardData: Codable {
         role = try c.decode(String.self, forKey: .role)
         stats = try c.decode(DashboardStats.self, forKey: .stats)
         myCheckouts = try c.decode(CheckoutGroup.self, forKey: .myCheckouts)
-        teamCheckouts = try c.decode(CheckoutGroup.self, forKey: .teamCheckouts)
-        teamReservations = try c.decode(ReservationGroup.self, forKey: .teamReservations)
+        // Team lanes, overdue items, and upcoming events are web-only; the
+        // personal ios-home payload may omit them, so decode tolerantly.
+        teamCheckouts = try c.decodeIfPresent(CheckoutGroup.self, forKey: .teamCheckouts)
+            ?? CheckoutGroup(total: 0, overdue: 0, items: [])
+        teamReservations = try c.decodeIfPresent(ReservationGroup.self, forKey: .teamReservations)
+            ?? ReservationGroup(total: 0, items: [])
         pendingPickups = try c.decode(ReservationGroup.self, forKey: .pendingPickups)
         myReservations = try c.decode([BookingSummary].self, forKey: .myReservations)
         overdueCount = try c.decode(Int.self, forKey: .overdueCount)
-        overdueItems = try c.decode([DashboardOverdueItem].self, forKey: .overdueItems)
+        overdueItems = try c.decodeIfPresent([DashboardOverdueItem].self, forKey: .overdueItems) ?? []
         myShifts = try c.decode([DashboardShift].self, forKey: .myShifts)
-        upcomingEvents = try c.decode([DashboardUpcomingEvent].self, forKey: .upcomingEvents)
+        upcomingEvents = try c.decodeIfPresent([DashboardUpcomingEvent].self, forKey: .upcomingEvents) ?? []
         drafts = try c.decode([DashboardDraft].self, forKey: .drafts)
         flaggedItems = try c.decode([DashboardFlaggedItem].self, forKey: .flaggedItems)
         lostBulkUnits = try c.decode([DashboardLostBulkUnit].self, forKey: .lostBulkUnits)

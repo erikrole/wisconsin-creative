@@ -30,6 +30,7 @@ const workDir = mkdtempSync(join(tmpdir(), "gear-tracker-ios-project-"));
 try {
   cpSync(join(iosDir, "project.yml"), join(workDir, "project.yml"));
   cpSync(join(iosDir, "Wisconsin"), join(workDir, "Wisconsin"), { recursive: true });
+  cpSync(join(iosDir, "IconSources", "KioskIcon.icon"), join(workDir, "IconSources", "KioskIcon.icon"), { recursive: true });
   if (existsSync(join(iosDir, "WisconsinLiveActivities"))) {
     cpSync(join(iosDir, "WisconsinLiveActivities"), join(workDir, "WisconsinLiveActivities"), { recursive: true });
   }
@@ -59,6 +60,16 @@ try {
   }
   if (read(generatedEntitlements) !== read(checkedEntitlements)) {
     mismatches.push("ios/Wisconsin/Wisconsin.entitlements");
+  }
+
+  // Schemes carry launch, profiling, and coverage settings too.
+  for (const scheme of ["Wisconsin", "WisconsinPerformance", "WisconsinKiosk"]) {
+    const relative = join("Wisconsin.xcodeproj", "xcshareddata", "xcschemes", `${scheme}.xcscheme`);
+    assertExists(join(iosDir, relative), `checked-in ${scheme} scheme`);
+    assertExists(join(workDir, relative), `generated ${scheme} scheme`);
+    if (read(join(iosDir, relative)) !== read(join(workDir, relative))) {
+      mismatches.push(`ios/${relative}`);
+    }
   }
 
   if (mismatches.length > 0) {

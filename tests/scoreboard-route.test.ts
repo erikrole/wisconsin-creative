@@ -6,7 +6,6 @@ const mocks = vi.hoisted(() => ({
   findUnique: vi.fn(),
   canReadSharedScoreboard: vi.fn(),
   requirePermission: vi.fn(),
-  normalizeSportCode: vi.fn(),
   parsePagination: vi.fn(),
   getScoreboardScope: vi.fn(),
   getScoreboardForUser: vi.fn(),
@@ -18,7 +17,7 @@ vi.mock("@/lib/api", () => ({
       try {
         return await handler(req, { user: mocks.currentUser, params: await context.params });
       } catch (error) {
-        const status = (error as { status?: number }).status ?? 500;
+        const status = error instanceof Error && error.name === "ZodError" ? 400 : (error as { status?: number }).status ?? 500;
         const message = error instanceof Error ? error.message : "Internal server error";
         return new Response(JSON.stringify({ error: message }), { status });
       }
@@ -28,7 +27,6 @@ vi.mock("@/lib/api", () => ({
 vi.mock("@/lib/db", () => ({ db: { user: { findUnique: mocks.findUnique } } }));
 vi.mock("@/lib/user-visibility", () => ({ canReadSharedScoreboard: mocks.canReadSharedScoreboard }));
 vi.mock("@/lib/rbac", () => ({ requirePermission: mocks.requirePermission }));
-vi.mock("@/lib/sports", () => ({ normalizeSportCode: mocks.normalizeSportCode }));
 vi.mock("@/lib/http", () => ({
   HttpError: class HttpError extends Error {
     status: number;
@@ -53,14 +51,13 @@ const run = GET as unknown as (
 ) => Promise<Response>;
 
 beforeEach(() => {
-  vi.clearAllMocks();
+  vi.resetAllMocks();
   mocks.currentUser.id = "viewer-1";
   mocks.currentUser.role = "ADMIN";
   mocks.target.active = true;
   mocks.target.hiddenFromRoster = false;
   mocks.findUnique.mockResolvedValue(mocks.target);
   mocks.canReadSharedScoreboard.mockReturnValue(true);
-  mocks.normalizeSportCode.mockImplementation((value: string) => `normalized-${value}`);
   mocks.parsePagination.mockReturnValue({ limit: 25, offset: 4 });
   mocks.getScoreboardScope.mockReturnValue({ key: "2026-27" });
   mocks.getScoreboardForUser.mockResolvedValue({ summary: { wins: 1, losses: 0 } });
@@ -83,7 +80,7 @@ describe("GET /api/users/[id]/scoreboard", () => {
     expect(mocks.requirePermission).toHaveBeenCalledWith("ADMIN", "scoreboard", "view");
     expect(mocks.getScoreboardForUser).toHaveBeenCalledWith(
       "target-1",
-      { sportCode: "normalized-SB", result: "WIN", site: undefined },
+      { sportCode: "SB", result: "WIN", site: undefined, venue: undefined, opponent: undefined },
       { limit: 25, offset: 4 },
     );
     await expect(response.json()).resolves.toEqual({ data: { summary: { wins: 1, losses: 0 } } });
@@ -95,7 +92,7 @@ describe("GET /api/users/[id]/scoreboard", () => {
     expect(response.status).toBe(200);
     expect(mocks.getScoreboardForUser).toHaveBeenCalledWith(
       "target-1",
-      { sportCode: undefined, result: "TIE", site: undefined },
+      { sportCode: undefined, result: "TIE", site: undefined, venue: undefined, opponent: undefined },
       { limit: 25, offset: 4 },
     );
   });
@@ -107,7 +104,7 @@ describe("GET /api/users/[id]/scoreboard", () => {
     expect(mocks.getScoreboardScope).toHaveBeenCalledWith(undefined);
     expect(mocks.getScoreboardForUser).toHaveBeenCalledWith(
       "target-1",
-      { sportCode: undefined, result: undefined, site: undefined },
+      { sportCode: undefined, result: undefined, site: undefined, venue: undefined, opponent: undefined },
       { limit: 25, offset: 4 },
     );
   });
@@ -119,6 +116,21 @@ describe("GET /api/users/[id]/scoreboard", () => {
     expect(badSeason.status).toBe(400);
     expect(mocks.getScoreboardForUser).not.toHaveBeenCalled();
   });
+
+  it("normalizes all four team dimensions before reading a person", async () => {
+    const query = new URLSearchParams({ sportCode: "fb", site: "HOME", venue: " Camp Randall Stadium ", opponent: " Iowa " });
+    expect((await run(request(`?${query}`), context)).status).toBe(200);
+    expect(mocks.getScoreboardForUser).toHaveBeenCalledWith("target-1", {
+      sportCode: "FB", site: "HOME", venue: "Camp Randall Stadium", opponent: "Iowa", result: undefined,
+    }, { limit: 25, offset: 4 });
+  });
+
+  it.each(["site=invalid", "result=invalid", `venue=${"x".repeat(201)}`, `opponent=${"x".repeat(201)}`])(
+    "rejects invalid filter %s before reading season data", async (query) => {
+      expect((await run(request(`?${query}`), context)).status).toBe(400);
+      expect(mocks.getScoreboardForUser).not.toHaveBeenCalled();
+    },
+  );
 
   it.each([
     { viewerRole: "ADMIN", self: false },

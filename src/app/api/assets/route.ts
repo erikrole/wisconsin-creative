@@ -1,7 +1,8 @@
+import { intakeTransaction } from "@/lib/intake-receipt";
 import { z } from "zod";
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api";
-import { createAuditEntry } from "@/lib/audit";
+import { createAuditEntry, createAuditEntryTx } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { HttpError, ok, parsePagination } from "@/lib/http";
 import { requirePermission, requirePermissionOrCollaboratorCapability } from "@/lib/rbac";
@@ -1191,7 +1192,7 @@ export const POST = withAuth(async (req, { user }) => {
 
   let asset;
   try {
-    asset = await db.asset.create({
+    const args = {
       data: {
         ...buildAssetTagSortFields(body.assetTag),
         name: body.name ?? null,
@@ -1220,7 +1221,17 @@ export const POST = withAuth(async (req, { user }) => {
         location: { select: { id: true, name: true } },
         category: { select: { id: true, name: true } },
       }
-    });
+    } satisfies Prisma.AssetCreateArgs;
+    asset = req.headers.has("X-Intake-Request")
+      ? await intakeTransaction(req, user, "asset:create", body, async tx => {
+          const record = await tx.asset.create(args);
+          await createAuditEntryTx(tx, {
+            actorId: user.id, actorRole: user.role, entityType: "asset", entityId: record.id,
+            action: "asset_created", after: { assetTag: record.assetTag, brand: record.brand, model: record.model, locationId: record.locationId },
+          });
+          return record;
+        })
+      : await db.asset.create(args);
   } catch (error) {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -1234,7 +1245,7 @@ export const POST = withAuth(async (req, { user }) => {
     throw error;
   }
 
-  await createAuditEntry({
+  if (!req.headers.has("X-Intake-Request")) await createAuditEntry({
     actorId: user.id,
     actorRole: user.role,
     entityType: "asset",

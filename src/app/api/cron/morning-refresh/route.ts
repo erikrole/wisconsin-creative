@@ -14,7 +14,8 @@ import { cleanupPendingSignatureArtifacts } from "@/lib/services/signatures";
 import { pruneNotificationDeliveries } from "@/lib/services/notification-deliveries";
 import { pruneAppDiagnostics } from "@/lib/services/app-diagnostics";
 import { pruneJobRuns, recordJobRun } from "@/lib/services/job-runs";
-import { badges, badgesEnabled } from "@/lib/badges";
+import { badgesEnabled } from "@/lib/badges";
+import { onShiftsWorked } from "@/lib/badges/evaluator";
 import { recentlyWorkedEventUsers } from "@/lib/badges/worked-evidence";
 
 function maintenanceValue<T>(
@@ -34,15 +35,11 @@ function maintenanceValue<T>(
 const SHIFT_BADGE_LOOKBACK_MS = 2 * 24 * 60 * 60 * 1000;
 
 /**
- * Wall-clock budget shared by the two fan-out loops below, matching the
- * rehost-images cron: the Hobby 10s function budget minus room for the
- * maintenance steps and the response. Whatever is left over carries to the
- * next nightly run and is reported as `sourcesSkipped` / `shiftBadgeUsersRemaining`.
+ * Admission budget shared by the two loops below. This does not cancel
+ * in-flight fetches or database work, or bound the later maintenance steps.
+ * Deferred work is reported as `sourcesSkipped` / `shiftBadgeUsersRemaining`.
  */
 const DEADLINE_MS = 8000;
-/** Each source is an external ICS fetch plus two writes, so keep the fan-out
- *  small enough that one slow calendar host cannot starve the others. */
-const SOURCE_CONCURRENCY = 3;
 /** Badge evaluation is database-only and tolerates a wider batch. */
 const SHIFT_BADGE_CONCURRENCY = 5;
 
@@ -51,7 +48,7 @@ const EVENT_ARCHIVE_MONTHS = 4;
 const PRODUCT_EVENT_RETENTION_DAYS = 90;
 
 /**
- * Nightly 3 AM Central refresh (08:00 UTC):
+ * Daily refresh at 08:00 UTC (3 AM CDT / 2 AM CST):
  *   1. Sync all enabled calendar sources (fetch ICS, upsert events)
  *   2. Generate shifts for any newly synced events
  *   3. Archive shift groups for events that have ended, and award shift badges
@@ -65,7 +62,9 @@ const PRODUCT_EVENT_RETENTION_DAYS = 90;
  * product-event stream is the sole exception and expires after 90 days.
  */
 export const GET = withCron(async () => {
+  const deadlineStart = Date.now();
   const now = new Date();
+  const maintenanceFailures: string[] = [];
   const syncResults: Array<{
     sourceId: string;
     sourceName: string;
@@ -74,6 +73,8 @@ export const GET = withCron(async () => {
     groupsCreated?: number;
     shiftsCreated?: number;
     error?: string;
+    shiftGenerationError?: string;
+    eventErrors?: number;
     consecutiveFailures?: number;
     adminNotificationsCreated?: number;
   }> = [];
@@ -82,58 +83,69 @@ export const GET = withCron(async () => {
   const sources = await db.calendarSource.findMany({
     where: { enabled: true },
     select: { id: true, name: true },
-    orderBy: { name: "asc" },
+    orderBy: [{ lastFetchedAt: { sort: "asc", nulls: "first" } }, { id: "asc" }],
+  }).catch((error) => {
+    console.error("morning-refresh: source discovery failed", error);
+    maintenanceFailures.push("calendarSources");
+    return [];
   });
 
-  // Bounded concurrency with a deadline: each source stays atomic (its own
-  // try/catch plus a health write), so a skipped source simply carries over.
-  const deadlineStart = Date.now();
+  // D-026 requires sequential source processing. Check the admission budget
+  // before each source; older fetches are prioritized for the next run.
   let sourcesSkipped = 0;
-  for (let i = 0; i < sources.length; i += SOURCE_CONCURRENCY) {
+  for (const [i, source] of sources.entries()) {
     if (Date.now() - deadlineStart > DEADLINE_MS) {
       sourcesSkipped = sources.length - i;
       break;
     }
-    await Promise.all(sources.slice(i, i + SOURCE_CONCURRENCY).map(async (source) => {
-      try {
-        const syncResult = await syncCalendarSource(source.id);
-        const shiftResult = await generateShiftsForNewEvents(source.id);
-        const healthResult = await recordCalendarSyncHealth({
-          sourceId: source.id,
-          sourceName: source.name,
-          result: syncResult,
-          now,
-        });
+    try {
+      const syncResult = await syncCalendarSource(source.id);
+      const healthResult = await recordCalendarSyncHealth({
+        sourceId: source.id,
+        sourceName: source.name,
+        result: syncResult,
+        now,
+      }, maintenanceFailures);
 
-        syncResults.push({
-          sourceId: source.id,
-          sourceName: source.name,
-          eventsAdded: syncResult.added ?? 0,
-          eventsUpdated: syncResult.updated ?? 0,
-          groupsCreated: shiftResult.groupsCreated,
-          shiftsCreated: shiftResult.shiftsCreated,
-          error: syncResult.error,
-          consecutiveFailures: healthResult.consecutiveFailures,
-          adminNotificationsCreated: healthResult.notificationsCreated,
-        });
-      } catch (err) {
-        console.error(`morning-refresh: sync failed for source ${source.name}:`, err);
-        const error = err instanceof Error ? err.message : "Unknown error";
-        const healthResult = await recordCalendarSyncHealth({
-          sourceId: source.id,
-          sourceName: source.name,
-          result: { added: 0, updated: 0, cancelled: 0, skipped: 0, errors: [], error },
-          now,
-        });
-        syncResults.push({
-          sourceId: source.id,
-          sourceName: source.name,
-          error,
-          consecutiveFailures: healthResult.consecutiveFailures,
-          adminNotificationsCreated: healthResult.notificationsCreated,
-        });
-      }
-    }));
+      if (syncResult.error || syncResult.errors.length > 0) maintenanceFailures.push(`calendarSync:${source.id}`);
+      let shiftGenerationError: string | undefined;
+      const shiftResult = await generateShiftsForNewEvents(source.id).catch((error) => {
+        console.error(`morning-refresh: shift generation failed for ${source.id}`, error);
+        shiftGenerationError = error instanceof Error ? error.message : "Unknown error";
+        maintenanceFailures.push(`shiftGeneration:${source.id}`);
+        return { groupsCreated: 0, shiftsCreated: 0 };
+      });
+      syncResults.push({
+        sourceId: source.id,
+        sourceName: source.name,
+        eventsAdded: syncResult.added ?? 0,
+        eventsUpdated: syncResult.updated ?? 0,
+        groupsCreated: shiftResult.groupsCreated,
+        shiftsCreated: shiftResult.shiftsCreated,
+        error: syncResult.error,
+        eventErrors: syncResult.errors.length,
+        shiftGenerationError,
+        consecutiveFailures: healthResult.consecutiveFailures,
+        adminNotificationsCreated: healthResult.notificationsCreated,
+      });
+    } catch (err) {
+      console.error(`morning-refresh: sync failed for source ${source.name}:`, err);
+      maintenanceFailures.push(`calendarSync:${source.id}`);
+      const error = err instanceof Error ? err.message : "Unknown error";
+      const healthResult = await recordCalendarSyncHealth({
+        sourceId: source.id,
+        sourceName: source.name,
+        result: { added: 0, updated: 0, cancelled: 0, skipped: 0, errors: [], error },
+        now,
+      }, maintenanceFailures);
+      syncResults.push({
+        sourceId: source.id,
+        sourceName: source.name,
+        error,
+        consecutiveFailures: healthResult.consecutiveFailures,
+        adminNotificationsCreated: healthResult.notificationsCreated,
+      });
+    }
   }
 
   // ── 2. Archive completed shift groups ─────────────────────────────────
@@ -143,6 +155,10 @@ export const GET = withCron(async () => {
       event: { endsAt: { lt: now } },
     },
     data: { archivedAt: now },
+  }).catch((error) => {
+    console.error("morning-refresh: shift archive failed", error);
+    maintenanceFailures.push("shiftGroupsArchived");
+    return { count: 0 };
   });
 
   // ── 2b. Recognise shift work that just finished ──────────────────────
@@ -153,6 +169,7 @@ export const GET = withCron(async () => {
   // shift awards every threshold they had already passed.
   let shiftBadgeUsers = 0;
   let shiftBadgeUsersRemaining = 0;
+  let shiftBadgeUsersFailed = 0;
   if (badgesEnabled()) {
     try {
       const recentlyEnded = await recentlyWorkedEventUsers(
@@ -160,25 +177,31 @@ export const GET = withCron(async () => {
         now,
       );
 
-      // Same bounded-concurrency + deadline shape as the source loop. Each
-      // person's evaluation is independent and idempotent, so anyone skipped is
-      // simply picked up by the next run.
+      shiftBadgeUsersRemaining = recentlyEnded.length;
+      // Bounded badge batches share the source loop admission deadline. Each
+      // person's evaluation is independent and idempotent. Deferred users are
+      // eligible on the next run only while inside the lookback window.
       for (let i = 0; i < recentlyEnded.length; i += SHIFT_BADGE_CONCURRENCY) {
         if (Date.now() - deadlineStart > DEADLINE_MS) break;
         const batch = recentlyEnded.slice(i, i + SHIFT_BADGE_CONCURRENCY);
-        await Promise.all(
+        // The cron owns failure reporting; the request-safe facade swallows
+        // evaluator failures in production to protect interactive mutations.
+        const results = await Promise.allSettled(
           batch.map(({ userId, hasAddedWorker, hasBackfilledAssignment }) =>
-            badges.onShiftsWorked(
+            onShiftsWorked(
               { userId },
               { notify: !(hasAddedWorker || hasBackfilledAssignment) },
             ),
           ),
         );
-        shiftBadgeUsers += batch.length;
+        shiftBadgeUsers += results.filter((result) => result.status === "fulfilled").length;
+        shiftBadgeUsersFailed += results.filter((result) => result.status === "rejected").length;
+        shiftBadgeUsersRemaining -= batch.length;
       }
-      shiftBadgeUsersRemaining = recentlyEnded.length - shiftBadgeUsers;
+      if (shiftBadgeUsersFailed > 0) maintenanceFailures.push("shiftBadges");
     } catch (err) {
       console.error("morning-refresh: shift badge step failed", err);
+      maintenanceFailures.push("shiftBadges");
     }
   }
 
@@ -193,6 +216,7 @@ export const GET = withCron(async () => {
     .then((r) => r.count)
     .catch((err) => {
       console.error("morning-refresh: event archive step failed", err);
+      maintenanceFailures.push("eventsArchived");
       return 0;
     });
 
@@ -207,7 +231,6 @@ export const GET = withCron(async () => {
     pruneNotificationDeliveries(now),
     Promise.all([pruneAppDiagnostics(now), pruneJobRuns(now)]),
   ]);
-  const maintenanceFailures: string[] = [];
   const { expired: tradesExpired } = maintenanceValue(
     tradeResult,
     { expired: 0 },
@@ -286,25 +309,35 @@ export const GET = withCron(async () => {
     return null;
   });
 
+  if (pendingPickups.failed > 0 && !maintenanceFailures.includes("pendingPickups")) maintenanceFailures.push("pendingPickups");
+  if (firmwareWatch.failed > 0 && !maintenanceFailures.includes("firmwareWatch")) maintenanceFailures.push("firmwareWatch");
+  if (signatureCleanup.attempted > signatureCleanup.deleted && !maintenanceFailures.includes("signatureCleanup")) maintenanceFailures.push("signatureCleanup");
+  if (automationDigest?.partialFailures.length) maintenanceFailures.push("scheduleAutomation");
+  const deadlineExceeded = sourcesSkipped > 0 || shiftBadgeUsersRemaining > 0 || firmwareWatch.skipped > 0;
+  const ok = maintenanceFailures.length === 0 && !deadlineExceeded;
+
   // Scheduled for 08:00 UTC in vercel.json; lateness shows cron drift.
   const scheduledAt = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 8));
   await recordJobRun({
     job: "morning_refresh",
-    outcome: maintenanceFailures.length === 0 ? "succeeded" : "failed",
+    outcome: ok ? "succeeded" : "failed",
     dueAt: scheduledAt,
-    detail: maintenanceFailures.length === 0 ? null : maintenanceFailures.join(","),
+    detail: ok ? null : [...maintenanceFailures, ...(deadlineExceeded ? ["deferredWork"] : [])].join(","),
   });
 
   return NextResponse.json({
-    ok: maintenanceFailures.length === 0,
+    ok,
+    durationMs: Date.now() - deadlineStart,
+    sourcesTotal: sources.length,
     runAt: now.toISOString(),
-    sourcesProcessed: sources.length,
+    sourcesProcessed: syncResults.length,
     sourcesSkipped,
     syncResults,
     shiftGroupsArchived: archived,
     shiftBadgeUsers,
     shiftBadgeUsersRemaining,
-    deadlineExceeded: sourcesSkipped > 0 || shiftBadgeUsersRemaining > 0 || firmwareWatch.skipped > 0,
+    shiftBadgeUsersFailed,
+    deadlineExceeded,
     eventsArchived,
     tradesExpired,
     pendingPickups,
@@ -322,11 +355,12 @@ async function recordCalendarSyncHealth(args: {
   sourceName: string;
   result: Awaited<ReturnType<typeof syncCalendarSource>>;
   now: Date;
-}) {
+}, failures: string[]) {
   try {
     return await updateCalendarSyncHealth(args);
   } catch (err) {
     console.error(`morning-refresh: sync health update failed for source ${args.sourceName}:`, err);
+    failures.push(`calendarHealth:${args.sourceId}`);
     return {
       sourceId: args.sourceId,
       sourceName: args.sourceName,

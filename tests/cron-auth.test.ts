@@ -28,12 +28,12 @@ describe("withCron", () => {
     expect(handler).not.toHaveBeenCalled();
   });
 
-  it("returns 401 when bearer token does not match", async () => {
+  it.each(["Bearer wrong", "Bearer sécret-123"])("returns 401 for invalid token %s", async (token) => {
     process.env.CRON_SECRET = "secret-123";
     const handler = vi.fn().mockResolvedValue(NextResponse.json({ ok: true }));
     const wrapped = withCron(handler);
 
-    const res = await wrapped(makeRequest("Bearer wrong"), noParams);
+    const res = await wrapped(makeRequest(token), noParams);
 
     expect(res.status).toBe(401);
     expect(handler).not.toHaveBeenCalled();

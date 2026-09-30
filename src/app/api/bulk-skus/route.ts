@@ -1,10 +1,11 @@
+import { intakeTransaction } from "@/lib/intake-receipt";
 import { Prisma } from "@prisma/client";
 import { withAuth } from "@/lib/api";
 import { db } from "@/lib/db";
 import { HttpError, ok, parsePagination } from "@/lib/http";
 import { requirePermission, requirePermissionOrCollaboratorCapability } from "@/lib/rbac";
 import { createBulkSkuSchema } from "@/lib/validation";
-import { createAuditEntry } from "@/lib/audit";
+import { createAuditEntryTx } from "@/lib/audit";
 import { buildActiveBulkUnitAllocationMap } from "@/lib/bulk-unit-status";
 import { summarizeItemFamilyState } from "@/lib/item-family-state";
 import { sanitizeCollaboratorBulkItem } from "@/lib/collaborator-gear";
@@ -81,7 +82,7 @@ export const POST = withAuth(async (req, { user }) => {
   requirePermission(user.role, "bulk_sku", "create");
   const body = createBulkSkuSchema.parse(await req.json());
 
-  const result = await db.$transaction(async (tx) => {
+  const result = await intakeTransaction(req, user, "bulk:create", body, async (tx) => {
     const [location, category] = await Promise.all([
       tx.location.findUnique({
         where: { id: body.locationId },
@@ -141,20 +142,17 @@ export const POST = withAuth(async (req, { user }) => {
       });
     }
 
+    await createAuditEntryTx(tx, {
+      actorId: user.id, actorRole: user.role, entityType: "bulk_sku", entityId: sku.id,
+      action: "create", after: { name: body.name, initialQuantity: body.initialQuantity },
+    });
     return tx.bulkSku.findUniqueOrThrow({
       where: { id: sku.id },
       include: { balances: true, units: body.trackByNumber }
     });
-  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
-
-  await createAuditEntry({
-    actorId: user.id,
-    actorRole: user.role,
-    entityType: "bulk_sku",
-    entityId: result.id,
-    action: "create",
-    after: { name: body.name, initialQuantity: body.initialQuantity },
   });
+
+
 
   return ok({ data: result }, 201);
 });

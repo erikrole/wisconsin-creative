@@ -1,0 +1,23 @@
+{
+  "sourceRevision": "1c62814365f89eb377689495ba8f1eb4f85a9d9e",
+  "sourcePatchSha256": "265350a63313cff2fb686e04381cd847806e512badc58d2f840d7fdc69d26a68",
+  "settings": {
+    "device": "Playwright Chromium, headless",
+    "viewport": [
+      1440,
+      1000
+    ],
+    "fixture": "profile-completion Staff error; benchmark-profile-completion.mjs 2026-09-27",
+    "role": "staff",
+    "route": "loopback fixture /?scenario=manual",
+    "appearance": "light",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "2026-09-27T16:00:00Z",
+    "scroll": [
+      0,
+      0
+    ]
+  }
+}

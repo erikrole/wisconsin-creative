@@ -1,0 +1,19 @@
+{
+  "CFBundleIdentifier": "com.erikrole.WisconsinKiosk",
+  "CFBundleIcons": {
+    "CFBundlePrimaryIcon": {
+      "CFBundleIconFiles": [
+        "KioskIcon60x60"
+      ]
+    }
+  },
+  "CFBundleIcons~ipad": {
+    "CFBundlePrimaryIcon": {
+      "CFBundleIconFiles": [
+        "KioskIcon60x60",
+        "KioskIcon76x76"
+      ],
+      "CFBundleIconName": "KioskIcon"
+    }
+  }
+}

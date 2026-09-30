@@ -1,0 +1,79 @@
+{
+  "date": "2026-09-27",
+  "node": "22.23.3",
+  "vitest": "4.1.11",
+  "regression": {
+    "beforePassed": 15,
+    "beforeFailed": 12,
+    "failureNames": [
+      "rejects 'shared destination' before moving custody",
+      "rejects 'different destination purpose' before moving custody",
+      "rejects 'different primary event' before moving custody",
+      "rejects 'different sport' before moving custody",
+      "rejects 'different source reservation' before moving custody",
+      "rejects 'missing source reservation' before moving custody",
+      "rejects 'missing linked event' before moving custody",
+      "rejects 'additional linked event' before moving custody",
+      "rejects 'different event set of the same size' before moving custody",
+      "rejects 'destination not started' before moving custody",
+      "rejects 'ineligible receiving checkout owner' before moving custody",
+      "reuses compatible personal custody regardless of linked-event order"
+    ],
+    "afterPassed": 27,
+    "afterFailed": 0
+  },
+  "fullShuffledCoverage": {
+    "exitCode": 0,
+    "files": 703,
+    "passed": 5019,
+    "failed": 0,
+    "skipped": 1,
+    "seed": 260927,
+    "workers": 4,
+    "coveragePercent": {
+      "statements": 73.18,
+      "branches": 63.28,
+      "functions": 75.74,
+      "lines": 76.0
+    },
+    "branchFloor": 63.28,
+    "functionFloor": 75.74
+  },
+  "checks": {
+    "nonIncrementalTypescript": "passed",
+    "focusedLint": "passed",
+    "configLint": "passed",
+    "buildApp": "passed",
+    "docs": "passed after codemap refresh",
+    "diffCheck": "passed",
+    "localLinks": "passed"
+  },
+  "scope": {
+    "productionAddedLines": 16,
+    "productionDeletedLines": 6,
+    "testCasesAdded": 15,
+    "transferSuiteCases": 27,
+    "transferSuiteLines": 166
+  },
+  "sourceSha256": {
+    "src/lib/services/kiosk-item-transfer.ts": "6397a507043c9bf7d31a2fa22a2229d53d5b971886c156e29cae12965738717e",
+    "tests/kiosk-item-transfer.test.ts": "d7b93808ba0b0e6f20ef7188f82ccd41ef6b73d9c718781c27555b1fc843a952",
+    "vitest.config.ts": "3ae5202719d5db33f4ce98c9da755f5a1c0d7f919981cce3fb583f34bf89dead"
+  },
+  "budget": {
+    "weeklyStart": 10,
+    "latestReading": 12,
+    "stopAt": 13,
+    "resetTimestamp": 1791047471,
+    "accountWideNotTaskTokens": true
+  },
+  "boundaries": [
+    "Mocked database; no real Postgres atomicity, concurrency, or receipt replay proof",
+    "No native Swift transfer caller found; no authenticated UI or managed-device proof",
+    "No production database, commit, push, or deployment"
+  ],
+  "rawEvidenceDirectory": "/tmp/wc-custody-contract-2026-09-27",
+  "buildWarnings": [
+    "Existing src/components/Sidebar.tsx:200 unused state variable"
+  ]
+}

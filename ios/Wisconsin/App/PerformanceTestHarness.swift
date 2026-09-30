@@ -41,6 +41,10 @@ struct PerformanceTestRootView: View {
 
     var body: some View {
         switch scenario {
+        case .welcomeStudent, .welcomeStaff, .welcomeApparel:
+            WelcomeHarnessView()
+        case .registration:
+            NavigationStack { NativeRegistrationView(initialEmail: "alex.rivera@wisc.edu") }
         case .launch:
             RootView()
         case .items:
@@ -61,7 +65,7 @@ struct PerformanceTestRootView: View {
             ScheduleHarnessView()
         case .tradeBoardStaff, .tradeBoardStudent:
             TradeBoardHarnessView()
-        case .home, .homeAllClear:
+        case .home, .homeAllClear, .homeAgenda:
             HomeHarnessView()
         case .scoreboard:
             ScoreboardHarnessView()
@@ -75,7 +79,8 @@ struct PerformanceTestRootView: View {
             PasswordSetupView(email: "avery.nakamura@wisc.edu")
         case .studentBookings:
             StudentBookingsHarnessView()
-        case .bookingDetail, .bookingExtend, .bookingEdit, .bookingCancel:
+        case .bookingDetail, .bookingExtend, .bookingEdit, .bookingEditReservation, .bookingEditItems,
+             .bookingCancel, .bookingOverdue:
             BookingDetailHarnessView()
         case .itemEdit:
             ItemDetailHarnessView()
@@ -92,6 +97,34 @@ struct PerformanceTestRootView: View {
         case .notifications:
             NotificationSettingsHarnessView()
         }
+    }
+}
+
+/// Uses the real Welcome coordinator with isolated read-only profile fixtures.
+private struct WelcomeHarnessView: View {
+    @Environment(SessionStore.self) private var session
+    var body: some View {
+        ZStack {
+            Color(.systemGroupedBackground).ignoresSafeArea()
+            if session.currentUser != nil { ProfileCompletionWelcomeView() }
+        }
+        .onAppear { session.currentUser = WelcomeHarnessFixture.user }
+    }
+}
+
+private enum WelcomeHarnessFixture {
+    static var role: String { AppRuntimeMode.performanceScenario == .welcomeStaff ? "STAFF" : "STUDENT" }
+    static var user: CurrentUser {
+        CurrentUser(id: "welcome-fixture", name: "Alex Rivera", email: "alex.rivera@wisc.edu",
+                    role: role, affiliation: nil, collaboratorProfile: nil, capabilities: [],
+                    collaboratorPolicy: nil, staffingType: "ST", avatarUrl: nil, forcePasswordChange: false)
+    }
+    static var response: Data {
+        let step = AppRuntimeMode.performanceScenario == .welcomeApparel ? "APPAREL" : (role == "STAFF" ? "EMAIL" : "PHONES")
+        return Data("""
+        {"data":{"profile":{"id":"welcome-fixture","name":"Alex Rivera","role":"\(role)","email":"alex.rivera@wisc.edu"},
+         "completion":{"profileComplete":false,"shouldPrompt":true,"firstIncompleteStep":"\(step)","completedCount":1,"totalCount":8}}}
+        """.utf8)
     }
 }
 
@@ -310,7 +343,9 @@ struct BookingDetailHarnessView: View {
 
     var body: some View {
         NavigationStack {
-            BookingDetailView(bookingId: BookingFixtureAPI.bookingId)
+            BookingDetailView(bookingId: AppRuntimeMode.CaptureSeed.bookingEditReservation
+                ? "up1"
+                : BookingFixtureAPI.bookingId)
         }
         .onAppear { session.currentUser = ScheduleFixtures.staffUser }
     }
@@ -437,6 +472,12 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
             return
         }
 
+        if ScoreboardFixtureFaults.shared.shouldFail(request) {
+            let response = HTTPURLResponse(url: url, statusCode: 503, httpVersion: "HTTP/1.1", headerFields: nil)!
+            deliver(response, Data("Temporarily unavailable".utf8))
+            return
+        }
+
         // Unmapped paths answer 404, never 401: `APIError.notFound` stays local
         // to the caller, while a 401 would tear down the harness session.
         let mapped = Self.body(for: request)
@@ -470,6 +511,10 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
 
     private static func body(for request: URLRequest) -> Data? {
         guard let path = request.url?.path else { return nil }
+        if path == "/api/me/profile-completion", request.httpMethod == "GET",
+           [.welcomeStudent, .welcomeStaff, .welcomeApparel].contains(AppRuntimeMode.performanceScenario) {
+            return WelcomeHarnessFixture.response
+        }
         switch path {
         case "/api/resources": return FixtureAPI.guides
         case let path where path.hasPrefix("/api/resources/"):
@@ -496,9 +541,13 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
         case "/api/auth/discover": return AuthFixtureAPI.discoverPassword
         case "/api/me/passkeys": return PasskeyFixtureAPI.passkeys
         case "/api/dashboard":
-            return AppRuntimeMode.performanceScenario == .homeAllClear
-                ? HomeFixtureAPI.allClearDashboard
-                : HomeFixtureAPI.dashboard
+            switch AppRuntimeMode.performanceScenario {
+            case .homeAllClear: return HomeFixtureAPI.allClearDashboard
+            case .homeAgenda: return HomeFixtureAPI.agendaDashboard
+            default: return HomeFixtureAPI.dashboard
+            }
+        case "/api/scoreboard":
+            return ScoreboardFixtureAPI.teamScoreboard(for: request)
         case "/api/users/\(ScoreboardFixtureAPI.userId)/scoreboard":
             return ScoreboardFixtureAPI.scoreboard(for: request)
         case "/api/users/\(ScoreboardFixtureAPI.userId)":
@@ -829,8 +878,11 @@ enum BookingFixtureAPI {
     ]
 
     static func booking(for id: String) -> Data? {
+        if id == "\(bookingId)/nudge" { return Data(#"{"success":true}"#.utf8) }
         guard id == bookingId || linkedDashboardBookings[id] != nil else { return nil }
-        guard let detail = linkedDashboardBookings[id] else { return booking }
+        guard let detail = linkedDashboardBookings[id] else {
+            return AppRuntimeMode.performanceScenario == .bookingOverdue ? overdueBooking : booking
+        }
 
         var payload = String(decoding: booking, as: UTF8.self)
         payload = payload.replacingOccurrences(of: "\"id\":\"\(bookingId)\"", with: "\"id\":\"\(id)\"")
@@ -859,11 +911,20 @@ enum BookingFixtureAPI {
         return formatter.string(from: studentListReferenceDate.addingTimeInterval(TimeInterval(minutes * 60)))
     }
 
+    /// Two hours past due, so the Nudge action is on screen.
+    private static var overdueBooking: Data {
+        bookingPayload(startsInMinutes: -360, endsInMinutes: -120, allowedActions: #"["extend","edit","nudge"]"#)
+    }
+
     private static var booking: Data {
+        bookingPayload(startsInMinutes: -120, endsInMinutes: 180, allowedActions: #"["extend","edit","cancel"]"#)
+    }
+
+    private static func bookingPayload(startsInMinutes: Int, endsInMinutes: Int, allowedActions: String) -> Data {
         Data("""
         {"data":{
           "id":"\(bookingId)","kind":"CHECKOUT","title":"Volleyball vs Nebraska","status":"OPEN",
-          "startsAt":"\(iso(-120))","endsAt":"\(iso(180))",
+          "startsAt":"\(iso(startsInMinutes))","endsAt":"\(iso(endsInMinutes))",
           "notes":"Two bodies on the baseline, one roaming. Return through the gear room, not the loading dock.",
           "refNumber":"CO-2418",
           "requester":{"id":"u-avery","name":"Avery Nakamura","email":"avery.nakamura@wisc.edu","avatarUrl":null},
@@ -886,7 +947,7 @@ enum BookingFixtureAPI {
                    "opponent":"Nebraska","isHome":true},
           "events":[{"id":"ev-1","summary":"Volleyball vs Nebraska","sportCode":"VB",
                      "opponent":"Nebraska","isHome":true}],
-          "allowedActions":["extend","edit","cancel"],
+          "allowedActions":\(allowedActions),
           "updatedAt":"\(iso(-30))",
           "pickupKioskDevice":null
         }}
@@ -1245,7 +1306,11 @@ struct ScoreboardHarnessView: View {
 
     var body: some View {
         NavigationStack {
-            ScoreboardView(userId: ScoreboardFixtureAPI.userId)
+            if ProcessInfo.processInfo.environment["GT_SCOREBOARD_TEAM"] == "1" {
+                TeamScoreboardView(wrapsInNavigationStack: false)
+            } else {
+                ScoreboardView(userId: ScoreboardFixtureAPI.userId)
+            }
         }
         .onAppear { session.currentUser = ScheduleFixtures.staffUser }
     }
@@ -1279,6 +1344,62 @@ enum HomeFixtureAPI {
           "endsAt": "\(iso(endsIn))", "itemCount": \(items),
           "status": "\(status)", "isOverdue": \(overdue) }
         """
+    }
+
+    private static func eventWork(
+        _ id: String, summary: String, opponent: String, isHome: Bool,
+        startsIn: Int, gear: String?
+    ) -> String {
+        """
+        { "id": "\(id)",
+          "event": { "id": "\(id)", "summary": "\(summary)", "startsAt": "\(iso(startsIn))",
+                     "endsAt": "\(iso(startsIn + 150))", "allDay": false, "sportCode": "VB",
+                     "opponent": "\(opponent)", "isHome": \(isHome), "site": "\(isHome ? "HOME" : "AWAY")",
+                     "locationId": "loc-fh", "locationName": "UW Field House" },
+          "shift": { "id": "sh-\(id)", "area": "VIDEO", "workerType": "FT",
+                     "startsAt": "\(iso(startsIn - 90))", "endsAt": "\(iso(startsIn + 150))",
+                     "callStartsAt": null, "callEndsAt": null },
+          "gearStatus": "\(gear == nil ? "none" : "reserved")",
+          "gearBookings": [\(gear ?? "")],
+          "needsGear": \(gear == nil) }
+        """
+    }
+
+    /// Worked events across the week: tonight with nothing reserved, tomorrow
+    /// with its reservation folded into the event row, plus a return.
+    static var agendaDashboard: Data {
+        let linkedGear = booking("r-ev2", "Volleyball at Minnesota kit", "BOOKED", "RESERVATION",
+                                 startsIn: 1_380, endsIn: 1_800, items: 5)
+            .replacingOccurrences(of: "\"linkedEventId\": null", with: "\"linkedEventId\": \"ev2\"")
+        let returnSoon = booking("co1", "Hockey road audio kit", "OPEN", "CHECKOUT",
+                                 startsIn: -1_440, endsIn: 2_880, items: 4)
+        let work = [
+            eventWork("ev1", summary: "Volleyball vs Nebraska", opponent: "Nebraska", isHome: true,
+                      startsIn: 120, gear: nil),
+            eventWork("ev2", summary: "Volleyball at Minnesota", opponent: "Minnesota", isHome: false,
+                      startsIn: 1_560, gear: linkedGear),
+            eventWork("ev3", summary: "Volleyball vs Purdue", opponent: "Purdue", isHome: true,
+                      startsIn: 4_440, gear: nil),
+        ].joined(separator: ",")
+        return Data("""
+        { "data": {
+          "role": "STAFF",
+          "stats": { "checkedOut": 1, "overdue": 0, "reserved": 1, "dueToday": 0 },
+          "myCheckouts": { "total": 1, "overdue": 0, "items": [\(returnSoon)] },
+          "teamCheckouts": { "total": 0, "overdue": 0, "items": [] },
+          "teamReservations": { "total": 0, "items": [] },
+          "pendingPickups": { "total": 0, "items": [] },
+          "myReservations": [\(linkedGear)],
+          "overdueCount": 0,
+          "overdueItems": [],
+          "myShifts": [],
+          "upcomingEvents": [],
+          "drafts": [],
+          "flaggedItems": [],
+          "lostBulkUnits": [],
+          "myEventWork": [\(work)]
+        } }
+        """.utf8)
     }
 
     /// Nothing personal outstanding, one staff draft waiting.
@@ -1348,6 +1469,23 @@ enum HomeFixtureAPI {
 /// stays a season-wide count, so this fixture answers the query rather than
     /// returning one canned payload -- a fixture that ignored the query would hide
 /// the exact filtering behaviour a capture exists to show.
+private final class ScoreboardFixtureFaults: @unchecked Sendable {
+    static let shared = ScoreboardFixtureFaults()
+    private let lock = NSLock()
+    private var failedPaths: Set<String> = []
+
+    func shouldFail(_ request: URLRequest) -> Bool {
+        guard ProcessInfo.processInfo.environment["GT_SCOREBOARD_FAIL_ONCE"] == "1",
+              let url = request.url, url.path.hasSuffix("/scoreboard"),
+              URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.contains(where: {
+                  $0.name == "site" && $0.value == "AWAY"
+              }) == true else { return false }
+        lock.lock()
+        defer { lock.unlock() }
+        return failedPaths.insert(url.path).inserted
+    }
+}
+
 enum ScoreboardFixtureAPI {
     static let userId = "fixture-staff"
 
@@ -1465,11 +1603,16 @@ enum ScoreboardFixtureAPI {
         }
         let sportCode = value("sportCode")
         let result = value("result")
+        let venue = value("venue")
+        let opponent = value("opponent")
+        let site = value("site")
         let limit = value("limit").flatMap(Int.init) ?? 25
         let offset = value("offset").flatMap(Int.init) ?? 0
 
         let matched = games.filter { game in
             (sportCode == nil || game.sportCode == sportCode) && (result == nil || game.result == result)
+                && (venue == nil || game.venue == venue) && (opponent == nil || game.opponent == opponent)
+                && (site == nil || game.site == site)
         }
         let wins = matched.filter { $0.result == "WIN" }.count
         let losses = matched.filter { $0.result == "LOSS" }.count
@@ -1502,6 +1645,40 @@ enum ScoreboardFixtureAPI {
           "nextCursor": \(hasMore ? "\"\(offset + limit)\"" : "null")
         } }
         """.utf8)
+    }
+
+    /// The team fixture reuses the same season and filtering logic as its person.
+    static func teamScoreboard(for request: URLRequest) -> Data {
+        let envelope = try! JSONSerialization.jsonObject(with: scoreboard(for: request)) as! [String: Any]
+        let person = envelope["data"] as! [String: Any]
+        var summary = person["summary"] as! [String: Any]
+        let count = summary["games"] as! Int
+        summary["eventsWorked"] = count
+        var totals = summary
+        totals["contributors"] = count == 0 ? 0 : 1
+        totals["eventsCovered"] = count
+        totals["eventCredits"] = count
+        totals["gameCredits"] = count
+        func facets(_ dimension: (Game) -> (String, String)) -> [[String: String]] {
+            var labels: [String: String] = [:]
+            for game in games { let pair = dimension(game); labels[pair.0] = pair.1 }
+            return labels.keys.sorted().map { ["key": $0, "label": labels[$0]!] }
+        }
+        let query = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)?.queryItems ?? []
+        let filters = Dictionary(uniqueKeysWithValues: query.compactMap { item in
+            item.value.map { (item.name, $0) }
+        })
+        let team: [String: Any] = [
+            "scope": person["scope"]!, "summary": totals, "filters": filters,
+            "facets": [
+                "sports": facets { ($0.sportCode, $0.sportLabel) },
+                "venues": facets { ($0.venue, $0.venue) },
+                "opponents": facets { ($0.opponent, $0.opponent) },
+                "sites": facets { ($0.site, siteLabel($0.site)) },
+            ],
+            "leaderboard": count == 0 ? [] : [["userId": userId, "name": "Jordan Lee", "summary": summary]],
+        ]
+        return try! JSONSerialization.data(withJSONObject: ["data": team])
     }
 
     private static func siteLabel(_ site: String) -> String {

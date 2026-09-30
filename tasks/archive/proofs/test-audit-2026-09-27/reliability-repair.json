@@ -1,0 +1,77 @@
+{
+  "date": "2026-09-27",
+  "scope": "Reliability repair only; no production changes",
+  "node": "v24.21.0",
+  "full": {
+    "total": 4971,
+    "passed": 4970,
+    "failed": 0,
+    "skipped": 1,
+    "files": 702
+  },
+  "shuffle": {
+    "total": 4971,
+    "passed": 4970,
+    "failed": 0,
+    "skipped": 1,
+    "files": 702,
+    "seed": 260926,
+    "maxWorkers": 4
+  },
+  "focusedShuffle": {
+    "total": 84,
+    "passed": 84,
+    "failed": 0,
+    "skipped": 0,
+    "files": 5
+  },
+  "individual": {
+    "total": 84,
+    "passed": 84
+  },
+  "mutationChecks": [
+    {
+      "name": "boundary",
+      "passed": 0,
+      "failed": 1,
+      "failures": [
+        {
+          "test": "past-event Schedule backfill route publishes an ending-now-event edit immediately and keeps recognition silent",
+          "message": "AssertionError: expected \"spy\" to not be called at all, but actually been called 1 times"
+        }
+      ]
+    },
+    {
+      "name": "replay",
+      "passed": 0,
+      "failed": 1,
+      "failures": [
+        {
+          "test": "passkey authentication does not accept a ceremony that has already been consumed",
+          "message": "AssertionError: expected 200 to be 401 // Object.is equality"
+        }
+      ]
+    },
+    {
+      "name": "student",
+      "passed": 0,
+      "failed": 1,
+      "failures": [
+        {
+          "test": "collaborator default-deny route matrix still admits a student to 'the booking calendar'",
+          "message": "AssertionError: expected 500 to be 200 // Object.is equality"
+        }
+      ]
+    }
+  ],
+  "checks": {
+    "typescript": "passed --noEmit --pretty false --incremental false",
+    "changedTestLint": "passed",
+    "buildApp": "passed with placeholder DB and source-map upload disabled; existing Sidebar.tsx:200 unused state warning",
+    "isolation": "unchanged",
+    "globalSetup": "unchanged",
+    "node22CI": "not run"
+  },
+  "testNumstat": "39\t19\ttests/collaborator-negative-routes.test.ts\n11\t1\ttests/passkey-auth.test.ts\n3\t1\ttests/pending-claim-review.test.ts\n27\t7\ttests/schedule-publication.test.ts\n15\t5\ttests/schedule-working-copy-backfill-route.test.ts",
+  "productionLinesChanged": 0
+}

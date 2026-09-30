@@ -94,15 +94,18 @@ describe("schedule staff/student display source contracts", () => {
   it("never substitutes event time into Staff call-time presentation", () => {
     const dashboardRoute = source("src/app/api/dashboard/route.ts");
     const myShiftsRoute = source("src/app/api/my-shifts/route.ts");
-    const dashboardColumn = source("src/app/(app)/dashboard/my-gear-column.tsx");
+    const dashboardAgenda = source("src/lib/home-agenda.ts");
+    const dashboardEventCards = source("src/app/(app)/dashboard/event-cards.tsx");
     const notifications = source("src/lib/services/notifications.ts");
     const home = source("ios/Wisconsin/Views/HomeView.swift");
     const profile = source("ios/Wisconsin/Views/ProfileNextUp.swift");
 
     expect((dashboardRoute.match(/a\.shift\.workerType === "ST"/g) ?? []).length).toBeGreaterThanOrEqual(2);
     expect(myShiftsRoute).toContain('a.shift.workerType === "ST"');
-    expect(dashboardColumn).toContain('s.workerType === "ST"');
-    expect(dashboardColumn).toContain("studentCallWindow && !isFullDayDefault");
+    expect(dashboardAgenda).toContain('work.shift.workerType === "ST" && work.shift.callStartsAt');
+    expect(dashboardAgenda).toContain("!isFullDayWindow(work.shift.callStartsAt, work.shift.callEndsAt)");
+    // Staff cards anchor on the event start and say "Starts", never "Call".
+    expect(dashboardEventCards).toContain("Only Student cards name a call time");
     expect(notifications).toContain("const hasStudentCallTime = assignment.workerType === \"ST\"");
     expect(notifications).toContain("dueAt: callStartsAt?.toISOString()");
     // Only the Student call time is ever named; Staff copy has none.

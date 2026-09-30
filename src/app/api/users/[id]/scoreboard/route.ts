@@ -5,6 +5,7 @@ import { normalizeSportCode } from "@/lib/sports";
 import { HttpError, ok, parsePagination } from "@/lib/http";
 import { requirePermission } from "@/lib/rbac";
 import { db } from "@/lib/db";
+import { normalizeOpponentName, scheduleVenueDisplayName } from "@/lib/schedule-event-identity";
 import {
   getScoreboardForUser,
   getScoreboardScope,
@@ -16,6 +17,8 @@ const scoreboardQuerySchema = z.object({
   sportCode: z.string().trim().max(20).optional(),
   result: z.enum(["WIN", "LOSS", "TIE"]).optional(),
   site: z.enum(["HOME", "AWAY", "NEUTRAL"]).optional(),
+  venue: z.string().trim().max(200).optional(),
+  opponent: z.string().trim().max(200).optional(),
 });
 
 export const GET = withAuth<{ id: string }>(async (req, { user, params }) => {
@@ -35,6 +38,8 @@ export const GET = withAuth<{ id: string }>(async (req, { user, params }) => {
     sportCode: url.searchParams.get("sportCode") ?? undefined,
     result: url.searchParams.get("result") ?? undefined,
     site: url.searchParams.get("site") ?? undefined,
+    venue: url.searchParams.get("venue") ?? undefined,
+    opponent: url.searchParams.get("opponent") ?? undefined,
   });
   if (!getScoreboardScope(query.season)) {
     throw new HttpError(400, "Unsupported scoreboard season");
@@ -47,6 +52,8 @@ export const GET = withAuth<{ id: string }>(async (req, { user, params }) => {
       sportCode: query.sportCode ? normalizeSportCode(query.sportCode) : undefined,
       result: query.result as ScoreboardResult | undefined,
       site: query.site,
+      venue: scheduleVenueDisplayName(query.venue) ?? undefined,
+      opponent: normalizeOpponentName(query.opponent) ?? undefined,
     },
     { limit, offset },
   );

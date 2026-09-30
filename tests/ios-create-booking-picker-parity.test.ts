@@ -440,7 +440,8 @@ describe("iOS create booking picker parity", () => {
     expect(picker).toContain('Label("Selected", systemImage: "shippingbox.fill")');
     expect(picker).toContain(".badge(vm.selectedEquipmentCount)");
     expect(picker).toContain(".tint(Color.statusText(.purple))");
-    expect(picker).toContain('(vm.selectedConflictCount == 0 ? "Review" : "Resolve Conflicts")');
+    expect(picker).toContain('(vm.selectedConflictCount == 0 ? reviewTitle : "Resolve Conflicts")');
+    expect(picker).toContain('var reviewTitle = "Review"');
     expect(picker).toContain("vm.selectedLocationMismatchCount > 0");
     expect(sheet).toContain('reviewSectionHeader(title: "Schedule", editStep: 1)');
     expect(sheet).toContain('reviewSectionHeader(title: "Gear", count: vm.selectedEquipmentCount, editStep: 2)');

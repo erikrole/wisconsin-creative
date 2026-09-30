@@ -19,7 +19,7 @@ describe("native Scoreboard wiring", () => {
     expect(appTabs).toContain("if !isCollaborator {");
     expect(browse).toContain("return [.scoreboard]");
     expect(browse).toContain("TeamScoreboardView(wrapsInNavigationStack: false)");
-    expect(teamView).toContain("ScoreboardView(userId: row.person.userId)");
+    expect(teamView).toContain("ScoreboardView(userId: row.person.userId, personName: row.person.name, initialFilters: loadedFilters)");
     expect(teamView).toContain("Picker(\"Venue\", selection: $filters.venue)");
     expect(teamView).toContain("Picker(\"Opponent\", selection: $filters.opponent)");
     expect(teamView).toContain("Picker(\"Site\", selection: $filters.site)");
@@ -53,9 +53,10 @@ describe("native Scoreboard wiring", () => {
     expect(client).toContain("site: String? = nil");
     expect(view).toContain("enum ScoreboardSiteFilter: String");
     expect(view).toContain("@State private var siteFilter: ScoreboardSiteFilter = .all");
-    // A changed site has to re-key the load, or the screen keeps the old games.
-    expect(view).toContain('"\\(userId)|\\(resultFilter.rawValue)|\\(sportCode ?? "all")|\\(siteFilter.rawValue)"');
-    expect(view).toContain("resultFilter != .all || sportCode != nil || siteFilter != .all");
+    expect(view).toContain("private struct QueryKey: Equatable");
+    expect(view).toContain("let context: ScoreboardContextFilters");
+    expect(view).toContain(".task(id: queryKey)");
+    expect(view).toContain("venue: venue, opponent: opponent, site: siteFilter.apiValue");
     expect(view).toContain("site: siteFilter.apiValue");
   });
 
@@ -70,18 +71,19 @@ describe("native Scoreboard wiring", () => {
 
     // The route filters its own breakdowns, so the menu has to remember the
     // unfiltered sport list instead of reading it back out of a filtered read.
-    expect(view).toContain("@State private var sportMenuOptions: [ScoreboardBucket] = []");
+    expect(view).toContain("@State private var sportMenuOptions: [TeamScoreboardFacet] = []");
     expect(view).toContain("sportOptions: sportMenuOptions");
-    expect(view).toContain("if wasUnfiltered {");
+    expect(view).toContain("if let facets = fetched.facets");
+    expect(view).toContain("else if wasUnfiltered {");
   });
 
   it("drops a page that a filter change has already outrun", () => {
     const view = source("ios/Wisconsin/Views/ScoreboardView.swift");
 
-    expect(view).toContain("guard !Task.isCancelled, requestKey == queryKey else { return }");
+    expect(view).toContain("guard !Task.isCancelled, requestKey == queryKey, activeRequestID == requestID else { return }");
     // The cursor is an offset; anything else has to end the list.
     expect(source("ios/Wisconsin/Models/ScoreboardModels.swift")).toContain(
-      "var nextOffset: Int? { nextCursor.flatMap(Int.init) }",
+      "offset > 0",
     );
   });
 
@@ -95,11 +97,11 @@ describe("native Scoreboard wiring", () => {
     expect(view).not.toContain("2026–27 record");
   });
 
-  it("keeps the season's shape client-side rather than inventing server fields", () => {
+  it("decodes full-season form with an older-server fallback", () => {
     const models = source("ios/Wisconsin/Models/ScoreboardModels.swift");
 
-    // Recency, streaks, and month grouping are all derived from the game list
-    // the route already returns -- no new API surface.
+    expect(models).toContain("let recentResults: [ScoreboardEvent]?");
+    expect(models).toContain("let streak: ScoreboardRecordStreak?");
     expect(models).toContain("enum ScoreboardDigest {");
     expect(models).toContain("static func months(");
     expect(models).toContain("static func streak(");
@@ -116,7 +118,7 @@ describe("native Scoreboard wiring", () => {
     // knows its own subtotal.
     expect(view).toContain("@State private var seasonResolvedGames: Int?");
     expect(view).toContain("seasonResolvedGames = fetched.summary.games");
-    expect(view).toContain("Filtered to \\(shown) of the season's \\(seasonResolvedGames) resolved. ");
+    expect(view).toContain("matchingEventsWorked");
     expect(view).toContain("Events worked counts all \\(worked).");
   });
 

@@ -34,6 +34,8 @@ type Props = {
   /** When set, renders a pickup badge using booking.startsAt instead of the due badge. */
   showPickupBadge?: boolean;
   actions?: ReactNode;
+  /** Optional third line under the requester, e.g. who last nudged them. */
+  note?: string;
   onSelectBooking: (id: string) => void;
 };
 
@@ -64,6 +66,7 @@ export function DashboardBookingRow({
   showDueBadge = false,
   showPickupBadge = false,
   actions,
+  note,
   onSelectBooking,
 }: Props) {
   const pickupIsLate = showPickupBadge && new Date(booking.startsAt).getTime() < now.getTime();
@@ -111,6 +114,9 @@ export function DashboardBookingRow({
               {booking.itemCount} item{booking.itemCount !== 1 ? "s" : ""}
             </span>
           </span>
+          {note && (
+            <span className="truncate text-xs leading-snug text-muted-foreground">{note}</span>
+          )}
         </div>
       </button>
 

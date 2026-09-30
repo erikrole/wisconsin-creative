@@ -1,0 +1,52 @@
+[
+  {
+    "width": 1280,
+    "typingRetained": true,
+    "trackingCancelAndFocus": true,
+    "confirmedSwitch": true,
+    "stockActionPreservesNameAndImage": true,
+    "discardCancelAndConfirm": true,
+    "inventoryMutations": 0,
+    "blockedBackgroundEvents": [
+      {
+        "method": "POST",
+        "path": "/api/product-events"
+      },
+      {
+        "method": "POST",
+        "path": "/api/product-events"
+      },
+      {
+        "method": "POST",
+        "path": "/api/badges/events/app-open"
+      }
+    ],
+    "errors": [],
+    "failed": []
+  },
+  {
+    "width": 768,
+    "typingRetained": true,
+    "trackingCancelAndFocus": true,
+    "confirmedSwitch": true,
+    "stockActionPreservesNameAndImage": true,
+    "discardCancelAndConfirm": true,
+    "inventoryMutations": 0,
+    "blockedBackgroundEvents": [
+      {
+        "method": "POST",
+        "path": "/api/product-events"
+      },
+      {
+        "method": "POST",
+        "path": "/api/product-events"
+      },
+      {
+        "method": "POST",
+        "path": "/api/badges/events/app-open"
+      }
+    ],
+    "errors": [],
+    "failed": []
+  }
+]

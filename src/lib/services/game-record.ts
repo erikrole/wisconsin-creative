@@ -45,11 +45,27 @@ const SITE_ORDER: Array<CalendarEventSite | null> = ["HOME", "AWAY", "NEUTRAL", 
  * official staff win-loss-tie record.
  */
 export const OFFICIAL_RECORD_EVENT_EXCLUSION: Prisma.CalendarEventWhereInput = {
-  NOT: [
-    { rawSummary: { contains: "exhibition", mode: "insensitive" } },
-    { rawSummary: { contains: "scrimmage", mode: "insensitive" } },
-    { rawSummary: { contains: "alumni match", mode: "insensitive" } },
-  ],
+  // SQL NOT LIKE does not match NULL. Manual events have no raw summary, so
+  // explicitly fall back to their display title while preserving source truth.
+  // Keep this OR inside AND: participation has its own independent OR.
+  AND: [{ OR: [
+    {
+      rawSummary: { not: null },
+      NOT: [
+        { rawSummary: { contains: "exhibition", mode: "insensitive" } },
+        { rawSummary: { contains: "scrimmage", mode: "insensitive" } },
+        { rawSummary: { contains: "alumni match", mode: "insensitive" } },
+      ],
+    },
+    {
+      rawSummary: null,
+      NOT: [
+        { summary: { contains: "exhibition", mode: "insensitive" } },
+        { summary: { contains: "scrimmage", mode: "insensitive" } },
+        { summary: { contains: "alumni match", mode: "insensitive" } },
+      ],
+    },
+  ] }],
 };
 
 /**

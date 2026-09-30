@@ -346,6 +346,15 @@ struct HomeView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: Brand.Space.lg) {
                 blastStack
+                HomeContextBanner(
+                    dash: dash,
+                    currentUserId: session.currentUser?.id,
+                    openBooking: { summary in
+                        rememberSceneDestination("booking", id: summary.id)
+                        navigationPath.append(summary)
+                    },
+                    openEventWork: { selectedEventWork = $0 }
+                )
                 DashboardHero(
                     name: session.currentUser?.name ?? ""
                 )
@@ -370,6 +379,13 @@ struct HomeView: View {
                         appState.selectedTab = 4
                     }
                 )
+                let week = HomeAgenda.week(for: dash, currentUserId: session.currentUser?.id)
+                if week.contains(where: { !$0.isEmpty }) {
+                    HomeWeekStrip(days: week, openSchedule: {
+                        appState.pendingScheduleMyShifts = true
+                        appState.selectedTab = 4
+                    })
+                }
                 if HomeActionQueue.hasActions(in: dash, currentUserId: session.currentUser?.id) {
                     HomeActionQueue(
                         dash: dash,
@@ -1229,9 +1245,24 @@ private struct EventActionQueueRow: View {
         return queueCallTime(workerType: work.shift.workerType, callStartsAt: work.shift.callStartsAt)
     }
 
-    /// When the event itself starts. The gear a shift needs is stated on its
-    /// own Next Up row and in the event detail sheet; restating it here made a
-    /// four-line row out of what is fundamentally "where to be, and when".
+    /// Event-linked gear is dropped from the standalone Next Up lanes, so this
+    /// row is the only place Home shows it. One line: its state and when.
+    private var gearLine: (text: String, tone: StatusTone) {
+        guard let gear = work.primaryGear else { return ("No gear reserved", .gray) }
+        switch gear.status {
+        case .open: return ("Gear out · \(gear.itemCount) item\(gear.itemCount == 1 ? "" : "s")", .blue)
+        case .pendingPickup, .booked:
+            if gear.startsAt <= Date() { return ("Gear ready for pickup", .orange) }
+            let sameDay = Calendar.current.isDate(gear.startsAt, inSameDayAs: work.event.startsAt)
+            let when = sameDay
+                ? gear.startsAt.formatted(date: .omitted, time: .shortened)
+                : gear.startsAt.formatted(.dateTime.weekday(.abbreviated).hour().minute())
+            return ("Gear pickup \(when)", .purple)
+        default: return ("Gear \(gear.status.rawValue.lowercased())", .gray)
+        }
+    }
+
+    /// When the event itself starts.
     private var timeMeta: String {
         isAllDayEvent ? "All day" : work.event.startsAt.formatted(date: .omitted, time: .shortened)
     }
@@ -1252,6 +1283,7 @@ private struct EventActionQueueRow: View {
                     if let callTimeLine {
                         QueueDetailText(text: callTimeLine, tone: .blue, showsBullet: false)
                     }
+                    QueueDetailText(text: gearLine.text, tone: gearLine.tone, showsBullet: false)
                 }
 
                 Spacer(minLength: 8)
@@ -1268,7 +1300,7 @@ private struct EventActionQueueRow: View {
         .buttonStyle(.plain)
         // A title plus one supporting line is the same height whatever the row
         // is about, so gear and shift rows keep a shared rhythm down the card.
-        .frame(minHeight: callTimeLine != nil ? 64 : 44)
+        .frame(minHeight: callTimeLine != nil ? 80 : 64)
         .padding(.vertical, 8)
         .accessibilityLabel(accessibilityLabel)
     }
@@ -1276,6 +1308,7 @@ private struct EventActionQueueRow: View {
     private var accessibilityLabel: String {
         var parts = [title, dateLine]
         if let callTimeLine { parts.append(callTimeLine) }
+        parts.append(gearLine.text)
         parts.append(timeMeta)
         return parts.joined(separator: ", ")
     }

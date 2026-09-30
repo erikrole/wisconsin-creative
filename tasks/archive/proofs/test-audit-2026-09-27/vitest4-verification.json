@@ -1,0 +1,61 @@
+{
+  "date": "2026-09-27",
+  "status": "accepted-and-verified-locally",
+  "node": "22.23.3",
+  "vitest": "4.1.11",
+  "vite": "7.3.6",
+  "userAcceptedCoverageRecalibration": true,
+  "thresholds": {
+    "statements": 70,
+    "branches": 61.48,
+    "functions": 72.5,
+    "lines": 70
+  },
+  "coverage": {
+    "statements": 71.07,
+    "branches": 61.48,
+    "functions": 72.5,
+    "lines": 74.08
+  },
+  "fullShuffledCoverage": {
+    "exitCode": 0,
+    "seed": 260926,
+    "workers": 4,
+    "files": 701,
+    "passed": 4979,
+    "failed": 0,
+    "skipped": 1
+  },
+  "typecheck": {
+    "passed": true,
+    "incremental": false
+  },
+  "lint": {
+    "passed": true,
+    "scope": "vitest.config.ts"
+  },
+  "docs": {
+    "passed": true
+  },
+  "diffCheck": {
+    "passed": true
+  },
+  "retainedPreviousGates": {
+    "buildApp": "passed on the same dependency versions; no app/build changes afterward",
+    "dependencyAudit": "zero vulnerabilities on the same dependency versions"
+  },
+  "scope": {
+    "productionImplementationLOC": 0,
+    "testImplementationLOC": 0,
+    "coverageConfigLOC": {
+      "added": 4,
+      "removed": 2
+    },
+    "testFileScopeChanged": false,
+    "coverageSourceScopeChanged": false,
+    "isolationChanged": false,
+    "newSkips": false
+  },
+  "committed": false,
+  "deployed": false
+}

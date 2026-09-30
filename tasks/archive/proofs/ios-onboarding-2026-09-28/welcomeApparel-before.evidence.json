@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "1c62814365f89eb377689495ba8f1eb4f85a9d9e",
+  "sourcePatchSha256": "deee11816bcd4d4b4f781369ed2c8cbd49176efbb706c96c1175301cfbb3a9a9",
+  "settings": {
+    "device": "iPhone 18 Pro Max / iOS 27.0",
+    "viewport": [
+      440,
+      956
+    ],
+    "fixture": "welcomeApparel / WelcomeHarnessFixture v1",
+    "role": "STUDENT",
+    "route": "welcomeApparel",
+    "appearance": "light",
+    "textSize": "default",
+    "locale": "en_US",
+    "timezone": "America/Chicago (host default; no time-relative content)",
+    "clock": "status bar 09:41; 2026-09-28",
+    "scroll": [
+      0,
+      0
+    ]
+  },
+  "imageSha256": "3ec392983b842287af07a1e01888b5a852fb57f84b61faa53421b70e789f267d",
+  "dimensions": [
+    1320,
+    2868
+  ]
+}

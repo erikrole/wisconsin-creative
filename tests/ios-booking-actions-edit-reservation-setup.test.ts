@@ -65,8 +65,15 @@ describe("iOS focused booking edit and transfer", () => {
     expect(api).toContain('forHTTPHeaderField: "X-Booking-Updated-At"');
     expect(api).not.toContain("If-Unmodified-Since");
     expect(api).toContain('request(path: "/api/bookings/\\(id)/transfer-owner", method: "POST")');
-    expect(api).toContain("func bookingAvailability(for booking: Booking, endsAt: Date)");
-    expect(api).toContain("serializedAssetIds: booking.serializedItems.map(\\.assetId)");
+    expect(api).toContain("func bookingAvailability(\n        for booking: Booking,\n        endsAt: Date,");
+    expect(api).toContain("serializedAssetIds: serializedAssetIds ?? booking.serializedItems.map(\\.assetId)");
+    // Item edits check the return time against the edited gear, not the saved plan.
+    expect(detail).toContain("serializedAssetIds: itemsChanged ? itemsVM.selectedAssetIds.sorted() : nil");
+    // Picked-up gear stays on the plan; the server rejects dropping it.
+    const vm = readFileSync("ios/Wisconsin/Views/CreateBooking/CreateBookingViewModel.swift", "utf8");
+    expect(vm).toContain('$0.allocationStatus == "picked_up"');
+    expect(vm).toContain("guard !isLocked(asset) else { return }");
+    expect(vm).toContain("availableQuantity: sku.availableQuantity + held");
     expect(api).toContain("booking.bulkItems.map");
     expect(api).toContain("excludeBookingId: booking.id");
     expect(api).toContain("kind: booking.kind.rawValue");

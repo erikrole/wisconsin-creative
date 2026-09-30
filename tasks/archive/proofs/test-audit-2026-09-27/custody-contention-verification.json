@@ -1,0 +1,116 @@
+{
+  "date": "2026-09-27",
+  "node": "22.23.3",
+  "vitest": "4.1.11",
+  "postgres": {
+    "passed": 8,
+    "failed": 0,
+    "elapsedSecondsIncludingSetupAndCleanup": 3.6,
+    "vitestDurationMs": 1340,
+    "testExecutionMs": 958,
+    "realQueriesAndTransactions": true,
+    "forcedDatabaseContention": true,
+    "externalBoundariesMocked": [
+      "device session authentication",
+      "post-response notification delivery"
+    ],
+    "clusterStoppedAndRemoved": true,
+    "version": "17.11"
+  },
+  "postgresCommand": "npm run test:postgres:custody",
+  "httpRegressionBeforeFix": {
+    "passed": 5,
+    "failed": 3,
+    "genericErrors": [
+      {
+        "case": "changed replay details",
+        "status": 409
+      },
+      {
+        "case": "expired saved handoff",
+        "status": 409
+      },
+      {
+        "case": "unreadable saved handoff",
+        "status": 400
+      }
+    ],
+    "expected": "HTTP 200 with success false and operationRejected true"
+  },
+  "mutationControls": [
+    {
+      "mutation": "read-committed",
+      "exitCode": 1,
+      "failures": [
+        {
+          "case": "allows only one competing transfer after both have reached the custody write",
+          "message": "AssertionError: expected [ { status: 'fulfilled', \u2026(1) }, \u2026(1) ] to have a length of 1 but got 2"
+        }
+      ],
+      "productionSourceEdited": false
+    },
+    {
+      "mutation": "no-retry",
+      "exitCode": 1,
+      "failures": [
+        {
+          "case": "allows only one competing transfer after both have reached the custody write",
+          "message": "AssertionError: expected PrismaClientKnownRequestError{ \u2026(7) } to match object { status: 409 }"
+        }
+      ],
+      "productionSourceEdited": false
+    }
+  ],
+  "defaultSuite": {
+    "exitCode": 0,
+    "files": 703,
+    "passed": 5019,
+    "skipped": 1,
+    "failed": 0,
+    "shuffleSeed": 260927,
+    "workers": 4,
+    "coveragePercent": {
+      "statements": 73.18,
+      "branches": 63.28,
+      "functions": 75.74,
+      "lines": 76.0
+    }
+  },
+  "checks": {
+    "nonIncrementalTypescript": "passed",
+    "focusedLint": "passed",
+    "buildApp": "passed; pre-existing Sidebar unused-state warning",
+    "ciYaml": "parsed",
+    "docs": "passed after codemap refresh",
+    "localLinks": "passed",
+    "diffCheck": "passed"
+  },
+  "ci": {
+    "wiredIntoExistingPostgresJob": true,
+    "hostedRunVerified": false,
+    "reference": "https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2404-Readme.md#postgresql"
+  },
+  "productionRouteLoc": {
+    "added": 11,
+    "removed": 4
+  },
+  "testLines": 241,
+  "sourceSha256": {
+    "src/lib/services/kiosk-item-transfer.ts": "6397a507043c9bf7d31a2fa22a2229d53d5b971886c156e29cae12965738717e",
+    "src/app/api/kiosk/checkout/[id]/transfer/route.ts": "3079977261471ff644e3e75d37f7da4da4201623e9201c8ff425106c95c24e45",
+    "tests/postgres/kiosk-item-transfer.postgres.ts": "0744962d8b8d57d36e63755d240bbb604744e1bdae4e606ad84191d9fd736122",
+    "scripts/test-custody-postgres.mjs": "489f32f45907ead88fffc14a722b2c92c3ef8d1504ebc00a8a11ac84865e53c0",
+    "vitest.postgres.config.ts": "c5b4040dda66992d2630550fe2c1e3a96825f741f5e0792fb902b61f81691c05",
+    ".github/workflows/ci.yml": "90dd35b6258b000a895933741adc73f348f06423b1c4009f2213e5f2530fd7e3",
+    "package.json": "707708a47957bbb00c5fcdc33db7ea1fc2ef1ca630ed9ff77a6f68c2f479314f"
+  },
+  "unverified": [
+    "Hosted CI",
+    "Real device authentication",
+    "Actual notification delivery",
+    "Neon transport",
+    "Migration-only constraints, triggers, and sequences",
+    "Managed-iPad and deployed acceptance"
+  ],
+  "budgetPolicy": "Spending cap suspended by user; stop if weekly reset timestamp 1791047471 changes"
+}

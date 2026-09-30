@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { handleAuthRedirect, parseErrorMessage } from "@/lib/errors";
+import { formatRelativeTime } from "@/lib/format";
+import { NUDGE_REPEAT_WINDOW } from "@/lib/nudge-window";
 import type { OverdueItem } from "../dashboard-types";
 import { DashboardBookingRow } from "./booking-row";
 import { DashboardSectionHeader } from "./section-header";
@@ -68,25 +70,33 @@ export function OverdueBanner({ overdueCount, overdueItems, now, onSelectBooking
 
       <CardContent className="p-0">
         {overdueItems.map((item) => {
-          const nudgeAction = canAction ? (
+          // Someone nudged within the server's one-per-hour window: show it as
+          // already sent so a second staff member doesn't think it's pending.
+          const recentlyNudged = item.lastNudge != null
+            && now.getTime() - new Date(item.lastNudge.at).getTime() < NUDGE_REPEAT_WINDOW;
+          const isSent = nudgedIds.has(item.bookingId) || recentlyNudged;
+          const nudgeNote = item.lastNudge
+            ? `Nudged ${formatRelativeTime(item.lastNudge.at, now)}${item.lastNudge.byName ? ` by ${item.lastNudge.byName}` : ""}`
+            : undefined;
+          const nudgeAction = canAction && !item.isShared ? (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
                   className="size-10 shrink-0 text-muted-foreground hover:bg-[var(--red-bg)] hover:text-[var(--red-text)]"
-                  disabled={nudgedIds.has(item.bookingId) || nudgingId === item.bookingId}
+                  disabled={isSent || nudgingId === item.bookingId}
                   onClick={() => handleNudge(item.bookingId)}
                   aria-label={
                     nudgingId === item.bookingId
                       ? `Sending nudge to ${item.requesterName}`
-                      : nudgedIds.has(item.bookingId)
+                      : isSent
                         ? `Nudge sent to ${item.requesterName}`
                         : `Nudge ${item.requesterName}`
                   }
                 >
                   <AnimatePresence initial={false} mode="popLayout">
                     <motion.span
-                      key={nudgingId === item.bookingId ? "loading" : nudgedIds.has(item.bookingId) ? "sent" : "idle"}
+                      key={nudgingId === item.bookingId ? "loading" : isSent ? "sent" : "idle"}
                       initial={{ opacity: 0, scale: 0.25, filter: "blur(4px)" }}
                       animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
                       exit={{ opacity: 0, scale: 0.25, filter: "blur(4px)" }}
@@ -95,7 +105,7 @@ export function OverdueBanner({ overdueCount, overdueItems, now, onSelectBooking
                     >
                       {nudgingId === item.bookingId ? (
                         <Spinner />
-                      ) : nudgedIds.has(item.bookingId) ? (
+                      ) : isSent ? (
                         <CheckIcon className="size-4 text-[var(--green-text)]" />
                       ) : (
                         <BellRingIcon className="size-4" />
@@ -105,7 +115,7 @@ export function OverdueBanner({ overdueCount, overdueItems, now, onSelectBooking
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                {nudgedIds.has(item.bookingId) ? "Nudge sent" : `Nudge ${item.requesterName}`}
+                {isSent ? (nudgeNote ?? "Nudge sent") : `Nudge ${item.requesterName}`}
               </TooltipContent>
             </Tooltip>
           ) : undefined;
@@ -128,6 +138,7 @@ export function OverdueBanner({ overdueCount, overdueItems, now, onSelectBooking
               accent="overdue"
               showDueBadge
               actions={nudgeAction}
+              note={nudgedIds.has(item.bookingId) ? "Nudge sent just now" : nudgeNote}
               onSelectBooking={onSelectBooking}
             />
           );

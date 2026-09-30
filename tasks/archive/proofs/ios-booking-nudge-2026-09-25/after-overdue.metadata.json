@@ -1,0 +1,23 @@
+{
+  "sourceRevision": "80c81ef6ead9701d62a98ecd5dce51e1b855689d",
+  "sourcePatchSha256": "1278a5696c9ec3681d689418020ead5868f3abe6340c99413f4a75cb659b832d",
+  "settings": {
+    "device": "iPhone 18 Pro Max simulator (7BD40061-5741-4B92-B19C-3950F3C99DC3)",
+    "viewport": [
+      440,
+      956
+    ],
+    "fixture": "GT_PERFORMANCE_SCENARIO=booking-overdue (BookingFixtureAPI, 2h overdue, allowedActions extend/edit/nudge)",
+    "role": "staff",
+    "route": "BookingDetailView",
+    "appearance": "dark",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "simulator default",
+    "clock": "relative to launch; booking due 2h before launch",
+    "scroll": [
+      0,
+      0
+    ]
+  }
+}

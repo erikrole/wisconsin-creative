@@ -1,0 +1,100 @@
+import { writeFileSync, readdirSync, readFileSync } from "node:fs";
+import path from "node:path";
+import { createElement as h } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { it } from "vitest";
+import { MyGearColumn } from "@/app/(app)/dashboard/my-gear-column";
+import { TooltipProvider } from "@/components/ui/tooltip";
+
+const OUT = process.env.CAPTURE_OUT!;
+const ROOT = process.env.CAPTURE_ROOT!;
+const now = new Date(2026, 8, 25, 7, 0);
+const at = (days: number, hour: number, minute = 0) => new Date(2026, 8, 25 + days, hour, minute).toISOString();
+
+const thumbs = [
+  { id: "a1", name: "Sony FX3", imageUrl: null },
+  { id: "a2", name: "Sennheiser MKE 600", imageUrl: null },
+];
+function booking(id: string, title: string, status: string, kind: string, startsAt: string, endsAt: string, extra: Record<string, unknown> = {}) {
+  return {
+    id, kind, title, refNumber: null, eventId: null, eventIds: [], linkedEventId: null, sportCode: "VB",
+    requesterName: "Bucky Badger", requesterUserId: "u1", requesterInitials: "BB", requesterAvatarUrl: null,
+    locationName: "Media Ops Cage", startsAt, endsAt, itemCount: 5, status, isOverdue: false, items: thumbs, ...extra,
+  };
+}
+function event(id: string, opponent: string, isHome: boolean, startsAt: string, endsAt: string) {
+  return {
+    id, summary: `Volleyball ${isHome ? "vs" : "at"} ${opponent}`, startsAt, endsAt, allDay: false, sportCode: "VB",
+    opponent, isHome, site: isHome ? "HOME" : "AWAY", locationId: "loc-fh", locationName: isHome ? "UW Field House" : "Maturi Pavilion",
+  };
+}
+const linked = booking("r-ev2", "Volleyball at Minnesota kit", "BOOKED", "RESERVATION", at(1, 6), at(1, 22), { linkedEventId: "ev2", eventIds: ["ev2"] });
+const standalone = booking("r-solo", "Portrait lighting kit", "BOOKED", "RESERVATION", at(2, 10), at(2, 16));
+const ev1 = event("ev1", "Nebraska", true, at(0, 19), at(0, 21, 30));
+const ev2 = event("ev2", "Minnesota", false, at(1, 18), at(1, 20, 30));
+const ev3 = event("ev3", "Purdue", true, at(3, 19), at(3, 21, 30));
+const shift = (id: string, ev: ReturnType<typeof event>, callHour: number | null, days: number) => ({
+  id, area: "VIDEO", workerType: callHour === null ? "FT" : "ST", workerLabel: callHour === null ? "Staff" : "Student",
+  startsAt: at(days, 17), endsAt: ev.endsAt,
+  callStartsAt: callHour === null ? null : at(days, callHour, 30), callEndsAt: callHour === null ? null : ev.endsAt,
+  callNote: callHour === null ? null : "Meet at the loading dock; bring your own SD cards.",
+});
+const works = [
+  { ev: ev1, s: shift("s1", ev1, 17, 0), gear: [] as ReturnType<typeof booking>[] },
+  { ev: ev2, s: shift("s2", ev2, null, 1), gear: [linked] },
+  { ev: ev3, s: shift("s3", ev3, 17, 3), gear: [] },
+];
+const myEventWork = works.map(({ ev, s, gear }) => ({
+  id: ev.id, event: ev, shift: s, gearStatus: gear.length ? "reserved" : "none", gearBookings: gear, needsGear: gear.length === 0,
+}));
+const myShifts = works.map(({ ev, s, gear }) => ({
+  ...s, event: ev, gearStatus: gear.length ? "reserved" : "none", gearItems: gear.length ? thumbs : [], gearItemCount: gear.length ? 5 : 0,
+}));
+const checkout = booking("co1", "Hockey road audio kit", "OPEN", "CHECKOUT", at(-1, 9), at(2, 17));
+export const data = {
+  role: "STAFF",
+  stats: { checkedOut: 1, overdue: 0, reserved: 2, dueToday: 0 },
+  myCheckouts: { total: 1, overdue: 0, items: [checkout] },
+  teamCheckouts: { total: 0, overdue: 0, items: [] },
+  teamReservations: { total: 0, items: [] },
+  pendingPickups: { total: 0, items: [] },
+  myPendingPickups: [],
+  staleReservations: { total: 0, items: [] },
+  upcomingEvents: [],
+  myReservations: [linked, standalone],
+  overdueCount: 0,
+  overdueItems: [],
+  drafts: [],
+  myShifts,
+  myEventWork,
+  flaggedItems: [],
+  lostBulkUnits: [],
+};
+
+function page(body: string, width: number) {
+  const cssDir = path.join(ROOT, ".next/build/static/css");
+  const css = readdirSync(cssDir).map((f) => readFileSync(path.join(cssDir, f), "utf8")).join("\n");
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><style>${css}
+  /* Static render: settle entrance animations at their end state. */
+  [style*="opacity:0"]{opacity:1!important;transform:none!important}
+  body{margin:0;padding:24px;background:var(--background)} .stage{width:${width}px}</style></head>
+  <body><main class="stage">${body}</main></body></html>`;
+}
+
+const noop = () => {};
+it("renders", async () => {
+  const column = renderToStaticMarkup(h(TooltipProvider as never, null, h(MyGearColumn as never, {
+    data, filtered: null, activeSport: null, hasActiveFilter: false, now, actingId: null,
+    onSelectBooking: noop, onDeleteDraft: noop, onCreateBooking: noop,
+  })));
+  writeFileSync(path.join(OUT, "column.html"), page(column, 560));
+
+  try {
+    const mod = await import("@/app/(app)/dashboard/personal-agenda");
+    const agendaInput = { myCheckouts: data.myCheckouts.items, myReservations: data.myReservations, myPendingPickups: [], myEventWork };
+    const agenda = renderToStaticMarkup(h(TooltipProvider as never, null, h(mod.PersonalAgenda as never, { input: agendaInput, now, onSelectBooking: noop, onCreateBooking: noop })));
+    writeFileSync(path.join(OUT, "agenda.html"), page(`${agenda}<div class="grid grid-cols-2 gap-6">${column}<div></div></div>`, 1120));
+  } catch (error) {
+    writeFileSync(path.join(OUT, "agenda.skipped"), String(error));
+  }
+});

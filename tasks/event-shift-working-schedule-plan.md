@@ -267,7 +267,7 @@ Make the main web Schedule the event triage, crew-setup, and day-to-day crew-man
 - Verified: 36 focused source-contract tests, all 497 test files / 3,252 tests with a process-local placeholder `DIRECT_URL`, `npx tsc --noEmit --pretty false`, `npm run lint` (one pre-existing warning in `scripts/backfill-signature-artifacts.ts`), `npm run build:app`, codemap/docs verification, and `git diff --check` pass.
 - Deferred: Authenticated visual/browser acceptance of Schedule row setup and Event detail assignment/manage.
 - Blocked: Local development now starts cleanly with the documented `SESSION_COOKIE_NAME`, but both connected browser surfaces reach the sign-in page without an authenticated local session. No schedule data was mutated.
-- Proof artifacts: `tests/event-crew-setup-source.test.ts`, `tests/schedule-ui-polish-source.test.ts`, `tests/crew-row-standardization-source.test.ts`, `tests/schedule-source-truth-smoke-contract.test.ts`, `tests/schedule-working-copy-route-source.test.ts`, and `tests/schedule-working-copy-mutation-guard.test.ts`.
+- Proof artifacts: `tests/event-crew-setup-source.test.ts`, `tests/schedule-ui-polish-source.test.ts`, `tests/crew-row-standardization-source.test.ts`, `tests/schedule-source-truth-smoke-contract.test.ts`, and `tests/schedule-authoring-source.test.ts` (the working-copy route and mutation-guard suites were consolidated here on 2026-09-27 with every assertion retained).
 - Next slice or stop: Sign in to the prepared local browser tab, then run the desktop and responsive Schedule/Event detail smoke before shipping.
 
 ## Review: Slice 23 (2026-08-18)

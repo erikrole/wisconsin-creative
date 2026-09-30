@@ -21,9 +21,9 @@ describe("iOS Home shifts deep link", () => {
   it("sets the hint from every shifts affordance on Home", () => {
     const home = source(HOME);
 
-    // Both the Shifts stat tile and the "N more shifts in Schedule" overflow
-    // route through openSchedule, and both counts are personal.
-    expect(home.match(/appState\.pendingScheduleMyShifts = true/g)).toHaveLength(2);
+    // The Shifts stat tile, the "N more shifts in Schedule" overflow, and the
+    // This Week strip all route through openSchedule; every one is personal.
+    expect(home.match(/appState\.pendingScheduleMyShifts = true/g)).toHaveLength(3);
     expect(home).not.toContain("openSchedule: { appState.selectedTab = 4 }");
   });
 

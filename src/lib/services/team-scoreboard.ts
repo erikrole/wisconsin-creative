@@ -1,12 +1,12 @@
 import type { CalendarEventResult, CalendarEventSite, Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
-import { scheduleVenueDisplayName } from "@/lib/schedule-event-identity";
+import { normalizeOpponentName, scheduleVenueDisplayName } from "@/lib/schedule-event-identity";
 import { sportLabel } from "@/lib/sports";
 import { ACTIVE_ASSIGNMENT_STATUSES } from "@/lib/shift-constants";
 import { OFFICIAL_RECORD_EVENT_EXCLUSION } from "@/lib/services/game-record";
 import { participatedByAnyoneWhere } from "@/lib/services/event-worker";
 import { SCOREBOARD_SCOPE } from "@/lib/services/scoreboard";
-import { SITE_LABELS, trimmedOrNull, winRate as rate } from "@/lib/scoreboard-display";
+import { SITE_LABELS, winRate as rate } from "@/lib/scoreboard-display";
 
 const TEAM_SCOREBOARD_MINIMUM_RATE_GAMES = 3;
 
@@ -215,7 +215,7 @@ function labelForSport(key: string | null): string {
 function dimensionKey(event: EventDimensions, dimension: TeamScoreboardDimension): string | null {
   if (dimension === "sport") return event.sportCode;
   if (dimension === "venue") return scheduleVenueDisplayName(event.rawLocationText);
-  if (dimension === "opponent") return trimmedOrNull(event.opponent);
+  if (dimension === "opponent") return normalizeOpponentName(event.opponent);
   return event.site;
 }
 

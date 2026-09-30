@@ -53,13 +53,77 @@ export function parseEventResult(rawSummary: string | null | undefined): "WIN" |
   return "TIE";
 }
 
+/**
+ * Game-day promotions and themes: they describe how a game is presented, not
+ * who it is against. "Homecoming", "White Out", "Senior Night", "Pink Out
+ * Game". Competition qualifiers ("Invitational", "Big 12", "Shamrock Series")
+ * are deliberately not promotions — they change what the event is.
+ */
+const PROMOTION_QUALIFIER_PATTERN = new RegExp(
+  "^(?:" +
+    [
+      "homecoming",
+      "(?:white|black|pink|red|gold|blue|gray|grey|stripe)[\\s-]?out",
+      "stripe the (?:stadium|kohl|field ?house|center)",
+      "senior (?:day|night|recognition)",
+      "(?:family|parents|alumni|homecoming) weekend",
+      "hall of fame",
+      "hockey fights cancer",
+      "(?:[\\p{L}'’&]+ ){0,3}(?:appreciation|awareness)(?: (?:day|night|game))?",
+      "(?:[\\p{L}'’&]+ ){0,3}(?:day|night)",
+    ].join("|") +
+    ")(?: game)?$",
+  "iu",
+);
+
+export function isPromotionQualifier(value: string | null | undefined): boolean {
+  const text = value?.replace(/\s+/g, " ").trim();
+  return !!text && PROMOTION_QUALIFIER_PATTERN.test(text);
+}
+
+/** Dash separators that start a qualifier; a bare hyphen inside a name ("Minnesota-Duluth") does not. */
+const QUALIFIER_DASH_PATTERN = /\s*[-–—]\s+|\s+[–—]\s*/;
+
+/**
+ * Split an event title or opponent into its primary text and a trailing
+ * qualifier. Dash qualifiers always split ("Iowa - Invitational"); a trailing
+ * parenthetical, ` | `, or `: ` qualifier splits only when it is a game-day
+ * promotion, so "Football: Homecoming Parade" and "Saint Mary's (CA)" stay whole.
+ */
+export function splitEventQualifier(raw: string): { primary: string; qualifier: string | null } {
+  let text = raw.replace(/\s+/g, " ").trim();
+  const trailing: string[] = [];
+
+  for (;;) {
+    const paren = /^(.*\S)\s*\(([^()]+)\)$/.exec(text);
+    if (paren && isPromotionQualifier(paren[2])) {
+      trailing.unshift(paren[2]!.trim());
+      text = paren[1]!.trim();
+      continue;
+    }
+    const soft = /^(.*\S)(?:\s+\|\s*|:\s+)([^|:]+)$/.exec(text);
+    if (soft && isPromotionQualifier(soft[2])) {
+      trailing.unshift(soft[2]!.trim());
+      text = soft[1]!.trim();
+      continue;
+    }
+    break;
+  }
+
+  const [primary = text, ...dashParts] = text.split(QUALIFIER_DASH_PATTERN);
+  const qualifier = [...dashParts, ...trailing].map((part) => part.trim()).filter(Boolean).join(" - ");
+  return { primary: primary.trim() || text, qualifier: qualifier || null };
+}
+
 export function normalizeOpponentName(raw: string | null | undefined): string | null {
   if (!raw) return null;
 
-  const [primary = "", ...qualifierParts] = raw
-    .replace(/\s+/g, " ")
-    .trim()
-    .split(/\s*[-–—]\s+/);
+  const split = splitEventQualifier(raw);
+  const primary = split.primary;
+  // Promotions are presentation, not identity: "Iowa - Homecoming" is Iowa.
+  const qualifierParts = (split.qualifier ?? "")
+    .split(" - ")
+    .filter((part) => part && !isPromotionQualifier(part));
 
   let cleaned = primary
     .replace(/^(?:#\d+|No\.?\s*\d+|RV)\s+/i, "")

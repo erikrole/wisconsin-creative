@@ -1,0 +1,50 @@
+[
+  {
+    "variant": "before",
+    "width": 1280,
+    "baselineSilentDiscard": true,
+    "errors": []
+  },
+  {
+    "variant": "before",
+    "width": 768,
+    "baselineSilentDiscard": true,
+    "errors": []
+  },
+  {
+    "variant": "before",
+    "width": 390,
+    "baselineSilentDiscard": true,
+    "errors": []
+  },
+  {
+    "variant": "after",
+    "width": 1280,
+    "cancelPreservesDraft": true,
+    "confirmedSwitchClearsDraft": true,
+    "bulkSwitchClearsDraft": true,
+    "keyboardChoice": true,
+    "noHorizontalOverflow": true,
+    "errors": []
+  },
+  {
+    "variant": "after",
+    "width": 768,
+    "cancelPreservesDraft": true,
+    "confirmedSwitchClearsDraft": true,
+    "bulkSwitchClearsDraft": true,
+    "keyboardChoice": true,
+    "noHorizontalOverflow": true,
+    "errors": []
+  },
+  {
+    "variant": "after",
+    "width": 390,
+    "cancelPreservesDraft": true,
+    "confirmedSwitchClearsDraft": true,
+    "bulkSwitchClearsDraft": true,
+    "keyboardChoice": true,
+    "noHorizontalOverflow": true,
+    "errors": []
+  }
+]

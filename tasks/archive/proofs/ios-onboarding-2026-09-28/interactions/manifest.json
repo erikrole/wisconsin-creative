@@ -1,0 +1,65 @@
+[
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "7BD40061-5741-4B92-B19C-3950F3C99DC3",
+        "deviceName" : "iPhone 18 Pro Max",
+        "exportedFileName" : "8E095359-5E93-4575-95EA-EA441A626B30.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "optional-photo_0_C23BCD53-C688-4C8B-B0B1-FE3D8B1F3D36.png",
+        "timestamp" : 1790630358.914
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "7BD40061-5741-4B92-B19C-3950F3C99DC3",
+        "deviceName" : "iPhone 18 Pro Max",
+        "exportedFileName" : "77895013-B002-4388-A140-1A22E9EACCB5.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "optional-sizes_0_70EC3342-C1A0-4EE3-B249-F0F2232D02D0.png",
+        "timestamp" : 1790630357.164
+      }
+    ],
+    "testIdentifier" : "OnboardingUITests/testOptionalSizesCanBeSkippedAndRevisited()",
+    "testIdentifierURL" : "test://com.apple.xcode/Wisconsin/WisconsinUITests/OnboardingUITests/testOptionalSizesCanBeSkippedAndRevisited"
+  },
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "7BD40061-5741-4B92-B19C-3950F3C99DC3",
+        "deviceName" : "iPhone 18 Pro Max",
+        "exportedFileName" : "A92B8877-53CB-43D0-A280-B88E1FC72D47.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "registration-retry_0_54401E67-79FE-4BAD-A3D9-93FA609FD4B4.png",
+        "timestamp" : 1790630374.018
+      }
+    ],
+    "testIdentifier" : "OnboardingUITests/testRegistrationUsesOnePasswordAndPreservesInputOnFailure()",
+    "testIdentifierURL" : "test://com.apple.xcode/Wisconsin/WisconsinUITests/OnboardingUITests/testRegistrationUsesOnePasswordAndPreservesInputOnFailure"
+  },
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "7BD40061-5741-4B92-B19C-3950F3C99DC3",
+        "deviceName" : "iPhone 18 Pro Max",
+        "exportedFileName" : "618CEAB4-0012-452E-987A-BBBA013017BE.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "student-retry_0_0EADCF7F-B45C-4C15-99AE-5DB1D34FA262.png",
+        "timestamp" : 1790630382.551
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "7BD40061-5741-4B92-B19C-3950F3C99DC3",
+        "deviceName" : "iPhone 18 Pro Max",
+        "exportedFileName" : "258D1DD5-619E-4CBF-BE90-F4DAD053FEA9.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "student-start_0_ACACB8EE-860C-4FA3-9FDA-F38D05351800.png",
+        "timestamp" : 1790630380.161
+      }
+    ],
+    "testIdentifier" : "OnboardingUITests/testStudentPhoneFailureKeepsEnteredNumber()",
+    "testIdentifierURL" : "test://com.apple.xcode/Wisconsin/WisconsinUITests/OnboardingUITests/testStudentPhoneFailureKeepsEnteredNumber"
+  }
+]

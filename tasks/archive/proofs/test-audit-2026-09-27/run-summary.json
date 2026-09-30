@@ -1,0 +1,156 @@
+{
+  "inventoryGenerated": "2026-09-26T16:54:38.564Z",
+  "head": "1c62814365f89eb377689495ba8f1eb4f85a9d9e",
+  "dirtyWorkingTree": true,
+  "environment": {
+    "node": "24.21.0",
+    "ciNode": "22.x",
+    "os": "macOS",
+    "architecture": "arm64",
+    "logicalCpus": 18
+  },
+  "byLane": {
+    "python-tooling": {
+      "files": 2,
+      "lines": 214,
+      "cases": 18
+    },
+    "native-xctest": {
+      "files": 20,
+      "lines": 6681,
+      "cases": 312
+    },
+    "behavior": {
+      "files": 369,
+      "lines": 75129,
+      "cases": 2850
+    },
+    "web-tooling-source": {
+      "files": 137,
+      "lines": 8551,
+      "cases": 567
+    },
+    "native-source": {
+      "files": 132,
+      "lines": 12928,
+      "cases": 714
+    },
+    "mixed": {
+      "files": 64,
+      "lines": 9027,
+      "cases": 518
+    },
+    "browser": {
+      "files": 3,
+      "lines": 700,
+      "cases": 14
+    }
+  },
+  "baseline": {
+    "tests": 4970,
+    "passed": 4968,
+    "failed": 1,
+    "skipped": 1,
+    "failures": [
+      {
+        "file": "tests/schedule-working-copy-backfill-route.test.ts",
+        "name": "past-event Schedule backfill route keeps a future-event edit on the existing release timer"
+      }
+    ]
+  },
+  "shuffle": {
+    "seed": 260926,
+    "maxWorkers": 4,
+    "tests": 4970,
+    "passed": 4962,
+    "failed": 7,
+    "skipped": 1,
+    "failures": [
+      {
+        "file": "tests/collaborator-negative-routes.test.ts",
+        "name": "collaborator default-deny route matrix lets a student open another user's booking detail without granting actions"
+      },
+      {
+        "file": "tests/passkey-auth.test.ts",
+        "name": "passkey authentication names an unnamed credential after the client that enrolled it"
+      },
+      {
+        "file": "tests/pending-claim-review.test.ts",
+        "name": "pending claim review steps approves a trade claim left unreviewed at the deadline"
+      },
+      {
+        "file": "tests/pending-claim-review.test.ts",
+        "name": "pending claim review steps approves its own claim and pins the approval to it"
+      },
+      {
+        "file": "tests/pending-claim-review.test.ts",
+        "name": "pending claim review steps keeps the status-only check for runs enqueued before claimedAt was passed"
+      },
+      {
+        "file": "tests/schedule-publication.test.ts",
+        "name": "publish drift uses the recorded base shift set treats a removal of a previously adopted shift as a removal, not drift"
+      },
+      {
+        "file": "tests/schedule-working-copy-backfill-route.test.ts",
+        "name": "past-event Schedule backfill route keeps a future-event edit on the existing release timer"
+      }
+    ]
+  },
+  "coverageScope": "src/lib/services/**, src/lib/rbac.ts, src/lib/permissions.ts, src/lib/api.ts",
+  "coverage": {
+    "lines": {
+      "total": 30949,
+      "covered": 23404,
+      "skipped": 0,
+      "pct": 75.62
+    },
+    "statements": {
+      "total": 30949,
+      "covered": 23404,
+      "skipped": 0,
+      "pct": 75.62
+    },
+    "functions": {
+      "total": 906,
+      "covered": 746,
+      "skipped": 0,
+      "pct": 82.33
+    },
+    "branches": {
+      "total": 6501,
+      "covered": 5024,
+      "skipped": 0,
+      "pct": 77.28
+    },
+    "branchesTrue": {
+      "total": 0,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 100
+    }
+  },
+  "sourceConsolidation": {
+    "tests": 1296,
+    "filesBefore": 269,
+    "filesAfter": 1,
+    "workers": 2,
+    "separateSeconds": 13.36,
+    "aggregateSeconds": 1.84,
+    "repetitions": 1,
+    "productionChange": false
+  },
+  "validation": {
+    "typescript": "passed",
+    "testLint": "0 errors; 1 warning",
+    "pythonReviewTools": "11 passed",
+    "skillSuite": "blocked locally by missing PyYAML; dedicated CI installs it",
+    "native": "source review only",
+    "browser": "source review only",
+    "futureClockFullSuite": "interrupted; no complete result",
+    "passkeyBoundary": {
+      "original": "passed",
+      "boundaryAssertion": "failed: deleteMany called 0 times",
+      "correctedFixture": "passed"
+    }
+  }
+}

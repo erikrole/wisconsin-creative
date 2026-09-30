@@ -87,6 +87,9 @@ This is a working checklist, not a redesign brief. Use it before future page-spe
 
 ### `/items`
 
+- **Creation follow-up (2026-09-29, local)**: examples on tracking choices, responsive stacked choices, draft-switch recovery, and announced progress. Authenticated typing/recovery and responsive fixture proof: `tasks/archive/proofs/item-creation-2026-09-29/review.html`.
+- **Creation Sol review (2026-09-29, local)**: partial-batch recovery retains unfinished identity and shipment details, copy resets and partial exits require confirmation, Quantity action switches preserve the staged image, and creation notices use the full content column. Matched local fixtures and authenticated desktop/tablet draft checks: `tasks/archive/proofs/item-creation-2026-09-29/sol-review/review.html`. Fixture mutations do not claim database persistence.
+
 - **Header**: pass. `src/app/(app)/items/page.tsx` uses `PageHeader`.
 - **Toolbar and filters**: pass. `ItemsToolbar` uses `OperationalToolbar`, `OperationalActiveFilterChips`, shadcn inputs, switches, toggles, and filter controls.
 - **Rows and actions**: pass. Item row overflow uses the shared row-action pattern through the table columns.

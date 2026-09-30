@@ -1,0 +1,23 @@
+{
+  "sourceRevision": "1c62814365f89eb377689495ba8f1eb4f85a9d9e",
+  "sourcePatchSha256": "073feb68f4826f9e8b8d46ebbf38dbedda0d6f43d766cc823778a869df3ad38e",
+  "settings": {
+    "device": "Playwright Chromium",
+    "viewport": [
+      834,
+      1194
+    ],
+    "fixture": "Existing isolated Preview; sanitized season snapshot captured in before-team.json",
+    "role": "ADMIN (hidden smoke identity)",
+    "route": "/scoreboard",
+    "appearance": "light",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "2026-09-29T03:00:00Z",
+    "scroll": [
+      0,
+      0
+    ]
+  }
+}

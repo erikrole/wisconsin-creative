@@ -1,5 +1,5 @@
 import type { BadgeProps } from "@/components/ui/badge";
-import { cleanSourceSummary, normalizeOpponentName } from "@/lib/schedule-event-identity";
+import { cleanSourceSummary, normalizeOpponentName, splitEventQualifier } from "@/lib/schedule-event-identity";
 import { sportLabel } from "@/lib/sports";
 import { scheduleSportFamily } from "@/lib/schedule-sport-family";
 import { venueToneFromEvent } from "@/lib/venue-tone";
@@ -152,13 +152,7 @@ function cleanTitleText(value: string): string {
 }
 
 function splitTitleQualifier(value: string): { primary: string; qualifier: string | null } {
-  const cleaned = cleanTitleText(value);
-  const [primary = cleaned, ...rest] = cleaned.split(/\s*[-–—]\s+/);
-  const qualifier = rest.join(" - ").trim();
-  return {
-    primary: primary.trim() || cleaned,
-    qualifier: qualifier || null,
-  };
+  return splitEventQualifier(cleanTitleText(value));
 }
 
 type ScheduleEventTitleInput = Pick<CalendarEntry, "summary" | "sportCode" | "opponent" | "isHome"> & {

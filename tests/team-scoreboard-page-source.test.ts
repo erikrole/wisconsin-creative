@@ -48,7 +48,7 @@ describe("team Scoreboard page source contract", () => {
   it("links leaderboard identity only to the dedicated shared Scoreboard detail", () => {
     const client = source("src/app/(app)/scoreboard/TeamScoreboardClient.tsx");
 
-    expect(client).toContain("personScoreboardPath(userId, filters, sort)");
+    expect(client).toContain("personScoreboardPath(userId, loadedFilters, sort)");
     expect(client).toContain("href={hrefForPerson(person.userId)}");
     expect(client).not.toContain('href={`/users/${person.userId}');
     expect(client).not.toContain("email");

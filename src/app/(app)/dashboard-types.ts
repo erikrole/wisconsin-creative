@@ -60,6 +60,7 @@ export type BookingSummary = {
   linkedEventId: string | null;
   sportCode: string | null;
   requesterName: string;
+  requesterUserId?: string;
   requesterInitials: string;
   requesterAvatarUrl: string | null;
   locationName: string | null;
@@ -107,6 +108,10 @@ export type EventSummary = {
 
 export type OverdueItem = {
   bookingId: string;
+  /** Shared travel-case custody has no borrower to nudge. Older payloads omit it. */
+  isShared?: boolean;
+  /** Staff-only: the latest manual nudge. Null or absent when none. */
+  lastNudge?: { at: string; byName: string | null } | null;
   bookingTitle: string;
   requesterName: string;
   requesterInitials: string;
@@ -224,6 +229,8 @@ export type DashboardData = {
   teamCheckouts: { total: number; overdue: number; items: BookingSummary[] };
   teamReservations: { total: number; items: BookingSummary[] };
   pendingPickups: { total: number; items: BookingSummary[] };
+  /** The viewer's own due pickups (never shared custody). Older payloads omit it. */
+  myPendingPickups?: BookingSummary[];
   staleReservations: { total: number; items: BookingSummary[] };
   upcomingEvents: EventSummary[];
   myReservations: BookingSummary[];

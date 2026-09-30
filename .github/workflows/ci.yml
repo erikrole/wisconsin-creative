@@ -36,6 +36,10 @@ jobs:
       - run: npm install --global npm@11.17.0
       - run: npm ci
       - run: node scripts/check-postgres-integrity.mjs
+      - name: Test custody transactions and retry recovery
+        run: |
+          export PATH="$(pg_config --bindir):$PATH"
+          npm run test:postgres:custody
 
   validate:
     runs-on: ubuntu-latest

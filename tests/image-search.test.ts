@@ -9,6 +9,7 @@ import {
 } from "@/lib/image-search";
 import {
   buildBandHImageSearchQuery,
+  buildBandHWebsiteSearchUrl,
   buildBiasedImageSearchQuery,
   buildImageSearchSuggestions,
   mergeImageSearchResults,
@@ -62,6 +63,14 @@ function imageResult(overrides: Partial<ImageSearchResult> = {}): ImageSearchRes
 }
 
 describe("image search modal helpers", () => {
+  it("opens B&H's own search with the complete model query and no injected parameters", () => {
+    const link = new URL(buildBandHWebsiteSearchUrl("  Sony   FX3 & lens #1  ")!);
+    expect(link.origin + link.pathname).toBe("https://www.bhphotovideo.com/c/search");
+    expect(link.searchParams.get("Ntt")).toBe("Sony FX3 & lens #1");
+    expect(link.searchParams.get("N")).toBe("0");
+    expect(link.hash).toBe("");
+    expect(buildBandHWebsiteSearchUrl("  ")).toBeNull();
+  });
   it("builds a broad query with product-photo bias", () => {
     expect(buildBiasedImageSearchQuery("  Sony   FX3  ")).toBe("Sony   FX3 product photo white background");
     expect(buildBiasedImageSearchQuery("Sony FX3 product photo white background")).toBe("Sony FX3 product photo white background");

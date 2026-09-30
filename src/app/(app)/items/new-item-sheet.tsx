@@ -1,6 +1,8 @@
 "use client";
 
 import { FormEvent, type ComponentType, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { useAuthenticatedQueryUserId } from "@/components/QueryProvider";
+import { readIntakeDraft, requestForPayload, type IntakeDraft, type IntakeRequest } from "@/lib/item-intake-draft";
 import { useRouter } from "next/navigation";
 import { AlertCircleIcon, CheckCircle2Icon, CopyPlusIcon, LayersIcon, PackageIcon, ScanLineIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -29,6 +31,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import ChooseImageModal from "@/components/ChooseImageModal";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { cn } from "@/lib/utils";
+import { useItemImageSuggestion } from "@/hooks/use-item-image-suggestion";
 
 import type {
   FormValidationIssue,
@@ -69,6 +72,8 @@ type CreatedHandoff = {
   failedImageEndpoints?: string[];
   imageStatus: ImageStatus;
   imageError: string;
+  labelIds?: string[];
+  numberedFamilyId?: string;
   repeatTemplate?: SerializedIntakeTemplate;
   continuationTemplate?: SerializedIntakeTemplate;
   heading?: string;
@@ -140,6 +145,7 @@ type KindOption = {
   badge: string;
   badgeVariant: BadgeProps["variant"];
   description: string;
+  examples: string;
   outcome: string;
   icon: ComponentType<{ className?: string }>;
 };
@@ -148,30 +154,33 @@ const KIND_OPTIONS: KindOption[] = [
   {
     kind: "standard",
     id: "kind-standard",
-    title: "Standard",
+    title: "Individual items",
     badge: "Serialized",
     badgeVariant: "blue",
-    description: "One specific physical item with its own tag and scan code.",
-    outcome: "Creates one item record that can be reserved, checked out, and found by QR.",
+    description: "Track each item separately.",
+    examples: "Cameras, lenses, laptops",
+    outcome: "Each physical item gets its own asset tag and QR label, for example CAM 17 and CAM 18.",
     icon: ScanLineIcon,
   },
   {
     kind: "units",
     id: "kind-units",
-    title: "Units",
+    title: "Numbered family",
     badge: "Numbered family",
     badgeVariant: "purple",
-    description: "One item family with numbered or scannable units under it.",
-    outcome: "Creates a family record plus numbered units for kiosk pickup and return.",
+    description: "Scan units from a shared pool.",
+    examples: "Batteries, radios, card readers",
+    outcome: "One family QR plus numbered unit labels, for example FX6 Battery #1 and #2. Scan the exact unit at the kiosk.",
     icon: LayersIcon,
   },
   {
     kind: "quantity",
     id: "kind-quantity",
-    title: "Quantity",
+    title: "Stock by count",
     badge: "Count stock",
     badgeVariant: "green",
-    description: "Count-only stock where individual units are not scanned.",
+    description: "Track a count without scanning units.",
+    examples: "Tape, zip ties, cleaning supplies",
     outcome: "Creates or updates one stock record and tracks the count on hand.",
     icon: PackageIcon,
   },
@@ -225,6 +234,14 @@ export function NewItemSheet({
   sourceAssetId = null,
 }: NewItemSheetProps) {
   const router = useRouter();
+  const userId = useAuthenticatedQueryUserId();
+  const draftKey = userId ? `wc:item-intake:v1:${userId}` : null;
+  const requestsRef = useRef<IntakeRequest[]>([]);
+  const [recoverableDraft, setRecoverableDraft] = useState<IntakeDraft | null>(null);
+  const [restoreDraft, setRestoreDraft] = useState<IntakeDraft | null>(null);
+  const [draftNotice, setDraftNotice] = useState("");
+  const [reattachFileName, setReattachFileName] = useState<string | null>(null);
+  const [uncertainSave, setUncertainSave] = useState(false);
   const [kind, setKind] = useState<ItemKind>("standard");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -236,11 +253,17 @@ export function NewItemSheet({
   const [showImageModal, setShowImageModal] = useState(false);
   const [imageSearchQuery, setImageSearchQuery] = useState("");
   const [imageDraft, setImageDraft] = useState<DraftItemImage | null>(null);
+  const [imageSuggestionQuery, setImageSuggestionQuery] = useState("");
+  const [imageSuggestionScope, setImageSuggestionScope] = useState(0);
   const [imageRetrying, setImageRetrying] = useState(false);
   const [requiredProgress, setRequiredProgress] = useState<RequiredFieldProgress>({ completed: 0, total: 4 });
   const [bulkOperation, setBulkOperation] = useState<"create" | "adjust">("create");
   const [dirty, setDirty] = useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+  const [pendingHandoffExit, setPendingHandoffExit] = useState<"open" | "list" | null>(null);
+  const [pendingKind, setPendingKind] = useState<ItemKind | null>(null);
+  const [pendingSourceAction, setPendingSourceAction] = useState<"blank" | "reload" | null>(null);
+  const sourceActionTriggerRef = useRef<HTMLElement | null>(null);
   const [serializedTemplate, setSerializedTemplate] = useState<SerializedIntakeTemplate | null>(null);
   const [sourceLoading, setSourceLoading] = useState(false);
   const [sourceLoadError, setSourceLoadError] = useState("");
@@ -250,11 +273,100 @@ export function NewItemSheet({
   const [deferredImageEndpoints, setDeferredImageEndpoints] = useState<string[]>([]);
   const [batchContinuationTemplate, setBatchContinuationTemplate] = useState<SerializedIntakeTemplate | null>(null);
 
+  const imageSuggestion = useItemImageSuggestion({
+    query: imageSuggestionQuery,
+    enabled: open && !sourceLoading && !createdHandoff && !submitting && !showImageModal
+      && !(kind === "quantity" && bulkOperation === "adjust"),
+    image: imageDraft,
+    scope: imageSuggestionScope,
+    onImageChange: setImageDraft,
+  });
+
   const serializedRef = useRef<SerializedFormHandle>(null);
   const bulkRef = useRef<BulkFormHandle>(null);
   const sheetBodyRef = useRef<HTMLDivElement>(null);
   const sourceLoadRef = useRef(0);
+  const saveDraft = useCallback((uncertainOverride?: boolean) => {
+    if (!draftKey || !open || sourceLoading || recoverableDraft || restoreDraft) return;
+    const snapshot: IntakeDraft = {
+      version: 1, savedAt: Date.now(), kind, uncertain: (uncertainOverride ?? uncertainSave) || (!createdHandoff && requestsRef.current.some(receipt => receipt.status === "confirmed")),
+      ...(createdHandoff ? { handoff: createdHandoff } : {}), deferredImageEndpoints, batchContinuationTemplate,
+      ...(kind === "standard" && serializedRef.current ? { serialized: serializedRef.current.getDraft() } : {}),
+      ...(kind !== "standard" && bulkRef.current ? { bulk: bulkRef.current.getDraft() } : {}),
+      image: imageDraft?.kind === "remote" ? imageDraft : null,
+      ...(imageDraft?.kind === "file" ? { fileName: imageDraft.file.name } : {}),
+      requests: requestsRef.current,
+    };
+    try { localStorage.setItem(draftKey, JSON.stringify(snapshot)); }
+    catch { setDraftNotice("This browser could not save a recovery copy. Keep this page open until receiving is complete."); }
+  }, [draftKey, open, sourceLoading, createdHandoff, recoverableDraft, restoreDraft, kind, imageDraft, uncertainSave, deferredImageEndpoints, batchContinuationTemplate]);
+  const saveDraftRef = useRef(saveDraft);
+  saveDraftRef.current = saveDraft;
+  const clearSavedDraft = useCallback(() => {
+    if (draftKey) { try { localStorage.removeItem(draftKey); } catch { /* unavailable storage */ } }
+    requestsRef.current = [];
+    setRecoverableDraft(null);
+    setDraftNotice("");
+    setReattachFileName(null);
+    setUncertainSave(false);
+  }, [draftKey]);
+  useEffect(() => {
+    if (!open || !draftKey || sourceAssetId) return;
+    try { setRecoverableDraft(readIntakeDraft(localStorage.getItem(draftKey))); } catch { /* unavailable storage */ }
+  }, [open, draftKey, sourceAssetId]);
+  useEffect(() => {
+    if (!restoreDraft) return;
+    if (restoreDraft.kind === "standard" && restoreDraft.serialized) serializedRef.current?.restoreDraft(restoreDraft.serialized);
+    if (restoreDraft.kind !== "standard" && restoreDraft.bulk) bulkRef.current?.restoreDraft(restoreDraft.bulk);
+    requestsRef.current = restoreDraft.requests;
+    setUncertainSave(restoreDraft.uncertain || (!restoreDraft.handoff && restoreDraft.requests.some(receipt => receipt.status === "confirmed")));
+    setReattachFileName(restoreDraft.fileName ?? null);
+    setImageDraft(restoreDraft.image);
+    setCreatedHandoff(restoreDraft.handoff ?? null);
+    setDeferredImageEndpoints(restoreDraft.deferredImageEndpoints);
+    setBatchContinuationTemplate(restoreDraft.batchContinuationTemplate);
+    setDirty(!restoreDraft.handoff || Boolean(restoreDraft.handoff.batch?.failures.length));
+    setDraftNotice(restoreDraft.fileName ? `Draft restored. Reattach ${restoreDraft.fileName} before saving the image.` : "Draft restored on this browser.");
+    setRestoreDraft(null);
+  }, [restoreDraft]);
+  useEffect(() => {
+    if (dirty || createdHandoff?.imageStatus === "failed" || createdHandoff?.batch?.failures.length) saveDraft();
+  }, [dirty, imageDraft, saveDraft, createdHandoff]);
+  useEffect(() => {
+    if (createdHandoff?.imageStatus === "saved" && !createdHandoff.batch?.failures.length) clearSavedDraft();
+  }, [createdHandoff, clearSavedDraft]);
+  useEffect(() => {
+    function preserve() { if (dirty) saveDraftRef.current(); }
+    window.addEventListener("pagehide", preserve);
+    return () => window.removeEventListener("pagehide", preserve);
+  }, [dirty]);
+  async function postIntake(url: string, body: Record<string, unknown>) {
+    const request = requestForPayload(requestsRef.current, url, body);
+    request.status = "pending";
+    saveDraftRef.current(true);
+    try {
+      const response = await fetch(url, { method: "POST", headers: {
+        "Content-Type": "application/json", "X-Intake-Request": request.key, "X-Intake-Created-At": request.issuedAt,
+      }, body: JSON.stringify(body) });
+      if (response.status >= 400 && response.status < 500) request.status = "rejected";
+      const pending = requestsRef.current.some(receipt => receipt.status === "pending");
+      setUncertainSave(pending);
+      saveDraftRef.current(pending);
+      return response;
+    } catch (error) { setUncertainSave(true); throw error; }
+  }
+
+  function confirmReceipt(url: string, body: Record<string, unknown>) {
+    requestForPayload(requestsRef.current, url, body).status = "confirmed";
+    const pending = requestsRef.current.some(receipt => receipt.status === "pending");
+    setUncertainSave(pending);
+    saveDraftRef.current(pending);
+  }
+
   const resetAll = useCallback(() => {
+    clearSavedDraft();
+    setImageSuggestionScope((value) => value + 1);
+    setImageSuggestionQuery("");
     sourceLoadRef.current += 1;
     setError("");
     setSuccessMsg("");
@@ -268,6 +380,9 @@ export function NewItemSheet({
     setBulkOperation("create");
     setDirty(false);
     setShowDiscardConfirm(false);
+    setPendingHandoffExit(null);
+    setPendingKind(null);
+    setPendingSourceAction(null);
     setSerializedTemplate(null);
     setSourceLoading(false);
     setSourceLoadError("");
@@ -277,7 +392,7 @@ export function NewItemSheet({
     setBatchContinuationTemplate(null);
     serializedRef.current?.reset();
     bulkRef.current?.reset();
-  }, []);
+  }, [clearSavedDraft]);
 
   function showSuccessMessage(msg: string) {
     setSuccessMsg(msg);
@@ -359,6 +474,7 @@ export function NewItemSheet({
   const markInteraction = useCallback(() => {
     setError("");
     setDirty(true);
+    requestAnimationFrame(() => saveDraftRef.current());
   }, []);
 
   function focusValidationIssue(issue: FormValidationIssue) {
@@ -381,6 +497,9 @@ export function NewItemSheet({
   }
 
   function startBlankSerializedItem() {
+    clearSavedDraft();
+    setImageSuggestionScope((value) => value + 1);
+    setImageSuggestionQuery("");
     sourceLoadRef.current += 1;
     setKind("standard");
     setSerializedTemplate(null);
@@ -398,14 +517,59 @@ export function NewItemSheet({
     requestAnimationFrame(() => serializedRef.current?.focus());
   }
 
+  function requestSourceAction(action: "blank" | "reload") {
+    sourceActionTriggerRef.current = document.activeElement as HTMLElement | null;
+    if (dirty) {
+      setPendingSourceAction(action);
+      return;
+    }
+    applySourceAction(action);
+  }
+
+  function applySourceAction(action: "blank" | "reload") {
+    setPendingSourceAction(null);
+    if (action === "blank") startBlankSerializedItem();
+    else setSourceLoadVersion((version) => version + 1);
+  }
+
+  function changeKind(nextKind: ItemKind) {
+    clearSavedDraft();
+    setImageSuggestionScope((value) => value + 1);
+    setImageSuggestionQuery("");
+    sourceLoadRef.current += 1;
+    serializedRef.current?.reset();
+    bulkRef.current?.reset();
+    setError("");
+    setSuccessMsg("");
+    setSerializedTemplate(null);
+    setSourceLoading(false);
+    setSourceLoadError("");
+    setImageDraft(null);
+    setImageSearchQuery("");
+    setRequiredProgress({ completed: 0, total: 4 });
+    setSerializedUnitCount(1);
+    setSubmissionProgress(null);
+    setDeferredImageEndpoints([]);
+    setBatchContinuationTemplate(null);
+    setBulkOperation("create");
+    setDirty(false);
+    setKind(nextKind);
+    setPendingKind(null);
+  }
+
   function closeAndReset() {
     onOpenChange(false);
     resetAll();
   }
 
   function requestClose() {
-    if (submitting) return;
+    if (submitting || imageRetrying) return;
     if (createdHandoff) {
+      if (createdHandoff.batch?.failures.length) {
+        setPendingHandoffExit("list");
+        setShowDiscardConfirm(true);
+        return;
+      }
       onCreated();
       closeAndReset();
       return;
@@ -417,11 +581,21 @@ export function NewItemSheet({
     closeAndReset();
   }
 
+  function requestHandoffExit(mode: "open" | "list") {
+    if (createdHandoff?.batch?.failures.length) {
+      setPendingHandoffExit(mode);
+      setShowDiscardConfirm(true);
+      return;
+    }
+    finishCreatedHandoff(mode);
+  }
+
   function finishCreatedHandoff(mode: "another" | "similar" | "remaining" | "open" | "list") {
-    if (!createdHandoff) return;
+    if (!createdHandoff || imageRetrying) return;
     const handoff = createdHandoff;
     onCreated();
     if (mode === "remaining" && handoff.batch?.failures.length) {
+      requestsRef.current = requestsRef.current.filter(receipt => receipt.status !== "confirmed");
       setError("");
       setSuccessMsg("");
       setCreatedHandoff(null);
@@ -435,6 +609,7 @@ export function NewItemSheet({
         requestAnimationFrame(() => serializedRef.current?.focus());
       });
     } else if (mode === "similar" && handoff.repeatTemplate) {
+      clearSavedDraft();
       setError("");
       setSuccessMsg("");
       setKind("standard");
@@ -491,10 +666,11 @@ export function NewItemSheet({
     if (!createdHandoff || !imageDraft || imageRetrying) return;
     const batchEndpoints = createdHandoff.failedImageEndpoints ?? [];
     if (batchEndpoints.length === 0 && !createdHandoff.imageEndpoint) return;
+    const handoff = createdHandoff;
     setImageRetrying(true);
     if (batchEndpoints.length === 0 && createdHandoff.imageEndpoint) {
       const imageResult = await persistCreatedImage(createdHandoff.imageEndpoint);
-      setCreatedHandoff((current) => current
+      setCreatedHandoff((current) => current === handoff
         ? { ...current, ...imageResult }
         : current);
     } else {
@@ -507,7 +683,7 @@ export function NewItemSheet({
           firstError ||= result.imageError;
         }
       }
-      setCreatedHandoff((current) => current
+      setCreatedHandoff((current) => current === handoff
         ? {
             ...current,
             failedImageEndpoints: failedEndpoints,
@@ -534,13 +710,9 @@ export function NewItemSheet({
 
       let res: globalThis.Response;
       try {
-        res = await fetch("/api/assets", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(entry.body),
-        });
+        res = await postIntake("/api/assets", entry.body);
       } catch {
-        const message = "The request could not reach the server. Check your connection and try again.";
+        const message = "The outcome is not confirmed. Retry these same rows safely; completed requests will not be applied twice.";
         for (const remaining of entries.slice(index)) {
           failures.push({
             unitKey: remaining.unit.key,
@@ -576,6 +748,12 @@ export function NewItemSheet({
 
       const json = await parseJsonSafely<ItemCreateResponse>(res);
       const createdId = json?.data?.id;
+      if (!createdId) {
+        setUncertainSave(true);
+        failures.push({ unitKey: entry.unit.key, assetTag: entry.unit.assetTag, message: "The saved result could not be read. Retry safely to recover it.", fieldId: serializedUnitFieldId(entry.unit, "asset-tag") });
+        continue;
+      }
+      confirmReceipt("/api/assets", entry.body);
       created.push({
         id: createdId ?? null,
         assetTag: entry.unit.assetTag,
@@ -634,6 +812,7 @@ export function NewItemSheet({
     setCreatedHandoff({
       kind: "standard",
       label: productLabel,
+      labelIds: created.flatMap(item => item.id ? [item.id] : []),
       heading: `${created.length} ${productLabel} ${created.length === 1 ? "item is" : "items are"} ready`,
       href: firstLinkedItem?.id ? `/items/${firstLinkedItem.id}` : "/items",
       openLabel: firstLinkedItem ? "Open first item" : "Open item list",
@@ -658,26 +837,28 @@ export function NewItemSheet({
         failures,
       },
     });
+    if (allRecordsCreated && imageStatus !== "failed") clearSavedDraft();
     setDirty(!allRecordsCreated);
   }
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (createdHandoff || submittingRef.current) return;
     setError("");
     setSuccessMsg("");
-
-    if (submittingRef.current) return;
 
     try {
       let res: globalThis.Response;
       let label = "";
+      let submittedUrl = "";
+      let submittedBody: Record<string, unknown> = {};
       let bulkHandoffHref: string | null = null;
       let bulkHandoffLabel = "Open item";
       let createsCatalogRecord = true;
       let repeatTemplate: SerializedIntakeTemplate | undefined;
 
       if (kind === "standard") {
-        const validationIssue = serializedRef.current?.validate();
+        const validationIssue = serializedRef.current?.validate(uncertainSave);
         if (validationIssue) {
           focusValidationIssue(validationIssue);
           return;
@@ -695,11 +876,8 @@ export function NewItemSheet({
 
         setSubmitting(true);
         submittingRef.current = true;
-        res = await fetch("/api/assets", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
+        submittedUrl = "/api/assets"; submittedBody = body;
+        res = await postIntake(submittedUrl, submittedBody);
       } else {
         const validationIssue = bulkRef.current?.validate();
         if (validationIssue) {
@@ -715,11 +893,8 @@ export function NewItemSheet({
 
         setSubmitting(true);
         submittingRef.current = true;
-        res = await fetch(payload.url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload.body),
-        });
+        submittedUrl = payload.url; submittedBody = payload.body;
+        res = await postIntake(submittedUrl, submittedBody);
       }
 
       if (handleAuthRedirect(res)) return;
@@ -744,6 +919,17 @@ export function NewItemSheet({
       const json = await parseJsonSafely<ItemCreateResponse>(res);
 
       const createdId = json?.data?.id;
+      if (createsCatalogRecord && !createdId) {
+        setUncertainSave(true);
+        showFormError("The response could not be read. Retry safely to recover the original receiving result.");
+        return;
+      }
+      if (!createsCatalogRecord && !json?.data) {
+        setUncertainSave(true);
+        showFormError("The receipt response could not be read. Retry safely to recover the saved result.");
+        return;
+      }
+      confirmReceipt(submittedUrl, submittedBody);
       const handoffHref = createsCatalogRecord
         ? createdId
           ? kind === "standard"
@@ -771,6 +957,8 @@ export function NewItemSheet({
       setCreatedHandoff({
         kind,
         label,
+        labelIds: createdId ? [kind === "standard" ? createdId : `bulk-${createdId}`] : bulkHandoffHref ? [bulkHandoffHref.split("/").at(-1)!] : [],
+        numberedFamilyId: kind === "units" ? createdId ?? bulkHandoffHref?.split("bulk-").at(-1) : undefined,
         href: handoffHref,
         openLabel: bulkHandoffLabel,
         successMessage: payloadSuccessMessage(label, createsCatalogRecord),
@@ -786,9 +974,10 @@ export function NewItemSheet({
         repeatTemplate,
         ...imageResult,
       });
+      if (imageResult.imageStatus !== "failed") clearSavedDraft();
       setDirty(false);
     } catch {
-      showFormError("You are offline or the request could not reach the server. Check your connection and try again.");
+      showFormError("The save outcome is not confirmed. Keep these details and retry safely; the same receiving request will not be applied twice.");
     } finally {
       setSubmitting(false);
       submittingRef.current = false;
@@ -801,7 +990,7 @@ export function NewItemSheet({
 
   const selectedKind = optionForKind(kind);
   const SelectedKindIcon = selectedKind.icon;
-  const singleSubmitLabel = kind === "quantity" && bulkOperation === "adjust" ? "Add stock" : "Create item";
+  const singleSubmitLabel = bulkOperation === "adjust" ? kind === "units" ? "Receive units" : "Add stock" : "Create item";
   const submitLabel = kind === "standard" && serializedUnitCount > 1
     ? `Create ${serializedUnitCount} items`
     : singleSubmitLabel;
@@ -823,12 +1012,25 @@ export function NewItemSheet({
         <SheetHeader>
           <SheetTitle>Add item</SheetTitle>
           <SheetDescription>
-            Create a serialized item, numbered item family, or quantity-tracked stock record.
+            Choose how you track this gear, then add its details.
           </SheetDescription>
         </SheetHeader>
 
         <SheetBody ref={sheetBodyRef} className="px-4 py-5 sm:px-6 sm:py-6">
-          {showPostCreate ? (
+          {recoverableDraft && <Alert>
+            <AlertTitle className="col-start-2">Unfinished receiving draft</AlertTitle>
+            <AlertDescription className="col-start-2 flex flex-col gap-3">
+              <span>Resume the details saved on this browser, or discard them and start fresh.</span>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" onClick={() => { setKind(recoverableDraft.kind); setRestoreDraft(recoverableDraft); setRecoverableDraft(null); }}>Resume draft</Button>
+                <Button type="button" variant="outline" onClick={clearSavedDraft}>Discard saved draft</Button>
+              </div>
+            </AlertDescription>
+          </Alert>}
+          {draftNotice && <p role="status" className="mb-4 text-sm text-muted-foreground">{draftNotice}</p>}
+          {reattachFileName && <Button type="button" variant="outline" className="mb-4" onClick={() => setShowImageModal(true)}>Reattach image: {reattachFileName}</Button>}
+          {uncertainSave && <Alert className="mb-4"><AlertTitle className="col-start-2">Confirm the previous receipt</AlertTitle><AlertDescription className="col-start-2">Details are locked while the result is uncertain. Retry safely to recover the original result before changing the shipment.</AlertDescription></Alert>}
+          {showPostCreate && (
             <div className="flex flex-col gap-4">
               <div className="rounded-md border border-border/60 bg-background p-5 shadow-xs">
                 <div className="flex items-start gap-3">
@@ -886,7 +1088,7 @@ export function NewItemSheet({
                 <Alert className="border-[var(--orange)]/30 bg-[var(--orange-bg)] text-[var(--orange-text)]">
                   <AlertCircleIcon className="size-4" />
                   <AlertTitle>{createdHandoff.batch.failures.length} {createdHandoff.batch.failures.length === 1 ? "item needs" : "items need"} attention</AlertTitle>
-                  <AlertDescription>
+                  <AlertDescription className="col-start-2 min-w-0">
                     <ul className="mt-2 list-disc space-y-1 pl-5">
                       {createdHandoff.batch.failures.slice(0, 5).map((failure) => (
                         <li key={failure.unitKey}>
@@ -917,44 +1119,28 @@ export function NewItemSheet({
                   >
                     Retry image
                   </Button>
+                  <Button type="button" variant="outline" disabled={imageRetrying} onClick={() => { setImageSearchQuery(createdHandoff.label); setShowImageModal(true); }}>Replace image</Button>
                   </AlertDescription>
                 </Alert>
               )}
             </div>
-          ) : (
-            <form id="new-item-form" onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
+          )}
+            <form id="new-item-form" onSubmit={handleSubmit} noValidate className={cn("flex flex-col gap-5", showPostCreate && "hidden")} aria-hidden={showPostCreate || undefined}>
               {/* ── Tracking style ── */}
               <section className="flex flex-col gap-3">
                 <SectionHeading>Tracking style</SectionHeading>
                 <RadioGroup
-                  className="grid grid-cols-3 gap-2"
+                  className="grid grid-cols-1 gap-2 sm:grid-cols-3"
                   name="item-kind"
                   value={kind}
+                  aria-label="Tracking style"
                   onValueChange={(value) => {
                     const nextKind = value as ItemKind;
                     if (nextKind === kind) return;
-                    sourceLoadRef.current += 1;
-                    markInteraction();
-                    setError("");
-                    setSerializedTemplate(null);
-                    setSourceLoading(false);
-                    setSourceLoadError("");
-                    setImageDraft(null);
-                    setRequiredProgress({ completed: 0, total: 4 });
-                    setSerializedUnitCount(1);
-                    setSubmissionProgress(null);
-                    setDeferredImageEndpoints([]);
-                    setBatchContinuationTemplate(null);
-                    setBulkOperation("create");
-                    setKind(nextKind);
-                    requestAnimationFrame(() => {
-                      requestAnimationFrame(() => {
-                        if (nextKind === "standard") serializedRef.current?.focus();
-                        else bulkRef.current?.focus();
-                      });
-                    });
+                    if (dirty) setPendingKind(nextKind);
+                    else changeKind(nextKind);
                   }}
-                  disabled={submitting || sourceLoading}
+                  disabled={submitting || sourceLoading || uncertainSave || !!recoverableDraft}
                 >
                   {KIND_OPTIONS.map((option) => {
                     const Icon = option.icon;
@@ -964,9 +1150,9 @@ export function NewItemSheet({
                         key={option.kind}
                         htmlFor={option.id}
                         className={cn(
-                          "flex min-h-24 min-w-0 cursor-pointer flex-col gap-2 rounded-xl border px-3 py-3 shadow-xs transition-[background-color,border-color,box-shadow]",
+                          "flex min-w-0 cursor-pointer gap-3 rounded-lg border p-3 transition-colors focus-within:ring-2 focus-within:ring-ring sm:flex-col",
                           selected
-                            ? "border-primary/55 bg-primary/5 shadow-[0_8px_24px_rgba(0,0,0,0.05)]"
+                            ? "border-primary/55 bg-primary/5"
                             : "border-border/55 bg-background hover:bg-muted/40",
                         )}
                       >
@@ -977,16 +1163,14 @@ export function NewItemSheet({
                               selected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
                             )}
                           >
-                            <Icon className="size-4" />
+                            <Icon className="size-4" aria-hidden="true" />
                           </div>
                           <RadioGroupItem value={option.kind} id={option.id} />
                         </div>
                         <div className="min-w-0">
                           <span className="block text-sm font-semibold">{option.title}</span>
-                          <Badge variant={option.badgeVariant} size="sm" className="mt-1 max-w-full whitespace-normal text-center leading-tight">
-                            {option.badge}
-                          </Badge>
-                          <span className="sr-only">. {option.description}</span>
+                          <span className="mt-1 block text-xs leading-relaxed text-foreground">{option.description}</span>
+                          <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">{option.examples}</span>
                         </div>
                       </label>
                     );
@@ -1014,7 +1198,7 @@ export function NewItemSheet({
                 <Alert aria-live="polite">
                   <CopyPlusIcon className="size-4" />
                   <AlertTitle>Loading product details</AlertTitle>
-                  <AlertDescription>
+                  <AlertDescription className="col-start-2 min-w-0">
                     Reusing the source item&apos;s product, category, location, image, and workflow defaults.
                   </AlertDescription>
                 </Alert>
@@ -1024,13 +1208,13 @@ export function NewItemSheet({
                     <Alert variant="destructive">
                       <AlertCircleIcon className="size-4" />
                       <AlertTitle>Could not reuse this item</AlertTitle>
-                      <AlertDescription className="flex flex-col items-start gap-3">
+                      <AlertDescription className="col-start-2 flex min-w-0 flex-col items-start gap-3">
                         <span>{sourceLoadError} No new item was created.</span>
                         <div className="flex flex-wrap gap-2">
-                          <Button type="button" variant="outline" className="h-10" onClick={() => setSourceLoadVersion((version) => version + 1)}>
+                          <Button type="button" variant="outline" className="h-10" onClick={() => requestSourceAction("reload")}>
                             Retry source
                           </Button>
-                          <Button type="button" variant="outline" className="h-10" onClick={startBlankSerializedItem}>
+                          <Button type="button" variant="outline" className="h-10" onClick={() => requestSourceAction("blank")}>
                             Start blank
                           </Button>
                         </div>
@@ -1046,11 +1230,11 @@ export function NewItemSheet({
                           ? `Adding ${serializedUnitCount} ${serializedTemplate.productLabel} items`
                           : `Adding another ${serializedTemplate.productLabel}`}
                       </AlertTitle>
-                      <AlertDescription className="flex flex-col items-start gap-3">
+                      <AlertDescription className="col-start-2 flex min-w-0 flex-col items-start gap-3">
                         <span>
                           Product details, category, location, image, link, and workflow settings came from {serializedTemplate.sourceLabel}. Serial, QR, campus tag, purchase, warranty, fiscal year, and notes are new for {serializedUnitCount > 1 ? "this shipment" : "this item"}.
                         </span>
-                        <Button type="button" variant="outline" className="h-10" onClick={startBlankSerializedItem}>
+                        <Button type="button" variant="outline" className="h-10" onClick={() => requestSourceAction("blank")}>
                           Start a different item
                         </Button>
                       </AlertDescription>
@@ -1063,19 +1247,22 @@ export function NewItemSheet({
                     departments={departments}
                     locations={locations}
                     image={imageDraft}
+                    imageSuggestionStatus={imageSuggestion.status}
+                    onImageSearchSeedChange={setImageSuggestionQuery}
                     template={serializedTemplate}
                     onChooseImage={(searchQuery) => {
                       setImageSearchQuery(searchQuery);
                       setShowImageModal(true);
                     }}
                     onClearImage={() => {
+                      imageSuggestion.suppress();
                       setImageDraft(null);
                       markInteraction();
                     }}
                     onProgressChange={setRequiredProgress}
                     onUnitCountChange={setSerializedUnitCount}
                     onInteract={markInteraction}
-                    disabled={submitting}
+                    disabled={submitting || uncertainSave}
                   />
                 </>
               ) : (
@@ -1086,33 +1273,37 @@ export function NewItemSheet({
                   open={open}
                   trackingMode={kind}
                   image={imageDraft}
+                  imageSuggestionStatus={imageSuggestion.status}
+                  onImageSearchSeedChange={setImageSuggestionQuery}
                   onChooseImage={(searchQuery) => {
                     setImageSearchQuery(searchQuery);
                     setShowImageModal(true);
                   }}
                   onClearImage={() => {
+                    imageSuggestion.suppress();
                     setImageDraft(null);
                     markInteraction();
                   }}
                   onProgressChange={setRequiredProgress}
                   onOperationChange={setBulkOperation}
                   onInteract={markInteraction}
-                  disabled={submitting}
+                  disabled={submitting || uncertainSave}
                 />
               )}
             </form>
-          )}
         </SheetBody>
 
         <SheetFooter className="flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
           {showPostCreate ? (
             <>
+              {createdHandoff?.labelIds?.length ? <Button type="button" variant="outline" className="h-10" asChild><a href={`/labels?items=${createdHandoff.labelIds!.map(encodeURIComponent).join(",")}`} target="_blank" rel="noopener noreferrer">Print labels</a></Button> : null}
+              {createdHandoff?.numberedFamilyId && <Button type="button" variant="outline" className="h-10" asChild><a href={`/api/bulk-skus/${createdHandoff.numberedFamilyId}/units/labels?scope=unprinted`} download>Download unit labels</a></Button>}
               <div className="flex-1" />
               <Button
                 variant="outline"
                 type="button"
                 className="h-10"
-                onClick={() => finishCreatedHandoff("list")}
+                onClick={() => requestHandoffExit("list")}
               >
                 Return to list
               </Button>
@@ -1121,7 +1312,7 @@ export function NewItemSheet({
                   variant="outline"
                   type="button"
                   className="h-10"
-                  onClick={() => finishCreatedHandoff("open")}
+                  onClick={() => requestHandoffExit("open")}
                 >
                   {createdHandoff.openLabel}
                 </Button>
@@ -1160,7 +1351,7 @@ export function NewItemSheet({
             </>
           ) : (
             <>
-              <div className="flex-1 text-xs text-muted-foreground sm:mr-auto">
+              <div role="status" aria-live="polite" className="flex-1 text-xs text-muted-foreground sm:mr-auto">
                 {submissionProgress
                   ? submissionProgress.phase === "records"
                     ? `Creating item ${submissionProgress.current} of ${submissionProgress.total}`
@@ -1170,11 +1361,11 @@ export function NewItemSheet({
                     : `${requiredProgress.completed} of ${requiredProgress.total} required fields complete`}
               </div>
               <div className="grid grid-cols-2 gap-2 sm:contents">
-                <Button className="h-10" variant="outline" type="button" disabled={submitting} onClick={requestClose}>
+                <Button className="h-10" variant="outline" type="button" disabled={submitting || uncertainSave} onClick={requestClose}>
                   Cancel
                 </Button>
-                <Button className="h-10" type="submit" form="new-item-form" loading={submitting} disabled={sourceLoading}>
-                  {submitLabel}
+                <Button className="h-10" type="submit" form="new-item-form" loading={submitting} disabled={sourceLoading || !!recoverableDraft}>
+                  {uncertainSave ? "Retry safely" : submitLabel}
                 </Button>
               </div>
             </>
@@ -1191,17 +1382,81 @@ export function NewItemSheet({
         initialSelection={imageDraft}
         searchQuery={imageSearchQuery}
         onDraftChanged={(selection) => {
+          imageSuggestion.suppress();
           setImageDraft(selection);
+          setReattachFileName(null);
           markInteraction();
+          if (createdHandoff?.imageStatus === "failed") {
+            const endpoints = createdHandoff.failedImageEndpoints?.length ? createdHandoff.failedImageEndpoints : createdHandoff.imageEndpoint ? [createdHandoff.imageEndpoint] : [];
+            setImageRetrying(true);
+            void Promise.all(endpoints.map(async endpoint => {
+              try { await persistDraftItemImage(endpoint, selection); return null; } catch { return endpoint; }
+            })).then(results => {
+              const failed = results.filter((result): result is string => result !== null);
+              setCreatedHandoff(current => current === createdHandoff ? { ...current, failedImageEndpoints: failed, imageStatus: failed.length ? "failed" : "saved", imageError: failed.length ? "The replacement could not be saved. Retry or choose another photo." : "" } : current);
+            }).finally(() => setImageRetrying(false));
+          }
         }}
       />
 
-      <AlertDialog open={showDiscardConfirm} onOpenChange={setShowDiscardConfirm}>
+      <AlertDialog open={pendingKind !== null} onOpenChange={(nextOpen) => { if (!nextOpen) setPendingKind(null); }}>
+        <AlertDialogContent onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          document.getElementById(optionForKind(kind).id)?.focus();
+        }}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Switch to {pendingKind ? optionForKind(pendingKind).title : "another tracking style"}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Switching clears the details and image in this draft. Keep editing to retain them.
+              {batchContinuationTemplate && " Items already created will stay in your inventory."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="h-10">Keep editing</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" className="h-10" onClick={() => {
+              if (pendingKind) changeKind(pendingKind);
+            }}>
+              Clear draft and switch
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={pendingSourceAction !== null} onOpenChange={(nextOpen) => { if (!nextOpen) setPendingSourceAction(null); }}>
+        <AlertDialogContent onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          if (sourceActionTriggerRef.current?.isConnected) sourceActionTriggerRef.current.focus();
+          else serializedRef.current?.focus();
+        }}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{pendingSourceAction === "reload" ? "Reload product details?" : "Start a different item?"}</AlertDialogTitle>
+            <AlertDialogDescription>
+              This clears the details and image in your current draft. Keep editing to retain them.
+              {batchContinuationTemplate && " Items already created will stay in your inventory."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="h-10">Keep editing</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" className="h-10" onClick={() => {
+              if (pendingSourceAction) applySourceAction(pendingSourceAction);
+            }}>
+              {pendingSourceAction === "reload" ? "Clear draft and reload" : "Clear draft and start blank"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showDiscardConfirm} onOpenChange={(nextOpen) => {
+        setShowDiscardConfirm(nextOpen);
+        if (!nextOpen) setPendingHandoffExit(null);
+      }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Discard this item?</AlertDialogTitle>
+            <AlertDialogTitle>{createdHandoff?.batch?.failures.length ? "Leave unfinished items?" : "Discard this item?"}</AlertDialogTitle>
             <AlertDialogDescription>
-              The item has not been created. Closing now will clear the fields and any staged image.
+              {createdHandoff?.batch?.failures.length
+                ? "Items already created will stay in your inventory. Leaving now clears the unfinished rows and their draft details."
+                : "The item has not been created. Closing now will clear the fields and any staged image."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1209,9 +1464,12 @@ export function NewItemSheet({
             <AlertDialogAction
               variant="destructive"
               className="h-10"
-              onClick={closeAndReset}
+              onClick={() => {
+                if (pendingHandoffExit) finishCreatedHandoff(pendingHandoffExit);
+                else closeAndReset();
+              }}
             >
-              Discard item
+              {createdHandoff?.batch?.failures.length ? "Leave unfinished items" : "Discard item"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

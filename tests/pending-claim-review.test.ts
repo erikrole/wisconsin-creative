@@ -86,9 +86,11 @@ describe("claim review deadlines", () => {
 
 describe("pending claim review steps", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     mocks.tradeFindUnique.mockResolvedValue({ status: "CLAIMED" });
     mocks.assignmentFindUnique.mockResolvedValue({ status: "REQUESTED" });
+    mocks.approveTrade.mockResolvedValue(undefined);
+    mocks.approveRequest.mockResolvedValue(undefined);
   });
 
   it("escalates a trade claim that is still waiting", async () => {

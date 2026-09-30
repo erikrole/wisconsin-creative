@@ -1,0 +1,13 @@
+{
+  "origin": "http://127.0.0.1:3490",
+  "checks": [
+    "Authenticated team-to-person navigation retains sport/opponent/site/rank; result-less history renders without protected event links.",
+    "Person failed filter retains prior data and requested controls; non-JSON 503 retry and clear recover.",
+    "Team failed filter retains previous scope and links; retry applies selection; search clear restores ranking.",
+    "Real authenticated API validates length limits and returns matching filtered work count.",
+    "Controlled HTTP fixture: failed second page retries, duplicate IDs merge once, and terminal cursor removes paging action.",
+    "Tablet and narrow mobile web render without horizontal document overflow."
+  ],
+  "errors": [],
+  "fixtureBoundary": "Live checks use existing managed Preview; paging uses controlled HTTP fixture only."
+}

@@ -1,0 +1,666 @@
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project ios/Wisconsin.xcodeproj -scheme WisconsinKiosk -configuration Debug -destination "platform=iOS Simulator,name=iPad Air 11-inch (M4),OS=26.5" -derivedDataPath /tmp/wc-kiosk-icon-build CODE_SIGNING_ALLOWED=NO build
+
+Build settings from command line:
+    CODE_SIGNING_ALLOWED = NO
+
+Resolve Package Graph
+
+Fetching from https://github.com/apple/swift-markdown (cached)
+
+Fetching from https://github.com/swiftlang/swift-cmark.git (cached)
+
+Creating working copy of package ‘swift-cmark’
+
+Creating working copy of package ‘swift-markdown’
+
+Checking out 0.8.0 of package ‘swift-markdown’
+
+Checking out 0.8.0 of package ‘swift-cmark’
+
+
+Resolved source packages:
+  cmark-gfm: https://github.com/swiftlang/swift-cmark.git @ 0.8.0
+  swift-markdown: https://github.com/apple/swift-markdown @ 0.8.0
+
+ComputePackagePrebuildTargetDependencyGraph
+
+Prepare packages
+
+CreateBuildRequest
+
+SendProjectDescription
+
+CreateBuildOperation
+
+ComputeTargetDependencyGraph
+note: Building targets in dependency order
+note: Target dependency graph (1 target)
+    Target 'WisconsinKiosk' in project 'Wisconsin' (no dependencies)
+
+GatherProvisioningInputs
+
+CreateBuildDescription
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator27.0.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --print-asset-tag-combinations --output-format xml1 /Users/role/Code/wisconsin-creative/ios/IconSources/KioskIcon.icon /Users/role/Code/wisconsin-creative/ios/Wisconsin/Assets.xcassets
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --version --output-format xml1
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc --version
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld -version_details
+
+Build description signature: 9a7cce4ca83f710b125e90eb886f986c
+Build description path: /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/XCBuildData/9a7cce4ca83f710b125e90eb886f986c.xcbuilddata
+CreateBuildDirectory /tmp/wc-kiosk-icon-build/ModuleCache.noindex
+    cd /Users/role/Code/wisconsin-creative/ios/Wisconsin.xcodeproj
+    builtin-create-build-directory /tmp/wc-kiosk-icon-build/ModuleCache.noindex
+
+CreateBuildDirectory /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules
+    cd /Users/role/Code/wisconsin-creative/ios/Wisconsin.xcodeproj
+    builtin-create-build-directory /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules
+
+CreateBuildDirectory /tmp/wc-kiosk-icon-build/CompilationCache.noindex
+    cd /Users/role/Code/wisconsin-creative/ios/Wisconsin.xcodeproj
+    builtin-create-build-directory /tmp/wc-kiosk-icon-build/CompilationCache.noindex
+
+ClangStatCache /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator27.0.sdk /tmp/wc-kiosk-icon-build/SDKStatCaches.noindex/iphonesimulator27.0-24A430-8dc58220667be655e1bcc261a7455254.sdkstatcache
+    cd /Users/role/Code/wisconsin-creative/ios/Wisconsin.xcodeproj
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator27.0.sdk -o /tmp/wc-kiosk-icon-build/SDKStatCaches.noindex/iphonesimulator27.0-24A430-8dc58220667be655e1bcc261a7455254.sdkstatcache
+
+CreateBuildDirectory /tmp/wc-kiosk-icon-build/Build/Products
+    cd /Users/role/Code/wisconsin-creative/ios/Wisconsin.xcodeproj
+    builtin-create-build-directory /tmp/wc-kiosk-icon-build/Build/Products
+
+CreateBuildDirectory /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex
+    cd /Users/role/Code/wisconsin-creative/ios/Wisconsin.xcodeproj
+    builtin-create-build-directory /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex
+
+CreateBuildDirectory /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator
+    cd /Users/role/Code/wisconsin-creative/ios/Wisconsin.xcodeproj
+    builtin-create-build-directory /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator
+
+CreateBuildDirectory /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/PrecompiledHeaders
+    cd /Users/role/Code/wisconsin-creative/ios/Wisconsin.xcodeproj
+    builtin-create-build-directory /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/PrecompiledHeaders
+
+CreateBuildDirectory /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/ExplicitPrecompiledModules
+    cd /Users/role/Code/wisconsin-creative/ios/Wisconsin.xcodeproj
+    builtin-create-build-directory /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/ExplicitPrecompiledModules
+
+CreateBuildDirectory /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules
+    cd /Users/role/Code/wisconsin-creative/ios/Wisconsin.xcodeproj
+    builtin-create-build-directory /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules
+
+CreateBuildDirectory /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/EagerLinkingTBDs/Debug-iphonesimulator
+    cd /Users/role/Code/wisconsin-creative/ios/Wisconsin.xcodeproj
+    builtin-create-build-directory /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/EagerLinkingTBDs/Debug-iphonesimulator
+
+WriteAuxiliaryFile /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/Wisconsin-9acee25e55741f10d11b0593842f098e-VFS-iphonesimulator/all-product-headers.yaml
+    cd /Users/role/Code/wisconsin-creative/ios/Wisconsin.xcodeproj
+    write-file /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/Wisconsin-9acee25e55741f10d11b0593842f098e-VFS-iphonesimulator/all-product-headers.yaml
+
+WriteAuxiliaryFile /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Wisconsin\ Kiosk-own-target-headers.hmap (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    write-file /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Wisconsin\ Kiosk-own-target-headers.hmap
+
+WriteAuxiliaryFile /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Wisconsin\ Kiosk-generated-files.hmap (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    write-file /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Wisconsin\ Kiosk-generated-files.hmap
+
+WriteAuxiliaryFile /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Wisconsin\ Kiosk-project-headers.hmap (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    write-file /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Wisconsin\ Kiosk-project-headers.hmap
+
+WriteAuxiliaryFile /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Wisconsin\ Kiosk-DebugDylibInstallName-normal-arm64.txt (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    write-file /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Wisconsin\ Kiosk-DebugDylibInstallName-normal-arm64.txt
+
+WriteAuxiliaryFile /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Wisconsin\ Kiosk-DebugDylibPath-normal-arm64.txt (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    write-file /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Wisconsin\ Kiosk-DebugDylibPath-normal-arm64.txt
+
+WriteAuxiliaryFile /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Wisconsin\ Kiosk.DependencyMetadataFileList (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    write-file /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Wisconsin\ Kiosk.DependencyMetadataFileList
+
+MkDir /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin\ Kiosk.app (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    /bin/mkdir -p /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin\ Kiosk.app
+
+WriteAuxiliaryFile /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Wisconsin\ Kiosk.DependencyStaticMetadataFileList (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    write-file /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Wisconsin\ Kiosk.DependencyStaticMetadataFileList
+
+WriteAuxiliaryFile /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Wisconsin\ Kiosk-all-non-framework-target-headers.hmap (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    write-file /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Wisconsin\ Kiosk-all-non-framework-target-headers.hmap
+
+WriteAuxiliaryFile /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Wisconsin\ Kiosk.hmap (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    write-file /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Wisconsin\ Kiosk.hmap
+
+WriteAuxiliaryFile /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Wisconsin\ Kiosk-all-target-headers.hmap (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    write-file /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Wisconsin\ Kiosk-all-target-headers.hmap
+
+WriteAuxiliaryFile /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/WisconsinKiosk_const_extract_protocols.json (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    write-file /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/WisconsinKiosk_const_extract_protocols.json
+
+WriteAuxiliaryFile /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/Wisconsin\ Kiosk.SwiftConstValuesFileList (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    write-file /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/Wisconsin\ Kiosk.SwiftConstValuesFileList
+
+WriteAuxiliaryFile /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/WisconsinKiosk-OutputFileMap.json (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    write-file /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/WisconsinKiosk-OutputFileMap.json
+
+WriteAuxiliaryFile /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/Wisconsin\ Kiosk.LinkFileList (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    write-file /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/Wisconsin\ Kiosk.LinkFileList
+
+WriteAuxiliaryFile /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/Wisconsin\ Kiosk.SwiftFileList (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    write-file /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/Wisconsin\ Kiosk.SwiftFileList
+
+Ld /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin\ Kiosk.app/__preview.dylib normal (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-ios26.0-simulator -dynamiclib -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator27.0.sdk -O0 -Xlinker -no_warn_duplicate_libraries -L/tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator -F/tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator -install_name @rpath/Wisconsin\ Kiosk.debug.dylib -Xlinker -dead_strip -rdynamic -Xlinker -no_deduplicate -Xlinker -objc_abi_version -Xlinker 2 -Xlinker -debug_variant -Xlinker -dependency_info -Xlinker /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/Wisconsin\ Kiosk_dependency_info.dat -o /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin\ Kiosk.app/__preview.dylib
+
+CpResource /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin\ Kiosk.app/Gotham-Black.ttf /Users/role/Code/wisconsin-creative/ios/Wisconsin/Resources/Fonts/Gotham-Black.ttf (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Users/role/Code/wisconsin-creative/ios/Wisconsin/Resources/Fonts/Gotham-Black.ttf /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin\ Kiosk.app
+
+CpResource /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin\ Kiosk.app/PrivacyInfo.xcprivacy /Users/role/Code/wisconsin-creative/ios/Wisconsin/KioskOnly/PrivacyInfo.xcprivacy (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Users/role/Code/wisconsin-creative/ios/Wisconsin/KioskOnly/PrivacyInfo.xcprivacy /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin\ Kiosk.app
+
+CpResource /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin\ Kiosk.app/Gotham-Bold.ttf /Users/role/Code/wisconsin-creative/ios/Wisconsin/Resources/Fonts/Gotham-Bold.ttf (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Users/role/Code/wisconsin-creative/ios/Wisconsin/Resources/Fonts/Gotham-Bold.ttf /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin\ Kiosk.app
+
+MkDir /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/assetcatalog_output/unthinned (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    /bin/mkdir -p /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/assetcatalog_output/unthinned
+
+MkDir /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/assetcatalog_output/thinned (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    /bin/mkdir -p /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/assetcatalog_output/thinned
+
+GenerateAssetSymbols /Users/role/Code/wisconsin-creative/ios/IconSources/KioskIcon.icon /Users/role/Code/wisconsin-creative/ios/Wisconsin/Assets.xcassets (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    /Applications/Xcode.app/Contents/Developer/usr/bin/actool /Users/role/Code/wisconsin-creative/ios/IconSources/KioskIcon.icon /Users/role/Code/wisconsin-creative/ios/Wisconsin/Assets.xcassets --compile /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin\ Kiosk.app --output-format human-readable-text --notices --warnings --export-dependency-info /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/assetcatalog_dependencies --output-partial-info-plist /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/assetcatalog_generated_info.plist --app-icon KioskIcon --compress-pngs --enable-on-demand-resources YES --development-region en --target-device ipad --minimum-deployment-target 26.0 --platform iphonesimulator --bundle-identifier com.erikrole.WisconsinKiosk --generate-swift-asset-symbols /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/DerivedSources/GeneratedAssetSymbols.swift --generate-objc-asset-symbols /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/DerivedSources/GeneratedAssetSymbols.h --generate-asset-symbol-index /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/DerivedSources/GeneratedAssetSymbols-Index.plist
+/* com.apple.actool.compilation-results */
+/tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/DerivedSources/GeneratedAssetSymbols-Index.plist
+/tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/DerivedSources/GeneratedAssetSymbols.h
+/tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/DerivedSources/GeneratedAssetSymbols.swift
+
+
+CompileAssetCatalogVariant thinned /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin\ Kiosk.app /Users/role/Code/wisconsin-creative/ios/IconSources/KioskIcon.icon /Users/role/Code/wisconsin-creative/ios/Wisconsin/Assets.xcassets (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    /Applications/Xcode.app/Contents/Developer/usr/bin/actool /Users/role/Code/wisconsin-creative/ios/IconSources/KioskIcon.icon /Users/role/Code/wisconsin-creative/ios/Wisconsin/Assets.xcassets --compile /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/assetcatalog_output/thinned --output-format human-readable-text --notices --warnings --export-dependency-info /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/assetcatalog_dependencies_thinned --output-partial-info-plist /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/assetcatalog_generated_info.plist_thinned --app-icon KioskIcon --compress-pngs --enable-on-demand-resources YES --filter-for-thinning-device-configuration iPad16,9 --filter-for-device-os-version 26.5 --development-region en --target-device ipad --minimum-deployment-target 26.0 --platform iphonesimulator
+/* com.apple.actool.compilation-results */
+/tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/assetcatalog_generated_info.plist_thinned
+/tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/assetcatalog_output/thinned/Assets.car
+/tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/assetcatalog_output/thinned/KioskIcon60x60@2x.png
+/tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/assetcatalog_output/thinned/KioskIcon76x76@2x~ipad.png
+
+
+SwiftDriver WisconsinKiosk normal arm64 com.apple.xcode.tools.swift.compiler (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-SwiftDriver -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name Wisconsin_Kiosk -Onone @/tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/Wisconsin\ Kiosk.SwiftFileList -DDEBUG -DDEBUG -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator27.0.sdk -target arm64-apple-ios26.0-simulator -g -module-cache-path /tmp/wc-kiosk-icon-build/ModuleCache.noindex -Xfrontend -serialize-debugging-options -profile-coverage-mapping -profile-generate -enable-testing -index-store-path /tmp/wc-kiosk-icon-build/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 6 -I /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator -F /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator -c -j18 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /tmp/wc-kiosk-icon-build/SDKStatCaches.noindex/iphonesimulator27.0-24A430-8dc58220667be655e1bcc261a7455254.sdkstatcache -output-file-map /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/WisconsinKiosk-OutputFileMap.json -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /tmp/wc-kiosk-icon-build/ModuleCache.noindex -sdk-module-cache-path /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules -emit-dependencies -emit-module -emit-module-path /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/Wisconsin_Kiosk.swiftmodule -serialize-diagnostics -dependency-scan-serialize-diagnostics-path /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/Wisconsin_Kiosk-dependency-scan.dia -validate-clang-modules-once -clang-build-session-file /tmp/wc-kiosk-icon-build/ModuleCache.noindex/Session.modulevalidation -Xcc -fmodules-prune-interval\=86400 -Xcc -fmodules-prune-after\=345600 -emit-const-values -const-gather-protocols-list /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/WisconsinKiosk_const_extract_protocols.json -Xcc -iquote -Xcc /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Wisconsin\ Kiosk-generated-files.hmap -Xcc -I/tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Wisconsin\ Kiosk-own-target-headers.hmap -Xcc -I/tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Wisconsin\ Kiosk-all-target-headers.hmap -Xcc -iquote -Xcc /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Wisconsin\ Kiosk-project-headers.hmap -Xcc -I/tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/include -Xcc -I/tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/DerivedSources-normal/arm64 -Xcc -I/tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/DerivedSources/arm64 -Xcc -I/tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/Wisconsin_Kiosk-Swift.h -working-directory /Users/role/Code/wisconsin-creative/ios -experimental-emit-module-separately -disable-cmo
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/_Builtin_float-EVO8H4BM1TJLNZTGHYYALW6AG.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/_SwiftConcurrencyShims-8MOPBKUT4YPZW3JHX394E9O3R.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/ptrcheck-2XULABHKB4ATN29E7YTBQVP3.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/ptrauth-ALZIIHJPCANM7BDEAC5NYKTT9.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/_Builtin_stdarg-DK9JIA44UCOIRLXB031SODH6E.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/_Builtin_stddef-2ASOQ5D13J9SIZ30GSME1WQV4.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/DeveloperToolsSupport-AFS84YXZCELBLS426RFCE6TE0.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/SwiftShims-8LMWQM5QBQSVYG6PZWB8QDNGA.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/_AvailabilityInternal-DPMZOYOJHE6TYA2FP22S9OL7F.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/_Builtin_stdbool-2R729ZFJ5XYZPWZ873JY6ZT2K.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/_DarwinFoundation1-2UY3CJ0WLZEYONH4PC308OA18.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/_Builtin_limits-C70VZGG6W64KSCIWOK35LFSXK.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/_DarwinFoundation2-BTYGDWN9VSILKVEV1N1OI6BL5.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/_Builtin_stdint-EV93UECN3DIHGJ2IIYFOQVS70.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/sys_types-DBI0219INLD7STZRTESQXXB9W.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/string_h-8OKKKV9C5UAXT0SB8WGFTK5LI.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/_Builtin_tgmath-UNG0OBQUEXK9RZB8LYFI7XF7.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/_Builtin_stdatomic-5AUP859LT3CGDFDNRA22Z7XR0.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/_DarwinFoundation3-A1W6WL4CXJERK4UQ3PD4HUZFR.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/_Builtin_intrinsics-7DXDH72HWL3IKWYKPGSXEURVE.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/_Builtin_inttypes-E9CRVZ3GFF32G8PWQ81ZVVXWX.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/Darwin-54NRPCT1CXXECU3JHE6QB5E81.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/simd-6E42X0BDVKHSVTATHLC2XBKON.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/Compression-E9VRC5YIB9U6XHRH7U3UF08UH.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/ObjectiveC-8LVOCTB5R2EL9HW190ATCL05Z.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/MachO-7U6MVKB7WS48POLE1VW70ZSCG.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/os_object-54NSCJZGYENOZ7G07UMNPK6GO.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/Spatial-BNVS2RXRJS7ZBKC6Z31HZEU71.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/os_workgroup-394JZDKZIOO0UQUUEEN9P17FL.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/Dispatch-5VR1J6ET7073VDON02C3PSZO2.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/dnssd-2SKDGUKNJBSY0OHALJ6NNJ0R0.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/CoreFoundation-2HJ716T2AZ1C2MF7VK1HPFRHN.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/XPC-6M8SFGKF7SGGQWGDMOF3H64X2.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/os-AIJ1TMMAAB1YH54S8ITBZX5U6.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/CFNetwork-DTCHFA3C03I4TE9OR20YB79T3.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/CoreAudioTypes-748X2BQJGUUFLYI6AMS0M1H7L.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/Security-7ZGX3XHIMLGQII387MUFT0LRC.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/CoreGraphics-B7PQRIDM2UZ202RCSV94AKK3V.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/CoreAudio-11X6CQL9DW9IJOMZ6JEHFZLHI.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/Foundation-47NZO5XXJN2UVAJETTUKHVLWS.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/CoreText-4WIE2SUBXM3324IAMNQR0KOAW.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/ImageIO-2CDOES1IU5271XEO6TKIM4R6Y.pcm
+
+LinkAssetCatalog /Users/role/Code/wisconsin-creative/ios/IconSources/KioskIcon.icon /Users/role/Code/wisconsin-creative/ios/Wisconsin/Assets.xcassets (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-linkAssetCatalog --thinned /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/assetcatalog_output/thinned --thinned-dependencies /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/assetcatalog_dependencies_thinned --thinned-info-plist-content /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/assetcatalog_generated_info.plist_thinned --unthinned /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/assetcatalog_output/unthinned --unthinned-dependencies /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/assetcatalog_dependencies_unthinned --unthinned-info-plist-content /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/assetcatalog_generated_info.plist_unthinned --output /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin\ Kiosk.app --plist-output /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/assetcatalog_generated_info.plist
+note: Emplaced /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin Kiosk.app/Assets.car (in target 'WisconsinKiosk' from project 'Wisconsin')
+note: Emplaced /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin Kiosk.app/KioskIcon60x60@2x.png (in target 'WisconsinKiosk' from project 'Wisconsin')
+note: Emplaced /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin Kiosk.app/KioskIcon76x76@2x~ipad.png (in target 'WisconsinKiosk' from project 'Wisconsin')
+
+ProcessInfoPlistFile /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin\ Kiosk.app/Info.plist /Users/role/Code/wisconsin-creative/ios/Wisconsin/KioskOnly/Info.plist (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-infoPlistUtility /Users/role/Code/wisconsin-creative/ios/Wisconsin/KioskOnly/Info.plist -producttype com.apple.product-type.application -genpkginfo /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin\ Kiosk.app/PkgInfo -expandbuildsettings -format binary -platform iphonesimulator -additionalcontentfile /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/assetcatalog_generated_info.plist -o /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin\ Kiosk.app/Info.plist
+warning: 'UIRequiresFullScreen' has been deprecated starting in iOS 26.0 and will be ignored in a future release. See the UIRequiresFullScreen documentation for more details. (in target 'WisconsinKiosk' from project 'Wisconsin')
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/Accessibility-5XDG879RVALZMEYPKWN2FG7EG.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/CoreData-656XG7S5XRO18ICTLJKDK4R3O.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/_LocationEssentials-3P5ZE1PF2CGVWT9QDQ772ZJFP.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/OSLog-C48E7YDQCHR77UULCE3W39KA2.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/FileProvider-EOT8PUFNQ541YZDGV79XWTG89.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/UIUtilities-97A3J1UVGG2RNEGCI525JTEMB.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/CoreTransferable-ERHI5REBTZ8Q530R5AQPJ1F05.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/DataDetection-13T61OLXR7BHNP0DLQHSYZETC.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/UniformTypeIdentifiers-YH3CF954VKEN52QQAY90OO3I.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/CoreMIDI-8JLUJ38BJ7EUQZBC0S0WWSA73.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/OpenGLES-DC68XEY30ERS0U51U5SQGO0KH.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/Symbols-D43MLPGECXD0MMEQ9PXQYUIFJ.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/UserNotifications-CAJB4W0TXFZKZL27MG2PUK4NX.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/Network-39CHUPPSLD8LPLD7BNHB4HC8I.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/IOSurface-2F2XEQXP22DG3HY2H6AZK3KFV.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/CoreLocation-54ODUWA0XTEXTOOSZ44P6HUSF.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/Metal-3ADWXXTTFTGSPXXTDUEKPE389.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/AudioToolbox-1PQARPKGFA5WCBYF56Q2GHYQ.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/AVRouting-5IF6UMCF0RWX0SZD99VLB09FX.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/CoreMotion-ENZ0L1W4MM75ZARVFSD1MPOXO.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/CoreVideo-D7CGP80LAENX2NUHKRYPK9D9Z.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/Accelerate-ERR6NVVFLFER1P7UK16PL08AI.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/CoreImage-8MIRGN9YH6I9YJL15FOUT8LMA.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/CoreMedia-11II0562NXT2YG9CTZ3IY85BX.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/QuartzCore-3UUH2R9XWYOV240VKJUF101OG.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/CoreML-8CQLDW3FAIKPOT9KYJ997J5I1.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/SwiftUICore-69RPFEF37YO0030WUZHK9H676.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/VideoToolbox-6D76PR1ZBMNMXSYIMZIAYMWO2.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/AVFAudio-6AKBULPQXN2602YL6VBN9DVRS.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/Vision-BMX3CQZ6G5MHD41U220KUY2B3.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/MediaToolbox-8ORRWN3LC4PL49ZW9R7UQ79VC.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/UIKit-5JFYN2VCQPBLZQ62QSA15VTGN.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/AVFoundation-1O2G8TOTSCVBCPSVSHIKM9TM3.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/SwiftUI-XG512O48L04RG21QYJ6YBVF8.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/VisionKit-17FVLGS1HTYGI3DI043HAK1NR.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules/GameController-247IQA11W5ZUNKJ73DMLR71P8.pcm
+
+SwiftCompile normal arm64 Compiling\ LatestRequestGeneration.swift /Users/role/Code/wisconsin-creative/ios/Wisconsin/Shared/LatestRequestGeneration.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+
+SwiftCompile normal arm64 /Users/role/Code/wisconsin-creative/ios/Wisconsin/Shared/LatestRequestGeneration.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-SwiftPerFileCompile LatestRequestGeneration.swift
+
+SwiftEmitModule normal arm64 Emitting\ module\ for\ Wisconsin_Kiosk (in target 'WisconsinKiosk' from project 'Wisconsin')
+
+SwiftCompile normal arm64 (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    
+
+SwiftCompile normal arm64 Compiling\ KioskReturnView.swift,\ KioskShellView.swift /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskReturnView.swift /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskShellView.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+
+SwiftCompile normal arm64 /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskReturnView.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-SwiftPerFileCompile KioskReturnView.swift
+
+SwiftCompile normal arm64 /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskShellView.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-SwiftPerFileCompile KioskShellView.swift
+
+SwiftCompile normal arm64 Compiling\ KioskSuccessView.swift /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskSuccessView.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+
+SwiftCompile normal arm64 /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskSuccessView.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-SwiftPerFileCompile KioskSuccessView.swift
+
+SwiftCompile normal arm64 Compiling\ KioskStore.swift /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskStore.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+
+SwiftCompile normal arm64 /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskStore.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-SwiftPerFileCompile KioskStore.swift
+
+SwiftCompile normal arm64 Compiling\ KioskSleepModeView.swift /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskSleepModeView.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+
+SwiftCompile normal arm64 /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskSleepModeView.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-SwiftPerFileCompile KioskSleepModeView.swift
+
+SwiftCompile normal arm64 Compiling\ KioskOperatorHubView.swift,\ KioskPickupView.swift /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskOperatorHubView.swift /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskPickupView.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+
+SwiftCompile normal arm64 /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskOperatorHubView.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-SwiftPerFileCompile KioskOperatorHubView.swift
+
+SwiftCompile normal arm64 /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskPickupView.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-SwiftPerFileCompile KioskPickupView.swift
+
+SwiftCompile normal arm64 Compiling\ KioskDateFormatting.swift,\ KioskDesign.swift /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskDateFormatting.swift /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskDesign.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+
+SwiftCompile normal arm64 /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskDateFormatting.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-SwiftPerFileCompile KioskDateFormatting.swift
+
+SwiftCompile normal arm64 /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskDesign.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-SwiftPerFileCompile KioskDesign.swift
+
+SwiftCompile normal arm64 Compiling\ KioskBarcodeCameraView.swift,\ KioskCheckoutDetailSheet.swift /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskBarcodeCameraView.swift /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskCheckoutDetailSheet.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+
+SwiftCompile normal arm64 /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskBarcodeCameraView.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-SwiftPerFileCompile KioskBarcodeCameraView.swift
+
+SwiftCompile normal arm64 /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskCheckoutDetailSheet.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-SwiftPerFileCompile KioskCheckoutDetailSheet.swift
+
+SwiftCompile normal arm64 Compiling\ KioskColors.swift,\ KioskComponents.swift /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskColors.swift /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskComponents.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+
+SwiftCompile normal arm64 /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskColors.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-SwiftPerFileCompile KioskColors.swift
+
+SwiftCompile normal arm64 /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskComponents.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-SwiftPerFileCompile KioskComponents.swift
+
+SwiftCompile normal arm64 Compiling\ KioskCheckoutView.swift,\ KioskChrome.swift /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskCheckoutView.swift /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskChrome.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+
+SwiftCompile normal arm64 /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskCheckoutView.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-SwiftPerFileCompile KioskCheckoutView.swift
+
+SwiftCompile normal arm64 /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskChrome.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-SwiftPerFileCompile KioskChrome.swift
+
+SwiftCompile normal arm64 Compiling\ KioskAPIClient.swift,\ KioskActivationView.swift /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskAPIClient.swift /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskActivationView.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+
+SwiftCompile normal arm64 /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskAPIClient.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-SwiftPerFileCompile KioskAPIClient.swift
+
+SwiftCompile normal arm64 /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskActivationView.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-SwiftPerFileCompile KioskActivationView.swift
+
+SwiftCompile normal arm64 Compiling\ GeneratedAssetSymbols.swift /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/DerivedSources/GeneratedAssetSymbols.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+
+SwiftCompile normal arm64 /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/DerivedSources/GeneratedAssetSymbols.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-SwiftPerFileCompile GeneratedAssetSymbols.swift
+
+SwiftCompile normal arm64 Compiling\ KioskIdleView.swift,\ KioskModels.swift /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskIdleView.swift /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskModels.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+
+SwiftCompile normal arm64 /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskIdleView.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-SwiftPerFileCompile KioskIdleView.swift
+
+SwiftCompile normal arm64 /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskModels.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-SwiftPerFileCompile KioskModels.swift
+
+SwiftCompile normal arm64 Compiling\ HIDScannerField.swift,\ ItemListText.swift /Users/role/Code/wisconsin-creative/ios/Wisconsin/Shared/HIDScannerField.swift /Users/role/Code/wisconsin-creative/ios/Wisconsin/Shared/ItemListText.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+
+SwiftCompile normal arm64 /Users/role/Code/wisconsin-creative/ios/Wisconsin/Shared/HIDScannerField.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-SwiftPerFileCompile HIDScannerField.swift
+
+SwiftCompile normal arm64 /Users/role/Code/wisconsin-creative/ios/Wisconsin/Shared/ItemListText.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-SwiftPerFileCompile ItemListText.swift
+
+SwiftCompile normal arm64 Compiling\ AppEnvironment.swift,\ BadgeEarnedCelebration.swift /Users/role/Code/wisconsin-creative/ios/Wisconsin/Shared/AppEnvironment.swift /Users/role/Code/wisconsin-creative/ios/Wisconsin/Shared/BadgeEarnedCelebration.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+
+SwiftCompile normal arm64 /Users/role/Code/wisconsin-creative/ios/Wisconsin/Shared/AppEnvironment.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-SwiftPerFileCompile AppEnvironment.swift
+
+SwiftCompile normal arm64 /Users/role/Code/wisconsin-creative/ios/Wisconsin/Shared/BadgeEarnedCelebration.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-SwiftPerFileCompile BadgeEarnedCelebration.swift
+
+SwiftCompile normal arm64 Compiling\ KioskIdentityView.swift,\ KioskIdleRoster.swift /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskIdentityView.swift /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskIdleRoster.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+
+SwiftCompile normal arm64 /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskIdentityView.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-SwiftPerFileCompile KioskIdentityView.swift
+
+SwiftCompile normal arm64 /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskIdleRoster.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-SwiftPerFileCompile KioskIdleRoster.swift
+
+SwiftCompile normal arm64 Compiling\ KioskEventDetailSheet.swift,\ KioskFlowRouting.swift /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskEventDetailSheet.swift /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskFlowRouting.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+
+SwiftCompile normal arm64 /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskEventDetailSheet.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-SwiftPerFileCompile KioskEventDetailSheet.swift
+
+SwiftCompile normal arm64 /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskFlowRouting.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-SwiftPerFileCompile KioskFlowRouting.swift
+
+SwiftCompile normal arm64 Compiling\ KioskNativeTextField.swift,\ KioskOnlyApp.swift /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskNativeTextField.swift /Users/role/Code/wisconsin-creative/ios/Wisconsin/KioskOnly/KioskOnlyApp.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+
+SwiftCompile normal arm64 /Users/role/Code/wisconsin-creative/ios/Wisconsin/Kiosk/KioskNativeTextField.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-SwiftPerFileCompile KioskNativeTextField.swift
+
+SwiftCompile normal arm64 /Users/role/Code/wisconsin-creative/ios/Wisconsin/KioskOnly/KioskOnlyApp.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-SwiftPerFileCompile KioskOnlyApp.swift
+
+SwiftDriverJobDiscovery normal arm64 Compiling LatestRequestGeneration.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+
+SwiftDriverJobDiscovery normal arm64 Compiling KioskDateFormatting.swift, KioskDesign.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+
+SwiftDriverJobDiscovery normal arm64 Compiling AppEnvironment.swift, BadgeEarnedCelebration.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+
+SwiftDriverJobDiscovery normal arm64 Compiling KioskColors.swift, KioskComponents.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+
+SwiftDriverJobDiscovery normal arm64 Compiling HIDScannerField.swift, ItemListText.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+
+SwiftDriverJobDiscovery normal arm64 Compiling KioskSleepModeView.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+
+SwiftDriverJobDiscovery normal arm64 Compiling KioskEventDetailSheet.swift, KioskFlowRouting.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+
+SwiftDriverJobDiscovery normal arm64 Compiling KioskIdentityView.swift, KioskIdleRoster.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+
+SwiftDriverJobDiscovery normal arm64 Compiling KioskAPIClient.swift, KioskActivationView.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+
+SwiftDriverJobDiscovery normal arm64 Compiling KioskSuccessView.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+
+SwiftDriverJobDiscovery normal arm64 Compiling KioskStore.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+
+SwiftDriverJobDiscovery normal arm64 Compiling GeneratedAssetSymbols.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+
+SwiftDriverJobDiscovery normal arm64 Emitting module for Wisconsin_Kiosk (in target 'WisconsinKiosk' from project 'Wisconsin')
+
+SwiftDriver\ Compilation\ Requirements WisconsinKiosk normal arm64 com.apple.xcode.tools.swift.compiler (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-Swift-Compilation-Requirements -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name Wisconsin_Kiosk -Onone @/tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/Wisconsin\ Kiosk.SwiftFileList -DDEBUG -DDEBUG -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator27.0.sdk -target arm64-apple-ios26.0-simulator -g -module-cache-path /tmp/wc-kiosk-icon-build/ModuleCache.noindex -Xfrontend -serialize-debugging-options -profile-coverage-mapping -profile-generate -enable-testing -index-store-path /tmp/wc-kiosk-icon-build/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 6 -I /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator -F /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator -c -j18 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /tmp/wc-kiosk-icon-build/SDKStatCaches.noindex/iphonesimulator27.0-24A430-8dc58220667be655e1bcc261a7455254.sdkstatcache -output-file-map /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/WisconsinKiosk-OutputFileMap.json -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /tmp/wc-kiosk-icon-build/ModuleCache.noindex -sdk-module-cache-path /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules -emit-dependencies -emit-module -emit-module-path /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/Wisconsin_Kiosk.swiftmodule -serialize-diagnostics -dependency-scan-serialize-diagnostics-path /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/Wisconsin_Kiosk-dependency-scan.dia -validate-clang-modules-once -clang-build-session-file /tmp/wc-kiosk-icon-build/ModuleCache.noindex/Session.modulevalidation -Xcc -fmodules-prune-interval\=86400 -Xcc -fmodules-prune-after\=345600 -emit-const-values -const-gather-protocols-list /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/WisconsinKiosk_const_extract_protocols.json -Xcc -iquote -Xcc /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Wisconsin\ Kiosk-generated-files.hmap -Xcc -I/tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Wisconsin\ Kiosk-own-target-headers.hmap -Xcc -I/tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Wisconsin\ Kiosk-all-target-headers.hmap -Xcc -iquote -Xcc /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Wisconsin\ Kiosk-project-headers.hmap -Xcc -I/tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/include -Xcc -I/tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/DerivedSources-normal/arm64 -Xcc -I/tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/DerivedSources/arm64 -Xcc -I/tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/Wisconsin_Kiosk-Swift.h -working-directory /Users/role/Code/wisconsin-creative/ios -experimental-emit-module-separately -disable-cmo
+
+SwiftMergeGeneratedHeaders /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/DerivedSources/Wisconsin_Kiosk-Swift.h /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/Wisconsin_Kiosk-Swift.h (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-swiftHeaderTool -arch arm64 /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/Wisconsin_Kiosk-Swift.h -o /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/DerivedSources/Wisconsin_Kiosk-Swift.h
+
+Copy /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin_Kiosk.swiftmodule/arm64-apple-ios-simulator.swiftdoc /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/Wisconsin_Kiosk.swiftdoc (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/Wisconsin_Kiosk.swiftdoc /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin_Kiosk.swiftmodule/arm64-apple-ios-simulator.swiftdoc
+
+Copy /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin_Kiosk.swiftmodule/arm64-apple-ios-simulator.abi.json /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/Wisconsin_Kiosk.abi.json (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/Wisconsin_Kiosk.abi.json /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin_Kiosk.swiftmodule/arm64-apple-ios-simulator.abi.json
+
+Copy /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin_Kiosk.swiftmodule/arm64-apple-ios-simulator.swiftmodule /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/Wisconsin_Kiosk.swiftmodule (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/Wisconsin_Kiosk.swiftmodule /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin_Kiosk.swiftmodule/arm64-apple-ios-simulator.swiftmodule
+
+Copy /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin_Kiosk.swiftmodule/Project/arm64-apple-ios-simulator.swiftsourceinfo /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/Wisconsin_Kiosk.swiftsourceinfo (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/Wisconsin_Kiosk.swiftsourceinfo /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin_Kiosk.swiftmodule/Project/arm64-apple-ios-simulator.swiftsourceinfo
+
+SwiftDriverJobDiscovery normal arm64 Compiling KioskNativeTextField.swift, KioskOnlyApp.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+
+SwiftDriverJobDiscovery normal arm64 Compiling KioskReturnView.swift, KioskShellView.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+
+SwiftDriverJobDiscovery normal arm64 Compiling KioskBarcodeCameraView.swift, KioskCheckoutDetailSheet.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+
+SwiftDriverJobDiscovery normal arm64 Compiling KioskOperatorHubView.swift, KioskPickupView.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+
+SwiftDriverJobDiscovery normal arm64 Compiling KioskIdleView.swift, KioskModels.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+
+SwiftDriverJobDiscovery normal arm64 Compiling KioskCheckoutView.swift, KioskChrome.swift (in target 'WisconsinKiosk' from project 'Wisconsin')
+
+SwiftDriver\ Compilation WisconsinKiosk normal arm64 com.apple.xcode.tools.swift.compiler (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-Swift-Compilation -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name Wisconsin_Kiosk -Onone @/tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/Wisconsin\ Kiosk.SwiftFileList -DDEBUG -DDEBUG -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator27.0.sdk -target arm64-apple-ios26.0-simulator -g -module-cache-path /tmp/wc-kiosk-icon-build/ModuleCache.noindex -Xfrontend -serialize-debugging-options -profile-coverage-mapping -profile-generate -enable-testing -index-store-path /tmp/wc-kiosk-icon-build/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 6 -I /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator -F /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator -c -j18 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /tmp/wc-kiosk-icon-build/SDKStatCaches.noindex/iphonesimulator27.0-24A430-8dc58220667be655e1bcc261a7455254.sdkstatcache -output-file-map /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/WisconsinKiosk-OutputFileMap.json -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /tmp/wc-kiosk-icon-build/ModuleCache.noindex -sdk-module-cache-path /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules -emit-dependencies -emit-module -emit-module-path /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/Wisconsin_Kiosk.swiftmodule -serialize-diagnostics -dependency-scan-serialize-diagnostics-path /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/Wisconsin_Kiosk-dependency-scan.dia -validate-clang-modules-once -clang-build-session-file /tmp/wc-kiosk-icon-build/ModuleCache.noindex/Session.modulevalidation -Xcc -fmodules-prune-interval\=86400 -Xcc -fmodules-prune-after\=345600 -emit-const-values -const-gather-protocols-list /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/WisconsinKiosk_const_extract_protocols.json -Xcc -iquote -Xcc /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Wisconsin\ Kiosk-generated-files.hmap -Xcc -I/tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Wisconsin\ Kiosk-own-target-headers.hmap -Xcc -I/tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Wisconsin\ Kiosk-all-target-headers.hmap -Xcc -iquote -Xcc /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Wisconsin\ Kiosk-project-headers.hmap -Xcc -I/tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/include -Xcc -I/tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/DerivedSources-normal/arm64 -Xcc -I/tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/DerivedSources/arm64 -Xcc -I/tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/Wisconsin_Kiosk-Swift.h -working-directory /Users/role/Code/wisconsin-creative/ios -experimental-emit-module-separately -disable-cmo
+
+Ld /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin\ Kiosk.app/Wisconsin\ Kiosk.debug.dylib normal (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-ios26.0-simulator -dynamiclib -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator27.0.sdk -O0 -Xlinker -no_warn_duplicate_libraries -L/tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/EagerLinkingTBDs/Debug-iphonesimulator -L/tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator -F/tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/EagerLinkingTBDs/Debug-iphonesimulator -F/tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator -filelist /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/Wisconsin\ Kiosk.LinkFileList -install_name @rpath/Wisconsin\ Kiosk.debug.dylib -Xlinker -rpath -Xlinker @executable_path/Frameworks -Xlinker -dead_strip -Xlinker -object_path_lto -Xlinker /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/Wisconsin\ Kiosk_lto.o -rdynamic -Xlinker -no_deduplicate -Xlinker -objc_abi_version -Xlinker 2 -Xlinker -debug_variant -Xlinker -dependency_info -Xlinker /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/Wisconsin\ Kiosk_dependency_info.dat -fobjc-link-runtime -fprofile-instr-generate -L/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphonesimulator -L/usr/lib/swift -Xlinker -add_ast_path -Xlinker /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/Wisconsin_Kiosk.swiftmodule -Xlinker -alias -Xlinker _main -Xlinker ___debug_main_executable_dylib_entry_point -o /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin\ Kiosk.app/Wisconsin\ Kiosk.debug.dylib
+
+ConstructStubExecutorLinkFileList /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Wisconsin\ Kiosk-ExecutorLinkFileList-normal-arm64.txt (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    construct-stub-executor-link-file-list /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin\ Kiosk.app/Wisconsin\ Kiosk.debug.dylib /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib/libPreviewsJITStubExecutor_no_swift_entry_point.a /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib/libPreviewsJITStubExecutor.a --output /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Wisconsin\ Kiosk-ExecutorLinkFileList-normal-arm64.txt
+note: Using stub executor library with Swift entry point. (in target 'WisconsinKiosk' from project 'Wisconsin')
+
+Ld /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin\ Kiosk.app/Wisconsin\ Kiosk normal (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-ios26.0-simulator -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator27.0.sdk -O0 -Xlinker -no_warn_duplicate_libraries -L/tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator -F/tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator -Xlinker -rpath -Xlinker @executable_path -Xlinker -rpath -Xlinker @executable_path/Frameworks -rdynamic -Xlinker -no_deduplicate -Xlinker -objc_abi_version -Xlinker 2 -Xlinker -debug_variant -e ___debug_blank_executor_main -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __debug_dylib -Xlinker /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Wisconsin\ Kiosk-DebugDylibPath-normal-arm64.txt -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __debug_instlnm -Xlinker /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Wisconsin\ Kiosk-DebugDylibInstallName-normal-arm64.txt -Xlinker -filelist -Xlinker /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Wisconsin\ Kiosk-ExecutorLinkFileList-normal-arm64.txt /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin\ Kiosk.app/Wisconsin\ Kiosk.debug.dylib -o /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin\ Kiosk.app/Wisconsin\ Kiosk
+
+CopySwiftLibs /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin\ Kiosk.app (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-swiftStdLibTool --copy --verbose --scan-executable /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin\ Kiosk.app/Wisconsin\ Kiosk.debug.dylib --scan-folder /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin\ Kiosk.app/Frameworks --scan-folder /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin\ Kiosk.app/PlugIns --scan-folder /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin\ Kiosk.app/SystemExtensions --scan-folder /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin\ Kiosk.app/Extensions --platform iphonesimulator --toolchain /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin\ Kiosk.app/Frameworks --strip-bitcode --strip-bitcode-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os
+Ignoring --strip-bitcode because --sign was not passed
+
+ExtractAppIntentsMetadata (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsmetadataprocessor --toolchain-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --module-name Wisconsin_Kiosk --sdk-root /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator27.0.sdk --xcode-version 27A266a --platform-family iOS --deployment-target 26.0 --bundle-identifier com.erikrole.WisconsinKiosk --output /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin\ Kiosk.app --target-triple arm64-apple-ios26.0-simulator --binary-file /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin\ Kiosk.app/Wisconsin\ Kiosk --dependency-file /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/Wisconsin\ Kiosk_dependency_info.dat --stringsdata-file /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/ExtractedAppShortcutsMetadata.stringsdata --source-file-list /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/Wisconsin\ Kiosk.SwiftFileList --metadata-file-list /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Wisconsin\ Kiosk.DependencyMetadataFileList --static-metadata-file-list /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Wisconsin\ Kiosk.DependencyStaticMetadataFileList --swift-const-vals-list /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Objects-normal/arm64/Wisconsin\ Kiosk.SwiftConstValuesFileList --compile-time-extraction --deployment-aware-processing --no-app-shortcuts-localization
+2026-09-28 08:06:56.008 appintentsmetadataprocessor[12423:12542933] Starting appintentsmetadataprocessor export
+2026-09-28 08:06:56.009 appintentsmetadataprocessor[12423:12542933] warning: Metadata extraction skipped, no AppIntents.framework dependency found
+
+AppIntentsSSUTraining (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsnltrainingprocessor --infoplist-path /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin\ Kiosk.app/Info.plist --temp-dir-path /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/ssu --bundle-id com.erikrole.WisconsinKiosk --product-path /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin\ Kiosk.app --extracted-metadata-path /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin\ Kiosk.app/Metadata.appintents --metadata-file-list /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/Wisconsin.build/Debug-iphonesimulator/WisconsinKiosk.build/Wisconsin\ Kiosk.DependencyMetadataFileList --source-file /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin\ Kiosk.app/Info.plist --archive-ssu-assets
+2026-09-28 08:06:56.034 appintentsnltrainingprocessor[12424:12542934] Parsing options for appintentsnltrainingprocessor
+2026-09-28 08:06:56.035 appintentsnltrainingprocessor[12424:12542934] Starting AppIntents SSU YAML Generation
+2026-09-28 08:06:56.036 appintentsnltrainingprocessor[12424:12542934] No AppShortcuts found - Skipping.
+
+RegisterExecutionPolicyException /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin\ Kiosk.app (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-RegisterExecutionPolicyException /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin\ Kiosk.app
+
+Validate /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin\ Kiosk.app (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    builtin-validationUtility /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin\ Kiosk.app -shallow-bundle -infoplist-subpath Info.plist
+
+Touch /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin\ Kiosk.app (in target 'WisconsinKiosk' from project 'Wisconsin')
+    cd /Users/role/Code/wisconsin-creative/ios
+    /usr/bin/touch -c /tmp/wc-kiosk-icon-build/Build/Products/Debug-iphonesimulator/Wisconsin\ Kiosk.app
+
+PruneExplicitPrecompiledModules /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/ExplicitPrecompiledModules
+
+PruneExplicitPrecompiledModules /tmp/wc-kiosk-icon-build/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules
+
+PruneExplicitPrecompiledModules /tmp/wc-kiosk-icon-build/SDKExplicitPrecompiledModules
+
+** BUILD SUCCEEDED **
+

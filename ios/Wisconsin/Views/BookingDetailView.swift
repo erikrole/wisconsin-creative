@@ -13,6 +13,7 @@ struct BookingDetailView: View {
     @State private var showExtend = AppRuntimeMode.CaptureSeed.bookingExtend
     @State private var showEdit = AppRuntimeMode.CaptureSeed.bookingEdit
     @State private var isActioning = false
+    @State private var nudgeState: NudgeState = .idle
     /// Web guards this call with an AbortController. Without an equivalent, a
     /// pull-to-refresh mid-flight lets the older availability answer land last
     /// and overwrite the newer one.
@@ -73,6 +74,21 @@ struct BookingDetailView: View {
             && hasCapability("RESERVATION_CANCEL_OWN")
             && (booking.status == .booked || booking.status == .pendingPickup)
         return booking.allows("cancel") ?? legacyAllowed
+    }
+
+    /// The server also enforces the return grace period; a nudge inside it
+    /// comes back as an inline error rather than being hidden here.
+    private var canNudgeBooking: Bool {
+        guard let booking else { return false }
+        return booking.kind == .checkout
+            && booking.status == .open
+            && booking.endsAt < Date.now
+            && booking.allows("nudge") == true
+    }
+
+    private var nudgeNote: String? {
+        if let lastNudge = booking?.lastNudge { return lastNudge.label() }
+        return nudgeState == .sent ? "Nudged just now" : nil
     }
 
     private var canReuseReservationGear: Bool {
@@ -175,10 +191,15 @@ struct BookingDetailView: View {
             }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            if canExtendBooking {
+            if canExtendBooking || canNudgeBooking {
                 BookingExtendBar(
                     isActioning: isActioning,
-                    onExtend: { showExtend = true }
+                    canExtend: canExtendBooking,
+                    nudge: canNudgeBooking ? nudgeState : nil,
+                    nudgeNote: canNudgeBooking ? nudgeNote : nil,
+                    borrowerName: booking?.requester.name,
+                    onExtend: { showExtend = true },
+                    onNudge: { Task { await nudgeBooking() } }
                 )
             }
         }
@@ -220,6 +241,11 @@ struct BookingDetailView: View {
         do {
             let loaded = try await APIClient.shared.booking(id: bookingId)
             booking = loaded
+            // A colleague's nudge inside the hourly window reads as sent here
+            // too; a local send is never downgraded by a refresh.
+            if nudgeState == .idle, loaded.lastNudge?.isRecent() == true {
+                nudgeState = .sent
+            }
             isLoading = false
             await loadConflicts(for: loaded)
             await loadReturnInsight(for: loaded)
@@ -313,6 +339,28 @@ struct BookingDetailView: View {
         isActioning = false
     }
 
+    private func nudgeBooking() async {
+        guard nudgeState == .idle else { return }
+        nudgeState = .sending
+        do {
+            try await APIClient.shared.nudgeBooking(id: bookingId)
+            nudgeState = .sent
+            error = nil
+            if let current = booking {
+                // Show the local send immediately; the next load replaces it
+                // with the server's record.
+                var updated = current
+                updated.lastNudge = BookingLastNudge(at: .now, byName: session.currentUser?.name)
+                booking = updated
+            }
+            Haptics.success()
+        } catch {
+            nudgeState = .idle
+            self.error = error.localizedDescription
+            Haptics.warning()
+        }
+    }
+
     private func reuseReservationGear() {
         guard let booking else { return }
         isActioning = true
@@ -359,6 +407,8 @@ struct EditBookingSheet: View {
     @State private var showDiscardConfirm = false
     @State private var showTransfer = false
     @State private var didTransfer = false
+    @State private var itemsVM = CreateBookingViewModel()
+    @State private var showItemPicker = AppRuntimeMode.CaptureSeed.bookingEditItems
 
     init(booking: Booking, onSaved: @escaping (Booking) -> Void) {
         self.booking = booking
@@ -373,8 +423,44 @@ struct EditBookingSheet: View {
         title.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    private var canEditItems: Bool {
+        booking.kind == .reservation
+    }
+
+    private var originalAssetIds: Set<String> {
+        Set(booking.serializedItems.map(\.assetId))
+    }
+
+    private var originalBulkQuantities: [String: Int] {
+        Dictionary(
+            booking.bulkItems
+                .filter { $0.plannedQuantity > 0 }
+                .map { ($0.bulkSku.id, $0.plannedQuantity) },
+            uniquingKeysWith: { _, later in later }
+        )
+    }
+
+    private var editedBulkQuantities: [String: Int] {
+        itemsVM.selectedBulkQuantities.filter { $0.value > 0 }
+    }
+
+    private var itemsChanged: Bool {
+        canEditItems
+            && (itemsVM.selectedAssetIds != originalAssetIds || editedBulkQuantities != originalBulkQuantities)
+    }
+
+    /// Item edits are blocked until the picker's availability check is clean.
+    private var itemsBlockSave: Bool {
+        guard itemsChanged else { return false }
+        return itemsVM.selectedEquipmentCount == 0
+            || itemsVM.selectedConflictCount > 0
+            || itemsVM.selectedLocationMismatchCount > 0
+            || itemsVM.isCheckingAvailability
+            || itemsVM.availabilityCheckError != nil
+    }
+
     private var hasChanges: Bool {
-        trimmedTitle != booking.title || endsAt != booking.endsAt
+        trimmedTitle != booking.title || endsAt != booking.endsAt || itemsChanged
     }
 
     private var canTransfer: Bool {
@@ -384,7 +470,7 @@ struct EditBookingSheet: View {
     }
 
     private var canSave: Bool {
-        guard hasChanges, !trimmedTitle.isEmpty, endsAt > booking.startsAt, !isSaving else { return false }
+        guard hasChanges, !trimmedTitle.isEmpty, endsAt > booking.startsAt, !isSaving, !itemsBlockSave else { return false }
         switch availability {
         case .checking, .unavailable: return endsAt == booking.endsAt
         case .unchanged, .available, .failed: return true
@@ -464,6 +550,10 @@ struct EditBookingSheet: View {
                         }
                     }
 
+                    if canEditItems {
+                        itemsCard
+                    }
+
                     if canTransfer {
                         Button { showTransfer = true } label: {
                             HStack(spacing: Brand.Space.sm) {
@@ -490,7 +580,9 @@ struct EditBookingSheet: View {
                         .buttonStyle(.plain)
                     }
 
-                    Text("Gear and pickup details stay read-only on your phone. Physical handoff and returns remain kiosk workflows.")
+                    Text(canEditItems
+                        ? "Pickup details stay read-only on your phone. Physical handoff and returns remain kiosk workflows."
+                        : "Gear and pickup details stay read-only on your phone. Physical handoff and returns remain kiosk workflows.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -524,7 +616,31 @@ struct EditBookingSheet: View {
                     .disabled(!canSave)
                 }
             }
-            .task(id: endsAt) { await checkAvailability() }
+            .task(id: endsAt) {
+                if canEditItems && itemsVM.endsAt != endsAt {
+                    itemsVM.endsAt = endsAt
+                    itemsVM.scheduleConflictCheck()
+                }
+                await checkAvailability()
+            }
+            .task {
+                guard canEditItems, itemsVM.excludeBookingId == nil else { return }
+                itemsVM.prefillForEditingItems(from: booking)
+                await itemsVM.loadOptions()
+            }
+            .navigationDestination(isPresented: $showItemPicker) {
+                CreateBookingEquipmentPicker(vm: itemsVM, reviewTitle: "Done") {
+                    showItemPicker = false
+                }
+                // Load here, not on the sheet: pushing the picker cancels the sheet's task.
+                .task {
+                    guard itemsVM.availableAssets.isEmpty else { return }
+                    await itemsVM.loadAvailableAssets(reset: true)
+                    itemsVM.scheduleConflictCheck()
+                }
+                .navigationTitle("Edit Items")
+                .navigationBarTitleDisplayMode(.inline)
+            }
             .navigationDestination(isPresented: $showTransfer) {
                 TransferBookingOwnerSheet(booking: booking, wrapsInNavigationStack: false) { transferred in
                     ownerName = transferred.requester.name
@@ -544,6 +660,48 @@ struct EditBookingSheet: View {
                 Text("Your changes will be lost.")
             }
         }
+    }
+
+    private var itemsCard: some View {
+        Button { showItemPicker = true } label: {
+            HStack(spacing: Brand.Space.sm) {
+                Image(systemName: "shippingbox")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(Color.statusText(.purple))
+                    .frame(width: 36, height: 36)
+                    .background(Color.statusBackground(.purple), in: Circle())
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Items")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    Text(itemsSummary)
+                        .font(.caption)
+                        .foregroundStyle(itemsBlockSave && !itemsVM.isCheckingAvailability ? Color.statusText(.red) : .secondary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .brandCard()
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint("Add or remove equipment on this reservation")
+    }
+
+    private var itemsSummary: String {
+        let count = itemsVM.selectedAssetIds.count + editedBulkQuantities.values.reduce(0, +)
+        if itemsChanged {
+            if count == 0 { return "Add at least one item" }
+            if itemsVM.selectedConflictCount > 0 { return "Remove unavailable items to save" }
+            if itemsVM.selectedLocationMismatchCount > 0 { return "Some items aren't at this pickup location" }
+            if itemsVM.isCheckingAvailability { return "Checking availability…" }
+            if itemsVM.availabilityCheckError != nil { return "Couldn't check availability. Open to retry." }
+        }
+        let noun = count == 1 ? "item" : "items"
+        let held = itemsVM.lockedAssetIds.count + itemsVM.lockedBulkQuantities.values.reduce(0, +)
+        let heldNote = held > 0 ? " · \(held) picked up" : ""
+        return itemsChanged ? "\(count) \(noun)\(heldNote) · edited" : "\(count) \(noun)\(heldNote)"
     }
 
     @ViewBuilder
@@ -575,7 +733,12 @@ struct EditBookingSheet: View {
         do {
             try await Task.sleep(for: .milliseconds(350))
             guard !Task.isCancelled else { return }
-            let result = try await APIClient.shared.bookingAvailability(for: booking, endsAt: endsAt)
+            let result = try await APIClient.shared.bookingAvailability(
+                for: booking,
+                endsAt: endsAt,
+                serializedAssetIds: itemsChanged ? itemsVM.selectedAssetIds.sorted() : nil,
+                bulkItems: itemsChanged ? itemsVM.selectedBulkRequests : nil
+            )
             guard !Task.isCancelled else { return }
             availability = result.isAvailable ? .available : .unavailable(result.issueSummary)
         } catch is CancellationError {
@@ -594,6 +757,8 @@ struct EditBookingSheet: View {
                 id: booking.id,
                 title: trimmedTitle != booking.title ? trimmedTitle : nil,
                 endsAt: endsAt != booking.endsAt ? endsAt : nil,
+                serializedAssetIds: itemsChanged ? itemsVM.selectedAssetIds.sorted() : nil,
+                bulkItems: itemsChanged ? itemsVM.selectedBulkRequests : nil,
                 updatedAt: booking.updatedAt
             )
             Haptics.success()
@@ -1150,27 +1315,86 @@ private struct ActionsSection: View {
     }
 }
 
+enum NudgeState: Equatable {
+    case idle, sending, sent
+}
+
 private struct BookingExtendBar: View {
     let isActioning: Bool
+    let canExtend: Bool
+    /// Nil hides Nudge: not staff, not overdue, or a shared checkout.
+    let nudge: NudgeState?
+    /// "Nudged 20 min ago by Erik", so staff can see a colleague already did.
+    let nudgeNote: String?
+    let borrowerName: String?
     let onExtend: () -> Void
+    let onNudge: () -> Void
 
     var body: some View {
-        Button {
-            onExtend()
-        } label: {
-            Label("Extend Return Date", systemImage: "clock.arrow.circlepath")
-                .frame(maxWidth: .infinity)
+        VStack(spacing: 6) {
+            if let nudgeNote {
+                Label(nudgeNote, systemImage: "bell")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            actions
         }
-        .buttonStyle(.bordered)
-        .buttonBorderShape(.capsule)
-        .controlSize(.large)
-        .tint(Color.statusText(.blue))
-        .disabled(isActioning)
-        .accessibilityLabel("Extend Return Date")
         .padding(.horizontal, Brand.Space.md)
         .padding(.top, 10)
         .padding(.bottom, 8)
         .background(.ultraThinMaterial)
+    }
+
+    private var actions: some View {
+        HStack(spacing: Brand.Space.sm) {
+            if let nudge {
+                Button {
+                    onNudge()
+                } label: {
+                    Group {
+                        switch nudge {
+                        case .idle: Label("Nudge", systemImage: "bell.badge")
+                        case .sending: Label { Text("Sending…") } icon: { ProgressView() }
+                        case .sent: Label("Nudge Sent", systemImage: "checkmark")
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .buttonBorderShape(.capsule)
+                .controlSize(.large)
+                // Sent stays tinted so it reads as confirmed, not unavailable;
+                // nudgeBooking() ignores taps once it has left .idle.
+                .tint(Color.statusText(nudge == .sent ? .green : .red))
+                .disabled(nudge == .sending)
+                .allowsHitTesting(nudge == .idle)
+                .accessibilityLabel(nudgeAccessibilityLabel(nudge))
+            }
+            if canExtend {
+                Button {
+                    onExtend()
+                } label: {
+                    Label(nudge == nil ? "Extend Return Date" : "Extend", systemImage: "clock.arrow.circlepath")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .buttonBorderShape(.capsule)
+                .controlSize(.large)
+                .tint(Color.statusText(.blue))
+                .disabled(isActioning)
+                .accessibilityLabel("Extend Return Date")
+            }
+        }
+    }
+
+    private func nudgeAccessibilityLabel(_ state: NudgeState) -> String {
+        let who = borrowerName ?? "borrower"
+        switch state {
+        case .idle: return "Nudge \(who)"
+        case .sending: return "Sending nudge to \(who)"
+        case .sent: return "Nudge sent to \(who)"
+        }
     }
 }
 

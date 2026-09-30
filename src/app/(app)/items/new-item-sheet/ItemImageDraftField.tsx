@@ -5,10 +5,12 @@ import { ImageIcon, Trash2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { DraftItemImage } from "@/lib/item-image-draft";
 import { FormRow } from "@/components/form-layout";
+import type { ItemImageSuggestionStatus } from "@/lib/item-image-suggestion";
 import { FormSection } from "./FormSection";
 
 type Props = {
   image: DraftItemImage | null;
+  suggestionStatus?: ItemImageSuggestionStatus;
   disabled?: boolean;
   onChoose: () => void;
   onClear: () => void;
@@ -17,6 +19,7 @@ type Props = {
 
 export function ItemImageDraftField({
   image,
+  suggestionStatus = "idle",
   disabled = false,
   onChoose,
   onClear,
@@ -40,14 +43,17 @@ export function ItemImageDraftField({
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium">
-            {image ? "Image ready to save" : "No image selected"}
+            {image ? "Image ready to save" : suggestionStatus === "loading" ? "Finding a B&H product photo…" : "No image selected"}
           </p>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <p role="status" className="mt-1 text-xs text-muted-foreground">
             {image?.kind === "file"
               ? image.file.name
               : image
-                ? "Product image selected"
-                : "Add one now or continue without an image."}
+                ? suggestionStatus === "ready" ? "B&H product photo · You can change or remove it." : "Product image selected"
+                : suggestionStatus === "loading" ? "Looking up the first product photo. You can keep entering details."
+                  : suggestionStatus === "empty" ? "No B&H product photo found. Choose an image or continue without one."
+                    : suggestionStatus === "unavailable" ? "Automatic lookup is unavailable. Choose an image or continue without one."
+                      : "Enter a product name or brand and model to find a B&H photo automatically."}
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <Button

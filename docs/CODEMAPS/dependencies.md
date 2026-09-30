@@ -68,13 +68,14 @@
 | `@types/react` | `^19.2.17` |
 | `@types/react-dom` | `^19.0.4` |
 | `@types/web-push` | `^3.6.4` |
-| `@vitest/coverage-v8` | `^3.2.6` |
+| `@vitest/coverage-v8` | `^4.1.11` |
 | `eslint` | `^9.39.4` |
 | `eslint-config-next` | `^15.5.25` |
 | `plist` | `^5.0.0` |
 | `prisma` | `^6.19.3` |
 | `typescript` | `5.9.3` |
-| `vitest` | `^3.0.6` |
+| `vite` | `^7.3.6` |
+| `vitest` | `^4.1.11` |
 
 ## Scripts
 
@@ -135,6 +136,7 @@
 - `test`: `vitest run`
 - `test:coverage`: `vitest run --coverage`
 - `test:e2e:smoke`: `playwright test`
+- `test:postgres:custody`: `node scripts/test-custody-postgres.mjs`
 - `test:watch`: `vitest`
 - `verify:docs`: `npm run codemap:check`
 - `verify:skills`: `python3 -B scripts/verify-skills.py`

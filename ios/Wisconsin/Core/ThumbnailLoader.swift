@@ -78,10 +78,19 @@ enum NativeImageProcessor {
 // NSCache-backed thumbnail store. Limited to 20 MB of decoded pixel data.
 @MainActor
 final class ThumbnailCache {
-    static let shared = ThumbnailCache()
+    static let shared = ThumbnailCache(session: thumbnailSession)
     private let cache = NSCache<NSString, UIImage>()
+    private let session: URLSession
+    private struct InFlight {
+        let id: UUID
+        let task: Task<UIImage?, Never>
+        var waiters: Set<UUID>
+    }
+    private var inFlight: [String: InFlight] = [:]
+    private var generation = UUID()
 
-    private init() {
+    init(session: URLSession) {
+        self.session = session
         cache.totalCostLimit = 20_000_000
         cache.countLimit = 150
     }
@@ -95,13 +104,72 @@ final class ThumbnailCache {
         cache.setObject(image, forKey: key as NSString, cost: cost)
     }
 
+    func thumbnail(url: URL, size: CGFloat, scale: CGFloat) async -> UIImage? {
+        let pixels = size * scale
+        guard !Task.isCancelled, pixels.isFinite, pixels > 0, scale.isFinite, scale > 0 else { return nil }
+        let key = "\(url.absoluteString)@\(pixels)px:\(scale)"
+        if let cached = image(for: key) { return cached }
+        let requestGeneration = generation
+        let waiter = UUID()
+        let pending: InFlight
+        if let existing = inFlight[key] {
+            pending = existing
+            inFlight[key]?.waiters.insert(waiter)
+        } else {
+            // Several visible rows often show the same holder or item photo.
+            // One row disappearing must not cancel work the others still need.
+            let id = UUID()
+            let task = Task<UIImage?, Never> { [weak self, session] in
+                defer {
+                    if self?.inFlight[key]?.id == id { self?.inFlight.removeValue(forKey: key) }
+                }
+                var request = URLRequest(url: url)
+                request.cachePolicy = .returnCacheDataElseLoad
+                guard let (data, response) = try? await session.data(for: request),
+                      let response = response as? HTTPURLResponse,
+                      (200..<300).contains(response.statusCode),
+                      response.mimeType?.hasPrefix("image/") == true,
+                      !Task.isCancelled,
+                      let image = await NativeImageProcessor.downsample(data: data, maxPixels: pixels, scale: scale),
+                      !Task.isCancelled,
+                      let self, self.generation == requestGeneration,
+                      self.inFlight[key]?.id == id else { return nil }
+                self.store(image, for: key)
+                return image
+            }
+            pending = InFlight(id: id, task: task, waiters: [waiter])
+            inFlight[key] = pending
+        }
+        let image = await withTaskCancellationHandler {
+            await pending.task.value
+        } onCancel: {
+            Task { @MainActor [weak self] in
+                self?.cancelWaiter(waiter, key: key, requestId: pending.id)
+            }
+        }
+        guard generation == requestGeneration else { return nil }
+        return Task.isCancelled ? nil : image
+    }
+
+    private func cancelWaiter(_ waiter: UUID, key: String, requestId: UUID) {
+        guard inFlight[key]?.id == requestId else { return }
+        inFlight[key]?.waiters.remove(waiter)
+        if let pending = inFlight[key], pending.waiters.isEmpty {
+            pending.task.cancel()
+            inFlight.removeValue(forKey: key)
+        }
+    }
+
     func evictAll() {
         cache.removeAllObjects()
     }
 
     func clearForSignOut() {
+        generation = UUID()
+        for pending in inFlight.values { pending.task.cancel() }
+        inFlight.removeAll()
         cache.removeAllObjects()
-        thumbnailURLCache.removeAllCachedResponses()
+        session.configuration.urlCache?.removeAllCachedResponses()
     }
 }
 
@@ -134,9 +202,8 @@ struct CachedThumbnail: View {
 
     @Environment(\.displayScale) private var displayScale
     @State private var uiImage: UIImage?
-    @State private var loadTask: Task<Void, Never>?
 
-    private var cacheKey: String { "\(url.absoluteString)@\(Int(size))" }
+    private var cacheKey: String { "\(url.absoluteString)@\(size)pt:\(displayScale)" }
 
     var body: some View {
         Group {
@@ -152,34 +219,11 @@ struct CachedThumbnail: View {
                 Color.clear
             }
         }
-        .task(id: url) {
-            loadTask?.cancel()
-            loadTask = Task { await load(scale: displayScale) }
-            await loadTask?.value
+        .task(id: cacheKey) {
+            uiImage = nil
+            let image = await ThumbnailCache.shared.thumbnail(url: url, size: size, scale: displayScale)
+            guard !Task.isCancelled else { return }
+            uiImage = image
         }
-        .onDisappear {
-            loadTask?.cancel()
-            loadTask = nil
-        }
-    }
-
-    private func load(scale: CGFloat) async {
-        if let cached = ThumbnailCache.shared.image(for: cacheKey) {
-            uiImage = cached
-            return
-        }
-        var request = URLRequest(url: url)
-        request.cachePolicy = .returnCacheDataElseLoad
-        guard let (data, response) = try? await thumbnailSession.data(for: request),
-              let httpResponse = response as? HTTPURLResponse,
-              (200..<300).contains(httpResponse.statusCode),
-              httpResponse.mimeType?.hasPrefix("image/") == true,
-              !Task.isCancelled else { return }
-        let pixels = size * scale
-        guard pixels > 0,
-              let image = await NativeImageProcessor.downsample(data: data, maxPixels: pixels, scale: scale),
-              !Task.isCancelled else { return }
-        ThumbnailCache.shared.store(image, for: cacheKey)
-        uiImage = image
     }
 }

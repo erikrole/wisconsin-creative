@@ -23,20 +23,7 @@ private enum TeamScoreboardFilterDimension {
     case site
 }
 
-private struct TeamScoreboardFilterSelection: Equatable {
-    var sportCode: String?
-    var venue: String?
-    var opponent: String?
-    var site: String?
-
-    var isEmpty: Bool {
-        sportCode == nil && venue == nil && opponent == nil && site == nil
-    }
-
-    var count: Int {
-        [sportCode, venue, opponent, site].compactMap { $0 }.count
-    }
-}
+private typealias TeamScoreboardFilterSelection = ScoreboardContextFilters
 
 private struct TeamScoreboardTotals {
     let contributors: Int
@@ -120,6 +107,7 @@ struct TeamScoreboardView: View {
     @State private var initialError: String?
     @State private var refreshError: String?
     @State private var activeRequestID: UUID?
+    @State private var searchText = ""
 
     var body: some View {
         Group {
@@ -151,6 +139,7 @@ struct TeamScoreboardView: View {
         }
         .navigationTitle("Scoreboard")
         .navigationBarTitleDisplayMode(.inline)
+        .searchable(text: $searchText, prompt: "Find a person")
         .tint(.primary)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -162,6 +151,7 @@ struct TeamScoreboardView: View {
                     }
                 }
                 .disabled(isLoading)
+                .tint(.primary)
                 .accessibilityLabel("Refresh Scoreboard")
             }
         }
@@ -208,6 +198,7 @@ struct TeamScoreboardView: View {
                     }
                 }
                 .pickerStyle(.menu)
+                .accessibilityIdentifier("scoreboard-filter-sport")
 
                 Picker("Venue", selection: $filters.venue) {
                     Text("All venues").tag(nil as String?)
@@ -216,6 +207,7 @@ struct TeamScoreboardView: View {
                     }
                 }
                 .pickerStyle(.menu)
+                .accessibilityIdentifier("scoreboard-filter-venue")
 
                 Picker("Opponent", selection: $filters.opponent) {
                     Text("All opponents").tag(nil as String?)
@@ -224,6 +216,7 @@ struct TeamScoreboardView: View {
                     }
                 }
                 .pickerStyle(.menu)
+                .accessibilityIdentifier("scoreboard-filter-opponent")
 
                 Picker("Site", selection: $filters.site) {
                     Text("All sites").tag(nil as String?)
@@ -232,6 +225,7 @@ struct TeamScoreboardView: View {
                     }
                 }
                 .pickerStyle(.menu)
+                .accessibilityIdentifier("scoreboard-filter-site")
 
                 if !filters.isEmpty {
                     Button("Clear filters", systemImage: "xmark.circle") {
@@ -260,20 +254,21 @@ struct TeamScoreboardView: View {
 
                 if let leader = mostEventsPerson(in: scoreboard) {
                     NavigationLink {
-                        ScoreboardView(userId: leader.userId)
+                        ScoreboardView(userId: leader.userId, personName: leader.name, initialFilters: loadedFilters)
                     } label: {
                         LabeledContent("Most events") {
                             Text("\(leader.name) · \(leader.summary.eventsWorked)")
                                 .foregroundStyle(.secondary)
                         }
                     }
+                    .accessibilityIdentifier("scoreboard-most-events")
                 }
             } header: {
                 Text("Snapshot")
             } footer: {
-                Text(filters.isEmpty
+                Text(loadedFilters.isEmpty
                     ? "Apply filters to uncover a more specific story."
-                    : "This snapshot combines all \(filters.count) active \(filters.count == 1 ? "filter" : "filters").")
+                    : "This snapshot combines all \(loadedFilters.count) active \(loadedFilters.count == 1 ? "filter" : "filters").")
             }
 
             Section("Rank") {
@@ -288,28 +283,33 @@ struct TeamScoreboardView: View {
             if scoreboard.leaderboard.isEmpty {
                 Section("Leaderboard") {
                     ContentUnavailableView(
-                        filters.isEmpty ? "No Scoreboard credits yet" : "No matching Scoreboard results",
+                        loadedFilters.isEmpty ? "No Scoreboard credits yet" : "No matching Scoreboard results",
                         systemImage: "person.2.slash",
-                        description: Text(filters.isEmpty
+                        description: Text(loadedFilters.isEmpty
                             ? "People appear after they work an eligible Schedule event."
                             : "Remove one filter or clear the stack to broaden the results.")
                     )
                 }
             } else {
-                let rankedPeople = rankedPeople(in: scoreboard)
+                let rankedPeople = Array(rankedPeople(in: scoreboard).enumerated()).filter { _, row in
+                    searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        || row.person.name.localizedStandardContains(searchText.trimmingCharacters(in: .whitespacesAndNewlines))
+                }
                 Section {
                     if rankedPeople.isEmpty {
-                        ContentUnavailableView(
-                            "No matching Scoreboard results",
-                            systemImage: "person.2.slash",
-                            description: Text("Remove one filter or clear the stack to broaden the results.")
-                        )
+                        ContentUnavailableView {
+                            Label("No matching people", systemImage: "magnifyingglass")
+                        } description: {
+                            Text("No name in this leaderboard matches your search.")
+                        } actions: {
+                            Button("Clear search") { searchText = "" }
+                        }
                     } else {
-                        ForEach(Array(rankedPeople.enumerated()), id: \.element.id) { index, row in
+                        ForEach(rankedPeople, id: \.element.id) { index, row in
                             NavigationLink {
                                 // Intentionally bypasses UserDetailView. The
                                 // shared route contains Scoreboard metrics only.
-                                ScoreboardView(userId: row.person.userId)
+                                ScoreboardView(userId: row.person.userId, personName: row.person.name, initialFilters: loadedFilters)
                             } label: {
                                 TeamScoreboardPersonRow(
                                     rank: index + 1,
@@ -444,25 +444,25 @@ struct TeamScoreboardView: View {
 
     private func filterSummary(in scoreboard: TeamScoreboard) -> String {
         let parts = [
-            filters.sportCode.map { key in scoreboard.facets.sports.first { $0.key == key }?.label ?? key },
-            filters.venue.map { key in scoreboard.facets.venues.first { $0.key == key }?.label ?? key },
-            filters.opponent.map { key in scoreboard.facets.opponents.first { $0.key == key }?.label ?? key },
-            filters.site.map { key in scoreboard.facets.sites.first { $0.key == key }?.label ?? key },
+            loadedFilters.sportCode.map { key in scoreboard.facets.sports.first { $0.key == key }?.label ?? key },
+            loadedFilters.venue.map { key in scoreboard.facets.venues.first { $0.key == key }?.label ?? key },
+            loadedFilters.opponent.map { key in scoreboard.facets.opponents.first { $0.key == key }?.label ?? key },
+            loadedFilters.site.map { key in scoreboard.facets.sites.first { $0.key == key }?.label ?? key },
         ].compactMap { $0 }
         return parts.isEmpty ? "All events" : parts.joined(separator: " · ")
     }
 
     private func snapshotTitle(in scoreboard: TeamScoreboard) -> String {
-        let sport = filters.sportCode.map { key in
+        let sport = loadedFilters.sportCode.map { key in
             scoreboard.facets.sports.first { $0.key == key }?.label ?? key
         }
-        let venue = filters.venue.map { key in
+        let venue = loadedFilters.venue.map { key in
             "At \(scoreboard.facets.venues.first { $0.key == key }?.label ?? key)"
         }
-        let opponent = filters.opponent.map { key in
+        let opponent = loadedFilters.opponent.map { key in
             "Against \(scoreboard.facets.opponents.first { $0.key == key }?.label ?? key)"
         }
-        let site = filters.site.map { key in
+        let site = loadedFilters.site.map { key in
             "\(scoreboard.facets.sites.first { $0.key == key }?.label ?? key) events"
         }
         let parts = [sport, venue, opponent, site].compactMap { $0 }
@@ -523,8 +523,7 @@ struct TeamScoreboardView: View {
         } catch {
             guard !Task.isCancelled, activeRequestID == requestID else { return }
             if hasData {
-                if filters == requestedFilters { filters = loadedFilters }
-                refreshError = "Couldn’t apply those filters. Showing the last loaded totals."
+                refreshError = "Couldn’t refresh. Showing the last loaded totals. Retry to apply the selected filters."
             } else {
                 initialError = error.localizedDescription
             }

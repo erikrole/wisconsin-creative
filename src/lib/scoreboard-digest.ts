@@ -98,7 +98,7 @@ export function scoreboardHighlights(scoreboard: UserScoreboard): ScoreboardHigh
 
   const sport = scoreboard.bySport[0];
   if (sport) {
-    highlights.push({ id: "sport", label: "Most worked", value: sport.label, detail: gamesLabel(sport.games) });
+    highlights.push({ id: "sport", label: "Most games", value: sport.label, detail: gamesLabel(sport.games) });
   }
 
   // Rank sustained success by win margin, then rate and volume. A perfect
@@ -154,9 +154,14 @@ export function totalsSentence(input: {
   resolvedGames: number;
   isFiltered: boolean;
   seasonResolvedGames: number | null;
+  matchingEventsWorked?: number;
 }): string {
   const events = input.eventsWorked === 1 ? "1 event" : `${input.eventsWorked} events`;
   if (input.isFiltered) {
+    if (input.matchingEventsWorked !== undefined) {
+      const matching = input.matchingEventsWorked;
+      return `${matching} ${matching === 1 ? "event" : "events"} in this view, ${input.resolvedGames} official ${input.resolvedGames === 1 ? "game" : "games"}. ${events} worked this season.`;
+    }
     const shown = input.resolvedGames === 1 ? "1 game" : `${input.resolvedGames} games`;
     if (input.seasonResolvedGames == null) {
       return `Filtered to ${shown}. Events worked counts all ${input.eventsWorked} this season.`;
@@ -165,7 +170,7 @@ export function totalsSentence(input: {
       + `Events worked counts all ${input.eventsWorked}.`;
   }
   if (input.resolvedGames === 0) {
-    return `${events} worked this season, none with a recorded result yet.`;
+    return `${events} worked this season, none in the official record yet.`;
   }
-  return `${events} worked this season, ${input.resolvedGames} with a recorded result.`;
+  return `${events} worked this season, ${input.resolvedGames} official ${input.resolvedGames === 1 ? "game" : "games"}.`;
 }

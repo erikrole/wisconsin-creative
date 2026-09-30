@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "1c62814365f89eb377689495ba8f1eb4f85a9d9e",
+  "sourcePatchSha256": "f18e98f6041c8a676af37f2ad0a8093bdc6107e980bb14bf057fbf32ad4c5cb7",
+  "settings": {
+    "device": "Chromium desktop",
+    "viewport": [
+      768,
+      900
+    ],
+    "fixture": "bh-photo-handoff-v1-provider-unconfigured",
+    "role": "staff fixture",
+    "route": "/items/choose-image",
+    "appearance": "light",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "2026-09-29T19:00:00Z",
+    "scroll": [
+      0,
+      0
+    ]
+  },
+  "imageSha256": "a74c6af5cb9bc7cf386c3a900fa8466cd388af1526f8431a8b7d3f70c9b2e09d",
+  "dimensions": [
+    768,
+    900
+  ]
+}

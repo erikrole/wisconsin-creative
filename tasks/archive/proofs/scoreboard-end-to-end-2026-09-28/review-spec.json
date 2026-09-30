@@ -1,0 +1,117 @@
+{
+  "title": "Scoreboard: web + native iOS",
+  "eyebrow": "Wisconsin Creative \u00b7 September 28, 2026",
+  "lede": "An end-to-end pass through presentation, navigation, counting, API contracts, and recovery. Changes are local and uncommitted.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "Web layout and history",
+      "note": "Same existing isolated Preview dataset, authenticated hidden Admin, route, viewport, appearance and fixed capture clock. Synthetic names are expected. Source manifests and hash-bound receipts are retained.",
+      "pairs": [
+        {
+          "title": "Desktop hierarchy",
+          "before": "before-team-desktop.png",
+          "after": "final-team-desktop.png",
+          "beforeEvidence": "before-team-desktop-evidence.json",
+          "afterEvidence": "final-team-desktop-evidence.json",
+          "beforeCap": "The record and leaderboard cards touch.",
+          "afterCap": "Clear separation and readable table headings."
+        },
+        {
+          "title": "Tablet layout",
+          "before": "before-team-tablet.png",
+          "after": "final-team-tablet.png",
+          "beforeEvidence": "before-team-tablet-evidence.json",
+          "afterEvidence": "final-team-tablet-evidence.json",
+          "beforeCap": "The desktop ranking grid truncates names; the shared header pushes notifications off screen.",
+          "afterCap": "Stacked person rows preserve names, and the header fits the viewport."
+        },
+        {
+          "title": "Personal work history",
+          "before": "before-person-desktop.png",
+          "after": "final-person-desktop.png",
+          "beforeEvidence": "before-person-desktop-evidence.json",
+          "afterEvidence": "final-person-desktop-evidence.json",
+          "beforeCap": "The total says one event worked, but the history is empty.",
+          "afterCap": "The completed event is visible, even without an official result. The record remains 0\u20130."
+        }
+      ]
+    },
+    {
+      "heading": "Native season overview",
+      "note": "Same iPhone 18 Pro Max on iOS 27.0, original 27-game fixture, light appearance, default text, top scroll position. Optional-field fallback is intentionally exercised. These captures prove simulator presentation, not authenticated production data.",
+      "pairs": [
+        {
+          "title": "Overview and controls",
+          "before": "native-before-scoreboard-top.png",
+          "after": "native-verified-scoreboard-top.png",
+          "beforeEvidence": "native-before-scoreboard-top-evidence.json",
+          "afterEvidence": "native-verified-scoreboard-top-evidence.json",
+          "beforeCap": "The leading sport is called Most worked despite measuring official games; the venue is truncated.",
+          "afterCap": "Most games states the measure accurately, the venue wraps, and an explicit neutral refresh action is available."
+        }
+      ]
+    },
+    {
+      "heading": "Context and recovery \u00b7 after-only",
+      "note": "These exact workflow states do not have a trustworthy matching baseline. Web failures use controlled HTTP responses over an authenticated local session; native states use the isolated fixture API.",
+      "shots": [
+        {
+          "title": "Web team retry",
+          "image": "after-team-failed-filter.png",
+          "cap": "The requested opponent stays selected while the previous All events scope remains explicit. Retry applies the requested filter."
+        },
+        {
+          "title": "Web person retry",
+          "image": "after-person-failed-filter.png",
+          "cap": "The last successful history stays visible after a failed Away read. Retry and Clear filters both recover."
+        },
+        {
+          "title": "Native person context",
+          "image": "native-final-scoreboard-person-context.png",
+          "cap": "The person\u2019s name, Football, Camp Randall Stadium, Iowa and Home carry over from the team view."
+        },
+        {
+          "title": "Native failed refresh",
+          "image": "native-failed-filter.png",
+          "cap": "Away remains selected. The prior 14\u201312\u20131 record remains visible with an explicit notice; the XCTest then retries and verifies the Away result."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Team context survives navigation",
+      "was": "Individual reads dropped venue/opponent; native navigation also dropped the selected team stack.",
+      "now": "All four dimensions carry into the person view. Stable season facets and Clear filters keep the explorer switchable."
+    },
+    {
+      "h": "Records and history have distinct rules",
+      "was": "Result-less work could disappear, raw-title NULL comparisons could omit manual official games, and page-sized history truncated streaks.",
+      "now": "Two bounded scalar reads separate completed work from official results. Full-season recent results/streaks are computed before paging; exclusions, ties and count-once participation remain server-owned."
+    },
+    {
+      "h": "Failure preserves useful context",
+      "was": "Failed filter changes could reset controls or hide why old numbers remained.",
+      "now": "Both clients retain the last loaded scope, keep requested controls selected, and explain Retry. Obsolete pages are rejected; duplicate IDs merge once."
+    },
+    {
+      "h": "Native paper cuts",
+      "was": "All-day dates could fall into the prior local day, and invalid cursors could repeat page one.",
+      "now": "Calendar-day labels are stable, non-advancing cursors stop paging, names accompany person navigation, and team search retains rank."
+    }
+  ],
+  "verification": [
+    "123 focused web/API/source-contract tests passed across 13 files.",
+    "3 Scoreboard checks passed against disposable local PostgreSQL, alongside 8 existing custody checks. Covers actual SQL NULL semantics, exclusions, hidden identities, canonical filtering, paging and team/profile/person agreement.",
+    "17 native model tests and 3 native UI workflows passed on the required iPhone 18 Pro Max simulator. Xcode builds passed for Wisconsin and WisconsinPerformance.",
+    "Authenticated Preview checks passed for navigation, filtered work counts, validation, stale-data retry, clearing, search, and tablet/phone overflow. Controlled HTTP fixtures verified failed pagination, deduplication and terminal cursors; browser page errors: 0.",
+    "TypeScript, changed-file lint, app-only production build, docs verification and diff checks passed. No schema changes or migrations were run against a shared database.",
+    "Repository-wide lint remains blocked by the existing no-assign-module-variable error in public/qrcode/vendor/jsQR.js; changed files are clean. Existing unrelated lint warnings remain."
+  ],
+  "notes": [
+    "The after-only gallery has no matching baseline for its exact workflow states; it is not a before/after comparison.",
+    "No ESPN integration exists or was added. Results still come from Wisconsin calendar markers; work participation comes from Schedule assignments and recorded workers.",
+    "No commit, push, deployment or distribution was performed. Production Student/Collaborator reads, authenticated native totals and regular-width iPad acceptance remain GAP-71."
+  ]
+}

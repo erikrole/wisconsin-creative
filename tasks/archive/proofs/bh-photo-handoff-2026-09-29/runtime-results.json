@@ -1,0 +1,22 @@
+[
+  {
+    "width": 1280,
+    "route": "/items",
+    "role": "ADMIN isolated preview",
+    "searchHref": "https://www.bhphotovideo.com/c/search?Ntt=Sony+FX3&N=0&InitialSearch=yes&sts=ma",
+    "liveStaticBhImageLoaded": true,
+    "stagedAndRemoved": true,
+    "inventoryWrites": [],
+    "pageErrors": []
+  },
+  {
+    "width": 768,
+    "route": "/items",
+    "role": "ADMIN isolated preview",
+    "searchHref": "https://www.bhphotovideo.com/c/search?Ntt=Sony+FX3&N=0&InitialSearch=yes&sts=ma",
+    "liveStaticBhImageLoaded": true,
+    "stagedAndRemoved": true,
+    "inventoryWrites": [],
+    "pageErrors": []
+  }
+]

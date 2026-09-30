@@ -2,6 +2,48 @@ import XCTest
 @testable import Wisconsin
 
 final class ScoreboardModelsTests: XCTestCase {
+    func testAdditiveSeasonContextDecodesWithoutRequiringItFromOlderServers() throws {
+        var payload = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(scoreboardJSON.utf8)) as? [String: Any])
+        payload["seasonGames"] = 30
+        payload["facets"] = ["sports": [["key": "FB", "label": "Football"]], "venues": [], "opponents": []]
+        payload["recentResults"] = payload["events"]
+        payload["streak"] = ["result": "WIN", "count": 7]
+        var summary = try XCTUnwrap(payload["summary"] as? [String: Any])
+        summary["matchingEventsWorked"] = 3
+        payload["summary"] = summary
+        let current = try JSONDecoder().decode(UserScoreboard.self, from: JSONSerialization.data(withJSONObject: payload))
+        XCTAssertEqual(current.seasonGames, 30)
+        XCTAssertEqual(current.summary.matchingEventsWorked, 3)
+        XCTAssertEqual(current.facets?.sports.first?.key, "FB")
+        XCTAssertEqual(current.recentResults?.first?.id, "event-1")
+        XCTAssertEqual(current.streak?.presentation?.label, "7 straight wins")
+        let legacy = try JSONDecoder().decode(UserScoreboard.self, from: Data(scoreboardJSON.utf8))
+        XCTAssertNil(legacy.facets)
+        XCTAssertNil(legacy.recentResults)
+        XCTAssertNil(legacy.streak)
+    }
+
+    func testAllDayEventsStayOnTheirCalendarDayInCentralTime() throws {
+        let original = NSTimeZone.default
+        NSTimeZone.default = try XCTUnwrap(TimeZone(identifier: "America/Chicago"))
+        defer { NSTimeZone.default = original }
+        let base = """
+        {"id":"day","startsAt":"2026-09-01T00:00:00.000Z","allDay":true,"result":null}
+        """
+        let allDay = try JSONDecoder().decode(ScoreboardEvent.self, from: Data(base.utf8))
+        let timed = try JSONDecoder().decode(ScoreboardEvent.self, from: Data(base.replacingOccurrences(of: "true", with: "false").utf8))
+        XCTAssertEqual(allDay.monthKey, "2026-09")
+        XCTAssertEqual(timed.monthKey, "2026-08")
+        XCTAssertNotEqual(allDay.dayLabel, timed.dayLabel)
+    }
+
+    func testNonAdvancingCursorsEndPagination() throws {
+        for cursor in ["0", "-25", "opaque-cursor"] {
+            let json = scoreboardJSON.replacingOccurrences(of: "\"nextCursor\":\"25\"", with: "\"nextCursor\":\"\(cursor)\"")
+            XCTAssertNil(try JSONDecoder().decode(UserScoreboard.self, from: Data(json.utf8)).nextOffset)
+        }
+    }
+
     func testScoreboardDecodesServerShapeAndPreservesSeparateTotals() throws {
         let scoreboard = try JSONDecoder().decode(UserScoreboard.self, from: Data(scoreboardJSON.utf8))
 

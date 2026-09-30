@@ -159,7 +159,9 @@ final class ProfileCompletionDraft {
     }
 
     static func formatPhone(_ value: String) -> String {
-        let digits = String(value.filter(\.isNumber).prefix(10))
+        var numbers = value.filter(\.isNumber)
+        if numbers.count == 11, numbers.first == "1" { numbers.removeFirst() }
+        let digits = String(numbers.prefix(10))
         if digits.count <= 3 { return digits }
         if digits.count <= 6 {
             return "(\(digits.prefix(3))) \(digits.dropFirst(3))"

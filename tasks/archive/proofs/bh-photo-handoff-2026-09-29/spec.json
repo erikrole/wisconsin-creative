@@ -1,0 +1,65 @@
+{
+  "title": "Find a B&H photo",
+  "eyebrow": "Items \u00b7 Local review",
+  "lede": "Launch an editable B&H product search and bring a photo back into the draft without an image-search API key.",
+  "sections": [
+    {
+      "heading": "Image picker",
+      "note": "Matched source fixture captures. B&H search navigation and actual inventory persistence are separate runtime boundaries.",
+      "pairs": [
+        {
+          "title": "1280px image picker",
+          "sub": "Same product query, provider unavailable, image-address input focused.",
+          "before": "before-1280.png",
+          "after": "after-1280.png",
+          "beforeCap": "Paste URL or upload, without a shortcut to find the product.",
+          "afterCap": "Editable B&H search and instructions for copying a photo.",
+          "beforeEvidence": "before-1280-evidence.json",
+          "afterEvidence": "after-1280-evidence.json"
+        },
+        {
+          "title": "768px image picker",
+          "sub": "Same product query, provider unavailable, image-address input focused.",
+          "before": "before-768.png",
+          "after": "after-768.png",
+          "beforeCap": "Paste URL or upload, without a shortcut to find the product.",
+          "afterCap": "Editable B&H search and instructions for copying a photo.",
+          "beforeEvidence": "before-768-evidence.json",
+          "afterEvidence": "after-768-evidence.json"
+        },
+        {
+          "title": "390px image picker",
+          "sub": "Same product query, provider unavailable, image-address input focused.",
+          "before": "before-390.png",
+          "after": "after-390.png",
+          "beforeCap": "Paste URL or upload, without a shortcut to find the product.",
+          "afterCap": "Editable B&H search and instructions for copying a photo.",
+          "beforeEvidence": "before-390-evidence.json",
+          "afterEvidence": "after-390-evidence.json"
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Direct B&H search",
+      "was": "No external product-search shortcut.",
+      "now": "A prefilled editable query opens B&H in a separate tab, including when the API provider is unavailable."
+    },
+    {
+      "h": "Trustworthy pasted photo",
+      "was": "Protected B&H links could fail previews; selection could precede image load.",
+      "now": "B&H image links use the static host, selection waits for a loaded preview, and product links get recovery guidance."
+    }
+  ],
+  "verification": [
+    "84 focused tests passed; TypeScript, scoped lint, and application build passed.",
+    "Actual shared image picker exercised in Chromium at 1280, 768 and 390px; no page errors.",
+    "Fixture checked query encoding, empty-query disablement, product-page recovery, and selected normalized image URL.",
+    "Authenticated isolated ADMIN preview at 1280 and 768px loaded a live static B&H image, staged it, and removed it; no inventory writes or page errors. Equivalent pasted B&H links retain preview readiness."
+  ],
+  "notes": [
+    "No inventory mutations or deployment. B&H product-page HTML is not fetched; use the photo address or upload.",
+    "Matched captures precede the final equivalent-URL readiness fix, which does not change presentation; the authenticated check exercises the final source."
+  ]
+}

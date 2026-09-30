@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "1c62814365f89eb377689495ba8f1eb4f85a9d9e",
+  "sourcePatchSha256": "dfca26d5c67fa346e3abfa0018bca534e059aeb3c8fbed2526ac357e7a04ff45",
+  "settings": {
+    "device": "Playwright Chromium, headless",
+    "viewport": [
+      1440,
+      1000
+    ],
+    "fixture": "profile-completion Staff manual; benchmark-profile-completion.mjs 2026-09-27",
+    "role": "staff",
+    "route": "loopback fixture /?scenario=manual",
+    "appearance": "light",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "2026-09-27T16:00:00Z",
+    "scroll": [
+      0,
+      0
+    ]
+  },
+  "imageSha256": "22b86b9a1d74d4ff414a830622fbb441bcd339e532395693a42df07eebb59039",
+  "dimensions": [
+    1440,
+    1000
+  ]
+}

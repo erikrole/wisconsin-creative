@@ -1,0 +1,128 @@
+{
+  "changed": [
+    {
+      "package": "node_modules/@vitest/coverage-v8",
+      "before": "3.2.7",
+      "after": "4.1.11"
+    },
+    {
+      "package": "node_modules/@vitest/coverage-v8/node_modules/magicast",
+      "after": "0.5.5"
+    },
+    {
+      "package": "node_modules/@vitest/expect",
+      "before": "3.2.7",
+      "after": "4.1.11"
+    },
+    {
+      "package": "node_modules/@vitest/mocker",
+      "before": "3.2.7",
+      "after": "4.1.11"
+    },
+    {
+      "package": "node_modules/@vitest/pretty-format",
+      "before": "3.2.7",
+      "after": "4.1.11"
+    },
+    {
+      "package": "node_modules/@vitest/runner",
+      "before": "3.2.7",
+      "after": "4.1.11"
+    },
+    {
+      "package": "node_modules/@vitest/snapshot",
+      "before": "3.2.7",
+      "after": "4.1.11"
+    },
+    {
+      "package": "node_modules/@vitest/spy",
+      "before": "3.2.7",
+      "after": "4.1.11"
+    },
+    {
+      "package": "node_modules/@vitest/utils",
+      "before": "3.2.7",
+      "after": "4.1.11"
+    },
+    {
+      "package": "node_modules/ast-v8-to-istanbul",
+      "before": "0.3.12",
+      "after": "1.0.6"
+    },
+    {
+      "package": "node_modules/chai",
+      "before": "5.3.3",
+      "after": "6.2.2"
+    },
+    {
+      "package": "node_modules/es-module-lexer",
+      "before": "1.7.0",
+      "after": "2.3.2"
+    },
+    {
+      "package": "node_modules/obug",
+      "after": "2.2.1"
+    },
+    {
+      "package": "node_modules/picomatch",
+      "before": "4.0.4",
+      "after": "4.0.7"
+    },
+    {
+      "package": "node_modules/std-env",
+      "before": "3.10.0",
+      "after": "4.2.0"
+    },
+    {
+      "package": "node_modules/tinyrainbow",
+      "before": "2.0.0",
+      "after": "3.1.1"
+    },
+    {
+      "package": "node_modules/vitest",
+      "before": "3.2.7",
+      "after": "4.1.11"
+    }
+  ],
+  "removed": [
+    "node_modules/@ampproject/remapping",
+    "node_modules/@isaacs/cliui",
+    "node_modules/@isaacs/cliui/node_modules/ansi-regex",
+    "node_modules/@isaacs/cliui/node_modules/ansi-styles",
+    "node_modules/@isaacs/cliui/node_modules/string-width",
+    "node_modules/@isaacs/cliui/node_modules/strip-ansi",
+    "node_modules/@isaacs/cliui/node_modules/wrap-ansi",
+    "node_modules/@istanbuljs/schema",
+    "node_modules/@pkgjs/parseargs",
+    "node_modules/cac",
+    "node_modules/check-error",
+    "node_modules/deep-eql",
+    "node_modules/eastasianwidth",
+    "node_modules/foreground-child",
+    "node_modules/foreground-child/node_modules/signal-exit",
+    "node_modules/istanbul-lib-source-maps",
+    "node_modules/jackspeak",
+    "node_modules/loupe",
+    "node_modules/magicast",
+    "node_modules/package-json-from-dist",
+    "node_modules/pathval",
+    "node_modules/string-width-cjs",
+    "node_modules/string-width-cjs/node_modules/emoji-regex",
+    "node_modules/strip-ansi-cjs",
+    "node_modules/strip-literal",
+    "node_modules/strip-literal/node_modules/js-tokens",
+    "node_modules/test-exclude",
+    "node_modules/test-exclude/node_modules/balanced-match",
+    "node_modules/test-exclude/node_modules/brace-expansion",
+    "node_modules/test-exclude/node_modules/glob",
+    "node_modules/test-exclude/node_modules/glob/node_modules/minimatch",
+    "node_modules/test-exclude/node_modules/lru-cache",
+    "node_modules/test-exclude/node_modules/path-scurry",
+    "node_modules/tinypool",
+    "node_modules/tinyspy",
+    "node_modules/vite-node",
+    "node_modules/vitest/node_modules/tinyexec",
+    "node_modules/webpack/node_modules/es-module-lexer",
+    "node_modules/wrap-ansi-cjs"
+  ]
+}

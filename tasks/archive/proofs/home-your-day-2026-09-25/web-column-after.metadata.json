@@ -1,0 +1,23 @@
+{
+  "sourceRevision": "80c81ef6ead9701d62a98ecd5dce51e1b855689d",
+  "sourcePatchSha256": "3c2f983911729c701b5b84d77c710e6680ab9c298a829eb53a92e5486f5b6626",
+  "settings": {
+    "device": "Chromium via Playwright, static render of MyGearColumn with the app's built CSS",
+    "viewport": [
+      608,
+      800
+    ],
+    "fixture": "web-render-fixture.ts.txt (staff, 3 worked events, 1 linked + 1 standalone reservation)",
+    "role": "staff",
+    "route": "/ dashboard My gear column (static render)",
+    "appearance": "light",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "fixed 2026-09-25 07:00",
+    "scroll": [
+      0,
+      0
+    ]
+  }
+}

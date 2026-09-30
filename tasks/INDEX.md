@@ -1,6 +1,6 @@
 # Tasks Index
 
-Last updated: 2026-09-18
+Last updated: 2026-09-29
 
 ## Start Here
 
@@ -36,6 +36,14 @@ As of this cleanup pass, root `tasks/` contains:
 Audit files intentionally remain at root for now because the repo audit skills read and write `tasks/audit-*.md` paths directly.
 
 ## Active Follow-up Ledgers
+
+- [calendar-sync-hardening-plan-2026-09-29.md](calendar-sync-hardening-plan-2026-09-29.md) - execution-ready sequential slices for lock-safe writes, shared manual/cron leases, safe bounded ICS fetching, committed-result reporting, and Hobby runtime acceptance; planning complete, implementation pending.
+
+- [scoreboard-postgame-plan-2026-09-29.md](scoreboard-postgame-plan-2026-09-29.md) - accepted postgame-only direction for web/native final scores, personal records and Season Wrapped; existing UW descriptions contain basic finals, while detailed provider access and implementation remain open. Live scores are excluded.
+
+- [performance-web-ios-plan-2026-09-27.md](performance-web-ios-plan-2026-09-27.md) - balanced web/iOS benchmarks, shared startup and optional-UI loading, native decoding and thumbnail coalescing; reusable pinned Claude/Codex preview and authenticated benchmark runner; physical-device proof remains open.
+
+- [audit-tests-2026-09-27.md](audit-tests-2026-09-27.md) - test audit, reliability repairs, consolidation, Item Insights performance, Vitest 4 migration, custody/bulk owner coverage, kiosk destination/retry recovery fixes, and PostgreSQL rollback/contention/replay proof with CI wiring; hosted/device proof and broader coverage gaps remain.
 
 - `infrastructure-hardening-plan-2026-09-22.md` - Vercel/Neon repairs, branch previews, cross-agent handoff and pending source/cutover gates.
 
@@ -92,6 +100,7 @@ Audit files intentionally remain at root for now because the repo audit skills r
 - `internal-public-beta-release-cut-followup.md` - release cut work that requires a clean worktree and explicit shipping approval.
 - `repo-public-surface-plan-2026-08-15.md` - public README, GitHub About metadata, and conservative web-release posture.
 - `signature-capture-micro-app-plan.md` - Signatures execution ledger for supported team, Creative Staff, Administration, and one-off rosters; pen-only capture, private artifacts, hardening, and rollout proof.
+- `signatures-end-to-end-2026-09-28.md` - Sequential main workflow, roster, capture, and backend hardening pass; local verification complete, isolated live artifact acceptance awaits explicit approval.
 - `signatures-whky-save-validation-plan-2026-08-31.md` - bounded WHKY incident ledger for deliberate printed/slow Pencil input that exceeded the old signature-shape validation ceilings; local verification is complete while deployment and physical iPad acceptance remain open.
 - `software-vault-plan-2026-08-19.md` - encrypted shared software access above the existing Photo Mechanic license pool, with migration, key, and authenticated runtime rollout gates.
 - `software-photo-mechanic-first-plan-2026-08-23.md` - make Photo Mechanic the default Software landing and extract the license pool from the page shell.
@@ -130,6 +139,9 @@ Audit files intentionally remain at root for now because the repo audit skills r
 
 ## Recently Archived
 
+- `archive/completed-2026-09-29/item-receiving-2026-09-29.md` - all eight item-receiving findings implemented and verified locally, with retry receipts, draft/photo recovery, receiving choices, attachment setup, and labels. Live automatic photo-provider acceptance remains open.
+
+- `archive/completed-2026-09-28/scoreboard-end-to-end-pass-2026-09-28.md` - completed a sequential web/native Scoreboard pass covering filter continuity, completed-work history, official-record SQL exclusions, full-season form, retry/paging recovery, tablet layout and native date labels, with matched local proof; production acceptance remains GAP-71.
 - `archive/completed-2026-08-23/accountability-table-readability-plan.md` - reduced the full Accountability leaderboard to five desktop scan targets, made return rate visually prominent on a continuous red-to-green scale, moved cramped widths to structured cards, and grouped incident receipts behind explicit 40px controls without changing ranking or access.
 - `archive/completed-2026-08-23/scoreboard-explorer-plan-2026-08-23.md` - expanded the shared Scoreboard into a generic Sport/Venue/Opponent/Site explorer with exact stacked intersections, stable facets, web/native Snapshots, matched authenticated proof, and a deterministic foundation for a future end-of-year story; production rollout remains under GAP-71.
 - `archive/completed-2026-08-23/accountability-leaderboard-plan.md` - promoted Accountability to the primary internal sidebar, preserved Admin-only cleanup controls, and replaced fixed podium copy with one deterministic shared draw from a 50-line reviewed jeer deck that stays fixed until the leaderboard changes.

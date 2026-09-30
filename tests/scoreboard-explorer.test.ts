@@ -98,12 +98,21 @@ describe("team Scoreboard explorer URL", () => {
 });
 
 describe("person Scoreboard explorer URL", () => {
+  it("applies and clears the venue and opponent carried from the team view", () => {
+    const params = new URLSearchParams("venue=Camp+Randall+Stadium&opponent=Iowa&rank=rate");
+    const parsed = parsePersonScoreboardFilters(params);
+    expect(parsed).toMatchObject({ venue: "Camp Randall Stadium", opponent: "Iowa" });
+    expect(personScoreboardHasFilters(parsed)).toBe(true);
+    writePersonScoreboardSearchParams(params, EMPTY_PERSON_SCOREBOARD_FILTERS);
+    expect(params.toString()).toBe("rank=rate");
+  });
+
   it("keeps result, sport, and site without disturbing unrelated params", () => {
     const parsed = parsePersonScoreboardFilters(
       new URLSearchParams("tab=scoreboard&result=WIN&sportCode=FB&site=AWAY"),
     );
 
-    expect(parsed).toEqual({ result: "WIN", sport: "FB", site: "AWAY" });
+    expect(parsed).toEqual({ result: "WIN", sport: "FB", site: "AWAY", venue: "all", opponent: "all" });
     expect(personScoreboardHasFilters(parsed)).toBe(true);
 
     const params = new URLSearchParams("tab=scoreboard&result=LOSS");

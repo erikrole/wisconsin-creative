@@ -5,6 +5,7 @@ import os
 enum AppRuntimeMode {
     enum PerformanceScenario: String {
         case launch
+        case welcomeStudent, welcomeStaff, welcomeApparel, registration
         case items
         case equipment
         /// Renders the guide reader against fixture Markdown, so the Resources
@@ -42,6 +43,9 @@ enum AppRuntimeMode {
         /// the shape where "You're all set" used to render directly above a
         /// populated Drafts card.
         case homeAllClear
+        /// Home with worked events: one today with no gear (prep-gear banner),
+        /// one tomorrow with a reservation folded into its row, and a week.
+        case homeAgenda
         /// The native profile Scoreboard against a canned season payload, so
         /// its summary, filters, breakdowns, and event history can be reviewed
         /// without a signed-in session or live network.
@@ -76,7 +80,14 @@ enum AppRuntimeMode {
         case bookingDetail = "booking-detail"
         case bookingExtend = "booking-extend"
         case bookingEdit = "booking-edit"
+        /// Edit on a reservation, where items are editable; the second opens
+        /// the item picker on top of the sheet.
+        case bookingEditReservation = "booking-edit-reservation"
+        case bookingEditItems = "booking-edit-items"
         case bookingCancel = "booking-cancel"
+        /// The same booking two hours past due, with the staff Nudge action
+        /// the server grants on an overdue personal checkout.
+        case bookingOverdue = "booking-overdue"
         /// Item detail with its edit sheet open, against a canned asset.
         case itemEdit = "item-edit"
         /// The reservation composer with its QR cover open. A simulator has no
@@ -103,7 +114,8 @@ enum AppRuntimeMode {
         /// sheet is seeded open.
         var isBookingDetail: Bool {
             switch self {
-            case .bookingDetail, .bookingExtend, .bookingEdit, .bookingCancel: return true
+            case .bookingDetail, .bookingExtend, .bookingEdit, .bookingEditReservation, .bookingEditItems,
+                 .bookingCancel, .bookingOverdue: return true
             default: return false
             }
         }
@@ -130,7 +142,13 @@ enum AppRuntimeMode {
     /// Every value is `false` outside DEBUG, so release builds carry none of it.
     enum CaptureSeed {
         static var bookingExtend: Bool { matches(.bookingExtend) }
-        static var bookingEdit: Bool { matches(.bookingEdit) }
+        static var bookingEdit: Bool {
+            matches(.bookingEdit) || matches(.bookingEditReservation) || matches(.bookingEditItems)
+        }
+        static var bookingEditItems: Bool { matches(.bookingEditItems) }
+        static var bookingEditReservation: Bool {
+            matches(.bookingEditReservation) || matches(.bookingEditItems)
+        }
         static var bookingCancel: Bool { matches(.bookingCancel) }
         static var itemEdit: Bool { matches(.itemEdit) }
         static var createBookingScanner: Bool { matches(.createBookingScanner) }
@@ -163,11 +181,12 @@ enum AppRuntimeMode {
         switch performanceScenario {
         case .resourcesGuides, .previewChrome, .resourcesUsers, .resourcesLicenses, .resourcesLicensesOpen,
              .schedule, .tradeBoardStaff, .tradeBoardStudent,
-             .home, .homeAllClear, .scoreboard, .profile,
+             .home, .homeAllClear, .homeAgenda, .scoreboard, .profile,
              .studentBookings,
-             .bookingDetail, .bookingExtend, .bookingEdit, .bookingCancel,
+             .bookingDetail, .bookingExtend, .bookingEdit, .bookingEditReservation, .bookingEditItems,
+             .bookingCancel, .bookingOverdue,
              .itemEdit, .createBookingScanner, .createBookingEvents, .search, .searchPartial,
-             .itemsList, .reports, .accountSecurity, .notifications, .login:
+             .itemsList, .reports, .accountSecurity, .notifications, .login, .welcomeStudent, .welcomeStaff, .welcomeApparel, .registration:
             return true
         default:
             return false

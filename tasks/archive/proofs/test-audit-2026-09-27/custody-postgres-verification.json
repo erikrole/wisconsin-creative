@@ -1,0 +1,52 @@
+{
+  "date": "2026-09-27",
+  "postgres": "17.11",
+  "node": "22.23.3",
+  "vitest": "4.1.11",
+  "command": "node scripts/test-custody-postgres.mjs",
+  "integration": {
+    "passed": 2,
+    "failed": 0,
+    "testExecutionMs": 330,
+    "vitestDurationMs": 810,
+    "runnerExit": 0,
+    "clusterStoppedAndRemoved": true,
+    "tcpEnabled": false,
+    "transport": "Prisma native PostgreSQL engine",
+    "schema": "Generated from prisma/schema.prisma; not a migrated production clone"
+  },
+  "checks": {
+    "nonIncrementalTypescript": "passed",
+    "focusedLint": "passed",
+    "buildApp": "passed with existing Sidebar unused-variable warning",
+    "docs": "passed",
+    "diffCheck": "passed",
+    "localLinks": "passed"
+  },
+  "defaultSuite": {
+    "passed": 5019,
+    "skipped": 1,
+    "failed": 0,
+    "files": 703
+  },
+  "sourceSha256": {
+    "scripts/test-custody-postgres.mjs": "bff7d2c4caf28413707717b54f0f7815a649667d79aebc4bf3cb293cd326dd8e",
+    "vitest.postgres.config.ts": "c5b4040dda66992d2630550fe2c1e3a96825f741f5e0792fb902b61f81691c05",
+    "tests/postgres/kiosk-item-transfer.postgres.ts": "3daebe07d113bcc10d14982d3cfd8e799f8399fa949683e064e6d2fe851c86e5"
+  },
+  "budget": {
+    "weeklyStart": 19,
+    "latestWeeklyReading": 20,
+    "stopAt": 21,
+    "resetTimestamp": 1791047471,
+    "accountWideNotTaskTokens": true
+  },
+  "limits": [
+    "Concurrent transfer contention remains untested",
+    "Native transport does not verify Neon adapter behavior",
+    "Generated schema does not verify migration-only constraints or triggers",
+    "Receipt read-back is not full HTTP retry/rejection proof",
+    "No deployment or physical-device proof"
+  ],
+  "rawLog": "/tmp/wc-custody-postgres-2026-09-27.log"
+}

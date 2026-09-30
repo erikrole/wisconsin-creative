@@ -11,59 +11,99 @@ enum WelcomeFocusField: Hashable {
     case shoeSizeOther
 }
 
-struct WelcomeHeaderView: View {
+/// Shared visual hierarchy for account creation and each native setup step.
+struct WelcomeStepHeading: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    let symbol: String
+    let title: String
+    let detail: String
+    var isOptional = false
 
+    var body: some View {
+        VStack(spacing: 14) {
+            Image(systemName: symbol)
+                .font(.system(size: dynamicTypeSize.isAccessibilitySize ? 28 : 38, weight: .regular))
+                .foregroundStyle(Color.brandPrimary)
+                .frame(width: dynamicTypeSize.isAccessibilitySize ? 64 : 88,
+                       height: dynamicTypeSize.isAccessibilitySize ? 64 : 88)
+                .background(Color.brandPrimary.opacity(0.07), in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+                .accessibilityHidden(true)
+
+            VStack(spacing: 10) {
+                Text(title)
+                    .font(.largeTitle.weight(.bold))
+                    .tracking(-0.7)
+                    .foregroundStyle(.primary)
+                    .accessibilityAddTraits(.isHeader)
+                Text(detail)
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .lineSpacing(2)
+                if isOptional {
+                    Text("Optional · Add later from Profile")
+                        .font(.footnote.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .padding(.top, 2)
+                }
+            }
+            .fixedSize(horizontal: false, vertical: true)
+        }
+        .multilineTextAlignment(.center)
+        .accessibilityElement(children: .combine)
+        .frame(maxWidth: .infinity)
+        .padding(.top, 12)
+        .padding(.bottom, 8)
+    }
+}
+
+struct WelcomeHeaderView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let name: String
     let stepIndex: Int
     let stepCount: Int
-    let completedCount: Int
-    let totalCount: Int
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            if dynamicTypeSize.isAccessibilitySize {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Welcome, \(firstName)")
-                        .font(.headline)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Text("Step \(stepIndex + 1) of \(stepCount)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Text("\(completedCount) of \(totalCount) complete")
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            } else {
-                HStack(alignment: .firstTextBaseline) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Welcome, \(firstName)")
-                            .font(.headline)
-                        Text("Step \(stepIndex + 1) of \(stepCount)")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+        VStack(spacing: 14) {
+            ViewThatFits(in: .horizontal) {
+                HStack {
+                    greeting
                     Spacer()
-                    Text("\(completedCount) of \(totalCount) complete")
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(.secondary)
+                    progressLabel
+                }
+                VStack(spacing: 4) {
+                    greeting
+                    progressLabel
                 }
             }
-            ProgressView(value: Double(stepIndex + 1), total: Double(max(stepCount, 1)))
-                .tint(.brandPrimary)
-                .accessibilityLabel("Welcome progress")
-                .accessibilityValue("Step \(stepIndex + 1) of \(stepCount)")
+            HStack(spacing: 5) {
+                ForEach(0..<stepCount, id: \.self) { index in
+                    Capsule()
+                        .fill(index <= stepIndex ? Color.brandPrimary : Color(.quaternarySystemFill))
+                        .frame(height: 3)
+                }
+            }
+            .animation(reduceMotion ? nil : .smooth(duration: 0.3), value: stepIndex)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Profile setup")
+            .accessibilityValue("Step \(stepIndex + 1) of \(stepCount)")
         }
-        .padding(.horizontal, 24)
-        .padding(.top, 18)
+        .padding(.horizontal, 28)
+        .padding(.top, 12)
         .padding(.bottom, 16)
-        .background(.bar)
     }
 
-    private var firstName: String {
-        name.split(separator: " ").first.map(String.init) ?? name
+    private var greeting: some View {
+        Text("Welcome, \(name.split(separator: " ").first.map(String.init) ?? name)")
+            .font(.subheadline.weight(.medium))
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var progressLabel: some View {
+        Text("Step \(stepIndex + 1) of \(stepCount)")
+            .font(.subheadline.monospacedDigit())
+            .foregroundStyle(.secondary)
+            .fixedSize()
     }
 }
 
@@ -78,67 +118,54 @@ struct WelcomeFooter: View {
     let onPrimary: () -> Void
 
     var body: some View {
-        ViewThatFits(in: .horizontal) {
-            horizontalActions
-            stackedActions
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 14)
-        .background(.bar)
-    }
-
-    private var horizontalActions: some View {
-        HStack(spacing: 10) {
-            if showsReminder { reminderButton }
-            Spacer(minLength: 4)
-            if showsBack { backButton }
-            primaryButton
-        }
-        .fixedSize(horizontal: true, vertical: false)
-        .frame(maxWidth: .infinity)
-    }
-
-    private var stackedActions: some View {
-        VStack(spacing: 10) {
-            HStack(spacing: 10) {
-                if showsBack { backButton }
-                primaryButton
-                    .frame(maxWidth: .infinity)
+        VStack(spacing: 8) {
+            Button(action: onPrimary) {
+                HStack(spacing: 8) {
+                    if isSaving { ProgressView() }
+                    Text(isSaving ? "Just a moment…" : primaryTitle)
+                        .fontWeight(.semibold)
+                }
+                .frame(maxWidth: .infinity, minHeight: 40)
             }
-            if showsReminder {
-                reminderButton
-                    .frame(maxWidth: .infinity, alignment: .leading)
+            .buttonStyle(.borderedProminent)
+            .buttonBorderShape(.roundedRectangle(radius: 18))
+            .controlSize(.large)
+            .disabled(!primaryEnabled || isSaving)
+
+            if showsBack || showsReminder {
+                ViewThatFits(in: .horizontal) {
+                    HStack {
+                        if showsBack { backButton }
+                        Spacer()
+                        if showsReminder { reminderButton }
+                    }
+                    VStack {
+                        if showsBack { backButton }
+                        if showsReminder { reminderButton }
+                    }
+                }
             }
         }
+        .padding(.horizontal, 24)
+        .padding(.vertical, 12)
+        .background(.regularMaterial)
     }
 
     private var reminderButton: some View {
         Button("Remind tomorrow", action: onReminder)
-            .buttonStyle(.borderless)
+            .tint(.secondary)
             .font(.subheadline)
+            .frame(minHeight: 44)
             .disabled(isSaving)
             .fixedSize(horizontal: true, vertical: false)
     }
 
     private var backButton: some View {
         Button("Back", action: onBack)
-            .buttonStyle(.bordered)
+            .tint(.secondary)
+            .font(.subheadline)
+            .frame(minWidth: 44, minHeight: 44)
             .disabled(isSaving)
-            .fixedSize(horizontal: true, vertical: false)
-    }
-
-    private var primaryButton: some View {
-        Button(action: onPrimary) {
-            if isSaving {
-                ProgressView()
-            } else {
-                Text(primaryTitle)
-                    .fontWeight(.semibold)
-                    .fixedSize(horizontal: true, vertical: false)
-            }
-        }
-        .buttonStyle(.borderedProminent)
-        .disabled(!primaryEnabled || isSaving)
     }
 }
 
@@ -147,11 +174,21 @@ struct WelcomeFormCard<Content: View>: View {
 
     var body: some View {
         content()
-            .padding(18)
+            .padding(20)
             .background(
-                Color(.secondarySystemGroupedBackground),
-                in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+                Color(.secondarySystemBackground),
+                in: RoundedRectangle(cornerRadius: 24, style: .continuous)
             )
+    }
+}
+
+struct WelcomeTextFieldStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .textFieldStyle(.plain)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 13)
+            .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
@@ -225,7 +262,7 @@ struct WelcomeEmailStepView: View {
                         .keyboardType(.emailAddress)
                         .textContentType(.emailAddress)
                         .autocorrectionDisabled()
-                        .textFieldStyle(.roundedBorder)
+                        .modifier(WelcomeTextFieldStyle())
                         .focused(focus, equals: .athleticsEmail)
                         .submitLabel(.continue)
                         .onSubmit(onSubmit)
@@ -279,7 +316,7 @@ struct WelcomePhonesStepView: View {
                     TextField("(XXX) XXX-XXXX", text: $draft.personalPhone)
                         .keyboardType(.phonePad)
                         .textContentType(.telephoneNumber)
-                        .textFieldStyle(.roundedBorder)
+                        .modifier(WelcomeTextFieldStyle())
                         .focused(focus, equals: .personalPhone)
                         .onChange(of: draft.personalPhone) { _, value in
                             let formatted = ProfileCompletionDraft.formatPhone(value)
@@ -299,7 +336,7 @@ struct WelcomePhonesStepView: View {
                         TextField("(XXX) XXX-XXXX", text: $draft.workPhone)
                             .keyboardType(.phonePad)
                             .textContentType(.telephoneNumber)
-                            .textFieldStyle(.roundedBorder)
+                            .modifier(WelcomeTextFieldStyle())
                             .focused(focus, equals: .workPhone)
                             .disabled(draft.noWorkPhone)
                             .onChange(of: draft.workPhone) { _, value in
@@ -340,7 +377,7 @@ struct WelcomeWiscardStepView: View {
                     TextField("XXXXXXXXXX", text: $draft.wiscardCardNumber)
                         .keyboardType(.numberPad)
                         .textContentType(.none)
-                        .textFieldStyle(.roundedBorder)
+                        .modifier(WelcomeTextFieldStyle())
                         .focused(focus, equals: .wiscardNumber)
                         .onChange(of: draft.wiscardCardNumber) { _, value in
                             draft.wiscardCardNumber = String(value.filter(\.isNumber).prefix(10))
@@ -359,7 +396,7 @@ struct WelcomeWiscardStepView: View {
                     TextField("X", text: $draft.wiscardIssueCode)
                         .keyboardType(.numberPad)
                         .textContentType(.none)
-                        .textFieldStyle(.roundedBorder)
+                        .modifier(WelcomeTextFieldStyle())
                         .focused(focus, equals: .wiscardIssueCode)
                         .onChange(of: draft.wiscardIssueCode) { _, value in
                             draft.wiscardIssueCode = String(value.filter(\.isNumber).prefix(1))
@@ -445,7 +482,7 @@ struct WelcomeApparelStepView: View {
                 )
                 if draft.topSizeChoice == "OTHER" {
                     TextField("Other top size", text: $draft.topSizeOther)
-                        .textFieldStyle(.roundedBorder)
+                        .modifier(WelcomeTextFieldStyle())
                         .focused(focus, equals: .topSizeOther)
                         .submitLabel(.next)
                 }
@@ -470,7 +507,7 @@ struct WelcomeApparelStepView: View {
                 .disabled(draft.shoeSizeSystem.isEmpty)
                 if draft.shoeSizeChoice == "OTHER" {
                     TextField("Other shoe size", text: $draft.shoeSizeOther)
-                        .textFieldStyle(.roundedBorder)
+                        .modifier(WelcomeTextFieldStyle())
                         .focused(focus, equals: .shoeSizeOther)
                         .submitLabel(.done)
                         .onSubmit { focus.wrappedValue = nil }
@@ -614,8 +651,8 @@ struct WelcomeSelectionField<Value: Hashable>: View {
             .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
             .padding(.horizontal, 12)
             .background(
-                Color(.tertiarySystemFill),
-                in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                Color(.tertiarySystemGroupedBackground),
+                in: RoundedRectangle(cornerRadius: 12, style: .continuous)
             )
         }
         .buttonStyle(.plain)
@@ -692,9 +729,7 @@ private struct WelcomeStepPreviewHost: View {
             WelcomeHeaderView(
                 name: profile.name,
                 stepIndex: max(0, ProfileCompletionStep.visibleSteps(for: profile.role).firstIndex(of: step) ?? 0),
-                stepCount: ProfileCompletionStep.visibleSteps(for: profile.role).count,
-                completedCount: 3,
-                totalCount: profile.role == "STUDENT" ? 9 : 8
+                stepCount: ProfileCompletionStep.visibleSteps(for: profile.role).count
             )
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
@@ -763,7 +798,7 @@ private enum WelcomePreviewFixtures {
 }
 
 #Preview("Student Welcome") {
-    WelcomeStepPreviewHost(profile: WelcomePreviewFixtures.student, step: .email)
+    WelcomeStepPreviewHost(profile: WelcomePreviewFixtures.student, step: .phones)
 }
 
 #Preview("Staff Welcome") {

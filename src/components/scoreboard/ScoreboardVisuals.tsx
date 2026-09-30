@@ -110,7 +110,7 @@ export function ScoreboardDataRegion({
     <div
       aria-busy={refreshing || undefined}
       className={cn(
-        "transition-opacity duration-200 motion-reduce:transition-none",
+        "flex flex-col gap-4 transition-opacity duration-200 motion-reduce:transition-none",
         refreshing && "opacity-60",
       )}
     >

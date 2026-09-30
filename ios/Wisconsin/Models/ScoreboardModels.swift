@@ -30,6 +30,7 @@ enum ScoreboardFormat {
 
 struct ScoreboardSummary: Codable, Equatable {
     let eventsWorked: Int
+    let matchingEventsWorked: Int?
     let wins: Int
     let losses: Int
     let ties: Int
@@ -39,6 +40,7 @@ struct ScoreboardSummary: Codable, Equatable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         eventsWorked = try container.decode(Int.self, forKey: .eventsWorked)
+        matchingEventsWorked = try container.decodeIfPresent(Int.self, forKey: .matchingEventsWorked)
         wins = try container.decode(Int.self, forKey: .wins)
         losses = try container.decode(Int.self, forKey: .losses)
         ties = try container.decodeIfPresent(Int.self, forKey: .ties) ?? 0
@@ -116,6 +118,14 @@ struct ScoreboardEvent: Codable, Equatable, Identifiable {
         (try? Self.fractionalSeconds.parse(startsAt)) ?? (try? Self.wholeSeconds.parse(startsAt))
     }
 
+    /// All-day timestamps encode a calendar day in UTC, not a local instant.
+    private var displayDate: Date? {
+        guard let date = startsDate, allDay else { return startsDate }
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = TimeZone(secondsFromGMT: 0)!
+        return Calendar.current.date(from: utc.dateComponents([.year, .month, .day], from: date))
+    }
+
     var isWin: Bool { result == "WIN" }
     var isTie: Bool { result == "TIE" }
 
@@ -164,21 +174,21 @@ struct ScoreboardEvent: Codable, Equatable, Identifiable {
     /// `"Nov 28"`. The month heading above the row carries the year, and a
     /// finished game's start time is not what anyone reads a record for.
     var dayLabel: String {
-        guard let startsDate else { return "—" }
-        return startsDate.formatted(.dateTime.month(.abbreviated).day())
+        guard let displayDate else { return "—" }
+        return displayDate.formatted(.dateTime.month(.abbreviated).day())
     }
 
     /// Sort/group key for the month heading. Undated rows keep their own group
     /// rather than being folded into whatever month is adjacent.
     var monthKey: String {
-        guard let startsDate else { return "undated" }
-        let parts = Calendar.current.dateComponents([.year, .month], from: startsDate)
+        guard let displayDate else { return "undated" }
+        let parts = Calendar.current.dateComponents([.year, .month], from: displayDate)
         return String(format: "%04d-%02d", parts.year ?? 0, parts.month ?? 0)
     }
 
     var monthLabel: String {
-        guard let startsDate else { return "Undated" }
-        return startsDate.formatted(.dateTime.month(.wide).year())
+        guard let displayDate else { return "Undated" }
+        return displayDate.formatted(.dateTime.month(.wide).year())
     }
 
     /// The site glyph for the metadata line, so where a game was played can be
@@ -210,6 +220,10 @@ struct UserScoreboard: Codable, Equatable {
     let events: [ScoreboardEvent]
     let eventCount: Int
     let nextCursor: String?
+    let facets: TeamScoreboardFacets?
+    let seasonGames: Int?
+    let recentResults: [ScoreboardEvent]?
+    let streak: ScoreboardRecordStreak?
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -225,12 +239,40 @@ struct UserScoreboard: Codable, Equatable {
         eventCount = try container.decodeIfPresent(Int.self, forKey: .eventCount) ?? events.count
         nextCursor = (try? container.decode(String.self, forKey: .nextCursor))
             ?? (try? container.decode(Int.self, forKey: .nextCursor)).map(String.init)
+        facets = try container.decodeIfPresent(TeamScoreboardFacets.self, forKey: .facets)
+        seasonGames = try container.decodeIfPresent(Int.self, forKey: .seasonGames)
+        recentResults = try container.decodeIfPresent([ScoreboardEvent].self, forKey: .recentResults)
+        streak = try container.decodeIfPresent(ScoreboardRecordStreak.self, forKey: .streak)
     }
 
     /// The route's cursor is the offset of the next page. A cursor that is not
     /// an offset ends the list, rather than being read as zero and quietly
     /// serving page one again under a "Show more" button.
-    var nextOffset: Int? { nextCursor.flatMap(Int.init) }
+    var nextOffset: Int? {
+        guard let offset = nextCursor.flatMap(Int.init), offset > 0 else { return nil }
+        return offset
+    }
+}
+
+/// The same four-dimensional context is carried from the team to a person.
+struct ScoreboardContextFilters: Equatable {
+    var sportCode: String?
+    var venue: String?
+    var opponent: String?
+    var site: String?
+
+    var count: Int { [sportCode, venue, opponent, site].compactMap { $0 }.count }
+    var isEmpty: Bool { count == 0 }
+}
+
+struct ScoreboardRecordStreak: Codable, Equatable {
+    let result: String
+    let count: Int
+
+    var presentation: ScoreboardStreak? {
+        guard count >= 2, ["WIN", "LOSS", "TIE"].contains(result) else { return nil }
+        return ScoreboardStreak(count: count, result: result, isWin: result == "WIN")
+    }
 }
 
 /// Copy explaining how the shared team totals relate. Keeping this in the
@@ -559,7 +601,7 @@ extension UserScoreboard {
         if let sport = bySport.first {
             found.append(ScoreboardHighlight(
                 id: "sport",
-                label: "Most worked",
+                label: "Most games",
                 value: sport.label,
                 detail: sport.gamesLabel
             ))

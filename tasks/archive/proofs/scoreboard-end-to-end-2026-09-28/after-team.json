@@ -1,0 +1,833 @@
+{
+  "data": {
+    "generatedAt": "2026-09-29T03:23:02.391Z",
+    "scope": {
+      "key": "2026-27",
+      "label": "Current season",
+      "startsAt": "2026-07-01T05:00:00.000Z",
+      "endsAt": "2027-07-01T05:00:00.000Z",
+      "timeZone": "America/Chicago"
+    },
+    "methodology": {
+      "eventsCovered": "Unique completed, confirmed Schedule events worked by at least one visible active person, by assignment or admin-added worker.",
+      "eventCredits": "One credit per person per completed event, even when that person worked multiple shifts.",
+      "record": "Unique resolved games (wins, losses, or ties) after the official exhibition, scrimmage, and alumni-match exclusions.",
+      "gameCredits": "One record credit per person per resolved game, even when that person worked multiple shifts.",
+      "minimumGamesForWinRate": 3
+    },
+    "filters": {
+      "sportCode": null,
+      "venue": null,
+      "opponent": null,
+      "site": null
+    },
+    "facets": {
+      "sports": [
+        {
+          "key": "FB",
+          "label": "Football"
+        },
+        {
+          "key": "VB",
+          "label": "Volleyball"
+        }
+      ],
+      "venues": [],
+      "opponents": [
+        {
+          "key": "Preview State 1",
+          "label": "Preview State 1"
+        },
+        {
+          "key": "Preview State 10",
+          "label": "Preview State 10"
+        },
+        {
+          "key": "Preview State 11",
+          "label": "Preview State 11"
+        },
+        {
+          "key": "Preview State 12",
+          "label": "Preview State 12"
+        },
+        {
+          "key": "Preview State 13",
+          "label": "Preview State 13"
+        },
+        {
+          "key": "Preview State 14",
+          "label": "Preview State 14"
+        },
+        {
+          "key": "Preview State 15",
+          "label": "Preview State 15"
+        },
+        {
+          "key": "Preview State 16",
+          "label": "Preview State 16"
+        },
+        {
+          "key": "Preview State 17",
+          "label": "Preview State 17"
+        },
+        {
+          "key": "Preview State 2",
+          "label": "Preview State 2"
+        },
+        {
+          "key": "Preview State 3",
+          "label": "Preview State 3"
+        },
+        {
+          "key": "Preview State 4",
+          "label": "Preview State 4"
+        },
+        {
+          "key": "Preview State 5",
+          "label": "Preview State 5"
+        },
+        {
+          "key": "Preview State 6",
+          "label": "Preview State 6"
+        },
+        {
+          "key": "Preview State 7",
+          "label": "Preview State 7"
+        },
+        {
+          "key": "Preview State 8",
+          "label": "Preview State 8"
+        },
+        {
+          "key": "Preview State 9",
+          "label": "Preview State 9"
+        }
+      ],
+      "sites": [
+        {
+          "key": "HOME",
+          "label": "Home"
+        }
+      ]
+    },
+    "summary": {
+      "contributors": 17,
+      "eventsCovered": 17,
+      "eventCredits": 17,
+      "wins": 0,
+      "losses": 0,
+      "ties": 0,
+      "games": 0,
+      "winRate": null,
+      "gameCredits": 0
+    },
+    "bySport": [
+      {
+        "key": "FB",
+        "label": "Football",
+        "contributors": 9,
+        "eventsCovered": 9,
+        "eventCredits": 9,
+        "wins": 0,
+        "losses": 0,
+        "ties": 0,
+        "games": 0,
+        "winRate": null,
+        "gameCredits": 0
+      },
+      {
+        "key": "VB",
+        "label": "Volleyball",
+        "contributors": 8,
+        "eventsCovered": 8,
+        "eventCredits": 8,
+        "wins": 0,
+        "losses": 0,
+        "ties": 0,
+        "games": 0,
+        "winRate": null,
+        "gameCredits": 0
+      }
+    ],
+    "byVenue": [
+      {
+        "key": null,
+        "label": "Unknown venue",
+        "contributors": 17,
+        "eventsCovered": 17,
+        "eventCredits": 17,
+        "wins": 0,
+        "losses": 0,
+        "ties": 0,
+        "games": 0,
+        "winRate": null,
+        "gameCredits": 0
+      }
+    ],
+    "byOpponent": [
+      {
+        "key": "Preview State 1",
+        "label": "Preview State 1",
+        "contributors": 1,
+        "eventsCovered": 1,
+        "eventCredits": 1,
+        "wins": 0,
+        "losses": 0,
+        "ties": 0,
+        "games": 0,
+        "winRate": null,
+        "gameCredits": 0
+      },
+      {
+        "key": "Preview State 10",
+        "label": "Preview State 10",
+        "contributors": 1,
+        "eventsCovered": 1,
+        "eventCredits": 1,
+        "wins": 0,
+        "losses": 0,
+        "ties": 0,
+        "games": 0,
+        "winRate": null,
+        "gameCredits": 0
+      },
+      {
+        "key": "Preview State 11",
+        "label": "Preview State 11",
+        "contributors": 1,
+        "eventsCovered": 1,
+        "eventCredits": 1,
+        "wins": 0,
+        "losses": 0,
+        "ties": 0,
+        "games": 0,
+        "winRate": null,
+        "gameCredits": 0
+      },
+      {
+        "key": "Preview State 12",
+        "label": "Preview State 12",
+        "contributors": 1,
+        "eventsCovered": 1,
+        "eventCredits": 1,
+        "wins": 0,
+        "losses": 0,
+        "ties": 0,
+        "games": 0,
+        "winRate": null,
+        "gameCredits": 0
+      },
+      {
+        "key": "Preview State 13",
+        "label": "Preview State 13",
+        "contributors": 1,
+        "eventsCovered": 1,
+        "eventCredits": 1,
+        "wins": 0,
+        "losses": 0,
+        "ties": 0,
+        "games": 0,
+        "winRate": null,
+        "gameCredits": 0
+      },
+      {
+        "key": "Preview State 14",
+        "label": "Preview State 14",
+        "contributors": 1,
+        "eventsCovered": 1,
+        "eventCredits": 1,
+        "wins": 0,
+        "losses": 0,
+        "ties": 0,
+        "games": 0,
+        "winRate": null,
+        "gameCredits": 0
+      },
+      {
+        "key": "Preview State 15",
+        "label": "Preview State 15",
+        "contributors": 1,
+        "eventsCovered": 1,
+        "eventCredits": 1,
+        "wins": 0,
+        "losses": 0,
+        "ties": 0,
+        "games": 0,
+        "winRate": null,
+        "gameCredits": 0
+      },
+      {
+        "key": "Preview State 16",
+        "label": "Preview State 16",
+        "contributors": 1,
+        "eventsCovered": 1,
+        "eventCredits": 1,
+        "wins": 0,
+        "losses": 0,
+        "ties": 0,
+        "games": 0,
+        "winRate": null,
+        "gameCredits": 0
+      },
+      {
+        "key": "Preview State 17",
+        "label": "Preview State 17",
+        "contributors": 1,
+        "eventsCovered": 1,
+        "eventCredits": 1,
+        "wins": 0,
+        "losses": 0,
+        "ties": 0,
+        "games": 0,
+        "winRate": null,
+        "gameCredits": 0
+      },
+      {
+        "key": "Preview State 2",
+        "label": "Preview State 2",
+        "contributors": 1,
+        "eventsCovered": 1,
+        "eventCredits": 1,
+        "wins": 0,
+        "losses": 0,
+        "ties": 0,
+        "games": 0,
+        "winRate": null,
+        "gameCredits": 0
+      },
+      {
+        "key": "Preview State 3",
+        "label": "Preview State 3",
+        "contributors": 1,
+        "eventsCovered": 1,
+        "eventCredits": 1,
+        "wins": 0,
+        "losses": 0,
+        "ties": 0,
+        "games": 0,
+        "winRate": null,
+        "gameCredits": 0
+      },
+      {
+        "key": "Preview State 4",
+        "label": "Preview State 4",
+        "contributors": 1,
+        "eventsCovered": 1,
+        "eventCredits": 1,
+        "wins": 0,
+        "losses": 0,
+        "ties": 0,
+        "games": 0,
+        "winRate": null,
+        "gameCredits": 0
+      },
+      {
+        "key": "Preview State 5",
+        "label": "Preview State 5",
+        "contributors": 1,
+        "eventsCovered": 1,
+        "eventCredits": 1,
+        "wins": 0,
+        "losses": 0,
+        "ties": 0,
+        "games": 0,
+        "winRate": null,
+        "gameCredits": 0
+      },
+      {
+        "key": "Preview State 6",
+        "label": "Preview State 6",
+        "contributors": 1,
+        "eventsCovered": 1,
+        "eventCredits": 1,
+        "wins": 0,
+        "losses": 0,
+        "ties": 0,
+        "games": 0,
+        "winRate": null,
+        "gameCredits": 0
+      },
+      {
+        "key": "Preview State 7",
+        "label": "Preview State 7",
+        "contributors": 1,
+        "eventsCovered": 1,
+        "eventCredits": 1,
+        "wins": 0,
+        "losses": 0,
+        "ties": 0,
+        "games": 0,
+        "winRate": null,
+        "gameCredits": 0
+      },
+      {
+        "key": "Preview State 8",
+        "label": "Preview State 8",
+        "contributors": 1,
+        "eventsCovered": 1,
+        "eventCredits": 1,
+        "wins": 0,
+        "losses": 0,
+        "ties": 0,
+        "games": 0,
+        "winRate": null,
+        "gameCredits": 0
+      },
+      {
+        "key": "Preview State 9",
+        "label": "Preview State 9",
+        "contributors": 1,
+        "eventsCovered": 1,
+        "eventCredits": 1,
+        "wins": 0,
+        "losses": 0,
+        "ties": 0,
+        "games": 0,
+        "winRate": null,
+        "gameCredits": 0
+      }
+    ],
+    "bySite": [
+      {
+        "key": "HOME",
+        "label": "Home",
+        "contributors": 17,
+        "eventsCovered": 17,
+        "eventCredits": 17,
+        "wins": 0,
+        "losses": 0,
+        "ties": 0,
+        "games": 0,
+        "winRate": null,
+        "gameCredits": 0
+      }
+    ],
+    "leaderboard": [
+      {
+        "userId": "preview-person-9",
+        "name": "Preview Student 10",
+        "avatarUrl": null,
+        "summary": {
+          "eventsWorked": 1,
+          "wins": 0,
+          "losses": 0,
+          "ties": 0,
+          "games": 0,
+          "winRate": null
+        },
+        "bySport": [
+          {
+            "key": "VB",
+            "label": "Volleyball",
+            "eventsWorked": 1,
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "games": 0,
+            "winRate": null
+          }
+        ]
+      },
+      {
+        "userId": "preview-person-10",
+        "name": "Preview Student 11",
+        "avatarUrl": null,
+        "summary": {
+          "eventsWorked": 1,
+          "wins": 0,
+          "losses": 0,
+          "ties": 0,
+          "games": 0,
+          "winRate": null
+        },
+        "bySport": [
+          {
+            "key": "FB",
+            "label": "Football",
+            "eventsWorked": 1,
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "games": 0,
+            "winRate": null
+          }
+        ]
+      },
+      {
+        "userId": "preview-person-11",
+        "name": "Preview Student 12",
+        "avatarUrl": null,
+        "summary": {
+          "eventsWorked": 1,
+          "wins": 0,
+          "losses": 0,
+          "ties": 0,
+          "games": 0,
+          "winRate": null
+        },
+        "bySport": [
+          {
+            "key": "VB",
+            "label": "Volleyball",
+            "eventsWorked": 1,
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "games": 0,
+            "winRate": null
+          }
+        ]
+      },
+      {
+        "userId": "preview-person-12",
+        "name": "Preview Student 13",
+        "avatarUrl": null,
+        "summary": {
+          "eventsWorked": 1,
+          "wins": 0,
+          "losses": 0,
+          "ties": 0,
+          "games": 0,
+          "winRate": null
+        },
+        "bySport": [
+          {
+            "key": "FB",
+            "label": "Football",
+            "eventsWorked": 1,
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "games": 0,
+            "winRate": null
+          }
+        ]
+      },
+      {
+        "userId": "preview-person-13",
+        "name": "Preview Student 14",
+        "avatarUrl": null,
+        "summary": {
+          "eventsWorked": 1,
+          "wins": 0,
+          "losses": 0,
+          "ties": 0,
+          "games": 0,
+          "winRate": null
+        },
+        "bySport": [
+          {
+            "key": "VB",
+            "label": "Volleyball",
+            "eventsWorked": 1,
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "games": 0,
+            "winRate": null
+          }
+        ]
+      },
+      {
+        "userId": "preview-person-14",
+        "name": "Preview Student 15",
+        "avatarUrl": null,
+        "summary": {
+          "eventsWorked": 1,
+          "wins": 0,
+          "losses": 0,
+          "ties": 0,
+          "games": 0,
+          "winRate": null
+        },
+        "bySport": [
+          {
+            "key": "FB",
+            "label": "Football",
+            "eventsWorked": 1,
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "games": 0,
+            "winRate": null
+          }
+        ]
+      },
+      {
+        "userId": "preview-person-15",
+        "name": "Preview Student 16",
+        "avatarUrl": null,
+        "summary": {
+          "eventsWorked": 1,
+          "wins": 0,
+          "losses": 0,
+          "ties": 0,
+          "games": 0,
+          "winRate": null
+        },
+        "bySport": [
+          {
+            "key": "VB",
+            "label": "Volleyball",
+            "eventsWorked": 1,
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "games": 0,
+            "winRate": null
+          }
+        ]
+      },
+      {
+        "userId": "preview-person-16",
+        "name": "Preview Student 17",
+        "avatarUrl": null,
+        "summary": {
+          "eventsWorked": 1,
+          "wins": 0,
+          "losses": 0,
+          "ties": 0,
+          "games": 0,
+          "winRate": null
+        },
+        "bySport": [
+          {
+            "key": "FB",
+            "label": "Football",
+            "eventsWorked": 1,
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "games": 0,
+            "winRate": null
+          }
+        ]
+      },
+      {
+        "userId": "preview-person-17",
+        "name": "Preview Student 18",
+        "avatarUrl": null,
+        "summary": {
+          "eventsWorked": 1,
+          "wins": 0,
+          "losses": 0,
+          "ties": 0,
+          "games": 0,
+          "winRate": null
+        },
+        "bySport": [
+          {
+            "key": "VB",
+            "label": "Volleyball",
+            "eventsWorked": 1,
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "games": 0,
+            "winRate": null
+          }
+        ]
+      },
+      {
+        "userId": "preview-person-18",
+        "name": "Preview Student 19",
+        "avatarUrl": null,
+        "summary": {
+          "eventsWorked": 1,
+          "wins": 0,
+          "losses": 0,
+          "ties": 0,
+          "games": 0,
+          "winRate": null
+        },
+        "bySport": [
+          {
+            "key": "FB",
+            "label": "Football",
+            "eventsWorked": 1,
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "games": 0,
+            "winRate": null
+          }
+        ]
+      },
+      {
+        "userId": "preview-person-19",
+        "name": "Preview Student 20",
+        "avatarUrl": null,
+        "summary": {
+          "eventsWorked": 1,
+          "wins": 0,
+          "losses": 0,
+          "ties": 0,
+          "games": 0,
+          "winRate": null
+        },
+        "bySport": [
+          {
+            "key": "VB",
+            "label": "Volleyball",
+            "eventsWorked": 1,
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "games": 0,
+            "winRate": null
+          }
+        ]
+      },
+      {
+        "userId": "preview-person-20",
+        "name": "Preview Student 21",
+        "avatarUrl": null,
+        "summary": {
+          "eventsWorked": 1,
+          "wins": 0,
+          "losses": 0,
+          "ties": 0,
+          "games": 0,
+          "winRate": null
+        },
+        "bySport": [
+          {
+            "key": "FB",
+            "label": "Football",
+            "eventsWorked": 1,
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "games": 0,
+            "winRate": null
+          }
+        ]
+      },
+      {
+        "userId": "preview-person-21",
+        "name": "Preview Student 22",
+        "avatarUrl": null,
+        "summary": {
+          "eventsWorked": 1,
+          "wins": 0,
+          "losses": 0,
+          "ties": 0,
+          "games": 0,
+          "winRate": null
+        },
+        "bySport": [
+          {
+            "key": "VB",
+            "label": "Volleyball",
+            "eventsWorked": 1,
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "games": 0,
+            "winRate": null
+          }
+        ]
+      },
+      {
+        "userId": "preview-person-22",
+        "name": "Preview Student 23",
+        "avatarUrl": null,
+        "summary": {
+          "eventsWorked": 1,
+          "wins": 0,
+          "losses": 0,
+          "ties": 0,
+          "games": 0,
+          "winRate": null
+        },
+        "bySport": [
+          {
+            "key": "FB",
+            "label": "Football",
+            "eventsWorked": 1,
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "games": 0,
+            "winRate": null
+          }
+        ]
+      },
+      {
+        "userId": "preview-person-23",
+        "name": "Preview Student 24",
+        "avatarUrl": null,
+        "summary": {
+          "eventsWorked": 1,
+          "wins": 0,
+          "losses": 0,
+          "ties": 0,
+          "games": 0,
+          "winRate": null
+        },
+        "bySport": [
+          {
+            "key": "VB",
+            "label": "Volleyball",
+            "eventsWorked": 1,
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "games": 0,
+            "winRate": null
+          }
+        ]
+      },
+      {
+        "userId": "preview-person-24",
+        "name": "Preview Student 25",
+        "avatarUrl": null,
+        "summary": {
+          "eventsWorked": 1,
+          "wins": 0,
+          "losses": 0,
+          "ties": 0,
+          "games": 0,
+          "winRate": null
+        },
+        "bySport": [
+          {
+            "key": "FB",
+            "label": "Football",
+            "eventsWorked": 1,
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "games": 0,
+            "winRate": null
+          }
+        ]
+      },
+      {
+        "userId": "preview-person-8",
+        "name": "Preview Student 9",
+        "avatarUrl": null,
+        "summary": {
+          "eventsWorked": 1,
+          "wins": 0,
+          "losses": 0,
+          "ties": 0,
+          "games": 0,
+          "winRate": null
+        },
+        "bySport": [
+          {
+            "key": "FB",
+            "label": "Football",
+            "eventsWorked": 1,
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "games": 0,
+            "winRate": null
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "sourceRevision": "80c81ef6ead9701d62a98ecd5dce51e1b855689d",
+  "sourcePatchSha256": "3c2f983911729c701b5b84d77c710e6680ab9c298a829eb53a92e5486f5b6626",
+  "settings": {
+    "device": "iPhone 18 Pro Max simulator, iOS 27.0 (dedicated capture device 283AEB67)",
+    "viewport": [
+      440,
+      956
+    ],
+    "fixture": "GT_PERFORMANCE_SCENARIO=homeAgenda",
+    "role": "staff",
+    "route": "HomeView",
+    "appearance": "dark",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "simulator default",
+    "clock": "fixture times relative to the start of the capture hour",
+    "scroll": [
+      0,
+      0
+    ]
+  }
+}

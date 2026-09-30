@@ -1,0 +1,75 @@
+--- vitest ---
+
+ RUN  v4.1.11 /Users/role/Code/wisconsin-creative
+
+
+ Test Files  5 passed (5)
+      Tests  42 passed (42)
+   Start at  16:15:17
+   Duration  308ms (transform 332ms, setup 124ms, import 355ms, tests 43ms, environment 0ms)
+
+
+--- unit ---
+Test Case '-[WisconsinTests.ProfileCompletionModelsTests testAthleticsEmailRequiresLocalPartAndExactDomain]' started.
+Test Case '-[WisconsinTests.ProfileCompletionModelsTests testAthleticsEmailRequiresLocalPartAndExactDomain]' passed (0.000 seconds).
+Test Case '-[WisconsinTests.ProfileCompletionModelsTests testCompletionPayloadToleratesMissingAdditiveFields]' started.
+Test Case '-[WisconsinTests.ProfileCompletionModelsTests testCompletionPayloadToleratesMissingAdditiveFields]' passed (0.000 seconds).
+Test Suite 'ProfileCompletionModelsTests' passed at 2026-09-28 16:15:41.114.
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.005 (0.008) seconds
+Test Suite 'WisconsinTests.xctest' passed at 2026-09-28 16:15:41.114.
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.005 (0.008) seconds
+Test Suite 'Selected tests' passed at 2026-09-28 16:15:41.114.
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.005 (0.009) seconds
+2026-09-28 16:15:41.420 xcodebuild[72419:827715] [MT] IDETestOperationsObserverDebug: 5.043 elapsed -- Testing started completed.
+2026-09-28 16:15:41.420 xcodebuild[72419:827715] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-09-28 16:15:41.420 xcodebuild[72419:827715] [MT] IDETestOperationsObserverDebug: 5.043 sec, +5.043 sec -- end
+
+Test session results, code coverage, and logs:
+	/tmp/wc-onboarding-build/Logs/Test/Test-Wisconsin-2026.09.28_16-15-22--0500.xcresult
+
+** TEST SUCCEEDED **
+
+Testing started
+
+--- ui ---
+    t =     8.23s Find the Target Application 'com.erikrole.Wisconsin'
+    t =     8.32s Added attachment named 'student-retry'
+    t =     8.32s Tear Down
+Test Case '-[WisconsinUITests.OnboardingUITests testStudentPhoneFailureKeepsEnteredNumber]' passed (8.537 seconds).
+Test Suite 'OnboardingUITests' passed at 2026-09-28 16:19:42.769.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 33.810 (33.814) seconds
+Test Suite 'WisconsinUITests.xctest' passed at 2026-09-28 16:19:42.769.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 33.810 (33.815) seconds
+Test Suite 'Selected tests' passed at 2026-09-28 16:19:42.770.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 33.810 (33.817) seconds
+2026-09-28 16:19:43.071 xcodebuild[74209:846748] [MT] IDETestOperationsObserverDebug: 40.137 elapsed -- Testing started completed.
+2026-09-28 16:19:43.071 xcodebuild[74209:846748] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-09-28 16:19:43.071 xcodebuild[74209:846748] [MT] IDETestOperationsObserverDebug: 40.137 sec, +40.137 sec -- end
+
+Test session results, code coverage, and logs:
+	/tmp/wc-onboarding-ui.xcresult
+
+** TEST EXECUTE SUCCEEDED **
+
+Testing started
+
+--- drift ---
+
+> creative-ops@2026.04.08.1 drift:ios
+> bash scripts/ios-drift-check.sh
+
+✓ ios-drift-check: no anti-patterns found across 94 swift files
+
+--- docs ---
+
+> creative-ops@2026.04.08.1 verify:docs
+> npm run codemap:check
+
+
+> creative-ops@2026.04.08.1 codemap:check
+> node scripts/generate-codemaps.mjs --check
+
+Codemaps are current.
+
+--- tsc ---
+

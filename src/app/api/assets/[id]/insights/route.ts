@@ -14,25 +14,32 @@ function daysBetween(a: Date, b: Date) {
   return Math.max(0, Math.ceil((b.getTime() - a.getTime()) / DAY_MS));
 }
 
-/** Count unique days covered by a set of [start, end] intervals */
+/** Count the existing 24-hour samples without visiting each booked day. */
 function countBookedDays(
   intervals: Array<{ start: Date; end: Date }>,
   windowStart: Date,
   windowEnd: Date
 ): number {
-  const days = new Set<number>();
+  const ranges: Array<{ first: number; last: number }> = [];
   for (const { start, end } of intervals) {
     const s = Math.max(start.getTime(), windowStart.getTime());
     const e = Math.min(end.getTime(), windowEnd.getTime());
-    if (s >= e) continue;
-    // Walk day-by-day (max ~365 iterations for 1yr window)
-    let cursor = s;
-    while (cursor < e) {
-      days.add(Math.floor(cursor / DAY_MS));
-      cursor += DAY_MS;
-    }
+    if (!(s < e)) continue;
+    const first = Math.floor(s / DAY_MS);
+    // Preserve sampling from the clipped start, including partial-day bookings.
+    // Counting every calendar date touched would change existing utilization.
+    ranges.push({ first, last: first + Math.ceil((e - s) / DAY_MS) - 1 });
   }
-  return days.size;
+  ranges.sort((a, b) => a.first - b.first);
+
+  let days = 0;
+  let lastCounted = -Infinity;
+  for (const range of ranges) {
+    const firstUncounted = Math.max(range.first, lastCounted + 1);
+    if (firstUncounted <= range.last) days += range.last - firstUncounted + 1;
+    lastCounted = Math.max(lastCounted, range.last);
+  }
+  return days;
 }
 
 function computeWindow(

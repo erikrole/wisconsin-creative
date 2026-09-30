@@ -1,0 +1,34 @@
+{
+  "title": "Kiosk icon \u00b7 Vintage Bucky on black",
+  "eyebrow": "Icon Composer design review",
+  "lede": "Original vintage Bucky and Block W artwork, with a black background and more room around the mark.",
+  "sections": [
+    {
+      "heading": "Composer source verified",
+      "note": "After-only compiled preview: kiosk-ipad-preview.png. The previous icon was a flat catalog PNG; no matched Composer baseline exists. Default, Dark, and Mono appearances were inspected in Icon Composer.",
+      "pairs": []
+    }
+  ],
+  "changes": [
+    {
+      "h": "Preserve the vintage artwork",
+      "was": "Flat 1024-pixel catalog image.",
+      "now": "Editable Composer document referencing the complete original vector logo."
+    },
+    {
+      "h": "Room around the mark",
+      "was": "Logo occupied roughly 86% of the icon width.",
+      "now": "Vector width is approximately 78% of the 1024-point canvas (390 \u00d7 2.05). Background stays black."
+    }
+  ],
+  "verification": [
+    "WisconsinKiosk Xcode build passed for iPad Air 11-inch (M4), iOS 26.5.",
+    "Built com.erikrole.WisconsinKiosk bundle declares KioskIcon as its iPad primary icon; preview is copied from that built bundle.",
+    "Target-split tests: 2 passed.",
+    "Local Illustrator original SHA-256 matches supplied shared-volume BlockW+Bucky_RGB.ai."
+  ],
+  "notes": [
+    "Applied to Debug and Release target settings and ios/project.yml. Main app icon unchanged.",
+    "No physical iPad installation or distribution performed."
+  ]
+}

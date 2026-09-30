@@ -1,0 +1,128 @@
+{
+  "logEvidence": {
+    "fullWebTests": {
+      "result": "passed: 5019 cases, one existing skip",
+      "path": ".tmp/performance-2026-09-27/vitest-verified.log",
+      "sha256": "2ca520043653c56b04381c4e0e0f3456874ea9252888dd909a5506dcb97635eb"
+    },
+    "finalNativeUnits": {
+      "result": "passed: 93 XCTest and 93 Swift Testing cases",
+      "path": ".tmp/performance-2026-09-27/ios-final-ownership.log",
+      "sha256": "2eb793e54c4c57b0fc8ee008203a0cd2c15f28c0fd071db6b164de6b05c5fe32"
+    },
+    "finalSwiftSourceContracts": {
+      "result": "passed: 25 cases",
+      "path": ".tmp/performance-2026-09-27/ios-final-ownership-contracts.log",
+      "sha256": "ab853c7f4c97d8f67c8b73d7672c9103316645dd62bece31f25f9ecb89bad103"
+    },
+    "webBuildBefore": {
+      "result": "passed",
+      "path": ".tmp/performance-2026-09-27/web-build-before.log",
+      "sha256": "434af7c3a01f2747dd8d7f3ed1f0c5cc4112279667282a27bfbeb0c3ff939e86"
+    },
+    "webBuildAfter": {
+      "result": "passed",
+      "path": ".tmp/performance-2026-09-27/web-build-after.log",
+      "sha256": "b684a03f1bc8613ace3978a12d48b6ba24e21e54d3c7f57d121d721c51e59201"
+    },
+    "typeScriptAfterBuild": {
+      "result": "passed",
+      "path": ".tmp/performance-2026-09-27/typescript-verified.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "focusedLint": {
+      "result": "passed",
+      "path": ".tmp/performance-2026-09-27/lint-focused.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "finalBenchmarkLint": {
+      "result": "passed",
+      "path": ".tmp/performance-2026-09-27/lint-benchmark-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "finalOwnershipLint": {
+      "result": "passed",
+      "path": ".tmp/performance-2026-09-27/lint-ownership-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "fullLint": {
+      "result": "failed: existing vendored QR error; benchmark-script warning corrected and focused lint rerun",
+      "path": ".tmp/performance-2026-09-27/lint.log",
+      "sha256": "b0667f0504c0757ddd329a02c504bfc8e0342744398a4684af688e23849fb16d"
+    },
+    "finalNativeRelease": {
+      "result": "passed: unsigned generic iOS",
+      "path": ".tmp/performance-2026-09-27/ios-release-ownership.log",
+      "sha256": "be2acaea16e7b92c00607c4ee8c04fe6f50da61fac1b4ed87794ec2292d3303d"
+    },
+    "nativePerformanceBefore": {
+      "result": "passed: 3 scenarios",
+      "path": ".tmp/performance-2026-09-27/ios-before.log",
+      "sha256": "16943bff84bab577f9b4ed74d7555e3a1d9c4a676ab6f146e4acf5a4b7db0a18"
+    },
+    "nativePerformanceAfter": {
+      "result": "passed: 3 scenarios",
+      "path": ".tmp/performance-2026-09-27/ios-after.log",
+      "sha256": "f91655f2bf293c044d52a4281148b5ec5d4a650e74f8ea73ae06d73ab00833dc"
+    },
+    "profileFixture": {
+      "result": "passed: 6 scenarios",
+      "path": ".tmp/performance-2026-09-27/profile-browser-final.log",
+      "sha256": "dad160d865bf44b81707cb99c33943eaf5400b1129fba5f7e8ff2bc50aa2e239"
+    },
+    "docs": {
+      "result": "passed",
+      "path": ".tmp/performance-2026-09-27/docs-final.log",
+      "sha256": "a9cf9bca626f5e729688ed5a6fb497c589eb61c8b1977960b884c46f4b591b39"
+    },
+    "nativeDrift": {
+      "result": "passed",
+      "path": ".tmp/performance-2026-09-27/ios-drift.log",
+      "sha256": "66826b8cd4679dd8806d130df858087970ecf48eac463be7395b6cf225f982e0"
+    },
+    "nativeAuditInventory": {
+      "result": "passed",
+      "path": ".tmp/performance-2026-09-27/ios-gaps.log",
+      "sha256": "84ca56487dae30c56a669dc81a2c8db24f7d50b8bbf027c0e5e17547cdce1c0d"
+    },
+    "migrationFolders": {
+      "result": "passed: filesystem only",
+      "path": ".tmp/performance-2026-09-27/migration-check.log",
+      "sha256": "69caa68cb4e32c58691320ca3190609564eb522daecf104bb943fbec737b216a"
+    }
+  },
+  "remaining": [
+    "Physical-device performance and native preview routing remain unverified.",
+    "Hosted performance, client-side transitions and populated Signatures are not covered by this local baseline.",
+    "No staging, commit, push, application deployment or distribution."
+  ],
+  "sourceSha256": {
+    "src/components/QueryProvider.tsx": "ef2452049fe68b1f1ce099ebc005efb6dd0eec08494bf7b3de5ddf964c848e6d",
+    "src/lib/query-client.ts": "d2c0fc7f89e625b459496b07918ef6fdddfe2fe34f5eea696b0d2b07318f2df3",
+    "src/components/AppShell.tsx": "bb05a2ed899b6ccc1a6e426b3a21495366e7b39dc5cc8f0fd935d8bbbaa0a34e",
+    "src/components/profile-completion/ProfileCompletionWizard.tsx": "544aff58d9c00608befc4c01d8ff918455778b341afe260c337cc85e5fc9a5c2",
+    "src/components/profile-completion/ProfileCompletionDialog.tsx": "d05a5bd18fff7a6850d1d8c898cfb7553f7287f95e63f9f0ab9b430ab55a9792",
+    "ios/Wisconsin/Core/APIClient.swift": "41ae2de2fd58734fa36795b36802a2c4a4e28bdc99e937395dfe29cecdbe369b",
+    "ios/Wisconsin/Core/ThumbnailLoader.swift": "4a74729013f3fdc3e53c20475ae47b8c748af7123bb7b2ec5ffc978c35101887",
+    "ios/WisconsinTests/APIResponseDecodingTests.swift": "60d07644b1f01353ce47c67a1d74a9152b972f2255c0613b01975e156c69c2ed",
+    "ios/WisconsinTests/ThumbnailLoadingTests.swift": "9ce87581f4711b7a4b0990d79396a43f2bfe7ddaa24f5e5e54cb16da9afc373c",
+    "ios/Wisconsin.xcodeproj/project.pbxproj": "0b03a723b776e587c86d62ba91582561932cac837af772df2a506cd0dfabd0c2",
+    "scripts/benchmark-web-bundles.mjs": "1b8a0ee8a980313a785c618622c264ce9f98ed8e289bba96c81489993b33d769",
+    "scripts/benchmark-query-provider.mjs": "b1d7c2944cb756487d325b093a6f573fae3ff4789fbbcfa7df75543f01524d56",
+    "scripts/benchmark-profile-completion.mjs": "3d97f49b71c3924c3aefc874847bfdecb17c58fea4779064d403c39d59531a85"
+  },
+  "continuation2026-09-28": {
+    "sharedPreview": "preview-provisioning.json",
+    "authenticatedBaseline": "preview/results.json",
+    "baselineSha256": "80144180496b14baf333430accb192eeea9c301192ffb2373eee381b0c837c84",
+    "renderChecks": 55,
+    "apiEndpoints": 8,
+    "measuredApiReads": 40,
+    "runtimeFailures": 0,
+    "runtime": "Node 22.23.2",
+    "build": "passed; verified existing build reused by final run",
+    "typescript": "passed",
+    "benchmarkLint": "passed",
+    "credentialsExcludedFromRetainedReports": true
+  }
+}

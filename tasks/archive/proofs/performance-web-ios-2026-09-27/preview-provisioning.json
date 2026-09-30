@@ -1,0 +1,67 @@
+{
+  "capturedAt": "2026-09-28T11:46:34.375Z",
+  "gitBranch": "claude/kiosk-multi-lens",
+  "projectId": "floral-fog-52897668",
+  "branchId": "br-raspy-sun-au47wnog",
+  "endpointId": "ep-bold-dew-aue5cozq",
+  "templateBranchId": "br-late-feather-auptprel",
+  "key": "c84b0c70774dba3385d2",
+  "stores": [
+    {
+      "kind": "public",
+      "access": "public",
+      "name": "wc-preview-c84b0c70774dba3385d2-public",
+      "id": "store_QHjYgExX46AYWGYP"
+    },
+    {
+      "kind": "signatures",
+      "access": "private",
+      "name": "wc-preview-c84b0c70774dba3385d2-signatures",
+      "id": "store_nwU8OWfHu181PceC"
+    },
+    {
+      "kind": "resources",
+      "access": "private",
+      "name": "wc-preview-c84b0c70774dba3385d2-resources",
+      "id": "store_9OnWyLEDo5V28amA"
+    }
+  ],
+  "trustedSignatureVerified": true,
+  "inheritedOwnerPasswordRotated": true,
+  "pinned": true,
+  "available": true,
+  "encryptedHandoffRoundTripIdentical": true,
+  "operatorKeysExcluded": true,
+  "deploymentCreated": false,
+  "verifiedAt": "2026-09-28T11:56:31.944Z",
+  "repeatSetupSameIdentity": true,
+  "attachSameIdentityAndCredentials": true,
+  "pendingMigrations": [],
+  "appliedMigration": "0155_notification_and_app_telemetry",
+  "privateStateFileMode": "600",
+  "storageVerification": {
+    "public": {
+      "upload": true,
+      "readback": true,
+      "testObjectRemoved": true
+    },
+    "signatures": {
+      "upload": true,
+      "readback": true,
+      "anonymousDenied": true,
+      "testObjectRemoved": true
+    },
+    "resources": {
+      "upload": true,
+      "readback": true,
+      "anonymousDenied": true,
+      "testObjectRemoved": true
+    }
+  },
+  "localAuthentication": {
+    "storedPasswordReused": true,
+    "apiMe": 200,
+    "role": "ADMIN",
+    "syntheticIdentity": true
+  }
+}

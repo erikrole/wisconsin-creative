@@ -86,7 +86,7 @@ export const env = {
   },
   /** Optional. Enables Brave-backed product image search */
   get braveSearchApiKey() {
-    return process.env.BRAVE_SEARCH_API_KEY || "";
+    return isolatedIntegrationValue("BRAVE_SEARCH_API_KEY");
   },
   /**
    * Origins trusted for same-origin (CSRF) checks on mutating requests.

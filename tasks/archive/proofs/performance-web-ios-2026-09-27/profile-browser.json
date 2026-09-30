@@ -1,0 +1,130 @@
+{
+  "mode": "Production React, real form, fixture identity and intercepted saves; not authenticated server proof",
+  "dialogFiles": [
+    "ProfileCompletionDialog-2MGAFOQQ.js"
+  ],
+  "results": [
+    {
+      "variant": "before",
+      "scenario": "manual",
+      "initialScripts": [
+        "before.js",
+        "chunk-OIFSFO6A.js",
+        "chunk-ECOMCHWN.js",
+        "chunk-XM4OEAEA.js"
+      ],
+      "loadedScripts": [
+        "before.js",
+        "chunk-OIFSFO6A.js",
+        "chunk-ECOMCHWN.js",
+        "chunk-XM4OEAEA.js"
+      ],
+      "manualOrAutomaticOpen": "passed",
+      "failedSaveRetainsInput": "passed",
+      "snoozeAndReopen": "passed",
+      "errors": []
+    },
+    {
+      "variant": "before",
+      "scenario": "automatic",
+      "initialScripts": [
+        "before.js",
+        "chunk-OIFSFO6A.js",
+        "chunk-ECOMCHWN.js",
+        "chunk-XM4OEAEA.js"
+      ],
+      "loadedScripts": [
+        "before.js",
+        "chunk-OIFSFO6A.js",
+        "chunk-ECOMCHWN.js",
+        "chunk-XM4OEAEA.js"
+      ],
+      "manualOrAutomaticOpen": "passed",
+      "failedSaveRetainsInput": "not exercised",
+      "snoozeAndReopen": "passed",
+      "errors": []
+    },
+    {
+      "variant": "before",
+      "scenario": "home",
+      "initialScripts": [
+        "before.js",
+        "chunk-OIFSFO6A.js",
+        "chunk-ECOMCHWN.js",
+        "chunk-XM4OEAEA.js"
+      ],
+      "loadedScripts": [
+        "before.js",
+        "chunk-OIFSFO6A.js",
+        "chunk-ECOMCHWN.js",
+        "chunk-XM4OEAEA.js"
+      ],
+      "manualOrAutomaticOpen": "passed",
+      "failedSaveRetainsInput": "not exercised",
+      "snoozeAndReopen": "passed",
+      "errors": []
+    },
+    {
+      "variant": "after",
+      "scenario": "manual",
+      "initialScripts": [
+        "after.js",
+        "chunk-OIFSFO6A.js",
+        "chunk-ECOMCHWN.js"
+      ],
+      "loadedScripts": [
+        "after.js",
+        "chunk-OIFSFO6A.js",
+        "chunk-ECOMCHWN.js",
+        "ProfileCompletionDialog-2MGAFOQQ.js",
+        "chunk-XM4OEAEA.js"
+      ],
+      "manualOrAutomaticOpen": "passed",
+      "failedSaveRetainsInput": "passed",
+      "snoozeAndReopen": "passed",
+      "errors": []
+    },
+    {
+      "variant": "after",
+      "scenario": "automatic",
+      "initialScripts": [
+        "after.js",
+        "chunk-OIFSFO6A.js",
+        "chunk-ECOMCHWN.js",
+        "ProfileCompletionDialog-2MGAFOQQ.js",
+        "chunk-XM4OEAEA.js"
+      ],
+      "loadedScripts": [
+        "after.js",
+        "chunk-OIFSFO6A.js",
+        "chunk-ECOMCHWN.js",
+        "ProfileCompletionDialog-2MGAFOQQ.js",
+        "chunk-XM4OEAEA.js"
+      ],
+      "manualOrAutomaticOpen": "passed",
+      "failedSaveRetainsInput": "not exercised",
+      "snoozeAndReopen": "passed",
+      "errors": []
+    },
+    {
+      "variant": "after",
+      "scenario": "home",
+      "initialScripts": [
+        "after.js",
+        "chunk-OIFSFO6A.js",
+        "chunk-ECOMCHWN.js"
+      ],
+      "loadedScripts": [
+        "after.js",
+        "chunk-OIFSFO6A.js",
+        "chunk-ECOMCHWN.js",
+        "ProfileCompletionDialog-2MGAFOQQ.js",
+        "chunk-XM4OEAEA.js"
+      ],
+      "manualOrAutomaticOpen": "passed",
+      "failedSaveRetainsInput": "not exercised",
+      "snoozeAndReopen": "passed",
+      "errors": []
+    }
+  ]
+}

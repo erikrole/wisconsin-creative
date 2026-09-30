@@ -1,0 +1,25 @@
+[
+  {
+    "name": "early-close",
+    "exitCode": 1,
+    "failed": [
+      "kiosk item custody transfer moves existing custody and closes only an empty source (remaining=true)",
+      "kiosk item custody transfer moves numbered-unit obligations with balanced ledger entries and no shelf restock"
+    ]
+  },
+  {
+    "name": "stale-preview",
+    "exitCode": 1,
+    "failed": [
+      "bulk schedule preview safety rejects a stale fingerprint before timers or writes"
+    ]
+  },
+  {
+    "name": "pending-notification",
+    "exitCode": 1,
+    "failed": [
+      "bulk schedule release completion does not notify a 'unfinished release'",
+      "bulk schedule release completion records an outcome only for the pending item at the requested version"
+    ]
+  }
+]

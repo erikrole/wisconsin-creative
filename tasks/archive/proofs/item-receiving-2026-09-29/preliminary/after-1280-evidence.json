@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "1c62814365f89eb377689495ba8f1eb4f85a9d9e",
+  "sourcePatchSha256": "b3f085e4bbc1b03804094cb834fe177925567a3bd90dff98deb3df0fe916ac78",
+  "settings": {
+    "device": "Chromium desktop",
+    "viewport": [
+      1280,
+      1000
+    ],
+    "fixture": "item-receiving-v1-empty-draft",
+    "role": "staff fixture",
+    "route": "/items/add",
+    "appearance": "light",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "2026-09-29T19:00:00Z",
+    "scroll": [
+      0,
+      0
+    ]
+  },
+  "imageSha256": "a75b9c82fcba43b3a89e1acc1b61f45b731d56487229d5c9e05b4da1d538a55c",
+  "dimensions": [
+    1280,
+    1000
+  ]
+}

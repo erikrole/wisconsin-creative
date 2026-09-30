@@ -97,6 +97,19 @@ extension Notification.Name {
     static let collaboratorPolicyMayHaveChanged = Notification.Name("WisconsinCollaboratorPolicyMayHaveChanged")
 }
 
+/// Response decoding can traverse hundreds of items and dates. Keep that work
+/// off the UI actor, with a decoder owned by each response rather than shared
+/// mutable state. The client still owns authentication and publication.
+enum APIResponseDecoder {
+    @concurrent
+    static func decode<T: Decodable & Sendable>(_ type: T.Type, from data: Data) async throws -> T {
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        decoder.dateDecodingStrategy = .iso8601
+        return try decoder.decode(type, from: data)
+    }
+}
+
 @MainActor
 final class APIClient {
     static let shared = APIClient()
@@ -440,6 +453,13 @@ final class APIClient {
         return resp.data
     }
 
+    /// Staff/Admin reminder to the borrower of an overdue checkout. The server
+    /// dedupes to one nudge per booking per hour, so a repeat is a quiet success.
+    func nudgeBooking(id: String) async throws {
+        let req = request(path: "/api/bookings/\(id)/nudge", method: "POST")
+        let _: SuccessResponse = try await perform(req)
+    }
+
     func cancelBooking(id: String) async throws -> Booking {
         let req = request(path: "/api/bookings/\(id)/cancel", method: "POST")
         let response: DataWrapper<Booking> = try await perform(req)
@@ -580,7 +600,7 @@ final class APIClient {
         return response.data
     }
 
-    func updateBooking(id: String, title: String? = nil, notes: String? = nil, locationId: String? = nil, startsAt: Date? = nil, endsAt: Date? = nil, updatedAt: Date? = nil) async throws -> Booking {
+    func updateBooking(id: String, title: String? = nil, notes: String? = nil, locationId: String? = nil, startsAt: Date? = nil, endsAt: Date? = nil, serializedAssetIds: [String]? = nil, bulkItems: [BulkReservationRequest]? = nil, updatedAt: Date? = nil) async throws -> Booking {
         guard let updatedAt else {
             throw APIError.serverError("Refresh this booking before editing it.")
         }
@@ -590,6 +610,8 @@ final class APIClient {
             let locationId: String?
             let startsAt: String?
             let endsAt: String?
+            let serializedAssetIds: [String]?
+            let bulkItems: [BulkReservationRequest]?
         }
         var req = request(path: "/api/bookings/\(id)", method: "PATCH")
         req.setValue(bookingSnapshotString(updatedAt), forHTTPHeaderField: "X-Booking-Updated-At")
@@ -600,7 +622,9 @@ final class APIClient {
             notes: notes,
             locationId: locationId,
             startsAt: startsAt.map { iso.string(from: $0) },
-            endsAt: endsAt.map { iso.string(from: $0) }
+            endsAt: endsAt.map { iso.string(from: $0) },
+            serializedAssetIds: serializedAssetIds,
+            bulkItems: bulkItems
         ))
         let response: DataWrapper<Booking> = try await perform(req)
         return response.data
@@ -620,7 +644,12 @@ final class APIClient {
         return response.data
     }
 
-    func bookingAvailability(for booking: Booking, endsAt: Date) async throws -> BookingAvailabilityResult {
+    func bookingAvailability(
+        for booking: Booking,
+        endsAt: Date,
+        serializedAssetIds: [String]? = nil,
+        bulkItems: [BulkReservationRequest]? = nil
+    ) async throws -> BookingAvailabilityResult {
         struct Body: Encodable {
             let locationId: String
             let startsAt: String
@@ -637,8 +666,8 @@ final class APIClient {
             locationId: booking.location.id,
             startsAt: iso.string(from: booking.startsAt),
             endsAt: iso.string(from: endsAt),
-            serializedAssetIds: booking.serializedItems.map(\.assetId),
-            bulkItems: booking.bulkItems.map {
+            serializedAssetIds: serializedAssetIds ?? booking.serializedItems.map(\.assetId),
+            bulkItems: bulkItems ?? booking.bulkItems.map {
                 BulkReservationRequest(bulkSkuId: $0.bulkSku.id, quantity: $0.plannedQuantity)
             },
             excludeBookingId: booking.id,
@@ -1268,6 +1297,8 @@ final class APIClient {
         sportCode: String? = nil,
         result: String? = nil,
         site: String? = nil,
+        venue: String? = nil,
+        opponent: String? = nil,
         limit: Int = 25,
         offset: Int = 0
     ) async throws -> UserScoreboard {
@@ -1287,6 +1318,8 @@ final class APIClient {
         if let site, !site.isEmpty {
             items.append(.init(name: "site", value: site))
         }
+        if let venue, !venue.isEmpty { items.append(.init(name: "venue", value: venue)) }
+        if let opponent, !opponent.isEmpty { items.append(.init(name: "opponent", value: opponent)) }
         let response: DataWrapper<UserScoreboard> = try await perform(
             request(path: "/api/users/\(userId)/scoreboard", queryItems: items)
         )
@@ -2311,7 +2344,7 @@ final class APIClient {
         )
     }
 
-    private func perform<T: Decodable>(
+    private func perform<T: Decodable & Sendable>(
         _ request: URLRequest,
         broadcastsSessionExpiry: Bool = true
     ) async throws -> T {
@@ -2332,11 +2365,25 @@ final class APIClient {
 
         switch http.statusCode {
         case 200...299:
+            let result: T
             do {
-                return try decoder.decode(T.self, from: data)
+                result = try await APIResponseDecoder.decode(T.self, from: data)
             } catch {
+                // A malformed response can finish after the account changes,
+                // too. Do not publish its error into the replacement session.
+                guard authSessionBoundary.owns(requestBoundary) else {
+                    throw APIError.sessionChanged
+                }
+                try Task.checkCancellation()
                 throw APIError.decodingError(error)
             }
+            // Decoding yields the actor. A sign-out/account switch or a newer
+            // request may have happened while the response was being decoded.
+            guard authSessionBoundary.owns(requestBoundary) else {
+                throw APIError.sessionChanged
+            }
+            try Task.checkCancellation()
+            return result
         case 401:
             if broadcastsSessionExpiry {
                 // Authenticated requests broadcast globally so SessionStore can
@@ -2439,7 +2486,7 @@ extension APIClient: ReservationDraftPersistence {}
 
 // MARK: - Private response shapes
 
-private struct DataWrapper<T: Decodable>: Decodable {
+private struct DataWrapper<T: Decodable & Sendable>: Decodable, Sendable {
     let data: T
 }
 
@@ -2478,7 +2525,7 @@ private struct LoginResponse: Decodable {
     let user: CurrentUser
 }
 
-private struct PasskeyOptionsResponse<T: Decodable>: Decodable {
+private struct PasskeyOptionsResponse<T: Decodable & Sendable>: Decodable, Sendable {
     let options: T
 }
 

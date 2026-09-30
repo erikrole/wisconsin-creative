@@ -1,0 +1,274 @@
+{
+  "focusedTests": {
+    "passed": 78,
+    "failed": 0
+  },
+  "postgresTests": 2,
+  "lint": "passed (bounded changed files)",
+  "buildApp": "passed",
+  "docs": "passed",
+  "diffCheck": "passed",
+  "fixtureScenarios": [
+    {
+      "scenario": "presentation",
+      "variant": "before",
+      "width": 1280,
+      "errors": []
+    },
+    {
+      "scenario": "presentation",
+      "variant": "before",
+      "width": 768,
+      "errors": []
+    },
+    {
+      "scenario": "presentation",
+      "variant": "before",
+      "width": 390,
+      "errors": []
+    },
+    {
+      "scenario": "presentation",
+      "variant": "after",
+      "width": 1280,
+      "errors": []
+    },
+    {
+      "scenario": "presentation",
+      "variant": "after",
+      "width": 768,
+      "errors": []
+    },
+    {
+      "scenario": "presentation",
+      "variant": "after",
+      "width": 390,
+      "errors": []
+    },
+    {
+      "scenario": "stock-lost",
+      "requests": [
+        {
+          "path": "/api/bulk-skus/stock/adjust",
+          "key": "be9f3ab7-9a33-48b9-ad97-fabe8ffffe7b",
+          "body": {
+            "quantityDelta": 3,
+            "reason": "Received through Add item"
+          }
+        },
+        {
+          "path": "/api/bulk-skus/stock/adjust",
+          "key": "be9f3ab7-9a33-48b9-ad97-fabe8ffffe7b",
+          "body": {
+            "quantityDelta": 3,
+            "reason": "Received through Add item"
+          }
+        }
+      ],
+      "mutations": 1,
+      "errors": []
+    },
+    {
+      "scenario": "asset-lost",
+      "requests": [
+        {
+          "path": "/api/assets",
+          "key": "22a40843-58ca-4d50-b950-2b4abfa5157a",
+          "body": {
+            "assetTag": "CAM 17",
+            "type": "equipment",
+            "brand": "Unknown",
+            "model": "Unknown",
+            "qrCodeValue": "QR-FIRST",
+            "locationId": "location",
+            "availableForReservation": true,
+            "availableForCheckout": true,
+            "availableForCustody": true,
+            "categoryId": "category",
+            "name": "Sony FX3"
+          }
+        },
+        {
+          "path": "/api/assets",
+          "key": "22a40843-58ca-4d50-b950-2b4abfa5157a",
+          "body": {
+            "assetTag": "CAM 17",
+            "type": "equipment",
+            "brand": "Unknown",
+            "model": "Unknown",
+            "qrCodeValue": "QR-FIRST",
+            "locationId": "location",
+            "availableForReservation": true,
+            "availableForCheckout": true,
+            "availableForCustody": true,
+            "categoryId": "category",
+            "name": "Sony FX3"
+          }
+        }
+      ],
+      "mutations": 1,
+      "errors": []
+    },
+    {
+      "scenario": "malformed",
+      "requests": [
+        {
+          "path": "/api/assets",
+          "key": "1289addd-ec67-4a65-8f60-4df2006807fe",
+          "body": {
+            "assetTag": "CAM 17",
+            "type": "equipment",
+            "brand": "Unknown",
+            "model": "Unknown",
+            "qrCodeValue": "QR-FIRST",
+            "locationId": "location",
+            "availableForReservation": true,
+            "availableForCheckout": true,
+            "availableForCustody": true,
+            "categoryId": "category",
+            "name": "Sony FX3"
+          }
+        },
+        {
+          "path": "/api/assets",
+          "key": "1289addd-ec67-4a65-8f60-4df2006807fe",
+          "body": {
+            "assetTag": "CAM 17",
+            "type": "equipment",
+            "brand": "Unknown",
+            "model": "Unknown",
+            "qrCodeValue": "QR-FIRST",
+            "locationId": "location",
+            "availableForReservation": true,
+            "availableForCheckout": true,
+            "availableForCustody": true,
+            "categoryId": "category",
+            "name": "Sony FX3"
+          }
+        }
+      ],
+      "mutations": 1,
+      "errors": []
+    },
+    {
+      "scenario": "partial-batch-reload-replay-and-new-shipment",
+      "mutations": 2,
+      "requests": [
+        {
+          "path": "/api/assets",
+          "key": "086dd0f0-74e8-4003-95bd-af08f5858e78",
+          "body": {
+            "assetTag": "CAM 17",
+            "type": "equipment",
+            "brand": "Unknown",
+            "model": "Unknown",
+            "qrCodeValue": "QR-FIRST",
+            "locationId": "location",
+            "availableForReservation": true,
+            "availableForCheckout": true,
+            "availableForCustody": true,
+            "categoryId": "category",
+            "name": "Sony FX3"
+          }
+        },
+        {
+          "path": "/api/assets",
+          "key": "2170f050-3da0-4f76-992c-44323900a31b",
+          "body": {
+            "assetTag": "CAM 18",
+            "type": "equipment",
+            "brand": "Unknown",
+            "model": "Unknown",
+            "qrCodeValue": "7EF00D06",
+            "locationId": "location",
+            "availableForReservation": true,
+            "availableForCheckout": true,
+            "availableForCustody": true,
+            "categoryId": "category",
+            "name": "Sony FX3"
+          }
+        },
+        {
+          "path": "/api/assets",
+          "key": "086dd0f0-74e8-4003-95bd-af08f5858e78",
+          "body": {
+            "assetTag": "CAM 17",
+            "type": "equipment",
+            "brand": "Unknown",
+            "model": "Unknown",
+            "qrCodeValue": "QR-FIRST",
+            "locationId": "location",
+            "availableForReservation": true,
+            "availableForCheckout": true,
+            "availableForCustody": true,
+            "categoryId": "category",
+            "name": "Sony FX3"
+          }
+        }
+      ],
+      "errors": []
+    },
+    {
+      "scenario": "upfront-parent-choice",
+      "errors": []
+    },
+    {
+      "scenario": "existing-numbered-family",
+      "requests": [
+        {
+          "path": "/api/bulk-skus/units/units",
+          "key": "36cf9b69-2bb2-4e4c-8214-72a6bdb3c7b6",
+          "body": {
+            "count": 3,
+            "reason": "Received through Add item"
+          }
+        }
+      ],
+      "errors": []
+    },
+    {
+      "scenario": "batch-draft-restore-and-discard",
+      "fieldIds": [
+        "new-item-asset-tag-unit-primary",
+        "new-item-asset-tag-batch-unit-1",
+        "new-item-asset-tag-batch-unit-2"
+      ],
+      "errors": []
+    },
+    {
+      "scenario": "failed-image-recovery-replacement",
+      "mutations": 1,
+      "errors": []
+    }
+  ],
+  "authenticated": [
+    {
+      "width": 1280,
+      "route": "/items",
+      "role": "ADMIN isolated preview",
+      "draftResumed": true,
+      "uniqueBatchRows": 3,
+      "existingFamilyOptions": 1,
+      "upfrontParent": true,
+      "inventoryWrites": [],
+      "pageErrors": []
+    },
+    {
+      "width": 768,
+      "route": "/items",
+      "role": "ADMIN isolated preview",
+      "draftResumed": true,
+      "uniqueBatchRows": 3,
+      "existingFamilyOptions": 1,
+      "upfrontParent": true,
+      "inventoryWrites": [],
+      "pageErrors": []
+    }
+  ],
+  "externalBoundaries": [
+    "No commit or deployment",
+    "No authenticated inventory mutations",
+    "Automatic live photo provider unavailable: saved Brave key invalid",
+    "Uploaded files must be reattached after restoring a draft"
+  ]
+}

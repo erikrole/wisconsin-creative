@@ -1,0 +1,24 @@
+{
+  "releaseSettings": {
+    "PRODUCT_BUNDLE_IDENTIFIER": "com.erikrole.WisconsinKiosk",
+    "FULL_PRODUCT_NAME": "Wisconsin Kiosk.app",
+    "TARGETED_DEVICE_FAMILY": "2",
+    "IPHONEOS_DEPLOYMENT_TARGET": "26.0",
+    "ASSETCATALOG_COMPILER_APPICON_NAME": "KioskIcon",
+    "COMPILATION_CACHE_ENABLE_CACHING": "YES",
+    "ENABLE_CODE_COVERAGE": "NO",
+    "SWIFT_OPTIMIZATION_LEVEL": "-O",
+    "SWIFT_COMPILATION_MODE": "wholemodule",
+    "DEBUG_INFORMATION_FORMAT": "dwarf-with-dsym",
+    "SUPPORTS_MACCATALYST": "NO",
+    "SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD": "NO",
+    "SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD": "NO"
+  },
+  "binaryComparison": {
+    "beforeBytes": 11689888,
+    "afterBytes": 9357128,
+    "beforeSHA256": "4d2ec24b7de92ec1a05580cf9265f9b14f1e422cf138566fb419ca20481dd440",
+    "afterSHA256": "d7cbe838ef34960628973393f80caffbefb7f1e340d6ee71900c553c002505ef",
+    "scope": "Local unsigned arm64 Release executable; same source and toolchain; coverage removed. Not IPA size or runtime performance."
+  }
+}

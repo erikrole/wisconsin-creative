@@ -203,6 +203,13 @@ describe("GET /api/image-search", () => {
     });
   });
 
+  it("distinguishes provider failure from an honest empty search", async () => {
+    vi.mocked(searchProductImages).mockResolvedValue({ status: "failed", provider: "brave", results: [] });
+    const res = await call("/api/image-search?q=Sony+FX3");
+    expect(res.status).toBe(200);
+    expect((await res.json()).data).toMatchObject({ failed: true, results: [] });
+  });
+
   it("returns 429 when the user exceeds the search limit", async () => {
     vi.mocked(enforceRateLimit).mockRejectedValue(new HttpError(429, "Too many requests. Try again in 60s."));
 

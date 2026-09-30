@@ -416,6 +416,8 @@ struct Booking: Codable, Identifiable, Hashable {
     let event: BookingEvent?
     var events: [BookingEvent]? = nil
     var allowedActions: [String]? = nil
+    /// Latest manual staff nudge; only sent to people who may nudge.
+    var lastNudge: BookingLastNudge? = nil
     let updatedAt: Date?
     let pickupKioskDevice: PickupKioskDevice?
 
@@ -428,6 +430,25 @@ struct Booking: Codable, Identifiable, Hashable {
 
     func allows(_ action: String) -> Bool? {
         allowedActions.map { $0.contains(action) }
+    }
+}
+
+struct BookingLastNudge: Codable, Hashable {
+    let at: Date
+    let byName: String?
+
+    /// The nudge route stores one nudge per booking per hour
+    /// (`src/lib/nudge-window.ts`), so a newer one reads as already sent.
+    func isRecent(now: Date = .now) -> Bool {
+        now.timeIntervalSince(at) < 60 * 60
+    }
+
+    func label(now: Date = .now) -> String {
+        let ago = now.timeIntervalSince(at) < 60
+            ? "just now"
+            : RelativeDateTimeFormatter().localizedString(for: at, relativeTo: now)
+        guard let byName else { return "Nudged \(ago)" }
+        return "Nudged \(ago) by \(byName)"
     }
 }
 

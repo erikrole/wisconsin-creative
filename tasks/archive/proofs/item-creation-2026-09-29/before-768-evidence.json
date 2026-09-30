@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "1c62814365f89eb377689495ba8f1eb4f85a9d9e",
+  "sourcePatchSha256": "fdb83058c9fa61731567d474cc65f189088021efb9b788cb22352747ed8ea18a",
+  "settings": {
+    "device": "Playwright Chromium",
+    "viewport": [
+      768,
+      1000
+    ],
+    "fixture": "real NewItemSheet; empty taxonomy; API data empty; v1",
+    "role": "staff creation component fixture",
+    "route": "/items Add item fixture",
+    "appearance": "light",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "2026-09-29T17:00:00Z",
+    "scroll": [
+      0,
+      0
+    ]
+  },
+  "imageSha256": "10c5c9ff9c3330a7fb065abfa10be33573a4be81e6fb275dc70ee98e62943e99",
+  "dimensions": [
+    768,
+    1000
+  ]
+}

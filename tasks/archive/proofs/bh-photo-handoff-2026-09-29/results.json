@@ -1,0 +1,44 @@
+[
+  {
+    "variant": "before",
+    "width": 1280,
+    "errors": [],
+    "providerConfigured": false,
+    "manualImageSelected": false
+  },
+  {
+    "variant": "before",
+    "width": 768,
+    "errors": [],
+    "providerConfigured": false,
+    "manualImageSelected": false
+  },
+  {
+    "variant": "before",
+    "width": 390,
+    "errors": [],
+    "providerConfigured": false,
+    "manualImageSelected": false
+  },
+  {
+    "variant": "after",
+    "width": 1280,
+    "errors": [],
+    "providerConfigured": false,
+    "manualImageSelected": true
+  },
+  {
+    "variant": "after",
+    "width": 768,
+    "errors": [],
+    "providerConfigured": false,
+    "manualImageSelected": true
+  },
+  {
+    "variant": "after",
+    "width": 390,
+    "errors": [],
+    "providerConfigured": false,
+    "manualImageSelected": true
+  }
+]

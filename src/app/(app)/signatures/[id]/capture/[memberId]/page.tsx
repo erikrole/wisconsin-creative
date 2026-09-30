@@ -6,5 +6,5 @@ export default async function SignatureCaptureRoute({ params }: { params: Promis
   const user = await requireAuth();
   requirePermission(user.role, "signature", "capture");
   const { id, memberId } = await params;
-  return <SignatureCapturePage collectionId={id} memberId={memberId} userId={user.id} />;
+  return <SignatureCapturePage key={`${user.id}:${id}:${memberId}`} collectionId={id} memberId={memberId} userId={user.id} />;
 }

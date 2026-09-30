@@ -96,6 +96,16 @@ enum ScoreboardDimension: String, CaseIterable, Hashable, Identifiable {
 /// rolling-out scoreboard route cannot blank the rest of a profile.
 struct ScoreboardView: View {
     let userId: String
+    var personName: String?
+
+    init(userId: String, personName: String? = nil, initialFilters: ScoreboardContextFilters = .init()) {
+        self.userId = userId
+        self.personName = personName
+        _sportCode = State(initialValue: initialFilters.sportCode)
+        _siteFilter = State(initialValue: initialFilters.site.flatMap(ScoreboardSiteFilter.init(rawValue:)) ?? .all)
+        _venue = State(initialValue: initialFilters.venue)
+        _opponent = State(initialValue: initialFilters.opponent)
+    }
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -105,11 +115,14 @@ struct ScoreboardView: View {
     @State private var resultFilter: ScoreboardResultFilter = .all
     @State private var sportCode: String?
     @State private var siteFilter: ScoreboardSiteFilter = .all
+    @State private var venue: String?
+    @State private var opponent: String?
     /// Sport choices held from an unfiltered read. The route filters its own
     /// breakdowns, so reading the options out of the current response left the
     /// picker offering only the sport already chosen -- a filter you could not
     /// move off without clearing it first.
-    @State private var sportMenuOptions: [ScoreboardBucket] = []
+    @State private var sportMenuOptions: [TeamScoreboardFacet] = []
+    @State private var facetOptions = TeamScoreboardFacets.empty
     /// Resolved games in the whole season, kept from an unfiltered read. A
     /// filtered response only knows its own subtotal, and the hero has to be
     /// able to say what fraction of the season the reader is looking at.
@@ -121,15 +134,26 @@ struct ScoreboardView: View {
     @State private var error: String?
     @State private var loadMoreError: String?
     @State private var tapFeedback = false
+    @State private var activeRequestID = UUID()
+    @State private var loadedQuery: QueryKey?
 
     private let pageSize = 25
 
-    private var queryKey: String {
-        "\(userId)|\(resultFilter.rawValue)|\(sportCode ?? "all")|\(siteFilter.rawValue)"
+    private struct QueryKey: Equatable {
+        let userId: String
+        let result: ScoreboardResultFilter
+        let context: ScoreboardContextFilters
+        var hasFilters: Bool { result != .all || !context.isEmpty }
+    }
+
+    private var queryKey: QueryKey {
+        QueryKey(userId: userId, result: resultFilter, context: ScoreboardContextFilters(
+            sportCode: sportCode, venue: venue, opponent: opponent, site: siteFilter.apiValue
+        ))
     }
 
     private var hasFilters: Bool {
-        resultFilter != .all || sportCode != nil || siteFilter != .all
+        queryKey.hasFilters
     }
 
     var body: some View {
@@ -149,15 +173,16 @@ struct ScoreboardView: View {
                             // A run of results only means something when every
                             // result is eligible; under a Wins filter "last five"
                             // is five wins by construction.
-                            showsForm: resultFilter == .all,
-                            isFiltered: hasFilters,
+                            showsForm: loadedQuery?.result == .all,
+                            isFiltered: loadedQuery?.hasFilters ?? false,
                             seasonResolvedGames: seasonResolvedGames
                         )
+                        .opacity(isLoading ? 0.6 : 1)
 
                         // Orientation, not analysis: once the reader has narrowed
                         // to one sport or one result, they are past the point
                         // these three facts help with.
-                        if !hasFilters, !scoreboard.highlights.isEmpty {
+                        if loadedQuery?.hasFilters == false, !scoreboard.highlights.isEmpty {
                             ScoreboardHighlightsCard(highlights: scoreboard.highlights)
                         }
 
@@ -165,7 +190,12 @@ struct ScoreboardView: View {
                             resultFilter: $resultFilter,
                             sportCode: $sportCode,
                             siteFilter: $siteFilter,
+                            venue: $venue,
+                            opponent: $opponent,
                             sportOptions: sportMenuOptions,
+                            facets: facetOptions,
+                            hasFilters: hasFilters,
+                            clearFilters: clearFilters,
                             reduceMotion: reduceMotion,
                             onChange: { tapFeedback.toggle() }
                         )
@@ -176,10 +206,15 @@ struct ScoreboardView: View {
                                 retry: { Task { await load(resetEvents: true) } }
                             )
                         }
+                        if isLoading {
+                            ProgressView("Updating Scoreboard…")
+                                .font(.caption)
+                                .accessibilityLabel("Updating Scoreboard")
+                        }
 
                         ScoreboardBreakdownCard(
                             scoreboard: scoreboard,
-                            isFiltered: hasFilters,
+                            isFiltered: loadedQuery?.hasFilters ?? false,
                             dimension: $dimension,
                             showsAllRows: $showsAllBreakdownRows,
                             reduceMotion: reduceMotion,
@@ -190,8 +225,8 @@ struct ScoreboardView: View {
                             games: events,
                             total: scoreboard.eventCount,
                             hasMore: nextOffset != nil,
-                            hasFilters: hasFilters,
-                            isBusy: isLoading || isLoadingMore,
+                            hasFilters: loadedQuery?.hasFilters ?? false,
+                            isBusy: isLoading || isLoadingMore || queryKey != loadedQuery,
                             error: loadMoreError,
                             loadMore: { Task { await loadMore() } },
                             clearFilters: clearFilters
@@ -203,13 +238,23 @@ struct ScoreboardView: View {
                 .background(Color(.systemGroupedBackground))
             }
         }
-        .navigationTitle("Scoreboard")
+        .navigationTitle(personName ?? "Scoreboard")
         .navigationBarTitleDisplayMode(.inline)
         // Nothing on a read-only record is destructive or urgent, and this
         // screen is pushed from two stacks with different tints -- Clear filters
         // rendered brand red from the Users side. `docs/COLOR_SYSTEM.md` keeps
         // red for custody and error meaning, so the controls here stay neutral.
         .tint(.primary)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { Task { await load(resetEvents: true) } } label: {
+                    Image(systemName: "arrow.clockwise")
+                }
+                .disabled(isLoading)
+                .tint(.primary)
+                .accessibilityLabel("Refresh person Scoreboard")
+            }
+        }
         .task {
             // Its own surface in the usage counts: the Scoreboard is reached
             // from two places and folding it into "users" would hide both.
@@ -225,11 +270,15 @@ struct ScoreboardView: View {
             resultFilter = .all
             sportCode = nil
             siteFilter = .all
+            venue = nil
+            opponent = nil
         } else {
             withAnimation(.snappy(duration: 0.18)) {
                 resultFilter = .all
                 sportCode = nil
                 siteFilter = .all
+                venue = nil
+                opponent = nil
             }
         }
     }
@@ -237,13 +286,16 @@ struct ScoreboardView: View {
     private func load(resetEvents: Bool) async {
         let requestKey = queryKey
         let wasUnfiltered = !hasFilters
+        if resetEvents { activeRequestID = UUID() }
+        let requestID = activeRequestID
         if resetEvents {
             isLoading = true
             error = nil
             loadMoreError = nil
+            isLoadingMore = false
         }
         defer {
-            if resetEvents, requestKey == queryKey {
+            if resetEvents, requestKey == queryKey, activeRequestID == requestID {
                 isLoading = false
             }
         }
@@ -255,39 +307,56 @@ struct ScoreboardView: View {
                 sportCode: sportCode,
                 result: resultFilter.apiValue,
                 site: siteFilter.apiValue,
+                venue: venue,
+                opponent: opponent,
                 limit: pageSize,
                 offset: offset
             )
             // "Show more" runs outside the task that owns the filter key, so a
             // filter changed mid-flight would otherwise append the old query's
             // games to the new query's list.
-            guard !Task.isCancelled, requestKey == queryKey else { return }
+            guard !Task.isCancelled, requestKey == queryKey, activeRequestID == requestID else { return }
             if resetEvents {
                 self.scoreboard = fetched
+                loadedQuery = requestKey
                 events = fetched.events
                 showsAllBreakdownRows = false
-                if wasUnfiltered {
-                    sportMenuOptions = fetched.bySport.filter { $0.key != nil }
+                if let facets = fetched.facets {
+                    facetOptions = facets
+                    sportMenuOptions = facets.sports
+                    seasonResolvedGames = fetched.seasonGames
+                } else if wasUnfiltered {
+                    sportMenuOptions = fetched.bySport.compactMap { bucket in
+                        bucket.key.map { TeamScoreboardFacet(key: $0, label: bucket.label) }
+                    }
                     seasonResolvedGames = fetched.summary.games
+                } else if sportMenuOptions.isEmpty,
+                          let baseline = try? await APIClient.shared.scoreboard(userId: userId, limit: 1) {
+                    guard !Task.isCancelled, requestKey == queryKey, activeRequestID == requestID else { return }
+                    sportMenuOptions = baseline.bySport.compactMap { bucket in
+                        bucket.key.map { TeamScoreboardFacet(key: $0, label: bucket.label) }
+                    }
+                    seasonResolvedGames = baseline.summary.games
                 }
                 error = nil
             } else {
                 // Offset paging over live data can repeat a row when the season
                 // changes between pages, and a repeated id breaks the list.
-                let known = Set(events.map(\.id))
-                events.append(contentsOf: fetched.events.filter { !known.contains($0.id) })
+                var known = Set(events.map(\.id))
+                events.append(contentsOf: fetched.events.filter { known.insert($0.id).inserted })
                 loadMoreError = nil
             }
-            nextOffset = fetched.nextOffset
+            nextOffset = fetched.nextOffset.flatMap { $0 > offset ? $0 : nil }
         } catch is CancellationError {
             return
         } catch APIError.unauthorized {
             // SessionStore owns the global login transition after a 401.
             return
         } catch {
-            guard !Task.isCancelled, requestKey == queryKey else { return }
+            guard !Task.isCancelled, requestKey == queryKey, activeRequestID == requestID else { return }
             if resetEvents {
-                self.error = error.localizedDescription
+                self.error = scoreboard == nil ? error.localizedDescription
+                    : "The last loaded record is still shown. Retry to apply the selected filters."
             } else {
                 loadMoreError = error.localizedDescription
             }
@@ -295,9 +364,10 @@ struct ScoreboardView: View {
     }
 
     private func loadMore() async {
-        guard nextOffset != nil, !isLoading, !isLoadingMore else { return }
+        guard nextOffset != nil, !isLoading, !isLoadingMore, queryKey == loadedQuery else { return }
+        let requestID = activeRequestID
         isLoadingMore = true
-        defer { isLoadingMore = false }
+        defer { if activeRequestID == requestID { isLoadingMore = false } }
         await load(resetEvents: false)
     }
 }
@@ -371,9 +441,11 @@ private struct ScoreboardSeasonCard: View {
 
     private var summary: ScoreboardSummary { scoreboard.summary }
 
-    private var form: [ScoreboardEvent] { ScoreboardDigest.form(games) }
+    private var form: [ScoreboardEvent] { scoreboard.recentResults ?? ScoreboardDigest.form(games) }
 
-    private var streak: ScoreboardStreak? { ScoreboardDigest.streak(games) }
+    private var streak: ScoreboardStreak? {
+        scoreboard.recentResults == nil ? ScoreboardDigest.streak(games) : scoreboard.streak?.presentation
+    }
 
     /// Events worked counts every event with an active assignment; the record
     /// counts only the ones that finished with a result. Two different numbers
@@ -384,6 +456,9 @@ private struct ScoreboardSeasonCard: View {
         let worked = summary.eventsWorked
         let events = worked == 1 ? "1 event" : "\(worked) events"
         if isFiltered {
+            if let matching = summary.matchingEventsWorked {
+                return "\(matching) \(matching == 1 ? "event" : "events") in this view, \(summary.games) official \(summary.games == 1 ? "game" : "games"). \(events) worked this season."
+            }
             let shown = summary.games == 1 ? "1 game" : "\(summary.games) games"
             guard let seasonResolvedGames else {
                 return "Filtered to \(shown). Events worked counts all \(worked) this season."
@@ -392,9 +467,9 @@ private struct ScoreboardSeasonCard: View {
                 + "Events worked counts all \(worked)."
         }
         if summary.games == 0 {
-            return "\(events) worked this season, none with a recorded result yet."
+            return "\(events) worked this season, none in the official record yet."
         }
-        return "\(events) worked this season, \(summary.games) with a recorded result."
+        return "\(events) worked this season, \(summary.games) official \(summary.games == 1 ? "game" : "games")."
     }
 
     var body: some View {
@@ -592,13 +667,10 @@ private struct ScoreboardHighlightsCard: View {
                         .foregroundStyle(.secondary)
                         .textCase(.uppercase)
                         .lineLimit(1)
-                    // One line, so the three tiles keep a shared baseline. A
-                    // wrapped venue name pushed its own detail row out of step
-                    // with the two beside it.
+                    // Give venue names room without shrinking their text.
                     Text(highlight.value)
                         .font(.subheadline.weight(.semibold))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
+                        .lineLimit(2)
                         .truncationMode(.tail)
                     Text(highlight.detail)
                         .font(.caption2)
@@ -625,9 +697,19 @@ private struct ScoreboardFilterBar: View {
     @Binding var resultFilter: ScoreboardResultFilter
     @Binding var sportCode: String?
     @Binding var siteFilter: ScoreboardSiteFilter
-    let sportOptions: [ScoreboardBucket]
+    @Binding var venue: String?
+    @Binding var opponent: String?
+    let sportOptions: [TeamScoreboardFacet]
+    let facets: TeamScoreboardFacets
+    let hasFilters: Bool
+    let clearFilters: () -> Void
     let reduceMotion: Bool
     let onChange: () -> Void
+
+    private var displayedSports: [TeamScoreboardFacet] {
+        guard let sportCode, !sportOptions.contains(where: { $0.key == sportCode }) else { return sportOptions }
+        return sportOptions + [TeamScoreboardFacet(key: sportCode, label: sportCode)]
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Brand.Space.sm) {
@@ -642,7 +724,7 @@ private struct ScoreboardFilterBar: View {
 
             // A visible strip rather than a dropdown: the sports a person works
             // are few, and a menu hid both the options and which one was on.
-            if !sportOptions.isEmpty {
+            if !displayedSports.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
                         FilterChip(
@@ -653,7 +735,7 @@ private struct ScoreboardFilterBar: View {
                         ) {
                             select(nil)
                         }
-                        ForEach(sportOptions) { sport in
+                        ForEach(displayedSports) { sport in
                             FilterChip(
                                 label: sport.label,
                                 isOn: sportCode == sport.key,
@@ -687,6 +769,34 @@ private struct ScoreboardFilterBar: View {
             }
             .scrollClipDisabled()
             .accessibilityLabel("Filter scoreboard site")
+
+            if !facets.venues.isEmpty || venue != nil {
+                Picker("Venue", selection: $venue) {
+                    Text("All venues").tag(nil as String?)
+                    ForEach(facets.venues) { option in Text(option.label).tag(Optional(option.key)) }
+                    if let venue, !facets.venues.contains(where: { $0.key == venue }) {
+                        Text(venue).tag(Optional(venue))
+                    }
+                }
+                .pickerStyle(.menu)
+                .frame(minHeight: 44)
+            }
+            if !facets.opponents.isEmpty || opponent != nil {
+                Picker("Opponent", selection: $opponent) {
+                    Text("All opponents").tag(nil as String?)
+                    ForEach(facets.opponents) { option in Text(option.label).tag(Optional(option.key)) }
+                    if let opponent, !facets.opponents.contains(where: { $0.key == opponent }) {
+                        Text(opponent).tag(Optional(opponent))
+                    }
+                }
+                .pickerStyle(.menu)
+                .frame(minHeight: 44)
+            }
+            if hasFilters {
+                Button("Clear filters", systemImage: "xmark.circle", action: clearFilters)
+                    .font(.caption.weight(.semibold))
+                    .frame(minHeight: 44)
+            }
         }
         .brandCard(padding: Brand.Space.sm)
     }
@@ -822,7 +932,7 @@ private struct ScoreboardBreakdownRow: View {
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
             }
-            .frame(width: 58, alignment: .trailing)
+            .fixedSize(horizontal: true, vertical: false)
         }
         .padding(.horizontal, Brand.Space.md)
         .padding(.vertical, 11)
@@ -928,7 +1038,7 @@ private struct ScoreboardGamesCard: View {
                 if hasMore {
                     Divider()
                     VStack(spacing: 6) {
-                        Button(isBusy ? "Loading…" : "Show more events", action: loadMore)
+                        Button("Show more events", action: loadMore)
                             .font(.caption.weight(.semibold))
                             .frame(maxWidth: .infinity, minHeight: 44)
                             .contentShape(Rectangle())
@@ -963,10 +1073,10 @@ private struct ScoreboardGamesEmptyState: View {
             Image(systemName: hasFilters ? "line.3.horizontal.decrease.circle" : "trophy")
                 .font(.title3)
                 .foregroundStyle(.tertiary)
-            Text(hasFilters ? "No games match these filters" : "No worked events on record")
+            Text(hasFilters ? "No events match these filters" : "No worked events on record")
                 .font(.subheadline.weight(.semibold))
             Text(hasFilters
-                ? "Try another result, sport, or site filter."
+                ? "Remove a filter or clear them to see more of the season."
                 : "Completed events will appear here when this person has worked them.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -975,7 +1085,8 @@ private struct ScoreboardGamesEmptyState: View {
                 Button("Clear filters", action: clearFilters)
                     .font(.caption.weight(.semibold))
                     .buttonStyle(.bordered)
-                    .controlSize(.small)
+                    .controlSize(.regular)
+                    .frame(minHeight: 44)
                     .padding(.top, 2)
             }
         }

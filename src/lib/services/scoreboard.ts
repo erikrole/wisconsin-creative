@@ -1,20 +1,15 @@
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { sportLabel } from "@/lib/sports";
-import { ACTIVE_ASSIGNMENT_STATUSES } from "@/lib/shift-constants";
-import { participatedEventWhere } from "@/lib/services/event-worker";
-import { scheduleVenueDisplayName } from "@/lib/schedule-event-identity";
-import { AREAS } from "@/types/areas";
+import { normalizeOpponentName, scheduleVenueDisplayName } from "@/lib/schedule-event-identity";
 import {
   GAME_RECORD_END_DATE,
   GAME_RECORD_START_DATE,
-  getWorkedEventCountForUser,
-  OFFICIAL_RECORD_EVENT_EXCLUSION,
-  type WorkedEventBounds,
+  gameRecordEventWhere,
+  workedEventWhere,
 } from "@/lib/services/game-record";
 import type { CalendarEventResult, CalendarEventSite, Prisma } from "@prisma/client";
-import { siteLabel, trimmedOrNull, winRate } from "@/lib/scoreboard-display";
-import { unique } from "@/lib/utils";
+import { siteLabel, winRate } from "@/lib/scoreboard-display";
 
 const SCOREBOARD_SEASON_KEY = "2026-27";
 export const SCOREBOARD_SCOPE = {
@@ -32,6 +27,15 @@ type ScoreboardFilters = {
   sportCode?: string;
   result?: ScoreboardResult;
   site?: CalendarEventSite;
+  venue?: string;
+  opponent?: string;
+};
+
+export type ScoreboardFacet = { key: string; label: string };
+export type ScoreboardFacets = {
+  sports: ScoreboardFacet[];
+  venues: ScoreboardFacet[];
+  opponents: ScoreboardFacet[];
 };
 
 export type ScoreboardBucket = {
@@ -73,6 +77,7 @@ export type UserScoreboard = {
     ties: number;
     games: number;
     winRate: number | null;
+    matchingEventsWorked?: number;
   };
   bySport: ScoreboardBucket[];
   byOpponent: ScoreboardBucket[];
@@ -81,6 +86,11 @@ export type UserScoreboard = {
   events: ScoreboardEvent[];
   eventCount: number;
   nextCursor: string | null;
+  /** Additive fields; older deployed servers may omit them during rollout. */
+  facets?: ScoreboardFacets;
+  seasonGames?: number;
+  recentResults?: ScoreboardEvent[];
+  streak?: { result: ScoreboardResult; count: number } | null;
 };
 
 export type ScoreboardPage = {
@@ -89,15 +99,6 @@ export type ScoreboardPage = {
 };
 
 const SITE_ORDER: Array<CalendarEventSite | null> = ["HOME", "AWAY", "NEUTRAL", null];
-const SHIFT_AREA_ORDER = new Map<string, number>(AREAS.map((area, index) => [area, index]));
-
-function orderedUniqueShiftAreas(areas: string[]): string[] {
-  return unique(areas).sort((a, b) => {
-    const orderDelta = (SHIFT_AREA_ORDER.get(a) ?? Number.MAX_SAFE_INTEGER)
-      - (SHIFT_AREA_ORDER.get(b) ?? Number.MAX_SAFE_INTEGER);
-    return orderDelta || a.localeCompare(b);
-  });
-}
 
 function bucketLabel(dimension: "sport" | "opponent" | "site" | "venue", key: string | null): string {
   if (dimension === "sport") return key ? sportLabel(key) : "Unknown sport";
@@ -143,32 +144,6 @@ function finishBuckets(
     });
 }
 
-export function scoreboardEventWhere(
-  userId: string,
-  filters: ScoreboardFilters = {},
-): Prisma.CalendarEventWhereInput {
-  const where: Prisma.CalendarEventWhereInput = {
-    ...OFFICIAL_RECORD_EVENT_EXCLUSION,
-    ...(filters.result ? { result: filters.result } : {}),
-    startsAt: { gte: SCOREBOARD_SCOPE.startsAt, lt: SCOREBOARD_SCOPE.endsAt },
-    endsAt: { lt: new Date() },
-    status: { not: "CANCELLED" },
-    isHidden: false,
-    archivedAt: null,
-    // An active assignment or a worker an admin added outside the schedule; a
-    // person holding both on one event is still one event.
-    ...participatedEventWhere(userId),
-  };
-
-  if (filters.sportCode) where.sportCode = filters.sportCode;
-  // Home, away, and neutral are already a breakdown row here. Filtering by one
-  // is the question that row invites -- "how do I do on the road" -- and it
-  // narrows the record, the breakdowns, and the game list together, exactly as
-  // sport and result do.
-  if (filters.site) where.site = filters.site;
-  return where;
-}
-
 export function getScoreboardScope(season: string | null | undefined) {
   if (!season || season === SCOREBOARD_SEASON_KEY) return SCOREBOARD_SCOPE;
   return null;
@@ -179,49 +154,50 @@ export async function getScoreboardForUser(
   filters: ScoreboardFilters = {},
   page: ScoreboardPage = { offset: 0, limit: 25 },
 ): Promise<UserScoreboard> {
-  const where = scoreboardEventWhere(userId, filters);
-  const eventBounds: WorkedEventBounds = {
-    startsAt: SCOREBOARD_SCOPE.startsAt,
-    endsAt: SCOREBOARD_SCOPE.endsAt,
-  };
-  const [grouped, eventRows, eventCount, eventsWorked] = await Promise.all([
-    db.calendarEvent.groupBy({
-      by: ["result", "sportCode", "site", "opponent", "rawLocationText"],
-      where,
-      _count: { _all: true },
+  // Two season-bounded scalar reads keep work history separate from official
+  // results. No per-event crew graph or private assignment metadata is needed.
+  const select = {
+    id: true, summary: true, startsAt: true, allDay: true, result: true,
+    sportCode: true, opponent: true, site: true, rawLocationText: true,
+  } satisfies Prisma.CalendarEventSelect;
+  const now = new Date();
+  const [workedRows, recordRows] = await Promise.all([
+    db.calendarEvent.findMany({
+      where: { ...workedEventWhere(userId), endsAt: { lt: now } },
+      orderBy: [{ startsAt: "desc" }, { id: "desc" }],
+      select,
     }),
     db.calendarEvent.findMany({
-      where,
+      where: gameRecordEventWhere(userId, now),
       orderBy: [{ startsAt: "desc" }, { id: "desc" }],
-      skip: page.offset,
-      take: page.limit + 1,
-      select: {
-        id: true,
-        summary: true,
-        startsAt: true,
-        allDay: true,
-        result: true,
-        sportCode: true,
-        opponent: true,
-        site: true,
-        rawLocationText: true,
-        shiftGroup: {
-          select: {
-            shifts: {
-              where: {
-                assignments: {
-                  some: { userId, status: { in: ACTIVE_ASSIGNMENT_STATUSES } },
-                },
-              },
-              select: { area: true },
-            },
-          },
-        },
-      },
+      select,
     }),
-    db.calendarEvent.count({ where }),
-    getWorkedEventCountForUser(userId, eventBounds),
   ]);
+
+  const officialResults = new Map(recordRows.map((row) => [row.id, row.result]));
+  const allRows = [...new Map([...workedRows, ...recordRows].map((row) => [row.id, row])).values()]
+    .sort((a, b) => b.startsAt.getTime() - a.startsAt.getTime() || b.id.localeCompare(a.id));
+  const allEvents: ScoreboardEvent[] = allRows.map((event) => ({
+    id: event.id,
+    summary: event.summary,
+    startsAt: event.startsAt.toISOString(),
+    allDay: event.allDay,
+    // Non-official outcomes stay on Schedule, never in Scoreboard form/streaks.
+    result: (officialResults.get(event.id) ?? null) as ScoreboardResult | null,
+    sportCode: event.sportCode,
+    sportLabel: event.sportCode ? sportLabel(event.sportCode) : null,
+    opponent: normalizeOpponentName(event.opponent),
+    site: event.site,
+    venue: scheduleVenueDisplayName(event.rawLocationText),
+    shiftAreas: [],
+  }));
+  const filteredEvents = allEvents.filter((event) => (
+    (!filters.sportCode || event.sportCode === filters.sportCode)
+    && (!filters.result || event.result === filters.result)
+    && (!filters.site || event.site === filters.site)
+    && (!filters.venue || event.venue === filters.venue)
+    && (!filters.opponent || event.opponent === filters.opponent)
+  ));
 
   const bySport = new Map<string | null, { key: string | null; wins: number; losses: number; ties: number }>();
   const byOpponent = new Map<string | null, { key: string | null; wins: number; losses: number; ties: number }>();
@@ -231,35 +207,31 @@ export async function getScoreboardForUser(
   let losses = 0;
   let ties = 0;
 
-  for (const row of grouped) {
+  for (const row of filteredEvents) {
     // Result-less worked events belong in the event list and work total, not
     // in the official W/L/T record or its dimensional breakdowns.
     if (row.result === null) continue;
-    const count = row._count._all;
+    const count = 1;
     if (row.result === "WIN") wins += count;
     if (row.result === "LOSS") losses += count;
     if (row.result === "TIE") ties += count;
 
     addBucket(bySport, row.sportCode, row.result, count);
-    addBucket(byOpponent, trimmedOrNull(row.opponent), row.result, count);
+    addBucket(byOpponent, row.opponent, row.result, count);
     addBucket(bySite, row.site, row.result, count);
-    addBucket(byVenue, scheduleVenueDisplayName(row.rawLocationText), row.result, count);
+    addBucket(byVenue, row.venue, row.result, count);
   }
 
-  const hasMore = eventRows.length > page.limit;
-  const events = eventRows.slice(0, page.limit).map((event): ScoreboardEvent => ({
-    id: event.id,
-    summary: event.summary,
-    startsAt: event.startsAt.toISOString(),
-    allDay: event.allDay,
-    result: event.result as ScoreboardResult | null,
-    sportCode: event.sportCode,
-    sportLabel: event.sportCode ? sportLabel(event.sportCode) : null,
-    opponent: trimmedOrNull(event.opponent),
-    site: event.site,
-    venue: scheduleVenueDisplayName(event.rawLocationText),
-    shiftAreas: orderedUniqueShiftAreas(event.shiftGroup?.shifts.map((shift) => shift.area) ?? []),
-  }));
+  const events = filteredEvents.slice(page.offset, page.offset + page.limit);
+  const resolvedEvents = filteredEvents.filter((event) => event.result !== null);
+  const firstResult = resolvedEvents[0]?.result;
+  const streakEnd = resolvedEvents.findIndex((event) => event.result !== firstResult);
+  const streakCount = streakEnd < 0 ? resolvedEvents.length : streakEnd;
+  const facet = (key: "sportCode" | "venue" | "opponent"): ScoreboardFacet[] => (
+    [...new Set(allEvents.map((event) => event[key]).filter((value): value is string => value !== null))]
+      .map((value) => ({ key: value, label: key === "sportCode" ? sportLabel(value) : value }))
+      .sort((a, b) => a.label.localeCompare(b.label))
+  );
 
   return {
     scope: {
@@ -269,13 +241,21 @@ export async function getScoreboardForUser(
       endsAt: SCOREBOARD_SCOPE.endsAt.toISOString(),
       timeZone: SCOREBOARD_SCOPE.timeZone,
     },
-    summary: { eventsWorked, wins, losses, ties, games: wins + losses + ties, winRate: winRate(wins, losses, ties) },
+    summary: {
+      eventsWorked: workedRows.length,
+      matchingEventsWorked: filteredEvents.length,
+      wins, losses, ties, games: wins + losses + ties, winRate: winRate(wins, losses, ties),
+    },
     bySport: finishBuckets(bySport, "sport"),
     byOpponent: finishBuckets(byOpponent, "opponent"),
     bySite: finishBuckets(bySite, "site"),
     byVenue: finishBuckets(byVenue, "venue"),
     events,
-    eventCount,
-    nextCursor: hasMore ? String(page.offset + page.limit) : null,
+    eventCount: filteredEvents.length,
+    nextCursor: page.offset + page.limit < filteredEvents.length ? String(page.offset + page.limit) : null,
+    facets: { sports: facet("sportCode"), venues: facet("venue"), opponents: facet("opponent") },
+    seasonGames: recordRows.length,
+    recentResults: resolvedEvents.slice(0, 5),
+    streak: firstResult && streakCount >= 2 ? { result: firstResult, count: streakCount } : null,
   };
 }

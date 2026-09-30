@@ -1,0 +1,37 @@
+native-unit.log
+Test Case '-[WisconsinTests.ScoreboardModelsTests testWorkedEventDecodesWithoutResultAndStaysOutOfRecordDigest]' passed (0.002 seconds).
+Test Case '-[WisconsinTests.ScoreboardModelsTests testHighlightsStayEmptyWithoutResolvedGames]' passed (0.002 seconds).
+Test Case '-[WisconsinTests.ScoreboardModelsTests testMonthsGroupGamesInRouteOrder]' passed (0.001 seconds).
+Test Case '-[WisconsinTests.ScoreboardModelsTests testFormTakesTheMostRecentGamesOnly]' passed (0.000 seconds).
+Test Case '-[WisconsinTests.ScoreboardModelsTests testTeamScoreboardDecodesUniqueTotalsAndMinimalLeaderboardIdentity]' passed (0.005 seconds).
+Test Case '-[WisconsinTests.ScoreboardModelsTests testAdditiveSeasonContextDecodesWithoutRequiringItFromOlderServers]' passed (0.002 seconds).
+Test Case '-[WisconsinTests.ScoreboardModelsTests testTieResultsDecodeWithNeutralPresentation]' passed (0.000 seconds).
+Test Case '-[WisconsinTests.ScoreboardModelsTests testAllDayEventsStayOnTheirCalendarDayInCentralTime]' passed (0.001 seconds).
+Test Case '-[WisconsinTests.ScoreboardModelsTests testScoreboardToleratesOptionalCollectionsAndNumericCursor]' passed (0.001 seconds).
+Test Case '-[WisconsinTests.ScoreboardModelsTests testNonNumericCursorEndsPagination]' passed (0.000 seconds).
+Test Case '-[WisconsinTests.ScoreboardModelsTests testHighlightsPreferSustainedSuccessAndSkipUnknownBuckets]' passed (0.000 seconds).
+Test Case '-[WisconsinTests.ScoreboardModelsTests testRecordAndRateFormattingIsShared]' passed (0.000 seconds).
+Test Case '-[WisconsinTests.ScoreboardModelsTests testScoreboardDecodesServerShapeAndPreservesSeparateTotals]' passed (0.001 seconds).
+Test Case '-[WisconsinTests.ScoreboardModelsTests testStreakNeedsTwoGamesAndStopsAtTheFirstDisagreement]' passed (0.000 seconds).
+Test Case '-[WisconsinTests.ScoreboardModelsTests testNonAdvancingCursorsEndPagination]' passed (0.000 seconds).
+Test Case '-[WisconsinTests.ScoreboardModelsTests testFilteredEventsFallBackToReadableCopyAndSpokenResults]' passed (0.000 seconds).
+Test Case '-[WisconsinTests.ScoreboardModelsTests testTeamScoreboardToleratesRollingOptionalCollections]' passed (0.000 seconds).
+	 Executed 17 tests, with 0 failures (0 unexpected) in 0.019 (0.024) seconds
+	 Executed 17 tests, with 0 failures (0 unexpected) in 0.019 (0.025) seconds
+	 Executed 17 tests, with 0 failures (0 unexpected) in 0.019 (0.025) seconds
+** TEST SUCCEEDED **
+
+native-final-ui.log
+Test Case '-[WisconsinUITests.ScoreboardScreenshotUITests testScoreboardStateCaptures]' passed (35.197 seconds).
+Test Case '-[WisconsinUITests.ScoreboardScreenshotUITests testTeamFiltersCarryIntoPersonScoreboard]' passed (29.882 seconds).
+	 Executed 2 tests, with 0 failures (0 unexpected) in 65.079 (65.083) seconds
+	 Executed 2 tests, with 0 failures (0 unexpected) in 65.079 (65.083) seconds
+	 Executed 2 tests, with 0 failures (0 unexpected) in 65.079 (65.084) seconds
+** TEST SUCCEEDED **
+
+native-recovery.log
+Test Case '-[WisconsinUITests.ScoreboardScreenshotUITests testFailedFilterKeepsRecordAndRetriesSelectedSite]' passed (10.188 seconds).
+	 Executed 1 test, with 0 failures (0 unexpected) in 10.188 (10.191) seconds
+	 Executed 1 test, with 0 failures (0 unexpected) in 10.188 (10.191) seconds
+	 Executed 1 test, with 0 failures (0 unexpected) in 10.188 (10.192) seconds
+** TEST SUCCEEDED **

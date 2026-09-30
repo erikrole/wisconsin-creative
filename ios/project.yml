@@ -31,6 +31,7 @@ packages:
 targets:
   Wisconsin:
     type: application
+    productName: Wisconsin Creative
     platform: iOS
     deploymentTarget: "26.0"
     bundleId: com.erikrole.Wisconsin
@@ -90,16 +91,23 @@ targets:
         CURRENT_PROJECT_VERSION: "31"
         TARGETED_DEVICE_FAMILY: "1,2"
         SWIFT_STRICT_CONCURRENCY: complete
+        COMPILATION_CACHE_ENABLE_CACHING: "YES"
       configs:
         Debug:
-          OTHER_SWIFT_FLAGS: "-DDEBUG"
+          OTHER_SWIFT_FLAGS: "$(inherited) -DDEBUG"
+        Release:
+          ENABLE_CODE_COVERAGE: "NO"
 
   WisconsinKiosk:
     type: application
+    productName: Wisconsin Kiosk
     platform: iOS
     deploymentTarget: "26.0"
     bundleId: com.erikrole.WisconsinKiosk
     sources:
+      - path: IconSources/KioskIcon.icon
+        type: file
+        buildPhase: resources
       - path: Wisconsin/KioskOnly
       - path: Wisconsin/Kiosk
       - path: Wisconsin/Shared
@@ -138,13 +146,21 @@ targets:
     settings:
       base:
         PRODUCT_NAME: Wisconsin Kiosk
-        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_APPICON_NAME: KioskIcon
         MARKETING_VERSION: "1.0"
         CURRENT_PROJECT_VERSION: "2"
         TARGETED_DEVICE_FAMILY: "2"
+        # Counter-mounted iPad app: avoid accidental Mac or Vision destinations.
+        SUPPORTS_MACCATALYST: "NO"
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: "NO"
+        SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD: "NO"
+        COMPILATION_CACHE_ENABLE_CACHING: "YES"
       configs:
         Debug:
-          OTHER_SWIFT_FLAGS: "-DDEBUG"
+          OTHER_SWIFT_FLAGS: "$(inherited) -DDEBUG"
+        Release:
+          # Coverage belongs to Debug XCTest, not the deployed counter app.
+          ENABLE_CODE_COVERAGE: "NO"
 
   WisconsinTests:
     type: bundle.unit-test
@@ -157,6 +173,7 @@ targets:
     settings:
       base:
         GENERATE_INFOPLIST_FILE: "YES"
+        COMPILATION_CACHE_ENABLE_CACHING: "YES"
         PRODUCT_NAME: WisconsinTests
         PRODUCT_BUNDLE_IDENTIFIER: com.erikrole.WisconsinTests
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Wisconsin Creative.app/Wisconsin Creative"
@@ -173,6 +190,7 @@ targets:
     settings:
       base:
         GENERATE_INFOPLIST_FILE: "YES"
+        COMPILATION_CACHE_ENABLE_CACHING: "YES"
         PRODUCT_NAME: WisconsinUITests
         PRODUCT_BUNDLE_IDENTIFIER: com.erikrole.WisconsinUITests
         TEST_TARGET_NAME: Wisconsin
@@ -188,6 +206,11 @@ targets:
     settings:
       base:
         GENERATE_INFOPLIST_FILE: "YES"
+        TARGETED_DEVICE_FAMILY: "2"
+        SUPPORTS_MACCATALYST: "NO"
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: "NO"
+        SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD: "NO"
+        COMPILATION_CACHE_ENABLE_CACHING: "YES"
         PRODUCT_NAME: WisconsinKioskTests
         PRODUCT_BUNDLE_IDENTIFIER: com.erikrole.WisconsinKioskTests
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Wisconsin Kiosk.app/Wisconsin Kiosk"
@@ -226,6 +249,10 @@ targets:
         CURRENT_PROJECT_VERSION: "31"
         SKIP_INSTALL: YES
         SWIFT_STRICT_CONCURRENCY: complete
+        COMPILATION_CACHE_ENABLE_CACHING: "YES"
+      configs:
+        Release:
+          ENABLE_CODE_COVERAGE: "NO"
 
 schemes:
   Wisconsin:
@@ -237,7 +264,7 @@ schemes:
       targets:
         - name: WisconsinTests
           randomExecutionOrder: true
-      gatherCoverageData: true
+      gatherCoverageData: false
 
   WisconsinPerformance:
     build:
@@ -259,3 +286,5 @@ schemes:
         - name: WisconsinKioskTests
           randomExecutionOrder: true
       gatherCoverageData: true
+      coverageTargets:
+        - WisconsinKiosk

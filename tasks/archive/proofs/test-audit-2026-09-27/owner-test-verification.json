@@ -1,0 +1,65 @@
+{
+  "date": "2026-09-27",
+  "node": "22.23.3",
+  "vitest": "4.1.11",
+  "newCases": 25,
+  "filesAdded": [
+    "tests/kiosk-item-transfer.test.ts",
+    "tests/bulk-schedule-assignment.test.ts"
+  ],
+  "productionLOC": 0,
+  "testLOC": 204,
+  "fullShuffledCoverage": {
+    "exitCode": 0,
+    "seed": 260927,
+    "workers": 4,
+    "files": 703,
+    "passed": 5004,
+    "failed": 0,
+    "skipped": 1
+  },
+  "coverage": {
+    "statements": 73.14,
+    "branches": 63.17,
+    "functions": 75.69,
+    "lines": 75.97
+  },
+  "thresholds": {
+    "statements": 70,
+    "branches": 63.17,
+    "functions": 75.69,
+    "lines": 70
+  },
+  "mutationProbes": [
+    {
+      "name": "early-close",
+      "exitCode": 1,
+      "failed": [
+        "kiosk item custody transfer moves existing custody and closes only an empty source (remaining=true)",
+        "kiosk item custody transfer moves numbered-unit obligations with balanced ledger entries and no shelf restock"
+      ]
+    },
+    {
+      "name": "stale-preview",
+      "exitCode": 1,
+      "failed": [
+        "bulk schedule preview safety rejects a stale fingerprint before timers or writes"
+      ]
+    },
+    {
+      "name": "pending-notification",
+      "exitCode": 1,
+      "failed": [
+        "bulk schedule release completion does not notify a 'unfinished release'",
+        "bulk schedule release completion records an outcome only for the pending item at the requested version"
+      ]
+    }
+  ],
+  "typecheck": "pass",
+  "lint": "pass",
+  "buildApp": "pass; existing Sidebar.tsx:200 unused-state warning",
+  "docs": "pass",
+  "realDatabaseProof": false,
+  "committed": false,
+  "deployed": false
+}

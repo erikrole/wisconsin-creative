@@ -1,0 +1,71 @@
+[
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "7BD40061-5741-4B92-B19C-3950F3C99DC3",
+        "deviceName" : "iPhone 18 Pro Max",
+        "exportedFileName" : "3A292DC6-37CD-42E1-BF45-A83AF4DA1674.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "scoreboard-filtered-empty-actions_0_C1DB6018-2123-469A-A7E2-9782F42E35DA.png",
+        "timestamp" : 1790650630.293
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "7BD40061-5741-4B92-B19C-3950F3C99DC3",
+        "deviceName" : "iPhone 18 Pro Max",
+        "exportedFileName" : "763A767D-AC07-4AD9-8615-9D2B3CAE935F.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "scoreboard-filtered-empty_0_876D968E-4614-422A-8D32-9F1E2B9F650E.png",
+        "timestamp" : 1790650629.242
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "7BD40061-5741-4B92-B19C-3950F3C99DC3",
+        "deviceName" : "iPhone 18 Pro Max",
+        "exportedFileName" : "BD09C59B-CE89-4509-814C-D1B0A0EE4FA0.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "scoreboard-filtered-sport_0_AC599815-2B8E-4F4C-822E-0CF1F387933F.png",
+        "timestamp" : 1790650625.214
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "7BD40061-5741-4B92-B19C-3950F3C99DC3",
+        "deviceName" : "iPhone 18 Pro Max",
+        "exportedFileName" : "5E62E00C-4240-49EA-A286-2E615C9E9D18.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "scoreboard-games_0_9049F178-5311-4D97-BC66-CFD7522BCBFD.png",
+        "timestamp" : 1790650613.642
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "7BD40061-5741-4B92-B19C-3950F3C99DC3",
+        "deviceName" : "iPhone 18 Pro Max",
+        "exportedFileName" : "8CD5C7F0-1632-43A9-A065-3F98E2E64D61.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "scoreboard-breakdown-opponent_0_35B6A599-6AB5-4710-A895-B6106019CBD9.png",
+        "timestamp" : 1790650608.502
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "7BD40061-5741-4B92-B19C-3950F3C99DC3",
+        "deviceName" : "iPhone 18 Pro Max",
+        "exportedFileName" : "66307463-62E2-4014-8CDF-4F1456255B61.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "scoreboard-breakdowns_0_DAC443DD-0256-41EB-A590-55CEDE00CE01.png",
+        "timestamp" : 1790650605.36
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "7BD40061-5741-4B92-B19C-3950F3C99DC3",
+        "deviceName" : "iPhone 18 Pro Max",
+        "exportedFileName" : "F5FF54DB-6DFE-4B56-9772-9F1729ACAC78.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "scoreboard-top_0_DDE54303-5A0F-4245-B7A8-4DBC4A8F1A4A.png",
+        "timestamp" : 1790650602.731
+      }
+    ],
+    "testIdentifier" : "ScoreboardScreenshotUITests/testScoreboardStateCaptures()",
+    "testIdentifierURL" : "test://com.apple.xcode/Wisconsin/WisconsinUITests/ScoreboardScreenshotUITests/testScoreboardStateCaptures"
+  }
+]

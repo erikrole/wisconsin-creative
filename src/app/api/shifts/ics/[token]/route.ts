@@ -4,7 +4,9 @@ import { withHandler } from "@/lib/api";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
-import { cleanSourceSummary, normalizeOpponentName } from "@/lib/schedule-event-identity";
+import { venueToneFromEvent } from "@/lib/venue-tone";
+import type { CalendarEventSite } from "@prisma/client";
+import { cleanSourceSummary, normalizeOpponentName, splitEventQualifier } from "@/lib/schedule-event-identity";
 import { AREA_LABELS } from "@/types/areas";
 import { studentCallTimeAppliesToEvent } from "@/lib/shift-call-windows";
 import { icsTokenLookupValues } from "@/lib/ics-token";
@@ -61,17 +63,28 @@ function latestDate(dates: Date[]): Date {
 
 function eventTitle(event: {
   summary: string;
+  subtitle: string | null;
   sportCode: string | null;
   opponent: string | null;
   isHome: boolean | null;
+  site: CalendarEventSite | null;
 }) {
+  const summary = splitEventQualifier(cleanSourceSummary(event.summary));
+  let title = summary.primary;
+  let qualifier = summary.qualifier;
+
   if (event.sportCode && event.opponent) {
-    const opponent = normalizeOpponentName(event.opponent) ?? event.opponent;
-    const venueWord = event.isHome === false ? "at" : "vs";
-    return `${event.sportCode} ${venueWord} ${opponent}`;
+    // Opponent is team identity; a competition qualifier it still carries
+    // ("Louisville - Invitational") outranks the summary's promotion text.
+    const opponent = splitEventQualifier(normalizeOpponentName(event.opponent) ?? event.opponent);
+    const venueWord = venueToneFromEvent(event) === "away" ? "at" : "vs";
+    title = `${event.sportCode} ${venueWord} ${opponent.primary}`;
+    qualifier = opponent.qualifier ?? qualifier;
   }
 
-  return cleanSourceSummary(event.summary);
+  // The operator's Label ("Homecoming") wins over whatever the feed said.
+  const label = event.subtitle?.replace(/\s+/g, " ").trim() || qualifier;
+  return label && label.toLowerCase() !== title.toLowerCase() ? `${title} - ${label}` : title;
 }
 
 function shiftSummary(area: string, title: string, isPosted: boolean) {
@@ -137,6 +150,7 @@ export const GET = withHandler<{ token: string }>(async (req, { params }) => {
                 select: {
                   id: true,
                   summary: true,
+                  subtitle: true,
                   startsAt: true,
                   endsAt: true,
                   allDay: true,

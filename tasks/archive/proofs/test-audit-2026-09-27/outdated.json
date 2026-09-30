@@ -1,0 +1,471 @@
+{
+  "@fontsource/barlow": {
+    "current": "5.2.8",
+    "wanted": "5.3.0",
+    "latest": "5.3.0",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/@fontsource/barlow",
+    "type": "dependencies",
+    "homepage": "https://fontsource.org/fonts/barlow",
+    "dependedByLocation": ""
+  },
+  "@hookform/resolvers": {
+    "current": "5.4.0",
+    "wanted": "5.9.1",
+    "latest": "5.9.1",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/@hookform/resolvers",
+    "type": "dependencies",
+    "homepage": "https://react-hook-form.com",
+    "dependedByLocation": ""
+  },
+  "@mdxeditor/editor": {
+    "current": "4.0.4",
+    "wanted": "4.2.5",
+    "latest": "4.2.5",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/@mdxeditor/editor",
+    "type": "dependencies",
+    "homepage": "https://mdxeditor.dev/",
+    "dependedByLocation": ""
+  },
+  "@next/bundle-analyzer": {
+    "current": "16.2.4",
+    "wanted": "16.3.5",
+    "latest": "16.3.5",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/@next/bundle-analyzer",
+    "type": "devDependencies",
+    "homepage": "https://github.com/vercel/next.js#readme",
+    "dependedByLocation": ""
+  },
+  "@playwright/test": {
+    "current": "1.61.1",
+    "wanted": "1.63.0",
+    "latest": "1.63.0",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/@playwright/test",
+    "type": "devDependencies",
+    "homepage": "https://playwright.dev",
+    "dependedByLocation": ""
+  },
+  "@prisma/adapter-neon": {
+    "current": "6.19.3",
+    "wanted": "6.19.3",
+    "latest": "7.10.0",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/@prisma/adapter-neon",
+    "type": "dependencies",
+    "dependedByLocation": ""
+  },
+  "@prisma/client": {
+    "current": "6.19.3",
+    "wanted": "6.19.3",
+    "latest": "7.10.0",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/@prisma/client",
+    "type": "dependencies",
+    "homepage": "https://www.prisma.io",
+    "dependedByLocation": ""
+  },
+  "@radix-ui/react-progress": {
+    "current": "1.1.9",
+    "wanted": "1.1.16",
+    "latest": "1.1.16",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/@radix-ui/react-progress",
+    "type": "dependencies",
+    "homepage": "https://radix-ui.com/primitives",
+    "dependedByLocation": ""
+  },
+  "@sentry/nextjs": {
+    "current": "10.57.0",
+    "wanted": "10.75.0",
+    "latest": "10.75.0",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/@sentry/nextjs",
+    "type": "dependencies",
+    "homepage": "https://github.com/getsentry/sentry-javascript/tree/master/packages/nextjs",
+    "dependedByLocation": ""
+  },
+  "@simplewebauthn/browser": {
+    "current": "13.3.0",
+    "wanted": "13.3.0",
+    "latest": "14.0.0",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/@simplewebauthn/browser",
+    "type": "dependencies",
+    "homepage": "https://github.com/MasterKale/SimpleWebAuthn/tree/master/packages/browser#readme",
+    "dependedByLocation": ""
+  },
+  "@simplewebauthn/server": {
+    "current": "13.3.2",
+    "wanted": "13.3.3",
+    "latest": "14.0.2",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/@simplewebauthn/server",
+    "type": "dependencies",
+    "homepage": "https://github.com/MasterKale/SimpleWebAuthn/tree/master/packages/server#readme",
+    "dependedByLocation": ""
+  },
+  "@tailwindcss/postcss": {
+    "current": "4.3.1",
+    "wanted": "4.3.3",
+    "latest": "4.3.3",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/@tailwindcss/postcss",
+    "type": "dependencies",
+    "homepage": "https://tailwindcss.com",
+    "dependedByLocation": ""
+  },
+  "@tanstack/query-sync-storage-persister": {
+    "current": "5.101.0",
+    "wanted": "5.103.1",
+    "latest": "5.103.1",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/@tanstack/query-sync-storage-persister",
+    "type": "dependencies",
+    "homepage": "https://tanstack.com/query",
+    "dependedByLocation": ""
+  },
+  "@tanstack/react-query": {
+    "current": "5.101.0",
+    "wanted": "5.103.1",
+    "latest": "5.103.1",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/@tanstack/react-query",
+    "type": "dependencies",
+    "homepage": "https://tanstack.com/query",
+    "dependedByLocation": ""
+  },
+  "@tanstack/react-query-persist-client": {
+    "current": "5.101.0",
+    "wanted": "5.103.1",
+    "latest": "5.103.1",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/@tanstack/react-query-persist-client",
+    "type": "dependencies",
+    "homepage": "https://tanstack.com/query",
+    "dependedByLocation": ""
+  },
+  "@tanstack/react-table": {
+    "current": "8.21.3",
+    "wanted": "8.21.3",
+    "latest": "9.2.4",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/@tanstack/react-table",
+    "type": "dependencies",
+    "homepage": "https://tanstack.com/table",
+    "dependedByLocation": ""
+  },
+  "@types/node": {
+    "current": "22.19.17",
+    "wanted": "22.20.4",
+    "latest": "26.6.2",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/@types/node",
+    "type": "devDependencies",
+    "homepage": "https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/node",
+    "dependedByLocation": ""
+  },
+  "@types/react": {
+    "current": "19.2.17",
+    "wanted": "19.3.0",
+    "latest": "19.3.0",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/@types/react",
+    "type": "devDependencies",
+    "homepage": "https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/react",
+    "dependedByLocation": ""
+  },
+  "@types/react-dom": {
+    "current": "19.2.3",
+    "wanted": "19.3.0",
+    "latest": "19.3.0",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/@types/react-dom",
+    "type": "devDependencies",
+    "homepage": "https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/react-dom",
+    "dependedByLocation": ""
+  },
+  "@upstash/ratelimit": {
+    "current": "2.0.8",
+    "wanted": "2.1.0",
+    "latest": "2.1.0",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/@upstash/ratelimit",
+    "type": "dependencies",
+    "homepage": "https://github.com/upstash/ratelimit-js#readme",
+    "dependedByLocation": ""
+  },
+  "@upstash/redis": {
+    "current": "1.38.0",
+    "wanted": "1.38.4",
+    "latest": "1.38.4",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/@upstash/redis",
+    "type": "dependencies",
+    "homepage": "https://github.com/upstash/upstash-redis#readme",
+    "dependedByLocation": ""
+  },
+  "@vercel/analytics": {
+    "current": "1.6.1",
+    "wanted": "1.6.1",
+    "latest": "2.0.1",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/@vercel/analytics",
+    "type": "dependencies",
+    "homepage": "https://github.com/vercel/analytics#readme",
+    "dependedByLocation": ""
+  },
+  "@vercel/blob": {
+    "current": "2.4.1",
+    "wanted": "2.8.0",
+    "latest": "2.8.0",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/@vercel/blob",
+    "type": "dependencies",
+    "homepage": "https://vercel.com/storage/blob",
+    "dependedByLocation": ""
+  },
+  "@vercel/functions": {
+    "current": "3.9.7",
+    "wanted": "3.9.7",
+    "latest": "3.9.8",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/@vercel/functions",
+    "type": "dependencies",
+    "homepage": "https://vercel.com/docs/functions/functions-api-reference/vercel-functions-package",
+    "dependedByLocation": ""
+  },
+  "@vitest/coverage-v8": {
+    "current": "3.2.6",
+    "wanted": "3.2.7",
+    "latest": "5.0.1",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/@vitest/coverage-v8",
+    "type": "devDependencies",
+    "homepage": "https://vitest.dev/guide/coverage",
+    "dependedByLocation": ""
+  },
+  "barcode-detector": {
+    "current": "3.2.0",
+    "wanted": "3.2.2",
+    "latest": "3.2.2",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/barcode-detector",
+    "type": "dependencies",
+    "homepage": "https://github.com/Sec-ant/barcode-detector",
+    "dependedByLocation": ""
+  },
+  "eslint": {
+    "current": "9.39.4",
+    "wanted": "9.39.5",
+    "latest": "10.11.0",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/eslint",
+    "type": "devDependencies",
+    "homepage": "https://eslint.org",
+    "dependedByLocation": ""
+  },
+  "eslint-config-next": {
+    "current": "15.5.25",
+    "wanted": "15.5.25",
+    "latest": "16.3.5",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/eslint-config-next",
+    "type": "devDependencies",
+    "homepage": "https://nextjs.org/docs/app/api-reference/config/eslint",
+    "dependedByLocation": ""
+  },
+  "lucide-react": {
+    "current": "0.577.0",
+    "wanted": "0.577.0",
+    "latest": "1.47.0",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/lucide-react",
+    "type": "dependencies",
+    "homepage": "https://lucide.dev",
+    "dependedByLocation": ""
+  },
+  "motion": {
+    "current": "12.40.0",
+    "wanted": "12.43.0",
+    "latest": "13.4.0",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/motion",
+    "type": "dependencies",
+    "homepage": "https://github.com/motiondivision/motion#readme",
+    "dependedByLocation": ""
+  },
+  "next": {
+    "current": "15.5.25",
+    "wanted": "15.5.25",
+    "latest": "16.3.5",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/next",
+    "type": "dependencies",
+    "homepage": "https://nextjs.org",
+    "dependedByLocation": ""
+  },
+  "postcss": {
+    "current": "8.5.25",
+    "wanted": "8.5.28",
+    "latest": "8.5.28",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/postcss",
+    "type": "dependencies",
+    "homepage": "https://postcss.org/",
+    "dependedByLocation": ""
+  },
+  "prisma": {
+    "current": "6.19.3",
+    "wanted": "6.19.3",
+    "latest": "7.10.0",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/prisma",
+    "type": "devDependencies",
+    "homepage": "https://github.com/prisma/prisma-cli#readme",
+    "dependedByLocation": ""
+  },
+  "radix-ui": {
+    "current": "1.5.0",
+    "wanted": "1.6.7",
+    "latest": "1.6.7",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/radix-ui",
+    "type": "dependencies",
+    "homepage": "https://radix-ui.com/primitives",
+    "dependedByLocation": ""
+  },
+  "react": {
+    "current": "19.2.7",
+    "wanted": "19.3.0",
+    "latest": "19.3.0",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/react",
+    "type": "dependencies",
+    "homepage": "https://react.dev/",
+    "dependedByLocation": ""
+  },
+  "react-day-picker": {
+    "current": "9.14.0",
+    "wanted": "9.14.0",
+    "latest": "10.0.1",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/react-day-picker",
+    "type": "dependencies",
+    "homepage": "https://daypicker.dev",
+    "dependedByLocation": ""
+  },
+  "react-dom": {
+    "current": "19.2.7",
+    "wanted": "19.3.0",
+    "latest": "19.3.0",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/react-dom",
+    "type": "dependencies",
+    "homepage": "https://react.dev/",
+    "dependedByLocation": ""
+  },
+  "react-hook-form": {
+    "current": "7.78.0",
+    "wanted": "7.88.0",
+    "latest": "7.88.0",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/react-hook-form",
+    "type": "dependencies",
+    "homepage": "https://react-hook-form.com",
+    "dependedByLocation": ""
+  },
+  "recharts": {
+    "current": "3.8.1",
+    "wanted": "3.10.1",
+    "latest": "3.10.1",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/recharts",
+    "type": "dependencies",
+    "homepage": "https://github.com/recharts/recharts",
+    "dependedByLocation": ""
+  },
+  "resend": {
+    "current": "6.12.4",
+    "wanted": "6.28.1",
+    "latest": "6.28.1",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/resend",
+    "type": "dependencies",
+    "homepage": "https://github.com/resend/resend-node#readme",
+    "dependedByLocation": ""
+  },
+  "sonner": {
+    "current": "2.0.7",
+    "wanted": "2.0.8",
+    "latest": "2.0.8",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/sonner",
+    "type": "dependencies",
+    "homepage": "https://sonner.emilkowal.ski/",
+    "dependedByLocation": ""
+  },
+  "tailwind-merge": {
+    "current": "3.6.0",
+    "wanted": "3.7.0",
+    "latest": "3.7.0",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/tailwind-merge",
+    "type": "dependencies",
+    "homepage": "https://github.com/dcastil/tailwind-merge",
+    "dependedByLocation": ""
+  },
+  "tailwindcss": {
+    "current": "4.3.1",
+    "wanted": "4.3.3",
+    "latest": "4.3.3",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/tailwindcss",
+    "type": "dependencies",
+    "homepage": "https://tailwindcss.com",
+    "dependedByLocation": ""
+  },
+  "typescript": {
+    "current": "5.9.3",
+    "wanted": "5.9.3",
+    "latest": "7.0.2",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/typescript",
+    "type": "devDependencies",
+    "homepage": "https://www.typescriptlang.org/",
+    "dependedByLocation": ""
+  },
+  "vitest": {
+    "current": "3.2.6",
+    "wanted": "3.2.7",
+    "latest": "5.0.1",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/vitest",
+    "type": "devDependencies",
+    "homepage": "https://vitest.dev",
+    "dependedByLocation": ""
+  },
+  "workflow": {
+    "current": "4.5.0",
+    "wanted": "4.5.0",
+    "latest": "4.8.9",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/workflow",
+    "type": "dependencies",
+    "homepage": "https://github.com/vercel/workflow#readme",
+    "dependedByLocation": ""
+  },
+  "zod": {
+    "current": "3.25.76",
+    "wanted": "3.25.76",
+    "latest": "4.6.5",
+    "dependent": "wisconsin-creative",
+    "location": "/Users/role/Code/wisconsin-creative/node_modules/zod",
+    "type": "dependencies",
+    "homepage": "https://zod.dev",
+    "dependedByLocation": ""
+  }
+}

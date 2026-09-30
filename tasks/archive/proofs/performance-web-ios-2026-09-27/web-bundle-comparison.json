@@ -1,0 +1,50 @@
+[
+  {
+    "route": "/",
+    "beforeGzipBytes": 407302,
+    "afterGzipBytes": 369116,
+    "reductionPercent": 9.375352932222283
+  },
+  {
+    "route": "/items",
+    "beforeGzipBytes": 469998,
+    "afterGzipBytes": 438744,
+    "reductionPercent": 6.64981553112992
+  },
+  {
+    "route": "/bookings",
+    "beforeGzipBytes": 448614,
+    "afterGzipBytes": 417592,
+    "reductionPercent": 6.915076212512315
+  },
+  {
+    "route": "/schedule",
+    "beforeGzipBytes": 503026,
+    "afterGzipBytes": 484684,
+    "reductionPercent": 3.646332396337366
+  },
+  {
+    "route": "/reservations/new",
+    "beforeGzipBytes": 433233,
+    "afterGzipBytes": 416509,
+    "reductionPercent": 3.8602784183107013
+  },
+  {
+    "route": "/users",
+    "beforeGzipBytes": 408250,
+    "afterGzipBytes": 376924,
+    "reductionPercent": 7.673239436619719
+  },
+  {
+    "route": "/resources",
+    "beforeGzipBytes": 451201,
+    "afterGzipBytes": 421605,
+    "reductionPercent": 6.55938262548177
+  },
+  {
+    "route": "/signatures",
+    "beforeGzipBytes": 386076,
+    "afterGzipBytes": 368064,
+    "reductionPercent": 4.6654026668324375
+  }
+]

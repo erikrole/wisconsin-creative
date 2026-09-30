@@ -1,0 +1,111 @@
+{
+  "title": "A more welcoming first run",
+  "eyebrow": "Wisconsin Creative \u00b7 Local native review",
+  "lede": "Calm native surfaces, clear account and profile steps, and restrained motion that keeps the next action in reach.",
+  "stats": [
+    {
+      "k": "Native verification",
+      "v": "23 tests passed",
+      "n": "3 simulator interaction tests and 20 source-contract tests."
+    },
+    {
+      "k": "Motion",
+      "v": "Forward + Back",
+      "n": "Stable controls with a short directional page transition."
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Matched before and after",
+      "note": "Same fixture, device, appearance, text size and initial scroll. Baseline is the preceding usability pass. The keyboard now stays closed on arrival; this intentional behavior change accounts for its difference between captures.",
+      "pairs": [
+        {
+          "title": "Create an account",
+          "before": "registration-before.png",
+          "after": "registration-after-final.png",
+          "beforeEvidence": "registration-before.evidence.json",
+          "afterEvidence": "registration-after.evidence.json"
+        },
+        {
+          "title": "Student contact details",
+          "before": "welcomeStudent-before.png",
+          "after": "welcomeStudent-after-final.png",
+          "beforeEvidence": "welcomeStudent-before.evidence.json",
+          "afterEvidence": "welcomeStudent-after.evidence.json"
+        },
+        {
+          "title": "Staff email setup",
+          "before": "welcomeStaff-before.png",
+          "after": "welcomeStaff-after-final.png",
+          "beforeEvidence": "welcomeStaff-before.evidence.json",
+          "afterEvidence": "welcomeStaff-after.evidence.json"
+        },
+        {
+          "title": "Optional sizes",
+          "before": "welcomeApparel-before.png",
+          "after": "welcomeApparel-after-final.png",
+          "beforeEvidence": "welcomeApparel-before.evidence.json",
+          "afterEvidence": "welcomeApparel-after.evidence.json"
+        }
+      ]
+    },
+    {
+      "heading": "Dark appearance",
+      "note": "After-only native simulator captures.",
+      "shots": [
+        {
+          "image": "registration-dark.png",
+          "title": "Account setup"
+        },
+        {
+          "image": "welcomeStudent-dark.png",
+          "title": "Contact details"
+        }
+      ]
+    },
+    {
+      "heading": "Larger text",
+      "note": "After-only Accessibility Large captures. Forms scroll and primary actions remain available.",
+      "shots": [
+        {
+          "image": "registration-accessibility.png",
+          "title": "Account setup"
+        },
+        {
+          "image": "welcomeApparel-accessibility.png",
+          "title": "Optional sizes"
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "A welcoming hierarchy",
+      "was": "Dense form presentation and competing labels.",
+      "now": "One centered system title, a soft symbol tile, and a short explanation."
+    },
+    {
+      "h": "Comfortable native surfaces",
+      "was": "Compact form controls and a utilitarian action area.",
+      "now": "Inset fields, generous spacing, and a rounded action above a system material footer."
+    },
+    {
+      "h": "Motion with orientation",
+      "was": "Abrupt step changes and automatic keyboard presentation.",
+      "now": "Directional page transitions with stable controls; the keyboard opens when a field is selected."
+    }
+  ],
+  "verification": [
+    "Final Xcode simulator build and all 3 onboarding interaction tests passed.",
+    "20 affected source-contract tests passed.",
+    "Native drift, documentation verification, and diff whitespace checks passed.",
+    "Light, dark, larger-text screenshots and recorded forward/Back transition frames inspected."
+  ],
+  "notes": [
+    "Local, uncommitted work. No real account or profile was changed.",
+    "Reduce Motion fallback is implemented; runtime VoiceOver and Reduce Motion acceptance remain unverified.",
+    "Physical-device AutoFill/photo and authenticated durable saves remain unverified.",
+    "The animation clip is retained beside this report. It precedes the final keyboard-dismiss and accessibility grouping tweaks; transition code is unchanged.",
+    "Report receipts and HTML structure checked. Browser rendering was unavailable because the local file URL was blocked; no alternate route was attempted."
+  ]
+}

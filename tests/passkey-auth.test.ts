@@ -156,7 +156,7 @@ function mockVerifiedRegistration() {
 }
 
 beforeEach(() => {
-  vi.clearAllMocks();
+  vi.resetAllMocks();
   cookieState.value = "ceremony-token";
   vi.mocked(requireAuth).mockResolvedValue(user);
   vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, remaining: 10, resetAt: Date.now() + 60_000 });
@@ -428,6 +428,7 @@ describe("passkey authentication", () => {
   });
 
   it("does not accept a ceremony that has already been consumed", async () => {
+    dbMock.user.findUnique.mockResolvedValue({ ...user, active: true, collaboratorPolicy: null });
     dbMock.passkeyChallenge.deleteMany.mockResolvedValueOnce({ count: 0 });
 
     const response = await loginVerify(
@@ -443,6 +444,15 @@ describe("passkey authentication", () => {
     );
 
     expect(response.status).toBe(401);
+    expect(dbMock.passkeyChallenge.deleteMany).toHaveBeenCalledExactlyOnceWith({
+      where: {
+        id: "challenge-1",
+        type: "AUTHENTICATION",
+        expiresAt: { gt: expect.any(Date) },
+      },
+    });
+    expect(dbMock.passkeyCredential.updateMany).not.toHaveBeenCalled();
     expect(createSession).not.toHaveBeenCalled();
+    expect(createAuditEntry).not.toHaveBeenCalled();
   });
 });

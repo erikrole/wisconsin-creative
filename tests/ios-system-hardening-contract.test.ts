@@ -246,7 +246,7 @@ describe("iOS system hardening contracts", () => {
     expect(app).toContain("SearchRecentsStorage.clear()");
     expect(app).toContain("ThumbnailCache.shared.clearForSignOut()");
     expect(search).toContain("enum SearchRecentsStorage");
-    expect(thumbnails).toContain("thumbnailURLCache.removeAllCachedResponses()");
+    expect(thumbnails).toMatch(/func clearForSignOut\(\)[\s\S]*?\.removeAllCachedResponses\(\)/);
   });
 
   it("does not cover inactive snapshots with a splash or privacy lock", () => {

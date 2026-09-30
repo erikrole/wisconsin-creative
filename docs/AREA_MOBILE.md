@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Mobile Operations
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-09-19
+- Last Updated: 2026-09-28
 - Status: Active
 - Version: V1
 
@@ -79,6 +79,8 @@ Cheqroom mobile patterns show useful primitives but too much menu depth and too 
 2. List read models should support lightweight pagination and filter updates.
 3. Offline/intermittent network states should preserve drafts and pending intent where feasible.
 4. Cold launch should not block the whole UI on session restore. Returning users see the app shell with skeletons while data loads; session validity is confirmed in the background and a revoked session bounces to Login.
+5. Main-app API success payloads decode away from the UI actor. Revalidate the account boundary and cancellation after decoding before returning a response.
+6. Concurrent thumbnail consumers share one download and decoded image for each URL, pixel size, and display scale. Sign-out cancels pending loads and prevents their results from refilling the cache; one disappearing row does not cancel another row's image.
 
 ## Edge Cases
 - Student deep-linking into admin-only mutation paths.
@@ -103,6 +105,8 @@ Cheqroom mobile patterns show useful primitives but too much menu depth and too 
 - [x] AC-13: Push notifications carry an action set matched to what the reader can usefully do, and no notification action opens a mutation sheet or performs a non-idempotent write.
 - [x] AC-14: Where a row offers an action by swipe, it offers the same action by long press.
 - [x] AC-15: A long-press action can never reveal data the row it sits on is deliberately hiding.
+
+- [x] AC-16 (local): Person Scoreboard retains the four team filters, preserves the last loaded record through failure, retries the requested scope, and keeps all-day dates stable; iPhone 18 Pro Max model/UI proof passes.
 
 ## Dependencies
 - `AREA_DASHBOARD.md`
@@ -144,6 +148,13 @@ Navigation shell versioned roadmap: `tasks/sidebar-roadmap.md` (revised 2026-03-
 - **V3 (later)**: Bottom nav badge counts via live `/api/nav-counts` polling, game-day/shift context cards
 
 ## Change Log
+- 2026-09-28: **Scoreboard preserves team context and recovers failed filters.** Native person navigation carries sport, venue, opponent and site plus the person’s name. Stable server facets have an older-server fallback; additive full-season form and streak data avoid page-sized results. Search keeps team ranks, selected filters remain after failure, neutral refresh/clear controls retry explicitly, and request generations prevent obsolete pages from overwriting a refresh. All-day dates retain their calendar day and non-advancing cursors stop pagination. Seventeen model tests and simulator workflow/capture tests pass on iPhone 18 Pro Max; source contracts and local evidence are in `tasks/archive/proofs/scoreboard-end-to-end-2026-09-28/`. Authenticated production/native and regular-width iPad proof remains GAP-71.
+
+- 2026-09-28: **Native onboarding visual and motion refinement (local).** Account creation and profile setup share a centered SF Symbol/title hierarchy, adaptive system surfaces, softer field treatments, restrained Wisconsin-red accents, segmented progress, and anchored primary actions. Whole-page forward/Back transitions use a short directional spring; Reduce Motion uses an opacity-only transition and disables progress animation. Steps arrive without forcing the keyboard open, and Continue dismisses it before save/recovery. Native builds, focused source contracts, simulator interactions, and [visual/motion evidence](../tasks/archive/proofs/ios-onboarding-polish-2026-09-28/README.md) own local acceptance. Authenticated persistence, physical-device AutoFill/photo, and distribution remain separate.
+
+- 2026-09-28: **Easier native account and profile setup (local).** Registration asks for one password with a visibility toggle, retains password AutoFill, and shows neutral length guidance. Welcome uses one step count, a full-width primary action, purpose-led prompts, and explicit optional sizing/photo guidance. Continue follows the visible step order, stale role-incompatible resume hints fall back safely, and pasted US phone numbers retain all ten digits. Required fields, invite authorization, server save contracts, one-day snooze, and session-only photo omission are unchanged. Acceptance: focused native and API/source contracts pass; simulator interaction and matched visual review are tracked in [onboarding proof](../tasks/archive/proofs/ios-onboarding-2026-09-28/README.md). Physical-device AutoFill/photo and authenticated account-to-profile persistence remain unverified; this is not a production rollout claim.
+
+- 2026-09-27: **Measured native response and image loading improvements (local).** Successful main-app API responses now decode concurrently with safe response envelopes and a second account/cancellation check. Shared thumbnails coalesce concurrent requests, include display scale in cache/task identity, and discard results crossing sign-out. A 24-row cold-cache fixture reproduced 24 downloads/decoded images before and one of each after. Native tests cover decoding keys/dates/errors, concurrency, image retry, sizing, cancellation and account isolation. The [cross-platform ledger](../tasks/performance-web-ios-plan-2026-09-27.md) owns raw benchmarks and build acceptance; simulator/fixture evidence does not close physical-device or production performance proof.
 
 - 2026-09-23: **Schedule follow-ups: pending claims, draft identity, hashed feed token (local).**
   - Event detail marks an open slot with its waiting student claims ("2 waiting"); tapping opens the Trade Board, and the crew refreshes on return.

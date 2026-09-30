@@ -281,6 +281,36 @@ final class HomeScreenshotUITests: XCTestCase {
         attach(app, name: "home-bottom")
     }
 
+    /// Worked events: the prep-gear banner above the greeting, the week strip,
+    /// and a reservation shown inside its event row.
+    func testHomeAgendaCaptures() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "homeAgenda"
+        app.launch()
+
+        XCTAssertTrue(app.staticTexts["No gear reserved for Volleyball vs Nebraska"].waitForExistence(timeout: 20),
+                      "Prep-gear banner never rendered")
+        attach(app, name: "home-agenda-top")
+
+        app.swipeUp(velocity: .slow)
+        attach(app, name: "home-agenda-queue")
+    }
+
+    /// Baseline-only capture for the same fixture; the old Home has no banner
+    /// to wait on, so it waits on the greeting instead.
+    func testHomeAgendaBaselineCaptures() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "homeAgenda"
+        app.launch()
+
+        XCTAssertTrue(app.staticTexts["Volleyball vs Nebraska"].waitForExistence(timeout: 20),
+                      "Home never loaded the agenda fixture")
+        attach(app, name: "home-agenda-top")
+
+        app.swipeUp(velocity: .slow)
+        attach(app, name: "home-agenda-queue")
+    }
+
     func testHomeAllClearWithStaffDraft() throws {
         let app = XCUIApplication()
         app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "homeAllClear"
@@ -325,6 +355,52 @@ final class ScoreboardScreenshotUITests: XCTestCase {
         continueAfterFailure = false
     }
 
+    func testTeamFiltersCarryIntoPersonScoreboard() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "scoreboard"
+        app.launchEnvironment["GT_SCOREBOARD_TEAM"] = "1"
+        app.launch()
+        XCTAssertTrue(app.buttons["scoreboard-filter-sport"].waitForExistence(timeout: 20))
+        attach(app, name: "scoreboard-team-top")
+        for (dimension, value) in [("sport", "Football"), ("venue", "Camp Randall Stadium"), ("opponent", "Iowa"), ("site", "Home")] {
+            app.buttons["scoreboard-filter-\(dimension)"].tap()
+            let choice = app.buttons[value].firstMatch
+            XCTAssertTrue(choice.waitForExistence(timeout: 5))
+            choice.tap()
+        }
+        let person = app.buttons["scoreboard-most-events"]
+        if !person.isHittable { app.swipeUp(velocity: .slow) }
+        XCTAssertTrue(person.waitForExistence(timeout: 10))
+        attach(app, name: "scoreboard-team-filtered")
+        person.tap()
+        XCTAssertTrue(app.navigationBars["Jordan Lee"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Football vs Iowa"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.staticTexts["Football vs Minnesota"].exists)
+        attach(app, name: "scoreboard-person-context")
+        let clear = app.buttons["Clear filters"].firstMatch
+        XCTAssertTrue(clear.exists)
+        clear.tap()
+        XCTAssertTrue(app.staticTexts["Most games"].waitForExistence(timeout: 10))
+    }
+
+    func testFailedFilterKeepsRecordAndRetriesSelectedSite() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "scoreboard"
+        app.launchEnvironment["GT_SCOREBOARD_FAIL_ONCE"] = "1"
+        app.launch()
+        XCTAssertTrue(app.staticTexts["Most games"].waitForExistence(timeout: 20))
+        app.buttons["Away"].tap()
+        let notice = app.staticTexts["The last loaded record is still shown. Retry to apply the selected filters."]
+        XCTAssertTrue(notice.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["14–12–1"].exists)
+        if !app.buttons["Retry"].isHittable { app.swipeUp(velocity: .slow) }
+        attach(app, name: "scoreboard-person-failed-filter")
+        app.buttons["Retry"].tap()
+        XCTAssertTrue(notice.waitForNonExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Football at Nebraska"].waitForExistence(timeout: 10))
+        attach(app, name: "scoreboard-person-recovered-filter")
+    }
+
     func testScoreboardStateCaptures() throws {
         let app = XCUIApplication()
         app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "scoreboard"
@@ -332,7 +408,7 @@ final class ScoreboardScreenshotUITests: XCTestCase {
 
         XCTAssertTrue(app.navigationBars["Scoreboard"].waitForExistence(timeout: 20), "Scoreboard never rendered")
         // Wait on fixture content, not the chrome.
-        XCTAssertTrue(app.staticTexts["Most worked"].waitForExistence(timeout: 15), "Fixture season never loaded")
+        XCTAssertTrue(app.staticTexts["Most games"].waitForExistence(timeout: 15), "Fixture season never loaded")
         attach(app, name: "scoreboard-top")
 
         app.swipeUp(velocity: .slow)
@@ -368,7 +444,7 @@ final class ScoreboardScreenshotUITests: XCTestCase {
         XCTAssertTrue(wins.waitForExistence(timeout: 10), "Result filter missing")
         wins.tap()
         XCTAssertTrue(
-            app.staticTexts["No games match these filters"].waitForExistence(timeout: 15),
+            app.staticTexts["No events match these filters"].waitForExistence(timeout: 15),
             "Filtered-empty state never rendered"
         )
         attach(app, name: "scoreboard-filtered-empty")
@@ -1102,5 +1178,120 @@ final class ActionErrorRecoveryUITests: XCTestCase {
         capture.name = name
         capture.lifetime = .keepAlways
         add(capture)
+    }
+}
+
+/// Captures an overdue checkout seen by staff, where Nudge now sits beside
+/// Extend, then the sent state after a tap against the fixture route.
+@MainActor
+final class BookingNudgeScreenshotUITests: XCTestCase {
+    override func setUpWithError() throws {
+        continueAfterFailure = false
+    }
+
+    private func launchOverdue() -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "booking-overdue"
+        app.launch()
+        XCTAssertTrue(app.staticTexts["Volleyball vs Nebraska"].waitForExistence(timeout: 20),
+                      "Booking Detail never rendered")
+        XCTAssertTrue(app.buttons["Extend Return Date"].waitForExistence(timeout: 10),
+                      "Extend action never rendered")
+        return app
+    }
+
+    private func attach(_ app: XCUIApplication, name: String) {
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = name
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+    }
+
+    func testOverdueNudgeCaptures() throws {
+        let app = launchOverdue()
+        let nudge = app.buttons["Nudge Avery Nakamura"]
+        XCTAssertTrue(nudge.waitForExistence(timeout: 10), "Nudge action never rendered")
+        attach(app, name: "booking-nudge-idle")
+
+        nudge.tap()
+        XCTAssertTrue(app.buttons["Nudge sent to Avery Nakamura"].waitForExistence(timeout: 10),
+                      "Nudge never reached its sent state")
+        attach(app, name: "booking-nudge-sent")
+    }
+
+    /// Baseline-only capture for the same fixture; the old detail has no Nudge.
+    func testOverdueNudgeBaselineCaptures() throws {
+        let app = launchOverdue()
+        attach(app, name: "booking-nudge-baseline")
+    }
+}
+
+/// Exercises real onboarding views; all requests remain in the fixture protocol.
+@MainActor
+final class OnboardingUITests: XCTestCase {
+    override func setUpWithError() throws { continueAfterFailure = false }
+
+    private func launch(_ scenario: String) -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = scenario
+        app.launchArguments += ["-WisconsinThemeChoice", "light"]
+        app.launch()
+        return app
+    }
+
+    private func capture(_ app: XCUIApplication, _ name: String) {
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
+    func testRegistrationUsesOnePasswordAndPreservesInputOnFailure() {
+        let app = launch("registration")
+        let name = app.textFields["Full name"]
+        XCTAssertTrue(name.waitForExistence(timeout: 15))
+        name.tap()
+        name.typeText("Alex Rivera")
+        let password = app.secureTextFields["Password"]
+        password.tap()
+        password.typeText("short")
+        XCTAssertFalse(app.buttons["Create account"].isEnabled)
+        password.typeText("-enough")
+        XCTAssertTrue(app.buttons["Create account"].isEnabled)
+        XCTAssertFalse(app.secureTextFields["Confirm password"].exists)
+        app.buttons["Show password"].tap()
+        XCTAssertEqual(app.textFields["Password"].value as? String, "short-enough")
+        app.buttons["Hide password"].tap()
+        app.buttons["Create account"].tap()
+        // The fixture intentionally rejects the write; no real account is created.
+        XCTAssertTrue(app.buttons["Create account"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["The requested item could not be found."].waitForExistence(timeout: 10))
+        XCTAssertEqual(name.value as? String, "Alex Rivera")
+        capture(app, "registration-retry")
+    }
+
+    func testStudentPhoneFailureKeepsEnteredNumber() {
+        let app = launch("welcomeStudent")
+        let phone = app.textFields["(XXX) XXX-XXXX"]
+        XCTAssertTrue(phone.waitForExistence(timeout: 15))
+        capture(app, "student-start")
+        phone.tap()
+        phone.typeText("6085551212")
+        app.buttons["Continue"].tap()
+        XCTAssertTrue(app.staticTexts["The requested item could not be found."].waitForExistence(timeout: 10))
+        XCTAssertEqual(phone.value as? String, "(608) 555-1212")
+        capture(app, "student-retry")
+    }
+
+    func testOptionalSizesCanBeSkippedAndRevisited() {
+        let app = launch("welcomeApparel")
+        XCTAssertTrue(app.buttons["Skip"].waitForExistence(timeout: 15))
+        capture(app, "optional-sizes")
+        app.buttons["Skip"].tap()
+        XCTAssertTrue(app.buttons["Choose photo"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Finish"].exists)
+        capture(app, "optional-photo")
+        app.buttons["Back"].tap()
+        XCTAssertTrue(app.buttons["Skip"].waitForExistence(timeout: 5))
     }
 }

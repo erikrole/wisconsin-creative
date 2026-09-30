@@ -1,0 +1,405 @@
+{
+  "device": "iPhone 18 Pro Max",
+  "runtime": "iOS 27.0",
+  "configuration": "Debug",
+  "scheme": "WisconsinPerformance",
+  "scope": "Existing deterministic local performance harness: launch, 300-item scroll, equipment search/selection. Synthetic data has no thumbnails and bypasses API response decoding. These scenarios check broad regressions, not the focused optimization gains.",
+  "metrics": {
+    "before": [
+      {
+        "scenario": "ColdLaunchPerformance",
+        "metric": "Duration (ApplicationFirstFramePresentationResponsive), s",
+        "id": "com.apple.dt.XCTMetric_ApplicationLaunch-ApplicationFirstFramePresentationResponsive.duration",
+        "mean": 2.208804,
+        "median": 2.212458,
+        "min": 2.186062,
+        "max": 2.237172,
+        "samples": [
+          2.219441,
+          2.186062,
+          2.212458,
+          2.188887,
+          2.237172
+        ]
+      },
+      {
+        "scenario": "EquipmentSearchAndSelectionPerformance",
+        "metric": "CPU Time (Wisconsin), s",
+        "id": "com.apple.dt.XCTMetric_CPU-com.erikrole.Wisconsin.time",
+        "mean": 0.9841143333333333,
+        "median": 0.930629,
+        "min": 0.890909,
+        "max": 1.130805,
+        "samples": [
+          1.130805,
+          0.890909,
+          0.930629
+        ]
+      },
+      {
+        "scenario": "EquipmentSearchAndSelectionPerformance",
+        "metric": "Memory Peak Physical (Wisconsin), kB",
+        "id": "com.apple.dt.XCTMetric_Memory-com.erikrole.Wisconsin.physical_peak",
+        "mean": 59443.408,
+        "median": 59525.328,
+        "min": 58935.504,
+        "max": 59869.392,
+        "samples": [
+          58935.504,
+          59525.328,
+          59869.392
+        ]
+      },
+      {
+        "scenario": "EquipmentSearchAndSelectionPerformance",
+        "metric": "Memory Physical (Wisconsin), kB",
+        "id": "com.apple.dt.XCTMetric_Memory-com.erikrole.Wisconsin.physical",
+        "mean": 1043.1226666666666,
+        "median": 1228.8,
+        "min": -425.984,
+        "max": 2326.552,
+        "samples": [
+          2326.552,
+          1228.8,
+          -425.984
+        ]
+      },
+      {
+        "scenario": "EquipmentSearchAndSelectionPerformance",
+        "metric": "CPU Cycles (Wisconsin), kC",
+        "id": "com.apple.dt.XCTMetric_CPU-com.erikrole.Wisconsin.cycles",
+        "mean": 4034778.6743333335,
+        "median": 3835981.669,
+        "min": 3702275.02,
+        "max": 4566079.334,
+        "samples": [
+          4566079.334,
+          3702275.02,
+          3835981.669
+        ]
+      },
+      {
+        "scenario": "EquipmentSearchAndSelectionPerformance",
+        "metric": "Absolute Memory Physical (Wisconsin), kB",
+        "id": "com.apple.dt.XCTMetric_Memory-com.erikrole.Wisconsin.physical_absolute",
+        "mean": 58995.57866666667,
+        "median": 58984.656,
+        "min": 58525.904,
+        "max": 59476.176,
+        "samples": [
+          58525.904,
+          59476.176,
+          58984.656
+        ]
+      },
+      {
+        "scenario": "EquipmentSearchAndSelectionPerformance",
+        "metric": "CPU Instructions Retired (Wisconsin), kI",
+        "id": "com.apple.dt.XCTMetric_CPU-com.erikrole.Wisconsin.instructions_retired",
+        "mean": 9484416.301333332,
+        "median": 9148594.568,
+        "min": 8894360.95,
+        "max": 10410293.386,
+        "samples": [
+          10410293.386,
+          9148594.568,
+          8894360.95
+        ]
+      },
+      {
+        "scenario": "ItemsScrollingPerformance",
+        "metric": "CPU Time (Wisconsin), s",
+        "id": "com.apple.dt.XCTMetric_CPU-com.erikrole.Wisconsin.time",
+        "mean": 1.0073050000000001,
+        "median": 1.028107,
+        "min": 0.882971,
+        "max": 1.078242,
+        "samples": [
+          1.028107,
+          1.078242,
+          0.992822,
+          1.054383,
+          0.882971
+        ]
+      },
+      {
+        "scenario": "ItemsScrollingPerformance",
+        "metric": "Memory Peak Physical (Wisconsin), kB",
+        "id": "com.apple.dt.XCTMetric_Memory-com.erikrole.Wisconsin.physical_peak",
+        "mean": 39526.8976,
+        "median": 39520.344,
+        "min": 39520.344,
+        "max": 39536.728,
+        "samples": [
+          39520.344,
+          39520.344,
+          39520.344,
+          39536.728,
+          39536.728
+        ]
+      },
+      {
+        "scenario": "ItemsScrollingPerformance",
+        "metric": "Memory Physical (Wisconsin), kB",
+        "id": "com.apple.dt.XCTMetric_Memory-com.erikrole.Wisconsin.physical",
+        "mean": 9.830400000000001,
+        "median": 0.0,
+        "min": -16.384,
+        "max": 32.768,
+        "samples": [
+          -16.384,
+          32.768,
+          0.0,
+          32.768,
+          0.0
+        ]
+      },
+      {
+        "scenario": "ItemsScrollingPerformance",
+        "metric": "CPU Cycles (Wisconsin), kC",
+        "id": "com.apple.dt.XCTMetric_CPU-com.erikrole.Wisconsin.cycles",
+        "mean": 2919436.9284,
+        "median": 2872933.709,
+        "min": 2710413.828,
+        "max": 3203782.915,
+        "samples": [
+          2799044.518,
+          3203782.915,
+          3011009.672,
+          2872933.709,
+          2710413.828
+        ]
+      },
+      {
+        "scenario": "ItemsScrollingPerformance",
+        "metric": "Absolute Memory Physical (Wisconsin), kB",
+        "id": "com.apple.dt.XCTMetric_Memory-com.erikrole.Wisconsin.physical_absolute",
+        "mean": 39428.5936,
+        "median": 39422.04,
+        "min": 39389.272,
+        "max": 39454.808,
+        "samples": [
+          39389.272,
+          39422.04,
+          39422.04,
+          39454.808,
+          39454.808
+        ]
+      },
+      {
+        "scenario": "ItemsScrollingPerformance",
+        "metric": "CPU Instructions Retired (Wisconsin), kI",
+        "id": "com.apple.dt.XCTMetric_CPU-com.erikrole.Wisconsin.instructions_retired",
+        "mean": 4678083.1336,
+        "median": 4674999.079,
+        "min": 4638712.316,
+        "max": 4731159.267,
+        "samples": [
+          4645037.392,
+          4674999.079,
+          4700507.614,
+          4731159.267,
+          4638712.316
+        ]
+      }
+    ],
+    "after": [
+      {
+        "scenario": "ColdLaunchPerformance",
+        "metric": "Duration (ApplicationFirstFramePresentationResponsive), s",
+        "id": "com.apple.dt.XCTMetric_ApplicationLaunch-ApplicationFirstFramePresentationResponsive.duration",
+        "mean": 2.1826876,
+        "median": 2.166314,
+        "min": 2.126228,
+        "max": 2.283037,
+        "samples": [
+          2.126228,
+          2.162386,
+          2.283037,
+          2.175473,
+          2.166314
+        ]
+      },
+      {
+        "scenario": "EquipmentSearchAndSelectionPerformance",
+        "metric": "CPU Time (Wisconsin), s",
+        "id": "com.apple.dt.XCTMetric_CPU-com.erikrole.Wisconsin.time",
+        "mean": 0.9956396666666666,
+        "median": 0.94395,
+        "min": 0.897795,
+        "max": 1.145174,
+        "samples": [
+          1.145174,
+          0.897795,
+          0.94395
+        ]
+      },
+      {
+        "scenario": "EquipmentSearchAndSelectionPerformance",
+        "metric": "Memory Peak Physical (Wisconsin), kB",
+        "id": "com.apple.dt.XCTMetric_Memory-com.erikrole.Wisconsin.physical_peak",
+        "mean": 59361.464,
+        "median": 59525.304,
+        "min": 59017.4,
+        "max": 59541.688,
+        "samples": [
+          59017.4,
+          59525.304,
+          59541.688
+        ]
+      },
+      {
+        "scenario": "EquipmentSearchAndSelectionPerformance",
+        "metric": "Memory Physical (Wisconsin), kB",
+        "id": "com.apple.dt.XCTMetric_Memory-com.erikrole.Wisconsin.physical",
+        "mean": 1130.496,
+        "median": 851.968,
+        "min": -262.144,
+        "max": 2801.664,
+        "samples": [
+          2801.664,
+          851.968,
+          -262.144
+        ]
+      },
+      {
+        "scenario": "EquipmentSearchAndSelectionPerformance",
+        "metric": "CPU Cycles (Wisconsin), kC",
+        "id": "com.apple.dt.XCTMetric_CPU-com.erikrole.Wisconsin.cycles",
+        "mean": 4045806.6496666665,
+        "median": 3822212.636,
+        "min": 3541318.693,
+        "max": 4773888.62,
+        "samples": [
+          4773888.62,
+          3541318.693,
+          3822212.636
+        ]
+      },
+      {
+        "scenario": "EquipmentSearchAndSelectionPerformance",
+        "metric": "Absolute Memory Physical (Wisconsin), kB",
+        "id": "com.apple.dt.XCTMetric_Memory-com.erikrole.Wisconsin.physical_absolute",
+        "mean": 58913.634666666665,
+        "median": 58968.248,
+        "min": 58542.264,
+        "max": 59230.392,
+        "samples": [
+          58542.264,
+          59230.392,
+          58968.248
+        ]
+      },
+      {
+        "scenario": "EquipmentSearchAndSelectionPerformance",
+        "metric": "CPU Instructions Retired (Wisconsin), kI",
+        "id": "com.apple.dt.XCTMetric_CPU-com.erikrole.Wisconsin.instructions_retired",
+        "mean": 10025488.049999999,
+        "median": 9452492.79,
+        "min": 9312666.462,
+        "max": 11311304.898,
+        "samples": [
+          11311304.898,
+          9312666.462,
+          9452492.79
+        ]
+      },
+      {
+        "scenario": "ItemsScrollingPerformance",
+        "metric": "CPU Time (Wisconsin), s",
+        "id": "com.apple.dt.XCTMetric_CPU-com.erikrole.Wisconsin.time",
+        "mean": 1.0172962,
+        "median": 1.01981,
+        "min": 0.982222,
+        "max": 1.046768,
+        "samples": [
+          1.04144,
+          1.01981,
+          0.982222,
+          0.996241,
+          1.046768
+        ]
+      },
+      {
+        "scenario": "ItemsScrollingPerformance",
+        "metric": "Memory Peak Physical (Wisconsin), kB",
+        "id": "com.apple.dt.XCTMetric_Memory-com.erikrole.Wisconsin.physical_peak",
+        "mean": 39628.5024,
+        "median": 39618.672,
+        "min": 39602.288,
+        "max": 39667.824,
+        "samples": [
+          39667.824,
+          39635.056,
+          39618.672,
+          39602.288,
+          39618.672
+        ]
+      },
+      {
+        "scenario": "ItemsScrollingPerformance",
+        "metric": "Memory Physical (Wisconsin), kB",
+        "id": "com.apple.dt.XCTMetric_Memory-com.erikrole.Wisconsin.physical",
+        "mean": 0.0,
+        "median": 0.0,
+        "min": -16.384,
+        "max": 16.384,
+        "samples": [
+          -16.384,
+          0.0,
+          -16.384,
+          16.384,
+          16.384
+        ]
+      },
+      {
+        "scenario": "ItemsScrollingPerformance",
+        "metric": "CPU Cycles (Wisconsin), kC",
+        "id": "com.apple.dt.XCTMetric_CPU-com.erikrole.Wisconsin.cycles",
+        "mean": 2853559.708,
+        "median": 2846967.643,
+        "min": 2820810.098,
+        "max": 2903809.051,
+        "samples": [
+          2820810.098,
+          2903809.051,
+          2843822.1,
+          2846967.643,
+          2852389.648
+        ]
+      },
+      {
+        "scenario": "ItemsScrollingPerformance",
+        "metric": "Absolute Memory Physical (Wisconsin), kB",
+        "id": "com.apple.dt.XCTMetric_Memory-com.erikrole.Wisconsin.physical_absolute",
+        "mean": 39520.368,
+        "median": 39520.368,
+        "min": 39503.984,
+        "max": 39536.752,
+        "samples": [
+          39520.368,
+          39520.368,
+          39503.984,
+          39520.368,
+          39536.752
+        ]
+      },
+      {
+        "scenario": "ItemsScrollingPerformance",
+        "metric": "CPU Instructions Retired (Wisconsin), kI",
+        "id": "com.apple.dt.XCTMetric_CPU-com.erikrole.Wisconsin.instructions_retired",
+        "mean": 4650944.6318,
+        "median": 4652888.127,
+        "min": 4541923.493,
+        "max": 4734657.837,
+        "samples": [
+          4541923.493,
+          4652888.127,
+          4652145.811,
+          4673107.891,
+          4734657.837
+        ]
+      }
+    ]
+  }
+}

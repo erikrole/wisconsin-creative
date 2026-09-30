@@ -1,0 +1,2 @@
+import {chromium,expect} from '@playwright/test';import {resolve} from 'node:path';
+const browser=await chromium.launch();try{const page=await browser.newPage({viewport:{width:1280,height:1000}});await page.goto('file://'+resolve('tasks/archive/proofs/item-receiving-2026-09-29/review.html'));await expect(page.getByRole('heading',{name:'Receiving items with confidence',exact:true})).toBeVisible();await page.screenshot({path:resolve('tasks/archive/proofs/item-receiving-2026-09-29/review-page.png'),animations:'disabled'});}finally{await browser.close();}

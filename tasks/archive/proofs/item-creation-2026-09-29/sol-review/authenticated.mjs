@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict';
+import {chromium,expect} from '@playwright/test';
+import {writeFile} from 'node:fs/promises';
+const proof='tasks/archive/proofs/item-creation-2026-09-29/sol-review';
+const browser=await chromium.launch();const results=[];
+try{for(const width of [1280,768]){
+ const page=await browser.newPage({storageState:'test-results/playwright/auth/user.json',viewport:{width,height:1000},reducedMotion:'reduce'});const errors=[];const failed=[];const mutations=[];
+ page.on('pageerror',e=>errors.push(e.message));page.on('response',r=>{if(r.url().includes('/api/')&&r.status()>=400)failed.push({url:new URL(r.url()).pathname,status:r.status()});});
+ await page.route('**/api/**',async route=>{if(!['GET','HEAD'].includes(route.request().method())){mutations.push({method:route.request().method(),path:new URL(route.request().url()).pathname});return route.abort();}return route.continue();});
+ await page.route('https://example.com/**',r=>r.fulfill({status:200,contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80"><rect width="80" height="80" fill="gray"/></svg>'}));
+ await page.goto('http://127.0.0.1:3490/items');await page.getByRole('button',{name:'Add item',exact:true}).click();
+ await page.locator('#new-item-asset-tag').fill('SOL UNSAVED REVIEW');await expect(page.locator('#new-item-asset-tag')).toHaveValue('SOL UNSAVED REVIEW');
+ await page.locator('#kind-quantity').click();await page.getByRole('alertdialog').waitFor();await page.getByRole('button',{name:'Keep editing',exact:true}).click();await page.getByRole('alertdialog').waitFor({state:'detached'});await expect(page.locator('#new-item-asset-tag')).toHaveValue('SOL UNSAVED REVIEW');await expect(page.locator('#kind-standard')).toBeFocused();
+ await page.locator('#kind-quantity').click();await page.getByRole('button',{name:'Clear draft and switch',exact:true}).click();await page.getByRole('alertdialog').waitFor({state:'detached'});await expect(page.locator('#new-bulk-item-name')).toHaveValue('');
+ await page.locator('#new-bulk-item-name').fill('UNSAVED TAPE');await expect(page.locator('#new-bulk-item-name')).toHaveValue('UNSAVED TAPE');await page.getByRole('button',{name:/Product image/}).click();await page.getByRole('button',{name:'Choose image',exact:true}).click();await page.getByRole('tab',{name:'Paste URL',exact:true}).click();await page.locator('#image-url').fill('https://example.com/image.png');await page.getByRole('button',{name:'Use image',exact:true}).click();await page.getByRole('dialog').filter({has:page.getByText('Choose image',{exact:true})}).waitFor({state:'detached'});await expect(page.getByText('Image ready to save',{exact:true})).toBeVisible();
+ await page.locator('#bulk-existing').click();await expect(page.getByRole('button',{name:'Add stock',exact:true})).toBeVisible();await page.locator('#bulk-new').click();await expect(page.locator('#new-bulk-item-name')).toHaveValue('UNSAVED TAPE');await expect(page.getByText('Image ready to save',{exact:true})).toBeVisible();
+ await page.getByText('Image ready to save',{exact:true}).scrollIntoViewIfNeeded();await page.screenshot({animations:'disabled',path:`${proof}/authenticated-${width}.png`});
+ await page.getByRole('button',{name:'Cancel',exact:true}).click();await page.getByRole('button',{name:'Keep editing',exact:true}).click();await page.getByRole('alertdialog').waitFor({state:'detached'});await expect(page.locator('#new-bulk-item-name')).toHaveValue('UNSAVED TAPE');await page.getByRole('button',{name:'Cancel',exact:true}).click();await page.getByRole('button',{name:'Discard item',exact:true}).click();await page.locator('#new-item-form').waitFor({state:'detached'});
+ assert.deepEqual(errors,[]);assert.deepEqual(failed,[]);assert.deepEqual(mutations.filter(r=>r.path.startsWith("/api/assets")||r.path.startsWith("/api/bulk-skus")),[]);results.push({width,typingRetained:true,trackingCancelAndFocus:true,confirmedSwitch:true,stockActionPreservesNameAndImage:true,discardCancelAndConfirm:true,inventoryMutations:0,blockedBackgroundEvents:mutations,errors,failed});await page.close();
+ }await writeFile(`${proof}/authenticated-results.json`,JSON.stringify(results,null,2));console.log(JSON.stringify(results,null,2));
+}finally{await browser.close();}

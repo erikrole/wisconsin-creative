@@ -27,11 +27,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   buildBandHImageSearchQuery,
+  buildBandHWebsiteSearchUrl,
   buildBiasedImageSearchQuery,
   buildImageSearchSuggestions,
   mergeImageSearchResults,
 } from "@/lib/image-search-modal";
 import type { DraftItemImage } from "@/lib/item-image-draft";
+import { toBhStaticImageUrl } from "@/lib/bhphoto-image";
 
 type ImageSearchResult = {
   id: string;
@@ -48,6 +50,7 @@ type ImageSearchResponse = {
   data?: {
     configured?: boolean;
     quotaExceeded?: boolean;
+    failed?: boolean;
     results?: ImageSearchResult[];
   };
 };
@@ -142,6 +145,7 @@ async function fetchSearchData(query: string, controller: AbortController) {
     throw new Error(msg);
   }
   const json = await parseJsonSafely<ImageSearchResponse>(res);
+  if (json?.data?.failed) throw new Error("Image search failed");
   return json?.data ?? {};
 }
 
@@ -155,6 +159,7 @@ export default function ChooseImageModal(props: Props) {
   const [url, setUrl] = useState("");
   const [urlPreview, setUrlPreview] = useState<string | null>(null);
   const [urlError, setUrlError] = useState(false);
+  const [urlLoaded, setUrlLoaded] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [fileError, setFileError] = useState("");
@@ -171,6 +176,7 @@ export default function ChooseImageModal(props: Props) {
   const savingRef = useRef(false);
   const confirm = useConfirm();
   const searchSuggestions = buildImageSearchSuggestions(searchText);
+  const bandHWebsiteUrl = buildBandHWebsiteSearchUrl(searchText);
   const saving = savingAction !== null;
 
   const reset = useCallback(() => {
@@ -180,6 +186,7 @@ export default function ChooseImageModal(props: Props) {
     setUrl("");
     setUrlPreview(null);
     setUrlError(false);
+    setUrlLoaded(false);
     setFile(null);
     setFilePreview(null);
     setFileError("");
@@ -213,12 +220,15 @@ export default function ChooseImageModal(props: Props) {
 
     try {
       const data = await fetchSearchData(bandHQuery, controller);
-      if (!data) return;
+      if (!data || controller.signal.aborted) return;
 
       let results = data.results ?? [];
       if (!data.quotaExceeded) {
-        const fallbackData = await fetchSearchData(broadQuery, controller);
-        if (!fallbackData) return;
+        const fallbackData = await fetchSearchData(broadQuery, controller).catch((error) => {
+          if (isAbortError(error) || results.length === 0) throw error;
+          return { results: [], quotaExceeded: false };
+        });
+        if (!fallbackData || controller.signal.aborted) return;
         if (fallbackData.quotaExceeded) {
           setSearchResults(results);
           setSearchState(results.length ? "ready" : "quota");
@@ -244,7 +254,7 @@ export default function ChooseImageModal(props: Props) {
       if (searchAbortRef.current === controller) {
         searchAbortRef.current = null;
       }
-      setSearching(false);
+      if (!controller.signal.aborted) setSearching(false);
     }
   }, []);
 
@@ -261,6 +271,7 @@ export default function ChooseImageModal(props: Props) {
       setTab("url");
       setUrl(initialSelection.url);
       setUrlPreview(initialSelection.previewUrl);
+      setUrlLoaded(false);
     }
 
     if (!seed) {
@@ -308,11 +319,12 @@ export default function ChooseImageModal(props: Props) {
   function handleUrlChange(value: string) {
     setUrl(value);
     setUrlError(false);
-    if (value.startsWith("https://") && value.length > 10) {
-      setUrlPreview(value);
-    } else {
-      setUrlPreview(null);
-    }
+    const trimmed = value.trim();
+    const preview = trimmed.startsWith("https://") && trimmed.length > 10
+      ? toBhStaticImageUrl(trimmed) ?? trimmed
+      : null;
+    if (preview !== urlPreview) setUrlLoaded(false);
+    setUrlPreview(preview);
   }
 
   function validateFile(f: File): string | null {
@@ -363,7 +375,7 @@ export default function ChooseImageModal(props: Props) {
   }
 
   async function saveUrl() {
-    if (!urlPreview || savingRef.current) return;
+    if (!urlPreview || !urlLoaded || savingRef.current) return;
     if (props.mode === "draft") {
       props.onDraftChanged({
         kind: "remote",
@@ -503,6 +515,27 @@ export default function ChooseImageModal(props: Props) {
           <DialogDescription className="sr-only">Upload or paste a URL for the item image</DialogDescription>
         </DialogHeader>
         <DialogBody className="pb-6">
+          <div className="mb-4 rounded-md border bg-muted/20 p-3">
+            <label htmlFor="bh-product-search" className="text-sm font-medium">Find the product on B&H</label>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Input
+                id="bh-product-search"
+                value={searchText}
+                onChange={(event) => setSearchText(event.target.value)}
+                placeholder="Brand, model number, or product name"
+                className="min-w-0 flex-1 basis-48"
+              />
+              {bandHWebsiteUrl ? (
+                <Button variant="outline" asChild>
+                  <a href={bandHWebsiteUrl} target="_blank" rel="noopener noreferrer">
+                    <ExternalLinkIcon className="size-4" /> Search B&H
+                    <span className="sr-only"> (opens in a new tab)</span>
+                  </a>
+                </Button>
+              ) : <Button type="button" variant="outline" disabled><ExternalLinkIcon className="size-4" /> Search B&H</Button>}
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">Open the product, right-click its photo and choose “Copy image address.” Then paste it below. You can also save the photo and upload it.</p>
+          </div>
           <Tabs value={tab} onValueChange={(v) => setTab(v as ImageTab)}>
             <TabsList className="mb-1">
               {searchConfigured && <TabsTrigger value="search">Search</TabsTrigger>}
@@ -668,6 +701,7 @@ export default function ChooseImageModal(props: Props) {
 
             {/* Paste URL tab */}
             <TabsContent value="url">
+              <label htmlFor="image-url" className="mb-2 block text-sm font-medium">Image address</label>
               <Input
                 id="image-url"
                 name="imageUrl"
@@ -681,19 +715,21 @@ export default function ChooseImageModal(props: Props) {
                 <div className="image-preview-container mt-4">
                   <div className="relative h-[240px] w-full">
                     <Image
+                      key={urlPreview}
                       src={urlPreview}
                       alt="Preview"
                       fill
                       sizes="min(100vw, 640px)"
                       className="object-contain"
                       unoptimized
-                      onError={() => { setUrlError(true); setUrlPreview(null); }}
-                      onLoad={() => setUrlError(false)}
+                      referrerPolicy="no-referrer"
+                      onError={() => { setUrlError(true); setUrlLoaded(false); setUrlPreview(null); }}
+                      onLoad={() => { setUrlError(false); setUrlLoaded(true); }}
                     />
                   </div>
                 </div>
               )}
-              {urlError && <p className="text-sm mt-2" style={{ color: "var(--red)" }}>Could not load image from this URL</p>}
+              {urlError && <p role="alert" className="text-sm mt-2 text-destructive">Could not load this image. Copy the photo’s image address rather than the product page link, or upload the photo.</p>}
               <div className="flex justify-end gap-2 mt-4">
                 {currentImageUrl && (
                   <Button variant="destructive" onClick={removeImage} loading={savingAction === "remove"} disabled={saving && savingAction !== "remove"} className="mr-auto">
@@ -701,7 +737,7 @@ export default function ChooseImageModal(props: Props) {
                   </Button>
                 )}
                 <Button variant="outline" onClick={handleClose}>Cancel</Button>
-                <Button onClick={saveUrl} loading={savingAction === "url"} disabled={!urlPreview || urlError || (saving && savingAction !== "url")}>
+                <Button onClick={saveUrl} loading={savingAction === "url"} disabled={!urlPreview || !urlLoaded || urlError || (saving && savingAction !== "url")}>
                   {persisted ? "Save" : "Use image"}
                 </Button>
               </div>

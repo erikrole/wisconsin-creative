@@ -6,8 +6,7 @@ describe("Add item sheet booking-inspired UI", () => {
     const source = readFileSync("src/app/(app)/items/new-item-sheet.tsx", "utf8");
 
     expect(source).toContain("KIND_OPTIONS");
-    expect(source).toContain("Creates one item record that can be reserved, checked out, and found by QR.");
-    expect(source).toContain("Creates a family record plus numbered units for kiosk pickup and return.");
+    expect(source).toContain("One family QR plus numbered unit labels, for example FX6 Battery #1 and #2. Scan the exact unit at the kiosk.");
     expect(source).toContain("Creates or updates one stock record and tracks the count on hand.");
     expect(source).toContain("SummaryRow label=\"Status\"");
     expect(source).toContain("SummaryRow label=\"Tracking\"");
@@ -52,7 +51,7 @@ describe("Add item sheet booking-inspired UI", () => {
     expect(actionsSource).not.toContain('/duplicate`');
   });
 
-  it("keeps required intake together and collapses optional metadata by default", () => {
+  it("keeps product details prominent and optional procurement collapsible", () => {
     const sectionSource = readFileSync("src/app/(app)/items/new-item-sheet/FormSection.tsx", "utf8");
     const standardSource = readFileSync("src/app/(app)/items/new-item-sheet/SerializedItemForm.tsx", "utf8");
     const bulkSource = readFileSync("src/app/(app)/items/new-item-sheet/BulkItemForm.tsx", "utf8");
@@ -68,7 +67,7 @@ describe("Add item sheet booking-inspired UI", () => {
     expect(standardSource).toContain("open={productDetailsOpen}");
     expect(standardSource).toContain("open={procurementOpen}");
     expect(standardSource).toContain("open={settingsOpen}");
-    expect(bulkSource).toContain('title="Stock action"');
+    expect(bulkSource).toContain('title="Receiving action"');
     expect(bulkSource).toContain('title="Essentials"');
     expect(bulkSource).toContain('title="Product image"');
     expect(bulkSource).toContain("open={imageOpen}");
@@ -110,13 +109,11 @@ describe("Add item sheet booking-inspired UI", () => {
 
     // The add-to-existing path must only target quantity-tracked families so it never
     // routes unit-tracked stock through /adjust (which skips BulkSkuUnit creation).
-    expect(bulkSource).toContain("existingBulkSkus.filter((sku) => !sku.trackByNumber)");
+    expect(bulkSource).toContain("existingBulkSkus.filter((sku) => sku.trackByNumber === (trackingMode === \"units\"))");
     expect(bulkSource).toContain("skus={quantityOnlyBulkSkus}");
     expect(bulkSource).toContain("quantityOnlyBulkSkus.find((item) => item.id === selectedBulkSkuId)");
     expect(bulkSource).toContain("quantityOnlyBulkSkus.length === 0");
     expect(bulkSource).toContain("createsCatalogRecord: false");
-    expect(bulkSource).toContain('if (nextMode === "existing")');
-    expect(bulkSource).toContain("onClearImage();");
   });
 
   it("provides validation recovery, progress, stable action language, and discard protection", () => {
@@ -128,7 +125,7 @@ describe("Add item sheet booking-inspired UI", () => {
     expect(source).toContain("focusValidationIssue");
     expect(source).toContain("focusField(issue.fieldId)");
     expect(source).toContain("Required fields complete");
-    expect(source).toContain('bulkOperation === "adjust" ? "Add stock" : "Create item"');
+    expect(source).toContain('bulkOperation === "adjust" ? kind === "units" ? "Receive units" : "Add stock" : "Create item"');
     expect(source).toContain(": bulkHandoffHref;");
     expect(source).not.toContain('bulkHandoffHref?.split("/").pop()');
     expect(source).toContain("Discard this item?");
@@ -155,7 +152,7 @@ describe("Add item sheet booking-inspired UI", () => {
     expect(standardSource).toContain('title={batchMode ? "Shipment details" : "New unit details"}');
     expect(batchSource).toContain("MAX_SERIALIZED_BATCH_SIZE = 25");
     expect(batchSource).toContain("validateSerializedUnitDrafts");
-    expect(source).toContain('await fetch("/api/assets"');
+    expect(source).toContain('await postIntake("/api/assets"');
     expect(source).toContain("for (let index = 0; index < entries.length; index += 1)");
     expect(source).toContain("serializedRef.current?.retainUnits");
     expect(source).toContain("The items already created will not be submitted again.");
@@ -170,9 +167,9 @@ describe("Add item sheet booking-inspired UI", () => {
     expect(bulkSource).toContain('setExistingItemsState("error")');
     expect(bulkSource).toContain("!json || !Array.isArray(json.data)");
     expect(bulkSource).toContain("returned an unreadable response");
-    expect(bulkSource).toContain('title="Loading count-tracked items"');
+    expect(bulkSource).toContain('title="Loading matching items"');
     expect(bulkSource).toContain('id="retry-existing-bulk-items"');
-    expect(bulkSource).toContain("No active count-tracked items are available. Create one instead.");
+    expect(bulkSource).toContain("No active matching items are available. Create one instead.");
   });
 
   it("persists staged images only after a new catalog record returns an id", () => {

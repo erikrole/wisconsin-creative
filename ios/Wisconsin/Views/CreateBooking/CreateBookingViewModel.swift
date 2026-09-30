@@ -207,6 +207,12 @@ final class CreateBookingViewModel {
 
     // Equipment selection
     var selectedAssetIds: Set<String> = []
+    /// Set when editing an existing reservation so its own holds never read as conflicts.
+    var excludeBookingId: String?
+    /// Gear already picked up on the reservation being edited. It is on the
+    /// checkout now, so the server refuses to drop it from the plan.
+    private(set) var lockedAssetIds: Set<String> = []
+    private(set) var lockedBulkQuantities: [String: Int] = [:]
     var selectedBulkQuantities: [String: Int] = [:]
     var availableAssets: [Asset] = []
     var popularItemOrder: [String] = []
@@ -291,6 +297,7 @@ final class CreateBookingViewModel {
                 serializedAssetIds: ids,
                 startsAt: start,
                 endsAt: end,
+                excludeBookingId: excludeBookingId,
                 bookingKind: .reservation,
                 bulkItems: bulkItems
             )
@@ -1273,11 +1280,38 @@ final class CreateBookingViewModel {
         Task { await loadSnapshotsForSelectedAssets(ids: Array(selectedAssetIds)) }
     }
 
+    /// Seeds the picker with an existing reservation's gear and window for in-place item edits.
+    func prefillForEditingItems(from booking: Booking) {
+        excludeBookingId = booking.id
+        title = booking.title
+        selectedUserId = booking.requester.id
+        selectedLocationId = booking.location.id
+        startsAt = booking.startsAt
+        endsAt = booking.endsAt
+        lockedAssetIds = Set(booking.serializedItems.filter { $0.allocationStatus == "picked_up" }.map(\.assetId))
+        lockedBulkQuantities = Dictionary(
+            booking.bulkItems
+                .filter { $0.checkedOutQuantity > 0 }
+                .map { ($0.bulkSku.id, $0.checkedOutQuantity) },
+            uniquingKeysWith: +
+        )
+        selectedAssetIds = Set(booking.serializedItems.map(\.assetId))
+        selectedAssetOrder = booking.serializedItems.map(\.assetId)
+        selectedBulkQuantities = Dictionary(
+            booking.bulkItems
+                .filter { $0.plannedQuantity > 0 }
+                .map { ($0.bulkSku.id, $0.plannedQuantity) },
+            uniquingKeysWith: { _, later in later }
+        )
+        Task { await loadSnapshotsForSelectedAssets(ids: Array(selectedAssetIds)) }
+    }
+
     func loadOptions() async {
         guard options == nil else { return }
         isLoadingOptions = true
         do {
             options = try await APIClient.shared.formOptions()
+            restoreLockedBulkAvailability()
             if selectedLocationId.isEmpty,
                let preferredId = UserDefaults.standard.string(forKey: "preferredReservationPickupLocationId"),
                options?.locations.contains(where: { $0.id == preferredId }) == true {
@@ -1415,7 +1449,29 @@ final class CreateBookingViewModel {
         scheduleConflictCheck()
     }
 
+    /// Units this reservation already checked out left the shelf, so on-hand
+    /// availability undercounts what the plan may keep. Add them back.
+    private func restoreLockedBulkAvailability() {
+        guard let current = options, !lockedBulkQuantities.isEmpty else { return }
+        let skus = current.bulkSkus.map { sku -> FormBulkSku in
+            guard let held = lockedBulkQuantities[sku.id] else { return sku }
+            return FormBulkSku(
+                id: sku.id, name: sku.name, category: sku.category, unit: sku.unit,
+                locationId: sku.locationId, binQrCodeValue: sku.binQrCodeValue,
+                trackByNumber: sku.trackByNumber, categoryName: sku.categoryName,
+                imageUrl: sku.imageUrl, currentQuantity: sku.currentQuantity,
+                availableQuantity: sku.availableQuantity + held
+            )
+        }
+        options = FormOptions(locations: current.locations, users: current.users, bulkSkus: skus)
+    }
+
+    func isLocked(_ asset: Asset) -> Bool {
+        lockedAssetIds.contains(asset.id)
+    }
+
     func toggleAsset(_ asset: Asset) {
+        guard !isLocked(asset) else { return }
         submissionConflict = nil
         if selectedAssetIds.contains(asset.id) {
             selectedAssetIds.remove(asset.id)
@@ -1431,6 +1487,7 @@ final class CreateBookingViewModel {
     }
 
     func removeSelectedAsset(_ asset: Asset) {
+        guard !isLocked(asset) else { return }
         submissionConflict = nil
         selectedAssetIds.remove(asset.id)
         selectedAssetOrder.removeAll { $0 == asset.id }
@@ -1444,7 +1501,8 @@ final class CreateBookingViewModel {
 
     func setBulkQuantity(_ sku: FormBulkSku, quantity: Int) {
         submissionConflict = nil
-        let clamped = min(max(quantity, 0), max(sku.availableQuantity, 0))
+        let floor = lockedBulkQuantities[sku.id] ?? 0
+        let clamped = max(min(max(quantity, 0), max(sku.availableQuantity, 0)), floor)
         if clamped == 0 {
             selectedBulkQuantities.removeValue(forKey: sku.id)
         } else {
@@ -1462,7 +1520,11 @@ final class CreateBookingViewModel {
     }
 
     func removeSelectedBulk(_ sku: FormBulkSku) {
-        selectedBulkQuantities.removeValue(forKey: sku.id)
+        if let held = lockedBulkQuantities[sku.id] {
+            selectedBulkQuantities[sku.id] = held
+        } else {
+            selectedBulkQuantities.removeValue(forKey: sku.id)
+        }
         scheduleConflictCheck()
     }
 

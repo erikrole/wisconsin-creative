@@ -1,0 +1,8 @@
+{
+  "sourceRevision": "1c62814365f89eb377689495ba8f1eb4f85a9d9e",
+  "patchHashes": {
+    "before": "8418268e651ba9fdbc92d8b4ecffe6ad74d0f7a40d86e164d74d6d5175aa20ac",
+    "after": "57d20d11feda32ffa174f2cf69b49faf3658bedce0c41443e098b086cdc1be45"
+  },
+  "note": "Sequential local captures with retained pre-change and final source snapshots under .tmp/signatures-audit. Snapshot patches also preserve unrelated checkout work; no deployment identity is claimed."
+}

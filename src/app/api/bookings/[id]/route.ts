@@ -17,6 +17,7 @@ import {
 } from "@/lib/booking-concurrency";
 import { assertSupportedReservationPickupLocation } from "@/lib/services/reservation-pickup-location";
 import { sortedStrings } from "@/lib/utils";
+import { readLastNudge } from "@/lib/services/nudge-history";
 
 type BookingPatchBody = z.infer<typeof updateBookingSchema>;
 
@@ -79,11 +80,19 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
   }
 
   const allowedActions = user.preview?.readOnly ? [] : getAllowedBookingActions(user, detail);
+  // Only whoever can nudge needs to know who already did. Best-effort: a
+  // failed history read must not block the booking itself.
+  const lastNudge = allowedActions.includes("nudge")
+    ? await readLastNudge(detail.id).catch((error) => {
+        console.error("[bookings] lastNudge failed", error);
+        return null;
+      })
+    : null;
 
   return ok({
     data: user.role === "COLLABORATOR"
       ? collaboratorBookingResponse(detail, allowedActions)
-      : { ...detail, allowedActions },
+      : { ...detail, allowedActions, lastNudge },
   });
 });
 
