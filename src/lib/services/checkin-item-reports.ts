@@ -149,6 +149,24 @@ export async function submitCheckinItemReport(args: {
     if (args.kiosk) {
       const kiosk = args.kiosk;
       const outcome = await db.$transaction(async (tx) => {
+        // Re-read the precondition inside the custody transaction: another
+        // kiosk may have scanned the item back since the checks above.
+        if (type === "LOST") {
+          const current = await tx.bookingSerializedItem.findUnique({
+            where: { bookingId_assetId: { bookingId: id, assetId } },
+            select: { allocationStatus: true },
+          });
+          if (!current) throw new HttpError(404, "Item not found in this checkout");
+          if (current.allocationStatus === "returned") {
+            throw new HttpError(409, "This item was already scanned back. Report it as damaged instead.");
+          }
+        } else {
+          const scanned = await tx.scanEvent.findFirst({
+            where: { bookingId: id, assetId, phase: ScanPhase.CHECKIN, success: true },
+            select: { id: true },
+          });
+          if (!scanned) throw new HttpError(400, "Item must be scanned before reporting damage");
+        }
         const saved = await tx.checkinItemReport.upsert(upsertArgs);
         let held = false;
         if (type === "DAMAGED") {

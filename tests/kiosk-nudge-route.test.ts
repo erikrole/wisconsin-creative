@@ -5,8 +5,8 @@ const mocks = vi.hoisted(() => ({
   userFindFirst: vi.fn(),
   notificationCreateManyAndReturn: vi.fn(),
   notificationFindMany: vi.fn(),
-  createAuditEntry: vi.fn(),
-  createSystemAuditEntry: vi.fn(),
+  createAuditEntryTx: vi.fn(),
+  transaction: vi.fn(),
   sendPushToUser: vi.fn(),
   deferPush: vi.fn(),
   enforceRateLimit: vi.fn(),
@@ -17,6 +17,7 @@ vi.mock("@/lib/db", () => ({
     booking: { findUnique: mocks.bookingFindUnique },
     user: { findFirst: mocks.userFindFirst },
     notification: { createManyAndReturn: mocks.notificationCreateManyAndReturn, findMany: mocks.notificationFindMany },
+    $transaction: mocks.transaction,
   },
 }));
 vi.mock("@/lib/api", () => ({
@@ -24,7 +25,7 @@ vi.mock("@/lib/api", () => ({
     async (req: Request, ctx: { params: Promise<{ id: string }> }) =>
       handler(req, { params: await ctx.params, kiosk: { kioskId: "kiosk-1", locationId: "loc-1", locationName: "Camp Randall" } }),
 }));
-vi.mock("@/lib/audit", () => ({ createAuditEntry: mocks.createAuditEntry, createSystemAuditEntry: mocks.createSystemAuditEntry }));
+vi.mock("@/lib/audit", () => ({ createAuditEntryTx: mocks.createAuditEntryTx }));
 vi.mock("@/lib/services/notifications", () => ({ sendPushToUser: mocks.sendPushToUser, deferPush: mocks.deferPush }));
 vi.mock("@/lib/rate-limit", () => ({ enforceRateLimit: mocks.enforceRateLimit }));
 
@@ -52,6 +53,10 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.enforceRateLimit.mockResolvedValue(undefined);
   mocks.notificationCreateManyAndReturn.mockResolvedValue([{ id: "n-1" }]);
+  // The tx client shares the notification mock; a throw rolls nothing back here,
+  // so the rollback case asserts the push never fires instead.
+  mocks.transaction.mockImplementation(async (fn: (tx: unknown) => unknown) =>
+    fn({ notification: { createManyAndReturn: mocks.notificationCreateManyAndReturn } }));
 });
 
 describe("POST /api/kiosk/checkout/[id]/nudge", () => {
@@ -70,7 +75,7 @@ describe("POST /api/kiosk/checkout/[id]/nudge", () => {
     });
     expect(mocks.notificationCreateManyAndReturn.mock.calls[0]![0].skipDuplicates).toBe(true);
     expect(mocks.deferPush).toHaveBeenCalledTimes(1);
-    expect(mocks.createSystemAuditEntry).toHaveBeenCalledWith(expect.objectContaining({ action: "kiosk_overdue_nudge_sent", entityId: "co-1" }));
+    expect(mocks.createAuditEntryTx).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ actorId: null, action: "kiosk_overdue_nudge_sent", entityId: "co-1" }));
     expect(mocks.enforceRateLimit).toHaveBeenCalledWith("kiosk:nudge:kiosk-1", expect.any(Object));
   });
 
@@ -78,7 +83,15 @@ describe("POST /api/kiosk/checkout/[id]/nudge", () => {
     mocks.userFindFirst.mockResolvedValue({ id: "actor-1", role: "STUDENT" });
     mocks.bookingFindUnique.mockResolvedValue(checkout());
     expect((await nudge({ actorId: "actor-1" })).status).toBe(200);
-    expect(mocks.createAuditEntry).toHaveBeenCalledWith(expect.objectContaining({ actorId: "actor-1", action: "kiosk_overdue_nudge_sent" }));
+    expect(mocks.createAuditEntryTx).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ actorId: "actor-1", action: "kiosk_overdue_nudge_sent" }));
+  });
+
+  it("commits the audit in the notification's transaction and pushes only after commit", async () => {
+    mocks.bookingFindUnique.mockResolvedValue(checkout());
+    mocks.createAuditEntryTx.mockRejectedValueOnce(new Error("audit write failed"));
+    await expect(nudge()).rejects.toThrow("audit write failed");
+    expect(mocks.transaction).toHaveBeenCalledTimes(1);
+    expect(mocks.deferPush).not.toHaveBeenCalled();
   });
 
   it("answers alreadyNudged for a second nudge the same local day, without a push", async () => {
@@ -86,7 +99,7 @@ describe("POST /api/kiosk/checkout/[id]/nudge", () => {
     mocks.notificationCreateManyAndReturn.mockResolvedValue([]);
     expect(await (await nudge({})).json()).toEqual({ success: true, alreadyNudged: true });
     expect(mocks.deferPush).not.toHaveBeenCalled();
-    expect(mocks.createSystemAuditEntry).not.toHaveBeenCalled();
+    expect(mocks.createAuditEntryTx).not.toHaveBeenCalled();
   });
 
   it("refuses shared, not-overdue, and closed checkouts", async () => {

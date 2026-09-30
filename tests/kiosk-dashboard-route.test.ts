@@ -237,6 +237,38 @@ describe("kiosk dashboard route", () => {
     expect(body.checkouts[0].title).toBe("Women's Soccer vs UCLA");
   });
 
+  it("labels crew with their assignment-level call time before the shift call", async () => {
+    mockDb.$queryRaw.mockResolvedValue([{ items_out: 0n, checkouts: 0n, overdue: 0n }]);
+    mockDb.calendarEvent.findMany.mockResolvedValue([{
+      id: "event-1",
+      summary: "Volleyball",
+      sportCode: "VB",
+      startsAt: new Date("2026-06-17T18:00:00.000Z"),
+      endsAt: new Date("2026-06-17T21:00:00.000Z"),
+      allDay: false,
+      shiftGroup: {
+        _count: { shifts: 1 },
+        shifts: [{
+          area: "Video",
+          startsAt: new Date("2026-06-17T17:00:00.000Z"),
+          endsAt: new Date("2026-06-17T21:00:00.000Z"),
+          callStartsAt: new Date("2026-06-17T16:00:00.000Z"),
+          callEndsAt: null,
+          assignments: [
+            { id: "as-1", callStartsAt: new Date("2026-06-17T15:00:00.000Z"), user: { id: "user-1", name: "Erik Role", avatarUrl: null } },
+            { id: "as-2", callStartsAt: null, user: { id: "user-2", name: "Bucky Badger", avatarUrl: null } },
+          ],
+        }],
+      },
+    }]);
+    mockOpenCheckouts([]);
+
+    const body = await (await GET(request(), { params: Promise.resolve({}) })).json();
+    const [override, inherited] = body.events[0].assignedUsers;
+    expect(override.callStartsAt).toBe("2026-06-17T15:00:00.000Z");
+    expect(inherited.callStartsAt).toBe("2026-06-17T16:00:00.000Z");
+  });
+
   it("shows active bulk checkout quantity even when exact unit allocations are missing", async () => {
     mockDb.$queryRaw.mockResolvedValue([{ items_out: 8n, checkouts: 1n, overdue: 0n }]);
     mockDb.calendarEvent.findMany.mockResolvedValue([]);

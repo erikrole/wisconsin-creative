@@ -23,6 +23,8 @@ const mocks = vi.hoisted(() => ({
 }));
 
 const tx = {
+  bookingSerializedItem: { findUnique: mocks.itemFindUnique },
+  scanEvent: { findFirst: mocks.scanEventFindFirst },
   checkinItemReport: { upsert: mocks.reportUpsert },
   asset: { findUnique: mocks.assetFindUnique, update: mocks.assetUpdate },
 };

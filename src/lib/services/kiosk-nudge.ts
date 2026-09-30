@@ -2,7 +2,7 @@ import { BookingCustodyScope, BookingKind, BookingStatus } from "@prisma/client"
 import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
 import { appTzDateKey } from "@/lib/app-time";
-import { createAuditEntry, createSystemAuditEntry } from "@/lib/audit";
+import { createAuditEntryTx } from "@/lib/audit";
 import { displayBookingTitle } from "@/lib/booking-display-title";
 import { deferPush, sendPushToUser } from "@/lib/services/notifications";
 import { requireKioskActor } from "@/lib/services/kiosk-actor";
@@ -65,20 +65,42 @@ export async function sendKioskNudge(args: {
   const title = displayBookingTitle(booking.title);
   const copy = kioskNudgeCopy(title, booking.endsAt, now);
   const payload = { bookingId: booking.id, href: `/checkouts/${booking.id}` };
-  const [row] = await db.notification.createManyAndReturn({
-    data: [{
-      userId: booking.requesterUserId,
-      bookingId: booking.id,
-      type: "overdue_nudge",
-      title: copy.title,
-      body: copy.body,
-      payload,
-      channel: "IN_APP",
-      sentAt: now,
-      dedupeKey: kioskNudgeDedupeKey(booking.id, now),
-    }],
-    skipDuplicates: true,
-    select: { id: true },
+  // The notification and its audit commit together, so a failed audit rolls
+  // back the dedupe row and a retry can record both. The push waits for commit.
+  const row = await db.$transaction(async (tx) => {
+    const [created] = await tx.notification.createManyAndReturn({
+      data: [{
+        userId: booking.requesterUserId,
+        bookingId: booking.id,
+        type: "overdue_nudge",
+        title: copy.title,
+        body: copy.body,
+        payload,
+        channel: "IN_APP",
+        sentAt: now,
+        dedupeKey: kioskNudgeDedupeKey(booking.id, now),
+      }],
+      skipDuplicates: true,
+      select: { id: true },
+    });
+    if (!created) return null;
+    await createAuditEntryTx(tx, {
+      actorId: actor?.id ?? null,
+      actorRole: actor?.role ?? null,
+      entityType: "booking",
+      entityId: booking.id,
+      action: "kiosk_overdue_nudge_sent",
+      before: { nudgedToday: false },
+      after: {
+        source: "KIOSK",
+        kioskDeviceId: args.kioskId,
+        requesterUserId: booking.requesterUserId,
+        endsAt: booking.endsAt.toISOString(),
+        notificationId: created.id,
+        nudgedToday: true,
+      },
+    });
+    return created;
   });
   if (!row) return { success: true, alreadyNudged: true };
 
@@ -91,32 +113,5 @@ export async function sendKioskNudge(args: {
     // Shares the checkout's slot, replacing its latest reminder.
     collapseId: `checkout-${booking.id}`,
   }));
-
-  const after = {
-    source: "KIOSK",
-    kioskDeviceId: args.kioskId,
-    requesterUserId: booking.requesterUserId,
-    endsAt: booking.endsAt.toISOString(),
-    notificationId: row.id,
-  };
-  if (actor) {
-    await createAuditEntry({
-      actorId: actor.id,
-      actorRole: actor.role,
-      entityType: "booking",
-      entityId: booking.id,
-      action: "kiosk_overdue_nudge_sent",
-      before: { nudgedToday: false },
-      after: { ...after, nudgedToday: true },
-    });
-  } else {
-    await createSystemAuditEntry({
-      entityType: "booking",
-      entityId: booking.id,
-      action: "kiosk_overdue_nudge_sent",
-      before: { nudgedToday: false },
-      after: { ...after, nudgedToday: true },
-    });
-  }
   return { success: true };
 }

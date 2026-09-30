@@ -598,7 +598,7 @@ export const GET = withKiosk(async () => {
           initials: getInitials(assignment.user.name),
           avatarUrl: assignment.user.avatarUrl,
           area: shift.area,
-          callStartsAt: allDay ? null : (shift.callStartsAt ?? shift.startsAt),
+          callStartsAt: allDay ? null : (assignment.callStartsAt ?? shift.callStartsAt ?? shift.startsAt),
           callEndsAt: allDay ? null : (shift.callEndsAt ?? shift.endsAt),
         });
       }
