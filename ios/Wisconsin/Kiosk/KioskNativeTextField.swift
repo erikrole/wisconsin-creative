@@ -22,7 +22,7 @@ struct KioskNativeTextField: UIViewRepresentable {
         field.borderStyle = .none
         field.backgroundColor = .clear
         field.textColor = UIColor.label
-        field.tintColor = UIColor(Color.kioskRed)
+        field.tintColor = UIColor(KioskText.primary)
         field.font = UIFont.systemFont(ofSize: fontSize, weight: fontWeight)
         field.returnKeyType = .done
         field.autocapitalizationType = .words

@@ -24,6 +24,12 @@ struct KioskReturnView: View {
     @State private var earnedBadges: [EarnedBadgeReward] = []
     @State private var scanQueue = KioskScanQueue()
     @State private var returningQuantityId: String?
+    /// G3–G5: the damaged-or-missing page, over the return.
+    @State private var reportStep: KioskReturnReportStep?
+    /// Reported damaged: returned, held for staff.
+    @State private var damagedIds: Set<String> = []
+    /// Marked missing: accounted for, so the return can finish without them.
+    @State private var missingIds: Set<String> = []
 
     enum ScanFeedback: Equatable {
         case success(String)
@@ -60,7 +66,13 @@ struct KioskReturnView: View {
     private var totalItems: Int { detail?.items.count ?? 0 }
     private var returnedCount: Int { returnedIds.count }
     private var hasReturned: Bool { returnedCount > 0 }
-    private var allReturned: Bool { returnedCount == totalItems && totalItems > 0 }
+    /// Returned plus marked missing (decision 4: missing is accounted for).
+    private var accountedCount: Int { returnedCount + missingIds.subtracting(returnedIds).count }
+    private var allReturned: Bool { accountedCount == totalItems && totalItems > 0 }
+    /// Items the report page can name: serialized gear, not counted stock.
+    private var reportableItems: [KioskCheckoutDetail.ReturnItem] {
+        (detail?.items ?? []).filter { !$0.isBulkDisplay && $0.returnsByQuantity != true }
+    }
     private var batteryTotal: Int { detail?.scanSummary?.numberedBulkTotal ?? detail?.numberedBulkItems.count ?? 0 }
     private var returnedBatteryCount: Int {
         detail?.numberedBulkItems.filter { returnedIds.contains($0.id) }.count ?? 0
@@ -70,11 +82,70 @@ struct KioskReturnView: View {
         detail?.numberedBulkItems.filter { returnedIds.contains($0.id) } ?? []
     }
 
+    @State private var showFinishConfirm = false
+    @State private var isUndoing = false
+
+    private var returner: KioskUser? { store.pendingIntent?.identifiedUser }
+    private var isShared: Bool { detail?.custodyScope == "SHARED" }
+    private var section: KioskSection { isShared ? .shared : .comingBack }
+
+    private var headerSubtitle: String {
+        let name = returner.map { homeShortNames(for: [$0])[$0.id] ?? $0.name }
+        if let owner = returningForOwner {
+            let ownerName = homeShortNames(for: [owner])[owner.id] ?? owner.name
+            return "\(name ?? "Someone") returning for \(ownerName)"
+        }
+        return [name, detail?.title].compactMap { $0 }.joined(separator: " · ")
+    }
+
     var body: some View {
-        KioskAdaptiveSplit { _ in
-            scanZone
-        } secondary: { isCompact in
-            checklistPanel(isCompact: isCompact)
+        ZStack {
+            if reportStep != nil {
+                KioskReturnReportView(
+                    bookingId: bookingId,
+                    actorId: userId,
+                    checkoutTitle: detail?.title,
+                    ownerSubtitle: headerSubtitle,
+                    avatarURL: returner?.avatarUrl,
+                    avatarInitials: returner?.initials,
+                    items: reportableItems,
+                    returnedIds: returnedIds,
+                    step: $reportStep,
+                    onReported: handleReport
+                )
+            } else {
+                returnScreen
+            }
+        }
+    }
+
+    private var returnScreen: some View {
+        KioskTaskScaffold(header: KioskTaskHeader(
+            title: "Return",
+            subtitle: headerSubtitle,
+            avatarURL: returner?.avatarUrl,
+            avatarInitials: returner?.initials,
+            onBack: { backToPerson() }
+        )) {
+            scanMain
+        } panel: {
+            comingBackPanel
+        }
+        .overlay {
+            if showFinishConfirm {
+                let stillOut = (detail?.items ?? []).filter { !returnedIds.contains($0.id) && !missingIds.contains($0.id) }
+                KioskConfirmationCard(
+                    title: stillOut.count == 1 ? "\(stillOut[0].itemListPrimaryTitle) is still out" : "\(stillOut.count) items are still out",
+                    message: "\(stillOut.count == 1 ? "It stays" : "They stay") on \(returningForOwner.map { "\($0.name.split(separator: " ").first ?? "")'s" } ?? "the") checkout, due \(KioskDueCopy.midSentence(detail?.endsAt ?? Date())). Finish returning the other \(returnedCount)?",
+                    cancelTitle: "Keep scanning",
+                    confirmTitle: "Finish return",
+                    onCancel: { showFinishConfirm = false },
+                    onConfirm: {
+                        showFinishConfirm = false
+                        completeReturn()
+                    }
+                )
+            }
         }
         .overlay(alignment: .bottom) {
             HIDScannerField(
@@ -91,8 +162,22 @@ struct KioskReturnView: View {
             #if DEBUG
             // Capture hook: the confirmation only exists in the seconds after a
             // real scan, which no fixture payload can produce.
+            switch KioskFixtureScenario.active {
+            case .returnReport:
+                if let first = reportableItems.first { returnedIds.insert(first.id) }
+                reportStep = .choose(selectedId: reportableItems.dropFirst().first?.id)
+            case .returnDamaged:
+                if let first = reportableItems.first {
+                    returnedIds.insert(first.id)
+                    reportStep = .damaged(itemId: first.id)
+                }
+            case .returnMissing:
+                if let second = reportableItems.dropFirst().first { reportStep = .missing(itemId: second.id) }
+            default: break
+            }
             if KioskFixtureScenario.active == .returnAccepted, let first = detail?.items.first {
                 returnedIds.insert(first.id)
+                lastReturnedId = first.id
                 lastAccepted = KioskAcceptedScan(
                     title: first.itemListPrimaryTitle,
                     subtitle: first.itemListSecondaryTitle,
@@ -112,199 +197,175 @@ struct KioskReturnView: View {
         }
     }
 
-    // MARK: - Scan Zone
+    // MARK: - Scan area (G1, G2)
 
-    private var scanZone: some View {
-        KioskScanZoneColumn {
-            KioskFlowHeader(
-                title: "Return",
-                subtitle: returnSubtitle,
-                onBack: { backToPerson() },
-                onCamera: { showCamera = true }
-            )
-
-            Spacer()
-
-            if isLoading {
-                ProgressView().tint(KioskText.primary)
-            } else {
-                VStack(spacing: 20) {
-                    if let lastAccepted {
-                        KioskScanAcceptedView(accepted: lastAccepted, reduceMotion: reduceMotion)
-                            .frame(minHeight: 300)
-                    } else {
-                        KioskProgressRing(
-                            count: returnedCount,
-                            total: totalItems,
-                            isComplete: allReturned,
-                            reduceMotion: reduceMotion,
-                            accessibilityText: "\(returnedCount) of \(totalItems) items returned"
-                        )
-
-                        if let detail, detail.isOverdue {
-                            Label("Overdue", systemImage: "exclamationmark.triangle.fill")
-                                .font(KioskType.chip)
-                                .foregroundStyle(KioskStatus.problem)
-                                .accessibilityLabel("This checkout is overdue")
-                        }
-
-                        VStack(spacing: 6) {
-                            Text(allReturned ? "All items returned" : "Scan items to return them")
-                                .font(KioskType.actionTitle)
-                                .foregroundStyle(allReturned ? KioskStatus.ok : KioskText.primary)
-                                .multilineTextAlignment(.center)
-                            if !allReturned {
-                                Text("Use the hand scanner, or tap Camera to scan with the iPad.")
-                                    .font(KioskType.rowDetail)
-                                    .foregroundStyle(KioskText.tertiary)
-                                    .multilineTextAlignment(.center)
-                            }
-                        }
-                    }
-
-                    KioskScannerReadinessBadge(
-                        isReady: scannerHasFocus,
-                        lastScanAt: lastScanAt,
-                        isHardwareConnected: store.scanner.hardwareConnected
-                    )
-
-                    if !scanQueue.isEmpty {
-                        Label("Saving \(scanQueue.count) scan\(scanQueue.count == 1 ? "" : "s")…", systemImage: "arrow.triangle.2.circlepath")
-                            .font(KioskType.chip)
-                            .foregroundStyle(KioskStatus.active)
-                    }
-
-                    if hasBatteryScanStep {
-                        KioskBatteryScanStatus(
-                            title: "Battery units",
-                            count: returnedBatteryCount,
-                            total: batteryTotal,
-                            pendingCopy: "Scan each returned battery unit QR so custody closes on the exact units.",
-                            completeCopy: batteryTotal == 1 ? "Unit returned" : "All \(batteryTotal) units returned",
-                            progressCopy: "\(returnedBatteryCount) of \(batteryTotal) \(batteryTotal == 1 ? "unit" : "units") returned",
-                            unitsHeader: "Returned units",
-                            scannedUnits: returnedBatteryUnits.map { KioskScannedUnit(id: $0.id, tag: $0.tagName) }
-                        )
-                    }
-
-                    if let result = lastResult {
-                        KioskFeedbackBanner(tone: result.tone, message: result.message)
-                            .transition(.move(edge: .bottom).combined(with: .opacity))
-                            .animation(reduceMotion ? nil : .spring(response: 0.3), value: lastResult)
-                    }
-                }
+    @ViewBuilder
+    private var scanMain: some View {
+        if isLoading && detail == nil {
+            ProgressView().tint(KioskText.primary).frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if let loadError, detail == nil {
+            KioskErrorState(title: loadError) { Task { await loadDetail() } }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            stage
+                .animation(KioskMotion.confirm(reduceMotion), value: lastAccepted)
+            if let owner = returningForOwner {
+                Text("It stays \(owner.name.split(separator: " ").first ?? "")'s checkout. The record shows who returned it.")
+                    .font(KioskType.meta)
+                    .foregroundStyle(KioskText.tertiary)
+                    .frame(maxWidth: .infinity)
             }
-
-            Spacer()
-
-            completeButton
+            if !reportableItems.isEmpty {
+                Button {
+                    store.resetInactivity()
+                    reportStep = .choose(selectedId: nil)
+                } label: {
+                    Text("Something damaged or missing?")
+                        .font(KioskType.buttonLabel)
+                        .foregroundStyle(KioskText.secondary)
+                        .underline()
+                        .frame(minHeight: 44)
+                }
+                .buttonStyle(.plain)
+                .disabled(isCompleting)
+            }
+            KioskPrimaryPill(
+                title: "Finish return",
+                detail: hasReturned ? progressDetail : nil,
+                isEnabled: hasReturned && scanQueue.isEmpty,
+                isBusy: isCompleting
+            ) {
+                if allReturned { completeReturn() } else { showFinishConfirm = true; KioskFeedbackSound.play(.attention) }
+            }
+            .accessibilityLabel(completeAccessibilityLabel)
         }
     }
 
-    private var completeButton: some View {
-        KioskCompletionButton(
-            title: returnLabel,
-            icon: hasReturned ? "checkmark.circle.fill" : "barcode.viewfinder",
-            isEnabled: hasReturned && scanQueue.isEmpty,
-            isBusy: isCompleting,
-            accessibilityLabel: completeAccessibilityLabel,
-            action: completeReturn
-        )
+    private var progressDetail: String {
+        let out = max(0, totalItems - accountedCount)
+        let missing = missingIds.subtracting(returnedIds).count
+        return [out == 0 && missing == 0 ? "all \(returnedCount) back" : "\(returnedCount) back",
+                missing > 0 ? "\(missing) missing" : nil,
+                out > 0 ? "\(out) still out" : nil].compactMap { $0 }.joined(separator: " · ")
     }
 
-    /// The CTA names what the next tap does, and while nothing is scanned it is
-    /// disabled — so it must not read "Return 0 of 6 Items", which describes an
-    /// action that returns nothing and looks like the button is broken rather
-    /// than waiting.
-    ///
-    /// It also no longer singles out battery units while empty. Any item on the
-    /// booking can be scanned first; "Scan Battery Units to Start" invented an
-    /// order that does not exist, and on a booking of three cameras and one
-    /// battery it named the smallest part of the work.
-    private var returnLabel: String {
-        if allReturned { return "Complete Return" }
-        if !hasReturned { return "Scan Items to Return" }
-        return "Finish for Now · \(max(0, totalItems - returnedCount)) Still Out"
+    @ViewBuilder
+    private var stage: some View {
+        if let lastAccepted {
+            KioskConfirmationStage(
+                section: section,
+                title: "\(lastAccepted.title) returned",
+                detail: [lastAccepted.subtitle, "\(returnedCount) of \(totalItems)"].compactMap { $0 }.joined(separator: " · "),
+                onUndo: isUndoing || lastReturnedId == nil ? nil : { undoLastReturn() }
+            )
+        } else if let lastResult, lastResult.tone != .success {
+            KioskNoticeStage(
+                section: lastResult.tone == .error ? .problem : .comingBack,
+                overline: lastResult.tone == .error ? "Not returned" : "Already back",
+                title: lastResult.message,
+                message: "Scan the next item.",
+                showsAlertGlyph: lastResult.tone == .error
+            )
+        } else {
+            KioskScanPrompt(
+                title: allReturned ? "Everything is back" : "Scan what's coming back",
+                detail: allReturned ? "Finish the return below." : "Each item checks off in the list as you scan.",
+                status: scannerStatusLine,
+                section: section,
+                onCamera: { showCamera = true }
+            )
+        }
+    }
+
+    private var scannerStatusLine: String? {
+        if !store.scanner.hardwareConnected { return KioskScannerCopy.asleep }
+        if !scannerHasFocus { return "Getting the scanner ready…" }
+        return nil
     }
 
     private var completeAccessibilityLabel: String {
         if isCompleting { return "Processing return" }
-        if !hasReturned { return "Scan at least one item before returning" }
-        if allReturned { return "Complete Return, all \(totalItems) items" }
-        return "Return \(returnedCount) of \(totalItems) items"
+        if !hasReturned { return "Scan at least one item before finishing the return" }
+        if allReturned { return "Finish return, all \(totalItems) items" }
+        return "Finish return, \(returnedCount) of \(totalItems) items"
     }
 
-    // MARK: - Checklist Panel
-
-    private func checklistPanel(isCompact: Bool) -> some View {
-        KioskSideRail(isCompact: isCompact) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(detail?.title ?? "Return")
-                    .font(KioskType.sectionTitle)
-                    .foregroundStyle(KioskText.primary)
-                if let ref = detail?.refNumber {
-                    Text(ref)
-                        .font(.caption.monospaced())
-                        .foregroundStyle(KioskText.secondary)
+    private func undoLastReturn() {
+        guard let id = lastReturnedId, let item = detail?.items.first(where: { $0.id == id }) else { return }
+        KioskFeedbackSound.play(.undo)
+        store.resetInactivity()
+        isUndoing = true
+        let flow = store.flowGeneration
+        Task {
+            defer { if store.ownsFlow(flow) { isUndoing = false } }
+            do {
+                let result = try await KioskAPI.shared.kioskUndoCheckinScan(bookingId: bookingId, actorId: userId, item: item)
+                guard store.ownsFlow(flow) else { return }
+                if result.success {
+                    returnedIds.remove(id)
+                    lastReturnedId = nil
+                    withAnimation { lastAccepted = nil }
+                } else {
+                    showFeedback(.error(result.error ?? result.message ?? "That scan can't be undone now."))
                 }
-                if totalItems > 0 {
-                    ChecklistProgressSummary(
-                        done: returnedCount,
-                        total: totalItems,
-                        verb: "returned",
-                        complete: allReturned
-                    )
-                }
+            } catch {
+                guard store.ownsFlow(flow) else { return }
+                showFeedback(.error((error as? APIError)?.errorDescription ?? "That scan can't be undone now."))
             }
-            .padding(20)
+        }
+    }
 
-            Divider().background(KioskStroke.divider)
+    // MARK: - List (coming back)
 
+    private var comingBackPanel: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            KioskSectionHeader(
+                title: isShared ? "For the team" : "Coming back",
+                detail: [returningForOwner.map { "\($0.name.split(separator: " ").first ?? "")'s checkout" } ?? detail?.title,
+                         detail.map { "due \($0.endsAt.formatted(.dateTime.hour().minute()))" }].compactMap { $0 }.joined(separator: " · "),
+                count: "\(returnedCount) of \(totalItems)",
+                section: section
+            )
             if let items = detail?.items {
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        LazyVStack(spacing: 0) {
-                            ForEach(items) { item in
-                                HStack(spacing: 0) {
-                                    KioskChecklistRow(
-                                        name: item.itemListSecondaryTitle ?? item.name,
-                                        tag: item.itemListPrimaryTitle,
-                                        isDone: returnedIds.contains(item.id),
-                                        isBattery: item.isNumberedBulk,
-                                        strikethroughWhenDone: true
-                                    )
-                                    if item.returnsByQuantity == true, !returnedIds.contains(item.id) {
-                                        quantityReturnControl(for: item)
-                                            .padding(.trailing, 16)
-                                    }
+                let serialized = items.filter { !$0.isNumberedBulk }
+                let batteries = Dictionary(grouping: items.filter(\.isNumberedBulk), by: { $0.bulkSkuId ?? $0.name })
+                ScrollView {
+                    VStack(spacing: 0) {
+                        ForEach(Array(serialized.enumerated()), id: \.element.id) { index, item in
+                            if index > 0 { Rectangle().fill(KioskStroke.divider).frame(height: 1) }
+                            KioskItemRow(
+                                tag: item.itemListPrimaryTitle,
+                                name: item.itemListSecondaryTitle,
+                                isDone: returnedIds.contains(item.id),
+                                section: section
+                            ) {
+                                if item.returnsByQuantity == true, !returnedIds.contains(item.id) {
+                                    quantityReturnControl(for: item)
+                                } else if damagedIds.contains(item.id) {
+                                    reportTag("Held for staff", section: .comingBack)
+                                } else if missingIds.contains(item.id) {
+                                    reportTag("Missing", section: .problem)
                                 }
-                                    .id(item.id)
-                                Divider().background(KioskStroke.hairline)
                             }
                         }
-                    }
-                    .onChange(of: lastReturnedId) { _, newId in
-                        guard let newId else { return }
-                        if reduceMotion {
-                            proxy.scrollTo(newId, anchor: .center)
-                        } else {
-                            withAnimation(.easeOut(duration: 0.25)) {
-                                proxy.scrollTo(newId, anchor: .center)
+                        ForEach(batteries.keys.sorted(), id: \.self) { key in
+                            let units = batteries[key] ?? []
+                            if !serialized.isEmpty || key != batteries.keys.sorted().first {
+                                Rectangle().fill(KioskStroke.divider).frame(height: 1)
                             }
+                            KioskBatteryRow(
+                                title: KioskBatteryCopy.familyTitle(units.first?.bulkSkuName ?? units.first?.name ?? "Batteries"),
+                                scanned: units.filter { returnedIds.contains($0.id) }.count,
+                                total: units.count,
+                                units: units.map { .init(id: $0.id, label: $0.unitNumber.map { "#\($0)" } ?? $0.tagName, isScanned: returnedIds.contains($0.id)) },
+                                section: section
+                            )
                         }
                     }
+                    .kioskCard()
+                    .clipShape(RoundedRectangle(cornerRadius: KioskRadius.xl))
                 }
-            } else if isLoading {
-                Spacer()
-                ProgressView().tint(KioskText.primary).frame(maxWidth: .infinity)
-                Spacer()
-            } else if let loadError {
-                // Detail-load error — distinct recovery surface from
-                // complete-failure (which now flows through showFeedback to
-                // the in-flow banner near the progress ring).
-                KioskErrorState(title: loadError) { Task { await loadDetail() } }
-                    .padding()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .scrollIndicators(.hidden)
             }
         }
     }
@@ -345,6 +406,7 @@ struct KioskReturnView: View {
                     } else {
                         returnedIds.insert(item.id)
                         lastReturnedId = item.id
+                        KioskFeedbackSound.play(.accept)
                         lastAccepted = KioskAcceptedScan(
                             title: item.itemListPrimaryTitle,
                             subtitle: item.itemListSecondaryTitle,
@@ -401,12 +463,9 @@ struct KioskReturnView: View {
                 guard store.ownsFlow(flow) else { return }
                 earnedBadges.appendUnique(contentsOf: result.earnedBadges ?? [])
                 Haptics.success()
+                let person = returner ?? returningForOwner
                 store.clearIntent(reason: .success)
-                store.screen = .success(KioskSuccessInfo(
-                    kind: .returned,
-                    message: successMessage(for: result),
-                    earnedBadges: earnedBadges
-                ))
+                showReceipt(message: successMessage(for: result), person: person)
             } catch {
                 let message = (error as? APIError)?.errorDescription
                     ?? "Return failed. Please try again."
@@ -414,6 +473,53 @@ struct KioskReturnView: View {
             }
             isCompleting = false
         }
+    }
+
+    @ViewBuilder
+    private func reportTag(_ text: String, section: KioskSection) -> some View {
+        Text(text)
+            .font(KioskType.meta.weight(.semibold))
+            .foregroundStyle(section.text)
+    }
+
+    /// A report came back. Damaged: still returned, held for staff. Missing:
+    /// accounted for; if it was the last item out, the server already
+    /// finished the return, so go straight to the receipt.
+    private func handleReport(_ result: KioskCheckinReportResult, _ item: KioskCheckoutDetail.ReturnItem) {
+        if result.type == "DAMAGED" {
+            damagedIds.insert(item.id)
+        } else {
+            missingIds.insert(item.id)
+        }
+        reportStep = nil
+        if result.completed {
+            let person = returner ?? returningForOwner
+            store.clearIntent(reason: .success)
+            showReceipt(message: "Return finished. Staff have been told about \(item.itemListPrimaryTitle).", person: person)
+        }
+    }
+
+    /// G6: Returned, then held-for-staff and marked-missing cards.
+    private func showReceipt(message: String, person: KioskUser?) {
+        let items = detail?.items ?? []
+        let returnedItems = items.filter { returnedIds.contains($0.id) }
+        store.screen = .success(KioskSuccessInfo(
+            kind: .returned,
+            message: message,
+            earnedBadges: earnedBadges,
+            receipt: person.map { user in
+                KioskReturnReportCopy.receipt(
+                    user: user,
+                    title: detail?.title ?? "Return",
+                    refNumber: detail?.refNumber,
+                    returnedCount: returnedItems.count,
+                    totalItems: totalItems,
+                    returnedTags: returnedItems.map(\.itemListPrimaryTitle),
+                    damaged: items.filter { damagedIds.contains($0.id) }.map { ($0.itemListPrimaryTitle, $0.itemListSecondaryTitle) },
+                    missing: items.filter { missingIds.contains($0.id) && !returnedIds.contains($0.id) }.map { ($0.itemListPrimaryTitle, $0.itemListSecondaryTitle) }
+                )
+            }
+        ))
     }
 
     /// Use the SERVER-authoritative counts in the success message — local

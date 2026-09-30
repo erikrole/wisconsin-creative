@@ -21,6 +21,7 @@ struct KioskIdleView: View {
     @State private var identityRequests = LatestRequestGeneration()
     @State private var dashboardRequests = LatestRequestGeneration()
     @State private var unavailableSections: Set<String> = []
+    @State private var nudgedIds: Set<String> = []
 
     /// The idle screen is a monitoring surface, not a live custody mutation
     /// flow. Five minutes lets Neon scale down between unattended checks while
@@ -34,34 +35,30 @@ struct KioskIdleView: View {
             let rosterWidth = KioskLayout.rosterWidth(for: proxy.size.width)
 
             ZStack {
-                Group {
-                    if compact {
-                        ScrollView {
-                            VStack(spacing: 24) {
-                                leftPanel
-                                // The page itself scrolls in the compact
-                                // fallback, so there is no "one screen" for the
-                                // roster to fit into and no box to measure.
-                                rosterPanel(fitsToScreen: false)
-                            }
-                            .padding(28)
-                        }
-                        .scrollIndicators(.hidden)
-                    } else {
-                        HStack(spacing: 0) {
-                            leftPanel
-                                .frame(maxWidth: .infinity)
-                                .padding(32)
-
-                            Divider()
-                                .background(KioskSurface.placeholder)
-
-                            rosterPanel(fitsToScreen: true)
-                                .frame(width: rosterWidth)
-                                .padding(32)
-                        }
+                KioskHomeView(
+                    locationName: store.info?.locationName,
+                    checkouts: unavailableSections.contains("checkouts") ? [] : (dashboard?.checkouts ?? []),
+                    pickups: dashboard?.pickups ?? [],
+                    events: dashboard?.events ?? [],
+                    serverToday: dashboard?.today ?? [],
+                    nudgedIds: nudgedIds,
+                    users: users,
+                    isLoaded: dashboard != nil,
+                    offlineSince: hasConnectionIssue ? (lastLoadedAt ?? loadFailedAt) : nil,
+                    lastLoadedAt: lastLoadedAt,
+                    nextUp: dashboard?.nextUp.map { "\($0.title), \(KioskDueCopy.relative($0.at))" },
+                    onOpenCheckout: { openCheckout($0) },
+                    onNudge: { nudge($0) },
+                    onSelectUser: { user in
+                        identityRequests.invalidate()
+                        store.deferSleepMode(for: sleepWakeDuration)
+                        store.screen = .operatorHub(user)
+                    },
+                    onRevealStatus: {
+                        store.resetInactivity()
+                        store.systemStatusRevealRequests += 1
                     }
-                }
+                )
 
                 if shouldShowSleepMode {
                     KioskSleepModeView(
@@ -199,14 +196,14 @@ struct KioskIdleView: View {
             // title, so the clock below owns the hierarchy.
             HStack(spacing: 8) {
                 Text((store.info?.name ?? "Gear Room").uppercased())
-                    .font(.caption.weight(.bold))
+                    .font(KioskType.chipStrong)
                     .tracking(1.2)
                     .foregroundStyle(KioskText.secondary)
                 if let location = store.info?.locationName {
                     Text("•")
                         .foregroundStyle(KioskText.muted)
                     Text(location.uppercased())
-                        .font(.caption.weight(.bold))
+                        .font(KioskType.chipStrong)
                         .tracking(1.2)
                         .foregroundStyle(KioskText.tertiary)
                 }
@@ -255,11 +252,11 @@ struct KioskIdleView: View {
                     KioskClockView(date: context.date)
                     HStack(spacing: 10) {
                         RoundedRectangle(cornerRadius: 1.5)
-                            .fill(Color.kioskRed)
+                            .fill(KioskText.primary)
                             .frame(width: 3, height: 26)
                             .accessibilityHidden(true)
                         Text(context.date, format: .dateTime.weekday(.wide).month(.wide).day())
-                            .font(.gothamBold(size: 32))
+                            .font(.system(size: 32, weight: .bold))
                             .foregroundStyle(KioskText.primary)
                             .lineLimit(1)
                             .minimumScaleFactor(0.75)
@@ -277,7 +274,7 @@ struct KioskIdleView: View {
                             .font(.callout.weight(.semibold))
                         Text("Tap a count to filter the list")
                     }
-                    .font(.caption.weight(.semibold))
+                    .font(KioskType.chip)
                     .foregroundStyle(KioskText.tertiary)
                     .accessibilityHidden(true)
 
@@ -362,7 +359,7 @@ struct KioskIdleView: View {
         HStack(spacing: 6) {
             if let last = lastLoadedAt {
                 Text("Updated \(last.kioskFreshnessLabel(now: Date()))")
-                    .font(.caption)
+                    .font(KioskType.meta)
                     .foregroundStyle(isStale ? Color.statusText(.orange) : KioskText.tertiary)
                     .monospacedDigit()
             }
@@ -395,7 +392,7 @@ struct KioskIdleView: View {
                     .fill(connectionTone)
                     .frame(width: 8, height: 8)
                 Text(isOffline ? "Offline" : (stale ? "Stale" : "Active"))
-                    .font(.caption2.weight(.bold))
+                    .font(KioskType.chipStrong)
                     .tracking(0.6)
                     .foregroundStyle(KioskText.tertiary)
                     .textCase(.uppercase)
@@ -412,15 +409,15 @@ struct KioskIdleView: View {
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 1) {
                 Text("Can't connect right now")
-                    .font(.caption.weight(.semibold))
+                    .font(KioskType.chip)
                     .foregroundStyle(KioskText.primary)
                 if let last = lastLoadedAt {
                     Text("Showing data from \(last.kioskFreshnessLabel(now: Date()))")
-                        .font(.caption2)
+                        .font(KioskType.meta)
                         .foregroundStyle(KioskText.muted)
                 } else {
                     Text("No data loaded yet")
-                        .font(.caption2)
+                        .font(KioskType.meta)
                         .foregroundStyle(KioskText.muted)
                 }
             }
@@ -429,11 +426,11 @@ struct KioskIdleView: View {
                 Task { await loadAll() }
             } label: {
                 Text(isLoading ? "Retrying…" : "Retry")
-                    .font(.caption.weight(.bold))
+                    .font(KioskType.chipStrong)
                     .foregroundStyle(KioskText.primary)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 8)
-                    .background(Color.kioskRed.opacity(0.85), in: Capsule())
+                    .background(KioskSurface.control, in: Capsule())
             }
             .buttonStyle(.plain)
             .disabled(isLoading)
@@ -652,6 +649,21 @@ struct KioskIdleView: View {
         ))
     }
 
+    /// Anyone may nudge an overdue checkout once a day; the server keeps
+    /// the daily limit, so a repeat just shows as already nudged.
+    private func nudge(_ checkout: KioskActiveCheckout) {
+        store.resetInactivity()
+        nudgedIds.insert(checkout.id)
+        Task {
+            do {
+                _ = try await KioskAPI.shared.kioskNudge(checkoutId: checkout.id, actorId: nil)
+            } catch {
+                nudgedIds.remove(checkout.id)
+                KioskScanFeedbackSound.playFailure()
+            }
+        }
+    }
+
     private func openCheckout(_ checkout: KioskActiveCheckout) {
         openCheckout(
             id: checkout.id,
@@ -843,7 +855,8 @@ struct KioskIdleView: View {
                         pendingScanValues: KioskFlowIntent.orderedScans(value, then: trailingScans),
                         createdAt: Date(),
                         ambiguity: .none,
-                        custodyOwner: result.custodyOwner
+                        custodyOwner: result.custodyOwner,
+                        scannedItem: result.item
                     )
                     trailingScans = []
                     store.setIntent(intent)
@@ -994,10 +1007,10 @@ private struct StatTile: View {
                     .font(.system(size: 44, weight: .bold, design: .rounded))
                     .foregroundStyle(accent)
                     .contentTransition(.numericText())
-                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.4), value: value)
+                    .animation(reduceMotion ? KioskMotion.fadeUnderReduceMotion : .easeInOut(duration: 0.4), value: value)
                     .monospacedDigit()
                 Text(label.uppercased())
-                    .font(.caption.weight(.semibold))
+                    .font(KioskType.chip)
                     .tracking(0.8)
                     .foregroundStyle(KioskText.secondary)
             }
@@ -1008,7 +1021,7 @@ private struct StatTile: View {
             // every other dashboard anyone has used.
             .overlay(alignment: .topTrailing) {
                 Image(systemName: isSelected ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
-                    .font(.caption)
+                    .font(KioskType.meta)
                     .foregroundStyle(isSelected ? KioskText.primary : KioskText.muted)
                     .padding(10)
                     .accessibilityHidden(true)
@@ -1047,7 +1060,7 @@ private struct StatTilePlaceholder: View {
                 .font(.system(size: 44, weight: .bold, design: .rounded))
                 .foregroundStyle(KioskText.muted)
             Text(label.uppercased())
-                .font(.caption.weight(.semibold))
+                .font(KioskType.chip)
                 .tracking(0.8)
                 .foregroundStyle(KioskText.tertiary)
         }
@@ -1184,22 +1197,22 @@ private struct ActiveItemRow: View {
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 6) {
                         Text(group.primaryTitle)
-                            .font(.gothamBold(size: 16))
+                            .font(.system(size: 16, weight: .bold))
                             .foregroundStyle(KioskText.primary)
                             .lineLimit(1)
                             .minimumScaleFactor(0.85)
                         if group.count > 1 {
                             Text("x\(group.count)")
-                                .font(.caption2.weight(.bold))
-                                .foregroundStyle(Color.kioskRed)
+                                .font(KioskType.chipStrong)
+                                .foregroundStyle(KioskText.primary)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
-                                .background(Color.kioskRed.opacity(0.16), in: Capsule())
+                                .background(KioskSurface.control, in: Capsule())
                         }
                     }
 
                     Text(group.subtitle)
-                        .font(.caption.weight(.medium))
+                        .font(KioskType.chip)
                         .foregroundStyle(KioskText.secondary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
@@ -1210,11 +1223,11 @@ private struct ActiveItemRow: View {
                 if group.isOverdue {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundStyle(Color.statusText(.red))
-                        .font(.caption)
+                        .font(KioskType.meta)
                         .accessibilityLabel("Overdue")
                 }
                 Image(systemName: "chevron.right")
-                    .font(.caption2.weight(.bold))
+                    .font(KioskType.chipStrong)
                     .foregroundStyle(KioskText.muted)
                     .accessibilityHidden(true)
             }
@@ -1267,7 +1280,7 @@ private struct ActiveItemRow: View {
             .frame(width: 42, height: 42)
             .overlay {
                 Image(systemName: item.isNumberedBulk ? "battery.100percent" : "camera.fill")
-                    .font(.caption)
+                    .font(KioskType.meta)
                     .foregroundStyle(KioskText.secondary)
             }
     }
@@ -1318,7 +1331,7 @@ private struct CheckoutRow: View {
                             .lineLimit(1)
                             .minimumScaleFactor(0.85)
                         Text(holderSummary)
-                            .font(.caption)
+                            .font(KioskType.meta)
                             .foregroundStyle(KioskText.secondary)
                             .lineLimit(1)
                             .minimumScaleFactor(0.85)
@@ -1376,7 +1389,7 @@ private struct CheckoutRow: View {
 
     private var initialsBubble: some View {
         Text(checkout.requesterInitials)
-            .font(.caption.bold())
+            .font(KioskType.chipStrong)
             .foregroundStyle(KioskText.primary)
     }
 

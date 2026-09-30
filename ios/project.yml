@@ -132,9 +132,6 @@ targets:
         NSCameraUsageDescription: "Wisconsin Creative uses the camera to scan gear barcodes and QR codes."
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: false
-        UIAppFonts:
-          - Gotham-Black.ttf
-          - Gotham-Bold.ttf
     settings:
       base:
         PRODUCT_NAME: Wisconsin Kiosk

@@ -15,8 +15,8 @@ describe("iOS Kiosk actionable availability recovery contract", () => {
   it("offers item-local recovery actions for blocking scan results", () => {
     const checkout = source("ios/Wisconsin/Kiosk/KioskCheckoutView.swift");
 
-    expect(checkout).toContain("onChangeReturnTime: issue?.canChangeReturnTime == true");
-    expect(checkout).toContain("onScanAnother: issue?.isBlocking == true");
+    expect(checkout).toContain("onChangeReturnTime: issue.canChangeReturnTime ? { editReturnTime() } : nil");
+    expect(checkout).toContain("onScanAnother: issue.isBlocking ? { prepareForNextScan(after: group) } : nil");
     expect(checkout).toContain("Text(\"What now?\")");
     expect(checkout).toContain("title: group.count == 1 ? \"Remove item\" : \"Remove \\(group.count) units\"");
     expect(checkout).toContain("title: \"Change return time\"");

@@ -52,13 +52,13 @@ describe("iOS item list identity", () => {
     expect(checkout).toContain("var primaryTitle: String");
     expect(checkout).toContain("let tags = unitNumbers.map { \"#\\($0)\" }.joined(separator: \" \")");
     expect(checkout).toContain("Text(group.primaryTitle)");
-    expect(checkout).toContain(".font(.gothamBold(size: 16))");
+    expect(checkout).toContain("KioskItemRow(tag: group.first.itemListPrimaryTitle, name: group.first.itemListSecondaryTitle");
     expect(checkout).not.toContain("Text(group.title)");
 
     expect(idle).toContain("Text(group.primaryTitle)");
     expect(idle).not.toContain("Text(group.title)");
     expect(components).toContain("Text(tag)");
-    expect(components).toContain(".font(.gothamBold(size: 16))");
+    expect(components).toContain(".font(.system(size: 16, weight: .bold))");
     expect(pickup).toContain("tag: confirmedItemOverrides[item.id]?.itemListPrimaryTitle");
     expect(returns).toContain("tag: item.itemListPrimaryTitle");
   });

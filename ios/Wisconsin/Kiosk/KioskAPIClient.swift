@@ -141,6 +141,19 @@ struct KioskAPI {
         let _: Response = try await perform(req)
     }
 
+    // MARK: - Nudge
+
+    /// Anyone at the kiosk may nudge an overdue checkout once per day. A
+    /// repeat is not an error: the server answers `alreadyNudged`.
+    func kioskNudge(checkoutId: String, actorId: String?) async throws -> Bool {
+        struct Body: Encodable { let actorId: String? }
+        struct Response: Decodable { let success: Bool; let alreadyNudged: Bool? }
+        var req = request(path: "/api/kiosk/checkout/\(checkoutId)/nudge", method: "POST")
+        req.httpBody = try JSONEncoder().encode(Body(actorId: actorId))
+        let response: Response = try await perform(req)
+        return response.alreadyNudged ?? false
+    }
+
     // MARK: - Dashboard
 
     func kioskDashboard() async throws -> KioskDashboard {
@@ -166,6 +179,13 @@ struct KioskAPI {
         struct Body: Encodable { let scanValue: String; let userId: String? }
         var req = request(path: "/api/kiosk/resolve-scan", method: "POST")
         req.httpBody = try JSONEncoder().encode(Body(scanValue: scanValue, userId: userId))
+        return try await perform(req)
+    }
+
+    func kioskScanLookup(scanValue: String) async throws -> KioskScanLookup {
+        struct Body: Encodable { let scanValue: String }
+        var req = request(path: "/api/kiosk/scan-lookup", method: "POST")
+        req.httpBody = try JSONEncoder().encode(Body(scanValue: scanValue))
         return try await perform(req)
     }
 
@@ -275,6 +295,7 @@ struct KioskAPI {
 
     struct KioskCheckoutCompletion: Decodable {
         let bookingId: String
+        let refNumber: String?
         let itemCount: Int?
         let earnedBadges: [EarnedBadgeReward]?
     }
@@ -347,6 +368,103 @@ struct KioskAPI {
         return try await perform(req)
     }
 
+    /// H1: how late this checkout can go before its gear is claimed. The
+    /// PATCH above still validates the chosen time.
+    func kioskExtendWindow(checkoutId: String) async throws -> KioskExtendWindow {
+        let req = request(path: "/api/kiosk/checkout/\(checkoutId)/extend-window")
+        return try await perform(req)
+    }
+
+    /// H2 and C5: move items to someone on the roster, immediately (decision
+    /// 2, no accept step). `requestId` makes a retry replay the first answer
+    /// instead of moving the gear twice. A staff actor must send a reason.
+    func kioskTransferCheckout(
+        id: String,
+        actorId: String,
+        requestId: String,
+        expectedUpdatedAt: Date,
+        targetUserId: String,
+        assetIds: [String],
+        bulkUnitIds: [String],
+        reason: String?
+    ) async throws -> KioskTransferResult {
+        struct Body: Encodable {
+            let actorId: String
+            let requestId: String
+            let expectedUpdatedAt: String
+            let targetUserId: String
+            let assetIds: [String]
+            let bulkUnitIds: [String]
+            let reason: String?
+        }
+        var req = request(path: "/api/kiosk/checkout/\(id)/transfer", method: "POST")
+        req.httpBody = try JSONEncoder().encode(Body(
+            actorId: actorId,
+            requestId: requestId,
+            expectedUpdatedAt: isoString(from: expectedUpdatedAt),
+            targetUserId: targetUserId,
+            assetIds: assetIds,
+            bulkUnitIds: bulkUnitIds,
+            reason: reason
+        ))
+        // A 4xx or a sealed rejection is definitive: the caller may start a new
+        // request id. Network, 5xx, and decode failures stay ambiguous.
+        let (envelope, _): (KioskCompletionEnvelope<KioskTransferResult>, HTTPURLResponse) = try await performWithResponse(req, typedClientErrors: true)
+        if envelope.operationRejected == true {
+            throw KioskRequestRejected(message: envelope.error ?? "That transfer didn't go through. Nothing moved.")
+        }
+        guard let result = envelope.result else {
+            throw APIError.serverError("Could not read the transfer receipt. Check the hub before trying again.")
+        }
+        return result
+    }
+
+    /// H4 plain swap: one unit off, a like-for-like unit on, in one
+    /// transaction. A refusal comes back as `success: false` with a sentence.
+    func kioskSwapActiveCheckoutItem(
+        id: String,
+        actorId: String,
+        item: KioskCheckoutDetail.ReturnItem,
+        scanValue: String
+    ) async throws -> KioskSwapResult {
+        struct Remove: Encodable {
+            let assetId: String?
+            let bulkSkuId: String?
+            let unitNumber: Int?
+            func encode(to encoder: Encoder) throws {
+                var c = encoder.container(keyedBy: CodingKeys.self)
+                try c.encodeIfPresent(assetId, forKey: .assetId)
+                try c.encodeIfPresent(bulkSkuId, forKey: .bulkSkuId)
+                try c.encodeIfPresent(unitNumber, forKey: .unitNumber)
+            }
+            enum CodingKeys: String, CodingKey { case assetId, bulkSkuId, unitNumber }
+        }
+        struct Body: Encodable {
+            let actorId: String
+            let remove: Remove
+            let scanValue: String
+        }
+        var req = request(path: "/api/kiosk/checkout/\(id)/swap", method: "POST")
+        req.httpBody = try JSONEncoder().encode(Body(
+            actorId: actorId,
+            remove: item.isNumberedBulk
+                ? Remove(assetId: nil, bulkSkuId: item.bulkSkuId, unitNumber: item.unitNumber)
+                : Remove(assetId: item.id, bulkSkuId: nil, unitNumber: nil),
+            scanValue: scanValue
+        ))
+        return try await perform(req)
+    }
+
+    /// H5: what is still reserved, with the reservation-item ids the per-op
+    /// POST below takes for remove and quantity.
+    func kioskReservationManifest(id: String, actorId: String) async throws -> KioskReservationManifest {
+        let req = request(
+            path: "/api/kiosk/reservation/\(id)/items",
+            query: [URLQueryItem(name: "actorId", value: actorId)]
+        )
+        return try await perform(req)
+    }
+
     func kioskAddActiveCheckoutItem(id: String, actorId: String, scanValue: String) async throws -> KioskActiveCheckoutMutationResult {
         struct Body: Encodable {
             let actorId: String
@@ -354,6 +472,26 @@ struct KioskAPI {
         }
         var req = request(path: "/api/kiosk/checkout/\(id)", method: "POST")
         req.httpBody = try JSONEncoder().encode(Body(actorId: actorId, scanValue: scanValue))
+        return try await perform(req)
+    }
+
+    /// Undo a return scan made in this session, before the return finishes.
+    /// The server refuses once the return is finished or the unit was
+    /// claimed again, and answers with a sentence to show.
+    func kioskUndoCheckinScan(bookingId: String, actorId: String, item: KioskCheckoutDetail.ReturnItem) async throws -> KioskActiveCheckoutMutationResult {
+        struct Body: Encodable {
+            let actorId: String
+            let assetId: String?
+            let bulkSkuId: String?
+            let unitNumber: Int?
+        }
+        var req = request(path: "/api/kiosk/checkin/\(bookingId)/scan", method: "DELETE")
+        req.httpBody = try JSONEncoder().encode(Body(
+            actorId: actorId,
+            assetId: item.isNumberedBulk ? nil : item.id,
+            bulkSkuId: item.isNumberedBulk ? item.bulkSkuId : nil,
+            unitNumber: item.isNumberedBulk ? item.unitNumber : nil
+        ))
         return try await perform(req)
     }
 
@@ -419,6 +557,50 @@ struct KioskAPI {
         return try await perform(req)
     }
 
+    /// Damaged or missing (G4, G5). Multipart like the web route: `actorId`,
+    /// `assetId`, `type` (DAMAGED | LOST), optional `description`, optional
+    /// JPEG `file`. Not retried automatically: the server rejects a repeat
+    /// report for the same item within a few seconds.
+    func kioskCheckinReport(
+        bookingId: String,
+        actorId: String,
+        assetId: String,
+        type: String,
+        description: String?,
+        photoJPEG: Data?
+    ) async throws -> KioskCheckinReportResult {
+        let boundary = "KioskReport-\(UUID().uuidString)"
+        var req = request(path: "/api/kiosk/checkin/\(bookingId)/report", method: "POST")
+        req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        req.httpBody = Self.multipartBody(
+            boundary: boundary,
+            fields: [("actorId", actorId), ("assetId", assetId), ("type", type)]
+                + (description.map { [("description", $0)] } ?? []),
+            file: photoJPEG.map { (name: "file", filename: "damage.jpg", contentType: "image/jpeg", data: $0) }
+        )
+        return try await perform(req)
+    }
+
+    static func multipartBody(
+        boundary: String,
+        fields: [(String, String)],
+        file: (name: String, filename: String, contentType: String, data: Data)?
+    ) -> Data {
+        var body = Data()
+        func append(_ string: String) { body.append(Data(string.utf8)) }
+        for (name, value) in fields {
+            append("--\(boundary)\r\nContent-Disposition: form-data; name=\"\(name)\"\r\n\r\n\(value)\r\n")
+        }
+        if let file {
+            append("--\(boundary)\r\nContent-Disposition: form-data; name=\"\(file.name)\"; filename=\"\(file.filename)\"\r\n")
+            append("Content-Type: \(file.contentType)\r\n\r\n")
+            body.append(file.data)
+            append("\r\n")
+        }
+        append("--\(boundary)--\r\n")
+        return body
+    }
+
     // MARK: - Pickup
 
     func kioskPickupScan(
@@ -451,6 +633,28 @@ struct KioskAPI {
         return try await perform(req)
     }
 
+    /// Undo a pickup scan made in this session, before the pickup is
+    /// confirmed (redesign F1). Serialized items send `assetId`; numbered
+    /// units send `bulkSkuId` + `unitNumber` (reservations only). The item
+    /// stays on the plan; only the staged scan clears.
+    func kioskPickupUndoScan(
+        bookingId: String,
+        actorId: String,
+        assetId: String?,
+        bulkSkuId: String?,
+        unitNumber: Int?
+    ) async throws -> KioskActiveCheckoutMutationResult {
+        struct Body: Encodable {
+            let actorId: String
+            let assetId: String?
+            let bulkSkuId: String?
+            let unitNumber: Int?
+        }
+        var req = request(path: "/api/kiosk/pickup/\(bookingId)/scan", method: "DELETE")
+        req.httpBody = try JSONEncoder().encode(Body(actorId: actorId, assetId: assetId, bulkSkuId: bulkSkuId, unitNumber: unitNumber))
+        return try await perform(req)
+    }
+
     func kioskPickupSubstitute(
         bookingId: String,
         actorId: String,
@@ -477,7 +681,8 @@ struct KioskAPI {
         expectedUpdatedAt: Date,
         action: String,
         itemId: String? = nil,
-        quantity: Int? = nil
+        quantity: Int? = nil,
+        scanValue: String? = nil
     ) async throws -> KioskReservationMutationResult {
         struct Body: Encodable {
             let actorId: String
@@ -485,9 +690,10 @@ struct KioskAPI {
             let action: String
             let itemId: String?
             let quantity: Int?
+            let scanValue: String?
 
             enum CodingKeys: String, CodingKey {
-                case actorId, expectedUpdatedAt, action, itemId, quantity
+                case actorId, expectedUpdatedAt, action, itemId, quantity, scanValue
             }
 
             func encode(to encoder: Encoder) throws {
@@ -497,6 +703,7 @@ struct KioskAPI {
                 try container.encode(action, forKey: .action)
                 try container.encodeIfPresent(itemId, forKey: .itemId)
                 try container.encodeIfPresent(quantity, forKey: .quantity)
+                try container.encodeIfPresent(scanValue, forKey: .scanValue)
             }
         }
         var req = request(path: "/api/kiosk/reservation/\(id)/items", method: "POST")
@@ -505,7 +712,8 @@ struct KioskAPI {
             expectedUpdatedAt: isoString(from: expectedUpdatedAt),
             action: action,
             itemId: itemId,
-            quantity: quantity
+            quantity: quantity,
+            scanValue: scanValue
         ))
         return try await perform(req)
     }
@@ -590,7 +798,8 @@ struct KioskAPI {
 
     private func performWithResponse<T: Decodable>(
         _ request: URLRequest,
-        broadcastsUnauthorizedSession: Bool = true
+        broadcastsUnauthorizedSession: Bool = true,
+        typedClientErrors: Bool = false
     ) async throws -> (T, HTTPURLResponse) {
         let requestGeneration = kioskCredentialBoundary.capture()
         let data: Data
@@ -650,6 +859,9 @@ struct KioskAPI {
             throw APIError.serverError("Something went wrong on our end. Try that scan again.")
         default:
             let msg = (try? decoder.decode(ErrorBody.self, from: data))?.error ?? "Server error (\(http.statusCode))"
+            if typedClientErrors, (400...499).contains(http.statusCode) {
+                throw KioskRequestRejected(message: msg)
+            }
             throw APIError.serverError(msg)
         }
     }
@@ -735,4 +947,11 @@ private struct KioskCompletionEnvelope<T: Decodable>: Decodable {
         error = try values.decodeIfPresent(String.self, forKey: .error)
         result = operationRejected == true ? nil : try T(from: decoder)
     }
+}
+
+/// The server definitively refused a request (a 4xx or a sealed operation
+/// rejection), so nothing was committed under its request id.
+struct KioskRequestRejected: LocalizedError {
+    let message: String
+    var errorDescription: String? { message }
 }

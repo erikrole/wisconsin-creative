@@ -3,7 +3,7 @@
 ## Document Control
 - Owner: Erik Role (Wisconsin Athletics Creative)
 - Product: Wisconsin Creative
-- Last Updated: 2026-09-17
+- Last Updated: 2026-09-28
 - Status: Living decision log
 - Purpose: track durable decisions, rationale, and downstream constraints
 
@@ -66,6 +66,7 @@
 - D-057: Event workers are recorded separately from shift scheduling
 - D-061: Shared travel-case checkouts are custodian-neutral
 - D-062: Gameday kits are callable, exclusive per sport, and pickup-aliased
+- D-064: Kiosk peer transfer, anyone-nudge, and missing items follow the redesign
 
 ---
 
@@ -1552,3 +1553,14 @@ These are non-negotiable integrity constraints. Every feature must preserve them
 - Guardrails: Existing plans, production/review data and historical migration receipts are preserved. No production PII enters the template. Outbound delivery is disabled in previews. Cleanup requires confirmed branch absence, no open PR or pin, seven days without use, signed ownership and an atomic claim coordinated with local agents.
 - Consequences: Separate local outputs and process locks prevent build/dev corruption; actual-port authentication prevents stale-cookie handoffs. Preview Redis-dependent Companion features remain unavailable until isolated Redis is configured. Production pooling changes require source deployment.
 - Reference: [Preview environments](PREVIEW_ENVIRONMENTS.md), [Prisma + Neon runbook](PRISMA_NEON_RUNBOOK.md), and [implementation ledger](../tasks/infrastructure-hardening-plan-2026-09-22.md).
+
+## D-064: Kiosk Peer Transfer, Anyone-Nudge, and Missing Items Follow the Redesign
+- Date: 2026-09-25 (recorded 2026-09-28)
+- Status: Accepted by Erik; built on branch `claude/kiosk-redesign`, unmerged, simulator/fixture proof only.
+- Decision:
+  - The holder of a personal checkout can transfer all or some of it to anyone on the roster immediately. There is no accept step. This loosens the previous staff-only kiosk transfer rule.
+  - Anyone at the kiosk can nudge an overdue checkout from home, with nobody identified, once per booking per local day.
+  - A missing item reported during a kiosk return is accounted for, matching the web LOST report, so the return can finish. Damaged items count as returned and are held for staff.
+  - Kits start on the scan screen and are offered to football crew only.
+- Consequences: The redesign's H3 accept frame and "stays on your record" copy are dropped. The nudge dedupe is per booking per local day. Football-crew membership is inferred until a crew field exists (GAP-84).
+- Reference: `tasks/kiosk-redesign-brief-2026-09-25.md`, `docs/AREA_KIOSK.md` AC-28 and AC-34–AC-36.

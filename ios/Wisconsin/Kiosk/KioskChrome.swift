@@ -17,7 +17,7 @@ struct KioskBackdrop: View {
         ZStack {
             KioskSurface.base
             RadialGradient(
-                colors: [Color.kioskRed.opacity(0.05), .clear],
+                colors: [.clear, .clear],
                 center: .topLeading,
                 startRadius: 0,
                 endRadius: 1100

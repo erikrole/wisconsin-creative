@@ -9,8 +9,8 @@ describe("iOS kiosk reservation battery checklist", () => {
     expect(pickup).toContain("private var checklistEntries: [KioskPickupChecklistEntry]");
     expect(pickup).toContain("guard item.isNumberedBulk else");
     expect(pickup).toContain("case .battery(let group)");
-    expect(pickup).toContain("KioskPickupBatteryChecklistRow(");
-    expect(pickup).toContain("printed numbers don't need to match the list.");
+    expect(pickup).toContain("KioskBatteryRow(");
+    expect(pickup).toContain("Any battery works; its number is saved as you scan");
     expect(pickup).toContain("confirmedItemOverrides[item.id]");
     expect(pickup).toContain("let targetId = checklistScrollTarget(for: newId)");
 

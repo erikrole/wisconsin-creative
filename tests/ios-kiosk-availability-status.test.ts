@@ -30,8 +30,8 @@ describe("iOS Kiosk availability status contract", () => {
     expect(checkout).toContain("has reserved the");
     expect(checkout).toContain("has checked out the");
     expect(checkout).toContain(".month(.abbreviated).day().hour().minute()");
-    expect(checkout).toContain("KioskAvailabilityCopy.blockingTitle(for: result)");
-    expect(pickup).toContain("\"Can't add this item\"");
+    expect(checkout).toContain("KioskAvailabilityCopy.blockingTitle(for: availabilityResult)");
+    expect(pickup).toContain('overline: "Can\'t add this item"');
     expect(pickup).toContain("presentBlockedAdd");
     expect(checkout).toContain("let status = availabilityIssue.map");
     expect(fixtures).toContain("case availabilityConflicts = \"availability-conflicts\"");

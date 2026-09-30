@@ -62,7 +62,7 @@ struct KioskRosterMetrics: Equatable {
     private static let chrome: CGFloat = 22        // horizontal padding + trailing spacer
     private static let portrait: CGFloat = 46      // avatar at full size
     private static let portraitGap: CGFloat = 12
-    /// "Madeleine" in the Gotham row rung measures about 76pt; this is that
+    /// "Madeleine" in the bold row rung measures about 76pt; this is that
     /// plus slack, and it is the number the whole layout now protects.
     private static let nameWidth: CGFloat = 88
     /// Narrowest tile that can hold a portrait *and* a readable name.

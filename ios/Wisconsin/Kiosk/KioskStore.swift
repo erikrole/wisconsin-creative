@@ -177,6 +177,8 @@ final class KioskStore {
     private static let infoKey = "kiosk_info_v1"
     private static let inactivityTotal: UInt64 = 300_000_000_000        // 5 min
     private static let inactivityWarning: UInt64 = 270_000_000_000      // 4:30
+    /// How long "Still here?" stays up before the reset (30 s).
+    static var inactivityWarningSeconds: Int { Int((inactivityTotal - inactivityWarning) / 1_000_000_000) }
     private static let sleepDismissalDuration: TimeInterval = 10 * 60
     /// Heartbeat cadence while someone is actually using the kiosk.
     private static let heartbeatInterval: UInt64 = 300_000_000_000      // 5 min

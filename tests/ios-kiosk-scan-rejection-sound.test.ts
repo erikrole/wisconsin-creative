@@ -6,11 +6,14 @@ describe("iOS Kiosk rejected-scan feedback contract", () => {
     const app = source("ios/Wisconsin/KioskOnly/KioskOnlyApp.swift");
 
     expect(app).toContain("import AVFoundation");
-    expect(app).toContain("enum KioskScanFeedbackSound");
+    expect(app).toContain("enum KioskFeedbackSound");
     expect(app).toContain("private static var player: AVAudioPlayer?");
-    expect(app).toContain("AVAudioPlayer(data: failureWave)");
-    expect(app).toContain("private static let failureWave: Data");
+    expect(app).toContain("AVAudioPlayer(data: data)");
+    expect(app).toContain("private static func wave(for cue: Cue) -> Data");
     expect(app).toContain(".mixWithOthers");
+    // The rejection cue keeps its original entry point for every scan surface.
+    expect(app).toContain("enum KioskScanFeedbackSound");
+    expect(app).toContain("static func playFailure() { KioskFeedbackSound.play(.reject) }");
   });
 
   it("makes rejected or failed scan feedback audible on every kiosk scan surface", () => {

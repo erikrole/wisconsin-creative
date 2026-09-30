@@ -10,85 +10,105 @@ import SwiftUI
 // centralizes the web-facing tokens.
 //
 // The kiosk is always dark (`KioskShellView` forces `.dark`), so these are
-// fixed dark values rather than dynamic light/dark providers. Semantic status
-// color still comes from `Color.statusText(_:)` in Brand.swift; the brand
-// accent stays `Color.kioskRed` in KioskColors.swift.
+// fixed dark values rather than dynamic light/dark providers. Status and
+// section color come from `KioskSection` / `KioskStatus` below; the kiosk no
+// longer spends brand red on anything (2026-09-25 redesign).
 
-/// Background and fill elevation scale. `base` is the full-screen backdrop;
-/// the rest are translucent whites layered on top so they read consistently
-/// over the dark base.
+/// Builds a color from a `#RRGGBB` literal so the tokens below read exactly
+/// like the design canvas they were measured from.
+private func kioskHex(_ hex: UInt32, opacity: Double = 1) -> Color {
+    Color(
+        red: Double((hex >> 16) & 0xFF) / 255,
+        green: Double((hex >> 8) & 0xFF) / 255,
+        blue: Double(hex & 0xFF) / 255,
+        opacity: opacity
+    )
+}
+
+/// Background and fill elevation scale, from the 2026-09-25 redesign canvas.
+/// Solid, flat values: the canvas has no glaze, blur, or translucent white
+/// layering, and solid hex keeps two sibling cards from drifting apart when
+/// one sits over a different background.
 enum KioskSurface {
     /// Full-screen kiosk backdrop. One value for every screen (shell,
     /// activation, sheets) so screens never drift to slightly different blacks.
-    static let base = Color(red: 11 / 255, green: 11 / 255, blue: 13 / 255) // #0B0B0D
+    static let base = kioskHex(0x0B0B0D)
 
-    /// Large sunken areas -- the scrolling list panels beside a scan zone.
-    static let sunken = Color.white.opacity(0.02)
+    /// Large sunken areas -- the panels beside a scan zone. The canvas leaves
+    /// them on the base and separates them with a divider.
+    static let sunken = kioskHex(0x0B0B0D)
 
-    /// Quiet grouped container (dashboard list shells, top bars).
-    static let low = Color.white.opacity(0.045)
+    /// Quiet grouped container (sectioned home lists, empty states).
+    static let low = kioskHex(0x131316)
 
-    /// Standard card / row fill (battery status, checklist rows, event detail rows).
-    static let card = Color.white.opacity(0.06)
+    /// Standard card / row fill.
+    static let card = kioskHex(0x131316)
 
-    /// Interactive tile fill (numpad keys, roster tiles, stat tiles, action rows).
-    static let cardRaised = Color.white.opacity(0.08)
+    /// Interactive tile fill (Today tiles, identity cards, numpad keys).
+    static let cardRaised = kioskHex(0x18181D)
 
-    /// Selected interactive tile (a chosen stat tile).
-    static let cardSelected = Color.white.opacity(0.13)
+    /// Secondary button and chip fill.
+    static let control = kioskHex(0x1E1E23)
 
-    /// Avatar / chip placeholder fill.
-    static let placeholder = Color.white.opacity(0.16)
+    /// Selected interactive tile. Selection is always a white outline
+    /// (`KioskStroke.selected`); the fill only lifts slightly under it.
+    static let cardSelected = kioskHex(0x1E1E23)
 
-    /// Raised modal surface -- scrims, overlays, confirmation cards.
-    static let modal = Color(red: 22 / 255, green: 22 / 255, blue: 26 / 255) // #16161A
+    /// Avatar / placeholder fill.
+    static let placeholder = kioskHex(0x3A3A44)
+
+    /// Raised modal surface -- confirmation cards and sheets.
+    static let modal = kioskHex(0x17171B)
+
+    /// A sheet's backdrop panel (B1, A6, H1): one step above the dimmed base.
+    static let sheet = kioskHex(0x121215)
 }
 
 /// Hairline stroke scale for card/tile separation on the dark base.
 enum KioskStroke {
-    static let hairline = Color.white.opacity(0.08)
-    static let standard = Color.white.opacity(0.12)
-    static let strong = Color.white.opacity(0.16)
-    static let selected = Color.white.opacity(0.5)
+    static let hairline = kioskHex(0x1E1E23)
+    static let standard = kioskHex(0x2A2A31)
+    static let strong = kioskHex(0x2E2E36)
+    /// Selected choices are always a white outline; green never means
+    /// "selected".
+    static let selected = kioskHex(0xF2F2F4)
     /// Divider lines between rows / panels.
-    static let divider = Color.white.opacity(0.1)
+    static let divider = kioskHex(0x1E1E23)
+    /// The outline of a still-to-scan checklist circle or battery unit.
+    static let pending = kioskHex(0x3A3A42)
 }
 
 /// Dimming scrims layered *over* content (full-screen modal backdrops, floating
-/// controls on top of the live camera). These are black-based — unlike
-/// `KioskSurface`, which is white-on-dark elevation — so screens stop reaching
-/// for ad-hoc `Color.black.opacity(...)` values.
+/// controls on top of the live camera).
 enum KioskScrim {
     /// Full-screen backdrop behind a modal/confirmation card.
-    static let modal = Color.black.opacity(0.7)
+    static let modal = kioskHex(0x060607, opacity: 0.72)
     /// Floating control pill resting on top of the live camera feed.
     static let control = Color.black.opacity(0.5)
     /// Manual-entry field panel over the camera feed.
     static let field = Color.black.opacity(0.58)
 }
 
-/// Corner-radius scale. Operational controls stay small; only hero brand
-/// surfaces (activation card, scan frame) use the largest radius.
+/// Corner-radius scale. Buttons are full capsules; these are for surfaces.
 enum KioskRadius {
     static let sm: CGFloat = 10   // small rows, asset thumbnails, chips
-    static let md: CGFloat = 12   // standard cards, rows, banners
-    static let lg: CGFloat = 14   // panels, primary buttons
-    static let xl: CGFloat = 16   // stat tiles
-    static let modal: CGFloat = 20 // confirmation cards
-    static let hero: CGFloat = 24 // activation card, scan frame
+    static let md: CGFloat = 12   // standard rows, roster tiles
+    static let lg: CGFloat = 14   // Today tiles, chips, inputs
+    static let xl: CGFloat = 16   // cards and sectioned lists
+    static let modal: CGFloat = 28 // confirmation cards and sheets
+    static let hero: CGFloat = 22 // the scan stage and hub hero
 }
 
-/// Spacing scale. Named rungs replace the drifting per-screen padding combos
-/// (44/36 on activation, 32 on idle, 24/16 on the hub, 32/20/32 on checkout).
+/// Spacing scale. Named rungs replace the drifting per-screen padding combos.
 enum KioskSpacing {
     static let xs: CGFloat = 8    // chip gaps, row internals
     static let sm: CGFloat = 12   // intra-card stacks
     static let md: CGFloat = 16   // card padding, grid gutters
     static let lg: CGFloat = 24   // section gaps, panel padding (compact)
-    static let xl: CGFloat = 32   // screen margins, panel padding (regular)
+    static let xl: CGFloat = 28   // screen margins (the canvas uses 28pt sides)
     /// Below the hidden status bar at the top of every screen.
     static let screenTop: CGFloat = 24
-    static let screenBottom: CGFloat = 32
+    static let screenBottom: CGFloat = 24
 }
 
 /// Shared layout dimensions that were previously inline magic numbers
@@ -126,51 +146,33 @@ enum KioskLayout {
 /// Foreground text tones on the dark base. Named rungs replace the long tail
 /// of `Color.white.opacity(...)` literals for the common cases.
 enum KioskText {
-    static let primary = Color.white
-    static let secondary = Color.white.opacity(0.72)
-    static let tertiary = Color.white.opacity(0.55)
-    static let muted = Color.white.opacity(0.4)
+    static let primary = kioskHex(0xF2F2F4)
+    static let secondary = kioskHex(0xA6A6AE)
+    static let tertiary = kioskHex(0x8A8A93)
+    static let muted = kioskHex(0x6F6F78)
+    /// Text on a white primary pill.
+    static let onPrimary = kioskHex(0x0B0B0D)
+    /// The count or detail beside a primary pill's label ("3 items").
+    static let onPrimaryDetail = kioskHex(0x4A4A55)
 }
 
 // MARK: - Card modifier
 
 extension View {
-    /// Standard kiosk card treatment: translucent fill + matching rounded
-    /// stroke. Collapses the repeated
-    /// `.background(fill, in: RoundedRectangle).overlay(RoundedRectangle.stroke)`
-    /// pattern that appeared on nearly every kiosk row and tile.
-    /// Depth comes from two restrained static gradients rather than blurs or
-    /// shadows (the kiosk is an always-on display): a faint
-    /// top glaze inside the shape and a stroke that fades toward the bottom,
-    /// so every card reads as lit from above. Both layer over the caller's
-    /// fill, so tinted cards (selected event chips, banners) keep working.
+    /// Standard kiosk card treatment: a flat fill and a 1pt stroke of the same
+    /// shape. The canvas is flat -- no glaze or gradient stroke -- so depth
+    /// comes only from the surface and stroke scales.
     func kioskCard(
         _ fill: Color = KioskSurface.card,
-        radius: CGFloat = KioskRadius.md,
-        stroke: Color = KioskStroke.standard,
+        radius: CGFloat = KioskRadius.xl,
+        stroke: Color = KioskStroke.hairline,
         lineWidth: CGFloat = 1
     ) -> some View {
         self
             .background(fill, in: RoundedRectangle(cornerRadius: radius))
             .overlay(
-                LinearGradient(
-                    colors: [Color.white.opacity(0.04), .clear],
-                    startPoint: .top,
-                    endPoint: .center
-                )
-                .clipShape(RoundedRectangle(cornerRadius: radius))
-                .allowsHitTesting(false)
-            )
-            .overlay(
                 RoundedRectangle(cornerRadius: radius)
-                    .stroke(
-                        LinearGradient(
-                            colors: [stroke, stroke.opacity(0.35)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        ),
-                        lineWidth: lineWidth
-                    )
+                    .stroke(stroke, lineWidth: lineWidth)
             )
     }
 
@@ -187,9 +189,9 @@ enum KioskBannerTone {
 
     var color: Color {
         switch self {
-        case .success: Color.statusText(.green)
-        case .error:   Color.statusText(.red)
-        case .warning: Color.statusText(.orange)
+        case .success: KioskStatus.ok
+        case .error:   KioskStatus.problem
+        case .warning: KioskStatus.attention
         }
     }
 
@@ -202,107 +204,206 @@ enum KioskBannerTone {
     }
 }
 
-// MARK: - Brand type (kiosk brand moments)
+// MARK: - Type
 
 extension Font {
     /// Activation hero title -- the biggest brand moment on the kiosk.
-    static func kioskHeroTitle(size: CGFloat = 44) -> Font { .gothamBlack(size: size) }
+    static func kioskHeroTitle(size: CGFloat = 48) -> Font { .system(size: size, weight: .heavy) }
 
-    /// Flow screen titles (Checkout / Pickup / Return). Gotham mirrors the web
-    /// `PageHeader`, making the kiosk read as the "little brother of web."
-    static func kioskScreenTitle(size: CGFloat = 24) -> Font { .gothamBold(size: size) }
+    /// Flow screen titles (Checkout / Pickup / Return).
+    static func kioskScreenTitle(size: CGFloat = 26) -> Font { .system(size: size, weight: .bold) }
 
     /// Terminal success message.
-    static func kioskSuccessTitle(size: CGFloat = 28) -> Font { .gothamBold(size: size) }
+    static func kioskSuccessTitle(size: CGFloat = 30) -> Font { .system(size: size, weight: .heavy) }
 }
-
-// MARK: - Type ramp
 
 /// The kiosk reading order, in one place.
 ///
-/// Before this, every screen picked from the raw system ramp
-/// (`.title3.bold()`, `.headline`, `.subheadline.weight(.semibold)`,
-/// `.caption.weight(.bold)`) at each call site, so two sibling cards could
-/// disagree about what "a card title" is and nothing established what to read
-/// first. These rungs are named for their *job on the screen*, not their size,
-/// and they are what new kiosk UI should reach for.
-///
-/// Gotham carries identity and custody nouns (names, item titles, big numbers)
-/// because that mirrors the web `PageHeader`; the system face carries prose,
-/// because Gotham at small sizes on an always-on panel is hard to read.
-/// All rungs stay Dynamic Type responsive via `.custom(_:size:relativeTo:)`
-/// inside the Gotham helpers and the system ramp elsewhere.
+/// SF Pro only (2026-09-25 redesign). Nothing on the kiosk renders below
+/// 14 pt: students read it from arm's length at a mounted iPad, so the floor
+/// is `meta` / `chip` / `overline`, all 14 pt. Sizes are fixed rather than
+/// Dynamic Type relative -- the fleet is two managed iPads on one 1180×820pt
+/// landscape canvas, and every rung below was measured from that canvas.
 enum KioskType {
-    /// Screen-owning title. One per screen, at most.
-    static var screenTitle: Font { .gothamBold(size: 26) }
+    // Display rungs -- one per screen at most.
 
-    /// The identity moment: a student's name on the hub, the roster headline.
-    static var identity: Font { .gothamBold(size: 34) }
+    /// The home clock: 72 pt bold with tabular digits. Seconds use
+    /// `displayClockSeconds`; the colon stays white.
+    static let displayClock = Font.system(size: 72, weight: .bold).monospacedDigit()
+    static let displayClockSeconds = Font.system(size: 72, weight: .regular).monospacedDigit()
+    static let displayClockMeridiem = Font.system(size: 32, weight: .semibold)
+    /// Overnight standby clock.
+    static let standbyClock = Font.system(size: 132, weight: .heavy).monospacedDigit()
+    static let standbyMeridiem = Font.system(size: 46, weight: .bold)
 
-    /// A number that is the point of its tile (stat counts, unit numbers).
-    static var metric: Font { .gothamBlack(size: 40) }
+    /// A task or hub header's title ("New checkout", "Harper L.").
+    static let taskTitle = Font.system(size: 56, weight: .bold)
+    /// The scan stage's confirmation headline ("AUD-031 added").
+    static let stageTitle = Font.system(size: 34, weight: .heavy)
+    /// A sheet or confirmation card title.
+    static let sheetTitle = Font.system(size: 28, weight: .heavy)
 
-    /// Section owner inside a panel ("Items", "Coming Up", "Add Items").
-    static var sectionTitle: Font { .headline.weight(.bold) }
+    /// Screen-owning title on screens that have not moved to the task header.
+    static let screenTitle = Font.system(size: 26, weight: .bold)
 
-    /// Primary line of a row or card -- an item name, an action label.
-    static var rowTitle: Font { .gothamBold(size: 16) }
+    /// The identity moment: a person's name on the hub or a sheet.
+    static let identity = Font.system(size: 34, weight: .bold)
+
+    /// A number that is the point of its tile.
+    static let metric = Font.system(size: 40, weight: .heavy).monospacedDigit()
+
+    /// The hub's "Check out gear" hero label.
+    static let heroAction = Font.system(size: 26, weight: .heavy)
+
+    /// A white primary pill's label ("Check out").
+    static let primaryLabel = Font.system(size: 22, weight: .heavy)
+
+    /// Header clock beside Back.
+    static let headerClock = Font.system(size: 22, weight: .semibold).monospacedDigit()
+
+    // Content rungs.
+
+    /// Section owner inside a panel.
+    static let sectionTitle = Font.system(size: 17, weight: .bold)
+
+    /// A card's title (a booking on the hub, the context card).
+    static let cardTitle = Font.system(size: 17, weight: .bold)
+
+    /// Header subtitle ("Harper L. · step 2 of 2").
+    static let headerDetail = Font.system(size: 17, weight: .semibold)
+
+    /// Primary line of a row -- an item tag, a booking on home.
+    static let rowTitle = Font.system(size: 16, weight: .bold)
 
     /// Hero action label, larger than a normal row because it is the one thing
     /// the screen wants tapped.
-    static var actionTitle: Font { .title3.weight(.bold) }
+    static let actionTitle = Font.system(size: 20, weight: .bold)
+
+    /// Button label on secondary pills.
+    static let buttonLabel = Font.system(size: 16, weight: .semibold)
 
     /// Supporting line under a title.
-    static var rowDetail: Font { .subheadline }
+    static let rowDetail = Font.system(size: 15)
 
     /// Body prose in empty states and explanations.
-    static var body: Font { .subheadline }
+    static let body = Font.system(size: 16)
 
-    /// All-caps overline above a group ("YOUR SESSION", "GOOD MORNING").
-    /// Always pair with `.tracking(1.2)` and `KioskText.muted`.
-    static var overline: Font { .caption.weight(.bold) }
+    /// Meta line: names, counts, due times under a row. The floor.
+    static let meta = Font.system(size: 14)
+
+    /// All-caps overline above a group ("OVERDUE", "TAKING OUT").
+    /// Pair with `.tracking(KioskType.overlineTracking)`.
+    static let overline = Font.system(size: 14, weight: .bold)
+    /// 0.12 em at 14 pt.
+    static let overlineTracking: CGFloat = 1.7
 
     /// Chip, badge, and timestamp text.
-    static var chip: Font { .caption.weight(.semibold) }
+    static let chip = Font.system(size: 14, weight: .semibold)
 
-    /// The smallest readable rung. Use sparingly -- students read this from
-    /// arm's length at a counter.
-    static var micro: Font { .caption2.weight(.semibold) }
+    /// Emphasized chip text (a due time, a count that matters).
+    static let chipStrong = Font.system(size: 14, weight: .bold)
+
+    /// Tag and code values.
+    static let code = Font.system(size: 14, weight: .semibold, design: .monospaced)
+
+    /// Kept for existing call sites; now the same 14 pt floor as `chip`.
+    static let micro = Font.system(size: 14, weight: .semibold)
+}
+
+// MARK: - Section color
+
+/// What a surface is *doing*, which decides its color everywhere.
+///
+/// green = taking out, amber = coming back, blue = picking up,
+/// violet = shared custody, red = real problems only (blocked, overdue,
+/// missing). Selection is never colored; it is a white outline.
+enum KioskSection {
+    case takingOut, comingBack, pickingUp, shared, problem
+
+    /// Solid accent: check circles, filled battery units, dots.
+    var accent: Color {
+        switch self {
+        case .takingOut: kioskHex(0x3FBF74)
+        case .comingBack: kioskHex(0xF0A43A)
+        case .pickingUp: kioskHex(0x5B8CFF)
+        case .shared: kioskHex(0x8F7CF0)
+        case .problem: kioskHex(0xE5484D)
+        }
+    }
+
+    /// Accent readable as text on the dark base.
+    var text: Color {
+        switch self {
+        case .takingOut: kioskHex(0x7FD6A1)
+        case .comingBack: kioskHex(0xF5C27A)
+        case .pickingUp: kioskHex(0x9DB8FF)
+        case .shared: kioskHex(0xC9B8FF)
+        case .problem: kioskHex(0xFF8A8E)
+        }
+    }
+
+    /// The scan stage and tinted card background.
+    var stageFill: Color {
+        switch self {
+        case .takingOut: kioskHex(0x121A15)
+        case .comingBack: kioskHex(0x1A1710)
+        case .pickingUp: kioskHex(0x10141F)
+        case .shared: kioskHex(0x14121A)
+        case .problem: kioskHex(0x1A1314)
+        }
+    }
+
+    var stageStroke: Color {
+        switch self {
+        case .takingOut: kioskHex(0x1F3B2A)
+        case .comingBack: kioskHex(0x4A3D22)
+        case .pickingUp: kioskHex(0x233257)
+        case .shared: kioskHex(0x2B2640)
+        case .problem: kioskHex(0x4A2226)
+        }
+    }
+
+    /// Quiet text on a tinted stage (the Undo label).
+    var stageSecondary: Color {
+        switch self {
+        case .takingOut: kioskHex(0xB9E8C9)
+        case .comingBack: kioskHex(0xF5D9A8)
+        case .pickingUp: kioskHex(0xC9D6FF)
+        case .shared: kioskHex(0xD9D0FF)
+        case .problem: kioskHex(0xFF8A8E)
+        }
+    }
 }
 
 // MARK: - Status language
 
-/// One meaning per color, kiosk-wide.
-///
-/// The kiosk previously spent blue, green, orange, and white on overlapping
-/// ideas -- "scanner ready" rendered white in the shell pill, blue in the
-/// readiness badge, and green in the detail sheet, two of them visible at once.
-/// Red is reserved: it is the brand accent and the primary-action color, so it
-/// never doubles as a generic "warning" tint.
+/// One meaning per color, kiosk-wide. Values come from `KioskSection` so a
+/// status and the flow it belongs to can never disagree.
 enum KioskStatus {
-    /// Available / free. Also: scanner armed, item accepted.
-    /// Never use for an active checkout — the item is not free.
-    static let ok = Color.statusText(.green)
+    /// Available / accepted. Also: scanner armed.
+    static let ok = KioskSection.takingOut.text
 
-    /// Active use: an `OPEN` checkout, gear currently out with someone, a
-    /// mutation in flight. This — not red — is what "checked out" looks like.
-    static let active = Color.statusText(.blue)
+    /// An `OPEN` checkout that is simply out. Neutral: being out is normal,
+    /// not a state that needs a color.
+    static let active = KioskText.secondary
 
-    /// Reserved / claimed but not yet out: `BOOKED` reservations.
-    static let scheduled = Color.statusText(.purple)
+    /// Reserved / ready to pick up.
+    static let scheduled = KioskSection.pickingUp.text
 
-    /// Warning / waiting: pending pickup, scanner reconnecting, and an `OPEN`
-    /// checkout on the day it comes due.
-    static let attention = Color.statusText(.orange)
+    /// Shared custody (travel cases).
+    static let shared = KioskSection.shared.text
 
-    /// Urgent / problem: overdue, errors, destructive actions. Deliberately
-    /// distinct from `Color.kioskRed`, which is brand chrome you tap.
-    static let problem = Color.statusText(.red)
+    /// Coming back: due today, waiting, needs attention.
+    static let attention = KioskSection.comingBack.text
 
-    /// Custody urgency ramp for an `OPEN` checkout, mirroring the iOS app's
-    /// `queueGearTone` and the deadline overlay sanctioned in
-    /// `docs/COLOR_SYSTEM.md`: blue while it is simply out, orange on the day
-    /// it is due, red once it is past due.
+    /// Real problems only: overdue, blocked, missing, errors.
+    static let problem = KioskSection.problem.text
+
+    /// The dot beside a checkout that is out and due later.
+    static let neutralDot = kioskHex(0x4A4A55)
+
+    /// Custody urgency for an `OPEN` checkout: neutral while it is simply out,
+    /// amber on the day it is due, red once it is past due.
     static func custody(isOverdue: Bool, dueAt: Date) -> Color {
         if isOverdue { return problem }
         return Calendar.current.isDateInToday(dueAt) ? attention : active
@@ -310,48 +411,76 @@ enum KioskStatus {
 }
 
 /// Affiliation marking — who a person is, not what a piece of gear is doing.
-///
-/// A blue ring on the portrait, and nothing else. The badge used to render as
-/// text under the name (and before that in brand red, which put it in the same
-/// hue band as genuinely overdue custody). Text under a name is a line every
-/// tile has to budget height for, and it competes with the name itself; a ring
-/// costs nothing and reads at a glance across a counter.
-///
-/// The affiliation is still spoken — `UserRow` keeps it in the accessibility
-/// label — so nothing is lost for VoiceOver.
+/// A ring on the portrait, and nothing else; still spoken via `UserRow`'s
+/// accessibility label.
 enum KioskAffiliation {
-    static let ring = Color.statusText(.blue)
+    static let ring = KioskText.tertiary
 }
 
 // MARK: - Button hierarchy
 
 /// What a button is *for*, so call sites stop choosing a style and a tint.
 ///
-/// The rule the kiosk was missing: brand red means "this is the action this
-/// screen exists for." Everything else is quieter. A destructive action is red
-/// too, but only ever inside a confirmation path, never competing with a
-/// primary CTA for the same glance.
+/// The one action a screen exists for is a solid white pill. Everything else
+/// is a quiet dark pill. Red is for confirming something destructive, inside
+/// a confirmation, never beside a primary action.
 enum KioskButtonRole {
-    /// The one action the screen is for. Brand red, prominent glass.
+    /// The one action the screen is for. Solid white pill, dark label.
     case primary
-    /// A supporting action -- Save, Edit, Camera. Neutral glass.
+    /// A supporting action -- Edit, Camera, Back. Dark pill with a stroke.
     case secondary
-    /// Removes custody or data. Red, but compact and never hero-sized.
+    /// Lowest emphasis: Remove on a row, Paste code. Outline only.
+    case quiet
+    /// Confirms a destructive choice inside a confirmation (Discard).
     case destructive
 }
 
-extension View {
-    /// Applies the kiosk button hierarchy. Pair with `.controlSize(_:)` when a
-    /// call site genuinely needs a different footprint.
-    @ViewBuilder
-    func kioskButtonRole(_ role: KioskButtonRole) -> some View {
+/// The kiosk's single pill button style.
+struct KioskPillButtonStyle: ButtonStyle {
+    let role: KioskButtonRole
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(KioskType.buttonLabel)
+            .foregroundStyle(foreground)
+            .padding(.horizontal, 18)
+            .frame(minHeight: 44)
+            .background(fill, in: Capsule())
+            .overlay(Capsule().stroke(stroke, lineWidth: 1))
+            .contentShape(Capsule())
+            .opacity(isEnabled ? (configuration.isPressed ? 0.78 : 1) : 0.4)
+    }
+
+    private var fill: Color {
         switch role {
-        case .primary:
-            self.buttonStyle(.glassProminent).tint(Color.kioskRed)
-        case .secondary:
-            self.buttonStyle(.glass).tint(KioskText.primary)
-        case .destructive:
-            self.buttonStyle(.bordered).tint(KioskStatus.problem)
+        case .primary: KioskText.primary
+        case .secondary: KioskSurface.control
+        case .quiet: .clear
+        case .destructive: KioskSection.problem.accent
         }
+    }
+
+    private var stroke: Color {
+        switch role {
+        case .primary: KioskText.primary
+        case .secondary, .quiet: KioskStroke.strong
+        case .destructive: KioskSection.problem.accent
+        }
+    }
+
+    private var foreground: Color {
+        switch role {
+        case .primary, .destructive: KioskText.onPrimary
+        case .secondary: KioskText.primary
+        case .quiet: KioskText.secondary
+        }
+    }
+}
+
+extension View {
+    /// Applies the kiosk button hierarchy.
+    func kioskButtonRole(_ role: KioskButtonRole) -> some View {
+        buttonStyle(KioskPillButtonStyle(role: role))
     }
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { choosePickupSubstitutionCandidate } from "@/lib/services/kiosk-pickup-substitute";
+import { choosePickupSubstitutionCandidate, pickupSubstitutionOffer } from "@/lib/services/kiosk-pickup-substitute";
 
 function remaining(over: {
   assetId: string;
@@ -71,5 +71,39 @@ describe("choosePickupSubstitutionCandidate", () => {
       new Set(),
     );
     expect(chosen).toBeNull();
+  });
+});
+
+describe("pickupSubstitutionOffer", () => {
+  const mic = { id: "mic-12", name: "Rode NTG5", assetTag: "MIC-12", type: "Microphone", categoryId: "mics" };
+
+  it("offers a like-for-like swap with the reserved item's id", () => {
+    const offer = pickupSubstitutionOffer(
+      [remaining({ assetId: "mic-09", tag: "MIC-09", name: "Rode NTG5", categoryId: "mics" })],
+      mic,
+      new Set(),
+    );
+    expect(offer).toEqual({
+      scanned: { id: "mic-12", name: "Rode NTG5", tagName: "MIC-12" },
+      reserved: { id: "mic-09", name: "Rode NTG5", tagName: "MIC-09" },
+    });
+  });
+
+  it("does not pair an unrelated scan with the last remaining item", () => {
+    const offer = pickupSubstitutionOffer(
+      [remaining({ assetId: "cam-1", tag: "CAM-1", name: "Sony FX3", categoryId: "cameras" })],
+      mic,
+      new Set(),
+    );
+    expect(offer).toBeNull();
+  });
+
+  it("skips reserved items already scanned", () => {
+    const offer = pickupSubstitutionOffer(
+      [remaining({ assetId: "mic-09", tag: "MIC-09", name: "Rode NTG5", categoryId: "mics" })],
+      mic,
+      new Set(["mic-09"]),
+    );
+    expect(offer).toBeNull();
   });
 });

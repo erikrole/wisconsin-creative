@@ -825,13 +825,16 @@ describe("kiosk pickup serialized scan guard", () => {
   });
 
   it("asks before adding an off-plan serialized scan to the reservation", async () => {
-    mocks.bookingFindUnique.mockResolvedValue({
-      id: "reservation-1",
-      status: "BOOKED",
-      kind: "RESERVATION",
-      requesterUserId: "user-1",
-      locationId: "loc-1",
-    });
+    mocks.bookingFindUnique.mockImplementation(async (args: { select?: Record<string, unknown> }) =>
+      args?.select?.scanEvents
+        ? { serializedItems: [], scanEvents: [] }
+        : {
+            id: "reservation-1",
+            status: "BOOKED",
+            kind: "RESERVATION",
+            requesterUserId: "user-1",
+            locationId: "loc-1",
+          });
     mocks.findAssetByScanValue.mockResolvedValue({
       id: "asset-755",
       assetTag: "Manfrotto 755CX3 Tripod",

@@ -50,12 +50,10 @@ describe("iOS kiosk windowing cleanup", () => {
     expect(chrome).toContain("proxy.size.width < KioskLayout.compactBreakpoint");
     expect(chrome).toContain("primary(true)");
     expect(chrome).toContain("secondary(true)");
-    expect(checkout).toContain("KioskAdaptiveSplit { _ in");
-    expect(checkout).toContain("KioskSideRail(isCompact: isCompact)");
-    expect(pickup).toContain("KioskAdaptiveSplit { _ in");
-    expect(pickup).toContain("KioskSideRail(isCompact: isCompact)");
-    expect(returned).toContain("KioskAdaptiveSplit { _ in");
-    expect(returned).toContain("KioskSideRail(isCompact: isCompact)");
+    // Checkout moved to the redesign's fixed-canvas task scaffold (1180×820pt).
+    expect(checkout).toContain("KioskTaskScaffold(header: taskHeader(step: 2))");
+    expect(pickup).toContain("KioskTaskScaffold(header: KioskTaskHeader(");
+    expect(returned).toContain("KioskTaskScaffold(header: KioskTaskHeader(");
     // The user hub is deliberately NOT an adaptive split. Its 60/40 layout gave
     // an "Coming Up" empty state half the iPad while truncating booking item
     // names on the left, so it became one full-width prioritized column that

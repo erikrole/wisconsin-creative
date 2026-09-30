@@ -59,11 +59,12 @@ describe("iOS kiosk scanner focus", () => {
     // Checkout's scan step uses the shared KioskScanStage now; pickup and
     // return still use the badge directly. Both must report the hidden sink's
     // REAL first-responder state, never merely that the field is mounted.
-    expect(checkout).toContain("KioskScanStage(");
-    expect(checkout).toContain("isReady: scannerHasFocus");
-    expect(checkout).toContain("isHardwareConnected: store.scanner.hardwareConnected");
-    expect(checkout).toContain("KioskNativeTextField(");
-    expect(checkout).toContain("focusedField.wrappedValue == .customPurpose");
+    expect(checkout).toContain("KioskScanPrompt(");
+    expect(checkout).toContain("if !scannerHasFocus {");
+    expect(checkout).toContain("if !store.scanner.hardwareConnected {");
+    const details = source("ios/Wisconsin/Kiosk/KioskCheckoutDetailsStep.swift");
+    expect(details).toContain("KioskNativeTextField(");
+    expect(details).toContain("get: { focusedField == .customPurpose }");
     expect(checkout).toContain("HIDScannerFocusGate.allowScannerFocusNow()");
     expect(checkout).toContain("UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder)");
     expect(checkout).toContain("DispatchQueue.main.async {\n            HIDScannerFocusGate.allowScannerFocusNow()\n            scannerCaptureEnabled = true");
@@ -77,8 +78,11 @@ describe("iOS kiosk scanner focus", () => {
     for (const flow of [pickup, kioskReturn]) {
       expect(flow).toContain("@State private var scannerHasFocus = false");
       expect(flow).toContain("onFocusChange: { scannerHasFocus = $0 }");
-      expect(flow).toContain("KioskScannerReadinessBadge(");
-      expect(flow).toContain("isReady: scannerHasFocus");
+    }
+    // Pickup and return state readiness in their scan prompt from the real
+    // focus state.
+    for (const flow of [pickup, kioskReturn]) {
+      expect(flow).toContain("if !scannerHasFocus {");
     }
     expect(components).toContain("struct KioskScannerReadinessBadge: View");
     expect(components).toContain('guard isReady else { return "Scanner reconnecting" }');
@@ -158,7 +162,10 @@ describe("iOS kiosk scanner focus", () => {
     // The checkout view reads that predicate in three places now (stroke tint,
     // status line, hint), so it lives in one computed property — assert both
     // halves rather than a single inlined expression.
-    expect(checkout).toContain("private var isFieldFocused: Bool { focusedField.wrappedValue == .customPurpose }");
+    // Redesign I6: on checkout details the tip sits inline under the field.
+    const details = source("ios/Wisconsin/Kiosk/KioskCheckoutDetailsStep.swift");
+    expect(details).toContain("KioskKeyboardTip(isFieldFocused: focusedField == .customPurpose)");
+    expect(details).toContain("if isFieldFocused && !keyboardVisible {");
 
     // The popup is centered and screen-level, so it is mounted per presentation
     // context and costs no layout inside any form. Anchored to the field it

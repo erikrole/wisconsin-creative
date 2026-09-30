@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		01166B5C08621BBC2D8218F6 /* HIDScannerField.swift in Sources */ = {isa = PBXBuildFile; fileRef = C22B3A50B4815BC1451C26DD /* HIDScannerField.swift */; };
+		015371E187F17F4CE2241673 /* KioskCheckoutDetailsStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14951B258A7FE7AD4B9F5059 /* KioskCheckoutDetailsStep.swift */; };
 		01C0E89D9110CBB8DA80D650 /* SearchResultRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD7494E64F4395E73A7AA6C1 /* SearchResultRow.swift */; };
 		021A7B27623C3C8544FE58BB /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B04517A8131BAA862DB3FF5E /* ProfileView.swift */; };
 		0342D7B9F506A8995685BC69 /* ItemListText.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC04AA628BB1DEA764D7EEAC /* ItemListText.swift */; };
@@ -24,6 +25,7 @@
 		1055262B6F98F58C10AC34F1 /* Gotham-Black.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 25CAFE07992F1EB02F507AE2 /* Gotham-Black.ttf */; };
 		11A01EC76DDAA014512A70E9 /* AppEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5932CB2D580EFEB5EA22D828 /* AppEnvironment.swift */; };
 		12BE5380A72CE66E23CA39CD /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 592769886AB12F6A842CC8CF /* Assets.xcassets */; };
+		13F24EADE030F4FF7CE34489 /* KioskHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35BA2B9D7993639E5BC37B75 /* KioskHomeView.swift */; };
 		157E1E0021A0F88C78E3590E /* SidebarWebDestinationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B76322B9A6F0D5B70487D0F2 /* SidebarWebDestinationView.swift */; };
 		16180470B97E979363856F90 /* Gotham-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = F79BD5C4616572A064F43254 /* Gotham-Bold.ttf */; };
 		17D60243EEB5E89A81363B3B /* ReportModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 841B755DD26E463F2B624373 /* ReportModelsTests.swift */; };
@@ -48,6 +50,7 @@
 		2CED1D2B5A4282EB13E29796 /* ScheduleModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = D50B2D1EA31765C957FED322 /* ScheduleModels.swift */; };
 		2DF5EDC0EA7BAAF2547F1035 /* LinkStickerWizard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41D51AC00210AD1B6DE0E466 /* LinkStickerWizard.swift */; };
 		2E557BDFACDF537A54930972 /* BadgeEarnedCelebration.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDF1537A041998300D3A8FA8 /* BadgeEarnedCelebration.swift */; };
+		2F57AAE5BC711AFCB6825C38 /* KioskChangesViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8720CD7A10389DB790C6C2D /* KioskChangesViews.swift */; };
 		30A2174F020A46E7B8538492 /* CreateBookingPickers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AFF5F65A92CEAED518EF6E6 /* CreateBookingPickers.swift */; };
 		31591DD0437B097C2510AB84 /* UserAvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2BBAACBEA87B1EE9FEBC287 /* UserAvatarView.swift */; };
 		31BA906AD0D633053D4804B7 /* AccountSecuritySettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 552E4A9FC0A2CB73C36F51C6 /* AccountSecuritySettingsView.swift */; };
@@ -58,7 +61,6 @@
 		390F43409B451AAB78D2D0C9 /* WisconsinApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BDE438C8F05EAA14B299BB /* WisconsinApp.swift */; };
 		3A34548DD720E71C6B54BB31 /* ItemsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F12684601FE641B454D0219B /* ItemsView.swift */; };
 		3C5D633C4299CA79C40FCFBA /* Gotham-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = F79BD5C4616572A064F43254 /* Gotham-Bold.ttf */; };
-		3EA409C06E497D3FCA3ECF8B /* KioskColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF17654612E5CA2EBF575539 /* KioskColors.swift */; };
 		3F0879ADAE07E40D10144C86 /* ScheduleCalendarSubscriptionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 796958C4A59FDC2C36ED1E38 /* ScheduleCalendarSubscriptionSheet.swift */; };
 		411CF014B25A6515F8E6869E /* CreateBookingEquipmentRows.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4C885700380306D486A94C9 /* CreateBookingEquipmentRows.swift */; };
 		41891E6B69644BB1DB025CB9 /* Brand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A9DAB950F60885A23620BEC /* Brand.swift */; };
@@ -95,12 +97,14 @@
 		6F494116C14B986CBC4F1C86 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B798A9A6A730D69BA6E9597B /* SettingsView.swift */; };
 		713FB9080DFAA1073EE5FA8C /* EventDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FB4AEDFE7F83CC6E155C12D /* EventDetailSheet.swift */; };
 		71675D3559403AAD9354C225 /* BrowseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58ABE954706326D6137979FB /* BrowseView.swift */; };
+		743F290B3CC3C134AA27607E /* KioskReturnReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D91ED4DEB3FC6F670DC60EDB /* KioskReturnReportView.swift */; };
 		7507BE07B0E40EAA31B9DBE9 /* DateFormats.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39565FFA7236A61DAD12D9BB /* DateFormats.swift */; };
 		783075F2A904D279CA0653C5 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 592769886AB12F6A842CC8CF /* Assets.xcassets */; };
 		78C02C1D3AEE264D6EA1925B /* NotificationSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2159F738CA242773EA9D438 /* NotificationSettingsView.swift */; };
 		795277BA3B90A0AB27B5C672 /* GearStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAD4EC3F211EACBB157F7DDE /* GearStore.swift */; };
 		7A57F69F8CCCA6552D3EBED3 /* ScheduleWindowCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = F27F74922887FF66BF6AA61E /* ScheduleWindowCache.swift */; };
 		7CE11553481BC17CEAE88EDC /* GearHomeScreenWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6720D70A7A90FE5BEFBFDD1F /* GearHomeScreenWidgets.swift */; };
+		7EFDB9FD68785427E5F753C3 /* KioskTaskKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59D13CBC93F3332016C1136E /* KioskTaskKit.swift */; };
 		81413B070B47866D2C7DB337 /* SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0189482D68508F45B086F46F /* SessionStore.swift */; };
 		843586F2B58722883BD12D08 /* KioskReturnView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 687337C19E47FE94FE56F9BF /* KioskReturnView.swift */; };
 		84BE753FF259E17D637E6482 /* AccountAvatar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 073F98039DAC37B5AC72487C /* AccountAvatar.swift */; };
@@ -249,6 +253,7 @@
 		0CF2E588B9A1DA4F76309E88 /* NotificationActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationActions.swift; sourceTree = "<group>"; };
 		0D900B3FE267BAB0F0904D07 /* Toast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Toast.swift; sourceTree = "<group>"; };
 		0E5A80EBE9AE9D0094E70FBB /* KioskShellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskShellView.swift; sourceTree = "<group>"; };
+		14951B258A7FE7AD4B9F5059 /* KioskCheckoutDetailsStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskCheckoutDetailsStep.swift; sourceTree = "<group>"; };
 		14DA88A1DF6F8D23066A07BC /* GuidesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuidesView.swift; sourceTree = "<group>"; };
 		1770023701735D8701DCAA5B /* OverdueReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverdueReportView.swift; sourceTree = "<group>"; };
 		1B440FC4AD4F07C1163F8856 /* CheckoutReturnLiveActivityWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckoutReturnLiveActivityWidget.swift; sourceTree = "<group>"; };
@@ -271,6 +276,7 @@
 		3505D284815BD7237ACFED5F /* KioskFlowRouting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskFlowRouting.swift; sourceTree = "<group>"; };
 		3552556B169D8833DE628CF9 /* WisconsinUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = WisconsinUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		358BF1EA0D68485F1E260EF1 /* PerformanceTestHarness.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceTestHarness.swift; sourceTree = "<group>"; };
+		35BA2B9D7993639E5BC37B75 /* KioskHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskHomeView.swift; sourceTree = "<group>"; };
 		3700D2B2FAE801DC2FF0F1ED /* KioskCheckoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskCheckoutView.swift; sourceTree = "<group>"; };
 		38065600FA5A1C1AC4C8CC2F /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		39565FFA7236A61DAD12D9BB /* DateFormats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateFormats.swift; sourceTree = "<group>"; };
@@ -294,6 +300,7 @@
 		592769886AB12F6A842CC8CF /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		5932CB2D580EFEB5EA22D828 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
 		59BEC868CE07F10941FEBB5C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		59D13CBC93F3332016C1136E /* KioskTaskKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskTaskKit.swift; sourceTree = "<group>"; };
 		5B540C9027D1885BCBEA2E4D /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		5E180A2286F2673D3B7E2179 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		5FB4AEDFE7F83CC6E155C12D /* EventDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventDetailSheet.swift; sourceTree = "<group>"; };
@@ -387,10 +394,11 @@
 		D5FEA50A163963BC17612FB6 /* ReservationDraftStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReservationDraftStore.swift; sourceTree = "<group>"; };
 		D670C3FF7EA66807225FD6FD /* SemanticTones.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SemanticTones.swift; sourceTree = "<group>"; };
 		D7348A946664F1C8E265C2A3 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		D8720CD7A10389DB790C6C2D /* KioskChangesViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskChangesViews.swift; sourceTree = "<group>"; };
+		D91ED4DEB3FC6F670DC60EDB /* KioskReturnReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskReturnReportView.swift; sourceTree = "<group>"; };
 		DB5E4D4F3F432CE124DE63A8 /* KioskPickupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskPickupView.swift; sourceTree = "<group>"; };
 		DDD21416289B346FEE851FB9 /* ProfileCompletionModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileCompletionModelsTests.swift; sourceTree = "<group>"; };
 		DE250FADCDB66EDCBD5DF234 /* AvailabilityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvailabilityView.swift; sourceTree = "<group>"; };
-		DF17654612E5CA2EBF575539 /* KioskColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskColors.swift; sourceTree = "<group>"; };
 		E11254A1E4647B8B02F4890A /* CheckoutReturnActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckoutReturnActivityAttributes.swift; sourceTree = "<group>"; };
 		E15CD71193CFD39E493FF9B9 /* KioskChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskChrome.swift; sourceTree = "<group>"; };
 		E376E0961E9404F4D93C4B4E /* GearWidgetPublisher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GearWidgetPublisher.swift; sourceTree = "<group>"; };
@@ -625,15 +633,17 @@
 				783E3F89AF08A64D8BE2685D /* KioskActivationView.swift */,
 				BA5C2531E017BDBDE5EFDDFE /* KioskAPIClient.swift */,
 				06C085E7CDEC3CCE6DFDD630 /* KioskBarcodeCameraView.swift */,
+				D8720CD7A10389DB790C6C2D /* KioskChangesViews.swift */,
 				966B6B986CA5E9C123B8EC01 /* KioskCheckoutDetailSheet.swift */,
+				14951B258A7FE7AD4B9F5059 /* KioskCheckoutDetailsStep.swift */,
 				3700D2B2FAE801DC2FF0F1ED /* KioskCheckoutView.swift */,
 				E15CD71193CFD39E493FF9B9 /* KioskChrome.swift */,
-				DF17654612E5CA2EBF575539 /* KioskColors.swift */,
 				348C1E3385689A947929A115 /* KioskComponents.swift */,
 				E37E6A8082FFD84EC009BC21 /* KioskDateFormatting.swift */,
 				07116906C1A1FF6F5D10BFA1 /* KioskDesign.swift */,
 				E476FBFFA1229259FF006C64 /* KioskEventDetailSheet.swift */,
 				3505D284815BD7237ACFED5F /* KioskFlowRouting.swift */,
+				35BA2B9D7993639E5BC37B75 /* KioskHomeView.swift */,
 				512445D206E12968A205246E /* KioskIdentityView.swift */,
 				2F4FFF38CD734CA5656C8878 /* KioskIdleRoster.swift */,
 				649B6E0F68D9B5DB4D054656 /* KioskIdleView.swift */,
@@ -641,11 +651,13 @@
 				046675A42DFADB1133461EDD /* KioskNativeTextField.swift */,
 				E725DC3AA9C81B02F5CF4435 /* KioskOperatorHubView.swift */,
 				DB5E4D4F3F432CE124DE63A8 /* KioskPickupView.swift */,
+				D91ED4DEB3FC6F670DC60EDB /* KioskReturnReportView.swift */,
 				687337C19E47FE94FE56F9BF /* KioskReturnView.swift */,
 				0E5A80EBE9AE9D0094E70FBB /* KioskShellView.swift */,
 				AE625FDFD675BDE49443B571 /* KioskSleepModeView.swift */,
 				FA38BB094C95612DBF9F1C24 /* KioskStore.swift */,
 				E968BAF46C8E557831F73C27 /* KioskSuccessView.swift */,
+				59D13CBC93F3332016C1136E /* KioskTaskKit.swift */,
 			);
 			path = Kiosk;
 			sourceTree = "<group>";
@@ -1058,15 +1070,17 @@
 				654893DACB94A0EDA73141DF /* KioskAPIClient.swift in Sources */,
 				4B2A968B07EADEF18DEAD46D /* KioskActivationView.swift in Sources */,
 				9920100D23D0FF37F2528340 /* KioskBarcodeCameraView.swift in Sources */,
+				2F57AAE5BC711AFCB6825C38 /* KioskChangesViews.swift in Sources */,
 				18103A77A1D847F0F42FFDCF /* KioskCheckoutDetailSheet.swift in Sources */,
+				015371E187F17F4CE2241673 /* KioskCheckoutDetailsStep.swift in Sources */,
 				3626807CF358067A4EF9AF15 /* KioskCheckoutView.swift in Sources */,
 				610271C66D62E1DD52D043D1 /* KioskChrome.swift in Sources */,
-				3EA409C06E497D3FCA3ECF8B /* KioskColors.swift in Sources */,
 				F2A0A3013F3F22792FA32C84 /* KioskComponents.swift in Sources */,
 				D0BEAE453503EBBEDD922745 /* KioskDateFormatting.swift in Sources */,
 				92FB41EABAD386A10484F5D8 /* KioskDesign.swift in Sources */,
 				B5172B28418254E10FE53FCF /* KioskEventDetailSheet.swift in Sources */,
 				D6AFE2C4EFEE0397AA81C6DC /* KioskFlowRouting.swift in Sources */,
+				13F24EADE030F4FF7CE34489 /* KioskHomeView.swift in Sources */,
 				8AD1ECE2467134BBDC92A41B /* KioskIdentityView.swift in Sources */,
 				A63240779436086293BA2A9E /* KioskIdleRoster.swift in Sources */,
 				9F8F4FCCB5B170E4C08FEBA1 /* KioskIdleView.swift in Sources */,
@@ -1075,11 +1089,13 @@
 				CB5A9F4D1449DDAFF063E6A6 /* KioskOnlyApp.swift in Sources */,
 				A7EE4C02BE39D3048D19E666 /* KioskOperatorHubView.swift in Sources */,
 				03D13CE00A34B9C6DD2AB6EF /* KioskPickupView.swift in Sources */,
+				743F290B3CC3C134AA27607E /* KioskReturnReportView.swift in Sources */,
 				843586F2B58722883BD12D08 /* KioskReturnView.swift in Sources */,
 				9CF45F32E90F4C03DDE548AB /* KioskShellView.swift in Sources */,
 				A4D4C64C1C5E6904BFF894E3 /* KioskSleepModeView.swift in Sources */,
 				F3AE80E47FC7B6AAA76035B6 /* KioskStore.swift in Sources */,
 				E6F51692EA10D1DF6DA5F049 /* KioskSuccessView.swift in Sources */,
+				7EFDB9FD68785427E5F753C3 /* KioskTaskKit.swift in Sources */,
 				47DD202255737DB455061266 /* LatestRequestGeneration.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

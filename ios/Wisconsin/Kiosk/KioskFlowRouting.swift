@@ -115,6 +115,8 @@ struct KioskFlowIntent: Equatable {
     /// Whose personal checkout a return closes. Unlike `expectedRequester`,
     /// this never limits who may identify.
     var custodyOwner: KioskUser? = nil
+    /// The item whose scan opened this flow from home (redesign B1/B2).
+    var scannedItem: KioskResolvedItem? = nil
 
     /// The scan that opened a flow followed by any that arrived while it was
     /// being resolved, in order, each value once.

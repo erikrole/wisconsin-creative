@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "7c3c1fba78c24bc430751a4b6223d5d7d378cd01",
+  "sourcePatchSha256": null,
+  "settings": {
+    "device": "iPad Air 11-inch (M4) simulator, iOS 26.5",
+    "viewport": [
+      1180,
+      820
+    ],
+    "fixture": "GT_KIOSK_SCENARIO=idle",
+    "role": "kiosk",
+    "route": "idle",
+    "appearance": "dark",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "live clock, captured 2026-09-28 morning",
+    "scroll": [
+      0,
+      0
+    ]
+  },
+  "imageSha256": "328cf2586abe90cc4915579039e35b562f388d6e98538fe512093d8414eaf246",
+  "dimensions": [
+    1640,
+    1140
+  ]
+}

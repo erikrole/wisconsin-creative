@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "7c3c1fba78c24bc430751a4b6223d5d7d378cd01",
+  "sourcePatchSha256": "8ce5c94310db22b5b307bbca9c362e410514e02e54e7aa5e55720ccfcbc085b6",
+  "settings": {
+    "device": "iPad Air 11-inch (M4) simulator, iOS 26.5",
+    "viewport": [
+      1180,
+      820
+    ],
+    "fixture": "GT_KIOSK_SCENARIO=home-game-day",
+    "role": "kiosk",
+    "route": "home-game-day",
+    "appearance": "dark",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "live clock, captured 2026-09-28 morning",
+    "scroll": [
+      0,
+      0
+    ]
+  },
+  "imageSha256": "3563030ad83e9023a69720e54e6a84da620476f5a33a1dd76137a83a6a3d5bff",
+  "dimensions": [
+    1640,
+    1140
+  ]
+}

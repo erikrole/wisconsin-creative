@@ -6,8 +6,9 @@ describe("iOS Kiosk back-button ownership contract", () => {
     const shell = source("ios/Wisconsin/Kiosk/KioskShellView.swift");
 
     expect(shell).toContain("private var showsSystemStatusButton: Bool");
-    // Success keeps the shell reveal; idle hosts its own control in its header.
-    expect(shell).toContain("case .success:\n            return !showSystemStatus");
+    // The redesigned receipt puts the portrait top-left, so success no longer
+    // hosts the reveal; home reveals status with a long press on its clock.
+    expect(shell).toContain("case .success:\n            // The redesigned receipt puts the person's portrait here.\n            return false");
     expect(shell).toContain("case .idle, .activation, .operatorHub, .identity, .checkout, .pickup, .return:");
     expect(shell).toContain("if showsSystemStatusButton {");
     expect(shell).toContain("Image(systemName: \"info.circle\")");

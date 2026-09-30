@@ -1,0 +1,124 @@
+{
+  "title": "Kiosk Pickup Rebuild",
+  "eyebrow": "WisconsinKiosk \u00b7 redesign row F",
+  "lede": "Pickup moves onto the task scaffold: blue for a personal pickup, violet for a shared case, Undo on every scan, off-plan scans answered inline, and a receipt that names what stays reserved.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "Side by side",
+      "note": "Before = HEAD 1417e3c0 build, after = working tree; same created simulator, same fixture scenarios.",
+      "pairs": [
+        {
+          "title": "Pickup, nothing scanned",
+          "sub": "Fixture co-1 (status OPEN).",
+          "before": "before/pickup.png",
+          "beforeCap": "Progress ring, readiness badge, rail with its own title block.",
+          "after": "after/pickup.png",
+          "afterCap": "Scan prompt in blue, context card, 'Picking up 0 of 4' list with the battery row, Pick up pill.",
+          "beforeEvidence": "evidence/before-pickup-evidence.json",
+          "afterEvidence": "evidence/after-pickup-evidence.json"
+        },
+        {
+          "title": "Reservation with 10 batteries",
+          "sub": "Fixture rs-1 (BOOKED).",
+          "before": "before/reservation-battery-pickup.png",
+          "beforeCap": "Battery-quantity card repeated the any-unit rule; rail row said ANY UNITS.",
+          "after": "after/reservation-battery-pickup.png",
+          "afterCap": "One battery row: '0 of 10', 'Numbers are saved as you scan them', no fake slot numbers.",
+          "beforeEvidence": "evidence/before-reservation-battery-pickup-evidence.json",
+          "afterEvidence": "evidence/after-reservation-battery-pickup-evidence.json"
+        }
+      ]
+    },
+    {
+      "heading": "New frames (after only)",
+      "note": "No before exists for these states: the old screen had no inline cards, no Undo, no shared styling, and no pickup receipt card.",
+      "shots": [
+        {
+          "title": "F1 \u00b7 battery #12 picked up",
+          "tag": "After only",
+          "image": "after/pickup-accepted.png",
+          "cap": "Blue confirmation with Undo; list shows #12 filled and an outlined chip still to scan.",
+          "wide": true
+        },
+        {
+          "title": "F2 \u00b7 MIC-12 isn't on this reservation",
+          "tag": "After only",
+          "image": "after/pickup-off-plan.png",
+          "cap": "Inline card; Put it back / Add MIC-12.",
+          "wide": true
+        },
+        {
+          "title": "F3 \u00b7 swap in a replacement",
+          "tag": "After only",
+          "image": "after/pickup-substitute.png",
+          "cap": "MIC-11 can take MIC-09's place; Swap for MIC-09, Put it back, or add as an extra.",
+          "wide": true
+        },
+        {
+          "title": "F4 \u00b7 shared travel case",
+          "tag": "After only",
+          "image": "after/pickup-shared.png",
+          "cap": "Violet section, 'For the team', Pick up for the team, off-record hint.",
+          "wide": true
+        },
+        {
+          "title": "Finishing with leftovers asks first",
+          "tag": "After only",
+          "image": "after/pickup-finish-confirm.png",
+          "cap": "Keep scanning / Pick up 3.",
+          "wide": true
+        },
+        {
+          "title": "F5 \u00b7 receipt",
+          "tag": "After only",
+          "image": "after/pickup-receipt.png",
+          "cap": "Leftover line in amber: 'MIC-09 and 1 \u00d7 Sony Battery stay reserved for a later pickup.'",
+          "wide": true
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "F1 pickup",
+      "was": "Adaptive split with ring and readiness badge; no Undo.",
+      "now": "Task scaffold, blue section, battery chips filled when scanned and outlined while still to scan, Undo on each confirmation (pickup scan DELETE)."
+    },
+    {
+      "h": "F2 not on the reservation",
+      "was": "System dialog 'Add this item?' with Discard.",
+      "now": "Inline card with Put it back / Add MIC-12."
+    },
+    {
+      "h": "F3 substitute",
+      "was": "Unreachable: the scan route never sent a substitution.",
+      "now": "Scan route offers a like-for-like swap (same category or name); card offers Swap for MIC-09, Put it back, or add as an extra. Same-model suggestion list dropped (class d)."
+    },
+    {
+      "h": "F4 shared case",
+      "was": "Same blue screen as a personal pickup.",
+      "now": "Violet section, 'For the team' list, 'Pick up for the team' pill, off-record hint."
+    },
+    {
+      "h": "F5 receipt",
+      "was": "Sentence only.",
+      "now": "Receipt card with scanned tags, due time, and an amber leftover line from confirm remainingItemNames."
+    },
+    {
+      "h": "Finishing with leftovers",
+      "was": "'Pick Up 3 Items' confirmed immediately.",
+      "now": "Asks first: 'MIC-09 and 1 \u00d7 Sony Battery aren't scanned' / Keep scanning / Pick up 3."
+    }
+  ],
+  "verification": [
+    "xcodebuild WisconsinKiosk build (created iPad Air 11-inch (M4) iOS 26.5): pass",
+    "npx vitest run tests/ios-kiosk- + kiosk-pickup-substitute + kiosk-pickup-add: 20 files, 69 tests pass",
+    "npx tsc --noEmit: pass; git diff --check: pass"
+  ],
+  "notes": [
+    "Fixture captures prove rendering only. Undo, substitute, and confirm against a live server, plus scanner/camera/sound on hardware, are unverified.",
+    "Undo is withheld after an item is added to the plan or swapped in (clearing the scan would leave it reserved); the row's Remove is the way back.",
+    "F2 says 'It's free' without a date: the preflight returns no free-until time."
+  ]
+}

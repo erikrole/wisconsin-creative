@@ -128,6 +128,7 @@ describe("leftoverReservationPickupConflict", () => {
     expect(error.status).toBe(409);
     expect(error.message).toBe("Finish pickup for RV-0453 first instead of starting a new checkout.");
     expect(error.data).toEqual({
+      code: "leftover_pickup",
       errorCode: "leftover_reservation_pickup",
       reservationId: "rv-1",
       refNumber: "RV-0453",

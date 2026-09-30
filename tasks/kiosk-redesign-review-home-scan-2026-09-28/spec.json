@@ -1,0 +1,88 @@
+{
+  "title": "Kiosk Home and Scan Starts",
+  "eyebrow": "WisconsinKiosk \u00b7 redesign A3, A6, B1, B2",
+  "lede": "Home groups game-day gear under its event, and every flow that starts from a scan or someone else's checkout now shows what it is about on the left while asking who you are on the right.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "Side by side",
+      "note": "Before is HEAD 7c3c1fba built separately; after is the same revision plus this slice. Same created iPad Air 11-inch (M4) simulator, iOS 26.5, dark, same GT_KIOSK_SCENARIO fixtures.",
+      "pairs": [
+        {
+          "title": "A6 \u00b7 Returning someone's gear",
+          "sub": "identity-return-other",
+          "before": "before/identity-return-other.png",
+          "beforeCap": "A sentence about whose gear it is above a plain roster; the owner is one tile among 22.",
+          "after": "after/identity-return-other.png",
+          "afterCap": "The checkout (due time, ref, items) on the left; the owner first, then a Someone else grid without them.",
+          "beforeEvidence": "evidence/before-identity-return-other.json",
+          "afterEvidence": "evidence/after-identity-return-other.json"
+        },
+        {
+          "title": "Home, ordinary day (no regression)",
+          "sub": "idle",
+          "before": "before/idle.png",
+          "beforeCap": "Sectioned home from the earlier slice.",
+          "after": "after/idle.png",
+          "afterCap": "Unchanged when no booking is linked to a today event.",
+          "beforeEvidence": "evidence/before-idle.json",
+          "afterEvidence": "evidence/after-idle.json"
+        }
+      ]
+    },
+    {
+      "heading": "After only (new states)",
+      "note": "These scenarios did not exist before this slice, so the old build cannot render them. Files: after/home-game-day.png, after/identity-scan-free.png, after/identity-scan-reserved.png.",
+      "shots": [
+        {
+          "image": "after/home-game-day.png",
+          "title": "A3 game day",
+          "cap": "A3 \u00b7 home-game-day: Football vs Iowa with 3 pickups, 3 out and Crew without gear (call times); Volleyball with 2 out; Overdue and Out, due later below."
+        },
+        {
+          "image": "after/identity-scan-free.png",
+          "title": "B1 free gear",
+          "cap": "B1 \u00b7 identity-scan-free: Just scanned, Available, Free until and Last back from scan-lookup; Who's taking it?"
+        },
+        {
+          "image": "after/identity-scan-reserved.png",
+          "title": "B2 reserved gear",
+          "cap": "B2 \u00b7 identity-scan-reserved: Reserved for Erik R., a single Continue as Erik card, and the put-it-back line."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "A3 game day",
+      "was": "Event-linked gear was mixed into Overdue / Due today / Pickup sections with no sign of which game it was for or who on the crew had nothing yet.",
+      "now": "Each event today with linked pickups, gear out, or crew without gear gets its own card at the top: pickups first, then gear out by person, then a Crew without gear line with call times from the event's assignments. Unlinked bookings fall through to the usual sections."
+    },
+    {
+      "h": "A6 who's returning",
+      "was": "A heading and a sentence, then the whole roster.",
+      "now": "Booking card on the left (due line, title, owner \u00b7 ref \u00b7 count, unreturned items, the 'anyone can bring this back' note, Close); owner card first, then Someone else."
+    },
+    {
+      "h": "B1 free gear",
+      "was": "Plain roster titled 'Checking out' with no sign of what was scanned.",
+      "now": "Just scanned card with Available, Free until (next claim, 'then reserved') and Last back from scan-lookup; 'Who's taking it?' roster. 'Where: Shelf B2' dropped (no data)."
+    },
+    {
+      "h": "B2 reserved gear",
+      "was": "A one-tile roster with 'Confirm Erik Role to continue \u2014 tap their name.'",
+      "now": "Reserved-for card with reservation, pickup time and due back; a single 'Continue as Erik' card and 'Not for Erik? Put it back on the shelf; it's held for their pickup.'"
+    }
+  ],
+  "verification": [
+    "xcodebuild WisconsinKiosk build (created iPad Air 11-inch (M4), iOS 26.5): BUILD SUCCEEDED",
+    "xcodebuild WisconsinKiosk test: 13 tests, 0 failures",
+    "npx vitest run tests/ios-kiosk-: 20 files, 65 tests passed",
+    "git diff --check: clean"
+  ],
+  "notes": [
+    "Fixture captures prove rendering only; the live dashboard game-day payload, scan-lookup, and resolve-scan item were not exercised against a server.",
+    "Kit role labels like Sideline, High, Photo are not invented; rows use the kit's own name (class d).",
+    "Scanner hardware, sound, and taps were not verified on a device."
+  ]
+}

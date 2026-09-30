@@ -88,7 +88,7 @@ describe("iOS launch experience", () => {
       blue: "0.051",
       alpha: "1.000",
     });
-    expect(kioskDesign).toContain("static let base = Color(red: 11 / 255, green: 11 / 255, blue: 13 / 255)");
+    expect(kioskDesign).toContain("static let base = kioskHex(0x0B0B0D)");
   });
 
   it("does not cover inactive snapshots with a splash or privacy lock", () => {

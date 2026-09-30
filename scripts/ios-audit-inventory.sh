@@ -123,6 +123,8 @@ Kiosk/KioskBarcodeCameraView.swift     | kiosk-checkout              | audit
 Kiosk/KioskCheckoutDetailSheet.swift   | kiosk-idle                  | audit
 Kiosk/KioskEventDetailSheet.swift      | kiosk-idle                  | audit
 Kiosk/KioskSleepModeView.swift         | kiosk-idle                  | audit
+Kiosk/KioskHomeView.swift              | kiosk-idle                  | audit
+Kiosk/KioskCheckoutDetailsStep.swift   | kiosk-checkout              | audit
 Kiosk/KioskChrome.swift                |                             | exempt-shared
 Kiosk/KioskIdleRoster.swift            |                             | exempt-shared
 Kiosk/KioskDateFormatting.swift        |                             | exempt-infra
@@ -140,9 +142,11 @@ Search/SearchResultRow.swift           |                             | exempt-sh
 Shared/HIDScannerField.swift           |                             | exempt-shared
 Kiosk/KioskNativeTextField.swift       |                             | exempt-shared
 Kiosk/KioskAPIClient.swift             |                             | exempt-infra
-Kiosk/KioskColors.swift                |                             | exempt-infra
 Kiosk/KioskDesign.swift                |                             | exempt-infra
 Kiosk/KioskComponents.swift            |                             | exempt-shared
+Kiosk/KioskTaskKit.swift               |                             | exempt-shared
+Kiosk/KioskChangesViews.swift          |                             | exempt-shared
+Kiosk/KioskReturnReportView.swift      |                             | exempt-shared
 Kiosk/KioskModels.swift                |                             | exempt-infra
 Kiosk/KioskStore.swift                 |                             | exempt-infra
 Kiosk/KioskFlowRouting.swift           |                             | exempt-infra

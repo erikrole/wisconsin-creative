@@ -11,6 +11,10 @@ struct KioskIdentityView: View {
     @State private var identifyTask: Task<Void, Never>?
     @State private var identifyRequests = LatestRequestGeneration()
     @FocusState private var searchFocused: Bool
+    /// Redesign B1: "Free until" and "Last back" for the scanned item.
+    @State private var lookup: KioskScanLookup.Item?
+    /// Redesign A6: the checkout being returned, for its ref and items.
+    @State private var returnDetail: KioskCheckoutDetail?
 
     private var intent: KioskFlowIntent? { store.pendingIntent }
     private var roster: [KioskUser] {
@@ -25,32 +29,20 @@ struct KioskIdentityView: View {
         query.trimmingCharacters(in: .whitespacesAndNewlines)
     }
     private var visibleUsers: [KioskUser] {
+        // A6 lists the owner on their own card, so "Someone else" skips them.
+        var roster = roster
+        if case .returnOther(let owner) = contextMode { roster.removeAll { $0.id == owner.id } }
         guard !normalizedQuery.isEmpty else { return roster }
         return roster.filter { $0.name.localizedCaseInsensitiveContains(normalizedQuery) }
     }
 
     var body: some View {
         ZStack {
-            VStack(alignment: .leading, spacing: 24) {
-                HStack {
-                    Button("Cancel") { cancelIdentityFlow() }
-                        .kioskButtonRole(.secondary)
-                    Spacer()
-                }
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(intent?.heroTitle ?? "Who are you?")
-                        .font(.gothamBlack(size: 36)).foregroundStyle(KioskText.primary)
-                    Text(identityPrompt)
-                        .font(.title3).foregroundStyle(KioskText.secondary)
-                }
-                TextField("Search roster", text: $query)
-                    .textFieldStyle(.plain).font(.title3)
-                    .padding(16).background(KioskSurface.cardRaised, in: RoundedRectangle(cornerRadius: KioskRadius.lg))
-                    .focused($searchFocused)
-                if let message { Text(message).foregroundStyle(Color.statusText(.orange)).font(.headline) }
-                rosterContent
+            if let contextMode {
+                contextLayout(contextMode)
+            } else {
+                plainLayout
             }
-            .padding(36)
 
             if !searchFocused {
                 HIDScannerField { store.scanner.receive($0) }.frame(width: 1, height: 1).opacity(0)
@@ -64,12 +56,36 @@ struct KioskIdentityView: View {
                 loading = false
             }
         }
+        .task { await loadContext() }
         .onChange(of: searchFocused) { _, focused in store.scanner.setEditing(focused) }
         .onDisappear {
             cancelIdentityRequest()
             store.scanner.setEditing(false)
             store.scanner.release(.identity)
         }
+    }
+
+    private var plainLayout: some View {
+            VStack(alignment: .leading, spacing: 24) {
+                HStack {
+                    Button("Cancel") { cancelIdentityFlow() }
+                        .kioskButtonRole(.secondary)
+                    Spacer()
+                }
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(intent?.heroTitle ?? "Who are you?")
+                        .font(.system(size: 36, weight: .heavy)).foregroundStyle(KioskText.primary)
+                    Text(identityPrompt)
+                        .font(.title3).foregroundStyle(KioskText.secondary)
+                }
+                TextField("Search roster", text: $query)
+                    .textFieldStyle(.plain).font(.title3)
+                    .padding(16).background(KioskSurface.cardRaised, in: RoundedRectangle(cornerRadius: KioskRadius.lg))
+                    .focused($searchFocused)
+                if let message { Text(message).foregroundStyle(Color.statusText(.orange)).font(.headline) }
+                rosterContent
+            }
+            .padding(36)
     }
 
     @ViewBuilder
@@ -257,6 +273,270 @@ struct KioskIdentityView: View {
         identifyTask = nil
         identifyRequests.invalidate()
     }
+}
+
+// MARK: - Starting from a scan or a booking (redesign A6, B1, B2)
+//
+// When the flow already knows what it is about -- an item scanned on home or
+// someone's checkout -- that thing sits on the left and the question sits on
+// the right, so nobody has to remember what they scanned while choosing.
+
+enum KioskIdentityContext: Equatable {
+    /// B1: free gear scanned on home.
+    case scanFree(KioskResolvedItem)
+    /// B2: gear reserved for someone's pickup.
+    case reserved(KioskUser)
+    /// A6: someone's personal checkout; anyone may return it.
+    case returnOther(KioskUser)
+
+    static func resolve(_ intent: KioskFlowIntent?) -> KioskIdentityContext? {
+        guard let intent else { return nil }
+        if intent.action == .return, intent.targetBooking != nil, let owner = intent.custodyOwner {
+            return .returnOther(owner)
+        }
+        if intent.source == .scan, intent.action == .pickup, let requester = intent.expectedRequester {
+            return .reserved(requester)
+        }
+        if intent.source == .scan, intent.action == .checkout, let item = intent.scannedItem {
+            return .scanFree(item)
+        }
+        return nil
+    }
+}
+
+extension KioskIdentityView {
+    fileprivate var contextMode: KioskIdentityContext? { KioskIdentityContext.resolve(intent) }
+
+    fileprivate func loadContext() async {
+        switch contextMode {
+        case .scanFree:
+            guard let scan = intent?.pendingScanValues.first else { return }
+            lookup = try? await KioskAPI.shared.kioskScanLookup(scanValue: scan).item
+        case .returnOther:
+            guard let id = intent?.targetBooking?.id else { return }
+            returnDetail = try? await KioskAPI.shared.kioskCheckoutDetail(id: id)
+        case .reserved, nil:
+            return
+        }
+    }
+
+    @ViewBuilder
+    fileprivate func contextLayout(_ mode: KioskIdentityContext) -> some View {
+        HStack(alignment: .top, spacing: 28) {
+            VStack(alignment: .leading, spacing: 16) {
+                switch mode {
+                case .scanFree(let item): scannedCard(item: item)
+                case .reserved(let holder): reservedCard(holder: holder)
+                case .returnOther(let owner): returnCard(owner: owner)
+                }
+                Spacer(minLength: 0)
+                Button {
+                    cancelIdentityFlow()
+                } label: {
+                    Text(mode.isReturn ? "Close" : "Cancel").frame(maxWidth: .infinity)
+                }
+                .kioskButtonRole(.secondary)
+            }
+            .frame(width: 400)
+            .frame(maxHeight: .infinity, alignment: .top)
+
+            VStack(alignment: .leading, spacing: 14) {
+                if let message { Text(message).foregroundStyle(Color.statusText(.orange)).font(.headline) }
+                switch mode {
+                case .scanFree:
+                    Text("Who\u{2019}s taking it?").font(KioskType.screenTitle).foregroundStyle(KioskText.primary)
+                    rosterContent
+                case .reserved(let holder):
+                    reservedChoice(holder: holder)
+                case .returnOther(let owner):
+                    Text("Who\u{2019}s returning it?").font(KioskType.screenTitle).foregroundStyle(KioskText.primary)
+                    personCard(owner, detail: "Checked this out", tint: KioskSection.comingBack) { choose(owner) }
+                    Text("SOMEONE ELSE")
+                        .font(KioskType.overline).tracking(KioskType.overlineTracking)
+                        .foregroundStyle(KioskText.tertiary)
+                        .padding(.top, 6)
+                    rosterContent
+                }
+            }
+            .padding(.leading, 28)
+            .overlay(alignment: .leading) { Rectangle().fill(KioskStroke.divider).frame(width: 1) }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        }
+        .padding(28)
+    }
+
+    // MARK: Left cards
+
+    private func overline(_ text: String, color: Color = KioskText.tertiary) -> some View {
+        Text(text)
+            .font(KioskType.overline).tracking(KioskType.overlineTracking)
+            .foregroundStyle(color)
+    }
+
+    private func itemHeader(tag: String, name: String) -> some View {
+        HStack(spacing: 16) {
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color.white.opacity(0.06))
+                .frame(width: 64, height: 64)
+                .overlay(Image(systemName: "camera").font(.system(size: 26)).foregroundStyle(KioskText.tertiary))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(tag).font(.system(size: 26, weight: .heavy)).foregroundStyle(KioskText.primary).lineLimit(1)
+                if !tag.isSameListText(as: name) {
+                    Text(name).font(.system(size: 16)).foregroundStyle(KioskText.secondary).lineLimit(1)
+                }
+            }
+        }
+        .padding(18)
+    }
+
+    private func factRow(_ label: String, _ value: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            Text(label).font(.system(size: 15)).foregroundStyle(KioskText.tertiary).frame(width: 110, alignment: .leading)
+            Text(value).font(.system(size: 15, weight: .semibold)).foregroundStyle(KioskText.primary)
+        }
+    }
+
+    private func statusLine(_ text: String, tint: KioskSection) -> some View {
+        HStack(spacing: 10) {
+            Circle().fill(tint.accent).frame(width: 12, height: 12)
+            Text(text).font(.system(size: 22, weight: .heavy)).foregroundStyle(tint.accent)
+        }
+    }
+
+    private func scannedCard(item: KioskResolvedItem) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            overline("JUST SCANNED")
+            VStack(alignment: .leading, spacing: 0) {
+                itemHeader(tag: lookup?.tagName ?? item.tagName, name: lookup?.productName ?? item.name)
+                VStack(alignment: .leading, spacing: 12) {
+                    statusLine("Available", tint: .takingOut)
+                    VStack(alignment: .leading, spacing: 6) {
+                        if let lookup {
+                            factRow("Free until", lookup.freeUntil.map { "\(KioskDueCopy.relative($0)), then reserved" } ?? "Nothing reserved")
+                            factRow("Last back", lookup.lastReturnedAt.map { KioskDueCopy.relative($0) } ?? "Not out before")
+                        }
+                    }
+                }
+                .padding(.horizontal, 18).padding(.top, 16).padding(.bottom, 18)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .overlay(alignment: .top) { Rectangle().fill(KioskSection.takingOut.stageStroke).frame(height: 1) }
+            }
+            .kioskCard(KioskSection.takingOut.stageFill, radius: 20, stroke: KioskSection.takingOut.stageStroke)
+        }
+    }
+
+    private func reservedCard(holder: KioskUser) -> some View {
+        let booking = intent?.targetBooking
+        return VStack(alignment: .leading, spacing: 14) {
+            overline("JUST SCANNED")
+            VStack(alignment: .leading, spacing: 0) {
+                if let item = intent?.scannedItem { itemHeader(tag: item.tagName, name: item.name) }
+                VStack(alignment: .leading, spacing: 12) {
+                    statusLine("Reserved for \(homeShortNames(for: [holder])[holder.id] ?? holder.name)", tint: .pickingUp)
+                    VStack(alignment: .leading, spacing: 6) {
+                        if let booking { factRow("Reservation", booking.title) }
+                        if let startsAt = booking?.startsAt {
+                            factRow("Pickup", startsAt <= Date() ? "Ready now" : "Ready from \(KioskDueCopy.midSentence(startsAt))")
+                        }
+                        if let endsAt = booking?.endsAt { factRow("Due back", KioskDueCopy.relative(endsAt)) }
+                    }
+                }
+                .padding(.horizontal, 18).padding(.top, 16).padding(.bottom, 18)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .overlay(alignment: .top) { Rectangle().fill(KioskSection.pickingUp.stageStroke).frame(height: 1) }
+            }
+            .kioskCard(KioskSection.pickingUp.stageFill, radius: 20, stroke: KioskSection.pickingUp.stageStroke)
+        }
+    }
+
+    private func returnCard(owner: KioskUser) -> some View {
+        let booking = intent?.targetBooking
+        let endsAt = returnDetail?.endsAt ?? booking?.endsAt
+        let isOverdue = endsAt.map { $0 < Date() } ?? false
+        let dueLine: String = {
+            guard let endsAt else { return "OUT NOW" }
+            if isOverdue { return "OVERDUE · DUE \(KioskDueCopy.relative(endsAt).uppercased())" }
+            if Calendar.current.isDateInToday(endsAt) { return "DUE BACK TODAY · \(endsAt.formatted(.dateTime.hour().minute()))" }
+            return "DUE BACK \(KioskDueCopy.relative(endsAt).uppercased())"
+        }()
+        let items = returnDetail?.items.filter { !$0.returned } ?? []
+        let ownerLabel = homeShortNames(for: [owner])[owner.id] ?? owner.name
+        let firstName = owner.name.split(separator: " ").first.map(String.init) ?? owner.name
+        var meta = [ownerLabel]
+        if let ref = returnDetail?.refNumber { meta.append(ref) }
+        if returnDetail != nil { meta.append("\(items.count) item\(items.count == 1 ? "" : "s")") }
+        return VStack(alignment: .leading, spacing: 14) {
+            overline(dueLine, color: isOverdue ? KioskSection.problem.text : KioskSection.comingBack.text)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(returnDetail?.title ?? booking?.title ?? "Checkout")
+                    .font(KioskType.screenTitle).foregroundStyle(KioskText.primary).lineLimit(2)
+                Text(meta.joined(separator: " · ")).font(KioskType.rowDetail).foregroundStyle(KioskText.secondary)
+            }
+            if !items.isEmpty {
+                VStack(spacing: 0) {
+                    ForEach(items.prefix(6)) { item in
+                        HStack(spacing: 12) {
+                            Text(item.itemListPrimaryTitle).font(KioskType.rowTitle).foregroundStyle(KioskText.primary)
+                            if let secondary = item.itemListSecondaryTitle {
+                                Text(secondary).font(KioskType.rowDetail).foregroundStyle(KioskText.secondary).lineLimit(1)
+                            }
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.horizontal, 16).padding(.vertical, 10)
+                    }
+                    if items.count > 6 {
+                        Text("and \(items.count - 6) more").font(KioskType.meta).foregroundStyle(KioskText.tertiary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 16).padding(.vertical, 8)
+                    }
+                }
+                .padding(.vertical, 4)
+                .kioskCard()
+            }
+            Text("Anyone can bring this back. It stays \(firstName)\u{2019}s checkout; the record shows who returned it.")
+                .font(KioskType.meta).foregroundStyle(KioskText.tertiary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    // MARK: Right side
+
+    private func personCard(_ user: KioskUser, detail: String, tint: KioskSection, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                KioskAvatar(url: user.avatarUrl, initials: user.initials, size: 48)
+                    .overlay(Circle().stroke(KioskSurface.base, lineWidth: 2))
+                    .padding(2)
+                    .overlay(Circle().stroke(tint.accent, lineWidth: 2))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(homeShortNames(for: [user])[user.id] ?? user.name)
+                        .font(.system(size: 19, weight: .bold)).foregroundStyle(KioskText.primary).lineLimit(1)
+                    Text(detail).font(KioskType.chip).foregroundStyle(tint.text).lineLimit(1)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right").font(.system(size: 14, weight: .semibold)).foregroundStyle(KioskText.muted)
+            }
+            .padding(.horizontal, 16)
+            .frame(height: 76)
+            .kioskCard(KioskSurface.cardRaised, radius: 16, stroke: KioskStroke.standard)
+        }
+        .buttonStyle(KioskPressStyle())
+        .accessibilityLabel("\(user.name), \(detail)")
+    }
+
+    @ViewBuilder
+    private func reservedChoice(holder: KioskUser) -> some View {
+        let firstName = holder.name.split(separator: " ").first.map(String.init) ?? holder.name
+        Text("This is \(firstName)\u{2019}s pickup").font(KioskType.screenTitle).foregroundStyle(KioskText.primary)
+        personCard(holder, detail: "Continue as \(firstName)", tint: .pickingUp) { choose(holder) }
+        Spacer(minLength: 0)
+        Text("Not for \(firstName)? Put it back on the shelf; it\u{2019}s held for their pickup.")
+            .font(KioskType.meta).foregroundStyle(KioskText.tertiary)
+    }
+}
+
+private extension KioskIdentityContext {
+    var isReturn: Bool { if case .returnOther = self { return true } else { return false } }
 }
 
 /// Global scanner indicator, floating above every screen.

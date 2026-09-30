@@ -26,6 +26,14 @@ vi.mock("@/lib/api", () => ({
   }),
 }));
 
+// Checkout allowance has its own tests (kiosk-checkout-allowance.test.ts);
+// these pin the hub projections' own queries.
+vi.mock("@/lib/services/kiosk-checkout-allowance", () => ({
+  evaluateKioskCheckoutAllowance: vi.fn().mockResolvedValue({
+    openCheckoutCount: 0, limit: null, canCheckout: true, blockedReason: null,
+  }),
+}));
+
 vi.mock("@/lib/rate-limit", () => ({
   enforceRateLimit: mocks.enforceRateLimit,
   getClientIp: mocks.getClientIp,

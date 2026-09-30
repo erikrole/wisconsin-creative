@@ -22,10 +22,15 @@ UDID="${KIOSK_SIM_UDID:-$(xcrun simctl list devices available 'iPad Air 11-inch 
 
 ALL_SCENARIOS=(
   activation resume idle event-detail sleep identity identity-return-other
-  operator-hub checkout-sheet inactivity checkout-details checkout-details-linked
+  operator-hub hub-at-limit checkout-sheet inactivity checkout-details checkout-details-linked
   keyboard-tip scanning scan-accepted scanner-help availability-conflicts
-  availability-rejected pickup reservation-battery-pickup return return-accepted
-  return-for-other badge
+  availability-rejected pickup reservation-battery-pickup pickup-accepted pickup-off-plan
+  pickup-substitute pickup-shared pickup-finish-confirm pickup-receipt return return-accepted
+  return-report return-damaged return-missing return-receipt
+  return-for-other badge home-game-day identity-scan-free identity-scan-reserved
+  changes-extend changes-transfer changes-swap changes-reservation changes-staff
+  checkout-other-date checkout-discard kit-pick kit-session kit-finish-confirm
+  scanner-asleep inactivity-checkout
 )
 if [[ $# -gt 0 ]]; then SCENARIOS=("$@"); else SCENARIOS=("${ALL_SCENARIOS[@]}"); fi
 

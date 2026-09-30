@@ -5,6 +5,7 @@ import { enforceRateLimit, getClientIp } from "@/lib/rate-limit";
 import { isGlobalKioskCollaborator } from "@/lib/collaborator-access";
 import { collaboratorPolicyActorSelect } from "@/lib/services/collaborator-policies";
 import { displayBookingTitle } from "@/lib/booking-display-title";
+import { evaluateKioskCheckoutAllowance } from "@/lib/services/kiosk-checkout-allowance";
 
 /** Get a student's active checkouts, pending pickups, and upcoming reservations */
 export const GET = withKiosk<{ userId: string }>(async (req, { kiosk, params }) => {
@@ -42,6 +43,17 @@ export const GET = withKiosk<{ userId: string }>(async (req, { kiosk, params }) 
   // bookings keep a requester only as compatibility metadata (D-061), so they
   // are excluded here; shared returns surface on the kiosk dashboard and shared
   // pickups resolve by scanning any planned item (resolve-scan).
+  // Same rules checkout completion enforces, read up front. Fail soft: the
+  // field is additive and a failed read must not blank the hub.
+  const checkoutAllowancePromise = evaluateKioskCheckoutAllowance(db, {
+    userId: params.userId,
+    locationId: kiosk.locationId,
+    now,
+  }).catch((error: unknown) => {
+    console.error("kiosk student checkoutAllowance failed", error);
+    return null;
+  });
+
   const [checkouts, pendingPickups, dueReservations, reservations] = await Promise.all([
     // Active checkouts (OPEN)
     db.booking.findMany({
@@ -162,7 +174,10 @@ export const GET = withKiosk<{ userId: string }>(async (req, { kiosk, params }) 
     }),
   ]);
 
+  const checkoutAllowance = await checkoutAllowancePromise;
+
   return ok({
+    ...(checkoutAllowance ? { checkoutAllowance } : {}),
     checkouts: checkouts.map((c) => ({
       id: c.id,
       title: displayBookingTitle(c.title),
@@ -181,8 +196,11 @@ export const GET = withKiosk<{ userId: string }>(async (req, { kiosk, params }) 
       isOverdue: c.endsAt < now,
     })),
     pendingPickups: [
+      // `kind` tells the hub which pickups are still reservations (their
+      // items can be changed) and which are already checkouts (they can't).
       ...pendingPickups.map((p) => ({
         id: p.id,
+        kind: "checkout" as const,
         title: displayBookingTitle(p.title),
         refNumber: p.refNumber,
         startsAt: p.startsAt,
@@ -198,6 +216,7 @@ export const GET = withKiosk<{ userId: string }>(async (req, { kiosk, params }) 
       })),
       ...dueReservations.map((p) => ({
         id: p.id,
+        kind: "reservation" as const,
         title: displayBookingTitle(p.title),
         refNumber: p.refNumber,
         startsAt: p.startsAt,

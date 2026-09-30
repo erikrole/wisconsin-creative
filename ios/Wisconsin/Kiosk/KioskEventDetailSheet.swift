@@ -46,7 +46,7 @@ private struct KioskEventRow: View {
             HStack(spacing: 12) {
                 Text(timeLabel)
                     .font(.subheadline.weight(.semibold).monospacedDigit())
-                    .foregroundStyle(Color.kioskRed)
+                    .foregroundStyle(KioskText.secondary)
                     .frame(minWidth: 88, alignment: .leading)
                     .fixedSize()
                 Text(event.title)
@@ -199,7 +199,7 @@ struct KioskEventDetailSheet: View {
                             .foregroundStyle(KioskText.primary)
                         if !event.assignedUsers.isEmpty {
                             Text("\(event.assignedUserCount)")
-                                .font(.caption.weight(.bold).monospacedDigit())
+                                .font(KioskType.chipStrong.monospacedDigit())
                                 .foregroundStyle(KioskText.tertiary)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)

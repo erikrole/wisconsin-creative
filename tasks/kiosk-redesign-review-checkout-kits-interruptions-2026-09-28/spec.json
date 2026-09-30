@@ -1,0 +1,127 @@
+{
+  "title": "Kiosk Checkout, Kits and Interruptions",
+  "eyebrow": "WisconsinKiosk \u00b7 redesign D3, E1\u2013E3, I1, I3, I4, J4",
+  "lede": "Picking another date uses a month grid, kits become the checkout's checklist for football crew and ask before leaving items behind, discarding scans is a card instead of a system dialog, and the interruptions (sleeping scanner, Still here?) read as the canvas does. Sounds for each moment follow J4.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "Side by side",
+      "note": "Before is HEAD 4b26cccb built into a separate derived-data path; after is f84a0c5d plus the second commit's working patch. Same created iPad Air 11-inch (M4) simulator, iOS 26.5, dark, same GT_KIOSK_SCENARIO fixtures.",
+      "pairs": [
+        {
+          "title": "Scan step (no kit for non-football crew)",
+          "sub": "scanning",
+          "before": "before/scanning.png",
+          "beforeCap": "The kit menu showed for everyone.",
+          "after": "after/scanning.png",
+          "afterCap": "The kit row only shows for football crew (server suggestion or a football shift); this fixture has neither.",
+          "beforeEvidence": "evidence/before-scanning.json",
+          "afterEvidence": "evidence/after-scanning.json"
+        },
+        {
+          "title": "Scan accepted",
+          "sub": "scan-accepted",
+          "before": "before/scan-accepted.png",
+          "beforeCap": "Confirmation with Undo.",
+          "after": "after/scan-accepted.png",
+          "afterCap": "Unchanged layout; the accept chime now plays with it (not capturable).",
+          "beforeEvidence": "evidence/before-scan-accepted.json",
+          "afterEvidence": "evidence/after-scan-accepted.json"
+        },
+        {
+          "title": "I4 still here? on the hub",
+          "sub": "inactivity",
+          "before": "before/inactivity.png",
+          "beforeCap": "Clock icon, a draining bar, Keep going / I'm done.",
+          "after": "after/inactivity.png",
+          "afterCap": "Countdown ring, Still here, Erik?, I'm done for now / I'm here.",
+          "beforeEvidence": "evidence/before-inactivity.json",
+          "afterEvidence": "evidence/after-inactivity.json"
+        }
+      ]
+    },
+    {
+      "heading": "After only (states the old build can't open)",
+      "note": "These need fixtures added in this slice, or the old UI was a system control no fixture could open.",
+      "shots": [
+        {
+          "image": "after/checkout-other-date.png",
+          "title": "D3 other date",
+          "cap": "Month grid (past days dimmed, today ringed, Oct 1 labelled) with 4-column time chips and a Back by summary. Before: the native graphical DatePicker (no fixture could open it)."
+        },
+        {
+          "image": "after/checkout-discard.png",
+          "title": "I1 discard scans",
+          "cap": "A card with Keep scanning and a red Discard that names the tags. Before: a system confirmation dialog."
+        },
+        {
+          "image": "after/kit-pick.png",
+          "title": "E1 choose a kit",
+          "cap": "Shift and the suggested kit's contents on the left; kits on the right with SUGGESTED. Before: a pull-down menu."
+        },
+        {
+          "image": "after/kit-session.png",
+          "title": "E2 scanning against a kit",
+          "cap": "Taking out is the kit's checklist in kit order, \"4 of 7 + 1 extra\", LENS-12 marked Not in kit; the confirmation names what is still to scan."
+        },
+        {
+          "image": "after/kit-finish-confirm.png",
+          "title": "E3 asks first",
+          "cap": "Check out with three kit items unscanned swaps the stage for an amber card with Keep scanning / Check out without them."
+        },
+        {
+          "image": "after/scanner-asleep.png",
+          "title": "I3 scanner asleep",
+          "cap": "A grey pill in place of the scan target: \"Scanner is asleep. Press its trigger to wake it.\" Before: the same words in amber under the target."
+        },
+        {
+          "image": "after/inactivity-checkout.png",
+          "title": "I4 still here?",
+          "cap": "Countdown ring, \"Still here, Erik?\", \"your 4 scans wait 20 minutes\" (KioskStore.cartRetention), I'm done for now / I'm here."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "D3 other date",
+      "was": "A native graphical DatePicker in the sheet's left panel.",
+      "now": "A month grid with 52pt round day cells and 4-column time chips; Use this date stays disabled for a past time."
+    },
+    {
+      "h": "I1 discard scans",
+      "was": "A system confirmation dialog, plus a second dialog before Edit.",
+      "now": "A 540pt card with a red Discard naming the tags; the hidden scanner field disarms under it. Edit goes straight to details (scans stay). Pickup and return have no discard: their scans commit as they happen."
+    },
+    {
+      "h": "E1\u2013E3 kits",
+      "was": "A pull-down kit menu for everyone; remaining kit items listed after the scans; checkout went through with kit items unscanned.",
+      "now": "Football crew only; a two-panel chooser; the kit is the checklist; an amber card asks before checking out without kit items. Labels are the kit's own name."
+    },
+    {
+      "h": "I3 scanner asleep",
+      "was": "Amber text under the scan target.",
+      "now": "A grey pill replaces the target on checkout, pickup, and return."
+    },
+    {
+      "h": "I4 still here?",
+      "was": "Generic copy and a bar.",
+      "now": "Ring with seconds, the person's first name, and the real 20-minute retention in the copy; two pings when it appears."
+    },
+    {
+      "h": "J4 sound and motion",
+      "was": "Only a rejection tone; Reduce Motion removed some animations outright.",
+      "now": "KioskFeedbackSound accept / reject / undo / done / badge / attention / warning, each tied to a visible twin; Reduce Motion movements are 150 ms fades (button press scale stays off)."
+    }
+  ],
+  "verification": [
+    "xcodebuild WisconsinKiosk on a created iPad Air 11-inch (M4) iOS 26.5 simulator: BUILD SUCCEEDED",
+    "npx vitest run tests/ios-kiosk- tests/ios-system-quality-contract.test.ts tests/ios-api-contract.test.ts: 23 files, 121 tests passed",
+    "git diff --check clean"
+  ],
+  "notes": [
+    "Sound is unverified: simulator captures are silent, and the fleet iPads need an on-device listen for level against the scanner beep.",
+    "Kit availability (Out with\u2026, Reserved for\u2026) is dropped: kiosk/kits has no status field (class b).",
+    "The football-crew gate is a heuristic (server kit suggestion or an FB shift); there is no crew field on the kiosk user."
+  ]
+}

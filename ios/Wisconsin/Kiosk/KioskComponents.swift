@@ -57,7 +57,7 @@ struct KioskFlowHeader<Trailing: View>: View {
                     .accessibilityAddTraits(.isHeader)
                 if let subtitle {
                     Text(subtitle)
-                        .font(.caption.weight(.medium))
+                        .font(KioskType.chip)
                         .foregroundStyle(KioskText.tertiary)
                         .lineLimit(1)
                 }
@@ -95,15 +95,11 @@ private struct KioskHeaderButton: View {
 
     var body: some View {
         Button(action: action) {
-            Label(label, systemImage: systemImage)
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(KioskText.primary)
-                .padding(.horizontal, 6)
-                .frame(minHeight: 44)
-                .contentShape(Rectangle())
+            Text(label)
+                .frame(minHeight: 48)
+                .contentShape(Capsule())
         }
-        .buttonStyle(.glass)
-        .controlSize(.regular)
+        .kioskButtonRole(.secondary)
         .accessibilityLabel(accessibilityLabel)
     }
 }
@@ -114,7 +110,7 @@ private struct KioskHeaderButton: View {
 /// a bare SF Symbol floating in space. Purely decorative.
 struct KioskSectionIcon: View {
     let systemImage: String
-    var tint: Color = Color.kioskRed
+    var tint: Color = KioskText.primary
     var size: CGFloat = 40
 
     var body: some View {
@@ -242,7 +238,7 @@ struct KioskScanStage: View {
         if accepted != nil { return KioskStatus.ok }
         if let feedbackTint { return feedbackTint }
         if !isHardwareConnected { return KioskStatus.problem }
-        return isReady ? Color.kioskRedGlyph : KioskStatus.attention
+        return isReady ? KioskText.primary : KioskStatus.attention
     }
 
     private var headline: String {
@@ -317,7 +313,7 @@ struct KioskScanStage: View {
             RoundedRectangle(cornerRadius: KioskRadius.hero)
                 .stroke(tint.opacity(0.45), lineWidth: 1)
         )
-        .animation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.85), value: accepted)
+        .animation(reduceMotion ? KioskMotion.fadeUnderReduceMotion : .spring(response: 0.3, dampingFraction: 0.85), value: accepted)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accepted.map { "Added \($0.title). \($0.progress)." } ?? "\(headline). \(detail)")
     }
@@ -351,7 +347,7 @@ struct KioskScanAcceptedView: View {
             .accessibilityHidden(true)
 
             Text(accepted.title)
-                .font(.gothamBlack(size: 40))
+                .font(.system(size: 40, weight: .heavy))
                 .foregroundStyle(KioskText.primary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
@@ -409,11 +405,11 @@ struct KioskScannerReadinessBadge: View {
                 .frame(width: 8, height: 8)
                 .accessibilityHidden(true)
             Text(label)
-                .font(.caption.weight(.semibold))
+                .font(KioskType.chip)
                 .foregroundStyle(KioskText.secondary)
             if onTap != nil {
                 Image(systemName: "info.circle")
-                    .font(.caption)
+                    .font(KioskType.meta)
                     .foregroundStyle(KioskText.muted)
                     .accessibilityHidden(true)
             }
@@ -476,7 +472,7 @@ struct KioskQuarterHourTimePicker: UIViewRepresentable {
         picker.datePickerMode = .time
         picker.preferredDatePickerStyle = .compact
         picker.minuteInterval = KioskQuarterHour.minuteInterval
-        picker.tintColor = UIColor(Color.kioskRed)
+        picker.tintColor = UIColor(KioskText.primary)
         picker.addTarget(context.coordinator, action: #selector(Coordinator.valueChanged(_:)), for: .valueChanged)
         picker.accessibilityLabel = accessibilityLabel
         return picker
@@ -520,36 +516,35 @@ struct KioskQuarterHourTimePicker: UIViewRepresentable {
 // MARK: Choice chip
 
 /// A single-tap choice on the kiosk: return-time presets, purpose shortcuts.
-/// Native glass carries the selected state so the chip reads as a control
-/// rather than another dark card, and selection is brand red because choosing
-/// is an action — not a status.
+/// A picked chip is solid white, matching the redesign canvas's day and time
+/// chips; nothing on the kiosk uses a status color to mean "selected".
 struct KioskChoiceChip: View {
     let title: String
     let isSelected: Bool
     let action: () -> Void
 
+    /// A chosen chip is the solid white fill the canvas uses for a picked day
+    /// or time; list-style choices use the white outline instead.
     var body: some View {
-        Group {
-            // `.glass` and `.glassProminent` are distinct types, so this has to
-            // branch rather than pick a style inline.
-            if isSelected {
-                button.buttonStyle(.glassProminent).tint(Color.kioskRed)
-            } else {
-                button.buttonStyle(.glass).tint(KioskText.primary)
-            }
-        }
-        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
-        .accessibilityLabel(title)
-    }
-
-    private var button: some View {
         Button(action: action) {
             Text(title)
-                .font(KioskType.chip)
-                .foregroundStyle(isSelected ? Color.white : KioskText.secondary)
+                .font(KioskType.rowTitle)
+                .foregroundStyle(isSelected ? KioskText.onPrimary : KioskText.primary)
                 .padding(.horizontal, 16)
-                .padding(.vertical, 11)
+                .frame(minHeight: 48)
+                .background(
+                    isSelected ? KioskText.primary : KioskSurface.cardRaised,
+                    in: RoundedRectangle(cornerRadius: KioskRadius.lg)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: KioskRadius.lg)
+                        .stroke(isSelected ? KioskStroke.selected : KioskStroke.standard, lineWidth: 1)
+                )
+                .contentShape(RoundedRectangle(cornerRadius: KioskRadius.lg))
         }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+        .accessibilityLabel(title)
     }
 }
 
@@ -647,13 +642,13 @@ struct KioskProgressRing: View {
                     style: StrokeStyle(lineWidth: 10, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
-                .animation(reduceMotion ? nil : .spring(response: 0.4), value: count)
+                .animation(reduceMotion ? KioskMotion.fadeUnderReduceMotion : .spring(response: 0.4), value: count)
             VStack(spacing: 2) {
                 Text("\(count)")
                     .font(.system(size: 52, weight: .bold, design: .rounded))
                     .foregroundStyle(KioskText.primary)
                     .contentTransition(.numericText())
-                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: count)
+                    .animation(reduceMotion ? KioskMotion.fadeUnderReduceMotion : .easeInOut(duration: 0.25), value: count)
                     .monospacedDigit()
                 Text("of \(total)")
                     .font(.subheadline)
@@ -669,8 +664,7 @@ struct KioskProgressRing: View {
 // MARK: Completion CTA
 
 /// Primary bottom action for the scan flows (Complete Checkout / Confirm
-/// Pickup / Complete Return). Native prominent glass carries the shared
-/// interactive hierarchy while disabled and busy states stay system-driven.
+/// Pickup / Complete Return): the screen's one solid white pill.
 struct KioskCompletionButton: View {
     let title: String
     var icon: String?
@@ -691,18 +685,15 @@ struct KioskCompletionButton: View {
                         .accessibilityHidden(true)
                 }
                 Text(isBusy ? busyTitle : title)
-                    .font(.headline)
+                    .font(KioskType.primaryLabel)
                 if isBusy {
-                    ProgressView().tint(.white).scaleEffect(0.8)
+                    ProgressView().tint(KioskText.onPrimary).scaleEffect(0.8)
                 }
             }
-            .foregroundStyle(KioskText.primary)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
+            .frame(minHeight: 72)
         }
-        .buttonStyle(.glassProminent)
-        .tint(Color.kioskRed)
-        .controlSize(.large)
+        .kioskButtonRole(.primary)
         .disabled(!isActive)
         .accessibilityLabel(accessibilityLabel)
     }
@@ -731,12 +722,12 @@ struct KioskChecklistRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Text(tag)
-                        .font(.gothamBold(size: 16))
+                        .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(isDone ? KioskText.tertiary : KioskText.primary)
                         .strikethrough(isDone && strikethroughWhenDone, color: KioskText.muted)
                     if isBattery {
                         Image(systemName: "battery.100percent")
-                            .font(.caption2.weight(.semibold))
+                            .font(KioskType.chip)
                             .foregroundStyle(Color.statusText(.orange))
                             .accessibilityLabel("Battery unit")
                     }
@@ -745,7 +736,7 @@ struct KioskChecklistRow: View {
                 // rows stay scannable.
                 if tag.caseInsensitiveCompare(name) != .orderedSame {
                     Text(name)
-                        .font(.caption)
+                        .font(KioskType.meta)
                         .foregroundStyle(KioskText.tertiary)
                 }
             }
@@ -753,7 +744,7 @@ struct KioskChecklistRow: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 16)
-        .animation(reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 1), value: isDone)
+        .animation(reduceMotion ? KioskMotion.fadeUnderReduceMotion : .spring(response: 0.25, dampingFraction: 1), value: isDone)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(tag), \(name), \(isDone ? "done" : "pending")")
     }
@@ -775,7 +766,7 @@ struct ChecklistProgressSummary: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("\(done) of \(total) \(verb)")
-                .font(.caption.weight(.semibold).monospacedDigit())
+                .font(KioskType.chip.monospacedDigit())
                 .foregroundStyle(complete ? Color.statusText(.green) : KioskText.secondary)
                 .contentTransition(.numericText())
             GeometryReader { geo in
@@ -785,7 +776,7 @@ struct ChecklistProgressSummary: View {
                     Capsule()
                         .fill(complete ? Color.statusText(.green) : inProgressColor)
                         .frame(width: total > 0 ? geo.size.width * CGFloat(done) / CGFloat(total) : 0)
-                        .animation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 1), value: done)
+                        .animation(reduceMotion ? KioskMotion.fadeUnderReduceMotion : .spring(response: 0.4, dampingFraction: 1), value: done)
                 }
             }
             .frame(height: 4)
@@ -831,14 +822,14 @@ struct KioskBatteryScanStatus: View {
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
-                        .font(.caption.weight(.semibold))
+                        .font(KioskType.chip)
                         .foregroundStyle(KioskText.primary)
                     Text(complete ? completeCopy : progressCopy)
-                        .font(.caption.monospacedDigit())
+                        .font(KioskType.meta.monospacedDigit())
                         .foregroundStyle(KioskText.tertiary)
                     if !complete {
                         Text(pendingCopy)
-                            .font(.caption2)
+                            .font(KioskType.meta)
                             .foregroundStyle(KioskText.tertiary)
                     }
                 }
@@ -847,7 +838,7 @@ struct KioskBatteryScanStatus: View {
             if !scannedUnits.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(onReplace == nil ? unitsHeader : "\(unitsHeader) · tap one to replace it")
-                        .font(.caption2.weight(.semibold))
+                        .font(KioskType.chip)
                         .foregroundStyle(KioskText.tertiary)
                     if let onReplace {
                         ScrollView(.horizontal, showsIndicators: false) {
@@ -855,7 +846,7 @@ struct KioskBatteryScanStatus: View {
                                 ForEach(scannedUnits) { unit in
                                     Button { onReplace(unit) } label: {
                                         Label(unit.tag, systemImage: "arrow.triangle.2.circlepath")
-                                            .font(.caption.monospaced().weight(.semibold))
+                                            .font(KioskType.code.weight(.semibold))
                                     }
                                     .kioskButtonRole(.secondary)
                                     .controlSize(.small)
@@ -886,7 +877,7 @@ struct KioskUnitChips: View {
 
     var body: some View {
         Text(unitSummary)
-            .font(.caption2.monospaced().weight(.semibold))
+            .font(KioskType.code.weight(.semibold))
             .foregroundStyle(Color.statusText(.green))
             .fixedSize(horizontal: false, vertical: true)
             .padding(.horizontal, 8)
@@ -933,13 +924,9 @@ struct KioskErrorState: View {
             }
             Button(action: onRetry) {
                 Text(retryTitle)
-                    .font(.headline)
-                    .foregroundStyle(KioskText.primary)
-                    .padding(.horizontal, 24)
-                    .frame(minHeight: 44)
-                    .background(Color.kioskRed, in: Capsule())
+                    .padding(.horizontal, 6)
             }
-            .buttonStyle(.plain)
+            .kioskButtonRole(.primary)
             .accessibilityLabel(retryTitle)
         }
         .frame(maxWidth: .infinity)
@@ -996,7 +983,7 @@ struct KioskAvatar: View {
     let initials: String
     var size: CGFloat = 42
     var placeholderFill: Color = KioskSurface.placeholder
-    @ScaledMetric(relativeTo: .caption2) private var minimumInitialsSize: CGFloat = 11
+    private let minimumInitialsSize: CGFloat = 14
 
     var body: some View {
         Group {
@@ -1110,13 +1097,13 @@ struct KioskKeyboardHint: View {
                     VStack(spacing: KioskSpacing.md) {
                         Image(systemName: "keyboard.badge.ellipsis")
                             .font(.system(size: 46, weight: .semibold))
-                            .foregroundStyle(Color.kioskRedGlyph)
+                            .foregroundStyle(KioskText.primary)
                             .frame(width: 92, height: 92)
-                            .background(Color.kioskRedGlyph.opacity(0.14), in: Circle())
+                            .background(KioskSurface.control, in: Circle())
                             .accessibilityHidden(true)
 
                         Text(Self.message)
-                            .font(.gothamBold(size: 28))
+                            .font(.system(size: 28, weight: .bold))
                             .foregroundStyle(KioskText.primary)
                             .multilineTextAlignment(.center)
                             .fixedSize(horizontal: false, vertical: true)
@@ -1133,7 +1120,7 @@ struct KioskKeyboardHint: View {
                     .background(KioskSurface.modal, in: RoundedRectangle(cornerRadius: KioskRadius.modal))
                     .overlay(
                         RoundedRectangle(cornerRadius: KioskRadius.modal)
-                            .stroke(Color.kioskRedGlyph.opacity(0.55), lineWidth: 1)
+                            .stroke(KioskStroke.strong, lineWidth: 1)
                     )
                     .shadow(color: .black.opacity(0.6), radius: 30, y: 12)
                 }
@@ -1158,10 +1145,10 @@ struct KioskKeyboardHint: View {
                 // Grace so a normally-appearing keyboard never flashes the tip.
                 try? await Task.sleep(nanoseconds: 750_000_000)
                 guard !Task.isCancelled else { return }
-                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { showTip = true }
+                withAnimation(reduceMotion ? KioskMotion.fadeUnderReduceMotion : .easeInOut(duration: 0.2)) { showTip = true }
                 UIAccessibility.post(notification: .announcement, argument: Self.message)
             } else if showTip {
-                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { showTip = false }
+                withAnimation(reduceMotion ? KioskMotion.fadeUnderReduceMotion : .easeInOut(duration: 0.2)) { showTip = false }
             }
         }
     }

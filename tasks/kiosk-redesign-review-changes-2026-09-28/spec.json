@@ -1,0 +1,42 @@
+{
+  "title": "Kiosk Changes and Staff Actions",
+  "eyebrow": "WisconsinKiosk · redesign row H and C5",
+  "lede": "Extend, transfer, swap, and change a reservation from the hub, plus staff actions on someone's booking. Every screen calls the kiosk route that already enforces the rule.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "Side by side",
+      "note": "Before = HEAD 3bc36eae build, after = working tree; same created simulator, same fixtures.",
+      "pairs": [
+        {"title": "C2 · hub buttons", "sub": "Fixture operator-hub.", "before": "before/operator-hub.png", "beforeCap": "Extend and Add items both opened the booking sheet; no Transfer; pickups had only Pick up.", "after": "after/operator-hub.png", "afterCap": "Extend opens H1, Transfer opens H2, pickups add Change what's reserved (H5).", "beforeEvidence": "evidence/before-operator-hub-evidence.json", "afterEvidence": "evidence/after-operator-hub-evidence.json"},
+        {"title": "Booking sheet · per-row Swap", "sub": "Fixture checkout-sheet.", "before": "before/checkout-sheet.png", "beforeCap": "Remove only.", "after": "after/checkout-sheet.png", "afterCap": "Swap beside Remove opens H4.", "beforeEvidence": "evidence/before-checkout-sheet-evidence.json", "afterEvidence": "evidence/after-checkout-sheet-evidence.json"}
+      ]
+    },
+    {
+      "heading": "New frames (after only)",
+      "note": "No before exists: the kiosk had none of these screens.",
+      "shots": [
+        {"title": "H1 · Extend", "tag": "After only", "image": "after/changes-extend.png", "cap": "extend-window fixture: CAM-014 reserved by Maya F. four hours after the due time. Later times are dimmed with 'CAM-014 needed'.", "wide": true},
+        {"title": "H2 · Transfer", "tag": "After only", "image": "after/changes-transfer.png", "cap": "Immediate, no accept step (decision 2). The holder is left out of the grid.", "wide": true},
+        {"title": "H4 · Swap a unit", "tag": "After only", "image": "after/changes-swap.png", "cap": "Battery #4 with #12 scanned. Batteries get plain swap only; serialized items also offer 'Something's wrong with it'.", "wide": true},
+        {"title": "H5 · Change a reservation", "tag": "After only", "image": "after/changes-reservation.png", "cap": "MIC-09 added and Sony A7S III removed, both staged. Save applies them in order.", "wide": true},
+        {"title": "C5 · Staff on a booking", "tag": "After only", "image": "after/changes-staff.png", "cap": "Fiona (staff) on Dashiell's overdue checkout. No 'Mark returned without scanning': no kiosk route has that permission.", "wide": true}
+      ]
+    }
+  ],
+  "changes": [
+    {"h": "Extend guessed", "was": "A date picker on the booking sheet; the server refused a time that was too late only after Save.", "now": "The screen reads the extend window first and says how late it can go and why."},
+    {"h": "Transfer was staff-only and invisible", "was": "No transfer on the kiosk hub.", "now": "Holders hand a checkout (all or some) to anyone on the roster, immediately."},
+    {"h": "Swapping a unit took two steps", "was": "Remove, then add: two separate saves.", "now": "One atomic swap; a problem unit goes through the damaged report on the return screen."},
+    {"h": "Reservation edits saved on every tap", "was": "Each remove saved immediately during pickup.", "now": "Changes are staged and saved together; any that fail are listed."}
+  ],
+  "verification": [
+    "xcodebuild WisconsinKiosk on iPad Air 11-inch (M4) iOS 26.5 (created device): BUILD SUCCEEDED",
+    "npx vitest run tests/ios-kiosk- : 20 files / 65 tests passed (new tests/ios-kiosk-changes.test.ts checks request bodies and Codable keys against the routes)",
+    "git diff --check clean"
+  ],
+  "notes": [
+    "Captures prove presentation only; no live-server run of extend, transfer, swap, or reservation save.",
+    "The 'Something's wrong' path and the C5 entry from the home booking sheet were not captured (taps don't register in the simulator); C5 is captured through a hub fixture hook."
+  ]
+}

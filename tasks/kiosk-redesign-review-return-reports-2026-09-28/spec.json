@@ -1,0 +1,89 @@
+{
+  "title": "Kiosk Return: Damaged or Missing",
+  "eyebrow": "WisconsinKiosk \u00b7 redesign row G (G3\u2013G6)",
+  "lede": "One quiet link on the return screen opens its own page: damaged means describe it and take a photo, and the item is held for staff; missing means mark it and tell staff, and the return can finish without it. The receipt names each.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "Side by side",
+      "note": "Before = HEAD c9e71a91 build, after = working tree; same created simulator, same fixture co-1.",
+      "pairs": [
+        {
+          "title": "G1 \u00b7 return, nothing scanned",
+          "sub": "Fixture co-1.",
+          "before": "before/return.png",
+          "beforeCap": "No way to report a problem at the kiosk.",
+          "after": "after/return.png",
+          "afterCap": "'Something damaged or missing?' link above Finish return.",
+          "beforeEvidence": "evidence/before-return-evidence.json",
+          "afterEvidence": "evidence/after-return-evidence.json"
+        }
+      ]
+    },
+    {
+      "heading": "New frames (after only)",
+      "note": "No before exists: the kiosk had no report page and the return receipt was a single sentence.",
+      "shots": [
+        {
+          "title": "G3 \u00b7 which item, what happened",
+          "tag": "After only",
+          "image": "after/return-report.png",
+          "cap": "CAM-014 is back; AUD-007 picked. Damaged needs the item scanned back first, so it is disabled for AUD-007; missing is offered.",
+          "wide": true
+        },
+        {
+          "title": "G4 \u00b7 damaged",
+          "tag": "After only",
+          "image": "after/return-damaged.png",
+          "cap": "Describe it plus a photo. The simulator has no camera, so it shows 'No camera here. Describe it instead.' The Open camera path is device-only.",
+          "wide": true
+        },
+        {
+          "title": "G5 \u00b7 missing",
+          "tag": "After only",
+          "image": "after/return-missing.png",
+          "cap": "Decision 4 copy: accounted for, so the return can finish without it. No 'stays on your record'.",
+          "wide": true
+        },
+        {
+          "title": "G6 \u00b7 receipt",
+          "tag": "After only",
+          "image": "after/return-receipt.png",
+          "cap": "Returned, Held for staff, and Marked missing cards.",
+          "wide": true
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "G3 chooser",
+      "was": "Nothing at the kiosk; web only.",
+      "now": "Its own page from one link: pick a serialized item, then It's damaged / It's missing."
+    },
+    {
+      "h": "G4 damaged",
+      "was": "\u2014",
+      "now": "Multipart POST /api/kiosk/checkin/{id}/report (type DAMAGED, description, optional JPEG under 4.5 MB). Still counts as returned; the server holds the asset for staff. The row reads 'Held for staff'."
+    },
+    {
+      "h": "G5 missing",
+      "was": "\u2014",
+      "now": "type LOST. Counted as accounted for: the Finish pill reads 'N back \u00b7 1 missing', the still-out check skips it, and if it was the last item out the server finishes the return and the kiosk goes straight to the receipt."
+    },
+    {
+      "h": "G6 receipt",
+      "was": "Sentence-only 'All 4 items returned.'",
+      "now": "Receipt cards: Returned (count, tags, ref), then Held for staff and Marked missing."
+    }
+  ],
+  "verification": [
+    "xcodebuild WisconsinKiosk on iPad Air 11-inch (M4) iOS 26.5 (created device): BUILD SUCCEEDED",
+    "npx vitest run tests/ios-kiosk- : 19 files / 60 tests passed (new tests/ios-kiosk-return-reports.test.ts checks the multipart fields and Codable keys against the route and service)",
+    "git diff --check clean"
+  ],
+  "notes": [
+    "The captures are fixtures and show layout only. They do not prove a report reached the server, the photo upload, staff notification, or the asset moving to MAINTENANCE.",
+    "Camera capture and the photo upload are device-only and unverified."
+  ]
+}

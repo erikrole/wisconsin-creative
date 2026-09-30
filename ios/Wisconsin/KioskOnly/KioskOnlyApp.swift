@@ -62,9 +62,10 @@ struct WisconsinKioskApp: App {
             affiliationBadge: user.affiliationBadge
         )
         switch scenario {
-        case .idle:
+        case .idle, .homeGameDay:
             kioskStore.screen = .idle
-        case .operatorHub, .checkoutSheet:
+        case .operatorHub, .checkoutSheet, .hubAtLimit,
+             .changesExtend, .changesTransfer, .changesSwap, .changesReservation, .changesStaff:
             kioskStore.screen = .operatorHub(kioskUser)
         case .resume:
             // The splash is a store state, not a screen, so it is the one
@@ -75,8 +76,10 @@ struct WisconsinKioskApp: App {
             // The sheet binds to a dashboard event, so `KioskIdleView` seeds it
             // once its own load finishes; nothing to set here but the screen.
             kioskStore.screen = .idle
-        case .scanning, .scanAccepted, .scannerHelp:
-            kioskStore.setCart(KioskFixtures.cart, for: kioskUser.id)
+        case .scanning, .scanAccepted, .scannerHelp, .checkoutDiscard, .scannerAsleep, .inactivityCheckout,
+             .kitPick, .kitSession, .kitFinishConfirm:
+            let isKit = [.kitPick, .kitSession, .kitFinishConfirm].contains(scenario)
+            kioskStore.setCart(isKit ? KioskFixtures.kitCart : KioskFixtures.cart, for: kioskUser.id)
             kioskStore.setIntent(KioskFlowIntent(
                 action: .checkout, source: .person, identifiedUser: kioskUser,
                 expectedRequester: nil,
@@ -84,6 +87,7 @@ struct WisconsinKioskApp: App {
                 targetBooking: nil, pendingScanValues: [], createdAt: Date(), ambiguity: .none
             ))
             kioskStore.screen = .checkout(user: kioskUser)
+            if scenario == .inactivityCheckout { kioskStore.inactivityWarningVisible = true }
         case .availabilityConflicts:
             kioskStore.setCart(KioskFixtures.availabilityConflictCart, for: kioskUser.id)
             kioskStore.setIntent(KioskFlowIntent(
@@ -106,7 +110,19 @@ struct WisconsinKioskApp: App {
             kioskStore.screen = .success(KioskSuccessInfo(
                 kind: .checkout,
                 message: "Checked out 4 items for Volleyball vs Minnesota from Camp Randall.",
-                earnedBadges: [KioskFixtures.badge]
+                earnedBadges: [KioskFixtures.badge],
+                receipt: KioskReceipt(
+                    firstName: "Erik",
+                    avatarURL: nil,
+                    initials: "ER",
+                    cards: [KioskReceipt.Card(
+                        overline: "Checked out",
+                        refNumber: "CO-1053",
+                        title: "4 items · Volleyball vs Minnesota",
+                        detail: "CAM-014, AUD-007, SUP-031, BAT-004 · due today at 8:30 PM"
+                    )],
+                    nextStep: "Bring it back and scan it in, or anyone can return it for you."
+                )
             ))
         case .inactivity:
             kioskStore.screen = .operatorHub(kioskUser)
@@ -117,13 +133,78 @@ struct WisconsinKioskApp: App {
             kioskStore.screen = .pickup(bookingId: "co-1", userId: kioskUser.id)
         case .reservationBatteryPickup:
             kioskStore.screen = .pickup(bookingId: "rs-1", userId: kioskUser.id)
+        case .pickupAccepted, .pickupOffPlan, .pickupSubstitute, .pickupShared, .pickupFinishConfirm:
+            let bookingId = scenario == .pickupShared ? "rs-shared" : "rs-duals"
+            kioskStore.setIntent(KioskFlowIntent(
+                action: .pickup, source: .reservation, identifiedUser: kioskUser, expectedRequester: nil,
+                selectedEvent: nil,
+                targetBooking: KioskIntentBooking(id: bookingId, title: scenario == .pickupShared ? "Football Travel Case" : "Wrestling Duals Kit", startsAt: nil, endsAt: KioskFixtures.hours(30)),
+                pendingScanValues: [], createdAt: Date(), ambiguity: .none
+            ))
+            kioskStore.screen = .pickup(bookingId: bookingId, userId: kioskUser.id)
+        case .pickupReceipt:
+            kioskStore.screen = .success(KioskSuccessInfo(
+                kind: .pickup,
+                message: "3 items checked out. The remaining items are reserved for a later pickup.",
+                receipt: KioskPickupCopy.receipt(
+                    user: kioskUser,
+                    title: "Wrestling Duals Kit",
+                    count: 3,
+                    total: 5,
+                    tags: ["CAM-022", "LENS-41", "Sony Battery #12"],
+                    endsAt: KioskFixtures.hours(30),
+                    isShared: false,
+                    remainingItemNames: ["MIC-09", "1 × Sony Battery"]
+                )
+            ))
         case .returnFlow, .returnAccepted:
             kioskStore.screen = .return(bookingId: "co-1", userId: kioskUser.id)
+        case .returnReport, .returnDamaged, .returnMissing:
+            kioskStore.setIntent(KioskFlowIntent(
+                action: .return, source: .activeCheckout, identifiedUser: kioskUser, expectedRequester: nil,
+                selectedEvent: nil, targetBooking: KioskFixtures.otherOwnerCheckout,
+                pendingScanValues: [], createdAt: Date(), ambiguity: .none
+            ))
+            kioskStore.screen = .return(bookingId: "co-1", userId: kioskUser.id)
+        case .returnReceipt:
+            kioskStore.screen = .success(KioskSuccessInfo(
+                kind: .returned,
+                message: "4 of 5 items returned.",
+                receipt: KioskReturnReportCopy.receipt(
+                    user: kioskUser,
+                    title: "Volleyball vs Minnesota",
+                    refNumber: "CO-1043",
+                    returnedCount: 4,
+                    totalItems: 5,
+                    returnedTags: ["CAM-014", "LENS-22", "V-Mount #7", "V-Mount #9"],
+                    damaged: [("LENS-22", "Sony 24-70mm GM")],
+                    missing: [("AUD-007", "Sennheiser MKE 600")]
+                )
+            ))
         case .identity:
             kioskStore.setIntent(KioskFlowIntent(
                 action: .checkout, source: .event, identifiedUser: nil, expectedRequester: nil,
                 selectedEvent: KioskIntentEvent(id: "ev-1", title: "Volleyball vs Minnesota", endsAt: KioskFixtures.hours(9)),
                 targetBooking: nil, pendingScanValues: [], createdAt: Date(), ambiguity: .none
+            ))
+            kioskStore.screen = .identity
+        case .identityScanFree:
+            // Mirrors `KioskIdleView.handleIdentityScan` for free gear (B1).
+            kioskStore.setIntent(KioskFlowIntent(
+                action: .checkout, source: .scan, identifiedUser: nil, expectedRequester: nil,
+                selectedEvent: nil, targetBooking: nil,
+                pendingScanValues: ["FX6-1"], createdAt: Date(), ambiguity: .none,
+                scannedItem: KioskResolvedItem(id: "a-fx6", name: "Sony FX6", tagName: "FX6-1", type: "serialized", bulkSkuId: nil, unitNumber: nil)
+            ))
+            kioskStore.screen = .identity
+        case .identityScanReserved:
+            // Mirrors `KioskIdleView.handleIdentityScan` for reserved gear (B2).
+            kioskStore.setIntent(KioskFlowIntent(
+                action: .pickup, source: .scan, identifiedUser: nil, expectedRequester: kioskUser,
+                selectedEvent: nil,
+                targetBooking: KioskIntentBooking(id: "rs-duals", title: "Wrestling Duals Kit", startsAt: KioskFixtures.hours(2), endsAt: KioskFixtures.at(2, 23)),
+                pendingScanValues: ["CAM-022"], createdAt: Date(), ambiguity: .none,
+                scannedItem: KioskResolvedItem(id: "a-cam022", name: "Sony A7S III", tagName: "CAM-022", type: "serialized", bulkSkuId: nil, unitNumber: nil)
             ))
             kioskStore.screen = .identity
         case .identityReturnOther:
@@ -145,7 +226,7 @@ struct WisconsinKioskApp: App {
             kioskStore.screen = .return(bookingId: "co-1", userId: kioskUser.id)
         case .activation:
             kioskStore.screen = .activation
-        case .checkoutDetails, .checkoutDetailsLinked, .keyboardTip:
+        case .checkoutDetails, .checkoutDetailsLinked, .keyboardTip, .checkoutOtherDate:
             kioskStore.setIntent(KioskFlowIntent(
                 action: .checkout,
                 source: .person,
@@ -240,62 +321,103 @@ enum Haptics {
 
 }
 
-/// A short local failure cue for the shared kiosk scanner surfaces. The sound
-/// is generated as PCM so the kiosk target needs no bundled media asset or
-/// project-file registration; visual, haptic, and VoiceOver feedback remain
-/// authoritative if audio is unavailable or muted.
+/// The kiosk's sounds, from canvas frame J4. The fleet's iPads have no
+/// haptics, so sound is how people know a scan landed, and every sound has a
+/// visible twin (the check, the red card, the amber card, the countdown ring)
+/// so a muted iPad still works. Tones are generated as PCM so the target needs
+/// no bundled media; they mix with other audio and stay quieter than the
+/// scanner's own beep.
 @MainActor
-enum KioskScanFeedbackSound {
-    private static var player: AVAudioPlayer?
+enum KioskFeedbackSound {
+    enum Cue: CaseIterable {
+        /// Short rising two-note chime, 180 ms. Twin: the section-colored check.
+        case accept
+        /// Low falling two-note tone, 180 ms. Twin: the red card and its shake.
+        case reject
+        /// Soft single click. Twin: the row leaving the list.
+        case undo
+        /// Three-note rising chime, 400 ms. Twin: the receipt.
+        case done
+        /// The done chime plus a bright sparkle. Twin: the badge card.
+        case badge
+        /// Neutral single tone. Twin: the amber "before you…" card.
+        case attention
+        /// Two gentle pings. Twin: the "Still here?" countdown ring.
+        case warning
 
-    static func playFailure() {
+        /// (frequency Hz, seconds) notes; a frequency of 0 is a rest.
+        fileprivate var notes: [(Double, Double)] {
+            switch self {
+            case .accept: return [(880, 0.07), (1320, 0.11)]
+            case .reject: return [(620, 0.094), (360, 0.086)]
+            case .undo: return [(1400, 0.03)]
+            case .done: return [(660, 0.12), (880, 0.12), (1100, 0.16)]
+            case .badge: return [(660, 0.12), (880, 0.12), (1100, 0.14), (1760, 0.06), (2200, 0.06), (2640, 0.1)]
+            case .attention: return [(520, 0.16)]
+            case .warning: return [(740, 0.09), (0, 0.12), (740, 0.09)]
+            }
+        }
+
+        fileprivate var volume: Float {
+            switch self {
+            case .undo: return 0.5
+            case .warning, .attention: return 0.6
+            default: return 0.72
+            }
+        }
+    }
+
+    private static var player: AVAudioPlayer?
+    private static var cache: [Cue: Data] = [:]
+
+    static func play(_ cue: Cue) {
         do {
             let session = AVAudioSession.sharedInstance()
             try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
             try session.setActive(true)
 
-            let next = try AVAudioPlayer(data: failureWave)
-            next.volume = 0.72
+            let data = cache[cue] ?? wave(for: cue)
+            cache[cue] = data
+            let next = try AVAudioPlayer(data: data)
+            next.volume = cue.volume
             next.prepareToPlay()
             player = next
             player?.play()
         } catch {
-            // Audio is additive feedback; a session/audio-route failure must
-            // never block the visual, haptic, or spoken rejection signal.
+            // Audio is additive; its visible twin always carries the meaning.
         }
     }
 
-    private static let failureWave: Data = {
+    private static func wave(for cue: Cue) -> Data {
         let sampleRate: UInt32 = 44_100
         let channels: UInt16 = 1
         let bitsPerSample: UInt16 = 16
-        let duration = 0.18
-        let sampleCount = Int(Double(sampleRate) * duration)
         let bytesPerSample = bitsPerSample / 8
         let byteRate = sampleRate * UInt32(channels) * UInt32(bytesPerSample)
         let blockAlign = channels * bytesPerSample
 
-        var pcm = Data(capacity: sampleCount * Int(bytesPerSample))
-        for index in 0..<sampleCount {
-            let progress = Double(index) / Double(sampleCount)
-            let frequency = progress < 0.52 ? 620.0 : 360.0
-            let phase = 2.0 * Double.pi * frequency * Double(index) / Double(sampleRate)
-            let attack = min(1.0, Double(index) / 600.0)
-            let release = max(0.0, 1.0 - progress)
-            let amplitude = 0.24 * attack * release
-            var sample = Int16(sin(phase) * amplitude * Double(Int16.max))
-            withUnsafeBytes(of: &sample) { pcm.append(contentsOf: $0) }
+        var pcm = Data()
+        for (frequency, seconds) in cue.notes {
+            let count = Int(Double(sampleRate) * seconds)
+            for index in 0..<count {
+                var sample: Int16 = 0
+                if frequency > 0 {
+                    let progress = Double(index) / Double(count)
+                    let phase = 2.0 * Double.pi * frequency * Double(index) / Double(sampleRate)
+                    let attack = min(1.0, Double(index) / 400.0)
+                    let release = cue == .undo ? pow(1.0 - progress, 3) : max(0.0, 1.0 - progress * 0.85)
+                    sample = Int16(sin(phase) * 0.24 * attack * release * Double(Int16.max))
+                }
+                withUnsafeBytes(of: &sample) { pcm.append(contentsOf: $0) }
+            }
         }
 
         var wave = Data()
-        func appendASCII(_ value: String) {
-            wave.append(contentsOf: value.utf8)
-        }
+        func appendASCII(_ value: String) { wave.append(contentsOf: value.utf8) }
         func appendLittleEndian<T: FixedWidthInteger>(_ value: T) {
             var littleEndian = value.littleEndian
             withUnsafeBytes(of: &littleEndian) { wave.append(contentsOf: $0) }
         }
-
         appendASCII("RIFF")
         appendLittleEndian(UInt32(36 + pcm.count))
         appendASCII("WAVE")
@@ -311,7 +433,14 @@ enum KioskScanFeedbackSound {
         appendLittleEndian(UInt32(pcm.count))
         wave.append(pcm)
         return wave
-    }()
+    }
+}
+
+/// The rejection cue under its original name, so every existing rejection
+/// site keeps playing it. New code calls `KioskFeedbackSound.play(.reject)`.
+@MainActor
+enum KioskScanFeedbackSound {
+    static func playFailure() { KioskFeedbackSound.play(.reject) }
 }
 
 enum StatusTone: String, CaseIterable {
@@ -352,34 +481,6 @@ extension Color {
     }
 }
 
-extension Font {
-    static func gothamBlack(size: CGFloat, relativeTo textStyle: Font.TextStyle? = nil) -> Font {
-        let style = textStyle ?? scalableTextStyle(for: size)
-        if UIFont(name: "Gotham-Black", size: size) != nil {
-            return Font.custom("Gotham-Black", size: size, relativeTo: style)
-        }
-        return Font.system(style).weight(.heavy)
-    }
-
-    static func gothamBold(size: CGFloat, relativeTo textStyle: Font.TextStyle? = nil) -> Font {
-        let style = textStyle ?? scalableTextStyle(for: size)
-        if UIFont(name: "Gotham-Bold", size: size) != nil {
-            return Font.custom("Gotham-Bold", size: size, relativeTo: style)
-        }
-        return Font.system(style).weight(.bold)
-    }
-
-    private static func scalableTextStyle(for size: CGFloat) -> Font.TextStyle {
-        switch size {
-        case 30...: return .largeTitle
-        case 24...: return .title2
-        case 20...: return .title3
-        case 17...: return .headline
-        default: return .body
-        }
-    }
-}
-
 /// Whether a capture scenario wants a sheet already open when its screen
 /// appears. Two kiosk surfaces are reachable only by tapping a control, and
 /// synthetic taps are the one thing that does not work reliably on a kiosk
@@ -394,6 +495,38 @@ enum KioskCaptureSeed {
     static var scannerHelp: Bool {
         #if DEBUG
         return KioskFixtureScenario.active == .scannerHelp
+        #else
+        return false
+        #endif
+    }
+
+    static var otherDate: Bool {
+        #if DEBUG
+        return KioskFixtureScenario.active == .checkoutOtherDate
+        #else
+        return false
+        #endif
+    }
+
+    static var kitPick: Bool {
+        #if DEBUG
+        return KioskFixtureScenario.active == .kitPick
+        #else
+        return false
+        #endif
+    }
+
+    static var kitFinishConfirm: Bool {
+        #if DEBUG
+        return KioskFixtureScenario.active == .kitFinishConfirm
+        #else
+        return false
+        #endif
+    }
+
+    static var discardConfirm: Bool {
+        #if DEBUG
+        return KioskFixtureScenario.active == .checkoutDiscard
         #else
         return false
         #endif
@@ -430,6 +563,8 @@ enum KioskFixtureScenario: String {
     case idle
     /// One person's hub: what they hold, and the actions on it.
     case operatorHub = "operator-hub"
+    /// Redesign C3: the hub when the person is at the checkout limit.
+    case hubAtLimit = "hub-at-limit"
     /// The custody drawer for a live checkout, opened over the hub.
     case checkoutSheet = "checkout-sheet"
     /// Step 1 of checkout with the booking-name field focused, for capturing
@@ -458,15 +593,41 @@ enum KioskFixtureScenario: String {
     case pickup = "pickup"
     /// Reservation pickup checklist with a quantity of numbered batteries.
     case reservationBatteryPickup = "reservation-battery-pickup"
+    /// Redesign F1: a reservation pickup right after a battery scan lands.
+    case pickupAccepted = "pickup-accepted"
+    /// Redesign F2: an off-plan scan, asking Put it back / Add.
+    case pickupOffPlan = "pickup-off-plan"
+    /// Redesign F3: a like-for-like scan offered as a swap for a reserved item.
+    case pickupSubstitute = "pickup-substitute"
+    /// Redesign F4: a shared travel case picked up for the team.
+    case pickupShared = "pickup-shared"
+    /// Finishing a pickup with reserved items unscanned asks first.
+    case pickupFinishConfirm = "pickup-finish-confirm"
+    /// Redesign F5: the pickup receipt with its leftover line.
+    case pickupReceipt = "pickup-receipt"
     /// Return checklist.
     case returnFlow = "return"
     /// The return checklist in the moment right after a scan lands.
     case returnAccepted = "return-accepted"
+    /// Redesign G3: the damaged-or-missing chooser with an item picked.
+    case returnReport = "return-report"
+    /// Redesign G4: damaged, describe it and take a photo.
+    case returnDamaged = "return-damaged"
+    /// Redesign G5: missing, mark it and tell staff.
+    case returnMissing = "return-missing"
+    /// Redesign G6: the return receipt with held-for-staff and missing cards.
+    case returnReceipt = "return-receipt"
     /// Roster-first identity confirmation.
     case identity = "identity"
     /// Identity for returning someone else's personal checkout, started from
     /// the idle custody drawer.
     case identityReturnOther = "identity-return-other"
+    /// Redesign A3: home on game day, grouped by event with crew without gear.
+    case homeGameDay = "home-game-day"
+    /// Redesign B1: free gear scanned on home, asking who's taking it.
+    case identityScanFree = "identity-scan-free"
+    /// Redesign B2: reserved gear scanned on home, "Continue as" the holder.
+    case identityScanReserved = "identity-scan-reserved"
     /// The return checklist while returning someone else's personal checkout.
     case returnForOther = "return-for-other"
     /// The un-activated iPad: 6-digit code entry.
@@ -477,6 +638,30 @@ enum KioskFixtureScenario: String {
     case eventDetail = "event-detail"
     /// The cold-launch splash shown while a stored session is revalidated.
     case resume = "resume"
+    /// Redesign H1: extend, limited by the next reservation on CAM-014.
+    case changesExtend = "changes-extend"
+    /// Redesign H2: transfer to someone on the roster, immediately.
+    case changesTransfer = "changes-transfer"
+    /// Redesign H4: swap a battery, replacement scanned.
+    case changesSwap = "changes-swap"
+    /// Redesign H5: change a reservation with staged edits.
+    case changesReservation = "changes-reservation"
+    /// Redesign C5: staff actions on someone's overdue booking.
+    case changesStaff = "changes-staff"
+    /// Redesign D3: the month grid and time chips opened from details.
+    case checkoutOtherDate = "checkout-other-date"
+    /// Redesign I1: Back with scans asks in a card with a red Discard.
+    case checkoutDiscard = "checkout-discard"
+    /// Redesign E1: choose a kit (football crew).
+    case kitPick = "kit-pick"
+    /// Redesign E2: the kit is the "Taking out" checklist, one item extra.
+    case kitSession = "kit-session"
+    /// Redesign E3: Check out with kit items unscanned asks first.
+    case kitFinishConfirm = "kit-finish-confirm"
+    /// Redesign I3: the scanner is asleep, said inline on the scan stage.
+    case scannerAsleep = "scanner-asleep"
+    /// Redesign I4: "Still here?" over a checkout with scans waiting.
+    case inactivityCheckout = "inactivity-checkout"
 
     static var active: KioskFixtureScenario? {
         ProcessInfo.processInfo.environment["GT_KIOSK_SCENARIO"]
@@ -660,6 +845,20 @@ enum KioskFixtures {
                       imageUrl: nil, bulkSkuId: "sku-bat", unitNumber: 4),
     ]
 
+    /// Two Slow 3 items and one battery scanned, plus a lens not in the kit.
+    static let kitCart: [KioskCartItem] = [
+        KioskCartItem(id: "a-1", name: "Sony FX9", tagName: "FX9-2", type: "serialized",
+                      imageUrl: nil, bulkSkuId: nil, unitNumber: nil),
+        KioskCartItem(id: "a-2", name: "Sony 24-105mm", tagName: "LENS-33", type: "serialized",
+                      imageUrl: nil, bulkSkuId: nil, unitNumber: nil),
+        KioskCartItem(id: "b-7", name: "V-Mount Battery #7", tagName: "BAT-007", type: "numbered_bulk",
+                      imageUrl: nil, bulkSkuId: "sku-vmount", unitNumber: 7),
+        KioskCartItem(id: "b-9", name: "V-Mount Battery #9", tagName: "BAT-009", type: "numbered_bulk",
+                      imageUrl: nil, bulkSkuId: "sku-vmount", unitNumber: 9),
+        KioskCartItem(id: "a-12", name: "Sony 70-200mm", tagName: "LENS-12", type: "serialized",
+                      imageUrl: nil, bulkSkuId: nil, unitNumber: nil),
+    ]
+
     static let availabilityConflictCart: [KioskCartItem] = [
         KioskCartItem(id: "it-1", name: "FX3 2", tagName: "CAM-014", type: "serialized",
                       imageUrl: nil, bulkSkuId: nil, unitNumber: nil),
@@ -753,6 +952,7 @@ enum KioskFixtures {
         // Standby is suppressed while anything is actually out — that check is
         // real logic, not a fixture detail — so the sleep scenario has to hand
         // back a genuinely quiet gear room.
+        if KioskFixtureScenario.active == .homeGameDay { return gameDayDashboardJSON() }
         if forcesSleep {
             return """
             {"stats":{"itemsOut":0,"checkouts":0,"overdue":0},
@@ -768,7 +968,76 @@ enum KioskFixtures {
          "standby":{"sleepMode":\(forcesSleep),"reason":"\(forcesSleep ? "night_hours" : "active_window")",
                     "nightHours":\(forcesSleep),
                     "nearbyEventCount":\(forcesSleep ? 0 : 2),"nearbyBookingWindowCount":\(forcesSleep ? 0 : 1)},
-         "events":\(dashboardEvents),"activeItems":\(activeItems),"checkouts":\(checkouts)}
+         "events":\(dashboardEvents),"activeItems":\(activeItems),"checkouts":\(checkouts),
+         "pickups":[{"bookingId":"res-1","title":"Wrestling Duals Kit",
+                     "requester":{"id":"u-erik-role","name":"Erik Role","avatarUrl":null,"initials":"ER"},
+                     "itemCount":4,"readyAt":"\(iso(hours(2)))","custodyScope":"PERSON","eventId":null}],
+         "today":[{"userId":"u-3","name":"Dashiell Okonkwo","avatarUrl":null,"initials":"DO","reasons":["overdue"]},
+                  {"userId":"u-erik-role","name":"Erik Role","avatarUrl":null,"initials":"ER","reasons":["pickup","return_due"],"pickupAt":"\(iso(hours(2)))"},
+                  {"userId":"u-16","name":"Priya Ramachandran","avatarUrl":null,"initials":"PR","reasons":["return_due"]},
+                  {"userId":"u-9","name":"Imani Brooks","avatarUrl":null,"initials":"IB","reasons":["return_due"]}],
+         "nextUp":null}
+        """
+    }
+
+    /// Redesign A3: two events today. Football has pickups, gear out, a
+    /// shared travel case, and two crew without gear; volleyball has gear out.
+    static func gameDayDashboardJSON() -> String {
+        let football = iso(at(0, 11)), volleyball = iso(at(0, 19)), due = iso(at(0, 23, 30))
+        func person(_ id: String, _ name: String, _ initials: String) -> String {
+            #"{"id":"\#(id)","name":"\#(name)","avatarUrl":null,"initials":"\#(initials)"}"#
+        }
+        func checkout(_ id: String, _ title: String, _ name: String, _ userId: String, _ initials: String, _ count: Int, _ endsAt: String, _ eventId: String?, overdue: Bool = false) -> String {
+            let items = (0..<count).map { #"{"name":"Item \#($0 + 1)"}"# }.joined(separator: ",")
+            let event = eventId.map { "\"\($0)\"" } ?? "null"
+            return #"{"id":"\#(id)","title":"\#(title)","requesterName":"\#(name)","requesterId":"\#(userId)","requesterAvatarUrl":null,"requesterInitials":"\#(initials)","items":[\#(items)],"itemCount":\#(count),"endsAt":"\#(endsAt)","isOverdue":\#(overdue),"eventId":\#(event)}"#
+        }
+        let checkouts = [
+            checkout("co-fb1", "Football Slow 1 Kit", "Erik Role", primaryUser.id, "ER", 5, due, "ev-fb"),
+            checkout("co-fb2", "Football Slow 2 Kit", "Silas Bergstrom", "u-19", "SB", 5, due, "ev-fb"),
+            checkout("co-fb3", "Football Bench Kit", "Tessa Nguyen", "u-20", "TN", 4, due, "ev-fb"),
+            checkout("co-1", "Volleyball vs Minnesota", "Imani Brooks", "u-9", "IB", 3, due, "ev-vb"),
+            checkout("co-3", "Volleyball vs Minnesota", "Priya Ramachandran", "u-16", "PR", 4, due, "ev-vb"),
+            checkout("co-2", "Hockey B-Roll", "Dashiell Okonkwo", "u-3", "DO", 2, iso(at(-2, 17)), nil, overdue: true),
+            checkout("co-4", "Softball Road Kit", "Morgan Lee", "u-18", "ML", 1, iso(at(1, 9)), nil),
+        ].joined(separator: ",")
+        let noor = person("u-14", "Noor Abdi", "NA"), oscar = person("u-15", "Oscar Delacroix", "OD")
+        let events = """
+        [{"id":"ev-fb","title":"Football vs Iowa","startsAt":"\(football)","endsAt":"\(iso(at(0, 15)))","allDay":false,
+          "shiftCount":2,"assignedUserCount":3,
+          "assignedUsers":[{"id":"u-14","name":"Noor Abdi","initials":"NA","avatarUrl":null,"area":"VIDEO","callStartsAt":"\(iso(at(0, 9)))","callEndsAt":null},
+                           {"id":"u-15","name":"Oscar Delacroix","initials":"OD","avatarUrl":null,"area":"PHOTO","callStartsAt":"\(iso(at(0, 10)))","callEndsAt":null},
+                           {"id":"u-19","name":"Silas Bergstrom","initials":"SB","avatarUrl":null,"area":"VIDEO","callStartsAt":"\(iso(at(0, 9)))","callEndsAt":null}],
+          "crewWithoutGear":[\(noor),\(oscar)]},
+         {"id":"ev-vb","title":"Volleyball vs Minnesota","startsAt":"\(volleyball)","endsAt":"\(iso(at(0, 21)))","allDay":false,
+          "shiftCount":1,"assignedUserCount":0,"assignedUsers":[],"crewWithoutGear":[]}]
+        """
+        let jonah = person("u-10", "Jonah Petrov", "JP"), kaia = person("u-11", "Kaia Thornton", "KT")
+        let ready = iso(at(0, 8))
+        return """
+        {"stats":{"itemsOut":24,"checkouts":7,"overdue":1},
+         "capabilities":{"eventWorkerDetails":true,"eventCallTimes":true},
+         "standby":{"sleepMode":false,"reason":"active_window","nightHours":false,"nearbyEventCount":2,"nearbyBookingWindowCount":3},
+         "events":\(events),"activeItems":[],"checkouts":[\(checkouts)],
+         "pickups":[{"bookingId":"res-fb1","title":"Football Roam 4 Kit","requester":\(jonah),
+                     "itemCount":4,"readyAt":"\(ready)","custodyScope":"PERSON","eventId":"ev-fb"},
+                    {"bookingId":"res-fb2","title":"Football Roam 3 Kit","requester":\(kaia),
+                     "itemCount":4,"readyAt":"\(ready)","custodyScope":"PERSON","eventId":"ev-fb"},
+                    {"bookingId":"res-fb3","title":"Football Travel Case","requester":null,
+                     "itemCount":12,"readyAt":"\(ready)","custodyScope":"SHARED","eventId":"ev-fb"}],
+         "today":[{"userId":"u-3","name":"Dashiell Okonkwo","avatarUrl":null,"initials":"DO","reasons":["overdue"]},
+                  {"userId":"u-10","name":"Jonah Petrov","avatarUrl":null,"initials":"JP","reasons":["pickup"]},
+                  {"userId":"u-11","name":"Kaia Thornton","avatarUrl":null,"initials":"KT","reasons":["pickup"]},
+                  {"userId":"u-9","name":"Imani Brooks","avatarUrl":null,"initials":"IB","reasons":["return_due"]}],
+         "nextUp":null}
+        """
+    }
+
+    static func scanLookupJSON() -> String {
+        """
+        {"item":{"tagName":"FX6-1","productName":"Sony FX6","type":"Cinema Camera","status":"Available",
+                 "holder":null,"dueAt":null,"bookingTitle":null,
+                 "freeUntil":"\(iso(at(2, 15)))","lastReturnedAt":"\(iso(hours(-1)))"}}
         """
     }
 
@@ -803,7 +1072,11 @@ enum KioskFixtures {
             "endsAt":"\(iso(at(-1, 15, 30)))","isOverdue":true}
          ],
          "pendingPickups":[
-           {"id":"pk-1","title":"Wrestling Duals Kit","refNumber":"RS-2201",
+           {"id":"pk-2","title":"Hockey Road Trip","refNumber":"CO-1044","kind":"checkout",
+            "startsAt":"\(iso(hours(3)))",
+            "serializedItems":[{"id":"si-3","tagName":"CAM-017","name":"Sony FX6"}],
+            "bulkItems":[]},
+           {"id":"pk-1","title":"Wrestling Duals Kit","refNumber":"RS-2201","kind":"reservation",
             "startsAt":"\(iso(hours(2)))",
             "serializedItems":[{"id":"si-1","tagName":"CAM-009","name":"Sony A7S III"},
                                {"id":"si-2","tagName":"LNS-004","name":"Sigma 24-70mm"}],
@@ -811,7 +1084,10 @@ enum KioskFixtures {
          ],
          "reservations":[
            {"id":"rs-1","title":"Senior Day Portraits","startsAt":"\(iso(hours(52)))"}
-         ]}
+         ],
+         "checkoutAllowance":\(KioskFixtureScenario.active == .hubAtLimit
+            ? #"{"openCheckoutCount":3,"limit":3,"canCheckout":false,"blockedReason":"limit"}"#
+            : #"{"openCheckoutCount":2,"limit":null,"canCheckout":true,"blockedReason":null}"#)}
         """
     }
 
@@ -821,10 +1097,14 @@ enum KioskFixtures {
         if KioskFixtureScenario.active == .reservationBatteryPickup {
             return reservationBatteryPickupDetailJSON(id: id)
         }
+        if id == "rs-duals" { return pickupDualsDetailJSON(id: id) }
+        if id == "rs-shared" { return pickupSharedDetailJSON(id: id) }
+
+        if id == "co-4" { return overdueCheckoutDetailJSON(id: id) }
 
         return """
         {"id":"\(id)","title":"Volleyball vs Minnesota","refNumber":"CO-1043","status":"OPEN",
-         "requesterId":"\(primaryUser.id)","endsAt":"\(iso(hours(6)))",
+         "requesterId":"\(primaryUser.id)","endsAt":"\(iso(hours(6)))","updatedAt":"\(iso(hours(-2)))",
          "scanSummary":{"serializedTotal":3,"numberedBulkTotal":1,"numberedBulkCompleted":0},
          "items":[
            {"id":"it-1","tagName":"CAM-014","name":"Sony FX3","returned":false,"type":"serialized",
@@ -837,6 +1117,98 @@ enum KioskFixtures {
             "type":"numbered_bulk","bulkSkuId":"sku-bat","bulkSkuName":"V-Mount Battery",
             "unitNumber":4,"imageUrl":null}
          ]}
+        """
+    }
+
+    /// Redesign C5: someone's overdue checkout, seen by staff.
+    static func overdueCheckoutDetailJSON(id: String) -> String {
+        """
+        {"id":"\(id)","title":"Football Practice Cutups","refNumber":"CO-1039","status":"OPEN",
+         "requesterId":"u-3","custodyScope":"PERSON","endsAt":"\(iso(at(-1, 15, 30)))",
+         "updatedAt":"\(iso(at(-2, 9)))",
+         "items":[
+           {"id":"cam-021","tagName":"CAM-021","name":"Canon R5","returned":false,"type":"serialized",
+            "bulkSkuId":null,"bulkSkuName":null,"unitNumber":null,"imageUrl":null},
+           {"id":"bat-004","tagName":"#4","name":"V-Mount Battery #4","returned":false,
+            "type":"numbered_bulk","bulkSkuId":"sku-bat","bulkSkuName":"V-Mount Battery",
+            "unitNumber":4,"imageUrl":null}
+         ]}
+        """
+    }
+
+    /// Redesign H1: CAM-014 is reserved by Maya F. four hours after this
+    /// checkout is due, so the extension stops there.
+    static func extendWindowJSON() -> String {
+        """
+        {"currentEndsAt":"\(iso(hours(6)))","maxEndsAt":"\(iso(hours(10)))",
+         "limitingItem":{"assetTag":"CAM-014","name":"Sony FX3","holderName":"Maya F.",
+                         "startsAt":"\(iso(hours(10)))"}}
+        """
+    }
+
+    /// Redesign H5: what is still reserved on the Wrestling Duals pickup.
+    static func reservationManifestJSON(id: String) -> String {
+        """
+        {"id":"\(id)","title":"Wrestling Duals Kit","updatedAt":"\(iso(hours(-1)))","items":[
+          {"id":"si-1","assetId":"cam-022","name":"Sony A7S III","quantity":1,"pickedQuantity":0},
+          {"id":"si-2","assetId":"lens-41","name":"Sigma 24–70mm","quantity":1,"pickedQuantity":0},
+          {"id":"bi-1","bulkSkuId":"sku-sony","name":"Sony battery","quantity":2,"pickedQuantity":0}
+        ]}
+        """
+    }
+
+    /// Redesign F1–F3: CAM-022, LENS-41 and battery #12 already scanned;
+    /// MIC-09 and one battery still to scan.
+    static func pickupDualsDetailJSON(id: String) -> String {
+        """
+        {"id":"\(id)","title":"Wrestling Duals Kit","refNumber":"RS-2210","status":"BOOKED",
+         "requesterId":"\(primaryUser.id)","custodyScope":"PERSONAL","endsAt":"\(iso(hours(30)))",
+         "updatedAt":"\(iso(hours(-1)))",
+         "scanSummary":{"serializedTotal":3,"numberedBulkTotal":2,"numberedBulkCompleted":1},
+         "items":[
+           {"id":"cam-022","tagName":"CAM-022","name":"Sony A7S III","returned":true,"type":"serialized",
+            "bulkSkuId":null,"bulkSkuName":null,"unitNumber":null,"imageUrl":null,"reservationItemId":"si-1"},
+           {"id":"lens-41","tagName":"LENS-41","name":"Sigma 24–70mm","returned":true,"type":"serialized",
+            "bulkSkuId":null,"bulkSkuName":null,"unitNumber":null,"imageUrl":null,"reservationItemId":"si-2"},
+           {"id":"mic-09","tagName":"MIC-09","name":"Rode NTG5","returned":false,"type":"serialized",
+            "bulkSkuId":null,"bulkSkuName":null,"unitNumber":null,"imageUrl":null,"reservationItemId":"si-3"},
+           {"id":"bulk-sony:slot:1","tagName":"Sony Battery #12","name":"Sony Battery #12","returned":true,
+            "type":"numbered_bulk","bulkSkuId":"sku-sony","bulkSkuName":"Sony Battery","unitNumber":12,
+            "imageUrl":null,"reservationItemId":"bi-1"},
+           {"id":"bulk-sony:slot:2","tagName":"#2","name":"Sony Battery 2","returned":false,
+            "type":"numbered_bulk","bulkSkuId":"sku-sony","bulkSkuName":"Sony Battery","unitNumber":null,
+            "imageUrl":null,"reservationItemId":"bi-1"}
+         ]}
+        """
+    }
+
+    /// Redesign F4: a shared travel case, three of seven scanned.
+    static func pickupSharedDetailJSON(id: String) -> String {
+        func serialized(_ id: String, _ tag: String, _ name: String, _ returned: Bool) -> String {
+            """
+            {"id":"\(id)","tagName":"\(tag)","name":"\(name)","returned":\(returned),"type":"serialized",
+             "bulkSkuId":null,"bulkSkuName":null,"unitNumber":null,"imageUrl":null,"reservationItemId":"si-\(id)"}
+            """
+        }
+        let batteries = (1...2).map { index in
+            """
+            {"id":"bulk-vmount:slot:\(index)","tagName":"#\(index)","name":"V-Mount Battery \(index)","returned":false,
+             "type":"numbered_bulk","bulkSkuId":"sku-vmount","bulkSkuName":"V-Mount Battery","unitNumber":null,
+             "imageUrl":null,"reservationItemId":"bi-vmount"}
+            """
+        }
+        let items = [
+            serialized("case-fb", "CASE-FB", "Pelican 1650 travel case", true),
+            serialized("drone-2", "DRONE-2", "DJI Inspire 3", true),
+            serialized("lens-50", "LENS-50", "Canon CN7 17–120", true),
+            serialized("ssd-11", "SSD-11", "4 × 2TB SSD pack", false),
+        ] + batteries + [serialized("cart-1", "CART-1", "Magliner cart", false)]
+        return """
+        {"id":"\(id)","title":"Football Travel Case","refNumber":"RS-2215","status":"BOOKED",
+         "requesterId":"\(primaryUser.id)","custodyScope":"SHARED","endsAt":"\(iso(hours(54)))",
+         "updatedAt":"\(iso(hours(-1)))",
+         "scanSummary":{"serializedTotal":5,"numberedBulkTotal":2,"numberedBulkCompleted":0},
+         "items":[\(items.joined(separator: ","))]}
         """
     }
 
@@ -889,22 +1261,28 @@ enum KioskFixtures {
     static func kitsJSON() -> String {
         """
         {"data":[
+          {"id":"kit-slow-3","name":"Slow 3","sportCode":"FB","gamedayRole":null,"contents":6},
           {"id":"kit-slow-1","name":"Slow 1","sportCode":"FB","gamedayRole":"SLOW1","contents":6},
+          {"id":"kit-bench","name":"Bench","sportCode":"FB","gamedayRole":"BENCH","contents":4},
+          {"id":"kit-roam-1","name":"Roam 1","sportCode":"FB","gamedayRole":"ROAM1","contents":5},
           {"id":"kit-high-2","name":"High 2","sportCode":"FB","contents":5}
-        ],"suggestedKitId":"kit-slow-1"}
+        ],"suggestedKitId":\([.kitPick, .kitSession, .kitFinishConfirm].contains(KioskFixtureScenario.active) ? "\"kit-slow-3\"" : "null")}
         """
     }
 
     static func kitDetailJSON() -> String {
         """
         {"data":{
-          "id":"kit-slow-1","name":"Slow 1","sportCode":"FB",
+          "id":"kit-slow-3","name":"Slow 3","sportCode":"FB",
           "members":[
-            {"id":"a-1","assetTag":"FX6-1","name":"Sony FX6"},
-            {"id":"a-2","assetTag":"LENS-70","name":"70-200"}
+            {"id":"a-1","assetTag":"FX9-2","name":"Sony FX9"},
+            {"id":"a-2","assetTag":"LENS-33","name":"Sony 24-105mm"},
+            {"id":"a-3","assetTag":"TRI-06","name":"Sachtler FSB 8"},
+            {"id":"a-4","assetTag":"AUD-020","name":"Sennheiser G4 kit"},
+            {"id":"a-5","assetTag":"MON-04","name":"SmallHD 703"}
           ],
           "bulkMembers":[
-            {"bulkSkuId":"sku-1","name":"Sony Battery","quantity":4}
+            {"bulkSkuId":"sku-vmount","name":"V-Mount Battery","quantity":2}
           ]
         }}
         """
@@ -959,11 +1337,22 @@ final class KioskFixtureURLProtocol: URLProtocol {
         case "/api/kiosk/kits":
             return (200, KioskFixtures.kitsJSON())
         default:
+            if path == "/api/kiosk/scan-lookup" {
+                return (200, KioskFixtures.scanLookupJSON())
+            }
             if path.hasPrefix("/api/kiosk/kits/") {
                 return (200, KioskFixtures.kitDetailJSON())
             }
             if path.hasPrefix("/api/kiosk/student/") {
                 return (200, KioskFixtures.studentContextJSON())
+            }
+            if path.hasSuffix("/extend-window") {
+                return (200, KioskFixtures.extendWindowJSON())
+            }
+            if path.hasPrefix("/api/kiosk/reservation/"), path.hasSuffix("/items") {
+                let id = path.replacingOccurrences(of: "/api/kiosk/reservation/", with: "")
+                    .replacingOccurrences(of: "/items", with: "")
+                return (200, KioskFixtures.reservationManifestJSON(id: id))
             }
             if path.hasPrefix("/api/kiosk/checkout/") {
                 let id = path.replacingOccurrences(of: "/api/kiosk/checkout/", with: "")

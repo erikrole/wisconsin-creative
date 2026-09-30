@@ -253,3 +253,47 @@ export async function substituteReservationPickupItem(args: {
     };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
+
+type SubstitutionScanned = { id: string; name: string | null; assetTag: string; type: string; categoryId: string | null };
+
+/**
+ * The swap the kiosk offers on an off-plan pickup scan (redesign F3). Only a
+ * like-for-like item qualifies: the chooser alone would pair any scan with the
+ * last remaining reserved item, and "swap MIC-12 for a camera" is never meant.
+ */
+export function pickupSubstitutionOffer(
+  remaining: RemainingSerializedItem[],
+  scanned: SubstitutionScanned,
+  alreadyScannedAssetIds: Set<string>,
+) {
+  const reserved = choosePickupSubstitutionCandidate(remaining, scanned, alreadyScannedAssetIds);
+  if (!reserved) return null;
+  const sameCategory = !!scanned.categoryId && reserved.asset.categoryId === scanned.categoryId;
+  const sameName = !!scanned.name && !!reserved.asset.name
+    && reserved.asset.name.trim().toLowerCase() === scanned.name.trim().toLowerCase();
+  if (!sameCategory && !sameName) return null;
+  return { scanned: namedItem(scanned), reserved: namedItem(reserved.asset) };
+}
+
+/** Read-only: which reserved item the scanned one could replace, if any. */
+export async function previewPickupSubstitution(bookingId: string, scanned: SubstitutionScanned) {
+  const booking = await db.booking.findUnique({
+    where: { id: bookingId },
+    select: {
+      serializedItems: {
+        select: {
+          assetId: true,
+          allocationStatus: true,
+          asset: { select: { id: true, assetTag: true, name: true, type: true, categoryId: true } },
+        },
+      },
+      scanEvents: {
+        where: { success: true, phase: "CHECKOUT", assetId: { not: null } },
+        select: { assetId: true },
+      },
+    },
+  });
+  if (!booking) return null;
+  const scannedIds = new Set(booking.scanEvents.map((event) => event.assetId).filter((id): id is string => !!id));
+  return pickupSubstitutionOffer(booking.serializedItems, scanned, scannedIds);
+}
