@@ -323,7 +323,9 @@ struct KioskHomeView: View {
     private var peoplePanel: some View {
         let today = Array((serverToday.isEmpty ? todayPeople : serverTodayPeople).prefix(6))
         let labels = homeShortNames(for: users)
-        let showsPhotos = users.count <= 24
+        // Photos at every roster size (Erik, 2026-09-30); 5 columns past 24 people,
+        // tiles sized to fill the card.
+        let usesWideGrid = users.count > 24
         return VStack(alignment: .leading, spacing: 16) {
             if !today.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
@@ -347,16 +349,26 @@ struct KioskHomeView: View {
                         .font(KioskType.meta)
                         .foregroundStyle(KioskText.muted)
                 }
-                ScrollView {
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: showsPhotos ? 4 : 5), spacing: 6) {
-                        ForEach(users) { user in
-                            HomePersonTile(user: user, label: labels[user.id] ?? user.name, showsPhoto: showsPhotos) {
-                                onSelectUser(user)
+                // The grid fills the card: tiles share the height left after
+                // the Today tiles, and scroll only below the 44 pt tap floor.
+                GeometryReader { proxy in
+                    let columns = usesWideGrid ? 5 : 4
+                    let spacing: CGFloat = 6
+                    let rows = max(1, Int(ceil(Double(users.count) / Double(columns))))
+                    let fitted = (proxy.size.height - spacing * CGFloat(rows - 1)) / CGFloat(rows)
+                    let tileHeight = min(max(fitted, 44), 96)
+                    ScrollView {
+                        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: spacing), count: columns), spacing: spacing) {
+                            ForEach(users) { user in
+                                HomePersonTile(user: user, label: labels[user.id] ?? user.name, height: tileHeight) {
+                                    onSelectUser(user)
+                                }
                             }
                         }
                     }
+                    .scrollIndicators(.hidden)
+                    .scrollDisabled(fitted >= 44)
                 }
-                .scrollIndicators(.hidden)
             }
         }
         .padding(.leading, KioskSpacing.lg)
@@ -516,24 +528,44 @@ private struct HomeTodayTile: View {
 private struct HomePersonTile: View {
     let user: KioskUser
     let label: String
-    let showsPhoto: Bool
+    var height: CGFloat = 44
     let action: () -> Void
+
+    /// Tall tiles stack the photo over the name so names keep their width;
+    /// short tiles put them side by side.
+    private var stacks: Bool { height >= 72 }
+    private var photoSize: CGFloat {
+        stacks ? min(height - 34, 56) : min(max(height - 14, 28), 44)
+    }
+
+    private var name: some View {
+        Text(label)
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundStyle(KioskText.primary)
+            .lineLimit(1)
+            .minimumScaleFactor(0.94)
+            .truncationMode(.tail)
+    }
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 8) {
-                if showsPhoto {
-                    KioskAvatar(url: user.avatarUrl, initials: user.initials, size: 28)
+            Group {
+                if stacks {
+                    VStack(spacing: 4) {
+                        KioskAvatar(url: user.avatarUrl, initials: user.initials, size: photoSize)
+                        name
+                    }
+                    .frame(maxWidth: .infinity)
+                } else {
+                    HStack(spacing: 8) {
+                        KioskAvatar(url: user.avatarUrl, initials: user.initials, size: photoSize)
+                        name
+                        Spacer(minLength: 0)
+                    }
                 }
-                Text(label)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(KioskText.primary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                Spacer(minLength: 0)
             }
-            .padding(.horizontal, 8)
-            .frame(height: 44)
+            .padding(.horizontal, 7)
+            .frame(height: height)
             .kioskCard(radius: KioskRadius.md)
         }
         .buttonStyle(KioskPressStyle())
