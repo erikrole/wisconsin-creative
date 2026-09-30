@@ -47,7 +47,8 @@ describe("iOS kiosk idle sleep mode", () => {
     expect(success).toContain("store.deferSleepMode()");
     // Redesign J2: a dim grey clock on black that drifts a few points.
     expect(sleepView).toContain("KioskType.standbyClock");
-    expect(sleepView).toContain("Tap or scan to wake");
+    expect(sleepView).toContain("Tap to wake");
+    expect(sleepView).not.toContain("scan to wake");
     expect(sleepView).not.toContain("Color.white.opacity(0.13)");
     expect(sleepView).not.toContain("Color.white.opacity(0.09)");
   });

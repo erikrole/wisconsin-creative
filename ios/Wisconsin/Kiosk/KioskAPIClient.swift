@@ -407,9 +407,11 @@ struct KioskAPI {
             bulkUnitIds: bulkUnitIds,
             reason: reason
         ))
-        let envelope: KioskCompletionEnvelope<KioskTransferResult> = try await perform(req)
+        // A 4xx or a sealed rejection is definitive: the caller may start a new
+        // request id. Network, 5xx, and decode failures stay ambiguous.
+        let (envelope, _): (KioskCompletionEnvelope<KioskTransferResult>, HTTPURLResponse) = try await performWithResponse(req, typedClientErrors: true)
         if envelope.operationRejected == true {
-            throw APIError.serverError(envelope.error ?? "That transfer didn't go through. Nothing moved.")
+            throw KioskRequestRejected(message: envelope.error ?? "That transfer didn't go through. Nothing moved.")
         }
         guard let result = envelope.result else {
             throw APIError.serverError("Could not read the transfer receipt. Check the hub before trying again.")
@@ -796,7 +798,8 @@ struct KioskAPI {
 
     private func performWithResponse<T: Decodable>(
         _ request: URLRequest,
-        broadcastsUnauthorizedSession: Bool = true
+        broadcastsUnauthorizedSession: Bool = true,
+        typedClientErrors: Bool = false
     ) async throws -> (T, HTTPURLResponse) {
         let requestGeneration = kioskCredentialBoundary.capture()
         let data: Data
@@ -856,6 +859,9 @@ struct KioskAPI {
             throw APIError.serverError("Something went wrong on our end. Try that scan again.")
         default:
             let msg = (try? decoder.decode(ErrorBody.self, from: data))?.error ?? "Server error (\(http.statusCode))"
+            if typedClientErrors, (400...499).contains(http.statusCode) {
+                throw KioskRequestRejected(message: msg)
+            }
             throw APIError.serverError(msg)
         }
     }
@@ -941,4 +947,11 @@ private struct KioskCompletionEnvelope<T: Decodable>: Decodable {
         error = try values.decodeIfPresent(String.self, forKey: .error)
         result = operationRejected == true ? nil : try T(from: decoder)
     }
+}
+
+/// The server definitively refused a request (a 4xx or a sealed operation
+/// rejection), so nothing was committed under its request id.
+struct KioskRequestRejected: LocalizedError {
+    let message: String
+    var errorDescription: String? { message }
 }

@@ -288,7 +288,7 @@ struct KioskTransferScreen: View {
     @State private var isSaving = false
     @State private var saveError: String?
     /// One id per attempt, kept across retries so a lost answer replays.
-    @State private var requestId = "\(Int64(Date().timeIntervalSince1970 * 1000)):\(UUID().uuidString.prefix(18))"
+    @State private var requestId = "\(Int64(Date().timeIntervalSince1970 * 1000)):\(UUID().uuidString)"
 
     /// Serialized and numbered units: the route moves these by id.
     private var movable: [KioskCheckoutDetail.ReturnItem] {
@@ -448,10 +448,14 @@ struct KioskTransferScreen: View {
                 reason: actor.canManageAnyCheckout ? KioskTransferCopy.staffReason : nil
             )
             onTransferred(result, target)
-        } catch {
+        } catch let rejected as KioskRequestRejected {
             // A refused transfer is sealed under this id; the next try is new.
-            requestId = "\(Int64(Date().timeIntervalSince1970 * 1000)):\(UUID().uuidString.prefix(18))"
-            saveError = (error as? APIError)?.errorDescription ?? "That transfer didn't go through. Nothing moved."
+            requestId = "\(Int64(Date().timeIntervalSince1970 * 1000)):\(UUID().uuidString)"
+            saveError = rejected.message
+        } catch {
+            // Network, 5xx, or an unreadable receipt: the server may have
+            // committed. Keep the id so the next tap replays the receipt.
+            saveError = "We couldn't confirm that transfer. Tap Transfer again to check."
         }
     }
 }
@@ -881,7 +885,13 @@ struct KioskReservationEditView: View {
         defer { isSaving = false }
         var expected = manifest.updatedAt
         var failed: [String] = []
+        // A swap's original must stay if its replacement never landed.
+        var keepOriginals: Set<String> = []
         for operation in draft.operations {
+            if case .remove(let itemId, let name) = operation, keepOriginals.contains(itemId) {
+                failed.append("Remove \(name): kept because its replacement wasn't added.")
+                continue
+            }
             do {
                 let result: KioskReservationMutationResult
                 switch operation {
@@ -897,6 +907,11 @@ struct KioskReservationEditView: View {
             } catch {
                 let reason = (error as? APIError)?.errorDescription ?? "Try again."
                 failed.append("\(Self.label(operation)): \(reason)")
+                if case .add(let scanValue) = operation {
+                    for staged in draft.added where staged.scanValue == scanValue {
+                        if let replacing = staged.replacing { keepOriginals.insert(replacing) }
+                    }
+                }
             }
         }
         if failed.isEmpty {
