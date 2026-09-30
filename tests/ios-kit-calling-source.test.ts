@@ -47,8 +47,9 @@ describe("kiosk kit calling", () => {
     expect(client).toContain("requester_user_id");
     expect(client).toContain("suggestedKitId");
     // Kits start on the scan screen (redesign E, Erik 2026-09-25).
-    expect(checkout).toContain("KioskCheckoutKitPicker(kits: kitOptions, selectedKitId: $selectedKitId)");
-    expect(checkout).toContain("A kit is the scan list");
+    expect(checkout).toContain("KioskKitPickSheet(");
+    expect(checkout).toContain("kits: kitOptions,");
+    expect(checkout).toContain("A kit is a checklist. Only what you scan goes out.");
     expect(checkout).not.toContain("store.setCart(kitMembers");
   });
 });

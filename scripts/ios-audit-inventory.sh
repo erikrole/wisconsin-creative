@@ -145,6 +145,8 @@ Kiosk/KioskAPIClient.swift             |                             | exempt-in
 Kiosk/KioskDesign.swift                |                             | exempt-infra
 Kiosk/KioskComponents.swift            |                             | exempt-shared
 Kiosk/KioskTaskKit.swift               |                             | exempt-shared
+Kiosk/KioskChangesViews.swift          |                             | exempt-shared
+Kiosk/KioskReturnReportView.swift      |                             | exempt-shared
 Kiosk/KioskModels.swift                |                             | exempt-infra
 Kiosk/KioskStore.swift                 |                             | exempt-infra
 Kiosk/KioskFlowRouting.swift           |                             | exempt-infra
