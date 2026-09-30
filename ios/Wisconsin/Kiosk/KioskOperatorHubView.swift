@@ -11,6 +11,10 @@ struct KioskOperatorHubView: View {
     @State private var scanFeedback: ScanRouteFeedback?
     @State private var scanFeedbackDismissTask: Task<Void, Never>?
     @State private var scanRouteTask: Task<Void, Never>?
+    /// Follow-up scans that arrive while the first is being routed ride along
+    /// into the flow it opens, instead of each one cancelling the last.
+    @State private var trailingScans: [String] = []
+    @State private var isRoutingScan = false
     @State private var scanRouteRequests = LatestRequestGeneration()
     @State private var contextLoadTask: Task<Void, Never>?
     @State private var contextLoadRequests = LatestRequestGeneration()
@@ -397,11 +401,14 @@ struct KioskOperatorHubView: View {
             if let checkouts = context?.checkouts, !checkouts.isEmpty {
                 let itemsOut = checkouts.reduce(0) { $0 + $1.items.count }
                 let soonest = checkouts.map(\.endsAt).min()
-                let hasOverdue = checkouts.contains(where: \.isOverdue)
+                let overdueCount = checkouts.filter(\.isOverdue).count
                 HStack(spacing: KioskSpacing.lg) {
                     holdingStat(value: "\(itemsOut)", label: "Items out", tone: KioskText.primary)
-                    if hasOverdue {
-                        holdingStat(value: "Overdue", label: "Return now", tone: KioskStatus.problem)
+                    // A count beside a count. The word "Overdue" set as a
+                    // numeral read as a broken stat; the red row below already
+                    // carries the due time and the Return action.
+                    if overdueCount > 0 {
+                        holdingStat(value: "\(overdueCount)", label: "Overdue", tone: KioskStatus.problem)
                     } else if let soonest {
                         holdingStat(
                             value: soonest.formatted(.dateTime.weekday(.abbreviated).hour().minute()),
@@ -605,9 +612,16 @@ struct KioskOperatorHubView: View {
     }
 
     private func routeScan(_ scan: String) {
-        scanRouteTask?.cancel()
+        store.resetInactivity()
+        if isRoutingScan {
+            if scan != trailingScans.last { trailingScans.append(scan) }
+            return
+        }
+        trailingScans = []
+        isRoutingScan = true
         let requestToken = scanRouteRequests.begin()
         scanRouteTask = Task { @MainActor in
+            defer { if scanRouteRequests.owns(requestToken) { isRoutingScan = false } }
             do {
                 guard ownsScanRoute(requestToken) else { return }
                 let result = try await KioskAPI.shared.kioskResolveScan(scanValue: scan, userId: user.id)
@@ -624,11 +638,12 @@ struct KioskOperatorHubView: View {
                     expectedRequester: result.expectedRequester,
                     selectedEvent: nil,
                     targetBooking: result.booking.map { KioskIntentBooking(id: $0.id, title: $0.title, startsAt: $0.startsAt, endsAt: $0.endsAt) },
-                    pendingScanValues: [scan],
+                    pendingScanValues: KioskFlowIntent.orderedScans(scan, then: trailingScans),
                     createdAt: Date(),
                     ambiguity: .none,
                     custodyOwner: result.custodyOwner
                 )
+                trailingScans = []
                 store.setIntent(intent)
                 switch action {
                 case .checkout: store.screen = .checkout(user: user)
@@ -668,6 +683,8 @@ struct KioskOperatorHubView: View {
         case .warning: Haptics.warning()
         case .error: Haptics.error()
         }
+        // Audible on every rejection: the fleet iPads have no Taptic Engine.
+        KioskScanFeedbackSound.playFailure()
         scanFeedbackDismissTask?.cancel()
         if reduceMotion {
             scanFeedback = feedback

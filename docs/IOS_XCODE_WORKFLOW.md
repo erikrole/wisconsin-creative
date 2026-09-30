@@ -25,7 +25,7 @@ Any gate that exits non-zero aborts the run with that status. A run only prints
 `OK: iOS Xcode verification passed` when every gate above actually ran and passed.
 
 The XCTest destination is resolved to a **UDID** at runtime from `xcrun simctl list
-devices available` — `iPhone 16 Pro` for `Wisconsin`, `iPad (A16)` for `WisconsinKiosk`,
+devices available` — `iPhone 16 Pro` for `Wisconsin`, `iPad Air 11-inch (M4)` for `WisconsinKiosk` (stand-in for the managed iPad Air 11-inch (M2) kiosks),
 preferring a booted device and otherwise the newest runtime that has one. A
 `name=...,OS=latest` destination is matched only against the newest installed runtime,
 so it fails outright for a device such as the iPhone 16 Pro that is installed under an

@@ -1,4 +1,4 @@
-import { BookingKind, BookingStatus, type Prisma } from "@prisma/client";
+import { BookingCustodyScope, BookingKind, BookingStatus, type Prisma } from "@prisma/client";
 import { HttpError } from "@/lib/http";
 
 type LeftoverReservationPickup = {
@@ -10,17 +10,25 @@ type LeftoverReservationPickup = {
 /**
  * A partial kiosk pickup that still has remaining gear should not be followed
  * by a second direct checkout for the same person at the same counter.
+ *
+ * Only the person's own (`PERSON`) reservations count: a `SHARED` travel-case
+ * manifest is custodian-neutral (D-061) and its retained requester is not its
+ * owner. A reservation whose window has ended is no longer pickable (the kiosk
+ * hides it and confirm rejects it), so it must not block direct checkout.
  */
 export async function findLeftoverReservationPickup(
   tx: Prisma.TransactionClient,
-  args: { requesterUserId: string; locationId: string },
+  args: { requesterUserId: string; locationId: string; now?: Date },
 ): Promise<LeftoverReservationPickup | null> {
+  const now = args.now ?? new Date();
   const reservations = await tx.booking.findMany({
     where: {
       requesterUserId: args.requesterUserId,
+      custodyScope: BookingCustodyScope.PERSON,
       kind: BookingKind.RESERVATION,
       status: BookingStatus.BOOKED,
       locationId: args.locationId,
+      endsAt: { gt: now },
     },
     select: {
       id: true,

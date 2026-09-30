@@ -100,5 +100,5 @@ export const POST = withKiosk<{ id: string }>(async (req, { params }) => {
     throw new HttpError(409, "Keep at least one reserved item, or cancel the reservation from its booking page.");
   }
   const updated = await updateReservation(booking.id, body.actorId, { serializedAssetIds: assetIds, bulkItems }, new Date(body.expectedUpdatedAt));
-  return ok({ success: true, message: "Reservation updated. Scan the remaining pickup items again before handing them over.", updatedAt: updated.updatedAt });
+  return ok({ success: true, message: "Reservation updated. Scans for items still on this pickup were kept.", updatedAt: updated.updatedAt });
 });

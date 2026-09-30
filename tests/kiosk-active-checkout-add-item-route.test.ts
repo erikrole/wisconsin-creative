@@ -30,6 +30,13 @@ const mocks = vi.hoisted(() => ({
   assetAllocationCreate: vi.fn(),
   upsertBulkBalancesAndMovements: vi.fn(),
   createAuditEntryTx: vi.fn(),
+  bookingSerializedItemCount: vi.fn(),
+  bookingBulkItemFindMany: vi.fn(),
+  assetAllocationUpdateMany: vi.fn(),
+  bookingUpdate: vi.fn(),
+  scanSessionUpdateMany: vi.fn(),
+  settleBulkLedgerAtCompletion: vi.fn(),
+  endCheckoutReturnLiveActivities: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -55,7 +62,7 @@ vi.mock("@/lib/api", () => ({
   }),
 }));
 
-vi.mock("@/lib/audit", () => ({ createAuditEntryTx: mocks.createAuditEntryTx }));
+vi.mock("@/lib/audit", () => ({ createAuditEntryTx: mocks.createAuditEntryTx, lookupActorRole: vi.fn() }));
 vi.mock("@/lib/services/kiosk-scan", () => ({ findAssetByScanValue: mocks.findAssetByScanValue }));
 vi.mock("@/lib/services/bulk-unit-scans", () => ({ findBulkUnitByScanValue: mocks.findBulkUnitByScanValue }));
 vi.mock("@/lib/services/availability", () => ({
@@ -65,9 +72,13 @@ vi.mock("@/lib/services/availability", () => ({
 }));
 vi.mock("@/lib/services/bookings-helpers", () => ({
   upsertBulkBalancesAndMovements: mocks.upsertBulkBalancesAndMovements,
+  settleBulkLedgerAtCompletion: mocks.settleBulkLedgerAtCompletion,
 }));
 vi.mock("@/lib/live-activity-workflow", () => ({ scheduleCheckoutReturnLiveActivity: vi.fn() }));
-vi.mock("@/lib/services/live-activities", () => ({ updateCheckoutReturnLiveActivities: vi.fn() }));
+vi.mock("@/lib/services/live-activities", () => ({
+  updateCheckoutReturnLiveActivities: vi.fn(),
+  endCheckoutReturnLiveActivities: mocks.endCheckoutReturnLiveActivities,
+}));
 
 import { POST as addActiveCheckoutItem, DELETE as removeActiveCheckoutItem } from "@/app/api/kiosk/checkout/[id]/route";
 
@@ -79,7 +90,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.transaction.mockImplementation((handler) => handler({
     user: { findFirst: mocks.userFindFirst },
-    booking: { findFirst: mocks.bookingFindFirst },
+    booking: { findFirst: mocks.bookingFindFirst, update: mocks.bookingUpdate },
     bulkSkuUnit: {
       findUnique: mocks.bulkSkuUnitFindUnique,
       updateMany: mocks.bulkSkuUnitUpdateMany,
@@ -96,6 +107,7 @@ beforeEach(() => {
       findUnique: mocks.bookingBulkItemFindUnique,
       delete: mocks.bookingBulkItemDelete,
       update: mocks.bookingBulkItemUpdate,
+      findMany: mocks.bookingBulkItemFindMany,
     },
     bookingBulkUnitAllocation: {
       create: mocks.bookingBulkUnitAllocationCreate,
@@ -108,16 +120,22 @@ beforeEach(() => {
       findUnique: mocks.bookingSerializedItemFindUnique,
       create: mocks.bookingSerializedItemCreate,
       update: mocks.bookingSerializedItemUpdate,
+      count: mocks.bookingSerializedItemCount,
     },
-    assetAllocation: { create: mocks.assetAllocationCreate },
+    assetAllocation: { create: mocks.assetAllocationCreate, updateMany: mocks.assetAllocationUpdateMany },
     scanEvent: { create: mocks.scanEventCreate },
+    scanSession: { updateMany: mocks.scanSessionUpdateMany },
   }));
+  // Other gear is still out unless a test says otherwise.
+  mocks.bookingSerializedItemCount.mockResolvedValue(1);
+  mocks.bookingBulkItemFindMany.mockResolvedValue([]);
   mocks.userFindFirst.mockResolvedValue({ id: "actor-1", role: "STAFF" });
   mocks.bookingFindFirst.mockResolvedValue({
     id: "checkout-1",
     title: "VB vs Auburn",
     startsAt: new Date("2026-09-03T18:00:00.000Z"),
-    endsAt: new Date("2026-09-04T04:00:00.000Z"),
+    // Due back in the future: adding gear to an overdue checkout is refused.
+    endsAt: new Date(Date.now() + 24 * 60 * 60_000),
     locationId: "loc-field-house",
     location: { name: "Field House" },
     requesterUserId: "user-1",
@@ -349,5 +367,108 @@ describe("kiosk active checkout add item", () => {
     });
     expect(mocks.bookingSerializedItemCreate).not.toHaveBeenCalled();
     expect(mocks.assetAllocationCreate).not.toHaveBeenCalled();
+  });
+
+  it("refuses to add gear to an overdue checkout before writing any custody", async () => {
+    mocks.findBulkUnitByScanValue.mockResolvedValue(null);
+    mocks.findAssetByScanValue.mockResolvedValue({
+      id: "asset-fx3-2", assetTag: "CAM-014", name: "FX3 2", imageUrl: null, status: "AVAILABLE", category: { name: "Camera" },
+    });
+    mocks.bookingFindFirst.mockResolvedValue({
+      id: "checkout-1", title: "VB", startsAt: new Date("2026-09-03T18:00:00.000Z"),
+      endsAt: new Date(Date.now() - 60_000), locationId: "loc-1", requesterUserId: "actor-1", custodyScope: "PERSON",
+    });
+
+    const response = await addActiveCheckoutItem(new Request("http://test/api/kiosk/checkout/checkout-1", {
+      method: "POST", body: JSON.stringify({ actorId: "actor-1", scanValue: "fx3-2" }),
+    }), routeContext("checkout-1"));
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      success: false,
+      error: "This checkout is overdue. Update the return time before adding items.",
+    });
+    expect(mocks.checkAvailability).not.toHaveBeenCalled();
+    expect(mocks.bookingSerializedItemCreate).not.toHaveBeenCalled();
+    expect(mocks.assetAllocationCreate).not.toHaveBeenCalled();
+    expect(mocks.bulkSkuUnitUpdateMany).not.toHaveBeenCalled();
+  });
+
+  it("completes the checkout when the last active item is removed", async () => {
+    mocks.bookingSerializedItemFindUnique.mockResolvedValue({
+      id: "item-1", allocationStatus: "active", asset: { assetTag: "CAM-014", name: "FX3 2" },
+    });
+    mocks.bookingSerializedItemCount.mockResolvedValue(0);
+    mocks.bookingBulkItemFindMany.mockResolvedValue([]);
+
+    const response = await removeActiveCheckoutItem(new Request("http://test/api/kiosk/checkout/checkout-1", {
+      method: "DELETE", body: JSON.stringify({ actorId: "actor-1", assetId: "asset-fx3-2" }),
+    }), routeContext("checkout-1"));
+
+    expect(await response.json()).toEqual({ success: true, message: "FX3 2 removed", completed: true });
+    expect(mocks.bookingUpdate).toHaveBeenCalledWith({
+      where: { id: "checkout-1" },
+      data: { status: "COMPLETED", completedAt: expect.any(Date) },
+    });
+    expect(mocks.settleBulkLedgerAtCompletion).toHaveBeenCalled();
+    expect(mocks.createAuditEntryTx).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      action: "auto_completed_by_kiosk_checkin",
+    }));
+    expect(mocks.endCheckoutReturnLiveActivities).toHaveBeenCalledWith("checkout-1");
+  });
+
+  it("leaves the checkout open when other gear is still out", async () => {
+    mocks.bookingSerializedItemFindUnique.mockResolvedValue({
+      id: "item-1", allocationStatus: "active", asset: { assetTag: "CAM-014", name: "FX3 2" },
+    });
+
+    const response = await removeActiveCheckoutItem(new Request("http://test/api/kiosk/checkout/checkout-1", {
+      method: "DELETE", body: JSON.stringify({ actorId: "actor-1", assetId: "asset-fx3-2" }),
+    }), routeContext("checkout-1"));
+
+    expect(await response.json()).toEqual({ success: true, message: "FX3 2 removed" });
+    expect(mocks.bookingUpdate).not.toHaveBeenCalled();
+    expect(mocks.endCheckoutReturnLiveActivities).not.toHaveBeenCalled();
+  });
+
+  describe("who may edit a live checkout", () => {
+    const removeSerialized = () => removeActiveCheckoutItem(new Request("http://test/api/kiosk/checkout/checkout-1", {
+      method: "DELETE", body: JSON.stringify({ actorId: "actor-1", assetId: "asset-1" }),
+    }), routeContext("checkout-1"));
+
+    it("refuses a student removing gear from someone else's personal checkout", async () => {
+      mocks.userFindFirst.mockResolvedValue({ id: "actor-1", role: "STUDENT" });
+      mocks.bookingFindFirst.mockResolvedValue({
+        id: "checkout-1", title: "VB", startsAt: new Date(), endsAt: new Date(),
+        locationId: "loc-1", requesterUserId: "user-1", custodyScope: "PERSON",
+      });
+      await expect(removeSerialized()).rejects.toMatchObject({ status: 403 });
+      expect(mocks.bookingSerializedItemUpdate).not.toHaveBeenCalled();
+      expect(mocks.createAuditEntryTx).not.toHaveBeenCalled();
+    });
+
+    it("lets the owner, and the operator of a shared checkout, past the editor check", async () => {
+      mocks.bookingSerializedItemFindUnique.mockResolvedValue(null);
+      for (const booking of [
+        { requesterUserId: "actor-1", custodyScope: "PERSON" },
+        { requesterUserId: "user-1", custodyScope: "SHARED" },
+      ]) {
+        mocks.userFindFirst.mockResolvedValue({ id: "actor-1", role: "STUDENT" });
+        mocks.bookingFindFirst.mockResolvedValue({
+          id: "checkout-1", title: "VB", startsAt: new Date(), endsAt: new Date(),
+          locationId: "loc-1", ...booking,
+        });
+        const response = await removeSerialized();
+        expect(await response.json()).toEqual({ success: false, error: "Item is not active on this checkout" });
+      }
+    });
+
+    it("resolves the actor with the kiosk roster rule, not just active", async () => {
+      mocks.userFindFirst.mockResolvedValue(null);
+      await expect(removeSerialized()).rejects.toMatchObject({ status: 404 });
+      expect(mocks.userFindFirst).toHaveBeenCalledWith(expect.objectContaining({
+        where: expect.objectContaining({ id: "actor-1", hiddenFromRoster: false }),
+      }));
+    });
   });
 });

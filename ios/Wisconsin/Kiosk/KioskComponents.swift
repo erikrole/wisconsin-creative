@@ -233,6 +233,10 @@ struct KioskScanStage: View {
     var accepted: KioskAcceptedScan?
     var onCamera: (() -> Void)?
     var onHelp: (() -> Void)?
+    /// Shrinks the target when a conflict banner or scan result shares the
+    /// column. At full size those pushed the completion button off the bottom
+    /// of an 820pt-tall landscape iPad.
+    var isCompact: Bool = false
 
     private var tint: Color {
         if accepted != nil { return KioskStatus.ok }
@@ -271,7 +275,11 @@ struct KioskScanStage: View {
                 // the middle of the panel.
                 acceptedView(accepted)
             } else {
-                KioskScanTarget(tint: tint, width: 260, height: 156)
+                KioskScanTarget(
+                    tint: tint,
+                    width: isCompact ? 180 : 260,
+                    height: isCompact ? 96 : 156
+                )
 
                 VStack(spacing: 6) {
                     Text(headline)
@@ -302,7 +310,7 @@ struct KioskScanStage: View {
             }
         }
         .padding(.horizontal, KioskSpacing.xl)
-        .padding(.vertical, KioskSpacing.lg)
+        .padding(.vertical, isCompact ? KioskSpacing.md : KioskSpacing.lg)
         .frame(maxWidth: .infinity)
         .kioskCard(KioskSurface.card, radius: KioskRadius.hero, stroke: KioskStroke.standard)
         .overlay(
@@ -481,6 +489,14 @@ struct KioskQuarterHourTimePicker: UIViewRepresentable {
         if abs(picker.date.timeIntervalSince(selection)) >= 1 {
             picker.setDate(selection, animated: false)
         }
+    }
+
+    /// The compact picker's own size. Without it SwiftUI treats the UIKit
+    /// view as flexible, and outside a ScrollView the chip floated in the
+    /// middle of a stretched return window.
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: UIDatePicker, context: Context) -> CGSize? {
+        let fitted = uiView.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize)
+        return CGSize(width: max(fitted.width, 120), height: max(fitted.height, 44))
     }
 
     func makeCoordinator() -> Coordinator {
@@ -799,6 +815,10 @@ struct KioskBatteryScanStatus: View {
     let progressCopy: String
     let unitsHeader: String
     let scannedUnits: [KioskScannedUnit]
+    /// When set, each scanned unit is its own button that clears it so a
+    /// different unit can be scanned (a staged unit someone else took, or the
+    /// wrong one picked up).
+    var onReplace: ((KioskScannedUnit) -> Void)? = nil
 
     private var complete: Bool { count >= total && total > 0 }
 
@@ -826,17 +846,33 @@ struct KioskBatteryScanStatus: View {
             }
             if !scannedUnits.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(unitsHeader)
+                    Text(onReplace == nil ? unitsHeader : "\(unitsHeader) · tap one to replace it")
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(KioskText.tertiary)
-                    KioskUnitChips(units: scannedUnits)
+                    if let onReplace {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(scannedUnits) { unit in
+                                    Button { onReplace(unit) } label: {
+                                        Label(unit.tag, systemImage: "arrow.triangle.2.circlepath")
+                                            .font(.caption.monospaced().weight(.semibold))
+                                    }
+                                    .kioskButtonRole(.secondary)
+                                    .controlSize(.small)
+                                    .accessibilityLabel("Replace \(unit.tag)")
+                                }
+                            }
+                        }
+                    } else {
+                        KioskUnitChips(units: scannedUnits)
+                    }
                 }
             }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
         .kioskCard(KioskSurface.card, stroke: KioskStroke.hairline)
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: onReplace == nil ? .combine : .contain)
     }
 }
 

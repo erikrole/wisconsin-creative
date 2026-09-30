@@ -31,7 +31,10 @@ describe("iOS kiosk checkout details polish", () => {
     expect(checkout).toContain("checkoutContextSetupZone");
     expect(checkout).toContain("KioskCheckoutSetupPanel(");
     expect(checkout).toContain("private struct KioskCheckoutSetupPanel");
-    expect(checkout).toContain("KioskCheckoutSetupHero");
+    // The person and step moved into the flow header; the separate hero card
+    // pushed the return window under the pinned CTA.
+    expect(checkout).not.toContain("KioskCheckoutSetupHero");
+    expect(checkout).toContain("title: user.name,");
     expect(checkout).toContain("private struct KioskCheckoutWindow");
     expect(checkout).toContain("static let maxWidth: CGFloat = 1048");
     // Columns split the bounded width evenly. The old fixed 376/648 pair
@@ -109,7 +112,7 @@ describe("iOS kiosk checkout details polish", () => {
     // screen, not a sheet floating over a scan screen you cannot use yet.
     expect(checkout).toContain("@State private var checkoutContextReady = false");
     expect(checkout).toContain(`title: "Continue to Scan"`);
-    expect(checkout).toContain("STEP 1 OF 2");
+    expect(checkout).toContain("Step 1 of 2 · Checkout details");
     expect(checkout).not.toContain("showDetailsSheet");
   });
 

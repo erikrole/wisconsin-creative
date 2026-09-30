@@ -15,9 +15,24 @@ import { badges } from "@/lib/badges";
 import { settleBulkLedgerAtCompletion, upsertBulkBalancesAndMovements } from "./bookings-helpers";
 import { assetLocationEvidence, reconcileAssetLocationToKiosk, type KioskLocationEvidence } from "./kiosk-location";
 import { endCheckoutReturnLiveActivities } from "./live-activities";
+import { requireKioskActor } from "./kiosk-actor";
 
 export function wasReturnedOnTime(endsAt: Date, completedAt: Date) {
   return completedAt.getTime() <= endsAt.getTime() + 15 * 60 * 1000;
+}
+
+/**
+ * When someone returns gear on another person's personal checkout, the audit
+ * names both the returner (actor) and the owner they returned it for. Shared
+ * custody has no owner to name.
+ */
+export function returnedForOwnerId(
+  booking: { requesterUserId: string | null; custodyScope: BookingCustodyScope | string | null },
+  actorUserId: string,
+): string | null {
+  if (booking.custodyScope !== BookingCustodyScope.PERSON) return null;
+  if (!booking.requesterUserId || booking.requesterUserId === actorUserId) return null;
+  return booking.requesterUserId;
 }
 
 /**
@@ -33,6 +48,9 @@ export async function maybeAutoComplete(
   actorUserId: string,
   opts: {
     auditAction: string;
+    /** Owner/scope of the booking, so a return completed by someone other
+     * than the owner records who it was returned for. */
+    returnedFor?: { requesterUserId: string | null; custodyScope: BookingCustodyScope | string | null };
   }
 ): Promise<Date | null> {
   const [remainingActive, currentBulkItems] = await Promise.all([
@@ -75,12 +93,14 @@ export async function maybeAutoComplete(
 
   // Audit
   const actorRole = await lookupActorRole(tx, actorUserId);
+  const returnedForUserId = opts.returnedFor ? returnedForOwnerId(opts.returnedFor, actorUserId) : null;
   await createAuditEntryTx(tx, {
     actorId: actorUserId,
     actorRole,
     entityType: "booking",
     entityId: bookingId,
     action: opts.auditAction,
+    ...(returnedForUserId ? { after: { returnedForUserId } } : {}),
   });
 
   return completedAt;
@@ -578,6 +598,7 @@ export async function kioskCheckinAsset(
   const completedAt = booking
     ? await maybeAutoComplete(tx, args.bookingId, booking.locationId, args.actorUserId, {
         auditAction: "auto_completed_by_kiosk_checkin",
+        returnedFor: booking,
       })
     : null;
 
@@ -615,21 +636,28 @@ export async function kioskCheckinAsset(
  * than a 404 — otherwise the explicit tap that follows a normal, final
  * scan would surface an error even though the return already succeeded.
  *
- * Returns `before/after` counts so the route can stamp the kiosk audit
- * entry with the same shape it always has.
+ * When `kiosk` is given, the `kiosk_checkin` summary audit is written inside
+ * the same transaction (deduped against an identical prior summary so a
+ * retried tap does not duplicate it).
  */
 export async function kioskCompleteCheckin(args: {
   bookingId: string;
   actorUserId: string;
+  kiosk?: { kioskId: string; name: string };
 }): Promise<{
   refNumber: string | null;
   totalItems: number;
   returnedItems: number;
   returnedItemNames: string[];
   completed: boolean;
+  custodyScope: BookingCustodyScope;
+  returnedForUserId: string | null;
 }> {
   return db.$transaction(
     async (tx) => {
+      // Validate the returner with the kiosk roster rule inside the same
+      // transaction that completes the return.
+      const actor = await requireKioskActor(tx, args.actorUserId);
       const booking = await tx.booking.findUnique({
         where: { id: args.bookingId },
         include: {
@@ -706,6 +734,7 @@ export async function kioskCompleteCheckin(args: {
       // Already completed by the last scan's auto-complete — don't re-run
       // maybeAutoComplete (it would double-settle the bulk ledger and
       // duplicate the completion audit entry).
+      const returnedForUserId = returnedForOwnerId(booking, args.actorUserId);
       const completedAt = alreadyCompleted
         ? null
         : await maybeAutoComplete(
@@ -715,15 +744,56 @@ export async function kioskCompleteCheckin(args: {
             args.actorUserId,
             {
               auditAction: "auto_completed_by_kiosk_checkin",
+              returnedFor: booking,
             },
           );
+      const completed = alreadyCompleted || completedAt !== null;
+
+      if (args.kiosk) {
+        // The kiosk return summary commits with the return itself. A retried
+        // "Complete Return" (lost response, double tap) that finds the same
+        // summary already recorded must not write it again.
+        const lastSummary = await tx.auditLog.findFirst({
+          where: { entityType: "booking", entityId: booking.id, action: "kiosk_checkin" },
+          orderBy: { createdAt: "desc" },
+          select: { afterJson: true },
+        });
+        const last = lastSummary?.afterJson as { returnedItems?: unknown; totalItems?: unknown; completed?: unknown } | null | undefined;
+        const alreadyRecorded = !!last &&
+          last.returnedItems === returnedItems &&
+          last.totalItems === totalItems &&
+          last.completed === completed;
+        if (!alreadyRecorded) {
+          await createAuditEntryTx(tx, {
+            actorId: actor.id,
+            actorRole: actor.role,
+            entityType: "booking",
+            entityId: booking.id,
+            action: "kiosk_checkin",
+            before: { returnedItems, totalItems },
+            after: {
+              refNumber: booking.refNumber,
+              returnedItems,
+              totalItems,
+              itemNames: returnedItemNames,
+              completed,
+              source: "KIOSK",
+              kioskDeviceId: args.kiosk.kioskId,
+              kioskName: args.kiosk.name,
+              ...(returnedForUserId ? { returnedForUserId } : {}),
+            },
+          });
+        }
+      }
 
       return {
         refNumber: booking.refNumber,
         totalItems,
         returnedItems,
         returnedItemNames,
-        completed: alreadyCompleted || completedAt !== null,
+        completed,
+        custodyScope: booking.custodyScope,
+        returnedForUserId,
         badgeEvent: completedAt && booking.custodyScope === BookingCustodyScope.PERSON
           ? {
               userId: booking.requesterUserId,
@@ -747,6 +817,8 @@ export async function kioskCompleteCheckin(args: {
       returnedItems: result.returnedItems,
       returnedItemNames: result.returnedItemNames,
       completed: result.completed,
+      custodyScope: result.custodyScope,
+      returnedForUserId: result.returnedForUserId,
     };
   });
 }

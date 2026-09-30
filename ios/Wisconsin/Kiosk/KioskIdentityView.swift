@@ -187,6 +187,7 @@ struct KioskIdentityView: View {
                     finishIdentityRequest(requestToken)
                     message = result.message ?? "That scan didn't match anyone. Tap your name instead."
                     Haptics.warning()
+                    KioskScanFeedbackSound.playFailure()
                     return
                 }
                 choose(user)
@@ -197,6 +198,7 @@ struct KioskIdentityView: View {
                 finishIdentityRequest(requestToken)
                 message = (error as? APIError)?.errorDescription ?? "Could not read that scan."
                 Haptics.error()
+                KioskScanFeedbackSound.playFailure()
             }
         }
     }

@@ -10,6 +10,24 @@ export type KioskOperationContext = {
 };
 const retryLifetimeMs = 7 * 24 * 60 * 60 * 1000;
 
+/**
+ * A reference that can never succeed: it expired with no receipt (so the
+ * original never committed — committed receipts outlive the retry window), or
+ * it is already bound to different details. The native client keeps a saved
+ * completion until it sees a receipt or `operationRejected`, so these must
+ * answer with a rejection envelope rather than a bare 409, or the iPad retries
+ * the same bytes forever behind "Check Previous Handoff".
+ */
+export class KioskOperationTerminalError extends HttpError {
+  constructor(message: string) {
+    super(409, message);
+  }
+}
+
+export function kioskOperationRejection(message: string) {
+  return { success: false, operationRejected: true, error: message };
+}
+
 function canonical(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
   if (value && typeof value === "object") return `{${Object.entries(value).filter(([, v]) => v !== undefined).sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => `${JSON.stringify(k)}:${canonical(v)}`).join(",")}}`;
@@ -37,15 +55,35 @@ export async function readKioskOperationReceipt(tx: Prisma.TransactionClient | P
   const row = await tx.auditLog.findUnique({ where: { id: context.id }, select: { beforeJson: true, afterJson: true } });
   if (row) {
     const before = row.beforeJson as { fingerprint?: string } | null;
-    if (before?.fingerprint !== context.fingerprint) throw new HttpError(409, "This operation reference belongs to different details. Resolve the original operation before making changes.");
+    if (before?.fingerprint !== context.fingerprint) throw new KioskOperationTerminalError("This handoff was saved with different details and was not recorded. Review the list and try again.");
     if (row.afterJson && typeof row.afterJson === "object" && !Array.isArray(row.afterJson)) return row.afterJson;
     throw new HttpError(409, "This handoff is still being recorded. Retry with the same details.");
   }
   // Audit retention is 90 days. An expired missing receipt must never create a
   // second handoff after archival. A retained committed result can still replay.
   const age = Date.now() - context.issuedAt;
-  if (age > retryLifetimeMs || age < -5 * 60 * 1000) throw new HttpError(409, "This handoff reference has expired. Check the checkout list before starting again.");
+  if (age > retryLifetimeMs || age < -5 * 60 * 1000) throw new KioskOperationTerminalError("This saved handoff expired and was not recorded. Check the checkout list before starting again.");
   return null;
+}
+
+/** `readKioskOperationReceipt` for route handlers: a terminal reference
+ * becomes a rejection envelope the client can clear. */
+export async function readKioskOperationReplay(tx: Prisma.TransactionClient | PrismaClient, context?: KioskOperationContext) {
+  try {
+    return await readKioskOperationReceipt(tx, context);
+  } catch (error) {
+    if (error instanceof KioskOperationTerminalError) return kioskOperationRejection(error.message);
+    throw error;
+  }
+}
+
+/** A saved completion body that no longer validates can never be recorded:
+ * validation runs before any write. Reject it with an envelope when it carries
+ * a retry reference, so the client stops resending it. */
+export function unreadableKioskOperation(raw: unknown) {
+  const requestId = raw && typeof raw === "object" ? (raw as { requestId?: unknown }).requestId : undefined;
+  if (typeof requestId !== "string") return null;
+  return kioskOperationRejection("This saved handoff could not be read and was not recorded. Review the list and try again.");
 }
 
 class KioskOperationReplay extends Error {}
@@ -84,6 +122,6 @@ export async function rejectKioskOperation(db: PrismaClient, context: KioskOpera
       return response;
     }, { isolationLevel: "Serializable" });
   } catch {
-    return readKioskOperationReceipt(db, context);
+    return readKioskOperationReplay(db, context);
   }
 }

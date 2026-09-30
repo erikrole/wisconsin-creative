@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { requirePermission } from "@/lib/rbac";
 import { createAuditEntryTx } from "@/lib/audit";
 import { parseDerivedBulkUnitQr } from "@/lib/bulk-unit-qr";
 import { BookingCustodyScope, Prisma } from "@prisma/client";
@@ -7,7 +6,7 @@ import { db } from "@/lib/db";
 import { withKiosk } from "@/lib/api";
 import { HttpError, ok } from "@/lib/http";
 import { findAssetByScanValue } from "@/lib/services/kiosk-scan";
-import { addAndStageReservationPickupSerialized, preflightReservationPickupSerializedAdd } from "@/lib/services/kiosk-pickup-add";
+import { addAndStageReservationPickupSerialized, assertKioskPickupPlanActor, kioskPickupPlanActorSelect, preflightReservationPickupSerializedAdd } from "@/lib/services/kiosk-pickup-add";
 import { pickupScanBody } from "@/lib/schemas/kiosk";
 import { scanKioskPickupBulkUnit, stageKioskReservationPickupBulkUnit } from "@/lib/services/bulk-unit-scans";
 import { kioskRosterUserWhere } from "@/lib/user-visibility";
@@ -184,12 +183,15 @@ export const DELETE = withKiosk<{ id: string }>(async (req, { params, kiosk }) =
   await db.$transaction(async (tx) => {
     const [booking, actor] = await Promise.all([
       tx.booking.findUnique({ where: { id: params.id }, include: { bulkItems: { include: { bulkSku: true } }, derivedCheckouts: { include: { bulkItems: { include: { unitAllocations: { include: { bulkSkuUnit: true } } } } } } } }),
-      tx.user.findFirst({ where: { id: body.actorId, ...kioskRosterUserWhere() }, select: { id: true, role: true } }),
+      tx.user.findFirst({ where: { id: body.actorId, ...kioskRosterUserWhere() }, select: kioskPickupPlanActorSelect }),
     ]);
-    if (!actor) throw new HttpError(403, "Choose an active operator");
-    requirePermission(actor.role, "checkout", "scan");
+    // Roster rule plus the same pickup-plan rule as add/substitute: staff,
+    // any operator on shared custody, or the requester (collaborators need
+    // their own-reservation capability). No blanket role gate, so a
+    // roster-eligible collaborator can fix their own staged scan.
+    if (!actor) throw new HttpError(404, "Person not found");
     if (!booking || booking.kind !== "RESERVATION" || booking.status !== "BOOKED") throw new HttpError(409, "Refresh the reservation before replacing a staged unit");
-    if (booking.custodyScope !== "SHARED" && booking.requesterUserId !== actor.id && actor.role !== "ADMIN" && actor.role !== "STAFF") throw new HttpError(403, "Only the requester or staff can change this pickup");
+    assertKioskPickupPlanActor(booking, actor);
     const bulk = booking.bulkItems.find((item) => item.bulkSkuId === body.bulkSkuId);
     if (!bulk || booking.derivedCheckouts.some((checkout) => checkout.bulkItems.some((item) => item.bulkSkuId === body.bulkSkuId && item.unitAllocations.some((unit) => unit.bulkSkuUnit.unitNumber === body.unitNumber)))) throw new HttpError(409, "That unit was already picked up. Return or transfer it from its checkout.");
     const scans = await tx.scanEvent.findMany({ where: { bookingId: params.id, bulkSkuId: body.bulkSkuId, phase: "CHECKOUT", success: true }, select: { id: true, scanValue: true } });

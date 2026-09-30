@@ -431,7 +431,7 @@ describe("iOS API contracts — kiosk checkout context", () => {
     expect(checkoutView).toContain("scanAvailabilityFeedback(for: cartItem, result: preflight)");
     expect(checkoutView).toContain("Remove it or change the return time before checkout.");
     expect(checkoutView).toContain("Start Scanning");
-    expect(checkoutView).toContain("Checkout Details");
+    expect(checkoutView).toContain("Step 1 of 2 · Checkout details");
     expect(checkoutView).toContain("Scan Items");
     expect(checkoutView).toContain("checkoutContextReady");
     expect(checkoutView).toContain("hasCheckoutContext");

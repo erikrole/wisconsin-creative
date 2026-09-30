@@ -42,9 +42,23 @@ struct KioskShellView: View {
     /// makes the user's back tap ambiguous.
     private var showsSystemStatusButton: Bool {
         switch store.screen {
-        case .idle, .success:
+        case .success:
             return !showSystemStatus
-        case .activation, .operatorHub, .identity, .checkout, .pickup, .return:
+        // Idle hosts the control in its own header.
+        case .idle, .activation, .operatorHub, .identity, .checkout, .pickup, .return:
+            return false
+        }
+    }
+
+    /// Scan screens (checkout, pickup, return) state scanner readiness in their
+    /// own work surface. The global pill there said it a second time and sat on
+    /// top of the right rail's title, so it only appears where it is the sole
+    /// signal: idle, identity, and the operator hub.
+    private var showsScannerStatusPill: Bool {
+        switch store.screen {
+        case .idle, .identity, .operatorHub:
+            return true
+        case .activation, .checkout, .pickup, .return, .success:
             return false
         }
     }
@@ -118,7 +132,7 @@ struct KioskShellView: View {
             KioskKeyboardHint(isFieldFocused: store.scanner.isEditing)
 
             // Not during standby: see `KioskStore.isStandbyVisible`.
-            if store.isActive, !store.isResuming, store.screen != .activation, !store.isStandbyVisible {
+            if store.isActive, !store.isResuming, showsScannerStatusPill, !store.isStandbyVisible {
                 KioskScannerStatusPill()
                     .padding(20)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
@@ -136,8 +150,7 @@ struct KioskShellView: View {
                 .tint(KioskText.secondary)
                 .accessibilityLabel("Show device status")
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .padding(.leading, 20)
-                .padding(.top, 20)
+                .padding(20)
             }
         }
         .preferredColorScheme(.dark)
@@ -154,6 +167,7 @@ struct KioskShellView: View {
         .onAppear { UIApplication.shared.isIdleTimerDisabled = true }
         .onDisappear { UIApplication.shared.isIdleTimerDisabled = false }
         .background(KioskActivityMonitor { store.resetInactivity() })
+        .onChange(of: store.systemStatusRevealRequests) { _, _ in revealSystemStatus() }
         .animation(.easeInOut(duration: 0.2), value: store.inactivityWarningVisible)
         .animation(
             reduceMotion ? .easeInOut(duration: 0.15) : .easeOut(duration: 0.28),

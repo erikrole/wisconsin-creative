@@ -11,7 +11,9 @@ describe("iOS system correctness request ownership", () => {
 
     expect(hub).toContain("@State private var scanRouteTask: Task<Void, Never>?");
     expect(hub).toContain("@State private var scanRouteRequests = LatestRequestGeneration()");
-    expect(routeScan).toContain("scanRouteTask?.cancel()");
+    // A scan during routing rides along into the flow instead of cancelling it.
+    expect(routeScan).toContain("if isRoutingScan {");
+    expect(routeScan).toContain("trailingScans.append(scan)");
     expect(routeScan).toContain("let requestToken = scanRouteRequests.begin()");
     expect(routeScan).toContain("try Task.checkCancellation()");
     expect(routeScan.match(/guard ownsScanRoute\(requestToken\) else \{ return \}/g)).toHaveLength(2);

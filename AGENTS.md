@@ -62,10 +62,11 @@ If a conflict could change behavior, reconcile it using the current request and 
 
 ### Simulator policy
 
-- Use `platform=iOS Simulator,name=iPhone 18 Pro Max` as the default iOS build and UI-verification destination for both `Wisconsin` and `WisconsinKiosk`.
+- Use `platform=iOS Simulator,name=iPhone 18 Pro Max` as the default iOS build and UI-verification destination for `Wisconsin`.
+- `WisconsinKiosk` is iPad-only and runs on the two managed kiosk iPads (iPad Air 11-inch (M2), iPad14,8, iPadOS 26.5). Use `iPad Air 11-inch (M4)` on the iOS 26.5 runtime as its simulator stand-in (same 1180×820pt landscape canvas), and those managed iPads for physical proof. `scripts/kiosk-capture-scenarios.sh` captures the DEBUG fixture scenarios for review.
 - Use the physical iPhone 16 Pro for device-only proof such as passkeys, camera, notifications, APNs, and other hardware or permission behavior. Simulator success does not replace that proof.
 - Do not silently substitute iPhone 17 or maintain a broad simulator matrix. Add another simulator only when the task specifically requires a different form factor, OS version, iPad, or watch.
-- If the iPhone 18 Pro Max destination is unavailable, report the missing runtime/device and stop at the source or generic-device gate rather than changing the default destination.
+- If the required destination is unavailable, report the missing runtime/device and stop at the source or generic-device gate rather than changing the default destination.
 
 ### UI and component standards
 

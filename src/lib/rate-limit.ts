@@ -137,6 +137,28 @@ export async function checkRateLimit(
 }
 
 /**
+ * Read-only check: is `key` already at its limit? Does not consume quota, so
+ * a caller can gate on a bucket it only increments on some outcomes (for
+ * example, counting failed attempts only).
+ */
+export async function isRateLimitExhausted(
+  key: string,
+  config: RateLimitConfig
+): Promise<boolean> {
+  const limiter = getLimiter(config);
+  if (limiter) {
+    try {
+      const { remaining } = await limiter.getRemaining(key);
+      return remaining <= 0;
+    } catch {
+      // Redis unreachable: fall through to the in-memory window.
+    }
+  }
+  const entry = memStore.get(key);
+  return !!entry && entry.resetAt > Date.now() && entry.count >= config.max;
+}
+
+/**
  * Get the client IP from a request (respects x-forwarded-for for proxied environments).
  */
 export function getClientIp(req: Request): string {

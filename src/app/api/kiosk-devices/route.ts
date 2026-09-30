@@ -7,8 +7,8 @@ import { tokenHash, KIOSK_ACTIVATION_CODE_TTL_MS } from "@/lib/auth";
 import { enforceRateLimit, SETTINGS_MUTATION_LIMIT } from "@/lib/rate-limit";
 import { generateActivationCode } from "@/lib/kiosk-activation";
 import { unique } from "@/lib/utils";
+import { kioskDeviceCreateBody } from "@/lib/schemas/kiosk";
 
-/** Generate a random 6-digit numeric code */
 /** List kiosk devices with health stats (ADMIN only) */
 export const GET = withAuth(async (req, { user }) => {
   requirePermission(user.role, "kiosk_device", "view");
@@ -122,13 +122,7 @@ export const POST = withAuth(async (req, { user }) => {
   requirePermission(user.role, "kiosk_device", "create");
   await enforceRateLimit(`kiosk-devices:write:${user.id}`, SETTINGS_MUTATION_LIMIT);
 
-  const body = await req.json();
-  const name = (body.name as string)?.trim();
-  const locationId = body.locationId as string;
-
-  if (!name || !locationId) {
-    throw new HttpError(400, "Name and location are required");
-  }
+  const { name, locationId } = kioskDeviceCreateBody.parse(await req.json());
 
   // Verify location exists
   const location = await db.location.findUnique({

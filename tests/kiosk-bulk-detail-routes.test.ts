@@ -130,6 +130,9 @@ beforeEach(() => {
     },
     user: {
       findUnique: mocks.userFindUnique,
+      // Pickup confirm resolves its actor with the kiosk roster rule
+      // (findFirst + kioskRosterUserWhere); the fixtures stay shared.
+      findFirst: mocks.userFindUnique,
     },
   }));
   mocks.bookingUpdateMany.mockResolvedValue({ count: 1 });
@@ -1010,6 +1013,23 @@ describe("kiosk pickup serialized scan guard", () => {
 
     expect(mocks.createAuditEntryTx).not.toHaveBeenCalled();
     expect(mocks.badgeOnCheckoutOpened).not.toHaveBeenCalled();
+  });
+});
+
+describe("kiosk pickup confirm actor rule", () => {
+  it("rejects an actor the kiosk roster would not offer before any custody write", async () => {
+    mocks.userFindUnique.mockResolvedValue(null);
+
+    await expect(confirmKioskPickup(
+      new Request("http://test", { method: "POST", body: JSON.stringify({ actorId: "hidden-user" }) }),
+      { params: Promise.resolve({ id: "booking-1" }) },
+    )).rejects.toMatchObject({ status: 404, message: "Person not found" });
+
+    expect(mocks.userFindUnique).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ id: "hidden-user", active: true, hiddenFromRoster: false }),
+    }));
+    expect(mocks.bookingFindUnique).not.toHaveBeenCalled();
+    expect(mocks.bookingUpdateMany).not.toHaveBeenCalled();
   });
 });
 

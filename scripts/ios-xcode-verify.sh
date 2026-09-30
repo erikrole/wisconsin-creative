@@ -11,7 +11,7 @@ PROJECT_PATH="ios/Wisconsin.xcodeproj"
 XCODEBUILD_FLAGS=()
 
 if [[ "$SCHEME" == "WisconsinKiosk" ]]; then
-  SIMULATOR_NAME="${IOS_SIMULATOR_NAME:-iPad (A16)}"
+  SIMULATOR_NAME="${IOS_SIMULATOR_NAME:-iPad Air 11-inch (M4)}"
 else
   SIMULATOR_NAME="${IOS_SIMULATOR_NAME:-iPhone 18 Pro Max}"
 fi

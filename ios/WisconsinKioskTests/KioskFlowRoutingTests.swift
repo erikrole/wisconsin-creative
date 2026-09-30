@@ -120,4 +120,31 @@ final class KioskFlowRoutingTests: XCTestCase {
         XCTAssertFalse(queue.enqueue("  "))
     }
 
+    func testTrailingScansFollowTheOpeningScanOnceEach() {
+        XCTAssertEqual(KioskFlowIntent.orderedScans("CAM-1", then: ["CAM-2", "CAM-1", "CAM-3", "CAM-2"]), ["CAM-1", "CAM-2", "CAM-3"])
+        XCTAssertEqual(KioskFlowIntent.orderedScans("CAM-1", then: []), ["CAM-1"])
+    }
+
+    @MainActor
+    func testAbandonedCartsExpireAfterRetention() {
+        let store = KioskStore()
+        let item = KioskCartItem(id: "a1", name: "Sony FX3", tagName: "CAM-014", type: "serialized", imageUrl: nil, bulkSkuId: nil, unitNumber: nil)
+        store.setCart([item], for: "u-1")
+        XCTAssertEqual(store.cart(for: "u-1"), [item])
+
+        store.pruneExpiredCheckouts(now: Date().addingTimeInterval(KioskStore.cartRetention - 60))
+        XCTAssertEqual(store.cart(for: "u-1"), [item], "a short step away keeps the scans")
+
+        store.pruneExpiredCheckouts(now: Date().addingTimeInterval(KioskStore.cartRetention + 60))
+        XCTAssertTrue(store.cart(for: "u-1").isEmpty, "an old cart must not reopen into scanning")
+    }
+
+    @MainActor
+    func testInactivityNeverRunsOnTheActivationScreen() {
+        let store = KioskStore()
+        store.screen = .activation
+        store.resetInactivity()
+        XCTAssertFalse(store.inactivityWarningVisible)
+        XCTAssertEqual(store.screen, .activation)
+    }
 }

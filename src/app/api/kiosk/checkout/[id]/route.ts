@@ -12,19 +12,12 @@ import { kioskAvailabilityBlockMessage, kioskHeldItemMessage } from "@/lib/avail
 import { upsertBulkBalancesAndMovements } from "@/lib/services/bookings-helpers";
 import { BookingCustodyScope, BookingKind, BulkMovementKind, BulkUnitStatus, Prisma, Role } from "@prisma/client";
 import { scheduleCheckoutReturnLiveActivity } from "@/lib/live-activity-workflow";
-import { updateCheckoutReturnLiveActivities } from "@/lib/services/live-activities";
+import { endCheckoutReturnLiveActivities, updateCheckoutReturnLiveActivities } from "@/lib/services/live-activities";
+import { maybeAutoComplete } from "@/lib/services/bookings-checkin";
 import { normalizeBookingTitle } from "@/lib/title-normalization";
 import { displayBookingTitle } from "@/lib/booking-display-title";
 import { MAX_EQUIPMENT_SELECTIONS_PER_REQUEST } from "@/lib/request-limits";
-
-async function requireActor(tx: Prisma.TransactionClient, actorId: string) {
-  const actor = await tx.user.findFirst({
-    where: { id: actorId, active: true },
-    select: { id: true, role: true },
-  });
-  if (!actor) throw new HttpError(404, "User not found");
-  return actor;
-}
+import { assertKioskCheckoutEditor, requireKioskActor } from "@/lib/services/kiosk-actor";
 
 async function requireEditableCheckout(
   tx: Prisma.TransactionClient,
@@ -43,6 +36,7 @@ async function requireEditableCheckout(
       endsAt: true,
       locationId: true,
       requesterUserId: true,
+      custodyScope: true,
     },
   });
   if (!booking) throw new HttpError(404, "Active checkout not found");
@@ -150,6 +144,8 @@ type KioskBulkDetailItem = {
   imageUrl: string | null;
   quantity?: number;
   reservationItemId?: string;
+  /** Counted (not unit-numbered) stock: returned with a quantity, not scans. */
+  returnsByQuantity?: boolean;
 };
 
 /** Get checkout details for kiosk return and pickup flows */
@@ -419,6 +415,7 @@ export const GET = withKiosk<{ id: string }>(async (_req, { params }) => {
             bulkSkuName: bi.bulkSku.name,
             unitNumber: null,
             imageUrl: bi.bulkSku.imageUrl,
+            ...(bi.bulkSku.trackByNumber ? {} : { returnsByQuantity: true }),
           },
         ];
       });
@@ -482,8 +479,9 @@ export const PATCH = withKiosk<{ id: string }>(async (req, { kiosk, params }) =>
   const requestedEndsAt = body.endsAt ? new Date(body.endsAt) : null;
 
   const updated = await db.$transaction(async (tx) => {
-    const actor = await requireActor(tx, actorId);
+    const actor = await requireKioskActor(tx, actorId);
     const booking = await requireEditableCheckout(tx, { checkoutId: params.id });
+    assertKioskCheckoutEditor(actor, booking);
 
     if (requestedEndsAt && requestedEndsAt <= new Date()) {
       throw new HttpError(400, "Return time must be in the future");
@@ -573,9 +571,20 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
   }
 
   const result = await db.$transaction(async (tx) => {
-    const actor = await requireActor(tx, actorId);
+    const actor = await requireKioskActor(tx, actorId);
     const booking = await requireEditableCheckout(tx, { checkoutId: params.id });
+    assertKioskCheckoutEditor(actor, booking);
     const now = new Date();
+
+    // New custody runs [now, endsAt). On an overdue checkout that range is
+    // empty/inverted and the allocation constraint would reject it, so ask
+    // for a new return time first instead of failing mid-write.
+    if (booking.endsAt.getTime() <= now.getTime()) {
+      return {
+        success: false,
+        error: "This checkout is overdue. Update the return time before adding items.",
+      };
+    }
 
     if (bulkUnit) {
       if (bulkUnit.status !== BulkUnitStatus.AVAILABLE) {
@@ -775,9 +784,33 @@ export const DELETE = withKiosk<{ id: string }>(async (req, { kiosk, params }) =
   const actorId = body.actorId;
 
   const result = await db.$transaction(async (tx) => {
-    const actor = await requireActor(tx, actorId);
+    const actor = await requireKioskActor(tx, actorId);
     const booking = await requireEditableCheckout(tx, { checkoutId: params.id });
+    assertKioskCheckoutEditor(actor, booking);
 
+    const removed = await removeActiveItem(tx, actor, booking);
+    if (!removed.success) return removed;
+    // Removing the last active item must not leave an empty OPEN checkout:
+    // complete it through the same path returns use (ledger settle, scan
+    // session close, completion audit) in this transaction.
+    const completedAt = await maybeAutoComplete(tx, booking.id, booking.locationId, actorId, {
+      auditAction: "auto_completed_by_kiosk_checkin",
+      returnedFor: booking,
+    });
+    return completedAt ? { ...removed, completed: true } : removed;
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+
+  if ("completed" in result && result.completed) {
+    await endCheckoutReturnLiveActivities(params.id);
+  }
+
+  return ok(result);
+
+  async function removeActiveItem(
+    tx: Prisma.TransactionClient,
+    actor: { id: string; role: Role },
+    booking: Awaited<ReturnType<typeof requireEditableCheckout>>,
+  ): Promise<{ success: boolean; error?: string; message?: string }> {
     if (body.assetId) {
       const item = await tx.bookingSerializedItem.findUnique({
         where: { bookingId_assetId: { bookingId: booking.id, assetId: body.assetId } },
@@ -884,7 +917,5 @@ export const DELETE = withKiosk<{ id: string }>(async (req, { kiosk, params }) =
       success: true,
       message: `${allocation.bulkSkuUnit.bulkSku.name} #${allocation.bulkSkuUnit.unitNumber} removed`,
     };
-  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
-
-  return ok(result);
+  }
 });

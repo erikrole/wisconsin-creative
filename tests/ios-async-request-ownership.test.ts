@@ -68,8 +68,9 @@ describe("iOS asynchronous request ownership", () => {
     const checkout = source("ios/Wisconsin/Kiosk/KioskCheckoutView.swift");
 
     expect(checkout).toContain("@State private var availabilityRequests = LatestRequestGeneration()");
-    expect(checkout).toContain("let requestToken = availabilityRequests.begin()");
-    expect(checkout).toContain("guard availabilityRequests.owns(requestToken) else { return nil }");
+    // Scan preflights own a separate generation from cart refreshes.
+    expect(checkout).toContain("let requestToken = isPreflight ? preflightRequests.begin() : availabilityRequests.begin()");
+    expect(checkout).toContain("guard owns() else { return nil }");
     expect(checkout).toContain("guard let preflight = await refreshAvailability(for: cart, endsAt: endsAt)");
     expect(checkout).toContain("guard !preflight.hasBlockingIssue else");
   });

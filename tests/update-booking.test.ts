@@ -11,7 +11,8 @@ type UpdateBookingTx = {
   auditLog: Record<"create" | "createMany", MockFn>;
   user: Record<"findUnique", MockFn>;
   scanSession: Record<"updateMany", MockFn>;
-  scanEvent: Record<"updateMany", MockFn>;
+  scanEvent: Record<"updateMany" | "findMany", MockFn>;
+  bookingBulkUnitAllocation: Record<"findMany", MockFn>;
   bulkStockBalance: Record<"findMany" | "upsert", MockFn>;
   bulkStockMovement: Record<"createMany", MockFn>;
 };
@@ -30,7 +31,8 @@ vi.mock("@/lib/db", () => {
     auditLog: { create: vi.fn(), createMany: vi.fn() },
     user: { findUnique: vi.fn().mockResolvedValue({ role: "ADMIN", active: true }) },
     scanSession: { updateMany: vi.fn() },
-    scanEvent: { updateMany: vi.fn() },
+    scanEvent: { updateMany: vi.fn(), findMany: vi.fn() },
+    bookingBulkUnitAllocation: { findMany: vi.fn() },
     bulkStockBalance: { findMany: vi.fn(), upsert: vi.fn() },
     bulkStockMovement: { createMany: vi.fn() },
   };
@@ -140,6 +142,8 @@ beforeEach(() => {
   mockTx.auditLog.createMany.mockResolvedValue({});
   mockTx.scanSession.updateMany.mockResolvedValue({ count: 0 });
   mockTx.scanEvent.updateMany.mockResolvedValue({ count: 0 });
+  mockTx.scanEvent.findMany.mockResolvedValue([]);
+  mockTx.bookingBulkUnitAllocation.findMany.mockResolvedValue([]);
   mockTx.bulkStockBalance.findMany.mockResolvedValue([{ bulkSkuId: "sku-1", onHandQuantity: 50 }]);
   mockTx.bulkStockBalance.upsert.mockResolvedValue({});
   mockTx.bulkStockMovement.createMany.mockResolvedValue({});
@@ -574,5 +578,130 @@ describe("updateCheckout", () => {
     expect(mockTx.assetAllocation.createMany).not.toHaveBeenCalled();
     expect(mockTx.bookingSerializedItem.deleteMany).not.toHaveBeenCalled();
     expect(mockTx.bookingSerializedItem.createMany).not.toHaveBeenCalled();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Staged pickup scans after a kiosk plan edit
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("updateReservation staged pickup scans", () => {
+  const batterySku = { id: "sku-bat", trackByNumber: true, binQrCodeValue: "BAT" };
+
+  function batteryReservation(checkedOutQuantity = 0) {
+    return makeExistingReservation({
+      serializedItems: [{ assetId: "a-cam", allocationStatus: "active" }],
+      bulkItems: [{ bulkSkuId: "sku-bat", plannedQuantity: 4, checkedOutQuantity }],
+    });
+  }
+
+  function stagedBatteryScans(units: Array<[string, number]>) {
+    return units.map(([id, unitNumber]) => ({ id, bulkSkuId: "sku-bat", scanValue: `BAT-${unitNumber}` }));
+  }
+
+  beforeEach(() => {
+    mockTx.bulkSku.findMany.mockResolvedValue([batterySku]);
+  });
+
+  it("keeps the scanned batteries and the camera scan when the battery quantity drops to what was scanned", async () => {
+    mockTx.booking.findUnique.mockResolvedValue(batteryReservation());
+    mockTx.scanEvent.findMany.mockResolvedValue(stagedBatteryScans([
+      ["scan-1", 1],
+      ["scan-2", 2],
+      ["scan-2-dup", 2],
+    ]));
+
+    await updateReservation("r-1", "actor-1", {
+      serializedAssetIds: ["a-cam"],
+      bulkItems: [{ bulkSkuId: "sku-bat", quantity: 2 }],
+    });
+
+    expect(mockTx.scanEvent.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("releases only staged units beyond the reduced quantity and ignores already-picked units", async () => {
+    // One unit already went out on the derived checkout; three remain staged.
+    mockTx.booking.findUnique.mockResolvedValue(batteryReservation(1));
+    mockTx.scanEvent.findMany.mockResolvedValue(stagedBatteryScans([
+      ["scan-1", 1],
+      ["scan-2", 2],
+      ["scan-3", 3],
+      ["scan-4", 4],
+    ]));
+    mockTx.bookingBulkUnitAllocation.findMany.mockResolvedValue([
+      { bulkSkuUnit: { bulkSkuId: "sku-bat", unitNumber: 1 } },
+    ]);
+
+    await updateReservation("r-1", "actor-1", {
+      serializedAssetIds: ["a-cam"],
+      // picked 1 + 1 still to pick up
+      bulkItems: [{ bulkSkuId: "sku-bat", quantity: 2 }],
+    });
+
+    expect(mockTx.bookingBulkUnitAllocation.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: {
+        bookingBulkItem: {
+          bulkSkuId: { in: ["sku-bat"] },
+          booking: { sourceReservationId: "r-1" },
+        },
+      },
+    }));
+    expect(mockTx.scanEvent.updateMany).toHaveBeenCalledTimes(1);
+    expect(mockTx.scanEvent.updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ["scan-3", "scan-4"] } },
+      data: { success: false },
+    });
+  });
+
+  it("releases only the removed camera's scans and leaves staged batteries alone", async () => {
+    mockTx.booking.findUnique.mockResolvedValue(batteryReservation());
+
+    await updateReservation("r-1", "actor-1", {
+      serializedAssetIds: [],
+      bulkItems: [{ bulkSkuId: "sku-bat", quantity: 4 }],
+    });
+
+    expect(mockTx.scanEvent.findMany).not.toHaveBeenCalled();
+    expect(mockTx.scanEvent.updateMany).toHaveBeenCalledTimes(1);
+    expect(mockTx.scanEvent.updateMany).toHaveBeenCalledWith({
+      where: {
+        bookingId: "r-1",
+        phase: "CHECKOUT",
+        success: true,
+        OR: [{ assetId: { in: ["a-cam"] } }],
+      },
+      data: { success: false },
+    });
+  });
+
+  it("releases every staged scan for a battery line that is removed entirely", async () => {
+    mockTx.booking.findUnique.mockResolvedValue(batteryReservation());
+
+    await updateReservation("r-1", "actor-1", {
+      serializedAssetIds: ["a-cam"],
+      bulkItems: [],
+    });
+
+    expect(mockTx.scanEvent.updateMany).toHaveBeenCalledTimes(1);
+    expect(mockTx.scanEvent.updateMany).toHaveBeenCalledWith({
+      where: {
+        bookingId: "r-1",
+        phase: "CHECKOUT",
+        success: true,
+        OR: [{ bulkSkuId: { in: ["sku-bat"] } }],
+      },
+      data: { success: false },
+    });
+  });
+
+  it("keeps every staged scan when an item is added to the pickup", async () => {
+    mockTx.booking.findUnique.mockResolvedValue(batteryReservation());
+
+    await updateReservation("r-1", "actor-1", {
+      serializedAssetIds: ["a-cam", "a-lens"],
+      bulkItems: [{ bulkSkuId: "sku-bat", quantity: 5 }],
+    });
+
+    expect(mockTx.scanEvent.updateMany).not.toHaveBeenCalled();
   });
 });

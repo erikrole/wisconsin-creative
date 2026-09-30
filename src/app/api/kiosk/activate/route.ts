@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { withHandler } from "@/lib/api";
 import { HttpError, ok } from "@/lib/http";
 import { tokenHash, createKioskSession } from "@/lib/auth";
-import { enforceRateLimit, getClientIp } from "@/lib/rate-limit";
+import { checkRateLimit, enforceRateLimit, getClientIp, isRateLimitExhausted } from "@/lib/rate-limit";
 import { activateBody } from "@/lib/schemas/kiosk";
 import { createSystemAuditEntry } from "@/lib/audit";
 import { deferCompanionProjectionRefreshForCommittedMutation } from "@/lib/services/companion-projection-publisher";
@@ -14,10 +14,29 @@ import { deferCompanionProjectionRefreshForCommittedMutation } from "@/lib/servi
  * Rate-limited per IP to slow brute-force enumeration of the 6-digit
  * (~1M) keyspace. The limiter is Upstash/KV-backed cross-instance in
  * production, with a per-instance in-memory fallback (see lib/rate-limit.ts).
+ *
+ * Per-IP limits alone do not bound a distributed guesser, so failed
+ * activations across every IP also share one global budget. Only failures
+ * count toward it; once it is spent, activation pauses for everyone until the
+ * window rolls over.
  */
+const ACTIVATION_GLOBAL_FAILURE_KEY = "kiosk:activate:failures:global";
+const ACTIVATION_GLOBAL_FAILURE_LIMIT = { max: 30, windowMs: 60 * 60_000 };
+
+async function rejectActivation(message: string): Promise<never> {
+  await checkRateLimit(ACTIVATION_GLOBAL_FAILURE_KEY, ACTIVATION_GLOBAL_FAILURE_LIMIT);
+  throw new HttpError(401, message);
+}
+
 export const POST = withHandler(async (req) => {
   const ip = getClientIp(req);
   await enforceRateLimit(`kiosk:activate:${ip}`, { max: 5, windowMs: 15 * 60_000 });
+  if (await isRateLimitExhausted(ACTIVATION_GLOBAL_FAILURE_KEY, ACTIVATION_GLOBAL_FAILURE_LIMIT)) {
+    throw new HttpError(
+      429,
+      "Kiosk activation is paused after too many incorrect codes. Try again in an hour, or ask an admin for help.",
+    );
+  }
 
   const { code } = activateBody.parse(await req.json());
   const hashedCode = await tokenHash(code);
@@ -30,17 +49,17 @@ export const POST = withHandler(async (req) => {
   });
 
   if (!device) {
-    throw new HttpError(401, "Invalid activation code");
+    return rejectActivation("Invalid activation code");
   }
 
   if (!device.active) {
-    throw new HttpError(401, "This kiosk device has been deactivated");
+    return rejectActivation("This kiosk device has been deactivated");
   }
 
   // Codes are time-bounded. A null expiry means the code was already redeemed
   // (cleared below) or predates this field — treat both as no longer valid.
   if (!device.activationCodeExpiresAt || device.activationCodeExpiresAt <= new Date()) {
-    throw new HttpError(401, "This activation code has expired. Ask an admin to generate a new one.");
+    return rejectActivation("This activation code has expired. Ask an admin to generate a new one.");
   }
 
   // Single-use: atomically clear the code so it can't be redeemed twice. The
@@ -53,7 +72,7 @@ export const POST = withHandler(async (req) => {
     data: { activationCode: null, activationCodeExpiresAt: null },
   });
   if (redeemed.count !== 1) {
-    throw new HttpError(401, "Invalid activation code");
+    return rejectActivation("Invalid activation code");
   }
 
   // Create session (sets cookie) and return the raw token to the native app so

@@ -38,6 +38,13 @@ export async function expirePickupNoShows(
         {
           kind: BookingKind.RESERVATION,
           status: BookingStatus.BOOKED,
+          // A reservation whose pickup already started (it has a derived
+          // checkout) is not a no-show. Its leftover stays pickable until its
+          // window ends and is only closed after that.
+          OR: [
+            { derivedCheckouts: { none: {} } },
+            { endsAt: { lte: now } },
+          ],
         },
         {
           kind: BookingKind.CHECKOUT,
@@ -83,11 +90,14 @@ async function expirePickupNoShow(
     const booking = await tx.booking.findUnique({
       where: { id: candidate.id },
       include: {
+        derivedCheckouts: { select: { id: true } },
+        serializedItems: { select: { assetId: true, allocationStatus: true } },
         bulkItems: {
           select: {
             id: true,
             bulkSkuId: true,
             plannedQuantity: true,
+            checkedOutQuantity: true,
             checkedInQuantity: true,
             unitAllocations: {
               where: { checkedOutAt: { not: null }, checkedInAt: null },
@@ -105,6 +115,15 @@ async function expirePickupNoShow(
 
     if (!booking || (!isReservationNoShow && !isLegacyPendingCheckout) || booking.startsAt >= cutoff) {
       return { expired: false, releasedAssignmentId: null as string | null };
+    }
+
+    const pickupStarted = isReservationNoShow && (
+      (booking.derivedCheckouts?.length ?? 0) > 0
+      || (booking.serializedItems ?? []).some((item) => item.allocationStatus === "picked_up")
+      || booking.bulkItems.some((item) => (item.checkedOutQuantity ?? 0) > 0)
+    );
+    if (pickupStarted) {
+      return closePartiallyPickedUpReservationTx(tx, booking, now);
     }
 
     const cancelled = await tx.booking.updateMany({
@@ -227,6 +246,76 @@ async function expirePickupNoShow(
     await createShiftScheduleNotification(result.releasedAssignmentId, "removed");
   }
   return result.expired;
+}
+
+/**
+ * The requester showed up and took part of the plan, so this is not a no-show:
+ * do not cancel the reservation, release its schedule assignment, or send a
+ * "removed" notification. Once its window has ended the leftover can no longer
+ * be picked up, so complete the reservation (the derived checkout owns the
+ * custody already handed over) and release only the remaining holds.
+ */
+async function closePartiallyPickedUpReservationTx(
+  tx: Prisma.TransactionClient,
+  booking: {
+    id: string;
+    status: BookingStatus;
+    endsAt: Date;
+    serializedItems: Array<{ assetId: string; allocationStatus: string }>;
+    bulkItems: Array<{ bulkSkuId: string; plannedQuantity: number; checkedOutQuantity: number | null }>;
+  },
+  now: Date,
+) {
+  const notExpired = { expired: false, releasedAssignmentId: null as string | null };
+  if (booking.endsAt > now) return notExpired;
+
+  const closed = await tx.booking.updateMany({
+    where: {
+      id: booking.id,
+      kind: BookingKind.RESERVATION,
+      status: BookingStatus.BOOKED,
+      endsAt: { lte: now },
+    },
+    data: { status: BookingStatus.COMPLETED, completedAt: now },
+  });
+  if (closed.count !== 1) return notExpired;
+
+  await tx.assetAllocation.updateMany({
+    where: { bookingId: booking.id, active: true },
+    data: { active: false },
+  });
+  await tx.scanSession.updateMany({
+    where: { bookingId: booking.id, status: ScanSessionStatus.OPEN },
+    data: { status: ScanSessionStatus.CANCELLED },
+  });
+
+  await createAuditEntryTx(tx, {
+    actorId: null,
+    actorRole: null,
+    entityType: "booking",
+    entityId: booking.id,
+    action: "reservation_leftover_expired",
+    before: {
+      status: booking.status,
+      endsAt: booking.endsAt.toISOString(),
+      remainingSerializedAssetIds: booking.serializedItems
+        .filter((item) => item.allocationStatus === "active")
+        .map((item) => item.assetId),
+      remainingBulkItems: booking.bulkItems
+        .map((item) => ({
+          bulkSkuId: item.bulkSkuId,
+          quantity: Math.max(0, item.plannedQuantity - (item.checkedOutQuantity ?? 0)),
+        }))
+        .filter((item) => item.quantity > 0),
+    },
+    after: {
+      status: BookingStatus.COMPLETED,
+      reason: "remaining_items_not_picked_up",
+      expiredAt: now.toISOString(),
+    },
+  });
+
+  return { expired: true, releasedAssignmentId: null as string | null };
 }
 
 async function restoreBulkStock(

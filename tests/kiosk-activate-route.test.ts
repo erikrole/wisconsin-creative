@@ -16,6 +16,8 @@ vi.mock("@/lib/db", () => ({
 
 vi.mock("@/lib/rate-limit", () => ({
   enforceRateLimit: vi.fn(),
+  checkRateLimit: vi.fn(),
+  isRateLimitExhausted: vi.fn(),
   getClientIp: vi.fn(),
 }));
 
@@ -34,7 +36,7 @@ vi.mock("@sentry/nextjs", () => ({
 
 import { tokenHash, createKioskSession } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { enforceRateLimit, getClientIp } from "@/lib/rate-limit";
+import { checkRateLimit, enforceRateLimit, getClientIp, isRateLimitExhausted } from "@/lib/rate-limit";
 import { createSystemAuditEntry } from "@/lib/audit";
 import { deferCompanionProjectionRefreshForCommittedMutation } from "@/lib/services/companion-projection-publisher";
 import { POST as activateKiosk } from "@/app/api/kiosk/activate/route";
@@ -56,6 +58,8 @@ beforeEach(() => {
   vi.mocked(tokenHash).mockResolvedValue("hashed-code");
   vi.mocked(createKioskSession).mockResolvedValue("session-token");
   vi.mocked(enforceRateLimit).mockResolvedValue(undefined);
+  vi.mocked(isRateLimitExhausted).mockResolvedValue(false);
+  vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, remaining: 29, resetAt: Date.now() + 60 * 60_000 });
   vi.mocked(getClientIp).mockReturnValue("203.0.113.10");
   vi.mocked(db.kioskDevice.findUnique).mockResolvedValue({
     id: "kiosk-1",
@@ -86,5 +90,49 @@ describe("kiosk activation route", () => {
     expect(deferCompanionProjectionRefreshForCommittedMutation).toHaveBeenCalledWith(
       expect.objectContaining({ method: "POST" }),
     );
+  });
+
+  const GLOBAL_FAILURES = "kiosk:activate:failures:global";
+  const GLOBAL_LIMIT = { max: 30, windowMs: 60 * 60_000 };
+
+  it("does not spend the global failure budget on a successful activation", async () => {
+    const res = await activateKiosk(
+      authedPost("/api/kiosk/activate", { code: "123456" }),
+      { params: Promise.resolve({}) },
+    );
+
+    expect(res.status).toBe(200);
+    expect(isRateLimitExhausted).toHaveBeenCalledWith(GLOBAL_FAILURES, GLOBAL_LIMIT);
+    expect(checkRateLimit).not.toHaveBeenCalled();
+  });
+
+  it("counts each wrong code against a global budget shared by every IP", async () => {
+    vi.mocked(db.kioskDevice.findUnique).mockResolvedValue(null);
+
+    const res = await activateKiosk(
+      authedPost("/api/kiosk/activate", { code: "654321" }),
+      { params: Promise.resolve({}) },
+    );
+
+    expect(res.status).toBe(401);
+    expect(checkRateLimit).toHaveBeenCalledWith(GLOBAL_FAILURES, GLOBAL_LIMIT);
+    expect(createKioskSession).not.toHaveBeenCalled();
+  });
+
+  it("pauses activation for everyone once the global failure budget is spent", async () => {
+    vi.mocked(isRateLimitExhausted).mockResolvedValue(true);
+
+    const res = await activateKiosk(
+      authedPost("/api/kiosk/activate", { code: "123456" }),
+      { params: Promise.resolve({}) },
+    );
+
+    expect(res.status).toBe(429);
+    const body = await res.json();
+    expect(JSON.stringify(body)).toContain("Kiosk activation is paused after too many incorrect codes");
+    // Even a correct code is not checked while paused, so guessing stops paying off.
+    expect(db.kioskDevice.findUnique).not.toHaveBeenCalled();
+    expect(db.kioskDevice.updateMany).not.toHaveBeenCalled();
+    expect(createKioskSession).not.toHaveBeenCalled();
   });
 });

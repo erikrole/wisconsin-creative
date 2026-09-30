@@ -86,6 +86,11 @@ struct KioskCheckoutView: View {
     @State private var availabilityError: String?
     @State private var hasVerifiedAvailability = false
     @State private var availabilityRequests = LatestRequestGeneration()
+    /// Scan preflights run on their own generation. Sharing the cart refresh's
+    /// token meant removing an item, or changing the return time, while a scan
+    /// was being checked orphaned that preflight and rejected a valid scan as
+    /// "could not be verified".
+    @State private var preflightRequests = LatestRequestGeneration()
     // Plain @State on purpose — NOT @FocusState. The booking-name field is a
     // UIKit-backed KioskNativeTextField, invisible to SwiftUI's focus system,
     // so no view ever claims a @FocusState value for it. SwiftUI then resets
@@ -125,7 +130,10 @@ struct KioskCheckoutView: View {
         KioskCartDisplayGroup.groups(from: scannedItems)
     }
     private var shouldListenForHIDScans: Bool {
-        scannerCaptureEnabled && focusedCheckoutField == nil && !showCamera && !showScannerHelp && !showEditContextConfirm
+        // Armed only on the scan step. Step 1 has no cart on screen, so a scan
+        // there landed items nobody could see, checked against a due time
+        // nobody had chosen yet.
+        scannerCaptureEnabled && checkoutContextReady && focusedCheckoutField == nil && !showCamera && !showScannerHelp && !showEditContextConfirm
     }
 
     var body: some View {
@@ -144,19 +152,25 @@ struct KioskCheckoutView: View {
             }
         }
         .confirmationDialog(
-            "Discard \(scannedItems.count) scanned item\(scannedItems.count == 1 ? "" : "s")?",
+            scannedItems.isEmpty
+                ? "Discard the unfinished checkout?"
+                : "Discard \(scannedItems.count) scanned item\(scannedItems.count == 1 ? "" : "s")?",
             isPresented: $showBackConfirm,
             titleVisibility: .visible
         ) {
             Button("Discard", role: .destructive) {
                 store.clearCart(for: userId)
                 store.clearCheckoutDraft(for: userId)
+                KioskAPI.shared.discardPendingCheckout(actorId: userId)
+                hasPendingCompletion = false
                 Haptics.warning()
                 store.screen = .operatorHub(user)
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Going back will clear your scans.")
+            Text(hasPendingCompletion
+                 ? "A checkout that didn't confirm is saved on this iPad. Discard it only if the gear is back on the shelf — anything that did go through is on your hub."
+                 : "Going back will clear your scans.")
         }
         .confirmationDialog(
             "Edit checkout details?",
@@ -199,8 +213,11 @@ struct KioskCheckoutView: View {
             restoreDraftIfNeeded()
             applyRetainedIntent()
             store.scanner.claim(.checkout) { handleScan($0) }
-            await loadCheckoutEvents()
+            // Events and kits are independent; loading them one after the
+            // other doubled the time before step 1 was complete.
+            let events = Task { await loadCheckoutEvents() }
             await loadCheckoutKits()
+            await events.value
             await loadSelectedKitDetail()
             if !hasRestoredDraft { applySelectedEventDueTime() }
             if !scannedItems.isEmpty { await refreshAvailability(for: scannedItems) }
@@ -291,6 +308,7 @@ struct KioskCheckoutView: View {
         }
         .onDisappear {
             availabilityRequests.invalidate()
+            preflightRequests.invalidate()
             isCheckingAvailability = false
             scannerCaptureEnabled = false
             store.scanner.setEditing(false)
@@ -317,11 +335,17 @@ struct KioskCheckoutView: View {
     /// details panel, and a pinned Start Scanning CTA.
     private var checkoutContextSetupZone: some View {
         VStack(spacing: 0) {
+            // The person and step live in the header. A separate hero card
+            // restating them cost ~140pt, which pushed "When's it back?" under
+            // the pinned CTA and the kit picker off the screen entirely.
             KioskFlowHeader(
-                title: "Checkout Details",
+                title: user.name,
+                subtitle: ["Step 1 of 2 · Checkout details", store.info?.locationName]
+                    .compactMap { $0 }
+                    .joined(separator: " · "),
                 backAccessibilityLabel: "Back to roster",
                 onBack: {
-                    if scannedItems.isEmpty {
+                    if scannedItems.isEmpty && !hasPendingCompletion {
                         store.screen = .operatorHub(user)
                     } else {
                         showBackConfirm = true
@@ -395,6 +419,9 @@ struct KioskCheckoutView: View {
             focusedField: $focusedCheckoutField,
             onRetryKits: { Task { await loadCheckoutKits() } }
         )
+        // Natural height. Offered all the space outside a ScrollView, the
+        // native time picker stretched to fill the return window.
+        .fixedSize(horizontal: false, vertical: true)
         .frame(maxWidth: KioskCheckoutSetupLayout.maxWidth)
         .frame(maxWidth: .infinity)
         .padding(.vertical, KioskSpacing.lg)
@@ -408,7 +435,7 @@ struct KioskCheckoutView: View {
                     ? "Back to roster"
                     : "Back to roster, will prompt to discard \(scannedItems.count) items",
                 onBack: {
-                    if scannedItems.isEmpty {
+                    if scannedItems.isEmpty && !hasPendingCompletion {
                         store.screen = .operatorHub(user)
                     } else {
                         showBackConfirm = true
@@ -427,7 +454,11 @@ struct KioskCheckoutView: View {
             KioskCheckoutAvailabilityBanner(
                 result: availabilityResult,
                 isChecking: isCheckingAvailability,
-                errorMessage: availabilityError
+                errorMessage: availabilityError,
+                onRetry: {
+                    let cart = store.cart(for: userId)
+                    Task { await refreshAvailability(for: cart) }
+                }
             )
 
             Spacer()
@@ -439,7 +470,8 @@ struct KioskCheckoutView: View {
                 feedbackTint: lastResult.map { _ in scannerBorderColor },
                 accepted: lastAccepted,
                 onCamera: { showCamera = true },
-                onHelp: { showScannerHelp = true }
+                onHelp: { showScannerHelp = true },
+                isCompact: lastResult != nil || availabilityResult.hasBlockingIssue || availabilityError != nil
             )
 
             // Feedback banner
@@ -766,6 +798,13 @@ struct KioskCheckoutView: View {
         // success. Phantom checkouts are worse than a "hold on" feedback.
         guard !isCompleting else {
             showFeedback(.error("Hold on — finishing checkout"))
+            return
+        }
+        // A saved handoff resends its own item list, not this cart, and a
+        // success then clears the cart. Scanning more now would send gear home
+        // with no record, so the saved handoff has to settle first.
+        guard !hasPendingCompletion else {
+            showFeedback(.error("Finish the previous checkout first — tap Check Previous Handoff"))
             return
         }
 
@@ -1140,7 +1179,11 @@ struct KioskCheckoutView: View {
         endsAt requestedEndsAt: Date? = nil,
         applyResult: Bool = true
     ) async -> KioskCheckoutAvailabilityResult? {
-        let requestToken = availabilityRequests.begin()
+        let isPreflight = !applyResult
+        let requestToken = isPreflight ? preflightRequests.begin() : availabilityRequests.begin()
+        func owns() -> Bool {
+            isPreflight ? preflightRequests.owns(requestToken) : availabilityRequests.owns(requestToken)
+        }
         guard let locationId = store.info?.locationId, !cart.isEmpty else {
             if applyResult {
                 availabilityResult = KioskCheckoutAvailabilityResult()
@@ -1167,7 +1210,7 @@ struct KioskCheckoutView: View {
             availabilityError = nil
         }
         defer {
-            if availabilityRequests.owns(requestToken) { isCheckingAvailability = false }
+            if owns() { isCheckingAvailability = false }
         }
         do {
             let result = try await KioskAPI.shared.kioskCheckoutAvailability(
@@ -1176,15 +1219,19 @@ struct KioskCheckoutView: View {
                 startsAt: Date(),
                 endsAt: endsAt
             )
-            guard availabilityRequests.owns(requestToken) else { return nil }
+            guard owns() else { return nil }
             if applyResult {
                 applyAvailabilityResult(result)
             }
             return result
         } catch {
-            guard availabilityRequests.owns(requestToken) else { return nil }
-            availabilityError = (error as? APIError)?.errorDescription ?? "Conflict check unavailable"
-            hasVerifiedAvailability = false
+            guard owns() else { return nil }
+            // A failed preflight rejects only its own scan; it must not
+            // disable Complete for the cart that was already verified.
+            if applyResult {
+                availabilityError = (error as? APIError)?.errorDescription ?? "Conflict check unavailable"
+                hasVerifiedAvailability = false
+            }
             return nil
         }
     }
@@ -1552,8 +1599,6 @@ private struct KioskCheckoutSetupPanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: KioskSpacing.lg) {
-            KioskCheckoutSetupHero(user: user, locationName: locationName)
-
             // Details left, event linking right. Everything the checkout record
             // needs -- name and due-back -- stays on one side and is never
             // pushed below the fold by a long event list.
@@ -1576,24 +1621,35 @@ private struct KioskCheckoutSetupPanel: View {
         VStack(alignment: .leading, spacing: KioskSpacing.lg) {
             contextWindow
             returnWindow
-            KioskCheckoutKitPicker(
-                kits: kits,
-                isLoading: isLoadingKits,
-                errorMessage: kitLoadError,
-                selectedKitId: $selectedKitId,
-                onRetry: onRetryKits
-            )
         }
     }
 
+    /// A pickup with no kits has nothing to choose, so the window is left out
+    /// rather than spending a card on "No kits at this pickup yet."
+    private var showsKitPicker: Bool {
+        isLoadingKits || kitLoadError != nil || !kits.isEmpty
+    }
+
     private var eventColumn: some View {
-        KioskCheckoutEventPicker(
-            events: events,
-            isLoading: isLoadingEvents,
-            errorMessage: eventLoadError,
-            selectedEventId: $selectedEventId,
-            isLinkedToEvent: $isLinkedToEvent
-        )
+        VStack(alignment: .leading, spacing: KioskSpacing.lg) {
+            KioskCheckoutEventPicker(
+                events: events,
+                isLoading: isLoadingEvents,
+                errorMessage: eventLoadError,
+                selectedEventId: $selectedEventId,
+                isLinkedToEvent: $isLinkedToEvent,
+                listMaxHeight: showsKitPicker ? 250 : 320
+            )
+            if showsKitPicker {
+                KioskCheckoutKitPicker(
+                    kits: kits,
+                    isLoading: isLoadingKits,
+                    errorMessage: kitLoadError,
+                    selectedKitId: $selectedKitId,
+                    onRetry: onRetryKits
+                )
+            }
+        }
     }
 
     private var contextWindow: some View {
@@ -1625,29 +1681,47 @@ private struct KioskCheckoutKitPicker: View {
         KioskCheckoutWindow(title: "Gameday kit") {
             if isLoading {
                 KioskCheckoutEventLoadingRow()
-            } else if kits.isEmpty && errorMessage == nil {
-                Text("No kits at this pickup yet.")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(KioskText.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 8)
-            } else {
-                VStack(spacing: 0) {
-                    kitRow(id: nil, title: "None", subtitle: "Scan without a kit")
-                    ForEach(kits) { kit in
-                        Divider().background(KioskStroke.divider)
-                        kitRow(
-                            id: kit.id,
-                            title: kioskFootballGamedayKitLabel(kit.gamedayRole) ?? kit.name,
-                            subtitle: kitSubtitle(kit)
-                        )
+            } else if !kits.isEmpty {
+                // One row that opens a menu. A full list of every kit at the
+                // pickup outgrew the column and pushed itself off screen.
+                Menu {
+                    Picker("Gameday kit", selection: $selectedKitId) {
+                        Text("None — scan without a kit").tag(String?.none)
+                        ForEach(kits) { kit in
+                            Text("\(kitTitle(kit)) · \(kitSubtitle(kit))").tag(Optional(kit.id))
+                        }
                     }
+                    .pickerStyle(.inline)
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: selectedKit == nil ? "shippingbox" : "shippingbox.fill")
+                            .foregroundStyle(selectedKit == nil ? KioskText.muted : Color.kioskRedGlyph)
+                            .accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(selectedKit.map(kitTitle) ?? "No kit")
+                                .font(.subheadline.weight(.bold))
+                                .foregroundStyle(KioskText.primary)
+                            Text(selectedKit.map(kitSubtitle) ?? "\(kits.count) kit\(kits.count == 1 ? "" : "s") at this pickup")
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(KioskText.secondary)
+                        }
+                        Spacer(minLength: 0)
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(KioskText.muted)
+                            .accessibilityHidden(true)
+                    }
+                    .padding(.horizontal, 14)
+                    .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
+                    .background(KioskSurface.sunken, in: RoundedRectangle(cornerRadius: KioskRadius.md))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: KioskRadius.md)
+                            .stroke(selectedKit == nil ? KioskStroke.hairline : Color.kioskRed.opacity(0.5), lineWidth: 1)
+                    )
+                    .contentShape(Rectangle())
                 }
-                .background(KioskSurface.sunken, in: RoundedRectangle(cornerRadius: KioskRadius.md))
-                .overlay(
-                    RoundedRectangle(cornerRadius: KioskRadius.md)
-                        .stroke(KioskStroke.hairline, lineWidth: 1)
-                )
+                .buttonStyle(.plain)
+                .accessibilityLabel("Gameday kit, \(selectedKit.map(kitTitle) ?? "none")")
             }
 
             if let errorMessage {
@@ -1667,6 +1741,14 @@ private struct KioskCheckoutKitPicker: View {
         }
     }
 
+    private var selectedKit: KioskKitOption? {
+        kits.first { $0.id == selectedKitId }
+    }
+
+    private func kitTitle(_ kit: KioskKitOption) -> String {
+        kioskFootballGamedayKitLabel(kit.gamedayRole) ?? kit.name
+    }
+
     private func kitSubtitle(_ kit: KioskKitOption) -> String {
         var parts: [String] = []
         let job = kioskFootballGamedayKitLabel(kit.gamedayRole)
@@ -1679,41 +1761,6 @@ private struct KioskCheckoutKitPicker: View {
         return parts.joined(separator: " · ")
     }
 
-    private func kitRow(id: String?, title: String, subtitle: String) -> some View {
-        let isSelected = selectedKitId == id
-        return Button {
-            selectedKitId = isSelected ? nil : id
-        } label: {
-            HStack(spacing: 12) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 5)
-                        .stroke(isSelected ? Color.kioskRed : KioskStroke.standard, lineWidth: isSelected ? 2 : 1)
-                        .frame(width: 20, height: 20)
-                    if isSelected {
-                        Image(systemName: "checkmark")
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(Color.kioskRed)
-                            .accessibilityHidden(true)
-                    }
-                }
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title)
-                        .font(.subheadline.weight(.bold))
-                        .foregroundStyle(KioskText.primary)
-                    Text(subtitle)
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(KioskText.secondary)
-                }
-                Spacer(minLength: 0)
-            }
-            .padding(.horizontal, 14)
-            .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
-            .background(isSelected ? Color.kioskRed.opacity(0.12) : Color.clear)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("\(title), \(subtitle)\(isSelected ? ", selected" : "")")
-    }
 }
 
 /// Right column of checkout setup: the requester's own published shifts first,
@@ -1730,6 +1777,7 @@ private struct KioskCheckoutEventPicker: View {
     let errorMessage: String?
     @Binding var selectedEventId: String?
     @Binding var isLinkedToEvent: Bool
+    var listMaxHeight: CGFloat = 320
 
     private var myShifts: [KioskCheckoutEvent] { events.filter(\.isMyShift) }
     private var otherEvents: [KioskCheckoutEvent] { events.filter { !$0.isMyShift } }
@@ -1751,7 +1799,7 @@ private struct KioskCheckoutEventPicker: View {
                         }
                     }
                 }
-                .frame(maxHeight: 320)
+                .frame(maxHeight: listMaxHeight)
                 .scrollIndicators(.visible)
             }
 
@@ -1804,39 +1852,6 @@ private struct KioskCheckoutEventPicker: View {
             isLinkedToEvent = true
         }
         Haptics.selection()
-    }
-}
-
-private struct KioskCheckoutSetupHero: View {
-    let user: KioskUser
-    let locationName: String?
-
-    var body: some View {
-        HStack(spacing: 18) {
-            KioskAvatar(url: user.avatarUrl, initials: user.initials, size: 54)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text("STEP 1 OF 2 · CHECKOUT DETAILS")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(KioskText.muted)
-                Text(user.name)
-                    .font(.kioskScreenTitle(size: 28))
-                    .foregroundStyle(KioskText.primary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                Text(locationName ?? "Kiosk location")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(KioskText.secondary)
-                    .lineLimit(1)
-            }
-
-            Spacer()
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 16)
-        .kioskCard(KioskSurface.card, radius: KioskRadius.lg, stroke: KioskStroke.standard)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(user.name), \(locationName ?? "kiosk location")")
     }
 }
 
@@ -2476,6 +2491,9 @@ private struct KioskCheckoutAvailabilityBanner: View {
     let result: KioskCheckoutAvailabilityResult
     let isChecking: Bool
     let errorMessage: String?
+    /// The only way back from a dropped availability check. Without it,
+    /// Complete stayed disabled until someone removed an item to re-trigger it.
+    var onRetry: (() -> Void)?
 
     var body: some View {
         if isChecking || result.hasBlockingIssue || result.hasWarning || errorMessage != nil {
@@ -2493,6 +2511,13 @@ private struct KioskCheckoutAvailabilityBanner: View {
                         .lineLimit(2)
                 }
                 Spacer()
+                if errorMessage != nil, !isChecking, let onRetry {
+                    Button("Retry", action: onRetry)
+                        .font(KioskType.chip)
+                        .kioskButtonRole(.secondary)
+                        .controlSize(.regular)
+                        .accessibilityLabel("Retry the availability check")
+                }
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)

@@ -283,6 +283,13 @@ struct KioskAPI {
         hasPendingCompletion(path: "/api/kiosk/checkout/complete", actorId: actorId)
     }
 
+    /// Forget a saved checkout the operator explicitly discarded. Safe either
+    /// way: if the original reached the server its custody already exists and
+    /// shows on the hub; if it never did, nothing should be recorded.
+    func discardPendingCheckout(actorId: String) {
+        UserDefaults.standard.removeObject(forKey: completionKey(path: "/api/kiosk/checkout/complete", actorId: actorId))
+    }
+
     func hasPendingPickup(bookingId: String, actorId: String) -> Bool {
         hasPendingCompletion(path: "/api/kiosk/pickup/\(bookingId)/confirm", actorId: actorId)
     }
@@ -376,6 +383,31 @@ struct KioskAPI {
         return try await perform(req)
     }
 
+    /// Return counted stock by quantity. `expectedOutstanding` is the count
+    /// the operator saw, so a stale screen cannot return more than is out.
+    func kioskReturnQuantity(
+        bookingId: String,
+        actorId: String,
+        bulkSkuId: String,
+        quantity: Int,
+        expectedOutstanding: Int
+    ) async throws -> KioskQuantityReturnResult {
+        struct Body: Encodable {
+            let actorId: String
+            let bulkSkuId: String
+            let quantity: Int
+            let expectedOutstanding: Int
+        }
+        var req = request(path: "/api/kiosk/checkin/\(bookingId)/quantity", method: "POST")
+        req.httpBody = try JSONEncoder().encode(Body(
+            actorId: actorId,
+            bulkSkuId: bulkSkuId,
+            quantity: quantity,
+            expectedOutstanding: expectedOutstanding
+        ))
+        return try await perform(req)
+    }
+
     func kioskCheckinComplete(bookingId: String, actorId: String) async throws -> KioskCheckinCompleteResult {
         struct Body: Encodable { let actorId: String }
         var req = request(path: "/api/kiosk/checkin/\(bookingId)/complete", method: "POST")
@@ -402,6 +434,20 @@ struct KioskAPI {
         }
         var req = request(path: "/api/kiosk/pickup/\(bookingId)/scan", method: "POST")
         req.httpBody = try JSONEncoder().encode(Body(actorId: actorId, scanValue: scanValue, intent: intent))
+        return try await perform(req)
+    }
+
+    /// Clears one staged (not yet handed-over) numbered unit from a
+    /// reservation pickup so a different unit can be scanned in its place.
+    func kioskPickupUnstage(
+        bookingId: String,
+        actorId: String,
+        bulkSkuId: String,
+        unitNumber: Int
+    ) async throws -> KioskActiveCheckoutMutationResult {
+        struct Body: Encodable { let actorId: String; let bulkSkuId: String; let unitNumber: Int }
+        var req = request(path: "/api/kiosk/pickup/\(bookingId)/scan", method: "DELETE")
+        req.httpBody = try JSONEncoder().encode(Body(actorId: actorId, bulkSkuId: bulkSkuId, unitNumber: unitNumber))
         return try await perform(req)
     }
 

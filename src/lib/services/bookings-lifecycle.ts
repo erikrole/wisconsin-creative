@@ -1031,18 +1031,29 @@ export async function createBooking(input: CreateBookingInput) {
               throw new HttpError(409, `${unavailable.bulkSku.name} #${unavailable.unitNumber} is no longer available`);
             }
 
-            // The ledger was decremented by plannedQuantity — custody must bind
-            // exactly that many units per numbered SKU, or the balance and the
-            // physical checkout disagree from the first minute. (The kiosk route
-            // blocks under-staging; this is the in-transaction backstop and also
-            // catches over-staging.)
+            // The ledger was decremented by this request's quantity — custody
+            // must bind exactly that many units per numbered SKU, or the balance
+            // and the physical checkout disagree from the first minute. (The
+            // kiosk route blocks under-staging; this is the in-transaction
+            // backstop and also catches over-staging.) Compare against this
+            // request, not the checkout's accumulated plan: a leftover pickup
+            // appended onto an existing checkout already holds the units bound
+            // by the earlier pickup.
+            const requestedQuantityBySku = new Map<string, number>();
+            for (const item of resolvedBulkItems) {
+              requestedQuantityBySku.set(
+                item.bulkSkuId,
+                (requestedQuantityBySku.get(item.bulkSkuId) ?? 0) + item.quantity,
+              );
+            }
             for (const item of checkoutBulkItems) {
               if (!item.bulkSku.trackByNumber) continue;
               const bound = units.filter((unit) => unit.bulkSkuId === item.bulkSkuId).length;
-              if (bound !== item.plannedQuantity) {
+              const expected = requestedQuantityBySku.get(item.bulkSkuId) ?? 0;
+              if (bound !== expected) {
                 throw new HttpError(
                   409,
-                  `${item.bulkSku.name}: ${bound} of ${item.plannedQuantity} numbered units scanned — scan exactly the planned units before confirming`,
+                  `${item.bulkSku.name}: ${bound} of ${expected} numbered units scanned — scan exactly the planned units before confirming`,
                 );
               }
             }
@@ -1788,6 +1799,129 @@ export async function detachRolledReservationPlan(args: {
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
 
+/**
+ * After a reservation plan edit, mark staged (not yet picked up) kiosk pickup
+ * scans unsuccessful only where the plan no longer needs them:
+ * - a removed serialized item loses its scans;
+ * - a removed or reduced quantity-tracked line loses its scans;
+ * - a reduced numbered-unit line keeps the earliest distinct staged units up to
+ *   the new remaining quantity (the order kiosk confirm selects them in) and
+ *   releases only the excess.
+ * Added items and increased quantities keep every existing scan.
+ */
+async function invalidateStagedPickupScansForPlanEditTx(
+  tx: Prisma.TransactionClient,
+  args: {
+    bookingId: string;
+    existingSerializedItems: Array<{ assetId: string; allocationStatus: string }>;
+    existingBulkItems: Array<{ bulkSkuId: string; plannedQuantity: number; checkedOutQuantity: number | null }>;
+    nextSerializedAssetIds: string[];
+    nextBulkItems: BulkRequest[];
+  },
+): Promise<void> {
+  const nextAssetIds = new Set(args.nextSerializedAssetIds);
+  const removedAssetIds = args.existingSerializedItems
+    .filter((item) => item.allocationStatus !== "picked_up" && !nextAssetIds.has(item.assetId))
+    .map((item) => item.assetId);
+
+  const nextQuantityBySku = new Map<string, number>();
+  for (const item of args.nextBulkItems) {
+    nextQuantityBySku.set(item.bulkSkuId, (nextQuantityBySku.get(item.bulkSkuId) ?? 0) + item.quantity);
+  }
+  const reducedBulk = args.existingBulkItems
+    .map((item) => {
+      const picked = item.checkedOutQuantity ?? 0;
+      return {
+        bulkSkuId: item.bulkSkuId,
+        previousRemaining: Math.max(0, item.plannedQuantity - picked),
+        nextRemaining: Math.max(0, (nextQuantityBySku.get(item.bulkSkuId) ?? 0) - picked),
+      };
+    })
+    .filter((item) => item.nextRemaining < item.previousRemaining);
+
+  const releaseWholeSkuIds: string[] = [];
+  const partialNumbered: Array<{ bulkSkuId: string; keep: number }> = [];
+  if (reducedBulk.length > 0) {
+    const skus = await tx.bulkSku.findMany({
+      where: { id: { in: reducedBulk.map((item) => item.bulkSkuId) } },
+      select: { id: true, trackByNumber: true, binQrCodeValue: true },
+    });
+    const skuById = new Map(skus.map((sku) => [sku.id, sku]));
+    for (const item of reducedBulk) {
+      if (item.nextRemaining > 0 && skuById.get(item.bulkSkuId)?.trackByNumber) {
+        partialNumbered.push({ bulkSkuId: item.bulkSkuId, keep: item.nextRemaining });
+      } else {
+        releaseWholeSkuIds.push(item.bulkSkuId);
+      }
+    }
+
+    if (partialNumbered.length > 0) {
+      const partialSkuIds = partialNumbered.map((item) => item.bulkSkuId);
+      const [stagedScans, pickedAllocations] = await Promise.all([
+        tx.scanEvent.findMany({
+          where: {
+            bookingId: args.bookingId,
+            phase: "CHECKOUT",
+            success: true,
+            scanType: "BULK_BIN",
+            bulkSkuId: { in: partialSkuIds },
+          },
+          orderBy: { createdAt: "asc" },
+          select: { id: true, bulkSkuId: true, scanValue: true },
+        }),
+        tx.bookingBulkUnitAllocation.findMany({
+          where: {
+            bookingBulkItem: {
+              bulkSkuId: { in: partialSkuIds },
+              booking: { sourceReservationId: args.bookingId },
+            },
+          },
+          select: { bulkSkuUnit: { select: { bulkSkuId: true, unitNumber: true } } },
+        }),
+      ]);
+      const pickedUnitKeys = new Set(
+        pickedAllocations.map((row) => `${row.bulkSkuUnit.bulkSkuId}:${row.bulkSkuUnit.unitNumber}`),
+      );
+      const excessScanIds: string[] = [];
+      for (const { bulkSkuId, keep } of partialNumbered) {
+        const sku = skuById.get(bulkSkuId)!;
+        const keptUnits = new Set<number>();
+        for (const scan of stagedScans) {
+          if (scan.bulkSkuId !== bulkSkuId) continue;
+          const match = parseDerivedBulkUnitQr(scan.scanValue, [sku]);
+          // Already-transferred units and unparseable rows are not staged
+          // pickup work; leave their evidence untouched.
+          if (!match || pickedUnitKeys.has(`${bulkSkuId}:${match.unitNumber}`)) continue;
+          if (keptUnits.has(match.unitNumber)) continue;
+          if (keptUnits.size < keep) {
+            keptUnits.add(match.unitNumber);
+            continue;
+          }
+          excessScanIds.push(scan.id);
+        }
+      }
+      // A duplicate scan of a kept unit stays successful; confirm dedupes by
+      // unit number. Only units beyond the new quantity are released.
+      if (excessScanIds.length > 0) {
+        await tx.scanEvent.updateMany({
+          where: { id: { in: excessScanIds } },
+          data: { success: false },
+        });
+      }
+    }
+  }
+
+  const releaseFilters: Prisma.ScanEventWhereInput[] = [];
+  if (removedAssetIds.length > 0) releaseFilters.push({ assetId: { in: removedAssetIds } });
+  if (releaseWholeSkuIds.length > 0) releaseFilters.push({ bulkSkuId: { in: releaseWholeSkuIds } });
+  if (releaseFilters.length > 0) {
+    await tx.scanEvent.updateMany({
+      where: { bookingId: args.bookingId, phase: "CHECKOUT", success: true, OR: releaseFilters },
+      data: { success: false },
+    });
+  }
+}
+
 export async function updateReservation(
   bookingId: string,
   actorUserId: string,
@@ -1973,11 +2107,16 @@ export async function updateReservation(
             update: { plannedQuantity: item.quantity },
           });
         }
-        // Keep evidence but reset the remaining pickup checklist after a plan
-        // edit. Scans on derived checkouts remain the durable handoff record.
-        await tx.scanEvent.updateMany({
-          where: { bookingId, phase: "CHECKOUT", success: true, OR: [ { assetId: { notIn: [...pickedAssetIds] } }, { bulkSkuId: { not: null } } ] },
-          data: { success: false },
+        // Keep evidence, but release staged pickup scans only for the lines
+        // this edit removed or reduced. Untouched lines keep their scans so
+        // "keep the scanned batteries, drop the rest" does not force a full
+        // rescan. Scans on derived checkouts remain the durable handoff record.
+        await invalidateStagedPickupScansForPlanEditTx(tx, {
+          bookingId,
+          existingSerializedItems: existing.serializedItems,
+          existingBulkItems: existing.bulkItems,
+          nextSerializedAssetIds: serializedAssetIds,
+          nextBulkItems: bulkItems,
         });
       }
       if (updatesWindow) {

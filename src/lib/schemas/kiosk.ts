@@ -110,6 +110,29 @@ export const pickupSubstituteBody = z.object({
   scanValue: z.string().trim().min(1, "Scan value required"),
   reservedAssetId: cuidish,
 });
+/** Admin: create a kiosk device (`POST /api/kiosk-devices`). */
+export const kioskDeviceCreateBody = z.object({
+  name: z.string({ required_error: "Name and location are required" })
+    .trim()
+    .min(1, "Name and location are required")
+    .max(100, "Kiosk name must be 100 characters or fewer"),
+  locationId: z.string({ required_error: "Name and location are required" })
+    .trim()
+    .min(1, "Name and location are required"),
+});
+
+/** Admin: rename or (de)activate a kiosk device (`PATCH /api/kiosk-devices/[id]`). */
+export const kioskDeviceUpdateBody = z.object({
+  active: z.boolean().optional(),
+  name: z.string()
+    .trim()
+    .min(1, "Kiosk name cannot be empty")
+    .max(100, "Kiosk name must be 100 characters or fewer")
+    .optional(),
+}).refine((body) => body.active !== undefined || body.name !== undefined, {
+  message: "No valid fields to update",
+});
+
 export const activateBody = z.object({
   code: z
     .string()

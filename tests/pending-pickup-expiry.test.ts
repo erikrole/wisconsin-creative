@@ -35,8 +35,22 @@ vi.mock("@/lib/services/reservation-rules", () => ({
   })),
 }));
 
+vi.mock("@/lib/services/reservation-schedule", () => ({
+  releaseReservationManagedAssignmentTx: vi.fn(async () => ({
+    released: true,
+    blocked: false,
+    assignmentId: "assignment-1",
+  })),
+}));
+
+vi.mock("@/lib/services/notifications", () => ({
+  createShiftScheduleNotification: vi.fn(async () => undefined),
+}));
+
 import { db } from "@/lib/db";
 import { expirePickupNoShows } from "@/lib/services/pending-pickup-expiry";
+import { releaseReservationManagedAssignmentTx } from "@/lib/services/reservation-schedule";
+import { createShiftScheduleNotification } from "@/lib/services/notifications";
 
 const mockDb = db as unknown as {
   booking: { findMany: ReturnType<typeof vi.fn> };
@@ -97,7 +111,14 @@ describe("expirePickupNoShows", () => {
     expect(mockDb.booking.findMany).toHaveBeenCalledWith(expect.objectContaining({
       where: expect.objectContaining({
         OR: [
-          { kind: "RESERVATION", status: "BOOKED" },
+          {
+            kind: "RESERVATION",
+            status: "BOOKED",
+            OR: [
+              { derivedCheckouts: { none: {} } },
+              { endsAt: { lte: now } },
+            ],
+          },
           { kind: "CHECKOUT", status: "PENDING_PICKUP" },
         ],
         startsAt: { lt: new Date("2026-05-11T12:00:00.000Z") },
@@ -219,5 +240,104 @@ describe("expirePickupNoShows", () => {
 
     expect(result).toMatchObject({ scanned: 1, expired: 0, failed: 0, errors: {} });
     expect(mockTx.booking.updateMany).not.toHaveBeenCalled();
+  });
+
+  describe("partially picked-up reservations", () => {
+    function partialReservation(endsAt: Date) {
+      return {
+        id: "reservation-partial",
+        kind: "RESERVATION",
+        status: "BOOKED",
+        startsAt: staleStart,
+        endsAt,
+        locationId: "loc-1",
+        createdBy: "creator-1",
+        shiftAssignmentId: "assignment-1",
+        derivedCheckouts: [{ id: "checkout-1" }],
+        serializedItems: [{ assetId: "asset-lens", allocationStatus: "active" }],
+        bulkItems: [{
+          id: "bulk-item-1",
+          bulkSkuId: "bulk-1",
+          plannedQuantity: 4,
+          checkedOutQuantity: 2,
+          checkedInQuantity: 0,
+          unitAllocations: [],
+        }],
+      };
+    }
+
+    it("leaves a started pickup alone while its window is still open", async () => {
+      mockTx.booking.findUnique.mockResolvedValue(
+        partialReservation(new Date(now.getTime() + 24 * 60 * 60 * 1000)),
+      );
+
+      const result = await expirePickupNoShows(now);
+
+      expect(result).toMatchObject({ scanned: 1, expired: 0, failed: 0 });
+      expect(mockTx.booking.updateMany).not.toHaveBeenCalled();
+      expect(mockTx.assetAllocation.updateMany).not.toHaveBeenCalled();
+      expect(releaseReservationManagedAssignmentTx).not.toHaveBeenCalled();
+      expect(createShiftScheduleNotification).not.toHaveBeenCalled();
+      expect(mockTx.auditLog.create).not.toHaveBeenCalled();
+    });
+
+    it("completes an ended leftover without cancelling it or releasing the shift", async () => {
+      const endsAt = new Date(now.getTime() - 60 * 60 * 1000);
+      mockTx.booking.findUnique.mockResolvedValue(partialReservation(endsAt));
+
+      const result = await expirePickupNoShows(now);
+
+      expect(result).toMatchObject({ scanned: 1, expired: 1, failed: 0 });
+      expectSerializableIsolation(transactionCalls, 0);
+      expect(mockTx.booking.updateMany).toHaveBeenCalledOnce();
+      expect(mockTx.booking.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: "reservation-partial",
+          kind: "RESERVATION",
+          status: "BOOKED",
+          endsAt: { lte: now },
+        },
+        data: { status: "COMPLETED", completedAt: now },
+      });
+      expect(mockTx.assetAllocation.updateMany).toHaveBeenCalledWith({
+        where: { bookingId: "reservation-partial", active: true },
+        data: { active: false },
+      });
+      expect(mockTx.bulkStockBalance.upsert).not.toHaveBeenCalled();
+      expect(releaseReservationManagedAssignmentTx).not.toHaveBeenCalled();
+      expect(createShiftScheduleNotification).not.toHaveBeenCalled();
+      expect(mockTx.auditLog.create).toHaveBeenCalledOnce();
+      expect(mockTx.auditLog.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          entityId: "reservation-partial",
+          action: "reservation_leftover_expired",
+        }),
+      });
+    });
+
+    it("still cancels an untouched reservation no-show and releases its shift", async () => {
+      mockTx.booking.findUnique.mockResolvedValue({
+        ...partialReservation(new Date(now.getTime() + 24 * 60 * 60 * 1000)),
+        id: "reservation-untouched",
+        derivedCheckouts: [],
+        bulkItems: [{
+          id: "bulk-item-1",
+          bulkSkuId: "bulk-1",
+          plannedQuantity: 4,
+          checkedOutQuantity: 0,
+          checkedInQuantity: 0,
+          unitAllocations: [],
+        }],
+      });
+
+      const result = await expirePickupNoShows(now);
+
+      expect(result).toMatchObject({ expired: 1 });
+      expect(mockTx.booking.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+        data: { status: "CANCELLED" },
+      }));
+      expect(releaseReservationManagedAssignmentTx).toHaveBeenCalledOnce();
+      expect(createShiftScheduleNotification).toHaveBeenCalledWith("assignment-1", "removed");
+    });
   });
 });
