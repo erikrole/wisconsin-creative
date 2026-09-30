@@ -12,6 +12,7 @@ const { dbMock, tx } = vi.hoisted(() => {
       update: vi.fn(),
       updateMany: vi.fn(),
       deleteMany: vi.fn(),
+      delete: vi.fn(),
     },
     signatureCollection: {
       findUnique: vi.fn(),
@@ -51,6 +52,7 @@ const { dbMock, tx } = vi.hoisted(() => {
     },
     signatureSaveOperation: {
       findUnique: vi.fn(),
+      count: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
       updateMany: vi.fn(),
@@ -87,10 +89,10 @@ vi.mock("@/lib/signatures/storage", () => ({
   getPrivateSignatureArtifact: vi.fn(),
 }));
 
-import { applySignatureRosterSnapshot, cleanupPendingSignatureArtifacts, createAdHocSignatureMember, createSignatureRosterPreview, deleteSignatureCollection, getReadySignatureArtifact, getSignatureCollection, getSignatureCollectionZip, getSignatureMemberCaptureBootstrap, listSignatureCollections, removeSignatureCapture, removeSignatureMemberFromRoster, resetSignatureCollection, saveSignatureCapture, signatureArtifactFilename, syncSignatureCreativeStaff, updateSignatureMemberRequired } from "@/lib/services/signatures";
+import { addSignatureTeamPlayer, applySignatureRosterSnapshot, cleanupPendingSignatureArtifacts, moveSignatureCapture, createAdHocSignatureMember, createSignatureRosterPreview, deleteSignatureCollection, getReadySignatureArtifact, getSignatureCollection, getSignatureCollectionZip, getSignatureMemberCaptureBootstrap, listSignatureCollections, removeSignatureCapture, removeSignatureMemberFromRoster, resetSignatureCollection, saveSignatureCapture, signatureArtifactFilename, syncSignatureCreativeStaff, updateSignatureMemberRequired } from "@/lib/services/signatures";
 import { createAuditEntryTx } from "@/lib/audit";
 import { renderSignatureArtifacts } from "@/lib/signatures/artifacts";
-import { deletePrivateSignatureArtifacts, getPrivateSignatureArtifact, uploadPrivateSignatureArtifact } from "@/lib/signatures/storage";
+import { buildSignatureArtifactPath, deletePrivateSignatureArtifacts, getPrivateSignatureArtifact, uploadPrivateSignatureArtifact } from "@/lib/signatures/storage";
 
 const actor = { id: "staff-1", role: Role.STAFF };
 const request = {
@@ -101,7 +103,9 @@ const request = {
 };
 
 beforeEach(() => {
-  vi.clearAllMocks();
+  vi.resetAllMocks();
+  dbMock.$transaction.mockImplementation(async (callback) => callback(tx));
+  vi.mocked(buildSignatureArtifactPath).mockImplementation((collectionId, memberId, revisionId, kind) => `signatures/${collectionId}/${memberId}/${revisionId}.${kind}`);
   dbMock.signatureSaveOperation.findUnique.mockResolvedValue(null);
   dbMock.signatureCapture.findFirst.mockResolvedValue({
     id: "capture-1",
@@ -268,6 +272,7 @@ describe("signature save lifecycle", () => {
       captureVersion: 1,
     });
 
+    expect(tx.signatureCollection.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ collectionVersion: { increment: 1 } }) }));
     expect(uploadPrivateSignatureArtifact).toHaveBeenCalledTimes(2);
     expect(uploadPrivateSignatureArtifact).toHaveBeenCalledWith(expect.objectContaining({
       path: revision.pngPath,
@@ -651,6 +656,26 @@ describe("signature download filenames", () => {
 });
 
 describe("signature collection ZIP export", () => {
+  it("stops reading and cancels an artifact stream as soon as the ZIP budget is exceeded", async () => {
+    dbMock.signatureCollection.findUnique.mockResolvedValue({
+      sportCode: "MBB", season: "2026-27",
+      members: [{ name: "QA", roleGroup: "PLAYER", linkedUserId: null, capture: { currentRevision: { state: "READY", svgPath: "large.svg" } } }],
+    });
+    const cancelled = vi.fn();
+    let chunksRead = 0;
+    const chunk = new Uint8Array(1024 * 1024);
+    vi.mocked(getPrivateSignatureArtifact).mockResolvedValue({
+      stream: new ReadableStream({
+        pull(controller) { chunksRead += 1; if (chunksRead <= 80) controller.enqueue(chunk); else controller.close(); },
+        cancel: cancelled,
+      }, { highWaterMark: 0 }),
+    } as never);
+
+    await expect(getSignatureCollectionZip("collection-1")).rejects.toMatchObject({ status: 413 });
+    expect(chunksRead).toBe(51);
+    expect(cancelled).toHaveBeenCalledOnce();
+  });
+
   it("exports current SVGs with clean unique names", async () => {
     dbMock.signatureCollection.findUnique.mockResolvedValue({
       sportCode: "MBB",
@@ -658,6 +683,7 @@ describe("signature collection ZIP export", () => {
       members: [
         { name: "José Role", jerseyNumber: 1, roleGroup: "PLAYER", linkedUserId: null, capture: { currentRevision: { state: SignatureArtifactState.READY, pngPath: "one.png", svgPath: "one.svg" } } },
         { name: "Jose Role", jerseyNumber: 1, roleGroup: "PLAYER", linkedUserId: null, capture: { currentRevision: { state: SignatureArtifactState.READY, pngPath: "two.png", svgPath: "two.svg" } } },
+        { name: "jose role", jerseyNumber: 1, roleGroup: "PLAYER", linkedUserId: null, capture: { currentRevision: { state: SignatureArtifactState.READY, pngPath: "three.png", svgPath: "three.svg" } } },
         { name: "Blank Signer", jerseyNumber: null, roleGroup: "PLAYER", linkedUserId: null, capture: { currentRevision: null } },
       ],
     });
@@ -667,9 +693,10 @@ describe("signature collection ZIP export", () => {
 
     await expect(getSignatureCollectionZip("collection-1")).resolves.satisfy((archive: { filename: string; fileCount: number; body: Buffer }) => {
       expect(archive.filename).toBe("mbb-2026-27-signatures-svg.zip");
-      expect(archive.fileCount).toBe(2);
+      expect(archive.fileCount).toBe(3);
       expect(archive.body.includes(Buffer.from("1_Jose_Role.svg"))).toBe(true);
       expect(archive.body.includes(Buffer.from("1_Jose_Role_2.svg"))).toBe(true);
+      expect(archive.body.includes(Buffer.from("1_jose_role_3.svg"))).toBe(true);
       return true;
     });
     expect(getPrivateSignatureArtifact).toHaveBeenCalledWith("one.svg");
@@ -775,7 +802,12 @@ describe("signature history erasure", () => {
     expect(deletePrivateSignatureArtifacts).not.toHaveBeenCalled();
   });
 
-  it("removes every retained revision for one signer", async () => {
+  it.each([true, false])("removes every retained revision for a signer (active: %s)", async (active) => {
+    dbMock.signatureCapture.findFirst.mockResolvedValue({
+      id: "capture-1", collectionId: "collection-1", memberId: "member-1",
+      member: { active, linkedUserId: null },
+      collection: { status: SignatureCollectionStatus.OPEN, sportCode: "MBB" },
+    });
     tx.signatureCapture.findUnique.mockResolvedValue({
       id: "capture-1",
       captureVersion: 3,
@@ -869,7 +901,7 @@ describe("signature history erasure", () => {
     expect(tx.signatureCollection.delete).not.toHaveBeenCalled();
   });
 
-  it("does not clean a pending revision while a live save still owns it", async () => {
+  it("keeps live saves out of cleanup but allows erased committed history to retry", async () => {
     dbMock.signatureArtifactRevision.findMany.mockResolvedValue([]);
 
     await expect(cleanupPendingSignatureArtifacts()).resolves.toEqual({ abandoned: 1, attempted: 0, deleted: 0 });
@@ -884,7 +916,7 @@ describe("signature history erasure", () => {
     expect(dbMock.signatureArtifactRevision.findMany).toHaveBeenCalledWith(expect.objectContaining({
       where: {
         state: SignatureArtifactState.PENDING_DELETE,
-        saveOperations: { none: { status: { in: [SignatureSaveStatus.UPLOADING, SignatureSaveStatus.FINALIZING, SignatureSaveStatus.COMMITTED] } } },
+        saveOperations: { none: { status: { in: [SignatureSaveStatus.UPLOADING, SignatureSaveStatus.FINALIZING] } } },
       },
     }));
     expect(deletePrivateSignatureArtifacts).not.toHaveBeenCalled();
@@ -1179,6 +1211,54 @@ describe("roster identity merge", () => {
 });
 
 describe("signature collection detail shape", () => {
+  it("offers a move target only when the member has no signature history of any state", async () => {
+    const member = (id: string, capture: Record<string, unknown> | null, extra: Record<string, unknown> = {}) => ({
+      id, name: id, normalizedName: id, jerseyNumber: null, title: null, roleGroup: "PLAYER",
+      sourceExternalId: id, sourceSnapshotId: "snapshot-1", required: true, active: true, linkedUserId: null, ...extra,
+      capture: capture && { id: `${id}-capture`, captureVersion: 0, settingsVersion: 1, currentRevisionId: null, currentRevision: null, revisions: [], _count: { revisions: 0, saveOperations: 0 }, ...capture },
+    });
+    dbMock.signatureCollection.findUnique.mockResolvedValue({
+      id: "collection-1", sportCode: "MBB", season: "2026-27",
+      status: SignatureCollectionStatus.OPEN, collectionVersion: 4, settingsVersion: 1, firstCaptureAt: null,
+      penSettings: { strokeColor: "#111827", strokeWidth: 4, cropPadding: 24, maxWidth: 1600, maxHeight: 900 },
+      snapshots: [],
+      members: [
+        member("blank", {}),
+        member("no-capture-row", null),
+        member("erased", { _count: { revisions: 0, saveOperations: 1 } }),
+        member("pending-delete-only", {}),
+        member("removed", {}, { active: false }),
+        member("unofficial", {}, { sourceSnapshotId: null }),
+      ],
+    });
+    dbMock.signatureArtifactRevision.findMany.mockResolvedValue([{ captureId: "pending-delete-only-capture" }]);
+
+    const detail = await getSignatureCollection("collection-1");
+    const eligible = Object.fromEntries(detail.members.map((m) => [m.id, m.canReceiveMovedSignature]));
+    expect(eligible).toEqual({ blank: true, "no-capture-row": true, erased: false, "pending-delete-only": false, removed: false, unofficial: true });
+    expect(detail.members.find((m) => m.id === "unofficial")?.unofficial).toBe(true);
+    expect(detail.members.find((m) => m.id === "blank")?.unofficial).toBe(false);
+    expect(dbMock.signatureArtifactRevision.findMany).toHaveBeenCalledWith({
+      where: { capture: { collectionId: "collection-1" }, state: { not: SignatureArtifactState.READY } },
+      select: { captureId: true },
+      distinct: ["captureId"],
+    });
+  });
+
+  it.each([null, new Date("2026-09-28T12:00:00Z")])("reports the server settings lock even with no remaining signatures (%s)", async (firstCaptureAt) => {
+    dbMock.signatureCollection.findUnique.mockResolvedValue({
+      id: "collection-1", sportCode: "MBB", season: "2026-27",
+      status: SignatureCollectionStatus.OPEN, collectionVersion: 4, settingsVersion: 1,
+      firstCaptureAt,
+      penSettings: { strokeColor: "#111827", strokeWidth: 4, cropPadding: 24, maxWidth: 1600, maxHeight: 900 },
+      snapshots: [], members: [],
+    });
+
+    const detail = await getSignatureCollection("collection-1");
+    expect(detail.settingsLocked).toBe(firstCaptureAt !== null);
+    expect(detail.members).toEqual([]);
+  });
+
   it("loads one applied snapshot and an explicitly bounded READY revision history", async () => {
     const revision = (number: number) => ({
       id: `revision-${number}`,
@@ -1501,6 +1581,39 @@ describe("ad-hoc signatures", () => {
 });
 
 describe("signature readiness requirements", () => {
+  it("does not revive an old team artifact after the canonical signature is removed", async () => {
+    dbMock.signatureCollection.findMany.mockResolvedValue([{
+      id: "team", sportCode: "MBB", season: "2026-27", status: "OPEN",
+      collectionVersion: 4, settingsVersion: 1, updatedAt: new Date(),
+      members: [{ id: "staff", active: true, required: false, roleGroup: "SUPPORT_STAFF", linkedUserId: "user" }],
+      captures: [{ memberId: "staff" }], _count: { captures: 1 },
+    }]);
+    dbMock.signatureCapture.findMany.mockResolvedValue([{
+      collection: { season: "2026-27" }, member: { linkedUserId: "user" }, currentRevision: null,
+    }]);
+    await expect(listSignatureCollections()).resolves.toMatchObject([{
+      staffCompleteness: { complete: 0, total: 1 }, downloadableCount: 0, hasRetainedSignatures: true,
+    }]);
+    dbMock.signatureCollection.findUnique.mockResolvedValue({
+      sportCode: "MBB", season: "2026-27",
+      members: [{ name: "Staff", roleGroup: "SUPPORT_STAFF", linkedUserId: "user", capture: { currentRevision: { state: "READY", svgPath: "old.svg" } } }],
+    });
+    await expect(getSignatureCollectionZip("team")).rejects.toMatchObject({ status: 404 });
+    expect(getPrivateSignatureArtifact).not.toHaveBeenCalled();
+  });
+
+  it("reports retained inactive-member history independently of downloadable active signatures", async () => {
+    dbMock.signatureCollection.findMany.mockResolvedValue([{
+      id: "team", sportCode: "MBB", season: "2026-27", status: "OPEN",
+      collectionVersion: 4, settingsVersion: 1, updatedAt: new Date(),
+      members: [{ id: "former-player", active: false, required: true, roleGroup: "PLAYER", linkedUserId: null }],
+      captures: [], _count: { captures: 1 },
+    }]);
+    await expect(listSignatureCollections()).resolves.toMatchObject([{
+      activeMemberCount: 0, downloadableCount: 0, hasRetainedSignatures: true,
+    }]);
+  });
+
   it("counts only student-athletes in primary progress and linked staff in the quiet secondary count", async () => {
     dbMock.signatureCollection.findMany.mockResolvedValue([{
       id: "collection-1",
@@ -1517,9 +1630,10 @@ describe("signature readiness requirements", () => {
         { id: "staff-1", active: true, required: false, roleGroup: "SUPPORT_STAFF", linkedUserId: null },
       ],
       captures: [{ memberId: "player-1" }],
+      _count: { captures: 1 },
     }]);
     dbMock.signatureCapture.findMany.mockResolvedValue([
-      { collection: { season: "2026-27" }, member: { linkedUserId: "user-1" } },
+      { collection: { season: "2026-27" }, member: { linkedUserId: "user-1" }, currentRevision: { state: SignatureArtifactState.READY } },
     ]);
 
     await expect(listSignatureCollections()).resolves.toMatchObject([{
@@ -1700,5 +1814,194 @@ describe("Creative staff roster sync", () => {
       expectedCollectionVersion: 4,
     })).rejects.toMatchObject({ status: 409 });
     expect(tx.user.findMany).not.toHaveBeenCalled();
+  });
+});
+
+describe("unofficial team players", () => {
+  const openCollection = { id: "collection-1", sportCode: "MBB", season: "2026-27", status: SignatureCollectionStatus.OPEN, collectionVersion: 6, settingsVersion: 1 };
+
+  function applyEntry(overrides: Record<string, unknown> = {}) {
+    return {
+      sourceExternalId: "20001",
+      sourceProfileUrl: "https://uwbadgers.com/sports/mens-basketball/roster/braeden-carrington/20001",
+      name: "Braeden Carrington",
+      normalizedName: "braeden carrington",
+      jerseyNumber: 1,
+      roleGroup: "PLAYER",
+      title: "Guard",
+      ...overrides,
+    };
+  }
+
+  it("never lets an official import deactivate a staff-added player", async () => {
+    tx.signatureRosterSnapshot.findUnique.mockResolvedValue({
+      id: "snapshot-1",
+      collectionId: "collection-1",
+      status: SignatureSnapshotStatus.PREVIEW,
+      entries: [applyEntry({ sourceExternalId: "30001", name: "Other Player", normalizedName: "other player" })],
+      collection: { status: SignatureCollectionStatus.OPEN, collectionVersion: 6, settingsVersion: 1 },
+    });
+    tx.signatureMember.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+    tx.signatureMember.create.mockResolvedValue({ id: "new-member", required: true });
+    tx.signatureCollection.update.mockResolvedValue({ id: "collection-1", collectionVersion: 7 });
+
+    await applySignatureRosterSnapshot({ actor, snapshotId: "snapshot-1", expectedCollectionVersion: 6 });
+
+    expect(tx.signatureMember.updateMany).toHaveBeenCalledWith({
+      where: { collectionId: "collection-1", sourceExternalId: { notIn: ["30001"] }, sourceSnapshotId: { not: null } },
+      data: { active: false },
+    });
+  });
+
+  it("adopts the staff-added row when the player later appears officially under a new source ID", async () => {
+    const unofficial = {
+      id: "unofficial-member",
+      sourceExternalId: "manual:abc",
+      sourceProfileUrl: null,
+      name: "Braeden Carrington",
+      normalizedName: "braeden carrington",
+      jerseyNumber: 1,
+      roleGroup: "PLAYER",
+      title: null,
+      active: true,
+      required: true,
+      sourceSnapshotId: null,
+      capture: null,
+    };
+    tx.signatureRosterSnapshot.findUnique.mockResolvedValue({
+      id: "snapshot-2",
+      collectionId: "collection-1",
+      status: SignatureSnapshotStatus.PREVIEW,
+      entries: [applyEntry()],
+      collection: { status: SignatureCollectionStatus.OPEN, collectionVersion: 7, settingsVersion: 1 },
+    });
+    tx.signatureMember.findMany.mockResolvedValueOnce([unofficial]).mockResolvedValueOnce([{ id: "unofficial-member" }]);
+    tx.signatureCollection.update.mockResolvedValue({ id: "collection-1", collectionVersion: 8 });
+
+    await applySignatureRosterSnapshot({ actor, snapshotId: "snapshot-2", expectedCollectionVersion: 7 });
+
+    expect(tx.signatureMember.create).not.toHaveBeenCalled();
+    expect(tx.signatureMember.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: "unofficial-member" },
+      data: expect.objectContaining({ sourceSnapshotId: "snapshot-2", sourceExternalId: "20001", active: true }),
+    }));
+  });
+
+  it("seeds a new player's source identity from the sport's most recent earlier season", async () => {
+    tx.signatureCollection.findUnique.mockResolvedValue(openCollection);
+    tx.signatureMember.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: "last-season", sourceExternalId: "14420", sourceProfileUrl: "https://uwbadgers.com/roster/braeden-carrington/14420", collection: { season: "2025-26" } }]);
+    tx.signatureMember.count.mockResolvedValue(0);
+    tx.signatureMember.create.mockResolvedValue({ id: "carrington" });
+    tx.signatureCollection.update.mockResolvedValue({ collectionVersion: 7 });
+
+    await expect(addSignatureTeamPlayer({ actor, collectionId: "collection-1", name: " Braeden  Carrington ", jerseyNumber: 1, expectedCollectionVersion: 6 }))
+      .resolves.toEqual({ memberId: "carrington", collectionVersion: 7, reactivated: false, seededFrom: { memberId: "last-season", season: "2025-26" } });
+
+    expect(tx.signatureMember.findMany).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      where: expect.objectContaining({ normalizedName: "braeden carrington", collection: { sportCode: "MBB", season: { lt: "2026-27" } } }),
+    }));
+    expect(tx.signatureMember.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ sourceExternalId: "14420", jerseyNumber: 1, roleGroup: "PLAYER", required: true, active: true }),
+    }));
+    expect(tx.signatureCapture.create).toHaveBeenCalledWith({ data: { collectionId: "collection-1", memberId: "carrington", settingsVersion: 1 } });
+    expect(createAuditEntryTx).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ action: "ADD_UNOFFICIAL_PLAYER" }));
+  });
+
+  it("refuses a duplicate active player and reactivates a removed one instead of duplicating it", async () => {
+    tx.signatureCollection.findUnique.mockResolvedValue(openCollection);
+    tx.signatureMember.findMany.mockResolvedValueOnce([{ id: "existing", active: true, capture: { id: "c" } }]);
+    await expect(addSignatureTeamPlayer({ actor, collectionId: "collection-1", name: "Braeden Carrington", jerseyNumber: 1, expectedCollectionVersion: 6 }))
+      .rejects.toMatchObject({ status: 409 });
+
+    tx.signatureMember.findMany.mockResolvedValueOnce([{ id: "removed", active: false, capture: { id: "c" } }]);
+    tx.signatureCollection.update.mockResolvedValue({ collectionVersion: 7 });
+    await expect(addSignatureTeamPlayer({ actor, collectionId: "collection-1", name: "Braeden Carrington", jerseyNumber: 1, expectedCollectionVersion: 6 }))
+      .resolves.toMatchObject({ memberId: "removed", reactivated: true });
+    expect(tx.signatureMember.create).not.toHaveBeenCalled();
+    expect(tx.signatureMember.update).toHaveBeenCalledWith({ where: { id: "removed" }, data: { active: true, required: true, name: "Braeden Carrington", jerseyNumber: 1 } });
+  });
+
+  it("rejects stale versions and non-team rosters", async () => {
+    tx.signatureCollection.findUnique.mockResolvedValue(openCollection);
+    await expect(addSignatureTeamPlayer({ actor, collectionId: "collection-1", name: "A", jerseyNumber: null, expectedCollectionVersion: 5 })).rejects.toMatchObject({ status: 409 });
+    tx.signatureCollection.findUnique.mockResolvedValue({ ...openCollection, sportCode: "ADHOC" });
+    await expect(addSignatureTeamPlayer({ actor, collectionId: "collection-1", name: "A", jerseyNumber: null, expectedCollectionVersion: 6 })).rejects.toMatchObject({ status: 400 });
+  });
+});
+
+describe("moving a signature to the person who signed it", () => {
+  const openCollection = { id: "collection-1", sportCode: "MBB", season: "2026-27", status: SignatureCollectionStatus.OPEN, collectionVersion: 6, settingsVersion: 1 };
+  const signedCapture = {
+    id: "riddle-slot-capture",
+    captureVersion: 1,
+    currentRevisionId: "rev-1",
+    currentRevision: { id: "rev-1", state: SignatureArtifactState.READY },
+    _count: { revisions: 1, saveOperations: 1 },
+  };
+  const blankCapture = { id: "carrington-blank", captureVersion: 0, currentRevisionId: null, currentRevision: null, _count: { revisions: 0, saveOperations: 0 } };
+  const riddle = { id: "riddle", name: "Isaac Riddle", active: true, linkedUserId: null, capture: signedCapture };
+  const carrington = { id: "carrington", name: "Braeden Carrington", active: true, linkedUserId: null, capture: blankCapture };
+  const move = (overrides: Record<string, unknown> = {}) => moveSignatureCapture({
+    actor,
+    collectionId: "collection-1",
+    memberId: "riddle",
+    targetMemberId: "carrington",
+    expectedCollectionVersion: 6,
+    expectedCaptureVersion: 1,
+    ...overrides,
+  });
+
+  beforeEach(() => {
+    tx.signatureCollection.findUnique.mockResolvedValue(openCollection);
+    tx.signatureSaveOperation.count.mockResolvedValue(0);
+    tx.signatureCapture.create.mockResolvedValue({ id: "riddle-new-blank" });
+    tx.signatureCollection.update.mockResolvedValue({ collectionVersion: 7 });
+  });
+
+  it("hands the whole capture to the target and leaves the source blank and fenced", async () => {
+    tx.signatureMember.findMany.mockResolvedValue([riddle, carrington]);
+
+    await expect(move()).resolves.toEqual({ collectionVersion: 7, memberId: "riddle", targetMemberId: "carrington" });
+
+    expect(tx.signatureCapture.delete).toHaveBeenCalledWith({ where: { id: "carrington-blank" } });
+    expect(tx.signatureCapture.update).toHaveBeenCalledWith({
+      where: { id: "riddle-slot-capture" },
+      data: { memberId: "carrington", captureVersion: { increment: 1 } },
+    });
+    expect(tx.signatureSaveOperation.updateMany).toHaveBeenCalledWith({ where: { captureId: "riddle-slot-capture" }, data: { memberId: "carrington" } });
+    expect(tx.signatureCapture.create).toHaveBeenCalledWith({
+      data: { collectionId: "collection-1", memberId: "riddle", settingsVersion: 1, captureVersion: 2 },
+      select: { id: true },
+    });
+    expect(tx.signatureCapture.delete.mock.invocationCallOrder[0]).toBeLessThan(tx.signatureCapture.update.mock.invocationCallOrder[0]!);
+    expect(tx.signatureArtifactRevision.updateMany).not.toHaveBeenCalled();
+    expect(createAuditEntryTx).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      action: "MOVE_SIGNATURE",
+      before: expect.objectContaining({ memberId: "riddle", revisionId: "rev-1" }),
+      after: expect.objectContaining({ memberId: "carrington" }),
+    }));
+  });
+
+  it.each([
+    ["the target already has history", [riddle, { ...carrington, capture: { ...blankCapture, _count: { revisions: 1, saveOperations: 0 } } }], {}, 409],
+    ["the signature changed after the roster loaded", [riddle, carrington], { expectedCaptureVersion: 0 }, 409],
+    ["the target was removed from the roster", [riddle, { ...carrington, active: false }], {}, 409],
+    ["either person shares a Creative Staff signature", [{ ...riddle, linkedUserId: "user-1" }, carrington], {}, 400],
+    ["the source has nothing saved", [{ ...riddle, capture: blankCapture }, carrington], {}, 409],
+  ])("refuses to move when %s", async (_label, members, overrides, status) => {
+    tx.signatureMember.findMany.mockResolvedValue(members);
+    await expect(move(overrides)).rejects.toMatchObject({ status });
+    expect(tx.signatureCapture.update).not.toHaveBeenCalled();
+    expect(tx.signatureCapture.delete).not.toHaveBeenCalled();
+  });
+
+  it("waits for an in-flight save and rejects a stale collection", async () => {
+    tx.signatureMember.findMany.mockResolvedValue([riddle, carrington]);
+    tx.signatureSaveOperation.count.mockResolvedValue(1);
+    await expect(move()).rejects.toMatchObject({ status: 409 });
+    await expect(move({ expectedCollectionVersion: 5 })).rejects.toMatchObject({ status: 409 });
+    expect(tx.signatureCapture.update).not.toHaveBeenCalled();
   });
 });

@@ -231,6 +231,18 @@ export const signatureAdHocMemberSchema = z.object({
   category: z.string().trim().min(1, "Sport or category is required").max(160),
 });
 
+export const signatureTeamPlayerCreateSchema = z.object({
+  name: z.string().trim().min(1, "Name is required").max(160),
+  jerseyNumber: z.number().int().min(0).max(999).nullable(),
+  expectedCollectionVersion: z.number().int().min(1),
+});
+
+export const signatureCaptureMoveSchema = z.object({
+  targetMemberId: z.string().trim().min(1).max(64),
+  expectedCollectionVersion: z.number().int().min(1),
+  expectedCaptureVersion: z.number().int().min(1),
+});
+
 export const signatureSettingsUpdateSchema = penSettingsSchema.extend({
   expectedSettingsVersion: z.number().int().min(1),
   expectedCollectionVersion: z.number().int().min(1),

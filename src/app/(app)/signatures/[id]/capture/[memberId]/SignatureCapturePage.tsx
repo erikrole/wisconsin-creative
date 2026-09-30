@@ -9,7 +9,7 @@ import { ArrowLeft, Check, Eraser, Redo2, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useFetch } from "@/hooks/use-fetch";
-import { handleAuthRedirect, parseErrorMessage } from "@/lib/errors";
+import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { invalidateSignatureCollectionCaches } from "@/lib/signatures/client-cache";
 import {
   appendDistinctSignaturePoints,
@@ -89,10 +89,20 @@ export default function SignatureCapturePage({ collectionId, memberId, userId }:
   const router = useRouter();
   const queryClient = useQueryClient();
   const [isIpad, setIsIpad] = useState<boolean | null>(null);
-  const { data: bootstrap, loading, error, reload, refreshing } = useFetch<CaptureBootstrap>({
+  const { data: latestBootstrap, loading, error, reload, refreshing } = useFetch<CaptureBootstrap>({
     url: `/api/signatures/collections/${collectionId}/members/${memberId}`,
     enabled: isIpad === true,
+    refetchOnFocus: false,
+    refetchOnMount: "always",
   });
+  const [bootstrap, setBootstrap] = useState<CaptureBootstrap | null>(null);
+  useEffect(() => {
+    // Freeze the edit session after a fresh read. A reconnect must not rebase
+    // local ink onto another device's capture/settings versions.
+    if (isIpad && latestBootstrap && !refreshing && !error) {
+      setBootstrap((current) => current ?? latestBootstrap);
+    }
+  }, [error, isIpad, latestBootstrap, refreshing]);
   const collection = bootstrap?.collection ?? null;
   const member = bootstrap?.member ?? null;
   const settings = member?.captureSettings;
@@ -341,7 +351,7 @@ export default function SignatureCapturePage({ collectionId, memberId, userId }:
   }, [finalizeInterruptedStroke]);
 
   function handlePointerDown(event: React.PointerEvent<HTMLCanvasElement>) {
-    if (saving) {
+    if (saving || saveSucceeded) {
       setMessage("Wait for the current signature save to finish");
       return;
     }
@@ -400,7 +410,7 @@ export default function SignatureCapturePage({ collectionId, memberId, userId }:
   }
 
   function undo() {
-    if (drawing || saving) return;
+    if (drawing || saving || saveSucceeded) return;
     const current = strokesRef.current;
     if (current.length === 0 && clearedStrokes) {
       setClearedStrokes(null);
@@ -419,7 +429,7 @@ export default function SignatureCapturePage({ collectionId, memberId, userId }:
   }
 
   function redo() {
-    if (drawing || saving) return;
+    if (drawing || saving || saveSucceeded) return;
     const restored = redoStack.at(-1);
     if (!restored) return;
     setRedoStack((current) => current.slice(0, -1));
@@ -429,7 +439,7 @@ export default function SignatureCapturePage({ collectionId, memberId, userId }:
   }
 
   function reset() {
-    if (drawing || saving || strokesRef.current.length === 0) return;
+    if (drawing || saving || saveSucceeded || strokesRef.current.length === 0) return;
     setClearedStrokes(strokesRef.current);
     setRedoStack([]);
     commitAndPersistStrokes([]);
@@ -438,17 +448,20 @@ export default function SignatureCapturePage({ collectionId, memberId, userId }:
 
   async function save() {
     const snapshot = strokesRef.current;
-    if (!collection || !member || snapshot.length === 0 || saving || drawing) return;
+    if (!collection || !member || snapshot.length === 0 || saving || saveSucceeded || drawing) return;
     const requestId = saveRequestIdRef.current ?? crypto.randomUUID();
     saveRequestIdRef.current = requestId;
     setSaveSucceeded(false);
     setSaving(true);
     setMessage("Saving both private signature files…");
     let committed = false;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 45_000);
     try {
       await persistDraftSnapshot(snapshot, draftRevisionRef.current, requestId).catch(() => undefined);
       const response = await fetch(`/api/signatures/collections/${collection.id}/capture/${member.id}`, {
         method: "POST",
+        signal: controller.signal,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           requestId,
@@ -465,6 +478,13 @@ export default function SignatureCapturePage({ collectionId, memberId, userId }:
         }
         throw new Error(await parseErrorMessage(response, "Signature was not saved"));
       }
+      const result = await parseJsonSafely<{ status?: string; captureVersion?: number; revision?: { id?: string } }>(response);
+      if (result?.status !== "committed" || !result.revision?.id || !Number.isInteger(result.captureVersion) || result.captureVersion! <= member.captureVersion) {
+        throw new Error("Couldn’t confirm the save. Your draft was kept; retry to check this same save.");
+      }
+      committed = true;
+      setSaveSucceeded(true);
+      setMessage("Signature saved");
       if (draftKey) {
         const deletion = draftQueueRef.current
           .catch(() => undefined)
@@ -478,9 +498,6 @@ export default function SignatureCapturePage({ collectionId, memberId, userId }:
         await deletion.catch(() => undefined);
       }
       await invalidateSignatureCollectionCaches(queryClient, collection.id);
-      committed = true;
-      setSaveSucceeded(true);
-      setMessage("Signature saved");
       toast.success(`${member.name}'s signature saved`);
       const feedbackDelay = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 250 : 650;
       await new Promise<void>((resolve) => window.setTimeout(resolve, feedbackDelay));
@@ -493,9 +510,12 @@ export default function SignatureCapturePage({ collectionId, memberId, userId }:
         return;
       }
       setSaveSucceeded(false);
-      setMessage(requestError instanceof Error ? requestError.message : "Signature was not saved");
+      setMessage(controller.signal.aborted
+        ? "The save is taking longer than expected. Your draft was kept; retry to check this same save."
+        : requestError instanceof Error ? requestError.message : "Signature was not saved");
     } finally {
-      if (!committed) setSaving(false);
+      window.clearTimeout(timeout);
+      setSaving(false);
     }
   }
 
@@ -505,11 +525,11 @@ export default function SignatureCapturePage({ collectionId, memberId, userId }:
         loading: "Checking draft…",
         empty: "Blank",
         saving: "Saving draft…",
-        saved: "Saved on iPad",
+        saved: "Draft saved on iPad",
         unavailable: "Recovery unavailable",
       }[draftStatus];
 
-  if (isIpad === null || loading) return <div className="flex min-h-[100dvh] items-center justify-center text-sm text-muted-foreground">Checking this iPad…</div>;
+  if (isIpad === null || loading || (isIpad && !bootstrap && !error)) return <div className="flex min-h-[100dvh] items-center justify-center text-sm text-muted-foreground">Checking this iPad…</div>;
   if (!isIpad) return (
     <div className="flex min-h-[100dvh] items-center justify-center p-6">
       <Card className="max-w-md p-6">
@@ -519,7 +539,7 @@ export default function SignatureCapturePage({ collectionId, memberId, userId }:
       </Card>
     </div>
   );
-  if (error) return (
+  if (error && !bootstrap) return (
     <div className="flex min-h-[100dvh] items-center justify-center p-6">
       <Card className="max-w-md p-6">
         <p className="font-semibold">Couldn’t load this signer</p>
@@ -589,15 +609,15 @@ export default function SignatureCapturePage({ collectionId, memberId, userId }:
           <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
             <p id="signature-capture-status" role="status" aria-live="polite" className="text-sm text-muted-foreground">{message}</p>
             <div className="flex items-center gap-1">
-              <Button type="button" variant="outline" size="icon" className="size-11" aria-label="Undo stroke" onClick={undo} disabled={saving || drawing || (strokes.length === 0 && !clearedStrokes)}><Undo2 /></Button>
-              <Button type="button" variant="outline" size="icon" className="size-11" aria-label="Redo stroke" onClick={redo} disabled={saving || drawing || redoStack.length === 0}><Redo2 /></Button>
-              <Button type="button" variant="outline" size="sm" className="h-11" onClick={reset} disabled={saving || drawing || strokes.length === 0}><Eraser data-icon="inline-start" />Clear</Button>
+              <Button type="button" variant="outline" size="icon" className="size-11" aria-label="Undo stroke" onClick={undo} disabled={saveSucceeded || saving || drawing || (strokes.length === 0 && !clearedStrokes)}><Undo2 /></Button>
+              <Button type="button" variant="outline" size="icon" className="size-11" aria-label="Redo stroke" onClick={redo} disabled={saveSucceeded || saving || drawing || redoStack.length === 0}><Redo2 /></Button>
+              <Button type="button" variant="outline" size="sm" className="h-11" onClick={reset} disabled={saveSucceeded || saving || drawing || strokes.length === 0}><Eraser data-icon="inline-start" />Clear</Button>
             </div>
           </div>
           <div className="relative min-h-[280px] flex-1 overflow-hidden rounded-lg border-2 border-dashed border-muted-foreground/25 bg-muted/40">
             <canvas
               ref={canvasRef}
-              className={`absolute inset-0 size-full touch-none ${draftLoaded && !saving ? "" : "pointer-events-none opacity-70"}`}
+              className={`absolute inset-0 size-full touch-none ${draftLoaded && !saving && !saveSucceeded ? "" : "pointer-events-none opacity-70"}`}
               onPointerDown={handlePointerDown}
               onPointerMove={handlePointerMove}
               onPointerUp={(event) => finishPointer(event, true, "Stroke captured")}
@@ -609,11 +629,21 @@ export default function SignatureCapturePage({ collectionId, memberId, userId }:
               }}
               aria-label="Pen-input signature canvas"
               aria-describedby="signature-capture-status"
-              aria-disabled={!draftLoaded}
+              aria-disabled={!draftLoaded || saving || saveSucceeded}
             />
+            {/* Visual only: never part of the saved strokes. Putting the name where
+                the signer is looking catches a wrong roster slot before Save. */}
+            <div className="pointer-events-none absolute inset-x-6 bottom-5 select-none sm:inset-x-10 sm:bottom-7" aria-hidden="true" data-signature-signer-line>
+              <div className="border-b-2 border-foreground/25" />
+              <p className="mt-2 flex items-baseline gap-3 text-foreground/60">
+                <span className="text-lg font-semibold">✕</span>
+                <span className="truncate text-xl font-semibold sm:text-2xl">{member.name}</span>
+                {member.jerseyNumber !== null && <span className="shrink-0 text-xl font-semibold tabular-nums sm:text-2xl">#{member.jerseyNumber}</span>}
+              </p>
+            </div>
           </div>
           <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
-            <p className="text-xs text-muted-foreground">Use Apple Pencil or compatible pen input to draw. Touch is reserved for controls.</p>
+            <p className="text-xs text-muted-foreground">Check the name on the line before saving. Use Apple Pencil or compatible pen input to draw; touch is reserved for controls.</p>
             <div className="flex gap-2">
               {saving ? (
                 <Button variant="outline" className="h-11" disabled>Cancel</Button>

@@ -1,0 +1,81 @@
+{
+  "title": "Signature Wrong-Slot Hardening",
+  "eyebrow": "Web \u00b7 Signatures \u00b7 Wisconsin Creative",
+  "lede": "Two MBB players signed in the wrong roster slots on 2026-09-03. These changes make a wrong slot visible before Save, make the fix a roster action instead of raw SQL, and let staff add players missing from the official roster without a later import dropping them.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "Capture canvas",
+      "note": "After only. No pre-change capture was taken; the earlier canvas showed the name only as small header text. iPad user agent emulated in Playwright at 1180\u00d7820 CSS px against the branch preview (synthetic MHKY data).",
+      "shots": [
+        {
+          "title": "Signer line",
+          "image": "capture-signer-line.png",
+          "wide": true,
+          "cap": "The signer's name and number sit on the signature line, where the signer is looking. It is an overlay and never part of the saved strokes."
+        }
+      ]
+    },
+    {
+      "heading": "Fixing a wrong slot",
+      "note": "After only, same preview session. A test signature was saved to #2 Luke Osburn through the save API, then moved through the UI.",
+      "shots": [
+        {
+          "title": "Move dialog",
+          "image": "move-dialog.png",
+          "cap": "Row menu \u2192 **Move signature to\u2026** shows the saved ink and lists only active people with no signature history."
+        },
+        {
+          "title": "Roster after the move",
+          "image": "roster-after-move.png",
+          "cap": "The signature and its history now belong to Braeden Carrington; Luke Osburn is blank and needs to sign again."
+        }
+      ]
+    },
+    {
+      "heading": "Unofficial players",
+      "note": "After only.",
+      "shots": [
+        {
+          "title": "Add player",
+          "image": "add-player-dialog.png",
+          "cap": "Team rosters get **Add player** for someone on the team but not on the official roster. The row carries an **Unofficial** badge."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Wrong slot was easy to miss",
+      "was": "The name was small text in the header, away from where the signer writes.",
+      "now": "Name and number on the signature line, plus a prompt to check it before saving."
+    },
+    {
+      "h": "Correcting a wrong slot took raw production SQL",
+      "was": "Reassigning captures meant hand-written SQL against production.",
+      "now": "An audited **Move signature to\u2026** action moves the whole capture, with its original revisions, to a blank person. It checks versions, blocks during live saves, excludes shared Creative Staff signatures, and leaves the source blank so stale drafts can't save onto it."
+    },
+    {
+      "h": "Official imports dropped unofficial players",
+      "was": "Apply deactivated every member missing from the snapshot, including staff-added ones.",
+      "now": "Apply deactivates only imported members, and adopts a staff-added player by unique name if they later appear officially."
+    },
+    {
+      "h": "No way to add an off-roster player to a team",
+      "was": "Only the ad-hoc collection took manual signers.",
+      "now": "Add player on team rosters, seeded from the previous season when the name is unique; a removed same-name player is reactivated instead of duplicated."
+    }
+  ],
+  "verification": [
+    "Signature suites: 129/129 pass, including 11 new service regressions (move guards, server-owned move eligibility including erased history, apply keeps and adopts unofficial members, add player seeding, reactivation, stale and non-team rejection).",
+    "Full vitest: 1 failure in tests/ios-accessibility-layout-hardening.test.ts, from iOS Welcome Swift edits already in the working tree before this session; all other tests pass.",
+    "TypeScript, scoped ESLint, and build:app pass.",
+    "Authenticated branch preview (Playwright, admin): Add player created an Unofficial #1; Move changed the collection from version 4 to 5, the target got the original revision, the source went blank at capture version 2; the picker offered 26 eligible people and excluded the signed row. No console errors.",
+    "verify:docs passes after codemap regeneration."
+  ],
+  "notes": [
+    "No before captures: the baseline would need a second preview server on an isolated copy of the pre-change tree.",
+    "Not deployed. Production still runs the old code, where an official MBB 2026-27 Apply would deactivate Carrington.",
+    "No physical iPad or Apple Pencil check; the iPad was emulated by user agent."
+  ]
+}
