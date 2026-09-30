@@ -128,7 +128,7 @@ describe("past-event Schedule backfill route", () => {
   });
 
   it("keeps a future-event edit on the existing release timer", async () => {
-    mocks.eventEndsAt.mockResolvedValue(new Date("2026-09-25T20:00:00.000Z"));
+    mocks.eventEndsAt.mockResolvedValue(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
 
     const response = await run(request(), context);
 
