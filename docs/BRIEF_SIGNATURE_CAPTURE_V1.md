@@ -41,7 +41,8 @@ Signature members are not `StudentSportAssignment` rows. Imported members are ex
 - Reset, remove, and delete cleanup use bounded private-artifact work; an upload that loses a delete/reset race fences and removes the files it just created.
 - Collection-card Download All offers separate authenticated private ZIPs of current committed PNG or SVG revisions with deterministic collision-safe filenames.
 - Staff/admin, admin-only, student, and collaborator authorization tests pass.
-- Capture success invalidates the exact roster caches; unsupported Add/Replace actions are disabled before mutation; fetch failures offer Retry; and readiness progress exposes its determinate value and accessible name.
+- Capture success invalidates Signatures collection, roster, and member-bootstrap caches, including shared Creative Staff consumers; unrelated application caches stay intact. Unsupported Add/Replace actions are disabled before mutation; fetch failures offer Retry; and readiness progress exposes its determinate value and accessible name.
+- A capture edit session keeps its original fresh versions across reconnects. Ambiguous or timed-out saves retain their draft and request ID; reset/delete reject a collection version observed before a new capture commit. Removed-member history remains reviewable and explicitly erasable.
 - Authenticated browser smoke and physical iPad Safari proof are recorded before production rollout.
 
 ## Local hardening note — 2026-08-20

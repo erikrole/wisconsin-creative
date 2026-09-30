@@ -1,0 +1,120 @@
+{
+  "title": "Signatures, end to end",
+  "eyebrow": "Wisconsin Creative · local workflow review · September 28, 2026",
+  "lede": "A sequential pass from roster import through signing, recovery, private files, and lifecycle management. Changes are local; production and physical Pencil acceptance remain separate.",
+  "stats": [
+    {
+      "k": "Focused verification",
+      "v": "125 tests",
+      "n": "Eight Signatures and app-shell files pass.",
+      "tone": "good"
+    },
+    {
+      "k": "iPad signing surface",
+      "v": "1180 × 820",
+      "n": "Save stays in the viewport; no page scroll required.",
+      "tone": "good"
+    },
+    {
+      "k": "Optimized build",
+      "v": "262 pages",
+      "n": "Controlled preview environment; no migrations or deployment.",
+      "tone": "good"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Import and find the right signer",
+      "note": "Matched desktop dimensions, synthetic ADMIN session, fixture data, search/selection, and scroll position. Source snapshot hashes and image hashes are attached to each pair. These are local captures, not deployed build evidence.",
+      "pairs": [
+        {
+          "title": "Changing season discards the old preview",
+          "sub": "Both views have switched from the reviewed 2026–27 roster to 2027–28.",
+          "before": "import-before.png",
+          "after": "import-after.png",
+          "beforeEvidence": "import-before.capture.json",
+          "afterEvidence": "import-after.capture.json",
+          "beforeCap": "Apply still targets the old preview while the selector shows the new season.",
+          "afterCap": "The old preview is cleared. A new preview is required before Apply."
+        },
+        {
+          "title": "Search reveals collapsed matches",
+          "sub": "Student-Athletes was collapsed before entering the same signer name.",
+          "before": "roster-search-before.png",
+          "after": "roster-search-after-final.png",
+          "beforeEvidence": "roster-search-before.capture.json",
+          "afterEvidence": "roster-search-after-final.capture.json",
+          "beforeCap": "The group count matches, but the signer remains hidden.",
+          "afterCap": "The matching row opens. Status filters find unfinished or signed work, and disclosure controls remain usable."
+        }
+      ]
+    },
+    {
+      "heading": "Review the actual roster",
+      "note": "After-only evidence: authenticated MHKY/2026-27 Preview/Apply in the isolated environment produced 26 active members. No signatures were created by this import check.",
+      "shots": [
+        {
+          "title": "Review import members",
+          "image": "import-review-after.png",
+          "cap": "Sport, season, and individual members are visible before Apply."
+        }
+      ]
+    },
+    {
+      "heading": "Signing and recovery on iPad",
+      "note": "After-only visual evidence at 1180×820. Chromium uses iPad detection and pen-class CDP input; save responses are intercepted. The original full-page capture was 1180×960, so it is not presented as a matched visual pair. Physical Pencil, touch, rotation, and Safari acceptance remain open.",
+      "shots": [
+        {
+          "title": "Signing retains draft after a timeout",
+          "image": "capture-recovery-after.png",
+          "wide": true,
+          "cap": "The canvas, controls, and Save fit together. An ambiguous response or 45-second timeout retains the ink and save request ID."
+        }
+      ]
+    },
+    {
+      "heading": "Management stays recoverable",
+      "note": "After-only fixtures: server settingsLocked=true with no current artifacts, followed by a simulated reset failure. This proves UI recovery, not real erasure.",
+      "shots": [
+        {
+          "title": "Settings lock follows the server",
+          "image": "settings-lock-after.png",
+          "cap": "Individual erasure does not falsely unlock pen settings. Reset remains available when the server lock requires it."
+        },
+        {
+          "title": "Failed reset keeps its confirmation",
+          "image": "reset-recovery-after.png",
+          "cap": "The failure appears inside the still-open dialog. Controls are available again for retry or cancel."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Keep the version that the signer started with",
+      "was": "Reconnect could move an in-progress draft from capture version 0 onto version 1, weakening stale-save protection.",
+      "now": "The browser keeps version 0 and its ink, receives a conflict, and requires deliberate reopening before replacing another capture."
+    },
+    {
+      "h": "Make shared and retained signature state consistent",
+      "was": "An erased canonical signature could fall back to an old team artifact; removed-member history was hard to reach; cleanup skipped historical committed operations.",
+      "now": "Canonical blank state stays authoritative, Removed from roster exposes retained history, and pending-delete cleanup can retry after erasure."
+    },
+    {
+      "h": "Fence destructive lifecycle actions and bound exports",
+      "was": "A new save did not advance the collection version; ZIP size was checked after files were buffered, and case-only names could collide on extraction.",
+      "now": "Every commit advances the collection version. ZIP reads stop at the 50 MiB budget and names are unique without case sensitivity."
+    }
+  ],
+  "verification": [
+    "125 focused tests pass, including shared AppShell consumers. Nine regression cases fail as expected against the original service implementation (eight lifecycle cases plus the streaming budget check).",
+    "TypeScript and scoped ESLint pass. The controlled optimized app build generates 262 pages.",
+    "Authenticated browser checks cover real Preview/Apply, collapsed search and filters, locked settings/reset failure fixtures, reconnect version retention, non-JSON response handling, timeout recovery, and viewport fit. Keyboard Space toggles a filtered group without losing its matching row.",
+    "The live-test runner passed read-only preflight: exact preview branch, isolated storage configured, and ADHOC/2032-33 unused. Execution remains pending explicit approval."
+  ],
+  "notes": [
+    "Full-repository ESLint has an existing error in vendored public/qrcode/vendor/jsQR.js. Unrelated dirty work is preserved.",
+    "Real new private artifact save/download/erase/reset/archive acceptance is prepared in live-test-plan.md, but automatic approval review rejected execution without explicit authorization.",
+    "No commit, push, deployment, production mutation, or physical-device claim is made."
+  ]
+}

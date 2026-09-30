@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Archive, CheckCircle2, ChevronDown, Download, FilePenLine, History, LockKeyhole, RefreshCw, RotateCcw, Settings2, ShieldCheck, Trash2, UserRound, UsersRound } from "lucide-react";
+import { Archive, ArrowRightLeft, CheckCircle2, ChevronDown, Download, FilePenLine, History, LockKeyhole, RefreshCw, RotateCcw, Settings2, ShieldCheck, Trash2, UserPlus, UserRound, UsersRound } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { useBreadcrumbLabel } from "@/components/BreadcrumbContext";
 import { FadeUp } from "@/components/ui/motion";
@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
@@ -38,13 +39,14 @@ import { SignaturePenPreview } from "@/components/signatures/SignaturePenPreview
 import { useFetch } from "@/hooks/use-fetch";
 import { handleAuthRedirect, parseErrorMessage } from "@/lib/errors";
 import { isCurrentDeviceIpad } from "@/lib/signatures/capture";
-import { invalidateSignatureCollectionCaches } from "@/lib/signatures/client-cache";
+import { invalidateSignatureCollectionCaches, signatureCollectionQueryKey } from "@/lib/signatures/client-cache";
 import { compareSignatureRosterMembers } from "@/lib/signatures/roster";
 import {
   SIGNATURE_AD_HOC_SPORT_CODE,
   SIGNATURE_ADMINISTRATION_SPORT_CODE,
   SIGNATURE_CREATIVE_STAFF_SPORT_CODE,
   isStandaloneStaffSignatureCollection,
+  penSettingsSchema,
   signatureCollectionTitle,
 } from "@/lib/signatures/types";
 import { cn } from "@/lib/utils";
@@ -58,6 +60,9 @@ type Member = {
   sourceOrder: number | null;
   required: boolean;
   active: boolean;
+  unofficial?: boolean;
+  canReceiveMovedSignature?: boolean;
+  linkedUserId?: string | null;
   captureVersion: number;
   settingsVersion: number;
   artifact: { id: string; revision: number; width: number; height: number; committedAt: string | null; replacedAt: string | null } | null;
@@ -73,6 +78,7 @@ type Collection = {
   status: "OPEN" | "ARCHIVED";
   collectionVersion: number;
   settingsVersion: number;
+  settingsLocked?: boolean;
   penSettings: { strokeColor: string; strokeWidth: number; cropPadding: number; maxWidth: number; maxHeight: number };
   completeness: { complete: number; required: number; percent: number };
   staffCompleteness?: { complete: number; total: number };
@@ -134,11 +140,18 @@ export default function SignatureCollectionPage({ collectionId, isAdmin }: { col
   const { data: collection, loading, refreshing, error, reload } = useFetch<Collection>({ url: `/api/signatures/collections/${collectionId}` });
   const [group, setGroup] = useState<"ALL" | Member["roleGroup"]>("ALL");
   const [search, setSearch] = useState("");
-  const [savingSettings, setSavingSettings] = useState(false);
-  const [resettingCollection, setResettingCollection] = useState(false);
-  const [settings, setSettings] = useState<Collection["penSettings"] | null>(null);
+  const [signatureFilter, setSignatureFilter] = useState("ALL");
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
+  const mutationPending = useRef(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [resetOpen, setResetOpen] = useState(false);
+  const [settings, setSettings] = useState<{ values: Collection["penSettings"]; collectionVersion: number; settingsVersion: number } | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [previewMember, setPreviewMember] = useState<Member | null>(null);
+  const [moveSource, setMoveSource] = useState<Member | null>(null);
+  const [moveTargetId, setMoveTargetId] = useState("");
+  const [addPlayerOpen, setAddPlayerOpen] = useState(false);
+  const [newPlayer, setNewPlayer] = useState({ name: "", jerseyNumber: "" });
   const [collapsedGroups, setCollapsedGroups] = useState<Set<Member["roleGroup"]>>(new Set());
   const [isIpad, setIsIpad] = useState(false);
   const isCreativeStaffRoster = collection?.sportCode === SIGNATURE_CREATIVE_STAFF_SPORT_CODE;
@@ -153,6 +166,9 @@ export default function SignatureCollectionPage({ collectionId, isAdmin }: { col
   useEffect(() => {
     setGroup("ALL");
     setSearch("");
+    setSignatureFilter("ALL");
+    setSettings(null);
+    setActionError(null);
     setCollapsedGroups(new Set());
     setSettingsOpen(false);
   }, [collection?.id]);
@@ -162,6 +178,11 @@ export default function SignatureCollectionPage({ collectionId, isAdmin }: { col
   }, []);
 
   useEffect(() => {
+    // Reveal fresh matches, while keeping disclosure controls usable afterward.
+    setCollapsedGroups(new Set());
+  }, [group, search, signatureFilter]);
+
+  useEffect(() => {
     if (collection) setBreadcrumbLabel(signatureCollectionTitle(collection.sportCode));
   }, [collection, setBreadcrumbLabel]);
 
@@ -169,7 +190,9 @@ export default function SignatureCollectionPage({ collectionId, isAdmin }: { col
     .map((roleGroup) => {
       const normalizedSearch = search.trim().toLocaleLowerCase();
       const members = (collection?.members ?? []).filter((member) => {
-        if (!member.active || member.roleGroup !== roleGroup) return false;
+        if ((signatureFilter === "REMOVED" ? member.active : !member.active) || member.roleGroup !== roleGroup) return false;
+        if (signatureFilter === "MISSING" && member.artifact) return false;
+        if (signatureFilter === "SIGNED" && !member.artifact) return false;
         if (!normalizedSearch) return true;
         return [member.name, member.title, member.jerseyNumber === null ? "" : String(member.jerseyNumber)]
           .some((value) => value?.toLocaleLowerCase().includes(normalizedSearch));
@@ -182,77 +205,107 @@ export default function SignatureCollectionPage({ collectionId, isAdmin }: { col
         percent: members.length === 0 ? 100 : Math.round((complete / members.length) * 100),
       };
     })
-    .filter((section) => (group === "ALL" || section.roleGroup === group) && (section.members.length > 0 || (!search.trim() && isCreativeStaffRoster && section.roleGroup === "CREATIVE_STAFF"))), [collection?.members, group, isCreativeStaffRoster, rosterGroupOrder, search]);
-  const effectiveSettings = settings ?? collection?.penSettings;
+    .filter((section) => (group === "ALL" || section.roleGroup === group) && section.members.length > 0), [collection?.members, group, rosterGroupOrder, search, signatureFilter]);
+  const effectiveSettings = settings?.values ?? collection?.penSettings;
   const hasCapturedSignatures = collection?.members.some((member) => Boolean(member.artifact)) ?? false;
-  const settingsLocked = hasCapturedSignatures;
+  const settingsLocked = collection?.settingsLocked ?? hasCapturedSignatures;
+  const settingsValidation = penSettingsSchema.safeParse(effectiveSettings);
+  const actionDisabled = Boolean(pendingAction) || Boolean(error) || refreshing;
+  const filtersActive = Boolean(search.trim()) || group !== "ALL" || signatureFilter !== "ALL";
 
-  async function saveSettings() {
-    if (!collection || !effectiveSettings) return;
-    setSavingSettings(true);
+  function editSettings(values: Collection["penSettings"]) {
+    if (!collection) return;
+    setSettings((current) => ({
+      values,
+      collectionVersion: current?.collectionVersion ?? collection.collectionVersion,
+      settingsVersion: current?.settingsVersion ?? collection.settingsVersion,
+    }));
+  }
+
+  async function runMutation(action: string, request: () => Promise<unknown>, success: string, onSuccess?: () => void) {
+    if (!collection || mutationPending.current) return;
+    mutationPending.current = true;
+    setPendingAction(action);
+    setActionError(null);
     try {
-      await mutate(`/api/signatures/collections/${collection.id}`, "PATCH", { ...effectiveSettings, expectedCollectionVersion: collection.collectionVersion, expectedSettingsVersion: collection.settingsVersion });
-      setSettings(null);
-      await invalidateSignatureCollectionCaches(queryClient, collection.id);
-      reload();
-      toast.success("Pen settings saved");
+      await request();
+      onSuccess?.();
+      toast.success(success);
     } catch (requestError) {
-      toast.error(requestError instanceof Error ? requestError.message : "Pen settings were not saved");
+      setActionError(requestError instanceof Error ? requestError.message : "Signature action failed. Refresh and try again.");
     } finally {
-      setSavingSettings(false);
+      // Reconcile versions even after an uncertain response before allowing another write.
+      await invalidateSignatureCollectionCaches(queryClient, collection.id);
+      await queryClient.refetchQueries({ queryKey: signatureCollectionQueryKey(collection.id), exact: true });
+      mutationPending.current = false;
+      setPendingAction(null);
     }
   }
 
+  async function saveSettings() {
+    if (!collection || !settings || !settingsValidation.success) return;
+    await runMutation("settings", () => mutate(`/api/signatures/collections/${collection.id}`, "PATCH", {
+      ...settings.values,
+      expectedCollectionVersion: settings.collectionVersion,
+      expectedSettingsVersion: settings.settingsVersion,
+    }), "Pen settings saved", () => setSettings(null));
+  }
+
   async function remove(member: Member) {
-    if (!collection || !member.artifact || !window.confirm(`Remove ${member.name}'s current signature?`)) return;
-    try {
-      await mutate(`/api/signatures/collections/${collection.id}/capture/${member.id}`, "DELETE", { expectedCaptureVersion: member.captureVersion });
-      await invalidateSignatureCollectionCaches(queryClient, collection.id);
-      reload();
-      toast.success(`${member.name}'s signature was removed`);
-    } catch (requestError) {
-      toast.error(requestError instanceof Error ? requestError.message : "Signature was not removed");
-    }
+    if (!collection || !member.artifact || !window.confirm(`Permanently remove ${member.name}'s signature and all previous versions? This also removes it from any rosters sharing this signature. This cannot be undone.`)) return;
+    await runMutation(member.id, () => mutate(`/api/signatures/collections/${collection.id}/capture/${member.id}`, "DELETE", { expectedCaptureVersion: member.captureVersion }), `${member.name}'s signature was removed`, () => setPreviewMember(null));
   }
 
   async function removeFromRoster(member: Member) {
     if (!collection || collection.status !== "OPEN" || member.roleGroup !== "PLAYER") return;
     if (!window.confirm(`Remove ${member.name} from this active roster? Their saved signature history will be kept. A future roster import may add this player again.`)) return;
-    try {
-      await mutate(`/api/signatures/collections/${collection.id}/members/${member.id}`, "DELETE", { expectedCollectionVersion: collection.collectionVersion });
-      await invalidateSignatureCollectionCaches(queryClient, collection.id);
-      reload();
-      toast.success(`${member.name} was removed from this roster`);
-    } catch (requestError) {
-      toast.error(requestError instanceof Error ? requestError.message : "Player was not removed from the roster");
-    }
+    await runMutation(member.id, () => mutate(`/api/signatures/collections/${collection.id}/members/${member.id}`, "DELETE", { expectedCollectionVersion: collection.collectionVersion }), `${member.name} was removed from this roster`);
+  }
+
+  // The server decides who has no signature history and can receive a move.
+  const moveCandidates = useMemo(() => (collection?.members ?? [])
+    .filter((member) => moveSource && member.id !== moveSource.id && member.canReceiveMovedSignature)
+    .sort(compareSignatureRosterMembers), [collection?.members, moveSource]);
+  const moveTarget = moveCandidates.find((member) => member.id === moveTargetId) ?? null;
+
+  function openMove(member: Member) {
+    setActionError(null);
+    setMoveTargetId("");
+    setMoveSource(member);
+  }
+
+  async function moveSignature() {
+    if (!collection || !moveSource || !moveTarget) return;
+    const source = moveSource;
+    const target = moveTarget;
+    await runMutation(`move-${source.id}`, () => mutate(`/api/signatures/collections/${collection.id}/capture/${source.id}/move`, "POST", {
+      targetMemberId: target.id,
+      expectedCollectionVersion: collection.collectionVersion,
+      expectedCaptureVersion: source.captureVersion,
+    }), `Signature moved to ${target.name}. ${source.name} needs to sign again.`, () => { setMoveSource(null); setPreviewMember(null); });
+  }
+
+  const newPlayerName = newPlayer.name.trim();
+  const newPlayerJersey = newPlayer.jerseyNumber.trim();
+  const newPlayerJerseyValid = newPlayerJersey === "" || /^\d{1,3}$/.test(newPlayerJersey);
+
+  async function addPlayer() {
+    if (!collection || !newPlayerName || !newPlayerJerseyValid) return;
+    await runMutation("add-player", () => mutate(`/api/signatures/collections/${collection.id}/members`, "POST", {
+      name: newPlayerName,
+      jerseyNumber: newPlayerJersey === "" ? null : Number(newPlayerJersey),
+      expectedCollectionVersion: collection.collectionVersion,
+    }), `${newPlayerName} was added to this roster`, () => { setAddPlayerOpen(false); setNewPlayer({ name: "", jerseyNumber: "" }); });
   }
 
   async function toggleRequired(member: Member) {
     if (!collection) return;
-    try {
-      await mutate(`/api/signatures/collections/${collection.id}/members/${member.id}/required`, "PATCH", { required: !member.required, expectedCollectionVersion: collection.collectionVersion });
-      await invalidateSignatureCollectionCaches(queryClient, collection.id);
-      reload();
-      toast.success(`${member.name} is now ${member.required ? "optional" : "required"}`);
-    } catch (requestError) {
-      toast.error(requestError instanceof Error ? requestError.message : "Required state was not changed");
-    }
+    await runMutation(member.id, () => mutate(`/api/signatures/collections/${collection.id}/members/${member.id}/required`, "PATCH", { required: !member.required, expectedCollectionVersion: collection.collectionVersion }), `${member.name} is now ${member.required ? "optional" : "required"}`);
   }
 
   async function resetCollection() {
     if (!collection) return;
-    setResettingCollection(true);
-    try {
-      await mutate(`/api/signatures/collections/${collection.id}/reset`, "POST", { expectedCollectionVersion: collection.collectionVersion });
-      await invalidateSignatureCollectionCaches(queryClient, collection.id);
-      reload();
-      toast.success("Collection reset");
-    } catch (requestError) {
-      toast.error(requestError instanceof Error ? requestError.message : "Collection was not reset");
-    } finally {
-      setResettingCollection(false);
-    }
+    await runMutation("reset", () => mutate(`/api/signatures/collections/${collection.id}/reset`, "POST", { expectedCollectionVersion: collection.collectionVersion }), "Collection reset", () => { setResetOpen(false); setSettings(null); });
   }
 
   function setGroupOpen(roleGroup: Member["roleGroup"], open: boolean) {
@@ -266,18 +319,11 @@ export default function SignatureCollectionPage({ collectionId, isAdmin }: { col
 
  async function archiveCollection() {
    if (!collection || !window.confirm("Archive this collection? It will become read-only.")) return;
-   try {
-      await mutate("/api/signatures/collections/" + collection.id + "/archive", "POST", { expectedCollectionVersion: collection.collectionVersion });
-      await invalidateSignatureCollectionCaches(queryClient, collection.id);
-     reload();
-     toast.success("Collection archived");
-    } catch (requestError) {
-      toast.error(requestError instanceof Error ? requestError.message : "Collection was not archived");
-    }
+   await runMutation("archive", () => mutate("/api/signatures/collections/" + collection.id + "/archive", "POST", { expectedCollectionVersion: collection.collectionVersion }), "Collection archived");
   }
 
   if (loading) return <Card><CardContent className="p-6 text-sm text-muted-foreground">Loading signature roster…</CardContent></Card>;
-  if (error || !collection) return <EmptyState icon="wifi-off" title="Couldn’t load this signature collection" description="The collection may have moved or the connection failed." actionLabel="Retry" onAction={reload} />;
+  if (!collection) return <EmptyState icon="wifi-off" title="Couldn’t load this signature collection" description="The collection may have moved or the connection failed." actionLabel="Retry" onAction={reload} />;
 
   const teamRoster = !isStandaloneStaffRoster && !isAdHocRoster;
   const staffCompleteness = collection.staffCompleteness ?? { complete: 0, total: 0 };
@@ -288,11 +334,14 @@ export default function SignatureCollectionPage({ collectionId, isAdmin }: { col
        title={signatureCollectionTitle(collection.sportCode)}
         description={collection.season}
      >
-        <Button variant="outline" size="sm" className="h-10" onClick={reload} disabled={loading || refreshing}><RefreshCw data-icon="inline-start" className={refreshing ? "animate-spin" : undefined} />Refresh</Button>
-        {isAdmin && collection.status === "OPEN" && <Button variant="outline" size="sm" className="h-10" onClick={archiveCollection}><Archive data-icon="inline-start" />Archive</Button>}
+        {collection.status === "ARCHIVED" && <Badge variant="outline">Archived · Read-only</Badge>}
+        <Button variant="outline" size="sm" className="h-10" onClick={reload} disabled={Boolean(pendingAction) || refreshing}><RefreshCw data-icon="inline-start" className={refreshing ? "animate-spin" : undefined} />Refresh</Button>
+        {teamRoster && collection.status === "OPEN" && <Button variant="outline" size="sm" className="h-10" onClick={() => { setActionError(null); setAddPlayerOpen(true); }} disabled={actionDisabled}><UserPlus data-icon="inline-start" />Add player</Button>}
+        {isAdmin && collection.status === "OPEN" && <Button variant="outline" size="sm" className="h-10" onClick={archiveCollection} disabled={actionDisabled}><Archive data-icon="inline-start" />{pendingAction === "archive" ? "Archiving…" : "Archive"}</Button>}
       </PageHeader>
 
       <div className="space-y-4">
+        {(actionError || error) && <Alert variant="destructive"><AlertDescription className="col-start-2">{actionError || "Couldn’t refresh this roster. Your last loaded roster is still visible; refresh before making changes."}</AlertDescription></Alert>}
        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
          <div className="min-w-0 flex-1">
             <h2 className="text-lg font-semibold">Roster</h2>
@@ -306,25 +355,29 @@ export default function SignatureCollectionPage({ collectionId, isAdmin }: { col
               </div>
             )}
          </div>
-          <div className="grid w-full gap-2 sm:w-auto sm:grid-cols-[minmax(14rem,22rem)_13rem]">
+          <div className="grid w-full gap-2 sm:w-auto sm:grid-cols-2">
             <Input
               type="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search name, number, or title"
               aria-label="Search signature roster"
-              className="h-10"
+              className="h-10 sm:col-span-2"
             />
             {teamRoster ? (
               <Select value={group} onValueChange={(value) => setGroup(value as typeof group)}>
                 <SelectTrigger className="h-10 w-full" aria-label="Filter signature roster"><SelectValue /></SelectTrigger>
                 <SelectContent><SelectItem value="ALL">All roster groups</SelectItem><SelectItem value="PLAYER">Players</SelectItem><SelectItem value="COACHING_STAFF">Coaching staff</SelectItem><SelectItem value="SUPPORT_STAFF">Support staff</SelectItem></SelectContent>
               </Select>
-            ) : <div className="hidden sm:block" aria-hidden="true" />}
+            ) : null}
+            <Select value={signatureFilter} onValueChange={setSignatureFilter}>
+              <SelectTrigger aria-label="Filter signature status"><SelectValue /></SelectTrigger>
+              <SelectContent><SelectItem value="ALL">All signatures</SelectItem><SelectItem value="MISSING">Needs signature</SelectItem><SelectItem value="SIGNED">Signed</SelectItem><SelectItem value="REMOVED">Removed from roster</SelectItem></SelectContent>
+            </Select>
           </div>
         </div>
 
-        {groupSections.length === 0 ? <EmptyState icon="users" title="No roster members in this view" description={search.trim() ? "Try another name, number, or title." : "Try another roster group."} /> : (
+        {groupSections.length === 0 ? <EmptyState icon="users" title={filtersActive ? "No matching roster members" : "No active roster members"} description={filtersActive ? "Clear the filters to see the full roster." : "Return to Signatures to import or update this roster."} actionLabel={filtersActive ? "Clear filters" : "All rosters"} actionHref={filtersActive ? undefined : "/signatures"} onAction={filtersActive ? () => { setSearch(""); setGroup("ALL"); setSignatureFilter("ALL"); } : undefined} /> : (
          <div className="space-y-7">
            {groupSections.map((section) => {
               const meta = isAdHocRoster
@@ -354,16 +407,6 @@ export default function SignatureCollectionPage({ collectionId, isAdmin }: { col
                     </button>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
-                 {section.members.length === 0 ? (
-                   <Card className="border-dashed bg-muted/15">
-                     <CardContent className="flex flex-col items-start gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-                       <div>
-                         <p className="font-medium">{isCreativeStaffRoster ? "Creative Staff is syncing automatically" : "No Administration members are active"}</p>
-                         <p className="mt-1 text-sm text-muted-foreground">{isCreativeStaffRoster ? "Active full-time Video, Photo, and Graphics staff will appear here." : "Apply a fresh UWBadgers Administration roster snapshot to populate this group."}</p>
-                       </div>
-                     </CardContent>
-                   </Card>
-                 ) : (
                  <div className="overflow-x-auto rounded-lg border">
                    <div className="min-w-[640px]">
                      <div className="grid h-11 grid-cols-[minmax(16rem,1fr)_11rem_3.5rem] items-center border-b bg-muted/20 px-4 text-xs font-medium text-muted-foreground">
@@ -373,8 +416,8 @@ export default function SignatureCollectionPage({ collectionId, isAdmin }: { col
                      </div>
                      {section.members.map((member) => {
                        const priorRevisions = (member.revisions ?? []).filter((revision) => revision.id !== member.artifact?.id);
-                       const canChangeRequirement = Boolean(isAdmin && collection.status === "OPEN" && member.roleGroup !== "PLAYER");
-                       const canRemoveFromRoster = collection.status === "OPEN" && member.roleGroup === "PLAYER";
+                       const canChangeRequirement = Boolean(isAdmin && member.active && collection.status === "OPEN" && member.roleGroup !== "PLAYER");
+                       const canRemoveFromRoster = member.active && collection.status === "OPEN" && member.roleGroup === "PLAYER";
                        const showRowActions = Boolean(member.artifact || priorRevisions.length > 0 || canChangeRequirement || canRemoveFromRoster);
                        return (
                          <div
@@ -402,6 +445,7 @@ export default function SignatureCollectionPage({ collectionId, isAdmin }: { col
                              <div className="min-w-0 flex-1">
                                <div className="flex min-w-0 items-center gap-2">
                                  <span className="min-w-0 truncate whitespace-nowrap text-sm leading-5" style={{ fontFamily: "var(--font-heading)", fontWeight: 800 }}>{member.name}</span>
+                                 {member.unofficial && <Badge variant="outline" size="sm" className="shrink-0" title="Added by staff; not on the official roster">Unofficial</Badge>}
                                  {member.artifact && (
                                    <span className="inline-flex size-6 shrink-0 items-center justify-center text-[var(--green-text)]" title="Signature complete">
                                      <CheckCircle2 className="size-4" aria-hidden="true" />
@@ -426,7 +470,7 @@ export default function SignatureCollectionPage({ collectionId, isAdmin }: { col
                                    decoding="async"
                                  />
                                </button>
-                             ) : collection.status === "OPEN" ? (
+                             ) : member.active && collection.status === "OPEN" ? (
                                <CaptureAction collectionId={collection.id} member={member} isIpad={isIpad} primaryCapture={member.roleGroup === "PLAYER" || member.roleGroup === "CREATIVE_STAFF" || isAdministrationRoster} />
                              ) : null}
                            </div>
@@ -434,7 +478,7 @@ export default function SignatureCollectionPage({ collectionId, isAdmin }: { col
                            <div className="flex items-center justify-center">
                              {showRowActions && (
                                <OperationalRowActions label={`Actions for ${member.name}'s signature`} triggerClassName="size-11">
-                                 {member.artifact && collection.status === "OPEN" && (isIpad ? (
+                                 {member.artifact && member.active && collection.status === "OPEN" && (isIpad ? (
                                    <DropdownMenuItem asChild>
                                      <Link href={`/signatures/${collection.id}/capture/${member.id}`}><FilePenLine />Replace signature</Link>
                                    </DropdownMenuItem>
@@ -471,12 +515,13 @@ export default function SignatureCollectionPage({ collectionId, isAdmin }: { col
                                      ])}
                                    </>
                                  )}
-                                 {member.artifact && collection.status === "OPEN" && <DropdownMenuItem variant="destructive" onSelect={() => remove(member)}><Trash2 />Remove signature</DropdownMenuItem>}
-                                 {canChangeRequirement && <DropdownMenuItem onSelect={() => toggleRequired(member)}>{member.required ? "Exclude from readiness" : "Include in readiness"}</DropdownMenuItem>}
+                                 {member.artifact && collection.status === "OPEN" && !member.linkedUserId && <DropdownMenuItem disabled={actionDisabled} onSelect={() => openMove(member)}><ArrowRightLeft />Move signature to…</DropdownMenuItem>}
+                                 {member.artifact && collection.status === "OPEN" && <DropdownMenuItem variant="destructive" disabled={actionDisabled} onSelect={() => remove(member)}><Trash2 />Remove signature</DropdownMenuItem>}
+                                 {canChangeRequirement && <DropdownMenuItem disabled={actionDisabled} onSelect={() => toggleRequired(member)}>{member.required ? "Exclude from readiness" : "Include in readiness"}</DropdownMenuItem>}
                                  {canRemoveFromRoster && (
                                    <>
                                      {(member.artifact || priorRevisions.length > 0) && <DropdownMenuSeparator />}
-                                     <DropdownMenuItem variant="destructive" onSelect={() => removeFromRoster(member)}><Trash2 />Remove from roster</DropdownMenuItem>
+                                     <DropdownMenuItem variant="destructive" disabled={actionDisabled} onSelect={() => removeFromRoster(member)}><Trash2 />{pendingAction === member.id ? "Updating…" : "Remove from roster"}</DropdownMenuItem>
                                    </>
                                  )}
                                </OperationalRowActions>
@@ -487,7 +532,6 @@ export default function SignatureCollectionPage({ collectionId, isAdmin }: { col
                      })}
                    </div>
                  </div>
-                 )}
                   </CollapsibleContent>
                  </section>
                </Collapsible>
@@ -512,37 +556,42 @@ export default function SignatureCollectionPage({ collectionId, isAdmin }: { col
                 {settingsLocked ? (
                   <div className="flex items-start gap-3 rounded-md border bg-muted/15 p-3 text-sm">
                     <LockKeyhole className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                    <div><p className="font-medium">Pen settings are locked</p><p className="mt-1 text-muted-foreground">Reset the collection to remove saved signatures before changing capture settings.</p></div>
+                    <div><p className="font-medium">Pen settings are locked</p><p className="mt-1 text-muted-foreground">Reset the collection to unlock capture settings. This also removes any remaining saved signatures and previous versions.</p></div>
                   </div>
                 ) : (
                   <>
                     <div><CardTitle className="flex items-center gap-2 text-base">Signature output</CardTitle><p className="mt-1 text-sm text-muted-foreground">Controls the ink and transparent PNG/SVG generated for every capture in this roster. These settings lock after the first saved signature.</p></div>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-                  <div className="space-y-2"><Label htmlFor="signature-color">Ink color</Label><Input id="signature-color" type="color" className="h-10 p-1" value={effectiveSettings?.strokeColor ?? "#111827"} onChange={(event) => setSettings({ ...(effectiveSettings ?? collection.penSettings), strokeColor: event.target.value })} /><p className="text-xs text-muted-foreground">Color saved in PNG and SVG files.</p></div>
-                  <div className="space-y-2"><Label htmlFor="signature-width">Line thickness</Label><Input id="signature-width" type="number" min={1} max={24} value={effectiveSettings?.strokeWidth ?? 4} onChange={(event) => setSettings({ ...(effectiveSettings ?? collection.penSettings), strokeWidth: Number(event.target.value) })} /><p className="text-xs text-muted-foreground">Width of each signature stroke.</p></div>
-                  <div className="space-y-2"><Label htmlFor="signature-padding">Trim margin</Label><Input id="signature-padding" type="number" min={0} max={128} value={effectiveSettings?.cropPadding ?? 24} onChange={(event) => setSettings({ ...(effectiveSettings ?? collection.penSettings), cropPadding: Number(event.target.value) })} /><p className="text-xs text-muted-foreground">Transparent space kept around the ink.</p></div>
-                  <div className="space-y-2"><Label htmlFor="signature-width-limit">Maximum width</Label><Input id="signature-width-limit" type="number" min={128} max={2000} value={effectiveSettings?.maxWidth ?? 1600} onChange={(event) => setSettings({ ...(effectiveSettings ?? collection.penSettings), maxWidth: Number(event.target.value) })} /><p className="text-xs text-muted-foreground">Largest exported PNG width in pixels.</p></div>
-                  <div className="space-y-2"><Label htmlFor="signature-height-limit">Maximum height</Label><Input id="signature-height-limit" type="number" min={128} max={2000} value={effectiveSettings?.maxHeight ?? 900} onChange={(event) => setSettings({ ...(effectiveSettings ?? collection.penSettings), maxHeight: Number(event.target.value) })} /><p className="text-xs text-muted-foreground">Largest exported PNG height in pixels.</p></div>
-                </div>
-                    <Button className="h-10" onClick={saveSettings} disabled={savingSettings || !settings}>Save settings</Button>
+                <fieldset disabled={actionDisabled} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                  <div className="space-y-2"><Label htmlFor="signature-color">Ink color</Label><Input id="signature-color" type="color" className="h-10 p-1" value={effectiveSettings?.strokeColor ?? "#111827"} onChange={(event) => editSettings({ ...(effectiveSettings ?? collection.penSettings), strokeColor: event.target.value })} /><p className="text-xs text-muted-foreground">Color saved in PNG and SVG files.</p></div>
+                  <div className="space-y-2"><Label htmlFor="signature-width">Line thickness</Label><Input id="signature-width" type="number" min={1} max={24} value={effectiveSettings?.strokeWidth ?? 4} onChange={(event) => editSettings({ ...(effectiveSettings ?? collection.penSettings), strokeWidth: Number(event.target.value) })} /><p className="text-xs text-muted-foreground">Width of each signature stroke.</p></div>
+                  <div className="space-y-2"><Label htmlFor="signature-padding">Trim margin</Label><Input id="signature-padding" type="number" min={0} max={128} value={effectiveSettings?.cropPadding ?? 24} onChange={(event) => editSettings({ ...(effectiveSettings ?? collection.penSettings), cropPadding: Number(event.target.value) })} /><p className="text-xs text-muted-foreground">Transparent space kept around the ink.</p></div>
+                  <div className="space-y-2"><Label htmlFor="signature-width-limit">Maximum width</Label><Input id="signature-width-limit" type="number" min={128} max={2000} value={effectiveSettings?.maxWidth ?? 1600} onChange={(event) => editSettings({ ...(effectiveSettings ?? collection.penSettings), maxWidth: Number(event.target.value) })} /><p className="text-xs text-muted-foreground">Largest exported PNG width in pixels.</p></div>
+                  <div className="space-y-2"><Label htmlFor="signature-height-limit">Maximum height</Label><Input id="signature-height-limit" type="number" min={128} max={2000} value={effectiveSettings?.maxHeight ?? 900} onChange={(event) => editSettings({ ...(effectiveSettings ?? collection.penSettings), maxHeight: Number(event.target.value) })} /><p className="text-xs text-muted-foreground">Largest exported PNG height in pixels.</p></div>
+                </fieldset>
+                    {settings && !settingsValidation.success && <p role="alert" className="text-sm text-destructive">{settingsValidation.error.issues[0]?.message}</p>}
+                    <div className="flex gap-2">
+                      <Button className="h-10" onClick={saveSettings} disabled={actionDisabled || !settings || !settingsValidation.success}>{pendingAction === "settings" ? "Saving…" : "Save settings"}</Button>
+                      {settings && <Button variant="outline" disabled={actionDisabled} onClick={() => setSettings(null)}>Discard changes</Button>}
+                    </div>
                   </>
                 )}
                 {effectiveSettings && <SignaturePenPreview settings={effectiveSettings} />}
                 <Separator />
                 <div className="flex flex-col gap-3 rounded-md border border-destructive/30 bg-destructive/[0.03] p-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div><p className="text-sm font-semibold text-destructive">Danger zone</p><p className="mt-1 text-xs text-muted-foreground">Remove every saved signature and queue its files for cleanup.</p></div>
-                  <AlertDialog>
+                  <div><p className="text-sm font-semibold text-destructive">Danger zone</p><p className="mt-1 text-xs text-muted-foreground">Remove every saved signature and previous version, and unlock capture settings.</p></div>
+                  <AlertDialog open={resetOpen} onOpenChange={(open) => { if (!pendingAction) setResetOpen(open); }}>
                     <AlertDialogTrigger asChild>
-                       <Button variant="destructive" className="h-10 shrink-0" disabled={!hasCapturedSignatures || resettingCollection}><RotateCcw data-icon="inline-start" />Reset all captures</Button>
+                       <Button variant="destructive" className="h-10 shrink-0" disabled={(!hasCapturedSignatures && !settingsLocked) || actionDisabled}><RotateCcw data-icon="inline-start" />Reset all captures</Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
                         <AlertDialogTitle>Reset every captured signature?</AlertDialogTitle>
-                        <AlertDialogDescription>This removes all saved signatures from {signatureCollectionTitle(collection.sportCode)} and queues the current PNG and SVG files for cleanup. This cannot be undone.</AlertDialogDescription>
+                        <AlertDialogDescription>This permanently removes all signatures and previous versions saved in {signatureCollectionTitle(collection.sportCode)} and unlocks capture settings. This cannot be undone.</AlertDialogDescription>
                       </AlertDialogHeader>
+                      {actionError && <p role="alert" className="text-sm text-destructive">{actionError}</p>}
                       <AlertDialogFooter>
-                        <AlertDialogCancel disabled={resettingCollection}>Cancel</AlertDialogCancel>
-                        <AlertDialogAction variant="destructive" onClick={resetCollection} disabled={resettingCollection}>Reset all captures</AlertDialogAction>
+                        <AlertDialogCancel disabled={Boolean(pendingAction)}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction variant="destructive" onClick={(event) => { event.preventDefault(); void resetCollection(); }} disabled={Boolean(pendingAction)}>{pendingAction === "reset" ? "Resetting…" : "Reset all captures"}</AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
@@ -553,6 +602,62 @@ export default function SignatureCollectionPage({ collectionId, isAdmin }: { col
          </Collapsible>
        )}
       </div>
+
+      <Dialog open={Boolean(moveSource)} onOpenChange={(open) => { if (!open && !pendingAction) setMoveSource(null); }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader className="block pr-14">
+            <DialogTitle>Move {moveSource?.name}&apos;s signature</DialogTitle>
+            <DialogDescription>Use this when someone signed in the wrong person&apos;s slot. The saved signature and its history move to the person who actually signed. {moveSource?.name} is left blank and needs to sign again.</DialogDescription>
+          </DialogHeader>
+          <DialogBody className="space-y-4">
+            {moveSource?.artifact && (
+              <div className="flex min-h-28 items-center justify-center rounded-lg border bg-muted/20 p-4">
+                <Image src={`/api/signatures/artifacts/${moveSource.artifact.id}/png`} alt={`Signature saved on ${moveSource.name}`} width={moveSource.artifact.width} height={moveSource.artifact.height} unoptimized className="h-auto max-h-24 w-auto max-w-full object-contain brightness-0 dark:invert" />
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="signature-move-target">Who signed this?</Label>
+              <Select value={moveTargetId} onValueChange={setMoveTargetId} disabled={Boolean(pendingAction)}>
+                <SelectTrigger id="signature-move-target" className="h-11 w-full"><SelectValue placeholder={moveCandidates.length === 0 ? "No one without a signature" : "Choose a person"} /></SelectTrigger>
+                <SelectContent>
+                  {moveCandidates.map((member) => (
+                    <SelectItem key={member.id} value={member.id}>{member.jerseyNumber === null ? "" : `#${member.jerseyNumber} · `}{member.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">Only people with no saved signature are listed. If they aren&apos;t on the roster yet, add them first.</p>
+            </div>
+            {actionError && <p role="alert" className="text-sm text-destructive">{actionError}</p>}
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="outline" className="h-11" onClick={() => setMoveSource(null)} disabled={Boolean(pendingAction)}>Cancel</Button>
+            <Button className="h-11" onClick={() => void moveSignature()} disabled={!moveTarget || Boolean(pendingAction)} loading={Boolean(moveSource && pendingAction === `move-${moveSource.id}`)}>
+              {moveTarget ? `Move to ${moveTarget.name}` : "Move signature"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={addPlayerOpen} onOpenChange={(open) => { if (!pendingAction) setAddPlayerOpen(open); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader className="block pr-14">
+            <DialogTitle>Add a player</DialogTitle>
+            <DialogDescription>For someone on the team who isn&apos;t on the official roster yet. Roster imports won&apos;t remove them, and if they appear officially later, this row is matched by name.</DialogDescription>
+          </DialogHeader>
+          <DialogBody>
+            <form id="signature-add-player" className="grid gap-4 sm:grid-cols-[1fr_6rem]" onSubmit={(event) => { event.preventDefault(); void addPlayer(); }}>
+              <div className="space-y-2"><Label htmlFor="signature-player-name">Name</Label><Input id="signature-player-name" autoComplete="off" value={newPlayer.name} onChange={(event) => setNewPlayer((current) => ({ ...current, name: event.target.value }))} maxLength={160} disabled={Boolean(pendingAction)} /></div>
+              <div className="space-y-2"><Label htmlFor="signature-player-number">Number</Label><Input id="signature-player-number" inputMode="numeric" value={newPlayer.jerseyNumber} onChange={(event) => setNewPlayer((current) => ({ ...current, jerseyNumber: event.target.value }))} placeholder="None" maxLength={3} aria-invalid={!newPlayerJerseyValid} disabled={Boolean(pendingAction)} /></div>
+            </form>
+            {!newPlayerJerseyValid && <p role="alert" className="mt-2 text-sm text-destructive">Number must be 0–999.</p>}
+            {actionError && <p role="alert" className="mt-2 text-sm text-destructive">{actionError}</p>}
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="outline" className="h-11" onClick={() => setAddPlayerOpen(false)} disabled={Boolean(pendingAction)}>Cancel</Button>
+            <Button type="submit" form="signature-add-player" className="h-11" disabled={!newPlayerName || !newPlayerJerseyValid || Boolean(pendingAction)} loading={pendingAction === "add-player"}>Add player</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={Boolean(previewMember)} onOpenChange={(open) => { if (!open) setPreviewMember(null); }}>
         <DialogContent className="sm:max-w-3xl">

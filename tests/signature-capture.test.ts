@@ -159,6 +159,9 @@ describe("signature input and draft contracts", () => {
     expect(source).toContain("if (committed)");
     expect(source).toContain("Signature saved. Return to the roster to continue.");
     expect(source).toContain("disabled={saveSucceeded || saving || drawing || strokes.length === 0}");
+    expect(source).toContain("data-signature-signer-line");
+    expect(source).toContain("{member.name}</span>");
+    expect(source).toContain("Check the name on the line before saving.");
     expect(source).not.toContain("SignatureAthleteProfileForm");
     expect(source).not.toContain("/profile");
   });
@@ -524,7 +527,7 @@ describe("signature roster presentation", () => {
     expect(source).not.toContain("Collection readiness");
     expect(source).not.toContain(">Optional</Badge>");
     expect(source).toContain('data-icon="inline-start" />Capture</Link>');
-    expect(source).not.toContain('>Needs signature<');
+    expect(source).not.toMatch(/<Badge[^>]*>Needs signature<\/Badge>/);
     expect(source).toContain('aria-label={`Quick Look ${member.name}\'s signature`}');
     expect(source).toContain('style={{ fontFamily: "var(--font-heading)", fontWeight: 800 }}');
     expect(source).toContain("useBreadcrumbLabel");
@@ -533,8 +536,8 @@ describe("signature roster presentation", () => {
     expect(source).toContain('aria-label={`${sectionOpen ? "Collapse" : "Expand"} ${meta.label}`}');
     expect(source).toContain('triggerClassName="size-11"');
     expect(source).toContain("Danger zone");
-    expect(source).toContain("Creative Staff is syncing automatically");
-    expect(source).toContain('const canRemoveFromRoster = collection.status === "OPEN" && member.roleGroup === "PLAYER";');
+    expect(source).toContain("No active roster members");
+    expect(source).toContain('const canRemoveFromRoster = member.active && collection.status === "OPEN" && member.roleGroup === "PLAYER";');
     expect(source).toContain('"DELETE", { expectedCollectionVersion: collection.collectionVersion }');
     expect(source).toContain("Remove from roster");
     expect(source).toContain("Their saved signature history will be kept.");

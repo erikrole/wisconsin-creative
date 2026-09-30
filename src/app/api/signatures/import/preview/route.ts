@@ -14,6 +14,8 @@ export const POST = withAuth(async (req, { user }) => {
   const preview = await createSignatureRosterPreview({ actor: user, sportCode: body.sportCode, season: body.season, ...snapshot });
   return ok({
     ...preview,
+    sportCode: body.sportCode,
+    season: body.season,
     sourceUrl: snapshot.sourceUrl,
     sourceHash: snapshot.sourceHash,
     parserVersion: snapshot.parserVersion,
