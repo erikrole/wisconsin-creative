@@ -13,14 +13,14 @@ export async function invalidateSignatureCollectionCaches(
   queryClient: QueryClient,
   collectionId: string,
 ) {
-  const queryKeys = [
-    signatureCollectionQueryKey(collectionId),
-    ...signatureCollectionListQueryKeys,
-  ];
-
-  await Promise.all(queryKeys.map((queryKey) => queryClient.invalidateQueries({
-    queryKey,
-    exact: true,
+  // A team member can resolve a Creative Staff capture. The cache does not
+  // carry that ownership graph, so stale every Signature roster/bootstrap,
+  // without fetching inactive pages or invalidating unrelated app queries.
+  await queryClient.invalidateQueries({
+    predicate: ({ queryKey }) => queryKey[0] === "fetch"
+      && typeof queryKey[1] === "string"
+      && (queryKey[1] === signatureCollectionQueryKey(collectionId)[1]
+        || /^\/api\/signatures\/collections(?:[/?]|$)/.test(queryKey[1])),
     refetchType: "none",
-  })));
+  });
 }

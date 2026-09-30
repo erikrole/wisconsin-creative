@@ -175,7 +175,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 
 - Doc: `docs/AREA_SIGNATURES.md`
 - Pages: `/signatures/[id]/capture/[memberId]`, `/signatures/[id]`, `/signatures`
-- APIs: `/api/signatures/artifacts/[revisionId]/[kind]`, `/api/signatures/cleanup`, `/api/signatures/collections/[id]/archive`, `/api/signatures/collections/[id]/capture/[memberId]`, `/api/signatures/collections/[id]/creative-staff`, `/api/signatures/collections/[id]/download`, `/api/signatures/collections/[id]/members/[memberId]/required`, `/api/signatures/collections/[id]/members/[memberId]`, `/api/signatures/collections/[id]/reset`, `/api/signatures/collections/[id]/restore`
+- APIs: `/api/signatures/artifacts/[revisionId]/[kind]`, `/api/signatures/cleanup`, `/api/signatures/collections/[id]/archive`, `/api/signatures/collections/[id]/capture/[memberId]/move`, `/api/signatures/collections/[id]/capture/[memberId]`, `/api/signatures/collections/[id]/creative-staff`, `/api/signatures/collections/[id]/download`, `/api/signatures/collections/[id]/members/[memberId]/required`, `/api/signatures/collections/[id]/members/[memberId]`, `/api/signatures/collections/[id]/members`
 - Services: `src/lib/services/signatures.ts`
 - Tests: _none matched_
 

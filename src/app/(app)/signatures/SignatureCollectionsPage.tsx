@@ -19,6 +19,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger } from "@/components/ui/dropdown-menu";
 import EmptyState from "@/components/EmptyState";
 import { useFetch } from "@/hooks/use-fetch";
@@ -46,12 +47,14 @@ type Collection = {
   completeness: { complete: number; required: number; percent: number };
   staffCompleteness?: { complete: number; total: number };
   downloadableCount?: number;
+  hasRetainedSignatures?: boolean;
   updatedAt: string;
 };
 
 type Preview = {
   collectionId: string;
   sportCode: SignatureImportedSportCode;
+  season: string;
   collectionVersion: number;
   snapshotId: string;
   candidateCount: number;
@@ -98,11 +101,15 @@ export default function SignatureCollectionsPage({ isAdmin }: { isAdmin: boolean
   const [season, setSeason] = useState(DEFAULT_SIGNATURE_SEASON);
   const [importSportCode, setImportSportCode] = useState<SignatureImportedSportCode>(SIGNATURE_MBB_SPORT_CODE);
   const [preview, setPreview] = useState<Preview | null>(null);
-  const [working, setWorking] = useState(false);
+  const [importAction, setImportAction] = useState<"preview" | "apply" | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const working = importAction !== null;
   const [workingCollectionId, setWorkingCollectionId] = useState<string | null>(null);
+  const [syncingCollectionId, setSyncingCollectionId] = useState<string | null>(null);
   const [adHocOpen, setAdHocOpen] = useState(false);
   const [adHocName, setAdHocName] = useState("");
   const [adHocCategory, setAdHocCategory] = useState("");
+  const [adHocSeason, setAdHocSeason] = useState(DEFAULT_SIGNATURE_SEASON);
   const [addingAdHoc, setAddingAdHoc] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Collection | null>(null);
   const [isIpad, setIsIpad] = useState(false);
@@ -124,7 +131,7 @@ export default function SignatureCollectionsPage({ isAdmin }: { isAdmin: boolean
     const attemptKey = `${creativeStaffRoster.id}:${creativeStaffRoster.collectionVersion}`;
     if (automaticSyncAttempt.current === attemptKey) return;
     automaticSyncAttempt.current = attemptKey;
-    setWorkingCollectionId(creativeStaffRoster.id);
+    setSyncingCollectionId(creativeStaffRoster.id);
     void postJson(`/api/signatures/collections/${creativeStaffRoster.id}/creative-staff`, {
       expectedCollectionVersion: creativeStaffRoster.collectionVersion,
     }).then(async (result) => {
@@ -135,7 +142,7 @@ export default function SignatureCollectionsPage({ isAdmin }: { isAdmin: boolean
     }).catch((requestError) => {
       toast.error(requestError instanceof Error ? requestError.message : "Creative Staff was not updated");
     }).finally(() => {
-      setWorkingCollectionId(null);
+      setSyncingCollectionId(null);
     });
   }, [collections, loading, queryClient, reload]);
 
@@ -147,7 +154,7 @@ export default function SignatureCollectionsPage({ isAdmin }: { isAdmin: boolean
     setAddingAdHoc(true);
     try {
       const result = await postJson("/api/signatures/collections", {
-        season,
+        season: adHocSeason,
         name: adHocName,
         category: adHocCategory,
       });
@@ -165,21 +172,24 @@ export default function SignatureCollectionsPage({ isAdmin }: { isAdmin: boolean
   }
 
   async function previewRoster() {
-    setWorking(true);
+    setImportAction("preview");
+    setPreview(null);
+    setImportError(null);
     try {
       const result = await postJson("/api/signatures/import/preview", { sportCode: importSportCode, season });
       setPreview(result as unknown as Preview);
       toast.success("Roster preview ready: " + result.candidateCount + " members");
     } catch (requestError) {
-      toast.error(requestError instanceof Error ? requestError.message : "Roster preview failed");
+      setImportError(requestError instanceof Error ? requestError.message : "Roster preview failed");
     } finally {
-      setWorking(false);
+      setImportAction(null);
     }
   }
 
   async function applyPreview() {
-    if (!preview) return;
-    setWorking(true);
+    if (!preview || preview.sportCode !== importSportCode || preview.season !== season) return;
+    setImportAction("apply");
+    setImportError(null);
     try {
       await postJson("/api/signatures/import/apply", {
         snapshotId: preview.snapshotId,
@@ -190,9 +200,9 @@ export default function SignatureCollectionsPage({ isAdmin }: { isAdmin: boolean
       reload();
       toast.success("Roster applied");
     } catch (requestError) {
-      toast.error(requestError instanceof Error ? requestError.message : "Roster apply failed");
+      setImportError(requestError instanceof Error ? requestError.message : "Roster apply failed");
     } finally {
-      setWorking(false);
+      setImportAction(null);
     }
   }
 
@@ -254,7 +264,7 @@ export default function SignatureCollectionsPage({ isAdmin }: { isAdmin: boolean
   }
 
   function requestDelete(collection: Collection) {
-    if ((collection.downloadableCount ?? 0) > 0) {
+    if (collection.hasRetainedSignatures || (collection.downloadableCount ?? 0) > 0) {
       setDeleteTarget(collection);
       return;
     }
@@ -273,6 +283,10 @@ export default function SignatureCollectionsPage({ isAdmin }: { isAdmin: boolean
       toast.success(`${signatureCollectionTitle(collection.sportCode)} was deleted`);
     } catch (requestError) {
       toast.error(requestError instanceof Error ? requestError.message : "Collection was not deleted");
+      setDeleteTarget(null);
+      setShowArchived(true);
+      await invalidateSignatureCollectionCaches(queryClient, collection.id);
+      reload();
     } finally {
       setWorkingCollectionId(null);
     }
@@ -281,7 +295,7 @@ export default function SignatureCollectionsPage({ isAdmin }: { isAdmin: boolean
   return (
     <FadeUp>
       <PageHeader title="Signatures">
-        <Dialog open={adHocOpen} onOpenChange={setAdHocOpen}>
+        <Dialog open={adHocOpen} onOpenChange={(open) => { if (!addingAdHoc) setAdHocOpen(open); }}>
           {isIpad ? (
             <DialogTrigger asChild>
               <Button size="sm" className="h-10"><Plus data-icon="inline-start" />Add Signature</Button>
@@ -304,20 +318,23 @@ export default function SignatureCollectionsPage({ isAdmin }: { isAdmin: boolean
             <DialogBody className="space-y-4 py-5">
               <div className="space-y-2">
                 <Label htmlFor="ad-hoc-signature-name">Name</Label>
-                <Input id="ad-hoc-signature-name" name="name" autoComplete="name" value={adHocName} onChange={(event) => setAdHocName(event.target.value)} placeholder="Full name" maxLength={160} />
+                <Input id="ad-hoc-signature-name" name="name" autoComplete="name" value={adHocName} onChange={(event) => setAdHocName(event.target.value)} placeholder="Full name" maxLength={160} disabled={addingAdHoc} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="ad-hoc-signature-category">Sport or category</Label>
-                <Input id="ad-hoc-signature-category" name="category" value={adHocCategory} onChange={(event) => setAdHocCategory(event.target.value)} placeholder="Football, donor, alumni…" maxLength={160} />
+                <Input id="ad-hoc-signature-category" name="category" value={adHocCategory} onChange={(event) => setAdHocCategory(event.target.value)} placeholder="Football, donor, alumni…" maxLength={160} disabled={addingAdHoc} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="ad-hoc-signature-season">Season</Label>
-                <Input id="ad-hoc-signature-season" name="season" value={season} onChange={(event) => setSeason(event.target.value)} placeholder="2026-27" inputMode="numeric" />
+                <Select value={adHocSeason} onValueChange={setAdHocSeason} disabled={addingAdHoc}>
+                  <SelectTrigger id="ad-hoc-signature-season"><SelectValue /></SelectTrigger>
+                  <SelectContent>{SIGNATURE_SEASON_OPTIONS.map((option) => <SelectItem key={option} value={option}>{option}</SelectItem>)}</SelectContent>
+                </Select>
               </div>
             </DialogBody>
             <DialogFooter>
               <Button variant="outline" onClick={() => setAdHocOpen(false)} disabled={addingAdHoc}>Cancel</Button>
-              <Button onClick={addAdHocSigner} disabled={addingAdHoc || !adHocName.trim() || !adHocCategory.trim() || !/^\d{4}-\d{2}$/.test(season)}>
+              <Button onClick={addAdHocSigner} disabled={addingAdHoc || !adHocName.trim() || !adHocCategory.trim()}>
                 <FilePenLine data-icon="inline-start" />{addingAdHoc ? "Adding…" : "Add and capture"}
               </Button>
             </DialogFooter>
@@ -366,7 +383,7 @@ export default function SignatureCollectionsPage({ isAdmin }: { isAdmin: boolean
           {!loading && !error && collections.length > 0 && (
             <div className="grid gap-3 md:grid-cols-2">
               {collections.map((collection) => {
-                const isWorking = workingCollectionId === collection.id;
+                const isWorking = Boolean(workingCollectionId) || syncingCollectionId === collection.id;
                 const isCreativeStaffRoster = collection.sportCode === SIGNATURE_CREATIVE_STAFF_SPORT_CODE;
                 const isStandaloneStaffRoster = isStandaloneStaffSignatureCollection(collection.sportCode);
                 const isAdHocRoster = collection.sportCode === SIGNATURE_AD_HOC_SPORT_CODE;
@@ -384,9 +401,7 @@ export default function SignatureCollectionsPage({ isAdmin }: { isAdmin: boolean
                             {signatureCollectionTitle(collection.sportCode)}
                           </Link>
                         </CardTitle>
-                        {!isCreativeStaffRoster && (
-                          <p className="mt-1 text-sm text-muted-foreground">{isAdHocRoster ? `${collection.season} one-off captures` : collection.season}</p>
-                        )}
+                        <p className="mt-1 text-sm text-muted-foreground">{isAdHocRoster ? `${collection.season} one-off captures` : collection.season}</p>
                       </div>
                       <div className="flex shrink-0 items-center gap-1">
                         <Badge variant={collection.status === "OPEN" ? "default" : "outline"}>{collection.status === "OPEN" ? "Open" : "Archived"}</Badge>
@@ -460,7 +475,7 @@ export default function SignatureCollectionsPage({ isAdmin }: { isAdmin: boolean
           <CardContent className="space-y-3">
             <div className="space-y-2">
               <Label htmlFor="signature-import-sport">Roster source</Label>
-              <Select value={importSportCode} onValueChange={(value) => setImportSportCode(value as SignatureImportedSportCode)}>
+              <Select value={importSportCode} disabled={working} onValueChange={(value) => { setImportSportCode(value as SignatureImportedSportCode); setPreview(null); setImportError(null); }}>
                 <SelectTrigger id="signature-import-sport" className="h-10 w-full" aria-label="Import roster source">
                   <SelectValue />
                 </SelectTrigger>
@@ -473,7 +488,7 @@ export default function SignatureCollectionsPage({ isAdmin }: { isAdmin: boolean
             </div>
             <div className="space-y-2">
               <Label htmlFor="signature-season">Season</Label>
-              <Select value={season} onValueChange={setSeason}>
+              <Select value={season} disabled={working} onValueChange={(value) => { setSeason(value); setPreview(null); setImportError(null); }}>
                 <SelectTrigger id="signature-season" className="h-10 w-full" aria-label="Season">
                   <SelectValue />
                 </SelectTrigger>
@@ -485,14 +500,23 @@ export default function SignatureCollectionsPage({ isAdmin }: { isAdmin: boolean
               </Select>
             </div>
             <Button className="h-10 w-full" onClick={previewRoster} disabled={working || !/^\d{4}-\d{2}$/.test(season)}>
-              {working ? "Checking roster…" : "Preview roster"}
+              {importAction === "preview" ? "Checking roster…" : "Preview roster"}
             </Button>
+            {importError && <Alert variant="destructive"><AlertDescription className="col-start-2">{importError}</AlertDescription></Alert>}
             {preview && (
               <div className="rounded-lg border bg-muted/30 p-3 text-sm">
-                <p className="font-medium">{preview.candidateCount} {signatureCollectionTitle(preview.sportCode)} members found</p>
-                <p className="mt-1 text-xs text-muted-foreground">{preview.alreadyApplied ? "This roster is already applied." : "Duplicates are removed by source profile."}</p>
+                <p className="font-medium">{signatureCollectionTitle(preview.sportCode)} · {preview.season}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{preview.candidateCount} members · {preview.alreadyApplied ? "Already applied" : "Review before applying"}</p>
+                <ul aria-label="Roster preview" className="mt-3 max-h-64 space-y-2 overflow-y-auto text-xs">
+                  {preview.entries.map((entry, index) => (
+                    <li key={index} className="flex items-baseline justify-between gap-2">
+                      <span>{entry.name}</span>
+                      <span className="shrink-0 text-muted-foreground">{entry.roleGroup === "PLAYER" ? (entry.jerseyNumber === null ? "Player" : `#${entry.jerseyNumber}`) : "Staff"}</span>
+                    </li>
+                  ))}
+                </ul>
                 <div className="mt-3 flex gap-2">
-                  <Button size="sm" className="h-10" onClick={applyPreview} disabled={working || preview.alreadyApplied}>Apply roster</Button>
+                  <Button size="sm" className="h-10" onClick={applyPreview} disabled={working || preview.alreadyApplied}>{importAction === "apply" ? "Applying…" : "Apply roster"}</Button>
                   <Button size="sm" variant="outline" className="h-10" onClick={() => setPreview(null)} disabled={working}>Dismiss</Button>
                 </div>
               </div>

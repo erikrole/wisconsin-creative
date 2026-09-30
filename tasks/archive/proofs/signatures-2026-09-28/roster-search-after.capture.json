@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "1c62814365f89eb377689495ba8f1eb4f85a9d9e",
+  "sourcePatchSha256": "57d20d11feda32ffa174f2cf69b49faf3658bedce0c41443e098b086cdc1be45",
+  "settings": {
+    "device": "Headless Chromium desktop, deviceScaleFactor 1",
+    "viewport": [
+      1440,
+      1000
+    ],
+    "fixture": "26-member MHKY/2026-27 imported preview roster; collapse Student-Athletes; search Luke Osburn",
+    "role": "Synthetic preview ADMIN",
+    "route": "/signatures/cmum36ikb001qp5qrpq8xm46z",
+    "appearance": "Light; reduced motion",
+    "textSize": "Default browser text, 100 percent zoom",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "System clock; no clock-dependent content shown",
+    "scroll": [
+      0,
+      0
+    ]
+  },
+  "imageSha256": "c922a5f5ac9d661757ad0ce7cf63ac381fafbe8eca8e6cc7f757a7f14e68772b",
+  "dimensions": [
+    1440,
+    1000
+  ]
+}

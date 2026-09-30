@@ -202,6 +202,8 @@ export const PERMISSIONS: Record<string, Record<string, Role[]>> = {
     capture: ["ADMIN", "STAFF"],
     download: ["ADMIN", "STAFF"],
     remove: ["ADMIN", "STAFF"],
+    roster: ["ADMIN", "STAFF"],
+    reassign: ["ADMIN", "STAFF"],
     settings: ["ADMIN"],
     required: ["ADMIN"],
     archive: ["ADMIN"],
