@@ -17,6 +17,8 @@ struct KioskHomeView: View {
     let locationName: String?
     let checkouts: [KioskActiveCheckout]
     var pickups: [KioskDashboard.HomePickup] = []
+    /// Reservations after today; shown only when the home is otherwise empty.
+    var upcoming: [KioskDashboard.UpcomingReservation] = []
     var events: [KioskEvent] = []
     var serverToday: [KioskDashboard.TodayTile] = []
     /// Checkouts nudged on this iPad since the last refresh.
@@ -180,7 +182,16 @@ struct KioskHomeView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 ForEach(groups) { group in eventCard(group) }
-                if isLoaded && groups.isEmpty && sections.isEmpty && pickups.isEmpty {
+                if isLoaded && groups.isEmpty && sections.isEmpty && pickups.isEmpty && !upcoming.isEmpty {
+                    Text("Everything is in.")
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundStyle(KioskText.primary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 12)
+                        .kioskCard()
+                    upcomingSection(upcoming)
+                } else if isLoaded && groups.isEmpty && sections.isEmpty && pickups.isEmpty {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Everything is in.")
                             .font(.system(size: 17, weight: .bold))
@@ -262,6 +273,25 @@ struct KioskHomeView: View {
     private func selectPickupHolder(_ pickup: KioskDashboard.HomePickup) {
         if let id = pickup.requester?.id, let user = users.first(where: { $0.id == id }) {
             onSelectUser(user)
+        }
+    }
+
+    private func selectUpcomingHolder(_ reservation: KioskDashboard.UpcomingReservation) {
+        if let id = reservation.requester?.id, let user = users.first(where: { $0.id == id }) {
+            onSelectUser(user)
+        }
+    }
+
+    private func upcomingSection(_ upcoming: [KioskDashboard.UpcomingReservation]) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            KioskSectionHeader(title: "Coming up", count: "\(upcoming.count)")
+            VStack(spacing: 0) {
+                ForEach(upcoming) { reservation in
+                    HomeUpcomingRow(reservation: reservation) { selectUpcomingHolder(reservation) }
+                }
+            }
+            .padding(.vertical, 6)
+            .kioskCard()
         }
     }
 
@@ -629,6 +659,72 @@ private struct HomePickupRow: View {
         .padding(.horizontal, 6)
         .accessibilityLabel("\(pickup.title), \(holder), \(readyText)")
     }
+}
+
+private struct HomeUpcomingRow: View {
+    let reservation: KioskDashboard.UpcomingReservation
+    let action: () -> Void
+
+    private var isShared: Bool { reservation.custodyScope == "SHARED" }
+
+    private var holder: String {
+        isShared ? "Shared" : homePersonName(reservation.requester?.name ?? "")
+    }
+
+    private var initials: String {
+        if isShared { return "SC" }
+        if let initials = reservation.requester?.initials, !initials.isEmpty { return initials }
+        return homeInitials(reservation.requester?.name ?? "")
+    }
+
+    private var whenText: String {
+        homeUpcomingWhen(reservation.startsAt)
+    }
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                HomeRowAvatar(
+                    url: isShared ? nil : reservation.requester?.avatarUrl,
+                    initials: initials,
+                    ring: KioskText.muted
+                )
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(reservation.title)
+                        .font(KioskType.rowTitle)
+                        .foregroundStyle(KioskText.primary)
+                        .lineLimit(1)
+                    Text("\(holder) · \(reservation.itemCount) item\(reservation.itemCount == 1 ? "" : "s")")
+                        .font(KioskType.meta)
+                        .foregroundStyle(KioskText.secondary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 8)
+                Text(whenText)
+                    .font(KioskType.chipStrong)
+                    .foregroundStyle(KioskText.secondary)
+                    .lineLimit(1)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(KioskText.muted)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(KioskPressStyle())
+        .padding(.horizontal, 6)
+        .accessibilityLabel("\(reservation.title), \(holder), \(whenText)")
+    }
+}
+
+/// "Tomorrow 2:00 PM", "Fri 9:00 AM" within the week, else "Oct 9 9:00 AM".
+func homeUpcomingWhen(_ date: Date, now: Date = Date(), calendar: Calendar = .current) -> String {
+    let time = date.formatted(.dateTime.hour().minute())
+    let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: now), to: calendar.startOfDay(for: date)).day ?? 0
+    if days == 1 { return "Tomorrow \(time)" }
+    if days > 1 && days < 7 { return "\(date.formatted(.dateTime.weekday(.abbreviated))) \(time)" }
+    return "\(date.formatted(.dateTime.month(.abbreviated).day())) \(time)"
 }
 
 private func homeInitials(_ name: String) -> String {

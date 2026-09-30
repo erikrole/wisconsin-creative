@@ -39,6 +39,7 @@ struct KioskIdleView: View {
                     locationName: store.info?.locationName,
                     checkouts: unavailableSections.contains("checkouts") ? [] : (dashboard?.checkouts ?? []),
                     pickups: dashboard?.pickups ?? [],
+                    upcoming: dashboard?.upcoming ?? [],
                     events: dashboard?.events ?? [],
                     serverToday: dashboard?.today ?? [],
                     nudgedIds: nudgedIds,

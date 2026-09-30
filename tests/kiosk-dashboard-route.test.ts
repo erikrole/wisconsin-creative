@@ -29,10 +29,14 @@ const mockDb = db as unknown as {
   bookingBulkUnitAllocation: { findMany: ReturnType<typeof vi.fn> };
 };
 
-/** The OPEN-checkout list query gets `rows`; the pickups query gets `pickups`. */
-function mockOpenCheckouts(rows: unknown[], pickups: unknown[] = []) {
-  mockDb.booking.findMany.mockImplementation(async (args: { where?: { status?: unknown } }) =>
-    args?.where?.status === "OPEN" ? rows : pickups,
+/**
+ * The OPEN-checkout list query gets `rows`; the location-scoped upcoming query
+ * gets `upcoming`; the pickups query gets `pickups`.
+ */
+function mockOpenCheckouts(rows: unknown[], pickups: unknown[] = [], upcoming: unknown[] = []) {
+  mockDb.booking.findMany.mockImplementation(
+    async (args: { where?: { status?: unknown; locationId?: unknown } }) =>
+      args?.where?.status === "OPEN" ? rows : args?.where?.locationId ? upcoming : pickups,
   );
 }
 
@@ -403,13 +407,86 @@ describe("kiosk dashboard route", () => {
   it("reports a failed pickups read as a partial failure", async () => {
     mockDb.$queryRaw.mockResolvedValue([{ items_out: 0n, checkouts: 0n, overdue: 0n }]);
     mockDb.calendarEvent.findMany.mockResolvedValue([]);
-    mockDb.booking.findMany.mockImplementation(async (args: { where?: { status?: unknown } }) => {
-      if (args.where?.status === "OPEN") return [];
+    mockDb.booking.findMany.mockImplementation(async (args: { where?: { status?: unknown; locationId?: unknown } }) => {
+      if (args.where?.status === "OPEN" || args.where?.locationId) return [];
       throw new Error("pickups failed");
     });
 
     const body = await (await GET(request(), { params: Promise.resolve({}) })).json();
     expect(body.pickups).toEqual([]);
     expect(body.partialFailures).toEqual(["pickups"]);
+  });
+
+  it("returns upcoming reservations at this kiosk's location after today, in one batched query", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-25T15:00:00.000Z"));
+    mockDb.$queryRaw.mockResolvedValue([{ items_out: 0n, checkouts: 0n, overdue: 0n }]);
+    mockDb.calendarEvent.findMany.mockResolvedValue([]);
+    mockOpenCheckouts([], [], [
+      {
+        id: "res-1",
+        kind: "RESERVATION",
+        title: "Hockey road trip",
+        startsAt: new Date("2026-09-26T14:00:00.000Z"),
+        endsAt: new Date("2026-09-28T02:00:00.000Z"),
+        custodyScope: "PERSON",
+        eventId: null,
+        events: [],
+        requester: { id: "u-1", name: "Ava Johnson", avatarUrl: "https://example.com/ava.png" },
+        _count: { serializedItems: 3 },
+        bulkItems: [{ plannedQuantity: 2, checkedOutQuantity: 0 }],
+      },
+      {
+        id: "res-2",
+        kind: "RESERVATION",
+        title: "Shared studio kit",
+        startsAt: new Date("2026-09-29T19:00:00.000Z"),
+        endsAt: new Date("2026-09-29T23:00:00.000Z"),
+        custodyScope: "SHARED",
+        eventId: null,
+        events: [],
+        requester: { id: "u-2", name: "Ben Lee", avatarUrl: null },
+        _count: { serializedItems: 1 },
+        bulkItems: [],
+      },
+    ]);
+
+    const body = await (await GET(request(), { params: Promise.resolve({}) })).json();
+    expect(body.upcoming).toEqual([
+      {
+        id: "res-1",
+        title: "Hockey road trip",
+        startsAt: "2026-09-26T14:00:00.000Z",
+        endsAt: "2026-09-28T02:00:00.000Z",
+        itemCount: 5,
+        custodyScope: "PERSON",
+        requester: { id: "u-1", name: "Ava Johnson", avatarUrl: "https://example.com/ava.png", initials: "AJ" },
+      },
+      {
+        id: "res-2",
+        title: "Shared studio kit",
+        startsAt: "2026-09-29T19:00:00.000Z",
+        endsAt: "2026-09-29T23:00:00.000Z",
+        itemCount: 1,
+        custodyScope: "SHARED",
+        requester: null,
+      },
+    ]);
+
+    const upcomingQueries = mockDb.booking.findMany.mock.calls
+      .map((call) => call[0])
+      .filter((args) => args.where?.locationId);
+    expect(upcomingQueries).toHaveLength(1);
+    const query = upcomingQueries[0];
+    expect(query.where).toEqual({
+      kind: "RESERVATION",
+      status: "BOOKED",
+      locationId: "loc-1",
+      // Chicago: today ends 2026-09-26 00:00 CDT; the window runs 14 local days past it.
+      startsAt: { gte: new Date("2026-09-26T05:00:00.000Z"), lt: new Date("2026-10-10T05:00:00.000Z") },
+    });
+    expect(query.orderBy).toEqual({ startsAt: "asc" });
+    expect(query.take).toBe(8);
+    expect(query.select.requester).toEqual({ select: { id: true, name: true, avatarUrl: true } });
   });
 });

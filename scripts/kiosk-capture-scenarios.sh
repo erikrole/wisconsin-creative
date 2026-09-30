@@ -27,7 +27,7 @@ ALL_SCENARIOS=(
   availability-rejected pickup reservation-battery-pickup pickup-accepted pickup-off-plan
   pickup-substitute pickup-shared pickup-finish-confirm pickup-receipt return return-accepted
   return-report return-damaged return-missing return-receipt
-  return-for-other badge home-game-day identity-scan-free identity-scan-reserved
+  return-for-other badge home-game-day home-empty-upcoming identity-scan-free identity-scan-reserved
   changes-extend changes-transfer changes-swap changes-reservation changes-staff
   checkout-other-date checkout-discard kit-pick kit-session kit-finish-confirm
   scanner-asleep inactivity-checkout

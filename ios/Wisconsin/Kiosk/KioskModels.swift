@@ -54,6 +54,8 @@ struct KioskDashboard: Decodable {
     let pickups: [HomePickup]
     let today: [TodayTile]
     let nextUp: NextUp?
+    /// Reservations after today (next 14 days); additive, absent = empty.
+    let upcoming: [UpcomingReservation]
 
     enum CodingKeys: String, CodingKey {
         case stats
@@ -66,6 +68,7 @@ struct KioskDashboard: Decodable {
         case pickups
         case today
         case nextUp
+        case upcoming
     }
 
     init(from decoder: Decoder) throws {
@@ -80,6 +83,7 @@ struct KioskDashboard: Decodable {
         pickups = try container.decodeIfPresent(LossyDecodableArray<HomePickup>.self, forKey: .pickups)?.elements ?? []
         today = try container.decodeIfPresent(LossyDecodableArray<TodayTile>.self, forKey: .today)?.elements ?? []
         nextUp = try? container.decodeIfPresent(NextUp.self, forKey: .nextUp)
+        upcoming = (try? container.decodeIfPresent(LossyDecodableArray<UpcomingReservation>.self, forKey: .upcoming))??.elements ?? []
     }
 
     struct Person: Decodable, Equatable {
@@ -99,6 +103,17 @@ struct KioskDashboard: Decodable {
         let custodyScope: String
         let eventId: String?
         var id: String { bookingId }
+    }
+
+    /// A booked reservation starting after today, shown when the home is quiet.
+    struct UpcomingReservation: Decodable, Identifiable, Equatable {
+        let id: String
+        let title: String
+        let startsAt: Date
+        let endsAt: Date?
+        let itemCount: Int
+        let custodyScope: String
+        let requester: Person?
     }
 
     /// Someone with something happening today.

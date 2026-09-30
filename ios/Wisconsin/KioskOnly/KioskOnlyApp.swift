@@ -62,7 +62,7 @@ struct WisconsinKioskApp: App {
             affiliationBadge: user.affiliationBadge
         )
         switch scenario {
-        case .idle, .homeGameDay:
+        case .idle, .homeGameDay, .homeEmptyUpcoming:
             kioskStore.screen = .idle
         case .operatorHub, .checkoutSheet, .hubAtLimit,
              .changesExtend, .changesTransfer, .changesSwap, .changesReservation, .changesStaff:
@@ -624,6 +624,8 @@ enum KioskFixtureScenario: String {
     case identityReturnOther = "identity-return-other"
     /// Redesign A3: home on game day, grouped by event with crew without gear.
     case homeGameDay = "home-game-day"
+    /// Quiet home: nothing out or due today, reservations coming up.
+    case homeEmptyUpcoming = "home-empty-upcoming"
     /// Redesign B1: free gear scanned on home, asking who's taking it.
     case identityScanFree = "identity-scan-free"
     /// Redesign B2: reserved gear scanned on home, "Continue as" the holder.
@@ -953,6 +955,7 @@ enum KioskFixtures {
         // real logic, not a fixture detail — so the sleep scenario has to hand
         // back a genuinely quiet gear room.
         if KioskFixtureScenario.active == .homeGameDay { return gameDayDashboardJSON() }
+        if KioskFixtureScenario.active == .homeEmptyUpcoming { return emptyUpcomingDashboardJSON() }
         if forcesSleep {
             return """
             {"stats":{"itemsOut":0,"checkouts":0,"overdue":0},
@@ -1030,6 +1033,31 @@ enum KioskFixtures {
                   {"userId":"u-11","name":"Kaia Thornton","avatarUrl":null,"initials":"KT","reasons":["pickup"]},
                   {"userId":"u-9","name":"Imani Brooks","avatarUrl":null,"initials":"IB","reasons":["return_due"]}],
          "nextUp":null}
+        """
+    }
+
+    /// Nothing out, nothing due today; five reservations over the next week.
+    static func emptyUpcomingDashboardJSON() -> String {
+        func person(_ id: String, _ name: String, _ initials: String) -> String {
+            #"{"id":"\#(id)","name":"\#(name)","avatarUrl":null,"initials":"\#(initials)"}"#
+        }
+        func reservation(_ id: String, _ title: String, _ requester: String, _ count: Int, _ day: Int, _ hour: Int, shared: Bool = false) -> String {
+            #"{"id":"\#(id)","title":"\#(title)","startsAt":"\#(iso(at(day, hour)))","endsAt":"\#(iso(at(day, hour + 4)))","itemCount":\#(count),"custodyScope":"\#(shared ? "SHARED" : "PERSON")","requester":\#(requester)}"#
+        }
+        let upcoming = [
+            reservation("res-u1", "Hockey vs Minnesota", person(primaryUser.id, "Erik Role", "ER"), 4, 1, 14),
+            reservation("res-u2", "Recruiting Visit Shoot", person("u-16", "Priya Ramachandran", "PR"), 6, 2, 9),
+            reservation("res-u3", "Football Travel Case", "null", 12, 3, 7, shared: true),
+            reservation("res-u4", "Softball Road Kit", person("u-18", "Morgan Lee", "ML"), 2, 4, 10),
+            reservation("res-u5", "Volleyball Media Day", person("u-9", "Imani Brooks", "IB"), 5, 9, 13),
+        ].joined(separator: ",")
+        return """
+        {"stats":{"itemsOut":0,"checkouts":0,"overdue":0},
+         "capabilities":{"eventWorkerDetails":true,"eventCallTimes":true},
+         "standby":{"sleepMode":false,"reason":"active_window","nightHours":false,"nearbyEventCount":0,"nearbyBookingWindowCount":0},
+         "events":[],"activeItems":[],"checkouts":[],"pickups":[],"today":[],
+         "nextUp":{"title":"Hockey vs Minnesota","at":"\(iso(at(1, 14)))","kind":"pickup"},
+         "upcoming":[\(upcoming)]}
         """
     }
 

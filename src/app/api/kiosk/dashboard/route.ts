@@ -139,13 +139,15 @@ function quantityLabel(name: string, quantity: number) {
 }
 
 /** Kiosk idle screen data: stats, nearby events, active items, and active checkouts. */
-export const GET = withKiosk(async () => {
+export const GET = withKiosk(async (_req, { kiosk }) => {
   const now = new Date();
   const nearPast = new Date(now.getTime() - 2 * 60 * 60 * 1000);
   const nearFuture = new Date(now.getTime() + 90 * 60 * 1000);
   const eventsWindow = dayWindowInTimeZone(now, 2, env.appTimezone);
   // The local calendar day (APP_TIMEZONE, America/Chicago by default).
   const todayWindow = dayWindowInTimeZone(now, 1, env.appTimezone);
+  // Upcoming reservations: after today, through the next 14 local days.
+  const upcomingWindow = dayWindowInTimeZone(now, 15, env.appTimezone);
   const localNow = localDateTimeParts(now, env.appTimezone);
   const nightHours = localNow.hour >= 22 || localNow.hour < 6;
 
@@ -157,6 +159,7 @@ export const GET = withKiosk(async () => {
     checkoutsResult,
     operationalWindowsResult,
     pickupsResult,
+    upcomingResult,
   ] = await Promise.allSettled([
     // Stats: every active checkout is operationally visible from every kiosk.
     db.$queryRaw<
@@ -420,6 +423,32 @@ export const GET = withKiosk(async () => {
         bulkItems: { select: { plannedQuantity: true, checkedOutQuantity: true } },
       },
     }),
+
+    // Upcoming reservations at this kiosk's location, after today and within
+    // the next 14 local days. The home shows them only when otherwise empty.
+    db.booking.findMany({
+      where: {
+        kind: BookingKind.RESERVATION,
+        status: BookingStatus.BOOKED,
+        locationId: kiosk.locationId,
+        startsAt: { gte: todayWindow.end, lt: upcomingWindow.end },
+      },
+      orderBy: { startsAt: "asc" },
+      take: 8,
+      select: {
+        id: true,
+        kind: true,
+        title: true,
+        startsAt: true,
+        endsAt: true,
+        custodyScope: true,
+        eventId: true,
+        events: { orderBy: { ordinal: "asc" }, take: 1, select: { eventId: true } },
+        requester: { select: { id: true, name: true, avatarUrl: true } },
+        _count: { select: { serializedItems: { where: { allocationStatus: "active" } } } },
+        bulkItems: { select: { plannedQuantity: true, checkedOutQuantity: true } },
+      },
+    }),
   ]);
 
   const partialFailures: string[] = [];
@@ -531,6 +560,24 @@ export const GET = withKiosk(async () => {
     partialFailures,
   );
   const pickups = projectPickups(pickupRows, displayBookingTitle);
+  const upcomingRows = settledValue(
+    upcomingResult,
+    [] as Array<HomePickupRow & { endsAt: Date }>,
+    "upcoming",
+    partialFailures,
+  );
+  const upcomingEndsAt = new Map(upcomingRows.map((row) => [row.id, row.endsAt]));
+  const upcoming = projectPickups(upcomingRows, displayBookingTitle).map((row) => ({
+    id: row.bookingId,
+    title: row.title,
+    startsAt: row.readyAt,
+    endsAt: upcomingEndsAt.get(row.bookingId) ?? null,
+    itemCount: row.itemCount,
+    custodyScope: row.custodyScope,
+    requester: row.requester
+      ? { ...row.requester, initials: getInitials(row.requester.name) }
+      : null,
+  }));
   // One batched read, only when something personal is overdue.
   const overduePersonalIds = checkouts
     .filter((c) => c.custodyScope === "PERSON" && c.endsAt < now)
@@ -649,6 +696,7 @@ export const GET = withKiosk(async () => {
       initials: getInitials(tile.name),
     })),
     nextUp: projectNextUp({ now, events: eventPayloads, pickups }),
+    upcoming,
     activeItems: [
       ...activeItems.map((entry) => ({
         id: entry.asset.id,
