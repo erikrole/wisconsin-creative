@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "fd1b138fb6f43e3bfb29c7338efb1de23d51486c",
+  "sourcePatchSha256": null,
+  "settings": {
+    "device": "iPad Air 11-inch (M4) simulator, iOS 26.5 (created kiosk-avatars-agent)",
+    "viewport": [
+      1180,
+      820
+    ],
+    "fixture": "GT_KIOSK_SCENARIO=home-game-day",
+    "role": "kiosk",
+    "route": "KioskHomeView",
+    "appearance": "dark",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "live simulator clock, same hour",
+    "scroll": [
+      0,
+      0
+    ]
+  },
+  "imageSha256": "082a4c9731e3b20dd7be54fcb324300abc711a3cc9cc764a8479ae1028979f0f",
+  "dimensions": [
+    1640,
+    1140
+  ]
+}

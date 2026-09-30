@@ -127,6 +127,7 @@ struct KioskHomeView: View {
         let checkouts: [KioskActiveCheckout]
         /// "Wes H. (call 9:00)"; call time comes from the event's assignments.
         let crew: [String]
+        let crewMembers: [KioskEvent.CrewMember]
         var id: String { event.id }
     }
 
@@ -148,7 +149,7 @@ struct KioskHomeView: View {
                     return "\(name) (call \(call.formatted(.dateTime.hour().minute())))"
                 }
                 guard !linkedPickups.isEmpty || !linkedCheckouts.isEmpty || !crew.isEmpty else { return nil }
-                return EventGroup(event: event, pickups: linkedPickups, checkouts: linkedCheckouts, crew: crew)
+                return EventGroup(event: event, pickups: linkedPickups, checkouts: linkedCheckouts, crew: crew, crewMembers: event.crewWithoutGear)
             }
     }
 
@@ -236,13 +237,16 @@ struct KioskHomeView: View {
                     HomeCustodyRow(checkout: checkout, showsHolderFirst: true) { onOpenCheckout(checkout) }
                 }
                 if !group.crew.isEmpty {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Crew without gear")
-                            .font(KioskType.chipStrong)
-                            .foregroundStyle(KioskStatus.attention)
-                        Text(group.crew.joined(separator: " · "))
-                            .font(KioskType.meta)
-                            .foregroundStyle(KioskText.secondary)
+                    HStack(spacing: 12) {
+                        HomeAvatarStack(members: group.crewMembers)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Crew without gear")
+                                .font(KioskType.chipStrong)
+                                .foregroundStyle(KioskStatus.attention)
+                            Text(group.crew.joined(separator: " · "))
+                                .font(KioskType.meta)
+                                .foregroundStyle(KioskText.secondary)
+                        }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 20)
@@ -426,7 +430,7 @@ private struct HomeCustodyRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 12) {
-                Circle().fill(dotColor).frame(width: 8, height: 8)
+                HomeRowAvatar(url: checkout.requesterAvatarUrl, initials: checkout.requesterInitials, ring: dotColor)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(showsHolderFirst ? "\(holder) · \(checkout.itemCount) item\(checkout.itemCount == 1 ? "" : "s")" : checkout.title)
                         .font(KioskType.rowTitle)
@@ -546,6 +550,12 @@ private struct HomePickupRow: View {
         pickup.custodyScope == "SHARED" ? "Shared" : homePersonName(pickup.requester?.name ?? "")
     }
 
+    private var initials: String {
+        if pickup.custodyScope == "SHARED" { return "SC" }
+        if let initials = pickup.requester?.initials, !initials.isEmpty { return initials }
+        return homeInitials(pickup.requester?.name ?? "")
+    }
+
     private var readyText: String {
         pickup.readyAt <= Date() ? "ready now" : "from \(pickup.readyAt.formatted(.dateTime.hour().minute()))"
     }
@@ -553,9 +563,11 @@ private struct HomePickupRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 12) {
-                Circle()
-                    .fill(pickup.custodyScope == "SHARED" ? KioskSection.shared.accent : KioskSection.pickingUp.accent)
-                    .frame(width: 8, height: 8)
+                HomeRowAvatar(
+                    url: pickup.custodyScope == "SHARED" ? nil : pickup.requester?.avatarUrl,
+                    initials: initials,
+                    ring: pickup.custodyScope == "SHARED" ? KioskSection.shared.accent : KioskSection.pickingUp.accent
+                )
                 VStack(alignment: .leading, spacing: 1) {
                     Text(showsHolderFirst ? "\(pickup.title) · \(holder)" : pickup.title)
                         .font(KioskType.rowTitle)
@@ -584,5 +596,49 @@ private struct HomePickupRow: View {
         .buttonStyle(KioskPressStyle())
         .padding(.horizontal, 6)
         .accessibilityLabel("\(pickup.title), \(holder), \(readyText)")
+    }
+}
+
+private func homeInitials(_ name: String) -> String {
+    name.split(separator: " ").prefix(2).compactMap { $0.first }.map { String($0) }.joined().uppercased()
+}
+
+/// Leading person avatar for home list rows (redesign canvas: 34pt). The
+/// status ring replaces the old 8pt dot so each row keeps its section colour.
+private struct HomeRowAvatar: View {
+    let url: String?
+    let initials: String
+    let ring: Color
+
+    var body: some View {
+        KioskAvatar(url: url, initials: initials, size: 30)
+            .padding(2)
+            .overlay(Circle().stroke(ring, lineWidth: 2))
+            .frame(width: 34, height: 34)
+            .accessibilityHidden(true)
+    }
+}
+
+/// Overlapping avatars for the game-day "Crew without gear" line.
+private struct HomeAvatarStack: View {
+    let members: [KioskEvent.CrewMember]
+    private let shown = 3
+
+    var body: some View {
+        HStack(spacing: -4) {
+            ForEach(members.prefix(shown)) { member in
+                KioskAvatar(url: member.avatarUrl, initials: member.initials ?? homeInitials(member.name), size: 34)
+                    .overlay(Circle().stroke(KioskSurface.card, lineWidth: 2))
+            }
+            if members.count > shown {
+                Text("+\(members.count - shown)")
+                    .font(KioskType.chipStrong)
+                    .foregroundStyle(KioskText.secondary)
+                    .frame(width: 34, height: 34)
+                    .background(KioskSurface.placeholder, in: Circle())
+                    .overlay(Circle().stroke(KioskSurface.card, lineWidth: 2))
+            }
+        }
+        .accessibilityHidden(true)
     }
 }
