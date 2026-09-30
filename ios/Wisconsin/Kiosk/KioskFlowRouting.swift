@@ -112,6 +112,9 @@ struct KioskFlowIntent: Equatable {
     var pendingScanValues: [String]
     let createdAt: Date
     var ambiguity: KioskIntentAmbiguity
+    /// Whose personal checkout a return closes. Unlike `expectedRequester`,
+    /// this never limits who may identify.
+    var custodyOwner: KioskUser? = nil
 
     var heroTitle: String {
         let verb = switch action {

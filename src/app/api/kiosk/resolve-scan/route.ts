@@ -76,6 +76,19 @@ function blocked(code: string, message: string, item?: unknown, booking?: Bookin
   });
 }
 
+/**
+ * Pickup is locked to the reservation's requester, so it names them as the
+ * `expectedRequester` the kiosk must confirm. A return is open to any
+ * identified person — gear swapped on the road comes back through whoever
+ * carried it — so it names the personal owner as `custodyOwner` for display
+ * only. Shared custody has no personal owner to name either way.
+ */
+function personFields(booking: BookingCandidate | undefined, returning: boolean) {
+  if (!booking || booking.custodyScope === BookingCustodyScope.SHARED) return {};
+  const person = displayUser(booking.requester);
+  return returning ? { custodyOwner: person } : { expectedRequester: person };
+}
+
 function actionable(
   action: "checkout" | "pickup" | "return",
   item: unknown,
@@ -86,7 +99,7 @@ function actionable(
     action,
     item,
     booking: booking ? displayBooking(booking) : undefined,
-    expectedRequester: booking && booking.custodyScope !== BookingCustodyScope.SHARED ? displayUser(booking.requester) : undefined,
+    ...personFields(booking, action === "return"),
   });
 }
 
@@ -96,7 +109,7 @@ function pending(disposition: "available" | "booked_reservation" | "active_custo
     disposition,
     item,
     booking: booking ? displayBooking(booking) : undefined,
-    expectedRequester: booking && booking.custodyScope !== BookingCustodyScope.SHARED ? displayUser(booking.requester) : undefined,
+    ...personFields(booking, disposition === "active_custody"),
   });
 }
 
@@ -157,7 +170,6 @@ export const POST = withKiosk(async (req, { kiosk }) => {
     const booking = allocation?.booking as BookingCandidate | undefined;
     if (booking?.kind === BookingKind.CHECKOUT && booking.status === BookingStatus.OPEN) {
       if (!userId) return pending("active_custody", item, booking);
-      if (booking.custodyScope !== BookingCustodyScope.SHARED && booking.requester.id !== userId) return blocked("wrong_requester", `This return requires ${booking.requester.name}.`, item, booking);
       return actionable("return", item, booking);
     }
     if (booking?.kind === BookingKind.RESERVATION && booking.status === BookingStatus.BOOKED && booking.endsAt >= now) {
@@ -193,7 +205,6 @@ export const POST = withKiosk(async (req, { kiosk }) => {
   const activeBooking = activeUnitAllocation?.bookingBulkItem.booking as BookingCandidate | undefined;
   if (activeBooking?.status === BookingStatus.OPEN) {
     if (!userId) return pending("active_custody", item, activeBooking);
-    if (activeBooking.custodyScope !== BookingCustodyScope.SHARED && activeBooking.requester.id !== userId) return blocked("wrong_requester", `This return requires ${activeBooking.requester.name}.`, item, activeBooking);
     return actionable("return", item, activeBooking);
   }
   if (numbered.status === "CHECKED_OUT") {

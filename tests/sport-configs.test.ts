@@ -306,6 +306,7 @@ describe("getSportRoster", () => {
         id: "ssa-1",
         userId: "u-1",
         sportCode: "FB",
+        defaultTraveler: true,
         user: { id: "u-1", name: "Student 1", email: "s1@uw.edu", role: "STUDENT", primaryArea: null },
         createdAt: new Date("2026-01-01"),
       },
@@ -316,6 +317,19 @@ describe("getSportRoster", () => {
     expect(result).toHaveLength(1);
     expect(result[0]!.userId).toBe("u-1");
     expect(result[0]!.user.name).toBe("Student 1");
+    // The event Travel card's plane toggle reads this flag; without it the
+    // toggle could only ever set true.
+    expect(result[0]!.defaultTraveler).toBe(true);
+  });
+
+  it("lists only active, visible people", async () => {
+    vi.mocked(db.studentSportAssignment.findMany).mockResolvedValue(studentSportAssignmentRows([]));
+
+    await getSportRoster("FB");
+
+    expect(vi.mocked(db.studentSportAssignment.findMany).mock.calls[0]?.[0]).toMatchObject({
+      where: { sportCode: "FB", user: { active: true, hiddenFromRoster: false } },
+    });
   });
 });
 

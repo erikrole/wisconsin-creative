@@ -1,5 +1,6 @@
 import { Prisma, ShiftArea } from "@prisma/client";
 import { db } from "@/lib/db";
+import { visibleActiveUserWhere } from "@/lib/user-visibility";
 
 type SportShiftConfigInput = {
   area: ShiftArea;
@@ -206,10 +207,14 @@ export async function toggleSportConfig(sportCode: string, active: boolean) {
   });
 }
 
-/** Get roster (students/staff) assigned to a sport */
+/**
+ * Get the active, visible roster (students/staff) assigned to a sport.
+ * Inactive and hidden people are left out because every consumer uses this
+ * list to pick someone, and the pick would be rejected server-side anyway.
+ */
 export async function getSportRoster(sportCode: string) {
   const assignments = await db.studentSportAssignment.findMany({
-    where: { sportCode },
+    where: { sportCode, user: visibleActiveUserWhere() },
     include: {
       user: {
         select: { id: true, name: true, email: true, role: true, primaryArea: true },
@@ -221,6 +226,7 @@ export async function getSportRoster(sportCode: string) {
     id: a.id,
     userId: a.userId,
     sportCode: a.sportCode,
+    defaultTraveler: a.defaultTraveler,
     user: a.user,
     createdAt: a.createdAt,
   }));

@@ -14,7 +14,7 @@ vi.mock("@/lib/db", () => ({
       findMany: vi.fn(),
       findUnique: vi.fn(),
       create: vi.fn(),
-      delete: vi.fn(),
+      deleteMany: vi.fn(),
     },
     user: {
       findFirst: vi.fn(),
@@ -53,6 +53,9 @@ const studentUser = {
 function calendarEvent(row: unknown) {
   return row as Awaited<ReturnType<typeof db.calendarEvent.findUnique>>;
 }
+
+const awayGame = { id: "event-1", summary: "Wisconsin at Iowa", isHome: false, sportCode: "FB", status: "CONFIRMED", combinedIntoId: null };
+const rosterTraveler = { id: "ckt1a2b3c4d5e6f7g8h9i0jkl", name: "Traveler", sportAssignments: [{ id: "assignment-1" }] };
 
 function travelMembers(rows: unknown) {
   return rows as Awaited<ReturnType<typeof db.eventTravelMember.findMany>>;
@@ -183,7 +186,7 @@ describe("calendar event travel authorization", () => {
 
   it("rejects malformed add-member JSON before creating travel members", async () => {
     vi.mocked(requireAuth).mockResolvedValue(staffUser);
-    vi.mocked(db.calendarEvent.findUnique).mockResolvedValue(calendarEvent({ id: "event-1" }));
+    vi.mocked(db.calendarEvent.findUnique).mockResolvedValue(calendarEvent(awayGame));
 
     const res = await POST(makeMalformedPostRequest(), { params: Promise.resolve({ id: "event-1" }) });
     const body = await res.json();
@@ -195,12 +198,8 @@ describe("calendar event travel authorization", () => {
 
   it("adds a traveler and records an audit entry", async () => {
     vi.mocked(requireAuth).mockResolvedValue(staffUser);
-    vi.mocked(db.calendarEvent.findUnique).mockResolvedValue(
-      calendarEvent({ id: "event-1", summary: "Wisconsin at Iowa" }),
-    );
-    vi.mocked(db.user.findFirst).mockResolvedValue(
-      { id: TARGET_USER_ID, name: "Traveler" } as never,
-    );
+    vi.mocked(db.calendarEvent.findUnique).mockResolvedValue(calendarEvent(awayGame));
+    vi.mocked(db.user.findFirst).mockResolvedValue(rosterTraveler as never);
     vi.mocked(db.eventTravelMember.create).mockResolvedValue({
       id: "member-1",
       notes: null,
@@ -224,7 +223,7 @@ describe("calendar event travel authorization", () => {
   // foreign-key violation, which has no central mapping and surfaced as a 500.
   it("returns 404 for an unknown or inactive traveler instead of a foreign-key 500", async () => {
     vi.mocked(requireAuth).mockResolvedValue(staffUser);
-    vi.mocked(db.calendarEvent.findUnique).mockResolvedValue(calendarEvent({ id: "event-1" }));
+    vi.mocked(db.calendarEvent.findUnique).mockResolvedValue(calendarEvent(awayGame));
     vi.mocked(db.user.findFirst).mockResolvedValue(null as never);
 
     const res = await POST(makePostRequest(), { params: Promise.resolve({ id: "event-1" }) });
@@ -237,10 +236,8 @@ describe("calendar event travel authorization", () => {
 
   it("turns a duplicate-roster constraint violation into a named 409", async () => {
     vi.mocked(requireAuth).mockResolvedValue(staffUser);
-    vi.mocked(db.calendarEvent.findUnique).mockResolvedValue(calendarEvent({ id: "event-1" }));
-    vi.mocked(db.user.findFirst).mockResolvedValue(
-      { id: TARGET_USER_ID, name: "Traveler" } as never,
-    );
+    vi.mocked(db.calendarEvent.findUnique).mockResolvedValue(calendarEvent(awayGame));
+    vi.mocked(db.user.findFirst).mockResolvedValue(rosterTraveler as never);
     vi.mocked(db.eventTravelMember.create).mockRejectedValue(
       new Prisma.PrismaClientKnownRequestError("duplicate", {
         code: "P2002",
@@ -263,7 +260,7 @@ describe("calendar event travel authorization", () => {
       notes: "driving",
       user: { name: "Traveler" },
     } as never);
-    vi.mocked(db.eventTravelMember.delete).mockResolvedValue({} as never);
+    vi.mocked(db.eventTravelMember.deleteMany).mockResolvedValue({ count: 1 } as never);
 
     const res = await DELETE(makeDeleteRequest(), {
       params: Promise.resolve({ id: "event-1", memberId: "member-1" }),
@@ -282,6 +279,83 @@ describe("calendar event travel authorization", () => {
     );
   });
 
+  it.each([
+    ["a home game", { isHome: true }, "Travel rosters are only for away games"],
+    ["an event with no recorded side", { isHome: null }, "Travel rosters are only for away games"],
+    ["a non-sport event", { sportCode: null }, "Travel rosters are only for away games"],
+    ["a cancelled game", { status: "CANCELLED" }, "This event is cancelled"],
+    ["a combined event", { combinedIntoId: "event-2" }, "This event was combined into another event. Edit that event's travel roster."],
+  ])("rejects adding travelers to %s", async (_label, override, message) => {
+    vi.mocked(requireAuth).mockResolvedValue(staffUser);
+    vi.mocked(db.calendarEvent.findUnique).mockResolvedValue(calendarEvent({ ...awayGame, ...override }));
+
+    const res = await POST(makePostRequest(), { params: Promise.resolve({ id: "event-1" }) });
+
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toBe(message);
+    expect(db.eventTravelMember.create).not.toHaveBeenCalled();
+  });
+
+  it("requires the traveler to be on the sport roster and excludes collaborators", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(staffUser);
+    vi.mocked(db.calendarEvent.findUnique).mockResolvedValue(calendarEvent(awayGame));
+    vi.mocked(db.user.findFirst).mockResolvedValue({ ...rosterTraveler, sportAssignments: [] } as never);
+
+    const res = await POST(makePostRequest(), { params: Promise.resolve({ id: "event-1" }) });
+
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toBe("Add Traveler to the FB roster before adding them to travel");
+    expect(db.eventTravelMember.create).not.toHaveBeenCalled();
+    expect(vi.mocked(db.user.findFirst).mock.calls[0]?.[0]).toMatchObject({
+      where: { id: TARGET_USER_ID, role: { not: Role.COLLABORATOR }, active: true, hiddenFromRoster: false },
+      select: { sportAssignments: { where: { sportCode: "FB" } } },
+    });
+  });
+
+  it("returns 404 when the event is deleted before the traveler insert", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(staffUser);
+    vi.mocked(db.calendarEvent.findUnique).mockResolvedValue(calendarEvent(awayGame));
+    vi.mocked(db.user.findFirst).mockResolvedValue(rosterTraveler as never);
+    vi.mocked(db.eventTravelMember.create).mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError("fk", { code: "P2003", clientVersion: "test" }),
+    );
+
+    const res = await POST(makePostRequest(), { params: Promise.resolve({ id: "event-1" }) });
+
+    expect(res.status).toBe(404);
+    expect(db.auditLog.create).not.toHaveBeenCalled();
+  });
+
+  it("treats a concurrent remove as done without a second audit entry", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(staffUser);
+    vi.mocked(db.eventTravelMember.findUnique).mockResolvedValue({
+      eventId: "event-1", userId: TARGET_USER_ID, notes: null, user: { name: "Traveler" },
+    } as never);
+    vi.mocked(db.eventTravelMember.deleteMany).mockResolvedValue({ count: 0 } as never);
+
+    const res = await DELETE(makeDeleteRequest(), {
+      params: Promise.resolve({ id: "event-1", memberId: "member-1" }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(db.eventTravelMember.deleteMany).toHaveBeenCalledWith({ where: { id: "member-1", eventId: "event-1" } });
+    expect(db.auditLog.create).not.toHaveBeenCalled();
+  });
+
+  it("does not remove a member through another event's URL", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(staffUser);
+    vi.mocked(db.eventTravelMember.findUnique).mockResolvedValue({
+      eventId: "event-other", userId: TARGET_USER_ID, notes: null, user: { name: "Traveler" },
+    } as never);
+
+    const res = await DELETE(makeDeleteRequest(), {
+      params: Promise.resolve({ id: "event-1", memberId: "member-1" }),
+    });
+
+    expect(res.status).toBe(404);
+    expect(db.eventTravelMember.deleteMany).not.toHaveBeenCalled();
+  });
+
   it("blocks STUDENT from deleting event travel members", async () => {
     vi.mocked(requireAuth).mockResolvedValue(studentUser);
 
@@ -290,6 +364,6 @@ describe("calendar event travel authorization", () => {
     });
 
     expect(res.status).toBe(403);
-    expect(db.eventTravelMember.delete).not.toHaveBeenCalled();
+    expect(db.eventTravelMember.deleteMany).not.toHaveBeenCalled();
   });
 });

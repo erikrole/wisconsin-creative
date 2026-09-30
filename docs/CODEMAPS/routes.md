@@ -192,6 +192,7 @@
 - `/api/calendar-events/[id]/command-center` -> `src/app/api/calendar-events/[id]/command-center/route.ts`
 - `/api/calendar-events/[id]` -> `src/app/api/calendar-events/[id]/route.ts`
 - `/api/calendar-events/[id]/travel/[memberId]` -> `src/app/api/calendar-events/[id]/travel/[memberId]/route.ts`
+- `/api/calendar-events/[id]/travel/defaults` -> `src/app/api/calendar-events/[id]/travel/defaults/route.ts`
 - `/api/calendar-events/[id]/travel` -> `src/app/api/calendar-events/[id]/travel/route.ts`
 - `/api/calendar-events/[id]/visibility` -> `src/app/api/calendar-events/[id]/visibility/route.ts`
 - `/api/calendar-events/[id]/workers/[workerId]` -> `src/app/api/calendar-events/[id]/workers/[workerId]/route.ts`

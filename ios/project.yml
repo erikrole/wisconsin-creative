@@ -108,6 +108,8 @@ targets:
     info:
       path: Wisconsin/KioskOnly/Info.plist
       properties:
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         UILaunchScreen:
           UIColorName: KioskLaunchBackground
         # Landscape only. The kiosk is a counter-mounted iPad and every layout
@@ -138,7 +140,7 @@ targets:
         PRODUCT_NAME: Wisconsin Kiosk
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         MARKETING_VERSION: "1.0"
-        CURRENT_PROJECT_VERSION: "1"
+        CURRENT_PROJECT_VERSION: "2"
         TARGETED_DEVICE_FAMILY: "2"
       configs:
         Debug:

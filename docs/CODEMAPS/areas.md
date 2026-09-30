@@ -47,7 +47,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 
 - Doc: `docs/AREA_EVENTS.md`
 - Pages: `/events/[id]`, `/events`
-- APIs: `/api/badges/events/app-open`, `/api/bookings/[id]/events`, `/api/calendar-events/[id]/command-center`, `/api/calendar-events/[id]`, `/api/calendar-events/[id]/travel/[memberId]`, `/api/calendar-events/[id]/travel`, `/api/calendar-events/[id]/visibility`, `/api/calendar-events/[id]/workers/[workerId]`, `/api/calendar-events/[id]/workers`, `/api/calendar-events/combine`
+- APIs: `/api/badges/events/app-open`, `/api/bookings/[id]/events`, `/api/calendar-events/[id]/command-center`, `/api/calendar-events/[id]`, `/api/calendar-events/[id]/travel/[memberId]`, `/api/calendar-events/[id]/travel/defaults`, `/api/calendar-events/[id]/travel`, `/api/calendar-events/[id]/visibility`, `/api/calendar-events/[id]/workers/[workerId]`, `/api/calendar-events/[id]/workers`
 - Services: `src/lib/services/combined-schedule-events.ts`
 - Tests: `tests/all-day-events-have-no-call-time.test.ts`, `tests/booking-events-route-contract.test.ts`, `tests/calendar-events-route.test.ts`, `tests/combined-schedule-events-projection.test.ts`, `tests/combined-schedule-events-source.test.ts`, `tests/combined-schedule-events.test.ts`, `tests/kiosk-events-route.test.ts`, `tests/update-booking-events.test.ts`
 

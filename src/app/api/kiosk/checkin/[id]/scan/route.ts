@@ -29,9 +29,12 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
     throw new HttpError(404, "Active checkout not found");
   }
   const activeBooking = booking;
-  const operationalActorId = activeBooking.custodyScope === BookingCustodyScope.SHARED
-    ? actorId
-    : activeBooking.requesterUserId;
+  // Anyone identified at the kiosk may return gear, including gear on someone
+  // else's personal checkout, and the scan records who actually returned it.
+  // Older kiosk builds omit actorId for personal returns; those fall back to
+  // the owner, which was the only person they allowed to return.
+  const isShared = activeBooking.custodyScope === BookingCustodyScope.SHARED;
+  const operationalActorId = actorId ?? (isShared ? undefined : activeBooking.requesterUserId);
   if (!operationalActorId) {
     throw new HttpError(400, "Identify the person operating this shared return");
   }
@@ -41,8 +44,9 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
   });
   if (!operationalActor) throw new HttpError(404, "User not found");
 
+  // Badges belong to the checkout owner, so only show them on the owner's own return.
   async function rewardPayload() {
-    if (activeBooking.custodyScope === BookingCustodyScope.SHARED) return {};
+    if (isShared || operationalActorId !== activeBooking.requesterUserId) return {};
     const earnedBadges = await earnedBadgesSince(activeBooking.requesterUserId, badgeWindowStart);
     return earnedBadges.length > 0 ? { earnedBadges } : {};
   }

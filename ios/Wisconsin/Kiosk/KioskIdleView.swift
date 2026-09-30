@@ -819,7 +819,8 @@ struct KioskIdleView: View {
                         targetBooking: result.booking.map { KioskIntentBooking(id: $0.id, title: $0.title, startsAt: $0.startsAt, endsAt: $0.endsAt) },
                         pendingScanValues: [value],
                         createdAt: Date(),
-                        ambiguity: .none
+                        ambiguity: .none,
+                        custodyOwner: result.custodyOwner
                     )
                     store.setIntent(intent)
                     store.screen = .identity
@@ -883,17 +884,19 @@ struct KioskIdleView: View {
             identityScanFeedback = .error("This checkout is missing its requester.")
             return
         }
-        let requester = KioskUser(id: requesterId, name: context.requesterName, avatarUrl: context.requesterAvatarUrl, role: "STUDENT", affiliation: nil, affiliationBadge: nil)
+        let owner = KioskUser(id: requesterId, name: context.requesterName, avatarUrl: context.requesterAvatarUrl, role: "STUDENT", affiliation: nil, affiliationBadge: nil)
+        // Anyone may return someone else's gear; the owner is shown, not required.
         store.setIntent(KioskFlowIntent(
             action: .return,
             source: .activeCheckout,
             identifiedUser: nil,
-            expectedRequester: requester,
+            expectedRequester: nil,
             selectedEvent: nil,
             targetBooking: KioskIntentBooking(id: context.checkoutId, title: context.title, startsAt: nil, endsAt: context.endsAt),
             pendingScanValues: [],
             createdAt: Date(),
-            ambiguity: .none
+            ambiguity: .none,
+            custodyOwner: owner
         ))
         store.screen = .identity
     }

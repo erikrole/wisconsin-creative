@@ -4,7 +4,7 @@ import { HttpError, ok } from "@/lib/http";
 import { requirePermission, requireRole } from "@/lib/rbac";
 import { createAuditEntry } from "@/lib/audit";
 import { enforceRateLimit, SCHEDULE_MUTATION_LIMIT } from "@/lib/rate-limit";
-import { visibleActiveUserWhere } from "@/lib/user-visibility";
+import { loadTravelEvent, travelerUserWhere, travelMemberInclude } from "@/lib/services/event-travel";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 
@@ -28,9 +28,7 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
 
   const members = await db.eventTravelMember.findMany({
     where: { eventId: id },
-    include: {
-      user: { select: { id: true, name: true, role: true, primaryArea: true, avatarUrl: true } },
-    },
+    include: travelMemberInclude,
     orderBy: { createdAt: "asc" },
   });
 
@@ -42,11 +40,8 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
   await enforceRateLimit(`event-travel:${user.id}`, SCHEDULE_MUTATION_LIMIT);
   const { id } = params;
 
-  const event = await db.calendarEvent.findUnique({
-    where: { id },
-    select: { id: true, summary: true },
-  });
-  if (!event) throw new HttpError(404, "Event not found");
+  const event = await loadTravelEvent(id);
+  const sportCode = event.sportCode;
 
   let rawBody: unknown;
   try {
@@ -63,10 +58,14 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
   // and inactive identities stay out of travel rosters for the same reason
   // they stay out of staffing decisions.
   const traveler = await db.user.findFirst({
-    where: visibleActiveUserWhere({ id: body.userId }),
-    select: { id: true, name: true },
+    where: travelerUserWhere({ id: body.userId }),
+    select: { id: true, name: true, sportAssignments: { where: { sportCode }, select: { id: true } } },
   });
   if (!traveler) throw new HttpError(404, "That person is not an active user");
+  // Travelers come from the sport roster, matching the picker and auto-assign.
+  if (traveler.sportAssignments.length === 0) {
+    throw new HttpError(409, `Add ${traveler.name} to the ${sportCode} roster before adding them to travel`);
+  }
 
   let member;
   try {
@@ -76,15 +75,17 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
         userId: body.userId,
         notes: body.notes ?? null,
       },
-      include: {
-        user: { select: { id: true, name: true, role: true, primaryArea: true, avatarUrl: true } },
-      },
+      include: travelMemberInclude,
     });
   } catch (error) {
     // Let the @@unique([eventId, userId]) constraint decide, rather than
     // pre-reading for a duplicate and racing two staff adding the same person.
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       throw new HttpError(409, `${traveler.name} is already on the travel roster`);
+    }
+    // The event was deleted between the check above and this insert.
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
+      throw new HttpError(404, "Event not found");
     }
     throw error;
   }

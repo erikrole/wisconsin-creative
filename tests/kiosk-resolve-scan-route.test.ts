@@ -82,14 +82,37 @@ describe("POST /api/kiosk/resolve-scan", () => {
     });
   });
 
-  it("requires the expected requester for inferred return", async () => {
+  it("lets anyone identified return gear on someone else's personal checkout, naming the owner for display", async () => {
     mocks.findAsset.mockResolvedValue(asset);
     mocks.allocationFindFirst.mockResolvedValue({
       kind: "CHECKOUT",
-      booking: { ...reservation, kind: "CHECKOUT", status: "OPEN" },
+      booking: { ...reservation, kind: "CHECKOUT", status: "OPEN", custodyScope: "PERSON" },
+    });
+    const json = await (await request({ scanValue: "CAM-1", userId: "user-2" })).json();
+    expect(json).toMatchObject({ kind: "action", action: "return", booking: { id: "booking-1" }, custodyOwner: requester });
+    expect(json).not.toHaveProperty("expectedRequester");
+  });
+
+  it("does not lock identity to the owner before a personal return", async () => {
+    mocks.findAsset.mockResolvedValue(asset);
+    mocks.allocationFindFirst.mockResolvedValue({
+      kind: "CHECKOUT",
+      booking: { ...reservation, kind: "CHECKOUT", status: "OPEN", custodyScope: "PERSON" },
+    });
+    const json = await (await request({ scanValue: "CAM-1" })).json();
+    expect(json).toMatchObject({ kind: "pending_identity", disposition: "active_custody", custodyOwner: requester });
+    expect(json).not.toHaveProperty("expectedRequester");
+  });
+
+  it("still locks reservation pickup to its requester", async () => {
+    mocks.findAsset.mockResolvedValue(asset);
+    mocks.allocationFindFirst.mockResolvedValue({
+      kind: "RESERVATION",
+      booking: { ...reservation, custodyScope: "PERSON" },
     });
     const json = await (await request({ scanValue: "CAM-1", userId: "user-2" })).json();
     expect(json).toMatchObject({ kind: "blocked", code: "wrong_requester", expectedRequester: requester });
+    expect(json).not.toHaveProperty("custodyOwner");
   });
 
   it("lets any identified operator return a shared checkout without exposing a requester", async () => {
@@ -107,6 +130,7 @@ describe("POST /api/kiosk/resolve-scan", () => {
       booking: { id: "booking-1", custodyScope: "SHARED" },
     });
     expect(json).not.toHaveProperty("expectedRequester");
+    expect(json).not.toHaveProperty("custodyOwner");
   });
 
   it("routes pickup from another kiosk location", async () => {
@@ -160,8 +184,8 @@ describe("POST /api/kiosk/resolve-scan", () => {
     mocks.unitAllocationFindFirst.mockResolvedValue({
       bookingBulkItem: { booking: { ...reservation, kind: "CHECKOUT", status: "OPEN" } },
     });
-    const json = await (await request({ scanValue: "sony-31", userId: "user-1" })).json();
-    expect(json).toMatchObject({ kind: "action", action: "return", booking: { id: "booking-1" } });
+    const json = await (await request({ scanValue: "sony-31", userId: "user-2" })).json();
+    expect(json).toMatchObject({ kind: "action", action: "return", booking: { id: "booking-1" }, custodyOwner: requester });
   });
 
   it("is read-only and returns unknown without invoking mutation services", async () => {

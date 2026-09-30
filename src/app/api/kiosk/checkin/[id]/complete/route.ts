@@ -32,9 +32,11 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
   ]);
   if (!user) throw new HttpError(404, "User not found");
   if (!booking) throw new HttpError(404, "Checkout not found");
-  if (booking.custodyScope === BookingCustodyScope.PERSON && booking.requesterUserId !== actorId) {
-    throw new HttpError(403, "This return requires the checkout requester");
-  }
+  // Any identified person may finish a return. When it isn't the owner, the
+  // audit names both the returner (actor) and the owner they returned for.
+  const returnedForOwner = booking.custodyScope === BookingCustodyScope.PERSON && booking.requesterUserId !== actorId
+    ? booking.requesterUserId
+    : null;
 
   const result = await kioskCompleteCheckin({
     bookingId: params.id,
@@ -60,9 +62,10 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
       source: "KIOSK",
       kioskDeviceId: kiosk.kioskId,
       kioskName: kiosk.name,
+      ...(returnedForOwner ? { returnedForUserId: returnedForOwner } : {}),
     },
   });
-  const earnedBadges = booking.custodyScope === BookingCustodyScope.PERSON
+  const earnedBadges = booking.custodyScope === BookingCustodyScope.PERSON && !returnedForOwner
     ? await earnedBadgesSince(actorId, badgeWindowStart)
     : [];
 

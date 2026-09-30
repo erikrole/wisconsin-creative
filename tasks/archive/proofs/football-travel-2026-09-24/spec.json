@@ -1,0 +1,113 @@
+{
+  "title": "Football Travel: Returns & Travelers",
+  "eyebrow": "Kiosk + Web \u00b7 Wisconsin Creative \u00b7 slices 1\u20133",
+  "lede": "Gear swapped on the road comes back through whoever carried it, and staff can finally see and unset who travels by default.",
+  "stats": [
+    {
+      "k": "Who can return Imani's checkout (drawer)",
+      "v": "1 \u2192 22",
+      "n": "People selectable in the fixture roster, counted from the capture.",
+      "tone": "good"
+    },
+    {
+      "k": "Default travelers visible",
+      "v": "0 \u2192 3",
+      "n": "Filled plane toggles, Playwright locator count.",
+      "tone": "good"
+    },
+    {
+      "k": "Picker rows offered",
+      "v": "6 \u2192 5",
+      "n": "The inactive user is no longer offered.",
+      "tone": "good"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Kiosk: returning someone else's checkout",
+      "note": "iPad Air 11-inch (M4) simulator, identical GT_KIOSK_SCENARIO fixtures in both builds. Each side's fixture intent mirrors that build's KioskIdleView.startReturn. Portrait simulator letterbox cropped identically (1640\u00d71140).",
+      "pairs": [
+        {
+          "title": "Identity after tapping Imani's checkout in the drawer",
+          "sub": "Erik is at the counter with Imani's camera after an on-site swap.",
+          "before": "before/kiosk-identity.png",
+          "beforeCap": "Only Imani can be chosen. Erik is stuck until Imani shows up.",
+          "after": "after/kiosk-identity.png",
+          "afterCap": "Full roster, with the owner named: \"Anyone can return it.\"",
+          "beforeEvidence": "before/kiosk-identity.capture.json",
+          "afterEvidence": "after/kiosk-identity.capture.json"
+        }
+      ]
+    },
+    {
+      "heading": "Web: event Travel card default-traveler picker",
+      "note": "The same EventTravelCard code on both sides, rendered in a temporary harness. The stubbed roster response is what each server revision's getSportRoster returns for the same 7 stored FB rows. This is fixture evidence of the payload contract, not an authenticated session.",
+      "pairs": [
+        {
+          "title": "Add traveler popover, Penn State",
+          "sub": "Ben, Casey, Jacob and Kelsey are stored default travelers. Jacob is already on the trip. Drew graduated (inactive).",
+          "before": "before/travel-picker.png",
+          "beforeCap": "No plane is filled, defaults aren't sorted first, and the inactive user is offered but would fail on add. Every toggle sends true.",
+          "after": "after/travel-picker.png",
+          "afterCap": "Defaults are filled and sorted first, and can be unset. Inactive people are gone.",
+          "beforeEvidence": "before/travel-picker.capture.json",
+          "afterEvidence": "after/travel-picker.capture.json"
+        }
+      ]
+    },
+    {
+      "heading": "Web: Add defaults on the Travel card",
+      "note": "Before is served from an isolated HEAD worktree and after from the working tree. Both use the same temporary harness and stubbed empty trip, captured with an identical clip.",
+      "pairs": [
+        {
+          "title": "Empty away-game trip, staff view",
+          "sub": "Penn State before anyone is added.",
+          "before": "before/travel-card-empty.png",
+          "beforeCap": "Only Add: staff pick all six travelers one at a time.",
+          "after": "after/travel-card-empty.png",
+          "afterCap": "Add defaults brings in the regulars in one press. Add covers the rotating seats.",
+          "beforeEvidence": "before/travel-card-empty.capture.json",
+          "afterEvidence": "after/travel-card-empty.capture.json"
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Returns were locked to the owner",
+      "was": "resolve-scan blocked with wrong_requester, the drawer path pinned identity to the owner, and completion returned 403.",
+      "now": "Any identified person can return. The owner is shown as custodyOwner (display only). Scans and completion record the real returner, the audit adds returnedForUserId, and the owner's badges stay off the returner's screen. Pickup is still locked to the requester."
+    },
+    {
+      "h": "Return header didn't say whose gear it was",
+      "was": "Only the checkout title.",
+      "now": "\"Volleyball vs Minnesota \u00b7 Returning for Imani Brooks\" when the returner isn't the owner. See after/kiosk-return-header.png (after-only: this screen was unreachable before)."
+    },
+    {
+      "h": "Plane toggle could never unset",
+      "was": "The roster read dropped defaultTraveler, so the card saw undefined and always sent true.",
+      "now": "The roster read returns defaultTraveler and only active, visible people."
+    },
+    {
+      "h": "Travel add trusted the client",
+      "was": "Any existing event, any active user (collaborators included), no roster check. A concurrent remove caused a 500, and the audit invented its before value.",
+      "now": "Away game with a sport only, not cancelled or combined. Sport-roster members only, no collaborators. P2003 returns 404. A scoped deleteMany makes a concurrent remove quiet. The audit reads the stored before value."
+    },
+    {
+      "h": "Six one-at-a-time adds per trip",
+      "was": "Every away game started empty, even though 4 of 6 travelers are the same every week.",
+      "now": "POST /travel/defaults adds every active default traveler, skips anyone already on the trip, and audits once. after/travel-card-defaults-added.png shows the card after the press (stubbed response)."
+    }
+  ],
+  "verification": [
+    "Full vitest: 691 files, 4867 passed (1 skipped), including a new defaults-route suite (5 tests) and a card source-contract test.",
+    "npx tsc --noEmit, eslint on changed files, npm run build:app, npm run verify:docs, git diff --check: all pass.",
+    "xcodebuild: Wisconsin on the iPhone 18 Pro Max simulator and WisconsinKiosk on the iPad Air 11-inch (M4) simulator, both BUILD SUCCEEDED. Kiosk is iPad-only, so the AGENTS.md iPhone destination can't build it.",
+    "The baseline is an isolated worktree at 5a29ab69 plus identical fixture scenarios. The active checkout was not touched."
+  ],
+  "notes": [
+    "Not proven: a real kiosk return of someone else's checkout on the managed iPad, authenticated web interaction against a real database, and deployment.",
+    "The return-header capture is after-only. Before this change the flow was blocked before reaching this screen, so there's no honest baseline frame.",
+    "Older kiosk builds already work with the server change for scan-started returns. The drawer path and the new copy need the TestFlight build."
+  ]
+}
