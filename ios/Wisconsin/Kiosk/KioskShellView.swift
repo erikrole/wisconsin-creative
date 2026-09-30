@@ -60,13 +60,14 @@ struct KioskShellView: View {
 
     /// Scan screens (checkout, pickup, return) state scanner readiness in their
     /// own work surface. The global pill there said it a second time and sat on
-    /// top of the right rail's title, so it only appears where it is the sole
-    /// signal: idle, identity, and the operator hub.
+    /// top of the right rail's title. Identity and the operator hub put time and
+    /// Back top-right (redesign), where the pill covered them, so it only
+    /// appears on home.
     private var showsScannerStatusPill: Bool {
         switch store.screen {
-        case .idle, .identity, .operatorHub:
+        case .idle:
             return true
-        case .activation, .checkout, .pickup, .return, .success:
+        case .identity, .operatorHub, .activation, .checkout, .pickup, .return, .success:
             return false
         }
     }
