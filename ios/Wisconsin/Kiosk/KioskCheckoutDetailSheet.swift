@@ -347,7 +347,7 @@ struct KioskCheckoutDetailSheet: View {
                         // batteries share one tile with their unit chips.
                         let grouped = items.filter { $0.isNumberedBulk && $0.bulkSkuId != nil }
                         let singles = items.filter { item in !grouped.contains { $0.id == item.id } }
-                        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 8)], alignment: .leading, spacing: 8) {
                             ForEach(singles) { item in itemTile(item) }
                             ForEach(batteryGroups(grouped), id: \.id) { group in batteryTile(group.items) }
                         }
@@ -683,53 +683,46 @@ struct KioskCheckoutDetailSheet: View {
         return order.map { ($0, (byKind[$0] ?? []).sorted { ($0.unitNumber ?? 0) < ($1.unitNumber ?? 0) }) }
     }
 
+    /// Compact chip: small photo + asset tag. The sheet is a quick overview.
     private func itemTile(_ item: KioskCheckoutDetail.ReturnItem) -> some View {
-        tileShell {
-            itemThumbnail(item, size: 64)
+        chipShell {
+            itemThumbnail(item, size: 28)
             Text(item.isNumberedBulk ? (item.itemListSecondaryTitle ?? item.itemListPrimaryTitle) : item.itemListPrimaryTitle)
-                .font(.system(size: 16, weight: .bold))
+                .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(item.returned ? KioskText.tertiary : KioskText.primary)
+                .strikethrough(item.returned)
                 .lineLimit(1)
-                .minimumScaleFactor(0.85)
-            if item.returned {
-                Text("Returned").font(KioskType.chipStrong).foregroundStyle(Color.statusText(.green))
-            }
         }
         .accessibilityLabel(item.itemListSecondaryTitle ?? item.name)
     }
 
+    /// One chip per battery kind: "Sony Battery #7 #20".
     private func batteryTile(_ units: [KioskCheckoutDetail.ReturnItem]) -> some View {
         let first = units[0]
         let name = first.bulkSkuName ?? first.name
-        return tileShell {
-            itemThumbnail(first, size: 64)
+        let numbers = units.map { $0.unitNumber.map { "#\($0)" } ?? $0.tagName }.joined(separator: " ")
+        return chipShell {
+            itemThumbnail(first, size: 28)
             Text(name)
-                .font(.system(size: 16, weight: .bold))
+                .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(KioskText.primary)
                 .lineLimit(1)
-                .minimumScaleFactor(0.85)
-            HStack(spacing: 4) {
-                ForEach(units) { unit in
-                    Text(unit.unitNumber.map { "#\($0)" } ?? unit.tagName)
-                        .font(.system(size: 14, weight: .bold).monospacedDigit())
-                        .foregroundStyle(unit.returned ? KioskText.tertiary : KioskText.primary)
-                        .strikethrough(unit.returned)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 2)
-                        .background(KioskSurface.cardRaised, in: Capsule())
-                }
-            }
-            .lineLimit(1)
+            Text(numbers)
+                .font(.system(size: 15, weight: .bold).monospacedDigit())
+                .foregroundStyle(KioskText.secondary)
+                .lineLimit(1)
         }
         .accessibilityLabel("\(name), units \(units.compactMap { $0.unitNumber.map(String.init) }.joined(separator: ", "))")
     }
 
-    private func tileShell<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
-        VStack(spacing: 8) { content() }
-            .frame(maxWidth: .infinity, minHeight: 132)
-            .padding(10)
-            .background(KioskSurface.card, in: RoundedRectangle(cornerRadius: KioskRadius.md))
-            .overlay(RoundedRectangle(cornerRadius: KioskRadius.md).stroke(KioskStroke.hairline, lineWidth: 1))
+    private func chipShell<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        HStack(spacing: 8) { content() }
+            .padding(.leading, 5)
+            .padding(.trailing, 12)
+            .padding(.vertical, 5)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(KioskSurface.card, in: RoundedRectangle(cornerRadius: KioskRadius.sm))
+            .overlay(RoundedRectangle(cornerRadius: KioskRadius.sm).stroke(KioskStroke.hairline, lineWidth: 1))
             .accessibilityElement(children: .ignore)
     }
 

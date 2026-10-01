@@ -161,7 +161,7 @@ struct KioskIdleView: View {
             }, onScan: { store.scanner.receive($0) }) {
                 Task { await loadAll() }
             }
-                .presentationSizing(.page)
+                .presentationSizing(.form)
                 .presentationDragIndicator(.visible)
         }
     }
