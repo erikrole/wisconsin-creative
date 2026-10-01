@@ -190,6 +190,7 @@ describe("kiosk checkout detail bulk units", () => {
         type: "numbered_bulk",
         bulkSkuId: "sku-1",
         bulkSkuName: "Sony Battery",
+        category: "Batteries",
         unitNumber: null,
       },
       {
@@ -200,6 +201,7 @@ describe("kiosk checkout detail bulk units", () => {
         type: "numbered_bulk",
         bulkSkuId: "sku-1",
         bulkSkuName: "Sony Battery",
+        category: "Batteries",
         unitNumber: null,
       },
     ]);
@@ -388,6 +390,7 @@ describe("kiosk checkout detail bulk units", () => {
       type: "bulk_quantity",
       bulkSkuId: "sku-tape",
       bulkSkuName: "Gaffer Tape",
+      category: "Supplies",
       unitNumber: null,
     }]);
   });
@@ -438,6 +441,7 @@ describe("kiosk checkout detail bulk units", () => {
         type: "numbered_bulk",
         bulkSkuId: "sku-1",
         bulkSkuName: "Sony Battery",
+        category: "Batteries",
         unitNumber: 7,
       },
       {
@@ -448,6 +452,7 @@ describe("kiosk checkout detail bulk units", () => {
         type: "numbered_bulk",
         bulkSkuId: "sku-1",
         bulkSkuName: "Sony Battery",
+        category: "Batteries",
         unitNumber: 11,
       },
     ]);
@@ -497,6 +502,7 @@ describe("kiosk checkout detail bulk units", () => {
         type: "bulk_quantity",
         bulkSkuId: "sku-sony",
         bulkSkuName: "Sony Battery",
+        category: "Batteries",
         unitNumber: null,
       },
     ]);
@@ -547,6 +553,7 @@ describe("kiosk checkout detail bulk units", () => {
         type: "numbered_bulk",
         bulkSkuId: "sku-1",
         bulkSkuName: "Sony Battery",
+        category: "Batteries",
         unitNumber: 7,
       },
       {
@@ -557,6 +564,7 @@ describe("kiosk checkout detail bulk units", () => {
         type: "numbered_bulk",
         bulkSkuId: "sku-1",
         bulkSkuName: "Sony Battery",
+        category: "Batteries",
         unitNumber: null,
       },
     ]);

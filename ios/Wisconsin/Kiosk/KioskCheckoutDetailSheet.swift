@@ -347,9 +347,31 @@ struct KioskCheckoutDetailSheet: View {
                         // batteries share one tile with their unit chips.
                         let grouped = items.filter { $0.isNumberedBulk && $0.bulkSkuId != nil }
                         let singles = items.filter { item in !grouped.contains { $0.id == item.id } }
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 8)], alignment: .leading, spacing: 8) {
-                            ForEach(singles) { item in itemTile(item) }
-                            ForEach(batteryGroups(grouped), id: \.id) { group in batteryTile(group.items) }
+                        // Grouped by kind (Cameras, Lenses, …); batteries last.
+                        VStack(alignment: .leading, spacing: 12) {
+                            ForEach(categoryGroups(singles), id: \.name) { group in
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text(group.name.uppercased())
+                                        .font(KioskType.overline)
+                                        .tracking(KioskType.overlineTracking)
+                                        .foregroundStyle(KioskText.tertiary)
+                                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 8)], alignment: .leading, spacing: 8) {
+                                        ForEach(group.items) { item in itemTile(item) }
+                                    }
+                                }
+                            }
+                            let batteries = batteryGroups(grouped)
+                            if !batteries.isEmpty {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text("BATTERIES")
+                                        .font(KioskType.overline)
+                                        .tracking(KioskType.overlineTracking)
+                                        .foregroundStyle(KioskText.tertiary)
+                                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 8)], alignment: .leading, spacing: 8) {
+                                        ForEach(batteries, id: \.id) { group in batteryTile(group.items) }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -670,6 +692,18 @@ struct KioskCheckoutDetailSheet: View {
             RoundedRectangle(cornerRadius: KioskRadius.md)
                 .stroke(KioskStroke.hairline, lineWidth: 1)
         )
+    }
+
+    /// Items by category name in first-seen order; no category -> "Other".
+    private func categoryGroups(_ items: [KioskCheckoutDetail.ReturnItem]) -> [(name: String, items: [KioskCheckoutDetail.ReturnItem])] {
+        var order: [String] = []
+        var byName: [String: [KioskCheckoutDetail.ReturnItem]] = [:]
+        for item in items {
+            let name = item.category?.trimmingCharacters(in: .whitespaces).nonBlankText ?? (item.isBulkDisplay ? "Supplies" : "Gear")
+            if byName[name] == nil { order.append(name) }
+            byName[name, default: []].append(item)
+        }
+        return order.map { ($0, byName[$0] ?? []) }
     }
 
     private func batteryGroups(_ items: [KioskCheckoutDetail.ReturnItem]) -> [(id: String, items: [KioskCheckoutDetail.ReturnItem])] {

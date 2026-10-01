@@ -37,6 +37,7 @@ type KioskBulkDetailItem = {
   bulkSkuName: string;
   unitNumber: number | null;
   imageUrl: string | null;
+  category?: string | null;
   quantity?: number;
   reservationItemId?: string;
   /** Counted (not unit-numbered) stock: returned with a quantity, not scans. */
@@ -82,6 +83,7 @@ export const GET = withKiosk<{ id: string }>(async (_req, { params }) => {
               assetTag: true,
               name: true,
               imageUrl: true,
+              category: { select: { name: true } },
             },
           },
         },
@@ -202,6 +204,7 @@ export const GET = withKiosk<{ id: string }>(async (_req, { params }) => {
       : si.allocationStatus === "returned",
     type: "serialized" as const,
     imageUrl: si.asset.imageUrl,
+    ...(si.asset.category?.name ? { category: si.asset.category.name } : {}),
   }));
 
   const numberedBulkItems = booking.bulkItems.filter((bi) => bi.bulkSku.trackByNumber);
@@ -238,6 +241,7 @@ export const GET = withKiosk<{ id: string }>(async (_req, { params }) => {
             bulkSkuName: bi.bulkSku.name,
             unitNumber: null,
             imageUrl: bi.bulkSku.imageUrl,
+            category: bi.bulkSku.category,
             ...(booking.kind === "RESERVATION" ? { reservationItemId: bi.id } : {}),
           }];
         }
@@ -266,6 +270,7 @@ export const GET = withKiosk<{ id: string }>(async (_req, { params }) => {
               bulkSkuName: bi.bulkSku.name,
               unitNumber,
               imageUrl: bi.bulkSku.imageUrl,
+              category: bi.bulkSku.category,
               ...(booking.kind === "RESERVATION" ? { reservationItemId: bi.id } : {}),
             };
           }
@@ -280,6 +285,7 @@ export const GET = withKiosk<{ id: string }>(async (_req, { params }) => {
             bulkSkuName: bi.bulkSku.name,
             unitNumber: null,
             imageUrl: bi.bulkSku.imageUrl,
+            category: bi.bulkSku.category,
             ...(booking.kind === "RESERVATION" ? { reservationItemId: bi.id } : {}),
           };
         });
@@ -295,6 +301,7 @@ export const GET = withKiosk<{ id: string }>(async (_req, { params }) => {
           bulkSkuName: bi.bulkSku.name,
           unitNumber: allocation.bulkSkuUnit.unitNumber,
           imageUrl: bi.bulkSku.imageUrl,
+          category: bi.bulkSku.category,
         }));
         const missingQuantity = Math.max(0, activeBulkQuantity(bi) - bi.unitAllocations.filter((allocation) => !allocation.checkedInAt).length);
         if (missingQuantity <= 0) return activeAllocations;
@@ -311,6 +318,7 @@ export const GET = withKiosk<{ id: string }>(async (_req, { params }) => {
             bulkSkuName: bi.bulkSku.name,
             unitNumber: null,
             imageUrl: bi.bulkSku.imageUrl,
+            category: bi.bulkSku.category,
             ...(bi.bulkSku.trackByNumber ? {} : { returnsByQuantity: true }),
           },
         ];

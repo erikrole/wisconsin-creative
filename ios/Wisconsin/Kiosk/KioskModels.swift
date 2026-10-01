@@ -868,6 +868,8 @@ struct KioskCheckoutDetail: Decodable {
         let unitNumber: Int?
         let imageUrl: String?
         let quantity: Int?
+        /// Additive: category name ("Cameras", "Lenses"); older servers omit it.
+        var category: String? = nil
         let reservationItemId: String?
         /// Counted stock (cables, tape) has no per-unit QR, so it is returned
         /// by quantity. Absent from older servers.

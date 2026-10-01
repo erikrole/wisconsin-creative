@@ -67,7 +67,7 @@ describe("kiosk active checkout edits", () => {
     expect(drawer).not.toContain("addScanValue");
     expect(drawer).not.toContain('Button(isMutating ? "Adding..." : "Add")');
 
-    expect(drawer).toContain("ForEach(detail?.items ?? [])");
+    expect(drawer).toContain("ForEach(items) { item in itemRow(item) }");
     // Removal is a compact destructive trash control, not a full "Remove" pill:
     // six labelled red buttons made the manifest read as a row of destructive
     // actions. The confirmation dialog below still names the item, so the
