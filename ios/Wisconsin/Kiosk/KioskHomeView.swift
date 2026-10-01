@@ -176,12 +176,14 @@ struct KioskHomeView: View {
     @ViewBuilder
     private var custodyPanel: some View {
         let groups = eventGroups
-        let sections = sections(excluding: Set(groups.flatMap { $0.checkouts.map(\.id) }))
-        let groupedPickupIds = Set(groups.flatMap { $0.pickups.map(\.id) })
-        let pickups = pickups.filter { !groupedPickupIds.contains($0.id) }
+        // One card per kind (Erik, 2026-10-01): every pickup in one card and
+        // every checkout in its status card, whatever event it belongs to.
+        // Events get a single card of one-line summaries.
+        let sections = sections
+        let pickups = pickups.sorted { $0.readyAt < $1.readyAt }
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                ForEach(groups) { group in eventCard(group) }
+                if !groups.isEmpty { eventsSummaryCard(groups) }
                 if isLoaded && groups.isEmpty && sections.isEmpty && pickups.isEmpty && !upcoming.isEmpty {
                     Text("Everything is in.")
                         .font(.system(size: 17, weight: .bold))
@@ -233,39 +235,36 @@ struct KioskHomeView: View {
         .scrollIndicators(.hidden)
     }
 
-    private func eventCard(_ group: EventGroup) -> some View {
-        let time = group.event.displayAllDay ? "All day" : group.event.startsAt.formatted(.dateTime.hour().minute())
-        var counts: [String] = []
-        if !group.crew.isEmpty { counts.append("\(group.crew.count) without gear") }
-        return VStack(alignment: .leading, spacing: 6) {
-            // Event names run long ("… 2026 Championship Banner Drop"): one
-            // sentence-case line that truncates, with time and counts on the right.
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
-                Text(group.event.title)
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(KioskText.primary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                Spacer(minLength: 8)
-                Text(([time] + counts).joined(separator: " · "))
-                    .font(KioskType.meta)
-                    .foregroundStyle(KioskText.tertiary)
-                    .lineLimit(1)
-                    .fixedSize()
-            }
-            .padding(.horizontal, 4)
-            if !group.pickups.isEmpty || !group.checkouts.isEmpty {
+    private func eventsSummaryCard(_ groups: [EventGroup]) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            KioskSectionHeader(title: "Events today", count: "\(groups.count)")
             VStack(spacing: 0) {
-                ForEach(group.pickups) { pickup in
-                    HomePickupRow(pickup: pickup) { selectPickupHolder(pickup) }
-                }
-                ForEach(group.checkouts) { checkout in
-                    HomeCustodyRow(checkout: checkout) { onOpenCheckout(checkout) }
+                ForEach(groups) { group in
+                    HStack(alignment: .firstTextBaseline, spacing: 12) {
+                        Text(group.event.title)
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(KioskText.primary)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                        Spacer(minLength: 8)
+                        Text(group.event.displayAllDay ? "All day" : group.event.startsAt.formatted(.dateTime.hour().minute()))
+                            .font(KioskType.meta)
+                            .foregroundStyle(KioskText.secondary)
+                            .fixedSize()
+                        if !group.crew.isEmpty {
+                            Text("\(group.crew.count) without gear")
+                                .font(KioskType.meta.weight(.semibold))
+                                .foregroundStyle(KioskStatus.attention)
+                                .fixedSize()
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+                    .accessibilityElement(children: .combine)
                 }
             }
             .padding(.vertical, 6)
             .kioskCard()
-            }
         }
     }
 
