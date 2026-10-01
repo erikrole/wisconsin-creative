@@ -32,6 +32,8 @@ struct KioskHomeView: View {
     let onOpenCheckout: (KioskActiveCheckout) -> Void
     var onNudge: ((KioskActiveCheckout) -> Void)?
     var onOpenEvent: ((KioskEvent) -> Void)?
+    /// Opens the pickup scan for that reservation directly (Erik, 2026-10-01).
+    var onStartPickup: ((KioskUser, KioskDashboard.HomePickup) -> Void)?
     let onSelectUser: (KioskUser) -> Void
     let onRevealStatus: () -> Void
 
@@ -279,7 +281,7 @@ struct KioskHomeView: View {
 
     private func selectPickupHolder(_ pickup: KioskDashboard.HomePickup) {
         if let id = pickup.requester?.id, let user = users.first(where: { $0.id == id }) {
-            onSelectUser(user)
+            if let onStartPickup { onStartPickup(user, pickup) } else { onSelectUser(user) }
         }
     }
 

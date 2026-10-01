@@ -51,6 +51,17 @@ struct KioskIdleView: View {
                     onOpenCheckout: { openCheckout($0) },
                     onNudge: { nudge($0) },
                     onOpenEvent: { selectedEvent = $0 },
+                    onStartPickup: { user, pickup in
+                        identityRequests.invalidate()
+                        store.deferSleepMode(for: sleepWakeDuration)
+                        store.setIntent(KioskFlowIntent(
+                            action: .pickup, source: .reservation, identifiedUser: user, expectedRequester: user,
+                            selectedEvent: nil,
+                            targetBooking: KioskIntentBooking(id: pickup.bookingId, title: pickup.title, startsAt: pickup.readyAt, endsAt: nil),
+                            pendingScanValues: [], createdAt: Date(), ambiguity: .none
+                        ))
+                        store.screen = .pickup(bookingId: pickup.bookingId, userId: user.id)
+                    },
                     onSelectUser: { user in
                         identityRequests.invalidate()
                         store.deferSleepMode(for: sleepWakeDuration)
