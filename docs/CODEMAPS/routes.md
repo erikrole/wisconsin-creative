@@ -276,6 +276,7 @@
 - `/api/kiosk/reservation/[id]/items` -> `src/app/api/kiosk/reservation/[id]/items/route.ts`
 - `/api/kiosk/resolve-scan` -> `src/app/api/kiosk/resolve-scan/route.ts`
 - `/api/kiosk/scan-lookup` -> `src/app/api/kiosk/scan-lookup/route.ts`
+- `/api/kiosk/staff/verify` -> `src/app/api/kiosk/staff/verify/route.ts`
 - `/api/kiosk/student/[userId]` -> `src/app/api/kiosk/student/[userId]/route.ts`
 - `/api/kiosk/users` -> `src/app/api/kiosk/users/route.ts`
 - `/api/kits/[id]/bulk-members` -> `src/app/api/kits/[id]/bulk-members/route.ts`

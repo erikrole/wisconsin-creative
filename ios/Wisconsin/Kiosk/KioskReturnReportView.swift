@@ -20,6 +20,8 @@ struct KioskReturnReportView: View {
     @Environment(KioskStore.self) private var store
     let bookingId: String
     let actorId: String
+    /// C5: the staff card proof, when Staff actions opened this report.
+    var staffToken: String? = nil
     let checkoutTitle: String?
     let ownerSubtitle: String
     let avatarURL: String?
@@ -319,7 +321,8 @@ struct KioskReturnReportView: View {
                     assetId: item.id,
                     type: type,
                     description: trimmed.isEmpty ? nil : trimmed,
-                    photoJPEG: jpeg
+                    photoJPEG: jpeg,
+                    staffToken: staffToken
                 )
                 guard store.ownsFlow(flow) else { return }
                 Haptics.success()

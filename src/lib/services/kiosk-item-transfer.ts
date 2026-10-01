@@ -10,6 +10,7 @@ import { formatAppDateTime } from "@/lib/app-time";
 import { displayBookingTitle } from "@/lib/booking-display-title";
 import { deferPush, sendPushToUser } from "@/lib/services/notifications";
 import { canManageAnyCheckout } from "@/lib/services/kiosk-actor";
+import { verifyKioskStaffToken } from "@/lib/kiosk-staff-token";
 import { claimKioskOperationReceiptTx, finishKioskOperationReceiptTx, type KioskOperationContext } from "./kiosk-operation-receipts";
 
 export async function transferKioskItems(args: {
@@ -17,6 +18,8 @@ export async function transferKioskItems(args: {
   targetBookingId?: string; targetUserId?: string; assetIds: string[];
   bulkUnitIds: string[]; reason?: string; kioskId: string;
   receipt?: KioskOperationContext;
+  /** C5: staff moving someone else's gear must send their staff card proof. */
+  staffToken?: string | null;
 }) {
   const { response, handover } = await withSerializationRetry(() => db.$transaction(async (tx) => {
     const actor = await tx.user.findFirst({ where: { id: args.actorId, ...kioskRosterUserWhere() }, select: { id: true, role: true } });
@@ -36,6 +39,7 @@ export async function transferKioskItems(args: {
     const isStaff = canManageAnyCheckout(actor.role);
     if (isStaff) {
       requirePermission(actor.role, "checkout", "manage_custody");
+      if (!isOwner) verifyKioskStaffToken(args.staffToken, { actorId: actor.id, kioskId: args.kioskId });
     } else if (!isOwner || args.targetBookingId) {
       throw new HttpError(403, "Only the person who checked this out, or staff, can hand it to someone else.", { code: "transfer_not_allowed" });
     }
@@ -100,7 +104,7 @@ export async function transferKioskItems(args: {
     const updatedAt = new Date(Math.max(Date.now(), source.updatedAt.getTime() + 1, receiving.updatedAt.getTime() + 1));
     await tx.booking.update({ where: { id: source.id }, data: { updatedAt, ...(sourceClosed ? { status: "CANCELLED" } : {}) } });
     await tx.booking.update({ where: { id: receiving.id }, data: { updatedAt } });
-    const evidence = { sourceBookingId: source.id, targetBookingId: receiving.id, assetIds: args.assetIds, bulkUnitIds: args.bulkUnitIds, reason, kioskId: args.kioskId, originalEvidenceBookingId: source.id, sourceClosed };
+    const evidence = { sourceBookingId: source.id, targetBookingId: receiving.id, assetIds: args.assetIds, bulkUnitIds: args.bulkUnitIds, reason, kioskId: args.kioskId, originalEvidenceBookingId: source.id, sourceClosed, staffCardVerified: isStaff && !isOwner };
     const auditEntries: Array<[string, string]> = [
       [source.id, "kiosk_items_transferred_out"],
       [receiving.id, "kiosk_items_transferred_in"],

@@ -22,7 +22,7 @@ describe("iOS kiosk changes (H1, H2, H4, H5) and staff actions (C5)", () => {
     }
     expect(changes).toContain("Can go until");
     // The PATCH stays the final word on the chosen time.
-    expect(changes).toContain("kioskUpdateActiveCheckout(id: checkoutId, actorId: actorId, title: nil, endsAt: chosen)");
+    expect(changes).toContain("kioskUpdateActiveCheckout(id: checkoutId, actorId: actorId, title: nil, endsAt: chosen, staffToken: staffToken)");
   });
 
   it("H2 transfers immediately with the route's body and no accept step", () => {
@@ -63,9 +63,13 @@ describe("iOS kiosk changes (H1, H2, H4, H5) and staff actions (C5)", () => {
     expect(changes).toContain("didn't go through");
   });
 
-  it("C5 shows staff actions only to staff, without a kiosk admin override", () => {
+  it("C5 opens staff actions only after a staff ID card scan, without a kiosk admin override", () => {
     expect(changes).toContain('role == "ADMIN" || role == "STAFF"');
-    expect(changes).toContain("roster.filter(\\.canManageAnyCheckout)");
+    expect(changes).toContain('Text("Scan your staff ID card")');
+    expect(changes).toContain("KioskAPI.shared.kioskVerifyStaff(scanValue:");
+    expect(changes).not.toContain('Text("Staff: tap your name")');
+    expect(changes).not.toMatch(/Wiscard/);
+    expect(changes.match(/staffToken: staffToken/g)?.length ?? 0).toBeGreaterThanOrEqual(5);
     expect(sheet).toContain('Button("Staff actions")');
     expect(changes).not.toContain("Mark returned without scanning");
     expect(changes).toContain("KioskReturnReportView(");

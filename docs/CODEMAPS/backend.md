@@ -55,7 +55,7 @@
 | `src/lib/services/kiosk-checkout-complete.ts` | 90 |
 | `src/lib/services/kiosk-dashboard-home.ts` | 229 |
 | `src/lib/services/kiosk-extend-window.ts` | 132 |
-| `src/lib/services/kiosk-item-transfer.ts` | 192 |
+| `src/lib/services/kiosk-item-transfer.ts` | 196 |
 | `src/lib/services/kiosk-location.ts` | 72 |
 | `src/lib/services/kiosk-nudge.ts` | 118 |
 | `src/lib/services/kiosk-operation-receipts.ts` | 128 |
@@ -190,6 +190,7 @@
 | `src/lib/item-family-state.ts` | 75 |
 | `src/lib/item-image-draft.ts` | 88 |
 | `src/lib/kiosk-activation.ts` | 8 |
+| `src/lib/kiosk-staff-token.ts` | 65 |
 | `src/lib/license-dates.ts` | 56 |
 | `src/lib/live-activity-workflow.ts` | 34 |
 | `src/lib/local-traces.ts` | 28 |
@@ -555,6 +556,7 @@
 - `/api/kiosk/reservation/[id]/items`
 - `/api/kiosk/resolve-scan`
 - `/api/kiosk/scan-lookup`
+- `/api/kiosk/staff/verify`
 - `/api/kiosk/student/[userId]`
 - `/api/kiosk/users`
 

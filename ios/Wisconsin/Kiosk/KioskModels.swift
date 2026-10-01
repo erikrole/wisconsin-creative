@@ -536,6 +536,17 @@ struct KioskIdentifyResult: Decodable {
     let data: KioskUser?
 }
 
+/// `POST /api/kiosk/staff/verify`. A refusal is `success: false` with a sentence.
+struct KioskStaffVerifyResult: Decodable {
+    struct Proof: Decodable {
+        let user: KioskUser
+        let staffToken: String
+    }
+    let success: Bool
+    let error: String?
+    let data: Proof?
+}
+
 struct KioskResolveScanResult: Decodable {
     let kind: String
     let action: KioskFlowAction?

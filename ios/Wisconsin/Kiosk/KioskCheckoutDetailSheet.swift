@@ -86,6 +86,7 @@ struct KioskCheckoutDetailSheet: View {
             && pendingBlock == nil
             && !showCamera
             && swapItem == nil
+            && !showStaffFlow
     }
 
     private var actorId: String? {

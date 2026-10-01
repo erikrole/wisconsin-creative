@@ -175,6 +175,20 @@ struct KioskAPI {
         return try await perform(req)
     }
 
+    /// C5: a staff ID card scan. On success the token proves this staff
+    /// person for ten minutes on this kiosk; it lives only in the open sheet.
+    func kioskVerifyStaff(scanValue: String) async throws -> KioskStaffVerifyResult {
+        struct Body: Encodable { let scanValue: String }
+        var req = request(path: "/api/kiosk/staff/verify", method: "POST")
+        req.httpBody = try JSONEncoder().encode(Body(scanValue: scanValue))
+        return try await perform(req)
+    }
+
+    static func attachStaffToken(_ token: String?, to request: inout URLRequest) {
+        guard let token, !token.isEmpty else { return }
+        request.setValue(token, forHTTPHeaderField: "X-Kiosk-Staff-Token")
+    }
+
     func kioskResolveScan(scanValue: String, userId: String? = nil) async throws -> KioskResolveScanResult {
         struct Body: Encodable { let scanValue: String; let userId: String? }
         var req = request(path: "/api/kiosk/resolve-scan", method: "POST")
@@ -353,13 +367,14 @@ struct KioskAPI {
         return try await perform(req)
     }
 
-    func kioskUpdateActiveCheckout(id: String, actorId: String, title: String?, endsAt: Date?) async throws -> KioskActiveCheckoutMutationResult {
+    func kioskUpdateActiveCheckout(id: String, actorId: String, title: String?, endsAt: Date?, staffToken: String? = nil) async throws -> KioskActiveCheckoutMutationResult {
         struct Body: Encodable {
             let actorId: String
             let title: String?
             let endsAt: String?
         }
         var req = request(path: "/api/kiosk/checkout/\(id)", method: "PATCH")
+        Self.attachStaffToken(staffToken, to: &req)
         req.httpBody = try JSONEncoder().encode(Body(
             actorId: actorId,
             title: title,
@@ -426,7 +441,8 @@ struct KioskAPI {
         targetUserId: String,
         assetIds: [String],
         bulkUnitIds: [String],
-        reason: String?
+        reason: String?,
+        staffToken: String? = nil
     ) async throws -> KioskTransferResult {
         struct Body: Encodable {
             let actorId: String
@@ -438,6 +454,7 @@ struct KioskAPI {
             let reason: String?
         }
         var req = request(path: "/api/kiosk/checkout/\(id)/transfer", method: "POST")
+        Self.attachStaffToken(staffToken, to: &req)
         req.httpBody = try JSONEncoder().encode(Body(
             actorId: actorId,
             requestId: requestId,
@@ -607,10 +624,12 @@ struct KioskAPI {
         assetId: String,
         type: String,
         description: String?,
-        photoJPEG: Data?
+        photoJPEG: Data?,
+        staffToken: String? = nil
     ) async throws -> KioskCheckinReportResult {
         let boundary = "KioskReport-\(UUID().uuidString)"
         var req = request(path: "/api/kiosk/checkin/\(bookingId)/report", method: "POST")
+        Self.attachStaffToken(staffToken, to: &req)
         req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
         req.httpBody = Self.multipartBody(
             boundary: boundary,

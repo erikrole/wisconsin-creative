@@ -31,6 +31,8 @@ struct KioskExtendScreen: View {
     let title: String
     let detailLine: String
     let actorId: String
+    /// C5: the staff card proof when staff change someone else's due back.
+    var staffToken: String? = nil
     let onCancel: () -> Void
     let onExtended: () -> Void
 
@@ -184,7 +186,7 @@ struct KioskExtendScreen: View {
         saveError = nil
         defer { isSaving = false }
         do {
-            let result = try await KioskAPI.shared.kioskUpdateActiveCheckout(id: checkoutId, actorId: actorId, title: nil, endsAt: chosen)
+            let result = try await KioskAPI.shared.kioskUpdateActiveCheckout(id: checkoutId, actorId: actorId, title: nil, endsAt: chosen, staffToken: staffToken)
             if result.success {
                 onExtended()
             } else {
@@ -276,6 +278,8 @@ struct KioskTransferScreen: View {
     let actor: KioskUser
     /// C5 "Transfer the whole checkout": no "Just some" choice.
     var wholeOnly: Bool = false
+    /// C5: the staff card proof when staff move someone else's checkout.
+    var staffToken: String? = nil
     let onCancel: () -> Void
     let onTransferred: (KioskTransferResult, KioskUser) -> Void
 
@@ -445,7 +449,8 @@ struct KioskTransferScreen: View {
                 targetUserId: target.id,
                 assetIds: items.filter { !$0.isNumberedBulk }.map(\.id),
                 bulkUnitIds: items.filter(\.isNumberedBulk).map(\.id),
-                reason: actor.canManageAnyCheckout ? KioskTransferCopy.staffReason : nil
+                reason: actor.canManageAnyCheckout ? KioskTransferCopy.staffReason : nil,
+                staffToken: staffToken
             )
             onTransferred(result, target)
         } catch let rejected as KioskRequestRejected {
@@ -934,8 +939,10 @@ struct KioskReservationEditView: View {
 
 // MARK: - C5 Staff actions on a booking
 
-/// Reached from a booking's sheet on home. Staff tap their name, then the
-/// actions appear under it. Every action is recorded under that name.
+/// Reached from a booking's sheet on home. Staff scan their staff ID card
+/// (scanner, camera, or typed number), then the actions appear under their
+/// name. The server's staff proof lives only in this sheet's memory: closing
+/// the sheet or an inactivity reset drops it, and it expires after ten minutes.
 struct KioskStaffActionsFlow: View {
     let context: KioskCheckoutDrawerContext
     let onClose: (Bool) -> Void
@@ -950,8 +957,12 @@ struct KioskStaffActionsFlow: View {
 
     @State private var step: Step = .pick
     @State private var staff: KioskUser?
-    @State private var roster: [KioskUser] = []
-    @State private var loadError: String?
+    @State private var staffToken: String?
+    @State private var scanMessage: String?
+    @State private var isVerifying = false
+    @State private var showCamera = false
+    @State private var typedCard = ""
+    @FocusState private var typingCard: Bool
     @State private var detail: KioskCheckoutDetail?
     @State private var reportStep: KioskReturnReportStep? = .choose(selectedId: nil)
     @State private var notice: String?
@@ -970,6 +981,7 @@ struct KioskStaffActionsFlow: View {
                         title: context.title,
                         detailLine: "\(context.requesterName) · \(detail?.refNumber ?? "")",
                         actorId: staff.id,
+                        staffToken: staffToken,
                         onCancel: { step = .actions },
                         onExtended: { finish("Due time changed. \(context.requesterName) is notified.") }
                     )
@@ -983,6 +995,7 @@ struct KioskStaffActionsFlow: View {
                         holderName: context.requesterName,
                         actor: staff,
                         wholeOnly: true,
+                        staffToken: staffToken,
                         onCancel: { step = .actions },
                         onTransferred: { _, _ in
                             changed = true
@@ -995,6 +1008,7 @@ struct KioskStaffActionsFlow: View {
                     KioskReturnReportView(
                         bookingId: context.checkoutId,
                         actorId: staff.id,
+                        staffToken: staffToken,
                         checkoutTitle: context.title,
                         ownerSubtitle: "\(context.requesterName) · reported by \(staff.shortName)",
                         avatarURL: context.requesterAvatarUrl,
@@ -1013,6 +1027,10 @@ struct KioskStaffActionsFlow: View {
             }
         }
         .task { await load() }
+        .onDisappear {
+            staffToken = nil
+            staff = nil
+        }
     }
 
     private var reportableItems: [KioskCheckoutDetail.ReturnItem] {
@@ -1048,23 +1066,96 @@ struct KioskStaffActionsFlow: View {
                 .lineSpacing(3)
                 .fixedSize(horizontal: false, vertical: true)
         } choice: {
-            Text("Staff: tap your name")
+            Text("Scan your staff ID card")
                 .font(KioskType.heroAction)
                 .foregroundStyle(KioskText.primary)
-            if let loadError {
-                KioskErrorState(title: loadError) { Task { await load() } }
-            } else {
-                ScrollView {
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 3), spacing: 6) {
-                        ForEach(roster.filter(\.canManageAnyCheckout)) { person in
-                            KioskPersonChip(person: person, isSelected: staff?.id == person.id) {
-                                staff = person
-                                step = .actions
-                            }
-                        }
-                    }
+            Text("Use the scanner, the camera, or type the card number.")
+                .font(KioskType.body)
+                .foregroundStyle(KioskText.secondary)
+            if isVerifying {
+                ProgressView("Checking card")
+                    .tint(KioskText.primary)
+            }
+            if let scanMessage {
+                KioskFeedbackBanner(tone: .warning, message: scanMessage)
+            }
+            Button { showCamera = true } label: {
+                Label("Use camera", systemImage: "camera.viewfinder")
+                    .font(.system(size: 17, weight: .semibold))
+                    .frame(maxWidth: .infinity, minHeight: 56)
+            }
+            .kioskButtonRole(.secondary)
+            .disabled(isVerifying)
+            HStack(spacing: 10) {
+                TextField("Card number", text: $typedCard)
+                    .textFieldStyle(.plain)
+                    .font(.title3)
+                    .keyboardType(.numberPad)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .submitLabel(.go)
+                    .focused($typingCard)
+                    .onSubmit(submitTypedCard)
+                    .padding(16)
+                    .background(KioskSurface.cardRaised, in: RoundedRectangle(cornerRadius: KioskRadius.lg))
+                Button("Continue", action: submitTypedCard)
+                    .kioskButtonRole(.primary)
+                    .disabled(isVerifying || typedCard.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+            Spacer(minLength: 0)
+        }
+        .overlay {
+            if !typingCard, !showCamera {
+                HIDScannerField(isEnabled: !isVerifying) { verify($0) }
+                    .frame(width: 1, height: 1)
+                    .opacity(0)
+            }
+        }
+        .sheet(isPresented: $showCamera) {
+            KioskBarcodeCameraView(
+                feedbackMessage: scanMessage,
+                feedbackTone: scanMessage == nil ? nil : .warning,
+                onScan: { value in
+                    showCamera = false
+                    verify(value)
+                },
+                onCancel: { showCamera = false }
+            )
+        }
+    }
+
+    private func submitTypedCard() {
+        let value = typedCard.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !value.isEmpty else { return }
+        typingCard = false
+        verify(value)
+    }
+
+    /// Only a staff card the server accepts opens the actions. A refusal stays
+    /// on this screen with the server's sentence.
+    private func verify(_ scanValue: String) {
+        guard !isVerifying else { return }
+        isVerifying = true
+        scanMessage = nil
+        Task { @MainActor in
+            defer { isVerifying = false }
+            do {
+                let result = try await KioskAPI.shared.kioskVerifyStaff(scanValue: scanValue)
+                guard result.success, let proof = result.data else {
+                    scanMessage = result.error ?? "That card isn't a staff card."
+                    Haptics.warning()
+                    KioskScanFeedbackSound.playFailure()
+                    return
                 }
-                .scrollIndicators(.hidden)
+                typedCard = ""
+                staff = proof.user
+                staffToken = proof.staffToken
+                Haptics.success()
+                step = .actions
+            } catch {
+                scanMessage = (error as? APIError)?.errorDescription ?? "Couldn't check that card. Try again."
+                Haptics.error()
+                KioskScanFeedbackSound.playFailure()
             }
         }
     }
@@ -1188,22 +1279,14 @@ struct KioskStaffActionsFlow: View {
     }
 
     private func load() async {
-        loadError = nil
-        do {
-            async let loadedRoster = KioskAPI.shared.kioskUsers()
-            async let loadedDetail = KioskAPI.shared.kioskCheckoutDetail(id: context.checkoutId)
-            roster = try await loadedRoster
-            detail = try? await loadedDetail
-            #if DEBUG
-            if KioskFixtureScenario.active == .changesStaff, staff == nil,
-               let first = roster.first(where: \.canManageAnyCheckout) {
-                staff = first
-                step = .actions
-            }
-            #endif
-        } catch {
-            loadError = (error as? APIError)?.errorDescription ?? "Couldn't load the roster."
+        detail = try? await KioskAPI.shared.kioskCheckoutDetail(id: context.checkoutId)
+        #if DEBUG
+        if KioskFixtureScenario.active == .changesStaff, staff == nil,
+           let first = (try? await KioskAPI.shared.kioskUsers())?.first(where: \.canManageAnyCheckout) {
+            staff = first
+            step = .actions
         }
+        #endif
     }
 }
 
