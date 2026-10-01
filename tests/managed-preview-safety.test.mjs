@@ -7,7 +7,7 @@ import { preparePreviewUpload } from "../scripts/lib/preview-upload.mjs";
 import { acquireProcessLock } from "../scripts/lib/process-lock.mjs";
 import { readInfrastructureConfig } from "../scripts/lib/migration-baseline.mjs";
 import { previewRetentionDecision } from "../scripts/lib/preview-retention.mjs";
-import { privateHandoff, handoffVariable } from "../scripts/lib/preview-handoff.mjs";
+import { privateHandoff, handoffVariable, missingEnvironmentReason } from "../scripts/lib/preview-handoff.mjs";
 import { VercelPreviewApi } from "../scripts/lib/vercel-preview-api.mjs";
 
 const temporary = [];
@@ -107,5 +107,23 @@ describe("Vercel preview API responses", () => {
   it("parses a JSON body and rejects a malformed one", async () => {
     expect(await api(respond(200, '{"a":1}')).request("/v1/x")).toEqual({ a: 1 });
     await expect(api(respond(200, "<html>")).request("/v1/x")).rejects.toThrow(/unexpected response/);
+  });
+});
+
+describe("missing preview environment diagnosis", () => {
+  const gh = (variables, prs) => (...args) => {
+    const out = args[0] === "variable" ? variables : prs;
+    if (out instanceof Error) throw out;
+    return JSON.stringify(out);
+  };
+  it("blames the disabled workflow without telling the operator to wait", () => {
+    const [reason, ...rest] = missingEnvironmentReason("b", gh([], [{ number: 1, isCrossRepository: false }]));
+    expect(reason).toMatch(/not enabled/); expect(rest).toEqual([]);
+  });
+  it("ignores fork PRs", () => {
+    expect(missingEnvironmentReason("b", gh([{ name: "MANAGED_PREVIEWS_ENABLED", value: "true" }], [{ number: 2, isCrossRepository: true }]))[0]).toMatch(/no open same-repository PR/);
+  });
+  it("falls back to the generic hint when gh is unusable", () => {
+    expect(missingEnvironmentReason("b", gh(new Error("no gh"), []))).toEqual([]);
   });
 });

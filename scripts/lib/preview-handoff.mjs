@@ -30,21 +30,19 @@ export async function publishPreviewHandoff(state, { api = new VercelPreviewApi(
   const body = { key: handoffKey(state.gitBranch), value: JSON.stringify(privateHandoff(state)), type: "encrypted", target: ["development"] };
   await api.request(existing ? `/v9/projects/${project}/env/${existing.id}` : `/v10/projects/${project}/env`, { method: existing ? "PATCH" : "POST", body });
 }
-// Best-effort: name the real reason a branch has no environment. Never throws.
+// Best-effort: name the real reason a branch has no environment. Returns [] when gh is unusable.
 export function missingEnvironmentReason(gitBranch, gh = (...args) => execFileSync("gh", args, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 15_000 })) {
-  const steps = [];
+  let enabled;
   try {
     const variables = JSON.parse(gh("variable", "list", "--json", "name,value"));
-    if (variables.find((v) => v.name === "MANAGED_PREVIEWS_ENABLED")?.value !== "true") {
-      steps.push("Managed previews are not enabled (repository variable MANAGED_PREVIEWS_ENABLED is not 'true'), so CI will not create environments. An authorized operator must enable it (docs/PREVIEW_ENVIRONMENTS.md, cutover step 2).");
-    }
-  } catch { steps.push("Could not read MANAGED_PREVIEWS_ENABLED (gh unavailable or unauthenticated); run `gh auth login`."); }
+    enabled = variables.find((v) => v.name === "MANAGED_PREVIEWS_ENABLED")?.value === "true";
+  } catch { return []; }
+  if (!enabled) return ["Managed previews are not enabled (repository variable MANAGED_PREVIEWS_ENABLED is not 'true'), so CI will not create environments. An authorized operator must enable it (docs/PREVIEW_ENVIRONMENTS.md, cutover step 2)."];
   try {
-    const prs = JSON.parse(gh("pr", "list", "--head", gitBranch, "--state", "open", "--json", "number"));
-    if (!prs.length) steps.push(`Branch ${gitBranch} has no open same-repository PR; push it and open one.`);
-    else steps.push(`PR #${prs[0].number} is open: wait for CI and the Managed previews run to pass.`);
-  } catch { /* gh unavailable; the generic hint below still applies */ }
-  return steps;
+    // Fork PRs never receive environments, so only same-repository PRs count.
+    const prs = JSON.parse(gh("pr", "list", "--head", gitBranch, "--state", "open", "--json", "number,isCrossRepository")).filter((pr) => !pr.isCrossRepository);
+    return [prs.length ? `PR #${prs[0].number} is open: wait for CI and the Managed previews run to pass.` : `Branch ${gitBranch} has no open same-repository PR; push it and open one.`];
+  } catch { return []; }
 }
 export async function fetchPreviewHandoff(gitBranch, { api = new VercelPreviewApi(), config = readInfrastructureConfig() } = {}) {
   const variable = await handoffVariable(gitBranch, api, config);
