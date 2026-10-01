@@ -1049,7 +1049,7 @@ enum KioskFixtures {
             reservation("res-u2", "Recruiting Visit Shoot", person("u-16", "Priya Ramachandran", "PR"), 6, 2, 9),
             reservation("res-u3", "Football Travel Case", "null", 12, 3, 7, shared: true),
             reservation("res-u4", "Softball Road Kit", person("u-18", "Morgan Lee", "ML"), 2, 4, 10),
-            reservation("res-u5", "Volleyball Media Day", person("u-9", "Imani Brooks", "IB"), 5, 9, 13),
+            reservation("res-u5", "Volleyball Media Day", person("u-9", "Imani Brooks", "IB"), 5, 6, 13),
         ].joined(separator: ",")
         return """
         {"stats":{"itemsOut":0,"checkouts":0,"overdue":0},

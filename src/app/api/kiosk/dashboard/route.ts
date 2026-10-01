@@ -146,8 +146,10 @@ export const GET = withKiosk(async (_req, { kiosk }) => {
   const eventsWindow = dayWindowInTimeZone(now, 2, env.appTimezone);
   // The local calendar day (APP_TIMEZONE, America/Chicago by default).
   const todayWindow = dayWindowInTimeZone(now, 1, env.appTimezone);
-  // Upcoming reservations: after today, through the next 14 local days.
-  const upcomingWindow = dayWindowInTimeZone(now, 15, env.appTimezone);
+  // Upcoming reservations: after today, through the same 7 x 24h horizon the
+  // operator hub (/api/kiosk/student/[userId]) uses, so a tapped row is always
+  // present in that person's hub.
+  const upcomingEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
   const localNow = localDateTimeParts(now, env.appTimezone);
   const nightHours = localNow.hour >= 22 || localNow.hour < 6;
 
@@ -424,14 +426,14 @@ export const GET = withKiosk(async (_req, { kiosk }) => {
       },
     }),
 
-    // Upcoming reservations at this kiosk's location, after today and within
-    // the next 14 local days. The home shows them only when otherwise empty.
+    // Upcoming reservations across all kiosks (D-032: reservation context is
+    // global), after today and within the hub's 7-day horizon. The home shows
+    // them only when otherwise empty.
     db.booking.findMany({
       where: {
         kind: BookingKind.RESERVATION,
         status: BookingStatus.BOOKED,
-        locationId: kiosk.locationId,
-        startsAt: { gte: todayWindow.end, lt: upcomingWindow.end },
+        startsAt: { gte: todayWindow.end, lte: upcomingEnd },
       },
       orderBy: { startsAt: "asc" },
       take: 8,

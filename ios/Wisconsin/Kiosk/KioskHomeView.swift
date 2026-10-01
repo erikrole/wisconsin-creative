@@ -681,8 +681,23 @@ private struct HomeUpcomingRow: View {
         homeUpcomingWhen(reservation.startsAt)
     }
 
-    var body: some View {
-        Button(action: action) {
+    // SHARED reservations carry no requester, so there is no hub to open:
+    // render them as plain, non-interactive rows (no chevron, no button).
+    @ViewBuilder var body: some View {
+        if isShared {
+            content
+                .padding(.horizontal, 6)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("\(reservation.title), \(holder), \(whenText)")
+        } else {
+            Button(action: action) { content }
+                .buttonStyle(KioskPressStyle())
+                .padding(.horizontal, 6)
+                .accessibilityLabel("\(reservation.title), \(holder), \(whenText)")
+        }
+    }
+
+    private var content: some View {
             HStack(spacing: 12) {
                 HomeRowAvatar(
                     url: isShared ? nil : reservation.requester?.avatarUrl,
@@ -704,17 +719,15 @@ private struct HomeUpcomingRow: View {
                     .font(KioskType.chipStrong)
                     .foregroundStyle(KioskText.secondary)
                     .lineLimit(1)
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(KioskText.muted)
+                if !isShared {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(KioskText.muted)
+                }
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
             .contentShape(Rectangle())
-        }
-        .buttonStyle(KioskPressStyle())
-        .padding(.horizontal, 6)
-        .accessibilityLabel("\(reservation.title), \(holder), \(whenText)")
     }
 }
 

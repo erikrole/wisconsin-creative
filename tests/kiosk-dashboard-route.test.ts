@@ -30,13 +30,13 @@ const mockDb = db as unknown as {
 };
 
 /**
- * The OPEN-checkout list query gets `rows`; the location-scoped upcoming query
+ * The OPEN-checkout list query gets `rows`; the upcoming query (startsAt.gte)
  * gets `upcoming`; the pickups query gets `pickups`.
  */
 function mockOpenCheckouts(rows: unknown[], pickups: unknown[] = [], upcoming: unknown[] = []) {
   mockDb.booking.findMany.mockImplementation(
-    async (args: { where?: { status?: unknown; locationId?: unknown } }) =>
-      args?.where?.status === "OPEN" ? rows : args?.where?.locationId ? upcoming : pickups,
+    async (args: { where?: { status?: unknown; startsAt?: { gte?: unknown } } }) =>
+      args?.where?.status === "OPEN" ? rows : args?.where?.startsAt?.gte ? upcoming : pickups,
   );
 }
 
@@ -407,8 +407,8 @@ describe("kiosk dashboard route", () => {
   it("reports a failed pickups read as a partial failure", async () => {
     mockDb.$queryRaw.mockResolvedValue([{ items_out: 0n, checkouts: 0n, overdue: 0n }]);
     mockDb.calendarEvent.findMany.mockResolvedValue([]);
-    mockDb.booking.findMany.mockImplementation(async (args: { where?: { status?: unknown; locationId?: unknown } }) => {
-      if (args.where?.status === "OPEN" || args.where?.locationId) return [];
+    mockDb.booking.findMany.mockImplementation(async (args: { where?: { status?: unknown; startsAt?: { gte?: unknown } } }) => {
+      if (args.where?.status === "OPEN" || args.where?.startsAt?.gte) return [];
       throw new Error("pickups failed");
     });
 
@@ -417,7 +417,7 @@ describe("kiosk dashboard route", () => {
     expect(body.partialFailures).toEqual(["pickups"]);
   });
 
-  it("returns upcoming reservations at this kiosk's location after today, in one batched query", async () => {
+  it("returns upcoming reservations from every location after today, in one batched query", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-09-25T15:00:00.000Z"));
     mockDb.$queryRaw.mockResolvedValue([{ items_out: 0n, checkouts: 0n, overdue: 0n }]);
@@ -475,15 +475,15 @@ describe("kiosk dashboard route", () => {
 
     const upcomingQueries = mockDb.booking.findMany.mock.calls
       .map((call) => call[0])
-      .filter((args) => args.where?.locationId);
+      .filter((args) => args.where?.startsAt?.gte);
     expect(upcomingQueries).toHaveLength(1);
     const query = upcomingQueries[0];
     expect(query.where).toEqual({
       kind: "RESERVATION",
       status: "BOOKED",
-      locationId: "loc-1",
-      // Chicago: today ends 2026-09-26 00:00 CDT; the window runs 14 local days past it.
-      startsAt: { gte: new Date("2026-09-26T05:00:00.000Z"), lt: new Date("2026-10-10T05:00:00.000Z") },
+      // D-032: no kiosk location filter. Chicago: today ends 2026-09-26 00:00 CDT;
+      // the window ends 7 x 24h from now, matching the operator hub.
+      startsAt: { gte: new Date("2026-09-26T05:00:00.000Z"), lte: new Date("2026-10-02T15:00:00.000Z") },
     });
     expect(query.orderBy).toEqual({ startsAt: "asc" });
     expect(query.take).toBe(8);
