@@ -127,7 +127,9 @@ struct KioskExtendScreen: View {
                     }
                 }
                 // One tap to the latest allowed time.
-                if let latest = window?.maxEndsAt, window?.canExtend == true, latest > currentEndsAt {
+                // 30-minute grace before the next booking needs the gear (Erik, 2026-10-01).
+                if let limit = window?.maxEndsAt, window?.canExtend == true,
+                   case let latest = limit.addingTimeInterval(-30 * 60), latest > max(currentEndsAt, Date()) {
                     KioskSlotChip(
                         title: "Latest: \(KioskDueCopy.relative(latest))",
                         detail: nil,
