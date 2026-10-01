@@ -83,6 +83,18 @@ export const PERMISSIONS: Record<string, Record<string, Role[]>> = {
     create: ["ADMIN"],
     delete: ["ADMIN"],
   },
+  workforce: {
+    // ADMIN-only per D-065: the Workforce overview, start terms, and term
+    // placements are an admin planning surface, not part of the Users matrix.
+    view: ["ADMIN"],
+    manage: ["ADMIN"],
+  },
+  hiring: {
+    // ADMIN-only per D-065: applicant data includes resumes, contact details,
+    // and evaluation notes. This is stricter than `user`, where STAFF can edit.
+    view: ["ADMIN"],
+    manage: ["ADMIN"],
+  },
   report: {
     view: ["ADMIN", "STAFF"],
     // The audit report exposes the full cross-user audit trail; keep it
