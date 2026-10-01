@@ -50,7 +50,7 @@
     "@xhmikosr/decompress": "11.1.4",
     "browserslist": "4.28.9",
     "baseline-browser-mapping": "2.11.0",
-    "devalue": "5.9.1",
+    "devalue": "5.9.4",
     "@prisma/config@6.19.3": {
       "deepmerge-ts": "8.0.2"
     }
