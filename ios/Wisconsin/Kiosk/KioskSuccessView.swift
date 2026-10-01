@@ -10,7 +10,7 @@ struct KioskSuccessView: View {
 
     init(info: KioskSuccessInfo) {
         self.info = info
-        _countdown = State(initialValue: info.earnedBadges.isEmpty ? 6 : 9)
+        _countdown = State(initialValue: info.earnedBadges.isEmpty ? 10 : 12)
     }
 
     /// Entrance values driven by the keyframe animators below. The icon pops
@@ -134,6 +134,14 @@ struct KioskSuccessView: View {
             Text(card.title)
                 .font(KioskType.cardTitle)
                 .foregroundStyle(KioskText.primary)
+            if !card.items.isEmpty {
+                FlowingChips(spacing: 6) {
+                    ForEach(KioskReceipt.Chip.group(card.items)) { chip in
+                        receiptChip(chip, section: section)
+                    }
+                }
+                .padding(.vertical, 2)
+            }
             if let detail = card.detail {
                 Text(detail)
                     .font(KioskType.meta)
@@ -151,6 +159,33 @@ struct KioskSuccessView: View {
         .padding(.vertical, 18)
         .kioskCard(radius: 18)
         .accessibilityElement(children: .combine)
+    }
+
+    @ViewBuilder
+    private func receiptChip(_ chip: KioskReceipt.Chip, section: KioskSection) -> some View {
+        HStack(spacing: 6) {
+            switch chip {
+            case .item(let item):
+                KioskItemThumbnail(imageUrl: item.imageUrl, size: 26)
+                Text(item.tag)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(KioskText.primary)
+                    .lineLimit(1)
+            case .batteries(let name, let imageUrl, let units):
+                KioskItemThumbnail(imageUrl: imageUrl, size: 26)
+                Text(name)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(KioskText.primary)
+                    .lineLimit(1)
+                ForEach(units, id: \.self) { unit in
+                    KioskBatteryUnitChip(label: "#\(unit)", isScanned: true, section: section, size: 24)
+                }
+            }
+        }
+        .padding(.leading, 4)
+        .padding(.trailing, 10)
+        .padding(.vertical, 4)
+        .background(KioskSurface.placeholder.opacity(0.6), in: RoundedRectangle(cornerRadius: KioskRadius.sm + 2))
     }
 
     private func badgeCard(_ reward: EarnedBadgeReward) -> some View {
@@ -288,7 +323,7 @@ struct KioskSuccessView: View {
     }
 
     private var countdownDuration: Int {
-        info.earnedBadges.isEmpty ? 6 : 9
+        info.earnedBadges.isEmpty ? 10 : 12
     }
 
     private var accessibilitySummary: String {
@@ -434,7 +469,7 @@ struct KioskSuccessView: View {
         .accessibilityHidden(true)
     }
 
-    /// Tap "Done" or anywhere on the screen to short-circuit the 5 s countdown
+    /// Tap "Done" or anywhere on the screen to short-circuit the countdown
     /// and return to idle immediately.
     private func skip() {
         store.deferSleepMode()

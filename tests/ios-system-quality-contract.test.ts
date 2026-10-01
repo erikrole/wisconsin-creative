@@ -87,7 +87,7 @@ describe("iOS system quality contracts", () => {
       identity.indexOf("private func choose"),
     );
 
-    expect(identity).toContain('Button("Cancel") { cancelIdentityFlow() }');
+    expect(identity).toContain('Button("Back") { cancelIdentityFlow() }');
     expect(cancelFlow).toContain("cancelIdentityRequest()");
     expect(cancelFlow).toContain("store.scanner.release(.identity)");
     expect(cancelFlow).toContain("store.screen = .idle");

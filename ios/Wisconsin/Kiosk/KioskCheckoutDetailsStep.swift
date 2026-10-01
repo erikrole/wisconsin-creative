@@ -13,12 +13,23 @@ struct KioskCheckoutDetailsStep: View {
     @Binding var selectedEventId: String?
     @Binding var customPurpose: String
     @Binding var dueBackAt: Date
+    /// False until the person taps a return time (no default; Erik, 2026-10-01).
+    var hasChosenReturn: Binding<Bool> = .constant(true)
     @Binding var focusedField: KioskCheckoutFocusedField?
     let canContinue: Bool
     let blockingRequirement: String?
+    var continueTitle: String = "Continue to scan"
+    /// Checkout opens on the person's next shift; the pickup editor already
+    /// has its own linked event or name and passes false.
     let onContinue: () -> Void
 
     @State private var showOtherDate = KioskCaptureSeed.otherDate
+    /// How far the software keyboard reaches up into the purpose column, in
+    /// points. Zero whenever no software keyboard is on screen (including
+    /// when a paired scanner is acting as the hardware keyboard).
+    @State private var keyboardOverlap: CGFloat = 0
+    @State private var purposeColumnBottom: CGFloat = 0
+    @State private var showsPurposeField = false
 
     private var shifts: [KioskCheckoutEvent] { events.filter(\.isMyShift) }
     private var otherEvents: [KioskCheckoutEvent] { events.filter { !$0.isMyShift } }
@@ -49,6 +60,7 @@ struct KioskCheckoutDetailsStep: View {
                     onCancel: { showOtherDate = false },
                     onUse: { date in
                         dueBackAt = date
+                        hasChosenReturn.wrappedValue = true
                         showOtherDate = false
                     }
                 )
@@ -57,9 +69,36 @@ struct KioskCheckoutDetailsStep: View {
         }
     }
 
+    /// The event's end plus the usual buffer, on the quarter hour; nil when
+    /// that time has already passed.
+    static func suggestedReturn(for event: KioskCheckoutEvent) -> Date? {
+        KioskCheckoutDefaults.dueBackDate(afterEventEndsAt: event.endsAt ?? event.startsAt.addingTimeInterval(2 * 3600))
+    }
+
+    private static func displayTitle(_ event: KioskCheckoutEvent) -> String {
+        kioskEventDisplayTitle(event.title, sportCode: event.sportCode)
+    }
+
+    private static func isSport(_ event: KioskCheckoutEvent) -> Bool {
+        !(event.sportCode?.trimmingCharacters(in: .whitespaces).isEmpty ?? true)
+    }
+
     // MARK: What's this for?
 
+    /// The "Something else" field sits under Your shifts, which on the
+    /// 820 pt landscape kiosk can still be where the software keyboard lands.
+    /// SwiftUI's own keyboard avoidance could not help: the right column's
+    /// chips and Continue pill are taller than the space left above the keys,
+    /// so the step overflowed (pushing the header off the top) instead of
+    /// shrinking this scroll view, and the native text field was never
+    /// scrolled into view anyway. So the step opts out of keyboard avoidance
+    /// (see `KioskShellView`), and this column alone shortens its viewport
+    /// by the keyboard's measured overlap and scrolls the field to sit
+    /// directly above the keys.
+    private static let purposeFieldID = "checkout-purpose-field"
+
     private var purposeColumn: some View {
+        ScrollViewReader { proxy in
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
                 Text("What's this for?")
@@ -72,17 +111,84 @@ struct KioskCheckoutDetailsStep: View {
                     KioskSectionHeader(title: "Your shifts")
                     ForEach(shifts) { event in eventRow(event) }
                 }
+                somethingElse
                 if !otherEvents.isEmpty {
                     KioskSectionHeader(title: shifts.isEmpty ? "Events" : "Other events")
                     ForEach(otherEvents.prefix(4)) { event in eventRow(event) }
                 }
-                KioskSectionHeader(title: "Something else")
-                purposeField
-                KioskKeyboardTip(isFieldFocused: focusedField == .customPurpose)
             }
             .padding(.top, 4)
+            .padding(.bottom, KioskSpacing.md)
         }
         .scrollIndicators(.hidden)
+        .padding(.bottom, keyboardOverlap)
+        .onChange(of: focusedField) { _, field in
+            if field == .customPurpose { revealPurposeField(proxy) }
+        }
+        .onChange(of: keyboardOverlap) { _, _ in
+            if focusedField == .customPurpose { revealPurposeField(proxy) }
+        }
+        }
+        .background(
+            GeometryReader { geometry in
+                Color.clear
+                    .onAppear { purposeColumnBottom = geometry.frame(in: .global).maxY }
+                    .onChange(of: geometry.frame(in: .global).maxY) { _, maxY in purposeColumnBottom = maxY }
+            }
+        )
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillChangeFrameNotification)) { note in
+            guard let frame = note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else { return }
+            keyboardOverlap = Self.overlap(keyboardTop: frame.minY, columnBottom: purposeColumnBottom)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+            keyboardOverlap = 0
+        }
+    }
+
+    /// The keyboard's end frame is in screen coordinates, which match SwiftUI's
+    /// global space for the full-screen kiosk window. Keep a small gap so the
+    /// field's card edge never touches the keys.
+    private static func overlap(keyboardTop: CGFloat, columnBottom: CGFloat) -> CGFloat {
+        guard columnBottom > 0 else { return 0 }
+        let reach = columnBottom - keyboardTop
+        return reach > 0 ? reach + KioskSpacing.sm : 0
+    }
+
+    private func revealPurposeField(_ proxy: ScrollViewProxy) {
+        withAnimation(.easeOut(duration: 0.25)) {
+            proxy.scrollTo(Self.purposeFieldID, anchor: .bottom)
+        }
+    }
+
+    /// A compact row until tapped; then the typed field, focused.
+    @ViewBuilder
+    private var somethingElse: some View {
+        if showsPurposeField || focusedField == .customPurpose || !customPurpose.isEmpty {
+            KioskSectionHeader(title: "Something else")
+            purposeField
+                .id(Self.purposeFieldID)
+            KioskKeyboardTip(isFieldFocused: focusedField == .customPurpose)
+        } else {
+            Button {
+                showsPurposeField = true
+                focusedField = .customPurpose
+            } label: {
+                HStack(spacing: 14) {
+                    Image(systemName: "square.and.pencil")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(KioskText.secondary)
+                        .frame(width: 22, height: 22)
+                    Text("Something else…")
+                        .font(KioskType.rowTitle)
+                        .foregroundStyle(KioskText.secondary)
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, 16)
+                .frame(minHeight: 52)
+                .kioskCard(KioskSurface.cardRaised, radius: KioskRadius.lg, stroke: KioskStroke.standard)
+            }
+            .buttonStyle(KioskPressStyle())
+        }
     }
 
     private func eventRow(_ event: KioskCheckoutEvent) -> some View {
@@ -110,7 +216,7 @@ struct KioskCheckoutDetailsStep: View {
                 }
                 .frame(width: 22, height: 22)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(event.title)
+                    Text(Self.displayTitle(event))
                         .font(KioskType.rowTitle)
                         .foregroundStyle(KioskText.primary)
                         .lineLimit(1)
@@ -179,21 +285,30 @@ struct KioskCheckoutDetailsStep: View {
                     choiceChip(
                         title: choice.title,
                         detail: choice.note,
-                        isSelected: abs(choice.date.timeIntervalSince(dueBackAt)) < 60
-                    ) { dueBackAt = choice.date }
+                        isSelected: hasChosenReturn.wrappedValue && abs(choice.date.timeIntervalSince(dueBackAt)) < 60
+                    ) {
+                        dueBackAt = choice.date
+                        hasChosenReturn.wrappedValue = true
+                    }
                 }
             }
             backBySummary
-            Spacer(minLength: 8)
             if let blockingRequirement, !canContinue {
                 Text(blockingRequirement)
                     .font(KioskType.meta)
                     .foregroundStyle(KioskText.tertiary)
                     .frame(maxWidth: .infinity)
             }
-            KioskPrimaryPill(title: "Continue to scan", isEnabled: canContinue, action: onContinue)
+            KioskPrimaryPill(title: continueTitle, isEnabled: canContinue, action: onContinue)
+            Spacer(minLength: 0)
         }
         .padding(.top, 4)
+    }
+
+    /// What it's for, shown inside the Back by card ("FB vs Michigan State").
+    private var choiceName: String? {
+        if let selectedEvent { return Self.displayTitle(selectedEvent) }
+        return customPurpose.trimmingCharacters(in: .whitespaces).nonBlankText
     }
 
     private func choiceChip(title: String, detail: String?, isSelected: Bool, action: @escaping () -> Void) -> some View {
@@ -228,12 +343,14 @@ struct KioskCheckoutDetailsStep: View {
                     .font(KioskType.overline)
                     .tracking(KioskType.overlineTracking)
                     .foregroundStyle(KioskText.tertiary)
-                Text(KioskDueCopy.relative(dueBackAt))
+                Text(hasChosenReturn.wrappedValue ? KioskDueCopy.relative(dueBackAt) : "Pick a return time")
                     .font(.system(size: 24, weight: .heavy))
-                    .foregroundStyle(KioskText.primary)
-                Text(dueBackAt.formatted(.dateTime.weekday(.wide).month(.wide).day()))
+                    .foregroundStyle(hasChosenReturn.wrappedValue ? KioskText.primary : KioskText.tertiary)
+                // The day chips already show the date; name what it's for instead.
+                Text(choiceName ?? dueBackAt.formatted(.dateTime.weekday(.wide).month(.wide).day()))
                     .font(KioskType.meta)
-                    .foregroundStyle(KioskText.tertiary)
+                    .foregroundStyle(KioskText.secondary)
+                    .lineLimit(1)
             }
             Spacer(minLength: 8)
             Button("Other date") { showOtherDate = true }
@@ -283,33 +400,28 @@ struct KioskCheckoutDetailsStep: View {
         let note: String?
     }
 
-    /// With a linked event: around 90 minutes after it ends, then the next
-    /// morning, noon, and evening. Without one: the usual return times on the
-    /// chosen day.
+    /// With a linked event: "After the game" (or event) first, about 90
+    /// minutes after it ends, then the usual return times on the chosen day.
+    /// Without one: the usual return times alone.
     private var timeChoices: [TimeChoice] {
         let calendar = Calendar.current
         let now = Date()
         func time(_ date: Date) -> String { date.formatted(.dateTime.hour().minute()) }
-        if let event = selectedEvent, let end = event.endsAt ?? Optional(event.startsAt.addingTimeInterval(2 * 3600)) {
-            let suggested = KioskQuarterHour.roundedUp(end.addingTimeInterval(KioskCheckoutDefaults.linkedEventReturnBuffer))
-            var choices: [TimeChoice] = [-90, -60, -30, 0, 30].compactMap { minutes in
-                let date = suggested.addingTimeInterval(TimeInterval(minutes * 60))
-                guard date > now else { return nil }
-                return TimeChoice(date: date, title: time(date), note: minutes == 0 ? "90 min after" : nil)
-            }
-            let nextDay = calendar.startOfDay(for: calendar.date(byAdding: .day, value: 1, to: suggested) ?? suggested)
-            for hour in [9, 12, 17] where choices.count < 8 {
-                if let date = calendar.date(bySettingHour: hour, minute: 0, second: 0, of: nextDay) {
-                    choices.append(TimeChoice(date: date, title: "\(date.formatted(.dateTime.weekday(.abbreviated))) \(time(date))", note: nil))
-                }
-            }
-            return choices
-        }
         let day = calendar.startOfDay(for: dueBackAt)
-        return [9, 12, 15, 17, 19, 21, 22, 23].compactMap { hour in
+        var fixed = [9, 12, 15, 17, 19, 21, 22, 23].compactMap { hour -> TimeChoice? in
             guard let date = calendar.date(bySettingHour: hour, minute: 0, second: 0, of: day), date > now else { return nil }
             return TimeChoice(date: date, title: time(date), note: nil)
         }
+        guard let event = selectedEvent, let suggested = Self.suggestedReturn(for: event) else { return fixed }
+        let eventEnd = event.endsAt ?? event.startsAt.addingTimeInterval(2 * 3600)
+        fixed.removeAll { $0.date <= eventEnd }
+        let after = TimeChoice(
+            date: suggested,
+            title: Self.isSport(event) ? "After the game" : "After the event",
+            note: "~" + time(suggested)
+        )
+        fixed.removeAll { abs($0.date.timeIntervalSince(suggested)) < 60 }
+        return [after] + fixed.prefix(7)
     }
 }
 
@@ -335,8 +447,13 @@ enum KioskDueCopy {
 
     /// "tomorrow at 11:00 PM", for use after other words.
     static func midSentence(_ date: Date) -> String {
+        // Only relative words drop their capital ("today", "tomorrow");
+        // weekdays and months keep it ("Sat at 4:00 PM").
         let text = relative(date)
-        return text.prefix(1).lowercased() + text.dropFirst()
+        for word in ["Today", "Tonight", "Tomorrow"] where text.hasPrefix(word) {
+            return word.lowercased() + text.dropFirst(word.count)
+        }
+        return text
     }
 }
 
@@ -407,16 +524,16 @@ struct KioskOtherDateSheet: View {
     }
 
     var body: some View {
-        KioskSheetScreen(onDismiss: onCancel, contextWidth: 400) {
+        KioskSheetScreen(onDismiss: onCancel, contextWidth: 400, height: 620) {
             KioskMonthGrid(monthStart: $monthStart, selectedDay: $day)
         } choice: {
-            Text("Pick a date")
+            Text("When will it be back?")
                 .font(KioskType.heroAction)
                 .foregroundStyle(KioskText.primary)
-            Text("For anything past the next few days.")
+            Text("Pick the day and time you'll return the gear.")
                 .font(.system(size: 15))
                 .foregroundStyle(KioskText.secondary)
-            Text("TIME")
+            Text("RETURN TIME")
                 .font(KioskType.overline)
                 .tracking(KioskType.overlineTracking)
                 .foregroundStyle(KioskText.tertiary)
@@ -445,7 +562,7 @@ struct KioskOtherDateSheet: View {
             .padding(.vertical, 16)
             .kioskCard(Color(red: 0x0E / 255, green: 0x0E / 255, blue: 0x10 / 255))
             Spacer(minLength: 8)
-            KioskPrimaryPill(title: "Use this date", isEnabled: chosen > Date(), height: 64) { onUse(chosen) }
+            KioskPrimaryPill(title: "Set return date", isEnabled: chosen > Date(), height: 64) { onUse(chosen) }
         }
     }
 

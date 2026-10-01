@@ -240,10 +240,25 @@ export const scanSchema = z.object({
   deviceContext: z.string().max(500).optional()
 });
 
+/**
+ * A check-in report targets exactly one thing: a serialized asset
+ * (`assetId`), a numbered bulk unit such as battery #7 (`bulkSkuUnitId`), or
+ * counted bulk stock (`bulkSkuId` + `quantity`).
+ */
 export const checkinReportSchema = z.object({
-  assetId: z.string().min(1),
+  assetId: z.string().min(1).optional(),
+  bulkSkuUnitId: z.string().min(1).optional(),
+  bulkSkuId: z.string().min(1).optional(),
+  quantity: z.coerce.number().int().positive().max(200).optional(),
   type: z.enum(["DAMAGED", "LOST"]),
   description: z.string().max(1000).optional(),
+}).superRefine((value, ctx) => {
+  const targets = [value.assetId, value.bulkSkuUnitId, value.bulkSkuId].filter(Boolean).length;
+  if (targets !== 1) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Choose one item to report" });
+  } else if (value.bulkSkuId ? value.quantity === undefined : value.quantity !== undefined) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "A quantity goes with counted stock only" });
+  }
 });
 
 export const overrideSchema = z.object({

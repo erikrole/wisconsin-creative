@@ -17,6 +17,8 @@ struct KioskHomeView: View {
     let locationName: String?
     let checkouts: [KioskActiveCheckout]
     var pickups: [KioskDashboard.HomePickup] = []
+    /// Reservations after today; shown only when the home is otherwise empty.
+    var upcoming: [KioskDashboard.UpcomingReservation] = []
     var events: [KioskEvent] = []
     var serverToday: [KioskDashboard.TodayTile] = []
     /// Checkouts nudged on this iPad since the last refresh.
@@ -29,6 +31,9 @@ struct KioskHomeView: View {
     let nextUp: String?
     let onOpenCheckout: (KioskActiveCheckout) -> Void
     var onNudge: ((KioskActiveCheckout) -> Void)?
+    var onOpenEvent: ((KioskEvent) -> Void)?
+    /// Opens the pickup scan for that reservation directly (Erik, 2026-10-01).
+    var onStartPickup: ((KioskUser, KioskDashboard.HomePickup) -> Void)?
     let onSelectUser: (KioskUser) -> Void
     let onRevealStatus: () -> Void
 
@@ -127,6 +132,7 @@ struct KioskHomeView: View {
         let checkouts: [KioskActiveCheckout]
         /// "Wes H. (call 9:00)"; call time comes from the event's assignments.
         let crew: [String]
+        let crewMembers: [KioskEvent.CrewMember]
         var id: String { event.id }
     }
 
@@ -148,7 +154,9 @@ struct KioskHomeView: View {
                     return "\(name) (call \(call.formatted(.dateTime.hour().minute())))"
                 }
                 guard !linkedPickups.isEmpty || !linkedCheckouts.isEmpty || !crew.isEmpty else { return nil }
-                return EventGroup(event: event, pickups: linkedPickups, checkouts: linkedCheckouts, crew: crew)
+                // A reservation for this event counts as gear (older servers didn't).
+                let reserved = Set(linkedPickups.filter { $0.custodyScope != "SHARED" }.compactMap { $0.requester?.id })
+                return EventGroup(event: event, pickups: linkedPickups, checkouts: linkedCheckouts, crew: crew, crewMembers: event.crewWithoutGear.filter { !reserved.contains($0.id) })
             }
     }
 
@@ -173,13 +181,24 @@ struct KioskHomeView: View {
     @ViewBuilder
     private var custodyPanel: some View {
         let groups = eventGroups
-        let sections = sections(excluding: Set(groups.flatMap { $0.checkouts.map(\.id) }))
-        let groupedPickupIds = Set(groups.flatMap { $0.pickups.map(\.id) })
-        let pickups = pickups.filter { !groupedPickupIds.contains($0.id) }
+        // One card per kind (Erik, 2026-10-01): every pickup in one card and
+        // every checkout in its status card, whatever event it belongs to.
+        // Events get a single card of one-line summaries.
+        let sections = sections
+        let pickups = pickups.sorted { $0.readyAt < $1.readyAt }
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                ForEach(groups) { group in eventCard(group) }
-                if isLoaded && groups.isEmpty && sections.isEmpty && pickups.isEmpty {
+                if !groups.isEmpty { eventsSummaryCard(groups) }
+                if isLoaded && groups.isEmpty && sections.isEmpty && pickups.isEmpty && !upcoming.isEmpty {
+                    Text("Everything is in.")
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundStyle(KioskText.primary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 12)
+                        .kioskCard()
+                    upcomingSection(upcoming)
+                } else if isLoaded && groups.isEmpty && sections.isEmpty && pickups.isEmpty {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Everything is in.")
                             .font(.system(size: 17, weight: .bold))
@@ -221,32 +240,41 @@ struct KioskHomeView: View {
         .scrollIndicators(.hidden)
     }
 
-    private func eventCard(_ group: EventGroup) -> some View {
-        let time = group.event.displayAllDay ? "All day" : group.event.startsAt.formatted(.dateTime.hour().minute())
-        var counts: [String] = []
-        if !group.pickups.isEmpty { counts.append("\(group.pickups.count) pickup\(group.pickups.count == 1 ? "" : "s")") }
-        if !group.checkouts.isEmpty { counts.append("\(group.checkouts.count) out") }
-        return VStack(alignment: .leading, spacing: 6) {
-            KioskSectionHeader(title: "\(group.event.title) · \(time)", count: counts.joined(separator: " · "))
+    private func eventsSummaryCard(_ groups: [EventGroup]) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            KioskSectionHeader(title: "Events today", count: "\(groups.count)")
             VStack(spacing: 0) {
-                ForEach(group.pickups) { pickup in
-                    HomePickupRow(pickup: pickup, showsHolderFirst: true) { selectPickupHolder(pickup) }
-                }
-                ForEach(group.checkouts) { checkout in
-                    HomeCustodyRow(checkout: checkout, showsHolderFirst: true) { onOpenCheckout(checkout) }
-                }
-                if !group.crew.isEmpty {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Crew without gear")
-                            .font(KioskType.chipStrong)
-                            .foregroundStyle(KioskStatus.attention)
-                        Text(group.crew.joined(separator: " · "))
+                ForEach(groups) { group in
+                    Button { onOpenEvent?(group.event) } label: {
+                    HStack(alignment: .center, spacing: 12) {
+                        Text(kioskEventDisplayTitle(group.event.title, sportCode: group.event.sportCode))
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(KioskText.primary)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                        Spacer(minLength: 8)
+                        Text(group.event.displayAllDay ? "All day" : group.event.startsAt.formatted(.dateTime.hour().minute()))
                             .font(KioskType.meta)
                             .foregroundStyle(KioskText.secondary)
+                            .fixedSize()
+                        if !group.crewMembers.isEmpty {
+                            // Crew without gear, as an avatar group (like web).
+                            HomeAvatarStack(members: group.crewMembers)
+                                .accessibilityLabel("\(group.crewMembers.count) without gear")
+                                .frame(width: 112, alignment: .trailing)
+                        } else {
+                            Color.clear.frame(width: 112, height: 1)
+                        }
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(KioskText.muted)
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 20)
-                    .padding(.vertical, 10)
+                    .padding(.vertical, 12)
+                    .contentShape(Rectangle())
+                    }
+                    .buttonStyle(KioskPressStyle())
+                    .disabled(onOpenEvent == nil)
                     .accessibilityElement(children: .combine)
                 }
             }
@@ -257,7 +285,26 @@ struct KioskHomeView: View {
 
     private func selectPickupHolder(_ pickup: KioskDashboard.HomePickup) {
         if let id = pickup.requester?.id, let user = users.first(where: { $0.id == id }) {
+            if let onStartPickup { onStartPickup(user, pickup) } else { onSelectUser(user) }
+        }
+    }
+
+    private func selectUpcomingHolder(_ reservation: KioskDashboard.UpcomingReservation) {
+        if let id = reservation.requester?.id, let user = users.first(where: { $0.id == id }) {
             onSelectUser(user)
+        }
+    }
+
+    private func upcomingSection(_ upcoming: [KioskDashboard.UpcomingReservation]) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            KioskSectionHeader(title: "Coming up", count: "\(upcoming.count)")
+            VStack(spacing: 0) {
+                ForEach(upcoming) { reservation in
+                    HomeUpcomingRow(reservation: reservation, canOpen: reservation.requester.map { r in users.contains { $0.id == r.id } } ?? false) { selectUpcomingHolder(reservation) }
+                }
+            }
+            .padding(.vertical, 6)
+            .kioskCard()
         }
     }
 
@@ -276,50 +323,22 @@ struct KioskHomeView: View {
 
     // MARK: People panel
 
-    /// People with something happening today: overdue or a return due today.
-    private var todayPeople: [(user: KioskUser, reason: String, section: KioskSection)] {
-        let byId = Dictionary(users.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-        var seen = Set<String>()
-        var result: [(KioskUser, String, KioskSection)] = []
-        let now = Date()
-        for checkout in checkouts.sorted(by: { $0.endsAt < $1.endsAt }) where checkout.custodyScope != "SHARED" {
-            guard let id = checkout.requesterId, let user = byId[id], !seen.contains(id) else { continue }
-            if checkout.isOverdue || checkout.endsAt < now {
-                result.append((user, "Overdue", .problem)); seen.insert(id)
-            } else if Calendar.current.isDateInToday(checkout.endsAt) {
-                result.append((user, "Returning today", .comingBack)); seen.insert(id)
-            }
-        }
-        return result.sorted { ($0.2 == .problem ? 0 : 1) < ($1.2 == .problem ? 0 : 1) }
-    }
 
-    private var serverTodayPeople: [(user: KioskUser, reason: String, section: KioskSection)] {
-        let byId = Dictionary(users.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-        return serverToday.compactMap { tile in
-            guard let user = byId[tile.userId] else { return nil }
-            var parts: [String] = []
-            var section: KioskSection = .comingBack
-            for reason in tile.reasons {
-                switch reason {
-                case "overdue": parts.append("Overdue"); section = .problem
-                case "pickup":
-                    parts.append(tile.pickupAt.map { "Pickup at \($0.formatted(.dateTime.hour().minute()))" } ?? "Pickup ready")
-                    if section != .problem { section = .pickingUp }
-                case "return_due": parts.append(parts.isEmpty ? "Returning today" : "returning today")
-                case "shift_soon":
-                    parts.append(tile.callAt.map { "Call at \($0.formatted(.dateTime.hour().minute())) · no gear yet" } ?? "Shift soon · no gear yet")
-                    if parts.count == 1 { section = .takingOut }
-                default: break
-                }
-            }
-            return (user, parts.joined(separator: " · "), section)
-        }
-    }
 
     private var peoplePanel: some View {
-        let today = Array((serverToday.isEmpty ? todayPeople : serverTodayPeople).prefix(6))
+        // Overdue, pickups, and returns already have rows on the left; the
+        // Today tiles only add people the left column can't show: a call
+        // soon with no gear yet (Erik, 2026-10-01: no duplication).
+        let today = Array(serverToday.filter { $0.reasons.contains("shift_soon") }.compactMap { tile -> (user: KioskUser, reason: String, section: KioskSection)? in
+            guard let user = users.first(where: { $0.id == tile.userId }) else { return nil }
+            let call = tile.callAt.map { "Call at \($0.formatted(.dateTime.hour().minute())) · no gear yet" } ?? "Shift soon · no gear yet"
+            return (user, call, .takingOut)
+        }.prefix(6))
         let labels = homeShortNames(for: users)
-        let showsPhotos = users.count <= 24
+        let gridLabels = homeGridNames(for: users)
+        // Photos at every roster size (Erik, 2026-09-30); 5 columns past 24 people,
+        // tiles sized to fill the card.
+        let usesWideGrid = users.count > 24
         return VStack(alignment: .leading, spacing: 16) {
             if !today.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
@@ -343,16 +362,26 @@ struct KioskHomeView: View {
                         .font(KioskType.meta)
                         .foregroundStyle(KioskText.muted)
                 }
-                ScrollView {
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: showsPhotos ? 4 : 5), spacing: 6) {
-                        ForEach(users) { user in
-                            HomePersonTile(user: user, label: labels[user.id] ?? user.name, showsPhoto: showsPhotos) {
-                                onSelectUser(user)
+                // The grid fills the card: tiles share the height left after
+                // the Today tiles, and scroll only below the 44 pt tap floor.
+                GeometryReader { proxy in
+                    let columns = usesWideGrid ? 5 : 4
+                    let spacing: CGFloat = 6
+                    let rows = max(1, Int(ceil(Double(users.count) / Double(columns))))
+                    let fitted = (proxy.size.height - spacing * CGFloat(rows - 1)) / CGFloat(rows)
+                    let tileHeight = min(max(fitted, 44), 96)
+                    ScrollView {
+                        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: spacing), count: columns), spacing: spacing) {
+                            ForEach(users) { user in
+                                HomePersonTile(user: user, label: gridLabels[user.id] ?? user.name, height: tileHeight) {
+                                    onSelectUser(user)
+                                }
                             }
                         }
                     }
+                    .scrollIndicators(.hidden)
+                    .scrollDisabled(fitted >= 44)
                 }
-                .scrollIndicators(.hidden)
             }
         }
         .padding(.leading, KioskSpacing.lg)
@@ -364,6 +393,45 @@ struct KioskHomeView: View {
 
 /// "Avery N." -- first name and last initial, the canvas's roster label.
 /// First names stay unique enough at this fleet size; the initial settles ties.
+/// "Women's Hockey vs Boston University- 2026 Championship Banner Drop" ->
+/// "WHKY vs Boston University": drops the promo tail after a dash or colon
+/// and swaps the sport name for its code when the title is a matchup.
+func kioskEventDisplayTitle(_ title: String, sportCode: String?) -> String {
+    var core = title
+    for separator in [" - ", "- ", " – ", " — ", ": "] {
+        if let range = core.range(of: separator) {
+            let head = String(core[..<range.lowerBound]).trimmingCharacters(in: .whitespaces)
+            if !head.isEmpty { core = head; break }
+        }
+    }
+    core = core.trimmingCharacters(in: .whitespacesAndNewlines)
+    for suffix in [" University", " College"] where core.hasSuffix(suffix) {
+        core = String(core.dropLast(suffix.count))
+    }
+    if let code = sportCode?.trimmingCharacters(in: .whitespaces), !code.isEmpty {
+        for joiner in [" vs. ", " vs ", " at ", " @ "] {
+            if let range = core.range(of: joiner, options: .caseInsensitive) {
+                return code + joiner + core[range.upperBound...]
+            }
+        }
+    }
+    return core
+}
+
+/// Roster-grid labels: first name alone, plus the last initial only when two
+/// people share a first name ("Ben S." / "Ben X."), so names fit five columns.
+func homeGridNames(for users: [KioskUser]) -> [String: String] {
+    let short = homeShortNames(for: users)
+    let firsts = users.map { $0.name.split(separator: " ").first.map(String.init) ?? $0.name }
+    var counts: [String: Int] = [:]
+    for first in firsts { counts[first.lowercased(), default: 0] += 1 }
+    var labels: [String: String] = [:]
+    for (user, first) in zip(users, firsts) {
+        labels[user.id] = (counts[first.lowercased()] ?? 0) > 1 ? (short[user.id] ?? user.name) : first
+    }
+    return labels
+}
+
 func homeShortNames(for users: [KioskUser]) -> [String: String] {
     var labels: [String: String] = [:]
     for user in users {
@@ -426,7 +494,7 @@ private struct HomeCustodyRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 12) {
-                Circle().fill(dotColor).frame(width: 8, height: 8)
+                HomeRowAvatar(url: checkout.requesterAvatarUrl, initials: checkout.requesterInitials, ring: dotColor)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(showsHolderFirst ? "\(holder) · \(checkout.itemCount) item\(checkout.itemCount == 1 ? "" : "s")" : checkout.title)
                         .font(KioskType.rowTitle)
@@ -512,24 +580,44 @@ private struct HomeTodayTile: View {
 private struct HomePersonTile: View {
     let user: KioskUser
     let label: String
-    let showsPhoto: Bool
+    var height: CGFloat = 44
     let action: () -> Void
+
+    /// Tall tiles stack the photo over the name so names keep their width;
+    /// short tiles put them side by side.
+    private var stacks: Bool { height >= 72 }
+    private var photoSize: CGFloat {
+        stacks ? min(height - 34, 56) : min(max(height - 14, 28), 36)
+    }
+
+    private var name: some View {
+        Text(label)
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundStyle(KioskText.primary)
+            .lineLimit(1)
+            .minimumScaleFactor(0.93)
+            .truncationMode(.tail)
+    }
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 8) {
-                if showsPhoto {
-                    KioskAvatar(url: user.avatarUrl, initials: user.initials, size: 28)
+            Group {
+                if stacks {
+                    VStack(spacing: 4) {
+                        KioskAvatar(url: user.avatarUrl, initials: user.initials, size: photoSize)
+                        name
+                    }
+                    .frame(maxWidth: .infinity)
+                } else {
+                    HStack(spacing: 6) {
+                        KioskAvatar(url: user.avatarUrl, initials: user.initials, size: photoSize)
+                        name
+                        Spacer(minLength: 0)
+                    }
                 }
-                Text(label)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(KioskText.primary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                Spacer(minLength: 0)
             }
-            .padding(.horizontal, 8)
-            .frame(height: 44)
+            .padding(.horizontal, 7)
+            .frame(height: height)
             .kioskCard(radius: KioskRadius.md)
         }
         .buttonStyle(KioskPressStyle())
@@ -546,6 +634,12 @@ private struct HomePickupRow: View {
         pickup.custodyScope == "SHARED" ? "Shared" : homePersonName(pickup.requester?.name ?? "")
     }
 
+    private var initials: String {
+        if pickup.custodyScope == "SHARED" { return "SC" }
+        if let initials = pickup.requester?.initials, !initials.isEmpty { return initials }
+        return homeInitials(pickup.requester?.name ?? "")
+    }
+
     private var readyText: String {
         pickup.readyAt <= Date() ? "ready now" : "from \(pickup.readyAt.formatted(.dateTime.hour().minute()))"
     }
@@ -553,9 +647,11 @@ private struct HomePickupRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 12) {
-                Circle()
-                    .fill(pickup.custodyScope == "SHARED" ? KioskSection.shared.accent : KioskSection.pickingUp.accent)
-                    .frame(width: 8, height: 8)
+                HomeRowAvatar(
+                    url: pickup.custodyScope == "SHARED" ? nil : pickup.requester?.avatarUrl,
+                    initials: initials,
+                    ring: pickup.custodyScope == "SHARED" ? KioskSection.shared.accent : KioskSection.pickingUp.accent
+                )
                 VStack(alignment: .leading, spacing: 1) {
                     Text(showsHolderFirst ? "\(pickup.title) · \(holder)" : pickup.title)
                         .font(KioskType.rowTitle)
@@ -584,5 +680,132 @@ private struct HomePickupRow: View {
         .buttonStyle(KioskPressStyle())
         .padding(.horizontal, 6)
         .accessibilityLabel("\(pickup.title), \(holder), \(readyText)")
+    }
+}
+
+private struct HomeUpcomingRow: View {
+    let reservation: KioskDashboard.UpcomingReservation
+    /// False when the holder isn't on the kiosk roster: no hub to open.
+    var canOpen = true
+    let action: () -> Void
+
+    private var isShared: Bool { reservation.custodyScope == "SHARED" }
+    private var isPlain: Bool { isShared || !canOpen }
+
+    private var holder: String {
+        isShared ? "Shared" : homePersonName(reservation.requester?.name ?? "")
+    }
+
+    private var initials: String {
+        if isShared { return "SC" }
+        if let initials = reservation.requester?.initials, !initials.isEmpty { return initials }
+        return homeInitials(reservation.requester?.name ?? "")
+    }
+
+    private var whenText: String {
+        homeUpcomingWhen(reservation.startsAt)
+    }
+
+    // SHARED reservations carry no requester, so there is no hub to open:
+    // render them as plain, non-interactive rows (no chevron, no button).
+    @ViewBuilder var body: some View {
+        if isPlain {
+            content
+                .padding(.horizontal, 6)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("\(reservation.title), \(holder), \(whenText)")
+        } else {
+            Button(action: action) { content }
+                .buttonStyle(KioskPressStyle())
+                .padding(.horizontal, 6)
+                .accessibilityLabel("\(reservation.title), \(holder), \(whenText)")
+        }
+    }
+
+    private var content: some View {
+            HStack(spacing: 12) {
+                HomeRowAvatar(
+                    url: isShared ? nil : reservation.requester?.avatarUrl,
+                    initials: initials,
+                    ring: KioskText.muted
+                )
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(reservation.title)
+                        .font(KioskType.rowTitle)
+                        .foregroundStyle(KioskText.primary)
+                        .lineLimit(1)
+                    Text("\(holder) · \(reservation.itemCount) item\(reservation.itemCount == 1 ? "" : "s")")
+                        .font(KioskType.meta)
+                        .foregroundStyle(KioskText.secondary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 8)
+                Text(whenText)
+                    .font(KioskType.chipStrong)
+                    .foregroundStyle(KioskText.secondary)
+                    .lineLimit(1)
+                if !isPlain {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(KioskText.muted)
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .contentShape(Rectangle())
+    }
+}
+
+/// "Tomorrow 2:00 PM", "Fri 9:00 AM" within the week, else "Oct 9 9:00 AM".
+func homeUpcomingWhen(_ date: Date, now: Date = Date(), calendar: Calendar = .current) -> String {
+    let time = date.formatted(.dateTime.hour().minute())
+    let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: now), to: calendar.startOfDay(for: date)).day ?? 0
+    if days == 1 { return "Tomorrow \(time)" }
+    if days > 1 && days < 7 { return "\(date.formatted(.dateTime.weekday(.abbreviated))) \(time)" }
+    return "\(date.formatted(.dateTime.month(.abbreviated).day())) \(time)"
+}
+
+func homeInitials(_ name: String) -> String {
+    name.split(separator: " ").prefix(2).compactMap { $0.first }.map { String($0) }.joined().uppercased()
+}
+
+/// Leading person avatar for home list rows (redesign canvas: 34pt). The
+/// status ring replaces the old 8pt dot so each row keeps its section colour.
+private struct HomeRowAvatar: View {
+    let url: String?
+    let initials: String
+    let ring: Color
+
+    var body: some View {
+        KioskAvatar(url: url, initials: initials, size: 30)
+            .padding(2)
+            .overlay(Circle().stroke(ring, lineWidth: 2))
+            .frame(width: 34, height: 34)
+            .accessibilityHidden(true)
+    }
+}
+
+/// Overlapping avatars with a "+N" chip, matching the web avatar group.
+private struct HomeAvatarStack: View {
+    let members: [KioskEvent.CrewMember]
+    private let shown = 4
+    private let size: CGFloat = 30
+
+    var body: some View {
+        HStack(spacing: -9) {
+            ForEach(members.prefix(shown)) { member in
+                KioskAvatar(url: member.avatarUrl, initials: member.initials ?? homeInitials(member.name), size: size)
+                    .overlay(Circle().stroke(KioskSurface.card, lineWidth: 2))
+            }
+            if members.count > shown {
+                Text("+\(members.count - shown)")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(KioskText.secondary)
+                    .frame(width: size, height: size)
+                    .background(KioskSurface.placeholder, in: Circle())
+                    .overlay(Circle().stroke(KioskSurface.card, lineWidth: 2))
+            }
+        }
+        .accessibilityElement(children: .ignore)
     }
 }

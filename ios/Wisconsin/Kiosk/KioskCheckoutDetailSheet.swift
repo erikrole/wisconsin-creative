@@ -60,6 +60,11 @@ struct KioskCheckoutDetailSheet: View {
     @State private var swapItem: KioskCheckoutDetail.ReturnItem?
     /// C5: staff actions, reached from the read-only sheet on home.
     @State private var showStaffFlow = false
+    @State private var showExtend = false
+    /// Extend from home acts as the holder, so it first asks "Continue as
+    /// <holder>?" (the reserved-pickup identity card's trust level). Anyone
+    /// else extends through Staff actions.
+    @State private var extendHolderConfirmed = false
 
     private enum ActiveMutation: Equatable {
         case savingDetails
@@ -86,6 +91,7 @@ struct KioskCheckoutDetailSheet: View {
             && pendingBlock == nil
             && !showCamera
             && swapItem == nil
+            && !showStaffFlow
     }
 
     private var actorId: String? {
@@ -144,8 +150,8 @@ struct KioskCheckoutDetailSheet: View {
                         }
                     }
                 } else {
-                    timingRow
                     itemsPanel
+                    actionBar
                 }
             }
             .padding(28)
@@ -199,6 +205,38 @@ struct KioskCheckoutDetailSheet: View {
                     onChanged()
                 }
             )
+            .statusBarHidden(true)
+        }
+        .fullScreenCover(isPresented: $showExtend) {
+            // Extends as the holder, the same as Extend on their own page.
+            if let holderId = context.requesterId ?? detail?.requesterId, !extendHolderConfirmed {
+                KioskExtendHolderConfirm(
+                    holderName: context.requesterName,
+                    avatarURL: context.requesterAvatarUrl,
+                    initials: context.requesterInitials,
+                    checkoutTitle: currentTitle,
+                    onConfirm: { extendHolderConfirmed = true },
+                    onCancel: { showExtend = false }
+                )
+                .id(holderId)
+                .statusBarHidden(true)
+            } else if let holderId = context.requesterId ?? detail?.requesterId {
+                KioskExtendScreen(
+                    checkoutId: context.checkoutId,
+                    title: currentTitle,
+                    detailLine: context.requesterName,
+                    actorId: holderId,
+                    onCancel: { showExtend = false },
+                    onExtended: {
+                        showExtend = false
+                        Task { await load() }
+                        onChanged()
+                    }
+                )
+            }
+        }
+        .onChange(of: showExtend) { _, isShowing in
+            if !isShowing { extendHolderConfirmed = false }
         }
         .fullScreenCover(isPresented: $showStaffFlow) {
             KioskStaffActionsFlow(context: context) { changed in
@@ -208,6 +246,7 @@ struct KioskCheckoutDetailSheet: View {
                     onChanged()
                 }
             }
+            .statusBarHidden(true)
         }
         .onDisappear {
             presentationGeneration = UUID()
@@ -335,9 +374,40 @@ struct KioskCheckoutDetailSheet: View {
                 .frame(maxWidth: .infinity, minHeight: 100)
             } else {
                 ScrollView {
-                    LazyVStack(spacing: 8) {
-                        ForEach(detail?.items ?? []) { item in
-                            itemRow(item)
+                    let items = detail?.items ?? []
+                    if canEditActiveCheckout {
+                        // Editing: one row per unit so Swap/Remove act on it.
+                        LazyVStack(spacing: 8) {
+                            ForEach(items) { item in itemRow(item) }
+                        }
+                    } else {
+                        // Reading: uniform tiles, photo over tag; numbered
+                        // batteries share one tile with their unit chips.
+                        let grouped = items.filter { $0.isNumberedBulk && $0.bulkSkuId != nil }
+                        let singles = items.filter { item in !grouped.contains { $0.id == item.id } }
+                        // Cameras, Lenses, Batteries, Audio, Other: only the
+                        // sections with items. Numbered batteries share a chip.
+                        let buckets = categoryGroups(singles)
+                        let batteries = batteryGroups(grouped)
+                        VStack(alignment: .leading, spacing: 12) {
+                            ForEach(["Cameras", "Lenses", "Batteries", "Audio", "Other"], id: \.self) { name in
+                                let loose = buckets.first { $0.name == name }?.items ?? []
+                                let packs = name == "Batteries" ? batteries : []
+                                if !loose.isEmpty || !packs.isEmpty {
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        Text(name.uppercased())
+                                            .font(KioskType.overline)
+                                            .tracking(KioskType.overlineTracking)
+                                            .foregroundStyle(KioskText.tertiary)
+                                        if !loose.isEmpty {
+                                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 8)], alignment: .leading, spacing: 8) {
+                                                ForEach(loose) { item in itemTile(item) }
+                                            }
+                                        }
+                                        ForEach(packs, id: \.id) { group in batteryTile(group.items) }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -348,44 +418,74 @@ struct KioskCheckoutDetailSheet: View {
     }
 
     private var header: some View {
-        HStack(alignment: .top, spacing: 14) {
+        HStack(alignment: .center, spacing: 14) {
             KioskAvatar(url: context.requesterAvatarUrl, initials: context.requesterInitials, size: 48)
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(currentTitle)
                     .font(.title2.weight(.heavy))
                     .foregroundStyle(KioskText.primary)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.78)
-                Text(context.requesterName)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                // Who and when on one line; the due part carries custody tone.
+                (Text(context.requesterName + " · ").foregroundStyle(KioskText.secondary)
+                 + Text("\(currentIsOverdue ? "Overdue since" : "Due") \(currentEndsAt.kioskDueStamp()) · \(relativeDue)").foregroundStyle(custodyTone))
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(KioskText.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
             }
-            Spacer()
-            if let onReturn {
-                // Returning gear is the primary custody action on this sheet,
-                // so it carries the brand red. Save and Remove are deliberately
-                // quieter below — red here must mean "the main thing to do".
-                Button("Return Gear") {
-                    dismiss()
-                    onReturn()
-                }
-                .font(.headline.weight(.semibold))
-                .kioskButtonRole(.primary)
-                .controlSize(.large)
-                .disabled(isMutating || !scanQueue.isEmpty)
-            }
-            if !allowsEditing, detail?.status == "OPEN" {
-                // C5: no separate staff mode. Staff tap their name inside.
-                Button("Staff actions") { showStaffFlow = true }
+            Spacer(minLength: 8)
+            if allowsEditing {
+                Button("Done") { dismiss() }
                     .font(.headline.weight(.semibold))
                     .kioskButtonRole(.secondary)
                     .controlSize(.large)
-            }
-            Button("Done") { dismiss() }
-                .font(.headline.weight(.semibold))
-                .kioskButtonRole(.secondary)
-                .controlSize(.large)
+                    .disabled(isMutating || !scanQueue.isEmpty)
+            } else {
+                Button { dismiss() } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 17, weight: .bold))
+                        .frame(width: 44, height: 44)
+                        .background(KioskSurface.cardRaised, in: Circle())
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(KioskText.secondary)
+                .accessibilityLabel("Close")
                 .disabled(isMutating || !scanQueue.isEmpty)
+            }
+        }
+    }
+
+    /// Read mode's actions, at the bottom where a thumb lands.
+    @ViewBuilder
+    private var actionBar: some View {
+        HStack(spacing: 10) {
+            if let onReturn {
+                Button {
+                    dismiss()
+                    onReturn()
+                } label: {
+                    Text("Return gear").font(.headline.weight(.semibold)).frame(maxWidth: .infinity, minHeight: 50)
+                }
+                .kioskButtonRole(.primary)
+                .disabled(isMutating || !scanQueue.isEmpty)
+            }
+            if detail?.status == "OPEN", context.custodyScope != "SHARED", (context.requesterId ?? detail?.requesterId) != nil {
+                Button { showExtend = true } label: {
+                    Label("Extend", systemImage: "clock.arrow.circlepath")
+                        .font(.headline.weight(.semibold)).lineLimit(1).fixedSize()
+                        .padding(.horizontal, 16).frame(minHeight: 50)
+                }
+                .kioskButtonRole(.secondary)
+            }
+            if detail?.status == "OPEN" {
+                // C5: staff actions open behind a staff ID card scan.
+                Button { showStaffFlow = true } label: {
+                    Label("Staff actions", systemImage: "lock.fill")
+                        .font(.headline.weight(.semibold)).lineLimit(1).fixedSize()
+                        .padding(.horizontal, 16).frame(minHeight: 50)
+                }
+                .kioskButtonRole(.secondary)
+            }
         }
     }
 
@@ -550,41 +650,6 @@ struct KioskCheckoutDetailSheet: View {
         .accessibilityElement(children: .contain)
     }
 
-    private var timingRow: some View {
-        HStack(spacing: 10) {
-            // Custody tone, not brand: blue while simply out, orange on the due
-            // day, red once late. The clock glyph used to be brand red here,
-            // which made an on-time checkout look like an alert.
-            Image(systemName: currentIsOverdue ? "exclamationmark.triangle.fill" : "clock.badge.checkmark")
-                .foregroundStyle(custodyTone)
-                .accessibilityHidden(true)
-            Text(currentIsOverdue ? "Overdue" : "Due")
-                .font(KioskType.overline)
-                .tracking(0.8)
-                .foregroundStyle(custodyTone)
-                .textCase(.uppercase)
-            Text(currentEndsAt.kioskDueStamp())
-                .font(.subheadline.weight(.semibold).monospacedDigit())
-                .foregroundStyle(KioskText.primary)
-            Text(relativeDue)
-                .font(KioskType.chip)
-                .foregroundStyle(custodyTone)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 3)
-                .background(custodyTone.opacity(0.14), in: Capsule())
-            Spacer()
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .background(KioskSurface.cardRaised, in: RoundedRectangle(cornerRadius: KioskRadius.lg))
-        .overlay(
-            RoundedRectangle(cornerRadius: KioskRadius.lg)
-                .stroke(KioskStroke.standard, lineWidth: 1)
-        )
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(currentIsOverdue ? "Overdue, due" : "Due") \(currentEndsAt.kioskDueStamp())")
-    }
-
     private var relativeDue: String {
         let rel = Self.relativeFormatter.localizedString(for: currentEndsAt, relativeTo: Date())
         return currentIsOverdue ? "\(rel)" : rel
@@ -613,16 +678,14 @@ struct KioskCheckoutDetailSheet: View {
             itemThumbnail(item)
                 .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(item.itemListPrimaryTitle)
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(KioskText.primary)
-                    .lineLimit(1)
-                Text(item.itemListSecondaryTitle ?? item.bulkSkuName ?? item.name)
-                    .font(KioskType.chip)
-                    .foregroundStyle(KioskText.secondary)
-                    .lineLimit(1)
-            }
+            // Asset tag only; a numbered battery reads "Sony Battery #7"
+            // rather than "#7" over "Sony Battery #7".
+            Text(item.isNumberedBulk ? (item.itemListSecondaryTitle ?? item.itemListPrimaryTitle) : item.itemListPrimaryTitle)
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(KioskText.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.9)
+                .accessibilityLabel(item.itemListSecondaryTitle ?? item.name)
             Spacer()
             if canEditActiveCheckout && isRemovable(item) {
                 Button("Swap") { swapItem = item }
@@ -662,12 +725,86 @@ struct KioskCheckoutDetailSheet: View {
         )
     }
 
+    /// Fixed buckets, in this order, shown only when they have items:
+    /// Cameras, Lenses, Audio, Other (batteries are their own section).
+    private func categoryGroups(_ items: [KioskCheckoutDetail.ReturnItem]) -> [(name: String, items: [KioskCheckoutDetail.ReturnItem])] {
+        let order = ["Cameras", "Lenses", "Batteries", "Audio", "Other"]
+        var byName: [String: [KioskCheckoutDetail.ReturnItem]] = [:]
+        for item in items { byName[Self.bucket(item), default: []].append(item) }
+        return order.compactMap { name in byName[name].map { (name, $0) } }
+    }
+
+    static func bucket(_ item: KioskCheckoutDetail.ReturnItem) -> String {
+        let text = [item.category, item.bulkSkuName, item.name, item.tagName].compactMap { $0 }.joined(separator: " ").lowercased()
+        func has(_ words: [String]) -> Bool { words.contains { text.contains($0) } }
+        if item.isNumberedBulk || has(["battery", "batteries", "v-mount", "np-f"]) { return "Batteries" }
+        if has(["audio", "mic", "microphone", "lav", "recorder", "sennheiser", "rode", "zoom h", "wireless go", "boom"]) { return "Audio" }
+        if has(["lens", "mm f/", "mm f", "16-35", "17-28", "24-70", "70-200", "100-400", "prime"]) { return "Lenses" }
+        if has(["camera", "body", "fx3", "fx6", "fx30", "a7", "a1 ", "canon r", "eos", "cinema"]) { return "Cameras" }
+        return "Other"
+    }
+
+    private func batteryGroups(_ items: [KioskCheckoutDetail.ReturnItem]) -> [(id: String, items: [KioskCheckoutDetail.ReturnItem])] {
+        var order: [String] = []
+        var byKind: [String: [KioskCheckoutDetail.ReturnItem]] = [:]
+        for item in items {
+            let key = item.bulkSkuId ?? item.name
+            if byKind[key] == nil { order.append(key) }
+            byKind[key, default: []].append(item)
+        }
+        return order.map { ($0, (byKind[$0] ?? []).sorted { ($0.unitNumber ?? 0) < ($1.unitNumber ?? 0) }) }
+    }
+
+    /// Compact chip: small photo + asset tag. The sheet is a quick overview.
+    private func itemTile(_ item: KioskCheckoutDetail.ReturnItem) -> some View {
+        chipShell {
+            itemThumbnail(item, size: 28)
+            Text(item.isNumberedBulk ? (item.itemListSecondaryTitle ?? item.itemListPrimaryTitle) : item.itemListPrimaryTitle)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(item.returned ? KioskText.tertiary : KioskText.primary)
+                .strikethrough(item.returned)
+                .lineLimit(1)
+        }
+        .accessibilityLabel(item.itemListSecondaryTitle ?? item.name)
+    }
+
+    /// One chip per battery kind: "Sony Battery #7 #20".
+    private func batteryTile(_ units: [KioskCheckoutDetail.ReturnItem]) -> some View {
+        let first = units[0]
+        let name = first.bulkSkuName ?? first.name
+        return chipShell(fits: true) {
+            itemThumbnail(first, size: 28)
+            Text(name)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(KioskText.primary)
+                .lineLimit(1)
+            HStack(spacing: 4) {
+                ForEach(units) { unit in
+                    KioskBatteryUnitChip(label: unit.unitNumber.map(String.init) ?? unit.tagName, isScanned: unit.returned, size: 26)
+                }
+            }
+        }
+        .accessibilityLabel("\(name), units \(units.compactMap { $0.unitNumber.map(String.init) }.joined(separator: ", "))")
+    }
+
+    private func chipShell<Content: View>(fits: Bool = false, @ViewBuilder _ content: () -> Content) -> some View {
+        HStack(spacing: 8) { content() }
+            .padding(.leading, 5)
+            .padding(.trailing, 12)
+            .padding(.vertical, 5)
+            .fixedSize(horizontal: fits, vertical: false)
+            .frame(maxWidth: fits ? nil : .infinity, alignment: .leading)
+            .background(KioskSurface.card, in: RoundedRectangle(cornerRadius: KioskRadius.sm))
+            .overlay(RoundedRectangle(cornerRadius: KioskRadius.sm).stroke(KioskStroke.hairline, lineWidth: 1))
+            .accessibilityElement(children: .ignore)
+    }
+
     private func isRemovable(_ item: KioskCheckoutDetail.ReturnItem) -> Bool {
         !item.returned && (!item.isBulkDisplay || (item.isNumberedBulk && item.unitNumber != nil))
     }
 
     @ViewBuilder
-    private func itemThumbnail(_ item: KioskCheckoutDetail.ReturnItem) -> some View {
+    private func itemThumbnail(_ item: KioskCheckoutDetail.ReturnItem, size: CGFloat = 40) -> some View {
         let fallbackIcon = item.isBulkDisplay ? "battery.100percent" : "camera.fill"
         Group {
             if let urlString = item.imageUrl, let url = URL(string: urlString) {
@@ -683,7 +820,7 @@ struct KioskCheckoutDetailSheet: View {
                 thumbnailFallback(icon: fallbackIcon)
             }
         }
-        .frame(width: 40, height: 40)
+        .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: KioskRadius.sm))
         .overlay(
             RoundedRectangle(cornerRadius: KioskRadius.sm)
@@ -854,4 +991,71 @@ struct KioskCheckoutDetailSheet: View {
 private struct KioskMutationMessage {
     let tone: KioskBannerTone
     let text: String
+}
+
+
+/// Extend from the home booking sheet: confirm the person at the kiosk is the
+/// holder before extending as them. Same trust as tapping your own name on
+/// home; anyone else is pointed at Staff actions.
+struct KioskExtendHolderConfirm: View {
+    let holderName: String
+    let avatarURL: String?
+    let initials: String
+    let checkoutTitle: String
+    let onConfirm: () -> Void
+    let onCancel: () -> Void
+
+    private var firstName: String {
+        holderName.split(separator: " ").first.map(String.init) ?? holderName
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            KioskTaskHeader(
+                title: "Extend",
+                subtitle: checkoutTitle,
+                backTitle: "Cancel",
+                backAccessibilityLabel: "Cancel extend",
+                onBack: onCancel
+            )
+            VStack(alignment: .leading, spacing: 18) {
+                Text("This is \(firstName)\u{2019}s checkout")
+                    .font(KioskType.screenTitle)
+                    .foregroundStyle(KioskText.primary)
+                Button(action: onConfirm) {
+                    HStack(spacing: 14) {
+                        KioskAvatar(url: avatarURL, initials: initials, size: 48)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(holderName)
+                                .font(.system(size: 19, weight: .bold))
+                                .foregroundStyle(KioskText.primary)
+                                .lineLimit(1)
+                            Text("Continue as \(firstName)")
+                                .font(KioskType.chip)
+                                .foregroundStyle(KioskText.secondary)
+                                .lineLimit(1)
+                        }
+                        Spacer(minLength: 0)
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(KioskText.muted)
+                    }
+                    .padding(.horizontal, 16)
+                    .frame(height: 76)
+                    .kioskCard(KioskSurface.cardRaised, radius: 16, stroke: KioskStroke.standard)
+                }
+                .buttonStyle(KioskPressStyle())
+                .accessibilityLabel("\(holderName), continue as \(firstName)")
+                Text("Not \(firstName)? Only \(firstName) can extend from here. Staff can extend it from Staff actions.")
+                    .font(KioskType.meta)
+                    .foregroundStyle(KioskText.tertiary)
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: 560, alignment: .leading)
+            .padding(.horizontal, KioskSpacing.xl)
+            .padding(.top, KioskSpacing.lg)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        }
+        .background(KioskSurface.base.ignoresSafeArea())
+    }
 }

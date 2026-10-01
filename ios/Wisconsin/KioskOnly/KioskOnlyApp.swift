@@ -62,7 +62,7 @@ struct WisconsinKioskApp: App {
             affiliationBadge: user.affiliationBadge
         )
         switch scenario {
-        case .idle, .homeGameDay:
+        case .idle, .homeGameDay, .homeEmptyUpcoming:
             kioskStore.screen = .idle
         case .operatorHub, .checkoutSheet, .hubAtLimit,
              .changesExtend, .changesTransfer, .changesSwap, .changesReservation, .changesStaff:
@@ -151,7 +151,11 @@ struct WisconsinKioskApp: App {
                     title: "Wrestling Duals Kit",
                     count: 3,
                     total: 5,
-                    tags: ["CAM-022", "LENS-41", "Sony Battery #12"],
+                    items: [
+                        KioskReceipt.Item(tag: "CAM-022", imageUrl: nil),
+                        KioskReceipt.Item(tag: "LENS-41", imageUrl: nil),
+                        KioskReceipt.Item(tag: "Sony Battery #12", imageUrl: nil, batteryKind: "sony", batteryName: "Sony Battery", unitNumber: 12),
+                    ],
                     endsAt: KioskFixtures.hours(30),
                     isShared: false,
                     remainingItemNames: ["MIC-09", "1 × Sony Battery"]
@@ -176,7 +180,12 @@ struct WisconsinKioskApp: App {
                     refNumber: "CO-1043",
                     returnedCount: 4,
                     totalItems: 5,
-                    returnedTags: ["CAM-014", "LENS-22", "V-Mount #7", "V-Mount #9"],
+                    returnedItems: [
+                        KioskReceipt.Item(tag: "CAM-014", imageUrl: nil),
+                        KioskReceipt.Item(tag: "LENS-22", imageUrl: nil),
+                        KioskReceipt.Item(tag: "V-Mount #7", imageUrl: nil, batteryKind: "vmount", batteryName: "V-Mount Battery", unitNumber: 7),
+                        KioskReceipt.Item(tag: "V-Mount #9", imageUrl: nil, batteryKind: "vmount", batteryName: "V-Mount Battery", unitNumber: 9),
+                    ],
                     damaged: [("LENS-22", "Sony 24-70mm GM")],
                     missing: [("AUD-007", "Sennheiser MKE 600")]
                 )
@@ -226,7 +235,7 @@ struct WisconsinKioskApp: App {
             kioskStore.screen = .return(bookingId: "co-1", userId: kioskUser.id)
         case .activation:
             kioskStore.screen = .activation
-        case .checkoutDetails, .checkoutDetailsLinked, .keyboardTip, .checkoutOtherDate:
+        case .checkoutDetails, .checkoutDetailsLinked, .keyboardTip, .keyboardEntry, .checkoutOtherDate:
             kioskStore.setIntent(KioskFlowIntent(
                 action: .checkout,
                 source: .person,
@@ -492,6 +501,14 @@ extension Color {
 /// hard-coded `false` outside DEBUG, so a release build carries no fixture
 /// behaviour and no reference to the harness.
 enum KioskCaptureSeed {
+    static var keyboardEntry: Bool {
+        #if DEBUG
+        return KioskFixtureScenario.active == .keyboardEntry
+        #else
+        return false
+        #endif
+    }
+
     static var scannerHelp: Bool {
         #if DEBUG
         return KioskFixtureScenario.active == .scannerHelp
@@ -570,6 +587,9 @@ enum KioskFixtureScenario: String {
     /// Step 1 of checkout with the booking-name field focused, for capturing
     /// the hardware-keyboard tip.
     case keyboardTip = "keyboard-tip"
+    /// Step 1 of checkout with the "Something else" field focused and the
+    /// software keyboard up, for capturing the field riding above it.
+    case keyboardEntry = "keyboard-entry"
     /// Step 1 of checkout — the detail-input step, nothing linked.
     case checkoutDetails = "checkout-details"
     /// Step 1 of checkout with an event linked.
@@ -624,6 +644,8 @@ enum KioskFixtureScenario: String {
     case identityReturnOther = "identity-return-other"
     /// Redesign A3: home on game day, grouped by event with crew without gear.
     case homeGameDay = "home-game-day"
+    /// Quiet home: nothing out or due today, reservations coming up.
+    case homeEmptyUpcoming = "home-empty-upcoming"
     /// Redesign B1: free gear scanned on home, asking who's taking it.
     case identityScanFree = "identity-scan-free"
     /// Redesign B2: reserved gear scanned on home, "Continue as" the holder.
@@ -953,6 +975,7 @@ enum KioskFixtures {
         // real logic, not a fixture detail — so the sleep scenario has to hand
         // back a genuinely quiet gear room.
         if KioskFixtureScenario.active == .homeGameDay { return gameDayDashboardJSON() }
+        if KioskFixtureScenario.active == .homeEmptyUpcoming { return emptyUpcomingDashboardJSON() }
         if forcesSleep {
             return """
             {"stats":{"itemsOut":0,"checkouts":0,"overdue":0},
@@ -1030,6 +1053,31 @@ enum KioskFixtures {
                   {"userId":"u-11","name":"Kaia Thornton","avatarUrl":null,"initials":"KT","reasons":["pickup"]},
                   {"userId":"u-9","name":"Imani Brooks","avatarUrl":null,"initials":"IB","reasons":["return_due"]}],
          "nextUp":null}
+        """
+    }
+
+    /// Nothing out, nothing due today; five reservations over the next week.
+    static func emptyUpcomingDashboardJSON() -> String {
+        func person(_ id: String, _ name: String, _ initials: String) -> String {
+            #"{"id":"\#(id)","name":"\#(name)","avatarUrl":null,"initials":"\#(initials)"}"#
+        }
+        func reservation(_ id: String, _ title: String, _ requester: String, _ count: Int, _ day: Int, _ hour: Int, shared: Bool = false) -> String {
+            #"{"id":"\#(id)","title":"\#(title)","startsAt":"\#(iso(at(day, hour)))","endsAt":"\#(iso(at(day, hour + 4)))","itemCount":\#(count),"custodyScope":"\#(shared ? "SHARED" : "PERSON")","requester":\#(requester)}"#
+        }
+        let upcoming = [
+            reservation("res-u1", "Hockey vs Minnesota", person(primaryUser.id, "Erik Role", "ER"), 4, 1, 14),
+            reservation("res-u2", "Recruiting Visit Shoot", person("u-16", "Priya Ramachandran", "PR"), 6, 2, 9),
+            reservation("res-u3", "Football Travel Case", "null", 12, 3, 7, shared: true),
+            reservation("res-u4", "Softball Road Kit", person("u-18", "Morgan Lee", "ML"), 2, 4, 10),
+            reservation("res-u5", "Volleyball Media Day", person("u-9", "Imani Brooks", "IB"), 5, 6, 13),
+        ].joined(separator: ",")
+        return """
+        {"stats":{"itemsOut":0,"checkouts":0,"overdue":0},
+         "capabilities":{"eventWorkerDetails":true,"eventCallTimes":true},
+         "standby":{"sleepMode":false,"reason":"active_window","nightHours":false,"nearbyEventCount":0,"nearbyBookingWindowCount":0},
+         "events":[],"activeItems":[],"checkouts":[],"pickups":[],"today":[],
+         "nextUp":{"title":"Hockey vs Minnesota","at":"\(iso(at(1, 14)))","kind":"pickup"},
+         "upcoming":[\(upcoming)]}
         """
     }
 
@@ -1143,6 +1191,14 @@ enum KioskFixtures {
         {"currentEndsAt":"\(iso(hours(6)))","maxEndsAt":"\(iso(hours(10)))",
          "limitingItem":{"assetTag":"CAM-014","name":"Sony FX3","holderName":"Maya F.",
                          "startsAt":"\(iso(hours(10)))"}}
+        """
+    }
+
+    /// Pickup context-card edit: the saved booking.
+    static func pickupDetailsJSON(id: String) -> String {
+        """
+        {"success":true,"booking":{"id":"\(id)","title":"Wrestling Duals Kit",
+         "endsAt":"\(iso(hours(8)))","updatedAt":"\(iso(hours(0)))","eventId":null}}
         """
     }
 
@@ -1345,6 +1401,11 @@ final class KioskFixtureURLProtocol: URLProtocol {
             }
             if path.hasPrefix("/api/kiosk/student/") {
                 return (200, KioskFixtures.studentContextJSON())
+            }
+            if path.hasPrefix("/api/kiosk/pickup/"), path.hasSuffix("/details") {
+                let id = path.replacingOccurrences(of: "/api/kiosk/pickup/", with: "")
+                    .replacingOccurrences(of: "/details", with: "")
+                return (200, KioskFixtures.pickupDetailsJSON(id: id))
             }
             if path.hasSuffix("/extend-window") {
                 return (200, KioskFixtures.extendWindowJSON())

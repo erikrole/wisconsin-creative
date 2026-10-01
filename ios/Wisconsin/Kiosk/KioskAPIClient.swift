@@ -175,6 +175,20 @@ struct KioskAPI {
         return try await perform(req)
     }
 
+    /// C5: a staff ID card scan. On success the token proves this staff
+    /// person for ten minutes on this kiosk; it lives only in the open sheet.
+    func kioskVerifyStaff(scanValue: String) async throws -> KioskStaffVerifyResult {
+        struct Body: Encodable { let scanValue: String }
+        var req = request(path: "/api/kiosk/staff/verify", method: "POST")
+        req.httpBody = try JSONEncoder().encode(Body(scanValue: scanValue))
+        return try await perform(req)
+    }
+
+    static func attachStaffToken(_ token: String?, to request: inout URLRequest) {
+        guard let token, !token.isEmpty else { return }
+        request.setValue(token, forHTTPHeaderField: "X-Kiosk-Staff-Token")
+    }
+
     func kioskResolveScan(scanValue: String, userId: String? = nil) async throws -> KioskResolveScanResult {
         struct Body: Encodable { let scanValue: String; let userId: String? }
         var req = request(path: "/api/kiosk/resolve-scan", method: "POST")
@@ -194,6 +208,21 @@ struct KioskAPI {
     func kioskStudentContext(userId: String) async throws -> KioskStudentContext {
         let req = request(path: "/api/kiosk/student/\(userId)")
         return try await perform(req)
+    }
+
+    // MARK: - Crew request
+
+    /// Asks staff to add the identified person to an event's crew in `area`.
+    /// Files a pending request; nothing is assigned until staff approve.
+    /// Returns the server status: requested, already_requested, already_on_crew.
+    func kioskCrewRequest(eventId: String, actorId: String, area: String) async throws -> String {
+        struct Body: Encodable { let actorId: String; let area: String }
+        struct Payload: Decodable { let status: String }
+        struct Response: Decodable { let data: Payload }
+        var req = request(path: "/api/kiosk/events/\(eventId)/crew-request", method: "POST")
+        req.httpBody = try JSONEncoder().encode(Body(actorId: actorId, area: area))
+        let response: Response = try await perform(req)
+        return response.data.status
     }
 
     // MARK: - Checkout
@@ -353,16 +382,57 @@ struct KioskAPI {
         return try await perform(req)
     }
 
-    func kioskUpdateActiveCheckout(id: String, actorId: String, title: String?, endsAt: Date?) async throws -> KioskActiveCheckoutMutationResult {
+    func kioskUpdateActiveCheckout(id: String, actorId: String, title: String?, endsAt: Date?, staffToken: String? = nil) async throws -> KioskActiveCheckoutMutationResult {
         struct Body: Encodable {
             let actorId: String
             let title: String?
             let endsAt: String?
         }
         var req = request(path: "/api/kiosk/checkout/\(id)", method: "PATCH")
+        Self.attachStaffToken(staffToken, to: &req)
         req.httpBody = try JSONEncoder().encode(Body(
             actorId: actorId,
             title: title,
+            endsAt: endsAt.map { isoString(from: $0) }
+        ))
+        return try await perform(req)
+    }
+
+    /// Pickup context card: rename, link or unlink an event, or move the
+    /// due-back time before pickup. `eventId` nil leaves the link alone;
+    /// `.some(nil)` unlinks (sent as an explicit JSON null).
+    func kioskUpdatePickupDetails(
+        id: String,
+        actorId: String,
+        expectedUpdatedAt: Date,
+        title: String?,
+        eventId: String??,
+        endsAt: Date?
+    ) async throws -> KioskPickupDetailsResult {
+        struct Body: Encodable {
+            let actorId: String
+            let expectedUpdatedAt: String
+            let title: String?
+            let eventId: String??
+            let endsAt: String?
+
+            func encode(to encoder: Encoder) throws {
+                var c = encoder.container(keyedBy: CodingKeys.self)
+                try c.encode(actorId, forKey: .actorId)
+                try c.encode(expectedUpdatedAt, forKey: .expectedUpdatedAt)
+                try c.encodeIfPresent(title, forKey: .title)
+                try c.encodeIfPresent(endsAt, forKey: .endsAt)
+                if let eventId { try c.encode(eventId, forKey: .eventId) }
+            }
+
+            enum CodingKeys: String, CodingKey { case actorId, expectedUpdatedAt, title, eventId, endsAt }
+        }
+        var req = request(path: "/api/kiosk/pickup/\(id)/details", method: "PATCH")
+        req.httpBody = try JSONEncoder().encode(Body(
+            actorId: actorId,
+            expectedUpdatedAt: isoString(from: expectedUpdatedAt),
+            title: title,
+            eventId: eventId,
             endsAt: endsAt.map { isoString(from: $0) }
         ))
         return try await perform(req)
@@ -386,7 +456,8 @@ struct KioskAPI {
         targetUserId: String,
         assetIds: [String],
         bulkUnitIds: [String],
-        reason: String?
+        reason: String?,
+        staffToken: String? = nil
     ) async throws -> KioskTransferResult {
         struct Body: Encodable {
             let actorId: String
@@ -398,6 +469,7 @@ struct KioskAPI {
             let reason: String?
         }
         var req = request(path: "/api/kiosk/checkout/\(id)/transfer", method: "POST")
+        Self.attachStaffToken(staffToken, to: &req)
         req.httpBody = try JSONEncoder().encode(Body(
             actorId: actorId,
             requestId: requestId,
@@ -558,24 +630,30 @@ struct KioskAPI {
     }
 
     /// Damaged or missing (G4, G5). Multipart like the web route: `actorId`,
-    /// `assetId`, `type` (DAMAGED | LOST), optional `description`, optional
+    /// one target (`assetId` | `bulkSkuUnitId` | `bulkSkuId` + `quantity`), `type` (DAMAGED | LOST), optional `description`, optional
     /// JPEG `file`. Not retried automatically: the server rejects a repeat
-    /// report for the same item within a few seconds.
+    /// report for the same item within a few seconds. `requestId` is the
+    /// operation reference for bulk reports: a resend of the same submit
+    /// replays the first answer instead of counting the quantity twice.
     func kioskCheckinReport(
         bookingId: String,
         actorId: String,
-        assetId: String,
+        target: KioskReportTarget,
         type: String,
         description: String?,
-        photoJPEG: Data?
+        photoJPEG: Data?,
+        staffToken: String? = nil,
+        requestId: String? = nil
     ) async throws -> KioskCheckinReportResult {
         let boundary = "KioskReport-\(UUID().uuidString)"
         var req = request(path: "/api/kiosk/checkin/\(bookingId)/report", method: "POST")
+        Self.attachStaffToken(staffToken, to: &req)
         req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
         req.httpBody = Self.multipartBody(
             boundary: boundary,
-            fields: [("actorId", actorId), ("assetId", assetId), ("type", type)]
-                + (description.map { [("description", $0)] } ?? []),
+            fields: [("actorId", actorId)] + target.fields + [("type", type)]
+                + (description.map { [("description", $0)] } ?? [])
+                + (requestId.map { [("requestId", $0)] } ?? []),
             file: photoJPEG.map { (name: "file", filename: "damage.jpg", contentType: "image/jpeg", data: $0) }
         )
         return try await perform(req)
@@ -954,4 +1032,27 @@ private struct KioskCompletionEnvelope<T: Decodable>: Decodable {
 struct KioskRequestRejected: LocalizedError {
     let message: String
     var errorDescription: String? { message }
+}
+
+/// What a damaged/missing report names: a serialized item, one numbered
+/// battery unit, or a quantity of counted stock.
+enum KioskReportTarget: Equatable {
+    case asset(id: String)
+    case bulkUnit(id: String)
+    case counted(bulkSkuId: String, quantity: Int)
+
+    var fields: [(String, String)] {
+        switch self {
+        case .asset(let id): [("assetId", id)]
+        case .bulkUnit(let id): [("bulkSkuUnitId", id)]
+        case .counted(let bulkSkuId, let quantity): [("bulkSkuId", bulkSkuId), ("quantity", String(quantity))]
+        }
+    }
+
+    static func `for`(_ item: KioskCheckoutDetail.ReturnItem, quantity: Int) -> KioskReportTarget {
+        if item.isCountedStock, let bulkSkuId = item.bulkSkuId {
+            return .counted(bulkSkuId: bulkSkuId, quantity: max(1, quantity))
+        }
+        return item.isNumberedBulk ? .bulkUnit(id: item.id) : .asset(id: item.id)
+    }
 }

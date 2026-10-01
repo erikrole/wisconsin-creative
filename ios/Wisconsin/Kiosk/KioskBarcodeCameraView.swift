@@ -50,17 +50,22 @@ struct KioskBarcodeCameraView: View {
                 if DataScannerViewController.isSupported && DataScannerViewController.isAvailable {
                     // A neutral "read it" tick. Success is the server's call, and
                     // the flow screen plays that verdict when it lands.
+                    // The preview fills the screen, but the controls are a
+                    // sibling layer, not overlays on it: an overlay inherits
+                    // the preview's ignore-all-safe-areas frame, which pinned
+                    // the typed-entry field to the screen bottom, behind the
+                    // software keyboard. As a sibling it keeps the keyboard
+                    // safe area and rides directly above the keys.
                     KioskDataScannerRepresentable(onScan: { value in
                         Haptics.selection()
                         onScan(value)
                     })
                     .ignoresSafeArea()
-                    .overlay(alignment: .top) { header }
-                    .overlay(alignment: .bottom) {
-                        VStack(spacing: 12) {
-                            manualEntry
-                        }
-                        .padding(.bottom, 32)
+                    VStack(spacing: 0) {
+                        header
+                        Spacer(minLength: 0)
+                        manualEntry
+                            .padding(.bottom, KioskSpacing.md)
                     }
                 } else {
                     unsupportedView

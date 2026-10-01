@@ -1,0 +1,73 @@
+{
+  "title": "Kiosk Home Avatars",
+  "eyebrow": "WisconsinKiosk \u00b7 iPad home",
+  "lede": "Staff at the counter scan the home list for a face, not a name. Every person row now leads with that person's avatar, falling back to initials.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "Side by side",
+      "note": "Baseline = origin/main fd1b138f built Debug; after = this branch. Same created iPad Air 11-inch (M4) iOS 26.5 simulator, same GT_KIOSK_SCENARIO fixtures, dark, 1180x820 pt landscape crop. Fixture avatarUrl values are null, so the initials fallback is what renders.",
+      "pairs": [
+        {
+          "title": "Idle home",
+          "sub": "Overdue, due back today, ready for pickup, out due later.",
+          "before": "before-idle.png",
+          "beforeCap": "An 8pt status dot led each row.",
+          "after": "after-idle.png",
+          "afterCap": "A 34pt avatar with a status-colour ring leads each row.",
+          "beforeEvidence": "before-idle.capture.json",
+          "afterEvidence": "after-idle.capture.json"
+        },
+        {
+          "title": "Game day",
+          "sub": "Event cards with pickups, checkouts, and crew without gear.",
+          "before": "before-home-game-day.png",
+          "beforeCap": "Crew without gear was a text line only.",
+          "after": "after-home-game-day.png",
+          "afterCap": "Crew without gear gets an avatar stack (up to 3, then +N).",
+          "beforeEvidence": "before-home-game-day.capture.json",
+          "afterEvidence": "after-home-game-day.capture.json"
+        }
+      ]
+    },
+    {
+      "heading": "Quiet home: Coming up (after only)",
+      "note": "No matched baseline exists: origin/main fd1b138f has no `home-empty-upcoming` fixture (launching that scenario there falls through to the activation screen) and its quiet home was just the \"Everything is in. / Next up\" card. Same created iPad Air 11-inch (M4) iOS 26.5 simulator, dark, 1180x820 pt, GT_KIOSK_SCENARIO=home-empty-upcoming, this branch after review fixes.",
+      "shots": [
+        {
+          "title": "Quiet home with Coming up",
+          "image": "after-home-empty-upcoming.png",
+          "tag": "After",
+          "cap": "Personal rows open the person's hub (chevron); the SHARED Football Travel Case row is non-interactive (no chevron). All rows fall within the hub's 7-day window."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Status dot became a ringed avatar",
+      "was": "8pt dot coloured by section; person identified only by text.",
+      "now": "KioskAvatar (30pt inside a 2pt ring, 34pt total) in the dot's colour; initials fallback, 'SC' for shared."
+    },
+    {
+      "h": "Crew without gear shows faces",
+      "was": "Names and call times as a single text line.",
+      "now": "Overlapping avatars precede the same text line."
+    },
+    {
+      "h": "Coming up list on a quiet home",
+      "was": "\"Everything is in.\" plus a one-line Next up.",
+      "now": "Up to 8 BOOKED reservations after today within 7 x 24h, from every location (D-032), each with avatar, item count, and when."
+    }
+  ],
+  "verification": [
+    "xcodebuild WisconsinKiosk Debug build on the created simulator: BUILD SUCCEEDED",
+    "npx vitest run tests/: 712 files passed, 1 skipped (5014 tests)",
+    "No payload change: the dashboard route already projects requesterAvatarUrl/initials for checkouts, requester.avatarUrl for pickups, and avatarUrl for crewWithoutGear; Swift models already decode them",
+    "Review fixes 2026-09-30: npx vitest run tests/ 712 files passed, 1 skipped (5015 tests); WisconsinKiosk Debug build on created simulator succeeded"
+  ],
+  "notes": [
+    "Photo rendering (non-null avatarUrl) is not shown: fixtures use null URLs to avoid a network dependency. KioskAvatar's AsyncImage path is unchanged and already in use on the Today tiles.",
+    "Scanner-disconnected identity/operator-hub pairs are not captured: the simulator reports the scanner nominal, so the global pill is hidden on both builds and no fixture can force a disconnected scanner without new GCKeyboard injection. The pill overlap on Back/time was confirmed by Erik on the physical counter iPad; scan screens still state readiness inline."
+  ]
+}

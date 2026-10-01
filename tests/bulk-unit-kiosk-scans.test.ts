@@ -11,6 +11,7 @@ function makeTx(overrides: Partial<Record<string, unknown>> = {}) {
     bulkSku: { findMany: vi.fn() },
     bulkSkuUnit: { findUnique: vi.fn(), update: vi.fn() },
     bookingBulkUnitAllocation: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
+    checkinItemReport: { findMany: vi.fn(async () => []) },
     bookingBulkItem: { update: vi.fn(), findMany: vi.fn() },
     bookingSerializedItem: { count: vi.fn().mockResolvedValue(0) },
     assetAllocation: { updateMany: vi.fn() },

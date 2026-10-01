@@ -1,6 +1,7 @@
 import { BookingStatus, type Prisma, type PrismaClient } from "@prisma/client";
 import { HttpError } from "@/lib/http";
 import { checkBulkShortages, checkSerializedConflicts } from "@/lib/services/availability";
+import { subtractSerializedTurnaroundBuffer } from "@/lib/booking-availability-window";
 
 type Client = Prisma.TransactionClient | PrismaClient;
 
@@ -18,6 +19,11 @@ export type KioskExtendWindow = {
     /** Omitted for SHARED holders and for counted stock. */
     holderName?: string;
     startsAt: Date;
+    /** The booking that needs it next ("WHKY vs Boston"), when known. */
+    bookingTitle?: string;
+    /** "RESERVATION" or "CHECKOUT", when known. */
+    bookingKind?: string;
+    imageUrl?: string | null;
   };
 };
 
@@ -26,6 +32,11 @@ export type KioskExtendWindow = {
  * gear is claimed by another reservation or checkout. Uses the same checks as
  * `checkCheckoutDueTime` (overlap-only serialized conflicts, held bulk stock
  * credited), so the answer matches what `PATCH /api/kiosk/checkout/[id]` enforces.
+ *
+ * Also answers for a booking still waiting at pickup (a BOOKED reservation or
+ * a legacy PENDING_PICKUP checkout). Nothing is held yet there, so it mirrors
+ * the reservation/checkout edit checks `PATCH /api/kiosk/pickup/[id]/details`
+ * runs instead: remaining planned stock, and the serialized turnaround buffer.
  */
 export async function kioskExtendWindow(
   tx: Client,
@@ -33,21 +44,30 @@ export async function kioskExtendWindow(
   now: Date = new Date(),
 ): Promise<KioskExtendWindow> {
   const booking = await tx.booking.findFirst({
-    where: { id: bookingId, kind: "CHECKOUT", status: BookingStatus.OPEN },
+    where: {
+      id: bookingId,
+      OR: [
+        { kind: "CHECKOUT", status: { in: [BookingStatus.OPEN, BookingStatus.PENDING_PICKUP] } },
+        { kind: "RESERVATION", status: BookingStatus.BOOKED },
+      ],
+    },
     select: {
       id: true,
+      kind: true,
+      status: true,
       endsAt: true,
       locationId: true,
       serializedItems: {
         where: { allocationStatus: "active" },
-        select: { assetId: true, asset: { select: { assetTag: true, name: true } } },
+        select: { assetId: true, asset: { select: { assetTag: true, name: true, imageUrl: true } } },
       },
       bulkItems: {
-        select: { bulkSkuId: true, checkedOutQuantity: true, checkedInQuantity: true, bulkSku: { select: { name: true } } },
+        select: { bulkSkuId: true, plannedQuantity: true, checkedOutQuantity: true, checkedInQuantity: true, bulkSku: { select: { name: true } } },
       },
     },
   });
   if (!booking) throw new HttpError(404, "Active checkout not found");
+  const atPickup = booking.status === BookingStatus.BOOKED || booking.status === BookingStatus.PENDING_PICKUP;
 
   const windowStart = new Date(Math.max(now.getTime(), booking.endsAt.getTime()));
   const horizon = new Date(windowStart.getTime() + EXTEND_WINDOW_HORIZON_MS);
@@ -59,7 +79,7 @@ export async function kioskExtendWindow(
     startsAt: windowStart,
     endsAt: horizon,
     excludeBookingId: booking.id,
-    enforceTurnaroundBuffer: false,
+    enforceTurnaroundBuffer: atPickup,
   });
   const assetById = new Map(booking.serializedItems.map((item) => [item.assetId, item.asset]));
   for (const conflict of conflicts) {
@@ -68,17 +88,33 @@ export async function kioskExtendWindow(
       assetTag: asset?.assetTag ?? conflict.assetId,
       name: asset?.name || asset?.assetTag || conflict.assetId,
       ...(conflict.conflictingBookingRequesterName ? { holderName: conflict.conflictingBookingRequesterName } : {}),
-      startsAt: conflict.startsAt,
+      ...(conflict.conflictingBookingTitle ? { bookingTitle: conflict.conflictingBookingTitle } : {}),
+      ...(conflict.conflictingBookingKind ? { bookingKind: conflict.conflictingBookingKind } : {}),
+      imageUrl: asset?.imageUrl ?? null,
+      // Pickup edits keep the turnaround buffer, so the latest time is that
+      // much before the next claim starts.
+      startsAt: atPickup ? subtractSerializedTurnaroundBuffer(conflict.startsAt) : conflict.startsAt,
     });
   }
 
   // Counted stock: the first reservation start at which the held quantity
   // would no longer fit, found with `checkBulkShortages` itself.
   const held = booking.bulkItems
-    .map((item) => ({ bulkSkuId: item.bulkSkuId, name: item.bulkSku.name, quantity: Math.max(0, item.checkedOutQuantity - item.checkedInQuantity) }))
+    .map((item) => ({
+      bulkSkuId: item.bulkSkuId,
+      name: item.bulkSku.name,
+      quantity: !atPickup
+        ? Math.max(0, item.checkedOutQuantity - item.checkedInQuantity)
+        : booking.kind === "RESERVATION"
+          ? Math.max(0, (item.plannedQuantity ?? 0) - (item.checkedOutQuantity ?? 0))
+          : item.plannedQuantity ?? 0,
+    }))
     .filter((item) => item.quantity > 0);
   if (held.length > 0) {
-    const heldQuantities = new Map(held.map((item) => [item.bulkSkuId, item.quantity]));
+    // At pickup nothing is checked out yet, so no stock is credited as held.
+    const heldQuantities = atPickup
+      ? new Map<string, number>()
+      : new Map(held.map((item) => [item.bulkSkuId, item.quantity]));
     const shortAt = (endsAt: Date) => checkBulkShortages(tx, {
       locationId: booking.locationId,
       bulkItems: held,

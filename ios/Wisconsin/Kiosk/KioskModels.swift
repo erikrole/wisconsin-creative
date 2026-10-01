@@ -54,6 +54,8 @@ struct KioskDashboard: Decodable {
     let pickups: [HomePickup]
     let today: [TodayTile]
     let nextUp: NextUp?
+    /// Reservations after today (next 14 days); additive, absent = empty.
+    var upcoming: [UpcomingReservation]
 
     enum CodingKeys: String, CodingKey {
         case stats
@@ -66,6 +68,7 @@ struct KioskDashboard: Decodable {
         case pickups
         case today
         case nextUp
+        case upcoming
     }
 
     init(from decoder: Decoder) throws {
@@ -80,6 +83,7 @@ struct KioskDashboard: Decodable {
         pickups = try container.decodeIfPresent(LossyDecodableArray<HomePickup>.self, forKey: .pickups)?.elements ?? []
         today = try container.decodeIfPresent(LossyDecodableArray<TodayTile>.self, forKey: .today)?.elements ?? []
         nextUp = try? container.decodeIfPresent(NextUp.self, forKey: .nextUp)
+        upcoming = (try? container.decodeIfPresent(LossyDecodableArray<UpcomingReservation>.self, forKey: .upcoming))??.elements ?? []
     }
 
     struct Person: Decodable, Equatable {
@@ -98,7 +102,20 @@ struct KioskDashboard: Decodable {
         let readyAt: Date
         let custodyScope: String
         let eventId: String?
+        /// First few reserved items for gear thumbnails. Older servers omit it.
+        let items: [KioskGearThumb]?
         var id: String { bookingId }
+    }
+
+    /// A booked reservation starting after today, shown when the home is quiet.
+    struct UpcomingReservation: Decodable, Identifiable, Equatable {
+        let id: String
+        let title: String
+        let startsAt: Date
+        let endsAt: Date?
+        let itemCount: Int
+        let custodyScope: String
+        let requester: Person?
     }
 
     /// Someone with something happening today.
@@ -212,6 +229,8 @@ struct KioskEvent: Decodable, Identifiable {
     let callStartsAt: Date?
     let callEndsAt: Date?
     let shiftCount: Int
+    /// The event's crew areas (VIDEO, PHOTO, ...), additive; older servers omit it.
+    let areas: [String]
     let assignedUsers: [AssignedUser]
     let assignedUserCount: Int
     /// Assigned crew with no personal checkout linked to this event
@@ -245,6 +264,7 @@ struct KioskEvent: Decodable, Identifiable {
         case callStartsAt
         case callEndsAt
         case shiftCount
+        case areas
         case assignedUsers
         case assignedUserCount
         case crewWithoutGear
@@ -261,6 +281,7 @@ struct KioskEvent: Decodable, Identifiable {
         callStartsAt = try container.decodeIfPresent(Date.self, forKey: .callStartsAt)
         callEndsAt = try container.decodeIfPresent(Date.self, forKey: .callEndsAt)
         shiftCount = try container.decodeIfPresent(Int.self, forKey: .shiftCount) ?? 0
+        areas = (try? container.decodeIfPresent([String].self, forKey: .areas)) ?? []
         assignedUsers = try container.decodeIfPresent(LossyDecodableArray<AssignedUser>.self, forKey: .assignedUsers)?.elements ?? []
         assignedUserCount = try container.decodeIfPresent(Int.self, forKey: .assignedUserCount) ?? assignedUsers.count
         crewWithoutGear = try container.decodeIfPresent(LossyDecodableArray<CrewMember>.self, forKey: .crewWithoutGear)?.elements ?? []
@@ -314,6 +335,8 @@ struct KioskKitDetail: Decodable, Equatable {
         let id: String
         let assetTag: String?
         let name: String
+        /// Additive; older servers omit it.
+        var imageUrl: String? = nil
     }
 
     struct BulkMember: Decodable, Equatable, Identifiable {
@@ -468,6 +491,9 @@ struct KioskActiveCheckout: Decodable, Identifiable {
 
     struct CheckoutItem: Decodable {
         let name: String
+        /// Asset tag or bulk SKU name; older servers omit it.
+        let tagName: String?
+        let imageUrl: String?
     }
 
     init(from decoder: Decoder) throws {
@@ -519,6 +545,17 @@ struct KioskIdentifyResult: Decodable {
     let success: Bool
     let error: String?
     let data: KioskUser?
+}
+
+/// `POST /api/kiosk/staff/verify`. A refusal is `success: false` with a sentence.
+struct KioskStaffVerifyResult: Decodable {
+    struct Proof: Decodable {
+        let user: KioskUser
+        let staffToken: String
+    }
+    let success: Bool
+    let error: String?
+    let data: Proof?
 }
 
 struct KioskResolveScanResult: Decodable {
@@ -615,6 +652,8 @@ struct KioskStudentContext: Decodable {
 struct KioskStudentCheckout: Decodable, Identifiable {
     let id: String
     let title: String
+    /// Linked event (additive; older servers omit it).
+    let eventId: String?
     let refNumber: String?
     let items: [StudentItem]
     let endsAt: Date
@@ -623,22 +662,27 @@ struct KioskStudentCheckout: Decodable, Identifiable {
     struct StudentItem: Decodable {
         let name: String
         let tagName: String
+        /// Additive; older servers omit it.
+        let imageUrl: String?
 
         enum CodingKeys: String, CodingKey {
             case name
             case tagName
+            case imageUrl
         }
 
         init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             name = try container.decodeIfPresent(String.self, forKey: .name) ?? "Item"
             tagName = try container.decodeIfPresent(String.self, forKey: .tagName) ?? name
+            imageUrl = try container.decodeIfPresent(String.self, forKey: .imageUrl)
         }
     }
 
     enum CodingKeys: String, CodingKey {
         case id
         case title
+        case eventId
         case refNumber
         case items
         case endsAt
@@ -649,6 +693,7 @@ struct KioskStudentCheckout: Decodable, Identifiable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(String.self, forKey: .id)
         title = try container.decodeIfPresent(String.self, forKey: .title) ?? "Checkout"
+        eventId = try? container.decodeIfPresent(String.self, forKey: .eventId)
         refNumber = try container.decodeIfPresent(String.self, forKey: .refNumber)
         items = try container.decodeIfPresent(LossyDecodableArray<StudentItem>.self, forKey: .items)?.elements ?? []
         endsAt = try container.decode(Date.self, forKey: .endsAt)
@@ -656,9 +701,17 @@ struct KioskStudentCheckout: Decodable, Identifiable {
     }
 }
 
+/// One gear thumbnail on the dashboard: asset tag (or bulk SKU name) and photo.
+struct KioskGearThumb: Decodable, Equatable, Hashable {
+    let tagName: String
+    let imageUrl: String?
+}
+
 struct KioskPendingPickup: Decodable, Identifiable {
     let id: String
     let title: String
+    /// Linked event (additive; older servers omit it).
+    let eventId: String?
     let refNumber: String?
     let startsAt: Date
     /// "reservation" or "checkout" (a legacy PENDING_PICKUP). Older servers
@@ -713,12 +766,14 @@ struct KioskPendingPickup: Decodable, Identifiable {
         case kind
         case serializedItems
         case bulkItems
+        case eventId
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(String.self, forKey: .id)
         title = try container.decodeIfPresent(String.self, forKey: .title) ?? "Pickup"
+        eventId = try? container.decodeIfPresent(String.self, forKey: .eventId)
         refNumber = try container.decodeIfPresent(String.self, forKey: .refNumber)
         startsAt = try container.decode(Date.self, forKey: .startsAt)
         kind = try? container.decodeIfPresent(String.self, forKey: .kind)
@@ -735,17 +790,21 @@ struct KioskReservation: Decodable, Identifiable {
     let id: String
     let title: String
     let startsAt: Date
+    /// Linked event (additive; older servers omit it).
+    let eventId: String?
 
     enum CodingKeys: String, CodingKey {
         case id
         case title
         case startsAt
+        case eventId
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(String.self, forKey: .id)
         title = try container.decodeIfPresent(String.self, forKey: .title) ?? "Reservation"
+        eventId = try? container.decodeIfPresent(String.self, forKey: .eventId)
         startsAt = try container.decode(Date.self, forKey: .startsAt)
     }
 }
@@ -798,6 +857,9 @@ struct KioskCheckoutDetail: Decodable {
     let updatedAt: Date?
     let locationId: String?
     let endsAt: Date
+    /// The linked event, if any (pickup "What's this for?" edit). Optional so
+    /// an older server that omits it still decodes.
+    let eventId: String?
     let scanSummary: ScanSummary?
     let items: [ReturnItem]
 
@@ -818,12 +880,26 @@ struct KioskCheckoutDetail: Decodable {
         let unitNumber: Int?
         let imageUrl: String?
         let quantity: Int?
+        /// Additive: category name ("Cameras", "Lenses"); older servers omit it.
+        var category: String? = nil
         let reservationItemId: String?
         /// Counted stock (cables, tape) has no per-unit QR, so it is returned
         /// by quantity. Absent from older servers.
         let returnsByQuantity: Bool?
+        /// Return mode: a damaged/missing report on this item or battery
+        /// unit. Additive; older servers omit it.
+        var report: Report? = nil
+        /// Return mode, counted stock: quantities already reported. Additive.
+        var reportedMissingQuantity: Int? = nil
+        var reportedDamagedQuantity: Int? = nil
+
+        struct Report: Decodable, Equatable {
+            let type: String
+        }
 
         var isNumberedBulk: Bool { type == "numbered_bulk" }
+        /// Counted stock is reported by quantity, not one piece.
+        var isCountedStock: Bool { isBulkQuantity && returnsByQuantity == true }
         var isBulkQuantity: Bool { type == "bulk_quantity" }
         var isBulkDisplay: Bool { isNumberedBulk || isBulkQuantity || bulkSkuId != nil }
 
@@ -847,6 +923,21 @@ struct KioskActiveCheckoutMutationResult: Decodable {
     let error: String?
 }
 
+/// `PATCH /api/kiosk/pickup/[id]/details`: the booking after a pickup
+/// title / event / due-time edit.
+struct KioskPickupDetailsResult: Decodable {
+    let success: Bool
+    let booking: Booking
+
+    struct Booking: Decodable {
+        let id: String
+        let title: String
+        let endsAt: Date
+        let updatedAt: Date
+        let eventId: String?
+    }
+}
+
 /// `GET /api/kiosk/checkout/[id]/extend-window` (H1).
 struct KioskExtendWindow: Decodable {
     let currentEndsAt: Date
@@ -861,6 +952,10 @@ struct KioskExtendWindow: Decodable {
         /// Omitted for shared holders and counted stock.
         let holderName: String?
         let startsAt: Date
+        /// Additive: the booking that needs it next, its kind, and the photo.
+        var bookingTitle: String? = nil
+        var bookingKind: String? = nil
+        var imageUrl: String? = nil
     }
 
     var canExtend: Bool {
@@ -949,6 +1044,8 @@ struct KioskCheckinReportResult: Decodable {
     let checkoutTitle: String
     let heldForStaff: Bool
     let completed: Bool
+    /// Counted stock: the reported quantity (running total). Additive.
+    var quantity: Int? = nil
 }
 
 /// Server response for a reservation pickup. `partial` is optional so a
@@ -1038,6 +1135,74 @@ struct KioskSuccessInfo: Equatable {
 
 /// "All set, Harper." then a card per record written.
 struct KioskReceipt: Equatable {
+    /// One thing on a receipt card. Numbered batteries carry their kind and
+    /// number so the card can draw one chip per kind with the numbers circled.
+    struct Item: Equatable {
+        let tag: String
+        let imageUrl: String?
+        var batteryKind: String? = nil
+        var batteryName: String? = nil
+        var unitNumber: Int? = nil
+
+        init(tag: String, imageUrl: String?, batteryKind: String? = nil, batteryName: String? = nil, unitNumber: Int? = nil) {
+            self.tag = tag
+            self.imageUrl = imageUrl
+            self.batteryKind = batteryKind
+            self.batteryName = batteryName
+            self.unitNumber = unitNumber
+        }
+
+        init(_ item: KioskCartItem) {
+            self.init(tag: item.itemListPrimaryTitle, imageUrl: item.imageUrl,
+                      batteryKind: item.isNumberedBulk ? item.bulkSkuId : nil,
+                      batteryName: item.name, unitNumber: item.isNumberedBulk ? item.unitNumber : nil)
+        }
+
+        init(_ item: KioskCheckoutDetail.ReturnItem, unit: Int? = nil, imageUrl: String? = nil) {
+            let number = unit ?? item.unitNumber
+            let numbered = (item.isNumberedBulk || unit != nil) && number != nil
+            self.init(tag: item.itemListPrimaryTitle, imageUrl: imageUrl ?? item.imageUrl,
+                      batteryKind: numbered ? (item.bulkSkuId ?? item.bulkSkuName ?? item.name) : nil,
+                      batteryName: item.bulkSkuName ?? item.name, unitNumber: numbered ? number : nil)
+        }
+    }
+
+    /// What a receipt card draws: a photo + tag, or one battery kind with its numbers.
+    enum Chip: Equatable, Identifiable {
+        case item(Item)
+        case batteries(name: String, imageUrl: String?, units: [Int])
+
+        var id: String {
+            switch self {
+            case .item(let item): "item-\(item.tag)"
+            case .batteries(let name, _, _): "batt-\(name)"
+            }
+        }
+
+        static func group(_ items: [Item]) -> [Chip] {
+            var chips: [Chip] = []
+            var kindIndex: [String: Int] = [:]
+            for item in items {
+                guard let kind = item.batteryKind, let unit = item.unitNumber else {
+                    chips.append(.item(item))
+                    continue
+                }
+                if let index = kindIndex[kind], case .batteries(let name, let image, let units) = chips[index] {
+                    chips[index] = .batteries(name: name, imageUrl: image ?? item.imageUrl, units: units + [unit])
+                } else {
+                    kindIndex[kind] = chips.count
+                    let name = (item.batteryName ?? item.tag)
+                        .replacingOccurrences(of: #"\s*#\d+$"#, with: "", options: .regularExpression)
+                    chips.append(.batteries(name: name, imageUrl: item.imageUrl, units: [unit]))
+                }
+            }
+            return chips.map {
+                if case .batteries(let name, let image, let units) = $0 { return .batteries(name: name, imageUrl: image, units: units.sorted()) }
+                return $0
+            }
+        }
+    }
+
     struct Card: Equatable {
         let overline: String
         let refNumber: String?
@@ -1048,8 +1213,11 @@ struct KioskReceipt: Equatable {
         /// Colors the footnote when it is something to act on later, like a
         /// pickup's leftover line (F5). Nil keeps it quiet.
         let footnoteSection: KioskSection?
+        /// Drawn as photo + tag chips under the title.
+        let items: [Item]
 
-        init(overline: String, refNumber: String? = nil, title: String, detail: String? = nil, footnote: String? = nil, isProblem: Bool = false, footnoteSection: KioskSection? = nil) {
+        init(overline: String, refNumber: String? = nil, title: String, items: [Item] = [], detail: String? = nil, footnote: String? = nil, isProblem: Bool = false, footnoteSection: KioskSection? = nil) {
+            self.items = items
             self.overline = overline
             self.refNumber = refNumber
             self.title = title

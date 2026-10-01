@@ -19,9 +19,9 @@
 | `src/lib/services/booking-ref.ts` | 26 |
 | `src/lib/services/booking-reuse.ts` | 219 |
 | `src/lib/services/booking-rules.ts` | 135 |
-| `src/lib/services/bookings-checkin.ts` | 934 |
-| `src/lib/services/bookings-helpers.ts` | 282 |
-| `src/lib/services/bookings-lifecycle.ts` | 3348 |
+| `src/lib/services/bookings-checkin.ts` | 940 |
+| `src/lib/services/bookings-helpers.ts` | 310 |
+| `src/lib/services/bookings-lifecycle.ts` | 3386 |
 | `src/lib/services/bookings-queries.ts` | 311 |
 | `src/lib/services/bookings.ts` | 9 |
 | `src/lib/services/bulk-assignment-batches.ts` | 253 |
@@ -31,7 +31,7 @@
 | `src/lib/services/calendar-sync.ts` | 754 |
 | `src/lib/services/candidate-scoring.ts` | 437 |
 | `src/lib/services/category-mutations.ts` | 168 |
-| `src/lib/services/checkin-item-reports.ts` | 262 |
+| `src/lib/services/checkin-item-reports.ts` | 599 |
 | `src/lib/services/checkout-consolidation.ts` | 596 |
 | `src/lib/services/checkout-policies.ts` | 40 |
 | `src/lib/services/claim-review-notifications.ts` | 197 |
@@ -53,9 +53,9 @@
 | `src/lib/services/kiosk-checkin-undo.ts` | 176 |
 | `src/lib/services/kiosk-checkout-allowance.ts` | 86 |
 | `src/lib/services/kiosk-checkout-complete.ts` | 90 |
-| `src/lib/services/kiosk-dashboard-home.ts` | 229 |
-| `src/lib/services/kiosk-extend-window.ts` | 132 |
-| `src/lib/services/kiosk-item-transfer.ts` | 192 |
+| `src/lib/services/kiosk-dashboard-home.ts` | 267 |
+| `src/lib/services/kiosk-extend-window.ts` | 168 |
+| `src/lib/services/kiosk-item-transfer.ts` | 196 |
 | `src/lib/services/kiosk-location.ts` | 72 |
 | `src/lib/services/kiosk-nudge.ts` | 118 |
 | `src/lib/services/kiosk-operation-receipts.ts` | 128 |
@@ -86,7 +86,7 @@
 | `src/lib/services/schedule-exports.ts` | 522 |
 | `src/lib/services/schedule-health.ts` | 383 |
 | `src/lib/services/schedule-notification-policy.ts` | 95 |
-| `src/lib/services/schedule-open-work.ts` | 589 |
+| `src/lib/services/schedule-open-work.ts` | 600 |
 | `src/lib/services/schedule-publication.ts` | 1117 |
 | `src/lib/services/schedule-template-review.ts` | 554 |
 | `src/lib/services/schedule-working-copy.ts` | 1190 |
@@ -190,6 +190,7 @@
 | `src/lib/item-family-state.ts` | 75 |
 | `src/lib/item-image-draft.ts` | 88 |
 | `src/lib/kiosk-activation.ts` | 8 |
+| `src/lib/kiosk-staff-token.ts` | 65 |
 | `src/lib/license-dates.ts` | 56 |
 | `src/lib/live-activity-workflow.ts` | 34 |
 | `src/lib/local-traces.ts` | 28 |
@@ -282,7 +283,7 @@
 | `src/lib/user-list-cache.ts` | 73 |
 | `src/lib/user-visibility.ts` | 86 |
 | `src/lib/utils.ts` | 22 |
-| `src/lib/validation.ts` | 846 |
+| `src/lib/validation.ts` | 861 |
 | `src/lib/venue-mapping-audit.ts` | 56 |
 | `src/lib/venue-mapping-contract.ts` | 46 |
 | `src/lib/venue-tone.ts` | 135 |
@@ -555,6 +556,7 @@
 - `/api/kiosk/checkout/complete`
 - `/api/kiosk/checkout/scan`
 - `/api/kiosk/dashboard`
+- `/api/kiosk/events/[id]/crew-request`
 - `/api/kiosk/events`
 - `/api/kiosk/heartbeat`
 - `/api/kiosk/identify`
@@ -562,11 +564,13 @@
 - `/api/kiosk/kits`
 - `/api/kiosk/me`
 - `/api/kiosk/pickup/[id]/confirm`
+- `/api/kiosk/pickup/[id]/details`
 - `/api/kiosk/pickup/[id]/scan`
 - `/api/kiosk/pickup/[id]/substitute`
 - `/api/kiosk/reservation/[id]/items`
 - `/api/kiosk/resolve-scan`
 - `/api/kiosk/scan-lookup`
+- `/api/kiosk/staff/verify`
 - `/api/kiosk/student/[userId]`
 - `/api/kiosk/users`
 

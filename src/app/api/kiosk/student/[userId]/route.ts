@@ -67,13 +67,14 @@ export const GET = withKiosk<{ userId: string }>(async (req, { kiosk, params }) 
       select: {
         id: true,
         title: true,
+        eventId: true,
         refNumber: true,
         endsAt: true,
         serializedItems: {
           where: { allocationStatus: "active" },
           select: {
             asset: {
-              select: { assetTag: true, name: true },
+              select: { assetTag: true, name: true, imageUrl: true },
             },
           },
         },
@@ -81,7 +82,7 @@ export const GET = withKiosk<{ userId: string }>(async (req, { kiosk, params }) 
           select: {
             checkedOutQuantity: true,
             plannedQuantity: true,
-            bulkSku: { select: { name: true } },
+            bulkSku: { select: { name: true, imageUrl: true } },
           },
         },
       },
@@ -99,6 +100,7 @@ export const GET = withKiosk<{ userId: string }>(async (req, { kiosk, params }) 
       select: {
         id: true,
         title: true,
+        eventId: true,
         refNumber: true,
         startsAt: true,
         serializedItems: {
@@ -132,6 +134,7 @@ export const GET = withKiosk<{ userId: string }>(async (req, { kiosk, params }) 
       select: {
         id: true,
         title: true,
+        eventId: true,
         refNumber: true,
         startsAt: true,
         serializedItems: {
@@ -169,6 +172,7 @@ export const GET = withKiosk<{ userId: string }>(async (req, { kiosk, params }) 
       select: {
         id: true,
         title: true,
+        eventId: true,
         startsAt: true,
       },
     }),
@@ -181,15 +185,18 @@ export const GET = withKiosk<{ userId: string }>(async (req, { kiosk, params }) 
     checkouts: checkouts.map((c) => ({
       id: c.id,
       title: displayBookingTitle(c.title),
+      eventId: c.eventId ?? null,
       refNumber: c.refNumber,
       items: c.serializedItems.map((si) => ({
         name: si.asset.name || si.asset.assetTag,
         tagName: si.asset.assetTag,
+        imageUrl: si.asset.imageUrl ?? null,
       })).concat(c.bulkItems.map((bi) => {
         const quantity = bi.checkedOutQuantity || bi.plannedQuantity;
         return {
           name: quantity === 1 ? bi.bulkSku.name : `${bi.bulkSku.name} x${quantity}`,
           tagName: `x${quantity}`,
+          imageUrl: bi.bulkSku.imageUrl ?? null,
         };
       })),
       endsAt: c.endsAt,
@@ -202,6 +209,8 @@ export const GET = withKiosk<{ userId: string }>(async (req, { kiosk, params }) 
         id: p.id,
         kind: "checkout" as const,
         title: displayBookingTitle(p.title),
+        // The hub matches a shift to its booking by event, not title.
+        eventId: p.eventId ?? null,
         refNumber: p.refNumber,
         startsAt: p.startsAt,
         serializedItems: p.serializedItems.map((si) => ({
@@ -218,6 +227,8 @@ export const GET = withKiosk<{ userId: string }>(async (req, { kiosk, params }) 
         id: p.id,
         kind: "reservation" as const,
         title: displayBookingTitle(p.title),
+        // The hub matches a shift to its booking by event, not title.
+        eventId: p.eventId ?? null,
         refNumber: p.refNumber,
         startsAt: p.startsAt,
         serializedItems: p.serializedItems.map((si) => ({
@@ -236,6 +247,7 @@ export const GET = withKiosk<{ userId: string }>(async (req, { kiosk, params }) 
     reservations: reservations.map((r) => ({
       id: r.id,
       title: displayBookingTitle(r.title),
+      eventId: r.eventId ?? null,
       startsAt: r.startsAt,
     })),
   });

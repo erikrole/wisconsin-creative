@@ -1,5 +1,6 @@
 import {
   BulkMovementKind,
+  CheckinReportType,
   Prisma,
 } from "@prisma/client";
 import { HttpError } from "@/lib/http";
@@ -153,6 +154,33 @@ export function diffEquipment(
   }
 
   return entries;
+}
+
+/**
+ * Bulk quantity reported missing at check-in, by SKU: numbered units (battery
+ * #7) count one each, counted stock counts its reported quantity. A missing
+ * report accounts for the gear (decision 4), so it is no longer owed back and
+ * is never restocked at completion.
+ */
+export async function reportedLostBulkBySku(
+  tx: Prisma.TransactionClient,
+  bookingId: string,
+): Promise<Map<string, number>> {
+  const reports = await tx.checkinItemReport.findMany({
+    where: {
+      bookingId,
+      type: CheckinReportType.LOST,
+      OR: [{ bulkSkuId: { not: null } }, { bulkSkuUnitId: { not: null } }],
+    },
+    select: { bulkSkuId: true, quantity: true, bulkSkuUnit: { select: { bulkSkuId: true } } },
+  });
+  const bySku = new Map<string, number>();
+  for (const report of reports) {
+    const skuId = report.bulkSkuId ?? report.bulkSkuUnit?.bulkSkuId;
+    if (!skuId) continue;
+    bySku.set(skuId, (bySku.get(skuId) ?? 0) + (report.bulkSkuId ? report.quantity ?? 0 : 1));
+  }
+  return bySku;
 }
 
 /**

@@ -33,7 +33,7 @@ async function buildScanCompletionState(tx: TxClient, bookingId: string, phase: 
 
   // Load checkin item reports (damaged/lost) — these count as "accounted for"
   const checkinReports = phase === ScanPhase.CHECKIN
-    ? await tx.checkinItemReport.findMany({ where: { bookingId } })
+    ? await tx.checkinItemReport.findMany({ where: { bookingId, assetId: { not: null } } })
     : [];
   const reportedAssetIds = new Set(checkinReports.map((r) => r.assetId));
 

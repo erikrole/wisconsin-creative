@@ -121,6 +121,7 @@ Replace Asana-based shift scheduling with a native shift calendar in Wisconsin C
 - Sports code mappings (existing — `src/lib/sports.ts`)
 
 ## Change Log
+- 2026-10-01: **Kiosk crew requests.** `POST /api/kiosk/events/[id]/crew-request` lets someone identified at the kiosk for an event checkout ask to join that event's crew in a chosen area. It reuses `pickupOpenShift`, so it files the same `REQUESTED` open-slot claim (eligibility, conflicts, reviewer alerts, claim-review deadline) that Admins approve or decline in the existing review queue; the kiosk never assigns directly.
 - 2026-09-23: **Draft identity, pending-claim visibility, hashed feed tokens (local).**
   - **Drafts:** the working-copy editor reports `draftId` (the draft row's `createdAt`). PATCH, undo/redo, rebase, discard and publish accept `expectedDraftId`, and a mismatch returns 409 inside the version-check transaction. Legacy clients that omit it are unchanged.
   - **Open Work:** reports `openShiftsTruncated` and `pickupRequestsTruncated` instead of silently capping at 100.

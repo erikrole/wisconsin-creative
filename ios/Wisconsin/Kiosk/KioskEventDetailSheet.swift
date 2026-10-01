@@ -141,6 +141,12 @@ struct KioskEventDetailSheet: View {
     let capabilities: KioskDashboard.Capabilities
     var onStartCheckout: (() -> Void)? = nil
     var onScan: ((String) -> Void)? = nil
+    /// Check out for this event as that worker (deep link: person + event).
+    var onCheckoutWorker: ((KioskEvent.AssignedUser) -> Void)? = nil
+    /// Open that worker's page.
+    var onOpenWorker: ((KioskEvent.AssignedUser) -> Void)? = nil
+    /// Each worker's gear for this event: reserved pickups plus checkouts out.
+    var gearByUserId: [String: KioskEventWorkerGear] = [:]
 
     var body: some View {
         ZStack {
@@ -153,16 +159,12 @@ struct KioskEventDetailSheet: View {
                                 .font(KioskType.overline)
                                 .tracking(1.4)
                                 .foregroundStyle(KioskText.tertiary)
-                            // "0 shifts" beside "No assigned workers" said nothing twice.
-                            if event.shiftCount > 0 {
-                                KioskEventShiftBadge(count: event.shiftCount)
-                            }
                         }
-                        Text(event.title)
+                        Text(kioskEventDisplayTitle(event.title, sportCode: event.sportCode))
                             .font(.title.weight(.heavy))
                             .foregroundStyle(KioskText.primary)
-                            .lineLimit(2)
-                            .minimumScaleFactor(0.74)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                     }
                     Spacer()
                     Button("Done") { dismiss() }
@@ -173,24 +175,13 @@ struct KioskEventDetailSheet: View {
                         .background(KioskSurface.cardSelected, in: Capsule())
                 }
 
-                VStack(spacing: 10) {
-                    KioskEventTimeRow(label: "Event", value: eventTimeLabel)
-                    // Only rows with an answer: "Call · Not set" was a field
-                    // label a student cannot act on.
-                    if !event.displayAllDay, let callTimeLabel {
-                        KioskEventTimeRow(label: "Call", value: callTimeLabel)
-                    }
-                }
+                // One line: "8:00 PM - 10:00 PM · Call 7:00 PM".
+                Text([eventTimeLabel, (!event.displayAllDay ? callTimeLabel.map { "Call \($0)" } : nil)].compactMap { $0 }.joined(separator: "  ·  "))
+                    .font(.title3.weight(.semibold).monospacedDigit())
+                    .foregroundStyle(KioskText.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
 
-                if let onStartCheckout {
-                    Button {
-                        dismiss(); onStartCheckout()
-                    } label: {
-                        Label("Start Checkout for This Event", systemImage: "barcode.viewfinder")
-                            .font(KioskType.sectionTitle).frame(maxWidth: .infinity, minHeight: 54)
-                    }
-                    .kioskButtonRole(.primary)
-                }
 
                 VStack(alignment: .leading, spacing: 10) {
                     HStack(spacing: 8) {
@@ -205,6 +196,12 @@ struct KioskEventDetailSheet: View {
                                 .padding(.vertical, 4)
                                 .background(KioskSurface.cardRaised, in: Capsule())
                         }
+                        let missing = event.assignedUsers.filter(needsGear).count
+                        if missing > 0 {
+                            Text("\(missing) need gear")
+                                .font(KioskType.chipStrong)
+                                .foregroundStyle(KioskStatus.attention)
+                        }
                     }
 
                     if event.assignedUsers.isEmpty {
@@ -217,12 +214,30 @@ struct KioskEventDetailSheet: View {
                     } else {
                         ScrollView {
                             LazyVStack(spacing: 8) {
-                                ForEach(event.assignedUsers) { user in
-                                    KioskEventWorkerRow(user: user, eventAllDay: event.displayAllDay)
+                                // Who still needs gear first.
+                                ForEach(event.assignedUsers.sorted { needsGear($0) && !needsGear($1) }) { user in
+                                    KioskEventWorkerRow(
+                                        user: user, eventAllDay: event.displayAllDay, needsGear: needsGear(user), gear: gearByUserId[user.id],
+                                        onCheckout: onCheckoutWorker.map { go in { dismiss(); go(user) } },
+                                        onOpen: onOpenWorker.map { go in { dismiss(); go(user) } }
+                                    )
                                 }
                             }
                         }
                         .scrollIndicators(.hidden)
+                    }
+                    // Fallback for anyone not on the crew list.
+                    if let onStartCheckout {
+                        Button {
+                            dismiss(); onStartCheckout()
+                        } label: {
+                            Text("Not listed? Check out for this event")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(KioskText.secondary)
+                                .underline()
+                                .frame(maxWidth: .infinity, minHeight: 44)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
 
@@ -234,6 +249,10 @@ struct KioskEventDetailSheet: View {
                 HIDScannerField(onScan: onScan).frame(width: 1, height: 1).opacity(0)
             }
         }
+    }
+
+    private func needsGear(_ user: KioskEvent.AssignedUser) -> Bool {
+        gearByUserId[user.id] == nil && event.crewWithoutGear.contains { $0.id == user.id }
     }
 
     private var eventDayLabel: String {
@@ -282,55 +301,17 @@ struct KioskEventDetailSheet: View {
     }
 }
 
-private struct KioskEventTimeRow: View {
-    let label: String
-    let value: String
-
-    var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 14) {
-            Text(label.uppercased())
-                .font(KioskType.micro)
-                .tracking(1)
-                .foregroundStyle(KioskText.tertiary)
-                .frame(width: 48, alignment: .leading)
-            Text(value)
-                .font(.title2.weight(.bold).monospacedDigit())
-                .foregroundStyle(KioskText.primary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.72)
-            Spacer(minLength: 0)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 13)
-        .background(KioskSurface.cardRaised, in: RoundedRectangle(cornerRadius: KioskRadius.lg))
-        .overlay(
-            RoundedRectangle(cornerRadius: KioskRadius.lg)
-                .stroke(KioskStroke.standard, lineWidth: 1)
-        )
-    }
-}
-
-private struct KioskEventShiftBadge: View {
-    let count: Int
-
-    var body: some View {
-        Text("\(count) shift\(count == 1 ? "" : "s")")
-            .font(KioskType.chip)
-            .foregroundStyle(KioskText.secondary)
-            .lineLimit(1)
-            .padding(.horizontal, 9)
-            .padding(.vertical, 5)
-            .background(KioskSurface.cardRaised, in: Capsule())
-    }
-}
-
 private struct KioskEventWorkerRow: View {
     let user: KioskEvent.AssignedUser
     let eventAllDay: Bool
+    var needsGear = false
+    var gear: KioskEventWorkerGear? = nil
+    var onCheckout: (() -> Void)? = nil
+    var onOpen: (() -> Void)? = nil
 
     var body: some View {
         HStack(spacing: 10) {
+            Button { onOpen?() } label: { HStack(spacing: 10) {
             avatar
             VStack(alignment: .leading, spacing: 2) {
                 Text(user.name)
@@ -345,7 +326,26 @@ private struct KioskEventWorkerRow: View {
                         .minimumScaleFactor(0.82)
                 }
             }
-            Spacer()
+            Spacer(minLength: 8)
+            } .contentShape(Rectangle()) }
+            .buttonStyle(KioskPressStyle())
+            .disabled(onOpen == nil)
+            if needsGear {
+                if let onCheckout {
+                    Button(action: onCheckout) {
+                        Text("Check out").font(.system(size: 15, weight: .semibold)).lineLimit(1).fixedSize()
+                            .padding(.horizontal, 14).frame(minHeight: 40)
+                    }
+                    .kioskButtonRole(.primary)
+                    .accessibilityHint("No gear yet")
+                } else {
+                    Text("No gear yet")
+                        .font(KioskType.chipStrong)
+                        .foregroundStyle(KioskStatus.attention)
+                }
+            } else if let gear, gear.totalCount > 0 {
+                KioskGearThumbStack(gear: gear)
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
@@ -377,5 +377,71 @@ private struct KioskEventWorkerRow: View {
         let startLabel = start.formatted(.dateTime.hour().minute())
         guard let end else { return startLabel }
         return "\(startLabel) - \(end.formatted(.dateTime.hour().minute()))"
+    }
+}
+
+/// A worker's gear for one event, merged across reserved pickups and checkouts.
+struct KioskEventWorkerGear: Equatable {
+    var thumbs: [KioskGearThumb] = []
+    var reservedCount = 0
+    var outCount = 0
+
+    var totalCount: Int { reservedCount + outCount }
+
+    mutating func add(thumbs newThumbs: [KioskGearThumb], count: Int, out: Bool) {
+        // Older servers send no item list: show box placeholders for the count.
+        let shown = newThumbs.isEmpty
+            ? (0..<min(count, 4)).map { _ in KioskGearThumb(tagName: "", imageUrl: nil) }
+            : newThumbs
+        thumbs.append(contentsOf: shown)
+        if out { outCount += max(count, newThumbs.count) } else { reservedCount += max(count, newThumbs.count) }
+    }
+
+    var accessibilityLabel: String {
+        var parts: [String] = []
+        if reservedCount > 0 { parts.append("\(reservedCount) item\(reservedCount == 1 ? "" : "s") reserved") }
+        if outCount > 0 { parts.append("\(outCount) item\(outCount == 1 ? "" : "s") out") }
+        return parts.joined(separator: ", ")
+    }
+}
+
+/// Overlapping item photos (up to 4), then "+N" for the rest.
+private struct KioskGearThumbStack: View {
+    let gear: KioskEventWorkerGear
+    private let size: CGFloat = 28
+
+    var body: some View {
+        let shown = Array(gear.thumbs.prefix(4))
+        let overflow = gear.totalCount - shown.count
+        HStack(spacing: -8) {
+            ForEach(Array(shown.enumerated()), id: \.offset) { _, thumb in
+                KioskItemThumbnail(imageUrl: thumb.imageUrl, size: size)
+                    .background(KioskSurface.cardRaised, in: RoundedRectangle(cornerRadius: KioskRadius.sm))
+            }
+            if overflow > 0 {
+                Text("+\(overflow)")
+                    .font(KioskType.micro)
+                    .foregroundStyle(KioskText.primary)
+                    .frame(width: size, height: size)
+                    .background(KioskSurface.placeholder, in: RoundedRectangle(cornerRadius: KioskRadius.sm))
+                    .overlay(RoundedRectangle(cornerRadius: KioskRadius.sm).stroke(KioskStroke.standard, lineWidth: 1))
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(gear.accessibilityLabel)
+    }
+}
+
+private struct KioskEventShiftBadge: View {
+    let count: Int
+
+    var body: some View {
+        Text("\(count) shift\(count == 1 ? "" : "s")")
+            .font(KioskType.chip)
+            .foregroundStyle(KioskText.secondary)
+            .lineLimit(1)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 5)
+            .background(KioskSurface.cardRaised, in: Capsule())
     }
 }

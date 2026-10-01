@@ -25,7 +25,7 @@ const mocks = vi.hoisted(() => ({
 const tx = {
   bookingSerializedItem: { findUnique: mocks.itemFindUnique },
   scanEvent: { findFirst: mocks.scanEventFindFirst },
-  checkinItemReport: { upsert: mocks.reportUpsert },
+  checkinItemReport: { upsert: mocks.reportUpsert, findMany: vi.fn(async () => []) },
   asset: { findUnique: mocks.assetFindUnique, update: mocks.assetUpdate },
 };
 
@@ -105,7 +105,7 @@ describe("POST /api/kiosk/checkin/[id]/report", () => {
       success: true, reportId: "rep-1", type: "DAMAGED", description: "Cracked LCD",
       imageUrl: "https://blob.example/photo.jpg",
       item: { id: "asset-1", assetTag: "CAM-1", name: "FX3 body" },
-      checkoutTitle: "Soccer at Iowa", heldForStaff: true, completed: false,
+      checkoutTitle: "Soccer at Iowa", heldForStaff: true, completed: false, quantity: null,
     });
     expect(mocks.assetUpdate).toHaveBeenCalledWith({ where: { id: "asset-1" }, data: { status: "MAINTENANCE" } });
     const actions = mocks.createAuditEntryTx.mock.calls.map((call) => call[1].action);

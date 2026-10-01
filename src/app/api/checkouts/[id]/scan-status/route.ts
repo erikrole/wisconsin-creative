@@ -71,7 +71,7 @@ export const GET = withAuth<{ id: string }>(async (req, { user, params }) => {
     }),
     phase === "CHECKIN"
       ? db.checkinItemReport.findMany({
-          where: { bookingId: id },
+          where: { bookingId: id, assetId: { not: null } },
           select: { assetId: true, type: true, description: true, imageUrl: true },
         })
       : Promise.resolve([]),

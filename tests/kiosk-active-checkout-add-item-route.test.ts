@@ -73,6 +73,7 @@ vi.mock("@/lib/services/availability", () => ({
 vi.mock("@/lib/services/bookings-helpers", () => ({
   upsertBulkBalancesAndMovements: mocks.upsertBulkBalancesAndMovements,
   settleBulkLedgerAtCompletion: mocks.settleBulkLedgerAtCompletion,
+  reportedLostBulkBySku: vi.fn(async () => new Map()),
 }));
 vi.mock("@/lib/live-activity-workflow", () => ({ scheduleCheckoutReturnLiveActivity: vi.fn() }));
 vi.mock("@/lib/services/live-activities", () => ({
@@ -102,6 +103,7 @@ beforeEach(() => {
       upsert: mocks.bulkStockBalanceUpsert,
     },
     bulkStockMovement: { create: mocks.bulkStockMovementCreate },
+    checkinItemReport: { findMany: vi.fn(async () => []) },
     bookingBulkItem: {
       upsert: mocks.bookingBulkItemUpsert,
       findUnique: mocks.bookingBulkItemFindUnique,

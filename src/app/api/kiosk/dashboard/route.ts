@@ -12,6 +12,7 @@ import {
   linkedEventId,
   projectNextUp,
   projectPickups,
+  PICKUP_GEAR_PREVIEW_LIMIT,
   projectTodayTiles,
   type HomeCheckoutRow,
   type HomePickupRow,
@@ -122,16 +123,37 @@ function isAllDaySpan(startsAt: Date, endsAt: Date | null, timeZone: string) {
   return startsAtMidnight && endsAtMidnight && crossesDay;
 }
 
-function activeBulkQuantity(item: { checkedOutQuantity: number; checkedInQuantity: number }) {
-  return Math.max(0, item.checkedOutQuantity - item.checkedInQuantity);
+/** Missing bulk per SKU: a numbered unit counts one, counted stock its quantity. */
+function reportedLostBulkBySku(reports: Array<{ bulkSkuId: string | null; quantity: number | null; bulkSkuUnit: { bulkSkuId: string } | null }> | undefined) {
+  const bySku = new Map<string, number>();
+  for (const report of reports ?? []) {
+    const skuId = report.bulkSkuId ?? report.bulkSkuUnit?.bulkSkuId;
+    if (!skuId) continue;
+    bySku.set(skuId, (bySku.get(skuId) ?? 0) + (report.bulkSkuId ? report.quantity ?? 0 : 1));
+  }
+  return bySku;
 }
 
-function missingAllocatedBulkQuantity(item: {
+type ActiveBulkItem = {
   checkedOutQuantity: number;
   checkedInQuantity: number;
+  bulkSku: { id: string };
   unitAllocations: unknown[];
-}) {
-  return Math.max(0, activeBulkQuantity(item) - item.unitAllocations.length);
+  _count?: { unitAllocations: number };
+};
+
+/** Still out: checked out, less checked in, less reported missing (a lost
+ * unit closes its allocation without counting as checked in). */
+function activeBulkQuantity(item: ActiveBulkItem, lostBySku: Map<string, number>) {
+  return Math.max(0, item.checkedOutQuantity - item.checkedInQuantity - (lostBySku.get(item.bulkSku.id) ?? 0));
+}
+
+function openUnitCount(item: ActiveBulkItem) {
+  return item._count?.unitAllocations ?? item.unitAllocations.length;
+}
+
+function missingAllocatedBulkQuantity(item: ActiveBulkItem, lostBySku: Map<string, number>) {
+  return Math.max(0, activeBulkQuantity(item, lostBySku) - openUnitCount(item));
 }
 
 function quantityLabel(name: string, quantity: number) {
@@ -139,13 +161,17 @@ function quantityLabel(name: string, quantity: number) {
 }
 
 /** Kiosk idle screen data: stats, nearby events, active items, and active checkouts. */
-export const GET = withKiosk(async () => {
+export const GET = withKiosk(async (_req, { kiosk }) => {
   const now = new Date();
   const nearPast = new Date(now.getTime() - 2 * 60 * 60 * 1000);
   const nearFuture = new Date(now.getTime() + 90 * 60 * 1000);
   const eventsWindow = dayWindowInTimeZone(now, 2, env.appTimezone);
   // The local calendar day (APP_TIMEZONE, America/Chicago by default).
   const todayWindow = dayWindowInTimeZone(now, 1, env.appTimezone);
+  // Upcoming reservations: after today, through the same 7 x 24h horizon the
+  // operator hub (/api/kiosk/student/[userId]) uses, so a tapped row is always
+  // present in that person's hub.
+  const upcomingEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
   const localNow = localDateTimeParts(now, env.appTimezone);
   const nightHours = localNow.hour >= 22 || localNow.hour < 6;
 
@@ -157,6 +183,7 @@ export const GET = withKiosk(async () => {
     checkoutsResult,
     operationalWindowsResult,
     pickupsResult,
+    upcomingResult,
   ] = await Promise.allSettled([
     // Stats: every active checkout is operationally visible from every kiosk.
     db.$queryRaw<
@@ -343,7 +370,7 @@ export const GET = withKiosk(async () => {
           take: 3,
           select: {
             asset: {
-              select: { assetTag: true, name: true },
+              select: { assetTag: true, name: true, imageUrl: true },
             },
           },
         },
@@ -368,7 +395,17 @@ export const GET = withKiosk(async () => {
                 },
               },
             },
+            // Exact open-unit count: the preview list above is capped at 3.
+            _count: {
+              select: { unitAllocations: { where: { checkedOutAt: { not: null }, checkedInAt: null } } },
+            },
           },
+        },
+        // Missing bulk is accounted for, so it is not still out (the same
+        // rule as the checkout detail).
+        checkinReports: {
+          where: { type: "LOST", OR: [{ bulkSkuId: { not: null } }, { bulkSkuUnitId: { not: null } }] },
+          select: { bulkSkuId: true, quantity: true, bulkSkuUnit: { select: { bulkSkuId: true } } },
         },
         _count: {
           select: { serializedItems: { where: { allocationStatus: "active" } } },
@@ -417,7 +454,55 @@ export const GET = withKiosk(async () => {
         events: { orderBy: { ordinal: "asc" }, take: 1, select: { eventId: true } },
         requester: { select: { id: true, name: true, avatarUrl: true } },
         _count: { select: { serializedItems: { where: { allocationStatus: "active" } } } },
-        bulkItems: { select: { plannedQuantity: true, checkedOutQuantity: true } },
+        serializedItems: {
+          where: { allocationStatus: "active" },
+          take: PICKUP_GEAR_PREVIEW_LIMIT,
+          select: { asset: { select: { assetTag: true, imageUrl: true } } },
+        },
+        bulkItems: {
+          select: {
+            plannedQuantity: true,
+            checkedOutQuantity: true,
+            bulkSku: { select: { name: true, imageUrl: true } },
+          },
+        },
+      },
+    }),
+
+    // Upcoming reservations across all kiosks (D-032: reservation context is
+    // global), after today and within the hub's 7-day horizon. The home shows
+    // them only when otherwise empty.
+    db.booking.findMany({
+      where: {
+        kind: BookingKind.RESERVATION,
+        status: BookingStatus.BOOKED,
+        startsAt: { gte: todayWindow.end, lte: upcomingEnd },
+      },
+      orderBy: { startsAt: "asc" },
+      take: 8,
+      select: {
+        id: true,
+        kind: true,
+        title: true,
+        startsAt: true,
+        endsAt: true,
+        custodyScope: true,
+        eventId: true,
+        events: { orderBy: { ordinal: "asc" }, take: 1, select: { eventId: true } },
+        requester: { select: { id: true, name: true, avatarUrl: true } },
+        _count: { select: { serializedItems: { where: { allocationStatus: "active" } } } },
+        serializedItems: {
+          where: { allocationStatus: "active" },
+          take: PICKUP_GEAR_PREVIEW_LIMIT,
+          select: { asset: { select: { assetTag: true, imageUrl: true } } },
+        },
+        bulkItems: {
+          select: {
+            plannedQuantity: true,
+            checkedOutQuantity: true,
+            bulkSku: { select: { name: true, imageUrl: true } },
+          },
+        },
       },
     }),
   ]);
@@ -468,14 +553,16 @@ export const GET = withKiosk(async () => {
       shiftAssignmentId: string | null;
       events: Array<{ eventId: string }>;
       requester: { id: string; name: string; avatarUrl: string | null };
-      serializedItems: Array<{ asset: { assetTag: string; name: string | null } }>;
+      serializedItems: Array<{ asset: { assetTag: string; name: string | null; imageUrl: string | null } }>;
       bulkItems: Array<{
         id: string;
         checkedOutQuantity: number;
         checkedInQuantity: number;
         bulkSku: { id: string; name: string; imageUrl: string | null };
         unitAllocations: Array<{ bulkSkuUnit: { unitNumber: number } }>;
+        _count?: { unitAllocations: number };
       }>;
+      checkinReports?: Array<{ bulkSkuId: string | null; quantity: number | null; bulkSkuUnit: { bulkSkuId: string } | null }>;
       _count: { serializedItems: number };
     }>,
     "checkouts",
@@ -531,6 +618,24 @@ export const GET = withKiosk(async () => {
     partialFailures,
   );
   const pickups = projectPickups(pickupRows, displayBookingTitle);
+  const upcomingRows = settledValue(
+    upcomingResult,
+    [] as Array<HomePickupRow & { endsAt: Date }>,
+    "upcoming",
+    partialFailures,
+  );
+  const upcomingEndsAt = new Map(upcomingRows.map((row) => [row.id, row.endsAt]));
+  const upcoming = projectPickups(upcomingRows, displayBookingTitle).map((row) => ({
+    id: row.bookingId,
+    title: row.title,
+    startsAt: row.readyAt,
+    endsAt: upcomingEndsAt.get(row.bookingId) ?? null,
+    itemCount: row.itemCount,
+    custodyScope: row.custodyScope,
+    requester: row.requester
+      ? { ...row.requester, initials: getInitials(row.requester.name) }
+      : null,
+  }));
   // One batched read, only when something personal is overdue.
   const overduePersonalIds = checkouts
     .filter((c) => c.custodyScope === "PERSON" && c.endsAt < now)
@@ -541,6 +646,49 @@ export const GET = withKiosk(async () => {
   } catch (error) {
     console.error("[kiosk/dashboard] nudges failed", error);
     partialFailures.push("nudges");
+  }
+  // Reserved gear for the shown events, whenever it is picked up: the pickups
+  // list only reaches today, so tomorrow's crew with a reservation would
+  // otherwise read as having no gear. One batched read for every event.
+  let eventReservations: Array<{ eventId: string | null; requester: { id: string } | null; custodyScope: "PERSON" | "SHARED" }> = [];
+  const shownEventIds = events.map((e) => e.id);
+  const shownAssignmentIds = events.flatMap((e) =>
+    (e.shiftGroup?.shifts ?? []).flatMap((shift) => shift.assignments.map((a) => a.id).filter((id): id is string => Boolean(id))),
+  );
+  if (shownEventIds.length > 0) {
+    try {
+      const rows = await db.booking.findMany({
+        where: {
+          custodyScope: "PERSON",
+          OR: [
+            { kind: BookingKind.RESERVATION, status: BookingStatus.BOOKED },
+            { kind: BookingKind.CHECKOUT, status: BookingStatus.PENDING_PICKUP },
+          ],
+          AND: [{
+            OR: [
+              { eventId: { in: shownEventIds } },
+              { events: { some: { eventId: { in: shownEventIds } } } },
+              ...(shownAssignmentIds.length > 0 ? [{ shiftAssignmentId: { in: shownAssignmentIds } }] : []),
+            ],
+          }],
+        },
+        select: { requesterUserId: true, eventId: true, shiftAssignmentId: true, events: { select: { eventId: true } } },
+      });
+      const eventByAssignment = new Map(events.flatMap((e) =>
+        (e.shiftGroup?.shifts ?? []).flatMap((shift) => shift.assignments.map((a) => [a.id, e.id] as const)),
+      ));
+      eventReservations = (rows ?? []).flatMap((row) => {
+        const linked = new Set([
+          row.eventId,
+          ...(row.events ?? []).map((link) => link.eventId),
+          row.shiftAssignmentId ? eventByAssignment.get(row.shiftAssignmentId) : undefined,
+        ].filter((id): id is string => Boolean(id)));
+        return [...linked].map((eventId) => ({ eventId, requester: { id: row.requesterUserId }, custodyScope: "PERSON" as const }));
+      });
+    } catch (error) {
+      console.error("[kiosk/dashboard] event reservations failed", error);
+      partialFailures.push("eventReservations");
+    }
   }
   // Older fixtures and rows without link columns read as unlinked.
   const homeCheckouts: HomeCheckoutRow[] = checkouts.map((c) => ({
@@ -613,9 +761,11 @@ export const GET = withKiosk(async () => {
       callStartsAt: allDay ? null : callStartsAt,
       callEndsAt: allDay ? null : callEndsAt,
       shiftCount: e.shiftGroup?._count.shifts ?? 0,
+      // The event's crew areas, for the kiosk's "add you to the crew" ask.
+      areas: [...new Set(shifts.map((shift) => shift.area))],
       assignedUsers,
       assignedUserCount: assignedUsers.length,
-      crewWithoutGear: crewWithoutGear(e, homeCheckouts).map((user) => ({
+      crewWithoutGear: crewWithoutGear(e, homeCheckouts, [...pickups, ...eventReservations]).map((user) => ({
         id: user.id,
         name: user.name,
         initials: getInitials(user.name),
@@ -649,6 +799,7 @@ export const GET = withKiosk(async () => {
       initials: getInitials(tile.name),
     })),
     nextUp: projectNextUp({ now, events: eventPayloads, pickups }),
+    upcoming,
     activeItems: [
       ...activeItems.map((entry) => ({
         id: entry.asset.id,
@@ -684,9 +835,10 @@ export const GET = withKiosk(async () => {
         endsAt: entry.bookingBulkItem.booking.endsAt,
         isOverdue: entry.bookingBulkItem.booking.endsAt < now,
       })),
-      ...checkouts.flatMap((checkout) =>
-        checkout.bulkItems.flatMap((item) => {
-          const missingQuantity = missingAllocatedBulkQuantity(item);
+      ...checkouts.flatMap((checkout) => {
+        const lostBySku = reportedLostBulkBySku(checkout.checkinReports);
+        return checkout.bulkItems.flatMap((item) => {
+          const missingQuantity = missingAllocatedBulkQuantity(item, lostBySku);
           if (missingQuantity <= 0) return [];
           return [{
             id: `${checkout.id}:${item.id}:bulk-quantity`,
@@ -705,21 +857,28 @@ export const GET = withKiosk(async () => {
             endsAt: checkout.endsAt,
             isOverdue: checkout.endsAt < now,
           }];
-        })
-      ),
+        });
+      }),
     ],
     checkouts: checkouts.map((c) => {
+      const lostBySku = reportedLostBulkBySku(c.checkinReports);
       const bulkPreviewItems = c.bulkItems.flatMap((bi) => {
         const allocatedItems = bi.unitAllocations.map((allocation) => ({
           name: `${bi.bulkSku.name} #${allocation.bulkSkuUnit.unitNumber}`,
+          tagName: bi.bulkSku.name,
+          imageUrl: bi.bulkSku.imageUrl,
         }));
-        const missingQuantity = missingAllocatedBulkQuantity(bi);
+        const missingQuantity = missingAllocatedBulkQuantity(bi, lostBySku);
         return missingQuantity > 0
-          ? allocatedItems.concat({ name: quantityLabel(bi.bulkSku.name, missingQuantity) })
+          ? allocatedItems.concat({
+              name: quantityLabel(bi.bulkSku.name, missingQuantity),
+              tagName: bi.bulkSku.name,
+              imageUrl: bi.bulkSku.imageUrl,
+            })
           : allocatedItems;
       });
       const bulkItemCount = c.bulkItems.reduce((sum, bi) => {
-        return sum + Math.max(bi.unitAllocations.length, activeBulkQuantity(bi));
+        return sum + Math.max(openUnitCount(bi), activeBulkQuantity(bi, lostBySku));
       }, 0);
 
       return {
@@ -732,6 +891,8 @@ export const GET = withKiosk(async () => {
         requesterInitials: c.custodyScope === "SHARED" ? "SC" : getInitials(c.requester.name),
         items: c.serializedItems.map((si) => ({
           name: si.asset.name || si.asset.assetTag,
+          tagName: si.asset.assetTag,
+          imageUrl: si.asset.imageUrl,
         })).concat(bulkPreviewItems).slice(0, 3),
         itemCount: c._count.serializedItems + bulkItemCount,
         endsAt: c.endsAt,

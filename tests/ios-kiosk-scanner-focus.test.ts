@@ -44,7 +44,7 @@ describe("iOS kiosk scanner focus", () => {
     // invisible to SwiftUI's focus system, so a @FocusState value for it gets
     // reset to nil on the next focus pass and the stale binding force-resigns
     // the keyboard the instant the field is tapped.
-    expect(checkout).toContain("@State private var focusedCheckoutField: KioskCheckoutFocusedField? = nil");
+    expect(checkout).toContain("@State private var focusedCheckoutField: KioskCheckoutFocusedField? = KioskCaptureSeed.keyboardEntry ? .customPurpose : nil");
     expect(checkout).not.toContain("@FocusState private var focusedCheckoutField");
     expect(checkout).not.toContain("FocusState<KioskCheckoutFocusedField?>.Binding");
     expect(checkout).toContain("@State private var scannerCaptureEnabled = true");

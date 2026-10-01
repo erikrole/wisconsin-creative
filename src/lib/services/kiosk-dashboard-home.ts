@@ -33,8 +33,19 @@ export type HomePickupRow = {
   events?: Array<{ eventId: string }>;
   requester: Person;
   _count: { serializedItems: number };
-  bulkItems: Array<{ plannedQuantity: number; checkedOutQuantity: number | null }>;
+  /** First few active serialized items, for gear thumbnails. Optional so older callers still type-check. */
+  serializedItems?: Array<{ asset: { assetTag: string; imageUrl: string | null } }>;
+  bulkItems: Array<{
+    plannedQuantity: number;
+    checkedOutQuantity: number | null;
+    bulkSku?: { name: string; imageUrl: string | null };
+  }>;
 };
+
+/** One gear thumbnail: an asset tag (or bulk SKU name) and its photo. */
+export type KioskGearThumb = { tagName: string; imageUrl: string | null };
+
+export const PICKUP_GEAR_PREVIEW_LIMIT = 6;
 
 export type HomeEventRow = {
   id: string;
@@ -59,6 +70,7 @@ export type KioskHomePickup = {
   readyAt: Date;
   custodyScope: "PERSON" | "SHARED";
   eventId: string | null;
+  items: KioskGearThumb[];
 };
 
 export type KioskTodayReason = "overdue" | "pickup" | "return_due" | "shift_soon";
@@ -96,10 +108,24 @@ export function projectPickups(rows: HomePickupRow[], displayTitle: (title: stri
         readyAt: row.startsAt,
         custodyScope: row.custodyScope,
         eventId: linkedEventId(row),
+        items: pickupGearThumbs(row),
       };
     })
     .filter((pickup) => pickup.itemCount > 0)
     .sort((a, b) => a.readyAt.getTime() - b.readyAt.getTime());
+}
+
+/** Serialized assets first, then bulk SKUs with quantity still to pick up; capped. */
+export function pickupGearThumbs(row: HomePickupRow): KioskGearThumb[] {
+  const serialized = (row.serializedItems ?? []).map((si) => ({
+    tagName: si.asset.assetTag,
+    imageUrl: si.asset.imageUrl,
+  }));
+  const bulk = row.bulkItems
+    .filter((item) => item.bulkSku)
+    .filter((item) => item.plannedQuantity - (row.kind === "RESERVATION" ? item.checkedOutQuantity ?? 0 : 0) > 0)
+    .map((item) => ({ tagName: item.bulkSku!.name, imageUrl: item.bulkSku!.imageUrl }));
+  return serialized.concat(bulk).slice(0, PICKUP_GEAR_PREVIEW_LIMIT);
 }
 
 /** Call time for one assignment: its own override, then the shift's call, then shift start. */
@@ -181,10 +207,22 @@ export function projectTodayTiles(args: {
 
 /**
  * Assigned crew for one event with no personal OPEN checkout linked to that
- * event (`Booking.eventId` or `BookingEvent`) or to their own shift assignment.
+ * event (`Booking.eventId` or `BookingEvent`) or to their own shift assignment,
+ * and no personal pickup reserved for it (a reservation counts as gear).
  */
-export function crewWithoutGear(event: HomeEventRow, checkouts: HomeCheckoutRow[]) {
+export function crewWithoutGear(
+  event: HomeEventRow,
+  checkouts: HomeCheckoutRow[],
+  /** Pickups and the event's reservations, which count as covering crew
+   * whatever day they are picked up. */
+  pickups: Array<{ eventId: string | null; requester: (Pick<Person, "id"> & Partial<Person>) | null; custodyScope: "PERSON" | "SHARED" }> = [],
+) {
   const covered = new Set<string>();
+  for (const pickup of pickups) {
+    if (pickup.custodyScope === "PERSON" && pickup.eventId === event.id && pickup.requester) {
+      covered.add(pickup.requester.id);
+    }
+  }
   const assignmentIds = new Set(
     (event.shiftGroup?.shifts ?? []).flatMap((shift) => shift.assignments.map((a) => a.id).filter(Boolean)),
   );

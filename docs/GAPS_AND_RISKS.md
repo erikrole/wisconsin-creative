@@ -3,7 +3,7 @@
 ## Document Control
 
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-09-28
+- Last Updated: 2026-10-01
 - Status: Active registry
 - Purpose: Track only open gaps, pending decisions, active risks, and intentionally deferred scope.
 - Historical record: [GAPS_AND_RISKS_HISTORY.md](archive/GAPS_AND_RISKS_HISTORY.md)
@@ -50,6 +50,7 @@ Review duplicate automatic builds are removed; main protection, sanitized previe
 | GAP-84 | Football-crew kit visibility is a heuristic | AREA_KIOSK / AREA_KITS | Active | The kiosk has no crew field. "Use a kit" shows when the server suggests a past gameday kit or the person has an `FB` shift on their event list, so new crew with no history may not see it. Add a crew field if this misses people. |
 | GAP-85 | Kiosk kit lists return no availability | AREA_KIOSK / AREA_KITS | Active | `GET /api/kiosk/kits[/id]` returns membership only; a kit checklist can list gear that is already out, which is only discovered when scanned. |
 | GAP-86 | Kiosk "Mark returned without scanning" and H5 target | AREA_KIOSK / AREA_RESERVATIONS | Resolved | 2026-09-28 (branch `claude/kiosk-redesign`): Erik decided "Mark returned without scanning" stays off the kiosk; staff use the web `checkouts/[id]/admin-override`. "Change what's reserved" shows only on real reservations: `kiosk/student/[userId]` now tags each pending pickup `kind: "reservation" \| "checkout"`, and the hub hides the button on legacy PENDING_PICKUP checkouts (older servers without `kind` keep showing it). Live-server read-back of the field is still pending with GAP-83. |
+| GAP-87 | Kiosk damaged/missing reports for batteries and counted stock rollout | AREA_KIOSK / AREA_CHECKOUTS / AREA_BULK_INVENTORY | Active | The report gap is closed in source (branch `claude/kiosk-keyboard-field`, 2026-10-01): battery units and counted stock can be reported damaged or missing at the kiosk and on web. Rollout needs merge, migration `0162_checkin_reports_bulk_targets` applied through the runbook before app deploy (`asset_id` becomes nullable plus a one-target CHECK), then live proof: report a battery missing (unit LOST, return finishes, no restock), a counted quantity missing and damaged, and the damaged-page scan on a managed iPad. |
 
 ## Deferred Product Scope
 
@@ -94,6 +95,7 @@ Review duplicate automatic builds are removed; main protection, sanitized previe
 | Brand asset storage or migration skew | A Brand assets route reaches an environment without migrations `0135`/`0136` or the dedicated private Blob token, or a public media token is reused | Preview now has migrations `0135`/`0136` and the dedicated private-store credential; preserve fail-closed configuration, then verify authenticated upload, replacement, restore copy, private preview/download, favorites, and database/audit read-back before rollout | Engineering |
 
 ## Change Log
+- 2026-10-01: Added GAP-87. Kiosk "Report a problem" no longer leaves out batteries and counted stock (they were told to tell staff); the remaining gate is migration `0162_checkin_reports_bulk_targets` and deploy plus live proof.
 - 2026-09-28: Resolved GAP-86. Kiosk "Mark returned without scanning" is left out by decision (web admin override instead); the hub offers "Change what's reserved" only on pickups the student route marks `kind: "reservation"`.
 - 2026-09-28: Kiosk redesign (branch `claude/kiosk-redesign`, unmerged, fixture-proven) added GAP-82–GAP-86 for physical iPad proof, a live-server pass, the football-crew kit heuristic, kit availability, and the admin-override / H5 questions. No registry gap is closed by it; the AREA_KIOSK wrong-person known gap is narrowed by peer transfer.
 - 2026-09-18: Clicking a booking in the macOS extra now opens details and items in the extra itself. Item names ride the existing two-read companion projection; older caches decode without names. The Companion delivery gap still owns real APNs, installed interaction, and notarized distribution.

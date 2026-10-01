@@ -39,6 +39,7 @@ vi.mock("@/lib/audit", () => ({
 vi.mock("@/lib/services/bookings-helpers", () => ({
   upsertBulkBalancesAndMovements: mocks.upsertBulkBalancesAndMovements,
   settleBulkLedgerAtCompletion: vi.fn(),
+  reportedLostBulkBySku: vi.fn(async () => new Map()),
 }));
 
 import { POST as returnCountedQuantity } from "@/app/api/kiosk/checkin/[id]/quantity/route";
@@ -59,6 +60,7 @@ beforeEach(() => {
   mocks.transaction.mockImplementation((handler: (tx: unknown) => Promise<unknown>) => handler({
     user: { findFirst: mocks.userFindFirst },
     booking: { findUnique: mocks.bookingFindUnique, update: mocks.bookingUpdate },
+    checkinItemReport: { findMany: vi.fn(async () => []) },
     bookingBulkItem: {
       findUnique: mocks.bookingBulkItemFindUnique,
       update: mocks.bookingBulkItemUpdate,

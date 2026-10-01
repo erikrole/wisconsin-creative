@@ -16,6 +16,7 @@ import { normalizeBookingTitle } from "@/lib/title-normalization";
 import { displayBookingTitle } from "@/lib/booking-display-title";
 import { MAX_EQUIPMENT_SELECTIONS_PER_REQUEST } from "@/lib/request-limits";
 import { assertKioskCheckoutEditor, requireKioskActor } from "@/lib/services/kiosk-actor";
+import { readKioskStaffToken, verifyKioskStaffToken } from "@/lib/kiosk-staff-token";
 import { addScannedItemToActiveCheckout, removeActiveCheckoutItem, requireEditableCheckout } from "@/lib/services/kiosk-active-checkout-items";
 
 function activeBulkQuantity(item: { checkedOutQuantity: number; checkedInQuantity: number }) {
@@ -36,10 +37,16 @@ type KioskBulkDetailItem = {
   bulkSkuName: string;
   unitNumber: number | null;
   imageUrl: string | null;
+  category?: string | null;
   quantity?: number;
   reservationItemId?: string;
   /** Counted (not unit-numbered) stock: returned with a quantity, not scans. */
   returnsByQuantity?: boolean;
+  /** Return mode: a damaged/missing report on this numbered unit. */
+  report?: { type: "DAMAGED" | "LOST" };
+  /** Return mode, counted stock: quantities already reported. */
+  reportedMissingQuantity?: number;
+  reportedDamagedQuantity?: number;
 };
 
 /** Get checkout details for kiosk return and pickup flows */
@@ -57,6 +64,11 @@ export const GET = withKiosk<{ id: string }>(async (_req, { params }) => {
       updatedAt: true,
       locationId: true,
       endsAt: true,
+      eventId: true,
+      // Return mode: damaged/missing reports, so the list reflects them.
+      checkinReports: {
+        select: { type: true, assetId: true, bulkSkuUnitId: true, bulkSkuId: true, quantity: true },
+      },
       scanEvents: {
         where: {
           success: true,
@@ -80,6 +92,7 @@ export const GET = withKiosk<{ id: string }>(async (_req, { params }) => {
               assetTag: true,
               name: true,
               imageUrl: true,
+              category: { select: { name: true } },
             },
           },
         },
@@ -179,6 +192,18 @@ export const GET = withKiosk<{ id: string }>(async (_req, { params }) => {
       stagedReservationUnitsBySku.set(bulkItem.bulkSku.id, stagedUnits);
     }
   }
+  const checkinReports = booking.kind === "CHECKOUT" ? (booking.checkinReports ?? []) : [];
+  const reportByAsset = new Map(checkinReports.flatMap((r) => r.assetId ? [[r.assetId, r.type] as const] : []));
+  const reportByUnit = new Map(checkinReports.flatMap((r) => r.bulkSkuUnitId ? [[r.bulkSkuUnitId, r.type] as const] : []));
+  const countedReports = (bulkSkuId: string, type: "DAMAGED" | "LOST") =>
+    checkinReports.filter((r) => r.bulkSkuId === bulkSkuId && r.type === type).reduce((sum, r) => sum + (r.quantity ?? 0), 0);
+  // Missing bulk is accounted for: numbered units one each, counted by quantity.
+  const reportedLostBySku = new Map<string, number>();
+  for (const bi of booking.bulkItems) {
+    const unitIds = new Set(bi.unitAllocations.map((a) => a.bulkSkuUnit.id));
+    const lostUnits = [...unitIds].filter((unitId) => reportByUnit.get(unitId) === "LOST").length;
+    reportedLostBySku.set(bi.bulkSku.id, lostUnits + countedReports(bi.bulkSku.id, "LOST"));
+  }
   const scannedSerializedAssetIds = new Set(
     scanEvents
       .filter((event) => event.scanType === "SERIALIZED" && event.assetId)
@@ -200,6 +225,8 @@ export const GET = withKiosk<{ id: string }>(async (_req, { params }) => {
       : si.allocationStatus === "returned",
     type: "serialized" as const,
     imageUrl: si.asset.imageUrl,
+    ...(!isPickupChecklist && reportByAsset.has(si.asset.id) ? { report: { type: reportByAsset.get(si.asset.id)! } } : {}),
+    ...(si.asset.category?.name ? { category: si.asset.category.name } : {}),
   }));
 
   const numberedBulkItems = booking.bulkItems.filter((bi) => bi.bulkSku.trackByNumber);
@@ -236,6 +263,7 @@ export const GET = withKiosk<{ id: string }>(async (_req, { params }) => {
             bulkSkuName: bi.bulkSku.name,
             unitNumber: null,
             imageUrl: bi.bulkSku.imageUrl,
+            category: bi.bulkSku.category,
             ...(booking.kind === "RESERVATION" ? { reservationItemId: bi.id } : {}),
           }];
         }
@@ -264,6 +292,7 @@ export const GET = withKiosk<{ id: string }>(async (_req, { params }) => {
               bulkSkuName: bi.bulkSku.name,
               unitNumber,
               imageUrl: bi.bulkSku.imageUrl,
+              category: bi.bulkSku.category,
               ...(booking.kind === "RESERVATION" ? { reservationItemId: bi.id } : {}),
             };
           }
@@ -278,23 +307,36 @@ export const GET = withKiosk<{ id: string }>(async (_req, { params }) => {
             bulkSkuName: bi.bulkSku.name,
             unitNumber: null,
             imageUrl: bi.bulkSku.imageUrl,
+            category: bi.bulkSku.category,
             ...(booking.kind === "RESERVATION" ? { reservationItemId: bi.id } : {}),
           };
         });
       })
     : booking.bulkItems.flatMap((bi): KioskBulkDetailItem[] => {
-        const activeAllocations = bi.unitAllocations.map((allocation) => ({
+        const activeAllocations = bi.unitAllocations.map((allocation) => {
+          const reportType = reportByUnit.get(allocation.bulkSkuUnit.id);
+          return {
           id: allocation.bulkSkuUnit.id,
           tagName: `#${allocation.bulkSkuUnit.unitNumber}`,
           name: `${bi.bulkSku.name} #${allocation.bulkSkuUnit.unitNumber}`,
-          returned: !!allocation.checkedInAt,
+          // A unit reported missing had its custody closed; it is accounted
+          // for, not returned.
+          returned: !!allocation.checkedInAt && reportType !== "LOST",
+          ...(reportType ? { report: { type: reportType } } : {}),
           type: "numbered_bulk" as const,
           bulkSkuId: bi.bulkSku.id,
           bulkSkuName: bi.bulkSku.name,
           unitNumber: allocation.bulkSkuUnit.unitNumber,
           imageUrl: bi.bulkSku.imageUrl,
-        }));
-        const missingQuantity = Math.max(0, activeBulkQuantity(bi) - bi.unitAllocations.filter((allocation) => !allocation.checkedInAt).length);
+          category: bi.bulkSku.category,
+        };
+        });
+        const missingQuantity = Math.max(
+          0,
+          activeBulkQuantity(bi)
+            - bi.unitAllocations.filter((allocation) => !allocation.checkedInAt).length
+            - (reportedLostBySku.get(bi.bulkSku.id) ?? 0),
+        );
         if (missingQuantity <= 0) return activeAllocations;
         return [
           ...activeAllocations,
@@ -309,7 +351,12 @@ export const GET = withKiosk<{ id: string }>(async (_req, { params }) => {
             bulkSkuName: bi.bulkSku.name,
             unitNumber: null,
             imageUrl: bi.bulkSku.imageUrl,
-            ...(bi.bulkSku.trackByNumber ? {} : { returnsByQuantity: true }),
+            category: bi.bulkSku.category,
+            ...(bi.bulkSku.trackByNumber ? {} : {
+              returnsByQuantity: true,
+              reportedMissingQuantity: countedReports(bi.bulkSku.id, "LOST"),
+              reportedDamagedQuantity: countedReports(bi.bulkSku.id, "DAMAGED"),
+            }),
           },
         ];
       });
@@ -356,6 +403,7 @@ export const GET = withKiosk<{ id: string }>(async (_req, { params }) => {
       : booking.requesterUserId,
     custodyScope: booking.custodyScope,
     endsAt: booking.endsAt,
+    eventId: booking.eventId ?? null,
     updatedAt: booking.updatedAt,
     locationId: booking.locationId,
     scanSummary: {
@@ -376,6 +424,11 @@ export const PATCH = withKiosk<{ id: string }>(async (req, { kiosk, params }) =>
     const actor = await requireKioskActor(tx, actorId);
     const booking = await requireEditableCheckout(tx, { checkoutId: params.id });
     assertKioskCheckoutEditor(actor, booking);
+    // C5: changing someone else's due back as staff needs a staff card scan,
+    // not a tapped name. The holder and SHARED custody are unchanged.
+    if (booking.custodyScope !== BookingCustodyScope.SHARED && booking.requesterUserId !== actor.id) {
+      verifyKioskStaffToken(readKioskStaffToken(req), { actorId: actor.id, kioskId: kiosk.kioskId });
+    }
 
     if (requestedEndsAt && requestedEndsAt <= new Date()) {
       throw new HttpError(400, "Return time must be in the future");
@@ -425,6 +478,7 @@ export const PATCH = withKiosk<{ id: string }>(async (req, { kiosk, params }) =>
         title: next.title,
         endsAt: next.endsAt.toISOString(),
         kioskDeviceId: kiosk.kioskId,
+        staffCardVerified: booking.custodyScope !== BookingCustodyScope.SHARED && booking.requesterUserId !== actor.id,
       },
     });
 

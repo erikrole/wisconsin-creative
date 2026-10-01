@@ -32,6 +32,11 @@ struct KioskIdentityView: View {
         // A6 lists the owner on their own card, so "Someone else" skips them.
         var roster = roster
         if case .returnOther(let owner) = contextMode { roster.removeAll { $0.id == owner.id } }
+        // Event checkout: the event's crew first, then everyone else.
+        if let crew = intent?.selectedEvent?.crewUserIds, !crew.isEmpty {
+            let ids = Set(crew)
+            roster = roster.filter { ids.contains($0.id) } + roster.filter { !ids.contains($0.id) }
+        }
         guard !normalizedQuery.isEmpty else { return roster }
         return roster.filter { $0.name.localizedCaseInsensitiveContains(normalizedQuery) }
     }
@@ -67,16 +72,24 @@ struct KioskIdentityView: View {
 
     private var plainLayout: some View {
             VStack(alignment: .leading, spacing: 24) {
-                HStack {
-                    Button("Cancel") { cancelIdentityFlow() }
+                // Back top-right beside the time, like every task screen.
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(intent?.heroTitle ?? "Who are you?")
+                            .font(.system(size: 36, weight: .heavy)).foregroundStyle(KioskText.primary)
+                            .lineLimit(1).minimumScaleFactor(0.8)
+                        Text(identityPrompt)
+                            .font(.title3).foregroundStyle(KioskText.secondary)
+                    }
+                    Spacer(minLength: 16)
+                    TimelineView(.everyMinute) { context in
+                        Text(context.date.formatted(.dateTime.hour().minute()))
+                            .font(.system(size: 22, weight: .semibold).monospacedDigit())
+                            .foregroundStyle(KioskText.tertiary)
+                    }
+                    .padding(.top, 10)
+                    Button("Back") { cancelIdentityFlow() }
                         .kioskButtonRole(.secondary)
-                    Spacer()
-                }
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(intent?.heroTitle ?? "Who are you?")
-                        .font(.system(size: 36, weight: .heavy)).foregroundStyle(KioskText.primary)
-                    Text(identityPrompt)
-                        .font(.title3).foregroundStyle(KioskText.secondary)
                 }
                 TextField("Search roster", text: $query)
                     .textFieldStyle(.plain).font(.title3)
@@ -172,7 +185,15 @@ struct KioskIdentityView: View {
                 fitsOnOneScreen: false
             )
         }
-        return KioskRosterMetrics.resolve(count: count, in: size)
+        // Photos at every roster size, matching home (Erik, 2026-10-01).
+        let resolved = KioskRosterMetrics.resolve(count: count, in: size)
+        return KioskRosterMetrics(
+            columns: resolved.columns,
+            tileHeight: max(resolved.tileHeight, 52),
+            avatarSize: min(max(resolved.avatarSize, 32), 40),
+            showsAvatar: true,
+            fitsOnOneScreen: resolved.fitsOnOneScreen
+        )
     }
 
     private func loadRoster() async {
@@ -329,27 +350,26 @@ extension KioskIdentityView {
                 case .reserved(let holder): reservedCard(holder: holder)
                 case .returnOther(let owner): returnCard(owner: owner)
                 }
-                Spacer(minLength: 0)
-                Button {
-                    cancelIdentityFlow()
-                } label: {
-                    Text(mode.isReturn ? "Close" : "Cancel").frame(maxWidth: .infinity)
-                }
-                .kioskButtonRole(.secondary)
             }
             .frame(width: 400)
             .frame(maxHeight: .infinity, alignment: .top)
 
             VStack(alignment: .leading, spacing: 14) {
+                switch mode {
+                case .scanFree:
+                    contextTopBar(title: "Who\u{2019}s taking it?")
+                case .reserved:
+                    contextTopBar(title: nil)
+                case .returnOther:
+                    contextTopBar(title: "Who\u{2019}s returning it?")
+                }
                 if let message { Text(message).foregroundStyle(Color.statusText(.orange)).font(.headline) }
                 switch mode {
                 case .scanFree:
-                    Text("Who\u{2019}s taking it?").font(KioskType.screenTitle).foregroundStyle(KioskText.primary)
                     rosterContent
                 case .reserved(let holder):
                     reservedChoice(holder: holder)
                 case .returnOther(let owner):
-                    Text("Who\u{2019}s returning it?").font(KioskType.screenTitle).foregroundStyle(KioskText.primary)
                     personCard(owner, detail: "Checked this out", tint: KioskSection.comingBack) { choose(owner) }
                     Text("SOMEONE ELSE")
                         .font(KioskType.overline).tracking(KioskType.overlineTracking)
@@ -363,6 +383,39 @@ extension KioskIdentityView {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
         .padding(28)
+    }
+
+    /// Time and Back top-right, the same as the plain roster and every task screen.
+    private func contextTopBar(title: String?) -> some View {
+        HStack(alignment: .top) {
+            if let title {
+                Text(title).font(KioskType.screenTitle).foregroundStyle(KioskText.primary)
+            }
+            Spacer(minLength: 16)
+            TimelineView(.everyMinute) { context in
+                Text(context.date.formatted(.dateTime.hour().minute()))
+                    .font(.system(size: 22, weight: .semibold).monospacedDigit())
+                    .foregroundStyle(KioskText.tertiary)
+            }
+            .padding(.top, 10)
+            Button("Back") { cancelIdentityFlow() }
+                .kioskButtonRole(.secondary)
+        }
+    }
+
+    private func returnChip(imageUrl: String?, label: String) -> some View {
+        HStack(spacing: 8) {
+            KioskItemThumbnail(imageUrl: imageUrl, size: 26)
+            Text(label)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(KioskText.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+        }
+        .padding(.leading, 5).padding(.trailing, 10).padding(.vertical, 5)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(KioskSurface.card, in: RoundedRectangle(cornerRadius: KioskRadius.sm))
+        .overlay(RoundedRectangle(cornerRadius: KioskRadius.sm).stroke(KioskStroke.hairline, lineWidth: 1))
     }
 
     // MARK: Left cards
@@ -473,25 +526,31 @@ extension KioskIdentityView {
                 Text(meta.joined(separator: " · ")).font(KioskType.rowDetail).foregroundStyle(KioskText.secondary)
             }
             if !items.isEmpty {
-                VStack(spacing: 0) {
-                    ForEach(items.prefix(6)) { item in
-                        HStack(spacing: 12) {
-                            Text(item.itemListPrimaryTitle).font(KioskType.rowTitle).foregroundStyle(KioskText.primary)
-                            if let secondary = item.itemListSecondaryTitle {
-                                Text(secondary).font(KioskType.rowDetail).foregroundStyle(KioskText.secondary).lineLimit(1)
-                            }
-                            Spacer(minLength: 0)
-                        }
-                        .padding(.horizontal, 16).padding(.vertical, 10)
+                // Photo + asset tag chips; numbered batteries share one chip.
+                let batteries = Dictionary(grouping: items.filter { $0.isNumberedBulk && $0.bulkSkuId != nil }, by: { $0.bulkSkuId ?? "" })
+                let singles = items.filter { !($0.isNumberedBulk && $0.bulkSkuId != nil) }
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 8)], alignment: .leading, spacing: 8) {
+                    ForEach(singles) { item in
+                        returnChip(imageUrl: item.imageUrl, label: item.itemListPrimaryTitle)
                     }
-                    if items.count > 6 {
-                        Text("and \(items.count - 6) more").font(KioskType.meta).foregroundStyle(KioskText.tertiary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, 16).padding(.vertical, 8)
+                    ForEach(batteries.keys.sorted(), id: \.self) { key in
+                        let units = (batteries[key] ?? []).sorted { ($0.unitNumber ?? 0) < ($1.unitNumber ?? 0) }
+                        HStack(spacing: 8) {
+                            KioskItemThumbnail(imageUrl: units.first?.imageUrl, size: 26)
+                            Text(units.first?.bulkSkuName ?? "Battery")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(KioskText.primary)
+                                .lineLimit(1)
+                            ForEach(units) { unit in
+                                KioskBatteryUnitChip(label: unit.unitNumber.map(String.init) ?? unit.tagName, isScanned: unit.returned, size: 26)
+                            }
+                        }
+                        .padding(.leading, 5).padding(.trailing, 8).padding(.vertical, 4)
+                        .fixedSize()
+                        .background(KioskSurface.card, in: RoundedRectangle(cornerRadius: KioskRadius.sm))
+                        .overlay(RoundedRectangle(cornerRadius: KioskRadius.sm).stroke(KioskStroke.hairline, lineWidth: 1))
                     }
                 }
-                .padding(.vertical, 4)
-                .kioskCard()
             }
             Text("Anyone can bring this back. It stays \(firstName)\u{2019}s checkout; the record shows who returned it.")
                 .font(KioskType.meta).foregroundStyle(KioskText.tertiary)

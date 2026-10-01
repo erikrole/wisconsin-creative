@@ -148,6 +148,7 @@ struct KioskTaskScaffold<Main: View, Panel: View>: View {
             .padding(.top, 16)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .statusBarHidden(true)
     }
 }
 
@@ -238,11 +239,13 @@ struct KioskCheckMark: View {
 
 // MARK: Item row
 
-/// One line in a task list: check, tag, model, and an optional trailing
-/// control or note ("Remove", "Not in kit", "Just added").
+/// One line in a task list: check, thumbnail, asset tag, and an optional
+/// trailing control or note ("Remove", "Not in kit", "Just added"). The model
+/// name stays in the accessibility label only (Erik, 2026-10-01: tag only).
 struct KioskItemRow<Trailing: View>: View {
     let tag: String
     var name: String?
+    var imageUrl: String?
     let isDone: Bool
     var section: KioskSection = .takingOut
     @ViewBuilder var trailing: () -> Trailing
@@ -250,32 +253,60 @@ struct KioskItemRow<Trailing: View>: View {
     var body: some View {
         HStack(spacing: 12) {
             KioskCheckMark(isDone: isDone, section: section)
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Text(tag)
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(KioskText.primary)
-                    .lineLimit(1)
-                if let name {
-                    Text(name)
-                        .font(KioskType.meta)
-                        .foregroundStyle(KioskText.secondary)
-                        .lineLimit(1)
-                }
-            }
+            KioskItemThumbnail(imageUrl: imageUrl)
+            Text(tag)
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(KioskText.primary)
+                .lineLimit(1)
             Spacer(minLength: 8)
             trailing()
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 11)
-        .frame(minHeight: 44)
+        .padding(.vertical, 8)
+        .frame(minHeight: 56)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(tag)\(name.map { ", \($0)" } ?? ""), \(isDone ? "scanned" : "not scanned yet")")
     }
 }
 
 extension KioskItemRow where Trailing == EmptyView {
-    init(tag: String, name: String? = nil, isDone: Bool, section: KioskSection = .takingOut) {
-        self.init(tag: tag, name: name, isDone: isDone, section: section, trailing: { EmptyView() })
+    init(tag: String, name: String? = nil, imageUrl: String? = nil, isDone: Bool, section: KioskSection = .takingOut) {
+        self.init(tag: tag, name: name, imageUrl: imageUrl, isDone: isDone, section: section, trailing: { EmptyView() })
+    }
+}
+
+/// Small rounded item photo; a neutral box symbol when there is none.
+struct KioskItemThumbnail: View {
+    let imageUrl: String?
+    var size: CGFloat = 40
+
+    var body: some View {
+        Group {
+            if let imageUrl, let url = URL(string: imageUrl) {
+                AsyncImage(url: url) { phase in
+                    if case .success(let image) = phase {
+                        image.resizable().scaledToFill()
+                    } else {
+                        placeholder
+                    }
+                }
+            } else {
+                placeholder
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(RoundedRectangle(cornerRadius: KioskRadius.sm))
+        .overlay(RoundedRectangle(cornerRadius: KioskRadius.sm).stroke(KioskStroke.standard, lineWidth: 1))
+        .accessibilityHidden(true)
+    }
+
+    private var placeholder: some View {
+        ZStack {
+            KioskSurface.placeholder
+            Image(systemName: "shippingbox")
+                .font(.system(size: size * 0.4))
+                .foregroundStyle(KioskText.muted)
+        }
     }
 }
 
@@ -323,59 +354,76 @@ struct KioskBatteryRow: View {
     var units: [Unit] = []
     var note: String?
     var section: KioskSection = .takingOut
+    /// The battery's photo; falls back to the battery glyph.
+    var imageUrl: String? = nil
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 10) {
-                Image(systemName: "battery.75percent")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(scanned >= total && total > 0 ? section.accent : KioskText.tertiary)
-                    .frame(width: 22)
-                Text("\(title) · \(scanned) of \(total)")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(KioskText.primary)
-                Spacer(minLength: 0)
+        // Same columns as KioskItemRow: check, 40 pt photo, then the text.
+        HStack(alignment: .top, spacing: 12) {
+            KioskCheckMark(isDone: scanned >= total && total > 0, section: section)
+                .padding(.top, 8)
+            Group {
+                if imageUrl != nil {
+                    KioskItemThumbnail(imageUrl: imageUrl, size: 40)
+                } else {
+                    Image(systemName: "battery.75percent")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(KioskText.tertiary)
+                        .frame(width: 40, height: 40)
+                        .background(KioskSurface.placeholder, in: RoundedRectangle(cornerRadius: KioskRadius.sm))
+                }
             }
-            if !units.isEmpty {
-                FlowingChips(spacing: 6) {
-                    ForEach(units) { unit in
-                        KioskBatteryUnitChip(label: unit.label, isScanned: unit.isScanned, section: section)
+            VStack(alignment: .leading, spacing: 8) {
+                Text("\(title) · \(scanned) of \(total)")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(KioskText.primary)
+                    .frame(minHeight: 40, alignment: .leading)
+                if !units.isEmpty {
+                    FlowingChips(spacing: 6) {
+                        ForEach(units) { unit in
+                            KioskBatteryUnitChip(label: unit.label, isScanned: unit.isScanned, section: section)
+                        }
                     }
                 }
-                .padding(.leading, 32)
+                if let note {
+                    Text(note)
+                        .font(KioskType.meta)
+                        .foregroundStyle(KioskText.tertiary)
+                }
             }
-            if let note {
-                Text(note)
-                    .font(KioskType.meta)
-                    .foregroundStyle(KioskText.tertiary)
-                    .padding(.leading, 32)
-            }
+            Spacer(minLength: 0)
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 12)
+        .padding(.vertical, 8)
         .accessibilityElement(children: .combine)
     }
 }
 
+/// A battery's unit number in a circle: outlined while still out or still to
+/// scan, filled green once it's back or scanned (Erik, 2026-10-01).
 struct KioskBatteryUnitChip: View {
     let label: String
     let isScanned: Bool
     var section: KioskSection = .takingOut
+    var size: CGFloat = 32
+
+    private var number: String { label.hasPrefix("#") ? String(label.dropFirst()) : label }
 
     var body: some View {
-        Text(label)
-            .font(KioskType.chipStrong)
-            .foregroundStyle(isScanned ? KioskText.onPrimary : KioskText.secondary)
-            .padding(.horizontal, 10)
-            .frame(minWidth: 44, minHeight: 30)
+        Text(number)
+            .font(.system(size: number.count > 2 ? 12 : 14, weight: .bold).monospacedDigit())
+            .foregroundStyle(isScanned ? Color.black : KioskText.primary)
+            .minimumScaleFactor(0.7)
+            .lineLimit(1)
+            .frame(width: size, height: size)
             .background {
                 if isScanned {
-                    Capsule().fill(section.accent)
+                    Circle().fill(Color.statusText(.green))
                 } else {
-                    Capsule().strokeBorder(KioskStroke.pending, lineWidth: 1)
+                    Circle().strokeBorder(KioskStroke.pending, lineWidth: 1.5)
                 }
             }
-            .accessibilityLabel("\(label), \(isScanned ? "scanned" : "still to scan")")
+            .accessibilityLabel("Number \(number), \(isScanned ? "done" : "still out")")
     }
 }
 
@@ -411,6 +459,10 @@ struct KioskContextCard: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
         .kioskCard()
+        // With an edit action, the whole card opens it, not just the button.
+        .contentShape(Rectangle())
+        .onTapGesture { onEdit?() }
+        .accessibilityAddTraits(onEdit == nil ? [] : .isButton)
     }
 }
 
@@ -584,9 +636,12 @@ struct KioskNoticeStage<Content: View>: View {
             content()
         }
         .padding(26)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
         .kioskCard(section.stageFill, radius: KioskRadius.hero, stroke: section.stageStroke)
         .accessibilityElement(children: .contain)
+        // The card hugs its words; the empty space stays outside it so the
+        // actions keep their place at the bottom.
+        .frame(maxHeight: .infinity, alignment: .top)
     }
 }
 
@@ -733,6 +788,9 @@ struct KioskSheetScreen<Context: View, Choice: View>: View {
     var dismissTitle: String = "Cancel"
     let onDismiss: () -> Void
     var contextWidth: CGFloat = 400
+    /// Shorter and nudged down when shown over a screen that keeps its header.
+    var height: CGFloat = 700
+    var topOffset: CGFloat = 0
     @ViewBuilder var context: () -> Context
     @ViewBuilder var choice: () -> Choice
 
@@ -760,9 +818,14 @@ struct KioskSheetScreen<Context: View, Choice: View>: View {
                     }
             }
             .padding(28)
-            .frame(width: 1060, height: 700)
+            // Fit the space it's given: inside a screen with a header the card
+            // used to overflow upward and cover the header's subtitle.
+            .frame(width: 1060, height: height)
             .kioskCard(KioskSurface.sheet, radius: KioskRadius.modal, stroke: KioskStroke.standard)
+            .offset(y: topOffset)
         }
+        // Every kiosk screen hides the iOS time/battery bar.
+        .statusBarHidden(true)
     }
 }
 

@@ -39,6 +39,7 @@ struct KioskIdleView: View {
                     locationName: store.info?.locationName,
                     checkouts: unavailableSections.contains("checkouts") ? [] : (dashboard?.checkouts ?? []),
                     pickups: dashboard?.pickups ?? [],
+                    upcoming: dashboard?.upcoming ?? [],
                     events: dashboard?.events ?? [],
                     serverToday: dashboard?.today ?? [],
                     nudgedIds: nudgedIds,
@@ -49,6 +50,18 @@ struct KioskIdleView: View {
                     nextUp: dashboard?.nextUp.map { "\($0.title), \(KioskDueCopy.relative($0.at))" },
                     onOpenCheckout: { openCheckout($0) },
                     onNudge: { nudge($0) },
+                    onOpenEvent: { selectedEvent = $0 },
+                    onStartPickup: { user, pickup in
+                        identityRequests.invalidate()
+                        store.deferSleepMode(for: sleepWakeDuration)
+                        store.setIntent(KioskFlowIntent(
+                            action: .pickup, source: .reservation, identifiedUser: user, expectedRequester: user,
+                            selectedEvent: nil,
+                            targetBooking: KioskIntentBooking(id: pickup.bookingId, title: pickup.title, startsAt: pickup.readyAt, endsAt: nil),
+                            pendingScanValues: [], createdAt: Date(), ambiguity: .none
+                        ))
+                        store.screen = .pickup(bookingId: pickup.bookingId, userId: user.id)
+                    },
                     onSelectUser: { user in
                         identityRequests.invalidate()
                         store.deferSleepMode(for: sleepWakeDuration)
@@ -119,9 +132,27 @@ struct KioskIdleView: View {
                 event: event,
                 capabilities: dashboard?.capabilities ?? KioskDashboard.Capabilities(),
                 onStartCheckout: { startCheckout(for: event) },
-                onScan: { store.scanner.receive($0) }
+                onScan: { store.scanner.receive($0) },
+                onCheckoutWorker: { worker in
+                    guard let user = users.first(where: { $0.id == worker.id }) else { return }
+                    identityRequests.invalidate()
+                    store.deferSleepMode(for: sleepWakeDuration)
+                    store.setIntent(KioskFlowIntent(
+                        action: .checkout, source: .event, identifiedUser: user, expectedRequester: nil,
+                        selectedEvent: KioskIntentEvent(id: event.id, title: event.title, endsAt: event.endsAt),
+                        targetBooking: nil, pendingScanValues: [], createdAt: Date(), ambiguity: .none
+                    ))
+                    store.screen = .checkout(user: user)
+                },
+                onOpenWorker: { worker in
+                    guard let user = users.first(where: { $0.id == worker.id }) else { return }
+                    identityRequests.invalidate()
+                    store.deferSleepMode(for: sleepWakeDuration)
+                    store.screen = .operatorHub(user)
+                },
+                gearByUserId: eventGearByUserId(eventId: event.id)
             )
-                .presentationDetents([.height(440), .large])
+                .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
         .sheet(item: $selectedCheckout) { context in
@@ -130,7 +161,7 @@ struct KioskIdleView: View {
             }, onScan: { store.scanner.receive($0) }) {
                 Task { await loadAll() }
             }
-                .presentationSizing(.page)
+                .presentationSizing(.form)
                 .presentationDragIndicator(.visible)
         }
     }
@@ -138,6 +169,8 @@ struct KioskIdleView: View {
     private var shouldShowSleepMode: Bool {
         guard unavailableSections.isEmpty, dashboard?.standby?.sleepMode == true else { return false }
         guard sleepModeReason != "active_window" else { return false }
+        // Pickups waiting today keep home up; standby would hide them.
+        if !(dashboard?.pickups ?? []).isEmpty, sleepModeReason != "night_hours" { return false }
         if let sleepDismissedUntil = store.sleepDismissedUntil, sleepDismissedUntil > Date() {
             return false
         }
@@ -155,6 +188,7 @@ struct KioskIdleView: View {
     private func isLocallyIdleWindow(_ dashboard: KioskDashboard, standby: KioskDashboard.Standby) -> Bool {
         dashboard.stats.checkouts == 0 &&
         dashboard.stats.itemsOut == 0 &&
+        dashboard.pickups.isEmpty &&
         standby.nearbyEventCount == 0 &&
         standby.nearbyBookingWindowCount == 0
     }
@@ -741,6 +775,7 @@ struct KioskIdleView: View {
                 if unavailableSections.contains("stats") { value.stats = previous.stats }
                 if unavailableSections.contains("checkouts") { value.checkouts = previous.checkouts }
                 if unavailableSections.contains("activeItems") { value.activeItems = previous.activeItems }
+                if unavailableSections.contains("upcoming") { value.upcoming = previous.upcoming }
             }
             dashboard = value
             #if DEBUG
@@ -890,13 +925,35 @@ struct KioskIdleView: View {
         }
     }
 
+    /// Per-worker gear for one event: PERSON pickups reserved for it plus
+    /// PERSON checkouts out for it, merged by requester.
+    private func eventGearByUserId(eventId: String) -> [String: KioskEventWorkerGear] {
+        var gear: [String: KioskEventWorkerGear] = [:]
+        for pickup in dashboard?.pickups ?? [] where pickup.eventId == eventId && pickup.custodyScope != "SHARED" {
+            guard let userId = pickup.requester?.id else { continue }
+            gear[userId, default: KioskEventWorkerGear()].add(thumbs: pickup.items ?? [], count: pickup.itemCount, out: false)
+        }
+        for checkout in dashboard?.checkouts ?? [] where checkout.eventId == eventId && checkout.custodyScope != "SHARED" {
+            guard let userId = checkout.requesterId else { continue }
+            let thumbs = checkout.items.map { KioskGearThumb(tagName: $0.tagName ?? $0.name, imageUrl: $0.imageUrl) }
+            gear[userId, default: KioskEventWorkerGear()].add(thumbs: thumbs, count: checkout.itemCount, out: true)
+        }
+        return gear
+    }
+
     private func startCheckout(for event: KioskEvent) {
         store.setIntent(KioskFlowIntent(
             action: .checkout,
             source: .event,
             identifiedUser: nil,
             expectedRequester: nil,
-            selectedEvent: KioskIntentEvent(id: event.id, title: event.title, endsAt: event.endsAt),
+            selectedEvent: KioskIntentEvent(
+                id: event.id,
+                title: event.title,
+                endsAt: event.endsAt,
+                crewUserIds: event.assignedUsers.map(\.id),
+                areas: event.areas
+            ),
             targetBooking: nil,
             pendingScanValues: [],
             createdAt: Date(),

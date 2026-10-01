@@ -43,6 +43,9 @@ struct KioskCheckoutView: View {
     @State private var eventLoadError: String?
     @State private var isLinkedToEvent = false
     @State private var selectedEventId: String?
+    /// Set when someone off an event's crew starts that event's checkout from
+    /// the event overview: ask first whether to request a crew spot.
+    @State private var crewAsk: KioskCrewAsk?
     @State private var customPurpose = ""
     @State private var kitOptions: [KioskKitOption] = []
     @State private var isLoadingKits = false
@@ -76,6 +79,8 @@ struct KioskCheckoutView: View {
     /// on the stage. Cleared on the same timer as the feedback banner.
     @State private var lastAccepted: KioskAcceptedScan?
     @State private var dueBackAt = KioskCheckoutDefaults.defaultDueBackDate()
+    /// No preselected return time: Continue waits for a tap (Erik, 2026-10-01).
+    @State private var hasChosenReturn = false
     @State private var availabilityResult = KioskCheckoutAvailabilityResult()
     @State private var isCheckingAvailability = false
     @State private var availabilityError: String?
@@ -94,7 +99,7 @@ struct KioskCheckoutView: View {
     // the keyboard dies before a single character can be typed. Plain @State
     // is the source of truth the UIKit delegate writes into (same pattern as
     // KioskCheckoutDetailSheet's titleFocused/scanFocused).
-    @State private var focusedCheckoutField: KioskCheckoutFocusedField? = nil
+    @State private var focusedCheckoutField: KioskCheckoutFocusedField? = KioskCaptureSeed.keyboardEntry ? .customPurpose : nil
     @State private var earnedBadges: [EarnedBadgeReward] = []
     @State private var hasRestoredDraft = false
 
@@ -167,7 +172,7 @@ struct KioskCheckoutView: View {
                     suggestedKitId: suggestedKitId,
                     selectedKitId: selectedKitId,
                     eventTitle: isLinkedToEvent ? selectedEvent?.title : nil,
-                    contextLine: isLinkedToEvent ? KioskDueCopy.due(dueBackAt) : (trimmedCustomPurpose.nonBlankText.map { "\($0) · \(KioskDueCopy.due(dueBackAt).lowercased())" } ?? KioskDueCopy.due(dueBackAt)),
+                    contextLine: isLinkedToEvent ? KioskDueCopy.due(dueBackAt) : (trimmedCustomPurpose.nonBlankText.map { "\($0) · \(KioskDueCopy.due(dueBackAt).replacingOccurrences(of: "Due ", with: "due ", options: .anchored))" } ?? KioskDueCopy.due(dueBackAt)),
                     locationName: store.info?.locationName,
                     onChoose: { kitId in
                         selectedKitId = kitId
@@ -330,6 +335,11 @@ struct KioskCheckoutView: View {
         } else {
             VStack(spacing: 0) {
                 taskHeader(step: 1)
+                if let crewAsk {
+                    KioskCrewRequestCard(ask: crewAsk, onChoose: requestCrewSpot, onDismiss: { self.crewAsk = nil })
+                        .padding(.horizontal, KioskSpacing.xl)
+                        .padding(.bottom, KioskSpacing.sm)
+                }
                 KioskCheckoutDetailsStep(
                     events: eventOptions,
                     isLoadingEvents: isLoadingEvents,
@@ -337,8 +347,9 @@ struct KioskCheckoutView: View {
                     selectedEventId: $selectedEventId,
                     customPurpose: $customPurpose,
                     dueBackAt: $dueBackAt,
+                    hasChosenReturn: $hasChosenReturn,
                     focusedField: $focusedCheckoutField,
-                    canContinue: hasCheckoutContext && hasValidReturnTime,
+                    canContinue: hasCheckoutContext && hasValidReturnTime && hasChosenReturn,
                     blockingRequirement: blockingRequirement,
                     onContinue: startScanning
                 )
@@ -371,7 +382,7 @@ struct KioskCheckoutView: View {
     private var scanMain: some View {
         KioskContextCard(
             title: hasCheckoutContext ? checkoutContextTitle : "Details needed",
-            detail: KioskDueCopy.due(dueBackAt) + (selectedKitDetail.map { " · \($0.name) kit" } ?? ""),
+            detail: KioskDueCopy.due(dueBackAt),
             onEdit: { requestEditContext() }
         )
 
@@ -533,7 +544,7 @@ struct KioskCheckoutView: View {
         VStack(alignment: .leading, spacing: 6) {
             KioskSectionHeader(
                 title: "Taking out",
-                detail: selectedKitDetail.map { "\($0.name) kit" } ?? "new checkout",
+                detail: selectedKitDetail == nil ? "new checkout" : nil,
                 count: kitProgress?.label ?? "\(scannedItems.count)",
                 section: .takingOut
             )
@@ -589,13 +600,13 @@ struct KioskCheckoutView: View {
                 note: trailingNote
             )
         } else if let trailingNote {
-            KioskItemRow(tag: group.first.itemListPrimaryTitle, name: group.first.itemListSecondaryTitle, isDone: true) {
+            KioskItemRow(tag: group.first.itemListPrimaryTitle, name: group.first.itemListSecondaryTitle, imageUrl: group.first.imageUrl, isDone: true) {
                 Text(trailingNote)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(KioskText.tertiary)
             }
         } else {
-            KioskItemRow(tag: group.first.itemListPrimaryTitle, name: group.first.itemListSecondaryTitle, isDone: true) {
+            KioskItemRow(tag: group.first.itemListPrimaryTitle, name: group.first.itemListSecondaryTitle, imageUrl: group.first.imageUrl, isDone: true) {
                 KioskRowRemoveButton(accessibilityLabel: "Remove \(group.primaryTitle)") { removeGroup(group) }
             }
         }
@@ -614,7 +625,7 @@ struct KioskCheckoutView: View {
             if let group = groups.first(where: { !$0.isBulkGroup && $0.first.id == member.id }) {
                 scannedGroupRow(group)
             } else {
-                KioskItemRow(tag: member.assetTag.nonBlankText ?? member.name, name: member.assetTag.nonBlankText == nil ? nil : member.name, isDone: false)
+                KioskItemRow(tag: member.assetTag.nonBlankText ?? member.name, name: member.assetTag.nonBlankText == nil ? nil : member.name, imageUrl: member.imageUrl, isDone: false)
             }
         }
         ForEach(kit.bulkMembers) { bulk in
@@ -742,6 +753,9 @@ struct KioskCheckoutView: View {
     /// the reason to be guessed. The spoken label also said "Start Scanning"
     /// while the button read "Continue to Scan".
     private var blockingRequirement: String? {
+        if hasCheckoutContext, !hasChosenReturn {
+            return "Pick when it'll be back."
+        }
         if isLinkedToEvent, selectedEvent == nil {
             return "Choose an event to link, or unlink to name this checkout yourself."
         }
@@ -765,7 +779,7 @@ struct KioskCheckoutView: View {
     }
 
     private var checkoutContextTitle: String {
-        isLinkedToEvent ? (selectedEvent?.title ?? "") : trimmedCustomPurpose
+        isLinkedToEvent ? (selectedEvent.map { kioskEventDisplayTitle($0.title, sportCode: $0.sportCode) } ?? "") : trimmedCustomPurpose
     }
 
     private var checkoutContextDetail: String? {
@@ -1194,7 +1208,8 @@ struct KioskCheckoutView: View {
                             overline: "Checked out",
                             refNumber: completion.refNumber,
                             title: "\(count) item\(count == 1 ? "" : "s") · \(checkoutContextTitle)",
-                            detail: KioskReceiptCopy.tags(cart) + " · due " + KioskDueCopy.midSentence(endsAt)
+                            items: cart.map(KioskReceipt.Item.init),
+                            detail: "Due " + KioskDueCopy.midSentence(endsAt)
                         )],
                         nextStep: "Bring it back and scan it in, or anyone can return it for you."
                     )
@@ -1228,6 +1243,10 @@ struct KioskCheckoutView: View {
         customPurpose = draft.customPurpose
         let minimum = KioskQuarterHour.roundedUp(Date().addingTimeInterval(5 * 60))
         dueBackAt = draft.dueBackAt >= minimum ? draft.dueBackAt : minimum
+        // A time the person picked stays picked; an untouched default still
+        // asks for one. A time that slid into the past was clamped, so it
+        // needs choosing again.
+        hasChosenReturn = draft.hasChosenReturn && draft.dueBackAt >= minimum
         selectedKitId = draft.selectedKitId
         if draft.selectedKitId != nil { didApplySuggestedKit = true }
         // Resume where the draft actually left off. Forcing `true` here sent a
@@ -1237,8 +1256,31 @@ struct KioskCheckoutView: View {
         armScannerCaptureAfterRestore()
     }
 
+    /// Files the pending crew request. Never blocks checkout: the result, or
+    /// the server's reason it could not be sent, shows inline.
+    private func requestCrewSpot(_ area: String) {
+        guard var ask = crewAsk, ask.phase != .sending else { return }
+        ask.phase = .sending
+        crewAsk = ask
+        let userId = user.id
+        Task { [ask] in
+            var ask = ask
+            do {
+                let status = try await KioskAPI.shared.kioskCrewRequest(eventId: ask.eventId, actorId: userId, area: area)
+                ask.phase = .done(status == "already_on_crew" ? "You're already on this crew" : "Request sent to staff")
+            } catch {
+                ask.phase = .failed((error as? APIError)?.errorDescription ?? "Could not send the request")
+            }
+            if crewAsk?.eventId == ask.eventId { crewAsk = ask }
+        }
+    }
+
     private func applyRetainedIntent() {
         guard var intent = store.pendingIntent, intent.identifiedUser?.id == user.id else { return }
+        if let event = intent.selectedEvent, crewAsk == nil,
+           let crew = event.crewUserIds, !crew.contains(user.id), !event.areas.isEmpty {
+            crewAsk = KioskCrewAsk(eventId: event.id, eventTitle: event.title, areas: event.areas)
+        }
         if let event = intent.selectedEvent, !hasRestoredDraft || selectedEventId != event.id {
             isLinkedToEvent = true
             selectedEventId = event.id
@@ -1269,7 +1311,8 @@ struct KioskCheckoutView: View {
                 customPurpose: customPurpose,
                 dueBackAt: dueBackAt,
                 contextReady: checkoutContextReady,
-                selectedKitId: selectedKitId
+                selectedKitId: selectedKitId,
+                hasChosenReturn: hasChosenReturn
             ),
             for: userId
         )
@@ -1701,7 +1744,9 @@ enum KioskCheckoutEventFormat {
     static func subtitle(_ event: KioskCheckoutEvent) -> String {
         var parts = [eventDateFormatter.string(from: event.startsAt)]
         if let locationName = event.locationName, !locationName.isEmpty {
-            parts.append(locationName)
+            // "Madison, Wis. - Homecoming / Red Out, …": drop the promo tail.
+            let place = locationName.components(separatedBy: " - ").first?.trimmingCharacters(in: .whitespaces) ?? locationName
+            parts.append(place.isEmpty ? locationName : place)
         } else if let sportCode = event.sportCode, !sportCode.isEmpty {
             parts.append(sportCode)
         }
@@ -2149,5 +2194,74 @@ struct KioskKitPickSheet: View {
         guard let previewId else { preview = nil; return }
         if preview?.id == previewId { return }
         preview = try? await KioskAPI.shared.kioskKitDetail(id: previewId)
+    }
+}
+
+
+struct KioskCrewAsk: Equatable {
+    enum Phase: Equatable { case asking, sending, done(String), failed(String) }
+    let eventId: String
+    let eventTitle: String
+    let areas: [String]
+    var phase: Phase = .asking
+}
+
+enum KioskAreaCopy {
+    static func label(_ area: String) -> String {
+        switch area {
+        case "VIDEO": "Video"
+        case "PHOTO": "Photo"
+        case "GRAPHICS": "Graphics"
+        case "SOCIAL": "Social"
+        case "COMMS": "Comms"
+        case "LIVE_PRODUCTION": "Live Production"
+        default: area.replacingOccurrences(of: "_", with: " ").capitalized
+        }
+    }
+}
+
+/// "Add you to the crew for <event>?" -- asked once at the top of an event
+/// checkout for someone not on the crew. Choosing an area files a pending
+/// request for staff review; "Not now" checks out without one.
+struct KioskCrewRequestCard: View {
+    let ask: KioskCrewAsk
+    let onChoose: (String) -> Void
+    let onDismiss: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: KioskSpacing.sm) {
+            Text("Add you to the crew for \(ask.eventTitle)?")
+                .font(KioskType.cardTitle)
+                .foregroundStyle(KioskText.primary)
+            switch ask.phase {
+            case .asking, .sending:
+                Text("Pick your area. Staff review the request; checkout goes ahead either way.")
+                    .font(KioskType.rowDetail)
+                    .foregroundStyle(KioskText.secondary)
+                HStack(spacing: KioskSpacing.xs) {
+                    ForEach(ask.areas, id: \.self) { area in
+                        Button(KioskAreaCopy.label(area)) { onChoose(area) }
+                            .buttonStyle(KioskPillButtonStyle(role: .secondary))
+                    }
+                    Spacer(minLength: 0)
+                    Button("Not now", action: onDismiss)
+                        .buttonStyle(KioskPillButtonStyle(role: .quiet))
+                }
+                .disabled(ask.phase == .sending)
+            case .done(let message), .failed(let message):
+                HStack {
+                    Text(message)
+                        .font(KioskType.rowDetail)
+                        .foregroundStyle(KioskText.secondary)
+                    Spacer(minLength: 0)
+                    Button("Dismiss", action: onDismiss)
+                        .buttonStyle(KioskPillButtonStyle(role: .quiet))
+                }
+            }
+        }
+        .padding(KioskSpacing.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(KioskSurface.card, in: RoundedRectangle(cornerRadius: KioskRadius.xl, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: KioskRadius.xl, style: .continuous).stroke(KioskStroke.standard, lineWidth: 1))
     }
 }

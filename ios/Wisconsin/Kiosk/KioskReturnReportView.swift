@@ -5,7 +5,7 @@ import UIKit
 enum KioskReturnReportStep: Equatable {
     /// G3: pick the item, then what happened to it.
     case choose(selectedId: String?)
-    /// G4: describe it and take a photo. The item was scanned back.
+    /// G4: scan it back if it isn't yet, then describe it and take a photo.
     case damaged(itemId: String)
     /// G5: mark it missing and tell staff. The item was not scanned back.
     case missing(itemId: String)
@@ -13,28 +13,51 @@ enum KioskReturnReportStep: Equatable {
 
 /// Damaged or missing, reported from the return screen (redesign G3–G5).
 ///
-/// Posts to `/api/kiosk/checkin/{id}/report`. A damaged item still counts as
-/// returned and is held for staff; a missing item is accounted for (the same
-/// as web's LOST report), so the return can finish without it.
+/// Posts to `/api/kiosk/checkin/{id}/report`. Covers all gear: serialized
+/// items, each numbered battery unit, and counted stock by quantity. A damaged
+/// item still counts as returned and is flagged for staff; a missing item is
+/// accounted for (the same as web's LOST report), so the return can finish
+/// without it.
 struct KioskReturnReportView: View {
     @Environment(KioskStore.self) private var store
     let bookingId: String
     let actorId: String
+    /// C5: the staff card proof, when Staff actions opened this report.
+    var staffToken: String? = nil
     let checkoutTitle: String?
     let ownerSubtitle: String
     let avatarURL: String?
     let avatarInitials: String?
-    /// Serialized items only: counted and numbered stock has no asset to report.
+    /// Everything on the return: serialized items, battery units, counted stock.
     let items: [KioskCheckoutDetail.ReturnItem]
     let returnedIds: Set<String>
+    /// Scanned back on this page. Kept here too, so the page moves past
+    /// "scan it first" even when the caller doesn't track returns (Staff
+    /// actions passes a fixed set).
+    @State private var scannedHereIds: Set<String> = []
+    private func isReturned(_ id: String) -> Bool { returnedIds.contains(id) || scannedHereIds.contains(id) }
+    /// Already reported missing: can't be reported again.
+    var missingIds: Set<String> = []
     @Binding var step: KioskReturnReportStep?
+    /// A scan on the damaged page returned this item (it counts as returned).
+    var onReturned: (KioskScanResult.ScannedItem) -> Void = { _ in }
     let onReported: (KioskCheckinReportResult, KioskCheckoutDetail.ReturnItem) -> Void
 
     @State private var note = ""
     @State private var photo: UIImage?
     @State private var showCamera = false
     @State private var isSubmitting = false
+    /// The operation reference for the submit in progress, kept across
+    /// retries of the same details so a resend replays rather than counting
+    /// twice. New details or a success start a new one.
+    @State private var pendingReport: (details: String, requestId: String)?
     @State private var errorMessage: String?
+    /// Counted stock: how many are damaged or missing.
+    @State private var quantity = 1
+    /// Damaged page, before the item is back: the inline scan.
+    @State private var isScanning = false
+    @State private var scanMessage: String?
+    @State private var showScanCamera = false
 
     private var cameraAvailable: Bool { UIImagePickerController.isSourceTypeAvailable(.camera) }
 
@@ -66,33 +89,34 @@ struct KioskReturnReportView: View {
         )) {
             VStack(alignment: .leading, spacing: 14) {
                 if let item = selectedItem {
-                    Text("What happened to \(item.itemListPrimaryTitle)?")
+                    Text("What happened to \(KioskReturnReportCopy.label(item))?")
                         .font(KioskType.heroAction)
                         .foregroundStyle(KioskText.primary)
                     HStack(spacing: 12) {
-                        let isBack = returnedIds.contains(item.id)
+                        let isBack = isReturned(item.id)
+                        let isMissing = missingIds.contains(item.id)
                         choiceCard(
                             dot: KioskSection.comingBack.accent,
                             title: "It's damaged",
-                            detail: isBack
-                                ? "You have it, but something's wrong. Describe it and take a photo."
-                                : "Scan it back first, then report the damage.",
-                            enabled: isBack
+                            detail: KioskReturnReportCopy.damagedChoiceDetail(item, isBack: isBack, isMissing: isMissing),
+                            enabled: !isMissing
                         ) { resetDraft(); step = .damaged(itemId: item.id) }
                         choiceCard(
                             dot: KioskSection.problem.accent,
                             title: "It's missing",
-                            detail: isBack
-                                ? "It was scanned back, so it isn't missing."
-                                : "You can't find it. We'll mark it and let staff know.",
-                            enabled: !isBack
+                            detail: isMissing
+                                ? "Already marked missing. Staff have been told."
+                                : isBack
+                                    ? "It was scanned back, so it isn't missing."
+                                    : "You can't find it. We'll mark it and let staff know.",
+                            enabled: !isBack && !isMissing
                         ) { resetDraft(); step = .missing(itemId: item.id) }
                     }
                 } else {
                     Text("Which item?")
                         .font(KioskType.heroAction)
                         .foregroundStyle(KioskText.primary)
-                    Text("Pick it from the list. Everything else returns as normal.")
+                    Text("Tap the item on the right. Everything else returns as normal.")
                         .font(KioskType.body)
                         .foregroundStyle(KioskText.secondary)
                 }
@@ -100,7 +124,7 @@ struct KioskReturnReportView: View {
             }
             .frame(maxWidth: .infinity, alignment: .topLeading)
         } panel: {
-            overline("Which item?")
+            overline("Coming back")
             ScrollView {
                 VStack(spacing: 10) {
                     ForEach(items) { item in
@@ -118,17 +142,25 @@ struct KioskReturnReportView: View {
             step = .choose(selectedId: item.id)
         } label: {
             HStack(spacing: 12) {
-                Text(item.itemListPrimaryTitle)
-                    .font(KioskType.rowTitle)
-                    .foregroundStyle(KioskText.primary)
-                if let name = item.itemListSecondaryTitle {
-                    Text(name)
-                        .font(KioskType.meta)
-                        .foregroundStyle(KioskText.secondary)
+                itemPhoto(item, size: 40)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(item.isNumberedBulk ? (item.bulkSkuName ?? item.name) : item.itemListPrimaryTitle)
+                        .font(KioskType.rowTitle)
+                        .foregroundStyle(KioskText.primary)
                         .lineLimit(1)
+                    if let secondary = rowSecondary(item) {
+                        Text(secondary)
+                            .font(KioskType.meta)
+                            .foregroundStyle(KioskText.tertiary)
+                            .lineLimit(1)
+                    }
                 }
                 Spacer(minLength: 8)
-                if returnedIds.contains(item.id) {
+                if missingIds.contains(item.id) {
+                    Text("Missing")
+                        .font(KioskType.meta)
+                        .foregroundStyle(KioskSection.problem.text)
+                } else if isReturned(item.id) {
                     Text("Back")
                         .font(KioskType.meta)
                         .foregroundStyle(KioskSection.comingBack.text)
@@ -144,6 +176,30 @@ struct KioskReturnReportView: View {
         }
         .buttonStyle(KioskPressStyle())
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private func rowSecondary(_ item: KioskCheckoutDetail.ReturnItem) -> String? {
+        if item.isCountedStock { return "\(item.quantity ?? 0) still out" }
+        if item.isNumberedBulk { return nil }
+        return item.itemListSecondaryTitle
+    }
+
+    /// The item's photo; a battery unit also shows its number circle.
+    @ViewBuilder
+    private func itemPhoto(_ item: KioskCheckoutDetail.ReturnItem, size: CGFloat) -> some View {
+        if item.isNumberedBulk {
+            HStack(spacing: size > 60 ? 12 : 8) {
+                KioskItemThumbnail(imageUrl: item.imageUrl, size: size)
+                KioskBatteryUnitChip(
+                    label: item.unitNumber.map { "#\($0)" } ?? item.tagName,
+                    isScanned: isReturned(item.id),
+                    section: .comingBack,
+                    size: size > 60 ? 44 : 32
+                )
+            }
+        } else {
+            KioskItemThumbnail(imageUrl: item.imageUrl, size: size)
+        }
     }
 
     private func choiceCard(dot: Color, title: String, detail: String, enabled: Bool, action: @escaping () -> Void) -> some View {
@@ -168,24 +224,84 @@ struct KioskReturnReportView: View {
         .disabled(!enabled)
     }
 
+    /// Big photo and tag at the top of the damaged and missing cards.
+    private func itemHero(_ item: KioskCheckoutDetail.ReturnItem) -> some View {
+        HStack(spacing: 16) {
+            itemPhoto(item, size: 96)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.isNumberedBulk ? (item.bulkSkuName ?? item.name) : item.itemListPrimaryTitle)
+                    .font(.system(size: 24, weight: .heavy))
+                    .foregroundStyle(KioskText.primary)
+                    .lineLimit(2)
+                if let secondary = rowSecondary(item) {
+                    Text(secondary)
+                        .font(KioskType.body)
+                        .foregroundStyle(KioskText.secondary)
+                        .lineLimit(2)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
+    /// Counted stock: how many. Bounded by what is still out.
+    @ViewBuilder
+    private func quantityStepper(_ item: KioskCheckoutDetail.ReturnItem, verb: String) -> some View {
+        if item.isCountedStock {
+            let maxQuantity = max(1, item.quantity ?? 1)
+            Stepper(value: $quantity, in: 1...maxQuantity) {
+                Text("\(quantity) of \(maxQuantity) \(verb)")
+                    .font(.system(size: 20, weight: .bold).monospacedDigit())
+                    .foregroundStyle(KioskText.primary)
+            }
+            .onChange(of: quantity) { _, _ in store.resetInactivity() }
+            .accessibilityLabel("\(quantity) \(verb)")
+        }
+    }
+
     // MARK: - G4 damaged
 
+    /// Serialized items and battery units are scanned back first, right here,
+    /// so "It's damaged" never dead-ends. Counted stock has no per-piece QR:
+    /// the damaged quantity counts as returned when the report is sent.
+    private func needsScan(_ item: KioskCheckoutDetail.ReturnItem) -> Bool {
+        !item.isCountedStock && !isReturned(item.id)
+    }
+
     private func damagedPage(_ item: KioskCheckoutDetail.ReturnItem) -> some View {
-        KioskTaskScaffold(header: KioskTaskHeader(
-            title: "\(item.itemListPrimaryTitle) is damaged",
-            subtitle: [item.itemListSecondaryTitle, checkoutTitle].compactMap { $0 }.joined(separator: " · "),
+        let awaitingScan = needsScan(item)
+        return KioskTaskScaffold(header: KioskTaskHeader(
+            title: "\(KioskReturnReportCopy.label(item)) is damaged",
+            subtitle: [item.isNumberedBulk ? nil : item.itemListSecondaryTitle, checkoutTitle].compactMap { $0 }.joined(separator: " · "),
             onBack: { step = .choose(selectedId: item.id) }
         )) {
-            photoArea
+            VStack(alignment: .leading, spacing: 16) {
+                itemHero(item)
+                quantityStepper(item, verb: "damaged")
+            }
+            .padding(20)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .kioskCard(radius: KioskRadius.hero, stroke: KioskStroke.standard)
+            if awaitingScan {
+                scanPrompt(item)
+            } else {
+                photoArea
+            }
             if let errorMessage { errorLine(errorMessage) }
             KioskPrimaryPill(
                 title: "Report and return it",
-                isEnabled: !note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || photo != nil,
+                isEnabled: !awaitingScan && (!note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || photo != nil),
                 isBusy: isSubmitting
             ) { submit(item, type: "DAMAGED") }
         } panel: {
             overline("What's wrong?")
-            noteField(placeholder: "Describe the damage")
+            if awaitingScan {
+                Text("Scan it back first. Then describe the damage here.")
+                    .font(KioskType.body)
+                    .foregroundStyle(KioskText.tertiary)
+            } else {
+                noteField(placeholder: "Describe the damage")
+            }
             Text("It still counts as returned. Staff check it before anyone can check it out again.")
                 .font(KioskType.meta)
                 .foregroundStyle(KioskText.tertiary)
@@ -197,6 +313,90 @@ struct KioskReturnReportView: View {
                 showCamera = false
             } onCancel: { showCamera = false }
                 .ignoresSafeArea()
+        }
+    }
+
+    /// The inline scan on the damaged page: the hidden HID field plus the
+    /// iPad camera. A matching scan returns the item through the same
+    /// check-in scan the return screen uses.
+    private func scanPrompt(_ item: KioskCheckoutDetail.ReturnItem) -> some View {
+        VStack(spacing: 14) {
+            Image(systemName: "barcode.viewfinder")
+                .font(.system(size: 44, weight: .regular))
+                .foregroundStyle(KioskText.secondary)
+                .accessibilityHidden(true)
+            Text("Scan \(KioskReturnReportCopy.label(item)) to return it, then describe the damage")
+                .font(.system(size: 24, weight: .bold))
+                .foregroundStyle(KioskText.primary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+            if isScanning {
+                ProgressView().tint(KioskText.primary)
+            } else if let scanMessage {
+                Text(scanMessage)
+                    .font(KioskType.meta.weight(.semibold))
+                    .foregroundStyle(KioskSection.problem.text)
+            }
+            Button("Use the iPad camera") { store.resetInactivity(); showScanCamera = true }
+                .font(.system(size: 16, weight: .bold))
+                .frame(minHeight: 52)
+                .kioskButtonRole(.secondary)
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(KioskSurface.card, in: RoundedRectangle(cornerRadius: KioskRadius.hero))
+        .overlay(RoundedRectangle(cornerRadius: KioskRadius.hero)
+            .strokeBorder(KioskStroke.pending, style: StrokeStyle(lineWidth: 1, dash: [6, 5])))
+        .overlay(alignment: .bottom) {
+            HIDScannerField(onScan: { store.scanner.receive($0) }, onFocusChange: nil)
+                .frame(width: 1, height: 1)
+                .opacity(0)
+        }
+        .task(id: item.id) {
+            store.scanner.claim(.returnReport) { value in handleDamageScan(value, item: item) }
+        }
+        .onDisappear { store.scanner.release(.returnReport) }
+        .sheet(isPresented: $showScanCamera) {
+            KioskBarcodeCameraView(
+                feedbackMessage: scanMessage,
+                feedbackTone: scanMessage == nil ? nil : .error,
+                onScan: { value in handleDamageScan(value, item: item) },
+                onCancel: { showScanCamera = false }
+            )
+        }
+    }
+
+    private func handleDamageScan(_ value: String, item: KioskCheckoutDetail.ReturnItem) {
+        guard !isScanning else { return }
+        store.resetInactivity()
+        isScanning = true
+        scanMessage = nil
+        let flow = store.flowGeneration
+        Task {
+            defer { if store.ownsFlow(flow) { isScanning = false } }
+            do {
+                let result = try await KioskAPI.shared.kioskCheckinScan(bookingId: bookingId, actorId: actorId, scanValue: value)
+                guard store.ownsFlow(flow) else { return }
+                guard result.success, let scanned = result.item else {
+                    Haptics.error()
+                    scanMessage = result.error ?? "That's not \(KioskReturnReportCopy.label(item))."
+                    return
+                }
+                // Another item on this checkout still came back: say so.
+                scannedHereIds.insert(scanned.id)
+                onReturned(scanned)
+                if scanned.id == item.id {
+                    Haptics.success()
+                    showScanCamera = false
+                } else {
+                    Haptics.error()
+                    scanMessage = "That's not \(KioskReturnReportCopy.label(item)). \(scanned.itemListPrimaryTitle) was returned."
+                }
+            } catch {
+                guard store.ownsFlow(flow) else { return }
+                Haptics.error()
+                scanMessage = (error as? APIError)?.errorDescription ?? "That scan didn't go through. Try again."
+            }
         }
     }
 
@@ -239,12 +439,16 @@ struct KioskReturnReportView: View {
 
     private func missingPage(_ item: KioskCheckoutDetail.ReturnItem) -> some View {
         KioskTaskScaffold(header: KioskTaskHeader(
-            title: "\(item.itemListPrimaryTitle) is missing",
-            subtitle: [item.itemListSecondaryTitle, checkoutTitle].compactMap { $0 }.joined(separator: " · "),
+            title: "\(KioskReturnReportCopy.label(item)) is missing",
+            subtitle: [item.isNumberedBulk ? nil : item.itemListSecondaryTitle, checkoutTitle].compactMap { $0 }.joined(separator: " · "),
             onBack: { step = .choose(selectedId: item.id) }
         )) {
             VStack(alignment: .leading, spacing: 16) {
-                Text("We'll mark \(item.itemListPrimaryTitle) missing and tell staff.")
+                itemHero(item)
+                quantityStepper(item, verb: "missing")
+                Text(item.isCountedStock
+                     ? "We'll mark \(quantity) \(item.bulkSkuName ?? item.name) missing and tell staff."
+                     : "We'll mark \(KioskReturnReportCopy.label(item)) missing and tell staff.")
                     .font(.system(size: 28, weight: .heavy))
                     .foregroundStyle(KioskText.primary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -255,10 +459,11 @@ struct KioskReturnReportView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             .padding(28)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .kioskCard(KioskSection.problem.stageFill, radius: KioskRadius.hero, stroke: KioskSection.problem.stageStroke)
             if let errorMessage { errorLine(errorMessage) }
             KioskPrimaryPill(title: "Mark missing", isBusy: isSubmitting) { submit(item, type: "LOST") }
+            Spacer(minLength: 0)
         } panel: {
             overline("Anything that helps find it? (optional)")
             noteField(placeholder: "Where it might be")
@@ -300,6 +505,9 @@ struct KioskReturnReportView: View {
         note = ""
         photo = nil
         errorMessage = nil
+        scanMessage = nil
+        quantity = 1
+        pendingReport = nil
     }
 
     private func submit(_ item: KioskCheckoutDetail.ReturnItem, type: String) {
@@ -310,18 +518,30 @@ struct KioskReturnReportView: View {
         let flow = store.flowGeneration
         let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)
         let jpeg = photo.flatMap { KioskPhotoCapture.uploadJPEG(from: $0) }
+        let target = KioskReportTarget.for(item, quantity: quantity)
+        let details = ([item.id, type, trimmed] + target.fields.map { "\($0.0)=\($0.1)" }).joined(separator: "|")
+        let requestId: String
+        if let pendingReport, pendingReport.details == details {
+            requestId = pendingReport.requestId
+        } else {
+            requestId = "\(Int64(Date().timeIntervalSince1970 * 1000)):\(UUID().uuidString)"
+            pendingReport = (details, requestId)
+        }
         Task {
             defer { if store.ownsFlow(flow) { isSubmitting = false } }
             do {
                 let result = try await KioskAPI.shared.kioskCheckinReport(
                     bookingId: bookingId,
                     actorId: actorId,
-                    assetId: item.id,
+                    target: target,
                     type: type,
                     description: trimmed.isEmpty ? nil : trimmed,
-                    photoJPEG: jpeg
+                    photoJPEG: jpeg,
+                    staffToken: staffToken,
+                    requestId: requestId
                 )
                 guard store.ownsFlow(flow) else { return }
+                pendingReport = nil
                 Haptics.success()
                 onReported(result, item)
             } catch {
@@ -333,9 +553,29 @@ struct KioskReturnReportView: View {
     }
 }
 
+
 enum KioskReturnReportCopy {
     /// Decision 4: a missing item is accounted for, like web's LOST report.
     static let missingExplainer = "Staff follow up from here. It's accounted for, so this return can finish without it. Everything else you scanned is returned as normal."
+
+    /// How the report names an item: the tag, "Sony Battery #7", or the
+    /// counted stock's name.
+    static func label(_ item: KioskCheckoutDetail.ReturnItem) -> String {
+        if item.isNumberedBulk {
+            if let sku = item.bulkSkuName, let number = item.unitNumber { return "\(sku) #\(number)" }
+            return item.name
+        }
+        if item.isCountedStock { return item.bulkSkuName ?? item.name }
+        return item.itemListPrimaryTitle
+    }
+
+    static func damagedChoiceDetail(_ item: KioskCheckoutDetail.ReturnItem, isBack: Bool, isMissing: Bool) -> String {
+        if isMissing { return "It's marked missing, so it can't be reported damaged." }
+        if item.isCountedStock { return "Some came back damaged. They count as returned, and staff take a look." }
+        return isBack
+            ? "You have it, but something's wrong. Describe it and take a photo."
+            : "Scan it back, then describe the damage and take a photo."
+    }
 
     /// G6: Returned, then a card for each item held for staff or marked missing.
     static func receipt(
@@ -344,7 +584,7 @@ enum KioskReturnReportCopy {
         refNumber: String?,
         returnedCount: Int,
         totalItems: Int,
-        returnedTags: [String],
+        returnedItems: [KioskReceipt.Item],
         damaged: [(tag: String, name: String?)],
         missing: [(tag: String, name: String?)]
     ) -> KioskReceipt {
@@ -357,7 +597,7 @@ enum KioskReturnReportCopy {
                 overline: "Returned",
                 refNumber: refNumber,
                 title: heading,
-                detail: returnedTags.isEmpty ? nil : returnedTags.joined(separator: ", ")
+                items: returnedItems
             ))
         }
         for item in damaged {

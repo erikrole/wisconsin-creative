@@ -723,6 +723,7 @@ model BulkSku {
   scans               ScanEvent[]
   products            BulkSkuProduct[]
   units               BulkSkuUnit[]
+  checkinReports      CheckinItemReport[]
   kitBulkMembers      KitBulkMembership[]
   favoritedBy         FavoriteItemFamily[]
 
@@ -804,6 +805,7 @@ model BulkSkuUnit {
   bulkSku           BulkSku                     @relation(fields: [bulkSkuId], references: [id], onDelete: Cascade)
   product           BulkSkuProduct?             @relation(fields: [productId], references: [id], onDelete: SetNull)
   allocations       BookingBulkUnitAllocation[]
+  checkinReports    CheckinItemReport[]
 
   @@unique([bulkSkuId, unitNumber])
   @@index([bulkSkuId, status])
@@ -2266,20 +2268,30 @@ model BookingPhoto {
 }
 
 model CheckinItemReport {
-  id           String            @id @default(cuid())
-  bookingId    String            @map("booking_id")
-  assetId      String            @map("asset_id")
-  type         CheckinReportType
-  description  String?
-  imageUrl     String?           @map("image_url")
-  reportedById String            @map("reported_by_id")
-  createdAt    DateTime          @default(now()) @map("created_at")
+  id            String            @id @default(cuid())
+  bookingId     String            @map("booking_id")
+  /// Exactly one target is set (CHECK in migration 0156): a serialized asset,
+  /// a numbered bulk unit (battery #7), or counted bulk stock by SKU.
+  assetId       String?           @map("asset_id")
+  bulkSkuUnitId String?           @map("bulk_sku_unit_id")
+  bulkSkuId     String?           @map("bulk_sku_id")
+  /// Counted stock only: how many were damaged or missing.
+  quantity      Int?
+  type          CheckinReportType
+  description   String?
+  imageUrl      String?           @map("image_url")
+  reportedById  String            @map("reported_by_id")
+  createdAt     DateTime          @default(now()) @map("created_at")
 
-  booking    Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  asset      Asset   @relation(fields: [assetId], references: [id], onDelete: Restrict)
-  reportedBy User    @relation("CheckinReports", fields: [reportedById], references: [id], onDelete: Restrict)
+  booking     Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  asset       Asset?       @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  bulkSkuUnit BulkSkuUnit? @relation(fields: [bulkSkuUnitId], references: [id], onDelete: Cascade)
+  bulkSku     BulkSku?     @relation(fields: [bulkSkuId], references: [id], onDelete: Cascade)
+  reportedBy  User         @relation("CheckinReports", fields: [reportedById], references: [id], onDelete: Restrict)
 
   @@unique([bookingId, assetId])
+  @@unique([bookingId, bulkSkuUnitId])
+  @@unique([bookingId, bulkSkuId, type])
   @@index([bookingId])
   @@map("checkin_item_reports")
 }

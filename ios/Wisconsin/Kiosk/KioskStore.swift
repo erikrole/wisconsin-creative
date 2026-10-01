@@ -90,6 +90,9 @@ struct KioskCheckoutDraft: Equatable {
     let dueBackAt: Date
     let contextReady: Bool
     let selectedKitId: String?
+    /// Whether the person picked a return time. Older drafts default to not
+    /// chosen, so the details step asks again rather than assuming.
+    var hasChosenReturn: Bool = false
 }
 
 @Observable
@@ -148,7 +151,12 @@ final class KioskStore {
 
     /// True when the inactivity warning should be shown ahead of the reset.
     var inactivityWarningVisible: Bool = false
-    var sleepDismissedUntil: Date?
+    /// The pickup screen's details editor (the checkout details step) is up,
+    /// so the shell opts out of keyboard avoidance the way checkout step 1 does.
+    var isEditingPickupDetails: Bool = false
+    /// Starts 10 minutes out so a fresh launch shows home instead of
+    /// dropping straight into standby (Erik, 2026-10-01).
+    var sleepDismissedUntil: Date? = Date().addingTimeInterval(10 * 60)
 
     /// True while the burn-in-safe standby overlay owns the screen. The shell
     /// needs this to pull its own chrome: standby pixel-shifts everything it

@@ -45,4 +45,26 @@ describe("iOS kiosk return damaged / missing (G3–G6)", () => {
     expect(report).toContain('"Held for staff"');
     expect(report).toContain('"Marked missing"');
   });
+
+  it("reports all gear: battery units and counted stock, not just serialized items", () => {
+    for (const field of ["bulkSkuUnitId", "bulkSkuId", "quantity"]) {
+      expect(client).toContain(`("${field}", `);
+      expect(service).toContain(`formData.get("${field}")`);
+    }
+    expect(report).not.toContain("Batteries and counted supplies aren't listed");
+    expect(report).toContain("KioskBatteryUnitChip(");
+    expect(report).toContain("Stepper(value: $quantity");
+    expect(returnView).toContain("$0.isNumberedBulk || ($0.isCountedStock");
+    // Swift decodes the new fields leniently (older servers omit them).
+    expect(models).toContain("var report: Report? = nil");
+    expect(models).toContain("var quantity: Int? = nil");
+  });
+
+  it("never dead-ends damage: an item not yet back is scanned on the damaged page", () => {
+    expect(report).toContain("store.scanner.claim(.returnReport)");
+    expect(report).toContain("HIDScannerField(");
+    expect(report).toContain('Button("Use the iPad camera")');
+    expect(report).toContain("KioskAPI.shared.kioskCheckinScan(");
+    expect(report).toContain("That's not \\(KioskReturnReportCopy.label(item)).");
+  });
 });

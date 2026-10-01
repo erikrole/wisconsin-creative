@@ -21,11 +21,13 @@ export const GET = withKiosk<{ id: string }>(async (_req, { kiosk, params }) => 
         id: member.asset.id,
         assetTag: member.asset.assetTag,
         name: member.asset.name,
+        imageUrl: member.asset.imageUrl ?? null,
       })),
       bulkMembers: kit.bulkMembers.map((member) => ({
         bulkSkuId: member.bulkSku.id,
         name: member.bulkSku.name,
         quantity: member.quantity,
+        imageUrl: member.bulkSku.imageUrl ?? null,
       })),
     },
   });

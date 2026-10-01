@@ -98,7 +98,16 @@ final class KioskScanQueue {
 enum KioskFlowAction: String, Codable, CaseIterable { case checkout, pickup, `return`, manage }
 enum KioskFlowSource: String, Codable, CaseIterable { case scan, event, person, reservation, activeCheckout }
 
-struct KioskIntentEvent: Equatable { let id: String; let title: String; let endsAt: Date? }
+struct KioskIntentEvent: Equatable {
+    let id: String
+    let title: String
+    let endsAt: Date?
+    /// Who already holds or has requested a slot on the event. `nil` when the
+    /// flow did not start from the event overview, which never asks.
+    var crewUserIds: [String]? = nil
+    /// The event's crew areas, offered when someone off the crew checks out.
+    var areas: [String] = []
+}
 struct KioskIntentBooking: Equatable { let id: String; let title: String; let startsAt: Date?; let endsAt: Date? }
 enum KioskIntentAmbiguity: Equatable { case none; case unresolved(String) }
 
@@ -132,7 +141,7 @@ struct KioskFlowIntent: Equatable {
         case .return: "Returning gear"
         case .manage: "Managing checkout"
         }
-        return (selectedEvent?.title ?? targetBooking?.title).map { "\(verb) for \($0)" } ?? verb
+        return (selectedEvent.map { kioskEventDisplayTitle($0.title, sportCode: nil) } ?? targetBooking?.title).map { "\(verb) for \($0)" } ?? verb
     }
 }
 
@@ -150,7 +159,7 @@ enum KioskFlowIntentReducer {
     }
 }
 
-enum KioskScannerOwner: String, CaseIterable { case none, home, identity, operatorHub, checkout, pickup, `return`, detail }
+enum KioskScannerOwner: String, CaseIterable { case none, home, identity, operatorHub, checkout, pickup, `return`, returnReport, detail }
 /// `disconnected` means no HID keyboard is attached at all — the scanner is
 /// off, asleep, or out of Bluetooth range. `reconnecting` means hardware is
 /// present but the hidden sink does not currently hold first responder.

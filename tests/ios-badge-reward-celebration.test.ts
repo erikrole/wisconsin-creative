@@ -47,7 +47,7 @@ describe("iOS badge reward celebration", () => {
       expect(flow).toContain("earnedBadges: earnedBadges");
     }
     expect(success).toContain("KioskBadgeCelebration");
-    expect(success).toContain("info.earnedBadges.isEmpty ? 6 : 9");
+    expect(success).toContain("info.earnedBadges.isEmpty ? 10 : 12");
     expect(success).toContain("additionalRewards");
     expect(success).toContain("Also earned:");
     // Rarity colour comes from the shared token, never a local switch. The

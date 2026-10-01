@@ -13,7 +13,7 @@ import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
 import { createAuditEntryTx, lookupActorRole } from "@/lib/audit";
 import { badges } from "@/lib/badges";
-import { settleBulkLedgerAtCompletion, upsertBulkBalancesAndMovements } from "./bookings-helpers";
+import { reportedLostBulkBySku, settleBulkLedgerAtCompletion, upsertBulkBalancesAndMovements } from "./bookings-helpers";
 import { assetLocationEvidence, reconcileAssetLocationToKiosk, type KioskLocationEvidence } from "./kiosk-location";
 import { endCheckoutReturnLiveActivities } from "./live-activities";
 import { requireKioskActor } from "./kiosk-actor";
@@ -54,7 +54,7 @@ export async function maybeAutoComplete(
     returnedFor?: { requesterUserId: string | null; custodyScope: BookingCustodyScope | string | null };
   }
 ): Promise<Date | null> {
-  const [remainingActive, currentBulkItems] = await Promise.all([
+  const [remainingActive, currentBulkItems, lostBySku] = await Promise.all([
     // A LOST report accounts for its item (web check-in semantics), so it no
     // longer holds the return open.
     tx.bookingSerializedItem.count({
@@ -66,10 +66,13 @@ export async function maybeAutoComplete(
     }),
     tx.bookingBulkItem.findMany({
       where: { bookingId }
-    })
+    }),
+    // Bulk reported missing is accounted for too: no longer owed back.
+    reportedLostBulkBySku(tx, bookingId),
   ]);
   const bulkRemaining = currentBulkItems.some(
-    (item) => (item.checkedInQuantity ?? 0) < (item.checkedOutQuantity ?? item.plannedQuantity)
+    (item) => (item.checkedInQuantity ?? 0) + (lostBySku.get(item.bulkSkuId) ?? 0)
+      < (item.checkedOutQuantity ?? item.plannedQuantity)
   );
 
   if (remainingActive > 0 || bulkRemaining) return null;
@@ -84,7 +87,8 @@ export async function maybeAutoComplete(
   // Ledger reconciliation from movement truth. Per-scan and per-quantity
   // returns already restocked what they returned; this restores only what the
   // movements say is still outstanding (e.g. pre-per-scan-restock history).
-  await settleBulkLedgerAtCompletion(tx, { bookingId, locationId, actorUserId });
+  // Reported-missing bulk is physically gone: never restocked.
+  await settleBulkLedgerAtCompletion(tx, { bookingId, locationId, actorUserId, lostBySku });
 
   // Complete booking
   await tx.booking.update({
@@ -159,7 +163,9 @@ export async function markCheckoutCompleted(bookingId: string, actorUserId: stri
     const lostUnitIds: string[] = [];
     const lostAllocationIds: string[] = [];
     const lostUnitNumbers: Array<{ bulkSkuId: string; unitNumbers: number[] }> = [];
-    const lostCountBySku = new Map<string, number>();
+    // Units already reported missing at check-in were marked LOST and their
+    // allocations closed then; count them so they are not restocked either.
+    const lostCountBySku = await reportedLostBulkBySku(tx, bookingId);
 
     for (const bulkItem of booking.bulkItems) {
       if (!bulkItem.bulkSku.trackByNumber) continue;
@@ -172,7 +178,7 @@ export async function markCheckoutCompleted(bookingId: string, actorUserId: stri
         bulkSkuId: bulkItem.bulkSkuId,
         unitNumbers: unreturned.map((a) => a.bulkSkuUnit.unitNumber),
       });
-      lostCountBySku.set(bulkItem.bulkSkuId, unreturned.length);
+      lostCountBySku.set(bulkItem.bulkSkuId, (lostCountBySku.get(bulkItem.bulkSkuId) ?? 0) + unreturned.length);
     }
 
     // Restore outstanding stock from movement truth (checkout movements minus
