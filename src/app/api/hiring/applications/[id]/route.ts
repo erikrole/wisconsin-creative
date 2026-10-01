@@ -1,0 +1,148 @@
+import { ApplicationStage } from "@prisma/client";
+import { withAuth } from "@/lib/api";
+import { createAuditEntry } from "@/lib/audit";
+import { db } from "@/lib/db";
+import { updateApplicationSchema } from "@/lib/hiring/contract";
+import { purgeDate } from "@/lib/hiring/retention";
+import { HttpError, ok } from "@/lib/http";
+import { enforceRateLimit, SETTINGS_MUTATION_LIMIT } from "@/lib/rate-limit";
+import { requirePermission } from "@/lib/rbac";
+
+const DECIDED_STAGES: ReadonlySet<ApplicationStage> = new Set([
+  ApplicationStage.HIRE,
+  ApplicationStage.PASSED,
+  ApplicationStage.WITHDRAWN,
+]);
+
+export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
+  requirePermission(user.role, "hiring", "view");
+  const application = await db.application.findUnique({
+    where: { id: params.id },
+    include: {
+      cycle: { select: { id: true, label: true, status: true, closedAt: true } },
+      allowedEmail: { select: { id: true, claimedAt: true } },
+      applicant: {
+        include: {
+          emails: { orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }], select: { email: true, isPrimary: true } },
+          applications: {
+            where: { id: { not: params.id } },
+            orderBy: { createdAt: "desc" },
+            select: { id: true, stage: true, cycle: { select: { label: true, status: true, closedAt: true } } },
+          },
+        },
+      },
+      documents: {
+        orderBy: { createdAt: "desc" },
+        select: { id: true, kind: true, fileName: true, contentType: true, sizeBytes: true, createdAt: true },
+      },
+      reviewNotes: {
+        orderBy: { createdAt: "desc" },
+        select: { id: true, body: true, rating: true, createdAt: true, author: { select: { id: true, name: true } } },
+      },
+    },
+  });
+  if (!application) throw new HttpError(404, "Application not found.");
+
+  const { applicant } = application;
+  const purgeOn = purgeDate({
+    linkedToAccount: Boolean(applicant.hiredUserId),
+    purged: Boolean(applicant.purgedAt),
+    cycles: [application.cycle, ...applicant.applications.map((a) => a.cycle)],
+  });
+  return ok({
+    data: {
+      id: application.id,
+      cycle: { id: application.cycle.id, label: application.cycle.label, status: application.cycle.status },
+      purgeOn,
+      stage: application.stage,
+      reviewed: application.reviewed,
+      reviewedAt: application.reviewedAt,
+      interviewedAt: application.interviewedAt,
+      interviewUrl: application.interviewUrl,
+      summerAvailable: application.summerAvailable,
+      rawAreas: application.rawAreas,
+      primaryArea: application.primaryArea,
+      fieldsExperience: application.fieldsExperience,
+      fieldsInterested: application.fieldsInterested,
+      softwareExperience: application.softwareExperience,
+      externalApplicationId: application.externalApplicationId,
+      decidedAt: application.decidedAt,
+      invite: application.allowedEmail
+        ? { id: application.allowedEmail.id, claimed: Boolean(application.allowedEmail.claimedAt) }
+        : null,
+      applicant: {
+        id: applicant.id,
+        name: applicant.name,
+        standing: applicant.standing,
+        gradTerm: applicant.gradTerm,
+        gradYear: applicant.gradYear,
+        phone: applicant.phone,
+        location: applicant.location,
+        portfolioUrl: applicant.portfolioUrl,
+        socialHandles: applicant.socialHandles,
+        emails: applicant.emails,
+        hiredUserId: applicant.hiredUserId,
+        history: applicant.applications.map((a) => ({ id: a.id, stage: a.stage, cycleLabel: a.cycle.label })),
+      },
+      documents: application.documents,
+      notes: application.reviewNotes,
+    },
+  });
+});
+
+export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
+  requirePermission(user.role, "hiring", "manage");
+  await enforceRateLimit(`hiring:write:${user.id}`, SETTINGS_MUTATION_LIMIT);
+  const body = updateApplicationSchema.parse(await req.json());
+
+  const existing = await db.application.findUnique({
+    where: { id: params.id },
+    select: { id: true, applicantId: true, stage: true, reviewed: true },
+  });
+  if (!existing) throw new HttpError(404, "Application not found.");
+
+  const stageChanged = body.stage !== undefined && body.stage !== existing.stage;
+  const now = new Date();
+
+  await db.$transaction(async (tx) => {
+    await tx.application.update({
+      where: { id: params.id },
+      data: {
+        stage: body.stage,
+        decidedAt: stageChanged ? (DECIDED_STAGES.has(body.stage!) ? now : null) : undefined,
+        decidedById: stageChanged ? (DECIDED_STAGES.has(body.stage!) ? user.id : null) : undefined,
+        reviewed: body.reviewed,
+        reviewedAt: body.reviewed === undefined ? undefined : body.reviewed ? now : null,
+        interviewedAt: body.interviewed === undefined ? undefined : body.interviewed ? now : null,
+        interviewUrl: body.interviewUrl,
+        summerAvailable: body.summerAvailable,
+        primaryArea: body.primaryArea,
+        rawAreas: body.rawAreas,
+      },
+    });
+
+    const applicantPatch = {
+      portfolioUrl: body.portfolioUrl,
+      standing: body.standing,
+      gradTerm: body.gradTerm,
+      gradYear: body.gradYear,
+    };
+    if (Object.values(applicantPatch).some((v) => v !== undefined)) {
+      await tx.applicant.update({ where: { id: existing.applicantId }, data: applicantPatch });
+    }
+  });
+
+  // Audit rows are deleted after 90 days and must not carry contact data (D-065):
+  // record which fields changed and the stage transition only.
+  await createAuditEntry({
+    actorId: user.id,
+    actorRole: user.role,
+    entityType: "hiring_application",
+    entityId: params.id,
+    action: stageChanged ? "stage_change" : "update",
+    before: { stage: existing.stage, reviewed: existing.reviewed },
+    after: { stage: body.stage ?? existing.stage, fields: Object.keys(body) },
+  });
+
+  return ok({ data: { id: params.id } });
+});

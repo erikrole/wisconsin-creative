@@ -8,6 +8,9 @@ const dbMock = vi.hoisted(() => ({
   session: {
     deleteMany: vi.fn(),
   },
+  applicant: {
+    findMany: vi.fn(),
+  },
 }));
 
 vi.mock("@/lib/cron", () => ({
@@ -38,6 +41,7 @@ describe("audit archive cron", () => {
     dbMock.auditLog.findMany.mockResolvedValue([]);
     dbMock.auditLog.deleteMany.mockResolvedValue({ count: 0 });
     dbMock.session.deleteMany.mockResolvedValue({ count: 0 });
+    dbMock.applicant.findMany.mockResolvedValue([]);
   });
 
   it("caps audit-log deletion batches per run and reports remaining backlog", async () => {
@@ -101,5 +105,25 @@ describe("audit archive cron", () => {
       partialFailures: ["sessions"],
       errors: { sessions: "session purge failed" },
     });
+  });
+
+  it("runs the applicant retention pass in the same weekly job and isolates its failure", async () => {
+    dbMock.applicant.findMany.mockRejectedValueOnce(new Error("applicant query failed"));
+    dbMock.session.deleteMany.mockResolvedValueOnce({ count: 1 });
+
+    const res = await GET(request(), { params: Promise.resolve({}) });
+    const body = await res.json();
+
+    expect(dbMock.applicant.findMany).toHaveBeenCalledTimes(1);
+    expect(body.ok).toBe(false);
+    expect(body.partialFailures).toEqual(["applicantRetention"]);
+    // The audit and session steps still ran.
+    expect(body.sessionsDeleted).toBe(1);
+  });
+
+  it("reports the retention step in the response when nothing is due", async () => {
+    const body = await (await GET(request(), { params: Promise.resolve({}) })).json();
+    expect(body.ok).toBe(true);
+    expect(body.applicantRetention).toMatchObject({ due: 0, purged: 0, failed: 0 });
   });
 });

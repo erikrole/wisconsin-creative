@@ -6,7 +6,7 @@ import { registerSchema } from "@/lib/validation";
 import { shiftWorkerTypeForRole } from "@/lib/shift-display";
 import { withHandler } from "@/lib/api";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
-import { createAuditEntriesTx, createAuditEntry } from "@/lib/audit";
+import { createAuditEntriesTx, createAuditEntry, createAuditEntryTx } from "@/lib/audit";
 import { capabilitiesForActor, collaboratorPolicyMetadataForActor, compatibilityCollaboratorProfile } from "@/lib/collaborator-access";
 import { collaboratorPolicyActorSelect } from "@/lib/services/collaborator-policies";
 import { unique } from "@/lib/utils";
@@ -78,6 +78,29 @@ export const POST = withHandler(async (req) => {
         where: { id: allowedEntry.id },
         data: { claimedAt: new Date(), claimedById: created.id },
       });
+
+      // Staged hire invite (D-065): link the applicant to the new account inside
+      // the same transaction. Never overwrites an existing link.
+      const hireApplication = await tx.application.findFirst({
+        where: { allowedEmailId: allowedEntry.id },
+        select: { id: true, applicantId: true },
+      });
+      if (hireApplication) {
+        const linked = await tx.applicant.updateMany({
+          where: { id: hireApplication.applicantId, hiredUserId: null },
+          data: { hiredUserId: created.id },
+        });
+        if (linked.count > 0) {
+          await createAuditEntryTx(tx, {
+            actorId: created.id,
+            actorRole: created.role,
+            entityType: "hiring_application",
+            entityId: hireApplication.id,
+            action: "hire_linked",
+            after: { userId: created.id },
+          });
+        }
+      }
 
       if (allowedEntry.role === "STUDENT") {
         const areas = unique([
