@@ -60,6 +60,7 @@ struct KioskCheckoutDetailSheet: View {
     @State private var swapItem: KioskCheckoutDetail.ReturnItem?
     /// C5: staff actions, reached from the read-only sheet on home.
     @State private var showStaffFlow = false
+    @State private var showExtend = false
 
     private enum ActiveMutation: Equatable {
         case savingDetails
@@ -200,6 +201,23 @@ struct KioskCheckoutDetailSheet: View {
                     onChanged()
                 }
             )
+        }
+        .fullScreenCover(isPresented: $showExtend) {
+            // Extends as the holder, the same as Extend on their own page.
+            if let holderId = context.requesterId ?? detail?.requesterId {
+                KioskExtendScreen(
+                    checkoutId: context.checkoutId,
+                    title: currentTitle,
+                    detailLine: context.requesterName,
+                    actorId: holderId,
+                    onCancel: { showExtend = false },
+                    onExtended: {
+                        showExtend = false
+                        Task { await load() }
+                        onChanged()
+                    }
+                )
+            }
         }
         .fullScreenCover(isPresented: $showStaffFlow) {
             KioskStaffActionsFlow(context: context) { changed in
@@ -347,28 +365,26 @@ struct KioskCheckoutDetailSheet: View {
                         // batteries share one tile with their unit chips.
                         let grouped = items.filter { $0.isNumberedBulk && $0.bulkSkuId != nil }
                         let singles = items.filter { item in !grouped.contains { $0.id == item.id } }
-                        // Grouped by kind (Cameras, Lenses, …); batteries last.
+                        // Cameras, Lenses, Batteries, Audio, Other: only the
+                        // sections with items. Numbered batteries share a chip.
+                        let buckets = categoryGroups(singles)
+                        let batteries = batteryGroups(grouped)
                         VStack(alignment: .leading, spacing: 12) {
-                            ForEach(categoryGroups(singles), id: \.name) { group in
-                                VStack(alignment: .leading, spacing: 6) {
-                                    Text(group.name.uppercased())
-                                        .font(KioskType.overline)
-                                        .tracking(KioskType.overlineTracking)
-                                        .foregroundStyle(KioskText.tertiary)
-                                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 8)], alignment: .leading, spacing: 8) {
-                                        ForEach(group.items) { item in itemTile(item) }
-                                    }
-                                }
-                            }
-                            let batteries = batteryGroups(grouped)
-                            if !batteries.isEmpty {
-                                VStack(alignment: .leading, spacing: 6) {
-                                    Text("BATTERIES")
-                                        .font(KioskType.overline)
-                                        .tracking(KioskType.overlineTracking)
-                                        .foregroundStyle(KioskText.tertiary)
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        ForEach(batteries, id: \.id) { group in batteryTile(group.items) }
+                            ForEach(["Cameras", "Lenses", "Batteries", "Audio", "Other"], id: \.self) { name in
+                                let loose = buckets.first { $0.name == name }?.items ?? []
+                                let packs = name == "Batteries" ? batteries : []
+                                if !loose.isEmpty || !packs.isEmpty {
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        Text(name.uppercased())
+                                            .font(KioskType.overline)
+                                            .tracking(KioskType.overlineTracking)
+                                            .foregroundStyle(KioskText.tertiary)
+                                        if !loose.isEmpty {
+                                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 8)], alignment: .leading, spacing: 8) {
+                                                ForEach(loose) { item in itemTile(item) }
+                                            }
+                                        }
+                                        ForEach(packs, id: \.id) { group in batteryTile(group.items) }
                                     }
                                 }
                             }
@@ -432,6 +448,14 @@ struct KioskCheckoutDetailSheet: View {
                 }
                 .kioskButtonRole(.primary)
                 .disabled(isMutating || !scanQueue.isEmpty)
+            }
+            if detail?.status == "OPEN", context.custodyScope != "SHARED", (context.requesterId ?? detail?.requesterId) != nil {
+                Button { showExtend = true } label: {
+                    Label("Extend", systemImage: "clock.arrow.circlepath")
+                        .font(.headline.weight(.semibold)).lineLimit(1).fixedSize()
+                        .padding(.horizontal, 16).frame(minHeight: 50)
+                }
+                .kioskButtonRole(.secondary)
             }
             if detail?.status == "OPEN" {
                 // C5: staff actions open behind a staff ID card scan.
@@ -681,16 +705,23 @@ struct KioskCheckoutDetailSheet: View {
         )
     }
 
-    /// Items by category name in first-seen order; no category -> "Other".
+    /// Fixed buckets, in this order, shown only when they have items:
+    /// Cameras, Lenses, Audio, Other (batteries are their own section).
     private func categoryGroups(_ items: [KioskCheckoutDetail.ReturnItem]) -> [(name: String, items: [KioskCheckoutDetail.ReturnItem])] {
-        var order: [String] = []
+        let order = ["Cameras", "Lenses", "Batteries", "Audio", "Other"]
         var byName: [String: [KioskCheckoutDetail.ReturnItem]] = [:]
-        for item in items {
-            let name = item.category?.trimmingCharacters(in: .whitespaces).nonBlankText ?? (item.isBulkDisplay ? "Supplies" : "Gear")
-            if byName[name] == nil { order.append(name) }
-            byName[name, default: []].append(item)
-        }
-        return order.map { ($0, byName[$0] ?? []) }
+        for item in items { byName[Self.bucket(item), default: []].append(item) }
+        return order.compactMap { name in byName[name].map { (name, $0) } }
+    }
+
+    static func bucket(_ item: KioskCheckoutDetail.ReturnItem) -> String {
+        let text = [item.category, item.bulkSkuName, item.name, item.tagName].compactMap { $0 }.joined(separator: " ").lowercased()
+        func has(_ words: [String]) -> Bool { words.contains { text.contains($0) } }
+        if item.isNumberedBulk || has(["battery", "batteries", "v-mount", "np-f"]) { return "Batteries" }
+        if has(["audio", "mic", "microphone", "lav", "recorder", "sennheiser", "rode", "zoom h", "wireless go", "boom"]) { return "Audio" }
+        if has(["lens", "mm f/", "mm f", "16-35", "17-28", "24-70", "70-200", "100-400", "prime"]) { return "Lenses" }
+        if has(["camera", "body", "fx3", "fx6", "fx30", "a7", "a1 ", "canon r", "eos", "cinema"]) { return "Cameras" }
+        return "Other"
     }
 
     private func batteryGroups(_ items: [KioskCheckoutDetail.ReturnItem]) -> [(id: String, items: [KioskCheckoutDetail.ReturnItem])] {
