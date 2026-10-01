@@ -118,11 +118,24 @@ struct KioskExtendScreen: View {
                             title: Self.dayTitle(value),
                             detail: value.formatted(.dateTime.month(.abbreviated).day()),
                             isSelected: Calendar.current.isDate(value, inSameDayAs: day),
-                            isEnabled: true
+                            // A day that starts after the latest allowed time can't be picked.
+                            isEnabled: window?.maxEndsAt.map { value <= $0 } ?? true
                         ) {
                             day = value
                             if let chosen, !Calendar.current.isDate(chosen, inSameDayAs: value) { self.chosen = nil }
                         }
+                    }
+                }
+                // One tap to the latest allowed time.
+                if let latest = window?.maxEndsAt, window?.canExtend == true, latest > currentEndsAt {
+                    KioskSlotChip(
+                        title: "Latest: \(KioskDueCopy.relative(latest))",
+                        detail: nil,
+                        isSelected: chosen == latest,
+                        isEnabled: true
+                    ) {
+                        day = Calendar.current.startOfDay(for: latest)
+                        chosen = latest
                     }
                 }
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
@@ -167,6 +180,7 @@ struct KioskExtendScreen: View {
             ) { Task { await save() } }
         }
         .task { await load() }
+        .statusBarHidden(true)
     }
 
     private func load() async {
@@ -213,7 +227,8 @@ struct KioskExtendScreen: View {
         guard window.canExtend else {
             return "\(item.assetTag) is reserved\(by) from \(from), so this can't go later. Return it on time."
         }
-        return "\(item.assetTag) is reserved\(by) from \(from), so this can go until \(max.formatted(.dateTime.hour().minute())). Pick a later day only if you return the \(item.name) first."
+        _ = max
+        return "\(item.assetTag) is reserved\(by) from \(from)."
     }
 
     static func dayTitle(_ date: Date) -> String {
