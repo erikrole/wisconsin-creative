@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { withAuth } from "@/lib/api";
 import { HttpError, ok } from "@/lib/http";
+import { assertNotHiringInvite } from "@/lib/hiring/invite-scope";
 import { requirePermission } from "@/lib/rbac";
 import { createAuditEntry } from "@/lib/audit";
 import { enforceRateLimit, SETTINGS_MUTATION_LIMIT } from "@/lib/rate-limit";
@@ -12,10 +13,12 @@ export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
   requirePermission(user.role, "allowed_email", "edit");
   await enforceRateLimit(`allowed-emails:write:${user.id}`, SETTINGS_MUTATION_LIMIT);
 
+  await assertNotHiringInvite(user.role, params.id);
   const profile = updateAllowedEmailProfileSchema.parse(await req.json());
   const result = await updatePendingAllowedEmailProfile({
     actor: { id: user.id, role: user.role },
     id: params.id,
+    hideHiringInvites: user.role !== "ADMIN",
     ...profile,
   });
 
@@ -27,6 +30,7 @@ export const DELETE = withAuth<{ id: string }>(async (_req, { user, params }) =>
   requirePermission(user.role, "allowed_email", "delete");
   await enforceRateLimit(`allowed-emails:write:${user.id}`, SETTINGS_MUTATION_LIMIT);
 
+  await assertNotHiringInvite(user.role, params.id);
   const entry = await db.allowedEmail.findUnique({
     where: { id: params.id },
   });
@@ -44,7 +48,8 @@ export const DELETE = withAuth<{ id: string }>(async (_req, { user, params }) =>
 
   // Atomic: only delete if still unclaimed (guards against race with concurrent registration)
   const deleted = await db.allowedEmail.deleteMany({
-    where: { id: params.id, claimedAt: null },
+    // Non-admins can never delete a hire invite, even one adopted after the checks above.
+    where: { id: params.id, claimedAt: null, ...(user.role === "ADMIN" ? {} : { applications: { none: {} } }) },
   });
 
   if (deleted.count === 0) {

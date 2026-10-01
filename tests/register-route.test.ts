@@ -4,9 +4,16 @@ import { Role } from "@prisma/client";
 const tx = {
   user: {
     create: vi.fn(),
+    update: vi.fn(),
   },
   allowedEmail: {
     update: vi.fn(),
+  },
+  application: {
+    findFirst: vi.fn(),
+  },
+  applicant: {
+    updateMany: vi.fn(),
   },
   studentAreaAssignment: {
     create: vi.fn(),
@@ -43,6 +50,7 @@ vi.mock("@/lib/rate-limit", () => ({
 vi.mock("@/lib/audit", () => ({
   createAuditEntry: vi.fn(),
   createAuditEntriesTx: vi.fn(),
+  createAuditEntryTx: vi.fn(),
 }));
 
 vi.mock("@sentry/nextjs", () => ({
@@ -50,7 +58,7 @@ vi.mock("@sentry/nextjs", () => ({
 }));
 
 import { createSession, hashPassword } from "@/lib/auth";
-import { createAuditEntriesTx, createAuditEntry } from "@/lib/audit";
+import { createAuditEntriesTx, createAuditEntry, createAuditEntryTx } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { POST } from "@/app/api/auth/register/route";
@@ -110,6 +118,8 @@ beforeEach(() => {
   vi.mocked(createAuditEntry).mockResolvedValue(undefined);
   vi.mocked(db.user.findUnique).mockResolvedValue(null);
   tx.allowedEmail.update.mockResolvedValue({});
+  tx.application.findFirst.mockResolvedValue(null);
+  tx.applicant.updateMany.mockResolvedValue({ count: 0 });
   tx.studentAreaAssignment.create.mockReset();
   tx.studentSportAssignment.create.mockReset();
   vi.mocked(createAuditEntriesTx).mockResolvedValue(undefined);
@@ -326,5 +336,56 @@ describe("POST /api/auth/register", () => {
     expect(claimedBody).toEqual(missingBody);
     expect(existingBody).toEqual(missingBody);
     expect(tx.user.create).not.toHaveBeenCalled();
+  });
+
+  it("links a hired applicant to the new account inside the claim transaction", async () => {
+    vi.mocked(db.allowedEmail.findUnique).mockResolvedValue(allowedInvite(Role.STUDENT));
+    tx.user.create.mockResolvedValue(createdUser(Role.STUDENT, null));
+    tx.application.findFirst.mockResolvedValue({
+      id: "app-1",
+      applicantId: "applicant-1",
+      cycle: { term: "FALL", year: 2026 },
+      applicant: { gradTerm: "SPRING", gradYear: 2029 },
+    });
+    tx.applicant.updateMany.mockResolvedValue({ count: 1 });
+
+    const response = await POST(
+      postRegister({ name: "Student User", email: "student@example.com", password: "long-enough-password" }),
+      noParams,
+    );
+
+    expect(response.status).toBe(201);
+    expect(tx.application.findFirst).toHaveBeenCalledWith(
+      // Only a standing Hire links; an undone decision must not.
+      expect.objectContaining({ where: { allowedEmailId: "invite-student", stage: "HIRE" } }),
+    );
+    // The student starts in the hiring cycle's term.
+    // ...and keep the graduation date the applicant gave, so planning does not assume they stay forever.
+    expect(tx.user.update).toHaveBeenCalledWith({
+      where: { id: "user-student" },
+      data: { startTerm: "FALL", startTermYear: 2026, gradYear: 2029, graduationTerm: "SPRING" },
+    });
+    // Never overwrites an existing link.
+    expect(tx.applicant.updateMany).toHaveBeenCalledWith({
+      where: { id: "applicant-1", hiredUserId: null },
+      data: { hiredUserId: "user-student" },
+    });
+    expect(createAuditEntryTx).toHaveBeenCalledWith(
+      tx,
+      expect.objectContaining({ entityType: "hiring_application", action: "hire_linked" }),
+    );
+  });
+
+  it("registers normally when the invite has no hiring application", async () => {
+    vi.mocked(db.allowedEmail.findUnique).mockResolvedValue(allowedInvite(Role.STUDENT));
+    tx.user.create.mockResolvedValue(createdUser(Role.STUDENT, null));
+
+    const response = await POST(
+      postRegister({ name: "Student User", email: "student@example.com", password: "long-enough-password" }),
+      noParams,
+    );
+
+    expect(response.status).toBe(201);
+    expect(tx.applicant.updateMany).not.toHaveBeenCalled();
   });
 });

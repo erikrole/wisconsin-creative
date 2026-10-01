@@ -2,10 +2,15 @@ import { NextResponse } from "next/server";
 import { withCron } from "@/lib/cron";
 import { db } from "@/lib/db";
 import { AUDIT_RETENTION_DAYS } from "@/lib/audit";
+import { runApplicantRetention, type RetentionRunResult } from "@/lib/hiring/retention";
 
 /**
  * Retention policy: delete audit log entries older than AUDIT_RETENTION_DAYS.
  * Runs weekly via Vercel Cron (see vercel.json).
+ *
+ * Also runs the hiring applicant retention pass (D-065: names kept, other
+ * personal data purged 36 months after the last cycle closed) so it shares this
+ * weekly cron instead of using another cron slot.
  *
  * Hard delete in batches to avoid locking the table for too long on large
  * datasets. For regulatory needs, a separate export-before-delete step can
@@ -65,6 +70,22 @@ export const GET = withCron(async () => {
     errors.sessions = message;
   }
 
+  let applicantRetention: RetentionRunResult | null = null;
+  try {
+    // Small budget: this job has already spent time on audit and session cleanup, and the
+    // function limit is 10 seconds. Anything left over is continued by the nightly morning-refresh run.
+    applicantRetention = await runApplicantRetention(now, { budgetMs: 3500 });
+    if (applicantRetention.failed > 0) {
+      partialFailures.push("applicantRetention");
+      errors.applicantRetention = `${applicantRetention.failed} applicant purge(s) failed; they retry next run`;
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown applicant retention error";
+    console.error("audit-archive: applicant retention failed", err);
+    partialFailures.push("applicantRetention");
+    errors.applicantRetention = message;
+  }
+
   return NextResponse.json({
     ok: partialFailures.length === 0,
     auditLogsDeleted: totalDeleted,
@@ -75,6 +96,7 @@ export const GET = withCron(async () => {
     hasMoreAuditLogs,
     cutoffDate: cutoff.toISOString(),
     retentionDays: AUDIT_RETENTION_DAYS,
+    applicantRetention,
     ...(partialFailures.length > 0 ? { partialFailures, errors } : {}),
   });
 });

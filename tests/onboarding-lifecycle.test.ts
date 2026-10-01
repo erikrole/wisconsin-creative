@@ -7,6 +7,7 @@ const tx = {
   },
   allowedEmail: {
     findUnique: vi.fn(),
+    findFirst: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
   },
@@ -318,7 +319,7 @@ describe("onboarding lifecycle service", () => {
   });
 
   it("updates an unclaimed student invitation profile in the transaction and audits the replacement", async () => {
-    tx.allowedEmail.findUnique.mockResolvedValue({
+    tx.allowedEmail.findFirst.mockResolvedValue({
       id: "allowed-student",
       email: "student@uw.edu",
       role: "STUDENT",

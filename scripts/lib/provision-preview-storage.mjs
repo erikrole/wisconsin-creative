@@ -8,6 +8,10 @@ const stores = [
   { kind: "public", access: "public", key: "WC_PREVIEW_BLOB_READ_WRITE_TOKEN" },
   { kind: "signatures", access: "private", key: "WC_PREVIEW_SIGNATURE_BLOB_READ_WRITE_TOKEN" },
   { kind: "resources", access: "private", key: "WC_PREVIEW_RESOURCE_ASSET_BLOB_READ_WRITE_TOKEN" },
+  // Applicant resumes (D-065). Optional so branch environments provisioned before this store
+  // existed keep a valid signed manifest; they simply have no applicant store (uploads return
+  // 503 there). New environments are provisioned with it.
+  { kind: "applicants", access: "private", key: "WC_PREVIEW_APPLICANT_BLOB_READ_WRITE_TOKEN", optional: true },
 ];
 export function validateResourceManifest(manifest, state, config = readInfrastructureConfig()) {
   const { signature, ...payload } = manifest;
@@ -15,7 +19,12 @@ export function validateResourceManifest(manifest, state, config = readInfrastru
     || !signature || !verify(null, Buffer.from(canonical(payload)), config.preview.attestationPublicKey, Buffer.from(signature, "base64"))) {
     throw new Error("Preview resource attestation is invalid");
   }
-  if (payload.stores.length !== stores.length || stores.some(({ kind, access }) => !payload.stores.some((s) => s.kind === kind && s.access === access && s.name === `${config.preview.branchPrefix}${state.key}-${kind}` && /^store_[A-Za-z0-9]+$/.test(s.id)))) {
+  const identityMatches = ({ kind, access }, s) => s.kind === kind && s.access === access && s.name === `${config.preview.branchPrefix}${state.key}-${kind}` && /^store_[A-Za-z0-9]+$/.test(s.id);
+  const required = stores.filter((d) => !d.optional);
+  // Every required store must be present; optional stores may be absent; nothing else is allowed.
+  if (payload.stores.length < required.length || payload.stores.length > stores.length
+    || required.some((d) => !payload.stores.some((s) => identityMatches(d, s)))
+    || payload.stores.some((s) => !stores.some((d) => identityMatches(d, s)))) {
     throw new Error("Preview resource identities do not match the branch");
   }
   return payload;

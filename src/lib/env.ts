@@ -84,6 +84,10 @@ export const env = {
   get resourceAssetBlobReadWriteToken() {
     return isolatedIntegrationValue("RESOURCE_ASSET_BLOB_READ_WRITE_TOKEN");
   },
+  /** Optional — required for applicant resume uploads and reads (D-065). */
+  get applicantBlobReadWriteToken() {
+    return isolatedIntegrationValue("APPLICANT_BLOB_READ_WRITE_TOKEN");
+  },
   /** Optional. Enables Brave-backed product image search */
   get braveSearchApiKey() {
     return process.env.BRAVE_SEARCH_API_KEY || "";
