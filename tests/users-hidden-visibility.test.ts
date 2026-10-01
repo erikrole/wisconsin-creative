@@ -290,9 +290,10 @@ describe("hidden smoke user visibility", () => {
 
     expect(json).toMatchObject({ success: true, data: { id: "other-location-user" } });
     const where = vi.mocked(db.user.findFirst).mock.calls[0]?.[0]?.where;
-    expect(where.AND[0]).toMatchObject({ active: true, hiddenFromRoster: false });
+    const and = (where as { AND: unknown[] }).AND;
+    expect(and[0]).toMatchObject({ active: true, hiddenFromRoster: false });
     // The card matches the free-text number or the structured 10-digit card number.
-    expect(where.AND[1]).toEqual({ OR: [{ wiscardNumber: "9000000000" }, { wiscardCardNumber: { in: ["9000000000"] } }] });
+    expect(and[1]).toEqual({ OR: [{ wiscardNumber: "9000000000" }, { wiscardCardNumber: { in: ["9000000000"] } }] });
     expect(JSON.stringify(where)).not.toContain("locationId");
   });
 
