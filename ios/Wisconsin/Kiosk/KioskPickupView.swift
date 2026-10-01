@@ -420,6 +420,7 @@ struct KioskPickupView: View {
             KioskItemRow(
                 tag: confirmedItemOverrides[item.id]?.itemListPrimaryTitle ?? item.itemListPrimaryTitle,
                 name: confirmedItemOverrides[item.id]?.itemListSecondaryTitle ?? item.itemListSecondaryTitle,
+                imageUrl: confirmedItemOverrides[item.id]?.imageUrl ?? item.imageUrl,
                 isDone: confirmedIds.contains(item.id),
                 section: section
             ) {

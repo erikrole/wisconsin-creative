@@ -336,6 +336,7 @@ struct KioskReturnView: View {
                             KioskItemRow(
                                 tag: item.itemListPrimaryTitle,
                                 name: item.itemListSecondaryTitle,
+                                imageUrl: item.imageUrl,
                                 isDone: returnedIds.contains(item.id),
                                 section: section
                             ) {

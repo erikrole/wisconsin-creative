@@ -589,13 +589,13 @@ struct KioskCheckoutView: View {
                 note: trailingNote
             )
         } else if let trailingNote {
-            KioskItemRow(tag: group.first.itemListPrimaryTitle, name: group.first.itemListSecondaryTitle, isDone: true) {
+            KioskItemRow(tag: group.first.itemListPrimaryTitle, name: group.first.itemListSecondaryTitle, imageUrl: group.first.imageUrl, isDone: true) {
                 Text(trailingNote)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(KioskText.tertiary)
             }
         } else {
-            KioskItemRow(tag: group.first.itemListPrimaryTitle, name: group.first.itemListSecondaryTitle, isDone: true) {
+            KioskItemRow(tag: group.first.itemListPrimaryTitle, name: group.first.itemListSecondaryTitle, imageUrl: group.first.imageUrl, isDone: true) {
                 KioskRowRemoveButton(accessibilityLabel: "Remove \(group.primaryTitle)") { removeGroup(group) }
             }
         }

@@ -238,11 +238,13 @@ struct KioskCheckMark: View {
 
 // MARK: Item row
 
-/// One line in a task list: check, tag, model, and an optional trailing
-/// control or note ("Remove", "Not in kit", "Just added").
+/// One line in a task list: check, thumbnail, asset tag, and an optional
+/// trailing control or note ("Remove", "Not in kit", "Just added"). The model
+/// name stays in the accessibility label only (Erik, 2026-10-01: tag only).
 struct KioskItemRow<Trailing: View>: View {
     let tag: String
     var name: String?
+    var imageUrl: String?
     let isDone: Bool
     var section: KioskSection = .takingOut
     @ViewBuilder var trailing: () -> Trailing
@@ -250,32 +252,60 @@ struct KioskItemRow<Trailing: View>: View {
     var body: some View {
         HStack(spacing: 12) {
             KioskCheckMark(isDone: isDone, section: section)
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Text(tag)
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(KioskText.primary)
-                    .lineLimit(1)
-                if let name {
-                    Text(name)
-                        .font(KioskType.meta)
-                        .foregroundStyle(KioskText.secondary)
-                        .lineLimit(1)
-                }
-            }
+            KioskItemThumbnail(imageUrl: imageUrl)
+            Text(tag)
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(KioskText.primary)
+                .lineLimit(1)
             Spacer(minLength: 8)
             trailing()
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 11)
-        .frame(minHeight: 44)
+        .padding(.vertical, 8)
+        .frame(minHeight: 56)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(tag)\(name.map { ", \($0)" } ?? ""), \(isDone ? "scanned" : "not scanned yet")")
     }
 }
 
 extension KioskItemRow where Trailing == EmptyView {
-    init(tag: String, name: String? = nil, isDone: Bool, section: KioskSection = .takingOut) {
-        self.init(tag: tag, name: name, isDone: isDone, section: section, trailing: { EmptyView() })
+    init(tag: String, name: String? = nil, imageUrl: String? = nil, isDone: Bool, section: KioskSection = .takingOut) {
+        self.init(tag: tag, name: name, imageUrl: imageUrl, isDone: isDone, section: section, trailing: { EmptyView() })
+    }
+}
+
+/// Small rounded item photo; a neutral box symbol when there is none.
+struct KioskItemThumbnail: View {
+    let imageUrl: String?
+    var size: CGFloat = 40
+
+    var body: some View {
+        Group {
+            if let imageUrl, let url = URL(string: imageUrl) {
+                AsyncImage(url: url) { phase in
+                    if case .success(let image) = phase {
+                        image.resizable().scaledToFill()
+                    } else {
+                        placeholder
+                    }
+                }
+            } else {
+                placeholder
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(RoundedRectangle(cornerRadius: KioskRadius.sm))
+        .overlay(RoundedRectangle(cornerRadius: KioskRadius.sm).stroke(KioskStroke.standard, lineWidth: 1))
+        .accessibilityHidden(true)
+    }
+
+    private var placeholder: some View {
+        ZStack {
+            KioskSurface.placeholder
+            Image(systemName: "shippingbox")
+                .font(.system(size: size * 0.4))
+                .foregroundStyle(KioskText.muted)
+        }
     }
 }
 
