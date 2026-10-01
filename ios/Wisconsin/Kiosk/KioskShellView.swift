@@ -134,6 +134,11 @@ struct KioskShellView: View {
                 }
             }
             .id(screenKey)
+            // Checkout step 1 does not fit above the software keyboard, so
+            // SwiftUI's keyboard avoidance overflowed it and pushed the header
+            // off the top. The details step lifts its own "Something else"
+            // field above the keys instead (`KioskCheckoutDetailsStep`).
+            .ignoresSafeArea(.keyboard, edges: showsInlineKeyboardTip ? .bottom : [])
             .disabled(store.isProcessingHandoff)
             .transition(screenTransition)
 

@@ -94,7 +94,7 @@ struct KioskCheckoutView: View {
     // the keyboard dies before a single character can be typed. Plain @State
     // is the source of truth the UIKit delegate writes into (same pattern as
     // KioskCheckoutDetailSheet's titleFocused/scanFocused).
-    @State private var focusedCheckoutField: KioskCheckoutFocusedField? = nil
+    @State private var focusedCheckoutField: KioskCheckoutFocusedField? = KioskCaptureSeed.keyboardEntry ? .customPurpose : nil
     @State private var earnedBadges: [EarnedBadgeReward] = []
     @State private var hasRestoredDraft = false
 

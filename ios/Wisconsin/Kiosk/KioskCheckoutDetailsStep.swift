@@ -19,6 +19,11 @@ struct KioskCheckoutDetailsStep: View {
     let onContinue: () -> Void
 
     @State private var showOtherDate = KioskCaptureSeed.otherDate
+    /// How far the software keyboard reaches up into the purpose column, in
+    /// points. Zero whenever no software keyboard is on screen (including
+    /// when a paired scanner is acting as the hardware keyboard).
+    @State private var keyboardOverlap: CGFloat = 0
+    @State private var purposeColumnBottom: CGFloat = 0
 
     private var shifts: [KioskCheckoutEvent] { events.filter(\.isMyShift) }
     private var otherEvents: [KioskCheckoutEvent] { events.filter { !$0.isMyShift } }
@@ -59,7 +64,20 @@ struct KioskCheckoutDetailsStep: View {
 
     // MARK: What's this for?
 
+    /// The "Something else" field sits last in this column, which on the
+    /// 820 pt landscape kiosk is exactly where the software keyboard lands.
+    /// SwiftUI's own keyboard avoidance could not help: the right column's
+    /// chips and Continue pill are taller than the space left above the keys,
+    /// so the step overflowed (pushing the header off the top) instead of
+    /// shrinking this scroll view, and the native text field was never
+    /// scrolled into view anyway. So the step opts out of keyboard avoidance
+    /// (see `KioskShellView`), and this column alone shortens its viewport
+    /// by the keyboard's measured overlap and scrolls the field to sit
+    /// directly above the keys.
+    private static let purposeFieldID = "checkout-purpose-field"
+
     private var purposeColumn: some View {
+        ScrollViewReader { proxy in
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
                 Text("What's this for?")
@@ -78,11 +96,50 @@ struct KioskCheckoutDetailsStep: View {
                 }
                 KioskSectionHeader(title: "Something else")
                 purposeField
+                    .id(Self.purposeFieldID)
                 KioskKeyboardTip(isFieldFocused: focusedField == .customPurpose)
             }
             .padding(.top, 4)
+            .padding(.bottom, KioskSpacing.md)
         }
         .scrollIndicators(.hidden)
+        .padding(.bottom, keyboardOverlap)
+        .onChange(of: focusedField) { _, field in
+            if field == .customPurpose { revealPurposeField(proxy) }
+        }
+        .onChange(of: keyboardOverlap) { _, _ in
+            if focusedField == .customPurpose { revealPurposeField(proxy) }
+        }
+        }
+        .background(
+            GeometryReader { geometry in
+                Color.clear
+                    .onAppear { purposeColumnBottom = geometry.frame(in: .global).maxY }
+                    .onChange(of: geometry.frame(in: .global).maxY) { _, maxY in purposeColumnBottom = maxY }
+            }
+        )
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillChangeFrameNotification)) { note in
+            guard let frame = note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else { return }
+            keyboardOverlap = Self.overlap(keyboardTop: frame.minY, columnBottom: purposeColumnBottom)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+            keyboardOverlap = 0
+        }
+    }
+
+    /// The keyboard's end frame is in screen coordinates, which match SwiftUI's
+    /// global space for the full-screen kiosk window. Keep a small gap so the
+    /// field's card edge never touches the keys.
+    private static func overlap(keyboardTop: CGFloat, columnBottom: CGFloat) -> CGFloat {
+        guard columnBottom > 0 else { return 0 }
+        let reach = columnBottom - keyboardTop
+        return reach > 0 ? reach + KioskSpacing.sm : 0
+    }
+
+    private func revealPurposeField(_ proxy: ScrollViewProxy) {
+        withAnimation(.easeOut(duration: 0.25)) {
+            proxy.scrollTo(Self.purposeFieldID, anchor: .bottom)
+        }
     }
 
     private func eventRow(_ event: KioskCheckoutEvent) -> some View {

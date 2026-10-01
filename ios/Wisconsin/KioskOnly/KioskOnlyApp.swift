@@ -226,7 +226,7 @@ struct WisconsinKioskApp: App {
             kioskStore.screen = .return(bookingId: "co-1", userId: kioskUser.id)
         case .activation:
             kioskStore.screen = .activation
-        case .checkoutDetails, .checkoutDetailsLinked, .keyboardTip, .checkoutOtherDate:
+        case .checkoutDetails, .checkoutDetailsLinked, .keyboardTip, .keyboardEntry, .checkoutOtherDate:
             kioskStore.setIntent(KioskFlowIntent(
                 action: .checkout,
                 source: .person,
@@ -492,6 +492,14 @@ extension Color {
 /// hard-coded `false` outside DEBUG, so a release build carries no fixture
 /// behaviour and no reference to the harness.
 enum KioskCaptureSeed {
+    static var keyboardEntry: Bool {
+        #if DEBUG
+        return KioskFixtureScenario.active == .keyboardEntry
+        #else
+        return false
+        #endif
+    }
+
     static var scannerHelp: Bool {
         #if DEBUG
         return KioskFixtureScenario.active == .scannerHelp
@@ -570,6 +578,9 @@ enum KioskFixtureScenario: String {
     /// Step 1 of checkout with the booking-name field focused, for capturing
     /// the hardware-keyboard tip.
     case keyboardTip = "keyboard-tip"
+    /// Step 1 of checkout with the "Something else" field focused and the
+    /// software keyboard up, for capturing the field riding above it.
+    case keyboardEntry = "keyboard-entry"
     /// Step 1 of checkout — the detail-input step, nothing linked.
     case checkoutDetails = "checkout-details"
     /// Step 1 of checkout with an event linked.
