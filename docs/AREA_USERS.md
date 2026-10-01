@@ -42,6 +42,11 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 - `COLLABORATOR`: view active, non-hidden teammates only when the assigned affiliation policy grants `PEOPLE_DIRECTORY_VIEW`. The directory is name-searchable and exposes only roster identity and work context. Collaborators cannot see private profile, contact, presence, assignment, activity, booking, shift, badge, or audit data and cannot edit another user.
 - Every authenticated role may update its own approved profile-completion fields through the explicit `user.edit_self` permission. This does not grant broader user-edit access.
 
+### Hiring (D-065)
+- `ADMIN`: view and manage hiring cycles, applicants, resumes, notes, and decisions through the `hiring` permission. Applicant data includes resumes, contact details, and evaluation notes.
+- The Workforce overview, start terms, and per-term placements use the separate `workforce` permission, also ADMIN only.
+- `STAFF`, `STUDENT`, `COLLABORATOR`: no access. The sidebar entry is hidden, the page redirects, and every `/api/hiring/*` route returns 403, including an admin previewing as Staff. This is stricter than Users, where Staff can edit all users.
+
 ### Scoreboard
 - `ADMIN`, `STAFF`, `STUDENT`, and `COLLABORATOR` may view the shared team Scoreboard and an active, non-hidden person’s Scoreboard through the explicit `scoreboard.view` permission.
 - The team Scoreboard is a generic current-season explorer. Sport, Schedule venue, opponent, and Home/Away/Neutral site each accept one exact value and combine with AND semantics; totals, dimensional breakdowns, the Snapshot, and every person ranking are recomputed from that same intersection. Filter choices remain stable across narrowing. Web explorer state is URL-backed, so a stacked view can be refreshed or shared. Opening a person keeps that stack on the URL; sport and site also filter the person Scoreboard, and All leaders restores the team view. The leaderboard can be searched by name without changing the underlying rank. Snapshot labels follow the last loaded intersection while a new stack refreshes.

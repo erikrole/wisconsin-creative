@@ -15,6 +15,14 @@ describe("kit gameday authoring", () => {
     expect(source).toContain("FOOTBALL_GAMEDAY_KIT_ROLE_OPTIONS");
   });
 
+  it("loads item families without letting the effect cancel its own request", () => {
+    const source = readFileSync("src/app/(app)/kits/[id]/page.tsx", "utf8");
+    expect(source).toContain("bulkFetchStarted");
+    const effect = source.slice(source.indexOf("bulkFetchStarted = useRef"), source.indexOf("// ── Add member"));
+    expect(effect).not.toContain("cancelled");
+    expect(effect).not.toContain("bulkOptionsLoading]");
+  });
+
   it("keeps kit authoring pages staff-only while reservation routes can list kits", () => {
     const layout = readFileSync("src/app/(app)/kits/layout.tsx", "utf8");
     const list = readFileSync("src/app/api/kits/route.ts", "utf8");

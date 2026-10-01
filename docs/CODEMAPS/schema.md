@@ -131,7 +131,7 @@ Values: `UPLOADING`, `FINALIZING`, `COMMITTED`, `FAILED`
 
 ## Model `User`
 
-Fields: 120
+Fields: 128
 
 - `id                            String                           @id @default(cuid())`
 - `name                          String`
@@ -234,6 +234,11 @@ Fields: 120
 - `signatureSaveOperations       SignatureSaveOperation[]         @relation("SignatureSaveActor")`
 - `eventWork                     EventWorker[]                    @relation("EventWorkerUser")`
 - `eventWorkersAdded             EventWorker[]                    @relation("EventWorkerAdder")`
+- `termPlacements                StudentTermPlacement[]           @relation("TermPlacementUser")`
+- `hiredApplicant                Applicant?                       @relation("ApplicantHiredUser")`
+- `applicationsDecided           Application[]                    @relation("ApplicationDecider")`
+- `applicantDocumentsUploaded    ApplicantDocument[]              @relation("ApplicantDocumentUploader")`
+- `applicationNotesAuthored      ApplicationNote[]                @relation("ApplicationNoteAuthor")`
 - `assignedBookingItems          BookingSerializedItem[]          @relation("BookingSerializedItemAssignee")`
 - `title               String?`
 - `athleticsEmail      String?         @unique @map("athletics_email")`
@@ -253,6 +258,9 @@ Fields: 120
 - `birthdayMonth       Int?            @map("birthday_month")`
 - `birthdayDay         Int?            @map("birthday_day")`
 - `birthYear           Int?            @map("birth_year")`
+- `startTerm           GraduationTerm? @map("start_term")`
+- `startTermYear       Int?            @map("start_term_year")`
+- `deactivatedAt       DateTime?       @map("deactivated_at")`
 
 Indexes and constraints:
 
@@ -1495,19 +1503,19 @@ Indexes and constraints:
 
 Fields: 14
 
-- `id        String              @id @default(cuid())`
-- `userId    String              @map("user_id")`
-- `type      String`
-- `title     String`
-- `body      String?`
-- `payload   Json?`
-- `channel   NotificationChannel @default(IN_APP)`
-- `sentAt    DateTime?           @map("sent_at")`
-- `readAt    DateTime?           @map("read_at")`
-- `dedupeKey String?             @unique @map("dedupe_key")`
-- `bookingId String?             @map("booking_id")`
-- `createdAt DateTime            @default(now()) @map("created_at")`
-- `user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)`
+- `id         String                 @id @default(cuid())`
+- `userId     String                 @map("user_id")`
+- `type       String`
+- `title      String`
+- `body       String?`
+- `payload    Json?`
+- `channel    NotificationChannel    @default(IN_APP)`
+- `sentAt     DateTime?              @map("sent_at")`
+- `readAt     DateTime?              @map("read_at")`
+- `dedupeKey  String?                @unique @map("dedupe_key")`
+- `bookingId  String?                @map("booking_id")`
+- `createdAt  DateTime               @default(now()) @map("created_at")`
+- `user       User                   @relation(fields: [userId], references: [id], onDelete: Cascade)`
 - `deliveries NotificationDelivery[]`
 
 Indexes and constraints:
@@ -1545,15 +1553,15 @@ Indexes and constraints:
 
 Fields: 9
 
-- `id          String   @id @default(cuid())`
-- `platform    String`
-- `kind        String`
-- `appVersion  String?  @map("app_version")`
-- `osVersion   String?  @map("os_version")`
-- `signature   String?`
-- `metadata    Json?`
-- `callStack   Json?    @map("call_stack")`
-- `receivedAt  DateTime @default(now()) @map("received_at")`
+- `id         String   @id @default(cuid())`
+- `platform   String`
+- `kind       String`
+- `appVersion String?  @map("app_version")`
+- `osVersion  String?  @map("os_version")`
+- `signature  String?`
+- `metadata   Json?`
+- `callStack  Json?    @map("call_stack")`
+- `receivedAt DateTime @default(now()) @map("received_at")`
 
 Indexes and constraints:
 
@@ -1709,7 +1717,7 @@ Indexes and constraints:
 
 ## Model `AllowedEmail`
 
-Fields: 17
+Fields: 18
 
 - `id                   String               @id @default(cuid())`
 - `email                String               @unique`
@@ -1728,6 +1736,7 @@ Fields: 17
 - `createdBy            User                 @relation("AllowedEmailCreator", fields: [createdById], references: [id], onDelete: Restrict)`
 - `claimedBy            User?                @relation("AllowedEmailClaimer", fields: [claimedById], references: [id], onDelete: SetNull)`
 - `collaboratorPolicy   CollaboratorPolicy?  @relation(fields: [collaboratorPolicyId], references: [id], onDelete: Restrict)`
+- `applications         Application[]        @relation("ApplicationInvite")`
 
 Indexes and constraints:
 
@@ -2593,3 +2602,224 @@ Indexes and constraints:
 - `@@unique([eventId, userId])`
 - `@@index([eventId])`
 - `@@map("event_travel_members")`
+
+## Enum `HiringCycleStatus`
+
+Values: `PLANNING`, `OPEN`, `CLOSED`, `ARCHIVED`
+
+## Enum `ApplicantStanding`
+
+Values: `INCOMING`, `FRESHMAN`, `SOPHOMORE`, `JUNIOR`, `SENIOR`, `GRADUATE`, `OTHER`
+
+## Enum `ApplicationStage`
+
+Values: `APPLIED`, `ROUND_1`, `HIRE`, `PASSED`, `WITHDRAWN`
+
+## Enum `ApplicantDocumentKind`
+
+Values: `RESUME`, `COVER_LETTER`, `PORTFOLIO_FILE`, `OTHER`
+
+## Model `HiringCycle`
+
+Fields: 13
+
+- `id           String            @id @default(cuid())`
+- `label        String            @unique`
+- `term         GraduationTerm`
+- `year         Int`
+- `status       HiringCycleStatus @default(PLANNING)`
+- `opensOn      DateTime?         @map("opens_on") @db.Date`
+- `closesOn     DateTime?         @map("closes_on") @db.Date`
+- `closedAt     DateTime?         @map("closed_at")`
+- `notes        String?`
+- `createdAt    DateTime          @default(now()) @map("created_at")`
+- `updatedAt    DateTime          @updatedAt @map("updated_at")`
+- `slots        HiringCycleSlot[]`
+- `applications Application[]`
+
+Indexes and constraints:
+
+- `@@unique([term, year])`
+- `@@index([status])`
+- `@@map("hiring_cycles")`
+
+## Model `HiringCycleSlot`
+
+Fields: 5
+
+- `id          String      @id @default(cuid())`
+- `cycleId     String      @map("cycle_id")`
+- `area        ShiftArea`
+- `targetCount Int         @map("target_count")`
+- `cycle       HiringCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)`
+
+Indexes and constraints:
+
+- `@@unique([cycleId, area])`
+- `@@map("hiring_cycle_slots")`
+
+## Model `Applicant`
+
+Fields: 18
+
+- `id            String             @id @default(cuid())`
+- `name          String`
+- `nameKey       String             @default("") @map("name_key")`
+- `standing      ApplicantStanding?`
+- `gradTerm      GraduationTerm?    @map("grad_term")`
+- `gradYear      Int?               @map("grad_year")`
+- `phone         String?`
+- `location      String?`
+- `portfolioUrl  String?            @map("portfolio_url")`
+- `socialHandles String?            @map("social_handles")`
+- `notes         String?`
+- `hiredUserId   String?            @unique @map("hired_user_id")`
+- `purgedAt      DateTime?          @map("purged_at")`
+- `createdAt     DateTime           @default(now()) @map("created_at")`
+- `updatedAt     DateTime           @updatedAt @map("updated_at")`
+- `hiredUser     User?              @relation("ApplicantHiredUser", fields: [hiredUserId], references: [id], onDelete: SetNull)`
+- `emails        ApplicantEmail[]`
+- `applications  Application[]`
+
+Indexes and constraints:
+
+- `@@index([name])`
+- `@@index([nameKey])`
+- `@@map("applicants")`
+
+## Model `ApplicantEmail`
+
+Fields: 6
+
+- `id          String    @id @default(cuid())`
+- `applicantId String    @map("applicant_id")`
+- `email       String    @unique`
+- `isPrimary   Boolean   @default(false) @map("is_primary")`
+- `createdAt   DateTime  @default(now()) @map("created_at")`
+- `applicant   Applicant @relation(fields: [applicantId], references: [id], onDelete: Cascade)`
+
+Indexes and constraints:
+
+- `@@index([applicantId])`
+- `@@map("applicant_emails")`
+
+## Model `Application`
+
+Fields: 27
+
+- `id                    String              @id @default(cuid())`
+- `applicantId           String              @map("applicant_id")`
+- `cycleId               String              @map("cycle_id")`
+- `externalApplicationId String?             @map("external_application_id")`
+- `stage                 ApplicationStage    @default(APPLIED)`
+- `reviewed              Boolean             @default(false)`
+- `reviewedAt            DateTime?           @map("reviewed_at")`
+- `interviewedAt         DateTime?           @map("interviewed_at")`
+- `interviewUrl          String?             @map("interview_url")`
+- `summerAvailable       Boolean?            @map("summer_available")`
+- `softwareExperience    String[]            @default([]) @map("software_experience")`
+- `fieldsExperience      String[]            @default([]) @map("fields_experience")`
+- `fieldsInterested      String[]            @default([]) @map("fields_interested")`
+- `rawAreas              String[]            @default([]) @map("raw_areas")`
+- `primaryArea           ShiftArea?          @map("primary_area")`
+- `decidedAt             DateTime?           @map("decided_at")`
+- `decidedById           String?             @map("decided_by_id")`
+- `allowedEmailId        String?             @map("allowed_email_id")`
+- `sourcePayload         Json?               @map("source_payload")`
+- `createdAt             DateTime            @default(now()) @map("created_at")`
+- `updatedAt             DateTime            @updatedAt @map("updated_at")`
+- `applicant             Applicant           @relation(fields: [applicantId], references: [id], onDelete: Cascade)`
+- `cycle                 HiringCycle         @relation(fields: [cycleId], references: [id], onDelete: Cascade)`
+- `decidedBy             User?               @relation("ApplicationDecider", fields: [decidedById], references: [id], onDelete: SetNull)`
+- `allowedEmail          AllowedEmail?       @relation("ApplicationInvite", fields: [allowedEmailId], references: [id], onDelete: SetNull)`
+- `documents             ApplicantDocument[]`
+- `reviewNotes           ApplicationNote[]`
+
+Indexes and constraints:
+
+- `@@unique([applicantId, cycleId])`
+- `@@unique([cycleId, externalApplicationId])`
+- `@@index([cycleId, stage])`
+- `@@index([decidedById])`
+- `@@index([allowedEmailId])`
+- `@@map("applications")`
+
+## Model `ApplicantDocument`
+
+Fields: 11
+
+- `id            String                @id @default(cuid())`
+- `applicationId String                @map("application_id")`
+- `kind          ApplicantDocumentKind`
+- `pathname      String                @unique`
+- `fileName      String                @map("file_name")`
+- `contentType   String                @map("content_type")`
+- `sizeBytes     Int                   @map("size_bytes")`
+- `uploadedById  String?               @map("uploaded_by_id")`
+- `createdAt     DateTime              @default(now()) @map("created_at")`
+- `application   Application           @relation(fields: [applicationId], references: [id], onDelete: Cascade)`
+- `uploadedBy    User?                 @relation("ApplicantDocumentUploader", fields: [uploadedById], references: [id], onDelete: SetNull)`
+
+Indexes and constraints:
+
+- `@@index([applicationId])`
+- `@@index([uploadedById])`
+- `@@map("applicant_documents")`
+
+## Model `ApplicationNote`
+
+Fields: 8
+
+- `id            String      @id @default(cuid())`
+- `applicationId String      @map("application_id")`
+- `authorId      String?     @map("author_id")`
+- `body          String`
+- `rating        Int?`
+- `createdAt     DateTime    @default(now()) @map("created_at")`
+- `application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)`
+- `author        User?       @relation("ApplicationNoteAuthor", fields: [authorId], references: [id], onDelete: SetNull)`
+
+Indexes and constraints:
+
+- `@@index([applicationId, createdAt])`
+- `@@index([authorId])`
+- `@@map("application_notes")`
+
+## Model `StudentTermPlacement`
+
+Fields: 10
+
+- `id         String         @id @default(cuid())`
+- `userId     String         @map("user_id")`
+- `term       GraduationTerm`
+- `year       Int`
+- `area       ShiftArea?`
+- `sportCodes String[]       @default([]) @map("sport_codes")`
+- `notes      String?`
+- `createdAt  DateTime       @default(now()) @map("created_at")`
+- `updatedAt  DateTime       @updatedAt @map("updated_at")`
+- `user       User           @relation("TermPlacementUser", fields: [userId], references: [id], onDelete: Cascade)`
+
+Indexes and constraints:
+
+- `@@unique([userId, term, year])`
+- `@@index([year, term])`
+- `@@map("student_term_placements")`
+
+## Model `ApplicantRetentionEvent`
+
+Fields: 7
+
+- `id               String   @id @default(cuid())`
+- `applicantId      String   @map("applicant_id")`
+- `purgedAt         DateTime @default(now()) @map("purged_at")`
+- `applicationCount Int      @map("application_count")`
+- `documentCount    Int      @map("document_count")`
+- `policyMonths     Int      @map("policy_months")`
+- `pendingBlobPaths String[] @default([]) @map("pending_blob_paths")`
+
+Indexes and constraints:
+
+- `@@index([applicantId])`
+- `@@index([purgedAt])`
+- `@@map("applicant_retention_events")`

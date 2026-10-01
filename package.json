@@ -47,6 +47,7 @@
       "nanoid": "5.1.16"
     },
     "@xmldom/xmldom": "0.9.12",
+    "@xhmikosr/decompress": "11.1.4",
     "browserslist": "4.28.9",
     "baseline-browser-mapping": "2.11.0",
     "devalue": "5.9.1",

@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { withAuth } from "@/lib/api";
 import { ok, parsePagination } from "@/lib/http";
+import { excludeHiringInvites } from "@/lib/hiring/invite-scope";
 import { requirePermission } from "@/lib/rbac";
 import { createAllowedEmailSchema, createAllowedEmailBulkSchema } from "@/lib/validation";
 import { enforceRateLimit, SETTINGS_MUTATION_LIMIT } from "@/lib/rate-limit";
@@ -38,6 +39,8 @@ export const GET = withAuth(async (req, { user }) => {
   } else if (status === "unclaimed") {
     conditions.push({ claimedAt: null });
   }
+  const hidden = excludeHiringInvites(user.role);
+  if (hidden) conditions.push(hidden);
   const where: Prisma.AllowedEmailWhereInput = conditions.length > 0 ? { AND: conditions } : {};
 
   const [data, total] = await Promise.all([

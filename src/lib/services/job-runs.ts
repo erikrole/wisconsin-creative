@@ -12,7 +12,8 @@ export type JobName =
   | "claim_review"
   | "schedule_release"
   | "shift_reminder"
-  | "morning_refresh";
+  | "morning_refresh"
+  | "applicant_retention";
 
 export function latenessBucket(dueAt: Date | null | undefined, now = new Date()): string | null {
   if (!dueAt) return null;

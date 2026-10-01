@@ -22,6 +22,7 @@ const mocks = vi.hoisted(() => {
     studentAvailabilityBlock: { deleteMany },
     studentSportAssignment: { deleteMany },
     studentAreaAssignment: { deleteMany },
+    studentTermPlacement: { deleteMany },
     studentBadge: { deleteMany },
     badgeStreak: { deleteMany },
     badgeEventReceipt: { deleteMany },
@@ -103,6 +104,7 @@ beforeEach(() => {
     mocks.tx.studentAvailabilityBlock,
     mocks.tx.studentSportAssignment,
     mocks.tx.studentAreaAssignment,
+    mocks.tx.studentTermPlacement,
     mocks.tx.studentBadge,
     mocks.tx.badgeStreak,
     mocks.tx.badgeEventReceipt,
@@ -143,6 +145,7 @@ describe("self-service account erasure", () => {
     expect(mocks.tx.passkeyCredential.deleteMany).toHaveBeenCalledWith({ where: { userId: "user-1" } });
     expect(mocks.tx.notification.deleteMany).toHaveBeenCalledWith({ where: { userId: "user-1" } });
     expect(mocks.tx.webPushSubscription.deleteMany).toHaveBeenCalledWith({ where: { userId: "user-1" } });
+    expect(mocks.tx.studentTermPlacement.deleteMany).toHaveBeenCalledWith({ where: { userId: "user-1" } });
     expect(mocks.tx.user.update).toHaveBeenCalledWith(expect.objectContaining({
       where: { id: "user-1" },
       data: expect.objectContaining({
@@ -150,6 +153,9 @@ describe("self-service account erasure", () => {
         name: "Deleted User",
         email: "deleted+user-1@deleted.invalid",
         passwordHash: "deleted-password-hash",
+        // Workforce history is erased with the rest of the personal data (D-065).
+        startTerm: null,
+        startTermYear: null,
         avatarUrl: null,
         notificationPrefs: expect.anything(),
         icsToken: null,

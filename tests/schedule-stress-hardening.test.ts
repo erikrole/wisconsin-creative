@@ -79,7 +79,7 @@ describe("Schedule stress-test hardening", () => {
     // The credential itself never leaves the server after it is minted.
     expect(source("src/app/api/users/[id]/route.ts")).toContain("hasIcsToken: isSelf ? Boolean(target.icsToken) : undefined,");
     expect(source("src/app/api/users/[id]/route.ts")).not.toContain("icsToken: isSelf ? (target.icsToken");
-    expect(source("src/lib/services/user-deactivation.ts")).toContain(": { active: false, icsToken: null },");
+    expect(source("src/lib/services/user-deactivation.ts")).toContain(": { active: false, deactivatedAt: new Date(), icsToken: null },");
     expect(source("src/app/api/users/[id]/role/route.ts")).toContain('...(body.role === "COLLABORATOR" ? { icsToken: null } : {}),');
     expect(source("src/app/(app)/users/[id]/UserInfoTab.tsx")).toContain('title: "Reset private link?"');
     expect(source("ios/Wisconsin/Shared/AppEnvironment.swift")).toContain('webcal://\\(activeAPIHost)');
