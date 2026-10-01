@@ -151,6 +151,14 @@ describe("planImport", () => {
     expect(plan[1]).toMatchObject({ action: "skip_existing" });
   });
 
+  it("reports a second row for the same applicant matched through a different known email", () => {
+    const existing = [{ id: "p1", name: "Alex Sample", gradTerm: "SPRING" as const, gradYear: 2027, emails: ["alex@example.edu", "alex.old@example.com"] }];
+    const csv = ["Name,Email", "Alex Sample,alex@example.edu", "Alex Sample,alex.old@example.com"].join("\n");
+    const plan = planImport(parseApplicantCsv(csv).records, existing, none);
+    expect(plan.map((p) => p.action)).toEqual(["attach", "duplicate_in_file"]);
+    expect(plan[1]!.reason).toContain("different email");
+  });
+
   it("reports repeated emails and likely same-person rows within one file", () => {
     const csv = [
       "Name,Email,Graduation",
@@ -341,6 +349,32 @@ describe("import routes", () => {
     await importApplicants(post("/api/hiring/import", { cycleId: CYCLE, csv: "Name,Email\nRen\u00e9e O'Brien,renee@example.edu\n" }), ctx);
     const where = models.applicant.findMany.mock.calls[0]![0].where;
     expect(JSON.stringify(where)).toContain('"nameKey":{"in":["renee o brien"]}');
+  });
+
+  it("rejects 'a blank decision means passed over' for an open or planned cycle", async () => {
+    for (const status of ["OPEN", "PLANNING"]) {
+      models.hiringCycle.findUnique.mockResolvedValue({ id: CYCLE, label: "Fall 2026", status });
+      const res = await importApplicants(post("/api/hiring/import", { cycleId: CYCLE, csv: PAGEUP, blankDecisionMeansPassed: true, apply: true }), ctx);
+      expect(res.status).toBe(400);
+    }
+    expect(models.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("allows the option for a closed or archived cycle, and previews the stages applicants will take", async () => {
+    models.hiringCycle.findUnique.mockResolvedValue({ id: CYCLE, label: "Spring 2026", status: "CLOSED" });
+    const res = await importApplicants(post("/api/hiring/import", { cycleId: CYCLE, csv: PAGEUP, blankDecisionMeansPassed: true }), ctx);
+    expect(res.status).toBe(200);
+    const { data } = await res.json();
+    // Blank decisions become Passed; the explicit "Round 1" row stays Round 1.
+    expect(data.stages).toEqual({ PASSED: 2, ROUND_1: 1 });
+  });
+
+  it("flags rows whose email already belongs to an account so the preview can show them", async () => {
+    models.user.findMany.mockResolvedValue([{ email: "alex@example.edu" }]);
+    const res = await importApplicants(post("/api/hiring/import", { cycleId: CYCLE, csv: PAGEUP }), ctx);
+    const { data } = await res.json();
+    expect(data.rows.find((r: { name: string }) => r.name === "Alex Sample").hasAccount).toBe(true);
+    expect(data.rows.find((r: { name: string }) => r.name === "Jordan Fictional").hasAccount).toBe(false);
   });
 
   it("rejects an empty file", async () => {

@@ -11,7 +11,7 @@
 
 | Model | Fields | Model-level indexes/constraints |
 |---|---:|---:|
-| `User` | 127 | 5 |
+| `User` | 128 | 5 |
 | `Session` | 6 | 2 |
 | `PasswordResetToken` | 6 | 2 |
 | `PasskeyCredential` | 12 | 2 |

@@ -23,6 +23,7 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
       allowedEmail: { select: { id: true, claimedAt: true } },
       applicant: {
         include: {
+          hiredUser: { select: { active: true, deactivatedAt: true } },
           // Newest first: the latest address is the default for a hire invite.
           emails: { orderBy: { createdAt: "desc" }, select: { email: true, isPrimary: true } },
           applications: {
@@ -46,7 +47,7 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
 
   const { applicant } = application;
   const purgeOn = purgeDate({
-    linkedToAccount: Boolean(applicant.hiredUserId),
+    linkedAccount: applicant.hiredUser,
     purged: Boolean(applicant.purgedAt),
     cycles: [application.cycle, ...applicant.applications.map((a) => a.cycle)],
   });

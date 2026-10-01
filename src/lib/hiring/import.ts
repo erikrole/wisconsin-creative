@@ -221,6 +221,8 @@ export function planImport(
 ): PlanItem[] {
   const seenEmails = new Set<string>();
   const seenExternal = new Set<string>();
+  // Applicants already receiving an application in this file (matched through any alias).
+  const plannedApplicants = new Set<string>();
   // Rows planned as new people, so two rows for one person with different emails are flagged.
   const planned: ExistingApplicant[] = [];
   return records.map((record) => {
@@ -245,6 +247,13 @@ export function planImport(
       if (alreadyInCycle.applicantIds.has(hard.applicantId)) {
         return { record, action: "skip_existing", applicantId: hard.applicantId, reason: "Already has an application in this cycle" } satisfies PlanItem;
       }
+      // A second row for the same person under a different known email would insert a second
+      // application for one applicant and cycle, violating the unique key and rolling back the
+      // whole import. Report it instead.
+      if (plannedApplicants.has(hard.applicantId)) {
+        return { record, action: "duplicate_in_file", applicantId: hard.applicantId, reason: `Another row in this file already adds an application for ${hard.name} (different email)` } satisfies PlanItem;
+      }
+      plannedApplicants.add(hard.applicantId);
       return { record, action: "attach", applicantId: hard.applicantId, reason: `Known applicant: ${hard.name}` } satisfies PlanItem;
     }
     const soft = matches[0];

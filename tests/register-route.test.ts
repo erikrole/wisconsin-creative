@@ -341,7 +341,12 @@ describe("POST /api/auth/register", () => {
   it("links a hired applicant to the new account inside the claim transaction", async () => {
     vi.mocked(db.allowedEmail.findUnique).mockResolvedValue(allowedInvite(Role.STUDENT));
     tx.user.create.mockResolvedValue(createdUser(Role.STUDENT, null));
-    tx.application.findFirst.mockResolvedValue({ id: "app-1", applicantId: "applicant-1", cycle: { term: "FALL", year: 2026 } });
+    tx.application.findFirst.mockResolvedValue({
+      id: "app-1",
+      applicantId: "applicant-1",
+      cycle: { term: "FALL", year: 2026 },
+      applicant: { gradTerm: "SPRING", gradYear: 2029 },
+    });
     tx.applicant.updateMany.mockResolvedValue({ count: 1 });
 
     const response = await POST(
@@ -355,9 +360,10 @@ describe("POST /api/auth/register", () => {
       expect.objectContaining({ where: { allowedEmailId: "invite-student", stage: "HIRE" } }),
     );
     // The student starts in the hiring cycle's term.
+    // ...and keep the graduation date the applicant gave, so planning does not assume they stay forever.
     expect(tx.user.update).toHaveBeenCalledWith({
       where: { id: "user-student" },
-      data: { startTerm: "FALL", startTermYear: 2026 },
+      data: { startTerm: "FALL", startTermYear: 2026, gradYear: 2029, graduationTerm: "SPRING" },
     });
     // Never overwrites an existing link.
     expect(tx.applicant.updateMany).toHaveBeenCalledWith({

@@ -393,13 +393,23 @@ export default function HiringClient() {
           title={`Import applicants into ${cycle.label}`}
           description="Works with the PageUp export and the Google Form or prospect sheets. Known people are matched by email; likely duplicates are flagged, never merged."
           endpoint="/api/hiring/import"
-          extraPayload={{ cycleId: cycle.id, blankDecisionMeansPassed: blankPassed }}
+          extraPayload={{ cycleId: cycle.id, blankDecisionMeansPassed: blankPassed && (cycle.status === "CLOSED" || cycle.status === "ARCHIVED") }}
           extraControls={
             <label className="flex items-start gap-2 text-sm">
-              <input type="checkbox" className="mt-1" checked={blankPassed} onChange={(e) => setBlankPassed(e.target.checked)} />
+              <input
+                type="checkbox"
+                className="mt-1"
+                checked={blankPassed && (cycle.status === "CLOSED" || cycle.status === "ARCHIVED")}
+                disabled={cycle.status === "OPEN" || cycle.status === "PLANNING"}
+                onChange={(e) => setBlankPassed(e.target.checked)}
+              />
               <span>
                 A blank decision means passed over
-                <span className="block text-xs text-muted-foreground">Use for finished cycles such as Spring 2026. Leave off for an open cycle.</span>
+                <span className="block text-xs text-muted-foreground">
+                  {cycle.status === "OPEN" || cycle.status === "PLANNING"
+                    ? "Available once the cycle is closed. An open cycle still has undecided applicants."
+                    : "Use for finished cycles such as Spring 2026."}
+                </span>
               </span>
             </label>
           }

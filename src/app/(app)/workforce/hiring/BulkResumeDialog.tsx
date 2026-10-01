@@ -174,6 +174,8 @@ export default function BulkResumeDialog({
                     {apps.map((a) => (
                       <option key={a.id} value={a.id}>
                         {a.name}
+                        {a.email ? ` · ${a.email}` : ""}
+                        {a.externalApplicationId ? ` · #${a.externalApplicationId}` : ""}
                         {a.hasResume ? " (has resume)" : ""}
                       </option>
                     ))}

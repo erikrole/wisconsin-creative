@@ -11,9 +11,11 @@ import { messageOf } from "./hiring/types";
 type Report = {
   applied: boolean;
   counts: Record<string, number>;
+  /** Stages the importable rows will take, so a stage mistake is visible before Apply. */
+  stages?: Record<string, number>;
   unmappedHeaders?: string[];
   invalid?: { line: number; name: string; reason: string }[];
-  rows: { line: number; name: string; action: string; reason?: string; warnings: string[] }[];
+  rows: { line: number; name: string; action: string; reason?: string; warnings: string[]; hasAccount?: boolean }[];
 };
 
 const COUNT_LABELS: Record<string, string> = {
@@ -124,7 +126,7 @@ export default function CsvImportDialog({
     setError(null);
   }
 
-  const attention = report?.rows.filter((r) => r.action === "needs_review" || r.action === "duplicate_in_file" || r.action === "unmatched" || r.warnings.length > 0) ?? [];
+  const attention = report?.rows.filter((r) => r.action === "needs_review" || r.action === "duplicate_in_file" || r.action === "unmatched" || r.hasAccount || r.warnings.length > 0) ?? [];
   const writable = report ? (report.counts.create ?? 0) + (report.counts.attach ?? 0) + (report.counts.updated ?? 0) > 0 : false;
 
   return (
@@ -185,6 +187,14 @@ export default function CsvImportDialog({
                     </div>
                   ))}
               </dl>
+              {report.stages && Object.keys(report.stages).length > 0 && (
+                <p className="text-sm">
+                  <span className="font-medium">They will be added as: </span>
+                  {Object.entries(report.stages)
+                    .map(([stage, n]) => `${n} ${stage.replace("_", " ").toLowerCase()}`)
+                    .join(", ")}
+                </p>
+              )}
               {report.unmappedHeaders && report.unmappedHeaders.length > 0 && (
                 <p className="text-xs text-muted-foreground">Columns not imported: {report.unmappedHeaders.join(", ")}</p>
               )}
@@ -199,7 +209,9 @@ export default function CsvImportDialog({
                     {attention.map((r) => (
                       <li key={r.line} className="p-2">
                         <span className="font-medium">Row {r.line} · {r.name}</span>{" "}
-                        <span className="text-muted-foreground">{[r.reason, ...r.warnings].filter(Boolean).join(" · ")}</span>
+                        <span className="text-muted-foreground">
+                          {[r.reason, r.hasAccount ? "An account already exists for this email" : null, ...r.warnings].filter(Boolean).join(" · ")}
+                        </span>
                       </li>
                     ))}
                   </ul>

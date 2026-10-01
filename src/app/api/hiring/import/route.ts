@@ -26,8 +26,13 @@ export const POST = withAuth(async (req, { user }) => {
   await enforceRateLimit(`hiring:import:${user.id}`, SETTINGS_MUTATION_LIMIT);
   const body = importSchema.parse(await req.json());
 
-  const cycle = await db.hiringCycle.findUnique({ where: { id: body.cycleId }, select: { id: true, label: true } });
+  const cycle = await db.hiringCycle.findUnique({ where: { id: body.cycleId }, select: { id: true, label: true, status: true } });
   if (!cycle) throw new HttpError(404, "Hiring cycle not found.");
+  // "A blank decision means passed over" is only true once a cycle has finished. On an open or
+  // planned cycle it would write every undecided applicant, interviewed or not, as Passed.
+  if (body.blankDecisionMeansPassed && (cycle.status === "OPEN" || cycle.status === "PLANNING")) {
+    throw new HttpError(400, "Close the cycle before importing with 'a blank decision means passed over'. An open cycle has undecided applicants.");
+  }
 
   const parsed = parseApplicantCsv(body.csv, { blankDecisionMeansPassed: body.blankDecisionMeansPassed });
   if (parsed.records.length + parsed.invalid.length > MAX_IMPORT_ROWS) {
@@ -71,6 +76,12 @@ export const POST = withAuth(async (req, { user }) => {
     invalid: parsed.invalid.length,
   };
   for (const item of plan) counts[item.action]++;
+
+  // What the applicants will become, so the admin can review it before applying.
+  const stages: Record<string, number> = {};
+  for (const item of plan) {
+    if (item.action === "create" || item.action === "attach") stages[item.record.stage] = (stages[item.record.stage] ?? 0) + 1;
+  }
 
   let applied = false;
   if (body.apply) {
@@ -152,6 +163,7 @@ export const POST = withAuth(async (req, { user }) => {
       applied,
       cycle: cycle.label,
       counts,
+      stages,
       unmappedHeaders: parsed.unmappedHeaders,
       invalid: parsed.invalid,
       rows: plan.map((p) => ({

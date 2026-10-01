@@ -131,6 +131,7 @@ function makeUser(overrides: Partial<User> = {}): User {
     birthYear: null,
     startTerm: null,
     startTermYear: null,
+    deactivatedAt: null,
     icsToken: null,
     ...overrides,
   };

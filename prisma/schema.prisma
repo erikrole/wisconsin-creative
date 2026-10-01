@@ -335,6 +335,9 @@ model User {
   /// Students start by term ("Fall 2025"), not by date; staff keep `startDate`.
   startTerm           GraduationTerm? @map("start_term")
   startTermYear       Int?            @map("start_term_year")
+  /// When the account was last deactivated; null while active. Starts the 36-month retention
+  /// clock for a hired student's applicant record (D-065).
+  deactivatedAt       DateTime?       @map("deactivated_at")
 
   @@index([active, hiddenFromRoster])
   @@index([role, affiliation])

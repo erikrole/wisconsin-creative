@@ -23,20 +23,30 @@ export function retentionCutoff(now: Date = new Date()): Date {
 
 type RetentionCycle = { status: HiringCycleStatus; closedAt: Date | null };
 
+/** The account a hired applicant became; its deactivation date starts their retention clock. */
+export type LinkedAccount = { active: boolean; deactivatedAt: Date | null };
+
 /**
  * When an applicant's personal data is due to be purged, or null when it is not
- * scheduled: they are linked to an account (kept while that account is active),
- * any of their cycles is still open or planned, or a cycle has no recorded close
- * time. The clock is the latest close time across all of their applications.
+ * scheduled: any of their cycles is still open or planned, a cycle has no recorded close
+ * time, or they are linked to an account that is still active (or whose deactivation date
+ * is unknown). The clock is the latest close time across all of their applications; for
+ * a hired student it starts no earlier than their account's deactivation (D-065).
  */
-export function purgeDate(input: { linkedToAccount: boolean; purged: boolean; cycles: RetentionCycle[] }): Date | null {
-  if (input.linkedToAccount || input.purged || input.cycles.length === 0) return null;
+export function purgeDate(input: { linkedAccount: LinkedAccount | null; purged: boolean; cycles: RetentionCycle[] }): Date | null {
+  if (input.purged || input.cycles.length === 0) return null;
   let latest: Date | null = null;
   for (const cycle of input.cycles) {
     if (cycle.status === "OPEN" || cycle.status === "PLANNING" || !cycle.closedAt) return null;
     if (!latest || cycle.closedAt > latest) latest = cycle.closedAt;
   }
-  return latest ? addMonths(latest, APPLICANT_RETENTION_MONTHS) : null;
+  if (!latest) return null;
+  if (input.linkedAccount) {
+    // A current worker's record is kept; so is one whose deactivation date was never recorded.
+    if (input.linkedAccount.active || !input.linkedAccount.deactivatedAt) return null;
+    if (input.linkedAccount.deactivatedAt > latest) latest = input.linkedAccount.deactivatedAt;
+  }
+  return addMonths(latest, APPLICANT_RETENTION_MONTHS);
 }
 
 /** Applicants whose retention window has fully elapsed, oldest first. */
@@ -45,7 +55,8 @@ export async function findPurgeCandidates(now: Date, limit: number): Promise<str
   const rows = await db.applicant.findMany({
     where: {
       purgedAt: null,
-      hiredUserId: null,
+      // Unlinked applicants, or hired students whose account was deactivated long enough ago.
+      OR: [{ hiredUserId: null }, { hiredUser: { is: { active: false, deactivatedAt: { lte: cutoff } } } }],
       applications: {
         some: {},
         // No application may sit in a cycle that is unclosed or closed inside the window.
@@ -82,7 +93,7 @@ export async function purgeApplicant(applicantId: string, now: Date = new Date()
           select: {
             id: true,
             purgedAt: true,
-            hiredUserId: true,
+            hiredUser: { select: { active: true, deactivatedAt: true } },
             applications: {
               select: {
                 id: true,
@@ -93,9 +104,9 @@ export async function purgeApplicant(applicantId: string, now: Date = new Date()
             },
           },
         });
-        if (!applicant || applicant.purgedAt || applicant.hiredUserId) return null;
+        if (!applicant || applicant.purgedAt) return null;
 
-        const due = purgeDate({ linkedToAccount: false, purged: false, cycles: applicant.applications.map((a) => a.cycle) });
+        const due = purgeDate({ linkedAccount: applicant.hiredUser, purged: false, cycles: applicant.applications.map((a) => a.cycle) });
         if (!due || due > now) return null;
 
         const pathnames = applicant.applications.flatMap((a) => a.documents.map((d) => d.pathname));
@@ -193,9 +204,15 @@ export async function sweepPendingBlobs(limit = 25): Promise<{ swept: number; fa
 }
 
 export const RETENTION_BATCH_SIZE = 25;
-/** Per-run ceilings so the weekly job drains a backlog without running unbounded. */
+/** Per-run ceiling on batches so a run is bounded even without the time budget. */
 export const RETENTION_MAX_BATCHES = 20;
-export const RETENTION_TIME_BUDGET_MS = 40_000;
+/**
+ * Default wall-clock budget for one pass. The crons that run this are sized for the Hobby
+ * 10-second function limit (the repo's other crons reserve 8 seconds in total), and the
+ * weekly audit-archive job spends time before it gets here, so the default is small. A
+ * caller with more room passes a larger `budgetMs`; whatever is left carries to the next run.
+ */
+export const RETENTION_TIME_BUDGET_MS = 3_000;
 
 export type RetentionRunResult = {
   dryRun: boolean;
@@ -208,12 +225,19 @@ export type RetentionRunResult = {
 };
 
 /**
- * One retention pass, run from the weekly audit-archive cron so no extra cron slot is
- * used. It drains every due batch (up to a batch and time ceiling) so a whole cycle that
- * reaches its deadline together is purged in one run, retries queued file deletions, and
- * never lets one applicant's failure block the rest. `dryRun` only reports how many are due.
+ * One retention pass, run from existing crons so no extra cron slot is used (the weekly
+ * audit-archive job and the nightly morning-refresh job both call it). It purges due
+ * applicants in batches until the time budget, the batch ceiling, or the due list is
+ * exhausted, checking the clock before every applicant so it never overruns the platform
+ * limit; retries queued file deletions if time remains; and never lets one applicant's
+ * failure block the rest. `hasMore` reports that work was left for the next run.
+ * `dryRun` only reports how many are due.
  */
-export async function runApplicantRetention(now: Date = new Date(), options: { dryRun?: boolean } = {}): Promise<RetentionRunResult> {
+export async function runApplicantRetention(
+  now: Date = new Date(),
+  options: { dryRun?: boolean; budgetMs?: number } = {},
+): Promise<RetentionRunResult> {
+  const budgetMs = options.budgetMs ?? RETENTION_TIME_BUDGET_MS;
   const result: RetentionRunResult = {
     dryRun: Boolean(options.dryRun),
     due: 0,
@@ -224,6 +248,9 @@ export async function runApplicantRetention(now: Date = new Date(), options: { d
     blobsSwept: 0,
   };
 
+  const started = Date.now();
+  const outOfTime = () => Date.now() - started >= budgetMs;
+
   const first = await findPurgeCandidates(now, RETENTION_BATCH_SIZE);
   result.due = first.length;
   if (options.dryRun) {
@@ -231,11 +258,15 @@ export async function runApplicantRetention(now: Date = new Date(), options: { d
     return result;
   }
 
-  const started = Date.now();
   let batch = first;
-  for (let batchNumber = 0; batchNumber < RETENTION_MAX_BATCHES && batch.length > 0; batchNumber += 1) {
+  let timedOut = false;
+  for (let batchNumber = 0; batchNumber < RETENTION_MAX_BATCHES && batch.length > 0 && !timedOut; batchNumber += 1) {
     let progressed = 0;
     for (const applicantId of batch) {
+      if (outOfTime()) {
+        timedOut = true;
+        break;
+      }
       try {
         const purged = await purgeApplicant(applicantId, now);
         if (!purged) continue;
@@ -254,22 +285,25 @@ export async function runApplicantRetention(now: Date = new Date(), options: { d
         result.failed += 1;
       }
     }
-    // Stop when a full batch made no progress (every candidate lost a race or failed),
-    // when the last batch was short (nothing more is due), or when the time budget is spent.
+    if (timedOut) break;
+    // Stop when a full batch made no progress (every candidate lost a race or failed) or
+    // when the last batch was short (nothing more is due).
     if (progressed === 0 || batch.length < RETENTION_BATCH_SIZE) break;
-    if (Date.now() - started > RETENTION_TIME_BUDGET_MS) {
-      result.hasMore = true;
-      break;
-    }
     batch = await findPurgeCandidates(now, RETENTION_BATCH_SIZE);
     if (batchNumber === RETENTION_MAX_BATCHES - 1 && batch.length > 0) result.hasMore = true;
   }
+  if (timedOut) result.hasMore = true;
 
-  const sweep = await sweepPendingBlobs();
-  result.blobsSwept = sweep.swept;
-  result.failed += sweep.failed;
+  // Retry queued file deletions only when there is time left to do it safely.
+  if (!outOfTime()) {
+    const sweep = await sweepPendingBlobs();
+    result.blobsSwept = sweep.swept;
+    result.failed += sweep.failed;
+  } else {
+    result.hasMore = true;
+  }
 
-  if (result.purged > 0 || result.failed > 0 || sweep.swept > 0) {
+  if (result.purged > 0 || result.failed > 0 || result.blobsSwept > 0) {
     await recordJobRun({
       job: "applicant_retention",
       outcome: result.failed === 0 ? "succeeded" : "failed",

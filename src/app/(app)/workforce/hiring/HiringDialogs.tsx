@@ -167,8 +167,13 @@ export function AddApplicantDialog({
   const [busy, setBusy] = useState(false);
   const [matches, setMatches] = useState<PossibleMatch[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+  const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    // The duplicate choices were computed for the previous values. Once any field changes they
+    // are stale ("Same person" would attach the new email and details to the wrong applicant),
+    // so drop them and let the next save run duplicate detection again.
+    setMatches(null);
     setForm((f) => ({ ...f, [key]: e.target.value }));
+  };
 
   async function submit(options?: { existingApplicantId?: string; confirmNotDuplicate?: boolean }) {
     setBusy(true);

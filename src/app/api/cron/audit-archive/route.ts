@@ -72,7 +72,9 @@ export const GET = withCron(async () => {
 
   let applicantRetention: RetentionRunResult | null = null;
   try {
-    applicantRetention = await runApplicantRetention(now);
+    // Small budget: this job has already spent time on audit and session cleanup, and the
+    // function limit is 10 seconds. Anything left over is continued by the nightly morning-refresh run.
+    applicantRetention = await runApplicantRetention(now, { budgetMs: 2500 });
     if (applicantRetention.failed > 0) {
       partialFailures.push("applicantRetention");
       errors.applicantRetention = `${applicantRetention.failed} applicant purge(s) failed; they retry next run`;

@@ -126,10 +126,15 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
       async (tx) => {
         const current = await tx.application.findUnique({
           where: { id: application.id },
-          select: { stage: true, allowedEmailId: true },
+          select: { stage: true, allowedEmailId: true, applicant: { select: { purgedAt: true } } },
         });
         if (!current || current.stage !== "HIRE") {
           throw new HttpError(409, "This application is no longer marked Hire, so no invite was created.");
+        }
+        // A purge that committed after the first read must not be undone by writing the
+        // applicant's name and email into a new invitation.
+        if (current.applicant.purgedAt) {
+          throw new HttpError(409, "This applicant's personal data was purged, so no invite was created.");
         }
         if (current.allowedEmailId) throw new HttpError(409, "An invitation was already sent for this application.");
 

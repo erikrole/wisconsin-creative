@@ -55,32 +55,52 @@ describe("retention policy", () => {
   });
 
   it("schedules the purge 36 months after the latest cycle close", () => {
-    const date = purgeDate({ linkedToAccount: false, purged: false, cycles: [closed("2025-05-01T00:00:00Z"), closed("2026-05-01T00:00:00Z")] });
+    const date = purgeDate({ linkedAccount: null, purged: false, cycles: [closed("2025-05-01T00:00:00Z"), closed("2026-05-01T00:00:00Z")] });
     expect(date?.toISOString()).toBe("2029-05-01T00:00:00.000Z");
   });
 
   it("is not scheduled while a cycle is open, planned, or has no close time", () => {
-    expect(purgeDate({ linkedToAccount: false, purged: false, cycles: [closed("2024-01-01T00:00:00Z"), { status: "OPEN", closedAt: null }] })).toBeNull();
-    expect(purgeDate({ linkedToAccount: false, purged: false, cycles: [{ status: "PLANNING", closedAt: null }] })).toBeNull();
-    expect(purgeDate({ linkedToAccount: false, purged: false, cycles: [{ status: "ARCHIVED", closedAt: null }] })).toBeNull();
+    expect(purgeDate({ linkedAccount: null, purged: false, cycles: [closed("2024-01-01T00:00:00Z"), { status: "OPEN", closedAt: null }] })).toBeNull();
+    expect(purgeDate({ linkedAccount: null, purged: false, cycles: [{ status: "PLANNING", closedAt: null }] })).toBeNull();
+    expect(purgeDate({ linkedAccount: null, purged: false, cycles: [{ status: "ARCHIVED", closedAt: null }] })).toBeNull();
   });
 
-  it("is not scheduled for linked, already purged, or application-less applicants", () => {
+  it("is not scheduled for a hired student while their account is active, or if its deactivation was never recorded", () => {
     const cycles = [closed("2020-01-01T00:00:00Z")];
-    expect(purgeDate({ linkedToAccount: true, purged: false, cycles })).toBeNull();
-    expect(purgeDate({ linkedToAccount: false, purged: true, cycles })).toBeNull();
-    expect(purgeDate({ linkedToAccount: false, purged: false, cycles: [] })).toBeNull();
+    expect(purgeDate({ linkedAccount: { active: true, deactivatedAt: null }, purged: false, cycles })).toBeNull();
+    expect(purgeDate({ linkedAccount: { active: false, deactivatedAt: null }, purged: false, cycles })).toBeNull();
+    // Even a stale deactivation date does not count while the account is active again.
+    expect(purgeDate({ linkedAccount: { active: true, deactivatedAt: new Date("2021-01-01T00:00:00Z") }, purged: false, cycles })).toBeNull();
+  });
+
+  it("starts a hired student's clock at deactivation, never earlier than the last cycle close", () => {
+    const cycles = [closed("2025-05-01T00:00:00Z")];
+    // Deactivated well after the cycle closed: the clock is the deactivation date.
+    expect(purgeDate({ linkedAccount: { active: false, deactivatedAt: new Date("2027-12-15T00:00:00Z") }, purged: false, cycles })?.toISOString()).toBe("2030-12-15T00:00:00.000Z");
+    // Deactivated before the (later) cycle closed: the later close wins.
+    expect(purgeDate({ linkedAccount: { active: false, deactivatedAt: new Date("2024-01-01T00:00:00Z") }, purged: false, cycles })?.toISOString()).toBe("2028-05-01T00:00:00.000Z");
+  });
+
+  it("is not scheduled for already purged or application-less applicants", () => {
+    const cycles = [closed("2020-01-01T00:00:00Z")];
+    expect(purgeDate({ linkedAccount: null, purged: true, cycles })).toBeNull();
+    expect(purgeDate({ linkedAccount: null, purged: false, cycles: [] })).toBeNull();
   });
 });
 
 describe("candidate query", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("asks only for unlinked, unpurged applicants whose every cycle closed before the cutoff", async () => {
+  it("asks for unpurged applicants (unlinked, or hired and long deactivated) whose every cycle closed before the cutoff", async () => {
     models.applicant.findMany.mockResolvedValue([{ id: "a1" }]);
     expect(await findPurgeCandidates(NOW, 25)).toEqual(["a1"]);
     const where = models.applicant.findMany.mock.calls[0]![0].where;
-    expect(where).toMatchObject({ purgedAt: null, hiredUserId: null });
+    expect(where.purgedAt).toBeNull();
+    // Unlinked applicants, or hired students whose account was deactivated before the cutoff.
+    expect(where.OR).toEqual([
+      { hiredUserId: null },
+      { hiredUser: { is: { active: false, deactivatedAt: { lte: new Date("2026-10-15T12:00:00.000Z") } } } },
+    ]);
     const none = where.applications.none.cycle.OR;
     expect(none).toEqual([
       { closedAt: null },
@@ -99,7 +119,7 @@ describe("purgeApplicant", () => {
   const eligible = (overrides: Record<string, unknown> = {}) => ({
     id: "a1",
     purgedAt: null,
-    hiredUserId: null,
+    hiredUser: null,
     applications: [
       {
         id: "app1",
@@ -180,13 +200,23 @@ describe("purgeApplicant", () => {
   it.each([
     ["inside the retention window", { applications: [{ id: "app1", allowedEmailId: null, cycle: closed("2027-05-01T00:00:00Z"), documents: [] }] }],
     ["a cycle still open", { applications: [{ id: "app1", allowedEmailId: null, cycle: { status: "OPEN", closedAt: null }, documents: [] }] }],
-    ["linked to an account", { hiredUserId: "u1" }],
+    ["linked to an active account", { hiredUser: { active: true, deactivatedAt: null } }],
+    ["linked to an account whose deactivation date is unknown", { hiredUser: { active: false, deactivatedAt: null } }],
+    ["linked to an account deactivated inside the window", { hiredUser: { active: false, deactivatedAt: new Date("2028-01-01T00:00:00Z") } }],
     ["already purged", { purgedAt: new Date("2029-01-01T00:00:00Z") }],
   ])("does not purge when %s", async (_label, overrides) => {
     tx.applicant.findUnique.mockResolvedValue(eligible(overrides));
     expect(await purgeApplicant("a1", NOW)).toBeNull();
     expect(tx.applicantDocument.deleteMany).not.toHaveBeenCalled();
     expect(tx.applicantRetentionEvent.create).not.toHaveBeenCalled();
+  });
+
+  it("purges a hired student once their account has been deactivated for the full period", async () => {
+    tx.applicant.findUnique.mockResolvedValue(eligible({ hiredUser: { active: false, deactivatedAt: new Date("2026-01-01T00:00:00Z") } }));
+    const result = await purgeApplicant("a1", NOW);
+    expect(result).toMatchObject({ applicantId: "a1" });
+    // The account itself is untouched: only the applicant's hiring record is purged.
+    expect(tx.applicant.update.mock.calls[0]![0].data).not.toHaveProperty("hiredUserId");
   });
 
   it("does not purge an applicant who vanished", async () => {
@@ -234,7 +264,7 @@ describe("runApplicantRetention (runs inside the weekly audit-archive cron)", ()
   const person = (id: string) => ({
     id,
     purgedAt: null,
-    hiredUserId: null,
+    hiredUser: null,
     applications: [{ id: `app-${id}`, allowedEmailId: null, cycle: { status: "CLOSED", closedAt: new Date("2020-01-01T00:00:00Z") }, documents: [{ pathname: `applicants/app-${id}/resume.pdf` }] }],
   });
   const ids = (from: number, count: number) => Array.from({ length: count }, (_, i) => ({ id: `a${from + i}` }));
@@ -276,6 +306,28 @@ describe("runApplicantRetention (runs inside the weekly audit-archive cron)", ()
     const result = await runApplicantRetention(NOW);
     expect(result.purged).toBe(20 * 25);
     expect(result.hasMore).toBe(true);
+  });
+
+  it("stops inside a batch when the time budget runs out, before the platform limit, and reports hasMore", async () => {
+    models.applicant.findMany.mockImplementation(async () => ids(0, 25));
+    tx.applicant.findUnique.mockImplementation(async () => person("x"));
+    // Each purge takes ~15ms; a 40ms budget allows only a few before stopping.
+    models.$transaction.mockImplementation(async (fn: (t: typeof tx) => Promise<unknown>) => {
+      await new Promise((resolve) => setTimeout(resolve, 15));
+      return fn(tx);
+    });
+    const result = await runApplicantRetention(NOW, { budgetMs: 40 });
+    expect(result.purged).toBeGreaterThan(0);
+    expect(result.purged).toBeLessThan(10);
+    expect(result.hasMore).toBe(true);
+    // No file sweep once the budget is spent.
+    expect(models.applicantRetentionEvent.findMany).not.toHaveBeenCalled();
+    models.$transaction.mockImplementation(async (fn: (t: typeof tx) => Promise<unknown>) => fn(tx));
+  });
+
+  it("uses a small default budget suited to the 10 second function limit", async () => {
+    const { RETENTION_TIME_BUDGET_MS } = await import("@/lib/hiring/retention");
+    expect(RETENTION_TIME_BUDGET_MS).toBeLessThanOrEqual(4000);
   });
 
   it("stops when a whole batch makes no progress, so a stuck applicant cannot loop forever", async () => {

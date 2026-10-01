@@ -329,6 +329,27 @@ export default function ApplicationSheet({ applicationId, onClose, onChanged, on
               )}
             </dl>
 
+            {[
+              ["Experience in", detail.fieldsExperience],
+              ["Interested in", detail.fieldsInterested],
+              ["Software", detail.softwareExperience],
+            ].map(([label, items]) =>
+              (items as string[]).length > 0 ? (
+                <section key={label as string} aria-label={label as string} className="grid gap-1">
+                  <h3 className="text-sm font-semibold">{label as string}</h3>
+                  <ul className="flex flex-wrap gap-1">
+                    {(items as string[]).map((item) => (
+                      <li key={item}>
+                        <Badge variant="gray" size="sm">
+                          {item}
+                        </Badge>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null,
+            )}
+
             <div className="flex flex-wrap gap-4">
               <ExternalLinkRow label="Portfolio" href={detail.applicant.portfolioUrl} />
               <ExternalLinkRow label="Interview" href={detail.interviewUrl} />

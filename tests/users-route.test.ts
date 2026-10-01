@@ -404,6 +404,7 @@ describe("PATCH /api/users/[id]", () => {
       birthYear: null,
       startTerm: null,
       startTermYear: null,
+      deactivatedAt: null,
     })));
 
     const res = await PATCH(

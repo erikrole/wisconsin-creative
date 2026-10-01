@@ -452,7 +452,9 @@ export async function previewAllowedEmailInvitesBulk(input: {
 
   const [existingAllowed, existingUsers] = await Promise.all([
     db.allowedEmail.findMany({
-      where: { email: { in: emailList } },
+      // Hire invites carry an applicant's email and name and stay inside the ADMIN-only hiring
+      // boundary (D-065): a non-admin's preview must not report them as pending invitations.
+      where: { email: { in: emailList }, ...(input.actor.role === "ADMIN" ? {} : { applications: { none: {} } }) },
       select: { email: true, role: true, claimedAt: true },
     }),
     db.user.findMany({

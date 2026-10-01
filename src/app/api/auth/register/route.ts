@@ -84,7 +84,12 @@ export const POST = withHandler(async (req) => {
       const hireApplication = await tx.application.findFirst({
         // Only a standing Hire links; a decision undone since the invite was sent does not.
         where: { allowedEmailId: allowedEntry.id, stage: "HIRE" },
-        select: { id: true, applicantId: true, cycle: { select: { term: true, year: true } } },
+        select: {
+          id: true,
+          applicantId: true,
+          cycle: { select: { term: true, year: true } },
+          applicant: { select: { gradTerm: true, gradYear: true } },
+        },
       });
       if (hireApplication) {
         const linked = await tx.applicant.updateMany({
@@ -92,10 +97,17 @@ export const POST = withHandler(async (req) => {
           data: { hiredUserId: created.id },
         });
         if (linked.count > 0) {
-          // Students start in the hiring cycle's term.
+          // Students start in the hiring cycle's term, and keep the graduation date they gave:
+          // the planning view stops counting the applicant once linked and counts this user, so
+          // a hire without it would be assumed to stay indefinitely.
           await tx.user.update({
             where: { id: created.id },
-            data: { startTerm: hireApplication.cycle.term, startTermYear: hireApplication.cycle.year },
+            data: {
+              startTerm: hireApplication.cycle.term,
+              startTermYear: hireApplication.cycle.year,
+              ...(hireApplication.applicant.gradYear != null ? { gradYear: hireApplication.applicant.gradYear } : {}),
+              ...(hireApplication.applicant.gradTerm ? { graduationTerm: hireApplication.applicant.gradTerm } : {}),
+            },
           });
           await createAuditEntryTx(tx, {
             actorId: created.id,

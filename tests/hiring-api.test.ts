@@ -156,7 +156,11 @@ describe("application creation", () => {
     expect(created.emails.create.email).toBe("alex@example.edu");
     expect(created.phone).toBe("5550100101");
 
-    const audit = JSON.stringify(vi.mocked(createAuditEntry).mock.calls[0]![0]);
+    // The audit is written in the same transaction as the person, email, and application.
+    expect(createAuditEntry).not.toHaveBeenCalled();
+    const entry = vi.mocked(createAuditEntryTx).mock.calls[0]![1];
+    expect(entry).toMatchObject({ entityType: "hiring_application", action: "create" });
+    const audit = JSON.stringify(entry);
     expect(audit).not.toContain("alex@example.edu");
     expect(audit).not.toContain("5550100101");
   });
@@ -805,5 +809,32 @@ describe("hire invite: existing accounts, pending invites, and areas", () => {
     const res = await post({ linkUserId: "clh0000000000000000000007" });
     expect(res.status).toBe(409);
     expect(models.applicant.update).not.toHaveBeenCalled();
+  });
+});
+
+describe("hire invite and retention tombstones", () => {
+  beforeEach(() => {
+    vi.mocked(requireAuth).mockResolvedValue(user("ADMIN") as never);
+    models.user.findFirst.mockResolvedValue(null);
+    models.user.findMany.mockResolvedValue([]);
+    models.allowedEmail.findUnique.mockResolvedValue(null);
+  });
+  const live = {
+    id: "app-1",
+    stage: "HIRE",
+    primaryArea: "VIDEO",
+    rawAreas: [],
+    allowedEmail: null,
+    applicant: { id: "p1", name: "Alex Sample", hiredUserId: null, emails: [{ email: "alex@example.edu", isPrimary: true }] },
+  };
+
+  it("refuses to write the applicant's name and email into an invite when a purge committed after the first read", async () => {
+    models.application.findUnique
+      .mockResolvedValueOnce(live)
+      .mockResolvedValueOnce({ stage: "HIRE", allowedEmailId: null, applicant: { purgedAt: new Date("2029-01-01T00:00:00Z") } });
+    const res = await inviteHire(json("/api/hiring/applications/app-1/invite", "POST", {}), ctx());
+    expect(res.status).toBe(409);
+    expect(models.allowedEmail.create).not.toHaveBeenCalled();
+    expect(models.allowedEmail.update).not.toHaveBeenCalled();
   });
 });

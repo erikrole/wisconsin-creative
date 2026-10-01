@@ -131,7 +131,7 @@ Values: `UPLOADING`, `FINALIZING`, `COMMITTED`, `FAILED`
 
 ## Model `User`
 
-Fields: 127
+Fields: 128
 
 - `id                            String                           @id @default(cuid())`
 - `name                          String`
@@ -260,6 +260,7 @@ Fields: 127
 - `birthYear           Int?            @map("birth_year")`
 - `startTerm           GraduationTerm? @map("start_term")`
 - `startTermYear       Int?            @map("start_term_year")`
+- `deactivatedAt       DateTime?       @map("deactivated_at")`
 
 Indexes and constraints:
 

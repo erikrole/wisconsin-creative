@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { withAuth } from "@/lib/api";
-import { createAuditEntry } from "@/lib/audit";
+import { createAuditEntryTx } from "@/lib/audit";
 import { db } from "@/lib/db";
 import {
   createApplicationSchema,
@@ -168,16 +168,18 @@ export const POST = withAuth(async (req, { user }) => {
       });
       applicantId = person.id;
     }
-    return tx.application.create({ data: { ...applicationData, applicantId } });
-  });
-
-  await createAuditEntry({
-    actorId: user.id,
-    actorRole: user.role,
-    entityType: "hiring_application",
-    entityId: created.id,
-    action: "create",
-    after: { cycleId: created.cycleId, applicantId: created.applicantId, stage: created.stage },
+    const application = await tx.application.create({ data: { ...applicationData, applicantId } });
+    // Same transaction as the person, email, and application, so the creation never commits
+    // without its audit evidence (and a retry cannot find an unaudited half-created record).
+    await createAuditEntryTx(tx, {
+      actorId: user.id,
+      actorRole: user.role,
+      entityType: "hiring_application",
+      entityId: application.id,
+      action: "create",
+      after: { cycleId: application.cycleId, applicantId: application.applicantId, stage: application.stage },
+    });
+    return application;
   });
 
   return ok({ data: { id: created.id, applicantId: created.applicantId } }, 201);

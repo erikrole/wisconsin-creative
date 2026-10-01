@@ -401,6 +401,7 @@ export async function deactivateUserWithCleanup(args: {
       data: erasePersonalData
         ? {
           active: false,
+          deactivatedAt: new Date(),
           name: "Deleted User",
           email: `deleted+${targetUserId}@deleted.invalid`,
           passwordHash: erasedPasswordHash!,
@@ -443,7 +444,7 @@ export async function deactivateUserWithCleanup(args: {
         }
         // Revoke the calendar feed on every deactivation, so a reactivated
         // account does not quietly resume serving an old shared link.
-        : { active: false, icsToken: null },
+        : { active: false, deactivatedAt: new Date(), icsToken: null },
     });
 
     const result = {
