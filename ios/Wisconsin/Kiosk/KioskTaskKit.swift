@@ -811,7 +811,11 @@ struct KioskSheetScreen<Context: View, Choice: View>: View {
                     }
             }
             .padding(28)
-            .frame(width: 1060, height: 700)
+            // Fit the space it's given: inside a screen with a header the card
+            // used to overflow upward and cover the header's subtitle.
+            .containerRelativeFrame([.horizontal, .vertical]) { length, axis in
+                axis == .horizontal ? min(1060, length - 32) : min(700, length - 24)
+            }
             .kioskCard(KioskSurface.sheet, radius: KioskRadius.modal, stroke: KioskStroke.standard)
         }
     }
