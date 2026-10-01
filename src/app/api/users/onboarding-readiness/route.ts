@@ -2,6 +2,7 @@ import { withAuth } from "@/lib/api";
 import { db } from "@/lib/db";
 import { ok } from "@/lib/http";
 import { getProfileCompletion } from "@/lib/profile-completion";
+import { excludeHiringInvites } from "@/lib/hiring/invite-scope";
 import { requirePermission } from "@/lib/rbac";
 
 const readinessProfileSelect = {
@@ -33,9 +34,14 @@ export const GET = withAuth(async (_req, { user }) => {
   const [invitations, accounts] = await Promise.all([
     db.allowedEmail.findMany({
       where: {
-        OR: [
-          { claimedById: null },
-          { claimedBy: { is: { hiddenFromRoster: false } } },
+        AND: [
+          {
+            OR: [
+              { claimedById: null },
+              { claimedBy: { is: { hiddenFromRoster: false } } },
+            ],
+          },
+          ...(excludeHiringInvites(user.role) ? [excludeHiringInvites(user.role)!] : []),
         ],
       },
       orderBy: { createdAt: "desc" },

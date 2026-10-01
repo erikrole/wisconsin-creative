@@ -50,7 +50,7 @@ Fresh audit found existing critical Next/image and high-severity transitive advi
 - [x] Dependency-patched high/critical audit gate, Prisma config/client proof, full tests/deploy-shaped build and hosted browser acceptance pass. Patched local Playwright: all eight checks pass (real sign-in plus seven routes, 46.7 seconds).
 - [ ] Obtain explicit source shipping authorization, commit/push coherent files, open PR and pass required CI. Do not include unrelated screenshots.
 - [ ] Merge authorized PR, verify production Ready and runtime health; pooling/runtime isolation changes are not production-live until this point.
-- [ ] Enable `MANAGED_PREVIEWS_ENABLED`, exercise a real successful same-repository PR through the hosted workflow, then disable redundant native Git preview builds while preserving main production builds.
+- [x] Enable `MANAGED_PREVIEWS_ENABLED`, exercise a real successful same-repository PR through the hosted workflow, then disable redundant native Git preview builds while preserving main production builds. Done 2026-10-01: PR #410 provisioned and reached Ready; the Ignored Build Step skips Git-triggered non-production builds and managed previews still build. Second-computer handoff not yet exercised.
 - [ ] Run cleanup dry-run with protected operator credentials; only then enable separate `PREVIEW_CLEANUP_ENABLED`. No legacy branch deletion is authorized by attestation absence.
 - [ ] Dedicated preview Redis remains absent: ordinary app rate limiting falls back locally; Companion remote-sync fails closed. Documented, not claimed verified.
 

@@ -82,6 +82,9 @@
 | `/users/org-chart` | `src/app/(app)/users/org-chart/page.tsx` |
 | `/users` | `src/app/(app)/users/page.tsx` |
 | `/welcome` | `src/app/(app)/welcome/page.tsx` |
+| `/workforce/hiring` | `src/app/(app)/workforce/hiring/page.tsx` |
+| `/workforce` | `src/app/(app)/workforce/page.tsx` |
+| `/workforce/planning` | `src/app/(app)/workforce/planning/page.tsx` |
 | `/about/features` | `src/app/(public)/about/features/page.tsx` |
 | `/about/field-work` | `src/app/(public)/about/field-work/page.tsx` |
 | `/about` | `src/app/(public)/about/page.tsx` |
@@ -105,6 +108,7 @@
 | `/reports/usage` | `src/app/(app)/reports/usage/layout.tsx` |
 | `/settings/app-activity` | `src/app/(app)/settings/app-activity/layout.tsx` |
 | `/settings` | `src/app/(app)/settings/layout.tsx` |
+| `/workforce` | `src/app/(app)/workforce/layout.tsx` |
 | `/about` | `src/app/(public)/about/layout.tsx` |
 | `/` | `src/app/layout.tsx` |
 
@@ -129,7 +133,7 @@
 | `src/components/schedule/SportSetupWizard.tsx` | 675 |
 | `src/components/booking-wizard/WizardStep1.tsx` | 599 |
 | `src/components/booking-details/BookingHeader.tsx` | 472 |
-| `src/components/Sidebar.tsx` | 446 |
+| `src/components/Sidebar.tsx` | 448 |
 | `src/components/event-editor/EventEditorFields.tsx` | 435 |
 | `src/components/ui/heatmap.tsx` | 434 |
 | `src/components/ui/chart.tsx` | 389 |

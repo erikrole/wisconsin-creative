@@ -12,6 +12,7 @@ import { getScheduleAutomationDigest } from "@/lib/services/schedule-automation"
 import { refreshCompanionProjection } from "@/lib/services/companion-projection";
 import { cleanupPendingSignatureArtifacts } from "@/lib/services/signatures";
 import { pruneNotificationDeliveries } from "@/lib/services/notification-deliveries";
+import { runApplicantRetention, type RetentionRunResult } from "@/lib/hiring/retention";
 import { pruneAppDiagnostics } from "@/lib/services/app-diagnostics";
 import { pruneJobRuns, recordJobRun } from "@/lib/services/job-runs";
 import { badges, badgesEnabled } from "@/lib/badges";
@@ -267,6 +268,23 @@ export const GET = withCron(async () => {
     "signatureCleanup",
     maintenanceFailures,
   );
+  // Continue the hiring retention backlog (D-065) with whatever is left of the shared time
+  // budget. The weekly audit-archive pass only has a small budget, so this nightly pass is what
+  // drains a large cohort. It runs only when there is room, never past the budget, and a failure
+  // is reported without affecting the rest of this job.
+  let applicantRetention: RetentionRunResult | null = null;
+  const retentionRoom = DEADLINE_MS - (Date.now() - deadlineStart);
+  // Needs room for the item margin plus real work, otherwise it would start nothing.
+  if (retentionRoom >= 3000) {
+    try {
+      applicantRetention = await runApplicantRetention(now, { budgetMs: retentionRoom - 500 });
+      if (applicantRetention.failed > 0) maintenanceFailures.push("applicantRetention");
+    } catch (error) {
+      console.error("morning-refresh: applicant retention failed", error);
+      maintenanceFailures.push("applicantRetention");
+    }
+  }
+
   const automationDigest = await getScheduleAutomationDigest({
     userId: "system",
     includePast: false,
@@ -313,6 +331,7 @@ export const GET = withCron(async () => {
     notificationDeliveriesDeleted,
     signatureCleanup,
     scheduleAutomation: automationDigest,
+    applicantRetention,
     maintenanceFailures,
   });
 });

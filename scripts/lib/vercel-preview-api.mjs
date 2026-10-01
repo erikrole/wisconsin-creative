@@ -22,6 +22,8 @@ export class VercelPreviewApi {
       ...(body ? { body: JSON.stringify(body) } : {}), signal: AbortSignal.timeout(30_000),
     });
     if (!response.ok) throw new Error(`Vercel ${method} failed (${response.status}); provider response body suppressed.`);
-    return response.status === 204 ? {} : response.json();
+    // Some successful writes (e.g. store connections) return 200 with no body.
+    const text = response.status === 204 ? "" : await response.text();
+    try { return text.trim() ? JSON.parse(text) : {}; } catch { throw new Error("Vercel returned an unexpected response; inspect before retrying."); }
   }
 }

@@ -11,7 +11,7 @@
 
 | Model | Fields | Model-level indexes/constraints |
 |---|---:|---:|
-| `User` | 120 | 5 |
+| `User` | 128 | 5 |
 | `Session` | 6 | 2 |
 | `PasswordResetToken` | 6 | 2 |
 | `PasskeyCredential` | 12 | 2 |
@@ -68,7 +68,7 @@
 | `BlastRecipient` | 12 | 4 |
 | `FavoriteItem` | 6 | 3 |
 | `FavoriteItemFamily` | 6 | 4 |
-| `AllowedEmail` | 17 | 4 |
+| `AllowedEmail` | 18 | 4 |
 | `CollaboratorAffiliation` | 8 | 2 |
 | `CollaboratorPolicy` | 11 | 2 |
 | `CollaboratorPolicyGrant` | 5 | 3 |
@@ -103,6 +103,15 @@
 | `ResourceAssetUpload` | 21 | 4 |
 | `ResourceAssetFavorite` | 6 | 4 |
 | `EventTravelMember` | 7 | 3 |
+| `HiringCycle` | 13 | 3 |
+| `HiringCycleSlot` | 5 | 2 |
+| `Applicant` | 18 | 3 |
+| `ApplicantEmail` | 6 | 2 |
+| `Application` | 27 | 6 |
+| `ApplicantDocument` | 11 | 3 |
+| `ApplicationNote` | 8 | 3 |
+| `StudentTermPlacement` | 10 | 3 |
+| `ApplicantRetentionEvent` | 7 | 3 |
 
 ## Enums
 
@@ -484,3 +493,35 @@
 
 - `PENDING`
 - `COMPLETED`
+
+### `HiringCycleStatus`
+
+- `PLANNING`
+- `OPEN`
+- `CLOSED`
+- `ARCHIVED`
+
+### `ApplicantStanding`
+
+- `INCOMING`
+- `FRESHMAN`
+- `SOPHOMORE`
+- `JUNIOR`
+- `SENIOR`
+- `GRADUATE`
+- `OTHER`
+
+### `ApplicationStage`
+
+- `APPLIED`
+- `ROUND_1`
+- `HIRE`
+- `PASSED`
+- `WITHDRAWN`
+
+### `ApplicantDocumentKind`
+
+- `RESUME`
+- `COVER_LETTER`
+- `PORTFOLIO_FILE`
+- `OTHER`
