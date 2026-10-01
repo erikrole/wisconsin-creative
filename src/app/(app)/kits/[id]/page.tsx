@@ -510,7 +510,7 @@ export default function KitDetailPage() {
       if (!res.ok) throw new Error(await parseErrorMessage(res, "Failed to duplicate kit"));
       const json = await parseJsonSafely<{ data?: { id?: string; name?: string } }>(res);
       if (!json?.data?.id) throw new Error("Kit was duplicated, but the response was incomplete");
-      toast.success(`Created ${json.data.name ?? "a copy"} without cameras. Add this position’s bodies — kits in the same sport cannot share a camera.`);
+      toast.success(`Created ${json.data.name ?? "a copy"} without cameras. Add this position’s bodies. Football job kits cannot share a camera; a kit with no job can.`);
       router.push(`/kits/${json.data.id}`);
     } catch (err) {
       toast.error((err as Error).message || "Failed to duplicate kit");
