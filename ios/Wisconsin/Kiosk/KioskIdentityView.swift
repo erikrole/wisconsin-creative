@@ -32,6 +32,11 @@ struct KioskIdentityView: View {
         // A6 lists the owner on their own card, so "Someone else" skips them.
         var roster = roster
         if case .returnOther(let owner) = contextMode { roster.removeAll { $0.id == owner.id } }
+        // Event checkout: the event's crew first, then everyone else.
+        if let crew = intent?.selectedEvent?.crewUserIds, !crew.isEmpty {
+            let ids = Set(crew)
+            roster = roster.filter { ids.contains($0.id) } + roster.filter { !ids.contains($0.id) }
+        }
         guard !normalizedQuery.isEmpty else { return roster }
         return roster.filter { $0.name.localizedCaseInsensitiveContains(normalizedQuery) }
     }
@@ -67,16 +72,24 @@ struct KioskIdentityView: View {
 
     private var plainLayout: some View {
             VStack(alignment: .leading, spacing: 24) {
-                HStack {
-                    Button("Cancel") { cancelIdentityFlow() }
+                // Back top-right beside the time, like every task screen.
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(intent?.heroTitle ?? "Who are you?")
+                            .font(.system(size: 36, weight: .heavy)).foregroundStyle(KioskText.primary)
+                            .lineLimit(1).minimumScaleFactor(0.8)
+                        Text(identityPrompt)
+                            .font(.title3).foregroundStyle(KioskText.secondary)
+                    }
+                    Spacer(minLength: 16)
+                    TimelineView(.everyMinute) { context in
+                        Text(context.date.formatted(.dateTime.hour().minute()))
+                            .font(.system(size: 22, weight: .semibold).monospacedDigit())
+                            .foregroundStyle(KioskText.tertiary)
+                    }
+                    .padding(.top, 10)
+                    Button("Back") { cancelIdentityFlow() }
                         .kioskButtonRole(.secondary)
-                    Spacer()
-                }
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(intent?.heroTitle ?? "Who are you?")
-                        .font(.system(size: 36, weight: .heavy)).foregroundStyle(KioskText.primary)
-                    Text(identityPrompt)
-                        .font(.title3).foregroundStyle(KioskText.secondary)
                 }
                 TextField("Search roster", text: $query)
                     .textFieldStyle(.plain).font(.title3)

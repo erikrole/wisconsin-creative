@@ -141,7 +141,7 @@ struct KioskFlowIntent: Equatable {
         case .return: "Returning gear"
         case .manage: "Managing checkout"
         }
-        return (selectedEvent?.title ?? targetBooking?.title).map { "\(verb) for \($0)" } ?? verb
+        return (selectedEvent.map { kioskEventDisplayTitle($0.title, sportCode: nil) } ?? targetBooking?.title).map { "\(verb) for \($0)" } ?? verb
     }
 }
 
