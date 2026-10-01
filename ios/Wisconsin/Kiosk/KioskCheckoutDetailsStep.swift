@@ -518,7 +518,7 @@ struct KioskOtherDateSheet: View {
     }
 
     var body: some View {
-        KioskSheetScreen(onDismiss: onCancel, contextWidth: 400, height: 620, topOffset: 56) {
+        KioskSheetScreen(onDismiss: onCancel, contextWidth: 400, height: 620) {
             KioskMonthGrid(monthStart: $monthStart, selectedDay: $day)
         } choice: {
             Text("When will it be back?")
