@@ -1547,7 +1547,7 @@ These are non-negotiable integrity constraints. Every feature must preserve them
 
 ## D-063: Branch-Owned Previews and One Automatic Production Build
 - Date: 2026-09-22
-- Status: Accepted; live foundations verified, source shipping and automated cutover pending
+- Status: Accepted; managed previews activated and native-preview cutover done 2026-10-01 (PR #410 reached Ready; native Git builds skipped by the Ignored Build Step); scheduled cleanup and production pooling proof remain gated
 - Decision: Main requires a PR with `validate` and `postgres-integrity`, with zero mandatory human reviewers. Production deploys automatically once. Review retains its domain and data but refreshes only on explicit request.
 - Decision: Claude, Cursor and Codex share a sanitized database and isolated file stores per named Git branch. Trusted main-branch CI owns provisioning keys and signed provenance; app builds receive only branch credentials. Encrypted development settings in the no-deploy resource project provide authenticated cross-machine handoff.
 - Guardrails: Existing plans, production/review data and historical migration receipts are preserved. No production PII enters the template. Outbound delivery is disabled in previews. Cleanup requires confirmed branch absence, no open PR or pin, seven days without use, signed ownership and an atomic claim coordinated with local agents.
