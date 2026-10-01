@@ -79,6 +79,7 @@ beforeEach(() => {
     name: "Slow 1",
     locationId: "loc-1",
     sportCode: "FB",
+    gamedayRole: "SLOW1",
     location: { name: "Camp Randall" },
   });
   mockTx.kit.findUniqueOrThrow.mockResolvedValue({ id: "kit-1", members: [] });
@@ -141,9 +142,47 @@ describe("kit membership writes", () => {
 
     await expect(addKitMembers("kit-1", ["cam-1"], actor.id, actor.role)).rejects.toMatchObject({
       status: 409,
-      message: "FX6-1 is already in Slow 1",
+      message: expect.stringContaining("FX6-1 is already in Slow 1"),
     });
     expect(mockTx.kitMembership.createMany).not.toHaveBeenCalled();
+  });
+
+  it("only checks football exclusivity against other football jobs", async () => {
+    mockTx.asset.findMany.mockResolvedValue([
+      { id: "cam-1", assetTag: "FX6-1", locationId: "loc-1", location: { name: "Camp Randall" } },
+    ]);
+    mockTx.kitMembership.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+    mockTx.kitMembership.createMany.mockResolvedValue({ count: 1 });
+
+    await addKitMembers("kit-1", ["cam-1"], actor.id, actor.role);
+
+    expect(mockTx.kitMembership.findMany).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      where: expect.objectContaining({
+        kit: expect.objectContaining({ sportCode: "FB", gamedayRole: { not: null } }),
+      }),
+    }));
+  });
+
+  it("lets a football kit without a job, like the travel case, share gear with the jobs", async () => {
+    mockTx.kit.findUnique.mockResolvedValue({
+      id: "kit-case",
+      name: "Football Travel Case",
+      locationId: "loc-1",
+      sportCode: "FB",
+      gamedayRole: null,
+      location: { name: "Camp Randall" },
+    });
+    mockTx.asset.findMany.mockResolvedValue([
+      { id: "cam-1", assetTag: "FX6-1", locationId: "loc-1", location: { name: "Camp Randall" } },
+    ]);
+    mockTx.kitMembership.findMany.mockResolvedValueOnce([]);
+    mockTx.kitMembership.createMany.mockResolvedValue({ count: 1 });
+
+    const result = await addKitMembers("kit-case", ["cam-1"], actor.id, actor.role);
+
+    expect(result.addedAssetIds).toEqual(["cam-1"]);
+    // The only membership read is the existing-member check; no exclusivity lookup ran.
+    expect(mockTx.kitMembership.findMany).toHaveBeenCalledTimes(1);
   });
 
   it("allows the same camera on a different-sport kit", async () => {

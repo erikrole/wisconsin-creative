@@ -310,17 +310,23 @@ export default function KitDetailPage() {
 
   // ── Lazy-load location item families when the bulk add-search is first used ──
 
+  const bulkFetchStarted = useRef(false);
+  const kitLocationId = kit?.location.id;
+  const kitPickupIds = kit?.pickupLocationIds;
+
   useEffect(() => {
-    if (!kit) return;
+    if (!kitLocationId) return;
     if (!bulkAddSearch.trim()) return;
-    if (bulkOptions !== null || bulkOptionsLoading) return;
-    let cancelled = false;
+    // Guard with a ref, not loading state: toggling state here re-runs this effect and would
+    // cancel the request in flight, leaving the search empty or stuck on "Loading…".
+    if (bulkFetchStarted.current) return;
+    bulkFetchStarted.current = true;
     (async () => {
       setBulkOptionsLoading(true);
       setBulkOptionsError("");
       try {
-        const locationQuery = (kit.pickupLocationIds?.length ? kit.pickupLocationIds : [kit.location.id])
-          .map((id) => `location_id=${encodeURIComponent(id)}`)
+        const locationQuery = (kitPickupIds?.length ? kitPickupIds : [kitLocationId])
+          .map((locationId) => `location_id=${encodeURIComponent(locationId)}`)
           .join("&");
         const res = await fetch(
           `/api/bulk-skus?${locationQuery}&limit=200`,
@@ -328,19 +334,17 @@ export default function KitDetailPage() {
         if (handleAuthRedirect(res)) return;
         if (!res.ok) throw new Error(await parseErrorMessage(res, "Failed to load item families"));
         const json = await parseJsonSafely<{ data?: BulkSkuOption[] }>(res);
-        if (cancelled) return;
         setBulkOptions(json?.data ?? []);
       } catch (err) {
-        if (!cancelled) {
-          setBulkOptions([]);
-          setBulkOptionsError((err as Error).message || "Failed to load item families");
-        }
+        // Allow the next keystroke to retry after a failed load.
+        bulkFetchStarted.current = false;
+        setBulkOptions(null);
+        setBulkOptionsError((err as Error).message || "Failed to load item families");
       } finally {
-        if (!cancelled) setBulkOptionsLoading(false);
+        setBulkOptionsLoading(false);
       }
     })();
-    return () => { cancelled = true; };
-  }, [bulkAddSearch, bulkOptions, bulkOptionsLoading, kit]);
+  }, [bulkAddSearch, kitLocationId, kitPickupIds]);
 
   // ── Add member ──────────────────────────────────────────
 

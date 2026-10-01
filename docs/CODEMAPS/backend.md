@@ -62,7 +62,7 @@
 | `src/lib/services/kiosk-pickup-add.ts` | 273 |
 | `src/lib/services/kiosk-pickup-substitute.ts` | 300 |
 | `src/lib/services/kiosk-scan.ts` | 44 |
-| `src/lib/services/kits.ts` | 824 |
+| `src/lib/services/kits.ts` | 836 |
 | `src/lib/services/licenses.ts` | 603 |
 | `src/lib/services/live-activities.ts` | 629 |
 | `src/lib/services/manual-event-time.ts` | 304 |

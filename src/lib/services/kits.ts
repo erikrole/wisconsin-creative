@@ -183,9 +183,18 @@ function kitUniqueConflictMessage(error: unknown) {
 
 async function assertExclusiveSerializedMembers(
   tx: Prisma.TransactionClient,
-  input: { kitId: string; sportCode: string | null; assetIds: string[] },
+  input: {
+    kitId: string;
+    sportCode: string | null;
+    gamedayRole: FootballGamedayKitRole | null;
+    assetIds: string[];
+  },
 ) {
   if (input.assetIds.length === 0) return;
+  // Football exclusivity protects the gameday positions from sharing a body. A football kit
+  // without a job (travel case, road-trip pack) may overlap with any kit, including the jobs.
+  const footballJobsOnly = exclusiveSportCode(input.sportCode) === FOOTBALL_SPORT_CODE;
+  if (footballJobsOnly && !input.gamedayRole) return;
   const collisions = await tx.kitMembership.findMany({
     where: {
       assetId: { in: input.assetIds },
@@ -193,6 +202,7 @@ async function assertExclusiveSerializedMembers(
         id: { not: input.kitId },
         active: true,
         sportCode: exclusiveSportCode(input.sportCode),
+        ...(footballJobsOnly ? { gamedayRole: { not: null } } : {}),
       },
     },
     select: {
@@ -204,7 +214,7 @@ async function assertExclusiveSerializedMembers(
   throw new HttpError(
     409,
     collisions
-      .map((row) => `${row.asset.assetTag} is already in ${row.kit.name}`)
+      .map((row) => `${row.asset.assetTag} is already in ${row.kit.name}, another ${input.gamedayRole ? "football job" : "kit in this sport"}; remove it there first`)
       .join("; "),
   );
 }
@@ -333,6 +343,7 @@ export async function updateKit(
           await assertExclusiveSerializedMembers(tx, {
             kitId: id,
             sportCode,
+            gamedayRole,
             assetIds: members.map((member) => member.assetId),
           });
         }
@@ -553,6 +564,7 @@ export async function addKitMembers(
       await assertExclusiveSerializedMembers(tx, {
         kitId,
         sportCode: kit.sportCode,
+        gamedayRole: kit.gamedayRole,
         assetIds: uniqueAssetIds,
       });
 
