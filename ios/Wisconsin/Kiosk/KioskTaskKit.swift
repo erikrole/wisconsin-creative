@@ -387,25 +387,31 @@ struct KioskBatteryRow: View {
     }
 }
 
+/// A battery's unit number in a circle: outlined while still out or still to
+/// scan, filled green once it's back or scanned (Erik, 2026-10-01).
 struct KioskBatteryUnitChip: View {
     let label: String
     let isScanned: Bool
     var section: KioskSection = .takingOut
+    var size: CGFloat = 32
+
+    private var number: String { label.hasPrefix("#") ? String(label.dropFirst()) : label }
 
     var body: some View {
-        Text(label)
-            .font(KioskType.chipStrong)
-            .foregroundStyle(isScanned ? KioskText.onPrimary : KioskText.secondary)
-            .padding(.horizontal, 10)
-            .frame(minWidth: 44, minHeight: 30)
+        Text(number)
+            .font(.system(size: number.count > 2 ? 12 : 14, weight: .bold).monospacedDigit())
+            .foregroundStyle(isScanned ? Color.black : KioskText.primary)
+            .minimumScaleFactor(0.7)
+            .lineLimit(1)
+            .frame(width: size, height: size)
             .background {
                 if isScanned {
-                    Capsule().fill(section.accent)
+                    Circle().fill(Color.statusText(.green))
                 } else {
-                    Capsule().strokeBorder(KioskStroke.pending, lineWidth: 1)
+                    Circle().strokeBorder(KioskStroke.pending, lineWidth: 1.5)
                 }
             }
-            .accessibilityLabel("\(label), \(isScanned ? "scanned" : "still to scan")")
+            .accessibilityLabel("Number \(number), \(isScanned ? "done" : "still out")")
     }
 }
 

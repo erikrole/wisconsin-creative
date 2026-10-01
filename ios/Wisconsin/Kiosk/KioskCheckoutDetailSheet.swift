@@ -752,17 +752,17 @@ struct KioskCheckoutDetailSheet: View {
     private func batteryTile(_ units: [KioskCheckoutDetail.ReturnItem]) -> some View {
         let first = units[0]
         let name = first.bulkSkuName ?? first.name
-        let numbers = units.map { $0.unitNumber.map { "#\($0)" } ?? $0.tagName }.joined(separator: " ")
         return chipShell(fits: true) {
             itemThumbnail(first, size: 28)
             Text(name)
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(KioskText.primary)
                 .lineLimit(1)
-            Text(numbers)
-                .font(.system(size: 15, weight: .bold).monospacedDigit())
-                .foregroundStyle(KioskText.secondary)
-                .lineLimit(1)
+            HStack(spacing: 4) {
+                ForEach(units) { unit in
+                    KioskBatteryUnitChip(label: unit.unitNumber.map(String.init) ?? unit.tagName, isScanned: unit.returned, size: 26)
+                }
+            }
         }
         .accessibilityLabel("\(name), units \(units.compactMap { $0.unitNumber.map(String.init) }.joined(separator: ", "))")
     }
