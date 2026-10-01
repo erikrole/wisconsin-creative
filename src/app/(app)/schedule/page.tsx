@@ -389,7 +389,7 @@ function InternalSchedulePage() {
         ref={stickyRef}
         data-schedule-sticky-frame
         className={cn(
-          "sticky z-30 -mx-8 border-b bg-background px-8 max-md:-mx-4 max-md:px-4",
+          "sticky z-30 -mx-8 border-b bg-background px-8 transition-[box-shadow,border-color] duration-200 max-md:-mx-4 max-md:px-4 motion-reduce:transition-none",
           pinned
             ? "border-border/60 pt-4 shadow-[0_6px_16px_-12px_rgba(0,0,0,0.6)] max-md:pt-3"
             : "border-transparent pt-1",

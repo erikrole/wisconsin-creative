@@ -388,7 +388,7 @@ export function WeekView({
   ].join(" · ");
 
   return (
-    <div data-schedule-view="week">
+    <div className="schedule-enter" data-schedule-view="week">
       {/* ── Week navigation ── */}
       <SchedulePeriodNavigator
         title={weekRangeLabel(weekStart)}

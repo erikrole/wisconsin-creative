@@ -121,6 +121,10 @@ Replace Asana-based shift scheduling with a native shift calendar in Wisconsin C
 - Sports code mappings (existing — `src/lib/sports.ts`)
 
 ## Change Log
+- 2026-10-01: **Schedule list row grid and motion (local, source-verified only).**
+  - **Row alignment:** desktop header, rows, and loading skeleton render through one `EventGrid` that emits exactly one cell per column. Previously an event with no shifts omitted its crew cell, shifting status and actions one column left (visible under filters such as unfilled coverage). `tests/schedule-list-row-grid-source.test.ts` pins the contract.
+  - **Motion:** opacity-only `schedule-enter` fades for rows, detail, mobile cards and views (reduced-motion safe); chevron rotation; row-shaped skeleton; list dims while filters fill the window; sticky-frame shadow eases.
+  - No schema, API, or permission change. Authenticated browser proof and the before/after review page remain pending a branch preview.
 - 2026-09-23: **Draft identity, pending-claim visibility, hashed feed tokens (local).**
   - **Drafts:** the working-copy editor reports `draftId` (the draft row's `createdAt`). PATCH, undo/redo, rebase, discard and publish accept `expectedDraftId`, and a mismatch returns 409 inside the version-check transaction. Legacy clients that omit it are unchanged.
   - **Open Work:** reports `openShiftsTruncated` and `pickupRequestsTruncated` instead of silently capping at 100.

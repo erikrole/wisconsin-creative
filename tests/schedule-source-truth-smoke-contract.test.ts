@@ -192,6 +192,7 @@ describe("schedule source-of-truth and browser smoke contracts", () => {
     );
 
     expect(listView).toContain("EVENT_GRID_CLASS");
+    expect(listView).toContain("const EVENT_COLUMNS =");
     expect(listView).toContain("grid-cols-[44px_72px_minmax(180px,1fr)_80px_minmax(100px,140px)_136px_40px]");
     expect(listView).toContain("const openCount =");
     expect(listView).toContain("Manage crew");
@@ -209,7 +210,7 @@ describe("schedule source-of-truth and browser smoke contracts", () => {
     expect(mobile).toContain("onHideEvent(entry.id)");
     expect(mobile).toContain("hidingEventIds?.has(entry.id)");
     expect(listView).toContain('"group/row border-l-[3px] transition-colors"');
-    expect(mobile).toContain('"relative border-b border-l-[3px] border-border/50 last:border-b-0"');
+    expect(mobile).toContain('"schedule-enter relative border-b border-l-[3px] border-border/50 last:border-b-0"');
     expect(listView).toContain("venueTone.railClass");
   });
 
