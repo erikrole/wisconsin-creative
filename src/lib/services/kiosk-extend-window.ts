@@ -19,6 +19,11 @@ export type KioskExtendWindow = {
     /** Omitted for SHARED holders and for counted stock. */
     holderName?: string;
     startsAt: Date;
+    /** The booking that needs it next ("WHKY vs Boston"), when known. */
+    bookingTitle?: string;
+    /** "RESERVATION" or "CHECKOUT", when known. */
+    bookingKind?: string;
+    imageUrl?: string | null;
   };
 };
 
@@ -54,7 +59,7 @@ export async function kioskExtendWindow(
       locationId: true,
       serializedItems: {
         where: { allocationStatus: "active" },
-        select: { assetId: true, asset: { select: { assetTag: true, name: true } } },
+        select: { assetId: true, asset: { select: { assetTag: true, name: true, imageUrl: true } } },
       },
       bulkItems: {
         select: { bulkSkuId: true, plannedQuantity: true, checkedOutQuantity: true, checkedInQuantity: true, bulkSku: { select: { name: true } } },
@@ -83,6 +88,9 @@ export async function kioskExtendWindow(
       assetTag: asset?.assetTag ?? conflict.assetId,
       name: asset?.name || asset?.assetTag || conflict.assetId,
       ...(conflict.conflictingBookingRequesterName ? { holderName: conflict.conflictingBookingRequesterName } : {}),
+      ...(conflict.conflictingBookingTitle ? { bookingTitle: conflict.conflictingBookingTitle } : {}),
+      ...(conflict.conflictingBookingKind ? { bookingKind: conflict.conflictingBookingKind } : {}),
+      imageUrl: asset?.imageUrl ?? null,
       // Pickup edits keep the turnaround buffer, so the latest time is that
       // much before the next claim starts.
       startsAt: atPickup ? subtractSerializedTurnaroundBuffer(conflict.startsAt) : conflict.startsAt,

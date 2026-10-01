@@ -74,7 +74,7 @@ describe("kiosk extend window", () => {
     expect(window).toEqual({
       currentEndsAt: endsAt,
       maxEndsAt: at(2),
-      limitingItem: { assetTag: "MIC-2", name: "Wireless mic", holderName: "Bucky Badger", startsAt: at(2) },
+      limitingItem: expect.objectContaining({ assetTag: "MIC-2", name: "Wireless mic", holderName: "Bucky Badger", startsAt: at(2) }),
     });
     // Same overlap-only rule the extend PATCH uses, from the current due time.
     expect(tx.assetAllocation.findMany.mock.calls[0]![0].where.endsAt).toEqual({ gt: endsAt });
@@ -86,7 +86,8 @@ describe("kiosk extend window", () => {
       allocations: [{ assetId: "a1", startsAt: at(3), endsAt: at(9), custodyScope: "SHARED", requester: "Hidden Person" }],
     });
     const window = await kioskExtendWindow(tx as never, "co-1", now);
-    expect(window.limitingItem).toEqual({ assetTag: "CAM-1", name: "FX3", startsAt: at(3) });
+    expect(window.limitingItem).toEqual(expect.objectContaining({ assetTag: "CAM-1", name: "FX3", startsAt: at(3) }));
+    expect(window.limitingItem).not.toHaveProperty("holderName");
     expect(JSON.stringify(window)).not.toContain("Hidden Person");
   });
 

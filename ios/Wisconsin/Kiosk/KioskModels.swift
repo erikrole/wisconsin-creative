@@ -928,6 +928,10 @@ struct KioskExtendWindow: Decodable {
         /// Omitted for shared holders and counted stock.
         let holderName: String?
         let startsAt: Date
+        /// Additive: the booking that needs it next, its kind, and the photo.
+        var bookingTitle: String? = nil
+        var bookingKind: String? = nil
+        var imageUrl: String? = nil
     }
 
     var canExtend: Bool {

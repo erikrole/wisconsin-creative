@@ -762,7 +762,7 @@ func homeUpcomingWhen(_ date: Date, now: Date = Date(), calendar: Calendar = .cu
     return "\(date.formatted(.dateTime.month(.abbreviated).day())) \(time)"
 }
 
-private func homeInitials(_ name: String) -> String {
+func homeInitials(_ name: String) -> String {
     name.split(separator: " ").prefix(2).compactMap { $0.first }.map { String($0) }.joined().uppercased()
 }
 

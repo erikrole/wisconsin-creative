@@ -89,19 +89,17 @@ struct KioskExtendScreen: View {
                     .foregroundStyle(KioskText.secondary)
             }
             if let window {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(Self.headline(window))
-                        .font(KioskType.cardTitle)
-                        .foregroundStyle(KioskText.primary)
-                    Text(Self.explanation(window))
-                        .font(KioskType.meta)
+                Text(Self.headline(window))
+                    .font(.system(size: 22, weight: .heavy))
+                    .foregroundStyle(window.canExtend ? KioskText.primary : KioskSection.problem.text)
+                    .padding(.top, 6)
+                if let item = window.limitingItem {
+                    KioskNeededNextCard(item: item)
+                } else {
+                    Text("Nothing else needs this gear, so pick any time.")
+                        .font(KioskType.body)
                         .foregroundStyle(KioskText.secondary)
-                        .lineSpacing(3)
-                        .fixedSize(horizontal: false, vertical: true)
                 }
-                .padding(16)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .kioskCard()
             }
         } choice: {
             Text("Extend until")
@@ -1308,3 +1306,61 @@ struct KioskStaffActionsFlow: View {
 }
 
 extension KioskIntentBooking: Identifiable {}
+
+/// Who needs the gear next, what for, when, and which item.
+struct KioskNeededNextCard: View {
+    let item: KioskExtendWindow.LimitingItem
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("NEEDED NEXT")
+                .font(KioskType.overline)
+                .tracking(KioskType.overlineTracking)
+                .foregroundStyle(KioskText.tertiary)
+            HStack(spacing: 12) {
+                KioskAvatar(url: nil, initials: homeInitials(item.holderName ?? "?"), size: 40)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(item.holderName ?? "Another booking")
+                        .font(KioskType.cardTitle)
+                        .foregroundStyle(KioskText.primary)
+                    Text(item.bookingKind?.uppercased() == "CHECKOUT" ? "Checking it out" : "Reserved it")
+                        .font(KioskType.meta)
+                        .foregroundStyle(KioskText.tertiary)
+                }
+            }
+            row("For", item.bookingTitle.map { displayTitle($0) } ?? "—")
+            row("When", KioskDueCopy.relative(item.startsAt))
+            HStack(spacing: 12) {
+                Text("Item")
+                    .font(KioskType.meta)
+                    .foregroundStyle(KioskText.tertiary)
+                    .frame(width: 56, alignment: .leading)
+                KioskItemThumbnail(imageUrl: item.imageUrl, size: 32)
+                Text(item.assetTag)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(KioskText.primary)
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .kioskCard()
+        .accessibilityElement(children: .combine)
+    }
+
+    private func displayTitle(_ title: String) -> String {
+        kioskEventDisplayTitle(title, sportCode: nil)
+    }
+
+    private func row(_ label: String, _ value: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Text(label)
+                .font(KioskType.meta)
+                .foregroundStyle(KioskText.tertiary)
+                .frame(width: 56, alignment: .leading)
+            Text(value)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(KioskText.primary)
+                .lineLimit(1)
+        }
+    }
+}
