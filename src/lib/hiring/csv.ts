@@ -61,7 +61,7 @@ export function parseBoolean(value: string | undefined): boolean | null {
   return null;
 }
 
-/** Split multi-value cells on commas, semicolons, and slashes. */
+/** Split multi-value cells on commas, semicolons, and slashes ("Video / Photography"). */
 export function splitList(value: string | undefined): string[] {
-  return [...new Set((value ?? "").split(/[,;]/).map((s) => s.trim()).filter((s) => s && s.toLowerCase() !== "none listed"))];
+  return [...new Set((value ?? "").split(/[,;/]/).map((s) => s.trim()).filter((s) => s && s.toLowerCase() !== "none listed"))];
 }

@@ -1,4 +1,4 @@
-import { ApplicationStage } from "@prisma/client";
+import { ApplicationStage, Prisma } from "@prisma/client";
 import { withAuth } from "@/lib/api";
 import { createAuditEntryTx } from "@/lib/audit";
 import { db } from "@/lib/db";
@@ -23,7 +23,8 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
       allowedEmail: { select: { id: true, claimedAt: true } },
       applicant: {
         include: {
-          emails: { orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }], select: { email: true, isPrimary: true } },
+          // Newest first: the latest address is the default for a hire invite.
+          emails: { orderBy: { createdAt: "desc" }, select: { email: true, isPrimary: true } },
           applications: {
             where: { id: { not: params.id } },
             orderBy: { createdAt: "desc" },
@@ -107,11 +108,14 @@ export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
 
   await db.$transaction(async (tx) => {
     let invitationRevoked = false;
-    if (leavingHire && existing.allowedEmailId) {
-      const invite = await tx.allowedEmail.findUnique({
-        where: { id: existing.allowedEmailId },
-        select: { id: true, claimedAt: true },
-      });
+    if (leavingHire) {
+      // Re-read the link inside the transaction: an invite attached a moment ago is not
+      // in the snapshot taken above. Serializable isolation makes a race with invite
+      // creation abort one side instead of leaving a live invite on a passed applicant.
+      const current = await tx.application.findUnique({ where: { id: params.id }, select: { allowedEmailId: true } });
+      const invite = current?.allowedEmailId
+        ? await tx.allowedEmail.findUnique({ where: { id: current.allowedEmailId }, select: { id: true, claimedAt: true } })
+        : null;
       if (invite?.claimedAt) {
         throw new HttpError(409, "This applicant already registered from the hire invite. Deactivate the account instead of undoing the hire.");
       }
@@ -160,7 +164,7 @@ export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
       before: { stage: existing.stage, reviewed: existing.reviewed },
       after: { stage: body.stage ?? existing.stage, fields: Object.keys(body), invitationRevoked },
     });
-  });
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
   return ok({ data: { id: params.id } });
 });

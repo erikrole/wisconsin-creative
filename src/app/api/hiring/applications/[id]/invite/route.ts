@@ -1,6 +1,7 @@
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { withAuth } from "@/lib/api";
-import { createAuditEntry } from "@/lib/audit";
+import { createAuditEntry, createAuditEntryTx } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { normalizeEmail } from "@/lib/hiring/contract";
 import { HttpError, ok } from "@/lib/http";
@@ -39,7 +40,8 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
           id: true,
           name: true,
           hiredUserId: true,
-          emails: { select: { email: true, isPrimary: true }, orderBy: { isPrimary: "desc" } },
+          // Newest first: a returning applicant's latest address is the one to invite by default.
+          emails: { select: { email: true, isPrimary: true }, orderBy: { createdAt: "desc" } },
         },
       },
     },
@@ -108,15 +110,49 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
   });
   if (invite.skipped) throw new HttpError(409, "An invitation already exists for this email.");
 
-  await db.application.update({ where: { id: application.id }, data: { allowedEmailId: invite.entry.id } });
-  await createAuditEntry({
-    actorId: user.id,
-    actorRole: user.role,
-    entityType: "hiring_application",
-    entityId: application.id,
-    action: "hire_invited",
-    after: { allowedEmailId: invite.entry.id },
-  });
+  // Attach the invite only if the application is still a standing Hire, atomically with
+  // the audit. A decision undone while the invite was being created would otherwise leave
+  // a live invite on a passed applicant, who could register and gain a student account.
+  // Remove a just-created invite that must not stay live. Best effort: a failure here
+  // must not mask the reason the invite was abandoned.
+  const discardInvite = async () => {
+    try {
+      await db.allowedEmail.delete({ where: { id: invite.entry.id } });
+    } catch (error) {
+      console.error("hire invite cleanup failed", error);
+    }
+  };
+
+  let attached = false;
+  try {
+    attached = await db.$transaction(
+      async (tx) => {
+        const current = await tx.application.findUnique({
+          where: { id: application.id },
+          select: { stage: true, allowedEmailId: true },
+        });
+        if (!current || current.stage !== "HIRE" || current.allowedEmailId) return false;
+        await tx.application.update({ where: { id: application.id }, data: { allowedEmailId: invite.entry.id } });
+        await createAuditEntryTx(tx, {
+          actorId: user.id,
+          actorRole: user.role,
+          entityType: "hiring_application",
+          entityId: application.id,
+          action: "hire_invited",
+          after: { allowedEmailId: invite.entry.id },
+        });
+        return true;
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+  } catch (error) {
+    await discardInvite();
+    throw error;
+  }
+  if (!attached) {
+    await discardInvite();
+    throw new HttpError(409, "This application is no longer marked Hire, so no invite was created.");
+  }
 
   return ok({ data: { status: "invited", allowedEmailId: invite.entry.id } }, 201);
 });

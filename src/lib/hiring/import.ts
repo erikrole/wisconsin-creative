@@ -65,14 +65,21 @@ export function mapArea(label: string): ShiftArea | null {
   return AREA_MAP[label.trim().toLowerCase()] ?? null;
 }
 
-export function mapStage(value: string, blankMeansPassed: boolean, interviewed: boolean): ApplicationStage {
+/**
+ * Map a decision cell to a stage. Returns null for non-empty text that is not
+ * recognized (a typo, or a value such as "Interview 2"), so the importer can reject the
+ * row instead of silently moving a decided applicant back into the active pipeline.
+ */
+export function mapStage(value: string, blankMeansPassed: boolean, interviewed: boolean): ApplicationStage | null {
   const v = value.trim().toLowerCase();
   if (v === "hire" || v === "hired") return "HIRE";
   if (v === "round 1" || v === "round1" || v === "interview") return "ROUND_1";
-  if (v === "pass" || v === "passed" || v === "no" || v === "declined" || v === "rejected") return "PASSED";
-  if (v === "withdrawn") return "WITHDRAWN";
-  if (!v && interviewed) return "ROUND_1";
-  return !v && blankMeansPassed ? "PASSED" : "APPLIED";
+  if (v === "pass" || v === "passed" || v === "no" || v === "declined" || v === "rejected" || v === "not hired") return "PASSED";
+  if (v === "withdrawn" || v === "withdrew") return "WITHDRAWN";
+  if (v === "applied" || v === "new") return "APPLIED";
+  if (v) return null;
+  if (interviewed) return "ROUND_1";
+  return blankMeansPassed ? "PASSED" : "APPLIED";
 }
 
 export type ImportRecord = {
@@ -127,6 +134,9 @@ export function parseApplicantCsv(csv: string, options: { blankDecisionMeansPass
     if (!name) return invalid.push({ line, name: "", reason: "Missing name" });
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return invalid.push({ line, name, reason: "Missing or invalid email" });
 
+    const stage = mapStage(cell("stage"), options.blankDecisionMeansPassed === true, parseBoolean(cell("interviewed")) === true || isHttpsUrl(cell("interviewUrl")));
+    if (stage === null) return invalid.push({ line, name, reason: `Unrecognized decision "${cell("stage")}". Fix it in the sheet or leave it blank.` });
+
     const warnings: string[] = [];
     const grad = parseTermLabel(cell("graduation"));
     if (cell("graduation") && !grad) warnings.push(`Graduation "${cell("graduation")}" not recognized`);
@@ -165,7 +175,7 @@ export function parseApplicantCsv(csv: string, options: { blankDecisionMeansPass
       fieldsExperience: splitList(cell("fieldsExperience")),
       fieldsInterested: splitList(cell("fieldsInterested")),
       softwareExperience: splitList(cell("software")),
-      stage: mapStage(cell("stage"), options.blankDecisionMeansPassed === true, interviewed),
+      stage,
       reviewed: parseBoolean(cell("reviewed")) === true,
       interviewed,
       summerAvailable: parseBoolean(cell("summer")),

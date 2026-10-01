@@ -143,7 +143,8 @@ export const createApplicationSchema = z.object({
   /** When true, create a new person even if a possible match exists. */
   confirmNotDuplicate: z.boolean().optional(),
   /** When set, attach the application to this existing applicant. */
-  existingApplicantId: z.string().cuid().optional(),
+  // Applicants created by the importer carry UUIDs; web-created ones carry cuids.
+  existingApplicantId: z.string().trim().min(8).max(64).optional(),
 });
 
 export const updateApplicationSchema = z

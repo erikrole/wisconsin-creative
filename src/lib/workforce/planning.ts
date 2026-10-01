@@ -10,6 +10,9 @@ export type PlanningStudent = {
   area: ShiftArea | null;
   gradTerm: GraduationTerm | null;
   gradYear: number | null;
+  /** When they start. Null means already here (no constraint). */
+  startTerm?: GraduationTerm | null;
+  startYear?: number | null;
 };
 
 export type PlanningApplicant = {
@@ -18,6 +21,9 @@ export type PlanningApplicant = {
   area: ShiftArea | null;
   gradTerm: GraduationTerm | null;
   gradYear: number | null;
+  /** The hiring cycle's term: when this person would start. */
+  startTerm?: GraduationTerm | null;
+  startYear?: number | null;
   stage: Extract<ApplicationStage, "APPLIED" | "ROUND_1" | "HIRE">;
 };
 
@@ -48,11 +54,21 @@ export type PlanningRow = { area: PlanningAreaKey; baseline: number; cells: Plan
  * An unknown graduation date is treated as staying (and flagged separately).
  */
 export function presentInYear(
-  grad: { gradTerm: GraduationTerm | null; gradYear: number | null },
+  person: {
+    gradTerm: GraduationTerm | null;
+    gradYear: number | null;
+    startTerm?: GraduationTerm | null;
+    startYear?: number | null;
+  },
   start: number,
 ): boolean {
-  if (grad.gradTerm === null || grad.gradYear === null) return true;
-  return compareTerms({ term: grad.gradTerm, year: grad.gradYear }, { term: "FALL", year: start }) >= 0;
+  // Someone who has not started by the end of that academic year (Summer of the next
+  // calendar year) is not there yet; one starting during it counts for that year.
+  if (person.startTerm && person.startYear != null) {
+    if (compareTerms({ term: person.startTerm, year: person.startYear }, { term: "SUMMER", year: start + 1 }) > 0) return false;
+  }
+  if (person.gradTerm === null || person.gradYear === null) return true;
+  return compareTerms({ term: person.gradTerm, year: person.gradYear }, { term: "FALL", year: start }) >= 0;
 }
 
 /**
@@ -131,5 +147,14 @@ export function collapseApplicants(rows: PlanningApplicationRow[]): PlanningAppl
       best.set(row.applicantId, row);
     }
   }
-  return [...best.values()].map(({ id, name, area, gradTerm, gradYear, stage }) => ({ id, name, area, gradTerm, gradYear, stage }));
+  return [...best.values()].map(({ id, name, area, gradTerm, gradYear, stage, cycleTerm, cycleYear }) => ({
+    id,
+    name,
+    area,
+    gradTerm,
+    gradYear,
+    stage,
+    startTerm: cycleTerm,
+    startYear: cycleYear,
+  }));
 }

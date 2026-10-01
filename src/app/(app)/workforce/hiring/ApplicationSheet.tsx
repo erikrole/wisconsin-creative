@@ -44,6 +44,7 @@ export default function ApplicationSheet({ applicationId, onClose, onChanged, on
   const [noteBody, setNoteBody] = useState("");
   const [noteRating, setNoteRating] = useState("");
   const [busy, setBusy] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
   const [activeDoc, setActiveDoc] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   // The id the panel is showing now; a slower response for an earlier id must not replace it.
@@ -67,6 +68,7 @@ export default function ApplicationSheet({ applicationId, onClose, onChanged, on
 
   useEffect(() => {
     setDetail(null);
+    setInviteEmail("");
     setActiveDoc(null);
     setNoteBody("");
     setNoteRating("");
@@ -156,7 +158,8 @@ export default function ApplicationSheet({ applicationId, onClose, onChanged, on
       const res = await fetch(`/api/hiring/applications/${detail.id}/invite`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(options),
+        // The admin chooses which known address to invite; the newest is the default.
+        body: JSON.stringify({ ...options, email: inviteEmail || detail.applicant.emails[0]?.email }),
       });
       if (handleAuthRedirect(res)) return;
       const json = await parseJsonSafely<{
@@ -363,6 +366,19 @@ export default function ApplicationSheet({ applicationId, onClose, onChanged, on
                     <p className="text-sm text-muted-foreground">
                       Creates a student invite from this applicant (name, area, email). Nothing is created until they register.
                     </p>
+                    {detail.applicant.emails.length > 1 && (
+                      <div className="grid gap-1.5">
+                        <Label htmlFor="invite-email">Invite this address</Label>
+                        <NativeSelect id="invite-email" value={inviteEmail || detail.applicant.emails[0]?.email} onChange={(e) => setInviteEmail(e.target.value)}>
+                          {detail.applicant.emails.map((e) => (
+                            <option key={e.email} value={e.email}>
+                              {e.email}
+                            </option>
+                          ))}
+                        </NativeSelect>
+                        <p className="text-xs text-muted-foreground">The newest address is selected. Choose another if that one is no longer in use.</p>
+                      </div>
+                    )}
                     <div>
                       <Button disabled={busy} onClick={() => void createInvite()}>
                         Create student invite

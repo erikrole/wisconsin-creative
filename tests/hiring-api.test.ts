@@ -44,6 +44,8 @@ import { GET as getApplication, PATCH as patchApplication } from "@/app/api/hiri
 import { POST as addNote } from "@/app/api/hiring/applications/[id]/notes/route";
 import { GET as readDocument } from "@/app/api/hiring/documents/[id]/route";
 import { POST as inviteHire } from "@/app/api/hiring/applications/[id]/invite/route";
+import { POST as uploadDocument } from "@/app/api/hiring/applications/[id]/documents/route";
+import { deleteApplicantFile, putApplicantFile } from "@/lib/hiring/storage";
 import { createAllowedEmailInvite } from "@/lib/services/onboarding-lifecycle";
 
 const user = (role: "ADMIN" | "STAFF" | "STUDENT" | "COLLABORATOR") => ({
@@ -279,7 +281,7 @@ describe("hire invite (staged conversion)", () => {
       }),
     );
     expect(models.application.update).toHaveBeenCalledWith({ where: { id: "app-1" }, data: { allowedEmailId: "invite-1" } });
-    expect(JSON.stringify(vi.mocked(createAuditEntry).mock.calls[0]![0])).not.toContain("alex@example.edu");
+    expect(JSON.stringify(vi.mocked(createAuditEntryTx).mock.calls[0]![1])).not.toContain("alex@example.edu");
   });
 
   it("asks before linking when an account already exists, then links only on confirm", async () => {
@@ -295,6 +297,53 @@ describe("hire invite (staged conversion)", () => {
     expect(second.status).toBe(200);
     expect(models.applicant.update).toHaveBeenCalledWith({ where: { id: "p1" }, data: { hiredUserId: "u9" } });
     expect(createAllowedEmailInvite).not.toHaveBeenCalled();
+  });
+
+  it("does not leave a live invite when the Hire was undone while the invite was being created", async () => {
+    models.application.findUnique
+      .mockResolvedValueOnce(hireApplication()) // initial read: still Hire
+      .mockResolvedValueOnce({ stage: "PASSED", allowedEmailId: null }); // re-read inside the attach transaction
+    models.user.findFirst.mockResolvedValue(null);
+    models.user.findMany.mockResolvedValue([]);
+    vi.mocked(createAllowedEmailInvite).mockResolvedValue({ skipped: false, entry: { id: "invite-race" } } as never);
+
+    const res = await inviteHire(json("/api/hiring/applications/app-1/invite", "POST", {}), ctx());
+    expect(res.status).toBe(409);
+    expect(models.application.update).not.toHaveBeenCalled();
+    expect(models.allowedEmail.delete).toHaveBeenCalledWith({ where: { id: "invite-race" } });
+  });
+
+  it("attaches the invite under serializable isolation", async () => {
+    models.application.findUnique.mockResolvedValue(hireApplication());
+    models.user.findFirst.mockResolvedValue(null);
+    models.user.findMany.mockResolvedValue([]);
+    vi.mocked(createAllowedEmailInvite).mockResolvedValue({ skipped: false, entry: { id: "invite-ok" } } as never);
+    await inviteHire(json("/api/hiring/applications/app-1/invite", "POST", {}), ctx());
+    expect(db.$transaction.mock.calls.some((c: unknown[]) => (c[1] as { isolationLevel?: string } | undefined)?.isolationLevel === "Serializable")).toBe(true);
+  });
+
+  it("invites the newest address by default, and any known address on request", async () => {
+    models.application.findUnique.mockResolvedValue({
+      ...hireApplication(),
+      applicant: {
+        id: "p1",
+        name: "Alex Sample",
+        hiredUserId: null,
+        emails: [
+          { email: "alex.new@example.edu", isPrimary: false },
+          { email: "alex@example.edu", isPrimary: true },
+        ],
+      },
+    });
+    models.user.findFirst.mockResolvedValue(null);
+    models.user.findMany.mockResolvedValue([]);
+    vi.mocked(createAllowedEmailInvite).mockResolvedValue({ skipped: false, entry: { id: "invite-1" } } as never);
+
+    await inviteHire(json("/api/hiring/applications/app-1/invite", "POST", {}), ctx());
+    expect(vi.mocked(createAllowedEmailInvite).mock.calls[0]![0].email).toBe("alex.new@example.edu");
+
+    await inviteHire(json("/api/hiring/applications/app-1/invite", "POST", { email: "alex@example.edu" }), ctx());
+    expect(vi.mocked(createAllowedEmailInvite).mock.calls[1]![0].email).toBe("alex@example.edu");
   });
 
   it("rejects an email that is not one of the applicant's", async () => {
@@ -362,6 +411,96 @@ describe("hire invite identity checks", () => {
     const res = await post({ confirmNewAccount: true });
     expect(res.status).toBe(201);
     expect(createAllowedEmailInvite).toHaveBeenCalled();
+  });
+});
+
+describe("cycle archive and attach ids", () => {
+  beforeEach(() => vi.mocked(requireAuth).mockResolvedValue(user("ADMIN") as never));
+
+  it("stamps the retention clock when a cycle is archived straight from Open", async () => {
+    models.hiringCycle.findUnique.mockResolvedValue({ id: "c1", status: "OPEN", closedAt: null });
+    await patchCycle(json("/api/hiring/cycles/c1", "PATCH", { status: "ARCHIVED" }), ctx("c1"));
+    expect(models.hiringCycle.update.mock.calls[0]![0].data.closedAt).toBeInstanceOf(Date);
+  });
+
+  it("keeps the original close time when a closed cycle is archived, and clears it on reopen", async () => {
+    models.hiringCycle.findUnique.mockResolvedValue({ id: "c1", status: "CLOSED", closedAt: new Date("2026-05-01T00:00:00Z") });
+    await patchCycle(json("/api/hiring/cycles/c1", "PATCH", { status: "ARCHIVED" }), ctx("c1"));
+    expect(models.hiringCycle.update.mock.calls[0]![0].data.closedAt).toBeUndefined();
+    await patchCycle(json("/api/hiring/cycles/c1", "PATCH", { status: "OPEN" }), ctx("c1"));
+    expect(models.hiringCycle.update.mock.calls[1]![0].data.closedAt).toBeNull();
+  });
+
+  it("accepts an importer-created (UUID) applicant id when attaching a returning application", async () => {
+    models.hiringCycle.findUnique.mockResolvedValue({ id: CYCLE_ID });
+    models.applicant.findUnique.mockResolvedValue({ id: "5f1b7a52-1c53-4f6e-9a0e-3b3c1a9d1e11", purgedAt: null });
+    models.applicantEmail.findUnique.mockResolvedValue({ applicantId: "5f1b7a52-1c53-4f6e-9a0e-3b3c1a9d1e11" });
+    models.application.create.mockResolvedValue({ id: "app-3", cycleId: CYCLE_ID, applicantId: "5f1b7a52-1c53-4f6e-9a0e-3b3c1a9d1e11", stage: "APPLIED" });
+    const res = await createApplication(
+      json("/api/hiring/applications", "POST", {
+        cycleId: CYCLE_ID,
+        name: "Imported Person",
+        email: "imported@example.edu",
+        existingApplicantId: "5f1b7a52-1c53-4f6e-9a0e-3b3c1a9d1e11",
+      }),
+      ctx(),
+    );
+    expect(res.status).toBe(201);
+  });
+});
+
+describe("document uploads", () => {
+  const png = () => {
+    const form = new FormData();
+    form.set("file", new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0])], "scan.png", { type: "image/png" }));
+    form.set("kind", "OTHER");
+    return new Request("https://app.example.com/api/hiring/applications/app-1/documents", {
+      method: "POST",
+      headers: { host: "app.example.com", origin: "https://app.example.com" },
+      body: form,
+    });
+  };
+
+  beforeEach(() => vi.mocked(requireAuth).mockResolvedValue(user("ADMIN") as never));
+
+  it("rejects uploads for an applicant whose data was purged, before storing anything", async () => {
+    models.application.findUnique.mockResolvedValue({ id: "app-1", applicant: { purgedAt: new Date("2029-01-01T00:00:00Z") } });
+    const res = await uploadDocument(png(), ctx());
+    expect(res.status).toBe(409);
+    expect(putApplicantFile).not.toHaveBeenCalled();
+    expect(models.applicantDocument.create).not.toHaveBeenCalled();
+  });
+
+  it("re-checks the purge state inside the transaction and removes the stored file when it loses a race", async () => {
+    models.application.findUnique
+      .mockResolvedValueOnce({ id: "app-1", applicant: { purgedAt: null } })
+      .mockResolvedValueOnce({ applicant: { purgedAt: new Date("2029-01-01T00:00:00Z") } });
+    const res = await uploadDocument(png(), ctx());
+    expect(res.status).toBe(409);
+    expect(models.applicantDocument.create).not.toHaveBeenCalled();
+    expect(deleteApplicantFile).toHaveBeenCalledTimes(1);
+  });
+
+  it("writes the document row and its audit entry in one serializable transaction", async () => {
+    models.application.findUnique
+      .mockResolvedValueOnce({ id: "app-1", applicant: { purgedAt: null } })
+      .mockResolvedValueOnce({ applicant: { purgedAt: null } });
+    models.applicantDocument.create.mockResolvedValue({ id: "d1", kind: "OTHER", fileName: "scan.png", contentType: "image/png", sizeBytes: 10, createdAt: new Date() });
+    const res = await uploadDocument(png(), ctx());
+    expect(res.status).toBe(201);
+    expect(createAuditEntryTx).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ action: "document_add" }));
+    expect(deleteApplicantFile).not.toHaveBeenCalled();
+  });
+
+  it("cleans up the stored file when the audit write fails, so no orphan row or file remains", async () => {
+    models.application.findUnique
+      .mockResolvedValueOnce({ id: "app-1", applicant: { purgedAt: null } })
+      .mockResolvedValueOnce({ applicant: { purgedAt: null } });
+    models.applicantDocument.create.mockResolvedValue({ id: "d1", kind: "OTHER", fileName: "scan.png", contentType: "image/png", sizeBytes: 10, createdAt: new Date() });
+    vi.mocked(createAuditEntryTx).mockRejectedValueOnce(new Error("audit down"));
+    const res = await uploadDocument(png(), ctx());
+    expect(res.status).toBe(500);
+    expect(deleteApplicantFile).toHaveBeenCalledTimes(1);
   });
 });
 

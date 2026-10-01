@@ -30,6 +30,8 @@ export default async function WorkforcePlanningPage() {
         primaryArea: true,
         gradYear: true,
         graduationTerm: true,
+        startTerm: true,
+        startTermYear: true,
         areaAssignments: { select: { area: true, isPrimary: true } },
       },
     }),
@@ -59,6 +61,8 @@ export default async function WorkforcePlanningPage() {
       area: u.primaryArea ?? u.areaAssignments.find((a) => a.isPrimary)?.area ?? u.areaAssignments[0]?.area ?? null,
       gradTerm: u.graduationTerm,
       gradYear: u.gradYear,
+      startTerm: u.startTerm,
+      startYear: u.startTermYear,
     })),
     collapseApplicants(
       applications.map((a) => ({

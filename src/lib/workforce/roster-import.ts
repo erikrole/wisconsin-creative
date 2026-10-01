@@ -119,6 +119,12 @@ export function planRosterImport(
     if (u.athleticsEmail) byEmail.set(normalizeEmail(u.athleticsEmail), u);
   }
 
+  // Writes already planned in this file, so a student repeated in a combined export cannot
+  // plan two start terms or the same placement twice (which would hit the unique key).
+  const plannedStart = new Set<string>();
+  const plannedPlacements = new Set<string>();
+  const seenUsers = new Set<string>();
+
   return records.map((record) => {
     const user = record.emails.map((e) => byEmail.get(e)).find(Boolean);
     if (!user) {
@@ -127,9 +133,23 @@ export function planRosterImport(
     if (user.staffingType !== "ST") {
       return { record, action: "unmatched", userId: user.id, setStartTerm: false, newPlacements: [], reason: "Not a student account (full-time staff are skipped)" };
     }
-    const setStartTerm = Boolean(record.startTerm) && user.startTerm === null;
-    const newPlacements = record.placements.filter((p) => !existingPlacementKeys.has(`${user.id}:${p.term}:${p.year}`));
+    const repeated = seenUsers.has(user.id);
+    seenUsers.add(user.id);
+    const setStartTerm = Boolean(record.startTerm) && user.startTerm === null && !plannedStart.has(user.id);
+    const newPlacements = record.placements.filter((p) => {
+      const key = `${user.id}:${p.term}:${p.year}`;
+      return !existingPlacementKeys.has(key) && !plannedPlacements.has(key);
+    });
+    if (setStartTerm) plannedStart.add(user.id);
+    for (const p of newPlacements) plannedPlacements.add(`${user.id}:${p.term}:${p.year}`);
     const action: RosterAction = setStartTerm || newPlacements.length > 0 ? "update" : "no_change";
-    return { record, action, userId: user.id, setStartTerm, newPlacements };
+    return {
+      record,
+      action,
+      userId: user.id,
+      setStartTerm,
+      newPlacements,
+      ...(repeated ? { reason: "This person appears earlier in the file. Only values not already planned are used." } : {}),
+    };
   });
 }

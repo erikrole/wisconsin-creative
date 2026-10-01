@@ -203,3 +203,12 @@ Source: Fable read-only review, 2026-09-30, verified against the repo.
 - **Imports:** applicant imports write with batched inserts (one per table); a changed import option (Fall year, blank-decision rule) clears the reviewed preview; roster import and the placement and start-term APIs accept student workers only.
 - **Planning** counts each applicant once (strongest stage, then latest cycle).
 - **Client races:** applicant list and detail responses from superseded requests are ignored; J/K and R use only stages visible on the board; R advances only after Reviewed saves.
+
+## 22. Review fixes, round 2 (PR #414, 2026-09-30)
+- **Invite creation is atomic with the Hire state:** the invite is attached to the application in a SERIALIZABLE transaction that re-reads the stage; if the decision was undone meanwhile the just-created invite is deleted and the request fails. Undoing a Hire re-reads the invite link inside its own serializable transaction. Together a race aborts one side instead of leaving a live invite on a passed applicant.
+- **Invite address:** the newest known address is the default and the admin can pick any known address in the Account section.
+- **Uploads:** rejected for purged applicants (a tombstone is only rehydrated through a new application), the purge state is re-checked inside the write transaction, and the document row and its audit entry commit together; the stored file is removed if either fails.
+- **Planning honors start terms:** a student with a future `startTerm`, and a hired applicant by hiring-cycle term, is counted only from the academic year they start.
+- **Importer:** non-empty decision text it does not recognize rejects the row (no silent fall back to Applied); slash-delimited lists split; applicant imports create UUID ids, so the attach contract accepts any persisted id (cuid or UUID).
+- **Roster import:** a student repeated in one file is planned once (first start term wins, no duplicate placements).
+- **Cycles:** archiving an Open or Planning cycle stamps `closedAt` like closing it; reopening clears it.

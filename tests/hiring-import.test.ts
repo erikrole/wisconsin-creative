@@ -67,6 +67,25 @@ describe("parseApplicantCsv (PageUp shape)", () => {
   });
 });
 
+describe("unrecognized decisions", () => {
+  it("rejects the row instead of silently putting a decided applicant back in the pipeline", () => {
+    const csv = ["Name,Email,Decision", "Pat Placeholder,pat@example.edu,Passsed", "Sam Sample,sam@example.edu,Hire"].join("\n");
+    const { records, invalid } = parseApplicantCsv(csv);
+    expect(records.map((r) => r.name)).toEqual(["Sam Sample"]);
+    expect(invalid).toEqual([{ line: 2, name: "Pat Placeholder", reason: expect.stringContaining('Unrecognized decision "Passsed"') }]);
+  });
+});
+
+describe("slash-delimited lists", () => {
+  it("splits areas and experience on slashes as well as commas and semicolons", () => {
+    const csv = ["Name,Email,Primary Area,Fields you have experience in", 'Pat Placeholder,pat@example.edu,Video / Photography,"Design / Social Strategy, Marketing"'].join("\n");
+    const [record] = parseApplicantCsv(csv).records;
+    expect(record!.rawAreas).toEqual(["Video", "Photography"]);
+    expect(record!.primaryArea).toBe("VIDEO");
+    expect(record!.fieldsExperience).toEqual(["Design", "Social Strategy", "Marketing"]);
+  });
+});
+
 describe("Google Form shape", () => {
   it("maps form columns and phone numbers with directional marks", () => {
     const csv = [
@@ -91,6 +110,12 @@ describe("stage and area mapping", () => {
     expect(mapStage("", false, true)).toBe("ROUND_1");
     expect(mapStage("", false, false)).toBe("APPLIED");
     expect(mapStage("", true, false)).toBe("PASSED");
+  });
+
+  it("returns null for decision text it does not recognize, instead of defaulting to Applied", () => {
+    expect(mapStage("Passsed", false, false)).toBeNull();
+    expect(mapStage("Interview 2", true, true)).toBeNull();
+    expect(mapStage("Applied", false, false)).toBe("APPLIED");
   });
 
   it("maps design to graphics and leaves marketing unmapped", () => {
@@ -179,6 +204,24 @@ describe("roster import", () => {
     const [riley] = planRosterImport(records.filter((r) => r.name === "Riley Roster"), staff, new Set());
     expect(riley).toMatchObject({ action: "unmatched", setStartTerm: false, newPlacements: [] });
     expect(riley!.reason).toContain("Not a student");
+  });
+
+  it("plans a student repeated in a combined export once: first start term wins, no duplicate placements", () => {
+    const csv = [
+      "Area,Name,Campus Email,Start Date,Fall,Winter,Spring",
+      "Video,Riley Roster,riley@example.edu,Fall 2024,MSOC,,",
+      "Video,Riley Roster,riley@example.edu,Spring 2025,MSOC,WHKY,",
+    ].join("\n");
+    const { records } = parseRosterCsv(csv, 2025);
+    const plan = planRosterImport(records, users, new Set());
+    expect(plan[0]).toMatchObject({ action: "update", setStartTerm: true });
+    expect(plan[0]!.newPlacements).toHaveLength(1);
+    // The second row may only add what is not already planned (Winter), and never a second start term.
+    expect(plan[1]!.setStartTerm).toBe(false);
+    expect(plan[1]!.newPlacements.map((p) => p.term)).toEqual(["WINTER"]);
+    expect(plan[1]!.reason).toContain("earlier in the file");
+    const keys = plan.flatMap((p) => p.newPlacements.map((x) => `${p.userId}:${x.term}:${x.year}`));
+    expect(new Set(keys).size).toBe(keys.length);
   });
 
   it("matches only by email and never overwrites existing values", () => {

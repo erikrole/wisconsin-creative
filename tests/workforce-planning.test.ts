@@ -34,6 +34,28 @@ describe("presentInYear", () => {
   });
 });
 
+describe("start terms", () => {
+  it("does not count someone before they start", () => {
+    // Starts Fall 2028: not here in 2026-27 or 2027-28, here in 2028-29.
+    const person = { gradTerm: "SPRING" as const, gradYear: 2032, startTerm: "FALL" as const, startYear: 2028 };
+    expect(presentInYear(person, 2026)).toBe(false);
+    expect(presentInYear(person, 2027)).toBe(false);
+    expect(presentInYear(person, 2028)).toBe(true);
+  });
+
+  it("counts someone who starts partway through the academic year for that year", () => {
+    expect(presentInYear({ gradTerm: null, gradYear: null, startTerm: "SPRING", startYear: 2027 }, 2026)).toBe(true);
+  });
+
+  it("applies to current students with a future start term and to hired applicants by cycle term", () => {
+    const students: PlanningStudent[] = [{ ...student("future", "VIDEO", "SPRING", 2032), startTerm: "FALL", startYear: 2028 }];
+    const hired: PlanningApplicant[] = [{ ...applicant("h", "VIDEO", "HIRE", "SPRING", 2032), startTerm: "FALL", startYear: 2027 }];
+    const [video] = buildPlanning(students, hired, [2026, 2027, 2028]);
+    expect(video!.cells.map((c) => c.continuing)).toEqual([0, 0, 1]);
+    expect(video!.cells.map((c) => c.hired)).toEqual([0, 1, 1]);
+  });
+});
+
 describe("buildPlanning", () => {
   const years = [2026, 2027, 2028];
 
