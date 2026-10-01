@@ -353,14 +353,20 @@ struct KioskBatteryRow: View {
     var units: [Unit] = []
     var note: String?
     var section: KioskSection = .takingOut
+    /// The battery's photo; falls back to the battery glyph.
+    var imageUrl: String? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 10) {
-                Image(systemName: "battery.75percent")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(scanned >= total && total > 0 ? section.accent : KioskText.tertiary)
-                    .frame(width: 22)
+                if imageUrl != nil {
+                    KioskItemThumbnail(imageUrl: imageUrl, size: 40)
+                } else {
+                    Image(systemName: "battery.75percent")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(scanned >= total && total > 0 ? section.accent : KioskText.tertiary)
+                        .frame(width: 22)
+                }
                 Text("\(title) · \(scanned) of \(total)")
                     .font(.system(size: 15, weight: .bold))
                     .foregroundStyle(KioskText.primary)

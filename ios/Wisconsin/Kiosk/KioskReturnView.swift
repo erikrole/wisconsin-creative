@@ -321,8 +321,9 @@ struct KioskReturnView: View {
         VStack(alignment: .leading, spacing: 6) {
             KioskSectionHeader(
                 title: isShared ? "For the team" : "Coming back",
-                detail: [returningForOwner.map { "\($0.name.split(separator: " ").first ?? "")'s checkout" } ?? detail?.title,
-                         detail.map { "due \($0.endsAt.formatted(.dateTime.hour().minute()))" }].compactMap { $0 }.joined(separator: " · "),
+                // The screen header already names the booking; only say whose it is
+                // when someone else is returning it.
+                detail: returningForOwner.map { "\($0.name.split(separator: " ").first ?? "")'s checkout" },
                 count: "\(returnedCount) of \(totalItems)",
                 section: section
             )
@@ -359,7 +360,8 @@ struct KioskReturnView: View {
                                 scanned: units.filter { returnedIds.contains($0.id) }.count,
                                 total: units.count,
                                 units: units.map { .init(id: $0.id, label: $0.unitNumber.map { "#\($0)" } ?? $0.tagName, isScanned: returnedIds.contains($0.id)) },
-                                section: section
+                                section: section,
+                                imageUrl: units.first?.imageUrl
                             )
                         }
                     }
