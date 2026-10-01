@@ -148,8 +148,8 @@ describe("roster import", () => {
   const csv = ROSTER;
 
   const users = [
-    { id: "u1", name: "Riley Roster", email: "riley@example.edu", athleticsEmail: null, startTerm: null },
-    { id: "u3", name: "Quinn Existing", email: "quinn@example.edu", athleticsEmail: "quinn@athletics.example.edu", startTerm: "FALL" as const },
+    { id: "u1", name: "Riley Roster", email: "riley@example.edu", athleticsEmail: null, startTerm: null, staffingType: "ST" as const },
+    { id: "u3", name: "Quinn Existing", email: "quinn@example.edu", athleticsEmail: "quinn@athletics.example.edu", startTerm: "FALL" as const, staffingType: "ST" as const },
   ];
 
   it("parses placements into the academic year, skipping repeated headers", () => {
@@ -173,6 +173,14 @@ describe("roster import", () => {
     expect(morgan.placements).toEqual([]);
   });
 
+  it("skips full-time staff accounts", () => {
+    const { records } = parseRosterCsv(csv, 2025);
+    const staff = [{ id: "u9", name: "Riley Roster", email: "riley@example.edu", athleticsEmail: null, startTerm: null, staffingType: "FT" as const }];
+    const [riley] = planRosterImport(records.filter((r) => r.name === "Riley Roster"), staff, new Set());
+    expect(riley).toMatchObject({ action: "unmatched", setStartTerm: false, newPlacements: [] });
+    expect(riley!.reason).toContain("Not a student");
+  });
+
   it("matches only by email and never overwrites existing values", () => {
     const { records } = parseRosterCsv(csv, 2025);
     const plan = planRosterImport(records, users, new Set(["u3:SPRING:2026"]));
@@ -192,9 +200,10 @@ vi.mock("@/lib/rate-limit", () => ({ enforceRateLimit: vi.fn(), SETTINGS_MUTATIO
 vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
 
 const tx = {
-  applicant: { create: vi.fn() },
-  application: { create: vi.fn() },
-  applicationNote: { create: vi.fn() },
+  applicant: { createMany: vi.fn() },
+  applicantEmail: { createMany: vi.fn() },
+  application: { createMany: vi.fn() },
+  applicationNote: { createMany: vi.fn() },
   user: { update: vi.fn() },
   studentTermPlacement: { create: vi.fn() },
 };
@@ -232,8 +241,6 @@ describe("import routes", () => {
     models.application.findMany.mockResolvedValue([]);
     models.user.findMany.mockResolvedValue([]);
     models.studentTermPlacement.findMany.mockResolvedValue([]);
-    tx.applicant.create.mockResolvedValue({ id: "new-person" });
-    tx.application.create.mockResolvedValue({ id: "new-app" });
   });
 
   it.each(["STAFF", "STUDENT", "COLLABORATOR"] as const)("%s gets 403 on both imports", async (role) => {
@@ -257,11 +264,19 @@ describe("import routes", () => {
   it("apply creates people and applications, and audits counts only", async () => {
     const res = await importApplicants(post("/api/hiring/import", { cycleId: CYCLE, csv: PAGEUP, apply: true }), ctx);
     expect(res.status).toBe(200);
-    expect(tx.applicant.create).toHaveBeenCalledTimes(3);
-    expect(tx.application.create).toHaveBeenCalledTimes(3);
-    const first = tx.application.create.mock.calls[0]![0].data;
-    expect(first.cycleId).toBe(CYCLE);
-    expect(first.sourcePayload).toMatchObject({ Applicant: "Alex Sample" });
+    // Batched: one insert per table, not one round trip per row.
+    expect(tx.applicant.createMany).toHaveBeenCalledTimes(1);
+    expect(tx.applicantEmail.createMany).toHaveBeenCalledTimes(1);
+    expect(tx.application.createMany).toHaveBeenCalledTimes(1);
+    const people = tx.applicant.createMany.mock.calls[0]![0].data;
+    expect(people).toHaveLength(3);
+    expect(people[0].nameKey).toBe("alex sample");
+    const apps = tx.application.createMany.mock.calls[0]![0].data;
+    expect(apps).toHaveLength(3);
+    expect(apps[0].cycleId).toBe(CYCLE);
+    expect(apps[0].applicantId).toBe(people[0].id);
+    expect(apps[0].sourcePayload).toMatchObject({ Applicant: "Alex Sample" });
+    expect(tx.applicantEmail.createMany.mock.calls[0]![0].data[0]).toMatchObject({ applicantId: people[0].id, isPrimary: true });
     const audit = JSON.stringify(vi.mocked(createAuditEntry).mock.calls[0]![0]);
     expect(audit).toContain("import");
     expect(audit).not.toContain("example.edu");
@@ -272,7 +287,13 @@ describe("import routes", () => {
       { id: "p2", name: "Alex Sample", gradTerm: "SPRING", gradYear: 2027, emails: [{ email: "alex.old@example.com" }] },
     ]);
     await importApplicants(post("/api/hiring/import", { cycleId: CYCLE, csv: PAGEUP, apply: true }), ctx);
-    expect(tx.applicant.create).toHaveBeenCalledTimes(2);
+    expect(tx.applicant.createMany.mock.calls[0]![0].data).toHaveLength(2);
+  });
+
+  it("finds possible duplicates by normalized name key, so accents and punctuation do not hide them", async () => {
+    await importApplicants(post("/api/hiring/import", { cycleId: CYCLE, csv: "Name,Email\nRen\u00e9e O'Brien,renee@example.edu\n" }), ctx);
+    const where = models.applicant.findMany.mock.calls[0]![0].where;
+    expect(JSON.stringify(where)).toContain('"nameKey":{"in":["renee o brien"]}');
   });
 
   it("rejects an empty file", async () => {
@@ -281,10 +302,18 @@ describe("import routes", () => {
   });
 
   it("roster apply sets a start term and placements without overwriting", async () => {
-    models.user.findMany.mockResolvedValue([{ id: "u1", name: "Riley Roster", email: "riley@example.edu", athleticsEmail: null, startTerm: null }]);
+    models.user.findMany.mockResolvedValue([{ id: "u1", name: "Riley Roster", email: "riley@example.edu", athleticsEmail: null, startTerm: null, staffingType: "ST" }]);
     const res = await importRoster(post("/api/workforce/import", { academicYearStart: 2025, csv: ROSTER, apply: true }), ctx);
     expect(res.status).toBe(200);
     expect(tx.user.update).toHaveBeenCalledWith({ where: { id: "u1" }, data: { startTerm: "FALL", startTermYear: 2024 } });
     expect(tx.studentTermPlacement.create).toHaveBeenCalledTimes(3);
+  });
+
+  it("roster import skips full-time accounts", async () => {
+    models.user.findMany.mockResolvedValue([{ id: "u1", name: "Riley Roster", email: "riley@example.edu", athleticsEmail: null, startTerm: null, staffingType: "FT" }]);
+    const res = await importRoster(post("/api/workforce/import", { academicYearStart: 2025, csv: ROSTER, apply: true }), ctx);
+    expect(res.status).toBe(200);
+    expect(tx.user.update).not.toHaveBeenCalled();
+    expect(tx.studentTermPlacement.create).not.toHaveBeenCalled();
   });
 });

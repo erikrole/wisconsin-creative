@@ -83,7 +83,14 @@ export function parseRosterCsv(csv: string, academicYearStart: number): { record
   return { records, skipped };
 }
 
-export type RosterUser = { id: string; name: string; email: string; athleticsEmail: string | null; startTerm: GraduationTerm | null };
+export type RosterUser = {
+  id: string;
+  name: string;
+  email: string;
+  athleticsEmail: string | null;
+  startTerm: GraduationTerm | null;
+  staffingType: "FT" | "ST";
+};
 
 export type RosterAction = "update" | "no_change" | "unmatched";
 
@@ -116,6 +123,9 @@ export function planRosterImport(
     const user = record.emails.map((e) => byEmail.get(e)).find(Boolean);
     if (!user) {
       return { record, action: "unmatched", setStartTerm: false, newPlacements: [], reason: "No account with this email" };
+    }
+    if (user.staffingType !== "ST") {
+      return { record, action: "unmatched", userId: user.id, setStartTerm: false, newPlacements: [], reason: "Not a student account (full-time staff are skipped)" };
     }
     const setStartTerm = Boolean(record.startTerm) && user.startTerm === null;
     const newPlacements = record.placements.filter((p) => !existingPlacementKeys.has(`${user.id}:${p.term}:${p.year}`));

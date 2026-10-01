@@ -70,7 +70,7 @@
 | `src/lib/services/notification-deliveries.ts` | 59 |
 | `src/lib/services/notification-prefs.ts` | 348 |
 | `src/lib/services/notifications.ts` | 1966 |
-| `src/lib/services/onboarding-lifecycle.ts` | 540 |
+| `src/lib/services/onboarding-lifecycle.ts` | 544 |
 | `src/lib/services/pending-pickup-expiry.ts` | 370 |
 | `src/lib/services/product-event-log.ts` | 43 |
 | `src/lib/services/reports.ts` | 1932 |

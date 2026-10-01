@@ -1,5 +1,5 @@
 import { withAuth } from "@/lib/api";
-import { createAuditEntry } from "@/lib/audit";
+import { createAuditEntryTx } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { updateCycleSchema } from "@/lib/hiring/contract";
 import { HttpError, ok } from "@/lib/http";
@@ -35,16 +35,16 @@ export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
         });
       }
     }
-  });
 
-  await createAuditEntry({
-    actorId: user.id,
-    actorRole: user.role,
-    entityType: "hiring_cycle",
-    entityId: params.id,
-    action: "update",
-    before: { status: existing.status },
-    after: { status: body.status ?? existing.status, slotsChanged: Boolean(body.slots) },
+    await createAuditEntryTx(tx, {
+      actorId: user.id,
+      actorRole: user.role,
+      entityType: "hiring_cycle",
+      entityId: params.id,
+      action: "update",
+      before: { status: existing.status },
+      after: { status: body.status ?? existing.status, slotsChanged: Boolean(body.slots) },
+    });
   });
 
   return ok({ data: { id: params.id } });

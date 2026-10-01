@@ -1,6 +1,6 @@
 import { ApplicationStage } from "@prisma/client";
 import { withAuth } from "@/lib/api";
-import { createAuditEntry } from "@/lib/audit";
+import { createAuditEntryTx } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { updateApplicationSchema } from "@/lib/hiring/contract";
 import { purgeDate } from "@/lib/hiring/retention";
@@ -97,14 +97,31 @@ export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
 
   const existing = await db.application.findUnique({
     where: { id: params.id },
-    select: { id: true, applicantId: true, stage: true, reviewed: true },
+    select: { id: true, applicantId: true, stage: true, reviewed: true, allowedEmailId: true },
   });
   if (!existing) throw new HttpError(404, "Application not found.");
 
   const stageChanged = body.stage !== undefined && body.stage !== existing.stage;
+  const leavingHire = stageChanged && existing.stage === ApplicationStage.HIRE && body.stage !== ApplicationStage.HIRE;
   const now = new Date();
 
   await db.$transaction(async (tx) => {
+    let invitationRevoked = false;
+    if (leavingHire && existing.allowedEmailId) {
+      const invite = await tx.allowedEmail.findUnique({
+        where: { id: existing.allowedEmailId },
+        select: { id: true, claimedAt: true },
+      });
+      if (invite?.claimedAt) {
+        throw new HttpError(409, "This applicant already registered from the hire invite. Deactivate the account instead of undoing the hire.");
+      }
+      // An unclaimed invite must not outlive the decision. Deleting it also nulls the link.
+      if (invite) {
+        await tx.allowedEmail.delete({ where: { id: invite.id } });
+        invitationRevoked = true;
+      }
+    }
+
     await tx.application.update({
       where: { id: params.id },
       data: {
@@ -130,18 +147,19 @@ export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
     if (Object.values(applicantPatch).some((v) => v !== undefined)) {
       await tx.applicant.update({ where: { id: existing.applicantId }, data: applicantPatch });
     }
-  });
 
-  // Audit rows are deleted after 90 days and must not carry contact data (D-065):
-  // record which fields changed and the stage transition only.
-  await createAuditEntry({
-    actorId: user.id,
-    actorRole: user.role,
-    entityType: "hiring_application",
-    entityId: params.id,
-    action: stageChanged ? "stage_change" : "update",
-    before: { stage: existing.stage, reviewed: existing.reviewed },
-    after: { stage: body.stage ?? existing.stage, fields: Object.keys(body) },
+    // Audit rows are deleted after 90 days and must not carry contact data (D-065):
+    // record which fields changed and the stage transition only. Written in the same
+    // transaction so a mutation never commits without its evidence.
+    await createAuditEntryTx(tx, {
+      actorId: user.id,
+      actorRole: user.role,
+      entityType: "hiring_application",
+      entityId: params.id,
+      action: stageChanged ? "stage_change" : "update",
+      before: { stage: existing.stage, reviewed: existing.reviewed },
+      after: { stage: body.stage ?? existing.stage, fields: Object.keys(body), invitationRevoked },
+    });
   });
 
   return ok({ data: { id: params.id } });

@@ -1,4 +1,4 @@
-import { del, get, put, type GetBlobResult } from "@vercel/blob";
+import { BlobNotFoundError, del, get, put, type GetBlobResult } from "@vercel/blob";
 import { env } from "@/lib/env";
 import { HttpError } from "@/lib/http";
 
@@ -36,12 +36,17 @@ export async function getApplicantFile(
   }
 }
 
-/** Best-effort delete; a missing blob counts as deleted. */
+/**
+ * Delete a stored file. Only a confirmed missing blob counts as deleted; any other
+ * storage failure throws so callers keep the database row (the only record of the
+ * pathname) and can retry, instead of orphaning the file permanently.
+ */
 export async function deleteApplicantFile(pathname: string): Promise<void> {
   try {
     await del(pathname, auth());
   } catch (error) {
     if (error instanceof HttpError) throw error;
-    console.error("Could not delete an applicant blob", error);
+    if (error instanceof BlobNotFoundError) return;
+    throw new HttpError(503, "The applicant file could not be deleted.");
   }
 }

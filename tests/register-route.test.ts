@@ -4,6 +4,7 @@ import { Role } from "@prisma/client";
 const tx = {
   user: {
     create: vi.fn(),
+    update: vi.fn(),
   },
   allowedEmail: {
     update: vi.fn(),
@@ -340,7 +341,7 @@ describe("POST /api/auth/register", () => {
   it("links a hired applicant to the new account inside the claim transaction", async () => {
     vi.mocked(db.allowedEmail.findUnique).mockResolvedValue(allowedInvite(Role.STUDENT));
     tx.user.create.mockResolvedValue(createdUser(Role.STUDENT, null));
-    tx.application.findFirst.mockResolvedValue({ id: "app-1", applicantId: "applicant-1" });
+    tx.application.findFirst.mockResolvedValue({ id: "app-1", applicantId: "applicant-1", cycle: { term: "FALL", year: 2026 } });
     tx.applicant.updateMany.mockResolvedValue({ count: 1 });
 
     const response = await POST(
@@ -350,8 +351,14 @@ describe("POST /api/auth/register", () => {
 
     expect(response.status).toBe(201);
     expect(tx.application.findFirst).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { allowedEmailId: "invite-student" } }),
+      // Only a standing Hire links; an undone decision must not.
+      expect.objectContaining({ where: { allowedEmailId: "invite-student", stage: "HIRE" } }),
     );
+    // The student starts in the hiring cycle's term.
+    expect(tx.user.update).toHaveBeenCalledWith({
+      where: { id: "user-student" },
+      data: { startTerm: "FALL", startTermYear: 2026 },
+    });
     // Never overwrites an existing link.
     expect(tx.applicant.updateMany).toHaveBeenCalledWith({
       where: { id: "applicant-1", hiredUserId: null },

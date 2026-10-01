@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import EmptyState from "@/components/EmptyState";
 import { requireAuth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { academicYearLabel, buildPlanning, type PlanningApplicant } from "@/lib/workforce/planning";
+import { academicYearLabel, buildPlanning, collapseApplicants, type PlanningApplicant } from "@/lib/workforce/planning";
 import { AREA_LABEL } from "../hiring/types";
 
 export const metadata = { title: "Workforce planning" };
@@ -45,6 +45,8 @@ export default async function WorkforcePlanningPage() {
         id: true,
         stage: true,
         primaryArea: true,
+        applicantId: true,
+        cycle: { select: { term: true, year: true } },
         applicant: { select: { name: true, gradTerm: true, gradYear: true } },
       },
     }),
@@ -58,15 +60,18 @@ export default async function WorkforcePlanningPage() {
       gradTerm: u.graduationTerm,
       gradYear: u.gradYear,
     })),
-    applications.map(
-      (a): PlanningApplicant => ({
+    collapseApplicants(
+      applications.map((a) => ({
         id: a.id,
+        applicantId: a.applicantId,
         name: a.applicant.name,
         area: a.primaryArea,
         gradTerm: a.applicant.gradTerm,
         gradYear: a.applicant.gradYear,
         stage: a.stage as PlanningApplicant["stage"],
-      }),
+        cycleTerm: a.cycle.term,
+        cycleYear: a.cycle.year,
+      })),
     ),
     years,
   );

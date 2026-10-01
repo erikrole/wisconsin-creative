@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -60,6 +60,18 @@ export default function CsvImportDialog({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // The reviewed preview is only valid for the options it was run with. If an option
+  // changes (Fall year, blank-decision rule), drop the report so Apply cannot write a
+  // different plan than the one that was reviewed.
+  const optionsKey = JSON.stringify(extraPayload);
+  const previewedWith = useRef<string | null>(null);
+  useEffect(() => {
+    if (previewedWith.current !== null && previewedWith.current !== optionsKey) {
+      setReport(null);
+      previewedWith.current = null;
+    }
+  }, [optionsKey]);
+
   async function run(apply: boolean) {
     if (!csv) return;
     setBusy(true);
@@ -74,6 +86,7 @@ export default function CsvImportDialog({
       const json = await parseJsonSafely<{ data?: Report }>(res);
       if (!res.ok || !json?.data) throw new Error(messageOf(json, "The import could not be processed."));
       setReport(json.data);
+      previewedWith.current = optionsKey;
       if (apply) {
         toast.success("Import applied");
         onApplied();

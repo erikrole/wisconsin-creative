@@ -66,7 +66,8 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
     });
     return ok({ data: doc }, 201);
   } catch (error) {
-    await deleteApplicantFile(pathname);
+    // Best effort: do not mask the original failure if cleanup also fails.
+    await deleteApplicantFile(pathname).catch(() => undefined);
     throw error;
   }
 });

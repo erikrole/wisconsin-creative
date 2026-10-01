@@ -41,9 +41,10 @@ export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
 
   const existing = await db.user.findUnique({
     where: { id: params.id },
-    select: { id: true, startTerm: true, startTermYear: true },
+    select: { id: true, staffingType: true, startTerm: true, startTermYear: true },
   });
   if (!existing) throw new HttpError(404, "Person not found.");
+  if (existing.staffingType !== "ST") throw new HttpError(400, "Start terms are only for student workers.");
 
   await db.user.update({
     where: { id: params.id },

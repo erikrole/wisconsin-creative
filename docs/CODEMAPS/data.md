@@ -105,7 +105,7 @@
 | `EventTravelMember` | 7 | 3 |
 | `HiringCycle` | 13 | 3 |
 | `HiringCycleSlot` | 5 | 2 |
-| `Applicant` | 17 | 2 |
+| `Applicant` | 18 | 3 |
 | `ApplicantEmail` | 6 | 2 |
 | `Application` | 27 | 6 |
 | `ApplicantDocument` | 11 | 3 |

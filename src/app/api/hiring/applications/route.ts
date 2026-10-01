@@ -6,6 +6,7 @@ import {
   createApplicationSchema,
   findPossibleMatches,
   normalizeEmail,
+  normalizeName,
   normalizePhone,
 } from "@/lib/hiring/contract";
 import { HttpError, ok } from "@/lib/http";
@@ -81,7 +82,8 @@ export const POST = withAuth(async (req, { user }) => {
       where: {
         OR: [
           { emails: { some: { email } } },
-          { name: { equals: body.name, mode: "insensitive" } },
+          // Accent and punctuation differences must not hide a duplicate.
+          { nameKey: normalizeName(body.name) },
         ],
       },
       select: {
@@ -141,7 +143,8 @@ export const POST = withAuth(async (req, { user }) => {
         });
       }
       const hasEmail = await tx.applicantEmail.findUnique({ where: { email }, select: { applicantId: true } });
-      if (!hasEmail) await tx.applicantEmail.create({ data: { applicantId, email } });
+      // A rehydrated record has no emails left, so the restored one must be primary.
+      if (!hasEmail) await tx.applicantEmail.create({ data: { applicantId, email, isPrimary: Boolean(existing.purgedAt) } });
       else if (hasEmail.applicantId !== applicantId) {
         throw new HttpError(409, "That email belongs to a different applicant.");
       }
@@ -149,6 +152,7 @@ export const POST = withAuth(async (req, { user }) => {
       const person = await tx.applicant.create({
         data: {
           name: body.name,
+          nameKey: normalizeName(body.name),
           standing: body.standing,
           gradTerm: body.gradTerm,
           gradYear: body.gradYear,

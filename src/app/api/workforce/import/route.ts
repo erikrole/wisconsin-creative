@@ -28,7 +28,7 @@ export const POST = withAuth(async (req, { user }) => {
   const users = emails.length
     ? await db.user.findMany({
         where: { OR: [{ email: { in: emails } }, { athleticsEmail: { in: emails } }] },
-        select: { id: true, name: true, email: true, athleticsEmail: true, startTerm: true },
+        select: { id: true, name: true, email: true, athleticsEmail: true, startTerm: true, staffingType: true },
       })
     : [];
   const placements = users.length

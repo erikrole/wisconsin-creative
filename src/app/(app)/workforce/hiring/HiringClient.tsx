@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { FileText, Link2, MessageSquare, Plus, Search, Video } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
@@ -67,11 +67,16 @@ export default function HiringClient() {
     }
   }, []);
 
+  // Only the newest list request may update the board; a slower, older response for a
+  // cycle that is no longer selected is dropped.
+  const appsRequest = useRef(0);
   const loadApps = useCallback(async (id: string) => {
+    const ticket = ++appsRequest.current;
     try {
       const res = await fetch(`/api/hiring/applications?cycleId=${encodeURIComponent(id)}`);
       if (handleAuthRedirect(res)) return;
       const json = await parseJsonSafely<{ data?: BoardApplication[] }>(res);
+      if (ticket !== appsRequest.current) return;
       if (!res.ok) throw new Error(messageOf(json, "Could not load applicants."));
       setApps(json?.data ?? []);
       setLoadError(null);
@@ -103,9 +108,33 @@ export default function HiringClient() {
     });
   }, [apps, search, areaFilter, reviewFilter]);
 
-  const queueIds = useMemo(() => filtered.map((a) => a.id), [filtered]);
-
   const columns = APPLICATION_STAGES.filter((s) => showPassed || (s !== "PASSED" && s !== "WITHDRAWN"));
+  // Review shortcuts walk only what is visible on the board.
+  const queueIds = useMemo(() => filtered.filter((a) => columns.includes(a.stage)).map((a) => a.id), [filtered, columns]);
+
+  async function setCycleStatus(status: "OPEN" | "CLOSED") {
+    if (!cycle) return;
+    if (status === "CLOSED") {
+      const confirmed = await confirm({
+        title: `Close ${cycle.label}?`,
+        message: "Closing starts the 36-month retention clock for everyone in this cycle: after that, personal data is deleted and only names remain. You can reopen it.",
+        confirmLabel: "Close cycle",
+      });
+      if (!confirmed) return;
+    }
+    const res = await fetch(`/api/hiring/cycles/${cycle.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+    if (handleAuthRedirect(res)) return;
+    if (!res.ok) {
+      toast.error(await parseErrorMessage(res, "Could not update the cycle."));
+      return;
+    }
+    toast.success(status === "CLOSED" ? "Cycle closed" : "Cycle reopened");
+    void loadCycles();
+  }
 
   const changeStage = useCallback(
     async (id: string, stage: ApplicationStage) => {
@@ -222,6 +251,16 @@ export default function HiringClient() {
               <option value="unreviewed">Not reviewed</option>
               <option value="reviewed">Reviewed</option>
             </NativeSelect>
+            {cycle && (cycle.status === "OPEN" || cycle.status === "PLANNING") && (
+              <Button variant="outline" onClick={() => void setCycleStatus("CLOSED")}>
+                Close cycle
+              </Button>
+            )}
+            {cycle && (cycle.status === "CLOSED" || cycle.status === "ARCHIVED") && (
+              <Button variant="outline" onClick={() => void setCycleStatus("OPEN")}>
+                Reopen cycle
+              </Button>
+            )}
             <label className="flex items-center gap-2 text-sm text-muted-foreground">
               <input type="checkbox" checked={showPassed} onChange={(e) => setShowPassed(e.target.checked)} />
               Show passed

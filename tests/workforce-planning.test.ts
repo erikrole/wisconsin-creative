@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { academicYearLabel, buildPlanning, presentInYear, type PlanningApplicant, type PlanningStudent } from "@/lib/workforce/planning";
+import { academicYearLabel, buildPlanning, collapseApplicants, presentInYear, type PlanningApplicant, type PlanningStudent } from "@/lib/workforce/planning";
 
 // Fictional people. Academic year 2026 means Fall 2026 through Summer 2027.
 const student = (id: string, area: PlanningStudent["area"], gradTerm: PlanningStudent["gradTerm"], gradYear: number | null): PlanningStudent => ({
@@ -98,5 +98,31 @@ describe("academicYearLabel", () => {
   it("formats the span", () => {
     expect(academicYearLabel(2026)).toBe("2026-27");
     expect(academicYearLabel(2099)).toBe("2099-00");
+  });
+});
+
+describe("collapseApplicants", () => {
+  const row = (id: string, applicantId: string, stage: PlanningApplicant["stage"], cycleTerm: "FALL" | "SPRING", cycleYear: number) => ({
+    ...applicant(id, "VIDEO", stage, "SPRING", 2030),
+    applicantId,
+    cycleTerm,
+    cycleYear,
+  });
+
+  it("counts a returning person once, preferring the strongest stage", () => {
+    const rows = [row("old-hire", "p1", "HIRE", "FALL", 2025), row("new-open", "p1", "APPLIED", "FALL", 2026)];
+    expect(collapseApplicants(rows).map((r) => r.id)).toEqual(["old-hire"]);
+  });
+
+  it("prefers the latest cycle when stages tie", () => {
+    const rows = [row("a", "p1", "ROUND_1", "SPRING", 2026), row("b", "p1", "ROUND_1", "FALL", 2026)];
+    expect(collapseApplicants(rows).map((r) => r.id)).toEqual(["b"]);
+  });
+
+  it("keeps different people separate and yields one planning entry each", () => {
+    const rows = [row("a", "p1", "HIRE", "FALL", 2026), row("b", "p2", "HIRE", "FALL", 2026)];
+    const [video] = buildPlanning([], collapseApplicants([...rows, row("a2", "p1", "APPLIED", "SPRING", 2027)]), [2026]);
+    expect(video!.cells[0]!.hired).toBe(2);
+    expect(video!.cells[0]!.pipeline).toBe(0);
   });
 });

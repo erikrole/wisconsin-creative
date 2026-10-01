@@ -2659,10 +2659,11 @@ Indexes and constraints:
 
 ## Model `Applicant`
 
-Fields: 17
+Fields: 18
 
 - `id            String             @id @default(cuid())`
 - `name          String`
+- `nameKey       String             @default("") @map("name_key")`
 - `standing      ApplicantStanding?`
 - `gradTerm      GraduationTerm?    @map("grad_term")`
 - `gradYear      Int?               @map("grad_year")`
@@ -2682,6 +2683,7 @@ Fields: 17
 Indexes and constraints:
 
 - `@@index([name])`
+- `@@index([nameKey])`
 - `@@map("applicants")`
 
 ## Model `ApplicantEmail`

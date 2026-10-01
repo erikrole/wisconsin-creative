@@ -13,12 +13,13 @@ const tx = {
   applicationNote: { deleteMany: vi.fn() },
   applicantEmail: { deleteMany: vi.fn() },
   application: { updateMany: vi.fn() },
-  applicant: { update: vi.fn() },
+  applicant: { findUnique: vi.fn(), update: vi.fn() },
   applicantRetentionEvent: { create: vi.fn() },
+  allowedEmail: { deleteMany: vi.fn() },
 };
 const models = {
   applicant: { findUnique: vi.fn(), findMany: vi.fn() },
-  $transaction: vi.fn(async (fn: (t: typeof tx) => Promise<unknown>) => fn(tx)),
+  $transaction: vi.fn(async (fn: (t: typeof tx) => Promise<unknown>, _options?: unknown) => fn(tx)),
 };
 vi.mock("@/lib/db", () => ({ get db() { return models; } }));
 
@@ -94,14 +95,28 @@ describe("purgeApplicant", () => {
     purgedAt: null,
     hiredUserId: null,
     applications: [
-      { id: "app1", cycle: closed("2025-05-01T00:00:00Z"), documents: [{ pathname: "applicants/app1/resume-x.pdf" }, { pathname: "applicants/app1/other-y.png" }] },
-      { id: "app2", cycle: closed("2026-05-01T00:00:00Z"), documents: [] },
+      {
+        id: "app1",
+        allowedEmailId: "invite-1",
+        cycle: closed("2025-05-01T00:00:00Z"),
+        documents: [{ pathname: "applicants/app1/resume-x.pdf" }, { pathname: "applicants/app1/other-y.png" }],
+      },
+      { id: "app2", allowedEmailId: null, cycle: closed("2026-05-01T00:00:00Z"), documents: [] },
     ],
     ...overrides,
   });
 
+  it("re-reads the applicant inside a serializable transaction before doing anything destructive", async () => {
+    tx.applicant.findUnique.mockResolvedValue(eligible());
+    await purgeApplicant("a1", NOW);
+    expect(models.$transaction).toHaveBeenCalledTimes(1);
+    expect(models.$transaction.mock.calls[0]![1]).toMatchObject({ isolationLevel: "Serializable" });
+    // The eligibility read happens on the transaction client, not before it.
+    expect(tx.applicant.findUnique).toHaveBeenCalledTimes(1);
+  });
+
   it("deletes files first, clears personal data, keeps the outcome, and writes a non-PII ledger row", async () => {
-    models.applicant.findUnique.mockResolvedValue(eligible());
+    tx.applicant.findUnique.mockResolvedValue(eligible());
     const order: string[] = [];
     vi.mocked(deleteApplicantFile).mockImplementation(async () => void order.push("blob"));
     tx.applicantDocument.deleteMany.mockImplementation(async () => void order.push("rows"));
@@ -127,23 +142,51 @@ describe("purgeApplicant", () => {
     expect(ledger).toEqual({ applicantId: "a1", purgedAt: NOW, applicationCount: 2, documentCount: 2, policyMonths: 36 });
   });
 
-  it("leaves everything intact when file deletion fails", async () => {
-    models.applicant.findUnique.mockResolvedValue(eligible());
+  it("deletes an unclaimed hire invite (it still holds the email and name), and never a claimed one", async () => {
+    tx.applicant.findUnique.mockResolvedValue(eligible());
+    await purgeApplicant("a1", NOW);
+    expect(tx.allowedEmail.deleteMany).toHaveBeenCalledWith({ where: { id: { in: ["invite-1"] }, claimedAt: null } });
+  });
+
+  it("does not touch invites when there are none", async () => {
+    tx.applicant.findUnique.mockResolvedValue(
+      eligible({ applications: [{ id: "app1", allowedEmailId: null, cycle: closed("2025-05-01T00:00:00Z"), documents: [] }] }),
+    );
+    await purgeApplicant("a1", NOW);
+    expect(tx.allowedEmail.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it("stops before deleting any rows when file deletion fails", async () => {
+    tx.applicant.findUnique.mockResolvedValue(eligible());
     vi.mocked(deleteApplicantFile).mockRejectedValueOnce(new Error("storage down"));
     await expect(purgeApplicant("a1", NOW)).rejects.toThrow("storage down");
-    expect(models.$transaction).not.toHaveBeenCalled();
+    expect(tx.applicantDocument.deleteMany).not.toHaveBeenCalled();
+    expect(tx.applicantRetentionEvent.create).not.toHaveBeenCalled();
+  });
+
+  it("skips the applicant when concurrent hiring activity causes a serialization conflict", async () => {
+    tx.applicant.findUnique.mockResolvedValue(eligible());
+    tx.applicantRetentionEvent.create.mockRejectedValueOnce(Object.assign(new Error("could not serialize access"), { code: "P2034" }));
+    expect(await purgeApplicant("a1", NOW)).toBeNull();
   });
 
   it.each([
-    ["inside the retention window", { applications: [{ id: "app1", cycle: closed("2027-05-01T00:00:00Z"), documents: [] }] }],
-    ["a cycle still open", { applications: [{ id: "app1", cycle: { status: "OPEN", closedAt: null }, documents: [] }] }],
+    ["inside the retention window", { applications: [{ id: "app1", allowedEmailId: null, cycle: closed("2027-05-01T00:00:00Z"), documents: [] }] }],
+    ["a cycle still open", { applications: [{ id: "app1", allowedEmailId: null, cycle: { status: "OPEN", closedAt: null }, documents: [] }] }],
     ["linked to an account", { hiredUserId: "u1" }],
     ["already purged", { purgedAt: new Date("2029-01-01T00:00:00Z") }],
   ])("does not purge when %s", async (_label, overrides) => {
-    models.applicant.findUnique.mockResolvedValue(eligible(overrides));
+    tx.applicant.findUnique.mockResolvedValue(eligible(overrides));
     expect(await purgeApplicant("a1", NOW)).toBeNull();
     expect(deleteApplicantFile).not.toHaveBeenCalled();
-    expect(models.$transaction).not.toHaveBeenCalled();
+    expect(tx.applicantDocument.deleteMany).not.toHaveBeenCalled();
+    expect(tx.applicantRetentionEvent.create).not.toHaveBeenCalled();
+  });
+
+  it("does not purge an applicant who vanished or became eligible-looking only in a stale read", async () => {
+    tx.applicant.findUnique.mockResolvedValue(null);
+    expect(await purgeApplicant("gone", NOW)).toBeNull();
+    expect(deleteApplicantFile).not.toHaveBeenCalled();
   });
 });
 
@@ -170,9 +213,9 @@ describe("runApplicantRetention (runs inside the weekly audit-archive cron)", ()
       id,
       purgedAt: null,
       hiredUserId: null,
-      applications: [{ id: `app-${id}`, cycle: { status: "CLOSED", closedAt: new Date("2020-01-01T00:00:00Z") }, documents: [] }],
+      applications: [{ id: `app-${id}`, allowedEmailId: null, cycle: { status: "CLOSED", closedAt: new Date("2020-01-01T00:00:00Z") }, documents: [] }],
     });
-    models.applicant.findUnique.mockResolvedValueOnce(person("a1")).mockResolvedValueOnce(person("a2"));
+    tx.applicant.findUnique.mockResolvedValueOnce(person("a1")).mockResolvedValueOnce(person("a2"));
     tx.applicantRetentionEvent.create.mockRejectedValueOnce(new Error("db hiccup")).mockResolvedValueOnce({});
 
     const result = await runApplicantRetention(NOW);

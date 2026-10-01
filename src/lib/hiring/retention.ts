@@ -1,6 +1,7 @@
 import { HiringCycleStatus, Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { deleteApplicantFile } from "@/lib/hiring/storage";
+import { isSerializationConflict } from "@/lib/serialization";
 import { recordJobRun } from "@/lib/services/job-runs";
 
 /** D-065: names are kept forever; everything else is purged this long after the last cycle closes. */
@@ -61,80 +62,99 @@ export async function findPurgeCandidates(now: Date, limit: number): Promise<str
 export type PurgeResult = { applicantId: string; applications: number; documents: number } | null;
 
 /**
- * Purge one applicant's personal data and keep the name tombstone: files are
- * deleted first, then rows are cleared in one transaction that also records the
- * non-PII ledger entry. Returns null when the applicant is no longer eligible.
+ * Purge one applicant's personal data and keep the name tombstone. Everything runs
+ * in one SERIALIZABLE transaction that re-reads the applicant first, so a new
+ * application, an account link, a reopened cycle, or a new upload that races with
+ * the job aborts the purge (retried next run) instead of being deleted from a stale
+ * snapshot. Files are deleted before the rows that name them; a storage failure
+ * throws and rolls everything back, and a blob that is already gone counts as
+ * deleted so a retry after a conflict still completes. Returns null when the
+ * applicant is no longer eligible.
  */
 export async function purgeApplicant(applicantId: string, now: Date = new Date()): Promise<PurgeResult> {
-  const applicant = await db.applicant.findUnique({
-    where: { id: applicantId },
-    select: {
-      id: true,
-      purgedAt: true,
-      hiredUserId: true,
-      applications: {
-        select: { id: true, cycle: { select: { status: true, closedAt: true } }, documents: { select: { pathname: true } } },
-      },
-    },
-  });
-  if (!applicant || applicant.purgedAt || applicant.hiredUserId) return null;
+  try {
+    return await db.$transaction(
+      async (tx) => {
+        const applicant = await tx.applicant.findUnique({
+          where: { id: applicantId },
+          select: {
+            id: true,
+            purgedAt: true,
+            hiredUserId: true,
+            applications: {
+              select: {
+                id: true,
+                allowedEmailId: true,
+                cycle: { select: { status: true, closedAt: true } },
+                documents: { select: { pathname: true } },
+              },
+            },
+          },
+        });
+        if (!applicant || applicant.purgedAt || applicant.hiredUserId) return null;
 
-  const due = purgeDate({
-    linkedToAccount: false,
-    purged: false,
-    cycles: applicant.applications.map((a) => a.cycle),
-  });
-  if (!due || due > now) return null;
+        const due = purgeDate({ linkedToAccount: false, purged: false, cycles: applicant.applications.map((a) => a.cycle) });
+        if (!due || due > now) return null;
 
-  // Files first: if storage fails the rows stay intact and the next run retries.
-  const pathnames = applicant.applications.flatMap((a) => a.documents.map((d) => d.pathname));
-  for (const pathname of pathnames) await deleteApplicantFile(pathname);
+        const pathnames = applicant.applications.flatMap((a) => a.documents.map((d) => d.pathname));
+        for (const pathname of pathnames) await deleteApplicantFile(pathname);
 
-  const applicationIds = applicant.applications.map((a) => a.id);
-  await db.$transaction(async (tx) => {
-    await tx.applicantDocument.deleteMany({ where: { applicationId: { in: applicationIds } } });
-    await tx.applicationNote.deleteMany({ where: { applicationId: { in: applicationIds } } });
-    await tx.applicantEmail.deleteMany({ where: { applicantId } });
-    // Keep stage, reviewed state, decision time, cycle link, and mapped area as the final outcome.
-    await tx.application.updateMany({
-      where: { id: { in: applicationIds } },
-      data: {
-        externalApplicationId: null,
-        interviewUrl: null,
-        summerAvailable: null,
-        rawAreas: [],
-        fieldsExperience: [],
-        fieldsInterested: [],
-        softwareExperience: [],
-        sourcePayload: Prisma.DbNull,
-      },
-    });
-    await tx.applicant.update({
-      where: { id: applicantId },
-      data: {
-        phone: null,
-        location: null,
-        portfolioUrl: null,
-        socialHandles: null,
-        notes: null,
-        standing: null,
-        gradTerm: null,
-        gradYear: null,
-        purgedAt: now,
-      },
-    });
-    await tx.applicantRetentionEvent.create({
-      data: {
-        applicantId,
-        purgedAt: now,
-        applicationCount: applicationIds.length,
-        documentCount: pathnames.length,
-        policyMonths: APPLICANT_RETENTION_MONTHS,
-      },
-    });
-  });
+        const applicationIds = applicant.applications.map((a) => a.id);
+        const inviteIds = applicant.applications.map((a) => a.allowedEmailId).filter((id): id is string => Boolean(id));
 
-  return { applicantId, applications: applicationIds.length, documents: pathnames.length };
+        await tx.applicantDocument.deleteMany({ where: { applicationId: { in: applicationIds } } });
+        await tx.applicationNote.deleteMany({ where: { applicationId: { in: applicationIds } } });
+        await tx.applicantEmail.deleteMany({ where: { applicantId } });
+        // An unclaimed hire invite still holds the applicant's email and name; remove it
+        // with the rest. A claimed one belongs to a real account and is never touched.
+        if (inviteIds.length > 0) await tx.allowedEmail.deleteMany({ where: { id: { in: inviteIds }, claimedAt: null } });
+        // Keep stage, reviewed state, decision time, cycle link, and mapped area as the final outcome.
+        await tx.application.updateMany({
+          where: { id: { in: applicationIds } },
+          data: {
+            externalApplicationId: null,
+            interviewUrl: null,
+            summerAvailable: null,
+            rawAreas: [],
+            fieldsExperience: [],
+            fieldsInterested: [],
+            softwareExperience: [],
+            sourcePayload: Prisma.DbNull,
+          },
+        });
+        await tx.applicant.update({
+          where: { id: applicantId },
+          data: {
+            phone: null,
+            location: null,
+            portfolioUrl: null,
+            socialHandles: null,
+            notes: null,
+            standing: null,
+            gradTerm: null,
+            gradYear: null,
+            purgedAt: now,
+          },
+        });
+        await tx.applicantRetentionEvent.create({
+          data: {
+            applicantId,
+            purgedAt: now,
+            applicationCount: applicationIds.length,
+            documentCount: pathnames.length,
+            policyMonths: APPLICANT_RETENTION_MONTHS,
+          },
+        });
+
+        return { applicantId, applications: applicationIds.length, documents: pathnames.length };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, timeout: 30_000 },
+    );
+  } catch (error) {
+    // Concurrent hiring activity touched this applicant: skip it and retry next run.
+    if (isSerializationConflict(error)) return null;
+    throw error;
+  }
 }
 
 export const RETENTION_BATCH_SIZE = 25;

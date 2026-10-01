@@ -82,8 +82,9 @@ export const POST = withHandler(async (req) => {
       // Staged hire invite (D-065): link the applicant to the new account inside
       // the same transaction. Never overwrites an existing link.
       const hireApplication = await tx.application.findFirst({
-        where: { allowedEmailId: allowedEntry.id },
-        select: { id: true, applicantId: true },
+        // Only a standing Hire links; a decision undone since the invite was sent does not.
+        where: { allowedEmailId: allowedEntry.id, stage: "HIRE" },
+        select: { id: true, applicantId: true, cycle: { select: { term: true, year: true } } },
       });
       if (hireApplication) {
         const linked = await tx.applicant.updateMany({
@@ -91,6 +92,11 @@ export const POST = withHandler(async (req) => {
           data: { hiredUserId: created.id },
         });
         if (linked.count > 0) {
+          // Students start in the hiring cycle's term.
+          await tx.user.update({
+            where: { id: created.id },
+            data: { startTerm: hireApplication.cycle.term, startTermYear: hireApplication.cycle.year },
+          });
           await createAuditEntryTx(tx, {
             actorId: created.id,
             actorRole: created.role,

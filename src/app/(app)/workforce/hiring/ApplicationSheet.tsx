@@ -46,12 +46,16 @@ export default function ApplicationSheet({ applicationId, onClose, onChanged, on
   const [busy, setBusy] = useState(false);
   const [activeDoc, setActiveDoc] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  // The id the panel is showing now; a slower response for an earlier id must not replace it.
+  const currentId = useRef<string | null>(null);
+  currentId.current = applicationId;
 
   const load = useCallback(async (id: string) => {
     try {
       const res = await fetch(`/api/hiring/applications/${id}`);
       if (handleAuthRedirect(res)) return;
       const json = await parseJsonSafely<{ data?: ApplicationDetail }>(res);
+      if (currentId.current !== id) return;
       if (!res.ok || !json?.data) throw new Error(messageOf(json, "Could not load the applicant."));
       setDetail(json.data);
       setError(null);
@@ -69,20 +73,21 @@ export default function ApplicationSheet({ applicationId, onClose, onChanged, on
     if (applicationId) void load(applicationId);
   }, [applicationId, load]);
 
-  async function patch(body: Record<string, unknown>) {
-    if (!applicationId) return;
+  async function patch(body: Record<string, unknown>): Promise<boolean> {
+    if (!applicationId) return false;
     const res = await fetch(`/api/hiring/applications/${applicationId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    if (handleAuthRedirect(res)) return;
+    if (handleAuthRedirect(res)) return false;
     if (!res.ok) {
       toast.error(await parseErrorMessage(res, "Could not save the change."));
-      return;
+      return false;
     }
     await load(applicationId);
     onChanged();
+    return true;
   }
 
   async function addNote(e: React.FormEvent) {
@@ -143,28 +148,52 @@ export default function ApplicationSheet({ applicationId, onClose, onChanged, on
     onChanged();
   }
 
-  async function createInvite(linkExistingUser = false): Promise<void> {
+  type InviteOptions = { linkExistingUser?: boolean; linkUserId?: string; confirmNewAccount?: boolean };
+  async function createInvite(options: InviteOptions = {}): Promise<void> {
     if (!detail) return;
     setBusy(true);
     try {
       const res = await fetch(`/api/hiring/applications/${detail.id}/invite`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ linkExistingUser }),
+        body: JSON.stringify(options),
       });
       if (handleAuthRedirect(res)) return;
-      const json = await parseJsonSafely<{ error?: string; code?: string; data?: { user?: { name: string } } }>(res);
-      if (res.status === 409 && json?.code === "user_exists" && !linkExistingUser) {
+      const json = await parseJsonSafely<{
+        error?: string;
+        code?: string;
+        data?: { user?: { name: string }; users?: { id: string; name: string }[] };
+      }>(res);
+      if (res.status === 409 && json?.code === "user_exists" && !options.linkExistingUser) {
         const confirmed = await confirm({
           title: `Link to ${json.data?.user?.name ?? "the existing account"}?`,
           message: "An account already exists for this email. Link this applicant to it instead of sending an invite.",
           confirmLabel: "Link account",
         });
-        if (confirmed) await createInvite(true);
+        if (confirmed) await createInvite({ linkExistingUser: true });
+        return;
+      }
+      if (res.status === 409 && json?.code === "possible_account" && json.data?.users?.length) {
+        const candidate = json.data.users[0]!;
+        const link = await confirm({
+          title: `Is this ${candidate.name}'s existing account?`,
+          message: "An account with the same name exists under a different email. Link this applicant to it instead of sending an invite.",
+          confirmLabel: "Link account",
+        });
+        if (link) {
+          await createInvite({ linkUserId: candidate.id });
+          return;
+        }
+        const separate = await confirm({
+          title: "Create a separate account?",
+          message: "This will send a new student invite even though an account with the same name exists.",
+          confirmLabel: "Create invite",
+        });
+        if (separate) await createInvite({ confirmNewAccount: true });
         return;
       }
       if (!res.ok) throw new Error(messageOf(json, "Could not create the invite."));
-      toast.success(linkExistingUser ? "Linked to the existing account" : "Student invite created");
+      toast.success(options.linkExistingUser || options.linkUserId ? "Linked to the existing account" : "Student invite created");
       await load(detail.id);
       onChanged();
     } catch (err) {
@@ -198,8 +227,9 @@ export default function ApplicationSheet({ applicationId, onClose, onChanged, on
           break;
         case "r":
           void (async () => {
-            if (!detail!.reviewed) await patch({ reviewed: true });
-            go(1);
+            // Move on only once Reviewed is actually saved, so a failed save cannot skip someone.
+            const saved = detail!.reviewed ? true : await patch({ reviewed: true });
+            if (saved) go(1);
           })();
           break;
         case "h":

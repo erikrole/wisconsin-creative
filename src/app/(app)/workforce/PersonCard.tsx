@@ -179,7 +179,10 @@ function PersonSheet({ person, onClose }: { person: PersonCardData; onClose: () 
         )}
         {!detail && !error && <Skeleton className="mx-4 h-48" />}
 
-        {detail && (
+        {detail && person.kind === "FULL_TIME" && (
+          <p className="px-4 text-sm text-muted-foreground">Start terms and term placements are recorded for student workers only.</p>
+        )}
+        {detail && person.kind === "STUDENT" && (
           <div className="grid gap-6 px-4 pb-6">
             <section aria-label="Start term" className="grid gap-2">
               <h3 className="text-sm font-semibold">Started</h3>

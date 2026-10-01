@@ -2581,6 +2581,8 @@ model HiringCycleSlot {
 model Applicant {
   id            String             @id @default(cuid())
   name          String
+  /// Normalized name (lowercase, accents and punctuation stripped) for duplicate lookup.
+  nameKey       String             @default("") @map("name_key")
   standing      ApplicantStanding?
   gradTerm      GraduationTerm?    @map("grad_term")
   gradYear      Int?               @map("grad_year")
@@ -2599,6 +2601,7 @@ model Applicant {
   applications  Application[]
 
   @@index([name])
+  @@index([nameKey])
   @@map("applicants")
 }
 

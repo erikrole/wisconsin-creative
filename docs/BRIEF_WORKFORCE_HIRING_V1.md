@@ -192,3 +192,14 @@ Source: Fable read-only review, 2026-09-30, verified against the repo.
 - **Visible in the UI:** the applicant panel shows the scheduled deletion date, or why none is scheduled.
 - **Still open:** hired applicants linked to an account are never purged by this job; a post-deactivation clock needs a `User.deactivatedAt`, which does not exist yet. No "keep for next cycle" flag was added.
 - **Bulk resume upload:** "Upload resumes" on the Hiring tab matches many files to applicants by PageUp ID or name in the filename (`src/lib/hiring/resume-match.ts`), lets you correct any row, skips applicants who already have a resume, and uploads one at a time through the existing validated endpoint. Ambiguous names are never guessed.
+
+## 21. Review fixes (PR #414, 2026-09-30)
+- **Undoing a Hire** revokes an unclaimed invite in the same transaction; an already-claimed invite blocks the undo (deactivate the account instead). Registration links an applicant only when the application is still at Hire, and sets the student's start term from the hiring cycle.
+- **Files:** blob deletion throws on any failure except a confirmed missing blob, so a database row (the only record of a pathname) is never removed while its file survives. Document delete removes the blob first.
+- **Retention:** the purge re-reads and rechecks the applicant inside a SERIALIZABLE transaction (concurrent hiring activity aborts it, retried next run) and also deletes an unclaimed hire invite, which still holds the applicant's email and name.
+- **Cycles:** the Hiring tab has Close cycle and Reopen cycle, which set or clear `closedAt` (the retention clock).
+- **Audit:** hire invites use a redacted onboarding audit; application, note, and cycle updates write their audit entry in the same transaction as the change.
+- **Identity:** the invite checks campus and athletics email aliases and asks about same-name accounts under another email (link, or confirm a separate account). Duplicate lookup uses a stored normalized `nameKey` (migration `0159`), so accents and punctuation no longer hide a duplicate; a re-hydrated record gets a primary email again.
+- **Imports:** applicant imports write with batched inserts (one per table); a changed import option (Fall year, blank-decision rule) clears the reviewed preview; roster import and the placement and start-term APIs accept student workers only.
+- **Planning** counts each applicant once (strongest stage, then latest cycle).
+- **Client races:** applicant list and detail responses from superseded requests are ignored; J/K and R use only stages visible on the board; R advances only after Reviewed saves.

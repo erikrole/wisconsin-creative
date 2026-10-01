@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createMockDb } from "./_helpers/mock-db";
 
 vi.mock("@/lib/auth", () => ({ requireAuth: vi.fn() }));
-vi.mock("@/lib/audit", () => ({ createAuditEntry: vi.fn() }));
+vi.mock("@/lib/audit", () => ({ createAuditEntry: vi.fn(), createAuditEntryTx: vi.fn() }));
 vi.mock("@/lib/rate-limit", () => ({
   enforceRateLimit: vi.fn(),
   SETTINGS_MUTATION_LIMIT: { limit: 100, windowMs: 60_000 },
@@ -26,7 +26,8 @@ const models = {
     groupBy: vi.fn(),
   },
   applicant: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
-  user: { findUnique: vi.fn() },
+  user: { findUnique: vi.fn(), findFirst: vi.fn(), findMany: vi.fn() },
+  allowedEmail: { findUnique: vi.fn(), delete: vi.fn() },
   applicantEmail: { findUnique: vi.fn(), create: vi.fn() },
   applicantDocument: { findUnique: vi.fn(), create: vi.fn(), delete: vi.fn() },
   applicationNote: { create: vi.fn() },
@@ -35,7 +36,7 @@ const { db } = createMockDb(models);
 vi.mock("@/lib/db", () => ({ get db() { return db; } }));
 
 import { requireAuth } from "@/lib/auth";
-import { createAuditEntry } from "@/lib/audit";
+import { createAuditEntry, createAuditEntryTx } from "@/lib/audit";
 import { GET as listCycles, POST as createCycle } from "@/app/api/hiring/cycles/route";
 import { PATCH as patchCycle } from "@/app/api/hiring/cycles/[id]/route";
 import { GET as listApplications, POST as createApplication } from "@/app/api/hiring/applications/route";
@@ -181,7 +182,8 @@ describe("returning applicant with a purged record", () => {
     expect(res.status).toBe(201);
     const data = models.applicant.update.mock.calls[0]![0].data;
     expect(data).toMatchObject({ gradTerm: "SPRING", gradYear: 2031, purgedAt: null });
-    expect(models.applicantEmail.create).toHaveBeenCalledWith({ data: { applicantId: "clh0000000000000000000002", email: "taylor@example.edu" } });
+    // The restored address must be primary: retention deleted every email.
+    expect(models.applicantEmail.create).toHaveBeenCalledWith({ data: { applicantId: "clh0000000000000000000002", email: "taylor@example.edu", isPrimary: true } });
   });
 });
 
@@ -198,7 +200,7 @@ describe("stage changes", () => {
     expect(data.decidedById).toBe("ADMIN-1");
     expect(data.decidedAt).toBeInstanceOf(Date);
 
-    const entry = vi.mocked(createAuditEntry).mock.calls[0]![0];
+    const entry = vi.mocked(createAuditEntryTx).mock.calls[0]![1];
     expect(entry.action).toBe("stage_change");
     expect(entry.before).toMatchObject({ stage: "ROUND_1" });
     expect(entry.after).toMatchObject({ stage: "HIRE" });
@@ -227,7 +229,7 @@ describe("notes", () => {
     models.applicationNote.create.mockResolvedValue({ id: "n1", body: "Private opinion", rating: 4, createdAt: new Date(), author: null });
     const res = await addNote(json("/api/hiring/applications/app-1/notes", "POST", { body: "Private opinion", rating: 4 }), ctx());
     expect(res.status).toBe(201);
-    expect(JSON.stringify(vi.mocked(createAuditEntry).mock.calls[0]![0])).not.toContain("Private opinion");
+    expect(JSON.stringify(vi.mocked(createAuditEntryTx).mock.calls[0]![1])).not.toContain("Private opinion");
   });
 });
 
@@ -259,7 +261,8 @@ describe("hire invite (staged conversion)", () => {
 
   it("stages a student invite prefilled from the applicant and records the link", async () => {
     models.application.findUnique.mockResolvedValue(hireApplication());
-    models.user.findUnique.mockResolvedValue(null);
+    models.user.findFirst.mockResolvedValue(null);
+    models.user.findMany.mockResolvedValue([]);
     vi.mocked(createAllowedEmailInvite).mockResolvedValue({ skipped: false, entry: { id: "invite-1" } } as never);
 
     const res = await inviteHire(json("/api/hiring/applications/app-1/invite", "POST", {}), ctx());
@@ -271,6 +274,8 @@ describe("hire invite (staged conversion)", () => {
         preloadedName: "Alex Sample",
         preloadedPrimaryArea: "VIDEO",
         preloadedAreas: ["VIDEO"],
+        // The onboarding audit must not snapshot the applicant's email or name.
+        redactAudit: true,
       }),
     );
     expect(models.application.update).toHaveBeenCalledWith({ where: { id: "app-1" }, data: { allowedEmailId: "invite-1" } });
@@ -279,7 +284,7 @@ describe("hire invite (staged conversion)", () => {
 
   it("asks before linking when an account already exists, then links only on confirm", async () => {
     models.application.findUnique.mockResolvedValue(hireApplication());
-    models.user.findUnique.mockResolvedValue({ id: "u9", name: "Alex Sample" });
+    models.user.findFirst.mockResolvedValue({ id: "u9", name: "Alex Sample" });
 
     const first = await inviteHire(json("/api/hiring/applications/app-1/invite", "POST", {}), ctx());
     expect(first.status).toBe(409);
@@ -302,5 +307,89 @@ describe("hire invite (staged conversion)", () => {
     models.application.findUnique.mockResolvedValue(hireApplication({ allowedEmail: { id: "invite-1" } }));
     const res = await inviteHire(json("/api/hiring/applications/app-1/invite", "POST", {}), ctx());
     expect(res.status).toBe(409);
+  });
+});
+
+describe("hire invite identity checks", () => {
+  const hireApplication = () => ({
+    id: "app-1",
+    stage: "HIRE",
+    primaryArea: "VIDEO",
+    allowedEmail: null,
+    applicant: { id: "p1", name: "Alex Sample", hiredUserId: null, emails: [{ email: "alex@example.edu", isPrimary: true }] },
+  });
+  const post = (body: unknown) => inviteHire(json("/api/hiring/applications/app-1/invite", "POST", body), ctx());
+
+  beforeEach(() => {
+    vi.mocked(requireAuth).mockResolvedValue(user("ADMIN") as never);
+    models.application.findUnique.mockResolvedValue(hireApplication());
+    models.user.findFirst.mockResolvedValue(null);
+    models.user.findMany.mockResolvedValue([]);
+  });
+
+  it("looks for an existing account by campus email or athletics email", async () => {
+    await post({});
+    expect(models.user.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { OR: [{ email: "alex@example.edu" }, { athleticsEmail: "alex@example.edu" }] } }),
+    );
+  });
+
+  it("asks before issuing an invite when a same-name account exists under another email", async () => {
+    models.user.findMany.mockResolvedValue([{ id: "u7", name: "Alex Sample" }]);
+    const res = await post({});
+    expect(res.status).toBe(409);
+    const payload = await res.json();
+    expect(payload.code).toBe("possible_account");
+    expect(payload.data.users).toEqual([{ id: "u7", name: "Alex Sample" }]);
+    expect(createAllowedEmailInvite).not.toHaveBeenCalled();
+  });
+
+  it("links to a confirmed same-name account, and refuses an account that is not a name match", async () => {
+    models.user.findMany.mockResolvedValue([{ id: "u7", name: "Alex Sample" }]);
+    const refused = await post({ linkUserId: "clh0000000000000000000007" });
+    expect(refused.status).toBe(400);
+
+    models.user.findMany.mockResolvedValue([{ id: "clh0000000000000000000007", name: "Alex Sample" }]);
+    const linked = await post({ linkUserId: "clh0000000000000000000007" });
+    expect(linked.status).toBe(200);
+    expect(models.applicant.update).toHaveBeenCalledWith({ where: { id: "p1" }, data: { hiredUserId: "clh0000000000000000000007" } });
+    expect(createAllowedEmailInvite).not.toHaveBeenCalled();
+  });
+
+  it("issues the invite when the admin confirms a separate account", async () => {
+    models.user.findMany.mockResolvedValue([{ id: "u7", name: "Alex Sample" }]);
+    vi.mocked(createAllowedEmailInvite).mockResolvedValue({ skipped: false, entry: { id: "invite-9" } } as never);
+    const res = await post({ confirmNewAccount: true });
+    expect(res.status).toBe(201);
+    expect(createAllowedEmailInvite).toHaveBeenCalled();
+  });
+});
+
+describe("undoing a Hire", () => {
+  beforeEach(() => vi.mocked(requireAuth).mockResolvedValue(user("ADMIN") as never));
+  const hired = { id: "app-1", applicantId: "p1", stage: "HIRE", reviewed: true, allowedEmailId: "invite-1" };
+
+  it("revokes an unclaimed invite in the same transaction", async () => {
+    models.application.findUnique.mockResolvedValue(hired);
+    models.allowedEmail.findUnique.mockResolvedValue({ id: "invite-1", claimedAt: null });
+    const res = await patchApplication(json("/api/hiring/applications/app-1", "PATCH", { stage: "PASSED" }), ctx());
+    expect(res.status).toBe(200);
+    expect(models.allowedEmail.delete).toHaveBeenCalledWith({ where: { id: "invite-1" } });
+    expect(vi.mocked(createAuditEntryTx).mock.calls[0]![1].after).toMatchObject({ invitationRevoked: true });
+  });
+
+  it("refuses to undo a Hire whose invite was already claimed", async () => {
+    models.application.findUnique.mockResolvedValue(hired);
+    models.allowedEmail.findUnique.mockResolvedValue({ id: "invite-1", claimedAt: new Date() });
+    const res = await patchApplication(json("/api/hiring/applications/app-1", "PATCH", { stage: "ROUND_1" }), ctx());
+    expect(res.status).toBe(409);
+    expect(models.allowedEmail.delete).not.toHaveBeenCalled();
+    expect(models.application.update).not.toHaveBeenCalled();
+  });
+
+  it("leaves invites alone when the stage is not leaving Hire", async () => {
+    models.application.findUnique.mockResolvedValue({ ...hired, stage: "ROUND_1", allowedEmailId: null });
+    await patchApplication(json("/api/hiring/applications/app-1", "PATCH", { reviewed: true }), ctx());
+    expect(models.allowedEmail.delete).not.toHaveBeenCalled();
   });
 });

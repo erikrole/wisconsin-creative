@@ -104,3 +104,32 @@ export function buildPlanning(
 export function academicYearLabel(start: number): string {
   return `${start}-${String(start + 1).slice(2)}`;
 }
+
+export type PlanningApplicationRow = PlanningApplicant & {
+  applicantId: string;
+  cycleTerm: GraduationTerm;
+  cycleYear: number;
+};
+
+const STAGE_PRIORITY: Record<PlanningApplicant["stage"], number> = { HIRE: 3, ROUND_1: 2, APPLIED: 1 };
+
+/**
+ * One entry per person. A returning applicant can have several qualifying
+ * applications (an old Hire plus a new open-cycle one); count them once, preferring
+ * the strongest stage (Hire over Round 1 over Applied) and then the latest cycle.
+ */
+export function collapseApplicants(rows: PlanningApplicationRow[]): PlanningApplicant[] {
+  const best = new Map<string, PlanningApplicationRow>();
+  for (const row of rows) {
+    const current = best.get(row.applicantId);
+    if (
+      !current ||
+      STAGE_PRIORITY[row.stage] > STAGE_PRIORITY[current.stage] ||
+      (STAGE_PRIORITY[row.stage] === STAGE_PRIORITY[current.stage] &&
+        compareTerms({ term: row.cycleTerm, year: row.cycleYear }, { term: current.cycleTerm, year: current.cycleYear }) > 0)
+    ) {
+      best.set(row.applicantId, row);
+    }
+  }
+  return [...best.values()].map(({ id, name, area, gradTerm, gradYear, stage }) => ({ id, name, area, gradTerm, gradYear, stage }));
+}

@@ -63,7 +63,7 @@ describe("start term", () => {
   beforeEach(() => vi.mocked(requireAuth).mockResolvedValue(user("ADMIN") as never));
 
   it("saves a start term and audits the change", async () => {
-    models.user.findUnique.mockResolvedValue({ id: "u1", startTerm: null, startTermYear: null });
+    models.user.findUnique.mockResolvedValue({ id: "u1", staffingType: "ST", startTerm: null, startTermYear: null });
     const res = await patchPerson(req("/api/workforce/people/u1", "PATCH", { startTerm: "FALL", startTermYear: 2025 }), ctx);
     expect(res.status).toBe(200);
     expect(models.user.update).toHaveBeenCalledWith({ where: { id: "u1" }, data: { startTerm: "FALL", startTermYear: 2025 } });
@@ -85,7 +85,7 @@ describe("term placements", () => {
   beforeEach(() => vi.mocked(requireAuth).mockResolvedValue(user("ADMIN") as never));
 
   it("upserts one placement per person and term with normalized sport codes", async () => {
-    models.user.findUnique.mockResolvedValue({ id: "u1" });
+    models.user.findUnique.mockResolvedValue({ id: "u1", staffingType: "ST" });
     models.studentTermPlacement.upsert.mockResolvedValue({ id: "p1", term: "WINTER", year: 2026, area: "VIDEO", sportCodes: ["WHKY"], notes: null });
     const res = await upsertPlacement(
       req("/api/workforce/people/u1/placements", "POST", { term: "WINTER", year: 2026, area: "VIDEO", sportCodes: ["whky", "WHKY"] }),
@@ -95,6 +95,16 @@ describe("term placements", () => {
     const args = models.studentTermPlacement.upsert.mock.calls[0]![0];
     expect(args.where).toEqual({ userId_term_year: { userId: "u1", term: "WINTER", year: 2026 } });
     expect(args.create.sportCodes).toEqual(["WHKY"]);
+  });
+
+  it("rejects placements and start terms for full-time staff", async () => {
+    models.user.findUnique.mockResolvedValue({ id: "u1", staffingType: "FT", startTerm: null, startTermYear: null });
+    const placement = await upsertPlacement(req("/api/workforce/people/u1/placements", "POST", { term: "FALL", year: 2025 }), ctx);
+    expect(placement.status).toBe(400);
+    expect(models.studentTermPlacement.upsert).not.toHaveBeenCalled();
+    const start = await patchPerson(req("/api/workforce/people/u1", "PATCH", { startTerm: "FALL", startTermYear: 2025 }), ctx);
+    expect(start.status).toBe(400);
+    expect(models.user.update).not.toHaveBeenCalled();
   });
 
   it("rejects unknown sport codes", async () => {

@@ -60,8 +60,10 @@ export const DELETE = withAuth<{ id: string }>(async (_req, { user, params }) =>
   });
   if (!doc) throw new HttpError(404, "Document not found.");
 
-  await db.applicantDocument.delete({ where: { id: doc.id } });
+  // Blob first: if storage fails the row (the only record of the pathname) stays and
+  // the admin can retry; a blob already missing counts as deleted.
   await deleteApplicantFile(doc.pathname);
+  await db.applicantDocument.delete({ where: { id: doc.id } });
 
   await createAuditEntry({
     actorId: user.id,

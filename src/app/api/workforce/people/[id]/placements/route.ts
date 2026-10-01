@@ -12,8 +12,9 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
   await enforceRateLimit(`workforce:write:${user.id}`, SETTINGS_MUTATION_LIMIT);
   const body = upsertPlacementSchema.parse(await req.json());
 
-  const person = await db.user.findUnique({ where: { id: params.id }, select: { id: true } });
+  const person = await db.user.findUnique({ where: { id: params.id }, select: { id: true, staffingType: true } });
   if (!person) throw new HttpError(404, "Person not found.");
+  if (person.staffingType !== "ST") throw new HttpError(400, "Term placements are only for student workers.");
 
   const placement = await db.studentTermPlacement.upsert({
     where: { userId_term_year: { userId: params.id, term: body.term, year: body.year } },
