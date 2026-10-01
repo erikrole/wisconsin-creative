@@ -8,6 +8,7 @@ import { acquireProcessLock } from "../scripts/lib/process-lock.mjs";
 import { readInfrastructureConfig } from "../scripts/lib/migration-baseline.mjs";
 import { previewRetentionDecision } from "../scripts/lib/preview-retention.mjs";
 import { privateHandoff, handoffVariable } from "../scripts/lib/preview-handoff.mjs";
+import { VercelPreviewApi } from "../scripts/lib/vercel-preview-api.mjs";
 
 const temporary = [];
 function directory() { const path = mkdtempSync(join(tmpdir(), "wc-preview-test-")); temporary.push(path); return path; }
@@ -94,5 +95,17 @@ describe("private cross-machine handoff", () => {
     for (const entry of [{ key, type: "plain", target: ["development"] }, { key, type: "encrypted", target: ["production"] }]) {
       await expect(handoffVariable("claude/test", { request: async () => ({ envs: [entry] }) }, config)).rejects.toThrow("unexpected scope");
     }
+  });
+});
+
+describe("Vercel preview API responses", () => {
+  const respond = (status, text) => ({ ok: status < 400, status, text: async () => text });
+  const api = (response) => new VercelPreviewApi({ token: "t", config, fetcher: async () => response });
+  it("treats a successful empty body as an empty result", async () => {
+    expect(await api(respond(200, "")).request("/v1/x", { method: "POST", body: {} })).toEqual({});
+  });
+  it("parses a JSON body and rejects a malformed one", async () => {
+    expect(await api(respond(200, '{"a":1}')).request("/v1/x")).toEqual({ a: 1 });
+    await expect(api(respond(200, "<html>")).request("/v1/x")).rejects.toThrow(/unexpected response/);
   });
 });

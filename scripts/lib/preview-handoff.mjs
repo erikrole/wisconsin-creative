@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { branchKey, previewRuntimeEnvironment, verifyPreviewState } from "./preview-environment.mjs";
 import { readInfrastructureConfig } from "./migration-baseline.mjs";
 import { localChecksums } from "./local-migrations.mjs";
@@ -29,9 +30,28 @@ export async function publishPreviewHandoff(state, { api = new VercelPreviewApi(
   const body = { key: handoffKey(state.gitBranch), value: JSON.stringify(privateHandoff(state)), type: "encrypted", target: ["development"] };
   await api.request(existing ? `/v9/projects/${project}/env/${existing.id}` : `/v10/projects/${project}/env`, { method: existing ? "PATCH" : "POST", body });
 }
+// Best-effort: name the real reason a branch has no environment. Never throws.
+export function missingEnvironmentReason(gitBranch, gh = (...args) => execFileSync("gh", args, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 15_000 })) {
+  const steps = [];
+  try {
+    const variables = JSON.parse(gh("variable", "list", "--json", "name,value"));
+    if (variables.find((v) => v.name === "MANAGED_PREVIEWS_ENABLED")?.value !== "true") {
+      steps.push("Managed previews are not enabled (repository variable MANAGED_PREVIEWS_ENABLED is not 'true'), so CI will not create environments. An authorized operator must enable it (docs/PREVIEW_ENVIRONMENTS.md, cutover step 2).");
+    }
+  } catch { steps.push("Could not read MANAGED_PREVIEWS_ENABLED (gh unavailable or unauthenticated); run `gh auth login`."); }
+  try {
+    const prs = JSON.parse(gh("pr", "list", "--head", gitBranch, "--state", "open", "--json", "number"));
+    if (!prs.length) steps.push(`Branch ${gitBranch} has no open same-repository PR; push it and open one.`);
+    else steps.push(`PR #${prs[0].number} is open: wait for CI and the Managed previews run to pass.`);
+  } catch { /* gh unavailable; the generic hint below still applies */ }
+  return steps;
+}
 export async function fetchPreviewHandoff(gitBranch, { api = new VercelPreviewApi(), config = readInfrastructureConfig() } = {}) {
   const variable = await handoffVariable(gitBranch, api, config);
-  if (!variable) throw new Error("No hosted environment exists for this branch yet. Open its PR and wait for Managed previews, then run preview:setup again.");
+  if (!variable) {
+    const reasons = missingEnvironmentReason(gitBranch);
+    throw new Error(["No hosted environment exists for this branch yet.", ...(reasons.length ? reasons : ["Open its PR and wait for Managed previews, then run preview:setup again."]), "Branches that already have one: see preview:status on them. Never reuse another branch's credentials."].join("\n- "));
+  }
   const { value } = await api.request(`/v1/projects/${config.vercel.resourceProjectId}/env/${variable.id}`);
   let state;
   try { state = JSON.parse(value); } catch { throw new Error("Private preview handoff is malformed; no credentials were saved."); }
