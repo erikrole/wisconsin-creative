@@ -817,8 +817,8 @@ struct KioskSheetScreen<Context: View, Choice: View>: View {
             // Fit the space it's given: inside a screen with a header the card
             // used to overflow upward and cover the header's subtitle.
             .frame(width: 1060, height: height)
-            .offset(y: topOffset)
             .kioskCard(KioskSurface.sheet, radius: KioskRadius.modal, stroke: KioskStroke.standard)
+            .offset(y: topOffset)
         }
     }
 }
