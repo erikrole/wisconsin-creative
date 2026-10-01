@@ -521,13 +521,13 @@ struct KioskOtherDateSheet: View {
         KioskSheetScreen(onDismiss: onCancel, contextWidth: 400) {
             KioskMonthGrid(monthStart: $monthStart, selectedDay: $day)
         } choice: {
-            Text("Pick a date")
+            Text("When will it be back?")
                 .font(KioskType.heroAction)
                 .foregroundStyle(KioskText.primary)
-            Text("For anything past the next few days.")
+            Text("Pick the day and time you'll return the gear.")
                 .font(.system(size: 15))
                 .foregroundStyle(KioskText.secondary)
-            Text("TIME")
+            Text("RETURN TIME")
                 .font(KioskType.overline)
                 .tracking(KioskType.overlineTracking)
                 .foregroundStyle(KioskText.tertiary)
@@ -556,7 +556,7 @@ struct KioskOtherDateSheet: View {
             .padding(.vertical, 16)
             .kioskCard(Color(red: 0x0E / 255, green: 0x0E / 255, blue: 0x10 / 255))
             Spacer(minLength: 8)
-            KioskPrimaryPill(title: "Use this date", isEnabled: chosen > Date(), height: 64) { onUse(chosen) }
+            KioskPrimaryPill(title: "Set return date", isEnabled: chosen > Date(), height: 64) { onUse(chosen) }
         }
     }
 
