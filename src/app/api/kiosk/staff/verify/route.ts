@@ -5,7 +5,7 @@ import { ok } from "@/lib/http";
 import { createAuditEntry } from "@/lib/audit";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { kioskRosterUserWhere } from "@/lib/user-visibility";
-import { normalizeWiscardNumber } from "@/lib/validation";
+import { normalizeWiscardNumber, wiscardScanWhere } from "@/lib/validation";
 import { canManageAnyCheckout } from "@/lib/services/kiosk-actor";
 import { issueKioskStaffToken } from "@/lib/kiosk-staff-token";
 
@@ -28,7 +28,7 @@ export const POST = withKiosk(async (req, { kiosk }) => {
   }
 
   const user = await db.user.findFirst({
-    where: { ...kioskRosterUserWhere(), wiscardNumber },
+    where: { AND: [kioskRosterUserWhere(), wiscardScanWhere(wiscardNumber) ?? {}] },
     select: { id: true, name: true, avatarUrl: true, role: true },
   });
   if (!user) {
