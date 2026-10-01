@@ -31,7 +31,7 @@
 | `src/lib/services/calendar-sync.ts` | 754 |
 | `src/lib/services/candidate-scoring.ts` | 437 |
 | `src/lib/services/category-mutations.ts` | 168 |
-| `src/lib/services/checkin-item-reports.ts` | 244 |
+| `src/lib/services/checkin-item-reports.ts` | 262 |
 | `src/lib/services/checkout-consolidation.ts` | 596 |
 | `src/lib/services/checkout-policies.ts` | 40 |
 | `src/lib/services/claim-review-notifications.ts` | 197 |
@@ -47,7 +47,7 @@
 | `src/lib/services/firmware-watch.ts` | 329 |
 | `src/lib/services/game-record.ts` | 169 |
 | `src/lib/services/hidden-users-cleanup.ts` | 122 |
-| `src/lib/services/job-runs.ts` | 51 |
+| `src/lib/services/job-runs.ts` | 52 |
 | `src/lib/services/kiosk-active-checkout-items.ts` | 492 |
 | `src/lib/services/kiosk-actor.ts` | 51 |
 | `src/lib/services/kiosk-checkin-undo.ts` | 176 |
@@ -57,7 +57,7 @@
 | `src/lib/services/kiosk-extend-window.ts` | 132 |
 | `src/lib/services/kiosk-item-transfer.ts` | 192 |
 | `src/lib/services/kiosk-location.ts` | 72 |
-| `src/lib/services/kiosk-nudge.ts` | 123 |
+| `src/lib/services/kiosk-nudge.ts` | 118 |
 | `src/lib/services/kiosk-operation-receipts.ts` | 128 |
 | `src/lib/services/kiosk-pickup-add.ts` | 273 |
 | `src/lib/services/kiosk-pickup-substitute.ts` | 300 |
@@ -163,7 +163,7 @@
 | `src/lib/db.ts` | 32 |
 | `src/lib/editor-snippets.ts` | 52 |
 | `src/lib/email.ts` | 129 |
-| `src/lib/env.ts` | 125 |
+| `src/lib/env.ts` | 129 |
 | `src/lib/environment-safety.ts` | 17 |
 | `src/lib/equipment-guidance.ts` | 127 |
 | `src/lib/equipment-section-filters.ts` | 87 |
@@ -204,7 +204,7 @@
 | `src/lib/passkey-client.ts` | 73 |
 | `src/lib/passkey.ts` | 371 |
 | `src/lib/password-rules.ts` | 16 |
-| `src/lib/permissions.ts` | 225 |
+| `src/lib/permissions.ts` | 237 |
 | `src/lib/preview-activity.ts` | 23 |
 | `src/lib/prisma-errors.ts` | 38 |
 | `src/lib/profile-completion-events.ts` | 6 |
@@ -511,6 +511,18 @@
 
 - `/api/form-options`
 
+### `/api/hiring`
+
+- `/api/hiring/applications/[id]/documents`
+- `/api/hiring/applications/[id]/invite`
+- `/api/hiring/applications/[id]/notes`
+- `/api/hiring/applications/[id]`
+- `/api/hiring/applications`
+- `/api/hiring/cycles/[id]`
+- `/api/hiring/cycles`
+- `/api/hiring/documents/[id]`
+- `/api/hiring/import`
+
 ### `/api/image-search`
 
 - `/api/image-search`
@@ -813,3 +825,9 @@
 - `/api/users/onboarding-readiness`
 - `/api/users/org-chart`
 - `/api/users`
+
+### `/api/workforce`
+
+- `/api/workforce/import`
+- `/api/workforce/people/[id]/placements`
+- `/api/workforce/people/[id]`
