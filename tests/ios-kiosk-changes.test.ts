@@ -41,7 +41,7 @@ describe("iOS kiosk changes (H1, H2, H4, H5) and staff actions (C5)", () => {
     for (const file of [changes, hub, sheet]) {
       expect(file).not.toMatch(/taps? their name to accept/i);
     }
-    expect(hub).toContain('Button("Transfer") { transferTarget = drawerContext(for: checkout) }');
+    expect(hub).toContain('Button("Transfer", systemImage: "arrow.left.arrow.right") { transferTarget = drawerContext(for: checkout) }');
   });
 
   it("H4 swaps through the atomic route and hands a problem to the damaged report", () => {

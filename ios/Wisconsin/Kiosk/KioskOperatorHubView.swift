@@ -304,14 +304,17 @@ struct KioskOperatorHubView: View {
                         ) {
                             Button("Return") { startReturn(drawerContext(for: checkout)) }
                                 .kioskButtonRole(.primary)
-                            Button("Extend") { extendTarget = drawerContext(for: checkout) }
-                                .kioskButtonRole(.secondary)
-                            Button("Add items") { selectedCheckout = drawerContext(for: checkout) }
-                                .kioskButtonRole(.secondary)
-                            // Decision 2: the holder hands it over directly,
-                            // no accept step. Hub checkouts are personal.
-                            Button("Transfer") { transferTarget = drawerContext(for: checkout) }
-                                .kioskButtonRole(.secondary)
+                            // Return leads; the rest sit in one menu (Erik, 2026-10-01).
+                            Menu {
+                                Button("Extend", systemImage: "clock") { extendTarget = drawerContext(for: checkout) }
+                                Button("Add items", systemImage: "plus") { selectedCheckout = drawerContext(for: checkout) }
+                                // Decision 2: the holder hands it over directly,
+                                // no accept step. Hub checkouts are personal.
+                                Button("Transfer", systemImage: "arrow.left.arrow.right") { transferTarget = drawerContext(for: checkout) }
+                            } label: {
+                                Text("More")
+                            }
+                            .kioskButtonRole(.secondary)
                         }
                     }
                 } else {
@@ -482,7 +485,7 @@ struct KioskOperatorHubView: View {
                         // One card per matchup: a series (Thu and Fri vs the same
                         // opponent) lists its dates instead of repeating the card.
                         ForEach(hubShiftSeries(shifts), id: \.title) { series in
-                            HubShiftSeriesCard(title: series.title, events: series.events) { startCheckout(for: $0) }
+                            HubShiftSeriesCard(title: series.title, events: series.events, existing: { existingBooking(for: $0) }) { startCheckout(for: $0) }
                         }
                     }
                 }
@@ -534,6 +537,26 @@ struct KioskOperatorHubView: View {
     /// `KioskCheckoutView` reads `selectedEvent` off the intent, ticks the
     /// event row, and prefills due-back to 90 minutes after the event end —
     /// so this lands on the details step with both required answers already filled.
+    /// A shift that already has gear booked points at that booking instead of
+    /// offering a second checkout. Matched by cleaned title (bookings don't
+    /// carry an event id here).
+    private func existingBooking(for event: KioskCheckoutEvent) -> (label: String, action: (() -> Void)?)? {
+        let key = kioskEventDisplayTitle(event.title, sportCode: event.sportCode).lowercased()
+        func same(_ title: String) -> Bool {
+            kioskEventDisplayTitle(title, sportCode: event.sportCode).lowercased() == key
+        }
+        if let pickup = context?.pendingPickups.first(where: { same($0.title) }) {
+            return ("Pick up", { startPickup(id: pickup.id, title: pickup.title, startsAt: pickup.startsAt) })
+        }
+        if let reservation = context?.reservations.first(where: { same($0.title) }) {
+            return ("Pick up", { startPickup(id: reservation.id, title: reservation.title, startsAt: reservation.startsAt) })
+        }
+        if context?.checkouts.contains(where: { same($0.title) }) == true {
+            return ("Gear out", nil)
+        }
+        return nil
+    }
+
     private func startCheckout(for event: KioskCheckoutEvent) {
         store.deferSleepMode()
         store.resetInactivity()
@@ -914,6 +937,7 @@ private func hubShiftSeries(_ shifts: [KioskCheckoutEvent]) -> [(title: String, 
 private struct HubShiftSeriesCard: View {
     let title: String
     let events: [KioskCheckoutEvent]
+    var existing: (KioskCheckoutEvent) -> (label: String, action: (() -> Void)?)? = { _ in nil }
     let action: (KioskCheckoutEvent) -> Void
 
     var body: some View {
@@ -939,10 +963,23 @@ private struct HubShiftSeriesCard: View {
                         .font(KioskType.meta)
                         .foregroundStyle(KioskText.secondary)
                     Spacer(minLength: 8)
-                    Button { action(event) } label: {
-                        Text("Check out").font(.system(size: 15, weight: .semibold)).padding(.horizontal, 14).frame(minHeight: 44)
+                    if let booked = existing(event) {
+                        if let go = booked.action {
+                            Button(action: go) {
+                                Text(booked.label).font(.system(size: 15, weight: .semibold)).padding(.horizontal, 14).frame(minHeight: 44)
+                            }
+                            .kioskButtonRole(.primary)
+                        } else {
+                            Text(booked.label)
+                                .font(KioskType.chipStrong)
+                                .foregroundStyle(KioskText.tertiary)
+                        }
+                    } else {
+                        Button { action(event) } label: {
+                            Text("Check out").font(.system(size: 15, weight: .semibold)).padding(.horizontal, 14).frame(minHeight: 44)
+                        }
+                        .kioskButtonRole(.secondary)
                     }
-                    .kioskButtonRole(.secondary)
                 }
             }
         }
