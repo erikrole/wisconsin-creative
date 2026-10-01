@@ -728,7 +728,7 @@ struct CreateBookingSheet: View {
                                     .foregroundStyle(.secondary)
                                     .lineLimit(1)
                             }
-                            if let caption = vm.availabilityCaption(for: asset.id) {
+                            if let caption = vm.availabilityCaption(for: asset) {
                                 Text(caption.text)
                                     .font(.caption.weight(.medium))
                                     .foregroundStyle(Color.statusText(caption.tone))

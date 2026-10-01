@@ -153,10 +153,10 @@ struct CreateBookingEquipmentPicker: View {
     @ViewBuilder
     private func assetResultRow(_ asset: Asset) -> some View {
         let isSelected = vm.selectedAssetIds.contains(asset.id)
-        let isConflicted = vm.conflictedAssetIds.contains(asset.id)
+        let isConflicted = !vm.canReserveAssetForWindow(asset)
         let atPickup = vm.isAtPickupLocation(asset)
         let canAdd = !isSelected && atPickup && !isConflicted
-        let caption = vm.availabilityCaption(for: asset.id)
+        let caption = vm.availabilityCaption(for: asset)
 
         Button {
             handleAssetTap(asset)
@@ -584,14 +584,16 @@ struct EquipmentCartSheet: View {
                         if !selectedAssets.isEmpty || !selectedBulkSkus.isEmpty {
                             Section {
                                 ForEach(selectedAssets) { asset in
+                                    let caption = vm.availabilityCaption(for: asset)
+                                    let isConflicted = !vm.canReserveAssetForWindow(asset)
                                     SelectedEquipmentRow(
                                         asset: asset,
-                                        isConflicted: vm.conflictedAssetIds.contains(asset.id),
-                                        conflictMessage: vm.conflictMessage(for: asset.id),
-                                        availabilityTone: vm.availabilityCaption(for: asset.id)?.tone ?? .red,
+                                        isConflicted: isConflicted,
+                                        conflictMessage: caption?.text,
+                                        availabilityTone: caption?.tone ?? .red,
                                         isAtPickupLocation: vm.isAtPickupLocation(asset),
-                                        upcomingCommitmentLabel: vm.upcomingCommitmentLabel(for: asset.id),
-                                        upcomingTone: vm.availabilityCaption(for: asset.id)?.tone ?? .purple,
+                                        upcomingCommitmentLabel: isConflicted ? nil : caption?.text,
+                                        upcomingTone: caption?.tone ?? .purple,
                                         turnaroundMessage: vm.turnaroundMessage(for: asset.id),
                                         turnaroundIsCritical: vm.turnaroundIsCritical(for: asset.id)
                                     ) {

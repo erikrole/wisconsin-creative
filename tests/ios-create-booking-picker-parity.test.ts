@@ -452,6 +452,24 @@ describe("iOS create booking picker parity", () => {
     expect(cartSheet).not.toContain('Section("Supplies")');
   });
 
+  it("keeps checked-out gear searchable when the pickup is after that hold", () => {
+    const viewModel = source("ios/Wisconsin/Views/CreateBooking/CreateBookingViewModel.swift");
+    const picker = source("ios/Wisconsin/Views/CreateBooking/CreateBookingEquipmentPicker.swift");
+    const loadAvailableAssets = sliceBetween(
+      viewModel,
+      "func loadAvailableAssets(reset: Bool = false) async",
+      "func addAsset",
+    );
+
+    expect(loadAvailableAssets).toContain("statuses: [.available, .checkedOut, .pendingPickup, .reserved]");
+    expect(viewModel).toContain("func canReserveSerializedAssetForWindow");
+    expect(viewModel).toContain("serializedTurnaroundBuffer");
+    expect(viewModel).toContain("func canReserveAssetForWindow(_ asset: Asset)");
+    expect(viewModel).toContain("guard canReserveAssetForWindow(asset)");
+    expect(picker).toContain("let isConflicted = !vm.canReserveAssetForWindow(asset)");
+    expect(viewModel).not.toContain("guard asset.computedStatus == .available");
+  });
+
   it("previews conflicts for visible reservation rows before selection", () => {
     const viewModel = source("ios/Wisconsin/Views/CreateBooking/CreateBookingViewModel.swift");
 
@@ -492,7 +510,7 @@ describe("iOS create booking picker parity", () => {
     expect(viewModel).toContain("compactReservationDateTime()");
     expect(viewModel).toContain("func conflictDetail(for assetId: String)");
     expect(viewModel).toContain("selectedTimingAdvisoryCount");
-    expect(picker).toContain("let caption = vm.availabilityCaption(for: asset.id)");
+    expect(picker).toContain("let caption = vm.availabilityCaption(for: asset)");
     expect(picker).toContain("upcomingCommitmentLabel: isConflicted ? nil : caption?.text");
     expect(picker).toContain("turnaroundMessage: vm.turnaroundMessage(for: asset.id)");
     expect(picker).toContain("turnaroundMessage: vm.bulkTurnaroundMessage(for: sku.id)");
