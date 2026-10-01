@@ -139,6 +139,8 @@ struct KioskIdleView: View {
     private var shouldShowSleepMode: Bool {
         guard unavailableSections.isEmpty, dashboard?.standby?.sleepMode == true else { return false }
         guard sleepModeReason != "active_window" else { return false }
+        // Pickups waiting today keep home up; standby would hide them.
+        if !(dashboard?.pickups ?? []).isEmpty, sleepModeReason != "night_hours" { return false }
         if let sleepDismissedUntil = store.sleepDismissedUntil, sleepDismissedUntil > Date() {
             return false
         }
@@ -156,6 +158,7 @@ struct KioskIdleView: View {
     private func isLocallyIdleWindow(_ dashboard: KioskDashboard, standby: KioskDashboard.Standby) -> Bool {
         dashboard.stats.checkouts == 0 &&
         dashboard.stats.itemsOut == 0 &&
+        dashboard.pickups.isEmpty &&
         standby.nearbyEventCount == 0 &&
         standby.nearbyBookingWindowCount == 0
     }
