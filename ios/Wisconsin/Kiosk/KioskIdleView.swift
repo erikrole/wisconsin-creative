@@ -50,6 +50,7 @@ struct KioskIdleView: View {
                     nextUp: dashboard?.nextUp.map { "\($0.title), \(KioskDueCopy.relative($0.at))" },
                     onOpenCheckout: { openCheckout($0) },
                     onNudge: { nudge($0) },
+                    onOpenEvent: { selectedEvent = $0 },
                     onSelectUser: { user in
                         identityRequests.invalidate()
                         store.deferSleepMode(for: sleepWakeDuration)

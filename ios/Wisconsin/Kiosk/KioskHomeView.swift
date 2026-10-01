@@ -31,6 +31,7 @@ struct KioskHomeView: View {
     let nextUp: String?
     let onOpenCheckout: (KioskActiveCheckout) -> Void
     var onNudge: ((KioskActiveCheckout) -> Void)?
+    var onOpenEvent: ((KioskEvent) -> Void)?
     let onSelectUser: (KioskUser) -> Void
     let onRevealStatus: () -> Void
 
@@ -240,6 +241,7 @@ struct KioskHomeView: View {
             KioskSectionHeader(title: "Events today", count: "\(groups.count)")
             VStack(spacing: 0) {
                 ForEach(groups) { group in
+                    Button { onOpenEvent?(group.event) } label: {
                     HStack(alignment: .firstTextBaseline, spacing: 12) {
                         Text(kioskEventDisplayTitle(group.event.title, sportCode: group.event.sportCode))
                             .font(.system(size: 17, weight: .semibold))
@@ -257,9 +259,16 @@ struct KioskHomeView: View {
                                 .foregroundStyle(KioskStatus.attention)
                                 .fixedSize()
                         }
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(KioskText.muted)
                     }
                     .padding(.horizontal, 20)
                     .padding(.vertical, 12)
+                    .contentShape(Rectangle())
+                    }
+                    .buttonStyle(KioskPressStyle())
+                    .disabled(onOpenEvent == nil)
                     .accessibilityElement(children: .combine)
                 }
             }
