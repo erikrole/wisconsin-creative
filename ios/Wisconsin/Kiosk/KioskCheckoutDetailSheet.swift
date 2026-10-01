@@ -336,10 +336,20 @@ struct KioskCheckoutDetailSheet: View {
                 .frame(maxWidth: .infinity, minHeight: 100)
             } else {
                 ScrollView {
-                    // Two columns: photo + asset tag, like every other list.
-                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
-                        ForEach(detail?.items ?? []) { item in
-                            itemRow(item)
+                    let items = detail?.items ?? []
+                    // While editing, every unit keeps its own row for Swap/Remove.
+                    let grouped = canEditActiveCheckout ? [] : items.filter { $0.isNumberedBulk && $0.bulkSkuId != nil }
+                    let singles = items.filter { item in !grouped.contains { $0.id == item.id } }
+                    VStack(alignment: .leading, spacing: 8) {
+                        // Two columns: photo + asset tag, like every other list.
+                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
+                            ForEach(singles) { item in
+                                itemRow(item)
+                            }
+                        }
+                        // Numbered batteries: one row per kind with its unit numbers.
+                        ForEach(batteryGroups(grouped), id: \.id) { group in
+                            batteryGroupRow(group.items)
                         }
                     }
                 }
@@ -660,6 +670,56 @@ struct KioskCheckoutDetailSheet: View {
             RoundedRectangle(cornerRadius: KioskRadius.md)
                 .stroke(KioskStroke.hairline, lineWidth: 1)
         )
+    }
+
+    private func batteryGroups(_ items: [KioskCheckoutDetail.ReturnItem]) -> [(id: String, items: [KioskCheckoutDetail.ReturnItem])] {
+        var order: [String] = []
+        var byKind: [String: [KioskCheckoutDetail.ReturnItem]] = [:]
+        for item in items {
+            let key = item.bulkSkuId ?? item.name
+            if byKind[key] == nil { order.append(key) }
+            byKind[key, default: []].append(item)
+        }
+        return order.map { ($0, (byKind[$0] ?? []).sorted { ($0.unitNumber ?? 0) < ($1.unitNumber ?? 0) }) }
+    }
+
+    private func batteryGroupRow(_ units: [KioskCheckoutDetail.ReturnItem]) -> some View {
+        let first = units[0]
+        let name = first.bulkSkuName ?? first.name
+        return HStack(spacing: 12) {
+            itemThumbnail(first)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 8) {
+                    Text(name)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(KioskText.primary)
+                        .lineLimit(1)
+                    Text("\(units.count) unit\(units.count == 1 ? "" : "s")")
+                        .font(KioskType.chip)
+                        .foregroundStyle(KioskText.tertiary)
+                }
+                HStack(spacing: 6) {
+                    ForEach(units) { unit in
+                        Text(unit.unitNumber.map { "#\($0)" } ?? unit.tagName)
+                            .font(.system(size: 15, weight: .bold).monospacedDigit())
+                            .foregroundStyle(unit.returned ? KioskText.tertiary : KioskText.primary)
+                            .strikethrough(unit.returned)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(KioskSurface.cardRaised, in: Capsule())
+                            .overlay(Capsule().stroke(KioskStroke.standard, lineWidth: 1))
+                    }
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(KioskSurface.card, in: RoundedRectangle(cornerRadius: KioskRadius.md))
+        .overlay(RoundedRectangle(cornerRadius: KioskRadius.md).stroke(KioskStroke.hairline, lineWidth: 1))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(name), units \(units.compactMap { $0.unitNumber.map(String.init) }.joined(separator: ", "))")
     }
 
     private func isRemovable(_ item: KioskCheckoutDetail.ReturnItem) -> Bool {
