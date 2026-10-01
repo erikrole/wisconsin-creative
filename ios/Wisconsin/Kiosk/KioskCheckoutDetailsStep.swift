@@ -19,7 +19,6 @@ struct KioskCheckoutDetailsStep: View {
     var continueTitle: String = "Continue to scan"
     /// Checkout opens on the person's next shift; the pickup editor already
     /// has its own linked event or name and passes false.
-    var preselectsNextShift: Bool = true
     let onContinue: () -> Void
 
     @State private var showOtherDate = KioskCaptureSeed.otherDate
@@ -29,7 +28,6 @@ struct KioskCheckoutDetailsStep: View {
     @State private var keyboardOverlap: CGFloat = 0
     @State private var purposeColumnBottom: CGFloat = 0
     @State private var showsPurposeField = false
-    @State private var didPreselect = false
 
     private var shifts: [KioskCheckoutEvent] { events.filter(\.isMyShift) }
     private var otherEvents: [KioskCheckoutEvent] { events.filter { !$0.isMyShift } }
@@ -53,8 +51,6 @@ struct KioskCheckoutDetailsStep: View {
         }
         .padding(.top, 20)
         .padding(.bottom, KioskSpacing.screenBottom)
-        .onAppear { preselectNextShift() }
-        .onChange(of: events) { _, _ in preselectNextShift() }
         .overlay {
             if showOtherDate {
                 KioskOtherDateSheet(
@@ -68,24 +64,6 @@ struct KioskCheckoutDetailsStep: View {
                 .transition(.opacity)
             }
         }
-    }
-
-    /// Selects the soonest shift that hasn't ended, once, and only when
-    /// nothing is chosen yet (no linked event, no typed name, no restored
-    /// draft or capture fixture), so Continue is ready immediately.
-    private func preselectNextShift() {
-        guard preselectsNextShift, !didPreselect, !events.isEmpty else { return }
-        didPreselect = true
-        guard !isLinkedToEvent, selectedEventId == nil,
-              customPurpose.trimmingCharacters(in: .whitespaces).isEmpty else { return }
-        let now = Date()
-        let next = shifts
-            .filter { ($0.endsAt ?? $0.startsAt.addingTimeInterval(2 * 3600)) > now }
-            .min { $0.startsAt < $1.startsAt }
-        guard let next else { return }
-        selectedEventId = next.id
-        isLinkedToEvent = true
-        if let suggested = Self.suggestedReturn(for: next) { dueBackAt = suggested }
     }
 
     /// The event's end plus the usual buffer, on the quarter hour; nil when

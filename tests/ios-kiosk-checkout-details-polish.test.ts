@@ -48,8 +48,8 @@ describe("iOS kiosk checkout details polish", () => {
     // times stay as alternatives.
     expect(details).toContain('title: Self.isSport(event) ? "After the game" : "After the event"');
     expect(details).toContain("return [after] + fixed.prefix(7)");
-    // The next shift is preselected so Continue is ready on open.
-    expect(details).toContain("private func preselectNextShift()");
+    // No event is chosen for the person: only a deep link preselects one (Erik, 2026-10-01).
+    expect(details).not.toContain("preselectNextShift");
     expect(details).toContain("Text(Self.displayTitle(event))");
     expect(details).toContain('Text("Something else…")');
     expect(details).toContain("private var choiceName: String?");

@@ -901,7 +901,6 @@ struct KioskPickupView: View {
                 canContinue: editBlockingRequirement(detail) == nil && !isSavingDetails,
                 blockingRequirement: isSavingDetails ? "Saving…" : editBlockingRequirement(detail),
                 continueTitle: "Save changes",
-                preselectsNextShift: false,
                 onContinue: { Task { await saveDetails(detail) } }
             )
         }
