@@ -468,6 +468,23 @@ export function normalizeWiscardNumber(value: string | null | undefined) {
   return normalized ? normalized : null;
 }
 
+/**
+ * Prisma `where` fragment matching a raw ID-card scan against either the
+ * free-text `wiscardNumber` or the structured 10-digit `wiscardCardNumber`.
+ * Scanners can add an issue-code digit or other framing around the card
+ * number, so the 10-digit candidates are the first and last ten digits.
+ */
+export function wiscardScanWhere(value: string | null | undefined) {
+  const raw = normalizeWiscardNumber(value);
+  if (!raw) return null;
+  const digits = raw.replace(/\D/g, "");
+  const cardNumbers = digits.length >= 10 ? [...new Set([digits.slice(0, 10), digits.slice(-10)])] : [];
+  const or: Array<Record<string, unknown>> = [{ wiscardNumber: raw }];
+  if (digits && digits !== raw) or.push({ wiscardNumber: digits });
+  if (cardNumbers.length > 0) or.push({ wiscardCardNumber: { in: cardNumbers } });
+  return { OR: or };
+}
+
 export const wiscardCardNumberSchema = z.string().trim().regex(/^\d{10}$/, "Wiscard card number must be 10 digits").nullable().optional();
 export const wiscardIssueCodeSchema = z.string().trim().regex(/^\d$/, "Wiscard issue code must be 1 digit").nullable().optional();
 

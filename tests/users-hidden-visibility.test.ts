@@ -274,7 +274,7 @@ describe("hidden smoke user visibility", () => {
 
     const where = vi.mocked(db.user.findMany).mock.calls.at(-1)?.[0]?.where;
     expect(where).toMatchObject({ active: true, hiddenFromRoster: false });
-    expect(where).not.toHaveProperty("locationId");
+    expect(JSON.stringify(where)).not.toContain("locationId");
     expect(where).toHaveProperty("OR");
   });
 
@@ -290,12 +290,11 @@ describe("hidden smoke user visibility", () => {
 
     expect(json).toMatchObject({ success: true, data: { id: "other-location-user" } });
     const where = vi.mocked(db.user.findFirst).mock.calls[0]?.[0]?.where;
-    expect(where).toMatchObject({
-      active: true,
-      hiddenFromRoster: false,
-      wiscardNumber: "9000000000",
-    });
-    expect(where).not.toHaveProperty("locationId");
+    const and = (where as { AND: unknown[] }).AND;
+    expect(and[0]).toMatchObject({ active: true, hiddenFromRoster: false });
+    // The card matches the free-text number or the structured 10-digit card number.
+    expect(and[1]).toEqual({ OR: [{ wiscardNumber: "9000000000" }, { wiscardCardNumber: { in: ["9000000000"] } }] });
+    expect(JSON.stringify(where)).not.toContain("locationId");
   });
 
   it("only trusts comma-separated internal operator emails for hidden access", () => {

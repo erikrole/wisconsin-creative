@@ -156,12 +156,10 @@ describe("POST /api/kiosk/resolve-scan", () => {
 
     expect(json).toMatchObject({ kind: "identity", user: requester });
     const where = mocks.userFindFirst.mock.calls[0]?.[0]?.where;
-    expect(where).toMatchObject({
-      active: true,
-      hiddenFromRoster: false,
-      wiscardNumber: "9000000000",
-    });
-    expect(where).not.toHaveProperty("locationId");
+    expect(where.AND[0]).toMatchObject({ active: true, hiddenFromRoster: false });
+    // The card matches the free-text number or the structured 10-digit card number.
+    expect(where.AND[1]).toEqual({ OR: [{ wiscardNumber: "9000000000" }, { wiscardCardNumber: { in: ["9000000000"] } }] });
+    expect(JSON.stringify(where)).not.toContain("locationId");
   });
 
   it("routes an available numbered unit into checkout after identity", async () => {
@@ -194,5 +192,18 @@ describe("POST /api/kiosk/resolve-scan", () => {
     expect(mocks.allocationFindFirst).not.toHaveBeenCalled();
     expect(mocks.unitAllocationFindFirst).not.toHaveBeenCalled();
     expect(mocks.bookingFindMany).not.toHaveBeenCalled();
+  });
+});
+
+describe("wiscardScanWhere", () => {
+  it("matches an 11-digit scan by its first or last ten digits", async () => {
+    const { wiscardScanWhere } = await import("@/lib/validation");
+    expect(wiscardScanWhere("12345678901")).toEqual({
+      OR: [{ wiscardNumber: "12345678901" }, { wiscardCardNumber: { in: ["1234567890", "2345678901"] } }],
+    });
+    expect(wiscardScanWhere(";1234567890?")).toEqual({
+      OR: [{ wiscardNumber: ";1234567890?" }, { wiscardNumber: "1234567890" }, { wiscardCardNumber: { in: ["1234567890"] } }],
+    });
+    expect(wiscardScanWhere("  ")).toBeNull();
   });
 });

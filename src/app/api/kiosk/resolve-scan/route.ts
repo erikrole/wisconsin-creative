@@ -8,7 +8,7 @@ import { findAssetByScanValue } from "@/lib/services/kiosk-scan";
 import { findBulkUnitByScanValue } from "@/lib/services/bulk-unit-scans";
 import { kioskRosterUserWhere } from "@/lib/user-visibility";
 import { displayBookingTitle } from "@/lib/booking-display-title";
-import { normalizeWiscardNumber } from "@/lib/validation";
+import { normalizeWiscardNumber, wiscardScanWhere } from "@/lib/validation";
 
 const requesterSelect = {
   id: true,
@@ -122,10 +122,7 @@ export const POST = withKiosk(async (req, { kiosk }) => {
   const [identity, asset, unit] = await Promise.all([
     wiscardNumber
       ? db.user.findFirst({
-          where: {
-            ...kioskRosterUserWhere(),
-            wiscardNumber,
-          },
+          where: { AND: [kioskRosterUserWhere(), wiscardScanWhere(wiscardNumber) ?? {}] },
           select: requesterSelect,
         })
       : null,
