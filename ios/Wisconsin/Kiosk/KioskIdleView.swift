@@ -133,7 +133,7 @@ struct KioskIdleView: View {
                 capabilities: dashboard?.capabilities ?? KioskDashboard.Capabilities(),
                 onStartCheckout: { startCheckout(for: event) },
                 onScan: { store.scanner.receive($0) },
-                reservedUserIds: Set((dashboard?.pickups ?? []).filter { $0.eventId == event.id && $0.custodyScope != "SHARED" }.compactMap { $0.requester?.id })
+                gearByUserId: eventGearByUserId(eventId: event.id)
             )
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
@@ -905,6 +905,22 @@ struct KioskIdleView: View {
         case "active_custody": return "return"
         default: return "checkout"
         }
+    }
+
+    /// Per-worker gear for one event: PERSON pickups reserved for it plus
+    /// PERSON checkouts out for it, merged by requester.
+    private func eventGearByUserId(eventId: String) -> [String: KioskEventWorkerGear] {
+        var gear: [String: KioskEventWorkerGear] = [:]
+        for pickup in dashboard?.pickups ?? [] where pickup.eventId == eventId && pickup.custodyScope != "SHARED" {
+            guard let userId = pickup.requester?.id else { continue }
+            gear[userId, default: KioskEventWorkerGear()].add(thumbs: pickup.items ?? [], count: pickup.itemCount, out: false)
+        }
+        for checkout in dashboard?.checkouts ?? [] where checkout.eventId == eventId && checkout.custodyScope != "SHARED" {
+            guard let userId = checkout.requesterId else { continue }
+            let thumbs = checkout.items.map { KioskGearThumb(tagName: $0.tagName ?? $0.name, imageUrl: $0.imageUrl) }
+            gear[userId, default: KioskEventWorkerGear()].add(thumbs: thumbs, count: checkout.itemCount, out: true)
+        }
+        return gear
     }
 
     private func startCheckout(for event: KioskEvent) {

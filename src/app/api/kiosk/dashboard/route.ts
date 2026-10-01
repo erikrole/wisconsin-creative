@@ -12,6 +12,7 @@ import {
   linkedEventId,
   projectNextUp,
   projectPickups,
+  PICKUP_GEAR_PREVIEW_LIMIT,
   projectTodayTiles,
   type HomeCheckoutRow,
   type HomePickupRow,
@@ -348,7 +349,7 @@ export const GET = withKiosk(async (_req, { kiosk }) => {
           take: 3,
           select: {
             asset: {
-              select: { assetTag: true, name: true },
+              select: { assetTag: true, name: true, imageUrl: true },
             },
           },
         },
@@ -422,7 +423,18 @@ export const GET = withKiosk(async (_req, { kiosk }) => {
         events: { orderBy: { ordinal: "asc" }, take: 1, select: { eventId: true } },
         requester: { select: { id: true, name: true, avatarUrl: true } },
         _count: { select: { serializedItems: { where: { allocationStatus: "active" } } } },
-        bulkItems: { select: { plannedQuantity: true, checkedOutQuantity: true } },
+        serializedItems: {
+          where: { allocationStatus: "active" },
+          take: PICKUP_GEAR_PREVIEW_LIMIT,
+          select: { asset: { select: { assetTag: true, imageUrl: true } } },
+        },
+        bulkItems: {
+          select: {
+            plannedQuantity: true,
+            checkedOutQuantity: true,
+            bulkSku: { select: { name: true, imageUrl: true } },
+          },
+        },
       },
     }),
 
@@ -448,7 +460,18 @@ export const GET = withKiosk(async (_req, { kiosk }) => {
         events: { orderBy: { ordinal: "asc" }, take: 1, select: { eventId: true } },
         requester: { select: { id: true, name: true, avatarUrl: true } },
         _count: { select: { serializedItems: { where: { allocationStatus: "active" } } } },
-        bulkItems: { select: { plannedQuantity: true, checkedOutQuantity: true } },
+        serializedItems: {
+          where: { allocationStatus: "active" },
+          take: PICKUP_GEAR_PREVIEW_LIMIT,
+          select: { asset: { select: { assetTag: true, imageUrl: true } } },
+        },
+        bulkItems: {
+          select: {
+            plannedQuantity: true,
+            checkedOutQuantity: true,
+            bulkSku: { select: { name: true, imageUrl: true } },
+          },
+        },
       },
     }),
   ]);
@@ -499,7 +522,7 @@ export const GET = withKiosk(async (_req, { kiosk }) => {
       shiftAssignmentId: string | null;
       events: Array<{ eventId: string }>;
       requester: { id: string; name: string; avatarUrl: string | null };
-      serializedItems: Array<{ asset: { assetTag: string; name: string | null } }>;
+      serializedItems: Array<{ asset: { assetTag: string; name: string | null; imageUrl: string | null } }>;
       bulkItems: Array<{
         id: string;
         checkedOutQuantity: number;
@@ -762,10 +785,16 @@ export const GET = withKiosk(async (_req, { kiosk }) => {
       const bulkPreviewItems = c.bulkItems.flatMap((bi) => {
         const allocatedItems = bi.unitAllocations.map((allocation) => ({
           name: `${bi.bulkSku.name} #${allocation.bulkSkuUnit.unitNumber}`,
+          tagName: bi.bulkSku.name,
+          imageUrl: bi.bulkSku.imageUrl,
         }));
         const missingQuantity = missingAllocatedBulkQuantity(bi);
         return missingQuantity > 0
-          ? allocatedItems.concat({ name: quantityLabel(bi.bulkSku.name, missingQuantity) })
+          ? allocatedItems.concat({
+              name: quantityLabel(bi.bulkSku.name, missingQuantity),
+              tagName: bi.bulkSku.name,
+              imageUrl: bi.bulkSku.imageUrl,
+            })
           : allocatedItems;
       });
       const bulkItemCount = c.bulkItems.reduce((sum, bi) => {
@@ -782,6 +811,8 @@ export const GET = withKiosk(async (_req, { kiosk }) => {
         requesterInitials: c.custodyScope === "SHARED" ? "SC" : getInitials(c.requester.name),
         items: c.serializedItems.map((si) => ({
           name: si.asset.name || si.asset.assetTag,
+          tagName: si.asset.assetTag,
+          imageUrl: si.asset.imageUrl,
         })).concat(bulkPreviewItems).slice(0, 3),
         itemCount: c._count.serializedItems + bulkItemCount,
         endsAt: c.endsAt,

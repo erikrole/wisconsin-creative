@@ -102,6 +102,8 @@ struct KioskDashboard: Decodable {
         let readyAt: Date
         let custodyScope: String
         let eventId: String?
+        /// First few reserved items for gear thumbnails. Older servers omit it.
+        let items: [KioskGearThumb]?
         var id: String { bookingId }
     }
 
@@ -485,6 +487,9 @@ struct KioskActiveCheckout: Decodable, Identifiable {
 
     struct CheckoutItem: Decodable {
         let name: String
+        /// Asset tag or bulk SKU name; older servers omit it.
+        let tagName: String?
+        let imageUrl: String?
     }
 
     init(from decoder: Decoder) throws {
@@ -686,6 +691,12 @@ struct KioskStudentCheckout: Decodable, Identifiable {
         endsAt = try container.decode(Date.self, forKey: .endsAt)
         isOverdue = try container.decodeIfPresent(Bool.self, forKey: .isOverdue) ?? (endsAt < Date())
     }
+}
+
+/// One gear thumbnail on the dashboard: asset tag (or bulk SKU name) and photo.
+struct KioskGearThumb: Decodable, Equatable, Hashable {
+    let tagName: String
+    let imageUrl: String?
 }
 
 struct KioskPendingPickup: Decodable, Identifiable {

@@ -141,8 +141,8 @@ struct KioskEventDetailSheet: View {
     let capabilities: KioskDashboard.Capabilities
     var onStartCheckout: (() -> Void)? = nil
     var onScan: ((String) -> Void)? = nil
-    /// People with a pickup reserved for this event: they have gear coming.
-    var reservedUserIds: Set<String> = []
+    /// Each worker's gear for this event: reserved pickups plus checkouts out.
+    var gearByUserId: [String: KioskEventWorkerGear] = [:]
 
     var body: some View {
         ZStack {
@@ -215,7 +215,7 @@ struct KioskEventDetailSheet: View {
                             LazyVStack(spacing: 8) {
                                 // Who still needs gear first.
                                 ForEach(event.assignedUsers.sorted { needsGear($0) && !needsGear($1) }) { user in
-                                    KioskEventWorkerRow(user: user, eventAllDay: event.displayAllDay, needsGear: needsGear(user), isReserved: reservedUserIds.contains(user.id))
+                                    KioskEventWorkerRow(user: user, eventAllDay: event.displayAllDay, needsGear: needsGear(user), gear: gearByUserId[user.id])
                                 }
                             }
                         }
@@ -234,7 +234,7 @@ struct KioskEventDetailSheet: View {
     }
 
     private func needsGear(_ user: KioskEvent.AssignedUser) -> Bool {
-        !reservedUserIds.contains(user.id) && event.crewWithoutGear.contains { $0.id == user.id }
+        gearByUserId[user.id] == nil && event.crewWithoutGear.contains { $0.id == user.id }
     }
 
     private var eventDayLabel: String {
@@ -287,7 +287,7 @@ private struct KioskEventWorkerRow: View {
     let user: KioskEvent.AssignedUser
     let eventAllDay: Bool
     var needsGear = false
-    var isReserved = false
+    var gear: KioskEventWorkerGear? = nil
 
     var body: some View {
         HStack(spacing: 10) {
@@ -310,10 +310,8 @@ private struct KioskEventWorkerRow: View {
                 Text("No gear yet")
                     .font(KioskType.chipStrong)
                     .foregroundStyle(KioskStatus.attention)
-            } else if isReserved {
-                Text("Reserved")
-                    .font(KioskType.chipStrong)
-                    .foregroundStyle(KioskStatus.scheduled)
+            } else if let gear, gear.totalCount > 0 {
+                KioskGearThumbStack(gear: gear)
             }
         }
         .padding(.horizontal, 12)
@@ -346,6 +344,54 @@ private struct KioskEventWorkerRow: View {
         let startLabel = start.formatted(.dateTime.hour().minute())
         guard let end else { return startLabel }
         return "\(startLabel) - \(end.formatted(.dateTime.hour().minute()))"
+    }
+}
+
+/// A worker's gear for one event, merged across reserved pickups and checkouts.
+struct KioskEventWorkerGear: Equatable {
+    var thumbs: [KioskGearThumb] = []
+    var reservedCount = 0
+    var outCount = 0
+
+    var totalCount: Int { reservedCount + outCount }
+
+    mutating func add(thumbs newThumbs: [KioskGearThumb], count: Int, out: Bool) {
+        thumbs.append(contentsOf: newThumbs)
+        if out { outCount += max(count, newThumbs.count) } else { reservedCount += max(count, newThumbs.count) }
+    }
+
+    var accessibilityLabel: String {
+        var parts: [String] = []
+        if reservedCount > 0 { parts.append("\(reservedCount) item\(reservedCount == 1 ? "" : "s") reserved") }
+        if outCount > 0 { parts.append("\(outCount) item\(outCount == 1 ? "" : "s") out") }
+        return parts.joined(separator: ", ")
+    }
+}
+
+/// Overlapping item photos (up to 4), then "+N" for the rest.
+private struct KioskGearThumbStack: View {
+    let gear: KioskEventWorkerGear
+    private let size: CGFloat = 28
+
+    var body: some View {
+        let shown = Array(gear.thumbs.prefix(4))
+        let overflow = gear.totalCount - shown.count
+        HStack(spacing: -8) {
+            ForEach(Array(shown.enumerated()), id: \.offset) { _, thumb in
+                KioskItemThumbnail(imageUrl: thumb.imageUrl, size: size)
+                    .background(KioskSurface.cardRaised, in: RoundedRectangle(cornerRadius: KioskRadius.sm))
+            }
+            if overflow > 0 {
+                Text("+\(overflow)")
+                    .font(KioskType.micro)
+                    .foregroundStyle(KioskText.primary)
+                    .frame(width: size, height: size)
+                    .background(KioskSurface.placeholder, in: RoundedRectangle(cornerRadius: KioskRadius.sm))
+                    .overlay(RoundedRectangle(cornerRadius: KioskRadius.sm).stroke(KioskStroke.standard, lineWidth: 1))
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(gear.accessibilityLabel)
     }
 }
 

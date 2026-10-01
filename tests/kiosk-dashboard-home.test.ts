@@ -48,6 +48,34 @@ describe("kiosk home projections", () => {
     expect(pickups.map((p) => p.bookingId)).toEqual(["p1", "p2"]);
     expect(pickups[0]).toMatchObject({ requester: null, custodyScope: "SHARED", eventId: "ev-1", itemCount: 4 });
     expect(pickups[1]).toMatchObject({ requester: { id: "u2" }, itemCount: 4, readyAt: at(2) });
+    expect(pickups[1]!.items).toEqual([]);
+  });
+
+  it("lists pickup gear thumbnails: serialized first, then bulk still to pick up, capped at six", () => {
+    const [pickup] = projectPickups([
+      pickupRow("p1", "u1", at(1), {
+        _count: { serializedItems: 6 },
+        serializedItems: Array.from({ length: 6 }, (_, i) => ({ asset: { assetTag: `CAM-${i}`, imageUrl: i === 0 ? "https://x/cam.png" : null } })),
+        bulkItems: [{ plannedQuantity: 2, checkedOutQuantity: 0, bulkSku: { name: "Battery", imageUrl: "https://x/b.png" } }],
+      }),
+    ], (t) => t);
+    expect(pickup!.items).toHaveLength(6);
+    expect(pickup!.items[0]).toEqual({ tagName: "CAM-0", imageUrl: "https://x/cam.png" });
+
+    const [bulkOnly] = projectPickups([
+      pickupRow("p2", "u1", at(1), {
+        _count: { serializedItems: 1 },
+        serializedItems: [{ asset: { assetTag: "CAM-9", imageUrl: null } }],
+        bulkItems: [
+          { plannedQuantity: 2, checkedOutQuantity: 2, bulkSku: { name: "Done", imageUrl: null } },
+          { plannedQuantity: 1, checkedOutQuantity: 0, bulkSku: { name: "Battery", imageUrl: "https://x/b.png" } },
+        ],
+      }),
+    ], (t) => t);
+    expect(bulkOnly!.items).toEqual([
+      { tagName: "CAM-9", imageUrl: null },
+      { tagName: "Battery", imageUrl: "https://x/b.png" },
+    ]);
   });
 
   it("builds one tile per person with merged reasons, never for SHARED custody", () => {

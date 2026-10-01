@@ -173,7 +173,7 @@ describe("kiosk dashboard route", () => {
         bulkItems: [{
           checkedOutQuantity: 1,
           checkedInQuantity: 0,
-          bulkSku: { name: "Sony Battery" },
+          bulkSku: { name: "Sony Battery", imageUrl: "https://example.com/battery.png" },
           unitAllocations: [{ bulkSkuUnit: { unitNumber: 31 } }],
         }],
         _count: { serializedItems: 0 },
@@ -197,7 +197,7 @@ describe("kiosk dashboard route", () => {
       expect.objectContaining({
         id: "booking-1",
         itemCount: 1,
-        items: [{ name: "Sony Battery #31" }],
+        items: [{ name: "Sony Battery #31", tagName: "Sony Battery", imageUrl: "https://example.com/battery.png" }],
       }),
     ]);
     expect(body.partialFailures).toEqual([]);
@@ -314,7 +314,7 @@ describe("kiosk dashboard route", () => {
       expect.objectContaining({
         id: "booking-1",
         itemCount: 8,
-        items: [{ name: "Sony Battery x8" }],
+        items: [{ name: "Sony Battery x8", tagName: "Sony Battery", imageUrl: null }],
       }),
     ]);
   });
