@@ -154,7 +154,9 @@ struct KioskHomeView: View {
                     return "\(name) (call \(call.formatted(.dateTime.hour().minute())))"
                 }
                 guard !linkedPickups.isEmpty || !linkedCheckouts.isEmpty || !crew.isEmpty else { return nil }
-                return EventGroup(event: event, pickups: linkedPickups, checkouts: linkedCheckouts, crew: crew, crewMembers: event.crewWithoutGear)
+                // A reservation for this event counts as gear (older servers didn't).
+                let reserved = Set(linkedPickups.filter { $0.custodyScope != "SHARED" }.compactMap { $0.requester?.id })
+                return EventGroup(event: event, pickups: linkedPickups, checkouts: linkedCheckouts, crew: crew, crewMembers: event.crewWithoutGear.filter { !reserved.contains($0.id) })
             }
     }
 

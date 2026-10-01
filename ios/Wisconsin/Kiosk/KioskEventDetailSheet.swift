@@ -141,6 +141,8 @@ struct KioskEventDetailSheet: View {
     let capabilities: KioskDashboard.Capabilities
     var onStartCheckout: (() -> Void)? = nil
     var onScan: ((String) -> Void)? = nil
+    /// People with a pickup reserved for this event: they have gear coming.
+    var reservedUserIds: Set<String> = []
 
     var body: some View {
         ZStack {
@@ -213,7 +215,7 @@ struct KioskEventDetailSheet: View {
                             LazyVStack(spacing: 8) {
                                 // Who still needs gear first.
                                 ForEach(event.assignedUsers.sorted { needsGear($0) && !needsGear($1) }) { user in
-                                    KioskEventWorkerRow(user: user, eventAllDay: event.displayAllDay, needsGear: needsGear(user))
+                                    KioskEventWorkerRow(user: user, eventAllDay: event.displayAllDay, needsGear: needsGear(user), isReserved: reservedUserIds.contains(user.id))
                                 }
                             }
                         }
@@ -232,7 +234,7 @@ struct KioskEventDetailSheet: View {
     }
 
     private func needsGear(_ user: KioskEvent.AssignedUser) -> Bool {
-        event.crewWithoutGear.contains { $0.id == user.id }
+        !reservedUserIds.contains(user.id) && event.crewWithoutGear.contains { $0.id == user.id }
     }
 
     private var eventDayLabel: String {
@@ -285,6 +287,7 @@ private struct KioskEventWorkerRow: View {
     let user: KioskEvent.AssignedUser
     let eventAllDay: Bool
     var needsGear = false
+    var isReserved = false
 
     var body: some View {
         HStack(spacing: 10) {
@@ -307,6 +310,10 @@ private struct KioskEventWorkerRow: View {
                 Text("No gear yet")
                     .font(KioskType.chipStrong)
                     .foregroundStyle(KioskStatus.attention)
+            } else if isReserved {
+                Text("Reserved")
+                    .font(KioskType.chipStrong)
+                    .foregroundStyle(KioskStatus.scheduled)
             }
         }
         .padding(.horizontal, 12)

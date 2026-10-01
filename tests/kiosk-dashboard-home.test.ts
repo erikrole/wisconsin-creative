@@ -94,6 +94,18 @@ describe("kiosk home projections", () => {
     expect(crew.map((u) => u.id)).toEqual(["u4", "u5"]);
   });
 
+  it("counts a reserved pickup for the event as gear", () => {
+    const e = event("e1", [
+      { id: "a1", user: "u1", callAt: at(1) },
+      { id: "a2", user: "u2", callAt: at(1) },
+    ]);
+    const crew = crewWithoutGear(e, [], [
+      { eventId: "e1", custodyScope: "PERSON", requester: { id: "u1", name: "U1", avatarUrl: null } },
+      { eventId: "e1", custodyScope: "SHARED", requester: { id: "u2", name: "U2", avatarUrl: null } },
+    ]);
+    expect(crew.map((u) => u.id)).toEqual(["u2"]);
+  });
+
   it("picks the next event call or pickup window after now", () => {
     const pickups = projectPickups([pickupRow("p1", "u1", at(2)), pickupRow("p0", "u1", at(-1))], (t) => t);
     expect(projectNextUp({

@@ -664,7 +664,7 @@ export const GET = withKiosk(async (_req, { kiosk }) => {
       shiftCount: e.shiftGroup?._count.shifts ?? 0,
       assignedUsers,
       assignedUserCount: assignedUsers.length,
-      crewWithoutGear: crewWithoutGear(e, homeCheckouts).map((user) => ({
+      crewWithoutGear: crewWithoutGear(e, homeCheckouts, pickups).map((user) => ({
         id: user.id,
         name: user.name,
         initials: getInitials(user.name),

@@ -132,7 +132,8 @@ struct KioskIdleView: View {
                 event: event,
                 capabilities: dashboard?.capabilities ?? KioskDashboard.Capabilities(),
                 onStartCheckout: { startCheckout(for: event) },
-                onScan: { store.scanner.receive($0) }
+                onScan: { store.scanner.receive($0) },
+                reservedUserIds: Set((dashboard?.pickups ?? []).filter { $0.eventId == event.id && $0.custodyScope != "SHARED" }.compactMap { $0.requester?.id })
             )
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)

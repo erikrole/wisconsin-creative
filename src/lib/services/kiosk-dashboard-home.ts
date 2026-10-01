@@ -181,10 +181,20 @@ export function projectTodayTiles(args: {
 
 /**
  * Assigned crew for one event with no personal OPEN checkout linked to that
- * event (`Booking.eventId` or `BookingEvent`) or to their own shift assignment.
+ * event (`Booking.eventId` or `BookingEvent`) or to their own shift assignment,
+ * and no personal pickup reserved for it (a reservation counts as gear).
  */
-export function crewWithoutGear(event: HomeEventRow, checkouts: HomeCheckoutRow[]) {
+export function crewWithoutGear(
+  event: HomeEventRow,
+  checkouts: HomeCheckoutRow[],
+  pickups: Pick<KioskHomePickup, "eventId" | "requester" | "custodyScope">[] = [],
+) {
   const covered = new Set<string>();
+  for (const pickup of pickups) {
+    if (pickup.custodyScope === "PERSON" && pickup.eventId === event.id && pickup.requester) {
+      covered.add(pickup.requester.id);
+    }
+  }
   const assignmentIds = new Set(
     (event.shiftGroup?.shifts ?? []).flatMap((shift) => shift.assignments.map((a) => a.id).filter(Boolean)),
   );
