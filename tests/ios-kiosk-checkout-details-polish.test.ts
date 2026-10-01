@@ -44,7 +44,15 @@ describe("iOS kiosk checkout details polish", () => {
 
     // The 2026-09 removal of one-tap presets is reversed by the approved
     // redesign: day and time chips, with the linked event's suggestion marked.
-    expect(details).toContain('note: minutes == 0 ? "90 min after" : nil');
+    // A linked event leads with "After the game"/"After the event"; fixed
+    // times stay as alternatives.
+    expect(details).toContain('title: Self.isSport(event) ? "After the game" : "After the event"');
+    expect(details).toContain("return [after] + fixed.prefix(7)");
+    // The next shift is preselected so Continue is ready on open.
+    expect(details).toContain("private func preselectNextShift()");
+    expect(details).toContain("Text(Self.displayTitle(event))");
+    expect(details).toContain('Text("Something else…")');
+    expect(details).toContain("private var choiceSummary: String?");
     expect(details).toContain('Text("BACK BY")');
     expect(details).toContain('Button("Other date")');
     expect(details).toContain("struct KioskOtherDateSheet");

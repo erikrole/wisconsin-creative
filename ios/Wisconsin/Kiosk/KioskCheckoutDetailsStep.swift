@@ -17,6 +17,9 @@ struct KioskCheckoutDetailsStep: View {
     let canContinue: Bool
     let blockingRequirement: String?
     var continueTitle: String = "Continue to scan"
+    /// Checkout opens on the person's next shift; the pickup editor already
+    /// has its own linked event or name and passes false.
+    var preselectsNextShift: Bool = true
     let onContinue: () -> Void
 
     @State private var showOtherDate = KioskCaptureSeed.otherDate
@@ -25,6 +28,8 @@ struct KioskCheckoutDetailsStep: View {
     /// when a paired scanner is acting as the hardware keyboard).
     @State private var keyboardOverlap: CGFloat = 0
     @State private var purposeColumnBottom: CGFloat = 0
+    @State private var showsPurposeField = false
+    @State private var didPreselect = false
 
     private var shifts: [KioskCheckoutEvent] { events.filter(\.isMyShift) }
     private var otherEvents: [KioskCheckoutEvent] { events.filter { !$0.isMyShift } }
@@ -48,6 +53,8 @@ struct KioskCheckoutDetailsStep: View {
         }
         .padding(.top, 20)
         .padding(.bottom, KioskSpacing.screenBottom)
+        .onAppear { preselectNextShift() }
+        .onChange(of: events) { _, _ in preselectNextShift() }
         .overlay {
             if showOtherDate {
                 KioskOtherDateSheet(
@@ -63,10 +70,42 @@ struct KioskCheckoutDetailsStep: View {
         }
     }
 
+    /// Selects the soonest shift that hasn't ended, once, and only when
+    /// nothing is chosen yet (no linked event, no typed name, no restored
+    /// draft or capture fixture), so Continue is ready immediately.
+    private func preselectNextShift() {
+        guard preselectsNextShift, !didPreselect, !events.isEmpty else { return }
+        didPreselect = true
+        guard !isLinkedToEvent, selectedEventId == nil,
+              customPurpose.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+        let now = Date()
+        let next = shifts
+            .filter { ($0.endsAt ?? $0.startsAt.addingTimeInterval(2 * 3600)) > now }
+            .min { $0.startsAt < $1.startsAt }
+        guard let next else { return }
+        selectedEventId = next.id
+        isLinkedToEvent = true
+        if let suggested = Self.suggestedReturn(for: next) { dueBackAt = suggested }
+    }
+
+    /// The event's end plus the usual buffer, on the quarter hour; nil when
+    /// that time has already passed.
+    static func suggestedReturn(for event: KioskCheckoutEvent) -> Date? {
+        KioskCheckoutDefaults.dueBackDate(afterEventEndsAt: event.endsAt ?? event.startsAt.addingTimeInterval(2 * 3600))
+    }
+
+    private static func displayTitle(_ event: KioskCheckoutEvent) -> String {
+        kioskEventDisplayTitle(event.title, sportCode: event.sportCode)
+    }
+
+    private static func isSport(_ event: KioskCheckoutEvent) -> Bool {
+        !(event.sportCode?.trimmingCharacters(in: .whitespaces).isEmpty ?? true)
+    }
+
     // MARK: What's this for?
 
-    /// The "Something else" field sits last in this column, which on the
-    /// 820 pt landscape kiosk is exactly where the software keyboard lands.
+    /// The "Something else" field sits under Your shifts, which on the
+    /// 820 pt landscape kiosk can still be where the software keyboard lands.
     /// SwiftUI's own keyboard avoidance could not help: the right column's
     /// chips and Continue pill are taller than the space left above the keys,
     /// so the step overflowed (pushing the header off the top) instead of
@@ -91,14 +130,11 @@ struct KioskCheckoutDetailsStep: View {
                     KioskSectionHeader(title: "Your shifts")
                     ForEach(shifts) { event in eventRow(event) }
                 }
+                somethingElse
                 if !otherEvents.isEmpty {
                     KioskSectionHeader(title: shifts.isEmpty ? "Events" : "Other events")
                     ForEach(otherEvents.prefix(4)) { event in eventRow(event) }
                 }
-                KioskSectionHeader(title: "Something else")
-                purposeField
-                    .id(Self.purposeFieldID)
-                KioskKeyboardTip(isFieldFocused: focusedField == .customPurpose)
             }
             .padding(.top, 4)
             .padding(.bottom, KioskSpacing.md)
@@ -143,6 +179,37 @@ struct KioskCheckoutDetailsStep: View {
         }
     }
 
+    /// A compact row until tapped; then the typed field, focused.
+    @ViewBuilder
+    private var somethingElse: some View {
+        if showsPurposeField || focusedField == .customPurpose || !customPurpose.isEmpty {
+            KioskSectionHeader(title: "Something else")
+            purposeField
+                .id(Self.purposeFieldID)
+            KioskKeyboardTip(isFieldFocused: focusedField == .customPurpose)
+        } else {
+            Button {
+                showsPurposeField = true
+                focusedField = .customPurpose
+            } label: {
+                HStack(spacing: 14) {
+                    Image(systemName: "square.and.pencil")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(KioskText.secondary)
+                        .frame(width: 22, height: 22)
+                    Text("Something else…")
+                        .font(KioskType.rowTitle)
+                        .foregroundStyle(KioskText.secondary)
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, 16)
+                .frame(minHeight: 52)
+                .kioskCard(KioskSurface.cardRaised, radius: KioskRadius.lg, stroke: KioskStroke.standard)
+            }
+            .buttonStyle(KioskPressStyle())
+        }
+    }
+
     private func eventRow(_ event: KioskCheckoutEvent) -> some View {
         let isSelected = isLinkedToEvent && selectedEventId == event.id
         return Button {
@@ -168,7 +235,7 @@ struct KioskCheckoutDetailsStep: View {
                 }
                 .frame(width: 22, height: 22)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(event.title)
+                    Text(Self.displayTitle(event))
                         .font(KioskType.rowTitle)
                         .foregroundStyle(KioskText.primary)
                         .lineLimit(1)
@@ -248,10 +315,30 @@ struct KioskCheckoutDetailsStep: View {
                     .font(KioskType.meta)
                     .foregroundStyle(KioskText.tertiary)
                     .frame(maxWidth: .infinity)
+            } else if let choiceSummary {
+                Text(choiceSummary)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(KioskText.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+                    .frame(maxWidth: .infinity)
             }
             KioskPrimaryPill(title: continueTitle, isEnabled: canContinue, action: onContinue)
         }
         .padding(.top, 4)
+    }
+
+    /// "WHKY vs Boston · back by today at 9:30 PM".
+    private var choiceSummary: String? {
+        let name: String
+        if let selectedEvent {
+            name = Self.displayTitle(selectedEvent)
+        } else {
+            let typed = customPurpose.trimmingCharacters(in: .whitespaces)
+            guard !typed.isEmpty else { return nil }
+            name = typed
+        }
+        return "\(name) · back by \(KioskDueCopy.midSentence(dueBackAt))"
     }
 
     private func choiceChip(title: String, detail: String?, isSelected: Bool, action: @escaping () -> Void) -> some View {
@@ -341,33 +428,26 @@ struct KioskCheckoutDetailsStep: View {
         let note: String?
     }
 
-    /// With a linked event: around 90 minutes after it ends, then the next
-    /// morning, noon, and evening. Without one: the usual return times on the
-    /// chosen day.
+    /// With a linked event: "After the game" (or event) first, about 90
+    /// minutes after it ends, then the usual return times on the chosen day.
+    /// Without one: the usual return times alone.
     private var timeChoices: [TimeChoice] {
         let calendar = Calendar.current
         let now = Date()
         func time(_ date: Date) -> String { date.formatted(.dateTime.hour().minute()) }
-        if let event = selectedEvent, let end = event.endsAt ?? Optional(event.startsAt.addingTimeInterval(2 * 3600)) {
-            let suggested = KioskQuarterHour.roundedUp(end.addingTimeInterval(KioskCheckoutDefaults.linkedEventReturnBuffer))
-            var choices: [TimeChoice] = [-90, -60, -30, 0, 30].compactMap { minutes in
-                let date = suggested.addingTimeInterval(TimeInterval(minutes * 60))
-                guard date > now else { return nil }
-                return TimeChoice(date: date, title: time(date), note: minutes == 0 ? "90 min after" : nil)
-            }
-            let nextDay = calendar.startOfDay(for: calendar.date(byAdding: .day, value: 1, to: suggested) ?? suggested)
-            for hour in [9, 12, 17] where choices.count < 8 {
-                if let date = calendar.date(bySettingHour: hour, minute: 0, second: 0, of: nextDay) {
-                    choices.append(TimeChoice(date: date, title: "\(date.formatted(.dateTime.weekday(.abbreviated))) \(time(date))", note: nil))
-                }
-            }
-            return choices
-        }
         let day = calendar.startOfDay(for: dueBackAt)
-        return [9, 12, 15, 17, 19, 21, 22, 23].compactMap { hour in
+        var fixed = [9, 12, 15, 17, 19, 21, 22, 23].compactMap { hour -> TimeChoice? in
             guard let date = calendar.date(bySettingHour: hour, minute: 0, second: 0, of: day), date > now else { return nil }
             return TimeChoice(date: date, title: time(date), note: nil)
         }
+        guard let event = selectedEvent, let suggested = Self.suggestedReturn(for: event) else { return fixed }
+        let after = TimeChoice(
+            date: suggested,
+            title: Self.isSport(event) ? "After the game" : "After the event",
+            note: "~" + time(suggested)
+        )
+        fixed.removeAll { abs($0.date.timeIntervalSince(suggested)) < 60 }
+        return [after] + fixed.prefix(7)
     }
 }
 
