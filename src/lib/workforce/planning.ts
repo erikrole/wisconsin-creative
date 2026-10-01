@@ -1,0 +1,106 @@
+import { ApplicationStage, GraduationTerm, ShiftArea } from "@prisma/client";
+import { compareTerms } from "@/lib/workforce/contract";
+
+export const NO_AREA = "NONE" as const;
+export type PlanningAreaKey = ShiftArea | typeof NO_AREA;
+
+export type PlanningStudent = {
+  id: string;
+  name: string;
+  area: ShiftArea | null;
+  gradTerm: GraduationTerm | null;
+  gradYear: number | null;
+};
+
+export type PlanningApplicant = {
+  id: string;
+  name: string;
+  area: ShiftArea | null;
+  gradTerm: GraduationTerm | null;
+  gradYear: number | null;
+  stage: Extract<ApplicationStage, "APPLIED" | "ROUND_1" | "HIRE">;
+};
+
+export type PlanningCell = {
+  academicYearStart: number;
+  /** Current students still here at the start of this academic year. */
+  continuing: number;
+  /** Of those, how many have no graduation date and are assumed to stay. */
+  unknownGrad: number;
+  /** Hired applicants who have not registered yet and are here that year. */
+  hired: number;
+  /** Open-cycle applicants (applied or Round 1) who would be here that year. */
+  pipeline: number;
+  /** continuing + hired. */
+  projected: number;
+  /** Hires still needed to match the first column's headcount. */
+  need: number;
+  leaving: string[];
+  hiredNames: string[];
+  pipelineNames: string[];
+};
+
+export type PlanningRow = { area: PlanningAreaKey; baseline: number; cells: PlanningCell[] };
+
+/**
+ * A person is here for the academic year that starts in Fall `start` unless
+ * they graduate before that Fall. Graduating in Fall `start` still counts.
+ * An unknown graduation date is treated as staying (and flagged separately).
+ */
+export function presentInYear(
+  grad: { gradTerm: GraduationTerm | null; gradYear: number | null },
+  start: number,
+): boolean {
+  if (grad.gradTerm === null || grad.gradYear === null) return true;
+  return compareTerms({ term: grad.gradTerm, year: grad.gradYear }, { term: "FALL", year: start }) >= 0;
+}
+
+/**
+ * Projected student headcount per area per academic year, from current
+ * students plus unregistered hires, with open-cycle applicants shown as pipeline.
+ * Full-time staff are not part of the projection. `need` compares each year with
+ * the first column, so it answers "how many hires keep us at today's size".
+ */
+export function buildPlanning(
+  students: PlanningStudent[],
+  applicants: PlanningApplicant[],
+  years: number[],
+): PlanningRow[] {
+  const areas = new Set<PlanningAreaKey>();
+  for (const s of students) areas.add(s.area ?? NO_AREA);
+  for (const a of applicants) areas.add(a.area ?? NO_AREA);
+
+  const order: PlanningAreaKey[] = ["VIDEO", "PHOTO", "GRAPHICS", "SOCIAL", "COMMS", "LIVE_PRODUCTION", NO_AREA];
+  return order
+    .filter((area) => areas.has(area))
+    .map((area) => {
+      const inArea = students.filter((s) => (s.area ?? NO_AREA) === area);
+      const applicantsInArea = applicants.filter((a) => (a.area ?? NO_AREA) === area);
+      const baseline = inArea.filter((s) => presentInYear(s, years[0]!)).length;
+
+      const cells = years.map((year, index): PlanningCell => {
+        const here = inArea.filter((s) => presentInYear(s, year));
+        const previous = index === 0 ? null : inArea.filter((s) => presentInYear(s, years[index - 1]!));
+        const hired = applicantsInArea.filter((a) => a.stage === "HIRE" && presentInYear(a, year));
+        const pipeline = applicantsInArea.filter((a) => a.stage !== "HIRE" && presentInYear(a, year));
+        const projected = here.length + hired.length;
+        return {
+          academicYearStart: year,
+          continuing: here.length,
+          unknownGrad: here.filter((s) => s.gradTerm === null || s.gradYear === null).length,
+          hired: hired.length,
+          pipeline: pipeline.length,
+          projected,
+          need: Math.max(0, baseline - projected),
+          leaving: previous ? previous.filter((s) => !presentInYear(s, year)).map((s) => s.name) : [],
+          hiredNames: hired.map((a) => a.name),
+          pipelineNames: pipeline.map((a) => a.name),
+        };
+      });
+      return { area, baseline, cells };
+    });
+}
+
+export function academicYearLabel(start: number): string {
+  return `${start}-${String(start + 1).slice(2)}`;
+}
