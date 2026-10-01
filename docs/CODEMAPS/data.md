@@ -27,11 +27,11 @@
 | `BookingSerializedItem` | 10 | 4 |
 | `BookingBulkItem` | 10 | 3 |
 | `AssetAllocation` | 11 | 4 |
-| `BulkSku` | 29 | 5 |
+| `BulkSku` | 30 | 5 |
 | `BulkSkuProduct` | 11 | 3 |
 | `BulkStockBalance` | 7 | 4 |
 | `BulkStockMovement` | 13 | 4 |
-| `BulkSkuUnit` | 14 | 5 |
+| `BulkSkuUnit` | 15 | 5 |
 | `BookingBulkUnitAllocation` | 8 | 3 |
 | `ScanEvent` | 19 | 4 |
 | `ScanSession` | 9 | 2 |
@@ -94,7 +94,7 @@
 | `ShiftTrade` | 14 | 4 |
 | `StudentAvailabilityBlock` | 22 | 7 |
 | `BookingPhoto` | 8 | 2 |
-| `CheckinItemReport` | 11 | 3 |
+| `CheckinItemReport` | 16 | 5 |
 | `KioskDevice` | 19 | 3 |
 | `Resource` | 20 | 7 |
 | `ResourceAssetFolder` | 12 | 2 |

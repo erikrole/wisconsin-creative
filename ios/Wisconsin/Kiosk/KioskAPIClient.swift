@@ -630,13 +630,13 @@ struct KioskAPI {
     }
 
     /// Damaged or missing (G4, G5). Multipart like the web route: `actorId`,
-    /// `assetId`, `type` (DAMAGED | LOST), optional `description`, optional
+    /// one target (`assetId` | `bulkSkuUnitId` | `bulkSkuId` + `quantity`), `type` (DAMAGED | LOST), optional `description`, optional
     /// JPEG `file`. Not retried automatically: the server rejects a repeat
     /// report for the same item within a few seconds.
     func kioskCheckinReport(
         bookingId: String,
         actorId: String,
-        assetId: String,
+        target: KioskReportTarget,
         type: String,
         description: String?,
         photoJPEG: Data?,
@@ -648,7 +648,7 @@ struct KioskAPI {
         req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
         req.httpBody = Self.multipartBody(
             boundary: boundary,
-            fields: [("actorId", actorId), ("assetId", assetId), ("type", type)]
+            fields: [("actorId", actorId)] + target.fields + [("type", type)]
                 + (description.map { [("description", $0)] } ?? []),
             file: photoJPEG.map { (name: "file", filename: "damage.jpg", contentType: "image/jpeg", data: $0) }
         )
@@ -1028,4 +1028,27 @@ private struct KioskCompletionEnvelope<T: Decodable>: Decodable {
 struct KioskRequestRejected: LocalizedError {
     let message: String
     var errorDescription: String? { message }
+}
+
+/// What a damaged/missing report names: a serialized item, one numbered
+/// battery unit, or a quantity of counted stock.
+enum KioskReportTarget: Equatable {
+    case asset(id: String)
+    case bulkUnit(id: String)
+    case counted(bulkSkuId: String, quantity: Int)
+
+    var fields: [(String, String)] {
+        switch self {
+        case .asset(let id): [("assetId", id)]
+        case .bulkUnit(let id): [("bulkSkuUnitId", id)]
+        case .counted(let bulkSkuId, let quantity): [("bulkSkuId", bulkSkuId), ("quantity", String(quantity))]
+        }
+    }
+
+    static func `for`(_ item: KioskCheckoutDetail.ReturnItem, quantity: Int) -> KioskReportTarget {
+        if item.isCountedStock, let bulkSkuId = item.bulkSkuId {
+            return .counted(bulkSkuId: bulkSkuId, quantity: max(1, quantity))
+        }
+        return item.isNumberedBulk ? .bulkUnit(id: item.id) : .asset(id: item.id)
+    }
 }

@@ -131,6 +131,7 @@ beforeEach(() => {
         findUnique: mocks.serializedFindUnique,
         update: mocks.serializedUpdate,
       },
+      checkinItemReport: { findMany: vi.fn(async () => []) },
       bookingBulkItem: { findMany: mocks.bulkFindMany },
       assetAllocation: { updateMany: mocks.assetAllocationUpdateMany },
       scanSession: { updateMany: mocks.scanSessionUpdateMany },

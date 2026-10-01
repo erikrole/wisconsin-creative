@@ -22,6 +22,7 @@ const transactionCalls: Array<{ options: unknown }> = [];
 vi.mock("@/lib/db", () => {
   const mockTx = {
     booking: { findUnique: vi.fn(), update: vi.fn() },
+    checkinItemReport: { findMany: vi.fn(async () => []) },
     bookingBulkItem: { update: vi.fn(), findMany: vi.fn() },
     bookingSerializedItem: { count: vi.fn() },
     bulkStockBalance: { findMany: vi.fn(), upsert: vi.fn() },

@@ -666,7 +666,7 @@ Indexes and constraints:
 
 ## Model `BulkSku`
 
-Fields: 29
+Fields: 30
 
 - `id                  String               @id @default(cuid())`
 - `name                String`
@@ -695,6 +695,7 @@ Fields: 29
 - `scans               ScanEvent[]`
 - `products            BulkSkuProduct[]`
 - `units               BulkSkuUnit[]`
+- `checkinReports      CheckinItemReport[]`
 - `kitBulkMembers      KitBulkMembership[]`
 - `favoritedBy         FavoriteItemFamily[]`
 
@@ -774,7 +775,7 @@ Indexes and constraints:
 
 ## Model `BulkSkuUnit`
 
-Fields: 14
+Fields: 15
 
 - `id                String                      @id @default(cuid())`
 - `bulkSkuId         String                      @map("bulk_sku_id")`
@@ -790,6 +791,7 @@ Fields: 14
 - `bulkSku           BulkSku                     @relation(fields: [bulkSkuId], references: [id], onDelete: Cascade)`
 - `product           BulkSkuProduct?             @relation(fields: [productId], references: [id], onDelete: SetNull)`
 - `allocations       BookingBulkUnitAllocation[]`
+- `checkinReports    CheckinItemReport[]`
 
 Indexes and constraints:
 
@@ -1495,19 +1497,19 @@ Indexes and constraints:
 
 Fields: 14
 
-- `id        String              @id @default(cuid())`
-- `userId    String              @map("user_id")`
-- `type      String`
-- `title     String`
-- `body      String?`
-- `payload   Json?`
-- `channel   NotificationChannel @default(IN_APP)`
-- `sentAt    DateTime?           @map("sent_at")`
-- `readAt    DateTime?           @map("read_at")`
-- `dedupeKey String?             @unique @map("dedupe_key")`
-- `bookingId String?             @map("booking_id")`
-- `createdAt DateTime            @default(now()) @map("created_at")`
-- `user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)`
+- `id         String                 @id @default(cuid())`
+- `userId     String                 @map("user_id")`
+- `type       String`
+- `title      String`
+- `body       String?`
+- `payload    Json?`
+- `channel    NotificationChannel    @default(IN_APP)`
+- `sentAt     DateTime?              @map("sent_at")`
+- `readAt     DateTime?              @map("read_at")`
+- `dedupeKey  String?                @unique @map("dedupe_key")`
+- `bookingId  String?                @map("booking_id")`
+- `createdAt  DateTime               @default(now()) @map("created_at")`
+- `user       User                   @relation(fields: [userId], references: [id], onDelete: Cascade)`
 - `deliveries NotificationDelivery[]`
 
 Indexes and constraints:
@@ -1545,15 +1547,15 @@ Indexes and constraints:
 
 Fields: 9
 
-- `id          String   @id @default(cuid())`
-- `platform    String`
-- `kind        String`
-- `appVersion  String?  @map("app_version")`
-- `osVersion   String?  @map("os_version")`
-- `signature   String?`
-- `metadata    Json?`
-- `callStack   Json?    @map("call_stack")`
-- `receivedAt  DateTime @default(now()) @map("received_at")`
+- `id         String   @id @default(cuid())`
+- `platform   String`
+- `kind       String`
+- `appVersion String?  @map("app_version")`
+- `osVersion  String?  @map("os_version")`
+- `signature  String?`
+- `metadata   Json?`
+- `callStack  Json?    @map("call_stack")`
+- `receivedAt DateTime @default(now()) @map("received_at")`
 
 Indexes and constraints:
 
@@ -2352,23 +2354,30 @@ Indexes and constraints:
 
 ## Model `CheckinItemReport`
 
-Fields: 11
+Fields: 16
 
-- `id           String            @id @default(cuid())`
-- `bookingId    String            @map("booking_id")`
-- `assetId      String            @map("asset_id")`
-- `type         CheckinReportType`
-- `description  String?`
-- `imageUrl     String?           @map("image_url")`
-- `reportedById String            @map("reported_by_id")`
-- `createdAt    DateTime          @default(now()) @map("created_at")`
-- `booking    Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)`
-- `asset      Asset   @relation(fields: [assetId], references: [id], onDelete: Restrict)`
-- `reportedBy User    @relation("CheckinReports", fields: [reportedById], references: [id], onDelete: Restrict)`
+- `id            String            @id @default(cuid())`
+- `bookingId     String            @map("booking_id")`
+- `assetId       String?           @map("asset_id")`
+- `bulkSkuUnitId String?           @map("bulk_sku_unit_id")`
+- `bulkSkuId     String?           @map("bulk_sku_id")`
+- `quantity      Int?`
+- `type          CheckinReportType`
+- `description   String?`
+- `imageUrl      String?           @map("image_url")`
+- `reportedById  String            @map("reported_by_id")`
+- `createdAt     DateTime          @default(now()) @map("created_at")`
+- `booking     Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)`
+- `asset       Asset?       @relation(fields: [assetId], references: [id], onDelete: Restrict)`
+- `bulkSkuUnit BulkSkuUnit? @relation(fields: [bulkSkuUnitId], references: [id], onDelete: Cascade)`
+- `bulkSku     BulkSku?     @relation(fields: [bulkSkuId], references: [id], onDelete: Cascade)`
+- `reportedBy  User         @relation("CheckinReports", fields: [reportedById], references: [id], onDelete: Restrict)`
 
 Indexes and constraints:
 
 - `@@unique([bookingId, assetId])`
+- `@@unique([bookingId, bulkSkuUnitId])`
+- `@@unique([bookingId, bulkSkuId, type])`
 - `@@index([bookingId])`
 - `@@map("checkin_item_reports")`
 

@@ -30,6 +30,9 @@ struct KioskReturnView: View {
     @State private var damagedIds: Set<String> = []
     /// Marked missing: accounted for, so the return can finish without them.
     @State private var missingIds: Set<String> = []
+    /// Counted stock reports by SKU: name plus quantities missing/damaged.
+    /// Kept here because a fully accounted-for row leaves the list.
+    @State private var countedReports: [String: KioskCountedReport] = [:]
 
     enum ScanFeedback: Equatable {
         case success(String)
@@ -69,9 +72,12 @@ struct KioskReturnView: View {
     /// Returned plus marked missing (decision 4: missing is accounted for).
     private var accountedCount: Int { returnedCount + missingIds.subtracting(returnedIds).count }
     private var allReturned: Bool { accountedCount == totalItems && totalItems > 0 }
-    /// Items the report page can name: serialized gear, not counted stock.
+    /// Everything the report page can name: serialized gear, each battery
+    /// unit, and counted stock still out.
     private var reportableItems: [KioskCheckoutDetail.ReturnItem] {
-        (detail?.items ?? []).filter { !$0.isBulkDisplay && $0.returnsByQuantity != true }
+        (detail?.items ?? []).filter {
+            (!$0.isBulkDisplay) || $0.isNumberedBulk || ($0.isCountedStock && ($0.quantity ?? 0) > 0)
+        }
     }
     private var batteryTotal: Int { detail?.scanSummary?.numberedBulkTotal ?? detail?.numberedBulkItems.count ?? 0 }
     private var returnedBatteryCount: Int {
@@ -110,7 +116,12 @@ struct KioskReturnView: View {
                     avatarInitials: returner?.initials,
                     items: reportableItems,
                     returnedIds: returnedIds,
+                    missingIds: missingIds,
                     step: $reportStep,
+                    onReturned: { scanned in
+                        returnedIds.insert(scanned.id)
+                        lastReturnedId = scanned.id
+                    },
                     onReported: handleReport
                 )
             } else {
@@ -342,7 +353,12 @@ struct KioskReturnView: View {
                                 section: section
                             ) {
                                 if item.returnsByQuantity == true, !returnedIds.contains(item.id) {
-                                    quantityReturnControl(for: item)
+                                    HStack(spacing: 10) {
+                                        if let counted = item.bulkSkuId.flatMap({ countedReports[$0] }), let tag = counted.tag {
+                                            reportTag(tag, section: counted.missing > 0 ? .problem : .comingBack)
+                                        }
+                                        quantityReturnControl(for: item)
+                                    }
                                 } else if damagedIds.contains(item.id) {
                                     reportTag("Held for staff", section: .comingBack)
                                 } else if missingIds.contains(item.id) {
@@ -360,6 +376,7 @@ struct KioskReturnView: View {
                                 scanned: units.filter { returnedIds.contains($0.id) }.count,
                                 total: units.count,
                                 units: units.map { .init(id: $0.id, label: $0.unitNumber.map { "#\($0)" } ?? $0.tagName, isScanned: returnedIds.contains($0.id)) },
+                                note: batteryReportNote(units),
                                 section: section,
                                 imageUrl: units.first?.imageUrl
                             )
@@ -478,6 +495,17 @@ struct KioskReturnView: View {
         }
     }
 
+    /// "#7 missing · #3 held for staff" under a battery family.
+    private func batteryReportNote(_ units: [KioskCheckoutDetail.ReturnItem]) -> String? {
+        let parts = units.compactMap { unit -> String? in
+            let label = unit.unitNumber.map { "#\($0)" } ?? unit.tagName
+            if missingIds.contains(unit.id) { return "\(label) missing" }
+            if damagedIds.contains(unit.id) { return "\(label) held for staff" }
+            return nil
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
     @ViewBuilder
     private func reportTag(_ text: String, section: KioskSection) -> some View {
         Text(text)
@@ -489,6 +517,25 @@ struct KioskReturnView: View {
     /// accounted for; if it was the last item out, the server already
     /// finished the return, so go straight to the receipt.
     private func handleReport(_ result: KioskCheckinReportResult, _ item: KioskCheckoutDetail.ReturnItem) {
+        if item.isCountedStock, let bulkSkuId = item.bulkSkuId {
+            var counted = countedReports[bulkSkuId] ?? KioskCountedReport(name: item.bulkSkuName ?? item.name)
+            if result.type == "DAMAGED" {
+                counted.damaged = result.quantity ?? counted.damaged
+            } else {
+                counted.missing = result.quantity ?? counted.missing
+            }
+            countedReports[bulkSkuId] = counted
+            reportStep = nil
+            if result.completed {
+                let person = returner ?? returningForOwner
+                store.clearIntent(reason: .success)
+                showReceipt(message: "Return finished. Staff have been told about \(counted.name).", person: person)
+            } else {
+                // The owed quantity changed on the server.
+                Task { await loadDetail() }
+            }
+            return
+        }
         if result.type == "DAMAGED" {
             damagedIds.insert(item.id)
         } else {
@@ -518,8 +565,10 @@ struct KioskReturnView: View {
                     returnedCount: returnedItems.count,
                     totalItems: totalItems,
                     returnedTags: returnedItems.map(\.itemListPrimaryTitle),
-                    damaged: items.filter { damagedIds.contains($0.id) }.map { ($0.itemListPrimaryTitle, $0.itemListSecondaryTitle) },
+                    damaged: items.filter { damagedIds.contains($0.id) }.map { ($0.itemListPrimaryTitle, $0.itemListSecondaryTitle) }
+                        + countedReports.values.filter { $0.damaged > 0 }.map { ("x\($0.damaged)", $0.name) },
                     missing: items.filter { missingIds.contains($0.id) && !returnedIds.contains($0.id) }.map { ($0.itemListPrimaryTitle, $0.itemListSecondaryTitle) }
+                        + countedReports.values.filter { $0.missing > 0 }.map { ("x\($0.missing)", $0.name) }
                 )
             }
         ))
@@ -604,6 +653,17 @@ struct KioskReturnView: View {
             detail = loaded
             // Pre-populate already-returned items (mid-session resume).
             returnedIds = Set(loaded.items.filter(\.returned).map(\.id))
+            // Reports made earlier (or on another kiosk) show on the list.
+            for item in loaded.items {
+                if item.report?.type == "LOST" { missingIds.insert(item.id) }
+                if item.report?.type == "DAMAGED" { damagedIds.insert(item.id) }
+                if item.isCountedStock, let bulkSkuId = item.bulkSkuId {
+                    var counted = countedReports[bulkSkuId] ?? KioskCountedReport(name: item.bulkSkuName ?? item.name)
+                    counted.missing = max(counted.missing, item.reportedMissingQuantity ?? 0)
+                    counted.damaged = max(counted.damaged, item.reportedDamagedQuantity ?? 0)
+                    if counted.missing > 0 || counted.damaged > 0 { countedReports[bulkSkuId] = counted }
+                }
+            }
             processNextScanIfNeeded()
         } catch {
             self.loadError = (error as? APIError)?.errorDescription ?? "Could not load return details."
@@ -629,4 +689,16 @@ struct KioskReturnView: View {
 
 private extension KioskCheckoutDetail {
     var isOverdue: Bool { endsAt < Date() }
+}
+
+/// Counted stock reported damaged or missing on this return.
+struct KioskCountedReport: Equatable {
+    let name: String
+    var missing = 0
+    var damaged = 0
+
+    var tag: String? {
+        [missing > 0 ? "\(missing) missing" : nil, damaged > 0 ? "\(damaged) held for staff" : nil]
+            .compactMap { $0 }.joined(separator: " · ").nonBlankText
+    }
 }

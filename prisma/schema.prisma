@@ -712,6 +712,7 @@ model BulkSku {
   scans               ScanEvent[]
   products            BulkSkuProduct[]
   units               BulkSkuUnit[]
+  checkinReports      CheckinItemReport[]
   kitBulkMembers      KitBulkMembership[]
   favoritedBy         FavoriteItemFamily[]
 
@@ -793,6 +794,7 @@ model BulkSkuUnit {
   bulkSku           BulkSku                     @relation(fields: [bulkSkuId], references: [id], onDelete: Cascade)
   product           BulkSkuProduct?             @relation(fields: [productId], references: [id], onDelete: SetNull)
   allocations       BookingBulkUnitAllocation[]
+  checkinReports    CheckinItemReport[]
 
   @@unique([bulkSkuId, unitNumber])
   @@index([bulkSkuId, status])
@@ -1424,16 +1426,16 @@ model LiveActivityStart {
 }
 
 model Notification {
-  id        String              @id @default(cuid())
-  userId    String              @map("user_id")
-  type      String
-  title     String
-  body      String?
-  payload   Json?
-  channel   NotificationChannel @default(IN_APP)
-  sentAt    DateTime?           @map("sent_at")
-  readAt    DateTime?           @map("read_at")
-  dedupeKey String?             @unique @map("dedupe_key")
+  id         String                 @id @default(cuid())
+  userId     String                 @map("user_id")
+  type       String
+  title      String
+  body       String?
+  payload    Json?
+  channel    NotificationChannel    @default(IN_APP)
+  sentAt     DateTime?              @map("sent_at")
+  readAt     DateTime?              @map("read_at")
+  dedupeKey  String?                @unique @map("dedupe_key")
   // Booking-scoped notifications carry the owning booking id so escalation
   // sweeps can filter with `bookingId: { in: [...] }` instead of a fan of
   // `dedupeKey startsWith` LIKE branches. Intentionally no foreign key:
@@ -1442,9 +1444,9 @@ model Notification {
   // history that must survive that delete. A nullable, FK-less column keeps
   // the same practical shape as the repo's `onDelete: SetNull` booking links
   // without adding a Booking back-relation or a cascade path.
-  bookingId String?             @map("booking_id")
-  createdAt DateTime            @default(now()) @map("created_at")
-  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookingId  String?                @map("booking_id")
+  createdAt  DateTime               @default(now()) @map("created_at")
+  user       User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   deliveries NotificationDelivery[]
 
   @@index([userId, readAt])
@@ -1487,17 +1489,17 @@ model NotificationDelivery {
 /// iOS install. No user identity: app and OS version, the diagnostic's own
 /// metadata, and a size-capped call stack. Pruned after 90 days.
 model AppDiagnostic {
-  id          String   @id @default(cuid())
-  platform    String
+  id         String   @id @default(cuid())
+  platform   String
   /// crash | hang | cpu_exception | disk_write_exception | app_launch
-  kind        String
-  appVersion  String?  @map("app_version")
-  osVersion   String?  @map("os_version")
+  kind       String
+  appVersion String?  @map("app_version")
+  osVersion  String?  @map("os_version")
   /// Exception type, signal, or termination reason, when MetricKit gives one.
-  signature   String?
-  metadata    Json?
-  callStack   Json?    @map("call_stack")
-  receivedAt  DateTime @default(now()) @map("received_at")
+  signature  String?
+  metadata   Json?
+  callStack  Json?    @map("call_stack")
+  receivedAt DateTime @default(now()) @map("received_at")
 
   @@index([receivedAt])
   @@index([kind, receivedAt])
@@ -2254,20 +2256,30 @@ model BookingPhoto {
 }
 
 model CheckinItemReport {
-  id           String            @id @default(cuid())
-  bookingId    String            @map("booking_id")
-  assetId      String            @map("asset_id")
-  type         CheckinReportType
-  description  String?
-  imageUrl     String?           @map("image_url")
-  reportedById String            @map("reported_by_id")
-  createdAt    DateTime          @default(now()) @map("created_at")
+  id            String            @id @default(cuid())
+  bookingId     String            @map("booking_id")
+  /// Exactly one target is set (CHECK in migration 0156): a serialized asset,
+  /// a numbered bulk unit (battery #7), or counted bulk stock by SKU.
+  assetId       String?           @map("asset_id")
+  bulkSkuUnitId String?           @map("bulk_sku_unit_id")
+  bulkSkuId     String?           @map("bulk_sku_id")
+  /// Counted stock only: how many were damaged or missing.
+  quantity      Int?
+  type          CheckinReportType
+  description   String?
+  imageUrl      String?           @map("image_url")
+  reportedById  String            @map("reported_by_id")
+  createdAt     DateTime          @default(now()) @map("created_at")
 
-  booking    Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  asset      Asset   @relation(fields: [assetId], references: [id], onDelete: Restrict)
-  reportedBy User    @relation("CheckinReports", fields: [reportedById], references: [id], onDelete: Restrict)
+  booking     Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  asset       Asset?       @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  bulkSkuUnit BulkSkuUnit? @relation(fields: [bulkSkuUnitId], references: [id], onDelete: Cascade)
+  bulkSku     BulkSku?     @relation(fields: [bulkSkuId], references: [id], onDelete: Cascade)
+  reportedBy  User         @relation("CheckinReports", fields: [reportedById], references: [id], onDelete: Restrict)
 
   @@unique([bookingId, assetId])
+  @@unique([bookingId, bulkSkuUnitId])
+  @@unique([bookingId, bulkSkuId, type])
   @@index([bookingId])
   @@map("checkin_item_reports")
 }

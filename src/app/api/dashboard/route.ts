@@ -366,7 +366,8 @@ export const GET = withAuth(async (req, { user }) => {
     // Recent damage/lost reports (last 30 days, staff/admin only)
     user.role === "ADMIN" || user.role === "STAFF"
       ? db.checkinItemReport.findMany({
-          where: { createdAt: { gte: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) } },
+          // Serialized reports only; lost batteries surface via lostBulkUnits.
+          where: { assetId: { not: null }, createdAt: { gte: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) } },
           orderBy: { createdAt: "desc" },
           take: 10,
           include: {
@@ -473,7 +474,7 @@ export const GET = withAuth(async (req, { user }) => {
     type: string;
     imageUrl: string | null;
     createdAt: Date;
-    asset: { id: string; assetTag: string; name: string | null };
+    asset: { id: string; assetTag: string; name: string | null } | null;
     booking: { title: string };
     reportedBy: { name: string };
   }>, "recentReports", partialFailures);
@@ -826,7 +827,7 @@ export const GET = withAuth(async (req, { user }) => {
       myEventWork,
       lostBulkUnits,
       flaggedItems: [
-        ...recentReports.map((r) => ({
+        ...recentReports.flatMap((r) => !r.asset ? [] : [{
           id: r.id,
           assetId: r.asset.id,
           assetTag: r.asset.assetTag,
@@ -836,7 +837,7 @@ export const GET = withAuth(async (req, { user }) => {
           reportedBy: r.reportedBy.name,
           imageUrl: r.imageUrl ?? null,
           createdAt: r.createdAt.toISOString(),
-        })),
+        }]),
         ...maintenanceAssets.map((a) => ({
           id: `maint-${a.id}`,
           assetId: a.id,

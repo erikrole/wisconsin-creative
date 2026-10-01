@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { withKiosk } from "@/lib/api";
 import { HttpError, ok } from "@/lib/http";
 import { maybeAutoComplete } from "@/lib/services/bookings-checkin";
-import { upsertBulkBalancesAndMovements } from "@/lib/services/bookings-helpers";
+import { reportedLostBulkBySku, upsertBulkBalancesAndMovements } from "@/lib/services/bookings-helpers";
 import { createAuditEntryTx } from "@/lib/audit";
 import { requireKioskActor } from "@/lib/services/kiosk-actor";
 const schema = z.object({ actorId: z.string().min(1), bulkSkuId: z.string().min(1), quantity: z.number().int().positive().max(200), expectedOutstanding: z.number().int().positive() });
@@ -20,7 +20,9 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
     const item = await tx.bookingBulkItem.findUnique({ where: { bookingId_bulkSkuId: { bookingId: params.id, bulkSkuId: body.bulkSkuId } }, include: { bulkSku: true, booking: true } });
     if (!item || item.booking.kind !== "CHECKOUT" || item.booking.status !== "OPEN") throw new HttpError(404, "Active checkout item not found");
     if (item.bulkSku.trackByNumber) throw new HttpError(400, "Scan each numbered unit to return it");
-    const outstanding = item.checkedOutQuantity - item.checkedInQuantity;
+    // Quantity reported missing is accounted for, so it is no longer owed.
+    const reportedLost = (await reportedLostBulkBySku(tx, params.id)).get(item.bulkSkuId) ?? 0;
+    const outstanding = item.checkedOutQuantity - item.checkedInQuantity - reportedLost;
     if (outstanding !== body.expectedOutstanding || body.quantity > outstanding) throw new HttpError(409, "The remaining quantity changed. Refresh before returning more.");
     await tx.bookingBulkItem.update({ where: { id: item.id }, data: { checkedInQuantity: { increment: body.quantity } } });
     await upsertBulkBalancesAndMovements(tx, { bookingId: params.id, locationId: kiosk.locationId, actorUserId: actor.id, kind: "CHECKIN", items: [{ bulkSkuId: item.bulkSkuId, quantity: body.quantity }] });

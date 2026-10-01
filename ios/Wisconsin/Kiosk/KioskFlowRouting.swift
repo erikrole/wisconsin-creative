@@ -159,7 +159,7 @@ enum KioskFlowIntentReducer {
     }
 }
 
-enum KioskScannerOwner: String, CaseIterable { case none, home, identity, operatorHub, checkout, pickup, `return`, detail }
+enum KioskScannerOwner: String, CaseIterable { case none, home, identity, operatorHub, checkout, pickup, `return`, returnReport, detail }
 /// `disconnected` means no HID keyboard is attached at all — the scanner is
 /// off, asleep, or out of Bluetooth range. `reconnecting` means hardware is
 /// present but the hidden sink does not currently hold first responder.

@@ -27,6 +27,7 @@ vi.mock("@/lib/db", () => {
   const mockTx = {
     booking: { findUnique: vi.fn(), update: vi.fn() },
     bookingSerializedItem: { updateMany: vi.fn() },
+    checkinItemReport: { findMany: vi.fn(async () => []) },
     bookingBulkItem: { update: vi.fn() },
     bookingBulkUnitAllocation: { updateMany: vi.fn() },
     assetAllocation: { updateMany: vi.fn() },

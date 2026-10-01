@@ -874,8 +874,20 @@ struct KioskCheckoutDetail: Decodable {
         /// Counted stock (cables, tape) has no per-unit QR, so it is returned
         /// by quantity. Absent from older servers.
         let returnsByQuantity: Bool?
+        /// Return mode: a damaged/missing report on this item or battery
+        /// unit. Additive; older servers omit it.
+        var report: Report? = nil
+        /// Return mode, counted stock: quantities already reported. Additive.
+        var reportedMissingQuantity: Int? = nil
+        var reportedDamagedQuantity: Int? = nil
+
+        struct Report: Decodable, Equatable {
+            let type: String
+        }
 
         var isNumberedBulk: Bool { type == "numbered_bulk" }
+        /// Counted stock is reported by quantity, not one piece.
+        var isCountedStock: Bool { isBulkQuantity && returnsByQuantity == true }
         var isBulkQuantity: Bool { type == "bulk_quantity" }
         var isBulkDisplay: Bool { isNumberedBulk || isBulkQuantity || bulkSkuId != nil }
 
@@ -1020,6 +1032,8 @@ struct KioskCheckinReportResult: Decodable {
     let checkoutTitle: String
     let heldForStaff: Bool
     let completed: Bool
+    /// Counted stock: the reported quantity (running total). Additive.
+    var quantity: Int? = nil
 }
 
 /// Server response for a reservation pickup. `partial` is optional so a

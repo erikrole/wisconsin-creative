@@ -309,7 +309,7 @@ export async function checkSerializedTurnaroundRisks(
 
   const latestReportByAsset = new Map<string, (typeof recentReports)[number]>();
   for (const report of recentReports) {
-    if (!latestReportByAsset.has(report.assetId)) {
+    if (report.assetId && !latestReportByAsset.has(report.assetId)) {
       latestReportByAsset.set(report.assetId, report);
     }
   }

@@ -1,4 +1,4 @@
-import { AssetStatus, BookingCustodyScope, CheckinReportType, Prisma, ScanPhase, type Role } from "@prisma/client";
+import { AssetStatus, BookingCustodyScope, BulkMovementKind, BulkUnitStatus, CheckinReportType, Prisma, ScanPhase, type Role } from "@prisma/client";
 import { put } from "@vercel/blob";
 import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
@@ -6,6 +6,7 @@ import { createAuditEntry, createAuditEntryTx } from "@/lib/audit";
 import { checkinReportSchema } from "@/lib/validation";
 import { deferPush, notifyItemReport } from "@/lib/services/notifications";
 import { maybeAutoComplete } from "@/lib/services/bookings-checkin";
+import { reportedLostBulkBySku, upsertBulkBalancesAndMovements } from "@/lib/services/bookings-helpers";
 import { deleteImage, imageExtensionForType, isBlobUrl, validateImage, publicBlobAuth } from "@/lib/blob";
 
 const REPORT_DEDUP_WINDOW_MS = 5_000;
@@ -31,7 +32,10 @@ export async function readCheckinReportPayload(req: Request) {
   const rawActor = formData.get("actorId");
   return {
     parsed: checkinReportSchema.safeParse({
-      assetId: formData.get("assetId"),
+      assetId: optionalField(formData.get("assetId")),
+      bulkSkuUnitId: optionalField(formData.get("bulkSkuUnitId")),
+      bulkSkuId: optionalField(formData.get("bulkSkuId")),
+      quantity: optionalField(formData.get("quantity")),
       type: formData.get("type"),
       description: typeof rawDescription === "string" && rawDescription.trim()
         ? rawDescription
@@ -40,6 +44,10 @@ export async function readCheckinReportPayload(req: Request) {
     file: rawFile instanceof File && rawFile.size > 0 ? rawFile : null,
     actorId: typeof rawActor === "string" && rawActor ? rawActor : null,
   };
+}
+
+function optionalField(value: FormDataEntryValue | null) {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
 async function uploadReportImage(file: File, bookingId: string, assetId: string) {
@@ -257,5 +265,256 @@ export async function submitCheckinItemReport(args: {
     heldForStaff,
     completed: completedAt !== null,
     completedAt,
+  };
+}
+
+type BulkReportTarget =
+  | { kind: "unit"; bulkSkuUnitId: string }
+  | { kind: "counted"; bulkSkuId: string; quantity: number };
+
+/**
+ * Record a damaged or missing report for bulk gear on a checkout. Shared by
+ * the web check-in and the kiosk return, with one rule for both surfaces.
+ *
+ * Numbered unit (battery #7):
+ * - LOST: the unit must still be out. It is accounted for (decision 4): the
+ *   unit is marked LOST, its custody episode is closed, and it is never
+ *   restocked. The return can finish without it.
+ * - DAMAGED: the unit must have been scanned back. There is no maintenance
+ *   status for bulk units, so the unit stays in stock and the report flags it
+ *   for staff (notified).
+ *
+ * Counted stock: `quantity` of what is still owed.
+ * - LOST: reduces what is owed back; never restocked.
+ * - DAMAGED: counts as returned (the same ledger return as the quantity
+ *   route) and is flagged for staff.
+ *
+ * Everything commits in one SERIALIZABLE transaction that re-reads custody
+ * state, writes before/after audit, and completes the return when nothing is
+ * left owed.
+ */
+export async function submitBulkCheckinReport(args: {
+  bookingId: string;
+  bookingTitle: string;
+  target: BulkReportTarget;
+  type: "DAMAGED" | "LOST";
+  description?: string;
+  file: File | null;
+  reporter: { id: string; role: Role; name: string };
+  /** Where returned stock is restocked (counted DAMAGED) and completion runs. */
+  locationId: string;
+  returnedFor: { requesterUserId: string | null; custodyScope: BookingCustodyScope };
+  kiosk?: { kioskId: string };
+}) {
+  const { bookingId: id, target, type, description } = args;
+  const source = args.kiosk ? { source: "KIOSK", kioskDeviceId: args.kiosk.kioskId } : { source: "WEB" };
+  const targetKey = target.kind === "unit" ? target.bulkSkuUnitId : target.bulkSkuId;
+
+  const existing = target.kind === "unit"
+    ? await db.checkinItemReport.findUnique({
+        where: { bookingId_bulkSkuUnitId: { bookingId: id, bulkSkuUnitId: target.bulkSkuUnitId } },
+        select: { imageUrl: true, createdAt: true },
+      })
+    : await db.checkinItemReport.findUnique({
+        where: { bookingId_bulkSkuId_type: { bookingId: id, bulkSkuId: target.bulkSkuId, type } },
+        select: { imageUrl: true, createdAt: true },
+      });
+  if (existing && Date.now() - existing.createdAt.getTime() < REPORT_DEDUP_WINDOW_MS) {
+    throw new HttpError(409, "A report for this item was just submitted. Wait a moment before updating it.");
+  }
+
+  const imageUrl = args.file ? await uploadReportImage(args.file, id, targetKey) : undefined;
+
+  let outcome;
+  try {
+    outcome = await db.$transaction(async (tx) => {
+      let label: { id: string; tag: string; name: string; skuName: string; imageUrl: string | null };
+      let saved;
+      if (target.kind === "unit") {
+        const allocation = await tx.bookingBulkUnitAllocation.findFirst({
+          where: {
+            bulkSkuUnitId: target.bulkSkuUnitId,
+            checkedOutAt: { not: null },
+            bookingBulkItem: { bookingId: id },
+          },
+          include: {
+            bulkSkuUnit: { select: { id: true, unitNumber: true, status: true, notes: true, bulkSku: { select: { id: true, name: true, imageUrl: true } } } },
+          },
+        });
+        if (!allocation) throw new HttpError(404, "Item not found in this checkout");
+        const unit = allocation.bulkSkuUnit;
+        label = {
+          id: unit.id,
+          tag: `#${unit.unitNumber}`,
+          name: `${unit.bulkSku.name} #${unit.unitNumber}`,
+          skuName: unit.bulkSku.name,
+          imageUrl: unit.bulkSku.imageUrl,
+        };
+        const prior = await tx.checkinItemReport.findUnique({
+          where: { bookingId_bulkSkuUnitId: { bookingId: id, bulkSkuUnitId: unit.id } },
+          select: { type: true },
+        });
+        if (prior?.type === CheckinReportType.LOST) {
+          throw new HttpError(409, "This unit was already reported missing.");
+        }
+        if (type === "LOST") {
+          if (allocation.checkedInAt) {
+            throw new HttpError(409, "This item was already scanned back. Report it as damaged instead.");
+          }
+          const now = new Date();
+          await tx.bulkSkuUnit.update({
+            where: { id: unit.id },
+            data: { status: BulkUnitStatus.LOST, notes: `Reported missing at check-in (${id})` },
+          });
+          await tx.bookingBulkUnitAllocation.update({ where: { id: allocation.id }, data: { checkedInAt: now } });
+          await createAuditEntryTx(tx, {
+            actorId: args.reporter.id,
+            actorRole: args.reporter.role,
+            entityType: "bulk_sku_unit",
+            entityId: unit.id,
+            action: "checkin_report_unit_lost",
+            before: { status: unit.status, checkedInAt: null },
+            after: { status: BulkUnitStatus.LOST, checkedInAt: now.toISOString(), bookingId: id, ...source },
+          });
+        } else if (!allocation.checkedInAt) {
+          throw new HttpError(400, "Item must be scanned before reporting damage");
+        }
+        const data = { type: type as CheckinReportType, description, reportedById: args.reporter.id };
+        saved = await tx.checkinItemReport.upsert({
+          where: { bookingId_bulkSkuUnitId: { bookingId: id, bulkSkuUnitId: unit.id } },
+          create: { ...data, bookingId: id, bulkSkuUnitId: unit.id, imageUrl: imageUrl ?? null },
+          update: { ...data, ...(imageUrl ? { imageUrl } : {}) },
+        });
+      } else {
+        const item = await tx.bookingBulkItem.findUnique({
+          where: { bookingId_bulkSkuId: { bookingId: id, bulkSkuId: target.bulkSkuId } },
+          include: { bulkSku: { select: { id: true, name: true, imageUrl: true, trackByNumber: true, binQrCodeValue: true } } },
+        });
+        if (!item) throw new HttpError(404, "Item not found in this checkout");
+        if (item.bulkSku.trackByNumber) throw new HttpError(400, "Report a numbered unit by its number");
+        const reportedLost = (await reportedLostBulkBySku(tx, id)).get(item.bulkSkuId) ?? 0;
+        const owed = item.checkedOutQuantity - item.checkedInQuantity - reportedLost;
+        if (target.quantity > owed) {
+          throw new HttpError(409, owed > 0
+            ? `Only ${owed} ${item.bulkSku.name} still out. Refresh and try again.`
+            : `No ${item.bulkSku.name} still out.`);
+        }
+        label = {
+          id: item.bulkSkuId,
+          tag: `x${target.quantity}`,
+          name: target.quantity === 1 ? item.bulkSku.name : `${item.bulkSku.name} x${target.quantity}`,
+          skuName: item.bulkSku.name,
+          imageUrl: item.bulkSku.imageUrl,
+        };
+        if (type === "DAMAGED") {
+          // Damaged counts as returned: the same ledger return as the
+          // quantity route, then the report flags it for staff.
+          await tx.bookingBulkItem.update({ where: { id: item.id }, data: { checkedInQuantity: { increment: target.quantity } } });
+          await upsertBulkBalancesAndMovements(tx, {
+            bookingId: id,
+            locationId: args.locationId,
+            actorUserId: args.reporter.id,
+            kind: BulkMovementKind.CHECKIN,
+            items: [{ bulkSkuId: item.bulkSkuId, quantity: target.quantity }],
+          });
+          await tx.scanEvent.create({
+            data: {
+              bookingId: id,
+              actorUserId: args.reporter.id,
+              scanType: "BULK_BIN",
+              scanValue: item.bulkSku.binQrCodeValue ?? item.bulkSkuId,
+              bulkSkuId: item.bulkSkuId,
+              quantity: target.quantity,
+              success: true,
+              phase: ScanPhase.CHECKIN,
+              actualLocationId: args.locationId,
+              deviceContext: args.kiosk ? `kiosk:${args.kiosk.kioskId}:damaged-return` : "web:damaged-return",
+            },
+          });
+        }
+        saved = await tx.checkinItemReport.upsert({
+          where: { bookingId_bulkSkuId_type: { bookingId: id, bulkSkuId: item.bulkSkuId, type: type as CheckinReportType } },
+          create: {
+            bookingId: id,
+            bulkSkuId: item.bulkSkuId,
+            quantity: target.quantity,
+            type: type as CheckinReportType,
+            description,
+            imageUrl: imageUrl ?? null,
+            reportedById: args.reporter.id,
+          },
+          update: {
+            quantity: { increment: target.quantity },
+            description,
+            ...(imageUrl ? { imageUrl } : {}),
+            reportedById: args.reporter.id,
+          },
+        });
+        await createAuditEntryTx(tx, {
+          actorId: args.reporter.id,
+          actorRole: args.reporter.role,
+          entityType: "booking",
+          entityId: id,
+          action: type === "DAMAGED" ? "checkin_report_bulk_damaged_returned" : "checkin_report_bulk_lost",
+          before: { owed },
+          after: { owed: owed - target.quantity, quantity: target.quantity, bulkSkuId: item.bulkSkuId, ...source },
+        });
+      }
+
+      await createAuditEntryTx(tx, {
+        actorId: args.reporter.id,
+        actorRole: args.reporter.role,
+        entityType: "booking",
+        entityId: id,
+        action: `checkin_report_${type.toLowerCase()}`,
+        before: existing ? { reported: true } : { reported: false },
+        after: {
+          ...(target.kind === "unit" ? { bulkSkuUnitId: target.bulkSkuUnitId } : { bulkSkuId: target.bulkSkuId, quantity: target.quantity }),
+          label: label.name,
+          description,
+          imageUrl: saved.imageUrl,
+          ...source,
+        },
+      });
+
+      const booking = await tx.booking.findUnique({ where: { id }, select: { status: true } });
+      const completedAt = booking?.status === "OPEN"
+        ? await maybeAutoComplete(tx, id, args.locationId, args.reporter.id, {
+            auditAction: args.kiosk ? "auto_completed_by_kiosk_checkin" : "auto_completed_by_checkin_report",
+            returnedFor: args.returnedFor,
+          })
+        : null;
+      return { saved, label, completedAt };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  } catch (err) {
+    if (imageUrl && isBlobUrl(imageUrl)) await deleteImage(imageUrl).catch(() => {});
+    throw err;
+  }
+
+  if (imageUrl && existing?.imageUrl && isBlobUrl(existing.imageUrl)) {
+    await deleteImage(existing.imageUrl).catch(() => {});
+  }
+
+  deferPush(notifyItemReport({
+    bookingId: id,
+    bookingTitle: args.bookingTitle,
+    assetId: targetKey,
+    assetTag: outcome.label.tag,
+    itemDescription: outcome.label.skuName,
+    reportType: type,
+    damageDescription: description,
+    evidenceImageUrl: outcome.saved.imageUrl ?? undefined,
+    reporterName: args.reporter.name,
+  }).catch((err) => {
+    console.error("[REPORT] Failed to send supervisor notifications:", err);
+  }));
+
+  return {
+    report: outcome.saved,
+    item: { id: outcome.label.id, assetTag: outcome.label.tag, name: outcome.label.name },
+    // Damaged bulk is flagged for staff (notified); the unit/stock stays in inventory.
+    heldForStaff: type === "DAMAGED",
+    completed: outcome.completedAt !== null,
+    completedAt: outcome.completedAt,
   };
 }

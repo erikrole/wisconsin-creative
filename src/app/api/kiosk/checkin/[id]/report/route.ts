@@ -6,15 +6,16 @@ import { enforceRateLimit } from "@/lib/rate-limit";
 import { displayBookingTitle } from "@/lib/booking-display-title";
 import { requireKioskActor } from "@/lib/services/kiosk-actor";
 import { readKioskStaffToken, verifyKioskStaffToken } from "@/lib/kiosk-staff-token";
-import { readCheckinReportPayload, submitCheckinItemReport } from "@/lib/services/checkin-item-reports";
+import { readCheckinReportPayload, submitBulkCheckinReport, submitCheckinItemReport } from "@/lib/services/checkin-item-reports";
 import { wasReturnedOnTime } from "@/lib/services/bookings-checkin";
 import { endCheckoutReturnLiveActivities } from "@/lib/services/live-activities";
 import { badges } from "@/lib/badges";
 
 /**
  * POST /api/kiosk/checkin/[id]/report — damaged or missing at the kiosk
- * (frames G3–G5). Multipart like the web route: `actorId`, `assetId`,
- * `type` (DAMAGED | LOST), optional `description`, optional photo `file`.
+ * (frames G3–G5). Multipart like the web route: `actorId`, one target
+ * (`assetId` | `bulkSkuUnitId` | `bulkSkuId` + `quantity`), `type`
+ * (DAMAGED | LOST), optional `description`, optional photo `file`.
  *
  * Anyone on the roster may report, the same rule as Return. DAMAGED needs the
  * item scanned back and holds it for staff; LOST accounts for the item so the
@@ -43,7 +44,7 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
     }),
     db.user.findUnique({ where: { id: actor.id }, select: { name: true } }),
   ]);
-  const { type, assetId, description } = parsed.data;
+  const { type, assetId, bulkSkuUnitId, bulkSkuId, quantity, description } = parsed.data;
   // The scan that returns the last item completes the checkout, so a damage
   // report for that item arrives on a COMPLETED booking. Missing needs it open.
   const reportable = booking && booking.kind === BookingKind.CHECKOUT && (
@@ -52,16 +53,32 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
   );
   if (!booking || !reportable) throw new HttpError(404, "Active checkout not found");
 
-  const result = await submitCheckinItemReport({
-    bookingId: booking.id,
-    bookingTitle: booking.title,
-    assetId,
-    type,
-    description,
-    file,
-    reporter: { id: actor.id, role: actor.role, name: reporter?.name ?? "Someone at the kiosk" },
-    kiosk: { kioskId: kiosk.kioskId, locationId: kiosk.locationId, booking },
-  });
+  const reporterInfo = { id: actor.id, role: actor.role, name: reporter?.name ?? "Someone at the kiosk" };
+  const result = assetId
+    ? await submitCheckinItemReport({
+        bookingId: booking.id,
+        bookingTitle: booking.title,
+        assetId,
+        type,
+        description,
+        file,
+        reporter: reporterInfo,
+        kiosk: { kioskId: kiosk.kioskId, locationId: kiosk.locationId, booking },
+      }).then((r) => ({ ...r, item: r.asset }))
+    : await submitBulkCheckinReport({
+        bookingId: booking.id,
+        bookingTitle: booking.title,
+        target: bulkSkuUnitId
+          ? { kind: "unit", bulkSkuUnitId }
+          : { kind: "counted", bulkSkuId: bulkSkuId!, quantity: quantity! },
+        type,
+        description,
+        file,
+        reporter: reporterInfo,
+        locationId: booking.locationId,
+        returnedFor: booking,
+        kiosk: { kioskId: kiosk.kioskId },
+      });
 
   // A LOST report on the last outstanding item finished the return: same
   // follow-through as every other completion path.
@@ -84,7 +101,8 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
     type: result.report.type,
     description: result.report.description,
     imageUrl: result.report.imageUrl,
-    item: result.asset,
+    item: result.item,
+    quantity: result.report.quantity ?? null,
     checkoutTitle: displayBookingTitle(booking.title),
     heldForStaff: result.heldForStaff,
     completed: result.completed,
