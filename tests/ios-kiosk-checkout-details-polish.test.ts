@@ -52,7 +52,8 @@ describe("iOS kiosk checkout details polish", () => {
     expect(details).toContain("private func preselectNextShift()");
     expect(details).toContain("Text(Self.displayTitle(event))");
     expect(details).toContain('Text("Something else…")');
-    expect(details).toContain("private var choiceSummary: String?");
+    expect(details).toContain("private var choiceName: String?");
+    expect(details).toContain("fixed.removeAll { $0.date <= eventEnd }");
     expect(details).toContain('Text("BACK BY")');
     expect(details).toContain('Button("Other date")');
     expect(details).toContain("struct KioskOtherDateSheet");

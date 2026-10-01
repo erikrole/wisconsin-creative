@@ -309,36 +309,22 @@ struct KioskCheckoutDetailsStep: View {
                 }
             }
             backBySummary
-            Spacer(minLength: 8)
             if let blockingRequirement, !canContinue {
                 Text(blockingRequirement)
                     .font(KioskType.meta)
                     .foregroundStyle(KioskText.tertiary)
                     .frame(maxWidth: .infinity)
-            } else if let choiceSummary {
-                Text(choiceSummary)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(KioskText.secondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
-                    .frame(maxWidth: .infinity)
             }
             KioskPrimaryPill(title: continueTitle, isEnabled: canContinue, action: onContinue)
+            Spacer(minLength: 0)
         }
         .padding(.top, 4)
     }
 
-    /// "WHKY vs Boston · back by today at 9:30 PM".
-    private var choiceSummary: String? {
-        let name: String
-        if let selectedEvent {
-            name = Self.displayTitle(selectedEvent)
-        } else {
-            let typed = customPurpose.trimmingCharacters(in: .whitespaces)
-            guard !typed.isEmpty else { return nil }
-            name = typed
-        }
-        return "\(name) · back by \(KioskDueCopy.midSentence(dueBackAt))"
+    /// What it's for, shown inside the Back by card ("FB vs Michigan State").
+    private var choiceName: String? {
+        if let selectedEvent { return Self.displayTitle(selectedEvent) }
+        return customPurpose.trimmingCharacters(in: .whitespaces).nonBlankText
     }
 
     private func choiceChip(title: String, detail: String?, isSelected: Bool, action: @escaping () -> Void) -> some View {
@@ -376,9 +362,11 @@ struct KioskCheckoutDetailsStep: View {
                 Text(KioskDueCopy.relative(dueBackAt))
                     .font(.system(size: 24, weight: .heavy))
                     .foregroundStyle(KioskText.primary)
-                Text(dueBackAt.formatted(.dateTime.weekday(.wide).month(.wide).day()))
+                // The day chips already show the date; name what it's for instead.
+                Text(choiceName ?? dueBackAt.formatted(.dateTime.weekday(.wide).month(.wide).day()))
                     .font(KioskType.meta)
-                    .foregroundStyle(KioskText.tertiary)
+                    .foregroundStyle(KioskText.secondary)
+                    .lineLimit(1)
             }
             Spacer(minLength: 8)
             Button("Other date") { showOtherDate = true }
@@ -441,6 +429,8 @@ struct KioskCheckoutDetailsStep: View {
             return TimeChoice(date: date, title: time(date), note: nil)
         }
         guard let event = selectedEvent, let suggested = Self.suggestedReturn(for: event) else { return fixed }
+        let eventEnd = event.endsAt ?? event.startsAt.addingTimeInterval(2 * 3600)
+        fixed.removeAll { $0.date <= eventEnd }
         let after = TimeChoice(
             date: suggested,
             title: Self.isSport(event) ? "After the game" : "After the event",

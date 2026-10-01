@@ -1701,7 +1701,9 @@ enum KioskCheckoutEventFormat {
     static func subtitle(_ event: KioskCheckoutEvent) -> String {
         var parts = [eventDateFormatter.string(from: event.startsAt)]
         if let locationName = event.locationName, !locationName.isEmpty {
-            parts.append(locationName)
+            // "Madison, Wis. - Homecoming / Red Out, …": drop the promo tail.
+            let place = locationName.components(separatedBy: " - ").first?.trimmingCharacters(in: .whitespaces) ?? locationName
+            parts.append(place.isEmpty ? locationName : place)
         } else if let sportCode = event.sportCode, !sportCode.isEmpty {
             parts.append(sportCode)
         }
