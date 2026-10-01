@@ -244,7 +244,7 @@ struct KioskHomeView: View {
             VStack(spacing: 0) {
                 ForEach(groups) { group in
                     Button { onOpenEvent?(group.event) } label: {
-                    HStack(alignment: .firstTextBaseline, spacing: 12) {
+                    HStack(alignment: .center, spacing: 12) {
                         Text(kioskEventDisplayTitle(group.event.title, sportCode: group.event.sportCode))
                             .font(.system(size: 17, weight: .semibold))
                             .foregroundStyle(KioskText.primary)
@@ -255,11 +255,13 @@ struct KioskHomeView: View {
                             .font(KioskType.meta)
                             .foregroundStyle(KioskText.secondary)
                             .fixedSize()
-                        if !group.crew.isEmpty {
-                            Text("\(group.crew.count) without gear")
-                                .font(KioskType.meta.weight(.semibold))
-                                .foregroundStyle(KioskStatus.attention)
-                                .fixedSize()
+                        if !group.crewMembers.isEmpty {
+                            // Crew without gear, as an avatar group (like web).
+                            HomeAvatarStack(members: group.crewMembers)
+                                .accessibilityLabel("\(group.crewMembers.count) without gear")
+                                .frame(width: 112, alignment: .trailing)
+                        } else {
+                            Color.clear.frame(width: 112, height: 1)
                         }
                         Image(systemName: "chevron.right")
                             .font(.system(size: 14, weight: .semibold))
@@ -775,5 +777,30 @@ private struct HomeRowAvatar: View {
             .overlay(Circle().stroke(ring, lineWidth: 2))
             .frame(width: 34, height: 34)
             .accessibilityHidden(true)
+    }
+}
+
+/// Overlapping avatars with a "+N" chip, matching the web avatar group.
+private struct HomeAvatarStack: View {
+    let members: [KioskEvent.CrewMember]
+    private let shown = 4
+    private let size: CGFloat = 30
+
+    var body: some View {
+        HStack(spacing: -9) {
+            ForEach(members.prefix(shown)) { member in
+                KioskAvatar(url: member.avatarUrl, initials: member.initials ?? homeInitials(member.name), size: size)
+                    .overlay(Circle().stroke(KioskSurface.card, lineWidth: 2))
+            }
+            if members.count > shown {
+                Text("+\(members.count - shown)")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(KioskText.secondary)
+                    .frame(width: size, height: size)
+                    .background(KioskSurface.placeholder, in: Circle())
+                    .overlay(Circle().stroke(KioskSurface.card, lineWidth: 2))
+            }
+        }
+        .accessibilityElement(children: .ignore)
     }
 }
