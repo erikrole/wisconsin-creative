@@ -337,19 +337,19 @@ struct KioskCheckoutDetailSheet: View {
             } else {
                 ScrollView {
                     let items = detail?.items ?? []
-                    // While editing, every unit keeps its own row for Swap/Remove.
-                    let grouped = canEditActiveCheckout ? [] : items.filter { $0.isNumberedBulk && $0.bulkSkuId != nil }
-                    let singles = items.filter { item in !grouped.contains { $0.id == item.id } }
-                    VStack(alignment: .leading, spacing: 8) {
-                        // Two columns: photo + asset tag, like every other list.
-                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
-                            ForEach(singles) { item in
-                                itemRow(item)
-                            }
+                    if canEditActiveCheckout {
+                        // Editing: one row per unit so Swap/Remove act on it.
+                        LazyVStack(spacing: 8) {
+                            ForEach(items) { item in itemRow(item) }
                         }
-                        // Numbered batteries: one row per kind with its unit numbers.
-                        ForEach(batteryGroups(grouped), id: \.id) { group in
-                            batteryGroupRow(group.items)
+                    } else {
+                        // Reading: uniform tiles, photo over tag; numbered
+                        // batteries share one tile with their unit chips.
+                        let grouped = items.filter { $0.isNumberedBulk && $0.bulkSkuId != nil }
+                        let singles = items.filter { item in !grouped.contains { $0.id == item.id } }
+                        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
+                            ForEach(singles) { item in itemTile(item) }
+                            ForEach(batteryGroups(grouped), id: \.id) { group in batteryTile(group.items) }
                         }
                     }
                 }
@@ -683,43 +683,54 @@ struct KioskCheckoutDetailSheet: View {
         return order.map { ($0, (byKind[$0] ?? []).sorted { ($0.unitNumber ?? 0) < ($1.unitNumber ?? 0) }) }
     }
 
-    private func batteryGroupRow(_ units: [KioskCheckoutDetail.ReturnItem]) -> some View {
+    private func itemTile(_ item: KioskCheckoutDetail.ReturnItem) -> some View {
+        tileShell {
+            itemThumbnail(item, size: 64)
+            Text(item.isNumberedBulk ? (item.itemListSecondaryTitle ?? item.itemListPrimaryTitle) : item.itemListPrimaryTitle)
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(item.returned ? KioskText.tertiary : KioskText.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+            if item.returned {
+                Text("Returned").font(KioskType.chipStrong).foregroundStyle(Color.statusText(.green))
+            }
+        }
+        .accessibilityLabel(item.itemListSecondaryTitle ?? item.name)
+    }
+
+    private func batteryTile(_ units: [KioskCheckoutDetail.ReturnItem]) -> some View {
         let first = units[0]
         let name = first.bulkSkuName ?? first.name
-        return HStack(spacing: 12) {
-            itemThumbnail(first)
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 8) {
-                    Text(name)
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(KioskText.primary)
-                        .lineLimit(1)
-                    Text("\(units.count) unit\(units.count == 1 ? "" : "s")")
-                        .font(KioskType.chip)
-                        .foregroundStyle(KioskText.tertiary)
-                }
-                HStack(spacing: 6) {
-                    ForEach(units) { unit in
-                        Text(unit.unitNumber.map { "#\($0)" } ?? unit.tagName)
-                            .font(.system(size: 15, weight: .bold).monospacedDigit())
-                            .foregroundStyle(unit.returned ? KioskText.tertiary : KioskText.primary)
-                            .strikethrough(unit.returned)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 4)
-                            .background(KioskSurface.cardRaised, in: Capsule())
-                            .overlay(Capsule().stroke(KioskStroke.standard, lineWidth: 1))
-                    }
+        return tileShell {
+            itemThumbnail(first, size: 64)
+            Text(name)
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(KioskText.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+            HStack(spacing: 4) {
+                ForEach(units) { unit in
+                    Text(unit.unitNumber.map { "#\($0)" } ?? unit.tagName)
+                        .font(.system(size: 14, weight: .bold).monospacedDigit())
+                        .foregroundStyle(unit.returned ? KioskText.tertiary : KioskText.primary)
+                        .strikethrough(unit.returned)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 2)
+                        .background(KioskSurface.cardRaised, in: Capsule())
                 }
             }
-            Spacer(minLength: 0)
+            .lineLimit(1)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .background(KioskSurface.card, in: RoundedRectangle(cornerRadius: KioskRadius.md))
-        .overlay(RoundedRectangle(cornerRadius: KioskRadius.md).stroke(KioskStroke.hairline, lineWidth: 1))
-        .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(name), units \(units.compactMap { $0.unitNumber.map(String.init) }.joined(separator: ", "))")
+    }
+
+    private func tileShell<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        VStack(spacing: 8) { content() }
+            .frame(maxWidth: .infinity, minHeight: 132)
+            .padding(10)
+            .background(KioskSurface.card, in: RoundedRectangle(cornerRadius: KioskRadius.md))
+            .overlay(RoundedRectangle(cornerRadius: KioskRadius.md).stroke(KioskStroke.hairline, lineWidth: 1))
+            .accessibilityElement(children: .ignore)
     }
 
     private func isRemovable(_ item: KioskCheckoutDetail.ReturnItem) -> Bool {
@@ -727,7 +738,7 @@ struct KioskCheckoutDetailSheet: View {
     }
 
     @ViewBuilder
-    private func itemThumbnail(_ item: KioskCheckoutDetail.ReturnItem) -> some View {
+    private func itemThumbnail(_ item: KioskCheckoutDetail.ReturnItem, size: CGFloat = 40) -> some View {
         let fallbackIcon = item.isBulkDisplay ? "battery.100percent" : "camera.fill"
         Group {
             if let urlString = item.imageUrl, let url = URL(string: urlString) {
@@ -743,7 +754,7 @@ struct KioskCheckoutDetailSheet: View {
                 thumbnailFallback(icon: fallbackIcon)
             }
         }
-        .frame(width: 40, height: 40)
+        .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: KioskRadius.sm))
         .overlay(
             RoundedRectangle(cornerRadius: KioskRadius.sm)
