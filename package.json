@@ -26,16 +26,16 @@
     "fast-uri": "3.1.8",
     "js-yaml": "4.3.2",
     "minimatch@3.1.5": {
-      "brace-expansion": "1.1.18"
+      "brace-expansion": "1.1.21"
     },
     "minimatch@5.1.9": {
-      "brace-expansion": "2.1.4"
+      "brace-expansion": "2.1.7"
     },
     "minimatch@9.0.9": {
-      "brace-expansion": "2.1.4"
+      "brace-expansion": "2.1.7"
     },
     "minimatch@10.2.5": {
-      "brace-expansion": "5.0.9"
+      "brace-expansion": "5.0.12"
     },
     "postcss": {
       ".": "$postcss",
@@ -47,6 +47,7 @@
       "nanoid": "5.1.16"
     },
     "@xmldom/xmldom": "0.9.12",
+    "@xhmikosr/decompress": "11.1.4",
     "browserslist": "4.28.9",
     "baseline-browser-mapping": "2.11.0",
     "devalue": "5.9.1",
