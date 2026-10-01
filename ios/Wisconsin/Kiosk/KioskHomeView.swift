@@ -239,24 +239,42 @@ struct KioskHomeView: View {
         if !group.pickups.isEmpty { counts.append("\(group.pickups.count) pickup\(group.pickups.count == 1 ? "" : "s")") }
         if !group.checkouts.isEmpty { counts.append("\(group.checkouts.count) out") }
         return VStack(alignment: .leading, spacing: 6) {
-            KioskSectionHeader(title: "\(group.event.title) · \(time)", count: counts.joined(separator: " · "))
+            // Event names run long ("… 2026 Championship Banner Drop"): one
+            // sentence-case line that truncates, with time and counts on the right.
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Text(group.event.title)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(KioskText.primary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                Spacer(minLength: 8)
+                Text(([time] + counts).joined(separator: " · "))
+                    .font(KioskType.meta)
+                    .foregroundStyle(KioskText.tertiary)
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+            .padding(.horizontal, 4)
             VStack(spacing: 0) {
                 ForEach(group.pickups) { pickup in
-                    HomePickupRow(pickup: pickup, showsHolderFirst: true) { selectPickupHolder(pickup) }
+                    HomePickupRow(pickup: pickup) { selectPickupHolder(pickup) }
                 }
                 ForEach(group.checkouts) { checkout in
-                    HomeCustodyRow(checkout: checkout, showsHolderFirst: true) { onOpenCheckout(checkout) }
+                    HomeCustodyRow(checkout: checkout) { onOpenCheckout(checkout) }
                 }
                 if !group.crew.isEmpty {
                     HStack(spacing: 12) {
                         HomeAvatarStack(members: group.crewMembers)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Crew without gear")
+                            Text("\(group.crew.count) crew without gear")
                                 .font(KioskType.chipStrong)
                                 .foregroundStyle(KioskStatus.attention)
-                            Text(group.crew.joined(separator: " · "))
+                            // Names only; call times live on each person's hub.
+                            Text(group.crew.map { $0.components(separatedBy: " (call").first ?? $0 }.joined(separator: ", "))
                                 .font(KioskType.meta)
                                 .foregroundStyle(KioskText.secondary)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -353,6 +371,7 @@ struct KioskHomeView: View {
     private var peoplePanel: some View {
         let today = Array((serverToday.isEmpty ? todayPeople : serverTodayPeople).prefix(6))
         let labels = homeShortNames(for: users)
+        let gridLabels = homeGridNames(for: users)
         // Photos at every roster size (Erik, 2026-09-30); 5 columns past 24 people,
         // tiles sized to fill the card.
         let usesWideGrid = users.count > 24
@@ -390,7 +409,7 @@ struct KioskHomeView: View {
                     ScrollView {
                         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: spacing), count: columns), spacing: spacing) {
                             ForEach(users) { user in
-                                HomePersonTile(user: user, label: labels[user.id] ?? user.name, height: tileHeight) {
+                                HomePersonTile(user: user, label: gridLabels[user.id] ?? user.name, height: tileHeight) {
                                     onSelectUser(user)
                                 }
                             }
@@ -410,6 +429,20 @@ struct KioskHomeView: View {
 
 /// "Avery N." -- first name and last initial, the canvas's roster label.
 /// First names stay unique enough at this fleet size; the initial settles ties.
+/// Roster-grid labels: first name alone, plus the last initial only when two
+/// people share a first name ("Ben S." / "Ben X."), so names fit five columns.
+func homeGridNames(for users: [KioskUser]) -> [String: String] {
+    let short = homeShortNames(for: users)
+    let firsts = users.map { $0.name.split(separator: " ").first.map(String.init) ?? $0.name }
+    var counts: [String: Int] = [:]
+    for first in firsts { counts[first.lowercased(), default: 0] += 1 }
+    var labels: [String: String] = [:]
+    for (user, first) in zip(users, firsts) {
+        labels[user.id] = (counts[first.lowercased()] ?? 0) > 1 ? (short[user.id] ?? user.name) : first
+    }
+    return labels
+}
+
 func homeShortNames(for users: [KioskUser]) -> [String: String] {
     var labels: [String: String] = [:]
     for user in users {
@@ -565,7 +598,7 @@ private struct HomePersonTile: View {
     /// short tiles put them side by side.
     private var stacks: Bool { height >= 72 }
     private var photoSize: CGFloat {
-        stacks ? min(height - 34, 56) : min(max(height - 14, 28), 44)
+        stacks ? min(height - 34, 56) : min(max(height - 14, 28), 36)
     }
 
     private var name: some View {
@@ -573,7 +606,7 @@ private struct HomePersonTile: View {
             .font(.system(size: 15, weight: .semibold))
             .foregroundStyle(KioskText.primary)
             .lineLimit(1)
-            .minimumScaleFactor(0.94)
+            .minimumScaleFactor(0.93)
             .truncationMode(.tail)
     }
 
@@ -587,7 +620,7 @@ private struct HomePersonTile: View {
                     }
                     .frame(maxWidth: .infinity)
                 } else {
-                    HStack(spacing: 8) {
+                    HStack(spacing: 6) {
                         KioskAvatar(url: user.avatarUrl, initials: user.initials, size: photoSize)
                         name
                         Spacer(minLength: 0)
