@@ -336,7 +336,8 @@ struct KioskCheckoutDetailSheet: View {
                 .frame(maxWidth: .infinity, minHeight: 100)
             } else {
                 ScrollView {
-                    LazyVStack(spacing: 8) {
+                    // Two columns: photo + asset tag, like every other list.
+                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
                         ForEach(detail?.items ?? []) { item in
                             itemRow(item)
                         }
@@ -366,7 +367,7 @@ struct KioskCheckoutDetailSheet: View {
                 // Returning gear is the primary custody action on this sheet,
                 // so it carries the brand red. Save and Remove are deliberately
                 // quieter below — red here must mean "the main thing to do".
-                Button("Return Gear") {
+                Button("Return gear") {
                     dismiss()
                     onReturn()
                 }
@@ -614,16 +615,14 @@ struct KioskCheckoutDetailSheet: View {
             itemThumbnail(item)
                 .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(item.itemListPrimaryTitle)
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(KioskText.primary)
-                    .lineLimit(1)
-                Text(item.itemListSecondaryTitle ?? item.bulkSkuName ?? item.name)
-                    .font(KioskType.chip)
-                    .foregroundStyle(KioskText.secondary)
-                    .lineLimit(1)
-            }
+            // Asset tag only; a numbered battery reads "Sony Battery #7"
+            // rather than "#7" over "Sony Battery #7".
+            Text(item.isNumberedBulk ? (item.itemListSecondaryTitle ?? item.itemListPrimaryTitle) : item.itemListPrimaryTitle)
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(KioskText.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.9)
+                .accessibilityLabel(item.itemListSecondaryTitle ?? item.name)
             Spacer()
             if canEditActiveCheckout && isRemovable(item) {
                 Button("Swap") { swapItem = item }
