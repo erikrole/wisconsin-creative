@@ -784,6 +784,9 @@ struct KioskSheetScreen<Context: View, Choice: View>: View {
     var dismissTitle: String = "Cancel"
     let onDismiss: () -> Void
     var contextWidth: CGFloat = 400
+    /// Shorter and nudged down when shown over a screen that keeps its header.
+    var height: CGFloat = 700
+    var topOffset: CGFloat = 0
     @ViewBuilder var context: () -> Context
     @ViewBuilder var choice: () -> Choice
 
@@ -813,9 +816,8 @@ struct KioskSheetScreen<Context: View, Choice: View>: View {
             .padding(28)
             // Fit the space it's given: inside a screen with a header the card
             // used to overflow upward and cover the header's subtitle.
-            .containerRelativeFrame([.horizontal, .vertical]) { length, axis in
-                axis == .horizontal ? min(1060, length - 32) : min(700, length - 24)
-            }
+            .frame(width: 1060, height: height)
+            .offset(y: topOffset)
             .kioskCard(KioskSurface.sheet, radius: KioskRadius.modal, stroke: KioskStroke.standard)
         }
     }
