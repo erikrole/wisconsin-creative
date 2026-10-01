@@ -98,15 +98,24 @@ export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
 
   const existing = await db.application.findUnique({
     where: { id: params.id },
-    select: { id: true, applicantId: true, stage: true, reviewed: true, allowedEmailId: true },
+    select: { id: true, applicantId: true, stage: true, reviewed: true, allowedEmailId: true, applicant: { select: { purgedAt: true } } },
   });
   if (!existing) throw new HttpError(404, "Application not found.");
+  if (existing.applicant.purgedAt) {
+    throw new HttpError(409, "This applicant's personal data was purged, so the record is read-only. Add a new application to bring them back.");
+  }
 
   const stageChanged = body.stage !== undefined && body.stage !== existing.stage;
   const leavingHire = stageChanged && existing.stage === ApplicationStage.HIRE && body.stage !== ApplicationStage.HIRE;
   const now = new Date();
 
   await db.$transaction(async (tx) => {
+    // Re-check inside the transaction: a purge that committed since the read above must
+    // not be undone by writing personal fields onto the tombstone.
+    const live = await tx.applicant.findUnique({ where: { id: existing.applicantId }, select: { purgedAt: true } });
+    if (!live || live.purgedAt) {
+      throw new HttpError(409, "This applicant's personal data was purged, so the record is read-only. Add a new application to bring them back.");
+    }
     let invitationRevoked = false;
     if (leavingHire) {
       // Re-read the link inside the transaction: an invite attached a moment ago is not

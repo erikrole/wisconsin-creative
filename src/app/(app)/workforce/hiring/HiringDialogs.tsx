@@ -138,6 +138,20 @@ export function NewCycleDialog({
   );
 }
 
+const INITIAL_APPLICANT_FORM = {
+  name: "",
+  email: "",
+  phone: "",
+  standing: "",
+  gradTerm: "",
+  gradYear: "",
+  area: "",
+  rawAreas: "",
+  portfolioUrl: "",
+  interviewUrl: "",
+  externalApplicationId: "",
+};
+
 export function AddApplicantDialog({
   open,
   onOpenChange,
@@ -149,19 +163,7 @@ export function AddApplicantDialog({
   cycleId: string;
   onCreated: (applicationId: string) => void;
 }) {
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    standing: "",
-    gradTerm: "",
-    gradYear: "",
-    area: "",
-    rawAreas: "",
-    portfolioUrl: "",
-    interviewUrl: "",
-    externalApplicationId: "",
-  });
+  const [form, setForm] = useState(INITIAL_APPLICANT_FORM);
   const [busy, setBusy] = useState(false);
   const [matches, setMatches] = useState<PossibleMatch[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -199,7 +201,8 @@ export function AddApplicantDialog({
       if (!res.ok || !json?.data) throw new Error(messageOf(json, "Could not add the applicant."));
       toast.success("Applicant added");
       setMatches(null);
-      setForm((f) => ({ ...f, name: "", email: "", phone: "", rawAreas: "", portfolioUrl: "", interviewUrl: "", externalApplicationId: "" }));
+      // Reset every field: a leftover standing or area must not carry onto the next person.
+      setForm(INITIAL_APPLICANT_FORM);
       onCreated(json.data.id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not add the applicant.");

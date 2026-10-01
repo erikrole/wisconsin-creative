@@ -112,6 +112,15 @@ const slotList = z
 const closedOn = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Use a date like 2025-05-01")
+  // JavaScript rolls 2025-02-31 over to March 3; reject any date that does not round-trip.
+  // Zod runs every refinement even after the pattern fails, so this must not throw on junk.
+  .refine(
+    (value) => {
+      const parsed = new Date(`${value}T12:00:00.000Z`);
+      return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+    },
+    { message: "Enter a real calendar date" },
+  )
   .transform((value) => new Date(`${value}T12:00:00.000Z`))
   .refine((date) => !Number.isNaN(date.getTime()) && date.getUTCFullYear() >= 2000, { message: "Enter a valid date" })
   .refine((date) => date.getTime() <= Date.now() + 24 * 60 * 60 * 1000, { message: "The close date cannot be in the future" });

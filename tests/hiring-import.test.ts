@@ -249,8 +249,8 @@ const tx = {
   applicantEmail: { createMany: vi.fn() },
   application: { createMany: vi.fn() },
   applicationNote: { createMany: vi.fn() },
-  user: { update: vi.fn() },
-  studentTermPlacement: { create: vi.fn() },
+  user: { updateMany: vi.fn() },
+  studentTermPlacement: { createMany: vi.fn() },
 };
 const models = {
   hiringCycle: { findUnique: vi.fn() },
@@ -352,17 +352,33 @@ describe("import routes", () => {
     models.user.findMany.mockResolvedValue([{ id: "u1", name: "Riley Roster", email: "riley@example.edu", athleticsEmail: null, startTerm: null, staffingType: "ST" }]);
     const res = await importRoster(post("/api/workforce/import", { academicYearStart: 2025, csv: ROSTER, apply: true }), ctx);
     expect(res.status).toBe(200);
-    expect(tx.user.update).toHaveBeenCalledWith({ where: { id: "u1" }, data: { startTerm: "FALL", startTermYear: 2024 } });
+    // One guarded updateMany per distinct start term (never overwrites an existing one).
+    expect(tx.user.updateMany).toHaveBeenCalledWith({ where: { id: { in: ["u1"] }, startTerm: null }, data: { startTerm: "FALL", startTermYear: 2024 } });
     // Counts-only audit, in the same transaction.
     expect(vi.mocked(createAuditEntryTx).mock.calls[0]![1]).toMatchObject({ entityType: "workforce_import", action: "import" });
-    expect(tx.studentTermPlacement.create).toHaveBeenCalledTimes(3);
+    // One batched insert for every placement.
+    expect(tx.studentTermPlacement.createMany).toHaveBeenCalledTimes(1);
+    expect(tx.studentTermPlacement.createMany.mock.calls[0]![0].data).toHaveLength(3);
+  });
+
+  it("writes a 500-row roster in a handful of statements, not one per person and term", async () => {
+    const header = "Area,Name,Campus Email,Start Date,Fall,Winter,Spring";
+    const rows = Array.from({ length: 500 }, (_, i) => `Video,Person ${i},p${i}@example.edu,Fall 2024,MSOC,WHKY,SB`);
+    models.user.findMany.mockResolvedValue(
+      Array.from({ length: 500 }, (_, i) => ({ id: `u${i}`, name: `Person ${i}`, email: `p${i}@example.edu`, athleticsEmail: null, startTerm: null, staffingType: "ST" })),
+    );
+    const res = await importRoster(post("/api/workforce/import", { academicYearStart: 2025, csv: [header, ...rows].join("\n"), apply: true }), ctx);
+    expect(res.status).toBe(200);
+    expect(tx.user.updateMany).toHaveBeenCalledTimes(1);
+    expect(tx.user.updateMany.mock.calls[0]![0].where.id.in).toHaveLength(500);
+    expect(tx.studentTermPlacement.createMany.mock.calls[0]![0].data).toHaveLength(1500);
   });
 
   it("roster import skips full-time accounts", async () => {
     models.user.findMany.mockResolvedValue([{ id: "u1", name: "Riley Roster", email: "riley@example.edu", athleticsEmail: null, startTerm: null, staffingType: "FT" }]);
     const res = await importRoster(post("/api/workforce/import", { academicYearStart: 2025, csv: ROSTER, apply: true }), ctx);
     expect(res.status).toBe(200);
-    expect(tx.user.update).not.toHaveBeenCalled();
-    expect(tx.studentTermPlacement.create).not.toHaveBeenCalled();
+    expect(tx.user.updateMany).not.toHaveBeenCalled();
+    expect(tx.studentTermPlacement.createMany).not.toHaveBeenCalled();
   });
 });

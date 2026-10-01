@@ -2722,6 +2722,9 @@ model ApplicantRetentionEvent {
   applicationCount Int      @map("application_count")
   documentCount    Int      @map("document_count")
   policyMonths     Int      @map("policy_months")
+  /// Blob pathnames still to delete after the purge committed. Paths hold ids, not personal
+  /// data. Cleared once the files are gone; a sweep retries any that remain.
+  pendingBlobPaths String[] @default([]) @map("pending_blob_paths")
 
   @@index([applicantId])
   @@index([purgedAt])

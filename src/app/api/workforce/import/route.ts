@@ -1,3 +1,4 @@
+import type { GraduationTerm } from "@prisma/client";
 import { z } from "zod";
 import { withAuth } from "@/lib/api";
 import { createAuditEntryTx } from "@/lib/audit";
@@ -53,25 +54,33 @@ export const POST = withAuth(async (req, { user }) => {
     const writable = plan.filter((p) => p.action === "update");
     await db.$transaction(
       async (tx) => {
+        // Start terms: one updateMany per distinct term (a roster has only a few), guarded to
+        // people who still have none so an existing value is never overwritten.
+        const byStart = new Map<string, { term: GraduationTerm; year: number; ids: string[] }>();
         for (const item of writable) {
-          if (item.setStartTerm && item.record.startTerm) {
-            await tx.user.update({
-              where: { id: item.userId! },
-              data: { startTerm: item.record.startTerm.term, startTermYear: item.record.startTerm.year },
-            });
-          }
-          for (const placement of item.newPlacements) {
-            await tx.studentTermPlacement.create({
-              data: {
-                userId: item.userId!,
-                term: placement.term,
-                year: placement.year,
-                area: item.record.area,
-                sportCodes: placement.sportCodes,
-              },
-            });
-          }
+          if (!item.setStartTerm || !item.record.startTerm) continue;
+          const { term, year } = item.record.startTerm;
+          const key = `${term}:${year}`;
+          const group = byStart.get(key) ?? { term, year, ids: [] };
+          group.ids.push(item.userId!);
+          byStart.set(key, group);
         }
+        for (const { term, year, ids } of byStart.values()) {
+          await tx.user.updateMany({ where: { id: { in: ids }, startTerm: null }, data: { startTerm: term, startTermYear: year } });
+        }
+
+        // Placements: one batched insert. The plan already removed anything that exists or
+        // repeats in the file; skipDuplicates keeps a concurrent edit from failing the import.
+        const placements = writable.flatMap((item) =>
+          item.newPlacements.map((placement) => ({
+            userId: item.userId!,
+            term: placement.term,
+            year: placement.year,
+            area: item.record.area,
+            sportCodes: placement.sportCodes,
+          })),
+        );
+        if (placements.length > 0) await tx.studentTermPlacement.createMany({ data: placements, skipDuplicates: true });
         // Counts only, in the same transaction so the import never commits without its evidence.
         await createAuditEntryTx(tx, {
           actorId: user.id,

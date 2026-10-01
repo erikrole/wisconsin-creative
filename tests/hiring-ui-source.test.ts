@@ -53,6 +53,15 @@ describe("applicant panel", () => {
 });
 
 describe("CSV import dialog", () => {
+  it("binds Apply to the exact CSV that produced the visible preview", () => {
+    expect(csvDialog).toContain("previewedCsv");
+    expect(csvDialog).toContain("const csvToSend = apply ? previewedCsv.current : csv");
+    // A preview that arrives after the file changed is discarded.
+    expect(csvDialog).toContain("revision.current !== startedAt");
+    expect(csvDialog).toContain("revision.current === mine");
+    expect(csvDialog).toContain("previewedCsv.current === null");
+  });
+
   it("invalidates the reviewed preview when an import option changes", () => {
     expect(csvDialog).toContain("previewedWith");
     expect(csvDialog).toContain("setReport(null)");
@@ -61,10 +70,25 @@ describe("CSV import dialog", () => {
 });
 
 describe("bulk resume upload", () => {
-  it("stays under the write rate limit and can retry failed rows", () => {
-    expect(bulk).toContain("MAX_FILES_PER_BATCH = 50");
+  it("paces uploads against the shared rate-limit window instead of failing files", () => {
+    // A 429 means the per-minute window is used up (by this batch or other work): wait it out and retry the file.
+    expect(bulk).toContain("res.status !== 429");
+    expect(bulk).toContain("MAX_RATE_LIMIT_WAITS");
+    expect(bulk).toContain("retrySeconds");
+    expect(bulk).toContain("Waiting");
+  });
+
+  it("bounds a batch and can retry rows that still failed", () => {
     expect(bulk).toContain("allFiles.slice(0, MAX_FILES_PER_BATCH)");
     expect(bulk).toContain('row.status !== "failed"');
+  });
+});
+
+describe("add applicant dialog", () => {
+  it("resets every field after a successful add, so nothing carries onto the next person", () => {
+    expect(dialogs).toContain("INITIAL_APPLICANT_FORM");
+    expect(dialogs).toContain("setForm(INITIAL_APPLICANT_FORM)");
+    expect(dialogs).not.toContain("setForm((f) => ({ ...f, name: \"\"");
   });
 });
 

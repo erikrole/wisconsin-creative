@@ -11,6 +11,9 @@ const dbMock = vi.hoisted(() => ({
   applicant: {
     findMany: vi.fn(),
   },
+  applicantRetentionEvent: {
+    findMany: vi.fn(),
+  },
 }));
 
 vi.mock("@/lib/cron", () => ({
@@ -42,6 +45,7 @@ describe("audit archive cron", () => {
     dbMock.auditLog.deleteMany.mockResolvedValue({ count: 0 });
     dbMock.session.deleteMany.mockResolvedValue({ count: 0 });
     dbMock.applicant.findMany.mockResolvedValue([]);
+    dbMock.applicantRetentionEvent.findMany.mockResolvedValue([]);
   });
 
   it("caps audit-log deletion batches per run and reports remaining backlog", async () => {

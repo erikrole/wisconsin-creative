@@ -65,28 +65,45 @@ export default function CsvImportDialog({
   // different plan than the one that was reviewed.
   const optionsKey = JSON.stringify(extraPayload);
   const previewedWith = useRef<string | null>(null);
+  // Apply may only send the CSV that produced the report on screen. `revision` changes
+  // whenever the file or options change, so a preview response that arrives after the
+  // admin picked a different file is discarded instead of re-arming Apply for the wrong data.
+  const revision = useRef(0);
+  const previewedCsv = useRef<string | null>(null);
   useEffect(() => {
     if (previewedWith.current !== null && previewedWith.current !== optionsKey) {
       setReport(null);
       previewedWith.current = null;
+      previewedCsv.current = null;
+      revision.current += 1;
     }
   }, [optionsKey]);
 
   async function run(apply: boolean) {
-    if (!csv) return;
+    // Preview reads the selected file; Apply sends exactly what was previewed.
+    const csvToSend = apply ? previewedCsv.current : csv;
+    if (!csvToSend) return;
+    const startedAt = revision.current;
     setBusy(true);
     setError(null);
     try {
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...extraPayload, csv, apply }),
+        body: JSON.stringify({ ...extraPayload, csv: csvToSend, apply }),
       });
       if (handleAuthRedirect(res)) return;
       const json = await parseJsonSafely<{ data?: Report }>(res);
       if (!res.ok || !json?.data) throw new Error(messageOf(json, "The import could not be processed."));
+      if (revision.current !== startedAt) {
+        // The file or an option changed while this request was in flight. A preview for the
+        // old file must not appear; an apply that already ran must still refresh the page.
+        if (apply) onApplied();
+        return;
+      }
       setReport(json.data);
       previewedWith.current = optionsKey;
+      if (!apply) previewedCsv.current = csvToSend;
       if (apply) {
         toast.success("Import applied");
         onApplied();
@@ -99,6 +116,8 @@ export default function CsvImportDialog({
   }
 
   function reset() {
+    revision.current += 1;
+    previewedCsv.current = null;
     setCsv(null);
     setFileName("");
     setReport(null);
@@ -132,11 +151,16 @@ export default function CsvImportDialog({
               className="text-sm"
               onChange={async (e) => {
                 const file = e.target.files?.[0];
+                revision.current += 1;
+                const mine = revision.current;
+                previewedCsv.current = null;
                 setReport(null);
                 setError(null);
                 if (!file) return setCsv(null);
                 setFileName(file.name);
-                setCsv(await file.text());
+                const text = await file.text();
+                // A newer selection superseded this one while it was being read.
+                if (revision.current === mine) setCsv(text);
               }}
             />
             <p className="text-xs text-muted-foreground">In Google Sheets: File, Download, Comma-separated values (current sheet). Nothing is saved until you press Apply.</p>
@@ -196,7 +220,7 @@ export default function CsvImportDialog({
               <Button type="button" variant="outline" disabled={busy || !csv} onClick={() => void run(false)}>
                 Preview
               </Button>
-              <Button type="button" disabled={busy || !report || !writable} onClick={() => void run(true)}>
+              <Button type="button" disabled={busy || !report || !writable || previewedCsv.current === null} onClick={() => void run(true)}>
                 Apply import
               </Button>
             </>

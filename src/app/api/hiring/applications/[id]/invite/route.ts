@@ -1,9 +1,10 @@
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { withAuth } from "@/lib/api";
-import { createAuditEntry, createAuditEntryTx } from "@/lib/audit";
+import { createAuditEntryTx } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { normalizeEmail } from "@/lib/hiring/contract";
+import { mapArea } from "@/lib/hiring/import";
 import { HttpError, ok } from "@/lib/http";
 import { enforceRateLimit, SETTINGS_MUTATION_LIMIT } from "@/lib/rate-limit";
 import { requirePermission } from "@/lib/rbac";
@@ -33,6 +34,7 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
       id: true,
       stage: true,
       primaryArea: true,
+      rawAreas: true,
       allowedEmail: { select: { id: true } },
       applicant: {
         select: {
@@ -60,16 +62,32 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
     select: { id: true, name: true },
   });
 
+  // Linking an existing account is part of the Hire decision, so it re-checks the stage
+  // and writes its audit entry in the same serializable transaction. A decision undone
+  // meanwhile cannot leave a passed applicant linked to a user.
   const link = async (userId: string, action: string) => {
-    await db.applicant.update({ where: { id: application.applicant.id }, data: { hiredUserId: userId } });
-    await createAuditEntry({
-      actorId: user.id,
-      actorRole: user.role,
-      entityType: "hiring_application",
-      entityId: application.id,
-      action,
-      after: { userId },
-    });
+    await db.$transaction(
+      async (tx) => {
+        const current = await tx.application.findUnique({
+          where: { id: application.id },
+          select: { stage: true, applicant: { select: { hiredUserId: true } } },
+        });
+        if (!current || current.stage !== "HIRE") {
+          throw new HttpError(409, "This application is no longer marked Hire, so no account was linked.");
+        }
+        if (current.applicant.hiredUserId) throw new HttpError(409, "This applicant is already linked to an account.");
+        await tx.applicant.update({ where: { id: application.applicant.id }, data: { hiredUserId: userId } });
+        await createAuditEntryTx(tx, {
+          actorId: user.id,
+          actorRole: user.role,
+          entityType: "hiring_application",
+          entityId: application.id,
+          action,
+          after: { userId },
+        });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
     return ok({ data: { status: "linked", userId } });
   };
 
@@ -115,24 +133,52 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
         }
         if (current.allowedEmailId) throw new HttpError(409, "An invitation was already sent for this application.");
 
-        const created = await tx.allowedEmail.create({
-          data: {
-            email,
-            role: "STUDENT",
-            preloadedName: application.applicant.name,
-            preloadedPrimaryArea: application.primaryArea,
-            preloadedAreas: application.primaryArea ? [application.primaryArea] : [],
-            createdById: user.id,
-          },
-          select: { id: true },
+        // The primary area first, then every other recognized area from the application, so
+        // registration creates all of the student's area assignments.
+        const areas = [
+          ...new Set([
+            ...(application.primaryArea ? [application.primaryArea] : []),
+            ...application.rawAreas.map((label) => mapArea(label)).filter((a): a is NonNullable<typeof a> => a !== null),
+          ]),
+        ];
+        const profile = {
+          preloadedName: application.applicant.name,
+          preloadedPrimaryArea: application.primaryArea ?? areas[0] ?? null,
+          preloadedAreas: areas,
+        };
+
+        // A pending ordinary student invite for this address would block a new one (unique
+        // email) and, if claimed, would register the user without linking the applicant.
+        // Adopt it for this application instead.
+        const pending = await tx.allowedEmail.findUnique({
+          where: { email },
+          select: { id: true, role: true, claimedAt: true, applications: { select: { id: true } } },
         });
-        await tx.application.update({ where: { id: application.id }, data: { allowedEmailId: created.id } });
+        let inviteId: string;
+        let adopted = false;
+        if (pending) {
+          if (pending.claimedAt) throw new HttpError(409, "That address already registered an account. Link the applicant to it instead.");
+          if (pending.role !== "STUDENT") throw new HttpError(409, "That address has a staff or collaborator invitation. Resolve it before inviting a student.");
+          if (pending.applications.some((a) => a.id !== application.id)) {
+            throw new HttpError(409, "That address is already invited for a different application.");
+          }
+          await tx.allowedEmail.update({ where: { id: pending.id }, data: profile });
+          inviteId = pending.id;
+          adopted = true;
+        } else {
+          const created = await tx.allowedEmail.create({
+            data: { email, role: "STUDENT", ...profile, createdById: user.id },
+            select: { id: true },
+          });
+          inviteId = created.id;
+        }
+        await tx.application.update({ where: { id: application.id }, data: { allowedEmailId: inviteId } });
         await createAuditEntryTx(tx, {
           actorId: user.id,
           actorRole: user.role,
           entityType: "allowed_email",
-          entityId: created.id,
-          action: "created",
+          entityId: inviteId,
+          action: adopted ? "adopted_for_hire" : "created",
           after: { role: "STUDENT", source: "hiring_invite" },
         });
         await createAuditEntryTx(tx, {
@@ -141,9 +187,9 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
           entityType: "hiring_application",
           entityId: application.id,
           action: "hire_invited",
-          after: { allowedEmailId: created.id },
+          after: { allowedEmailId: inviteId },
         });
-        return created.id;
+        return inviteId;
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );

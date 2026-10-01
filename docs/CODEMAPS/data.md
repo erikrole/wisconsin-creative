@@ -111,7 +111,7 @@
 | `ApplicantDocument` | 11 | 3 |
 | `ApplicationNote` | 8 | 3 |
 | `StudentTermPlacement` | 10 | 3 |
-| `ApplicantRetentionEvent` | 6 | 3 |
+| `ApplicantRetentionEvent` | 7 | 3 |
 
 ## Enums
 

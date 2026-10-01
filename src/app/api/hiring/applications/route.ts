@@ -125,21 +125,24 @@ export const POST = withAuth(async (req, { user }) => {
     if (applicantId) {
       const existing = await tx.applicant.findUnique({ where: { id: applicantId }, select: { id: true, purgedAt: true } });
       if (!existing) throw new HttpError(404, "Applicant not found.");
-      if (existing.purgedAt) {
-        // A returning applicant whose old data was purged: refill the profile from
-        // this application and restart the retention clock from the new cycle.
+      // Merge policy for a returning applicant: the details submitted with this new
+      // application are the newest, so any value provided replaces the stored one; a value
+      // left blank never erases what is already on file. A purged record is refilled the
+      // same way and its retention clock restarts from the new cycle.
+      const submitted = {
+        standing: body.standing,
+        gradTerm: body.gradTerm,
+        gradYear: body.gradYear,
+        phone: normalizePhone(body.phone) ?? undefined,
+        location: body.location,
+        portfolioUrl: body.portfolioUrl,
+        socialHandles: body.socialHandles,
+      };
+      const changes = Object.fromEntries(Object.entries(submitted).filter(([, value]) => value !== undefined));
+      if (existing.purgedAt || Object.keys(changes).length > 0) {
         await tx.applicant.update({
           where: { id: applicantId },
-          data: {
-            standing: body.standing,
-            gradTerm: body.gradTerm,
-            gradYear: body.gradYear,
-            phone: normalizePhone(body.phone),
-            location: body.location,
-            portfolioUrl: body.portfolioUrl,
-            socialHandles: body.socialHandles,
-            purgedAt: null,
-          },
+          data: { ...changes, ...(existing.purgedAt ? { purgedAt: null } : {}) },
         });
       }
       const hasEmail = await tx.applicantEmail.findUnique({ where: { email }, select: { applicantId: true } });

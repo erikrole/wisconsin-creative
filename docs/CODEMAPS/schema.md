@@ -2807,7 +2807,7 @@ Indexes and constraints:
 
 ## Model `ApplicantRetentionEvent`
 
-Fields: 6
+Fields: 7
 
 - `id               String   @id @default(cuid())`
 - `applicantId      String   @map("applicant_id")`
@@ -2815,6 +2815,7 @@ Fields: 6
 - `applicationCount Int      @map("application_count")`
 - `documentCount    Int      @map("document_count")`
 - `policyMonths     Int      @map("policy_months")`
+- `pendingBlobPaths String[] @default([]) @map("pending_blob_paths")`
 
 Indexes and constraints:
 

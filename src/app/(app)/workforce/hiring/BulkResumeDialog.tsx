@@ -11,8 +11,17 @@ import { isApplicantFileType, MAX_APPLICANT_FILE_BYTES } from "@/lib/hiring/file
 import { matchResumeFile } from "@/lib/hiring/resume-match";
 import type { BoardApplication } from "./types";
 
-/** Below the 60-per-minute write limit, so one batch cannot partially fail by design. */
-const MAX_FILES_PER_BATCH = 50;
+/** Files per selection. The write limit is a shared 60-per-minute window, so pacing (below)
+ * is what keeps a batch from failing; this only bounds how long one batch can run. */
+const MAX_FILES_PER_BATCH = 100;
+const MAX_RATE_LIMIT_WAITS = 6;
+
+/** Seconds to wait from a 429 body like "Too many requests. Try again in 23s." */
+function retrySeconds(message: string): number {
+  const match = /in (\d+)s/.exec(message);
+  return Math.min(90, Math.max(2, match ? Number(match[1]) + 1 : 30));
+}
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 type Row = { file: File; applicationId: string; note: string; status: "ready" | "uploading" | "done" | "failed" | "skipped"; error?: string };
 
@@ -79,11 +88,21 @@ export default function BulkResumeDialog({
       if ((row.status !== "ready" && row.status !== "failed") || !row.applicationId) continue;
       setRows((list) => list.map((r, j) => (j === i ? { ...r, status: "uploading" } : r)));
       try {
-        const form = new FormData();
-        form.set("file", row.file);
-        form.set("kind", "RESUME");
-        const res = await fetch(`/api/hiring/applications/${row.applicationId}/documents`, { method: "POST", body: form });
-        if (handleAuthRedirect(res)) return;
+        // Upload with pacing: a 429 means the shared per-minute window is used up (by this
+        // batch or anything else this admin did), so wait out the reset and try this file
+        // again rather than marking it failed.
+        let res: Response;
+        for (let waits = 0; ; waits++) {
+          const form = new FormData();
+          form.set("file", row.file);
+          form.set("kind", "RESUME");
+          res = await fetch(`/api/hiring/applications/${row.applicationId}/documents`, { method: "POST", body: form });
+          if (handleAuthRedirect(res)) return;
+          if (res.status !== 429 || waits >= MAX_RATE_LIMIT_WAITS) break;
+          const seconds = retrySeconds(await parseErrorMessage(res.clone(), ""));
+          setRows((list) => list.map((r, j) => (j === i ? { ...r, status: "uploading", note: `Waiting ${seconds}s for the upload limit` } : r)));
+          await sleep(seconds * 1000);
+        }
         if (!res.ok) throw new Error(await parseErrorMessage(res, "Upload failed."));
         done++;
         setRows((list) => list.map((r, j) => (j === i ? { ...r, status: "done" } : r)));
@@ -142,7 +161,7 @@ export default function BulkResumeDialog({
                   <div className="min-w-0">
                     <p className="truncate font-medium">{row.file.name}</p>
                     <p className={row.status === "failed" ? "text-destructive" : "text-xs text-muted-foreground"}>
-                      {row.status === "done" ? "Uploaded" : row.status === "uploading" ? "Uploading" : row.error ?? row.note}
+                      {row.status === "done" ? "Uploaded" : row.status === "uploading" ? (row.note.startsWith("Waiting") ? row.note : "Uploading") : row.error ?? row.note}
                     </p>
                   </div>
                   <NativeSelect
