@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api";
-import { createAuditEntry } from "@/lib/audit";
+import { createAuditEntry, createAuditEntryTx } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { safeFileName } from "@/lib/hiring/files";
 import { deleteApplicantFile, getApplicantFile } from "@/lib/hiring/storage";
@@ -63,15 +63,18 @@ export const DELETE = withAuth<{ id: string }>(async (_req, { user, params }) =>
   // Blob first: if storage fails the row (the only record of the pathname) stays and
   // the admin can retry; a blob already missing counts as deleted.
   await deleteApplicantFile(doc.pathname);
-  await db.applicantDocument.delete({ where: { id: doc.id } });
-
-  await createAuditEntry({
-    actorId: user.id,
-    actorRole: user.role,
-    entityType: "hiring_application",
-    entityId: doc.applicationId,
-    action: "document_delete",
-    after: { documentId: doc.id, kind: doc.kind },
+  // Row and audit commit together: if the audit fails the row stays, and a retry
+  // treats the already-missing blob as deleted and finishes the job.
+  await db.$transaction(async (tx) => {
+    await tx.applicantDocument.delete({ where: { id: doc.id } });
+    await createAuditEntryTx(tx, {
+      actorId: user.id,
+      actorRole: user.role,
+      entityType: "hiring_application",
+      entityId: doc.applicationId,
+      action: "document_delete",
+      after: { documentId: doc.id, kind: doc.kind },
+    });
   });
 
   return ok({ deleted: true });

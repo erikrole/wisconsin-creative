@@ -27,7 +27,9 @@ export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
         status: body.status,
         notes: body.notes === undefined ? undefined : body.notes,
         // The retention clock keys off the actual close time (D-065).
-        closedAt: closing ? new Date() : reopening ? null : undefined,
+        // An explicit actual end date wins (and can correct a close time that was set late);
+        // otherwise stamp now the first time the cycle ends.
+        closedAt: terminal ? (body.closedOn ?? (closing ? new Date() : undefined)) : reopening ? null : undefined,
       },
     });
     if (body.slots) {

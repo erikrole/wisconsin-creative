@@ -24,7 +24,7 @@ import type { ApplicationStage } from "@prisma/client";
 import CsvImportDialog from "../CsvImportDialog";
 import ApplicationSheet from "./ApplicationSheet";
 import BulkResumeDialog from "./BulkResumeDialog";
-import { AddApplicantDialog, NewCycleDialog } from "./HiringDialogs";
+import { AddApplicantDialog, CloseCycleDialog, NewCycleDialog } from "./HiringDialogs";
 import { AREA_LABEL, AREA_OPTIONS, type BoardApplication, type CycleSummary } from "./types";
 
 const STAGE_BADGE: Record<ApplicationStage, "gray" | "blue" | "green" | "orange" | "red"> = {
@@ -50,6 +50,7 @@ export default function HiringClient() {
   const [cycleOpen, setCycleOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [resumesOpen, setResumesOpen] = useState(false);
+  const [closeOpen, setCloseOpen] = useState(false);
   const [blankPassed, setBlankPassed] = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
 
@@ -112,20 +113,12 @@ export default function HiringClient() {
   // Review shortcuts walk only what is visible on the board.
   const queueIds = useMemo(() => filtered.filter((a) => columns.includes(a.stage)).map((a) => a.id), [filtered, columns]);
 
-  async function setCycleStatus(status: "OPEN" | "CLOSED") {
+  async function setCycleStatus(status: "OPEN" | "CLOSED", closedOn?: string) {
     if (!cycle) return;
-    if (status === "CLOSED") {
-      const confirmed = await confirm({
-        title: `Close ${cycle.label}?`,
-        message: "Closing starts the 36-month retention clock for everyone in this cycle: after that, personal data is deleted and only names remain. You can reopen it.",
-        confirmLabel: "Close cycle",
-      });
-      if (!confirmed) return;
-    }
     const res = await fetch(`/api/hiring/cycles/${cycle.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify(status === "CLOSED" && closedOn ? { status, closedOn } : { status }),
     });
     if (handleAuthRedirect(res)) return;
     if (!res.ok) {
@@ -252,7 +245,7 @@ export default function HiringClient() {
               <option value="reviewed">Reviewed</option>
             </NativeSelect>
             {cycle && (cycle.status === "OPEN" || cycle.status === "PLANNING") && (
-              <Button variant="outline" onClick={() => void setCycleStatus("CLOSED")}>
+              <Button variant="outline" onClick={() => setCloseOpen(true)}>
                 Close cycle
               </Button>
             )}
@@ -353,6 +346,17 @@ export default function HiringClient() {
         </>
       )}
 
+      {cycle && (
+        <CloseCycleDialog
+          open={closeOpen}
+          onOpenChange={setCloseOpen}
+          label={cycle.label}
+          onConfirm={(closedOn) => {
+            setCloseOpen(false);
+            void setCycleStatus("CLOSED", closedOn);
+          }}
+        />
+      )}
       <NewCycleDialog
         open={cycleOpen}
         onOpenChange={setCycleOpen}

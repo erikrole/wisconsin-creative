@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { withAuth } from "@/lib/api";
-import { createAuditEntry } from "@/lib/audit";
+import { createAuditEntryTx } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { MAX_IMPORT_CHARS, MAX_IMPORT_ROWS } from "@/lib/hiring/import";
 import { HttpError, ok } from "@/lib/http";
@@ -72,18 +72,19 @@ export const POST = withAuth(async (req, { user }) => {
             });
           }
         }
+        // Counts only, in the same transaction so the import never commits without its evidence.
+        await createAuditEntryTx(tx, {
+          actorId: user.id,
+          actorRole: user.role,
+          entityType: "workforce_import",
+          entityId: `roster-${body.academicYearStart}`,
+          action: "import",
+          after: { startTerms: counts.startTerms, placements: counts.placements, unmatched: counts.unmatched },
+        });
       },
       { timeout: 60_000 },
     );
     applied = true;
-    await createAuditEntry({
-      actorId: user.id,
-      actorRole: user.role,
-      entityType: "workforce_import",
-      entityId: `roster-${body.academicYearStart}`,
-      action: "import",
-      after: { startTerms: counts.startTerms, placements: counts.placements, unmatched: counts.unmatched },
-    });
   }
 
   return ok({

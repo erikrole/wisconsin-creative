@@ -4,6 +4,8 @@ import { source } from "./_helpers/source";
 // Source-contract checks for race and safety behavior in the Workforce client code.
 const board = source("src/app/(app)/workforce/hiring/HiringClient.tsx");
 const sheet = source("src/app/(app)/workforce/hiring/ApplicationSheet.tsx");
+const dialogs = source("src/app/(app)/workforce/hiring/HiringDialogs.tsx");
+const bulk = source("src/app/(app)/workforce/hiring/BulkResumeDialog.tsx");
 const csvDialog = source("src/app/(app)/workforce/CsvImportDialog.tsx");
 const personCard = source("src/app/(app)/workforce/PersonCard.tsx");
 
@@ -22,7 +24,14 @@ describe("hiring board", () => {
     expect(board).toContain('method: "PATCH"');
     expect(board).toContain("Close cycle");
     expect(board).toContain("Reopen cycle");
-    expect(board).toContain("retention clock");
+    expect(board).toContain("CloseCycleDialog");
+    expect(dialogs).toContain("36-month retention clock");
+  });
+
+  it("lets the admin give the real end date of a cycle (closing, or creating one that already ended)", () => {
+    expect(board).toContain("closedOn");
+    expect(dialogs).toContain('type="date"');
+    expect(dialogs).toContain("This cycle already ended");
   });
 });
 
@@ -48,6 +57,14 @@ describe("CSV import dialog", () => {
     expect(csvDialog).toContain("previewedWith");
     expect(csvDialog).toContain("setReport(null)");
     expect(csvDialog).toContain("JSON.stringify(extraPayload)");
+  });
+});
+
+describe("bulk resume upload", () => {
+  it("stays under the write rate limit and can retry failed rows", () => {
+    expect(bulk).toContain("MAX_FILES_PER_BATCH = 50");
+    expect(bulk).toContain("allFiles.slice(0, MAX_FILES_PER_BATCH)");
+    expect(bulk).toContain('row.status !== "failed"');
   });
 });
 

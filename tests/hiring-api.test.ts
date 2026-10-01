@@ -27,7 +27,7 @@ const models = {
   },
   applicant: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
   user: { findUnique: vi.fn(), findFirst: vi.fn(), findMany: vi.fn() },
-  allowedEmail: { findUnique: vi.fn(), delete: vi.fn() },
+  allowedEmail: { findUnique: vi.fn(), delete: vi.fn(), create: vi.fn() },
   applicantEmail: { findUnique: vi.fn(), create: vi.fn() },
   applicantDocument: { findUnique: vi.fn(), create: vi.fn(), delete: vi.fn() },
   applicationNote: { create: vi.fn() },
@@ -42,7 +42,7 @@ import { PATCH as patchCycle } from "@/app/api/hiring/cycles/[id]/route";
 import { GET as listApplications, POST as createApplication } from "@/app/api/hiring/applications/route";
 import { GET as getApplication, PATCH as patchApplication } from "@/app/api/hiring/applications/[id]/route";
 import { POST as addNote } from "@/app/api/hiring/applications/[id]/notes/route";
-import { GET as readDocument } from "@/app/api/hiring/documents/[id]/route";
+import { DELETE as deleteDocument, GET as readDocument } from "@/app/api/hiring/documents/[id]/route";
 import { POST as inviteHire } from "@/app/api/hiring/applications/[id]/invite/route";
 import { POST as uploadDocument } from "@/app/api/hiring/applications/[id]/documents/route";
 import { deleteApplicantFile, putApplicantFile } from "@/lib/hiring/storage";
@@ -227,11 +227,106 @@ describe("stage changes", () => {
 describe("notes", () => {
   it("does not copy note text into the audit trail", async () => {
     vi.mocked(requireAuth).mockResolvedValue(user("ADMIN") as never);
-    models.application.findUnique.mockResolvedValue({ id: "app-1" });
+    models.application.findUnique.mockResolvedValue({ id: "app-1", applicant: { purgedAt: null } });
     models.applicationNote.create.mockResolvedValue({ id: "n1", body: "Private opinion", rating: 4, createdAt: new Date(), author: null });
     const res = await addNote(json("/api/hiring/applications/app-1/notes", "POST", { body: "Private opinion", rating: 4 }), ctx());
     expect(res.status).toBe(201);
     expect(JSON.stringify(vi.mocked(createAuditEntryTx).mock.calls[0]![1])).not.toContain("Private opinion");
+  });
+});
+
+describe("notes on retention tombstones", () => {
+  beforeEach(() => vi.mocked(requireAuth).mockResolvedValue(user("ADMIN") as never));
+
+  it("rejects a note for a purged applicant, so new personal data is never created on a tombstone", async () => {
+    models.application.findUnique.mockResolvedValue({ id: "app-1", applicant: { purgedAt: new Date("2029-01-01T00:00:00Z") } });
+    const res = await addNote(json("/api/hiring/applications/app-1/notes", "POST", { body: "Late note" }), ctx());
+    expect(res.status).toBe(409);
+    expect(models.applicationNote.create).not.toHaveBeenCalled();
+  });
+
+  it("re-checks the purge state inside the transaction", async () => {
+    models.application.findUnique
+      .mockResolvedValueOnce({ id: "app-1", applicant: { purgedAt: null } })
+      .mockResolvedValueOnce({ applicant: { purgedAt: new Date("2029-01-01T00:00:00Z") } });
+    const res = await addNote(json("/api/hiring/applications/app-1/notes", "POST", { body: "Racing note" }), ctx());
+    expect(res.status).toBe(409);
+    expect(models.applicationNote.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("document deletion", () => {
+  beforeEach(() => vi.mocked(requireAuth).mockResolvedValue(user("ADMIN") as never));
+  const doc = { id: "d1", applicationId: "app-1", pathname: "applicants/app-1/resume-d1.pdf", kind: "RESUME" };
+
+  it("deletes the blob first, then the row and its audit entry in one transaction", async () => {
+    models.applicantDocument.findUnique.mockResolvedValue(doc);
+    const order: string[] = [];
+    vi.mocked(deleteApplicantFile).mockImplementation(async () => void order.push("blob"));
+    models.applicantDocument.delete.mockImplementation(async () => void order.push("row"));
+    vi.mocked(createAuditEntryTx).mockImplementation(async () => void order.push("audit"));
+    const res = await deleteDocument(json("/api/hiring/documents/d1", "DELETE"), ctx("d1"));
+    expect(res.status).toBe(200);
+    expect(order).toEqual(["blob", "row", "audit"]);
+  });
+
+  it("keeps the row when the audit fails, so a retry can finish (the blob is already gone)", async () => {
+    models.applicantDocument.findUnique.mockResolvedValue(doc);
+    vi.mocked(deleteApplicantFile).mockResolvedValue(undefined);
+    models.applicantDocument.delete.mockResolvedValue({});
+    vi.mocked(createAuditEntryTx).mockRejectedValueOnce(new Error("audit down"));
+    const res = await deleteDocument(json("/api/hiring/documents/d1", "DELETE"), ctx("d1"));
+    expect(res.status).toBe(500);
+    // The mock transaction has no rollback, but the route did not report success.
+    expect(createAuditEntry).not.toHaveBeenCalled();
+  });
+});
+
+describe("cycle close dates", () => {
+  beforeEach(() => vi.mocked(requireAuth).mockResolvedValue(user("ADMIN") as never));
+
+  it("creates a historical cycle already closed, with its real end date as the retention clock start", async () => {
+    models.hiringCycle.create.mockResolvedValue({ id: "c9", label: "Spring 2025", status: "CLOSED" });
+    const res = await createCycle(json("/api/hiring/cycles", "POST", { term: "SPRING", year: 2025, status: "CLOSED", closedOn: "2025-05-01" }), ctx());
+    expect(res.status).toBe(201);
+    const data = models.hiringCycle.create.mock.calls[0]![0].data;
+    expect(data.status).toBe("CLOSED");
+    expect((data.closedAt as Date).toISOString()).toBe("2025-05-01T12:00:00.000Z");
+  });
+
+  it("defaults the close time to now when no date is given", async () => {
+    models.hiringCycle.create.mockResolvedValue({ id: "c9", label: "Spring 2025", status: "CLOSED" });
+    await createCycle(json("/api/hiring/cycles", "POST", { term: "SPRING", year: 2025, status: "CLOSED" }), ctx());
+    expect(models.hiringCycle.create.mock.calls[0]![0].data.closedAt).toBeInstanceOf(Date);
+  });
+
+  it("does not stamp a close time on an open cycle, and rejects a close date without a closed status", async () => {
+    models.hiringCycle.create.mockResolvedValue({ id: "c9", label: "Fall 2026", status: "OPEN" });
+    await createCycle(json("/api/hiring/cycles", "POST", { term: "FALL", year: 2026 }), ctx());
+    expect(models.hiringCycle.create.mock.calls[0]![0].data.closedAt).toBeNull();
+    const bad = await createCycle(json("/api/hiring/cycles", "POST", { term: "FALL", year: 2026, closedOn: "2026-01-01" }), ctx());
+    expect(bad.status).toBe(400);
+  });
+
+  it("rejects future and malformed close dates", async () => {
+    const future = new Date(Date.now() + 10 * 86_400_000).toISOString().slice(0, 10);
+    expect((await createCycle(json("/api/hiring/cycles", "POST", { term: "SPRING", year: 2025, status: "CLOSED", closedOn: future }), ctx())).status).toBe(400);
+    expect((await createCycle(json("/api/hiring/cycles", "POST", { term: "SPRING", year: 2025, status: "CLOSED", closedOn: "05/01/2025" }), ctx())).status).toBe(400);
+  });
+
+  it("closes an existing cycle on its real end date, and can correct a late close time", async () => {
+    models.hiringCycle.findUnique.mockResolvedValue({ id: "c1", status: "OPEN", closedAt: null });
+    await patchCycle(json("/api/hiring/cycles/c1", "PATCH", { status: "CLOSED", closedOn: "2025-05-01" }), ctx("c1"));
+    expect((models.hiringCycle.update.mock.calls[0]![0].data.closedAt as Date).toISOString()).toBe("2025-05-01T12:00:00.000Z");
+
+    models.hiringCycle.findUnique.mockResolvedValue({ id: "c1", status: "CLOSED", closedAt: new Date("2026-09-30T00:00:00Z") });
+    await patchCycle(json("/api/hiring/cycles/c1", "PATCH", { status: "CLOSED", closedOn: "2025-05-01" }), ctx("c1"));
+    expect((models.hiringCycle.update.mock.calls[1]![0].data.closedAt as Date).toISOString()).toBe("2025-05-01T12:00:00.000Z");
+  });
+
+  it("rejects a close date on a status that is not closed or archived", async () => {
+    const res = await patchCycle(json("/api/hiring/cycles/c1", "PATCH", { status: "OPEN", closedOn: "2025-05-01" }), ctx("c1"));
+    expect(res.status).toBe(400);
   });
 });
 
@@ -265,23 +360,26 @@ describe("hire invite (staged conversion)", () => {
     models.application.findUnique.mockResolvedValue(hireApplication());
     models.user.findFirst.mockResolvedValue(null);
     models.user.findMany.mockResolvedValue([]);
-    vi.mocked(createAllowedEmailInvite).mockResolvedValue({ skipped: false, entry: { id: "invite-1" } } as never);
+    models.allowedEmail.create.mockResolvedValue({ id: "invite-1" });
 
     const res = await inviteHire(json("/api/hiring/applications/app-1/invite", "POST", {}), ctx());
     expect(res.status).toBe(201);
-    expect(createAllowedEmailInvite).toHaveBeenCalledWith(
-      expect.objectContaining({
-        email: "alex@example.edu",
-        role: "STUDENT",
-        preloadedName: "Alex Sample",
-        preloadedPrimaryArea: "VIDEO",
-        preloadedAreas: ["VIDEO"],
-        // The onboarding audit must not snapshot the applicant's email or name.
-        redactAudit: true,
-      }),
-    );
+    // Created inside the transaction (not through the shared helper), prefilled from the applicant.
+    expect(models.allowedEmail.create.mock.calls[0]![0].data).toEqual({
+      email: "alex@example.edu",
+      role: "STUDENT",
+      preloadedName: "Alex Sample",
+      preloadedPrimaryArea: "VIDEO",
+      preloadedAreas: ["VIDEO"],
+      createdById: "ADMIN-1",
+    });
+    expect(createAllowedEmailInvite).not.toHaveBeenCalled();
     expect(models.application.update).toHaveBeenCalledWith({ where: { id: "app-1" }, data: { allowedEmailId: "invite-1" } });
-    expect(JSON.stringify(vi.mocked(createAuditEntryTx).mock.calls[0]![1])).not.toContain("alex@example.edu");
+    // Both audit entries are transactional and carry no email or name.
+    const audits = vi.mocked(createAuditEntryTx).mock.calls.map((c) => c[1]);
+    expect(audits.map((a) => `${a.entityType}:${a.action}`)).toEqual(["allowed_email:created", "hiring_application:hire_invited"]);
+    expect(JSON.stringify(audits)).not.toContain("alex@example.edu");
+    expect(JSON.stringify(audits)).not.toContain("Alex Sample");
   });
 
   it("asks before linking when an account already exists, then links only on confirm", async () => {
@@ -302,22 +400,23 @@ describe("hire invite (staged conversion)", () => {
   it("does not leave a live invite when the Hire was undone while the invite was being created", async () => {
     models.application.findUnique
       .mockResolvedValueOnce(hireApplication()) // initial read: still Hire
-      .mockResolvedValueOnce({ stage: "PASSED", allowedEmailId: null }); // re-read inside the attach transaction
+      .mockResolvedValueOnce({ stage: "PASSED", allowedEmailId: null }); // re-read inside the transaction
     models.user.findFirst.mockResolvedValue(null);
     models.user.findMany.mockResolvedValue([]);
-    vi.mocked(createAllowedEmailInvite).mockResolvedValue({ skipped: false, entry: { id: "invite-race" } } as never);
 
     const res = await inviteHire(json("/api/hiring/applications/app-1/invite", "POST", {}), ctx());
     expect(res.status).toBe(409);
+    // The invite is created inside the same transaction, so nothing is created or left to clean up.
+    expect(models.allowedEmail.create).not.toHaveBeenCalled();
     expect(models.application.update).not.toHaveBeenCalled();
-    expect(models.allowedEmail.delete).toHaveBeenCalledWith({ where: { id: "invite-race" } });
+    expect(models.allowedEmail.delete).not.toHaveBeenCalled();
   });
 
   it("attaches the invite under serializable isolation", async () => {
     models.application.findUnique.mockResolvedValue(hireApplication());
     models.user.findFirst.mockResolvedValue(null);
     models.user.findMany.mockResolvedValue([]);
-    vi.mocked(createAllowedEmailInvite).mockResolvedValue({ skipped: false, entry: { id: "invite-ok" } } as never);
+    models.allowedEmail.create.mockResolvedValue({ id: "invite-ok" });
     await inviteHire(json("/api/hiring/applications/app-1/invite", "POST", {}), ctx());
     expect(db.$transaction.mock.calls.some((c: unknown[]) => (c[1] as { isolationLevel?: string } | undefined)?.isolationLevel === "Serializable")).toBe(true);
   });
@@ -337,13 +436,13 @@ describe("hire invite (staged conversion)", () => {
     });
     models.user.findFirst.mockResolvedValue(null);
     models.user.findMany.mockResolvedValue([]);
-    vi.mocked(createAllowedEmailInvite).mockResolvedValue({ skipped: false, entry: { id: "invite-1" } } as never);
+    models.allowedEmail.create.mockResolvedValue({ id: "invite-1" });
 
     await inviteHire(json("/api/hiring/applications/app-1/invite", "POST", {}), ctx());
-    expect(vi.mocked(createAllowedEmailInvite).mock.calls[0]![0].email).toBe("alex.new@example.edu");
+    expect(models.allowedEmail.create.mock.calls[0]![0].data.email).toBe("alex.new@example.edu");
 
     await inviteHire(json("/api/hiring/applications/app-1/invite", "POST", { email: "alex@example.edu" }), ctx());
-    expect(vi.mocked(createAllowedEmailInvite).mock.calls[1]![0].email).toBe("alex@example.edu");
+    expect(models.allowedEmail.create.mock.calls[1]![0].data.email).toBe("alex@example.edu");
   });
 
   it("rejects an email that is not one of the applicant's", async () => {
@@ -407,10 +506,10 @@ describe("hire invite identity checks", () => {
 
   it("issues the invite when the admin confirms a separate account", async () => {
     models.user.findMany.mockResolvedValue([{ id: "u7", name: "Alex Sample" }]);
-    vi.mocked(createAllowedEmailInvite).mockResolvedValue({ skipped: false, entry: { id: "invite-9" } } as never);
+    models.allowedEmail.create.mockResolvedValue({ id: "invite-9" });
     const res = await post({ confirmNewAccount: true });
     expect(res.status).toBe(201);
-    expect(createAllowedEmailInvite).toHaveBeenCalled();
+    expect(models.allowedEmail.create).toHaveBeenCalled();
   });
 });
 

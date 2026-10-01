@@ -108,6 +108,8 @@ describe("stage and area mapping", () => {
     expect(mapStage("Hire", false, false)).toBe("HIRE");
     expect(mapStage("Round 1", false, false)).toBe("ROUND_1");
     expect(mapStage("", false, true)).toBe("ROUND_1");
+    // In a finished cycle a blank decision means passed over, even for someone who interviewed.
+    expect(mapStage("", true, true)).toBe("PASSED");
     expect(mapStage("", false, false)).toBe("APPLIED");
     expect(mapStage("", true, false)).toBe("PASSED");
   });
@@ -238,7 +240,7 @@ describe("roster import", () => {
 
 // ─── Route behavior ────────────────────────────────────────────────────────
 vi.mock("@/lib/auth", () => ({ requireAuth: vi.fn() }));
-vi.mock("@/lib/audit", () => ({ createAuditEntry: vi.fn() }));
+vi.mock("@/lib/audit", () => ({ createAuditEntry: vi.fn(), createAuditEntryTx: vi.fn() }));
 vi.mock("@/lib/rate-limit", () => ({ enforceRateLimit: vi.fn(), SETTINGS_MUTATION_LIMIT: { limit: 100, windowMs: 60_000 } }));
 vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
 
@@ -261,7 +263,7 @@ const models = {
 vi.mock("@/lib/db", () => ({ get db() { return models; } }));
 
 import { requireAuth } from "@/lib/auth";
-import { createAuditEntry } from "@/lib/audit";
+import { createAuditEntry, createAuditEntryTx } from "@/lib/audit";
 import { POST as importApplicants } from "@/app/api/hiring/import/route";
 import { POST as importRoster } from "@/app/api/workforce/import/route";
 
@@ -320,7 +322,9 @@ describe("import routes", () => {
     expect(apps[0].applicantId).toBe(people[0].id);
     expect(apps[0].sourcePayload).toMatchObject({ Applicant: "Alex Sample" });
     expect(tx.applicantEmail.createMany.mock.calls[0]![0].data[0]).toMatchObject({ applicantId: people[0].id, isPrimary: true });
-    const audit = JSON.stringify(vi.mocked(createAuditEntry).mock.calls[0]![0]);
+    // Written inside the same transaction as the inserts, counts only.
+    expect(createAuditEntry).not.toHaveBeenCalled();
+    const audit = JSON.stringify(vi.mocked(createAuditEntryTx).mock.calls[0]![1]);
     expect(audit).toContain("import");
     expect(audit).not.toContain("example.edu");
   });
@@ -349,6 +353,8 @@ describe("import routes", () => {
     const res = await importRoster(post("/api/workforce/import", { academicYearStart: 2025, csv: ROSTER, apply: true }), ctx);
     expect(res.status).toBe(200);
     expect(tx.user.update).toHaveBeenCalledWith({ where: { id: "u1" }, data: { startTerm: "FALL", startTermYear: 2024 } });
+    // Counts-only audit, in the same transaction.
+    expect(vi.mocked(createAuditEntryTx).mock.calls[0]![1]).toMatchObject({ entityType: "workforce_import", action: "import" });
     expect(tx.studentTermPlacement.create).toHaveBeenCalledTimes(3);
   });
 

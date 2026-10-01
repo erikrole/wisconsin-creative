@@ -51,6 +51,8 @@ export const POST = withAuth(async (req, { user }) => {
       term: body.term,
       year: body.year,
       status: body.status,
+      // A cycle created already closed starts its retention clock from its real end date.
+      closedAt: body.status === "CLOSED" ? (body.closedOn ?? new Date()) : null,
       notes: body.notes,
       slots: body.slots?.length
         ? { create: body.slots.map((s) => ({ area: s.area, targetCount: s.targetCount })) }

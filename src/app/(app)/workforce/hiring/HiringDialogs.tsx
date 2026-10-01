@@ -37,6 +37,8 @@ export function NewCycleDialog({
   const [year, setYear] = useState(String(new Date().getFullYear()));
   const [targets, setTargets] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const [finished, setFinished] = useState(false);
+  const [closedOn, setClosedOn] = useState("");
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -46,7 +48,12 @@ export function NewCycleDialog({
         area: a.value,
         targetCount: Number(targets[a.value]),
       }));
-      const { res, json } = await postJson("/api/hiring/cycles", { term, year: Number(year), slots });
+      const { res, json } = await postJson("/api/hiring/cycles", {
+        term,
+        year: Number(year),
+        slots,
+        ...(finished ? { status: "CLOSED", closedOn: closedOn || undefined } : {}),
+      });
       if (handleAuthRedirect(res)) return;
       if (!res.ok || !json?.data) throw new Error(messageOf(json, "Could not create the cycle."));
       toast.success("Cycle created");
@@ -82,6 +89,21 @@ export function NewCycleDialog({
                 <Label htmlFor="cycle-year">Year</Label>
                 <Input id="cycle-year" inputMode="numeric" value={year} onChange={(e) => setYear(e.target.value)} />
               </div>
+            </div>
+            <div className="grid gap-2">
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={finished} onChange={(e) => setFinished(e.target.checked)} />
+                This cycle already ended (importing history)
+              </label>
+              {finished && (
+                <div className="grid gap-1.5">
+                  <Label htmlFor="cycle-closed-on">When did it end?</Label>
+                  <Input id="cycle-closed-on" type="date" className="w-44" value={closedOn} onChange={(e) => setClosedOn(e.target.value)} />
+                  <p className="text-xs text-muted-foreground">
+                    The 36-month retention clock counts from this date. Leave blank to use today.
+                  </p>
+                </div>
+              )}
             </div>
             <fieldset className="grid gap-2">
               <legend className="mb-1 text-sm font-medium">Hiring targets by area</legend>
@@ -314,6 +336,46 @@ export function AddApplicantDialog({
             </Button>
           </DialogFooter>
         </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** Confirms closing a cycle and lets the admin give the real end date (retention clock start). */
+export function CloseCycleDialog({
+  open,
+  onOpenChange,
+  label,
+  onConfirm,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  label: string;
+  onConfirm: (closedOn: string | undefined) => void;
+}) {
+  const [closedOn, setClosedOn] = useState("");
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Close {label}?</DialogTitle>
+          <DialogDescription>
+            Closing starts the 36-month retention clock for everyone in this cycle: after that, personal data is deleted and only names remain. You can reopen it.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogBody className="grid gap-1.5 pb-4">
+          <Label htmlFor="close-cycle-on">When did it end?</Label>
+          <Input id="close-cycle-on" type="date" className="w-44" value={closedOn} onChange={(e) => setClosedOn(e.target.value)} />
+          <p className="text-xs text-muted-foreground">Leave blank to use today. For an older cycle, enter its real end date so it is not retained too long.</p>
+        </DialogBody>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button type="button" onClick={() => onConfirm(closedOn || undefined)}>
+            Close cycle
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

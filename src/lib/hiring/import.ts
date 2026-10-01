@@ -78,8 +78,9 @@ export function mapStage(value: string, blankMeansPassed: boolean, interviewed: 
   if (v === "withdrawn" || v === "withdrew") return "WITHDRAWN";
   if (v === "applied" || v === "new") return "APPLIED";
   if (v) return null;
-  if (interviewed) return "ROUND_1";
-  return blankMeansPassed ? "PASSED" : "APPLIED";
+  // Blank decision: in a finished cycle that means passed over, even if they interviewed.
+  if (blankMeansPassed) return "PASSED";
+  return interviewed ? "ROUND_1" : "APPLIED";
 }
 
 export type ImportRecord = {

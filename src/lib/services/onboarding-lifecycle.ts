@@ -187,8 +187,6 @@ export async function createAllowedEmailInvite(input: {
   actor: OnboardingActor;
   email: string;
   role: InviteRole;
-  /** Hiring invites (D-065) keep contact data out of the audit trail. */
-  redactAudit?: boolean;
 } & InviteProfile): Promise<AllowedEmailInviteResult> {
   assertCanInviteRole(input.actor, input.role);
   const resolvedProfile = await resolveInviteProfile(input.role, input);
@@ -264,9 +262,7 @@ export async function createAllowedEmailInvite(input: {
       entityType: "allowed_email",
       entityId: entry.id,
       action: "created",
-      after: input.redactAudit
-        ? { role: input.role, source: "hiring_invite" }
-        : {
+      after: {
         email,
         role: input.role,
         affiliation: resolvedProfile.affiliation,

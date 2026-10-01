@@ -11,6 +11,9 @@ import { isApplicantFileType, MAX_APPLICANT_FILE_BYTES } from "@/lib/hiring/file
 import { matchResumeFile } from "@/lib/hiring/resume-match";
 import type { BoardApplication } from "./types";
 
+/** Below the 60-per-minute write limit, so one batch cannot partially fail by design. */
+const MAX_FILES_PER_BATCH = 50;
+
 type Row = { file: File; applicationId: string; note: string; status: "ready" | "uploading" | "done" | "failed" | "skipped"; error?: string };
 
 /**
@@ -33,7 +36,11 @@ export default function BulkResumeDialog({
   const [busy, setBusy] = useState(false);
   const byId = useMemo(() => new Map(apps.map((a) => [a.id, a])), [apps]);
 
-  function buildRows(files: File[]) {
+  const [overLimit, setOverLimit] = useState(0);
+
+  function buildRows(allFiles: File[]) {
+    const files = allFiles.slice(0, MAX_FILES_PER_BATCH);
+    setOverLimit(Math.max(0, allFiles.length - MAX_FILES_PER_BATCH));
     const targets = apps.map((a) => ({ id: a.id, name: a.name, externalApplicationId: a.externalApplicationId }));
     setRows(
       files.map((file): Row => {
@@ -68,7 +75,8 @@ export default function BulkResumeDialog({
     let done = 0;
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i]!;
-      if (row.status !== "ready" || !row.applicationId) continue;
+      // Retry rows that failed (for example after a rate-limit pause) as well as new ones.
+      if ((row.status !== "ready" && row.status !== "failed") || !row.applicationId) continue;
       setRows((list) => list.map((r, j) => (j === i ? { ...r, status: "uploading" } : r)));
       try {
         const form = new FormData();
@@ -90,13 +98,16 @@ export default function BulkResumeDialog({
     }
   }
 
-  const ready = rows.filter((r) => r.status === "ready").length;
+  const ready = rows.filter((r) => r.status === "ready" || (r.status === "failed" && r.applicationId)).length;
 
   return (
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        if (!next) setRows([]);
+        if (!next) {
+          setRows([]);
+          setOverLimit(0);
+        }
         onOpenChange(next);
       }}
     >
@@ -119,6 +130,11 @@ export default function BulkResumeDialog({
               onChange={(e) => buildRows([...(e.target.files ?? [])])}
             />
           </div>
+          {overLimit > 0 && (
+            <p role="alert" className="text-sm text-destructive">
+              Only the first {MAX_FILES_PER_BATCH} files were taken. Upload the other {overLimit} in a second batch.
+            </p>
+          )}
           {rows.length > 0 && (
             <ul className="grid max-h-80 gap-2 overflow-y-auto" aria-live="polite">
               {rows.map((row, i) => (

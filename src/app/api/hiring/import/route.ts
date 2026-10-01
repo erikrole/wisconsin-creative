@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { withAuth } from "@/lib/api";
-import { createAuditEntry } from "@/lib/audit";
+import { createAuditEntryTx } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { normalizeName } from "@/lib/hiring/contract";
 import { MAX_IMPORT_CHARS, MAX_IMPORT_ROWS, parseApplicantCsv, planImport, type PlanAction } from "@/lib/hiring/import";
@@ -131,20 +131,20 @@ export const POST = withAuth(async (req, { user }) => {
         if (emailRows.length) await tx.applicantEmail.createMany({ data: emailRows });
         if (applications.length) await tx.application.createMany({ data: applications });
         if (notes.length) await tx.applicationNote.createMany({ data: notes });
+        // Counts only (audit rows must not carry contact data, D-065), written in the same
+        // transaction so an import never commits without its evidence.
+        await createAuditEntryTx(tx, {
+          actorId: user.id,
+          actorRole: user.role,
+          entityType: "hiring_cycle",
+          entityId: cycle.id,
+          action: "import",
+          after: { created: counts.create, attached: counts.attach, skipped: counts.skip_existing + counts.duplicate_in_file, needsReview: counts.needs_review },
+        });
       },
       { timeout: 30_000 },
     );
     applied = true;
-
-    // Counts only: audit rows must not carry contact data (D-065).
-    await createAuditEntry({
-      actorId: user.id,
-      actorRole: user.role,
-      entityType: "hiring_cycle",
-      entityId: cycle.id,
-      action: "import",
-      after: { created: counts.create, attached: counts.attach, skipped: counts.skip_existing + counts.duplicate_in_file, needsReview: counts.needs_review },
-    });
   }
 
   return ok({

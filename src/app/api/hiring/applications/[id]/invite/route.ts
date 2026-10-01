@@ -7,7 +7,6 @@ import { normalizeEmail } from "@/lib/hiring/contract";
 import { HttpError, ok } from "@/lib/http";
 import { enforceRateLimit, SETTINGS_MUTATION_LIMIT } from "@/lib/rate-limit";
 import { requirePermission } from "@/lib/rbac";
-import { createAllowedEmailInvite } from "@/lib/services/onboarding-lifecycle";
 
 const inviteSchema = z.object({
   email: z.string().trim().email().max(254).optional(),
@@ -99,60 +98,61 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
     throw new HttpError(409, "An account with the same name already exists.", { code: "possible_account", users: sameName });
   }
 
-  const invite = await createAllowedEmailInvite({
-    actor: { id: user.id, role: user.role },
-    email,
-    role: "STUDENT",
-    preloadedName: application.applicant.name,
-    preloadedPrimaryArea: application.primaryArea,
-    preloadedAreas: application.primaryArea ? [application.primaryArea] : [],
-    redactAudit: true,
-  });
-  if (invite.skipped) throw new HttpError(409, "An invitation already exists for this email.");
-
-  // Attach the invite only if the application is still a standing Hire, atomically with
-  // the audit. A decision undone while the invite was being created would otherwise leave
-  // a live invite on a passed applicant, who could register and gain a student account.
-  // Remove a just-created invite that must not stay live. Best effort: a failure here
-  // must not mask the reason the invite was abandoned.
-  const discardInvite = async () => {
-    try {
-      await db.allowedEmail.delete({ where: { id: invite.entry.id } });
-    } catch (error) {
-      console.error("hire invite cleanup failed", error);
-    }
-  };
-
-  let attached = false;
+  // Create, audit, and attach the invite in ONE serializable transaction that re-reads
+  // the stage. A failure anywhere leaves no orphan invite, and a decision undone while
+  // the invite was being created cannot leave a live invite on a passed applicant, who
+  // could otherwise register and gain a student account. The audit carries no contact data.
+  let inviteId: string;
   try {
-    attached = await db.$transaction(
+    inviteId = await db.$transaction(
       async (tx) => {
         const current = await tx.application.findUnique({
           where: { id: application.id },
           select: { stage: true, allowedEmailId: true },
         });
-        if (!current || current.stage !== "HIRE" || current.allowedEmailId) return false;
-        await tx.application.update({ where: { id: application.id }, data: { allowedEmailId: invite.entry.id } });
+        if (!current || current.stage !== "HIRE") {
+          throw new HttpError(409, "This application is no longer marked Hire, so no invite was created.");
+        }
+        if (current.allowedEmailId) throw new HttpError(409, "An invitation was already sent for this application.");
+
+        const created = await tx.allowedEmail.create({
+          data: {
+            email,
+            role: "STUDENT",
+            preloadedName: application.applicant.name,
+            preloadedPrimaryArea: application.primaryArea,
+            preloadedAreas: application.primaryArea ? [application.primaryArea] : [],
+            createdById: user.id,
+          },
+          select: { id: true },
+        });
+        await tx.application.update({ where: { id: application.id }, data: { allowedEmailId: created.id } });
+        await createAuditEntryTx(tx, {
+          actorId: user.id,
+          actorRole: user.role,
+          entityType: "allowed_email",
+          entityId: created.id,
+          action: "created",
+          after: { role: "STUDENT", source: "hiring_invite" },
+        });
         await createAuditEntryTx(tx, {
           actorId: user.id,
           actorRole: user.role,
           entityType: "hiring_application",
           entityId: application.id,
           action: "hire_invited",
-          after: { allowedEmailId: invite.entry.id },
+          after: { allowedEmailId: created.id },
         });
-        return true;
+        return created.id;
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
   } catch (error) {
-    await discardInvite();
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      throw new HttpError(409, "An invitation already exists for this email.");
+    }
     throw error;
   }
-  if (!attached) {
-    await discardInvite();
-    throw new HttpError(409, "This application is no longer marked Hire, so no invite was created.");
-  }
 
-  return ok({ data: { status: "invited", allowedEmailId: invite.entry.id } }, 201);
+  return ok({ data: { status: "invited", allowedEmailId: inviteId } }, 201);
 });

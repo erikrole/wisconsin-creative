@@ -105,21 +105,42 @@ const slotList = z
   .array(z.object({ area: z.nativeEnum(ShiftArea), targetCount: z.number().int().min(0).max(50) }))
   .max(10);
 
-export const createCycleSchema = z.object({
-  term: z.nativeEnum(GraduationTerm),
-  year: z.number().int().min(2000).max(2100),
-  status: z.enum(["PLANNING", "OPEN"]).default("OPEN"),
-  notes: optionalText(2000),
-  slots: slotList.optional(),
-});
+/**
+ * The actual date a cycle ended (YYYY-MM-DD), so an older cycle imported late starts its
+ * retention clock from when it really closed. Not in the future, and not before 2000.
+ */
+const closedOn = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Use a date like 2025-05-01")
+  .transform((value) => new Date(`${value}T12:00:00.000Z`))
+  .refine((date) => !Number.isNaN(date.getTime()) && date.getUTCFullYear() >= 2000, { message: "Enter a valid date" })
+  .refine((date) => date.getTime() <= Date.now() + 24 * 60 * 60 * 1000, { message: "The close date cannot be in the future" });
+
+export const createCycleSchema = z
+  .object({
+    term: z.nativeEnum(GraduationTerm),
+    year: z.number().int().min(2000).max(2100),
+    status: z.enum(["PLANNING", "OPEN", "CLOSED"]).default("OPEN"),
+    /** Only for a cycle created already closed (historical import). */
+    closedOn: closedOn.optional(),
+    notes: optionalText(2000),
+    slots: slotList.optional(),
+  })
+  .refine((v) => v.closedOn === undefined || v.status === "CLOSED", { message: "A close date needs a closed cycle", path: ["closedOn"] });
 
 export const updateCycleSchema = z
   .object({
     status: z.enum(["PLANNING", "OPEN", "CLOSED", "ARCHIVED"]).optional(),
+    /** When closing or archiving: the actual end date. Defaults to now. */
+    closedOn: closedOn.optional(),
     notes: z.string().trim().max(2000).nullable().optional(),
     slots: slotList.optional(),
   })
-  .refine((v) => Object.keys(v).length > 0, { message: "Nothing to update" });
+  .refine((v) => Object.keys(v).length > 0, { message: "Nothing to update" })
+  .refine((v) => v.closedOn === undefined || v.status === "CLOSED" || v.status === "ARCHIVED", {
+    message: "A close date needs a closed or archived status",
+    path: ["closedOn"],
+  });
 
 export const createApplicationSchema = z.object({
   cycleId: z.string().cuid(),
