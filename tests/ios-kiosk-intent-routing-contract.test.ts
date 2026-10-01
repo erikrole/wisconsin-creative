@@ -20,7 +20,7 @@ describe("iOS kiosk intent routing", () => {
     expect(idle).toContain("source: .activeCheckout");
     expect(hub).toContain("source: .person");
     expect(hub).toContain("kioskResolveScan(scanValue: scan, userId: user.id)");
-    expect(event).toContain("Someone else checking out for this event");
+    expect(event).toContain("Not listed? Check out for this event");
   });
 
   it("keeps exact-requester identity and native editing intact", () => {

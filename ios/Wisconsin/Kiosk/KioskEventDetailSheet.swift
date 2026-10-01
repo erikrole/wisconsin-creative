@@ -182,16 +182,6 @@ struct KioskEventDetailSheet: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
 
-                if let onStartCheckout {
-                    // Most checkouts start from a worker row; this is for anyone else.
-                    Button {
-                        dismiss(); onStartCheckout()
-                    } label: {
-                        Label("Someone else checking out for this event", systemImage: "barcode.viewfinder")
-                            .font(.system(size: 15, weight: .semibold)).frame(maxWidth: .infinity, minHeight: 48)
-                    }
-                    .kioskButtonRole(.secondary)
-                }
 
                 VStack(alignment: .leading, spacing: 10) {
                     HStack(spacing: 8) {
@@ -235,6 +225,19 @@ struct KioskEventDetailSheet: View {
                             }
                         }
                         .scrollIndicators(.hidden)
+                    }
+                    // Fallback for anyone not on the crew list.
+                    if let onStartCheckout {
+                        Button {
+                            dismiss(); onStartCheckout()
+                        } label: {
+                            Text("Not listed? Check out for this event")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(KioskText.secondary)
+                                .underline()
+                                .frame(maxWidth: .infinity, minHeight: 44)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
 
