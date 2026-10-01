@@ -134,7 +134,7 @@ struct KioskIdleView: View {
                 onStartCheckout: { startCheckout(for: event) },
                 onScan: { store.scanner.receive($0) }
             )
-                .presentationDetents([.height(440), .large])
+                .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
         .sheet(item: $selectedCheckout) { context in

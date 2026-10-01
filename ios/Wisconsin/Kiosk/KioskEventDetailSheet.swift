@@ -153,16 +153,12 @@ struct KioskEventDetailSheet: View {
                                 .font(KioskType.overline)
                                 .tracking(1.4)
                                 .foregroundStyle(KioskText.tertiary)
-                            // "0 shifts" beside "No assigned workers" said nothing twice.
-                            if event.shiftCount > 0 {
-                                KioskEventShiftBadge(count: event.shiftCount)
-                            }
                         }
-                        Text(event.title)
+                        Text(kioskEventDisplayTitle(event.title, sportCode: event.sportCode))
                             .font(.title.weight(.heavy))
                             .foregroundStyle(KioskText.primary)
-                            .lineLimit(2)
-                            .minimumScaleFactor(0.74)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                     }
                     Spacer()
                     Button("Done") { dismiss() }
@@ -173,20 +169,18 @@ struct KioskEventDetailSheet: View {
                         .background(KioskSurface.cardSelected, in: Capsule())
                 }
 
-                VStack(spacing: 10) {
-                    KioskEventTimeRow(label: "Event", value: eventTimeLabel)
-                    // Only rows with an answer: "Call · Not set" was a field
-                    // label a student cannot act on.
-                    if !event.displayAllDay, let callTimeLabel {
-                        KioskEventTimeRow(label: "Call", value: callTimeLabel)
-                    }
-                }
+                // One line: "8:00 PM - 10:00 PM · Call 7:00 PM".
+                Text([eventTimeLabel, (!event.displayAllDay ? callTimeLabel.map { "Call \($0)" } : nil)].compactMap { $0 }.joined(separator: "  ·  "))
+                    .font(.title3.weight(.semibold).monospacedDigit())
+                    .foregroundStyle(KioskText.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
 
                 if let onStartCheckout {
                     Button {
                         dismiss(); onStartCheckout()
                     } label: {
-                        Label("Start Checkout for This Event", systemImage: "barcode.viewfinder")
+                        Label("Check out for this event", systemImage: "barcode.viewfinder")
                             .font(KioskType.sectionTitle).frame(maxWidth: .infinity, minHeight: 54)
                     }
                     .kioskButtonRole(.primary)
@@ -217,8 +211,9 @@ struct KioskEventDetailSheet: View {
                     } else {
                         ScrollView {
                             LazyVStack(spacing: 8) {
-                                ForEach(event.assignedUsers) { user in
-                                    KioskEventWorkerRow(user: user, eventAllDay: event.displayAllDay)
+                                // Who still needs gear first.
+                                ForEach(event.assignedUsers.sorted { needsGear($0) && !needsGear($1) }) { user in
+                                    KioskEventWorkerRow(user: user, eventAllDay: event.displayAllDay, needsGear: needsGear(user))
                                 }
                             }
                         }
@@ -234,6 +229,10 @@ struct KioskEventDetailSheet: View {
                 HIDScannerField(onScan: onScan).frame(width: 1, height: 1).opacity(0)
             }
         }
+    }
+
+    private func needsGear(_ user: KioskEvent.AssignedUser) -> Bool {
+        event.crewWithoutGear.contains { $0.id == user.id }
     }
 
     private var eventDayLabel: String {
@@ -282,52 +281,10 @@ struct KioskEventDetailSheet: View {
     }
 }
 
-private struct KioskEventTimeRow: View {
-    let label: String
-    let value: String
-
-    var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 14) {
-            Text(label.uppercased())
-                .font(KioskType.micro)
-                .tracking(1)
-                .foregroundStyle(KioskText.tertiary)
-                .frame(width: 48, alignment: .leading)
-            Text(value)
-                .font(.title2.weight(.bold).monospacedDigit())
-                .foregroundStyle(KioskText.primary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.72)
-            Spacer(minLength: 0)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 13)
-        .background(KioskSurface.cardRaised, in: RoundedRectangle(cornerRadius: KioskRadius.lg))
-        .overlay(
-            RoundedRectangle(cornerRadius: KioskRadius.lg)
-                .stroke(KioskStroke.standard, lineWidth: 1)
-        )
-    }
-}
-
-private struct KioskEventShiftBadge: View {
-    let count: Int
-
-    var body: some View {
-        Text("\(count) shift\(count == 1 ? "" : "s")")
-            .font(KioskType.chip)
-            .foregroundStyle(KioskText.secondary)
-            .lineLimit(1)
-            .padding(.horizontal, 9)
-            .padding(.vertical, 5)
-            .background(KioskSurface.cardRaised, in: Capsule())
-    }
-}
-
 private struct KioskEventWorkerRow: View {
     let user: KioskEvent.AssignedUser
     let eventAllDay: Bool
+    var needsGear = false
 
     var body: some View {
         HStack(spacing: 10) {
@@ -346,6 +303,11 @@ private struct KioskEventWorkerRow: View {
                 }
             }
             Spacer()
+            if needsGear {
+                Text("No gear yet")
+                    .font(KioskType.chipStrong)
+                    .foregroundStyle(KioskStatus.attention)
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
@@ -377,5 +339,19 @@ private struct KioskEventWorkerRow: View {
         let startLabel = start.formatted(.dateTime.hour().minute())
         guard let end else { return startLabel }
         return "\(startLabel) - \(end.formatted(.dateTime.hour().minute()))"
+    }
+}
+
+private struct KioskEventShiftBadge: View {
+    let count: Int
+
+    var body: some View {
+        Text("\(count) shift\(count == 1 ? "" : "s")")
+            .font(KioskType.chip)
+            .foregroundStyle(KioskText.secondary)
+            .lineLimit(1)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 5)
+            .background(KioskSurface.cardRaised, in: Capsule())
     }
 }
