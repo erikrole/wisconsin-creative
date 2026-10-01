@@ -1,10 +1,10 @@
 # Preview environments and agent handoffs
 
-Owner: infrastructure. Updated 2026-09-22. Accepted architecture: [D-063](DECISIONS.md#d-063-branch-owned-previews-and-one-automatic-production-build).
+Owner: infrastructure. Updated 2026-10-01. Accepted architecture: [D-063](DECISIONS.md#d-063-branch-owned-previews-and-one-automatic-production-build).
 
 ## Current rollout boundary
 
-The review site's Git connection is removed, so a main push no longer starts its duplicate build. Production and review remain online. Main requires a PR and passing `validate` and `postgres-integrity`, with no mandatory human reviewer. The sanitized template, first branch environment, private file stores, and encrypted handoff are live. Source changes remain uncommitted; automatic managed previews and cleanup stay gated until the shipping and cutover steps below are complete.
+The review site's Git connection is removed, so a main push no longer starts its duplicate build. Production and review remain online. Main requires a PR and passing `validate` and `postgres-integrity`, with no mandatory human reviewer. As of 2026-10-01 managed previews are live: `MANAGED_PREVIEWS_ENABLED=true`, the hosted workflow reached Ready for PR #410, local `preview:setup` → `dev:preview` → `auth:local` worked from the handed-off state, and native Git preview builds are skipped by the project's Ignored Build Step. Scheduled cleanup (`PREVIEW_CLEANUP_ENABLED`) stays off until a dry run is reviewed.
 
 ## Start or resume a branch
 
@@ -68,10 +68,10 @@ The first command reports the target and commit without deploying. The second up
 
 ## Cutover checklist
 
-1. Ship the reviewed source through a PR; require both protected checks. Verify the production deployment is Ready and public routes remain healthy.
-2. Set GitHub repository variable `MANAGED_PREVIEWS_ENABLED=true`. The `preview-infrastructure` environment already restricts secrets to protected branches and contains `NEON_PREVIEW_API_KEY`, `VERCEL_PREVIEW_TOKEN`, and `PREVIEW_SIGNING_KEY`.
-3. Trigger a same-repository acceptance PR and verify the full hosted workflow, authenticated pages, private/public storage, and a second computer or clean-state handoff.
-4. Only after that succeeds, disable native Vercel Git preview builds while retaining main production deployment. This avoids a period with no working preview path. Verify one build per intended target.
+1. (Done) Ship the reviewed source through a PR; require both protected checks. Verify the production deployment is Ready and public routes remain healthy.
+2. (Done 2026-10-01) Set GitHub repository variable `MANAGED_PREVIEWS_ENABLED=true`. The `preview-infrastructure` environment already restricts secrets to protected branches and contains `NEON_PREVIEW_API_KEY`, `VERCEL_PREVIEW_TOKEN`, and `PREVIEW_SIGNING_KEY`.
+3. (Done on #410; second-computer handoff not yet exercised) Trigger a same-repository acceptance PR and verify the full hosted workflow, authenticated pages, private/public storage, and a second computer or clean-state handoff.
+4. (Done 2026-10-01) Only after that succeeds, disable native Vercel Git preview builds while retaining main production deployment. Implemented as the project's Ignored Build Step `[ -n "$VERCEL_GIT_PROVIDER" ] && [ "$VERCEL_ENV" != "production" ]`: Git-triggered non-production builds are skipped, while production and CLI-driven managed previews build. Do not use the "Only build production" preset (it would skip managed previews) or Disconnect (it would stop production). Rollback: set the step back to Automatic. This avoids a period with no working preview path. Verify one build per intended target.
 5. Run cleanup in dry-run mode, inspect retention decisions, then set the separate `PREVIEW_CLEANUP_ENABLED=true` variable to enable scheduled destructive cleanup. Keep the active acceptance environment pinned until complete.
 
 Rollback: disable both GitHub activation variables; restore native Git previews if they were disabled. Do not reset or delete data. Restore a previous Ready production deployment only under explicit incident authority. The review site remains manual throughout.
@@ -79,3 +79,5 @@ Rollback: disable both GitHub activation variables; restore native Git previews 
 ## Changelog and acceptance
 
 2026-09-22: live review trigger removal, branch protection, exact-target migration checkpoints and forward repairs `0153`/`0154`; sanitized template, first isolated child, three file stores, and encrypted handoff. Local route smoke and patched hosted login, database reads and seven rendered pages passed. The patched lockfile clears high/critical audit findings; four moderate findings remain. Source shipping, automatic workflow cutover, production pooling deployment and dedicated preview Redis remain separate boundaries. Detailed evidence is in the [active ledger](../tasks/infrastructure-hardening-plan-2026-09-22.md).
+
+2026-10-01: first hosted run failed because the Vercel store-connection call returns an empty success body (fixed in #412; resources are reused on re-run). New advisories had failed `validate` everywhere; resolved with `package.json` overrides. Ignored Build Step set; stale PRs closed.

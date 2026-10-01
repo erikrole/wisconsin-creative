@@ -98,6 +98,17 @@ Once the applicable gates pass, rerun them only after a relevant change, failure
 
 Use the full `npm run build` when shipping or validating deploy-shaped behavior, especially schema and migration work. It may run database deployment steps, so do not use it casually against an uncontrolled environment.
 
+## Preview environments and infrastructure hardening
+
+The accepted plan is [D-063](docs/DECISIONS.md#d-063-branch-owned-previews-and-one-automatic-production-build); the runbook is [docs/PREVIEW_ENVIRONMENTS.md](docs/PREVIEW_ENVIRONMENTS.md). Rules for every agent (Claude, Cursor, Codex):
+
+- One named Git feature branch owns one preview environment (its own sanitized Neon child, file stores, session secret, and encrypted handoff). Never share, borrow, reset, or recreate another branch's environment, and never use production credentials or pull production variables for a preview.
+- New branches get an environment only from the hosted `Managed previews` workflow, which runs after `CI` passes on a same-repository PR targeting `main`. To get one: push the branch, open the PR, let CI and Managed previews pass, then run `npm run preview:setup`, `npm run dev:preview`, and `npm run auth:local` (the first `auth:local` can 404 on a cold route compile; run it again). Use the printed URL; do not bypass the wrappers with raw `next` commands.
+- If `preview:setup` reports no environment, its message names the likely cause (workflow disabled, or no open PR to `main`). It does not read check results, so when a PR is open inspect its checks and the `Managed previews` run for a failure before waiting. Do not provision manually; `PREVIEW_SIGNING_KEY` and operator tokens belong only to trusted CI.
+- Main is the only automatic production line. Native Vercel Git preview builds are skipped by the project's Ignored Build Step, so a failing `Vercel` check on a PR is a regression to report, not noise. Do not disconnect Git or change that step without checking the runbook.
+- Required checks on `main` are `validate` and `postgres-integrity`, with strict up-to-date, resolved conversations, and no admin bypass. `validate` runs `npm audit --audit-level=high`; fix new advisories with targeted `package.json` overrides, not `npm audit fix` (it rewrites the lockfile and can make results worse).
+- Agents must not merge to `main`, change repository variables, Vercel project settings, or branch protection, or enable cleanup without explicit user authorization. `PREVIEW_CLEANUP_ENABLED` stays off until a `preview:cleanup` dry run is reviewed.
+
 ## Safety and quality bar
 
 - Prefer the smallest change that closes the root cause.
