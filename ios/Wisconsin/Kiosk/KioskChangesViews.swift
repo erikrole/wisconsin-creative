@@ -1328,7 +1328,7 @@ struct KioskNeededNextCard: View {
                         .foregroundStyle(KioskText.tertiary)
                 }
             }
-            row("For", item.bookingTitle.map { displayTitle($0) } ?? "—")
+            if let title = item.bookingTitle { row("For", displayTitle(title)) }
             row("When", KioskDueCopy.relative(item.startsAt))
             HStack(spacing: 12) {
                 Text("Item")
