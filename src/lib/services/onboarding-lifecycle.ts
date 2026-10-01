@@ -287,13 +287,17 @@ export async function createAllowedEmailInvite(input: {
 export async function updatePendingAllowedEmailProfile(input: {
   actor: OnboardingActor;
   id: string;
+  /** Non-admins may not touch an invite linked to a hire (D-065); checked inside the transaction. */
+  hideHiringInvites?: boolean;
 } & InviteProfile): Promise<{ entry: AllowedEmailWithPeople }> {
   assertCanInviteRole(input.actor, "STUDENT");
   const resolvedProfile = await resolveInviteProfile("STUDENT", input);
 
   return db.$transaction(async (tx) => {
-    const existing = await tx.allowedEmail.findUnique({
-      where: { id: input.id },
+    const existing = await tx.allowedEmail.findFirst({
+      // The scope is part of the read inside this transaction, so an invite adopted for a hire
+      // between the route's check and this update cannot be edited by a non-admin.
+      where: { id: input.id, ...(input.hideHiringInvites ? { applications: { none: {} } } : {}) },
     });
 
     if (!existing) {

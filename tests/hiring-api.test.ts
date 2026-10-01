@@ -394,7 +394,7 @@ describe("hire invite (staged conversion)", () => {
 
   it("asks before linking when an account already exists, then links only on confirm", async () => {
     models.application.findUnique.mockResolvedValue(hireApplication());
-    models.user.findFirst.mockResolvedValue({ id: "u9", name: "Alex Sample" });
+    models.user.findFirst.mockResolvedValue({ id: "u9", name: "Alex Sample", active: true });
 
     const first = await inviteHire(json("/api/hiring/applications/app-1/invite", "POST", {}), ctx());
     expect(first.status).toBe(409);
@@ -508,7 +508,7 @@ describe("hire invite identity checks", () => {
     const refused = await post({ linkUserId: "clh0000000000000000000007" });
     expect(refused.status).toBe(400);
 
-    models.user.findMany.mockResolvedValue([{ id: "clh0000000000000000000007", name: "Alex Sample" }]);
+    models.user.findMany.mockResolvedValue([{ id: "clh0000000000000000000007", name: "Alex Sample", email: "alex.s@example.edu", active: true }]);
     const linked = await post({ linkUserId: "clh0000000000000000000007" });
     expect(linked.status).toBe(200);
     expect(models.applicant.update).toHaveBeenCalledWith({ where: { id: "p1" }, data: { hiredUserId: "clh0000000000000000000007" } });
@@ -658,8 +658,10 @@ describe("tombstones are read-only", () => {
   });
 
   it("re-checks inside the transaction when a purge committed after the first read", async () => {
-    models.application.findUnique.mockResolvedValue({ ...tombstone, applicant: { purgedAt: null } });
-    models.applicant.findUnique.mockResolvedValue({ purgedAt: new Date("2029-01-01T00:00:00Z") });
+    models.application.findUnique
+      .mockResolvedValueOnce({ ...tombstone, applicant: { purgedAt: null } })
+      // The serializable transaction's own read now shows the purge that committed meanwhile.
+      .mockResolvedValueOnce({ stage: "PASSED", reviewed: true, allowedEmailId: null, applicant: { purgedAt: new Date("2029-01-01T00:00:00Z") } });
     const res = await patchApplication(json("/api/hiring/applications/app-1", "PATCH", { portfolioUrl: "https://example.com/p" }), ctx());
     expect(res.status).toBe(409);
     expect(models.application.update).not.toHaveBeenCalled();
@@ -782,7 +784,7 @@ describe("hire invite: existing accounts, pending invites, and areas", () => {
   });
 
   it("links an existing account only while the application is still Hire, with its audit in the same transaction", async () => {
-    models.user.findFirst.mockResolvedValue({ id: "u9", name: "Alex Sample" });
+    models.user.findFirst.mockResolvedValue({ id: "u9", name: "Alex Sample", active: true });
     const linked = await post({ linkExistingUser: true });
     expect(linked.status).toBe(200);
     expect(models.applicant.update).toHaveBeenCalledWith({ where: { id: "p1" }, data: { hiredUserId: "u9" } });
@@ -792,7 +794,7 @@ describe("hire invite: existing accounts, pending invites, and areas", () => {
   });
 
   it("does not link when the Hire was undone before the link transaction ran", async () => {
-    models.user.findFirst.mockResolvedValue({ id: "u9", name: "Alex Sample" });
+    models.user.findFirst.mockResolvedValue({ id: "u9", name: "Alex Sample", active: true });
     models.application.findUnique
       .mockResolvedValueOnce(app()) // initial read
       .mockResolvedValueOnce({ stage: "PASSED", applicant: { hiredUserId: null } }); // inside the transaction
@@ -802,7 +804,7 @@ describe("hire invite: existing accounts, pending invites, and areas", () => {
   });
 
   it("does not link a same-name account for a passed applicant either", async () => {
-    models.user.findMany.mockResolvedValue([{ id: "clh0000000000000000000007", name: "Alex Sample" }]);
+    models.user.findMany.mockResolvedValue([{ id: "clh0000000000000000000007", name: "Alex Sample", email: "alex.s@example.edu", active: true }]);
     models.application.findUnique
       .mockResolvedValueOnce(app())
       .mockResolvedValueOnce({ stage: "WITHDRAWN", applicant: { hiredUserId: null } });
@@ -836,5 +838,104 @@ describe("hire invite and retention tombstones", () => {
     expect(res.status).toBe(409);
     expect(models.allowedEmail.create).not.toHaveBeenCalled();
     expect(models.allowedEmail.update).not.toHaveBeenCalled();
+  });
+});
+
+describe("hire links and deactivated accounts", () => {
+  const app = () => ({
+    id: "app-1",
+    stage: "HIRE",
+    primaryArea: "VIDEO",
+    rawAreas: [],
+    allowedEmail: null,
+    applicant: { id: "p1", name: "Alex Sample", hiredUserId: null, emails: [{ email: "alex@example.edu", isPrimary: true }] },
+  });
+  const post = (body: unknown = {}) => inviteHire(json("/api/hiring/applications/app-1/invite", "POST", body), ctx());
+
+  beforeEach(() => {
+    vi.mocked(requireAuth).mockResolvedValue(user("ADMIN") as never);
+    models.application.findUnique.mockResolvedValue(app());
+    models.user.findMany.mockResolvedValue([]);
+  });
+
+  it("refuses to link a hire to a deactivated account matched by email, with a clear next step", async () => {
+    models.user.findFirst.mockResolvedValue({ id: "u9", name: "Alex Sample", active: false });
+    for (const body of [{}, { linkExistingUser: true }]) {
+      const res = await post(body);
+      expect(res.status).toBe(409);
+      expect((await res.json()).code).toBe("user_inactive");
+    }
+    expect(models.applicant.update).not.toHaveBeenCalled();
+  });
+
+  it("refuses to link to a deactivated same-name account the admin picked", async () => {
+    models.user.findFirst.mockResolvedValue(null);
+    models.user.findMany.mockResolvedValue([{ id: "clh0000000000000000000007", name: "Alex Sample", email: "alex.s@example.edu", active: false }]);
+    const res = await post({ linkUserId: "clh0000000000000000000007" });
+    expect(res.status).toBe(409);
+    expect((await res.json()).code).toBe("user_inactive");
+    expect(models.applicant.update).not.toHaveBeenCalled();
+  });
+
+  it("returns every same-name candidate with the email and status that tell them apart", async () => {
+    models.user.findFirst.mockResolvedValue(null);
+    const candidates = [
+      { id: "u1", name: "Alex Sample", email: "a1@example.edu", active: true },
+      { id: "u2", name: "Alex Sample", email: "a2@example.edu", active: false },
+      { id: "u3", name: "Alex Sample", email: "a3@example.edu", active: true },
+    ];
+    models.user.findMany.mockResolvedValue(candidates);
+    const res = await post();
+    expect(res.status).toBe(409);
+    const payload = await res.json();
+    expect(payload.code).toBe("possible_account");
+    expect(payload.data.users).toEqual(candidates);
+    expect(models.user.findMany.mock.calls[0]![0].select).toEqual({ id: true, name: true, email: true, active: true });
+  });
+});
+
+describe("Hire departure is decided inside the transaction", () => {
+  beforeEach(() => vi.mocked(requireAuth).mockResolvedValue(user("ADMIN") as never));
+
+  it("revokes an invite attached after the first read, when the first read saw an earlier stage", async () => {
+    // The pre-transaction read saw APPLIED; by the time the serializable transaction reads, another admin
+    // moved the application to Hire and attached an invite. The departure must be derived from that read.
+    models.application.findUnique
+      .mockResolvedValueOnce({ id: "app-1", applicantId: "p1", stage: "APPLIED", reviewed: false, allowedEmailId: null, applicant: { purgedAt: null } })
+      .mockResolvedValueOnce({ stage: "HIRE", reviewed: false, allowedEmailId: "invite-9", applicant: { purgedAt: null } });
+    models.allowedEmail.findUnique.mockResolvedValue({ id: "invite-9", claimedAt: null });
+    const res = await patchApplication(json("/api/hiring/applications/app-1", "PATCH", { stage: "PASSED" }), ctx());
+    expect(res.status).toBe(200);
+    expect(models.allowedEmail.delete).toHaveBeenCalledWith({ where: { id: "invite-9" } });
+    const entry = vi.mocked(createAuditEntryTx).mock.calls.at(-1)![1];
+    expect(entry.before).toMatchObject({ stage: "HIRE" });
+    expect(entry.after).toMatchObject({ stage: "PASSED", invitationRevoked: true });
+  });
+
+  it("does not revoke when the transaction read shows the application is no longer Hire", async () => {
+    models.application.findUnique
+      .mockResolvedValueOnce({ id: "app-1", applicantId: "p1", stage: "HIRE", reviewed: false, allowedEmailId: "invite-9", applicant: { purgedAt: null } })
+      .mockResolvedValueOnce({ stage: "ROUND_1", reviewed: false, allowedEmailId: null, applicant: { purgedAt: null } });
+    await patchApplication(json("/api/hiring/applications/app-1", "PATCH", { stage: "PASSED" }), ctx());
+    expect(models.allowedEmail.delete).not.toHaveBeenCalled();
+  });
+});
+
+describe("cycle creation audit", () => {
+  beforeEach(() => vi.mocked(requireAuth).mockResolvedValue(user("ADMIN") as never));
+
+  it("commits the cycle and its audit entry together", async () => {
+    models.hiringCycle.create.mockResolvedValue({ id: "c9", label: "Fall 2026", status: "OPEN" });
+    const res = await createCycle(json("/api/hiring/cycles", "POST", { term: "FALL", year: 2026 }), ctx());
+    expect(res.status).toBe(201);
+    expect(createAuditEntry).not.toHaveBeenCalled();
+    expect(vi.mocked(createAuditEntryTx).mock.calls.at(-1)![1]).toMatchObject({ entityType: "hiring_cycle", action: "create" });
+  });
+
+  it("does not return success when the audit entry cannot be written", async () => {
+    models.hiringCycle.create.mockResolvedValue({ id: "c9", label: "Fall 2026", status: "OPEN" });
+    vi.mocked(createAuditEntryTx).mockRejectedValueOnce(new Error("audit down"));
+    const res = await createCycle(json("/api/hiring/cycles", "POST", { term: "FALL", year: 2026 }), ctx());
+    expect(res.status).toBe(500);
   });
 });

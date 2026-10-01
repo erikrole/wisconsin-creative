@@ -18,6 +18,7 @@ export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
   const result = await updatePendingAllowedEmailProfile({
     actor: { id: user.id, role: user.role },
     id: params.id,
+    hideHiringInvites: user.role !== "ADMIN",
     ...profile,
   });
 
@@ -47,7 +48,8 @@ export const DELETE = withAuth<{ id: string }>(async (_req, { user, params }) =>
 
   // Atomic: only delete if still unclaimed (guards against race with concurrent registration)
   const deleted = await db.allowedEmail.deleteMany({
-    where: { id: params.id, claimedAt: null },
+    // Non-admins can never delete a hire invite, even one adopted after the checks above.
+    where: { id: params.id, claimedAt: null, ...(user.role === "ADMIN" ? {} : { applications: { none: {} } }) },
   });
 
   if (deleted.count === 0) {

@@ -59,7 +59,7 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
   // Any authoritative alias counts: campus email or athletics email.
   const existingUser = await db.user.findFirst({
     where: { OR: [{ email }, { athleticsEmail: email }] },
-    select: { id: true, name: true },
+    select: { id: true, name: true, active: true },
   });
 
   // Linking an existing account is part of the Hire decision, so it re-checks the stage
@@ -91,7 +91,16 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
     return ok({ data: { status: "linked", userId } });
   };
 
+  // A deactivated account cannot sign in, and linked applicants drop out of planning, so linking a
+  // hire to one would hide them. It must be reactivated first (a deliberate lifecycle step).
+  const inactive = (u: { id: string; name: string }) =>
+    new HttpError(409, "That account is deactivated. Reactivate it on the Users page before linking this hire.", {
+      code: "user_inactive",
+      user: { id: u.id, name: u.name },
+    });
+
   if (existingUser) {
+    if (!existingUser.active) throw inactive(existingUser);
     if (!body.linkExistingUser) {
       throw new HttpError(409, "An account already exists for this email.", {
         code: "user_exists",
@@ -105,12 +114,15 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
   // address). Same-name accounts need an explicit decision before a new invite.
   const sameName = await db.user.findMany({
     where: { name: { equals: application.applicant.name, mode: "insensitive" } },
-    select: { id: true, name: true },
-    take: 5,
+    // Email and status let the admin tell same-name people apart (never just the shared name).
+    select: { id: true, name: true, email: true, active: true },
+    take: 10,
   });
   if (body.linkUserId) {
-    if (!sameName.some((u) => u.id === body.linkUserId)) throw new HttpError(400, "That account is not a name match for this applicant.");
-    return link(body.linkUserId, "hire_linked_existing");
+    const chosen = sameName.find((u) => u.id === body.linkUserId);
+    if (!chosen) throw new HttpError(400, "That account is not a name match for this applicant.");
+    if (!chosen.active) throw inactive(chosen);
+    return link(chosen.id, "hire_linked_existing");
   }
   if (sameName.length > 0 && !body.confirmNewAccount) {
     throw new HttpError(409, "An account with the same name already exists.", { code: "possible_account", users: sameName });

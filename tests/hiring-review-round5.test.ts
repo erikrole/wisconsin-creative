@@ -41,7 +41,7 @@ describe("deactivation date (starts the hired-student retention clock)", () => {
   it("is recorded on every deactivation path, including the erase path", () => {
     const service = source("src/lib/services/user-deactivation.ts");
     expect(service).toContain(": { active: false, deactivatedAt: new Date(), icsToken: null },");
-    expect(service).toMatch(/active: false,\s+deactivatedAt: new Date\(\),\s+name: "Deleted User"/);
+    expect(service).toMatch(/active: false,\s+deactivatedAt: new Date\(\),\s+startTerm: null,\s+startTermYear: null,\s+name: "Deleted User"/);
   });
 
   it("is cleared when an account is reactivated", () => {
@@ -83,6 +83,27 @@ describe("hiring UI", () => {
 
   it("drops stale duplicate choices as soon as any applicant field changes", () => {
     expect(dialogs).toContain("setMatches(null);\n    setForm((f) => ({ ...f, [key]: e.target.value }));");
+  });
+
+  it("lets the admin choose among every same-name account, with email and status", () => {
+    expect(dialogs).toContain("export function PickAccountDialog");
+    expect(dialogs).toContain("c.email");
+    expect(dialogs).toContain('c.active ? "Active" : "Deactivated"');
+    expect(sheet).toContain("setAccountChoices(json.data.users)");
+    expect(sheet).toContain("PickAccountDialog");
+    // The old flow silently used only the first candidate.
+    expect(sheet).not.toContain("json.data.users[0]");
+  });
+
+  it("clears the close date whenever the dialog opens, closes, or targets another cycle", () => {
+    expect(dialogs).toContain('setClosedOn("");');
+    expect(dialogs).toContain("}, [open, label]);");
+  });
+
+  it("does not invent a graduation term for a year-only record", () => {
+    const page = source("src/app/(app)/workforce/page.tsx");
+    expect(page).not.toContain('"Spring"}');
+    expect(page).toContain('u.graduationTerm ? `${TERM_LABELS[u.graduationTerm]} ` : ""');
   });
 
   it("only offers 'a blank decision means passed over' for a finished cycle", () => {

@@ -52,6 +52,7 @@ export const POST = withAuth(async (req, { user }) => {
   let applied = false;
   if (body.apply) {
     const writable = plan.filter((p) => p.action === "update");
+    let actual = { startTerms: 0, placements: 0 };
     await db.$transaction(
       async (tx) => {
         // Start terms: one updateMany per distinct term (a roster has only a few), guarded to
@@ -65,8 +66,10 @@ export const POST = withAuth(async (req, { user }) => {
           group.ids.push(item.userId!);
           byStart.set(key, group);
         }
+        let startTermsWritten = 0;
         for (const { term, year, ids } of byStart.values()) {
-          await tx.user.updateMany({ where: { id: { in: ids }, startTerm: null }, data: { startTerm: term, startTermYear: year } });
+          const result = await tx.user.updateMany({ where: { id: { in: ids }, startTerm: null }, data: { startTerm: term, startTermYear: year } });
+          startTermsWritten += result.count;
         }
 
         // Placements: one batched insert. The plan already removed anything that exists or
@@ -80,7 +83,13 @@ export const POST = withAuth(async (req, { user }) => {
             sportCodes: placement.sportCodes,
           })),
         );
-        if (placements.length > 0) await tx.studentTermPlacement.createMany({ data: placements, skipDuplicates: true });
+        let placementsWritten = 0;
+        if (placements.length > 0) {
+          placementsWritten = (await tx.studentTermPlacement.createMany({ data: placements, skipDuplicates: true })).count;
+        }
+        // A concurrent edit can make the guarded writes skip rows the preview counted. Report what
+        // was really written, in the audit and the response, so the evidence is never overstated.
+        actual = { startTerms: startTermsWritten, placements: placementsWritten };
         // Counts only, in the same transaction so the import never commits without its evidence.
         await createAuditEntryTx(tx, {
           actorId: user.id,
@@ -88,12 +97,14 @@ export const POST = withAuth(async (req, { user }) => {
           entityType: "workforce_import",
           entityId: `roster-${body.academicYearStart}`,
           action: "import",
-          after: { startTerms: counts.startTerms, placements: counts.placements, unmatched: counts.unmatched },
+          after: { startTerms: actual.startTerms, placements: actual.placements, unmatched: counts.unmatched },
         });
       },
       { timeout: 60_000 },
     );
     applied = true;
+    counts.startTerms = actual.startTerms;
+    counts.placements = actual.placements;
   }
 
   return ok({

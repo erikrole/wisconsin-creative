@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -362,6 +362,12 @@ export function CloseCycleDialog({
   onConfirm: (closedOn: string | undefined) => void;
 }) {
   const [closedOn, setClosedOn] = useState("");
+  // A date entered for one cycle must never preload for another: a stale old date would start the
+  // next cycle's retention clock years too early. Clear it whenever the dialog opens, closes, or
+  // targets a different cycle.
+  useEffect(() => {
+    setClosedOn("");
+  }, [open, label]);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -382,6 +388,63 @@ export function CloseCycleDialog({
           </Button>
           <Button type="button" onClick={() => onConfirm(closedOn || undefined)}>
             Close cycle
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export type AccountChoice = { id: string; name: string; email: string; active: boolean };
+
+/**
+ * Same-name accounts that might be this applicant. Every candidate is shown with the email and
+ * status that tell people with the same name apart, so the admin picks the right one (or
+ * explicitly says none of them is this person) instead of being handed only the first match.
+ */
+export function PickAccountDialog({
+  choices,
+  applicantName,
+  onLink,
+  onCreateNew,
+  onCancel,
+}: {
+  choices: AccountChoice[] | null;
+  applicantName: string;
+  onLink: (userId: string) => void;
+  onCreateNew: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <Dialog open={choices !== null} onOpenChange={(open) => !open && onCancel()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Is {applicantName} already in the system?</DialogTitle>
+          <DialogDescription>
+            Accounts with the same name exist under a different email. Link this hire to the right one, or create a separate account if none is them.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogBody className="grid gap-2 pb-4">
+          {(choices ?? []).map((c) => (
+            <div key={c.id} className="flex items-center justify-between gap-3 rounded-md border p-3">
+              <div className="min-w-0">
+                <p className="truncate font-medium">{c.name}</p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {c.email} · {c.active ? "Active" : "Deactivated"}
+                </p>
+              </div>
+              <Button type="button" variant="outline" disabled={!c.active} title={c.active ? undefined : "Reactivate this account on the Users page first"} onClick={() => onLink(c.id)}>
+                Link
+              </Button>
+            </div>
+          ))}
+        </DialogBody>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button type="button" onClick={onCreateNew}>
+            None of these, create a new account
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -161,7 +161,7 @@ describe("purgeApplicant", () => {
     expect(tx.applicantEmail.deleteMany).toHaveBeenCalledWith({ where: { applicantId: "a1" } });
     expect(tx.applicationNote.deleteMany).toHaveBeenCalled();
     const appData = tx.application.updateMany.mock.calls[0]![0].data;
-    expect(appData).toMatchObject({ externalApplicationId: null, interviewUrl: null, rawAreas: [], sourcePayload: Prisma.DbNull });
+    expect(appData).toMatchObject({ externalApplicationId: null, interviewUrl: null, interviewedAt: null, rawAreas: [], sourcePayload: Prisma.DbNull });
     // Stage, decision, and cycle are the retained outcome and must not be touched.
     expect(appData).not.toHaveProperty("stage");
     expect(appData).not.toHaveProperty("decidedAt");
@@ -311,12 +311,12 @@ describe("runApplicantRetention (runs inside the weekly audit-archive cron)", ()
   it("stops inside a batch when the time budget runs out, before the platform limit, and reports hasMore", async () => {
     models.applicant.findMany.mockImplementation(async () => ids(0, 25));
     tx.applicant.findUnique.mockImplementation(async () => person("x"));
-    // Each purge takes ~15ms; a 40ms budget allows only a few before stopping.
+    // Each purge takes ~15ms; a 40ms working window (budget minus the 1.5s item margin) allows only a few.
     models.$transaction.mockImplementation(async (fn: (t: typeof tx) => Promise<unknown>) => {
       await new Promise((resolve) => setTimeout(resolve, 15));
       return fn(tx);
     });
-    const result = await runApplicantRetention(NOW, { budgetMs: 40 });
+    const result = await runApplicantRetention(NOW, { budgetMs: 1540 });
     expect(result.purged).toBeGreaterThan(0);
     expect(result.purged).toBeLessThan(10);
     expect(result.hasMore).toBe(true);
@@ -326,8 +326,41 @@ describe("runApplicantRetention (runs inside the weekly audit-archive cron)", ()
   });
 
   it("uses a small default budget suited to the 10 second function limit", async () => {
-    const { RETENTION_TIME_BUDGET_MS } = await import("@/lib/hiring/retention");
+    const { RETENTION_TIME_BUDGET_MS, RETENTION_ITEM_MARGIN_MS } = await import("@/lib/hiring/retention");
     expect(RETENTION_TIME_BUDGET_MS).toBeLessThanOrEqual(4000);
+    // The margin is room for the item in flight; the default budget must leave real working time.
+    expect(RETENTION_TIME_BUDGET_MS - RETENTION_ITEM_MARGIN_MS).toBeGreaterThan(500);
+  });
+
+  it("starts nothing when the budget is smaller than the per-item margin", async () => {
+    models.applicant.findMany.mockResolvedValue(ids(0, 5));
+    tx.applicant.findUnique.mockImplementation(async () => person("x"));
+    const result = await runApplicantRetention(NOW, { budgetMs: 1000 });
+    expect(result.purged).toBe(0);
+    expect(models.$transaction).not.toHaveBeenCalled();
+    expect(result.hasMore).toBe(true);
+  });
+
+  it("caps each purge transaction well below the function limit", async () => {
+    tx.applicant.findUnique.mockResolvedValue(person("x"));
+    await purgeApplicant("x", NOW);
+    expect(models.$transaction.mock.calls[0]![1]).toMatchObject({ timeout: 5000 });
+  });
+
+  it("leaves file deletion queued when time runs out right after a purge commits", async () => {
+    models.applicant.findMany.mockResolvedValueOnce([{ id: "a1" }]).mockResolvedValue([]);
+    tx.applicant.findUnique.mockImplementation(async () => person("a1"));
+    // The purge itself eats the whole working window.
+    models.$transaction.mockImplementation(async (fn: (t: typeof tx) => Promise<unknown>) => {
+      await new Promise((resolve) => setTimeout(resolve, 60));
+      return fn(tx);
+    });
+    const result = await runApplicantRetention(NOW, { budgetMs: 1560 });
+    expect(result.purged).toBe(1);
+    expect(deleteApplicantFile).not.toHaveBeenCalled(); // queued durably, deleted by a later run
+    expect(models.applicantRetentionEvent.update).not.toHaveBeenCalled();
+    expect(result.hasMore).toBe(true);
+    models.$transaction.mockImplementation(async (fn: (t: typeof tx) => Promise<unknown>) => fn(tx));
   });
 
   it("stops when a whole batch makes no progress, so a stuck applicant cannot loop forever", async () => {

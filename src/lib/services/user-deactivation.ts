@@ -361,6 +361,10 @@ export async function deactivateUserWithCleanup(args: {
     const areaAssignmentCleanup = erasePersonalData
       ? await tx.studentAreaAssignment.deleteMany({ where: { userId: targetUserId } })
       : { count: 0 };
+    // Term-by-term areas, sports, and notes are workforce history about a person (D-065).
+    const termPlacementCleanup = erasePersonalData
+      ? await tx.studentTermPlacement.deleteMany({ where: { userId: targetUserId } })
+      : { count: 0 };
     const badgeCleanup = erasePersonalData
       ? await tx.studentBadge.deleteMany({ where: { userId: targetUserId } })
       : { count: 0 };
@@ -402,6 +406,8 @@ export async function deactivateUserWithCleanup(args: {
         ? {
           active: false,
           deactivatedAt: new Date(),
+          startTerm: null,
+          startTermYear: null,
           name: "Deleted User",
           email: `deleted+${targetUserId}@deleted.invalid`,
           passwordHash: erasedPasswordHash!,
@@ -474,6 +480,7 @@ export async function deactivateUserWithCleanup(args: {
           availabilityBlocks: availabilityCleanup.count,
           sportAssignments: sportAssignmentCleanup.count,
           areaAssignments: areaAssignmentCleanup.count,
+          termPlacements: termPlacementCleanup.count,
           badges: badgeCleanup.count + badgeStreakCleanup.count + badgeReceiptCleanup.count,
           claimedInvites: claimedInviteCleanup.count,
           licenseClaims: licenseClaimCleanup.count,

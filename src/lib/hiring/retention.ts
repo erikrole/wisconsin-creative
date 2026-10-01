@@ -125,6 +125,7 @@ export async function purgeApplicant(applicantId: string, now: Date = new Date()
           data: {
             externalApplicationId: null,
             interviewUrl: null,
+            interviewedAt: null,
             summerAvailable: null,
             rawAreas: [],
             fieldsExperience: [],
@@ -161,7 +162,9 @@ export async function purgeApplicant(applicantId: string, now: Date = new Date()
 
         return { applicantId, applications: applicationIds.length, documents: pathnames.length, eventId: event.id, pathnames };
       },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, timeout: 30_000 },
+      // A purge is a handful of statements. Cap the transaction well below the function limit so a
+      // slow database fails this applicant (retried next run) instead of consuming the whole budget.
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, timeout: 5_000 },
     );
   } catch (error) {
     // Concurrent hiring activity touched this applicant: skip it and retry next run.
@@ -213,6 +216,12 @@ export const RETENTION_MAX_BATCHES = 20;
  * caller with more room passes a larger `budgetMs`; whatever is left carries to the next run.
  */
 export const RETENTION_TIME_BUDGET_MS = 3_000;
+/**
+ * Room reserved for the item in flight. An applicant is only started when at least this
+ * much of the budget remains, so even a slow purge (transaction capped at 5 seconds) cannot
+ * run past the caller's budget and prevent the response and job evidence from being written.
+ */
+export const RETENTION_ITEM_MARGIN_MS = 1_500;
 
 export type RetentionRunResult = {
   dryRun: boolean;
@@ -249,7 +258,7 @@ export async function runApplicantRetention(
   };
 
   const started = Date.now();
-  const outOfTime = () => Date.now() - started >= budgetMs;
+  const outOfTime = () => Date.now() - started >= budgetMs - RETENTION_ITEM_MARGIN_MS;
 
   const first = await findPurgeCandidates(now, RETENTION_BATCH_SIZE);
   result.due = first.length;
@@ -273,6 +282,12 @@ export async function runApplicantRetention(
         progressed += 1;
         result.purged += 1;
         result.documentsDeleted += purged.documents;
+        // The rows are purged and the paths are already queued durably, so when time is short the
+        // file deletion simply waits for the next run instead of risking the deadline.
+        if (outOfTime()) {
+          timedOut = true;
+          break;
+        }
         try {
           await deleteQueuedBlobs(purged.eventId, purged.pathnames);
         } catch (error) {

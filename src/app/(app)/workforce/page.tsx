@@ -71,7 +71,8 @@ export default async function WorkforcePage() {
       area: u.primaryArea ?? u.areaAssignments.find((a) => a.isPrimary)?.area ?? u.areaAssignments[0]?.area ?? null,
       kind,
       standing: derived ? (STUDENT_YEAR_LABEL[derived] ?? STANDING_LABELS[derived as keyof typeof STANDING_LABELS] ?? null) : null,
-      graduation: u.gradYear ? `${u.graduationTerm ? TERM_LABELS[u.graduationTerm] : "Spring"} ${u.gradYear}` : null,
+      // A year without a term is shown as just the year; the term is not guessed.
+      graduation: u.gradYear ? `${u.graduationTerm ? `${TERM_LABELS[u.graduationTerm]} ` : ""}${u.gradYear}` : null,
       graduatesThisYear: kind === "STUDENT" && u.gradYear != null && u.gradYear <= academicYearEnd,
       sports: u.sportAssignments.map((s) => s.sportCode),
     };

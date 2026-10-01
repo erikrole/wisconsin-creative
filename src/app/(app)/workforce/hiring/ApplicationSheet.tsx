@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { APPLICATION_STAGES, STAGE_LABELS, STANDING_LABELS, TERM_LABELS, isHttpsUrl } from "@/lib/hiring/contract";
 import type { ApplicationStage } from "@prisma/client";
+import { PickAccountDialog, type AccountChoice } from "./HiringDialogs";
 import { AREA_LABEL, messageOf, type ApplicationDetail } from "./types";
 
 type Props = {
@@ -45,6 +46,7 @@ export default function ApplicationSheet({ applicationId, onClose, onChanged, on
   const [noteRating, setNoteRating] = useState("");
   const [busy, setBusy] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
+  const [accountChoices, setAccountChoices] = useState<AccountChoice[] | null>(null);
   const [activeDoc, setActiveDoc] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   // The id the panel is showing now; a slower response for an earlier id must not replace it.
@@ -69,6 +71,7 @@ export default function ApplicationSheet({ applicationId, onClose, onChanged, on
   useEffect(() => {
     setDetail(null);
     setInviteEmail("");
+    setAccountChoices(null);
     setActiveDoc(null);
     setNoteBody("");
     setNoteRating("");
@@ -165,7 +168,7 @@ export default function ApplicationSheet({ applicationId, onClose, onChanged, on
       const json = await parseJsonSafely<{
         error?: string;
         code?: string;
-        data?: { user?: { name: string }; users?: { id: string; name: string }[] };
+        data?: { user?: { name: string }; users?: AccountChoice[] };
       }>(res);
       if (res.status === 409 && json?.code === "user_exists" && !options.linkExistingUser) {
         const confirmed = await confirm({
@@ -177,22 +180,8 @@ export default function ApplicationSheet({ applicationId, onClose, onChanged, on
         return;
       }
       if (res.status === 409 && json?.code === "possible_account" && json.data?.users?.length) {
-        const candidate = json.data.users[0]!;
-        const link = await confirm({
-          title: `Is this ${candidate.name}'s existing account?`,
-          message: "An account with the same name exists under a different email. Link this applicant to it instead of sending an invite.",
-          confirmLabel: "Link account",
-        });
-        if (link) {
-          await createInvite({ linkUserId: candidate.id });
-          return;
-        }
-        const separate = await confirm({
-          title: "Create a separate account?",
-          message: "This will send a new student invite even though an account with the same name exists.",
-          confirmLabel: "Create invite",
-        });
-        if (separate) await createInvite({ confirmNewAccount: true });
+        // Show every candidate (with email and status) and let the admin choose.
+        setAccountChoices(json.data.users);
         return;
       }
       if (!res.ok) throw new Error(messageOf(json, "Could not create the invite."));
@@ -503,6 +492,19 @@ export default function ApplicationSheet({ applicationId, onClose, onChanged, on
           </div>
         )}
       </SheetContent>
+      <PickAccountDialog
+        choices={accountChoices}
+        applicantName={detail?.applicant.name ?? "This applicant"}
+        onCancel={() => setAccountChoices(null)}
+        onLink={(userId) => {
+          setAccountChoices(null);
+          void createInvite({ linkUserId: userId });
+        }}
+        onCreateNew={() => {
+          setAccountChoices(null);
+          void createInvite({ confirmNewAccount: true });
+        }}
+      />
     </Sheet>
   );
 }

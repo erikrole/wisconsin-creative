@@ -274,7 +274,8 @@ export const GET = withCron(async () => {
   // is reported without affecting the rest of this job.
   let applicantRetention: RetentionRunResult | null = null;
   const retentionRoom = DEADLINE_MS - (Date.now() - deadlineStart);
-  if (retentionRoom >= 1500) {
+  // Needs room for the item margin plus real work, otherwise it would start nothing.
+  if (retentionRoom >= 3000) {
     try {
       applicantRetention = await runApplicantRetention(now, { budgetMs: retentionRoom - 500 });
       if (applicantRetention.failed > 0) maintenanceFailures.push("applicantRetention");

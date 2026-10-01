@@ -234,6 +234,21 @@ describe("roster import", () => {
     expect(new Set(keys).size).toBe(keys.length);
   });
 
+  it("reports a row whose campus and athletics addresses belong to different accounts instead of picking one", () => {
+    const csv = ["Area,Name,Athletics Email,Campus Email,Start Date,Fall", "Video,Riley Roster,quinn@athletics.example.edu,riley@example.edu,Fall 2024,MSOC"].join("\n");
+    const { records } = parseRosterCsv(csv, 2025);
+    const plan = planRosterImport(records, users, new Set());
+    expect(plan[0]).toMatchObject({ action: "unmatched", setStartTerm: false, newPlacements: [] });
+    expect(plan[0]!.reason).toContain("different accounts");
+    expect(plan[0]!.userId).toBeUndefined();
+  });
+
+  it("still matches when both addresses on a row identify the same account", () => {
+    const csv = ["Area,Name,Athletics Email,Campus Email,Start Date,Fall", "Photo,Quinn Existing,quinn@athletics.example.edu,quinn@example.edu,Fall 2024,MSOC"].join("\n");
+    const { records } = parseRosterCsv(csv, 2025);
+    expect(planRosterImport(records, users, new Set())[0]).toMatchObject({ userId: "u3" });
+  });
+
   it("matches only by email and never overwrites existing values", () => {
     const { records } = parseRosterCsv(csv, 2025);
     const plan = planRosterImport(records, users, new Set(["u3:SPRING:2026"]));
@@ -294,6 +309,9 @@ describe("import routes", () => {
     models.application.findMany.mockResolvedValue([]);
     models.user.findMany.mockResolvedValue([]);
     models.studentTermPlacement.findMany.mockResolvedValue([]);
+    // Guarded writes report how many rows they really wrote.
+    tx.user.updateMany.mockImplementation(async (args: { where: { id: { in: string[] } } }) => ({ count: args.where.id.in.length }));
+    tx.studentTermPlacement.createMany.mockImplementation(async (args: { data: unknown[] }) => ({ count: args.data.length }));
   });
 
   it.each(["STAFF", "STUDENT", "COLLABORATOR"] as const)("%s gets 403 on both imports", async (role) => {
@@ -406,6 +424,17 @@ describe("import routes", () => {
     expect(tx.user.updateMany).toHaveBeenCalledTimes(1);
     expect(tx.user.updateMany.mock.calls[0]![0].where.id.in).toHaveLength(500);
     expect(tx.studentTermPlacement.createMany.mock.calls[0]![0].data).toHaveLength(1500);
+  });
+
+  it("reports and audits what was actually written when a concurrent edit makes the guarded writes skip rows", async () => {
+    models.user.findMany.mockResolvedValue([{ id: "u1", name: "Riley Roster", email: "riley@example.edu", athleticsEmail: null, startTerm: null, staffingType: "ST" }]);
+    // Another admin already set the start term and one placement after the preview was planned.
+    tx.user.updateMany.mockResolvedValue({ count: 0 });
+    tx.studentTermPlacement.createMany.mockResolvedValue({ count: 2 });
+    const res = await importRoster(post("/api/workforce/import", { academicYearStart: 2025, csv: ROSTER, apply: true }), ctx);
+    const { data } = await res.json();
+    expect(data.counts).toMatchObject({ startTerms: 0, placements: 2 });
+    expect(vi.mocked(createAuditEntryTx).mock.calls[0]![1].after).toMatchObject({ startTerms: 0, placements: 2 });
   });
 
   it("roster import skips full-time accounts", async () => {

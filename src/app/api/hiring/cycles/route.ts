@@ -1,5 +1,5 @@
 import { withAuth } from "@/lib/api";
-import { createAuditEntry } from "@/lib/audit";
+import { createAuditEntryTx } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { cycleLabel, createCycleSchema } from "@/lib/hiring/contract";
 import { ok } from "@/lib/http";
@@ -45,7 +45,10 @@ export const POST = withAuth(async (req, { user }) => {
   await enforceRateLimit(`hiring:write:${user.id}`, SETTINGS_MUTATION_LIMIT);
   const body = createCycleSchema.parse(await req.json());
 
-  const cycle = await db.hiringCycle.create({
+  // The cycle (with its slots) and its audit entry commit together: a failed audit must not leave
+  // a created cycle behind that a retry can only hit as a duplicate.
+  const cycle = await db.$transaction(async (tx) => {
+    const created = await tx.hiringCycle.create({
     data: {
       label: cycleLabel(body.term, body.year),
       term: body.term,
@@ -58,15 +61,16 @@ export const POST = withAuth(async (req, { user }) => {
         ? { create: body.slots.map((s) => ({ area: s.area, targetCount: s.targetCount })) }
         : undefined,
     },
-  });
-
-  await createAuditEntry({
-    actorId: user.id,
-    actorRole: user.role,
-    entityType: "hiring_cycle",
-    entityId: cycle.id,
-    action: "create",
-    after: { label: cycle.label, status: cycle.status },
+    });
+    await createAuditEntryTx(tx, {
+      actorId: user.id,
+      actorRole: user.role,
+      entityType: "hiring_cycle",
+      entityId: created.id,
+      action: "create",
+      after: { label: created.label, status: created.status },
+    });
+    return created;
   });
 
   return ok({ data: { id: cycle.id, label: cycle.label } }, 201);

@@ -106,75 +106,84 @@ export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
     throw new HttpError(409, "This applicant's personal data was purged, so the record is read-only. Add a new application to bring them back.");
   }
 
-  const stageChanged = body.stage !== undefined && body.stage !== existing.stage;
-  const leavingHire = stageChanged && existing.stage === ApplicationStage.HIRE && body.stage !== ApplicationStage.HIRE;
   const now = new Date();
 
-  await db.$transaction(async (tx) => {
-    // Re-check inside the transaction: a purge that committed since the read above must
-    // not be undone by writing personal fields onto the tombstone.
-    const live = await tx.applicant.findUnique({ where: { id: existing.applicantId }, select: { purgedAt: true } });
-    if (!live || live.purgedAt) {
-      throw new HttpError(409, "This applicant's personal data was purged, so the record is read-only. Add a new application to bring them back.");
-    }
-    let invitationRevoked = false;
-    if (leavingHire) {
-      // Re-read the link inside the transaction: an invite attached a moment ago is not
-      // in the snapshot taken above. Serializable isolation makes a race with invite
-      // creation abort one side instead of leaving a live invite on a passed applicant.
-      const current = await tx.application.findUnique({ where: { id: params.id }, select: { allowedEmailId: true } });
-      const invite = current?.allowedEmailId
-        ? await tx.allowedEmail.findUnique({ where: { id: current.allowedEmailId }, select: { id: true, claimedAt: true } })
-        : null;
-      if (invite?.claimedAt) {
-        throw new HttpError(409, "This applicant already registered from the hire invite. Deactivate the account instead of undoing the hire.");
+  await db.$transaction(
+    async (tx) => {
+      // Everything that depends on the current stage is derived from this read, inside the
+      // serializable transaction. A decision made by another admin since the read above (an
+      // applicant moved to Hire with an invite attached) must be seen here, or a live invite
+      // could survive for an applicant who is no longer hired.
+      const current = await tx.application.findUnique({
+        where: { id: params.id },
+        select: { stage: true, reviewed: true, allowedEmailId: true, applicant: { select: { purgedAt: true } } },
+      });
+      // Re-check the purge state too: a purge that committed since the read above must not be
+      // undone by writing personal fields onto the tombstone.
+      if (!current || current.applicant.purgedAt) {
+        throw new HttpError(409, "This applicant's personal data was purged, so the record is read-only. Add a new application to bring them back.");
       }
-      // An unclaimed invite must not outlive the decision. Deleting it also nulls the link.
-      if (invite) {
-        await tx.allowedEmail.delete({ where: { id: invite.id } });
-        invitationRevoked = true;
+
+      const stageChanged = body.stage !== undefined && body.stage !== current.stage;
+      const leavingHire = stageChanged && current.stage === ApplicationStage.HIRE && body.stage !== ApplicationStage.HIRE;
+
+      let invitationRevoked = false;
+      if (leavingHire && current.allowedEmailId) {
+        const invite = await tx.allowedEmail.findUnique({
+          where: { id: current.allowedEmailId },
+          select: { id: true, claimedAt: true },
+        });
+        if (invite?.claimedAt) {
+          throw new HttpError(409, "This applicant already registered from the hire invite. Deactivate the account instead of undoing the hire.");
+        }
+        // An unclaimed invite must not outlive the decision. Deleting it also nulls the link.
+        if (invite) {
+          await tx.allowedEmail.delete({ where: { id: invite.id } });
+          invitationRevoked = true;
+        }
       }
-    }
 
-    await tx.application.update({
-      where: { id: params.id },
-      data: {
-        stage: body.stage,
-        decidedAt: stageChanged ? (DECIDED_STAGES.has(body.stage!) ? now : null) : undefined,
-        decidedById: stageChanged ? (DECIDED_STAGES.has(body.stage!) ? user.id : null) : undefined,
-        reviewed: body.reviewed,
-        reviewedAt: body.reviewed === undefined ? undefined : body.reviewed ? now : null,
-        interviewedAt: body.interviewed === undefined ? undefined : body.interviewed ? now : null,
-        interviewUrl: body.interviewUrl,
-        summerAvailable: body.summerAvailable,
-        primaryArea: body.primaryArea,
-        rawAreas: body.rawAreas,
-      },
-    });
+      await tx.application.update({
+        where: { id: params.id },
+        data: {
+          stage: body.stage,
+          decidedAt: stageChanged ? (DECIDED_STAGES.has(body.stage!) ? now : null) : undefined,
+          decidedById: stageChanged ? (DECIDED_STAGES.has(body.stage!) ? user.id : null) : undefined,
+          reviewed: body.reviewed,
+          reviewedAt: body.reviewed === undefined ? undefined : body.reviewed ? now : null,
+          interviewedAt: body.interviewed === undefined ? undefined : body.interviewed ? now : null,
+          interviewUrl: body.interviewUrl,
+          summerAvailable: body.summerAvailable,
+          primaryArea: body.primaryArea,
+          rawAreas: body.rawAreas,
+        },
+      });
 
-    const applicantPatch = {
-      portfolioUrl: body.portfolioUrl,
-      standing: body.standing,
-      gradTerm: body.gradTerm,
-      gradYear: body.gradYear,
-    };
-    if (Object.values(applicantPatch).some((v) => v !== undefined)) {
-      await tx.applicant.update({ where: { id: existing.applicantId }, data: applicantPatch });
-    }
+      const applicantPatch = {
+        portfolioUrl: body.portfolioUrl,
+        standing: body.standing,
+        gradTerm: body.gradTerm,
+        gradYear: body.gradYear,
+      };
+      if (Object.values(applicantPatch).some((v) => v !== undefined)) {
+        await tx.applicant.update({ where: { id: existing.applicantId }, data: applicantPatch });
+      }
 
-    // Audit rows are deleted after 90 days and must not carry contact data (D-065):
-    // record which fields changed and the stage transition only. Written in the same
-    // transaction so a mutation never commits without its evidence.
-    await createAuditEntryTx(tx, {
-      actorId: user.id,
-      actorRole: user.role,
-      entityType: "hiring_application",
-      entityId: params.id,
-      action: stageChanged ? "stage_change" : "update",
-      before: { stage: existing.stage, reviewed: existing.reviewed },
-      after: { stage: body.stage ?? existing.stage, fields: Object.keys(body), invitationRevoked },
-    });
-  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+      // Audit rows are deleted after 90 days and must not carry contact data (D-065):
+      // record which fields changed and the stage transition only. Written in the same
+      // transaction so a mutation never commits without its evidence.
+      await createAuditEntryTx(tx, {
+        actorId: user.id,
+        actorRole: user.role,
+        entityType: "hiring_application",
+        entityId: params.id,
+        action: stageChanged ? "stage_change" : "update",
+        before: { stage: current.stage, reviewed: current.reviewed },
+        after: { stage: body.stage ?? current.stage, fields: Object.keys(body), invitationRevoked },
+      });
+    },
+    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+  );
 
   return ok({ data: { id: params.id } });
 });

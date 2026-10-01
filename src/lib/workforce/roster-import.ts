@@ -126,7 +126,13 @@ export function planRosterImport(
   const seenUsers = new Set<string>();
 
   return records.map((record) => {
-    const user = record.emails.map((e) => byEmail.get(e)).find(Boolean);
+    const matched = [...new Map(record.emails.map((e) => byEmail.get(e)).filter((u): u is RosterUser => Boolean(u)).map((u) => [u.id, u])).values()];
+    // The campus and athletics columns are unique separately, so two addresses on one row can
+    // belong to two different people. Never guess which one the row means.
+    if (matched.length > 1) {
+      return { record, action: "unmatched", setStartTerm: false, newPlacements: [], reason: "The campus and athletics addresses match different accounts" };
+    }
+    const user = matched[0];
     if (!user) {
       return { record, action: "unmatched", setStartTerm: false, newPlacements: [], reason: "No account with this email" };
     }

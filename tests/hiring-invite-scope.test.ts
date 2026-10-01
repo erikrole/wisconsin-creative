@@ -83,13 +83,43 @@ describe("hire invites stay inside the hiring boundary", () => {
     vi.mocked(requireAuth).mockResolvedValue(user("STAFF") as never);
     models.allowedEmail.findFirst.mockResolvedValue({ id: "invite-1" }); // linked to an application
 
-    const patched = await patchAllowed(req("/api/allowed-emails/invite-1", "PATCH", { preloadedName: "X" }), ctx);
+    const patched = await patchAllowed(req("/api/allowed-emails/invite-1", "PATCH", { preloadedName: "X", preloadedPrimaryArea: null, preloadedAreas: [], preloadedSportCodes: [] }), ctx);
     expect(patched.status).toBe(404);
     expect(updatePendingAllowedEmailProfile).not.toHaveBeenCalled();
 
     const deleted = await deleteAllowed(req("/api/allowed-emails/invite-1", "DELETE"), ctx);
     expect(deleted.status).toBe(404);
     expect(models.allowedEmail.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it("enforces the scope inside the delete itself, so an invite adopted after the check still cannot be deleted by staff", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(user("STAFF") as never);
+    models.allowedEmail.findFirst.mockResolvedValue(null); // the separate check passed...
+    models.allowedEmail.findUnique.mockResolvedValue({ id: "invite-1", email: "x@example.edu", role: "STUDENT", claimedAt: null });
+    models.allowedEmail.deleteMany.mockResolvedValue({ count: 0 }); // ...but the conditional delete matched nothing
+    const res = await deleteAllowed(req("/api/allowed-emails/invite-1", "DELETE"), ctx);
+    expect(models.allowedEmail.deleteMany.mock.calls[0]![0].where).toEqual({ id: "invite-1", claimedAt: null, applications: { none: {} } });
+    expect(res.status).toBe(400);
+  });
+
+  it("does not add the scope to an admin's delete", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(user("ADMIN") as never);
+    models.allowedEmail.findUnique.mockResolvedValue({ id: "invite-1", email: "x@example.edu", role: "STUDENT", claimedAt: null });
+    models.allowedEmail.deleteMany.mockResolvedValue({ count: 1 });
+    await deleteAllowed(req("/api/allowed-emails/invite-1", "DELETE"), ctx);
+    expect(models.allowedEmail.deleteMany.mock.calls[0]![0].where).toEqual({ id: "invite-1", claimedAt: null });
+  });
+
+  it("tells the profile update to hide hire invites for non-admins (applied inside its transaction)", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(user("STAFF") as never);
+    models.allowedEmail.findFirst.mockResolvedValue(null);
+    vi.mocked(updatePendingAllowedEmailProfile).mockResolvedValue({ entry: { id: "invite-1" } } as never);
+    await patchAllowed(req("/api/allowed-emails/invite-1", "PATCH", { preloadedName: "X", preloadedPrimaryArea: null, preloadedAreas: [], preloadedSportCodes: [] }), ctx);
+    expect(vi.mocked(updatePendingAllowedEmailProfile).mock.calls[0]![0]).toMatchObject({ hideHiringInvites: true });
+
+    vi.mocked(requireAuth).mockResolvedValue(user("ADMIN") as never);
+    await patchAllowed(req("/api/allowed-emails/invite-1", "PATCH", { preloadedName: "X", preloadedPrimaryArea: null, preloadedAreas: [], preloadedSportCodes: [] }), ctx);
+    expect(vi.mocked(updatePendingAllowedEmailProfile).mock.calls[1]![0]).toMatchObject({ hideHiringInvites: false });
   });
 
   it("lets staff manage ordinary invites that are not linked to an application", async () => {
