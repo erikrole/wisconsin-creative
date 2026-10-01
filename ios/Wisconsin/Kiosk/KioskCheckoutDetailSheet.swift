@@ -145,8 +145,8 @@ struct KioskCheckoutDetailSheet: View {
                         }
                     }
                 } else {
-                    timingRow
                     itemsPanel
+                    actionBar
                 }
             }
             .padding(28)
@@ -367,7 +367,7 @@ struct KioskCheckoutDetailSheet: View {
                                         .font(KioskType.overline)
                                         .tracking(KioskType.overlineTracking)
                                         .foregroundStyle(KioskText.tertiary)
-                                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 8)], alignment: .leading, spacing: 8) {
+                                    VStack(alignment: .leading, spacing: 8) {
                                         ForEach(batteries, id: \.id) { group in batteryTile(group.items) }
                                     }
                                 }
@@ -382,44 +382,66 @@ struct KioskCheckoutDetailSheet: View {
     }
 
     private var header: some View {
-        HStack(alignment: .top, spacing: 14) {
+        HStack(alignment: .center, spacing: 14) {
             KioskAvatar(url: context.requesterAvatarUrl, initials: context.requesterInitials, size: 48)
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(currentTitle)
                     .font(.title2.weight(.heavy))
                     .foregroundStyle(KioskText.primary)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.78)
-                Text(context.requesterName)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                // Who and when on one line; the due part carries custody tone.
+                (Text(context.requesterName + " · ").foregroundStyle(KioskText.secondary)
+                 + Text("\(currentIsOverdue ? "Overdue since" : "Due") \(currentEndsAt.kioskDueStamp()) · \(relativeDue)").foregroundStyle(custodyTone))
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(KioskText.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
             }
-            Spacer()
-            if let onReturn {
-                // Returning gear is the primary custody action on this sheet,
-                // so it carries the brand red. Save and Remove are deliberately
-                // quieter below — red here must mean "the main thing to do".
-                Button("Return gear") {
-                    dismiss()
-                    onReturn()
-                }
-                .font(.headline.weight(.semibold))
-                .kioskButtonRole(.primary)
-                .controlSize(.large)
-                .disabled(isMutating || !scanQueue.isEmpty)
-            }
-            if !allowsEditing, detail?.status == "OPEN" {
-                // C5: no separate staff mode. Staff tap their name inside.
-                Button("Staff actions") { showStaffFlow = true }
+            Spacer(minLength: 8)
+            if allowsEditing {
+                Button("Done") { dismiss() }
                     .font(.headline.weight(.semibold))
                     .kioskButtonRole(.secondary)
                     .controlSize(.large)
-            }
-            Button("Done") { dismiss() }
-                .font(.headline.weight(.semibold))
-                .kioskButtonRole(.secondary)
-                .controlSize(.large)
+                    .disabled(isMutating || !scanQueue.isEmpty)
+            } else {
+                Button { dismiss() } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 17, weight: .bold))
+                        .frame(width: 44, height: 44)
+                        .background(KioskSurface.cardRaised, in: Circle())
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(KioskText.secondary)
+                .accessibilityLabel("Close")
                 .disabled(isMutating || !scanQueue.isEmpty)
+            }
+        }
+    }
+
+    /// Read mode's actions, at the bottom where a thumb lands.
+    @ViewBuilder
+    private var actionBar: some View {
+        HStack(spacing: 10) {
+            if let onReturn {
+                Button {
+                    dismiss()
+                    onReturn()
+                } label: {
+                    Text("Return gear").font(.headline.weight(.semibold)).frame(maxWidth: .infinity, minHeight: 50)
+                }
+                .kioskButtonRole(.primary)
+                .disabled(isMutating || !scanQueue.isEmpty)
+            }
+            if detail?.status == "OPEN" {
+                // C5: staff actions open behind a staff ID card scan.
+                Button { showStaffFlow = true } label: {
+                    Label("Staff actions", systemImage: "lock.fill")
+                        .font(.headline.weight(.semibold)).lineLimit(1).fixedSize()
+                        .padding(.horizontal, 16).frame(minHeight: 50)
+                }
+                .kioskButtonRole(.secondary)
+            }
         }
     }
 
@@ -584,41 +606,6 @@ struct KioskCheckoutDetailSheet: View {
         .accessibilityElement(children: .contain)
     }
 
-    private var timingRow: some View {
-        HStack(spacing: 10) {
-            // Custody tone, not brand: blue while simply out, orange on the due
-            // day, red once late. The clock glyph used to be brand red here,
-            // which made an on-time checkout look like an alert.
-            Image(systemName: currentIsOverdue ? "exclamationmark.triangle.fill" : "clock.badge.checkmark")
-                .foregroundStyle(custodyTone)
-                .accessibilityHidden(true)
-            Text(currentIsOverdue ? "Overdue" : "Due")
-                .font(KioskType.overline)
-                .tracking(0.8)
-                .foregroundStyle(custodyTone)
-                .textCase(.uppercase)
-            Text(currentEndsAt.kioskDueStamp())
-                .font(.subheadline.weight(.semibold).monospacedDigit())
-                .foregroundStyle(KioskText.primary)
-            Text(relativeDue)
-                .font(KioskType.chip)
-                .foregroundStyle(custodyTone)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 3)
-                .background(custodyTone.opacity(0.14), in: Capsule())
-            Spacer()
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .background(KioskSurface.cardRaised, in: RoundedRectangle(cornerRadius: KioskRadius.lg))
-        .overlay(
-            RoundedRectangle(cornerRadius: KioskRadius.lg)
-                .stroke(KioskStroke.standard, lineWidth: 1)
-        )
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(currentIsOverdue ? "Overdue, due" : "Due") \(currentEndsAt.kioskDueStamp())")
-    }
-
     private var relativeDue: String {
         let rel = Self.relativeFormatter.localizedString(for: currentEndsAt, relativeTo: Date())
         return currentIsOverdue ? "\(rel)" : rel
@@ -735,7 +722,7 @@ struct KioskCheckoutDetailSheet: View {
         let first = units[0]
         let name = first.bulkSkuName ?? first.name
         let numbers = units.map { $0.unitNumber.map { "#\($0)" } ?? $0.tagName }.joined(separator: " ")
-        return chipShell {
+        return chipShell(fits: true) {
             itemThumbnail(first, size: 28)
             Text(name)
                 .font(.system(size: 15, weight: .semibold))
@@ -749,12 +736,13 @@ struct KioskCheckoutDetailSheet: View {
         .accessibilityLabel("\(name), units \(units.compactMap { $0.unitNumber.map(String.init) }.joined(separator: ", "))")
     }
 
-    private func chipShell<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+    private func chipShell<Content: View>(fits: Bool = false, @ViewBuilder _ content: () -> Content) -> some View {
         HStack(spacing: 8) { content() }
             .padding(.leading, 5)
             .padding(.trailing, 12)
             .padding(.vertical, 5)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .fixedSize(horizontal: fits, vertical: false)
+            .frame(maxWidth: fits ? nil : .infinity, alignment: .leading)
             .background(KioskSurface.card, in: RoundedRectangle(cornerRadius: KioskRadius.sm))
             .overlay(RoundedRectangle(cornerRadius: KioskRadius.sm).stroke(KioskStroke.hairline, lineWidth: 1))
             .accessibilityElement(children: .ignore)

@@ -70,7 +70,7 @@ describe("iOS kiosk changes (H1, H2, H4, H5) and staff actions (C5)", () => {
     expect(changes).not.toContain('Text("Staff: tap your name")');
     expect(changes).not.toMatch(/Wiscard/);
     expect(changes.match(/staffToken: staffToken/g)?.length ?? 0).toBeGreaterThanOrEqual(5);
-    expect(sheet).toContain('Button("Staff actions")');
+    expect(sheet).toContain('Label("Staff actions", systemImage: "lock.fill")');
     expect(changes).not.toContain("Mark returned without scanning");
     expect(changes).toContain("KioskReturnReportView(");
   });
