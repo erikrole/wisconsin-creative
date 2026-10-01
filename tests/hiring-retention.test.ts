@@ -352,10 +352,12 @@ describe("runApplicantRetention (runs inside the weekly audit-archive cron)", ()
     tx.applicant.findUnique.mockImplementation(async () => person("a1"));
     // The purge itself eats the whole working window.
     models.$transaction.mockImplementation(async (fn: (t: typeof tx) => Promise<unknown>) => {
-      await new Promise((resolve) => setTimeout(resolve, 60));
+      await new Promise((resolve) => setTimeout(resolve, 400));
       return fn(tx);
     });
-    const result = await runApplicantRetention(NOW, { budgetMs: 1560 });
+    // 400 ms of room before the per-item margin: enough for a slow CI runner to
+    // start the purge, and the purge itself uses all of it.
+    const result = await runApplicantRetention(NOW, { budgetMs: 1900 });
     expect(result.purged).toBe(1);
     expect(deleteApplicantFile).not.toHaveBeenCalled(); // queued durably, deleted by a later run
     expect(models.applicantRetentionEvent.update).not.toHaveBeenCalled();
