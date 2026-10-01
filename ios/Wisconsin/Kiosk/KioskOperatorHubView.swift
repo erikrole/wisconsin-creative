@@ -327,13 +327,13 @@ struct KioskOperatorHubView: View {
                         HubBookingCard(
                             title: pickup.title,
                             detail: "\(pickup.itemCount) item\(pickup.itemCount == 1 ? "" : "s") reserved · \(readyLine(pickup.startsAt))",
-                            status: "Pickup",
+                            status: "",
                             statusColor: KioskStatus.scheduled
                         ) {
                             Button("Pick up") { startPickup(id: pickup.id, title: pickup.title, startsAt: pickup.startsAt) }
                                 .kioskButtonRole(.primary)
                             if pickup.canChangeReservedItems {
-                                Button("Change what's reserved") {
+                                Button("Change items") {
                                     reservationTarget = KioskIntentBooking(id: pickup.id, title: pickup.title, startsAt: pickup.startsAt, endsAt: nil)
                                 }
                                 .kioskButtonRole(.secondary)
@@ -344,13 +344,13 @@ struct KioskOperatorHubView: View {
                         HubBookingCard(
                             title: reservation.title,
                             detail: readyLine(reservation.startsAt),
-                            status: "Reserved",
+                            status: "",
                             statusColor: KioskStatus.scheduled
                         ) {
                             Button("Pick up") { startPickup(id: reservation.id, title: reservation.title, startsAt: reservation.startsAt) }
                                 .kioskButtonRole(.primary)
                                 .accessibilityHint("Start pickup now")
-                            Button("Change what's reserved") {
+                            Button("Change items") {
                                 reservationTarget = KioskIntentBooking(id: reservation.id, title: reservation.title, startsAt: reservation.startsAt, endsAt: nil)
                             }
                             .kioskButtonRole(.secondary)
@@ -478,8 +478,10 @@ struct KioskOperatorHubView: View {
             } else {
                 ScrollView {
                     VStack(spacing: 10) {
-                        ForEach(shifts) { shift in
-                            HubShiftCard(event: shift) { startCheckout(for: shift) }
+                        // One card per matchup: a series (Thu and Fri vs the same
+                        // opponent) lists its dates instead of repeating the card.
+                        ForEach(hubShiftSeries(shifts), id: \.title) { series in
+                            HubShiftSeriesCard(title: series.title, events: series.events) { startCheckout(for: $0) }
                         }
                     }
                 }
@@ -890,42 +892,52 @@ private struct HubBookingCard<Actions: View>: View {
     }
 }
 
-private struct HubShiftCard: View {
-    let event: KioskCheckoutEvent
-    let action: () -> Void
+/// Groups shifts by their cleaned matchup title, keeping first-seen order.
+private func hubShiftSeries(_ shifts: [KioskCheckoutEvent]) -> [(title: String, events: [KioskCheckoutEvent])] {
+    var order: [String] = []
+    var byTitle: [String: [KioskCheckoutEvent]] = [:]
+    for shift in shifts {
+        let title = kioskEventDisplayTitle(shift.title, sportCode: nil)
+        if byTitle[title] == nil { order.append(title) }
+        byTitle[title, default: []].append(shift)
+    }
+    return order.map { ($0, byTitle[$0] ?? []) }
+}
+
+private struct HubShiftSeriesCard: View {
+    let title: String
+    let events: [KioskCheckoutEvent]
+    let action: (KioskCheckoutEvent) -> Void
 
     var body: some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 14) {
-                VStack(spacing: 0) {
-                    Text(event.startsAt.formatted(.dateTime.day()))
-                        .font(.system(size: 20, weight: .heavy))
-                        .foregroundStyle(KioskText.primary)
-                    Text(event.startsAt.formatted(.dateTime.weekday(.abbreviated)).uppercased())
-                        .font(KioskType.chipStrong)
-                        .foregroundStyle(KioskText.tertiary)
-                }
-                .frame(width: 52, height: 52)
-                .background(KioskSurface.control, in: RoundedRectangle(cornerRadius: KioskRadius.md))
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(event.title)
-                        .font(.system(size: 17, weight: .bold))
-                        .foregroundStyle(KioskText.primary)
-                        .lineLimit(2)
-                    Text([event.allDay ? "All day" : event.startsAt.formatted(.dateTime.hour().minute()), event.locationName]
-                        .compactMap { $0 }.joined(separator: " · "))
+        VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundStyle(KioskText.primary)
+                    .lineLimit(1)
+                if let location = events.first?.locationName {
+                    Text(location)
                         .font(KioskType.meta)
                         .foregroundStyle(KioskText.tertiary)
                         .lineLimit(1)
                 }
-                Spacer(minLength: 0)
             }
-            Button(action: action) {
-                Text("Check out for this")
-                    .font(.system(size: 15, weight: .semibold))
-                    .frame(maxWidth: .infinity, minHeight: 48)
+            ForEach(events) { event in
+                HStack(spacing: 12) {
+                    Text(event.startsAt.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()))
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(KioskText.primary)
+                    Text(event.allDay ? "All day" : event.startsAt.formatted(.dateTime.hour().minute()))
+                        .font(KioskType.meta)
+                        .foregroundStyle(KioskText.secondary)
+                    Spacer(minLength: 8)
+                    Button { action(event) } label: {
+                        Text("Check out").font(.system(size: 15, weight: .semibold)).padding(.horizontal, 14).frame(minHeight: 44)
+                    }
+                    .kioskButtonRole(.secondary)
+                }
             }
-            .kioskButtonRole(.secondary)
         }
         .padding(16)
         .kioskCard()
