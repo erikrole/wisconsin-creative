@@ -236,8 +236,7 @@ struct KioskHomeView: View {
     private func eventCard(_ group: EventGroup) -> some View {
         let time = group.event.displayAllDay ? "All day" : group.event.startsAt.formatted(.dateTime.hour().minute())
         var counts: [String] = []
-        if !group.pickups.isEmpty { counts.append("\(group.pickups.count) pickup\(group.pickups.count == 1 ? "" : "s")") }
-        if !group.checkouts.isEmpty { counts.append("\(group.checkouts.count) out") }
+        if !group.crew.isEmpty { counts.append("\(group.crew.count) without gear") }
         return VStack(alignment: .leading, spacing: 6) {
             // Event names run long ("… 2026 Championship Banner Drop"): one
             // sentence-case line that truncates, with time and counts on the right.
@@ -255,6 +254,7 @@ struct KioskHomeView: View {
                     .fixedSize()
             }
             .padding(.horizontal, 4)
+            if !group.pickups.isEmpty || !group.checkouts.isEmpty {
             VStack(spacing: 0) {
                 ForEach(group.pickups) { pickup in
                     HomePickupRow(pickup: pickup) { selectPickupHolder(pickup) }
@@ -262,29 +262,10 @@ struct KioskHomeView: View {
                 ForEach(group.checkouts) { checkout in
                     HomeCustodyRow(checkout: checkout) { onOpenCheckout(checkout) }
                 }
-                if !group.crew.isEmpty {
-                    HStack(spacing: 12) {
-                        HomeAvatarStack(members: group.crewMembers)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("\(group.crew.count) crew without gear")
-                                .font(KioskType.chipStrong)
-                                .foregroundStyle(KioskStatus.attention)
-                            // Names only; call times live on each person's hub.
-                            Text(group.crew.map { $0.components(separatedBy: " (call").first ?? $0 }.joined(separator: ", "))
-                                .font(KioskType.meta)
-                                .foregroundStyle(KioskText.secondary)
-                                .lineLimit(1)
-                                .truncationMode(.tail)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 10)
-                    .accessibilityElement(children: .combine)
-                }
             }
             .padding(.vertical, 6)
             .kioskCard()
+            }
         }
     }
 
@@ -328,48 +309,17 @@ struct KioskHomeView: View {
 
     // MARK: People panel
 
-    /// People with something happening today: overdue or a return due today.
-    private var todayPeople: [(user: KioskUser, reason: String, section: KioskSection)] {
-        let byId = Dictionary(users.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-        var seen = Set<String>()
-        var result: [(KioskUser, String, KioskSection)] = []
-        let now = Date()
-        for checkout in checkouts.sorted(by: { $0.endsAt < $1.endsAt }) where checkout.custodyScope != "SHARED" {
-            guard let id = checkout.requesterId, let user = byId[id], !seen.contains(id) else { continue }
-            if checkout.isOverdue || checkout.endsAt < now {
-                result.append((user, "Overdue", .problem)); seen.insert(id)
-            } else if Calendar.current.isDateInToday(checkout.endsAt) {
-                result.append((user, "Returning today", .comingBack)); seen.insert(id)
-            }
-        }
-        return result.sorted { ($0.2 == .problem ? 0 : 1) < ($1.2 == .problem ? 0 : 1) }
-    }
 
-    private var serverTodayPeople: [(user: KioskUser, reason: String, section: KioskSection)] {
-        let byId = Dictionary(users.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-        return serverToday.compactMap { tile in
-            guard let user = byId[tile.userId] else { return nil }
-            var parts: [String] = []
-            var section: KioskSection = .comingBack
-            for reason in tile.reasons {
-                switch reason {
-                case "overdue": parts.append("Overdue"); section = .problem
-                case "pickup":
-                    parts.append(tile.pickupAt.map { "Pickup at \($0.formatted(.dateTime.hour().minute()))" } ?? "Pickup ready")
-                    if section != .problem { section = .pickingUp }
-                case "return_due": parts.append(parts.isEmpty ? "Returning today" : "returning today")
-                case "shift_soon":
-                    parts.append(tile.callAt.map { "Call at \($0.formatted(.dateTime.hour().minute())) · no gear yet" } ?? "Shift soon · no gear yet")
-                    if parts.count == 1 { section = .takingOut }
-                default: break
-                }
-            }
-            return (user, parts.joined(separator: " · "), section)
-        }
-    }
 
     private var peoplePanel: some View {
-        let today = Array((serverToday.isEmpty ? todayPeople : serverTodayPeople).prefix(6))
+        // Overdue, pickups, and returns already have rows on the left; the
+        // Today tiles only add people the left column can't show: a call
+        // soon with no gear yet (Erik, 2026-10-01: no duplication).
+        let today = Array(serverToday.filter { $0.reasons.contains("shift_soon") }.compactMap { tile -> (user: KioskUser, reason: String, section: KioskSection)? in
+            guard let user = users.first(where: { $0.id == tile.userId }) else { return nil }
+            let call = tile.callAt.map { "Call at \($0.formatted(.dateTime.hour().minute())) · no gear yet" } ?? "Shift soon · no gear yet"
+            return (user, call, .takingOut)
+        }.prefix(6))
         let labels = homeShortNames(for: users)
         let gridLabels = homeGridNames(for: users)
         // Photos at every roster size (Erik, 2026-09-30); 5 columns past 24 people,
@@ -790,29 +740,5 @@ private struct HomeRowAvatar: View {
             .overlay(Circle().stroke(ring, lineWidth: 2))
             .frame(width: 34, height: 34)
             .accessibilityHidden(true)
-    }
-}
-
-/// Overlapping avatars for the game-day "Crew without gear" line.
-private struct HomeAvatarStack: View {
-    let members: [KioskEvent.CrewMember]
-    private let shown = 3
-
-    var body: some View {
-        HStack(spacing: -4) {
-            ForEach(members.prefix(shown)) { member in
-                KioskAvatar(url: member.avatarUrl, initials: member.initials ?? homeInitials(member.name), size: 34)
-                    .overlay(Circle().stroke(KioskSurface.card, lineWidth: 2))
-            }
-            if members.count > shown {
-                Text("+\(members.count - shown)")
-                    .font(KioskType.chipStrong)
-                    .foregroundStyle(KioskText.secondary)
-                    .frame(width: 34, height: 34)
-                    .background(KioskSurface.placeholder, in: Circle())
-                    .overlay(Circle().stroke(KioskSurface.card, lineWidth: 2))
-            }
-        }
-        .accessibilityHidden(true)
     }
 }

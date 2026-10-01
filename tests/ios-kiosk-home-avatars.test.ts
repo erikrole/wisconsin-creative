@@ -10,9 +10,9 @@ describe("iOS kiosk home list avatars", () => {
     expect(home).toContain("KioskAvatar(url: url, initials: initials, size: 30)");
   });
 
-  it("shows crew-without-gear avatars on game-day cards", () => {
-    expect(home).toContain("HomeAvatarStack(members: group.crewMembers)");
-    expect(home).toContain("KioskAvatar(url: member.avatarUrl");
+  it("keeps crew without gear to a count in the game-day header", () => {
+    expect(home).toContain('without gear")');
+    expect(home).not.toContain("HomeAvatarStack");
   });
 
   it("decodes the avatar fields the dashboard route already projects", () => {
