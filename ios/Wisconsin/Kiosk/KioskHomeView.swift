@@ -300,7 +300,7 @@ struct KioskHomeView: View {
             KioskSectionHeader(title: "Coming up", count: "\(upcoming.count)")
             VStack(spacing: 0) {
                 ForEach(upcoming) { reservation in
-                    HomeUpcomingRow(reservation: reservation) { selectUpcomingHolder(reservation) }
+                    HomeUpcomingRow(reservation: reservation, canOpen: reservation.requester.map { r in users.contains { $0.id == r.id } } ?? false) { selectUpcomingHolder(reservation) }
                 }
             }
             .padding(.vertical, 6)
@@ -685,9 +685,12 @@ private struct HomePickupRow: View {
 
 private struct HomeUpcomingRow: View {
     let reservation: KioskDashboard.UpcomingReservation
+    /// False when the holder isn't on the kiosk roster: no hub to open.
+    var canOpen = true
     let action: () -> Void
 
     private var isShared: Bool { reservation.custodyScope == "SHARED" }
+    private var isPlain: Bool { isShared || !canOpen }
 
     private var holder: String {
         isShared ? "Shared" : homePersonName(reservation.requester?.name ?? "")
@@ -706,7 +709,7 @@ private struct HomeUpcomingRow: View {
     // SHARED reservations carry no requester, so there is no hub to open:
     // render them as plain, non-interactive rows (no chevron, no button).
     @ViewBuilder var body: some View {
-        if isShared {
+        if isPlain {
             content
                 .padding(.horizontal, 6)
                 .accessibilityElement(children: .combine)
@@ -741,7 +744,7 @@ private struct HomeUpcomingRow: View {
                     .font(KioskType.chipStrong)
                     .foregroundStyle(KioskText.secondary)
                     .lineLimit(1)
-                if !isShared {
+                if !isPlain {
                     Image(systemName: "chevron.right")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(KioskText.muted)

@@ -775,6 +775,7 @@ struct KioskIdleView: View {
                 if unavailableSections.contains("stats") { value.stats = previous.stats }
                 if unavailableSections.contains("checkouts") { value.checkouts = previous.checkouts }
                 if unavailableSections.contains("activeItems") { value.activeItems = previous.activeItems }
+                if unavailableSections.contains("upcoming") { value.upcoming = previous.upcoming }
             }
             dashboard = value
             #if DEBUG

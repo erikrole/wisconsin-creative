@@ -55,7 +55,7 @@ struct KioskDashboard: Decodable {
     let today: [TodayTile]
     let nextUp: NextUp?
     /// Reservations after today (next 14 days); additive, absent = empty.
-    let upcoming: [UpcomingReservation]
+    var upcoming: [UpcomingReservation]
 
     enum CodingKeys: String, CodingKey {
         case stats
