@@ -328,7 +328,7 @@ export function CalendarView({
   ].join(" · ");
 
   return (
-    <div className="mb-1" data-schedule-view="calendar">
+    <div className="schedule-enter mb-1" data-schedule-view="calendar">
       {/* ── Calendar Header ── */}
       <SchedulePeriodNavigator
         title={calMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })}

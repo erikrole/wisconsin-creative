@@ -39,7 +39,7 @@ describe("Schedule interaction-detail contracts", () => {
     const list = source("src/app/(app)/schedule/_components/ListView.tsx");
 
     expect(list).toContain("<span>Coverage</span>");
-    expect(list).toContain('<span className="text-right">Crew</span>');
+    expect(list).toContain('<span className="block text-right">Crew</span>');
     expect(list).toContain("<CrewSummary entry={entry} />");
     expect(list).toContain("Manage crew");
     expect(list).toContain("Set up crew");
