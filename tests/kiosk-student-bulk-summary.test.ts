@@ -86,6 +86,7 @@ describe("kiosk student bulk summaries", () => {
     expect(json.checkouts[0].items).toEqual([{
       name: "Cable Ties x1000000",
       tagName: "x1000000",
+      imageUrl: null,
     }]);
     expect(json.checkouts[0].items).toHaveLength(1);
   });

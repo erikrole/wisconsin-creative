@@ -73,7 +73,7 @@ export const GET = withKiosk<{ userId: string }>(async (req, { kiosk, params }) 
           where: { allocationStatus: "active" },
           select: {
             asset: {
-              select: { assetTag: true, name: true },
+              select: { assetTag: true, name: true, imageUrl: true },
             },
           },
         },
@@ -81,7 +81,7 @@ export const GET = withKiosk<{ userId: string }>(async (req, { kiosk, params }) 
           select: {
             checkedOutQuantity: true,
             plannedQuantity: true,
-            bulkSku: { select: { name: true } },
+            bulkSku: { select: { name: true, imageUrl: true } },
           },
         },
       },
@@ -185,11 +185,13 @@ export const GET = withKiosk<{ userId: string }>(async (req, { kiosk, params }) 
       items: c.serializedItems.map((si) => ({
         name: si.asset.name || si.asset.assetTag,
         tagName: si.asset.assetTag,
+        imageUrl: si.asset.imageUrl ?? null,
       })).concat(c.bulkItems.map((bi) => {
         const quantity = bi.checkedOutQuantity || bi.plannedQuantity;
         return {
           name: quantity === 1 ? bi.bulkSku.name : `${bi.bulkSku.name} x${quantity}`,
           tagName: `x${quantity}`,
+          imageUrl: bi.bulkSku.imageUrl ?? null,
         };
       })),
       endsAt: c.endsAt,

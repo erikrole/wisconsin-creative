@@ -651,16 +651,20 @@ struct KioskStudentCheckout: Decodable, Identifiable {
     struct StudentItem: Decodable {
         let name: String
         let tagName: String
+        /// Additive; older servers omit it.
+        let imageUrl: String?
 
         enum CodingKeys: String, CodingKey {
             case name
             case tagName
+            case imageUrl
         }
 
         init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             name = try container.decodeIfPresent(String.self, forKey: .name) ?? "Item"
             tagName = try container.decodeIfPresent(String.self, forKey: .tagName) ?? name
+            imageUrl = try container.decodeIfPresent(String.self, forKey: .imageUrl)
         }
     }
 

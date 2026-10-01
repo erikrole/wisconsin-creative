@@ -299,7 +299,8 @@ struct KioskOperatorHubView: View {
                             detail: itemsLine(checkout),
                             status: dueStatus(checkout),
                             statusColor: checkout.isOverdue ? KioskStatus.problem
-                                : (Calendar.current.isDateInToday(checkout.endsAt) ? KioskStatus.attention : KioskText.secondary)
+                                : (Calendar.current.isDateInToday(checkout.endsAt) ? KioskStatus.attention : KioskText.secondary),
+                            items: checkout.items
                         ) {
                             Button("Return") { startReturn(drawerContext(for: checkout)) }
                                 .kioskButtonRole(.primary)
@@ -864,20 +865,26 @@ private struct HubBookingCard<Actions: View>: View {
     let detail: String
     let status: String
     let statusColor: Color
+    /// When set, the gear shows as photo + asset tag chips instead of `detail`.
+    var items: [KioskStudentCheckout.StudentItem]? = nil
     @ViewBuilder var actions: () -> Actions
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text(title)
                         .font(.system(size: 19, weight: .bold))
                         .foregroundStyle(KioskText.primary)
                         .lineLimit(1)
-                    Text(detail)
-                        .font(KioskType.meta)
-                        .foregroundStyle(KioskText.tertiary)
-                        .lineLimit(2)
+                    if let items, !items.isEmpty {
+                        HubItemChips(items: items)
+                    } else {
+                        Text(detail)
+                            .font(KioskType.meta)
+                            .foregroundStyle(KioskText.tertiary)
+                            .lineLimit(2)
+                    }
                 }
                 Spacer(minLength: 8)
                 Text(status)
@@ -897,7 +904,7 @@ private func hubShiftSeries(_ shifts: [KioskCheckoutEvent]) -> [(title: String, 
     var order: [String] = []
     var byTitle: [String: [KioskCheckoutEvent]] = [:]
     for shift in shifts {
-        let title = kioskEventDisplayTitle(shift.title, sportCode: nil)
+        let title = kioskEventDisplayTitle(shift.title, sportCode: shift.sportCode)
         if byTitle[title] == nil { order.append(title) }
         byTitle[title, default: []].append(shift)
     }
@@ -916,7 +923,7 @@ private struct HubShiftSeriesCard: View {
                     .font(.system(size: 17, weight: .bold))
                     .foregroundStyle(KioskText.primary)
                     .lineLimit(1)
-                if let location = events.first?.locationName {
+                if let location = events.first?.locationName?.components(separatedBy: " - ").first, !location.isEmpty {
                     Text(location)
                         .font(KioskType.meta)
                         .foregroundStyle(KioskText.tertiary)
@@ -942,5 +949,41 @@ private struct HubShiftSeriesCard: View {
         .padding(16)
         .kioskCard()
         .accessibilityElement(children: .contain)
+    }
+}
+
+/// Up to four photo + asset-tag chips, then "+N".
+private struct HubItemChips: View {
+    let items: [KioskStudentCheckout.StudentItem]
+    private let shown = 4
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ForEach(Array(items.prefix(shown).enumerated()), id: \.offset) { _, item in
+                HStack(spacing: 6) {
+                    KioskItemThumbnail(imageUrl: item.imageUrl, size: 26)
+                    Text(label(item))
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(KioskText.secondary)
+                        .lineLimit(1)
+                }
+                .padding(.leading, 3)
+                .padding(.trailing, 9)
+                .padding(.vertical, 3)
+                .background(KioskSurface.cardRaised, in: Capsule())
+            }
+            if items.count > shown {
+                Text("+\(items.count - shown)")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(KioskText.tertiary)
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(items.map(\.name).joined(separator: ", "))
+    }
+
+    /// Asset tag; counted stock ("x2") reads as its name instead.
+    private func label(_ item: KioskStudentCheckout.StudentItem) -> String {
+        item.tagName.hasPrefix("x") && Int(item.tagName.dropFirst()) != nil ? item.name : item.tagName
     }
 }
