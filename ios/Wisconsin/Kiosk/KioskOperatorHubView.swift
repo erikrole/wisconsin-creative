@@ -966,7 +966,7 @@ private struct HubShiftSeriesCard: View {
                     if let booked = existing(event) {
                         if let go = booked.action {
                             Button(action: go) {
-                                Text(booked.label).font(.system(size: 15, weight: .semibold)).padding(.horizontal, 14).frame(minHeight: 44)
+                                Text(booked.label).font(.system(size: 15, weight: .semibold)).lineLimit(1).fixedSize().padding(.horizontal, 14).frame(minHeight: 44)
                             }
                             .kioskButtonRole(.primary)
                         } else {
@@ -976,7 +976,7 @@ private struct HubShiftSeriesCard: View {
                         }
                     } else {
                         Button { action(event) } label: {
-                            Text("Check out").font(.system(size: 15, weight: .semibold)).padding(.horizontal, 14).frame(minHeight: 44)
+                            Text("Check out").font(.system(size: 15, weight: .semibold)).lineLimit(1).fixedSize().padding(.horizontal, 14).frame(minHeight: 44)
                         }
                         .kioskButtonRole(.secondary)
                     }
