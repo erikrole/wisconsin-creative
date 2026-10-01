@@ -48,7 +48,8 @@ describe("iOS kiosk checkout details polish", () => {
     expect(details).toContain('Text("BACK BY")');
     expect(details).toContain('Button("Other date")');
     expect(details).toContain("struct KioskOtherDateSheet");
-    expect(details).toContain('KioskPrimaryPill(title: "Continue to scan"');
+    expect(details).toContain('var continueTitle: String = "Continue to scan"');
+    expect(details).toContain("KioskPrimaryPill(title: continueTitle");
     expect(checkout).toContain("static let linkedEventReturnBuffer: TimeInterval = 90 * 60");
     expect(checkout).toContain("return KioskQuarterHour.roundedUp(proposed)");
     expect(checkout).toContain("@State private var checkoutContextReady = false");

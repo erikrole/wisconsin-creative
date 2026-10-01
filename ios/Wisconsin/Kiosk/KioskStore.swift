@@ -148,6 +148,9 @@ final class KioskStore {
 
     /// True when the inactivity warning should be shown ahead of the reset.
     var inactivityWarningVisible: Bool = false
+    /// The pickup screen's details editor (the checkout details step) is up,
+    /// so the shell opts out of keyboard avoidance the way checkout step 1 does.
+    var isEditingPickupDetails: Bool = false
     /// Starts 10 minutes out so a fresh launch shows home instead of
     /// dropping straight into standby (Erik, 2026-10-01).
     var sleepDismissedUntil: Date? = Date().addingTimeInterval(10 * 60)

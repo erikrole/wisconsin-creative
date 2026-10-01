@@ -16,6 +16,7 @@ struct KioskCheckoutDetailsStep: View {
     @Binding var focusedField: KioskCheckoutFocusedField?
     let canContinue: Bool
     let blockingRequirement: String?
+    var continueTitle: String = "Continue to scan"
     let onContinue: () -> Void
 
     @State private var showOtherDate = KioskCaptureSeed.otherDate
@@ -248,7 +249,7 @@ struct KioskCheckoutDetailsStep: View {
                     .foregroundStyle(KioskText.tertiary)
                     .frame(maxWidth: .infinity)
             }
-            KioskPrimaryPill(title: "Continue to scan", isEnabled: canContinue, action: onContinue)
+            KioskPrimaryPill(title: continueTitle, isEnabled: canContinue, action: onContinue)
         }
         .padding(.top, 4)
     }

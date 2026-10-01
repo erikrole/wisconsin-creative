@@ -57,6 +57,7 @@ export const GET = withKiosk<{ id: string }>(async (_req, { params }) => {
       updatedAt: true,
       locationId: true,
       endsAt: true,
+      eventId: true,
       scanEvents: {
         where: {
           success: true,
@@ -356,6 +357,7 @@ export const GET = withKiosk<{ id: string }>(async (_req, { params }) => {
       : booking.requesterUserId,
     custodyScope: booking.custodyScope,
     endsAt: booking.endsAt,
+    eventId: booking.eventId ?? null,
     updatedAt: booking.updatedAt,
     locationId: booking.locationId,
     scanSummary: {

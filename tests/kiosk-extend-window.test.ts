@@ -45,6 +45,18 @@ function client(opts: {
 }
 
 describe("kiosk extend window", () => {
+  it("at pickup, keeps the turnaround buffer before the next claim", async () => {
+    const tx = client({
+      serialized: [{ assetId: "a1", assetTag: "CAM-1", name: "FX3" }],
+      allocations: [{ assetId: "a1", startsAt: at(5), endsAt: at(9), custodyScope: "PERSON", requester: "Erik Role" }],
+    });
+    const base = await tx.booking.findFirst();
+    tx.booking.findFirst.mockResolvedValue({ ...base, kind: "RESERVATION", status: "BOOKED" });
+    const window = await kioskExtendWindow(tx as never, "rv-1", now);
+    expect(window.maxEndsAt).toEqual(at(4));
+    expect(tx.booking.findFirst.mock.calls[1]![0].where.OR).toContainEqual({ kind: "RESERVATION", status: "BOOKED" });
+  });
+
   it("returns null when nothing claims the gear", async () => {
     const tx = client({ serialized: [{ assetId: "a1", assetTag: "CAM-1", name: "FX3" }] });
     await expect(kioskExtendWindow(tx as never, "co-1", now)).resolves.toEqual({ currentEndsAt: endsAt, maxEndsAt: null });

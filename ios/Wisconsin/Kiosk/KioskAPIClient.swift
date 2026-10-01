@@ -368,6 +368,46 @@ struct KioskAPI {
         return try await perform(req)
     }
 
+    /// Pickup context card: rename, link or unlink an event, or move the
+    /// due-back time before pickup. `eventId` nil leaves the link alone;
+    /// `.some(nil)` unlinks (sent as an explicit JSON null).
+    func kioskUpdatePickupDetails(
+        id: String,
+        actorId: String,
+        expectedUpdatedAt: Date,
+        title: String?,
+        eventId: String??,
+        endsAt: Date?
+    ) async throws -> KioskPickupDetailsResult {
+        struct Body: Encodable {
+            let actorId: String
+            let expectedUpdatedAt: String
+            let title: String?
+            let eventId: String??
+            let endsAt: String?
+
+            func encode(to encoder: Encoder) throws {
+                var c = encoder.container(keyedBy: CodingKeys.self)
+                try c.encode(actorId, forKey: .actorId)
+                try c.encode(expectedUpdatedAt, forKey: .expectedUpdatedAt)
+                try c.encodeIfPresent(title, forKey: .title)
+                try c.encodeIfPresent(endsAt, forKey: .endsAt)
+                if let eventId { try c.encode(eventId, forKey: .eventId) }
+            }
+
+            enum CodingKeys: String, CodingKey { case actorId, expectedUpdatedAt, title, eventId, endsAt }
+        }
+        var req = request(path: "/api/kiosk/pickup/\(id)/details", method: "PATCH")
+        req.httpBody = try JSONEncoder().encode(Body(
+            actorId: actorId,
+            expectedUpdatedAt: isoString(from: expectedUpdatedAt),
+            title: title,
+            eventId: eventId,
+            endsAt: endsAt.map { isoString(from: $0) }
+        ))
+        return try await perform(req)
+    }
+
     /// H1: how late this checkout can go before its gear is claimed. The
     /// PATCH above still validates the chosen time.
     func kioskExtendWindow(checkoutId: String) async throws -> KioskExtendWindow {

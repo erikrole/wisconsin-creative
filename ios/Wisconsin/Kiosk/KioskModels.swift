@@ -813,6 +813,9 @@ struct KioskCheckoutDetail: Decodable {
     let updatedAt: Date?
     let locationId: String?
     let endsAt: Date
+    /// The linked event, if any (pickup "What's this for?" edit). Optional so
+    /// an older server that omits it still decodes.
+    let eventId: String?
     let scanSummary: ScanSummary?
     let items: [ReturnItem]
 
@@ -860,6 +863,21 @@ struct KioskActiveCheckoutMutationResult: Decodable {
     let success: Bool
     let message: String?
     let error: String?
+}
+
+/// `PATCH /api/kiosk/pickup/[id]/details`: the booking after a pickup
+/// title / event / due-time edit.
+struct KioskPickupDetailsResult: Decodable {
+    let success: Bool
+    let booking: Booking
+
+    struct Booking: Decodable {
+        let id: String
+        let title: String
+        let endsAt: Date
+        let updatedAt: Date
+        let eventId: String?
+    }
 }
 
 /// `GET /api/kiosk/checkout/[id]/extend-window` (H1).

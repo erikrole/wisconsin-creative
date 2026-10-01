@@ -1185,6 +1185,14 @@ enum KioskFixtures {
         """
     }
 
+    /// Pickup context-card edit: the saved booking.
+    static func pickupDetailsJSON(id: String) -> String {
+        """
+        {"success":true,"booking":{"id":"\(id)","title":"Wrestling Duals Kit",
+         "endsAt":"\(iso(hours(8)))","updatedAt":"\(iso(hours(0)))","eventId":null}}
+        """
+    }
+
     /// Redesign H5: what is still reserved on the Wrestling Duals pickup.
     static func reservationManifestJSON(id: String) -> String {
         """
@@ -1384,6 +1392,11 @@ final class KioskFixtureURLProtocol: URLProtocol {
             }
             if path.hasPrefix("/api/kiosk/student/") {
                 return (200, KioskFixtures.studentContextJSON())
+            }
+            if path.hasPrefix("/api/kiosk/pickup/"), path.hasSuffix("/details") {
+                let id = path.replacingOccurrences(of: "/api/kiosk/pickup/", with: "")
+                    .replacingOccurrences(of: "/details", with: "")
+                return (200, KioskFixtures.pickupDetailsJSON(id: id))
             }
             if path.hasSuffix("/extend-window") {
                 return (200, KioskFixtures.extendWindowJSON())

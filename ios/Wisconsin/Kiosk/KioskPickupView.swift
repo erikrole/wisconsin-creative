@@ -35,6 +35,19 @@ struct KioskPickupView: View {
     @State private var pendingBlock: PendingBlockedAdd?
     @State private var pendingRemove: PendingRemove?
     @State private var showFinishConfirm = false
+    // Context-card edit: the checkout details step, reused for title / event
+    // and due-back time before pickup.
+    @State private var editingDetails = false
+    @State private var editEvents: [KioskCheckoutEvent] = []
+    @State private var isLoadingEditEvents = false
+    @State private var editLinked = false
+    @State private var editEventId: String?
+    @State private var editPurpose = ""
+    @State private var editDueBackAt = Date()
+    @State private var editFocus: KioskCheckoutFocusedField?
+    @State private var editWindow: KioskExtendWindow?
+    @State private var isSavingDetails = false
+    @State private var editError: String?
 
     struct PendingOffPlanAdd: Identifiable, Equatable {
         let scanValue: String
@@ -117,6 +130,19 @@ struct KioskPickupView: View {
     }
 
     var body: some View {
+        // The editor covers the pickup instead of replacing it, so the scan
+        // claim, queue, and loaded detail stay alive underneath.
+        pickupBody
+            .opacity(editingDetails ? 0 : 1)
+            .overlay {
+                if editingDetails, let detail {
+                    detailsEditor(detail)
+                        .background(KioskSurface.base)
+                }
+            }
+    }
+
+    private var pickupBody: some View {
         KioskTaskScaffold(header: KioskTaskHeader(
             title: "Pickup",
             subtitle: headerSubtitle,
@@ -155,12 +181,14 @@ struct KioskPickupView: View {
             }
         }
         .overlay(alignment: .bottom) {
+            if !editingDetails {
             HIDScannerField(
                 onScan: { store.scanner.receive($0) },
                 onFocusChange: { scannerHasFocus = $0 }
             )
                 .frame(width: 1, height: 1)
                 .opacity(0)
+            }
         }
         .task {
             store.scanner.claim(.pickup) { handleScan($0) }
@@ -170,7 +198,7 @@ struct KioskPickupView: View {
             applyFixtureMoment()
             #endif
         }
-        .onDisappear { scanQueue.reset(); store.scanner.release(.pickup) }
+        .onDisappear { scanQueue.reset(); store.scanner.release(.pickup); store.isEditingPickupDetails = false }
         .sheet(isPresented: $showCamera) {
             KioskBarcodeCameraView(
                 feedbackMessage: lastResult?.message,
@@ -192,7 +220,11 @@ struct KioskPickupView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             if let detail {
-                KioskContextCard(title: detail.title, detail: contextLine(detail))
+                KioskContextCard(
+                    title: detail.title,
+                    detail: contextLine(detail),
+                    onEdit: isShared || isConfirming ? nil : { openDetailsEditor(detail) }
+                )
             }
             stage
                 .animation(KioskMotion.confirm(reduceMotion), value: lastAccepted)
@@ -509,7 +541,7 @@ struct KioskPickupView: View {
     }
 
     private func processNextScanIfNeeded() {
-        guard pendingAdd == nil, pendingBlock == nil, pendingRemove == nil else { return }
+        guard pendingAdd == nil, pendingBlock == nil, pendingRemove == nil, !editingDetails else { return }
         guard let items = detail?.items, let entry = scanQueue.next() else { return }
         let flow = store.flowGeneration
         Task {
@@ -843,6 +875,134 @@ struct KioskPickupView: View {
         (detail?.items ?? []).filter { confirmedIds.contains($0.id) }.map { item in
             if let unit = confirmedItemOverrides[item.id] { return acceptedTitle(unit) }
             return item.itemListPrimaryTitle
+        }
+    }
+
+    // MARK: - Details edit (title / event, due-back time)
+
+    private func detailsEditor(_ detail: KioskCheckoutDetail) -> some View {
+        VStack(spacing: 0) {
+            KioskTaskHeader(
+                title: "Pickup details",
+                subtitle: headerSubtitle,
+                avatarURL: picker?.avatarUrl,
+                avatarInitials: picker?.initials,
+                backAccessibilityLabel: "Back to pickup without saving",
+                onBack: { closeDetailsEditor() }
+            )
+            KioskCheckoutDetailsStep(
+                events: editEvents,
+                isLoadingEvents: isLoadingEditEvents,
+                isLinkedToEvent: $editLinked,
+                selectedEventId: $editEventId,
+                customPurpose: $editPurpose,
+                dueBackAt: $editDueBackAt,
+                focusedField: $editFocus,
+                canContinue: editBlockingRequirement(detail) == nil && !isSavingDetails,
+                blockingRequirement: isSavingDetails ? "Saving…" : editBlockingRequirement(detail),
+                continueTitle: "Save changes",
+                onContinue: { Task { await saveDetails(detail) } }
+            )
+        }
+        .onChange(of: editEventId) { _, _ in applyEditEventDueTime() }
+        .onChange(of: editLinked) { _, linked in
+            editError = nil
+            if linked {
+                applyEditEventDueTime()
+            } else {
+                editEventId = nil
+                DispatchQueue.main.async { editFocus = .customPurpose }
+            }
+        }
+        .onChange(of: editDueBackAt) { _, _ in editError = nil }
+        .onChange(of: editPurpose) { _, _ in editError = nil }
+    }
+
+    /// Latest due time the server will accept: the extend window's limit, or
+    /// the current due time when the gear can't go any later.
+    private func editLatestEndsAt(_ detail: KioskCheckoutDetail) -> Date? {
+        guard let max = editWindow?.maxEndsAt else { return nil }
+        return Swift.max(max, detail.endsAt)
+    }
+
+    private func editBlockingRequirement(_ detail: KioskCheckoutDetail) -> String? {
+        if let editError { return editError }
+        if editLinked, editEventId == nil { return "Pick an event, or choose Something else" }
+        if !editLinked, editPurpose.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "Say what this is for"
+        }
+        if editDueBackAt <= Date().addingTimeInterval(60) { return "Pick a return time in the future" }
+        if let latest = editLatestEndsAt(detail), editDueBackAt > latest.addingTimeInterval(30) {
+            let item = editWindow?.limitingItem.map { " \($0.assetTag) is reserved after that." } ?? ""
+            return "Can go until \(KioskDueCopy.midSentence(latest)).\(item)"
+        }
+        return nil
+    }
+
+    private func openDetailsEditor(_ detail: KioskCheckoutDetail) {
+        store.resetInactivity()
+        editLinked = detail.eventId != nil
+        editEventId = detail.eventId
+        editPurpose = detail.eventId == nil ? detail.title : ""
+        editDueBackAt = detail.endsAt
+        editFocus = nil
+        editError = nil
+        editWindow = nil
+        editingDetails = true
+        store.isEditingPickupDetails = true
+        Task {
+            async let window = try? KioskAPI.shared.kioskExtendWindow(checkoutId: bookingId)
+            if editEvents.isEmpty {
+                isLoadingEditEvents = true
+                editEvents = (try? await KioskAPI.shared.kioskCheckoutEvents(requesterId: userId)) ?? []
+                isLoadingEditEvents = false
+            }
+            editWindow = await window
+        }
+    }
+
+    private func closeDetailsEditor() {
+        editingDetails = false
+        editFocus = nil
+        store.isEditingPickupDetails = false
+        processNextScanIfNeeded()
+    }
+
+    private func applyEditEventDueTime() {
+        guard editLinked, let editEventId,
+              let end = editEvents.first(where: { $0.id == editEventId })?.endsAt,
+              let due = KioskCheckoutDefaults.dueBackDate(afterEventEndsAt: end) else { return }
+        editDueBackAt = due
+    }
+
+    private func saveDetails(_ detail: KioskCheckoutDetail) async {
+        let purpose = editPurpose.trimmingCharacters(in: .whitespacesAndNewlines)
+        let eventChange: String?? = editLinked
+            ? (editEventId != detail.eventId ? .some(editEventId) : nil)
+            : (detail.eventId != nil ? .some(nil) : nil)
+        let title: String? = !editLinked && purpose != detail.title ? purpose : nil
+        let endsAt: Date? = abs(editDueBackAt.timeIntervalSince(detail.endsAt)) > 30 ? editDueBackAt : nil
+        guard eventChange != nil || title != nil || endsAt != nil else {
+            closeDetailsEditor()
+            return
+        }
+        isSavingDetails = true
+        defer { isSavingDetails = false }
+        do {
+            _ = try await KioskAPI.shared.kioskUpdatePickupDetails(
+                id: bookingId,
+                actorId: userId,
+                expectedUpdatedAt: detail.updatedAt ?? detail.endsAt,
+                title: title,
+                eventId: eventChange,
+                endsAt: endsAt
+            )
+            // Reload keeps staged scans: they live on the server and come
+            // back as `returned` items.
+            await loadDetail(showLoading: false)
+            closeDetailsEditor()
+        } catch {
+            editError = (error as? APIError)?.errorDescription ?? "Could not save. Try again."
         }
     }
 

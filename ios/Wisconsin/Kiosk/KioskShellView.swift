@@ -55,6 +55,7 @@ struct KioskShellView: View {
     /// (redesign I6), so the centered popup stays off that screen.
     private var showsInlineKeyboardTip: Bool {
         if case .checkout = store.screen { return true }
+        if case .pickup = store.screen { return store.isEditingPickupDetails }
         return false
     }
 

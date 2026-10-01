@@ -441,6 +441,10 @@ struct KioskContextCard: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
         .kioskCard()
+        // With an edit action, the whole card opens it, not just the button.
+        .contentShape(Rectangle())
+        .onTapGesture { onEdit?() }
+        .accessibilityAddTraits(onEdit == nil ? [] : .isButton)
     }
 }
 
