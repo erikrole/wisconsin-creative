@@ -39,9 +39,9 @@ export function missingEnvironmentReason(gitBranch, gh = (...args) => execFileSy
   } catch { return []; }
   if (!enabled) return ["Managed previews are not enabled (repository variable MANAGED_PREVIEWS_ENABLED is not 'true'), so CI will not create environments. An authorized operator must enable it (docs/PREVIEW_ENVIRONMENTS.md, cutover step 2)."];
   try {
-    // Fork PRs never receive environments, so only same-repository PRs count.
-    const prs = JSON.parse(gh("pr", "list", "--head", gitBranch, "--state", "open", "--json", "number,isCrossRepository")).filter((pr) => !pr.isCrossRepository);
-    return [prs.length ? `PR #${prs[0].number} is open: wait for CI and the Managed previews run to pass.` : `Branch ${gitBranch} has no open same-repository PR; push it and open one.`];
+    // Previews only run for same-repository PRs that target main.
+    const prs = JSON.parse(gh("pr", "list", "--head", gitBranch, "--state", "open", "--base", "main", "--json", "number,isCrossRepository")).filter((pr) => !pr.isCrossRepository);
+    return [prs.length ? `PR #${prs[0].number} is open: wait for CI and the Managed previews run to pass.` : `Branch ${gitBranch} has no open same-repository PR targeting main; push it and open one.`];
   } catch { return []; }
 }
 export async function fetchPreviewHandoff(gitBranch, { api = new VercelPreviewApi(), config = readInfrastructureConfig() } = {}) {

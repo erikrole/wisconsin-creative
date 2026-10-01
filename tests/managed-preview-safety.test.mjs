@@ -121,7 +121,12 @@ describe("missing preview environment diagnosis", () => {
     expect(reason).toMatch(/not enabled/); expect(rest).toEqual([]);
   });
   it("ignores fork PRs", () => {
-    expect(missingEnvironmentReason("b", gh([{ name: "MANAGED_PREVIEWS_ENABLED", value: "true" }], [{ number: 2, isCrossRepository: true }]))[0]).toMatch(/no open same-repository PR/);
+    expect(missingEnvironmentReason("b", gh([{ name: "MANAGED_PREVIEWS_ENABLED", value: "true" }], [{ number: 2, isCrossRepository: true }]))[0]).toMatch(/no open same-repository PR targeting main/);
+  });
+  it("only asks gh for PRs targeting main", () => {
+    let seen;
+    missingEnvironmentReason("b", (...args) => { if (args[0] === "pr") seen = args; return args[0] === "variable" ? JSON.stringify([{ name: "MANAGED_PREVIEWS_ENABLED", value: "true" }]) : "[]"; });
+    expect(seen).toContain("--base"); expect(seen[seen.indexOf("--base") + 1]).toBe("main");
   });
   it("falls back to the generic hint when gh is unusable", () => {
     expect(missingEnvironmentReason("b", gh(new Error("no gh"), []))).toEqual([]);
