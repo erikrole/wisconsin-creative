@@ -357,38 +357,43 @@ struct KioskBatteryRow: View {
     var imageUrl: String? = nil
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 10) {
+        // Same columns as KioskItemRow: check, 40 pt photo, then the text.
+        HStack(alignment: .top, spacing: 12) {
+            KioskCheckMark(isDone: scanned >= total && total > 0, section: section)
+                .padding(.top, 8)
+            Group {
                 if imageUrl != nil {
                     KioskItemThumbnail(imageUrl: imageUrl, size: 40)
                 } else {
                     Image(systemName: "battery.75percent")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(scanned >= total && total > 0 ? section.accent : KioskText.tertiary)
-                        .frame(width: 22)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(KioskText.tertiary)
+                        .frame(width: 40, height: 40)
+                        .background(KioskSurface.placeholder, in: RoundedRectangle(cornerRadius: KioskRadius.sm))
                 }
-                Text("\(title) · \(scanned) of \(total)")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(KioskText.primary)
-                Spacer(minLength: 0)
             }
-            if !units.isEmpty {
-                FlowingChips(spacing: 6) {
-                    ForEach(units) { unit in
-                        KioskBatteryUnitChip(label: unit.label, isScanned: unit.isScanned, section: section)
+            VStack(alignment: .leading, spacing: 8) {
+                Text("\(title) · \(scanned) of \(total)")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(KioskText.primary)
+                    .frame(minHeight: 40, alignment: .leading)
+                if !units.isEmpty {
+                    FlowingChips(spacing: 6) {
+                        ForEach(units) { unit in
+                            KioskBatteryUnitChip(label: unit.label, isScanned: unit.isScanned, section: section)
+                        }
                     }
                 }
-                .padding(.leading, 32)
+                if let note {
+                    Text(note)
+                        .font(KioskType.meta)
+                        .foregroundStyle(KioskText.tertiary)
+                }
             }
-            if let note {
-                Text(note)
-                    .font(KioskType.meta)
-                    .foregroundStyle(KioskText.tertiary)
-                    .padding(.leading, 32)
-            }
+            Spacer(minLength: 0)
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 12)
+        .padding(.vertical, 8)
         .accessibilityElement(children: .combine)
     }
 }
