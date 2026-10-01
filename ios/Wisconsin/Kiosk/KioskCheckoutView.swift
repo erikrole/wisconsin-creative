@@ -79,6 +79,8 @@ struct KioskCheckoutView: View {
     /// on the stage. Cleared on the same timer as the feedback banner.
     @State private var lastAccepted: KioskAcceptedScan?
     @State private var dueBackAt = KioskCheckoutDefaults.defaultDueBackDate()
+    /// No preselected return time: Continue waits for a tap (Erik, 2026-10-01).
+    @State private var hasChosenReturn = false
     @State private var availabilityResult = KioskCheckoutAvailabilityResult()
     @State private var isCheckingAvailability = false
     @State private var availabilityError: String?
@@ -345,8 +347,9 @@ struct KioskCheckoutView: View {
                     selectedEventId: $selectedEventId,
                     customPurpose: $customPurpose,
                     dueBackAt: $dueBackAt,
+                    hasChosenReturn: $hasChosenReturn,
                     focusedField: $focusedCheckoutField,
-                    canContinue: hasCheckoutContext && hasValidReturnTime,
+                    canContinue: hasCheckoutContext && hasValidReturnTime && hasChosenReturn,
                     blockingRequirement: blockingRequirement,
                     onContinue: startScanning
                 )
@@ -750,6 +753,9 @@ struct KioskCheckoutView: View {
     /// the reason to be guessed. The spoken label also said "Start Scanning"
     /// while the button read "Continue to Scan".
     private var blockingRequirement: String? {
+        if hasCheckoutContext, !hasChosenReturn {
+            return "Pick when it'll be back."
+        }
         if isLinkedToEvent, selectedEvent == nil {
             return "Choose an event to link, or unlink to name this checkout yourself."
         }
@@ -1236,6 +1242,7 @@ struct KioskCheckoutView: View {
         customPurpose = draft.customPurpose
         let minimum = KioskQuarterHour.roundedUp(Date().addingTimeInterval(5 * 60))
         dueBackAt = draft.dueBackAt >= minimum ? draft.dueBackAt : minimum
+        hasChosenReturn = true
         selectedKitId = draft.selectedKitId
         if draft.selectedKitId != nil { didApplySuggestedKit = true }
         // Resume where the draft actually left off. Forcing `true` here sent a

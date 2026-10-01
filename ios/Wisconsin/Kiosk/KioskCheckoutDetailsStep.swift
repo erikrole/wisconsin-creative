@@ -13,6 +13,8 @@ struct KioskCheckoutDetailsStep: View {
     @Binding var selectedEventId: String?
     @Binding var customPurpose: String
     @Binding var dueBackAt: Date
+    /// False until the person taps a return time (no default; Erik, 2026-10-01).
+    var hasChosenReturn: Binding<Bool> = .constant(true)
     @Binding var focusedField: KioskCheckoutFocusedField?
     let canContinue: Bool
     let blockingRequirement: String?
@@ -58,6 +60,7 @@ struct KioskCheckoutDetailsStep: View {
                     onCancel: { showOtherDate = false },
                     onUse: { date in
                         dueBackAt = date
+                        hasChosenReturn.wrappedValue = true
                         showOtherDate = false
                     }
                 )
@@ -282,8 +285,11 @@ struct KioskCheckoutDetailsStep: View {
                     choiceChip(
                         title: choice.title,
                         detail: choice.note,
-                        isSelected: abs(choice.date.timeIntervalSince(dueBackAt)) < 60
-                    ) { dueBackAt = choice.date }
+                        isSelected: hasChosenReturn.wrappedValue && abs(choice.date.timeIntervalSince(dueBackAt)) < 60
+                    ) {
+                        dueBackAt = choice.date
+                        hasChosenReturn.wrappedValue = true
+                    }
                 }
             }
             backBySummary
@@ -337,9 +343,9 @@ struct KioskCheckoutDetailsStep: View {
                     .font(KioskType.overline)
                     .tracking(KioskType.overlineTracking)
                     .foregroundStyle(KioskText.tertiary)
-                Text(KioskDueCopy.relative(dueBackAt))
+                Text(hasChosenReturn.wrappedValue ? KioskDueCopy.relative(dueBackAt) : "Pick a return time")
                     .font(.system(size: 24, weight: .heavy))
-                    .foregroundStyle(KioskText.primary)
+                    .foregroundStyle(hasChosenReturn.wrappedValue ? KioskText.primary : KioskText.tertiary)
                 // The day chips already show the date; name what it's for instead.
                 Text(choiceName ?? dueBackAt.formatted(.dateTime.weekday(.wide).month(.wide).day()))
                     .font(KioskType.meta)
