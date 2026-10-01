@@ -141,6 +141,10 @@ struct KioskEventDetailSheet: View {
     let capabilities: KioskDashboard.Capabilities
     var onStartCheckout: (() -> Void)? = nil
     var onScan: ((String) -> Void)? = nil
+    /// Check out for this event as that worker (deep link: person + event).
+    var onCheckoutWorker: ((KioskEvent.AssignedUser) -> Void)? = nil
+    /// Open that worker's page.
+    var onOpenWorker: ((KioskEvent.AssignedUser) -> Void)? = nil
     /// Each worker's gear for this event: reserved pickups plus checkouts out.
     var gearByUserId: [String: KioskEventWorkerGear] = [:]
 
@@ -179,13 +183,14 @@ struct KioskEventDetailSheet: View {
                     .minimumScaleFactor(0.8)
 
                 if let onStartCheckout {
+                    // Most checkouts start from a worker row; this is for anyone else.
                     Button {
                         dismiss(); onStartCheckout()
                     } label: {
-                        Label("Check out for this event", systemImage: "barcode.viewfinder")
-                            .font(KioskType.sectionTitle).frame(maxWidth: .infinity, minHeight: 54)
+                        Label("Someone else checking out for this event", systemImage: "barcode.viewfinder")
+                            .font(.system(size: 15, weight: .semibold)).frame(maxWidth: .infinity, minHeight: 48)
                     }
-                    .kioskButtonRole(.primary)
+                    .kioskButtonRole(.secondary)
                 }
 
                 VStack(alignment: .leading, spacing: 10) {
@@ -201,6 +206,12 @@ struct KioskEventDetailSheet: View {
                                 .padding(.vertical, 4)
                                 .background(KioskSurface.cardRaised, in: Capsule())
                         }
+                        let missing = event.assignedUsers.filter(needsGear).count
+                        if missing > 0 {
+                            Text("\(missing) need gear")
+                                .font(KioskType.chipStrong)
+                                .foregroundStyle(KioskStatus.attention)
+                        }
                     }
 
                     if event.assignedUsers.isEmpty {
@@ -215,7 +226,11 @@ struct KioskEventDetailSheet: View {
                             LazyVStack(spacing: 8) {
                                 // Who still needs gear first.
                                 ForEach(event.assignedUsers.sorted { needsGear($0) && !needsGear($1) }) { user in
-                                    KioskEventWorkerRow(user: user, eventAllDay: event.displayAllDay, needsGear: needsGear(user), gear: gearByUserId[user.id])
+                                    KioskEventWorkerRow(
+                                        user: user, eventAllDay: event.displayAllDay, needsGear: needsGear(user), gear: gearByUserId[user.id],
+                                        onCheckout: onCheckoutWorker.map { go in { dismiss(); go(user) } },
+                                        onOpen: onOpenWorker.map { go in { dismiss(); go(user) } }
+                                    )
                                 }
                             }
                         }
@@ -288,9 +303,12 @@ private struct KioskEventWorkerRow: View {
     let eventAllDay: Bool
     var needsGear = false
     var gear: KioskEventWorkerGear? = nil
+    var onCheckout: (() -> Void)? = nil
+    var onOpen: (() -> Void)? = nil
 
     var body: some View {
         HStack(spacing: 10) {
+            Button { onOpen?() } label: { HStack(spacing: 10) {
             avatar
             VStack(alignment: .leading, spacing: 2) {
                 Text(user.name)
@@ -305,11 +323,23 @@ private struct KioskEventWorkerRow: View {
                         .minimumScaleFactor(0.82)
                 }
             }
-            Spacer()
+            Spacer(minLength: 8)
+            } .contentShape(Rectangle()) }
+            .buttonStyle(KioskPressStyle())
+            .disabled(onOpen == nil)
             if needsGear {
-                Text("No gear yet")
-                    .font(KioskType.chipStrong)
-                    .foregroundStyle(KioskStatus.attention)
+                if let onCheckout {
+                    Button(action: onCheckout) {
+                        Text("Check out").font(.system(size: 15, weight: .semibold)).lineLimit(1).fixedSize()
+                            .padding(.horizontal, 14).frame(minHeight: 40)
+                    }
+                    .kioskButtonRole(.primary)
+                    .accessibilityHint("No gear yet")
+                } else {
+                    Text("No gear yet")
+                        .font(KioskType.chipStrong)
+                        .foregroundStyle(KioskStatus.attention)
+                }
             } else if let gear, gear.totalCount > 0 {
                 KioskGearThumbStack(gear: gear)
             }

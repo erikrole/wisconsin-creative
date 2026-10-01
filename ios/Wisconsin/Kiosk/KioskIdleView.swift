@@ -133,6 +133,23 @@ struct KioskIdleView: View {
                 capabilities: dashboard?.capabilities ?? KioskDashboard.Capabilities(),
                 onStartCheckout: { startCheckout(for: event) },
                 onScan: { store.scanner.receive($0) },
+                onCheckoutWorker: { worker in
+                    guard let user = users.first(where: { $0.id == worker.id }) else { return }
+                    identityRequests.invalidate()
+                    store.deferSleepMode(for: sleepWakeDuration)
+                    store.setIntent(KioskFlowIntent(
+                        action: .checkout, source: .event, identifiedUser: user, expectedRequester: nil,
+                        selectedEvent: KioskIntentEvent(id: event.id, title: event.title, endsAt: event.endsAt),
+                        targetBooking: nil, pendingScanValues: [], createdAt: Date(), ambiguity: .none
+                    ))
+                    store.screen = .checkout(user: user)
+                },
+                onOpenWorker: { worker in
+                    guard let user = users.first(where: { $0.id == worker.id }) else { return }
+                    identityRequests.invalidate()
+                    store.deferSleepMode(for: sleepWakeDuration)
+                    store.screen = .operatorHub(user)
+                },
                 gearByUserId: eventGearByUserId(eventId: event.id)
             )
                 .presentationDetents([.large])
