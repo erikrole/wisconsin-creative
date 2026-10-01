@@ -1168,11 +1168,21 @@ struct KioskStaffActionsFlow: View {
                 Haptics.success()
                 step = .actions
             } catch {
-                scanMessage = (error as? APIError)?.errorDescription ?? "Couldn't check that card. Try again."
+                // Older servers have no staff ID check yet: say so plainly.
+                if let api = error as? APIError, Self.isMissingRoute(api) {
+                    scanMessage = "Staff ID check isn't available yet. The server update is pending."
+                } else {
+                    scanMessage = (error as? APIError)?.errorDescription ?? "Couldn't check that card. Try again."
+                }
                 Haptics.error()
                 KioskScanFeedbackSound.playFailure()
             }
         }
+    }
+
+    static func isMissingRoute(_ error: APIError) -> Bool {
+        if case .notFound = error { return true }
+        return false
     }
 
     private var actions: some View {
