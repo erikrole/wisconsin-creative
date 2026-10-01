@@ -356,7 +356,11 @@ struct KioskEventWorkerGear: Equatable {
     var totalCount: Int { reservedCount + outCount }
 
     mutating func add(thumbs newThumbs: [KioskGearThumb], count: Int, out: Bool) {
-        thumbs.append(contentsOf: newThumbs)
+        // Older servers send no item list: show box placeholders for the count.
+        let shown = newThumbs.isEmpty
+            ? (0..<min(count, 4)).map { _ in KioskGearThumb(tagName: "", imageUrl: nil) }
+            : newThumbs
+        thumbs.append(contentsOf: shown)
         if out { outCount += max(count, newThumbs.count) } else { reservedCount += max(count, newThumbs.count) }
     }
 
