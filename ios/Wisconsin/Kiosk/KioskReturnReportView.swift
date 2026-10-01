@@ -94,15 +94,19 @@ struct KioskReturnReportView: View {
                     Text("Which item?")
                         .font(KioskType.heroAction)
                         .foregroundStyle(KioskText.primary)
-                    Text("Pick it from the list. Everything else returns as normal.")
+                    Text("Tap the item on the right. Everything else returns as normal.")
                         .font(KioskType.body)
                         .foregroundStyle(KioskText.secondary)
+                    Text("Batteries and counted supplies aren't listed. Tell staff if one is damaged or missing.")
+                        .font(KioskType.meta)
+                        .foregroundStyle(KioskText.tertiary)
+                        .padding(.top, 8)
                 }
                 Spacer(minLength: 0)
             }
             .frame(maxWidth: .infinity, alignment: .topLeading)
         } panel: {
-            overline("Which item?")
+            overline("Coming back")
             ScrollView {
                 VStack(spacing: 10) {
                     ForEach(items) { item in
@@ -120,15 +124,10 @@ struct KioskReturnReportView: View {
             step = .choose(selectedId: item.id)
         } label: {
             HStack(spacing: 12) {
+                KioskItemThumbnail(imageUrl: item.imageUrl, size: 40)
                 Text(item.itemListPrimaryTitle)
                     .font(KioskType.rowTitle)
                     .foregroundStyle(KioskText.primary)
-                if let name = item.itemListSecondaryTitle {
-                    Text(name)
-                        .font(KioskType.meta)
-                        .foregroundStyle(KioskText.secondary)
-                        .lineLimit(1)
-                }
                 Spacer(minLength: 8)
                 if returnedIds.contains(item.id) {
                     Text("Back")
