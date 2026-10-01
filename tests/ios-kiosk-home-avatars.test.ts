@@ -23,3 +23,12 @@ describe("iOS kiosk home list avatars", () => {
     expect(route).toContain("avatarUrl: user.avatarUrl");
   });
 });
+
+describe("kiosk event display titles", () => {
+  it("drops promo tails and University, and uses the sport code for matchups", () => {
+    const home = source("ios/Wisconsin/Kiosk/KioskHomeView.swift");
+    expect(home).toContain("func kioskEventDisplayTitle(_ title: String, sportCode: String?)");
+    expect(home).toContain('[" University", " College"]');
+    expect(home).toContain("Text(kioskEventDisplayTitle(group.event.title, sportCode: group.event.sportCode))");
+  });
+});

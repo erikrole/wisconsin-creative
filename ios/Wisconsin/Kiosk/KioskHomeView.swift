@@ -241,7 +241,7 @@ struct KioskHomeView: View {
             VStack(spacing: 0) {
                 ForEach(groups) { group in
                     HStack(alignment: .firstTextBaseline, spacing: 12) {
-                        Text(group.event.title)
+                        Text(kioskEventDisplayTitle(group.event.title, sportCode: group.event.sportCode))
                             .font(.system(size: 17, weight: .semibold))
                             .foregroundStyle(KioskText.primary)
                             .lineLimit(1)
@@ -378,6 +378,31 @@ struct KioskHomeView: View {
 
 /// "Avery N." -- first name and last initial, the canvas's roster label.
 /// First names stay unique enough at this fleet size; the initial settles ties.
+/// "Women's Hockey vs Boston University- 2026 Championship Banner Drop" ->
+/// "WHKY vs Boston University": drops the promo tail after a dash or colon
+/// and swaps the sport name for its code when the title is a matchup.
+func kioskEventDisplayTitle(_ title: String, sportCode: String?) -> String {
+    var core = title
+    for separator in [" - ", "- ", " – ", " — ", ": "] {
+        if let range = core.range(of: separator) {
+            let head = String(core[..<range.lowerBound]).trimmingCharacters(in: .whitespaces)
+            if !head.isEmpty { core = head; break }
+        }
+    }
+    core = core.trimmingCharacters(in: .whitespacesAndNewlines)
+    for suffix in [" University", " College"] where core.hasSuffix(suffix) {
+        core = String(core.dropLast(suffix.count))
+    }
+    if let code = sportCode?.trimmingCharacters(in: .whitespaces), !code.isEmpty {
+        for joiner in [" vs. ", " vs ", " at ", " @ "] {
+            if let range = core.range(of: joiner, options: .caseInsensitive) {
+                return code + joiner + core[range.upperBound...]
+            }
+        }
+    }
+    return core
+}
+
 /// Roster-grid labels: first name alone, plus the last initial only when two
 /// people share a first name ("Ben S." / "Ben X."), so names fit five columns.
 func homeGridNames(for users: [KioskUser]) -> [String: String] {
