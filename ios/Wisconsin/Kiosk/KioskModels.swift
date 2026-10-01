@@ -1123,6 +1123,74 @@ struct KioskSuccessInfo: Equatable {
 
 /// "All set, Harper." then a card per record written.
 struct KioskReceipt: Equatable {
+    /// One thing on a receipt card. Numbered batteries carry their kind and
+    /// number so the card can draw one chip per kind with the numbers circled.
+    struct Item: Equatable {
+        let tag: String
+        let imageUrl: String?
+        var batteryKind: String? = nil
+        var batteryName: String? = nil
+        var unitNumber: Int? = nil
+
+        init(tag: String, imageUrl: String?, batteryKind: String? = nil, batteryName: String? = nil, unitNumber: Int? = nil) {
+            self.tag = tag
+            self.imageUrl = imageUrl
+            self.batteryKind = batteryKind
+            self.batteryName = batteryName
+            self.unitNumber = unitNumber
+        }
+
+        init(_ item: KioskCartItem) {
+            self.init(tag: item.itemListPrimaryTitle, imageUrl: item.imageUrl,
+                      batteryKind: item.isNumberedBulk ? item.bulkSkuId : nil,
+                      batteryName: item.name, unitNumber: item.isNumberedBulk ? item.unitNumber : nil)
+        }
+
+        init(_ item: KioskCheckoutDetail.ReturnItem, unit: Int? = nil, imageUrl: String? = nil) {
+            let number = unit ?? item.unitNumber
+            let numbered = (item.isNumberedBulk || unit != nil) && number != nil
+            self.init(tag: item.itemListPrimaryTitle, imageUrl: imageUrl ?? item.imageUrl,
+                      batteryKind: numbered ? (item.bulkSkuId ?? item.bulkSkuName ?? item.name) : nil,
+                      batteryName: item.bulkSkuName ?? item.name, unitNumber: numbered ? number : nil)
+        }
+    }
+
+    /// What a receipt card draws: a photo + tag, or one battery kind with its numbers.
+    enum Chip: Equatable, Identifiable {
+        case item(Item)
+        case batteries(name: String, imageUrl: String?, units: [Int])
+
+        var id: String {
+            switch self {
+            case .item(let item): "item-\(item.tag)"
+            case .batteries(let name, _, _): "batt-\(name)"
+            }
+        }
+
+        static func group(_ items: [Item]) -> [Chip] {
+            var chips: [Chip] = []
+            var kindIndex: [String: Int] = [:]
+            for item in items {
+                guard let kind = item.batteryKind, let unit = item.unitNumber else {
+                    chips.append(.item(item))
+                    continue
+                }
+                if let index = kindIndex[kind], case .batteries(let name, let image, let units) = chips[index] {
+                    chips[index] = .batteries(name: name, imageUrl: image ?? item.imageUrl, units: units + [unit])
+                } else {
+                    kindIndex[kind] = chips.count
+                    let name = (item.batteryName ?? item.tag)
+                        .replacingOccurrences(of: #"\s*#\d+$"#, with: "", options: .regularExpression)
+                    chips.append(.batteries(name: name, imageUrl: item.imageUrl, units: [unit]))
+                }
+            }
+            return chips.map {
+                if case .batteries(let name, let image, let units) = $0 { return .batteries(name: name, imageUrl: image, units: units.sorted()) }
+                return $0
+            }
+        }
+    }
+
     struct Card: Equatable {
         let overline: String
         let refNumber: String?
@@ -1133,8 +1201,11 @@ struct KioskReceipt: Equatable {
         /// Colors the footnote when it is something to act on later, like a
         /// pickup's leftover line (F5). Nil keeps it quiet.
         let footnoteSection: KioskSection?
+        /// Drawn as photo + tag chips under the title.
+        let items: [Item]
 
-        init(overline: String, refNumber: String? = nil, title: String, detail: String? = nil, footnote: String? = nil, isProblem: Bool = false, footnoteSection: KioskSection? = nil) {
+        init(overline: String, refNumber: String? = nil, title: String, items: [Item] = [], detail: String? = nil, footnote: String? = nil, isProblem: Bool = false, footnoteSection: KioskSection? = nil) {
+            self.items = items
             self.overline = overline
             self.refNumber = refNumber
             self.title = title

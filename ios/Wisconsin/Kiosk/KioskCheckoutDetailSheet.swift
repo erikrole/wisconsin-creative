@@ -201,6 +201,7 @@ struct KioskCheckoutDetailSheet: View {
                     onChanged()
                 }
             )
+            .statusBarHidden(true)
         }
         .fullScreenCover(isPresented: $showExtend) {
             // Extends as the holder, the same as Extend on their own page.
@@ -227,6 +228,7 @@ struct KioskCheckoutDetailSheet: View {
                     onChanged()
                 }
             }
+            .statusBarHidden(true)
         }
         .onDisappear {
             presentationGeneration = UUID()

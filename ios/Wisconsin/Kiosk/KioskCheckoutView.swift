@@ -1208,7 +1208,8 @@ struct KioskCheckoutView: View {
                             overline: "Checked out",
                             refNumber: completion.refNumber,
                             title: "\(count) item\(count == 1 ? "" : "s") · \(checkoutContextTitle)",
-                            detail: KioskReceiptCopy.tags(cart) + " · due " + KioskDueCopy.midSentence(endsAt)
+                            items: cart.map(KioskReceipt.Item.init),
+                            detail: "Due " + KioskDueCopy.midSentence(endsAt)
                         )],
                         nextStep: "Bring it back and scan it in, or anyone can return it for you."
                     )

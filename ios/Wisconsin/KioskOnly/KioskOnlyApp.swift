@@ -151,7 +151,11 @@ struct WisconsinKioskApp: App {
                     title: "Wrestling Duals Kit",
                     count: 3,
                     total: 5,
-                    tags: ["CAM-022", "LENS-41", "Sony Battery #12"],
+                    items: [
+                        KioskReceipt.Item(tag: "CAM-022", imageUrl: nil),
+                        KioskReceipt.Item(tag: "LENS-41", imageUrl: nil),
+                        KioskReceipt.Item(tag: "Sony Battery #12", imageUrl: nil, batteryKind: "sony", batteryName: "Sony Battery", unitNumber: 12),
+                    ],
                     endsAt: KioskFixtures.hours(30),
                     isShared: false,
                     remainingItemNames: ["MIC-09", "1 × Sony Battery"]
@@ -176,7 +180,12 @@ struct WisconsinKioskApp: App {
                     refNumber: "CO-1043",
                     returnedCount: 4,
                     totalItems: 5,
-                    returnedTags: ["CAM-014", "LENS-22", "V-Mount #7", "V-Mount #9"],
+                    returnedItems: [
+                        KioskReceipt.Item(tag: "CAM-014", imageUrl: nil),
+                        KioskReceipt.Item(tag: "LENS-22", imageUrl: nil),
+                        KioskReceipt.Item(tag: "V-Mount #7", imageUrl: nil, batteryKind: "vmount", batteryName: "V-Mount Battery", unitNumber: 7),
+                        KioskReceipt.Item(tag: "V-Mount #9", imageUrl: nil, batteryKind: "vmount", batteryName: "V-Mount Battery", unitNumber: 9),
+                    ],
                     damaged: [("LENS-22", "Sony 24-70mm GM")],
                     missing: [("AUD-007", "Sennheiser MKE 600")]
                 )

@@ -350,27 +350,26 @@ extension KioskIdentityView {
                 case .reserved(let holder): reservedCard(holder: holder)
                 case .returnOther(let owner): returnCard(owner: owner)
                 }
-                Spacer(minLength: 0)
-                Button {
-                    cancelIdentityFlow()
-                } label: {
-                    Text(mode.isReturn ? "Close" : "Cancel").frame(maxWidth: .infinity)
-                }
-                .kioskButtonRole(.secondary)
             }
             .frame(width: 400)
             .frame(maxHeight: .infinity, alignment: .top)
 
             VStack(alignment: .leading, spacing: 14) {
+                switch mode {
+                case .scanFree:
+                    contextTopBar(title: "Who\u{2019}s taking it?")
+                case .reserved:
+                    contextTopBar(title: nil)
+                case .returnOther:
+                    contextTopBar(title: "Who\u{2019}s returning it?")
+                }
                 if let message { Text(message).foregroundStyle(Color.statusText(.orange)).font(.headline) }
                 switch mode {
                 case .scanFree:
-                    Text("Who\u{2019}s taking it?").font(KioskType.screenTitle).foregroundStyle(KioskText.primary)
                     rosterContent
                 case .reserved(let holder):
                     reservedChoice(holder: holder)
                 case .returnOther(let owner):
-                    Text("Who\u{2019}s returning it?").font(KioskType.screenTitle).foregroundStyle(KioskText.primary)
                     personCard(owner, detail: "Checked this out", tint: KioskSection.comingBack) { choose(owner) }
                     Text("SOMEONE ELSE")
                         .font(KioskType.overline).tracking(KioskType.overlineTracking)
@@ -384,6 +383,24 @@ extension KioskIdentityView {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
         .padding(28)
+    }
+
+    /// Time and Back top-right, the same as the plain roster and every task screen.
+    private func contextTopBar(title: String?) -> some View {
+        HStack(alignment: .top) {
+            if let title {
+                Text(title).font(KioskType.screenTitle).foregroundStyle(KioskText.primary)
+            }
+            Spacer(minLength: 16)
+            TimelineView(.everyMinute) { context in
+                Text(context.date.formatted(.dateTime.hour().minute()))
+                    .font(.system(size: 22, weight: .semibold).monospacedDigit())
+                    .foregroundStyle(KioskText.tertiary)
+            }
+            .padding(.top, 10)
+            Button("Back") { cancelIdentityFlow() }
+                .kioskButtonRole(.secondary)
+        }
     }
 
     private func returnChip(imageUrl: String?, label: String) -> some View {

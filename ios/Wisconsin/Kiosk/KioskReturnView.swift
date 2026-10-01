@@ -564,7 +564,7 @@ struct KioskReturnView: View {
                     refNumber: detail?.refNumber,
                     returnedCount: returnedItems.count,
                     totalItems: totalItems,
-                    returnedTags: returnedItems.map(\.itemListPrimaryTitle),
+                    returnedItems: returnedItems.map { KioskReceipt.Item($0) },
                     damaged: items.filter { damagedIds.contains($0.id) }.map { ($0.itemListPrimaryTitle, $0.itemListSecondaryTitle) }
                         + countedReports.values.filter { $0.damaged > 0 }.map { ("x\($0.damaged)", $0.name) },
                     missing: items.filter { missingIds.contains($0.id) && !returnedIds.contains($0.id) }.map { ($0.itemListPrimaryTitle, $0.itemListSecondaryTitle) }

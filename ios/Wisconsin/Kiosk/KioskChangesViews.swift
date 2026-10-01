@@ -1216,7 +1216,19 @@ struct KioskStaffActionsFlow: View {
                         }
                         VStack(spacing: 0) {
                             ForEach((detail?.items ?? []).filter { !$0.returned }.prefix(6)) { item in
-                                KioskItemRow(tag: item.itemListPrimaryTitle, name: item.itemListSecondaryTitle, isDone: false, section: .comingBack)
+                                if item.isNumberedBulk, let unit = item.unitNumber {
+                                    // A numbered battery reads as its kind with the number circled, not "#4" alone.
+                                    KioskItemRow(
+                                        tag: (item.bulkSkuName ?? item.name).replacingOccurrences(of: #"\s*#\d+$"#, with: "", options: .regularExpression),
+                                        imageUrl: item.imageUrl,
+                                        isDone: false,
+                                        section: .comingBack
+                                    ) {
+                                        KioskBatteryUnitChip(label: "#\(unit)", isScanned: false, section: .comingBack)
+                                    }
+                                } else {
+                                    KioskItemRow(tag: item.itemListPrimaryTitle, name: item.itemListSecondaryTitle, imageUrl: item.imageUrl, isDone: false, section: .comingBack)
+                                }
                             }
                         }
                         .kioskCard()

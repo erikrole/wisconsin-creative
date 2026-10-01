@@ -148,6 +148,7 @@ struct KioskTaskScaffold<Main: View, Panel: View>: View {
             .padding(.top, 16)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .statusBarHidden(true)
     }
 }
 
@@ -635,9 +636,12 @@ struct KioskNoticeStage<Content: View>: View {
             content()
         }
         .padding(26)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
         .kioskCard(section.stageFill, radius: KioskRadius.hero, stroke: section.stageStroke)
         .accessibilityElement(children: .contain)
+        // The card hugs its words; the empty space stays outside it so the
+        // actions keep their place at the bottom.
+        .frame(maxHeight: .infinity, alignment: .top)
     }
 }
 
@@ -820,6 +824,8 @@ struct KioskSheetScreen<Context: View, Choice: View>: View {
             .kioskCard(KioskSurface.sheet, radius: KioskRadius.modal, stroke: KioskStroke.standard)
             .offset(y: topOffset)
         }
+        // Every kiosk screen hides the iOS time/battery bar.
+        .statusBarHidden(true)
     }
 }
 

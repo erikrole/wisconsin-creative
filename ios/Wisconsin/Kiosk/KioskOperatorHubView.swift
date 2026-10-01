@@ -207,6 +207,7 @@ struct KioskOperatorHubView: View {
                 onCancel: { extendTarget = nil },
                 onExtended: { finishChange("Extended. \(checkout.title) has more time.") { extendTarget = nil } }
             )
+            .statusBarHidden(true)
         }
         .fullScreenCover(item: $transferTarget) { checkout in
             KioskTransferScreen(
@@ -222,18 +223,21 @@ struct KioskOperatorHubView: View {
                     }
                 }
             )
+            .statusBarHidden(true)
         }
         .fullScreenCover(item: $reservationTarget) { booking in
             KioskReservationEditView(reservationId: booking.id, title: booking.title, user: user) { saved in
                 reservationTarget = nil
                 if saved { finishChange("Reservation saved.") {} }
             }
+            .statusBarHidden(true)
         }
         .fullScreenCover(item: $staffFlowTarget) { checkout in
             KioskStaffActionsFlow(context: checkout) { _ in
                 staffFlowTarget = nil
                 Task { await loadContext() }
             }
+            .statusBarHidden(true)
         }
     }
 

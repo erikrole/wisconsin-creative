@@ -289,7 +289,6 @@ struct KioskPickupView: View {
                 title: "\(tag) can take \(reserved.tagName)'s place",
                 message: "Both are \(reserved.name). \(tag) goes out instead, and \(reserved.tagName) comes off your reservation."
             ) {
-                Spacer(minLength: 0)
                 Button("Add \(tag) as an extra instead") {
                     Task { await addScannedItem(pending) }
                 }
@@ -359,7 +358,8 @@ struct KioskPickupView: View {
         VStack(alignment: .leading, spacing: 6) {
             KioskSectionHeader(
                 title: isShared ? "For the team" : "Picking up",
-                detail: detail.map { isShared ? "\($0.title) · shared" : $0.title },
+                // The screen header already names the booking.
+                detail: nil,
                 count: "\(confirmedCount) of \(totalItems)",
                 section: section
             )
@@ -852,7 +852,7 @@ struct KioskPickupView: View {
                                 title: detail.title,
                                 count: count,
                                 total: partial ? totalItems : nil,
-                                tags: scannedTags,
+                                items: scannedTags,
                                 endsAt: isShared ? nil : detail.endsAt,
                                 isShared: isShared,
                                 remainingItemNames: confirmation.remainingItemNames ?? []
@@ -871,10 +871,12 @@ struct KioskPickupView: View {
     }
 
     /// "CAM-022, LENS-41, Sony Battery #12", in list order.
-    private var confirmedScanTags: [String] {
+    private var confirmedScanTags: [KioskReceipt.Item] {
         (detail?.items ?? []).filter { confirmedIds.contains($0.id) }.map { item in
-            if let unit = confirmedItemOverrides[item.id] { return acceptedTitle(unit) }
-            return item.itemListPrimaryTitle
+            if let unit = confirmedItemOverrides[item.id] {
+                return KioskReceipt.Item(item, unit: unit.unitNumber, imageUrl: unit.imageUrl)
+            }
+            return KioskReceipt.Item(item)
         }
     }
 
@@ -1100,14 +1102,13 @@ enum KioskPickupCopy {
         title: String,
         count: Int,
         total: Int?,
-        tags: [String],
+        items: [KioskReceipt.Item],
         endsAt: Date?,
         isShared: Bool,
         remainingItemNames: [String]
     ) -> KioskReceipt {
         let heading = total.map { "\(count) of \($0) · \(title)" } ?? "\(count) item\(count == 1 ? "" : "s") · \(title)"
-        let detail = [tags.isEmpty ? nil : tags.joined(separator: ", "), endsAt.map { "due " + KioskDueCopy.midSentence($0) }]
-            .compactMap { $0 }.joined(separator: " · ")
+        let detail = endsAt.map { "Due " + KioskDueCopy.midSentence($0) } ?? ""
         let leftover = remainingItemNames.isEmpty
             ? nil
             : "\(list(remainingItemNames)) \(remainingItemNames.count == 1 && !remainingItemNames[0].contains("×") ? "stays" : "stay") reserved for a later pickup."
@@ -1126,6 +1127,7 @@ enum KioskPickupCopy {
             cards: [KioskReceipt.Card(
                 overline: isShared ? "Picked up for the team" : "Picked up",
                 title: heading,
+                items: items,
                 detail: detail.isEmpty ? nil : detail,
                 footnote: leftover,
                 footnoteSection: leftover == nil ? nil : .comingBack

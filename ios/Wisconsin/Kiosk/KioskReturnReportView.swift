@@ -563,7 +563,7 @@ enum KioskReturnReportCopy {
         refNumber: String?,
         returnedCount: Int,
         totalItems: Int,
-        returnedTags: [String],
+        returnedItems: [KioskReceipt.Item],
         damaged: [(tag: String, name: String?)],
         missing: [(tag: String, name: String?)]
     ) -> KioskReceipt {
@@ -576,7 +576,7 @@ enum KioskReturnReportCopy {
                 overline: "Returned",
                 refNumber: refNumber,
                 title: heading,
-                detail: returnedTags.isEmpty ? nil : returnedTags.joined(separator: ", ")
+                items: returnedItems
             ))
         }
         for item in damaged {
