@@ -298,7 +298,7 @@ export function NewKitSheet({
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Football kits cannot share the same camera. A basketball kit can still use that camera.
+              Football job kits (Slow 1 to Roam 4) cannot share a camera. A kit with no job, like the travel case, and basketball kits can still use it.
             </p>
           </div>
 

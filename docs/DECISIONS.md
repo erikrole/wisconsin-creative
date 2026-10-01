@@ -1543,6 +1543,7 @@ These are non-negotiable integrity constraints. Every feature must preserve them
   - Football gameday kits can be authored once and called from any reservation surface without colliding cameras inside Football.
   - A person who shot Slow 1 last week sees this week’s Slow 1 kit first.
   - Kiosk walk-up checkout can start from the same named plan without replacing scan custody.
+- Amendment (2026-09-30): Football exclusivity applies only between kits that own a gameday job. A job-less Football kit, such as the road-game travel case, may share serialized gear with any kit, because the case and the home position are never staffed by the same body at once. Non-football and unsported rules are unchanged.
 - Reference: `docs/AREA_KITS.md`, `docs/AREA_RESERVATIONS.md`, `docs/AREA_KIOSK.md`, `tasks/kits-gameday-expansion-plan-2026-09-16.md`, and migrations `0149_kit_sport_code` and `0150_kit_gameday_role`.
 
 ## D-063: Branch-Owned Previews and One Automatic Production Build
