@@ -167,7 +167,7 @@ struct KioskCheckoutView: View {
                     suggestedKitId: suggestedKitId,
                     selectedKitId: selectedKitId,
                     eventTitle: isLinkedToEvent ? selectedEvent?.title : nil,
-                    contextLine: isLinkedToEvent ? KioskDueCopy.due(dueBackAt) : (trimmedCustomPurpose.nonBlankText.map { "\($0) · \(KioskDueCopy.due(dueBackAt).lowercased())" } ?? KioskDueCopy.due(dueBackAt)),
+                    contextLine: isLinkedToEvent ? KioskDueCopy.due(dueBackAt) : (trimmedCustomPurpose.nonBlankText.map { "\($0) · \(KioskDueCopy.due(dueBackAt).replacingOccurrences(of: "Due ", with: "due ", options: .anchored))" } ?? KioskDueCopy.due(dueBackAt)),
                     locationName: store.info?.locationName,
                     onChoose: { kitId in
                         selectedKitId = kitId

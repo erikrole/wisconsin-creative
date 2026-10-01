@@ -473,8 +473,13 @@ enum KioskDueCopy {
 
     /// "tomorrow at 11:00 PM", for use after other words.
     static func midSentence(_ date: Date) -> String {
+        // Only relative words drop their capital ("today", "tomorrow");
+        // weekdays and months keep it ("Sat at 4:00 PM").
         let text = relative(date)
-        return text.prefix(1).lowercased() + text.dropFirst()
+        for word in ["Today", "Tonight", "Tomorrow"] where text.hasPrefix(word) {
+            return word.lowercased() + text.dropFirst(word.count)
+        }
+        return text
     }
 }
 
