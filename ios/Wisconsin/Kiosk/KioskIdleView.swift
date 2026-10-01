@@ -946,7 +946,13 @@ struct KioskIdleView: View {
             source: .event,
             identifiedUser: nil,
             expectedRequester: nil,
-            selectedEvent: KioskIntentEvent(id: event.id, title: event.title, endsAt: event.endsAt),
+            selectedEvent: KioskIntentEvent(
+                id: event.id,
+                title: event.title,
+                endsAt: event.endsAt,
+                crewUserIds: event.assignedUsers.map(\.id),
+                areas: event.areas
+            ),
             targetBooking: nil,
             pendingScanValues: [],
             createdAt: Date(),

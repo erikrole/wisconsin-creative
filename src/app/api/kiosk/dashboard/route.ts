@@ -685,6 +685,8 @@ export const GET = withKiosk(async (_req, { kiosk }) => {
       callStartsAt: allDay ? null : callStartsAt,
       callEndsAt: allDay ? null : callEndsAt,
       shiftCount: e.shiftGroup?._count.shifts ?? 0,
+      // The event's crew areas, for the kiosk's "add you to the crew" ask.
+      areas: [...new Set(shifts.map((shift) => shift.area))],
       assignedUsers,
       assignedUserCount: assignedUsers.length,
       crewWithoutGear: crewWithoutGear(e, homeCheckouts, pickups).map((user) => ({

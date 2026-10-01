@@ -53,7 +53,7 @@
 | `src/lib/services/kiosk-checkin-undo.ts` | 176 |
 | `src/lib/services/kiosk-checkout-allowance.ts` | 86 |
 | `src/lib/services/kiosk-checkout-complete.ts` | 90 |
-| `src/lib/services/kiosk-dashboard-home.ts` | 229 |
+| `src/lib/services/kiosk-dashboard-home.ts` | 265 |
 | `src/lib/services/kiosk-extend-window.ts` | 160 |
 | `src/lib/services/kiosk-item-transfer.ts` | 196 |
 | `src/lib/services/kiosk-location.ts` | 72 |
@@ -544,6 +544,7 @@
 - `/api/kiosk/checkout/complete`
 - `/api/kiosk/checkout/scan`
 - `/api/kiosk/dashboard`
+- `/api/kiosk/events/[id]/crew-request`
 - `/api/kiosk/events`
 - `/api/kiosk/heartbeat`
 - `/api/kiosk/identify`

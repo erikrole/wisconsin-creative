@@ -210,6 +210,21 @@ struct KioskAPI {
         return try await perform(req)
     }
 
+    // MARK: - Crew request
+
+    /// Asks staff to add the identified person to an event's crew in `area`.
+    /// Files a pending request; nothing is assigned until staff approve.
+    /// Returns the server status: requested, already_requested, already_on_crew.
+    func kioskCrewRequest(eventId: String, actorId: String, area: String) async throws -> String {
+        struct Body: Encodable { let actorId: String; let area: String }
+        struct Payload: Decodable { let status: String }
+        struct Response: Decodable { let data: Payload }
+        var req = request(path: "/api/kiosk/events/\(eventId)/crew-request", method: "POST")
+        req.httpBody = try JSONEncoder().encode(Body(actorId: actorId, area: area))
+        let response: Response = try await perform(req)
+        return response.data.status
+    }
+
     // MARK: - Checkout
 
     func kioskCheckoutScan(actorId: String, scanValue: String) async throws -> KioskScanResult {

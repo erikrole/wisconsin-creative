@@ -43,6 +43,9 @@ struct KioskCheckoutView: View {
     @State private var eventLoadError: String?
     @State private var isLinkedToEvent = false
     @State private var selectedEventId: String?
+    /// Set when someone off an event's crew starts that event's checkout from
+    /// the event overview: ask first whether to request a crew spot.
+    @State private var crewAsk: KioskCrewAsk?
     @State private var customPurpose = ""
     @State private var kitOptions: [KioskKitOption] = []
     @State private var isLoadingKits = false
@@ -330,6 +333,11 @@ struct KioskCheckoutView: View {
         } else {
             VStack(spacing: 0) {
                 taskHeader(step: 1)
+                if let crewAsk {
+                    KioskCrewRequestCard(ask: crewAsk, onChoose: requestCrewSpot, onDismiss: { self.crewAsk = nil })
+                        .padding(.horizontal, KioskSpacing.xl)
+                        .padding(.bottom, KioskSpacing.sm)
+                }
                 KioskCheckoutDetailsStep(
                     events: eventOptions,
                     isLoadingEvents: isLoadingEvents,
@@ -1237,8 +1245,31 @@ struct KioskCheckoutView: View {
         armScannerCaptureAfterRestore()
     }
 
+    /// Files the pending crew request. Never blocks checkout: the result, or
+    /// the server's reason it could not be sent, shows inline.
+    private func requestCrewSpot(_ area: String) {
+        guard var ask = crewAsk, ask.phase != .sending else { return }
+        ask.phase = .sending
+        crewAsk = ask
+        let userId = user.id
+        Task { [ask] in
+            var ask = ask
+            do {
+                let status = try await KioskAPI.shared.kioskCrewRequest(eventId: ask.eventId, actorId: userId, area: area)
+                ask.phase = .done(status == "already_on_crew" ? "You're already on this crew" : "Request sent to staff")
+            } catch {
+                ask.phase = .failed((error as? APIError)?.errorDescription ?? "Could not send the request")
+            }
+            if crewAsk?.eventId == ask.eventId { crewAsk = ask }
+        }
+    }
+
     private func applyRetainedIntent() {
         guard var intent = store.pendingIntent, intent.identifiedUser?.id == user.id else { return }
+        if let event = intent.selectedEvent, crewAsk == nil,
+           let crew = event.crewUserIds, !crew.contains(user.id), !event.areas.isEmpty {
+            crewAsk = KioskCrewAsk(eventId: event.id, eventTitle: event.title, areas: event.areas)
+        }
         if let event = intent.selectedEvent, !hasRestoredDraft || selectedEventId != event.id {
             isLinkedToEvent = true
             selectedEventId = event.id
@@ -2151,5 +2182,74 @@ struct KioskKitPickSheet: View {
         guard let previewId else { preview = nil; return }
         if preview?.id == previewId { return }
         preview = try? await KioskAPI.shared.kioskKitDetail(id: previewId)
+    }
+}
+
+
+struct KioskCrewAsk: Equatable {
+    enum Phase: Equatable { case asking, sending, done(String), failed(String) }
+    let eventId: String
+    let eventTitle: String
+    let areas: [String]
+    var phase: Phase = .asking
+}
+
+enum KioskAreaCopy {
+    static func label(_ area: String) -> String {
+        switch area {
+        case "VIDEO": "Video"
+        case "PHOTO": "Photo"
+        case "GRAPHICS": "Graphics"
+        case "SOCIAL": "Social"
+        case "COMMS": "Comms"
+        case "LIVE_PRODUCTION": "Live Production"
+        default: area.replacingOccurrences(of: "_", with: " ").capitalized
+        }
+    }
+}
+
+/// "Add you to the crew for <event>?" -- asked once at the top of an event
+/// checkout for someone not on the crew. Choosing an area files a pending
+/// request for staff review; "Not now" checks out without one.
+struct KioskCrewRequestCard: View {
+    let ask: KioskCrewAsk
+    let onChoose: (String) -> Void
+    let onDismiss: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: KioskSpacing.sm) {
+            Text("Add you to the crew for \(ask.eventTitle)?")
+                .font(KioskType.cardTitle)
+                .foregroundStyle(KioskText.primary)
+            switch ask.phase {
+            case .asking, .sending:
+                Text("Pick your area. Staff review the request; checkout goes ahead either way.")
+                    .font(KioskType.rowDetail)
+                    .foregroundStyle(KioskText.secondary)
+                HStack(spacing: KioskSpacing.xs) {
+                    ForEach(ask.areas, id: \.self) { area in
+                        Button(KioskAreaCopy.label(area)) { onChoose(area) }
+                            .buttonStyle(KioskPillButtonStyle(role: .secondary))
+                    }
+                    Spacer(minLength: 0)
+                    Button("Not now", action: onDismiss)
+                        .buttonStyle(KioskPillButtonStyle(role: .quiet))
+                }
+                .disabled(ask.phase == .sending)
+            case .done(let message), .failed(let message):
+                HStack {
+                    Text(message)
+                        .font(KioskType.rowDetail)
+                        .foregroundStyle(KioskText.secondary)
+                    Spacer(minLength: 0)
+                    Button("Dismiss", action: onDismiss)
+                        .buttonStyle(KioskPillButtonStyle(role: .quiet))
+                }
+            }
+        }
+        .padding(KioskSpacing.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(KioskSurface.card, in: RoundedRectangle(cornerRadius: KioskRadius.xl, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: KioskRadius.xl, style: .continuous).stroke(KioskStroke.standard, lineWidth: 1))
     }
 }

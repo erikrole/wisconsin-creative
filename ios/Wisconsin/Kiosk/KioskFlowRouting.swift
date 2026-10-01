@@ -98,7 +98,16 @@ final class KioskScanQueue {
 enum KioskFlowAction: String, Codable, CaseIterable { case checkout, pickup, `return`, manage }
 enum KioskFlowSource: String, Codable, CaseIterable { case scan, event, person, reservation, activeCheckout }
 
-struct KioskIntentEvent: Equatable { let id: String; let title: String; let endsAt: Date? }
+struct KioskIntentEvent: Equatable {
+    let id: String
+    let title: String
+    let endsAt: Date?
+    /// Who already holds or has requested a slot on the event. `nil` when the
+    /// flow did not start from the event overview, which never asks.
+    var crewUserIds: [String]? = nil
+    /// The event's crew areas, offered when someone off the crew checks out.
+    var areas: [String] = []
+}
 struct KioskIntentBooking: Equatable { let id: String; let title: String; let startsAt: Date?; let endsAt: Date? }
 enum KioskIntentAmbiguity: Equatable { case none; case unresolved(String) }
 

@@ -229,6 +229,8 @@ struct KioskEvent: Decodable, Identifiable {
     let callStartsAt: Date?
     let callEndsAt: Date?
     let shiftCount: Int
+    /// The event's crew areas (VIDEO, PHOTO, ...), additive; older servers omit it.
+    let areas: [String]
     let assignedUsers: [AssignedUser]
     let assignedUserCount: Int
     /// Assigned crew with no personal checkout linked to this event
@@ -262,6 +264,7 @@ struct KioskEvent: Decodable, Identifiable {
         case callStartsAt
         case callEndsAt
         case shiftCount
+        case areas
         case assignedUsers
         case assignedUserCount
         case crewWithoutGear
@@ -278,6 +281,7 @@ struct KioskEvent: Decodable, Identifiable {
         callStartsAt = try container.decodeIfPresent(Date.self, forKey: .callStartsAt)
         callEndsAt = try container.decodeIfPresent(Date.self, forKey: .callEndsAt)
         shiftCount = try container.decodeIfPresent(Int.self, forKey: .shiftCount) ?? 0
+        areas = (try? container.decodeIfPresent([String].self, forKey: .areas)) ?? []
         assignedUsers = try container.decodeIfPresent(LossyDecodableArray<AssignedUser>.self, forKey: .assignedUsers)?.elements ?? []
         assignedUserCount = try container.decodeIfPresent(Int.self, forKey: .assignedUserCount) ?? assignedUsers.count
         crewWithoutGear = try container.decodeIfPresent(LossyDecodableArray<CrewMember>.self, forKey: .crewWithoutGear)?.elements ?? []

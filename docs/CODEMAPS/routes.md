@@ -264,6 +264,7 @@
 - `/api/kiosk/checkout/complete` -> `src/app/api/kiosk/checkout/complete/route.ts`
 - `/api/kiosk/checkout/scan` -> `src/app/api/kiosk/checkout/scan/route.ts`
 - `/api/kiosk/dashboard` -> `src/app/api/kiosk/dashboard/route.ts`
+- `/api/kiosk/events/[id]/crew-request` -> `src/app/api/kiosk/events/[id]/crew-request/route.ts`
 - `/api/kiosk/events` -> `src/app/api/kiosk/events/route.ts`
 - `/api/kiosk/heartbeat` -> `src/app/api/kiosk/heartbeat/route.ts`
 - `/api/kiosk/identify` -> `src/app/api/kiosk/identify/route.ts`
