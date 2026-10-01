@@ -463,6 +463,54 @@ describe("kiosk checkout detail bulk units", () => {
     });
   });
 
+  it("shows a battery reported missing as not returned, with no phantom quantity row, and nets counted stock", async () => {
+    mocks.bookingFindUnique.mockResolvedValue({
+      id: "booking-1",
+      title: "Return",
+      refNumber: "CO-1001",
+      status: "OPEN",
+      kind: "CHECKOUT",
+      endsAt: new Date("2026-05-06T12:00:00.000Z"),
+      scanEvents: [],
+      serializedItems: [],
+      checkinReports: [
+        { type: "LOST", assetId: null, bulkSkuUnitId: "unit-9", bulkSkuId: null, quantity: null },
+        { type: "LOST", assetId: null, bulkSkuUnitId: null, bulkSkuId: "sku-tape", quantity: 2 },
+      ],
+      bulkItems: [
+        {
+          id: "bulk-item-1",
+          plannedQuantity: 3,
+          checkedOutQuantity: 3,
+          checkedInQuantity: 1,
+          bulkSku: { id: "sku-1", name: "Sony Battery", category: "Batteries", trackByNumber: true },
+          unitAllocations: [
+            { checkedInAt: null, bulkSkuUnit: { id: "unit-7", unitNumber: 7 } },
+            { checkedInAt: new Date("2026-05-05T12:00:00.000Z"), bulkSkuUnit: { id: "unit-11", unitNumber: 11 } },
+            // Reported missing: custody closed at report time.
+            { checkedInAt: new Date("2026-05-05T12:05:00.000Z"), bulkSkuUnit: { id: "unit-9", unitNumber: 9 } },
+          ],
+        },
+        {
+          id: "bulk-item-2",
+          plannedQuantity: 5,
+          checkedOutQuantity: 5,
+          checkedInQuantity: 1,
+          bulkSku: { id: "sku-tape", name: "Gaff tape", category: "Supplies", trackByNumber: false },
+          unitAllocations: [],
+        },
+      ],
+    });
+
+    const json = await (await getKioskCheckoutDetail(new Request("http://test"), routeCtx("booking-1"))).json();
+    const unit9 = json.items.find((item: { id: string }) => item.id === "unit-9");
+    expect(unit9).toMatchObject({ returned: false, report: { type: "LOST" } });
+    expect(json.items.find((item: { id: string }) => item.id === "bulk-item-1:bulk-quantity")).toBeUndefined();
+    expect(json.items.find((item: { id: string }) => item.id === "bulk-item-2:bulk-quantity")).toMatchObject({
+      quantity: 2, returnsByQuantity: true, reportedMissingQuantity: 2, reportedDamagedQuantity: 0,
+    });
+  });
+
   it("includes checked-out battery quantity when unit allocation rows are missing", async () => {
     mocks.bookingFindUnique.mockResolvedValue({
       id: "booking-1",

@@ -378,6 +378,20 @@ export async function submitBulkCheckinReport(args: {
           });
         } else if (!allocation.checkedInAt) {
           throw new HttpError(400, "Item must be scanned before reporting damage");
+        } else {
+          // Bulk units have no maintenance status: note it on the unit so
+          // Battery Ops sees it, and staff are notified below.
+          const notes = `Reported damaged at check-in (${id})${description ? `: ${description.slice(0, 200)}` : ""}`;
+          await tx.bulkSkuUnit.update({ where: { id: unit.id }, data: { notes } });
+          await createAuditEntryTx(tx, {
+            actorId: args.reporter.id,
+            actorRole: args.reporter.role,
+            entityType: "bulk_sku_unit",
+            entityId: unit.id,
+            action: "checkin_report_unit_damaged",
+            before: { status: unit.status, notes: unit.notes },
+            after: { status: unit.status, notes, bookingId: id, ...source },
+          });
         }
         const data = { type: type as CheckinReportType, description, reportedById: args.reporter.id };
         saved = await tx.checkinItemReport.upsert({
@@ -498,7 +512,9 @@ export async function submitBulkCheckinReport(args: {
   deferPush(notifyItemReport({
     bookingId: id,
     bookingTitle: args.bookingTitle,
-    assetId: targetKey,
+    // Dedupe per report: a counted SKU can carry both a missing and a damaged
+    // report, and a later missing report raises the quantity.
+    assetId: target.kind === "unit" ? targetKey : `${targetKey}:${type}:${outcome.saved.quantity ?? 0}`,
     assetTag: outcome.label.tag,
     itemDescription: outcome.label.skuName,
     reportType: type,

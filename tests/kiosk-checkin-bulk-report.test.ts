@@ -145,7 +145,10 @@ describe("POST /api/kiosk/checkin/[id]/report for batteries", () => {
     mocks.allocationFindFirst.mockResolvedValue({ id: "alloc-1", checkedInAt: new Date(), bulkSkuUnit: { ...unit, status: "AVAILABLE" } });
     const body = await (await report({ actorId: "returner-1", bulkSkuUnitId: "unit-7", type: "DAMAGED", description: "Swollen" })).json();
     expect(body).toMatchObject({ type: "DAMAGED", heldForStaff: true });
-    expect(mocks.unitUpdate).not.toHaveBeenCalled();
+    // No maintenance status for units: the unit keeps its status and gets a note.
+    expect(mocks.unitUpdate).toHaveBeenCalledWith({ where: { id: "unit-7" }, data: { notes: expect.stringContaining("Reported damaged at check-in") } });
+    const audit = mocks.createAuditEntryTx.mock.calls.find((call) => call[1].action === "checkin_report_unit_damaged")![1];
+    expect(audit.before).toEqual({ status: "AVAILABLE", notes: null });
     expect(mocks.notifyItemReport).toHaveBeenCalledWith(expect.objectContaining({ reportType: "DAMAGED", assetTag: "#7" }));
   });
 });

@@ -8,6 +8,7 @@ type MarkCheckoutCompletedTx = {
   booking: Record<"findUnique" | "update", MockFn>;
   bookingSerializedItem: Record<"updateMany", MockFn>;
   bookingBulkItem: Record<"update", MockFn>;
+  checkinItemReport: Record<"findMany", MockFn>;
   bookingBulkUnitAllocation: Record<"updateMany", MockFn>;
   assetAllocation: Record<"updateMany", MockFn>;
   bulkSkuUnit: Record<"updateMany", MockFn>;
@@ -276,6 +277,54 @@ describe("markCheckoutCompleted", () => {
   });
 
   // ── REGRESSION: auto-LOST units must not restore stock or stay allocated ─
+  it("never restocks bulk already reported missing at check-in", async () => {
+    // Battery #9 was reported missing (unit LOST, allocation closed then), and
+    // 2 of 5 tape were reported missing. Nothing else is open.
+    const numberedBulk = makeBulkItem({
+      id: "bulk-numbered",
+      bulkSkuId: "sku-numbered",
+      plannedQuantity: 2,
+      checkedOutQuantity: 2,
+      checkedInQuantity: 1,
+      bulkSku: { trackByNumber: true },
+      unitAllocations: [],
+    });
+    const plainBulk = makeBulkItem({
+      id: "bulk-plain",
+      bulkSkuId: "sku-plain",
+      plannedQuantity: 5,
+      checkedOutQuantity: 5,
+      checkedInQuantity: 3,
+      bulkSku: { trackByNumber: false },
+      unitAllocations: [],
+    });
+    mockTx.checkinItemReport.findMany.mockResolvedValueOnce([
+      { bulkSkuId: null, quantity: null, bulkSkuUnit: { bulkSkuId: "sku-numbered" } },
+      { bulkSkuId: "sku-plain", quantity: 2, bulkSkuUnit: null },
+    ] as never);
+    mockTx.bulkStockMovement.groupBy.mockResolvedValue([
+      movementRow("sku-numbered", "CHECKOUT", 2),
+      movementRow("sku-numbered", "CHECKIN", 1),
+      movementRow("sku-plain", "CHECKOUT", 5),
+      movementRow("sku-plain", "CHECKIN", 2),
+    ]);
+    mockTx.booking.findUnique.mockResolvedValue(openCheckout([numberedBulk, plainBulk]));
+    mockTx.booking.update.mockResolvedValue({});
+    mockTx.assetAllocation.updateMany.mockResolvedValue({});
+    mockTx.bulkStockBalance.findMany.mockResolvedValue([]);
+    mockTx.bulkStockBalance.upsert.mockResolvedValue({});
+    mockTx.bulkStockMovement.createMany.mockResolvedValue({});
+    mockTx.scanSession.updateMany.mockResolvedValue({});
+    mockTx.auditLog.create.mockResolvedValue({});
+
+    await markCheckoutCompleted("b-1", "actor-1");
+
+    // Numbered: 2 out - 1 in - 1 reported missing = 0. Plain: 5 - 2 - 2 = 1.
+    const movementCall = mockTx.bulkStockMovement.createMany.mock.calls[0]?.[0];
+    expect(movementCall?.data).toHaveLength(1);
+    expect(movementCall?.data?.[0]).toMatchObject({ bulkSkuId: "sku-plain", quantity: 1 });
+  });
+
   it("excludes auto-LOST numbered units from the stock restore and closes their allocations", async () => {
     const plainBulk = makeBulkItem({
       id: "bulk-plain",
