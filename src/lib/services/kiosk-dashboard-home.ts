@@ -213,7 +213,9 @@ export function projectTodayTiles(args: {
 export function crewWithoutGear(
   event: HomeEventRow,
   checkouts: HomeCheckoutRow[],
-  pickups: Pick<KioskHomePickup, "eventId" | "requester" | "custodyScope">[] = [],
+  /** Pickups and the event's reservations, which count as covering crew
+   * whatever day they are picked up. */
+  pickups: Array<{ eventId: string | null; requester: (Pick<Person, "id"> & Partial<Person>) | null; custodyScope: "PERSON" | "SHARED" }> = [],
 ) {
   const covered = new Set<string>();
   for (const pickup of pickups) {

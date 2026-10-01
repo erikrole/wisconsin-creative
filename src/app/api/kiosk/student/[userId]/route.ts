@@ -67,6 +67,7 @@ export const GET = withKiosk<{ userId: string }>(async (req, { kiosk, params }) 
       select: {
         id: true,
         title: true,
+        eventId: true,
         refNumber: true,
         endsAt: true,
         serializedItems: {
@@ -99,6 +100,7 @@ export const GET = withKiosk<{ userId: string }>(async (req, { kiosk, params }) 
       select: {
         id: true,
         title: true,
+        eventId: true,
         refNumber: true,
         startsAt: true,
         serializedItems: {
@@ -132,6 +134,7 @@ export const GET = withKiosk<{ userId: string }>(async (req, { kiosk, params }) 
       select: {
         id: true,
         title: true,
+        eventId: true,
         refNumber: true,
         startsAt: true,
         serializedItems: {
@@ -169,6 +172,7 @@ export const GET = withKiosk<{ userId: string }>(async (req, { kiosk, params }) 
       select: {
         id: true,
         title: true,
+        eventId: true,
         startsAt: true,
       },
     }),
@@ -181,6 +185,7 @@ export const GET = withKiosk<{ userId: string }>(async (req, { kiosk, params }) 
     checkouts: checkouts.map((c) => ({
       id: c.id,
       title: displayBookingTitle(c.title),
+      eventId: c.eventId ?? null,
       refNumber: c.refNumber,
       items: c.serializedItems.map((si) => ({
         name: si.asset.name || si.asset.assetTag,
@@ -204,6 +209,8 @@ export const GET = withKiosk<{ userId: string }>(async (req, { kiosk, params }) 
         id: p.id,
         kind: "checkout" as const,
         title: displayBookingTitle(p.title),
+        // The hub matches a shift to its booking by event, not title.
+        eventId: p.eventId ?? null,
         refNumber: p.refNumber,
         startsAt: p.startsAt,
         serializedItems: p.serializedItems.map((si) => ({
@@ -220,6 +227,8 @@ export const GET = withKiosk<{ userId: string }>(async (req, { kiosk, params }) 
         id: p.id,
         kind: "reservation" as const,
         title: displayBookingTitle(p.title),
+        // The hub matches a shift to its booking by event, not title.
+        eventId: p.eventId ?? null,
         refNumber: p.refNumber,
         startsAt: p.startsAt,
         serializedItems: p.serializedItems.map((si) => ({
@@ -238,6 +247,7 @@ export const GET = withKiosk<{ userId: string }>(async (req, { kiosk, params }) 
     reservations: reservations.map((r) => ({
       id: r.id,
       title: displayBookingTitle(r.title),
+      eventId: r.eventId ?? null,
       startsAt: r.startsAt,
     })),
   });

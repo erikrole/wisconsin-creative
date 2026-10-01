@@ -1243,7 +1243,10 @@ struct KioskCheckoutView: View {
         customPurpose = draft.customPurpose
         let minimum = KioskQuarterHour.roundedUp(Date().addingTimeInterval(5 * 60))
         dueBackAt = draft.dueBackAt >= minimum ? draft.dueBackAt : minimum
-        hasChosenReturn = true
+        // A time the person picked stays picked; an untouched default still
+        // asks for one. A time that slid into the past was clamped, so it
+        // needs choosing again.
+        hasChosenReturn = draft.hasChosenReturn && draft.dueBackAt >= minimum
         selectedKitId = draft.selectedKitId
         if draft.selectedKitId != nil { didApplySuggestedKit = true }
         // Resume where the draft actually left off. Forcing `true` here sent a
@@ -1308,7 +1311,8 @@ struct KioskCheckoutView: View {
                 customPurpose: customPurpose,
                 dueBackAt: dueBackAt,
                 contextReady: checkoutContextReady,
-                selectedKitId: selectedKitId
+                selectedKitId: selectedKitId,
+                hasChosenReturn: hasChosenReturn
             ),
             for: userId
         )

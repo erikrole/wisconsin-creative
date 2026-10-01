@@ -5,7 +5,8 @@ import { withKiosk } from "@/lib/api";
 import { HttpError, ok } from "@/lib/http";
 import { bookingSnapshotMatches } from "@/lib/booking-concurrency";
 import { displayBookingTitle } from "@/lib/booking-display-title";
-import { updateBookingEvents, updateCheckout, updateReservation } from "@/lib/services/bookings-lifecycle";
+import { updateBookingEvents, updateBookingEventsTx, updateCheckout, updateReservation } from "@/lib/services/bookings-lifecycle";
+import { dispatchScheduleAssignmentNotifications } from "@/lib/services/notifications";
 import { assertKioskPickupPlanActor, kioskPickupPlanActorSelect } from "@/lib/services/kiosk-pickup-add";
 import { kioskRosterUserWhere } from "@/lib/user-visibility";
 
@@ -29,8 +30,8 @@ const bodySchema = z.object({
  * checkout. Title and time go through `updateReservation` / `updateCheckout`
  * (Serializable, availability-checked with the same rules
  * `GET /api/kiosk/checkout/[id]/extend-window` reports, audited before/after);
- * an event link then goes through `updateBookingEvents` (its own Serializable
- * transaction and audit). Items and staged pickup scans are not touched.
+ * an event link commits inside that same transaction (`updateBookingEventsTx`),
+ * or alone through `updateBookingEvents` when only the link changes. Items and staged pickup scans are not touched.
  */
 export const PATCH = withKiosk<{ id: string }>(async (req, { params }) => {
   const body = bodySchema.parse(await req.json());
@@ -75,15 +76,29 @@ export const PATCH = withKiosk<{ id: string }>(async (req, { params }) => {
     title = displayBookingTitle(event.summary);
   }
 
+  const eventIds = body.eventId ? [body.eventId] : [];
   if (title !== undefined || endsAt) {
     const updates = { title, endsAt };
-    if (isReservation) await updateReservation(booking.id, actor.id, updates, expectedUpdatedAt);
-    else await updateCheckout(booking.id, actor.id, updates, expectedUpdatedAt);
-  }
-  if (body.eventId !== undefined) {
-    // Second transaction: the snapshot was already checked above and the
-    // title/time update just moved updatedAt.
-    await updateBookingEvents(booking.id, actor.id, body.eventId ? [body.eventId] : []);
+    // With an event link, it commits in the same SERIALIZABLE transaction as
+    // the title/time: a refused time never leaves a half-applied edit.
+    const scheduleNotificationAssignmentIds: string[] = [];
+    const linkEvents = body.eventId !== undefined
+      ? [{
+          afterUpdateTx: (tx: Parameters<typeof updateBookingEventsTx>[0]) => updateBookingEventsTx(tx, {
+            bookingId: booking.id,
+            actorUserId: actor.id,
+            eventIds,
+            scheduleNotificationAssignmentIds,
+          }),
+        }] as const
+      : [] as const;
+    if (isReservation) await updateReservation(booking.id, actor.id, updates, expectedUpdatedAt, ...linkEvents);
+    else await updateCheckout(booking.id, actor.id, updates, expectedUpdatedAt, ...linkEvents);
+    for (const assignmentId of scheduleNotificationAssignmentIds) {
+      await dispatchScheduleAssignmentNotifications(assignmentId, "assigned");
+    }
+  } else if (body.eventId !== undefined) {
+    await updateBookingEvents(booking.id, actor.id, eventIds, expectedUpdatedAt);
   }
 
   const updated = await db.booking.findUniqueOrThrow({

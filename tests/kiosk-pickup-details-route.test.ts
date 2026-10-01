@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   updateReservation: vi.fn(),
   updateCheckout: vi.fn(),
   updateBookingEvents: vi.fn(),
+  updateBookingEventsTx: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -31,7 +32,9 @@ vi.mock("@/lib/services/bookings-lifecycle", () => ({
   updateReservation: mocks.updateReservation,
   updateCheckout: mocks.updateCheckout,
   updateBookingEvents: mocks.updateBookingEvents,
+  updateBookingEventsTx: mocks.updateBookingEventsTx,
 }));
+vi.mock("@/lib/services/notifications", () => ({ dispatchScheduleAssignmentNotifications: vi.fn() }));
 
 import { PATCH } from "@/app/api/kiosk/pickup/[id]/details/route";
 
@@ -60,6 +63,7 @@ function patch(body: Record<string, unknown>) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.updateReservation.mockReset();
   mocks.bookingFindUnique.mockResolvedValue(booking());
   mocks.userFindFirst.mockResolvedValue({ id: "david", role: Role.STUDENT, collaboratorPolicy: null });
   mocks.bookingFindUniqueOrThrow.mockResolvedValue({
@@ -89,18 +93,37 @@ describe("PATCH /api/kiosk/pickup/[id]/details", () => {
     );
   });
 
-  it("links an event and takes its name as the title", async () => {
+  it("links an event inside the title update's transaction and takes its name as the title", async () => {
     mocks.eventFindFirst.mockResolvedValue({ id: "ev-1", summary: "Volleyball vs Minnesota" });
+    const tx = { marker: "tx" };
+    mocks.updateReservation.mockImplementation(async (_id, _actor, _updates, _expected, options) => {
+      await options.afterUpdateTx(tx);
+    });
     await patch({ eventId: "ev-1" });
     expect(mocks.updateReservation).toHaveBeenCalledWith(
       "rv-1", "david", { title: "Volleyball vs Minnesota", endsAt: undefined }, new Date(snapshot),
+      expect.objectContaining({ afterUpdateTx: expect.any(Function) }),
     );
-    expect(mocks.updateBookingEvents).toHaveBeenCalledWith("rv-1", "david", ["ev-1"]);
+    expect(mocks.updateBookingEventsTx).toHaveBeenCalledWith(tx, expect.objectContaining({
+      bookingId: "rv-1", actorUserId: "david", eventIds: ["ev-1"],
+    }));
+    expect(mocks.updateBookingEvents).not.toHaveBeenCalled();
   });
 
-  it("unlinks the event when a custom purpose replaces it", async () => {
+  it("commits nothing of the link when the title/time update is refused", async () => {
+    mocks.eventFindFirst.mockResolvedValue({ id: "ev-1", summary: "Volleyball vs Minnesota" });
+    mocks.updateReservation.mockRejectedValue(new HttpError(409, "FX3 1 is reserved then"));
+    await expect(patch({ eventId: "ev-1", endsAt: later })).rejects.toMatchObject({ status: 409 });
+    expect(mocks.updateBookingEvents).not.toHaveBeenCalled();
+    expect(mocks.updateBookingEventsTx).not.toHaveBeenCalled();
+  });
+
+  it("unlinks the event in the same transaction when a custom purpose replaces it", async () => {
+    mocks.updateReservation.mockImplementation(async (_id, _actor, _updates, _expected, options) => {
+      await options.afterUpdateTx({});
+    });
     await patch({ title: "Media day", eventId: null });
-    expect(mocks.updateBookingEvents).toHaveBeenCalledWith("rv-1", "david", []);
+    expect(mocks.updateBookingEventsTx).toHaveBeenCalledWith({}, expect.objectContaining({ eventIds: [] }));
   });
 
   it("rejects an event that is no longer available", async () => {

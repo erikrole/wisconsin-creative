@@ -118,6 +118,11 @@ type UpdateBookingInput = {
   notes?: string;
 };
 
+/** Extra writes that must commit with a booking update (same transaction). */
+type BookingUpdateOptions = {
+  afterUpdateTx?: (tx: Prisma.TransactionClient) => Promise<void>;
+};
+
 type TransferBookingOwnerInput = {
   targetUserId: string;
   reason?: string;
@@ -1927,6 +1932,7 @@ export async function updateReservation(
   actorUserId: string,
   updates: UpdateBookingInput,
   expectedUpdatedAt?: Date,
+  options: BookingUpdateOptions = {},
 ) {
   const scheduleNotificationAssignmentIds: string[] = [];
   let updated;
@@ -2276,6 +2282,8 @@ export async function updateReservation(
         }
       }
 
+      await options.afterUpdateTx?.(tx);
+
       return tx.booking.findUniqueOrThrow({
         where: { id: bookingId },
         include: bookingInclude
@@ -2305,6 +2313,48 @@ export async function updateBookingEvents(
   try {
     const updated = await db.$transaction(
       async (tx) => {
+        await updateBookingEventsTx(tx, {
+          bookingId,
+          actorUserId,
+          eventIds,
+          expectedUpdatedAt,
+          scheduleNotificationAssignmentIds,
+        });
+        return tx.booking.findUniqueOrThrow({
+          where: { id: bookingId },
+          include: bookingInclude,
+        });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+
+    for (const assignmentId of scheduleNotificationAssignmentIds) {
+      await dispatchScheduleAssignmentNotifications(assignmentId, "assigned");
+    }
+    return updated;
+  } catch (error) {
+    handleBookingMutationRace(error);
+  }
+}
+
+/**
+ * The event-link write of `updateBookingEvents` inside a caller's SERIALIZABLE
+ * transaction, so a title/time edit and the link commit together (kiosk
+ * pickup details). Schedule assignments it creates are pushed onto
+ * `scheduleNotificationAssignmentIds`; the caller notifies after commit.
+ */
+export async function updateBookingEventsTx(
+  tx: Prisma.TransactionClient,
+  args: {
+    bookingId: string;
+    actorUserId: string;
+    eventIds: string[];
+    expectedUpdatedAt?: Date;
+    scheduleNotificationAssignmentIds: string[];
+  },
+) {
+  const { bookingId, actorUserId, eventIds, expectedUpdatedAt, scheduleNotificationAssignmentIds } = args;
+  assertValidEventLinks(eventIds);
         const actor = await tx.user.findUnique({
           where: { id: actorUserId },
           select: {
@@ -2503,21 +2553,6 @@ export async function updateBookingEvents(
           });
         }
 
-        return tx.booking.findUniqueOrThrow({
-          where: { id: bookingId },
-          include: bookingInclude,
-        });
-      },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-    );
-
-    for (const assignmentId of scheduleNotificationAssignmentIds) {
-      await dispatchScheduleAssignmentNotifications(assignmentId, "assigned");
-    }
-    return updated;
-  } catch (error) {
-    handleBookingMutationRace(error);
-  }
 }
 
 export async function cancelReservation(bookingId: string, actorUserId: string) {
@@ -2614,6 +2649,7 @@ export async function updateCheckout(
   actorUserId: string,
   updates: UpdateBookingInput,
   expectedUpdatedAt?: Date,
+  options: BookingUpdateOptions = {},
 ) {
   let updated;
   try {
@@ -2871,6 +2907,8 @@ export async function updateCheckout(
           })),
         );
       }
+
+      await options.afterUpdateTx?.(tx);
 
       return tx.booking.findUniqueOrThrow({
         where: { id: bookingId },

@@ -123,16 +123,37 @@ function isAllDaySpan(startsAt: Date, endsAt: Date | null, timeZone: string) {
   return startsAtMidnight && endsAtMidnight && crossesDay;
 }
 
-function activeBulkQuantity(item: { checkedOutQuantity: number; checkedInQuantity: number }) {
-  return Math.max(0, item.checkedOutQuantity - item.checkedInQuantity);
+/** Missing bulk per SKU: a numbered unit counts one, counted stock its quantity. */
+function reportedLostBulkBySku(reports: Array<{ bulkSkuId: string | null; quantity: number | null; bulkSkuUnit: { bulkSkuId: string } | null }> | undefined) {
+  const bySku = new Map<string, number>();
+  for (const report of reports ?? []) {
+    const skuId = report.bulkSkuId ?? report.bulkSkuUnit?.bulkSkuId;
+    if (!skuId) continue;
+    bySku.set(skuId, (bySku.get(skuId) ?? 0) + (report.bulkSkuId ? report.quantity ?? 0 : 1));
+  }
+  return bySku;
 }
 
-function missingAllocatedBulkQuantity(item: {
+type ActiveBulkItem = {
   checkedOutQuantity: number;
   checkedInQuantity: number;
+  bulkSku: { id: string };
   unitAllocations: unknown[];
-}) {
-  return Math.max(0, activeBulkQuantity(item) - item.unitAllocations.length);
+  _count?: { unitAllocations: number };
+};
+
+/** Still out: checked out, less checked in, less reported missing (a lost
+ * unit closes its allocation without counting as checked in). */
+function activeBulkQuantity(item: ActiveBulkItem, lostBySku: Map<string, number>) {
+  return Math.max(0, item.checkedOutQuantity - item.checkedInQuantity - (lostBySku.get(item.bulkSku.id) ?? 0));
+}
+
+function openUnitCount(item: ActiveBulkItem) {
+  return item._count?.unitAllocations ?? item.unitAllocations.length;
+}
+
+function missingAllocatedBulkQuantity(item: ActiveBulkItem, lostBySku: Map<string, number>) {
+  return Math.max(0, activeBulkQuantity(item, lostBySku) - openUnitCount(item));
 }
 
 function quantityLabel(name: string, quantity: number) {
@@ -374,7 +395,17 @@ export const GET = withKiosk(async (_req, { kiosk }) => {
                 },
               },
             },
+            // Exact open-unit count: the preview list above is capped at 3.
+            _count: {
+              select: { unitAllocations: { where: { checkedOutAt: { not: null }, checkedInAt: null } } },
+            },
           },
+        },
+        // Missing bulk is accounted for, so it is not still out (the same
+        // rule as the checkout detail).
+        checkinReports: {
+          where: { type: "LOST", OR: [{ bulkSkuId: { not: null } }, { bulkSkuUnitId: { not: null } }] },
+          select: { bulkSkuId: true, quantity: true, bulkSkuUnit: { select: { bulkSkuId: true } } },
         },
         _count: {
           select: { serializedItems: { where: { allocationStatus: "active" } } },
@@ -529,7 +560,9 @@ export const GET = withKiosk(async (_req, { kiosk }) => {
         checkedInQuantity: number;
         bulkSku: { id: string; name: string; imageUrl: string | null };
         unitAllocations: Array<{ bulkSkuUnit: { unitNumber: number } }>;
+        _count?: { unitAllocations: number };
       }>;
+      checkinReports?: Array<{ bulkSkuId: string | null; quantity: number | null; bulkSkuUnit: { bulkSkuId: string } | null }>;
       _count: { serializedItems: number };
     }>,
     "checkouts",
@@ -614,6 +647,49 @@ export const GET = withKiosk(async (_req, { kiosk }) => {
     console.error("[kiosk/dashboard] nudges failed", error);
     partialFailures.push("nudges");
   }
+  // Reserved gear for the shown events, whenever it is picked up: the pickups
+  // list only reaches today, so tomorrow's crew with a reservation would
+  // otherwise read as having no gear. One batched read for every event.
+  let eventReservations: Array<{ eventId: string | null; requester: { id: string } | null; custodyScope: "PERSON" | "SHARED" }> = [];
+  const shownEventIds = events.map((e) => e.id);
+  const shownAssignmentIds = events.flatMap((e) =>
+    (e.shiftGroup?.shifts ?? []).flatMap((shift) => shift.assignments.map((a) => a.id).filter((id): id is string => Boolean(id))),
+  );
+  if (shownEventIds.length > 0) {
+    try {
+      const rows = await db.booking.findMany({
+        where: {
+          custodyScope: "PERSON",
+          OR: [
+            { kind: BookingKind.RESERVATION, status: BookingStatus.BOOKED },
+            { kind: BookingKind.CHECKOUT, status: BookingStatus.PENDING_PICKUP },
+          ],
+          AND: [{
+            OR: [
+              { eventId: { in: shownEventIds } },
+              { events: { some: { eventId: { in: shownEventIds } } } },
+              ...(shownAssignmentIds.length > 0 ? [{ shiftAssignmentId: { in: shownAssignmentIds } }] : []),
+            ],
+          }],
+        },
+        select: { requesterUserId: true, eventId: true, shiftAssignmentId: true, events: { select: { eventId: true } } },
+      });
+      const eventByAssignment = new Map(events.flatMap((e) =>
+        (e.shiftGroup?.shifts ?? []).flatMap((shift) => shift.assignments.map((a) => [a.id, e.id] as const)),
+      ));
+      eventReservations = (rows ?? []).flatMap((row) => {
+        const linked = new Set([
+          row.eventId,
+          ...(row.events ?? []).map((link) => link.eventId),
+          row.shiftAssignmentId ? eventByAssignment.get(row.shiftAssignmentId) : undefined,
+        ].filter((id): id is string => Boolean(id)));
+        return [...linked].map((eventId) => ({ eventId, requester: { id: row.requesterUserId }, custodyScope: "PERSON" as const }));
+      });
+    } catch (error) {
+      console.error("[kiosk/dashboard] event reservations failed", error);
+      partialFailures.push("eventReservations");
+    }
+  }
   // Older fixtures and rows without link columns read as unlinked.
   const homeCheckouts: HomeCheckoutRow[] = checkouts.map((c) => ({
     id: c.id,
@@ -689,7 +765,7 @@ export const GET = withKiosk(async (_req, { kiosk }) => {
       areas: [...new Set(shifts.map((shift) => shift.area))],
       assignedUsers,
       assignedUserCount: assignedUsers.length,
-      crewWithoutGear: crewWithoutGear(e, homeCheckouts, pickups).map((user) => ({
+      crewWithoutGear: crewWithoutGear(e, homeCheckouts, [...pickups, ...eventReservations]).map((user) => ({
         id: user.id,
         name: user.name,
         initials: getInitials(user.name),
@@ -759,9 +835,10 @@ export const GET = withKiosk(async (_req, { kiosk }) => {
         endsAt: entry.bookingBulkItem.booking.endsAt,
         isOverdue: entry.bookingBulkItem.booking.endsAt < now,
       })),
-      ...checkouts.flatMap((checkout) =>
-        checkout.bulkItems.flatMap((item) => {
-          const missingQuantity = missingAllocatedBulkQuantity(item);
+      ...checkouts.flatMap((checkout) => {
+        const lostBySku = reportedLostBulkBySku(checkout.checkinReports);
+        return checkout.bulkItems.flatMap((item) => {
+          const missingQuantity = missingAllocatedBulkQuantity(item, lostBySku);
           if (missingQuantity <= 0) return [];
           return [{
             id: `${checkout.id}:${item.id}:bulk-quantity`,
@@ -780,17 +857,18 @@ export const GET = withKiosk(async (_req, { kiosk }) => {
             endsAt: checkout.endsAt,
             isOverdue: checkout.endsAt < now,
           }];
-        })
-      ),
+        });
+      }),
     ],
     checkouts: checkouts.map((c) => {
+      const lostBySku = reportedLostBulkBySku(c.checkinReports);
       const bulkPreviewItems = c.bulkItems.flatMap((bi) => {
         const allocatedItems = bi.unitAllocations.map((allocation) => ({
           name: `${bi.bulkSku.name} #${allocation.bulkSkuUnit.unitNumber}`,
           tagName: bi.bulkSku.name,
           imageUrl: bi.bulkSku.imageUrl,
         }));
-        const missingQuantity = missingAllocatedBulkQuantity(bi);
+        const missingQuantity = missingAllocatedBulkQuantity(bi, lostBySku);
         return missingQuantity > 0
           ? allocatedItems.concat({
               name: quantityLabel(bi.bulkSku.name, missingQuantity),
@@ -800,7 +878,7 @@ export const GET = withKiosk(async (_req, { kiosk }) => {
           : allocatedItems;
       });
       const bulkItemCount = c.bulkItems.reduce((sum, bi) => {
-        return sum + Math.max(bi.unitAllocations.length, activeBulkQuantity(bi));
+        return sum + Math.max(openUnitCount(bi), activeBulkQuantity(bi, lostBySku));
       }, 0);
 
       return {

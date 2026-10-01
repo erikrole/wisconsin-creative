@@ -203,6 +203,99 @@ describe("kiosk dashboard route", () => {
     expect(body.partialFailures).toEqual([]);
   });
 
+  it("counts crew with a reservation for a later event as having gear, in one batched read", async () => {
+    mockDb.$queryRaw.mockResolvedValue([{ items_out: 0n, checkouts: 0n, overdue: 0n }]);
+    mockDb.calendarEvent.findMany.mockResolvedValue([{
+      id: "event-tomorrow",
+      summary: "Volleyball vs Minnesota",
+      sportCode: "WVB",
+      startsAt: new Date(Date.now() + 30 * 3_600_000),
+      endsAt: new Date(Date.now() + 33 * 3_600_000),
+      allDay: false,
+      shiftGroup: {
+        _count: { shifts: 1 },
+        shifts: [{
+          area: "Video",
+          startsAt: new Date(Date.now() + 30 * 3_600_000),
+          endsAt: new Date(Date.now() + 33 * 3_600_000),
+          callStartsAt: null,
+          callEndsAt: null,
+          assignments: [
+            { id: "asg-2", user: { id: "user-2", name: "Reserved Person", avatarUrl: null } },
+            { id: "asg-3", user: { id: "user-3", name: "No Gear", avatarUrl: null } },
+          ],
+        }],
+      },
+    }]);
+    const reservationQueries: unknown[] = [];
+    mockDb.booking.findMany.mockImplementation(async (args: { where?: { status?: unknown; AND?: unknown } }) => {
+      if (args?.where?.status === "OPEN") return [];
+      if (args?.where?.AND) {
+        reservationQueries.push(args.where);
+        return [{ requesterUserId: "user-2", eventId: null, shiftAssignmentId: null, events: [{ eventId: "event-tomorrow" }] }];
+      }
+      return [];
+    });
+
+    const body = await (await GET(request(), { params: Promise.resolve({}) })).json();
+
+    expect(reservationQueries).toHaveLength(1);
+    expect(body.events[0].crewWithoutGear.map((user: { id: string }) => user.id)).toEqual(["user-3"]);
+  });
+
+  it("leaves reported-missing bulk out of what a checkout still has out", async () => {
+    mockDb.$queryRaw.mockResolvedValue([{ items_out: 1n, checkouts: 1n, overdue: 0n }]);
+    mockDb.calendarEvent.findMany.mockResolvedValue([]);
+    mockDb.bookingBulkUnitAllocation.findMany.mockResolvedValue([]);
+    mockOpenCheckouts([
+      {
+        id: "booking-1",
+        title: "Kiosk Checkout",
+        endsAt: new Date("2026-05-13T12:00:00.000Z"),
+        requester: { id: "user-1", name: "Bucky Badger", avatarUrl: null },
+        serializedItems: [],
+        bulkItems: [
+          {
+            // #31 still out; #32 reported missing closed its allocation
+            // without counting as checked in.
+            id: "bi-bat",
+            checkedOutQuantity: 2,
+            checkedInQuantity: 0,
+            bulkSku: { id: "sku-bat", name: "Sony Battery", imageUrl: null },
+            unitAllocations: [{ bulkSkuUnit: { unitNumber: 31 } }],
+            _count: { unitAllocations: 1 },
+          },
+          {
+            // 5 out, 1 back, 2 reported missing: 2 still out.
+            id: "bi-cable",
+            checkedOutQuantity: 5,
+            checkedInQuantity: 1,
+            bulkSku: { id: "sku-cable", name: "XLR Cable", imageUrl: null },
+            unitAllocations: [],
+            _count: { unitAllocations: 0 },
+          },
+        ],
+        checkinReports: [
+          { bulkSkuId: null, quantity: null, bulkSkuUnit: { bulkSkuId: "sku-bat" } },
+          { bulkSkuId: "sku-cable", quantity: 2, bulkSkuUnit: null },
+        ],
+        _count: { serializedItems: 0 },
+      },
+    ]);
+
+    const res = await GET(request(), { params: Promise.resolve({}) });
+    const body = await res.json();
+
+    expect(body.checkouts[0]).toMatchObject({
+      itemCount: 3,
+      items: [
+        { name: "Sony Battery #31", tagName: "Sony Battery", imageUrl: null },
+        { name: "XLR Cable x2", tagName: "XLR Cable", imageUrl: null },
+      ],
+    });
+    expect(body.activeItems.map((item: { name: string }) => item.name)).toEqual(["XLR Cable x2"]);
+  });
+
   it("corrects legacy team abbreviation casing in kiosk display projections", async () => {
     mockDb.$queryRaw.mockResolvedValue([{ items_out: 1n, checkouts: 1n, overdue: 0n }]);
     mockDb.calendarEvent.findMany.mockResolvedValue([{

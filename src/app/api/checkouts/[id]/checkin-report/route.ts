@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { HttpError, ok } from "@/lib/http";
 import { BookingKind } from "@prisma/client";
 import { requireBookingAction } from "@/lib/services/booking-rules";
-import { readCheckinReportPayload, submitBulkCheckinReport, submitCheckinItemReport } from "@/lib/services/checkin-item-reports";
+import { finishReportCompletedReturn, readCheckinReportPayload, submitBulkCheckinReport, submitCheckinItemReport } from "@/lib/services/checkin-item-reports";
 
 /**
  * POST /api/checkouts/[id]/checkin-report
@@ -27,7 +27,7 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
 
   const { assetId, bulkSkuUnitId, bulkSkuId, quantity, type, description } = parsed.data;
   const reporter = { id: user.id, role: user.role, name: user.name };
-  const { report } = assetId
+  const result = assetId
     ? await submitCheckinItemReport({ bookingId: id, bookingTitle: booking.title, assetId, type, description, file, reporter })
     : await submitBulkCheckinReport({
         bookingId: id,
@@ -42,6 +42,11 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
         locationId: (await db.booking.findUniqueOrThrow({ where: { id }, select: { locationId: true } })).locationId,
         returnedFor: booking,
       });
+  const { report } = result;
+
+  // A bulk missing report on the last outstanding item completes the
+  // checkout: award the return badge and end the Live Activity, like the kiosk.
+  if ("completedAt" in result) await finishReportCompletedReturn(booking, result.completedAt);
 
   return ok({
     id: report.id,

@@ -31,6 +31,11 @@ struct KioskReturnReportView: View {
     /// Everything on the return: serialized items, battery units, counted stock.
     let items: [KioskCheckoutDetail.ReturnItem]
     let returnedIds: Set<String>
+    /// Scanned back on this page. Kept here too, so the page moves past
+    /// "scan it first" even when the caller doesn't track returns (Staff
+    /// actions passes a fixed set).
+    @State private var scannedHereIds: Set<String> = []
+    private func isReturned(_ id: String) -> Bool { returnedIds.contains(id) || scannedHereIds.contains(id) }
     /// Already reported missing: can't be reported again.
     var missingIds: Set<String> = []
     @Binding var step: KioskReturnReportStep?
@@ -42,6 +47,10 @@ struct KioskReturnReportView: View {
     @State private var photo: UIImage?
     @State private var showCamera = false
     @State private var isSubmitting = false
+    /// The operation reference for the submit in progress, kept across
+    /// retries of the same details so a resend replays rather than counting
+    /// twice. New details or a success start a new one.
+    @State private var pendingReport: (details: String, requestId: String)?
     @State private var errorMessage: String?
     /// Counted stock: how many are damaged or missing.
     @State private var quantity = 1
@@ -84,7 +93,7 @@ struct KioskReturnReportView: View {
                         .font(KioskType.heroAction)
                         .foregroundStyle(KioskText.primary)
                     HStack(spacing: 12) {
-                        let isBack = returnedIds.contains(item.id)
+                        let isBack = isReturned(item.id)
                         let isMissing = missingIds.contains(item.id)
                         choiceCard(
                             dot: KioskSection.comingBack.accent,
@@ -151,7 +160,7 @@ struct KioskReturnReportView: View {
                     Text("Missing")
                         .font(KioskType.meta)
                         .foregroundStyle(KioskSection.problem.text)
-                } else if returnedIds.contains(item.id) {
+                } else if isReturned(item.id) {
                     Text("Back")
                         .font(KioskType.meta)
                         .foregroundStyle(KioskSection.comingBack.text)
@@ -183,7 +192,7 @@ struct KioskReturnReportView: View {
                 KioskItemThumbnail(imageUrl: item.imageUrl, size: size)
                 KioskBatteryUnitChip(
                     label: item.unitNumber.map { "#\($0)" } ?? item.tagName,
-                    isScanned: returnedIds.contains(item.id),
+                    isScanned: isReturned(item.id),
                     section: .comingBack,
                     size: size > 60 ? 44 : 32
                 )
@@ -256,7 +265,7 @@ struct KioskReturnReportView: View {
     /// so "It's damaged" never dead-ends. Counted stock has no per-piece QR:
     /// the damaged quantity counts as returned when the report is sent.
     private func needsScan(_ item: KioskCheckoutDetail.ReturnItem) -> Bool {
-        !item.isCountedStock && !returnedIds.contains(item.id)
+        !item.isCountedStock && !isReturned(item.id)
     }
 
     private func damagedPage(_ item: KioskCheckoutDetail.ReturnItem) -> some View {
@@ -374,6 +383,7 @@ struct KioskReturnReportView: View {
                     return
                 }
                 // Another item on this checkout still came back: say so.
+                scannedHereIds.insert(scanned.id)
                 onReturned(scanned)
                 if scanned.id == item.id {
                     Haptics.success()
@@ -497,6 +507,7 @@ struct KioskReturnReportView: View {
         errorMessage = nil
         scanMessage = nil
         quantity = 1
+        pendingReport = nil
     }
 
     private func submit(_ item: KioskCheckoutDetail.ReturnItem, type: String) {
@@ -508,6 +519,14 @@ struct KioskReturnReportView: View {
         let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)
         let jpeg = photo.flatMap { KioskPhotoCapture.uploadJPEG(from: $0) }
         let target = KioskReportTarget.for(item, quantity: quantity)
+        let details = ([item.id, type, trimmed] + target.fields.map { "\($0.0)=\($0.1)" }).joined(separator: "|")
+        let requestId: String
+        if let pendingReport, pendingReport.details == details {
+            requestId = pendingReport.requestId
+        } else {
+            requestId = "\(Int64(Date().timeIntervalSince1970 * 1000)):\(UUID().uuidString)"
+            pendingReport = (details, requestId)
+        }
         Task {
             defer { if store.ownsFlow(flow) { isSubmitting = false } }
             do {
@@ -518,9 +537,11 @@ struct KioskReturnReportView: View {
                     type: type,
                     description: trimmed.isEmpty ? nil : trimmed,
                     photoJPEG: jpeg,
-                    staffToken: staffToken
+                    staffToken: staffToken,
+                    requestId: requestId
                 )
                 guard store.ownsFlow(flow) else { return }
+                pendingReport = nil
                 Haptics.success()
                 onReported(result, item)
             } catch {

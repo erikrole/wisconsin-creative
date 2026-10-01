@@ -632,7 +632,9 @@ struct KioskAPI {
     /// Damaged or missing (G4, G5). Multipart like the web route: `actorId`,
     /// one target (`assetId` | `bulkSkuUnitId` | `bulkSkuId` + `quantity`), `type` (DAMAGED | LOST), optional `description`, optional
     /// JPEG `file`. Not retried automatically: the server rejects a repeat
-    /// report for the same item within a few seconds.
+    /// report for the same item within a few seconds. `requestId` is the
+    /// operation reference for bulk reports: a resend of the same submit
+    /// replays the first answer instead of counting the quantity twice.
     func kioskCheckinReport(
         bookingId: String,
         actorId: String,
@@ -640,7 +642,8 @@ struct KioskAPI {
         type: String,
         description: String?,
         photoJPEG: Data?,
-        staffToken: String? = nil
+        staffToken: String? = nil,
+        requestId: String? = nil
     ) async throws -> KioskCheckinReportResult {
         let boundary = "KioskReport-\(UUID().uuidString)"
         var req = request(path: "/api/kiosk/checkin/\(bookingId)/report", method: "POST")
@@ -649,7 +652,8 @@ struct KioskAPI {
         req.httpBody = Self.multipartBody(
             boundary: boundary,
             fields: [("actorId", actorId)] + target.fields + [("type", type)]
-                + (description.map { [("description", $0)] } ?? []),
+                + (description.map { [("description", $0)] } ?? [])
+                + (requestId.map { [("requestId", $0)] } ?? []),
             file: photoJPEG.map { (name: "file", filename: "damage.jpg", contentType: "image/jpeg", data: $0) }
         )
         return try await perform(req)

@@ -542,20 +542,22 @@ struct KioskOperatorHubView: View {
     /// event row, and prefills due-back to 90 minutes after the event end —
     /// so this lands on the details step with both required answers already filled.
     /// A shift that already has gear booked points at that booking instead of
-    /// offering a second checkout. Matched by cleaned title (bookings don't
-    /// carry an event id here).
+    /// offering a second checkout. Matched by the booking's linked event; a
+    /// series shares one title across dates, so the cleaned title is only the
+    /// fallback for a booking with no event id (older servers, unlinked).
     private func existingBooking(for event: KioskCheckoutEvent) -> (label: String, action: (() -> Void)?)? {
         let key = kioskEventDisplayTitle(event.title, sportCode: event.sportCode).lowercased()
-        func same(_ title: String) -> Bool {
-            kioskEventDisplayTitle(title, sportCode: event.sportCode).lowercased() == key
+        func same(_ title: String, eventId: String?) -> Bool {
+            if let eventId { return eventId == event.id }
+            return kioskEventDisplayTitle(title, sportCode: event.sportCode).lowercased() == key
         }
-        if let pickup = context?.pendingPickups.first(where: { same($0.title) }) {
+        if let pickup = context?.pendingPickups.first(where: { same($0.title, eventId: $0.eventId) }) {
             return ("Pick up", { startPickup(id: pickup.id, title: pickup.title, startsAt: pickup.startsAt) })
         }
-        if let reservation = context?.reservations.first(where: { same($0.title) }) {
+        if let reservation = context?.reservations.first(where: { same($0.title, eventId: $0.eventId) }) {
             return ("Pick up", { startPickup(id: reservation.id, title: reservation.title, startsAt: reservation.startsAt) })
         }
-        if context?.checkouts.contains(where: { same($0.title) }) == true {
+        if context?.checkouts.contains(where: { same($0.title, eventId: $0.eventId) }) == true {
             return ("Gear out", nil)
         }
         return nil

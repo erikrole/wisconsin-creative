@@ -21,7 +21,7 @@
 | `src/lib/services/booking-rules.ts` | 135 |
 | `src/lib/services/bookings-checkin.ts` | 940 |
 | `src/lib/services/bookings-helpers.ts` | 310 |
-| `src/lib/services/bookings-lifecycle.ts` | 3348 |
+| `src/lib/services/bookings-lifecycle.ts` | 3386 |
 | `src/lib/services/bookings-queries.ts` | 311 |
 | `src/lib/services/bookings.ts` | 9 |
 | `src/lib/services/bulk-assignment-batches.ts` | 253 |
@@ -31,7 +31,7 @@
 | `src/lib/services/calendar-sync.ts` | 754 |
 | `src/lib/services/candidate-scoring.ts` | 437 |
 | `src/lib/services/category-mutations.ts` | 168 |
-| `src/lib/services/checkin-item-reports.ts` | 537 |
+| `src/lib/services/checkin-item-reports.ts` | 599 |
 | `src/lib/services/checkout-consolidation.ts` | 596 |
 | `src/lib/services/checkout-policies.ts` | 40 |
 | `src/lib/services/claim-review-notifications.ts` | 197 |
@@ -53,7 +53,7 @@
 | `src/lib/services/kiosk-checkin-undo.ts` | 176 |
 | `src/lib/services/kiosk-checkout-allowance.ts` | 86 |
 | `src/lib/services/kiosk-checkout-complete.ts` | 90 |
-| `src/lib/services/kiosk-dashboard-home.ts` | 265 |
+| `src/lib/services/kiosk-dashboard-home.ts` | 267 |
 | `src/lib/services/kiosk-extend-window.ts` | 168 |
 | `src/lib/services/kiosk-item-transfer.ts` | 196 |
 | `src/lib/services/kiosk-location.ts` | 72 |
@@ -86,7 +86,7 @@
 | `src/lib/services/schedule-exports.ts` | 522 |
 | `src/lib/services/schedule-health.ts` | 383 |
 | `src/lib/services/schedule-notification-policy.ts` | 95 |
-| `src/lib/services/schedule-open-work.ts` | 589 |
+| `src/lib/services/schedule-open-work.ts` | 600 |
 | `src/lib/services/schedule-publication.ts` | 1117 |
 | `src/lib/services/schedule-template-review.ts` | 554 |
 | `src/lib/services/schedule-working-copy.ts` | 1190 |

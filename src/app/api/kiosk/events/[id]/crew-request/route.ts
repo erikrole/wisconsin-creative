@@ -3,10 +3,12 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { withKiosk } from "@/lib/api";
 import { HttpError, ok } from "@/lib/http";
-import { createAuditEntry } from "@/lib/audit";
+import { createAuditEntryTx } from "@/lib/audit";
+import { getAllowedRoles } from "@/lib/permissions";
+import { withSerializationRetry } from "@/lib/serialization";
 import { enforceRateLimit, getClientIp } from "@/lib/rate-limit";
 import { requireKioskActor } from "@/lib/services/kiosk-actor";
-import { pickupOpenShift } from "@/lib/services/schedule-open-work";
+import { pickupOpenShiftTx } from "@/lib/services/schedule-open-work";
 import { deferPush, dispatchScheduleAssignmentNotifications, notifyPickupRequestReviewers } from "@/lib/services/notifications";
 import { enqueuePendingClaimReview } from "@/lib/claim-review-workflow";
 import { shiftWorkerTypeForProfile } from "@/lib/shift-display";
@@ -32,6 +34,11 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
 
   const { actorId, area } = body.parse(await req.json());
   const actor = await requireKioskActor(db, actorId);
+  // The same permission as the schedule's own pickup (D-053: collaborators
+  // can't request crew spots), worded for the person at the kiosk.
+  if (!getAllowedRoles("shift_assignment", "request").includes(actor.role)) {
+    throw new HttpError(403, "You can't request a crew spot here. Ask staff to add you.");
+  }
 
   const [event, profile] = await Promise.all([
     db.calendarEvent.findUnique({
@@ -89,32 +96,36 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
     throw new HttpError(409, `No open ${areaLabel} spot on this event. Ask staff to add you.`);
   }
 
-  let assignment: Awaited<ReturnType<typeof pickupOpenShift>>;
+  let assignment: Awaited<ReturnType<typeof pickupOpenShiftTx>>;
   try {
-    assignment = await pickupOpenShift(openShift.id, actor.id);
+    // The claim and its audit commit together: no REQUESTED row without a
+    // record of which kiosk filed it.
+    assignment = await withSerializationRetry(() => db.$transaction(async (tx) => {
+      const created = await pickupOpenShiftTx(tx, openShift.id, actor.id);
+      await createAuditEntryTx(tx, {
+        actorId: actor.id,
+        actorRole: actor.role,
+        entityType: "shift_assignment",
+        entityId: created.id,
+        action: "kiosk_crew_requested",
+        after: {
+          eventId: event.id,
+          shiftId: openShift.id,
+          area,
+          status: created.status,
+          kioskId: kiosk.kioskId,
+          hasConflict: created.hasConflict,
+          conflictNote: created.conflictNote,
+        },
+      });
+      return created;
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }));
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       throw new HttpError(409, "You already have a request waiting on this event");
     }
     throw error;
   }
-
-  await createAuditEntry({
-    actorId: actor.id,
-    actorRole: actor.role,
-    entityType: "shift_assignment",
-    entityId: assignment.id,
-    action: "kiosk_crew_requested",
-    after: {
-      eventId: event.id,
-      shiftId: openShift.id,
-      area,
-      status: assignment.status,
-      kioskId: kiosk.kioskId,
-      hasConflict: assignment.hasConflict,
-      conflictNote: assignment.conflictNote,
-    },
-  });
 
   deferPush(dispatchScheduleAssignmentNotifications(assignment.id, "requested").catch(() => {}));
   deferPush(notifyPickupRequestReviewers(assignment.id).catch(() => {}));

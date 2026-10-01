@@ -5,11 +5,36 @@ import { HttpError } from "@/lib/http";
 import { createAuditEntry, createAuditEntryTx } from "@/lib/audit";
 import { checkinReportSchema } from "@/lib/validation";
 import { deferPush, notifyItemReport } from "@/lib/services/notifications";
-import { maybeAutoComplete } from "@/lib/services/bookings-checkin";
+import { maybeAutoComplete, wasReturnedOnTime } from "@/lib/services/bookings-checkin";
+import { endCheckoutReturnLiveActivities } from "@/lib/services/live-activities";
+import { badges } from "@/lib/badges";
 import { reportedLostBulkBySku, upsertBulkBalancesAndMovements } from "@/lib/services/bookings-helpers";
 import { deleteImage, imageExtensionForType, isBlobUrl, validateImage, publicBlobAuth } from "@/lib/blob";
+import { claimKioskOperationReceiptTx, finishKioskOperationReceiptTx, type KioskOperationContext } from "@/lib/services/kiosk-operation-receipts";
 
 const REPORT_DEDUP_WINDOW_MS = 5_000;
+
+/**
+ * A missing report on the last outstanding item finished the return: the same
+ * follow-through as every other completion path (return badge for a personal
+ * checkout, end the return Live Activity). Shared by the web and kiosk routes.
+ */
+export async function finishReportCompletedReturn(
+  booking: { id: string; custodyScope: BookingCustodyScope; requesterUserId: string | null; endsAt: Date },
+  completedAt: Date | null,
+) {
+  if (!completedAt) return;
+  if (booking.custodyScope === BookingCustodyScope.PERSON && booking.requesterUserId) {
+    await badges.onCheckoutReturned({
+      userId: booking.requesterUserId,
+      bookingId: booking.id,
+      completedAt,
+      wasOnTime: wasReturnedOnTime(booking.endsAt, completedAt),
+      sourceKey: booking.id,
+    });
+  }
+  await endCheckoutReturnLiveActivities(booking.id);
+}
 
 /**
  * Read a damaged/lost report from JSON or multipart (`file` is the optional
@@ -23,6 +48,7 @@ export async function readCheckinReportPayload(req: Request) {
       parsed: checkinReportSchema.safeParse(json),
       file: null as File | null,
       actorId: typeof json?.actorId === "string" ? json.actorId : null,
+      requestId: typeof json?.requestId === "string" && json.requestId ? json.requestId : undefined,
     };
   }
 
@@ -30,6 +56,7 @@ export async function readCheckinReportPayload(req: Request) {
   const rawDescription = formData.get("description");
   const rawFile = formData.get("file");
   const rawActor = formData.get("actorId");
+  const rawRequestId = formData.get("requestId");
   return {
     parsed: checkinReportSchema.safeParse({
       assetId: optionalField(formData.get("assetId")),
@@ -43,6 +70,8 @@ export async function readCheckinReportPayload(req: Request) {
     }),
     file: rawFile instanceof File && rawFile.size > 0 ? rawFile : null,
     actorId: typeof rawActor === "string" && rawActor ? rawActor : null,
+    /** Kiosk retry reference: a resend replays the first answer. */
+    requestId: typeof rawRequestId === "string" && rawRequestId ? rawRequestId : undefined,
   };
 }
 
@@ -268,6 +297,12 @@ export async function submitCheckinItemReport(args: {
   };
 }
 
+/** Battery Ops keeps its own notes on a unit; a report adds a line, never replaces them. */
+export function appendUnitNote(existing: string | null, marker: string) {
+  const prior = existing?.trim();
+  return prior ? `${prior}\n${marker}` : marker;
+}
+
 type BulkReportTarget =
   | { kind: "unit"; bulkSkuUnitId: string }
   | { kind: "counted"; bulkSkuId: string; quantity: number };
@@ -305,7 +340,13 @@ export async function submitBulkCheckinReport(args: {
   locationId: string;
   returnedFor: { requesterUserId: string | null; custodyScope: BookingCustodyScope };
   kiosk?: { kioskId: string };
-}) {
+  /**
+   * Kiosk operation receipt: claimed in the same transaction as the report,
+   * sealed with `respond`'s body, so a retried submit replays instead of
+   * counting the quantity twice. The caller checks for a replay first.
+   */
+  receipt?: { context: KioskOperationContext; respond: (result: BulkReportResult) => Record<string, unknown> };
+}): Promise<BulkReportResult> {
   const { bookingId: id, target, type, description } = args;
   const source = args.kiosk ? { source: "KIOSK", kioskDeviceId: args.kiosk.kioskId } : { source: "WEB" };
   const targetKey = target.kind === "unit" ? target.bulkSkuUnitId : target.bulkSkuId;
@@ -328,6 +369,7 @@ export async function submitBulkCheckinReport(args: {
   let outcome;
   try {
     outcome = await db.$transaction(async (tx) => {
+      await claimKioskOperationReceiptTx(tx, args.receipt?.context);
       let label: { id: string; tag: string; name: string; skuName: string; imageUrl: string | null };
       let saved;
       if (target.kind === "unit") {
@@ -364,7 +406,7 @@ export async function submitBulkCheckinReport(args: {
           const now = new Date();
           await tx.bulkSkuUnit.update({
             where: { id: unit.id },
-            data: { status: BulkUnitStatus.LOST, notes: `Reported missing at check-in (${id})` },
+            data: { status: BulkUnitStatus.LOST, notes: appendUnitNote(unit.notes, `Reported missing at check-in (${id})`) },
           });
           await tx.bookingBulkUnitAllocation.update({ where: { id: allocation.id }, data: { checkedInAt: now } });
           await createAuditEntryTx(tx, {
@@ -381,7 +423,7 @@ export async function submitBulkCheckinReport(args: {
         } else {
           // Bulk units have no maintenance status: note it on the unit so
           // Battery Ops sees it, and staff are notified below.
-          const notes = `Reported damaged at check-in (${id})${description ? `: ${description.slice(0, 200)}` : ""}`;
+          const notes = appendUnitNote(unit.notes, `Reported damaged at check-in (${id})${description ? `: ${description.slice(0, 200)}` : ""}`);
           await tx.bulkSkuUnit.update({ where: { id: unit.id }, data: { notes } });
           await createAuditEntryTx(tx, {
             actorId: args.reporter.id,
@@ -498,6 +540,9 @@ export async function submitBulkCheckinReport(args: {
             returnedFor: args.returnedFor,
           })
         : null;
+      if (args.receipt) {
+        await finishKioskOperationReceiptTx(tx, args.receipt.context, args.receipt.respond(bulkReportResult(saved, label, type, completedAt)));
+      }
       return { saved, label, completedAt };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   } catch (err) {
@@ -525,12 +570,29 @@ export async function submitBulkCheckinReport(args: {
     console.error("[REPORT] Failed to send supervisor notifications:", err);
   }));
 
+  return bulkReportResult(outcome.saved, outcome.label, type, outcome.completedAt);
+}
+
+type BulkReportResult = {
+  report: { id: string; type: CheckinReportType; description: string | null; imageUrl: string | null; quantity: number | null };
+  item: { id: string; assetTag: string; name: string };
+  heldForStaff: boolean;
+  completed: boolean;
+  completedAt: Date | null;
+};
+
+function bulkReportResult(
+  saved: BulkReportResult["report"],
+  label: { id: string; tag: string; name: string },
+  type: "DAMAGED" | "LOST",
+  completedAt: Date | null,
+): BulkReportResult {
   return {
-    report: outcome.saved,
-    item: { id: outcome.label.id, assetTag: outcome.label.tag, name: outcome.label.name },
+    report: saved,
+    item: { id: label.id, assetTag: label.tag, name: label.name },
     // Damaged bulk is flagged for staff (notified); the unit/stock stays in inventory.
     heldForStaff: type === "DAMAGED",
-    completed: outcome.completedAt !== null,
-    completedAt: outcome.completedAt,
+    completed: completedAt !== null,
+    completedAt,
   };
 }

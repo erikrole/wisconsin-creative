@@ -61,6 +61,10 @@ struct KioskCheckoutDetailSheet: View {
     /// C5: staff actions, reached from the read-only sheet on home.
     @State private var showStaffFlow = false
     @State private var showExtend = false
+    /// Extend from home acts as the holder, so it first asks "Continue as
+    /// <holder>?" (the reserved-pickup identity card's trust level). Anyone
+    /// else extends through Staff actions.
+    @State private var extendHolderConfirmed = false
 
     private enum ActiveMutation: Equatable {
         case savingDetails
@@ -205,7 +209,18 @@ struct KioskCheckoutDetailSheet: View {
         }
         .fullScreenCover(isPresented: $showExtend) {
             // Extends as the holder, the same as Extend on their own page.
-            if let holderId = context.requesterId ?? detail?.requesterId {
+            if let holderId = context.requesterId ?? detail?.requesterId, !extendHolderConfirmed {
+                KioskExtendHolderConfirm(
+                    holderName: context.requesterName,
+                    avatarURL: context.requesterAvatarUrl,
+                    initials: context.requesterInitials,
+                    checkoutTitle: currentTitle,
+                    onConfirm: { extendHolderConfirmed = true },
+                    onCancel: { showExtend = false }
+                )
+                .id(holderId)
+                .statusBarHidden(true)
+            } else if let holderId = context.requesterId ?? detail?.requesterId {
                 KioskExtendScreen(
                     checkoutId: context.checkoutId,
                     title: currentTitle,
@@ -219,6 +234,9 @@ struct KioskCheckoutDetailSheet: View {
                     }
                 )
             }
+        }
+        .onChange(of: showExtend) { _, isShowing in
+            if !isShowing { extendHolderConfirmed = false }
         }
         .fullScreenCover(isPresented: $showStaffFlow) {
             KioskStaffActionsFlow(context: context) { changed in
@@ -973,4 +991,71 @@ struct KioskCheckoutDetailSheet: View {
 private struct KioskMutationMessage {
     let tone: KioskBannerTone
     let text: String
+}
+
+
+/// Extend from the home booking sheet: confirm the person at the kiosk is the
+/// holder before extending as them. Same trust as tapping your own name on
+/// home; anyone else is pointed at Staff actions.
+struct KioskExtendHolderConfirm: View {
+    let holderName: String
+    let avatarURL: String?
+    let initials: String
+    let checkoutTitle: String
+    let onConfirm: () -> Void
+    let onCancel: () -> Void
+
+    private var firstName: String {
+        holderName.split(separator: " ").first.map(String.init) ?? holderName
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            KioskTaskHeader(
+                title: "Extend",
+                subtitle: checkoutTitle,
+                backTitle: "Cancel",
+                backAccessibilityLabel: "Cancel extend",
+                onBack: onCancel
+            )
+            VStack(alignment: .leading, spacing: 18) {
+                Text("This is \(firstName)\u{2019}s checkout")
+                    .font(KioskType.screenTitle)
+                    .foregroundStyle(KioskText.primary)
+                Button(action: onConfirm) {
+                    HStack(spacing: 14) {
+                        KioskAvatar(url: avatarURL, initials: initials, size: 48)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(holderName)
+                                .font(.system(size: 19, weight: .bold))
+                                .foregroundStyle(KioskText.primary)
+                                .lineLimit(1)
+                            Text("Continue as \(firstName)")
+                                .font(KioskType.chip)
+                                .foregroundStyle(KioskText.secondary)
+                                .lineLimit(1)
+                        }
+                        Spacer(minLength: 0)
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(KioskText.muted)
+                    }
+                    .padding(.horizontal, 16)
+                    .frame(height: 76)
+                    .kioskCard(KioskSurface.cardRaised, radius: 16, stroke: KioskStroke.standard)
+                }
+                .buttonStyle(KioskPressStyle())
+                .accessibilityLabel("\(holderName), continue as \(firstName)")
+                Text("Not \(firstName)? Only \(firstName) can extend from here. Staff can extend it from Staff actions.")
+                    .font(KioskType.meta)
+                    .foregroundStyle(KioskText.tertiary)
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: 560, alignment: .leading)
+            .padding(.horizontal, KioskSpacing.xl)
+            .padding(.top, KioskSpacing.lg)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        }
+        .background(KioskSurface.base.ignoresSafeArea())
+    }
 }

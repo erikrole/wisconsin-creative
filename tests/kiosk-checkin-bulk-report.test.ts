@@ -20,7 +20,19 @@ const mocks = vi.hoisted(() => ({
   maybeAutoComplete: vi.fn(),
   reportedLost: vi.fn(),
   upsertLedger: vi.fn(),
+  receipts: new Map<string, { beforeJson: unknown; afterJson: unknown }>(),
 }));
+
+// Operation receipts live in audit_log rows keyed by the reference.
+const auditLog = {
+  findUnique: vi.fn(async ({ where }: { where: { id: string } }) => mocks.receipts.get(where.id) ?? null),
+  create: vi.fn(async ({ data }: { data: { id: string; beforeJson: unknown } }) => {
+    mocks.receipts.set(data.id, { beforeJson: data.beforeJson, afterJson: null });
+  }),
+  update: vi.fn(async ({ where, data }: { where: { id: string }; data: { afterJson: unknown } }) => {
+    mocks.receipts.get(where.id)!.afterJson = data.afterJson;
+  }),
+};
 
 const tx = {
   bookingBulkUnitAllocation: { findFirst: mocks.allocationFindFirst, update: mocks.allocationUpdate },
@@ -29,6 +41,7 @@ const tx = {
   bookingBulkItem: { findUnique: mocks.bulkItemFindUnique, update: mocks.bulkItemUpdate },
   scanEvent: { create: mocks.scanEventCreate },
   booking: { findUnique: mocks.txBookingFindUnique },
+  auditLog,
 };
 
 vi.mock("@/lib/db", () => ({
@@ -37,6 +50,7 @@ vi.mock("@/lib/db", () => ({
     booking: { findUnique: mocks.bookingFindUnique },
     user: { findUnique: mocks.userFindUnique, findFirst: mocks.userFindFirst },
     checkinItemReport: { findUnique: mocks.reportFindUnique },
+    get auditLog() { return auditLog; },
   },
 }));
 vi.mock("@/lib/api", () => ({
@@ -80,6 +94,7 @@ const unit = { id: "unit-7", unitNumber: 7, status: "CHECKED_OUT", notes: null, 
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.receipts.clear();
   mocks.transaction.mockImplementation((fn: (client: typeof tx) => unknown) => fn(tx));
   mocks.userFindFirst.mockResolvedValue({ id: "returner-1", role: "STUDENT" });
   mocks.userFindUnique.mockResolvedValue({ name: "Bucky Badger" });
@@ -153,6 +168,26 @@ describe("POST /api/kiosk/checkin/[id]/report for batteries", () => {
   });
 });
 
+describe("battery unit notes", () => {
+  it("adds the missing marker under existing unit notes instead of replacing them", async () => {
+    mocks.allocationFindFirst.mockResolvedValue({ id: "alloc-1", checkedInAt: null, bulkSkuUnit: { ...unit, notes: "Cell 2 weak" } });
+    await report({ actorId: "returner-1", bulkSkuUnitId: "unit-7", type: "LOST" });
+    expect(mocks.unitUpdate).toHaveBeenCalledWith({
+      where: { id: "unit-7" },
+      data: { status: "LOST", notes: "Cell 2 weak\nReported missing at check-in (co-1)" },
+    });
+  });
+
+  it("adds the damaged marker under existing unit notes instead of replacing them", async () => {
+    mocks.allocationFindFirst.mockResolvedValue({ id: "alloc-1", checkedInAt: new Date(), bulkSkuUnit: { ...unit, status: "AVAILABLE", notes: "Cell 2 weak" } });
+    await report({ actorId: "returner-1", bulkSkuUnitId: "unit-7", type: "DAMAGED", description: "Swollen" });
+    expect(mocks.unitUpdate).toHaveBeenCalledWith({
+      where: { id: "unit-7" },
+      data: { notes: "Cell 2 weak\nReported damaged at check-in (co-1): Swollen" },
+    });
+  });
+});
+
 describe("POST /api/kiosk/checkin/[id]/report for counted stock", () => {
   const tape = { id: "bbi-1", bulkSkuId: "sku-tape", checkedOutQuantity: 5, checkedInQuantity: 1, bulkSku: { id: "sku-tape", name: "Gaff tape", imageUrl: null, trackByNumber: false, binQrCodeValue: "BIN-TAPE" } };
 
@@ -184,6 +219,42 @@ describe("POST /api/kiosk/checkin/[id]/report for counted stock", () => {
       kind: "CHECKIN", items: [{ bulkSkuId: "sku-tape", quantity: 1 }], locationId: "loc-1",
     }));
     expect(mocks.scanEventCreate).toHaveBeenCalled();
+  });
+
+  it("restocks a damaged quantity at the kiosk's location, not the booking's (D-032)", async () => {
+    mocks.bookingFindUnique.mockResolvedValue({
+      id: "co-1", kind: "CHECKOUT", status: "OPEN", title: "Soccer at Iowa",
+      requesterUserId: "owner-1", custodyScope: "PERSON", locationId: "loc-home", endsAt: new Date(Date.now() + 3_600_000),
+    });
+    mocks.bulkItemFindUnique.mockResolvedValue(tape);
+    await report({ actorId: "returner-1", bulkSkuId: "sku-tape", quantity: "1", type: "DAMAGED" });
+    expect(mocks.upsertLedger).toHaveBeenCalledWith(tx, expect.objectContaining({ locationId: "loc-1" }));
+    expect(mocks.scanEventCreate).toHaveBeenCalledWith({ data: expect.objectContaining({ actualLocationId: "loc-1" }) });
+    expect(mocks.maybeAutoComplete).toHaveBeenCalledWith(tx, "co-1", "loc-1", "returner-1", expect.anything());
+  });
+
+  it("replays a retried counted report with the same reference instead of counting it twice", async () => {
+    mocks.bulkItemFindUnique.mockResolvedValue(tape);
+    const requestId = `${Date.now()}:123e4567-e89b-42d3-a456-426614174000`;
+    const fields = { actorId: "returner-1", bulkSkuId: "sku-tape", quantity: "1", type: "DAMAGED", requestId };
+    const first = await (await report(fields)).json();
+    // The response was lost; the existing report is now inside the 5s window.
+    mocks.reportFindUnique.mockResolvedValue({ imageUrl: null, createdAt: new Date() });
+    const retry = await report(fields);
+    expect(retry.status).toBe(200);
+    expect(await retry.json()).toEqual(first);
+    expect(mocks.bulkItemUpdate).toHaveBeenCalledTimes(1);
+    expect(mocks.reportUpsert).toHaveBeenCalledTimes(1);
+    expect(mocks.upsertLedger).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses a reused reference with different details", async () => {
+    mocks.bulkItemFindUnique.mockResolvedValue(tape);
+    const requestId = `${Date.now()}:123e4567-e89b-42d3-a456-426614174001`;
+    await report({ actorId: "returner-1", bulkSkuId: "sku-tape", quantity: "1", type: "DAMAGED", requestId });
+    const res = await report({ actorId: "returner-1", bulkSkuId: "sku-tape", quantity: "2", type: "DAMAGED", requestId });
+    expect(await res.json()).toMatchObject({ success: false, operationRejected: true });
+    expect(mocks.bulkItemUpdate).toHaveBeenCalledTimes(1);
   });
 
   it("refuses counted reporting on numbered stock", async () => {

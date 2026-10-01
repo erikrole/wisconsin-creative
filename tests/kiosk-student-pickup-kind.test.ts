@@ -82,4 +82,26 @@ describe("kiosk student pending pickup kind", () => {
       ["due-reservation", "reservation"],
     ]);
   });
+
+  it("carries each booking's linked event so the hub matches shifts by event, not by title", async () => {
+    const startsAt = new Date("2026-08-01T12:00:00.000Z");
+    const endsAt = new Date("2099-08-01T12:00:00.000Z");
+    mocks.bookingFindMany
+      .mockResolvedValueOnce([{ id: "co-1", title: "Volleyball vs Minnesota", eventId: "ev-fri", refNumber: null, endsAt, serializedItems: [], bulkItems: [] }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: "due-1", title: "Volleyball vs Minnesota", eventId: "ev-sat", refNumber: null, startsAt, serializedItems: [], bulkItems: [] }])
+      .mockResolvedValueOnce([{ id: "rv-1", title: "Volleyball vs Minnesota", eventId: null, startsAt }]);
+
+    const json = await (await getKioskStudent(
+      new Request("http://test"),
+      { params: Promise.resolve({ userId: "user-1" }) },
+    )).json();
+
+    expect(json.checkouts[0].eventId).toBe("ev-fri");
+    expect(json.pendingPickups[0].eventId).toBe("ev-sat");
+    expect(json.reservations[0].eventId).toBeNull();
+    for (const call of mocks.bookingFindMany.mock.calls) {
+      expect(call[0].select.eventId).toBe(true);
+    }
+  });
 });

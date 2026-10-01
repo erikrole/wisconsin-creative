@@ -1,4 +1,4 @@
-import { BookingCustodyScope, BookingKind, BookingStatus } from "@prisma/client";
+import { BookingKind, BookingStatus } from "@prisma/client";
 import { withKiosk } from "@/lib/api";
 import { db } from "@/lib/db";
 import { HttpError, ok } from "@/lib/http";
@@ -6,10 +6,8 @@ import { enforceRateLimit } from "@/lib/rate-limit";
 import { displayBookingTitle } from "@/lib/booking-display-title";
 import { requireKioskActor } from "@/lib/services/kiosk-actor";
 import { readKioskStaffToken, verifyKioskStaffToken } from "@/lib/kiosk-staff-token";
-import { readCheckinReportPayload, submitBulkCheckinReport, submitCheckinItemReport } from "@/lib/services/checkin-item-reports";
-import { wasReturnedOnTime } from "@/lib/services/bookings-checkin";
-import { endCheckoutReturnLiveActivities } from "@/lib/services/live-activities";
-import { badges } from "@/lib/badges";
+import { finishReportCompletedReturn, readCheckinReportPayload, submitBulkCheckinReport, submitCheckinItemReport } from "@/lib/services/checkin-item-reports";
+import { kioskOperationContext, readKioskOperationReplay } from "@/lib/services/kiosk-operation-receipts";
 
 /**
  * POST /api/kiosk/checkin/[id]/report — damaged or missing at the kiosk
@@ -25,7 +23,7 @@ import { badges } from "@/lib/badges";
 export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => {
   await enforceRateLimit(`kiosk:checkin-report:${kiosk.kioskId}`, { max: 30, windowMs: 60_000 });
 
-  const { parsed, file, actorId } = await readCheckinReportPayload(req);
+  const { parsed, file, actorId, requestId } = await readCheckinReportPayload(req);
   if (!parsed.success) {
     throw new HttpError(400, parsed.error.issues[0]?.message ?? "Invalid input");
   }
@@ -54,6 +52,37 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
   if (!booking || !reportable) throw new HttpError(404, "Active checkout not found");
 
   const reporterInfo = { id: actor.id, role: actor.role, name: reporter?.name ?? "Someone at the kiosk" };
+  const respond = (result: {
+    report: { id: string; type: string; description: string | null; imageUrl: string | null; quantity?: number | null };
+    item: unknown;
+    heldForStaff: boolean;
+    completed: boolean;
+  }) => ({
+    success: true,
+    reportId: result.report.id,
+    type: result.report.type,
+    description: result.report.description,
+    imageUrl: result.report.imageUrl,
+    item: result.item,
+    quantity: result.report.quantity ?? null,
+    checkoutTitle: displayBookingTitle(booking.title),
+    heldForStaff: result.heldForStaff,
+    completed: result.completed,
+  });
+  // Bulk reports move counts (counted stock increments), so a retried submit
+  // carries the same reference and replays the first answer.
+  const receipt = !assetId
+    ? kioskOperationContext({
+        requestId,
+        kioskId: kiosk.kioskId,
+        actorId: actor.id,
+        operation: "checkin-report",
+        sourceId: booking.id,
+        payload: { type, bulkSkuUnitId, bulkSkuId, quantity, description },
+      })
+    : undefined;
+  const replay = await readKioskOperationReplay(db, receipt);
+  if (replay) return ok(replay);
   const result = assetId
     ? await submitCheckinItemReport({
         bookingId: booking.id,
@@ -75,36 +104,24 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
         description,
         file,
         reporter: reporterInfo,
-        locationId: booking.locationId,
+        // Restock and completion run where the gear physically came back,
+        // the same as the quantity route (D-032).
+        locationId: kiosk.locationId,
         returnedFor: booking,
         kiosk: { kioskId: kiosk.kioskId },
+        receipt: receipt ? { context: receipt, respond } : undefined,
+      }).catch(async (error) => {
+        // A concurrent resend of the same reference committed first: answer
+        // with its result rather than an error.
+        const committed = receipt ? await readKioskOperationReplay(db, receipt).catch(() => null) : null;
+        if (committed) return { replayed: committed };
+        throw error;
       });
+  if ("replayed" in result) return ok(result.replayed);
 
   // A LOST report on the last outstanding item finished the return: same
   // follow-through as every other completion path.
-  if (result.completedAt) {
-    if (booking.custodyScope === BookingCustodyScope.PERSON) {
-      await badges.onCheckoutReturned({
-        userId: booking.requesterUserId,
-        bookingId: booking.id,
-        completedAt: result.completedAt,
-        wasOnTime: wasReturnedOnTime(booking.endsAt, result.completedAt),
-        sourceKey: booking.id,
-      });
-    }
-    await endCheckoutReturnLiveActivities(booking.id);
-  }
+  await finishReportCompletedReturn(booking, result.completedAt);
 
-  return ok({
-    success: true,
-    reportId: result.report.id,
-    type: result.report.type,
-    description: result.report.description,
-    imageUrl: result.report.imageUrl,
-    item: result.item,
-    quantity: result.report.quantity ?? null,
-    checkoutTitle: displayBookingTitle(booking.title),
-    heldForStaff: result.heldForStaff,
-    completed: result.completed,
-  });
+  return ok(respond(result));
 });

@@ -90,6 +90,9 @@ struct KioskCheckoutDraft: Equatable {
     let dueBackAt: Date
     let contextReady: Bool
     let selectedKitId: String?
+    /// Whether the person picked a return time. Older drafts default to not
+    /// chosen, so the details step asks again rather than assuming.
+    var hasChosenReturn: Bool = false
 }
 
 @Observable

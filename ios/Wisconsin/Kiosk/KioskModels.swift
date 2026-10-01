@@ -652,6 +652,8 @@ struct KioskStudentContext: Decodable {
 struct KioskStudentCheckout: Decodable, Identifiable {
     let id: String
     let title: String
+    /// Linked event (additive; older servers omit it).
+    let eventId: String?
     let refNumber: String?
     let items: [StudentItem]
     let endsAt: Date
@@ -680,6 +682,7 @@ struct KioskStudentCheckout: Decodable, Identifiable {
     enum CodingKeys: String, CodingKey {
         case id
         case title
+        case eventId
         case refNumber
         case items
         case endsAt
@@ -690,6 +693,7 @@ struct KioskStudentCheckout: Decodable, Identifiable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(String.self, forKey: .id)
         title = try container.decodeIfPresent(String.self, forKey: .title) ?? "Checkout"
+        eventId = try? container.decodeIfPresent(String.self, forKey: .eventId)
         refNumber = try container.decodeIfPresent(String.self, forKey: .refNumber)
         items = try container.decodeIfPresent(LossyDecodableArray<StudentItem>.self, forKey: .items)?.elements ?? []
         endsAt = try container.decode(Date.self, forKey: .endsAt)
@@ -706,6 +710,8 @@ struct KioskGearThumb: Decodable, Equatable, Hashable {
 struct KioskPendingPickup: Decodable, Identifiable {
     let id: String
     let title: String
+    /// Linked event (additive; older servers omit it).
+    let eventId: String?
     let refNumber: String?
     let startsAt: Date
     /// "reservation" or "checkout" (a legacy PENDING_PICKUP). Older servers
@@ -760,12 +766,14 @@ struct KioskPendingPickup: Decodable, Identifiable {
         case kind
         case serializedItems
         case bulkItems
+        case eventId
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(String.self, forKey: .id)
         title = try container.decodeIfPresent(String.self, forKey: .title) ?? "Pickup"
+        eventId = try? container.decodeIfPresent(String.self, forKey: .eventId)
         refNumber = try container.decodeIfPresent(String.self, forKey: .refNumber)
         startsAt = try container.decode(Date.self, forKey: .startsAt)
         kind = try? container.decodeIfPresent(String.self, forKey: .kind)
@@ -782,17 +790,21 @@ struct KioskReservation: Decodable, Identifiable {
     let id: String
     let title: String
     let startsAt: Date
+    /// Linked event (additive; older servers omit it).
+    let eventId: String?
 
     enum CodingKeys: String, CodingKey {
         case id
         case title
         case startsAt
+        case eventId
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(String.self, forKey: .id)
         title = try container.decodeIfPresent(String.self, forKey: .title) ?? "Reservation"
+        eventId = try? container.decodeIfPresent(String.self, forKey: .eventId)
         startsAt = try container.decode(Date.self, forKey: .startsAt)
     }
 }

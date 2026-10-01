@@ -398,7 +398,18 @@ export async function pickupOpenShift(shiftId: string, userId: string) {
   // Requests no longer race each other for the slot, but they still race staff
   // filling it directly, so a lost serialization conflict retries once and the
   // second attempt returns the 409 against the assignment that landed first.
-  return withSerializationRetry(() => db.$transaction(async (tx) => {
+  return withSerializationRetry(() => db.$transaction(
+    (tx) => pickupOpenShiftTx(tx, shiftId, userId),
+    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+  ));
+}
+
+/**
+ * The REQUESTED claim inside a caller's SERIALIZABLE transaction, so a caller
+ * can write its audit in the same commit (the kiosk crew request).
+ */
+export async function pickupOpenShiftTx(tx: Prisma.TransactionClient, shiftId: string, userId: string) {
+  {
     const [shift, user] = await Promise.all([
       tx.shift.findUnique({
         where: { id: shiftId },
@@ -536,7 +547,7 @@ export async function pickupOpenShift(shiftId: string, userId: string) {
         },
       },
     });
-  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }));
+  }
 }
 
 /**
