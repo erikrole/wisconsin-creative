@@ -1,0 +1,186 @@
+import { Prisma } from "@prisma/client";
+import { withAuth } from "@/lib/api";
+import { createAuditEntryTx } from "@/lib/audit";
+import { db } from "@/lib/db";
+import {
+  createApplicationSchema,
+  findPossibleMatches,
+  normalizeEmail,
+  normalizeName,
+  normalizePhone,
+} from "@/lib/hiring/contract";
+import { HttpError, ok } from "@/lib/http";
+import { enforceRateLimit, SETTINGS_MUTATION_LIMIT } from "@/lib/rate-limit";
+import { requirePermission } from "@/lib/rbac";
+
+export const GET = withAuth(async (req, { user }) => {
+  requirePermission(user.role, "hiring", "view");
+  const cycleId = new URL(req.url).searchParams.get("cycleId");
+  if (!cycleId) throw new HttpError(400, "cycleId is required.");
+
+  const rows = await db.application.findMany({
+    where: { cycleId },
+    orderBy: [{ createdAt: "asc" }],
+    include: {
+      applicant: {
+        select: {
+          id: true,
+          name: true,
+          standing: true,
+          gradTerm: true,
+          gradYear: true,
+          location: true,
+          portfolioUrl: true,
+          purgedAt: true,
+          emails: { where: { isPrimary: true }, select: { email: true }, take: 1 },
+        },
+      },
+      documents: { select: { kind: true } },
+      reviewNotes: { select: { rating: true } },
+    },
+  });
+
+  return ok({
+    data: rows.map((row) => {
+      const ratings = row.reviewNotes.map((n) => n.rating).filter((r): r is number => r != null);
+      return {
+        id: row.id,
+        applicantId: row.applicant.id,
+        name: row.applicant.name,
+        email: row.applicant.emails[0]?.email ?? null,
+        standing: row.applicant.standing,
+        gradTerm: row.applicant.gradTerm,
+        gradYear: row.applicant.gradYear,
+        location: row.applicant.location,
+        hasPortfolio: Boolean(row.applicant.portfolioUrl),
+        stage: row.stage,
+        reviewed: row.reviewed,
+        hasInterview: Boolean(row.interviewUrl),
+        summerAvailable: row.summerAvailable,
+        rawAreas: row.rawAreas,
+        primaryArea: row.primaryArea,
+        hasResume: row.documents.some((d) => d.kind === "RESUME"),
+        ratingAverage: ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : null,
+        ratingCount: ratings.length,
+        externalApplicationId: row.externalApplicationId,
+      };
+    }),
+  });
+});
+
+export const POST = withAuth(async (req, { user }) => {
+  requirePermission(user.role, "hiring", "manage");
+  await enforceRateLimit(`hiring:write:${user.id}`, SETTINGS_MUTATION_LIMIT);
+  const body = createApplicationSchema.parse(await req.json());
+  const email = normalizeEmail(body.email);
+
+  const cycle = await db.hiringCycle.findUnique({ where: { id: body.cycleId }, select: { id: true } });
+  if (!cycle) throw new HttpError(404, "Hiring cycle not found.");
+
+  if (!body.existingApplicantId && !body.confirmNotDuplicate) {
+    const nearby = await db.applicant.findMany({
+      where: {
+        OR: [
+          { emails: { some: { email } } },
+          // Accent and punctuation differences must not hide a duplicate.
+          { nameKey: normalizeName(body.name) },
+        ],
+      },
+      select: {
+        id: true,
+        name: true,
+        gradTerm: true,
+        gradYear: true,
+        purgedAt: true,
+        emails: { select: { email: true } },
+      },
+      take: 20,
+    });
+    const matches = findPossibleMatches(
+      { name: body.name, email, gradTerm: body.gradTerm, gradYear: body.gradYear },
+      nearby.map((a) => ({ ...a, purged: a.purgedAt !== null, emails: a.emails.map((e) => e.email) })),
+    );
+    if (matches.length) {
+      throw new HttpError(409, "This looks like someone already in the system.", {
+        code: "possible_match",
+        matches,
+      });
+    }
+  }
+
+  const applicationData = {
+    cycleId: body.cycleId,
+    externalApplicationId: body.externalApplicationId,
+    rawAreas: body.rawAreas ?? [],
+    primaryArea: body.primaryArea,
+    fieldsExperience: body.fieldsExperience ?? [],
+    fieldsInterested: body.fieldsInterested ?? [],
+    softwareExperience: body.softwareExperience ?? [],
+    summerAvailable: body.summerAvailable,
+    interviewUrl: body.interviewUrl,
+  } satisfies Omit<Prisma.ApplicationUncheckedCreateInput, "applicantId">;
+
+  const created = await db.$transaction(async (tx) => {
+    let applicantId = body.existingApplicantId;
+    if (applicantId) {
+      const existing = await tx.applicant.findUnique({ where: { id: applicantId }, select: { id: true, purgedAt: true } });
+      if (!existing) throw new HttpError(404, "Applicant not found.");
+      // Merge policy for a returning applicant: the details submitted with this new
+      // application are the newest, so any value provided replaces the stored one; a value
+      // left blank never erases what is already on file. A purged record is refilled the
+      // same way and its retention clock restarts from the new cycle.
+      const submitted = {
+        standing: body.standing,
+        gradTerm: body.gradTerm,
+        gradYear: body.gradYear,
+        phone: normalizePhone(body.phone) ?? undefined,
+        location: body.location,
+        portfolioUrl: body.portfolioUrl,
+        socialHandles: body.socialHandles,
+      };
+      const changes = Object.fromEntries(Object.entries(submitted).filter(([, value]) => value !== undefined));
+      if (existing.purgedAt || Object.keys(changes).length > 0) {
+        await tx.applicant.update({
+          where: { id: applicantId },
+          data: { ...changes, ...(existing.purgedAt ? { purgedAt: null } : {}) },
+        });
+      }
+      const hasEmail = await tx.applicantEmail.findUnique({ where: { email }, select: { applicantId: true } });
+      // A rehydrated record has no emails left, so the restored one must be primary.
+      if (!hasEmail) await tx.applicantEmail.create({ data: { applicantId, email, isPrimary: Boolean(existing.purgedAt) } });
+      else if (hasEmail.applicantId !== applicantId) {
+        throw new HttpError(409, "That email belongs to a different applicant.");
+      }
+    } else {
+      const person = await tx.applicant.create({
+        data: {
+          name: body.name,
+          nameKey: normalizeName(body.name),
+          standing: body.standing,
+          gradTerm: body.gradTerm,
+          gradYear: body.gradYear,
+          phone: normalizePhone(body.phone),
+          location: body.location,
+          portfolioUrl: body.portfolioUrl,
+          socialHandles: body.socialHandles,
+          emails: { create: { email, isPrimary: true } },
+        },
+      });
+      applicantId = person.id;
+    }
+    const application = await tx.application.create({ data: { ...applicationData, applicantId } });
+    // Same transaction as the person, email, and application, so the creation never commits
+    // without its audit evidence (and a retry cannot find an unaudited half-created record).
+    await createAuditEntryTx(tx, {
+      actorId: user.id,
+      actorRole: user.role,
+      entityType: "hiring_application",
+      entityId: application.id,
+      action: "create",
+      after: { cycleId: application.cycleId, applicantId: application.applicantId, stage: application.stage },
+    });
+    return application;
+  });
+
+  return ok({ data: { id: created.id, applicantId: created.applicantId } }, 201);
+});

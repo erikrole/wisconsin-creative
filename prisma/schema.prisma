@@ -305,6 +305,11 @@ model User {
   signatureSaveOperations       SignatureSaveOperation[]         @relation("SignatureSaveActor")
   eventWork                     EventWorker[]                    @relation("EventWorkerUser")
   eventWorkersAdded             EventWorker[]                    @relation("EventWorkerAdder")
+  termPlacements                StudentTermPlacement[]           @relation("TermPlacementUser")
+  hiredApplicant                Applicant?                       @relation("ApplicantHiredUser")
+  applicationsDecided           Application[]                    @relation("ApplicationDecider")
+  applicantDocumentsUploaded    ApplicantDocument[]              @relation("ApplicantDocumentUploader")
+  applicationNotesAuthored      ApplicationNote[]                @relation("ApplicationNoteAuthor")
   /// Legacy nullable relation deployed before shared-custody direction was finalized.
   /// No application workflow assigns shared-checkout items to individuals.
   assignedBookingItems          BookingSerializedItem[]          @relation("BookingSerializedItemAssignee")
@@ -327,6 +332,12 @@ model User {
   birthdayMonth       Int?            @map("birthday_month")
   birthdayDay         Int?            @map("birthday_day")
   birthYear           Int?            @map("birth_year")
+  /// Students start by term ("Fall 2025"), not by date; staff keep `startDate`.
+  startTerm           GraduationTerm? @map("start_term")
+  startTermYear       Int?            @map("start_term_year")
+  /// When the account was last deactivated; null while active. Starts the 36-month retention
+  /// clock for a hired student's applicant record (D-065).
+  deactivatedAt       DateTime?       @map("deactivated_at")
 
   @@index([active, hiddenFromRoster])
   @@index([role, affiliation])
@@ -1424,16 +1435,16 @@ model LiveActivityStart {
 }
 
 model Notification {
-  id        String              @id @default(cuid())
-  userId    String              @map("user_id")
-  type      String
-  title     String
-  body      String?
-  payload   Json?
-  channel   NotificationChannel @default(IN_APP)
-  sentAt    DateTime?           @map("sent_at")
-  readAt    DateTime?           @map("read_at")
-  dedupeKey String?             @unique @map("dedupe_key")
+  id         String                 @id @default(cuid())
+  userId     String                 @map("user_id")
+  type       String
+  title      String
+  body       String?
+  payload    Json?
+  channel    NotificationChannel    @default(IN_APP)
+  sentAt     DateTime?              @map("sent_at")
+  readAt     DateTime?              @map("read_at")
+  dedupeKey  String?                @unique @map("dedupe_key")
   // Booking-scoped notifications carry the owning booking id so escalation
   // sweeps can filter with `bookingId: { in: [...] }` instead of a fan of
   // `dedupeKey startsWith` LIKE branches. Intentionally no foreign key:
@@ -1442,9 +1453,9 @@ model Notification {
   // history that must survive that delete. A nullable, FK-less column keeps
   // the same practical shape as the repo's `onDelete: SetNull` booking links
   // without adding a Booking back-relation or a cascade path.
-  bookingId String?             @map("booking_id")
-  createdAt DateTime            @default(now()) @map("created_at")
-  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookingId  String?                @map("booking_id")
+  createdAt  DateTime               @default(now()) @map("created_at")
+  user       User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   deliveries NotificationDelivery[]
 
   @@index([userId, readAt])
@@ -1487,17 +1498,17 @@ model NotificationDelivery {
 /// iOS install. No user identity: app and OS version, the diagnostic's own
 /// metadata, and a size-capped call stack. Pruned after 90 days.
 model AppDiagnostic {
-  id          String   @id @default(cuid())
-  platform    String
+  id         String   @id @default(cuid())
+  platform   String
   /// crash | hang | cpu_exception | disk_write_exception | app_launch
-  kind        String
-  appVersion  String?  @map("app_version")
-  osVersion   String?  @map("os_version")
+  kind       String
+  appVersion String?  @map("app_version")
+  osVersion  String?  @map("os_version")
   /// Exception type, signal, or termination reason, when MetricKit gives one.
-  signature   String?
-  metadata    Json?
-  callStack   Json?    @map("call_stack")
-  receivedAt  DateTime @default(now()) @map("received_at")
+  signature  String?
+  metadata   Json?
+  callStack  Json?    @map("call_stack")
+  receivedAt DateTime @default(now()) @map("received_at")
 
   @@index([receivedAt])
   @@index([kind, receivedAt])
@@ -1685,6 +1696,7 @@ model AllowedEmail {
   createdBy            User                 @relation("AllowedEmailCreator", fields: [createdById], references: [id], onDelete: Restrict)
   claimedBy            User?                @relation("AllowedEmailClaimer", fields: [claimedById], references: [id], onDelete: SetNull)
   collaboratorPolicy   CollaboratorPolicy?  @relation(fields: [collaboratorPolicyId], references: [id], onDelete: Restrict)
+  applications         Application[]        @relation("ApplicationInvite")
 
   @@index([createdById])
   @@index([role, affiliation])
@@ -2496,4 +2508,228 @@ model EventTravelMember {
   @@unique([eventId, userId])
   @@index([eventId])
   @@map("event_travel_members")
+}
+
+// ---------------------------------------------------------------------------
+// Student hiring pipeline (D-065, docs/BRIEF_WORKFORCE_HIRING_V1.md).
+// Admin-only. Applicants are people, not accounts: `User` is linked only after
+// a hire claims an invite. Identifiers say "applicant"; "candidate" already
+// means shift-crew scoring in this codebase.
+// ---------------------------------------------------------------------------
+
+enum HiringCycleStatus {
+  PLANNING
+  OPEN
+  CLOSED
+  ARCHIVED
+}
+
+enum ApplicantStanding {
+  INCOMING
+  FRESHMAN
+  SOPHOMORE
+  JUNIOR
+  SENIOR
+  GRADUATE
+  OTHER
+}
+
+enum ApplicationStage {
+  APPLIED
+  ROUND_1
+  HIRE
+  PASSED
+  WITHDRAWN
+}
+
+enum ApplicantDocumentKind {
+  RESUME
+  COVER_LETTER
+  PORTFOLIO_FILE
+  OTHER
+}
+
+model HiringCycle {
+  id           String            @id @default(cuid())
+  label        String            @unique
+  term         GraduationTerm
+  year         Int
+  status       HiringCycleStatus @default(PLANNING)
+  opensOn      DateTime?         @map("opens_on") @db.Date
+  closesOn     DateTime?         @map("closes_on") @db.Date
+  /// Actual close time. Drives the applicant retention clock (D-065).
+  closedAt     DateTime?         @map("closed_at")
+  notes        String?
+  createdAt    DateTime          @default(now()) @map("created_at")
+  updatedAt    DateTime          @updatedAt @map("updated_at")
+  slots        HiringCycleSlot[]
+  applications Application[]
+
+  @@unique([term, year])
+  @@index([status])
+  @@map("hiring_cycles")
+}
+
+model HiringCycleSlot {
+  id          String      @id @default(cuid())
+  cycleId     String      @map("cycle_id")
+  area        ShiftArea
+  targetCount Int         @map("target_count")
+  cycle       HiringCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+
+  @@unique([cycleId, area])
+  @@map("hiring_cycle_slots")
+}
+
+model Applicant {
+  id            String             @id @default(cuid())
+  name          String
+  /// Normalized name (lowercase, accents and punctuation stripped) for duplicate lookup.
+  nameKey       String             @default("") @map("name_key")
+  standing      ApplicantStanding?
+  gradTerm      GraduationTerm?    @map("grad_term")
+  gradYear      Int?               @map("grad_year")
+  phone         String?
+  location      String?
+  portfolioUrl  String?            @map("portfolio_url")
+  socialHandles String?            @map("social_handles")
+  notes         String?
+  hiredUserId   String?            @unique @map("hired_user_id")
+  /// Set when personal data was purged; the name row remains as a tombstone.
+  purgedAt      DateTime?          @map("purged_at")
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt @map("updated_at")
+  hiredUser     User?              @relation("ApplicantHiredUser", fields: [hiredUserId], references: [id], onDelete: SetNull)
+  emails        ApplicantEmail[]
+  applications  Application[]
+
+  @@index([name])
+  @@index([nameKey])
+  @@map("applicants")
+}
+
+model ApplicantEmail {
+  id          String    @id @default(cuid())
+  applicantId String    @map("applicant_id")
+  /// Lowercased, trimmed. The database decides uniqueness.
+  email       String    @unique
+  isPrimary   Boolean   @default(false) @map("is_primary")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  applicant   Applicant @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+
+  @@index([applicantId])
+  @@map("applicant_emails")
+}
+
+model Application {
+  id                    String              @id @default(cuid())
+  applicantId           String              @map("applicant_id")
+  cycleId               String              @map("cycle_id")
+  /// PageUp Application ID (Fall 2026 onward).
+  externalApplicationId String?             @map("external_application_id")
+  stage                 ApplicationStage    @default(APPLIED)
+  reviewed              Boolean             @default(false)
+  reviewedAt            DateTime?           @map("reviewed_at")
+  interviewedAt         DateTime?           @map("interviewed_at")
+  interviewUrl          String?             @map("interview_url")
+  summerAvailable       Boolean?            @map("summer_available")
+  softwareExperience    String[]            @default([]) @map("software_experience")
+  fieldsExperience      String[]            @default([]) @map("fields_experience")
+  fieldsInterested      String[]            @default([]) @map("fields_interested")
+  /// Free-form area labels as submitted (Marketing, Design, ...).
+  rawAreas              String[]            @default([]) @map("raw_areas")
+  primaryArea           ShiftArea?          @map("primary_area")
+  decidedAt             DateTime?           @map("decided_at")
+  decidedById           String?             @map("decided_by_id")
+  /// Staged hire invite (D-065). SetNull so deleting an unclaimed invite reverts cleanly.
+  allowedEmailId        String?             @map("allowed_email_id")
+  /// Original source row, preserved verbatim by importers.
+  sourcePayload         Json?               @map("source_payload")
+  createdAt             DateTime            @default(now()) @map("created_at")
+  updatedAt             DateTime            @updatedAt @map("updated_at")
+  applicant             Applicant           @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  cycle                 HiringCycle         @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  decidedBy             User?               @relation("ApplicationDecider", fields: [decidedById], references: [id], onDelete: SetNull)
+  allowedEmail          AllowedEmail?       @relation("ApplicationInvite", fields: [allowedEmailId], references: [id], onDelete: SetNull)
+  documents             ApplicantDocument[]
+  reviewNotes           ApplicationNote[]
+
+  @@unique([applicantId, cycleId])
+  @@unique([cycleId, externalApplicationId])
+  @@index([cycleId, stage])
+  @@index([decidedById])
+  @@index([allowedEmailId])
+  @@map("applications")
+}
+
+model ApplicantDocument {
+  id            String                @id @default(cuid())
+  applicationId String                @map("application_id")
+  kind          ApplicantDocumentKind
+  /// Private blob pathname. Never exposed; reads go through an authenticated route.
+  pathname      String                @unique
+  fileName      String                @map("file_name")
+  contentType   String                @map("content_type")
+  sizeBytes     Int                   @map("size_bytes")
+  uploadedById  String?               @map("uploaded_by_id")
+  createdAt     DateTime              @default(now()) @map("created_at")
+  application   Application           @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  uploadedBy    User?                 @relation("ApplicantDocumentUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([applicationId])
+  @@index([uploadedById])
+  @@map("applicant_documents")
+}
+
+model ApplicationNote {
+  id            String      @id @default(cuid())
+  applicationId String      @map("application_id")
+  authorId      String?     @map("author_id")
+  body          String
+  rating        Int?
+  createdAt     DateTime    @default(now()) @map("created_at")
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  author        User?       @relation("ApplicationNoteAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([applicationId, createdAt])
+  @@index([authorId])
+  @@map("application_notes")
+}
+
+/// One row per student per term: which area and sports they worked. Replaces the
+/// Fall/Winter/Spring columns of the intern roster sheet (D-065).
+model StudentTermPlacement {
+  id         String         @id @default(cuid())
+  userId     String         @map("user_id")
+  term       GraduationTerm
+  year       Int
+  area       ShiftArea?
+  sportCodes String[]       @default([]) @map("sport_codes")
+  notes      String?
+  createdAt  DateTime       @default(now()) @map("created_at")
+  updatedAt  DateTime       @updatedAt @map("updated_at")
+  user       User           @relation("TermPlacementUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, term, year])
+  @@index([year, term])
+  @@map("student_term_placements")
+}
+
+/// Durable, non-PII record that an applicant's personal data was purged under the
+/// retention policy (D-065). Audit rows are hard-deleted at 90 days, so this
+/// table is the lasting evidence. No foreign key: it must outlive later cleanup.
+model ApplicantRetentionEvent {
+  id               String   @id @default(cuid())
+  applicantId      String   @map("applicant_id")
+  purgedAt         DateTime @default(now()) @map("purged_at")
+  applicationCount Int      @map("application_count")
+  documentCount    Int      @map("document_count")
+  policyMonths     Int      @map("policy_months")
+  /// Blob pathnames still to delete after the purge committed. Paths hold ids, not personal
+  /// data. Cleared once the files are gone; a sweep retries any that remain.
+  pendingBlobPaths String[] @default([]) @map("pending_blob_paths")
+
+  @@index([applicantId])
+  @@index([purgedAt])
+  @@map("applicant_retention_events")
 }

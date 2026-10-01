@@ -1,0 +1,150 @@
+import { describe, expect, it } from "vitest";
+import { academicYearLabel, buildPlanning, collapseApplicants, presentInYear, type PlanningApplicant, type PlanningStudent } from "@/lib/workforce/planning";
+
+// Fictional people. Academic year 2026 means Fall 2026 through Summer 2027.
+const student = (id: string, area: PlanningStudent["area"], gradTerm: PlanningStudent["gradTerm"], gradYear: number | null): PlanningStudent => ({
+  id,
+  name: `Student ${id}`,
+  area,
+  gradTerm,
+  gradYear,
+});
+
+const applicant = (id: string, area: PlanningApplicant["area"], stage: PlanningApplicant["stage"], gradTerm: PlanningApplicant["gradTerm"], gradYear: number | null): PlanningApplicant => ({
+  id,
+  name: `Applicant ${id}`,
+  area,
+  gradTerm,
+  gradYear,
+  stage,
+});
+
+describe("presentInYear", () => {
+  it("keeps someone who graduates in the Fall of that year, drops one who graduated the Spring before", () => {
+    expect(presentInYear({ gradTerm: "FALL", gradYear: 2026 }, 2026)).toBe(true);
+    expect(presentInYear({ gradTerm: "SPRING", gradYear: 2026 }, 2026)).toBe(false);
+    expect(presentInYear({ gradTerm: "SUMMER", gradYear: 2026 }, 2026)).toBe(false);
+    expect(presentInYear({ gradTerm: "SPRING", gradYear: 2027 }, 2026)).toBe(true);
+    expect(presentInYear({ gradTerm: "SPRING", gradYear: 2027 }, 2027)).toBe(false);
+  });
+
+  it("treats an unknown graduation as staying", () => {
+    expect(presentInYear({ gradTerm: null, gradYear: null }, 2030)).toBe(true);
+    expect(presentInYear({ gradTerm: "SPRING", gradYear: null }, 2030)).toBe(true);
+  });
+});
+
+describe("start terms", () => {
+  it("does not count someone before they start", () => {
+    // Starts Fall 2028: not here in 2026-27 or 2027-28, here in 2028-29.
+    const person = { gradTerm: "SPRING" as const, gradYear: 2032, startTerm: "FALL" as const, startYear: 2028 };
+    expect(presentInYear(person, 2026)).toBe(false);
+    expect(presentInYear(person, 2027)).toBe(false);
+    expect(presentInYear(person, 2028)).toBe(true);
+  });
+
+  it("counts someone who starts partway through the academic year for that year", () => {
+    expect(presentInYear({ gradTerm: null, gradYear: null, startTerm: "SPRING", startYear: 2027 }, 2026)).toBe(true);
+  });
+
+  it("applies to current students with a future start term and to hired applicants by cycle term", () => {
+    const students: PlanningStudent[] = [{ ...student("future", "VIDEO", "SPRING", 2032), startTerm: "FALL", startYear: 2028 }];
+    const hired: PlanningApplicant[] = [{ ...applicant("h", "VIDEO", "HIRE", "SPRING", 2032), startTerm: "FALL", startYear: 2027 }];
+    const [video] = buildPlanning(students, hired, [2026, 2027, 2028]);
+    expect(video!.cells.map((c) => c.continuing)).toEqual([0, 0, 1]);
+    expect(video!.cells.map((c) => c.hired)).toEqual([0, 1, 1]);
+  });
+});
+
+describe("buildPlanning", () => {
+  const years = [2026, 2027, 2028];
+
+  it("projects continuing students, who is leaving, and the hiring gap", () => {
+    const students = [
+      student("a", "VIDEO", "SPRING", 2027),
+      student("b", "VIDEO", "SPRING", 2027),
+      student("c", "VIDEO", "SPRING", 2028),
+      student("d", "VIDEO", "SPRING", 2029),
+    ];
+    const [video] = buildPlanning(students, [], years);
+    expect(video!.baseline).toBe(4);
+    expect(video!.cells.map((c) => c.projected)).toEqual([4, 2, 1]);
+    expect(video!.cells[1]!.leaving.sort()).toEqual(["Student a", "Student b"]);
+    expect(video!.cells.map((c) => c.need)).toEqual([0, 2, 3]);
+  });
+
+  it("counts unregistered hires toward the projection and shows pipeline separately", () => {
+    const students = [student("a", "PHOTO", "SPRING", 2027), student("b", "PHOTO", "SPRING", 2027)];
+    const applicants = [
+      applicant("h1", "PHOTO", "HIRE", "SPRING", 2030),
+      applicant("p1", "PHOTO", "ROUND_1", "SPRING", 2029),
+      applicant("p2", "PHOTO", "APPLIED", "SPRING", 2027),
+    ];
+    const [photo] = buildPlanning(students, applicants, years);
+    const second = photo!.cells[1]!;
+    expect(second.continuing).toBe(0);
+    expect(second.hired).toBe(1);
+    expect(second.projected).toBe(1);
+    expect(second.pipeline).toBe(1); // p2 graduates before this year, so only p1
+    expect(second.need).toBe(1);
+    expect(second.hiredNames).toEqual(["Applicant h1"]);
+  });
+
+  it("flags students with no graduation date but still counts them", () => {
+    const [row] = buildPlanning([student("a", "SOCIAL", null, null), student("b", "SOCIAL", "SPRING", 2027)], [], years);
+    expect(row!.cells[2]!.continuing).toBe(1);
+    expect(row!.cells[2]!.unknownGrad).toBe(1);
+  });
+
+  it("puts unassigned people in a No-area row, last, and omits empty areas", () => {
+    const rows = buildPlanning([student("a", null, "SPRING", 2028), student("b", "COMMS", "SPRING", 2028)], [], years);
+    expect(rows.map((r) => r.area)).toEqual(["COMMS", "NONE"]);
+  });
+
+  it("never reports a negative need", () => {
+    const [row] = buildPlanning(
+      [student("a", "VIDEO", "SPRING", 2027)],
+      [applicant("h1", "VIDEO", "HIRE", "SPRING", 2030), applicant("h2", "VIDEO", "HIRE", "SPRING", 2030)],
+      years,
+    );
+    expect(row!.cells.every((c) => c.need >= 0)).toBe(true);
+    expect(row!.cells[1]!.need).toBe(0);
+  });
+
+  it("returns no rows when there is nothing to project", () => {
+    expect(buildPlanning([], [], years)).toEqual([]);
+  });
+});
+
+describe("academicYearLabel", () => {
+  it("formats the span", () => {
+    expect(academicYearLabel(2026)).toBe("2026-27");
+    expect(academicYearLabel(2099)).toBe("2099-00");
+  });
+});
+
+describe("collapseApplicants", () => {
+  const row = (id: string, applicantId: string, stage: PlanningApplicant["stage"], cycleTerm: "FALL" | "SPRING", cycleYear: number) => ({
+    ...applicant(id, "VIDEO", stage, "SPRING", 2030),
+    applicantId,
+    cycleTerm,
+    cycleYear,
+  });
+
+  it("counts a returning person once, preferring the strongest stage", () => {
+    const rows = [row("old-hire", "p1", "HIRE", "FALL", 2025), row("new-open", "p1", "APPLIED", "FALL", 2026)];
+    expect(collapseApplicants(rows).map((r) => r.id)).toEqual(["old-hire"]);
+  });
+
+  it("prefers the latest cycle when stages tie", () => {
+    const rows = [row("a", "p1", "ROUND_1", "SPRING", 2026), row("b", "p1", "ROUND_1", "FALL", 2026)];
+    expect(collapseApplicants(rows).map((r) => r.id)).toEqual(["b"]);
+  });
+
+  it("keeps different people separate and yields one planning entry each", () => {
+    const rows = [row("a", "p1", "HIRE", "FALL", 2026), row("b", "p2", "HIRE", "FALL", 2026)];
+    const [video] = buildPlanning([], collapseApplicants([...rows, row("a2", "p1", "APPLIED", "SPRING", 2027)]), [2026]);
+    expect(video!.cells[0]!.hired).toBe(2);
+    expect(video!.cells[0]!.pipeline).toBe(0);
+  });
+});

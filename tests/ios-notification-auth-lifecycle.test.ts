@@ -242,7 +242,8 @@ describe("iOS notification authorization lifecycle", () => {
     expect(mocks.tx.user.update).toHaveBeenCalledWith({
       where: { id: "user-1" },
       // Deactivation also revokes the calendar feed token.
-      data: { active: false, icsToken: null },
+      // Deactivation also records when it happened: it starts the applicant retention clock (D-065).
+      data: { active: false, deactivatedAt: expect.any(Date), icsToken: null },
     });
   });
 

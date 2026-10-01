@@ -6,7 +6,7 @@ import { registerSchema } from "@/lib/validation";
 import { shiftWorkerTypeForRole } from "@/lib/shift-display";
 import { withHandler } from "@/lib/api";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
-import { createAuditEntriesTx, createAuditEntry } from "@/lib/audit";
+import { createAuditEntriesTx, createAuditEntry, createAuditEntryTx } from "@/lib/audit";
 import { capabilitiesForActor, collaboratorPolicyMetadataForActor, compatibilityCollaboratorProfile } from "@/lib/collaborator-access";
 import { collaboratorPolicyActorSelect } from "@/lib/services/collaborator-policies";
 import { unique } from "@/lib/utils";
@@ -78,6 +78,47 @@ export const POST = withHandler(async (req) => {
         where: { id: allowedEntry.id },
         data: { claimedAt: new Date(), claimedById: created.id },
       });
+
+      // Staged hire invite (D-065): link the applicant to the new account inside
+      // the same transaction. Never overwrites an existing link.
+      const hireApplication = await tx.application.findFirst({
+        // Only a standing Hire links; a decision undone since the invite was sent does not.
+        where: { allowedEmailId: allowedEntry.id, stage: "HIRE" },
+        select: {
+          id: true,
+          applicantId: true,
+          cycle: { select: { term: true, year: true } },
+          applicant: { select: { gradTerm: true, gradYear: true } },
+        },
+      });
+      if (hireApplication) {
+        const linked = await tx.applicant.updateMany({
+          where: { id: hireApplication.applicantId, hiredUserId: null },
+          data: { hiredUserId: created.id },
+        });
+        if (linked.count > 0) {
+          // Students start in the hiring cycle's term, and keep the graduation date they gave:
+          // the planning view stops counting the applicant once linked and counts this user, so
+          // a hire without it would be assumed to stay indefinitely.
+          await tx.user.update({
+            where: { id: created.id },
+            data: {
+              startTerm: hireApplication.cycle.term,
+              startTermYear: hireApplication.cycle.year,
+              ...(hireApplication.applicant.gradYear != null ? { gradYear: hireApplication.applicant.gradYear } : {}),
+              ...(hireApplication.applicant.gradTerm ? { graduationTerm: hireApplication.applicant.gradTerm } : {}),
+            },
+          });
+          await createAuditEntryTx(tx, {
+            actorId: created.id,
+            actorRole: created.role,
+            entityType: "hiring_application",
+            entityId: hireApplication.id,
+            action: "hire_linked",
+            after: { userId: created.id },
+          });
+        }
+      }
 
       if (allowedEntry.role === "STUDENT") {
         const areas = unique([

@@ -16,6 +16,10 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
+vi.mock("@/lib/hiring/retention", () => ({
+  runApplicantRetention: vi.fn(async () => ({ dryRun: false, due: 0, purged: 0, documentsDeleted: 0, failed: 0, hasMore: false, blobsSwept: 0 })),
+}));
+
 vi.mock("@/lib/services/notification-deliveries", () => ({
   pruneNotificationDeliveries: vi.fn(async () => 0),
 }));
@@ -86,6 +90,7 @@ import { refreshCompanionProjection } from "@/lib/services/companion-projection"
 import { cleanupPendingSignatureArtifacts } from "@/lib/services/signatures";
 import { badges, badgesEnabled } from "@/lib/badges";
 import { recentlyWorkedEventUsers } from "@/lib/badges/worked-evidence";
+import { runApplicantRetention } from "@/lib/hiring/retention";
 import { GET } from "@/app/api/cron/morning-refresh/route";
 
 const mockDb = db as unknown as {
@@ -174,6 +179,26 @@ describe("morning refresh cron route", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it("continues the hiring retention backlog with the leftover time budget, within the shared limit", async () => {
+    const res = await GET(request(), { params: Promise.resolve({}) });
+    const body = await res.json();
+    expect(runApplicantRetention).toHaveBeenCalledTimes(1);
+    const options = vi.mocked(runApplicantRetention).mock.calls[0]![1] as { budgetMs: number };
+    // Never more than the shared 8 second budget minus a safety margin, and never negative.
+    expect(options.budgetMs).toBeGreaterThan(0);
+    expect(options.budgetMs).toBeLessThanOrEqual(7500);
+    expect(body.applicantRetention).toMatchObject({ purged: 0, failed: 0 });
+  });
+
+  it("reports a retention failure without losing the rest of the job", async () => {
+    vi.mocked(runApplicantRetention).mockRejectedValueOnce(new Error("retention down"));
+    const res = await GET(request(), { params: Promise.resolve({}) });
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(body.maintenanceFailures).toContain("applicantRetention");
+    expect(body.tradesExpired).toBe(1);
   });
 
   it("returns stale trade and pending pickup maintenance results", async () => {

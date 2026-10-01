@@ -397,6 +397,8 @@ export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
     }
 
     updateData.active = body.active;
+    // Reactivation ends the inactive period, so the retention clock does not run.
+    if (body.active) updateData.deactivatedAt = null;
   }
 
   if (Object.prototype.hasOwnProperty.call(body, "title")) {
