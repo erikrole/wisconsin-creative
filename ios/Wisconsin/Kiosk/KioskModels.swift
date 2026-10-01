@@ -329,6 +329,8 @@ struct KioskKitDetail: Decodable, Equatable {
         let id: String
         let assetTag: String?
         let name: String
+        /// Additive; older servers omit it.
+        var imageUrl: String? = nil
     }
 
     struct BulkMember: Decodable, Equatable, Identifiable {

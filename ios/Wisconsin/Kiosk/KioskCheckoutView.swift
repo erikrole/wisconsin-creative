@@ -371,7 +371,7 @@ struct KioskCheckoutView: View {
     private var scanMain: some View {
         KioskContextCard(
             title: hasCheckoutContext ? checkoutContextTitle : "Details needed",
-            detail: KioskDueCopy.due(dueBackAt) + (selectedKitDetail.map { " · \($0.name) kit" } ?? ""),
+            detail: KioskDueCopy.due(dueBackAt),
             onEdit: { requestEditContext() }
         )
 
@@ -533,7 +533,7 @@ struct KioskCheckoutView: View {
         VStack(alignment: .leading, spacing: 6) {
             KioskSectionHeader(
                 title: "Taking out",
-                detail: selectedKitDetail.map { "\($0.name) kit" } ?? "new checkout",
+                detail: selectedKitDetail == nil ? "new checkout" : nil,
                 count: kitProgress?.label ?? "\(scannedItems.count)",
                 section: .takingOut
             )
@@ -614,7 +614,7 @@ struct KioskCheckoutView: View {
             if let group = groups.first(where: { !$0.isBulkGroup && $0.first.id == member.id }) {
                 scannedGroupRow(group)
             } else {
-                KioskItemRow(tag: member.assetTag.nonBlankText ?? member.name, name: member.assetTag.nonBlankText == nil ? nil : member.name, isDone: false)
+                KioskItemRow(tag: member.assetTag.nonBlankText ?? member.name, name: member.assetTag.nonBlankText == nil ? nil : member.name, imageUrl: member.imageUrl, isDone: false)
             }
         }
         ForEach(kit.bulkMembers) { bulk in
@@ -765,7 +765,7 @@ struct KioskCheckoutView: View {
     }
 
     private var checkoutContextTitle: String {
-        isLinkedToEvent ? (selectedEvent?.title ?? "") : trimmedCustomPurpose
+        isLinkedToEvent ? (selectedEvent.map { kioskEventDisplayTitle($0.title, sportCode: $0.sportCode) } ?? "") : trimmedCustomPurpose
     }
 
     private var checkoutContextDetail: String? {
