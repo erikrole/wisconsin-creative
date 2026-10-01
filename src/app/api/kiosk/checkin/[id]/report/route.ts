@@ -5,6 +5,7 @@ import { HttpError, ok } from "@/lib/http";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { displayBookingTitle } from "@/lib/booking-display-title";
 import { requireKioskActor } from "@/lib/services/kiosk-actor";
+import { readKioskStaffToken, verifyKioskStaffToken } from "@/lib/kiosk-staff-token";
 import { readCheckinReportPayload, submitCheckinItemReport } from "@/lib/services/checkin-item-reports";
 import { wasReturnedOnTime } from "@/lib/services/bookings-checkin";
 import { endCheckoutReturnLiveActivities } from "@/lib/services/live-activities";
@@ -17,7 +18,8 @@ import { badges } from "@/lib/badges";
  *
  * Anyone on the roster may report, the same rule as Return. DAMAGED needs the
  * item scanned back and holds it for staff; LOST accounts for the item so the
- * return can finish. Staff are notified either way.
+ * return can finish. Staff are notified either way. A C5 staff proof header,
+ * when sent, is verified (see kiosk-staff-token).
  */
 export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => {
   await enforceRateLimit(`kiosk:checkin-report:${kiosk.kioskId}`, { max: 30, windowMs: 60_000 });
@@ -28,6 +30,11 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
   }
   if (!actorId) throw new HttpError(400, "Identify who is reporting this item");
   const actor = await requireKioskActor(db, actorId);
+  // Reporting stays open to anyone on the roster (the Return rule), so no
+  // staff proof is required. When C5 Staff actions send one, it must still be
+  // valid for this person on this kiosk: a stale or borrowed scan is refused.
+  const staffToken = readKioskStaffToken(req);
+  if (staffToken) verifyKioskStaffToken(staffToken, { actorId: actor.id, kioskId: kiosk.kioskId });
 
   const [booking, reporter] = await Promise.all([
     db.booking.findUnique({

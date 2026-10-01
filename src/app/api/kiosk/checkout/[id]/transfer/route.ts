@@ -7,6 +7,7 @@ import { transferKioskItems } from "@/lib/services/kiosk-item-transfer";
 import { kioskOperationContext, readKioskOperationReceipt, rejectKioskOperation } from "@/lib/services/kiosk-operation-receipts";
 import { scheduleCheckoutReturnLiveActivity } from "@/lib/live-activity-workflow";
 import { endCheckoutReturnLiveActivities } from "@/lib/services/live-activities";
+import { readKioskStaffToken } from "@/lib/kiosk-staff-token";
 const schema = z.object({
   actorId: z.string().min(1), requestId: z.string().max(64), expectedUpdatedAt: z.string().datetime({ offset: true }),
   targetBookingId: z.string().min(1).optional(), targetUserId: z.string().min(1).optional(),
@@ -18,7 +19,7 @@ export const POST = withKiosk<{ id: string }>(async (req, { params, kiosk }) => 
   const replay = await readKioskOperationReceipt(db, receipt);
   if (replay) return ok(replay);
   try {
-    const result = await transferKioskItems({ ...body, sourceId: params.id, expectedUpdatedAt: new Date(body.expectedUpdatedAt), kioskId: kiosk.kioskId, receipt });
+    const result = await transferKioskItems({ ...body, sourceId: params.id, expectedUpdatedAt: new Date(body.expectedUpdatedAt), kioskId: kiosk.kioskId, receipt, staffToken: readKioskStaffToken(req) });
     after(async () => { await Promise.allSettled([scheduleCheckoutReturnLiveActivity({ bookingId: result.targetBookingId, endsAt: result.endsAt }), ...(result.sourceClosed ? [endCheckoutReturnLiveActivities(params.id)] : [])]); });
     return ok(result);
   } catch (error) {

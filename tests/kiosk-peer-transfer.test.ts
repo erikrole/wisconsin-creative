@@ -34,6 +34,9 @@ vi.mock("@/lib/services/booking-ref", () => ({ nextBookingRef: mocks.nextBooking
 vi.mock("@/lib/services/notifications", () => ({ sendPushToUser: mocks.sendPushToUser, deferPush: mocks.deferPush }));
 
 import { transferKioskItems, OWNER_TRANSFER_REASON, kioskHandoverCopy } from "@/lib/services/kiosk-item-transfer";
+import { issueKioskStaffToken } from "@/lib/kiosk-staff-token";
+
+vi.stubEnv("SESSION_SECRET", "test-session-secret-at-least-32-characters-long");
 
 const updatedAt = new Date("2026-09-25T15:00:00.000Z");
 const endsAt = new Date("2026-09-26T23:00:00.000Z");
@@ -130,17 +133,33 @@ describe("kiosk peer transfer", () => {
     await expect(transfer({ targetUserId: undefined, targetBookingId: "co-9" })).rejects.toMatchObject({ status: 403 });
   });
 
-  it("leaves staff transfers unchanged: reason required, no handover pushes", async () => {
+  it("staff transfers need a staff card proof, a reason, and send no handover pushes", async () => {
+    const staffToken = issueKioskStaffToken({ userId: "staff-1", kioskId: "kiosk-1" }).token;
     mocks.userFindFirst.mockResolvedValueOnce(actor("staff-1", "STAFF"));
-    await expect(transfer({ actorId: "staff-1" })).rejects.toMatchObject({ status: 400 });
+    await expect(transfer({ actorId: "staff-1", staffToken })).rejects.toMatchObject({ status: 400 });
 
     mocks.userFindFirst
       .mockResolvedValueOnce(actor("staff-1", "STAFF"))
       .mockResolvedValueOnce({ id: "peer-1", name: "Erik Role" });
-    const result = await transfer({ actorId: "staff-1", reason: "Swapped at the game" });
+    const result = await transfer({ actorId: "staff-1", reason: "Swapped at the game", staffToken });
     expect(result.success).toBe(true);
-    expect(mocks.createAuditEntryTx.mock.calls[0]![1].after.reason).toBe("Swapped at the game");
+    expect(mocks.createAuditEntryTx.mock.calls[0]![1].after).toMatchObject({ reason: "Swapped at the game", staffCardVerified: true });
     expect(mocks.notificationCreateManyAndReturn).not.toHaveBeenCalled();
+  });
+
+  it("refuses a staff transfer of someone else's checkout without a valid staff card proof", async () => {
+    const cases: Array<[string | undefined, string]> = [
+      [undefined, "staff_scan_required"],
+      [issueKioskStaffToken({ userId: "staff-2", kioskId: "kiosk-1" }).token, "staff_scan_invalid"],
+      [issueKioskStaffToken({ userId: "staff-1", kioskId: "kiosk-9" }).token, "staff_scan_invalid"],
+      [issueKioskStaffToken({ userId: "staff-1", kioskId: "kiosk-1", now: Date.now() - 11 * 60_000 }).token, "staff_scan_expired"],
+    ];
+    for (const [staffToken, code] of cases) {
+      mocks.userFindFirst.mockResolvedValueOnce(actor("staff-1", "STAFF"));
+      await expect(transfer({ actorId: "staff-1", reason: "Swapped at the game", staffToken }))
+        .rejects.toMatchObject({ status: 403, data: { code } });
+    }
+    expect(mocks.bookingCreate).not.toHaveBeenCalled();
   });
 
   it("refuses handing gear to its current holder", async () => {
