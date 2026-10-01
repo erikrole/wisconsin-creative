@@ -271,6 +271,7 @@
 - `/api/kiosk/kits` -> `src/app/api/kiosk/kits/route.ts`
 - `/api/kiosk/me` -> `src/app/api/kiosk/me/route.ts`
 - `/api/kiosk/pickup/[id]/confirm` -> `src/app/api/kiosk/pickup/[id]/confirm/route.ts`
+- `/api/kiosk/pickup/[id]/details` -> `src/app/api/kiosk/pickup/[id]/details/route.ts`
 - `/api/kiosk/pickup/[id]/scan` -> `src/app/api/kiosk/pickup/[id]/scan/route.ts`
 - `/api/kiosk/pickup/[id]/substitute` -> `src/app/api/kiosk/pickup/[id]/substitute/route.ts`
 - `/api/kiosk/reservation/[id]/items` -> `src/app/api/kiosk/reservation/[id]/items/route.ts`

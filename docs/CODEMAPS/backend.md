@@ -54,7 +54,7 @@
 | `src/lib/services/kiosk-checkout-allowance.ts` | 86 |
 | `src/lib/services/kiosk-checkout-complete.ts` | 90 |
 | `src/lib/services/kiosk-dashboard-home.ts` | 229 |
-| `src/lib/services/kiosk-extend-window.ts` | 132 |
+| `src/lib/services/kiosk-extend-window.ts` | 160 |
 | `src/lib/services/kiosk-item-transfer.ts` | 196 |
 | `src/lib/services/kiosk-location.ts` | 72 |
 | `src/lib/services/kiosk-nudge.ts` | 118 |
@@ -551,6 +551,7 @@
 - `/api/kiosk/kits`
 - `/api/kiosk/me`
 - `/api/kiosk/pickup/[id]/confirm`
+- `/api/kiosk/pickup/[id]/details`
 - `/api/kiosk/pickup/[id]/scan`
 - `/api/kiosk/pickup/[id]/substitute`
 - `/api/kiosk/reservation/[id]/items`
