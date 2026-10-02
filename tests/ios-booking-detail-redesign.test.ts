@@ -61,8 +61,9 @@ describe("iOS Booking Detail Item Detail alignment", () => {
     expect(overview).not.toContain('arrow.down.left');
     expect(overview).not.toContain('title: "Pickup Location"');
     expect(overview).toContain('overviewRow(icon: "barcode.viewfinder", tone: .gray, title: "Pickup Kiosk")');
-    expect(overview).toContain("date.operationalDateTimeLabel(now: now)");
-    expect(dates).toContain('if calendar.isDate(self, inSameDayAs: now) { return "Today" }');
+    expect(overview).toContain("date.operationalDateTimeLabel(now: today)");
+    expect(dates).toContain("let dayDistance = Calendar.current.dayOffset(of: self, from: now)");
+    expect(dates).toContain('case 0: return "Today"');
     expect(dates).toContain("abs(dayDistance) < 7");
     expect(dates).toContain(".dateTime.weekday(.wide)");
     expect(dates).toContain(".dateTime.weekday(.abbreviated).month(.abbreviated).day()");

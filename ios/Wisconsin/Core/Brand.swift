@@ -308,8 +308,10 @@ extension Color {
     /// and disappears against a grouped cell.
     static let myShiftSurface = Color(UIColor { traits in
         let base = UIColor.secondarySystemGroupedBackground.resolvedColor(with: traits)
-        let blue = UIColor(Color.statusText(.blue)).resolvedColor(with: traits)
-        return base.mixed(with: blue, amount: traits.userInterfaceStyle == .dark ? 0.22 : 0.09)
+        // System blue, not the deeper status blue: mixing the status blue into
+        // white skews lavender. A little system blue stays a clean sky tint.
+        let blue = UIColor.systemBlue.resolvedColor(with: traits)
+        return base.mixed(with: blue, amount: traits.userInterfaceStyle == .dark ? 0.20 : 0.10)
     })
 }
 
@@ -346,7 +348,7 @@ private struct BrandCardModifier: ViewModifier {
             .overlay {
                 if stroke {
                     RoundedRectangle(cornerRadius: radius, style: .continuous)
-                        .strokeBorder(Color.hairline, lineWidth: 0.5)
+                        .strokeBorder(Color.flatStroke, lineWidth: 1)
                 }
             }
     }
@@ -358,7 +360,7 @@ extension View {
     func brandCard(
         padding: CGFloat = Brand.Space.md,
         radius: CGFloat = Brand.Radius.card,
-        fill: Color = .cardSurface,
+        fill: Color = .flatCard,
         stroke: Bool = true,
         alignment: Alignment = .leading
     ) -> some View {
@@ -425,12 +427,13 @@ struct BrandSectionHeader<Trailing: View>: View {
             if let systemImage {
                 Image(systemName: systemImage)
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color.brandPrimary)
+                    .foregroundStyle(.secondary)
                     .accessibilityHidden(true)
             }
             VStack(alignment: .leading, spacing: 1) {
                 Text(title)
-                    .font(.headline)
+                    .font(.title3)
+                    .fontWeight(.heavy)
                     .foregroundStyle(.primary)
                 if let subtitle, !subtitle.isEmpty {
                     Text(subtitle)

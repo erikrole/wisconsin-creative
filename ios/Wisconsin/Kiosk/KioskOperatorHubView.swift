@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct KioskOperatorHubView: View {
+    @Environment(\.today) private var today
     @Environment(KioskStore.self) private var store
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let user: KioskUser
@@ -303,7 +304,7 @@ struct KioskOperatorHubView: View {
                             detail: itemsLine(checkout),
                             status: dueStatus(checkout),
                             statusColor: checkout.isOverdue ? KioskStatus.problem
-                                : (Calendar.current.isDateInToday(checkout.endsAt) ? KioskStatus.attention : KioskText.secondary),
+                                : (Calendar.current.dayOffset(of: checkout.endsAt, from: today) == 0 ? KioskStatus.attention : KioskText.secondary),
                             items: checkout.items
                         ) {
                             Button("Return") { startReturn(drawerContext(for: checkout)) }
@@ -461,13 +462,13 @@ struct KioskOperatorHubView: View {
     private func dueStatus(_ checkout: KioskStudentCheckout) -> String {
         let time = checkout.endsAt.formatted(.dateTime.hour().minute())
         if checkout.isOverdue { return "Overdue" }
-        if Calendar.current.isDateInToday(checkout.endsAt) { return "Due today \(time)" }
+        if Calendar.current.dayOffset(of: checkout.endsAt, from: today) == 0 { return "Due today \(time)" }
         return "Due \(checkout.endsAt.formatted(.dateTime.weekday(.abbreviated))) \(time)"
     }
 
     private func readyLine(_ startsAt: Date) -> String {
         if startsAt <= Date() { return "ready now" }
-        if Calendar.current.isDateInToday(startsAt) {
+        if Calendar.current.dayOffset(of: startsAt, from: today) == 0 {
             return "ready from \(startsAt.formatted(.dateTime.hour().minute()))"
         }
         return "from \(startsAt.formatted(.dateTime.weekday(.abbreviated).hour().minute()))"

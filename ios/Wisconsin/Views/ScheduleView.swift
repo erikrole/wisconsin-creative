@@ -73,6 +73,10 @@ final class ScheduleViewModel {
     @ObservationIgnored var cacheOwnerId: String?
 
     var shiftsByEventId: [String: MyShift] = [:]
+    /// "Overlaps <event>" for each of your own events whose call window runs
+    /// into another event you also work, so a double-booking is visible in the
+    /// list instead of discovered on the day.
+    private(set) var conflictNoteByEventId: [String: String] = [:]
     /// Every personal assignment on an event, earliest first. `shiftsByEventId`
     /// keeps the primary row so existing filters and swipe actions stay stable.
     var allShiftsByEventId: [String: [MyShift]] = [:]
@@ -394,6 +398,28 @@ final class ScheduleViewModel {
         // Assigned last: its didSet rebuilds the day index, which reads the
         // current window bounds.
         events = collapsedCombinedScheduleEvents(Array(rawEventsById.values))
+        conflictNoteByEventId = Self.conflictNotes(events: events, shifts: grouped)
+    }
+
+    private static func conflictNotes(
+        events: [ScheduleEvent],
+        shifts: [String: [MyShift]]
+    ) -> [String: String] {
+        struct Slot { let id: String; let title: String; let start: Date; let end: Date }
+        let slots: [Slot] = events.compactMap { event in
+            guard let shift = shifts[event.id]?.first, !event.displayAllDay else { return nil }
+            let start = shift.callStartsAt ?? event.startsAt
+            let end = shift.callEndsAt ?? event.endsAt
+            guard end > start else { return nil }
+            return Slot(id: event.id, title: scheduleEventDisplayTitle(event), start: start, end: end)
+        }
+        var notes: [String: String] = [:]
+        for slot in slots {
+            if let other = slots.first(where: { $0.id != slot.id && $0.start < slot.end && $0.end > slot.start }) {
+                notes[slot.id] = "Overlaps \(other.title)"
+            }
+        }
+        return notes
     }
 }
 
@@ -457,9 +483,6 @@ struct ScheduleView: View {
 /// Isolated from `InternalScheduleView.body` so iOS 27 overflow content type-checks
 /// in a small ToolbarContent unit instead of the Schedule root's giant tree.
 private struct ScheduleRootToolbar: ToolbarContent {
-    @Binding var myShiftsOnly: Bool
-    @Binding var sportFilter: String?
-    let availableSportCodes: [String]
     let canManageAvailability: Bool
     let openTradeCount: Int
     let scheduleOpenWorkTip: ScheduleOpenWorkTip
@@ -468,20 +491,11 @@ private struct ScheduleRootToolbar: ToolbarContent {
     @Binding var showAvailability: Bool
     @Binding var showCalendarSetup: Bool
 
-    private static let allSports = "__all_sports__"
-
-    private var showsSportMenu: Bool { availableSportCodes.count > 1 }
-
+    /// Only the two actions that open something sit in the bar: Trades and the
+    /// overflow. The filters (My Shifts, Sport) live in the labelled header
+    /// under the week strip, where they can say what they are.
     var body: some ToolbarContent {
         if #available(iOS 27.0, *) {
-            ToolbarItemGroup(placement: .topBarTrailing) {
-                myShiftsButton
-                if showsSportMenu { sportMenu }
-            }
-            .visibilityPriority(.high)
-
-            ToolbarSpacer(.fixed, placement: .topBarTrailing)
-
             ToolbarItem(placement: .topBarTrailing) {
                 tradeBoardButton
                     .badge(openTradeCount)
@@ -492,13 +506,6 @@ private struct ScheduleRootToolbar: ToolbarContent {
                 overflowActions
             }
         } else {
-            ToolbarItemGroup(placement: .topBarTrailing) {
-                myShiftsButton
-                if showsSportMenu { sportMenu }
-            }
-
-            ToolbarSpacer(.fixed, placement: .topBarTrailing)
-
             ToolbarItem(placement: .topBarTrailing) {
                 tradeBoardButton
                     .badge(openTradeCount)
@@ -508,57 +515,6 @@ private struct ScheduleRootToolbar: ToolbarContent {
                 moreControl
             }
         }
-    }
-
-    /// One tap between everything and your own work, which is the question
-    /// most people open Schedule to answer.
-    private var myShiftsButton: some View {
-        Button {
-            myShiftsOnly.toggle()
-            Haptics.selection()
-        } label: {
-            Label(
-                "My Shifts",
-                systemImage: myShiftsOnly
-                    ? "person.crop.circle.fill.badge.checkmark"
-                    : "person.crop.circle.badge.checkmark"
-            )
-        }
-        .listControlTint(isActive: myShiftsOnly)
-        .accessibilityLabel("My Shifts")
-        .accessibilityValue(myShiftsOnly ? "On" : "Off")
-        .accessibilityAddTraits(myShiftsOnly ? .isSelected : [])
-    }
-
-    private var sportSelection: Binding<String> {
-        Binding {
-            sportFilter ?? Self.allSports
-        } set: { newValue in
-            sportFilter = newValue == Self.allSports ? nil : newValue
-        }
-    }
-
-    private var sportMenu: some View {
-        Menu {
-            Picker("Sport", selection: sportSelection) {
-                Text("All Sports").tag(Self.allSports)
-                ForEach(availableSportCodes, id: \.self) { code in
-                    Text(scheduleSportLabel(code)).tag(code)
-                }
-            }
-        } label: {
-            Label(
-                "Sport",
-                systemImage: sportFilter == nil ? "sportscourt" : "sportscourt.fill"
-            )
-        }
-        .listControlTint(isActive: sportFilter != nil)
-        .accessibilityLabel(sportMenuAccessibilityLabel)
-    }
-
-    private var sportMenuAccessibilityLabel: String {
-        guard let sportFilter else { return "Sport, all sports" }
-        return "Sport, " + scheduleSportLabel(sportFilter)
     }
 
     private var tradeBoardButton: some View {
@@ -627,12 +583,64 @@ private struct ScheduleRootToolbar: ToolbarContent {
     }
 }
 
+/// A one-time offer to put your shifts in Apple Calendar.
+private struct ScheduleCalendarPrompt: View {
+    let onSetUp: () -> Void
+    let onDismiss: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "calendar.badge.plus")
+                .font(.title3)
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Add your shifts to Calendar")
+                    .font(.subheadline.weight(.bold))
+                Text("Call times stay current.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Button(action: onSetUp) {
+                Text("Set up")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color(.systemBackground))
+                    .padding(.horizontal, 14)
+                    .frame(minHeight: 36)
+                    .background(Color(.label), in: Capsule())
+            }
+            .buttonStyle(.plain)
+            Button(action: onDismiss) {
+                Image(systemName: "xmark")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 36, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Dismiss")
+        }
+        .padding(.leading, 14)
+        .padding(.trailing, 4)
+        .padding(.vertical, 6)
+        .background(Color.flatCard, in: RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous).strokeBorder(Color.flatStroke, lineWidth: 1))
+        .accessibilityElement(children: .contain)
+    }
+}
+
 private struct InternalScheduleView: View {
+    /// The rollover dependency: crossing midnight re-renders the list from the
+    /// new day instead of leaving yesterday at the top under stale headers.
+    @Environment(\.today) private var today
     private let scheduleOpenWorkTip = ScheduleOpenWorkTip()
     private let shiftCalendarTip = ShiftCalendarTip()
     @State private var vm = ScheduleViewModel()
     @State private var navigationPath = NavigationPath()
     @State private var myShiftsOnly = false
+    @State private var didRestoreFilters = false
+    @State private var calendarPromptDismissed = false
     @State private var homeAwayFilter: HomeAwayFilter = .all
     /// nil = all sports. Cuts the all-team firehose down to the sport a student
     /// or staffer actually works, without hiding open shifts the way a
@@ -671,6 +679,55 @@ private struct InternalScheduleView: View {
         guard appState.pendingScheduleMyShifts else { return }
         appState.pendingScheduleMyShifts = false
         myShiftsOnly = true
+    }
+
+    // MARK: Remembered filters
+
+    /// Whose events, which sport, and which event type are remembered per
+    /// account, so someone who always opens on My Shifts is not sent back to
+    /// Everyone each time the tab resets.
+    private var filterDefaultsKey: String {
+        "ScheduleFilters." + (session.currentUser?.id ?? "signed-out")
+    }
+
+    private func restoreFilters() {
+        guard !didRestoreFilters else { return }
+        didRestoreFilters = true
+        let defaults = UserDefaults.standard
+        myShiftsOnly = defaults.bool(forKey: filterDefaultsKey + ".mine")
+        if let raw = defaults.string(forKey: filterDefaultsKey + ".type"),
+           let filter = HomeAwayFilter(rawValue: raw) {
+            homeAwayFilter = filter
+        }
+        sportFilter = defaults.string(forKey: filterDefaultsKey + ".sport")
+        calendarPromptDismissed = defaults.bool(forKey: calendarPromptKey)
+    }
+
+    private var calendarPromptKey: String {
+        "ScheduleCalendarPromptDismissed." + (session.currentUser?.id ?? "signed-out")
+    }
+
+    /// Offered once to someone who has shifts and has never opened Shift
+    /// Calendar, which is the most useful thing the Schedule can do for them
+    /// and otherwise lives two taps deep under More.
+    private var showsCalendarPrompt: Bool {
+        guard !calendarPromptDismissed, !vm.myShifts.isEmpty else { return false }
+        let openedKey = "scheduleCalendarLastOpenedAt." + (session.currentUser?.id ?? "signed-out")
+        return UserDefaults.standard.object(forKey: openedKey) == nil
+    }
+
+    private func dismissCalendarPrompt() {
+        calendarPromptDismissed = true
+        UserDefaults.standard.set(true, forKey: calendarPromptKey)
+        shiftCalendarTip.invalidate(reason: .actionPerformed)
+    }
+
+    private func saveFilters() {
+        guard didRestoreFilters else { return }
+        let defaults = UserDefaults.standard
+        defaults.set(myShiftsOnly, forKey: filterDefaultsKey + ".mine")
+        defaults.set(homeAwayFilter.rawValue, forKey: filterDefaultsKey + ".type")
+        defaults.set(sportFilter, forKey: filterDefaultsKey + ".sport")
     }
 
     private var canManageAvailability: Bool {
@@ -757,14 +814,14 @@ private struct InternalScheduleView: View {
 
     /// Where Today lands, for the strip's Today button.
     private func todayAnchor(in sections: [ScheduleListSection]) -> Date? {
-        section(for: .now, in: sections)?.id.date
+        section(for: today, in: sections)?.id.date
     }
 
     /// Scrolls the master list to a day, loading its weeks first when the
     /// month grid picks a date outside the loaded window.
     private func jump(to day: Date, animated: Bool = true) {
         let target = Calendar.current.startOfDay(for: day)
-        let today = Calendar.current.startOfDay(for: .now)
+        let today = self.today
         if target < today {
             // A past day picked in the strip or month grid is itself the
             // intentional step, so reveal enough of the past to hold it.
@@ -787,8 +844,24 @@ private struct InternalScheduleView: View {
             }
             return
         }
-        guard let section = section(for: target, in: listSections(for: displayedGroups)) else { return }
-        jumpRequest = ScheduleJumpRequest(anchor: section.firstAnchor, animated: animated)
+        let sections = listSections(for: displayedGroups)
+        guard let section = section(for: target, in: sections) else { return }
+        jumpRequest = ScheduleJumpRequest(
+            anchor: nowAnchor(for: target, in: section) ?? section.firstAnchor,
+            animated: animated
+        )
+    }
+
+    /// For today, the row of the event that is live or next, so the list opens
+    /// on what is happening instead of events that already ended. Nil when
+    /// that is the day's first row (its header is already in view) or the
+    /// target is another day.
+    private func nowAnchor(for target: Date, in section: ScheduleListSection) -> ScheduleRowAnchor? {
+        guard Calendar.current.dayOffset(of: target, from: today) == 0,
+              case let .day(date, events) = section,
+              let index = events.firstIndex(where: { $0.endsAt > .now }),
+              index > 0 else { return nil }
+        return ScheduleRowAnchor(day: date, eventId: events[index].id)
     }
 
     private static let pullThreshold: CGFloat = 96
@@ -796,7 +869,7 @@ private struct InternalScheduleView: View {
     /// The first day the list shows. Today, until the reader deliberately
     /// pulls past the top; each pull adds two weeks.
     private var visibleLowerBound: Date {
-        let today = Calendar.current.startOfDay(for: .now)
+        let today = self.today
         guard pastRevealSteps > 0 else { return today }
         let back = Calendar.current.date(byAdding: .day, value: -14 * pastRevealSteps, to: today) ?? today
         return ScheduleViewModel.weekStart(of: back)
@@ -863,7 +936,7 @@ private struct InternalScheduleView: View {
     /// next status-bar tap or hard flick upward then stops on today.
     private func collapsePastIfOutOfView() {
         guard pastRevealSteps > 0, revealSettlingCount == 0 else { return }
-        let today = Calendar.current.startOfDay(for: .now)
+        let today = self.today
         guard !scrollTracker.hasVisibleRow(before: today),
               let anchor = scrollTracker.topAnchor?.base as? ScheduleRowAnchor else { return }
         pastRevealSteps = 0
@@ -877,10 +950,11 @@ private struct InternalScheduleView: View {
             systemImage: isPullArmed ? "arrow.up.circle.fill" : "arrow.down.circle"
         )
         .font(.footnote.weight(.semibold))
-        .foregroundStyle(isPullArmed ? Color.brandPrimary : Color.secondary)
+        .foregroundStyle(isPullArmed ? Color.primary : Color.secondary)
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
-        .background(.regularMaterial, in: Capsule())
+        .background(Color.flatCard, in: Capsule())
+        .overlay(Capsule().strokeBorder(Color.flatStroke, lineWidth: 1))
         .opacity(canRevealMorePast && pullDistance > 12 ? progress : 0)
         .offset(y: min(pullDistance, Self.pullThreshold) / 2 - 8)
         .animation(.snappy(duration: 0.15), value: isPullArmed)
@@ -895,23 +969,24 @@ private struct InternalScheduleView: View {
                 // A cached window renders at once; the skeleton only shows on
                 // a first launch with nothing saved.
                 if !vm.hasLoaded && vm.events.isEmpty && vm.error == nil {
-                    VStack(spacing: 8) {
-                        ProgressView("Loading schedule")
-                            .padding(.top, 12)
-                        List {
-                            Section {
-                                ForEach(0..<6, id: \.self) { _ in
-                                    EventRowSkeleton()
-                                        .listRowBackground(Color.cardSurface)
+                    ScrollView {
+                        VStack(spacing: 0) {
+                            ForEach(0..<6, id: \.self) { index in
+                                EventRowSkeleton()
+                                    .padding(.horizontal, 16)
+                                if index < 5 {
+                                    Divider().overlay(Color.flatDivider).padding(.leading, 36)
                                 }
                             }
                         }
-                        .listStyle(.insetGrouped)
-                        .scrollContentBackground(.hidden)
-                        .background(Color(.systemGroupedBackground))
-                        .allowsHitTesting(false)
-                        .accessibilityHidden(true)
+                        .padding(.vertical, 4)
+                        .flatCard(padding: 0, radius: Brand.Radius.md)
+                        .padding(16)
                     }
+                    .background(Color(.systemGroupedBackground))
+                    .allowsHitTesting(false)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("Loading schedule")
                 } else if !vm.hasLoaded, vm.events.isEmpty, let err = vm.error {
                     // Only blank the screen when we have nothing to show.
                     ContentUnavailableView {
@@ -920,7 +995,8 @@ private struct InternalScheduleView: View {
                         Text(err)
                     } actions: {
                         Button("Retry") { Task { await vm.load(forceRefresh: true) } }
-                            .buttonStyle(.borderedProminent)
+                            .authButton(.primary, adaptive: true)
+                            .frame(maxWidth: 240)
                     }
                 } else {
                     VStack(spacing: 0) {
@@ -944,10 +1020,10 @@ private struct InternalScheduleView: View {
                     }
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
-                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+                    .background(Color.flatCard, in: RoundedRectangle(cornerRadius: Brand.Radius.sm, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: Brand.Radius.sm, style: .continuous).strokeBorder(Color.flatStroke, lineWidth: 1))
                     .padding(.horizontal, 12)
                     .padding(.top, 4)
-                    .shadow(color: Color.primary.opacity(0.08), radius: 8, y: 2)
                     .transition(.move(edge: .top).combined(with: .opacity))
                 }
             }
@@ -961,9 +1037,6 @@ private struct InternalScheduleView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ScheduleRootToolbar(
-                    myShiftsOnly: $myShiftsOnly,
-                    sportFilter: $sportFilter,
-                    availableSportCodes: availableSportCodes,
                     canManageAvailability: canManageAvailability,
                     openTradeCount: appState.openTradeCount,
                     scheduleOpenWorkTip: scheduleOpenWorkTip,
@@ -975,6 +1048,7 @@ private struct InternalScheduleView: View {
             }
             .nativeScrollBarMinimization()
             .task {
+                restoreFilters()
                 consumePendingMyShifts()
                 vm.cacheOwnerId = session.currentUser?.id
                 vm.restoreCachedWindow()
@@ -994,17 +1068,17 @@ private struct InternalScheduleView: View {
             .onChange(of: appState.pendingScheduleMyShifts) { _, _ in
                 consumePendingMyShifts()
             }
+            .onChange(of: myShiftsOnly) { _, _ in saveFilters() }
+            .onChange(of: homeAwayFilter) { _, _ in saveFilters() }
+            .onChange(of: sportFilter) { _, _ in saveFilters() }
             .onChange(of: appState.tabResetToken) { _, _ in
                 guard appState.resetTab == 4 else { return }
                 navigationPath = NavigationPath()
-                myShiftsOnly = false
-                homeAwayFilter = .all
-                sportFilter = nil
                 isMonthExpanded = false
                 showTradeBoard = false
                 showAvailability = false
                 showCalendarSetup = false
-                jump(to: .now)
+                jump(to: today)
             }
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active {
@@ -1097,7 +1171,7 @@ private struct InternalScheduleView: View {
                 todayAnchor: todayAnchor(in: listSections(for: groups)),
                 isExpanded: $isMonthExpanded,
                 onJump: { jump(to: $0) },
-                onToday: { jump(to: .now) },
+                onToday: { jump(to: today) },
                 // Loading earlier data never inserts list rows by itself; the
                 // list only shows the past a deliberate pull has revealed.
                 onReachStart: { Task { await vm.loadEarlier() } },
@@ -1112,10 +1186,22 @@ private struct InternalScheduleView: View {
                 }
             )
             ScheduleQuickFilterBar(
-                homeAwayFilter: $homeAwayFilter,
-                sportLabel: sportFilter.map(scheduleSportLabel),
-                onClearSport: { sportFilter = nil }
+                myShiftsOnly: $myShiftsOnly,
+                sportFilter: $sportFilter,
+                availableSportCodes: availableSportCodes,
+                homeAwayFilter: $homeAwayFilter
             )
+            if showsCalendarPrompt {
+                ScheduleCalendarPrompt(
+                    onSetUp: {
+                        dismissCalendarPrompt()
+                        showCalendarSetup = true
+                    },
+                    onDismiss: dismissCalendarPrompt
+                )
+                .padding(.horizontal, 16)
+                .padding(.top, 4)
+            }
         }
         .padding(.top, 2)
         .padding(.bottom, 4)
@@ -1136,12 +1222,33 @@ private struct InternalScheduleView: View {
                 Text(filteredEmptyDescription)
             } actions: {
                 Button("Clear Filters") { clearScheduleFilters() }
-                    .buttonStyle(.borderedProminent)
+                    .authButton(.primary, adaptive: true)
+                    .frame(maxWidth: 240)
             }
         } else {
             let sections = listSections(for: groups)
             ScrollViewReader { proxy in
                 List {
+                    if canRevealMorePast {
+                        // The past is one tap away as well as one pull away.
+                        Button {
+                            Haptics.selection()
+                            revealPast(keeping: sections.first?.firstAnchor)
+                        } label: {
+                            Label("Show earlier events", systemImage: "arrow.up")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Color.primary)
+                                .padding(.horizontal, 14)
+                                .frame(minHeight: 44)
+                                .background(Color.flatRaised, in: Capsule())
+                                .overlay(Capsule().strokeBorder(Color.flatStroke, lineWidth: 1))
+                        }
+                        .buttonStyle(.plain)
+                        .frame(maxWidth: .infinity)
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                    }
+
                     ForEach(sections) { section in
                         listSection(section)
                     }
@@ -1206,7 +1313,7 @@ private struct InternalScheduleView: View {
                     // render lands on today rather than the top of the window.
                     guard !didInitialJump else { return }
                     Task { @MainActor in
-                        jump(to: .now, animated: false)
+                        jump(to: today, animated: false)
                         didInitialJump = true
                     }
                 }
@@ -1277,7 +1384,7 @@ private struct InternalScheduleView: View {
     /// An empty stretch reports its start day to the strip, except when it
     /// begins in the current week, whose placeholder stands for today onward.
     private func trackedDay(forWeek start: Date) -> Date {
-        let today = Calendar.current.startOfDay(for: .now)
+        let today = self.today
         return ScheduleViewModel.weekStart(of: today) == start ? today : start
     }
 
@@ -1301,7 +1408,8 @@ private struct InternalScheduleView: View {
                 event: event,
                 myShift: myShift,
                 extraAreas: vm.extraShiftAreasByEventId[event.id] ?? [],
-                contextDay: day
+                contextDay: day,
+                conflictNote: vm.conflictNoteByEventId[event.id]
             )
         }
         .foregroundStyle(.primary)

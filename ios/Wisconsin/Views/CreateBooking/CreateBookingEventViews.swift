@@ -126,6 +126,30 @@ struct AllEventsPickerView: View {
         }
     }
 
+    /// Upcoming events first, grouped the way people talk about them; anything
+    /// already past sinks to "Earlier" so it never leads the list.
+    private var sections: [(title: String, events: [ScheduleEvent])] {
+        let calendar = Calendar.current
+        let startOfToday = calendar.startOfDay(for: Date())
+        let startOfTomorrow = calendar.date(byAdding: .day, value: 1, to: startOfToday) ?? startOfToday
+        let startOfDayAfter = calendar.date(byAdding: .day, value: 2, to: startOfToday) ?? startOfTomorrow
+        let endOfWeek = calendar.date(byAdding: .day, value: 7, to: startOfToday) ?? startOfDayAfter
+        let sorted = filtered.sorted { $0.startsAt < $1.startsAt }
+        func bucket(_ event: ScheduleEvent) -> Int {
+            if event.startsAt < startOfToday { return 4 }
+            if event.startsAt < startOfTomorrow { return 0 }
+            if event.startsAt < startOfDayAfter { return 1 }
+            if event.startsAt < endOfWeek { return 2 }
+            return 3
+        }
+        let titles = ["Today", "Tomorrow", "This week", "Later", "Earlier"]
+        return titles.indices.compactMap { index in
+            let items = sorted.filter { bucket($0) == index }
+            let ordered = index == 4 ? items.reversed() : items
+            return items.isEmpty ? nil : (titles[index], Array(ordered))
+        }
+    }
+
     /// Filters on the same resolved venue the row's rail and scope label draw,
     /// so picking "Neutral" cannot hide a row this list is labelling Neutral.
     /// Reading `isHome` directly filed every explicitly neutral game that sits
@@ -141,55 +165,75 @@ struct AllEventsPickerView: View {
     }
 
     var body: some View {
-        List {
-            Section {
-                ViewThatFits(in: .horizontal) {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 10) {
+                ScrollView(.horizontal, showsIndicators: false) {
                     eventFilterRow
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        eventFilterRow
+                        .padding(.horizontal, 16)
+                }
+                .padding(.horizontal, -16)
+
+                ForEach(sections, id: \.title) { section in
+                    Text(section.title.uppercased())
+                        .font(.caption2.weight(.bold))
+                        .tracking(0.8)
+                        .foregroundStyle(.secondary)
+                        .padding(.top, 8)
+                    ForEach(section.events) { event in
+                        let isSelected = selectedEvents.contains(where: { $0.id == event.id })
+                        EventPickRow(
+                            event: event,
+                            isSelected: isSelected,
+                            isDisabled: selectedEvents.count >= BookingEventLimits.maxLinkedEvents && !isSelected
+                        ) {
+                            onToggle(event)
+                        }
                     }
                 }
-                .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12))
-            }
 
-            ForEach(filtered) { event in
-                EventPickRow(
-                    event: event,
-                    isSelected: selectedEvents.contains(where: { $0.id == event.id }),
-                    isDisabled: selectedEvents.count >= BookingEventLimits.maxLinkedEvents && !selectedEvents.contains(where: { $0.id == event.id })
-                ) {
-                    onToggle(event)
+                if filtered.isEmpty {
+                    if !search.isEmpty {
+                        ContentUnavailableView.search(text: search)
+                    } else {
+                        ContentUnavailableView(
+                            "No \(scope.rawValue.lowercased()) events",
+                            systemImage: "calendar",
+                            description: Text("Try another event filter.")
+                        )
+                    }
                 }
             }
-            if filtered.isEmpty {
-                if !search.isEmpty {
-                    ContentUnavailableView.search(text: search)
-                        .listRowBackground(Color.clear)
-                } else {
-                    ContentUnavailableView(
-                        "No \(scope.rawValue.lowercased()) events",
-                        systemImage: "calendar",
-                        description: Text("Try another event filter.")
-                    )
-                    .listRowBackground(Color.clear)
-                }
-            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 16)
         }
-        .searchable(text: $search, prompt: "Search events")
+        .background(Color(.systemGroupedBackground))
+        .searchable(text: $search, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search events")
         .navigationTitle("Events")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .confirmationAction) {
-                Button {
-                    dismiss()
-                } label: {
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            Button {
+                dismiss()
+            } label: {
+                HStack(spacing: 8) {
                     Image(systemName: "checkmark")
+                    Text(selectedEvents.isEmpty
+                         ? "Pick an event"
+                         : "Use \(selectedEvents.count) event\(selectedEvents.count == 1 ? "" : "s")")
                 }
-                .fontWeight(.semibold)
-                .tint(Color.statusText(.purple))
-                .disabled(selectedEvents.isEmpty)
-                .accessibilityLabel("Confirm event selection")
+                .font(.headline)
+                .frame(maxWidth: .infinity, minHeight: 52)
             }
+            .buttonStyle(.plain)
+            .foregroundStyle(selectedEvents.isEmpty ? Color.secondary : Color.white)
+            .background(
+                selectedEvents.isEmpty ? Color(.tertiarySystemFill) : Color.statusText(.purple),
+                in: RoundedRectangle(cornerRadius: 16)
+            )
+            .disabled(selectedEvents.isEmpty)
+            .accessibilityLabel("Confirm event selection")
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(.bar)
         }
     }
 
@@ -201,16 +245,13 @@ struct AllEventsPickerView: View {
                     Haptics.selection()
                 } label: {
                     Text(filter.rawValue)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(scope == filter ? Color.statusText(.purple) : Color.secondary)
-                        .padding(.horizontal, 9)
-                        .frame(minHeight: 32)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(scope == filter ? Color.white : Color.primary)
+                        .padding(.horizontal, 14)
+                        .frame(minHeight: 40)
                         .background(
-                            scope == filter ? Color.statusBackground(.purple) : Color(.secondarySystemGroupedBackground),
+                            scope == filter ? Color.statusText(.purple) : Color(.secondarySystemGroupedBackground),
                             in: Capsule()
-                        )
-                        .overlay(
-                            Capsule().strokeBorder(scope == filter ? Color.statusText(.purple).opacity(0.35) : Color.hairline)
                         )
                         .fixedSize(horizontal: true, vertical: false)
                 }
@@ -229,41 +270,47 @@ struct EventPickRow: View {
 
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: 10) {
+            HStack(spacing: 12) {
                 StatusRail(color: event.bookingEventRailColor)
 
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.title3)
-                    .foregroundStyle(isSelected ? Color.statusText(.purple) : Color(.systemGray3))
-                    .accessibilityHidden(true)
-
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: 8) {
-                        Text(event.shortBookingEventTitle)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.primary)
-                            .lineLimit(1)
-                        Spacer(minLength: 8)
-                        Text(event.bookingEventScopeLabel)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(event.bookingEventRailColor)
-                            .lineLimit(1)
-                    }
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(event.shortBookingEventTitle)
+                        .font(.headline)
+                        .foregroundStyle(isSelected ? Color.white : Color.primary)
+                        .lineLimit(1)
                     Text(event.bookingEventPickerDate)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(.subheadline)
+                        .foregroundStyle(isSelected ? Color.white.opacity(0.85) : Color.secondary)
                         .lineLimit(1)
                     if let venue = event.bookingEventPickerVenue {
                         Text(venue)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .font(.subheadline)
+                            .foregroundStyle(isSelected ? Color.white.opacity(0.85) : Color.secondary)
                             .lineLimit(1)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+
+                VStack(alignment: .trailing, spacing: 6) {
+                    Text(event.bookingEventScopeLabel)
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(isSelected ? Color.white : event.bookingEventRailColor)
+                        .lineLimit(1)
+                    if isSelected {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.title3)
+                            .foregroundStyle(.white)
+                            .accessibilityHidden(true)
+                    }
+                }
             }
-            .frame(minHeight: 68)
-            .contentShape(Rectangle())
+            .padding(14)
+            .frame(maxWidth: .infinity, minHeight: 84, alignment: .leading)
+            .background(
+                isSelected ? Color.statusText(.purple) : Color(.secondarySystemGroupedBackground),
+                in: RoundedRectangle(cornerRadius: 16)
+            )
+            .contentShape(RoundedRectangle(cornerRadius: 16))
             .opacity(isDisabled ? 0.45 : 1)
         }
         .buttonStyle(.plain)

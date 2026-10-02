@@ -7,6 +7,7 @@ import SwiftUI
 // come before scanning so every scan is checked against the right return time.
 
 struct KioskCheckoutDetailsStep: View {
+    @Environment(\.today) private var today
     let events: [KioskCheckoutEvent]
     let isLoadingEvents: Bool
     @Binding var isLinkedToEvent: Bool
@@ -343,7 +344,7 @@ struct KioskCheckoutDetailsStep: View {
                     .font(KioskType.overline)
                     .tracking(KioskType.overlineTracking)
                     .foregroundStyle(KioskText.tertiary)
-                Text(hasChosenReturn.wrappedValue ? KioskDueCopy.relative(dueBackAt) : "Pick a return time")
+                Text(hasChosenReturn.wrappedValue ? KioskDueCopy.relative(dueBackAt, now: today) : "Pick a return time")
                     .font(.system(size: 24, weight: .heavy))
                     .foregroundStyle(hasChosenReturn.wrappedValue ? KioskText.primary : KioskText.tertiary)
                 // The day chips already show the date; name what it's for instead.
@@ -370,14 +371,14 @@ struct KioskCheckoutDetailsStep: View {
 
     private func dayTitle(_ day: Date) -> String {
         let calendar = Calendar.current
-        if calendar.isDateInToday(day) { return "Today" }
-        if calendar.isDateInTomorrow(day) { return "Tomorrow" }
+        if calendar.dayOffset(of: day, from: today) == 0 { return "Today" }
+        if calendar.dayOffset(of: day, from: today) == 1 { return "Tomorrow" }
         return day.formatted(.dateTime.weekday(.abbreviated))
     }
 
     private func dayDetail(_ day: Date) -> String {
         let calendar = Calendar.current
-        if calendar.isDateInToday(day) || calendar.isDateInTomorrow(day) {
+        if (0...1).contains(calendar.dayOffset(of: day, from: today)) {
             return day.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
         }
         return day.formatted(.dateTime.month(.abbreviated).day())
@@ -433,9 +434,9 @@ enum KioskDueCopy {
     static func relative(_ date: Date, now: Date = Date()) -> String {
         let calendar = Calendar.current
         let time = date.formatted(.dateTime.hour().minute())
-        if calendar.isDate(date, inSameDayAs: now) { return "Today at \(time)" }
-        if calendar.isDateInTomorrow(date) { return "Tomorrow at \(time)" }
-        let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: now), to: calendar.startOfDay(for: date)).day ?? 0
+        let days = calendar.dayOffset(of: date, from: now)
+        if days == 0 { return "Today at \(time)" }
+        if days == 1 { return "Tomorrow at \(time)" }
         if (0..<7).contains(days) { return "\(date.formatted(.dateTime.weekday(.abbreviated))) at \(time)" }
         return "\(date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())) at \(time)"
     }

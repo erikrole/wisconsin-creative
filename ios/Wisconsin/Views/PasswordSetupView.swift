@@ -16,15 +16,6 @@ struct PasswordSetupView: View {
         case confirmPassword
     }
 
-    private var validationMessage: String? {
-        if currentPassword.isEmpty { return nil }
-        if newPassword.isEmpty { return nil }
-        if newPassword.count < 8 { return "Use at least 8 characters." }
-        if !confirmPassword.isEmpty && newPassword != confirmPassword { return "Passwords do not match." }
-        if !newPassword.isEmpty && currentPassword == newPassword { return "Choose a password that is different from the temporary password." }
-        return nil
-    }
-
     private var canSubmit: Bool {
         !currentPassword.isEmpty &&
         newPassword.count >= 8 &&
@@ -55,31 +46,22 @@ struct PasswordSetupView: View {
     }
 
     var body: some View {
-        ZStack {
-            BrandSplashScene()
-
-            GeometryReader { geo in
-                ScrollView {
-                    VStack(spacing: 0) {
-                        Spacer(minLength: 24)
-
-                        BrandSplashLockup(subtitle: "Set your password")
-                            .padding(.bottom, 22)
-
-                        card
-                            .padding(.horizontal, 20)
-
-                        Spacer(minLength: 24)
-                    }
-                    .frame(maxWidth: 468)
-                    .frame(maxWidth: .infinity)
-                    .frame(minHeight: geo.size.height)
-                }
-                .scrollDismissesKeyboard(.interactively)
+        AuthScreen(
+            title: "Set your password",
+            subtitle: "Create a new password to continue on this device."
+        ) {
+            card
+        } footer: {
+            Button("Sign out") {
+                Task { await session.logout() }
             }
+            .buttonStyle(.plain)
+            .font(.footnote.weight(.medium))
+            .foregroundStyle(AuthPalette.textSecondary)
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+            .disabled(session.isLoading)
         }
-        .ignoresSafeArea(.keyboard, edges: .bottom)
-        .preferredColorScheme(.dark)
         .onChange(of: session.error) { _, error in
             if let error {
                 AccessibilityNotification.Announcement(error).post()
@@ -89,26 +71,19 @@ struct PasswordSetupView: View {
 
     private var card: some View {
         VStack(spacing: 16) {
-            VStack(spacing: 8) {
-                // Renders exactly like the label it replaces, but as a real
-                // account field: iOS needs one next to a new-password field to
-                // file the saved credential under the right address.
-                TextField("Account", text: .constant(email))
-                    .textFieldStyle(.plain)
-                    .textContentType(.username)
-                    .multilineTextAlignment(.center)
-                    .disabled(true)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                    .accessibilityLabel("Signed in as \(email)")
-
-                Text("Create a new password to continue on this device.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-            }
+            // Renders as a plain label, but is a real account field: iOS needs
+            // one next to a new-password field to file the saved credential
+            // under the right address.
+            TextField("Account", text: .constant(email))
+                .textFieldStyle(.plain)
+                .textContentType(.username)
+                .disabled(true)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(AuthPalette.textSecondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityLabel("Signed in as \(email)")
 
             VStack(spacing: 16) {
                 passwordField(
@@ -143,20 +118,9 @@ struct PasswordSetupView: View {
 
                 PasswordRequirementChecklist(requirements: passwordRequirements)
 
-                if let message = validationMessage {
-                    Text(message)
-                        .font(.footnote)
-                        .foregroundStyle(Color.statusText(.orange))
-                        .multilineTextAlignment(.center)
-                        .frame(maxWidth: .infinity)
-                }
-
                 if let error = session.error {
-                    Text(error)
-                        .font(.footnote)
-                        .foregroundStyle(Color.statusText(.red))
-                        .multilineTextAlignment(.center)
-                        .frame(maxWidth: .infinity)
+                    AuthInlineMessage(text: error, systemImage: "exclamationmark.circle.fill", tone: .red)
+                        .accessibilityLabel("Couldn't set password. \(error)")
                 }
 
                 Button {
@@ -165,27 +129,17 @@ struct PasswordSetupView: View {
                     ZStack {
                         if session.isLoading {
                             ProgressView()
+                                .tint(AuthPalette.onPrimary)
                         } else {
                             Text("Continue")
                         }
                     }
                     .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.glassProminent)
-                .controlSize(.large)
-                .tint(.brandPrimary)
+                .authButton(.primary)
                 .disabled(!canSubmit)
-
-                Button("Sign out") {
-                    Task { await session.logout() }
-                }
-                .buttonStyle(.plain)
-                .font(.footnote.weight(.medium))
-                .foregroundStyle(.secondary)
-                .disabled(session.isLoading)
             }
         }
-        .brandLoginCardChrome()
     }
 
     @ViewBuilder
@@ -199,15 +153,17 @@ struct PasswordSetupView: View {
     ) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
-                .font(.subheadline.weight(.medium))
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(AuthPalette.textPrimary)
             ZStack(alignment: .trailing) {
                 Group {
                     if showPasswords {
-                        TextField(title, text: text)
+                        TextField(text: text, prompt: Text(title).foregroundStyle(AuthPalette.textTertiary)) { Text(title) }
                     } else {
-                        SecureField(title, text: text)
+                        SecureField(text: text, prompt: Text(title).foregroundStyle(AuthPalette.textTertiary)) { Text(title) }
                     }
                 }
+                .foregroundStyle(AuthPalette.textPrimary)
                 .textContentType(contentType)
                 .focused($focused, equals: focus)
                 .submitLabel(submitLabel)
@@ -215,18 +171,14 @@ struct PasswordSetupView: View {
                 .onChange(of: text.wrappedValue) { session.clearError() }
                 .padding(.horizontal, 14)
                 .padding(.trailing, 42)
-                .padding(.vertical, 12)
-                .background(Color(.systemGroupedBackground), in: RoundedRectangle(cornerRadius: 10))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .strokeBorder(Color(.separator).opacity(0.5), lineWidth: 0.5)
-                )
+                .frame(minHeight: 52)
+                .authFieldChrome(isFocused: focused == focus)
 
                 Button {
                     showPasswords.toggle()
                 } label: {
                     Image(systemName: showPasswords ? "eye.slash" : "eye")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AuthPalette.textSecondary)
                         .frame(width: 44, height: 44)
                 }
                 .buttonStyle(.plain)
@@ -262,18 +214,18 @@ private struct PasswordRequirementChecklist: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Password requirements")
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(AuthPalette.textTertiary)
 
             ForEach(requirements) { requirement in
                 HStack(spacing: 8) {
                     Image(systemName: requirement.isMet ? "checkmark.circle.fill" : "circle")
                         .font(.caption)
-                        .foregroundStyle(requirement.isMet ? Color.statusText(.green) : Color.secondary)
+                        .foregroundStyle(requirement.isMet ? Color.statusText(.green) : AuthPalette.textTertiary)
                         .accessibilityHidden(true)
 
                     Text(requirement.title)
                         .font(.caption)
-                        .foregroundStyle(requirement.isMet ? .primary : .secondary)
+                        .foregroundStyle(requirement.isMet ? AuthPalette.textPrimary : AuthPalette.textSecondary)
                 }
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("\(requirement.title), \(requirement.isMet ? "met" : "not met")")
@@ -282,6 +234,6 @@ private struct PasswordRequirementChecklist: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 10))
+        .background(AuthPalette.field, in: RoundedRectangle(cornerRadius: Brand.Radius.sm, style: .continuous))
     }
 }

@@ -99,7 +99,11 @@ struct ShiftTradeEvent: Codable {
 
     var compactTitle: String {
         if let sportCode, let opponent, !sportCode.isEmpty, !opponent.isEmpty {
-            return "\(sportCode) \(venue == .away ? "at" : "vs") \(opponent)"
+            // The sport's name, not its code, and the opponent without the
+            // promotion calendar imports append ("Homecoming / Red Out").
+            var sport = sportLabel(sportCode) ?? sportCode
+            if sport == sport.lowercased() { sport = sport.prefix(1).uppercased() + sport.dropFirst() }
+            return "\(sport) \(venue == .away ? "at" : "vs") \(scheduleOpponentParts(opponent).name)"
         }
         return summary ?? "Shift"
     }

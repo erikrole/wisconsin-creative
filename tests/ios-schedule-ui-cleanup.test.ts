@@ -25,18 +25,18 @@ describe("iOS Schedule UI cleanup", () => {
     expect(scheduleView).not.toContain("ScheduleFilterSheet");
     expect(scheduleView).not.toContain("showFilters");
     expect(scheduleView).toContain("@State private var myShiftsOnly = false");
-    // My Shifts and Sport are toolbar list controls with the shared tint.
-    expect(toolbar).toContain('"My Shifts"');
-    expect(toolbar).toContain(".listControlTint(isActive: myShiftsOnly)");
-    expect(toolbar).toContain('Picker("Sport", selection: sportSelection)');
-    expect(toolbar).toContain(".listControlTint(isActive: sportFilter != nil)");
+    // My Shifts and Sport moved out of unlabeled toolbar icons into the
+    // labelled filter header; the toolbar keeps only Trades and More.
+    expect(toolbar).not.toContain('"My Shifts"');
+    expect(toolbar).not.toContain('Picker("Sport"');
+    expect(filterBar).toContain('"My Shifts"');
+    expect(filterBar).toContain('"Everyone"');
+    expect(filterBar).toContain('Picker("Sport", selection: sportSelection)');
     expect(toolbar).not.toContain("Include Past Events");
     expect(toolbar).not.toContain("canSeePastEvents");
     expect(toolbar).toContain(".badge(openTradeCount)");
-    expect(toolbar).toContain("ToolbarSpacer(.fixed, placement: .topBarTrailing)");
-    // Event type is a row of chips; toolbar-set filters show as removable chips.
+    // Event type is one flat segmented control under the scope control.
     expect(filterBar).toContain("ForEach(HomeAwayFilter.allCases");
-    expect(filterBar).toContain("RemovableFilterChip(title: sportLabel");
     expect(filterBar).not.toContain("Past events");
     expect(filterBar).toContain(".accessibilityAddTraits(isOn ? .isSelected : [])");
     expect(scheduleView).toContain('case .home: return event.venue == .home');
@@ -66,7 +66,7 @@ describe("iOS Schedule UI cleanup", () => {
     expect(eventRow).not.toContain('["You"]');
     expect(eventRow).toContain('return "Call " + callStartsAt.formatted(date: .omitted, time: .shortened)');
     expect(eventRow).toContain("parts.append(shift.gear.gearLabel)");
-    expect(rowFile).toContain("(isMine ? Color.myShiftSurface : Color.cardSurface)");
+    expect(rowFile).toContain("(isMine ? Color.myShiftSurface : Color.flatCard)");
     expect(rowFile).not.toContain(".frame(width: 3)");
     expect(scheduleView).toContain(".listRowBackground(EventRowBackground(isMine: myShift != nil, position: position))");
     expect(rowFile).toContain("struct EventRowBackground: View");

@@ -15,7 +15,8 @@ describe("iOS Event detail temporal state", () => {
     expect(models).toContain("if startsAt <= now { return .live }");
 
     // Both surfaces read the shared property rather than re-deriving it.
-    expect(scheduleView).toContain("private var timeState: ScheduleEventTimeState { event.timeState }");
+    expect(scheduleView).toContain("private var timeState: ScheduleEventTimeState {");
+    expect(scheduleView).toContain("return event.timeState");
     expect(eventDetail).toContain("private var eventHasEnded: Bool { event.timeState == .past }");
     expect(eventDetail).toContain("switch event.timeState {");
   });

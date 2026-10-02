@@ -178,6 +178,24 @@ struct CoverageChip: View {
     }
 
     var body: some View {
+        // A list row only speaks up when someone is needed: "2 open" in the
+        // attention tone. A fully staffed event is the default and stays quiet;
+        // the row's spoken label still reports the crew count.
+        if emphasis == .dense {
+            if isShort {
+                Text("\(coverage.total - coverage.filled) open")
+                    .font(.caption.weight(.semibold).monospacedDigit())
+                    .foregroundStyle(Color.statusText(coverageTone(coverage)))
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+                    .accessibilityLabel("Crew coverage: \(coverage.filled) of \(coverage.total) filled")
+            }
+        } else {
+            heroBody
+        }
+    }
+
+    private var heroBody: some View {
         HStack(spacing: 3) {
             Image(systemName: "person.2.fill")
                 .font(.caption.weight(.semibold))

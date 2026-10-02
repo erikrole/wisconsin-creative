@@ -61,7 +61,7 @@ describe("iOS Schedule windowed scrolling", () => {
 
   it("returns to today from the strip and folds the past away", () => {
     expect(strip).toContain("let onToday: () -> Void");
-    expect(schedule).toContain("onToday: { jump(to: .now) }");
+    expect(schedule).toContain("onToday: { jump(to: today) }");
     expect(schedule).toContain("} else if target == today {\n            pastRevealSteps = 0");
     // The pager rebuilds when earlier weeks are prepended, so it never rests
     // between pages.
@@ -121,7 +121,7 @@ describe("iOS Schedule follow-ups", () => {
       expect(source(`ios/Wisconsin/Views/Schedule/${file}.swift`)).not.toContain(".frame(width: 4, height:");
     }
     // Your own shift reads the same on the list row and the detail card.
-    expect(row).toContain("(isMine ? Color.myShiftSurface : Color.cardSurface)");
+    expect(row).toContain("(isMine ? Color.myShiftSurface : Color.flatCard)");
     expect(detail).toContain(".brandCard(fill: Color.myShiftSurface)");
   });
 });

@@ -69,10 +69,14 @@ describe("iOS kiosk checkout details polish", () => {
     const components = source("ios/Wisconsin/Kiosk/KioskComponents.swift");
     const detail = source("ios/Wisconsin/Kiosk/KioskCheckoutDetailSheet.swift");
 
-    expect(components).toContain("enum KioskQuarterHour");
-    expect(components).toContain("static let minuteInterval = 15");
-    expect(components).toContain("picker.minuteInterval = KioskQuarterHour.minuteInterval");
-    expect(components).toContain("struct KioskQuarterHourTimePicker: UIViewRepresentable");
+    const shared = source("ios/Wisconsin/Shared/QuarterHourTimePicker.swift");
+
+    expect(shared).toContain("enum QuarterHour");
+    expect(shared).toContain("static let minuteInterval = 15");
+    expect(shared).toContain("picker.minuteInterval = QuarterHour.minuteInterval");
+    expect(shared).toContain("struct QuarterHourTimePicker: UIViewRepresentable");
+    expect(components).toContain("typealias KioskQuarterHour = QuarterHour");
+    expect(components).toContain("struct KioskQuarterHourTimePicker: View");
     expect(detail).toContain("KioskQuarterHourTimePicker(");
     expect(detail).toContain("selection: clampedEditEndsAt");
     expect(detail).toContain("displayedComponents: .date");

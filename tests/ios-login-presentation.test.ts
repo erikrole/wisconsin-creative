@@ -16,10 +16,9 @@ describe("iOS Login presentation", () => {
     expect(login).toContain('passwordLoading ? "Signing in…" : "Sign in"');
     expect(login).toContain("Text(primaryButtonTitle)");
     expect(login).toMatch(
-      /if discoveryLoading \|\| passwordLoading \{\s+ProgressView\(\)\s+\.controlSize\(\.small\)\s+\.accessibilityHidden\(true\)/,
+      /if discoveryLoading \|\| passwordLoading \{\s+ProgressView\(\)\s+\.controlSize\(\.small\)\s+\.tint\(AuthPalette\.onPrimary\)\s+\.accessibilityHidden\(true\)/,
     );
-    expect(login).toContain(".buttonStyle(.glassProminent)");
-    expect(login).toContain(".controlSize(.large)");
+    expect(login).toContain(".authButton(.primary)");
   });
 
   it("discovers the invited identity before choosing onboarding or password", () => {
@@ -64,8 +63,7 @@ describe("iOS Login presentation", () => {
     expect(passkey).toContain('Text(passkeyLoading ? "Waiting for passkey…" : "Use a passkey")');
     expect(passkey).toContain('.accessibilityHint("Choose an account with a saved passkey")');
     expect(passkey).toContain("submitPasskey()");
-    expect(passkey).toContain(".buttonStyle(.glass)");
-    expect(passkey).toContain(".tint(.primary)");
+    expect(passkey).toContain(".authButton(.secondary)");
     expect(passkey).toContain(".disabled(authBusy)");
     expect(section("private var passwordStep: some View", "private func fieldFill")).not.toContain("submitPasskey()");
   });
@@ -84,9 +82,8 @@ describe("iOS Login presentation", () => {
   });
 
   it("renders failures as one semantic inline message", () => {
-    expect(login).toContain('Label(error, systemImage: "exclamationmark.circle.fill")');
-    expect(login).toContain(".foregroundStyle(Color.statusText(.red))");
-    expect(login).toContain(".background(Color.statusBackground(.red)");
+    expect(login).toContain('AuthInlineMessage(text: error, systemImage: "exclamationmark.circle.fill", tone: .red)');
+    expect(readFileSync(path.join(process.cwd(), "ios/Wisconsin/Core/AuthDesign.swift"), "utf8")).toContain(".foregroundStyle(Color.statusText(tone))");
     expect(login).toContain('.accessibilityLabel("Sign in failed. \\(error)")');
     expect(login).toContain("AccessibilityNotification.Announcement(error).post()");
   });

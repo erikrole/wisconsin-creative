@@ -307,6 +307,7 @@ enum EventConfirmation: Identifiable {
 // MARK: - Detail
 
 struct EventDetailView: View {
+    @Environment(\.today) private var today
     let event: ScheduleEvent
     let myShifts: [MyShift]
     let eventWork: DashboardEventWork?
@@ -463,6 +464,7 @@ struct EventDetailView: View {
                         defaultStart: vm.workingEditor?.defaultWindow?.startsAt ?? event.startsAt,
                         defaultEnd: vm.workingEditor?.defaultWindow?.endsAt ?? event.endsAt,
                         isAllDay: event.displayAllDay,
+                        existingShifts: vm.displayedShifts,
                         onAdded: { editor in
                             acceptWorkingScheduleEditor(editor)
                         },
@@ -1244,7 +1246,7 @@ struct EventDetailView: View {
             } label: {
                 HStack(spacing: 8) {
                     if isCreatingGroup {
-                        ProgressView().tint(.white)
+                        ProgressView().tint(Color(.systemBackground))
                     } else {
                         Image(systemName: primaryAction.systemImage)
                     }
@@ -1252,9 +1254,7 @@ struct EventDetailView: View {
                 }
                 .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .tint(Color.statusText(.purple))
+            .authButton(.primary, adaptive: true)
             .disabled(isCreatingGroup)
             .padding(.horizontal, Brand.Space.md)
             .padding(.vertical, Brand.Space.sm)
@@ -1386,12 +1386,11 @@ struct EventDetailView: View {
 
     private func detailDateLabel(_ date: Date, abbreviatedWeekday: Bool) -> String {
         let calendar = Calendar.current
-        let includesYear = calendar.component(.year, from: date) != calendar.component(.year, from: .now)
-        if calendar.isDateInToday(date) {
-            return "Today, \(date.formatted(.dateTime.month(abbreviatedWeekday ? .abbreviated : .wide).day()))"
-        }
-        if calendar.isDateInTomorrow(date) {
-            return "Tomorrow, \(date.formatted(.dateTime.month(abbreviatedWeekday ? .abbreviated : .wide).day()))"
+        let includesYear = calendar.component(.year, from: date) != calendar.component(.year, from: today)
+        switch calendar.dayOffset(of: date, from: today) {
+        case 0: return "Today, \(date.formatted(.dateTime.month(abbreviatedWeekday ? .abbreviated : .wide).day()))"
+        case 1: return "Tomorrow, \(date.formatted(.dateTime.month(abbreviatedWeekday ? .abbreviated : .wide).day()))"
+        default: break
         }
         if abbreviatedWeekday {
             return includesYear
@@ -1445,13 +1444,8 @@ struct EventDetailView: View {
         let calendar = Calendar.current
         // Same resolved day `eventDateText` prints, so "Tomorrow, Jun 17" and
         // "in 2 days" can never disagree about which day the event is on.
-        let eventDay = event.displayStartDay
-        guard !eventHasEnded,
-              !calendar.isDateInToday(eventDay),
-              !calendar.isDateInTomorrow(eventDay) else { return nil }
-        let today = calendar.startOfDay(for: .now)
-        guard let days = calendar.dateComponents([.day], from: today, to: eventDay).day,
-              days > 1, days <= 14 else { return nil }
+        let days = calendar.dayOffset(of: event.displayStartDay, from: today)
+        guard !eventHasEnded, days > 1, days <= 14 else { return nil }
         return "in \(days) days"
     }
 
@@ -1535,9 +1529,10 @@ struct EventDetailView: View {
                             .foregroundStyle(.secondary)
                         Text("·").foregroundStyle(.tertiary)
                     }
+                    // The dot beside the title already carries the venue colour.
                     Text(eventTypeLabel)
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(eventRailColor)
+                        .foregroundStyle(.secondary)
                     if eventIsCancelled {
                         Text("Cancelled")
                             .font(.caption.weight(.semibold))
@@ -1556,8 +1551,8 @@ struct EventDetailView: View {
                                 .font(.caption2.weight(.heavy))
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
-                                .background(Color.brandPrimary, in: Capsule())
-                                .foregroundStyle(.white)
+                                .background(Color(.label), in: Capsule())
+                                .foregroundStyle(Color(.systemBackground))
                         case .past:
                             Text("Ended")
                                 .font(.caption.weight(.semibold))
@@ -1579,17 +1574,22 @@ struct EventDetailView: View {
                             .fixedSize(horizontal: false, vertical: true)
                     } icon: {
                         Image(systemName: event.isMultiDay ? "calendar.day.timeline.left" : "calendar")
+                            .foregroundStyle(.secondary)
                     }
-                    .font(.subheadline.weight(.medium))
+                    .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.primary)
 
-                    Label(event.displayAllDay ? "All day" : eventTimeText, systemImage: "clock")
-                        .font(.subheadline)
-                        .foregroundStyle(
-                            event.timeState == .live && !eventIsCancelled
-                                ? Color.brandPrimary
-                                : Color.secondary
-                        )
+                    Label {
+                        Text(event.displayAllDay ? scheduleAllDayLabel(event) : eventTimeText)
+                    } icon: {
+                        Image(systemName: "clock").foregroundStyle(.secondary)
+                    }
+                    .font(.subheadline)
+                    .foregroundStyle(
+                        event.timeState == .live && !eventIsCancelled
+                            ? Color.primary
+                            : Color.secondary
+                    )
 
                     if let eventVenueName {
                         Label(eventVenueName, systemImage: "mappin.and.ellipse")
@@ -1713,7 +1713,7 @@ struct EventDetailView: View {
                     Text(eventHasEnded ? "Apply correction now" : "Publish now")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .authButton(.primary, adaptive: true)
                 .disabled(isPublishing || isDiscarding)
             }
 
@@ -1771,7 +1771,8 @@ struct EventDetailView: View {
                 Text(err)
             } actions: {
                 Button("Retry") { Task { await vm.load() } }
-                    .buttonStyle(.borderedProminent)
+                    .authButton(.primary, adaptive: true)
+                    .frame(maxWidth: 240)
             }
         } else if vm.shiftGroup != nil, let workingCopyError = vm.workingCopyError {
             VStack(alignment: .leading, spacing: 10) {
@@ -2504,11 +2505,8 @@ struct ShiftRow: View {
                     HStack(spacing: 10) {
                         if let onApprove {
                             Button("Approve") { onApprove(assignment) }
-                                .buttonStyle(.borderedProminent)
-                                .controlSize(.small)
-                                .frame(minHeight: 44)
+                                .authButton(.primary, adaptive: true)
                                 .lineLimit(1)
-                                .tint(Color.statusText(.green))
                                 .accessibilityLabel("Approve \(assignment.user.name)")
                         }
                         if let onDecline {
@@ -2699,9 +2697,7 @@ struct EditShiftTimesSheet: View {
                     }
                     .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(Color.statusText(.purple))
-                .controlSize(.large)
+                .authButton(.primary, adaptive: true)
                 .disabled(isSaving || !hasChanges || !hasValidWindow)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
@@ -2736,7 +2732,7 @@ struct EditShiftTimesSheet: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(16)
-        .background(Color.cardSurface, in: RoundedRectangle(cornerRadius: Brand.Radius.lg, style: .continuous))
+        .background(Color.flatCard, in: RoundedRectangle(cornerRadius: Brand.Radius.lg, style: .continuous))
         .accessibilityElement(children: .combine)
     }
 
@@ -2770,7 +2766,7 @@ struct EditShiftTimesSheet: View {
             }
         }
         .padding(16)
-        .background(Color.cardSurface, in: RoundedRectangle(cornerRadius: Brand.Radius.lg, style: .continuous))
+        .background(Color.flatCard, in: RoundedRectangle(cornerRadius: Brand.Radius.lg, style: .continuous))
     }
 
     private var workerClassLabel: String {

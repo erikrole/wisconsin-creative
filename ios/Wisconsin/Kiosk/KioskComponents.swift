@@ -442,74 +442,22 @@ struct KioskScannerReadinessBadge: View {
 
 // MARK: Quarter-hour time input
 
-/// Shared kiosk return-time policy. Custody times are chosen in quarter-hour
-/// steps, and generated suggestions always round forward so a smart default
-/// never promises an earlier return than the source event or safety minimum.
-enum KioskQuarterHour {
-    static let minuteInterval = 15
-    private static let secondsPerInterval = TimeInterval(minuteInterval * 60)
+/// The quarter-hour grid and wheel live in `Shared/QuarterHourTimePicker.swift`
+/// so the iPhone app uses the same custody-time steps as the kiosk.
+typealias KioskQuarterHour = QuarterHour
 
-    static func roundedUp(_ date: Date) -> Date {
-        let intervals = date.timeIntervalSinceReferenceDate / secondsPerInterval
-        return Date(timeIntervalSinceReferenceDate: ceil(intervals) * secondsPerInterval)
-    }
-
-    static func clamped(_ date: Date, minimum: Date) -> Date {
-        roundedUp(max(date, minimum))
-    }
-}
-
-/// Native compact time control with a real 15-minute wheel interval. SwiftUI's
-/// `DatePicker` does not expose `UIDatePicker.minuteInterval`, which previously
-/// made staff scroll through minute-by-minute values for a custody timestamp.
-struct KioskQuarterHourTimePicker: UIViewRepresentable {
+struct KioskQuarterHourTimePicker: View {
     @Binding var selection: Date
     var minimumDate: Date?
     var accessibilityLabel = "Return time, 15-minute increments"
 
-    func makeUIView(context: Context) -> UIDatePicker {
-        let picker = UIDatePicker()
-        picker.datePickerMode = .time
-        picker.preferredDatePickerStyle = .compact
-        picker.minuteInterval = KioskQuarterHour.minuteInterval
-        picker.tintColor = UIColor(KioskText.primary)
-        picker.addTarget(context.coordinator, action: #selector(Coordinator.valueChanged(_:)), for: .valueChanged)
-        picker.accessibilityLabel = accessibilityLabel
-        return picker
-    }
-
-    func updateUIView(_ picker: UIDatePicker, context: Context) {
-        context.coordinator.parent = self
-        picker.minimumDate = minimumDate
-        picker.accessibilityLabel = accessibilityLabel
-        if abs(picker.date.timeIntervalSince(selection)) >= 1 {
-            picker.setDate(selection, animated: false)
-        }
-    }
-
-    /// The compact picker's own size. Without it SwiftUI treats the UIKit
-    /// view as flexible, and outside a ScrollView the chip floated in the
-    /// middle of a stretched return window.
-    func sizeThatFits(_ proposal: ProposedViewSize, uiView: UIDatePicker, context: Context) -> CGSize? {
-        let fitted = uiView.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize)
-        return CGSize(width: max(fitted.width, 120), height: max(fitted.height, 44))
-    }
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(parent: self)
-    }
-
-    @MainActor
-    final class Coordinator: NSObject {
-        var parent: KioskQuarterHourTimePicker
-
-        init(parent: KioskQuarterHourTimePicker) {
-            self.parent = parent
-        }
-
-        @objc func valueChanged(_ picker: UIDatePicker) {
-            parent.selection = KioskQuarterHour.roundedUp(picker.date)
-        }
+    var body: some View {
+        QuarterHourTimePicker(
+            selection: $selection,
+            minimumDate: minimumDate,
+            tint: KioskText.primary,
+            accessibilityLabel: accessibilityLabel
+        )
     }
 }
 

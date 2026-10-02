@@ -1,0 +1,2925 @@
+diff --git a/ios/Wisconsin.xcodeproj/project.pbxproj b/ios/Wisconsin.xcodeproj/project.pbxproj
+index fd081c80..d6c60be5 100644
+--- a/ios/Wisconsin.xcodeproj/project.pbxproj
++++ b/ios/Wisconsin.xcodeproj/project.pbxproj
+@@ -41,6 +41,7 @@
+ 		22682418CE8FC843F3E2B1F3 /* Markdown in Frameworks */ = {isa = PBXBuildFile; productRef = E1FC7879594025684FC876D1 /* Markdown */; };
+ 		237DD2AF7BCC2631721C737C /* CreateBookingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1F3FA2D4C06E966E6BA030B /* CreateBookingSheet.swift */; };
+ 		2516A89A0CD4284023B38A28 /* ScheduleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74157D1DF3F4EF9F53F70494 /* ScheduleView.swift */; };
++		2643D99B273EB3DA3E3D35A7 /* QuarterHourTimePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98F3B72469F3E6BFC5B50CE5 /* QuarterHourTimePicker.swift */; };
+ 		27614B86498B5D98CC600630 /* CreateBookingFormRows.swift in Sources */ = {isa = PBXBuildFile; fileRef = 089FAA6DDBB831B89ED4E5F5 /* CreateBookingFormRows.swift */; };
+ 		27D9158F06A8D80D8B7C5B53 /* ReportsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4321D991D40907BB2A1819C1 /* ReportsView.swift */; };
+ 		27ECC333F667B220F460C700 /* GuidesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DA88A1DF6F8D23066A07BC /* GuidesView.swift */; };
+@@ -67,6 +68,7 @@
+ 		41B304E3F5ABE1BF6F9B94BB /* CheckoutReturnActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = E11254A1E4647B8B02F4890A /* CheckoutReturnActivityAttributes.swift */; };
+ 		41B90D7E34083A1070406934 /* KioskModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02B29E7150D396D5C8236398 /* KioskModels.swift */; };
+ 		45024C2592BDCC5901293130 /* CreateBookingEquipmentPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66DFAABBDCC4FC644E2F8E8B /* CreateBookingEquipmentPicker.swift */; };
++		46010B21A5285A7396574B59 /* DayTimeChipPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1284B141E75FF8117D418B12 /* DayTimeChipPicker.swift */; };
+ 		46239E3116E5DE148E7A9C4F /* ItemListText.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC04AA628BB1DEA764D7EEAC /* ItemListText.swift */; };
+ 		470F79B703DF9EB55FECE070 /* FormModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6148A160C162A021FF9DE4C0 /* FormModels.swift */; };
+ 		47DD202255737DB455061266 /* LatestRequestGeneration.swift in Sources */ = {isa = PBXBuildFile; fileRef = D39486DE707928DB17EA4667 /* LatestRequestGeneration.swift */; };
+@@ -105,6 +107,7 @@
+ 		7A57F69F8CCCA6552D3EBED3 /* ScheduleWindowCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = F27F74922887FF66BF6AA61E /* ScheduleWindowCache.swift */; };
+ 		7CE11553481BC17CEAE88EDC /* GearHomeScreenWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6720D70A7A90FE5BEFBFDD1F /* GearHomeScreenWidgets.swift */; };
+ 		7EFDB9FD68785427E5F753C3 /* KioskTaskKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59D13CBC93F3332016C1136E /* KioskTaskKit.swift */; };
++		80270EB0689F3880F6383BC1 /* DayTimeChipPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1284B141E75FF8117D418B12 /* DayTimeChipPicker.swift */; };
+ 		81413B070B47866D2C7DB337 /* SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0189482D68508F45B086F46F /* SessionStore.swift */; };
+ 		843586F2B58722883BD12D08 /* KioskReturnView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 687337C19E47FE94FE56F9BF /* KioskReturnView.swift */; };
+ 		84BE753FF259E17D637E6482 /* AccountAvatar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 073F98039DAC37B5AC72487C /* AccountAvatar.swift */; };
+@@ -143,6 +146,7 @@
+ 		AF66ADDE1D3CF5B16155A3BA /* GlobalSearchSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5EC344925B5666C2CA8F773 /* GlobalSearchSheet.swift */; };
+ 		B0583B1951EA442CCD563320 /* ScheduleDateMathTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A943ABC3AA353DC3AAEA0B3A /* ScheduleDateMathTests.swift */; };
+ 		B1DDE3C06BD40F1F8615A227 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64F14676788E6FA7CDD08D48 /* HomeView.swift */; };
++		B23E7EE505EE66CF853A4009 /* QuarterHourTimePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98F3B72469F3E6BFC5B50CE5 /* QuarterHourTimePicker.swift */; };
+ 		B2FEB545EEB4F42FE18F292F /* BookingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2228A84C3CCBC90ABF9103F1 /* BookingsView.swift */; };
+ 		B3836CE0F5F3C6E234501639 /* GearWidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = D49E4A7AC5C05860AAB8EBE5 /* GearWidgetSnapshot.swift */; };
+ 		B5152EECF15D45DC25BE2D08 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = D7348A946664F1C8E265C2A3 /* PrivacyInfo.xcprivacy */; };
+@@ -253,6 +257,7 @@
+ 		0CF2E588B9A1DA4F76309E88 /* NotificationActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationActions.swift; sourceTree = "<group>"; };
+ 		0D900B3FE267BAB0F0904D07 /* Toast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Toast.swift; sourceTree = "<group>"; };
+ 		0E5A80EBE9AE9D0094E70FBB /* KioskShellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskShellView.swift; sourceTree = "<group>"; };
++		1284B141E75FF8117D418B12 /* DayTimeChipPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayTimeChipPicker.swift; sourceTree = "<group>"; };
+ 		14951B258A7FE7AD4B9F5059 /* KioskCheckoutDetailsStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskCheckoutDetailsStep.swift; sourceTree = "<group>"; };
+ 		14DA88A1DF6F8D23066A07BC /* GuidesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuidesView.swift; sourceTree = "<group>"; };
+ 		1770023701735D8701DCAA5B /* OverdueReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverdueReportView.swift; sourceTree = "<group>"; };
+@@ -344,6 +349,7 @@
+ 		93A02FB7D1B8ADC547189F1A /* ScanPrePromptView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanPrePromptView.swift; sourceTree = "<group>"; };
+ 		96636E404DEEEDA5C6046ADB /* AddShiftSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddShiftSheet.swift; sourceTree = "<group>"; };
+ 		966B6B986CA5E9C123B8EC01 /* KioskCheckoutDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskCheckoutDetailSheet.swift; sourceTree = "<group>"; };
++		98F3B72469F3E6BFC5B50CE5 /* QuarterHourTimePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuarterHourTimePicker.swift; sourceTree = "<group>"; };
+ 		9C02E3259C05C85AFCA83327 /* TeamScoreboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamScoreboardView.swift; sourceTree = "<group>"; };
+ 		9CDE77AE37C01B8DA663C7CE /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+ 		9DAF420E532759A9116D675B /* DraftModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftModels.swift; sourceTree = "<group>"; };
+@@ -462,9 +468,11 @@
+ 			children = (
+ 				5932CB2D580EFEB5EA22D828 /* AppEnvironment.swift */,
+ 				CDF1537A041998300D3A8FA8 /* BadgeEarnedCelebration.swift */,
++				1284B141E75FF8117D418B12 /* DayTimeChipPicker.swift */,
+ 				C22B3A50B4815BC1451C26DD /* HIDScannerField.swift */,
+ 				EC04AA628BB1DEA764D7EEAC /* ItemListText.swift */,
+ 				D39486DE707928DB17EA4667 /* LatestRequestGeneration.swift */,
++				98F3B72469F3E6BFC5B50CE5 /* QuarterHourTimePicker.swift */,
+ 			);
+ 			path = Shared;
+ 			sourceTree = "<group>";
+@@ -1065,6 +1073,7 @@
+ 			files = (
+ 				11A01EC76DDAA014512A70E9 /* AppEnvironment.swift in Sources */,
+ 				2E557BDFACDF537A54930972 /* BadgeEarnedCelebration.swift in Sources */,
++				80270EB0689F3880F6383BC1 /* DayTimeChipPicker.swift in Sources */,
+ 				E9A78D5C1743CBD6CC8AF930 /* HIDScannerField.swift in Sources */,
+ 				46239E3116E5DE148E7A9C4F /* ItemListText.swift in Sources */,
+ 				654893DACB94A0EDA73141DF /* KioskAPIClient.swift in Sources */,
+@@ -1097,6 +1106,7 @@
+ 				E6F51692EA10D1DF6DA5F049 /* KioskSuccessView.swift in Sources */,
+ 				7EFDB9FD68785427E5F753C3 /* KioskTaskKit.swift in Sources */,
+ 				47DD202255737DB455061266 /* LatestRequestGeneration.swift in Sources */,
++				B23E7EE505EE66CF853A4009 /* QuarterHourTimePicker.swift in Sources */,
+ 			);
+ 			runOnlyForDeploymentPostprocessing = 0;
+ 		};
+@@ -1150,6 +1160,7 @@
+ 				8AF1D9B30757EC04020B0A22 /* CrewRow.swift in Sources */,
+ 				CE860A32B56D88E0802D8EFE /* DashboardModels.swift in Sources */,
+ 				7507BE07B0E40EAA31B9DBE9 /* DateFormats.swift in Sources */,
++				46010B21A5285A7396574B59 /* DayTimeChipPicker.swift in Sources */,
+ 				B6B0235DB84A35FE3DFF5D6C /* DraftModels.swift in Sources */,
+ 				713FB9080DFAA1073EE5FA8C /* EventDetailSheet.swift in Sources */,
+ 				904A4A8C645FFEB4CD2AA971 /* ExtendBookingSheet.swift in Sources */,
+@@ -1200,6 +1211,7 @@
+ 				899247599162DB5F38910752 /* PublishedScheduleView.swift in Sources */,
+ 				D24677599DC4E06E3E093A81 /* PushPrePromptView.swift in Sources */,
+ 				085E8467FC2D0385A67DD157 /* QRScannerSheet.swift in Sources */,
++				2643D99B273EB3DA3E3D35A7 /* QuarterHourTimePicker.swift in Sources */,
+ 				0A7B733B24619FD907F15B4A /* QuickActions.swift in Sources */,
+ 				27D9158F06A8D80D8B7C5B53 /* ReportsView.swift in Sources */,
+ 				6A83B2291B4776A186254C0F /* ReservationDraftCard.swift in Sources */,
+diff --git a/ios/Wisconsin/Kiosk/KioskComponents.swift b/ios/Wisconsin/Kiosk/KioskComponents.swift
+index 08b957af..d6f92a54 100644
+--- a/ios/Wisconsin/Kiosk/KioskComponents.swift
++++ b/ios/Wisconsin/Kiosk/KioskComponents.swift
+@@ -442,74 +442,22 @@ struct KioskScannerReadinessBadge: View {
+ 
+ // MARK: Quarter-hour time input
+ 
+-/// Shared kiosk return-time policy. Custody times are chosen in quarter-hour
+-/// steps, and generated suggestions always round forward so a smart default
+-/// never promises an earlier return than the source event or safety minimum.
+-enum KioskQuarterHour {
+-    static let minuteInterval = 15
+-    private static let secondsPerInterval = TimeInterval(minuteInterval * 60)
+-
+-    static func roundedUp(_ date: Date) -> Date {
+-        let intervals = date.timeIntervalSinceReferenceDate / secondsPerInterval
+-        return Date(timeIntervalSinceReferenceDate: ceil(intervals) * secondsPerInterval)
+-    }
++/// The quarter-hour grid and wheel live in `Shared/QuarterHourTimePicker.swift`
++/// so the iPhone app uses the same custody-time steps as the kiosk.
++typealias KioskQuarterHour = QuarterHour
+ 
+-    static func clamped(_ date: Date, minimum: Date) -> Date {
+-        roundedUp(max(date, minimum))
+-    }
+-}
+-
+-/// Native compact time control with a real 15-minute wheel interval. SwiftUI's
+-/// `DatePicker` does not expose `UIDatePicker.minuteInterval`, which previously
+-/// made staff scroll through minute-by-minute values for a custody timestamp.
+-struct KioskQuarterHourTimePicker: UIViewRepresentable {
++struct KioskQuarterHourTimePicker: View {
+     @Binding var selection: Date
+     var minimumDate: Date?
+     var accessibilityLabel = "Return time, 15-minute increments"
+ 
+-    func makeUIView(context: Context) -> UIDatePicker {
+-        let picker = UIDatePicker()
+-        picker.datePickerMode = .time
+-        picker.preferredDatePickerStyle = .compact
+-        picker.minuteInterval = KioskQuarterHour.minuteInterval
+-        picker.tintColor = UIColor(KioskText.primary)
+-        picker.addTarget(context.coordinator, action: #selector(Coordinator.valueChanged(_:)), for: .valueChanged)
+-        picker.accessibilityLabel = accessibilityLabel
+-        return picker
+-    }
+-
+-    func updateUIView(_ picker: UIDatePicker, context: Context) {
+-        context.coordinator.parent = self
+-        picker.minimumDate = minimumDate
+-        picker.accessibilityLabel = accessibilityLabel
+-        if abs(picker.date.timeIntervalSince(selection)) >= 1 {
+-            picker.setDate(selection, animated: false)
+-        }
+-    }
+-
+-    /// The compact picker's own size. Without it SwiftUI treats the UIKit
+-    /// view as flexible, and outside a ScrollView the chip floated in the
+-    /// middle of a stretched return window.
+-    func sizeThatFits(_ proposal: ProposedViewSize, uiView: UIDatePicker, context: Context) -> CGSize? {
+-        let fitted = uiView.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize)
+-        return CGSize(width: max(fitted.width, 120), height: max(fitted.height, 44))
+-    }
+-
+-    func makeCoordinator() -> Coordinator {
+-        Coordinator(parent: self)
+-    }
+-
+-    @MainActor
+-    final class Coordinator: NSObject {
+-        var parent: KioskQuarterHourTimePicker
+-
+-        init(parent: KioskQuarterHourTimePicker) {
+-            self.parent = parent
+-        }
+-
+-        @objc func valueChanged(_ picker: UIDatePicker) {
+-            parent.selection = KioskQuarterHour.roundedUp(picker.date)
+-        }
++    var body: some View {
++        QuarterHourTimePicker(
++            selection: $selection,
++            minimumDate: minimumDate,
++            tint: KioskText.primary,
++            accessibilityLabel: accessibilityLabel
++        )
+     }
+ }
+ 
+diff --git a/ios/Wisconsin/Views/AvailabilityView.swift b/ios/Wisconsin/Views/AvailabilityView.swift
+index fced84f9..489ad5a8 100644
+--- a/ios/Wisconsin/Views/AvailabilityView.swift
++++ b/ios/Wisconsin/Views/AvailabilityView.swift
+@@ -579,100 +579,195 @@ private struct AvailabilityEditorSheet: View {
+         _semesterLabel = State(initialValue: block?.semesterLabel ?? "")
+     }
+ 
++    private static let timePresets: [(title: String, detail: String, start: Int, end: Int)] = [
++        ("Morning", "8 AM – 12 PM", 8 * 60, 12 * 60),
++        ("Afternoon", "12 – 5 PM", 12 * 60, 17 * 60),
++        ("Evening", "5 – 10 PM", 17 * 60, 22 * 60),
++        ("School day", "8 AM – 5 PM", 8 * 60, 17 * 60),
++    ]
++
++    private func editorCard<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
++        VStack(alignment: .leading, spacing: 12) {
++            Text(title)
++                .font(.headline)
++            content()
++        }
++        .frame(maxWidth: .infinity, alignment: .leading)
++        .padding(16)
++        .background(Color.cardSurface, in: RoundedRectangle(cornerRadius: Brand.Radius.lg, style: .continuous))
++    }
++
+     private var timeOptions: [Int] {
+         Array(Set(Array(stride(from: 0, through: 23 * 60 + 45, by: 15)) + [startMinutes, endMinutes])).sorted()
+     }
+ 
+     var body: some View {
+         NavigationStack {
+-            Form {
+-                Section("Signal") {
+-                    Picker("Type", selection: $intent) {
+-                        ForEach(AvailabilityEditorIntent.allCases) { option in
+-                            Label(option.label, systemImage: option.systemImage).tag(option)
++            ScrollView {
++                VStack(alignment: .leading, spacing: 14) {
++                    editorCard("What is this?") {
++                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
++                            ForEach(AvailabilityEditorIntent.allCases) { option in
++                                ChipButton(
++                                    title: option.label,
++                                    systemImage: option.systemImage,
++                                    isSelected: intent == option,
++                                    tint: Color.statusText(.purple)
++                                ) {
++                                    intent = option
++                                    Haptics.selection()
++                                }
++                            }
+                         }
++                        Text(intent.detail)
++                            .font(.footnote)
++                            .foregroundStyle(.secondary)
+                     }
+-                    Text(intent.detail)
+-                        .font(.footnote)
+-                        .foregroundStyle(.secondary)
+-                }
+ 
+-                Section("When") {
+-                    Picker("Repeats", selection: kindSelection) {
+-                        ForEach(AvailabilityEditorKind.allCases) { option in
+-                            Text(option.label).tag(option)
++                    editorCard("When") {
++                        HStack(spacing: 8) {
++                            ForEach(AvailabilityEditorKind.allCases) { option in
++                                ChipButton(
++                                    title: option.label,
++                                    isSelected: kind == option,
++                                    tint: Color.statusText(.purple)
++                                ) {
++                                    kindSelection.wrappedValue = option
++                                    Haptics.selection()
++                                }
++                            }
+                         }
+-                    }
+-                    .pickerStyle(.segmented)
+ 
+-                    if kind == .weekly {
+-                        Picker("Day", selection: $dayOfWeek) {
+-                            ForEach(0..<7, id: \.self) { Text(availabilityDayNames[$0]).tag($0) }
+-                        }
+-                    } else {
+-                        DatePicker("From", selection: $date, displayedComponents: .date)
+-                        Toggle("Multiple days", isOn: $isDateRange)
+-                        if isDateRange {
+-                            DatePicker("Through", selection: $dateEnd, displayedComponents: .date)
+-                        }
+-                        Toggle("All day", isOn: $allDay)
+-                        if allDay {
+-                            Text(intent.allDayDetail)
+-                                .font(.footnote)
+-                                .foregroundStyle(.secondary)
++                        if kind == .weekly {
++                            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
++                                ForEach(0..<7, id: \.self) { index in
++                                    ChipButton(
++                                        title: String(availabilityDayNames[index].prefix(3)),
++                                        isSelected: dayOfWeek == index,
++                                        tint: Color.statusText(.purple)
++                                    ) {
++                                        dayOfWeek = index
++                                        Haptics.selection()
++                                    }
++                                }
++                            }
++                        } else {
++                            DatePicker("From", selection: $date, displayedComponents: .date)
++                            Toggle("Multiple days", isOn: $isDateRange)
++                            if isDateRange {
++                                DatePicker("Through", selection: $dateEnd, displayedComponents: .date)
++                            }
++                            Toggle("All day", isOn: $allDay)
++                            if allDay {
++                                Text(intent.allDayDetail)
++                                    .font(.footnote)
++                                    .foregroundStyle(.secondary)
++                            }
+                         }
+                     }
+-                }
+-
+-                if kind == .weekly || !allDay {
+-                    Section("Time") {
+-                        Picker("Starts", selection: $startMinutes) {
+-                            ForEach(timeOptions, id: \.self) { minutes in
+-                                Text(Self.timeLabel(minutes)).tag(minutes)
++                    .tint(Color.statusText(.purple))
++
++                    if kind == .weekly || !allDay {
++                        editorCard("Time") {
++                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
++                                ForEach(Self.timePresets, id: \.title) { preset in
++                                    ChipButton(
++                                        title: preset.title,
++                                        detail: preset.detail,
++                                        isSelected: startMinutes == preset.start && endMinutes == preset.end,
++                                        tint: Color.statusText(.purple)
++                                    ) {
++                                        startMinutes = preset.start
++                                        endMinutes = preset.end
++                                        Haptics.selection()
++                                    }
++                                }
+                             }
+-                        }
+-                        Picker("Ends", selection: $endMinutes) {
+-                            ForEach(timeOptions, id: \.self) { minutes in
+-                                Text(Self.timeLabel(minutes)).tag(minutes)
++                            HStack(alignment: .firstTextBaseline) {
++                                Text("Starts").font(.subheadline.weight(.semibold))
++                                Picker("Starts", selection: $startMinutes) {
++                                    ForEach(timeOptions, id: \.self) { minutes in
++                                        Text(Self.timeLabel(minutes)).tag(minutes)
++                                    }
++                                }
++                                .labelsHidden()
++                                .fixedSize()
++                                Spacer(minLength: 8)
++                                Text("Ends").font(.subheadline.weight(.semibold))
++                                Picker("Ends", selection: $endMinutes) {
++                                    ForEach(timeOptions, id: \.self) { minutes in
++                                        Text(Self.timeLabel(minutes)).tag(minutes)
++                                    }
++                                }
++                                .labelsHidden()
++                                .fixedSize()
+                             }
++                            .tint(Color.statusText(.purple))
+                         }
+                     }
+-                }
+ 
+-                if kind == .weekly {
+-                    Section {
+-                        Toggle("Limit to term dates", isOn: $usesTermDates)
+-                        if usesTermDates {
+-                            TextField("Term name (optional)", text: $semesterLabel)
+-                            DatePicker("Starts", selection: $termStartDate, displayedComponents: .date)
+-                            DatePicker("Ends", selection: $termEndDate, displayedComponents: .date)
++                    if kind == .weekly {
++                        editorCard("Class term (optional)") {
++                            Toggle("Limit to term dates", isOn: $usesTermDates)
++                                .tint(Color.statusText(.purple))
++                            if usesTermDates {
++                                TextField("Term name (optional)", text: $semesterLabel)
++                                DatePicker("Starts", selection: $termStartDate, displayedComponents: .date)
++                                DatePicker("Ends", selection: $termEndDate, displayedComponents: .date)
++                            }
++                            Text("Use this when the class only blocks work during a specific semester or session.")
++                                .font(.footnote)
++                                .foregroundStyle(.secondary)
+                         }
+-                    } header: {
+-                        Text("Class term (optional)")
+-                    } footer: {
+-                        Text("Use this when the class only blocks work during a specific semester or session.")
+                     }
+-                }
+ 
+-                Section {
+-                    TextField(intent.labelPlaceholder, text: $label)
+-                } footer: {
+-                    if kind == .weekly {
+-                        Text(usesTermDates ? "Repeats every \(availabilityDayNames[dayOfWeek]) during the selected term." : "Repeats every \(availabilityDayNames[dayOfWeek]) until you remove it.")
+-                    } else if isDateRange {
+-                        Text("Applies to every selected date in the range.")
+-                    } else {
+-                        Text("Applies only to the selected date.")
++                    editorCard("Label") {
++                        TextField(intent.labelPlaceholder, text: $label)
++                        if kind == .weekly {
++                            Text(usesTermDates ? "Repeats every \(availabilityDayNames[dayOfWeek]) during the selected term." : "Repeats every \(availabilityDayNames[dayOfWeek]) until you remove it.")
++                                .font(.footnote)
++                                .foregroundStyle(.secondary)
++                        } else if isDateRange {
++                            Text("Applies to every selected date in the range.")
++                                .font(.footnote)
++                                .foregroundStyle(.secondary)
++                        } else {
++                            Text("Applies only to the selected date.")
++                                .font(.footnote)
++                                .foregroundStyle(.secondary)
++                        }
+                     }
+-                }
+ 
+-                if let error {
+-                    Section {
++                    if let error {
+                         Label(error, systemImage: "exclamationmark.triangle.fill")
+                             .font(.footnote)
+                             .foregroundStyle(Color.statusText(.red))
+                     }
+                 }
++                .padding(.horizontal, 16)
++                .padding(.vertical, 12)
++            }
++            .background(Color(.systemGroupedBackground))
++            .safeAreaInset(edge: .bottom) {
++                Button {
++                    Task { await save() }
++                } label: {
++                    Group {
++                        if isSaving {
++                            ProgressView().tint(.white)
++                        } else {
++                            Text(context.block == nil ? "Add" : "Save").font(.headline)
++                        }
++                    }
++                    .foregroundStyle(.white)
++                    .frame(maxWidth: .infinity, minHeight: 56)
++                    .background(Color.statusText(.purple), in: RoundedRectangle(cornerRadius: 16))
++                }
++                .buttonStyle(.plain)
++                .disabled(isSaving)
++                .padding(.horizontal, 16)
++                .padding(.vertical, 10)
++                .background(.bar)
+             }
+             .navigationTitle(context.block == nil ? (kind == .weekly ? "Add Class Schedule" : "Add Day Away") : "Edit Availability")
+             .navigationBarTitleDisplayMode(.inline)
+@@ -681,19 +776,6 @@ private struct AvailabilityEditorSheet: View {
+                     Button("Cancel") { dismiss() }
+                         .disabled(isSaving)
+                 }
+-                ToolbarItem(placement: .confirmationAction) {
+-                    Button {
+-                        Task { await save() }
+-                    } label: {
+-                        if isSaving {
+-                            ProgressView().controlSize(.small)
+-                        } else {
+-                            Text(context.block == nil ? "Add" : "Save").fontWeight(.semibold)
+-                        }
+-                    }
+-                    .tint(Color.brandPrimary)
+-                    .disabled(isSaving)
+-                }
+             }
+             .interactiveDismissDisabled(isSaving)
+             .onChange(of: startMinutes) { _, newValue in
+diff --git a/ios/Wisconsin/Views/BookingDetailView.swift b/ios/Wisconsin/Views/BookingDetailView.swift
+index 22c3fba9..a95dfcf7 100644
+--- a/ios/Wisconsin/Views/BookingDetailView.swift
++++ b/ios/Wisconsin/Views/BookingDetailView.swift
+@@ -444,19 +444,28 @@ struct EditBookingSheet: View {
+ 
+                             Divider().padding(.leading, 42)
+ 
+-                            HStack(spacing: Brand.Space.sm) {
+-                                Image(systemName: "arrow.left")
+-                                    .font(.caption.weight(.semibold))
+-                                    .foregroundStyle(Color.statusText(.purple))
+-                                    .frame(width: 30, height: 30)
+-                                    .background(Color.statusBackground(.purple), in: Circle())
+-                                DatePicker(
+-                                    "Return Time",
++                            VStack(alignment: .leading, spacing: 10) {
++                                HStack(spacing: 8) {
++                                    Image(systemName: "arrow.left")
++                                        .font(.caption.weight(.semibold))
++                                        .foregroundStyle(Color.statusText(.purple))
++                                        .frame(width: 30, height: 30)
++                                        .background(Color.statusBackground(.purple), in: Circle())
++                                    Text("Due back")
++                                        .font(.subheadline.weight(.semibold))
++                                    Text(chipDayTime(endsAt))
++                                        .font(.caption.weight(.semibold))
++                                        .foregroundStyle(Color.statusText(.purple))
++                                        .padding(.horizontal, 8)
++                                        .padding(.vertical, 3)
++                                        .background(Color.statusBackground(.purple), in: Capsule())
++                                    Spacer(minLength: 0)
++                                }
++                                DayTimeChipPicker(
+                                     selection: $endsAt,
+-                                    in: booking.startsAt...,
+-                                    displayedComponents: [.date, .hourAndMinute]
++                                    minimum: booking.startsAt,
++                                    tint: Color.statusText(.purple)
+                                 )
+-                                .font(.subheadline.weight(.medium))
+                             }
+                             .padding(.vertical, 8)
+ 
+diff --git a/ios/Wisconsin/Views/CreateBooking/CreateBookingEquipmentPicker.swift b/ios/Wisconsin/Views/CreateBooking/CreateBookingEquipmentPicker.swift
+index 5112ea66..5e8c2bc6 100644
+--- a/ios/Wisconsin/Views/CreateBooking/CreateBookingEquipmentPicker.swift
++++ b/ios/Wisconsin/Views/CreateBooking/CreateBookingEquipmentPicker.swift
+@@ -107,34 +107,35 @@ struct CreateBookingEquipmentPicker: View {
+         .refreshable { await vm.loadAvailableAssets(reset: true) }
+         .nativeScrollBarMinimization()
+         .safeAreaInset(edge: .bottom, spacing: 0) {
+-            if !activeRecommendations.isEmpty {
+-                VStack(spacing: 6) {
+-                    ForEach(activeRecommendations) { recommendation in
+-                        BatteryRecommendationCard(
+-                            recommendation: recommendation,
+-                            quantity: vm.quantity(for: recommendation.sku),
+-                            onDecrement: {
+-                                vm.decrementBulk(recommendation.sku)
+-                                Haptics.selection()
+-                            },
+-                            onIncrement: {
+-                                vm.incrementBulk(recommendation.sku)
+-                                Haptics.selection()
+-                            },
+-                            onDismiss: {
+-                                acknowledge(recommendation)
+-                            }
+-                        )
+-                        .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
+-                    }
++            VStack(spacing: 8) {
++                ForEach(activeRecommendations) { recommendation in
++                    BatteryRecommendationCard(
++                        recommendation: recommendation,
++                        quantity: vm.quantity(for: recommendation.sku),
++                        onDecrement: {
++                            vm.decrementBulk(recommendation.sku)
++                            Haptics.selection()
++                        },
++                        onIncrement: {
++                            vm.incrementBulk(recommendation.sku)
++                            Haptics.selection()
++                        },
++                        onDismiss: {
++                            acknowledge(recommendation)
++                        }
++                    )
++                    .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
++                }
++                if vm.selectedEquipmentCount > 0 {
++                    gearActionBar(needsPower: needsPowerNudge)
+                 }
+-                .padding(.horizontal, 12)
+-                .padding(.top, 6)
+-                .padding(.bottom, 4)
+-                .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: activeRecommendations.map(\.reminderKey))
+             }
++            .padding(.horizontal, 16)
++            .padding(.top, 8)
++            .padding(.bottom, vm.selectedEquipmentCount > 0 || !activeRecommendations.isEmpty ? 8 : 0)
++            .background(vm.selectedEquipmentCount > 0 || !activeRecommendations.isEmpty ? AnyShapeStyle(.bar) : AnyShapeStyle(.clear))
++            .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: activeRecommendations.map(\.reminderKey))
+         }
+-        .toolbar { gearBottomToolbar }
+         .sheet(isPresented: $showCart) {
+             EquipmentCartSheet(vm: vm)
+                 .presentationDetents([.medium, .large])
+@@ -176,6 +177,7 @@ struct CreateBookingEquipmentPicker: View {
+             )
+         }
+         .buttonStyle(.plain)
++        .listRowBackground(isSelected ? Color.statusBackground(.purple) : Color(.secondarySystemGroupedBackground))
+         .disabled((isConflicted && !isSelected) || (!atPickup && !isSelected))
+         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+             if canAdd {
+@@ -298,40 +300,56 @@ struct CreateBookingEquipmentPicker: View {
+         }
+     }
+ 
+-    // MARK: - Toolbar
++    // MARK: - Action bar
+ 
+-    @ToolbarContentBuilder
+-    private var gearBottomToolbar: some ToolbarContent {
+-        if vm.selectedEquipmentCount > 0 {
+-            ToolbarItem(placement: .bottomBar) {
+-                Button {
+-                    showCart = true
+-                } label: {
+-                    Label("Selected", systemImage: "shippingbox.fill")
+-                        .symbolRenderingMode(.monochrome)
+-                        .foregroundStyle(Color.statusText(.purple))
+-                }
+-                .tint(Color.statusText(.purple))
+-                .badge(vm.selectedEquipmentCount)
+-                .accessibilityLabel("\(vm.selectedEquipmentCount) items selected, view selected equipment")
++    /// A battery suggestion nobody has answered yet: Review sends them to
++    /// Batteries once, and dismissing the suggestion lets Review through.
++    private var needsPowerNudge: Bool {
++        !vm.hasSelectedPower
++            && vm.batteryRecommendations.contains { !acknowledgedRecommendationIDs.contains($0.reminderKey) }
++    }
++
++    private func reviewTitle(needsPower: Bool) -> String {
++        if vm.selectedLocationMismatchCount > 0 { return "Fix Location" }
++        if vm.selectedConflictCount > 0 { return "Resolve Conflicts" }
++        if needsPower { return "Add a Battery" }
++        let count = vm.selectedEquipmentCount
++        return "Review · \(count) item\(count == 1 ? "" : "s")"
++    }
++
++    /// One bar instead of a floating cart bubble, a suggestion banner and a
++    /// Review pill: what's picked on the left, the next step on the right.
++    @ViewBuilder
++    private func gearActionBar(needsPower: Bool) -> some View {
++        HStack(spacing: 10) {
++            Button {
++                showCart = true
++            } label: {
++                Label("\(vm.selectedEquipmentCount)", systemImage: "shippingbox.fill")
++                    .font(.headline)
++                    .foregroundStyle(Color.statusText(.purple))
++                    .padding(.horizontal, 18)
++                    .frame(minHeight: 52)
++                    .background(Color.statusBackground(.purple), in: RoundedRectangle(cornerRadius: 16))
+             }
+-            ToolbarSpacer(.flexible, placement: .bottomBar)
+-            ToolbarItem(placement: .bottomBar) {
+-                Button {
+-                    attemptReview()
+-                } label: {
+-                    Text(
+-                        vm.selectedLocationMismatchCount > 0
+-                            ? "Fix Location"
+-                            : (vm.selectedConflictCount == 0 ? "Review" : "Resolve Conflicts")
++            .buttonStyle(.plain)
++            .accessibilityLabel("\(vm.selectedEquipmentCount) items selected, view selected equipment")
++
++            Button {
++                attemptReview()
++            } label: {
++                Text(reviewTitle(needsPower: needsPower))
++                    .font(.headline)
++                    .foregroundStyle(vm.canReviewEquipment ? Color.white : Color.secondary)
++                    .frame(maxWidth: .infinity, minHeight: 52)
++                    .background(
++                        vm.canReviewEquipment ? Color.statusText(.purple) : Color(.tertiarySystemFill),
++                        in: RoundedRectangle(cornerRadius: 16)
+                     )
+-                    .fontWeight(.semibold)
+-                }
+-                .buttonStyle(.borderedProminent)
+-                .tint(Color.statusText(.purple))
+-                .disabled(!vm.canReviewEquipment)
+-                .accessibilityHint(reviewBlockedHint)
+             }
++            .buttonStyle(.plain)
++            .disabled(!vm.canReviewEquipment)
++            .accessibilityHint(reviewBlockedHint)
+         }
+     }
+ 
+@@ -390,7 +408,9 @@ struct CreateBookingEquipmentPicker: View {
+     }
+ 
+     private func attemptReview() {
+-        guard !vm.hasSelectedPower, let recommendation = vm.batteryRecommendations.first else {
++        guard !vm.hasSelectedPower,
++              let recommendation = vm.batteryRecommendations.first(where: { !acknowledgedRecommendationIDs.contains($0.reminderKey) })
++        else {
+             onReview()
+             return
+         }
+diff --git a/ios/Wisconsin/Views/CreateBooking/CreateBookingEquipmentRows.swift b/ios/Wisconsin/Views/CreateBooking/CreateBookingEquipmentRows.swift
+index 1d59a403..87b81f4a 100644
+--- a/ios/Wisconsin/Views/CreateBooking/CreateBookingEquipmentRows.swift
++++ b/ios/Wisconsin/Views/CreateBooking/CreateBookingEquipmentRows.swift
+@@ -323,7 +323,7 @@ struct AssetPickerRow: View {
+     @ViewBuilder
+     private var trailingIndicator: some View {
+         Image(systemName: indicatorSystemImage)
+-            .font(.title3)
++            .font(.title2)
+             .foregroundStyle(indicatorColor)
+             .symbolEffect(.bounce, options: .nonRepeating, isActive: !reduceMotion && isSelected)
+             .accessibilityHidden(true)
+@@ -333,14 +333,14 @@ struct AssetPickerRow: View {
+         if isSelected { return "checkmark.circle.fill" }
+         if isConflicted { return "exclamationmark.triangle.fill" }
+         if !isAtPickupLocation { return "mappin.circle" }
+-        return "plus.circle"
++        return "plus.circle.fill"
+     }
+ 
+     private var indicatorColor: Color {
+         if isSelected { return Color.statusText(.purple) }
+         if isConflicted { return Color.statusText(.red) }
+         if !isAtPickupLocation { return Color.statusText(.orange) }
+-        return Color(.systemGray2)
++        return Color.statusText(.purple).opacity(0.55)
+     }
+ 
+     private var rowAccessibilityLabel: String {
+diff --git a/ios/Wisconsin/Views/CreateBooking/CreateBookingEventViews.swift b/ios/Wisconsin/Views/CreateBooking/CreateBookingEventViews.swift
+index 6ec21349..b90c05e1 100644
+--- a/ios/Wisconsin/Views/CreateBooking/CreateBookingEventViews.swift
++++ b/ios/Wisconsin/Views/CreateBooking/CreateBookingEventViews.swift
+@@ -126,6 +126,30 @@ struct AllEventsPickerView: View {
+         }
+     }
+ 
++    /// Upcoming events first, grouped the way people talk about them; anything
++    /// already past sinks to "Earlier" so it never leads the list.
++    private var sections: [(title: String, events: [ScheduleEvent])] {
++        let calendar = Calendar.current
++        let startOfToday = calendar.startOfDay(for: Date())
++        let startOfTomorrow = calendar.date(byAdding: .day, value: 1, to: startOfToday) ?? startOfToday
++        let startOfDayAfter = calendar.date(byAdding: .day, value: 2, to: startOfToday) ?? startOfTomorrow
++        let endOfWeek = calendar.date(byAdding: .day, value: 7, to: startOfToday) ?? startOfDayAfter
++        let sorted = filtered.sorted { $0.startsAt < $1.startsAt }
++        func bucket(_ event: ScheduleEvent) -> Int {
++            if event.startsAt < startOfToday { return 4 }
++            if event.startsAt < startOfTomorrow { return 0 }
++            if event.startsAt < startOfDayAfter { return 1 }
++            if event.startsAt < endOfWeek { return 2 }
++            return 3
++        }
++        let titles = ["Today", "Tomorrow", "This week", "Later", "Earlier"]
++        return titles.indices.compactMap { index in
++            let items = sorted.filter { bucket($0) == index }
++            let ordered = index == 4 ? items.reversed() : items
++            return items.isEmpty ? nil : (titles[index], Array(ordered))
++        }
++    }
++
+     /// Filters on the same resolved venue the row's rail and scope label draw,
+     /// so picking "Neutral" cannot hide a row this list is labelling Neutral.
+     /// Reading `isHome` directly filed every explicitly neutral game that sits
+@@ -141,55 +165,75 @@ struct AllEventsPickerView: View {
+     }
+ 
+     var body: some View {
+-        List {
+-            Section {
+-                ViewThatFits(in: .horizontal) {
++        ScrollView {
++            LazyVStack(alignment: .leading, spacing: 10) {
++                ScrollView(.horizontal, showsIndicators: false) {
+                     eventFilterRow
+-                    ScrollView(.horizontal, showsIndicators: false) {
+-                        eventFilterRow
+-                    }
++                        .padding(.horizontal, 16)
+                 }
+-                .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12))
+-            }
++                .padding(.horizontal, -16)
+ 
+-            ForEach(filtered) { event in
+-                EventPickRow(
+-                    event: event,
+-                    isSelected: selectedEvents.contains(where: { $0.id == event.id }),
+-                    isDisabled: selectedEvents.count >= BookingEventLimits.maxLinkedEvents && !selectedEvents.contains(where: { $0.id == event.id })
+-                ) {
+-                    onToggle(event)
++                ForEach(sections, id: \.title) { section in
++                    Text(section.title.uppercased())
++                        .font(.caption2.weight(.bold))
++                        .tracking(0.8)
++                        .foregroundStyle(.secondary)
++                        .padding(.top, 8)
++                    ForEach(section.events) { event in
++                        let isSelected = selectedEvents.contains(where: { $0.id == event.id })
++                        EventPickRow(
++                            event: event,
++                            isSelected: isSelected,
++                            isDisabled: selectedEvents.count >= BookingEventLimits.maxLinkedEvents && !isSelected
++                        ) {
++                            onToggle(event)
++                        }
++                    }
+                 }
+-            }
+-            if filtered.isEmpty {
+-                if !search.isEmpty {
+-                    ContentUnavailableView.search(text: search)
+-                        .listRowBackground(Color.clear)
+-                } else {
+-                    ContentUnavailableView(
+-                        "No \(scope.rawValue.lowercased()) events",
+-                        systemImage: "calendar",
+-                        description: Text("Try another event filter.")
+-                    )
+-                    .listRowBackground(Color.clear)
++
++                if filtered.isEmpty {
++                    if !search.isEmpty {
++                        ContentUnavailableView.search(text: search)
++                    } else {
++                        ContentUnavailableView(
++                            "No \(scope.rawValue.lowercased()) events",
++                            systemImage: "calendar",
++                            description: Text("Try another event filter.")
++                        )
++                    }
+                 }
+             }
++            .padding(.horizontal, 16)
++            .padding(.bottom, 16)
+         }
+-        .searchable(text: $search, prompt: "Search events")
++        .background(Color(.systemGroupedBackground))
++        .searchable(text: $search, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search events")
+         .navigationTitle("Events")
+         .navigationBarTitleDisplayMode(.inline)
+-        .toolbar {
+-            ToolbarItem(placement: .confirmationAction) {
+-                Button {
+-                    dismiss()
+-                } label: {
++        .safeAreaInset(edge: .bottom, spacing: 0) {
++            Button {
++                dismiss()
++            } label: {
++                HStack(spacing: 8) {
+                     Image(systemName: "checkmark")
++                    Text(selectedEvents.isEmpty
++                         ? "Pick an event"
++                         : "Use \(selectedEvents.count) event\(selectedEvents.count == 1 ? "" : "s")")
+                 }
+-                .fontWeight(.semibold)
+-                .tint(Color.statusText(.purple))
+-                .disabled(selectedEvents.isEmpty)
+-                .accessibilityLabel("Confirm event selection")
++                .font(.headline)
++                .frame(maxWidth: .infinity, minHeight: 52)
+             }
++            .buttonStyle(.plain)
++            .foregroundStyle(selectedEvents.isEmpty ? Color.secondary : Color.white)
++            .background(
++                selectedEvents.isEmpty ? Color(.tertiarySystemFill) : Color.statusText(.purple),
++                in: RoundedRectangle(cornerRadius: 16)
++            )
++            .disabled(selectedEvents.isEmpty)
++            .accessibilityLabel("Confirm event selection")
++            .padding(.horizontal, 16)
++            .padding(.vertical, 10)
++            .background(.bar)
+         }
+     }
+ 
+@@ -201,17 +245,14 @@ struct AllEventsPickerView: View {
+                     Haptics.selection()
+                 } label: {
+                     Text(filter.rawValue)
+-                        .font(.caption.weight(.semibold))
+-                        .foregroundStyle(scope == filter ? Color.statusText(.purple) : Color.secondary)
+-                        .padding(.horizontal, 9)
+-                        .frame(minHeight: 32)
++                        .font(.subheadline.weight(.semibold))
++                        .foregroundStyle(scope == filter ? Color.white : Color.primary)
++                        .padding(.horizontal, 14)
++                        .frame(minHeight: 40)
+                         .background(
+-                            scope == filter ? Color.statusBackground(.purple) : Color(.secondarySystemGroupedBackground),
++                            scope == filter ? Color.statusText(.purple) : Color(.secondarySystemGroupedBackground),
+                             in: Capsule()
+                         )
+-                        .overlay(
+-                            Capsule().strokeBorder(scope == filter ? Color.statusText(.purple).opacity(0.35) : Color.hairline)
+-                        )
+                         .fixedSize(horizontal: true, vertical: false)
+                 }
+                 .buttonStyle(.plain)
+@@ -229,41 +270,47 @@ struct EventPickRow: View {
+ 
+     var body: some View {
+         Button(action: onTap) {
+-            HStack(spacing: 10) {
++            HStack(spacing: 12) {
+                 StatusRail(color: event.bookingEventRailColor)
+ 
+-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+-                    .font(.title3)
+-                    .foregroundStyle(isSelected ? Color.statusText(.purple) : Color(.systemGray3))
+-                    .accessibilityHidden(true)
+-
+-                VStack(alignment: .leading, spacing: 3) {
+-                    HStack(spacing: 8) {
+-                        Text(event.shortBookingEventTitle)
+-                            .font(.subheadline.weight(.semibold))
+-                            .foregroundStyle(.primary)
+-                            .lineLimit(1)
+-                        Spacer(minLength: 8)
+-                        Text(event.bookingEventScopeLabel)
+-                            .font(.caption.weight(.semibold))
+-                            .foregroundStyle(event.bookingEventRailColor)
+-                            .lineLimit(1)
+-                    }
++                VStack(alignment: .leading, spacing: 4) {
++                    Text(event.shortBookingEventTitle)
++                        .font(.headline)
++                        .foregroundStyle(isSelected ? Color.white : Color.primary)
++                        .lineLimit(1)
+                     Text(event.bookingEventPickerDate)
+-                        .font(.caption)
+-                        .foregroundStyle(.secondary)
++                        .font(.subheadline)
++                        .foregroundStyle(isSelected ? Color.white.opacity(0.85) : Color.secondary)
+                         .lineLimit(1)
+                     if let venue = event.bookingEventPickerVenue {
+                         Text(venue)
+-                            .font(.caption)
+-                            .foregroundStyle(.secondary)
++                            .font(.subheadline)
++                            .foregroundStyle(isSelected ? Color.white.opacity(0.85) : Color.secondary)
+                             .lineLimit(1)
+                     }
+                 }
+                 .frame(maxWidth: .infinity, alignment: .leading)
++
++                VStack(alignment: .trailing, spacing: 6) {
++                    Text(event.bookingEventScopeLabel)
++                        .font(.caption.weight(.bold))
++                        .foregroundStyle(isSelected ? Color.white : event.bookingEventRailColor)
++                        .lineLimit(1)
++                    if isSelected {
++                        Image(systemName: "checkmark.circle.fill")
++                            .font(.title3)
++                            .foregroundStyle(.white)
++                            .accessibilityHidden(true)
++                    }
++                }
+             }
+-            .frame(minHeight: 68)
+-            .contentShape(Rectangle())
++            .padding(14)
++            .frame(maxWidth: .infinity, minHeight: 84, alignment: .leading)
++            .background(
++                isSelected ? Color.statusText(.purple) : Color(.secondarySystemGroupedBackground),
++                in: RoundedRectangle(cornerRadius: 16)
++            )
++            .contentShape(RoundedRectangle(cornerRadius: 16))
+             .opacity(isDisabled ? 0.45 : 1)
+         }
+         .buttonStyle(.plain)
+diff --git a/ios/Wisconsin/Views/CreateBookingSheet.swift b/ios/Wisconsin/Views/CreateBookingSheet.swift
+index a2abba2c..6340eb3b 100644
+--- a/ios/Wisconsin/Views/CreateBookingSheet.swift
++++ b/ios/Wisconsin/Views/CreateBookingSheet.swift
+@@ -22,6 +22,14 @@ struct CreateBookingSheet: View {
+     @State private var showExitOptions = false
+     @State private var showScanner = false
+     @State private var showNotesField = false
++    /// Step 1 is two screens: what it's for, then when it's due back.
++    @State private var detailsPage = 1
++    @State private var showPickupEditor = false
++    @State private var showTimesSheet = false
++    /// The event we'd bet this person is booking for: their next shift's event,
++    /// else whatever is next on the calendar.
++    @State private var suggestedEventId: String?
++    @State private var suggestionFromShift = false
+     @FocusState private var notesFocused: Bool
+     @Environment(SessionStore.self) private var session
+     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+@@ -42,6 +50,22 @@ struct CreateBookingSheet: View {
+         return vm.usesEventLinkedSetup ? .event : .manual
+     }
+ 
++    private func loadSuggestion() async {
++        guard canLinkEvents, vm.selectedEventIds.isEmpty else { return }
++        let now = Date()
++        if let shifts = try? await APIClient.shared.myShifts(limit: 20),
++           let next = shifts.filter({ $0.event.endsAt > now }).min(by: { $0.event.startsAt < $1.event.startsAt }),
++           vm.events.contains(where: { $0.id == next.event.id }) {
++            suggestedEventId = next.event.id
++            suggestionFromShift = true
++            return
++        }
++        suggestedEventId = vm.events
++            .filter { $0.endsAt > now }
++            .min(by: { $0.startsAt < $1.startsAt })?.id
++        suggestionFromShift = false
++    }
++
+     private func loadEventsIfPermitted() async {
+         guard canLinkEvents else { return }
+         await vm.loadEvents()
+@@ -60,10 +84,6 @@ struct CreateBookingSheet: View {
+             && !vm.hasInvalidReusedEventSelection
+     }
+ 
+-    private var showsPlanDetails: Bool {
+-        setupMode == .manual || vm.linkedEventCount > 0
+-    }
+-
+     private var continueBlockedReason: String? {
+         guard !canContinueToGear, !vm.isSubmitting else { return nil }
+         if setupMode == .event && vm.linkedEventCount == 0 {
+@@ -98,12 +118,34 @@ struct CreateBookingSheet: View {
+         vm.kits.first(where: { $0.id == vm.selectedKitId })
+     }
+ 
+-    private func goToStep(_ value: Int) {
+-        guard value >= 1, value < step, !vm.isSubmitting else { return }
+-        setStep(value)
++    private func goBack() {
++        guard !vm.isSubmitting else { return }
++        if step == 1 {
++            guard detailsPage == 2 else { return }
++            detailsPage = 1
++        } else {
++            setStep(step - 1)
++        }
+         Haptics.selection()
+     }
+ 
++    private var canContinuePage1: Bool {
++        if setupMode == .event {
++            return vm.linkedEventCount > 0 && !vm.hasInvalidReusedEventSelection
++        }
++        return !vm.title.trimmingCharacters(in: .whitespaces).isEmpty
++    }
++
++    private var page1BlockedReason: String? {
++        guard !canContinuePage1 else { return nil }
++        if setupMode == .event {
++            return vm.hasInvalidReusedEventSelection
++                ? "Choose a different event when re-reserving."
++                : "Choose an event to continue."
++        }
++        return "Name this reservation to continue."
++    }
++
+     private func continueToGear() {
+         guard canContinueToGear, !vm.isSubmitting else { return }
+         setStep(2)
+@@ -133,11 +175,11 @@ struct CreateBookingSheet: View {
+                 if step == 2 {
+                     equipmentPicker
+                         .safeAreaInset(edge: .top, spacing: 0) {
+-                            ReservationStepProgress(currentStep: step, onSelect: goToStep)
++                            ReservationProgressHeader(step: step, page: detailsPage, total: setupMode == .event ? 3 : 4, onBack: goBack)
+                         }
+                 } else {
+                     VStack(spacing: 0) {
+-                        ReservationStepProgress(currentStep: step, onSelect: goToStep)
++                        ReservationProgressHeader(step: step, page: detailsPage, total: setupMode == .event ? 3 : 4, onBack: goBack)
+                         if step == 1 {
+                             detailsForm
+                         } else {
+@@ -162,15 +204,14 @@ struct CreateBookingSheet: View {
+                                     .tint(.white)
+                             } else {
+                                 Text("Create Reservation")
+-                                    .fontWeight(.semibold)
++                                    .font(.headline)
+                             }
+                         }
+-                        .frame(maxWidth: .infinity)
++                        .foregroundStyle(.white)
++                        .frame(maxWidth: .infinity, minHeight: 56)
++                        .background(Color.statusText(.purple), in: RoundedRectangle(cornerRadius: 16))
+                     }
+-                    .buttonStyle(.borderedProminent)
+-                    .buttonBorderShape(.capsule)
+-                    .controlSize(.large)
+-                    .tint(Color.statusText(.purple))
++                    .buttonStyle(.plain)
+                     .disabled(vm.isSubmitting)
+                     .padding(.horizontal, Brand.Space.md)
+                     .padding(.vertical, 10)
+@@ -246,6 +287,7 @@ struct CreateBookingSheet: View {
+                 applySelfAndLocationDefaults()
+                 await vm.loadKits()
+                 vm.captureBaselineIfNeeded()
++                await loadSuggestion()
+             }
+             .task(id: step) {
+                 guard step == 2 else { return }
+@@ -370,25 +412,42 @@ struct CreateBookingSheet: View {
+ 
+     @ViewBuilder
+     private var detailsFooter: some View {
++        // Event-linked setups fill pickup and return from the event, so they go
++        // straight to gear. Manual setups take one more screen for the times.
++        let eventFlow = setupMode == .event
++        let onFirstPage = detailsPage == 1 && !eventFlow
++        let blocked = eventFlow ? (page1BlockedReason ?? continueBlockedReason)
++            : (detailsPage == 1 ? page1BlockedReason : continueBlockedReason)
++        let canGo = eventFlow ? (canContinuePage1 && canContinueToGear)
++            : (detailsPage == 1 ? canContinuePage1 : canContinueToGear)
+         VStack(alignment: .leading, spacing: 8) {
+-            if let continueBlockedReason {
+-                Text(continueBlockedReason)
++            if let blocked {
++                Text(blocked)
+                     .font(.footnote)
+                     .foregroundStyle(.secondary)
+                     .frame(maxWidth: .infinity, alignment: .leading)
+-                    .accessibilityLabel(continueBlockedReason)
++                    .accessibilityLabel(blocked)
+             }
+-            Button(action: continueToGear) {
+-                Label("Choose Gear", systemImage: "shippingbox")
+-                    .fontWeight(.semibold)
+-                    .frame(maxWidth: .infinity)
++            Button {
++                if onFirstPage {
++                    detailsPage = 2
++                    Haptics.selection()
++                } else {
++                    continueToGear()
++                }
++            } label: {
++                Text(onFirstPage ? "Continue" : "Choose Gear")
++                    .font(.headline)
++                    .frame(maxWidth: .infinity, minHeight: 52)
+             }
+-            .buttonStyle(.borderedProminent)
+-            .buttonBorderShape(.capsule)
+-            .controlSize(.large)
+-            .tint(Color.statusText(.purple))
+-            .disabled(!canContinueToGear || vm.isSubmitting)
+-            .accessibilityHint(continueBlockedReason ?? "Opens equipment selection")
++            .buttonStyle(.plain)
++            .foregroundStyle(canGo ? Color.white : Color.secondary)
++            .background(
++                canGo ? Color.statusText(.purple) : Color(.tertiarySystemFill),
++                in: RoundedRectangle(cornerRadius: 16)
++            )
++            .disabled(!canGo || vm.isSubmitting)
++            .accessibilityHint(blocked ?? (onFirstPage ? "Next: when it's due back" : "Opens equipment selection"))
+         }
+         .padding(.horizontal, Brand.Space.md)
+         .padding(.vertical, 10)
+@@ -396,105 +455,25 @@ struct CreateBookingSheet: View {
+         .overlay(alignment: .top) { Divider() }
+     }
+ 
++    private func pageHeading(_ text: String) -> some View {
++        Text(text)
++            .font(.system(size: 30, weight: .heavy))
++            .frame(maxWidth: .infinity, alignment: .leading)
++    }
++
+     @ViewBuilder
+     private var detailsForm: some View {
+         ScrollView {
+-            VStack(spacing: Brand.Space.md) {
+-                if let sourceTitle = vm.reusedGearSourceTitle {
+-                    FormCard {
+-                        Label {
+-                            VStack(alignment: .leading, spacing: 3) {
+-                                Text("Copied from \u{201c}\(sourceTitle)\u{201d}")
+-                                    .font(.subheadline.weight(.semibold))
+-                                Text("Choose this week’s event. Pickup and return follow the same timing as last time, and availability is checked again before saving.")
+-                                    .font(.caption)
+-                                    .foregroundStyle(.secondary)
+-                            }
+-                        } icon: {
+-                            Image(systemName: "arrow.trianglehead.2.clockwise.rotate.90")
+-                                .foregroundStyle(Color.statusText(.purple))
+-                        }
+-                    }
+-                }
+-
+-                if canLinkEvents && !vm.isReusingGear {
+-                    FormCard {
+-                        BrandSectionHeader("Set Schedule From")
+-                        Picker("Schedule source", selection: setupModeBinding) {
+-                            ForEach(ReservationSetupMode.allCases) { mode in
+-                                Text(mode.rawValue).tag(mode)
+-                            }
+-                        }
+-                        .pickerStyle(.segmented)
+-                        if setupMode == .event {
+-                            Divider().padding(.leading, 4)
+-                            EventSelectionCard(
+-                                events: vm.events,
+-                                selectedEvents: vm.linkedEventsForSetup,
+-                                isLoading: vm.isLoadingEvents,
+-                                error: vm.eventError,
+-                                usesFormCard: false,
+-                                onRetry: { Task { await vm.loadEvents() } },
+-                                onToggle: { vm.toggleEvent($0) },
+-                                onRemove: { vm.removeSelectedEvent($0) }
+-                            )
+-                        }
+-                    }
+-                } else if setupMode == .event {
+-                    EventSelectionCard(
+-                        events: vm.events,
+-                        selectedEvents: vm.linkedEventsForSetup,
+-                        isLoading: vm.isLoadingEvents,
+-                        error: vm.eventError,
+-                        onRetry: { Task { await vm.loadEvents() } },
+-                        onToggle: { vm.toggleEvent($0) },
+-                        onRemove: { vm.removeSelectedEvent($0) }
+-                    )
+-                }
+-
+-                if showsPlanDetails {
+-                    reservationPlanCard
+-                        .transition(detailsTransition)
+-                    if setupMode == .event, vm.hasInvalidReusedEventSelection {
+-                        Label("Choose a different event when re-reserving", systemImage: "exclamationmark.triangle.fill")
+-                            .font(.footnote)
+-                            .foregroundStyle(Color.statusText(.orange))
+-                            .frame(maxWidth: .infinity, alignment: .leading)
+-                    }
+-
+-                    pickupAndKitCard
+-
+-                    if vm.notes.isEmpty && !showNotesField {
+-                        Button {
+-                            showNotesField = true
+-                            Task {
+-                                // Focus after the field exists in the hierarchy.
+-                                try? await Task.sleep(for: .milliseconds(80))
+-                                notesFocused = true
+-                            }
+-                        } label: {
+-                            FormCard {
+-                                Label("Add note", systemImage: "square.and.pencil")
+-                                    .font(.body)
+-                                    .foregroundStyle(Color.statusText(.purple))
+-                            }
+-                        }
+-                        .buttonStyle(.plain)
+-                    } else {
+-                        FormCard {
+-                            TextField("Notes (optional)", text: $vm.notes, axis: .vertical)
+-                                .lineLimit(3...6)
+-                                .font(.body)
+-                                .focused($notesFocused)
+-                        }
+-                    }
++            VStack(alignment: .leading, spacing: Brand.Space.md) {
++                if detailsPage == 1 || setupMode == .event {
++                    whatIsItForPage
++                } else {
++                    whenIsItDuePage
+                 }
+-
+                 if let error = vm.error {
+                     Text(error)
+                         .font(.footnote)
+                         .foregroundStyle(Color.statusText(.red))
+-                        .frame(maxWidth: .infinity, alignment: .leading)
+                         .padding(.horizontal, 4)
+                 }
+             }
+@@ -505,11 +484,196 @@ struct CreateBookingSheet: View {
+         .background(Color(.systemGroupedBackground))
+     }
+ 
+-    private var reservationPlanCard: some View {
++    @ViewBuilder
++    private var whatIsItForPage: some View {
++        if let sourceTitle = vm.reusedGearSourceTitle {
++            FormCard {
++                Label {
++                    VStack(alignment: .leading, spacing: 3) {
++                        Text("Copied from \u{201c}\(sourceTitle)\u{201d}")
++                            .font(.subheadline.weight(.semibold))
++                        Text("Choose this week’s event. Pickup and return follow the same timing as last time, and availability is checked again before saving.")
++                            .font(.caption)
++                            .foregroundStyle(.secondary)
++                    }
++                } icon: {
++                    Image(systemName: "arrow.trianglehead.2.clockwise.rotate.90")
++                        .foregroundStyle(Color.statusText(.purple))
++                }
++            }
++        }
++
++        pageHeading("What's this for?")
++
++        if canLinkEvents && !vm.isReusingGear {
++            HStack(spacing: 8) {
++                ChipButton(title: "An event", isSelected: setupMode == .event, tint: Color.statusText(.purple)) {
++                    setupModeBinding.wrappedValue = .event
++                }
++                ChipButton(title: "Something else", isSelected: setupMode == .manual, tint: Color.statusText(.purple)) {
++                    setupModeBinding.wrappedValue = .manual
++                }
++            }
++        }
++
++        if setupMode == .event {
++            if vm.linkedEventCount == 0, !vm.isReusingGear,
++               let id = suggestedEventId, let event = vm.events.first(where: { $0.id == id }) {
++                Text(suggestionFromShift ? "YOUR NEXT SHIFT" : "NEXT UP")
++                    .font(.caption2.weight(.bold))
++                    .tracking(0.8)
++                    .foregroundStyle(.secondary)
++                EventPickRow(event: event, isSelected: false, isDisabled: false) {
++                    vm.toggleEvent(event)
++                }
++            }
++            EventSelectionCard(
++                events: vm.events,
++                selectedEvents: vm.linkedEventsForSetup,
++                isLoading: vm.isLoadingEvents,
++                error: vm.eventError,
++                onRetry: { Task { await vm.loadEvents() } },
++                onToggle: { vm.toggleEvent($0) },
++                onRemove: { vm.removeSelectedEvent($0) }
++            )
++            if vm.linkedEventCount > 0 {
++                eventPlanCard
++                pickupAndKitCard
++                notesField
++            }
++            if vm.hasInvalidReusedEventSelection {
++                Label("Choose a different event when re-reserving", systemImage: "exclamationmark.triangle.fill")
++                    .font(.footnote)
++                    .foregroundStyle(Color.statusText(.orange))
++            }
++        } else {
++            FormCard { reservationTitleCard }
++        }
++    }
++
++    @ViewBuilder
++    private var whenIsItDuePage: some View {
++        pageHeading("When's it due back?")
++        timesCard
++        pickupAndKitCard
++        notesField
++    }
++
++    private var timesCard: some View {
+         FormCard {
+-            reservationTitleCard
++            HStack(spacing: 8) {
++                Text("Pickup")
++                    .font(.subheadline.weight(.semibold))
++                Text(chipDayTime(vm.startsAt))
++                    .font(.caption.weight(.semibold))
++                    .foregroundStyle(Color.statusText(.purple))
++                    .padding(.horizontal, 8)
++                    .padding(.vertical, 3)
++                    .background(Color.statusBackground(.purple), in: Capsule())
++                Spacer(minLength: 0)
++                Button(showPickupEditor ? "Done" : "Change") { showPickupEditor.toggle() }
++                    .font(.subheadline.weight(.semibold))
++                    .tint(Color.statusText(.purple))
++            }
++            if showPickupEditor {
++                QuarterHourDatePickerRow(
++                    label: "Pickup",
++                    selection: Binding(
++                        get: { vm.startsAt },
++                        set: { vm.adjustStart(to: $0) }
++                    )
++                )
++            }
+             Divider().padding(.leading, 4)
+-            scheduleWindowCard
++            HStack(spacing: 8) {
++                Text("Due back")
++                    .font(.subheadline.weight(.semibold))
++                Text(chipDayTime(vm.endsAt))
++                    .font(.caption.weight(.semibold))
++                    .foregroundStyle(Color.statusText(.purple))
++                    .padding(.horizontal, 8)
++                    .padding(.vertical, 3)
++                    .background(Color.statusBackground(.purple), in: Capsule())
++                Spacer(minLength: 0)
++            }
++            DayTimeChipPicker(
++                selection: Binding(
++                    get: { vm.endsAt },
++                    set: { vm.adjustEnd(to: $0) }
++                ),
++                minimum: vm.startsAt,
++                tint: Color.statusText(.purple)
++            )
++            if vm.endsAt <= vm.startsAt {
++                Label("Return must be after pickup", systemImage: "exclamationmark.circle.fill")
++                    .font(.caption)
++                    .foregroundStyle(Color.statusText(.red))
++            }
++        }
++    }
++
++    /// Event-linked setups take their times from the event, so the plan is one
++    /// glanceable line with a way to change it.
++    private var eventPlanCard: some View {
++        FormCard {
++            HStack(alignment: .top, spacing: 12) {
++                VStack(alignment: .leading, spacing: 6) {
++                    Text("PICKUP AND RETURN")
++                        .font(.caption2.weight(.bold))
++                        .tracking(0.8)
++                        .foregroundStyle(.secondary)
++                    Text("Pickup \(chipDayTime(vm.startsAt))")
++                        .font(.subheadline.weight(.semibold))
++                    Text("Due back \(chipDayTime(vm.endsAt))")
++                        .font(.subheadline.weight(.semibold))
++                }
++                Spacer(minLength: 0)
++                Button("Change") { showTimesSheet = true }
++                    .font(.subheadline.weight(.semibold))
++                    .tint(Color.statusText(.purple))
++            }
++        }
++        .sheet(isPresented: $showTimesSheet) {
++            NavigationStack {
++                ScrollView {
++                    timesCard.padding(Brand.Space.lg)
++                }
++                .background(Color(.systemGroupedBackground))
++                .navigationTitle("Pickup and return")
++                .navigationBarTitleDisplayMode(.inline)
++                .toolbar {
++                    ToolbarItem(placement: .confirmationAction) {
++                        Button("Done") { showTimesSheet = false }
++                    }
++                }
++            }
++            .presentationDetents([.large])
++        }
++    }
++
++    @ViewBuilder
++    private var notesField: some View {
++        if vm.notes.isEmpty && !showNotesField {
++            Button {
++                showNotesField = true
++                Task {
++                    try? await Task.sleep(for: .milliseconds(80))
++                    notesFocused = true
++                }
++            } label: {
++                Label("Add note", systemImage: "square.and.pencil")
++                    .font(.subheadline.weight(.semibold))
++                    .foregroundStyle(Color.statusText(.purple))
++                    .frame(maxWidth: .infinity, alignment: .leading)
++            }
++            .buttonStyle(.plain)
++        } else {
++            FormCard {
++                TextField("Notes (optional)", text: $vm.notes, axis: .vertical)
++                    .lineLimit(3...6)
++                    .font(.body)
++                    .focused($notesFocused)
++            }
+         }
+     }
+ 
+@@ -596,38 +760,6 @@ struct CreateBookingSheet: View {
+         }
+     }
+ 
+-    private var scheduleWindowCard: some View {
+-        VStack(alignment: .leading, spacing: 8) {
+-            BrandSectionHeader("When")
+-            QuarterHourDatePickerRow(
+-                label: "Pickup",
+-                selection: Binding(
+-                    get: { vm.startsAt },
+-                    set: { vm.adjustStart(to: $0) }
+-                )
+-            )
+-            Divider().padding(.leading, 4)
+-            QuarterHourDatePickerRow(
+-                label: "Return",
+-                selection: Binding(
+-                    get: { vm.endsAt },
+-                    set: { vm.adjustEnd(to: $0) }
+-                ),
+-                minimumDate: vm.startsAt
+-            )
+-            if vm.endsAt <= vm.startsAt {
+-                Label("Return must be after pickup", systemImage: "exclamationmark.circle.fill")
+-                    .font(.caption)
+-                    .foregroundStyle(Color.statusText(.red))
+-                    .padding(.top, 2)
+-            }
+-        }
+-    }
+-
+-    private var detailsTransition: AnyTransition {
+-        reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .top))
+-    }
+-
+     private var setupModeBinding: Binding<ReservationSetupMode> {
+         Binding(
+             get: { setupMode },
+@@ -667,8 +799,12 @@ struct CreateBookingSheet: View {
+                         size: 44
+                     )
+                     VStack(alignment: .leading, spacing: 2) {
++                        Text("READY TO RESERVE")
++                            .font(.caption2.weight(.bold))
++                            .tracking(0.8)
++                            .foregroundStyle(Color.statusText(.purple))
+                         Text(reviewDisplayTitle)
+-                            .font(.headline)
++                            .font(.title3.weight(.heavy))
+                             .lineLimit(2)
+                         Text(vm.selectedUser?.name ?? session.currentUser?.name ?? "")
+                             .font(.subheadline)
+@@ -835,8 +971,6 @@ private struct QuarterHourDatePickerRow: View {
+     @Binding var selection: Date
+     var minimumDate: Date? = nil
+ 
+-    private let quarterHours = Array(0..<96)
+-
+     private var dateBinding: Binding<Date> {
+         Binding(
+             get: { selection },
+@@ -856,25 +990,10 @@ private struct QuarterHourDatePickerRow: View {
+         )
+     }
+ 
+-    private var quarterBinding: Binding<Int> {
++    private var timeBinding: Binding<Date> {
+         Binding(
+-            get: {
+-                let components = Calendar.current.dateComponents([.hour, .minute], from: selection)
+-                let minutes = (components.hour ?? 0) * 60 + (components.minute ?? 0)
+-                return min(95, max(0, Int((Double(minutes) / 15).rounded())))
+-            },
+-            set: { quarter in
+-                let calendar = Calendar.current
+-                let day = calendar.dateComponents([.year, .month, .day], from: selection)
+-                var merged = DateComponents()
+-                merged.year = day.year
+-                merged.month = day.month
+-                merged.day = day.day
+-                merged.hour = (quarter * 15) / 60
+-                merged.minute = (quarter * 15) % 60
+-                guard let value = calendar.date(from: merged) else { return }
+-                selection = max(value, minimumDate ?? .distantPast)
+-            }
++            get: { selection },
++            set: { selection = max(QuarterHour.roundedUp($0), minimumDate ?? .distantPast) }
+         )
+     }
+ 
+@@ -911,82 +1030,63 @@ private struct QuarterHourDatePickerRow: View {
+             .fixedSize()
+             .tint(Color.statusText(.purple))
+ 
+-            Picker("\(label) time", selection: quarterBinding) {
+-                ForEach(quarterHours, id: \.self) { quarter in
+-                    Text(timeLabel(for: quarter)).tag(quarter)
+-                }
+-            }
+-            .pickerStyle(.menu)
+-            .fixedSize()
+-            .tint(Color.statusText(.purple))
++            QuarterHourTimePicker(
++                selection: timeBinding,
++                minimumDate: minimumDate,
++                tint: Color.statusText(.purple),
++                accessibilityLabel: "\(label) time, 15-minute increments"
++            )
+ 
+             if !showsLabel {
+                 Spacer(minLength: 0)
+             }
+         }
+     }
+-
+-    private func timeLabel(for quarter: Int) -> String {
+-        let calendar = Calendar.current
+-        let start = calendar.startOfDay(for: .now)
+-        let date = calendar.date(byAdding: .minute, value: quarter * 15, to: start) ?? start
+-        return date.formatted(date: .omitted, time: .shortened)
+-    }
+ }
+ 
+-private struct ReservationStepProgress: View {
+-    let currentStep: Int
+-    var onSelect: (Int) -> Void
++/// Kiosk-style progress: Back on the left, "Step n of 4" on the right, and a
++/// four-segment bar. Step 1 counts as two (what it's for, then when it's due).
++private struct ReservationProgressHeader: View {
++    let step: Int
++    let page: Int
++    let total: Int
++    var onBack: () -> Void
+ 
+-    private let labels = ["Details", "Gear", "Review"]
++    /// Manual setups spend two screens on step 1; event-linked setups spend one.
++    private var position: Int { step == 1 ? page : (total == 3 ? step : step + 1) }
++    private var canGoBack: Bool { step > 1 || (page > 1 && total == 4) }
+ 
+     var body: some View {
+-        HStack(spacing: Brand.Space.sm) {
+-            ForEach(Array(labels.enumerated()), id: \.offset) { index, label in
+-                let step = index + 1
+-                stepControl(step: step, title: label)
+-                if step < labels.count {
+-                    Rectangle()
+-                        .fill(step < currentStep ? Color.statusText(.purple).opacity(0.45) : Color.hairline)
+-                        .frame(height: 1)
+-                        .accessibilityHidden(true)
++        VStack(spacing: 10) {
++            HStack {
++                if canGoBack {
++                    Button(action: onBack) {
++                        Label("Back", systemImage: "chevron.left")
++                            .font(.subheadline.weight(.semibold))
++                    }
++                    .tint(Color.statusText(.purple))
++                }
++                Spacer()
++                Text("STEP \(position) OF \(total)")
++                    .font(.caption2.weight(.bold))
++                    .tracking(0.8)
++                    .foregroundStyle(.secondary)
++            }
++            .frame(minHeight: 24)
++            HStack(spacing: 6) {
++                ForEach(1...total, id: \.self) { index in
++                    Capsule()
++                        .fill(index <= position ? Color.statusText(.purple) : Color.hairline)
++                        .frame(height: 4)
+                 }
+             }
++            .accessibilityHidden(true)
+         }
+         .padding(.horizontal, Brand.Space.md)
+         .padding(.vertical, 10)
+         .background(.bar)
+         .overlay(alignment: .bottom) { Divider() }
+         .accessibilityElement(children: .contain)
+-    }
+-
+-    @ViewBuilder
+-    private func stepControl(step: Int, title: String) -> some View {
+-        if step < currentStep {
+-            Button {
+-                onSelect(step)
+-            } label: {
+-                stepLabel(step: step, title: title)
+-            }
+-            .buttonStyle(.plain)
+-            .accessibilityLabel("\(title), completed")
+-            .accessibilityHint("Goes back to \(title)")
+-        } else {
+-            stepLabel(step: step, title: title)
+-                .accessibilityElement(children: .combine)
+-                .accessibilityLabel(step == currentStep ? "\(title), current step" : "\(title), not started")
+-        }
+-    }
+-
+-    private func stepLabel(step: Int, title: String) -> some View {
+-        HStack(spacing: 6) {
+-            Image(systemName: step < currentStep ? "checkmark.circle.fill" : "\(step).circle.fill")
+-                .foregroundStyle(step <= currentStep ? Color.statusText(.purple) : Color.secondary)
+-            Text(title)
+-                .font(.caption.weight(step == currentStep ? .semibold : .regular))
+-                .foregroundStyle(step == currentStep ? .primary : .secondary)
+-        }
+-        .frame(minHeight: 28)
+-        .contentShape(Rectangle())
++        .accessibilityLabel("Step \(position) of \(total)")
+     }
+ }
+diff --git a/ios/Wisconsin/Views/EventDetailSheet.swift b/ios/Wisconsin/Views/EventDetailSheet.swift
+index 59bc555f..1c8df66f 100644
+--- a/ios/Wisconsin/Views/EventDetailSheet.swift
++++ b/ios/Wisconsin/Views/EventDetailSheet.swift
+@@ -463,6 +463,7 @@ struct EventDetailView: View {
+                         defaultStart: vm.workingEditor?.defaultWindow?.startsAt ?? event.startsAt,
+                         defaultEnd: vm.workingEditor?.defaultWindow?.endsAt ?? event.endsAt,
+                         isAllDay: event.displayAllDay,
++                        existingShifts: vm.displayedShifts,
+                         onAdded: { editor in
+                             acceptWorkingScheduleEditor(editor)
+                         },
+diff --git a/ios/Wisconsin/Views/ExtendBookingSheet.swift b/ios/Wisconsin/Views/ExtendBookingSheet.swift
+index 8d703cb7..150382a3 100644
+--- a/ios/Wisconsin/Views/ExtendBookingSheet.swift
++++ b/ios/Wisconsin/Views/ExtendBookingSheet.swift
+@@ -9,6 +9,7 @@ struct ExtendBookingSheet: View {
+     @State private var isLoading = false
+     @State private var error: String?
+     @State private var showDiscardConfirm = false
++    @State private var nextNeedAt: Date?
+ 
+     init(booking: Booking, onSuccess: @escaping (Booking) -> Void) {
+         self.booking = booking
+@@ -18,58 +19,160 @@ struct ExtendBookingSheet: View {
+ 
+     private var currentEndsAt: Date { booking.endsAt }
+ 
+-    /// Web parity: +1 day / +3 days / +1 week chips on `BookingDetailPage`.
+-    private static let quickPresets: [(label: String, days: Int)] = [
+-        ("+1 day", 1),
+-        ("+3 days", 3),
+-        ("+1 week", 7),
+-    ]
++    private var calendar: Calendar { .current }
++
++    /// Latest end that leaves a 30-minute grace before another booking needs
++    /// the gear, floored to the quarter hour. Same rule as the kiosk.
++    private var latestEndsAt: Date? {
++        guard let nextNeedAt else { return nil }
++        let latest = nextNeedAt.addingTimeInterval(-30 * 60)
++        let step = TimeInterval(QuarterHour.minuteInterval * 60)
++        let floored = floor(latest.timeIntervalSinceReferenceDate / step) * step
++        return Date(timeIntervalSinceReferenceDate: floored)
++    }
++
++    private var exceedsLimit: Bool {
++        guard let latestEndsAt else { return false }
++        return newEndsAt > latestEndsAt
++    }
++
++    /// The day the chips treat as picked: the new end once the user has moved
++    /// it, otherwise the booking's current end day.
++    private var canSubmit: Bool { hasChanges && !exceedsLimit }
+ 
+     private var hasChanges: Bool { newEndsAt > currentEndsAt }
+ 
++    private func dayTime(_ date: Date) -> String {
++        chipDayTime(date)
++    }
++
++    private var dueOverline: String {
++        let relative = RelativeDateTimeFormatter()
++        relative.unitsStyle = .full
++        let text = relative.localizedString(for: currentEndsAt, relativeTo: Date())
++        return currentEndsAt < Date() ? "OVERDUE · \(text.uppercased())" : "DUE \(text.uppercased())"
++    }
++
++    private func neededNextCard(_ needAt: Date) -> some View {
++        HStack(spacing: 12) {
++            Image(systemName: "clock.badge.exclamationmark")
++                .font(.title3)
++                .foregroundStyle(Color.statusText(.orange))
++            VStack(alignment: .leading, spacing: 2) {
++                Text("NEEDED NEXT")
++                    .font(.caption2.weight(.bold))
++                    .tracking(0.8)
++                    .foregroundStyle(.secondary)
++                Text(dayTime(needAt))
++                    .font(.headline)
++            }
++            Spacer(minLength: 0)
++        }
++        .padding(14)
++        .frame(maxWidth: .infinity, alignment: .leading)
++        .background(Color.statusBackground(.orange), in: RoundedRectangle(cornerRadius: 14))
++    }
++
++    private func sectionHeading(_ text: String) -> some View {
++        Text(text)
++            .font(.title3.weight(.heavy))
++            .padding(.top, 4)
++    }
++
+     var body: some View {
+         NavigationStack {
+-            Form {
+-                Section {
+-                    LabeledContent("Current End") {
+-                        Text(currentEndsAt.formatted(date: .abbreviated, time: .shortened))
+-                            .font(.callout.monospacedDigit())
++            ScrollView {
++                VStack(alignment: .leading, spacing: 14) {
++                    VStack(alignment: .leading, spacing: 4) {
++                        Text(dueOverline)
++                            .font(.caption2.weight(.bold))
++                            .tracking(0.8)
++                            .foregroundStyle(currentEndsAt < Date() ? Color.statusText(.red) : Color.statusText(.blue))
++                        Text(booking.title)
++                            .font(.title.weight(.heavy))
++                            .lineLimit(2)
++                        Text("\(booking.requester.name) · ends \(dayTime(currentEndsAt))")
++                            .font(.subheadline)
+                             .foregroundStyle(.secondary)
+                     }
+-                }
+ 
+-                Section("Quick Extend") {
+-                    HStack(spacing: 8) {
+-                        ForEach(Self.quickPresets, id: \.days) { preset in
+-                            Button {
+-                                applyPreset(days: preset.days)
+-                            } label: {
+-                                Text(preset.label)
+-                                    .font(.footnote.weight(.medium))
+-                                    .frame(maxWidth: .infinity)
+-                                    .padding(.vertical, 8)
++                    if let latestEndsAt, latestEndsAt > currentEndsAt {
++                        Text("Can go until \(dayTime(latestEndsAt))")
++                            .font(.title3.weight(.heavy))
++                            .padding(.top, 6)
++                        if let nextNeedAt {
++                            neededNextCard(nextNeedAt)
++                        }
++                    } else if nextNeedAt != nil {
++                        Text("This can't be extended")
++                            .font(.title3.weight(.heavy))
++                            .foregroundStyle(Color.statusText(.red))
++                            .padding(.top, 6)
++                        if let nextNeedAt { neededNextCard(nextNeedAt) }
++                    } else {
++                        Text("Nothing else needs this gear, so pick any time.")
++                            .font(.subheadline)
++                            .foregroundStyle(.secondary)
++                            .padding(.top, 6)
++                    }
++
++                    sectionHeading("Extend until")
++                    DayTimeChipPicker(selection: $newEndsAt, minimum: currentEndsAt, latest: latestEndsAt)
++
++                    if hasChanges {
++                        VStack(alignment: .leading, spacing: 2) {
++                            Text("NEW DUE TIME")
++                                .font(.caption2.weight(.bold))
++                                .tracking(0.8)
++                                .foregroundStyle(.secondary)
++                            Text(dayTime(newEndsAt))
++                                .font(.title2.weight(.heavy))
++                            Text(moreTime)
++                                .font(.footnote)
++                                .foregroundStyle(.secondary)
++                            if exceedsLimit, let latestEndsAt {
++                                Label("Gear is needed again then. Latest is \(dayTime(latestEndsAt)).", systemImage: "exclamationmark.triangle.fill")
++                                    .font(.footnote)
++                                    .foregroundStyle(Color.statusText(.red))
++                                    .padding(.top, 4)
+                             }
+-                            .buttonStyle(.bordered)
+-                            .tint(Color.statusText(.blue))
+-                            .controlSize(.regular)
+-                            .disabled(isLoading)
+-                            .accessibilityLabel(presetAccessibilityLabel(preset))
+                         }
++                        .frame(maxWidth: .infinity, alignment: .leading)
++                        .padding(16)
++                        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
++                        .accessibilityElement(children: .combine)
+                     }
+-                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                 }
+-
+-                Section("New End Date & Time") {
+-                    DatePicker(
+-                        "Ends At",
+-                        selection: $newEndsAt,
+-                        in: currentEndsAt...,
+-                        displayedComponents: [.date, .hourAndMinute]
+-                    )
+-                    .datePickerStyle(.graphical)
+-                    .disabled(isLoading)
++                .padding(.horizontal, 16)
++                .padding(.top, 8)
++                .padding(.bottom, 24)
++                .disabled(isLoading)
++            }
++            .background(Color(.systemGroupedBackground))
++            .safeAreaInset(edge: .bottom) {
++                Button {
++                    Task { await extend() }
++                } label: {
++                    Group {
++                        if isLoading {
++                            ProgressView()
++                        } else {
++                            Text(canSubmit ? "Extend to \(dayTime(newEndsAt))" : "Pick a new time")
++                        }
++                    }
++                    .font(.headline)
++                    .frame(maxWidth: .infinity, minHeight: 56)
+                 }
+-
++                .buttonStyle(.plain)
++                .foregroundStyle(canSubmit ? Color.white : Color.secondary)
++                .background(
++                    canSubmit ? Color.statusText(.blue) : Color(.tertiarySystemFill),
++                    in: RoundedRectangle(cornerRadius: 16)
++                )
++                .disabled(!canSubmit || isLoading)
++                .padding(.horizontal, 16)
++                .padding(.vertical, 10)
++                .background(.bar)
+             }
+             .safeAreaInset(edge: .top) {
+                 if let error {
+@@ -78,6 +181,7 @@ struct ExtendBookingSheet: View {
+                     }
+                 }
+             }
++            .task { nextNeedAt = await APIClient.shared.checkoutReturnInsight(for: booking).nextNeedAt }
+             .navigationTitle("Extend Booking")
+             .navigationBarTitleDisplayMode(.inline)
+             .toolbar {
+@@ -102,7 +206,7 @@ struct ExtendBookingSheet: View {
+                             Text("Extend").fontWeight(.semibold)
+                         }
+                     }
+-                    .disabled(!hasChanges || isLoading)
++                    .disabled(!canSubmit || isLoading)
+                     .accessibilityLabel(isLoading ? "Extending booking" : "Extend booking")
+                 }
+             }
+@@ -120,25 +224,14 @@ struct ExtendBookingSheet: View {
+         }
+     }
+ 
+-    /// Offset from the current picker value if the user has already nudged it,
+-    /// otherwise from the booking's current end. Mirrors web's `handleQuickExtend`.
+-    private func applyPreset(days: Int) {
+-        let base = newEndsAt > currentEndsAt ? newEndsAt : currentEndsAt
+-        if let next = Calendar.current.date(byAdding: .day, value: days, to: base) {
+-            newEndsAt = next
+-        }
+-    }
+-
+-    /// Builds the VoiceOver label for a preset chip including the resulting
+-    /// end date. Computes off the same base as `applyPreset(days:)` so it
+-    /// stays accurate after the user has already nudged.
+-    private func presetAccessibilityLabel(_ preset: (label: String, days: Int)) -> String {
+-        let base = newEndsAt > currentEndsAt ? newEndsAt : currentEndsAt
+-        guard let resulting = Calendar.current.date(byAdding: .day, value: preset.days, to: base) else {
+-            return "Extend by \(preset.label)"
+-        }
+-        let formatted = resulting.formatted(date: .abbreviated, time: .shortened)
+-        return "Extend by \(preset.label.replacingOccurrences(of: "+", with: "")), to \(formatted)"
++    /// "+2 days 3 hours" style gap between the current and new end.
++    private var moreTime: String {
++        let parts = calendar.dateComponents([.day, .hour, .minute], from: currentEndsAt, to: newEndsAt)
++        var out: [String] = []
++        if let d = parts.day, d > 0 { out.append("\(d) day\(d == 1 ? "" : "s")") }
++        if let h = parts.hour, h > 0 { out.append("\(h) hour\(h == 1 ? "" : "s")") }
++        if let m = parts.minute, m > 0, parts.day == 0 { out.append("\(m) min") }
++        return out.isEmpty ? "No extra time" : "+" + out.joined(separator: " ") + " more"
+     }
+ 
+     private func extend() async {
+diff --git a/ios/Wisconsin/Views/NotificationSettingsView.swift b/ios/Wisconsin/Views/NotificationSettingsView.swift
+index 12306a33..d6a4a144 100644
+--- a/ios/Wisconsin/Views/NotificationSettingsView.swift
++++ b/ios/Wisconsin/Views/NotificationSettingsView.swift
+@@ -248,15 +248,23 @@ struct NotificationSettingsView: View {
+ 
+     private var customPauseSheet: some View {
+         NavigationStack {
+-            Form {
+-                DatePicker(
+-                    "Pause until",
+-                    selection: $customPauseUntil,
+-                    in: Date().addingTimeInterval(5 * 60)...Date().addingTimeInterval(30 * 24 * 60 * 60),
+-                    displayedComponents: [.date, .hourAndMinute]
+-                )
+-                .datePickerStyle(.graphical)
++            ScrollView {
++                VStack(alignment: .leading, spacing: 14) {
++                    Text("Pause until")
++                        .font(.title2.weight(.heavy))
++                    Text(chipDayTime(customPauseUntil))
++                        .font(.headline)
++                        .foregroundStyle(Color.statusText(.purple))
++                    DayTimeChipPicker(
++                        selection: $customPauseUntil,
++                        minimum: Date().addingTimeInterval(5 * 60),
++                        latest: Date().addingTimeInterval(30 * 24 * 60 * 60),
++                        tint: Color.statusText(.purple)
++                    )
++                }
++                .padding(16)
+             }
++            .background(Color(.systemGroupedBackground))
+             .navigationTitle("Pause alerts")
+             .navigationBarTitleDisplayMode(.inline)
+             .toolbar {
+@@ -292,6 +300,20 @@ struct NotificationSettingsView: View {
+                 .accessibilityHint("Alerts arrive silently during a set time each week.")
+ 
+                 if quiet.enabled {
++                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
++                        ForEach(Self.quietPresets, id: \.title) { preset in
++                            ChipButton(
++                                title: preset.title,
++                                detail: preset.detail,
++                                isSelected: quiet.start == preset.start && quiet.end == preset.end,
++                                tint: Color.statusText(.purple)
++                            ) {
++                                prefsVM.updateQuietHours { $0.start = preset.start; $0.end = preset.end }
++                                Haptics.selection()
++                            }
++                        }
++                    }
++                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                     quietTimePicker("From", time: quiet.start) { value in
+                         prefsVM.updateQuietHours({ $0.start = value }, debounce: true)
+                     }
+@@ -318,6 +340,12 @@ struct NotificationSettingsView: View {
+         }
+     }
+ 
++    private static let quietPresets: [(title: String, detail: String, start: String, end: String)] = [
++        ("Overnight", "10 PM – 7 AM", "22:00", "07:00"),
++        ("Late night", "11 PM – 8 AM", "23:00", "08:00"),
++        ("Evenings", "6 – 10 PM", "18:00", "22:00"),
++    ]
++
+     private func quietHoursFooter(_ quiet: NotificationQuietHours) -> String {
+         guard quiet.enabled else {
+             return "Silence alerts on a schedule, like overnight. They still arrive in Notification Center."
+diff --git a/ios/Wisconsin/Views/Schedule/AddShiftSheet.swift b/ios/Wisconsin/Views/Schedule/AddShiftSheet.swift
+index f55acea3..0cd25bf5 100644
+--- a/ios/Wisconsin/Views/Schedule/AddShiftSheet.swift
++++ b/ios/Wisconsin/Views/Schedule/AddShiftSheet.swift
+@@ -10,15 +10,18 @@ struct AddShiftSheet: View {
+     /// All-day events carry no call time, so the custom window is not offered.
+     var isAllDay = false
+     let onAdded: (WorkingScheduleEditor) -> Void
++    /// The crew as it stands, so each area chip can show how full it is.
++    var existingShifts: [EventShift] = []
+     /// Reloads the crew after another session changed it and returns the new
+     /// draft version, so a conflicted add retries once.
+     var refreshWorkingVersion: (() async -> Int?)?
+     @State private var workingVersionOverride: Int?
+ 
+     @Environment(\.dismiss) private var dismiss
+-    @State private var area: ShiftAreaOption = .video
+-    @State private var workerType: ShiftWorkerOption = .student
+-    @State private var customizeTimes = false
++    @State private var area: ShiftAreaOption
++    @State private var workerType: ShiftWorkerOption
++    @State private var preset: CallPreset = .event
++    @State private var count = 1
+     @State private var startsAt: Date
+     @State private var endsAt: Date
+     @State private var isSubmitting = false
+@@ -31,9 +34,16 @@ struct AddShiftSheet: View {
+         defaultStart: Date,
+         defaultEnd: Date,
+         isAllDay: Bool = false,
++        existingShifts: [EventShift] = [],
+         onAdded: @escaping (WorkingScheduleEditor) -> Void,
+         refreshWorkingVersion: (() async -> Int?)? = nil
+     ) {
++        self.existingShifts = existingShifts
++        // Last area and worker class used: adding crew is repetitive, so start
++        // where the last person left off.
++        let defaults = UserDefaults.standard
++        _area = State(initialValue: defaults.string(forKey: "addShift.lastArea").flatMap(ShiftAreaOption.init(rawValue:)) ?? .video)
++        _workerType = State(initialValue: defaults.string(forKey: "addShift.lastWorker").flatMap(ShiftWorkerOption.init(rawValue:)) ?? .student)
+         self.shiftGroupId = shiftGroupId
+         self.expectedWorkingVersion = expectedWorkingVersion
+         self.eventTitle = eventTitle
+@@ -46,6 +56,15 @@ struct AddShiftSheet: View {
+         _endsAt = State(initialValue: defaultEnd)
+     }
+ 
++    private var customizeTimes: Bool { preset != .event }
++
++    private func fill(for option: ShiftAreaOption) -> String? {
++        let slots = existingShifts.filter { $0.area == option.rawValue }
++        guard !slots.isEmpty else { return nil }
++        let filled = slots.filter { !$0.assignments.isEmpty }.count
++        return "\(filled)/\(slots.count)"
++    }
++
+     private var hasValidWindow: Bool {
+         workerType == .fullTime || !customizeTimes || endsAt > startsAt
+     }
+@@ -88,14 +107,17 @@ struct AddShiftSheet: View {
+                         } else {
+                             Image(systemName: "plus")
+                         }
+-                        Text("Add \(area.label) Shift")
+-                            .fontWeight(.semibold)
++                        Text(count == 1 ? "Add \(area.label) Shift" : "Add \(count) \(area.label) Shifts")
++                            .font(.headline)
+                     }
+-                    .frame(maxWidth: .infinity)
++                    .foregroundStyle(isSubmitting || hasValidWindow ? Color.white : Color.secondary)
++                    .frame(maxWidth: .infinity, minHeight: 56)
++                    .background(
++                        hasValidWindow ? Color.statusText(.purple) : Color(.tertiarySystemFill),
++                        in: RoundedRectangle(cornerRadius: 16)
++                    )
+                 }
+-                .buttonStyle(.borderedProminent)
+-                .tint(Color.statusText(.purple))
+-                .controlSize(.large)
++                .buttonStyle(.plain)
+                 .disabled(isSubmitting || !hasValidWindow)
+                 .padding(.horizontal, 16)
+                 .padding(.vertical, 10)
+@@ -105,7 +127,7 @@ struct AddShiftSheet: View {
+         }
+         .presentationDetents([.large])
+         .onChange(of: workerType) { _, next in
+-            if next == .fullTime { customizeTimes = false }
++            if next == .fullTime { preset = .event }
+         }
+     }
+ 
+@@ -133,21 +155,16 @@ struct AddShiftSheet: View {
+ 
+             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                 ForEach(ShiftAreaOption.allCases, id: \.self) { option in
+-                    Button {
++                    ChipButton(
++                        title: option.label,
++                        systemImage: option.systemImage,
++                        detail: fill(for: option),
++                        isSelected: area == option,
++                        tint: Color.statusText(.purple)
++                    ) {
+                         withAnimation(.easeInOut(duration: 0.16)) { area = option }
+                         Haptics.selection()
+-                    } label: {
+-                        Label(option.label, systemImage: option.systemImage)
+-                            .font(.subheadline.weight(.semibold))
+-                            .frame(maxWidth: .infinity, minHeight: 44)
+                     }
+-                    .buttonStyle(.bordered)
+-                    .tint(area == option ? Color.statusText(.purple) : .secondary)
+-                    .background(
+-                        area == option ? Color.statusBackground(.purple) : Color.clear,
+-                        in: RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous)
+-                    )
+-                    .accessibilityAddTraits(area == option ? .isSelected : [])
+                 }
+             }
+ 
+@@ -162,6 +179,21 @@ struct AddShiftSheet: View {
+                 }
+                 .pickerStyle(.segmented)
+             }
++
++            Divider()
++
++            HStack {
++                Text("How many")
++                    .font(.subheadline.weight(.semibold))
++                Spacer()
++                ReservationQuantityStepper(
++                    value: count,
++                    range: 1...6,
++                    label: "Number of slots",
++                    onIncrement: { count = min(6, count + 1) },
++                    onDecrement: { count = max(1, count - 1) }
++                )
++            }
+         }
+         .padding(16)
+         .background(Color.cardSurface, in: RoundedRectangle(cornerRadius: Brand.Radius.lg, style: .continuous))
+@@ -169,22 +201,28 @@ struct AddShiftSheet: View {
+ 
+     private var scheduleCard: some View {
+         VStack(alignment: .leading, spacing: 14) {
+-            HStack {
+-                VStack(alignment: .leading, spacing: 2) {
+-                    Text("Call Window")
+-                        .font(.headline)
+-                    Text(customizeTimes ? "Custom for this shift" : "Uses the configured call time")
+-                        .font(.caption)
+-                        .foregroundStyle(.secondary)
++            VStack(alignment: .leading, spacing: 2) {
++                Text("Call Window")
++                    .font(.headline)
++                Text(preset == .event ? "Uses the configured call time" : "Custom for this shift")
++                    .font(.caption)
++                    .foregroundStyle(.secondary)
++            }
++
++            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
++                ForEach(CallPreset.allCases, id: \.self) { option in
++                    ChipButton(
++                        title: option.title,
++                        isSelected: preset == option,
++                        tint: Color.statusText(.purple)
++                    ) {
++                        preset = option
++                        Haptics.selection()
++                    }
+                 }
+-                Spacer()
+-                Toggle("Custom call window", isOn: $customizeTimes)
+-                    .labelsHidden()
+-                    .tint(Color.statusText(.purple))
+-                    .accessibilityLabel("Custom call window")
+             }
+ 
+-            if customizeTimes {
++            if preset == .custom {
+                 Divider()
+                 ShiftDateTimeRow(label: "Call", systemImage: "arrow.right", date: $startsAt)
+                 Divider()
+@@ -195,6 +233,13 @@ struct AddShiftSheet: View {
+                         .font(.caption)
+                         .foregroundStyle(Color.statusText(.red))
+                 }
++            } else if let lead = preset.leadMinutes {
++                Label(
++                    "\(shortDate(defaultStart)) · \(roundedToQuarterHour(defaultStart.addingTimeInterval(-Double(lead) * 60)).formatted(date: .omitted, time: .shortened)) to \(defaultEnd.formatted(date: .omitted, time: .shortened))",
++                    systemImage: "clock"
++                )
++                .font(.subheadline)
++                .foregroundStyle(.secondary)
+             } else {
+                 Label(defaultWindowText, systemImage: defaultsToAllDayWindow ? "calendar" : "clock")
+                     .font(.subheadline)
+@@ -203,8 +248,11 @@ struct AddShiftSheet: View {
+         }
+         .padding(16)
+         .background(Color.cardSurface, in: RoundedRectangle(cornerRadius: Brand.Radius.lg, style: .continuous))
+-        .onChange(of: customizeTimes) { _, isCustom in
+-            if isCustom {
++        .onChange(of: preset) { _, next in
++            if let lead = next.leadMinutes {
++                startsAt = roundedToQuarterHour(defaultStart.addingTimeInterval(-Double(lead) * 60))
++                endsAt = roundedToQuarterHour(defaultEnd)
++            } else if next == .custom, startsAt == defaultStart {
+                 startsAt = roundedToQuarterHour(defaultStart)
+                 endsAt = roundedToQuarterHour(defaultEnd)
+             }
+@@ -254,10 +302,14 @@ struct AddShiftSheet: View {
+         defer { isSubmitting = false }
+         var version = workingVersionOverride ?? expectedWorkingVersion
+         var canRetryConflict = refreshWorkingVersion != nil
+-        do {
++        var lastEditor: WorkingScheduleEditor?
++        var added = 0
++
++        /// One slot, retrying once if another session moved the crew version.
++        func addOne() async throws -> WorkingScheduleEditor {
+             while true {
+                 do {
+-                    let editor = try await APIClient.shared.addWorkingScheduleSlot(
++                    return try await APIClient.shared.addWorkingScheduleSlot(
+                         shiftGroupId: shiftGroupId,
+                         expectedVersion: version,
+                         area: area.rawValue,
+@@ -265,10 +317,6 @@ struct AddShiftSheet: View {
+                         callStartsAt: workerType == .student && customizeTimes ? startsAt : nil,
+                         callEndsAt: workerType == .student && customizeTimes ? endsAt : nil
+                     )
+-                    Haptics.success()
+-                    onAdded(editor)
+-                    dismiss()
+-                    return
+                 } catch APIError.conflict {
+                     // Another session edited the crew: retry once against
+                     // the new version, then surface a second conflict.
+@@ -279,8 +327,27 @@ struct AddShiftSheet: View {
+                     workingVersionOverride = refreshed
+                 }
+             }
++        }
++
++        do {
++            for _ in 0..<count {
++                let editor = try await addOne()
++                lastEditor = editor
++                version = editor.workingVersion
++                added += 1
++            }
++            UserDefaults.standard.set(area.rawValue, forKey: "addShift.lastArea")
++            UserDefaults.standard.set(workerType.rawValue, forKey: "addShift.lastWorker")
++            Haptics.success()
++            if let lastEditor { onAdded(lastEditor) }
++            dismiss()
+         } catch {
+-            self.error = error.localizedDescription
++            // Slots already added stay added: hand the crew back so the screen
++            // shows them, and say how far this got.
++            if let lastEditor { onAdded(lastEditor) }
++            self.error = added > 0
++                ? "Added \(added) of \(count). \(error.localizedDescription)"
++                : error.localizedDescription
+             Haptics.warning()
+         }
+     }
+@@ -317,14 +384,34 @@ struct AddShiftSheet: View {
+     }
+ }
+ 
++enum CallPreset: CaseIterable {
++    case event, before30, before60, before120, custom
++
++    var title: String {
++        switch self {
++        case .event: "Event time"
++        case .before30: "30 min before"
++        case .before60: "1 hr before"
++        case .before120: "2 hr before"
++        case .custom: "Custom"
++        }
++    }
++
++    var leadMinutes: Int? {
++        switch self {
++        case .before30: 30
++        case .before60: 60
++        case .before120: 120
++        default: nil
++        }
++    }
++}
++
+ struct ShiftDateTimeRow: View {
+     let label: String
+     let systemImage: String
+     @Binding var date: Date
+ 
+-    private let hours = Array(0..<24)
+-    private let minutes = [0, 15, 30, 45]
+-
+     var body: some View {
+         HStack(spacing: 10) {
+             Image(systemName: systemImage)
+@@ -333,57 +420,14 @@ struct ShiftDateTimeRow: View {
+                 .accessibilityHidden(true)
+             Text(label)
+                 .font(.subheadline.weight(.semibold))
+-            Spacer()
+-            DatePicker("\(label) date", selection: $date, displayedComponents: .date)
+-                .labelsHidden()
+-            HStack(spacing: 4) {
+-                Picker("\(label) hour", selection: hourSelection) {
+-                    ForEach(hours, id: \.self) { hour in
+-                        Text(timeLabel(hour: hour, minute: minuteSelection.wrappedValue)).tag(hour)
+-                    }
+-                }
+-                .pickerStyle(.menu)
+-                .fixedSize()
+-
+-                Picker("\(label) minute", selection: minuteSelection) {
+-                    ForEach(minutes, id: \.self) { minute in
+-                        Text(timeLabel(hour: hourSelection.wrappedValue, minute: minute)).tag(minute)
+-                    }
+-                }
+-                .pickerStyle(.menu)
+-                .fixedSize()
+-            }
+-            .tint(Color.statusText(.purple))
++            Spacer(minLength: 8)
++            QuarterHourDateTimeControls(
++                label: label,
++                selection: $date,
++                tint: Color.statusText(.purple)
++            )
+         }
+     }
+-
+-    private var hourSelection: Binding<Int> {
+-        Binding(
+-            get: { Calendar.current.component(.hour, from: date) },
+-            set: { updateTime(hour: $0, minute: Calendar.current.component(.minute, from: date)) }
+-        )
+-    }
+-
+-    private var minuteSelection: Binding<Int> {
+-        Binding(
+-            get: {
+-                let minute = Calendar.current.component(.minute, from: date)
+-                return minutes.min(by: { abs($0 - minute) < abs($1 - minute) }) ?? 0
+-            },
+-            set: { updateTime(hour: Calendar.current.component(.hour, from: date), minute: $0) }
+-        )
+-    }
+-
+-    private func updateTime(hour: Int, minute: Int) {
+-        let calendar = Calendar.current
+-        date = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: date) ?? date
+-    }
+-
+-    private func timeLabel(hour: Int, minute: Int) -> String {
+-        let calendar = Calendar.current
+-        let value = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: date) ?? date
+-        return value.formatted(date: .omitted, time: .shortened)
+-    }
+ }
+ 
+ enum ShiftAreaOption: String, CaseIterable {
+diff --git a/tests/ios-booking-actions-edit-reservation-setup.test.ts b/tests/ios-booking-actions-edit-reservation-setup.test.ts
+index f66c10e4..e5cac8eb 100644
+--- a/tests/ios-booking-actions-edit-reservation-setup.test.ts
++++ b/tests/ios-booking-actions-edit-reservation-setup.test.ts
+@@ -51,7 +51,8 @@ describe("iOS focused booking edit and transfer", () => {
+       detail.indexOf("struct TransferBookingOwnerSheet"),
+     );
+     expect(editor).toContain('BrandSectionHeader("Booking Name")');
+-    expect(editor).toContain('DatePicker(\n                                    "Return Time"');
++    expect(editor).toContain('Text("Due back")');
++    expect(editor).toContain("DayTimeChipPicker(");
+     expect(editor).toContain("APIClient.shared.bookingAvailability");
+     expect(editor).toContain('Label("This return time works"');
+     expect(editor).toContain('Text("Transfer Ownership")');
+@@ -75,13 +76,13 @@ describe("iOS focused booking edit and transfer", () => {
+ 
+ describe("iOS reservation setup refresh", () => {
+   it("uses a visible three-step progression and bottom primary action", () => {
+-    expect(create).toContain("ReservationStepProgress(currentStep: step, onSelect: goToStep)");
+-    expect(create).toContain('private let labels = ["Details", "Gear", "Review"]');
++    expect(create).toContain("ReservationProgressHeader(step: step, page: detailsPage, total: setupMode == .event ? 3 : 4, onBack: goBack)");
++    expect(create).toContain('Text("STEP \\(position) OF \\(total)")');
+     expect(create).toContain(".safeAreaInset(edge: .bottom, spacing: 0)");
+-    expect(create).toContain('Label("Choose Gear", systemImage: "shippingbox")');
+-    expect(create).toContain('BrandSectionHeader("Set Schedule From")');
++    expect(create).toContain('Text(onFirstPage ? "Continue" : "Choose Gear")');
++    expect(create).toContain('pageHeading("What\'s this for?")');
+     expect(create).toContain('BrandSectionHeader("Pickup Location")');
+-    expect(create).toContain('BrandSectionHeader("When")');
++    expect(create).toContain('pageHeading("When\'s it due back?")');
+     expect(create).toContain('Text("Create Reservation")');
+     expect(create).toContain("UserAvatarView(");
+     expect(create).toContain(".tint(Color.statusText(.purple))");
+diff --git a/tests/ios-create-booking-picker-parity.test.ts b/tests/ios-create-booking-picker-parity.test.ts
+index ff04fd92..d8b27372 100644
+--- a/tests/ios-create-booking-picker-parity.test.ts
++++ b/tests/ios-create-booking-picker-parity.test.ts
+@@ -236,48 +236,43 @@ describe("iOS create booking picker parity", () => {
+     expect(createSheet).not.toContain("sportLabel(event.sportCode)");
+   });
+ 
+-  it("keeps reservation details compact and uses deliberate schedule controls", () => {
++  it("splits reservation details into what-it's-for and when-it's-due pages", () => {
+     const sheet = source("ios/Wisconsin/Views/CreateBookingSheet.swift");
+     const viewModel = source("ios/Wisconsin/Views/CreateBooking/CreateBookingViewModel.swift");
+     const details = sliceBetween(sheet, "private var detailsForm: some View", "private var setupModeBinding");
+ 
+-    expect(details).toContain('Text("Reservation Title")');
+-    expect(details).toContain('BrandSectionHeader("Set Schedule From")');
+-    expect(details).toContain('BrandSectionHeader("Pickup Location")');
+-    expect(details).toContain("vm.primaryPickupLocations");
++    expect(details).toContain("whatIsItForPage");
++    expect(details).toContain("whenIsItDuePage");
++    expect(details).toContain('pageHeading("What\'s this for?")');
++    expect(details).toContain('pageHeading("When\'s it due back?")');
++    expect(details).toContain('ChipButton(title: "An event"');
++    expect(details).toContain('ChipButton(title: "Something else"');
++    expect(details).toContain("reservationTitleCard");
++    expect(details).toContain("DayTimeChipPicker(");
+     expect(details).toContain("QuarterHourDatePickerRow(");
+-    expect(details).toContain("reservationPlanCard");
+     expect(details).toContain("pickupAndKitCard");
+-    expect(details).toContain("showsPlanDetails");
++    expect(details).toContain("vm.primaryPickupLocations");
+     expect(sheet).toContain("continueBlockedReason");
+-    expect(sheet).toContain("func goToStep(_ value: Int)");
+-    expect(sheet).not.toContain('Label("Back", systemImage: "chevron.left")');
++    expect(sheet).toContain("page1BlockedReason");
++    expect(sheet).toContain("private func goBack()");
++    expect(sheet).toContain("private struct ReservationProgressHeader");
++    expect(sheet).not.toContain("ReservationStepProgress");
++    expect(sheet).not.toContain("UIViewRepresentable");
+     const scheduleRow = sliceBetween(
+       sheet,
+       "private struct QuarterHourDatePickerRow",
+-      "private struct ReservationStepProgress",
++      "private struct ReservationProgressHeader",
+     );
+-    expect(scheduleRow).toContain("private let quarterHours = Array(0..<96)");
++    expect(scheduleRow).toContain("QuarterHourTimePicker(");
++    expect(scheduleRow).not.toContain("Array(0..<96)");
+     expect(scheduleRow).toContain('DatePicker(\n                "\\(label) date"');
+-    expect(scheduleRow).toContain('Picker("\\(label) time", selection: quarterBinding)');
+     expect(scheduleRow).toContain(".lineLimit(1)");
+     expect(scheduleRow).toContain(".fixedSize(horizontal: true, vertical: false)");
+-    expect(scheduleRow).toContain(".tint(Color.statusText(.purple))");
+     expect(scheduleRow).toContain("ViewThatFits(in: .horizontal)");
+-    expect(scheduleRow).not.toContain("in: (minimumDate ?? .distantPast)...");
+-    expect(scheduleRow).not.toContain('Picker("\\(label) hour"');
+-    expect(scheduleRow).not.toContain('Picker("\\(label) minute"');
+-    expect(sheet).not.toContain("UIViewRepresentable");
+-    expect(details).not.toContain("BookingStepHeader(");
+     expect(details).not.toContain('label: "For"');
+     expect(sheet).not.toContain("BookingDurationPreset");
+     expect(viewModel).toContain('private static let reservationCategories = ["Cameras", "Lenses", "Batteries", "Other"]');
+-    expect(details.indexOf('BrandSectionHeader("Set Schedule From")')).toBeLessThan(
+-      details.indexOf("reservationTitleCard"),
+-    );
+-    expect(details).toContain("usesFormCard: false");
+     expect(sheet).toContain("setupMode == .manual || vm.linkedEventCount > 0");
+-    expect(details).toContain("scheduleWindowCard");
+     expect(viewModel).toContain("private let eventPickupLeadTime: TimeInterval = 60 * 60");
+     expect(viewModel).toContain("private let eventReturnBuffer: TimeInterval = 2 * 60 * 60");
+     expect(viewModel).toContain("startsAt = first.startsAt.addingTimeInterval(-eventPickupLeadTime)");
+@@ -305,12 +300,12 @@ describe("iOS create booking picker parity", () => {
+     expect(picker).toContain("activeRecommendations.map(\\.reminderKey)");
+     expect(picker).toContain("DragGesture(minimumDistance: 18)");
+     expect(picker).toContain('vm.browseCategoryFilter = "Batteries"');
+-    expect(picker).toContain("guard !vm.hasSelectedPower, let recommendation = vm.batteryRecommendations.first else");
++    expect(picker).toContain("guard !vm.hasSelectedPower,");
++    expect(picker).toContain("acknowledgedRecommendationIDs.contains($0.reminderKey)");
+     expect(picker).toContain("onReview()\n            return");
+     expect(picker).toContain(".safeAreaInset(edge: .bottom");
+-    expect(picker.indexOf(".safeAreaInset(edge: .bottom")).toBeLessThan(
+-      picker.indexOf(".toolbar { gearBottomToolbar }"),
+-    );
++    expect(picker).toContain("gearActionBar(needsPower: needsPowerNudge)");
++    expect(picker).not.toContain(".toolbar { gearBottomToolbar }");
+     expect(createSheet).toContain("private var selectedAssetOrder: [String] = []");
+     expect(createSheet).toContain(".sorted { $0.0 < $1.0 }");
+     const recommendationCard = sliceBetween(
+@@ -436,11 +431,10 @@ describe("iOS create booking picker parity", () => {
+     const picker = source("ios/Wisconsin/Views/CreateBooking/CreateBookingEquipmentPicker.swift");
+     const sheet = source("ios/Wisconsin/Views/CreateBookingSheet.swift");
+ 
+-    expect(picker).toContain("ToolbarItem(placement: .bottomBar)");
+-    expect(picker).toContain('Label("Selected", systemImage: "shippingbox.fill")');
+-    expect(picker).toContain(".badge(vm.selectedEquipmentCount)");
+-    expect(picker).toContain(".tint(Color.statusText(.purple))");
+-    expect(picker).toContain('(vm.selectedConflictCount == 0 ? "Review" : "Resolve Conflicts")');
++    expect(picker).toContain("private func gearActionBar(needsPower: Bool)");
++    expect(picker).toContain('Label("\\(vm.selectedEquipmentCount)", systemImage: "shippingbox.fill")');
++    expect(picker).toContain('if vm.selectedConflictCount > 0 { return "Resolve Conflicts" }');
++    expect(picker).toContain('if needsPower { return "Add a Battery" }');
+     expect(picker).toContain("vm.selectedLocationMismatchCount > 0");
+     expect(sheet).toContain('reviewSectionHeader(title: "Schedule", editStep: 1)');
+     expect(sheet).toContain('reviewSectionHeader(title: "Gear", count: vm.selectedEquipmentCount, editStep: 2)');
+@@ -504,7 +498,7 @@ describe("iOS create booking picker parity", () => {
+     expect(picker).toContain(".disabled((isConflicted && !isSelected) || (!atPickup && !isSelected))");
+     expect(rows).toContain('return "exclamationmark.triangle.fill"');
+     expect(rows).toContain("if isConflicted { return Color.statusText(.red) }");
+-    expect(rows).toContain("return Color(.systemGray2)");
++    expect(rows).toContain("return Color.statusText(.purple).opacity(0.55)");
+     expect(rows).toContain("var conflictMessage: String?");
+     expect(rows).toContain('systemImage: "clock.arrow.circlepath"');
+     expect(rows).toContain("turnaroundIsCritical ? .red : .orange");
+diff --git a/tests/ios-kiosk-checkout-details-polish.test.ts b/tests/ios-kiosk-checkout-details-polish.test.ts
+index 9d2bb22c..2f2ad9e6 100644
+--- a/tests/ios-kiosk-checkout-details-polish.test.ts
++++ b/tests/ios-kiosk-checkout-details-polish.test.ts
+@@ -69,10 +69,14 @@ describe("iOS kiosk checkout details polish", () => {
+     const components = source("ios/Wisconsin/Kiosk/KioskComponents.swift");
+     const detail = source("ios/Wisconsin/Kiosk/KioskCheckoutDetailSheet.swift");
+ 
+-    expect(components).toContain("enum KioskQuarterHour");
+-    expect(components).toContain("static let minuteInterval = 15");
+-    expect(components).toContain("picker.minuteInterval = KioskQuarterHour.minuteInterval");
+-    expect(components).toContain("struct KioskQuarterHourTimePicker: UIViewRepresentable");
++    const shared = source("ios/Wisconsin/Shared/QuarterHourTimePicker.swift");
++
++    expect(shared).toContain("enum QuarterHour");
++    expect(shared).toContain("static let minuteInterval = 15");
++    expect(shared).toContain("picker.minuteInterval = QuarterHour.minuteInterval");
++    expect(shared).toContain("struct QuarterHourTimePicker: UIViewRepresentable");
++    expect(components).toContain("typealias KioskQuarterHour = QuarterHour");
++    expect(components).toContain("struct KioskQuarterHourTimePicker: View");
+     expect(detail).toContain("KioskQuarterHourTimePicker(");
+     expect(detail).toContain("selection: clampedEditEndsAt");
+     expect(detail).toContain("displayedComponents: .date");
+diff --git a/tests/ios-native-control-cleanup.test.ts b/tests/ios-native-control-cleanup.test.ts
+index 748abd48..c0e57643 100644
+--- a/tests/ios-native-control-cleanup.test.ts
++++ b/tests/ios-native-control-cleanup.test.ts
+@@ -62,7 +62,7 @@ describe("iOS native control cleanup", () => {
+     expect(picker).toContain("placement: .navigationBarDrawer(displayMode: .always)");
+     expect(picker).toContain('prompt: "Search all equipment"');
+     expect(picker).not.toContain(".searchFocused($searchFocused)");
+-    expect(picker).toContain("ToolbarItem(placement: .bottomBar)");
++    expect(picker).toContain("private func gearActionBar(needsPower: Bool)");
+     expect(picker).toContain(".refreshable");
+     expect(picker).not.toContain(".toolbar(removing: .search)");
+     expect(picker).not.toContain("equipmentSearchField");
+diff --git a/tests/ios-schedule-staff-authoring-redesign.test.ts b/tests/ios-schedule-staff-authoring-redesign.test.ts
+index 323fd242..00b8f792 100644
+--- a/tests/ios-schedule-staff-authoring-redesign.test.ts
++++ b/tests/ios-schedule-staff-authoring-redesign.test.ts
+@@ -9,10 +9,13 @@ describe("native Schedule staff authoring redesign", () => {
+     expect(view).toContain("Text(\"Open Slot\")");
+     expect(view).toContain("LazyVGrid");
+     expect(view).toContain("Text(\"Worker Class\")");
+-    expect(view).toContain("Toggle(\"Custom call window\"");
++    expect(view).toContain("enum CallPreset");
++    expect(view).toContain('title: option.title');
++    expect(view).toContain("existingShifts");
++    expect(view).toContain('Text("How many")');
+     expect(view).toContain("roundedToQuarterHour");
+     expect(view).toContain("ShiftDateTimeRow");
+-    expect(view).toContain("Text(\"Add \\(area.label) Shift\")");
++    expect(view).toContain('count == 1 ? "Add \\(area.label) Shift"');
+     expect(view).toContain("guard !isSubmitting, hasValidWindow else { return }");
+     expect(view).toContain("Label(\"End time must be after call time.\"");
+   });
+diff --git a/tests/student-field-contracts.test.ts b/tests/student-field-contracts.test.ts
+index dfd5f3ac..6dc1e30b 100644
+--- a/tests/student-field-contracts.test.ts
++++ b/tests/student-field-contracts.test.ts
+@@ -322,7 +322,8 @@ describe("student field mobile contracts", () => {
+     expect(editor).toContain(".navigationTitle(\"Edit Booking\")");
+     expect(editor).toContain("Gear and pickup details stay read-only on your phone.");
+     expect(editor).toContain('BrandSectionHeader("Booking Name")');
+-    expect(editor).toContain('DatePicker(\n                                    "Return Time"');
++    expect(editor).toContain('Text("Due back")');
++    expect(editor).toContain("DayTimeChipPicker(");
+     expect(editor).toContain("APIClient.shared.bookingAvailability");
+     expect(editor).not.toContain("OptionPickerView(");
+     expect(editor).not.toContain("TextEditor(");
+diff --git a/ios/Wisconsin/Shared/DayTimeChipPicker.swift b/ios/Wisconsin/Shared/DayTimeChipPicker.swift
+new file mode 100644
+index 00000000..2a17dfcb
+--- /dev/null
++++ b/ios/Wisconsin/Shared/DayTimeChipPicker.swift
+@@ -0,0 +1,171 @@
++import SwiftUI
++
++func chipDayTitle(_ day: Date, calendar: Calendar = .current) -> String {
++    if calendar.isDateInToday(day) { return "Today" }
++    if calendar.isDateInTomorrow(day) { return "Tomorrow" }
++    return day.formatted(.dateTime.weekday(.abbreviated))
++}
++
++/// "Today 8:15 PM", the one phrasing every date chip surface uses.
++func chipDayTime(_ date: Date, calendar: Calendar = .current) -> String {
++    "\(chipDayTitle(date, calendar: calendar)) \(date.formatted(.dateTime.hour().minute()))"
++}
++
++/// Single-tap day or time choice. A picked chip is solid, like the kiosk's.
++struct ChipButton: View {
++    let title: String
++    var systemImage: String? = nil
++    var detail: String? = nil
++    let isSelected: Bool
++    var tint: Color = Color.statusText(.blue)
++    let action: () -> Void
++
++    var body: some View {
++        Button(action: action) {
++            VStack(spacing: 1) {
++                if let systemImage {
++                    Label(title, systemImage: systemImage).font(.subheadline.weight(.semibold))
++                } else {
++                    Text(title).font(.subheadline.weight(.semibold))
++                }
++                if let detail {
++                    Text(detail).font(.caption2).opacity(0.75)
++                }
++            }
++            .foregroundStyle(isSelected ? Color.white : Color.primary)
++            .frame(maxWidth: .infinity, minHeight: 48)
++            .background(
++                isSelected ? tint : Color(.tertiarySystemFill),
++                in: RoundedRectangle(cornerRadius: 12)
++            )
++            .contentShape(RoundedRectangle(cornerRadius: 12))
++        }
++        .buttonStyle(.plain)
++        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
++    }
++}
++
++/// The kiosk's return-time picker for the iPhone, kept to one decision at a
++/// time: Today, Tomorrow or another date; then three suggested times or the
++/// quarter-hour wheel. A Latest chip appears when something else needs the gear.
++/// Nothing earlier than `minimum` or later than `latest` is offered.
++struct DayTimeChipPicker: View {
++    @Binding var selection: Date
++    let minimum: Date
++    var latest: Date? = nil
++    var tint: Color = Color.statusText(.blue)
++
++    private static let timeChoices: [(hour: Int, minute: Int)] = [
++        (9, 0), (12, 0), (15, 0), (17, 0), (20, 0), (22, 0),
++    ]
++
++    private var calendar: Calendar { .current }
++    private var selectedDay: Date { calendar.startOfDay(for: selection) }
++    private var today: Date { calendar.startOfDay(for: Date()) }
++    private var tomorrow: Date { calendar.date(byAdding: .day, value: 1, to: today) ?? today }
++    private var isOtherDay: Bool { selectedDay != today && selectedDay != tomorrow }
++
++    private func isAllowed(day: Date) -> Bool {
++        day >= calendar.startOfDay(for: minimum) && (latest.map { day <= $0 } ?? true)
++    }
++
++    private var suggestedTimes: [Date] {
++        let valid = Self.timeChoices.compactMap {
++            calendar.date(bySettingHour: $0.hour, minute: $0.minute, second: 0, of: selectedDay)
++        }
++        .filter { time in time > max(minimum, Date()) && (latest.map { time <= $0 } ?? true) }
++        var picks = Array(valid.prefix(3))
++        let selectionIsValid = selection > minimum && calendar.isDate(selection, inSameDayAs: selectedDay)
++            && (latest.map { selection <= $0 } ?? true)
++        if selectionIsValid, !picks.contains(selection) {
++            if picks.count == 3 { picks.removeLast() }
++            picks.append(selection)
++            picks.sort()
++        }
++        return picks
++    }
++
++    var body: some View {
++        VStack(alignment: .leading, spacing: 8) {
++            HStack(spacing: 8) {
++                dayChip("Today", day: today)
++                dayChip("Tomorrow", day: tomorrow)
++                otherDateChip
++            }
++
++            if let latest, latest > minimum {
++                ChipButton(title: "Latest: \(chipDayTime(latest))", isSelected: selection == latest, tint: tint) {
++                    selection = latest
++                }
++            }
++
++            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 2), spacing: 8) {
++                ForEach(suggestedTimes, id: \.self) { time in
++                    ChipButton(
++                        title: time.formatted(.dateTime.hour().minute()),
++                        isSelected: selection == time,
++                        tint: tint
++                    ) { selection = time }
++                }
++                wheelChip
++            }
++        }
++    }
++
++    @ViewBuilder
++    private func dayChip(_ title: String, day: Date) -> some View {
++        ChipButton(
++            title: title,
++            isSelected: selectedDay == day,
++            tint: tint
++        ) { pickDay(day) }
++        .disabled(!isAllowed(day: day))
++        .opacity(isAllowed(day: day) ? 1 : 0.4)
++    }
++
++    /// The compact `DatePicker` always draws its own date text, so when this
++    /// chip isn't the active choice the picker is made near-invisible (still
++    /// tappable) and an "Other date" label sits in its place.
++    private var otherDateChip: some View {
++        ZStack {
++            RoundedRectangle(cornerRadius: 12)
++                .fill(isOtherDay ? tint : Color(.tertiarySystemFill))
++            if !isOtherDay {
++                Text("Other date")
++                    .font(.subheadline.weight(.semibold))
++                    .foregroundStyle(.primary)
++                    .allowsHitTesting(false)
++            }
++            DatePicker(
++                "Date",
++                selection: Binding(get: { selection }, set: { pickDay($0) }),
++                in: calendar.startOfDay(for: max(minimum, Date()))...,
++                displayedComponents: .date
++            )
++            .labelsHidden()
++            .tint(isOtherDay ? .white : tint)
++            .colorScheme(isOtherDay ? .dark : .light)
++            .opacity(isOtherDay ? 1 : 0.015)
++        }
++        .frame(maxWidth: .infinity, minHeight: 48)
++    }
++
++    private var wheelChip: some View {
++        HStack(spacing: 6) {
++            Image(systemName: "clock")
++                .font(.caption.weight(.semibold))
++                .foregroundStyle(.secondary)
++            QuarterHourTimePicker(selection: $selection, minimumDate: minimum, tint: tint,
++                                  accessibilityLabel: "Custom time, 15-minute increments")
++        }
++        .frame(maxWidth: .infinity, minHeight: 48)
++        .background(Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 12))
++    }
++
++    /// Moving the day keeps the time of day, and never lands at or before `minimum`.
++    private func pickDay(_ day: Date) {
++        let time = calendar.dateComponents([.hour, .minute], from: selection)
++        guard let moved = calendar.date(bySettingHour: time.hour ?? 0, minute: time.minute ?? 0, second: 0, of: calendar.startOfDay(for: day)) else { return }
++        selection = max(moved, QuarterHour.roundedUp(minimum.addingTimeInterval(60)))
++    }
++}
+diff --git a/ios/Wisconsin/Shared/QuarterHourTimePicker.swift b/ios/Wisconsin/Shared/QuarterHourTimePicker.swift
+new file mode 100644
+index 00000000..078245ce
+--- /dev/null
++++ b/ios/Wisconsin/Shared/QuarterHourTimePicker.swift
+@@ -0,0 +1,129 @@
++import SwiftUI
++import UIKit
++
++/// Custody times are chosen in quarter-hour steps, and generated suggestions
++/// always round forward so a smart default never promises an earlier return
++/// than the source event or safety minimum. Shared by the kiosk and the
++/// iPhone app so both agree on the grid.
++enum QuarterHour {
++    static let minuteInterval = 15
++    private static let secondsPerInterval = TimeInterval(minuteInterval * 60)
++
++    static func roundedUp(_ date: Date) -> Date {
++        let intervals = date.timeIntervalSinceReferenceDate / secondsPerInterval
++        return Date(timeIntervalSinceReferenceDate: ceil(intervals) * secondsPerInterval)
++    }
++
++    static func clamped(_ date: Date, minimum: Date) -> Date {
++        roundedUp(max(date, minimum))
++    }
++}
++
++/// Native compact time control with a real 15-minute wheel interval. SwiftUI's
++/// `DatePicker` does not expose `UIDatePicker.minuteInterval`, which previously
++/// made staff scroll through minute-by-minute values for a custody timestamp.
++struct QuarterHourTimePicker: UIViewRepresentable {
++    @Binding var selection: Date
++    var minimumDate: Date?
++    var tint: Color?
++    var accessibilityLabel = "Time, 15-minute increments"
++
++    func makeUIView(context: Context) -> UIDatePicker {
++        let picker = UIDatePicker()
++        picker.datePickerMode = .time
++        picker.preferredDatePickerStyle = .compact
++        picker.minuteInterval = QuarterHour.minuteInterval
++        picker.addTarget(context.coordinator, action: #selector(Coordinator.valueChanged(_:)), for: .valueChanged)
++        return picker
++    }
++
++    func updateUIView(_ picker: UIDatePicker, context: Context) {
++        context.coordinator.parent = self
++        picker.minimumDate = minimumDate
++        picker.accessibilityLabel = accessibilityLabel
++        if let tint { picker.tintColor = UIColor(tint) }
++        if abs(picker.date.timeIntervalSince(selection)) >= 1 {
++            picker.setDate(selection, animated: false)
++        }
++    }
++
++    /// The compact picker's own size. Without it SwiftUI treats the UIKit
++    /// view as flexible, and outside a ScrollView the chip floated in the
++    /// middle of a stretched row.
++    func sizeThatFits(_ proposal: ProposedViewSize, uiView: UIDatePicker, context: Context) -> CGSize? {
++        let fitted = uiView.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize)
++        return CGSize(width: max(fitted.width, 120), height: max(fitted.height, 44))
++    }
++
++    func makeCoordinator() -> Coordinator {
++        Coordinator(parent: self)
++    }
++
++    @MainActor
++    final class Coordinator: NSObject {
++        var parent: QuarterHourTimePicker
++
++        init(parent: QuarterHourTimePicker) {
++            self.parent = parent
++        }
++
++        @objc func valueChanged(_ picker: UIDatePicker) {
++            parent.selection = QuarterHour.roundedUp(picker.date)
++        }
++    }
++}
++
++/// Compact date chip plus the 15-minute time wheel, editing one `Date`.
++/// Changing the day keeps the time of day (and vice versa), and the result is
++/// never earlier than `minimumDate`.
++struct QuarterHourDateTimeControls: View {
++    let label: String
++    @Binding var selection: Date
++    var minimumDate: Date?
++    var tint: Color?
++
++    /// Reads rounded *up* to the grid: an off-grid value such as a 6:54 PM
++    /// booking end would otherwise show as 6:45 PM, a time before it.
++    private var clamped: Binding<Date> {
++        Binding(
++            get: { QuarterHour.roundedUp(selection) },
++            set: { selection = QuarterHour.clamped($0, minimum: minimumDate ?? .distantPast) }
++        )
++    }
++
++    private var dayBinding: Binding<Date> {
++        Binding(
++            get: { selection },
++            set: { newDay in
++                let calendar = Calendar.current
++                var merged = calendar.dateComponents([.year, .month, .day], from: newDay)
++                let time = calendar.dateComponents([.hour, .minute], from: selection)
++                merged.hour = time.hour
++                merged.minute = time.minute
++                guard let value = calendar.date(from: merged) else { return }
++                clamped.wrappedValue = value
++            }
++        )
++    }
++
++    var body: some View {
++        HStack(spacing: 8) {
++            DatePicker(
++                "\(label) date",
++                selection: dayBinding,
++                in: (minimumDate.map { Calendar.current.startOfDay(for: $0) } ?? .distantPast)...,
++                displayedComponents: .date
++            )
++            .labelsHidden()
++            .fixedSize()
++
++            QuarterHourTimePicker(
++                selection: clamped,
++                minimumDate: minimumDate,
++                tint: tint,
++                accessibilityLabel: "\(label) time, 15-minute increments"
++            )
++        }
++        .tint(tint)
++    }
++}

@@ -62,7 +62,7 @@ describe("iOS native control cleanup", () => {
     expect(picker).toContain("placement: .navigationBarDrawer(displayMode: .always)");
     expect(picker).toContain('prompt: "Search all equipment"');
     expect(picker).not.toContain(".searchFocused($searchFocused)");
-    expect(picker).toContain("ToolbarItem(placement: .bottomBar)");
+    expect(picker).toContain("private func gearActionBar(needsPower: Bool)");
     expect(picker).toContain(".refreshable");
     expect(picker).not.toContain(".toolbar(removing: .search)");
     expect(picker).not.toContain("equipmentSearchField");

@@ -236,48 +236,43 @@ describe("iOS create booking picker parity", () => {
     expect(createSheet).not.toContain("sportLabel(event.sportCode)");
   });
 
-  it("keeps reservation details compact and uses deliberate schedule controls", () => {
+  it("splits reservation details into what-it's-for and when-it's-due pages", () => {
     const sheet = source("ios/Wisconsin/Views/CreateBookingSheet.swift");
     const viewModel = source("ios/Wisconsin/Views/CreateBooking/CreateBookingViewModel.swift");
     const details = sliceBetween(sheet, "private var detailsForm: some View", "private var setupModeBinding");
 
-    expect(details).toContain('Text("Reservation Title")');
-    expect(details).toContain('BrandSectionHeader("Set Schedule From")');
-    expect(details).toContain('BrandSectionHeader("Pickup Location")');
-    expect(details).toContain("vm.primaryPickupLocations");
+    expect(details).toContain("whatIsItForPage");
+    expect(details).toContain("whenIsItDuePage");
+    expect(details).toContain('pageHeading("What\'s this for?")');
+    expect(details).toContain('pageHeading("When\'s it due back?")');
+    expect(details).toContain('ChipButton(title: "An event"');
+    expect(details).toContain('ChipButton(title: "Something else"');
+    expect(details).toContain("reservationTitleCard");
+    expect(details).toContain("DayTimeChipPicker(");
     expect(details).toContain("QuarterHourDatePickerRow(");
-    expect(details).toContain("reservationPlanCard");
     expect(details).toContain("pickupAndKitCard");
-    expect(details).toContain("showsPlanDetails");
+    expect(details).toContain("vm.primaryPickupLocations");
     expect(sheet).toContain("continueBlockedReason");
-    expect(sheet).toContain("func goToStep(_ value: Int)");
-    expect(sheet).not.toContain('Label("Back", systemImage: "chevron.left")');
+    expect(sheet).toContain("page1BlockedReason");
+    expect(sheet).toContain("private func goBack()");
+    expect(sheet).toContain("private struct ReservationProgressHeader");
+    expect(sheet).not.toContain("ReservationStepProgress");
+    expect(sheet).not.toContain("UIViewRepresentable");
     const scheduleRow = sliceBetween(
       sheet,
       "private struct QuarterHourDatePickerRow",
-      "private struct ReservationStepProgress",
+      "private struct ReservationProgressHeader",
     );
-    expect(scheduleRow).toContain("private let quarterHours = Array(0..<96)");
+    expect(scheduleRow).toContain("QuarterHourTimePicker(");
+    expect(scheduleRow).not.toContain("Array(0..<96)");
     expect(scheduleRow).toContain('DatePicker(\n                "\\(label) date"');
-    expect(scheduleRow).toContain('Picker("\\(label) time", selection: quarterBinding)');
     expect(scheduleRow).toContain(".lineLimit(1)");
     expect(scheduleRow).toContain(".fixedSize(horizontal: true, vertical: false)");
-    expect(scheduleRow).toContain(".tint(Color.statusText(.purple))");
     expect(scheduleRow).toContain("ViewThatFits(in: .horizontal)");
-    expect(scheduleRow).not.toContain("in: (minimumDate ?? .distantPast)...");
-    expect(scheduleRow).not.toContain('Picker("\\(label) hour"');
-    expect(scheduleRow).not.toContain('Picker("\\(label) minute"');
-    expect(sheet).not.toContain("UIViewRepresentable");
-    expect(details).not.toContain("BookingStepHeader(");
     expect(details).not.toContain('label: "For"');
     expect(sheet).not.toContain("BookingDurationPreset");
     expect(viewModel).toContain('private static let reservationCategories = ["Cameras", "Lenses", "Batteries", "Other"]');
-    expect(details.indexOf('BrandSectionHeader("Set Schedule From")')).toBeLessThan(
-      details.indexOf("reservationTitleCard"),
-    );
-    expect(details).toContain("usesFormCard: false");
     expect(sheet).toContain("setupMode == .manual || vm.linkedEventCount > 0");
-    expect(details).toContain("scheduleWindowCard");
     expect(viewModel).toContain("private let eventPickupLeadTime: TimeInterval = 60 * 60");
     expect(viewModel).toContain("private let eventReturnBuffer: TimeInterval = 2 * 60 * 60");
     expect(viewModel).toContain("startsAt = first.startsAt.addingTimeInterval(-eventPickupLeadTime)");
@@ -305,12 +300,12 @@ describe("iOS create booking picker parity", () => {
     expect(picker).toContain("activeRecommendations.map(\\.reminderKey)");
     expect(picker).toContain("DragGesture(minimumDistance: 18)");
     expect(picker).toContain('vm.browseCategoryFilter = "Batteries"');
-    expect(picker).toContain("guard !vm.hasSelectedPower, let recommendation = vm.batteryRecommendations.first else");
+    expect(picker).toContain("guard !vm.hasSelectedPower,");
+    expect(picker).toContain("acknowledgedRecommendationIDs.contains($0.reminderKey)");
     expect(picker).toContain("onReview()\n            return");
     expect(picker).toContain(".safeAreaInset(edge: .bottom");
-    expect(picker.indexOf(".safeAreaInset(edge: .bottom")).toBeLessThan(
-      picker.indexOf(".toolbar { gearBottomToolbar }"),
-    );
+    expect(picker).toContain("gearActionBar(needsPower: needsPowerNudge)");
+    expect(picker).not.toContain(".toolbar { gearBottomToolbar }");
     expect(createSheet).toContain("private var selectedAssetOrder: [String] = []");
     expect(createSheet).toContain(".sorted { $0.0 < $1.0 }");
     const recommendationCard = sliceBetween(
@@ -420,8 +415,8 @@ describe("iOS create booking picker parity", () => {
     expect(sheet).toContain("vm.primaryPickupLocations");
     expect(review).toContain('LabeledContent("Pickup", value: reviewPickupText)');
     expect(review).toContain('LabeledContent("Return", value: reviewReturnText)');
-    expect(sheet).toContain("vm.startsAt.operationalDateTimeLabel()");
-    expect(sheet).toContain("vm.endsAt.operationalDateTimeLabel()");
+    expect(sheet).toContain("vm.startsAt.operationalDateTimeLabel(now: today)");
+    expect(sheet).toContain("vm.endsAt.operationalDateTimeLabel(now: today)");
     expect(review).toContain('LabeledContent("Gameday Kit", value: vm.kitPickerLabel(kit))');
     expect(review).toContain("BookingAssetThumbnail(imageUrl: asset.imageUrl, size: 40, cornerRadius: 8)");
     expect(review).toContain("BookingBulkThumbnail(imageUrl: sku.imageUrl, size: 40, cornerRadius: 8)");
@@ -436,11 +431,10 @@ describe("iOS create booking picker parity", () => {
     const picker = source("ios/Wisconsin/Views/CreateBooking/CreateBookingEquipmentPicker.swift");
     const sheet = source("ios/Wisconsin/Views/CreateBookingSheet.swift");
 
-    expect(picker).toContain("ToolbarItem(placement: .bottomBar)");
-    expect(picker).toContain('Label("Selected", systemImage: "shippingbox.fill")');
-    expect(picker).toContain(".badge(vm.selectedEquipmentCount)");
-    expect(picker).toContain(".tint(Color.statusText(.purple))");
-    expect(picker).toContain('(vm.selectedConflictCount == 0 ? "Review" : "Resolve Conflicts")');
+    expect(picker).toContain("private func gearActionBar(needsPower: Bool)");
+    expect(picker).toContain('Label("\\(vm.selectedEquipmentCount)", systemImage: "shippingbox.fill")');
+    expect(picker).toContain('if vm.selectedConflictCount > 0 { return "Resolve Conflicts" }');
+    expect(picker).toContain('if needsPower { return "Add a Battery" }');
     expect(picker).toContain("vm.selectedLocationMismatchCount > 0");
     expect(sheet).toContain('reviewSectionHeader(title: "Schedule", editStep: 1)');
     expect(sheet).toContain('reviewSectionHeader(title: "Gear", count: vm.selectedEquipmentCount, editStep: 2)');
@@ -504,7 +498,7 @@ describe("iOS create booking picker parity", () => {
     expect(picker).toContain(".disabled((isConflicted && !isSelected) || (!atPickup && !isSelected))");
     expect(rows).toContain('return "exclamationmark.triangle.fill"');
     expect(rows).toContain("if isConflicted { return Color.statusText(.red) }");
-    expect(rows).toContain("return Color(.systemGray2)");
+    expect(rows).toContain("return Color.statusText(.purple).opacity(0.55)");
     expect(rows).toContain("var conflictMessage: String?");
     expect(rows).toContain('systemImage: "clock.arrow.circlepath"');
     expect(rows).toContain("turnaroundIsCritical ? .red : .orange");

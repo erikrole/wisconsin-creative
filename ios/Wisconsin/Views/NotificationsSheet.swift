@@ -197,6 +197,7 @@ private extension AppNotification {
 }
 
 struct NotificationsSheet: View {
+    @Environment(\.today) private var today
     var onRoute: ((GearTrackerRoute) -> Void)?
 
     @State var vm = NotificationsViewModel()
@@ -420,18 +421,18 @@ struct NotificationsSheet: View {
 
     private var groupedSections: [(String, [AppNotification])] {
         let cal = Calendar.current
-        let now = Date()
-        var today: [AppNotification] = []
+        var todays: [AppNotification] = []
         var yesterday: [AppNotification] = []
         var thisWeek: [AppNotification] = []
         var older: [AppNotification] = []
 
         for n in vm.notifications {
-            if cal.isDateInToday(n.displayDate) {
-                today.append(n)
-            } else if cal.isDateInYesterday(n.displayDate) {
+            let daysAgo = -cal.dayOffset(of: n.displayDate, from: today)
+            if daysAgo <= 0 {
+                todays.append(n)
+            } else if daysAgo == 1 {
                 yesterday.append(n)
-            } else if let daysAgo = cal.dateComponents([.day], from: n.displayDate, to: now).day, daysAgo < 7 {
+            } else if daysAgo < 7 {
                 thisWeek.append(n)
             } else {
                 older.append(n)
@@ -439,7 +440,7 @@ struct NotificationsSheet: View {
         }
 
         return [
-            ("Today", today),
+            ("Today", todays),
             ("Yesterday", yesterday),
             ("Previous 7 Days", thisWeek),
             ("Older", older),

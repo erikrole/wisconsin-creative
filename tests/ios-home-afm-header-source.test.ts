@@ -66,9 +66,10 @@ describe("iOS Home header source contract", () => {
     expect(home).toContain('StatItem(id: "due-today"');
     expect(home).toContain("private struct StatRow: View");
     expect(home).toContain("tone: .orange");
-    expect(home).toContain("Color.statusIconBackground(item.tone)");
-    expect(home).toContain("Color.cardSurface");
-    expect(home).toContain('Image(systemName: "chevron.right")');
+    // Flat number tiles: the numeral is the point, so no icon square or chevron.
+    expect(home).not.toContain("Color.statusIconBackground(item.tone)");
+    expect(home).toContain(".font(.system(size: 34, weight: .heavy))");
+    expect(home).toContain(".flatCard(padding: Brand.Space.md, radius: Brand.Radius.md)");
     expect(home).not.toContain("private struct StatCard");
     expect(home).toContain(".foregroundStyle(.secondary)");
     expect(brand).toContain("// #d97706");
@@ -91,7 +92,7 @@ describe("iOS Home header source contract", () => {
     expect(home).toContain(".formatted(.dateTime.weekday(.wide).month(.wide).day())");
     expect(home).toContain("scheduleEvent.spannedDays");
     expect(home).toContain("private var timeMeta: String");
-    expect(home).toContain('isAllDayEvent ? "All day" : work.event.startsAt.formatted(date: .omitted, time: .shortened)');
+    expect(home).toContain('isAllDayEvent ? scheduleAllDayLabel(scheduleEvent) : work.event.startsAt.formatted(date: .omitted, time: .shortened)');
     expect(home).not.toContain("private var firstTime: Date");
     // An all-day row has no call time to state, so the line drops out entirely
     // and the "All day" meta is what the accessibility label reads back.
@@ -126,7 +127,7 @@ describe("iOS Home header source contract", () => {
     expect(bookings).toContain(".font(.gothamBold(size: 16))");
     expect(home).toContain("private struct QueueRowTitle: View");
     expect(home).toContain(".font(.gothamBold(size: 16))");
-    expect(home).toContain("QueueRowTitle(title)");
+    expect(home).toContain("QueueRowTitle(title, wraps: true)");
     expect(home).not.toContain('Text(title)\n                        .font(.subheadline.weight(.semibold))');
   });
 
@@ -156,10 +157,14 @@ describe("iOS Home header source contract", () => {
     expect(home).toContain("private struct QueueKindGlyph: View");
     expect(home).toContain('case .eventWork: "calendar"');
     expect(home).toContain('default: "shippingbox.fill"');
-    expect(home).toContain("private struct QueueDisclosureChevron: View");
-    expect(home).toContain("Divider().padding(.leading, 46)");
-    // The bullet only separates two detail lines; a lone line goes without.
-    expect(home).toContain("showsBullet: detailLines.count > 1");
+    // Rows drop the rail and chevron; time buckets label Overdue / Today / Later.
+    expect(home).not.toContain("QueueDisclosureChevron");
+    expect(home).not.toContain("StatusRail(");
+    expect(home).toContain("private struct QueueRowLayout: View");
+    expect(home).toContain("Divider().overlay(Color.flatDivider).padding(.leading, 30)");
+    expect(home).toContain('case overdue = "Overdue"');
+    expect(home).toContain('case today = "Today"');
+    expect(home).toContain('case later = "Later"');
   });
 
   it("colors Next Up rows from the domain each row belongs to", () => {
@@ -167,12 +172,12 @@ describe("iOS Home header source contract", () => {
 
     // Gear rows read the booking-status palette in docs/COLOR_SYSTEM.md, with
     // the sanctioned deadline overlay on an open checkout due today.
-    expect(home).toContain("private func queueGearTone(for summary: BookingSummary) -> StatusTone");
+    expect(home).toContain("private func queueGearTone(for summary: BookingSummary, today: Date) -> StatusTone");
     expect(home).toContain("if summary.isOverdue { return .red }");
     expect(home).toContain("case .booked: return .purple");
     expect(home).toContain("case .pendingPickup: return .orange");
     expect(home).toContain(
-      "case .open: return Calendar.current.isDateInToday(summary.endsAt) ? .orange : .blue",
+      "case .open: return Calendar.current.dayOffset(of: summary.endsAt, from: today) == 0 ? .orange : .blue",
     );
     // Shift rows read the scheduling domain's location palette instead, the
     // same mapping the Schedule tab's rails use.

@@ -8,6 +8,7 @@ import SwiftUI
 /// shifts, overdue pinned above it, each row coloured from the domain it
 /// belongs to.
 struct ProfileNextUpCard: View {
+    @Environment(\.today) private var today
     let checkouts: [Booking]
     let reservations: [Booking]
     let shifts: [MyShift]
@@ -122,7 +123,7 @@ struct ProfileNextUpCard: View {
         switch booking.status {
         case .booked: return booking.kind == .reservation ? .purple : .blue
         case .pendingPickup: return .orange
-        case .open: return Calendar.current.isDateInToday(booking.endsAt) ? .orange : .blue
+        case .open: return Calendar.current.dayOffset(of: booking.endsAt, from: today) == 0 ? .orange : .blue
         default: return .gray
         }
     }

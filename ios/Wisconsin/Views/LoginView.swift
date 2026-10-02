@@ -152,56 +152,25 @@ struct LoginView: View {
         }
     }
 
-    /// Crimson accent for focused field edges — matches the web login's
-    /// `#c41230` focus ring rather than the adaptive `brandPrimary`, because
-    /// the card subtree is pinned light.
-    private static let focusAccent = Color(red: 0.769, green: 0.071, blue: 0.188)
-
     var body: some View {
-        ZStack {
-            BrandSplashScene()
-
-            GeometryReader { geo in
-                ScrollView {
-                    VStack(spacing: 0) {
-                        Spacer(minLength: 24)
-
-                        // Lockup lives on the scene, not the card — the card's
-                        // only job is the form. Mirrors the web login.
-                        BrandSplashLockup(subtitle: "Sign in to your account")
-                            .padding(.bottom, 22)
-
-                        Text("Your account keeps schedules, reservations, and gear activity available to the right people.")
-                            .font(.subheadline)
-                            .foregroundStyle(.white.opacity(0.78))
-                            .multilineTextAlignment(.center)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.horizontal, 24)
-                            .padding(.bottom, 18)
-
-                        card
-                            .padding(.horizontal, 20)
-
-                        footer
-                            .padding(.top, 18)
-                            .padding(.horizontal, 24)
-
-                        Spacer(minLength: 24)
-                    }
-                    .frame(maxWidth: 468)
-                    .frame(maxWidth: .infinity)
-                    .frame(minHeight: geo.size.height)
-                }
-                .scrollDismissesKeyboard(.interactively)
-            }
+        AuthScreen(
+            title: "Sign in",
+            subtitle: "Gear, schedules, and reservations for Wisconsin Creative."
+        ) {
+            card
+        } footer: {
+            footer
         }
-        .ignoresSafeArea(.keyboard, edges: .bottom)
-        .preferredColorScheme(.dark)
         .task(id: PasskeyAutoFillKey(step: loginStep, attempt: passkeyAutoFillAttempt)) {
             // Offers a saved passkey in the QuickType bar over the email field,
             // so signing in does not require finding the passkey button first.
             guard loginStep == .identity else { return }
             await session.armPasskeyAutoFill()
+        }
+        .onAppear {
+            if let notice = session.notice {
+                AccessibilityNotification.Announcement(notice).post()
+            }
         }
         .onChange(of: session.error) { _, error in
             if let error {
@@ -229,9 +198,14 @@ struct LoginView: View {
         }
     }
 
-    // Shared splash-scene card: light material over the dark crimson scene.
+    // The form sits directly on the AuthScreen surface (see AuthDesign.swift).
     private var card: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: 16) {
+            if let notice = session.notice, identityError == nil, session.error == nil {
+                AuthInlineMessage(text: notice, systemImage: "info.circle.fill", tone: .blue)
+                    .accessibilityElement(children: .combine)
+            }
+
             if loginStep == .identity {
                 identityStep
                     .transition(.opacity)
@@ -242,14 +216,7 @@ struct LoginView: View {
 
             // Error
             if let error = identityError ?? session.error {
-                Label(error, systemImage: "exclamationmark.circle.fill")
-                    .font(.footnote.weight(.medium))
-                    .foregroundStyle(Color.statusText(.red))
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
-                    .background(Color.statusBackground(.red), in: RoundedRectangle(cornerRadius: Brand.Radius.sm, style: .continuous))
+                AuthInlineMessage(text: error, systemImage: "exclamationmark.circle.fill", tone: .red)
                     .accessibilityLabel("Sign in failed. \(error)")
             }
 
@@ -267,6 +234,7 @@ struct LoginView: View {
                     if discoveryLoading || passwordLoading {
                         ProgressView()
                             .controlSize(.small)
+                            .tint(AuthPalette.onPrimary)
                             .accessibilityHidden(true)
                     }
                     Text(primaryButtonTitle)
@@ -274,21 +242,19 @@ struct LoginView: View {
                 }
                 .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.glassProminent)
-            .controlSize(.large)
-            .tint(.brandPrimary)
+            .authButton(.primary)
             .disabled(loginStep == .identity ? !canContinue : !canSubmit)
 
             if loginStep == .identity {
                 HStack(spacing: 12) {
                     Rectangle()
-                        .fill(.secondary.opacity(0.25))
+                        .fill(AuthPalette.strokeStandard)
                         .frame(height: 1)
                     Text("or")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AuthPalette.textTertiary)
                     Rectangle()
-                        .fill(.secondary.opacity(0.25))
+                        .fill(AuthPalette.strokeStandard)
                         .frame(height: 1)
                 }
 
@@ -299,6 +265,7 @@ struct LoginView: View {
                         if passkeyLoading {
                             ProgressView()
                                 .controlSize(.small)
+                                .tint(AuthPalette.textPrimary)
                                 .accessibilityHidden(true)
                         } else {
                             Image(systemName: "key.fill")
@@ -309,28 +276,27 @@ struct LoginView: View {
                     }
                     .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.glass)
-                .controlSize(.large)
-                .tint(.primary)
+                .authButton(.secondary)
                 .disabled(authBusy)
                 .accessibilityHint("Choose an account with a saved passkey")
             }
         }
-        .brandLoginCardChrome()
     }
 
     private var identityStep: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Email address")
                 .font(.subheadline.weight(.semibold))
+                .foregroundStyle(AuthPalette.textPrimary)
 
             TextField(
                 text: $email,
-                prompt: Text("you@wisc.edu").foregroundStyle(.secondary)
+                prompt: Text("you@wisc.edu").foregroundStyle(AuthPalette.textTertiary)
             ) {
                 Text("Email address")
             }
             .accessibilityLabel("Email address")
+            .foregroundStyle(AuthPalette.textPrimary)
             .textInputAutocapitalization(.never)
             .keyboardType(.emailAddress)
             .textContentType(.username)
@@ -354,7 +320,7 @@ struct LoginView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Signing in as")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AuthPalette.textTertiary)
                     // The email field belongs to the previous step and is gone
                     // by now. Keeping the address here as a real account field
                     // is what lets AutoFill file the password under it.
@@ -363,7 +329,7 @@ struct LoginView: View {
                         .textContentType(.username)
                         .disabled(true)
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(AuthPalette.textPrimary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
                         .accessibilityLabel("Signing in as \(trimmedEmail)")
@@ -375,7 +341,7 @@ struct LoginView: View {
                     changeEmail()
                 }
                 .font(.footnote.weight(.semibold))
-                .foregroundStyle(Self.focusAccent)
+                .foregroundStyle(AuthPalette.textPrimary)
                 .buttonStyle(.plain)
                 .frame(minWidth: 44, minHeight: 44)
                 .contentShape(Rectangle())
@@ -385,25 +351,27 @@ struct LoginView: View {
 
             Text("Password")
                 .font(.subheadline.weight(.semibold))
+                .foregroundStyle(AuthPalette.textPrimary)
 
             ZStack(alignment: .trailing) {
                 Group {
                     if showPassword {
                         TextField(
                             text: $password,
-                            prompt: Text("Enter your password").foregroundStyle(.secondary)
+                            prompt: Text("Enter your password").foregroundStyle(AuthPalette.textTertiary)
                         ) {
                             Text("Password")
                         }
                     } else {
                         SecureField(
                             text: $password,
-                            prompt: Text("Enter your password").foregroundStyle(.secondary)
+                            prompt: Text("Enter your password").foregroundStyle(AuthPalette.textTertiary)
                         ) {
                             Text("Password")
                         }
                     }
                 }
+                .foregroundStyle(AuthPalette.textPrimary)
                 .accessibilityLabel("Password")
                 .textContentType(.password)
                 .focused($focused, equals: .password)
@@ -419,7 +387,7 @@ struct LoginView: View {
                     showPassword.toggle()
                 } label: {
                     Image(systemName: showPassword ? "eye.slash" : "eye")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AuthPalette.textSecondary)
                         .frame(width: 44, height: 44)
                 }
                 .buttonStyle(.plain)
@@ -432,7 +400,7 @@ struct LoginView: View {
                 authDestination = .forgotPassword(email: trimmedEmail)
             }
             .font(.footnote.weight(.medium))
-            .foregroundStyle(.secondary)
+            .foregroundStyle(AuthPalette.textSecondary)
             .buttonStyle(.plain)
             .frame(maxWidth: .infinity, minHeight: 44, alignment: .trailing)
             .contentShape(Rectangle())
@@ -444,20 +412,13 @@ struct LoginView: View {
     // Each step owns one focused field. The email step performs the account
     // discovery request and either opens onboarding or continues to password.
     private func fieldFill(isFocused: Bool) -> some View {
-        RoundedRectangle(cornerRadius: Brand.Radius.sm, style: .continuous)
-            .fill(Color.white)
-            .strokeBorder(
-                isFocused ? Self.focusAccent : Color.black.opacity(0.14),
-                lineWidth: isFocused ? 1.5 : 1
-            )
-            .animation(.easeOut(duration: 0.15), value: isFocused)
+        Color.clear.authFieldChrome(isFocused: isFocused)
     }
 
     // Quiet scene-level footer below the card, mirroring the web login.
     private var footer: some View {
         Text("Enter your invited email to get started.\nContact Erik Role to request access.")
-            .multilineTextAlignment(.center)
-            .foregroundStyle(.white.opacity(0.55))
-            .font(.footnote)
+            .multilineTextAlignment(.leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

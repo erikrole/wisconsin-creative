@@ -351,7 +351,8 @@ struct TradeBoardSheet: View {
                         Label("Couldn't load the Trade Board", systemImage: "exclamationmark.triangle")
                     } description: { Text(error) } actions: {
                         Button("Retry") { Task { await vm.load(forceRefresh: true) } }
-                            .buttonStyle(.borderedProminent)
+                            .authButton(.primary, adaptive: true)
+                            .frame(maxWidth: 240)
                     }
                 } else {
                     tradeList
@@ -399,19 +400,18 @@ struct TradeBoardSheet: View {
                             Label("My posts only", systemImage: "person.crop.circle")
                         }
                     } label: {
-                        Image(systemName: (vm.areaFilter == nil && !mineOnly)
-                            ? "line.3.horizontal.decrease.circle"
-                            : "line.3.horizontal.decrease.circle.fill")
-                            .frame(width: 36, height: 36)
+                        // Text, not a Label: the toolbar drops a Label's title,
+                        // which left two unlabelled icons.
+                        Text((vm.areaFilter == nil && !mineOnly) ? "Filter" : "Filtered")
+                            .fontWeight((vm.areaFilter == nil && !mineOnly) ? .regular : .semibold)
                     }
-                    .foregroundStyle((vm.areaFilter == nil && !mineOnly) ? Color.primary : Color.brandPrimary)
+                    .foregroundStyle(Color.primary)
                     .accessibilityLabel(vm.areaFilter.map { "Filtering by \($0.shiftAreaLabel)" } ?? "Filter")
 
                     Button {
                         showPostSheet = true
                     } label: {
-                        Image(systemName: "plus")
-                            .frame(width: 36, height: 36)
+                        Text("Post")
                     }
                     .accessibilityLabel("Post trade")
                 }
@@ -603,6 +603,32 @@ struct TradeBoardSheet: View {
         .background(Color(.systemGroupedBackground))
     }
 
+    /// Trade posts and unassigned slots answer the same question for a student
+    /// ("what could I pick up?"), so they share one list ordered by start time.
+    private enum AvailableItem: Identifiable {
+        case trade(ShiftTrade)
+        case open(OpenWorkShift)
+
+        var id: String {
+            switch self {
+            case .trade(let trade): "trade-\(trade.id)"
+            case .open(let item): "open-\(item.id)"
+            }
+        }
+
+        var startsAt: Date {
+            switch self {
+            case .trade(let trade): trade.shiftAssignment.shift.effectiveStartsAt
+            case .open(let item): item.shift.effectiveStartsAt
+            }
+        }
+    }
+
+    private var availableItems: [AvailableItem] {
+        (vm.availableTrades.map(AvailableItem.trade) + vm.availableOpenShifts.map(AvailableItem.open))
+            .sorted { $0.startsAt < $1.startsAt }
+    }
+
     @ViewBuilder
     private var availableContent: some View {
             if vm.canReview, vm.reviewCount > 0 {
@@ -677,37 +703,29 @@ struct TradeBoardSheet: View {
                 }
             }
 
-            if !vm.availableTrades.isEmpty {
+            if !availableItems.isEmpty {
                 Section {
-                    ForEach(vm.availableTrades) { trade in
-                        TradeRow(
-                            trade: trade,
-                            context: .availableNow,
-                            isActioning: pendingActionIds.contains(trade.id),
-                            action: { tradeToConfirm = trade },
-                            cancelAction: nil
-                        )
-                        .tradeBoardCardRow()
-                    }
-                } header: {
-                    TradeSectionHeader(
-                        title: "Trade Posts",
-                        subtitle: "Shifts another student posted for coverage. Claiming sends the trade to an admin."
-                    )
-                }
-            }
-
-            if !vm.availableOpenShifts.isEmpty {
-                Section {
-                    ForEach(vm.availableOpenShifts) { item in
-                        OpenWorkShiftRow(
-                            item: item,
-                            context: .availableNow,
-                            isActioning: pendingActionIds.contains(item.id)
-                        ) {
-                            openShiftToPickup = item
+                    ForEach(availableItems) { item in
+                        switch item {
+                        case .trade(let trade):
+                            TradeRow(
+                                trade: trade,
+                                context: .availableNow,
+                                isActioning: pendingActionIds.contains(trade.id),
+                                action: { tradeToConfirm = trade },
+                                cancelAction: nil
+                            )
+                            .tradeBoardCardRow()
+                        case .open(let openShift):
+                            OpenWorkShiftRow(
+                                item: openShift,
+                                context: .availableNow,
+                                isActioning: pendingActionIds.contains(openShift.id)
+                            ) {
+                                openShiftToPickup = openShift
+                            }
+                            .tradeBoardCardRow()
                         }
-                        .tradeBoardCardRow()
                     }
                     if vm.openWork.openShiftsTruncated || vm.openWork.pickupRequestsTruncated {
                         Text("Showing the first 100 open slots. Narrow by area to see the rest.")
@@ -718,8 +736,8 @@ struct TradeBoardSheet: View {
                     }
                 } header: {
                     TradeSectionHeader(
-                        title: "Open Shifts",
-                        subtitle: "Unassigned Student slots. Claiming sends a pickup request to an admin."
+                        title: "Available to Pick Up",
+                        subtitle: "Shifts other students posted and unassigned slots, soonest first. Claiming sends a request to an admin."
                     )
                 }
             }
@@ -783,8 +801,8 @@ struct TradeBoardSheet: View {
                     Text("Post one of your upcoming shifts when you need someone else to cover it.")
                 } actions: {
                     Button("Post a Shift") { showPostSheet = true }
-                        .buttonStyle(.borderedProminent)
-                        .tint(Color.brandPrimary)
+                        .authButton(.primary, adaptive: true)
+                        .frame(maxWidth: 240)
                 }
             }
             .listRowBackground(Color.clear)
@@ -902,6 +920,10 @@ private struct TradeSectionHeader: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title)
+                .font(.title3)
+                .fontWeight(.heavy)
+                .foregroundColor(.primary)
+                .textCase(nil)
             Text(subtitle)
                 .font(.caption)
                 .fontWeight(.regular)
@@ -953,28 +975,24 @@ private struct TradeBoardSummaryCard: View {
         if !isComplete { return "Refresh the unavailable source before relying on this board" }
         if actionableCount == 0 {
             if isReviewer { return "No claims are waiting on you" }
-            return isStaff ? "Open shifts and trade posts across the team" : "Trade posts and open shifts are listed separately below"
+            return isStaff ? "Open shifts and trade posts across the team" : "Posted trades and open slots are listed together below"
         }
         return isReviewer
             ? "Students are waiting on your decision"
-            : "Trade posts and open shifts are listed separately below"
+            : "Posted trades and open slots are listed together below"
     }
 
     var body: some View {
         HStack(spacing: 14) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 13)
-                    .fill(Color.statusBackground(summaryTone))
-                Image(systemName: summaryIcon)
-                    .font(.headline.weight(.semibold))
-                    .foregroundStyle(Color.statusText(summaryTone))
-            }
-            .frame(width: 46, height: 46)
-            .accessibilityHidden(true)
+            Image(systemName: summaryIcon)
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(summaryTone == .orange ? Color.statusText(.orange) : Color.secondary)
+                .frame(width: 28)
+                .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(summaryTitle)
-                    .font(.headline)
+                    .font(.system(size: 17, weight: .heavy))
                 Text(summaryDetail)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
@@ -983,16 +1001,21 @@ private struct TradeBoardSummaryCard: View {
             Spacer(minLength: 8)
 
             Button(action: onToggleMine) {
-                Image(systemName: mineOnly ? "arrow.left.arrow.right" : "person.crop.circle")
-                    .frame(width: 38, height: 38)
+                Text(mineOnly ? "All shifts" : "My posts")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.primary)
+                    .padding(.horizontal, 14)
+                    .frame(minHeight: 44)
+                    .background(Color.flatRaised, in: Capsule())
+                    .overlay(Capsule().strokeBorder(Color.flatStroke, lineWidth: 1))
+                    .contentShape(Capsule())
             }
-            .buttonStyle(.bordered)
-            .buttonBorderShape(.circle)
-            .tint(mineOnly ? Color.brandPrimary : Color.primary)
+            .buttonStyle(.plain)
             .accessibilityLabel(mineOnly ? "Show available shifts" : "Show my trade posts")
         }
         .padding(16)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20))
+        .background(Color.flatCard, in: RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous).strokeBorder(Color.flatStroke, lineWidth: 1))
     }
 }
 
@@ -1042,13 +1065,15 @@ private struct OpenWorkShiftRow: View {
                 rowHeader(title: shift.displayTitle, badge: context.badge, tone: context.tone)
 
                 Text(shift.dateTimeLine)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(Color.statusText(.blue))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.primary)
 
                 HStack(spacing: 6) {
                     Text(shift.area.shiftAreaLabel)
                     Text("·")
                     Text(shift.classificationLabel)
+                    Text("·")
+                    Text("Open slot")
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -1076,16 +1101,14 @@ private struct OpenWorkShiftRow: View {
                         }
                         .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(Color.brandPrimary)
-                    .controlSize(.small)
-                    .frame(minHeight: 44)
+                    .authButton(.primary, adaptive: true)
                     .disabled(isActioning)
                 }
             }
         }
         .padding(14)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 18))
+        .background(Color.flatCard, in: RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous).strokeBorder(Color.flatStroke, lineWidth: 1))
         .accessibilityElement(children: .contain)
     }
 }
@@ -1171,8 +1194,8 @@ private struct TradeRow: View {
                     personalStartsAt: trade.shiftAssignment.callStartsAt,
                     personalEndsAt: trade.shiftAssignment.callEndsAt
                 ))
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(Color.statusText(.blue))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.primary)
 
                 Text("\(shift.area.shiftAreaLabel) · \(shift.classificationLabel) · Posted by \(trade.postedBy.name)")
                     .font(.caption)
@@ -1180,8 +1203,8 @@ private struct TradeRow: View {
 
                 if let claimedBy = trade.claimedBy {
                     Text("Claimed by \(claimedBy.name)")
-                        .font(.caption)
-                        .foregroundStyle(Color.statusText(.orange))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.primary)
                 }
 
                 if let notes = trade.notes, !notes.isEmpty {
@@ -1221,10 +1244,7 @@ private struct TradeRow: View {
                             }
                             .frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.borderedProminent)
-                        .tint(Color.brandPrimary)
-                        .controlSize(.small)
-                        .frame(minHeight: 44)
+                        .authButton(.primary, adaptive: true)
                         .disabled(isActioning)
                     }
 
@@ -1237,10 +1257,7 @@ private struct TradeRow: View {
                             }
                             .frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.borderedProminent)
-                        .tint(Color.statusText(.green))
-                        .controlSize(.small)
-                        .frame(minHeight: 44)
+                        .authButton(.primary, adaptive: true)
                         .disabled(isActioning)
                         .accessibilityLabel("Approve trade for \(trade.claimedBy?.name ?? "the claimer")")
                     }
@@ -1251,9 +1268,7 @@ private struct TradeRow: View {
                                 .font(.subheadline.weight(.medium))
                                 .frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
-                        .frame(minHeight: 44)
+                        .authButton(.secondary, adaptive: true)
                         .disabled(isActioning)
                         .accessibilityLabel("Decline trade for \(trade.claimedBy?.name ?? "the claimer")")
                     }
@@ -1264,9 +1279,7 @@ private struct TradeRow: View {
                                 .font(.subheadline.weight(.medium))
                                 .frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
-                        .frame(minHeight: 44)
+                        .authButton(.secondary, adaptive: true)
                         .disabled(isActioning)
                     }
 
@@ -1276,16 +1289,15 @@ private struct TradeRow: View {
                                 .font(.subheadline.weight(.medium))
                                 .frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
-                        .frame(minHeight: 44)
+                        .authButton(.secondary, adaptive: true)
                         .disabled(isActioning)
                     }
                 }
             }
         }
         .padding(14)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 18))
+        .background(Color.flatCard, in: RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous).strokeBorder(Color.flatStroke, lineWidth: 1))
         .accessibilityElement(children: .contain)
     }
 }
@@ -1318,8 +1330,8 @@ private struct PickupRequestRow: View {
                 )
 
                 Text(shift.dateTimeLine)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(Color.statusText(.blue))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.primary)
 
                 Text(isReview
                     ? "\(shift.area.shiftAreaLabel) · \(request.user.name) wants this slot"
@@ -1353,9 +1365,7 @@ private struct PickupRequestRow: View {
                             }
                             .frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
-                        .frame(minHeight: 44)
+                        .authButton(.secondary, adaptive: true)
                         .disabled(isActioning)
                     }
                 }
@@ -1371,10 +1381,7 @@ private struct PickupRequestRow: View {
                                 }
                                 .frame(maxWidth: .infinity)
                             }
-                            .buttonStyle(.borderedProminent)
-                            .tint(Color.statusText(.green))
-                            .controlSize(.small)
-                            .frame(minHeight: 44)
+                            .authButton(.primary, adaptive: true)
                             .disabled(isActioning)
                             .accessibilityLabel("Approve request from \(request.user.name)")
                         }
@@ -1384,9 +1391,7 @@ private struct PickupRequestRow: View {
                                     .font(.subheadline.weight(.medium))
                                     .frame(maxWidth: .infinity)
                             }
-                            .buttonStyle(.bordered)
-                            .controlSize(.small)
-                            .frame(minHeight: 44)
+                            .authButton(.secondary, adaptive: true)
                             .disabled(isActioning)
                             .accessibilityLabel("Decline request from \(request.user.name)")
                         }
@@ -1395,7 +1400,8 @@ private struct PickupRequestRow: View {
             }
         }
         .padding(14)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 18))
+        .background(Color.flatCard, in: RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous).strokeBorder(Color.flatStroke, lineWidth: 1))
         .accessibilityElement(children: .contain)
     }
 }
@@ -1403,15 +1409,16 @@ private struct PickupRequestRow: View {
 private func rowHeader(title: String, badge: String, tone: StatusTone) -> some View {
     HStack(alignment: .top) {
         Text(title)
-            .font(.subheadline.weight(.semibold))
+            .font(.gothamBold(size: 16))
             .lineLimit(2)
         Spacer(minLength: 8)
         Text(badge)
             .font(.caption2.weight(.semibold))
-            .foregroundStyle(Color.statusText(tone))
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .background(Color.statusBackground(tone), in: Capsule())
+            .foregroundStyle(tone == .red || tone == .orange ? Color.statusText(tone) : Color.secondary)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(Color.flatRaised, in: Capsule())
+            .overlay(Capsule().strokeBorder(Color.flatStroke, lineWidth: 1))
     }
 }
 

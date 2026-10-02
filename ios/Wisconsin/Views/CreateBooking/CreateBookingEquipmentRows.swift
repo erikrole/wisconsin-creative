@@ -323,7 +323,7 @@ struct AssetPickerRow: View {
     @ViewBuilder
     private var trailingIndicator: some View {
         Image(systemName: indicatorSystemImage)
-            .font(.title3)
+            .font(.title2)
             .foregroundStyle(indicatorColor)
             .symbolEffect(.bounce, options: .nonRepeating, isActive: !reduceMotion && isSelected)
             .accessibilityHidden(true)
@@ -333,14 +333,14 @@ struct AssetPickerRow: View {
         if isSelected { return "checkmark.circle.fill" }
         if isConflicted { return "exclamationmark.triangle.fill" }
         if !isAtPickupLocation { return "mappin.circle" }
-        return "plus.circle"
+        return "plus.circle.fill"
     }
 
     private var indicatorColor: Color {
         if isSelected { return Color.statusText(.purple) }
         if isConflicted { return Color.statusText(.red) }
         if !isAtPickupLocation { return Color.statusText(.orange) }
-        return Color(.systemGray2)
+        return Color.statusText(.purple).opacity(0.55)
     }
 
     private var rowAccessibilityLabel: String {

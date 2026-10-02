@@ -9,6 +9,7 @@ private enum ReservationSetupMode: String, CaseIterable, Identifiable {
 }
 
 struct CreateBookingSheet: View {
+    @Environment(\.today) private var today
     private let minimizeReservationTip = MinimizeReservationTip()
     private let scanReservationGearTip = ScanReservationGearTip()
     /// The composer lives in `ReservationDraftStore`, not here: minimizing
@@ -22,6 +23,14 @@ struct CreateBookingSheet: View {
     @State private var showExitOptions = false
     @State private var showScanner = false
     @State private var showNotesField = false
+    /// Step 1 is two screens: what it's for, then when it's due back.
+    @State private var detailsPage = 1
+    @State private var showPickupEditor = false
+    @State private var showTimesSheet = false
+    /// The event we'd bet this person is booking for: their next shift's event,
+    /// else whatever is next on the calendar.
+    @State private var suggestedEventId: String?
+    @State private var suggestionFromShift = false
     @FocusState private var notesFocused: Bool
     @Environment(SessionStore.self) private var session
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -42,6 +51,22 @@ struct CreateBookingSheet: View {
         return vm.usesEventLinkedSetup ? .event : .manual
     }
 
+    private func loadSuggestion() async {
+        guard canLinkEvents, vm.selectedEventIds.isEmpty else { return }
+        let now = Date()
+        if let shifts = try? await APIClient.shared.myShifts(limit: 20),
+           let next = shifts.filter({ $0.event.endsAt > now }).min(by: { $0.event.startsAt < $1.event.startsAt }),
+           vm.events.contains(where: { $0.id == next.event.id }) {
+            suggestedEventId = next.event.id
+            suggestionFromShift = true
+            return
+        }
+        suggestedEventId = vm.events
+            .filter { $0.endsAt > now }
+            .min(by: { $0.startsAt < $1.startsAt })?.id
+        suggestionFromShift = false
+    }
+
     private func loadEventsIfPermitted() async {
         guard canLinkEvents else { return }
         await vm.loadEvents()
@@ -58,10 +83,6 @@ struct CreateBookingSheet: View {
             && (setupMode == .manual || vm.linkedEventCount > 0)
             && (!vm.isReusingGear || (setupMode == .event && vm.linkedEventCount > 0))
             && !vm.hasInvalidReusedEventSelection
-    }
-
-    private var showsPlanDetails: Bool {
-        setupMode == .manual || vm.linkedEventCount > 0
     }
 
     private var continueBlockedReason: String? {
@@ -98,10 +119,32 @@ struct CreateBookingSheet: View {
         vm.kits.first(where: { $0.id == vm.selectedKitId })
     }
 
-    private func goToStep(_ value: Int) {
-        guard value >= 1, value < step, !vm.isSubmitting else { return }
-        setStep(value)
+    private func goBack() {
+        guard !vm.isSubmitting else { return }
+        if step == 1 {
+            guard detailsPage == 2 else { return }
+            detailsPage = 1
+        } else {
+            setStep(step - 1)
+        }
         Haptics.selection()
+    }
+
+    private var canContinuePage1: Bool {
+        if setupMode == .event {
+            return vm.linkedEventCount > 0 && !vm.hasInvalidReusedEventSelection
+        }
+        return !vm.title.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
+    private var page1BlockedReason: String? {
+        guard !canContinuePage1 else { return nil }
+        if setupMode == .event {
+            return vm.hasInvalidReusedEventSelection
+                ? "Choose a different event when re-reserving."
+                : "Choose an event to continue."
+        }
+        return "Name this reservation to continue."
     }
 
     private func continueToGear() {
@@ -133,11 +176,11 @@ struct CreateBookingSheet: View {
                 if step == 2 {
                     equipmentPicker
                         .safeAreaInset(edge: .top, spacing: 0) {
-                            ReservationStepProgress(currentStep: step, onSelect: goToStep)
+                            ReservationProgressHeader(step: step, page: detailsPage, total: setupMode == .event ? 3 : 4, onBack: goBack)
                         }
                 } else {
                     VStack(spacing: 0) {
-                        ReservationStepProgress(currentStep: step, onSelect: goToStep)
+                        ReservationProgressHeader(step: step, page: detailsPage, total: setupMode == .event ? 3 : 4, onBack: goBack)
                         if step == 1 {
                             detailsForm
                         } else {
@@ -162,15 +205,14 @@ struct CreateBookingSheet: View {
                                     .tint(.white)
                             } else {
                                 Text("Create Reservation")
-                                    .fontWeight(.semibold)
+                                    .font(.headline)
                             }
                         }
-                        .frame(maxWidth: .infinity)
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity, minHeight: 56)
+                        .background(Color.statusText(.purple), in: RoundedRectangle(cornerRadius: 16))
                     }
-                    .buttonStyle(.borderedProminent)
-                    .buttonBorderShape(.capsule)
-                    .controlSize(.large)
-                    .tint(Color.statusText(.purple))
+                    .buttonStyle(.plain)
                     .disabled(vm.isSubmitting)
                     .padding(.horizontal, Brand.Space.md)
                     .padding(.vertical, 10)
@@ -246,6 +288,7 @@ struct CreateBookingSheet: View {
                 applySelfAndLocationDefaults()
                 await vm.loadKits()
                 vm.captureBaselineIfNeeded()
+                await loadSuggestion()
             }
             .task(id: step) {
                 guard step == 2 else { return }
@@ -370,25 +413,42 @@ struct CreateBookingSheet: View {
 
     @ViewBuilder
     private var detailsFooter: some View {
+        // Event-linked setups fill pickup and return from the event, so they go
+        // straight to gear. Manual setups take one more screen for the times.
+        let eventFlow = setupMode == .event
+        let onFirstPage = detailsPage == 1 && !eventFlow
+        let blocked = eventFlow ? (page1BlockedReason ?? continueBlockedReason)
+            : (detailsPage == 1 ? page1BlockedReason : continueBlockedReason)
+        let canGo = eventFlow ? (canContinuePage1 && canContinueToGear)
+            : (detailsPage == 1 ? canContinuePage1 : canContinueToGear)
         VStack(alignment: .leading, spacing: 8) {
-            if let continueBlockedReason {
-                Text(continueBlockedReason)
+            if let blocked {
+                Text(blocked)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .accessibilityLabel(continueBlockedReason)
+                    .accessibilityLabel(blocked)
             }
-            Button(action: continueToGear) {
-                Label("Choose Gear", systemImage: "shippingbox")
-                    .fontWeight(.semibold)
-                    .frame(maxWidth: .infinity)
+            Button {
+                if onFirstPage {
+                    detailsPage = 2
+                    Haptics.selection()
+                } else {
+                    continueToGear()
+                }
+            } label: {
+                Text(onFirstPage ? "Continue" : "Choose Gear")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity, minHeight: 52)
             }
-            .buttonStyle(.borderedProminent)
-            .buttonBorderShape(.capsule)
-            .controlSize(.large)
-            .tint(Color.statusText(.purple))
-            .disabled(!canContinueToGear || vm.isSubmitting)
-            .accessibilityHint(continueBlockedReason ?? "Opens equipment selection")
+            .buttonStyle(.plain)
+            .foregroundStyle(canGo ? Color.white : Color.secondary)
+            .background(
+                canGo ? Color.statusText(.purple) : Color(.tertiarySystemFill),
+                in: RoundedRectangle(cornerRadius: 16)
+            )
+            .disabled(!canGo || vm.isSubmitting)
+            .accessibilityHint(blocked ?? (onFirstPage ? "Next: when it's due back" : "Opens equipment selection"))
         }
         .padding(.horizontal, Brand.Space.md)
         .padding(.vertical, 10)
@@ -396,105 +456,25 @@ struct CreateBookingSheet: View {
         .overlay(alignment: .top) { Divider() }
     }
 
+    private func pageHeading(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 30, weight: .heavy))
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
     @ViewBuilder
     private var detailsForm: some View {
         ScrollView {
-            VStack(spacing: Brand.Space.md) {
-                if let sourceTitle = vm.reusedGearSourceTitle {
-                    FormCard {
-                        Label {
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text("Copied from \u{201c}\(sourceTitle)\u{201d}")
-                                    .font(.subheadline.weight(.semibold))
-                                Text("Choose this week’s event. Pickup and return follow the same timing as last time, and availability is checked again before saving.")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        } icon: {
-                            Image(systemName: "arrow.trianglehead.2.clockwise.rotate.90")
-                                .foregroundStyle(Color.statusText(.purple))
-                        }
-                    }
+            VStack(alignment: .leading, spacing: Brand.Space.md) {
+                if detailsPage == 1 || setupMode == .event {
+                    whatIsItForPage
+                } else {
+                    whenIsItDuePage
                 }
-
-                if canLinkEvents && !vm.isReusingGear {
-                    FormCard {
-                        BrandSectionHeader("Set Schedule From")
-                        Picker("Schedule source", selection: setupModeBinding) {
-                            ForEach(ReservationSetupMode.allCases) { mode in
-                                Text(mode.rawValue).tag(mode)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-                        if setupMode == .event {
-                            Divider().padding(.leading, 4)
-                            EventSelectionCard(
-                                events: vm.events,
-                                selectedEvents: vm.linkedEventsForSetup,
-                                isLoading: vm.isLoadingEvents,
-                                error: vm.eventError,
-                                usesFormCard: false,
-                                onRetry: { Task { await vm.loadEvents() } },
-                                onToggle: { vm.toggleEvent($0) },
-                                onRemove: { vm.removeSelectedEvent($0) }
-                            )
-                        }
-                    }
-                } else if setupMode == .event {
-                    EventSelectionCard(
-                        events: vm.events,
-                        selectedEvents: vm.linkedEventsForSetup,
-                        isLoading: vm.isLoadingEvents,
-                        error: vm.eventError,
-                        onRetry: { Task { await vm.loadEvents() } },
-                        onToggle: { vm.toggleEvent($0) },
-                        onRemove: { vm.removeSelectedEvent($0) }
-                    )
-                }
-
-                if showsPlanDetails {
-                    reservationPlanCard
-                        .transition(detailsTransition)
-                    if setupMode == .event, vm.hasInvalidReusedEventSelection {
-                        Label("Choose a different event when re-reserving", systemImage: "exclamationmark.triangle.fill")
-                            .font(.footnote)
-                            .foregroundStyle(Color.statusText(.orange))
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-
-                    pickupAndKitCard
-
-                    if vm.notes.isEmpty && !showNotesField {
-                        Button {
-                            showNotesField = true
-                            Task {
-                                // Focus after the field exists in the hierarchy.
-                                try? await Task.sleep(for: .milliseconds(80))
-                                notesFocused = true
-                            }
-                        } label: {
-                            FormCard {
-                                Label("Add note", systemImage: "square.and.pencil")
-                                    .font(.body)
-                                    .foregroundStyle(Color.statusText(.purple))
-                            }
-                        }
-                        .buttonStyle(.plain)
-                    } else {
-                        FormCard {
-                            TextField("Notes (optional)", text: $vm.notes, axis: .vertical)
-                                .lineLimit(3...6)
-                                .font(.body)
-                                .focused($notesFocused)
-                        }
-                    }
-                }
-
                 if let error = vm.error {
                     Text(error)
                         .font(.footnote)
                         .foregroundStyle(Color.statusText(.red))
-                        .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 4)
                 }
             }
@@ -505,11 +485,196 @@ struct CreateBookingSheet: View {
         .background(Color(.systemGroupedBackground))
     }
 
-    private var reservationPlanCard: some View {
+    @ViewBuilder
+    private var whatIsItForPage: some View {
+        if let sourceTitle = vm.reusedGearSourceTitle {
+            FormCard {
+                Label {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Copied from \u{201c}\(sourceTitle)\u{201d}")
+                            .font(.subheadline.weight(.semibold))
+                        Text("Choose this week’s event. Pickup and return follow the same timing as last time, and availability is checked again before saving.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                } icon: {
+                    Image(systemName: "arrow.trianglehead.2.clockwise.rotate.90")
+                        .foregroundStyle(Color.statusText(.purple))
+                }
+            }
+        }
+
+        pageHeading("What's this for?")
+
+        if canLinkEvents && !vm.isReusingGear {
+            HStack(spacing: 8) {
+                ChipButton(title: "An event", isSelected: setupMode == .event, tint: Color.statusText(.purple)) {
+                    setupModeBinding.wrappedValue = .event
+                }
+                ChipButton(title: "Something else", isSelected: setupMode == .manual, tint: Color.statusText(.purple)) {
+                    setupModeBinding.wrappedValue = .manual
+                }
+            }
+        }
+
+        if setupMode == .event {
+            if vm.linkedEventCount == 0, !vm.isReusingGear,
+               let id = suggestedEventId, let event = vm.events.first(where: { $0.id == id }) {
+                Text(suggestionFromShift ? "YOUR NEXT SHIFT" : "NEXT UP")
+                    .font(.caption2.weight(.bold))
+                    .tracking(0.8)
+                    .foregroundStyle(.secondary)
+                EventPickRow(event: event, isSelected: false, isDisabled: false) {
+                    vm.toggleEvent(event)
+                }
+            }
+            EventSelectionCard(
+                events: vm.events,
+                selectedEvents: vm.linkedEventsForSetup,
+                isLoading: vm.isLoadingEvents,
+                error: vm.eventError,
+                onRetry: { Task { await vm.loadEvents() } },
+                onToggle: { vm.toggleEvent($0) },
+                onRemove: { vm.removeSelectedEvent($0) }
+            )
+            if vm.linkedEventCount > 0 {
+                eventPlanCard
+                pickupAndKitCard
+                notesField
+            }
+            if vm.hasInvalidReusedEventSelection {
+                Label("Choose a different event when re-reserving", systemImage: "exclamationmark.triangle.fill")
+                    .font(.footnote)
+                    .foregroundStyle(Color.statusText(.orange))
+            }
+        } else {
+            FormCard { reservationTitleCard }
+        }
+    }
+
+    @ViewBuilder
+    private var whenIsItDuePage: some View {
+        pageHeading("When's it due back?")
+        timesCard
+        pickupAndKitCard
+        notesField
+    }
+
+    private var timesCard: some View {
         FormCard {
-            reservationTitleCard
+            HStack(spacing: 8) {
+                Text("Pickup")
+                    .font(.subheadline.weight(.semibold))
+                Text(chipDayTime(vm.startsAt))
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.statusText(.purple))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Color.statusBackground(.purple), in: Capsule())
+                Spacer(minLength: 0)
+                Button(showPickupEditor ? "Done" : "Change") { showPickupEditor.toggle() }
+                    .font(.subheadline.weight(.semibold))
+                    .tint(Color.statusText(.purple))
+            }
+            if showPickupEditor {
+                QuarterHourDatePickerRow(
+                    label: "Pickup",
+                    selection: Binding(
+                        get: { vm.startsAt },
+                        set: { vm.adjustStart(to: $0) }
+                    )
+                )
+            }
             Divider().padding(.leading, 4)
-            scheduleWindowCard
+            HStack(spacing: 8) {
+                Text("Due back")
+                    .font(.subheadline.weight(.semibold))
+                Text(chipDayTime(vm.endsAt))
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.statusText(.purple))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Color.statusBackground(.purple), in: Capsule())
+                Spacer(minLength: 0)
+            }
+            DayTimeChipPicker(
+                selection: Binding(
+                    get: { vm.endsAt },
+                    set: { vm.adjustEnd(to: $0) }
+                ),
+                minimum: vm.startsAt,
+                tint: Color.statusText(.purple)
+            )
+            if vm.endsAt <= vm.startsAt {
+                Label("Return must be after pickup", systemImage: "exclamationmark.circle.fill")
+                    .font(.caption)
+                    .foregroundStyle(Color.statusText(.red))
+            }
+        }
+    }
+
+    /// Event-linked setups take their times from the event, so the plan is one
+    /// glanceable line with a way to change it.
+    private var eventPlanCard: some View {
+        FormCard {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("PICKUP AND RETURN")
+                        .font(.caption2.weight(.bold))
+                        .tracking(0.8)
+                        .foregroundStyle(.secondary)
+                    Text("Pickup \(chipDayTime(vm.startsAt))")
+                        .font(.subheadline.weight(.semibold))
+                    Text("Due back \(chipDayTime(vm.endsAt))")
+                        .font(.subheadline.weight(.semibold))
+                }
+                Spacer(minLength: 0)
+                Button("Change") { showTimesSheet = true }
+                    .font(.subheadline.weight(.semibold))
+                    .tint(Color.statusText(.purple))
+            }
+        }
+        .sheet(isPresented: $showTimesSheet) {
+            NavigationStack {
+                ScrollView {
+                    timesCard.padding(Brand.Space.lg)
+                }
+                .background(Color(.systemGroupedBackground))
+                .navigationTitle("Pickup and return")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") { showTimesSheet = false }
+                    }
+                }
+            }
+            .presentationDetents([.large])
+        }
+    }
+
+    @ViewBuilder
+    private var notesField: some View {
+        if vm.notes.isEmpty && !showNotesField {
+            Button {
+                showNotesField = true
+                Task {
+                    try? await Task.sleep(for: .milliseconds(80))
+                    notesFocused = true
+                }
+            } label: {
+                Label("Add note", systemImage: "square.and.pencil")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.statusText(.purple))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(.plain)
+        } else {
+            FormCard {
+                TextField("Notes (optional)", text: $vm.notes, axis: .vertical)
+                    .lineLimit(3...6)
+                    .font(.body)
+                    .focused($notesFocused)
+            }
         }
     }
 
@@ -596,38 +761,6 @@ struct CreateBookingSheet: View {
         }
     }
 
-    private var scheduleWindowCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            BrandSectionHeader("When")
-            QuarterHourDatePickerRow(
-                label: "Pickup",
-                selection: Binding(
-                    get: { vm.startsAt },
-                    set: { vm.adjustStart(to: $0) }
-                )
-            )
-            Divider().padding(.leading, 4)
-            QuarterHourDatePickerRow(
-                label: "Return",
-                selection: Binding(
-                    get: { vm.endsAt },
-                    set: { vm.adjustEnd(to: $0) }
-                ),
-                minimumDate: vm.startsAt
-            )
-            if vm.endsAt <= vm.startsAt {
-                Label("Return must be after pickup", systemImage: "exclamationmark.circle.fill")
-                    .font(.caption)
-                    .foregroundStyle(Color.statusText(.red))
-                    .padding(.top, 2)
-            }
-        }
-    }
-
-    private var detailsTransition: AnyTransition {
-        reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .top))
-    }
-
     private var setupModeBinding: Binding<ReservationSetupMode> {
         Binding(
             get: { setupMode },
@@ -642,11 +775,11 @@ struct CreateBookingSheet: View {
     }
 
     private var reviewPickupText: String {
-        vm.startsAt.operationalDateTimeLabel()
+        vm.startsAt.operationalDateTimeLabel(now: today)
     }
 
     private var reviewReturnText: String {
-        vm.endsAt.operationalDateTimeLabel()
+        vm.endsAt.operationalDateTimeLabel(now: today)
     }
 
     @ViewBuilder
@@ -667,8 +800,12 @@ struct CreateBookingSheet: View {
                         size: 44
                     )
                     VStack(alignment: .leading, spacing: 2) {
+                        Text("READY TO RESERVE")
+                            .font(.caption2.weight(.bold))
+                            .tracking(0.8)
+                            .foregroundStyle(Color.statusText(.purple))
                         Text(reviewDisplayTitle)
-                            .font(.headline)
+                            .font(.title3.weight(.heavy))
                             .lineLimit(2)
                         Text(vm.selectedUser?.name ?? session.currentUser?.name ?? "")
                             .font(.subheadline)
@@ -835,8 +972,6 @@ private struct QuarterHourDatePickerRow: View {
     @Binding var selection: Date
     var minimumDate: Date? = nil
 
-    private let quarterHours = Array(0..<96)
-
     private var dateBinding: Binding<Date> {
         Binding(
             get: { selection },
@@ -856,25 +991,10 @@ private struct QuarterHourDatePickerRow: View {
         )
     }
 
-    private var quarterBinding: Binding<Int> {
+    private var timeBinding: Binding<Date> {
         Binding(
-            get: {
-                let components = Calendar.current.dateComponents([.hour, .minute], from: selection)
-                let minutes = (components.hour ?? 0) * 60 + (components.minute ?? 0)
-                return min(95, max(0, Int((Double(minutes) / 15).rounded())))
-            },
-            set: { quarter in
-                let calendar = Calendar.current
-                let day = calendar.dateComponents([.year, .month, .day], from: selection)
-                var merged = DateComponents()
-                merged.year = day.year
-                merged.month = day.month
-                merged.day = day.day
-                merged.hour = (quarter * 15) / 60
-                merged.minute = (quarter * 15) % 60
-                guard let value = calendar.date(from: merged) else { return }
-                selection = max(value, minimumDate ?? .distantPast)
-            }
+            get: { selection },
+            set: { selection = max(QuarterHour.roundedUp($0), minimumDate ?? .distantPast) }
         )
     }
 
@@ -911,82 +1031,63 @@ private struct QuarterHourDatePickerRow: View {
             .fixedSize()
             .tint(Color.statusText(.purple))
 
-            Picker("\(label) time", selection: quarterBinding) {
-                ForEach(quarterHours, id: \.self) { quarter in
-                    Text(timeLabel(for: quarter)).tag(quarter)
-                }
-            }
-            .pickerStyle(.menu)
-            .fixedSize()
-            .tint(Color.statusText(.purple))
+            QuarterHourTimePicker(
+                selection: timeBinding,
+                minimumDate: minimumDate,
+                tint: Color.statusText(.purple),
+                accessibilityLabel: "\(label) time, 15-minute increments"
+            )
 
             if !showsLabel {
                 Spacer(minLength: 0)
             }
         }
     }
-
-    private func timeLabel(for quarter: Int) -> String {
-        let calendar = Calendar.current
-        let start = calendar.startOfDay(for: .now)
-        let date = calendar.date(byAdding: .minute, value: quarter * 15, to: start) ?? start
-        return date.formatted(date: .omitted, time: .shortened)
-    }
 }
 
-private struct ReservationStepProgress: View {
-    let currentStep: Int
-    var onSelect: (Int) -> Void
+/// Kiosk-style progress: Back on the left, "Step n of 4" on the right, and a
+/// four-segment bar. Step 1 counts as two (what it's for, then when it's due).
+private struct ReservationProgressHeader: View {
+    let step: Int
+    let page: Int
+    let total: Int
+    var onBack: () -> Void
 
-    private let labels = ["Details", "Gear", "Review"]
+    /// Manual setups spend two screens on step 1; event-linked setups spend one.
+    private var position: Int { step == 1 ? page : (total == 3 ? step : step + 1) }
+    private var canGoBack: Bool { step > 1 || (page > 1 && total == 4) }
 
     var body: some View {
-        HStack(spacing: Brand.Space.sm) {
-            ForEach(Array(labels.enumerated()), id: \.offset) { index, label in
-                let step = index + 1
-                stepControl(step: step, title: label)
-                if step < labels.count {
-                    Rectangle()
-                        .fill(step < currentStep ? Color.statusText(.purple).opacity(0.45) : Color.hairline)
-                        .frame(height: 1)
-                        .accessibilityHidden(true)
+        VStack(spacing: 10) {
+            HStack {
+                if canGoBack {
+                    Button(action: onBack) {
+                        Label("Back", systemImage: "chevron.left")
+                            .font(.subheadline.weight(.semibold))
+                    }
+                    .tint(Color.statusText(.purple))
+                }
+                Spacer()
+                Text("STEP \(position) OF \(total)")
+                    .font(.caption2.weight(.bold))
+                    .tracking(0.8)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(minHeight: 24)
+            HStack(spacing: 6) {
+                ForEach(1...total, id: \.self) { index in
+                    Capsule()
+                        .fill(index <= position ? Color.statusText(.purple) : Color.hairline)
+                        .frame(height: 4)
                 }
             }
+            .accessibilityHidden(true)
         }
         .padding(.horizontal, Brand.Space.md)
         .padding(.vertical, 10)
         .background(.bar)
         .overlay(alignment: .bottom) { Divider() }
         .accessibilityElement(children: .contain)
-    }
-
-    @ViewBuilder
-    private func stepControl(step: Int, title: String) -> some View {
-        if step < currentStep {
-            Button {
-                onSelect(step)
-            } label: {
-                stepLabel(step: step, title: title)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("\(title), completed")
-            .accessibilityHint("Goes back to \(title)")
-        } else {
-            stepLabel(step: step, title: title)
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel(step == currentStep ? "\(title), current step" : "\(title), not started")
-        }
-    }
-
-    private func stepLabel(step: Int, title: String) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: step < currentStep ? "checkmark.circle.fill" : "\(step).circle.fill")
-                .foregroundStyle(step <= currentStep ? Color.statusText(.purple) : Color.secondary)
-            Text(title)
-                .font(.caption.weight(step == currentStep ? .semibold : .regular))
-                .foregroundStyle(step == currentStep ? .primary : .secondary)
-        }
-        .frame(minHeight: 28)
-        .contentShape(Rectangle())
+        .accessibilityLabel("Step \(position) of \(total)")
     }
 }

@@ -38,6 +38,7 @@ struct WisconsinApp: App {
                 .environment(drafts)
                 .environment(network)
                 .nativeRemoteImageSession()
+                .providesCurrentDay()
                 .preferredColorScheme(themeChoice.colorScheme)
                 .onAppear {
                     sharedAppState = appState
@@ -344,7 +345,11 @@ struct RootView: View {
     var body: some View {
         Group {
             if session.isRestoring {
-                LaunchView()
+                LaunchView(
+                    failed: session.restoreFailed,
+                    onRetry: { session.retryRestore() },
+                    onSignIn: { session.abandonRestore() }
+                )
             } else if let user = session.currentUser, user.forcePasswordChange {
                 PasswordSetupView(email: user.email)
                     .id(user.id)

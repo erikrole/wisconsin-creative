@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "2b2a3cfbd89afba7ff041e9f795524a356abb36a",
+  "sourcePatchSha256": "d7765ee4874fb7eadc223c5e9418aa4ff173946da6eb3aa688cd160787f84cb4",
+  "settings": {
+    "device": "iPhone 18 Pro Max simulator, iOS 27.0 (GT Capture)",
+    "viewport": [
+      440,
+      956
+    ],
+    "fixture": "FixtureAPIProtocol via GT_PERFORMANCE_SCENARIO (Debug build, user Bucky Badger)",
+    "role": "STAFF",
+    "route": "booking-edit scenario",
+    "appearance": "light",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "simctl status_bar override 9:41; fixture dates relative to launch on 2026-10-01 (America/Chicago)",
+    "scroll": [
+      0,
+      0
+    ]
+  },
+  "imageSha256": "85abb723c1fea50bb7a0b59680dfcbf95d1eaab4135d8f9320d88fcf5886def7",
+  "dimensions": [
+    1320,
+    2868
+  ]
+}
