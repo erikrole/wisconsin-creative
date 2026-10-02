@@ -24,7 +24,7 @@ import {
   ItemTitle,
 } from "@/components/ui/item";
 import { cn } from "@/lib/utils";
-import { LabelCartReview, labelTotal, newCartEntry, useLabelCart } from "./LabelCart";
+import { LabelCartReview, LabelGenerators, labelTotal, newCartEntry, useLabelCart } from "./LabelCart";
 
 function LabelQRCode({ value }: { value: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -65,6 +65,7 @@ type Asset = {
   primaryScanCode?: string;
   serialNumber: string;
   location: { name: string };
+  category?: { name: string } | null;
 };
 
 type BulkItemFamily = {
@@ -83,6 +84,7 @@ type LabelItem = {
   id: string;
   title: string;
   name: string;
+  category?: string | null;
   description: string;
   qrCodeValue: string;
   primaryScanCode?: string;
@@ -112,6 +114,7 @@ function mapAssetToLabelItem(asset: Asset): LabelItem {
     id: asset.id,
     title: asset.assetTag,
     name: asset.name?.trim() || `${asset.brand} ${asset.model}`.trim(),
+    category: asset.category?.name,
     description,
     qrCodeValue: asset.qrCodeValue,
     primaryScanCode: asset.primaryScanCode,
@@ -130,6 +133,7 @@ function mapFamilyToLabelItem(family: BulkItemFamily): LabelItem {
     id: `bulk-${family.id}`,
     title: family.name,
     name: family.name,
+    category: family.category,
     description: [tracking, availability, family.category].filter(Boolean).join(" · "),
     qrCodeValue: family.binQrCodeValue,
     primaryScanCode: family.binQrCodeValue,
@@ -144,8 +148,8 @@ function toCartEntry(item: LabelItem) {
   return newCartEntry({
     id: item.id,
     title: item.title,
-    description: item.description,
     name: item.name,
+    category: item.category,
     qrCodeValue: item.qrCodeValue,
     primaryScanCode: item.primaryScanCode,
   });
@@ -413,6 +417,8 @@ export default function LabelsPage() {
         )}
       </Card>
 
+      <LabelGenerators onAdd={add} />
+
       <LabelCartReview cart={cart} onUpdate={update} onRemove={remove} onClear={clear} />
 
       {selectedItems.length > 0 && (
@@ -420,15 +426,17 @@ export default function LabelsPage() {
           {selectedItems.flatMap((item) =>
             Array.from({ length: Math.max(1, item.copies) }, (_, copy) => (
             <div key={`${item.id}-${copy}`} className="label-print-card">
-              <div className="shrink-0">
-                <LabelQRCode value={item.qrCodeValue} />
-              </div>
+              {item.qrCodeValue && (
+                <div className="shrink-0">
+                  <LabelQRCode value={item.qrCodeValue} />
+                </div>
+              )}
               <div className="flex-1 min-w-0">
                 <div className="font-bold text-sm mb-0.5">
-                  {[item.tag, item.number].filter(Boolean).join(" ")}
+                  {[item.dept, item.model, item.number].filter(Boolean).join(" ")}
                 </div>
                 <div className="text-[11px] text-muted-foreground">
-                  {item.description}
+                  {item.name}
                 </div>
                 {item.primaryScanCode && (
                   <div className="font-mono text-[10px] text-muted-foreground mt-0.5">{item.primaryScanCode}</div>
