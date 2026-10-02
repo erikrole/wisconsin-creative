@@ -48,14 +48,16 @@ describe("native Schedule edit times and post trade redesign", () => {
     expect(postTrade).toContain('.interactiveDismissDisabled(hasUnsavedInput || isPosting)');
   });
 
-  it("keeps dates compact and the constructive actions purple", () => {
+  it("keeps dates compact and the constructive actions on the shared primary pill", () => {
     const detail = source("ios/Wisconsin/Views/EventDetailSheet.swift");
     const postTrade = source("ios/Wisconsin/Views/Schedule/PostTradeSheet.swift");
 
     expect(detail).toContain("calendar.component(.year, from: date) == calendar.component(.year, from: .now)");
     expect(postTrade).toContain("calendar.component(.year, from: candidate.startsAt) == calendar.component(.year, from: .now)");
-    expect(detail).toContain('.tint(Color.statusText(.purple))');
-    expect(postTrade).toContain('.tint(Color.statusText(.purple))');
+    // The purple constructive tint is retired for the shared adaptive pill.
+    expect(detail).toContain(".authButton(.primary, adaptive: true)");
+    expect(detail).not.toContain('.tint(Color.statusText(.purple))');
+    expect(postTrade).toContain(".authButton(.primary, adaptive: true)");
     expect(postTrade).toContain('.accessibilityAddTraits(isSelected ? .isSelected : [])');
   });
 });

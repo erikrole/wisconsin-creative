@@ -268,22 +268,25 @@ struct HomeView: View {
         if vm.dashboard == nil && vm.error == nil {
             ScrollView {
                 VStack(alignment: .leading, spacing: Brand.Space.lg) {
-                    ProgressView("Loading dashboard")
-                        .frame(maxWidth: .infinity, alignment: .leading)
                     blastStack
+                    VStack(alignment: .leading, spacing: 5) {
+                        Skeleton().frame(width: 150, height: 12)
+                        Skeleton().frame(width: 260, height: 30)
+                    }
                     StatStripSkeleton()
-                    VStack(alignment: .leading, spacing: Brand.Space.sm) {
-                        Skeleton().frame(width: 140, height: 14)
-                        ForEach(0..<3, id: \.self) { _ in BookingRowSkeleton() }
+                    VStack(alignment: .leading, spacing: 4) {
+                        Skeleton().frame(width: 96, height: 20)
+                            .padding(.bottom, 8)
+                        ForEach(0..<4, id: \.self) { index in
+                            QueueRowSkeleton()
+                            if index < 3 { Divider().overlay(Color.flatDivider).padding(.leading, 30) }
+                        }
                     }
-                    .brandCard(padding: Brand.Space.md, radius: Brand.Radius.card)
-                    VStack(alignment: .leading, spacing: Brand.Space.sm) {
-                        Skeleton().frame(width: 140, height: 14)
-                        ForEach(0..<4, id: \.self) { _ in BookingRowSkeleton() }
-                    }
-                    .brandCard(padding: Brand.Space.md, radius: Brand.Radius.card)
+                    .flatCard()
                 }
                 .padding(Brand.Space.md)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Loading dashboard")
             }
             .allowsHitTesting(false)
         } else if let error = vm.error, vm.dashboard == nil {
@@ -296,7 +299,8 @@ struct HomeView: View {
                         Text(error)
                     } actions: {
                         Button("Retry") { Task { await vm.load(appState: appState, requesterId: session.currentUser?.id, forceRefresh: true) } }
-                            .buttonStyle(.borderedProminent)
+                            .authButton(.primary, adaptive: true)
+                            .frame(maxWidth: 240)
                     }
                 }
                 .padding(Brand.Space.md)
@@ -368,7 +372,8 @@ struct HomeView: View {
                         // into every event on the calendar.
                         appState.pendingScheduleMyShifts = true
                         appState.selectedTab = 4
-                    }
+                    },
+                    emptyMessage: clearSummary(dash)
                 )
                 if HomeActionQueue.hasActions(in: dash, currentUserId: session.currentUser?.id) {
                     HomeActionQueue(
@@ -394,12 +399,37 @@ struct HomeView: View {
                 } else if isAllEmpty(dash) && !hasStaffFollowUp(dash) {
                     AllClearEmptyState(openSearch: { appState.presentSearch() })
                 }
+                let teamEvents = teamScheduleEvents(dash)
+                if !teamEvents.isEmpty {
+                    TeamScheduleCard(events: teamEvents, openFullSchedule: { appState.selectedTab = 4 })
+                }
                 if dash.isStaff {
                     staffExceptionSection(dash)
                 }
             }
             .padding(Brand.Space.md)
         }
+    }
+
+    /// Events on the team calendar that this person is not already working,
+    /// since Next Up lists those. A short list fills the space a shift-only
+    /// Home would otherwise leave empty.
+    private func teamScheduleEvents(_ dash: DashboardData) -> [DashboardUpcomingEvent] {
+        let mine = Set(dash.myEventWork.map(\.event.id))
+        return Array(
+            dash.upcomingEvents
+                .filter { !mine.contains($0.id) && $0.endsAt > .now }
+                .sorted { $0.startsAt < $1.startsAt }
+                .prefix(3)
+        )
+    }
+
+    /// The line shown when nothing is overdue, due, or waiting. Says when the
+    /// next shift is, so a quiet Home still answers "what's next".
+    private func clearSummary(_ dash: DashboardData) -> String {
+        let next = dash.myEventWork.map(\.shift.startsAt).filter { $0 > .now }.min()
+        guard let next else { return "Nothing overdue, due today, or waiting on you" }
+        return "Nothing due. Next shift \(queueWhen(next))"
     }
 
     private func hasStaffFollowUp(_ dash: DashboardData) -> Bool {
@@ -410,7 +440,7 @@ struct HomeView: View {
     private func staffExceptionSection(_ dash: DashboardData) -> some View {
         if !dash.flaggedItems.isEmpty || !dash.lostBulkUnits.isEmpty || !dash.drafts.isEmpty {
             VStack(alignment: .leading, spacing: Brand.Space.sm) {
-                BrandSectionHeader("Staff Follow-Up", systemImage: "flag.checkered")
+                FlatSectionTitle("Staff Follow-Up")
                 if !dash.flaggedItems.isEmpty {
                     FlaggedItemsBanner(items: dash.flaggedItems)
                 }
@@ -657,7 +687,7 @@ private struct DashboardHero: View {
                 .textCase(.uppercase)
                 .tracking(0.6)
             Text(accessibilityGreeting)
-                .font(.gothamBold(size: 24))
+                .font(.system(size: 32, weight: .heavy))
                 .foregroundStyle(.primary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -678,6 +708,8 @@ private struct StatStrip: View {
     let openBookings: () -> Void
     let openAttention: () -> Void
     let openSchedule: () -> Void
+    /// Shown when no tile applies; says what is next instead of only what is not.
+    let emptyMessage: String
 
     private var activeItems: [StatItem] {
         var items: [StatItem] = []
@@ -693,7 +725,9 @@ private struct StatStrip: View {
             // cancels itself and releases the gear after 48 unattended hours.
             items.append(StatItem(id: "pickups", value: pendingPickupCount, label: pendingPickupCount == 1 ? "Pickup" : "Pickups", systemImage: "shippingbox.fill", tone: .orange, action: openBookings))
         }
-        if shiftCount > 0 {
+        // Next Up lists up to three shifts itself, so a tile that repeats them
+        // only earns its place once the list has to overflow.
+        if shiftCount > 3 {
             items.append(StatItem(id: "shifts", value: shiftCount, label: shiftCount == 1 ? "Shift" : "Shifts", systemImage: "calendar", tone: .blue, action: openSchedule))
         }
         return items
@@ -710,16 +744,28 @@ private struct StatStrip: View {
                     Image(systemName: "checkmark.circle")
                         .font(.caption.weight(.semibold))
                         .accessibilityHidden(true)
-                    Text("Nothing overdue, due today, or waiting on you")
+                    Text(emptyMessage)
                         .font(.caption)
                     Spacer(minLength: 8)
                 }
                 .foregroundStyle(.secondary)
                 .accessibilityElement(children: .combine)
             } else {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), alignment: .leading), count: dynamicTypeSize.isAccessibilitySize ? 1 : 2), spacing: Brand.Space.sm) {
-                    ForEach(activeItems) { item in
-                        StatRow(item: item)
+                // Tiles pair up two to a row. A tile left without a partner (a
+                // lone metric, or the odd one out) spans the row as a compact
+                // number-and-label strip rather than leaving a hole beside it.
+                let rows = dynamicTypeSize.isAccessibilitySize
+                    ? activeItems.map { [$0] }
+                    : stride(from: 0, to: activeItems.count, by: 2).map {
+                        Array(activeItems[$0..<min($0 + 2, activeItems.count)])
+                    }
+                VStack(spacing: Brand.Space.sm) {
+                    ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                        HStack(spacing: Brand.Space.sm) {
+                            ForEach(row) { item in
+                                StatRow(item: item, isWide: row.count == 1)
+                            }
+                        }
                     }
                 }
             }
@@ -738,6 +784,22 @@ private struct StatItem: Identifiable {
 
 private struct StatRow: View {
     let item: StatItem
+    var isWide = false
+
+    private var valueText: some View {
+        Text("\(item.value)")
+            .font(.system(size: 34, weight: .heavy))
+            .monospacedDigit()
+            .foregroundStyle(Color.statusText(item.tone))
+            .contentTransition(.numericText())
+    }
+
+    private var labelText: some View {
+        Text(item.label)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+    }
     @State private var hapticTrigger = false
 
     var body: some View {
@@ -745,38 +807,23 @@ private struct StatRow: View {
             hapticTrigger.toggle()
             item.action()
         }) {
-            HStack(spacing: Brand.Space.sm) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: Brand.Radius.sm, style: .continuous)
-                        .fill(Color.statusIconBackground(item.tone))
-                    Image(systemName: item.systemImage)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.statusText(item.tone))
+            // The number is the point of the tile: no icon square, no chevron.
+            Group {
+                if isWide {
+                    HStack(alignment: .firstTextBaseline, spacing: 10) {
+                        valueText
+                        labelText
+                        Spacer(minLength: 0)
+                    }
+                } else {
+                    VStack(alignment: .leading, spacing: 2) {
+                        valueText
+                        labelText
+                    }
                 }
-                .frame(width: 36, height: 36)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("\(item.value)")
-                        .font(.headline.weight(.semibold))
-                        .monospacedDigit()
-                        .foregroundStyle(Color.statusText(item.tone))
-                        .contentTransition(.numericText())
-                    Text(item.label)
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(.primary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.tertiary)
-                    .accessibilityHidden(true)
             }
-            .padding(.horizontal, Brand.Space.md)
-            .padding(.vertical, Brand.Space.sm)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .flatCard(padding: Brand.Space.md, radius: Brand.Radius.md)
             .contentShape(Rectangle())
-            .background(Color.cardSurface, in: RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous))
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
@@ -791,17 +838,11 @@ private struct StatStripSkeleton: View {
     var body: some View {
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), alignment: .leading), count: dynamicTypeSize.isAccessibilitySize ? 1 : 2), spacing: Brand.Space.sm) {
             ForEach(0..<2, id: \.self) { _ in
-                HStack(spacing: Brand.Space.sm) {
-                    Skeleton(cornerRadius: Brand.Radius.sm).frame(width: 36, height: 36)
-                    VStack(alignment: .leading, spacing: 4) {
-                        Skeleton().frame(width: 24, height: 18)
-                        Skeleton().frame(height: 14)
-                    }
+                VStack(alignment: .leading, spacing: 6) {
+                    Skeleton().frame(width: 36, height: 30)
+                    Skeleton().frame(width: 72, height: 14)
                 }
-                .padding(.horizontal, Brand.Space.md)
-                .padding(.vertical, Brand.Space.sm)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.cardSurface, in: RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous))
+                .flatCard(padding: Brand.Space.md, radius: Brand.Radius.md)
             }
         }
         .accessibilityHidden(true)  // Don't pollute VO with placeholder shapes during initial load.
@@ -967,7 +1008,7 @@ private struct HomeActionQueue: View {
                 systemImage: entry.systemImage,
                 title: summary.title,
                 subtitle: personalContext(for: summary),
-                meta: "Due \(summary.endsAt.formatted(date: .omitted, time: .shortened))",
+                meta: "Due \(queueWhen(summary.endsAt))",
                 action: { openBookingSummary(summary) }
             )
         case .pendingPickup(let summary):
@@ -978,7 +1019,7 @@ private struct HomeActionQueue: View {
                 subtitle: summary.linkedEventId == nil ? personalContext(for: summary) : nil,
                 meta: summary.startsAt < Date()
                     ? "Pickup \(summary.startsAt.lateLabel)"
-                    : "Pickup \(summary.startsAt.formatted(date: .omitted, time: .shortened))",
+                    : "Pickup \(queueWhen(summary.startsAt))",
                 detailLines: summary.linkedEventId == nil ? [] : eventDetailLines(for: summary),
                 action: { openBookingSummary(summary) }
             )
@@ -988,7 +1029,7 @@ private struct HomeActionQueue: View {
                 systemImage: entry.systemImage,
                 title: summary.title,
                 subtitle: summary.linkedEventId == nil ? personalContext(for: summary) : nil,
-                meta: summary.startsAt.formatted(.dateTime.weekday(.abbreviated).hour().minute()),
+                meta: queueWhen(summary.startsAt),
                 detailLines: summary.linkedEventId == nil ? [] : eventDetailLines(for: summary),
                 action: { openBookingSummary(summary) }
             )
@@ -1004,7 +1045,7 @@ private struct HomeActionQueue: View {
                 systemImage: entry.systemImage,
                 title: summary.title,
                 subtitle: personalContext(for: summary),
-                meta: "Due \(summary.endsAt.formatted(.dateTime.weekday(.abbreviated).hour().minute()))",
+                meta: "Due \(queueWhen(summary.endsAt))",
                 action: { openBookingSummary(summary) }
             )
         }
@@ -1021,19 +1062,40 @@ private struct HomeActionQueue: View {
             || !dash.myCheckouts.items.isEmpty
     }
 
+    /// Overdue, then what lands before tomorrow, then the rest. Entries are
+    /// already ordered overdue-first then chronologically, so each bucket is
+    /// one contiguous run and a label only has to mark where it starts.
+    private enum Bucket: String {
+        case overdue = "Overdue"
+        case today = "Today"
+        case later = "Later"
+    }
+
+    private func bucket(for entry: QueueEntry) -> Bucket {
+        if case .overdue = entry.kind { return .overdue }
+        let tomorrow = Calendar.current.startOfDay(for: .now).addingTimeInterval(86_400)
+        return entry.sortsAt < tomorrow ? .today : .later
+    }
+
     var body: some View {
         let entries = makeDisplayedEntries()
-        VStack(alignment: .leading, spacing: 12) {
+        let buckets = entries.map(bucket(for:))
+        let showsLabels = Set(buckets).count > 1
+        let hidden = hiddenCounts()
+        VStack(alignment: .leading, spacing: 4) {
             header
+                .padding(.bottom, 4)
 
-            let hidden = hiddenCounts()
             VStack(spacing: 0) {
                 ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
+                    if showsLabels, index == 0 || buckets[index] != buckets[index - 1] {
+                        BucketLabel(text: buckets[index].rawValue, isFirst: index == 0)
+                    }
                     row(for: entry)
-                    if index < entries.count - 1 || hidden.gear + hidden.shifts > 0 {
-                        // Inset to the title, so the rail and glyph column
-                        // reads as one stack of kinds down the left edge.
-                        Divider().padding(.leading, 46)
+                    let continuesBucket = index < entries.count - 1 && buckets[index + 1] == buckets[index]
+                    if continuesBucket || (index == entries.count - 1 && hidden.gear + hidden.shifts > 0) {
+                        // Inset to the title, past the glyph column.
+                        Divider().overlay(Color.flatDivider).padding(.leading, 30)
                     }
                 }
                 if hidden.gear + hidden.shifts > 0 {
@@ -1046,17 +1108,121 @@ private struct HomeActionQueue: View {
                 }
             }
         }
-        .brandCard(padding: Brand.Space.md, radius: Brand.Radius.card)
+        .flatCard(padding: Brand.Space.md, radius: Brand.Radius.md)
     }
 
     private var header: some View {
-        BrandSectionHeader("Next Up")
+        FlatSectionTitle("Next Up")
+    }
+}
+
+/// Quiet time-bucket label inside the Next Up card.
+private struct BucketLabel: View {
+    let text: String
+    let isFirst: Bool
+
+    var body: some View {
+        Text(text)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .textCase(.uppercase)
+            .tracking(0.6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, isFirst ? 6 : 14)
+            .padding(.bottom, 2)
+            .accessibilityAddTraits(.isHeader)
     }
 }
 
 /// Names what the per-lane caps left out. The queue used to end on an arbitrary
 /// third row with nothing to say more existed, so a student with five shifts
 /// today saw three and no reason to look further.
+/// The next few events on the team calendar that this person is not working.
+private struct TeamScheduleCard: View {
+    let events: [DashboardUpcomingEvent]
+    let openFullSchedule: () -> Void
+    @State private var hapticTrigger = false
+
+    private func title(_ event: DashboardUpcomingEvent) -> String {
+        if let raw = event.opponent, !raw.isEmpty {
+            let name = scheduleOpponentParts(raw).name
+            let preposition = event.isHome == false ? "at" : "vs"
+            let sport = sportLabel(event.sportCode)
+            return [sport, "\(preposition) \(name)"].compactMap { $0 }.joined(separator: " ")
+        }
+        let cleaned = cleanScheduleEventSummary(event.title)
+        return cleaned.isEmpty ? "Event" : cleaned
+    }
+
+    private func supporting(_ event: DashboardUpcomingEvent) -> String {
+        let calendar = Calendar.current
+        let day: String
+        if calendar.isDateInToday(event.startsAt) {
+            day = "Today"
+        } else if calendar.isDateInTomorrow(event.startsAt) {
+            day = "Tomorrow"
+        } else {
+            day = event.startsAt.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
+        }
+        let open = event.totalShiftSlots - event.filledShiftSlots
+        let coverage = event.totalShiftSlots > 0
+            ? (open > 0 ? "\(open) open" : "Fully staffed")
+            : nil
+        return [day, coverage].compactMap { $0 }.joined(separator: " · ")
+    }
+
+    private func time(_ event: DashboardUpcomingEvent) -> String {
+        if event.allDay { return event.sportCode == "FB" ? "TBD" : "All day" }
+        return event.startsAt.formatted(date: .omitted, time: .shortened)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            FlatSectionTitle("On the Schedule")
+                .padding(.bottom, 4)
+            ForEach(Array(events.enumerated()), id: \.element.id) { index, event in
+                Button {
+                    hapticTrigger.toggle()
+                    openFullSchedule()
+                } label: {
+                    QueueRowLayout(
+                        tone: .gray,
+                        systemImage: "calendar",
+                        title: title(event),
+                        supporting: supporting(event),
+                        meta: time(event)
+                    )
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("\(title(event)), \(supporting(event)), \(time(event))")
+                if index < events.count - 1 {
+                    Divider().overlay(Color.flatDivider).padding(.leading, 30)
+                }
+            }
+        }
+        .flatCard(padding: Brand.Space.md, radius: Brand.Radius.md)
+    }
+}
+
+/// Placeholder shaped like `QueueRowLayout`: glyph, two text lines, time.
+private struct QueueRowSkeleton: View {
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Skeleton(cornerRadius: 4).frame(width: 18, height: 18)
+                .padding(.top, 3)
+            VStack(alignment: .leading, spacing: 6) {
+                Skeleton().frame(width: 190, height: 16)
+                Skeleton().frame(width: 130, height: 12)
+            }
+            Spacer(minLength: 8)
+            Skeleton().frame(width: 64, height: 12)
+                .padding(.top, 4)
+        }
+        .padding(.vertical, 10)
+        .frame(minHeight: 44)
+    }
+}
+
 private struct QueueOverflowRow: View {
     let gear: Int
     let shifts: Int
@@ -1082,11 +1248,11 @@ private struct QueueOverflowRow: View {
             hapticTrigger.toggle()
             action()
         } label: {
-            HStack(spacing: Brand.Space.sm) {
+            HStack(spacing: 12) {
                 Image(systemName: "ellipsis.circle")
-                    .font(.subheadline.weight(.semibold))
+                    .font(.footnote.weight(.semibold))
                     .foregroundStyle(.secondary)
-                    .frame(width: 30)
+                    .frame(width: 18)
                 Text(label)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
@@ -1106,16 +1272,36 @@ private struct QueueOverflowRow: View {
     }
 }
 
+/// When something lands, in the form that reads fastest: minutes or hours out
+/// for the next few hours, then a clock time today, "Tomorrow" plus a time, a
+/// weekday inside the week, and a date beyond it. Evaluated when the row
+/// renders; Home refreshes on foreground, so it is never read stale for long.
+private func queueWhen(_ date: Date, now: Date = .now) -> String {
+    let time = date.formatted(date: .omitted, time: .shortened)
+    let delta = date.timeIntervalSince(now)
+    if delta > 0 && delta < 3 * 3_600 {
+        let minutes = max(1, Int((delta / 60).rounded()))
+        if minutes <= 90 { return "in \(minutes) min" }
+        return "in \(Int((Double(minutes) / 60).rounded())) hr"
+    }
+    let calendar = Calendar.current
+    if calendar.isDateInToday(date) { return time }
+    if calendar.isDateInTomorrow(date) { return "Tomorrow \(time)" }
+    if delta < 6 * 86_400 { return date.formatted(.dateTime.weekday(.abbreviated).hour().minute()) }
+    return date.formatted(.dateTime.month(.abbreviated).day().hour().minute())
+}
+
 private struct QueueDetailLine {
     let text: String
     let tone: StatusTone
 }
 
-/// Gear rows inherit the booking-status colors from `docs/COLOR_SYSTEM.md`:
-/// purple reserved, orange awaiting pickup, blue checked out, red overdue.
-/// The single overlay is the deadline ramp -- an open checkout goes orange on
-/// the day it is due before it goes red -- which is the same escalation the
-/// stat strip above the card already reads out as Overdue / Due Today.
+/// Gear rows still *compute* the booking-status tone from
+/// `docs/COLOR_SYSTEM.md`: purple reserved, orange awaiting pickup, blue checked
+/// out, red overdue, with the deadline overlay that takes an open checkout orange
+/// on the day it is due. `QueueRowLayout` only *renders* the urgent tones (red,
+/// orange); purple, blue, and gray resolve to the neutral secondary style so
+/// colour on Home means "needs you now", not "which kind of booking".
 private func queueGearTone(for summary: BookingSummary) -> StatusTone {
     if summary.isOverdue { return .red }
     switch summary.status {
@@ -1126,9 +1312,10 @@ private func queueGearTone(for summary: BookingSummary) -> StatusTone {
     }
 }
 
-/// Shift rows inherit the scheduling domain's location colors instead, via the
-/// shared `venueTone`. The two domains share one chronological list, so the
-/// row's glyph -- box or calendar -- is what says which vocabulary to read.
+/// Shift rows still compute the scheduling domain's venue tone through the
+/// shared `venueTone`, but Home renders it neutral: a green or blue venue tone is
+/// not urgent, so only the box-versus-calendar glyph says which kind of row this
+/// is. Venue colour lives on the Schedule tab.
 private func queueVenueTone(for event: DashboardEventWorkEvent) -> StatusTone {
     venueTone(isHome: event.isHome)
 }
@@ -1194,10 +1381,9 @@ private struct EventActionQueueRow: View {
     let openEventWork: (DashboardEventWork) -> Void
     @State private var hapticTrigger = false
 
-    /// Venue, not gear readiness. This row's colour used to answer "is gear
-    /// booked?", which made green mean "ready" here and "home game" one tab
-    /// over on Schedule. Whether gear is still needed is a fact for the detail
-    /// sheet, not for the one channel the Schedule tab spends on location.
+    /// Venue, not gear readiness. Whether gear is still needed is a fact for the
+    /// detail sheet. The tone is computed for parity with Schedule, but the row
+    /// renders it neutral (see `QueueRowLayout`).
     private var tone: StatusTone { queueVenueTone(for: work.event) }
     private var scheduleEvent: ScheduleEvent { work.asScheduleEvent }
     private var isAllDayEvent: Bool { scheduleEvent.displayAllDay }
@@ -1233,7 +1419,11 @@ private struct EventActionQueueRow: View {
     /// own Next Up row and in the event detail sheet; restating it here made a
     /// four-line row out of what is fundamentally "where to be, and when".
     private var timeMeta: String {
-        isAllDayEvent ? "All day" : work.event.startsAt.formatted(date: .omitted, time: .shortened)
+        isAllDayEvent ? scheduleAllDayLabel(scheduleEvent) : work.event.startsAt.formatted(date: .omitted, time: .shortened)
+    }
+
+    private var supportingLine: String {
+        [dateLine, scheduleEventPromotion(scheduleEvent), callTimeLine].compactMap { $0 }.joined(separator: " · ")
     }
 
     var body: some View {
@@ -1241,35 +1431,15 @@ private struct EventActionQueueRow: View {
             hapticTrigger.toggle()
             openEventWork(work)
         } label: {
-            HStack(spacing: 12) {
-                StatusRail(tone: tone)
-                QueueKindGlyph(systemImage: systemImage, tone: tone)
-
-                // Same title-to-detail rhythm as the gear rows it sits between.
-                VStack(alignment: .leading, spacing: 4) {
-                    QueueRowTitle(title)
-                    QueueDetailText(text: dateLine, tone: tone, showsBullet: false)
-                    if let callTimeLine {
-                        QueueDetailText(text: callTimeLine, tone: .blue, showsBullet: false)
-                    }
-                }
-
-                Spacer(minLength: 8)
-
-                Text(timeMeta)
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(Color.statusText(tone))
-                    .multilineTextAlignment(.trailing)
-                    .lineLimit(2)
-                QueueDisclosureChevron()
-            }
-            .contentShape(Rectangle())
+            QueueRowLayout(
+                tone: tone,
+                systemImage: systemImage,
+                title: title,
+                supporting: supportingLine,
+                meta: timeMeta
+            )
         }
         .buttonStyle(.plain)
-        // A title plus one supporting line is the same height whatever the row
-        // is about, so gear and shift rows keep a shared rhythm down the card.
-        .frame(minHeight: callTimeLine != nil ? 64 : 44)
-        .padding(.vertical, 8)
         .accessibilityLabel(accessibilityLabel)
     }
 
@@ -1281,32 +1451,47 @@ private struct EventActionQueueRow: View {
     }
 }
 
-/// A supporting line under a Next Up title. The bullet only earns its place
-/// when there are two lines to tell apart; alone it reads as decoration. Only
-/// a red line colours its text: awaiting-pickup orange is the resting state
-/// for most gear lines, so tinting on it would light up the whole card.
-private struct QueueDetailText: View {
-    let text: String
+/// One Next Up row: kind glyph, Gotham title over a single supporting line, and
+/// the time on the trailing edge. Only the problem tones (overdue, due today)
+/// colour the time; every other state reads in the neutral secondary tone, so
+/// colour means "needs you now" instead of "which kind of booking".
+private struct QueueRowLayout: View {
     let tone: StatusTone
-    let showsBullet: Bool
-    var wraps = false
+    let systemImage: String
+    let title: String
+    let supporting: String
+    let meta: String
 
-    private var isUrgent: Bool { tone == .red }
+    private var metaStyle: Color {
+        tone == .red || tone == .orange ? Color.statusText(tone) : .secondary
+    }
 
     var body: some View {
-        HStack(spacing: 5) {
-            if showsBullet {
-                Circle()
-                    .fill(Color.statusText(tone))
-                    .frame(width: 5, height: 5)
-                    .accessibilityHidden(true)
+        HStack(alignment: .top, spacing: 12) {
+            QueueKindGlyph(systemImage: systemImage, tone: tone)
+                .padding(.top, 3)
+
+            VStack(alignment: .leading, spacing: 3) {
+                QueueRowTitle(title, wraps: true)
+                if !supporting.isEmpty {
+                    Text(supporting)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
-            Text(text)
-                .font(.caption)
-                .foregroundStyle(isUrgent ? AnyShapeStyle(Color.statusText(tone)) : AnyShapeStyle(.secondary))
-                .lineLimit(wraps ? nil : 1)
-                .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Text(meta)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(metaStyle)
+                .multilineTextAlignment(.trailing)
+                .padding(.top, 3)
         }
+        .multilineTextAlignment(.leading)
+        .padding(.vertical, 10)
+        .frame(minHeight: 44)
+        .contentShape(Rectangle())
     }
 }
 
@@ -1320,49 +1505,24 @@ private struct ActionQueueRow: View {
     let action: () -> Void
     @State private var hapticTrigger = false
 
+    private var supporting: String {
+        detailLines.isEmpty ? (subtitle ?? "") : detailLines.map(\.text).joined(separator: " · ")
+    }
+
     var body: some View {
         Button {
             hapticTrigger.toggle()
             action()
         } label: {
-            HStack(spacing: 12) {
-                StatusRail(tone: tone)
-                QueueKindGlyph(systemImage: systemImage, tone: tone)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    QueueRowTitle(title, wraps: true)
-                    Text(meta)
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(Color.statusText(tone))
-                        .fixedSize(horizontal: false, vertical: true)
-                    if detailLines.isEmpty, let subtitle {
-                        Text(subtitle)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    } else {
-                        VStack(alignment: .leading, spacing: 4) {
-                            ForEach(detailLines, id: \.text) { line in
-                                QueueDetailText(
-                                    text: line.text,
-                                    tone: line.tone,
-                                    showsBullet: detailLines.count > 1,
-                                    wraps: true
-                                )
-                            }
-                        }
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-                QueueDisclosureChevron()
-            }
-            .multilineTextAlignment(.leading)
-            .contentShape(Rectangle())
+            QueueRowLayout(
+                tone: tone,
+                systemImage: systemImage,
+                title: title,
+                supporting: supporting,
+                meta: meta
+            )
         }
         .buttonStyle(.plain)
-        .frame(minHeight: detailLines.count > 1 ? 64 : 44)
-        .padding(.vertical, 8)
         .accessibilityLabel(accessibilityLabel)
     }
 
@@ -1382,19 +1542,8 @@ private struct QueueKindGlyph: View {
     var body: some View {
         Image(systemName: systemImage)
             .font(.footnote.weight(.semibold))
-            .foregroundStyle(Color.statusText(tone))
+            .foregroundStyle(tone == .red || tone == .orange ? AnyShapeStyle(Color.statusText(tone)) : AnyShapeStyle(.secondary))
             .frame(width: 18)
-            .accessibilityHidden(true)
-    }
-}
-
-/// These rows are informational, but they still open their booking or event.
-/// A chevron says "tappable" without putting a verb on every line.
-private struct QueueDisclosureChevron: View {
-    var body: some View {
-        Image(systemName: "chevron.right")
-            .font(.caption2.weight(.semibold))
-            .foregroundStyle(.tertiary)
             .accessibilityHidden(true)
     }
 }
@@ -1419,8 +1568,7 @@ private struct RefreshFailurePill: View {
             }
             Spacer()
         }
-        .padding(10)
-        .background(Color.statusBackground(.orange), in: RoundedRectangle(cornerRadius: 10))
+        .flatCard(padding: 12, radius: Brand.Radius.sm)
         .accessibilityElement(children: .combine)
     }
 }
@@ -1431,28 +1579,29 @@ private struct AllClearEmptyState: View {
     let openSearch: () -> Void
 
     var body: some View {
-        VStack(spacing: 10) {
-            Image(systemName: "checkmark.seal.fill")
-                .font(.system(size: 36))
-                .foregroundStyle(Color.statusText(.green))
-                .accessibilityHidden(true)
-            Text("You're all set")
-                .font(.headline)
-            Text("Use Search to look up gear or scan a code.")
-                .font(.subheadline)
+        VStack(spacing: 12) {
+            Image(systemName: "checkmark.circle")
+                .font(.system(size: 30, weight: .semibold))
                 .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+                .accessibilityHidden(true)
+            VStack(spacing: 4) {
+                Text("You're all set")
+                    .font(.system(size: 20, weight: .heavy))
+                Text("Use Search to look up gear or scan a code.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
             Button {
                 openSearch()
             } label: {
                 Label("Search or Scan", systemImage: "magnifyingglass")
-                    .font(.subheadline.weight(.semibold))
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.regular)
+            .authButton(.primary, adaptive: true)
+            .frame(maxWidth: 280)
             .padding(.top, 4)
         }
-        .brandCard(padding: Brand.Space.xl, radius: Brand.Radius.card, alignment: .center)
+        .flatCard(padding: Brand.Space.xl, radius: Brand.Radius.md, alignment: .center)
         .accessibilityElement(children: .contain)
     }
 }
@@ -1475,7 +1624,7 @@ private struct DashboardCard<Content: View>: View {
                 .tracking(0.3)
             content()
         }
-        .brandCard(padding: Brand.Space.md, radius: Brand.Radius.card)
+        .flatCard(padding: Brand.Space.md, radius: Brand.Radius.md)
     }
 }
 
@@ -1520,12 +1669,10 @@ private struct FlaggedItemsBanner: View {
                 }
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel(flaggedRowLabel(for: item))
-                if item.id != items.last?.id { Divider() }
+                if item.id != items.last?.id { Divider().overlay(Color.flatDivider) }
             }
         }
-        .padding(Brand.Space.md)
-        .background(Color.statusBackground(.orange), in: RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous).strokeBorder(Color.statusText(.orange).opacity(0.2), lineWidth: 1))
+        .flatCard(padding: Brand.Space.md, radius: Brand.Radius.md)
     }
 
     private func flaggedRowLabel(for item: DashboardFlaggedItem) -> String {
@@ -1569,9 +1716,7 @@ private struct LostBulkUnitsBanner: View {
                 .accessibilityLabel("\(item.skuName), \(item.count) missing")
             }
         }
-        .padding(Brand.Space.md)
-        .background(Color.statusBackground(.red), in: RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous).strokeBorder(Color.statusText(.red).opacity(0.2), lineWidth: 1))
+        .flatCard(padding: Brand.Space.md, radius: Brand.Radius.md)
     }
 }
 
@@ -1601,11 +1746,6 @@ private struct DraftRow: View {
             }
 
             Spacer()
-
-            Image(systemName: "chevron.right")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.tertiary)
-                .accessibilityHidden(true)
         }
         .padding(.vertical, 2)
         .accessibilityElement(children: .combine)

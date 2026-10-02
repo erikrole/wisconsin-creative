@@ -141,6 +141,7 @@
 		ADB0FD771E094960BDFC5D6B /* BookingModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33E539B4DF2AE3F73D36C2BA /* BookingModelsTests.swift */; };
 		AE02BC8C269DDE4A15E54745 /* Gotham-Black.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 25CAFE07992F1EB02F507AE2 /* Gotham-Black.ttf */; };
 		AF66ADDE1D3CF5B16155A3BA /* GlobalSearchSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5EC344925B5666C2CA8F773 /* GlobalSearchSheet.swift */; };
+		B055ADFFD82943733382DB0D /* AuthDesign.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7BC639F2D52A9931FBEF8F3 /* AuthDesign.swift */; };
 		B0583B1951EA442CCD563320 /* ScheduleDateMathTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A943ABC3AA353DC3AAEA0B3A /* ScheduleDateMathTests.swift */; };
 		B1DDE3C06BD40F1F8615A227 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64F14676788E6FA7CDD08D48 /* HomeView.swift */; };
 		B2FEB545EEB4F42FE18F292F /* BookingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2228A84C3CCBC90ABF9103F1 /* BookingsView.swift */; };
@@ -185,6 +186,7 @@
 		EB431E266D465DDA520852CB /* OverdueReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1770023701735D8701DCAA5B /* OverdueReportView.swift */; };
 		F2A0A3013F3F22792FA32C84 /* KioskComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 348C1E3385689A947929A115 /* KioskComponents.swift */; };
 		F3AE80E47FC7B6AAA76035B6 /* KioskStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA38BB094C95612DBF9F1C24 /* KioskStore.swift */; };
+		F638E74E3B0DD964350FB270 /* FlatSurface.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C6B12C97D45B058A9E678BB /* FlatSurface.swift */; };
 		F6E0C3F7CF7197546DFADD59 /* ScheduleQuickFilterBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4654A0A61430D64DD8A38F71 /* ScheduleQuickFilterBar.swift */; };
 		F7ACA92034120AFA8C31E7CB /* ScoreboardModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3D02DDA55619A77B76789C2 /* ScoreboardModels.swift */; };
 		F8198BB80C4CB84C0C12ED6A /* FloatingSearchButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2E89852F4DC85939BA9A8AA /* FloatingSearchButton.swift */; };
@@ -335,6 +337,7 @@
 		84430D9886900EA2E8F3CB0B /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		88F162C9B5233CB44C35E9E5 /* WisconsinLiveActivities.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = WisconsinLiveActivities.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		88FF0CACAB4BD4886FD0219B /* CreateBookingEventViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateBookingEventViews.swift; sourceTree = "<group>"; };
+		8C6B12C97D45B058A9E678BB /* FlatSurface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlatSurface.swift; sourceTree = "<group>"; };
 		8EE808994D4A26C719DA2432 /* ScoreboardModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoreboardModelsTests.swift; sourceTree = "<group>"; };
 		8F93CDFD1D75D7CAC2D88211 /* KioskFlowRoutingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskFlowRoutingTests.swift; sourceTree = "<group>"; };
 		8F94CA79BF538DBB6FF7F225 /* UsersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsersView.swift; sourceTree = "<group>"; };
@@ -394,6 +397,7 @@
 		D5FEA50A163963BC17612FB6 /* ReservationDraftStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReservationDraftStore.swift; sourceTree = "<group>"; };
 		D670C3FF7EA66807225FD6FD /* SemanticTones.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SemanticTones.swift; sourceTree = "<group>"; };
 		D7348A946664F1C8E265C2A3 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		D7BC639F2D52A9931FBEF8F3 /* AuthDesign.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthDesign.swift; sourceTree = "<group>"; };
 		D8720CD7A10389DB790C6C2D /* KioskChangesViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskChangesViews.swift; sourceTree = "<group>"; };
 		D91ED4DEB3FC6F670DC60EDB /* KioskReturnReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskReturnReportView.swift; sourceTree = "<group>"; };
 		DB5E4D4F3F432CE124DE63A8 /* KioskPickupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskPickupView.swift; sourceTree = "<group>"; };
@@ -700,8 +704,10 @@
 			children = (
 				6ED3D57FAA3E94281C3FF27C /* APIClient.swift */,
 				38065600FA5A1C1AC4C8CC2F /* AppState.swift */,
+				D7BC639F2D52A9931FBEF8F3 /* AuthDesign.swift */,
 				4A9DAB950F60885A23620BEC /* Brand.swift */,
 				39565FFA7236A61DAD12D9BB /* DateFormats.swift */,
+				8C6B12C97D45B058A9E678BB /* FlatSurface.swift */,
 				FAD4EC3F211EACBB157F7DDE /* GearStore.swift */,
 				32D615552EE7D68CF4808A62 /* GearTrackerRoute.swift */,
 				2A73B2A1C9B274552CBA7C8B /* Haptics.swift */,
@@ -1128,6 +1134,7 @@
 				E74AB0C45B70B59CEBC79AC4 /* AppTabView.swift in Sources */,
 				C3C5D175C583096B0D645F24 /* AssetModels.swift in Sources */,
 				DC10577F4AF30D4E44E08B63 /* AssignStudentSheet.swift in Sources */,
+				B055ADFFD82943733382DB0D /* AuthDesign.swift in Sources */,
 				56A81DDDEF06AB1D40D13B33 /* AvailabilityView.swift in Sources */,
 				922F655D9910FE2ECB1E7DD8 /* BadgeEarnedCelebration.swift in Sources */,
 				6A2AF05B82DC2BA24217048C /* BannerView.swift in Sources */,
@@ -1153,6 +1160,7 @@
 				B6B0235DB84A35FE3DFF5D6C /* DraftModels.swift in Sources */,
 				713FB9080DFAA1073EE5FA8C /* EventDetailSheet.swift in Sources */,
 				904A4A8C645FFEB4CD2AA971 /* ExtendBookingSheet.swift in Sources */,
+				F638E74E3B0DD964350FB270 /* FlatSurface.swift in Sources */,
 				F8198BB80C4CB84C0C12ED6A /* FloatingSearchButton.swift in Sources */,
 				470F79B703DF9EB55FECE070 /* FormModels.swift in Sources */,
 				795277BA3B90A0AB27B5C672 /* GearStore.swift in Sources */,

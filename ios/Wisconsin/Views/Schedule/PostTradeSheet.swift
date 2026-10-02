@@ -149,7 +149,7 @@ struct PostTradeSheet: View {
                     } label: {
                         HStack(spacing: 8) {
                             if isPosting {
-                                ProgressView().tint(.white)
+                                ProgressView().tint(Color(.systemBackground))
                             } else {
                                 Image(systemName: "arrow.left.arrow.right")
                             }
@@ -158,9 +158,7 @@ struct PostTradeSheet: View {
                         }
                         .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(Color.statusText(.purple))
-                    .controlSize(.large)
+                    .authButton(.primary, adaptive: true)
                     .disabled(selectedCandidate == nil || isPosting)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
@@ -208,7 +206,7 @@ struct PostTradeSheet: View {
                 }
             }
         }
-        .background(Color.cardSurface, in: RoundedRectangle(cornerRadius: Brand.Radius.lg, style: .continuous))
+        .background(Color.flatCard, in: RoundedRectangle(cornerRadius: Brand.Radius.lg, style: .continuous))
     }
 
     private func selectedShiftCard(_ candidate: TradePostCandidate) -> some View {
@@ -235,7 +233,7 @@ struct PostTradeSheet: View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: "person.crop.circle.badge.clock")
                 .font(.title3)
-                .foregroundStyle(Color.statusText(.purple))
+                .foregroundStyle(Color.secondary)
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 4) {
@@ -248,7 +246,7 @@ struct PostTradeSheet: View {
             Spacer(minLength: 0)
         }
         .padding(14)
-        .background(Color.statusBackground(.purple), in: RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous))
+        .background(Color.flatRaised, in: RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous))
         .accessibilityElement(children: .combine)
     }
 
@@ -342,8 +340,8 @@ private struct TradeCandidateRow: View {
         HStack(spacing: 12) {
             Image(systemName: areaIcon)
                 .frame(width: 28, height: 28)
-                .foregroundStyle(Color.statusText(.purple))
-                .background(Color.statusBackground(.purple), in: Circle())
+                .foregroundStyle(Color.secondary)
+                .background(Color.flatRaised, in: Circle())
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 3) {
@@ -356,7 +354,7 @@ private struct TradeCandidateRow: View {
             }
             Spacer()
             Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                .foregroundStyle(isSelected ? Color.statusText(.purple) : Color.secondary)
+                .foregroundStyle(isSelected ? Color.primary : Color.secondary)
                 .accessibilityHidden(true)
         }
         .padding(.horizontal, 16)

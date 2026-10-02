@@ -15,6 +15,8 @@ struct EventRow: View {
     /// The day this row is rendered under. For a multi-day event it drives the
     /// "Day n of m" marker and the segment-aware time.
     var contextDay: Date? = nil
+    /// "Overlaps <event>" when another event you work runs into this one.
+    var conflictNote: String? = nil
 
     /// When this row represents one day of a multi-day event, its 1-based
     /// position and the total span length.
@@ -45,6 +47,13 @@ struct EventRow: View {
                     .fixedSize(horizontal: false, vertical: true)
 
                 metaLine
+
+                if let conflictNote {
+                    Label(conflictNote, systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.statusText(.orange))
+                        .lineLimit(1)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -64,12 +73,12 @@ struct EventRow: View {
         let start = event.startsAt.formatted(.dateTime.hour().minute())
         let end = event.endsAt.formatted(.dateTime.hour().minute())
         if let seg = segment {
-            if event.displayAllDay { return ("All day", nil) }
+            if event.displayAllDay { return (scheduleAllDayLabel(event), nil) }
             if seg.index == 1 { return (start, callTimeText) }
             if seg.index == seg.total { return ("Until", end) }
             return ("All day", nil)
         }
-        if event.displayAllDay { return ("All day", nil) }
+        if event.displayAllDay { return (scheduleAllDayLabel(event), nil) }
         return (start, callTimeText ?? end)
     }
 
@@ -79,13 +88,13 @@ struct EventRow: View {
             if timeState == .live {
                 Text("Now")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color.brandPrimary)
+                    .foregroundStyle(Color.primary)
                 Text(event.displayAllDay ? "All day" : event.endsAt.formatted(.dateTime.hour().minute()))
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(.secondary)
             } else {
                 Text(lines.primary)
-                    .font(.subheadline.weight(.semibold).monospacedDigit())
+                    .font(.subheadline.weight(.heavy).monospacedDigit())
                     .foregroundStyle(isPast ? Color.secondary : Color.primary)
                 if let secondary = lines.secondary {
                     Text(secondary)
@@ -219,6 +228,7 @@ struct EventRow: View {
         if let venueName {
             parts.append(venueName)
         }
+        if let conflictNote { parts.append(conflictNote) }
         return parts.joined(separator: ", ")
     }
 
@@ -261,7 +271,7 @@ struct EventRowBackground: View {
     let isMine: Bool
     var position: EventRowGroupPosition = .only
 
-    private static let radius: CGFloat = 20
+    private static let radius: CGFloat = Brand.Radius.md
 
     private var shape: UnevenRoundedRectangle {
         UnevenRoundedRectangle(
@@ -274,19 +284,61 @@ struct EventRowBackground: View {
     }
 
     var body: some View {
-        (isMine ? Color.myShiftSurface : Color.cardSurface)
+        (isMine ? Color.myShiftSurface : Color.flatCard)
             .overlay(alignment: .bottom) {
                 if position.hasSeparator {
                     // Starts under the title, past the venue dot.
                     Rectangle()
-                        .fill(Color(.separator))
-                        .frame(height: 0.5)
+                        .fill(Color.flatDivider)
+                        .frame(height: 1)
                         .padding(.leading, 36)
                 }
+            }
+            // The hairline outline of the day's group: both sides on every
+            // slice, the top only where the group starts and the bottom only
+            // where it ends, so slices join without a doubled line.
+            .overlay {
+                GroupOutline(position: position, radius: Self.radius)
+                    .stroke(Color.flatStroke, lineWidth: 1)
             }
             .clipShape(shape)
             .padding(.horizontal, 16)
             .background(Color(.systemGroupedBackground))
+    }
+}
+
+/// An open path tracing only the outer edges of one slice of a rounded group.
+private struct GroupOutline: Shape {
+    let position: EventRowGroupPosition
+    let radius: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        let r = radius
+        let top = position.roundsTop
+        let bottom = position.roundsBottom
+        var p = Path()
+        // Left edge, bottom to top, rounding into the top edge when it is drawn.
+        p.move(to: CGPoint(x: rect.minX, y: bottom ? rect.maxY - r : rect.maxY))
+        p.addLine(to: CGPoint(x: rect.minX, y: top ? rect.minY + r : rect.minY))
+        if top {
+            p.addArc(tangent1End: CGPoint(x: rect.minX, y: rect.minY),
+                     tangent2End: CGPoint(x: rect.minX + r, y: rect.minY), radius: r)
+            p.addLine(to: CGPoint(x: rect.maxX - r, y: rect.minY))
+            p.addArc(tangent1End: CGPoint(x: rect.maxX, y: rect.minY),
+                     tangent2End: CGPoint(x: rect.maxX, y: rect.minY + r), radius: r)
+        } else {
+            p.move(to: CGPoint(x: rect.maxX, y: rect.minY))
+        }
+        // Right edge, top to bottom, rounding into the bottom edge when drawn.
+        p.addLine(to: CGPoint(x: rect.maxX, y: bottom ? rect.maxY - r : rect.maxY))
+        if bottom {
+            p.addArc(tangent1End: CGPoint(x: rect.maxX, y: rect.maxY),
+                     tangent2End: CGPoint(x: rect.maxX - r, y: rect.maxY), radius: r)
+            p.addLine(to: CGPoint(x: rect.minX + r, y: rect.maxY))
+            p.addArc(tangent1End: CGPoint(x: rect.minX, y: rect.maxY),
+                     tangent2End: CGPoint(x: rect.minX, y: rect.maxY - r), radius: r)
+        }
+        return p
     }
 }
 
@@ -348,20 +400,18 @@ struct ScheduleDateHeader: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 6) {
             Text(primaryLabel)
-                .font(.headline)
-                .foregroundStyle(isToday ? Color.brandPrimary : Color.primary)
+                .font(.title3)
+                .fontWeight(.heavy)
+                .foregroundStyle(Color.primary)
             Text(dateLabel)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
             Spacer(minLength: 8)
-            Text(countText)
-                .font(.caption.monospacedDigit())
-                .foregroundStyle(.secondary)
         }
         .lineLimit(1)
         .textCase(nil)
         .padding(.horizontal, 32)
-        .padding(.top, 12)
+        .padding(.top, 14)
         .padding(.bottom, 8)
         .frame(maxWidth: .infinity)
         .background(Color(.systemGroupedBackground))

@@ -919,8 +919,36 @@ func sportLabel(_ code: String?) -> String? {
     return SPORT_LABELS[code] ?? code
 }
 
+/// Splits an opponent field like "Michigan State - Homecoming / Red Out" into
+/// the opponent and the promotion riding on the end of it. Calendar imports put
+/// both in one field, which turned a title into a two-line caption.
+func scheduleOpponentParts(_ raw: String) -> (name: String, promotion: String?) {
+    for separator in [" - ", " – ", " — "] {
+        guard let range = raw.range(of: separator) else { continue }
+        let name = raw[..<range.lowerBound].trimmingCharacters(in: .whitespaces)
+        let promotion = raw[range.upperBound...].trimmingCharacters(in: .whitespaces)
+        guard !name.isEmpty else { continue }
+        return (name, promotion.isEmpty ? nil : promotion)
+    }
+    return (raw.trimmingCharacters(in: .whitespaces), nil)
+}
+
+/// The promotion attached to an event's opponent ("Homecoming / Red Out"), for
+/// surfaces that have room to show it beside, not inside, the title.
+func scheduleEventPromotion(_ event: ScheduleEvent) -> String? {
+    guard let opponent = event.opponent, !opponent.isEmpty else { return nil }
+    return scheduleOpponentParts(opponent).promotion
+}
+
+/// What to print where an all-day event's time would go. Football is never an
+/// all-day event; an unset kickoff imports as one, so it reads "TBD".
+func scheduleAllDayLabel(_ event: ScheduleEvent) -> String {
+    event.sportCode == "FB" ? "TBD" : "All day"
+}
+
 func scheduleEventDisplayTitle(_ event: ScheduleEvent) -> String {
-    if let opponent = event.opponent, !opponent.isEmpty {
+    if let rawOpponent = event.opponent, !rawOpponent.isEmpty {
+        let opponent = scheduleOpponentParts(rawOpponent).name
         var parts: [String] = []
         if let code = event.sportCode {
             parts.append(sportLabel(code) ?? code)

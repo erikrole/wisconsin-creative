@@ -78,10 +78,9 @@ describe("iOS launch experience", () => {
     });
     expect(home).toContain("Color(.systemGroupedBackground)");
     expect(launch).toContain("Color(.systemGroupedBackground)");
-    expect(launch).not.toContain("BrandSplashScene(");
     expect(launch).not.toContain('Image("LaunchLockup")');
-    expect(launch).toContain("struct BrandSplashScene");
-    expect(launch).toContain('Image("Badgers")');
+    expect(launch).not.toContain("BrandSplashScene");
+    expect(source("ios/Wisconsin/Core/AuthDesign.swift")).toContain('Image("Badgers")');
     expect(kioskBackground.colors[0]?.color.components).toMatchObject({
       red: "0.043",
       green: "0.043",
@@ -112,27 +111,44 @@ describe("iOS launch experience", () => {
     expect(launch).toContain("try await Task.sleep(for: .seconds(3.35))");
     expect(launch.match(/catch \{\n\s+return\n\s+\}/g)).toHaveLength(2);
     expect(launch).toContain("if reduceMotion");
-    expect(launch).toContain(".accessibilityElement(children: .ignore)");
+    expect(launch).toContain(".accessibilityElement(children: failed ? .contain : .ignore)");
     expect(launch).toContain(".accessibilityLabel(accessibilityStatus)");
   });
 
-  it("reserves the crimson lockup for sign-in and does not delay optimistic sessions", () => {
+  it("holds a failed cold restore on the launch screen with retry, and keeps expiry out of the error style", () => {
+    const app = source("ios/Wisconsin/App/WisconsinApp.swift");
+    const session = source("ios/Wisconsin/Core/SessionStore.swift");
+    const launch = source("ios/Wisconsin/Views/LaunchView.swift");
+    const login = source("ios/Wisconsin/Views/LoginView.swift");
+
+    expect(app).toContain("failed: session.restoreFailed");
+    expect(session).toMatch(/if currentUser == nil \{\s+holdForRetry = true\s+restoreFailed = true/);
+    expect(session).toContain("if authRequests.owns(requestToken), !holdForRetry { isRestoring = false }");
+    expect(session).toContain("func retryRestore()");
+    expect(session).toContain("func abandonRestore()");
+    expect(session).toContain('self.notice = "Your session expired. Sign in again to continue."');
+    expect(session).not.toMatch(/self\.error = "Your session expired/);
+    expect(launch).toContain("Can't reach Wisconsin Creative");
+    expect(launch).toContain('Button("Sign in instead", action: onSignIn)');
+    expect(login).toContain("session.notice");
+  });
+
+  it("puts the mark on the kiosk-dark sign-in page and does not delay optimistic sessions", () => {
     const app = source("ios/Wisconsin/App/WisconsinApp.swift");
     const session = source("ios/Wisconsin/Core/SessionStore.swift");
     const login = source("ios/Wisconsin/Views/LoginView.swift");
     const passwordSetup = source("ios/Wisconsin/Views/PasswordSetupView.swift");
     const launch = source("ios/Wisconsin/Views/LaunchView.swift");
 
-    expect(app).toMatch(/if session\.isRestoring \{\s+LaunchView\(\)/);
+    expect(app).toMatch(/if session\.isRestoring \{\s+LaunchView\(/);
     expect(session).toMatch(
       /if !AppRuntimeMode\.isPerformanceTesting,[\s\S]*?currentUser = snapshot\s+isRestoring = false/,
     );
-    expect(login).toContain("BrandSplashScene()");
-    expect(login).toContain('BrandSplashLockup(subtitle: "Sign in to your account")');
-    expect(passwordSetup).toContain("BrandSplashScene()");
-    expect(passwordSetup).toContain('BrandSplashLockup(subtitle: "Set your password")');
+    expect(login).toContain("AuthScreen(");
+    expect(login).toContain('title: "Sign in"');
+    expect(passwordSetup).toContain("AuthScreen(");
+    expect(passwordSetup).toContain('title: "Set your password"');
     expect(passwordSetup).not.toContain("LinearGradient(");
-    expect(launch).toContain("struct BrandSplashLockup");
     expect(launchMinimumDurationTokens(app + session)).toEqual([]);
   });
 });

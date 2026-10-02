@@ -39,14 +39,15 @@ describe("native Schedule availability and Trade Board redesign", () => {
     expect(board).toContain("Show my trade posts");
     expect(board).toContain("private var availableContent");
     expect(board).toContain("private var myPostsContent");
-    expect(board).toContain('title: "Trade Posts"');
-    expect(board).toContain('title: "Open Shifts"');
-    expect(board).toContain("Shifts another student posted for coverage.");
-    expect(board).toContain("Unassigned Student slots.");
+    // One "Available to Pick Up" list holds both kinds, soonest first.
+    expect(board).toContain('title: "Available to Pick Up"');
+    expect(board).toContain("case trade(ShiftTrade)");
+    expect(board).toContain("case open(OpenWorkShift)");
+    expect(board).toContain("Shifts other students posted and unassigned slots, soonest first.");
     expect(board).not.toContain('title: "Available Now"');
     expect(board).toContain("dateTimeLine");
     expect(board).toContain("classificationColor");
-    expect(board).toContain(".buttonStyle(.borderedProminent)");
+    expect(board).toContain(".authButton(.primary, adaptive: true)");
     expect(board).toContain("cancelAction: nil");
     expect(board).not.toContain("} cancelAction: {}");
     expect(models).toContain("let viewerAvailabilityContext: ShiftAvailabilityContext?");

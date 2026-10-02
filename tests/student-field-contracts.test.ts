@@ -135,10 +135,12 @@ describe("student field mobile contracts", () => {
 
     expect(scheduleView).toContain("scheduleHeader(groups: groups)");
     expect(scheduleView).not.toContain("Picker(\"Schedule view\"");
-    expect(scheduleView).toContain("\"My Shifts\"");
+    const filterBar = source("ios/Wisconsin/Views/Schedule/ScheduleQuickFilterBar.swift");
+    // My Shifts and Sport are labelled controls in the filter header.
+    expect(filterBar).toContain("\"My Shifts\"");
     expect(scheduleView).toContain("\"Pull for earlier weeks\"");
-    expect(scheduleView).toContain("Picker(\"Sport\"");
-    expect(scheduleView).toContain("\"Sport, all sports\"");
+    expect(filterBar).toContain("Picker(\"Sport\"");
+    expect(filterBar).toContain("\"Sport, all sports\"");
     // Toolbar controls are Labels, not bare Images: the title is what makes
     // them self-describing, and it lets the system own sizing and hit area.
     expect(scheduleView).toContain("Label(\n                \"Trade Board\",");
@@ -273,8 +275,10 @@ describe("student field mobile contracts", () => {
     expect(tradeBoard).toContain(".accessibilityLabel(\"Post trade\")");
     expect(tradeBoard).toContain(".navigationTitle(\"Trade Board\")");
     expect(tradeBoard).toContain("APIClient.shared.scheduleOpenWork(area: areaFilter)");
-    expect(tradeBoard).toContain('title: "Trade Posts"');
-    expect(tradeBoard).toContain('title: "Open Shifts"');
+    // One "Available to Pick Up" list holds both kinds, soonest first.
+    expect(tradeBoard).toContain('title: "Available to Pick Up"');
+    expect(tradeBoard).toContain("case trade(ShiftTrade)");
+    expect(tradeBoard).toContain("case open(OpenWorkShift)");
     expect(tradeBoard).toContain("My Posts");
     expect(tradeBoard).toContain("Waiting or Blocked");
     expect(tradeBoard).toContain("Text(\"Claim shift\")");

@@ -110,8 +110,10 @@ describe("schedule open work source contracts", () => {
     // Area filter and paging bring the native board level with web.
     expect(sheet).toContain("func loadMoreTrades()");
     expect(sheet).toContain("shiftTrades(area: areaFilter, limit: pageSize)");
-    expect(sheet).toContain('title: "Trade Posts"');
-    expect(sheet).toContain('title: "Open Shifts"');
+    // One "Available to Pick Up" list holds both kinds, soonest first.
+    expect(sheet).toContain('title: "Available to Pick Up"');
+    expect(sheet).toContain("case trade(ShiftTrade)");
+    expect(sheet).toContain("case open(OpenWorkShift)");
     expect(sheet).not.toContain('title: "Available Now"');
     expect(sheet).toContain("My Posts");
     expect(sheet).toContain("Waiting or Blocked");

@@ -16,7 +16,7 @@ describe("iOS Schedule all-day display", () => {
     expect(scheduleView).toContain("if event.displayAllDay { return \"All day\" }");
     // The row's time sits in a trailing column, so the all-day substitution
     // lives in `timeLines`.
-    expect(scheduleView).toContain("if event.displayAllDay { return (\"All day\", nil) }");
+    expect(scheduleView).toContain("if event.displayAllDay { return (scheduleAllDayLabel(event), nil) }");
     expect(scheduleView).not.toContain("return Self.cleanSummary(event.summary)");
 
     expect(eventDetail).toContain('if event.displayAllDay || myShift?.workerType == "FT" { return nil }');

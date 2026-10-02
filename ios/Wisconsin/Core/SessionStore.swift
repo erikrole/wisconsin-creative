@@ -40,6 +40,12 @@ final class SessionStore {
     var isRestoring = true
     var error: String?
     var isOffline = false
+    /// A cold launch with no cached session could not reach the server, so we
+    /// cannot yet say whether the stored cookie is valid. Held on the launch
+    /// screen with a retry instead of guessing "signed out".
+    private(set) var restoreFailed = false
+    /// Neutral, non-error sign-in context (for example an expired session).
+    var notice: String?
     var rolePreviewError: String?
     private(set) var isRolePreviewActionInFlight = false
     private(set) var isInitialSessionValidationInFlight = true
@@ -47,6 +53,9 @@ final class SessionStore {
     /// True when this launch optimistically seeded `currentUser` from a stored
     /// snapshot, so the app shell rendered before `/me` confirmed the session.
     private var didSeedFromSnapshot = false
+#if DEBUG
+    private var didForceRestoreOffline = false
+#endif
     private var authRequests = LatestRequestGeneration()
     private let authMutations = AuthMutationQueue()
 
@@ -71,6 +80,11 @@ final class SessionStore {
             isRestoring = false
             didSeedFromSnapshot = true
         }
+#if DEBUG
+        if ProcessInfo.processInfo.environment["GT_SHOW_SESSION_EXPIRED"] == "1" {
+            notice = "Your session expired. Sign in again to continue."
+        }
+#endif
         if !AppRuntimeMode.isPerformanceTesting {
             let restoreToken = authRequests.begin()
             Task { await restoreSession(requestToken: restoreToken) }
@@ -96,7 +110,7 @@ final class SessionStore {
                 SessionSnapshot.clear()
                 self.rolePreviewError = nil
                 self.isRolePreviewActionInFlight = false
-                self.error = "Your session expired — please sign in again."
+                self.notice = "Your session expired. Sign in again to continue."
             }
         }
         NotificationCenter.default.addObserver(
@@ -294,6 +308,30 @@ final class SessionStore {
         if error != nil { error = nil }
     }
 
+    func clearNotice() {
+        if notice != nil { notice = nil }
+    }
+
+    /// Retries the blocking restore after a cold-launch network failure.
+    func retryRestore() {
+        guard restoreFailed else { return }
+        restoreFailed = false
+        isOffline = false
+        isInitialSessionValidationInFlight = true
+        let token = authRequests.begin()
+        Task { await restoreSession(requestToken: token) }
+    }
+
+    /// Gives up on restoring and shows Login, for someone who would rather
+    /// sign in than wait on a bad connection.
+    func abandonRestore() {
+        guard restoreFailed else { return }
+        restoreFailed = false
+        authRequests.invalidate()
+        isInitialSessionValidationInFlight = false
+        isRestoring = false
+    }
+
     /// Starts the native Student presentation view for the underlying Admin
     /// session. The server issues the signed cookie; the following `/api/me`
     /// read publishes the effective Student shell and preview metadata.
@@ -365,16 +403,26 @@ final class SessionStore {
         let signpost = AppPerformanceSignposts.begin("SessionValidation")
         let optimistic = didSeedFromSnapshot
         var result = "superseded"
+        var holdForRetry = false
         defer {
             AppPerformanceSignposts.end("SessionValidation", signpost)
             isInitialSessionValidationInFlight = false
-            if authRequests.owns(requestToken) { isRestoring = false }
+            if authRequests.owns(requestToken), !holdForRetry { isRestoring = false }
             // Distinguish the optimistic path (shell already shown) from a cold
             // blocking restore so launch timings stay comparable in Console.
             let phase = optimistic ? "launch.session.optimistic" : "launch.session.restore"
             sessionPerformanceLog.info("\(phase, privacy: .public) result=\(result, privacy: .public) durationMs=\(elapsedMilliseconds(since: startedAt), privacy: .public)")
         }
         do {
+#if DEBUG
+            // Review captures cannot toggle the host network per simulator.
+            if ProcessInfo.processInfo.environment["GT_FORCE_RESTORE_OFFLINE"] == "1",
+               !didForceRestoreOffline {
+                didForceRestoreOffline = true
+                try await Task.sleep(for: .seconds(1))
+                throw APIError.networkError(URLError(.notConnectedToInternet))
+            }
+#endif
             let user = try await APIClient.shared.me()
             guard authRequests.owns(requestToken) else {
                 result = "superseded"
@@ -393,6 +441,7 @@ final class SessionStore {
             authSessionBoundary.advance()
             authRequests.invalidate()
             isRestoring = false
+            isOffline = false
             SessionSnapshot.clear()
             currentUser = nil
             result = "unauthorized"
@@ -404,11 +453,16 @@ final class SessionStore {
             // Network failure — don't clear session state; keep any optimistic
             // session and let the user retry.
             isOffline = true
+            if currentUser == nil {
+                holdForRetry = true
+                restoreFailed = true
+            }
             result = optimistic ? "offline-optimistic" : "offline"
         }
     }
 
     private func publishCurrentUserIfChanged(_ user: CurrentUser) {
+        notice = nil
         if currentUser?.id != user.id {
             authSessionBoundary.advance()
         }

@@ -63,101 +63,98 @@ struct NativeRegistrationView: View {
     }
 
     var body: some View {
-        Form {
-            Section {
-                Text("Your invited email is approved. Create a password, then add the details needed for work.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-
-                TextField("Full name", text: $name)
-                    .textContentType(.name)
-                    .focused($focusedField, equals: .name)
-                    .submitLabel(.next)
-                    .onSubmit { focusedField = emailIsLocked ? .password : .email }
-
-                if !name.isEmpty && name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    Text("Enter your name.")
-                        .font(.footnote)
-                        .foregroundStyle(Color.statusText(.red))
+        AuthScreen(
+            title: "Set up account",
+            subtitle: "Your invited email is approved. Create a password, then add the details needed for work.",
+            showsMark: false
+        ) {
+            VStack(alignment: .leading, spacing: 18) {
+                AuthLabeledField(title: "Full name", isFocused: focusedField == .name) {
+                    TextField(text: $name, prompt: Text("Your name").foregroundStyle(AuthPalette.textTertiary)) { Text("Full name") }
+                        .textContentType(.name)
+                        .focused($focusedField, equals: .name)
+                        .submitLabel(.next)
+                        .onSubmit { focusedField = emailIsLocked ? .password : .email }
                 }
 
-                TextField("Email", text: $email)
-                    .textInputAutocapitalization(.never)
-                    .keyboardType(.emailAddress)
-                    // `.username`, not `.emailAddress`: this is the account the
-                    // password below belongs to, and it is what iOS files the
-                    // saved credential under.
-                    .textContentType(.username)
-                    .autocorrectionDisabled()
-                    .focused($focusedField, equals: .email)
-                    .submitLabel(.next)
-                    .onSubmit { focusedField = .password }
-                    .disabled(emailIsLocked)
+                if !name.isEmpty && name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    fieldNote("Enter your name.")
+                }
+
+                AuthLabeledField(title: "Email", isFocused: focusedField == .email) {
+                    TextField(text: $email, prompt: Text("you@wisc.edu").foregroundStyle(AuthPalette.textTertiary)) { Text("Email") }
+                        .textInputAutocapitalization(.never)
+                        .keyboardType(.emailAddress)
+                        // `.username`, not `.emailAddress`: this is the account the
+                        // password below belongs to, and it is what iOS files the
+                        // saved credential under.
+                        .textContentType(.username)
+                        .autocorrectionDisabled()
+                        .focused($focusedField, equals: .email)
+                        .submitLabel(.next)
+                        .onSubmit { focusedField = .password }
+                        .disabled(emailIsLocked)
+                        .opacity(emailIsLocked ? 0.6 : 1)
+                }
 
                 if !email.isEmpty && !Self.isValidEmail(normalizedEmail) {
-                    Text("Use a valid email address.")
-                        .font(.footnote)
-                        .foregroundStyle(Color.statusText(.red))
+                    fieldNote("Use a valid email address.")
                 }
 
                 AuthEmailDomainNote(email: email)
 
-                SecureField("Password", text: $password)
-                    .textContentType(.newPassword)
-                    .focused($focusedField, equals: .password)
-                    .submitLabel(.next)
-                    .onSubmit { focusedField = .confirmPassword }
-
-                if !password.isEmpty && password.count < 8 {
-                    Text("Use at least 8 characters.")
-                        .font(.footnote)
-                        .foregroundStyle(Color.statusText(.red))
+                AuthLabeledField(title: "Password", isFocused: focusedField == .password) {
+                    SecureField(text: $password, prompt: Text("At least 8 characters").foregroundStyle(AuthPalette.textTertiary)) { Text("Password") }
+                        .textContentType(.newPassword)
+                        .focused($focusedField, equals: .password)
+                        .submitLabel(.next)
+                        .onSubmit { focusedField = .confirmPassword }
                 }
 
-                SecureField("Confirm password", text: $confirmPassword)
-                    .textContentType(.newPassword)
-                    .focused($focusedField, equals: .confirmPassword)
-                    .submitLabel(.done)
-                    .onSubmit { submit() }
+                if !password.isEmpty && password.count < 8 {
+                    fieldNote("Use at least 8 characters.")
+                }
+
+                AuthLabeledField(title: "Confirm password", isFocused: focusedField == .confirmPassword) {
+                    SecureField(text: $confirmPassword, prompt: Text("Repeat your password").foregroundStyle(AuthPalette.textTertiary)) { Text("Confirm password") }
+                        .textContentType(.newPassword)
+                        .focused($focusedField, equals: .confirmPassword)
+                        .submitLabel(.done)
+                        .onSubmit { submit() }
+                }
 
                 if !confirmPassword.isEmpty && password != confirmPassword {
-                    Text("Passwords do not match.")
-                        .font(.footnote)
-                        .foregroundStyle(Color.statusText(.red))
+                    fieldNote("Passwords do not match.")
                 }
 
                 if let formError {
-                    Label(formError, systemImage: "exclamationmark.triangle.fill")
-                        .font(.footnote)
-                        .foregroundStyle(Color.statusText(.red))
-                        .fixedSize(horizontal: false, vertical: true)
+                    AuthInlineMessage(text: formError, systemImage: "exclamationmark.circle.fill", tone: .red)
                 }
-            }
 
-            Section {
                 Button {
                     submit()
                 } label: {
-                    HStack {
-                        Spacer()
+                    HStack(spacing: 8) {
                         if isSubmitting {
                             ProgressView()
                                 .controlSize(.small)
-                            Text("Creating account…")
-                        } else {
-                            Text("Create account")
+                                .tint(AuthPalette.onPrimary)
                         }
-                        Spacer()
+                        Text(isSubmitting ? "Creating account…" : "Create account")
                     }
+                    .frame(maxWidth: .infinity)
                 }
+                .authButton(.primary)
                 .disabled(!canSubmit)
             }
+        } footer: {
+            EmptyView()
         }
-        .navigationTitle("Set up account")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button("Cancel") { dismiss() }
+                    .foregroundStyle(AuthPalette.textSecondary)
                     .disabled(isSubmitting)
             }
         }
@@ -170,6 +167,12 @@ struct NativeRegistrationView: View {
         .onChange(of: password) { _, _ in formError = nil }
         .onChange(of: confirmPassword) { _, _ in formError = nil }
         .onAppear { focusedField = .name }
+    }
+
+    private func fieldNote(_ text: String) -> some View {
+        Text(text)
+            .font(.footnote)
+            .foregroundStyle(Color.statusText(.red))
     }
 
     private func submit() {
@@ -240,77 +243,62 @@ struct NativeForgotPasswordView: View {
     }
 
     var body: some View {
-        Form {
-            if let result {
-                Section {
-                    Label(
-                        result.resetEmailConfigured ? "Check your email" : "Contact Erik Role",
-                        systemImage: result.resetEmailConfigured ? "checkmark.circle.fill" : "info.circle.fill"
-                    )
-                    .foregroundStyle(result.resetEmailConfigured ? Color.statusText(.green) : .secondary)
-
-                    Text(result.message)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-
-                    Button("Done") { dismiss() }
-                }
+        AuthScreen(
+            title: result == nil ? "Reset password" : (result!.resetEmailConfigured ? "Check your email" : "Contact Erik Role"),
+            subtitle: result == nil
+                ? "Enter your account email. If password recovery is available, a reset link will be sent."
+                : result!.message,
+            showsMark: false
+        ) {
+            if result != nil {
+                Button("Done") { dismiss() }
+                    .authButton(.primary)
             } else {
-                Section {
-                    Text("Enter your account email. If password recovery is available, a reset link will be sent.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-
-                    TextField("Email", text: $email)
-                        .textInputAutocapitalization(.never)
-                        .keyboardType(.emailAddress)
-                        .textContentType(.emailAddress)
-                        .autocorrectionDisabled()
-                        .focused($emailFocused)
-                        .submitLabel(.go)
-                        .onSubmit { submit() }
+                VStack(alignment: .leading, spacing: 18) {
+                    AuthLabeledField(title: "Email", isFocused: emailFocused) {
+                        TextField(text: $email, prompt: Text("you@wisc.edu").foregroundStyle(AuthPalette.textTertiary)) { Text("Email") }
+                            .textInputAutocapitalization(.never)
+                            .keyboardType(.emailAddress)
+                            .textContentType(.emailAddress)
+                            .autocorrectionDisabled()
+                            .focused($emailFocused)
+                            .submitLabel(.go)
+                            .onSubmit { submit() }
+                    }
 
                     AuthEmailDomainNote(email: email)
 
                     if let formError {
-                        Label(formError, systemImage: "exclamationmark.triangle.fill")
-                            .font(.footnote)
-                            .foregroundStyle(Color.statusText(.red))
-                            .fixedSize(horizontal: false, vertical: true)
+                        AuthInlineMessage(text: formError, systemImage: "exclamationmark.circle.fill", tone: .red)
                     }
-                }
 
-                Section {
                     Button {
                         submit()
                     } label: {
-                        HStack {
-                            Spacer()
+                        HStack(spacing: 8) {
                             if isSubmitting {
                                 ProgressView()
                                     .controlSize(.small)
-                                Text("Sending…")
-                            } else {
-                                Text("Request password reset")
+                                    .tint(AuthPalette.onPrimary)
                             }
-                            Spacer()
+                            Text(isSubmitting ? "Sending…" : "Request password reset")
                         }
+                        .frame(maxWidth: .infinity)
                     }
+                    .authButton(.primary)
                     .disabled(isSubmitting)
                 }
-
-                Section {
-                    Text("If email recovery is unavailable, contact Erik Role for help.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
+            }
+        } footer: {
+            if result == nil {
+                Text("If email recovery is unavailable, contact Erik Role for help.")
             }
         }
-        .navigationTitle("Reset password")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button("Cancel") { dismiss() }
+                    .foregroundStyle(AuthPalette.textSecondary)
                     .disabled(isSubmitting)
             }
         }

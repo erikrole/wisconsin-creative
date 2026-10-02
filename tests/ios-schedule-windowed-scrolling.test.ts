@@ -121,7 +121,7 @@ describe("iOS Schedule follow-ups", () => {
       expect(source(`ios/Wisconsin/Views/Schedule/${file}.swift`)).not.toContain(".frame(width: 4, height:");
     }
     // Your own shift reads the same on the list row and the detail card.
-    expect(row).toContain("(isMine ? Color.myShiftSurface : Color.cardSurface)");
+    expect(row).toContain("(isMine ? Color.myShiftSurface : Color.flatCard)");
     expect(detail).toContain(".brandCard(fill: Color.myShiftSurface)");
   });
 });

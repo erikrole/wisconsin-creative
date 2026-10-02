@@ -191,11 +191,12 @@ struct ScheduleWeekStrip: View {
             } label: {
                 HStack(spacing: 4) {
                     Text(headerMonth.formatted(.dateTime.month(.wide).year()))
-                        .font(.headline)
+                        .font(.title2)
+                        .fontWeight(.heavy)
                         .foregroundStyle(.primary)
                     Image(systemName: "chevron.down")
                         .font(.caption.weight(.bold))
-                        .foregroundStyle(Color.brandPrimary)
+                        .foregroundStyle(.secondary)
                         .rotationEffect(.degrees(isExpanded ? 180 : 0))
                 }
                 .frame(minHeight: 44)
@@ -214,10 +215,11 @@ struct ScheduleWeekStrip: View {
                     onToday()
                 }
                 .font(.subheadline.weight(.semibold))
-                .buttonStyle(.bordered)
-                .buttonBorderShape(.capsule)
-                .controlSize(.small)
-                .tint(Color.brandPrimary)
+                .foregroundStyle(Color(.systemBackground))
+                .padding(.horizontal, 14)
+                .frame(minHeight: 32)
+                .background(Color.primary, in: Capsule())
+                .buttonStyle(.plain)
             }
 
             if isExpanded {
@@ -438,8 +440,7 @@ private struct DayCell: View {
     var isOutsideMonth = false
 
     private var numeralStyle: Color {
-        if isSelected && isToday { return .white }
-        if isSelected || isToday { return Color.brandPrimary }
+        if isSelected { return Color(.systemBackground) }
         if isOutsideMonth { return Color(.tertiaryLabel) }
         return eventCount == 0 ? Color.secondary : Color.primary
     }
@@ -447,21 +448,23 @@ private struct DayCell: View {
     var body: some View {
         VStack(spacing: 2) {
             ZStack {
+                // Flat tiles, not circles: the selected day is the inverted
+                // fill (the kiosk's white selection), today is an outline.
                 if isSelected {
-                    Circle()
-                        .fill(isToday ? Color.brandPrimary : Color.brandPrimary.opacity(0.18))
-                        .frame(width: 28, height: 28)
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(Color.primary)
+                        .frame(width: 34, height: 34)
                 } else if isToday {
-                    Circle()
-                        .strokeBorder(Color.brandPrimary, lineWidth: 1.5)
-                        .frame(width: 28, height: 28)
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .strokeBorder(Color.primary, lineWidth: 1.5)
+                        .frame(width: 34, height: 34)
                 }
                 Text(date.formatted(.dateTime.day()))
                     .font(.subheadline)
-                    .fontWeight(isToday || isSelected ? .semibold : .regular)
+                    .fontWeight(isToday || isSelected ? .heavy : .regular)
                     .foregroundStyle(numeralStyle)
             }
-            .frame(width: 28, height: 28)
+            .frame(width: 34, height: 34)
 
             // One plain venue dot per event, up to three. VoiceOver reads the
             // venue counts from the cell label; the blue assignment mark stays

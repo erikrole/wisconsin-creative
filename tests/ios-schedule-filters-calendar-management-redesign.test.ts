@@ -16,10 +16,10 @@ describe("iOS Schedule filters and calendar management", () => {
 
   it("keeps every filter one tap away without a sheet", () => {
     const filterBar = source("ios/Wisconsin/Views/Schedule/ScheduleQuickFilterBar.swift");
-    expect(schedule).toContain('"My Shifts"');
+    expect(filterBar).toContain('"My Shifts"');
     // Past events are reached by pulling past the top, not a toggle.
     expect(schedule).not.toContain("Include Past Events");
-    expect(schedule).toContain('Picker("Sport", selection: sportSelection)');
+    expect(filterBar).toContain('Picker("Sport", selection: sportSelection)');
     expect(filterBar).toContain("ForEach(HomeAwayFilter.allCases");
     expect(schedule).not.toContain("ScheduleFilterSheet");
     expect(schedule).not.toContain('Picker("Venue", selection: $homeAwayFilter)');

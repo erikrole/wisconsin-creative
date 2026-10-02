@@ -14,9 +14,12 @@ describe("iOS Schedule Dynamic Type", () => {
     const rowFile = source("ios/Wisconsin/Views/Schedule/ScheduleEventRow.swift");
     const dateHeader = sliceBetween(rowFile, "struct ScheduleDateHeader: View", "private var headerAccessibilityLabel");
 
-    expect(dateHeader).toContain(".font(.headline)");
+    // The day title is heavy but still a semantic style, and the event count
+    // is gone: the rows below it already say how many there are.
+    expect(dateHeader).toContain(".font(.title3)");
+    expect(dateHeader).toContain(".fontWeight(.heavy)");
     expect(dateHeader).toContain(".font(.subheadline)");
-    expect(dateHeader).toContain(".font(.caption.monospacedDigit())");
+    expect(dateHeader).not.toContain("countText)\n                .font(.caption.monospacedDigit())");
     expect(dateHeader).not.toContain(".font(.system(size:");
     expect(dateHeader).toContain(".textCase(nil)");
   });
@@ -30,7 +33,7 @@ describe("iOS Schedule Dynamic Type", () => {
     expect(eventRow).toContain(".font(.subheadline.weight(.semibold))");
     expect(eventRow).toContain(".font(.subheadline)");
     // Trailing time column: semantic styles with tabular figures.
-    expect(eventRow).toContain(".font(.subheadline.weight(.semibold).monospacedDigit())");
+    expect(eventRow).toContain(".font(.subheadline.weight(.heavy).monospacedDigit())");
     expect(eventRow).toContain(".font(.caption.monospacedDigit())");
     expect(eventRow).not.toContain(".font(.system(size:");
     expect(crewRow).toContain(".font(.caption.weight(.semibold).monospacedDigit())");

@@ -439,11 +439,34 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
 
         // Unmapped paths answer 404, never 401: `APIError.notFound` stays local
         // to the caller, while a 401 would tear down the harness session.
-        let mapped = Self.body(for: request)
+        var mapped = Self.body(for: request)
+        var statusCode = mapped == nil ? 404 : 200
+#if DEBUG
+        // Review captures of Home's own states: `GT_FIXTURE_HOME=error` fails
+        // the dashboard load; `=empty` serves the all-clear payload with no drafts.
+        if url.path == "/api/dashboard" {
+            switch ProcessInfo.processInfo.environment["GT_FIXTURE_HOME"] {
+            case "error":
+                mapped = Data(#"{"error":"The server had a problem. Try again in a moment."}"#.utf8)
+                statusCode = 500
+            case "empty":
+                mapped = Data(
+                    (String(data: HomeFixtureAPI.allClearDashboard, encoding: .utf8) ?? "")
+                        .replacingOccurrences(
+                            of: #""drafts": \[[^\]]*\],"#,
+                            with: #""drafts": [],"#,
+                            options: .regularExpression
+                        )
+                        .utf8
+                )
+            default: break
+            }
+        }
+#endif
         let payload = mapped ?? Data(#"{"error":"Not served by the fixture harness"}"#.utf8)
         let response = HTTPURLResponse(
             url: url,
-            statusCode: mapped == nil ? 404 : 200,
+            statusCode: statusCode,
             httpVersion: "HTTP/1.1",
             headerFields: ["Content-Type": "application/json"]
         )!
@@ -1332,7 +1355,16 @@ enum HomeFixtureAPI {
           "overdueCount": 1,
           "overdueItems": [],
           "myShifts": [],
-          "upcomingEvents": [],
+          "upcomingEvents": [
+            { "id": "ue1", "title": "Men's Hockey vs Minnesota", "sportCode": "MHKY",
+              "startsAt": "\(iso(1_500))", "endsAt": "\(iso(1_680))", "allDay": false,
+              "location": "Kohl Center", "locationId": null, "opponent": "Minnesota",
+              "isHome": true, "site": null, "totalShiftSlots": 5, "filledShiftSlots": 3 },
+            { "id": "ue2", "title": "Football vs USC - Family Weekend", "sportCode": "FB",
+              "startsAt": "\(iso(5_760))", "endsAt": "\(iso(5_760))", "allDay": true,
+              "location": "Camp Randall", "locationId": null, "opponent": "USC - Family Weekend",
+              "isHome": true, "site": null, "totalShiftSlots": 8, "filledShiftSlots": 8 }
+          ],
           "drafts": [ { "id": "d1", "kind": "RESERVATION", "title": "Hockey B-roll kit",
                         "itemCount": 6, "updatedAt": "\(iso(-90))" } ],
           "flaggedItems": [],
