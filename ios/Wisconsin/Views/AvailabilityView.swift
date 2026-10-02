@@ -579,100 +579,195 @@ private struct AvailabilityEditorSheet: View {
         _semesterLabel = State(initialValue: block?.semesterLabel ?? "")
     }
 
+    private static let timePresets: [(title: String, detail: String, start: Int, end: Int)] = [
+        ("Morning", "8 AM – 12 PM", 8 * 60, 12 * 60),
+        ("Afternoon", "12 – 5 PM", 12 * 60, 17 * 60),
+        ("Evening", "5 – 10 PM", 17 * 60, 22 * 60),
+        ("School day", "8 AM – 5 PM", 8 * 60, 17 * 60),
+    ]
+
+    private func editorCard<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.headline)
+            content()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(Color.cardSurface, in: RoundedRectangle(cornerRadius: Brand.Radius.lg, style: .continuous))
+    }
+
     private var timeOptions: [Int] {
         Array(Set(Array(stride(from: 0, through: 23 * 60 + 45, by: 15)) + [startMinutes, endMinutes])).sorted()
     }
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Signal") {
-                    Picker("Type", selection: $intent) {
-                        ForEach(AvailabilityEditorIntent.allCases) { option in
-                            Label(option.label, systemImage: option.systemImage).tag(option)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    editorCard("What is this?") {
+                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                            ForEach(AvailabilityEditorIntent.allCases) { option in
+                                ChipButton(
+                                    title: option.label,
+                                    systemImage: option.systemImage,
+                                    isSelected: intent == option,
+                                    tint: Color.statusText(.purple)
+                                ) {
+                                    intent = option
+                                    Haptics.selection()
+                                }
+                            }
                         }
+                        Text(intent.detail)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
                     }
-                    Text(intent.detail)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
 
-                Section("When") {
-                    Picker("Repeats", selection: kindSelection) {
-                        ForEach(AvailabilityEditorKind.allCases) { option in
-                            Text(option.label).tag(option)
+                    editorCard("When") {
+                        HStack(spacing: 8) {
+                            ForEach(AvailabilityEditorKind.allCases) { option in
+                                ChipButton(
+                                    title: option.label,
+                                    isSelected: kind == option,
+                                    tint: Color.statusText(.purple)
+                                ) {
+                                    kindSelection.wrappedValue = option
+                                    Haptics.selection()
+                                }
+                            }
+                        }
+
+                        if kind == .weekly {
+                            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
+                                ForEach(0..<7, id: \.self) { index in
+                                    ChipButton(
+                                        title: String(availabilityDayNames[index].prefix(3)),
+                                        isSelected: dayOfWeek == index,
+                                        tint: Color.statusText(.purple)
+                                    ) {
+                                        dayOfWeek = index
+                                        Haptics.selection()
+                                    }
+                                }
+                            }
+                        } else {
+                            DatePicker("From", selection: $date, displayedComponents: .date)
+                            Toggle("Multiple days", isOn: $isDateRange)
+                            if isDateRange {
+                                DatePicker("Through", selection: $dateEnd, displayedComponents: .date)
+                            }
+                            Toggle("All day", isOn: $allDay)
+                            if allDay {
+                                Text(intent.allDayDetail)
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                     }
-                    .pickerStyle(.segmented)
+                    .tint(Color.statusText(.purple))
+
+                    if kind == .weekly || !allDay {
+                        editorCard("Time") {
+                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                                ForEach(Self.timePresets, id: \.title) { preset in
+                                    ChipButton(
+                                        title: preset.title,
+                                        detail: preset.detail,
+                                        isSelected: startMinutes == preset.start && endMinutes == preset.end,
+                                        tint: Color.statusText(.purple)
+                                    ) {
+                                        startMinutes = preset.start
+                                        endMinutes = preset.end
+                                        Haptics.selection()
+                                    }
+                                }
+                            }
+                            HStack(alignment: .firstTextBaseline) {
+                                Text("Starts").font(.subheadline.weight(.semibold))
+                                Picker("Starts", selection: $startMinutes) {
+                                    ForEach(timeOptions, id: \.self) { minutes in
+                                        Text(Self.timeLabel(minutes)).tag(minutes)
+                                    }
+                                }
+                                .labelsHidden()
+                                .fixedSize()
+                                Spacer(minLength: 8)
+                                Text("Ends").font(.subheadline.weight(.semibold))
+                                Picker("Ends", selection: $endMinutes) {
+                                    ForEach(timeOptions, id: \.self) { minutes in
+                                        Text(Self.timeLabel(minutes)).tag(minutes)
+                                    }
+                                }
+                                .labelsHidden()
+                                .fixedSize()
+                            }
+                            .tint(Color.statusText(.purple))
+                        }
+                    }
 
                     if kind == .weekly {
-                        Picker("Day", selection: $dayOfWeek) {
-                            ForEach(0..<7, id: \.self) { Text(availabilityDayNames[$0]).tag($0) }
-                        }
-                    } else {
-                        DatePicker("From", selection: $date, displayedComponents: .date)
-                        Toggle("Multiple days", isOn: $isDateRange)
-                        if isDateRange {
-                            DatePicker("Through", selection: $dateEnd, displayedComponents: .date)
-                        }
-                        Toggle("All day", isOn: $allDay)
-                        if allDay {
-                            Text(intent.allDayDetail)
+                        editorCard("Class term (optional)") {
+                            Toggle("Limit to term dates", isOn: $usesTermDates)
+                                .tint(Color.statusText(.purple))
+                            if usesTermDates {
+                                TextField("Term name (optional)", text: $semesterLabel)
+                                DatePicker("Starts", selection: $termStartDate, displayedComponents: .date)
+                                DatePicker("Ends", selection: $termEndDate, displayedComponents: .date)
+                            }
+                            Text("Use this when the class only blocks work during a specific semester or session.")
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
                         }
                     }
-                }
 
-                if kind == .weekly || !allDay {
-                    Section("Time") {
-                        Picker("Starts", selection: $startMinutes) {
-                            ForEach(timeOptions, id: \.self) { minutes in
-                                Text(Self.timeLabel(minutes)).tag(minutes)
-                            }
-                        }
-                        Picker("Ends", selection: $endMinutes) {
-                            ForEach(timeOptions, id: \.self) { minutes in
-                                Text(Self.timeLabel(minutes)).tag(minutes)
-                            }
+                    editorCard("Label") {
+                        TextField(intent.labelPlaceholder, text: $label)
+                        if kind == .weekly {
+                            Text(usesTermDates ? "Repeats every \(availabilityDayNames[dayOfWeek]) during the selected term." : "Repeats every \(availabilityDayNames[dayOfWeek]) until you remove it.")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        } else if isDateRange {
+                            Text("Applies to every selected date in the range.")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Text("Applies only to the selected date.")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
                         }
                     }
-                }
 
-                if kind == .weekly {
-                    Section {
-                        Toggle("Limit to term dates", isOn: $usesTermDates)
-                        if usesTermDates {
-                            TextField("Term name (optional)", text: $semesterLabel)
-                            DatePicker("Starts", selection: $termStartDate, displayedComponents: .date)
-                            DatePicker("Ends", selection: $termEndDate, displayedComponents: .date)
-                        }
-                    } header: {
-                        Text("Class term (optional)")
-                    } footer: {
-                        Text("Use this when the class only blocks work during a specific semester or session.")
-                    }
-                }
-
-                Section {
-                    TextField(intent.labelPlaceholder, text: $label)
-                } footer: {
-                    if kind == .weekly {
-                        Text(usesTermDates ? "Repeats every \(availabilityDayNames[dayOfWeek]) during the selected term." : "Repeats every \(availabilityDayNames[dayOfWeek]) until you remove it.")
-                    } else if isDateRange {
-                        Text("Applies to every selected date in the range.")
-                    } else {
-                        Text("Applies only to the selected date.")
-                    }
-                }
-
-                if let error {
-                    Section {
+                    if let error {
                         Label(error, systemImage: "exclamationmark.triangle.fill")
                             .font(.footnote)
                             .foregroundStyle(Color.statusText(.red))
                     }
                 }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+            }
+            .background(Color(.systemGroupedBackground))
+            .safeAreaInset(edge: .bottom) {
+                Button {
+                    Task { await save() }
+                } label: {
+                    Group {
+                        if isSaving {
+                            ProgressView().tint(.white)
+                        } else {
+                            Text(context.block == nil ? "Add" : "Save").font(.headline)
+                        }
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity, minHeight: 56)
+                    .background(Color.statusText(.purple), in: RoundedRectangle(cornerRadius: 16))
+                }
+                .buttonStyle(.plain)
+                .disabled(isSaving)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(.bar)
             }
             .navigationTitle(context.block == nil ? (kind == .weekly ? "Add Class Schedule" : "Add Day Away") : "Edit Availability")
             .navigationBarTitleDisplayMode(.inline)
@@ -680,19 +775,6 @@ private struct AvailabilityEditorSheet: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                         .disabled(isSaving)
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button {
-                        Task { await save() }
-                    } label: {
-                        if isSaving {
-                            ProgressView().controlSize(.small)
-                        } else {
-                            Text(context.block == nil ? "Add" : "Save").fontWeight(.semibold)
-                        }
-                    }
-                    .tint(Color.brandPrimary)
-                    .disabled(isSaving)
                 }
             }
             .interactiveDismissDisabled(isSaving)

@@ -9,6 +9,7 @@ struct ExtendBookingSheet: View {
     @State private var isLoading = false
     @State private var error: String?
     @State private var showDiscardConfirm = false
+    @State private var nextNeedAt: Date?
 
     init(booking: Booking, onSuccess: @escaping (Booking) -> Void) {
         self.booking = booking
@@ -18,58 +19,160 @@ struct ExtendBookingSheet: View {
 
     private var currentEndsAt: Date { booking.endsAt }
 
-    /// Web parity: +1 day / +3 days / +1 week chips on `BookingDetailPage`.
-    private static let quickPresets: [(label: String, days: Int)] = [
-        ("+1 day", 1),
-        ("+3 days", 3),
-        ("+1 week", 7),
-    ]
+    private var calendar: Calendar { .current }
+
+    /// Latest end that leaves a 30-minute grace before another booking needs
+    /// the gear, floored to the quarter hour. Same rule as the kiosk.
+    private var latestEndsAt: Date? {
+        guard let nextNeedAt else { return nil }
+        let latest = nextNeedAt.addingTimeInterval(-30 * 60)
+        let step = TimeInterval(QuarterHour.minuteInterval * 60)
+        let floored = floor(latest.timeIntervalSinceReferenceDate / step) * step
+        return Date(timeIntervalSinceReferenceDate: floored)
+    }
+
+    private var exceedsLimit: Bool {
+        guard let latestEndsAt else { return false }
+        return newEndsAt > latestEndsAt
+    }
+
+    /// The day the chips treat as picked: the new end once the user has moved
+    /// it, otherwise the booking's current end day.
+    private var canSubmit: Bool { hasChanges && !exceedsLimit }
 
     private var hasChanges: Bool { newEndsAt > currentEndsAt }
 
+    private func dayTime(_ date: Date) -> String {
+        chipDayTime(date)
+    }
+
+    private var dueOverline: String {
+        let relative = RelativeDateTimeFormatter()
+        relative.unitsStyle = .full
+        let text = relative.localizedString(for: currentEndsAt, relativeTo: Date())
+        return currentEndsAt < Date() ? "OVERDUE · \(text.uppercased())" : "DUE \(text.uppercased())"
+    }
+
+    private func neededNextCard(_ needAt: Date) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: "clock.badge.exclamationmark")
+                .font(.title3)
+                .foregroundStyle(Color.statusText(.orange))
+            VStack(alignment: .leading, spacing: 2) {
+                Text("NEEDED NEXT")
+                    .font(.caption2.weight(.bold))
+                    .tracking(0.8)
+                    .foregroundStyle(.secondary)
+                Text(dayTime(needAt))
+                    .font(.headline)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.statusBackground(.orange), in: RoundedRectangle(cornerRadius: 14))
+    }
+
+    private func sectionHeading(_ text: String) -> some View {
+        Text(text)
+            .font(.title3.weight(.heavy))
+            .padding(.top, 4)
+    }
+
     var body: some View {
         NavigationStack {
-            Form {
-                Section {
-                    LabeledContent("Current End") {
-                        Text(currentEndsAt.formatted(date: .abbreviated, time: .shortened))
-                            .font(.callout.monospacedDigit())
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(dueOverline)
+                            .font(.caption2.weight(.bold))
+                            .tracking(0.8)
+                            .foregroundStyle(currentEndsAt < Date() ? Color.statusText(.red) : Color.statusText(.blue))
+                        Text(booking.title)
+                            .font(.title.weight(.heavy))
+                            .lineLimit(2)
+                        Text("\(booking.requester.name) · ends \(dayTime(currentEndsAt))")
+                            .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
-                }
 
-                Section("Quick Extend") {
-                    HStack(spacing: 8) {
-                        ForEach(Self.quickPresets, id: \.days) { preset in
-                            Button {
-                                applyPreset(days: preset.days)
-                            } label: {
-                                Text(preset.label)
-                                    .font(.footnote.weight(.medium))
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 8)
+                    if let latestEndsAt, latestEndsAt > currentEndsAt {
+                        Text("Can go until \(dayTime(latestEndsAt))")
+                            .font(.title3.weight(.heavy))
+                            .padding(.top, 6)
+                        if let nextNeedAt {
+                            neededNextCard(nextNeedAt)
+                        }
+                    } else if nextNeedAt != nil {
+                        Text("This can't be extended")
+                            .font(.title3.weight(.heavy))
+                            .foregroundStyle(Color.statusText(.red))
+                            .padding(.top, 6)
+                        if let nextNeedAt { neededNextCard(nextNeedAt) }
+                    } else {
+                        Text("Nothing else needs this gear, so pick any time.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .padding(.top, 6)
+                    }
+
+                    sectionHeading("Extend until")
+                    DayTimeChipPicker(selection: $newEndsAt, minimum: currentEndsAt, latest: latestEndsAt)
+
+                    if hasChanges {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("NEW DUE TIME")
+                                .font(.caption2.weight(.bold))
+                                .tracking(0.8)
+                                .foregroundStyle(.secondary)
+                            Text(dayTime(newEndsAt))
+                                .font(.title2.weight(.heavy))
+                            Text(moreTime)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                            if exceedsLimit, let latestEndsAt {
+                                Label("Gear is needed again then. Latest is \(dayTime(latestEndsAt)).", systemImage: "exclamationmark.triangle.fill")
+                                    .font(.footnote)
+                                    .foregroundStyle(Color.statusText(.red))
+                                    .padding(.top, 4)
                             }
-                            .buttonStyle(.bordered)
-                            .tint(Color.statusText(.blue))
-                            .controlSize(.regular)
-                            .disabled(isLoading)
-                            .accessibilityLabel(presetAccessibilityLabel(preset))
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(16)
+                        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+                        .accessibilityElement(children: .combine)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 24)
+                .disabled(isLoading)
+            }
+            .background(Color(.systemGroupedBackground))
+            .safeAreaInset(edge: .bottom) {
+                Button {
+                    Task { await extend() }
+                } label: {
+                    Group {
+                        if isLoading {
+                            ProgressView()
+                        } else {
+                            Text(canSubmit ? "Extend to \(dayTime(newEndsAt))" : "Pick a new time")
                         }
                     }
-                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                    .font(.headline)
+                    .frame(maxWidth: .infinity, minHeight: 56)
                 }
-
-                Section("New End Date & Time") {
-                    DatePicker(
-                        "Ends At",
-                        selection: $newEndsAt,
-                        in: currentEndsAt...,
-                        displayedComponents: [.date, .hourAndMinute]
-                    )
-                    .datePickerStyle(.graphical)
-                    .disabled(isLoading)
-                }
-
+                .buttonStyle(.plain)
+                .foregroundStyle(canSubmit ? Color.white : Color.secondary)
+                .background(
+                    canSubmit ? Color.statusText(.blue) : Color(.tertiarySystemFill),
+                    in: RoundedRectangle(cornerRadius: 16)
+                )
+                .disabled(!canSubmit || isLoading)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(.bar)
             }
             .safeAreaInset(edge: .top) {
                 if let error {
@@ -78,6 +181,7 @@ struct ExtendBookingSheet: View {
                     }
                 }
             }
+            .task { nextNeedAt = await APIClient.shared.checkoutReturnInsight(for: booking).nextNeedAt }
             .navigationTitle("Extend Booking")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -102,7 +206,7 @@ struct ExtendBookingSheet: View {
                             Text("Extend").fontWeight(.semibold)
                         }
                     }
-                    .disabled(!hasChanges || isLoading)
+                    .disabled(!canSubmit || isLoading)
                     .accessibilityLabel(isLoading ? "Extending booking" : "Extend booking")
                 }
             }
@@ -120,25 +224,14 @@ struct ExtendBookingSheet: View {
         }
     }
 
-    /// Offset from the current picker value if the user has already nudged it,
-    /// otherwise from the booking's current end. Mirrors web's `handleQuickExtend`.
-    private func applyPreset(days: Int) {
-        let base = newEndsAt > currentEndsAt ? newEndsAt : currentEndsAt
-        if let next = Calendar.current.date(byAdding: .day, value: days, to: base) {
-            newEndsAt = next
-        }
-    }
-
-    /// Builds the VoiceOver label for a preset chip including the resulting
-    /// end date. Computes off the same base as `applyPreset(days:)` so it
-    /// stays accurate after the user has already nudged.
-    private func presetAccessibilityLabel(_ preset: (label: String, days: Int)) -> String {
-        let base = newEndsAt > currentEndsAt ? newEndsAt : currentEndsAt
-        guard let resulting = Calendar.current.date(byAdding: .day, value: preset.days, to: base) else {
-            return "Extend by \(preset.label)"
-        }
-        let formatted = resulting.formatted(date: .abbreviated, time: .shortened)
-        return "Extend by \(preset.label.replacingOccurrences(of: "+", with: "")), to \(formatted)"
+    /// "+2 days 3 hours" style gap between the current and new end.
+    private var moreTime: String {
+        let parts = calendar.dateComponents([.day, .hour, .minute], from: currentEndsAt, to: newEndsAt)
+        var out: [String] = []
+        if let d = parts.day, d > 0 { out.append("\(d) day\(d == 1 ? "" : "s")") }
+        if let h = parts.hour, h > 0 { out.append("\(h) hour\(h == 1 ? "" : "s")") }
+        if let m = parts.minute, m > 0, parts.day == 0 { out.append("\(m) min") }
+        return out.isEmpty ? "No extra time" : "+" + out.joined(separator: " ") + " more"
     }
 
     private func extend() async {

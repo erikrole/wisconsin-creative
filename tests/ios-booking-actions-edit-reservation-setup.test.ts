@@ -51,7 +51,8 @@ describe("iOS focused booking edit and transfer", () => {
       detail.indexOf("struct TransferBookingOwnerSheet"),
     );
     expect(editor).toContain('BrandSectionHeader("Booking Name")');
-    expect(editor).toContain('DatePicker(\n                                    "Return Time"');
+    expect(editor).toContain('Text("Due back")');
+    expect(editor).toContain("DayTimeChipPicker(");
     expect(editor).toContain("APIClient.shared.bookingAvailability");
     expect(editor).toContain('Label("This return time works"');
     expect(editor).toContain('Text("Transfer Ownership")');
@@ -75,13 +76,13 @@ describe("iOS focused booking edit and transfer", () => {
 
 describe("iOS reservation setup refresh", () => {
   it("uses a visible three-step progression and bottom primary action", () => {
-    expect(create).toContain("ReservationStepProgress(currentStep: step, onSelect: goToStep)");
-    expect(create).toContain('private let labels = ["Details", "Gear", "Review"]');
+    expect(create).toContain("ReservationProgressHeader(step: step, page: detailsPage, total: setupMode == .event ? 3 : 4, onBack: goBack)");
+    expect(create).toContain('Text("STEP \\(position) OF \\(total)")');
     expect(create).toContain(".safeAreaInset(edge: .bottom, spacing: 0)");
-    expect(create).toContain('Label("Choose Gear", systemImage: "shippingbox")');
-    expect(create).toContain('BrandSectionHeader("Set Schedule From")');
+    expect(create).toContain('Text(onFirstPage ? "Continue" : "Choose Gear")');
+    expect(create).toContain('pageHeading("What\'s this for?")');
     expect(create).toContain('BrandSectionHeader("Pickup Location")');
-    expect(create).toContain('BrandSectionHeader("When")');
+    expect(create).toContain('pageHeading("When\'s it due back?")');
     expect(create).toContain('Text("Create Reservation")');
     expect(create).toContain("UserAvatarView(");
     expect(create).toContain(".tint(Color.statusText(.purple))");

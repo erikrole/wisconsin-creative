@@ -1,0 +1,178 @@
+{
+  "title": "Kiosk direction on iPhone",
+  "eyebrow": "iOS \u00b7 Wisconsin Creative",
+  "lede": "The kiosk's pattern (one decision per screen, chips for the answer, one big button) brought to the reservation flow, Extend, Edit Booking, Add Shift, Availability and Notifications.",
+  "stats": [
+    {
+      "k": "Matched pairs",
+      "v": "10",
+      "n": "Same simulator, fixture scenario, appearance and status-bar clock on both sides."
+    },
+    {
+      "k": "Taps from launch to Gear",
+      "v": "4 \u2192 2",
+      "n": "Event path: Choose Event, pick, confirm, Choose Gear before; suggested event, Choose Gear after.",
+      "tone": "good"
+    },
+    {
+      "k": "Source-contract tests",
+      "v": "124 files / 695 pass",
+      "n": "iOS, student-field and schedule suites on the final source; assertions in 6 test files updated to the new layout."
+    }
+  ],
+  "sections": [
+    {
+      "heading": "New reservation",
+      "note": "Baseline: clean HEAD 2b2a3cfb. After: working tree. Fixture: create-booking-events.",
+      "pairs": [
+        {
+          "title": "Step 1",
+          "sub": "Opening screen.",
+          "before": "before/reservation-step1.png",
+          "beforeCap": "A segmented toggle and one row; the next shift is not offered.",
+          "after": "after/reservation-step1.png",
+          "afterCap": "\"What's this for?\" with a suggested next shift and a single bottom button.",
+          "beforeEvidence": "before/reservation-step1.capture.json",
+          "afterEvidence": "after/reservation-step1.capture.json"
+        },
+        {
+          "title": "Event picker",
+          "sub": "Choose Event.",
+          "before": "before/event-picker.png",
+          "beforeCap": "Stock list, past events first (Sep 11, Sep 22), tiny radio circles, a faint toolbar check.",
+          "after": "after/event-picker.png",
+          "afterCap": "Grouped Today/Tomorrow, solid chips, and a \"Use N events\" button.",
+          "beforeEvidence": "before/event-picker.capture.json",
+          "afterEvidence": "after/event-picker.capture.json"
+        },
+        {
+          "title": "Event linked",
+          "sub": "VB vs Nebraska, same event both sides.",
+          "before": "before/reservation-linked.png",
+          "beforeCap": "Schedule, title, pickup and return pickers all on one screen.",
+          "after": "after/reservation-linked.png",
+          "afterCap": "Pickup and return collapsed to two lines with Change; Choose Gear goes straight to gear.",
+          "beforeEvidence": "before/reservation-linked.capture.json",
+          "afterEvidence": "after/reservation-linked.capture.json"
+        },
+        {
+          "title": "Gear",
+          "sub": "Before any item is picked.",
+          "before": "before/gear.png",
+          "beforeCap": "Hollow plus icons.",
+          "after": "after/gear.png",
+          "afterCap": "Solid purple plus buttons.",
+          "beforeEvidence": "before/gear.capture.json",
+          "afterEvidence": "after/gear.capture.json"
+        },
+        {
+          "title": "Gear, one item picked",
+          "sub": "CAM-015 added.",
+          "before": "before/gear-picked.png",
+          "beforeCap": "Cart bubble, battery banner and Review pill float over the list.",
+          "after": "after/gear-picked.png",
+          "afterCap": "One bottom bar: count on the left, an honest action on the right.",
+          "beforeEvidence": "before/gear-picked.capture.json",
+          "afterEvidence": "after/gear-picked.capture.json"
+        }
+      ]
+    },
+    {
+      "heading": "Booking sheets",
+      "note": "Fixtures: booking-extend and booking-edit.",
+      "pairs": [
+        {
+          "title": "Extend booking",
+          "sub": "Staff extending a return.",
+          "before": "before/extend.png",
+          "beforeCap": "A calendar graphic at minute resolution; the next booking's limit is only a line of text on the detail screen.",
+          "after": "after/extend.png",
+          "afterCap": "Due header, \"Can go until\", a Needed Next card, day and time chips, a Latest chip and one button.",
+          "beforeEvidence": "before/extend.capture.json",
+          "afterEvidence": "after/extend.capture.json"
+        },
+        {
+          "title": "Edit booking",
+          "sub": "Return row.",
+          "before": "before/edit-booking.png",
+          "beforeCap": "A date chip plus two dropdown menus in one cramped row.",
+          "after": "after/edit-booking.png",
+          "afterCap": "Due-back pill, Today/Tomorrow/Other date, suggested times and the 15-minute wheel.",
+          "beforeEvidence": "before/edit-booking.capture.json",
+          "afterEvidence": "after/edit-booking.capture.json"
+        }
+      ]
+    },
+    {
+      "heading": "Schedule and settings",
+      "note": "Fixtures: schedule (Volleyball vs Nebraska), schedule menu, notifications.",
+      "pairs": [
+        {
+          "title": "Add shift",
+          "sub": "Open slot, default state.",
+          "before": "before/add-shift.png",
+          "beforeCap": "Outlined area buttons and a call-window toggle.",
+          "after": "after/add-shift.png",
+          "afterCap": "Area chips with fill (2/2, 1/2, 0/1), a How-many stepper and call-time presets.",
+          "beforeEvidence": "before/add-shift.capture.json",
+          "afterEvidence": "after/add-shift.capture.json"
+        },
+        {
+          "title": "Availability editor",
+          "sub": "Add class schedule.",
+          "before": "before/availability-editor.png",
+          "beforeCap": "A stock Form with dropdowns.",
+          "after": "after/availability-editor.png",
+          "afterCap": "Chips for signal, repeat, day and time presets; Add button at the bottom.",
+          "beforeEvidence": "before/availability-editor.capture.json",
+          "afterEvidence": "after/availability-editor.capture.json"
+        },
+        {
+          "title": "Notifications",
+          "sub": "Quiet hours.",
+          "before": "before/notifications.png",
+          "beforeCap": "Free time pickers only.",
+          "after": "after/notifications.png",
+          "afterCap": "Overnight, Late night and Evenings presets above the pickers.",
+          "beforeEvidence": "before/notifications.capture.json",
+          "afterEvidence": "after/notifications.capture.json"
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "The next shift is the first suggestion",
+      "was": "Reservations started from a blank Choose Event row.",
+      "now": "The next shift's event is offered on step 1; tapping it fills the event, times, location and Choose Gear. Event-linked reservations skip the separate times screen."
+    },
+    {
+      "h": "Return time is a decision, not a form",
+      "was": "Dropdowns and calendars at minute resolution.",
+      "now": "Today, Tomorrow or another date, three suggested times, and a 15-minute wheel. The Extend sheet also caps choices at the next booking's need, less a 30-minute grace."
+    },
+    {
+      "h": "Gear has one bottom bar",
+      "was": "Three floating controls overlapped rows, and Review silently switched the filter to Batteries even after the suggestion was dismissed.",
+      "now": "A single bar with the item count and a labelled action. Dismissing the battery suggestion now lets Review through."
+    },
+    {
+      "h": "Add Shift can add several slots",
+      "was": "One slot at a time, with area counts hidden.",
+      "now": "Each area chip shows its fill, the last area is remembered, and up to six slots are added in one go."
+    }
+  ],
+  "verification": [
+    "iOS Wisconsin and WisconsinKiosk builds: both BUILD SUCCEEDED on the final source; the Wisconsin device build is installed on an iPhone 16 Pro.",
+    "Vitest: the iOS, student-field and schedule suites pass (124 files / 695 tests) on the final source. The full suite has 4 failing files (tests/hiring-*), which fail to load on an unrelated Prisma enum error (APPLIED undefined).",
+    "Fixture captures prove presentation only. Nothing was submitted: Create Reservation, Extend, Add Shift and Availability Add were not pressed, so server behavior is unverified.",
+    "Final source patch (HEAD plus uncommitted and new files) is retained as after-source.patch in this folder."
+  ],
+  "notes": [
+    "Add Shift Custom state is shown after-only (after/add-shift-custom.png). The baseline (before/add-shift-custom.png) overflows the sheet width and wraps the End label one letter per line; the after capture was scrolled to reach the rows, so the scroll positions do not match and it is not offered as a pair.",
+    "The Availability editor capture was retaken after a one-line layout fix; the other after captures were taken just before it. That fix touches only the Availability editor.",
+    "Fixture dates are relative to launch, so some times (for example due-back) differ by minutes between sides while the status bar is pinned to 9:41.",
+    "Not built: copying the previous event's crew into Add Shift (needs new logic to find and copy slots); a before/after for the Review step and the Custom pause sheet.",
+    "Baseline captured from an isolated worktree at HEAD 2b2a3cfb; the checkout was clean at session start."
+  ]
+}
