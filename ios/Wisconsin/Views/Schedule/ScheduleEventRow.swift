@@ -30,7 +30,20 @@ struct EventRow: View {
     /// Drives the "Now" time and the dimming that lets the eye skip work that
     /// is already done. Defined on `ScheduleEvent` so Event detail answers the
     /// same question the same way.
-    private var timeState: ScheduleEventTimeState { event.timeState }
+    ///
+    /// A multi-day segment answers for its own day: Saturday's "Day 2 of 2" is
+    /// not "Now" while Friday's Day 1 is running.
+    private var timeState: ScheduleEventTimeState {
+        if segment != nil, let contextDay {
+            let offset = Calendar.current.dayOffset(of: contextDay, from: today)
+            if offset > 0 { return .upcoming }
+            if offset < 0 { return .past }
+        }
+        return event.timeState
+    }
+
+    /// Read so the midnight rollover re-renders "Now" and the past dimming.
+    @Environment(\.today) private var today
 
     private var isPast: Bool { timeState == .past }
 
@@ -318,9 +331,13 @@ struct ScheduleDateHeader: View {
     let date: Date
     let eventCount: Int
 
+    /// Read from the environment so the midnight rollover re-renders the
+    /// header; a wall-clock check here left "Tomorrow" on today's events.
+    @Environment(\.today) private var today
+
     private var cal: Calendar { .current }
-    private var isToday: Bool { cal.isDateInToday(date) }
-    private var isTomorrow: Bool { cal.isDateInTomorrow(date) }
+    private var isToday: Bool { cal.dayOffset(of: date, from: today) == 0 }
+    private var isTomorrow: Bool { cal.dayOffset(of: date, from: today) == 1 }
 
     private var primaryLabel: String {
         if isToday { return "Today" }
@@ -332,7 +349,7 @@ struct ScheduleDateHeader: View {
     /// weekday here; a named weekday elsewhere would only repeat itself.
     private var dateLabel: String {
         let year = cal.component(.year, from: date)
-        let currentYear = cal.component(.year, from: .now)
+        let currentYear = cal.component(.year, from: today)
         guard year == currentYear else {
             return date.formatted(.dateTime.month(.abbreviated).day().year())
         }
@@ -394,10 +411,12 @@ struct ScheduleWeekHeader: View {
     let weekStart: Date
     var weekCount = 1
 
+    @Environment(\.today) private var today
+
     private var rangeLabel: String {
         let cal = Calendar.current
         let end = cal.date(byAdding: .day, value: 7 * weekCount - 1, to: weekStart) ?? weekStart
-        let sameYear = cal.component(.year, from: weekStart) == cal.component(.year, from: .now)
+        let sameYear = cal.component(.year, from: weekStart) == cal.component(.year, from: today)
         let style: Date.FormatStyle = sameYear
             ? .dateTime.month(.abbreviated).day()
             : .dateTime.month(.abbreviated).day().year()

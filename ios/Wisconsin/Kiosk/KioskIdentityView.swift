@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct KioskIdentityView: View {
+    @Environment(\.today) private var today
     @Environment(KioskStore.self) private var store
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var users: [KioskUser] = []
@@ -412,8 +413,8 @@ extension KioskIdentityView {
                     statusLine("Available", tint: .takingOut)
                     VStack(alignment: .leading, spacing: 6) {
                         if let lookup {
-                            factRow("Free until", lookup.freeUntil.map { "\(KioskDueCopy.relative($0)), then reserved" } ?? "Nothing reserved")
-                            factRow("Last back", lookup.lastReturnedAt.map { KioskDueCopy.relative($0) } ?? "Not out before")
+                            factRow("Free until", lookup.freeUntil.map { "\(KioskDueCopy.relative($0, now: today)), then reserved" } ?? "Nothing reserved")
+                            factRow("Last back", lookup.lastReturnedAt.map { KioskDueCopy.relative($0, now: today) } ?? "Not out before")
                         }
                     }
                 }
@@ -438,7 +439,7 @@ extension KioskIdentityView {
                         if let startsAt = booking?.startsAt {
                             factRow("Pickup", startsAt <= Date() ? "Ready now" : "Ready from \(KioskDueCopy.midSentence(startsAt))")
                         }
-                        if let endsAt = booking?.endsAt { factRow("Due back", KioskDueCopy.relative(endsAt)) }
+                        if let endsAt = booking?.endsAt { factRow("Due back", KioskDueCopy.relative(endsAt, now: today)) }
                     }
                 }
                 .padding(.horizontal, 18).padding(.top, 16).padding(.bottom, 18)
@@ -455,9 +456,9 @@ extension KioskIdentityView {
         let isOverdue = endsAt.map { $0 < Date() } ?? false
         let dueLine: String = {
             guard let endsAt else { return "OUT NOW" }
-            if isOverdue { return "OVERDUE · DUE \(KioskDueCopy.relative(endsAt).uppercased())" }
-            if Calendar.current.isDateInToday(endsAt) { return "DUE BACK TODAY · \(endsAt.formatted(.dateTime.hour().minute()))" }
-            return "DUE BACK \(KioskDueCopy.relative(endsAt).uppercased())"
+            if isOverdue { return "OVERDUE · DUE \(KioskDueCopy.relative(endsAt, now: today).uppercased())" }
+            if Calendar.current.dayOffset(of: endsAt, from: today) == 0 { return "DUE BACK TODAY · \(endsAt.formatted(.dateTime.hour().minute()))" }
+            return "DUE BACK \(KioskDueCopy.relative(endsAt, now: today).uppercased())"
         }()
         let items = returnDetail?.items.filter { !$0.returned } ?? []
         let ownerLabel = homeShortNames(for: [owner])[owner.id] ?? owner.name

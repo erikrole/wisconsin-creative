@@ -628,6 +628,9 @@ private struct ScheduleRootToolbar: ToolbarContent {
 }
 
 private struct InternalScheduleView: View {
+    /// The rollover dependency: crossing midnight re-renders the list from the
+    /// new day instead of leaving yesterday at the top under stale headers.
+    @Environment(\.today) private var today
     private let scheduleOpenWorkTip = ScheduleOpenWorkTip()
     private let shiftCalendarTip = ShiftCalendarTip()
     @State private var vm = ScheduleViewModel()
@@ -757,14 +760,14 @@ private struct InternalScheduleView: View {
 
     /// Where Today lands, for the strip's Today button.
     private func todayAnchor(in sections: [ScheduleListSection]) -> Date? {
-        section(for: .now, in: sections)?.id.date
+        section(for: today, in: sections)?.id.date
     }
 
     /// Scrolls the master list to a day, loading its weeks first when the
     /// month grid picks a date outside the loaded window.
     private func jump(to day: Date, animated: Bool = true) {
         let target = Calendar.current.startOfDay(for: day)
-        let today = Calendar.current.startOfDay(for: .now)
+        let today = self.today
         if target < today {
             // A past day picked in the strip or month grid is itself the
             // intentional step, so reveal enough of the past to hold it.
@@ -796,7 +799,7 @@ private struct InternalScheduleView: View {
     /// The first day the list shows. Today, until the reader deliberately
     /// pulls past the top; each pull adds two weeks.
     private var visibleLowerBound: Date {
-        let today = Calendar.current.startOfDay(for: .now)
+        let today = self.today
         guard pastRevealSteps > 0 else { return today }
         let back = Calendar.current.date(byAdding: .day, value: -14 * pastRevealSteps, to: today) ?? today
         return ScheduleViewModel.weekStart(of: back)
@@ -863,7 +866,7 @@ private struct InternalScheduleView: View {
     /// next status-bar tap or hard flick upward then stops on today.
     private func collapsePastIfOutOfView() {
         guard pastRevealSteps > 0, revealSettlingCount == 0 else { return }
-        let today = Calendar.current.startOfDay(for: .now)
+        let today = self.today
         guard !scrollTracker.hasVisibleRow(before: today),
               let anchor = scrollTracker.topAnchor?.base as? ScheduleRowAnchor else { return }
         pastRevealSteps = 0
@@ -1004,7 +1007,7 @@ private struct InternalScheduleView: View {
                 showTradeBoard = false
                 showAvailability = false
                 showCalendarSetup = false
-                jump(to: .now)
+                jump(to: today)
             }
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active {
@@ -1097,7 +1100,7 @@ private struct InternalScheduleView: View {
                 todayAnchor: todayAnchor(in: listSections(for: groups)),
                 isExpanded: $isMonthExpanded,
                 onJump: { jump(to: $0) },
-                onToday: { jump(to: .now) },
+                onToday: { jump(to: today) },
                 // Loading earlier data never inserts list rows by itself; the
                 // list only shows the past a deliberate pull has revealed.
                 onReachStart: { Task { await vm.loadEarlier() } },
@@ -1206,7 +1209,7 @@ private struct InternalScheduleView: View {
                     // render lands on today rather than the top of the window.
                     guard !didInitialJump else { return }
                     Task { @MainActor in
-                        jump(to: .now, animated: false)
+                        jump(to: today, animated: false)
                         didInitialJump = true
                     }
                 }
@@ -1277,7 +1280,7 @@ private struct InternalScheduleView: View {
     /// An empty stretch reports its start day to the strip, except when it
     /// begins in the current week, whose placeholder stands for today onward.
     private func trackedDay(forWeek start: Date) -> Date {
-        let today = Calendar.current.startOfDay(for: .now)
+        let today = self.today
         return ScheduleViewModel.weekStart(of: today) == start ? today : start
     }
 

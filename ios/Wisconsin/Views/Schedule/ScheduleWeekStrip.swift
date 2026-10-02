@@ -120,6 +120,7 @@ struct ScheduleWeekStrip: View {
     @State private var visibleWeek: Date?
     @State private var displayedMonth: Date = Self.monthStart(of: .now)
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.today) private var today
     @Environment(\.layoutDirection) private var layoutDirection
 
     private static var calendar: Calendar { .current }
@@ -314,7 +315,7 @@ struct ScheduleWeekStrip: View {
         } label: {
             DayCell(
                 date: day,
-                isToday: calendar.isDateInToday(day),
+                isToday: calendar.dayOffset(of: day, from: today) == 0,
                 isSelected: focusedDay.map { calendar.isDate($0, inSameDayAs: day) } ?? false,
                 dots: marks?.dots ?? [],
                 eventCount: marks?.eventCount ?? 0,

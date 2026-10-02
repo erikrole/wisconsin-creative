@@ -404,9 +404,9 @@ enum KioskStatus {
 
     /// Custody urgency for an `OPEN` checkout: neutral while it is simply out,
     /// amber on the day it is due, red once it is past due.
-    static func custody(isOverdue: Bool, dueAt: Date) -> Color {
+    static func custody(isOverdue: Bool, dueAt: Date, today: Date) -> Color {
         if isOverdue { return problem }
-        return Calendar.current.isDateInToday(dueAt) ? attention : active
+        return Calendar.current.dayOffset(of: dueAt, from: today) == 0 ? attention : active
     }
 }
 

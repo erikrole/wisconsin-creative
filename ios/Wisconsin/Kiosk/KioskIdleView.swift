@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct KioskIdleView: View {
+    @Environment(\.today) private var today
     @Environment(KioskStore.self) private var store
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -46,7 +47,7 @@ struct KioskIdleView: View {
                     isLoaded: dashboard != nil,
                     offlineSince: hasConnectionIssue ? (lastLoadedAt ?? loadFailedAt) : nil,
                     lastLoadedAt: lastLoadedAt,
-                    nextUp: dashboard?.nextUp.map { "\($0.title), \(KioskDueCopy.relative($0.at))" },
+                    nextUp: dashboard?.nextUp.map { "\($0.title), \(KioskDueCopy.relative($0.at, now: today))" },
                     onOpenCheckout: { openCheckout($0) },
                     onNudge: { nudge($0) },
                     onSelectUser: { user in
@@ -695,7 +696,6 @@ struct KioskIdleView: View {
     private var eventSections: some View {
         if let dashboard {
             let calendar = Calendar.current
-            let today = calendar.startOfDay(for: Date())
             let tomorrow = calendar.date(byAdding: .day, value: 1, to: today) ?? today
             let todayEvents = dashboard.events.filter { $0.kioskOccurs(on: today, calendar: calendar) }
             let tomorrowEvents = dashboard.events.filter { $0.kioskOccurs(on: tomorrow, calendar: calendar) }
@@ -1287,13 +1287,14 @@ private struct ActiveItemRow: View {
 }
 
 private struct CheckoutRow: View {
+    @Environment(\.today) private var today
     let checkout: KioskActiveCheckout
     let onTap: () -> Void
     let onReturn: () -> Void
 
     /// Status, not brand: blue while out, orange on the due day, red once late.
     private var tone: Color {
-        KioskStatus.custody(isOverdue: checkout.isOverdue, dueAt: checkout.endsAt)
+        KioskStatus.custody(isOverdue: checkout.isOverdue, dueAt: checkout.endsAt, today: today)
     }
 
     // Two labelled destinations, not one target and a chevron.

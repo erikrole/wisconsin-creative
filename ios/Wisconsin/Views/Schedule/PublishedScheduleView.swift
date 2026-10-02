@@ -418,6 +418,7 @@ private struct PublishedCrewAvatar: View {
 }
 
 private struct PublishedEventDetailView: View {
+    @Environment(\.today) private var today
     let event: PublishedScheduleEvent
     let canFollow: Bool
     let isUpdatingFollow: Bool
@@ -461,7 +462,7 @@ private struct PublishedEventDetailView: View {
                         .foregroundStyle(.secondary)
                 }
 
-                Label(publishedEventDate(event.event), systemImage: "calendar")
+                Label(publishedEventDate(event.event, today: today), systemImage: "calendar")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.primary)
 
@@ -651,13 +652,16 @@ private func publishedEventTime(_ event: PublishedEventSummary) -> String {
     return "\(start) – \(end)"
 }
 
-private func publishedEventDate(_ event: PublishedEventSummary) -> String {
+private func publishedEventDate(_ event: PublishedEventSummary, today: Date) -> String {
     let date = publishedScheduleDay(for: event)
     let calendar = Calendar.current
-    if calendar.isDateInToday(date) { return "Today, \(date.formatted(.dateTime.month(.abbreviated).day()))" }
-    if calendar.isDateInTomorrow(date) { return "Tomorrow, \(date.formatted(.dateTime.month(.abbreviated).day()))" }
+    switch calendar.dayOffset(of: date, from: today) {
+    case 0: return "Today, \(date.formatted(.dateTime.month(.abbreviated).day()))"
+    case 1: return "Tomorrow, \(date.formatted(.dateTime.month(.abbreviated).day()))"
+    default: break
+    }
     let year = calendar.component(.year, from: date)
-    let currentYear = calendar.component(.year, from: .now)
+    let currentYear = calendar.component(.year, from: today)
     return year == currentYear
         ? date.formatted(.dateTime.weekday(.wide).month(.abbreviated).day())
         : date.formatted(.dateTime.weekday(.wide).month(.abbreviated).day().year())

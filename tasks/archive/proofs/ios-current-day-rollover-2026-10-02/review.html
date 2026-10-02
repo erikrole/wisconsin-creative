@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Today Stays Today</title>
+<style>
+  :root {
+    --ground:#EEF0F4; --surface:#FFFFFF; --raised:#F7F8FA;
+    --ink:#14171C; --muted:#5B6472; --faint:#8B95A3;
+    --line:#D8DDE5; --accent:#C5050C; --good:#1B7F3B; --warn:#A65A00;
+    --shadow:0 1px 2px rgba(20,23,28,.06), 0 8px 24px rgba(20,23,28,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#131519; --surface:#1B1E24; --raised:#22262E;
+      --ink:#E9ECF1; --muted:#9AA4B2; --faint:#727D8C;
+      --line:#2C313A; --accent:#F2545B; --good:#4ADE80; --warn:#F0A64A;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#131519; --surface:#1B1E24; --raised:#22262E;
+    --ink:#E9ECF1; --muted:#9AA4B2; --faint:#727D8C;
+    --line:#2C313A; --accent:#F2545B; --good:#4ADE80; --warn:#F0A64A;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; background:var(--ground); color:var(--ink);
+    font-family:"Public Sans", ui-sans-serif, system-ui, sans-serif;
+    font-size:16px; line-height:1.6; -webkit-font-smoothing:antialiased;
+  }
+  .wrap { max-width:1080px; margin:0 auto; padding:56px 24px 96px; }
+  .eyebrow {
+    font-family:"IBM Plex Mono", ui-monospace, monospace; font-size:.72rem;
+    letter-spacing:.14em; text-transform:uppercase; color:var(--accent); margin:0 0 14px;
+  }
+  h1 {
+    font-family:"Archivo Narrow", Arial Narrow, sans-serif; font-weight:700;
+    font-size:clamp(2.4rem,6vw,3.9rem); line-height:1.02; letter-spacing:-.015em;
+    margin:0 0 18px; text-wrap:balance;
+  }
+  .lede { font-size:1.12rem; color:var(--muted); max-width:60ch; margin:0; }
+  .rule { height:2px; background:var(--accent); width:64px; margin:34px 0 0; border:0; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:14px; margin:44px 0 0; }
+  .stat { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:20px; box-shadow:var(--shadow); }
+  .stat .k { font-family:"IBM Plex Mono", monospace; font-size:.68rem; letter-spacing:.12em;
+             text-transform:uppercase; color:var(--faint); margin:0 0 10px; }
+  .stat .v { font-family:"Archivo Narrow", sans-serif; font-weight:700; font-size:2.15rem;
+             line-height:1; margin:0 0 6px; font-variant-numeric:tabular-nums; }
+  .stat .n { font-size:.86rem; color:var(--muted); margin:0; line-height:1.45; }
+  .down { color:var(--good); }
+  h2 { font-family:"Archivo Narrow", sans-serif; font-weight:700;
+       font-size:1.9rem; letter-spacing:-.01em; margin:72px 0 6px; }
+  .sec-note { color:var(--muted); margin:0 0 26px; font-size:.95rem; }
+  .pair { margin:0 0 40px; }
+  .pair-head h3 { font-family:"Archivo Narrow",sans-serif; font-weight:600; font-size:1.2rem; margin:0 0 2px; }
+  .pair-head p { margin:0 0 16px; color:var(--muted); font-size:.92rem; }
+  .shots { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+  figure { margin:0; display:flex; flex-direction:column; gap:10px; }
+  figure img { width:100%; height:auto; display:block; border-radius:14px;
+               border:1px solid var(--line); box-shadow:var(--shadow); background:var(--surface); }
+  figcaption { font-size:.85rem; color:var(--muted); line-height:1.5; }
+  .tag { font-family:"IBM Plex Mono",monospace; font-size:.66rem; letter-spacing:.12em;
+         text-transform:uppercase; padding:4px 9px; border-radius:5px; align-self:flex-start; font-weight:600; }
+  .tag-before { background:color-mix(in srgb, var(--muted) 14%, transparent); color:var(--muted); }
+  .tag-after { background:color-mix(in srgb, var(--accent) 13%, transparent); color:var(--accent); }
+  .change { border-top:1px solid var(--line); padding:22px 0 4px; }
+  .change h3 { font-family:"Archivo Narrow",sans-serif; font-weight:600; font-size:1.18rem; margin:0 0 14px; }
+  .ba { display:grid; grid-template-columns:1fr 1fr; gap:26px; }
+  .ba p { margin:6px 0 0; font-size:.93rem; color:var(--muted); }
+  .lbl { font-family:"IBM Plex Mono",monospace; font-size:.64rem; letter-spacing:.13em;
+         text-transform:uppercase; font-weight:600; }
+  .lbl-b { color:var(--faint); }
+  .lbl-a { color:var(--accent); }
+  .panel { background:var(--surface); border:1px solid var(--line); border-radius:12px;
+           padding:24px 26px; box-shadow:var(--shadow); }
+  .panel ul { margin:0; padding-left:19px; }
+  .panel li { margin:0 0 9px; font-size:.94rem; }
+  .panel li:last-child { margin-bottom:0; }
+  code { font-family:"IBM Plex Mono",monospace; font-size:.86em; background:var(--raised);
+         border:1px solid var(--line); padding:1px 5px; border-radius:4px; }
+  .flag { border-left:3px solid var(--warn); }
+  @media (max-width:720px) {
+    .wrap { padding:36px 16px 64px; }
+    .ba { grid-template-columns:1fr; gap:16px; }
+  }
+</style></head><body>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">iOS · Schedule + app-wide relative days</p>
+    <h1>Today Stays Today</h1>
+    <p class="lede">If the app stayed open past midnight, the Schedule labelled today&#x27;s events as &quot;Tomorrow&quot;. Day labels now update when the date changes.</p>
+    <hr class="rule">
+  </header>
+  
+  
+  <h2>Evidence</h2>
+  <p class="sec-note">There&#x27;s no matched before/after pair. The bug only shows when the app stays open past midnight, and a simulator capture can&#x27;t reproduce that. The reported screenshot is the user&#x27;s own device; the after capture is a fixture run on GT Capture iPhone 18 Pro Max, light mode, at the top of the list.</p>
+  
+  
+  <h2>What changed, and why</h2>
+  <div class="change">
+    <h3>&quot;Tomorrow&quot; on today&#x27;s events</h3>
+    <div class="ba">
+      <div><span class="lbl lbl-b">Was</span><p>The day headers checked the clock only when they first drew. Nothing redrew them at midnight, so an app left open overnight kept Thursday&#x27;s labels on Friday.</p></div>
+      <div><span class="lbl lbl-a">Now</span><p>A shared today value, set where the app starts, updates at midnight, on clock or time-zone changes, and when the app returns to the foreground. Headers, rows, the week strip and the list&#x27;s first day all use it.</p></div>
+    </div>
+  </div>
+  <div class="change">
+    <h3>Day 2 of a multi-day event read &quot;Now&quot; a day early</h3>
+    <div class="ba">
+      <div><span class="lbl lbl-b">Was</span><p>Saturday&#x27;s &quot;Day 2 of 2&quot; row showed Now on Friday.</p></div>
+      <div><span class="lbl lbl-a">Now</span><p>Each day of a multi-day event shows Now only on its own day.</p></div>
+    </div>
+  </div>
+  <div class="change">
+    <h3>Same fix across the app</h3>
+    <div class="ba">
+      <div><span class="lbl lbl-b">Was</span><p>Event detail, Published Schedule, Home due-today colors, Profile Next Up, notification groups, booking day labels and kiosk sections each checked the clock directly.</p></div>
+      <div><span class="lbl lbl-a">Now</span><p>They all use the shared today value. A guard test fails if any iOS code checks today, tomorrow or yesterday against the clock directly.</p></div>
+    </div>
+  </div>
+  <h2>Verification</h2><div class="panel"><ul><li>xcodebuild: Wisconsin and WisconsinKiosk build</li><li>CurrentDayTests: 2 tests pass, including the midnight boundary</li><li>vitest: 712 test files pass, 1 skipped (includes the new guard test)</li><li>ScheduleScreenshotUITests/testScheduleListCaptures passed on GT Capture iPhone 18 Pro Max</li><li>npm run verify:docs passes</li></ul></div>
+  <h2>Things to know</h2><div class="panel flag"><ul><li>The fixture capture shows how the screen looks with the change. It can&#x27;t show the screen changing at midnight; the unit tests and guard test cover that.</li><li>Web schedule views also read the current date when they draw, so a browser tab left open overnight can still go stale. That isn&#x27;t covered here.</li></ul></div>
+</div>
+</body></html>

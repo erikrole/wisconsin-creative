@@ -167,12 +167,12 @@ describe("iOS Home header source contract", () => {
 
     // Gear rows read the booking-status palette in docs/COLOR_SYSTEM.md, with
     // the sanctioned deadline overlay on an open checkout due today.
-    expect(home).toContain("private func queueGearTone(for summary: BookingSummary) -> StatusTone");
+    expect(home).toContain("private func queueGearTone(for summary: BookingSummary, today: Date) -> StatusTone");
     expect(home).toContain("if summary.isOverdue { return .red }");
     expect(home).toContain("case .booked: return .purple");
     expect(home).toContain("case .pendingPickup: return .orange");
     expect(home).toContain(
-      "case .open: return Calendar.current.isDateInToday(summary.endsAt) ? .orange : .blue",
+      "case .open: return Calendar.current.dayOffset(of: summary.endsAt, from: today) == 0 ? .orange : .blue",
     );
     // Shift rows read the scheduling domain's location palette instead, the
     // same mapping the Schedule tab's rails use.
