@@ -115,6 +115,14 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Services: _none matched_
 - Tests: `tests/public-showroom-content.test.ts`
 
+## radio-clip
+
+- Doc: `docs/AREA_RADIO_CLIP.md`
+- Pages: `/radio-clip/authorize`
+- APIs: `/api/radio-clip/access/[id]`, `/api/radio-clip/authorize`, `/api/radio-clip/availability`, `/api/radio-clip/session`, `/api/radio-clip/token`
+- Services: `src/lib/services/radio-clip-auth.ts`
+- Tests: `tests/radio-clip-auth.test.ts`
+
 ## reports
 
 - Doc: `docs/AREA_REPORTS.md`

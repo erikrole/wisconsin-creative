@@ -88,6 +88,7 @@ function makeUser(overrides: Partial<User> = {}): User {
     name: "Visible User",
     email: "visible@example.com",
     passwordHash: "hash",
+    radioClipEnabled: false,
     forcePasswordChange: false,
     role: Role.STUDENT,
     affiliation: null,

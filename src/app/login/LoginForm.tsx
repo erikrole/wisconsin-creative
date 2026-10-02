@@ -52,7 +52,7 @@ function validateEmail(email: string): string {
   return "";
 }
 
-export default function LoginForm() {
+export default function LoginForm({ returnTo = "/" }: { returnTo?: string }) {
   const router = useRouter();
   const emailRef = useRef<HTMLInputElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
@@ -100,7 +100,7 @@ export default function LoginForm() {
     url: "/api/auth/login",
     skipAuthRedirect: true,
     onSuccess: (data: LoginResponse) => {
-      router.replace(data.user?.forcePasswordChange ? "/change-password" : "/");
+      router.replace(data.user?.forcePasswordChange ? "/change-password" : returnTo);
     },
     onError: (kind) => setIsNetworkError(kind === "network"),
   });
@@ -290,7 +290,7 @@ export default function LoginForm() {
       const result = await parseJsonSafely<LoginResponse>(verifyResponse);
       if (!isCurrent()) return assertionReceived;
       passkeyNavigatedRef.current = true;
-      router.replace(result?.user?.forcePasswordChange ? "/change-password" : "/");
+      router.replace(result?.user?.forcePasswordChange ? "/change-password" : returnTo);
     } catch (error) {
       if (!isCurrent()) return assertionReceived;
       if (isPasskeyCancellation(error)) return assertionReceived;
