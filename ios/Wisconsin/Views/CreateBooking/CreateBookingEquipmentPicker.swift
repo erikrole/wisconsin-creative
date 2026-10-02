@@ -107,34 +107,35 @@ struct CreateBookingEquipmentPicker: View {
         .refreshable { await vm.loadAvailableAssets(reset: true) }
         .nativeScrollBarMinimization()
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            if !activeRecommendations.isEmpty {
-                VStack(spacing: 6) {
-                    ForEach(activeRecommendations) { recommendation in
-                        BatteryRecommendationCard(
-                            recommendation: recommendation,
-                            quantity: vm.quantity(for: recommendation.sku),
-                            onDecrement: {
-                                vm.decrementBulk(recommendation.sku)
-                                Haptics.selection()
-                            },
-                            onIncrement: {
-                                vm.incrementBulk(recommendation.sku)
-                                Haptics.selection()
-                            },
-                            onDismiss: {
-                                acknowledge(recommendation)
-                            }
-                        )
-                        .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
-                    }
+            VStack(spacing: 8) {
+                ForEach(activeRecommendations) { recommendation in
+                    BatteryRecommendationCard(
+                        recommendation: recommendation,
+                        quantity: vm.quantity(for: recommendation.sku),
+                        onDecrement: {
+                            vm.decrementBulk(recommendation.sku)
+                            Haptics.selection()
+                        },
+                        onIncrement: {
+                            vm.incrementBulk(recommendation.sku)
+                            Haptics.selection()
+                        },
+                        onDismiss: {
+                            acknowledge(recommendation)
+                        }
+                    )
+                    .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
                 }
-                .padding(.horizontal, 12)
-                .padding(.top, 6)
-                .padding(.bottom, 4)
-                .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: activeRecommendations.map(\.reminderKey))
+                if vm.selectedEquipmentCount > 0 {
+                    gearActionBar(needsPower: needsPowerNudge)
+                }
             }
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .padding(.bottom, vm.selectedEquipmentCount > 0 || !activeRecommendations.isEmpty ? 8 : 0)
+            .background(vm.selectedEquipmentCount > 0 || !activeRecommendations.isEmpty ? AnyShapeStyle(.bar) : AnyShapeStyle(.clear))
+            .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: activeRecommendations.map(\.reminderKey))
         }
-        .toolbar { gearBottomToolbar }
         .sheet(isPresented: $showCart) {
             EquipmentCartSheet(vm: vm)
                 .presentationDetents([.medium, .large])
@@ -176,6 +177,7 @@ struct CreateBookingEquipmentPicker: View {
             )
         }
         .buttonStyle(.plain)
+        .listRowBackground(isSelected ? Color.statusBackground(.purple) : Color(.secondarySystemGroupedBackground))
         .disabled((isConflicted && !isSelected) || (!atPickup && !isSelected))
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
             if canAdd {
@@ -298,40 +300,56 @@ struct CreateBookingEquipmentPicker: View {
         }
     }
 
-    // MARK: - Toolbar
+    // MARK: - Action bar
 
-    @ToolbarContentBuilder
-    private var gearBottomToolbar: some ToolbarContent {
-        if vm.selectedEquipmentCount > 0 {
-            ToolbarItem(placement: .bottomBar) {
-                Button {
-                    showCart = true
-                } label: {
-                    Label("Selected", systemImage: "shippingbox.fill")
-                        .symbolRenderingMode(.monochrome)
-                        .foregroundStyle(Color.statusText(.purple))
-                }
-                .tint(Color.statusText(.purple))
-                .badge(vm.selectedEquipmentCount)
-                .accessibilityLabel("\(vm.selectedEquipmentCount) items selected, view selected equipment")
+    /// A battery suggestion nobody has answered yet: Review sends them to
+    /// Batteries once, and dismissing the suggestion lets Review through.
+    private var needsPowerNudge: Bool {
+        !vm.hasSelectedPower
+            && vm.batteryRecommendations.contains { !acknowledgedRecommendationIDs.contains($0.reminderKey) }
+    }
+
+    private func reviewTitle(needsPower: Bool) -> String {
+        if vm.selectedLocationMismatchCount > 0 { return "Fix Location" }
+        if vm.selectedConflictCount > 0 { return "Resolve Conflicts" }
+        if needsPower { return "Add a Battery" }
+        let count = vm.selectedEquipmentCount
+        return "Review · \(count) item\(count == 1 ? "" : "s")"
+    }
+
+    /// One bar instead of a floating cart bubble, a suggestion banner and a
+    /// Review pill: what's picked on the left, the next step on the right.
+    @ViewBuilder
+    private func gearActionBar(needsPower: Bool) -> some View {
+        HStack(spacing: 10) {
+            Button {
+                showCart = true
+            } label: {
+                Label("\(vm.selectedEquipmentCount)", systemImage: "shippingbox.fill")
+                    .font(.headline)
+                    .foregroundStyle(Color.statusText(.purple))
+                    .padding(.horizontal, 18)
+                    .frame(minHeight: 52)
+                    .background(Color.statusBackground(.purple), in: RoundedRectangle(cornerRadius: 16))
             }
-            ToolbarSpacer(.flexible, placement: .bottomBar)
-            ToolbarItem(placement: .bottomBar) {
-                Button {
-                    attemptReview()
-                } label: {
-                    Text(
-                        vm.selectedLocationMismatchCount > 0
-                            ? "Fix Location"
-                            : (vm.selectedConflictCount == 0 ? "Review" : "Resolve Conflicts")
+            .buttonStyle(.plain)
+            .accessibilityLabel("\(vm.selectedEquipmentCount) items selected, view selected equipment")
+
+            Button {
+                attemptReview()
+            } label: {
+                Text(reviewTitle(needsPower: needsPower))
+                    .font(.headline)
+                    .foregroundStyle(vm.canReviewEquipment ? Color.white : Color.secondary)
+                    .frame(maxWidth: .infinity, minHeight: 52)
+                    .background(
+                        vm.canReviewEquipment ? Color.statusText(.purple) : Color(.tertiarySystemFill),
+                        in: RoundedRectangle(cornerRadius: 16)
                     )
-                    .fontWeight(.semibold)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(Color.statusText(.purple))
-                .disabled(!vm.canReviewEquipment)
-                .accessibilityHint(reviewBlockedHint)
             }
+            .buttonStyle(.plain)
+            .disabled(!vm.canReviewEquipment)
+            .accessibilityHint(reviewBlockedHint)
         }
     }
 
@@ -390,7 +408,9 @@ struct CreateBookingEquipmentPicker: View {
     }
 
     private func attemptReview() {
-        guard !vm.hasSelectedPower, let recommendation = vm.batteryRecommendations.first else {
+        guard !vm.hasSelectedPower,
+              let recommendation = vm.batteryRecommendations.first(where: { !acknowledgedRecommendationIDs.contains($0.reminderKey) })
+        else {
             onReview()
             return
         }

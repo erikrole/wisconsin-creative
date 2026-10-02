@@ -248,15 +248,23 @@ struct NotificationSettingsView: View {
 
     private var customPauseSheet: some View {
         NavigationStack {
-            Form {
-                DatePicker(
-                    "Pause until",
-                    selection: $customPauseUntil,
-                    in: Date().addingTimeInterval(5 * 60)...Date().addingTimeInterval(30 * 24 * 60 * 60),
-                    displayedComponents: [.date, .hourAndMinute]
-                )
-                .datePickerStyle(.graphical)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    Text("Pause until")
+                        .font(.title2.weight(.heavy))
+                    Text(chipDayTime(customPauseUntil))
+                        .font(.headline)
+                        .foregroundStyle(Color.statusText(.purple))
+                    DayTimeChipPicker(
+                        selection: $customPauseUntil,
+                        minimum: Date().addingTimeInterval(5 * 60),
+                        latest: Date().addingTimeInterval(30 * 24 * 60 * 60),
+                        tint: Color.statusText(.purple)
+                    )
+                }
+                .padding(16)
             }
+            .background(Color(.systemGroupedBackground))
             .navigationTitle("Pause alerts")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -292,6 +300,20 @@ struct NotificationSettingsView: View {
                 .accessibilityHint("Alerts arrive silently during a set time each week.")
 
                 if quiet.enabled {
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
+                        ForEach(Self.quietPresets, id: \.title) { preset in
+                            ChipButton(
+                                title: preset.title,
+                                detail: preset.detail,
+                                isSelected: quiet.start == preset.start && quiet.end == preset.end,
+                                tint: Color.statusText(.purple)
+                            ) {
+                                prefsVM.updateQuietHours { $0.start = preset.start; $0.end = preset.end }
+                                Haptics.selection()
+                            }
+                        }
+                    }
+                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                     quietTimePicker("From", time: quiet.start) { value in
                         prefsVM.updateQuietHours({ $0.start = value }, debounce: true)
                     }
@@ -317,6 +339,12 @@ struct NotificationSettingsView: View {
             }
         }
     }
+
+    private static let quietPresets: [(title: String, detail: String, start: String, end: String)] = [
+        ("Overnight", "10 PM – 7 AM", "22:00", "07:00"),
+        ("Late night", "11 PM – 8 AM", "23:00", "08:00"),
+        ("Evenings", "6 – 10 PM", "18:00", "22:00"),
+    ]
 
     private func quietHoursFooter(_ quiet: NotificationQuietHours) -> String {
         guard quiet.enabled else {

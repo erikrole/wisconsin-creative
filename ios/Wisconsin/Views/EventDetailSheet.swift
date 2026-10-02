@@ -463,6 +463,7 @@ struct EventDetailView: View {
                         defaultStart: vm.workingEditor?.defaultWindow?.startsAt ?? event.startsAt,
                         defaultEnd: vm.workingEditor?.defaultWindow?.endsAt ?? event.endsAt,
                         isAllDay: event.displayAllDay,
+                        existingShifts: vm.displayedShifts,
                         onAdded: { editor in
                             acceptWorkingScheduleEditor(editor)
                         },

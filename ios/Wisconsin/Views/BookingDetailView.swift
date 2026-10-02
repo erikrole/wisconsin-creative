@@ -444,19 +444,28 @@ struct EditBookingSheet: View {
 
                             Divider().padding(.leading, 42)
 
-                            HStack(spacing: Brand.Space.sm) {
-                                Image(systemName: "arrow.left")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(Color.statusText(.purple))
-                                    .frame(width: 30, height: 30)
-                                    .background(Color.statusBackground(.purple), in: Circle())
-                                DatePicker(
-                                    "Return Time",
+                            VStack(alignment: .leading, spacing: 10) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "arrow.left")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(Color.statusText(.purple))
+                                        .frame(width: 30, height: 30)
+                                        .background(Color.statusBackground(.purple), in: Circle())
+                                    Text("Due back")
+                                        .font(.subheadline.weight(.semibold))
+                                    Text(chipDayTime(endsAt))
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(Color.statusText(.purple))
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 3)
+                                        .background(Color.statusBackground(.purple), in: Capsule())
+                                    Spacer(minLength: 0)
+                                }
+                                DayTimeChipPicker(
                                     selection: $endsAt,
-                                    in: booking.startsAt...,
-                                    displayedComponents: [.date, .hourAndMinute]
+                                    minimum: booking.startsAt,
+                                    tint: Color.statusText(.purple)
                                 )
-                                .font(.subheadline.weight(.medium))
                             }
                             .padding(.vertical, 8)
 

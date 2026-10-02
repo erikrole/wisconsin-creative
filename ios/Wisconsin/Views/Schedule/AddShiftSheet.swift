@@ -10,15 +10,18 @@ struct AddShiftSheet: View {
     /// All-day events carry no call time, so the custom window is not offered.
     var isAllDay = false
     let onAdded: (WorkingScheduleEditor) -> Void
+    /// The crew as it stands, so each area chip can show how full it is.
+    var existingShifts: [EventShift] = []
     /// Reloads the crew after another session changed it and returns the new
     /// draft version, so a conflicted add retries once.
     var refreshWorkingVersion: (() async -> Int?)?
     @State private var workingVersionOverride: Int?
 
     @Environment(\.dismiss) private var dismiss
-    @State private var area: ShiftAreaOption = .video
-    @State private var workerType: ShiftWorkerOption = .student
-    @State private var customizeTimes = false
+    @State private var area: ShiftAreaOption
+    @State private var workerType: ShiftWorkerOption
+    @State private var preset: CallPreset = .event
+    @State private var count = 1
     @State private var startsAt: Date
     @State private var endsAt: Date
     @State private var isSubmitting = false
@@ -31,9 +34,16 @@ struct AddShiftSheet: View {
         defaultStart: Date,
         defaultEnd: Date,
         isAllDay: Bool = false,
+        existingShifts: [EventShift] = [],
         onAdded: @escaping (WorkingScheduleEditor) -> Void,
         refreshWorkingVersion: (() async -> Int?)? = nil
     ) {
+        self.existingShifts = existingShifts
+        // Last area and worker class used: adding crew is repetitive, so start
+        // where the last person left off.
+        let defaults = UserDefaults.standard
+        _area = State(initialValue: defaults.string(forKey: "addShift.lastArea").flatMap(ShiftAreaOption.init(rawValue:)) ?? .video)
+        _workerType = State(initialValue: defaults.string(forKey: "addShift.lastWorker").flatMap(ShiftWorkerOption.init(rawValue:)) ?? .student)
         self.shiftGroupId = shiftGroupId
         self.expectedWorkingVersion = expectedWorkingVersion
         self.eventTitle = eventTitle
@@ -44,6 +54,15 @@ struct AddShiftSheet: View {
         self.refreshWorkingVersion = refreshWorkingVersion
         _startsAt = State(initialValue: defaultStart)
         _endsAt = State(initialValue: defaultEnd)
+    }
+
+    private var customizeTimes: Bool { preset != .event }
+
+    private func fill(for option: ShiftAreaOption) -> String? {
+        let slots = existingShifts.filter { $0.area == option.rawValue }
+        guard !slots.isEmpty else { return nil }
+        let filled = slots.filter { !$0.assignments.isEmpty }.count
+        return "\(filled)/\(slots.count)"
     }
 
     private var hasValidWindow: Bool {
@@ -88,14 +107,17 @@ struct AddShiftSheet: View {
                         } else {
                             Image(systemName: "plus")
                         }
-                        Text("Add \(area.label) Shift")
-                            .fontWeight(.semibold)
+                        Text(count == 1 ? "Add \(area.label) Shift" : "Add \(count) \(area.label) Shifts")
+                            .font(.headline)
                     }
-                    .frame(maxWidth: .infinity)
+                    .foregroundStyle(isSubmitting || hasValidWindow ? Color.white : Color.secondary)
+                    .frame(maxWidth: .infinity, minHeight: 56)
+                    .background(
+                        hasValidWindow ? Color.statusText(.purple) : Color(.tertiarySystemFill),
+                        in: RoundedRectangle(cornerRadius: 16)
+                    )
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(Color.statusText(.purple))
-                .controlSize(.large)
+                .buttonStyle(.plain)
                 .disabled(isSubmitting || !hasValidWindow)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
@@ -105,7 +127,7 @@ struct AddShiftSheet: View {
         }
         .presentationDetents([.large])
         .onChange(of: workerType) { _, next in
-            if next == .fullTime { customizeTimes = false }
+            if next == .fullTime { preset = .event }
         }
     }
 
@@ -133,21 +155,16 @@ struct AddShiftSheet: View {
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
                 ForEach(ShiftAreaOption.allCases, id: \.self) { option in
-                    Button {
+                    ChipButton(
+                        title: option.label,
+                        systemImage: option.systemImage,
+                        detail: fill(for: option),
+                        isSelected: area == option,
+                        tint: Color.statusText(.purple)
+                    ) {
                         withAnimation(.easeInOut(duration: 0.16)) { area = option }
                         Haptics.selection()
-                    } label: {
-                        Label(option.label, systemImage: option.systemImage)
-                            .font(.subheadline.weight(.semibold))
-                            .frame(maxWidth: .infinity, minHeight: 44)
                     }
-                    .buttonStyle(.bordered)
-                    .tint(area == option ? Color.statusText(.purple) : .secondary)
-                    .background(
-                        area == option ? Color.statusBackground(.purple) : Color.clear,
-                        in: RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous)
-                    )
-                    .accessibilityAddTraits(area == option ? .isSelected : [])
                 }
             }
 
@@ -162,6 +179,21 @@ struct AddShiftSheet: View {
                 }
                 .pickerStyle(.segmented)
             }
+
+            Divider()
+
+            HStack {
+                Text("How many")
+                    .font(.subheadline.weight(.semibold))
+                Spacer()
+                ReservationQuantityStepper(
+                    value: count,
+                    range: 1...6,
+                    label: "Number of slots",
+                    onIncrement: { count = min(6, count + 1) },
+                    onDecrement: { count = max(1, count - 1) }
+                )
+            }
         }
         .padding(16)
         .background(Color.cardSurface, in: RoundedRectangle(cornerRadius: Brand.Radius.lg, style: .continuous))
@@ -169,22 +201,28 @@ struct AddShiftSheet: View {
 
     private var scheduleCard: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Call Window")
-                        .font(.headline)
-                    Text(customizeTimes ? "Custom for this shift" : "Uses the configured call time")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                Toggle("Custom call window", isOn: $customizeTimes)
-                    .labelsHidden()
-                    .tint(Color.statusText(.purple))
-                    .accessibilityLabel("Custom call window")
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Call Window")
+                    .font(.headline)
+                Text(preset == .event ? "Uses the configured call time" : "Custom for this shift")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
-            if customizeTimes {
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                ForEach(CallPreset.allCases, id: \.self) { option in
+                    ChipButton(
+                        title: option.title,
+                        isSelected: preset == option,
+                        tint: Color.statusText(.purple)
+                    ) {
+                        preset = option
+                        Haptics.selection()
+                    }
+                }
+            }
+
+            if preset == .custom {
                 Divider()
                 ShiftDateTimeRow(label: "Call", systemImage: "arrow.right", date: $startsAt)
                 Divider()
@@ -195,6 +233,13 @@ struct AddShiftSheet: View {
                         .font(.caption)
                         .foregroundStyle(Color.statusText(.red))
                 }
+            } else if let lead = preset.leadMinutes {
+                Label(
+                    "\(shortDate(defaultStart)) · \(roundedToQuarterHour(defaultStart.addingTimeInterval(-Double(lead) * 60)).formatted(date: .omitted, time: .shortened)) to \(defaultEnd.formatted(date: .omitted, time: .shortened))",
+                    systemImage: "clock"
+                )
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
             } else {
                 Label(defaultWindowText, systemImage: defaultsToAllDayWindow ? "calendar" : "clock")
                     .font(.subheadline)
@@ -203,8 +248,11 @@ struct AddShiftSheet: View {
         }
         .padding(16)
         .background(Color.cardSurface, in: RoundedRectangle(cornerRadius: Brand.Radius.lg, style: .continuous))
-        .onChange(of: customizeTimes) { _, isCustom in
-            if isCustom {
+        .onChange(of: preset) { _, next in
+            if let lead = next.leadMinutes {
+                startsAt = roundedToQuarterHour(defaultStart.addingTimeInterval(-Double(lead) * 60))
+                endsAt = roundedToQuarterHour(defaultEnd)
+            } else if next == .custom, startsAt == defaultStart {
                 startsAt = roundedToQuarterHour(defaultStart)
                 endsAt = roundedToQuarterHour(defaultEnd)
             }
@@ -254,10 +302,14 @@ struct AddShiftSheet: View {
         defer { isSubmitting = false }
         var version = workingVersionOverride ?? expectedWorkingVersion
         var canRetryConflict = refreshWorkingVersion != nil
-        do {
+        var lastEditor: WorkingScheduleEditor?
+        var added = 0
+
+        /// One slot, retrying once if another session moved the crew version.
+        func addOne() async throws -> WorkingScheduleEditor {
             while true {
                 do {
-                    let editor = try await APIClient.shared.addWorkingScheduleSlot(
+                    return try await APIClient.shared.addWorkingScheduleSlot(
                         shiftGroupId: shiftGroupId,
                         expectedVersion: version,
                         area: area.rawValue,
@@ -265,10 +317,6 @@ struct AddShiftSheet: View {
                         callStartsAt: workerType == .student && customizeTimes ? startsAt : nil,
                         callEndsAt: workerType == .student && customizeTimes ? endsAt : nil
                     )
-                    Haptics.success()
-                    onAdded(editor)
-                    dismiss()
-                    return
                 } catch APIError.conflict {
                     // Another session edited the crew: retry once against
                     // the new version, then surface a second conflict.
@@ -279,8 +327,27 @@ struct AddShiftSheet: View {
                     workingVersionOverride = refreshed
                 }
             }
+        }
+
+        do {
+            for _ in 0..<count {
+                let editor = try await addOne()
+                lastEditor = editor
+                version = editor.workingVersion
+                added += 1
+            }
+            UserDefaults.standard.set(area.rawValue, forKey: "addShift.lastArea")
+            UserDefaults.standard.set(workerType.rawValue, forKey: "addShift.lastWorker")
+            Haptics.success()
+            if let lastEditor { onAdded(lastEditor) }
+            dismiss()
         } catch {
-            self.error = error.localizedDescription
+            // Slots already added stay added: hand the crew back so the screen
+            // shows them, and say how far this got.
+            if let lastEditor { onAdded(lastEditor) }
+            self.error = added > 0
+                ? "Added \(added) of \(count). \(error.localizedDescription)"
+                : error.localizedDescription
             Haptics.warning()
         }
     }
@@ -317,13 +384,33 @@ struct AddShiftSheet: View {
     }
 }
 
+enum CallPreset: CaseIterable {
+    case event, before30, before60, before120, custom
+
+    var title: String {
+        switch self {
+        case .event: "Event time"
+        case .before30: "30 min before"
+        case .before60: "1 hr before"
+        case .before120: "2 hr before"
+        case .custom: "Custom"
+        }
+    }
+
+    var leadMinutes: Int? {
+        switch self {
+        case .before30: 30
+        case .before60: 60
+        case .before120: 120
+        default: nil
+        }
+    }
+}
+
 struct ShiftDateTimeRow: View {
     let label: String
     let systemImage: String
     @Binding var date: Date
-
-    private let hours = Array(0..<24)
-    private let minutes = [0, 15, 30, 45]
 
     var body: some View {
         HStack(spacing: 10) {
@@ -333,56 +420,13 @@ struct ShiftDateTimeRow: View {
                 .accessibilityHidden(true)
             Text(label)
                 .font(.subheadline.weight(.semibold))
-            Spacer()
-            DatePicker("\(label) date", selection: $date, displayedComponents: .date)
-                .labelsHidden()
-            HStack(spacing: 4) {
-                Picker("\(label) hour", selection: hourSelection) {
-                    ForEach(hours, id: \.self) { hour in
-                        Text(timeLabel(hour: hour, minute: minuteSelection.wrappedValue)).tag(hour)
-                    }
-                }
-                .pickerStyle(.menu)
-                .fixedSize()
-
-                Picker("\(label) minute", selection: minuteSelection) {
-                    ForEach(minutes, id: \.self) { minute in
-                        Text(timeLabel(hour: hourSelection.wrappedValue, minute: minute)).tag(minute)
-                    }
-                }
-                .pickerStyle(.menu)
-                .fixedSize()
-            }
-            .tint(Color.statusText(.purple))
+            Spacer(minLength: 8)
+            QuarterHourDateTimeControls(
+                label: label,
+                selection: $date,
+                tint: Color.statusText(.purple)
+            )
         }
-    }
-
-    private var hourSelection: Binding<Int> {
-        Binding(
-            get: { Calendar.current.component(.hour, from: date) },
-            set: { updateTime(hour: $0, minute: Calendar.current.component(.minute, from: date)) }
-        )
-    }
-
-    private var minuteSelection: Binding<Int> {
-        Binding(
-            get: {
-                let minute = Calendar.current.component(.minute, from: date)
-                return minutes.min(by: { abs($0 - minute) < abs($1 - minute) }) ?? 0
-            },
-            set: { updateTime(hour: Calendar.current.component(.hour, from: date), minute: $0) }
-        )
-    }
-
-    private func updateTime(hour: Int, minute: Int) {
-        let calendar = Calendar.current
-        date = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: date) ?? date
-    }
-
-    private func timeLabel(hour: Int, minute: Int) -> String {
-        let calendar = Calendar.current
-        let value = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: date) ?? date
-        return value.formatted(date: .omitted, time: .shortened)
     }
 }
 
