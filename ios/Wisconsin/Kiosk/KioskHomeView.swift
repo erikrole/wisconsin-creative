@@ -171,7 +171,7 @@ struct KioskHomeView: View {
         let sorted = checkouts.filter { !grouped.contains($0.id) }.sorted { $0.endsAt < $1.endsAt }
         let overdue = sorted.filter { $0.isOverdue || $0.endsAt < now }
         let dueToday = sorted.filter { !$0.isOverdue && $0.endsAt >= now && calendar.dayOffset(of: $0.endsAt, from: today) == 0 }
-        let later = sorted.filter { !$0.isOverdue && $0.endsAt >= now && !calendar.dayOffset(of: $0.endsAt, from: today) == 0 }
+        let later = sorted.filter { !$0.isOverdue && $0.endsAt >= now && calendar.dayOffset(of: $0.endsAt, from: today) != 0 }
         return [
             CustodySection(id: "overdue", title: "Overdue", rows: overdue),
             CustodySection(id: "today", title: "Due back today", rows: dueToday),
