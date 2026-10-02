@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { tokenHash } from "@/lib/auth";
+import { radioClipReturnTo } from "@/lib/radio-clip-contract";
 import LoginForm from "./LoginForm";
 
 export const metadata: Metadata = {
@@ -29,9 +30,10 @@ async function hasActiveSession(): Promise<boolean> {
   }
 }
 
-export default async function LoginPage() {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ returnTo?: string }> }) {
+  const returnTo = radioClipReturnTo((await searchParams).returnTo);
   if (await hasActiveSession()) {
-    redirect("/");
+    redirect(returnTo);
   }
-  return <LoginForm />;
+  return <LoginForm returnTo={returnTo} />;
 }

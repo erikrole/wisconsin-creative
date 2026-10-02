@@ -73,6 +73,7 @@
 | `src/lib/services/onboarding-lifecycle.ts` | 546 |
 | `src/lib/services/pending-pickup-expiry.ts` | 370 |
 | `src/lib/services/product-event-log.ts` | 43 |
+| `src/lib/services/radio-clip-auth.ts` | 96 |
 | `src/lib/services/reports.ts` | 1932 |
 | `src/lib/services/reservation-consolidation.ts` | 240 |
 | `src/lib/services/reservation-pickup-guard.ts` | 71 |
@@ -205,7 +206,7 @@
 | `src/lib/passkey-client.ts` | 73 |
 | `src/lib/passkey.ts` | 371 |
 | `src/lib/password-rules.ts` | 16 |
-| `src/lib/permissions.ts` | 237 |
+| `src/lib/permissions.ts` | 242 |
 | `src/lib/preview-activity.ts` | 23 |
 | `src/lib/prisma-errors.ts` | 38 |
 | `src/lib/profile-completion-events.ts` | 6 |
@@ -215,6 +216,8 @@
 | `src/lib/public-showroom.ts` | 444 |
 | `src/lib/quarter-hour.ts` | 27 |
 | `src/lib/query-client.ts` | 56 |
+| `src/lib/radio-clip-contract.ts` | 23 |
+| `src/lib/radio-clip-feature.ts` | 10 |
 | `src/lib/rate-limit.ts` | 238 |
 | `src/lib/rbac.ts` | 59 |
 | `src/lib/remark-callouts.ts` | 77 |
@@ -657,6 +660,14 @@
 
 - `/api/push/web`
 - `/api/push/web/test`
+
+### `/api/radio-clip`
+
+- `/api/radio-clip/access/[id]`
+- `/api/radio-clip/authorize`
+- `/api/radio-clip/availability`
+- `/api/radio-clip/session`
+- `/api/radio-clip/token`
 
 ### `/api/reports`
 
