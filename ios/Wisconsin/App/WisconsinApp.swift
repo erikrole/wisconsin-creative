@@ -38,6 +38,7 @@ struct WisconsinApp: App {
                 .environment(drafts)
                 .environment(network)
                 .nativeRemoteImageSession()
+                .providesCurrentDay()
                 .preferredColorScheme(themeChoice.colorScheme)
                 .onAppear {
                     sharedAppState = appState

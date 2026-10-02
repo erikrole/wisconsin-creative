@@ -140,7 +140,7 @@ describe("iOS notification category preferences", () => {
     expect(inbox).toContain('Label("Notification Settings", systemImage: "gearshape")');
 
     // The inbox dates rows the way the web does.
-    expect(inbox).toContain("cal.isDateInToday(n.displayDate)");
+    expect(inbox).toContain("cal.dayOffset(of: n.displayDate, from: today)");
 
     // No action identifier the app never registers.
     expect(actions).not.toContain("GT_VIEW");

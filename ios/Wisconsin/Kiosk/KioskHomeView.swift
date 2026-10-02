@@ -14,6 +14,7 @@ import SwiftUI
 // sheets, and standby.
 
 struct KioskHomeView: View {
+    @Environment(\.today) private var today
     let locationName: String?
     let checkouts: [KioskActiveCheckout]
     var pickups: [KioskDashboard.HomePickup] = []
@@ -140,7 +141,7 @@ struct KioskHomeView: View {
     private var eventGroups: [EventGroup] {
         let now = Date()
         return events
-            .filter { Calendar.current.isDateInToday($0.startsAt) }
+            .filter { Calendar.current.dayOffset(of: $0.startsAt, from: today) == 0 }
             .sorted { $0.startsAt < $1.startsAt }
             .compactMap { event in
                 let linkedPickups = pickups.filter { $0.eventId == event.id }.sorted { $0.readyAt < $1.readyAt }
@@ -169,11 +170,11 @@ struct KioskHomeView: View {
         let calendar = Calendar.current
         let sorted = checkouts.filter { !grouped.contains($0.id) }.sorted { $0.endsAt < $1.endsAt }
         let overdue = sorted.filter { $0.isOverdue || $0.endsAt < now }
-        let today = sorted.filter { !$0.isOverdue && $0.endsAt >= now && calendar.isDateInToday($0.endsAt) }
-        let later = sorted.filter { !$0.isOverdue && $0.endsAt >= now && !calendar.isDateInToday($0.endsAt) }
+        let dueToday = sorted.filter { !$0.isOverdue && $0.endsAt >= now && calendar.dayOffset(of: $0.endsAt, from: today) == 0 }
+        let later = sorted.filter { !$0.isOverdue && $0.endsAt >= now && !calendar.dayOffset(of: $0.endsAt, from: today) == 0 }
         return [
             CustodySection(id: "overdue", title: "Overdue", rows: overdue),
-            CustodySection(id: "today", title: "Due back today", rows: today),
+            CustodySection(id: "today", title: "Due back today", rows: dueToday),
             CustodySection(id: "later", title: "Out, due later", rows: later),
         ].filter { !$0.rows.isEmpty }
     }
@@ -329,7 +330,7 @@ struct KioskHomeView: View {
         // Overdue, pickups, and returns already have rows on the left; the
         // Today tiles only add people the left column can't show: a call
         // soon with no gear yet (Erik, 2026-10-01: no duplication).
-        let today = Array(serverToday.filter { $0.reasons.contains("shift_soon") }.compactMap { tile -> (user: KioskUser, reason: String, section: KioskSection)? in
+        let todayEntries = Array(serverToday.filter { $0.reasons.contains("shift_soon") }.compactMap { tile -> (user: KioskUser, reason: String, section: KioskSection)? in
             guard let user = users.first(where: { $0.id == tile.userId }) else { return nil }
             let call = tile.callAt.map { "Call at \($0.formatted(.dateTime.hour().minute())) · no gear yet" } ?? "Shift soon · no gear yet"
             return (user, call, .takingOut)
@@ -340,11 +341,11 @@ struct KioskHomeView: View {
         // tiles sized to fill the card.
         let usesWideGrid = users.count > 24
         return VStack(alignment: .leading, spacing: 16) {
-            if !today.isEmpty {
+            if !todayEntries.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
                     KioskSectionHeader(title: "Today")
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 2), spacing: 8) {
-                        ForEach(today, id: \.user.id) { entry in
+                        ForEach(todayEntries, id: \.user.id) { entry in
                             HomeTodayTile(user: entry.user, label: labels[entry.user.id] ?? entry.user.name, reason: entry.reason, section: entry.section) {
                                 onSelectUser(entry.user)
                             }
@@ -456,6 +457,7 @@ private func homePersonName(_ full: String) -> String {
 // MARK: - Rows and tiles
 
 private struct HomeCustodyRow: View {
+    @Environment(\.today) private var today
     let checkout: KioskActiveCheckout
     /// Inside an event card the event is the heading, so the row leads with
     /// the person: "Imani B. · 3 items".
@@ -465,7 +467,7 @@ private struct HomeCustodyRow: View {
     let action: () -> Void
 
     private var isOverdue: Bool { checkout.isOverdue || checkout.endsAt < Date() }
-    private var isToday: Bool { Calendar.current.isDateInToday(checkout.endsAt) }
+    private var isToday: Bool { Calendar.current.dayOffset(of: checkout.endsAt, from: today) == 0 }
 
     private var dotColor: Color {
         if isOverdue { return KioskSection.problem.accent }

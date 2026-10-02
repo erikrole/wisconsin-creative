@@ -27,6 +27,7 @@ enum KioskTransferCopy {
 // MARK: - H1 Extend
 
 struct KioskExtendScreen: View {
+    @Environment(\.today) private var today
     let checkoutId: String
     let title: String
     let detailLine: String
@@ -113,7 +114,7 @@ struct KioskExtendScreen: View {
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
                     ForEach(days, id: \.self) { value in
                         KioskSlotChip(
-                            title: Self.dayTitle(value),
+                            title: Self.dayTitle(value, today: today),
                             detail: value.formatted(.dateTime.month(.abbreviated).day()),
                             isSelected: Calendar.current.isDate(value, inSameDayAs: day),
                             // A day that starts after the latest allowed time can't be picked.
@@ -155,7 +156,7 @@ struct KioskExtendScreen: View {
                             .font(KioskType.overline)
                             .tracking(KioskType.overlineTracking)
                             .foregroundStyle(KioskText.tertiary)
-                        Text(KioskDueCopy.relative(chosen))
+                        Text(KioskDueCopy.relative(chosen, now: today))
                             .font(.system(size: 24, weight: .heavy))
                             .foregroundStyle(KioskText.primary)
                         Text(Self.moreTime(from: currentEndsAt, to: chosen))
@@ -231,10 +232,10 @@ struct KioskExtendScreen: View {
         return "\(item.assetTag) is reserved\(by) from \(from)."
     }
 
-    static func dayTitle(_ date: Date) -> String {
+    static func dayTitle(_ date: Date, today: Date) -> String {
         let calendar = Calendar.current
-        if calendar.isDateInToday(date) { return "Today" }
-        if calendar.isDateInTomorrow(date) { return "Tomorrow" }
+        if calendar.dayOffset(of: date, from: today) == 0 { return "Today" }
+        if calendar.dayOffset(of: date, from: today) == 1 { return "Tomorrow" }
         return date.formatted(.dateTime.weekday(.abbreviated))
     }
 

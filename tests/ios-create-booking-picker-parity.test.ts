@@ -415,8 +415,8 @@ describe("iOS create booking picker parity", () => {
     expect(sheet).toContain("vm.primaryPickupLocations");
     expect(review).toContain('LabeledContent("Pickup", value: reviewPickupText)');
     expect(review).toContain('LabeledContent("Return", value: reviewReturnText)');
-    expect(sheet).toContain("vm.startsAt.operationalDateTimeLabel()");
-    expect(sheet).toContain("vm.endsAt.operationalDateTimeLabel()");
+    expect(sheet).toContain("vm.startsAt.operationalDateTimeLabel(now: today)");
+    expect(sheet).toContain("vm.endsAt.operationalDateTimeLabel(now: today)");
     expect(review).toContain('LabeledContent("Gameday Kit", value: vm.kitPickerLabel(kit))');
     expect(review).toContain("BookingAssetThumbnail(imageUrl: asset.imageUrl, size: 40, cornerRadius: 8)");
     expect(review).toContain("BookingBulkThumbnail(imageUrl: sku.imageUrl, size: 40, cornerRadius: 8)");

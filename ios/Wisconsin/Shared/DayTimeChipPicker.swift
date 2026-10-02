@@ -1,8 +1,8 @@
 import SwiftUI
 
-func chipDayTitle(_ day: Date, calendar: Calendar = .current) -> String {
-    if calendar.isDateInToday(day) { return "Today" }
-    if calendar.isDateInTomorrow(day) { return "Tomorrow" }
+func chipDayTitle(_ day: Date, calendar: Calendar = .current, now: Date = .now) -> String {
+    if calendar.dayOffset(of: day, from: now) == 0 { return "Today" }
+    if calendar.dayOffset(of: day, from: now) == 1 { return "Tomorrow" }
     return day.formatted(.dateTime.weekday(.abbreviated))
 }
 

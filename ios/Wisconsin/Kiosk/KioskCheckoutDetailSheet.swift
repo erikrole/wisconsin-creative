@@ -32,6 +32,7 @@ struct KioskCheckoutDrawerContext: Identifiable {
 }
 
 struct KioskCheckoutDetailSheet: View {
+    @Environment(\.today) private var today
     @Environment(\.dismiss) private var dismiss
     // Sheets inherit the environment, and the tip has to track connect/
     // disconnect live rather than snapshot it when the sheet was built.
@@ -115,7 +116,7 @@ struct KioskCheckoutDetailSheet: View {
     }
 
     private var custodyTone: Color {
-        KioskStatus.custody(isOverdue: currentIsOverdue, dueAt: currentEndsAt)
+        KioskStatus.custody(isOverdue: currentIsOverdue, dueAt: currentEndsAt, today: today)
     }
 
     var body: some View {

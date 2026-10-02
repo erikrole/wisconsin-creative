@@ -574,6 +574,7 @@ struct ItemsView: View {
 
 
 struct AssetRow: View {
+    @Environment(\.today) private var today
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     let asset: Asset
@@ -689,7 +690,7 @@ struct AssetRow: View {
 
         // Due/overdue label, if active checkout has one.
         if asset.computedStatus == .checkedOut, let booking = asset.activeBooking {
-            let due = booking.endsAt.operationalDateTimeLabel(capitalizesRelativeDay: false)
+            let due = booking.endsAt.operationalDateTimeLabel(now: today, capitalizesRelativeDay: false)
             parts.append(booking.isOverdue ? "Was due \(due)" : "Due \(due)")
         }
         return parts.joined(separator: ", ")

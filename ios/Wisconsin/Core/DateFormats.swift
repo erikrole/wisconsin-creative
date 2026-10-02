@@ -25,16 +25,15 @@ extension Date {
     /// Context-first day label shared by Booking list and detail.
     /// Nearby dates prioritize recognition; farther dates stay compact and omit the year.
     func operationalDayLabel(now: Date = .now) -> String {
-        let calendar = Calendar.current
-        if calendar.isDate(self, inSameDayAs: now) { return "Today" }
-        if calendar.isDateInTomorrow(self) { return "Tomorrow" }
-        if calendar.isDateInYesterday(self) { return "Yesterday" }
-
-        let dayDistance = calendar.dateComponents(
-            [.day],
-            from: calendar.startOfDay(for: now),
-            to: calendar.startOfDay(for: self)
-        ).day ?? 7
+        // Every branch measures from `now`; `isDateInTomorrow` reads the wall
+        // clock instead and disagreed with an injected or stale `now`.
+        let dayDistance = Calendar.current.dayOffset(of: self, from: now)
+        switch dayDistance {
+        case 0: return "Today"
+        case 1: return "Tomorrow"
+        case -1: return "Yesterday"
+        default: break
+        }
         return abs(dayDistance) < 7
             ? formatted(.dateTime.weekday(.wide))
             : formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())

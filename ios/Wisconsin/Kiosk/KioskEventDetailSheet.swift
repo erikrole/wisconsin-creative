@@ -37,6 +37,7 @@ struct KioskEventSection: View {
 }
 
 private struct KioskEventRow: View {
+    @Environment(\.today) private var today
     let event: KioskEvent
     let hasWorkerDetails: Bool
     let onTap: () -> Void
@@ -78,7 +79,7 @@ private struct KioskEventRow: View {
         if event.displayAllDay {
             return "All day"
         }
-        if Calendar.current.isDateInToday(event.startsAt) {
+        if Calendar.current.dayOffset(of: event.startsAt, from: today) == 0 {
             return event.startsAt.formatted(.dateTime.hour().minute())
         }
         return event.startsAt.formatted(.dateTime.weekday(.abbreviated).hour().minute())
@@ -136,6 +137,7 @@ private struct KioskEventAvatarStack: View {
 }
 
 struct KioskEventDetailSheet: View {
+    @Environment(\.today) private var today
     @Environment(\.dismiss) private var dismiss
     let event: KioskEvent
     let capabilities: KioskDashboard.Capabilities
@@ -257,10 +259,10 @@ struct KioskEventDetailSheet: View {
 
     private var eventDayLabel: String {
         let displayDay = event.kioskDisplayStartDay
-        if Calendar.current.isDateInToday(displayDay) {
+        if Calendar.current.dayOffset(of: displayDay, from: today) == 0 {
             return "Today"
         }
-        if Calendar.current.isDateInTomorrow(displayDay) {
+        if Calendar.current.dayOffset(of: displayDay, from: today) == 1 {
             return "Tomorrow"
         }
         return displayDay.formatted(.dateTime.weekday(.wide).month().day())

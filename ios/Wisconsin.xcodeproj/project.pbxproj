@@ -52,6 +52,7 @@
 		2DF5EDC0EA7BAAF2547F1035 /* LinkStickerWizard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41D51AC00210AD1B6DE0E466 /* LinkStickerWizard.swift */; };
 		2E557BDFACDF537A54930972 /* BadgeEarnedCelebration.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDF1537A041998300D3A8FA8 /* BadgeEarnedCelebration.swift */; };
 		2F57AAE5BC711AFCB6825C38 /* KioskChangesViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8720CD7A10389DB790C6C2D /* KioskChangesViews.swift */; };
+		2F641BB2A7FBF81DEDEE7FE1 /* CurrentDayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7F7F41A126A5E914C982A9 /* CurrentDayTests.swift */; };
 		30A2174F020A46E7B8538492 /* CreateBookingPickers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AFF5F65A92CEAED518EF6E6 /* CreateBookingPickers.swift */; };
 		31591DD0437B097C2510AB84 /* UserAvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2BBAACBEA87B1EE9FEBC287 /* UserAvatarView.swift */; };
 		31BA906AD0D633053D4804B7 /* AccountSecuritySettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 552E4A9FC0A2CB73C36F51C6 /* AccountSecuritySettingsView.swift */; };
@@ -104,6 +105,7 @@
 		783075F2A904D279CA0653C5 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 592769886AB12F6A842CC8CF /* Assets.xcassets */; };
 		78C02C1D3AEE264D6EA1925B /* NotificationSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2159F738CA242773EA9D438 /* NotificationSettingsView.swift */; };
 		795277BA3B90A0AB27B5C672 /* GearStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAD4EC3F211EACBB157F7DDE /* GearStore.swift */; };
+		7955FAEBBC1B5970FCFD76C5 /* CurrentDay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B792FF3569918A5A54D8693 /* CurrentDay.swift */; };
 		7A57F69F8CCCA6552D3EBED3 /* ScheduleWindowCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = F27F74922887FF66BF6AA61E /* ScheduleWindowCache.swift */; };
 		7CE11553481BC17CEAE88EDC /* GearHomeScreenWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6720D70A7A90FE5BEFBFDD1F /* GearHomeScreenWidgets.swift */; };
 		7EFDB9FD68785427E5F753C3 /* KioskTaskKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59D13CBC93F3332016C1136E /* KioskTaskKit.swift */; };
@@ -123,6 +125,7 @@
 		904A4A8C645FFEB4CD2AA971 /* ExtendBookingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0058FB3644F501479BA0D5 /* ExtendBookingSheet.swift */; };
 		922F655D9910FE2ECB1E7DD8 /* BadgeEarnedCelebration.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDF1537A041998300D3A8FA8 /* BadgeEarnedCelebration.swift */; };
 		92FB41EABAD386A10484F5D8 /* KioskDesign.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07116906C1A1FF6F5D10BFA1 /* KioskDesign.swift */; };
+		942FA5C930D79B2ACBF6B94F /* CurrentDay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B792FF3569918A5A54D8693 /* CurrentDay.swift */; };
 		96DAC20EB887DA3916DEE474 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38065600FA5A1C1AC4C8CC2F /* AppState.swift */; };
 		9920100D23D0FF37F2528340 /* KioskBarcodeCameraView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06C085E7CDEC3CCE6DFDD630 /* KioskBarcodeCameraView.swift */; };
 		9939B52822812D9C7B8CF92B /* ScannerDebuggerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6B542F56A00A8C2FEB2078C /* ScannerDebuggerView.swift */; };
@@ -342,6 +345,7 @@
 		84430D9886900EA2E8F3CB0B /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		88F162C9B5233CB44C35E9E5 /* WisconsinLiveActivities.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = WisconsinLiveActivities.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		88FF0CACAB4BD4886FD0219B /* CreateBookingEventViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateBookingEventViews.swift; sourceTree = "<group>"; };
+		8B792FF3569918A5A54D8693 /* CurrentDay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrentDay.swift; sourceTree = "<group>"; };
 		8C6B12C97D45B058A9E678BB /* FlatSurface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlatSurface.swift; sourceTree = "<group>"; };
 		8EE808994D4A26C719DA2432 /* ScoreboardModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoreboardModelsTests.swift; sourceTree = "<group>"; };
 		8F93CDFD1D75D7CAC2D88211 /* KioskFlowRoutingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskFlowRoutingTests.swift; sourceTree = "<group>"; };
@@ -431,6 +435,7 @@
 		FA38BB094C95612DBF9F1C24 /* KioskStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskStore.swift; sourceTree = "<group>"; };
 		FAD4EC3F211EACBB157F7DDE /* GearStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GearStore.swift; sourceTree = "<group>"; };
 		FC5B889D242E8A0835B68845 /* ScanResultHeroCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanResultHeroCard.swift; sourceTree = "<group>"; };
+		FE7F7F41A126A5E914C982A9 /* CurrentDayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrentDayTests.swift; sourceTree = "<group>"; };
 		FF98C537202359B822B1D752 /* BookingEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingEntity.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -472,6 +477,7 @@
 			children = (
 				5932CB2D580EFEB5EA22D828 /* AppEnvironment.swift */,
 				CDF1537A041998300D3A8FA8 /* BadgeEarnedCelebration.swift */,
+				8B792FF3569918A5A54D8693 /* CurrentDay.swift */,
 				1284B141E75FF8117D418B12 /* DayTimeChipPicker.swift */,
 				C22B3A50B4815BC1451C26DD /* HIDScannerField.swift */,
 				EC04AA628BB1DEA764D7EEAC /* ItemListText.swift */,
@@ -811,6 +817,7 @@
 			isa = PBXGroup;
 			children = (
 				33E539B4DF2AE3F73D36C2BA /* BookingModelsTests.swift */,
+				FE7F7F41A126A5E914C982A9 /* CurrentDayTests.swift */,
 				21093FA38C7231AD95DA04B0 /* GearTrackerRouteTests.swift */,
 				6FDEEC500E8732A76AA01E90 /* GuideMarkdownTests.swift */,
 				F7E2243115099DA4F3973F11 /* LatestRequestGenerationTests.swift */,
@@ -1042,6 +1049,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				ADB0FD771E094960BDFC5D6B /* BookingModelsTests.swift in Sources */,
+				2F641BB2A7FBF81DEDEE7FE1 /* CurrentDayTests.swift in Sources */,
 				563D04BBDE05CA2EDE98513A /* GearTrackerRouteTests.swift in Sources */,
 				0E3E3B49635A5FE7B0C6DE71 /* GuideMarkdownTests.swift in Sources */,
 				D90FDB80F8FFF8F2921E26A5 /* LatestRequestGenerationTests.swift in Sources */,
@@ -1079,6 +1087,7 @@
 			files = (
 				11A01EC76DDAA014512A70E9 /* AppEnvironment.swift in Sources */,
 				2E557BDFACDF537A54930972 /* BadgeEarnedCelebration.swift in Sources */,
+				7955FAEBBC1B5970FCFD76C5 /* CurrentDay.swift in Sources */,
 				80270EB0689F3880F6383BC1 /* DayTimeChipPicker.swift in Sources */,
 				E9A78D5C1743CBD6CC8AF930 /* HIDScannerField.swift in Sources */,
 				46239E3116E5DE148E7A9C4F /* ItemListText.swift in Sources */,
@@ -1165,6 +1174,7 @@
 				237DD2AF7BCC2631721C737C /* CreateBookingSheet.swift in Sources */,
 				2A37E7B9C1A68005651FAC4A /* CreateBookingViewModel.swift in Sources */,
 				8AF1D9B30757EC04020B0A22 /* CrewRow.swift in Sources */,
+				942FA5C930D79B2ACBF6B94F /* CurrentDay.swift in Sources */,
 				CE860A32B56D88E0802D8EFE /* DashboardModels.swift in Sources */,
 				7507BE07B0E40EAA31B9DBE9 /* DateFormats.swift in Sources */,
 				46010B21A5285A7396574B59 /* DayTimeChipPicker.swift in Sources */,

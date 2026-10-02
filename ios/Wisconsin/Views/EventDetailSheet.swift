@@ -307,6 +307,7 @@ enum EventConfirmation: Identifiable {
 // MARK: - Detail
 
 struct EventDetailView: View {
+    @Environment(\.today) private var today
     let event: ScheduleEvent
     let myShifts: [MyShift]
     let eventWork: DashboardEventWork?
@@ -1385,12 +1386,11 @@ struct EventDetailView: View {
 
     private func detailDateLabel(_ date: Date, abbreviatedWeekday: Bool) -> String {
         let calendar = Calendar.current
-        let includesYear = calendar.component(.year, from: date) != calendar.component(.year, from: .now)
-        if calendar.isDateInToday(date) {
-            return "Today, \(date.formatted(.dateTime.month(abbreviatedWeekday ? .abbreviated : .wide).day()))"
-        }
-        if calendar.isDateInTomorrow(date) {
-            return "Tomorrow, \(date.formatted(.dateTime.month(abbreviatedWeekday ? .abbreviated : .wide).day()))"
+        let includesYear = calendar.component(.year, from: date) != calendar.component(.year, from: today)
+        switch calendar.dayOffset(of: date, from: today) {
+        case 0: return "Today, \(date.formatted(.dateTime.month(abbreviatedWeekday ? .abbreviated : .wide).day()))"
+        case 1: return "Tomorrow, \(date.formatted(.dateTime.month(abbreviatedWeekday ? .abbreviated : .wide).day()))"
+        default: break
         }
         if abbreviatedWeekday {
             return includesYear
@@ -1444,13 +1444,8 @@ struct EventDetailView: View {
         let calendar = Calendar.current
         // Same resolved day `eventDateText` prints, so "Tomorrow, Jun 17" and
         // "in 2 days" can never disagree about which day the event is on.
-        let eventDay = event.displayStartDay
-        guard !eventHasEnded,
-              !calendar.isDateInToday(eventDay),
-              !calendar.isDateInTomorrow(eventDay) else { return nil }
-        let today = calendar.startOfDay(for: .now)
-        guard let days = calendar.dateComponents([.day], from: today, to: eventDay).day,
-              days > 1, days <= 14 else { return nil }
+        let days = calendar.dayOffset(of: event.displayStartDay, from: today)
+        guard !eventHasEnded, days > 1, days <= 14 else { return nil }
         return "in \(days) days"
     }
 

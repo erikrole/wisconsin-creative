@@ -852,6 +852,7 @@ private struct StatStripSkeleton: View {
 // MARK: - Action Queue
 
 private struct HomeActionQueue: View {
+    @Environment(\.today) private var today
     let dash: DashboardData
     let openBookingSummary: (BookingSummary) -> Void
     let openEventWork: (DashboardEventWork) -> Void
@@ -888,7 +889,7 @@ private struct HomeActionQueue: View {
     }
 
     private func eventDetailLines(for summary: BookingSummary) -> [QueueDetailLine] {
-        var lines = [QueueDetailLine(text: gearInstruction(for: summary), tone: queueGearTone(for: summary))]
+        var lines = [QueueDetailLine(text: gearInstruction(for: summary), tone: queueGearTone(for: summary, today: today))]
         if let shift = shiftLinked(to: summary), let callTime = queueCallTime(workerType: shift.workerType, callStartsAt: shift.callStartsAt) {
             lines.append(QueueDetailLine(text: callTime, tone: .blue))
         }
@@ -909,7 +910,7 @@ private struct HomeActionQueue: View {
         for summary in dash.myCheckouts.items {
             if summary.isOverdue {
                 overdueBookings.append(summary)
-            } else if Calendar.current.isDateInToday(summary.endsAt) {
+            } else if Calendar.current.dayOffset(of: summary.endsAt, from: today) == 0 {
                 if seenDueToday.insert(summary.id).inserted {
                     dueTodayBookings.append(summary)
                 }
@@ -966,7 +967,7 @@ private struct HomeActionQueue: View {
         var upcoming = 0
         var seenDueToday = Set<String>()
         for summary in dash.myCheckouts.items where !summary.isOverdue {
-            if Calendar.current.isDateInToday(summary.endsAt) {
+            if Calendar.current.dayOffset(of: summary.endsAt, from: today) == 0 {
                 if seenDueToday.insert(summary.id).inserted { dueToday += 1 }
             } else {
                 upcoming += 1
@@ -995,7 +996,7 @@ private struct HomeActionQueue: View {
         switch entry.kind {
         case .overdue(let summary):
             ActionQueueRow(
-                tone: queueGearTone(for: summary),
+                tone: queueGearTone(for: summary, today: today),
                 systemImage: entry.systemImage,
                 title: summary.title,
                 subtitle: personalContext(for: summary),
@@ -1004,7 +1005,7 @@ private struct HomeActionQueue: View {
             )
         case .dueToday(let summary):
             ActionQueueRow(
-                tone: queueGearTone(for: summary),
+                tone: queueGearTone(for: summary, today: today),
                 systemImage: entry.systemImage,
                 title: summary.title,
                 subtitle: personalContext(for: summary),
@@ -1013,7 +1014,7 @@ private struct HomeActionQueue: View {
             )
         case .pendingPickup(let summary):
             ActionQueueRow(
-                tone: queueGearTone(for: summary),
+                tone: queueGearTone(for: summary, today: today),
                 systemImage: entry.systemImage,
                 title: summary.title,
                 subtitle: summary.linkedEventId == nil ? personalContext(for: summary) : nil,
@@ -1025,7 +1026,7 @@ private struct HomeActionQueue: View {
             )
         case .reservation(let summary):
             ActionQueueRow(
-                tone: queueGearTone(for: summary),
+                tone: queueGearTone(for: summary, today: today),
                 systemImage: entry.systemImage,
                 title: summary.title,
                 subtitle: summary.linkedEventId == nil ? personalContext(for: summary) : nil,
@@ -1041,7 +1042,7 @@ private struct HomeActionQueue: View {
             )
         case .upcomingCheckout(let summary):
             ActionQueueRow(
-                tone: queueGearTone(for: summary),
+                tone: queueGearTone(for: summary, today: today),
                 systemImage: entry.systemImage,
                 title: summary.title,
                 subtitle: personalContext(for: summary),
@@ -1139,6 +1140,7 @@ private struct BucketLabel: View {
 /// today saw three and no reason to look further.
 /// The next few events on the team calendar that this person is not working.
 private struct TeamScheduleCard: View {
+    @Environment(\.today) private var today
     let events: [DashboardUpcomingEvent]
     let openFullSchedule: () -> Void
     @State private var hapticTrigger = false
@@ -1157,9 +1159,9 @@ private struct TeamScheduleCard: View {
     private func supporting(_ event: DashboardUpcomingEvent) -> String {
         let calendar = Calendar.current
         let day: String
-        if calendar.isDateInToday(event.startsAt) {
+        if calendar.dayOffset(of: event.startsAt, from: today) == 0 {
             day = "Today"
-        } else if calendar.isDateInTomorrow(event.startsAt) {
+        } else if calendar.dayOffset(of: event.startsAt, from: today) == 1 {
             day = "Tomorrow"
         } else {
             day = event.startsAt.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
@@ -1285,8 +1287,8 @@ private func queueWhen(_ date: Date, now: Date = .now) -> String {
         return "in \(Int((Double(minutes) / 60).rounded())) hr"
     }
     let calendar = Calendar.current
-    if calendar.isDateInToday(date) { return time }
-    if calendar.isDateInTomorrow(date) { return "Tomorrow \(time)" }
+    if calendar.dayOffset(of: date, from: now) == 0 { return time }
+    if calendar.dayOffset(of: date, from: now) == 1 { return "Tomorrow \(time)" }
     if delta < 6 * 86_400 { return date.formatted(.dateTime.weekday(.abbreviated).hour().minute()) }
     return date.formatted(.dateTime.month(.abbreviated).day().hour().minute())
 }
@@ -1302,12 +1304,12 @@ private struct QueueDetailLine {
 /// on the day it is due. `QueueRowLayout` only *renders* the urgent tones (red,
 /// orange); purple, blue, and gray resolve to the neutral secondary style so
 /// colour on Home means "needs you now", not "which kind of booking".
-private func queueGearTone(for summary: BookingSummary) -> StatusTone {
+private func queueGearTone(for summary: BookingSummary, today: Date) -> StatusTone {
     if summary.isOverdue { return .red }
     switch summary.status {
     case .booked: return .purple
     case .pendingPickup: return .orange
-    case .open: return Calendar.current.isDateInToday(summary.endsAt) ? .orange : .blue
+    case .open: return Calendar.current.dayOffset(of: summary.endsAt, from: today) == 0 ? .orange : .blue
     default: return .gray
     }
 }

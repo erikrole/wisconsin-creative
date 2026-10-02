@@ -344,6 +344,7 @@ private enum ReturnAvailabilityState: Equatable {
 }
 
 struct EditBookingSheet: View {
+    @Environment(\.today) private var today
     let booking: Booking
     let onSaved: (Booking) -> Void
 
@@ -435,7 +436,7 @@ struct EditBookingSheet: View {
                                     Text("Pickup")
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
-                                    Text(booking.startsAt.operationalDateTimeLabel())
+                                    Text(booking.startsAt.operationalDateTimeLabel(now: today))
                                         .font(.subheadline.weight(.medium))
                                 }
                                 Spacer()
@@ -860,6 +861,7 @@ private struct BookingDetailsSection: View {
 }
 
 private struct BookingOverviewSection: View {
+    @Environment(\.today) private var today
     let booking: Booking
     let returnInsight: CheckoutReturnInsight
 
@@ -962,8 +964,8 @@ private struct BookingOverviewSection: View {
         Divider().padding(.leading, 42)
     }
 
-    private func detailDate(_ date: Date, now: Date = .now) -> String {
-        date.operationalDateTimeLabel(now: now)
+    private func detailDate(_ date: Date) -> String {
+        date.operationalDateTimeLabel(now: today)
     }
 }
 

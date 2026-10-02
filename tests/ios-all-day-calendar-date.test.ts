@@ -46,7 +46,7 @@ describe("iOS all-day events display their encoded calendar date", () => {
     expect(eventDetail).toContain("detailDateLabel(event.displayEndDay, abbreviatedWeekday: true)");
     expect(eventDetail).not.toContain("detailDateLabel(event.startsAt");
     // The countdown reads the same day the header prints.
-    expect(eventDetail).toContain("let eventDay = event.displayStartDay");
+    expect(eventDetail).toContain("calendar.dayOffset(of: event.displayStartDay, from: today)");
     expect(eventDetail).not.toContain("calendar.startOfDay(for: event.startsAt)");
   });
 

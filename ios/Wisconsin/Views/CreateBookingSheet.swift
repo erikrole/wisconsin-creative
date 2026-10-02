@@ -9,6 +9,7 @@ private enum ReservationSetupMode: String, CaseIterable, Identifiable {
 }
 
 struct CreateBookingSheet: View {
+    @Environment(\.today) private var today
     private let minimizeReservationTip = MinimizeReservationTip()
     private let scanReservationGearTip = ScanReservationGearTip()
     /// The composer lives in `ReservationDraftStore`, not here: minimizing
@@ -774,11 +775,11 @@ struct CreateBookingSheet: View {
     }
 
     private var reviewPickupText: String {
-        vm.startsAt.operationalDateTimeLabel()
+        vm.startsAt.operationalDateTimeLabel(now: today)
     }
 
     private var reviewReturnText: String {
-        vm.endsAt.operationalDateTimeLabel()
+        vm.endsAt.operationalDateTimeLabel(now: today)
     }
 
     @ViewBuilder
