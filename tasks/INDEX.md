@@ -37,6 +37,8 @@ Audit files intentionally remain at root for now because the repo audit skills r
 
 ## Active Follow-up Ledgers
 
+- [web-ui-refresh-plan.md](web-ui-refresh-plan.md) - dedicated preview and a bounded iOS-informed web shell and Dashboard refresh.
+
 - `infrastructure-hardening-plan-2026-09-22.md` - Vercel/Neon repairs, branch previews, cross-agent handoff and pending source/cutover gates.
 
 - `ios-entry-point-hardening-plan-2026-09-16.md` - one destination map for quick actions, Control Center, deep links, and every notification family.
