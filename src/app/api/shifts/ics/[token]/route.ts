@@ -4,7 +4,7 @@ import { withHandler } from "@/lib/api";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
-import { cleanSourceSummary, normalizeOpponentName } from "@/lib/schedule-event-identity";
+import { scheduleEventTitleParts } from "@/app/(app)/schedule/_components/types";
 import { AREA_LABELS } from "@/types/areas";
 import { studentCallTimeAppliesToEvent } from "@/lib/shift-call-windows";
 import { icsTokenLookupValues } from "@/lib/ics-token";
@@ -57,21 +57,6 @@ function icsDateOnly(d: Date): string {
 
 function latestDate(dates: Date[]): Date {
   return new Date(Math.max(...dates.map((d) => d.getTime())));
-}
-
-function eventTitle(event: {
-  summary: string;
-  sportCode: string | null;
-  opponent: string | null;
-  isHome: boolean | null;
-}) {
-  if (event.sportCode && event.opponent) {
-    const opponent = normalizeOpponentName(event.opponent) ?? event.opponent;
-    const venueWord = event.isHome === false ? "at" : "vs";
-    return `${event.sportCode} ${venueWord} ${opponent}`;
-  }
-
-  return cleanSourceSummary(event.summary);
 }
 
 function shiftSummary(area: string, title: string, isPosted: boolean) {
@@ -146,7 +131,7 @@ export const GET = withHandler<{ token: string }>(async (req, { params }) => {
                   site: true,
                   locationId: true,
                   updatedAt: true,
-                  location: { select: { name: true } },
+                  location: { select: { id: true, name: true } },
                 },
               },
             },
@@ -196,7 +181,11 @@ export const GET = withHandler<{ token: string }>(async (req, { params }) => {
     const isInheritedAllDayWindow = event.allDay
       && startsAt.getTime() === event.startsAt.getTime()
       && endsAt.getTime() === event.endsAt.getTime();
-    const title = shiftSummary(shift.area, eventTitle(event), Boolean(activeTrade));
+    // Same title the app shows ("Football vs Michigan State"), so the
+    // subscribed calendar reads like Schedule rather than the raw source
+    // summary. A promo qualifier ("Homecoming / Red Out") moves to the notes.
+    const titleParts = scheduleEventTitleParts(event);
+    const title = shiftSummary(shift.area, titleParts.title, Boolean(activeTrade));
     const uid = `shift-${a.id}@wisconsin.creative`;
     const lastModified = latestDate([
       a.updatedAt,
@@ -227,6 +216,7 @@ export const GET = withHandler<{ token: string }>(async (req, { params }) => {
     }
     lines.push(`SUMMARY:${icsEscape(title)}`);
     if (location) lines.push(`LOCATION:${icsEscape(location)}`);
+    if (titleParts.detail) lines.push(`DESCRIPTION:${icsEscape(titleParts.detail)}`);
     lines.push(`URL:${eventUrl}`);
     lines.push("TRANSP:OPAQUE");
     lines.push("END:VEVENT");

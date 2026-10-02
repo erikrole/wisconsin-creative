@@ -185,7 +185,7 @@ describe("shift ICS feed hardening", () => {
 
     expect(res.headers.get("Content-Type")).toContain("text/calendar");
     expect(body).toContain("BEGIN:VCALENDAR");
-    expect(body).toContain("SUMMARY:Photo: MBB vs Iowa");
+    expect(body).toContain("SUMMARY:Photo: Men's Basketball vs Iowa");
     expect(body).toContain("DTSTART:20260510T143000Z");
     expect(body).toContain("DTEND:20260510T170000Z");
     expect(body).toContain("LOCATION:Camp Randall");
@@ -238,6 +238,9 @@ describe("shift ICS feed hardening", () => {
     const res = await GET(request(), { params: Promise.resolve({ token: validToken }) });
     const body = await res.text();
 
+    expect(body).toContain("SUMMARY:Video: Football vs Michigan State");
+    expect(body).toContain("DESCRIPTION:Homecoming");
+    expect(body).not.toContain("SUMMARY:Video: FB");
     expect(body).toContain("DTSTART;VALUE=DATE:20261003");
     expect(body).toContain("DTEND;VALUE=DATE:20261004");
     expect(body).toContain(`SEQUENCE:${Math.floor(new Date("2026-08-11T12:00:00.000Z").getTime() / 1000) + 1}`);
@@ -335,7 +338,7 @@ describe("shift ICS feed hardening", () => {
     }
     // Folded lines reassemble to the original content (unfold then check)
     const unfolded = body.replace(/\r\n /g, "");
-    expect(unfolded).toContain(`SUMMARY:🔁 Photo: MBB vs ${longOpponent}`);
+    expect(unfolded).toContain(`SUMMARY:🔁 Photo: Men's Basketball vs ${longOpponent}`);
   });
 
   it("marks active trade-board posts in the shift title", async () => {
@@ -377,7 +380,7 @@ describe("shift ICS feed hardening", () => {
     const res = await GET(request(), { params: Promise.resolve({ token: validToken }) });
     const body = await res.text();
 
-    expect(body).toContain("SUMMARY:🔁 Photo: MBB vs Iowa");
+    expect(body).toContain("SUMMARY:🔁 Photo: Men's Basketball vs Iowa");
     expect(body).toContain("LAST-MODIFIED:20260502T120000Z");
   });
 });
