@@ -121,6 +121,7 @@ Replace Asana-based shift scheduling with a native shift calendar in Wisconsin C
 - Sports code mappings (existing — `src/lib/sports.ts`)
 
 ## Change Log
+- 2026-10-02: **Subscribed shift calendar titles match the app.** The `/api/shifts/ics/[token]` feed built titles from the raw sport code and the full opponent string ("Video: FB vs Michigan State - Homecoming / Red Out"). It now uses the Schedule's `scheduleEventTitleParts`, so the title reads "Video: Football vs Michigan State" and the promo qualifier moves to the event's `DESCRIPTION`. UIDs are unchanged, and subscribers pick up the new titles on their next refresh.
 - 2026-09-23: **Draft identity, pending-claim visibility, hashed feed tokens (local).**
   - **Drafts:** the working-copy editor reports `draftId` (the draft row's `createdAt`). PATCH, undo/redo, rebase, discard and publish accept `expectedDraftId`, and a mismatch returns 409 inside the version-check transaction. Legacy clients that omit it are unchanged.
   - **Open Work:** reports `openShiftsTruncated` and `pickupRequestsTruncated` instead of silently capping at 100.
