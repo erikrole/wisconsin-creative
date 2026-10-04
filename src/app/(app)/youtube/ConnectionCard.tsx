@@ -1,5 +1,6 @@
 "use client";
 
+import { CircleAlertIcon, CircleCheckIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -46,6 +47,7 @@ export function ConnectionCard({ status, result }: { status: ConnectionStatus; r
     <div className="flex flex-col gap-4">
       {result && (
         <Alert variant={result.tone === "error" ? "destructive" : "default"}>
+          {result.tone === "error" ? <CircleAlertIcon /> : <CircleCheckIcon />}
           <AlertDescription>{result.text}</AlertDescription>
         </Alert>
       )}
