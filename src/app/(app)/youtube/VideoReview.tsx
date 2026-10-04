@@ -141,6 +141,16 @@ export function VideoReview({ item, playlists, canSend }: { item: QueueItem; pla
     if (!proceed) return;
     await run(() => send(`/api/youtube/drafts/${item.id}/publish`, "POST", { version: saved!.version, factsReviewed: true }), "Sent to YouTube and verified");
   }
+  const plannedNew = edits.plannedPlaylistIds.filter((id) => !existingIds.has(id));
+  const canAddPlaylists = canSend && editable && changed.length === 0 && plannedNew.length > 0 && !item.playlistOpen && !busy;
+
+  async function addPlaylists() {
+    const names = plannedNew.map((id) => playlists.find((playlist) => playlist.id === id)?.title ?? id).join(", ");
+    const proceed = await confirm({ title: "Add to playlists?", message: `This video is added to ${names} on the Wisconsin Badgers channel now.`, confirmLabel: "Add" });
+    if (!proceed) return;
+    await run(() => send(`/api/youtube/drafts/${item.id}/playlists`, "POST", { version: saved!.version }), "Added to playlists and verified");
+  }
+  const checkPlaylists = () => run(() => send(`/api/youtube/drafts/${item.id}/check-playlists`, "POST", {}), "Checked playlists");
   const checkLastSend = () => run(() => send(`/api/youtube/drafts/${item.id}/check-send`, "POST", {}), "Checked YouTube");
 
   function setTitle(value: string) {
@@ -358,7 +368,7 @@ export function VideoReview({ item, playlists, canSend }: { item: QueueItem; pla
                   ? "YouTube already matches this draft."
                   : changed.length > 0
                     ? "Save your edits first. The saved draft is what gets sent."
-                    : "Sends the title and description above. Playlists and thumbnails are not changed."}
+                    : "Sends the title and description above, and adds the playlists you chose. Thumbnails are not changed."}
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
@@ -369,6 +379,17 @@ export function VideoReview({ item, playlists, canSend }: { item: QueueItem; pla
                     <span>{openSend.message ?? "The last send has not been verified yet."} Further sends are blocked until it is checked.</span>
                     <Button className="self-start" size="sm" variant="outline" disabled={busy} onClick={checkLastSend}>
                       Check last send
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              )}
+              {item.playlistOpen && (
+                <Alert variant="destructive">
+                  <CircleAlertIcon />
+                  <AlertDescription className="flex flex-col gap-2">
+                    <span>{item.playlistOpen} Playlist additions are blocked until it is checked.</span>
+                    <Button className="self-start" size="sm" variant="outline" disabled={busy} onClick={checkPlaylists}>
+                      Check last additions
                     </Button>
                   </AlertDescription>
                 </Alert>
@@ -392,6 +413,9 @@ export function VideoReview({ item, playlists, canSend }: { item: QueueItem; pla
               </Button>
               <Button variant="outline" disabled={busy || changed.length === 0} onClick={save}>
                 Save draft
+              </Button>
+              <Button variant="outline" disabled={!canAddPlaylists} onClick={addPlaylists}>
+                {plannedNew.length === 0 ? "Add to playlists" : `Add to ${plannedNew.length} ${plannedNew.length === 1 ? "playlist" : "playlists"}`}
               </Button>
               <Button variant="brand" disabled={!canPress} onClick={sendToYouTube}>
                 Send to YouTube

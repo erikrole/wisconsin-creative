@@ -12,13 +12,14 @@ import { HttpError } from "@/lib/http";
 
 import { channelAccessToken } from "./connection";
 import { BADGERS_CHANNEL_ID } from "./google";
+import { createPlaylistJournal } from "./playlist-journal";
 import { createPublishJournal } from "./publish-journal";
-import { createPreview, PublishingCoordinator, type PublishRecord } from "./publishing";
+import { createPreview, PlaylistCoordinator, PublishingCoordinator, type PlaylistAddition, type PublishRecord } from "./publishing";
 import { replayDirectory } from "./reader";
 import { actorRole, conflict, editableVideo } from "./queue";
 import { draftDescription, draftTitle } from "./review";
-import { createTransport } from "./transport";
-import { YouTubeToolError } from "./types";
+import { createPlaylistTransport, createTransport } from "./transport";
+import { YouTubeToolError, type YouTubePlaylist } from "./types";
 import { prepareMetadata } from "./write-guard";
 
 const sha256 = (text: string) => createHash("sha256").update(text, "utf8").digest("hex");
@@ -103,4 +104,72 @@ export async function checkLastSend(user: AuthUser, videoId: string): Promise<Pu
     after: { recordId: record.id, phase: record.phase },
   });
   return record;
+}
+
+// ---------------------------------------------------------------- playlists
+
+async function playlistCoordinator(user: AuthUser) {
+  if (replayDirectory()) throw new HttpError(409, "This preview shows recorded YouTube data, so nothing can be sent.");
+  const transport = createPlaylistTransport(await channelAccessToken());
+  return new PlaylistCoordinator(transport, createPlaylistJournal(user.id), { channelId: BADGERS_CHANNEL_ID });
+}
+
+/** Remembers a verified membership so the queue shows the video as already in the playlist. */
+async function rememberMember(videoId: string, playlistId: string) {
+  const state = await db.youTubeLibraryState.findUnique({ where: { channelId: BADGERS_CHANNEL_ID } });
+  if (!state) return;
+  const members = (state.playlistMembers as Record<string, string[]> | null) ?? {};
+  const current = members[playlistId] ?? [];
+  if (current.includes(videoId)) return;
+  await db.youTubeLibraryState.update({ where: { channelId: BADGERS_CHANNEL_ID }, data: { playlistMembers: { ...members, [playlistId]: [...current, videoId] } } });
+}
+
+/** Adds the video to each playlist chosen in the saved draft, one verified insert at a time. */
+export async function addToPlannedPlaylists(user: AuthUser, videoId: string, version: number): Promise<{ added: string[] }> {
+  const { item, draft, playlists } = await editableVideo(videoId);
+  if (draft.version !== version) throw conflict();
+  const state = await db.youTubeLibraryState.findUnique({ where: { channelId: BADGERS_CHANNEL_ID } });
+  const members = (state?.playlistMembers as Record<string, string[]> | null) ?? {};
+  const targets = draft.plannedPlaylistIds
+    .filter((id) => !(members[id] ?? []).includes(videoId))
+    .map((id) => playlists.find((playlist) => playlist.id === id))
+    .filter((playlist): playlist is YouTubePlaylist => Boolean(playlist));
+  if (targets.length === 0) throw new HttpError(409, "There are no new playlists to add. Choose a playlist and save the draft first.");
+
+  const coordinator = await playlistCoordinator(user);
+  const added: string[] = [];
+  try {
+    for (const playlist of targets) {
+      await coordinator.add(item.live.snapshot, playlist, new Set([videoId]));
+      await rememberMember(videoId, playlist.id);
+      added.push(playlist.title);
+    }
+  } catch (error) {
+    if (added.length > 0) await auditPlaylists(user, videoId, added);
+    return failure(error);
+  }
+  await auditPlaylists(user, videoId, added);
+  return { added };
+}
+
+const auditPlaylists = (user: AuthUser, videoId: string, added: string[]) =>
+  createAuditEntry({ actorId: user.id, actorRole: actorRole(user), entityType: "YouTubeVideo", entityId: videoId, action: "ADD_TO_PLAYLISTS", after: { playlists: added } });
+
+/** Read-only: settles playlist additions whose result was unclear. */
+export async function checkPlaylistAdditions(user: AuthUser, videoId: string): Promise<PlaylistAddition[]> {
+  const open = (await createPlaylistJournal(user.id).records(videoId)).filter((record) => record.phase === "pending" || record.phase === "uncertain");
+  if (open.length === 0) throw new HttpError(404, "There are no playlist additions to check for this video.");
+  const coordinator = await playlistCoordinator(user);
+  const settled: PlaylistAddition[] = [];
+  try {
+    for (const record of open) {
+      const updated = await coordinator.reconcile(record);
+      if (updated.phase === "verified") await rememberMember(videoId, updated.playlist.id);
+      settled.push(updated);
+    }
+  } catch (error) {
+    return failure(error);
+  }
+  await createAuditEntry({ actorId: user.id, actorRole: actorRole(user), entityType: "YouTubeVideo", entityId: videoId, action: "CHECK_PLAYLISTS", after: { phases: settled.map((r) => r.phase) } });
+  return settled;
 }

@@ -2853,3 +2853,23 @@ model YouTubePublishRecord {
   @@index([videoId, createdAt(sort: Desc)])
   @@map("youtube_publish_records")
 }
+
+/// Durable journal of every playlist addition the tool sends. "pending" is saved
+/// before the request; "uncertain" blocks that destination until it is checked.
+model YouTubePlaylistAddition {
+  id             String   @id
+  videoId        String   @map("video_id")
+  videoTitle     String   @map("video_title")
+  /// YouTubePlaylist as read just before the insert.
+  playlist       Json
+  playlistId     String   @map("playlist_id")
+  phase          String
+  membership     Json?
+  failureMessage String?  @map("failure_message")
+  actorId        String?  @map("actor_id")
+  createdAt      DateTime @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([videoId, createdAt(sort: Desc)])
+  @@map("youtube_playlist_additions")
+}

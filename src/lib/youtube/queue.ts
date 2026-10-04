@@ -256,6 +256,8 @@ export interface QueueItem {
   suggestedPlaylists: YouTubePlaylist[];
   /** The newest send for this video, or null when none was attempted. */
   publish: PublishSummary | null;
+  /** Why playlist additions are blocked (an unverified earlier attempt), or null. */
+  playlistOpen: string | null;
 }
 
 export interface PublishSummary {
@@ -303,6 +305,7 @@ export function evaluate(
     existingPlaylists,
     suggestedPlaylists: suggested,
     publish: null,
+    playlistOpen: null,
   };
 }
 
@@ -320,6 +323,13 @@ export async function loadQueue(): Promise<Queue> {
       latestSend.set(row.videoId, { id: row.id, phase: row.phase as PublishSummary["phase"], message: row.failureMessage, at: (row.verifiedAt ?? row.updatedAt).toISOString() });
     }
   }
+  const playlistOpen = new Map<string, string>();
+  for (const row of await db.youTubePlaylistAddition.findMany({
+    where: { videoId: { in: rows.map((row) => row.videoId) }, phase: { in: ["pending", "uncertain"] } },
+    orderBy: { createdAt: "desc" },
+  })) {
+    if (!playlistOpen.has(row.videoId)) playlistOpen.set(row.videoId, row.failureMessage ?? "A playlist addition has not been verified yet.");
+  }
   const playlists = (state?.playlists as YouTubePlaylist[] | undefined) ?? [];
   const members = (state?.playlistMembers as Record<string, string[]> | undefined) ?? {};
   const now = libraryNow();
@@ -333,6 +343,7 @@ export async function loadQueue(): Promise<Queue> {
     items: rows.map((row) => ({
       ...evaluate(catalogFromRow(row), drafts.get(row.videoId) ?? null, now, playlists, members, checked),
       publish: latestSend.get(row.videoId) ?? null,
+      playlistOpen: playlistOpen.get(row.videoId) ?? null,
     })),
   };
 }
