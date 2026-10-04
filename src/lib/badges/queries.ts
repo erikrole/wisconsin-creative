@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import type { AuthUser } from "@/lib/auth";
 import { HttpError } from "@/lib/http";
+import { withSerializationRetry } from "@/lib/serialization";
 import { normalizePrefs } from "@/lib/services/notification-prefs";
 import { ON_TIME_GRACE_MS } from "./types";
 import { getBadgeRarityDetail } from "./display";
@@ -74,37 +75,77 @@ export async function listActiveBadgeDefinitions(where?: { trigger?: string }) {
   });
 }
 
+const earnedBadgeSelect = {
+  id: true,
+  awardedAt: true,
+  source: true,
+  definition: {
+    select: {
+      id: true,
+      key: true,
+      name: true,
+      description: true,
+      icon: true,
+      category: true,
+      kind: true,
+      trigger: true,
+      threshold: true,
+      createdAt: true,
+    },
+  },
+} as const;
+
+/**
+ * Return uncelebrated awards in the window and claim them for exactly one
+ * celebration surface. Web, signed-in iOS, and kiosk all read through this
+ * helper, so the first delivery marks `celebratedAt` and later polls or
+ * custody responses stay silent for the same award.
+ */
 export async function listEarnedBadgesSince(args: {
   userId: string;
   after: Date;
   through: Date;
 }): Promise<EarnedBadge[]> {
-  const awards = await db.studentBadge.findMany({
-    where: {
-      userId: args.userId,
-      awardedAt: { gt: args.after, lte: args.through },
-    },
-    orderBy: [{ awardedAt: "asc" }, { id: "asc" }],
-    select: {
-      id: true,
-      awardedAt: true,
-      source: true,
-      definition: {
-        select: {
-          id: true,
-          key: true,
-          name: true,
-          description: true,
-          icon: true,
-          category: true,
-          kind: true,
-          trigger: true,
-          threshold: true,
-          createdAt: true,
+  const claimedAt = new Date();
+  const awards = await withSerializationRetry(() =>
+    db.$transaction(async (tx) => {
+      const candidates = await tx.studentBadge.findMany({
+        where: {
+          userId: args.userId,
+          awardedAt: { gt: args.after, lte: args.through },
+          celebratedAt: null,
         },
-      },
-    },
-  });
+        orderBy: [{ awardedAt: "asc" }, { id: "asc" }],
+        select: earnedBadgeSelect,
+      });
+      if (candidates.length === 0) return [];
+
+      const claim = await tx.studentBadge.updateMany({
+        where: {
+          id: { in: candidates.map((award) => award.id) },
+          celebratedAt: null,
+        },
+        data: { celebratedAt: claimedAt },
+      });
+
+      // Serializable usually makes this all-or-nothing. If a concurrent claim
+      // still took a subset, only return the rows this call actually marked.
+      if (claim.count === candidates.length) return candidates;
+      if (claim.count === 0) return [];
+
+      const claimedRows = await tx.studentBadge.findMany({
+        where: {
+          id: { in: candidates.map((award) => award.id) },
+          celebratedAt: claimedAt,
+        },
+        select: { id: true },
+      });
+      const claimedIds = new Set(claimedRows.map((row) => row.id));
+      return candidates.filter((award) => claimedIds.has(award.id));
+    }, {
+      isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+    }),
+  );
 
   if (awards.length === 0) return [];
 

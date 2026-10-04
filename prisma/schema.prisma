@@ -1795,19 +1795,24 @@ model BadgeDefinition {
 }
 
 model StudentBadge {
-  id           String          @id @default(cuid())
-  userId       String          @map("user_id")
-  definitionId String          @map("definition_id")
-  awardedAt    DateTime        @default(now()) @map("awarded_at")
-  source       BadgeSource     @default(AUTO)
-  awardedById  String?         @map("awarded_by_id")
-  note         String?
-  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  definition   BadgeDefinition @relation(fields: [definitionId], references: [id], onDelete: Restrict)
-  awardedBy    User?           @relation("BadgeAwardedBy", fields: [awardedById], references: [id], onDelete: SetNull)
+  id            String          @id @default(cuid())
+  userId        String          @map("user_id")
+  definitionId  String          @map("definition_id")
+  awardedAt     DateTime        @default(now()) @map("awarded_at")
+  /// Set when any celebration surface (web, iOS, or kiosk) first claims the
+  /// award for a popup. Existing rows are backfilled to awardedAt so history
+  /// cannot flood devices after deploy.
+  celebratedAt  DateTime?       @map("celebrated_at")
+  source        BadgeSource     @default(AUTO)
+  awardedById   String?         @map("awarded_by_id")
+  note          String?
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  definition    BadgeDefinition @relation(fields: [definitionId], references: [id], onDelete: Restrict)
+  awardedBy     User?           @relation("BadgeAwardedBy", fields: [awardedById], references: [id], onDelete: SetNull)
 
   @@unique([userId, definitionId])
   @@index([userId, awardedAt(sort: Desc)])
+  @@index([userId, celebratedAt, awardedAt])
   @@index([definitionId, awardedAt(sort: Desc)])
   @@index([awardedById])
   @@map("student_badges")

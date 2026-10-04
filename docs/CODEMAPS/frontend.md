@@ -120,7 +120,7 @@
 | `src/components/resources/BrandAssetLibrary.tsx` | 1827 |
 | `src/components/ActivityTimeline.tsx` | 1387 |
 | `src/components/booking-wizard/BookingWizard.tsx` | 1109 |
-| `src/components/AppShell.tsx` | 1029 |
+| `src/components/AppShell.tsx` | 1044 |
 | `src/components/onboarding/OnboardingDialog.tsx` | 996 |
 | `src/components/schedule/AutoAssignDialog.tsx` | 966 |
 | `src/components/BookingListPage.tsx` | 921 |
