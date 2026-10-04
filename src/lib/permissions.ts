@@ -14,10 +14,12 @@ export const PERMISSIONS: Record<string, Record<string, Role[]>> = {
   role_preview: {
     manage: ["ADMIN"],
   },
-  // YouTube metadata tool: admin only. "publish" covers every write to the channel.
+  // YouTube metadata tool: admin only. "draft" covers the stored review queue;
+  // "publish" covers every write to the channel.
   youtube: {
     view: ["ADMIN"],
     connect: ["ADMIN"],
+    draft: ["ADMIN"],
     publish: ["ADMIN"],
   },
   user: {

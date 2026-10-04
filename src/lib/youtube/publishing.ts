@@ -253,7 +253,7 @@ export interface PlaylistTransport extends Pick<YouTubeTransport, "read"> {
   insert(videoId: string, playlistId: string): Promise<PlaylistMembership>;
 }
 
-export async function loadPlaylists(transport: PlaylistTransport, channelId: string, maxPages = 100): Promise<YouTubePlaylist[]> {
+export async function loadPlaylists(transport: Pick<PlaylistTransport, "playlistPage">, channelId: string, maxPages = 100): Promise<YouTubePlaylist[]> {
   const { items } = await collectPages((token) => transport.playlistPage(token), maxPages, {
     repeated: "YouTube repeated a playlist page. Refresh to try again.",
     tooLarge: "The playlist library is too large to finish loading. No partial list was used.",
@@ -266,7 +266,7 @@ export async function loadPlaylists(transport: PlaylistTransport, channelId: str
   return [...byId.values()].sort((a, b) => a.title.localeCompare(b.title, "en", { numeric: true }));
 }
 
-export async function loadPlaylistVideoIds(transport: PlaylistTransport, playlistId: string, maxPages = 100): Promise<Set<string>> {
+export async function loadPlaylistVideoIds(transport: Pick<PlaylistTransport, "playlistVideoPage">, playlistId: string, maxPages = 100): Promise<Set<string>> {
   const { items } = await collectPages(async (token) => {
     const page = await transport.playlistVideoPage(playlistId, token);
     return { items: page.ids, nextToken: page.nextToken };

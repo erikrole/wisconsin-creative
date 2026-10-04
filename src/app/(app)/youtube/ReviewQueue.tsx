@@ -1,0 +1,168 @@
+"use client";
+
+import { RefreshCwIcon, SearchIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
+
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
+import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
+import { Spinner } from "@/components/ui/spinner";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
+import type { Queue, QueueItem, RefreshSummary } from "@/lib/youtube/queue";
+
+import { STATUS_BADGE } from "./status";
+import { VideoReview } from "./VideoReview";
+
+const checkedLabel = (value: string | null) =>
+  value ? `Checked ${new Date(value).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}` : "Not checked yet";
+
+async function errorMessage(res: Response, fallback: string) {
+  const body = (await res.json().catch(() => null)) as { error?: string } | null;
+  return body?.error ?? fallback;
+}
+
+export function ReviewQueue({ queue, canRefresh, replay }: { queue: Queue; canRefresh: boolean; replay: boolean }) {
+  const router = useRouter();
+  const [refreshing, setRefreshing] = useState(false);
+  const [view, setView] = useState<"queue" | "all">("queue");
+  const [sport, setSport] = useState("All sports");
+  const [search, setSearch] = useState("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const sports = useMemo(() => [...new Set(queue.items.map((item) => item.video.sport))].sort(), [queue.items]);
+  const visible = useMemo(() => {
+    const needle = search.trim().toLowerCase();
+    return queue.items.filter(
+      (item) =>
+        (view === "all" || (item.status !== "Published" && item.status !== "Protected")) &&
+        (sport === "All sports" || item.video.sport === sport) &&
+        (!needle || [item.title, item.video.opponent, item.video.sport].some((text) => text.toLowerCase().includes(needle))),
+    );
+  }, [queue.items, view, sport, search]);
+  const selected = visible.find((item) => item.id === selectedId) ?? visible[0] ?? null;
+  const waiting = queue.items.filter((item) => item.status !== "Published" && item.status !== "Protected").length;
+
+  async function refresh() {
+    setRefreshing(true);
+    try {
+      const res = await fetch("/api/youtube/library/refresh", { method: "POST" });
+      if (!res.ok) throw new Error(await errorMessage(res, "The library could not be refreshed."));
+      const data = (await res.json()) as RefreshSummary;
+      const extra = [data.held ? `${data.held} held` : "", data.skipped ? `${data.skipped} left for the next refresh` : ""].filter(Boolean).join(", ");
+      toast.success(`${data.videos} recent uploads checked${extra ? ` · ${extra}` : ""}`);
+      if (data.playlistFailure) toast.error(`Playlists: ${data.playlistFailure}`);
+      router.refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "The library could not be refreshed.");
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  return (
+    <section className="flex flex-col gap-4" aria-label="Review queue">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold">Review queue</h2>
+          <p className="text-sm text-muted-foreground">
+            {waiting} of {queue.items.length} recent uploads need attention · {checkedLabel(queue.checkedAt)}
+            {queue.reachedLimit ? " · latest 300 uploads" : ""}
+            {replay ? " · recorded YouTube data" : ""}
+          </p>
+        </div>
+        <Button onClick={refresh} disabled={!canRefresh || refreshing} variant="outline">
+          {refreshing ? <Spinner /> : <RefreshCwIcon />}
+          {refreshing ? "Checking uploads…" : "Refresh library"}
+        </Button>
+      </div>
+
+      {queue.lastFailure && (
+        <Alert variant="destructive">
+          <AlertDescription>The last refresh failed: {queue.lastFailure}</AlertDescription>
+        </Alert>
+      )}
+
+      {queue.items.length === 0 ? (
+        <Empty className="border">
+          <EmptyHeader>
+            <EmptyTitle>No uploads loaded</EmptyTitle>
+            <EmptyDescription>
+              {canRefresh ? "Refresh the library to load the last 30 days of uploads." : "Connect the channel, then refresh the library."}
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      ) : (
+        <>
+          <div className="flex flex-wrap items-center gap-2">
+            <Tabs value={view} onValueChange={(value) => setView(value as "queue" | "all")}>
+              <TabsList>
+                <TabsTrigger value="queue">Needs attention</TabsTrigger>
+                <TabsTrigger value="all">All uploads</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <NativeSelect className="w-auto" value={sport} onChange={(event) => setSport(event.target.value)} aria-label="Sport">
+              <option>All sports</option>
+              {sports.map((name) => (
+                <option key={name}>{name}</option>
+              ))}
+            </NativeSelect>
+            <div className="relative min-w-48 flex-1">
+              <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input className="pl-9" placeholder="Search titles" value={search} onChange={(event) => setSearch(event.target.value)} aria-label="Search titles" />
+            </div>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
+            <ul className="flex max-h-[70vh] flex-col gap-1 overflow-y-auto rounded-lg border p-1" aria-label="Uploads">
+              {visible.length === 0 && <li className="p-4 text-sm text-muted-foreground">Nothing matches these filters.</li>}
+              {visible.map((item) => (
+                <li key={item.id}>
+                  <QueueRow item={item} active={item.id === selected?.id} onSelect={() => setSelectedId(item.id)} />
+                </li>
+              ))}
+            </ul>
+            {selected ? (
+              <VideoReview key={`${selected.id}:${selected.draft?.version ?? 0}`} item={selected} playlists={queue.playlists} />
+            ) : (
+              <p className="text-sm text-muted-foreground">Choose an upload to review.</p>
+            )}
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
+function QueueRow({ item, active, onSelect }: { item: QueueItem; active: boolean; onSelect: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-current={active ? "true" : undefined}
+      className={cn("flex w-full gap-3 rounded-md p-2 text-left transition-colors hover:bg-accent", active && "bg-accent")}
+    >
+      {item.thumbnailUrl ? (
+        // YouTube thumbnails are already sized; next/image would proxy them for no gain.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={item.thumbnailUrl} alt="" className="aspect-video w-24 shrink-0 rounded object-cover" loading="lazy" />
+      ) : (
+        <div className="aspect-video w-24 shrink-0 rounded bg-muted" />
+      )}
+      <div className="flex min-w-0 flex-col gap-1">
+        <span className="line-clamp-2 text-sm font-medium">{item.title}</span>
+        <span className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+          <Badge variant={STATUS_BADGE[item.status]} size="sm">
+            {item.status}
+          </Badge>
+          <span className="line-clamp-1">{item.status === "Published" ? item.video.uploadDate : item.reason}</span>
+        </span>
+      </div>
+    </button>
+  );
+}

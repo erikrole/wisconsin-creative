@@ -206,7 +206,7 @@
 | `src/lib/passkey-client.ts` | 73 |
 | `src/lib/passkey.ts` | 371 |
 | `src/lib/password-rules.ts` | 16 |
-| `src/lib/permissions.ts` | 243 |
+| `src/lib/permissions.ts` | 245 |
 | `src/lib/preview-activity.ts` | 23 |
 | `src/lib/prisma-errors.ts` | 38 |
 | `src/lib/profile-completion-events.ts` | 6 |
@@ -841,5 +841,9 @@
 ### `/api/youtube`
 
 - `/api/youtube/connection`
+- `/api/youtube/drafts/[videoId]/game`
+- `/api/youtube/drafts/[videoId]/prepare`
+- `/api/youtube/drafts/[videoId]`
+- `/api/youtube/library/refresh`
 - `/api/youtube/oauth/callback`
 - `/api/youtube/oauth/start`

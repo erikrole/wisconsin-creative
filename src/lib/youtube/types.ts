@@ -53,6 +53,8 @@ export interface Game {
   sport: string;
   opponent: string;
   recapUrl?: string | null;
+  /** "vs" or "at" from the official schedule. */
+  atVs?: string | null;
 }
 
 export interface RecapSentence {

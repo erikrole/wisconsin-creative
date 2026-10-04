@@ -226,9 +226,9 @@ export const MATCH_LABELS: Record<MatchResult["kind"], string> = {
   missingRecap: "Missing recap",
 };
 
-const canonicalSport = (value: string) =>
+export const canonicalSport = (value: string) =>
   value.toLowerCase().replace("wisconsin ", "").replace("women's volleyball", "volleyball").trim();
-const canonicalOpponent = (value: string) => {
+export const canonicalOpponent = (value: string) => {
   const text = value.toLowerCase().trim();
   return ({ "uw-milwaukee": "milwaukee", "uw milwaukee": "milwaukee" } as Record<string, string>)[text] ?? text;
 };

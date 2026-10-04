@@ -2851,3 +2851,64 @@ Fields: 10
 Indexes and constraints:
 
 - `@@map("youtube_connections")`
+
+## Model `YouTubeLibraryVideo`
+
+Fields: 5
+
+- `videoId      String   @id @map("video_id")`
+- `live         Json`
+- `publishedAt  DateTime @map("published_at")`
+- `thumbnailUrl String?  @map("thumbnail_url")`
+- `checkedAt    DateTime @map("checked_at")`
+
+Indexes and constraints:
+
+- `@@index([publishedAt])`
+- `@@map("youtube_library_videos")`
+
+## Model `YouTubeReviewDraft`
+
+Fields: 20
+
+- `videoId             String    @id @map("video_id")`
+- `version             Int       @default(1)`
+- `matchedTitle        String?   @map("matched_title")`
+- `matchedGame         Json?     @map("matched_game")`
+- `recap               Json?`
+- `selectedSentenceIds String[]  @default([]) @map("selected_sentence_ids")`
+- `editedTitle         String?   @map("edited_title")`
+- `editedDescription   String?   @map("edited_description")`
+- `manualSource        Boolean   @default(false) @map("manual_source")`
+- `manualVideo         Boolean   @default(false) @map("manual_video")`
+- `conferenceKind      String?   @map("conference_kind")`
+- `speakerIds          String[]  @default([]) @map("speaker_ids")`
+- `plannedPlaylistIds  String[]  @default([]) @map("planned_playlist_ids")`
+- `matchKind           String?   @map("match_kind")`
+- `gameChoices         Json?     @map("game_choices")`
+- `hold                String?`
+- `preparedAt          DateTime? @map("prepared_at")`
+- `updatedById         String?   @map("updated_by_id")`
+- `createdAt           DateTime  @default(now()) @map("created_at")`
+- `updatedAt           DateTime  @updatedAt @map("updated_at")`
+
+Indexes and constraints:
+
+- `@@map("youtube_review_drafts")`
+
+## Model `YouTubeLibraryState`
+
+Fields: 8
+
+- `channelId       String    @id @map("channel_id")`
+- `checkedAt       DateTime? @map("checked_at")`
+- `reachedLimit    Boolean   @default(false) @map("reached_limit")`
+- `lastFailure     String?   @map("last_failure")`
+- `playlists       Json      @default("[]")`
+- `playlistMembers Json      @default("{}") @map("playlist_members")`
+- `playlistFailure String?   @map("playlist_failure")`
+- `updatedAt       DateTime  @updatedAt @map("updated_at")`
+
+Indexes and constraints:
+
+- `@@map("youtube_library_state")`

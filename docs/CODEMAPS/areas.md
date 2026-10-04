@@ -199,6 +199,6 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 
 - Doc: `docs/AREA_YOUTUBE.md`
 - Pages: `/youtube`
-- APIs: `/api/youtube/connection`, `/api/youtube/oauth/callback`, `/api/youtube/oauth/start`
+- APIs: `/api/youtube/connection`, `/api/youtube/drafts/[videoId]/game`, `/api/youtube/drafts/[videoId]/prepare`, `/api/youtube/drafts/[videoId]`, `/api/youtube/library/refresh`, `/api/youtube/oauth/callback`, `/api/youtube/oauth/start`
 - Services: _none matched_
-- Tests: `tests/youtube-connection.test.ts`, `tests/youtube-publishing.test.ts`, `tests/youtube-rules.test.ts`
+- Tests: `tests/youtube-connection.test.ts`, `tests/youtube-publishing.test.ts`, `tests/youtube-queue-service.test.ts`, `tests/youtube-review-queue.test.ts`, `tests/youtube-rules.test.ts`
