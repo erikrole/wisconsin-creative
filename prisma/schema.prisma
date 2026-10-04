@@ -2828,3 +2828,28 @@ model YouTubeLibraryState {
 
   @@map("youtube_library_state")
 }
+
+/// Durable journal of every title and description write to YouTube. A row is
+/// saved as "pending" before the request is sent; an "uncertain" or "conflict"
+/// row blocks further sends for that video until it is reconciled read-only.
+model YouTubePublishRecord {
+  id             String    @id
+  videoId        String    @map("video_id")
+  operation      String
+  undoOf         String?   @map("undo_of")
+  phase          String
+  /// LiveVideo read before the write, PublishPreview.expected, and the read-back after it.
+  before         Json
+  expected       Json
+  readBack       Json?     @map("read_back")
+  sourceUrl      String    @map("source_url")
+  sourceSha256   String    @map("source_sha256")
+  failureMessage String?   @map("failure_message")
+  actorId        String?   @map("actor_id")
+  createdAt      DateTime  @map("created_at")
+  verifiedAt     DateTime? @map("verified_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@index([videoId, createdAt(sort: Desc)])
+  @@map("youtube_publish_records")
+}

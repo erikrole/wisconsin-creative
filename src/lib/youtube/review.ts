@@ -226,7 +226,8 @@ export function suggestedTitle(video: ReviewVideo, draft: ReviewDraft | null): s
     const date = apDate(game.date);
     if (date) {
       const direction = game.atVs ?? (/\bat\s/i.test(video.title) ? "at" : "vs");
-      return `Highlights ${direction} ${video.opponent || game.opponent} || Wisconsin ${displaySport(game.sport)} || ${date}`;
+      const word = direction === "at" ? "at" : "vs.";
+      return `Highlights ${word} ${video.opponent || game.opponent} || Wisconsin ${displaySport(game.sport)} || ${date}`;
     }
   }
   return checkedTitle(draftTitle(video, draft));

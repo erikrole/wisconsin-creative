@@ -8,7 +8,6 @@ import { toast } from "sonner";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ConnectionStatus } from "@/lib/youtube/connection";
 
 const dateTime = (value: string | null) =>
@@ -43,41 +42,45 @@ export function ConnectionCard({ status, result }: { status: ConnectionStatus; r
 
   const connectedBy = [status.connectedByName, dateTime(status.connectedAt)].filter(Boolean).join(" · ");
 
+  const headline = !status.configured
+    ? "Google sign-in is not set up for this environment."
+    : status.connected
+      ? `On air: ${status.channelTitle}`
+      : status.needsReconnect
+        ? `Off air: Google stopped accepting the saved connection to ${status.channelTitle}.`
+        : "Off air: sign in with a Google account that manages the Wisconsin Badgers channel.";
+
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
       {result && (
         <Alert variant={result.tone === "error" ? "destructive" : "default"}>
           {result.tone === "error" ? <CircleAlertIcon /> : <CircleCheckIcon />}
           <AlertDescription>{result.text}</AlertDescription>
         </Alert>
       )}
-      <Card>
-        <CardHeader>
-          <CardTitle>Channel connection</CardTitle>
-          <CardDescription>
-            {!status.configured
-              ? "Google sign-in is not set up for this environment."
-              : status.connected
-                ? `Connected to ${status.channelTitle}${connectedBy ? ` by ${connectedBy}` : ""}.`
-                : status.needsReconnect
-                  ? `Google stopped accepting the saved connection to ${status.channelTitle}. Connect again to continue.`
-                  : "Not connected. Sign in with a Google account that manages the Wisconsin Badgers channel."}
-          </CardDescription>
-        </CardHeader>
+      <section className="yt-sheet flex flex-wrap items-center gap-3 px-4 py-3" aria-label="Channel connection">
+        <span
+          className={`size-2.5 shrink-0 rounded-full ${status.connected ? "yt-pulse bg-[var(--green-text)]" : "bg-muted-foreground/50"}`}
+          aria-hidden="true"
+        />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold">{headline}</p>
+          {status.connected && connectedBy && <p className="yt-mono truncate text-xs text-muted-foreground">Connected by {connectedBy}</p>}
+        </div>
         {status.configured && (
-          <CardContent className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2">
             {/* A plain link: the start route redirects the browser to Google. */}
-            <Button asChild variant={status.connected ? "outline" : "brand"}>
+            <Button asChild size="sm" variant={status.connected ? "outline" : "brand"}>
               <a href="/api/youtube/oauth/start">{status.connected ? "Reconnect" : "Connect YouTube"}</a>
             </Button>
             {(status.connected || status.needsReconnect) && (
-              <Button variant="ghost" onClick={handleDisconnect} disabled={busy}>
+              <Button size="sm" variant="ghost" onClick={handleDisconnect} disabled={busy}>
                 Disconnect
               </Button>
             )}
-          </CardContent>
+          </div>
         )}
-      </Card>
+      </section>
     </div>
   );
 }

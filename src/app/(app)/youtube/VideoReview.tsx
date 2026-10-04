@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { useConfirm } from "@/components/ConfirmDialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { wordDiff } from "@/lib/youtube/diff";
 import type { QueueItem } from "@/lib/youtube/queue";
 import {
   conferenceCoaches,
@@ -28,10 +30,33 @@ import {
 import { descriptionProblems, DESCRIPTION_MAX, isConference, MATCH_LABELS, titleProblems, TITLE_MAX } from "@/lib/youtube/rules";
 import type { Game, VideoSnapshot, YouTubePlaylist } from "@/lib/youtube/types";
 
+import { RecapPicker } from "./RecapPicker";
 import { STATUS_BADGE } from "./status";
 
 type Edits = Pick<ReviewDraft, "editedTitle" | "editedDescription" | "selectedSentenceIds" | "conferenceKind" | "speakerIds" | "plannedPlaylistIds">;
 const EDIT_KEYS: Array<keyof Edits> = ["editedTitle", "editedDescription", "selectedSentenceIds", "conferenceKind", "speakerIds", "plannedPlaylistIds"];
+
+/** Shows what changes between the live text and the draft: removed words struck in red, added words in green. */
+function Diff({ before, after }: { before: string; after: string }) {
+  if (before === after) return <p className="text-xs text-muted-foreground">Matches YouTube.</p>;
+  return (
+    <p className="yt-mono rounded-md border bg-muted/40 p-2 text-xs leading-relaxed whitespace-pre-wrap" aria-label="Changes from the live text">
+      {wordDiff(before, after).map((part, index) =>
+        part.kind === "same" ? (
+          <span key={index}>{part.text}</span>
+        ) : part.kind === "removed" ? (
+          <del key={index} className="rounded-sm bg-[var(--red-bg)] text-[var(--red-text)]">
+            {part.text}
+          </del>
+        ) : (
+          <ins key={index} className="rounded-sm bg-[var(--green-bg)] text-[var(--green-text)] no-underline">
+            {part.text}
+          </ins>
+        ),
+      )}
+    </p>
+  );
+}
 
 const gameLabel = (game: Game) => `${game.sport} ${game.atVs ?? "vs"} ${game.opponent} · ${game.date}`;
 
@@ -44,8 +69,10 @@ async function send(url: string, method: "PATCH" | "POST", body: unknown) {
 }
 
 /** The editor for one upload. Everything here saves to the draft only; nothing is sent to YouTube. */
-export function VideoReview({ item, playlists }: { item: QueueItem; playlists: YouTubePlaylist[] }) {
+export function VideoReview({ item, playlists, canSend }: { item: QueueItem; playlists: YouTubePlaylist[]; canSend: boolean }) {
   const router = useRouter();
+  const confirm = useConfirm();
+  const [factsReviewed, setFactsReviewed] = useState(false);
   const saved = item.draft;
   const initial: Edits = {
     editedTitle: saved?.editedTitle ?? null,
@@ -78,7 +105,6 @@ export function VideoReview({ item, playlists }: { item: QueueItem; playlists: Y
   const conference = isConference(video.title);
   const kind = draftConferenceKind(video, draft);
   const recap = saved?.recap ?? null;
-  const selected = new Set(edits.selectedSentenceIds);
   const existingIds = new Set(item.existingPlaylists.map((playlist) => playlist.id));
 
   async function run(action: () => Promise<void>, success: string) {
@@ -102,6 +128,21 @@ export function VideoReview({ item, playlists }: { item: QueueItem; playlists: Y
   const chooseGame = (game: Game) => run(() => send(`/api/youtube/drafts/${item.id}/game`, "POST", { version: saved!.version, gameId: game.id }), "Game confirmed");
   const prepareAgain = () => run(() => send(`/api/youtube/drafts/${item.id}/prepare`, "POST", { version: saved!.version }), "Source checked again");
 
+  const openSend = item.publish && ["pending", "uncertain", "conflict"].includes(item.publish.phase) ? item.publish : null;
+  const differsFromLive = title !== item.live.title || description !== item.live.description;
+  const canPress = canSend && editable && changed.length === 0 && differsFromLive && factsReviewed && !openSend && !busy;
+
+  async function sendToYouTube() {
+    const proceed = await confirm({
+      title: "Send to YouTube?",
+      message: "The title and description change on the Wisconsin Badgers channel now. YouTube is read back afterwards to confirm it.",
+      confirmLabel: "Send",
+    });
+    if (!proceed) return;
+    await run(() => send(`/api/youtube/drafts/${item.id}/publish`, "POST", { version: saved!.version, factsReviewed: true }), "Sent to YouTube and verified");
+  }
+  const checkLastSend = () => run(() => send(`/api/youtube/drafts/${item.id}/check-send`, "POST", {}), "Checked YouTube");
+
   function setTitle(value: string) {
     update({ editedTitle: value === item.live.title ? null : value });
   }
@@ -120,7 +161,11 @@ export function VideoReview({ item, playlists }: { item: QueueItem; playlists: Y
 
   return (
     <div className="flex min-w-0 flex-col gap-4">
-      <Card>
+      <Card className="yt-sheet yt-rise">
+        {item.thumbnailUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={item.thumbnailUrl} alt="" className="aspect-[21/9] w-full rounded-t-[14px] object-cover" />
+        )}
         <CardHeader>
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant={STATUS_BADGE[item.status]}>{item.status}</Badge>
@@ -145,6 +190,16 @@ export function VideoReview({ item, playlists }: { item: QueueItem; playlists: Y
               <AlertDescription>{hold}</AlertDescription>
             </Alert>
           )}
+          <div className="flex items-center gap-3">
+            <div className="flex flex-1 gap-1" aria-hidden="true">
+              {checks.map((check) => (
+                <span key={check.id} className={`h-1.5 flex-1 rounded-full ${check.complete ? "bg-[var(--green-text)]" : "bg-muted"}`} />
+              ))}
+            </div>
+            <span className="yt-mono text-xs text-muted-foreground">
+              {checks.filter((check) => check.complete).length}/{checks.length} checks
+            </span>
+          </div>
           <ul className="grid gap-2 sm:grid-cols-2" aria-label="Review checklist">
             {checks.map((check) => (
               <li key={check.id} className="flex items-start gap-2 text-sm">
@@ -161,7 +216,7 @@ export function VideoReview({ item, playlists }: { item: QueueItem; playlists: Y
 
       {editable && (
         <>
-          <Card>
+          <Card className="yt-sheet yt-rise">
             <CardHeader>
               <CardTitle className="text-base">Official game</CardTitle>
               <CardDescription>
@@ -195,7 +250,7 @@ export function VideoReview({ item, playlists }: { item: QueueItem; playlists: Y
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="yt-sheet yt-rise">
             <CardHeader>
               <CardTitle className="text-base">Title</CardTitle>
             </CardHeader>
@@ -207,6 +262,7 @@ export function VideoReview({ item, playlists }: { item: QueueItem; playlists: Y
                   {title.length}/{TITLE_MAX}
                 </span>
               </div>
+              <Diff before={item.live.title} after={title === item.live.title ? suggestion : title} />
               {suggestion !== title && (
                 <Button className="self-start" size="sm" variant="outline" onClick={() => setTitle(suggestion)}>
                   Use suggested title
@@ -215,7 +271,7 @@ export function VideoReview({ item, playlists }: { item: QueueItem; playlists: Y
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="yt-sheet yt-rise">
             <CardHeader>
               <CardTitle className="text-base">Description</CardTitle>
               <CardDescription>
@@ -243,26 +299,7 @@ export function VideoReview({ item, playlists }: { item: QueueItem; playlists: Y
                   {kind === "Postgame" && !saved?.matchedGame && <p className="text-xs text-muted-foreground">Postgame wording needs the official game above.</p>}
                 </div>
               )}
-              {recap && (
-                <ol className="flex max-h-80 flex-col gap-1 overflow-y-auto rounded-md border p-2" aria-label="Recap sentences">
-                  {recap.sentences.map((sentence) => (
-                    <li key={sentence.id} className="flex items-start gap-2 text-sm">
-                      <Checkbox
-                        id={`s-${sentence.id}`}
-                        className="mt-0.5"
-                        checked={selected.has(sentence.id)}
-                        disabled={sentence.isTimeSensitive}
-                        onCheckedChange={(on) =>
-                          update({ selectedSentenceIds: on ? [...edits.selectedSentenceIds, sentence.id] : edits.selectedSentenceIds.filter((id) => id !== sentence.id) })
-                        }
-                      />
-                      <Label htmlFor={`s-${sentence.id}`} className={sentence.isTimeSensitive ? "font-normal text-muted-foreground line-through" : "font-normal"}>
-                        {sentence.text}
-                      </Label>
-                    </li>
-                  ))}
-                </ol>
-              )}
+              {recap && <RecapPicker recap={recap} selectedIds={edits.selectedSentenceIds} onChange={(ids) => update({ selectedSentenceIds: ids })} />}
               <Textarea
                 value={description}
                 onChange={(event) => update({ editedDescription: event.target.value })}
@@ -276,6 +313,7 @@ export function VideoReview({ item, playlists }: { item: QueueItem; playlists: Y
                   {description.length}/{DESCRIPTION_MAX}
                 </span>
               </div>
+              <Diff before={item.live.description} after={description} />
               {recap && edits.editedDescription != null && (
                 <Button className="self-start" size="sm" variant="outline" onClick={() => update({ editedDescription: null })}>
                   Use selected excerpt
@@ -284,7 +322,7 @@ export function VideoReview({ item, playlists }: { item: QueueItem; playlists: Y
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="yt-sheet yt-rise">
             <CardHeader>
               <CardTitle className="text-base">Playlists</CardTitle>
               <CardDescription>
@@ -312,14 +350,51 @@ export function VideoReview({ item, playlists }: { item: QueueItem; playlists: Y
             </CardContent>
           </Card>
 
-          <div className="sticky bottom-0 flex flex-wrap items-center justify-between gap-2 border-t bg-background py-3">
-            <p className="text-xs text-muted-foreground">Drafts save here only. Sending changes to YouTube comes in a later update.</p>
+          <Card className="yt-sheet yt-rise">
+            <CardHeader>
+              <CardTitle className="text-base">Send to YouTube</CardTitle>
+              <CardDescription>
+                {!differsFromLive
+                  ? "YouTube already matches this draft."
+                  : changed.length > 0
+                    ? "Save your edits first. The saved draft is what gets sent."
+                    : "Sends the title and description above. Playlists and thumbnails are not changed."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              {openSend && (
+                <Alert variant="destructive">
+                  <CircleAlertIcon />
+                  <AlertDescription className="flex flex-col gap-2">
+                    <span>{openSend.message ?? "The last send has not been verified yet."} Further sends are blocked until it is checked.</span>
+                    <Button className="self-start" size="sm" variant="outline" disabled={busy} onClick={checkLastSend}>
+                      Check last send
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              )}
+              {item.publish?.phase === "verified" && <p className="text-xs text-muted-foreground">Last send verified {new Date(item.publish.at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}.</p>}
+              {!canSend && <p className="text-xs text-muted-foreground">This preview shows recorded YouTube data, so sending is switched off.</p>}
+              <div className="flex items-center gap-2 text-sm">
+                <Checkbox id="facts-reviewed" checked={factsReviewed} onCheckedChange={(on) => setFactsReviewed(on === true)} disabled={!canSend} />
+                <Label htmlFor="facts-reviewed" className="font-normal">
+                  I checked the description&apos;s facts against the official recap
+                </Label>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="yt-sheet sticky bottom-3 flex flex-wrap items-center justify-between gap-2 px-4 py-3">
+            <p className="text-xs text-muted-foreground">Drafts stay in the studio until you send them.</p>
             <div className="flex gap-2">
               <Button variant="ghost" disabled={busy || changed.length === 0} onClick={() => setEdits(initial)}>
                 Discard
               </Button>
-              <Button variant="brand" disabled={busy || changed.length === 0} onClick={save}>
+              <Button variant="outline" disabled={busy || changed.length === 0} onClick={save}>
                 Save draft
+              </Button>
+              <Button variant="brand" disabled={!canPress} onClick={sendToYouTube}>
+                Send to YouTube
               </Button>
             </div>
           </div>

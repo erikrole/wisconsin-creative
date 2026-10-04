@@ -130,6 +130,62 @@ describe("recap excerpts", () => {
     }
   });
 
+  it("builds a two-sentence synopsis from every real recap: the result plus one standout", () => {
+    const videos = JSON.parse(readFileSync(path.join(FIXTURES, "examples.json"), "utf8")) as Array<{ id: string; opponent: string; recapURL: string | null; protectedReason: string | null }>;
+    for (const video of videos.filter((v) => !v.protectedReason)) {
+      const recap = extractRecap(readFileSync(path.join(FIXTURES, "Recaps", `${video.id}.html`), "utf8"), video.recapURL!);
+      const ids = initialSelection(recap);
+      expect(ids.length, video.opponent).toBeGreaterThanOrEqual(1);
+      expect(ids.length, video.opponent).toBeLessThanOrEqual(2);
+      expect(ids[0], video.opponent).toBe(recap.sentences[0]?.id);
+      expect(recap.sentences.filter((s) => ids.includes(s.id)).reduce((n, s) => n + s.text.split(/\s+/).length, 0), video.opponent).toBeLessThanOrEqual(75);
+    }
+  });
+
+  it("prefers a curated notes stat over play-by-play, and never the opponent's goal", () => {
+    const body = [
+      "MADISON, Wis. — The Wisconsin men's hockey team bested the Colonials 4-2 on Friday at the Kohl Center.",
+      "Halfway through the second period, Bruno Idzan received a pass from Osburn and backhanded a goal to put the Badgers up 2-0.",
+      "In the last 12 seconds, Robert Morris was able to tally one last goal for a final score of 4-2.",
+      "NOTES TO KNOW",
+      "Badgers have won 3 out of 4 season openers under Mike Hastings",
+      "Career high 3 assists and 3 points for Vasily Zelenov",
+      "STRAIGHT FROM THE RINK",
+      "Photo gallery and more from the game.",
+    ];
+    const recap = buildRecapDocument("https://uwbadgers.com/news/a", body);
+    const text = descriptionFromSelection(recap, initialSelection(recap));
+    expect(text).toContain("Career high 3 assists");
+    expect(text).not.toContain("Robert Morris");
+    expect(text).not.toContain("Photo gallery");
+  });
+
+  it("keeps the opening excerpt short and stops before a notes section", () => {
+    const body = [
+      "MADISON, Wis. — The Badgers beat the Colonials 4-2 on Friday night at the Kohl Center.",
+      "Vasily Zelenov had three assists and Luke Osburn scored twice in the win.",
+      "NOTES TO KNOW",
+      "Wisconsin has won three of four openers under its coach.",
+      "Follow the Badgers on social media #Badgers",
+    ];
+    const recap = buildRecapDocument("https://uwbadgers.com/news/a", body);
+    const text = descriptionFromSelection(recap, initialSelection(recap));
+    expect(text).toContain("Zelenov");
+    expect(text).not.toContain("NOTES TO KNOW");
+    expect(text).not.toContain("three of four");
+    expect(text).not.toContain("Follow the Badgers");
+  });
+
+  it("writes vs. with a period in titles, except Cinematic Recap titles", () => {
+    expect(checkedTitle("Highlights vs Robert Morris || Wisconsin Men's Hockey || Oct. 3, 2026")).toBe(
+      "Highlights vs. Robert Morris || Wisconsin Men's Hockey || Oct. 3, 2026",
+    );
+    expect(checkedTitle("Highlights vs. Robert Morris || Wisconsin Men's Hockey || Oct. 3, 2026")).toBe(
+      "Highlights vs. Robert Morris || Wisconsin Men's Hockey || Oct. 3, 2026",
+    );
+    expect(checkedTitle("2026 Wisconsin Football || Cinematic Recap vs Penn State")).toBe("2026 Wisconsin Football || Cinematic Recap vs Penn State");
+  });
+
   it("refuses markup without a recognized story body", () => {
     expect(() => extractRecap("<html><p>Access denied</p></html>", "https://uwbadgers.com/news/a")).toThrow();
   });

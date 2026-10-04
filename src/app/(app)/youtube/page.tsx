@@ -1,7 +1,7 @@
 import { Role } from "@prisma/client";
+import { ClapperboardIcon } from "lucide-react";
 import { redirect } from "next/navigation";
 
-import { PageHeader } from "@/components/PageHeader";
 import { requireAuth } from "@/lib/auth";
 import { connectionStatus } from "@/lib/youtube/connection";
 import { loadQueue } from "@/lib/youtube/queue";
@@ -10,7 +10,7 @@ import { replayDirectory } from "@/lib/youtube/reader";
 import { ConnectionCard } from "./ConnectionCard";
 import { ReviewQueue } from "./ReviewQueue";
 
-export const metadata = { title: "YouTube" };
+export const metadata = { title: "YouTube Studio Lite" };
 
 const RESULT_MESSAGES: Record<string, { tone: "ok" | "error"; text: string }> = {
   connected: { tone: "ok", text: "The Wisconsin Badgers channel is connected." },
@@ -31,11 +31,16 @@ export default async function YouTubePage({ searchParams }: { searchParams: Prom
   const replay = Boolean(replayDirectory());
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-6">
-      <PageHeader
-        title="YouTube"
-        description="Review titles, descriptions, playlists and visibility for Wisconsin Badgers uploads."
-      />
+    <div className="yt-studio mx-auto flex max-w-6xl flex-col gap-5">
+      <header className="flex items-center gap-3">
+        <span className="yt-mark" aria-hidden="true">
+          <ClapperboardIcon className="size-5" />
+        </span>
+        <div className="min-w-0">
+          <h1 className="text-wrap-balance">YouTube Studio Lite</h1>
+          <p className="text-sm text-muted-foreground">Review, approve and send titles and descriptions for every Badgers upload.</p>
+        </div>
+      </header>
       <ConnectionCard status={status} result={result} />
       <ReviewQueue queue={queue} canRefresh={status.connected || replay} replay={replay} />
     </div>

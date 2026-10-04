@@ -100,19 +100,73 @@ export function titleProblems(title: string): string[] {
   return issues;
 }
 
-/** Initial excerpt: the first two paragraphs, up to ~190 words, never time-sensitive copy. */
+export const EXCERPT_WORDS = 75;
+
+/** A paragraph that is a section label ("NOTES TO KNOW", "Up Next"), not story copy. */
+const isSectionHeading = (paragraph: string) => {
+  const text = paragraph.trim();
+  return text.length <= 40 && !/[.!?"”]$/.test(text) && (text === text.toUpperCase() || /^(notes?|up next|next up|coming up|quotes?|game notes)\b/i.test(text));
+};
+
+const NOTES_HEADING = /^(?:game )?notes?\b|to know\b|\bstats?\b/i;
+
+/** Social, credit and promo lines that never belong in a description. */
+const isBoilerplate = (text: string) => /#\w|@\w|\b(follow|photo|photos|courtesy|tickets?|watch live|listen live|subscribe)\b/i.test(text);
+
+const STAT_WORDS = /\b(?:goals?|assists?|points?|saves?|shutout|yards?|touchdowns?|rebounds?|kills?|aces?|digs?|blocks?|hits?|runs?|rbis?|strikeouts?|wins?|career|record|season-high|career-high|first)\b/i;
+const PLAYER_NAME = /\b[A-Z][a-z'’-]+ [A-Z][a-zA-Z'’-]+/;
+
+/** How well a sentence reads as the one standout line: a named player with a number or stat, standing on its own. */
+function standoutScore(text: string): number {
+  const words = text.split(/\s+/).filter(Boolean).length;
+  let score = 0;
+  if (PLAYER_NAME.test(text)) score += 2;
+  if (STAT_WORDS.test(text)) score += 2;
+  if (/\d|\b(?:one|two|three|four|five|six|seven|eight|nine|ten)\b/i.test(text)) score += 1;
+  if (/\b(?:finished with|led the|led all|totaled|recorded|racked up|posted|scored twice|hat trick|shutout|saved)\b/i.test(text)) score += 2;
+  if (/\b(?:provided the first|setting up|received a pass|put the badgers up|power play)\b/i.test(text)) score -= 1;
+  if (/^(?:he|she|they|his|her|their|it|that|this)\b/i.test(text)) score -= 3;
+  if (/["“”]/.test(text)) score -= 3;
+  if (/^(?:halfway|early|late|with \d|in the (?:first|second|third|fourth)|the (?:first|second|third|fourth) (?:period|quarter|half))/i.test(text)) score -= 1;
+  if (words > 40) score -= 2;
+  return score;
+}
+
+/**
+ * Initial excerpt, a quick synopsis: the result (the story's first sentence) plus the single best standout
+ * sentence, both verbatim, kept to ~75 words. Stops at the first notes or "up next" section.
+ */
 export function initialSelection(doc: RecapDocument): string[] {
-  const ids: string[] = [];
-  let words = 0;
+  const story: RecapDocument["sentences"] = [];
+  const notes: RecapDocument["sentences"] = [];
+  let section: "story" | "notes" = "story";
+  let seenHeading = -1;
   for (const sentence of doc.sentences) {
-    if (sentence.paragraph >= 2 || sentence.isTimeSensitive) continue;
-    const count = sentence.text.split(/\s+/).filter(Boolean).length;
-    if (words + count <= 190) {
-      ids.push(sentence.id);
-      words += count;
+    const paragraph = doc.paragraphs[sentence.paragraph] ?? "";
+    if (sentence.paragraph !== seenHeading && isSectionHeading(paragraph)) {
+      seenHeading = sentence.paragraph;
+      // A notes section holds curated stat lines worth quoting; any other section ends the story.
+      if (section === "story" && NOTES_HEADING.test(paragraph)) section = "notes";
+      else break;
+      continue;
     }
+    if (sentence.paragraph === seenHeading) continue;
+    if (sentence.isTimeSensitive || isBoilerplate(sentence.text)) continue;
+    (section === "story" ? story : notes).push(sentence);
   }
-  return ids;
+  const lead = story[0];
+  if (!lead) return [];
+  const leadWords = lead.text.split(/\s+/).filter(Boolean).length;
+  let best: { id: string; score: number } | null = null;
+  const noteIds = new Set(notes.map((sentence) => sentence.id));
+  for (const sentence of [...story.slice(1), ...notes]) {
+    const count = sentence.text.split(/\s+/).filter(Boolean).length;
+    if (leadWords + count > EXCERPT_WORDS) continue;
+    // Notes are curated stat lines, so they win ties against narration.
+    const score = standoutScore(sentence.text) + (noteIds.has(sentence.id) ? 2 : 0);
+    if (score >= 3 && (!best || score > best.score)) best = { id: sentence.id, score };
+  }
+  return best ? [lead.id, best.id] : [lead.id];
 }
 
 /** Verbatim excerpt in source order. Only the opening dateline is removed. */
@@ -134,6 +188,7 @@ export function descriptionFromSelection(doc: RecapDocument, selected: Iterable<
 export function checkedTitle(title: string): string {
   return title
     .replace(/\bpost[ -]+game\b/gi, "Postgame")
+    .replace(/\bvs(?!\.)(?=\s)/gi, (match) => (/cinematic recap/i.test(title) ? match : "vs."))
     .replace(/\s*\|\|\s*/g, " || ")
     .trim();
 }

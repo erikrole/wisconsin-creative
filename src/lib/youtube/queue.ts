@@ -1,6 +1,7 @@
 // Server-only: the /youtube review queue. Refresh reads the channel and the
 // official UWBadgers sources and stores the library and prepared drafts;
-// the page renders from the database. Nothing here writes to YouTube.
+// the page renders from the database. Refresh only reads; sending a reviewed
+// title and description lives in publish-service.ts.
 
 import { Prisma } from "@prisma/client";
 
@@ -32,7 +33,7 @@ import { CONFERENCE_COACHES, DESCRIPTION_MAX, TITLE_MAX } from "./rules";
 import { createScheduleSource } from "./uwbadgers";
 import { YouTubeToolError, type CatalogVideo, type Game, type LiveVideo, type RecapDocument, type YouTubePlaylist } from "./types";
 
-const actorRole = (user: AuthUser) => user.preview?.actualRole ?? user.role;
+export const actorRole = (user: AuthUser) => user.preview?.actualRole ?? user.role;
 
 /** Refresh stops preparing new videos after this long so the request stays inside the function budget. */
 export const PREPARE_BUDGET_MS = 40_000;
@@ -253,6 +254,15 @@ export interface QueueItem {
   description: string;
   existingPlaylists: YouTubePlaylist[];
   suggestedPlaylists: YouTubePlaylist[];
+  /** The newest send for this video, or null when none was attempted. */
+  publish: PublishSummary | null;
+}
+
+export interface PublishSummary {
+  id: string;
+  phase: "pending" | "verified" | "uncertain" | "conflict" | "notApplied";
+  message: string | null;
+  at: string;
 }
 
 export interface Queue {
@@ -292,6 +302,7 @@ export function evaluate(
     description: draftDescription(draft, snapshot),
     existingPlaylists,
     suggestedPlaylists: suggested,
+    publish: null,
   };
 }
 
@@ -303,6 +314,12 @@ export async function loadQueue(): Promise<Queue> {
   const drafts = new Map(
     (await db.youTubeReviewDraft.findMany({ where: { videoId: { in: rows.map((row) => row.videoId) } } })).map((row) => [row.videoId, draftFromRow(row)]),
   );
+  const latestSend = new Map<string, PublishSummary>();
+  for (const row of await db.youTubePublishRecord.findMany({ where: { videoId: { in: rows.map((row) => row.videoId) } }, orderBy: { createdAt: "desc" } })) {
+    if (!latestSend.has(row.videoId)) {
+      latestSend.set(row.videoId, { id: row.id, phase: row.phase as PublishSummary["phase"], message: row.failureMessage, at: (row.verifiedAt ?? row.updatedAt).toISOString() });
+    }
+  }
   const playlists = (state?.playlists as YouTubePlaylist[] | undefined) ?? [];
   const members = (state?.playlistMembers as Record<string, string[]> | undefined) ?? {};
   const now = libraryNow();
@@ -313,7 +330,10 @@ export async function loadQueue(): Promise<Queue> {
     lastFailure: state?.lastFailure ?? null,
     playlistFailure: state?.playlistFailure ?? null,
     playlists,
-    items: rows.map((row) => evaluate(catalogFromRow(row), drafts.get(row.videoId) ?? null, now, playlists, members, checked)),
+    items: rows.map((row) => ({
+      ...evaluate(catalogFromRow(row), drafts.get(row.videoId) ?? null, now, playlists, members, checked),
+      publish: latestSend.get(row.videoId) ?? null,
+    })),
   };
 }
 
@@ -329,7 +349,7 @@ export interface DraftEdit {
   plannedPlaylistIds?: string[];
 }
 
-async function editableVideo(videoId: string) {
+export async function editableVideo(videoId: string) {
   const [row, draftRow, state] = await Promise.all([
     db.youTubeLibraryVideo.findUnique({ where: { videoId } }),
     db.youTubeReviewDraft.findUnique({ where: { videoId } }),
@@ -354,7 +374,7 @@ const auditDraft = (draft: ReviewDraft) => ({
   plannedPlaylistIds: draft.plannedPlaylistIds,
 });
 
-function conflict(): HttpError {
+export function conflict(): HttpError {
   return new HttpError(409, "This draft changed since you opened it. Reload to see the current version.");
 }
 
