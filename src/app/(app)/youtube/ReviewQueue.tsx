@@ -15,7 +15,6 @@ import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import type { Queue, QueueItem, RefreshSummary } from "@/lib/youtube/queue";
-import { apDate, UNASSIGNED } from "@/lib/youtube/rules";
 
 import { STATUS_BADGE, STATUS_RAIL } from "./status";
 import { VisibilityBadge } from "./VisibilityBadge";
@@ -24,16 +23,6 @@ import { VideoReview } from "./VideoReview";
 const isOpen = (item: QueueItem) => item.status !== "Published" && item.status !== "Protected";
 /** Every check passes and YouTube does not match yet: this upload only needs approval. */
 const isReady = (item: QueueItem) => isOpen(item) && item.checks.length > 0 && item.checks.every((check) => check.complete);
-/** "Men's Hockey vs. Robert Morris · Oct. 3", or just "Men's Hockey · Oct. 3" when the opponent is unknown. */
-function gameKey(item: QueueItem): string {
-  const game = item.draft?.matchedGame;
-  const sport = item.video.sport === UNASSIGNED ? "" : item.video.sport;
-  const opponent = game?.opponent ?? item.video.opponent;
-  const direction = game?.atVs === "at" ? "at" : "vs.";
-  const day = game?.date ?? item.video.uploadDate;
-  const what = [sport, opponent ? `${sport ? direction : "Game vs."} ${opponent}` : ""].filter(Boolean).join(" ") || "Other uploads";
-  return `${what} · ${apDate(day) ?? day}`;
-}
 
 const checkedLabel = (value: string | null) =>
   value ? `Checked ${new Date(value).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}` : "Not checked yet";
@@ -66,11 +55,6 @@ export function ReviewQueue({ queue, canRefresh, replay }: { queue: Queue; canRe
   const selected = visible.find((item) => item.id === selectedId) ?? null;
   const waiting = queue.items.filter(isOpen).length;
   const ready = queue.items.filter(isReady).length;
-  const groups = useMemo(() => {
-    const byGame = new Map<string, QueueItem[]>();
-    for (const item of visible) byGame.set(gameKey(item), [...(byGame.get(gameKey(item)) ?? []), item]);
-    return [...byGame.entries()];
-  }, [visible]);
 
   async function refresh() {
     setRefreshing(true);
@@ -165,21 +149,9 @@ export function ReviewQueue({ queue, canRefresh, replay }: { queue: Queue; canRe
           <div className="grid gap-4 lg:grid-cols-[minmax(0,23rem)_minmax(0,1fr)]">
             <ul className="yt-sheet flex max-h-[72vh] flex-col gap-1 self-start overflow-y-auto p-1.5" aria-label="Uploads">
               {visible.length === 0 && <li className="p-4 text-sm text-muted-foreground">Nothing matches. Try loosening the filters.</li>}
-              {groups.map(([key, items]) => (
-                <li key={key} className="flex flex-col gap-1">
-                  <p className="sticky top-0 z-10 flex items-center justify-between gap-2 rounded-md bg-card/95 px-2 pt-2 pb-1 text-xs font-semibold">
-                    <span className="truncate">{key}</span>
-                    <span className="yt-mono shrink-0 font-normal text-muted-foreground">
-                      {items.filter(isReady).length}/{items.length} ready
-                    </span>
-                  </p>
-                  <ul className="flex flex-col gap-1">
-                    {items.map((item) => (
-                      <li key={item.id}>
-                        <QueueRow item={item} active={item.id === selected?.id} onSelect={() => setSelectedId(item.id)} />
-                      </li>
-                    ))}
-                  </ul>
+              {visible.map((item) => (
+                <li key={item.id}>
+                  <QueueRow item={item} active={item.id === selected?.id} onSelect={() => setSelectedId(item.id)} />
                 </li>
               ))}
             </ul>
