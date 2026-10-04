@@ -15,14 +15,25 @@ import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import type { Queue, QueueItem, RefreshSummary } from "@/lib/youtube/queue";
+import { apDate, UNASSIGNED } from "@/lib/youtube/rules";
 
 import { STATUS_BADGE, STATUS_RAIL } from "./status";
+import { VisibilityBadge } from "./VisibilityBadge";
 import { VideoReview } from "./VideoReview";
 
 const isOpen = (item: QueueItem) => item.status !== "Published" && item.status !== "Protected";
 /** Every check passes and YouTube does not match yet: this upload only needs approval. */
 const isReady = (item: QueueItem) => isOpen(item) && item.checks.length > 0 && item.checks.every((check) => check.complete);
-const gameKey = (item: QueueItem) => `${item.video.sport} · ${item.video.opponent || "No opponent"} · ${item.video.uploadDate}`;
+/** "Men's Hockey vs. Robert Morris · Oct. 3", or just "Men's Hockey · Oct. 3" when the opponent is unknown. */
+function gameKey(item: QueueItem): string {
+  const game = item.draft?.matchedGame;
+  const sport = item.video.sport === UNASSIGNED ? "" : item.video.sport;
+  const opponent = game?.opponent ?? item.video.opponent;
+  const direction = game?.atVs === "at" ? "at" : "vs.";
+  const day = game?.date ?? item.video.uploadDate;
+  const what = [sport, opponent ? `${sport ? direction : "Game vs."} ${opponent}` : ""].filter(Boolean).join(" ") || "Other uploads";
+  return `${what} · ${apDate(day) ?? day}`;
+}
 
 const checkedLabel = (value: string | null) =>
   value ? `Checked ${new Date(value).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}` : "Not checked yet";
@@ -38,6 +49,7 @@ export function ReviewQueue({ queue, canRefresh, replay }: { queue: Queue; canRe
   const [view, setView] = useState<"queue" | "ready" | "all">("queue");
   const [sport, setSport] = useState("All sports");
   const [search, setSearch] = useState("");
+  const [privacy, setPrivacy] = useState("All visibility");
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const sports = useMemo(() => [...new Set(queue.items.map((item) => item.video.sport))].sort(), [queue.items]);
@@ -47,10 +59,11 @@ export function ReviewQueue({ queue, canRefresh, replay }: { queue: Queue; canRe
       (item) =>
         (view === "all" || (view === "ready" ? isReady(item) : isOpen(item))) &&
         (sport === "All sports" || item.video.sport === sport) &&
+        (privacy === "All visibility" || item.live.privacyStatus === privacy) &&
         (!needle || [item.title, item.video.opponent, item.video.sport].some((text) => text.toLowerCase().includes(needle))),
     );
-  }, [queue.items, view, sport, search]);
-  const selected = visible.find((item) => item.id === selectedId) ?? visible[0] ?? null;
+  }, [queue.items, view, sport, privacy, search]);
+  const selected = visible.find((item) => item.id === selectedId) ?? null;
   const waiting = queue.items.filter(isOpen).length;
   const ready = queue.items.filter(isReady).length;
   const groups = useMemo(() => {
@@ -137,6 +150,12 @@ export function ReviewQueue({ queue, canRefresh, replay }: { queue: Queue; canRe
                 <option key={name}>{name}</option>
               ))}
             </NativeSelect>
+            <NativeSelect className="w-auto bg-card" value={privacy} onChange={(event) => setPrivacy(event.target.value)} aria-label="Visibility">
+              <option>All visibility</option>
+              <option value="public">Public</option>
+              <option value="unlisted">Unlisted</option>
+              <option value="private">Private</option>
+            </NativeSelect>
             <div className="relative min-w-48 flex-1">
               <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input className="bg-card pl-9" placeholder="Search titles" value={search} onChange={(event) => setSearch(event.target.value)} aria-label="Search titles" />
@@ -148,9 +167,9 @@ export function ReviewQueue({ queue, canRefresh, replay }: { queue: Queue; canRe
               {visible.length === 0 && <li className="p-4 text-sm text-muted-foreground">Nothing matches. Try loosening the filters.</li>}
               {groups.map(([key, items]) => (
                 <li key={key} className="flex flex-col gap-1">
-                  <p className="yt-mono sticky top-0 z-10 flex items-center justify-between rounded-md bg-card/95 px-2 pt-2 pb-1 text-[11px] tracking-wide text-muted-foreground uppercase">
+                  <p className="sticky top-0 z-10 flex items-center justify-between gap-2 rounded-md bg-card/95 px-2 pt-2 pb-1 text-xs font-semibold">
                     <span className="truncate">{key}</span>
-                    <span>
+                    <span className="yt-mono shrink-0 font-normal text-muted-foreground">
                       {items.filter(isReady).length}/{items.length} ready
                     </span>
                   </p>
@@ -198,6 +217,7 @@ function QueueRow({ item, active, onSelect }: { item: QueueItem; active: boolean
           <Badge variant={STATUS_BADGE[item.status]} size="sm">
             {item.status}
           </Badge>
+          <VisibilityBadge privacy={item.live.privacyStatus} size="sm" />
           <span className="line-clamp-1">{item.status === "Published" ? item.video.uploadDate : item.reason}</span>
         </span>
       </div>

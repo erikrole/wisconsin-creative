@@ -45,7 +45,7 @@ async function adoptVerified(record: PublishRecord) {
 }
 
 /** Sends the saved draft's title and description. `version` must be the draft the admin approved. */
-export async function publishDraft(user: AuthUser, videoId: string, version: number): Promise<PublishRecord> {
+export async function publishDraft(user: AuthUser, videoId: string, version: number, factsReviewed: boolean): Promise<PublishRecord> {
   const { item, draft, video } = await editableVideo(videoId);
   if (draft.version !== version) throw conflict();
   if (draft.hold) throw new HttpError(409, draft.hold);
@@ -53,6 +53,8 @@ export async function publishDraft(user: AuthUser, videoId: string, version: num
   const title = draftTitle(video, draft);
   const description = draftDescription(draft, live.snapshot);
   if (title === live.snapshot.title && description === live.snapshot.description) throw new HttpError(409, "YouTube already has this title and description.");
+
+  if (description !== live.snapshot.description && !factsReviewed) throw new HttpError(409, "Check the description's facts against the official recap before sending.");
 
   const coordinator = await coordinatorFor(user, videoId);
   let record: PublishRecord;

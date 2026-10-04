@@ -32,6 +32,7 @@ import type { Game, VideoSnapshot, YouTubePlaylist } from "@/lib/youtube/types";
 
 import { RecapPicker } from "./RecapPicker";
 import { STATUS_BADGE } from "./status";
+import { VisibilityBadge } from "./VisibilityBadge";
 
 type Edits = Pick<ReviewDraft, "editedTitle" | "editedDescription" | "selectedSentenceIds" | "conferenceKind" | "speakerIds" | "plannedPlaylistIds">;
 const EDIT_KEYS: Array<keyof Edits> = ["editedTitle", "editedDescription", "selectedSentenceIds", "conferenceKind", "speakerIds", "plannedPlaylistIds"];
@@ -60,12 +61,11 @@ function Diff({ before, after }: { before: string; after: string }) {
 
 const gameLabel = (game: Game) => `${game.sport} ${game.atVs ?? "vs"} ${game.opponent} · ${game.date}`;
 
-async function send(url: string, method: "PATCH" | "POST", body: unknown) {
+async function send<T = unknown>(url: string, method: "PATCH" | "POST", body: unknown): Promise<T> {
   const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  if (!res.ok) {
-    const json = (await res.json().catch(() => null)) as { error?: string } | null;
-    throw new Error(json?.error ?? "The draft could not be saved.");
-  }
+  const json = (await res.json().catch(() => null)) as (T & { error?: string }) | null;
+  if (!res.ok) throw new Error(json?.error ?? "That request failed.");
+  return json as T;
 }
 
 /** The editor for one upload. Everything here saves to the draft only; nothing is sent to YouTube. */
@@ -130,7 +130,18 @@ export function VideoReview({ item, playlists, canSend }: { item: QueueItem; pla
 
   const openSend = item.publish && ["pending", "uncertain", "conflict"].includes(item.publish.phase) ? item.publish : null;
   const differsFromLive = title !== item.live.title || description !== item.live.description;
-  const canPress = canSend && editable && changed.length === 0 && differsFromLive && factsReviewed && !openSend && !busy;
+  const descriptionDiffers = description !== item.live.description;
+  const canPress = canSend && editable && differsFromLive && (!descriptionDiffers || factsReviewed) && !openSend && !busy;
+
+  /** Edits are saved first, so one click pushes whatever is on screen. Returns the draft version to send. */
+  async function saveFirst(): Promise<number> {
+    if (changed.length === 0) return saved!.version;
+    const draft = await send<{ version: number }>(`/api/youtube/drafts/${item.id}`, "PATCH", {
+      version: saved!.version,
+      ...Object.fromEntries(changed.map((key) => [key, edits[key]])),
+    });
+    return draft.version;
+  }
 
   async function sendToYouTube() {
     const proceed = await confirm({
@@ -139,16 +150,22 @@ export function VideoReview({ item, playlists, canSend }: { item: QueueItem; pla
       confirmLabel: "Send",
     });
     if (!proceed) return;
-    await run(() => send(`/api/youtube/drafts/${item.id}/publish`, "POST", { version: saved!.version, factsReviewed: true }), "Sent to YouTube and verified");
+    await run(async () => {
+      const version = await saveFirst();
+      await send(`/api/youtube/drafts/${item.id}/publish`, "POST", { version, factsReviewed });
+    }, "Sent to YouTube and verified");
   }
   const plannedNew = edits.plannedPlaylistIds.filter((id) => !existingIds.has(id));
-  const canAddPlaylists = canSend && editable && changed.length === 0 && plannedNew.length > 0 && !item.playlistOpen && !busy;
+  const canAddPlaylists = canSend && editable && plannedNew.length > 0 && !item.playlistOpen && !busy;
 
   async function addPlaylists() {
     const names = plannedNew.map((id) => playlists.find((playlist) => playlist.id === id)?.title ?? id).join(", ");
     const proceed = await confirm({ title: "Add to playlists?", message: `This video is added to ${names} on the Wisconsin Badgers channel now.`, confirmLabel: "Add" });
     if (!proceed) return;
-    await run(() => send(`/api/youtube/drafts/${item.id}/playlists`, "POST", { version: saved!.version }), "Added to playlists and verified");
+    await run(async () => {
+      const version = await saveFirst();
+      await send(`/api/youtube/drafts/${item.id}/playlists`, "POST", { version });
+    }, "Added to playlists and verified");
   }
   const checkPlaylists = () => run(() => send(`/api/youtube/drafts/${item.id}/check-playlists`, "POST", {}), "Checked playlists");
   const checkLastSend = () => run(() => send(`/api/youtube/drafts/${item.id}/check-send`, "POST", {}), "Checked YouTube");
@@ -179,8 +196,9 @@ export function VideoReview({ item, playlists, canSend }: { item: QueueItem; pla
         <CardHeader>
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant={STATUS_BADGE[item.status]}>{item.status}</Badge>
+            <VisibilityBadge privacy={item.live.privacyStatus} />
             <span className="text-xs text-muted-foreground">
-              {video.sport} · uploaded {video.uploadDate} · {item.live.privacyStatus}
+              {video.sport} · uploaded {video.uploadDate}
             </span>
           </div>
           <CardTitle className="text-base">{item.live.title}</CardTitle>
@@ -364,11 +382,9 @@ export function VideoReview({ item, playlists, canSend }: { item: QueueItem; pla
             <CardHeader>
               <CardTitle className="text-base">Send to YouTube</CardTitle>
               <CardDescription>
-                {!differsFromLive
-                  ? "YouTube already matches this draft."
-                  : changed.length > 0
-                    ? "Save your edits first. The saved draft is what gets sent."
-                    : "Sends the title and description above, and adds the playlists you chose. Thumbnails are not changed."}
+                {differsFromLive
+                  ? "Saves your edits and sends the title and description above to YouTube. Thumbnails are not changed."
+                  : "YouTube already matches the title and description."}
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
@@ -396,12 +412,14 @@ export function VideoReview({ item, playlists, canSend }: { item: QueueItem; pla
               )}
               {item.publish?.phase === "verified" && <p className="text-xs text-muted-foreground">Last send verified {new Date(item.publish.at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}.</p>}
               {!canSend && <p className="text-xs text-muted-foreground">This preview shows recorded YouTube data, so sending is switched off.</p>}
+              {descriptionDiffers && (
               <div className="flex items-center gap-2 text-sm">
                 <Checkbox id="facts-reviewed" checked={factsReviewed} onCheckedChange={(on) => setFactsReviewed(on === true)} disabled={!canSend} />
                 <Label htmlFor="facts-reviewed" className="font-normal">
                   I checked the description&apos;s facts against the official recap
                 </Label>
               </div>
+              )}
             </CardContent>
           </Card>
 

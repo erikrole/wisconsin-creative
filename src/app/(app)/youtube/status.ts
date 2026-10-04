@@ -16,3 +16,9 @@ export const STATUS_RAIL: Record<ReviewStatus, string> = {
   Published: "var(--green-text)",
   Protected: "var(--muted-foreground)",
 };
+
+export const PRIVACY_BADGE: Record<string, { label: string; variant: "green" | "orange" | "gray" }> = {
+  public: { label: "Public", variant: "green" },
+  unlisted: { label: "Unlisted", variant: "orange" },
+  private: { label: "Private", variant: "gray" },
+};

@@ -61,25 +61,33 @@ describe("publishing a reviewed draft", () => {
 
   it("refuses while the preview shows recorded data, before reading or writing anything", async () => {
     mockReplay.mockReturnValue("/recordings");
-    expect((await rejection(publishDraft(admin, ID, 3))).status).toBe(409);
+    expect((await rejection(publishDraft(admin, ID, 3, true))).status).toBe(409);
     expect(mockTransport.read).not.toHaveBeenCalled();
     expect(mockTransport.update).not.toHaveBeenCalled();
   });
 
   it("refuses a draft that changed since the admin approved it", async () => {
-    expect((await rejection(publishDraft(admin, ID, 2))).status).toBe(409);
+    expect((await rejection(publishDraft(admin, ID, 2, true))).status).toBe(409);
     expect(mockTransport.update).not.toHaveBeenCalled();
+  });
+
+  it("needs the facts check when the description changes, but not for a title-only change", async () => {
+    expect((await rejection(publishDraft(admin, ID, 3, false))).message).toMatch(/facts/);
+    expect(mockTransport.update).not.toHaveBeenCalled();
+    mockDb.youTubeReviewDraft.findUnique.mockResolvedValue(draftRow({ editedDescription: "Old description.", editedTitle: "Highlights at Penn State || Wisconsin Football || Sept. 27, 2026" }));
+    mockTransport.read.mockResolvedValueOnce(live()).mockResolvedValueOnce({ etag: "e2", snapshot: snapshot({ title: "Highlights at Penn State || Wisconsin Football || Sept. 27, 2026" }) });
+    expect((await publishDraft(admin, ID, 3, false)).phase).toBe("verified");
   });
 
   it("refuses when YouTube already has the draft", async () => {
     mockDb.youTubeReviewDraft.findUnique.mockResolvedValue(draftRow({ editedDescription: "Old description." }));
-    expect((await rejection(publishDraft(admin, ID, 3))).message).toMatch(/already has/);
+    expect((await rejection(publishDraft(admin, ID, 3, true))).message).toMatch(/already has/);
     expect(mockTransport.update).not.toHaveBeenCalled();
   });
 
   it("refuses when the live video changed since the library was checked", async () => {
     mockTransport.read.mockResolvedValue({ etag: "e2", snapshot: snapshot({ description: "Someone edited this." }) });
-    expect((await rejection(publishDraft(admin, ID, 3))).message).toMatch(/changed after the preview/);
+    expect((await rejection(publishDraft(admin, ID, 3, true))).message).toMatch(/changed after the preview/);
     expect(mockTransport.update).not.toHaveBeenCalled();
   });
 
@@ -96,7 +104,7 @@ describe("publishing a reviewed draft", () => {
     mockTransport.read
       .mockResolvedValueOnce(live())
       .mockResolvedValueOnce({ etag: "e2", snapshot: snapshot({ description }) });
-    const record = await publishDraft(admin, ID, 3);
+    const record = await publishDraft(admin, ID, 3, true);
     expect(record.phase).toBe("verified");
     expect(calls.slice(0, 2)).toEqual(["save:pending", "update"]);
     expect(mockTransport.update).toHaveBeenCalledTimes(1);
@@ -106,7 +114,7 @@ describe("publishing a reviewed draft", () => {
 
   it("sends nothing when the journal cannot be saved", async () => {
     mockDb.youTubePublishRecord.upsert.mockRejectedValue(new Error("database down"));
-    await expect(publishDraft(admin, ID, 3)).rejects.toThrow();
+    await expect(publishDraft(admin, ID, 3, true)).rejects.toThrow();
     expect(mockTransport.update).not.toHaveBeenCalled();
   });
 });
