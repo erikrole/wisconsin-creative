@@ -352,9 +352,24 @@ export default function AppShell({
       loading = true;
 
       try {
+        // Prefer the newer of memory and storage. A failed setItem or a stale
+        // write from another tab must not drag the cursor backwards and
+        // re-queue awards this session already dismissed.
         let after = memoryCursor;
         try {
-          after = localStorage.getItem(cursorKey) ?? after;
+          const stored = localStorage.getItem(cursorKey);
+          if (stored) {
+            if (!after) {
+              after = stored;
+            } else {
+              const memoryTime = Date.parse(after);
+              const storedTime = Date.parse(stored);
+              if (!Number.isNaN(storedTime) && (Number.isNaN(memoryTime) || storedTime > memoryTime)) {
+                after = stored;
+                memoryCursor = stored;
+              }
+            }
+          }
         } catch {
           // Keep polling with the in-memory cursor when storage is unavailable.
         }

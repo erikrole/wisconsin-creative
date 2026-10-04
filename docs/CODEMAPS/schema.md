@@ -1861,23 +1861,25 @@ Indexes and constraints:
 
 ## Model `StudentBadge`
 
-Fields: 10
+Fields: 11
 
-- `id           String          @id @default(cuid())`
-- `userId       String          @map("user_id")`
-- `definitionId String          @map("definition_id")`
-- `awardedAt    DateTime        @default(now()) @map("awarded_at")`
-- `source       BadgeSource     @default(AUTO)`
-- `awardedById  String?         @map("awarded_by_id")`
-- `note         String?`
-- `user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)`
-- `definition   BadgeDefinition @relation(fields: [definitionId], references: [id], onDelete: Restrict)`
-- `awardedBy    User?           @relation("BadgeAwardedBy", fields: [awardedById], references: [id], onDelete: SetNull)`
+- `id            String          @id @default(cuid())`
+- `userId        String          @map("user_id")`
+- `definitionId  String          @map("definition_id")`
+- `awardedAt     DateTime        @default(now()) @map("awarded_at")`
+- `celebratedAt  DateTime?       @map("celebrated_at")`
+- `source        BadgeSource     @default(AUTO)`
+- `awardedById   String?         @map("awarded_by_id")`
+- `note          String?`
+- `user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)`
+- `definition    BadgeDefinition @relation(fields: [definitionId], references: [id], onDelete: Restrict)`
+- `awardedBy     User?           @relation("BadgeAwardedBy", fields: [awardedById], references: [id], onDelete: SetNull)`
 
 Indexes and constraints:
 
 - `@@unique([userId, definitionId])`
 - `@@index([userId, awardedAt(sort: Desc)])`
+- `@@index([userId, celebratedAt, awardedAt])`
 - `@@index([definitionId, awardedAt(sort: Desc)])`
 - `@@index([awardedById])`
 - `@@map("student_badges")`

@@ -138,6 +138,7 @@
 | `src/lib/booking-status-display.ts` | 170 |
 | `src/lib/booking-statuses.ts` | 9 |
 | `src/lib/breadcrumbs.ts` | 179 |
+| `src/lib/brother-label-csv.ts` | 134 |
 | `src/lib/bulk-batteries.ts` | 28 |
 | `src/lib/bulk-schedule-assignment-types.ts` | 213 |
 | `src/lib/bulk-unit-qr.ts` | 111 |

@@ -75,7 +75,7 @@
 | `CollaboratorPolicyRevision` | 9 | 3 |
 | `SystemConfig` | 3 | 1 |
 | `BadgeDefinition` | 14 | 3 |
-| `StudentBadge` | 10 | 5 |
+| `StudentBadge` | 11 | 6 |
 | `BadgeStreak` | 8 | 3 |
 | `BadgeEventReceipt` | 6 | 3 |
 | `LicenseCode` | 15 | 4 |
