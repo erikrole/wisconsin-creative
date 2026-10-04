@@ -112,6 +112,7 @@
 | `ApplicationNote` | 8 | 3 |
 | `StudentTermPlacement` | 10 | 3 |
 | `ApplicantRetentionEvent` | 7 | 3 |
+| `YouTubeConnection` | 10 | 1 |
 
 ## Enums
 

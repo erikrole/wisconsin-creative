@@ -39,6 +39,7 @@ import {
   ChevronsUpDownIcon,
   UserIcon,
   UserPlusIcon,
+  MonitorPlayIcon,
 } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
@@ -122,6 +123,7 @@ const navGroups: NavGroup[] = [
     items: [
       { label: "Resources", href: "/resources", icon: ScrollTextIcon },
       { label: "Software", href: "/licenses", icon: KeyIcon },
+      { label: "YouTube", href: "/youtube", icon: MonitorPlayIcon, requiredRole: "ADMIN" },
     ],
   },
   {

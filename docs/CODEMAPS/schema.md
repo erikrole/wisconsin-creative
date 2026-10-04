@@ -2832,3 +2832,22 @@ Indexes and constraints:
 - `@@index([applicantId])`
 - `@@index([purgedAt])`
 - `@@map("applicant_retention_events")`
+
+## Model `YouTubeConnection`
+
+Fields: 10
+
+- `id                    String    @id @default(cuid())`
+- `channelId             String    @unique @map("channel_id")`
+- `channelTitle          String    @map("channel_title")`
+- `encryptedRefreshToken String    @map("encrypted_refresh_token")`
+- `scopes                String[]  @default([])`
+- `connectedById         String    @map("connected_by_id")`
+- `connectedAt           DateTime  @default(now()) @map("connected_at")`
+- `lastUsedAt            DateTime? @map("last_used_at")`
+- `revokedAt             DateTime? @map("revoked_at")`
+- `updatedAt             DateTime  @updatedAt @map("updated_at")`
+
+Indexes and constraints:
+
+- `@@map("youtube_connections")`

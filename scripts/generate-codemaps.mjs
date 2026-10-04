@@ -167,6 +167,7 @@ const AREA_HINTS = {
   settings: ["settings"],
   shifts: ["shifts", "schedule", "shift-"],
   users: ["users", "profile", "allowed-emails", "onboarding"],
+  youtube: ["youtube"],
 };
 
 function matchesHints(value, hints) {

@@ -85,6 +85,7 @@
 | `/workforce/hiring` | `src/app/(app)/workforce/hiring/page.tsx` |
 | `/workforce` | `src/app/(app)/workforce/page.tsx` |
 | `/workforce/planning` | `src/app/(app)/workforce/planning/page.tsx` |
+| `/youtube` | `src/app/(app)/youtube/page.tsx` |
 | `/about/features` | `src/app/(public)/about/features/page.tsx` |
 | `/about/field-work` | `src/app/(public)/about/field-work/page.tsx` |
 | `/about` | `src/app/(public)/about/page.tsx` |
@@ -133,7 +134,7 @@
 | `src/components/schedule/SportSetupWizard.tsx` | 675 |
 | `src/components/booking-wizard/WizardStep1.tsx` | 599 |
 | `src/components/booking-details/BookingHeader.tsx` | 472 |
-| `src/components/Sidebar.tsx` | 448 |
+| `src/components/Sidebar.tsx` | 450 |
 | `src/components/event-editor/EventEditorFields.tsx` | 435 |
 | `src/components/ui/heatmap.tsx` | 434 |
 | `src/components/ui/chart.tsx` | 389 |

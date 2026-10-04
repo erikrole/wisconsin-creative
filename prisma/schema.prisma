@@ -2745,3 +2745,23 @@ model ApplicantRetentionEvent {
   @@index([purgedAt])
   @@map("applicant_retention_events")
 }
+
+/// The Google grant behind the /youtube tool. One row per YouTube channel; the
+/// refresh token is AES-256-GCM encrypted with YOUTUBE_TOKEN_KEY and never
+/// leaves the server. No foreign key to users so a departed admin's grant stays
+/// explainable until someone reconnects.
+model YouTubeConnection {
+  id                    String    @id @default(cuid())
+  channelId             String    @unique @map("channel_id")
+  channelTitle          String    @map("channel_title")
+  encryptedRefreshToken String    @map("encrypted_refresh_token")
+  scopes                String[]  @default([])
+  connectedById         String    @map("connected_by_id")
+  connectedAt           DateTime  @default(now()) @map("connected_at")
+  lastUsedAt            DateTime? @map("last_used_at")
+  /// Set when Google rejects the refresh token; the tool then asks an admin to reconnect.
+  revokedAt             DateTime? @map("revoked_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  @@map("youtube_connections")
+}
