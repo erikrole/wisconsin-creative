@@ -164,7 +164,7 @@
 | `src/lib/db.ts` | 32 |
 | `src/lib/editor-snippets.ts` | 52 |
 | `src/lib/email.ts` | 129 |
-| `src/lib/env.ts` | 129 |
+| `src/lib/env.ts` | 140 |
 | `src/lib/environment-safety.ts` | 17 |
 | `src/lib/equipment-guidance.ts` | 127 |
 | `src/lib/equipment-section-filters.ts` | 87 |
@@ -206,7 +206,7 @@
 | `src/lib/passkey-client.ts` | 73 |
 | `src/lib/passkey.ts` | 371 |
 | `src/lib/password-rules.ts` | 16 |
-| `src/lib/permissions.ts` | 237 |
+| `src/lib/permissions.ts` | 245 |
 | `src/lib/preview-activity.ts` | 23 |
 | `src/lib/prisma-errors.ts` | 38 |
 | `src/lib/profile-completion-events.ts` | 6 |
@@ -259,6 +259,7 @@
 | `src/lib/scoreboard-explorer.ts` | 152 |
 | `src/lib/search-pages.ts` | 78 |
 | `src/lib/search-result-title.ts` | 13 |
+| `src/lib/secret-box.ts` | 54 |
 | `src/lib/serialization.ts` | 47 |
 | `src/lib/shell-navigation.ts` | 11 |
 | `src/lib/shift-call-windows.ts` | 200 |
@@ -267,7 +268,7 @@
 | `src/lib/shift-display.ts` | 71 |
 | `src/lib/shift-reminder-workflow.ts` | 26 |
 | `src/lib/software-vault-access.ts` | 20 |
-| `src/lib/software-vault-crypto.ts` | 61 |
+| `src/lib/software-vault-crypto.ts` | 11 |
 | `src/lib/software-vault-validation.ts` | 39 |
 | `src/lib/sport-auto-assign-policy.ts` | 60 |
 | `src/lib/sports.ts` | 100 |
@@ -836,3 +837,13 @@
 - `/api/workforce/import`
 - `/api/workforce/people/[id]/placements`
 - `/api/workforce/people/[id]`
+
+### `/api/youtube`
+
+- `/api/youtube/connection`
+- `/api/youtube/drafts/[videoId]/game`
+- `/api/youtube/drafts/[videoId]/prepare`
+- `/api/youtube/drafts/[videoId]`
+- `/api/youtube/library/refresh`
+- `/api/youtube/oauth/callback`
+- `/api/youtube/oauth/start`

@@ -2745,3 +2745,131 @@ model ApplicantRetentionEvent {
   @@index([purgedAt])
   @@map("applicant_retention_events")
 }
+
+/// The Google grant behind the /youtube tool. One row per YouTube channel; the
+/// refresh token is AES-256-GCM encrypted with YOUTUBE_TOKEN_KEY and never
+/// leaves the server. No foreign key to users so a departed admin's grant stays
+/// explainable until someone reconnects.
+model YouTubeConnection {
+  id                    String    @id @default(cuid())
+  channelId             String    @unique @map("channel_id")
+  channelTitle          String    @map("channel_title")
+  encryptedRefreshToken String    @map("encrypted_refresh_token")
+  scopes                String[]  @default([])
+  connectedById         String    @map("connected_by_id")
+  connectedAt           DateTime  @default(now()) @map("connected_at")
+  lastUsedAt            DateTime? @map("last_used_at")
+  /// Set when Google rejects the refresh token; the tool then asks an admin to reconnect.
+  revokedAt             DateTime? @map("revoked_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  @@map("youtube_connections")
+}
+
+/// Last imported metadata for one recent Badgers upload (the review queue's
+/// library). Replaced on every refresh; videos that leave the window are removed.
+model YouTubeLibraryVideo {
+  videoId      String   @id @map("video_id")
+  /// LiveVideo: the snapshot and etag YouTube returned at checkedAt.
+  live         Json
+  publishedAt  DateTime @map("published_at")
+  thumbnailUrl String?  @map("thumbnail_url")
+  checkedAt    DateTime @map("checked_at")
+
+  @@index([publishedAt])
+  @@map("youtube_library_videos")
+}
+
+/// The saved review for one video: the matched official source, the chosen
+/// recap sentences and any manual title, description, speaker or playlist
+/// choices. Field names follow the Mac app's SavedSelection so its drafts can be
+/// imported. `version` guards concurrent edits; refresh bumps it too.
+model YouTubeReviewDraft {
+  videoId             String    @id @map("video_id")
+  version             Int       @default(1)
+  /// The YouTube title this source was matched against. A changed title needs a fresh match.
+  matchedTitle        String?   @map("matched_title")
+  matchedGame         Json?     @map("matched_game")
+  /// RecapDocument from the official UWBadgers page, or null for template videos.
+  recap               Json?
+  selectedSentenceIds String[]  @default([]) @map("selected_sentence_ids")
+  editedTitle         String?   @map("edited_title")
+  editedDescription   String?   @map("edited_description")
+  manualSource        Boolean   @default(false) @map("manual_source")
+  manualVideo         Boolean   @default(false) @map("manual_video")
+  conferenceKind      String?   @map("conference_kind")
+  speakerIds          String[]  @default([]) @map("speaker_ids")
+  plannedPlaylistIds  String[]  @default([]) @map("planned_playlist_ids")
+  /// Preparation result: MatchResult kind, official game choices, and why the video is held.
+  matchKind           String?   @map("match_kind")
+  gameChoices         Json?     @map("game_choices")
+  hold                String?
+  preparedAt          DateTime? @map("prepared_at")
+  updatedById         String?   @map("updated_by_id")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  @@map("youtube_review_drafts")
+}
+
+/// One row per channel: when the library was last checked, the channel's
+/// playlists and the memberships of the suggested playlists.
+model YouTubeLibraryState {
+  channelId       String    @id @map("channel_id")
+  checkedAt       DateTime? @map("checked_at")
+  reachedLimit    Boolean   @default(false) @map("reached_limit")
+  lastFailure     String?   @map("last_failure")
+  /// YouTubePlaylist[] for the whole channel.
+  playlists       Json      @default("[]")
+  /// { [playlistId]: videoId[] } for playlists suggested to at least one queued video.
+  playlistMembers Json      @default("{}") @map("playlist_members")
+  playlistFailure String?   @map("playlist_failure")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@map("youtube_library_state")
+}
+
+/// Durable journal of every title and description write to YouTube. A row is
+/// saved as "pending" before the request is sent; an "uncertain" or "conflict"
+/// row blocks further sends for that video until it is reconciled read-only.
+model YouTubePublishRecord {
+  id             String    @id
+  videoId        String    @map("video_id")
+  operation      String
+  undoOf         String?   @map("undo_of")
+  phase          String
+  /// LiveVideo read before the write, PublishPreview.expected, and the read-back after it.
+  before         Json
+  expected       Json
+  readBack       Json?     @map("read_back")
+  sourceUrl      String    @map("source_url")
+  sourceSha256   String    @map("source_sha256")
+  failureMessage String?   @map("failure_message")
+  actorId        String?   @map("actor_id")
+  createdAt      DateTime  @map("created_at")
+  verifiedAt     DateTime? @map("verified_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@index([videoId, createdAt(sort: Desc)])
+  @@map("youtube_publish_records")
+}
+
+/// Durable journal of every playlist addition the tool sends. "pending" is saved
+/// before the request; "uncertain" blocks that destination until it is checked.
+model YouTubePlaylistAddition {
+  id             String   @id
+  videoId        String   @map("video_id")
+  videoTitle     String   @map("video_title")
+  /// YouTubePlaylist as read just before the insert.
+  playlist       Json
+  playlistId     String   @map("playlist_id")
+  phase          String
+  membership     Json?
+  failureMessage String?  @map("failure_message")
+  actorId        String?  @map("actor_id")
+  createdAt      DateTime @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([videoId, createdAt(sort: Desc)])
+  @@map("youtube_playlist_additions")
+}

@@ -194,3 +194,11 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - APIs: `/api/allowed-emails/[id]`, `/api/allowed-emails/preview`, `/api/allowed-emails`, `/api/kiosk/users`, `/api/me/profile-completion`, `/api/me/profile`, `/api/profile`, `/api/users/[id]/activity`, `/api/users/[id]/availability/[blockId]`, `/api/users/[id]/availability`
 - Services: `src/lib/services/hidden-users-cleanup.ts`, `src/lib/services/onboarding-lifecycle.ts`
 - Tests: `tests/allowed-emails-preview.test.ts`, `tests/allowed-emails.test.ts`, `tests/email-first-onboarding-source.test.ts`, `tests/hidden-users-cleanup.test.ts`, `tests/ios-notification-categories-profile.test.ts`, `tests/onboarding-dialog-source.test.ts`, `tests/onboarding-lifecycle.test.ts`, `tests/onboarding-readiness-route.test.ts`
+
+## youtube
+
+- Doc: `docs/AREA_YOUTUBE.md`
+- Pages: `/youtube`
+- APIs: `/api/youtube/connection`, `/api/youtube/drafts/[videoId]/game`, `/api/youtube/drafts/[videoId]/prepare`, `/api/youtube/drafts/[videoId]`, `/api/youtube/library/refresh`, `/api/youtube/oauth/callback`, `/api/youtube/oauth/start`
+- Services: _none matched_
+- Tests: `tests/youtube-connection.test.ts`, `tests/youtube-publishing.test.ts`, `tests/youtube-queue-service.test.ts`, `tests/youtube-review-queue.test.ts`, `tests/youtube-rules.test.ts`
