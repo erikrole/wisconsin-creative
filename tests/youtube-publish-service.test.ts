@@ -21,7 +21,7 @@ vi.mock("@/lib/youtube/reader", async (importOriginal) => ({ ...(await importOri
 import type { AuthUser } from "@/lib/auth";
 import { HttpError } from "@/lib/http";
 import { BADGERS_CHANNEL_ID } from "@/lib/youtube/google";
-import { publishDraft } from "@/lib/youtube/publish-service";
+import { makePublic, publishDraft } from "@/lib/youtube/publish-service";
 
 const admin = { id: "admin-1", role: "ADMIN", name: "Erik", email: "e@example.com", avatarUrl: null } as AuthUser;
 const ID = "hl";
@@ -116,5 +116,42 @@ describe("publishing a reviewed draft", () => {
     mockDb.youTubePublishRecord.upsert.mockRejectedValue(new Error("database down"));
     await expect(publishDraft(admin, ID, 3, true)).rejects.toThrow();
     expect(mockTransport.update).not.toHaveBeenCalled();
+  });
+});
+
+describe("making a video public", () => {
+  const unlisted = (over: Record<string, unknown> = {}) => snapshot({ isPublic: false, status: { privacyStatus: "unlisted", uploadStatus: "processed" }, ...over });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockReplay.mockReturnValue("");
+    mockDb.youTubeLibraryVideo.findUnique.mockResolvedValue({ ...libraryRow(), live: { etag: "e1", snapshot: unlisted() } });
+    mockDb.youTubeReviewDraft.findUnique.mockResolvedValue(draftRow());
+    mockDb.youTubeLibraryState.findUnique.mockResolvedValue({ playlists: [], playlistMembers: {} });
+    mockDb.youTubePublishRecord.findMany.mockResolvedValue([]);
+    mockDb.youTubePublishRecord.upsert.mockResolvedValue({});
+    mockTransport.read.mockResolvedValue({ etag: "e1", snapshot: unlisted() });
+  });
+
+  it("needs the facts check and an unchanged title", async () => {
+    expect((await rejection(makePublic(admin, ID, 3, false))).message).toMatch(/facts/);
+    mockDb.youTubeReviewDraft.findUnique.mockResolvedValue(draftRow({ editedTitle: "Highlights at Penn State || Wisconsin Football || Sept. 27, 2026" }));
+    expect((await rejection(makePublic(admin, ID, 3, true))).message).toMatch(/title change first/);
+    expect(mockTransport.publish).not.toHaveBeenCalled();
+  });
+
+  it("refuses a video that is already public", async () => {
+    mockDb.youTubeLibraryVideo.findUnique.mockResolvedValue(libraryRow());
+    expect((await rejection(makePublic(admin, ID, 3, true))).message).toMatch(/already public/);
+  });
+
+  it("launches once with the reviewed description and verifies the public status", async () => {
+    const description = draftRow().editedDescription;
+    const published = snapshot({ description });
+    mockTransport.read.mockResolvedValueOnce({ etag: "e1", snapshot: unlisted() }).mockResolvedValueOnce({ etag: "e2", snapshot: published });
+    const record = await makePublic(admin, ID, 3, true);
+    expect(record.phase).toBe("verified");
+    expect(mockTransport.publish).toHaveBeenCalledTimes(1);
+    expect(mockTransport.update).not.toHaveBeenCalled();
+    expect(mockAudit).toHaveBeenCalledWith(expect.objectContaining({ action: "MAKE_PUBLIC" }));
   });
 });

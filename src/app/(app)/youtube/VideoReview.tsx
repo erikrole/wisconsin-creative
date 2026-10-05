@@ -27,7 +27,7 @@ import {
   suggestedTitle,
   type ReviewDraft,
 } from "@/lib/youtube/review";
-import { descriptionProblems, DESCRIPTION_MAX, isConference, MATCH_LABELS, titleProblems, TITLE_MAX } from "@/lib/youtube/rules";
+import { descriptionProblems, DESCRIPTION_FOOTER, DESCRIPTION_MAX, isConference, MATCH_LABELS, titleProblems, TITLE_MAX } from "@/lib/youtube/rules";
 import type { Game, VideoSnapshot, YouTubePlaylist } from "@/lib/youtube/types";
 
 import { RecapPicker } from "./RecapPicker";
@@ -39,7 +39,7 @@ const EDIT_KEYS: Array<keyof Edits> = ["editedTitle", "editedDescription", "sele
 
 /** Shows what changes between the live text and the draft: removed words struck in red, added words in green. */
 function Diff({ before, after }: { before: string; after: string }) {
-  if (before === after) return <p className="text-xs text-muted-foreground">Matches YouTube.</p>;
+  if (before === after) return null;
   return (
     <p className="yt-mono rounded-md border bg-muted/40 p-2 text-xs leading-relaxed whitespace-pre-wrap" aria-label="Changes from the live text">
       {wordDiff(before, after).map((part, index) =>
@@ -155,6 +155,20 @@ export function VideoReview({ item, playlists, canSend }: { item: QueueItem; pla
       await send(`/api/youtube/drafts/${item.id}/publish`, "POST", { version, factsReviewed });
     }, "Sent to YouTube and verified");
   }
+  const isPublic = item.live.isPublic;
+  const canMakePublic = canSend && editable && !isPublic && title === item.live.title && description.trim() !== "" && factsReviewed && !openSend && !busy;
+  async function launch() {
+    const proceed = await confirm({
+      title: "Make this video public?",
+      message: "It becomes visible to everyone on the Wisconsin Badgers channel, with the description shown above. YouTube is read back afterwards to confirm it.",
+      confirmLabel: "Make public",
+    });
+    if (!proceed) return;
+    await run(async () => {
+      const version = await saveFirst();
+      await send(`/api/youtube/drafts/${item.id}/make-public`, "POST", { version, factsReviewed });
+    }, "Video is now public");
+  }
   const plannedNew = edits.plannedPlaylistIds.filter((id) => !existingIds.has(id));
   const canAddPlaylists = canSend && editable && plannedNew.length > 0 && !item.playlistOpen && !busy;
 
@@ -191,7 +205,7 @@ export function VideoReview({ item, playlists, canSend }: { item: QueueItem; pla
       <Card className="yt-sheet yt-rise">
         {item.thumbnailUrl && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={item.thumbnailUrl} alt="" className="aspect-[21/9] w-full rounded-t-[14px] object-cover" />
+          <img src={item.thumbnailUrl} alt="" className="aspect-[21/9] max-h-40 w-full rounded-t-[14px] object-cover object-top" />
         )}
         <CardHeader>
           <div className="flex flex-wrap items-center gap-2">
@@ -246,6 +260,51 @@ export function VideoReview({ item, playlists, canSend }: { item: QueueItem; pla
         <>
           <Card className="yt-sheet yt-rise">
             <CardHeader>
+              <CardTitle className="text-base">Send to YouTube</CardTitle>
+              <CardDescription>
+                {differsFromLive
+                  ? "Saves your edits and sends the title and description above to YouTube. Thumbnails are not changed."
+                  : "YouTube already matches the title and description."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              {openSend && (
+                <Alert variant="destructive">
+                  <CircleAlertIcon />
+                  <AlertDescription className="flex flex-col gap-2">
+                    <span>{openSend.message ?? "The last send has not been verified yet."} Further sends are blocked until it is checked.</span>
+                    <Button className="self-start" size="sm" variant="outline" disabled={busy} onClick={checkLastSend}>
+                      Check last send
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              )}
+              {item.playlistOpen && (
+                <Alert variant="destructive">
+                  <CircleAlertIcon />
+                  <AlertDescription className="flex flex-col gap-2">
+                    <span>{item.playlistOpen} Playlist additions are blocked until it is checked.</span>
+                    <Button className="self-start" size="sm" variant="outline" disabled={busy} onClick={checkPlaylists}>
+                      Check last additions
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              )}
+              {item.publish?.phase === "verified" && <p className="text-xs text-muted-foreground">Last send verified {new Date(item.publish.at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}.</p>}
+              {!canSend && <p className="text-xs text-muted-foreground">This preview shows recorded YouTube data, so sending is switched off.</p>}
+              {(descriptionDiffers || !isPublic) && (
+              <div className="flex items-center gap-2 text-sm">
+                <Checkbox id="facts-reviewed" checked={factsReviewed} onCheckedChange={(on) => setFactsReviewed(on === true)} disabled={!canSend} />
+                <Label htmlFor="facts-reviewed" className="font-normal">
+                  I checked the description&apos;s facts against the official recap
+                </Label>
+              </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="yt-sheet yt-rise">
+            <CardHeader>
               <CardTitle className="text-base">Official game</CardTitle>
               <CardDescription>
                 {saved?.matchedGame
@@ -274,6 +333,9 @@ export function VideoReview({ item, playlists, canSend }: { item: QueueItem; pla
               <Button size="sm" variant="ghost" disabled={busy || changed.length > 0} onClick={prepareAgain}>
                 Check source again
               </Button>
+              {saved?.matchKind === "missingRecap" && !saved.recap && (
+                <p className="w-full text-xs text-muted-foreground">UWBadgers has not posted a recap for this game yet. Check again once it is up, or write the description by hand below.</p>
+              )}
               {changed.length > 0 && <p className="w-full text-xs text-muted-foreground">Save or discard your edits before changing the game or source.</p>}
             </CardContent>
           </Card>
@@ -328,6 +390,11 @@ export function VideoReview({ item, playlists, canSend }: { item: QueueItem; pla
                 </div>
               )}
               {recap && <RecapPicker recap={recap} selectedIds={edits.selectedSentenceIds} onChange={(ids) => update({ selectedSentenceIds: ids })} />}
+              {description.trim() === "" && !recap && (
+                <Button className="self-start" size="sm" variant="outline" onClick={() => update({ editedDescription: DESCRIPTION_FOOTER })}>
+                  Start from the standard footer
+                </Button>
+              )}
               <Textarea
                 value={description}
                 onChange={(event) => update({ editedDescription: event.target.value })}
@@ -378,54 +445,10 @@ export function VideoReview({ item, playlists, canSend }: { item: QueueItem; pla
             </CardContent>
           </Card>
 
-          <Card className="yt-sheet yt-rise">
-            <CardHeader>
-              <CardTitle className="text-base">Send to YouTube</CardTitle>
-              <CardDescription>
-                {differsFromLive
-                  ? "Saves your edits and sends the title and description above to YouTube. Thumbnails are not changed."
-                  : "YouTube already matches the title and description."}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3">
-              {openSend && (
-                <Alert variant="destructive">
-                  <CircleAlertIcon />
-                  <AlertDescription className="flex flex-col gap-2">
-                    <span>{openSend.message ?? "The last send has not been verified yet."} Further sends are blocked until it is checked.</span>
-                    <Button className="self-start" size="sm" variant="outline" disabled={busy} onClick={checkLastSend}>
-                      Check last send
-                    </Button>
-                  </AlertDescription>
-                </Alert>
-              )}
-              {item.playlistOpen && (
-                <Alert variant="destructive">
-                  <CircleAlertIcon />
-                  <AlertDescription className="flex flex-col gap-2">
-                    <span>{item.playlistOpen} Playlist additions are blocked until it is checked.</span>
-                    <Button className="self-start" size="sm" variant="outline" disabled={busy} onClick={checkPlaylists}>
-                      Check last additions
-                    </Button>
-                  </AlertDescription>
-                </Alert>
-              )}
-              {item.publish?.phase === "verified" && <p className="text-xs text-muted-foreground">Last send verified {new Date(item.publish.at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}.</p>}
-              {!canSend && <p className="text-xs text-muted-foreground">This preview shows recorded YouTube data, so sending is switched off.</p>}
-              {descriptionDiffers && (
-              <div className="flex items-center gap-2 text-sm">
-                <Checkbox id="facts-reviewed" checked={factsReviewed} onCheckedChange={(on) => setFactsReviewed(on === true)} disabled={!canSend} />
-                <Label htmlFor="facts-reviewed" className="font-normal">
-                  I checked the description&apos;s facts against the official recap
-                </Label>
-              </div>
-              )}
-            </CardContent>
-          </Card>
 
           <div className="yt-sheet sticky bottom-3 flex flex-wrap items-center justify-between gap-2 px-4 py-3">
             <p className="text-xs text-muted-foreground">Drafts stay in the studio until you send them.</p>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button variant="ghost" disabled={busy || changed.length === 0} onClick={() => setEdits(initial)}>
                 Discard
               </Button>
@@ -435,6 +458,11 @@ export function VideoReview({ item, playlists, canSend }: { item: QueueItem; pla
               <Button variant="outline" disabled={!canAddPlaylists} onClick={addPlaylists}>
                 {plannedNew.length === 0 ? "Add to playlists" : `Add to ${plannedNew.length} ${plannedNew.length === 1 ? "playlist" : "playlists"}`}
               </Button>
+              {!isPublic && (
+                <Button variant="outline" disabled={!canMakePublic} onClick={launch} title={title !== item.live.title ? "Send the title change first" : undefined}>
+                  Make public
+                </Button>
+              )}
               <Button variant="brand" disabled={!canPress} onClick={sendToYouTube}>
                 Send to YouTube
               </Button>

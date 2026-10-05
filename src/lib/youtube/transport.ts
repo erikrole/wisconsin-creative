@@ -1,6 +1,6 @@
 // Server-only: the live YouTube transport behind the publishing coordinator.
-// Only a title and description update (`videos.update`, part=snippet) is wired.
-// Visibility changes and launches throw: this slice never sends them.
+// Wired: a title and description update (`videos.update`, part=snippet) and a
+// launch (snippet plus a verified public status). Visibility-only changes throw.
 
 import { youtubeApi } from "./google";
 import { decodeVideo, type VideoResource } from "./payload";
@@ -11,7 +11,7 @@ import { updateBody } from "./write-guard";
 
 export function createTransport(accessToken: string, fetcher: typeof fetch = fetch): YouTubeTransport {
   const refuse = () => {
-    throw new YouTubeToolError("Only title and description updates are enabled.");
+    throw new YouTubeToolError("Only title, description and launch updates are enabled.");
   };
   return {
     async read(id): Promise<LiveVideo> {
@@ -24,7 +24,9 @@ export function createTransport(accessToken: string, fetcher: typeof fetch = fet
     async update(video: VideoSnapshot, ifMatch: string) {
       await youtubeApi(accessToken, "videos", { method: "PUT", query: { part: "snippet" }, body: updateBody(video), ifMatch }, fetcher);
     },
-    publish: async () => refuse(),
+    async publish(video: VideoSnapshot, ifMatch: string) {
+      await youtubeApi(accessToken, "videos", { method: "PUT", query: { part: "snippet,status" }, body: updateBody(video, true), ifMatch }, fetcher);
+    },
     changeVisibility: async () => refuse(),
   };
 }

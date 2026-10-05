@@ -1,10 +1,11 @@
 "use client";
 
-import { RefreshCwIcon, SearchIcon } from "lucide-react";
+import { RefreshCwIcon, SearchIcon, WandSparklesIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { useConfirm } from "@/components/ConfirmDialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,13 @@ const isOpen = (item: QueueItem) => item.status !== "Published" && item.status !
 /** Every check passes and YouTube does not match yet: this upload only needs approval. */
 const isReady = (item: QueueItem) => isOpen(item) && item.checks.length > 0 && item.checks.every((check) => check.complete);
 
+/** Camera files like "20261003 A0322 Idzan bell rung 4K": raw footage, not a game upload. */
+const isRawClip = (item: QueueItem) => /^\d{6,8}[\s_-]/.test(item.live.title);
+/** A title-only fix: the suggested title differs, nothing else about the draft does, and nothing is blocking a send. */
+const isTitleFix = (item: QueueItem) =>
+  item.status !== "Protected" && item.draft != null && !item.draft.hold && !item.publish?.phase.match(/^(pending|uncertain|conflict)$/) &&
+  item.suggestedTitle !== item.live.title && item.description === item.live.description;
+
 const checkedLabel = (value: string | null) =>
   value ? `Checked ${new Date(value).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}` : "Not checked yet";
 
@@ -34,6 +42,9 @@ async function errorMessage(res: Response, fallback: string) {
 
 export function ReviewQueue({ queue, canRefresh, replay }: { queue: Queue; canRefresh: boolean; replay: boolean }) {
   const router = useRouter();
+  const confirm = useConfirm();
+  const [showRaw, setShowRaw] = useState(false);
+  const [fixing, setFixing] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [view, setView] = useState<"queue" | "ready" | "all">("queue");
   const [sport, setSport] = useState("All sports");
@@ -41,20 +52,68 @@ export function ReviewQueue({ queue, canRefresh, replay }: { queue: Queue; canRe
   const [privacy, setPrivacy] = useState("All visibility");
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const sports = useMemo(() => [...new Set(queue.items.map((item) => item.video.sport))].sort(), [queue.items]);
+  const items = useMemo(() => queue.items.filter((item) => showRaw || !isRawClip(item)), [queue.items, showRaw]);
+  const rawCount = queue.items.filter(isRawClip).length;
+  const sports = useMemo(() => [...new Set(items.map((item) => item.video.sport))].sort(), [items]);
   const visible = useMemo(() => {
     const needle = search.trim().toLowerCase();
-    return queue.items.filter(
+    return items.filter(
       (item) =>
         (view === "all" || (view === "ready" ? isReady(item) : isOpen(item))) &&
         (sport === "All sports" || item.video.sport === sport) &&
         (privacy === "All visibility" || item.live.privacyStatus === privacy) &&
         (!needle || [item.title, item.video.opponent, item.video.sport].some((text) => text.toLowerCase().includes(needle))),
     );
-  }, [queue.items, view, sport, privacy, search]);
-  const selected = visible.find((item) => item.id === selectedId) ?? null;
-  const waiting = queue.items.filter(isOpen).length;
-  const ready = queue.items.filter(isReady).length;
+  }, [items, view, sport, privacy, search]);
+  // On wide screens the review pane sits beside the list, so open the first upload instead of leaving it empty.
+  const [wide, setWide] = useState(false);
+  useEffect(() => {
+    const query = window.matchMedia("(min-width: 1024px)");
+    const sync = () => setWide(query.matches);
+    sync();
+    query.addEventListener("change", sync);
+    return () => query.removeEventListener("change", sync);
+  }, []);
+  const selected = visible.find((item) => item.id === selectedId) ?? (wide ? (visible[0] ?? null) : null);
+  const waiting = items.filter(isOpen).length;
+  const ready = items.filter(isReady).length;
+  const titleFixes = visible.filter(isTitleFix);
+
+  async function fixTitles() {
+    const first = titleFixes[0]!;
+    const proceed = await confirm({
+      title: `Fix ${titleFixes.length} ${titleFixes.length === 1 ? "title" : "titles"} on YouTube?`,
+      message: `Each title is saved and sent now, then read back from YouTube. Descriptions are not touched. For example: "${first.live.title}" becomes "${first.suggestedTitle}".`,
+      confirmLabel: "Fix titles",
+    });
+    if (!proceed) return;
+    setFixing(true);
+    let done = 0;
+    try {
+      for (const item of titleFixes) {
+        const saved = await fetch(`/api/youtube/drafts/${item.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ version: item.draft!.version, editedTitle: item.suggestedTitle }),
+        });
+        if (!saved.ok) throw new Error(await errorMessage(saved, "A draft could not be saved."));
+        const draft = (await saved.json()) as { version: number };
+        const sent = await fetch(`/api/youtube/drafts/${item.id}/publish`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ version: draft.version, factsReviewed: false }),
+        });
+        if (!sent.ok) throw new Error(`${item.suggestedTitle}: ${await errorMessage(sent, "Could not send.")}`);
+        done += 1;
+      }
+      toast.success(`${done} ${done === 1 ? "title" : "titles"} fixed on YouTube`);
+    } catch (error) {
+      toast.error(`${done} fixed, then it stopped. ${error instanceof Error ? error.message : ""}`);
+    } finally {
+      setFixing(false);
+      router.refresh();
+    }
+  }
 
   async function refresh() {
     setRefreshing(true);
@@ -79,14 +138,14 @@ export function ReviewQueue({ queue, canRefresh, replay }: { queue: Queue; canRe
         <div className="flex w-full gap-2 sm:w-auto">
           <div className="yt-stat">
             <b className="yt-mono">{waiting}</b>
-            <span>Need a look</span>
+            <span>Needs attention</span>
           </div>
           <div className="yt-stat">
-            <b className="yt-mono">{queue.items.length - waiting}</b>
-            <span>Good to go</span>
+            <b className="yt-mono">{items.length - waiting}</b>
+            <span>Up to date</span>
           </div>
           <div className="yt-stat">
-            <b className="yt-mono">{queue.items.length}</b>
+            <b className="yt-mono">{items.length}</b>
             <span>Recent uploads</span>
           </div>
         </div>
@@ -124,7 +183,7 @@ export function ReviewQueue({ queue, canRefresh, replay }: { queue: Queue; canRe
             <Tabs className="[&_[role=tablist]]:bg-card" value={view} onValueChange={(value) => setView(value as "queue" | "ready" | "all")}>
               <TabsList>
                 <TabsTrigger value="queue">Needs attention</TabsTrigger>
-                <TabsTrigger value="ready">Ready ({ready})</TabsTrigger>
+                <TabsTrigger value="ready">Ready to send ({ready})</TabsTrigger>
                 <TabsTrigger value="all">All uploads</TabsTrigger>
               </TabsList>
             </Tabs>
@@ -144,6 +203,22 @@ export function ReviewQueue({ queue, canRefresh, replay }: { queue: Queue; canRe
               <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input className="bg-card pl-9" placeholder="Search titles" value={search} onChange={(event) => setSearch(event.target.value)} aria-label="Search titles" />
             </div>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            {rawCount > 0 ? (
+              <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                <input type="checkbox" checked={showRaw} onChange={(event) => setShowRaw(event.target.checked)} />
+                Show {rawCount} raw camera {rawCount === 1 ? "clip" : "clips"}
+              </label>
+            ) : (
+              <span />
+            )}
+            {titleFixes.length > 0 && (
+              <Button size="sm" variant="outline" className="bg-card" disabled={!canRefresh || replay || fixing} onClick={fixTitles}>
+                {fixing ? <Spinner /> : <WandSparklesIcon />}
+                {fixing ? "Fixing titles…" : `Fix ${titleFixes.length} ${titleFixes.length === 1 ? "title" : "titles"} on YouTube`}
+              </Button>
+            )}
           </div>
 
           <div className="grid gap-4 lg:grid-cols-[minmax(0,23rem)_minmax(0,1fr)]">

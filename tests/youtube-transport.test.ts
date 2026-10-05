@@ -19,10 +19,14 @@ describe("YouTube transport", () => {
     expect(JSON.parse(init.body as string)).toEqual({ id: "hl", snippet: { title: "New title", description: "New description", categoryId: "17" } });
   });
 
-  it("refuses launches and visibility changes", async () => {
-    const transport = createTransport("token", vi.fn() as unknown as typeof fetch);
-    await expect(transport.publish(snapshot, "e")).rejects.toThrow(/Only title and description/);
-    await expect(transport.changeVisibility(snapshot, "e")).rejects.toThrow(/Only title and description/);
+  it("launches with snippet and a public status, and refuses visibility-only changes", async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response("{}", { status: 200 }));
+    const transport = createTransport("token", fetcher as unknown as typeof fetch);
+    await transport.publish(snapshot, "e");
+    const [url, init] = fetcher.mock.calls[0] as [URL, RequestInit];
+    expect(url.searchParams.get("part")).toBe("snippet,status");
+    expect(JSON.parse(init.body as string).status.privacyStatus).toBe("public");
+    await expect(transport.changeVisibility(snapshot, "e")).rejects.toThrow(/Only title, description and launch/);
   });
 
   it("reads with the same parts as the library import", async () => {

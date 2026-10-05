@@ -14,6 +14,10 @@
       "schedule": "0 3 * * 0"
     },
     {
+      "path": "/api/cron/youtube-sweep",
+      "schedule": "0 11 * * *"
+    },
+    {
       "path": "/api/cron/rehost-images",
       "schedule": "0 4 * * *"
     }

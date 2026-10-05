@@ -136,7 +136,8 @@ export interface RefreshSummary {
 }
 
 /** Reads the channel and official sources, then stores the library, playlists and prepared drafts. */
-export async function refreshLibrary(user: AuthUser): Promise<RefreshSummary> {
+/** `user` is null for the scheduled sweep, which has no signed-in admin and leaves no audit entry. */
+export async function refreshLibrary(user: AuthUser | null): Promise<RefreshSummary> {
   const started = Date.now();
   const reader = await openReader();
   const now = reader.now();
@@ -194,7 +195,7 @@ export async function refreshLibrary(user: AuthUser): Promise<RefreshSummary> {
     }
     const current = existing.get(video.id) ?? null;
     const draft = await prepareDraft(video, current, sources, now);
-    if (await storePrepared(draft, current?.version ?? null, user.id)) {
+    if (await storePrepared(draft, current?.version ?? null, user?.id ?? null)) {
       if (draft.hold) held += 1;
       else prepared += 1;
     }
@@ -226,14 +227,16 @@ export async function refreshLibrary(user: AuthUser): Promise<RefreshSummary> {
   await db.youTubeLibraryState.upsert({ where: { channelId: BADGERS_CHANNEL_ID }, create: { channelId: BADGERS_CHANNEL_ID, ...stateData }, update: stateData });
 
   const summary: RefreshSummary = { videos: library.videos.length, prepared, held, skipped, reachedLimit: library.reachedLimit, playlistFailure, replay: reader.replay };
-  await createAuditEntry({
-    actorId: user.id,
-    actorRole: actorRole(user),
-    entityType: "YouTubeLibrary",
-    entityId: BADGERS_CHANNEL_ID,
-    action: "REFRESH",
-    after: { ...summary },
-  });
+  if (user) {
+    await createAuditEntry({
+      actorId: user.id,
+      actorRole: actorRole(user),
+      entityType: "YouTubeLibrary",
+      entityId: BADGERS_CHANNEL_ID,
+      action: "REFRESH",
+      after: { ...summary },
+    });
+  }
   return summary;
 }
 

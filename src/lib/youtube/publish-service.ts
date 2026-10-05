@@ -20,7 +20,8 @@ import { actorRole, conflict, editableVideo } from "./queue";
 import { draftDescription, draftTitle } from "./review";
 import { createPlaylistTransport, createTransport } from "./transport";
 import { YouTubeToolError, type YouTubePlaylist } from "./types";
-import { prepareMetadata } from "./write-guard";
+import { prepareDescription, prepareMetadata } from "./write-guard";
+import { titleProblems } from "./rules";
 
 const sha256 = (text: string) => createHash("sha256").update(text, "utf8").digest("hex");
 
@@ -104,6 +105,47 @@ export async function checkLastSend(user: AuthUser, videoId: string): Promise<Pu
     entityId: videoId,
     action: "CHECK_PUBLISH",
     after: { recordId: record.id, phase: record.phase },
+  });
+  return record;
+}
+
+/** Makes an unlisted or private video public, with the reviewed description. The title must already match YouTube. */
+export async function makePublic(user: AuthUser, videoId: string, version: number, factsReviewed: boolean): Promise<PublishRecord> {
+  const { item, draft, video } = await editableVideo(videoId);
+  if (draft.version !== version) throw conflict();
+  if (draft.hold) throw new HttpError(409, draft.hold);
+  const live = item.live;
+  if (live.snapshot.isPublic) throw new HttpError(409, "This video is already public.");
+  const title = draftTitle(video, draft);
+  if (title !== live.snapshot.title || titleProblems(title).length) throw new HttpError(409, "Send the title change first, then make the video public.");
+  if (!factsReviewed) throw new HttpError(409, "Check the description's facts against the official recap before making the video public.");
+  const description = draftDescription(draft, live.snapshot);
+
+  const coordinator = await coordinatorFor(user, videoId);
+  let record: PublishRecord;
+  try {
+    const expected = prepareDescription({ baseline: live.snapshot, live: live.snapshot, review: { text: description, approvedText: description, reviewedFacts: true }, makePublic: true });
+    record = await coordinator.send(
+      createPreview({
+        operation: "launch",
+        before: live,
+        expected,
+        sourceUrl: draft.recap?.url ?? `https://www.youtube.com/watch?v=${videoId}`,
+        sourceSha256: draft.recap?.sha256 ?? sha256(description),
+      }),
+    );
+  } catch (error) {
+    return failure(error);
+  }
+  await adoptVerified(record);
+  await createAuditEntry({
+    actorId: user.id,
+    actorRole: actorRole(user),
+    entityType: "YouTubeVideo",
+    entityId: videoId,
+    action: "MAKE_PUBLIC",
+    before: { privacy: live.snapshot.status?.privacyStatus ?? null },
+    after: { privacy: "public", descriptionLength: description.length, recordId: record.id, phase: record.phase },
   });
   return record;
 }
