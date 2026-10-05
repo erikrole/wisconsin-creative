@@ -70,11 +70,11 @@ export function ConnectionCard({ status, result }: { status: ConnectionStatus; r
         {status.configured && (
           <div className="flex flex-wrap gap-2">
             {/* A plain link: the start route redirects the browser to Google. */}
-            <Button asChild size="sm" variant={status.connected ? "outline" : "brand"}>
+            <Button asChild variant={status.connected ? "outline" : "brand"}>
               <a href="/api/youtube/oauth/start">{status.connected ? "Reconnect" : "Connect YouTube"}</a>
             </Button>
             {(status.connected || status.needsReconnect) && (
-              <Button size="sm" variant="ghost" onClick={handleDisconnect} disabled={busy}>
+              <Button variant="ghost" onClick={handleDisconnect} disabled={busy}>
                 Disconnect
               </Button>
             )}

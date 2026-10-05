@@ -273,7 +273,7 @@ export function VideoReview({ item, playlists, canSend }: { item: QueueItem; pla
                   <CircleAlertIcon />
                   <AlertDescription className="flex flex-col gap-2">
                     <span>{openSend.message ?? "The last send has not been verified yet."} Further sends are blocked until it is checked.</span>
-                    <Button className="self-start" size="sm" variant="outline" disabled={busy} onClick={checkLastSend}>
+                    <Button className="self-start" variant="outline" disabled={busy} onClick={checkLastSend}>
                       Check last send
                     </Button>
                   </AlertDescription>
@@ -284,7 +284,7 @@ export function VideoReview({ item, playlists, canSend }: { item: QueueItem; pla
                   <CircleAlertIcon />
                   <AlertDescription className="flex flex-col gap-2">
                     <span>{item.playlistOpen} Playlist additions are blocked until it is checked.</span>
-                    <Button className="self-start" size="sm" variant="outline" disabled={busy} onClick={checkPlaylists}>
+                    <Button className="self-start" variant="outline" disabled={busy} onClick={checkPlaylists}>
                       Check last additions
                     </Button>
                   </AlertDescription>
@@ -326,11 +326,11 @@ export function VideoReview({ item, playlists, canSend }: { item: QueueItem; pla
             </CardHeader>
             <CardContent className="flex flex-wrap gap-2">
               {(saved?.gameChoices ?? []).map((game) => (
-                <Button key={game.id} size="sm" variant={saved?.matchedGame?.id === game.id ? "secondary" : "outline"} disabled={busy || changed.length > 0} onClick={() => chooseGame(game)}>
+                <Button key={game.id} variant={saved?.matchedGame?.id === game.id ? "secondary" : "outline"} disabled={busy || changed.length > 0} onClick={() => chooseGame(game)}>
                   {gameLabel(game)}
                 </Button>
               ))}
-              <Button size="sm" variant="ghost" disabled={busy || changed.length > 0} onClick={prepareAgain}>
+              <Button variant="ghost" disabled={busy || changed.length > 0} onClick={prepareAgain}>
                 Check source again
               </Button>
               {saved?.matchKind === "missingRecap" && !saved.recap && (
@@ -354,7 +354,7 @@ export function VideoReview({ item, playlists, canSend }: { item: QueueItem; pla
               </div>
               <Diff before={item.live.title} after={title === item.live.title ? suggestion : title} />
               {suggestion !== title && (
-                <Button className="self-start" size="sm" variant="outline" onClick={() => setTitle(suggestion)}>
+                <Button className="self-start" variant="outline" onClick={() => setTitle(suggestion)}>
                   Use suggested title
                 </Button>
               )}
@@ -391,7 +391,7 @@ export function VideoReview({ item, playlists, canSend }: { item: QueueItem; pla
               )}
               {recap && <RecapPicker recap={recap} selectedIds={edits.selectedSentenceIds} onChange={(ids) => update({ selectedSentenceIds: ids })} />}
               {description.trim() === "" && !recap && (
-                <Button className="self-start" size="sm" variant="outline" onClick={() => update({ editedDescription: DESCRIPTION_FOOTER })}>
+                <Button className="self-start" variant="outline" onClick={() => update({ editedDescription: DESCRIPTION_FOOTER })}>
                   Start from the standard footer
                 </Button>
               )}
@@ -410,7 +410,7 @@ export function VideoReview({ item, playlists, canSend }: { item: QueueItem; pla
               </div>
               <Diff before={item.live.description} after={description} />
               {recap && edits.editedDescription != null && (
-                <Button className="self-start" size="sm" variant="outline" onClick={() => update({ editedDescription: null })}>
+                <Button className="self-start" variant="outline" onClick={() => update({ editedDescription: null })}>
                   Use selected excerpt
                 </Button>
               )}

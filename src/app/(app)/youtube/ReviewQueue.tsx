@@ -214,7 +214,7 @@ export function ReviewQueue({ queue, canRefresh, replay }: { queue: Queue; canRe
               <span />
             )}
             {titleFixes.length > 0 && (
-              <Button size="sm" variant="outline" className="bg-card" disabled={!canRefresh || replay || fixing} onClick={fixTitles}>
+              <Button variant="outline" className="bg-card" disabled={!canRefresh || replay || fixing} onClick={fixTitles}>
                 {fixing ? <Spinner /> : <WandSparklesIcon />}
                 {fixing ? "Fixing titles…" : `Fix ${titleFixes.length} ${titleFixes.length === 1 ? "title" : "titles"} on YouTube`}
               </Button>

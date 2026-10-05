@@ -29,10 +29,10 @@ export function RecapPicker({ recap, selectedIds, onChange }: { recap: RecapDocu
           </span>
         </p>
         <div className="flex gap-1">
-          <Button size="sm" variant="ghost" disabled={isSuggested} onClick={() => onChange(suggested)}>
+          <Button variant="ghost" disabled={isSuggested} onClick={() => onChange(suggested)}>
             Suggested lead
           </Button>
-          <Button size="sm" variant="ghost" disabled={selectedIds.length === 0} onClick={() => onChange([])}>
+          <Button variant="ghost" disabled={selectedIds.length === 0} onClick={() => onChange([])}>
             Clear
           </Button>
         </div>
