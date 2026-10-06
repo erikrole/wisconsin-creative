@@ -9,7 +9,7 @@
 
 - Owner area: Reservations and Checkouts shared booking detail
 - Ledger: this plan
-- Existing references: `tasks/booking-rename-transfer-fix-plan.md` and `tests/booking-detail-mutation-freshness.test.ts`
+- Existing references: `tasks/archive/completed-2026-10-06/booking-rename-transfer-fix-plan.md` and `tests/booking-detail-mutation-freshness.test.ts`
 
 ## Source Checks
 

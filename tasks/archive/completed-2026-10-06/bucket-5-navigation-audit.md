@@ -1,5 +1,7 @@
 # Bucket 5 — Navigation Audit
 
+> **Closed 2026-10-06** in the open-task audit: remaining boxes are stale (work shipped in source or superseded). Evidence is in the audit report; nothing here is open.
+
 **Components:** `tabs`, `breadcrumb`, `pagination`, `command`
 **Date:** 2026-05-01
 

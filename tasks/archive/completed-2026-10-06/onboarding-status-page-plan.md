@@ -1,5 +1,7 @@
 # Onboarding Status Page Plan - 2026-06-03
 
+> **Closed 2026-10-06** in the open-task audit: remaining boxes are stale (work shipped in source or superseded). Evidence is in the audit report; nothing here is open.
+
 ## Goal
 - Give staff/admin one place to review onboarding state after bulk or one-off onboarding: pending invites, stale pending invites, claimed invites, and who created or claimed each row.
 
