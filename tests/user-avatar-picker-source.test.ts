@@ -20,4 +20,10 @@ describe("assignment picker", () => {
       expect(readFileSync(file, "utf8")).toContain("userSearch.trim()");
     }
   });
+
+  it("tells iOS users when ranking is unavailable", () => {
+    const sheet = readFileSync("ios/Wisconsin/Views/Schedule/AssignStudentSheet.swift", "utf8");
+    expect(sheet).toContain("scoresUnavailable");
+    expect(sheet).toContain("Ranking unavailable");
+  });
 });
