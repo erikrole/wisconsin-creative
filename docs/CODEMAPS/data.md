@@ -116,6 +116,8 @@
 | `YouTubeLibraryVideo` | 5 | 2 |
 | `YouTubeReviewDraft` | 20 | 1 |
 | `YouTubeLibraryState` | 8 | 1 |
+| `YouTubePublishRecord` | 15 | 2 |
+| `YouTubePlaylistAddition` | 11 | 2 |
 
 ## Enums
 

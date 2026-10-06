@@ -29,7 +29,7 @@
 | `src/lib/services/bulk-unit-scans.ts` | 718 |
 | `src/lib/services/calendar-sync-health.ts` | 165 |
 | `src/lib/services/calendar-sync.ts` | 754 |
-| `src/lib/services/candidate-scoring.ts` | 437 |
+| `src/lib/services/candidate-scoring.ts` | 507 |
 | `src/lib/services/category-mutations.ts` | 168 |
 | `src/lib/services/checkin-item-reports.ts` | 599 |
 | `src/lib/services/checkout-consolidation.ts` | 596 |
@@ -481,6 +481,7 @@
 - `/api/cron/morning-refresh`
 - `/api/cron/notifications`
 - `/api/cron/rehost-images`
+- `/api/cron/youtube-sweep`
 
 ### `/api/dashboard`
 
@@ -841,8 +842,13 @@
 ### `/api/youtube`
 
 - `/api/youtube/connection`
+- `/api/youtube/drafts/[videoId]/check-playlists`
+- `/api/youtube/drafts/[videoId]/check-send`
 - `/api/youtube/drafts/[videoId]/game`
+- `/api/youtube/drafts/[videoId]/make-public`
+- `/api/youtube/drafts/[videoId]/playlists`
 - `/api/youtube/drafts/[videoId]/prepare`
+- `/api/youtube/drafts/[videoId]/publish`
 - `/api/youtube/drafts/[videoId]`
 - `/api/youtube/library/refresh`
 - `/api/youtube/oauth/callback`
