@@ -110,8 +110,13 @@ export function UserAvatarPicker({
     if (!candidateScores) {
       return [{ key: "all", label: null, users: [...filteredUsers].sort((a, b) => a.name.localeCompare(b.name)) }];
     }
+    // Scores arrive best-first from the server (unclamped, unavailable last),
+    // so server order breaks ties between equal displayed scores.
+    const serverRank = new Map(Object.keys(candidateScores).map((id, index) => [id, index]));
     const rankedUsers = [...filteredUsers].sort((a, b) =>
-      (candidateScores[b.id]?.score ?? -1) - (candidateScores[a.id]?.score ?? -1)
+      Number(candidateScores[a.id]?.blockingConflict ?? false) - Number(candidateScores[b.id]?.blockingConflict ?? false)
+      || (candidateScores[b.id]?.score ?? -1) - (candidateScores[a.id]?.score ?? -1)
+      || (serverRank.get(a.id) ?? Infinity) - (serverRank.get(b.id) ?? Infinity)
       || a.name.localeCompare(b.name),
     );
     const groups: Array<{ key: string; label: string | null; users: PickerUser[] }> = SCORE_BUCKET_ORDER.map((bucket) => ({

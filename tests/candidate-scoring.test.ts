@@ -223,4 +223,53 @@ describe("scoreCandidatesForShift", () => {
     expect(score?.workload.weekHours).toBe(12);
     expect(score?.warnings.map((warning) => warning.code)).toContain("workload_overloaded");
   });
+
+  it("always ranks unavailable candidates last, even with a stronger raw fit", () => {
+    const scores = scoreCandidatesForShift({
+      shift,
+      candidates: [
+        candidate({
+          id: "busy-but-fit",
+          assignments: [
+            assignment("overlap", "2026-10-06T18:00:00.000Z", "2026-10-06T21:00:00.000Z"),
+            assignment("prior", "2026-09-20T18:00:00.000Z", "2026-09-20T21:00:00.000Z"),
+          ],
+        }),
+        candidate({ id: "free-weak", primaryArea: "PHOTO", areaAssignments: [], sportAssignments: [] }),
+      ],
+      now: new Date("2026-10-01T12:00:00.000Z"),
+    });
+    expect(scores.map((score) => score.userId)).toEqual(["free-weak", "busy-but-fit"]);
+    expect(scores[1]?.blockingConflict).toBe(true);
+  });
+
+  it("warns on short turnarounds and credits experience with the sport", () => {
+    const [score] = scoreCandidatesForShift({
+      shift,
+      candidates: [candidate({
+        id: "tired",
+        assignments: [
+          assignment("late", "2026-10-06T04:00:00.000Z", "2026-10-06T10:00:00.000Z"),
+          assignment("p1", "2026-09-01T18:00:00.000Z", "2026-09-01T21:00:00.000Z"),
+          assignment("p2", "2026-09-08T18:00:00.000Z", "2026-09-08T21:00:00.000Z"),
+          assignment("p3", "2026-09-15T18:00:00.000Z", "2026-09-15T21:00:00.000Z"),
+        ],
+      })],
+      now: new Date("2026-10-01T12:00:00.000Z"),
+    });
+    expect(score?.warnings.some((warning) => warning.code === "short_turnaround")).toBe(true);
+    expect(score?.reasons.some((reason) => reason.code === "prior_sport_assignment" && reason.label.includes("Experienced"))).toBe(true);
+  });
+
+  it("prefers lighter-loaded peers when fit is otherwise equal", () => {
+    const heavy = ["h1", "h2", "h3"].map((id, index) =>
+      assignment(id, `2026-10-0${index + 1}T18:00:00.000Z`, `2026-10-0${index + 1}T22:00:00.000Z`),
+    );
+    const scores = scoreCandidatesForShift({
+      shift,
+      candidates: [candidate({ id: "a-heavy", assignments: heavy }), candidate({ id: "b-light" }), candidate({ id: "c-light" })],
+      now: new Date("2026-10-01T12:00:00.000Z"),
+    });
+    expect(scores[scores.length - 1]?.userId).toBe("a-heavy");
+  });
 });
