@@ -87,7 +87,9 @@ export function UserAvatarPicker({
     [conflictFilter, conflictMap, users],
   );
   const groupedUsers = useMemo(() => {
-    if (!candidateScores) return [{ key: "all", label: null, users: filteredUsers }];
+    if (!candidateScores) {
+      return [{ key: "all", label: null, users: [...filteredUsers].sort((a, b) => a.name.localeCompare(b.name)) }];
+    }
     const rankedUsers = [...filteredUsers].sort((a, b) =>
       (candidateScores[b.id]?.score ?? -1) - (candidateScores[a.id]?.score ?? -1)
       || a.name.localeCompare(b.name),
@@ -110,12 +112,13 @@ export function UserAvatarPicker({
           type="text"
           className="h-10 text-sm"
           placeholder="Search by name"
+          aria-label="Search people by name"
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
           autoFocus
         />
-        <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">
-          {filteredUsers.length} available
+        <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground" aria-live="polite">
+          {filteredUsers.length} {filteredUsers.length === 1 ? "person" : "people"}
         </span>
       </div>
       {canFilterConflicts && (
@@ -142,9 +145,7 @@ export function UserAvatarPicker({
         </div>
       )}
       {loading ? (
-        <p className="text-xs text-muted-foreground p-2">Loading users...</p>
-      ) : scoresLoading && !candidateScores ? (
-        <p className="text-xs text-muted-foreground p-2">Ranking candidates...</p>
+        <p role="status" className="text-xs text-muted-foreground p-2">Loading users...</p>
       ) : loadError ? (
         <Alert variant="destructive" className="p-3">
           <AlertDescription className="flex flex-col gap-2 text-xs">
@@ -160,9 +161,11 @@ export function UserAvatarPicker({
             )}
           </AlertDescription>
         </Alert>
+      ) : scoresLoading && !candidateScores ? (
+        <p role="status" className="text-xs text-muted-foreground p-2">Ranking candidates...</p>
       ) : filteredUsers.length === 0 ? (
         <p className="text-xs text-muted-foreground p-2">
-          {search
+          {search.trim()
             ? "No matching users."
             : conflictFilter === "conflicts"
               ? "No conflicted candidates for this slot."
@@ -199,11 +202,17 @@ export function UserAvatarPicker({
                       onClick={() => onSelect(u.id)}
                       disabled={disabled}
                       title={topReason ?? roleSlotNote ?? conflict ?? undefined}
+                      aria-label={[
+                        u.name,
+                        candidateWorkerLabel,
+                        conflict ? `conflict: ${conflict}` : null,
+                        score ? `${SCORE_BUCKET_LABELS[score.bucket]}, score ${score.score}` : null,
+                      ].filter(Boolean).join(", ")}
                     >
                       <div className="relative shrink-0">
                         <UserAvatar name={u.name} avatarUrl={u.avatarUrl} size="sm" />
                         {conflict && (
-                          <span className="absolute -top-0.5 -right-0.5 size-2.5 rounded-full border border-background bg-[var(--orange)]" />
+                          <span aria-hidden="true" className="absolute -top-0.5 -right-0.5 size-2.5 rounded-full border border-background bg-[var(--orange)]" />
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
@@ -212,6 +221,11 @@ export function UserAvatarPicker({
                           {candidateWorkerLabel}
                           {u.primaryArea ? ` · ${AREA_LABELS[u.primaryArea] ?? u.primaryArea}` : ""}
                         </div>
+                        {(conflict ?? topReason ?? roleSlotNote) && (
+                          <div className={cn("truncate text-[11px]", conflict ? "text-[var(--orange-text)]" : "text-muted-foreground")}>
+                            {conflict ?? topReason ?? roleSlotNote}
+                          </div>
+                        )}
                       </div>
                       <div className="ml-auto flex shrink-0 items-center gap-1">
                         {conflict && (

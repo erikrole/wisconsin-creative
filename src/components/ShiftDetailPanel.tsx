@@ -245,8 +245,8 @@ export default function ShiftDetailPanel({
         .map((a) => a.user.id)
     );
     let users = allUsers.filter((u) => !assignedIds.has(u.id));
-    if (userSearch) {
-      const q = userSearch.toLowerCase();
+    if (userSearch.trim()) {
+      const q = userSearch.trim().toLowerCase();
       users = users.filter((u) => u.name.toLowerCase().includes(q));
     }
     return users;
