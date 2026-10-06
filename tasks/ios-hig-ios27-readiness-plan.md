@@ -1,6 +1,6 @@
 # iOS HIG and iOS 27 Readiness Plan
 
-**Status:** Active, slices 1-19 and R1-R13, R15-R18 shipped locally; R14 (password-only sign-in, no second factor), R19, R20 open
+**Status:** Active, slices 1-19 and R1-R18 shipped locally (R14 keeps an accepted D-043 exception); R19 (re-run gap inventory, needs working npm install) and R20 (device proof) open
 **Created:** 2026-06-05
 **Scope:** `ios/Wisconsin`
 **Goal:** Refresh the native iOS app against current Apple Human Interface Guidelines, improve the highest-impact UI/UX gaps now, and keep the code ready for WWDC26/iOS 27 changes starting June 8, 2026.
@@ -49,7 +49,7 @@
 - [x] R11: Separate kiosk HID scanner capture from ordinary text editing; restore Paste, drag/drop, Scribble, camera cancellation, status visibility, and full-screen recovery. Source findings closed in `tasks/audit-hig-ios.md` (checked 2026-08-29); runtime proof stays under R20.
 - [x] R12: Make loading, refresh, transient feedback, VoiceOver announcements, reduced motion, haptics, and recovery states truthful and accessible. Source findings closed in `tasks/audit-hig-ios.md` (checked 2026-08-29); runtime proof stays under R20.
 - [x] R13: Move frequent crew and sharing actions into visible surfaces; correct menu, picker, selection, destructive-role, ellipsis, and command semantics. Source findings closed in `tasks/audit-hig-ios.md` (checked 2026-08-29); runtime proof stays under R20.
-- [ ] R14: Make onboarding, sign-in, registration validation, passkey/authentication messaging, permission copy, account security, and notification interruption policy accurate.
+- [x] R14: Make onboarding, sign-in, registration validation, passkey/authentication messaging, permission copy, account security, and notification interruption policy accurate. Source findings closed; the one open finding (no second factor) is an accepted exception under D-043 until a separate factor/recovery decision is made.
 - [x] R15: Correct profile/photo crop encoding, thumbnail failure recovery, image-view context/zoom, raster color profiles, status-bar appearance, and image-button behavior. Source findings closed in `tasks/audit-hig-ios.md` (checked 2026-08-29); runtime proof stays under R20.
 - [x] R16: Replace unavailable SF Symbols and audit dynamic symbol availability; repair adaptive color, contrast, Dark Mode, accent-token, branding, writing, and action-label issues. Source findings closed in `tasks/audit-hig-ios.md` (checked 2026-08-29); runtime proof stays under R20.
 - [x] R17: Correct chart selection duplication, calendar venue/noncolor semantics, RTL readiness, static-text selection, and equivalent-layout consistency. Source findings closed in `tasks/audit-hig-ios.md` (checked 2026-08-29); runtime proof stays under R20.
