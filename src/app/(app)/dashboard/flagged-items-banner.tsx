@@ -1,8 +1,21 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { AlertTriangleIcon, ImageIcon, WrenchIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { handleAuthRedirect, parseErrorMessage } from "@/lib/errors";
 import type { FlaggedItem } from "../dashboard-types";
 
 type Props = {
@@ -15,7 +28,11 @@ const TYPE_CONFIG = {
   MAINTENANCE: { label: "Maintenance", variant: "orange" as const },
 };
 
+const ROW_CLASS =
+  "flex min-h-10 w-full items-center gap-2.5 border-b border-[var(--orange)]/10 px-4 py-2.5 text-left text-inherit no-underline transition-colors last:border-b-0 hover:bg-[var(--orange)]/[0.07] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ring/50";
+
 export function FlaggedItemsBanner({ items }: Props) {
+  const [reviewing, setReviewing] = useState<FlaggedItem | null>(null);
   if (items.length === 0) return null;
 
   const onlyMaintenance = items.every((i) => i.type === "MAINTENANCE");
@@ -60,49 +77,130 @@ export function FlaggedItemsBanner({ items }: Props) {
       <div className="flex flex-col">
         {items.slice(0, 5).map((item) => {
           const cfg = TYPE_CONFIG[item.type];
-          return (
-            <Link
-              key={item.id}
-              href={`/items/${item.assetId}`}
-              className="flex min-h-10 items-center gap-2.5 border-b border-[var(--orange)]/10 px-4 py-2.5 text-inherit no-underline transition-colors last:border-b-0 hover:bg-[var(--orange)]/[0.07] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ring/50"
-            >
-              {item.type === "MAINTENANCE" ? (
-                <WrenchIcon className="size-3.5 text-muted-foreground/50 shrink-0" />
-              ) : (
-                <AlertTriangleIcon className="size-3.5 text-[var(--orange-text)]/70 shrink-0" />
-              )}
-              <span
-                className="text-[13px] font-semibold truncate min-w-0"
-                style={{ fontFamily: "var(--font-heading)", fontWeight: 600 }}
-              >
-                {item.assetTag}
-                {item.assetName && (
-                  <span className="font-normal text-muted-foreground ml-1.5">
-                    {item.assetName}
+          const content = (
+            <>
+                {item.type === "MAINTENANCE" ? (
+                  <WrenchIcon className="size-3.5 text-muted-foreground/50 shrink-0" />
+                ) : (
+                  <AlertTriangleIcon className="size-3.5 text-[var(--orange-text)]/70 shrink-0" />
+                )}
+                <span
+                  className="text-[13px] font-semibold truncate min-w-0"
+                  style={{ fontFamily: "var(--font-heading)", fontWeight: 600 }}
+                >
+                  {item.assetTag}
+                  {item.assetName && (
+                    <span className="font-normal text-muted-foreground ml-1.5">
+                      {item.assetName}
+                    </span>
+                  )}
+                </span>
+                <Badge variant={cfg.variant} size="sm" className="shrink-0">
+                  {cfg.label}
+                </Badge>
+                {item.imageUrl && (
+                  <Badge variant="secondary" size="sm" className="shrink-0 gap-1">
+                    <ImageIcon className="size-3" />
+                    Photo
+                  </Badge>
+                )}
+                {item.bookingTitle && (
+                  <span
+                    className="text-[10.5px] text-muted-foreground/50 truncate ml-auto hidden sm:inline"
+                    style={{ fontFamily: "var(--font-mono)" }}
+                  >
+                    {item.bookingTitle}
                   </span>
                 )}
-              </span>
-              <Badge variant={cfg.variant} size="sm" className="shrink-0">
-                {cfg.label}
-              </Badge>
-              {item.imageUrl && (
-                <Badge variant="secondary" size="sm" className="shrink-0 gap-1">
-                  <ImageIcon className="size-3" />
-                  Photo
-                </Badge>
-              )}
-              {item.bookingTitle && (
-                <span
-                  className="text-[10.5px] text-muted-foreground/50 truncate ml-auto hidden sm:inline"
-                  style={{ fontFamily: "var(--font-mono)" }}
-                >
-                  {item.bookingTitle}
-                </span>
-              )}
+            </>
+          );
+          return item.type === "MAINTENANCE" ? (
+            <Link key={item.id} href={`/items/${item.assetId}`} className={ROW_CLASS}>
+              {content}
             </Link>
+          ) : (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setReviewing(item)}
+              className={ROW_CLASS}
+              aria-label={`Review ${cfg.label.toLowerCase()} report for ${item.assetTag}`}
+            >
+              {content}
+            </button>
           );
         })}
       </div>
+
+      <FlaggedReportDialog item={reviewing} onClose={() => setReviewing(null)} />
     </div>
+  );
+}
+
+function FlaggedReportDialog({ item, onClose }: { item: FlaggedItem | null; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const [busy, setBusy] = useState(false);
+  const inMaintenance = item?.assetStatus === "MAINTENANCE";
+
+  async function toggleMaintenance() {
+    if (!item || busy) return;
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/assets/${item.assetId}/maintenance`, { method: "POST" });
+      if (handleAuthRedirect(res)) return;
+      if (!res.ok) {
+        toast.error(await parseErrorMessage(res, "Couldn't update maintenance"));
+        return;
+      }
+      toast.success(inMaintenance ? "Maintenance cleared" : "Flagged for maintenance");
+      await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      onClose();
+    } catch {
+      toast.error("Couldn't update maintenance");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open={item !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-md">
+        {item && (
+          <>
+            <DialogHeader>
+              <DialogTitle>
+                {item.type === "LOST" ? "Lost" : "Damage"} report: {item.assetTag}
+              </DialogTitle>
+              <DialogDescription>
+                {[item.assetName, item.bookingTitle, item.reportedBy && `Reported by ${item.reportedBy}`]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </DialogDescription>
+            </DialogHeader>
+            {item.imageUrl ? (
+              <a href={item.imageUrl} target="_blank" rel="noopener noreferrer">
+                {/* eslint-disable-next-line @next/next/no-img-element -- report photos are arbitrary blob URLs */}
+                <img
+                  src={item.imageUrl}
+                  alt={`Photo of reported ${item.type === "LOST" ? "loss" : "damage"} on ${item.assetTag}`}
+                  className="max-h-80 w-full rounded-md border object-contain"
+                />
+              </a>
+            ) : (
+              <p className="text-sm text-muted-foreground">No photo was attached to this report.</p>
+            )}
+            {item.description && <p className="whitespace-pre-wrap text-sm">{item.description}</p>}
+            <DialogFooter>
+              <Button variant="outline" asChild>
+                <Link href={`/items/${item.assetId}`}>Open item</Link>
+              </Button>
+              <Button onClick={toggleMaintenance} disabled={busy}>
+                {inMaintenance ? "Clear maintenance" : "Needs maintenance"}
+              </Button>
+            </DialogFooter>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
