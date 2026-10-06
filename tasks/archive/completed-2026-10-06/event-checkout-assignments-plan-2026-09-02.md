@@ -1,5 +1,7 @@
 # Event Checkout Assignments Plan - 2026-09-02 (Superseded)
 
+> **Closed 2026-10-06** in the open-task audit: remaining boxes are stale (work shipped in source or superseded). Evidence is in the audit report; nothing here is open.
+
 > Superseded on 2026-09-03 by `shared-travel-case-checkout-plan-2026-09-03.md`. The accepted workflow uses one custodian-neutral shared checkout for the travel case and separate personal checkouts for gear carried by individuals; it does not use per-item assignees.
 
 ## Goal

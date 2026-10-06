@@ -13,7 +13,7 @@
 - Owner area: Reservations and checkout lifecycle integrity
 - Ledger: this plan
 - Existing plan/archive references:
-  - `tasks/booking-rename-transfer-fix-plan.md`
+  - `tasks/archive/completed-2026-10-06/booking-rename-transfer-fix-plan.md`
   - `tasks/reservation-auto-schedule-plan.md`
   - `tasks/archive/completed-2026-07/pending-pickup-reservation-consolidation-plan.md`
   - `tasks/archive/bookings-hardening-plan.md`

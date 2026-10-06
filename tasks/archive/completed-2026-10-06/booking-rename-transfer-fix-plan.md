@@ -1,5 +1,7 @@
 # Booking Rename and Ownership Transfer Fix - 2026-08-04
 
+> **Closed 2026-10-06** in the open-task audit: remaining boxes are stale (work shipped in source or superseded). Evidence is in the audit report; nothing here is open.
+
 ## Goal
 
 - Booking detail rename and ownership transfer should not show an error when a

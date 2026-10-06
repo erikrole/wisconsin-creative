@@ -1,5 +1,7 @@
 # Preview schema baseline — 2026-09-11
 
+> **Closed 2026-10-06** in the open-task audit: remaining boxes are stale (work shipped in source or superseded). Evidence is in the audit report; nothing here is open.
+
 Owner: this task. Scope: explicitly approved Preview-only baseline and migrations
 0144–0146. Production, deployment, guide publication, and storage writes excluded.
 

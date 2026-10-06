@@ -2,7 +2,7 @@
 
 ## Goal
 - Treat one requester's ordinary event-linked reservation as one living personal gear plan across web, native iOS, Schedule/Event entry points, kiosk pickup, notifications, history, and staff cleanup.
-- Keep ownerless event custody out of requester-based consolidation; shared travel loads and per-item people assignments are owned by `tasks/event-checkout-assignments-plan-2026-09-02.md`.
+- Keep ownerless event custody out of requester-based consolidation; shared travel loads and per-item people assignments are owned by `tasks/archive/completed-2026-10-06/event-checkout-assignments-plan-2026-09-02.md`.
 - Consolidate exact duplicate reservation intent automatically and provide an audited repair path for existing duplicates such as Emma Hanson's two reservations.
 - Reduce repeat entry, dead-end conflict errors, and event-day scanning friction without moving physical custody outside the kiosk.
 

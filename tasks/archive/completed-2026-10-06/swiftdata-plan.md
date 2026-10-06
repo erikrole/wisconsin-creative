@@ -1,5 +1,7 @@
 # SwiftData Caching Layer — Implementation Plan
 
+> **Closed 2026-10-06** in the open-task audit: remaining boxes are stale (work shipped in source or superseded). Evidence is in the audit report; nothing here is open.
+
 ## Goal
 Add a local SwiftData cache to the iOS app so users see data instantly on tab switch/app relaunch while a silent background refresh runs. Stale-while-revalidate pattern.
 

@@ -9,7 +9,7 @@
 - Owner area: `AREA_SHIFTS`
 - Secondary area: `AREA_MOBILE`
 - Ledger: this plan plus `tasks/todo.md`
-- Existing references: `tasks/ios-schedule-core-redesign-plan.md`, `tasks/ios-schedule-staff-authoring-redesign-plan.md`, `tasks/audit-event-detail-ios.md`, `tasks/audit-post-trade-ios.md`, and `tasks/shift-trade-actions-plan.md`
+- Existing references: `tasks/ios-schedule-core-redesign-plan.md`, `tasks/ios-schedule-staff-authoring-redesign-plan.md`, `tasks/audit-event-detail-ios.md`, `tasks/audit-post-trade-ios.md`, and `tasks/archive/completed-2026-10-06/shift-trade-actions-plan.md`
 
 ## Source Checks
 
