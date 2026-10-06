@@ -23,6 +23,27 @@ export const EXCEPTIONS = [
     reason:
       "Fixed in 4.3.0, published 2026-10-04 and still inside the 7-day min-release-age cooldown. Reached through workflow > @swc/cli binary download (got > cacheable-request), not request serving. Replace with an override to 4.3.0 once installable.",
   },
+  {
+    id: "GHSA-5gmw-xhrv-c9v3",
+    package: "tinypool",
+    expires: "2026-11-06",
+    reason:
+      "Prototype-pollution gadget in tinypool worker options. Reached only through the dev-only test runner (vitest 3 > tinypool 1.x), which never receives untrusted options; the fix needs the vitest 5 major. Upgrade vitest, then drop this exception.",
+  },
+  {
+    id: "GHSA-85c8-ppgw-ccpr",
+    package: "tinypool",
+    expires: "2026-11-06",
+    reason:
+      "Prototype-pollution gadget in tinypool worker options. Reached only through the dev-only test runner (vitest 3 > tinypool 1.x), which never receives untrusted options; the fix needs the vitest 5 major. Upgrade vitest, then drop this exception.",
+  },
+  {
+    id: "GHSA-68fv-2mgg-jv7q",
+    package: "source-map-js",
+    expires: "2026-10-12",
+    reason:
+      "Fixed in 1.2.2, published 2026-09-30 and still inside the 7-day min-release-age cooldown. Reached through postcss and tailwind at build time on repository CSS, not request serving. Replace with an override to 1.2.2 once installable.",
+  },
 ];
 
 const BLOCKING = new Set(["high", "critical"]);
