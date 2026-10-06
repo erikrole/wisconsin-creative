@@ -1,5 +1,7 @@
 # Users Ownership Pass - 2026-05-06
 
+> **Closed 2026-10-06** in the open-task audit: remaining boxes are stale (work shipped in source or superseded). Evidence is in the audit report; nothing here is open.
+
 ## Compact roster table polish - 2026-07-16
 
 ### Goal

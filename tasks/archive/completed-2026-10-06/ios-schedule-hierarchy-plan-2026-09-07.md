@@ -1,5 +1,7 @@
 # iOS Schedule hierarchy — September 7, 2026
 
+> **Closed 2026-10-06** in the open-task audit: remaining boxes are stale (work shipped in source or superseded). Evidence is in the audit report; nothing here is open.
+
 Scope: Schedule list/calendar event rows and native Event detail, following the user's cleaner-hierarchy, less-clutter direction. Availability, Trade Board, and staff editing sheets remain a later slice.
 
 Contracts: preserve shared event classification, date/all-day boundaries, crew coverage, personal call/gear context, role permissions, published roster fallback, and all existing navigation/actions. No API or scheduling lifecycle changes.

@@ -12,7 +12,7 @@
 - Owner area: Checkouts / unified Booking lifecycle.
 - Secondary areas: Kiosk, Dashboard, Accountability, Notifications, Reports, and native iOS.
 - Ledger: this plan plus `docs/AREA_CHECKOUTS.md`, `docs/DECISIONS.md`, and `docs/GAPS_AND_RISKS.md`.
-- Supersedes: `tasks/event-checkout-assignments-plan-2026-09-02.md` and the assignment portions of `tasks/event-checkout-assignments-plan-2026-09-03.md`.
+- Supersedes: `tasks/archive/completed-2026-10-06/event-checkout-assignments-plan-2026-09-02.md` and the assignment portions of `tasks/event-checkout-assignments-plan-2026-09-03.md`.
 
 ## Source Checks
 - Migration `0141_event_checkout_assignments` is already applied in production. It added `Booking.custodyScope` with `PERSON`/`EVENT` and nullable serialized-item assignee columns, but no application mutation or UI uses either feature.

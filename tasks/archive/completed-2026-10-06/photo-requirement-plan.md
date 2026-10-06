@@ -1,5 +1,7 @@
 # Photo Requirement for Checkout/Checkin
 
+> **Closed 2026-10-06** in the open-task audit: remaining boxes are stale (work shipped in source or superseded). Evidence is in the audit report; nothing here is open.
+
 ## Context
 Gear checkout/checkin currently has no accountability mechanism to document equipment condition. Staff can check items in/out without evidence, and items can be returned via manual checkbox selection without scanning — bypassing verification.
 
