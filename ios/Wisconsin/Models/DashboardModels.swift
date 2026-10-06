@@ -195,7 +195,16 @@ struct DashboardFlaggedItem: Codable, Identifiable {
     let type: String
     let bookingTitle: String?
     let reportedBy: String?
+    /// Report notes and the staff-visible damage photo. Absent for maintenance
+    /// rows and for older servers, so both decode as nil.
+    let description: String?
+    let imageUrl: String?
+    /// Current asset status, so the review sheet offers the matching maintenance action.
+    let assetStatus: String?
     let createdAt: Date
+
+    var isMaintenanceFlag: Bool { type == "MAINTENANCE" }
+    var isInMaintenance: Bool { assetStatus == "MAINTENANCE" }
 
     var typeLabel: String {
         switch type {

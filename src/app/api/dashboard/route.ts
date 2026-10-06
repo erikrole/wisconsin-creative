@@ -371,7 +371,7 @@ export const GET = withAuth(async (req, { user }) => {
           orderBy: { createdAt: "desc" },
           take: 10,
           include: {
-            asset: { select: { id: true, assetTag: true, name: true } },
+            asset: { select: { id: true, assetTag: true, name: true, status: true } },
             booking: { select: { title: true } },
             reportedBy: { select: { name: true } },
           },
@@ -472,9 +472,10 @@ export const GET = withAuth(async (req, { user }) => {
   const recentReports = settledValue(recentReportsResult, [] as Array<{
     id: string;
     type: string;
+    description: string | null;
     imageUrl: string | null;
     createdAt: Date;
-    asset: { id: string; assetTag: string; name: string | null } | null;
+    asset: { id: string; assetTag: string; name: string | null; status: string } | null;
     booking: { title: string };
     reportedBy: { name: string };
   }>, "recentReports", partialFailures);
@@ -835,7 +836,9 @@ export const GET = withAuth(async (req, { user }) => {
           type: r.type as "DAMAGED" | "LOST",
           bookingTitle: displayBookingTitle(r.booking.title),
           reportedBy: r.reportedBy.name,
+          description: r.description ?? null,
           imageUrl: r.imageUrl ?? null,
+          assetStatus: r.asset.status,
           createdAt: r.createdAt.toISOString(),
         }]),
         ...maintenanceAssets.map((a) => ({
@@ -846,6 +849,9 @@ export const GET = withAuth(async (req, { user }) => {
           type: "MAINTENANCE" as const,
           bookingTitle: null,
           reportedBy: null,
+          description: null,
+          imageUrl: null,
+          assetStatus: "MAINTENANCE",
           createdAt: a.updatedAt.toISOString(),
         })),
       ],
