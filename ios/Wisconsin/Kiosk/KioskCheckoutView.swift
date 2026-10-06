@@ -52,7 +52,6 @@ struct KioskCheckoutView: View {
     @State private var kitLoadError: String?
     @State private var selectedKitId: String?
     @State private var selectedKitDetail: KioskKitDetail?
-    @State private var didApplySuggestedKit = false
     @State private var suggestedKitId: String?
     /// A new checkout starts on its details step. Checkout is a two-step flow —
     /// say what this is for and when it comes back, then scan — and the details
@@ -818,13 +817,8 @@ struct KioskCheckoutView: View {
             let response = try await KioskAPI.shared.kioskKits(requesterId: user.id)
             kitOptions = response.kits
             suggestedKitId = response.suggestedKitId
-            if !didApplySuggestedKit,
-               selectedKitId == nil,
-               let suggestedKitId = response.suggestedKitId,
-               kitOptions.contains(where: { $0.id == suggestedKitId }) {
-                didApplySuggestedKit = true
-                selectedKitId = suggestedKitId
-            }
+            // The suggestion only highlights a kit in the picker; a checkout
+            // starts with no kit until the user chooses one.
         } catch {
             kitLoadError = (error as? APIError)?.errorDescription ?? "Kits unavailable"
         }
@@ -1248,7 +1242,6 @@ struct KioskCheckoutView: View {
         // needs choosing again.
         hasChosenReturn = draft.hasChosenReturn && draft.dueBackAt >= minimum
         selectedKitId = draft.selectedKitId
-        if draft.selectedKitId != nil { didApplySuggestedKit = true }
         // Resume where the draft actually left off. Forcing `true` here sent a
         // half-filled draft straight to the scan step.
         checkoutContextReady = draft.contextReady
