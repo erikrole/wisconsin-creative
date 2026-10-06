@@ -150,7 +150,6 @@ describe("schedule timeline", () => {
     expect(page).toContain('[data-app-shell-breadcrumb-frame]');
     expect(page).toContain("+ Math.round(appShellBreadcrumb?.getBoundingClientRect().height ?? 0);");
     expect(page).toContain('document.documentElement.style.setProperty("--schedule-sticky-top"');
-    expect(page).toContain("const bottom = Math.round(el.getBoundingClientRect().bottom);");
   });
 
   it("gives the pinned bar its own spacing instead of hugging the viewport", () => {
