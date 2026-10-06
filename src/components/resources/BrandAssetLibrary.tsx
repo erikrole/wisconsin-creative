@@ -738,7 +738,7 @@ function UploadAssetDialog({
                     <div key={item.id} className="rounded-md border border-border/80 bg-muted/20 p-3">
                       <div className="flex items-start gap-3">
                         <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
-                          {item.status === "completed" ? <CheckCircle2Icon className="size-4 text-green-600" aria-hidden="true" /> : item.status === "failed" || item.status === "conflict" ? <XIcon className="size-4 text-destructive" aria-hidden="true" /> : <FileIcon className="size-4" aria-hidden="true" />}
+                          {item.status === "completed" ? <CheckCircle2Icon className="size-4 text-muted-foreground" aria-hidden="true" /> : item.status === "failed" || item.status === "conflict" ? <XIcon className="size-4 text-destructive" aria-hidden="true" /> : <FileIcon className="size-4" aria-hidden="true" />}
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-medium">{item.file.name}</p>
@@ -1619,7 +1619,7 @@ export function BrandAssetLibrary({ canManage }: { canManage: boolean }) {
                 </span>
               ))}
               </nav>
-              <h2 className="mt-1 truncate text-2xl font-semibold tracking-tight">
+              <h2 className="mt-1 truncate">
                 {libraryView === "home" ? libraryData.folder.name : libraryView === "recent" ? "Recent" : "Starred"}
               </h2>
             </div>

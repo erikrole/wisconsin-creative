@@ -139,7 +139,7 @@ export function FeatureGrid({ cards, dark = false }: { cards: ShowroomCard[]; da
               className={cn("border-t pt-5", dark ? "border-white/20" : "border-border/70")}
             >
               <Icon className={cn("mb-5 size-5", dark ? "text-white/70" : "text-foreground")} aria-hidden="true" />
-              <h3 className="text-xl font-semibold text-balance">{card.title}</h3>
+              <h3 className="text-balance">{card.title}</h3>
               <p className={cn("mt-3 text-sm leading-6 text-pretty", dark ? "text-white/64" : "text-muted-foreground")}>{card.description}</p>
             </article>
           );
