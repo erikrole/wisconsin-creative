@@ -57,6 +57,7 @@ struct AssignStudentSheet: View {
     @State private var conflicts: [String: String] = [:]
     @State private var isLoading = true
     @State private var scoresLoading = false
+    @State private var scoresUnavailable = false
     @State private var loadError: String?
     @State private var search = ""
     @State private var assigningUserId: String?
@@ -200,6 +201,14 @@ struct AssignStudentSheet: View {
                 }
             }
 
+            if scoresUnavailable && !scoresLoading {
+                Section {
+                    Label("Ranking unavailable. People are shown by area and name.", systemImage: "exclamationmark.circle")
+                        .font(.caption)
+                        .foregroundStyle(Color.statusText(.orange))
+                }
+            }
+
             if scoresLoading {
                 Section {
                     HStack(spacing: 8) {
@@ -330,21 +339,23 @@ struct AssignStudentSheet: View {
         loadError = nil
         scoresLoading = true
 
-        let loadedRecommendations: [CandidateRecommendation]
+        let loadedScores: [CandidateRecommendation]?
         let fallbackConflicts: [String: String]
         if let workingCopyShiftGroupId {
-            loadedRecommendations = (try? await APIClient.shared.workingScheduleCandidateScores(
+            loadedScores = try? await APIClient.shared.workingScheduleCandidateScores(
                 shiftGroupId: workingCopyShiftGroupId,
                 slotKey: shiftId,
                 workerType: targetWorkerType
-            )) ?? []
+            )
             fallbackConflicts = [:]
         } else {
             async let scoresTask = try? APIClient.shared.shiftCandidateScores(shiftId: shiftId)
             async let conflictsTask = APIClient.shared.shiftConflicts(shiftId: shiftId)
-            loadedRecommendations = (await scoresTask) ?? []
+            loadedScores = await scoresTask
             fallbackConflicts = await conflictsTask
         }
+        let loadedRecommendations = loadedScores ?? []
+        scoresUnavailable = loadedScores == nil
         await loadPage(reset: true)
 
         recommendations = Dictionary(uniqueKeysWithValues: loadedRecommendations.map { ($0.userId, $0) })
@@ -387,7 +398,10 @@ struct AssignStudentSheet: View {
         } catch is CancellationError {
             return
         } catch {
-            if reset { loadError = error.localizedDescription }
+            if reset {
+                loadError = error.localizedDescription
+                users = []
+            }
             hasMore = false
         }
     }

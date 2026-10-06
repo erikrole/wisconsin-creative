@@ -65,6 +65,30 @@ const WEEK_HOUR_OVERLOAD = 12;
 const MONTH_ASSIGNMENT_OVERLOAD = 12;
 const MONTH_HOUR_OVERLOAD = 36;
 const UPCOMING_ASSIGNMENT_WARNING = 5;
+const MIN_REST_HOURS = 8;
+const SHORT_TURNAROUND_PENALTY = -10;
+const FAIRNESS_MAX_BONUS = 8;
+const FAIRNESS_MAX_PENALTY = -8;
+
+function median(values: number[]) {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? (sorted[mid] ?? 0) : ((sorted[mid - 1] ?? 0) + (sorted[mid] ?? 0)) / 2;
+}
+
+/** Month hours already on the books for a candidate, excluding the target shift. */
+function monthHoursFor(candidate: CandidateScoringUser, shiftId: string, monthStart: Date, monthEnd: Date) {
+  let hours = 0;
+  for (const assignment of candidate.assignments) {
+    if (assignment.shift.id === shiftId) continue;
+    const window = assignmentWindow(assignment);
+    if (window.startsAt >= monthStart && window.startsAt < monthEnd) {
+      hours += hoursBetween(window.startsAt, window.endsAt);
+    }
+  }
+  return hours;
+}
 
 function effectiveWindow(item: {
   startsAt: Date;
@@ -140,6 +164,13 @@ export function scoreCandidatesForShift({ shift, candidates, now }: ScoreArgs): 
   const monthStart = startOfMonth(targetWindow.startsAt);
   const monthEnd = endOfMonth(targetWindow.startsAt);
   const referenceNow = now ?? new Date();
+  // Fairness is relative to the people competing for this slot, so a heavy
+  // month for everyone does not push every candidate into "overloaded".
+  const peerMedianMonthHours = median(
+    candidates
+      .filter((candidate) => shiftWorkerTypeForProfile(candidate) === shift.workerType)
+      .map((candidate) => monthHoursFor(candidate, shift.id, monthStart, monthEnd)),
+  );
 
   return candidates
     .map((candidate) => {
@@ -190,7 +221,28 @@ export function scoreCandidatesForShift({ shift, candidates, now }: ScoreArgs): 
             && assignment.shift.shiftGroup?.event?.sportCode === shift.sportCode;
         });
       if (previousSameSport) {
-        addReason("prior_sport_assignment", "Has worked this sport recently", 8);
+        const priorCount = candidate.assignments.filter((assignment) =>
+          assignmentWindow(assignment).startsAt < targetWindow.startsAt
+          && assignment.shift.shiftGroup?.event?.sportCode === shift.sportCode,
+        ).length;
+        addReason(
+          "prior_sport_assignment",
+          priorCount >= 3 ? "Experienced with this sport" : "Has worked this sport recently",
+          priorCount >= 3 ? 12 : 6,
+        );
+      }
+
+      const shortTurnaround = candidate.assignments.some((assignment) => {
+        if (assignment.shift.id === shift.id) return false;
+        const window = assignmentWindow(assignment);
+        if (overlaps(targetWindow, window)) return false;
+        const gapBefore = hoursBetween(window.endsAt, targetWindow.startsAt);
+        const gapAfter = hoursBetween(targetWindow.endsAt, window.startsAt);
+        return (window.endsAt <= targetWindow.startsAt && gapBefore < MIN_REST_HOURS)
+          || (window.startsAt >= targetWindow.endsAt && gapAfter < MIN_REST_HOURS);
+      });
+      if (shortTurnaround) {
+        addWarning("short_turnaround", "Less than 8 hours between assignments", SHORT_TURNAROUND_PENALTY);
       }
 
       const blockingConflict = candidate.assignments.some((assignment) => {
@@ -253,13 +305,24 @@ export function scoreCandidatesForShift({ shift, candidates, now }: ScoreArgs): 
         addReason("fresh_capacity", "Light recent schedule", 8);
       }
 
+      // Graded load: a steady nudge toward whoever has the most headroom,
+      // instead of a cliff at the overload thresholds.
+      if (!overloaded) {
+        const loadDelta = peerMedianMonthHours - monthHours;
+        const fairness = Math.max(FAIRNESS_MAX_PENALTY, Math.min(FAIRNESS_MAX_BONUS, Math.round(loadDelta / 2)));
+        if (fairness >= 3) addReason("below_peer_load", "Fewer hours than peers this month", fairness);
+        else if (fairness <= -3) addWarning("above_peer_load", "More hours than peers this month", fairness);
+      }
+
+      const blocked = blockingConflict || Boolean(availability?.blocking);
       return {
+        rawScore: score,
         userId: candidate.id,
         bucket: bucketFor(score, warnings, overloaded),
         score: Math.max(0, Math.min(100, score)),
         reasons: reasons.sort(sortSignals),
         warnings: warnings.sort(sortSignals),
-        blockingConflict: blockingConflict || Boolean(availability?.blocking),
+        blockingConflict: blocked,
         advisoryConflict: Boolean(availability?.blocking || availability?.advisory),
         advisoryConflictNote: availability?.blocking?.note ?? availability?.advisory?.note ?? null,
         workload: {
@@ -271,7 +334,14 @@ export function scoreCandidatesForShift({ shift, candidates, now }: ScoreArgs): 
         },
       };
     })
-    .sort((a, b) => b.score - a.score || a.userId.localeCompare(b.userId));
+    // Unavailable people always sort last, and ranking uses the unclamped
+    // score so strong candidates stay distinguishable above 100.
+    .sort((a, b) =>
+      Number(a.blockingConflict) - Number(b.blockingConflict)
+      || b.rawScore - a.rawScore
+      || a.userId.localeCompare(b.userId))
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    .map(({ rawScore: _rawScore, ...recommendation }) => recommendation);
 }
 
 type LoadedShift = NonNullable<Awaited<ReturnType<typeof loadShiftForScoring>>>;

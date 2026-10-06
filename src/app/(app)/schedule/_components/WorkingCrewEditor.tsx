@@ -444,8 +444,8 @@ export function WorkingCrewEditor({
   }, [loadUsers]);
 
   const filteredUsers = useMemo(() => {
-    if (!userSearch) return allUsers;
-    const query = userSearch.toLowerCase();
+    const query = userSearch.trim().toLowerCase();
+    if (!query) return allUsers;
     return allUsers.filter((user) => user.name.toLowerCase().includes(query));
   }, [allUsers, userSearch]);
 

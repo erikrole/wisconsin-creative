@@ -2912,3 +2912,49 @@ Fields: 8
 Indexes and constraints:
 
 - `@@map("youtube_library_state")`
+
+## Model `YouTubePublishRecord`
+
+Fields: 15
+
+- `id             String    @id`
+- `videoId        String    @map("video_id")`
+- `operation      String`
+- `undoOf         String?   @map("undo_of")`
+- `phase          String`
+- `before         Json`
+- `expected       Json`
+- `readBack       Json?     @map("read_back")`
+- `sourceUrl      String    @map("source_url")`
+- `sourceSha256   String    @map("source_sha256")`
+- `failureMessage String?   @map("failure_message")`
+- `actorId        String?   @map("actor_id")`
+- `createdAt      DateTime  @map("created_at")`
+- `verifiedAt     DateTime? @map("verified_at")`
+- `updatedAt      DateTime  @updatedAt @map("updated_at")`
+
+Indexes and constraints:
+
+- `@@index([videoId, createdAt(sort: Desc)])`
+- `@@map("youtube_publish_records")`
+
+## Model `YouTubePlaylistAddition`
+
+Fields: 11
+
+- `id             String   @id`
+- `videoId        String   @map("video_id")`
+- `videoTitle     String   @map("video_title")`
+- `playlist       Json`
+- `playlistId     String   @map("playlist_id")`
+- `phase          String`
+- `membership     Json?`
+- `failureMessage String?  @map("failure_message")`
+- `actorId        String?  @map("actor_id")`
+- `createdAt      DateTime @map("created_at")`
+- `updatedAt      DateTime @updatedAt @map("updated_at")`
+
+Indexes and constraints:
+
+- `@@index([videoId, createdAt(sort: Desc)])`
+- `@@map("youtube_playlist_additions")`
