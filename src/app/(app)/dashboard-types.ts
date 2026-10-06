@@ -203,7 +203,10 @@ export type FlaggedItem = {
   type: "DAMAGED" | "LOST" | "MAINTENANCE";
   bookingTitle: string | null;
   reportedBy: string | null;
+  description?: string | null;
   imageUrl?: string | null;
+  /** Current asset status, so the review dialog offers the right maintenance action. */
+  assetStatus?: string;
   createdAt: string;
 };
 
