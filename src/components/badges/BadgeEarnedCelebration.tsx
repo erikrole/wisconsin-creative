@@ -82,7 +82,7 @@ export function BadgeEarnedCelebration({
             className="relative z-10 mt-5 size-28 motion-safe:animate-in motion-safe:zoom-in-75 motion-safe:duration-500"
             iconClassName="size-11"
           />
-          <h2 className="relative z-10 mt-6 text-balance text-3xl font-semibold tracking-tight">
+          <h2 className="relative z-10 mt-6 text-balance">
             {reward.name}
           </h2>
           <p className="relative z-10 mt-3 max-w-[34ch] text-pretty text-sm leading-6 text-foreground/70">
