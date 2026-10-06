@@ -442,7 +442,13 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: Brand.Space.sm) {
                 FlatSectionTitle("Staff Follow-Up")
                 if !dash.flaggedItems.isEmpty {
-                    FlaggedItemsBanner(items: dash.flaggedItems)
+                    FlaggedItemsBanner(
+                        items: dash.flaggedItems,
+                        onOpenItem: { id in navigationPath.append(AssetRouteId(id: id)) },
+                        onChanged: {
+                            Task { await vm.load(appState: appState, requesterId: session.currentUser?.id, forceRefresh: true) }
+                        }
+                    )
                 }
                 if dash.isAdmin && !dash.lostBulkUnits.isEmpty {
                     LostBulkUnitsBanner(items: dash.lostBulkUnits)
@@ -1634,6 +1640,9 @@ private struct DashboardCard<Content: View>: View {
 
 private struct FlaggedItemsBanner: View {
     let items: [DashboardFlaggedItem]
+    let onOpenItem: (String) -> Void
+    let onChanged: () -> Void
+    @State private var reviewing: DashboardFlaggedItem?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -1646,6 +1655,13 @@ private struct FlaggedItemsBanner: View {
             .foregroundStyle(Color.statusText(.orange))
 
             ForEach(items) { item in
+                Button {
+                    if item.isMaintenanceFlag {
+                        onOpenItem(item.assetId)
+                    } else {
+                        reviewing = item
+                    }
+                } label: {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(item.assetTag)
@@ -1668,13 +1684,27 @@ private struct FlaggedItemsBanner: View {
                         .lineLimit(1)
                     }
                     Spacer()
+                    if item.imageUrl != nil {
+                        Image(systemName: "photo").foregroundStyle(.secondary).accessibilityHidden(true)
+                    }
+                    Image(systemName: "chevron.right")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                        .accessibilityHidden(true)
                 }
+                .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel(flaggedRowLabel(for: item))
+                .accessibilityHint(item.isMaintenanceFlag ? "Opens the item" : "Reviews the report")
                 if item.id != items.last?.id { Divider().overlay(Color.flatDivider) }
             }
         }
         .flatCard(padding: Brand.Space.md, radius: Brand.Radius.md)
+        .sheet(item: $reviewing) { item in
+            FlaggedReportSheet(item: item, onOpenItem: onOpenItem, onChanged: onChanged)
+        }
     }
 
     private func flaggedRowLabel(for item: DashboardFlaggedItem) -> String {
@@ -1686,6 +1716,105 @@ private struct FlaggedItemsBanner: View {
         if let title = item.bookingTitle { parts.append(title) }
         parts.append("tag \(item.assetTag)")
         return parts.joined(separator: ", ")
+    }
+}
+
+// MARK: - Flagged Report Sheet
+
+/// Staff review of one damaged/lost report: the photo, the reporter's notes,
+/// and the actions that follow from them. Maintenance is refetched from the
+/// server, never guessed, because it changes what others can reserve.
+private struct FlaggedReportSheet: View {
+    let item: DashboardFlaggedItem
+    let onOpenItem: (String) -> Void
+    let onChanged: () -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var isWorking = false
+    @State private var errorMessage: String?
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: Brand.Space.md) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(item.assetTag).font(.gothamBold(size: 20))
+                        Text([item.assetName, item.bookingTitle, item.reportedBy.map { "Reported by \($0)" }]
+                            .compactMap { $0 }
+                            .joined(separator: " · "))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    if let urlString = item.imageUrl, let url = URL(string: urlString) {
+                        AsyncImage(url: url) { phase in
+                            switch phase {
+                            case .success(let image):
+                                image.resizable().scaledToFit()
+                            case .failure:
+                                Label("Photo couldn't load", systemImage: "photo.badge.exclamationmark")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            default:
+                                ProgressView().frame(maxWidth: .infinity, minHeight: 160)
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .clipShape(RoundedRectangle(cornerRadius: Brand.Radius.md))
+                        .accessibilityLabel("Photo of the reported \(item.typeLabel.lowercased()) item")
+                    } else {
+                        Text("No photo was attached to this report.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    if let description = item.description, !description.isEmpty {
+                        Text(description).font(.body)
+                    }
+                    if let errorMessage {
+                        Text(errorMessage).font(.footnote).foregroundStyle(Color.statusText(.red))
+                    }
+                    Button {
+                        Task { await toggleMaintenance() }
+                    } label: {
+                        Label(
+                            item.isInMaintenance ? "Clear Maintenance" : "Needs Maintenance",
+                            systemImage: item.isInMaintenance ? "checkmark.circle" : "wrench.and.screwdriver"
+                        )
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(isWorking)
+                    Button {
+                        dismiss()
+                        onOpenItem(item.assetId)
+                    } label: {
+                        Label("Open Item", systemImage: "shippingbox").frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                }
+                .padding(Brand.Space.md)
+            }
+            .navigationTitle("\(item.typeLabel) Report")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    private func toggleMaintenance() async {
+        guard !isWorking else { return }
+        isWorking = true
+        errorMessage = nil
+        defer { isWorking = false }
+        do {
+            _ = try await APIClient.shared.toggleAssetMaintenance(assetId: item.assetId)
+            Haptics.success()
+            onChanged()
+            dismiss()
+        } catch {
+            Haptics.error()
+            errorMessage = (error as? APIError)?.errorDescription ?? "Couldn't update maintenance"
+        }
     }
 }
 
