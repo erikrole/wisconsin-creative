@@ -124,6 +124,8 @@ describe("schedule timeline", () => {
   it("pins the header, filters, and activity strip so the timeline runs beneath them", () => {
     expect(page).toContain('style={{ top: "var(--schedule-sticky-top, 0px)" }}');
     expect(page).toContain('--schedule-sticky-bottom');
+    // Scroll-independent: a viewport-rect bottom goes stale when filters resize the frame.
+    expect(page).toContain("const bottom = top + Math.round(el.getBoundingClientRect().height);");
     expect(page).toContain("data-schedule-sticky-frame");
     const stickyStart = page.indexOf("data-schedule-sticky-frame");
     const listStart = page.indexOf("{canDisplaySchedule && data.filters.viewMode === \"calendar\"");
