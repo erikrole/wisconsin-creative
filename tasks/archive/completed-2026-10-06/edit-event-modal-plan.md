@@ -1,5 +1,7 @@
 # Edit Event Modal Plan
 
+> **Closed 2026-10-06** in the open-task audit: remaining boxes are stale (work shipped in source or superseded). Evidence is in the audit report; nothing here is open.
+
 **Goal:** Single "Edit Event" modal consolidating title, subtitle, home/away/neutral, and location.
 **Fixes:** Notre Dame toggle missing (sportCode=null gates it out); location overwrites on sync.
 

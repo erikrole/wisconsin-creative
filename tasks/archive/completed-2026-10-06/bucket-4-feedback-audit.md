@@ -1,5 +1,7 @@
 # Bucket 4 — Feedback Audit
 
+> **Closed 2026-10-06** in the open-task audit: remaining boxes are stale (work shipped in source or superseded). Evidence is in the audit report; nothing here is open.
+
 **Components:** `alert`, `alert-dialog`, `sonner`, `progress`, `empty`, `item`
 **Date:** 2026-05-01
 

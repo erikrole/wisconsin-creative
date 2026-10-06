@@ -1,5 +1,7 @@
 # Shift Trade Actions from iOS (Event Detail + Schedule)
 
+> **Closed 2026-10-06** in the open-task audit: remaining boxes are stale (work shipped in source or superseded). Evidence is in the audit report; nothing here is open.
+
 Goal: post shifts to the Trade Board from where people actually see shifts
 (event-detail crew rows, My Shifts), with staff able to post any student
 shift, owner notifications, visible on-board indicators, and swipe/long-press

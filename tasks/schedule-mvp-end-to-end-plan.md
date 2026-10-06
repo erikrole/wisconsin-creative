@@ -9,7 +9,7 @@
 - Owner area: `AREA_SHIFTS`
 - Secondary areas: `AREA_MOBILE`, `AREA_NOTIFICATIONS`
 - Ledger: this plan plus a closeout entry in `tasks/todo.md`
-- Existing references: `tasks/event-shift-working-schedule-plan.md`, `tasks/remove-premier-events-plan.md`, `tasks/shift-trade-actions-plan.md`, `tasks/ios-schedule-availability-trade-redesign-plan.md`, and `plans/061-centralize-shift-trade-side-effects.md`
+- Existing references: `tasks/event-shift-working-schedule-plan.md`, `tasks/archive/completed-2026-10-06/remove-premier-events-plan.md`, `tasks/archive/completed-2026-10-06/shift-trade-actions-plan.md`, `tasks/ios-schedule-availability-trade-redesign-plan.md`, and `plans/061-centralize-shift-trade-side-effects.md`
 
 ## Source Checks
 

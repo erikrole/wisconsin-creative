@@ -1,5 +1,7 @@
 # iOS Apple Design Full Audit Plan - 2026-07-10
 
+> **Closed 2026-10-06** in the open-task audit: remaining boxes are stale (work shipped in source or superseded). Evidence is in the audit report; nothing here is open.
+
 ## Goal
 - Produce a current, source-grounded audit of the full Wisconsin iOS app and kiosk target using Apple Design principles, then provide prioritized, independently executable remediation slices without changing implementation code.
 

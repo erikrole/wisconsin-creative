@@ -1,5 +1,7 @@
 # Kiosk Check-In/Out Fixes — Implementation Plan
 
+> **Closed 2026-10-06** in the open-task audit: remaining boxes are stale (work shipped in source or superseded). Evidence is in the audit report; nothing here is open.
+
 Source: `tasks/kiosk-checkin-checkout-audit.md` (2026-04-29)
 
 ## Slice 1 — Quick Wins (no schema change)
