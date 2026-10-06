@@ -51,5 +51,8 @@ describe("kiosk kit calling", () => {
     expect(checkout).toContain("kits: kitOptions,");
     expect(checkout).toContain("A kit is a checklist. Only what you scan goes out.");
     expect(checkout).not.toContain("store.setCart(kitMembers");
+    // A suggestion only highlights a kit in the picker; it never selects one.
+    expect(checkout).not.toContain("didApplySuggestedKit");
+    expect(checkout).not.toMatch(/selectedKitId = suggestedKitId/);
   });
 });
