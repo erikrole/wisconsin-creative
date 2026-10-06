@@ -26,4 +26,10 @@ describe("assignment picker", () => {
     expect(sheet).toContain("scoresUnavailable");
     expect(sheet).toContain("Ranking unavailable");
   });
+
+  it("blocks unavailable people and confirms advisory conflicts like iOS", () => {
+    expect(picker).toContain("score.blockingConflict");
+    expect(picker).toContain("disabled={disabled || blocked}");
+    expect(picker).toContain("Assign {pendingUser.name} anyway?");
+  });
 });

@@ -73,7 +73,7 @@ export function UserAvatarPicker({
   onSearchChange,
   onSelect,
   disabled,
-  conflictMap,
+  conflictMap: conflictMapProp,
   conflictsLoading,
   candidateScores,
   scoresLoading,
@@ -81,7 +81,27 @@ export function UserAvatarPicker({
   slotWorkerType,
 }: Props) {
   const [conflictFilter, setConflictFilter] = useState<CandidateConflictFilter>("all");
-  const canFilterConflicts = Boolean(conflictMap);
+  const [pendingUser, setPendingUser] = useState<PickerUser | null>(null);
+  // Scores carry advisory and blocking conflicts, so the picker can flag them
+  // without every caller also fetching a separate conflict map.
+  const conflictMap = useMemo(() => {
+    if (!conflictMapProp && !candidateScores) return undefined;
+    const merged: Record<string, string> = { ...conflictMapProp };
+    for (const score of Object.values(candidateScores ?? {})) {
+      if (score.blockingConflict) {
+        merged[score.userId] = score.warnings[0]?.label ?? "Unavailable during this call window";
+      } else if (score.advisoryConflict) {
+        merged[score.userId] = score.advisoryConflictNote ?? score.warnings[0]?.label ?? "Scheduling conflict";
+      }
+    }
+    return merged;
+  }, [candidateScores, conflictMapProp]);
+  const canFilterConflicts = Boolean(conflictMap) && Object.keys(conflictMap ?? {}).length > 0;
+  const handleSelect = (user: PickerUser) => {
+    if (candidateScores?.[user.id]?.blockingConflict) return;
+    if (conflictMap?.[user.id]) setPendingUser(user);
+    else onSelect(user.id);
+  };
   const filteredUsers = useMemo(
     () => filterCandidatesByConflict(users, conflictMap, conflictFilter),
     [conflictFilter, conflictMap, users],
@@ -144,7 +164,24 @@ export function UserAvatarPicker({
           </ToggleGroup>
         </div>
       )}
-      {loading ? (
+      {pendingUser ? (
+        <Alert className="p-3">
+          <AlertDescription className="flex flex-col gap-2 text-xs">
+            <span className="block font-medium">Assign {pendingUser.name} anyway?</span>
+            <span className="block text-muted-foreground">
+              {conflictMap?.[pendingUser.id]} The assignment is still checked by the server.
+            </span>
+            <div className="flex gap-2">
+              <Button type="button" size="sm" className="min-h-10 flex-1" disabled={disabled} onClick={() => onSelect(pendingUser.id)}>
+                Assign anyway
+              </Button>
+              <Button type="button" variant="outline" size="sm" className="min-h-10 flex-1" onClick={() => setPendingUser(null)}>
+                Cancel
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      ) : loading ? (
         <p role="status" className="text-xs text-muted-foreground p-2">Loading users...</p>
       ) : loadError ? (
         <Alert variant="destructive" className="p-3">
@@ -187,6 +224,7 @@ export function UserAvatarPicker({
                 {group.users.map((u) => {
                   const conflict = conflictMap?.[u.id];
                   const score = candidateScores?.[u.id];
+                  const blocked = score?.blockingConflict === true;
                   const topReason = score?.warnings[0]?.label ?? score?.reasons[0]?.label;
                   const candidateWorkerType = shiftWorkerTypeForProfile(u);
                   const candidateWorkerLabel = shiftWorkerLabelForProfile(u) ?? "Worker";
@@ -199,8 +237,8 @@ export function UserAvatarPicker({
                       type="button"
                       variant="ghost"
                       className="min-h-12 w-full justify-start gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-[background-color,color,scale] hover:bg-accent active:scale-[0.96] disabled:opacity-50"
-                      onClick={() => onSelect(u.id)}
-                      disabled={disabled}
+                      onClick={() => handleSelect(u)}
+                      disabled={disabled || blocked}
                       title={topReason ?? roleSlotNote ?? conflict ?? undefined}
                       aria-label={[
                         u.name,
@@ -229,7 +267,9 @@ export function UserAvatarPicker({
                       </div>
                       <div className="ml-auto flex shrink-0 items-center gap-1">
                         {conflict && (
-                          <Badge variant="orange" size="sm" className="px-1.5 py-0 text-[9px]">Conflict</Badge>
+                          <Badge variant={blocked ? "destructive" : "orange"} size="sm" className="px-1.5 py-0 text-[9px]">
+                            {blocked ? "Unavailable" : "Conflict"}
+                          </Badge>
                         )}
                         {score && (
                           <Badge
