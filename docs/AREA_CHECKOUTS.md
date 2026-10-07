@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Checkouts
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-09-17
+- Last Updated: 2026-10-07
 - Status: Active — V1 Shipped
 - Version: V1
 
@@ -123,14 +123,16 @@ All section tabs are freely navigable (no forward-lock). Section tabs are labels
 Assets are classified into sections by keyword matching against the asset's `type` field (from Cheqroom category import). Classification is case-insensitive substring matching. Implementation: `classifyAssetType()` in `src/lib/equipment-sections.ts`.
 
 ### Equipment Guidance Rules
-Context-aware hints appear per section based on what has already been selected in other sections. Rules live in `EQUIPMENT_GUIDANCE_RULES` in `src/lib/equipment-guidance.ts`; only `getUnsatisfiedRequirements()` is wired into the wizard today.
+Context-aware hints appear per section based on what has already been selected in other sections. Rules live in `EQUIPMENT_GUIDANCE_RULES` in `src/lib/equipment-guidance.ts`. The web equipment picker shows active-section info/warning hints through `getSectionGuidance()`; `getUnsatisfiedRequirements()` remains available for hard review blockers (none today).
 
-Current rules:
-- `body-needs-batteries` (warning): camera body selected, check compatible battery availability before checkout.
-- `lens-needs-body` (warning): "You've added lenses but no camera body."
-- `audio-with-video` (info): "Don't forget audio gear."
+Current rules include:
+- `body-needs-batteries` (warning): camera body selected — add a battery family quantity; exact units bind at pickup.
+- `lens-needs-body` (warning): lenses without a camera body.
+- `audio-with-video` (info): don't forget audio gear.
+- `cameras-need-support` (info): add `Tripod` or `Football Tripod` quantity, not a model row.
+- `cameras-need-lighting` (info): add `Light Kit` or `Football Light Kit` for cased sets.
 
-Adding new rules: add entries to `EQUIPMENT_GUIDANCE_RULES` array in `src/lib/equipment-guidance.ts`. No schema changes required.
+Adding new rules: add entries to `EQUIPMENT_GUIDANCE_RULES` in `src/lib/equipment-guidance.ts`. No schema changes required. Selected bulk lines classify by family name/category (`classifyBulkSku`), not a blanket Batteries assumption.
 
 ### Availability Preview Badges
 When a booking date window is set (startsAt/endsAt), the picker calls `POST /api/availability/check` with all asset IDs to detect scheduling conflicts. Results are shown as:
@@ -339,6 +341,7 @@ The checkout detail page (`/checkouts/[id]`) uses the shared `BookingDetailPage`
 
 ## Change Log
 
+- 2026-10-07: **Equipment guidance speaks family pools and is visible again.** `getSectionGuidance()` wires info/warning rules into the web equipment picker (Tripod / Football Tripod, Light Kit / Football Light Kit, battery families). Selected bulk lines classify by family name/category instead of always counting as Batteries. Local source/test; authenticated picker proof remains open.
 - 2026-09-20: **Removed the unused `getActiveGuidance()` helper.** Per-section context hints were never wired into the booking wizard; only `getUnsatisfiedRequirements()` consumes `EQUIPMENT_GUIDANCE_RULES`. The rules table is unchanged.
 - 2026-09-17: **Direct kiosk checkout can start from a kit.** Setup offers pickup-scoped gameday kits, hides empty kits, labels Slow 1–Roam 4, and can suggest last week’s football job. Scans remain the cart; remaining kit members are a checklist; completion stores `kitId` as provenance after validating the kit against the kiosk pickup. Local source/test; physical kiosk proof remains open.
 - 2026-09-16: **Completed checkouts can re-reserve for a new event.** The action copies person, pickup, notes, title, and equipment into the reservation composer. It does not create checkout custody from app/web. Source/test complete; authenticated proof remains open.

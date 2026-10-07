@@ -4,6 +4,10 @@ import { db } from "@/lib/db";
 import { ok } from "@/lib/http";
 import { requirePermission } from "@/lib/rbac";
 import { summarizeItemFamilyState } from "@/lib/item-family-state";
+import {
+  isSerializedSupportPoolCandidate,
+  shouldAssignUnitProduct,
+} from "@/lib/support-gear-families";
 
 const SAMPLE_LIMIT = 6;
 const DEFAULT_BULK_THRESHOLD = 1;
@@ -92,6 +96,7 @@ export const GET = withAuth(async (_req, { user }) => {
     cameraWithoutAttachmentRowsResult,
     duplicateRowsResult,
     bulkRowsResult,
+    supportCandidateRowsResult,
   ] = await Promise.allSettled([
     db.asset.count({ where: { categoryId: null } }),
     db.asset.findMany({
@@ -232,10 +237,16 @@ export const GET = withAuth(async (_req, { user }) => {
         location: { select: { name: true } },
         categoryRel: { select: { name: true } },
         balances: { select: { onHandQuantity: true } },
+        products: {
+          where: { active: true },
+          select: { id: true },
+        },
         units: {
           select: {
             id: true,
             status: true,
+            unitNumber: true,
+            productId: true,
             allocations: {
               where: {
                 checkedOutAt: { not: null },
@@ -246,6 +257,31 @@ export const GET = withAuth(async (_req, { user }) => {
             },
           },
         },
+      },
+    }),
+    db.asset.findMany({
+      where: {
+        parentAssetId: null,
+        status: { not: "RETIRED" },
+        OR: [
+          { category: { name: { in: ["Tripods", "Tripod", "Support", "Monopods", "Monopod", "Lighting", "Lights", "Light"] } } },
+          { type: { contains: "tripod", mode: "insensitive" } },
+          { type: { contains: "monopod", mode: "insensitive" } },
+          { type: { contains: "light kit", mode: "insensitive" } },
+          { name: { contains: "tripod", mode: "insensitive" } },
+          { name: { contains: "monopod", mode: "insensitive" } },
+          { name: { contains: "light kit", mode: "insensitive" } },
+          { model: { contains: "tripod", mode: "insensitive" } },
+          { model: { contains: "light kit", mode: "insensitive" } },
+        ],
+      },
+      orderBy: { assetTag: "asc" },
+      take: 200,
+      select: {
+        ...assetSelect,
+        status: true,
+        parentAssetId: true,
+        type: true,
       },
     }),
   ]);
@@ -272,11 +308,19 @@ export const GET = withAuth(async (_req, { user }) => {
     location: { name: string };
     categoryRel: { name: string } | null;
     balances: Array<{ onHandQuantity: number }>;
+    products: Array<{ id: string }>;
     units: Array<{
       id: string;
       status: BulkUnitStatus | `${BulkUnitStatus}`;
+      unitNumber: number;
+      productId: string | null;
       allocations?: Array<{ bulkSkuUnitId: string }>;
     }>;
+  }> = [];
+  const supportCandidateFallback: Array<(typeof assetRowsFallback)[number] & {
+    status: string;
+    parentAssetId: string | null;
+    type: string;
   }> = [];
   const missingCategoryCount = settledValue(missingCategoryCountResult, 0, "missingCategoryCount", partialFailures);
   const missingCategoryRows = settledValue(missingCategoryRowsResult, assetRowsFallback, "missingCategoryRows", partialFailures);
@@ -292,6 +336,12 @@ export const GET = withAuth(async (_req, { user }) => {
   const cameraWithoutAttachmentRows = settledValue(cameraWithoutAttachmentRowsResult, assetRowsFallback, "cameraWithoutAttachmentRows", partialFailures);
   const duplicateRows = settledValue(duplicateRowsResult, [] as DuplicateScanRow[], "duplicateRows", partialFailures);
   const bulkRows = settledValue(bulkRowsResult, bulkRowsFallback, "bulkRows", partialFailures);
+  const supportCandidateRowsFetched = settledValue(
+    supportCandidateRowsResult,
+    supportCandidateFallback,
+    "supportPoolCandidates",
+    partialFailures,
+  );
 
   const lowBulkRows = bulkRows
     .map((sku) => {
@@ -303,6 +353,42 @@ export const GET = withAuth(async (_req, { user }) => {
       return { sku, available: state.availableQuantity, threshold };
     })
     .filter((row) => row.available < row.threshold);
+
+  const unassignedProductSamples: HygieneSample[] = [];
+  let unassignedProductCount = 0;
+  for (const sku of bulkRows) {
+    const activeProductCount = sku.products?.length ?? 0;
+    for (const unit of sku.units) {
+      if (!shouldAssignUnitProduct({
+        trackByNumber: sku.trackByNumber,
+        activeProductCount,
+        productId: unit.productId,
+        unitStatus: unit.status,
+      })) continue;
+      unassignedProductCount += 1;
+      if (unassignedProductSamples.length < SAMPLE_LIMIT) {
+        unassignedProductSamples.push({
+          id: `${sku.id}:${unit.unitNumber}`,
+          label: `${sku.name} #${unit.unitNumber}`,
+          detail: `${sku.categoryRel?.name ?? sku.category} / ${sku.location.name} / product unassigned`,
+          href: `/bulk-inventory/${sku.id}`,
+        });
+      }
+    }
+  }
+
+  const supportPoolCandidates = supportCandidateRowsFetched.filter((asset) =>
+    isSerializedSupportPoolCandidate({
+      status: asset.status,
+      parentAssetId: asset.parentAssetId,
+      categoryName: asset.category?.name,
+      type: asset.type,
+      name: asset.name,
+      brand: asset.brand,
+      model: asset.model,
+      assetTag: asset.assetTag,
+    }),
+  );
 
   const duplicateCount = duplicateRows.length;
 
@@ -401,6 +487,25 @@ export const GET = withAuth(async (_req, { user }) => {
         label: sku.name,
         detail: `${available} available / ${threshold} threshold / ${sku.categoryRel?.name ?? sku.category} / ${sku.location.name}`,
         href: `/bulk-inventory/${sku.id}`,
+      })),
+    ),
+    issue(
+      "units-missing-product",
+      "Family units missing product",
+      "When a unit-tracked family defines products, every active unit should name its brand/model so maintenance stays accurate without splitting the picker.",
+      unassignedProductCount,
+      unassignedProductSamples,
+    ),
+    issue(
+      "serialized-support-pool-candidates",
+      "Serialized support gear to review as families",
+      "Tripods and cased light kits should usually be Tripod / Football Tripod or Light Kit / Football Light Kit unit families, with models as products under each unit.",
+      supportPoolCandidates.length,
+      supportPoolCandidates.slice(0, SAMPLE_LIMIT).map((asset) => ({
+        id: asset.id,
+        label: assetLabel(asset),
+        detail: assetDetail(asset),
+        href: `/items/${asset.id}`,
       })),
     ),
   ];

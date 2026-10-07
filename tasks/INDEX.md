@@ -1,6 +1,6 @@
 # Tasks Index
 
-Last updated: 2026-10-06
+Last updated: 2026-10-07
 
 ## Start Here
 
@@ -36,6 +36,8 @@ As of this cleanup pass, root `tasks/` contains:
 Audit files intentionally remain at root for now because the repo audit skills read and write `tasks/audit-*.md` paths directly.
 
 ## Active Follow-up Ledgers
+
+- `support-gear-item-families-plan-2026-10-07.md` - Tripod / Light Kit unit-tracked pools (Creative vs Football), family guidance, product hygiene; physical setup under GAP-87; 2-/3-point light kits held.
 
 - `infrastructure-hardening-plan-2026-09-22.md` - Vercel/Neon repairs, branch previews, cross-agent handoff and pending source/cutover gates.
 

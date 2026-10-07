@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Kits Management
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-09-17
+- Last Updated: 2026-10-07
 - Status: Active
 - Version: V1
 - Brief: `BRIEF_KIT_MANAGEMENT_V1.md`
@@ -11,6 +11,8 @@
 
 ## Direction
 Enable staff to name the cameras, lenses, and batteries each gameday position uses. Anyone who can create a reservation can call that kit from web, native iOS, or kiosk checkout. Selecting the kit expands every member into the booking’s item list on reservation create, or becomes the kiosk scan plan. `Booking.kitId` remains provenance (“this plan started from Slow 1”); the reserved/checked-out gear is the expanded serialized items and item families. The booking title stays the event name.
+
+Kits are job templates, not inventory pools. Fungible support gear such as `Tripod` / `Football Tripod` and `Light Kit` / `Football Light Kit` belongs in unit-tracked item families under D-022; put those families on a kit as bulk members when a gameday position needs them, rather than inventing one kit per brand or case.
 
 ## Core Rules
 1. Kit is a named group of serialized items (via `KitMembership`) and/or bulk SKUs (via `KitBulkMembership`).
@@ -103,6 +105,7 @@ See `AREA_ITEMS.md` 2026-04-06 entry for kit detail page hardening work:
 - [x] AC-7: Football kits can own Slow 1, Slow 2, Bench, or Roam 1–4 at a pickup; calling surfaces hide empty kits and can suggest last week’s job
 
 ## Change Log
+- 2026-10-07: **Kits stay job templates vs support inventory pools.** Direction clarifies that Tripod / Light Kit unit-tracked families (D-022) are the inventory shape for fungible cased gear; kits may include those families as bulk members but should not multiply into one kit per brand or case.
 - 2026-09-30: **Travel-case gear can sit in a home kit; kit batteries are searchable.** Football exclusivity now applies only between kits that own a gameday job, so a job-less Football kit (road-game travel case) may share cameras with Slow 2 and the other jobs (D-062 amendment). Exclusivity errors name the holding kit and the fix. Kit detail's item-family search no longer cancels its own load, which left Sony Battery and other families unfindable. Authenticated local-preview proof (branch `br-frosty-surf-au97xidz`, `tasks/archive/proofs/kit-travel-case-2026-09-30/`): Slow 2 family search returned and added Sony Battery; a job-less Football kit accepted CAM 102 while Slow 1 still refused it with the named-kit error. Deployed and physical-kiosk proof remain open.
 - 2026-09-17: **Football kits are Slow 1, Slow 2, Bench, and Roam 1–4.** Staff assign one of those jobs per pickup, including Camp Randall aliases. Duplicate copies batteries and sport, not the job. Reservation and kiosk pickers hide empty kits, label Slow 1–Roam 4, and suggest this week’s kit from the requester’s last football job. Photo kits stay un-roled. Local source/test; migrations `0149_kit_sport_code` and `0150_kit_gameday_role` are not applied to production; authenticated browser, iPhone 16 Pro, and physical kiosk proof remain open.
 - 2026-09-17: **Anyone can call a kit; exclusive per sport.** Active kits are callable from web reservation create, native iOS create, and kiosk checkout by any actor who can make a reservation. Authoring stays staff/admin. Optional `sportCode` scopes exclusive serialized membership so two Football kits cannot share a camera while Basketball may. Camp Randall and Camp Randall Stadium share kit pickup. Duplicate copies batteries and sport, not cameras. Reservation and checkout titles stay the event name. Kiosk kit pick is a scan checklist plus `kitId` provenance; scans remain the cart. Local source/test; authenticated browser, iPhone 16 Pro, and physical kiosk proof remain open.

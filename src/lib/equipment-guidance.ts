@@ -5,7 +5,7 @@ export type GuidanceContext = {
   activeSection: EquipmentSectionKey;
 };
 
-type GuidanceRule = {
+export type GuidanceRule = {
   id: string;
   section: EquipmentSectionKey | null;
   message: string;
@@ -18,7 +18,8 @@ export const EQUIPMENT_GUIDANCE_RULES: GuidanceRule[] = [
   {
     id: "body-needs-batteries",
     section: "batteries",
-    message: "Camera body selected — check compatible battery availability before checkout.",
+    message:
+      "Camera body selected — add Sony Battery, Monitor Battery, Gold Mount, or FX6 Battery quantity. Exact units bind at pickup.",
     level: "warning",
     condition: (ctx) =>
       ctx.selectedSectionKeys.includes("cameras") &&
@@ -43,20 +44,31 @@ export const EQUIPMENT_GUIDANCE_RULES: GuidanceRule[] = [
       !ctx.selectedSectionKeys.includes("audio"),
   },
 
-  // ── Support gear ────────────────────────────────────────
+  // ── Support gear (family pools, not model rows) ─────────
   {
     id: "cameras-need-support",
     section: "tripods",
-    message: "Add a tripod or monopod for sideline and press-box coverage.",
+    message:
+      "Add Tripod or Football Tripod quantity for sideline and press-box coverage. Models stay under the family and bind at pickup.",
     level: "info",
     condition: (ctx) =>
       ctx.selectedSectionKeys.includes("cameras") &&
       !ctx.selectedSectionKeys.includes("tripods"),
   },
   {
+    id: "cameras-need-lighting",
+    section: "lighting",
+    message:
+      "Need lights? Reserve Light Kit or Football Light Kit — cased sets, not brand rows. Exact cases bind at pickup.",
+    level: "info",
+    condition: (ctx) =>
+      ctx.selectedSectionKeys.includes("cameras") &&
+      !ctx.selectedSectionKeys.includes("lighting"),
+  },
+  {
     id: "monitors-need-power",
     section: "batteries",
-    message: "Field monitors drain batteries fast \u2014 pack extras or a V-mount.",
+    message: "Field monitors drain batteries fast \u2014 pack Monitor Battery or Gold Mount extras.",
     level: "warning",
     condition: (ctx) =>
       ctx.selectedSectionKeys.includes("other") &&
@@ -100,10 +112,12 @@ export const EQUIPMENT_GUIDANCE_RULES: GuidanceRule[] = [
   {
     id: "accessories-without-cameras",
     section: "cameras",
-    message: "You have accessories (audio/tripods) but no camera body.",
+    message: "You have support gear (audio, tripods, or light kits) but no camera body.",
     level: "info",
     condition: (ctx) =>
-      (ctx.selectedSectionKeys.includes("audio") || ctx.selectedSectionKeys.includes("tripods")) &&
+      (ctx.selectedSectionKeys.includes("audio")
+        || ctx.selectedSectionKeys.includes("tripods")
+        || ctx.selectedSectionKeys.includes("lighting")) &&
       !ctx.selectedSectionKeys.includes("cameras") &&
       !ctx.selectedSectionKeys.includes("lenses"),
   },
@@ -118,9 +132,24 @@ export const EQUIPMENT_GUIDANCE_RULES: GuidanceRule[] = [
   },
 ];
 
+/** Hard blockers for review advance (none today; reserved for future requirements). */
 export function getUnsatisfiedRequirements(selectedSectionKeys: EquipmentSectionKey[]): GuidanceRule[] {
   const ctx: GuidanceContext = { selectedSectionKeys, activeSection: "cameras" };
   return EQUIPMENT_GUIDANCE_RULES.filter(
-    (rule) => rule.level === "requirement" && rule.condition(ctx)
+    (rule) => rule.level === "requirement" && rule.condition(ctx),
   );
+}
+
+/**
+ * Section-scoped advisory hints for the equipment picker. Shows rules that
+ * target the active tab (or global null-section rules) when their condition
+ * is already true from the current selection.
+ */
+export function getSectionGuidance(ctx: GuidanceContext): GuidanceRule[] {
+  return EQUIPMENT_GUIDANCE_RULES.filter((rule) => {
+    if (!rule.condition(ctx)) return false;
+    if (rule.level === "requirement") return false;
+    if (rule.section === null) return ctx.selectedSectionKeys.length >= 4;
+    return rule.section === ctx.activeSection;
+  });
 }

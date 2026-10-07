@@ -118,6 +118,38 @@ describe("normalizeHygieneQueue", () => {
     expect(missingImage).toMatchObject({ severity: "info", ctaLabel: "Open items" });
   });
 
+  it("routes support-family hygiene checks to the right repair surfaces", () => {
+    const checks = normalizeHygieneQueue(hygieneQueue({
+      issues: [
+        {
+          key: "units-missing-product",
+          title: "Family units missing product",
+          description: "Assign products under the family.",
+          count: 3,
+          samples: [],
+        },
+        {
+          key: "serialized-support-pool-candidates",
+          title: "Serialized support gear to review as families",
+          description: "Review tripods and light kits.",
+          count: 4,
+          samples: [],
+        },
+      ],
+    }));
+
+    expect(checks.find((check) => check.key === "units-missing-product")).toMatchObject({
+      severity: "warning",
+      href: "/bulk-inventory",
+      ctaLabel: "Assign products",
+    });
+    expect(checks.find((check) => check.key === "serialized-support-pool-candidates")).toMatchObject({
+      severity: "info",
+      href: "/items",
+      ctaLabel: "Review support gear",
+    });
+  });
+
   it("falls back to safe defaults for unknown check keys", () => {
     const checks = normalizeHygieneQueue(hygieneQueue({
       issues: [
