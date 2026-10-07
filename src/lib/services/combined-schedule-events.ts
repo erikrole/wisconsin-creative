@@ -169,7 +169,7 @@ export async function uncombineScheduleEvents(input: {
     if (secondary.shiftGroup) {
       await tx.shiftGroup.update({
         where: { id: secondary.shiftGroup.id },
-        data: { archivedAt: null, notifyAfter: null, notifyAttemptedAt: null, notifyError: null },
+        data: { archivedAt: null },
       });
       if (secondary.shiftGroup.workingCopy) {
         const restored = await tx.shiftGroupWorkingCopy.updateMany({
@@ -262,9 +262,6 @@ export async function combineScheduleEvents(input: {
         where: { id: preview.secondary.shiftGroupId },
         data: {
           archivedAt: combinedAt,
-          notifyAfter: null,
-          notifyAttemptedAt: null,
-          notifyError: null,
         },
       });
     }

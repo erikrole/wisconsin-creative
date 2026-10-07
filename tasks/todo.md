@@ -883,7 +883,7 @@ Plan: `tasks/kiosk-active-checkout-item-editing-plan.md`
 
 ## Active: Booking owner transfer (2026-07-09)
 
-Plan: `tasks/booking-owner-transfer-plan.md`
+Plan: `tasks/archive/completed-2026-10-07/booking-owner-transfer-plan.md`
 
 - [x] Add staff/admin-only transfer ownership API and lifecycle audit.
 - [x] Wire the shared booking detail page and sheet action.

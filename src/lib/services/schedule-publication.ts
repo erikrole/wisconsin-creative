@@ -567,7 +567,6 @@ export async function publishShiftGroup(
    */
   options: {
     advanceNotificationMark?: boolean;
-    clearNotificationPending?: boolean;
     manualPublish?: boolean;
     requireWorkingCopy?: boolean;
     /**
@@ -584,7 +583,6 @@ export async function publishShiftGroup(
   } = {},
 ) {
   const advanceNotificationMark = options.advanceNotificationMark ?? true;
-  const clearNotificationPending = options.clearNotificationPending ?? false;
   const manualPublish = options.manualPublish ?? false;
   const requireWorkingCopy = options.requireWorkingCopy ?? false;
   return withSerializationRetry(() => db.$transaction(async (tx) => {
@@ -978,11 +976,6 @@ export async function publishShiftGroup(
         publishedAt,
         publishedById: actorId,
         publishedVersion: { increment: 1 },
-        ...(clearNotificationPending ? {
-          notifyAfter: null,
-          notifyAttemptedAt: publishedAt,
-          notifyError: null,
-        } : {}),
         ...(advanceNotificationMark
           ? { lastPublishedSnapshot: snapshot as unknown as Prisma.InputJsonValue }
           : {}),

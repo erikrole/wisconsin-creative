@@ -2076,7 +2076,7 @@ Indexes and constraints:
 
 ## Model `ShiftGroup`
 
-Fields: 20
+Fields: 17
 
 - `id                    String                       @id @default(cuid())`
 - `eventId               String                       @unique @map("event_id")`
@@ -2087,9 +2087,6 @@ Fields: 20
 - `publishedById         String?                      @map("published_by_id")`
 - `lastPublishedSnapshot Json?                        @map("last_published_snapshot")`
 - `publishedVersion      Int                          @default(0) @map("published_version")`
-- `notifyAfter           DateTime?                    @map("notify_after")`
-- `notifyAttemptedAt     DateTime?                    @map("notify_attempted_at")`
-- `notifyError           String?                      @map("notify_error")`
 - `archivedAt            DateTime?                    @map("archived_at")`
 - `createdAt             DateTime                     @default(now()) @map("created_at")`
 - `updatedAt             DateTime                     @updatedAt @map("updated_at")`
@@ -2103,7 +2100,6 @@ Indexes and constraints:
 
 - `@@index([publishedAt])`
 - `@@index([publishedById])`
-- `@@index([notifyAfter])`
 - `@@map("shift_groups")`
 
 ## Model `ShiftGroupWorkingCopy`
@@ -2912,3 +2908,49 @@ Fields: 8
 Indexes and constraints:
 
 - `@@map("youtube_library_state")`
+
+## Model `YouTubePublishRecord`
+
+Fields: 15
+
+- `id             String    @id`
+- `videoId        String    @map("video_id")`
+- `operation      String`
+- `undoOf         String?   @map("undo_of")`
+- `phase          String`
+- `before         Json`
+- `expected       Json`
+- `readBack       Json?     @map("read_back")`
+- `sourceUrl      String    @map("source_url")`
+- `sourceSha256   String    @map("source_sha256")`
+- `failureMessage String?   @map("failure_message")`
+- `actorId        String?   @map("actor_id")`
+- `createdAt      DateTime  @map("created_at")`
+- `verifiedAt     DateTime? @map("verified_at")`
+- `updatedAt      DateTime  @updatedAt @map("updated_at")`
+
+Indexes and constraints:
+
+- `@@index([videoId, createdAt(sort: Desc)])`
+- `@@map("youtube_publish_records")`
+
+## Model `YouTubePlaylistAddition`
+
+Fields: 11
+
+- `id             String   @id`
+- `videoId        String   @map("video_id")`
+- `videoTitle     String   @map("video_title")`
+- `playlist       Json`
+- `playlistId     String   @map("playlist_id")`
+- `phase          String`
+- `membership     Json?`
+- `failureMessage String?  @map("failure_message")`
+- `actorId        String?  @map("actor_id")`
+- `createdAt      DateTime @map("created_at")`
+- `updatedAt      DateTime @updatedAt @map("updated_at")`
+
+Indexes and constraints:
+
+- `@@index([videoId, createdAt(sort: Desc)])`
+- `@@map("youtube_playlist_additions")`
