@@ -373,13 +373,27 @@ export async function getCleanupWizardCounts() {
   };
 }
 
-async function collectQueueMatches<T extends { id: string }>(args: {
+type QueueAssetRow = {
+  id: string;
+  assetTag: string;
+  name: string | null;
+  brand: string;
+  model: string;
+  type: string;
+  imageUrl: string | null;
+  qrCodeValue: string;
+  primaryScanCode: string | null;
+  serialNumber: string | null;
+  location: { name: string } | null;
+};
+
+async function collectQueueMatches(args: {
   limit: number;
   excluded: string[];
   where: Prisma.AssetWhereInput;
-  matches: (asset: T) => boolean;
-}): Promise<T[]> {
-  const matches: T[] = [];
+  matches: (asset: QueueAssetRow) => boolean;
+}): Promise<QueueAssetRow[]> {
+  const matches: QueueAssetRow[] = [];
   let skip = 0;
   while (matches.length < args.limit && skip < QUEUE_SCAN_MAX) {
     const batch = await db.asset.findMany({
@@ -391,7 +405,7 @@ async function collectQueueMatches<T extends { id: string }>(args: {
       select: assetSelect,
       take: QUEUE_SCAN_BATCH,
       skip,
-    }) as T[];
+    });
     if (batch.length === 0) break;
     for (const asset of batch) {
       if (!args.matches(asset)) continue;
