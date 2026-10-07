@@ -31,10 +31,14 @@ async function references() {
 let refs = await references();
 for (const branch of await provider.branches(config.preview.projectId)) {
   if (branch.id === config.preview.templateBranchId || branch.protected || branch.default || branch.primary || branch.parent_id !== config.preview.templateBranchId || !/^wc-preview-[a-f0-9]{20}$/.test(branch.name)) continue;
+  const woken = await provider.idleEndpoints(config.preview.projectId, branch.id);
+  try { await review(branch); } finally { await provider.suspendEndpoints(config.preview.projectId, woken); }
+}
+async function review(branch) {
   const pooled = await provider.connection(config.preview.projectId, branch.id, config.preview.database, config.preview.ownerRole, true);
   const direct = await provider.connection(config.preview.projectId, branch.id, config.preview.database, config.preview.ownerRole, false);
   const sql = neon(direct), baseline = await loadMigrationBaseline(sql, localChecksums());
-  if (!baseline || baseline.approval?.kind !== "sanitized-child") { console.log({ branch: branch.id, status: "unattested-retained" }); continue; }
+  if (!baseline || baseline.approval?.kind !== "sanitized-child") { console.log({ branch: branch.id, status: "unattested-retained" }); return; }
   const gitBranch = baseline.approval.gitBranch;
   assertProviderLineage(branch, gitBranch, config);
   const state = { projectId: config.preview.projectId, branchId: branch.id, endpointId: baseline.target.endpoint, gitBranch, key: branchKey(gitBranch), environment: { DATABASE_URL: pooled, DIRECT_URL: direct, DATABASE_URL_UNPOOLED: direct } };
@@ -42,10 +46,10 @@ for (const branch of await provider.branches(config.preview.projectId)) {
   const [runtime] = await sql.query("SELECT pinned,git_deleted_at,last_seen_at FROM wc_preview_meta.runtime WHERE id=true");
   const decision = previewRetentionDecision({ exists: refs.branches.has(gitBranch), openPullRequest: refs.prs.has(gitBranch), pinned: runtime.pinned, deletedAt: runtime.git_deleted_at, lastSeenAt: runtime.last_seen_at, graceDays: config.preview.cleanupGraceDays });
   console.log({ gitBranch, branch: branch.id, status: decision, apply });
-  if (!apply) continue;
-  if (decision === "referenced") { await sql.query("UPDATE wc_preview_meta.runtime SET git_deleted_at=NULL WHERE id=true"); continue; }
-  if (decision === "record-deletion") { await sql.query("UPDATE wc_preview_meta.runtime SET git_deleted_at=now() WHERE id=true AND git_deleted_at IS NULL"); continue; }
-  if (decision !== "eligible") continue;
+  if (!apply) return;
+  if (decision === "referenced") { await sql.query("UPDATE wc_preview_meta.runtime SET git_deleted_at=NULL WHERE id=true"); return; }
+  if (decision === "record-deletion") { await sql.query("UPDATE wc_preview_meta.runtime SET git_deleted_at=now() WHERE id=true AND git_deleted_at IS NULL"); return; }
+  if (decision !== "eligible") return;
   const [resourceRow] = await sql.query("SELECT manifest FROM wc_preview_meta.resources WHERE id=true");
   const resources = validateResourceManifest(resourceRow.manifest, state, config);
   const deployments = []; let until;
@@ -53,12 +57,12 @@ for (const branch of await provider.branches(config.preview.projectId)) {
     const page = await vercel.request(`/v6/deployments?projectId=${config.vercel.productionProjectId}&limit=100${until ? `&until=${until}` : ""}`);
     deployments.push(...page.deployments.filter((d) => d.meta?.wcPreviewKey === state.key && d.meta?.wcPreviewBranch === branch.id)); until = page.pagination?.next;
   } while (until);
-  if (deployments.some((d) => d.target === "production" || ["BUILDING", "QUEUED", "INITIALIZING"].includes(d.readyState ?? d.state))) { console.log({ branch: branch.id, status: "deployment-active-retained" }); continue; }
+  if (deployments.some((d) => d.target === "production" || ["BUILDING", "QUEUED", "INITIALIZING"].includes(d.readyState ?? d.state))) { console.log({ branch: branch.id, status: "deployment-active-retained" }); return; }
   refs = await references();
   const { branch: currentBranch } = await provider.request(`/projects/${config.preview.projectId}/branches/${branch.id}`);
   assertProviderLineage(currentBranch, gitBranch, config);
   const [current] = await sql.query("SELECT pinned,git_deleted_at,last_seen_at FROM wc_preview_meta.runtime WHERE id=true");
-  if (previewRetentionDecision({ exists: refs.branches.has(gitBranch), openPullRequest: refs.prs.has(gitBranch), pinned: current.pinned, deletedAt: current.git_deleted_at, lastSeenAt: current.last_seen_at, graceDays: config.preview.cleanupGraceDays }) !== "eligible") continue;
+  if (previewRetentionDecision({ exists: refs.branches.has(gitBranch), openPullRequest: refs.prs.has(gitBranch), pinned: current.pinned, deletedAt: current.git_deleted_at, lastSeenAt: current.last_seen_at, graceDays: config.preview.cleanupGraceDays }) !== "eligible") return;
   const inventory = (await vercel.request("/v1/storage/stores")).stores;
   const present = resources.stores.filter((s) => inventory.some((i) => i.id === s.id));
   for (const resource of present) {
@@ -69,7 +73,7 @@ for (const branch of await provider.branches(config.preview.projectId)) {
   // A prior local lease changes last_seen_at and loses this compare-and-set;
   // a later local lease sees the tombstone and refuses to start.
   const claimed = await sql.query(claimPreviewCleanupSql, [current.git_deleted_at, current.last_seen_at, config.preview.cleanupGraceDays]);
-  if (!claimed.length) { console.log({ branch: branch.id, status: "activity-changed-retained" }); continue; }
+  if (!claimed.length) { console.log({ branch: branch.id, status: "activity-changed-retained" }); return; }
   for (const deployment of deployments) await vercel.request(`/v13/deployments/${deployment.uid ?? deployment.id}`, { method: "DELETE" });
   for (const resource of present) {
     await vercel.request(`/v1/storage/stores/${resource.id}/connections`, { method: "DELETE" });

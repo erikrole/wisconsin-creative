@@ -9,6 +9,7 @@ import { readInfrastructureConfig } from "../scripts/lib/migration-baseline.mjs"
 import { previewRetentionDecision } from "../scripts/lib/preview-retention.mjs";
 import { privateHandoff, handoffVariable, missingEnvironmentReason } from "../scripts/lib/preview-handoff.mjs";
 import { VercelPreviewApi } from "../scripts/lib/vercel-preview-api.mjs";
+import { NeonPreviewApi } from "../scripts/lib/neon-preview-api.mjs";
 
 const temporary = [];
 function directory() { const path = mkdtempSync(join(tmpdir(), "wc-preview-test-")); temporary.push(path); return path; }
@@ -130,5 +131,25 @@ describe("missing preview environment diagnosis", () => {
   });
   it("falls back to the generic hint when gh is unusable", () => {
     expect(missingEnvironmentReason("b", gh(new Error("no gh"), []))).toEqual([]);
+  });
+});
+
+describe("managed preview cleanup compute", () => {
+  it("suspends only the computes cleanup woke, tolerating a deleted branch", async () => {
+    const calls = [];
+    const fetcher = async (url, { method }) => {
+      calls.push(`${method} ${url.replace("https://console.neon.tech/api/v2", "")}`);
+      if (url.endsWith("/endpoints")) return new Response(JSON.stringify({ endpoints: [{ id: "ep-idle", current_state: "idle" }, { id: "ep-busy", current_state: "active" }] }));
+      return new Response(null, { status: url.includes("ep-gone") ? 404 : 200 });
+    };
+    const api = new NeonPreviewApi("token", fetcher);
+    const woken = await api.idleEndpoints("project", "br-test");
+    expect(woken).toEqual(["ep-idle"]);
+    await api.suspendEndpoints("project", [...woken, "ep-gone"]);
+    expect(calls).toEqual(["GET /projects/project/branches/br-test/endpoints", "POST /projects/project/endpoints/ep-idle/suspend", "POST /projects/project/endpoints/ep-gone/suspend"]);
+  });
+  it("suspends after every reviewed branch, including early returns", () => {
+    const source = readFileSync("scripts/cleanup-previews.mjs", "utf8");
+    expect(source).toMatch(/try \{ await review\(branch\); \} finally \{ await provider\.suspendEndpoints/);
   });
 });

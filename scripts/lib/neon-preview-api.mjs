@@ -29,6 +29,19 @@ export class NeonPreviewApi {
     }
     throw new Error("Neon preview did not become ready. Inspect it before retrying.");
   }
+  async idleEndpoints(project, branchId) {
+    const { endpoints } = await this.request(`/projects/${project}/branches/${branchId}/endpoints`);
+    return endpoints.filter((endpoint) => endpoint.current_state !== "active").map((endpoint) => endpoint.id);
+  }
+  // Cleanup wakes each child to read its retention row. Suspend only the computes
+  // it woke so a sweep never exhausts the active-endpoint limit or bills idle time,
+  // and never interrupts a preview someone is using.
+  async suspendEndpoints(project, endpointIds) {
+    for (const id of endpointIds) {
+      try { await this.request(`/projects/${project}/endpoints/${id}/suspend`, { method: "POST" }); }
+      catch { console.warn({ endpoint: id, status: "suspend-skipped" }); }
+    }
+  }
   async connection(project, branch, database, role, pooled) {
     const query = new URLSearchParams({ branch_id: branch, database_name: database, role_name: role, pooled: String(pooled) });
     const result = await this.request(`/projects/${project}/connection_uri?${query}`);
