@@ -32,9 +32,9 @@ Evidence-backed cleanup of dead code and dormant schema, plus task/docs inventor
 
 ## Verification
 
-- Focused schedule/combine/checkin-related Vitest.
-- `npx tsc --noEmit --pretty false`
-- `npm run db:migrate:check`
-- `npm run verify:docs` (after codemap if needed)
-- `git diff --check`
-- `npm run build:app`
+- [x] Focused Vitest: 8 files / 88 tests (schedule publication, combine, pending release, working-copy, mark-checkout-completed, kiosk-only custody, bulk check-in ledger).
+- [x] `npm run db:migrate:check` — 173 migrations, no collisions.
+- [x] `npm run verify:docs` / `codemap:check` — current.
+- [x] `git diff --check` — clean.
+- [x] `npm run build:app` — passed.
+- Note: `npx tsc --noEmit` still reports two pre-existing `match![1]` errors in `tests/ios-auth-design.test.ts` and `tests/ios-flat-surface.test.ts` on `main`; none in this slice’s paths.
