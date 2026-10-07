@@ -19,7 +19,7 @@
 | `src/lib/services/booking-ref.ts` | 26 |
 | `src/lib/services/booking-reuse.ts` | 219 |
 | `src/lib/services/booking-rules.ts` | 135 |
-| `src/lib/services/bookings-checkin.ts` | 940 |
+| `src/lib/services/bookings-checkin.ts` | 734 |
 | `src/lib/services/bookings-helpers.ts` | 310 |
 | `src/lib/services/bookings-lifecycle.ts` | 3386 |
 | `src/lib/services/bookings-queries.ts` | 311 |
@@ -37,7 +37,7 @@
 | `src/lib/services/claim-review-notifications.ts` | 197 |
 | `src/lib/services/collaborator-policies.ts` | 400 |
 | `src/lib/services/collaborator-schedule.ts` | 228 |
-| `src/lib/services/combined-schedule-events.ts` | 298 |
+| `src/lib/services/combined-schedule-events.ts` | 295 |
 | `src/lib/services/companion-projection-publisher.ts` | 57 |
 | `src/lib/services/companion-projection.ts` | 250 |
 | `src/lib/services/consolidation-shared.ts` | 21 |
@@ -87,7 +87,7 @@
 | `src/lib/services/schedule-health.ts` | 383 |
 | `src/lib/services/schedule-notification-policy.ts` | 95 |
 | `src/lib/services/schedule-open-work.ts` | 600 |
-| `src/lib/services/schedule-publication.ts` | 1117 |
+| `src/lib/services/schedule-publication.ts` | 1110 |
 | `src/lib/services/schedule-template-review.ts` | 554 |
 | `src/lib/services/schedule-working-copy.ts` | 1190 |
 | `src/lib/services/scoreboard.ts` | 282 |
@@ -481,6 +481,7 @@
 - `/api/cron/morning-refresh`
 - `/api/cron/notifications`
 - `/api/cron/rehost-images`
+- `/api/cron/youtube-sweep`
 
 ### `/api/dashboard`
 
@@ -841,8 +842,13 @@
 ### `/api/youtube`
 
 - `/api/youtube/connection`
+- `/api/youtube/drafts/[videoId]/check-playlists`
+- `/api/youtube/drafts/[videoId]/check-send`
 - `/api/youtube/drafts/[videoId]/game`
+- `/api/youtube/drafts/[videoId]/make-public`
+- `/api/youtube/drafts/[videoId]/playlists`
 - `/api/youtube/drafts/[videoId]/prepare`
+- `/api/youtube/drafts/[videoId]/publish`
 - `/api/youtube/drafts/[videoId]`
 - `/api/youtube/library/refresh`
 - `/api/youtube/oauth/callback`

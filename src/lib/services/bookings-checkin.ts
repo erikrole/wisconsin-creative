@@ -13,7 +13,7 @@ import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
 import { createAuditEntryTx, lookupActorRole } from "@/lib/audit";
 import { badges } from "@/lib/badges";
-import { reportedLostBulkBySku, settleBulkLedgerAtCompletion, upsertBulkBalancesAndMovements } from "./bookings-helpers";
+import { reportedLostBulkBySku, settleBulkLedgerAtCompletion } from "./bookings-helpers";
 import { assetLocationEvidence, reconcileAssetLocationToKiosk, type KioskLocationEvidence } from "./kiosk-location";
 import { endCheckoutReturnLiveActivities } from "./live-activities";
 import { requireKioskActor } from "./kiosk-actor";
@@ -37,8 +37,8 @@ export function returnedForOwnerId(
 }
 
 /**
- * Shared auto-complete check for checkinItems, checkinBulkItem, kioskCheckinAsset,
- * and scanKioskCheckinBulkUnit. Completes the booking if all serialized items are
+ * Shared auto-complete check for kioskCheckinAsset, scanKioskCheckinBulkUnit,
+ * and other kiosk/force-complete return paths. Completes the booking if all serialized items are
  * returned and all bulk items are fully checked in. Returns the completion
  * timestamp if booking was completed.
  */
@@ -428,115 +428,11 @@ export async function forceCompleteCheckout(args: {
 }
 
 /**
- * Partial check-in: return individual serialized items from a checkout.
- * Marks each item's allocationStatus as "returned" and deactivates its allocation.
- * If all serialized items are returned (and bulk items fully checked in),
- * auto-completes the checkout.
- *
- * Source: BRIEF_CHECKOUT_UX_V2.md — "Partial check-in: multi-item
- * allocations can be returned incrementally without triggering completion"
- */
-export async function checkinItems(
-  bookingId: string,
-  actorUserId: string,
-  assetIds: string[]
-) {
-  return db.$transaction(
-    async (tx) => {
-      const booking = await tx.booking.findUnique({
-        where: { id: bookingId },
-        include: { serializedItems: true, bulkItems: true }
-      });
-
-      if (!booking || booking.kind !== BookingKind.CHECKOUT) {
-        throw new HttpError(404, "Checkout not found");
-      }
-
-      if (booking.status !== BookingStatus.OPEN) {
-        throw new HttpError(400, "Can only check in items from an open checkout");
-      }
-
-      // Validate all requested assets belong to this checkout
-      const bookingAssetIds = new Set(booking.serializedItems.map((i) => i.assetId));
-      const invalid = assetIds.filter((id) => !bookingAssetIds.has(id));
-      if (invalid.length > 0) {
-        throw new HttpError(400, `Assets not in this checkout: ${invalid.join(", ")}`);
-      }
-
-      // Validate none are already returned
-      const alreadyReturned = booking.serializedItems
-        .filter((i) => assetIds.includes(i.assetId) && i.allocationStatus === "returned")
-        .map((i) => i.assetId);
-      if (alreadyReturned.length > 0) {
-        throw new HttpError(400, `Assets already returned: ${alreadyReturned.join(", ")}`);
-      }
-
-      // Mark items as returned (batched — avoids N+1 sequential queries)
-      await tx.bookingSerializedItem.updateMany({
-        where: { bookingId, assetId: { in: assetIds } },
-        data: { allocationStatus: "returned" }
-      });
-
-      await tx.assetAllocation.updateMany({
-        where: { bookingId, assetId: { in: assetIds }, active: true },
-        data: { active: false }
-      });
-
-      const actorRole = await lookupActorRole(tx, actorUserId);
-      await createAuditEntryTx(tx, {
-        actorId: actorUserId,
-        actorRole,
-        entityType: "booking",
-        entityId: bookingId,
-        action: "partial_checkin",
-        after: { returnedAssetIds: assetIds },
-      });
-
-      const completedAt = await maybeAutoComplete(tx, bookingId, booking.locationId, actorUserId, {
-        auditAction: "auto_completed_by_partial_checkin"
-      });
-
-      const remainingActive = completedAt
-        ? 0
-        : await tx.bookingSerializedItem.count({ where: { bookingId, allocationStatus: "active" } });
-
-      return {
-        success: true,
-        returnedAssetIds: assetIds,
-        remainingActiveItems: remainingActive,
-        autoCompleted: completedAt !== null,
-        badgeEvent: completedAt && booking.custodyScope === BookingCustodyScope.PERSON
-          ? {
-              userId: booking.requesterUserId,
-              bookingId,
-              completedAt,
-              wasOnTime: wasReturnedOnTime(booking.endsAt, completedAt),
-              sourceKey: bookingId,
-            }
-          : null,
-      };
-    },
-    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
-  ).then(async (result) => {
-    if (result.badgeEvent) {
-      await badges.onCheckoutReturned(result.badgeEvent);
-      await endCheckoutReturnLiveActivities(bookingId);
-    }
-    return {
-      success: result.success,
-      returnedAssetIds: result.returnedAssetIds,
-      remainingActiveItems: result.remainingActiveItems,
-      autoCompleted: result.autoCompleted,
-    };
-  });
-}
-
-/**
  * Kiosk-flavored per-asset return.
  *
- * Mirrors the core of `checkinItems` (validate booking → mark serialized
- * item returned → deactivate allocation) but is scoped to a single asset
- * and emits no per-scan audit (kiosk audits at complete, not per-scan).
+ * Validates the booking, marks one serialized item returned, and deactivates
+ * its allocation. Scoped to a single asset with no per-scan audit (kiosk
+ * audits at complete, not per-scan).
  *
  * Auto-completes the booking via `maybeAutoComplete` when this scan returns
  * the last outstanding item — otherwise a dropped kiosk session between the
@@ -832,108 +728,6 @@ export async function kioskCompleteCheckin(args: {
       completed: result.completed,
       custodyScope: result.custodyScope,
       returnedForUserId: result.returnedForUserId,
-    };
-  });
-}
-
-/**
- * Check in a partial quantity of a bulk item on an open checkout.
- * Updates checkedInQuantity and returns bulk stock to the location balance.
- * Auto-completes the checkout if all items (serialized + bulk) are now returned.
- */
-export async function checkinBulkItem(
-  bookingId: string,
-  actorUserId: string,
-  bulkItemId: string,
-  quantity: number
-) {
-  return db.$transaction(
-    async (tx) => {
-      const booking = await tx.booking.findUnique({
-        where: { id: bookingId },
-        include: { serializedItems: true, bulkItems: true }
-      });
-
-      if (!booking || booking.kind !== BookingKind.CHECKOUT) {
-        throw new HttpError(404, "Checkout not found");
-      }
-
-      if (booking.status !== BookingStatus.OPEN) {
-        throw new HttpError(400, "Can only check in items from an open checkout");
-      }
-
-      const bulkItem = booking.bulkItems.find((i) => i.id === bulkItemId);
-      if (!bulkItem) {
-        throw new HttpError(400, "Bulk item not in this checkout");
-      }
-
-      const outQty = bulkItem.checkedOutQuantity ?? bulkItem.plannedQuantity;
-      const alreadyIn = bulkItem.checkedInQuantity ?? 0;
-      const remaining = outQty - alreadyIn;
-
-      if (quantity <= 0 || quantity > remaining) {
-        throw new HttpError(400, `Invalid quantity: ${remaining} remaining to return`);
-      }
-
-      const newCheckedIn = alreadyIn + quantity;
-
-      await tx.bookingBulkItem.update({
-        where: { id: bulkItemId },
-        data: { checkedInQuantity: newCheckedIn }
-      });
-
-      // Return stock to location balance
-      await upsertBulkBalancesAndMovements(tx, {
-        bookingId,
-        locationId: booking.locationId,
-        actorUserId,
-        kind: BulkMovementKind.CHECKIN,
-        items: [{ bulkSkuId: bulkItem.bulkSkuId, quantity }]
-      });
-
-      const actorRole = await lookupActorRole(tx, actorUserId);
-      await createAuditEntryTx(tx, {
-        actorId: actorUserId,
-        actorRole,
-        entityType: "booking",
-        entityId: bookingId,
-        action: "partial_bulk_checkin",
-        after: { bulkItemId, quantity, newCheckedIn, outQty },
-      });
-
-      const completedAt = await maybeAutoComplete(tx, bookingId, booking.locationId, actorUserId, {
-        auditAction: "auto_completed_by_bulk_checkin"
-      });
-
-      return {
-        success: true,
-        bulkItemId,
-        checkedInQuantity: newCheckedIn,
-        totalQuantity: outQty,
-        autoCompleted: completedAt !== null,
-        badgeEvent: completedAt && booking.custodyScope === BookingCustodyScope.PERSON
-          ? {
-              userId: booking.requesterUserId,
-              bookingId,
-              completedAt,
-              wasOnTime: wasReturnedOnTime(booking.endsAt, completedAt),
-              sourceKey: bookingId,
-            }
-          : null,
-      };
-    },
-    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
-  ).then(async (result) => {
-    if (result.badgeEvent) {
-      await badges.onCheckoutReturned(result.badgeEvent);
-      await endCheckoutReturnLiveActivities(bookingId);
-    }
-    return {
-      success: result.success,
-      bulkItemId: result.bulkItemId,
-      checkedInQuantity: result.checkedInQuantity,
-      totalQuantity: result.totalQuantity,
-      autoCompleted: result.autoCompleted,
     };
   });
 }

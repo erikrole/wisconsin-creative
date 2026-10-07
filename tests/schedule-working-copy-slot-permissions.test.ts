@@ -150,9 +150,9 @@ describe("publish-now permissions", () => {
     const response = await publishRequest();
     expect(response.status).toBe(200);
     expect(mocks.publish).toHaveBeenCalledWith("group-1", "staff-1", 5, role, {
-      clearNotificationPending: false,
       manualPublish: true,
       requireWorkingCopy: true,
+      expectedDraftId: undefined,
     });
     expect(mocks.getEditor).toHaveBeenCalledWith("group-1", "staff-1");
     expect(mocks.after).toHaveBeenCalledOnce();

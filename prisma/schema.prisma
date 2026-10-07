@@ -2033,9 +2033,6 @@ model ShiftGroup {
   publishedById         String?                      @map("published_by_id")
   lastPublishedSnapshot Json?                        @map("last_published_snapshot")
   publishedVersion      Int                          @default(0) @map("published_version")
-  notifyAfter           DateTime?                    @map("notify_after")
-  notifyAttemptedAt     DateTime?                    @map("notify_attempted_at")
-  notifyError           String?                      @map("notify_error")
   archivedAt            DateTime?                    @map("archived_at")
   createdAt             DateTime                     @default(now()) @map("created_at")
   updatedAt             DateTime                     @updatedAt @map("updated_at")
@@ -2047,7 +2044,6 @@ model ShiftGroup {
 
   @@index([publishedAt])
   @@index([publishedById])
-  @@index([notifyAfter])
   @@map("shift_groups")
 }
 

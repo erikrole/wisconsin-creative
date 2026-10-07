@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Checkouts
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-09-17
+- Last Updated: 2026-10-07
 - Status: Active — V1 Shipped
 - Version: V1
 
@@ -339,6 +339,7 @@ The checkout detail page (`/checkouts/[id]`) uses the shared `BookingDetailPage`
 
 ## Change Log
 
+- 2026-10-07: **Removed dead app/web partial check-in service helpers.** `checkinItems` and `checkinBulkItem` had no product API callers under D-040; kiosk return paths, `maybeAutoComplete`, `markCheckoutCompleted`, and `forceCompleteCheckout` remain. The `/api/checkouts/[id]/checkin-*` routes still 403 so old clients get the kiosk-only message.
 - 2026-09-20: **Removed the unused `getActiveGuidance()` helper.** Per-section context hints were never wired into the booking wizard; only `getUnsatisfiedRequirements()` consumes `EQUIPMENT_GUIDANCE_RULES`. The rules table is unchanged.
 - 2026-09-17: **Direct kiosk checkout can start from a kit.** Setup offers pickup-scoped gameday kits, hides empty kits, labels Slow 1–Roam 4, and can suggest last week’s football job. Scans remain the cart; remaining kit members are a checklist; completion stores `kitId` as provenance after validating the kit against the kiosk pickup. Local source/test; physical kiosk proof remains open.
 - 2026-09-16: **Completed checkouts can re-reserve for a new event.** The action copies person, pickup, notes, title, and equipment into the reservation composer. It does not create checkout custody from app/web. Source/test complete; authenticated proof remains open.
