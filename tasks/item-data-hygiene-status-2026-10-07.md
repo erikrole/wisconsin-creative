@@ -41,10 +41,10 @@ This workspace has no `DATABASE_URL`, so live `npm run audit:item-data` was not 
 
 ## Product surface
 
-The **Cleanup wizard** (2026-10-07) walks `legacy_qr` and `missing_serial` queues with operator questions and audited save/defer. Entry: Items → Cleanup wizard, `/items?cleanupWizard=…`, Operations Keep data clean. Attachment parent mapping remains ledger/physical-only until a later slice.
+The **Cleanup wizard** (2026-10-07) walks `legacy_qr`, `missing_serial`, and `attachment_candidate` queues with operator questions and audited save/defer/attach. Entry: Items → Cleanup wizard, `/items?cleanupWizard=…`, Operations Keep data clean. Attachment attach still requires a shelf-confirmed parent; the wizard only suggests candidates and never invents ownership.
 
 ## Next bounded steps
 
 1. Authorized DB: `npm run audit:item-data` + dry-run `npm run cleanup:item-data`; refresh the four ledgers.
-2. Physical: run Cleanup wizard for legacy QR + missing serial; then 12 attachment parent decisions.
+2. Physical: run Cleanup wizard for legacy QR, missing serial, and the 12 attachment parent decisions.
 3. Archive cleared review ledgers into `tasks/archive/completed-YYYY-MM-DD/`.

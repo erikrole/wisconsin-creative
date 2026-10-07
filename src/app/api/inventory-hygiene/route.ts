@@ -107,6 +107,7 @@ export const GET = withAuth(async (_req, { user }) => {
     duplicateRowsResult,
     cleanupWizardCountsResult,
     legacyQrSamplesResult,
+    attachmentCandidateSamplesResult,
     bulkRowsResult,
   ] = await Promise.allSettled([
     db.asset.count({ where: { ...activeSerializedWhere, categoryId: null } }),
@@ -337,6 +338,7 @@ export const GET = withAuth(async (_req, { user }) => {
     `,
     getCleanupWizardCounts(),
     listCleanupWizardQueue("legacy_qr", SAMPLE_LIMIT),
+    listCleanupWizardQueue("attachment_candidate", SAMPLE_LIMIT),
     db.bulkSku.findMany({
       where: { active: true },
       orderBy: { name: "asc" },
@@ -421,11 +423,22 @@ export const GET = withAuth(async (_req, { user }) => {
   const duplicateRows = settledValue(duplicateRowsResult, [] as DuplicateScanRow[], "duplicateRows", partialFailures);
   const cleanupWizardCounts = settledValue(
     cleanupWizardCountsResult,
-    { legacy_qr: 0, missing_serial: 0, deferred: { legacy_qr: 0, missing_serial: 0 } },
+    {
+      legacy_qr: 0,
+      missing_serial: 0,
+      attachment_candidate: 0,
+      deferred: { legacy_qr: 0, missing_serial: 0, attachment_candidate: 0 },
+    },
     "cleanupWizardCounts",
     partialFailures,
   );
   const legacyQrSamples = settledValue(legacyQrSamplesResult, [], "legacyQrSamples", partialFailures);
+  const attachmentCandidateSamples = settledValue(
+    attachmentCandidateSamplesResult,
+    [],
+    "attachmentCandidateSamples",
+    partialFailures,
+  );
   const bulkRows = settledValue(bulkRowsResult, bulkRowsFallback, "bulkRows", partialFailures);
 
   const lowBulkRows = bulkRows
@@ -562,6 +575,18 @@ export const GET = withAuth(async (_req, { user }) => {
       "Active items with no serial on file. Use the Cleanup wizard when you have the gear in hand.",
       cleanupWizardCounts.missing_serial,
       [],
+    ),
+    issue(
+      "attachment-candidates",
+      "Attachment parent mapping",
+      "Standalone cages, plates, caps, and grips that may belong under a parent camera or lens. Confirm on the shelf before attaching.",
+      cleanupWizardCounts.attachment_candidate,
+      attachmentCandidateSamples.map((asset) => ({
+        id: asset.id,
+        label: asset.assetTag,
+        detail: [asset.brand, asset.model].filter(Boolean).join(" ") || asset.name || "Accessory candidate",
+        href: `/items/${asset.id}?tab=attachments`,
+      })),
     ),
     issue(
       "retired-in-kits",

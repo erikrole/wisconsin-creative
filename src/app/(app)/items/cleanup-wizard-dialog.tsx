@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { AlertCircle, Package, QrCode, RotateCcw, ScanLine } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { AlertCircle, Link2, Package, QrCode, RotateCcw, ScanLine } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { FormCombobox } from "@/components/FormCombobox";
 import { AssetImage } from "@/components/AssetImage";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import type { CleanupWizardItem, CleanupWizardKind } from "@/lib/services/item-cleanup-wizard";
@@ -24,7 +25,21 @@ type Answer = "yes" | "no" | null;
 type Counts = {
   legacy_qr: number;
   missing_serial: number;
-  deferred: { legacy_qr: number; missing_serial: number };
+  attachment_candidate: number;
+  deferred: {
+    legacy_qr: number;
+    missing_serial: number;
+    attachment_candidate: number;
+  };
+};
+
+type ParentSearchHit = {
+  id: string;
+  assetTag: string;
+  brand?: string | null;
+  model?: string | null;
+  name?: string | null;
+  parentAssetId?: string | null;
 };
 
 interface Props {
@@ -36,7 +51,14 @@ interface Props {
 
 const KIND_META: Record<
   CleanupWizardKind,
-  { title: string; blurb: string; icon: typeof QrCode; yesLabel: string; noLabel: string; deferReason: "no_printed_qr" | "no_serial" }
+  {
+    title: string;
+    blurb: string;
+    icon: typeof QrCode;
+    yesLabel: string;
+    noLabel: string;
+    deferReason: "no_printed_qr" | "no_serial" | "keep_standalone";
+  }
 > = {
   legacy_qr: {
     title: "Legacy QR labels",
@@ -54,7 +76,26 @@ const KIND_META: Record<
     noLabel: "No readable serial on this gear",
     deferReason: "no_serial",
   },
+  attachment_candidate: {
+    title: "Attachment parents",
+    blurb: "Cages, plates, caps, and grips that may belong under a camera or lens.",
+    icon: Link2,
+    yesLabel: "Yes — pick the parent item",
+    noLabel: "Keep standalone — staff checks it out alone",
+    deferReason: "keep_standalone",
+  },
 };
+
+function parentOptionLabel(parent: {
+  assetTag: string;
+  brand?: string | null;
+  model?: string | null;
+  reason?: string;
+}) {
+  const product = [parent.brand, parent.model].filter(Boolean).join(" ");
+  const base = product ? `${parent.assetTag} · ${product}` : parent.assetTag;
+  return parent.reason ? `${base} (${parent.reason})` : base;
+}
 
 export function CleanupWizardDialog({ open, onOpenChange, initialKind = null, onChanged }: Props) {
   const [stage, setStage] = useState<Stage>("pick");
@@ -65,6 +106,10 @@ export function CleanupWizardDialog({ open, onOpenChange, initialKind = null, on
   const [item, setItem] = useState<CleanupWizardItem | null>(null);
   const [answer, setAnswer] = useState<Answer>(null);
   const [value, setValue] = useState("");
+  const [parentId, setParentId] = useState("");
+  const [parentSearch, setParentSearch] = useState("");
+  const [parentSearchHits, setParentSearchHits] = useState<ParentSearchHit[]>([]);
+  const [parentSearching, setParentSearching] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -80,6 +125,9 @@ export function CleanupWizardDialog({ open, onOpenChange, initialKind = null, on
     setItem(null);
     setAnswer(null);
     setValue("");
+    setParentId("");
+    setParentSearch("");
+    setParentSearchHits([]);
     setLoading(false);
     setSaving(false);
     setLoadError(null);
@@ -118,6 +166,9 @@ export function CleanupWizardDialog({ open, onOpenChange, initialKind = null, on
       setItem(remaining[0] ?? null);
       setAnswer(null);
       setValue("");
+      setParentId("");
+      setParentSearch("");
+      setParentSearchHits([]);
       setSaveError(null);
       setStage("ask");
       return;
@@ -144,6 +195,9 @@ export function CleanupWizardDialog({ open, onOpenChange, initialKind = null, on
       setItem(json.data.items[0] ?? null);
       setAnswer(null);
       setValue("");
+      setParentId("");
+      setParentSearch("");
+      setParentSearchHits([]);
       setStage("ask");
     } catch (err) {
       setQueue([]);
@@ -162,6 +216,64 @@ export function CleanupWizardDialog({ open, onOpenChange, initialKind = null, on
       void loadNext(initialKind);
     }
   }, [counts, initialKind, kind, loadNext, open]);
+
+  useEffect(() => {
+    if (stage !== "enter" || kind !== "attachment_candidate") return;
+    const query = parentSearch.trim();
+    if (query.length < 2) {
+      setParentSearchHits([]);
+      setParentSearching(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setParentSearching(true);
+      try {
+        const res = await fetch(
+          `/api/assets?q=${encodeURIComponent(query)}&limit=10&include_accessories=true`,
+          { signal: controller.signal },
+        );
+        if (handleAuthRedirect(res)) return;
+        if (!res.ok) {
+          setParentSearchHits([]);
+          return;
+        }
+        const json = await parseJsonSafely<{ data?: ParentSearchHit[] }>(res);
+        const rows = Array.isArray(json?.data) ? json.data : [];
+        setParentSearchHits(
+          rows.filter((row) => row.id !== item?.id && !row.parentAssetId).slice(0, 8),
+        );
+      } catch {
+        if (!controller.signal.aborted) setParentSearchHits([]);
+      } finally {
+        if (!controller.signal.aborted) setParentSearching(false);
+      }
+    }, 250);
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+    };
+  }, [item?.id, kind, parentSearch, stage]);
+
+  const parentOptions = useMemo(() => {
+    const byId = new Map<string, { value: string; label: string }>();
+    for (const parent of item?.suggestedParents ?? []) {
+      byId.set(parent.id, {
+        value: parent.id,
+        label: parentOptionLabel(parent),
+      });
+    }
+    for (const hit of parentSearchHits) {
+      if (byId.has(hit.id)) continue;
+      byId.set(hit.id, {
+        value: hit.id,
+        label: parentOptionLabel(hit),
+      });
+    }
+    return [...byId.values()];
+  }, [item?.suggestedParents, parentSearchHits]);
 
   const startKind = useCallback((nextKind: CleanupWizardKind) => {
     setKind(nextKind);
@@ -213,14 +325,19 @@ export function CleanupWizardDialog({ open, onOpenChange, initialKind = null, on
   }, [advance, item, kind, onChanged, queue]);
 
   const handleSave = useCallback(async () => {
-    if (!kind || !item || !value.trim()) return;
+    if (!kind || !item) return;
+    if (kind === "attachment_candidate" && !parentId) return;
+    if (kind !== "attachment_candidate" && !value.trim()) return;
+
     setSaving(true);
     setSaveError(null);
     try {
       const body =
         kind === "legacy_qr"
           ? { action: "set_qr" as const, assetId: item.id, code: value.trim() }
-          : { action: "set_serial" as const, assetId: item.id, serialNumber: value.trim() };
+          : kind === "missing_serial"
+            ? { action: "set_serial" as const, assetId: item.id, serialNumber: value.trim() }
+            : { action: "attach" as const, assetId: item.id, parentAssetId: parentId };
       const res = await fetch("/api/items/cleanup-wizard", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -232,7 +349,13 @@ export function CleanupWizardDialog({ open, onOpenChange, initialKind = null, on
       if (json?.data?.counts) setCounts(json.data.counts);
       setFixed((n) => n + 1);
       onChanged?.();
-      toast.success(kind === "legacy_qr" ? "QR updated" : "Serial saved");
+      toast.success(
+        kind === "legacy_qr"
+          ? "QR updated"
+          : kind === "missing_serial"
+            ? "Serial saved"
+            : "Attached to parent",
+      );
       advance(kind, queue.slice(1));
     } catch (err) {
       const message = err instanceof Error ? err.message : "Could not save";
@@ -241,9 +364,11 @@ export function CleanupWizardDialog({ open, onOpenChange, initialKind = null, on
     } finally {
       setSaving(false);
     }
-  }, [advance, item, kind, onChanged, queue, value]);
+  }, [advance, item, kind, onChanged, parentId, queue, value]);
 
   const meta = kind ? KIND_META[kind] : null;
+  const canSave =
+    kind === "attachment_candidate" ? Boolean(parentId) : Boolean(value.trim());
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -304,9 +429,14 @@ export function CleanupWizardDialog({ open, onOpenChange, initialKind = null, on
                 );
               })}
             </div>
-            {counts && (counts.deferred.legacy_qr > 0 || counts.deferred.missing_serial > 0) && (
+            {counts && (
+              counts.deferred.legacy_qr > 0
+              || counts.deferred.missing_serial > 0
+              || counts.deferred.attachment_candidate > 0
+            ) && (
               <p className="text-xs text-muted-foreground">
-                Deferred for later: {counts.deferred.legacy_qr} QR, {counts.deferred.missing_serial} serial.
+                Deferred for later: {counts.deferred.legacy_qr} QR, {counts.deferred.missing_serial} serial,{" "}
+                {counts.deferred.attachment_candidate} attachment.
               </p>
             )}
           </>
@@ -371,6 +501,11 @@ export function CleanupWizardDialog({ open, onOpenChange, initialKind = null, on
                             No serial on file
                           </Badge>
                         )}
+                        {kind === "attachment_candidate" && (
+                          <Badge variant="outline" className="h-5 px-1.5 text-[10px] text-muted-foreground">
+                            No parent attached
+                          </Badge>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -389,6 +524,9 @@ export function CleanupWizardDialog({ open, onOpenChange, initialKind = null, on
                         setAnswer("yes");
                         setStage("enter");
                         setValue("");
+                        setParentId(item.suggestedParents?.[0]?.id ?? "");
+                        setParentSearch("");
+                        setParentSearchHits([]);
                         setSaveError(null);
                       }}
                       disabled={saving}
@@ -406,7 +544,7 @@ export function CleanupWizardDialog({ open, onOpenChange, initialKind = null, on
                   </div>
                 )}
 
-                {stage === "enter" && answer === "yes" && (
+                {stage === "enter" && answer === "yes" && kind !== "attachment_candidate" && (
                   <div className="flex flex-col gap-2">
                     <label className="text-sm font-medium" htmlFor="cleanup-wizard-value">
                       {kind === "legacy_qr" ? "Printed QR / scan code" : "Serial number"}
@@ -431,6 +569,53 @@ export function CleanupWizardDialog({ open, onOpenChange, initialKind = null, on
                   </div>
                 )}
 
+                {stage === "enter" && answer === "yes" && kind === "attachment_candidate" && (
+                  <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-2">
+                      <label className="text-sm font-medium" htmlFor="cleanup-wizard-parent">
+                        Parent item
+                      </label>
+                      <FormCombobox
+                        id="cleanup-wizard-parent"
+                        value={parentId}
+                        onValueChange={setParentId}
+                        options={parentOptions}
+                        placeholder="Select a parent"
+                        searchPlaceholder="Filter suggestions..."
+                        emptyLabel="No parents in this list. Search below."
+                        triggerClassName="h-11"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className="text-sm font-medium" htmlFor="cleanup-wizard-parent-search">
+                        Search other parents
+                      </label>
+                      <Input
+                        id="cleanup-wizard-parent-search"
+                        value={parentSearch}
+                        onChange={(event) => setParentSearch(event.target.value)}
+                        className="h-11"
+                        placeholder="Type an asset tag or name"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        {parentSearching
+                          ? "Searching..."
+                          : parentSearch.trim().length < 2
+                            ? "Type at least 2 characters to search the catalog."
+                            : parentSearchHits.length === 0
+                              ? "No additional parents found."
+                              : `${parentSearchHits.length} added to the list above.`}
+                      </p>
+                    </div>
+                    {saveError && (
+                      <div className="flex items-center gap-1.5 text-xs text-destructive">
+                        <AlertCircle className="size-3.5" />
+                        {saveError}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="flex items-center justify-between gap-2 pt-1">
                   <Button variant="ghost" onClick={handleSkip} disabled={saving}>
                     Skip for now
@@ -444,14 +629,17 @@ export function CleanupWizardDialog({ open, onOpenChange, initialKind = null, on
                             setStage("ask");
                             setAnswer(null);
                             setValue("");
+                            setParentId("");
+                            setParentSearch("");
+                            setParentSearchHits([]);
                             setSaveError(null);
                           }}
                           disabled={saving}
                         >
                           Back
                         </Button>
-                        <Button onClick={() => void handleSave()} disabled={!value.trim() || saving}>
-                          Save
+                        <Button onClick={() => void handleSave()} disabled={!canSave || saving}>
+                          {kind === "attachment_candidate" ? "Attach" : "Save"}
                         </Button>
                       </>
                     ) : (

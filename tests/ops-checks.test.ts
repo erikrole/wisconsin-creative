@@ -118,7 +118,7 @@ describe("normalizeHygieneQueue", () => {
     expect(missingImage).toMatchObject({ severity: "info", ctaLabel: "Open items" });
   });
 
-  it("routes legacy QR and missing serial queues to the Cleanup wizard", () => {
+  it("routes legacy QR, missing serial, and attachment queues to the Cleanup wizard", () => {
     const checks = normalizeHygieneQueue(hygieneQueue({
       issues: [
         {
@@ -135,6 +135,13 @@ describe("normalizeHygieneQueue", () => {
           count: 3,
           samples: [],
         },
+        {
+          key: "attachment-candidates",
+          title: "Attachment parent mapping",
+          description: "Needs parent.",
+          count: 12,
+          samples: [],
+        },
       ],
     }));
 
@@ -147,6 +154,11 @@ describe("normalizeHygieneQueue", () => {
       expect.objectContaining({
         key: "missing-serial",
         href: "/items?cleanupWizard=missing_serial",
+        ctaLabel: "Open cleanup wizard",
+      }),
+      expect.objectContaining({
+        key: "attachment-candidates",
+        href: "/items?cleanupWizard=attachment_candidate",
         ctaLabel: "Open cleanup wizard",
       }),
     ]));

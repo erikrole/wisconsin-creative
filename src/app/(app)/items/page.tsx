@@ -110,7 +110,12 @@ export default function ItemsPage() {
       setShowGapWizard(true);
     }
     const cleanup = searchParams.get("cleanupWizard");
-    if (cleanup === "1" || cleanup === "legacy_qr" || cleanup === "missing_serial") {
+    if (
+      cleanup === "1"
+      || cleanup === "legacy_qr"
+      || cleanup === "missing_serial"
+      || cleanup === "attachment_candidate"
+    ) {
       setCleanupWizardKind(cleanup === "1" ? null : cleanup);
       setShowCleanupWizard(true);
     }

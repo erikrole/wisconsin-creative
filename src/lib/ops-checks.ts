@@ -93,6 +93,12 @@ const HYGIENE_CHECK_META: Record<string, HygieneCheckMeta> = {
     href: "/items?cleanupWizard=missing_serial",
     ctaLabel: "Open cleanup wizard",
   },
+  "attachment-candidates": {
+    severity: "info",
+    priority: 5,
+    href: "/items?cleanupWizard=attachment_candidate",
+    ctaLabel: "Open cleanup wizard",
+  },
   "camera-missing-attachments": {
     severity: "info",
     priority: 9,

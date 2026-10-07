@@ -25,9 +25,11 @@ describe("inventory hygiene source contract", () => {
     expect(hygieneSource).toMatch(/camera-missing-attachments[\s\S]*Advisory only/);
   });
 
-  it("surfaces legacy QR and missing serial queues for the cleanup wizard", () => {
+  it("surfaces legacy QR, missing serial, and attachment queues for the cleanup wizard", () => {
     expect(hygieneSource).toContain("legacy-qr-labels");
     expect(hygieneSource).toContain("missing-serial");
+    expect(hygieneSource).toContain("attachment-candidates");
     expect(hygieneSource).toContain("getCleanupWizardCounts");
+    expect(hygieneSource).toContain('listCleanupWizardQueue("attachment_candidate"');
   });
 });

@@ -4,6 +4,7 @@ import { ok } from "@/lib/http";
 import { requirePermission } from "@/lib/rbac";
 import { databaseIdSchema } from "@/lib/validation";
 import {
+  applyCleanupWizardAttach,
   applyCleanupWizardQr,
   applyCleanupWizardSerial,
   deferCleanupWizardItem,
@@ -29,10 +30,15 @@ const actionSchema = z.discriminatedUnion("action", [
     serialNumber: z.string().trim().min(1).max(500),
   }),
   z.object({
+    action: z.literal("attach"),
+    assetId: databaseIdSchema,
+    parentAssetId: databaseIdSchema,
+  }),
+  z.object({
     action: z.literal("defer"),
     assetId: databaseIdSchema,
-    kind: z.enum(["legacy_qr", "missing_serial"]),
-    reason: z.enum(["no_printed_qr", "no_serial", "needs_shelf_check", "other"]),
+    kind: z.enum(["legacy_qr", "missing_serial", "attachment_candidate"]),
+    reason: z.enum(["no_printed_qr", "no_serial", "keep_standalone", "needs_shelf_check", "other"]),
   }),
 ]);
 
@@ -80,6 +86,15 @@ export const POST = withAuth(async (req, { user }) => {
     const item = await applyCleanupWizardSerial({
       assetId: body.assetId,
       serialNumber: body.serialNumber,
+      actor,
+    });
+    return ok({ data: { item, counts: await getCleanupWizardCounts() } });
+  }
+
+  if (body.action === "attach") {
+    const item = await applyCleanupWizardAttach({
+      assetId: body.assetId,
+      parentAssetId: body.parentAssetId,
       actor,
     });
     return ok({ data: { item, counts: await getCleanupWizardCounts() } });
