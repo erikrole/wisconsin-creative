@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   classifyAssetType,
+  classifyBulkSku,
   groupBulkBySection,
   EQUIPMENT_SECTIONS,
 } from "@/lib/equipment-sections";
@@ -106,6 +107,38 @@ describe("groupBulkBySection", () => {
     expect(groups.batteries.map((s) => s.id)).toEqual(["b1", "b3"]);
     expect(groups.other.map((s) => s.id)).toEqual(["b2"]);
     expect(groups.audio.map((s) => s.id)).toEqual(["b4"]);
+  });
+});
+
+describe("classifyBulkSku", () => {
+  it("prefers canonical category, then family name keywords", () => {
+    expect(classifyBulkSku({
+      name: "Tripod",
+      category: "general",
+      categoryName: "Tripods",
+    })).toBe("tripods");
+
+    expect(classifyBulkSku({
+      name: "Football Light Kit",
+      category: "general",
+    })).toBe("lighting");
+
+    expect(classifyBulkSku({
+      name: "Sony Battery",
+      category: "Batteries",
+    })).toBe("batteries");
+  });
+
+  it("groups support families into tripods and lighting sections", () => {
+    const groups = groupBulkBySection([
+      { id: "t1", name: "Tripod", category: "Support" },
+      { id: "t2", name: "Football Tripod", category: "Tripods", categoryName: "Tripods" },
+      { id: "l1", name: "Light Kit", category: "Lighting" },
+      { id: "b1", name: "Sony Battery", category: "Batteries" },
+    ]);
+    expect(groups.tripods.map((sku) => sku.id)).toEqual(["t1", "t2"]);
+    expect(groups.lighting.map((sku) => sku.id)).toEqual(["l1"]);
+    expect(groups.batteries.map((sku) => sku.id)).toEqual(["b1"]);
   });
 });
 

@@ -18,6 +18,7 @@ import {
 import {
   EQUIPMENT_SECTIONS,
   classifyAssetType,
+  classifyBulkSku,
   groupBulkBySection,
   type EquipmentSectionKey,
 } from "@/lib/equipment-sections";
@@ -57,6 +58,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { handleAuthRedirect, isAbortError, parseJsonSafely } from "@/lib/errors";
 import { getBatteryCompatibilitySummaries } from "@/lib/battery-compatibility";
+import { getSectionGuidance } from "@/lib/equipment-guidance";
 import { compareItemAssetTags } from "@/lib/item-asset-tag-sort";
 import { AssetImage } from "@/components/AssetImage";
 import {
@@ -398,6 +400,22 @@ export default function EquipmentPicker({
     [activeSection, batteryGuidance],
   );
 
+  const selectedSectionKeys = useMemo(() => {
+    const keys = new Set<EquipmentSectionKey>(
+      resolvedSelectedAssets.map((asset) => classifyAssetType(asset.type, asset.categoryName)),
+    );
+    for (const item of selectedBulkItems) {
+      const sku = bulkById.get(item.bulkSkuId);
+      if (sku) keys.add(classifyBulkSku(sku));
+    }
+    return [...keys];
+  }, [bulkById, resolvedSelectedAssets, selectedBulkItems]);
+
+  const sectionGuidance = useMemo(
+    () => getSectionGuidance({ selectedSectionKeys, activeSection }),
+    [activeSection, selectedSectionKeys],
+  );
+
   // ── Helpers ──
 
   function toggleAsset(id: string, asset?: PickerAsset) {
@@ -571,8 +589,26 @@ export default function EquipmentPicker({
         </div>
       </div>
 
-      {visibleBatteryGuidance.length > 0 && (
+      {(sectionGuidance.length > 0 || visibleBatteryGuidance.length > 0) && (
         <div className="flex flex-col gap-2 border-b border-border/60 bg-background px-3 py-2">
+          {sectionGuidance.map((rule) => (
+            <Alert
+              key={rule.id}
+              className={cn(
+                "rounded-md py-2.5",
+                rule.level === "warning"
+                  ? "border-[var(--orange)]/30 bg-[var(--orange)]/[0.06]"
+                  : "border-[var(--blue)]/20 bg-[var(--blue)]/[0.05]",
+              )}
+            >
+              <AlertTitle className="text-sm">
+                {rule.level === "warning" ? "Check this" : "Suggestion"}
+              </AlertTitle>
+              <AlertDescription className="text-xs text-muted-foreground">
+                {rule.message}
+              </AlertDescription>
+            </Alert>
+          ))}
           {visibleBatteryGuidance.map((item) => (
             <Alert
               key={item.ruleId}

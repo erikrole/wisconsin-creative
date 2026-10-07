@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Bulk Inventory Management
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-09-11
+- Last Updated: 2026-10-07
 - Status: Active
 - Version: V1
 
@@ -208,6 +208,7 @@ See `AREA_ITEMS.md` 2026-04-06 entry for bulk inventory page hardening:
 - [ ] AC-14: Deploy and replay the 2026-09-11 battery integrity fixes at the native kiosk: cross-location removal, partial-family removal, shared-return operator/scan evidence, custody-safe status changes, and deficit-only repair. Local verification is tracked in `tasks/battery-data-flow-hardening-2026-09-11.md`.
 
 ## Change Log
+- 2026-10-07: **Support-gear families join the D-022 pool model.** Accepted canonical unit-tracked families `Tripod` / `Football Tripod` and `Light Kit` / `Football Light Kit` (Creative vs Football). Hygiene now flags family units missing a product when products exist. Physical creation and serialized migration remain under GAP-87; 2-/3-point light-kit split held.
 - 2026-09-11: **Battery data and flow hardening prepared locally.** Stale repair cannot double-count stock, status recovery cannot override OPEN/PENDING_PICKUP custody even with LOST/RETIRED flags, status decrements cannot produce negative local balances, and receiving/status audits commit with inventory. Ended-allocation recovery preserves allocation IDs/timestamps in audit evidence. Battery Ops uses a repeatable-read allocation-consistent snapshot. Kiosk battery returns record exact scan, operator, and location evidence; removal restores the kiosk location and permits an unreturned unit to be removed after another unit in its family was returned without deleting that history. Production read-only audit at 2026-09-12 03:50 UTC found five families, 103 units, 99 claimable and four held, with matching balances and no stale flags/ended allocations; Football Sony Battery already has 12 units. No production writes occurred. Local checks and external acceptance are recorded in the task ledger.
 - 2026-09-07: Item-family listing now uses shared integer pagination: default 50, maximum 200, default offset 0, and a 400 response above offset 10,000. Fractional or nonnumeric pagination no longer reaches Prisma. Acceptance: focused route regressions pass locally; authenticated runtime and deployment remain unverified.
 - 2026-09-03: **Numbered battery unit truth now repairs a deficient aggregate ledger.** A large active checkout successfully scanned 18 Sony units, then exposed historical drift: a June stale-flag repair had made 14 unit records effectively available without restoring the aggregate balance, so later exact scans stopped at `0 available` while Battery Ops still showed units 1, 2, and 40 available. Active-checkout exact scans now add only a positive aggregate deficit from effective unit truth through an audited adjustment before the normal checkout decrement. Future stale-flag repairs restore the matching balance and movement atomically with the unit changes.

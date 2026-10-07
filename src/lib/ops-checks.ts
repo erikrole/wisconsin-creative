@@ -105,6 +105,18 @@ const HYGIENE_CHECK_META: Record<string, HygieneCheckMeta> = {
     href: "/items",
     ctaLabel: "Open items",
   },
+  "units-missing-product": {
+    severity: "warning",
+    priority: 4,
+    href: "/bulk-inventory",
+    ctaLabel: "Assign products",
+  },
+  "serialized-support-pool-candidates": {
+    severity: "info",
+    priority: 9,
+    href: "/items",
+    ctaLabel: "Review support gear",
+  },
 };
 
 const DEFAULT_HYGIENE_META: HygieneCheckMeta = {

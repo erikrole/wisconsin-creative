@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Items
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-30
+- Last Updated: 2026-10-07
 - Status: Active
 - Version: V1
 
@@ -30,6 +30,7 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 10. Camera-tied SD cards, cages, and fixed camera parts are tracked as item attachments when they should travel with the parent camera and not be individually checked out.
 11. One unit-tracked family may contain multiple interchangeable branded products. The family remains the one catalog and reservation row; product identity belongs to each numbered physical unit.
 12. General battery discovery uses four canonical item-family rows: `Monitor Battery`, `Sony Battery`, `Gold Mount Battery`, and `FX6 Battery`. Quantity-only, model-specific, and serialized battery duplicates stay out of the active catalog. `Football Sony Battery` is the accepted second Sony family so its inventory pool stays operationally distinct, but it appears and behaves like every other unit-tracked family and shares the normal `Sony Battery` access policy.
+13. Fungible support gear uses the same family model. Canonical pools: `Tripod` / `Football Tripod` and `Light Kit` / `Football Light Kit`. Requesters reserve family quantity; kiosk scan binds the unit; brand/model live as products on units. Do not put interchangeable Manfrotto/Aputure/etc. rows in the picker. A possible 2-point vs 3-point Light Kit split is held until operators decide. Camera cages, slot cards, and fixed parts stay D-023 accessories. Gameday kits stay D-062 templates, not inventory pools.
 
 ## V1 Workflow
 
@@ -54,7 +55,7 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 1. Staff/admin opens the "Keep data clean" lane on `/operations` (the old `/items/hygiene` route redirects there). `GET /api/inventory-hygiene` is unchanged.
 2. The lane shows cleanup checks that improve picker, search, checkout, kit, and scan quality.
 3. Each issue card links to the existing repair surface instead of adding new mutation paths.
-4. Slice 1 checks missing category, missing department, missing primary scan code, missing image, duplicate scan identity, retired items still in active kits, camera bodies with no attachments, and active bulk SKUs below threshold.
+4. Slice 1 checks missing category, missing department, missing primary scan code, missing image, duplicate scan identity, retired items still in active kits, camera bodies with no attachments, active bulk SKUs below threshold, unit-tracked family units missing a product when the family defines products, and serialized tripod/light-kit rows that are candidates to migrate into support families.
 5. The page frames those checks as a read-only cleanup queue with priority ordering, clean/check progress, needs-work/all/clean views, partial-failure warnings, and tag-first sample rows.
 6. Checklist health uses the shared shadcn-backed status indicator: green for clean, orange for needs-work or partial data, and red only for critical/blocking states.
 7. The Items Fill gaps wizard can repair missing categories and departments across standard items and item families. Missing-category suggestions prefer existing categorized inventory patterns, then fall back to gear-term matching. The backing missing-field API counts standard items and item families separately, pages each source at the database layer, and reports when suggestion matching used a capped sample.
@@ -445,6 +446,7 @@ Item families can optionally enable `trackByNumber` on the backing `BulkSku` imp
 
 ## Change Log
 
+- 2026-10-07: **Support-gear families contract and hygiene.** D-022 now names canonical `Tripod` / `Football Tripod` and `Light Kit` / `Football Light Kit` pools (models as products; 2-/3-point light-kit split held). Inventory hygiene adds units-missing-product and serialized support-pool candidate checks. Physical family creation stays under GAP-87. Local source/test; no production inventory mutation.
 - 2026-09-20: **CSV import writes in bounded batches instead of one file-long transaction.** The import route no longer holds a single interactive transaction open for one statement per row: new assets go out as `createMany`, updates are grouped by identical payload into `updateMany`, and creates, updates, bulk SKUs and kits each run in transactions of at most 200 rows. Kit location lookup is pre-indexed by kit name instead of scanning every valid row per kit. Atomicity is now per batch rather than per file, so a failed batch rolls back only its own rows and reports each of them in the response `errors` with the reason it was not applied, while the remaining batches still run; `created`/`updated`/`bulkCreated` count applied rows only. Acceptance: focused import-route tests (including batch-size and failed-batch reporting), TypeScript, and lint passed.
 - 2026-09-20: **Firmware watch now finishes inside its budget instead of being cut off mid-run.** The nightly poll checked up to 100 targets one at a time, each an external fetch with an 8s timeout, so a run of slow sources could exceed the function budget and be killed — leaving an arbitrary tail of targets with a stale `lastCheckedAt` and no record that they were missed. Targets now run five at a time behind a 30s wall-clock deadline, and any targets the deadline cuts off are reported as `firmwareWatch.skipped` in the `morning-refresh` cron response, which also raises `deadlineExceeded`. Item detail's firmware freshness is unchanged for any target that was actually checked. Acceptance: focused firmware and cron tests, TypeScript, and lint passed.
 - 2026-09-20: **Items URL filter synchronization.** Local filter actions now cancel the URL rehydration guard so clearing or changing filters cannot leave a stale query in the address bar while the list shows different results. Acceptance: authenticated browser proof of `FX3` search, clear, URL reset, and restored 207-item list; focused tests, TypeScript, lint, and build passed.

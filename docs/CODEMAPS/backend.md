@@ -166,9 +166,9 @@
 | `src/lib/email.ts` | 129 |
 | `src/lib/env.ts` | 140 |
 | `src/lib/environment-safety.ts` | 17 |
-| `src/lib/equipment-guidance.ts` | 127 |
+| `src/lib/equipment-guidance.ts` | 156 |
 | `src/lib/equipment-section-filters.ts` | 87 |
-| `src/lib/equipment-sections.ts` | 155 |
+| `src/lib/equipment-sections.ts` | 189 |
 | `src/lib/errors.ts` | 80 |
 | `src/lib/event-editor.ts` | 107 |
 | `src/lib/external-url.ts` | 30 |
@@ -202,7 +202,7 @@
 | `src/lib/notification-destination.ts` | 85 |
 | `src/lib/observability.ts` | 19 |
 | `src/lib/operational-health.ts` | 2 |
-| `src/lib/ops-checks.ts` | 176 |
+| `src/lib/ops-checks.ts` | 188 |
 | `src/lib/passkey-client.ts` | 73 |
 | `src/lib/passkey.ts` | 371 |
 | `src/lib/password-rules.ts` | 16 |
@@ -276,6 +276,7 @@
 | `src/lib/status-styles.ts` | 19 |
 | `src/lib/student-availability.ts` | 209 |
 | `src/lib/student-profile.ts` | 56 |
+| `src/lib/support-gear-families.ts` | 123 |
 | `src/lib/theme.ts` | 145 |
 | `src/lib/time.ts` | 28 |
 | `src/lib/title-normalization.ts` | 101 |
@@ -481,6 +482,7 @@
 - `/api/cron/morning-refresh`
 - `/api/cron/notifications`
 - `/api/cron/rehost-images`
+- `/api/cron/youtube-sweep`
 
 ### `/api/dashboard`
 
@@ -841,8 +843,13 @@
 ### `/api/youtube`
 
 - `/api/youtube/connection`
+- `/api/youtube/drafts/[videoId]/check-playlists`
+- `/api/youtube/drafts/[videoId]/check-send`
 - `/api/youtube/drafts/[videoId]/game`
+- `/api/youtube/drafts/[videoId]/make-public`
+- `/api/youtube/drafts/[videoId]/playlists`
 - `/api/youtube/drafts/[videoId]/prepare`
+- `/api/youtube/drafts/[videoId]/publish`
 - `/api/youtube/drafts/[videoId]`
 - `/api/youtube/library/refresh`
 - `/api/youtube/oauth/callback`

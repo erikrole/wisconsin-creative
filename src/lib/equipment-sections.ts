@@ -127,7 +127,42 @@ export function classifyAssetType(type: string, categoryName?: string | null): E
   return "other";
 }
 
-type BulkSkuLike = { id: string; category: string; categoryName?: string | null; [k: string]: unknown };
+type BulkSkuLike = {
+  id: string;
+  category: string;
+  categoryName?: string | null;
+  name?: string | null;
+  [k: string]: unknown;
+};
+
+/**
+ * Classify an item family into an equipment section.
+ * Prefer canonical category, then legacy category text, then family name keywords
+ * so rows like "Tripod" / "Light Kit" land in the right tab even when category
+ * text is stale.
+ */
+export function classifyBulkSku(sku: {
+  name?: string | null;
+  category: string;
+  categoryName?: string | null;
+}): EquipmentSectionKey {
+  if (sku.categoryName) {
+    const fromCanonical = CATEGORY_MAP[sku.categoryName.toLowerCase().trim()];
+    if (fromCanonical) return fromCanonical;
+  }
+
+  const legacyCategory = sku.category?.toLowerCase().trim();
+  if (legacyCategory) {
+    const fromLegacy = CATEGORY_MAP[legacyCategory];
+    if (fromLegacy) return fromLegacy;
+  }
+
+  if (sku.name?.trim()) {
+    return classifyAssetType(sku.name, null);
+  }
+
+  return classifyAssetType(sku.category, null);
+}
 
 /**
  * Group bulk SKUs by equipment section.
@@ -146,8 +181,7 @@ export function groupBulkBySection<T extends BulkSkuLike>(
   };
 
   for (const sku of skus) {
-    const section = classifyAssetType(sku.category, sku.categoryName);
-    groups[section].push(sku);
+    groups[classifyBulkSku(sku)].push(sku);
   }
 
   return groups;

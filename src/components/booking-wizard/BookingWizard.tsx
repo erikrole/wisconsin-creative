@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { cn } from "@/lib/utils";
-import { EQUIPMENT_SECTIONS, classifyAssetType } from "@/lib/equipment-sections";
+import { EQUIPMENT_SECTIONS, classifyAssetType, classifyBulkSku } from "@/lib/equipment-sections";
 import { getUnsatisfiedRequirements } from "@/lib/equipment-guidance";
 import { filterSupportedReservationPickupLocations } from "@/lib/reservation-pickup-locations";
 import type { EquipmentSectionKey } from "@/lib/equipment-sections";
@@ -570,13 +570,17 @@ export function BookingWizard() {
 
   // ── Equipment requirement check ──
   const unsatisfiedRequirements = useMemo(() => {
-    if (selectedAssetDetails.length === 0) return [];
-    const sectionKeys = [...new Set(
-      selectedAssetDetails.map((a) => classifyAssetType(a.type, a.categoryName))
-    )] as EquipmentSectionKey[];
-    if (selectedBulkItems.length > 0) sectionKeys.push("batteries");
-    return getUnsatisfiedRequirements(sectionKeys);
-  }, [selectedAssetDetails, selectedBulkItems]);
+    if (selectedAssetDetails.length === 0 && selectedBulkItems.length === 0) return [];
+    const sectionKeys = new Set<EquipmentSectionKey>(
+      selectedAssetDetails.map((a) => classifyAssetType(a.type, a.categoryName)),
+    );
+    for (const item of selectedBulkItems) {
+      const sku = bulkSkus.find((candidate) => candidate.id === item.bulkSkuId);
+      if (!sku) continue;
+      sectionKeys.add(classifyBulkSku(sku));
+    }
+    return getUnsatisfiedRequirements([...sectionKeys]);
+  }, [bulkSkus, selectedAssetDetails, selectedBulkItems]);
 
   // ── Item count ──
   const itemCount = selectedAssetDetails.length + selectedBulkItems.reduce((sum, b) => sum + b.quantity, 0);
