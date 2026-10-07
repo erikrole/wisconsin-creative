@@ -117,6 +117,7 @@ export function CleanupWizardDialog({ open, onOpenChange, initialKind = null, on
   const [fixed, setFixed] = useState(0);
   const [deferred, setDeferred] = useState(0);
   const [skipped, setSkipped] = useState(0);
+  const [skippedIds, setSkippedIds] = useState<string[]>([]);
 
   const resetSession = useCallback(() => {
     setStage("pick");
@@ -135,6 +136,7 @@ export function CleanupWizardDialog({ open, onOpenChange, initialKind = null, on
     setFixed(0);
     setDeferred(0);
     setSkipped(0);
+    setSkippedIds([]);
   }, []);
 
   const loadCounts = useCallback(async () => {
@@ -160,10 +162,15 @@ export function CleanupWizardDialog({ open, onOpenChange, initialKind = null, on
     void loadCounts();
   }, [loadCounts, open, resetSession]);
 
-  const loadNext = useCallback(async (nextKind: CleanupWizardKind, remaining: CleanupWizardItem[] = []) => {
-    if (remaining.length > 0) {
-      setQueue(remaining);
-      setItem(remaining[0] ?? null);
+  const loadNext = useCallback(async (
+    nextKind: CleanupWizardKind,
+    remaining: CleanupWizardItem[] = [],
+    sessionSkippedIds: string[] = skippedIds,
+  ) => {
+    const usableRemaining = remaining.filter((row) => !sessionSkippedIds.includes(row.id));
+    if (usableRemaining.length > 0) {
+      setQueue(usableRemaining);
+      setItem(usableRemaining[0] ?? null);
       setAnswer(null);
       setValue("");
       setParentId("");
@@ -177,7 +184,11 @@ export function CleanupWizardDialog({ open, onOpenChange, initialKind = null, on
     setLoading(true);
     setLoadError(null);
     try {
-      const res = await fetch(`/api/items/cleanup-wizard?kind=${nextKind}&limit=8`);
+      const params = new URLSearchParams({ kind: nextKind, limit: "8" });
+      if (sessionSkippedIds.length > 0) {
+        params.set("exclude", sessionSkippedIds.join(","));
+      }
+      const res = await fetch(`/api/items/cleanup-wizard?${params.toString()}`);
       if (handleAuthRedirect(res)) return;
       if (!res.ok) throw new Error(await parseErrorMessage(res, "Could not load the next items"));
       const json = await parseJsonSafely<{ data?: { items?: CleanupWizardItem[]; counts?: Counts } }>(res);
@@ -185,14 +196,15 @@ export function CleanupWizardDialog({ open, onOpenChange, initialKind = null, on
         throw new Error("Could not read the cleanup queue");
       }
       if (json.data.counts) setCounts(json.data.counts);
-      if (json.data.items.length === 0) {
+      const nextItems = json.data.items.filter((row) => !sessionSkippedIds.includes(row.id));
+      if (nextItems.length === 0) {
         setQueue([]);
         setItem(null);
         setStage("done");
         return;
       }
-      setQueue(json.data.items);
-      setItem(json.data.items[0] ?? null);
+      setQueue(nextItems);
+      setItem(nextItems[0] ?? null);
       setAnswer(null);
       setValue("");
       setParentId("");
@@ -206,7 +218,7 @@ export function CleanupWizardDialog({ open, onOpenChange, initialKind = null, on
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [skippedIds]);
 
   useEffect(() => {
     if (!open || !initialKind || !counts) return;
@@ -280,7 +292,8 @@ export function CleanupWizardDialog({ open, onOpenChange, initialKind = null, on
     setFixed(0);
     setDeferred(0);
     setSkipped(0);
-    void loadNext(nextKind);
+    setSkippedIds([]);
+    void loadNext(nextKind, [], []);
   }, [loadNext]);
 
   const advance = useCallback((nextKind: CleanupWizardKind, rest: CleanupWizardItem[]) => {
@@ -289,9 +302,11 @@ export function CleanupWizardDialog({ open, onOpenChange, initialKind = null, on
 
   const handleSkip = useCallback(() => {
     if (!kind || !item) return;
+    const nextSkippedIds = skippedIds.includes(item.id) ? skippedIds : [...skippedIds, item.id];
+    setSkippedIds(nextSkippedIds);
     setSkipped((value) => value + 1);
-    advance(kind, queue.slice(1));
-  }, [advance, item, kind, queue]);
+    void loadNext(kind, queue.slice(1), nextSkippedIds);
+  }, [item, kind, loadNext, queue, skippedIds]);
 
   const handleDefer = useCallback(async () => {
     if (!kind || !item) return;

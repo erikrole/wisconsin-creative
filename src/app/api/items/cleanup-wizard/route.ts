@@ -16,6 +16,7 @@ import {
 const queueQuerySchema = z.object({
   kind: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(25).optional(),
+  exclude: z.string().optional(),
 });
 
 const actionSchema = z.discriminatedUnion("action", [
@@ -49,6 +50,7 @@ export const GET = withAuth(async (req, { user }) => {
   const query = queueQuerySchema.parse({
     kind: url.searchParams.get("kind") ?? undefined,
     limit: url.searchParams.get("limit") ?? undefined,
+    exclude: url.searchParams.get("exclude") ?? undefined,
   });
 
   const counts = await getCleanupWizardCounts();
@@ -57,7 +59,12 @@ export const GET = withAuth(async (req, { user }) => {
   }
 
   const kind = parseCleanupWizardKind(query.kind);
-  const items = await listCleanupWizardQueue(kind, query.limit ?? 8);
+  const excludeIds = (query.exclude ?? "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean)
+    .slice(0, 100);
+  const items = await listCleanupWizardQueue(kind, query.limit ?? 8, excludeIds);
   return ok({
     data: {
       counts,

@@ -4,10 +4,10 @@ const mocks = vi.hoisted(() => ({
   findMany: vi.fn(),
   findUnique: vi.fn(),
   findFirst: vi.fn(),
+  count: vi.fn(),
   update: vi.fn(),
   upsert: vi.fn(),
   $transaction: vi.fn(),
-  createAuditEntry: vi.fn(),
   createAuditEntryTx: vi.fn(),
 }));
 
@@ -17,6 +17,7 @@ vi.mock("@/lib/db", () => ({
       findMany: mocks.findMany,
       findUnique: mocks.findUnique,
       update: mocks.update,
+      count: mocks.count,
     },
     assetAllocation: {
       findFirst: mocks.findFirst,
@@ -31,7 +32,6 @@ vi.mock("@/lib/db", () => ({
 }));
 
 vi.mock("@/lib/audit", () => ({
-  createAuditEntry: mocks.createAuditEntry,
   createAuditEntryTx: mocks.createAuditEntryTx,
 }));
 
@@ -52,11 +52,13 @@ describe("item cleanup wizard", () => {
     vi.clearAllMocks();
     mocks.findUnique.mockResolvedValue(null);
     mocks.findFirst.mockResolvedValue(null);
+    mocks.count.mockResolvedValue(0);
     mocks.$transaction.mockImplementation(async (fn: (tx: unknown) => unknown) =>
       fn({
         asset: {
           findUnique: mocks.findUnique,
           update: mocks.update,
+          count: mocks.count,
         },
         assetAllocation: {
           findFirst: mocks.findFirst,
@@ -113,6 +115,7 @@ describe("item cleanup wizard", () => {
         primaryScanCode: "E1-041",
         serialNumber: null,
         parentAssetId: null,
+        _count: { accessories: 0 },
       },
       {
         id: "asset-deferred",
@@ -125,6 +128,7 @@ describe("item cleanup wizard", () => {
         primaryScanCode: "E1-042",
         serialNumber: "SN",
         parentAssetId: null,
+        _count: { accessories: 0 },
       },
       {
         id: "asset-2",
@@ -137,6 +141,7 @@ describe("item cleanup wizard", () => {
         primaryScanCode: "realqrcode",
         serialNumber: null,
         parentAssetId: null,
+        _count: { accessories: 0 },
       },
       {
         id: "asset-cage",
@@ -149,6 +154,7 @@ describe("item cleanup wizard", () => {
         primaryScanCode: "cageqr",
         serialNumber: "C1",
         parentAssetId: null,
+        _count: { accessories: 0 },
       },
       {
         id: "asset-standalone",
@@ -161,6 +167,7 @@ describe("item cleanup wizard", () => {
         primaryScanCode: "gripqr",
         serialNumber: "G1",
         parentAssetId: null,
+        _count: { accessories: 0 },
       },
     ]);
 
@@ -381,6 +388,7 @@ describe("item cleanup wizard", () => {
         assetTag: "FX3 1",
       });
     mocks.findFirst.mockResolvedValue({ id: "alloc-1", bookingId: "booking-1" });
+    mocks.count.mockResolvedValue(0);
 
     await expect(
       applyCleanupWizardAttach({
@@ -389,6 +397,35 @@ describe("item cleanup wizard", () => {
         actor: { id: "admin-1", role: "ADMIN" },
       }),
     ).rejects.toMatchObject({ status: 409, message: expect.stringContaining("active custody") });
+  });
+
+  it("blocks attach when the candidate already owns children", async () => {
+    mocks.findUnique
+      .mockResolvedValueOnce({
+        id: "child-1",
+        status: "AVAILABLE",
+        parentAssetId: null,
+        assetTag: "Cage Kit",
+        availableForCheckout: true,
+        availableForReservation: true,
+        availableForCustody: true,
+      })
+      .mockResolvedValueOnce({
+        id: "parent-1",
+        status: "AVAILABLE",
+        parentAssetId: null,
+        assetTag: "FX3 1",
+      });
+    mocks.findFirst.mockResolvedValue(null);
+    mocks.count.mockResolvedValue(2);
+
+    await expect(
+      applyCleanupWizardAttach({
+        assetId: "child-1",
+        parentAssetId: "parent-1",
+        actor: { id: "admin-1", role: "ADMIN" },
+      }),
+    ).rejects.toMatchObject({ status: 400, message: expect.stringContaining("already has attachments") });
   });
 
   it("defers a row with an audited reason", async () => {
@@ -408,7 +445,8 @@ describe("item cleanup wizard", () => {
     expect(mocks.upsert).toHaveBeenCalledWith(expect.objectContaining({
       where: { key: "item_cleanup_wizard_deferred" },
     }));
-    expect(mocks.createAuditEntry).toHaveBeenCalledWith(
+    expect(mocks.createAuditEntryTx).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({ action: "cleanup_wizard_deferred" }),
     );
   });

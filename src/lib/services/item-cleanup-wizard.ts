@@ -1,7 +1,10 @@
 import { Prisma, type Role } from "@prisma/client";
 import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
-import { createAuditEntry, createAuditEntryTx } from "@/lib/audit";
+import { createAuditEntryTx } from "@/lib/audit";
+import { withSerializationRetry } from "@/lib/serialization";
+
+const SERIALIZABLE = { isolationLevel: Prisma.TransactionIsolationLevel.Serializable } as const;
 
 export const CLEANUP_WIZARD_KINDS = ["legacy_qr", "missing_serial", "attachment_candidate"] as const;
 export type CleanupWizardKind = (typeof CLEANUP_WIZARD_KINDS)[number];
@@ -25,6 +28,8 @@ const ATTACHMENT_SUFFIX_PATTERN = /\s+(handle|cage|top plate|baseplate|lens cap|
 
 const QUEUE_DEFAULT_LIMIT = 8;
 const PARENT_SUGGESTION_LIMIT = 8;
+const QUEUE_SCAN_BATCH = 100;
+const QUEUE_SCAN_MAX = 2000;
 
 type DeferredEntry = {
   kinds: CleanupWizardKind[];
@@ -333,6 +338,7 @@ export async function getCleanupWizardCounts() {
       primaryScanCode: true,
       serialNumber: true,
       parentAssetId: true,
+      _count: { select: { accessories: true } },
     },
   });
 
@@ -347,6 +353,7 @@ export async function getCleanupWizardCounts() {
     if (!asset.serialNumber?.trim() && !deferredSerial.includes(asset.id)) missingSerial += 1;
     if (
       !asset.parentAssetId
+      && asset._count.accessories === 0
       && isAttachmentCandidateText(searchableText(asset))
       && !deferredAttachment.includes(asset.id)
     ) {
@@ -366,44 +373,68 @@ export async function getCleanupWizardCounts() {
   };
 }
 
-export async function listCleanupWizardQueue(kind: CleanupWizardKind, limit = QUEUE_DEFAULT_LIMIT) {
-  const deferred = await readDeferredMap();
-  const excluded = deferredAssetIds(deferred, kind);
-
-  if (kind === "legacy_qr") {
-    const candidates = await db.asset.findMany({
+async function collectQueueMatches<T extends { id: string }>(args: {
+  limit: number;
+  excluded: string[];
+  where: Prisma.AssetWhereInput;
+  matches: (asset: T) => boolean;
+}): Promise<T[]> {
+  const matches: T[] = [];
+  let skip = 0;
+  while (matches.length < args.limit && skip < QUEUE_SCAN_MAX) {
+    const batch = await db.asset.findMany({
       where: {
-        status: { not: "RETIRED" },
-        ...(excluded.length > 0 ? { id: { notIn: excluded } } : {}),
+        ...args.where,
+        ...(args.excluded.length > 0 ? { id: { notIn: args.excluded } } : {}),
       },
       orderBy: { assetTag: "asc" },
       select: assetSelect,
-      take: 200,
+      take: QUEUE_SCAN_BATCH,
+      skip,
+    }) as T[];
+    if (batch.length === 0) break;
+    for (const asset of batch) {
+      if (!args.matches(asset)) continue;
+      matches.push(asset);
+      if (matches.length >= args.limit) break;
+    }
+    skip += batch.length;
+    if (batch.length < QUEUE_SCAN_BATCH) break;
+  }
+  return matches;
+}
+
+export async function listCleanupWizardQueue(
+  kind: CleanupWizardKind,
+  limit = QUEUE_DEFAULT_LIMIT,
+  excludeIds: string[] = [],
+) {
+  const deferred = await readDeferredMap();
+  const excluded = [...new Set([...deferredAssetIds(deferred, kind), ...excludeIds])];
+
+  if (kind === "legacy_qr") {
+    const rows = await collectQueueMatches({
+      limit,
+      excluded,
+      where: { status: { not: "RETIRED" } },
+      matches: (asset) =>
+        LEGACY_QR_LABEL_PATTERN.test(asset.qrCodeValue)
+        || (asset.primaryScanCode != null && LEGACY_QR_LABEL_PATTERN.test(asset.primaryScanCode)),
     });
-    return candidates
-      .filter(
-        (asset) =>
-          LEGACY_QR_LABEL_PATTERN.test(asset.qrCodeValue)
-          || (asset.primaryScanCode != null && LEGACY_QR_LABEL_PATTERN.test(asset.primaryScanCode)),
-      )
-      .slice(0, limit)
-      .map((asset) => toItem(kind, asset));
+    return rows.map((asset) => toItem(kind, asset));
   }
 
   if (kind === "attachment_candidate") {
-    const candidates = await db.asset.findMany({
+    const rows = await collectQueueMatches({
+      limit,
+      excluded,
       where: {
         status: { not: "RETIRED" },
         parentAssetId: null,
-        ...(excluded.length > 0 ? { id: { notIn: excluded } } : {}),
+        accessories: { none: {} },
       },
-      orderBy: { assetTag: "asc" },
-      select: assetSelect,
-      take: 200,
+      matches: (asset) => isAttachmentCandidateText(searchableText(asset)),
     });
-    const rows = candidates
-      .filter((asset) => isAttachmentCandidateText(searchableText(asset)))
-      .slice(0, limit);
     const suggestions = await buildAttachmentSuggestions(rows);
     return rows.map((asset) => toItem(kind, asset, suggestions.get(asset.id) ?? []));
   }
@@ -562,89 +593,95 @@ export async function applyCleanupWizardAttach(args: {
     throw new HttpError(400, "Cannot attach an item to itself");
   }
 
-  return db.$transaction(async (tx) => {
-    const [child, parent, activeCustody] = await Promise.all([
-      tx.asset.findUnique({
+  return withSerializationRetry(() =>
+    db.$transaction(async (tx) => {
+      const [child, parent, activeCustody, childAccessoryCount] = await Promise.all([
+        tx.asset.findUnique({
+          where: { id: args.assetId },
+          select: {
+            id: true,
+            status: true,
+            parentAssetId: true,
+            assetTag: true,
+            availableForCheckout: true,
+            availableForReservation: true,
+            availableForCustody: true,
+            name: true,
+            brand: true,
+            model: true,
+            type: true,
+            imageUrl: true,
+            qrCodeValue: true,
+            primaryScanCode: true,
+            serialNumber: true,
+            location: { select: { name: true } },
+          },
+        }),
+        tx.asset.findUnique({
+          where: { id: args.parentAssetId },
+          select: {
+            id: true,
+            status: true,
+            parentAssetId: true,
+            assetTag: true,
+          },
+        }),
+        tx.assetAllocation.findFirst({
+          where: { assetId: args.assetId, active: true },
+          select: { id: true, bookingId: true },
+        }),
+        tx.asset.count({ where: { parentAssetId: args.assetId } }),
+      ]);
+
+      if (!child || child.status === "RETIRED") throw new HttpError(404, "Item not found");
+      if (!parent || parent.status === "RETIRED") throw new HttpError(404, "Parent item not found");
+      if (parent.parentAssetId) throw new HttpError(400, "Cannot attach accessories to a child item");
+      if (child.parentAssetId) {
+        throw new HttpError(409, "This item is already an accessory of another item. Detach it first.");
+      }
+      if (childAccessoryCount > 0) {
+        throw new HttpError(400, "This item already has attachments. Detach them before nesting it under another parent.");
+      }
+      if (activeCustody) {
+        throw new HttpError(409, "This item has active custody. Return it before attaching.");
+      }
+
+      const updated = await tx.asset.update({
         where: { id: args.assetId },
-        select: {
-          id: true,
-          status: true,
-          parentAssetId: true,
-          assetTag: true,
-          availableForCheckout: true,
-          availableForReservation: true,
-          availableForCustody: true,
-          name: true,
-          brand: true,
-          model: true,
-          type: true,
-          imageUrl: true,
-          qrCodeValue: true,
-          primaryScanCode: true,
-          serialNumber: true,
-          location: { select: { name: true } },
+        data: {
+          parentAssetId: args.parentAssetId,
+          availableForCheckout: false,
+          availableForReservation: false,
+          availableForCustody: false,
         },
-      }),
-      tx.asset.findUnique({
-        where: { id: args.parentAssetId },
-        select: {
-          id: true,
-          status: true,
-          parentAssetId: true,
-          assetTag: true,
+        select: assetSelect,
+      });
+
+      await createAuditEntryTx(tx, {
+        actorId: args.actor.id,
+        actorRole: args.actor.role,
+        entityType: "asset",
+        entityId: args.assetId,
+        action: "cleanup_wizard_attach",
+        before: {
+          parentAssetId: child.parentAssetId,
+          availableForCheckout: child.availableForCheckout,
+          availableForReservation: child.availableForReservation,
+          availableForCustody: child.availableForCustody,
         },
-      }),
-      tx.assetAllocation.findFirst({
-        where: { assetId: args.assetId, active: true },
-        select: { id: true, bookingId: true },
-      }),
-    ]);
+        after: {
+          parentAssetId: args.parentAssetId,
+          parentAssetTag: parent.assetTag,
+          availableForCheckout: false,
+          availableForReservation: false,
+          availableForCustody: false,
+        },
+      });
 
-    if (!child || child.status === "RETIRED") throw new HttpError(404, "Item not found");
-    if (!parent || parent.status === "RETIRED") throw new HttpError(404, "Parent item not found");
-    if (parent.parentAssetId) throw new HttpError(400, "Cannot attach accessories to a child item");
-    if (child.parentAssetId) {
-      throw new HttpError(409, "This item is already an accessory of another item. Detach it first.");
-    }
-    if (activeCustody) {
-      throw new HttpError(409, "This item has active custody. Return it before attaching.");
-    }
-
-    const updated = await tx.asset.update({
-      where: { id: args.assetId },
-      data: {
-        parentAssetId: args.parentAssetId,
-        availableForCheckout: false,
-        availableForReservation: false,
-        availableForCustody: false,
-      },
-      select: assetSelect,
-    });
-
-    await createAuditEntryTx(tx, {
-      actorId: args.actor.id,
-      actorRole: args.actor.role,
-      entityType: "asset",
-      entityId: args.assetId,
-      action: "cleanup_wizard_attach",
-      before: {
-        parentAssetId: child.parentAssetId,
-        availableForCheckout: child.availableForCheckout,
-        availableForReservation: child.availableForReservation,
-        availableForCustody: child.availableForCustody,
-      },
-      after: {
-        parentAssetId: args.parentAssetId,
-        parentAssetTag: parent.assetTag,
-        availableForCheckout: false,
-        availableForReservation: false,
-        availableForCustody: false,
-      },
-    });
-
-    await clearDeferralKind(tx, args.assetId, "attachment_candidate");
-    return toItem("attachment_candidate", updated, []);
-  });
+      await clearDeferralKind(tx, args.assetId, "attachment_candidate");
+      return toItem("attachment_candidate", updated, []);
+    }, SERIALIZABLE),
+  );
 }
 
 export async function deferCleanupWizardItem(args: {
@@ -653,49 +690,53 @@ export async function deferCleanupWizardItem(args: {
   reason: "no_printed_qr" | "no_serial" | "keep_standalone" | "needs_shelf_check" | "other";
   actor: { id: string; role: Role };
 }) {
-  const before = await db.asset.findUnique({
-    where: { id: args.assetId },
-    select: { id: true, assetTag: true, status: true },
-  });
-  if (!before || before.status === "RETIRED") {
-    throw new HttpError(404, "Item not found");
-  }
-
   if (args.kind === "attachment_candidate" && args.reason !== "keep_standalone" && args.reason !== "needs_shelf_check" && args.reason !== "other") {
     throw new HttpError(400, "Use keep_standalone when this accessory stays independent");
   }
 
-  const deferred = await readDeferredMap();
-  const existing = deferred[args.assetId];
-  const kinds = new Set(existing?.kinds ?? []);
-  kinds.add(args.kind);
-  deferred[args.assetId] = {
-    kinds: [...kinds],
-    reason: args.reason,
-    deferredAt: new Date().toISOString(),
-    actorId: args.actor.id,
-  };
+  return withSerializationRetry(() =>
+    db.$transaction(async (tx) => {
+      const before = await tx.asset.findUnique({
+        where: { id: args.assetId },
+        select: { id: true, assetTag: true, status: true },
+      });
+      if (!before || before.status === "RETIRED") {
+        throw new HttpError(404, "Item not found");
+      }
 
-  await db.systemConfig.upsert({
-    where: { key: DEFERRED_CONFIG_KEY },
-    create: { key: DEFERRED_CONFIG_KEY, value: deferred },
-    update: { value: deferred },
-  });
+      const deferred = await readDeferredMap(tx);
+      const existing = deferred[args.assetId];
+      const kinds = new Set(existing?.kinds ?? []);
+      kinds.add(args.kind);
+      deferred[args.assetId] = {
+        kinds: [...kinds],
+        reason: args.reason,
+        deferredAt: new Date().toISOString(),
+        actorId: args.actor.id,
+      };
 
-  await createAuditEntry({
-    actorId: args.actor.id,
-    actorRole: args.actor.role,
-    entityType: "asset",
-    entityId: args.assetId,
-    action: "cleanup_wizard_deferred",
-    after: {
-      kind: args.kind,
-      reason: args.reason,
-      assetTag: before.assetTag,
-    },
-  });
+      await tx.systemConfig.upsert({
+        where: { key: DEFERRED_CONFIG_KEY },
+        create: { key: DEFERRED_CONFIG_KEY, value: deferred },
+        update: { value: deferred },
+      });
 
-  return { success: true as const, assetId: args.assetId, kind: args.kind, reason: args.reason };
+      await createAuditEntryTx(tx, {
+        actorId: args.actor.id,
+        actorRole: args.actor.role,
+        entityType: "asset",
+        entityId: args.assetId,
+        action: "cleanup_wizard_deferred",
+        after: {
+          kind: args.kind,
+          reason: args.reason,
+          assetTag: before.assetTag,
+        },
+      });
+
+      return { success: true as const, assetId: args.assetId, kind: args.kind, reason: args.reason };
+    }, SERIALIZABLE),
+  );
 }
 
 export function parseCleanupWizardKind(value: unknown): CleanupWizardKind {
