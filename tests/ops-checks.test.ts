@@ -118,6 +118,40 @@ describe("normalizeHygieneQueue", () => {
     expect(missingImage).toMatchObject({ severity: "info", ctaLabel: "Open items" });
   });
 
+  it("routes legacy QR and missing serial queues to the Cleanup wizard", () => {
+    const checks = normalizeHygieneQueue(hygieneQueue({
+      issues: [
+        {
+          key: "legacy-qr-labels",
+          title: "Legacy QR labels",
+          description: "Shelf labels.",
+          count: 8,
+          samples: [],
+        },
+        {
+          key: "missing-serial",
+          title: "Missing serial numbers",
+          description: "No serial.",
+          count: 3,
+          samples: [],
+        },
+      ],
+    }));
+
+    expect(checks).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        key: "legacy-qr-labels",
+        href: "/items?cleanupWizard=legacy_qr",
+        ctaLabel: "Open cleanup wizard",
+      }),
+      expect.objectContaining({
+        key: "missing-serial",
+        href: "/items?cleanupWizard=missing_serial",
+        ctaLabel: "Open cleanup wizard",
+      }),
+    ]));
+  });
+
   it("routes taxonomy gaps to the Items Fill gaps wizard", () => {
     const checks = normalizeHygieneQueue(hygieneQueue({
       issues: [

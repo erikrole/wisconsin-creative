@@ -7,6 +7,7 @@ Last updated: 2026-10-07
 - Use `DESLOPPIFY.md` for standing cleanup policy (backlog closed 2026-06-22).
 - Use `tasks/repo-hygiene-cleanup-plan-2026-10-07.md` for the current hygiene slice and remaining database follow-ups.
 - Use `tasks/item-data-hygiene-status-2026-10-07.md` for item catalog data quality: what is done, physical queues, and Operations hygiene parity.
+- Use `tasks/item-cleanup-wizard-plan-2026-10-07.md` for the guided Cleanup wizard (legacy QR + missing serial).
 - Use `tasks/todo.md` for active execution notes and recent closeout reviews.
 - Use this index for the task-root contract, archive buckets, and active follow-up ledgers.
 - Treat `plans/README.md` as historical improve-plan context unless a current task explicitly references it.

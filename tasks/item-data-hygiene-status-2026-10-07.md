@@ -39,8 +39,12 @@ This workspace has no `DATABASE_URL`, so live `npm run audit:item-data` was not 
 - Operations CTAs for taxonomy gaps → `/items?fillGaps=1` (opens Fill gaps wizard).
 - Source-contract coverage for the hygiene route shape.
 
+## Product surface
+
+The **Cleanup wizard** (2026-10-07) walks `legacy_qr` and `missing_serial` queues with operator questions and audited save/defer. Entry: Items → Cleanup wizard, `/items?cleanupWizard=…`, Operations Keep data clean. Attachment parent mapping remains ledger/physical-only until a later slice.
+
 ## Next bounded steps
 
 1. Authorized DB: `npm run audit:item-data` + dry-run `npm run cleanup:item-data`; refresh the four ledgers.
-2. Physical: 8 QR scans + 12 attachment parent decisions.
+2. Physical: run Cleanup wizard for legacy QR + missing serial; then 12 attachment parent decisions.
 3. Archive cleared review ledgers into `tasks/archive/completed-YYYY-MM-DD/`.

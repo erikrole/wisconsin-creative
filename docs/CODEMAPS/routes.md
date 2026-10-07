@@ -262,6 +262,7 @@
 - `/api/inventory-hygiene` -> `src/app/api/inventory-hygiene/route.ts`
 - `/api/items-page-init` -> `src/app/api/items-page-init/route.ts`
 - `/api/items/changes` -> `src/app/api/items/changes/route.ts`
+- `/api/items/cleanup-wizard` -> `src/app/api/items/cleanup-wizard/route.ts`
 - `/api/kiosk-devices/[id]/regenerate-code` -> `src/app/api/kiosk-devices/[id]/regenerate-code/route.ts`
 - `/api/kiosk-devices/[id]` -> `src/app/api/kiosk-devices/[id]/route.ts`
 - `/api/kiosk-devices` -> `src/app/api/kiosk-devices/route.ts`

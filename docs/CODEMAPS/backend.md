@@ -47,6 +47,7 @@
 | `src/lib/services/firmware-watch.ts` | 329 |
 | `src/lib/services/game-record.ts` | 169 |
 | `src/lib/services/hidden-users-cleanup.ts` | 122 |
+| `src/lib/services/item-cleanup-wizard.ts` | 428 |
 | `src/lib/services/job-runs.ts` | 52 |
 | `src/lib/services/kiosk-active-checkout-items.ts` | 492 |
 | `src/lib/services/kiosk-actor.ts` | 51 |
@@ -202,7 +203,7 @@
 | `src/lib/notification-destination.ts` | 85 |
 | `src/lib/observability.ts` | 19 |
 | `src/lib/operational-health.ts` | 2 |
-| `src/lib/ops-checks.ts` | 176 |
+| `src/lib/ops-checks.ts` | 206 |
 | `src/lib/passkey-client.ts` | 73 |
 | `src/lib/passkey.ts` | 371 |
 | `src/lib/password-rules.ts` | 16 |
@@ -538,6 +539,7 @@
 ### `/api/items`
 
 - `/api/items/changes`
+- `/api/items/cleanup-wizard`
 
 ### `/api/items-page-init`
 

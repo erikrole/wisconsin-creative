@@ -4,6 +4,10 @@ import { db } from "@/lib/db";
 import { ok } from "@/lib/http";
 import { requirePermission } from "@/lib/rbac";
 import { summarizeItemFamilyState } from "@/lib/item-family-state";
+import {
+  getCleanupWizardCounts,
+  listCleanupWizardQueue,
+} from "@/lib/services/item-cleanup-wizard";
 
 const SAMPLE_LIMIT = 6;
 const DEFAULT_BULK_THRESHOLD = 1;
@@ -101,6 +105,8 @@ export const GET = withAuth(async (_req, { user }) => {
     cameraWithoutAttachmentRowsResult,
     duplicateCountResult,
     duplicateRowsResult,
+    cleanupWizardCountsResult,
+    legacyQrSamplesResult,
     bulkRowsResult,
   ] = await Promise.allSettled([
     db.asset.count({ where: { ...activeSerializedWhere, categoryId: null } }),
@@ -329,6 +335,8 @@ export const GET = withAuth(async (_req, { user }) => {
       ORDER BY d.occurrences DESC, d.scan_value ASC
       LIMIT ${SAMPLE_LIMIT}
     `,
+    getCleanupWizardCounts(),
+    listCleanupWizardQueue("legacy_qr", SAMPLE_LIMIT),
     db.bulkSku.findMany({
       where: { active: true },
       orderBy: { name: "asc" },
@@ -411,6 +419,13 @@ export const GET = withAuth(async (_req, { user }) => {
   const duplicateCountRows = settledValue(duplicateCountResult, [{ count: 0n }], "duplicateCount", partialFailures);
   const duplicateCount = Number(duplicateCountRows[0]?.count ?? 0);
   const duplicateRows = settledValue(duplicateRowsResult, [] as DuplicateScanRow[], "duplicateRows", partialFailures);
+  const cleanupWizardCounts = settledValue(
+    cleanupWizardCountsResult,
+    { legacy_qr: 0, missing_serial: 0, deferred: { legacy_qr: 0, missing_serial: 0 } },
+    "cleanupWizardCounts",
+    partialFailures,
+  );
+  const legacyQrSamples = settledValue(legacyQrSamplesResult, [], "legacyQrSamples", partialFailures);
   const bulkRows = settledValue(bulkRowsResult, bulkRowsFallback, "bulkRows", partialFailures);
 
   const lowBulkRows = bulkRows
@@ -528,6 +543,25 @@ export const GET = withAuth(async (_req, { user }) => {
         detail: `${Number(row.occurrences)} appearances / ${row.examples.slice(0, 3).map((example) => `${example.label} ${example.source}`).join(", ")}`,
         href: `/items?q=${encodeURIComponent(row.scan_value)}`,
       })),
+    ),
+    issue(
+      "legacy-qr-labels",
+      "Legacy QR labels",
+      "Active items still use Cheqroom-era shelf labels in scan fields. Confirm whether a printed QR exists.",
+      cleanupWizardCounts.legacy_qr,
+      legacyQrSamples.map((asset) => ({
+        id: asset.id,
+        label: asset.assetTag,
+        detail: asset.primaryScanCode || asset.qrCodeValue,
+        href: `/items/${asset.id}`,
+      })),
+    ),
+    issue(
+      "missing-serial",
+      "Missing serial numbers",
+      "Active items with no serial on file. Use the Cleanup wizard when you have the gear in hand.",
+      cleanupWizardCounts.missing_serial,
+      [],
     ),
     issue(
       "retired-in-kits",

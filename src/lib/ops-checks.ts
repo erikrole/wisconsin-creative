@@ -81,6 +81,18 @@ const HYGIENE_CHECK_META: Record<string, HygieneCheckMeta> = {
     href: "/items",
     ctaLabel: "Open items",
   },
+  "legacy-qr-labels": {
+    severity: "warning",
+    priority: 3,
+    href: "/items?cleanupWizard=legacy_qr",
+    ctaLabel: "Open cleanup wizard",
+  },
+  "missing-serial": {
+    severity: "info",
+    priority: 4,
+    href: "/items?cleanupWizard=missing_serial",
+    ctaLabel: "Open cleanup wizard",
+  },
   "camera-missing-attachments": {
     severity: "info",
     priority: 9,
