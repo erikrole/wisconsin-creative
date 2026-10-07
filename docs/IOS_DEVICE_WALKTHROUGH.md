@@ -144,9 +144,9 @@ Iterate the slider through every step from the smallest to "Larger Accessibility
 - [ ] **Resting palm** — sign a long name with the palm on the glass; no stray marks, no edge-swipe or Control Center interruption.
 - [ ] **Landscape** — in portrait the capture screen asks to rotate; rotating mid-signature keeps the ink.
 - [ ] **Undo / Redo / Clear / Replay** — the bar works; Undo after Clear brings the signature back; Replay redraws at the signer's pace. Pencil double-tap and (Pencil Pro) squeeze undo unless Settings → Apple Pencil is set to Ignore; Command-Z / Shift-Command-Z work with a keyboard.
-- [ ] **Save** — Save shows "Signature saved" briefly and returns to the roster, which now marks the person Signed; the web roster shows the same PNG/SVG.
-- [ ] **Offline save** — turn on Airplane Mode, tap Save (error shown, ink kept), turn it off, tap Save again — one revision is created, not two.
-- [ ] **Second iPad** — save the same person on another device first; this iPad's Save reports the conflict, keeps the ink, and shows "Replaces saved signature".
+- [ ] **Save** — Done shows the Saved card with the kept ink, then returns to the roster, which now marks the person Signed; the web roster shows the same PNG/SVG.
+- [ ] **Offline save** — turn on Airplane Mode, tap Done (error shown, ink kept), turn it off, tap Done again — one revision is created, not two.
+- [ ] **Second iPad** — save the same person on another device first; this iPad's Done reports the conflict and keeps the ink; the next Done asks "Replace the signature saved on another iPad?" before saving.
 
 ### Network instability
 

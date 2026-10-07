@@ -1,4 +1,5 @@
 import CoreGraphics
+import UIKit
 import XCTest
 @testable import Wisconsin
 
@@ -366,5 +367,63 @@ final class SignatureCaptureReviewFixTests: XCTestCase {
         vm.append(samples)
         XCTAssertNotNil(vm.notice)
         XCTAssertEqual(vm.recorder?.strokes.last?.count, SignatureStrokeRecorder.maxSamplesPerStroke)
+    }
+}
+
+@MainActor
+final class SignaturePreviewStoreTests: XCTestCase {
+    private var savedLoader: SignaturePreviewStore.Loader!
+    private var savedDirectory: URL!
+
+    override func setUp() async throws {
+        savedLoader = SignaturePreviewStore.loader
+        savedDirectory = SignaturePreviewStore.directory
+        SignaturePreviewStore.directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("SignaturePreviewStoreTests-\(UUID().uuidString)", isDirectory: true)
+        SignaturePreviewStore.clearMemory()
+    }
+
+    override func tearDown() async throws {
+        try? FileManager.default.removeItem(at: SignaturePreviewStore.directory)
+        SignaturePreviewStore.loader = savedLoader
+        SignaturePreviewStore.directory = savedDirectory
+        SignaturePreviewStore.clearMemory()
+    }
+
+    private let png = UIGraphicsImageRenderer(size: CGSize(width: 4, height: 2)).pngData { context in
+        UIColor.black.setFill()
+        context.fill(CGRect(x: 0, y: 0, width: 4, height: 2))
+    }
+
+    func testSharesOneDownloadAndServesLaterLoadsFromDisk() async {
+        var calls = 0
+        let png = png
+        SignaturePreviewStore.loader = { _ in
+            calls += 1
+            try await Task.sleep(for: .milliseconds(20))
+            return png
+        }
+        async let first = SignaturePreviewStore.image(for: "rev-1")
+        async let second = SignaturePreviewStore.image(for: "rev-1")
+        let images = await [first, second]
+        XCTAssertTrue(images.allSatisfy { $0 != nil })
+        XCTAssertEqual(calls, 1)
+
+        // A cold launch: memory is gone, the disk copy is used.
+        SignaturePreviewStore.clearMemory()
+        SignaturePreviewStore.loader = { _ in XCTFail("should read from disk"); return Data() }
+        let fromDisk = await SignaturePreviewStore.image(for: "rev-1")
+        XCTAssertNotNil(fromDisk)
+    }
+
+    func testPrefetchWarmsEveryRevisionAndSkipsCachedOnes() async {
+        var requested: [String] = []
+        let png = png
+        SignaturePreviewStore.loader = { id in requested.append(id); return png }
+        await SignaturePreviewStore.prefetch(["a", "b", "c", "d", "e", "f"])
+        XCTAssertEqual(Set(requested), ["a", "b", "c", "d", "e", "f"])
+        await SignaturePreviewStore.prefetch(["a", "b"])
+        XCTAssertEqual(requested.count, 6)
+        XCTAssertNotNil(SignaturePreviewStore.cached("f"))
     }
 }

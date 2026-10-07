@@ -56,8 +56,11 @@ describe("iOS native signature capture", () => {
 
   it("mirrors the web roster and capture surfaces", () => {
     const list = roster();
-    expect(list).toContain('TextField("Search name, number, or title"');
-    expect(list).toContain('case .all: "All roster groups"');
+    expect(list).toContain('.searchable(text: $vm.searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search name, number, or title")');
+    // Group headers stay pinned; the grid uses fixed column counts.
+    expect(list).toContain("pinnedViews: [.sectionHeaders]");
+    expect(list).toContain("let count = gridWidth >= 1_000 ? 4 : gridWidth >= 640 ? 3 : 2");
+    expect(list).toContain('case .all: "All"');
     // iPad cards: the whole card is the target, signed cards keep the green tint.
     expect(list).toContain("Button(action: member.isSigned ? onPreview : onCapture)");
     expect(list).toContain('Label("Tap to sign", systemImage: "pencil.and.scribble")');
@@ -68,14 +71,21 @@ describe("iOS native signature capture", () => {
     expect(source("ios/Wisconsin/Core/APIClient.swift")).toContain('"/api/signatures/artifacts/\\(revisionId)/png"');
   });
 
-  it("shows the signer who they are signing for, a signing line, and only signer controls", () => {
+  it("shows the signer who they are signing for, a signing line, and the signing controls", () => {
     const view = capture();
-    expect(view).toContain(".font(.wisconsinJersey(size: 52, relativeTo: .largeTitle))");
-    expect(view).toContain(".font(.gothamBlack(size: 30, relativeTo: .title))");
+    expect(view).toContain(".font(.wisconsinJersey(size: 56, relativeTo: .largeTitle))");
+    expect(view).toContain(".font(.gothamBlack(size: 32, relativeTo: .title))");
     expect(view).toContain("SignatureGuides(isClipped: vm.isClipped && !vm.isReplaying, showsLine: !vm.didSave)");
     expect(view).toContain('Text(vm.didSave ? "Saved" : "Done")');
     // Cancel left the signer bar; the Roster button still leaves (with the discard confirmation).
     expect(view).not.toContain('Button("Cancel", action: leave)');
+  });
+
+  it("caches saved previews by revision on disk and prefetches the roster", () => {
+    const list = roster();
+    expect(list).toContain('.appendingPathComponent("SignaturePreviews", isDirectory: true)');
+    expect(list).toContain("if let running = inFlight[revisionId] { return await running.value }");
+    expect(list).toContain(".task(id: vm.artifactIds) { await SignaturePreviewStore.prefetch(vm.artifactIds) }");
   });
 
   it("finds signers by jersey number without choosing the next signer", () => {
@@ -97,13 +107,11 @@ describe("iOS native signature capture", () => {
     expect(view).toContain("let pad = settings.strokeWidth / 2 + settings.cropPadding");
   });
 
-  it("keeps Undo and an undoable Clear with the signer and moves Redo and Replay to a staff menu", () => {
+  it("keeps undo, redo, clear, and replay together, with Clear undoable", () => {
     const view = capture();
-    for (const control of ['historyButton("Undo"', 'historyButton("Clear"', 'Button("Redo", systemImage: "arrow.uturn.forward")', 'vm.isReplaying ? "Stop Replay" : "Replay"', '.accessibilityLabel("Staff tools")']) {
+    for (const control of ['historyButton("Undo"', 'historyButton("Redo"', 'historyButton("Clear"', 'vm.isReplaying ? "Stop" : "Replay"']) {
       expect(view).toContain(control);
     }
-    expect(view).not.toContain('historyButton("Redo"');
-    // The staff menu's shortcuts keep working while it is closed.
     expect(view).toContain('.keyboardShortcut("r", modifiers: .command)');
     expect(view).toContain("} else if let cleared = clearedStrokes {");
     expect(view).not.toContain('confirmationDialog("Clear the canvas?"');

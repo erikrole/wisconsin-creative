@@ -34,7 +34,6 @@ struct SignatureHarnessView: View {
                 SignatureCaptureView(
                     collectionId: SignatureFixtures.collectionId,
                     memberId: "m-unsigned",
-                    sportTitle: "Men’s Basketball",
                     onSaved: {},
                     viewModel: captureVM
                 )
@@ -44,6 +43,7 @@ struct SignatureHarnessView: View {
         .onAppear {
             session.currentUser = SignatureFixtures.staffUser
             SignaturePreviewStore.loader = { _ in SignatureFixtures.previewPNG }
+            SignaturePreviewStore.directory = FileManager.default.temporaryDirectory.appendingPathComponent("SignaturePreviewFixtures", isDirectory: true)
         }
     }
 

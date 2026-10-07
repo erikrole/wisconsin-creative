@@ -28,6 +28,24 @@ final class SignatureCollectionsViewModel {
         self.loader = loader
     }
 
+    struct Group: Identifiable {
+        let title: String
+        let collections: [SignatureCollectionSummary]
+        var id: String { title }
+    }
+
+    /// Team rosters first (by sport, newest season first), then staff and
+    /// ad-hoc collections.
+    var groups: [Group] {
+        let ordered = collections.sorted {
+            ($0.title, $1.season) < ($1.title, $0.season)
+        }
+        let teams = ordered.filter { SignatureSport.isTeamRoster($0.sportCode) }
+        let other = ordered.filter { !SignatureSport.isTeamRoster($0.sportCode) }
+        return [Group(title: "Teams", collections: teams), Group(title: "Staff and other", collections: other)]
+            .filter { !$0.collections.isEmpty }
+    }
+
     func load() async {
         isLoading = true
         defer { isLoading = false }
@@ -43,6 +61,7 @@ final class SignatureCollectionsViewModel {
 struct SignaturesView: View {
     var wrapsInNavigationStack = true
     @State private var vm: SignatureCollectionsViewModel
+    @State private var gridWidth: CGFloat = 1_100
     private let rosterLoader: SignatureRosterViewModel.Loader?
 
     init(
@@ -68,11 +87,18 @@ struct SignaturesView: View {
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Signatures")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar(removing: .title)
             .refreshable { await vm.load() }
             .task { await vm.load() }
             .navigationDestination(for: SignatureCollectionSummary.self) { collection in
                 SignatureRosterView(collection: collection, viewModel: rosterLoader.map { SignatureRosterViewModel(collectionId: collection.id, loader: $0) })
             }
+    }
+
+    /// 3 across in landscape, 2 in portrait, 1 in a narrow split view.
+    private var collectionColumns: [GridItem] {
+        let count = gridWidth >= 1_000 ? 3 : gridWidth >= 560 ? 2 : 1
+        return Array(repeating: GridItem(.flexible(), spacing: Brand.Space.sm, alignment: .top), count: count)
     }
 
     @ViewBuilder
@@ -98,21 +124,32 @@ struct SignaturesView: View {
         } else {
             ScrollView {
                 VStack(alignment: .leading, spacing: Brand.Space.sm) {
-                    HStack {
-                        Text("Rosters").font(.title3.weight(.semibold))
-                        Spacer()
-                        SignatureBadge(text: "\(vm.collections.count) \(vm.collections.count == 1 ? "roster" : "rosters")", prominent: false)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Signatures")
+                            .font(.gothamBlack(size: 34, relativeTo: .largeTitle))
+                        Text("\(vm.collections.count) open \(vm.collections.count == 1 ? "roster" : "rosters")")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
                     }
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 340), spacing: Brand.Space.sm)], spacing: Brand.Space.sm) {
-                        ForEach(vm.collections) { collection in
-                            NavigationLink(value: collection) {
-                                SignatureCollectionCard(collection: collection)
+                    .padding(.top, Brand.Space.sm)
+                    .padding(.bottom, Brand.Space.xs)
+                    ForEach(vm.groups) { group in
+                        Text(group.title)
+                            .font(.headline)
+                            .foregroundStyle(.secondary)
+                            .padding(.top, Brand.Space.sm)
+                        LazyVGrid(columns: collectionColumns, spacing: Brand.Space.sm) {
+                            ForEach(group.collections) { collection in
+                                NavigationLink(value: collection) {
+                                    SignatureCollectionCard(collection: collection)
+                                }
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
                         }
                     }
                 }
                 .padding(Brand.Space.lg)
+                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { gridWidth = $0 }
             }
         }
     }
@@ -122,59 +159,97 @@ extension SignatureCollectionSummary: Hashable {
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
 }
 
-/// The web roster card: title, season, Open badge, Complete x/y with a
-/// progress bar, the staff count, and "% ready / Open roster".
+/// One open roster: sport mark, sport name in the brand face, season chip,
+/// the big signed count with staff alongside, a progress bar, and readiness.
+/// Finished rosters turn green. Cards share one height so the grid stays even.
 private struct SignatureCollectionCard: View {
     let collection: SignatureCollectionSummary
 
     private var isCreative: Bool { collection.sportCode == "CREATIVE" }
     private var isAdHoc: Bool { collection.sportCode == "ADHOC" }
     private var hasMembers: Bool { collection.activeMemberCount > 0 }
+    private var isComplete: Bool {
+        hasMembers && collection.completeness.required > 0 && collection.completeness.complete >= collection.completeness.required
+    }
+
+    private var symbol: String {
+        switch collection.sportCode {
+        case "MBB", "WBB": "basketball.fill"
+        case "FB": "football.fill"
+        case "VB": "volleyball.fill"
+        case "MHKY", "WHKY": "hockey.puck.fill"
+        case "WRES": "figure.wrestling"
+        case "CREATIVE": "camera.fill"
+        case "ADMIN": "building.columns.fill"
+        default: "signature"
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Brand.Space.sm) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(collection.title).font(.headline)
-                    if !isCreative {
-                        Text(isAdHoc ? "\(collection.season) one-off captures" : collection.season)
-                            .font(.subheadline)
+            HStack(alignment: .center, spacing: Brand.Space.sm) {
+                Image(systemName: symbol)
+                    .font(.title3)
+                    .foregroundStyle(.white)
+                    .frame(width: 44, height: 44)
+                    .background(isComplete ? Color.statusText(.green) : Color.brandPrimary, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .accessibilityHidden(true)
+                Text(collection.title)
+                    .font(.gothamBlack(size: 22, relativeTo: .title2))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                Spacer(minLength: Brand.Space.xs)
+                if !isCreative {
+                    Text(collection.season)
+                        .font(.subheadline.weight(.semibold).monospacedDigit())
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Color(.tertiarySystemFill), in: Capsule())
+                }
+            }
+            Spacer(minLength: 0)
+            HStack(alignment: .lastTextBaseline, spacing: Brand.Space.xs) {
+                if hasMembers {
+                    Text("\(collection.completeness.complete)/\(collection.completeness.required)")
+                        .font(.gothamBold(size: 32, relativeTo: .title))
+                        .monospacedDigit()
+                        .foregroundStyle(isComplete ? Color.statusText(.green) : Color.primary)
+                    Text(isCreative || isAdHoc ? "signed" : "Student-Athletes")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Spacer(minLength: Brand.Space.xs)
+                    if !isCreative, !isAdHoc, let staff = collection.staffCompleteness, staff.total > 0 {
+                        Text("\(staff.complete)/\(staff.total) Staff")
+                            .font(.subheadline.monospacedDigit())
                             .foregroundStyle(.secondary)
                     }
+                } else {
+                    Text("Roster not applied")
+                        .font(.headline)
+                        .foregroundStyle(.secondary)
                 }
-                Spacer()
-                SignatureBadge(text: "Open", prominent: true)
             }
-            HStack {
-                Text(hasMembers ? "Complete" : "Roster status").foregroundStyle(.secondary)
-                Spacer()
-                Text(hasMembers ? "\(collection.completeness.complete)/\(collection.completeness.required)" : "Not applied")
-                    .fontWeight(.semibold)
-                    .monospacedDigit()
-            }
-            .font(.subheadline)
             ProgressView(value: Double(hasMembers ? collection.completeness.percent : 0), total: 100)
-                .tint(Color.brandPrimary)
-            if !isCreative, !isAdHoc, let staff = collection.staffCompleteness, staff.total > 0 {
-                Text("\(staff.complete)/\(staff.total) Staff")
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-            }
+                .tint(isComplete ? Color.statusText(.green) : Color.brandPrimary)
+                .scaleEffect(x: 1, y: 1.6, anchor: .center)
             HStack {
-                Text(isCreative ? "Automatically synced" : hasMembers ? "\(collection.completeness.percent)% ready" : "Apply a roster to begin")
-                    .foregroundStyle(.secondary)
-                Spacer()
-                HStack(spacing: 4) {
-                    Text("Open roster")
-                    Image(systemName: "arrow.right").imageScale(.small)
+                if isComplete {
+                    Label("Complete", systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(Color.statusText(.green))
+                } else {
+                    Text(isCreative ? "Automatically synced" : hasMembers ? "\(collection.completeness.percent)% ready" : isAdHoc ? "\(collection.season) one-off captures" : "Apply a roster on the web to begin")
+                        .foregroundStyle(.secondary)
                 }
-                .fontWeight(.medium)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .foregroundStyle(.tertiary)
             }
-            .font(.caption)
+            .font(.subheadline.weight(.medium))
         }
         .padding(Brand.Space.md)
-        .brandCard(padding: 0)
+        .frame(height: 196)
+        .background(isComplete ? Color.statusBackground(.green) : Color.cardSurface, in: RoundedRectangle(cornerRadius: Brand.Radius.card, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: Brand.Radius.card, style: .continuous).strokeBorder(Color.hairline))
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
     }
@@ -187,12 +262,13 @@ enum SignatureRosterGroupFilter: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    var title: String {
+    /// Segment labels for the roster header.
+    var shortTitle: String {
         switch self {
-        case .all: "All roster groups"
+        case .all: "All"
         case .players: "Players"
-        case .coachingStaff: "Coaching staff"
-        case .supportStaff: "Support staff"
+        case .coachingStaff: "Coaches"
+        case .supportStaff: "Support"
         }
     }
 }
@@ -249,6 +325,11 @@ final class SignatureRosterViewModel {
         return keys.map { key in Section(roleGroup: key, members: active.filter { $0.roleGroup == key }) }
     }
 
+    /// Saved revisions on this roster, in roster order, for preview prefetch.
+    var artifactIds: [String] {
+        (detail?.members ?? []).filter(\.active).compactMap(\.artifact?.id)
+    }
+
     /// Active members wearing `number`, for the jersey pad. Staff still pick
     /// who signs; the pad only finds them.
     func members(withJersey number: Int) -> [SignatureRosterMember] {
@@ -279,6 +360,9 @@ struct SignatureRosterView: View {
     @State private var showsJerseyPad = false
     /// The member picked on the jersey pad; capture opens once the pad closes.
     @State private var padPick: SignatureRosterMember?
+    /// Replace chosen in Quick Look; capture opens once that sheet closes.
+    @State private var replacePick: SignatureRosterMember?
+    @State private var gridWidth: CGFloat = 1_100
 
     init(collection: SignatureCollectionSummary, viewModel: SignatureRosterViewModel? = nil) {
         self.collection = collection
@@ -293,13 +377,31 @@ struct SignatureRosterView: View {
             .background(Color(.systemGroupedBackground))
             .navigationTitle(collection.title)
             .navigationBarTitleDisplayMode(.inline)
+            // The header carries the roster name in the brand face.
+            .toolbar(removing: .title)
+            .searchable(text: $vm.searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search name, number, or title")
+            .toolbar {
+                if isTeamRoster {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button { showsJerseyPad = true } label: {
+                            Label("Jersey #", systemImage: "number")
+                                .labelStyle(.titleAndIcon)
+                                .font(.body.weight(.semibold))
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(Color.brandPrimary)
+                        .disabled(!isOpen)
+                        .keyboardShortcut("j", modifiers: .command)
+                    }
+                }
+            }
             .refreshable { await vm.load() }
             .task { await vm.load() }
+            .task(id: vm.artifactIds) { await SignaturePreviewStore.prefetch(vm.artifactIds) }
             .fullScreenCover(item: $capturing) { member in
                 SignatureCaptureView(
                     collectionId: collection.id,
                     memberId: member.id,
-                    sportTitle: collection.title,
                     onSaved: { Task { await vm.load() } }
                 )
             }
@@ -314,12 +416,24 @@ struct SignatureRosterView: View {
                     showsJerseyPad = false
                 }
             }
-            .sheet(item: $previewing) { member in
-                SignatureQuickLook(member: member, canReplace: isOpen) {
-                    previewing = nil
+            .sheet(item: $previewing, onDismiss: {
+                if let member = replacePick {
+                    replacePick = nil
                     capturing = member
                 }
+            }) { member in
+                SignatureQuickLook(member: member, canReplace: isOpen) {
+                    replacePick = member
+                    previewing = nil
+                }
             }
+    }
+
+    /// Fixed column counts keep the grid even: 4 across an 11-inch iPad in
+    /// landscape, 3 in portrait, 2 in a narrow split view.
+    private var columns: [GridItem] {
+        let count = gridWidth >= 1_000 ? 4 : gridWidth >= 640 ? 3 : 2
+        return Array(repeating: GridItem(.flexible(), spacing: Brand.Space.sm, alignment: .top), count: count)
     }
 
     @ViewBuilder
@@ -338,7 +452,7 @@ struct SignatureRosterView: View {
             }
         } else {
             ScrollView {
-                VStack(alignment: .leading, spacing: Brand.Space.lg) {
+                LazyVStack(alignment: .leading, spacing: Brand.Space.lg, pinnedViews: [.sectionHeaders]) {
                     rosterHeader
                     if vm.sections.isEmpty {
                         ContentUnavailableView(
@@ -352,76 +466,113 @@ struct SignatureRosterView: View {
                         }
                     }
                 }
-                .padding(Brand.Space.lg)
+                .padding(.horizontal, Brand.Space.lg)
+                .padding(.bottom, Brand.Space.lg)
+                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { gridWidth = $0 }
             }
         }
     }
 
-    // MARK: Header (readiness, search, group filter)
+    // MARK: Header (roster name, readiness, group filter)
+
+    private struct Readiness {
+        let complete: Int
+        let total: Int
+        let label: String
+    }
+
+    /// Team rosters count required student-athletes and staff separately (like
+    /// the web header); other rosters count everyone active.
+    private var readiness: [Readiness] {
+        let members = (vm.detail?.members ?? []).filter(\.active)
+        guard isTeamRoster else {
+            return [Readiness(complete: members.filter(\.isSigned).count, total: members.count, label: "Signed")]
+        }
+        var rows: [Readiness] = []
+        if let completeness = vm.detail?.completeness {
+            rows.append(Readiness(complete: completeness.complete, total: completeness.required, label: "Student-Athletes"))
+        }
+        if let staff = vm.detail?.staffCompleteness, staff.total > 0 {
+            rows.append(Readiness(complete: staff.complete, total: staff.total, label: "Staff"))
+        }
+        return rows
+    }
+
+    private var readinessPercent: Double {
+        if isTeamRoster, let completeness = vm.detail?.completeness { return Double(completeness.percent) }
+        guard let first = readiness.first, first.total > 0 else { return 0 }
+        return Double(first.complete) / Double(first.total) * 100
+    }
 
     private var rosterHeader: some View {
-        HStack(alignment: .bottom, spacing: Brand.Space.md) {
-            VStack(alignment: .leading, spacing: Brand.Space.xs) {
-                Text("Roster").font(.title3.weight(.semibold))
-                if isTeamRoster, let completeness = vm.detail?.completeness {
-                    HStack(alignment: .firstTextBaseline) {
-                        Text("\(completeness.complete)/\(completeness.required) Student-Athletes")
-                            .font(.subheadline.weight(.semibold).monospacedDigit())
-                        Spacer()
-                        if let staff = vm.detail?.staffCompleteness, staff.total > 0 {
-                            Text("\(staff.complete)/\(staff.total) Staff")
-                                .font(.caption.monospacedDigit())
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    ProgressView(value: Double(completeness.percent), total: 100)
-                        .tint(Color.brandPrimary)
-                }
+        VStack(alignment: .leading, spacing: Brand.Space.md) {
+            HStack(alignment: .firstTextBaseline, spacing: Brand.Space.sm) {
+                Text(collection.title)
+                    .font(.gothamBlack(size: 34, relativeTo: .largeTitle))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                Text(collection.season)
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+                Spacer(minLength: Brand.Space.sm)
+                if !isOpen { SignatureBadge(text: "Archived") }
             }
-            .frame(maxWidth: 520, alignment: .leading)
-            Spacer(minLength: 0)
-            HStack(spacing: Brand.Space.sm) {
-                HStack(spacing: Brand.Space.xs) {
-                    Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                    TextField("Search name, number, or title", text: $vm.searchText)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .submitLabel(.search)
-                }
-                .padding(.horizontal, Brand.Space.sm)
-                .frame(width: 300, height: 44)
-                .background(Color.cardSurface, in: RoundedRectangle(cornerRadius: Brand.Radius.sm, style: .continuous))
-                if isTeamRoster {
-                    Button { showsJerseyPad = true } label: {
-                        Label("Jersey #", systemImage: "number")
-                            .font(.body.weight(.semibold))
-                            .frame(minWidth: 110, minHeight: 44)
+            HStack(alignment: .lastTextBaseline, spacing: Brand.Space.xl) {
+                ForEach(readiness, id: \.label) { row in
+                    HStack(alignment: .lastTextBaseline, spacing: Brand.Space.xs) {
+                        Text("\(row.complete)/\(row.total)")
+                            .font(.gothamBold(size: 28, relativeTo: .title))
+                            .monospacedDigit()
+                            .foregroundStyle(row.total > 0 && row.complete == row.total ? Color.statusText(.green) : Color.primary)
+                        Text(row.label)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(Color.brandPrimary)
-                    .disabled(!isOpen)
-                    Picker("Filter signature roster", selection: $vm.groupFilter) {
-                        ForEach(SignatureRosterGroupFilter.allCases) { Text($0.title).tag($0) }
-                    }
-                    .pickerStyle(.menu)
-                    .frame(width: 210, height: 44)
-                    .background(Color.cardSurface, in: RoundedRectangle(cornerRadius: Brand.Radius.sm, style: .continuous))
+                    .accessibilityElement(children: .combine)
                 }
+                Spacer(minLength: 0)
+            }
+            ProgressView(value: readinessPercent, total: 100)
+                .tint(Color.brandPrimary)
+            if isTeamRoster {
+                Picker("Filter signature roster", selection: $vm.groupFilter) {
+                    ForEach(SignatureRosterGroupFilter.allCases) { Text($0.shortTitle).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .frame(maxWidth: 560)
             }
         }
+        .padding(.top, Brand.Space.sm)
     }
 
     // MARK: Groups
 
+    /// Group headers stay pinned while their cards scroll by.
     private func groupSection(_ section: SignatureRosterViewModel.Section) -> some View {
         let isOpenGroup = !vm.collapsedGroups.contains(section.roleGroup)
-        return VStack(alignment: .leading, spacing: Brand.Space.xs) {
+        return Section {
+            if isOpenGroup {
+                LazyVGrid(columns: columns, spacing: Brand.Space.sm) {
+                    ForEach(section.members) { member in
+                        SignatureMemberCard(
+                            member: member,
+                            showsTitle: collection.sportCode != "CREATIVE",
+                            primaryCapture: member.roleGroup == "PLAYER" || member.roleGroup == "CREATIVE_STAFF" || collection.sportCode == "ADMIN",
+                            isOpen: isOpen,
+                            onCapture: { capturing = member },
+                            onPreview: { previewing = member }
+                        )
+                    }
+                }
+                .padding(.bottom, Brand.Space.sm)
+            }
+        } header: {
             Button { withAnimation(.snappy) { vm.toggleGroup(section.roleGroup) } } label: {
                 HStack(spacing: Brand.Space.sm) {
                     Image(systemName: groupIcon(section.roleGroup))
                         .font(.body)
                         .foregroundStyle(.secondary)
-                        .frame(width: 40, height: 40)
+                        .frame(width: 36, height: 36)
                         .background(Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
                     Text(section.title).font(.headline)
                     Spacer()
@@ -434,24 +585,12 @@ struct SignatureRosterView: View {
                         .rotationEffect(.degrees(isOpenGroup ? 180 : 0))
                 }
                 .frame(minHeight: 48)
+                .padding(.vertical, Brand.Space.xs)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .background(Color(.systemGroupedBackground))
             .accessibilityLabel("\(isOpenGroup ? "Collapse" : "Expand") \(section.title)")
-            if isOpenGroup {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 210), spacing: Brand.Space.sm)], spacing: Brand.Space.sm) {
-                    ForEach(section.members) { member in
-                        SignatureMemberCard(
-                            member: member,
-                            showsTitle: collection.sportCode != "CREATIVE",
-                            primaryCapture: member.roleGroup == "PLAYER" || member.roleGroup == "CREATIVE_STAFF" || collection.sportCode == "ADMIN",
-                            isOpen: isOpen,
-                            onCapture: { capturing = member },
-                            onPreview: { previewing = member }
-                        )
-                    }
-                }
-            }
         }
     }
 
@@ -500,22 +639,27 @@ private struct SignatureMemberCard: View {
                             .accessibilityLabel("Signature complete")
                     }
                 }
-                Text(member.name)
-                    .font(.gothamBlack(size: 16, relativeTo: .subheadline))
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                if showsTitle {
-                    Text(subtitle)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(member.name)
+                        .font(.gothamBlack(size: 16, relativeTo: .subheadline))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                    Text(showsTitle ? subtitle : " ")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
+                // Signed cards step back a little so unsigned ones stand out.
+                .opacity(member.isSigned ? 0.75 : 1)
                 Spacer(minLength: Brand.Space.xs)
                 footer
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
             }
             .padding(Brand.Space.md)
-            .frame(maxWidth: .infinity, minHeight: 168, alignment: .topLeading)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+            .frame(height: 176)
             .background(member.isSigned ? Color.statusBackground(.green) : Color.cardSurface)
             .clipShape(RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous).strokeBorder(Color.hairline))
@@ -556,13 +700,12 @@ private struct SignatureMemberCard: View {
     @ViewBuilder
     private var footer: some View {
         if let artifact = member.artifact {
-            SignaturePreview(revisionId: artifact.id, maxHeight: 36)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            SignaturePreview(revisionId: artifact.id, maxHeight: 40)
         } else if isOpen {
             Label("Tap to sign", systemImage: "pencil.and.scribble")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(primaryCapture ? Color.white : Color.primary)
-                .frame(maxWidth: .infinity, minHeight: 36)
+                .frame(maxWidth: .infinity, minHeight: 40)
                 .background(
                     primaryCapture ? AnyShapeStyle(Color.brandPrimary) : AnyShapeStyle(Color(.tertiarySystemFill)),
                     in: RoundedRectangle(cornerRadius: Brand.Radius.sm, style: .continuous)
@@ -739,44 +882,103 @@ private struct Checkerboard: View {
 
 private struct SignatureBadge: View {
     let text: String
-    let prominent: Bool
 
     var body: some View {
         Text(text)
             .font(.caption.weight(.semibold))
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
-            .foregroundStyle(prominent ? Color(.systemBackground) : Color.secondary)
-            .background(prominent ? AnyShapeStyle(Color.primary) : AnyShapeStyle(Color.clear), in: Capsule())
-            .overlay(Capsule().strokeBorder(prominent ? Color.clear : Color.hairline))
+            .foregroundStyle(.secondary)
+            .overlay(Capsule().strokeBorder(Color.hairline))
     }
 }
 
 // MARK: - Saved signature preview
 
-/// Loads and caches the saved PNG for a roster row. Revisions never change, so
-/// the cache is keyed by revision ID for the life of the app process.
+/// Saved signature PNGs for roster cards. A revision never changes once
+/// saved (a replacement gets a new ID), so images are cached by revision ID
+/// in memory and on disk with no expiry; iOS may purge the Caches folder,
+/// which only costs a re-download. Concurrent requests for one revision
+/// share a single download.
 @MainActor
 enum SignaturePreviewStore {
     typealias Loader = @MainActor (_ revisionId: String) async throws -> Data
 
     static var loader: Loader = { try await APIClient.shared.signatureArtifactPNG(revisionId: $0) }
-    private static let cache = NSCache<NSString, UIImage>()
+    static var directory = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+        .appendingPathComponent("SignaturePreviews", isDirectory: true)
+    /// Roster prefetch downloads at most this many previews at once.
+    static let prefetchWidth = 4
+
+    private static let memory = NSCache<NSString, UIImage>()
+    private static var inFlight: [String: Task<UIImage?, Never>] = [:]
 
     static func cached(_ revisionId: String) -> UIImage? {
-        cache.object(forKey: revisionId as NSString)
+        memory.object(forKey: revisionId as NSString)
     }
 
     static func image(for revisionId: String) async -> UIImage? {
         if let hit = cached(revisionId) { return hit }
-        do {
-            guard let image = UIImage(data: try await loader(revisionId)) else { return nil }
-            cache.setObject(image, forKey: revisionId as NSString)
-            return image
-        } catch {
-            // A preview is decorative; the row still says Signed without it.
-            return nil
+        if let running = inFlight[revisionId] { return await running.value }
+        let task = Task { () -> UIImage? in
+            defer { inFlight[revisionId] = nil }
+            let file = fileURL(revisionId)
+            if let image = await readFile(file) {
+                memory.setObject(image, forKey: revisionId as NSString)
+                return image
+            }
+            do {
+                let data = try await loader(revisionId)
+                guard let image = UIImage(data: data) else { return nil }
+                memory.setObject(image, forKey: revisionId as NSString)
+                await writeFile(data, to: file)
+                return image
+            } catch {
+                // A preview is decorative; the card still says Signed without it.
+                return nil
+            }
         }
+        inFlight[revisionId] = task
+        return await task.value
+    }
+
+    /// Warms the cache for a roster so thumbnails are ready before scrolling.
+    static func prefetch(_ revisionIds: [String]) async {
+        var pending = revisionIds.filter { cached($0) == nil }[...]
+        await withTaskGroup(of: Void.self) { group in
+            for _ in 0..<prefetchWidth {
+                guard let id = pending.popFirst() else { break }
+                group.addTask { _ = await image(for: id) }
+            }
+            while await group.next() != nil {
+                guard let id = pending.popFirst() else { continue }
+                group.addTask { _ = await image(for: id) }
+            }
+        }
+    }
+
+    /// Test hook: drops the memory layer so the disk layer is exercised.
+    static func clearMemory() {
+        memory.removeAllObjects()
+    }
+
+    private static func fileURL(_ revisionId: String) -> URL {
+        let safe = revisionId.filter { $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" }
+        return directory.appendingPathComponent("\(safe).png")
+    }
+
+    private nonisolated static func readFile(_ url: URL) async -> UIImage? {
+        await Task.detached(priority: .utility) {
+            guard let data = try? Data(contentsOf: url) else { return nil }
+            return UIImage(data: data)
+        }.value
+    }
+
+    private nonisolated static func writeFile(_ data: Data, to url: URL) async {
+        await Task.detached(priority: .utility) {
+            try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try? data.write(to: url, options: .atomic)
+        }.value
     }
 }
 
@@ -786,6 +988,7 @@ private struct SignaturePreview: View {
     let revisionId: String
     var maxHeight: CGFloat = 32
     @State private var image: UIImage?
+    @State private var isLoading = false
 
     var body: some View {
         Group {
@@ -796,6 +999,12 @@ private struct SignaturePreview: View {
                     .interpolation(.high)
                     .scaledToFit()
                     .foregroundStyle(.primary)
+            } else if isLoading {
+                // Same footprint as the image so the card does not jump.
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(Color(.tertiarySystemFill))
+                    .frame(maxWidth: 120)
+                    .frame(height: maxHeight * 0.6)
             } else {
                 Color.clear
             }
@@ -804,7 +1013,10 @@ private struct SignaturePreview: View {
         .accessibilityHidden(true)
         .task(id: revisionId) {
             image = SignaturePreviewStore.cached(revisionId)
-            if image == nil { image = await SignaturePreviewStore.image(for: revisionId) }
+            guard image == nil else { return }
+            isLoading = true
+            image = await SignaturePreviewStore.image(for: revisionId)
+            isLoading = false
         }
     }
 }

@@ -233,8 +233,10 @@ final class SignatureCaptureViewModel {
                 // so the kept ink can be saved against the current versions,
                 // but only after the operator confirms replacing what is there.
                 if case .httpError(409, _) = error as? APIError {
+                    let before = bootstrap.member.artifact?.id
                     await reload()
-                    needsReplaceConfirmation = self.bootstrap?.member.artifact != nil
+                    let after = self.bootstrap?.member.artifact?.id
+                    needsReplaceConfirmation = after != nil && after != before
                 }
             }
             saveError = (error as? APIError)?.errorDescription ?? error.localizedDescription
@@ -246,9 +248,8 @@ final class SignatureCaptureViewModel {
 // MARK: - View
 
 /// The signer-facing capture screen. The athlete sees who they are signing for
-/// (big name and Wisconsin-font jersey number), a signing line, and only Undo,
-/// Clear, and Done; Redo and Replay sit in a staff menu (keyboard shortcuts
-/// still work). Strokes that reach the edge turn red and block Done, and a
+/// (big name and Wisconsin-font jersey number), a signing line, and Undo, Redo,
+/// Clear, Replay, and Done. Strokes that reach the edge turn red and block Done, and a
 /// save shows the cropped ink that was kept before returning to the roster.
 struct SignatureCaptureView: View {
     @Environment(\.dismiss) private var dismiss
@@ -256,12 +257,10 @@ struct SignatureCaptureView: View {
     @State private var vm: SignatureCaptureViewModel
     @State private var confirmDiscard = false
     @State private var confirmReplace = false
-    let sportTitle: String
     let onSaved: () -> Void
 
-    init(collectionId: String, memberId: String, sportTitle: String, onSaved: @escaping () -> Void, viewModel: SignatureCaptureViewModel? = nil) {
+    init(collectionId: String, memberId: String, onSaved: @escaping () -> Void, viewModel: SignatureCaptureViewModel? = nil) {
         _vm = State(initialValue: viewModel ?? SignatureCaptureViewModel(collectionId: collectionId, memberId: memberId))
-        self.sportTitle = sportTitle
         self.onSaved = onSaved
     }
 
@@ -270,7 +269,6 @@ struct SignatureCaptureView: View {
     var body: some View {
         content
             .background(Color(.systemGroupedBackground))
-            .background { shortcutCarriers }
             .task { await vm.load() }
             .interactiveDismissDisabled(vm.hasInk && !vm.didSave)
             // Signing runs to the screen edges: keep edge swipes and the
@@ -308,26 +306,14 @@ struct SignatureCaptureView: View {
         if vm.hasInk && !vm.didSave { confirmDiscard = true } else { dismiss() }
     }
 
-    /// Redo and Replay live in the staff menu; these invisible buttons keep
-    /// their keyboard shortcuts working while the menu is closed.
-    private var shortcutCarriers: some View {
-        ZStack {
-            Button("Redo") { vm.redo() }
-                .keyboardShortcut("z", modifiers: [.command, .shift])
-            Button("Replay") { vm.toggleReplay() }
-                .keyboardShortcut("r", modifiers: .command)
-        }
-        .opacity(0)
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
-    }
-
     @ViewBuilder
     private var content: some View {
         if let bootstrap = vm.bootstrap, let settings = vm.settings {
             GeometryReader { proxy in
+                // One sheet: who is signing, then the canvas and its controls.
                 VStack(spacing: Brand.Space.sm) {
                     header(bootstrap)
+                    Divider()
                     // Signatures are captured in landscape (Erik, 2026-10-07).
                     // iPadOS will not let a multitasking app force rotation, so
                     // portrait shows a rotate prompt; ink already drawn is kept.
@@ -337,6 +323,8 @@ struct SignatureCaptureView: View {
                         rotatePrompt
                     }
                 }
+                .padding(Brand.Space.md)
+                .brandCard(padding: 0)
                 .padding(Brand.Space.md)
             }
         } else if let error = vm.loadError {
@@ -363,7 +351,6 @@ struct SignatureCaptureView: View {
             Text(vm.hasInk ? "The signature so far is kept. Turn the iPad sideways to keep signing." : "Signatures are captured in landscape so there is room for the full name.")
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .brandCard(padding: 0)
     }
 
     // MARK: Header (who is signing)
@@ -376,19 +363,23 @@ struct SignatureCaptureView: View {
             .compactMap { $0 }
             .joined(separator: " · ")
         return HStack(spacing: Brand.Space.sm) {
-            Button(action: leave) {
-                Label("Roster", systemImage: "arrow.left")
-                    .frame(minHeight: 44)
+            HStack(spacing: Brand.Space.xs) {
+                Button(action: leave) {
+                    Label("Roster", systemImage: "chevron.left")
+                        .font(.body.weight(.semibold))
+                        .frame(minHeight: 44)
+                        .padding(.horizontal, Brand.Space.xs)
+                }
+                .buttonStyle(.glass)
+                .keyboardShortcut(.cancelAction)
+                .disabled(vm.isSaving)
             }
-            .buttonStyle(.borderless)
-            .keyboardShortcut(.cancelAction)
-            .disabled(vm.isSaving)
-            .frame(width: 140, alignment: .leading)
+            .frame(width: 160, alignment: .leading)
 
             HStack(spacing: Brand.Space.md) {
                 if let number = member.jerseyNumber {
                     Text("\(number)")
-                        .font(.wisconsinJersey(size: 52, relativeTo: .largeTitle))
+                        .font(.wisconsinJersey(size: 56, relativeTo: .largeTitle))
                         .monospacedDigit()
                         .tracking(2)
                         .foregroundStyle(Color.jerseyNumber)
@@ -396,7 +387,7 @@ struct SignatureCaptureView: View {
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     Text(member.name)
-                        .font(.gothamBlack(size: 30, relativeTo: .title))
+                        .font(.gothamBlack(size: 32, relativeTo: .title))
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                     Text(detail)
@@ -408,26 +399,10 @@ struct SignatureCaptureView: View {
             .frame(maxWidth: .infinity)
             .accessibilityElement(children: .combine)
 
-            staffMenu
-                .frame(width: 140, alignment: .trailing)
+            // Balances the left controls so the signer stays centred.
+            Color.clear.frame(width: 160, height: 1)
         }
-    }
-
-    /// Staff-only tools, kept out of the signer's way.
-    private var staffMenu: some View {
-        Menu {
-            Button("Redo", systemImage: "arrow.uturn.forward") { vm.redo() }
-                .disabled(!vm.canRedo)
-            Button(vm.isReplaying ? "Stop Replay" : "Replay", systemImage: vm.isReplaying ? "stop.fill" : "play.fill") { vm.toggleReplay() }
-                .disabled(!(vm.canReplay || vm.isReplaying))
-        } label: {
-            Image(systemName: "ellipsis.circle")
-                .font(.title2)
-                .frame(width: 44, height: 44)
-                .contentShape(Rectangle())
-        }
-        .disabled(vm.isSaving || vm.didSave)
-        .accessibilityLabel("Staff tools")
+        .padding(.vertical, Brand.Space.xs)
     }
 
     // MARK: Canvas card
@@ -444,14 +419,16 @@ struct SignatureCaptureView: View {
             HStack(spacing: Brand.Space.sm) {
                 historyButton("Undo", systemImage: "arrow.uturn.backward", enabled: vm.canUndo) { vm.undo() }
                     .keyboardShortcut("z", modifiers: .command)
+                historyButton("Redo", systemImage: "arrow.uturn.forward", enabled: vm.canRedo) { vm.redo() }
+                    .keyboardShortcut("z", modifiers: [.command, .shift])
                 historyButton("Clear", systemImage: "eraser", enabled: vm.canClear) { vm.clear() }
                     .keyboardShortcut(.delete, modifiers: .command)
+                historyButton(vm.isReplaying ? "Stop" : "Replay", systemImage: vm.isReplaying ? "stop.fill" : "play.fill", enabled: vm.canReplay || vm.isReplaying) { vm.toggleReplay() }
+                    .keyboardShortcut("r", modifiers: .command)
                 Spacer()
                 saveButton
             }
         }
-        .padding(Brand.Space.md)
-        .brandCard(padding: 0)
         // Rotating to portrait mid-stroke removes the canvas before the Pencil
         // lifts; keep the partial stroke and leave the recorder ready.
         .onDisappear { if vm.recorder?.isDrawing == true { vm.end(cancelled: true) } }
@@ -591,9 +568,9 @@ private struct SignatureGuides: View {
     }
 }
 
-/// After a save: the ink cropped the way the server crops it (ink bounds plus
+/// After a save: the ink cropped close to the server's crop (ink bounds plus
 /// half the stroke width plus the configured padding), with a Saved check, so
-/// the signer sees exactly what was kept.
+/// the signer sees the ink that was kept.
 private struct SignatureSavedCard: View {
     let strokes: [[SignatureSample]]
     let settings: SignatureCaptureSettings
