@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Items
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-30
+- Last Updated: 2026-10-07
 - Status: Active
 - Version: V1
 
@@ -51,13 +51,14 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 8. The mobile Items list intentionally avoids desktop-only bulk actions and advanced filter density.
 
 ### Inventory Hygiene
-1. Staff/admin opens the "Keep data clean" lane on `/operations` (the old `/items/hygiene` route redirects there). `GET /api/inventory-hygiene` is unchanged.
+1. Staff/admin opens the "Keep data clean" lane on `/operations` (the old `/items/hygiene` route redirects there).
 2. The lane shows cleanup checks that improve picker, search, checkout, kit, and scan quality.
-3. Each issue card links to the existing repair surface instead of adding new mutation paths.
-4. Slice 1 checks missing category, missing department, missing primary scan code, missing image, duplicate scan identity, retired items still in active kits, camera bodies with no attachments, and active bulk SKUs below threshold.
+3. Each issue card links to the existing repair surface instead of adding new mutation paths. Taxonomy gaps CTA to `/items?fillGaps=1` (opens Fill gaps).
+4. Checks cover active (non-retired) missing category/department/primary scan/image, active item-family missing category/department/image, duplicate scan identity across serialized scan fields and active family bin QR, retired items still in active kits, advisory camera bodies with no attachments, and active bulk SKUs below threshold (the last is dropped from the merged Operations UI because Battery Ops / Fix Today already own low stock).
 5. The page frames those checks as a read-only cleanup queue with priority ordering, clean/check progress, needs-work/all/clean views, partial-failure warnings, and tag-first sample rows.
 6. Checklist health uses the shared shadcn-backed status indicator: green for clean, orange for needs-work or partial data, and red only for critical/blocking states.
 7. The Items Fill gaps wizard can repair missing categories and departments across standard items and item families. Missing-category suggestions prefer existing categorized inventory patterns, then fall back to gear-term matching. The backing missing-field API counts standard items and item families separately, pages each source at the database layer, and reports when suggestion matching used a capped sample.
+8. Operator scripts `npm run audit:item-data` and `npm run cleanup:item-data` remain the offline verification/apply path for physical review queues tracked in `tasks/item-data-hygiene-status-2026-10-07.md`.
 
 ### Create Item
 1. User starts `Add item`.
@@ -445,6 +446,7 @@ Item families can optionally enable `trackByNumber` on the backing `BulkSku` imp
 
 ## Change Log
 
+- 2026-10-07: **Inventory hygiene parity with the item-data audit.** `/api/inventory-hygiene` now excludes retired rows from missing-field counts, reports active item-family category/department/image gaps, counts duplicate scan identity across serialized scan fields and active family bin QR (true total, not sample-capped), and labels camera-without-attachments as advisory. Operations taxonomy CTAs open `/items?fillGaps=1`. Residual physical queues are tracked in `tasks/item-data-hygiene-status-2026-10-07.md`; the June image-sourcing ledger is marked stale pending a live audit after battery consolidation.
 - 2026-09-20: **CSV import writes in bounded batches instead of one file-long transaction.** The import route no longer holds a single interactive transaction open for one statement per row: new assets go out as `createMany`, updates are grouped by identical payload into `updateMany`, and creates, updates, bulk SKUs and kits each run in transactions of at most 200 rows. Kit location lookup is pre-indexed by kit name instead of scanning every valid row per kit. Atomicity is now per batch rather than per file, so a failed batch rolls back only its own rows and reports each of them in the response `errors` with the reason it was not applied, while the remaining batches still run; `created`/`updated`/`bulkCreated` count applied rows only. Acceptance: focused import-route tests (including batch-size and failed-batch reporting), TypeScript, and lint passed.
 - 2026-09-20: **Firmware watch now finishes inside its budget instead of being cut off mid-run.** The nightly poll checked up to 100 targets one at a time, each an external fetch with an 8s timeout, so a run of slow sources could exceed the function budget and be killed — leaving an arbitrary tail of targets with a stale `lastCheckedAt` and no record that they were missed. Targets now run five at a time behind a 30s wall-clock deadline, and any targets the deadline cuts off are reported as `firmwareWatch.skipped` in the `morning-refresh` cron response, which also raises `deadlineExceeded`. Item detail's firmware freshness is unchanged for any target that was actually checked. Acceptance: focused firmware and cron tests, TypeScript, and lint passed.
 - 2026-09-20: **Items URL filter synchronization.** Local filter actions now cancel the URL rehydration guard so clearing or changing filters cannot leave a stale query in the address bar while the list shows different results. Acceptance: authenticated browser proof of `FX3` search, clear, URL reset, and restored 207-item list; focused tests, TypeScript, lint, and build passed.

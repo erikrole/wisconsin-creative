@@ -82,28 +82,46 @@ const HYGIENE_CHECK_META: Record<string, HygieneCheckMeta> = {
     ctaLabel: "Open items",
   },
   "camera-missing-attachments": {
-    severity: "warning",
-    priority: 5,
+    severity: "info",
+    priority: 9,
     href: "/items",
     ctaLabel: "Review attachments",
   },
   "missing-category": {
     severity: "info",
     priority: 6,
-    href: "/items",
-    ctaLabel: "Open items",
+    href: "/items?fillGaps=1",
+    ctaLabel: "Fill gaps",
   },
   "missing-department": {
     severity: "info",
     priority: 7,
-    href: "/items",
-    ctaLabel: "Open items",
+    href: "/items?fillGaps=1",
+    ctaLabel: "Fill gaps",
+  },
+  "family-missing-category": {
+    severity: "info",
+    priority: 6,
+    href: "/items?fillGaps=1",
+    ctaLabel: "Fill gaps",
+  },
+  "family-missing-department": {
+    severity: "info",
+    priority: 7,
+    href: "/items?fillGaps=1",
+    ctaLabel: "Fill gaps",
   },
   "missing-image": {
     severity: "info",
     priority: 8,
     href: "/items",
     ctaLabel: "Open items",
+  },
+  "family-missing-image": {
+    severity: "info",
+    priority: 8,
+    href: "/bulk-inventory",
+    ctaLabel: "Open item families",
   },
 };
 

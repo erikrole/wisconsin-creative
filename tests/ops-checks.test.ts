@@ -118,6 +118,40 @@ describe("normalizeHygieneQueue", () => {
     expect(missingImage).toMatchObject({ severity: "info", ctaLabel: "Open items" });
   });
 
+  it("routes taxonomy gaps to the Items Fill gaps wizard", () => {
+    const checks = normalizeHygieneQueue(hygieneQueue({
+      issues: [
+        {
+          key: "missing-category",
+          title: "Missing category",
+          description: "Needs taxonomy.",
+          count: 2,
+          samples: [],
+        },
+        {
+          key: "family-missing-department",
+          title: "Item families missing department",
+          description: "Needs taxonomy.",
+          count: 1,
+          samples: [],
+        },
+      ],
+    }));
+
+    expect(checks).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        key: "missing-category",
+        href: "/items?fillGaps=1",
+        ctaLabel: "Fill gaps",
+      }),
+      expect.objectContaining({
+        key: "family-missing-department",
+        href: "/items?fillGaps=1",
+        ctaLabel: "Fill gaps",
+      }),
+    ]));
+  });
+
   it("falls back to safe defaults for unknown check keys", () => {
     const checks = normalizeHygieneQueue(hygieneQueue({
       issues: [

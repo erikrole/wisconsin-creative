@@ -8,6 +8,9 @@ import { summarizeItemFamilyState } from "@/lib/item-family-state";
 const SAMPLE_LIMIT = 6;
 const DEFAULT_BULK_THRESHOLD = 1;
 
+/** Operational hygiene ignores retired rows so smoke/test leftovers do not inflate the queue. */
+const activeSerializedWhere = { status: { not: "RETIRED" as const } };
+
 type HygieneSample = {
   id: string;
   label: string;
@@ -86,29 +89,37 @@ export const GET = withAuth(async (_req, { user }) => {
     missingScanCodeRowsResult,
     missingImageCountResult,
     missingImageRowsResult,
+    familyMissingCategoryCountResult,
+    familyMissingCategoryRowsResult,
+    familyMissingDepartmentCountResult,
+    familyMissingDepartmentRowsResult,
+    familyMissingImageCountResult,
+    familyMissingImageRowsResult,
     retiredInKitCountResult,
     retiredInKitRowsResult,
     cameraWithoutAttachmentCountResult,
     cameraWithoutAttachmentRowsResult,
+    duplicateCountResult,
     duplicateRowsResult,
     bulkRowsResult,
   ] = await Promise.allSettled([
-    db.asset.count({ where: { categoryId: null } }),
+    db.asset.count({ where: { ...activeSerializedWhere, categoryId: null } }),
     db.asset.findMany({
-      where: { categoryId: null },
+      where: { ...activeSerializedWhere, categoryId: null },
       orderBy: { assetTag: "asc" },
       take: SAMPLE_LIMIT,
       select: assetSelect,
     }),
-    db.asset.count({ where: { departmentId: null } }),
+    db.asset.count({ where: { ...activeSerializedWhere, departmentId: null } }),
     db.asset.findMany({
-      where: { departmentId: null },
+      where: { ...activeSerializedWhere, departmentId: null },
       orderBy: { assetTag: "asc" },
       take: SAMPLE_LIMIT,
       select: assetSelect,
     }),
     db.asset.count({
       where: {
+        ...activeSerializedWhere,
         OR: [
           { primaryScanCode: null },
           { primaryScanCode: "" },
@@ -117,6 +128,7 @@ export const GET = withAuth(async (_req, { user }) => {
     }),
     db.asset.findMany({
       where: {
+        ...activeSerializedWhere,
         OR: [
           { primaryScanCode: null },
           { primaryScanCode: "" },
@@ -128,6 +140,7 @@ export const GET = withAuth(async (_req, { user }) => {
     }),
     db.asset.count({
       where: {
+        ...activeSerializedWhere,
         OR: [
           { imageUrl: null },
           { imageUrl: "" },
@@ -136,6 +149,7 @@ export const GET = withAuth(async (_req, { user }) => {
     }),
     db.asset.findMany({
       where: {
+        ...activeSerializedWhere,
         OR: [
           { imageUrl: null },
           { imageUrl: "" },
@@ -144,6 +158,62 @@ export const GET = withAuth(async (_req, { user }) => {
       orderBy: { assetTag: "asc" },
       take: SAMPLE_LIMIT,
       select: assetSelect,
+    }),
+    db.bulkSku.count({ where: { active: true, categoryId: null } }),
+    db.bulkSku.findMany({
+      where: { active: true, categoryId: null },
+      orderBy: { name: "asc" },
+      take: SAMPLE_LIMIT,
+      select: {
+        id: true,
+        name: true,
+        category: true,
+        location: { select: { name: true } },
+        categoryRel: { select: { name: true } },
+        department: { select: { name: true } },
+      },
+    }),
+    db.bulkSku.count({ where: { active: true, departmentId: null } }),
+    db.bulkSku.findMany({
+      where: { active: true, departmentId: null },
+      orderBy: { name: "asc" },
+      take: SAMPLE_LIMIT,
+      select: {
+        id: true,
+        name: true,
+        category: true,
+        location: { select: { name: true } },
+        categoryRel: { select: { name: true } },
+        department: { select: { name: true } },
+      },
+    }),
+    db.bulkSku.count({
+      where: {
+        active: true,
+        OR: [
+          { imageUrl: null },
+          { imageUrl: "" },
+        ],
+      },
+    }),
+    db.bulkSku.findMany({
+      where: {
+        active: true,
+        OR: [
+          { imageUrl: null },
+          { imageUrl: "" },
+        ],
+      },
+      orderBy: { name: "asc" },
+      take: SAMPLE_LIMIT,
+      select: {
+        id: true,
+        name: true,
+        category: true,
+        location: { select: { name: true } },
+        categoryRel: { select: { name: true } },
+        department: { select: { name: true } },
+      },
     }),
     db.asset.count({
       where: {
@@ -169,6 +239,7 @@ export const GET = withAuth(async (_req, { user }) => {
     }),
     db.asset.count({
       where: {
+        ...activeSerializedWhere,
         parentAssetId: null,
         accessories: { none: {} },
         OR: [
@@ -180,6 +251,7 @@ export const GET = withAuth(async (_req, { user }) => {
     }),
     db.asset.findMany({
       where: {
+        ...activeSerializedWhere,
         parentAssetId: null,
         accessories: { none: {} },
         OR: [
@@ -192,6 +264,34 @@ export const GET = withAuth(async (_req, { user }) => {
       take: SAMPLE_LIMIT,
       select: assetSelect,
     }),
+    // Total distinct colliding scan values across assets and active family bin QR
+    // (parity with scripts/audit-item-data.mjs). Count is not capped by SAMPLE_LIMIT.
+    db.$queryRaw<Array<{ count: bigint }>>`
+      WITH scan_values AS (
+        SELECT id, lower(asset_tag) AS scan_value
+        FROM assets
+        WHERE asset_tag IS NOT NULL AND btrim(asset_tag) <> ''
+        UNION ALL
+        SELECT id, lower(qr_code_value) AS scan_value
+        FROM assets
+        WHERE qr_code_value IS NOT NULL AND btrim(qr_code_value) <> ''
+        UNION ALL
+        SELECT id, lower(primary_scan_code) AS scan_value
+        FROM assets
+        WHERE primary_scan_code IS NOT NULL AND btrim(primary_scan_code) <> ''
+        UNION ALL
+        SELECT id, lower(bin_qr_code_value) AS scan_value
+        FROM bulk_skus
+        WHERE active = true AND bin_qr_code_value IS NOT NULL AND btrim(bin_qr_code_value) <> ''
+      ),
+      duplicate_values AS (
+        SELECT scan_value
+        FROM scan_values
+        GROUP BY scan_value
+        HAVING count(DISTINCT id) > 1
+      )
+      SELECT count(*)::bigint AS count FROM duplicate_values
+    `,
     db.$queryRaw<DuplicateScanRow[]>`
       WITH scan_values AS (
         SELECT id, asset_tag AS label, 'asset tag' AS source, lower(asset_tag) AS scan_value
@@ -205,6 +305,10 @@ export const GET = withAuth(async (_req, { user }) => {
         SELECT id, asset_tag AS label, 'primary scan' AS source, lower(primary_scan_code) AS scan_value
         FROM assets
         WHERE primary_scan_code IS NOT NULL AND btrim(primary_scan_code) <> ''
+        UNION ALL
+        SELECT id, name AS label, 'family bin QR' AS source, lower(bin_qr_code_value) AS scan_value
+        FROM bulk_skus
+        WHERE active = true AND bin_qr_code_value IS NOT NULL AND btrim(bin_qr_code_value) <> ''
       ),
       duplicate_values AS (
         SELECT scan_value, count(*) AS occurrences
@@ -260,6 +364,14 @@ export const GET = withAuth(async (_req, { user }) => {
     department: { name: string } | null;
     location: { name: string } | null;
   }> = [];
+  const familyRowsFallback: Array<{
+    id: string;
+    name: string;
+    category: string;
+    location: { name: string };
+    categoryRel: { name: string } | null;
+    department: { name: string } | null;
+  }> = [];
   const retiredRowsFallback: Array<(typeof assetRowsFallback)[number] & {
     kitMemberships: Array<{ kit: { id: string; name: string } }>;
   }> = [];
@@ -286,10 +398,18 @@ export const GET = withAuth(async (_req, { user }) => {
   const missingScanCodeRows = settledValue(missingScanCodeRowsResult, assetRowsFallback, "missingScanCodeRows", partialFailures);
   const missingImageCount = settledValue(missingImageCountResult, 0, "missingImageCount", partialFailures);
   const missingImageRows = settledValue(missingImageRowsResult, assetRowsFallback, "missingImageRows", partialFailures);
+  const familyMissingCategoryCount = settledValue(familyMissingCategoryCountResult, 0, "familyMissingCategoryCount", partialFailures);
+  const familyMissingCategoryRows = settledValue(familyMissingCategoryRowsResult, familyRowsFallback, "familyMissingCategoryRows", partialFailures);
+  const familyMissingDepartmentCount = settledValue(familyMissingDepartmentCountResult, 0, "familyMissingDepartmentCount", partialFailures);
+  const familyMissingDepartmentRows = settledValue(familyMissingDepartmentRowsResult, familyRowsFallback, "familyMissingDepartmentRows", partialFailures);
+  const familyMissingImageCount = settledValue(familyMissingImageCountResult, 0, "familyMissingImageCount", partialFailures);
+  const familyMissingImageRows = settledValue(familyMissingImageRowsResult, familyRowsFallback, "familyMissingImageRows", partialFailures);
   const retiredInKitCount = settledValue(retiredInKitCountResult, 0, "retiredInKitCount", partialFailures);
   const retiredInKitRows = settledValue(retiredInKitRowsResult, retiredRowsFallback, "retiredInKitRows", partialFailures);
   const cameraWithoutAttachmentCount = settledValue(cameraWithoutAttachmentCountResult, 0, "cameraWithoutAttachmentCount", partialFailures);
   const cameraWithoutAttachmentRows = settledValue(cameraWithoutAttachmentRowsResult, assetRowsFallback, "cameraWithoutAttachmentRows", partialFailures);
+  const duplicateCountRows = settledValue(duplicateCountResult, [{ count: 0n }], "duplicateCount", partialFailures);
+  const duplicateCount = Number(duplicateCountRows[0]?.count ?? 0);
   const duplicateRows = settledValue(duplicateRowsResult, [] as DuplicateScanRow[], "duplicateRows", partialFailures);
   const bulkRows = settledValue(bulkRowsResult, bulkRowsFallback, "bulkRows", partialFailures);
 
@@ -304,13 +424,19 @@ export const GET = withAuth(async (_req, { user }) => {
     })
     .filter((row) => row.available < row.threshold);
 
-  const duplicateCount = duplicateRows.length;
+  function familyDetail(family: (typeof familyRowsFallback)[number]) {
+    return [
+      family.categoryRel?.name ?? family.category,
+      family.department?.name,
+      family.location.name,
+    ].filter(Boolean).join(" / ") || "No supporting metadata";
+  }
 
   const issues = [
     issue(
       "missing-category",
       "Missing category",
-      "Items without a category are harder to filter, browse, and suggest during booking.",
+      "Active items without a category are harder to filter, browse, and suggest during booking. Use Fill gaps on Items.",
       missingCategoryCount,
       missingCategoryRows.map((asset) => ({
         id: asset.id,
@@ -322,7 +448,7 @@ export const GET = withAuth(async (_req, { user }) => {
     issue(
       "missing-department",
       "Missing department",
-      "Department gaps weaken ownership, reporting, and cleanup workflows.",
+      "Active items without a department weaken ownership, reporting, and cleanup workflows. Use Fill gaps on Items.",
       missingDepartmentCount,
       missingDepartmentRows.map((asset) => ({
         id: asset.id,
@@ -332,9 +458,33 @@ export const GET = withAuth(async (_req, { user }) => {
       })),
     ),
     issue(
+      "family-missing-category",
+      "Item families missing category",
+      "Active unit/quantity families without a category drift out of Filters and Fill gaps suggestions.",
+      familyMissingCategoryCount,
+      familyMissingCategoryRows.map((family) => ({
+        id: family.id,
+        label: family.name,
+        detail: familyDetail(family),
+        href: `/bulk-inventory/${family.id}`,
+      })),
+    ),
+    issue(
+      "family-missing-department",
+      "Item families missing department",
+      "Active unit/quantity families without a department weaken ownership and reporting.",
+      familyMissingDepartmentCount,
+      familyMissingDepartmentRows.map((family) => ({
+        id: family.id,
+        label: family.name,
+        detail: familyDetail(family),
+        href: `/bulk-inventory/${family.id}`,
+      })),
+    ),
+    issue(
       "missing-primary-scan",
       "Missing primary scan code",
-      "These items do not have a canonical primary scan value for scan-first workflows.",
+      "These active items do not have a canonical primary scan value for scan-first workflows.",
       missingScanCodeCount,
       missingScanCodeRows.map((asset) => ({
         id: asset.id,
@@ -356,9 +506,21 @@ export const GET = withAuth(async (_req, { user }) => {
       })),
     ),
     issue(
+      "family-missing-image",
+      "Item families missing image",
+      "Active unit/quantity families without a photo are harder to recognize in the picker.",
+      familyMissingImageCount,
+      familyMissingImageRows.map((family) => ({
+        id: family.id,
+        label: family.name,
+        detail: familyDetail(family),
+        href: `/bulk-inventory/${family.id}`,
+      })),
+    ),
+    issue(
       "duplicate-scan-identity",
       "Duplicate scan identity",
-      "The same physical scan value appears across multiple item identities.",
+      "The same physical scan value appears across multiple serialized items or active family bin QR codes.",
       duplicateCount,
       duplicateRows.map((row) => ({
         id: row.scan_value,
@@ -382,7 +544,7 @@ export const GET = withAuth(async (_req, { user }) => {
     issue(
       "camera-missing-attachments",
       "Camera bodies with no attachments",
-      "Camera systems with no child accessories may be missing cards, cages, or fixed parts.",
+      "Advisory only: many bodies correctly have no child accessories. Use this when a cage, grip, or cap should be married to a specific body.",
       cameraWithoutAttachmentCount,
       cameraWithoutAttachmentRows.map((asset) => ({
         id: asset.id,

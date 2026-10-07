@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { RowSelectionState, VisibilityState } from "@tanstack/react-table";
 import { toast } from "sonner";
 import {
@@ -85,6 +85,7 @@ export default function ItemsPage() {
     sortKey: filters.sortKey,
   });
 
+  const searchParams = useSearchParams();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [createSourceId, setCreateSourceId] = useState<string | null>(null);
@@ -98,6 +99,13 @@ export default function ItemsPage() {
     setCreateSourceId(null);
     setShowCreate(true);
   }
+
+  useEffect(() => {
+    const fillGaps = searchParams.get("fillGaps");
+    if (fillGaps === "1" || fillGaps === "category" || fillGaps === "department") {
+      setShowGapWizard(true);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     let nextColumnVisibility: VisibilityState = {};
