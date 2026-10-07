@@ -96,7 +96,7 @@
 | `src/lib/services/shift-generation.ts` | 629 |
 | `src/lib/services/shift-trade-emails.ts` | 56 |
 | `src/lib/services/shift-trades.ts` | 1560 |
-| `src/lib/services/signatures.ts` | 2051 |
+| `src/lib/services/signatures.ts` | 2057 |
 | `src/lib/services/software.ts` | 272 |
 | `src/lib/services/sport-auto-assign-policies.ts` | 46 |
 | `src/lib/services/sport-configs.ts` | 263 |
@@ -481,6 +481,7 @@
 - `/api/cron/morning-refresh`
 - `/api/cron/notifications`
 - `/api/cron/rehost-images`
+- `/api/cron/youtube-sweep`
 
 ### `/api/dashboard`
 
@@ -841,8 +842,13 @@
 ### `/api/youtube`
 
 - `/api/youtube/connection`
+- `/api/youtube/drafts/[videoId]/check-playlists`
+- `/api/youtube/drafts/[videoId]/check-send`
 - `/api/youtube/drafts/[videoId]/game`
+- `/api/youtube/drafts/[videoId]/make-public`
+- `/api/youtube/drafts/[videoId]/playlists`
 - `/api/youtube/drafts/[videoId]/prepare`
+- `/api/youtube/drafts/[videoId]/publish`
 - `/api/youtube/drafts/[videoId]`
 - `/api/youtube/library/refresh`
 - `/api/youtube/oauth/callback`

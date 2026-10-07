@@ -29,10 +29,6 @@ describe("Signature client cache freshness", () => {
   });
 
   it("wires successful Signature mutations into cache invalidation", () => {
-    const capturePage = readFileSync(
-      "src/app/(app)/signatures/[id]/capture/[memberId]/SignatureCapturePage.tsx",
-      "utf8",
-    );
     const detailPage = readFileSync(
       "src/app/(app)/signatures/[id]/SignatureCollectionPage.tsx",
       "utf8",
@@ -46,7 +42,6 @@ describe("Signature client cache freshness", () => {
       "utf8",
     );
 
-    expect(capturePage).toContain("invalidateSignatureCollectionCaches");
     expect(detailPage).toContain("invalidateSignatureCollectionCaches");
     expect(landingPage).toContain("invalidateSignatureCollectionCaches");
     expect(detailPage).toContain("await invalidateSignatureCollectionCaches(queryClient, collection.id)");
@@ -65,9 +60,9 @@ describe("Signature client cache freshness", () => {
     );
     const progress = readFileSync("src/components/ui/progress.tsx", "utf8");
 
-    expect(landingPage).toContain("if (!isIpad)");
-    expect(landingPage).toContain("<Button type=\"button\" size=\"sm\" className=\"h-10\" disabled>");
-    expect(detailPage).toContain("Replace on iPad");
+    // Web capture is retired: no iPad gate, no Replace link on the web.
+    expect(landingPage).not.toContain("isIpad");
+    expect(detailPage).not.toContain("Replace on iPad");
     expect(detailPage).toContain("Boolean(member.artifact)");
     expect(detailPage).toContain('aria-label={`${signatureCollectionTitle(collection.sportCode)} student-athlete readiness`}');
     expect(progress).toContain("value={value}");

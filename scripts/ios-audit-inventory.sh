@@ -82,6 +82,9 @@ ScoreboardView.swift                   | profile                     | audit
 TeamScoreboardView.swift               | team-scoreboard              | audit
 SettingsView.swift                     | profile                     | audit
 LicensesView.swift                     | licenses                    | audit
+Signatures/SignaturesView.swift        | signatures                  | audit
+Signatures/SignatureCaptureView.swift  | signatures                  | audit
+Signatures/SignatureCanvasView.swift   | signatures                  | audit
 GuidesView.swift                       | resources                   | audit
 GuideMarkdown.swift                    |                             | exempt-infra
 SidebarWebDestinationView.swift        |                             | exempt-tiny

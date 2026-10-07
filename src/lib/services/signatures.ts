@@ -506,6 +506,9 @@ function serializeSignatureCollection(
     collectionVersion: collection.collectionVersion,
     settingsVersion: collection.settingsVersion,
     penSettings: penSettingsSchema.parse(collection.penSettings),
+    // The server locks pen settings from the first capture until an explicit
+    // reset, even after every signature is removed one by one.
+    settingsLocked: collection.firstCaptureAt !== null,
     completeness,
     staffCompleteness: {
       complete: staffMembers.filter((member) => Boolean(member.artifact)).length,
@@ -2039,7 +2042,10 @@ export async function cleanupPendingSignatureArtifacts(limit = 50) {
   const revisions = await db.signatureArtifactRevision.findMany({
     where: {
       state: SignatureArtifactState.PENDING_DELETE,
-      saveOperations: { none: { status: { in: [SignatureSaveStatus.UPLOADING, SignatureSaveStatus.FINALIZING, SignatureSaveStatus.COMMITTED] } } },
+      // Only an in-flight save fences its revision. A removed or reset revision
+      // always has a COMMITTED save behind it, and must stay retryable here when
+      // its first blob delete fails (Remove/Reset do not retry on their own).
+      saveOperations: { none: { status: { in: [SignatureSaveStatus.UPLOADING, SignatureSaveStatus.FINALIZING] } } },
     },
     orderBy: { createdAt: "asc" },
     take: limit,

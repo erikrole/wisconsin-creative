@@ -65,6 +65,12 @@ enum AppRuntimeMode {
         /// delivery truth and recovery controls can be reviewed without a
         /// signed-in session or live APNs state.
         case notifications
+        /// iPad signature capture against canned collections, a roster, and a
+        /// capture surface seeded with a synthetic signature (the simulator has
+        /// no Apple Pencil, and no real person's signature is committed).
+        case signatureCollections = "signature-collections"
+        case signatureRoster = "signature-roster"
+        case signatureCapture = "signature-capture"
         case passwordSetup = "password-setup"
         /// The real Bookings tab as an internal Student, with the fixture
         /// changing from one own row to the shared team list when the request

@@ -91,6 +91,8 @@ struct PerformanceTestRootView: View {
             AccountSecurityHarnessView()
         case .notifications:
             NotificationSettingsHarnessView()
+        case .signatureCollections, .signatureRoster, .signatureCapture:
+            SignatureHarnessView(scenario: scenario)
         }
     }
 }

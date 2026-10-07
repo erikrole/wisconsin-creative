@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -37,7 +36,6 @@ import { OperationalRowActions } from "@/components/OperationalRowActions";
 import { SignaturePenPreview } from "@/components/signatures/SignaturePenPreview";
 import { useFetch } from "@/hooks/use-fetch";
 import { handleAuthRedirect, parseErrorMessage } from "@/lib/errors";
-import { isCurrentDeviceIpad } from "@/lib/signatures/capture";
 import { invalidateSignatureCollectionCaches } from "@/lib/signatures/client-cache";
 import { compareSignatureRosterMembers } from "@/lib/signatures/roster";
 import {
@@ -74,6 +72,7 @@ type Collection = {
   collectionVersion: number;
   settingsVersion: number;
   penSettings: { strokeColor: string; strokeWidth: number; cropPadding: number; maxWidth: number; maxHeight: number };
+  settingsLocked?: boolean;
   completeness: { complete: number; required: number; percent: number };
   staffCompleteness?: { complete: number; total: number };
   members: Member[];
@@ -93,27 +92,18 @@ const GROUP_META: Record<Member["roleGroup"], { label: string; icon: typeof User
   SUPPORT_STAFF: { label: "Support Staff", icon: UsersRound },
 };
 
-const CAPTURE_ON_IPAD_TOOLTIP = "Capture can only be done on an iPad with an Apple Pencil.";
+const CAPTURE_IN_APP_TOOLTIP = "Signatures are captured with Apple Pencil in the Wisconsin app on iPad (Browse → Signatures).";
 
-function CaptureAction({ collectionId, member, isIpad, primaryCapture }: { collectionId: string; member: Member; isIpad: boolean; primaryCapture: boolean }) {
-  if (isIpad) {
-    return (
-      <Button size="sm" variant={primaryCapture ? "brand" : "outline"} className="h-11 w-40" asChild>
-        <Link href={`/signatures/${collectionId}/capture/${member.id}`}><FilePenLine data-icon="inline-start" />Capture</Link>
-      </Button>
-    );
-  }
-
+/** Web capture is retired; an unsigned row says where capture happens instead of linking to it. */
+function CaptureInAppStatus({ primaryCapture }: { primaryCapture: boolean }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span tabIndex={0} aria-label="Capture on iPad" className="inline-flex">
-          <Button type="button" size="sm" variant={primaryCapture ? "brand" : "outline"} className="h-11 w-40" disabled>
-            <FilePenLine data-icon="inline-start" />Capture on iPad
-          </Button>
+        <span tabIndex={0} className={cn("inline-flex h-11 w-40 items-center justify-center gap-2 rounded-md border border-dashed text-xs font-medium", primaryCapture ? "text-foreground" : "text-muted-foreground")}>
+          <FilePenLine className="size-4" aria-hidden="true" />Capture in iPad app
         </span>
       </TooltipTrigger>
-      <TooltipContent>{CAPTURE_ON_IPAD_TOOLTIP}</TooltipContent>
+      <TooltipContent>{CAPTURE_IN_APP_TOOLTIP}</TooltipContent>
     </Tooltip>
   );
 }
@@ -140,7 +130,6 @@ export default function SignatureCollectionPage({ collectionId, isAdmin }: { col
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [previewMember, setPreviewMember] = useState<Member | null>(null);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<Member["roleGroup"]>>(new Set());
-  const [isIpad, setIsIpad] = useState(false);
   const isCreativeStaffRoster = collection?.sportCode === SIGNATURE_CREATIVE_STAFF_SPORT_CODE;
   const isAdministrationRoster = collection?.sportCode === SIGNATURE_ADMINISTRATION_SPORT_CODE;
   const isStandaloneStaffRoster = collection ? isStandaloneStaffSignatureCollection(collection.sportCode) : false;
@@ -157,9 +146,6 @@ export default function SignatureCollectionPage({ collectionId, isAdmin }: { col
     setSettingsOpen(false);
   }, [collection?.id]);
 
-  useEffect(() => {
-    setIsIpad(isCurrentDeviceIpad());
-  }, []);
 
   useEffect(() => {
     if (collection) setBreadcrumbLabel(signatureCollectionTitle(collection.sportCode));
@@ -185,7 +171,9 @@ export default function SignatureCollectionPage({ collectionId, isAdmin }: { col
     .filter((section) => (group === "ALL" || section.roleGroup === group) && (section.members.length > 0 || (!search.trim() && isCreativeStaffRoster && section.roleGroup === "CREATIVE_STAFF"))), [collection?.members, group, isCreativeStaffRoster, rosterGroupOrder, search]);
   const effectiveSettings = settings ?? collection?.penSettings;
   const hasCapturedSignatures = collection?.members.some((member) => Boolean(member.artifact)) ?? false;
-  const settingsLocked = hasCapturedSignatures;
+  // Follow the server lock (first capture until reset), not current artifacts:
+  // removing every signature one by one keeps the settings locked.
+  const settingsLocked = collection?.settingsLocked ?? hasCapturedSignatures;
 
   async function saveSettings() {
     if (!collection || !effectiveSettings) return;
@@ -427,20 +415,13 @@ export default function SignatureCollectionPage({ collectionId, isAdmin }: { col
                                  />
                                </button>
                              ) : collection.status === "OPEN" ? (
-                               <CaptureAction collectionId={collection.id} member={member} isIpad={isIpad} primaryCapture={member.roleGroup === "PLAYER" || member.roleGroup === "CREATIVE_STAFF" || isAdministrationRoster} />
+                               <CaptureInAppStatus primaryCapture={member.roleGroup === "PLAYER" || member.roleGroup === "CREATIVE_STAFF" || isAdministrationRoster} />
                              ) : null}
                            </div>
 
                            <div className="flex items-center justify-center">
                              {showRowActions && (
                                <OperationalRowActions label={`Actions for ${member.name}'s signature`} triggerClassName="size-11">
-                                 {member.artifact && collection.status === "OPEN" && (isIpad ? (
-                                   <DropdownMenuItem asChild>
-                                     <Link href={`/signatures/${collection.id}/capture/${member.id}`}><FilePenLine />Replace signature</Link>
-                                   </DropdownMenuItem>
-                                 ) : (
-                                   <DropdownMenuItem disabled title={CAPTURE_ON_IPAD_TOOLTIP}><FilePenLine />Replace on iPad</DropdownMenuItem>
-                                 ))}
                                  {member.artifact && (
                                    <>
                                      <DropdownMenuItem asChild>
@@ -533,7 +514,7 @@ export default function SignatureCollectionPage({ collectionId, isAdmin }: { col
                   <div><p className="text-sm font-semibold text-destructive">Danger zone</p><p className="mt-1 text-xs text-muted-foreground">Remove every saved signature and queue its files for cleanup.</p></div>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                       <Button variant="destructive" className="h-10 shrink-0" disabled={!hasCapturedSignatures || resettingCollection}><RotateCcw data-icon="inline-start" />Reset all captures</Button>
+                       <Button variant="destructive" className="h-10 shrink-0" disabled={!(hasCapturedSignatures || settingsLocked) || resettingCollection}><RotateCcw data-icon="inline-start" />Reset all captures</Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>

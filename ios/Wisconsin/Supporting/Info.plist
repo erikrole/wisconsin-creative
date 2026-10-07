@@ -44,6 +44,7 @@
 	<array>
 		<string>Gotham-Black.ttf</string>
 		<string>Gotham-Bold.ttf</string>
+		<string>Wisconsin-Regular.ttf</string>
 	</array>
 	<key>UILaunchScreen</key>
 	<dict>

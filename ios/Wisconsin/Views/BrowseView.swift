@@ -14,7 +14,10 @@ struct BrowseView: View {
         guard session.currentUser?.role == "COLLABORATOR" else {
             // Reports are staff analytics; the endpoints 403 anyone else, so the
             // row is hidden rather than offered and refused.
+            // Signature capture needs an Apple Pencil, so it is offered on iPad
+            // only, and to the staff/admin roles the capture endpoints accept.
             return [.scoreboard, .items, .guides, .licenses, .users] + (isStaffOrAdmin ? [.reports] : [])
+                + (SignatureCaptureAvailability.isAvailable(role: session.currentUser?.role) ? [.signatures] : [])
         }
         let capabilities = Set(session.currentUser?.capabilities ?? [])
         return [.scoreboard] + [
@@ -83,6 +86,8 @@ struct BrowseView: View {
             UsersView(wrapsInNavigationStack: false)
         case .reports:
             ReportsView()
+        case .signatures:
+            SignaturesView(wrapsInNavigationStack: false)
         }
     }
 }
@@ -94,6 +99,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
     case licenses
     case users
     case reports
+    case signatures
 
     var id: String { rawValue }
 
@@ -105,6 +111,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
         case .licenses: "Licenses"
         case .users: "Users"
         case .reports: "Reports"
+        case .signatures: "Signatures"
         }
     }
 
@@ -122,6 +129,8 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
             "Find teammates, roles, titles, and work areas."
         case .reports:
             "See what is going out, what sits idle, and who is overdue."
+        case .signatures:
+            "Capture team signatures with Apple Pencil."
         }
     }
 
@@ -133,6 +142,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
         case .licenses: "key"
         case .users: "person.2"
         case .reports: "chart.bar.xaxis"
+        case .signatures: "signature"
         }
     }
 
@@ -144,6 +154,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
         case .licenses: Color.statusText(.orange)
         case .users: Color.statusText(.green)
         case .reports: Color.statusText(.red)
+        case .signatures: Color.statusText(.blue)
         }
     }
 }

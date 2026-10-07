@@ -884,7 +884,8 @@ describe("signature history erasure", () => {
     expect(dbMock.signatureArtifactRevision.findMany).toHaveBeenCalledWith(expect.objectContaining({
       where: {
         state: SignatureArtifactState.PENDING_DELETE,
-        saveOperations: { none: { status: { in: [SignatureSaveStatus.UPLOADING, SignatureSaveStatus.FINALIZING, SignatureSaveStatus.COMMITTED] } } },
+        // Removed/reset revisions carry a COMMITTED save and must stay retryable.
+        saveOperations: { none: { status: { in: [SignatureSaveStatus.UPLOADING, SignatureSaveStatus.FINALIZING] } } },
       },
     }));
     expect(deletePrivateSignatureArtifacts).not.toHaveBeenCalled();

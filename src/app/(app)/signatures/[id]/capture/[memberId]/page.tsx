@@ -1,10 +1,8 @@
-import { requireAuth } from "@/lib/auth";
-import { requirePermission } from "@/lib/rbac";
-import SignatureCapturePage from "./SignatureCapturePage";
+import { redirect } from "next/navigation";
 
+// Web capture is retired (2026-10-07): signatures are captured in the native
+// Wisconsin app on iPad. Old capture links land on the roster instead.
 export default async function SignatureCaptureRoute({ params }: { params: Promise<{ id: string; memberId: string }> }) {
-  const user = await requireAuth();
-  requirePermission(user.role, "signature", "capture");
-  const { id, memberId } = await params;
-  return <SignatureCapturePage collectionId={id} memberId={memberId} userId={user.id} />;
+  const { id } = await params;
+  redirect(`/signatures/${id}`);
 }

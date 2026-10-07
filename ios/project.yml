@@ -67,6 +67,7 @@ targets:
         UIAppFonts:
           - Gotham-Black.ttf
           - Gotham-Bold.ttf
+          - Wisconsin-Regular.ttf
     entitlements:
       path: Wisconsin/Wisconsin.entitlements
       properties:
