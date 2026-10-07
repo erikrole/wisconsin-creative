@@ -40,7 +40,6 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
     body.expectedVersion,
     user.role,
     {
-      clearNotificationPending: eventHasEnded,
       manualPublish: true,
       requireWorkingCopy: true,
       expectedDraftId: body.expectedDraftId,

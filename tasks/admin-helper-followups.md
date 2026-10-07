@@ -5,16 +5,16 @@
 - Treat each item as a future slice requiring area-doc review before implementation.
 
 ## Source Checks
-- `docs/AREA_DASHBOARD.md`: Admin Fix Today shipped as `/admin/fix-today` with an ADMIN-only read queue and existing repair links.
+- `docs/AREA_DASHBOARD.md`: Admin Fix Today and Inventory Hygiene live on `/operations` (legacy `/admin/fix-today` and `/items/hygiene` redirect there). APIs `GET /api/admin/fix-today` and `GET /api/inventory-hygiene` are unchanged.
 - `docs/AREA_KIOSK.md`: Settings -> Kiosk Devices already shows live status, pending pickup count, active checkout count, session state, and clear-pickup repair affordances.
-- `docs/AREA_ITEMS.md`: Inventory Hygiene shipped as `/items/hygiene` with read-only checklist, priority ordering, partial-failure warnings, and repair links.
+- `docs/AREA_ITEMS.md`: Inventory Hygiene is the staff-visible "Keep data clean" lane on `/operations`.
 - `docs/GAPS_AND_RISKS.md`: GAP-33 is closed; morning-refresh auto-expires stale pending-pickup checkouts after 48 hours with inventory, scan-session, and audit cleanup.
 - `docs/AREA_SETTINGS.md`: checkout policies and reservation rules now store specific operator-facing `SystemConfig` keys, including configurable no-show expiry.
 
 ## Shipped Helpers
-- [x] **Admin Fix Today queue** - `/admin/fix-today` covers overdue gear, pending pickup handoffs, offline kiosks, flagged maintenance items, low batteries, calendar sync failures, and expiring licenses.
+- [x] **Operations day queue** - `/operations` covers overdue gear, pending pickup handoffs, offline kiosks, flagged maintenance items, low batteries, calendar sync failures, and expiring licenses (ADMIN "Run the day" lane).
 - [x] **Battery unit cockpit** - `/bulk-inventory/batteries` covers available/out/missing/retired counts, aging checked-out units, quick actions, and low compatible batteries by camera family.
-- [x] **Inventory hygiene center** - `/items/hygiene` covers missing category, missing department, missing primary scan code, missing image, duplicate scan identity, retired items in active kits, camera bodies without attachments, and low-threshold bulk SKUs.
+- [x] **Inventory hygiene center** - `/operations` "Keep data clean" lane covers missing category, missing department, missing primary scan code, missing image, duplicate scan identity, retired items in active kits, camera bodies without attachments, and low-threshold bulk SKUs.
 - [x] **Pending-pickup auto-expiry** - morning-refresh auto-cancels stale pending-pickup checkouts after the configured no-show expiry window.
 
 ## Future Slices

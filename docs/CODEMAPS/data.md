@@ -83,7 +83,7 @@
 | `SoftwareCredential` | 10 | 2 |
 | `SportConfig` | 9 | 1 |
 | `SportShiftConfig` | 12 | 2 |
-| `ShiftGroup` | 20 | 4 |
+| `ShiftGroup` | 17 | 3 |
 | `ShiftGroupWorkingCopy` | 17 | 3 |
 | `ScheduleBulkAssignment` | 13 | 3 |
 | `ScheduleBulkAssignmentItem` | 12 | 3 |
@@ -116,6 +116,8 @@
 | `YouTubeLibraryVideo` | 5 | 2 |
 | `YouTubeReviewDraft` | 20 | 1 |
 | `YouTubeLibraryState` | 8 | 1 |
+| `YouTubePublishRecord` | 15 | 2 |
+| `YouTubePlaylistAddition` | 11 | 2 |
 
 ## Enums
 
