@@ -406,7 +406,7 @@ describe("admin routes", () => {
 
     expect(response.status).toBe(200);
     expect(tx.gearPickParticipant!.create).toHaveBeenCalledWith(
-      expect.objectContaining({ data: { cycleId: "2027-28", userId: "user-9", fit: "WOMEN", allowanceCents: 35_000 } }),
+      expect.objectContaining({ data: { cycleId: "2027-28", userId: "user-9", fit: "WOMEN", allowanceCents: 35_700 } }),
     );
   });
 

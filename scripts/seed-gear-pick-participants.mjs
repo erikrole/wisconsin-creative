@@ -18,8 +18,8 @@ const CYCLE = {
 };
 
 // Allowance in whole cents by fit. Mirrors `allowances` in
-// src/lib/gear-picks/catalog-2027-28.json (MEN $185, WOMEN $350).
-const ALLOWANCE_CENTS = { MEN: 18_500, WOMEN: 35_000 };
+// src/lib/gear-picks/catalog-2027-28.json (MEN $192, WOMEN $357).
+const ALLOWANCE_CENTS = { MEN: 19_200, WOMEN: 35_700 };
 
 // The 2027-28 roster, as decided by the equipment owner. Laurie Digman also
 // picks this cycle but has no site account, so she is handled off-site.
