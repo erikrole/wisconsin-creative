@@ -131,7 +131,7 @@ Values: `UPLOADING`, `FINALIZING`, `COMMITTED`, `FAILED`
 
 ## Model `User`
 
-Fields: 128
+Fields: 129
 
 - `id                            String                           @id @default(cuid())`
 - `name                          String`
@@ -202,6 +202,7 @@ Fields: 128
 - `licenseCodesHeld              LicenseCode[]                    @relation("LicenseClaimedBy")`
 - `licenseCodesCreated           LicenseCode[]                    @relation("LicenseCreatedBy")`
 - `licenseClaims                 LicenseCodeClaim[]`
+- `gearPickParticipations        GearPickParticipant[]`
 - `resources                     Resource[]`
 - `resourcesVerified             Resource[]                       @relation("ResourceLastVerifiedBy")`
 - `resourceAssetFoldersCreated   ResourceAssetFolder[]            @relation("ResourceAssetFolderCreator")`
@@ -2954,3 +2955,80 @@ Indexes and constraints:
 
 - `@@index([videoId, createdAt(sort: Desc)])`
 - `@@map("youtube_playlist_additions")`
+
+## Enum `GearPickFit`
+
+Values: `MEN`, `WOMEN`
+
+## Model `GearPickCycle`
+
+Fields: 6
+
+- `id           String                @id`
+- `title        String`
+- `deadline     DateTime?`
+- `createdAt    DateTime              @default(now()) @map("created_at")`
+- `updatedAt    DateTime              @updatedAt @map("updated_at")`
+- `participants GearPickParticipant[]`
+
+Indexes and constraints:
+
+- `@@map("gear_pick_cycles")`
+
+## Model `GearPickParticipant`
+
+Fields: 10
+
+- `id             String              @id @default(cuid())`
+- `cycleId        String              @map("cycle_id")`
+- `userId         String              @map("user_id")`
+- `fit            GearPickFit`
+- `allowanceCents Int                 @map("allowance_cents")`
+- `createdAt      DateTime            @default(now()) @map("created_at")`
+- `updatedAt      DateTime            @updatedAt @map("updated_at")`
+- `cycle          GearPickCycle       @relation(fields: [cycleId], references: [id], onDelete: Cascade)`
+- `user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)`
+- `submission     GearPickSubmission?`
+
+Indexes and constraints:
+
+- `@@unique([cycleId, userId])`
+- `@@index([userId])`
+- `@@map("gear_pick_participants")`
+
+## Model `GearPickSubmission`
+
+Fields: 9
+
+- `id            String              @id @default(cuid())`
+- `participantId String              @unique @map("participant_id")`
+- `submittedAt   DateTime?           @map("submitted_at")`
+- `totalCents    Int                 @default(0) @map("total_cents")`
+- `version       Int                 @default(1)`
+- `createdAt     DateTime            @default(now()) @map("created_at")`
+- `updatedAt     DateTime            @updatedAt @map("updated_at")`
+- `participant   GearPickParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)`
+- `lines         GearPickLine[]`
+
+Indexes and constraints:
+
+- `@@map("gear_pick_submissions")`
+
+## Model `GearPickLine`
+
+Fields: 9
+
+- `id             String             @id @default(cuid())`
+- `submissionId   String             @map("submission_id")`
+- `sku            String`
+- `style          String`
+- `colorCode      String             @map("color_code")`
+- `size           String?`
+- `quantity       Int`
+- `unitPriceCents Int                @map("unit_price_cents")`
+- `submission     GearPickSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)`
+
+Indexes and constraints:
+
+- `@@unique([submissionId, sku, size])`
+- `@@map("gear_pick_lines")`

@@ -19,6 +19,8 @@
 | `/checkouts` | `src/app/(app)/checkouts/page.tsx` |
 | `/events/[id]` | `src/app/(app)/events/[id]/page.tsx` |
 | `/events` | `src/app/(app)/events/page.tsx` |
+| `/gear/admin` | `src/app/(app)/gear/admin/page.tsx` |
+| `/gear` | `src/app/(app)/gear/page.tsx` |
 | `/import` | `src/app/(app)/import/page.tsx` |
 | `/items/[id]` | `src/app/(app)/items/[id]/page.tsx` |
 | `/items/hygiene` | `src/app/(app)/items/hygiene/page.tsx` |
@@ -134,7 +136,7 @@
 | `src/components/schedule/SportSetupWizard.tsx` | 675 |
 | `src/components/booking-wizard/WizardStep1.tsx` | 599 |
 | `src/components/booking-details/BookingHeader.tsx` | 472 |
-| `src/components/Sidebar.tsx` | 450 |
+| `src/components/Sidebar.tsx` | 452 |
 | `src/components/event-editor/EventEditorFields.tsx` | 435 |
 | `src/components/ui/heatmap.tsx` | 434 |
 | `src/components/ui/chart.tsx` | 389 |
@@ -162,6 +164,7 @@
 | `src/hooks/use-fetch.ts` | 113 |
 | `src/hooks/use-form-options.ts` | 32 |
 | `src/hooks/use-form-submit.ts` | 188 |
+| `src/hooks/use-gear-picks.ts` | 29 |
 | `src/hooks/use-item-cache-invalidation.ts` | 18 |
 | `src/hooks/use-item-change-sync.ts` | 86 |
 | `src/hooks/use-last-audit.ts` | 77 |

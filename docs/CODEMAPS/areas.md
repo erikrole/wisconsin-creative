@@ -51,6 +51,14 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Services: `src/lib/services/combined-schedule-events.ts`
 - Tests: `tests/all-day-events-have-no-call-time.test.ts`, `tests/booking-events-route-contract.test.ts`, `tests/calendar-events-route.test.ts`, `tests/combined-schedule-events-projection.test.ts`, `tests/combined-schedule-events-source.test.ts`, `tests/combined-schedule-events.test.ts`, `tests/kiosk-events-route.test.ts`, `tests/update-booking-events.test.ts`
 
+## gear-picks
+
+- Doc: `docs/AREA_GEAR_PICKS.md`
+- Pages: _none matched_
+- APIs: `/api/gear-picks/admin/export.csv`, `/api/gear-picks/admin`, `/api/gear-picks/me`
+- Services: `src/lib/services/gear-picks.ts`
+- Tests: `tests/gear-picks-pricing.test.ts`, `tests/gear-picks-routes.test.ts`
+
 ## importer
 
 - Doc: `docs/AREA_IMPORTER.md`

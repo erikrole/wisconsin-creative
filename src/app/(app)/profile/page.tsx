@@ -21,7 +21,8 @@ export default function ProfileRedirect() {
 
   useEffect(() => {
     if (data?.user?.id) {
-      router.replace(`/users/${data.user.id}`);
+      // Keep deep links like /profile?tab=gear pointed at the same tab.
+      router.replace(`/users/${data.user.id}${window.location.search}`);
     } else if (error) {
       router.replace("/login");
     }
