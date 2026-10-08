@@ -36,6 +36,7 @@ export function GearPicksIntro({
   remaining,
   deadline,
   kitCount,
+  sizeFromProfile,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -45,6 +46,8 @@ export function GearPicksIntro({
   remaining: string | null;
   deadline: string | null;
   kitCount: number;
+  /** False when the profile has no top size, so nothing is prefilled. */
+  sizeFromProfile: boolean;
 }) {
   const close = (next: boolean) => {
     if (!next) markGearIntroSeen(cycleId);
@@ -70,7 +73,9 @@ export function GearPicksIntro({
     {
       icon: RulerIcon,
       title: "Check your size",
-      body: "Your size is filled in from your profile. Change it if it's wrong.",
+      body: sizeFromProfile
+        ? "Your size is filled in from your profile. Change it if it's wrong."
+        : "Pick a size for each item before you submit.",
     },
     {
       icon: CheckCircle2Icon,

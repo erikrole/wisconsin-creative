@@ -608,6 +608,7 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
         remaining={totalCents > 0 ? formatUsd(Math.max(0, remainingCents)) : null}
         deadline={cycle.deadline ? deadlineLabel(cycle.deadline) : null}
         kitCount={kit.length}
+        sizeFromProfile={Boolean(data.profile.topSize)}
       />
       <GearPreviewDialog
         preview={preview}
