@@ -95,7 +95,7 @@ export function GearPicksIntro({
 
   return (
     <Dialog open={open} onOpenChange={close}>
-      <DialogContent className="gap-0 overflow-hidden sm:max-w-md">
+      <DialogContent className="gap-0 sm:max-w-md">
         <div className="relative isolate overflow-hidden bg-[linear-gradient(115deg,#7a0000_0%,var(--wi-red)_45%,#1a0505_100%)] px-6 pb-5 pt-6 text-white">
           <Image
             src="/gear/ua-logo-white.svg"
