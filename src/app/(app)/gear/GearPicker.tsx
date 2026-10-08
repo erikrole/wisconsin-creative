@@ -416,7 +416,7 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
                 size="sm"
                 variant={category === entry ? "default" : "outline"}
                 aria-pressed={category === entry}
-                className="min-h-9 shrink-0 rounded-full"
+                className="min-h-10 shrink-0 rounded-full"
                 onClick={() => setCategory(entry)}
               >
                 {entry === "all" ? "All" : entry}
