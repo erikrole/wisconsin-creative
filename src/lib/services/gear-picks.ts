@@ -9,6 +9,7 @@ import {
   formatUsd,
   GEAR_CATALOG,
   GEAR_PICK_CYCLE_ID,
+  isItemAllowedForFit,
   type GearPickFitKey,
 } from "@/lib/gear-picks/catalog";
 import { isGearPickCycleOpen, priceGearPickLines, type GearPickLineInput } from "@/lib/gear-picks/pricing";
@@ -452,9 +453,40 @@ export async function applyGearPicksAdminChange(actor: Actor, change: GearPicksA
         case "updateParticipant": {
           const existing = await tx.gearPickParticipant.findFirst({
             where: { id: change.participantId, cycleId: cycle.id },
-            select: { id: true, fit: true, allowanceCents: true, userId: true },
+            select: {
+              id: true,
+              fit: true,
+              allowanceCents: true,
+              userId: true,
+              user: { select: { name: true } },
+              submission: { select: { totalCents: true, lines: { select: { sku: true } } } },
+            },
           });
           if (!existing) throw new HttpError(404, "That participant is no longer on the list.");
+          // A saved or submitted list must still be valid under the new fit and
+          // allowance, or the order export would carry picks they can't have.
+          const nextFit = (change.fit ?? existing.fit) as GearPickFitKey;
+          const nextAllowance = change.allowanceCents ?? existing.allowanceCents;
+          const saved = existing.submission;
+          if (saved) {
+            const outside = saved.lines
+              .map((line) => findGearSku(line.sku))
+              .find((entry) => entry && !isItemAllowedForFit(entry.item, nextFit));
+            if (outside) {
+              throw new HttpError(
+                409,
+                `${existing.user.name} has ${outside.item.name} saved, which isn't in that catalog. Ask them to remove it first.`,
+                { code: "GEAR_PICKS_CONFLICT" },
+              );
+            }
+            if (saved.totalCents > nextAllowance) {
+              throw new HttpError(
+                409,
+                `${existing.user.name}'s saved picks total ${formatUsd(saved.totalCents)}, more than ${formatUsd(nextAllowance)}. Ask them to remove something first.`,
+                { code: "GEAR_PICKS_CONFLICT" },
+              );
+            }
+          }
           const data: Prisma.GearPickParticipantUpdateInput = {};
           if (change.fit) data.fit = change.fit as GearPickFit;
           if (change.allowanceCents !== undefined) data.allowanceCents = change.allowanceCents;

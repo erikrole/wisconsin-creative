@@ -262,9 +262,13 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
     }, 250);
   }, []);
 
-  const reloadFromServer = useCallback(() => {
+  // Replace local edits with the server's list. Set lines directly: a refused
+  // save (e.g. the deadline just passed) leaves the version unchanged, so the
+  // version-keyed sync effect wouldn't fire.
+  const reloadFromServer = useCallback(async () => {
+    await queryClient.refetchQueries({ queryKey: GEAR_PICKS_ME_QUERY_KEY, exact: true });
+    setLines(draftLinesFromServer(queryClient.getQueryData<GearPicksMeResponse | null>(GEAR_PICKS_ME_QUERY_KEY)));
     setDirty(false);
-    void queryClient.invalidateQueries({ queryKey: GEAR_PICKS_ME_QUERY_KEY });
   }, [queryClient]);
 
   /** Returns true once the server has the list, so the review panel can close. */
@@ -285,10 +289,10 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
       if (!response.ok || !json?.data) {
         const message = json?.error ?? "Your picks weren't saved. Try again.";
         if (json?.code === "GEAR_PICKS_STALE") {
-          toast.error(message, { action: { label: "Reload", onClick: reloadFromServer }, duration: 10_000 });
+          toast.error(message, { action: { label: "Reload", onClick: () => void reloadFromServer() }, duration: 10_000 });
         } else if (json?.code === "GEAR_PICKS_CLOSED") {
           toast.error(message);
-          reloadFromServer();
+          await reloadFromServer();
         } else {
           toast.error(message);
         }
@@ -520,11 +524,18 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
               <Button
                 type="button"
                 variant="outline"
-                className="min-h-10 max-sm:hidden"
+                className="min-h-10 max-sm:px-3"
                 disabled={!canSave}
                 onClick={() => void save(false)}
               >
-                {saving === "draft" ? "Saving…" : "Save draft"}
+                {saving === "draft" ? (
+                  "Saving…"
+                ) : (
+                  <>
+                    <span className="sm:hidden">Save</span>
+                    <span className="max-sm:hidden">Save draft</span>
+                  </>
+                )}
               </Button>
             )}
             {!readOnly && (

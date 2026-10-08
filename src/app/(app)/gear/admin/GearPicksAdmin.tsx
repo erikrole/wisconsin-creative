@@ -415,7 +415,10 @@ function AllowanceInput({
     void onApply(
       { action: "updateParticipant", participantId: participant.id, allowanceCents: cents },
       `${participant.user.name}'s allowance is now ${formatUsd(cents)}.`,
-    );
+    ).then((saved) => {
+      // A refused change (e.g. below their saved picks) leaves the row as it was.
+      if (!saved) setValue((participant.allowanceCents / 100).toFixed(2));
+    });
   }
 
   return (

@@ -427,6 +427,56 @@ describe("admin routes", () => {
     expect(response.status).toBe(400);
   });
 
+  describe("participant changes against saved picks", () => {
+    const withPicks = {
+      id: "participant-1",
+      fit: "MEN",
+      allowanceCents: 18_500,
+      userId: "user-1",
+      user: { name: "Erik Role" },
+      submission: { totalCents: 3000, lines: [{ sku: MEN_TEE }] },
+    };
+
+    beforeEach(() => {
+      vi.mocked(requireAuth).mockResolvedValue(admin);
+      tx.gearPickParticipant!.findFirst!.mockResolvedValue(withPicks);
+      tx.gearPickParticipant!.update!.mockResolvedValue({ id: "participant-1", fit: "MEN", allowanceCents: 18_500 });
+    });
+
+    it("refuses an allowance below what they've saved", async () => {
+      const response = await patchAdmin(
+        patch({ action: "updateParticipant", participantId: "participant-1", allowanceCents: 2000 }),
+        context,
+      );
+      const json = await response.json();
+
+      expect(response.status).toBe(409);
+      expect(json.code).toBe("GEAR_PICKS_CONFLICT");
+      expect(json.error).toContain("Erik Role's saved picks total $30.00");
+      expect(tx.gearPickParticipant!.update).not.toHaveBeenCalled();
+    });
+
+    it("refuses a fit change that would orphan a saved item", async () => {
+      const response = await patchAdmin(
+        patch({ action: "updateParticipant", participantId: "participant-1", fit: "WOMEN" }),
+        context,
+      );
+
+      expect(response.status).toBe(409);
+      expect(tx.gearPickParticipant!.update).not.toHaveBeenCalled();
+    });
+
+    it("allows a change their saved picks still fit", async () => {
+      const response = await patchAdmin(
+        patch({ action: "updateParticipant", participantId: "participant-1", allowanceCents: 3000 }),
+        context,
+      );
+
+      expect(response.status).toBe(200);
+      expect(tx.gearPickParticipant!.update).toHaveBeenCalled();
+    });
+  });
+
   it("exports one CSV row per line with the sheet's columns", async () => {
     vi.mocked(requireAuth).mockResolvedValue(admin);
     vi.mocked(db.gearPickCycle.findUnique).mockResolvedValue(openCycle as never);
