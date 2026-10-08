@@ -1,75 +1,97 @@
 "use client";
 
+import Image from "next/image";
+import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
-import { ArrowRightIcon, ShirtIcon } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { ArrowRightIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useGearPicksMe } from "@/hooks/use-gear-picks";
 import { formatUsd } from "@/lib/gear-picks/catalog";
-import { formatDateTime } from "@/lib/format";
+import { formatDateShort } from "@/lib/format";
 
 /**
  * Nudges a gear pick participant who hasn't submitted while the cycle is open.
  * Drafts still count as "not submitted" so a half-finished list isn't forgotten.
+ * After submitting it disappears; the profile Gear tab shows the picks and links
+ * back to /gear while they can still change.
  */
 export function GearPicksBanner() {
   const { data } = useGearPicksMe();
 
+  // Once submitted, the person's picks live on their profile's Gear tab.
   if (!data?.cycle?.isOpen || !data.participant || data.submission?.submittedAt) return null;
 
-  const allowance = formatUsd(data.participant.allowanceCents);
+  const allowanceCents = data.participant.allowanceCents;
+  const allowance = formatUsd(allowanceCents);
+  const pickedCents = data.submission?.totalCents ?? 0;
   const hasDraft = Boolean(data.submission && data.submission.lines.length > 0);
-  const deadline = data.cycle.deadline ? formatDateTime(data.cycle.deadline) : null;
 
   return (
-    <section
-      aria-labelledby="gear-picks-banner-title"
-      className="relative mb-4 overflow-hidden rounded-lg border border-[var(--red-text)]/20 bg-[var(--red-bg)]/[0.04] dark:bg-[var(--red-bg)]/[0.08]"
+    <Reveal>
+      <section
+        aria-labelledby="gear-picks-banner-title"
+        className="relative isolate overflow-hidden rounded-xl bg-[linear-gradient(115deg,#7a0000_0%,var(--wi-red)_45%,#1a0505_100%)] text-white shadow-sm"
+      >
+        {/* Oversized mark bleeding off the right edge: texture, not content. */}
+        <Image
+          src="/gear/ua-logo-white.svg"
+          alt=""
+          aria-hidden="true"
+          width={201}
+          height={119}
+          className="pointer-events-none absolute -right-8 top-1/2 -z-10 h-[150%] w-auto -translate-y-1/2 opacity-[0.07]"
+        />
+        <div className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:gap-5 sm:px-6">
+          <Image
+            src="/gear/ua-logo-white.svg"
+            alt="Under Armour"
+            width={201}
+            height={119}
+            priority
+            className="h-9 w-auto shrink-0 self-start sm:h-11 sm:self-center"
+          />
+          <div className="min-w-0 flex-1">
+            <h2
+              id="gear-picks-banner-title"
+              className="text-xl font-bold leading-tight tracking-tight sm:text-2xl"
+              style={{ fontFamily: "var(--font-heading)" }}
+            >
+              {hasDraft ? "Finish your 2027–28 gear picks" : "Pick your 2027–28 UA gear"}
+            </h2>
+            <p className="mt-1 text-[13px] text-white/75">
+              {hasDraft ? `${formatUsd(Math.max(0, allowanceCents - pickedCents))} left to spend` : `${allowance} to spend`}
+              {data.cycle.deadline ? ` · Due ${formatDateShort(data.cycle.deadline)}` : ""}
+            </p>
+          </div>
+          <Button
+            asChild
+            className="min-h-11 w-full shrink-0 bg-white px-5 font-semibold text-[#7a0000] shadow-none hover:bg-white/90 sm:w-auto"
+          >
+            <Link href="/gear">
+              {hasDraft ? "Finish picks" : "Choose gear"}
+              <ArrowRightIcon data-icon="inline-end" />
+            </Link>
+          </Button>
+        </div>
+      </section>
+    </Reveal>
+  );
+}
+
+/**
+ * The banner arrives after the dashboard's first paint (it waits on the gear
+ * picks query), so it grows open instead of shoving the page down in one jump.
+ */
+function Reveal({ children }: { children: React.ReactNode }) {
+  const reduced = useReducedMotion();
+  return (
+    <motion.div
+      initial={reduced ? false : { height: 0, opacity: 0 }}
+      animate={{ height: "auto", opacity: 1 }}
+      transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+      className="overflow-hidden"
     >
-      <div className="absolute bottom-0 left-0 top-0 w-[3px] bg-[var(--red-text)]" aria-hidden="true" />
-
-      <div className="flex min-h-10 items-center justify-between gap-3 border-b border-[var(--red-text)]/15 px-4">
-        <div className="flex min-w-0 items-center gap-2">
-          <ShirtIcon className="size-3.5 shrink-0 text-[var(--red-text)]" aria-hidden="true" />
-          <span
-            className="truncate text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--red-text)]"
-            style={{ fontFamily: "var(--font-mono)" }}
-          >
-            Under Armour gear
-          </span>
-          <Badge variant={hasDraft ? "orange" : "red"} size="sm">
-            {hasDraft ? "Draft saved" : "Not started"}
-          </Badge>
-        </div>
-        {deadline && (
-          <span className="hidden shrink-0 text-[10.5px] text-muted-foreground/60 sm:inline">
-            Due {deadline}
-          </span>
-        )}
-      </div>
-
-      <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0">
-          <h2
-            id="gear-picks-banner-title"
-            className="text-[13px] font-semibold text-foreground"
-            style={{ fontFamily: "var(--font-heading)", fontWeight: 600 }}
-          >
-            Pick your 2027–28 UA gear
-          </h2>
-          <p className="mt-0.5 text-[12px] leading-5 text-muted-foreground">
-            You have {allowance} to spend on top of your standard issue.
-            {deadline ? ` Submit your picks by ${deadline}.` : " Submit your picks when you're ready."}
-          </p>
-        </div>
-
-        <Button asChild variant="outline" className="min-h-10 w-full sm:w-auto">
-          <Link href="/gear">
-            Choose gear
-            <ArrowRightIcon data-icon="inline-end" />
-          </Link>
-        </Button>
-      </div>
-    </section>
+      <div className="pb-4">{children}</div>
+    </motion.div>
   );
 }

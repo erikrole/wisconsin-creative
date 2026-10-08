@@ -103,17 +103,29 @@ function auditLines(lines: { sku: string; size: string | null; quantity: number;
 // ── Participant (self-service) ─────────────────────────────
 
 export async function getMyGearPicks(user: Actor, now: Date = new Date()): Promise<GearPicksMeResponse> {
+  return getGearPicksForUser(user.id, user, now);
+}
+
+/**
+ * One person's cycle, participation, and saved list. `viewer` only decides
+ * `isAdmin`; callers own the self-or-manage access check.
+ */
+export async function getGearPicksForUser(
+  userId: string,
+  viewer: Actor,
+  now: Date = new Date(),
+): Promise<GearPicksMeResponse> {
   const [cycle, participant, profile] = await Promise.all([
     db.gearPickCycle.findUnique({
       where: { id: GEAR_PICK_CYCLE_ID },
       select: { id: true, title: true, deadline: true },
     }),
     db.gearPickParticipant.findUnique({
-      where: { cycleId_userId: { cycleId: GEAR_PICK_CYCLE_ID, userId: user.id } },
+      where: { cycleId_userId: { cycleId: GEAR_PICK_CYCLE_ID, userId } },
       select: { id: true, fit: true, allowanceCents: true, submission: { select: submissionSelect } },
     }),
     db.user.findUnique({
-      where: { id: user.id },
+      where: { id: userId },
       select: { topSize: true, topSizeFit: true, shoeSize: true, shoeSizeSystem: true },
     }),
   ]);
@@ -130,7 +142,7 @@ export async function getMyGearPicks(user: Actor, now: Date = new Date()): Promi
       shoeSize: profile?.shoeSize ?? null,
       shoeSizeSystem: profile?.shoeSizeSystem ?? null,
     },
-    isAdmin: user.role === Role.ADMIN,
+    isAdmin: viewer.role === Role.ADMIN,
   };
 }
 

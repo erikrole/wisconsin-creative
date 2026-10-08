@@ -456,7 +456,7 @@ function ParticipantsTable({
                         const ok = await confirm({
                           title: `Remove ${participant.user.name}?`,
                           message: lines.length > 0
-                            ? `This deletes their ${lines.length} saved ${lines.length === 1 ? "line" : "lines"} (${formatUsd(total)}). The change is recorded in the audit log.`
+                            ? `This deletes their ${participant.submission?.submittedAt ? "submitted" : "draft"} picks: ${lines.length} ${lines.length === 1 ? "line" : "lines"}, ${formatUsd(total)}. Adding them back starts them from scratch. The change is recorded in the audit log.`
                             : "They will no longer see the pick list.",
                           confirmLabel: "Remove",
                           variant: "danger",

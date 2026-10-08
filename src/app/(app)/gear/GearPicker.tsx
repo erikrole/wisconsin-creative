@@ -2,15 +2,17 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { BarChart3Icon, LockIcon, SearchIcon } from "lucide-react";
+import { BarChart3Icon, ListChecksIcon, LockIcon, SearchIcon } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
 import { PageHeader } from "@/components/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
 import { Label } from "@/components/ui/label";
 import { FadeUp } from "@/components/ui/motion";
 import { Progress } from "@/components/ui/progress";
@@ -24,6 +26,7 @@ import {
   findGearSku,
   formatUsd,
   GEAR_CATALOG,
+  gearSku,
   itemsForFit,
   sizeKindForCategory,
   type GearCatalogItem,
@@ -40,7 +43,8 @@ import {
   itemSearchText,
   type DraftLine,
 } from "./gear-pick-state";
-import { GearItemCard } from "./GearItemCard";
+import { GearItemCard, gearItemAnchorId } from "./GearItemCard";
+import { GearPicksSheet, type GearPicksSheetMode } from "./GearPicksSheet";
 import { GearPreviewDialog, type GearPreview } from "./GearPreviewDialog";
 
 const KIT_LABELS = { STANDARD_ISSUE: "Standard issue", CORE_KIT: "Core kit" } as const;
@@ -98,6 +102,18 @@ export function GearPicker() {
   return <GearPickerForm data={data} />;
 }
 
+/** The color a card shows: the one the person tapped, else the first color already in their list. */
+function cardColorCode(
+  item: GearCatalogItem,
+  selectedColors: Record<string, string>,
+  linesByStyle: Map<string, DraftLine[]>,
+) {
+  const chosen = selectedColors[item.style];
+  if (chosen) return chosen;
+  const pickedSkus = new Set((linesByStyle.get(item.style) ?? []).map((line) => line.sku));
+  return (item.colors.find((color) => pickedSkus.has(gearSku(item.style, color.code))) ?? item.colors[0]!).code;
+}
+
 function AdminResultsLink() {
   return (
     <Button asChild variant="outline" className="min-h-10">
@@ -111,6 +127,7 @@ function AdminResultsLink() {
 
 function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
   const queryClient = useQueryClient();
+  const router = useRouter();
   const participant = data.participant!;
   const cycle = data.cycle!;
   const fit = participant.fit;
@@ -124,9 +141,11 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
   const [saving, setSaving] = useState<"draft" | "submit" | null>(null);
   const [search, setSearch] = useState("");
   const [collection, setCollection] = useState("all");
+  const [category, setCategory] = useState("all");
   const [fitsOnly, setFitsOnly] = useState(true);
   const [selectedColors, setSelectedColors] = useState<Record<string, string>>({});
   const [preview, setPreview] = useState<GearPreview | null>(null);
+  const [sheetMode, setSheetMode] = useState<GearPicksSheetMode | null>(null);
 
   // Adopt the server's list whenever it changes and nothing local is unsaved.
   const serverStamp = data.submission?.updatedAt ?? null;
@@ -145,6 +164,7 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
   }, [dirty]);
 
   const totalCents = draftTotalCents(lines);
+  const pickCount = lines.reduce((sum, line) => sum + line.quantity, 0);
   const remainingCents = allowanceCents - totalCents;
   const over = remainingCents < 0;
   const problems = draftLineProblems(lines);
@@ -166,7 +186,8 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
   const visible = items.filter((item) => {
     const text = searchIndex.get(item.style) ?? "";
     const matchesSearch = words.every((word) => text.includes(word));
-    const matchesCollection = collection === "all" || item.collection === collection;
+    const matchesCollection =
+      (collection === "all" || item.collection === collection) && (category === "all" || item.category === category);
     const picked = linesByStyle.has(item.style);
     const fitsBudget = !fitsOnly || picked || dollarsToCents(item.price) <= Math.max(0, remainingCents);
     if (matchesSearch && matchesCollection && !fitsBudget) hiddenForBudget += 1;
@@ -175,7 +196,13 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
   const sections = GEAR_CATALOG.categories
     .map((category) => ({ category, items: visible.filter((item) => item.category === category) }))
     .filter((section) => section.items.length > 0);
-  const collections = GEAR_CATALOG.collections.filter((entry) => items.some((item) => item.collection === entry.key));
+  // Headwear and Footwear collections duplicate their categories, so only the
+  // real collections (Sideline, Freedom, Ireland) get a collection filter.
+  const collections = GEAR_CATALOG.collections.filter(
+    (entry) =>
+      !GEAR_CATALOG.categories.includes(entry.label) && items.some((item) => item.collection === entry.key),
+  );
+  const categories = GEAR_CATALOG.categories.filter((entry) => items.some((item) => item.category === entry));
 
   const updateLines = useCallback((updater: (current: DraftLine[]) => DraftLine[]) => {
     setLines(updater);
@@ -212,12 +239,26 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
     setPreview((current) => (current?.kind === "item" && current.item.style === style ? { ...current, colorCode: code } : current));
   }, []);
 
+  const openSheet = useCallback((mode: GearPicksSheetMode) => setSheetMode(mode), []);
+
+  // Clear filters that could hide the card, then scroll to it once it renders.
+  const jumpToItem = useCallback((style: string) => {
+    setSheetMode(null);
+    setSearch("");
+    setCollection("all");
+    setCategory("all");
+    window.setTimeout(() => {
+      document.getElementById(gearItemAnchorId(style))?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 250);
+  }, []);
+
   const reloadFromServer = useCallback(() => {
     setDirty(false);
     void queryClient.invalidateQueries({ queryKey: GEAR_PICKS_ME_QUERY_KEY });
   }, [queryClient]);
 
-  async function save(submit: boolean) {
+  /** Returns true once the server has the list, so the review panel can close. */
+  async function save(submit: boolean): Promise<boolean> {
     setSaving(submit ? "submit" : "draft");
     try {
       const response = await fetch("/api/gear-picks/me", {
@@ -229,7 +270,7 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
           version: serverVersion,
         }),
       });
-      if (handleAuthRedirect(response, "/gear")) return;
+      if (handleAuthRedirect(response, "/gear")) return false;
       const json = await parseJsonSafely<{ data?: GearPickSubmissionDto; error?: string; code?: string }>(response);
       if (!response.ok || !json?.data) {
         const message = json?.error ?? "Your picks weren't saved. Try again.";
@@ -241,18 +282,25 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
         } else {
           toast.error(message);
         }
-        return;
+        return false;
       }
       const saved = json.data;
       setDirty(false);
       queryClient.setQueryData<GearPicksMeResponse | null>(GEAR_PICKS_ME_QUERY_KEY, (current) =>
         current ? { ...current, submission: saved } : current,
       );
-      toast.success(
-        submit && !submittedAt ? "Picks submitted. You can still change them until the deadline." : "Picks saved.",
-      );
+      if (submit && !submittedAt) {
+        toast.success("Picks submitted. You can still change them until the deadline.", {
+          action: { label: "View on profile", onClick: () => router.push("/profile?tab=gear") },
+          duration: 10_000,
+        });
+      } else {
+        toast.success("Picks saved.");
+      }
+      return true;
     } catch {
       toast.error("Couldn't reach the server. Your picks are still here, so try again.");
+      return false;
     } finally {
       setSaving(null);
     }
@@ -267,36 +315,33 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
     <FadeUp>
       <PageHeader
         title="UA staff gear"
-        description={`${cycle.title}. Your standard issue is covered. Choose the rest of your gear, up to ${allowanceLabel}.`}
+        description={
+          readOnly
+            ? cycle.title
+            : `${allowanceLabel} to spend${cycle.deadline ? ` · Due ${formatDateTime(cycle.deadline)}` : ""}`
+        }
       >
         {data.isAdmin && <AdminResultsLink />}
       </PageHeader>
 
-      {readOnly ? (
+      {readOnly && (
         <div className="mb-4 flex items-start gap-2 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm" role="status">
           <LockIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
           <p>
             <span className="font-semibold">Picks are closed.</span>{" "}
-            {cycle.deadline ? `The deadline was ${formatDateTime(cycle.deadline)}. ` : ""}
             {submittedAt ? "This is the list you submitted." : lines.length > 0 ? "This draft was never submitted; ask an admin if you still need gear." : "You didn't pick anything this year."}
           </p>
         </div>
-      ) : cycle.deadline ? (
-        <p className="mb-4 text-sm text-muted-foreground">
-          Picks lock on <span className="font-semibold text-foreground">{formatDateTime(cycle.deadline)}</span>. You can change them until then.
-        </p>
-      ) : null}
+      )}
 
       <section aria-labelledby="gear-kit-title" className="mb-6">
-        <h2 id="gear-kit-title" className="text-base font-semibold">Already in your kit</h2>
-        <p className="mb-3 text-sm text-muted-foreground">
-          {kit.some((entry) => entry.kind === "CORE_KIT")
-            ? `Free standard issue plus the core kit. These don't count against your ${allowanceLabel}.`
-            : `Free standard issue. It doesn't count against your ${allowanceLabel}.`}
-        </p>
-        <ul className="grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-9">
+        <h2 id="gear-kit-title" className="mb-2 flex items-baseline gap-2 text-sm font-semibold">
+          Already in your kit
+          <span className="text-xs font-normal text-muted-foreground">Free</span>
+        </h2>
+        <ul className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 scrollbar-hide">
           {kit.map((entry) => (
-            <li key={`${entry.style}-${entry.code}`}>
+            <li key={`${entry.style}-${entry.code}`} className="w-20 shrink-0 sm:w-24">
               <button
                 type="button"
                 className="group flex w-full flex-col overflow-hidden rounded-md border border-border bg-card text-left focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
@@ -309,81 +354,76 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
                     image: entry.image,
                   })
                 }
-                aria-label={`Preview ${entry.name} larger`}
+                aria-label={`${entry.name}, ${KIT_LABELS[entry.kind].toLowerCase()}. Preview larger`}
+                title={entry.name}
               >
                 <span className="relative block aspect-square w-full bg-white">
-                  <Image src={entry.image} alt="" fill sizes="120px" className="object-contain p-1.5" />
+                  <Image src={entry.image} alt="" fill sizes="96px" className="object-contain p-1.5" />
                 </span>
-                <span className="block px-1.5 py-1">
-                  <span className="block truncate text-[11.5px] font-medium">{entry.name}</span>
-                  <span className="block text-[10.5px] text-muted-foreground">{KIT_LABELS[entry.kind]}</span>
-                </span>
+                <span className="block truncate px-1.5 py-1 text-[11px] font-medium">{entry.name}</span>
               </button>
             </li>
           ))}
         </ul>
       </section>
 
-      <section aria-labelledby="gear-catalog-title">
-        <h2 id="gear-catalog-title" className="text-base font-semibold">Pick from the catalog</h2>
-        <p className="mb-3 text-sm text-muted-foreground">
-          {items.length} styles. Prices are team prices. Tap a color to see it, then add it and choose a size.
-        </p>
-
-        <div className="mb-3 flex flex-col gap-3">
-          <div className="relative max-w-md">
-            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-            <Input
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search items, colors, or item numbers"
-              aria-label="Search gear"
-              className="pl-9"
-            />
-          </div>
+      <section aria-label="Catalog">
+        <div className="mb-4 flex flex-col gap-3">
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex flex-wrap gap-1.5" role="group" aria-label="Collection">
-              {[{ key: "all", label: "All" }, ...collections].map((entry) => (
-                <Button
-                  key={entry.key}
-                  type="button"
-                  size="sm"
-                  variant={collection === entry.key ? "default" : "outline"}
-                  aria-pressed={collection === entry.key}
-                  className="min-h-10 rounded-full"
-                  onClick={() => setCollection(entry.key)}
-                >
-                  {entry.label}
-                </Button>
-              ))}
+            <div className="relative min-w-0 flex-1 basis-60">
+              <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+              <Input
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search gear"
+                aria-label="Search gear by name, color, or item number"
+                className="pl-9"
+              />
             </div>
-            <div className="flex items-center gap-2 sm:ml-auto">
+            {collections.length > 1 && (
+              <NativeSelect
+                value={collection}
+                onChange={(event) => setCollection(event.target.value)}
+                aria-label="Collection"
+                className="h-10 w-auto"
+              >
+                <option value="all">All collections</option>
+                {collections.map((entry) => (
+                  <option key={entry.key} value={entry.key}>{entry.label}</option>
+                ))}
+              </NativeSelect>
+            )}
+            <div className="flex min-h-10 items-center gap-2">
               <Switch id="gear-fits-budget" checked={fitsOnly} onCheckedChange={setFitsOnly} />
-              <Label htmlFor="gear-fits-budget" className="text-sm">Only what fits my budget</Label>
+              <Label htmlFor="gear-fits-budget" className="text-sm">
+                Fits my budget
+                {hiddenForBudget > 0 && (
+                  <span className="font-normal tabular-nums text-muted-foreground"> ({hiddenForBudget} hidden)</span>
+                )}
+              </Label>
             </div>
           </div>
-          <p className="text-xs text-muted-foreground" aria-live="polite">
-            {visible.length} {visible.length === 1 ? "item" : "items"}
-            {hiddenForBudget > 0
-              ? ` · ${hiddenForBudget} hidden because they cost more than your ${formatUsd(Math.max(0, remainingCents))} left`
-              : ""}
-          </p>
-        </div>
-
-        {sections.length > 1 && (
-          <nav aria-label="Categories" className="mb-4 flex flex-wrap gap-x-3 gap-y-1 text-sm">
-            {sections.map((section) => (
-              <a
-                key={section.category}
-                href={`#${categoryAnchorId(section.category)}`}
-                className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+          <div
+            className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 scrollbar-hide"
+            role="group"
+            aria-label="Category"
+          >
+            {["all", ...categories].map((entry) => (
+              <Button
+                key={entry}
+                type="button"
+                size="sm"
+                variant={category === entry ? "default" : "outline"}
+                aria-pressed={category === entry}
+                className="min-h-9 shrink-0 rounded-full"
+                onClick={() => setCategory(entry)}
               >
-                {section.category} <span className="tabular-nums text-muted-foreground/70">{section.items.length}</span>
-              </a>
+                {entry === "all" ? "All" : entry}
+              </Button>
             ))}
-          </nav>
-        )}
+          </div>
+        </div>
 
         {sections.length === 0 ? (
           <EmptyState
@@ -392,27 +432,30 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
             title="No items match"
             description={
               fitsOnly && hiddenForBudget > 0
-                ? "Everything that matches costs more than you have left. Turn off Only what fits my budget to see it."
-                : "Clear the search or pick another collection."
+                ? "Everything that matches costs more than you have left. Turn off Fits my budget to see it."
+                : "Clear the search or change the filters."
             }
           />
         ) : (
           sections.map((section) => (
-            <section key={section.category} id={categoryAnchorId(section.category)} className="mb-6 scroll-mt-20">
-              <h3 className="mb-2 text-sm font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                {section.category}
-              </h3>
+            <section key={section.category} id={categoryAnchorId(section.category)} className="mb-8 scroll-mt-20">
+              {category === "all" && (
+                <h2 className="mb-3 text-sm font-semibold">
+                  {section.category}
+                  <span className="ml-1.5 font-normal tabular-nums text-muted-foreground">{section.items.length}</span>
+                </h2>
+              )}
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                 {section.items.map((item: GearCatalogItem) => (
                   <GearItemCard
                     key={item.style}
                     item={item}
-                    selectedCode={selectedColors[item.style] ?? item.colors[0]!.code}
+                    selectedCode={cardColorCode(item, selectedColors, linesByStyle)}
                     lines={linesByStyle.get(item.style) ?? []}
                     readOnly={readOnly}
                     onSelectColor={(code) => selectColor(item.style, code)}
                     onPreview={() =>
-                      setPreview({ kind: "item", item, colorCode: selectedColors[item.style] ?? item.colors[0]!.code })
+                      setPreview({ kind: "item", item, colorCode: cardColorCode(item, selectedColors, linesByStyle) })
                     }
                     onAddLine={addLine}
                     onChangeLine={changeLine}
@@ -427,17 +470,23 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
 
       <div
         className={cn(
-          "sticky bottom-0 z-10 -mx-8 mt-6 border-t bg-background/95 px-8 py-3 backdrop-blur max-md:-mx-4 max-md:bottom-[calc(64px+env(safe-area-inset-bottom,0px))] max-md:px-4",
+          "sticky bottom-0 z-10 -mx-8 mt-6 border-t bg-background/95 px-8 py-3 backdrop-blur max-md:-mx-4 max-md:bottom-[calc(64px+env(safe-area-inset-bottom,0px))] max-md:px-4 max-md:py-2",
           over ? "border-[var(--red-text)]/40" : "border-border",
         )}
       >
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="flex items-center gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-baseline gap-x-2 text-sm">
               <span className="font-semibold tabular-nums">
-                {formatUsd(totalCents)} of {allowanceLabel}
+                {formatUsd(totalCents)}
+                <span className="font-normal text-muted-foreground"> of {allowanceLabel}</span>
               </span>
-              <span className={cn("tabular-nums", over ? "font-semibold text-[var(--red-text)]" : "text-muted-foreground")}>
+              <span
+                className={cn(
+                  "tabular-nums max-sm:hidden",
+                  over ? "font-semibold text-[var(--red-text)]" : "text-muted-foreground",
+                )}
+              >
                 {over ? `Over by ${formatUsd(-remainingCents)}` : `${formatUsd(remainingCents)} left`}
               </span>
               <FooterStatus readOnly={readOnly} dirty={dirty} submittedAt={submittedAt} hasSaved={Boolean(data.submission)} />
@@ -448,35 +497,62 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
               className={cn("mt-1.5 h-1.5", over && "[&>[data-slot=progress-indicator]]:bg-[var(--red-text)]")}
             />
             {!readOnly && problems.length > 0 && (
-              <p className="mt-1 text-xs text-[var(--orange-text)]">{problems[0]}</p>
+              <p className="mt-1 truncate text-xs text-[var(--orange-text)]">{problems[0]}</p>
             )}
           </div>
-          {!readOnly && (
-            <div className="flex shrink-0 gap-2">
-              {submittedAt ? (
-                <Button type="button" className="min-h-10 flex-1 sm:flex-none" disabled={!canSave || lines.length === 0} onClick={() => void save(true)}>
-                  {saving ? "Saving…" : "Save changes"}
-                </Button>
-              ) : (
-                <>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="min-h-10 flex-1 sm:flex-none"
-                    disabled={!canSave}
-                    onClick={() => void save(false)}
-                  >
-                    {saving === "draft" ? "Saving…" : "Save draft"}
-                  </Button>
-                  <Button type="button" className="min-h-10 flex-1 sm:flex-none" disabled={!canSubmit} onClick={() => void save(true)}>
-                    {saving === "submit" ? "Submitting…" : "Submit picks"}
-                  </Button>
-                </>
-              )}
-            </div>
-          )}
+          <div className="flex shrink-0 gap-2">
+            <Button type="button" variant="outline" className="min-h-10" onClick={() => openSheet("list")}>
+              <ListChecksIcon data-icon="inline-start" />
+              <span className="max-sm:sr-only">Your picks</span>
+              <Badge variant="gray" size="sm" className="tabular-nums">{pickCount}</Badge>
+            </Button>
+            {!readOnly && !submittedAt && (
+              <Button
+                type="button"
+                variant="outline"
+                className="min-h-10 max-sm:hidden"
+                disabled={!canSave}
+                onClick={() => void save(false)}
+              >
+                {saving === "draft" ? "Saving…" : "Save draft"}
+              </Button>
+            )}
+            {!readOnly && (
+              <Button
+                type="button"
+                className="min-h-10"
+                disabled={lines.length === 0 || (Boolean(submittedAt) && !dirty)}
+                onClick={() => openSheet("review")}
+              >
+                <span className="sm:hidden">Review</span>
+                <span className="max-sm:hidden">{submittedAt ? "Review changes" : "Review & submit"}</span>
+              </Button>
+            )}
+          </div>
         </div>
       </div>
+
+      <GearPicksSheet
+        open={sheetMode !== null}
+        mode={sheetMode ?? "list"}
+        onOpenChange={(open) => {
+          if (!open) setSheetMode(null);
+        }}
+        lines={lines}
+        readOnly={readOnly}
+        totalCents={totalCents}
+        allowanceCents={allowanceCents}
+        deadline={cycle.deadline ? formatDateTime(cycle.deadline) : null}
+        problems={problems}
+        submitLabel={submittedAt ? "Save changes" : "Submit picks"}
+        submitting={saving === "submit"}
+        canSubmit={submittedAt ? canSave && lines.length > 0 : canSubmit}
+        onSubmit={async () => {
+          if (await save(true)) setSheetMode(null);
+        }}
+        onJump={jumpToItem}
+        onRemoveLine={removeLine}
+      />
 
       <GearPreviewDialog
         preview={preview}

@@ -38,6 +38,7 @@ import { checkRateLimit, enforceRateLimit } from "@/lib/rate-limit";
 import { GET as getMe, PUT as putMe } from "@/app/api/gear-picks/me/route";
 import { GET as getAdmin, PATCH as patchAdmin } from "@/app/api/gear-picks/admin/route";
 import { GET as exportCsv } from "@/app/api/gear-picks/admin/export.csv/route";
+import { GET as getUserPicks } from "@/app/api/gear-picks/users/[userId]/route";
 
 type MockFn = ReturnType<typeof vi.fn>;
 const tx = (db as unknown as { _mockTx: Record<string, Record<string, MockFn>> })._mockTx;
@@ -116,6 +117,61 @@ describe("GET /api/gear-picks/me", () => {
   it("keeps collaborators out", async () => {
     vi.mocked(requireAuth).mockResolvedValue({ ...staff, role: Role.COLLABORATOR });
     expect((await getMe(new Request(`${ORIGIN}/api/gear-picks/me`), context)).status).toBe(403);
+  });
+});
+
+describe("GET /api/gear-picks/users/[userId]", () => {
+  const userRequest = (userId: string) => new Request(`${ORIGIN}/api/gear-picks/users/${userId}`);
+  const userContext = (userId: string) => ({ params: Promise.resolve({ userId }) });
+
+  beforeEach(() => {
+    vi.mocked(db.gearPickCycle.findUnique).mockResolvedValue(openCycle as never);
+    vi.mocked(db.gearPickParticipant.findUnique).mockResolvedValue(participant as never);
+    vi.mocked(db.user.findUnique).mockResolvedValue({ topSize: null, topSizeFit: null, shoeSize: null, shoeSizeSystem: null } as never);
+  });
+
+  it("lets people read their own picks", async () => {
+    const response = await getUserPicks(userRequest(staff.id), userContext(staff.id));
+
+    expect(response.status).toBe(200);
+    expect((await response.json()).data).toMatchObject({ participant: { id: "participant-1" }, isAdmin: false });
+    expect(db.gearPickParticipant.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { cycleId_userId: { cycleId: "2027-28", userId: staff.id } } }),
+    );
+  });
+
+  it("keeps staff out of other people's picks", async () => {
+    const response = await getUserPicks(userRequest("someone-else"), userContext("someone-else"));
+
+    expect(response.status).toBe(403);
+    expect(db.gearPickParticipant.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("keeps students out of other people's picks", async () => {
+    vi.mocked(requireAuth).mockResolvedValue({ ...staff, id: "student-1", role: Role.STUDENT });
+
+    const response = await getUserPicks(userRequest(staff.id), userContext(staff.id));
+
+    expect(response.status).toBe(403);
+    expect(db.gearPickParticipant.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("keeps collaborators out, even of their own profile", async () => {
+    vi.mocked(requireAuth).mockResolvedValue({ ...staff, role: Role.COLLABORATOR });
+
+    expect((await getUserPicks(userRequest(staff.id), userContext(staff.id))).status).toBe(403);
+  });
+
+  it("lets admins read anyone's picks", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(admin);
+
+    const response = await getUserPicks(userRequest(staff.id), userContext(staff.id));
+
+    expect(response.status).toBe(200);
+    expect((await response.json()).data).toMatchObject({ participant: { id: "participant-1" }, isAdmin: true });
+    expect(db.gearPickParticipant.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { cycleId_userId: { cycleId: "2027-28", userId: staff.id } } }),
+    );
   });
 });
 

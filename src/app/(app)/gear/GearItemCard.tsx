@@ -16,18 +16,35 @@ import {
 import { cn } from "@/lib/utils";
 import { sizeOptionsFor, type DraftLine } from "./gear-pick-state";
 
+export function gearItemAnchorId(style: string) {
+  return `gear-item-${style}`;
+}
+
 export function GearSwatches({
   item,
   selectedCode,
   onSelect,
+  onPhoto = false,
+  className,
 }: {
   item: GearCatalogItem;
   selectedCode: string;
   onSelect: (code: string) => void;
+  /** Sits on the white product photo, so it uses light styling in either theme (dark swatches stay readable). */
+  onPhoto?: boolean;
+  className?: string;
 }) {
   if (item.colors.length < 2) return null;
   return (
-    <div className="flex flex-wrap gap-1.5" role="group" aria-label={`${item.name} colors`}>
+    <div
+      className={cn(
+        "flex flex-wrap gap-1.5",
+        onPhoto && "gap-1 rounded-full bg-white/90 p-1 shadow-[0_1px_3px_rgba(0,0,0,0.18)] backdrop-blur-sm",
+        className,
+      )}
+      role="group"
+      aria-label={`${item.name} colors`}
+    >
       {item.colors.map((color) => {
         const selected = color.code === selectedCode;
         return (
@@ -39,8 +56,12 @@ export function GearSwatches({
             title={color.label}
             onClick={() => onSelect(color.code)}
             className={cn(
-              "relative size-7 rounded-full border border-border shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08)] transition-shadow focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
-              selected && "ring-2 ring-foreground ring-offset-2 ring-offset-background",
+              "relative size-7 rounded-full border shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08)] transition-shadow focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
+              onPhoto ? "size-6 border-black/15" : "border-border",
+              selected &&
+                (onPhoto
+                  ? "ring-2 ring-neutral-900 ring-offset-2 ring-offset-white"
+                  : "ring-2 ring-foreground ring-offset-2 ring-offset-background"),
             )}
             style={{ backgroundColor: color.swatch }}
           />
@@ -89,42 +110,49 @@ export function GearItemCard({
 
   return (
     <article
+      id={gearItemAnchorId(item.style)}
       className={cn(
-        "flex flex-col overflow-hidden rounded-lg border bg-card transition-colors",
+        "flex scroll-mt-20 flex-col overflow-hidden rounded-lg border bg-card transition-colors",
         picked ? "border-[var(--wi-red)]/50" : "border-border",
       )}
       aria-label={item.name}
     >
-      <button
-        type="button"
-        onClick={onPreview}
-        className="group relative aspect-square w-full bg-white focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ring/50"
-        aria-label={`Preview ${item.name} in ${color.label} larger`}
-      >
-        <Image
-          src={color.image}
-          alt={`${item.name} in ${color.label}`}
-          fill
-          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 240px"
-          className="object-contain p-3 transition-transform duration-200 group-hover:scale-[1.02] motion-reduce:transition-none"
+      <div className="relative">
+        <button
+          type="button"
+          onClick={onPreview}
+          className="group relative aspect-square w-full bg-white focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ring/50"
+          aria-label={`Preview ${item.name} in ${color.label} larger`}
+        >
+          <Image
+            src={color.image}
+            alt={`${item.name} in ${color.label}`}
+            fill
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 240px"
+            className="object-contain p-3 transition-transform duration-200 group-hover:scale-[1.02] motion-reduce:transition-none"
+          />
+          {color.imageNote && (
+            <Badge variant="gray" size="sm" className="absolute left-2 top-2">
+              {color.imageNote}
+            </Badge>
+          )}
+          {item.collectionLabel && (
+            <Badge size="sm" className="absolute right-2 top-2 bg-neutral-900 text-white">
+              {item.collectionLabel.replace(/ collection$/i, "")}
+            </Badge>
+          )}
+        </button>
+        <GearSwatches
+          item={item}
+          selectedCode={color.code}
+          onSelect={onSelectColor}
+          onPhoto
+          className="absolute bottom-2 left-2 max-w-[calc(100%-1rem)]"
         />
-        {color.imageNote && (
-          <Badge variant="gray" size="sm" className="absolute left-2 top-2">
-            {color.imageNote}
-          </Badge>
-        )}
-      </button>
+      </div>
 
       <div className="flex flex-1 flex-col gap-2 border-t border-border p-3">
         <div className="min-w-0">
-          {item.collectionLabel && (
-            <p
-              className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-muted-foreground"
-              style={{ fontFamily: "var(--font-mono)" }}
-            >
-              {item.collectionLabel}
-            </p>
-          )}
           <div className="flex items-start justify-between gap-2">
             <h3 className="text-sm font-semibold leading-snug text-foreground">{item.name}</h3>
             <span className="shrink-0 text-sm font-semibold tabular-nums">{formatUsd(dollarsToCents(item.price))}</span>
@@ -135,22 +163,19 @@ export function GearItemCard({
               {item.priceNote}
             </p>
           )}
-          <p className="mt-1 text-xs text-muted-foreground">
-            {color.label} <span className="font-mono text-[11px] text-muted-foreground/70">{sku}</span>
-          </p>
+          <p className="mt-1 text-xs text-muted-foreground">{color.label}</p>
         </div>
-
-        <GearSwatches item={item} selectedCode={color.code} onSelect={onSelectColor} />
 
         <div className="mt-auto flex flex-col gap-1.5 pt-1">
           {colorLines.map((line) => (
-            <div key={line.id} className="flex items-center gap-1.5">
+            // Wraps the stepper under the size on narrow cards so sizes like "XXL" never truncate.
+            <div key={line.id} className="flex flex-wrap items-center gap-1.5">
               {sizeKind === "HEADWEAR" ? (
                 <span className="min-w-0 flex-1 text-xs text-muted-foreground">One size</span>
               ) : (
                 <NativeSelect
                   aria-label={`Size for ${item.name} in ${color.label}`}
-                  className="h-9 min-w-0 flex-1 px-2 text-sm"
+                  className="h-9 min-w-[5.5rem] flex-1 basis-[5.5rem] px-2 text-sm"
                   value={line.size ?? ""}
                   disabled={readOnly}
                   onChange={(event) => onChangeLine(line.id, { size: event.target.value || null })}
@@ -163,7 +188,7 @@ export function GearItemCard({
                   ))}
                 </NativeSelect>
               )}
-              <div className="flex shrink-0 items-center rounded-md border border-border">
+              <div className="ml-auto flex shrink-0 items-center rounded-md border border-border">
                 <Button
                   type="button"
                   variant="ghost"

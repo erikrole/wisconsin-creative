@@ -17,7 +17,7 @@ import type { GearPickAdminParticipant } from "@/lib/gear-picks/types";
 const MEN_TEE = "6021649-005"; // Athletics SS Tee, MEN, $15.00
 const WOMEN_FULL_ZIP = "6021628-005"; // Unstoppable Fleece Full-Zip, WOMEN, $67.50
 const UNISEX_CAP = "6026519-280"; // Blitzing Stretch Fit Cap, UNISEX headwear, $21.50
-const UNISEX_SHOE = "6024284-104"; // UA Icon Lo, UNISEX footwear, $75.00
+const UNISEX_SHOE = "6024284-104"; // UA Icon Lo, UNISEX footwear, $77.00
 
 function expectHttp(fn: () => unknown, status: number, message: RegExp) {
   try {
@@ -67,7 +67,7 @@ describe("priceGearPickLines", () => {
         { sku: UNISEX_SHOE, size: "10.5", quantity: 1 },
       ],
     });
-    expect(result.totalCents).toBe(2 * 1500 + 2150 + 7500);
+    expect(result.totalCents).toBe(2 * 1500 + 2150 + 7700);
     expect(result.lines[0]).toMatchObject({
       sku: MEN_TEE,
       style: "6021649",

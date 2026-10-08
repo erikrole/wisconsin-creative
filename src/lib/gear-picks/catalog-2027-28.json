@@ -2815,7 +2815,7 @@
    "category": "Footwear",
    "collection": "footwear",
    "collectionLabel": null,
-   "price": 75,
+   "price": 77,
    "priceNote": null,
    "colors": [
     {
@@ -2830,7 +2830,7 @@
   {
    "style": "6013320",
    "name": "UA Ignite Pro 8 Slide",
-   "fit": "UNISEX",
+   "fit": "MEN",
    "category": "Footwear",
    "collection": "footwear",
    "collectionLabel": null,
@@ -2842,6 +2842,25 @@
      "label": "Black",
      "swatch": "#1E1E1E",
      "image": "/gear/2027-28/6013320-001.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6013321",
+   "name": "W UA Ignite Pro 8 Slide",
+   "fit": "WOMEN",
+   "category": "Footwear",
+   "collection": "footwear",
+   "collectionLabel": null,
+   "price": 30,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "001",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6013321-001.webp",
      "imageNote": null
     }
    ]
@@ -2944,7 +2963,7 @@
    "collection": "freedom",
    "collectionLabel": "Freedom Collection",
    "price": 23,
-   "priceNote": "Price read as $23; confirm with UA",
+   "priceNote": null,
    "colors": [
     {
      "code": "026",
@@ -2963,7 +2982,7 @@
    "collection": "freedom",
    "collectionLabel": "Freedom Collection",
    "price": 21,
-   "priceNote": "Price read as $21; confirm with UA",
+   "priceNote": null,
    "colors": [
     {
      "code": "028",
@@ -3344,7 +3363,7 @@
    "collection": "ireland",
    "collectionLabel": "Ireland Collection",
    "price": 21.75,
-   "priceNote": "Price read as $21.75; confirm with UA",
+   "priceNote": null,
    "colors": [
     {
      "code": "100",
@@ -3526,7 +3545,7 @@
    "collection": "ireland",
    "collectionLabel": "Ireland Collection",
    "price": 27,
-   "priceNote": "Price read as $27; confirm with UA",
+   "priceNote": null,
    "colors": [
     {
      "code": "100",
@@ -3583,5 +3602,5 @@
    ]
   }
  ],
- "sources": "UA FW27 Wisconsin Pinnacle B2B, AE Headwear, Licensed Footwear 27, Freedom and Ireland spec sheets (Equipment Department share, UA 2027-28). Team prices; four Freedom/Ireland prices read off spec sheets are flagged priceNote."
+ "sources": "UA FW27 Wisconsin Pinnacle B2B, AE Headwear, Licensed Footwear 27, Freedom and Ireland spec sheets (Equipment Department share, UA 2027-28). Team prices, checked 2026-10-08 against the share copies (Freedom/Ireland prices are typed on those copies)."
 }

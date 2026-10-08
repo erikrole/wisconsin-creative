@@ -1,0 +1,130 @@
+"use client";
+
+import { AlertTriangleIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetBody,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { formatUsd } from "@/lib/gear-picks/catalog";
+import { cn } from "@/lib/utils";
+import type { DraftLine } from "./gear-pick-state";
+import { GearPickLineList } from "./GearPickLineList";
+
+export type GearPicksSheetMode = "list" | "review";
+
+/**
+ * Everything on the person's list in one place. "list" is for browsing what's
+ * picked; "review" is the step before submitting, with the submit button in it.
+ */
+export function GearPicksSheet({
+  open,
+  mode,
+  onOpenChange,
+  lines,
+  readOnly,
+  totalCents,
+  allowanceCents,
+  deadline,
+  problems,
+  submitLabel,
+  submitting,
+  canSubmit,
+  onSubmit,
+  onJump,
+  onRemoveLine,
+}: {
+  open: boolean;
+  mode: GearPicksSheetMode;
+  onOpenChange: (open: boolean) => void;
+  lines: DraftLine[];
+  readOnly: boolean;
+  totalCents: number;
+  allowanceCents: number;
+  /** Formatted deadline, if one is set. */
+  deadline: string | null;
+  problems: string[];
+  submitLabel: string;
+  submitting: boolean;
+  canSubmit: boolean;
+  onSubmit: () => void;
+  onJump: (style: string) => void;
+  onRemoveLine: (id: string) => void;
+}) {
+  const remainingCents = allowanceCents - totalCents;
+  const over = remainingCents < 0;
+  const count = lines.reduce((sum, line) => sum + line.quantity, 0);
+  const reviewing = mode === "review" && !readOnly;
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right">
+        <SheetHeader>
+          <SheetTitle>{reviewing ? "Review your picks" : "Your picks"}</SheetTitle>
+          <SheetDescription>
+            {reviewing
+              ? `Check each size and color before you submit.${deadline ? ` You can still change them until ${deadline}.` : ""}`
+              : count === 0
+                ? "Nothing picked yet."
+                : `${count} ${count === 1 ? "item" : "items"} · ${formatUsd(totalCents)} of ${formatUsd(allowanceCents)}`}
+          </SheetDescription>
+        </SheetHeader>
+
+        <SheetBody>
+          {lines.length === 0 ? (
+            <p className="px-6 py-8 text-sm text-muted-foreground">
+              Add gear from the catalog and it will show up here.
+            </p>
+          ) : (
+            <GearPickLineList
+              lines={lines}
+              onJump={onJump}
+              onRemoveLine={readOnly ? undefined : onRemoveLine}
+            />
+          )}
+        </SheetBody>
+
+        <SheetFooter className="flex-col gap-3 sm:flex-col sm:justify-start">
+          <dl className="grid grid-cols-[1fr_auto] gap-y-1 text-sm">
+            <dt className="text-muted-foreground">Picked</dt>
+            <dd className="text-right font-semibold tabular-nums">{formatUsd(totalCents)}</dd>
+            <dt className="text-muted-foreground">Allowance</dt>
+            <dd className="text-right tabular-nums">{formatUsd(allowanceCents)}</dd>
+            <dt className={over ? "font-semibold text-[var(--red-text)]" : "text-muted-foreground"}>
+              {over ? "Over by" : "Left"}
+            </dt>
+            <dd className={cn("text-right tabular-nums", over && "font-semibold text-[var(--red-text)]")}>
+              {formatUsd(Math.abs(remainingCents))}
+            </dd>
+          </dl>
+          <p className="text-xs text-muted-foreground">Free kit items (shown under Already in your kit) aren&apos;t listed here.</p>
+
+          {reviewing && (
+            <>
+              {(over || problems.length > 0) && (
+                <p className="flex items-start gap-1.5 text-xs text-[var(--orange-text)]" role="status">
+                  <AlertTriangleIcon className="mt-px size-3.5 shrink-0" aria-hidden="true" />
+                  {over ? `Remove ${formatUsd(-remainingCents)} of gear to submit.` : problems[0]}
+                </p>
+              )}
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" className="min-h-11 flex-1" onClick={() => onOpenChange(false)}>
+                  Keep picking
+                </Button>
+                <Button type="button" className="min-h-11 flex-1" disabled={!canSubmit} onClick={onSubmit}>
+                  {submitting ? "Submitting…" : submitLabel}
+                </Button>
+              </div>
+            </>
+          )}
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
