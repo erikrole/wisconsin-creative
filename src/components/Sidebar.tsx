@@ -25,6 +25,7 @@ import {
   UsersIcon,
   BookOpenIcon,
   ScrollTextIcon,
+  ShirtIcon,
   BarChart3Icon,
   SettingsIcon,
   HelpCircleIcon,
@@ -116,6 +117,7 @@ const navGroups: NavGroup[] = [
       { label: "Accountability", href: "/accountability", icon: ShieldAlertIcon },
       { label: "Users", href: "/users", icon: UsersIcon },
       { label: "Workforce", href: "/workforce", icon: UserPlusIcon, requiredRole: "ADMIN" },
+      { label: "UA Gear Picks", href: "/gear/admin", icon: ShirtIcon, requiredRole: "ADMIN" },
     ],
   },
   {

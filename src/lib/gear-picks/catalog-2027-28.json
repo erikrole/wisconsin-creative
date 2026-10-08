@@ -1,0 +1,3587 @@
+{
+ "cycle": "2027-28",
+ "title": "2027–28 Under Armour staff gear",
+ "allowances": {
+  "MEN": 185,
+  "WOMEN": 350
+ },
+ "categories": [
+  "Jackets & full-zips",
+  "Quarter-zips",
+  "Hoodies & crews",
+  "Polos",
+  "Tees",
+  "Pants & shorts",
+  "Base layer",
+  "Headwear",
+  "Footwear"
+ ],
+ "collections": [
+  {
+   "key": "sideline",
+   "label": "FW27 Sideline"
+  },
+  {
+   "key": "headwear",
+   "label": "Headwear"
+  },
+  {
+   "key": "footwear",
+   "label": "Footwear"
+  },
+  {
+   "key": "freedom",
+   "label": "Freedom"
+  },
+  {
+   "key": "ireland",
+   "label": "Ireland"
+  }
+ ],
+ "kits": {
+  "MEN": [
+   {
+    "kind": "STANDARD_ISSUE",
+    "style": "6021711",
+    "code": "107",
+    "name": "Drive Bladed Top",
+    "image": "/gear/2027-28/6021711-107.webp"
+   },
+   {
+    "kind": "STANDARD_ISSUE",
+    "style": "6021712",
+    "code": "834",
+    "name": "Drive Polo",
+    "image": "/gear/2027-28/6021712-834.webp"
+   },
+   {
+    "kind": "STANDARD_ISSUE",
+    "style": "6021673",
+    "code": "834",
+    "name": "CW Momentum 1/4 Zip",
+    "image": "/gear/2027-28/6021673-834.webp"
+   },
+   {
+    "kind": "STANDARD_ISSUE",
+    "style": "6024285",
+    "code": "102",
+    "name": "Velociti Fresh shoe (unisex)",
+    "image": "/gear/2027-28/6024285-102.webp"
+   },
+   {
+    "kind": "CORE_KIT",
+    "style": "6021649",
+    "code": "834",
+    "name": "Athletics SS Tee",
+    "image": "/gear/2027-28/6021649-834.webp"
+   },
+   {
+    "kind": "CORE_KIT",
+    "style": "6021650",
+    "code": "834",
+    "name": "Athletics LS Tee",
+    "image": "/gear/2027-28/6021650-834.webp"
+   },
+   {
+    "kind": "CORE_KIT",
+    "style": "6021674",
+    "code": "834",
+    "name": "CW Momentum Hoodie",
+    "image": "/gear/2027-28/6021674-834.webp"
+   },
+   {
+    "kind": "CORE_KIT",
+    "style": "6021687",
+    "code": "834",
+    "name": "Bouncy Tee",
+    "image": "/gear/2027-28/6021687-834.webp"
+   },
+   {
+    "kind": "CORE_KIT",
+    "style": "6021661",
+    "code": "286",
+    "name": "Momentum 1/4 Zip",
+    "image": "/gear/2027-28/6021661-286.webp"
+   }
+  ],
+  "WOMEN": [
+   {
+    "kind": "STANDARD_ISSUE",
+    "style": "6021628",
+    "code": "834",
+    "name": "Unstoppable Fleece Full-Zip",
+    "image": "/gear/2027-28/6021628-834.webp"
+   },
+   {
+    "kind": "STANDARD_ISSUE",
+    "style": "6021655",
+    "code": "834",
+    "name": "Athletics SS Tee",
+    "image": "/gear/2027-28/6021655-834.webp"
+   },
+   {
+    "kind": "STANDARD_ISSUE",
+    "style": "6021657",
+    "code": "834",
+    "name": "Athletics LS Tee",
+    "image": "/gear/2027-28/6021657-834.webp"
+   },
+   {
+    "kind": "STANDARD_ISSUE",
+    "style": "6024285",
+    "code": "102",
+    "name": "Velociti Fresh shoe (unisex)",
+    "image": "/gear/2027-28/6024285-102.webp"
+   }
+  ]
+ },
+ "items": [
+  {
+   "style": "6021626",
+   "name": "Unstoppable Fleece Full-Zip",
+   "fit": "MEN",
+   "category": "Jackets & full-zips",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 67.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021626-005.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021626-834.webp",
+     "imageNote": "Catalog sketch"
+    }
+   ]
+  },
+  {
+   "style": "6021627",
+   "name": "Unstoppable Fleece Pant",
+   "fit": "MEN",
+   "category": "Pants & shorts",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 67.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021627-005.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021630",
+   "name": "Unstoppable Airvent Full-Zip",
+   "fit": "MEN",
+   "category": "Jackets & full-zips",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 60.0,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "286",
+     "label": "Stone",
+     "swatch": "#E4DCCB",
+     "image": "/gear/2027-28/6021630-286.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021631",
+   "name": "Unstoppable Airvent Pant",
+   "fit": "MEN",
+   "category": "Pants & shorts",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 60.0,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021631-005.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021649",
+   "name": "Athletics SS Tee",
+   "fit": "MEN",
+   "category": "Tees",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 15.0,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021649-005.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021649-834.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021650",
+   "name": "Athletics LS Tee",
+   "fit": "MEN",
+   "category": "Tees",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 15.0,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021650-834.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6027754",
+   "name": "Icon Fleece Hood",
+   "fit": "MEN",
+   "category": "Hoodies & crews",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 37.75,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "844",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6027754-844.webp",
+     "imageNote": null
+    },
+    {
+     "code": "110",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6027754-110.webp",
+     "imageNote": "Color not pictured"
+    },
+    {
+     "code": "011",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6027754-011.webp",
+     "imageNote": "Color not pictured"
+    }
+   ]
+  },
+  {
+   "style": "6021634",
+   "name": "Icon Heavyweight Fleece Wash Hoodie",
+   "fit": "MEN",
+   "category": "Hoodies & crews",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 65.0,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "022",
+     "label": "Anthracite",
+     "swatch": "#45444A",
+     "image": "/gear/2027-28/6021634-022.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021635",
+   "name": "Icon Heavyweight Fleece Wash Cut-Off Hoodie",
+   "fit": "MEN",
+   "category": "Hoodies & crews",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 47.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "022",
+     "label": "Anthracite",
+     "swatch": "#45444A",
+     "image": "/gear/2027-28/6021635-022.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021637",
+   "name": "Icon Heavyweight Fleece Wash Pant",
+   "fit": "MEN",
+   "category": "Pants & shorts",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 60.0,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "022",
+     "label": "Anthracite",
+     "swatch": "#45444A",
+     "image": "/gear/2027-28/6021637-022.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021724",
+   "name": "Sportswear Tee",
+   "fit": "MEN",
+   "category": "Tees",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 22.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021724-005.webp",
+     "imageNote": null
+    },
+    {
+     "code": "107",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6021724-107.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021641",
+   "name": "Icon Mesh Shorts",
+   "fit": "MEN",
+   "category": "Pants & shorts",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 25.0,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021641-005.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021651",
+   "name": "Command Warm-Up Full-Zip",
+   "fit": "MEN",
+   "category": "Jackets & full-zips",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 47.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021651-005.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021652",
+   "name": "Command Warm-Up Pant",
+   "fit": "MEN",
+   "category": "Pants & shorts",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 47.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "004",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021652-004.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6024495",
+   "name": "HB Woven Jacket",
+   "fit": "MEN",
+   "category": "Jackets & full-zips",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 60.0,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "004",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6024495-004.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6024497",
+   "name": "HB Woven Pant",
+   "fit": "MEN",
+   "category": "Pants & shorts",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 60.0,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "004",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6024497-004.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021687",
+   "name": "Bouncy Tee",
+   "fit": "MEN",
+   "category": "Tees",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 35.0,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021687-005.webp",
+     "imageNote": null
+    },
+    {
+     "code": "106",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6021687-106.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021687-834.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021659",
+   "name": "Momentum SS Tee",
+   "fit": "MEN",
+   "category": "Tees",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 32.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021659-005.webp",
+     "imageNote": null
+    },
+    {
+     "code": "285",
+     "label": "Stone",
+     "swatch": "#E4DCCB",
+     "image": "/gear/2027-28/6021659-285.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021661",
+   "name": "Momentum 1/4 Zip",
+   "fit": "MEN",
+   "category": "Quarter-zips",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 45.0,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "006",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021661-006.webp",
+     "imageNote": null
+    },
+    {
+     "code": "286",
+     "label": "Stone",
+     "swatch": "#E4DCCB",
+     "image": "/gear/2027-28/6021661-286.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021661-834.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021664",
+   "name": "Momentum Polo",
+   "fit": "MEN",
+   "category": "Polos",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 37.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021664-005.webp",
+     "imageNote": null
+    },
+    {
+     "code": "284",
+     "label": "Stone",
+     "swatch": "#E4DCCB",
+     "image": "/gear/2027-28/6021664-284.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021664-834.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021660",
+   "name": "Momentum Bomber",
+   "fit": "MEN",
+   "category": "Jackets & full-zips",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 55.0,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "006",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021660-006.webp",
+     "imageNote": null
+    },
+    {
+     "code": "286",
+     "label": "Stone",
+     "swatch": "#E4DCCB",
+     "image": "/gear/2027-28/6021660-286.webp",
+     "imageNote": "Catalog sketch"
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021660-834.webp",
+     "imageNote": "Catalog sketch"
+    }
+   ]
+  },
+  {
+   "style": "6021672",
+   "name": "CW Momentum Full-Zip",
+   "fit": "MEN",
+   "category": "Jackets & full-zips",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 57.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021672-005.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021672-834.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021673",
+   "name": "CW Momentum 1/4 Zip",
+   "fit": "MEN",
+   "category": "Quarter-zips",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 52.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021673-005.webp",
+     "imageNote": null
+    },
+    {
+     "code": "107",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6021673-107.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021673-834.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021674",
+   "name": "CW Momentum Hoodie",
+   "fit": "MEN",
+   "category": "Hoodies & crews",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 55.0,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021674-005.webp",
+     "imageNote": null
+    },
+    {
+     "code": "107",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6021674-107.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021674-834.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021675",
+   "name": "CW Momentum Crew",
+   "fit": "MEN",
+   "category": "Hoodies & crews",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 50.0,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021675-005.webp",
+     "imageNote": null
+    },
+    {
+     "code": "107",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6021675-107.webp",
+     "imageNote": "Catalog sketch"
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021675-834.webp",
+     "imageNote": "Catalog sketch"
+    }
+   ]
+  },
+  {
+   "style": "6021683",
+   "name": "CW Momentum Vest",
+   "fit": "MEN",
+   "category": "Jackets & full-zips",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 52.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "001",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021683-001.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6026481",
+   "name": "Vanish CoolSwitch SS",
+   "fit": "MEN",
+   "category": "Tees",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 29.0,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "844",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6026481-844.webp",
+     "imageNote": null
+    },
+    {
+     "code": "110",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6026481-110.webp",
+     "imageNote": "Color not pictured"
+    },
+    {
+     "code": "011",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6026481-011.webp",
+     "imageNote": "Color not pictured"
+    }
+   ]
+  },
+  {
+   "style": "6021688",
+   "name": "Vanish CoolSwitch Hoodie",
+   "fit": "MEN",
+   "category": "Hoodies & crews",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 35.0,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "001",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021688-001.webp",
+     "imageNote": null
+    },
+    {
+     "code": "100",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6021688-100.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021688-834.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021690",
+   "name": "Vanish CoolSwitch LS",
+   "fit": "MEN",
+   "category": "Tees",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 30.0,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "001",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021690-001.webp",
+     "imageNote": null
+    },
+    {
+     "code": "100",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6021690-100.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021690-834.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021692",
+   "name": "Vanish CoolSwitch Sleeveless Hood",
+   "fit": "MEN",
+   "category": "Hoodies & crews",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 27.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021692-005.webp",
+     "imageNote": null
+    },
+    {
+     "code": "107",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6021692-107.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021692-834.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021695",
+   "name": "Vanish CoolSwitch Sleeveless Mock",
+   "fit": "MEN",
+   "category": "Tees",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 25.0,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "001",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021695-001.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021695-834.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021700",
+   "name": "Vanish Woven Short",
+   "fit": "MEN",
+   "category": "Pants & shorts",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 30.0,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021700-005.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021700-834.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021701",
+   "name": "Helix Tech Short",
+   "fit": "MEN",
+   "category": "Pants & shorts",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 22.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021701-005.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021701-834.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021705",
+   "name": "Storm Fleece Pro Crew",
+   "fit": "MEN",
+   "category": "Hoodies & crews",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 37.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021705-005.webp",
+     "imageNote": null
+    },
+    {
+     "code": "017",
+     "label": "Gray",
+     "swatch": "#A8A8AA",
+     "image": "/gear/2027-28/6021705-017.webp",
+     "imageNote": "Catalog sketch"
+    },
+    {
+     "code": "106",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6021705-106.webp",
+     "imageNote": "Catalog sketch"
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021705-834.webp",
+     "imageNote": "Catalog sketch"
+    }
+   ]
+  },
+  {
+   "style": "6021706",
+   "name": "Storm Fleece Pro Hoodie",
+   "fit": "MEN",
+   "category": "Hoodies & crews",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 40.0,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021706-005.webp",
+     "imageNote": null
+    },
+    {
+     "code": "017",
+     "label": "Gray",
+     "swatch": "#A8A8AA",
+     "image": "/gear/2027-28/6021706-017.webp",
+     "imageNote": "Catalog sketch"
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021706-834.webp",
+     "imageNote": "Catalog sketch"
+    }
+   ]
+  },
+  {
+   "style": "6021707",
+   "name": "Storm Fleece Pro Jogger",
+   "fit": "MEN",
+   "category": "Pants & shorts",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 40.0,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021707-005.webp",
+     "imageNote": null
+    },
+    {
+     "code": "018",
+     "label": "Gray",
+     "swatch": "#A8A8AA",
+     "image": "/gear/2027-28/6021707-018.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021711",
+   "name": "Drive Bladed Top",
+   "fit": "MEN",
+   "category": "Polos",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 37.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021711-005.webp",
+     "imageNote": null
+    },
+    {
+     "code": "107",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6021711-107.webp",
+     "imageNote": "Catalog sketch"
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021711-834.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021712",
+   "name": "Drive Polo",
+   "fit": "MEN",
+   "category": "Polos",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 40.0,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021712-005.webp",
+     "imageNote": null
+    },
+    {
+     "code": "107",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6021712-107.webp",
+     "imageNote": "Catalog sketch"
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021712-834.webp",
+     "imageNote": "Catalog sketch"
+    }
+   ]
+  },
+  {
+   "style": "6021713",
+   "name": "Drive Novelty Polo",
+   "fit": "MEN",
+   "category": "Polos",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 42.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "004",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021713-004.webp",
+     "imageNote": null
+    },
+    {
+     "code": "107",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6021713-107.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021717",
+   "name": "Motivate SS 1/4 Zip",
+   "fit": "MEN",
+   "category": "Quarter-zips",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 47.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021717-005.webp",
+     "imageNote": null
+    },
+    {
+     "code": "107",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6021717-107.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021717-834.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021718",
+   "name": "Motivate LS 1/4 Zip",
+   "fit": "MEN",
+   "category": "Quarter-zips",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 50.0,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021718-005.webp",
+     "imageNote": null
+    },
+    {
+     "code": "107",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6021718-107.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021718-834.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021719",
+   "name": "Motivate Sleeveless Hoodie",
+   "fit": "MEN",
+   "category": "Hoodies & crews",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 45.0,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021719-005.webp",
+     "imageNote": null
+    },
+    {
+     "code": "107",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6021719-107.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021719-834.webp",
+     "imageNote": "Catalog sketch"
+    }
+   ]
+  },
+  {
+   "style": "6021628",
+   "name": "Unstoppable Fleece Full-Zip",
+   "fit": "WOMEN",
+   "category": "Jackets & full-zips",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 67.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021628-005.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021628-834.webp",
+     "imageNote": "Catalog sketch"
+    }
+   ]
+  },
+  {
+   "style": "6021629",
+   "name": "Unstoppable Fleece Pant",
+   "fit": "WOMEN",
+   "category": "Pants & shorts",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 60.0,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021629-005.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021632",
+   "name": "Unstoppable Airvent Full-Zip",
+   "fit": "WOMEN",
+   "category": "Jackets & full-zips",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 60.0,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "286",
+     "label": "Stone",
+     "swatch": "#E4DCCB",
+     "image": "/gear/2027-28/6021632-286.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021633",
+   "name": "Unstoppable Airvent Pant",
+   "fit": "WOMEN",
+   "category": "Pants & shorts",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 60.0,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021633-005.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021655",
+   "name": "Athletics SS Tee",
+   "fit": "WOMEN",
+   "category": "Tees",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 15.0,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021655-005.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021655-834.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021657",
+   "name": "Athletics LS Tee",
+   "fit": "WOMEN",
+   "category": "Tees",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 15.0,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021657-834.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6027748",
+   "name": "Icon Fleece Hood",
+   "fit": "WOMEN",
+   "category": "Hoodies & crews",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 37.75,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "837",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6027748-837.webp",
+     "imageNote": "Color not pictured"
+    },
+    {
+     "code": "103",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6027748-103.webp",
+     "imageNote": "Color not pictured"
+    },
+    {
+     "code": "004",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6027748-004.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021638",
+   "name": "Icon Heavyweight Fleece Wash Crew",
+   "fit": "WOMEN",
+   "category": "Hoodies & crews",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 62.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "023",
+     "label": "Anthracite",
+     "swatch": "#45444A",
+     "image": "/gear/2027-28/6021638-023.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021639",
+   "name": "Icon Heavyweight Fleece Wash Pant",
+   "fit": "WOMEN",
+   "category": "Pants & shorts",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 60.0,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "023",
+     "label": "Anthracite",
+     "swatch": "#45444A",
+     "image": "/gear/2027-28/6021639-023.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021725",
+   "name": "Sportswear Tee",
+   "fit": "WOMEN",
+   "category": "Tees",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 22.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021725-005.webp",
+     "imageNote": null
+    },
+    {
+     "code": "107",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6021725-107.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021648",
+   "name": "VelocitiChill 3\" Short",
+   "fit": "WOMEN",
+   "category": "Pants & shorts",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 32.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021648-005.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021653",
+   "name": "Command Warm-Up Full-Zip",
+   "fit": "WOMEN",
+   "category": "Jackets & full-zips",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 47.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021653-005.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021654",
+   "name": "Command Warm-Up Pant",
+   "fit": "WOMEN",
+   "category": "Pants & shorts",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 47.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021654-005.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6024496",
+   "name": "HB Woven Jacket",
+   "fit": "WOMEN",
+   "category": "Jackets & full-zips",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 60.0,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "003",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6024496-003.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6024498",
+   "name": "HB Woven Pant",
+   "fit": "WOMEN",
+   "category": "Pants & shorts",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 55.0,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "003",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6024498-003.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021696",
+   "name": "Bouncy Tee",
+   "fit": "WOMEN",
+   "category": "Tees",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 32.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "001",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021696-001.webp",
+     "imageNote": null
+    },
+    {
+     "code": "100",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6021696-100.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021696-834.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021666",
+   "name": "Momentum SS Tee",
+   "fit": "WOMEN",
+   "category": "Tees",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 32.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021666-005.webp",
+     "imageNote": null
+    },
+    {
+     "code": "284",
+     "label": "Stone",
+     "swatch": "#E4DCCB",
+     "image": "/gear/2027-28/6021666-284.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021666-834.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021668",
+   "name": "Momentum Hoodie",
+   "fit": "WOMEN",
+   "category": "Hoodies & crews",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 47.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "006",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021668-006.webp",
+     "imageNote": null
+    },
+    {
+     "code": "285",
+     "label": "Stone",
+     "swatch": "#E4DCCB",
+     "image": "/gear/2027-28/6021668-285.webp",
+     "imageNote": "Catalog sketch"
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021668-834.webp",
+     "imageNote": "Catalog sketch"
+    }
+   ]
+  },
+  {
+   "style": "6021670",
+   "name": "Momentum 1/4 Zip",
+   "fit": "WOMEN",
+   "category": "Quarter-zips",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 45.0,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "006",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021670-006.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021670-834.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021671",
+   "name": "Momentum Polo",
+   "fit": "WOMEN",
+   "category": "Polos",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 37.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021671-005.webp",
+     "imageNote": null
+    },
+    {
+     "code": "284",
+     "label": "Stone",
+     "swatch": "#E4DCCB",
+     "image": "/gear/2027-28/6021671-284.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021671-834.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021680",
+   "name": "CW Momentum 1/4 Zip",
+   "fit": "WOMEN",
+   "category": "Quarter-zips",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 52.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021680-005.webp",
+     "imageNote": null
+    },
+    {
+     "code": "107",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6021680-107.webp",
+     "imageNote": "Catalog sketch"
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021680-834.webp",
+     "imageNote": "Catalog sketch"
+    }
+   ]
+  },
+  {
+   "style": "6021684",
+   "name": "CW Momentum Full-Zip",
+   "fit": "WOMEN",
+   "category": "Jackets & full-zips",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 57.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "002",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021684-002.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021684-834.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6027763",
+   "name": "Vanish CoolSwitch SS",
+   "fit": "WOMEN",
+   "category": "Tees",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 29.0,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "837",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6027763-837.webp",
+     "imageNote": "Color not pictured"
+    },
+    {
+     "code": "103",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6027763-103.webp",
+     "imageNote": "Color not pictured"
+    },
+    {
+     "code": "004",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6027763-004.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021697",
+   "name": "Vanish CoolSwitch Sleeveless",
+   "fit": "WOMEN",
+   "category": "Tees",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 22.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "001",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021697-001.webp",
+     "imageNote": null
+    },
+    {
+     "code": "100",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6021697-100.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021697-834.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021698",
+   "name": "Vanish CoolSwitch LS",
+   "fit": "WOMEN",
+   "category": "Tees",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 30.0,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021698-005.webp",
+     "imageNote": null
+    },
+    {
+     "code": "107",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6021698-107.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021698-834.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021699",
+   "name": "Vanish CoolSwitch LS Hood",
+   "fit": "WOMEN",
+   "category": "Hoodies & crews",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 35.0,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021699-005.webp",
+     "imageNote": null
+    },
+    {
+     "code": "107",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6021699-107.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021699-834.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021702",
+   "name": "Vanish Woven 3\" Short",
+   "fit": "WOMEN",
+   "category": "Pants & shorts",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 27.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021702-005.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021702-834.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021704",
+   "name": "Play Up Short",
+   "fit": "WOMEN",
+   "category": "Pants & shorts",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 25.0,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021704-005.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021704-834.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021708",
+   "name": "Storm Fleece Pro Crew",
+   "fit": "WOMEN",
+   "category": "Hoodies & crews",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 37.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021708-005.webp",
+     "imageNote": null
+    },
+    {
+     "code": "017",
+     "label": "Gray",
+     "swatch": "#A8A8AA",
+     "image": "/gear/2027-28/6021708-017.webp",
+     "imageNote": null
+    },
+    {
+     "code": "106",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6021708-106.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021708-834.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021709",
+   "name": "Storm Fleece Pro Hoodie",
+   "fit": "WOMEN",
+   "category": "Hoodies & crews",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 40.0,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021709-005.webp",
+     "imageNote": null
+    },
+    {
+     "code": "017",
+     "label": "Gray",
+     "swatch": "#A8A8AA",
+     "image": "/gear/2027-28/6021709-017.webp",
+     "imageNote": "Catalog sketch"
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021709-834.webp",
+     "imageNote": "Catalog sketch"
+    }
+   ]
+  },
+  {
+   "style": "6021710",
+   "name": "Storm Fleece Pro Jogger",
+   "fit": "WOMEN",
+   "category": "Pants & shorts",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 40.0,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021710-005.webp",
+     "imageNote": null
+    },
+    {
+     "code": "018",
+     "label": "Gray",
+     "swatch": "#A8A8AA",
+     "image": "/gear/2027-28/6021710-018.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021714",
+   "name": "Drive Bladed Top",
+   "fit": "WOMEN",
+   "category": "Polos",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 37.3,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021714-005.webp",
+     "imageNote": null
+    },
+    {
+     "code": "107",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6021714-107.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021714-834.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021715",
+   "name": "Drive Polo",
+   "fit": "WOMEN",
+   "category": "Polos",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 40.0,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "005",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021715-005.webp",
+     "imageNote": null
+    },
+    {
+     "code": "107",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6021715-107.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021715-834.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021716",
+   "name": "Drive Novelty Polo",
+   "fit": "WOMEN",
+   "category": "Polos",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 40.0,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "004",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021716-004.webp",
+     "imageNote": null
+    },
+    {
+     "code": "107",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6021716-107.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021663",
+   "name": "Momentum Short",
+   "fit": "MEN",
+   "category": "Pants & shorts",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 37.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "001",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021663-001.webp",
+     "imageNote": null
+    },
+    {
+     "code": "279",
+     "label": "Stone",
+     "swatch": "#E4DCCB",
+     "image": "/gear/2027-28/6021663-279.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021665",
+   "name": "Momentum Pant",
+   "fit": "MEN",
+   "category": "Pants & shorts",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 52.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "001",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021665-001.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021677",
+   "name": "CW Momentum Pant",
+   "fit": "MEN",
+   "category": "Pants & shorts",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 50,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "001",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021677-001.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6025915",
+   "name": "HeatGear Armour Compression Sleeveless",
+   "fit": "MEN",
+   "category": "Base layer",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 20,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "001",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6025915-001.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021743",
+   "name": "Unhemmed Drive Pant",
+   "fit": "MEN",
+   "category": "Pants & shorts",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 45,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "001",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021743-001.webp",
+     "imageNote": null
+    },
+    {
+     "code": "100",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6021743-100.webp",
+     "imageNote": "Catalog sketch"
+    }
+   ]
+  },
+  {
+   "style": "6021667",
+   "name": "Momentum Pant",
+   "fit": "WOMEN",
+   "category": "Pants & shorts",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 52.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "001",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021667-001.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021669",
+   "name": "Momentum Short",
+   "fit": "WOMEN",
+   "category": "Pants & shorts",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 37.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "001",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021669-001.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021703",
+   "name": "Vanish Woven Skort",
+   "fit": "WOMEN",
+   "category": "Pants & shorts",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 32.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6021703-834.webp",
+     "imageNote": null
+    },
+    {
+     "code": "001",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021703-001.webp",
+     "imageNote": null
+    },
+    {
+     "code": "100",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6021703-100.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6021742",
+   "name": "Momentum Legging",
+   "fit": "WOMEN",
+   "category": "Pants & shorts",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 52.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "001",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6021742-001.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6025917",
+   "name": "HeatGear Mid",
+   "fit": "WOMEN",
+   "category": "Base layer",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 15,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "001",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6025917-001.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6025918",
+   "name": "HeatGear High Bra",
+   "fit": "WOMEN",
+   "category": "Base layer",
+   "collection": "sideline",
+   "collectionLabel": null,
+   "price": 15,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "001",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6025918-001.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6026519",
+   "name": "Blitzing Stretch Fit Cap",
+   "fit": "UNISEX",
+   "category": "Headwear",
+   "collection": "headwear",
+   "collectionLabel": null,
+   "price": 21.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "280",
+     "label": "Stone",
+     "swatch": "#E4DCCB",
+     "image": "/gear/2027-28/6026519-280.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6026519-834.webp",
+     "imageNote": null
+    },
+    {
+     "code": "001",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6026519-001.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6026515",
+   "name": "Blitzing Adjustable Cap",
+   "fit": "UNISEX",
+   "category": "Headwear",
+   "collection": "headwear",
+   "collectionLabel": null,
+   "price": 21.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "280",
+     "label": "Stone",
+     "swatch": "#E4DCCB",
+     "image": "/gear/2027-28/6026515-280.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6026515-834.webp",
+     "imageNote": null
+    },
+    {
+     "code": "001",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6026515-001.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6026510",
+   "name": "Washed Cotton Adjustable Cap",
+   "fit": "UNISEX",
+   "category": "Headwear",
+   "collection": "headwear",
+   "collectionLabel": null,
+   "price": 20,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "280",
+     "label": "Stone",
+     "swatch": "#E4DCCB",
+     "image": "/gear/2027-28/6026510-280.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6026510-834.webp",
+     "imageNote": null
+    },
+    {
+     "code": "001",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6026510-001.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6026507",
+   "name": "Heavyweight Cotton Adjustable Cap",
+   "fit": "UNISEX",
+   "category": "Headwear",
+   "collection": "headwear",
+   "collectionLabel": null,
+   "price": 20.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "018",
+     "label": "Gray",
+     "swatch": "#A8A8AA",
+     "image": "/gear/2027-28/6026507-018.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6026523",
+   "name": "ArmourVent Stretch Fit Cap",
+   "fit": "UNISEX",
+   "category": "Headwear",
+   "collection": "headwear",
+   "collectionLabel": null,
+   "price": 24.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "101",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6026523-101.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6026523-834.webp",
+     "imageNote": null
+    },
+    {
+     "code": "001",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6026523-001.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6026518",
+   "name": "ArmourVent Adjustable Cap",
+   "fit": "UNISEX",
+   "category": "Headwear",
+   "collection": "headwear",
+   "collectionLabel": null,
+   "price": 24.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "101",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6026518-101.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6026518-834.webp",
+     "imageNote": null
+    },
+    {
+     "code": "001",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6026518-001.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6026514",
+   "name": "Women's ArmourVent Adjustable Cap",
+   "fit": "WOMEN",
+   "category": "Headwear",
+   "collection": "headwear",
+   "collectionLabel": null,
+   "price": 24.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "101",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6026514-101.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6026514-834.webp",
+     "imageNote": null
+    },
+    {
+     "code": "001",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6026514-001.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6026509",
+   "name": "ArmourVent Bucket Hat",
+   "fit": "UNISEX",
+   "category": "Headwear",
+   "collection": "headwear",
+   "collectionLabel": null,
+   "price": 26,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "280",
+     "label": "Stone",
+     "swatch": "#E4DCCB",
+     "image": "/gear/2027-28/6026509-280.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6026509-834.webp",
+     "imageNote": null
+    },
+    {
+     "code": "001",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6026509-001.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6026499",
+   "name": "Drive Adjustable Cap",
+   "fit": "UNISEX",
+   "category": "Headwear",
+   "collection": "headwear",
+   "collectionLabel": null,
+   "price": 27,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "101",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6026499-101.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6026499-834.webp",
+     "imageNote": null
+    },
+    {
+     "code": "001",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6026499-001.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6026493",
+   "name": "Drive Visor",
+   "fit": "UNISEX",
+   "category": "Headwear",
+   "collection": "headwear",
+   "collectionLabel": null,
+   "price": 23,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "101",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6026493-101.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6026493-834.webp",
+     "imageNote": null
+    },
+    {
+     "code": "001",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6026493-001.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6026486",
+   "name": "Cuffless Beanie",
+   "fit": "UNISEX",
+   "category": "Headwear",
+   "collection": "headwear",
+   "collectionLabel": null,
+   "price": 21.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "101",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6026486-101.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6026486-834.webp",
+     "imageNote": null
+    },
+    {
+     "code": "001",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6026486-001.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6026476",
+   "name": "Pom Beanie",
+   "fit": "UNISEX",
+   "category": "Headwear",
+   "collection": "headwear",
+   "collectionLabel": null,
+   "price": 22,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "280",
+     "label": "Stone",
+     "swatch": "#E4DCCB",
+     "image": "/gear/2027-28/6026476-280.webp",
+     "imageNote": null
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6026476-834.webp",
+     "imageNote": null
+    },
+    {
+     "code": "001",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6026476-001.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6024284",
+   "name": "UA Icon Lo",
+   "fit": "UNISEX",
+   "category": "Footwear",
+   "collection": "footwear",
+   "collectionLabel": null,
+   "price": 75,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "104",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6024284-104.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6013320",
+   "name": "UA Ignite Pro 8 Slide",
+   "fit": "UNISEX",
+   "category": "Footwear",
+   "collection": "footwear",
+   "collectionLabel": null,
+   "price": 30,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "001",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6013320-001.webp",
+     "imageNote": null
+    }
+   ]
+  },
+  {
+   "style": "6026525",
+   "name": "LS Performance Cotton Tee",
+   "fit": "MEN",
+   "category": "Tees",
+   "collection": "freedom",
+   "collectionLabel": "Freedom Collection",
+   "price": 24,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "026",
+     "label": "Castlerock",
+     "swatch": "#5E6064",
+     "image": "/gear/2027-28/6026525-026.webp",
+     "imageNote": "Spec sheet"
+    },
+    {
+     "code": "277",
+     "label": "Graystone",
+     "swatch": "#A49E86",
+     "image": "/gear/2027-28/6026525-277.webp",
+     "imageNote": "Spec sheet"
+    }
+   ]
+  },
+  {
+   "style": "6026522",
+   "name": "Women's LS Icon Tee",
+   "fit": "WOMEN",
+   "category": "Tees",
+   "collection": "freedom",
+   "collectionLabel": "Freedom Collection",
+   "price": 27.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "026",
+     "label": "Castlerock",
+     "swatch": "#5E6064",
+     "image": "/gear/2027-28/6026522-026.webp",
+     "imageNote": "Spec sheet"
+    },
+    {
+     "code": "277",
+     "label": "Graystone",
+     "swatch": "#A49E86",
+     "image": "/gear/2027-28/6026522-277.webp",
+     "imageNote": "Spec sheet"
+    }
+   ]
+  },
+  {
+   "style": "6026508",
+   "name": "Icon Fleece Hood",
+   "fit": "MEN",
+   "category": "Hoodies & crews",
+   "collection": "freedom",
+   "collectionLabel": "Freedom Collection",
+   "price": 72,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "025",
+     "label": "Castlerock",
+     "swatch": "#5E6064",
+     "image": "/gear/2027-28/6026508-025.webp",
+     "imageNote": "Spec sheet"
+    }
+   ]
+  },
+  {
+   "style": "6026511",
+   "name": "GD Woven Varsity Puffer Jacket",
+   "fit": "UNISEX",
+   "category": "Jackets & full-zips",
+   "collection": "freedom",
+   "collectionLabel": "Freedom Collection",
+   "price": 90,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "002",
+     "label": "Black",
+     "swatch": "#1E1E1E",
+     "image": "/gear/2027-28/6026511-002.webp",
+     "imageNote": "Spec sheet"
+    }
+   ]
+  },
+  {
+   "style": "6026520",
+   "name": "SS Performance Cotton Tee (UW stencil)",
+   "fit": "MEN",
+   "category": "Tees",
+   "collection": "freedom",
+   "collectionLabel": "Freedom Collection",
+   "price": 23,
+   "priceNote": "Price read as $23; confirm with UA",
+   "colors": [
+    {
+     "code": "026",
+     "label": "Castlerock",
+     "swatch": "#5E6064",
+     "image": "/gear/2027-28/6026520-026.webp",
+     "imageNote": "Spec sheet"
+    }
+   ]
+  },
+  {
+   "style": "6026517",
+   "name": "SS Performance Cotton Tee",
+   "fit": "MEN",
+   "category": "Tees",
+   "collection": "freedom",
+   "collectionLabel": "Freedom Collection",
+   "price": 21,
+   "priceNote": "Price read as $21; confirm with UA",
+   "colors": [
+    {
+     "code": "028",
+     "label": "Castlerock",
+     "swatch": "#5E6064",
+     "image": "/gear/2027-28/6026517-028.webp",
+     "imageNote": "Spec sheet"
+    },
+    {
+     "code": "027",
+     "label": "Castlerock",
+     "swatch": "#5E6064",
+     "image": "/gear/2027-28/6026517-027.webp",
+     "imageNote": "Spec sheet"
+    }
+   ]
+  },
+  {
+   "style": "6026516",
+   "name": "Women's SS Icon Tee",
+   "fit": "WOMEN",
+   "category": "Tees",
+   "collection": "freedom",
+   "collectionLabel": "Freedom Collection",
+   "price": 27,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "026",
+     "label": "Castlerock",
+     "swatch": "#5E6064",
+     "image": "/gear/2027-28/6026516-026.webp",
+     "imageNote": "Spec sheet"
+    }
+   ]
+  },
+  {
+   "style": "6026512",
+   "name": "Women's SS Icon Tee",
+   "fit": "WOMEN",
+   "category": "Tees",
+   "collection": "freedom",
+   "collectionLabel": "Freedom Collection",
+   "price": 25.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "028",
+     "label": "Castlerock",
+     "swatch": "#5E6064",
+     "image": "/gear/2027-28/6026512-028.webp",
+     "imageNote": "Spec sheet"
+    },
+    {
+     "code": "027",
+     "label": "Castlerock",
+     "swatch": "#5E6064",
+     "image": "/gear/2027-28/6026512-027.webp",
+     "imageNote": "Spec sheet"
+    }
+   ]
+  },
+  {
+   "style": "6026502",
+   "name": "Drive Adj Cap",
+   "fit": "UNISEX",
+   "category": "Headwear",
+   "collection": "freedom",
+   "collectionLabel": "Freedom Collection",
+   "price": 30,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "026",
+     "label": "Castlerock",
+     "swatch": "#5E6064",
+     "image": "/gear/2027-28/6026502-026.webp",
+     "imageNote": "Spec sheet"
+    }
+   ]
+  },
+  {
+   "style": "6026492",
+   "name": "Pom Beanie",
+   "fit": "UNISEX",
+   "category": "Headwear",
+   "collection": "freedom",
+   "collectionLabel": "Freedom Collection",
+   "price": 24.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "026",
+     "label": "Castlerock",
+     "swatch": "#5E6064",
+     "image": "/gear/2027-28/6026492-026.webp",
+     "imageNote": "Spec sheet"
+    },
+    {
+     "code": "277",
+     "label": "Graystone",
+     "swatch": "#A49E86",
+     "image": "/gear/2027-28/6026492-277.webp",
+     "imageNote": "Spec sheet"
+    }
+   ]
+  },
+  {
+   "style": "6026497",
+   "name": "Adj Cap with Flag Patch",
+   "fit": "UNISEX",
+   "category": "Headwear",
+   "collection": "freedom",
+   "collectionLabel": "Freedom Collection",
+   "price": 22,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "277",
+     "label": "Graystone",
+     "swatch": "#A49E86",
+     "image": "/gear/2027-28/6026497-277.webp",
+     "imageNote": "Spec sheet"
+    }
+   ]
+  },
+  {
+   "style": "6026498",
+   "name": "Unstoppable Fleece Full-Zip",
+   "fit": "MEN",
+   "category": "Jackets & full-zips",
+   "collection": "ireland",
+   "collectionLabel": "Ireland Collection",
+   "price": 73.25,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "100",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6026498-100.webp",
+     "imageNote": "Spec sheet"
+    }
+   ]
+  },
+  {
+   "style": "6026496",
+   "name": "Unstoppable Fleece Pant",
+   "fit": "MEN",
+   "category": "Pants & shorts",
+   "collection": "ireland",
+   "collectionLabel": "Ireland Collection",
+   "price": 58.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "100",
+     "label": "Halo Gray",
+     "swatch": "#D9D9D9",
+     "image": "/gear/2027-28/6026496-100.webp",
+     "imageNote": "Spec sheet"
+    }
+   ]
+  },
+  {
+   "style": "6026504",
+   "name": "Momentum Quarter-Zip",
+   "fit": "MEN",
+   "category": "Quarter-zips",
+   "collection": "ireland",
+   "collectionLabel": "Ireland Collection",
+   "price": 45,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6026504-834.webp",
+     "imageNote": "Spec sheet"
+    },
+    {
+     "code": "101",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6026504-101.webp",
+     "imageNote": "Spec sheet"
+    }
+   ]
+  },
+  {
+   "style": "6026494",
+   "name": "Momentum Bomber",
+   "fit": "MEN",
+   "category": "Jackets & full-zips",
+   "collection": "ireland",
+   "collectionLabel": "Ireland Collection",
+   "price": 75,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6026494-834.webp",
+     "imageNote": "Spec sheet"
+    },
+    {
+     "code": "100",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6026494-100.webp",
+     "imageNote": "Spec sheet"
+    }
+   ]
+  },
+  {
+   "style": "6026490",
+   "name": "Momentum Polo",
+   "fit": "MEN",
+   "category": "Polos",
+   "collection": "ireland",
+   "collectionLabel": "Ireland Collection",
+   "price": 45,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6026490-834.webp",
+     "imageNote": "Spec sheet"
+    },
+    {
+     "code": "100",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6026490-100.webp",
+     "imageNote": "Spec sheet"
+    }
+   ]
+  },
+  {
+   "style": "6026491",
+   "name": "Momentum SS Tee",
+   "fit": "MEN",
+   "category": "Tees",
+   "collection": "ireland",
+   "collectionLabel": "Ireland Collection",
+   "price": 35,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6026491-834.webp",
+     "imageNote": "Spec sheet"
+    },
+    {
+     "code": "100",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6026491-100.webp",
+     "imageNote": "Spec sheet"
+    }
+   ]
+  },
+  {
+   "style": "6026484",
+   "name": "Icon Fleece Hood",
+   "fit": "MEN",
+   "category": "Hoodies & crews",
+   "collection": "ireland",
+   "collectionLabel": "Ireland Collection",
+   "price": 60,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6026484-834.webp",
+     "imageNote": "Spec sheet"
+    },
+    {
+     "code": "100",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6026484-100.webp",
+     "imageNote": "Spec sheet"
+    }
+   ]
+  },
+  {
+   "style": "6026487",
+   "name": "SS CoolSwitch Vanish Tee",
+   "fit": "MEN",
+   "category": "Tees",
+   "collection": "ireland",
+   "collectionLabel": "Ireland Collection",
+   "price": 29,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6026487-834.webp",
+     "imageNote": "Spec sheet"
+    },
+    {
+     "code": "100",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6026487-100.webp",
+     "imageNote": "Spec sheet"
+    }
+   ]
+  },
+  {
+   "style": "6026477",
+   "name": "Icon Heavyweight Tee",
+   "fit": "MEN",
+   "category": "Tees",
+   "collection": "ireland",
+   "collectionLabel": "Ireland Collection",
+   "price": 25,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6026477-834.webp",
+     "imageNote": "Spec sheet"
+    },
+    {
+     "code": "100",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6026477-100.webp",
+     "imageNote": "Spec sheet"
+    }
+   ]
+  },
+  {
+   "style": "6026489",
+   "name": "LS CoolSwitch Vanish Tee",
+   "fit": "MEN",
+   "category": "Tees",
+   "collection": "ireland",
+   "collectionLabel": "Ireland Collection",
+   "price": 31.5,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6026489-834.webp",
+     "imageNote": "Spec sheet"
+    },
+    {
+     "code": "100",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6026489-100.webp",
+     "imageNote": "Spec sheet"
+    }
+   ]
+  },
+  {
+   "style": "6026474",
+   "name": "SS Icon Tee (Dublin)",
+   "fit": "MEN",
+   "category": "Tees",
+   "collection": "ireland",
+   "collectionLabel": "Ireland Collection",
+   "price": 21.75,
+   "priceNote": "Price read as $21.75; confirm with UA",
+   "colors": [
+    {
+     "code": "100",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6026474-100.webp",
+     "imageNote": "Spec sheet"
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6026474-834.webp",
+     "imageNote": "Spec sheet"
+    }
+   ]
+  },
+  {
+   "style": "6026471",
+   "name": "SS Icon Tee (Celtic knot)",
+   "fit": "MEN",
+   "category": "Tees",
+   "collection": "ireland",
+   "collectionLabel": "Ireland Collection",
+   "price": 23.75,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "100",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6026471-100.webp",
+     "imageNote": "Spec sheet"
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6026471-834.webp",
+     "imageNote": "Spec sheet"
+    }
+   ]
+  },
+  {
+   "style": "6026468",
+   "name": "SS Icon Tee (Ní Neart)",
+   "fit": "MEN",
+   "category": "Tees",
+   "collection": "ireland",
+   "collectionLabel": "Ireland Collection",
+   "price": 25.75,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "100",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6026468-100.webp",
+     "imageNote": "Spec sheet"
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6026468-834.webp",
+     "imageNote": "Spec sheet"
+    }
+   ]
+  },
+  {
+   "style": "6026480",
+   "name": "Women's Icon Fleece Hood",
+   "fit": "WOMEN",
+   "category": "Hoodies & crews",
+   "collection": "ireland",
+   "collectionLabel": "Ireland Collection",
+   "price": 60,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6026480-834.webp",
+     "imageNote": "Spec sheet"
+    },
+    {
+     "code": "100",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6026480-100.webp",
+     "imageNote": "Spec sheet"
+    }
+   ]
+  },
+  {
+   "style": "6026538",
+   "name": "Women's SS Icon Tee (Ní Neart)",
+   "fit": "WOMEN",
+   "category": "Tees",
+   "collection": "ireland",
+   "collectionLabel": "Ireland Collection",
+   "price": 20.25,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "100",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6026538-100.webp",
+     "imageNote": "Spec sheet"
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6026538-834.webp",
+     "imageNote": "Spec sheet"
+    }
+   ]
+  },
+  {
+   "style": "6026539",
+   "name": "Women's SS Icon Tee (Celtic knot)",
+   "fit": "WOMEN",
+   "category": "Tees",
+   "collection": "ireland",
+   "collectionLabel": "Ireland Collection",
+   "price": 20.25,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "100",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6026539-100.webp",
+     "imageNote": "Spec sheet"
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6026539-834.webp",
+     "imageNote": "Spec sheet"
+    }
+   ]
+  },
+  {
+   "style": "6026465",
+   "name": "Women's SS Icon Tee (Dublin)",
+   "fit": "WOMEN",
+   "category": "Tees",
+   "collection": "ireland",
+   "collectionLabel": "Ireland Collection",
+   "price": 20.25,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "100",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6026465-100.webp",
+     "imageNote": "Spec sheet"
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6026465-834.webp",
+     "imageNote": "Spec sheet"
+    }
+   ]
+  },
+  {
+   "style": "6026466",
+   "name": "Drive Snapback",
+   "fit": "UNISEX",
+   "category": "Headwear",
+   "collection": "ireland",
+   "collectionLabel": "Ireland Collection",
+   "price": 27,
+   "priceNote": "Price read as $27; confirm with UA",
+   "colors": [
+    {
+     "code": "100",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6026466-100.webp",
+     "imageNote": "Spec sheet"
+    }
+   ]
+  },
+  {
+   "style": "6026469",
+   "name": "Washed Cotton Adj Cap",
+   "fit": "UNISEX",
+   "category": "Headwear",
+   "collection": "ireland",
+   "collectionLabel": "Ireland Collection",
+   "price": 20,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "100",
+     "label": "White",
+     "swatch": "#FFFFFF",
+     "image": "/gear/2027-28/6026469-100.webp",
+     "imageNote": "Spec sheet"
+    },
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6026469-834.webp",
+     "imageNote": "Spec sheet"
+    }
+   ]
+  },
+  {
+   "style": "6026472",
+   "name": "Pom Beanie",
+   "fit": "UNISEX",
+   "category": "Headwear",
+   "collection": "ireland",
+   "collectionLabel": "Ireland Collection",
+   "price": 22,
+   "priceNote": null,
+   "colors": [
+    {
+     "code": "834",
+     "label": "Red",
+     "swatch": "#A00000",
+     "image": "/gear/2027-28/6026472-834.webp",
+     "imageNote": "Spec sheet"
+    }
+   ]
+  }
+ ],
+ "sources": "UA FW27 Wisconsin Pinnacle B2B, AE Headwear, Licensed Footwear 27, Freedom and Ireland spec sheets (Equipment Department share, UA 2027-28). Team prices; four Freedom/Ireland prices read off spec sheets are flagged priceNote."
+}

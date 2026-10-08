@@ -46,8 +46,9 @@
 | `src/lib/services/event-worker.ts` | 125 |
 | `src/lib/services/firmware-watch.ts` | 329 |
 | `src/lib/services/game-record.ts` | 169 |
+| `src/lib/services/gear-picks.ts` | 533 |
 | `src/lib/services/hidden-users-cleanup.ts` | 122 |
-| `src/lib/services/item-cleanup-wizard.ts` | 428 |
+| `src/lib/services/item-cleanup-wizard.ts` | 762 |
 | `src/lib/services/job-runs.ts` | 52 |
 | `src/lib/services/kiosk-active-checkout-items.ts` | 492 |
 | `src/lib/services/kiosk-actor.ts` | 51 |
@@ -138,7 +139,7 @@
 | `src/lib/booking-display-title.ts` | 14 |
 | `src/lib/booking-status-display.ts` | 170 |
 | `src/lib/booking-statuses.ts` | 9 |
-| `src/lib/breadcrumbs.ts` | 179 |
+| `src/lib/breadcrumbs.ts` | 180 |
 | `src/lib/brother-label-csv.ts` | 134 |
 | `src/lib/bulk-batteries.ts` | 28 |
 | `src/lib/bulk-schedule-assignment-types.ts` | 213 |
@@ -203,11 +204,11 @@
 | `src/lib/notification-destination.ts` | 85 |
 | `src/lib/observability.ts` | 19 |
 | `src/lib/operational-health.ts` | 2 |
-| `src/lib/ops-checks.ts` | 206 |
+| `src/lib/ops-checks.ts` | 212 |
 | `src/lib/passkey-client.ts` | 73 |
 | `src/lib/passkey.ts` | 371 |
 | `src/lib/password-rules.ts` | 16 |
-| `src/lib/permissions.ts` | 245 |
+| `src/lib/permissions.ts` | 253 |
 | `src/lib/preview-activity.ts` | 23 |
 | `src/lib/prisma-errors.ts` | 38 |
 | `src/lib/profile-completion-events.ts` | 6 |
@@ -515,6 +516,12 @@
 ### `/api/form-options`
 
 - `/api/form-options`
+
+### `/api/gear-picks`
+
+- `/api/gear-picks/admin/export.csv`
+- `/api/gear-picks/admin`
+- `/api/gear-picks/me`
 
 ### `/api/hiring`
 
