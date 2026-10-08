@@ -4,7 +4,7 @@
 
 - Area: Yearly Under Armour staff gear picks for full-time creative staff
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-10-07
+- Last Updated: 2026-10-08
 - Status: Built on `feat/ua-gear-picks` for cycle 2027-28; authenticated preview proof pending.
 - Routes: `/gear` (participants), `/gear/admin` (ADMIN only)
 
@@ -56,6 +56,7 @@ It uses the direct database URL resolver (`DIRECT_URL`, then `DATABASE_URL_UNPOO
 ## UI
 
 - `/gear`: "Already in your kit" thumbnails from the catalog `kits`, then the catalog by category with jump links, search (name, color, item number, collection), collection chips, and "Only what fits my budget" (on by default; hides unpicked items priced above what is left). Cards swap the image by color, show the catalog-sketch or spec-sheet badge, price notes, and collection eyebrow, and open a larger preview. Each color holds one or more size lines with a quantity stepper. A sticky footer shows the total against the allowance, what is left or the overage, and Save draft / Submit picks (after submitting, Save changes). Non-participants see an explanation.
+- `/gear` intro: a "How it works" splash (`GearPicksIntro.tsx`) opens automatically on a participant's first visit each cycle (normally right after the dashboard banner) while picks are open and not yet submitted. Seen state is per device in localStorage (`gear-picks-intro-seen:<cycleId>:<participantId>`, so a shared browser still shows it to each person). It shows the kit count for their fit, their allowance (or what is left on a draft), and the deadline with its time, plus tips: "Fits my budget" is on, tap a photo to enlarge, which sizes are prefilled (clothing and/or shoe, from the profile) or that they need to pick sizes, changes allowed until the deadline. A "How it works" header button reopens it while picks are open.
 - `/gear/admin`: summary counts, deadline editor, people table (status Not started / Draft / Submitted, fit, editable allowance, picked total, expandable lines, remove with confirmation), add-person picker, totals by item, color, and size, and Export CSV. Sidebar entry "UA Gear Picks" under Team for admins.
 - Dashboard: a banner for participants who haven't submitted while the cycle is open, with the allowance and deadline and a "Choose gear" button.
 
@@ -76,3 +77,4 @@ It uses the direct database URL resolver (`DIRECT_URL`, then `DATABASE_URL_UNPOO
 
 - 2026-10-07: First build for 2027-28: schema and migration `0169_gear_picks`, roster seed script, participant pick page, admin results with CSV export, dashboard banner, `gear_picks` permission.
 - 2026-10-08: Default allowances raised to Men's $192 and Women's $357 to match the equipment sheet. The 8 production participant rows were seeded at these amounts.
+- 2026-10-08: "How it works" first-visit splash on `/gear` with a header button to reopen it. Accepted on the authenticated local preview at phone and desktop width (after-only proof: `tasks/archive/proofs/gear-picks-intro-2026-10-08/review.html`); automatic first-visit open not captured because the preview participant had already submitted.
