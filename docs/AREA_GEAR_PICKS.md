@@ -10,7 +10,7 @@
 
 ## Direction
 
-Each year full-time creative staff pick Under Armour gear, on top of their free standard issue, up to a dollar allowance by fit (2027-28: Men's $185, Women's $350). This replaces a static pick-list page and a copy-and-paste email. Staff save and submit in the app; an admin reads the results and copies the CSV into the equipment order sheet by hand. There is no server-side Google Sheets integration.
+Each year full-time creative staff pick Under Armour gear, on top of their free standard issue, up to a dollar allowance by fit (2027-28: Men's $192, Women's $357). This replaces a static pick-list page and a copy-and-paste email. Staff save and submit in the app; an admin reads the results and copies the CSV into the equipment order sheet by hand. There is no server-side Google Sheets integration.
 
 ## Rules
 
@@ -75,3 +75,4 @@ It uses the direct database URL resolver (`DIRECT_URL`, then `DATABASE_URL_UNPOO
 ## Change Log
 
 - 2026-10-07: First build for 2027-28: schema and migration `0169_gear_picks`, roster seed script, participant pick page, admin results with CSV export, dashboard banner, `gear_picks` permission.
+- 2026-10-08: Default allowances raised to Men's $192 and Women's $357 to match the equipment sheet. The 8 production participant rows were seeded at these amounts.
