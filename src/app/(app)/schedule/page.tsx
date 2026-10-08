@@ -352,7 +352,11 @@ function InternalSchedulePage() {
     const publish = () => {
       const top = Math.round(appShellHeader?.getBoundingClientRect().height ?? 0)
         + Math.round(appShellBreadcrumb?.getBoundingClientRect().height ?? 0);
-      const bottom = Math.round(el.getBoundingClientRect().bottom);
+      // Sticky top plus the frame's own height. The frame's viewport rect
+      // bottom would also move with scroll position: a publish that ran while
+      // the frame sat unpinned (filter chips wrapping, a clear-all) stuck the
+      // day headers at that stale offset, leaving a gap and hiding rows.
+      const bottom = top + Math.round(el.getBoundingClientRect().height);
       document.documentElement.style.setProperty("--schedule-sticky-top", `${top}px`);
       document.documentElement.style.setProperty("--schedule-sticky-bottom", `${bottom}px`);
     };
