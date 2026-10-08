@@ -389,6 +389,24 @@ function AddParticipant({
   );
 }
 
+/**
+ * `submittedAt` stays at the first submit, so a later edit shows as "Changed"
+ * with the submit time underneath; admins can spot lists that moved before export.
+ */
+function LastChange({ submission }: { submission: GearPickAdminParticipant["submission"] }) {
+  if (!submission) return <>—</>;
+  if (!submission.submittedAt) return <>Saved {formatDateTime(submission.updatedAt)}</>;
+  const changedAfterSubmit =
+    new Date(submission.updatedAt).getTime() - new Date(submission.submittedAt).getTime() > 60_000;
+  if (!changedAfterSubmit) return <>Submitted {formatDateTime(submission.submittedAt)}</>;
+  return (
+    <>
+      <span className="font-medium text-[var(--orange-text)]">Changed {formatDateTime(submission.updatedAt)}</span>
+      <span className="block">Submitted {formatDateTime(submission.submittedAt)}</span>
+    </>
+  );
+}
+
 function AllowanceInput({
   participant,
   pending,
@@ -404,7 +422,8 @@ function AllowanceInput({
   }, [participant.allowanceCents]);
 
   function commit() {
-    const dollars = Number(value);
+    // Number("") is 0, so a cleared box would silently save $0; treat it as invalid.
+    const dollars = value.trim() === "" ? Number.NaN : Number(value);
     if (!Number.isFinite(dollars) || dollars < 0) {
       setValue((participant.allowanceCents / 100).toFixed(2));
       toast.error("Enter an allowance in dollars, like 185.");
@@ -528,11 +547,7 @@ function ParticipantsTable({
                     {formatUsd(total)}
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground">
-                    {participant.submission?.submittedAt
-                      ? `Submitted ${formatDateTime(participant.submission.submittedAt)}`
-                      : participant.submission
-                        ? `Saved ${formatDateTime(participant.submission.updatedAt)}`
-                        : "—"}
+                    <LastChange submission={participant.submission} />
                   </TableCell>
                   <TableCell>
                     <Button
