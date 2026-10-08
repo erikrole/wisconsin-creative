@@ -48,12 +48,16 @@ const submissionSelect = {
 type LineRow = Prisma.GearPickLineGetPayload<{ select: typeof lineSelect }>;
 type SubmissionRow = Prisma.GearPickSubmissionGetPayload<{ select: typeof submissionSelect }>;
 
-function cycleDto(cycle: { id: string; title: string; deadline: Date | null }, now: Date): GearPickCycleDto {
+function cycleDto(
+  cycle: { id: string; title: string; deadline: Date | null; launchedAt: Date | null },
+  now: Date,
+): GearPickCycleDto {
   return {
     id: cycle.id,
     title: cycle.title,
     deadline: cycle.deadline?.toISOString() ?? null,
     isOpen: isGearPickCycleOpen(cycle.deadline, now),
+    launchedAt: cycle.launchedAt?.toISOString() ?? null,
   };
 }
 
@@ -107,8 +111,9 @@ export async function getMyGearPicks(user: Actor, now: Date = new Date()): Promi
 }
 
 /**
- * One person's cycle, participation, and saved list. `viewer` only decides
- * `isAdmin`; callers own the self-or-manage access check.
+ * One person's cycle, participation, and saved list. Callers own the
+ * self-or-manage access check. Before launch, non-admins see no cycle at all,
+ * so the banner, /gear, and the profile tab stay admin-only.
  */
 export async function getGearPicksForUser(
   userId: string,
@@ -118,7 +123,7 @@ export async function getGearPicksForUser(
   const [cycle, participant, profile] = await Promise.all([
     db.gearPickCycle.findUnique({
       where: { id: GEAR_PICK_CYCLE_ID },
-      select: { id: true, title: true, deadline: true },
+      select: { id: true, title: true, deadline: true, launchedAt: true },
     }),
     db.gearPickParticipant.findUnique({
       where: { cycleId_userId: { cycleId: GEAR_PICK_CYCLE_ID, userId } },
@@ -130,19 +135,23 @@ export async function getGearPicksForUser(
     }),
   ]);
 
+  const isAdmin = viewer.role === Role.ADMIN;
+  const visibleCycle = cycle && (cycle.launchedAt || isAdmin) ? cycle : null;
+  const visibleParticipant = visibleCycle ? participant : null;
+
   return {
-    cycle: cycle ? cycleDto(cycle, now) : null,
-    participant: participant
-      ? { id: participant.id, fit: participant.fit, allowanceCents: participant.allowanceCents }
+    cycle: visibleCycle ? cycleDto(visibleCycle, now) : null,
+    participant: visibleParticipant
+      ? { id: visibleParticipant.id, fit: visibleParticipant.fit, allowanceCents: visibleParticipant.allowanceCents }
       : null,
-    submission: submissionDto(participant?.submission ?? null),
+    submission: submissionDto(visibleParticipant?.submission ?? null),
     profile: {
       topSize: profile?.topSize ?? null,
       topSizeFit: profile?.topSizeFit ?? null,
       shoeSize: profile?.shoeSize ?? null,
       shoeSizeSystem: profile?.shoeSizeSystem ?? null,
     },
-    isAdmin: viewer.role === Role.ADMIN,
+    isAdmin,
   };
 }
 
@@ -160,9 +169,11 @@ export async function saveMyGearPicks(params: {
       const now = params.now ?? new Date();
       const cycle = await tx.gearPickCycle.findUnique({
         where: { id: GEAR_PICK_CYCLE_ID },
-        select: { id: true, deadline: true },
+        select: { id: true, deadline: true, launchedAt: true },
       });
-      if (!cycle) throw new HttpError(404, "Gear picks aren't open yet.");
+      if (!cycle || (!cycle.launchedAt && actor.role !== Role.ADMIN)) {
+        throw new HttpError(404, "Gear picks aren't open yet.");
+      }
 
       const participant = await tx.gearPickParticipant.findUnique({
         where: { cycleId_userId: { cycleId: cycle.id, userId: actor.id } },
@@ -277,7 +288,7 @@ export async function saveMyGearPicks(params: {
 async function loadCycleOrThrow(client: Prisma.TransactionClient | typeof db) {
   const cycle = await client.gearPickCycle.findUnique({
     where: { id: GEAR_PICK_CYCLE_ID },
-    select: { id: true, title: true, deadline: true },
+    select: { id: true, title: true, deadline: true, launchedAt: true },
   });
   if (!cycle) throw new HttpError(404, "The 2027–28 gear pick cycle hasn't been set up.");
   return cycle;
@@ -361,6 +372,7 @@ export async function getGearPicksAdmin(now: Date = new Date()): Promise<GearPic
 
 export type GearPicksAdminChange =
   | { action: "setDeadline"; deadline: string | null }
+  | { action: "setLaunched"; launched: boolean }
   | { action: "addParticipant"; userId: string; fit: GearPickFitKey; allowanceCents?: number }
   | { action: "updateParticipant"; participantId: string; fit?: GearPickFitKey; allowanceCents?: number }
   | { action: "removeParticipant"; participantId: string };
@@ -382,6 +394,21 @@ export async function applyGearPicksAdminChange(actor: Actor, change: GearPicksA
             action: "set_deadline",
             before: { deadline: cycle.deadline?.toISOString() ?? null },
             after: { deadline: deadline?.toISOString() ?? null },
+          });
+          return { cycleId: cycle.id };
+        }
+
+        case "setLaunched": {
+          const launchedAt = change.launched ? (cycle.launchedAt ?? new Date()) : null;
+          await tx.gearPickCycle.update({ where: { id: cycle.id }, data: { launchedAt } });
+          await createAuditEntryTx(tx, {
+            actorId: actor.id,
+            actorRole: actor.role,
+            entityType: "gear_pick_cycle",
+            entityId: cycle.id,
+            action: change.launched ? "launch" : "unlaunch",
+            before: { launchedAt: cycle.launchedAt?.toISOString() ?? null },
+            after: { launchedAt: launchedAt?.toISOString() ?? null },
           });
           return { cycleId: cycle.id };
         }

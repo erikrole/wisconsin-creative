@@ -15,6 +15,10 @@ const patchSchema = z.discriminatedUnion("action", [
     deadline: z.string().datetime({ offset: true }).nullable(),
   }),
   z.object({
+    action: z.literal("setLaunched"),
+    launched: z.boolean(),
+  }),
+  z.object({
     action: z.literal("addParticipant"),
     userId: z.string().trim().min(1).max(64),
     fit: fitSchema,

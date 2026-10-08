@@ -51,7 +51,9 @@ const admin = { ...staff, id: "admin-1", name: "Admin", role: Role.ADMIN };
 const MEN_TEE = "6021649-005"; // $15.00
 const WOMEN_FULL_ZIP = "6021628-005";
 
-const openCycle = { id: "2027-28", title: "2027–28 Under Armour staff gear", deadline: null };
+const LAUNCHED = new Date("2026-10-01T12:00:00Z");
+const openCycle = { id: "2027-28", title: "2027–28 Under Armour staff gear", deadline: null, launchedAt: LAUNCHED };
+const unlaunchedCycle = { ...openCycle, launchedAt: null };
 const participant = { id: "participant-1", fit: "MEN", allowanceCents: 18_500, submission: null };
 
 function put(body: unknown) {
@@ -106,7 +108,7 @@ describe("GET /api/gear-picks/me", () => {
 
     expect(response.status).toBe(200);
     expect(json.data).toMatchObject({
-      cycle: { id: "2027-28", deadline: null, isOpen: true },
+      cycle: { id: "2027-28", deadline: null, isOpen: true, launchedAt: LAUNCHED.toISOString() },
       participant: null,
       submission: null,
       profile: { topSize: "2XL", shoeSize: "11" },
@@ -117,6 +119,27 @@ describe("GET /api/gear-picks/me", () => {
   it("keeps collaborators out", async () => {
     vi.mocked(requireAuth).mockResolvedValue({ ...staff, role: Role.COLLABORATOR });
     expect((await getMe(new Request(`${ORIGIN}/api/gear-picks/me`), context)).status).toBe(403);
+  });
+
+  it("hides an unlaunched cycle from staff, even participants", async () => {
+    vi.mocked(db.gearPickCycle.findUnique).mockResolvedValue(unlaunchedCycle as never);
+    vi.mocked(db.gearPickParticipant.findUnique).mockResolvedValue(participant as never);
+    vi.mocked(db.user.findUnique).mockResolvedValue({ topSize: null, topSizeFit: null, shoeSize: null, shoeSizeSystem: null } as never);
+
+    const json = await (await getMe(new Request(`${ORIGIN}/api/gear-picks/me`), context)).json();
+
+    expect(json.data).toMatchObject({ cycle: null, participant: null, submission: null });
+  });
+
+  it("shows an unlaunched cycle to admins", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(admin);
+    vi.mocked(db.gearPickCycle.findUnique).mockResolvedValue(unlaunchedCycle as never);
+    vi.mocked(db.gearPickParticipant.findUnique).mockResolvedValue(participant as never);
+    vi.mocked(db.user.findUnique).mockResolvedValue({ topSize: null, topSizeFit: null, shoeSize: null, shoeSizeSystem: null } as never);
+
+    const json = await (await getMe(new Request(`${ORIGIN}/api/gear-picks/me`), context)).json();
+
+    expect(json.data).toMatchObject({ cycle: { launchedAt: null }, participant: { id: "participant-1" }, isAdmin: true });
   });
 });
 
@@ -241,6 +264,24 @@ describe("PUT /api/gear-picks/me", () => {
     expect(tx.gearPickLine!.deleteMany).not.toHaveBeenCalled();
   });
 
+  it("refuses staff saves before launch", async () => {
+    tx.gearPickCycle!.findUnique!.mockResolvedValue(unlaunchedCycle);
+
+    const response = await putMe(put({ lines: [], submit: false, version: 0 }), context);
+
+    expect(response.status).toBe(404);
+    expect(tx.gearPickSubmission!.create).not.toHaveBeenCalled();
+  });
+
+  it("lets admins save before launch", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(admin);
+    tx.gearPickCycle!.findUnique!.mockResolvedValue(unlaunchedCycle);
+
+    const response = await putMe(put({ lines: [{ sku: MEN_TEE, size: "M", quantity: 1 }], submit: false, version: 0 }), context);
+
+    expect(response.status).toBe(200);
+  });
+
   it("locks picks after the deadline", async () => {
     tx.gearPickCycle!.findUnique!.mockResolvedValue({ ...openCycle, deadline: new Date("2020-01-01T00:00:00Z") });
 
@@ -308,6 +349,36 @@ describe("admin routes", () => {
         before: { deadline: null },
         after: { deadline: "2026-11-01T05:00:00.000Z" },
       }),
+    );
+  });
+
+  it("launches the cycle to staff with an audit entry", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(admin);
+    tx.gearPickCycle!.findUnique!.mockResolvedValue(unlaunchedCycle);
+
+    const response = await patchAdmin(patch({ action: "setLaunched", launched: true }), context);
+
+    expect(response.status).toBe(200);
+    expect(tx.gearPickCycle!.update).toHaveBeenCalledWith({
+      where: { id: "2027-28" },
+      data: { launchedAt: expect.any(Date) },
+    });
+    expect(createAuditEntryTx).toHaveBeenCalledWith(
+      tx,
+      expect.objectContaining({ entityType: "gear_pick_cycle", action: "launch", before: { launchedAt: null } }),
+    );
+  });
+
+  it("hides a launched cycle from staff again", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(admin);
+
+    const response = await patchAdmin(patch({ action: "setLaunched", launched: false }), context);
+
+    expect(response.status).toBe(200);
+    expect(tx.gearPickCycle!.update).toHaveBeenCalledWith({ where: { id: "2027-28" }, data: { launchedAt: null } });
+    expect(createAuditEntryTx).toHaveBeenCalledWith(
+      tx,
+      expect.objectContaining({ action: "unlaunch", before: { launchedAt: LAUNCHED.toISOString() }, after: { launchedAt: null } }),
     );
   });
 

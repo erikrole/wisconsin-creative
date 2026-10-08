@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Fragment, useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ChevronDownIcon, ChevronRightIcon, DownloadIcon, ShirtIcon, Trash2Icon, UserPlusIcon } from "lucide-react";
+import { ChevronDownIcon, ChevronRightIcon, DownloadIcon, EyeOffIcon, RocketIcon, ShirtIcon, Trash2Icon, UserPlusIcon } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { OperationalMetricCard } from "@/components/OperationalFeedback";
@@ -41,6 +41,7 @@ const FIT_LABELS: Record<GearPickFitKey, string> = { MEN: "Men’s", WOMEN: "Wom
 
 type AdminChange =
   | { action: "setDeadline"; deadline: string | null }
+  | { action: "setLaunched"; launched: boolean }
   | { action: "addParticipant"; userId: string; fit: GearPickFitKey }
   | { action: "updateParticipant"; participantId: string; fit?: GearPickFitKey; allowanceCents?: number }
   | { action: "removeParticipant"; participantId: string };
@@ -114,7 +115,7 @@ export function GearPicksAdmin() {
     <FadeUp>
       <PageHeader
         title="UA gear pick results"
-        description={`${cycle.title}. ${cycle.isOpen ? "Picks are open." : "Picks are closed."}`}
+        description={`${cycle.title}. ${!cycle.launchedAt ? "Admins only." : cycle.isOpen ? "Picks are open." : "Picks are closed."}`}
       >
         <Button asChild variant="outline" className="min-h-10">
           <Link href="/gear">
@@ -129,6 +130,14 @@ export function GearPicksAdmin() {
           </a>
         </Button>
       </PageHeader>
+
+      <LaunchCard
+        launchedAt={cycle.launchedAt}
+        deadline={cycle.deadline}
+        participantCount={summary.participantCount}
+        pending={pending}
+        onApply={applyChange}
+      />
 
       <div className="mb-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         <OperationalMetricCard
@@ -191,6 +200,87 @@ export function GearPicksAdmin() {
         )}
       </section>
     </FadeUp>
+  );
+}
+
+/** Picks stay admin-only until launched; launching shows them to everyone on the list. */
+function LaunchCard({
+  launchedAt,
+  deadline,
+  participantCount,
+  pending,
+  onApply,
+}: {
+  launchedAt: string | null;
+  deadline: string | null;
+  participantCount: number;
+  pending: boolean;
+  onApply: (change: AdminChange, success: string) => Promise<boolean>;
+}) {
+  const confirm = useConfirm();
+  const people = `${participantCount} ${participantCount === 1 ? "person" : "people"}`;
+
+  if (launchedAt) {
+    return (
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card px-4 py-2">
+        <p className="flex items-center gap-2 text-sm">
+          <Badge variant="green" size="sm">Live</Badge>
+          <span className="text-muted-foreground">Open to everyone on the list since {formatDateTime(launchedAt)}.</span>
+        </p>
+        <Button
+          type="button"
+          variant="ghost"
+          className="min-h-10"
+          disabled={pending}
+          onClick={async () => {
+            const ok = await confirm({
+              title: "Hide gear picks from staff?",
+              message: "Only admins will see the banner, the catalog, and the Gear tab again. Saved picks stay as they are.",
+              confirmLabel: "Hide from staff",
+              variant: "danger",
+            });
+            if (ok) await onApply({ action: "setLaunched", launched: false }, "Gear picks are admin-only again.");
+          }}
+        >
+          <EyeOffIcon data-icon="inline-start" />
+          Hide from staff
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <Card className="mb-4 border-[var(--orange-text)]/30 bg-[var(--orange-bg)]/40">
+      <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center">
+        <div className="min-w-0 flex-1">
+          <p className="flex items-center gap-2 text-sm font-semibold">
+            <Badge variant="orange" size="sm">Admins only</Badge>
+            Not launched yet
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Only admins see the banner, the catalog, and the Gear tab. Launch when the list and deadline are ready.
+          </p>
+        </div>
+        <Button
+          type="button"
+          className="min-h-10"
+          disabled={pending || participantCount === 0}
+          onClick={async () => {
+            const ok = await confirm({
+              title: `Launch gear picks to ${people}?`,
+              message: `Everyone on the list gets the dashboard banner and can pick and submit${
+                deadline ? ` until ${formatDateTime(deadline)}` : ". No deadline is set yet, so picks stay open until you add one"
+              }.`,
+              confirmLabel: "Launch",
+            });
+            if (ok) await onApply({ action: "setLaunched", launched: true }, `Gear picks launched to ${people}.`);
+          }}
+        >
+          <RocketIcon data-icon="inline-start" />
+          Launch to {people}
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 

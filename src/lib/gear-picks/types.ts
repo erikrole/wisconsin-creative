@@ -7,6 +7,8 @@ export type GearPickCycleDto = {
   title: string;
   deadline: string | null;
   isOpen: boolean;
+  /** When admins opened picks to everyone on the list; null while only admins can see them. */
+  launchedAt: string | null;
 };
 
 export type GearPickLineDto = {

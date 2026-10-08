@@ -2886,6 +2886,8 @@ model GearPickCycle {
   title        String
   /// Picks are editable until this instant; null keeps the cycle open.
   deadline     DateTime?
+  /// When admins opened picks to everyone on the list; until then only admins see them.
+  launchedAt   DateTime?             @map("launched_at")
   createdAt    DateTime              @default(now()) @map("created_at")
   updatedAt    DateTime              @updatedAt @map("updated_at")
   participants GearPickParticipant[]
