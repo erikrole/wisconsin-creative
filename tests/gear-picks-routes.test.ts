@@ -131,6 +131,21 @@ describe("GET /api/gear-picks/me", () => {
     expect(json.data).toMatchObject({ cycle: null, participant: null, submission: null });
   });
 
+  it("shows an unlaunched cycle to an admin previewing as staff", async () => {
+    vi.mocked(requireAuth).mockResolvedValue({
+      ...admin,
+      role: Role.STAFF,
+      preview: { actualRole: "ADMIN", role: Role.STAFF, readOnly: true, expiresAt: Date.now() + 60_000 },
+    } as never);
+    vi.mocked(db.gearPickCycle.findUnique).mockResolvedValue(unlaunchedCycle as never);
+    vi.mocked(db.gearPickParticipant.findUnique).mockResolvedValue(participant as never);
+    vi.mocked(db.user.findUnique).mockResolvedValue({ topSize: null, topSizeFit: null, shoeSize: null, shoeSizeSystem: null } as never);
+
+    const json = await (await getMe(new Request(`${ORIGIN}/api/gear-picks/me`), context)).json();
+
+    expect(json.data).toMatchObject({ cycle: { launchedAt: null }, participant: { id: "participant-1" }, isAdmin: false });
+  });
+
   it("shows an unlaunched cycle to admins", async () => {
     vi.mocked(requireAuth).mockResolvedValue(admin);
     vi.mocked(db.gearPickCycle.findUnique).mockResolvedValue(unlaunchedCycle as never);

@@ -23,7 +23,12 @@ import type {
   GearPickSubmissionStatus,
 } from "@/lib/gear-picks/types";
 
-type Actor = { id: string; role: Role };
+type Actor = { id: string; role: Role; preview?: { actualRole: "ADMIN" } };
+
+/** A real admin, including one using "Preview as" another role. */
+function isSignedInAdmin(actor: Actor) {
+  return actor.role === Role.ADMIN || actor.preview?.actualRole === "ADMIN";
+}
 
 const SERIALIZABLE = { isolationLevel: Prisma.TransactionIsolationLevel.Serializable } as const;
 
@@ -113,7 +118,8 @@ export async function getMyGearPicks(user: Actor, now: Date = new Date()): Promi
 /**
  * One person's cycle, participation, and saved list. Callers own the
  * self-or-manage access check. Before launch, non-admins see no cycle at all,
- * so the banner, /gear, and the profile tab stay admin-only.
+ * so the banner, /gear, and the profile tab stay admin-only. An admin using
+ * "Preview as" still sees it, so the staff view can be checked before opening.
  */
 export async function getGearPicksForUser(
   userId: string,
@@ -136,7 +142,7 @@ export async function getGearPicksForUser(
   ]);
 
   const isAdmin = viewer.role === Role.ADMIN;
-  const visibleCycle = cycle && (cycle.launchedAt || isAdmin) ? cycle : null;
+  const visibleCycle = cycle && (cycle.launchedAt || isSignedInAdmin(viewer)) ? cycle : null;
   const visibleParticipant = visibleCycle ? participant : null;
 
   return {
@@ -171,7 +177,7 @@ export async function saveMyGearPicks(params: {
         where: { id: GEAR_PICK_CYCLE_ID },
         select: { id: true, deadline: true, launchedAt: true },
       });
-      if (!cycle || (!cycle.launchedAt && actor.role !== Role.ADMIN)) {
+      if (!cycle || (!cycle.launchedAt && !isSignedInAdmin(actor))) {
         throw new HttpError(404, "Gear picks aren't open yet.");
       }
 

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Fragment, useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ChevronDownIcon, ChevronRightIcon, DownloadIcon, EyeOffIcon, RocketIcon, ShirtIcon, Trash2Icon, UserPlusIcon } from "lucide-react";
+import { ChevronDownIcon, ChevronRightIcon, DownloadIcon, EyeOffIcon, ShirtIcon, Trash2Icon, UserPlusIcon, UsersIcon } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { OperationalMetricCard } from "@/components/OperationalFeedback";
@@ -115,7 +115,7 @@ export function GearPicksAdmin() {
     <FadeUp>
       <PageHeader
         title="UA gear pick results"
-        description={`${cycle.title}. ${!cycle.launchedAt ? "Admins only." : cycle.isOpen ? "Picks are open." : "Picks are closed."}`}
+        description={`${cycle.title}. ${!cycle.launchedAt ? "Not open to staff yet." : cycle.isOpen ? "Picks are open." : "Picks are closed."}`}
       >
         <Button asChild variant="outline" className="min-h-10">
           <Link href="/gear">
@@ -131,7 +131,7 @@ export function GearPicksAdmin() {
         </Button>
       </PageHeader>
 
-      <LaunchCard
+      <StaffAccessCard
         launchedAt={cycle.launchedAt}
         deadline={cycle.deadline}
         participantCount={summary.participantCount}
@@ -203,8 +203,8 @@ export function GearPicksAdmin() {
   );
 }
 
-/** Picks stay admin-only until launched; launching shows them to everyone on the list. */
-function LaunchCard({
+/** Picks stay admin-only until opened; opening shows them to everyone on the list. */
+function StaffAccessCard({
   launchedAt,
   deadline,
   participantCount,
@@ -224,7 +224,7 @@ function LaunchCard({
     return (
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card px-4 py-2">
         <p className="flex items-center gap-2 text-sm">
-          <Badge variant="green" size="sm">Live</Badge>
+          <Badge variant="green" size="sm">Open</Badge>
           <span className="text-muted-foreground">Open to everyone on the list since {formatDateTime(launchedAt)}.</span>
         </p>
         <Button
@@ -234,31 +234,28 @@ function LaunchCard({
           disabled={pending}
           onClick={async () => {
             const ok = await confirm({
-              title: "Hide gear picks from staff?",
+              title: "Close gear picks to staff?",
               message: "Only admins will see the banner, the catalog, and the Gear tab again. Saved picks stay as they are.",
-              confirmLabel: "Hide from staff",
+              confirmLabel: "Close to staff",
               variant: "danger",
             });
-            if (ok) await onApply({ action: "setLaunched", launched: false }, "Gear picks are admin-only again.");
+            if (ok) await onApply({ action: "setLaunched", launched: false }, "Gear picks are closed to staff.");
           }}
         >
           <EyeOffIcon data-icon="inline-start" />
-          Hide from staff
+          Close to staff
         </Button>
       </div>
     );
   }
 
   return (
-    <Card className="mb-4 border-[var(--orange-text)]/30 bg-[var(--orange-bg)]/40">
+    <Card className="mb-4">
       <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center">
         <div className="min-w-0 flex-1">
-          <p className="flex items-center gap-2 text-sm font-semibold">
-            <Badge variant="orange" size="sm">Admins only</Badge>
-            Not launched yet
-          </p>
+          <p className="text-sm font-semibold">Not open to staff yet</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Only admins see the banner, the catalog, and the Gear tab. Launch when the list and deadline are ready.
+            Admins can use everything now. Open it when the list and deadline are ready.
           </p>
         </div>
         <Button
@@ -267,17 +264,17 @@ function LaunchCard({
           disabled={pending || participantCount === 0}
           onClick={async () => {
             const ok = await confirm({
-              title: `Launch gear picks to ${people}?`,
+              title: `Open gear picks to ${people}?`,
               message: `Everyone on the list gets the dashboard banner and can pick and submit${
                 deadline ? ` until ${formatDateTime(deadline)}` : ". No deadline is set yet, so picks stay open until you add one"
               }.`,
-              confirmLabel: "Launch",
+              confirmLabel: "Open to staff",
             });
-            if (ok) await onApply({ action: "setLaunched", launched: true }, `Gear picks launched to ${people}.`);
+            if (ok) await onApply({ action: "setLaunched", launched: true }, `Gear picks are open to ${people}.`);
           }}
         >
-          <RocketIcon data-icon="inline-start" />
-          Launch to {people}
+          <UsersIcon data-icon="inline-start" />
+          Open to {people}
         </Button>
       </CardContent>
     </Card>

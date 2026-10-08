@@ -90,11 +90,21 @@ export function GearPicker() {
         <PageHeader title="UA staff gear" description={data.cycle.title}>
           {data.isAdmin && <AdminResultsLink />}
         </PageHeader>
-        <EmptyState
-          icon="users"
-          title="You're not on this year's pick list"
-          description="Under Armour staff picks are for full-time creative staff on the 2027–28 roster. If you should be picking, ask an admin to add you."
-        />
+        {data.isAdmin ? (
+          <EmptyState
+            icon="users"
+            title="You're not on this year's pick list"
+            description="Add yourself on the results page to try the catalog, review, and submit exactly as staff will. You can remove yourself afterwards."
+            actionLabel="Open results"
+            actionHref="/gear/admin"
+          />
+        ) : (
+          <EmptyState
+            icon="users"
+            title="You're not on this year's pick list"
+            description="Under Armour staff picks are for full-time creative staff on the 2027–28 roster. If you should be picking, ask an admin to add you."
+          />
+        )}
       </FadeUp>
     );
   }
