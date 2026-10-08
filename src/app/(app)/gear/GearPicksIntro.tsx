@@ -7,18 +7,18 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 
 const SEEN_KEY_PREFIX = "gear-picks-intro-seen:";
 
-/** Whether this person has dismissed the intro for this cycle. Storage can throw (private mode); treat that as unseen. */
-export function gearIntroSeen(cycleId: string) {
+/** Whether this participant has dismissed the intro for this cycle (keyed per person for shared browsers). Storage can throw (private mode); treat that as unseen. */
+export function gearIntroSeen(cycleId: string, participantId: string) {
   try {
-    return window.localStorage.getItem(SEEN_KEY_PREFIX + cycleId) === "1";
+    return window.localStorage.getItem(`${SEEN_KEY_PREFIX}${cycleId}:${participantId}`) === "1";
   } catch {
     return false;
   }
 }
 
-function markGearIntroSeen(cycleId: string) {
+function markGearIntroSeen(cycleId: string, participantId: string) {
   try {
-    window.localStorage.setItem(SEEN_KEY_PREFIX + cycleId, "1");
+    window.localStorage.setItem(`${SEEN_KEY_PREFIX}${cycleId}:${participantId}`, "1");
   } catch {
     // Not remembering it only means the intro shows again next visit.
   }
@@ -32,25 +32,29 @@ export function GearPicksIntro({
   open,
   onOpenChange,
   cycleId,
+  participantId,
   allowance,
   remaining,
   deadline,
   kitCount,
-  sizeFromProfile,
+  hasTopSize,
+  hasShoeSize,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   cycleId: string;
+  participantId: string;
   allowance: string;
   /** Set when a draft already spends some of the allowance. */
   remaining: string | null;
   deadline: string | null;
   kitCount: number;
-  /** False when the profile has no top size, so nothing is prefilled. */
-  sizeFromProfile: boolean;
+  /** Which profile sizes exist; only those are prefilled on new picks. */
+  hasTopSize: boolean;
+  hasShoeSize: boolean;
 }) {
   const close = (next: boolean) => {
-    if (!next) markGearIntroSeen(cycleId);
+    if (!next) markGearIntroSeen(cycleId, participantId);
     onOpenChange(next);
   };
 
@@ -73,9 +77,14 @@ export function GearPicksIntro({
     {
       icon: RulerIcon,
       title: "Check your size",
-      body: sizeFromProfile
-        ? "Your size is filled in from your profile. Change it if it's wrong."
-        : "Pick a size for each item before you submit.",
+      body:
+        hasTopSize && hasShoeSize
+          ? "Your sizes are filled in from your profile. Change them if they're wrong."
+          : hasTopSize
+            ? "Your clothing size is filled in from your profile. Pick a shoe size if you add shoes."
+            : hasShoeSize
+              ? "Your shoe size is filled in from your profile. Pick a clothing size for each item."
+              : "Pick a size for each item before you submit.",
     },
     {
       icon: CheckCircle2Icon,

@@ -172,7 +172,7 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
   // The splash shows once per cycle (normally right after the dashboard banner),
   // never once picks are submitted or closed. "How it works" reopens it.
   useEffect(() => {
-    if (!readOnly && !submittedAt && !gearIntroSeen(cycle.id)) setIntroOpen(true);
+    if (!readOnly && !submittedAt && !gearIntroSeen(cycle.id, participant.id)) setIntroOpen(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on arrival
   }, []);
 
@@ -604,11 +604,13 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
         open={introOpen}
         onOpenChange={setIntroOpen}
         cycleId={cycle.id}
+        participantId={participant.id}
         allowance={allowanceLabel}
         remaining={totalCents > 0 ? formatUsd(Math.max(0, remainingCents)) : null}
         deadline={cycle.deadline ? deadlineLabel(cycle.deadline) : null}
         kitCount={kit.length}
-        sizeFromProfile={Boolean(data.profile.topSize)}
+        hasTopSize={Boolean(data.profile.topSize?.trim())}
+        hasShoeSize={Boolean(data.profile.shoeSize?.trim())}
       />
       <GearPreviewDialog
         preview={preview}
