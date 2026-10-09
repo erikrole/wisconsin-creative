@@ -1,6 +1,6 @@
 [
   {
-    "date": "2026-10-08",
+    "date": "2026-10-09",
     "title": "Release notes",
     "type": "feature",
     "summary": "A public Releases page lists what shipped and when across web, iOS, the kiosk, and the Mac app, going back to the first build.",
@@ -15,6 +15,21 @@
       "Web"
     ],
     "pr": 444
+  },
+  {
+    "date": "2026-10-09",
+    "title": "Gear picks free-kit heads-up",
+    "type": "improvement",
+    "summary": "Gear picks now point out when something you're adding is already in your free kit, and colors appear in a consistent order.",
+    "details": [
+      "Adding the first pick of a style that's already in your standard issue or core kit shows a short heads-up naming the kit color.",
+      "It never blocks you: Add to picks keeps going, and it asks only once per style.",
+      "Every item lists Red, then White, then Black before other colors, on cards, swatches, previews, and the review sheet."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 443
   },
   {
     "date": "2026-10-08",
