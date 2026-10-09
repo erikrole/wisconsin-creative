@@ -57,6 +57,18 @@ jobs:
 
       - run: npm ci
 
+      - name: Require a /releases entry
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          PR_LABELS="$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json labels --jq '[.labels[].name]')" \
+            node scripts/check-release-note.mjs
+
       - run: npm run db:migrate:guard -- --base "${{ github.event.pull_request.base.sha || github.event.before }}"
 
       - run: node scripts/audit-gate.mjs

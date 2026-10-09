@@ -91,6 +91,7 @@
 - `/about` -> `src/app/(public)/about/page.tsx`
 - `/about/security` -> `src/app/(public)/about/security/page.tsx`
 - `/about/tech-stack` -> `src/app/(public)/about/tech-stack/page.tsx`
+- `/releases` -> `src/app/(public)/releases/page.tsx`
 - `/change-password` -> `src/app/change-password/page.tsx`
 - `/forgot-password` -> `src/app/forgot-password/page.tsx`
 - `/login` -> `src/app/login/page.tsx`
@@ -109,12 +110,14 @@
 - `/settings` -> `src/app/(app)/settings/layout.tsx`
 - `/workforce` -> `src/app/(app)/workforce/layout.tsx`
 - `/about` -> `src/app/(public)/about/layout.tsx`
+- `/releases` -> `src/app/(public)/releases/layout.tsx`
 - `/` -> `src/app/layout.tsx`
 
 ## API Routes
 
 - `/.well-known/apple-app-site-association` -> `src/app/.well-known/apple-app-site-association/route.ts`
 - `/.well-known/change-password` -> `src/app/.well-known/change-password/route.ts`
+- `/releases/feed.xml` -> `src/app/(public)/releases/feed.xml/route.ts`
 - `/api/accountability/exclusions/[bookingId]` -> `src/app/api/accountability/exclusions/[bookingId]/route.ts`
 - `/api/accountability/exclusions` -> `src/app/api/accountability/exclusions/route.ts`
 - `/api/accountability` -> `src/app/api/accountability/route.ts`
