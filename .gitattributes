@@ -4,4 +4,4 @@
 # UA review evidence preserves exact original source bytes and unified-diff
 # blank context lines. Keep those captures intact; check report HTML normally.
 tasks/archive/proofs/ua-picker-*/**/source.patch whitespace=-blank-at-eol
-tasks/archive/proofs/ua-picker-*/baseline-source/*.txt whitespace=-blank-at-eol
+tasks/archive/proofs/ua-picker-*/baseline-source/*.txt whitespace=-blank-at-eol,-blank-at-eof
