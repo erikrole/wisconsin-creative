@@ -215,11 +215,12 @@
 | `src/lib/profile-completion.ts` | 159 |
 | `src/lib/profile-phone.ts` | 44 |
 | `src/lib/profile-sizing.ts` | 24 |
-| `src/lib/public-showroom.ts` | 444 |
+| `src/lib/public-showroom.ts` | 449 |
 | `src/lib/quarter-hour.ts` | 27 |
 | `src/lib/query-client.ts` | 56 |
 | `src/lib/rate-limit.ts` | 238 |
 | `src/lib/rbac.ts` | 59 |
+| `src/lib/releases.ts` | 91 |
 | `src/lib/remark-callouts.ts` | 77 |
 | `src/lib/request-limits.ts` | 17 |
 | `src/lib/reservation-pickup-locations.ts` | 68 |

@@ -83,6 +83,11 @@ export const publicShowroomNav: ShowroomNavItem[] = [
     label: "Field Work",
     description: "Native iOS, kiosk, scanner, and game-day handoffs.",
   },
+  {
+    href: "/releases",
+    label: "Releases",
+    description: "What shipped, when, across web, iOS, kiosk, and macOS.",
+  },
 ];
 
 export const heroMockup: ShowroomMockup = {

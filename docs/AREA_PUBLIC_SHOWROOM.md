@@ -4,7 +4,7 @@
 - Area: Public Showroom
 - Owner: Wisconsin Athletics Creative Product
 - Created: 2026-07-01
-- Last Updated: 2026-09-23
+- Last Updated: 2026-10-08
 - Status: Active
 - Version: V1
 
@@ -25,6 +25,7 @@ Make `/about` a shareable public overview for Wisconsin Creative. It should expl
 - `/about/tech-stack` - public-safe stack map.
 - `/about/security` - trust model, access control, auditability, and reliability controls.
 - `/about/field-work` - native iOS, kiosk, scanner, and game-day handoffs.
+- `/releases` - public release notes. Releases live in `src/lib/releases.json` (newest first); `src/lib/releases.ts` owns the types and the public-safe term list. Every PR to `main` must add or update an entry (AGENTS.md); `.github/workflows/release-note.yml` runs `scripts/check-release-note.mjs` and fails the PR otherwise, unless it is labeled `no-release-note` or opened by Dependabot.
 - `/privacy` - public privacy policy for App Store Connect and stakeholder review.
 - `/qrcode` - QR Studio, a static client-only QR code generator. Redirects to `/qrcode/index.html` in `public/qrcode/`, which is generated from the QR Studio source by its `scripts/export-web.js`; do not edit the copy here.
 
@@ -32,23 +33,25 @@ Make `/about` a shareable public overview for Wisconsin Creative. It should expl
 - [x] AC-1: `/about` and all public subpages render without authentication.
 - [x] AC-2: Public routes use typed static content and do not call authenticated APIs.
 - [x] AC-3: Product mockups carry fictional data and avoid known live-user or incident identifiers.
-- [x] AC-4: Navigation exposes Overview, Features, Tech Stack, Security, Field Work, and Sign in.
+- [x] AC-4: Navigation exposes Overview, Features, Tech Stack, Security, Field Work, Releases, and Sign in.
 - [x] AC-5: `/` and authenticated app shell behavior remain unchanged.
 - [x] AC-6: Public pages have route metadata, keyboard-reachable navigation, and mobile-safe layouts.
 - [x] AC-7: `/privacy` renders without authentication and does not fetch authenticated data.
 - [ ] AC-8: `/qrcode` opens QR Studio without authentication, outside the nonce-CSP middleware, under its own `default-src 'none'` / `connect-src 'none'` policy; script URLs are content-hashed so the service worker's cache-first `.js` rule cannot serve stale code. Pending deploy proof.
+- [ ] AC-9: `/releases` renders static, public-safe release notes grouped by date (no people's names, emails, or security specifics), newest first with stable date anchors. Pending deploy proof.
 
 ## Verification
-- `npx vitest run tests/public-showroom-content.test.ts tests/qrcode-static-tool.test.ts`
+- `npx vitest run tests/public-showroom-content.test.ts tests/public-releases-content.test.ts tests/check-release-note.test.ts tests/qrcode-static-tool.test.ts`
 - `npx tsc --noEmit --pretty false`
 - `npm run codemap`
 - `npm run verify:docs`
 - `git diff --check`
 - `npm run build:app`
 - `npm run smoke:deploy`
-- Browser smoke `/about`, `/about/features`, `/about/tech-stack`, `/about/security`, `/about/field-work`, `/login`, and protected `/`.
+- Browser smoke `/about`, `/about/features`, `/about/tech-stack`, `/about/security`, `/about/field-work`, `/releases`, `/login`, and protected `/`.
 
 ## Change Log
+- 2026-10-08: Added `/releases`, a public release-notes page backfilled with per-feature releases (mapped to merged PRs where they exist), grouped by date, from the first build (2026-02-27) through 2026-10-08. Entries are static JSON with a content test for date order, unique anchors, and public-safe copy. The showroom nav and footer gain a Releases link, and the about and releases layouts share one footer component. Backfilled dates are when work landed on `main`, not announcement dates. From now on every PR to `main` must add or update a release entry, enforced by the `Release note` workflow (opt out with the `no-release-note` label), with a PR template checkbox to match.
 - 2026-09-23: Added `/qrcode`, the public QR Studio tool (branded, scan-checked QR codes for links, Wi-Fi, email, phone, SMS, contacts and text). Static files in `public/qrcode/`; `/qrcode` redirects to the dotted `index.html` path so the nonce middleware is not involved. The page makes no network requests and stores its library only in the visitor's browser. `tests/qrcode-static-tool.test.ts` guards the redirect, CSP, content-hashed script URLs and the folder's contents.
 - 2026-08-03: Fixed the desktop public-header wordmark contrast. The logo link now explicitly uses the white text token required by the dark header, and the public-showroom content contract guards that relationship.
 - 2026-07-10: Removed the public showroom's decorative hero atmosphere, repeated oversized card shadows, tinted icon tiles, and max-radius mockup framing. The static routes, factual copy, product mockups, and Wisconsin visual identity remain unchanged; shared status indicators now use a static labeled dot rather than a pulsing halo.
