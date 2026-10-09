@@ -3,21 +3,62 @@ import Foundation
 import Observation
 import ServiceManagement
 
-private struct StoredAppPreferences: Codable {
-    var showsMenuBarCount: Bool
-    var showsMenuBarExtra: Bool
+/// What the numeral beside the extra glyph counts. The glyph itself never
+/// changes; only this static numeral does.
+enum MenuBarCountMode: String, Codable, CaseIterable, Identifiable, Sendable {
+    case open
+    case overdue
+    case hidden
 
-    init(showsMenuBarCount: Bool, showsMenuBarExtra: Bool = true) {
-        self.showsMenuBarCount = showsMenuBarCount
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .open: "Open bookings"
+        case .overdue: "Overdue only"
+        case .hidden: "Off"
+        }
+    }
+}
+
+private struct StoredAppPreferences: Codable {
+    var menuBarCountMode: MenuBarCountMode
+    var showsMenuBarExtra: Bool
+    var usesGlobalShortcut: Bool
+
+    init(menuBarCountMode: MenuBarCountMode, showsMenuBarExtra: Bool, usesGlobalShortcut: Bool) {
+        self.menuBarCountMode = menuBarCountMode
         self.showsMenuBarExtra = showsMenuBarExtra
+        self.usesGlobalShortcut = usesGlobalShortcut
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case menuBarCountMode
+        case showsMenuBarCount
+        case showsMenuBarExtra
+        case usesGlobalShortcut
     }
 
     init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
-        showsMenuBarCount = try values.decodeIfPresent(Bool.self, forKey: .showsMenuBarCount) ?? true
+        if let mode = try values.decodeIfPresent(MenuBarCountMode.self, forKey: .menuBarCountMode) {
+            menuBarCountMode = mode
+        } else {
+            // Installs before the count mode stored a Bool; off maps to hidden.
+            let showsCount = try values.decodeIfPresent(Bool.self, forKey: .showsMenuBarCount) ?? true
+            menuBarCountMode = showsCount ? .open : .hidden
+        }
         // Existing installs predate the visibility control and should keep
         // their menu-bar entry until the user chooses otherwise.
         showsMenuBarExtra = try values.decodeIfPresent(Bool.self, forKey: .showsMenuBarExtra) ?? true
+        usesGlobalShortcut = try values.decodeIfPresent(Bool.self, forKey: .usesGlobalShortcut) ?? true
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        try values.encode(menuBarCountMode, forKey: .menuBarCountMode)
+        try values.encode(showsMenuBarExtra, forKey: .showsMenuBarExtra)
+        try values.encode(usesGlobalShortcut, forKey: .usesGlobalShortcut)
     }
 }
 
@@ -29,8 +70,8 @@ final class AppPreferencesStore {
     private let defaults: UserDefaults
 
     /// The count is the reason most people keep this app in the menu bar, so it
-    /// stays on by default; hiding it leaves just the status glyph.
-    var showsMenuBarCount: Bool {
+    /// shows open bookings by default; overdue narrows it to what needs action.
+    var menuBarCountMode: MenuBarCountMode {
         didSet { persist() }
     }
 
@@ -41,22 +82,31 @@ final class AppPreferencesStore {
         didSet { persist() }
     }
 
+    /// ⌃⌥⌘G opens the status window from any app, including when macOS has
+    /// tucked the extra away to make room for app menus.
+    var usesGlobalShortcut: Bool {
+        didSet { persist() }
+    }
+
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         guard let data = defaults.data(forKey: Self.key),
               let stored = try? JSONDecoder().decode(StoredAppPreferences.self, from: data) else {
-            showsMenuBarCount = true
+            menuBarCountMode = .open
             showsMenuBarExtra = true
+            usesGlobalShortcut = true
             return
         }
-        showsMenuBarCount = stored.showsMenuBarCount
+        menuBarCountMode = stored.menuBarCountMode
         showsMenuBarExtra = stored.showsMenuBarExtra
+        usesGlobalShortcut = stored.usesGlobalShortcut
     }
 
     private func persist() {
         let stored = StoredAppPreferences(
-            showsMenuBarCount: showsMenuBarCount,
-            showsMenuBarExtra: showsMenuBarExtra
+            menuBarCountMode: menuBarCountMode,
+            showsMenuBarExtra: showsMenuBarExtra,
+            usesGlobalShortcut: usesGlobalShortcut
         )
         guard let data = try? JSONEncoder().encode(stored) else { return }
         defaults.set(data, forKey: Self.key)

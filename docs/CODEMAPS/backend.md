@@ -31,7 +31,7 @@
 | `src/lib/services/calendar-sync.ts` | 754 |
 | `src/lib/services/candidate-scoring.ts` | 437 |
 | `src/lib/services/category-mutations.ts` | 168 |
-| `src/lib/services/checkin-item-reports.ts` | 262 |
+| `src/lib/services/checkin-item-reports.ts` | 270 |
 | `src/lib/services/checkout-consolidation.ts` | 596 |
 | `src/lib/services/checkout-policies.ts` | 40 |
 | `src/lib/services/claim-review-notifications.ts` | 197 |
@@ -73,6 +73,7 @@
 | `src/lib/services/onboarding-lifecycle.ts` | 540 |
 | `src/lib/services/pending-pickup-expiry.ts` | 370 |
 | `src/lib/services/product-event-log.ts` | 43 |
+| `src/lib/services/radio-clip-auth.ts` | 95 |
 | `src/lib/services/reports.ts` | 1932 |
 | `src/lib/services/reservation-consolidation.ts` | 240 |
 | `src/lib/services/reservation-pickup-guard.ts` | 71 |
@@ -96,7 +97,7 @@
 | `src/lib/services/shift-generation.ts` | 629 |
 | `src/lib/services/shift-trade-emails.ts` | 56 |
 | `src/lib/services/shift-trades.ts` | 1560 |
-| `src/lib/services/signatures.ts` | 2051 |
+| `src/lib/services/signatures.ts` | 2057 |
 | `src/lib/services/software.ts` | 272 |
 | `src/lib/services/sport-auto-assign-policies.ts` | 46 |
 | `src/lib/services/sport-configs.ts` | 263 |
@@ -204,7 +205,7 @@
 | `src/lib/passkey-client.ts` | 73 |
 | `src/lib/passkey.ts` | 371 |
 | `src/lib/password-rules.ts` | 16 |
-| `src/lib/permissions.ts` | 225 |
+| `src/lib/permissions.ts` | 230 |
 | `src/lib/preview-activity.ts` | 23 |
 | `src/lib/prisma-errors.ts` | 38 |
 | `src/lib/profile-completion-events.ts` | 6 |
@@ -214,6 +215,7 @@
 | `src/lib/public-showroom.ts` | 444 |
 | `src/lib/quarter-hour.ts` | 27 |
 | `src/lib/query-client.ts` | 56 |
+| `src/lib/radio-clip-contract.ts` | 23 |
 | `src/lib/rate-limit.ts` | 238 |
 | `src/lib/rbac.ts` | 59 |
 | `src/lib/remark-callouts.ts` | 77 |
@@ -641,6 +643,14 @@
 
 - `/api/push/web`
 - `/api/push/web/test`
+
+### `/api/radio-clip`
+
+- `/api/radio-clip/access/[id]`
+- `/api/radio-clip/authorize`
+- `/api/radio-clip/availability`
+- `/api/radio-clip/session`
+- `/api/radio-clip/token`
 
 ### `/api/reports`
 

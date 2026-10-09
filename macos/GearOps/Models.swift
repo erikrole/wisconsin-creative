@@ -120,14 +120,18 @@ struct GearOpsSnapshot: Codable, Equatable, Sendable {
     let stats: GearOpsStats
     let pendingPickupTotal: Int
     let receivedAt: Date
-    let partialFailures: [String]
 
     func freshnessLabel(at now: Date = .now) -> String {
         let age = max(0, now.timeIntervalSince(receivedAt))
-        if age < 60 { return "Updated just now" }
-        if age < 60 * 60 { return "Updated \(Int(age / 60))m ago" }
-        if age < 24 * 60 * 60 { return "Updated \(Int(age / (60 * 60)))h ago" }
-        return "Updated \(Int(age / (24 * 60 * 60)))d ago"
+        return age < 60 ? "Updated just now" : "Updated \(Self.compactElapsed(from: receivedAt, to: now)) ago"
+    }
+
+    /// "40m", "3h", "2d": the compact elapsed form shared by freshness labels.
+    static func compactElapsed(from start: Date, to end: Date) -> String {
+        let age = max(0, end.timeIntervalSince(start))
+        if age < 60 * 60 { return "\(Int(age / 60))m" }
+        if age < 24 * 60 * 60 { return "\(Int(age / (60 * 60)))h" }
+        return "\(Int(age / (24 * 60 * 60)))d"
     }
 }
 
@@ -208,6 +212,44 @@ struct OpenBookingsPage: Decodable, Sendable {
 struct OpenBookingsResult: Equatable, Sendable {
     let bookings: [OpenBooking]
     let total: Int
+}
+
+struct BookingSearchResult: Identifiable, Equatable, Sendable {
+    enum Booking: Equatable, Sendable {
+        case open(OpenBooking)
+        case reservation(BookingActivitySnapshot)
+    }
+
+    let booking: Booking
+    /// The first item that matched a term, so a search for "FX6" can show the
+    /// asset tag that answered it rather than only the booking title.
+    let matchedItem: OpenBooking.ItemReference?
+
+    var id: String {
+        switch booking {
+        case .open(let booking): "open:\(booking.id)"
+        case .reservation(let booking): "reservation:\(booking.id)"
+        }
+    }
+
+    static func match(
+        terms: [String],
+        fields: [String?],
+        items: [OpenBooking.ItemReference],
+        booking: Booking
+    ) -> BookingSearchResult? {
+        let itemFields = items.map { [$0.assetTag, $0.name].compactMap { $0 } }
+        let haystack = fields.compactMap { $0 } + itemFields.flatMap { $0 }
+        guard terms.allSatisfy({ term in haystack.contains { contains($0, term) } }) else { return nil }
+        let matchedItem = zip(items, itemFields).first { _, fields in
+            terms.contains { term in fields.contains { contains($0, term) } }
+        }?.0
+        return BookingSearchResult(booking: booking, matchedItem: matchedItem)
+    }
+
+    private static func contains(_ value: String, _ term: String) -> Bool {
+        value.range(of: term, options: [.caseInsensitive, .diacriticInsensitive]) != nil
+    }
 }
 
 enum BookingKind: String, Codable, Equatable, Sendable {
@@ -329,8 +371,6 @@ struct BookingChangesEnvelope: Decodable, Sendable {
 }
 
 struct CompanionProjection: Codable, Equatable, Sendable {
-    private static let maxCount = 1_000_000
-
     let version: Int
     let revision: Int?
     let generatedAt: Date
@@ -348,29 +388,50 @@ struct CompanionProjection: Codable, Equatable, Sendable {
     func validate() throws {
         guard version == 1,
               revision.map({ $0 >= 0 }) ?? true,
-              openBookings.count <= 1_000,
-              bookingActivity.count <= 2_000,
-              kioskDevices.count <= 256,
-              stats.checkedOut >= 0,
-              stats.checkedOut <= Self.maxCount,
-              stats.overdue >= 0,
-              stats.overdue <= Self.maxCount,
-              stats.reserved >= 0,
-              stats.reserved <= Self.maxCount,
-              stats.dueToday >= 0,
-              stats.dueToday <= Self.maxCount,
-              pendingPickupTotal >= 0,
-              pendingPickupTotal <= Self.maxCount,
-              Self.hasUniqueNonemptyIDs(openBookings.map(\.id)),
-              Self.hasUniqueNonemptyIDs(bookingActivity.map(\.id)),
-              Self.hasUniqueNonemptyIDs(kioskDevices.map(\.id)),
-              kioskDevices.allSatisfy({
-                  $0.pendingPickupCount >= 0 && $0.pendingPickupCount <= Self.maxCount
-                      && $0.openCheckoutCount >= 0 && $0.openCheckoutCount <= Self.maxCount
-              }),
+              CompanionProjectionLimits.accepts(
+                  stats: stats,
+                  pendingPickupTotal: pendingPickupTotal,
+                  openBookings: openBookings,
+                  bookingActivity: bookingActivity,
+                  kioskDevices: kioskDevices
+              ),
               kioskAccess == "available" || kioskAccess == "restricted" || kioskAccess == "failed" else {
             throw GearOpsClientError.invalidResponse
         }
+    }
+}
+
+/// One set of structural limits for both the server projection and the local
+/// preferences cache, so the two trust checks cannot drift apart.
+enum CompanionProjectionLimits {
+    private static let maxCount = 1_000_000
+
+    /// Mirrors `MAX_COMPANION_ITEMS` in `src/lib/services/companion-projection.ts`.
+    /// Display-only: the server may raise its cap, and a longer list must not
+    /// make an otherwise valid projection untrusted.
+    static let itemsPerBooking = 48
+
+    static func accepts(
+        stats: GearOpsStats?,
+        pendingPickupTotal: Int?,
+        openBookings: [OpenBooking],
+        bookingActivity: [BookingActivitySnapshot],
+        kioskDevices: [KioskDevice]
+    ) -> Bool {
+        let statCounts: [Int] = [stats?.checkedOut, stats?.overdue, stats?.reserved, stats?.dueToday, pendingPickupTotal]
+            .compactMap { $0 }
+        let kioskCounts = kioskDevices.flatMap { [$0.pendingPickupCount, $0.openCheckoutCount] }
+        return openBookings.count <= 1_000
+            && bookingActivity.count <= 2_000
+            && kioskDevices.count <= 256
+            && (statCounts + kioskCounts).allSatisfy(isValidCount)
+            && hasUniqueNonemptyIDs(openBookings.map(\.id))
+            && hasUniqueNonemptyIDs(bookingActivity.map(\.id))
+            && hasUniqueNonemptyIDs(kioskDevices.map(\.id))
+    }
+
+    private static func isValidCount(_ value: Int) -> Bool {
+        value >= 0 && value <= maxCount
     }
 
     private static func hasUniqueNonemptyIDs(_ ids: [String]) -> Bool {

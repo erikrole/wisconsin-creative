@@ -37,6 +37,15 @@ export type AssetDetail = {
   status: string;
   computedStatus: string;
   isFavorited: boolean;
+  checkinReports?: Array<{
+    id: string;
+    type: "DAMAGED" | "LOST";
+    description: string | null;
+    imageUrl: string | null;
+    createdAt: string;
+    reportedBy: { name: string };
+    booking: { id: string; title: string };
+  }>;
   notes: string | null;
   linkUrl: string | null;
   imageUrl: string | null;

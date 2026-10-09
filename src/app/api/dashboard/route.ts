@@ -366,7 +366,10 @@ export const GET = withAuth(async (req, { user }) => {
     // Recent damage/lost reports (last 30 days, staff/admin only)
     user.role === "ADMIN" || user.role === "STAFF"
       ? db.checkinItemReport.findMany({
-          where: { createdAt: { gte: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) } },
+          where: {
+            createdAt: { gte: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) },
+            dismissedAt: null,
+          },
           orderBy: { createdAt: "desc" },
           take: 10,
           include: {

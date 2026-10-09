@@ -11,6 +11,11 @@ import { Role } from "@prisma/client";
  * This map covers coarse role gating at the API route level.
  */
 export const PERMISSIONS: Record<string, Record<string, Role[]>> = {
+  radio_clip: {
+    access: ["ADMIN", "STAFF", "STUDENT"],
+    publish: ["ADMIN", "STAFF"],
+    manage_access: ["ADMIN"],
+  },
   role_preview: {
     manage: ["ADMIN"],
   },
@@ -34,6 +39,9 @@ export const PERMISSIONS: Record<string, Record<string, Role[]>> = {
     generate_qr: ["ADMIN", "STAFF"],
     export: ["ADMIN", "STAFF"],
     audit: ["ADMIN", "STAFF"],
+  },
+  checkin_report: {
+    dismiss: ["ADMIN", "STAFF"],
   },
   category: {
     view: ["ADMIN", "STAFF", "STUDENT"],

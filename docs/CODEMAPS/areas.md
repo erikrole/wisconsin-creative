@@ -115,13 +115,21 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Services: _none matched_
 - Tests: `tests/public-showroom-content.test.ts`
 
+## radio-clip
+
+- Doc: `docs/AREA_RADIO_CLIP.md`
+- Pages: `/radio-clip/authorize`
+- APIs: `/api/radio-clip/access/[id]`, `/api/radio-clip/authorize`, `/api/radio-clip/availability`, `/api/radio-clip/session`, `/api/radio-clip/token`
+- Services: `src/lib/services/radio-clip-auth.ts`
+- Tests: `tests/radio-clip-auth.test.ts`
+
 ## reports
 
 - Doc: `docs/AREA_REPORTS.md`
 - Pages: `/reports/audit`, `/reports/badges`, `/reports/bulk-losses`, `/reports/checkouts`, `/reports/overdue`, `/reports`, `/reports/scans`, `/reports/usage`
 - APIs: `/api/audit/export`, `/api/audit/last`, `/api/audit`, `/api/bookings/[id]/audit-logs`, `/api/cron/audit-archive`, `/api/location-mappings/audit`, `/api/reports/audit`, `/api/reports/badges`, `/api/reports/bulk-losses`, `/api/reports/checkouts`
 - Services: `src/lib/services/checkin-item-reports.ts`, `src/lib/services/reports.ts`
-- Tests: `tests/audit-archive-cron.test.ts`, `tests/audit-export-route.test.ts`, `tests/audit-helper.test.ts`, `tests/audit-last-route.test.ts`, `tests/booking-audit-history-recovery.test.ts`, `tests/calendar-sync-audit.test.ts`, `tests/ios-audit-inventory.test.ts`, `tests/ios-kiosk-return-reports.test.ts`
+- Tests: `tests/asset-condition-reports.test.ts`, `tests/audit-archive-cron.test.ts`, `tests/audit-export-route.test.ts`, `tests/audit-helper.test.ts`, `tests/audit-last-route.test.ts`, `tests/booking-audit-history-recovery.test.ts`, `tests/calendar-sync-audit.test.ts`, `tests/ios-audit-inventory.test.ts`
 
 ## reservations
 

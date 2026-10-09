@@ -25,7 +25,7 @@ const mocks = vi.hoisted(() => ({
 const tx = {
   bookingSerializedItem: { findUnique: mocks.itemFindUnique },
   scanEvent: { findFirst: mocks.scanEventFindFirst },
-  checkinItemReport: { upsert: mocks.reportUpsert },
+  checkinItemReport: { findUnique: mocks.reportFindUnique, upsert: mocks.reportUpsert },
   asset: { findUnique: mocks.assetFindUnique, update: mocks.assetUpdate },
 };
 
@@ -153,7 +153,7 @@ describe("POST /api/kiosk/checkin/[id]/report", () => {
       id: "co-1", kind: "CHECKOUT", status: "COMPLETED", title: "Soccer", requesterUserId: "owner-1", custodyScope: "PERSON", locationId: "loc-1",
     });
     mocks.scanEventFindFirst.mockResolvedValue({ id: "scan-1" });
-    expect((await report({ actorId: "returner-1", assetId: "asset-1", type: "DAMAGED" })).status).toBe(200);
+    expect((await report({ actorId: "returner-1", assetId: "asset-1", type: "DAMAGED", description: "Cracked display" })).status).toBe(200);
     await expect(report({ actorId: "returner-1", assetId: "asset-1", type: "LOST" })).rejects.toMatchObject({ status: 404 });
   });
 });

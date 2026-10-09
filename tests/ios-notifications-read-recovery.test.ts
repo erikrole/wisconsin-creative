@@ -2,6 +2,25 @@ import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
 
 describe("iOS notifications read recovery", () => {
+  it("reconciles the icon even when the cached unread count is unchanged", () => {
+    const state = source("ios/Wisconsin/Core/AppState.swift");
+    expect(state).not.toContain("guard unreadNotifCount != oldValue else { return }");
+    // Notification refresh cannot depend on dashboard/trade success or its throttle.
+    const refresh = state.slice(state.indexOf("func refresh(forceRefresh:"));
+    expect(refresh.indexOf("await refreshUnread()")).toBeLessThan(refresh.indexOf("guard !isRefreshing"));
+    expect(refresh).not.toContain("async let countTask");
+  });
+
+  it("marks a tapped push read while keeping navigation independent of network success", () => {
+    const delegate = source("ios/Wisconsin/App/AppDelegate.swift");
+    const route = delegate.slice(delegate.indexOf("private func routeNotificationDestination("));
+    expect(route).toContain('userInfo["notificationId"] as? String');
+    expect(route).toContain("markNotificationRead(id: notificationId)");
+    expect(route.indexOf("sharedAppState?.apply(route)")).toBeLessThan(route.indexOf("markNotificationRead(id:"));
+    expect(route).toContain("await sharedAppState?.refreshUnread()");
+    expect(route).toContain("defer { completionHandler() }");
+  });
+
   it("treats notification read API failures as real errors", () => {
     const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
 

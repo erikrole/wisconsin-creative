@@ -233,6 +233,7 @@ model User {
   updatedAt                     DateTime                         @updatedAt @map("updated_at")
   lastActiveAt                  DateTime?                        @map("last_active_at")
   location                      Location?                        @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  radioClipEnabled              Boolean                          @default(false) @map("radio_clip_enabled")
   sessions                      Session[]
   passkeyCredentials            PasskeyCredential[]
   passkeyChallenges             PasskeyChallenge[]
@@ -268,6 +269,7 @@ model User {
   blastsReceived                BlastRecipient[]                 @relation("BlastRecipient")
   bookingPhotos                 BookingPhoto[]                   @relation("BookingPhotoActor")
   checkinReports                CheckinItemReport[]              @relation("CheckinReports")
+  dismissedCheckinReports       CheckinItemReport[]              @relation("CheckinReportDismissals")
   allowedEmailsCreated          AllowedEmail[]                   @relation("AllowedEmailCreator")
   allowedEmailsClaimed          AllowedEmail[]                   @relation("AllowedEmailClaimer")
   licenseCodesHeld              LicenseCode[]                    @relation("LicenseClaimedBy")
@@ -335,13 +337,41 @@ model User {
   @@map("users")
 }
 
+model RadioClipAuthorization {
+  id              String   @id @default(cuid())
+  codeHash        String   @unique @map("code_hash")
+  challenge       String
+  parentSessionId String   @map("parent_session_id")
+  expiresAt       DateTime @map("expires_at")
+  parentSession   Session  @relation(fields: [parentSessionId], references: [id], onDelete: Cascade)
+
+  @@index([parentSessionId])
+  @@index([expiresAt])
+  @@map("radio_clip_authorizations")
+}
+
+model RadioClipSession {
+  id              String   @id @default(cuid())
+  tokenHash       String   @unique @map("token_hash")
+  parentSessionId String   @map("parent_session_id")
+  expiresAt       DateTime @map("expires_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  parentSession   Session  @relation(fields: [parentSessionId], references: [id], onDelete: Cascade)
+
+  @@index([parentSessionId])
+  @@index([expiresAt])
+  @@map("radio_clip_sessions")
+}
+
 model Session {
-  id        String   @id @default(cuid())
-  userId    String   @map("user_id")
-  tokenHash String   @unique @map("token_hash")
-  expiresAt DateTime @map("expires_at")
-  createdAt DateTime @default(now()) @map("created_at")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  radioClipAuthorizations RadioClipAuthorization[]
+  radioClipSessions       RadioClipSession[]
+  id                      String                   @id @default(cuid())
+  userId                  String                   @map("user_id")
+  tokenHash               String                   @unique @map("token_hash")
+  expiresAt               DateTime                 @map("expires_at")
+  createdAt               DateTime                 @default(now()) @map("created_at")
+  user                    User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("sessions")
@@ -1424,16 +1454,16 @@ model LiveActivityStart {
 }
 
 model Notification {
-  id        String              @id @default(cuid())
-  userId    String              @map("user_id")
-  type      String
-  title     String
-  body      String?
-  payload   Json?
-  channel   NotificationChannel @default(IN_APP)
-  sentAt    DateTime?           @map("sent_at")
-  readAt    DateTime?           @map("read_at")
-  dedupeKey String?             @unique @map("dedupe_key")
+  id         String                 @id @default(cuid())
+  userId     String                 @map("user_id")
+  type       String
+  title      String
+  body       String?
+  payload    Json?
+  channel    NotificationChannel    @default(IN_APP)
+  sentAt     DateTime?              @map("sent_at")
+  readAt     DateTime?              @map("read_at")
+  dedupeKey  String?                @unique @map("dedupe_key")
   // Booking-scoped notifications carry the owning booking id so escalation
   // sweeps can filter with `bookingId: { in: [...] }` instead of a fan of
   // `dedupeKey startsWith` LIKE branches. Intentionally no foreign key:
@@ -1442,9 +1472,9 @@ model Notification {
   // history that must survive that delete. A nullable, FK-less column keeps
   // the same practical shape as the repo's `onDelete: SetNull` booking links
   // without adding a Booking back-relation or a cascade path.
-  bookingId String?             @map("booking_id")
-  createdAt DateTime            @default(now()) @map("created_at")
-  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookingId  String?                @map("booking_id")
+  createdAt  DateTime               @default(now()) @map("created_at")
+  user       User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   deliveries NotificationDelivery[]
 
   @@index([userId, readAt])
@@ -1487,17 +1517,17 @@ model NotificationDelivery {
 /// iOS install. No user identity: app and OS version, the diagnostic's own
 /// metadata, and a size-capped call stack. Pruned after 90 days.
 model AppDiagnostic {
-  id          String   @id @default(cuid())
-  platform    String
+  id         String   @id @default(cuid())
+  platform   String
   /// crash | hang | cpu_exception | disk_write_exception | app_launch
-  kind        String
-  appVersion  String?  @map("app_version")
-  osVersion   String?  @map("os_version")
+  kind       String
+  appVersion String?  @map("app_version")
+  osVersion  String?  @map("os_version")
   /// Exception type, signal, or termination reason, when MetricKit gives one.
-  signature   String?
-  metadata    Json?
-  callStack   Json?    @map("call_stack")
-  receivedAt  DateTime @default(now()) @map("received_at")
+  signature  String?
+  metadata   Json?
+  callStack  Json?    @map("call_stack")
+  receivedAt DateTime @default(now()) @map("received_at")
 
   @@index([receivedAt])
   @@index([kind, receivedAt])
@@ -2254,18 +2284,23 @@ model BookingPhoto {
 }
 
 model CheckinItemReport {
-  id           String            @id @default(cuid())
-  bookingId    String            @map("booking_id")
-  assetId      String            @map("asset_id")
-  type         CheckinReportType
-  description  String?
-  imageUrl     String?           @map("image_url")
-  reportedById String            @map("reported_by_id")
-  createdAt    DateTime          @default(now()) @map("created_at")
+  id            String            @id @default(cuid())
+  bookingId     String            @map("booking_id")
+  assetId       String            @map("asset_id")
+  type          CheckinReportType
+  description   String?
+  imageUrl      String?           @map("image_url")
+  reportedById  String            @map("reported_by_id")
+  createdAt     DateTime          @default(now()) @map("created_at")
+  // Staff/admin dismissed this flag from the dashboard. The report stays in
+  // history; it only drops out of the dashboard's recent-flags list.
+  dismissedAt   DateTime?         @map("dismissed_at")
+  dismissedById String?           @map("dismissed_by_id")
 
-  booking    Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  asset      Asset   @relation(fields: [assetId], references: [id], onDelete: Restrict)
-  reportedBy User    @relation("CheckinReports", fields: [reportedById], references: [id], onDelete: Restrict)
+  booking     Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  asset       Asset   @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  reportedBy  User    @relation("CheckinReports", fields: [reportedById], references: [id], onDelete: Restrict)
+  dismissedBy User?   @relation("CheckinReportDismissals", fields: [dismissedById], references: [id], onDelete: SetNull)
 
   @@unique([bookingId, assetId])
   @@index([bookingId])
