@@ -8,7 +8,9 @@ import {
   GEAR_CATALOG,
   isItemAllowedForFit,
   itemsForFit,
+  kitEntryForStyle,
   normalizeApparelSize,
+  sortGearColors,
 } from "@/lib/gear-picks/catalog";
 import { defaultSizeFor } from "@/app/(app)/gear/gear-pick-state";
 import { isGearPickCycleOpen, priceGearPickLines } from "@/lib/gear-picks/pricing";
@@ -54,6 +56,34 @@ describe("gear pick catalog", () => {
     expect(normalizeApparelSize("2xl")).toBe("XXL");
     expect(normalizeApparelSize(" m ")).toBe("M");
     expect(normalizeApparelSize(null)).toBeNull();
+  });
+});
+
+describe("color order", () => {
+  it("leads every item with Red, then White, then Black", () => {
+    const leads = ["Red", "White", "Black"];
+    for (const item of GEAR_CATALOG.items) {
+      const ranks = item.colors.map((color) => (leads.includes(color.label) ? leads.indexOf(color.label) : leads.length));
+      expect(ranks, item.name).toEqual([...ranks].sort((a, b) => a - b));
+    }
+  });
+
+  it("keeps other colors in catalog order after the lead colors", () => {
+    const color = (label: string, code: string) => ({ code, label, swatch: "#000", image: "", imageNote: null });
+    expect(sortGearColors([color("Stone", "280"), color("Black", "005"), color("Gray", "017"), color("White", "100"), color("Red", "834")]).map((c) => c.code)).toEqual(["834", "100", "005", "280", "017"]);
+  });
+});
+
+describe("kitEntryForStyle", () => {
+  it("matches a catalog style that is already in the fit's free kit", () => {
+    expect(kitEntryForStyle("MEN", "6021712")).toMatchObject({ kind: "STANDARD_ISSUE", code: "834" }); // Drive Polo
+    expect(kitEntryForStyle("MEN", "6021649")).toMatchObject({ kind: "CORE_KIT" }); // Athletics SS Tee
+    expect(kitEntryForStyle("WOMEN", "6021628")).toMatchObject({ kind: "STANDARD_ISSUE" }); // Unstoppable Fleece Full-Zip
+  });
+
+  it("only looks at the participant's own fit kit", () => {
+    expect(kitEntryForStyle("WOMEN", "6021712")).toBeNull();
+    expect(kitEntryForStyle("MEN", "6021626")).toBeNull();
   });
 });
 

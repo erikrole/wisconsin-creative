@@ -9,6 +9,16 @@ import { toast } from "sonner";
 import { BarChart3Icon, ChevronDownIcon, CircleHelpIcon, ListChecksIcon, LockIcon, SearchIcon, SlidersHorizontalIcon } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
 import { PageHeader } from "@/components/PageHeader";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -29,7 +39,9 @@ import {
   GEAR_CATALOG,
   gearSku,
   itemsForFit,
+  kitEntryForStyle,
   type GearCatalogItem,
+  type GearKitEntry,
 } from "@/lib/gear-picks/catalog";
 import type { GearPicksMeResponse, GearPickSubmissionDto } from "@/lib/gear-picks/types";
 import { cn } from "@/lib/utils";
@@ -174,6 +186,7 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
   const [preview, setPreview] = useState<GearPreview | null>(null);
   const [sheetMode, setSheetMode] = useState<GearPicksSheetMode | null>(null);
   const [introOpen, setIntroOpen] = useState(false);
+  const [kitOverlap, setKitOverlap] = useState<{ sku: string; kitEntry: GearKitEntry } | null>(null);
 
   // The splash shows once per cycle (normally right after the dashboard banner),
   // never once picks are submitted or closed. "How it works" reopens it.
@@ -246,7 +259,7 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
     setDirty(true);
   }, []);
 
-  const addLine = useCallback(
+  const appendLine = useCallback(
     (sku: string) => {
       const entry = findGearSku(sku);
       if (!entry) return;
@@ -257,6 +270,21 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
       });
     },
     [data.profile, updateLines],
+  );
+
+  // Picking a style that's already in the department-covered kit is allowed (often in another
+  // color), so ask once per style instead of blocking. Later sizes and colors add silently.
+  const addLine = useCallback(
+    (sku: string) => {
+      const entry = findGearSku(sku);
+      const kitEntry = entry ? kitEntryForStyle(fit, entry.item.style) : null;
+      if (entry && kitEntry && !linesByStyle.has(entry.item.style)) {
+        setKitOverlap({ sku, kitEntry });
+        return;
+      }
+      appendLine(sku);
+    },
+    [appendLine, fit, linesByStyle],
   );
 
   const changeLine = useCallback(
@@ -671,6 +699,14 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
         deadline={cycle.deadline ? deadlineLabel(cycle.deadline) : null}
         kitCount={kit.length}
       />
+      <KitOverlapDialog
+        overlap={kitOverlap}
+        onCancel={() => setKitOverlap(null)}
+        onConfirm={(sku) => {
+          setKitOverlap(null);
+          appendLine(sku);
+        }}
+      />
       <GearPreviewDialog
         preview={preview}
         onOpenChange={(open) => {
@@ -679,6 +715,44 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
         onSelectColor={selectColor}
       />
     </FadeUp>
+  );
+}
+
+function KitOverlapDialog({
+  overlap,
+  onCancel,
+  onConfirm,
+}: {
+  overlap: { sku: string; kitEntry: GearKitEntry } | null;
+  onCancel: () => void;
+  onConfirm: (sku: string) => void;
+}) {
+  const picked = overlap ? findGearSku(overlap.sku) : null;
+  const kitColor = picked?.item.colors.find((color) => color.code === overlap?.kitEntry.code)?.label ?? overlap?.kitEntry.code;
+  const sameColor = picked?.color.code === overlap?.kitEntry.code;
+  const kitLabel = overlap ? KIT_LABELS[overlap.kitEntry.kind].toLowerCase() : "";
+
+  return (
+    <AlertDialog open={Boolean(overlap && picked)} onOpenChange={(open) => !open && onCancel()}>
+      <AlertDialogContent>
+        {overlap && picked && (
+          <>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Included in your {kitLabel}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {sameColor
+                  ? `Your ${kitLabel} already includes the ${picked.item.name} in ${kitColor}, covered by the department. You're welcome to add another one. It will count toward your pick allowance.`
+                  : `Your ${kitLabel} already includes the ${picked.item.name} in ${kitColor}, covered by the department. You're welcome to add it in ${picked.color.label} too. It will count toward your pick allowance.`}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={() => onConfirm(overlap.sku)}>Add to picks</AlertDialogAction>
+            </AlertDialogFooter>
+          </>
+        )}
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 

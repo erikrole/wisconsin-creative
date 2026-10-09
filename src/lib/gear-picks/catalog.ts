@@ -64,7 +64,23 @@ export type GearCatalogSku = {
 
 export const GEAR_PICK_CYCLE_ID = "2027-28";
 
-export const GEAR_CATALOG = catalogJson as GearCatalog;
+/** Brand colors lead every item: Red, then White, then Black. Other colors keep catalog order after them. */
+const LEAD_COLOR_ORDER = ["Red", "White", "Black"];
+
+export function sortGearColors(colors: GearCatalogColor[]) {
+  const rank = (color: GearCatalogColor) => {
+    const index = LEAD_COLOR_ORDER.indexOf(color.label);
+    return index === -1 ? LEAD_COLOR_ORDER.length : index;
+  };
+  return [...colors].sort((a, b) => rank(a) - rank(b));
+}
+
+const rawCatalog = catalogJson as GearCatalog;
+
+export const GEAR_CATALOG: GearCatalog = {
+  ...rawCatalog,
+  items: rawCatalog.items.map((item) => ({ ...item, colors: sortGearColors(item.colors) })),
+};
 
 export function gearSku(style: string, colorCode: string) {
   return `${style}-${colorCode}`;
@@ -114,6 +130,11 @@ const SKU_INDEX = buildSkuIndex(GEAR_CATALOG);
 
 export function findGearSku(sku: string): GearCatalogSku | null {
   return SKU_INDEX.get(sku) ?? null;
+}
+
+/** The department-covered kit entry (standard issue or core kit) for a catalog style, if the fit's kit includes it. */
+export function kitEntryForStyle(fit: GearPickFitKey, style: string, catalog: GearCatalog = GEAR_CATALOG) {
+  return catalog.kits[fit].find((entry) => entry.style === style) ?? null;
 }
 
 /** Apparel sizes offered in the picker. Free text up to 12 characters is accepted server-side. */
