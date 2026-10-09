@@ -10,6 +10,7 @@ import {
   itemsForFit,
   kitEntryForStyle,
   normalizeApparelSize,
+  sortGearColors,
 } from "@/lib/gear-picks/catalog";
 import { defaultSizeFor } from "@/app/(app)/gear/gear-pick-state";
 import { isGearPickCycleOpen, priceGearPickLines } from "@/lib/gear-picks/pricing";
@@ -55,6 +56,21 @@ describe("gear pick catalog", () => {
     expect(normalizeApparelSize("2xl")).toBe("XXL");
     expect(normalizeApparelSize(" m ")).toBe("M");
     expect(normalizeApparelSize(null)).toBeNull();
+  });
+});
+
+describe("color order", () => {
+  it("leads every item with Red, then White, then Black", () => {
+    const leads = ["Red", "White", "Black"];
+    for (const item of GEAR_CATALOG.items) {
+      const ranks = item.colors.map((color) => (leads.includes(color.label) ? leads.indexOf(color.label) : leads.length));
+      expect(ranks, item.name).toEqual([...ranks].sort((a, b) => a - b));
+    }
+  });
+
+  it("keeps other colors in catalog order after the lead colors", () => {
+    const color = (label: string, code: string) => ({ code, label, swatch: "#000", image: "", imageNote: null });
+    expect(sortGearColors([color("Stone", "280"), color("Black", "005"), color("Gray", "017"), color("White", "100"), color("Red", "834")]).map((c) => c.code)).toEqual(["834", "100", "005", "280", "017"]);
   });
 });
 
