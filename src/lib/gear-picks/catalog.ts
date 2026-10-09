@@ -116,7 +116,7 @@ export function findGearSku(sku: string): GearCatalogSku | null {
   return SKU_INDEX.get(sku) ?? null;
 }
 
-/** The free kit entry (standard issue or core kit) for a catalog style, if the fit's kit includes it. */
+/** The department-covered kit entry (standard issue or core kit) for a catalog style, if the fit's kit includes it. */
 export function kitEntryForStyle(fit: GearPickFitKey, style: string, catalog: GearCatalog = GEAR_CATALOG) {
   return catalog.kits[fit].find((entry) => entry.style === style) ?? null;
 }
