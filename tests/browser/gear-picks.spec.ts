@@ -68,6 +68,7 @@ test.afterAll(async () => { await browser?.close(); server?.close(); });
 
 async function open(width = 1280) {
   const page = await browser.newPage({ viewport: { width, height: 900 }, locale: "en-US", timezoneId: "America/Chicago", reducedMotion: "reduce" });
+  await page.addInitScript(() => localStorage.setItem("gear-picks-intro-seen:2027-28:fixture-staff", "1"));
   await page.clock.setFixedTime(new Date("2026-10-08T17:00:00Z"));
   const state = { data: fixture(), failRead: false, writes: [] as { version: number; lines: { size: string; quantity: number }[] }[] };
   await page.route("**/api/gear-picks/me", async (route) => {
@@ -344,5 +345,20 @@ test("item sizing controls require confirmation and use the catalog options", as
     expect(await shoe.locator("option").allTextContents()).not.toContain("10.5");
     await shoe.selectOption("");
     await browserExpect(page.getByRole("button", {name: "Save", exact: true})).toBeDisabled();
+  } finally {await page.close();}
+});
+
+
+test("intro explains the current sizing and selection workflow", async () => {
+  const {page} = await open(390);
+  try {
+    await page.getByRole("button", {name: "How it works", exact: true}).click();
+    const intro = page.getByRole("dialog");
+    await browserExpect(intro).toContainText("The department covers these separately");
+    await browserExpect(intro).toContainText("Turn on “Within my allowance”");
+    await browserExpect(intro).toContainText("Profile sizes fill in only when the sizing matches");
+    await capture(page, "intro-390");
+    await intro.getByRole("button", {name: "Start picking"}).click();
+    await browserExpect(intro).not.toBeVisible();
   } finally {await page.close();}
 });

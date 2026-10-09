@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { BarChart3Icon, ChevronDownIcon, ListChecksIcon, LockIcon, SearchIcon, SlidersHorizontalIcon } from "lucide-react";
+import { BarChart3Icon, ChevronDownIcon, CircleHelpIcon, ListChecksIcon, LockIcon, SearchIcon, SlidersHorizontalIcon } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
 import { PageHeader } from "@/components/PageHeader";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +21,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { GEAR_PICKS_ME_QUERY_KEY, useGearPicksMe } from "@/hooks/use-gear-picks";
 import { handleAuthRedirect, parseJsonSafely } from "@/lib/errors";
-import { formatDateTime } from "@/lib/format";
+import { formatDateShort, formatDateTime } from "@/lib/format";
 import {
   dollarsToCents,
   findGearSku,
@@ -46,6 +46,7 @@ import {
 import { GearItemCard, gearItemAnchorId } from "./GearItemCard";
 import { GearPicksSheet, type GearPicksSheetMode } from "./GearPicksSheet";
 import { GearPreviewDialog, type GearPreview } from "./GearPreviewDialog";
+import { gearIntroSeen, GearPicksIntro } from "./GearPicksIntro";
 
 const KIT_LABELS = { STANDARD_ISSUE: "Standard issue", CORE_KIT: "Core kit" } as const;
 
@@ -124,6 +125,16 @@ function cardColorCode(
   return (item.colors.find((color) => pickedSkus.has(gearSku(item.style, color.code))) ?? item.colors[0]!).code;
 }
 
+/** "Oct 11 at 11 PM": short enough for the intro, but keeps the cutoff time. */
+function deadlineLabel(iso: string) {
+  const date = new Date(iso);
+  const time = date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: date.getMinutes() ? "2-digit" : undefined,
+  });
+  return `${formatDateShort(iso)} at ${time}`;
+}
+
 function AdminResultsLink() {
   return (
     <Button asChild variant="outline" className="min-h-10">
@@ -162,6 +173,14 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
   const [selectedColors, setSelectedColors] = useState<Record<string, string>>({});
   const [preview, setPreview] = useState<GearPreview | null>(null);
   const [sheetMode, setSheetMode] = useState<GearPicksSheetMode | null>(null);
+  const [introOpen, setIntroOpen] = useState(false);
+
+  // The splash shows once per cycle (normally right after the dashboard banner),
+  // never once picks are submitted or closed. "How it works" reopens it.
+  useEffect(() => {
+    if (!readOnly && !submittedAt && !gearIntroSeen(cycle.id, participant.id)) setIntroOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on arrival
+  }, []);
 
   // Refresh clean lists, but never rebase unsaved edits onto another tab's version.
   useEffect(() => {
@@ -379,6 +398,12 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
             : `${fit === "MEN" ? "Men’s" : "Women’s"} + unisex · ${allowanceLabel} for your picks${cycle.deadline ? ` · Due ${formatDateTime(cycle.deadline)}` : ""}`
         }
       >
+        {!readOnly && (
+          <Button variant="ghost" className="min-h-10" onClick={() => setIntroOpen(true)}>
+            <CircleHelpIcon data-icon="inline-start" />
+            How it works
+          </Button>
+        )}
         {data.isAdmin && <AdminResultsLink />}
       </PageHeader>
 
@@ -636,6 +661,16 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
         onChangeLine={changeLine}
       />
 
+      <GearPicksIntro
+        open={introOpen}
+        onOpenChange={setIntroOpen}
+        cycleId={cycle.id}
+        participantId={participant.id}
+        allowance={allowanceLabel}
+        remaining={totalCents > 0 ? formatUsd(Math.max(0, remainingCents)) : null}
+        deadline={cycle.deadline ? deadlineLabel(cycle.deadline) : null}
+        kitCount={kit.length}
+      />
       <GearPreviewDialog
         preview={preview}
         onOpenChange={(open) => {
