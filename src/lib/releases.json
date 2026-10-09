@@ -50,8 +50,13 @@
     "title": "Damage report review",
     "type": "feature",
     "summary": "Damage reports filed at the kiosk now land on the dashboard, where staff can see the photo and send the item to maintenance in one step.",
+    "details": [
+      "Each report opens a review panel with the photo, the reporter's notes, and a link to the item.",
+      "Reports can cover numbered batteries and counted supplies, not just individually tracked gear."
+    ],
     "platforms": [
-      "Web"
+      "Web",
+      "iOS"
     ],
     "pr": 430
   },
@@ -60,6 +65,10 @@
     "title": "Kiosk stops auto-selecting kits",
     "type": "fixes",
     "summary": "Kiosk checkout no longer picks a suggested kit for you; you choose a kit only when you want one.",
+    "details": [
+      "The suggested kit is still highlighted in the kit picker so it's easy to find.",
+      "Choosing a kit uses it as your checklist while you scan gear."
+    ],
     "platforms": [
       "Kiosk"
     ],
@@ -289,7 +298,6 @@
       "iOS no longer crashes when one person has two shifts on an event.",
       "Guide table of contents stays pinned and highlights the section you're reading.",
       "Items address bar matches the current filters, and the default Items sort loads faster.",
-      "Large CSV imports run in batches and report exactly which rows were not applied.",
       "Mac booking alerts update in place, stay silent unless sound is on, and open the booking.",
       "Badge celebrations link to your shelf, and the iOS badge gallery matches the web layout."
     ],
@@ -436,10 +444,8 @@
       "Event coverage counts only confirmed crew, and blocked releases name the conflicting event and time.",
       "Reservation Rules and Checkout Policies warn about unsaved changes and recover drafts after a refresh.",
       "Filters and search boxes handle duplicate names, Enter, and international keyboards more reliably.",
-      "Data exports reject unreadable date ranges and warn when an export was cut short.",
       "iOS: Errors stay pinned above the form with your entries kept, and lists stay visible while refreshing.",
-      "Kiosk battery returns record where and by whom they were scanned.",
-      "New Football clip naming guide, and staff can import documents into Resources."
+      "Kiosk battery returns record where and by whom they were scanned."
     ],
     "platforms": [
       "Web",
@@ -453,6 +459,11 @@
     "title": "Publish a schedule now",
     "type": "feature",
     "summary": "Admins can send pending crew changes immediately instead of waiting for the release timer, useful for last-minute changes.",
+    "details": [
+      "Publishing early runs the same checks as a timed release.",
+      "Workers on future events get the usual change notifications.",
+      "Changes still release on the ten-minute timer unless an admin publishes them sooner."
+    ],
     "platforms": [
       "Web"
     ]
@@ -462,6 +473,11 @@
     "title": "Transfer items between checkouts",
     "type": "feature",
     "summary": "Staff can move a checked-out item to another person, adding it to their checkout or a new one, while keeping the item's history intact.",
+    "details": [
+      "The item's original scan and photo records stay with it after the move.",
+      "Return reminders follow the item to the receiving checkout.",
+      "A checkout left with no gear closes as a canceled transfer."
+    ],
     "platforms": [
       "Web"
     ]
@@ -471,6 +487,12 @@
     "title": "Merge duplicate checkouts",
     "type": "feature",
     "summary": "Staff can combine duplicate checkouts for the same event into one, choosing the due-back time when they differ.",
+    "details": [
+      "Staff can select up to 25 matching checkouts and merge them into the oldest one.",
+      "Custody, numbered batteries, and scan history all carry over to the merged checkout.",
+      "Checkouts for different people, events, or locations, or with partial returns, can't be merged.",
+      "When duplicates came from different reservations, staff choose which reservation link to keep."
+    ],
     "platforms": [
       "Web"
     ]
@@ -495,13 +517,11 @@
     "type": "fixes",
     "summary": "Shift claim scoping, signature, battery, and Schedule fixes.",
     "details": [
-      "Students see and claim open shifts and trades only in their primary area, with Photo and Graphics shared.",
-      "Trade Board lists teammates' trade posts separately from open shifts.",
+      "Students claim open shifts and trades only in their primary area, and the Trade Board lists teammates' trade posts separately.",
       "Away and neutral-site events no longer show students a call time.",
       "Signatures with many strokes, such as printed names, now save.",
       "Kiosk battery scans count correctly across kiosks, and pickup lists batteries as a count.",
       "Schedule list reliably opens at today and warns when data may be out of date.",
-      "Reservation pickup locations are now Camp Randall and Kohl Center.",
       "Staff can remove a player from a signature roster, and admins can turn a reservation into a checkout."
     ],
     "platforms": [
@@ -545,6 +565,11 @@
     "title": "Extend up to the next booking",
     "type": "improvement",
     "summary": "An active checkout can be extended right up to the start of the next booking for that gear, and the app shows when the gear is needed next.",
+    "details": [
+      "True overlaps and stock shortages still block an extension.",
+      "New reservations still keep the standard turnaround time between bookings.",
+      "On iPhone, booking details show the limit before you open Extend."
+    ],
     "platforms": [
       "Web",
       "iOS"
@@ -555,6 +580,11 @@
     "title": "Partial kiosk pickups",
     "type": "feature",
     "summary": "Scan only some of a reservation's gear at the kiosk; the rest stays reserved for a later pickup.",
+    "details": [
+      "Each pickup starts a checkout for only the gear you scanned.",
+      "The reservation completes once its last item is picked up.",
+      "A reservation's gear list can't be edited after pickup has started."
+    ],
     "platforms": [
       "Kiosk"
     ]
@@ -564,6 +594,12 @@
     "title": "Group badge awards",
     "type": "feature",
     "summary": "Admins can search people, select a group, and award a badge to everyone at once from the Badges page, with a summary of what was awarded.",
+    "details": [
+      "Admins can select every visible search result, clear the selection, and review names before confirming.",
+      "One group award can reach up to 200 people.",
+      "People who already hold the badge are skipped instead of receiving it twice.",
+      "Recipients get the usual in-app notification for their new badge."
+    ],
     "platforms": [
       "Web"
     ]
@@ -592,8 +628,6 @@
       "Event, call, and return times now use 15-minute steps and round forward.",
       "Deleting your account removes your personal profile and sign-in data while keeping gear history.",
       "Bookings, Items, and Schedule keep your filters and place when you go back.",
-      "Booking edits that saved no longer show a false error, and copy buttons report failures honestly.",
-      "Students can browse the People directory again, and crew fixes on past events save silently.",
       "Password managers save and fill the right account on every password screen.",
       "Accessibility improves across iOS and the kiosk, and the Mac menu bar icon can be hidden."
     ],
@@ -624,6 +658,11 @@
     "title": "Android browser push",
     "type": "feature",
     "summary": "Students on Android can turn on push notifications for the web app from Settings and send themselves a test.",
+    "details": [
+      "Tapping a notification opens the matching page in the web app.",
+      "Browser pushes follow your existing notification preferences.",
+      "Signing out turns off push for that browser, and iPhone notifications are unchanged."
+    ],
     "platforms": [
       "Web"
     ]
@@ -706,6 +745,12 @@
     "title": "Link bookings to five events",
     "type": "improvement",
     "summary": "Reservations and checkouts can now be linked to as many as five scheduled events, on the web and iPhone.",
+    "details": [
+      "The earliest linked event is treated as the booking's primary event.",
+      "Reservations keep all their linked events when they become checkouts.",
+      "The event picker hides past events but keeps existing past links visible.",
+      "Kiosk checkouts still link to a single event or purpose."
+    ],
     "platforms": [
       "Web",
       "iOS"
@@ -755,8 +800,7 @@
       "Fixed several kiosk layout issues, including wrapped names and the activation keypad being covered.",
       "Live Production shifts can be added from iPhone, and notification times show in Central time.",
       "Staff can invite people in bulk by uploading an email and role CSV.",
-      "Signature roster downloads come as PNG or SVG, and an Administration roster is added.",
-      "Items now open sorted by Most popular, and manually added events can have their times changed."
+      "Signature roster downloads come as PNG or SVG, and an Administration roster is added."
     ],
     "platforms": [
       "Web",
@@ -769,6 +813,11 @@
     "title": "Shift claims need approval",
     "type": "improvement",
     "summary": "Open-slot pickups and Trade Board claims are held for review again, and the original owner keeps the shift until a claim is approved.",
+    "details": [
+      "Several students can request the same open slot, and staff choose who gets it.",
+      "Approving one request automatically declines the others for that slot.",
+      "Staff approve or decline both open-slot requests and Trade Board claims."
+    ],
     "platforms": [
       "Web",
       "iOS"
@@ -884,7 +933,6 @@
       "Kiosk: Fixed a crash after scanning a numbered battery during pickup or return.",
       "Subscribed all-day shifts show as a single day in Apple Calendar.",
       "Team abbreviations stay in capitals on bookings, the dashboard, and the kiosk.",
-      "Imported venues show just the venue name.",
       "Trade Board keeps showing open shifts or trades if one fails to load, and explains blocked trades.",
       "iOS: Sign-in asks for your email first, then your password.",
       "The web app's browser and home-screen icons use the Block W."
@@ -917,7 +965,9 @@
     "type": "feature",
     "summary": "A new Mac menu bar app keeps your gear, bookings, and notifications a click away.",
     "details": [
-      "Booking alerts lead with the booking title, with status, requester, and time below."
+      "Booking alerts lead with the booking title, with status, requester, and time below.",
+      "The menu shows open bookings, pickups, and kiosk health.",
+      "Booking alerts and a menu bar count are optional, and the app can launch at login."
     ],
     "platforms": [
       "macOS"
@@ -980,9 +1030,7 @@
       "Checked-out gear closes only through a kiosk return or an admin exception.",
       "Scanning now lives in the iOS app and kiosk; the web scan page is retired.",
       "iOS: Booking details list every linked event and show only actions you can take.",
-      "Collaborators allowed to reserve gear see New reservation on Home again.",
-      "Fixed slow page reloads in Safari, and iOS item fields can be cleared.",
-      "Social is now a team area, and the accountability report has selectable rankings."
+      "Collaborators allowed to reserve gear see New reservation on Home again."
     ],
     "platforms": [
       "Web",
@@ -1026,7 +1074,10 @@
     "type": "feature",
     "summary": "Reserving gear for an event now adds you to that event's crew, keeping the schedule and gear in sync.",
     "details": [
-      "Canceling or transferring the reservation updates the crew assignment."
+      "Canceling or transferring the reservation updates the crew assignment.",
+      "You're placed on the reservation's primary event, in an open slot or a new one.",
+      "The usual schedule conflict and approved time-off checks still apply.",
+      "Events without a crew setup and unpublished schedule drafts are left unchanged."
     ],
     "platforms": [
       "Web"
@@ -1055,7 +1106,9 @@
     "type": "feature",
     "summary": "Invited users can now create an account and request a password reset without leaving the iPhone app.",
     "details": [
-      "Sign-in screens suggest using your campus email when an Athletics address is typed."
+      "Sign-in screens suggest using your campus email when an Athletics address is typed.",
+      "Only invited email addresses can register, just like on the web.",
+      "Registering signs you straight into the app once your account is created."
     ],
     "platforms": [
       "Web",
@@ -1097,11 +1150,9 @@
     "details": [
       "Hardened sign-in sessions on iPhone and kiosk; signing out clears notifications and cached data.",
       "Deactivating a user signs them out everywhere and stops their reminders.",
-      "Staff can assign an open license slot to a user from the license sheet.",
       "Collaborator controls match exactly what each account is allowed to do.",
       "Quick extend works again, and back-to-back edits no longer report a conflict.",
       "Trade Board refreshes when someone else claims a shift first.",
-      "Adding an inactive or duplicate traveler shows a clear message.",
       "Fixed several badge award rules, including damage-free credit for late returns."
     ],
     "platforms": [
@@ -1114,7 +1165,12 @@
     "date": "2026-07-30",
     "title": "Staff announcements",
     "type": "feature",
-    "summary": "Staff can send an announcement that appears as a banner in the app for everyone.",
+    "summary": "Staff can send an announcement to an event crew, specific people, or groups, and it appears as a banner in the app.",
+    "details": [
+      "The banner stays at the top of the iPhone Home screen until the recipient taps Got it.",
+      "Each announcement also arrives as a push notification and in the notification inbox.",
+      "Senders can see who received, read, and acknowledged each announcement."
+    ],
     "platforms": [
       "Web",
       "iOS"
@@ -1126,6 +1182,11 @@
     "title": "In-app tips on iPhone",
     "type": "feature",
     "summary": "One-time tips point out new features like New Reservation, Trade Board, Shift Calendar, My Availability, and continuous scanning.",
+    "details": [
+      "Each tip appears once and goes away after you use the feature.",
+      "Shift Calendar and My Availability tips appear only after a few visits to Schedule.",
+      "A tip on the reservation draft card explains how to resume a minimized reservation."
+    ],
     "platforms": [
       "iOS"
     ]
@@ -1151,7 +1212,9 @@
     "type": "improvement",
     "summary": "New items and item families can include a photo from search, a pasted link, or an upload before saving.",
     "details": [
-      "A failed photo can be retried without re-creating the item."
+      "A failed photo can be retried without re-creating the item.",
+      "Photo search for a new item family starts from the family name.",
+      "Adding stock to an existing quantity item keeps its current photo."
     ],
     "platforms": [
       "Web"
@@ -1197,7 +1260,6 @@
       "People added in an unpublished draft keep their name and photo after a refresh.",
       "Booking detail shows the requester, timing, location, gear count, and linked event in one summary.",
       "Dashboard rows read Today, Tomorrow, or Yesterday for nearby dates.",
-      "The sign-in page has a new layered design on web and iOS.",
       "iOS: Notification colors match their meaning, and screens do less work while drawing."
     ],
     "platforms": [
@@ -1283,6 +1345,11 @@
     "title": "Overdue nudges by push",
     "type": "feature",
     "summary": "When staff nudge someone about an overdue checkout, the borrower now also gets a push notification that opens the checkout.",
+    "details": [
+      "The push follows the borrower's overdue checkout notification setting.",
+      "The in-app reminder still arrives when push is off or unavailable.",
+      "Nudging doesn't change the checkout's status or due time."
+    ],
     "platforms": [
       "Web",
       "iOS"
@@ -1313,10 +1380,8 @@
       "iOS: Sign-in and sign-out are more reliable, and a wrong password gets a clear message.",
       "Profile edits show up in the Users roster immediately.",
       "Changing a shift's time saves conflicts and history together.",
-      "Booking titles are formatted consistently, with sport codes in caps.",
       "Controls across Items, Bookings, Schedule, and Resources are larger and keyboard accessible.",
-      "iOS: Notification settings are simpler and include Send Test Notification.",
-      "iOS: The app uses the Block W icon, and Licenses lead with open seats."
+      "iOS: Notification settings are simpler and include Send Test Notification."
     ],
     "platforms": [
       "Web",
@@ -1434,6 +1499,11 @@
     "title": "Operations page",
     "type": "feature",
     "summary": "Fix Today checks, data cleanup, and battery tools now live together on one Operations page.",
+    "details": [
+      "Fix Today checks are for admins, while Keep data clean checks are open to staff.",
+      "The page shows only checks that need work and folds clean ones into a summary.",
+      "A battery summary card links straight to Battery Ops."
+    ],
     "platforms": [
       "Web"
     ]
@@ -1449,9 +1519,7 @@
       "Trade Board posts can no longer double-book a shift, and cancelled games leave subscribed calendars.",
       "All-day events show on the right day without made-up call times or false conflicts.",
       "Gear shown as available in the picker is no longer rejected on submit.",
-      "iOS: Push notifications deliver reliably again.",
-      "Extending a booking from an out-of-date page asks you to refresh.",
-      "Fixed license pool, low-stock alert, and search focus issues, and Wiscard is optional at registration."
+      "iOS: Push notifications deliver reliably again."
     ],
     "platforms": [
       "Web",
@@ -1598,8 +1666,6 @@
       "Editing only a booking's title or notes no longer triggers false availability conflicts.",
       "iOS: All-day events show as date-only instead of midnight times, including with VoiceOver.",
       "Kiosk: The keyboard stays open while typing, and battery counts show on active checkouts.",
-      "Asset tags lead item rows on iPhone and kiosk, and small attachments stay out of search.",
-      "iOS: The Schedule tab badge appears only when you have a shift today.",
       "The notification bell count and license alert times work again.",
       "Hardened kiosk activation and signing out of other devices."
     ],
@@ -1713,6 +1779,10 @@
     "title": "Public About pages",
     "type": "feature",
     "summary": "A public set of About pages explains what the app does, how it is built, and how it is secured, alongside a privacy policy.",
+    "details": [
+      "The pages describe real workflows and the platform in plain language, using fictional sample data in product screens.",
+      "iPhone Settings links to the privacy policy and support."
+    ],
     "platforms": [
       "Web"
     ]
@@ -1771,8 +1841,6 @@
       "Returned numbered batteries no longer show as checked out, and staff can repair stale battery records.",
       "Kiosk: Overnight sleep mode follows local hours, and the scanner waits until you tap Start Scanning.",
       "Department, location, and price edits save correctly on items and item families.",
-      "Linking a non-game event such as a media day keeps the event's full name.",
-      "Calendar sync applies venue mappings in the right order.",
       "Settings appears in the web sidebar for everyone, and Bookings shows a badge when gear is due today.",
       "iOS: Home loads faster with a lighter payload and cached thumbnails.",
       "Guides have types like How-to, and Resources can switch between card and list views."
@@ -1820,7 +1888,9 @@
     "type": "feature",
     "summary": "Admins can close an open checkout from its detail page when all gear is verified back but can't be scanned.",
     "details": [
-      "Closing requires a reason and confirmation that the gear is back."
+      "Closing requires a reason and confirmation that the gear is back.",
+      "Closing marks items returned and puts batteries and stock back into availability.",
+      "The kiosk remains the standard place to return gear."
     ],
     "platforms": [
       "Web"
@@ -1878,9 +1948,7 @@
       "Items without a serial number open correctly again.",
       "The camera preview on iPhone no longer shows a false error or jumps into Picture-in-Picture.",
       "The Checkouts report no longer counts pending pickups or canceled bookings.",
-      "Upcoming events keep their real titles when no opponent is listed.",
       "Kiosk Items Out and active checkouts now include numbered batteries, and battery-only returns count correctly.",
-      "Users and reservation filters, avatars, and inline edit rows have a lighter look with clear Save and Cancel.",
       "iOS reservations group gear by category with photos and keep your pickup location."
     ],
     "platforms": [
@@ -2010,6 +2078,11 @@
     "title": "Kiosk visual consistency",
     "type": "improvement",
     "summary": "Colors, buttons, and progress rings now match across every kiosk screen, with larger touch targets.",
+    "details": [
+      "Progress rings run blue to green on every screen, and completion buttons use Wisconsin red.",
+      "Overdue is red everywhere, and pickups waiting on you are orange.",
+      "Back, camera, and remove-item buttons are large enough to tap easily."
+    ],
     "platforms": [
       "Kiosk"
     ],
@@ -2055,7 +2128,6 @@
       "Fixed a crash when opening Schedule on iPhone.",
       "Creating bookings, deleting shifts, crew setup, trade cancel, and notification settings work correctly on iPhone again.",
       "Quick search opens only from its button or Cmd/Ctrl+K, so typing in page fields isn't interrupted.",
-      "More retailer product photos preview and save in image search, and number-only item notes stay visible.",
       "Settings no longer shows an active kiosk as offline, and dashboard View all links respect filters."
     ],
     "platforms": [
@@ -2173,6 +2245,11 @@
     "title": "Invitation-only onboarding",
     "type": "improvement",
     "summary": "New accounts are created by invitation only, so every person sets their own password when they sign up.",
+    "details": [
+      "One Onboard users dialog handles single and bulk invites, flagging duplicates and existing accounts before sending.",
+      "An onboarding status page shows pending, stale, and claimed invitations.",
+      "Staff can copy a sign-up link for an unclaimed invitation or remove a stale one."
+    ],
     "platforms": [
       "Web"
     ]
@@ -2188,7 +2265,6 @@
       "Resources search matches text inside guides again.",
       "Every report export includes all matching rows, and Utilization and Missing Units gain CSV export.",
       "Scanning the same item twice at kiosk pickup now says it was already scanned.",
-      "Search results always show a sensible name, and the assign picker can retry failed loads.",
       "The audit log keeps your place when loading fails, and escalation and export saves are more reliable."
     ],
     "platforms": [
@@ -2262,6 +2338,10 @@
     "title": "Item families in kits",
     "type": "improvement",
     "summary": "Kits can now include item families, such as batteries, with a quantity instead of only individual items.",
+    "details": [
+      "The kit page searches active item families at the kit's location and skips ones already added.",
+      "Each family is added with its own quantity, from 1 to 999."
+    ],
     "platforms": [
       "Web"
     ]
@@ -2352,10 +2432,8 @@
       "Save, extend, cancel, assign, and upload actions can no longer submit twice from rapid clicks.",
       "Users, guides, and item family pages show retryable errors instead of misleading empty states.",
       "All-day events no longer appear on the wrong day.",
-      "Favorites stay in sync when switching filters, and select-all can favorite large selections.",
       "Items, Users, and Trade Board filters show as removable chips, and Settings uses a grouped navigation rail.",
       "Kiosk iPads stay signed in until an admin deactivates them.",
-      "Sign-in is more reliable for people on shared campus networks.",
       "The import preview prevents double submits and its summary counts bulk items and queued images."
     ],
     "platforms": [
@@ -2462,8 +2540,7 @@
       "Shift, trade, and settings forms show errors inline and stay locked while saving.",
       "Creating an item, kit, or event offers next steps like open it, add a photo, or add another.",
       "Scanning the same code twice on iPhone no longer opens duplicate pages.",
-      "Invitations for emails that already have an account show as claimed.",
-      "Theme changes fade smoothly, respect reduced motion, and stay in sync."
+      "Invitations for emails that already have an account show as claimed."
     ],
     "platforms": [
       "Web",
@@ -2576,9 +2653,7 @@
       "Checkout and overdue reports count only relevant bookings, and overdue and due-today links filter correctly.",
       "Away games read correctly, and only active bookings appear on the calendar.",
       "A kiosk returns to its activation screen when an admin deactivates it.",
-      "iOS search shows errors with Retry, and booking actions and purchase details appear only to the right people.",
-      "Users search, filters, and sort stay in the page address, and breadcrumbs have larger tap targets.",
-      "Hardened sign-in and session handling."
+      "iOS search shows errors with Retry, and booking actions and purchase details appear only to the right people."
     ],
     "platforms": [
       "Web",
@@ -2807,6 +2882,11 @@
     "title": "Notes on bookings",
     "type": "improvement",
     "summary": "Checkouts and bookings can carry notes, shown at review, and multi-event bookings list each event's date and home or away.",
+    "details": [
+      "Notes are optional and are saved with booking drafts.",
+      "Multi-event bookings tag the earliest event as Primary.",
+      "Title, requester, location, and dates are clearly marked as required."
+    ],
     "platforms": [
       "Web"
     ]
@@ -2816,6 +2896,11 @@
     "title": "Shift calendar subscriptions",
     "type": "feature",
     "summary": "Students and staff can subscribe to their shifts in Apple, Google, or Outlook calendar with a personal link.",
+    "details": [
+      "The feed stays in sync with schedule changes, so you never need to subscribe again.",
+      "On iPhone, a button on the Schedule tab opens the calendar subscribe sheet.",
+      "You can generate a new link from your profile, replacing the old one."
+    ],
     "platforms": [
       "Web"
     ]
@@ -2867,6 +2952,10 @@
     "title": "Renamed to Wisconsin Creative",
     "type": "improvement",
     "summary": "The app now goes by Wisconsin Creative on the web and iPhone.",
+    "details": [
+      "The new name appears in the sidebar, sign-in pages, page titles, and email footers.",
+      "The iPhone sign-in screen was redesigned with a card layout and a show password option."
+    ],
     "platforms": [
       "Web",
       "iOS"
@@ -2929,9 +3018,7 @@
       "iOS: Booking forms ask before discarding changes, and load errors offer Retry.",
       "Older QR code formats and accessory items now scan correctly.",
       "Search results and the Items list show item photos and locations.",
-      "The overdue banner works with the keyboard and screen readers.",
-      "Guide editing warns before discarding changes and when someone else edited the guide.",
-      "Sports with men's and women's teams now save their settings together."
+      "Guide editing warns before discarding changes and when someone else edited the guide."
     ],
     "platforms": [
       "Web",
@@ -3113,7 +3200,9 @@
     "type": "improvement",
     "summary": "Games at neutral venues are detected and labeled across the schedule and bookings, so they no longer read as home or away.",
     "details": [
-      "Neutral-site events get their own color in Calendar view."
+      "Neutral-site events get their own color in Calendar view.",
+      "A game listed as vs at a venue that isn't a home venue is marked Neutral.",
+      "Schedule filters add a Neutral option alongside Home and Away."
     ],
     "platforms": [
       "Web"
@@ -3156,7 +3245,9 @@
     "type": "feature",
     "summary": "Only invited email addresses can create an account, and each person's role is set when the invite is sent.",
     "details": [
-      "Admins manage the Allowed Emails list from Settings."
+      "Admins manage the Allowed Emails list from Settings.",
+      "Staff can invite students, while admins can invite any role.",
+      "Invitations that have already been used stay on the list."
     ],
     "platforms": [
       "Web"
@@ -3245,7 +3336,6 @@
       "Scan page handles network drops, duplicate scans, and repeated taps.",
       "Scanning unavailable gear into a booking is rejected, and rapid scans no longer duplicate.",
       "Booking pages show clearer errors, keep your data on refresh, and confirm extensions.",
-      "Your profile, permissions, and history now live on your user page.",
       "Staff see a banner of damaged, lost, and maintenance items that need attention.",
       "Spreadsheet imports keep columns that don't map to a field."
     ],
@@ -3321,7 +3411,9 @@
     "type": "improvement",
     "summary": "The app adopts Wisconsin typography and the Motion W logo, with cleaner, quieter dashboard cards.",
     "details": [
-      "Durations read in full, and upcoming events use full sport names."
+      "Durations read in full, and upcoming events use full sport names.",
+      "Headings use Gotham, and the Motion W replaces the old mark in the sidebar, sign-in page, and browser icon.",
+      "Wisconsin red is saved for brand moments like the active sidebar item, overdue banner, and notification badges."
     ],
     "platforms": [
       "Web"
@@ -3400,9 +3492,7 @@
       "Settings uses tab navigation, and Calendar Sources shows sync status and errors.",
       "Events are grouped by day, and calendar days expand to show everything scheduled.",
       "Reports add date filters, CSV export, and utilization charts.",
-      "Breadcrumb navigation appears on every page.",
-      "Buttons guard against double-submits, and pages warn before you leave with unsaved changes.",
-      "Form fields no longer zoom in on iPhone."
+      "Buttons guard against double-submits, and pages warn before you leave with unsaved changes."
     ],
     "platforms": [
       "Web"
@@ -3444,7 +3534,9 @@
     "type": "feature",
     "summary": "Each event gets one page showing its crew, who has gear, and who is still missing gear.",
     "details": [
-      "Staff can nudge crew members who haven't picked up gear."
+      "Staff can nudge crew members who haven't picked up gear.",
+      "Gear booked for an event links to the person's shift, so the page shows each crew member's gear status.",
+      "Creating a checkout for an event shows your shift area and time for that event."
     ],
     "platforms": [
       "Web"
@@ -3527,7 +3619,9 @@
     "type": "feature",
     "summary": "Report pages show how gear is used and where it goes, with charts, filters, and date ranges.",
     "details": [
-      "Covers utilization, checkout activity, overdue gear, missing units, scans, and audit history."
+      "Covers utilization, checkout activity, overdue gear, missing units, scans, and audit history.",
+      "Reports are organized into tabs, with metric cards above the charts.",
+      "Each report shows a clear empty state or error when there's nothing to load."
     ],
     "platforms": [
       "Web"
@@ -3567,6 +3661,11 @@
     "title": "Scan modes",
     "type": "feature",
     "summary": "The scan page can look up an item, add gear to a checkout, or check gear back in.",
+    "details": [
+      "Lookup mode shows an item's status, holder, and location in a sheet without leaving the scan page.",
+      "Checkout and check-in scans track progress item by item and celebrate when everything is scanned.",
+      "Students can scan their own gear out and back in without staff help."
+    ],
     "platforms": [
       "Web"
     ]

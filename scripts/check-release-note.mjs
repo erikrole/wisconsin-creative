@@ -33,16 +33,15 @@ export function releaseEntryProblems(entry) {
   const problems = [];
   if (!isRealIsoDate(entry.date)) problems.push(`"date" must be a real YYYY-MM-DD date`);
   const titleWords = typeof entry.title === "string" ? entry.title.trim().split(/\s+/).filter(Boolean).length : 0;
-  if (titleWords < 1 || titleWords > 7) problems.push(`"title" must be 1–7 words`);
+  if (titleWords < 2 || titleWords > 7) problems.push(`"title" must be 2–7 words`);
   if (!TYPES.has(entry.type)) problems.push(`"type" must be feature, improvement, or fixes`);
   if (typeof entry.summary !== "string" || entry.summary.trim().length < 20) problems.push(`"summary" needs a sentence or two`);
   if (!Array.isArray(entry.platforms) || entry.platforms.length === 0 || !entry.platforms.every((p) => PLATFORMS.has(p))) {
     problems.push(`"platforms" must list Web, iOS, Kiosk, and/or macOS`);
   }
   const details = entry.details ?? [];
-  const [min, max] = entry.type === "fixes" ? [1, 8] : [2, 6];
-  if (!Array.isArray(details) || details.length < min || details.length > max || details.some((d) => typeof d !== "string" || !d.trim())) {
-    problems.push(`"details" needs ${min}–${max} bullets`);
+  if (!Array.isArray(details) || details.length < 2 || details.length > 6 || details.some((d) => typeof d !== "string" || !d.trim())) {
+    problems.push(`"details" needs 2–6 bullets`);
   }
   return problems;
 }

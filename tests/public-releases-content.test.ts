@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { forbiddenReleaseTerms, groupReleases, releaseSlug, releases } from "@/lib/releases";
 // @ts-expect-error -- plain ESM script without type declarations
-import { isRealIsoDate } from "../scripts/check-release-note.mjs";
+import { isRealIsoDate, releaseEntryProblems } from "../scripts/check-release-note.mjs";
 
 const releasesLayoutSource = readFileSync("src/app/(public)/releases/layout.tsx", "utf8");
 const releasesPageSource = readFileSync("src/app/(public)/releases/page.tsx", "utf8");
@@ -29,6 +29,13 @@ describe("public release notes", () => {
       expect(release.platforms.length).toBeGreaterThan(0);
       for (const platform of release.platforms) expect(platforms.has(platform)).toBe(true);
     }
+  });
+
+  it("holds every release, including the backfill, to the release-note contract", () => {
+    const failures = releases
+      .map((release) => ({ release: `${release.date} ${release.title}`, problems: releaseEntryProblems(release) }))
+      .filter((result) => result.problems.length > 0);
+    expect(failures).toEqual([]);
   });
 
   it("groups every release into exactly one day", () => {

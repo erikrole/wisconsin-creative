@@ -43,8 +43,21 @@ describe("release note PR check", () => {
     const result = evaluateReleaseNote({ before: [existing], after: [noDetails, existing], prNumber: 452 });
     expect(result.ok).toBe(false);
     expect(result.reason).toContain("details");
-    const smallFix = { ...existing, date: "2026-10-09", pr: 452, type: "fixes", details: ["Fixed a kiosk label."] };
-    expect(evaluateReleaseNote({ before: [existing], after: [smallFix, existing], prNumber: 452 }).ok).toBe(true);
+    const oneBulletFix = { ...existing, date: "2026-10-09", pr: 452, type: "fixes", details: ["Fixed a kiosk label."] };
+    expect(evaluateReleaseNote({ before: [existing], after: [oneBulletFix, existing], prNumber: 452 }).ok).toBe(false);
+    const sevenBullets = { ...existing, date: "2026-10-09", pr: 452, details: Array.from({ length: 7 }, (_, i) => `Bullet ${i + 1}.`) };
+    expect(evaluateReleaseNote({ before: [existing], after: [sevenBullets, existing], prNumber: 452 }).ok).toBe(false);
+    const fix = { ...existing, date: "2026-10-09", pr: 452, type: "fixes", details: ["Fixed a kiosk label.", "Fixed a date picker."] };
+    expect(evaluateReleaseNote({ before: [existing], after: [fix, existing], prNumber: 452 }).ok).toBe(true);
+  });
+
+  it("requires a 2–7 word title", () => {
+    const oneWord = { ...existing, date: "2026-10-09", pr: 453, title: "Scheduling" };
+    const result = evaluateReleaseNote({ before: [existing], after: [oneWord, existing], prNumber: 453 });
+    expect(result.ok).toBe(false);
+    expect(result.reason).toContain("title");
+    const twoWords = { ...oneWord, title: "Draft schedules" };
+    expect(evaluateReleaseNote({ before: [existing], after: [twoWords, existing], prNumber: 453 }).ok).toBe(true);
   });
 
   it("honors the opt-out label and exempts Dependabot", () => {
