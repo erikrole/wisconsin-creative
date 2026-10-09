@@ -8,6 +8,7 @@ import {
   GEAR_CATALOG,
   isItemAllowedForFit,
   itemsForFit,
+  kitEntryForStyle,
   normalizeApparelSize,
 } from "@/lib/gear-picks/catalog";
 import { defaultSizeFor } from "@/app/(app)/gear/gear-pick-state";
@@ -54,6 +55,19 @@ describe("gear pick catalog", () => {
     expect(normalizeApparelSize("2xl")).toBe("XXL");
     expect(normalizeApparelSize(" m ")).toBe("M");
     expect(normalizeApparelSize(null)).toBeNull();
+  });
+});
+
+describe("kitEntryForStyle", () => {
+  it("matches a catalog style that is already in the fit's free kit", () => {
+    expect(kitEntryForStyle("MEN", "6021712")).toMatchObject({ kind: "STANDARD_ISSUE", code: "834" }); // Drive Polo
+    expect(kitEntryForStyle("MEN", "6021649")).toMatchObject({ kind: "CORE_KIT" }); // Athletics SS Tee
+    expect(kitEntryForStyle("WOMEN", "6021628")).toMatchObject({ kind: "STANDARD_ISSUE" }); // Unstoppable Fleece Full-Zip
+  });
+
+  it("only looks at the participant's own fit kit", () => {
+    expect(kitEntryForStyle("WOMEN", "6021712")).toBeNull();
+    expect(kitEntryForStyle("MEN", "6021626")).toBeNull();
   });
 });
 
