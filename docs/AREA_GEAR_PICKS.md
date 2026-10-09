@@ -109,3 +109,5 @@ It uses the direct database URL resolver (`DIRECT_URL`, then `DATABASE_URL_UNPOO
 - [Matched review](../tasks/archive/proofs/ua-picker-fit-2026-10-08/review.html) preserves the previous dirty source and Standard issue wording. No shipping actions.
 - 2026-10-08: "How it works" first-visit splash on `/gear` with a header button to reopen it. Accepted on the authenticated local preview at phone and desktop width (after-only proof: `tasks/archive/proofs/gear-picks-intro-2026-10-08/review.html`); automatic first-visit open not captured because the preview participant had already submitted.
 
+
+- 2026-10-08 shipping preparation: preserved the new How it works splash and aligned its copy with Standard issue, optional allowance filtering, color editing in review, and matching-size defaults. Full tests (5,564), integrated Chromium checks (12), application build, and standalone TypeScript pass. Earlier TypeScript blockers were fixed in their two test helpers. [Integrated intro capture](../tasks/archive/proofs/ua-picker-fit-2026-10-08/integration/intro-390.png) is after-only fixture proof; hosted/authenticated acceptance is recorded in PR #442 before merge.

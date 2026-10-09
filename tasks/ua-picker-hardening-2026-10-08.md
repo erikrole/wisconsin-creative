@@ -59,3 +59,9 @@ Completed locally: required item sizing in both browser and pricing; exact optio
 [Selection review](archive/proofs/ua-picker-fit-2026-10-08/review.html) compares the preserved prior dirty state with this follow-up. Icon Lo scale remains unconfirmed: user answered “Men's, I'm guessing”; no conversion or automatic default was added.
 
 Color-edit browser regression also fails on the preserved source because the color control is absent. The old filter check stops at the renamed label, so it is not claimed as independent proof of the old filtering behavior. Matched selected screenshots were visually inspected. Docs/codemap and diff checks pass.
+
+## Shipping gate (2026-10-08)
+
+User authorized commit, push, and merge. Integrated main's How it works splash and aligned its advice with the new sizing/filter/color behavior. Fixed narrow regex-capture typing in two existing iOS source tests; no assertion or native-code changes. Full suite: 5,564 passed, one skipped; 12 browser checks passed; application build, standalone TypeScript, touched-file lint and docs checks passed. PR #442 is open; authenticated branch-preview proof and required hosted checks still precede merge.
+
+Review correction: historical baseline mode now pins e5b141cd4a5e1d939252771cc775d6cee83f51ee and loads the matching gear UI/state/catalog together, rather than resolving HEAD after commit. Baseline-directory snapshots retain their original e5b141cd provenance. Fixture SVG serving now supplies image/svg+xml; intro logo rendering is explicitly checked.

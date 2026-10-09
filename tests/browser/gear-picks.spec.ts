@@ -11,6 +11,7 @@ import type { GearPicksMeResponse } from "@/lib/gear-picks/types";
 
 // Real picker and query hook; only Next's framework adapters are replaced.
 // Network fixtures prove browser behavior, not authenticated database persistence.
+const baselineRevision = "e5b141cd4a5e1d939252771cc775d6cee83f51ee";
 const baseline = process.env.GEAR_PICKER_BASELINE === "1";
 const baselineDirectory = process.env.GEAR_PICKER_BASELINE_DIR;
 let browser: Browser;
@@ -44,9 +45,9 @@ test.beforeAll(async () => {
         contents: await readFile(path.join(baselineDirectory, `${path.basename(args.path)}.txt`), "utf8"),
         loader: path.extname(args.path) === ".json" ? "json" : "tsx", resolveDir: path.dirname(args.path),
       }));
-      if (baseline) b.onLoad({ filter: /\/gear\/Gear(Picker|PicksSheet)\.tsx$/ }, (args) => ({
-        contents: execFileSync("git", ["show", `HEAD:${path.relative(process.cwd(), args.path)}`], { encoding: "utf8" }),
-        loader: "tsx", resolveDir: path.dirname(args.path),
+      if (baseline) b.onLoad({ filter: /\/(gear\/(Gear\w+\.tsx|gear-pick-state\.ts)|gear-picks\/catalog\.ts|gear-picks\/catalog-2027-28\.json)$/ }, (args) => ({
+        contents: execFileSync("git", ["show", `${baselineRevision}:${path.relative(process.cwd(), args.path)}`], { encoding: "utf8" }),
+        loader: path.extname(args.path) === ".json" ? "json" : "tsx", resolveDir: path.dirname(args.path),
       }));
     } }],
   });
@@ -55,6 +56,7 @@ test.beforeAll(async () => {
     if (req.url === "/bundle.js") { res.setHeader("Content-Type", "text/javascript"); res.end(bundle.outputFiles[0]!.text); }
     else if (req.url === "/style.css") { res.setHeader("Content-Type", "text/css"); res.end(css.css); }
     else if (req.url?.startsWith("/gear/") || req.url?.startsWith("/fonts/")) {
+      if (req.url.endsWith(".svg")) res.setHeader("Content-Type", "image/svg+xml");
       try { res.end(await readFile(path.join(process.cwd(), "public", req.url))); } catch { res.statusCode = 404; res.end(); }
     } else { res.setHeader("Content-Type", "text/html"); res.end('<html lang="en" data-theme="light"><head><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/style.css"></head><body><main id="root" style="padding:32px"></main><script src="/bundle.js"></script></body></html>'); }
   });
@@ -100,7 +102,7 @@ async function capture(page: Page, name: string) {
   if (patch) await writeFile(path.join(directory, "source.patch"), patch);
   const viewport = page.viewportSize()!;
   await writeFile(path.join(directory, `${name}.metadata.json`), JSON.stringify({
-    sourceRevision: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
+    sourceRevision: baseline || baselineDirectory ? baselineRevision : execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
     sourcePatchSha256: patch ? createHash("sha256").update(patch).digest("hex") : null,
     settings: {
       device: `Chromium ${browser.version()} fixture harness`, viewport: [viewport.width, viewport.height],
@@ -357,6 +359,8 @@ test("intro explains the current sizing and selection workflow", async () => {
     await browserExpect(intro).toContainText("The department covers these separately");
     await browserExpect(intro).toContainText("Turn on “Within my allowance”");
     await browserExpect(intro).toContainText("Profile sizes fill in only when the sizing matches");
+    await browserExpect(intro.getByRole("img", {name: "Under Armour"})).toBeVisible();
+    await browserExpect.poll(() => intro.getByRole("img", {name: "Under Armour"}).evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
     await capture(page, "intro-390");
     await intro.getByRole("button", {name: "Start picking"}).click();
     await browserExpect(intro).not.toBeVisible();
