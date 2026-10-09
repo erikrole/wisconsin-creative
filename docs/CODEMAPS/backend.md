@@ -220,7 +220,7 @@
 | `src/lib/query-client.ts` | 56 |
 | `src/lib/rate-limit.ts` | 238 |
 | `src/lib/rbac.ts` | 59 |
-| `src/lib/releases.ts` | 91 |
+| `src/lib/releases.ts` | 104 |
 | `src/lib/remark-callouts.ts` | 77 |
 | `src/lib/request-limits.ts` | 17 |
 | `src/lib/reservation-pickup-locations.ts` | 68 |
@@ -864,3 +864,7 @@
 - `/api/youtube/library/refresh`
 - `/api/youtube/oauth/callback`
 - `/api/youtube/oauth/start`
+
+### `/releases/feed.xml`
+
+- `/releases/feed.xml`

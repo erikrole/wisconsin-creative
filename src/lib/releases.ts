@@ -26,11 +26,24 @@ export type ReleaseDay = {
 export type ReleaseMonth = {
   key: string;
   label: string;
+  longLabel: string;
   days: ReleaseDay[];
 };
 
 /** Newest first. Edit `releases.json` to add a release. */
 export const releases: Release[] = releaseEntries as Release[];
+
+/** How far back the page shows before "Show earlier releases". */
+export const RECENT_RELEASE_DAYS = 56;
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Recent relative to the newest release, so the window doesn't empty out between releases. */
+export function isRecentRelease(release: Pick<Release, "date">, entries: Pick<Release, "date">[] = releases) {
+  const newest = entries[0]?.date;
+  if (!newest) return true;
+  return Date.parse(`${newest}T00:00:00Z`) - Date.parse(`${release.date}T00:00:00Z`) < RECENT_RELEASE_DAYS * DAY_MS;
+}
 
 /** Terms that must never appear in public release copy. */
 export const forbiddenReleaseTerms = [
@@ -70,11 +83,11 @@ export function groupReleases(entries: Release[]): ReleaseMonth[] {
     const key = release.date.slice(0, 7);
     let month = months.at(-1);
     if (!month || month.key !== key) {
+      const midMonth = new Date(`${key}-15T12:00:00Z`);
       month = {
         key,
-        label: new Intl.DateTimeFormat("en-US", { month: "short", year: "numeric", timeZone: "UTC" }).format(
-          new Date(`${key}-15T12:00:00Z`),
-        ),
+        label: new Intl.DateTimeFormat("en-US", { month: "short", year: "numeric", timeZone: "UTC" }).format(midMonth),
+        longLabel: new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric", timeZone: "UTC" }).format(midMonth),
         days: [],
       };
       months.push(month);

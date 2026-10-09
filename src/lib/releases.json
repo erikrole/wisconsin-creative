@@ -5,8 +5,10 @@
     "type": "feature",
     "summary": "A public Releases page lists what shipped and when across web, iOS, the kiosk, and the Mac app, going back to the first build.",
     "details": [
-      "Releases are grouped by date, with jump links by month.",
-      "Each release shows whether it's new, improved, or a fix, and which apps it touched.",
+      "The page opens on the last eight weeks, with earlier history one click away.",
+      "Filter by app (Web, iOS, Kiosk, Mac) or by new features, improvements, and fixes.",
+      "Weekly fix roundups fold into one line you can expand.",
+      "Follow along with the RSS feed.",
       "Every future update adds its own entry here."
     ],
     "platforms": [

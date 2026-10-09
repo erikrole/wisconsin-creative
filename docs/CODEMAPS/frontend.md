@@ -148,9 +148,9 @@
 | `src/components/shift-detail/ShiftSlotCard.tsx` | 345 |
 | `src/components/booking-details/EditBookingEventsDialog.tsx` | 342 |
 | `src/components/shift-detail/crew-row.tsx` | 334 |
+| `src/components/public-showroom/ReleasesFeed.tsx` | 302 |
 | `src/components/public-showroom/showroom-blocks.tsx` | 290 |
 | `src/components/CheckoutMergeDialog.tsx` | 286 |
-| `src/components/booking-details/BookingSheetOverview.tsx` | 285 |
 
 ## Hooks
 

@@ -59,3 +59,23 @@ describe("public release notes", () => {
     expect(releasesPageSource).not.toContain("prisma");
   });
 });
+
+describe("public release feed", () => {
+  it("serves an RSS feed of the latest releases with escaped content", async () => {
+    const { GET } = await import("@/app/(public)/releases/feed.xml/route");
+    const response = GET();
+    expect(response.headers.get("Content-Type")).toContain("application/rss+xml");
+    const xml = await response.text();
+    expect(xml.startsWith('<?xml version="1.0" encoding="UTF-8"?>')).toBe(true);
+    expect(xml.match(/<item>/g)?.length).toBe(Math.min(50, releases.length));
+    expect(xml).toContain(`/releases#${releaseSlug(releases[0]!)}`);
+    expect(xml.replace(/<!\[CDATA\[[\s\S]*?\]\]>/g, "")).not.toMatch(/&(?!amp;|lt;|gt;|quot;|apos;)/);
+  });
+
+  it("shows recent releases first and collapses older history", () => {
+    const feedSource = readFileSync("src/components/public-showroom/ReleasesFeed.tsx", "utf8");
+    expect(feedSource).toContain("isRecentRelease");
+    expect(feedSource).toContain("Show {hiddenCount} earlier");
+    expect(feedSource).toContain("<details");
+  });
+});

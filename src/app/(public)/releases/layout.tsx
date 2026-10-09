@@ -8,7 +8,10 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://wisconsincreative.com"),
   title: "Releases - Wisconsin Creative",
   description: releasesDescription,
-  alternates: { canonical: "/releases" },
+  alternates: {
+    canonical: "/releases",
+    types: { "application/rss+xml": "/releases/feed.xml" },
+  },
   openGraph: {
     type: "website",
     siteName: "Wisconsin Creative",
