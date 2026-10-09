@@ -1,0 +1,411 @@
+<!doctype html>
+<!-- Timelapse. Canonical source: edit here. Run `node scripts/hash-static-tools.mjs` after changing a script. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; font-src 'self'; img-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0c0d0f">
+  <title>Timelapse</title>
+  <meta name="description" content="Frame rate or interval, roll time and clip length for the team's Sony bodies.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3.5' fill='%230c0d0f'/%3E%3Cpath d='M3 5.5V3h2.5M13 5.5V3h-2.5M3 10.5V13h2.5M13 10.5V13h-2.5' fill='none' stroke='%23fff' stroke-width='1.2'/%3E%3Ccircle cx='8' cy='8' r='2' fill='%23ff3b3b'/%3E%3C/svg%3E">
+  <style>
+    @font-face { font-family: "Gotham"; src: url("/Gotham-Black.woff2") format("woff2"); font-weight: 800; font-display: swap; }
+    @font-face { font-family: "Gotham"; src: url("/Gotham-Bold.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+    @font-face { font-family: "Gotham"; src: url("/Gotham-Medium.woff2") format("woff2"); font-weight: 500; font-display: swap; }
+    @font-face { font-family: "Gotham"; src: url("/Gotham-Book.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+
+    /* A camera body, not a web form: graphite panels, hairlines, a viewfinder
+       for the answer, REC red for state and amber for the thing you're setting. */
+    :root {
+      --body: #0c0d0f;
+      --panel: #141518;
+      --panel-2: #1b1c20;
+      --field: #0f1012;
+      --line: #26272d;
+      --line-2: #34353c;
+      --ink: #f2f2ef;
+      --ink-2: #b9b9b3;
+      --ink-3: #85857f;
+      --rec: #ff3b3b;
+      --amber: #ffb224;
+      --amber-soft: rgba(255, 178, 36, 0.12);
+      --warn: #ffb224;
+      --warn-soft: rgba(255, 178, 36, 0.1);
+      --danger: #ff6b6b;
+      --danger-soft: rgba(255, 59, 59, 0.12);
+      --info-soft: rgba(255, 255, 255, 0.05);
+      --font: "Gotham", system-ui, -apple-system, "Segoe UI", sans-serif;
+      --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+      --ease: cubic-bezier(0.2, 0, 0, 1);
+      color-scheme: dark;
+    }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    html { background: var(--body); }
+    body {
+      margin: 0; min-width: 300px; color: var(--ink); font-family: var(--font); font-size: 15px; line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      background:
+        radial-gradient(900px 500px at 85% -10%, rgba(255, 59, 59, 0.07), transparent 60%),
+        repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.012) 0 1px, transparent 1px 3px),
+        var(--body);
+      min-height: 100vh;
+    }
+    button, input, select { font: inherit; color: inherit; }
+    :focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; border-radius: 6px; }
+
+    /* ---- top bar ---- */
+    .topbar {
+      display: flex; align-items: center; gap: 12px; height: 60px;
+      padding: env(safe-area-inset-top) clamp(16px, 4vw, 28px) 0; border-bottom: 1px solid var(--line);
+    }
+    .brand { display: flex; align-items: center; gap: 11px; margin-right: auto; }
+    .brand-mark { width: 30px; height: 30px; flex: none; display: grid; place-items: center; border-radius: 8px; background: #000; box-shadow: 0 0 0 1px var(--line-2); }
+    .brand-mark svg { width: 20px; height: 20px; }
+    .brand-name { font-weight: 800; font-size: 13px; letter-spacing: 0.18em; text-transform: uppercase; }
+    .brand-tag { font-family: var(--mono); font-size: 11px; color: var(--ink-3); letter-spacing: 0.06em; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 7px; min-height: 34px; padding: 0 13px; border-radius: 8px;
+      background: var(--panel); border: 1px solid var(--line-2); color: var(--ink-2); text-decoration: none;
+      font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+    }
+    .pill:hover { color: var(--ink); border-color: var(--ink-3); }
+    .icon { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+    @media (max-width: 460px) { .brand-tag { display: none; } }
+
+    /* ---- layout ---- */
+    main {
+      width: min(1120px, calc(100% - 32px)); margin: 0 auto; padding: clamp(18px, 3vw, 32px) 0 calc(56px + env(safe-area-inset-bottom));
+      display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr); gap: 20px; align-items: start;
+    }
+    .col-set { display: grid; gap: 16px; min-width: 0; }
+    .col-out { display: grid; gap: 12px; min-width: 0; position: sticky; top: 16px; }
+    @media (max-width: 880px) {
+      main { grid-template-columns: 1fr; gap: 14px; }
+      .col-set { display: contents; }
+      .setup { order: -2; }
+      .extras { order: 1; }
+    }
+
+    .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; }
+    .panel-head {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 11px 16px; border-bottom: 1px solid var(--line);
+      font-size: 11px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-3);
+    }
+    .panel-head .num { font-family: var(--mono); letter-spacing: 0; color: var(--ink-3); }
+    .setup-body { padding: 16px; display: grid; gap: 16px; }
+
+    .field-label { display: block; margin-bottom: 7px; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 520px) { .grid-2 { grid-template-columns: 1fr; } }
+    input[type="number"], select {
+      width: 100%; height: 46px; padding: 0 12px; border-radius: 9px;
+      background: var(--field); border: 1px solid var(--line-2);
+      font-family: var(--mono); font-size: 15px; font-variant-numeric: tabular-nums;
+      transition: border-color 140ms var(--ease);
+    }
+    input[type="number"]:hover, select:hover { border-color: var(--ink-3); }
+    input[type="number"]:focus, select:focus { border-color: var(--amber); outline: none; box-shadow: 0 0 0 3px var(--amber-soft); }
+    select { appearance: none; -webkit-appearance: none; padding-right: 34px; cursor: pointer; text-overflow: ellipsis; }
+    .select-wrap { position: relative; }
+    .select-wrap::after {
+      content: ""; position: absolute; right: 14px; top: 50%; width: 6px; height: 6px; margin-top: -5px;
+      border-right: 1.5px solid var(--ink-3); border-bottom: 1.5px solid var(--ink-3); transform: rotate(45deg); pointer-events: none;
+    }
+    .units { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .unit { position: relative; }
+    .unit span { position: absolute; right: 11px; top: 50%; transform: translateY(-50%); font-family: var(--mono); font-size: 11px; color: var(--ink-3); pointer-events: none; }
+    .unit input { padding-right: 34px; }
+    .hint { margin: 7px 0 0; font-size: 12.5px; line-height: 1.45; color: var(--ink-3); }
+
+    /* Camera-menu tabs */
+    .segmented { display: flex; gap: 4px; padding: 4px; border-radius: 11px; background: var(--field); border: 1px solid var(--line-2); }
+    .segmented input { position: absolute; opacity: 0; pointer-events: none; }
+    .segmented label {
+      position: relative; flex: 1; min-height: 38px; padding: 0 8px; display: flex; align-items: center; justify-content: center; text-align: center;
+      border-radius: 8px; cursor: pointer; line-height: 1.2;
+      font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap;
+      transition: background 140ms var(--ease), color 140ms var(--ease);
+    }
+    .segmented label:hover { color: var(--ink); }
+    @media (max-width: 400px) { .segmented label { font-size: 11px; letter-spacing: 0.04em; padding: 0 4px; } }
+    .segmented input:checked + label { background: var(--panel-2); color: var(--ink); box-shadow: inset 0 -2px 0 var(--amber), 0 0 0 1px var(--line-2); }
+    .segmented input:focus-visible + label { outline: 2px solid var(--amber); outline-offset: 1px; }
+
+    /* ---- viewfinder ---- */
+    .viewfinder {
+      position: relative; overflow: hidden; border-radius: 14px; background: #050506;
+      aspect-ratio: 16 / 10; min-height: 300px; display: grid; place-items: center; text-align: center;
+      border: 1px solid var(--line);
+      background:
+        radial-gradient(80% 70% at 50% 45%, rgba(255, 255, 255, 0.05), transparent 70%),
+        linear-gradient(transparent 49.9%, rgba(255, 255, 255, 0.04) 50%, transparent 50.1%),
+        linear-gradient(90deg, transparent 33.2%, rgba(255, 255, 255, 0.035) 33.3%, transparent 33.4%, transparent 66.6%, rgba(255, 255, 255, 0.035) 66.7%, transparent 66.8%),
+        #050506;
+    }
+    .corner { position: absolute; width: 26px; height: 26px; border-color: rgba(255, 255, 255, 0.75); border-style: solid; border-width: 0; }
+    .corner.tl { top: 14px; left: 14px; border-top-width: 2px; border-left-width: 2px; }
+    .corner.tr { top: 14px; right: 14px; border-top-width: 2px; border-right-width: 2px; }
+    .corner.bl { bottom: 14px; left: 14px; border-bottom-width: 2px; border-left-width: 2px; }
+    .corner.br { bottom: 14px; right: 14px; border-bottom-width: 2px; border-right-width: 2px; }
+    .hud { position: absolute; left: 50px; right: 50px; display: flex; justify-content: space-between; gap: 10px; font-family: var(--mono); font-size: 12px; letter-spacing: 0.06em; color: var(--ink-2); }
+    .hud-top { top: 19px; }
+    .hud-bottom { bottom: 19px; }
+    .rec { display: inline-flex; align-items: center; gap: 7px; color: var(--ink); }
+    .rec i { width: 9px; height: 9px; border-radius: 50%; background: var(--rec); box-shadow: 0 0 10px rgba(255, 59, 59, 0.8); animation: blink 1.6s steps(2, jump-none) infinite; }
+    body[data-blocked="1"] .rec i { background: var(--ink-3); box-shadow: none; animation: none; }
+    @keyframes blink { 50% { opacity: 0.25; } }
+    .hud-stat { display: flex; flex-direction: column; gap: 1px; text-align: left; }
+    .hud-stat:nth-child(2) { text-align: center; }
+    .hud-stat:last-child { text-align: right; }
+    .hud-stat span { font-size: 10px; letter-spacing: 0.16em; color: var(--ink-3); text-transform: uppercase; }
+    .hud-stat b { font-size: 15px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+    .readout { position: relative; padding: 58px 26px 76px; }
+    .result-label { margin: 0 0 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: var(--amber); }
+    .result-value {
+      margin: 0; font-size: clamp(56px, 12vw, 108px); font-weight: 800; letter-spacing: -0.04em; line-height: 0.9;
+      font-variant-numeric: tabular-nums; text-shadow: 0 0 40px rgba(255, 255, 255, 0.12);
+    }
+    .result-sub { margin: 14px auto 0; max-width: 420px; font-size: 14px; color: var(--ink-2); }
+    /* Phones: the viewfinder rides along at the top so the answer stays in
+       view while you change the setup underneath it. */
+    @media (max-width: 880px) {
+      .col-out { display: contents; }
+      .viewfinder {
+        order: -3; position: sticky; top: 8px; z-index: 5; aspect-ratio: auto; min-height: 0;
+        box-shadow: 0 18px 40px -18px rgba(0, 0, 0, 0.9);
+      }
+      .readout { padding: 40px 20px 58px; }
+      .result-value { font-size: clamp(48px, 14vw, 72px); }
+      .result-sub { margin-top: 8px; font-size: 13px; }
+      .footnote, .status { order: 2; }
+    }
+    @media (max-width: 460px) {
+      .hud { font-size: 11px; left: 40px; right: 40px; }
+      .hud-top { top: 16px; }
+      .hud-bottom { bottom: 14px; }
+      .hud-stat b { font-size: 13.5px; }
+      .corner { width: 20px; height: 20px; }
+      .corner.tl, .corner.tr { top: 10px; }
+      .corner.bl, .corner.br { bottom: 10px; }
+      .corner.tl, .corner.bl { left: 10px; }
+      .corner.tr, .corner.br { right: 10px; }
+    }
+
+    /* ---- time funnel ---- */
+    .funnel { padding: 14px 16px 12px; }
+    .funnel svg { display: block; width: 100%; height: 86px; }
+    .funnel .bar-real { fill: rgba(255, 255, 255, 0.08); }
+    .funnel .bar-clip { fill: var(--amber); }
+    .funnel .tick { stroke: rgba(255, 255, 255, 0.55); stroke-width: 1; }
+    .funnel .cone { fill: url(#cone); }
+    .funnel-labels { display: flex; justify-content: space-between; gap: 12px; margin-top: 4px; font-family: var(--mono); font-size: 11.5px; color: var(--ink-3); }
+    .funnel-labels b { color: var(--ink); font-weight: 600; }
+
+    /* ---- notes ---- */
+    .notes { display: grid; gap: 8px; }
+    .notes:empty { display: none; }
+    .note { display: flex; gap: 10px; align-items: flex-start; padding: 11px 14px; border-radius: 12px; font-size: 13px; line-height: 1.45; border: 1px solid transparent; }
+    .note::before { content: "!"; flex: none; width: 18px; height: 18px; margin-top: 0; display: grid; place-items: center; border-radius: 4px; font-family: var(--mono); font-size: 11px; font-weight: 700; }
+    .note.is-warn { background: var(--warn-soft); color: #ffd48a; border-color: rgba(255, 178, 36, 0.25); }
+    .note.is-warn::before { background: var(--warn); color: #1a1000; }
+    .note.is-error { background: var(--danger-soft); color: #ffb3b3; border-color: rgba(255, 59, 59, 0.3); }
+    .note.is-error::before { background: var(--rec); color: #fff; }
+    .note.is-info { background: var(--info-soft); color: var(--ink-2); border-color: var(--line); }
+    .note.is-info::before { content: "i"; background: var(--ink-3); color: var(--body); }
+
+    /* ---- on the camera ---- */
+    .menu-card h2 { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-3); }
+    .menu-rows { padding: 4px 0; }
+    .menu-row { display: flex; justify-content: space-between; align-items: baseline; gap: 14px; padding: 9px 16px; font-size: 13.5px; }
+    .menu-row + .menu-row { border-top: 1px solid var(--line); }
+    .menu-row span { color: var(--ink-2); }
+    .menu-row b { font-family: var(--mono); font-weight: 600; font-size: 13.5px; color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; }
+
+    /* ---- extras ---- */
+    .extras { display: grid; gap: 12px; }
+    .extras .panel-body { padding: 14px 16px 16px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 7px; }
+    .chip {
+      display: inline-flex; align-items: baseline; gap: 7px; padding: 0 12px; min-height: 38px; align-items: center;
+      background: var(--field); border: 1px solid var(--line-2); border-radius: 9px; cursor: pointer; font-size: 12.5px;
+    }
+    .chip:hover:not(:disabled) { border-color: var(--ink-3); }
+    .chip.is-active { border-color: var(--amber); background: var(--amber-soft); }
+    .chip:disabled { cursor: not-allowed; opacity: 0.38; }
+    .chip b { font-family: var(--mono); font-weight: 600; font-variant-numeric: tabular-nums; }
+    .chip span { color: var(--ink-3); }
+    .options { display: grid; }
+    .option {
+      display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px; width: 100%;
+      padding: 11px 16px; background: transparent; border: 0; border-top: 1px solid var(--line); text-align: left; cursor: pointer;
+      border-left: 2px solid transparent;
+    }
+    .option:first-child { border-top: 0; }
+    .option:hover:not(:disabled) { background: var(--panel-2); }
+    .option:disabled { cursor: not-allowed; opacity: 0.4; }
+    .option.is-closest { background: var(--amber-soft); border-left-color: var(--amber); }
+    .option-main b { display: block; font-family: var(--mono); font-size: 14px; font-weight: 600; }
+    .option-main span { font-size: 12px; color: var(--ink-3); }
+    .option-roll { font-family: var(--mono); font-size: 13px; color: var(--ink-2); white-space: nowrap; }
+
+    .actions { display: flex; justify-content: center; }
+    .button {
+      min-height: 44px; padding: 0 18px; display: inline-flex; align-items: center; gap: 8px; border-radius: 10px;
+      background: var(--ink); color: var(--body); border: 0; cursor: pointer;
+      font-size: 12px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase;
+    }
+    .button:hover { background: #fff; }
+    .status { margin: 8px 0 0; text-align: center; font-size: 12.5px; min-height: 1.4em; color: var(--ink-3); }
+    .footnote { margin: 4px 0 0; text-align: center; font-size: 12px; color: var(--ink-3); }
+
+    .rise { opacity: 0; transform: translateY(8px); animation: rise 600ms var(--ease) forwards; }
+    .col-out.rise { animation-delay: 90ms; }
+    .extras.rise { animation-delay: 160ms; }
+    @keyframes rise { to { opacity: 1; transform: none; } }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition-duration: 0.01ms !important; }
+      .rise { opacity: 1; transform: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M3 6.5V3h3.5M17 6.5V3h-3.5M3 13.5V17h3.5M17 13.5V17h-3.5" fill="none" stroke="#fff" stroke-width="1.6"/><circle cx="10" cy="10" r="2.6" fill="#ff3b3b"/></svg></span>
+      <span class="brand-name">Timelapse</span>
+      <span class="brand-tag">FX3 · A1 · A1 II · A7 V · A9 III</span>
+    </div>
+    <a class="pill" href="/tools">
+      <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="5" height="5" rx="1.2"/><rect x="9" y="2" width="5" height="5" rx="1.2"/><rect x="2" y="9" width="5" height="5" rx="1.2"/><rect x="9" y="9" width="5" height="5" rx="1.2"/></svg>
+      Tools
+    </a>
+  </header>
+
+  <main>
+    <div class="col-set">
+      <form class="panel setup rise" id="setup" novalidate>
+        <div class="panel-head"><span>Setup</span><span class="num">01</span></div>
+        <div class="setup-body">
+          <div class="grid-2">
+            <div>
+              <label class="field-label" for="body">Camera</label>
+              <div class="select-wrap"><select id="body"></select></div>
+            </div>
+            <div>
+              <span class="field-label" id="method-label">Method</span>
+              <div class="segmented" role="radiogroup" aria-labelledby="method-label" id="method"></div>
+            </div>
+          </div>
+          <p class="hint" id="method-hint" style="margin-top:-6px"></p>
+
+          <div>
+            <span class="field-label" id="mode-label">Work out</span>
+            <div class="segmented" role="radiogroup" aria-labelledby="mode-label">
+              <input type="radio" name="mode" id="mode-settings" value="settings" checked>
+              <label for="mode-settings">Clip length</label>
+              <input type="radio" name="mode" id="mode-clip" value="clip">
+              <label for="mode-clip">The setting</label>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div id="rate-field">
+              <label class="field-label" for="rate" id="rate-label">S&amp;Q frame rate</label>
+              <div class="select-wrap"><select id="rate"></select></div>
+            </div>
+            <div id="interval-field" hidden>
+              <label class="field-label" for="interval">Shooting interval</label>
+              <div class="unit"><input id="interval" type="number" inputmode="numeric" min="1" max="60" step="1" value="4"><span>sec</span></div>
+            </div>
+            <div id="clip-field" hidden>
+              <label class="field-label" for="clip">Clip on screen</label>
+              <div class="unit"><input id="clip" type="number" inputmode="decimal" min="1" max="3600" step="1" value="20"><span>sec</span></div>
+            </div>
+            <div>
+              <label class="field-label" for="fps" id="fps-label">Record frame rate</label>
+              <div class="select-wrap"><select id="fps"></select></div>
+            </div>
+          </div>
+
+          <div>
+            <span class="field-label" id="roll-label">Roll for</span>
+            <div class="units" role="group" aria-labelledby="roll-label">
+              <div class="unit"><input id="roll-h" type="number" inputmode="numeric" min="0" max="99" step="1" value="0" aria-label="Hours"><span>hr</span></div>
+              <div class="unit"><input id="roll-m" type="number" inputmode="numeric" min="0" max="59" step="1" value="30" aria-label="Minutes"><span>min</span></div>
+              <div class="unit"><input id="roll-s" type="number" inputmode="numeric" min="0" max="59" step="1" value="0" aria-label="Seconds"><span>sec</span></div>
+            </div>
+            <p class="hint" id="roll-hint">Real time the camera rolls.</p>
+          </div>
+
+          <div>
+            <label class="field-label" for="format" id="format-label">Record format</label>
+            <div class="select-wrap"><select id="format"></select></div>
+            <p class="hint" id="format-hint">For the card estimate.</p>
+          </div>
+        </div>
+      </form>
+
+      <div class="extras rise">
+        <section class="panel" id="presets-block">
+          <div class="panel-head"><span>Common cadences</span><span class="num">02</span></div>
+          <div class="panel-body">
+            <div class="chips" id="chips"></div>
+            <p class="hint" id="chips-hint"></p>
+          </div>
+        </section>
+        <section class="panel" id="options-block" hidden>
+          <div class="panel-head"><span>Every setting, and how long to roll</span><span class="num">02</span></div>
+          <div class="options" id="options"></div>
+        </section>
+      </div>
+    </div>
+
+    <div class="col-out rise">
+      <section class="viewfinder" aria-live="polite" aria-atomic="true">
+        <span class="corner tl" aria-hidden="true"></span><span class="corner tr" aria-hidden="true"></span>
+        <span class="corner bl" aria-hidden="true"></span><span class="corner br" aria-hidden="true"></span>
+        <div class="hud hud-top" aria-hidden="true">
+          <span class="rec"><i></i><span id="hud-method">S&amp;Q</span></span>
+          <span id="hud-body">FX3 · 29.97p</span>
+        </div>
+        <div class="readout">
+          <p class="result-label" id="result-label">Clip length</p>
+          <p class="result-value" id="result-value">—</p>
+          <p class="result-sub" id="result-sub"></p>
+        </div>
+        <div class="hud hud-bottom">
+          <div class="hud-stat"><span id="frames-label">Frames</span><b id="stat-frames">—</b></div>
+          <div class="hud-stat"><span>Speed-up</span><b id="stat-speed">—</b></div>
+          <div class="hud-stat"><span>Card</span><b id="stat-card">—</b></div>
+        </div>
+      </section>
+
+      <div class="panel funnel" id="funnel" aria-hidden="true"></div>
+
+      <div class="notes" id="notes"></div>
+
+      <section class="panel menu-card" id="menu-card">
+        <div class="panel-head"><h2 id="menu-title">On the camera</h2><span class="num">MENU</span></div>
+        <div class="menu-rows" id="menu-rows"></div>
+      </section>
+
+      <div class="actions">
+        <button class="button" id="copy-plan" type="button">
+          <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><rect x="5" y="5" width="8.5" height="8.5" rx="1.5"/><path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2h-6A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5"/></svg>
+          Copy plan
+        </button>
+      </div>
+      <p class="status" id="status" role="status"></p>
+      <p class="footnote">Limits, bitrates and file sizes from Sony’s Help Guides (NTSC). Card figures are estimates; leave headroom.</p>
+    </div>
+  </main>
+
+  <script src="core.js?v=73b4866f3166"></script>
+  <script src="app.js?v=6d462b3cd2c9"></script>
+</body>
+</html>

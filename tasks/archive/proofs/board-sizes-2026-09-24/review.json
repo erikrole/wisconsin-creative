@@ -1,0 +1,35 @@
+{
+  "title": "Board Sizes",
+  "eyebrow": "Web · new tool · /board-sizes",
+  "lede": "Every Camp Randall, Kohl Center and Field House display and zone from the “Wisconsin Board Info” sheet, as a blueprint you can search, copy from and pull guide PNGs out of.",
+  "stats": [{"k": "displays across 3 venues", "v": "19"}, {"k": "zones, parsed from the sheet's cells, not retyped", "v": "193"}, {"k": "tests passing (36 with the other tools)", "v": "36"}],
+  "sections": [{
+    "heading": "Screens (after only; new tool, no baseline)",
+    "note": "Captured from the static files; runtime routing checked separately on next dev.",
+    "shots": [
+      {"title": "Camp Randall, desktop (full page)", "image": "camp-randall-desktop.png", "cap": "Every display drawn at true proportions with dimension lines; FG/BG layers folded into one row; tap a size to copy it.", "wide": true},
+      {"title": "Search 1920x1080", "image": "search-1920x1080-desktop.png", "cap": "Exact size search across every venue; matching Club Board zones light up in the drawing."},
+      {"title": "Field House", "image": "field-house-desktop.png", "cap": "Red notes carry the sheet's open items: table rename pending, “Left GIP-BG” listed twice."},
+      {"title": "Kohl Center, phone", "image": "kohl-center-phone.png", "cap": "Compact masthead; tabs and search stay pinned."},
+      {"title": "Search “ring gip”, phone", "image": "search-ring-gip-phone.png", "cap": ""},
+      {"title": "Club Board guide PNG (5760 × 1080)", "image": "club-board-guide.png", "cap": "Transparent PNG at exact size, zones dashed where the sheet places them.", "wide": true},
+      {"title": "Tools hub", "image": "tools-hub.png", "cap": "Board Sizes joins as a blueprint card."}
+    ]
+  }],
+  "changes": [
+    {"h": "Board sizes lived in a spreadsheet", "was": "A 2022-era Google Sheet with merged cells, three current tabs, three OLD tabs and two empty hidden ones.", "now": "One page per venue, search across all of them, copyable sizes, CSV export and guide PNGs, with the sheet's source and date in the title block."},
+    {"h": "Open questions were easy to miss", "was": "“*TBD SIZE*” and duplicate rows sat in cells.", "now": "Shown as red notes on the display they affect."}
+  ],
+  "verification": [
+    "<b>PASS</b> · <code>npx vitest run tests/static-tools.test.ts tests/qrcode-static-tool.test.ts</code>: 36 passed (zone counts 78 / 91 / 24, sheet numbering, Club Board positions in bounds, open notes present).",
+    "<b>PASS</b> · <code>npx tsc --noEmit</code>, <code>npm run build:app</code>, <code>npm run verify:docs</code>, <code>git diff --check</code>.",
+    "<b>PASS</b> · <code>next dev</code>: /board-sizes?q=gip 307 to the file with the query kept, 15 matches, Gotham loaded, no console errors.",
+    "<b>PASS</b> · Guide PNG and CSV downloads produced in Playwright; PNG is 5760 × 1080.",
+    "<b>OPEN</b> · No real-iPhone check; not deployed."
+  ],
+  "notes": [
+    "Data is a snapshot of the sheet as modified 2026-06-09, in <code>public/board-sizes/data.js</code>. When the sheet changes, update that file (the tests will catch count or numbering slips).",
+    "Only Club Board rows have positions in the current tabs. The Kohl Center OLD / Field House OLD tabs have positions for similar zones, but I did not use superseded data.",
+    "LaBahn and Goodman tabs are empty. The AE Board Builder has LaBahn Main 448 × 256 from a production AEP; not added because it isn't in the sheet."
+  ]
+}

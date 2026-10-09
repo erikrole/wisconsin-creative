@@ -1,0 +1,23 @@
+{
+  "sourceRevision": "acc954af21c02ceac7aa0b6c5409494ec5a9dea1",
+  "sourcePatchSha256": "002f0394cd44802cd12be7209ba2ff53c4e9e9bc136d567e8abc55981cdb174f",
+  "settings": {
+    "device": "Playwright Chromium headless, deviceScaleFactor 2",
+    "viewport": [
+      1280,
+      900
+    ],
+    "fixture": "static page, empty localStorage, geolocation not granted",
+    "role": "anonymous",
+    "route": "/timelapse/index.html",
+    "appearance": "light",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "2026-09-24T18:35:00-05:00",
+    "scroll": [
+      0,
+      0
+    ]
+  }
+}

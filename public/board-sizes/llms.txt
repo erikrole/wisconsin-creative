@@ -1,0 +1,451 @@
+# Wisconsin Board Sizes
+
+> Every video board, ribbon, table and IPTV canvas at Camp Randall, the Kohl Center, the Field House, LaBahn Arena and Goodman Diamond (Wisconsin Athletics). Manifest 2026-10-08.1, updated 2026-10-08.
+
+Use this whenever you create or check anything that will play on a Wisconsin venue board: After Effects comps, Photoshop/Illustrator artboards, templates, render presets, code that lays out or validates board content, and sponsor or Colosseum deliverables.
+
+## Rules for agents
+
+1. Never hardcode or guess a board size. Look it up here every time; read `version` and say which one you used.
+2. Refer to boards by `id` (e.g. `camp-randall/north-board/main-video-fg`), or by canvas `key` (e.g. `MAIN_VIDEO`) in production tools. Names can carry typos from the processor; ids and keys never change.
+3. Positions are `{x, y}` from the display's top-left. Sizes are width × height in pixels.
+4. Check `issues` before final delivery. `conflict` = sources disagree, `tbd` = value not final, `unconfirmed` = only one source, `naming` = zone names may change. Surface them to the user; never resolve one silently.
+5. Respect delivery specs: `fps`, `stillOnly`, `duration`, `pad` (keep content that many px inside every edge), `audio`. When `fps` is null, ask or use 59.94.
+6. FG/BG zones are two processor layers of one window. Build one asset unless the content needs both.
+7. To change a size, edit `public/board-sizes/boards.json` in the Wisconsin Creative repo and run `node scripts/build-board-sizes.mjs`. Never edit the generated files.
+
+## Files
+
+- [index.json](https://wisconsincreative.com/board-sizes/index.json): start here. One flat record per display and zone (223), with id, size, aspect, positions, fps, delivery, canvas keys, issues and a deep link. Also canvases and content types resolved to ids.
+- [boards.json](https://wisconsincreative.com/board-sizes/boards.json): the hand-edited source (schema `wisconsin-board-sizes/1`). Pin this exact file for production tools; the After Effects Board Builder does.
+- [boards.schema.json](https://wisconsincreative.com/board-sizes/boards.schema.json): JSON Schema for boards.json.
+- [boards.csv](https://wisconsincreative.com/board-sizes/boards.csv): index.json as a spreadsheet.
+- [Board Sizes](https://wisconsincreative.com/board-sizes): the human page. `?v=<venue>#<id>` opens one board; `?c=<content id>` lists every canvas a piece of content needs.
+
+## Lookup recipes
+
+```js
+const idx = await (await fetch("https://wisconsincreative.com/board-sizes/index.json")).json();
+const board = idx.boards.find((b) => b.id === "camp-randall/north-board/main-video-fg"); // { w: 3096, h: 1440, fps: 60, ... }
+const byKey = idx.canvases.find((c) => c.key === "KC_MAIN");
+const touchdown = idx.content.find((c) => c.id === "score-touchdown").boards.map((id) => idx.boards.find((b) => b.id === id));
+```
+
+```python
+import json, urllib.request
+idx = json.load(urllib.request.urlopen("https://wisconsincreative.com/board-sizes/index.json"))
+sizes = {b["id"]: (b["w"], b["h"]) for b in idx["boards"]}
+```
+
+After Effects: use the Board Builder (pins boards.json with the `boards` CLI), or the site's "AE comps" button on any content type.
+
+## Open issues
+
+Zones inherit their display's issues in index.json.
+
+- `camp-randall/north-board/gip` (tbd, h): GIP 3096 × 155 is marked “TBD size” in the Board Info sheet and doesn’t appear in the 2024 guide or Colosseum’s list.
+- `kohl-center/centerhung-main`, `kohl-center/main-16-9-feed`, `kohl-center/centerhung-top-ring`, `kohl-center/360-fascia`, `kohl-center/300-level-tunnels`, `kohl-center/scorers-table`, `kohl-center/stanchion`, `kohl-center/baseline-table` (conflict, fps): Frame rate differs by source: Colosseum builds at 60 fps; the production After Effects project renders at 59.94. Confirm before final delivery.
+- `kohl-center/main-16-9-feed` (unconfirmed): Only in Colosseum’s list; not in the Board Info sheet. Confirm with the Kohl Center video board team before building for it.
+- `field-house/table` (naming): Zone names and folder structure will change when the table is plugged in.
+- `field-house/table` (naming): The sheet lists “Left GIP-BG” twice (zones 6 and 8); zone 8 is probably Right GIP-BG.
+- `goodman/main` (unconfirmed): Only in Colosseum’s list; the Board Info sheet’s Goodman tab is empty. Confirm before final delivery.
+
+## Camp Randall (`camp-randall`)
+
+- Deliver final files 2 weeks before the season opener, or 1 week before an event once the season is underway (2024 guide).
+- Full-system features and replay wipes are designed by UW Video Services: send RGB vector logos (.ai or .eps) for black, white and colored backgrounds, labeled.
+- Badger Sports Properties partners deliver through their representative; others deliver digitally (Box, Dropbox, FTP).
+
+### North Board: 5760x1440 (CR-MAIN-P)
+
+id `camp-randall/north-board` · 4:1 · 60 fps · MP4 · H.264 · keys `MAIN_FULL`, `DAILY_MAIN_FULL`
+
+| zone id | size | at (x,y) | fps | keys |
+|---|---|---|---|---|
+| `fullscreen-fg` | 5760x1440 | 0,0 | 60 | – |
+| `fullscreen-bg` | 5760x1440 | 0,0 | 60 | – |
+| `borders` | 5760x1440 | 0,0 | 60 | – |
+| `main-video-fg` | 3096x1440 | 1332,0 | 60 | MAIN_VIDEO |
+| `gip` | 3096x155 | – | 60 · ⚠ tbd | – |
+| `main-video-bg` | 3096x1440 | 1332,0 | 60 | – |
+| `frame-left` | 1332x1440 | 0,0 | 60 · pad 20 | LEFT_FRAME |
+| `frame-right` | 1332x1440 | 4428,0 | 60 · pad 20 | RIGHT_FRAME |
+| `wing-left-fg` | 612x1440 | 0,0 | 60 · pad 20 | WING_FULL_LEFT |
+| `wing-left-bg` | 612x1440 | 0,0 | 60 · pad 20 | – |
+| `wing-right-fg` | 612x1440 | 5148,0 | 60 · pad 20 | WING_FULL_RIGHT |
+| `wing-right-bg` | 612x1440 | 5148,0 | 60 · pad 20 | – |
+| `wing-short-left-fg` | 612x1030 | 0,0 | 60 · pad 20 | WING_LEFT |
+| `wing-short-left-bg` | 612x1030 | 0,0 | 60 · pad 20 | – |
+| `wing-short-right-fg` | 612x1030 | 5148,0 | 60 · pad 20 | WING_RIGHT |
+| `wing-short-right-bg` | 612x1030 | 5148,0 | 60 · pad 20 | – |
+| `stat-box-left-fg` | 720x612 | 612,828 | stills · pad 20 | STAT_LEFT |
+| `stat-box-left-bg` | 720x612 | 612,828 | stills · pad 20 | – |
+| `stat-box-right-fg` | 720x612 | 4428,828 | stills · pad 20 | STAT_RIGHT |
+| `stat-box-right-bg` | 720x612 | 4428,828 | stills · pad 20 | – |
+| `ad-top-left` | 612x200 | 0,0 | stills · pad 20 | TOP_AD_LEFT |
+| `ad-middle-left` | 612x830 | 0,200 | 60 · pad 20 | MIDDLE_AD_LEFT |
+| `ad-bottom-left` | 612x410 | 0,1030 | stills · pad 20 | BOTTOM_AD_LEFT |
+| `ad-top-right` | 612x200 | 5148,0 | stills · pad 20 | TOP_AD_RIGHT |
+| `ad-middle-right` | 612x830 | 5148,200 | 60 · pad 20 | MIDDLE_AD_RIGHT |
+| `ad-bottom-right` | 612x410 | 5148,1030 | stills · pad 20 | BOTTOM_AD_RIGHT |
+
+### North Board HD feed: 1920x1080
+
+id `camp-randall/north-board-hd-feed` · 16:9 · 59.94 fps · MP4 · H.264 · progressive · keys `MAIN_HD`
+
+| zone id | size | at (x,y) | fps | keys |
+|---|---|---|---|---|
+| `visible-on-the-board` | 1920x806 | 0,94 | 59.94 | – |
+| `hd-title-safe-90` | 1728x972 | 96,54 | 59.94 | – |
+
+### Club Board: 5760x1080 (CR-CLUB-P)
+
+id `camp-randall/club-board` · 16:3
+
+| zone id | size | at (x,y) | fps | keys |
+|---|---|---|---|---|
+| `full-screen` | 5760x1080 | 0,0 | – | – |
+| `two-thirds-left` | 3840x1080 | 0,0 | – | – |
+| `two-thirds-right` | 3840x1080 | 1920,0 | – | – |
+| `1080-right` | 1920x1080 | 3840,0 | – | – |
+| `1080-center` | 1920x1080 | 1920,0 | – | – |
+| `1080-left` | 1920x1080 | 0,0 | – | – |
+| `pillar-right-fg` | 960x1080 | 3840,0 | – | – |
+| `pillar-right-bg` | 960x1080 | 3840,0 | – | – |
+| `pillar-left-fg` | 960x1080 | 960,0 | – | – |
+| `pillar-left-bg` | 960x1080 | 960,0 | – | – |
+
+### West Fascia: 11880x108 (CR-AUX-P)
+
+id `camp-randall/west-fascia` · 110:1 · 60 fps · MP4 · H.264 · keys `FASCIA_FULL`
+
+| zone id | size | at (x,y) | fps | keys |
+|---|---|---|---|---|
+| `fullscreen-west-fg` | 11880x108 | 0,0 | 60 | – |
+| `fullscreen-west-bg` | 11880x108 | 0,0 | 60 | – |
+| `ad-left-west` | 5000x108 | 0,0 | 60 | FASCIA_AD_LEFT |
+| `gip-west` | 1880x108 | 5000,0 | 60 | – |
+| `ad-right-west` | 5000x108 | 6880,0 | 60 | FASCIA_AD_RIGHT |
+
+### East Fascia: 11880x108 (CR-AUX-P)
+
+id `camp-randall/east-fascia` · 110:1 · 60 fps · MP4 · H.264
+
+| zone id | size | at (x,y) | fps | keys |
+|---|---|---|---|---|
+| `fullscreen-east-fg` | 11880x108 | 0,0 | 60 | – |
+| `fullscreen-east-bg` | 11880x108 | 0,0 | 60 | – |
+| `ad-left-east` | 5000x108 | 0,0 | 60 | – |
+| `gip-east` | 1880x108 | 5000,0 | 60 | – |
+| `ad-right-east` | 5000x108 | 6880,0 | 60 | – |
+
+### Kellner: 1692x540 (CR-AUX-P)
+
+id `camp-randall/kellner` · 3.13:1 · 60 fps · MP4 · H.264 · keys `KELLNER`
+
+| zone id | size | at (x,y) | fps | keys |
+|---|---|---|---|---|
+| `fullscreen-fg` | 1692x540 | 0,0 | 60 | – |
+| `fullscreen-bg` | 1692x540 | 0,0 | 60 | – |
+| `borders` | 1692x540 | 0,0 | 60 | – |
+| `main-video-fg` | 1152x540 | 270,0 | 60 | KELLNER_MAIN |
+| `main-video-bg` | 1152x540 | 270,0 | 60 | – |
+| `wing-left-fg` | 270x540 | 0,0 | 60 · pad 20 | KELLNER_WING_LEFT |
+| `wing-left-bg` | 270x540 | 0,0 | 60 · pad 20 | – |
+| `wing-right-fg` | 270x540 | 1422,0 | 60 · pad 20 | KELLNER_WING_RIGHT |
+| `wing-right-bg` | 270x540 | 1422,0 | 60 · pad 20 | – |
+| `ad-top-left` | 270x270 | 0,0 | stills · pad 20 | KELLNER_AD_1 |
+| `ad-bottom-left` | 270x270 | 0,270 | stills · pad 20 | KELLNER_AD_2 |
+| `ad-top-right` | 270x270 | 1422,0 | stills · pad 20 | KELLNER_AD_3 |
+| `ad-bottom-right` | 270x270 | 1422,270 | stills · pad 20 | KELLNER_AD_4 |
+
+### South Upper Fascia: 4275x60 (CR-SEZUPPER-P)
+
+id `camp-randall/south-upper-fascia` · 71.25:1 · 60 fps · MP4 · H.264
+
+| zone id | size | at (x,y) | fps | keys |
+|---|---|---|---|---|
+| `fullscreen-left-fg` | 1725x60 | 0,0 | 60 | SEZ_UPPER_LEFT |
+| `fullscreen-left-bg` | 1725x60 | 0,0 | 60 | – |
+| `ad-left` | 1725x60 | 0,0 | 60 | SEZ_UPPER_AD_LEFT |
+| `fullscreen-right-fg` | 2550x60 | 1725,0 | 60 | SEZ_UPPER_RIGHT |
+| `fullscreen-right-bg` | 2550x60 | 1725,0 | 60 | – |
+| `ad-right` | 1725x60 | 1725,0 | 60 | SEZ_UPPER_AD_RIGHT |
+| `angle` | 825x60 | 3450,0 | 60 | SEZ_UPPER_ANGLE |
+
+### South Lower Fascia: 3225x60 (CR-SEZLOWER-P)
+
+id `camp-randall/south-lower-fascia` · 53.75:1 · 60 fps · MP4 · H.264 · keys `SEZ_LOWER_FULL`
+
+| zone id | size | at (x,y) | fps | keys |
+|---|---|---|---|---|
+| `fullscreen-fg` | 3225x60 | 0,0 | 60 | – |
+| `fullscreen-bg` | 3225x60 | 0,0 | 60 | – |
+| `ad-left` | 1300x60 | 0,0 | 60 | SEZ_LOWER_LEFT |
+| `gip` | 625x60 | 1300,0 | 60 | – |
+| `ad-right` | 1300x60 | 1925,0 | 60 | SEZ_LOWER_RIGHT |
+
+### Section A: 336x264 (CR-AUX-P)
+
+id `camp-randall/section-a` · 14:11 · 60 fps · MP4 · H.264 · keys `SECTION_A_FULL`
+
+| zone id | size | at (x,y) | fps | keys |
+|---|---|---|---|---|
+| `fullscreen-fg` | 336x264 | 0,0 | 60 | – |
+| `fullscreen-bg` | 336x264 | 0,0 | 60 | – |
+| `main-video-fg` | 336x184 | 0,80 | 60 | SECTION_A_MAIN |
+| `main-video-bg` | 336x184 | 0,80 | 60 | – |
+| `gip` | 336x80 | 0,0 | stills | SECTION_A_GIP |
+
+### Captioning: 600x72 (CR-CAPTION-P)
+
+id `camp-randall/captioning` · 25:3 · keys `CLOSED_CAPTION`
+
+| zone id | size | at (x,y) | fps | keys |
+|---|---|---|---|---|
+| `fullscreen-fg` | 600x72 | – | stills | – |
+| `fullscreen-bg` | 600x72 | – | stills | – |
+
+### IPTV Full Screen Ad: 1920x1080
+
+id `camp-randall/iptv-full-screen-ad` · 16:9 · 59.94 fps · MP4 · Exactly 15 s · keys `IPTV_FULL_SCREEN`
+
+| zone id | size | at (x,y) | fps | keys |
+|---|---|---|---|---|
+| `title-safe-100-px` | 1720x880 | 100,100 | 59.94 | – |
+
+### IPTV L-Wrap: 1920x1080
+
+id `camp-randall/iptv-l-wrap` · 16:9 · Stills only · keys `IPTV_L_WRAP`
+
+### IPTV Video Wall Ad: 960x1080
+
+id `camp-randall/iptv-video-wall-ad` · 8:9 · MOV or MP4 (uncompressed recommended) · Exactly 15 s · keys `IPTV_VIDEO_WALL_AD`
+
+### IPTV Video Wall Full: 5760x2160
+
+id `camp-randall/iptv-video-wall-full` · 8:3 · MOV or MP4 (uncompressed recommended) · Exactly 15 s · keys `IPTV_VIDEO_WALL_FULL`
+
+## Kohl Center (`kohl-center`)
+
+- Kohl Center sizes are from the Board Info sheet, cross-checked against Colosseum’s list and the production After Effects project. No Kohl Center content guide is in hand yet.
+
+### Centerhung Main: 1104x624 (KC-MAIN-P)
+
+id `kohl-center/centerhung-main` · 23:13 · 59.94 fps · keys `KC_MAIN`
+- ⚠ conflict: Frame rate differs by source: Colosseum builds at 60 fps; the production After Effects project renders at 59.94. Confirm before final delivery.
+
+| zone id | size | at (x,y) | fps | keys |
+|---|---|---|---|---|
+| `fullscreen-fg` | 1104x624 | – | – | – |
+| `fullscreen-bg` | 1104x624 | – | – | – |
+| `sdi-a` | 1104x624 | – | – | – |
+| `sdi-b` | 1104x624 | – | – | – |
+
+### Main 16:9 feed: 1920x1080
+
+id `kohl-center/main-16-9-feed` · 16:9
+- ⚠ unconfirmed: Only in Colosseum’s list; not in the Board Info sheet. Confirm with the Kohl Center video board team before building for it.
+- ⚠ conflict: Frame rate differs by source: Colosseum builds at 60 fps; the production After Effects project renders at 59.94. Confirm before final delivery.
+
+### Centerhung Top Ring: 5184x240 (KC-MAIN-P)
+
+id `kohl-center/centerhung-top-ring` · 21.6:1 · 59.94 fps · keys `KC_TOP_RING`
+- ⚠ conflict: Frame rate differs by source: Colosseum builds at 60 fps; the production After Effects project renders at 59.94. Confirm before final delivery.
+
+| zone id | size | at (x,y) | fps | keys |
+|---|---|---|---|---|
+| `fullscreen-fg` | 5184x240 | – | – | – |
+| `fullscreen-bg` | 5184x240 | – | – | – |
+| `sponsor-north-fg` | 1056x72 | – | – | – |
+| `sponsor-north-bg` | 1056x72 | – | – | – |
+| `sponsor-east-fg` | 1056x72 | – | – | – |
+| `sponsor-east-bg` | 1056x72 | – | – | – |
+| `sponsor-south-fg` | 1056x72 | – | – | – |
+| `sponsor-south-bg` | 1056x72 | – | – | – |
+| `sponsor-west-fg` | 1056x72 | – | – | – |
+| `sponsor-west-bg` | 1056x72 | – | – | – |
+| `ring-gip-fg` | 1056x240 | – | – | – |
+| `ring-gip-bg` | 1056x240 | – | – | – |
+| `captions` | 1056x240 | – | – | – |
+| `corner-nw-fg` | 240x240 | – | – | – |
+| `corner-nw-bg` | 240x240 | – | – | – |
+| `corner-ne-fg` | 240x240 | – | – | – |
+| `corner-ne-bg` | 240x240 | – | – | – |
+| `corner-sw-fg` | 240x240 | – | – | – |
+| `corner-sw-bg` | 240x240 | – | – | – |
+| `corner-se-fg` | 240x240 | – | – | – |
+| `corner-se-bg` | 240x240 | – | – | – |
+
+### 360 Fascia: 12576x144 (KC-MAIN-P)
+
+id `kohl-center/360-fascia` · 87.33:1 · 59.94 fps · keys `KC_FASCIA`
+- ⚠ conflict: Frame rate differs by source: Colosseum builds at 60 fps; the production After Effects project renders at 59.94. Confirm before final delivery.
+
+| zone id | size | at (x,y) | fps | keys |
+|---|---|---|---|---|
+| `fullscreen-fg` | 12576x144 | – | – | – |
+| `fullscreen-bg` | 12576x144 | – | – | – |
+| `sideline-extended-east-fg` | 11472x72 | – | – | – |
+| `sideline-extended-east-bg` | 11472x72 | – | – | – |
+| `sideline-extended-west-fg` | 11472x72 | – | – | – |
+| `sideline-extended-west-bg` | 11472x72 | – | – | – |
+| `sideline-east-fg` | 8160x72 | – | – | – |
+| `sideline-east-bg` | 8160x72 | – | – | – |
+| `sideline-west-fg` | 8160x72 | – | – | – |
+| `sideline-west-bg` | 8160x72 | – | – | – |
+| `endzone-north-fg` | 4416x72 | – | – | – |
+| `endzone-north-bg` | 4416x72 | – | – | – |
+| `endzone-south-fg` | 4416x72 | – | – | – |
+| `endzone-south-bg` | 4416x72 | – | – | – |
+| `endzone-gip-fg` | 1104x72 | – | – | – |
+| `endzone-gip-bg` | 1104x72 | – | – | – |
+| `endzone-left-stat-fg` | 1656x72 | – | – | – |
+| `endzone-left-stat-bg` | 1656x72 | – | – | – |
+| `endzone-right-stat-fg` | 1656x72 | – | – | – |
+| `endzone-right-stat-bg` | 1656x72 | – | – | – |
+
+### 300 Level & Tunnels: 1152x360 (KC-AUX-P)
+
+id `kohl-center/300-level-tunnels` · 16:5
+- ⚠ conflict: Frame rate differs by source: Colosseum builds at 60 fps; the production After Effects project renders at 59.94. Confirm before final delivery.
+
+| zone id | size | at (x,y) | fps | keys |
+|---|---|---|---|---|
+| `corner-fullscreen-se-fg` | 800x64 | – | 59.94 | KC_300_LEVEL |
+| `corner-fullscreen-se-bg` | 800x64 | – | – | – |
+| `corner-fullscreen-ne-fg` | 800x64 | – | – | – |
+| `corner-fullscreen-ne-bg` | 800x64 | – | – | – |
+| `corner-fullscreen-nw-fg` | 800x64 | – | – | – |
+| `corner-fullscreen-nw-bg` | 800x64 | – | – | – |
+| `corner-fullscreen-sw-fg` | 800x64 | – | – | – |
+| `corner-fullscreen-sw-bg` | 800x64 | – | – | – |
+| `corner-center-se-fg` | 470x64 | – | – | – |
+| `corner-center-se-bg` | 470x64 | – | – | – |
+| `corner-center-ne-fg` | 470x64 | – | – | – |
+| `corner-center-ne-bg` | 470x64 | – | – | – |
+| `corner-center-nw-fg` | 470x64 | – | – | – |
+| `corner-center-nw-bg` | 470x64 | – | – | – |
+| `corner-center-sw-fg` | 470x64 | – | – | – |
+| `corner-center-sw-bg` | 470x64 | – | – | – |
+| `corner-left-se-fg` | 165x64 | – | – | – |
+| `corner-left-se-bg` | 165x64 | – | – | – |
+| `corner-left-ne-fg` | 165x64 | – | – | – |
+| `corner-left-ne-bg` | 165x64 | – | – | – |
+| `corner-left-nw-fg` | 165x64 | – | – | – |
+| `corner-left-nw-bg` | 165x64 | – | – | – |
+| `corner-left-sw-fg` | 165x64 | – | – | – |
+| `corner-left-sw-bg` | 165x64 | – | – | – |
+| `corner-right-se-fg` | 165x64 | – | – | – |
+| `corner-right-se-bg` | 165x64 | – | – | – |
+| `corner-right-ne-fg` | 165x64 | – | – | – |
+| `corner-right-ne-bg` | 165x64 | – | – | – |
+| `corner-right-nw-fg` | 165x64 | – | – | – |
+| `corner-right-nw-bg` | 165x64 | – | – | – |
+| `corner-right-sw-fg` | 165x64 | – | – | – |
+| `corner-right-sw-bg` | 165x64 | – | – | – |
+| `tunnel-se-fg` | 288x72 | – | 59.94 | KC_TUNNEL |
+| `tunnel-se-bg` | 288x72 | – | – | – |
+| `tunnel-ne-fg` | 288x72 | – | – | – |
+| `tunnel-ne-bg` | 288x72 | – | – | – |
+| `tunnel-nw-fg` | 288x72 | – | – | – |
+| `tunnel-nw-bg` | 288x72 | – | – | – |
+| `tunnel-sw-fg` | 288x72 | – | – | – |
+| `tunnel-sw-bg` | 288x72 | – | – | – |
+
+### Scorer’s Table: 2016x126 (KC-TABLES-P)
+
+id `kohl-center/scorers-table` · 16:1 · 59.94 fps · keys `KC_SCORERS_TABLE`
+- ⚠ conflict: Frame rate differs by source: Colosseum builds at 60 fps; the production After Effects project renders at 59.94. Confirm before final delivery.
+
+| zone id | size | at (x,y) | fps | keys |
+|---|---|---|---|---|
+| `table-fg` | 2016x126 | – | – | – |
+| `table-bg` | 2016x126 | – | – | – |
+
+### Stanchion: 240x120 (KC-Stanchion-P)
+
+id `kohl-center/stanchion` · 2:1 · 59.94 fps · keys `KC_STANCHION`
+- ⚠ conflict: Frame rate differs by source: Colosseum builds at 60 fps; the production After Effects project renders at 59.94. Confirm before final delivery.
+
+| zone id | size | at (x,y) | fps | keys |
+|---|---|---|---|---|
+| `fullscreen-fg` | 240x120 | – | – | – |
+| `fullscreen-bg` | 240x120 | – | – | – |
+
+### Baseline Table: 840x126 (KC-TABLES-P)
+
+id `kohl-center/baseline-table` · 20:3 · 59.94 fps · keys `KC_BASELINE_TABLE`
+- ⚠ conflict: Frame rate differs by source: Colosseum builds at 60 fps; the production After Effects project renders at 59.94. Confirm before final delivery.
+
+| zone id | size | at (x,y) | fps | keys |
+|---|---|---|---|---|
+| `baseline-fg` | 840x126 | – | – | – |
+| `baseline-bg` | 840x126 | – | – | – |
+
+## Field House (`field-house`)
+
+### Main: 672x384 (FH-MAIN-P)
+
+id `field-house/main` · 7:4 · 59.94 fps · keys `FH_MAIN`
+
+| zone id | size | at (x,y) | fps | keys |
+|---|---|---|---|---|
+| `main-fullscreen-fg` | 672x384 | – | – | – |
+| `main-fullscreen-bg` | 672x384 | – | – | – |
+| `sdi-a` | 672x384 | – | – | – |
+| `sdi-b` | 672x384 | – | – | – |
+
+### Top Ring: 3456x96 (FH-MAIN-P)
+
+id `field-house/top-ring` · 36:1 · 59.94 fps · keys `FH_TOP_RING`
+
+| zone id | size | at (x,y) | fps | keys |
+|---|---|---|---|---|
+| `ring-fullscreen-fg` | 3456x96 | – | – | – |
+| `ring-fullscreen-bg` | 3456x96 | – | – | – |
+| `ring-gip-fg` | 694x96 | – | – | – |
+| `ring-gip-bg` | 694x96 | – | – | – |
+| `ring-corner-nw-fg` | 170x96 | – | – | – |
+| `ring-corner-nw-bg` | 170x96 | – | – | – |
+| `ring-corner-ne-fg` | 170x96 | – | – | – |
+| `ring-corner-ne-bg` | 170x96 | – | – | – |
+| `ring-corner-sw-fg` | 170x96 | – | – | – |
+| `ring-corner-sw-bg` | 170x96 | – | – | – |
+| `ring-corner-se-fg` | 170x96 | – | – | – |
+| `ring-corner-se-bg` | 170x96 | – | – | – |
+
+### Table: 1728x96 (FH-TABLES-P)
+
+id `field-house/table` · 18:1
+- ⚠ naming: Zone names and folder structure will change when the table is plugged in.
+- ⚠ naming: The sheet lists “Left GIP-BG” twice (zones 6 and 8); zone 8 is probably Right GIP-BG.
+
+| zone id | size | at (x,y) | fps | keys |
+|---|---|---|---|---|
+| `fullscreen-fg` | 1728x96 | – | – | – |
+| `fullscreen-bg` | 1728x96 | – | – | – |
+| `center-ad-fg` | 1036x96 | – | – | – |
+| `center-ad-bg` | 1036x96 | – | – | – |
+| `left-gip-fg` | 346x96 | – | – | – |
+| `left-gip-bg` | 346x96 | – | – | – |
+| `right-gip-fg` | 346x96 | – | – | – |
+| `left-gip-bg-8` | 346x96 | – | – | – |
+
+## LaBahn Arena (`labahn`)
+
+### Main: 448x256
+
+id `labahn/main` · 7:4 · 59.94 fps · keys `LB_MAIN`
+
+## Goodman Diamond (`goodman`)
+
+### Main: 560x308
+
+id `goodman/main` · 20:11
+- ⚠ unconfirmed: Only in Colosseum’s list; the Board Info sheet’s Goodman tab is empty. Confirm before final delivery.
+
+## Changes
+
+- 2026-10-08.1: Agent-ready: stable ids on every display and zone, positions as {x, y}, open questions as typed `issues`, `notes` everywhere for plain information, `stillOnly` on zones to match canvases. Generated index.json, boards.csv and llms.txt. Canvas keys and every size are unchanged.
+- 2026-09-24.1: First published manifest: five venues cross-referenced from the Board Info sheet, the 2024 Camp Randall guide, Colosseum’s deliverables sheet and the Board Builder; 58 canvas keys.

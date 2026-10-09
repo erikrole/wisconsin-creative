@@ -1,0 +1,183 @@
+{
+  "title": "Tools redesign: a sky and a viewfinder",
+  "eyebrow": "Web \u00b7 /golden-hour \u00b7 /timelapse \u00b7 /tools",
+  "lede": "Direction 2: each tool gets its own look. Golden Hour becomes a live sky that tracks the sun at the chosen venue; Timelapse becomes a camera viewfinder. Both use the brand's self-hosted Gotham. Same logic, routes and tests as the audit pass.",
+  "stats": [
+    {
+      "k": "sky states driven by real sun altitude",
+      "v": "4"
+    },
+    {
+      "k": "new tests still passing (31 with QR Studio)",
+      "v": "27"
+    },
+    {
+      "k": "new network requests",
+      "v": "0"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Golden Hour",
+      "note": "Original page (left) vs the redesign, same fixed clock (Sep 24, 6:35 PM CDT, inside evening golden hour), viewport and empty storage. Viewport-sized captures.",
+      "pairs": [
+        {
+          "title": "Phone, during golden hour",
+          "sub": "390 \u00d7 844",
+          "before": "../before/gh-evening-mobile.png",
+          "beforeEvidence": "../before/gh-evening-mobile.capture.json",
+          "beforeCap": "Flat grey page with a yellow banner.",
+          "after": "after/gh-evening-mobile.png",
+          "afterEvidence": "after/gh-evening-mobile.capture.json",
+          "afterCap": "The sky itself goes golden; the hero says how long is left; the sun sits on its real path."
+        },
+        {
+          "title": "Desktop",
+          "sub": "1280 \u00d7 900",
+          "before": "../before/gh-evening-desktop.png",
+          "beforeEvidence": "../before/gh-evening-desktop.capture.json",
+          "beforeCap": "",
+          "after": "after/gh-evening-desktop.png",
+          "afterEvidence": "after/gh-evening-desktop.capture.json",
+          "afterCap": "Controls on one line; the hero and path fill the width."
+        },
+        {
+          "title": "Changing location",
+          "sub": "Before: tap Change. After: pick UCLA.",
+          "before": "../before/gh-location-mobile.png",
+          "beforeEvidence": "../before/gh-location-mobile.capture.json",
+          "beforeCap": "Raw lat/long boxes.",
+          "after": "after/gh-location-mobile.png",
+          "afterEvidence": "after/gh-location-mobile.capture.json",
+          "afterCap": "Venue picker; everything re-reads in the venue's local time."
+        }
+      ]
+    },
+    {
+      "heading": "Timelapse",
+      "note": "Same clock, viewport and storage. Stills scenario: the old \u201c\u03b1 \u00b7 interval shooting\u201d vs A7 V \u2192 Interval, find-the-setting mode, 20 s clip.",
+      "pairs": [
+        {
+          "title": "Phone, first open",
+          "sub": "390 \u00d7 844",
+          "before": "../before/tl-default-mobile.png",
+          "beforeEvidence": "../before/tl-default-mobile.capture.json",
+          "beforeCap": "A long white form; the answer is below the fold.",
+          "after": "after/tl-default-mobile.png",
+          "afterEvidence": "after/tl-default-mobile.capture.json",
+          "afterCap": "A sticky viewfinder shows the answer while you scroll the setup under it."
+        },
+        {
+          "title": "Desktop",
+          "sub": "1280 \u00d7 900",
+          "before": "../before/tl-default-desktop.png",
+          "beforeEvidence": "../before/tl-default-desktop.capture.json",
+          "beforeCap": "",
+          "after": "after/tl-default-desktop.png",
+          "afterEvidence": "after/tl-default-desktop.capture.json",
+          "afterCap": "Setup on the left; viewfinder, time funnel and the camera's menu values on the right."
+        },
+        {
+          "title": "Stills, find the setting",
+          "sub": "A7 V vs old \u201c\u03b1\u201d",
+          "before": "../before/tl-clip-stills-mobile.png",
+          "beforeEvidence": "../before/tl-clip-stills-mobile.capture.json",
+          "beforeCap": "",
+          "after": "after/tl-clip-stills-mobile.png",
+          "afterEvidence": "after/tl-clip-stills-mobile.capture.json",
+          "afterCap": "Interval snaps to whole seconds; the HUD reads the plan like a camera."
+        }
+      ]
+    },
+    {
+      "heading": "Every sky, and the other screens (after only)",
+      "note": "No baseline exists for these states or for the hub.",
+      "shots": [
+        {
+          "title": "Tools hub",
+          "image": "full/hub-desktop.png",
+          "cap": "Paper background; each card previews its tool's own look.",
+          "wide": true
+        },
+        {
+          "title": "Golden hour sky (full page)",
+          "image": "full/gh-gold-mobile.png",
+          "cap": "Tinted glass keeps white text legible over amber."
+        },
+        {
+          "title": "Blue hour, 7:15 PM",
+          "image": "full/gh-blue-mobile.png",
+          "cap": "Indigo sky; blue dot pulses in the eyebrow."
+        },
+        {
+          "title": "Night, 10:30 PM",
+          "image": "full/gh-night-mobile.png",
+          "cap": "Stars; the sun is a hollow marker below the horizon; hero points to tomorrow's blue hour."
+        },
+        {
+          "title": "Daylight, desktop",
+          "image": "full/gh-day-desktop.png",
+          "cap": "Light sky flips the ink to navy."
+        },
+        {
+          "title": "Another day",
+          "image": "full/gh-other-day-mobile.png",
+          "cap": "Golden sky and that day's evening window; Today pill to jump back."
+        },
+        {
+          "title": "Timelapse desktop (full page)",
+          "image": "full/tl-desktop.png",
+          "cap": "Viewfinder with REC state, HUD stats, time funnel, camera menu."
+        },
+        {
+          "title": "Refused plan",
+          "image": "full/tl-tl4k-error-mobile.png",
+          "cap": "A9 III 4K time-lapse needing 12 s: REC goes grey, HUD blanks, the reason is in red."
+        },
+        {
+          "title": "Hub, phone",
+          "image": "full/hub-mobile.png",
+          "cap": ""
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Golden Hour looked like any web form",
+      "was": "Grey cards, a flat bar timeline and a yellow banner; theme toggle in the header.",
+      "now": "The whole page is the sky: night, blue, gold or day from the sun's real altitude at the venue, crossfading as it changes. The timeline is now the sun's actual path with the golden and blue altitude bands drawn through it, and a live sun marker."
+    },
+    {
+      "h": "The answer was small",
+      "was": "\u201cGolden hour now \u00b7 19m left\u201d in a pill.",
+      "now": "A hero that reads from across a room: GOLDEN HOUR / 36 min left \u00b7 until 7:11 PM, or \u201cin 2h 56m \u00b7 starts 6:15 PM\u201d, with \u201ctomorrow\u201d when it is."
+    },
+    {
+      "h": "Timelapse's result was just another card",
+      "was": "Result card, stats grid and menu card stacked under a long form.",
+      "now": "A viewfinder: focus brackets, REC dot (grey when a plan is refused), HUD for mode, body, frames, speed-up and card space. On phones it sticks to the top while you change settings."
+    },
+    {
+      "h": "Speed-up was a number",
+      "was": "\u201c30\u00d7\u201d.",
+      "now": "A time funnel draws it to scale: the real-time roll with frame ticks, narrowing to the clip."
+    },
+    {
+      "h": "Tools felt generic",
+      "was": "System font, same grey chrome on every page.",
+      "now": "Gotham (already self-hosted by the app; CSP now allows <code>font-src 'self'</code>). Each tool has its own palette; the hub previews them."
+    }
+  ],
+  "verification": [
+    "<b>PASS</b> \u00b7 <code>npx vitest run tests/static-tools.test.ts tests/qrcode-static-tool.test.ts</code>: 31 passed.",
+    "<b>PASS</b> \u00b7 Local <code>next dev</code>: /tools, /golden-hour, /timelapse load Gotham under their CSP; no console errors besides the pre-existing site-wide Permissions-Policy warnings.",
+    "<b>PASS</b> \u00b7 All sky states, the other-day view, the refused-plan state and the sticky phone viewfinder captured and inspected; no console errors.",
+    "<b>PASS</b> \u00b7 <code>npm run build:app</code> exit 0 after the redesign.",
+    "<b>OPEN</b> \u00b7 No real-iPhone check yet (sticky viewfinder, backdrop blur, native pickers over the sky)."
+  ],
+  "notes": [
+    "Golden Hour and Timelapse are now single-appearance by design: the sky picks Golden Hour's palette, and Timelapse is always dark like a camera LCD. The Auto/Light/Dark toggle is gone from both.",
+    "The first-pass review (audit fixes, before the redesign) is still in this folder as review.html."
+  ]
+}

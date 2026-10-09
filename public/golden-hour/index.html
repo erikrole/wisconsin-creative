@@ -1,0 +1,366 @@
+<!doctype html>
+<!-- Golden Hour. Canonical source: edit here. Run `node scripts/hash-static-tools.mjs` after changing a script. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; font-src 'self'; img-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#1a1f44">
+  <title>Golden Hour</title>
+  <meta name="description" content="When the light is good to shoot, at home or on the road.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%233b3f73'/%3E%3Cstop offset='.6' stop-color='%23c8646f'/%3E%3Cstop offset='1' stop-color='%23f5a64a'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='16' height='16' rx='3.5' fill='url(%23g)'/%3E%3Ccircle cx='8' cy='10.5' r='3.2' fill='%23ffe3a1'/%3E%3Cpath d='M1 10.5h14' stroke='%23fff' stroke-width='.9'/%3E%3C/svg%3E">
+  <style>
+    @font-face { font-family: "Gotham"; src: url("/Gotham-Black.woff2") format("woff2"); font-weight: 800; font-display: swap; }
+    @font-face { font-family: "Gotham"; src: url("/Gotham-Bold.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+    @font-face { font-family: "Gotham"; src: url("/Gotham-Medium.woff2") format("woff2"); font-weight: 500; font-display: swap; }
+    @font-face { font-family: "Gotham"; src: url("/Gotham-Book.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+
+    /* The sky decides the palette. app.js sets body[data-sky] from the sun's
+       altitude at the chosen venue: night, blue, gold or day. */
+    :root {
+      --ease: cubic-bezier(0.2, 0, 0, 1);
+      --font: "Gotham", system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    body {
+      --ink: #f4f1ff; --ink-2: rgba(244, 241, 255, 0.8); --ink-3: rgba(244, 241, 255, 0.6);
+      --glass: rgba(255, 255, 255, 0.1); --glass-2: rgba(255, 255, 255, 0.18); --glass-line: rgba(255, 255, 255, 0.22);
+      --path: rgba(255, 255, 255, 0.55); --horizon: rgba(255, 255, 255, 0.5);
+      --gold: #ffc861; --blue: #8fb3ff; --focus: #ffe3a1; --warn: #ffb4a8; --on-ink: #0b0f24;
+      color-scheme: dark;
+    }
+    /* Tinted glass on the golden sky: white on clear glass washes out over amber. */
+    body[data-sky="gold"] {
+      --glass: rgba(38, 22, 72, 0.3); --glass-2: rgba(38, 22, 72, 0.44); --glass-line: rgba(255, 255, 255, 0.26);
+      --ink-3: rgba(255, 248, 240, 0.74);
+    }
+    body[data-sky="day"] {
+      --ink: #0d1b33; --ink-2: rgba(13, 27, 51, 0.78); --ink-3: rgba(13, 27, 51, 0.6);
+      --glass: rgba(255, 255, 255, 0.5); --glass-2: rgba(255, 255, 255, 0.75); --glass-line: rgba(13, 27, 51, 0.13);
+      --path: rgba(13, 27, 51, 0.45); --horizon: rgba(13, 27, 51, 0.38);
+      --gold: #d9820a; --blue: #2f5fb8; --focus: #0d1b33; --warn: #a3261a; --on-ink: #ffffff;
+      color-scheme: light;
+    }
+
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    html { background: #1a2150; transition: background-color 1400ms var(--ease); }
+    body {
+      margin: 0; min-width: 300px; min-height: 100vh; color: var(--ink);
+      font-family: var(--font); font-size: 15px; line-height: 1.5;
+      -webkit-font-smoothing: antialiased; transition: color 900ms var(--ease);
+    }
+    button, input, select { font: inherit; color: inherit; }
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 8px; }
+
+    /* ---- sky: four stacked layers so phases crossfade ---- */
+    .sky { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+    .sky > div { position: absolute; inset: 0; opacity: 0; transition: opacity 1400ms var(--ease); }
+    body[data-sky="night"] .sky-night, body[data-sky="blue"] .sky-blue,
+    body[data-sky="gold"] .sky-gold, body[data-sky="day"] .sky-day { opacity: 1; }
+    .sky-night {
+      background:
+        radial-gradient(1px 1px at 12% 18%, #fff 50%, transparent 51%),
+        radial-gradient(1px 1px at 27% 8%, rgba(255,255,255,.8) 50%, transparent 51%),
+        radial-gradient(1.4px 1.4px at 41% 22%, #fff 50%, transparent 51%),
+        radial-gradient(1px 1px at 58% 12%, rgba(255,255,255,.7) 50%, transparent 51%),
+        radial-gradient(1.2px 1.2px at 73% 27%, #fff 50%, transparent 51%),
+        radial-gradient(1px 1px at 86% 9%, rgba(255,255,255,.8) 50%, transparent 51%),
+        radial-gradient(1px 1px at 93% 34%, rgba(255,255,255,.6) 50%, transparent 51%),
+        radial-gradient(1px 1px at 6% 41%, rgba(255,255,255,.6) 50%, transparent 51%),
+        radial-gradient(1.3px 1.3px at 34% 44%, rgba(255,255,255,.7) 50%, transparent 51%),
+        radial-gradient(1px 1px at 66% 47%, rgba(255,255,255,.5) 50%, transparent 51%),
+        linear-gradient(180deg, #05071a 0%, #0b1030 55%, #1a2150 100%);
+    }
+    .sky-blue {
+      background:
+        radial-gradient(1px 1px at 18% 12%, rgba(255,255,255,.7) 50%, transparent 51%),
+        radial-gradient(1px 1px at 71% 9%, rgba(255,255,255,.6) 50%, transparent 51%),
+        radial-gradient(120% 60% at 50% 110%, rgba(126, 160, 255, 0.55), transparent 70%),
+        linear-gradient(180deg, #0a1440 0%, #1c3278 55%, #3f64b8 100%);
+    }
+    .sky-gold {
+      background:
+        radial-gradient(90% 40% at 50% 108%, rgba(255, 206, 120, 0.8), rgba(255, 160, 70, 0.4) 45%, transparent 75%),
+        linear-gradient(180deg, #232552 0%, #4b3f78 28%, #9c5277 52%, #d16f62 72%, #e48f55 88%, #eea763 100%);
+    }
+    .sky-day {
+      background:
+        radial-gradient(70% 40% at 80% -5%, rgba(255, 255, 255, 0.9), transparent 70%),
+        linear-gradient(180deg, #7fb6f2 0%, #a9d0f7 38%, #d9ebfb 72%, #fbf3e4 100%);
+    }
+    /* Fine grain keeps the gradients from banding on big screens. */
+    .sky::after {
+      content: ""; position: absolute; inset: 0; opacity: 0.08; mix-blend-mode: overlay;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    .topbar, main { position: relative; z-index: 1; }
+
+    /* ---- top bar ---- */
+    .topbar {
+      display: flex; align-items: center; gap: 12px;
+      padding: max(14px, env(safe-area-inset-top)) clamp(16px, 4vw, 32px) 0;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; margin-right: auto; }
+    .brand-mark { width: 30px; height: 30px; flex: none; border-radius: 9px; overflow: hidden; box-shadow: 0 0 0 1px var(--glass-line); }
+    .brand-mark svg { display: block; width: 30px; height: 30px; }
+    .brand-name { font-weight: 800; font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 7px; min-height: 36px; padding: 0 14px;
+      border-radius: 999px; background: var(--glass); border: 1px solid var(--glass-line);
+      color: var(--ink); font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; text-decoration: none;
+      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); cursor: pointer;
+    }
+    .pill:hover { background: var(--glass-2); }
+
+    main { width: min(720px, calc(100% - 32px)); margin: 0 auto; padding: clamp(18px, 4vw, 36px) 0 calc(40px + env(safe-area-inset-bottom)); }
+
+    /* ---- where / when ---- */
+    .controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+    .venue { position: relative; min-width: 0; flex: 1 1 260px; max-width: 380px; }
+    .venue select {
+      width: 100%; appearance: none; -webkit-appearance: none; min-height: 44px; padding: 0 40px;
+      border-radius: 999px; background: var(--glass); border: 1px solid var(--glass-line);
+      font-size: 14px; font-weight: 500; cursor: pointer; text-overflow: ellipsis;
+      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    }
+    .venue select:hover { background: var(--glass-2); }
+    .venue select option, .venue select optgroup { color: #111; background: #fff; }
+    .venue svg { position: absolute; top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--ink-2); }
+    .venue .pin { left: 14px; }
+    .venue .chev { right: 15px; }
+
+    .datebar { display: flex; align-items: center; gap: 2px; min-width: 0; }
+    .datebar > button:not(.pill) {
+      width: 44px; height: 44px; flex: none; display: grid; place-items: center; padding: 0;
+      background: transparent; border: 0; border-radius: 999px; cursor: pointer; color: var(--ink-2);
+    }
+    .datebar > button:not(.pill):hover { background: var(--glass); color: var(--ink); }
+    .date-field { position: relative; min-width: 0; flex: 0 1 auto; }
+    .date-label {
+      display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px; border-radius: 999px;
+      font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap; max-width: 100%;
+    }
+    #date-label { overflow: hidden; text-overflow: ellipsis; }
+    .date-field:hover .date-label { background: var(--glass); }
+    .date-field:focus-within .date-label { outline: 2px solid var(--focus); outline-offset: 2px; }
+    .date-field input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+    .today-link { margin-left: 4px; min-height: 32px; font-size: 11px; }
+
+    /* ---- hero ---- */
+    .hero { margin: clamp(30px, 8vw, 72px) 0 4px; }
+    .hero-eyebrow {
+      display: flex; align-items: center; gap: 9px; margin: 0 0 14px;
+      font-size: 12px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-2);
+    }
+    .hero-eyebrow .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex: none; opacity: 0.8; }
+    body[data-live="gold"] .hero-eyebrow .dot { background: var(--gold); opacity: 1; animation: ping 2.4s var(--ease) infinite; }
+    body[data-live="blue"] .hero-eyebrow .dot { background: var(--blue); opacity: 1; animation: ping 2.4s var(--ease) infinite; }
+    @keyframes ping { 0% { box-shadow: 0 0 0 0 rgba(255, 230, 160, 0.65); } 80%, 100% { box-shadow: 0 0 0 12px rgba(255, 230, 160, 0); } }
+    .hero-title {
+      margin: 0; font-weight: 800; text-transform: uppercase; letter-spacing: -0.025em; line-height: 0.9;
+      font-size: clamp(48px, 13.5vw, 108px); text-wrap: balance;
+      text-shadow: 0 2px 34px rgba(10, 6, 40, 0.22);
+    }
+    body[data-sky="day"] .hero-title { text-shadow: none; }
+    .hero-sub {
+      margin: 16px 0 0; display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 12px;
+      font-size: clamp(22px, 5.6vw, 36px); font-weight: 400; letter-spacing: -0.01em; color: var(--ink-2); font-variant-numeric: tabular-nums;
+    }
+    .hero-sub b { font-weight: 800; color: var(--ink); }
+    .hero-note { margin: 12px 0 0; font-size: 13px; color: var(--ink-2); }
+    .hero-note.is-warn { color: var(--warn); }
+
+    /* ---- sun path ---- */
+    .path { margin: 24px 0 4px; }
+    .path-plot { position: relative; height: clamp(140px, 28vw, 210px); }
+    .path svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+    .path .horizon { stroke: var(--horizon); stroke-width: 1; stroke-dasharray: 2 6; }
+    .path .band-gold { fill: var(--gold); opacity: 0.24; }
+    body[data-sky="day"] .path .band-gold { opacity: 0.2; }
+    .path .band-blue { fill: var(--blue); opacity: 0.24; }
+    .path .curve { fill: none; stroke: var(--path); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .path .curve-gold { fill: none; stroke: var(--gold); stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
+    .path .curve-blue { fill: none; stroke: var(--blue); stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
+    .path .band-label {
+      position: absolute; left: 0; transform: translateY(-50%);
+      font-size: 10px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-3);
+    }
+    .path .sun {
+      position: absolute; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%;
+      background: #fff6d8; box-shadow: 0 0 0 6px rgba(255, 226, 150, 0.28), 0 0 34px 14px rgba(255, 196, 90, 0.55);
+      animation: glow 3.2s var(--ease) infinite;
+    }
+    .path .sun.is-down { background: var(--on-ink); border: 2px solid var(--ink); box-shadow: none; animation: none; }
+    @keyframes glow { 50% { box-shadow: 0 0 0 9px rgba(255, 226, 150, 0.16), 0 0 44px 18px rgba(255, 196, 90, 0.42); } }
+    .path .now-line { position: absolute; bottom: -2px; width: 0; border-left: 1px dashed var(--ink-3); transform: translateX(-0.5px); }
+    .path-axis { position: relative; height: 18px; margin-top: 8px; font-size: 11px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); }
+    .path-axis span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+    .path-axis span:first-child { transform: none; }
+    .path-axis span:last-child { transform: translateX(-100%); }
+    .draw { stroke-dasharray: 2400; stroke-dashoffset: 2400; animation: draw 1700ms var(--ease) 250ms forwards; }
+    @keyframes draw { to { stroke-dashoffset: 0; } }
+
+    /* ---- windows ---- */
+    .windows { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+    @media (max-width: 560px) { .windows { grid-template-columns: 1fr; } }
+    .window {
+      position: relative; padding: 18px 20px 16px; border-radius: 22px;
+      background: var(--glass); border: 1px solid var(--glass-line);
+      backdrop-filter: blur(18px) saturate(1.2); -webkit-backdrop-filter: blur(18px) saturate(1.2);
+      transition: background 400ms var(--ease), border-color 400ms var(--ease), opacity 400ms var(--ease);
+    }
+    .window.is-now { background: linear-gradient(160deg, rgba(255, 214, 120, 0.36), rgba(255, 160, 80, 0.12)); border-color: rgba(255, 220, 140, 0.75); }
+    body[data-sky="day"] .window.is-now { background: linear-gradient(160deg, rgba(255, 200, 90, 0.55), rgba(255, 255, 255, 0.55)); border-color: #d9820a; }
+    .window.is-past { opacity: 0.72; }
+    .window.is-past .window-range { font-weight: 700; }
+    .window-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; min-height: 22px; }
+    .window-label { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-2); }
+    .window-tag {
+      padding: 3px 10px; border-radius: 999px; background: var(--gold); color: #2b1c00;
+      font-size: 10px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase;
+    }
+    body[data-sky="day"] .window-tag { color: #fff; }
+    .window-range { margin: 0; font-size: clamp(26px, 5.4vw, 32px); font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1.1; }
+    .window-sub { margin: 6px 0 0; font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+    .window-blue { margin: 12px 0 0; padding-top: 10px; border-top: 1px solid var(--glass-line); font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+    .window-blue b { color: var(--ink); font-weight: 700; }
+    .window-blue i { display: inline-block; width: 8px; height: 8px; margin-right: 7px; border-radius: 2px; background: var(--blue); }
+
+    /* ---- custom coordinates ---- */
+    .custom { margin-top: 12px; padding: 16px 18px; border-radius: 22px; background: var(--glass); border: 1px solid var(--glass-line); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
+    .custom p { margin: 0 0 10px; font-size: 13px; color: var(--ink-2); }
+    .custom .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; }
+    .custom label { flex: 1 1 120px; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-2); }
+    .custom input {
+      display: block; width: 100%; height: 44px; margin-top: 6px; padding: 0 12px; border-radius: 12px;
+      background: var(--glass); border: 1px solid var(--glass-line); font-variant-numeric: tabular-nums;
+    }
+
+    /* ---- actions ---- */
+    .actions { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-top: 22px; }
+    .button {
+      min-height: 44px; padding: 0 18px; display: inline-flex; align-items: center; gap: 8px;
+      border-radius: 999px; background: var(--glass); border: 1px solid var(--glass-line); cursor: pointer;
+      font-size: 13px; font-weight: 700; letter-spacing: 0.04em;
+      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    }
+    .button:hover { background: var(--glass-2); }
+    .button.solid { background: var(--ink); color: var(--on-ink); border-color: transparent; }
+    .icon { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+    .status { margin: 10px 0 0; min-height: 1.4em; text-align: center; font-size: 13px; color: var(--ink-2); }
+    .status.is-error { color: var(--warn); }
+
+    .footnote { margin: 34px auto 0; max-width: 520px; text-align: center; font-size: 12px; line-height: 1.6; color: var(--ink-3); }
+    .footnote kbd { font: inherit; font-size: 11px; padding: 1px 6px; border: 1px solid var(--glass-line); border-radius: 5px; }
+    @media (hover: none) { .keys { display: none; } }
+
+    /* ---- entrance ---- */
+    .rise { opacity: 0; transform: translateY(12px); animation: rise 700ms var(--ease) forwards; }
+    .hero.rise { animation-delay: 60ms; }
+    .path.rise { animation-delay: 140ms; }
+    .windows.rise { animation-delay: 240ms; }
+    .actions.rise { animation-delay: 320ms; }
+    @keyframes rise { to { opacity: 1; transform: none; } }
+
+    @media (max-width: 560px) {
+      .controls { flex-direction: column; align-items: stretch; }
+      .venue { max-width: none; flex-basis: auto; }
+      .datebar { justify-content: space-between; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition-duration: 0.01ms !important; }
+      .rise { opacity: 1; transform: none; }
+      .draw { stroke-dashoffset: 0; }
+    }
+  </style>
+</head>
+<body data-sky="gold">
+  <div class="sky" aria-hidden="true"><div class="sky-night"></div><div class="sky-blue"></div><div class="sky-gold"></div><div class="sky-day"></div></div>
+
+  <header class="topbar">
+    <span class="brand">
+      <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 30 30"><defs><linearGradient id="bm" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b3f73"/><stop offset=".62" stop-color="#c8646f"/><stop offset="1" stop-color="#f5a64a"/></linearGradient></defs><rect width="30" height="30" fill="url(#bm)"/><circle cx="15" cy="19.5" r="6" fill="#ffe3a1"/><rect y="19.5" width="30" height="11" fill="#23204a" opacity=".62"/><path d="M3 19.5h24" stroke="#fff" stroke-width="1.3"/></svg></span>
+      <span class="brand-name">Golden Hour</span>
+    </span>
+    <a class="pill" href="/tools">
+      <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="5" height="5" rx="1.2"/><rect x="9" y="2" width="5" height="5" rx="1.2"/><rect x="2" y="9" width="5" height="5" rx="1.2"/><rect x="9" y="9" width="5" height="5" rx="1.2"/></svg>
+      Tools
+    </a>
+  </header>
+
+  <main>
+    <div class="controls rise">
+      <div class="venue">
+        <svg class="icon pin" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 14.5s4.5-4.2 4.5-7.7A4.5 4.5 0 0 0 3.5 6.8c0 3.5 4.5 7.7 4.5 7.7z"/><circle cx="8" cy="6.8" r="1.6"/></svg>
+        <select id="venue" aria-label="Location"></select>
+        <svg class="icon chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 6.5 8 10l3.5-3.5"/></svg>
+      </div>
+      <div class="datebar">
+        <button id="prev-day" type="button" aria-label="Previous day"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3.5 5.5 8l4.5 4.5"/></svg></button>
+        <div class="date-field">
+          <span class="date-label" aria-hidden="true"><span id="date-label">Today</span><svg class="icon" viewBox="0 0 16 16"><rect x="2.5" y="3.5" width="11" height="10" rx="1.8"/><path d="M2.5 6.8h11M5.5 2v2.8M10.5 2v2.8"/></svg></span>
+          <input id="date" type="date" aria-label="Date">
+        </div>
+        <button id="next-day" type="button" aria-label="Next day"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5"/></svg></button>
+        <button class="pill today-link" id="today-link" type="button" hidden>Today</button>
+      </div>
+    </div>
+
+    <section class="hero rise">
+      <p class="hero-eyebrow"><span class="dot" aria-hidden="true"></span><span id="hero-eyebrow">—</span></p>
+      <h1 class="hero-title" id="hero-title">Golden hour</h1>
+      <p class="hero-sub" id="hero-sub"></p>
+      <p class="hero-note" id="zone-note" hidden></p>
+    </section>
+
+    <div class="path rise" id="path" role="img" aria-label="The sun's height through the day"></div>
+
+    <div class="windows rise">
+      <section class="window" id="morning-card" aria-labelledby="morning-label">
+        <div class="window-head"><h2 class="window-label" id="morning-label">Morning</h2><span class="window-tag" id="morning-tag" hidden>Now</span></div>
+        <p class="window-range" id="morning-range">—</p>
+        <p class="window-sub" id="morning-sub"></p>
+        <p class="window-blue" id="morning-blue" hidden></p>
+      </section>
+      <section class="window" id="evening-card" aria-labelledby="evening-label">
+        <div class="window-head"><h2 class="window-label" id="evening-label">Evening</h2><span class="window-tag" id="evening-tag" hidden>Now</span></div>
+        <p class="window-range" id="evening-range">—</p>
+        <p class="window-sub" id="evening-sub"></p>
+        <p class="window-blue" id="evening-blue" hidden></p>
+      </section>
+    </div>
+
+    <div class="custom" id="custom" hidden>
+      <p>Enter coordinates. Times show in this device’s time zone.</p>
+      <div class="row">
+        <label>Latitude<input id="lat" type="number" inputmode="decimal" step="any" min="-90" max="90" placeholder="43.0700"></label>
+        <label>Longitude<input id="lon" type="number" inputmode="decimal" step="any" min="-180" max="180" placeholder="-89.4127"></label>
+        <button class="button solid" id="apply-custom" type="button">Use these</button>
+      </div>
+    </div>
+
+    <div class="actions rise">
+      <button class="button" id="copy-times" type="button">
+        <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><rect x="5" y="5" width="8.5" height="8.5" rx="1.5"/><path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2h-6A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5"/></svg>
+        Copy times
+      </button>
+      <button class="button" id="copy-link" type="button">
+        <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.8 9.2a2.8 2.8 0 0 0 4 0l2.2-2.2a2.8 2.8 0 0 0-4-4l-.9.9"/><path d="M9.2 6.8a2.8 2.8 0 0 0-4 0L3 9a2.8 2.8 0 0 0 4 4l.9-.9"/></svg>
+        Copy link
+      </button>
+    </div>
+    <p class="status" id="status" role="status"></p>
+
+    <p class="footnote">
+      Golden hour is the sun between 6° and −4°; blue hour, −4° to −6°. Assumes a flat horizon, so hills, buildings and stadium rims shift things. Scout to confirm.
+      <span class="keys"><br><kbd>←</kbd> <kbd>→</kbd> change day · <kbd>T</kbd> today</span>
+    </p>
+  </main>
+
+  <script src="core.js?v=25daa40d13f8"></script>
+  <script src="app.js?v=ee6361ded8e3"></script>
+</body>
+</html>
