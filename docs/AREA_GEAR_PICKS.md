@@ -17,7 +17,7 @@ Each year full-time creative staff pick Under Armour gear, on top of their stand
 1. Only explicit participants of the cycle can pick. Being staff is not enough; the roster is a table, not a role rule.
 2. A participant shops one fit. `MEN` sees Men's and unisex items; `WOMEN` sees Women's and unisex items.
 3. Picks are editable until the admin-set deadline. A cycle with no deadline stays open. After the deadline the page is read-only and saves return 409 (`GEAR_PICKS_CLOSED`).
-4. The catalog JSON is the only source of items and prices. The server prices every line from it and snapshots `unitPriceCents` on the line; client prices are ignored.
+4. The catalog JSON is the only source of items and prices. Each item's colors are shown Red, then White, then Black, then any others in catalog order (`sortGearColors`), so cards open on red. The server prices every line from it and snapshots `unitPriceCents` on the line; client prices are ignored.
 5. A save replaces the whole list in one `SERIALIZABLE` transaction. The client sends the `version` it last read (0 before the first save); a mismatch returns 409 (`GEAR_PICKS_STALE`) and the page offers a reload.
 6. Each line is a SKU (`style-colorCode`), size, and quantity of 1 to 5. Apparel and footwear require sizes; fitted headwear uses explicit item options. Verified `sizes` in catalog JSON are enforced by client and server (Stretch Fit caps, bucket hat, shoes/slides, and the numeric-waist Drive Pant). Other apparel retains free text up to 12 characters. Tops default only from a matching profile fit; pants and base layers require explicit selection. Shoe defaults require a matching US sizing system and an offered size; no conversion or rounding. One-size headwear normalizes to `OSFA`. Old incompatible values stay visible but block saving. The same normalized SKU/size cannot appear twice.
 7. The total can't exceed the participant's allowance, for drafts or submissions.
@@ -81,6 +81,7 @@ It uses the direct database URL resolver (`DIRECT_URL`, then `DATABASE_URL_UNPOO
 - 2026-10-08 (local, not deployed): Picker save/reload race protections, persistent recovery, narrow-screen budget visibility, and direct filter reset. See recovery acceptance below.
 
 - 2026-10-07: First build for 2027-28: schema and migration `0169_gear_picks`, roster seed script, participant pick page, admin results with CSV export, dashboard banner, `gear_picks` permission.
+- 2026-10-08: Colors lead with Red, then White, then Black on every item.
 - 2026-10-08: Heads-up dialog when a pick is already in the participant's standard issue or core kit (`kitEntryForStyle`).
 - 2026-10-08: Default allowances raised to Men's $192 and Women's $357 to match the equipment sheet. The 8 production participant rows were seeded at these amounts.
 
