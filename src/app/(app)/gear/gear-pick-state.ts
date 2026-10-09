@@ -2,10 +2,10 @@ import {
   findGearSku,
   GEAR_APPAREL_SIZES,
   GEAR_ONE_SIZE,
-  GEAR_SHOE_SIZES,
+  isOneSizeItem,
+  gearSizeProblem,
   normalizeApparelSize,
   type GearCatalogItem,
-  type GearSizeKind,
 } from "@/lib/gear-picks/catalog";
 import type { GearPicksMeResponse } from "@/lib/gear-picks/types";
 
@@ -37,20 +37,23 @@ export function draftTotalCents(lines: DraftLine[]) {
   return lines.reduce((sum, line) => sum + (findGearSku(line.sku)?.unitPriceCents ?? 0) * line.quantity, 0);
 }
 
-export function defaultSizeFor(sizeKind: GearSizeKind, profile: GearPicksMeResponse["profile"]): string | null {
-  if (sizeKind === "HEADWEAR") return GEAR_ONE_SIZE;
-  if (sizeKind === "FOOTWEAR") return profile.shoeSize?.trim() || null;
-  return normalizeApparelSize(profile.topSize);
+export function defaultSizeFor(item: GearCatalogItem, profile: GearPicksMeResponse["profile"]): string | null {
+  if (isOneSizeItem(item)) return GEAR_ONE_SIZE;
+  if (item.category === "Headwear" || item.category === "Pants & shorts" || item.category === "Base layer") return null;
+  if (item.category === "Footwear") {
+    if (!item.shoeSizeSystem || item.shoeSizeSystem === "CATALOG" || item.shoeSizeSystem !== profile.shoeSizeSystem) return null;
+    const size = profile.shoeSize?.trim() || null;
+    return gearSizeProblem(item, size) ? null : size;
+  }
+  const expectedFit = item.fit === "MEN" ? "MENS" : item.fit === "WOMEN" ? "WOMENS" : "UNISEX";
+  if (profile.topSizeFit !== expectedFit) return null;
+  const size = normalizeApparelSize(profile.topSize);
+  return gearSizeProblem(item, size) ? null : size;
 }
 
-/** Size options for a line, keeping a non-standard current value selectable. */
-export function sizeOptionsFor(sizeKind: GearSizeKind, current: string | null): string[] {
-  const base: string[] =
-    sizeKind === "HEADWEAR"
-      ? [GEAR_ONE_SIZE]
-      : sizeKind === "FOOTWEAR"
-        ? GEAR_SHOE_SIZES
-        : [...GEAR_APPAREL_SIZES];
+/** Preserve old values visibly; validation requires correcting unavailable item sizes. */
+export function sizeOptionsFor(item: GearCatalogItem, current: string | null): string[] {
+  const base = item.sizes ?? (isOneSizeItem(item) ? [GEAR_ONE_SIZE] : [...GEAR_APPAREL_SIZES]);
   if (current && !base.includes(current)) return [current, ...base];
   return base;
 }
@@ -65,10 +68,11 @@ export function draftLineProblems(lines: DraftLine[]): string[] {
       problems.push(`${line.sku} is no longer in the catalog. Remove it to continue.`);
       continue;
     }
-    if (entry.sizeKind === "APPAREL" && !line.size) {
-      problems.push(`Choose a size for ${entry.item.name} (${entry.color.label}).`);
+    const sizeProblem = gearSizeProblem(entry.item, line.size);
+    if (sizeProblem) {
+      problems.push(`${sizeProblem} for ${entry.item.name} (${entry.color.label}).`);
     }
-    const key = `${line.sku}|${line.size ?? ""}`;
+    const key = `${line.sku}|${line.size?.trim().toUpperCase() || (isOneSizeItem(entry.item) ? GEAR_ONE_SIZE : "")}`;
     if (seen.has(key)) {
       problems.push(`${entry.item.name} (${entry.color.label}${line.size ? `, ${line.size}` : ""}) is listed twice. Combine the quantities.`);
     }

@@ -1,6 +1,9 @@
 import { HttpError } from "@/lib/http";
 import {
   findGearSku,
+  gearSizeProblem,
+  isOneSizeItem,
+  GEAR_ONE_SIZE,
   formatUsd,
   GEAR_MAX_QUANTITY,
   GEAR_SIZE_MAX_LENGTH,
@@ -67,12 +70,13 @@ export function priceGearPickLines(params: {
       throw new HttpError(400, `Choose between 1 and ${GEAR_MAX_QUANTITY} of ${entry.item.name}.`);
     }
 
-    const size = normalizeSize(line.size);
+    const size = normalizeSize(line.size) ?? (isOneSizeItem(entry.item) ? GEAR_ONE_SIZE : null);
     if (size && size.length > GEAR_SIZE_MAX_LENGTH) {
       throw new HttpError(400, `Sizes can be up to ${GEAR_SIZE_MAX_LENGTH} characters.`);
     }
-    if (!size && entry.sizeKind === "APPAREL") {
-      throw new HttpError(400, `Choose a size for ${entry.item.name} (${entry.color.label}).`);
+    const sizeProblem = gearSizeProblem(entry.item, size);
+    if (sizeProblem) {
+      throw new HttpError(400, `${sizeProblem} for ${entry.item.name} (${entry.color.label}).`);
     }
 
     const key = `${entry.sku}|${size ?? ""}`;

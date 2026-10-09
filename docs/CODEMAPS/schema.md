@@ -2962,11 +2962,12 @@ Values: `MEN`, `WOMEN`
 
 ## Model `GearPickCycle`
 
-Fields: 6
+Fields: 7
 
 - `id           String                @id`
 - `title        String`
 - `deadline     DateTime?`
+- `launchedAt   DateTime?             @map("launched_at")`
 - `createdAt    DateTime              @default(now()) @map("created_at")`
 - `updatedAt    DateTime              @updatedAt @map("updated_at")`
 - `participants GearPickParticipant[]`

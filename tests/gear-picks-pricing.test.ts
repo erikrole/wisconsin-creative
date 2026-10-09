@@ -10,6 +10,7 @@ import {
   itemsForFit,
   normalizeApparelSize,
 } from "@/lib/gear-picks/catalog";
+import { defaultSizeFor } from "@/app/(app)/gear/gear-pick-state";
 import { isGearPickCycleOpen, priceGearPickLines } from "@/lib/gear-picks/pricing";
 import { aggregateGearPickTotals, buildGearPicksCsvRows, gearPickLineDto } from "@/lib/services/gear-picks";
 import type { GearPickAdminParticipant } from "@/lib/gear-picks/types";
@@ -63,7 +64,7 @@ describe("priceGearPickLines", () => {
       allowanceCents: 18_500,
       lines: [
         { sku: MEN_TEE, size: "l", quantity: 2 },
-        { sku: UNISEX_CAP, size: null, quantity: 1 },
+        { sku: UNISEX_CAP, size: "M/L", quantity: 1 },
         { sku: UNISEX_SHOE, size: "10.5", quantity: 1 },
       ],
     });
@@ -77,7 +78,7 @@ describe("priceGearPickLines", () => {
       unitPriceCents: 1500,
       lineTotalCents: 3000,
     });
-    expect(result.lines[1]?.size).toBeNull();
+    expect(result.lines[1]?.size).toBe("M/L");
   });
 
   it("allows a total exactly at the allowance and rejects one cent over", () => {
@@ -115,22 +116,28 @@ describe("priceGearPickLines", () => {
     );
   });
 
-  it("requires a size for apparel but not for headwear or footwear", () => {
-    expectHttp(
-      () => priceGearPickLines({ fit: "MEN", allowanceCents: 18_500, lines: [{ sku: MEN_TEE, size: "  ", quantity: 1 }] }),
-      400,
-      /Choose a size/,
-    );
-    expect(
-      priceGearPickLines({
-        fit: "MEN",
-        allowanceCents: 18_500,
-        lines: [
-          { sku: UNISEX_CAP, quantity: 1 },
-          { sku: UNISEX_SHOE, size: null, quantity: 1 },
-        ],
-      }).lines.map((line) => line.size),
-    ).toEqual([null, null]);
+  it.each([
+    [MEN_TEE, "  "], [UNISEX_SHOE, null], [UNISEX_CAP, null], [UNISEX_CAP, "OSFA"],
+    ["6026509-280", "OSFA"], ["6013320-001", "10.5"], ["6021743-001", "M"],
+  ])("rejects missing or unavailable sizes for %s (%s)", (sku, size) => {
+    expectHttp(() => priceGearPickLines({ fit: "MEN", allowanceCents: 100_000, lines: [{ sku: sku!, size, quantity: 1 }] }), 400, /Choose (a|an available) size/);
+  });
+
+  it("normalizes unsized adjustable hats without treating fitted hats as one size", () => {
+    expect(priceGearPickLines({fit: "MEN", allowanceCents: 100_000, lines: [{sku: "6026515-280", quantity: 1}]}).lines[0]?.size).toBe("OSFA");
+  });
+
+  it("uses profile sizes only for a matching garment and shoe system", () => {
+    const profile = {topSize: "M", topSizeFit: "MENS" as const, shoeSize: "10", shoeSizeSystem: "US_WOMENS" as const};
+    const size = (sku: string) => defaultSizeFor(findGearSku(sku)!.item, profile);
+    expect(size(MEN_TEE)).toBe("M");
+    expect(size(WOMEN_FULL_ZIP)).toBeNull();
+    expect(size("6021627-005")).toBeNull();
+    expect(size(UNISEX_CAP)).toBeNull();
+    expect(size(UNISEX_SHOE)).toBeNull();
+    expect(size("6013320-001")).toBeNull();
+    expect(size("6013321-001")).toBe("10");
+    expect(defaultSizeFor(findGearSku("6013321-001")!.item, {...profile, shoeSize: "10.5"})).toBeNull();
   });
 
   it("rejects oversized free-text sizes and duplicate SKU + size lines", () => {

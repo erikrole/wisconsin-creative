@@ -2,9 +2,11 @@
 
 import Image from "next/image";
 import { AlertTriangleIcon, Trash2Icon } from "lucide-react";
+import { NativeSelect } from "@/components/ui/native-select";
 import { Button } from "@/components/ui/button";
-import { findGearSku, formatUsd } from "@/lib/gear-picks/catalog";
+import { findGearSku, formatUsd, gearSku, gearSizeLabel, gearSizeProblem, isOneSizeItem, GEAR_MAX_QUANTITY } from "@/lib/gear-picks/catalog";
 import { cn } from "@/lib/utils";
+import { sizeOptionsFor } from "./gear-pick-state";
 
 export type GearPickListLine = {
   id: string;
@@ -18,17 +20,22 @@ export type GearPickListLine = {
 /**
  * Photo rows for a pick list: name, color, size, quantity, and line price.
  * Rows jump to the catalog card when `onJump` is set and show a remove button
- * when `onRemoveLine` is set; without either the list is read-only.
+ * when `onRemoveLine` is set. `onChangeLine` enables inline size/quantity edits;
+ * profile consumers omit these callbacks and remain read-only.
  */
 export function GearPickLineList({
   lines,
   onJump,
   onRemoveLine,
+  onChangeLine,
+  disabled = false,
   className,
 }: {
   lines: GearPickListLine[];
   onJump?: (style: string) => void;
   onRemoveLine?: (id: string) => void;
+  onChangeLine?: (id: string, patch: Partial<Pick<GearPickListLine, "sku" | "size" | "quantity">>) => void;
+  disabled?: boolean;
   className?: string;
 }) {
   return (
@@ -44,7 +51,7 @@ export function GearPickLineList({
           );
         }
         const unitPriceCents = line.unitPriceCents ?? entry.unitPriceCents;
-        const needsSize = entry.sizeKind === "APPAREL" && !line.size;
+        const needsSize = Boolean(gearSizeProblem(entry.item, line.size));
         const content = (
           <>
             <span className="relative size-16 shrink-0 overflow-hidden rounded-md bg-white">
@@ -53,16 +60,16 @@ export function GearPickLineList({
             <span className="min-w-0 flex-1">
               <span className="block text-sm font-semibold leading-snug text-foreground">{entry.item.name}</span>
               <span className="mt-0.5 block text-xs text-muted-foreground">{entry.color.label}</span>
-              <span
+              {!onChangeLine && <span
                 className={cn(
                   "mt-0.5 flex items-center gap-1 text-xs",
                   needsSize ? "font-medium text-[var(--orange-text)]" : "text-muted-foreground",
                 )}
               >
                 {needsSize && <AlertTriangleIcon className="size-3 shrink-0" aria-hidden="true" />}
-                {entry.sizeKind === "HEADWEAR" ? "One size" : needsSize ? "Choose a size" : `Size ${line.size}`}
+                {isOneSizeItem(entry.item) ? "One size" : needsSize ? "Choose a size" : `${gearSizeLabel(entry.item)} ${line.size}`}
                 {` · Qty ${line.quantity}`}
-              </span>
+              </span>}
             </span>
             <span className="shrink-0 text-right">
               <span className="block text-sm font-semibold tabular-nums">{formatUsd(unitPriceCents * line.quantity)}</span>
@@ -75,21 +82,64 @@ export function GearPickLineList({
           </>
         );
         return (
-          <li key={line.id} className="flex items-center gap-3 px-6 py-3">
-            {onJump ? (
-              <button
-                type="button"
-                onClick={() => onJump(entry.item.style)}
-                className="flex min-w-0 flex-1 items-center gap-3 rounded-md text-left focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                aria-label={`${entry.item.name}, ${entry.color.label}. Show it in the catalog.`}
-              >
-                {content}
-              </button>
-            ) : (
-              <div className="flex min-w-0 flex-1 items-center gap-3">{content}</div>
-            )}
-            {onRemoveLine && (
-              <RemoveButton label={`${entry.item.name} ${line.size ?? ""}`} onClick={() => onRemoveLine(line.id)} />
+          <li key={line.id} className={cn("px-6", onChangeLine ? "py-4" : "py-3")}>
+            <div className="flex items-center gap-3">
+              {onJump ? (
+                <button
+                  type="button"
+                  onClick={() => onJump(entry.item.style)}
+                  className="flex min-w-0 flex-1 items-center gap-3 rounded-md text-left focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                  aria-label={`${entry.item.name}, ${entry.color.label}. Show it in the catalog.`}
+                >
+                  {content}
+                </button>
+              ) : (
+                <div className="flex min-w-0 flex-1 items-center gap-3">{content}</div>
+              )}
+              {onRemoveLine && (
+                <RemoveButton label={`${entry.item.name} ${line.size ?? ""}`} onClick={() => onRemoveLine(line.id)} />
+              )}
+            </div>
+            {onChangeLine && (
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                {entry.item.colors.length > 1 && <label className="col-span-2 space-y-1 text-xs text-muted-foreground">
+                  <span>Color</span>
+                  <NativeSelect value={line.sku} disabled={disabled} aria-label={`Color for ${entry.item.name}`} className="h-11 text-sm text-foreground"
+                    onChange={(event) => onChangeLine(line.id, { sku: event.target.value })}>
+                    {entry.item.colors.map((color) => <option key={color.code} value={gearSku(entry.item.style, color.code)}>{color.label}</option>)}
+                  </NativeSelect>
+                </label>}
+                {entry.item.shoeSizeSystem === "CATALOG" && <p className="col-span-2 text-xs text-muted-foreground">Confirm your shoe size against the catalog before ordering.</p>}
+                {isOneSizeItem(entry.item) ? (
+                  <p className="self-end py-3 text-sm text-muted-foreground">One size</p>
+                ) : (
+                  <label className="space-y-1 text-xs text-muted-foreground">
+                    <span>{gearSizeLabel(entry.item)}</span>
+                    <NativeSelect
+                      value={line.size ?? ""}
+                      disabled={disabled}
+                      aria-label={`Size for ${entry.item.name} in ${entry.color.label}`}
+                      className="h-11 text-sm text-foreground"
+                      onChange={(event) => onChangeLine(line.id, { size: event.target.value || null })}
+                    >
+                      <option value="">Choose size</option>
+                      {sizeOptionsFor(entry.item, line.size).map((size) => <option key={size} value={size}>{size}</option>)}
+                    </NativeSelect>
+                  </label>
+                )}
+                <label className="space-y-1 text-xs text-muted-foreground">
+                  <span>Quantity</span>
+                  <NativeSelect
+                    value={line.quantity}
+                    disabled={disabled}
+                    aria-label={`Quantity for ${entry.item.name} in ${entry.color.label}`}
+                    className="h-11 text-sm text-foreground"
+                    onChange={(event) => onChangeLine(line.id, { quantity: Number(event.target.value) })}
+                  >
+                    {Array.from({ length: GEAR_MAX_QUANTITY }, (_, index) => index + 1).map((quantity) => <option key={quantity} value={quantity}>{quantity}</option>)}
+                  </NativeSelect>
+                </label>
+              </div>
             )}
           </li>
         );

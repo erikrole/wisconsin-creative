@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { AlertTriangleIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +29,8 @@ export function GearPicksSheet({
   onOpenChange,
   lines,
   readOnly,
+  busy,
+  feedback,
   totalCents,
   allowanceCents,
   deadline,
@@ -38,12 +41,15 @@ export function GearPicksSheet({
   onSubmit,
   onJump,
   onRemoveLine,
+  onChangeLine,
 }: {
   open: boolean;
   mode: GearPicksSheetMode;
   onOpenChange: (open: boolean) => void;
   lines: DraftLine[];
   readOnly: boolean;
+  busy: boolean;
+  feedback: ReactNode;
   totalCents: number;
   allowanceCents: number;
   /** Formatted deadline, if one is set. */
@@ -55,6 +61,7 @@ export function GearPicksSheet({
   onSubmit: () => void;
   onJump: (style: string) => void;
   onRemoveLine: (id: string) => void;
+  onChangeLine: (id: string, patch: Partial<Pick<DraftLine, "sku" | "size" | "quantity">>) => void;
 }) {
   const remainingCents = allowanceCents - totalCents;
   const over = remainingCents < 0;
@@ -68,7 +75,7 @@ export function GearPicksSheet({
           <SheetTitle>{reviewing ? "Review your picks" : "Your picks"}</SheetTitle>
           <SheetDescription>
             {reviewing
-              ? `Check each size and color before you submit.${deadline ? ` You can still change them until ${deadline}.` : ""}`
+              ? `Adjust colors, sizes, and quantities here.${deadline ? ` You can still change them until ${deadline}.` : ""}`
               : count === 0
                 ? "Nothing picked yet."
                 : `${count} ${count === 1 ? "item" : "items"} · ${formatUsd(totalCents)} of ${formatUsd(allowanceCents)}`}
@@ -84,12 +91,15 @@ export function GearPicksSheet({
             <GearPickLineList
               lines={lines}
               onJump={onJump}
-              onRemoveLine={readOnly ? undefined : onRemoveLine}
+              onRemoveLine={readOnly || busy ? undefined : onRemoveLine}
+              onChangeLine={readOnly ? undefined : onChangeLine}
+              disabled={busy}
             />
           )}
         </SheetBody>
 
         <SheetFooter className="flex-col gap-3 sm:flex-col sm:justify-start">
+          {feedback}
           <dl className="grid grid-cols-[1fr_auto] gap-y-1 text-sm">
             <dt className="text-muted-foreground">Picked</dt>
             <dd className="text-right font-semibold tabular-nums">{formatUsd(totalCents)}</dd>
@@ -102,16 +112,21 @@ export function GearPicksSheet({
               {formatUsd(Math.abs(remainingCents))}
             </dd>
           </dl>
-          <p className="text-xs text-muted-foreground">Free kit items (shown under Already in your kit) aren&apos;t listed here.</p>
+          <p className="text-xs text-muted-foreground">Standard issue is covered by the department and doesn’t use your pick allowance.</p>
 
-          {reviewing && (
+          {!readOnly && (
             <>
               {(over || problems.length > 0) && (
                 <p className="flex items-start gap-1.5 text-xs text-[var(--orange-text)]" role="status">
                   <AlertTriangleIcon className="mt-px size-3.5 shrink-0" aria-hidden="true" />
-                  {over ? `Remove ${formatUsd(-remainingCents)} of gear to submit.` : problems[0]}
+                  {problems[0] ?? `Remove ${formatUsd(-remainingCents)} of gear to submit.`}
                 </p>
               )}
+            </>
+          )}
+
+          {reviewing && (
+            <>
               <div className="flex gap-2">
                 <Button type="button" variant="outline" className="min-h-11 flex-1" onClick={() => onOpenChange(false)}>
                   Keep picking

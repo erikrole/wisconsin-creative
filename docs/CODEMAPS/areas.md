@@ -55,7 +55,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 
 - Doc: `docs/AREA_GEAR_PICKS.md`
 - Pages: _none matched_
-- APIs: `/api/gear-picks/admin/export.csv`, `/api/gear-picks/admin`, `/api/gear-picks/me`
+- APIs: `/api/gear-picks/admin/export.csv`, `/api/gear-picks/admin`, `/api/gear-picks/me`, `/api/gear-picks/users/[userId]`
 - Services: `src/lib/services/gear-picks.ts`
 - Tests: `tests/gear-picks-pricing.test.ts`, `tests/gear-picks-routes.test.ts`
 
@@ -199,7 +199,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 
 - Doc: `docs/AREA_USERS.md`
 - Pages: `/profile`, `/settings/allowed-emails`, `/settings/profile`, `/users/[id]`, `/users/onboarding-status`, `/users/org-chart`, `/users`
-- APIs: `/api/allowed-emails/[id]`, `/api/allowed-emails/preview`, `/api/allowed-emails`, `/api/kiosk/users`, `/api/me/profile-completion`, `/api/me/profile`, `/api/profile`, `/api/users/[id]/activity`, `/api/users/[id]/availability/[blockId]`, `/api/users/[id]/availability`
+- APIs: `/api/allowed-emails/[id]`, `/api/allowed-emails/preview`, `/api/allowed-emails`, `/api/gear-picks/users/[userId]`, `/api/kiosk/users`, `/api/me/profile-completion`, `/api/me/profile`, `/api/profile`, `/api/users/[id]/activity`, `/api/users/[id]/availability/[blockId]`
 - Services: `src/lib/services/hidden-users-cleanup.ts`, `src/lib/services/onboarding-lifecycle.ts`
 - Tests: `tests/allowed-emails-preview.test.ts`, `tests/allowed-emails.test.ts`, `tests/email-first-onboarding-source.test.ts`, `tests/hidden-users-cleanup.test.ts`, `tests/ios-notification-categories-profile.test.ts`, `tests/onboarding-dialog-source.test.ts`, `tests/onboarding-lifecycle.test.ts`, `tests/onboarding-readiness-route.test.ts`
 

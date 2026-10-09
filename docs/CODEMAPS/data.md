@@ -118,7 +118,7 @@
 | `YouTubeLibraryState` | 8 | 1 |
 | `YouTubePublishRecord` | 15 | 2 |
 | `YouTubePlaylistAddition` | 11 | 2 |
-| `GearPickCycle` | 6 | 1 |
+| `GearPickCycle` | 7 | 1 |
 | `GearPickParticipant` | 10 | 3 |
 | `GearPickSubmission` | 9 | 1 |
 | `GearPickLine` | 9 | 2 |

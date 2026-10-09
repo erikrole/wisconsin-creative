@@ -1,0 +1,69 @@
+{
+  "title": "A clearer way to choose your UA gear",
+  "eyebrow": "Wisconsin Creative \u00b7 Design and experience",
+  "lede": "Put the catalog first, make each choice readable, and let staff finish their picks in one review panel.",
+  "sections": [
+    {
+      "heading": "Before and after",
+      "note": "The baseline is the hardened picker from the first pass, including its uncommitted changes. Matching staff fixtures, viewports, light theme, clock, and scroll; synthetic page shell, not authenticated application proof.",
+      "pairs": [
+        {
+          "title": "Desktop catalog",
+          "before": "standard-issue-before/catalog-1280.png",
+          "after": "standard-issue/catalog-1280.png",
+          "beforeEvidence": "standard-issue-before/catalog-1280.capture.json",
+          "afterEvidence": "standard-issue/catalog-1280.capture.json",
+          "beforeCap": "Nine standard-issue thumbnails and five narrow product columns competed for attention.",
+          "afterCap": "A compact kit disclosure and four wider columns give names, prices, and color choices clear space."
+        },
+        {
+          "title": "Narrow-screen catalog",
+          "before": "standard-issue-before/catalog-390.png",
+          "after": "standard-issue/catalog-390.png",
+          "beforeEvidence": "standard-issue-before/catalog-390.capture.json",
+          "afterEvidence": "standard-issue/catalog-390.capture.json",
+          "beforeCap": "Long product names crowded and clipped prices; category chips scrolled out of view.",
+          "afterCap": "Prices sit below names. A Filters button exposes category and collection controls, while budget feedback stays visible."
+        },
+        {
+          "title": "Review without backtracking",
+          "before": "standard-issue-before/review-390.png",
+          "after": "standard-issue/review-390.png",
+          "beforeEvidence": "standard-issue-before/review-390.capture.json",
+          "afterEvidence": "standard-issue/review-390.capture.json",
+          "beforeCap": "Size changes required closing review and finding the product again.",
+          "afterCap": "Size and quantity are editable here, with immediate totals and the same save protections."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Standard issue stays separate",
+      "was": "A row of nine thumbnails took priority over shopping.",
+      "now": "The kit remains one click away, with a clear explanation that it does not use the allowance."
+    },
+    {
+      "h": "Names, prices and selection each have a place",
+      "was": "Small cards placed names beside prices and tiny swatches over photos. A border was the main selection signal.",
+      "now": "Wider cards stack name and price, use 44-pixel swatch targets, and label selected products with a check and picked quantity."
+    },
+    {
+      "h": "Review becomes a place to finish",
+      "was": "Staff could inspect or remove picks, but had to return to cards for size changes.",
+      "now": "Size and quantity controls update the draft and budget immediately. Controls lock during saves, and invalid sizes still block submission."
+    }
+  ],
+  "verification": [
+    "9 isolated Chromium browser checks pass, including save/reload regressions, keyboard kit expansion, mobile filters, and inline review edits.",
+    "The new inline-review regression fails on the preserved pre-design source because the controls do not exist.",
+    "Application build, changed-file lint, docs verification, local links and diff checks passed. Standalone TypeScript reports the same two existing iOS test errors; authenticated preview remains pending."
+  ],
+  "notes": [
+    "No commit, push or deployment. Changes remain on codex/ua-picker-hardening.",
+    "The profile pick list still receives no edit callbacks and remains read-only. The shared color swatches are larger in the product preview too.",
+    "Synthetic API responses prove client interactions only. They do not prove authenticated sessions or persisted database writes.",
+    "The existing standalone TypeScript errors are in two unrelated iOS test files; no managed preview exists for this branch.",
+    "Wording corrected to Standard issue, covered by the department separately from the pick allowance. Historical before captures retain their original wording."
+  ]
+}

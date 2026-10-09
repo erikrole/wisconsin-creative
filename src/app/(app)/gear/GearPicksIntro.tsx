@@ -37,8 +37,6 @@ export function GearPicksIntro({
   remaining,
   deadline,
   kitCount,
-  hasTopSize,
-  hasShoeSize,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -49,9 +47,6 @@ export function GearPicksIntro({
   remaining: string | null;
   deadline: string | null;
   kitCount: number;
-  /** Which profile sizes exist; only those are prefilled on new picks. */
-  hasTopSize: boolean;
-  hasShoeSize: boolean;
 }) {
   const close = (next: boolean) => {
     if (!next) markGearIntroSeen(cycleId, participantId);
@@ -61,30 +56,23 @@ export function GearPicksIntro({
   const tips = [
     {
       icon: ShirtIcon,
-      title: `You already get ${kitCount} items`,
-      body: "They're covered. They don't use your budget.",
+      title: `${kitCount} standard-issue items`,
+      body: "The department covers these separately from your pick allowance.",
     },
     {
       icon: WalletIcon,
       title: remaining ? `You have ${remaining} left` : `You have ${allowance} to spend`,
-      body: "“Fits my budget” is on, so you only see what you can afford.",
+      body: "Turn on “Within my allowance” when you want to narrow the catalog to what you have left.",
     },
     {
       icon: PaletteIcon,
       title: "Tap a photo to see it bigger",
-      body: "Tap a color dot to change the color.",
+      body: "Color dots preview each option. Change a picked item’s color in Your picks or review.",
     },
     {
       icon: RulerIcon,
       title: "Check your size",
-      body:
-        hasTopSize && hasShoeSize
-          ? "Your sizes are filled in from your profile. Change them if they're wrong."
-          : hasTopSize
-            ? "Your clothing size is filled in from your profile. Pick a shoe size if you add shoes."
-            : hasShoeSize
-              ? "Your shoe size is filled in from your profile. Pick a clothing size for each item."
-              : "Pick a size for each item before you submit.",
+      body: "Profile sizes fill in only when the sizing matches. Choose sizes for pants and fitted hats, and check every size before submitting.",
     },
     {
       icon: CheckCircle2Icon,
