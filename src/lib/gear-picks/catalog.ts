@@ -20,6 +20,9 @@ export type GearCatalogColor = {
 
 export type GearCatalogItem = {
   style: string;
+  /** Verified item options; absent apparel options retain the free-text contract. */
+  sizes?: string[];
+  shoeSizeSystem?: "US_MENS" | "US_WOMENS" | "CATALOG";
   name: string;
   fit: GearItemFit;
   category: string;
@@ -48,7 +51,7 @@ export type GearCatalog = {
   items: GearCatalogItem[];
 };
 
-/** How a line's size is chosen: apparel needs a size, footwear takes a shoe size, headwear is one size. */
+/** How a line's size is chosen: apparel needs a size, footwear takes a shoe size, headwear can be fitted or one size. */
 export type GearSizeKind = "APPAREL" | "FOOTWEAR" | "HEADWEAR";
 
 export type GearCatalogSku = {
@@ -116,15 +119,6 @@ export function findGearSku(sku: string): GearCatalogSku | null {
 /** Apparel sizes offered in the picker. Free text up to 12 characters is accepted server-side. */
 export const GEAR_APPAREL_SIZES = ["XS", "S", "M", "L", "XL", "XXL", "3XL"] as const;
 
-/** US shoe sizes 6–15 in half sizes. */
-export const GEAR_SHOE_SIZES: string[] = (() => {
-  const values: string[] = [];
-  for (let half = 12; half <= 30; half += 1) {
-    values.push(half % 2 === 0 ? String(half / 2) : (half / 2).toFixed(1));
-  }
-  return values;
-})();
-
 export const GEAR_ONE_SIZE = "OSFA";
 export const GEAR_SIZE_MAX_LENGTH = 12;
 export const GEAR_MAX_QUANTITY = 5;
@@ -135,4 +129,26 @@ export function normalizeApparelSize(size: string | null | undefined) {
   if (!value) return null;
   if (value === "2XL") return "XXL";
   return value;
+}
+
+/** Fitted headwear overrides the category's one-size default. */
+export function isOneSizeItem(item: GearCatalogItem) {
+  return item.category === "Headwear" && !item.sizes;
+}
+
+export function gearSizeLabel(item: GearCatalogItem) {
+  if (item.shoeSizeSystem === "US_MENS") return "US men's shoe size";
+  if (item.shoeSizeSystem === "US_WOMENS") return "US women's shoe size";
+  if (item.category === "Footwear") return "Catalog shoe size";
+  if (item.style === "6021743") return "Waist size (inches)";
+  return "Size";
+}
+
+/** The same size gate runs before saving in the browser and at the pricing boundary. */
+export function gearSizeProblem(item: GearCatalogItem, size: string | null | undefined): string | null {
+  const value = size?.trim().toUpperCase();
+  if (isOneSizeItem(item)) return value && value !== GEAR_ONE_SIZE ? "Choose one size" : null;
+  if (!value) return "Choose a size";
+  if (item.sizes && !item.sizes.includes(value)) return "Choose an available size";
+  return null;
 }

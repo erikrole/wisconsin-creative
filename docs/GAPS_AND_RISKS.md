@@ -3,14 +3,14 @@
 ## Document Control
 
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-10-01
+- Last Updated: 2026-10-08
 - Status: Active registry
 - Purpose: Track only open gaps, pending decisions, active risks, and intentionally deferred scope.
 - Historical record: [GAPS_AND_RISKS_HISTORY.md](archive/GAPS_AND_RISKS_HISTORY.md)
 
 ## Pending Decisions
 
-No open pending decisions are currently tracked here. Accepted decisions and their rationale live in [DECISIONS.md](DECISIONS.md). Add a pending decision here only when it has an unresolved owner, consequence, or product/architecture choice.
+- **UA Icon Lo sizing scale (2026-10-08):** Equipment/UA supplier confirmation is needed for style 6024284. The supplied sheet lists numeric sizes but does not label a US men’s or women’s scale; the user suspects men’s. Picker requires explicit catalog sizing and does not prefill from a profile until confirmed. See [gear picks](AREA_GEAR_PICKS.md#known-limits).
 
 ## Infrastructure rollout — 2026-09-22
 

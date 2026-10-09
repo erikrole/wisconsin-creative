@@ -2274,6 +2274,7 @@
   },
   {
    "style": "6021743",
+   "sizes": ["30", "32", "34", "36", "38", "40", "42", "44", "46", "48", "50"],
    "name": "Unhemmed Drive Pant",
    "fit": "MEN",
    "category": "Pants & shorts",
@@ -2428,6 +2429,7 @@
   },
   {
    "style": "6026519",
+   "sizes": ["M/L", "L/XL"],
    "name": "Blitzing Stretch Fit Cap",
    "fit": "UNISEX",
    "category": "Headwear",
@@ -2546,6 +2548,7 @@
   },
   {
    "style": "6026523",
+   "sizes": ["S/M", "M/L", "L/XL", "XL/XXL"],
    "name": "ArmourVent Stretch Fit Cap",
    "fit": "UNISEX",
    "category": "Headwear",
@@ -2645,6 +2648,7 @@
   },
   {
    "style": "6026509",
+   "sizes": ["MD/LG", "LG/XL"],
    "name": "ArmourVent Bucket Hat",
    "fit": "UNISEX",
    "category": "Headwear",
@@ -2810,6 +2814,8 @@
   },
   {
    "style": "6024284",
+   "sizes": ["3.5", "4", "4.5", "5", "5.5", "6", "6.5", "7", "7.5", "8", "8.5", "9", "9.5", "10", "10.5", "11", "11.5", "12", "12.5", "13", "14", "15", "16", "17", "18"],
+   "shoeSizeSystem": "CATALOG",
    "name": "UA Icon Lo",
    "fit": "UNISEX",
    "category": "Footwear",
@@ -2829,6 +2835,8 @@
   },
   {
    "style": "6013320",
+   "sizes": ["7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18"],
+   "shoeSizeSystem": "US_MENS",
    "name": "UA Ignite Pro 8 Slide",
    "fit": "MEN",
    "category": "Footwear",
@@ -2848,6 +2856,8 @@
   },
   {
    "style": "6013321",
+   "sizes": ["6", "7", "8", "9", "10", "11", "12"],
+   "shoeSizeSystem": "US_WOMENS",
    "name": "W UA Ignite Pro 8 Slide",
    "fit": "WOMEN",
    "category": "Footwear",

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { AlertTriangleIcon, MinusIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import { AlertTriangleIcon, CheckIcon, MinusIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -10,7 +10,8 @@ import {
   formatUsd,
   gearSku,
   GEAR_MAX_QUANTITY,
-  sizeKindForCategory,
+  isOneSizeItem,
+  gearSizeLabel,
   type GearCatalogItem,
 } from "@/lib/gear-picks/catalog";
 import { cn } from "@/lib/utils";
@@ -24,24 +25,17 @@ export function GearSwatches({
   item,
   selectedCode,
   onSelect,
-  onPhoto = false,
   className,
 }: {
   item: GearCatalogItem;
   selectedCode: string;
   onSelect: (code: string) => void;
-  /** Sits on the white product photo, so it uses light styling in either theme (dark swatches stay readable). */
-  onPhoto?: boolean;
   className?: string;
 }) {
   if (item.colors.length < 2) return null;
   return (
     <div
-      className={cn(
-        "flex flex-wrap gap-1.5",
-        onPhoto && "gap-1 rounded-full bg-white/90 p-1 shadow-[0_1px_3px_rgba(0,0,0,0.18)] backdrop-blur-sm",
-        className,
-      )}
+      className={cn("-ml-2 flex flex-wrap", className)}
       role="group"
       aria-label={`${item.name} colors`}
     >
@@ -55,16 +49,13 @@ export function GearSwatches({
             aria-label={`${color.label} (${color.code})`}
             title={color.label}
             onClick={() => onSelect(color.code)}
-            className={cn(
-              "relative size-7 rounded-full border shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08)] transition-shadow focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
-              onPhoto ? "size-6 border-black/15" : "border-border",
-              selected &&
-                (onPhoto
-                  ? "ring-2 ring-neutral-900 ring-offset-2 ring-offset-white"
-                  : "ring-2 ring-foreground ring-offset-2 ring-offset-background"),
-            )}
-            style={{ backgroundColor: color.swatch }}
-          />
+            className="flex size-11 items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          >
+            <span
+              className={cn("size-6 rounded-full border border-black/15 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08)]", selected && "ring-2 ring-foreground ring-offset-2 ring-offset-card")}
+              style={{ backgroundColor: color.swatch }}
+            />
+          </button>
         );
       })}
     </div>
@@ -90,12 +81,12 @@ export function GearItemCard({
   onSelectColor: (code: string) => void;
   onPreview: () => void;
   onAddLine: (sku: string) => void;
-  onChangeLine: (id: string, patch: Partial<Pick<DraftLine, "size" | "quantity">>) => void;
+  onChangeLine: (id: string, patch: Partial<Pick<DraftLine, "sku" | "size" | "quantity">>) => void;
   onRemoveLine: (id: string) => void;
 }) {
   const color = item.colors.find((entry) => entry.code === selectedCode) ?? item.colors[0]!;
   const sku = gearSku(item.style, color.code);
-  const sizeKind = sizeKindForCategory(item.category);
+  const oneSize = isOneSizeItem(item);
   const colorLines = lines.filter((line) => line.sku === sku);
   const otherColors = item.colors
     .filter((entry) => entry.code !== color.code)
@@ -107,13 +98,14 @@ export function GearItemCard({
     })
     .filter(Boolean);
   const picked = lines.length > 0;
+  const pickedCount = lines.reduce((sum, line) => sum + line.quantity, 0);
 
   return (
     <article
       id={gearItemAnchorId(item.style)}
       className={cn(
         "flex scroll-mt-20 flex-col overflow-hidden rounded-lg border bg-card transition-colors",
-        picked ? "border-[var(--wi-red)]/50" : "border-border",
+        picked ? "border-foreground/40" : "border-border",
       )}
       aria-label={item.name}
     >
@@ -121,14 +113,14 @@ export function GearItemCard({
         <button
           type="button"
           onClick={onPreview}
-          className="group relative aspect-square w-full bg-white focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ring/50"
+          className="group relative aspect-[4/3] w-full bg-white focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ring/50"
           aria-label={`Preview ${item.name} in ${color.label} larger`}
         >
           <Image
             src={color.image}
             alt={`${item.name} in ${color.label}`}
             fill
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 240px"
+            sizes="(max-width: 1023px) 50vw, (max-width: 1279px) 33vw, 25vw"
             className="object-contain p-3 transition-transform duration-200 group-hover:scale-[1.02] motion-reduce:transition-none"
           />
           {color.imageNote && (
@@ -136,64 +128,60 @@ export function GearItemCard({
               {color.imageNote}
             </Badge>
           )}
-          {item.collectionLabel && (
-            <Badge size="sm" className="absolute right-2 top-2 bg-neutral-900 text-white">
-              {item.collectionLabel.replace(/ collection$/i, "")}
-            </Badge>
-          )}
         </button>
-        <GearSwatches
-          item={item}
-          selectedCode={color.code}
-          onSelect={onSelectColor}
-          onPhoto
-          className="absolute bottom-2 left-2 max-w-[calc(100%-1rem)]"
-        />
+        {picked && (
+          <Badge variant="green" className={cn("absolute right-2 text-[11px]", color.imageNote ? "bottom-2" : "top-2")}>
+            <CheckIcon aria-hidden="true" /> Picked · {pickedCount}
+          </Badge>
+        )}
       </div>
 
       <div className="flex flex-1 flex-col gap-2 border-t border-border p-3">
         <div className="min-w-0">
-          <div className="flex items-start justify-between gap-2">
-            <h3 className="text-sm font-semibold leading-snug text-foreground">{item.name}</h3>
-            <span className="shrink-0 text-sm font-semibold tabular-nums">{formatUsd(dollarsToCents(item.price))}</span>
-          </div>
+          {item.collectionLabel && (
+            <p className="mb-1 text-[11px] font-medium text-muted-foreground">{item.collectionLabel.replace(/ collection$/i, "")}</p>
+          )}
+          <h3 className="text-sm font-semibold leading-snug text-foreground">{item.name}</h3>
+          <p className="mt-1.5 text-base font-semibold tabular-nums">{formatUsd(dollarsToCents(item.price))}</p>
           {item.priceNote && (
             <p className="mt-0.5 flex items-start gap-1 text-[11.5px] leading-4 text-[var(--orange-text)]">
               <AlertTriangleIcon className="mt-px size-3 shrink-0" aria-hidden="true" />
               {item.priceNote}
             </p>
           )}
-          <p className="mt-1 text-xs text-muted-foreground">{color.label}</p>
+          <p className="mt-2 text-xs text-muted-foreground">{color.label}</p>
+          <GearSwatches item={item} selectedCode={color.code} onSelect={onSelectColor} />
         </div>
 
         <div className="mt-auto flex flex-col gap-1.5 pt-1">
+          {colorLines.length > 0 && item.category === "Footwear" && <p className="text-xs text-muted-foreground">{gearSizeLabel(item)}{item.shoeSizeSystem === "CATALOG" ? " · Confirm against the catalog before ordering." : ""}</p>}
           {colorLines.map((line) => (
             // Wraps the stepper under the size on narrow cards so sizes like "XXL" never truncate.
             <div key={line.id} className="flex flex-wrap items-center gap-1.5">
-              {sizeKind === "HEADWEAR" ? (
+              {oneSize ? (
                 <span className="min-w-0 flex-1 text-xs text-muted-foreground">One size</span>
               ) : (
                 <NativeSelect
                   aria-label={`Size for ${item.name} in ${color.label}`}
-                  className="h-9 min-w-[5.5rem] flex-1 basis-[5.5rem] px-2 text-sm"
+                  className="h-11 min-w-0 flex-1 basis-full px-2 text-sm"
                   value={line.size ?? ""}
                   disabled={readOnly}
                   onChange={(event) => onChangeLine(line.id, { size: event.target.value || null })}
                 >
-                  <option value="">{sizeKind === "FOOTWEAR" ? "Shoe size" : "Size"}</option>
-                  {sizeOptionsFor(sizeKind, line.size).map((size) => (
+                  <option value="">{gearSizeLabel(item)}</option>
+                  {sizeOptionsFor(item, line.size).map((size) => (
                     <option key={size} value={size}>
                       {size}
                     </option>
                   ))}
                 </NativeSelect>
               )}
-              <div className="ml-auto flex shrink-0 items-center rounded-md border border-border">
+              <div className="flex w-full shrink-0 items-center justify-between rounded-md border border-border">
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="size-9 rounded-r-none"
+                  className="size-11 rounded-r-none"
                   disabled={readOnly}
                   aria-label={line.quantity === 1 ? `Remove ${item.name} ${line.size ?? ""}` : `Fewer ${item.name}`}
                   onClick={() =>
@@ -209,7 +197,7 @@ export function GearItemCard({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="size-9 rounded-l-none"
+                  className="size-11 rounded-l-none"
                   disabled={readOnly || line.quantity >= GEAR_MAX_QUANTITY}
                   aria-label={`More ${item.name}`}
                   onClick={() => onChangeLine(line.id, { quantity: line.quantity + 1 })}
@@ -220,16 +208,16 @@ export function GearItemCard({
             </div>
           ))}
 
-          {!readOnly && (colorLines.length === 0 || sizeKind !== "HEADWEAR") && (
+          {!readOnly && (colorLines.length === 0 || !oneSize) && (
             <Button
               type="button"
               variant={colorLines.length > 0 ? "ghost" : "outline"}
               size="sm"
-              className="min-h-10 w-full"
+              className="min-h-11 w-full px-2"
               onClick={() => onAddLine(sku)}
             >
               <PlusIcon data-icon="inline-start" />
-              {colorLines.length > 0 ? "Add another size" : "Add"}
+              {colorLines.length > 0 ? "Another size" : "Add to picks"}
             </Button>
           )}
 

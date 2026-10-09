@@ -254,6 +254,7 @@
 - `/api/gear-picks/admin/export.csv` -> `src/app/api/gear-picks/admin/export.csv/route.ts`
 - `/api/gear-picks/admin` -> `src/app/api/gear-picks/admin/route.ts`
 - `/api/gear-picks/me` -> `src/app/api/gear-picks/me/route.ts`
+- `/api/gear-picks/users/[userId]` -> `src/app/api/gear-picks/users/[userId]/route.ts`
 - `/api/hiring/applications/[id]/documents` -> `src/app/api/hiring/applications/[id]/documents/route.ts`
 - `/api/hiring/applications/[id]/invite` -> `src/app/api/hiring/applications/[id]/invite/route.ts`
 - `/api/hiring/applications/[id]/notes` -> `src/app/api/hiring/applications/[id]/notes/route.ts`
