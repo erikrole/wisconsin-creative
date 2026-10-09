@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { forbiddenReleaseTerms, groupReleases, releaseSlug, releases } from "@/lib/releases";
+// @ts-expect-error -- plain ESM script without type declarations
+import { isRealIsoDate } from "../scripts/check-release-note.mjs";
 
 const releasesLayoutSource = readFileSync("src/app/(public)/releases/layout.tsx", "utf8");
 const releasesPageSource = readFileSync("src/app/(public)/releases/page.tsx", "utf8");
@@ -11,8 +13,7 @@ describe("public release notes", () => {
   it("has releases with valid ISO dates, newest first", () => {
     expect(releases.length).toBeGreaterThan(20);
     for (const release of releases) {
-      expect(release.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-      expect(Number.isNaN(Date.parse(`${release.date}T12:00:00Z`))).toBe(false);
+      expect(isRealIsoDate(release.date), release.date).toBe(true);
     }
     const dates = releases.map((release) => release.date);
     expect([...dates].sort().reverse()).toEqual(dates);

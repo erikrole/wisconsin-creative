@@ -1,8 +1,15 @@
 import { describe, expect, it } from "vitest";
 // @ts-expect-error -- plain ESM script without type declarations
-import { changedReleases, evaluateReleaseNote, OPT_OUT_LABEL } from "../scripts/check-release-note.mjs";
+import { changedReleases, evaluateReleaseNote, isRealIsoDate, OPT_OUT_LABEL } from "../scripts/check-release-note.mjs";
 
-const existing = { date: "2026-10-01", title: "Kiosk redesign", type: "feature", summary: "s", platforms: ["Kiosk"] };
+const existing = {
+  date: "2026-10-01",
+  title: "Kiosk redesign",
+  type: "feature",
+  summary: "The kiosk gets a new home screen and hubs.",
+  details: ["Home shows today's pickups.", "Hubs group a person's gear."],
+  platforms: ["Kiosk"],
+};
 
 describe("release note PR check", () => {
   it("fails when the PR leaves releases.json unchanged", () => {
@@ -25,6 +32,19 @@ describe("release note PR check", () => {
     expect(missingResult.reason).toContain("451");
     const wrong = { ...existing, date: "2026-10-09", pr: 450 };
     expect(evaluateReleaseNote({ before: [existing], after: [wrong, existing], prNumber: 451 }).ok).toBe(false);
+  });
+
+  it("rejects impossible dates and entries outside the content contract", () => {
+    expect(isRealIsoDate("2026-02-28")).toBe(true);
+    expect(isRealIsoDate("2026-02-31")).toBe(false);
+    const badDate = { ...existing, date: "2026-02-31", pr: 452 };
+    expect(evaluateReleaseNote({ before: [existing], after: [badDate, existing], prNumber: 452 }).ok).toBe(false);
+    const noDetails = { ...existing, date: "2026-10-09", pr: 452, details: undefined };
+    const result = evaluateReleaseNote({ before: [existing], after: [noDetails, existing], prNumber: 452 });
+    expect(result.ok).toBe(false);
+    expect(result.reason).toContain("details");
+    const smallFix = { ...existing, date: "2026-10-09", pr: 452, type: "fixes", details: ["Fixed a kiosk label."] };
+    expect(evaluateReleaseNote({ before: [existing], after: [smallFix, existing], prNumber: 452 }).ok).toBe(true);
   });
 
   it("honors the opt-out label and exempts Dependabot", () => {

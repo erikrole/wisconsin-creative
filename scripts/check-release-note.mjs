@@ -19,6 +19,34 @@ function readAt(ref) {
   }
 }
 
+const TYPES = new Set(["feature", "improvement", "fixes"]);
+const PLATFORMS = new Set(["Web", "iOS", "Kiosk", "macOS"]);
+
+export function isRealIsoDate(value) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+}
+
+/** Problems with a release entry against the AGENTS.md release-note contract. */
+export function releaseEntryProblems(entry) {
+  const problems = [];
+  if (!isRealIsoDate(entry.date)) problems.push(`"date" must be a real YYYY-MM-DD date`);
+  const titleWords = typeof entry.title === "string" ? entry.title.trim().split(/\s+/).filter(Boolean).length : 0;
+  if (titleWords < 1 || titleWords > 7) problems.push(`"title" must be 1–7 words`);
+  if (!TYPES.has(entry.type)) problems.push(`"type" must be feature, improvement, or fixes`);
+  if (typeof entry.summary !== "string" || entry.summary.trim().length < 20) problems.push(`"summary" needs a sentence or two`);
+  if (!Array.isArray(entry.platforms) || entry.platforms.length === 0 || !entry.platforms.every((p) => PLATFORMS.has(p))) {
+    problems.push(`"platforms" must list Web, iOS, Kiosk, and/or macOS`);
+  }
+  const details = entry.details ?? [];
+  const [min, max] = entry.type === "fixes" ? [1, 8] : [2, 6];
+  if (!Array.isArray(details) || details.length < min || details.length > max || details.some((d) => typeof d !== "string" || !d.trim())) {
+    problems.push(`"details" needs ${min}–${max} bullets`);
+  }
+  return problems;
+}
+
 export function changedReleases(before, after) {
   const seen = new Set(before.map((entry) => JSON.stringify(entry)));
   return after.filter((entry) => !seen.has(JSON.stringify(entry)));
@@ -34,11 +62,18 @@ export function evaluateReleaseNote({ before, after, labels = [], author = "", p
       reason: `No release note. Add or update an entry in ${RELEASES_PATH} (see docs/AREA_PUBLIC_SHOWROOM.md), or label the PR "${OPT_OUT_LABEL}" if nothing user-visible changed.`,
     };
   }
-  if (prNumber && !changed.some((entry) => entry.pr === prNumber)) {
+  const own = prNumber ? changed.filter((entry) => entry.pr === prNumber) : changed;
+  if (own.length === 0) {
     return {
       ok: false,
       reason: `The new or updated release entry must set "pr": ${prNumber}.`,
     };
+  }
+  for (const entry of own) {
+    const problems = releaseEntryProblems(entry);
+    if (problems.length) {
+      return { ok: false, reason: `Release entry "${entry.title ?? "(untitled)"}": ${problems.join("; ")}.` };
+    }
   }
   return { ok: true, reason: `${changed.length} release entr${changed.length === 1 ? "y" : "ies"} added or updated` };
 }
