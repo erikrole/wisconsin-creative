@@ -3,6 +3,8 @@
 // notes (src/lib/releases.json, rendered at /releases). Opt out with the
 // `no-release-note` label for changes nobody outside the repo would notice
 // (dependency bumps, CI, docs-only, internal refactors). Dependabot is exempt.
+// The changed entry must carry this PR's number. Runs inside the required CI
+// `validate` job; labels are read when the job runs, so re-run CI after labeling.
 import { execFileSync } from "node:child_process";
 
 export const RELEASES_PATH = "src/lib/releases.json";
@@ -32,11 +34,13 @@ export function evaluateReleaseNote({ before, after, labels = [], author = "", p
       reason: `No release note. Add or update an entry in ${RELEASES_PATH} (see docs/AREA_PUBLIC_SHOWROOM.md), or label the PR "${OPT_OUT_LABEL}" if nothing user-visible changed.`,
     };
   }
-  const warnings = [];
   if (prNumber && !changed.some((entry) => entry.pr === prNumber)) {
-    warnings.push(`Consider setting "pr": ${prNumber} on the new release entry.`);
+    return {
+      ok: false,
+      reason: `The new or updated release entry must set "pr": ${prNumber}.`,
+    };
   }
-  return { ok: true, reason: `${changed.length} release entr${changed.length === 1 ? "y" : "ies"} added or updated`, warnings };
+  return { ok: true, reason: `${changed.length} release entr${changed.length === 1 ? "y" : "ies"} added or updated` };
 }
 
 function main() {
@@ -59,7 +63,6 @@ function main() {
     author: process.env.PR_AUTHOR || "",
     prNumber: Number(process.env.PR_NUMBER) || undefined,
   });
-  for (const warning of result.warnings ?? []) console.log(`::warning file=${RELEASES_PATH}::${warning}`);
   if (!result.ok) {
     console.log(`::error file=${RELEASES_PATH}::${result.reason}`);
     process.exit(1);

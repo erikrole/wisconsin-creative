@@ -13,16 +13,18 @@ describe("release note PR check", () => {
 
   it("passes when an entry is added or edited", () => {
     const added = { ...existing, date: "2026-10-09", title: "Label print cart", pr: 450 };
-    expect(evaluateReleaseNote({ before: [existing], after: [added, existing], prNumber: 450 })).toMatchObject({ ok: true, warnings: [] });
+    expect(evaluateReleaseNote({ before: [existing], after: [added, existing], prNumber: 450 }).ok).toBe(true);
     const edited = { ...existing, summary: "Updated." };
     expect(changedReleases([existing], [edited])).toEqual([edited]);
   });
 
-  it("warns when the new entry does not carry the PR number", () => {
-    const added = { ...existing, date: "2026-10-09" };
-    const result = evaluateReleaseNote({ before: [existing], after: [added, existing], prNumber: 451 });
-    expect(result.ok).toBe(true);
-    expect(result.warnings?.[0]).toContain("451");
+  it("fails when no changed entry carries this PR's number", () => {
+    const missing = { ...existing, date: "2026-10-09" };
+    const missingResult = evaluateReleaseNote({ before: [existing], after: [missing, existing], prNumber: 451 });
+    expect(missingResult.ok).toBe(false);
+    expect(missingResult.reason).toContain("451");
+    const wrong = { ...existing, date: "2026-10-09", pr: 450 };
+    expect(evaluateReleaseNote({ before: [existing], after: [wrong, existing], prNumber: 451 }).ok).toBe(false);
   });
 
   it("honors the opt-out label and exempts Dependabot", () => {
