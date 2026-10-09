@@ -1,3 +1,5 @@
+import { NextResponse } from "next/server";
+import { withHandler } from "@/lib/api-handler";
 import { releaseSlug, releases } from "@/lib/releases";
 
 export const dynamic = "force-static";
@@ -14,7 +16,7 @@ function escapeXml(value: string) {
     .replace(/'/g, "&apos;");
 }
 
-export function GET() {
+function renderFeed() {
   const items = releases.slice(0, FEED_LIMIT).map((release) => {
     const link = `${SITE}/releases#${releaseSlug(release)}`;
     const details = release.details?.length
@@ -47,7 +49,11 @@ export function GET() {
     "</rss>",
   ].join("");
 
-  return new Response(xml, {
-    headers: { "Content-Type": "application/rss+xml; charset=utf-8" },
-  });
+  return xml;
 }
+
+export const GET = withHandler(async () =>
+  new NextResponse(renderFeed(), {
+    headers: { "Content-Type": "application/rss+xml; charset=utf-8" },
+  }),
+);

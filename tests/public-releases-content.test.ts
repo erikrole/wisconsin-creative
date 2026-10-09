@@ -63,7 +63,7 @@ describe("public release notes", () => {
 describe("public release feed", () => {
   it("serves an RSS feed of the latest releases with escaped content", async () => {
     const { GET } = await import("@/app/(public)/releases/feed.xml/route");
-    const response = GET();
+    const response = await GET(new Request("https://wisconsincreative.com/releases/feed.xml"), { params: Promise.resolve({}) });
     expect(response.headers.get("Content-Type")).toContain("application/rss+xml");
     const xml = await response.text();
     expect(xml.startsWith('<?xml version="1.0" encoding="UTF-8"?>')).toBe(true);

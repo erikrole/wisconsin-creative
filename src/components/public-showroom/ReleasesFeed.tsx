@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDownIcon } from "lucide-react";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
 import {
   type Release,
@@ -46,6 +47,17 @@ function chipState(active: boolean) {
     : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground";
 }
 
+function readHash() {
+  try {
+    return decodeURIComponent(window.location.hash.slice(1));
+  } catch {
+    return "";
+  }
+}
+
+const toggleItemClass =
+  "min-h-9 shrink-0 gap-1.5 rounded-full border border-border bg-transparent px-3 text-muted-foreground shadow-none hover:border-foreground/30 hover:text-foreground data-[state=on]:border-foreground data-[state=on]:bg-foreground data-[state=on]:text-background data-[state=on]:shadow-none";
+
 export function ReleasesFeed() {
   const [platform, setPlatform] = useState<ReleasePlatform | null>(null);
   const [type, setType] = useState<ReleaseType | null>(null);
@@ -57,7 +69,7 @@ export function ReleasesFeed() {
 
   useEffect(() => {
     function revealHashTarget() {
-      const id = decodeURIComponent(window.location.hash.slice(1));
+      const id = readHash();
       if (!id) return;
       const existing = document.getElementById(id);
       if (existing) {
@@ -128,37 +140,37 @@ export function ReleasesFeed() {
           ))}
         </nav>
         <div className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:gap-6">
-          <div role="group" aria-label="Filter by app" className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:px-0">
-            <button type="button" aria-pressed={platform === null} onClick={() => setPlatform(null)} className={cn(chipClass, chipState(platform === null))}>
+          <ToggleGroup
+            type="single"
+            aria-label="Filter by app"
+            value={platform ?? "all"}
+            onValueChange={(value) => setPlatform(!value || value === "all" ? null : (value as ReleasePlatform))}
+            className="-mx-4 flex gap-2 overflow-x-auto rounded-none bg-transparent px-4 p-0 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden"
+          >
+            <ToggleGroupItem value="all" className={toggleItemClass}>
               All apps
-            </button>
+            </ToggleGroupItem>
             {platformOptions.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                aria-pressed={platform === option.value}
-                onClick={() => setPlatform(platform === option.value ? null : option.value)}
-                className={cn(chipClass, chipState(platform === option.value))}
-              >
+              <ToggleGroupItem key={option.value} value={option.value} className={toggleItemClass}>
                 <span aria-hidden="true" className={cn("size-1.5 rounded-full", option.dot)} />
                 {option.label}
-              </button>
+              </ToggleGroupItem>
             ))}
-          </div>
-          <div role="group" aria-label="Filter by type" className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:px-0">
+          </ToggleGroup>
+          <ToggleGroup
+            type="single"
+            aria-label="Filter by type"
+            value={type ?? ""}
+            onValueChange={(value) => setType(value ? (value as ReleaseType) : null)}
+            className="-mx-4 flex gap-2 overflow-x-auto rounded-none bg-transparent px-4 p-0 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden"
+          >
             {typeOptions.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                aria-pressed={type === option.value}
-                onClick={() => setType(type === option.value ? null : option.value)}
-                className={cn(chipClass, chipState(type === option.value))}
-              >
+              <ToggleGroupItem key={option.value} value={option.value} className={toggleItemClass}>
                 <span aria-hidden="true" className={cn("size-1.5 rounded-full", option.dot)} />
                 {option.label}
-              </button>
+              </ToggleGroupItem>
             ))}
-          </div>
+          </ToggleGroup>
         </div>
       </div>
 

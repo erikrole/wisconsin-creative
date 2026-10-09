@@ -3,7 +3,7 @@ import { ReleasesFeed } from "@/components/public-showroom/ReleasesFeed";
 import { formatReleaseDate, releaseSlug, releases } from "@/lib/releases";
 
 export default function ReleasesPage() {
-  const latest = releases.find((release) => release.type !== "fixes") ?? releases[0];
+  const latest = releases[0];
 
   return (
     <main id="showroom-content" className="px-4 pb-24 sm:px-6 lg:px-8">
