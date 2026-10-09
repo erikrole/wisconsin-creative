@@ -28,6 +28,15 @@ export function isRealIsoDate(value) {
   return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
 }
 
+/** A PR's own entry must be dated within this many days of when the check runs. */
+export const MERGE_WINDOW_DAYS = 14;
+
+export function isWithinMergeWindow(date, today = new Date()) {
+  const day = 24 * 60 * 60 * 1000;
+  const todayUtc = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
+  return Math.abs(Date.parse(`${date}T00:00:00Z`) - todayUtc) <= MERGE_WINDOW_DAYS * day;
+}
+
 /** Problems with a release entry against the AGENTS.md release-note contract. */
 export function releaseEntryProblems(entry) {
   const problems = [];
@@ -51,7 +60,7 @@ export function changedReleases(before, after) {
   return after.filter((entry) => !seen.has(JSON.stringify(entry)));
 }
 
-export function evaluateReleaseNote({ before, after, labels = [], author = "", prNumber }) {
+export function evaluateReleaseNote({ before, after, labels = [], author = "", prNumber, today = new Date() }) {
   if (labels.includes(OPT_OUT_LABEL)) return { ok: true, reason: `labeled ${OPT_OUT_LABEL}` };
   if (EXEMPT_AUTHORS.has(author)) return { ok: true, reason: `${author} is exempt` };
   const changed = changedReleases(before, after);
@@ -70,6 +79,9 @@ export function evaluateReleaseNote({ before, after, labels = [], author = "", p
   }
   for (const entry of own) {
     const problems = releaseEntryProblems(entry);
+    if (isRealIsoDate(entry.date) && !isWithinMergeWindow(entry.date, today)) {
+      problems.push(`"date" must be the expected merge date, within ${MERGE_WINDOW_DAYS} days of today`);
+    }
     if (problems.length) {
       return { ok: false, reason: `Release entry "${entry.title ?? "(untitled)"}": ${problems.join("; ")}.` };
     }

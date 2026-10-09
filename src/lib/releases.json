@@ -884,13 +884,12 @@
   },
   {
     "date": "2026-08-19",
-    "title": "Shared software logins",
+    "title": "Shared software accounts",
     "type": "feature",
-    "summary": "Staff can keep shared software logins in the app next to the Photo Mechanic license pool, visible only to the people who need them.",
+    "summary": "The Licenses area gains a home for the team's shared software accounts, next to the Photo Mechanic license pool.",
     "details": [
-      "Reveal, copy, archive, or restore each shared login.",
-      "Choose whether each login is shown to staff, students, collaborators, or a mix.",
-      "Licenses opens on Photo Mechanic with your activation code first, and shared logins one tab over."
+      "Licenses opens on Photo Mechanic, with shared software accounts one tab over.",
+      "Staff can archive and restore shared accounts as the team's tools change."
     ],
     "platforms": [
       "Web",
@@ -2050,7 +2049,7 @@
       "A return time picker checks scanned gear against other bookings and tight turnarounds before finishing.",
       "Scanned gear shows photos, and numbered batteries, including older label formats, group into one row with unit chips.",
       "Kiosk scans update each item's location and note when gear wasn't where expected.",
-      "Profiles hold a Wiscard number, admins can reset a kiosk's activation code, and staff can test hand scanners on iOS."
+      "Profiles hold a Wiscard number, admins can re-pair a kiosk iPad, and staff can test hand scanners on iOS."
     ],
     "platforms": [
       "Web",
@@ -3003,7 +3002,7 @@
       "Calendar Sources can test a feed and preview its events before saving.",
       "Allowed Emails accepts a pasted list and shows counts for all, pending, and claimed invites.",
       "Locations and Allowed Emails rows show who last edited them and when.",
-      "Kiosk devices can get a fresh activation code and show Offline when they stop checking in."
+      "Kiosk iPads can be re-paired from Settings and show Offline when they stop checking in."
     ],
     "platforms": [
       "Web"
