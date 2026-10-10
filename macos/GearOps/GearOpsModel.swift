@@ -602,12 +602,14 @@ final class GearOpsModel {
     /// not churn the credential. This is user-driven, not a timer.
     func refreshOnPresentation() async {
         labelClock = currentDate()
+        // An activation restore in flight ends in its own refresh; retrying
+        // or refreshing beside it would read and rotate a second time.
+        guard !restoreInFlight else { return }
         if shouldRetryCredentialRestore {
             await restoreSession()
             return
         }
-        // An activation restore in flight ends in its own refresh.
-        guard user != nil, companionToken != nil, !isRefreshing, !restoreInFlight, !isSigningIn, !isSigningOut else { return }
+        guard user != nil, companionToken != nil, !isRefreshing, !isSigningIn, !isSigningOut else { return }
         let now = currentDate()
         let interval = Self.presentationRefreshInterval
         if let lastConfirmedAt, now.timeIntervalSince(lastConfirmedAt) < interval { return }

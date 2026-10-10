@@ -668,7 +668,7 @@ describe("GearOps macOS menu bar contracts", () => {
     expect(model).toContain("static let staleSnapshotAge: TimeInterval = 15 * 60");
     expect(model).toContain("if statusMessage != nil || snapshotIsStale(snapshot, at: now) { return .attention }");
     expect(model).toContain("func refreshOnPresentation() async");
-    expect(model).toContain("!isRefreshing, !restoreInFlight, !isSigningIn");
+    expect(model).toMatch(/guard !restoreInFlight else \{ return \}\s*\n\s*if shouldRetryCredentialRestore/);
     expect(model).toContain("if !isRefreshing { await refresh() }");
     expect(view).toContain("guard model.user != nil, searchIsFocused else { return false }");
     expect(model).toContain("if let lastConfirmedAt, now.timeIntervalSince(lastConfirmedAt) < interval { return }");
