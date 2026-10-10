@@ -27,9 +27,9 @@ describe("item condition evidence visibility", () => {
     } else {
       expect(include.checkinReports).toMatchObject({
         take: 5,
-        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        orderBy: [{ lastReportedAt: "desc" }, { id: "desc" }],
         select: {
-          description: true, imageUrl: true, createdAt: true,
+          description: true, imageUrl: true, createdAt: true, lastReportedAt: true,
           reportedBy: { select: { name: true } }, booking: { select: { id: true, title: true } },
         },
       });

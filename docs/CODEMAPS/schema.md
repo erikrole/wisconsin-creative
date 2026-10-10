@@ -2361,21 +2361,22 @@ Indexes and constraints:
 
 ## Model `CheckinItemReport`
 
-Fields: 19
+Fields: 20
 
-- `id            String            @id @default(cuid())`
-- `bookingId     String            @map("booking_id")`
-- `assetId       String?           @map("asset_id")`
-- `bulkSkuUnitId String?           @map("bulk_sku_unit_id")`
-- `bulkSkuId     String?           @map("bulk_sku_id")`
-- `quantity      Int?`
-- `type          CheckinReportType`
-- `description   String?`
-- `imageUrl      String?           @map("image_url")`
-- `reportedById  String            @map("reported_by_id")`
-- `createdAt     DateTime          @default(now()) @map("created_at")`
-- `dismissedAt   DateTime?         @map("dismissed_at")`
-- `dismissedById String?           @map("dismissed_by_id")`
+- `id             String            @id @default(cuid())`
+- `bookingId      String            @map("booking_id")`
+- `assetId        String?           @map("asset_id")`
+- `bulkSkuUnitId  String?           @map("bulk_sku_unit_id")`
+- `bulkSkuId      String?           @map("bulk_sku_id")`
+- `quantity       Int?`
+- `type           CheckinReportType`
+- `description    String?`
+- `imageUrl       String?           @map("image_url")`
+- `reportedById   String            @map("reported_by_id")`
+- `createdAt      DateTime          @default(now()) @map("created_at")`
+- `lastReportedAt DateTime          @default(now()) @map("last_reported_at")`
+- `dismissedAt    DateTime?         @map("dismissed_at")`
+- `dismissedById  String?           @map("dismissed_by_id")`
 - `booking     Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)`
 - `asset       Asset?       @relation(fields: [assetId], references: [id], onDelete: Restrict)`
 - `bulkSkuUnit BulkSkuUnit? @relation(fields: [bulkSkuUnitId], references: [id], onDelete: Cascade)`

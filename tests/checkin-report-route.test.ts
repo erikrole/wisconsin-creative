@@ -142,7 +142,7 @@ describe("check-in report route", () => {
     expect(response.status).toBe(200);
     // Updated evidence reopens a flag staff dismissed from the dashboard.
     expect(db.checkinItemReport.upsert).toHaveBeenCalledWith(expect.objectContaining({
-      update: expect.objectContaining({ dismissedAt: null, dismissedById: null }),
+      update: expect.objectContaining({ dismissedAt: null, dismissedById: null, lastReportedAt: expect.any(Date) }),
     }));
     expect(deleteImage).not.toHaveBeenCalled();
     expect(createAuditEntryTx).toHaveBeenCalledWith(db, expect.objectContaining({

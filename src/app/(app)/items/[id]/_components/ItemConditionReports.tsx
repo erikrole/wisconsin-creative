@@ -39,7 +39,7 @@ export function ItemConditionReports({ asset, busy, onClearHold, onSelectBooking
             <div className="min-w-0 flex-1 space-y-2">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant={report.type === "DAMAGED" ? "orange" : "red"}>{report.type === "DAMAGED" ? "Damage reported" : "Reported missing"}</Badge>
-                <span className="text-xs text-muted-foreground">{report.reportedBy.name} · {new Date(report.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "America/Chicago" })}</span>
+                <span className="text-xs text-muted-foreground">{report.reportedBy.name} · {new Date(report.lastReportedAt ?? report.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "America/Chicago" })}</span>
               </div>
               <p className="whitespace-pre-wrap break-words text-sm">{report.description || "No description was provided."}</p>
               {!report.imageUrl && <p className="text-xs text-muted-foreground">No photo attached</p>}

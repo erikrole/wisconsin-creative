@@ -12,8 +12,13 @@ import { reportedLostBulkBySku, upsertBulkBalancesAndMovements } from "@/lib/ser
 import { deleteImage, imageExtensionForType, isBlobUrl, validateImage, publicBlobAuth } from "@/lib/blob";
 import { claimKioskOperationReceiptTx, finishKioskOperationReceiptTx, type KioskOperationContext } from "@/lib/services/kiosk-operation-receipts";
 
-/** An updated report is new evidence, so a dashboard dismissal no longer applies. */
-const REOPEN_DISMISSAL = { dismissedAt: null, dismissedById: null } as const;
+/**
+ * An updated report is new evidence: it reopens a dashboard dismissal and
+ * moves the report's recency so the dashboard and item page surface it.
+ */
+function reopenedReport() {
+  return { dismissedAt: null, dismissedById: null, lastReportedAt: new Date() };
+}
 
 const REPORT_DEDUP_WINDOW_MS = 5_000;
 
@@ -179,7 +184,7 @@ export async function submitCheckinItemReport(args: {
       ...(imageUrl ? { imageUrl } : {}),
       reportedById: args.reporter.id,
       // New evidence reopens a flag staff dismissed from the dashboard.
-      ...REOPEN_DISMISSAL,
+      ...reopenedReport(),
     },
   };
   const auditAfter = (reportImageUrl: string | null) => ({
@@ -452,7 +457,7 @@ export async function submitBulkCheckinReport(args: {
         saved = await tx.checkinItemReport.upsert({
           where: { bookingId_bulkSkuUnitId: { bookingId: id, bulkSkuUnitId: unit.id } },
           create: { ...data, bookingId: id, bulkSkuUnitId: unit.id, imageUrl: imageUrl ?? null },
-          update: { ...data, ...(imageUrl ? { imageUrl } : {}), ...REOPEN_DISMISSAL },
+          update: { ...data, ...(imageUrl ? { imageUrl } : {}), ...reopenedReport() },
         });
       } else {
         const item = await tx.bookingBulkItem.findUnique({
@@ -517,7 +522,7 @@ export async function submitBulkCheckinReport(args: {
             description,
             ...(imageUrl ? { imageUrl } : {}),
             reportedById: args.reporter.id,
-            ...REOPEN_DISMISSAL,
+            ...reopenedReport(),
           },
         });
         await createAuditEntryTx(tx, {

@@ -2266,24 +2266,26 @@ model BookingPhoto {
 }
 
 model CheckinItemReport {
-  id            String            @id @default(cuid())
-  bookingId     String            @map("booking_id")
+  id             String            @id @default(cuid())
+  bookingId      String            @map("booking_id")
   /// Exactly one target is set (CHECK in migration 0156): a serialized asset,
   /// a numbered bulk unit (battery #7), or counted bulk stock by SKU.
-  assetId       String?           @map("asset_id")
-  bulkSkuUnitId String?           @map("bulk_sku_unit_id")
-  bulkSkuId     String?           @map("bulk_sku_id")
+  assetId        String?           @map("asset_id")
+  bulkSkuUnitId  String?           @map("bulk_sku_unit_id")
+  bulkSkuId      String?           @map("bulk_sku_id")
   /// Counted stock only: how many were damaged or missing.
-  quantity      Int?
-  type          CheckinReportType
-  description   String?
-  imageUrl      String?           @map("image_url")
-  reportedById  String            @map("reported_by_id")
-  createdAt     DateTime          @default(now()) @map("created_at")
+  quantity       Int?
+  type           CheckinReportType
+  description    String?
+  imageUrl       String?           @map("image_url")
+  reportedById   String            @map("reported_by_id")
+  createdAt      DateTime          @default(now()) @map("created_at")
+  /// When the evidence last changed: creation, or a later kiosk update.
+  lastReportedAt DateTime          @default(now()) @map("last_reported_at")
   // Staff/admin dismissed this flag from the dashboard. The report stays in
   // history; it only drops out of the dashboard's recent-flags list.
-  dismissedAt   DateTime?         @map("dismissed_at")
-  dismissedById String?           @map("dismissed_by_id")
+  dismissedAt    DateTime?         @map("dismissed_at")
+  dismissedById  String?           @map("dismissed_by_id")
 
   booking     Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   asset       Asset?       @relation(fields: [assetId], references: [id], onDelete: Restrict)

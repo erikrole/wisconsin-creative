@@ -51,7 +51,7 @@ type FlaggedAsset = {
   types: FlagType[];
   // The most severe lost or damaged report, opened by the review dialog.
   report: FlaggedItem | null;
-  // Damage report IDs behind this row; dismissing the row dismisses all of them.
+  // Damage report IDs behind this row; dismissing any one dismisses the asset's open damage reports server-side.
   damageReportIds: string[];
 };
 
@@ -129,20 +129,17 @@ export function FlaggedItemsBanner({ items, onChanged }: Props) {
 
     setDismissingAssetId(asset.assetId);
     try {
-      for (const reportId of asset.damageReportIds) {
-        const res = await fetch(`/api/checkin-reports/${reportId}/dismiss`, {
-          method: "POST",
-        });
-        if (handleAuthRedirect(res)) return;
-        if (!res.ok) {
-          toast.error(await parseErrorMessage(res, "Couldn't dismiss the damage flag"));
-          return;
-        }
+      // One call dismisses every open damage report on the asset atomically.
+      const res = await fetch(`/api/checkin-reports/${asset.damageReportIds[0]}/dismiss`, {
+        method: "POST",
+      });
+      if (handleAuthRedirect(res)) return;
+      if (!res.ok) {
+        toast.error(await parseErrorMessage(res, "Couldn't dismiss the damage flag"));
       }
     } catch {
       toast.error("Couldn't dismiss the damage flag. Check your connection and try again.");
     } finally {
-      // Refresh even on a partial failure so dismissed reports leave the list.
       setDismissingAssetId(null);
       onChanged();
     }

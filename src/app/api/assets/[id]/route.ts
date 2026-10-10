@@ -140,11 +140,11 @@ export const GET = withAuth<{ id: string }>(async (req, { user, params }) => {
       include: { location: true, category: true, department: { select: { id: true, name: true } }, parent: { select: { id: true, assetTag: true, name: true, brand: true, model: true } },
         checkinReports: user.role === "ADMIN" || user.role === "STAFF" ? {
           select: {
-            id: true, type: true, description: true, imageUrl: true, createdAt: true,
+            id: true, type: true, description: true, imageUrl: true, createdAt: true, lastReportedAt: true,
             reportedBy: { select: { name: true } },
             booking: { select: { id: true, title: true } },
           },
-          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+          orderBy: [{ lastReportedAt: "desc" }, { id: "desc" }],
           take: 5,
         } : false,
       }
