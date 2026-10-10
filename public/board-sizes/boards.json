@@ -7,9 +7,14 @@
     "Every display and zone has a stable `id` (venue/display[/zone]); never rename one. `canvases` are the stable UPPER_SNAKE keys production tools build against (After Effects Board Builder, templates, audits); each points at a display, or a zone of one, and must match its size. `within: true` marks a region of a display that no source lists as a zone. `fps`/`duration` are the delivery spec where a source publishes one."
   ],
   "schema": "wisconsin-board-sizes/1",
-  "version": "2026-10-08.2",
-  "updated": "2026-10-08",
+  "version": "2026-10-09.1",
+  "updated": "2026-10-09",
   "changes": [
+    {
+      "version": "2026-10-09.1",
+      "date": "2026-10-09",
+      "summary": "North Board GIP confirmed at 3096 × 140 (was 155, TBD), placed at 1332,1300 on the board with notes, and its TBD issue cleared. Adds measured-geometry notes to the Kohl Center top ring and 360 fascia and the Field House top ring, and a kickout note on the Camp Randall SEZ upper angle. No other sizes, ids or canvas keys change."
+    },
     {
       "version": "2026-10-08.2",
       "date": "2026-10-08",
@@ -5100,13 +5105,17 @@
               "n": 5,
               "name": "GIP",
               "w": 3096,
-              "h": 155,
-              "issues": [
+              "h": 140,
+              "at": [
                 {
-                  "kind": "tbd",
-                  "field": "h",
-                  "text": "GIP 3096 × 155 is marked “TBD size” in the Board Info sheet and doesn’t appear in the 2024 guide or Colosseum’s list."
+                  "x": 1332,
+                  "y": 1300
                 }
+              ],
+              "atFrom": "derived",
+              "notes": [
+                "Confirmed by Erik 2026-09-29: the bottom 140 px of the main video (the Board Info sheet said 155, marked TBD).",
+                "An in-game scoreboard composited over the main, not a crop: background may run behind it to the bottom edge; lockups and important content must clear it."
               ]
             },
             {
@@ -6460,7 +6469,10 @@
                 }
               ],
               "atFrom": "derived",
-              "page": 29
+              "page": 29,
+              "notes": [
+                "The kickout: covered in the venue by the out-of-town scores overlay. Leave it bare; on the right board only its first 1725 px are playable."
+              ]
             }
           ],
           "sources": {
@@ -7101,7 +7113,8 @@
           },
           "notes": [
             "In Display Studio, drop the “Ring-” prefix when the zone already sits under Ring (e.g. KC-MAIN-P:Ring/Fullscreen-FG).",
-            "Colosseum cites a Kohl Center content guide (p. 7) for the top ring; that guide isn’t in hand yet."
+            "Colosseum cites a Kohl Center content guide (p. 7) for the top ring; that guide isn’t in hand yet.",
+            "Ring geometry (measured, 2026-09-27): the four 1056 px faces are centred at x 0 (on the seam), 1296, 2592 and 3888; the 240 px corners start at x 528, 1824, 3120 and 4416. The face on the seam needs a wrap twin at x 5184. Which face and corner is which compass direction is unconfirmed."
           ],
           "issues": [
             {
@@ -7268,7 +7281,8 @@
           "notes": [
             "In Display Studio, drop the “Fascia-” prefix when the zone already sits under Fascia (e.g. KC-MAIN-P:Fascia/Fullscreen-FG).",
             "Colosseum lists the fascia windows at 72 px high (12576 × 72, 11,472 × 72, 8160 × 72). The processor canvas here is 144 high because it stacks two 72 px rows.",
-            "Colosseum: the full fascia (12,576), “360 ads” (11,472) and in-game sideline (8160) windows scroll, 15 s."
+            "Colosseum: the full fascia (12,576), “360 ads” (11,472) and in-game sideline (8160) windows scroll, 15 s.",
+            "Ring model (Erik, measured 2026-09-28): the fascia is one 25,152 px ring, east sideline 8160, north endzone 4416 (stat 1656, GIP 1104, stat 1656), west sideline 8160, south endzone 4416. Center court sits at canvas x 2495 in both rows (row r shows ring x 1585 + r × 12576 onward). In a Sideline Extended file, center court is at x 5736. The E-N-W-S order is assumed, not confirmed."
           ],
           "issues": [
             {
@@ -7851,7 +7865,10 @@
             "sheet": "Top Ring",
             "colosseum": "Centerhung Top Ring",
             "builder": "Field House Top Ring"
-          }
+          },
+          "notes": [
+            "Ring content repeats every 864 px (measured for the mockups, 2026-09-24). Where the loop starts relative to the stat panels is unknown; ask for the ring content spec before relying on a phase."
+          ]
         },
         {
           "id": "field-house/table",

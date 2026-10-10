@@ -11,7 +11,7 @@
 
 ## Top ring
 
-- The ring is one thin loop. Its content repeats every 864 strip px (the ring shape in the mockups is solved from that), and where the loop starts relative to the stat panels is still unknown. Ask for the ring content spec before relying on a phase.
+- The ring is one thin loop. Its repeat length and the unknown phase are in the top ring's manifest notes; ask for the ring content spec before relying on a phase.
 - Use {{field-house/top-ring/ring-gip-fg}} and the four corners as the fixed pieces; the full ring carries the moving content.
 - At full scale a jersey last name nearly fills the ring height, and accents (carons) clip at the top edge. Keep a scale ceiling on ring type.
 - In shared PlayerID-style rigs the ring and table are fed by the same ribbon tile as the Kohl Center ribbons: edit the tile once, and check every board it lands on.

@@ -1,6 +1,6 @@
 # Wisconsin Board Sizes
 
-> Every video board, ribbon, table and IPTV canvas at Camp Randall, the Kohl Center, the Field House, LaBahn Arena and Goodman Diamond (Wisconsin Athletics). Manifest 2026-10-08.2, updated 2026-10-08.
+> Every video board, ribbon, table and IPTV canvas at Camp Randall, the Kohl Center, the Field House, LaBahn Arena and Goodman Diamond (Wisconsin Athletics). Manifest 2026-10-09.1, updated 2026-10-09.
 
 Use this whenever you create or check anything that will play on a Wisconsin venue board: After Effects comps, Photoshop/Illustrator artboards, templates, render presets, code that lays out or validates board content, and sponsor or Colosseum deliverables.
 
@@ -44,7 +44,6 @@ After Effects: use the Board Builder (pins boards.json with the `boards` CLI), o
 
 Zones inherit their display's issues in index.json.
 
-- `camp-randall/north-board/gip` (tbd, h): GIP 3096 × 155 is marked “TBD size” in the Board Info sheet and doesn’t appear in the 2024 guide or Colosseum’s list.
 - `kohl-center/centerhung-main`, `kohl-center/main-16-9-feed`, `kohl-center/centerhung-top-ring`, `kohl-center/360-fascia`, `kohl-center/300-level-tunnels`, `kohl-center/scorers-table`, `kohl-center/stanchion`, `kohl-center/baseline-table` (conflict, fps): Frame rate differs by source: Colosseum builds at 60 fps; the production After Effects project renders at 59.94. Confirm before final delivery.
 - `kohl-center/main-16-9-feed` (unconfirmed): Only in Colosseum’s list; not in the Board Info sheet. Confirm with the Kohl Center video board team before building for it.
 - `field-house/table` (naming): Zone names and folder structure will change when the table is plugged in.
@@ -74,7 +73,7 @@ Layouts (draft: inferred from geometry, not yet confirmed):
 | `fullscreen-bg` | 5760x1440 | 0,0 | 60 | – |
 | `borders` | 5760x1440 | 0,0 | 60 | – |
 | `main-video-fg` | 3096x1440 | 1332,0 | 60 | MAIN_VIDEO |
-| `gip` | 3096x155 | – | 60 · ⚠ tbd | – |
+| `gip` | 3096x140 | 1332,1300 | 60 | – |
 | `main-video-bg` | 3096x1440 | 1332,0 | 60 | – |
 | `frame-left` | 1332x1440 | 0,0 | 60 · pad 20 | LEFT_FRAME |
 | `frame-right` | 1332x1440 | 4428,0 | 60 · pad 20 | RIGHT_FRAME |
@@ -467,6 +466,7 @@ id `goodman/main` · 20:11
 
 ## Changes
 
+- 2026-10-09.1: North Board GIP confirmed at 3096 × 140 (was 155, TBD), placed at 1332,1300 on the board with notes, and its TBD issue cleared. Adds measured-geometry notes to the Kohl Center top ring and 360 fascia and the Field House top ring, and a kickout note on the Camp Randall SEZ upper angle. No other sizes, ids or canvas keys change.
 - 2026-10-08.2: Adds draft `layouts` to the North Board, Kellner and Club Board: named sets of zone ids that fill the board together (for example Main + frames). Inferred from zone geometry and marked `draft: true` until confirmed. Sizes, ids and canvas keys are unchanged.
 - 2026-10-08.1: Agent-ready: stable ids on every display and zone, positions as {x, y}, open questions as typed `issues`, `notes` everywhere for plain information, `stillOnly` on zones to match canvases. Generated index.json, boards.csv and llms.txt. Canvas keys and every size are unchanged.
 - 2026-09-24.1: First published manifest: five venues cross-referenced from the Board Info sheet, the 2024 Camp Randall guide, Colosseum’s deliverables sheet and the Board Builder; 58 canvas keys.

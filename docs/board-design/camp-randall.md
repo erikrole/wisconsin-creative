@@ -15,7 +15,7 @@
 ## North Board: GIP and safe areas
 
 - The GIP is an in-game scoreboard composited OVER the bottom of the main video. It is an overlay, not a crop: background can run behind it to the bottom edge, but lockups and important content must clear it.
-- Its height is not settled. The manifest's {{north-board/gip}} is marked TBD, but on 09-29 the band was confirmed as the bottom 140 px of the main. Until boards.json changes, keep lockups clear of the larger value (bottom 155 px) and flag the open issue.
+- Its size and position are {{north-board/gip}} (confirmed 09-29).
 - The main video deliverable is `Main_Standalone` at {{MAIN_VIDEO}}. It cover-fits HD media (161.25%).
 - The HD feed is a different crop. The board shows only {{north-board-hd-feed/visible-on-the-board}} of {{MAIN_HD}}, but concourse and suite TVs show the full frame, so finish the cropped bands too. Centre feed content on the visible band, not the frame.
 - The North Board main design sits off-centre on purpose to suit that crop. Don't re-centre it, and don't use it as the base for other venues' HD mains.
@@ -49,7 +49,7 @@
 
 ## South end zone fascias (SEZ)
 
-- Upper: the left board is {{SEZ_UPPER_LEFT}}. The right board is {{SEZ_UPPER_RIGHT}}, but its last part, the angle ({{south-upper-fascia/angle}}), is the kickout covered by out-of-town scores. Treat only its first stretch (the same width as the left board) as playable: reuse the left comp on the right, left-aligned, and leave the angle bare. The right board is usually switched off and the left file delivered as "SEZ Upper".
+- Upper: the left board is {{SEZ_UPPER_LEFT}}. The right board is {{SEZ_UPPER_RIGHT}}, but its last part, the angle ({{south-upper-fascia/angle}}), is the kickout covered by the out-of-town scores overlay (see the manifest note). Treat only its first stretch (the same width as the left board) as playable: reuse the left comp on the right, left-aligned, and leave the angle bare. The right board is usually switched off and the left file delivered as "SEZ Upper".
 - H.264 writes the upper-left file one pixel narrower (odd width); that's expected.
 - Lower: two ad windows either side of a GIP ({{south-lower-fascia/gip}}). "SEZ Lower" is one file, {{SEZ_LOWER_LEFT}}, used on both sides. Keep content out of the GIP.
 - On 60 px ribbons, cap Ws at 80% of board height (a Block W height-matched to a Motion W overflows). Size logos by their ink, not the file box.

@@ -20,7 +20,7 @@
 ## Top ring and the main as one piece
 
 - The main and the top ring can share one background: stack the ring above the main and let each side's gradient flow up from the main into its ring face.
-- The ring is four faces and four corners in one loop: {{kohl-center/centerhung-top-ring/ring-gip-fg}}-sized faces with {{kohl-center/centerhung-top-ring/corner-nw-fg}}-sized corners between them. Face centres sit at x 0 (the seam), 1296, 2592 and 3888; corner centres at 648, 1944, 3240 and 4536. The face on the seam needs a wrap twin at the far end.
+- The ring is four faces and four corners in one loop, with one face sitting on the seam. Face and corner positions are in the top ring's manifest notes; the seam face needs a wrap twin at the far end.
 - Design the ring as one full render of four seamless faces. A tile must be x-independent or carry wrap twins.
 - Scroll slowly. Colosseum's spec says the ring scrolls over 15 s; in practice every ring scroll has been called too fast and halved, ending around one face pitch per 30 s (2592 px a minute). Default slow.
 - Full systems: no type on the ring unless asked; in highlight sections the ring can carry a sharp slice of the main, one copy per face pair, meeting on the corners.
@@ -33,7 +33,7 @@
 - Older projects (WBB loops) split the fascia into sideline and endzone pieces instead. That split is retired; don't copy it.
 - Build one continuous ring master at the full ring length, then cut the zones from it. Per-zone gradients look broken at the corners.
 - Every zone file stands alone: no text or logo crosses a cut, and each zone's layout is centred and balanced inside it. Only the background gradient runs continuously across cuts.
-- Anchor sideline content on center court, which sits in the middle of the sideline span of a Sideline Extended file (after the stat window at its start). The end stat windows belong to the Sideline Extended files; keep text clear of them.
+- Anchor sideline content on center court (position in the fascia's manifest notes: the ring model). The end stat windows belong to the Sideline Extended files; keep text clear of them.
 - The endzone is one lockup centred on the GIP, never two.
 - One line of type on the fascia; never stack. Caps around 40 px on the fascia height read well.
 - Never let a stretch go fully black; it reads as the LED being off. Keep a floor (about 45% in light rigs).

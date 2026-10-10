@@ -363,7 +363,8 @@ describe("Board Sizes data", () => {
     expect(feed.zones[0]).toMatchObject({ w: 1920, h: 806, at: [{ x: 0, y: 94 }] });
     expect(94 + 806 + 180).toBe(feed.h);
     const north = display("Camp Randall", "North Board");
-    expect(north.zones.find((z) => z.name === "GIP")!.issues).toEqual([expect.objectContaining({ kind: "tbd", field: "h" })]);
+    expect(north.zones.find((z) => z.name === "GIP")).toMatchObject({ w: 3096, h: 140, at: [{ x: 1332, y: 1300 }] });
+    expect(north.zones.find((z) => z.name === "GIP")!.issues).toBeUndefined();
     expect(display("Kohl Center", "360 Fascia").notes!.join(" ")).toMatch(/72 px high/);
     expect(display("Kohl Center", "360 Fascia").issues).toEqual([expect.objectContaining({ kind: "conflict", field: "fps", text: expect.stringMatching(/59\.94/) })]);
     expect(display("Kohl Center", "Main 16:9 feed").issues!.map((i) => i.kind)).toEqual(["unconfirmed", "conflict"]);
@@ -430,7 +431,7 @@ describe("Board Sizes agent files", () => {
     expect(llms).toContain(`Manifest ${manifest.version}`);
     expect(llms).toContain("Never hardcode or guess a board size");
     for (const b of index.boards) if (b.type === "display") expect(llms).toContain(`id \`${b.id}\``);
-    expect(llms).toContain("`camp-randall/north-board/gip` (tbd, h)");
+    expect(llms).toContain("`goodman/main` (unconfirmed)");
   });
 
   it("writes one design guide per venue from the manifest and the guidance", () => {
@@ -440,7 +441,7 @@ describe("Board Sizes agent files", () => {
     expect(cr).toMatch(/^# Camp Randall design guide\n/);
     expect(cr).toContain(`manifest ${manifest.version}`);
     expect(cr).toContain("id `camp-randall/north-board`");
-    expect(cr).toContain("`camp-randall/north-board/gip` (tbd, h)");
+    expect(cr).toContain("- `gip`: Confirmed by Erik 2026-09-29");
     expect(cr).not.toContain("id `kohl-center/");
     expect(cr).not.toMatch(/\{\{/);
     const llms = readFileSync("public/board-sizes/llms.txt", "utf8");
