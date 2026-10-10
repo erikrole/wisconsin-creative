@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "4a1b0178e9c790850872e149dee03685bdb0644f",
+  "sourcePatchSha256": "8a489125cf19a05a380078b5c62345f27b8e07d5970c6ace8e8243f0549ea920",
+  "settings": {
+    "device": "Playwright Chromium, deviceScaleFactor 1",
+    "viewport": [
+      1280,
+      1600
+    ],
+    "fixture": "boards.json manifest 2026-10-08.1 (unchanged)",
+    "role": "anonymous (public static page)",
+    "route": "/board-sizes/?v=camp-randall",
+    "appearance": "light",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "n/a",
+    "scroll": [
+      0,
+      0
+    ]
+  },
+  "imageSha256": "908e6740648a4a4aac759904f4200f5f6f1de717b927f9b66a421fbd2de8df90",
+  "dimensions": [
+    1280,
+    1600
+  ]
+}

@@ -62,6 +62,32 @@ function checkIssues(list, at, problems) {
   }
 }
 
+// A layout names zones used together: each must exist on the display, and no
+// two positioned zones in it may overlap.
+function checkLayouts(d, at, problems) {
+  if (d.layouts === undefined) return;
+  if (!Array.isArray(d.layouts) || !d.layouts.length) return problems.push(`${at}: layouts must be a non-empty list`);
+  const seen = new Set();
+  for (const l of d.layouts) {
+    const lat = `${at} / layout ${l.id}`;
+    if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(l.id ?? "")) problems.push(`${lat}: id must be a lowercase slug`);
+    if (seen.has(l.id)) problems.push(`${lat}: duplicate layout id`);
+    seen.add(l.id);
+    if (typeof l.name !== "string" || !l.name) problems.push(`${lat}: name is required`);
+    if (!Array.isArray(l.zones) || !l.zones.length) { problems.push(`${lat}: zones must be a non-empty list`); continue; }
+    const rects = [];
+    for (const id of l.zones) {
+      const z = d.zones.find((x) => x.id === id);
+      if (!z) { problems.push(`${lat}: no zone ${id} on this display`); continue; }
+      for (const p of z.at ?? []) rects.push({ id, x: p.x, y: p.y, w: z.w, h: z.h });
+    }
+    for (let i = 0; i < rects.length; i++) for (let j = i + 1; j < rects.length; j++) {
+      const a = rects[i], b = rects[j];
+      if (a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h) problems.push(`${lat}: ${a.id} overlaps ${b.id}`);
+    }
+  }
+}
+
 // Returns a list of problems; empty means the manifest is usable.
 export function validateManifest(manifest) {
   const problems = [];
@@ -95,6 +121,7 @@ export function validateManifest(manifest) {
         }
         checkIssues(z.issues, zat, problems);
       }
+      checkLayouts(d, at, problems);
     }
   }
   const seen = new Set();
@@ -177,6 +204,7 @@ export function buildIndex(manifest, manifestBytes) {
         canvasKeys: (keysFor[d.id] ?? []).map((c) => c.key),
         zoneCount: d.zones.length, sources: sources(d),
         issues: d.issues ?? [], notes: d.notes ?? [], url: url(v.id, d.id),
+        layouts: (d.layouts ?? []).map((l) => ({ id: l.id, name: l.name, zones: l.zones, draft: !!l.draft })),
       });
       for (const z of d.zones) {
         const layer = LAYER.exec(z.name);
@@ -317,6 +345,11 @@ export function renderLlms(manifest, index) {
       L.push(`id \`${d.id}\` · ${rec.aspect}${spec ? ` · ${spec}` : ""}${rec.canvasKeys.length ? ` · keys ${rec.canvasKeys.map((k) => `\`${k}\``).join(", ")}` : ""}`);
       for (const i of d.issues ?? []) L.push(`- ⚠ ${i.kind}: ${i.text}`);
       L.push("");
+      if (d.layouts?.length) {
+        L.push(`Layouts${d.layouts.some((l) => l.draft) ? " (draft: inferred from geometry, not yet confirmed)" : ""}:`);
+        for (const l of d.layouts) L.push(`- ${l.name} (\`${l.id}\`): ${l.zones.map((id) => `\`${id.slice(d.id.length + 1)}\``).join(", ")}`);
+        L.push("");
+      }
       if (d.zones.length) {
         L.push("| zone id | size | at (x,y) | fps | keys |", "|---|---|---|---|---|");
         for (const z of d.zones) {

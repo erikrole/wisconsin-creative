@@ -277,6 +277,18 @@ describe("Board manifest", () => {
     expect(problems).toMatch(/unknown issue kind maybe/);
   });
 
+  it("keeps layouts to zones that exist on the board and don't overlap", () => {
+    const north = manifest.venues[0].displays.find((d: { id: string }) => d.id === "camp-randall/north-board");
+    expect(north.layouts.map((l: { id: string }) => l.id)).toEqual(["fullscreen", "main-frames", "main-wings", "main-short-wings", "main-ads"]);
+    const bad = structuredClone(manifest);
+    const layouts = bad.venues[0].displays.find((d: { id: string }) => d.id === "camp-randall/north-board").layouts;
+    layouts[1].zones.push("camp-randall/north-board/wing-left-fg");
+    layouts[2].zones.push("camp-randall/north-board/nope");
+    const problems = validateManifest(bad).join("\n");
+    expect(problems).toMatch(/layout main-frames: camp-randall\/north-board\/frame-left overlaps camp-randall\/north-board\/wing-left-fg/);
+    expect(problems).toMatch(/layout main-wings: no zone camp-randall\/north-board\/nope on this display/);
+  });
+
   it("keeps the stable canvas keys production tools build against", () => {
     const keys = manifest.canvases.map((c: { key: string }) => c.key);
     expect(keys).toHaveLength(58);
@@ -432,7 +444,7 @@ describe("Board Sizes agent files", () => {
 describe("Board Sizes page", () => {
   const app = readFileSync("public/board-sizes/app.js", "utf8");
   it("hides the way back to the site on shared links", () => {
-    expect(app).toMatch(/share: params\.get\('share'\) === '1'/);
+    expect(app).toMatch(/share(:| =) params\.get\('share'\) === '1'/);
     expect(app).toMatch(/if \(state\.share\) \{[^}]*el\['side-foot'\]\.hidden = true;/);
     expect(readFileSync("public/board-sizes/index.html", "utf8")).toMatch(/<div class="side-foot" id="side-foot">\s*<a href="\/tools"/);
   });

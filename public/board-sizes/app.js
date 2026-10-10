@@ -3,11 +3,13 @@
    Board Info sheet, the 2024 Camp Randall guide, Colosseum's deliverables
    sheet and the Board Builder. Client-only: no network requests.
 
-   Views: ?v=<venue> (a venue's boards), ?c=<content type> (the boards one
-   piece of content needs), ?q=<search> (across venues), ?p=agents (files and
-   rules for agents and tools), ?p=issues (every open question). #<id> jumps
-   to a display or zone by its stable id. &share=1 hides the way back to the
-   rest of the site. */
+   Views: ?v=<venue> (a venue's boards), ?d=<display id> (one board, large,
+   with its layouts; &l=<layout id> picks one), ?c=<content type> (the boards
+   one piece of content needs), ?q=<search> (across venues), ?p=agents (files
+   and rules for agents and tools), ?p=issues (every open question). #<id>
+   jumps to a display or zone by its stable id. &share=1 hides the way back to
+   the rest of the site. Moving between views adds a history entry; typing a
+   search doesn't. */
 (function () {
   'use strict';
 
@@ -15,7 +17,7 @@
   var VENUE_KEY = 'boards.venue.v1';
   var el = {};
   ['search', 'nav-venues', 'nav-broad', 'nav-gameday', 'nav-ref', 'tools-link', 'side-foot', 'menu', 'scrim', 'mobile-title',
-   'crumbs', 'title', 'actions', 'subtitle', 'props', 'callout', 'summary', 'view', 'empty', 'footnote', 'toast'
+   'crumbs', 'title', 'actions', 'subtitle', 'props', 'summary', 'view', 'empty', 'footnote', 'toast'
   ].forEach(function (id) { el[id] = document.getElementById(id); });
 
   function storageGet(k) { try { return window.localStorage.getItem(k); } catch (e) { return null; } }
@@ -41,6 +43,8 @@
     var id = z ? z.id : d.id;
     (KEYS[id] = KEYS[id] || []).push(c.key);
   });
+  var KEY_ID = {};
+  Object.keys(KEYS).forEach(function (id) { KEYS[id].forEach(function (k) { KEY_ID[k] = id; }); });
   var ISSUE_LABEL = { conflict: 'Sources disagree', tbd: 'Not final', unconfirmed: 'Unconfirmed', naming: 'Names may change' };
   var OPEN_ISSUES = [];
   VENUES.forEach(function (v) {
@@ -54,14 +58,21 @@
   DATA.content.broad.forEach(function (c) { c.kind = 'broad'; CONTENT[c.id] = c; });
   DATA.content.gameDay.forEach(function (g) { g.items.forEach(function (c) { c.kind = 'gameDay'; c.group = g.name; CONTENT[c.id] = c; }); });
 
-  var params = new URLSearchParams(window.location.search);
-  var state = {
-    venue: venueById[params.get('v')] ? params.get('v') : (venueById[storageGet(VENUE_KEY)] ? storageGet(VENUE_KEY) : VENUES[0].id),
-    content: CONTENT[params.get('c')] ? params.get('c') : null,
-    page: PAGES[params.get('p')] ? params.get('p') : null,
-    query: params.get('q') || '',
-    share: params.get('share') === '1'
-  };
+  function isDisplay(id) { return !!(BY_ID[id] && !BY_ID[id].z); }
+  var state = {};
+  function readParams() {
+    var params = new URLSearchParams(window.location.search);
+    var d = isDisplay(params.get('d')) ? params.get('d') : null;
+    state.display = d;
+    state.layout = d && (BY_ID[d].d.layouts || []).some(function (l) { return l.id === params.get('l'); }) ? params.get('l') : null;
+    state.filter = 'all';
+    state.venue = d ? BY_ID[d].v.id : venueById[params.get('v')] ? params.get('v') : (venueById[storageGet(VENUE_KEY)] ? storageGet(VENUE_KEY) : VENUES[0].id);
+    state.content = CONTENT[params.get('c')] ? params.get('c') : null;
+    state.page = PAGES[params.get('p')] ? params.get('p') : null;
+    state.query = params.get('q') || '';
+    state.share = params.get('share') === '1';
+  }
+  readParams();
   if (state.share) {
     document.body.classList.add('is-share');
     el['side-foot'].hidden = true;
@@ -103,11 +114,9 @@
     image: '<rect x="2.5" y="3.5" width="11" height="9" rx="1"/><path d="m4.5 10.5 2.5-2.5 2 2 1.5-1.5 1.5 1.5"/>',
     arrow: '<path d="M6 3.5 10.5 8 6 12.5"/>',
     json: '<path d="M5.5 2.5c-1.5 0-2 .7-2 2v1.6c0 .9-.5 1.4-1.3 1.9.8.5 1.3 1 1.3 1.9v1.6c0 1.3.5 2 2 2M10.5 2.5c1.5 0 2 .7 2 2v1.6c0 .9.5 1.4 1.3 1.9-.8.5-1.3 1-1.3 1.9v1.6c0 1.3-.5 2-2 2"/>',
-    warn: '<path d="M8 2.2 14.3 13H1.7z"/><path d="M8 6.5v3.2M8 11.4v.1"/>',
-    info: '<circle cx="8" cy="8" r="6"/><path d="M8 7.2v4M8 4.9v.1"/>'
+    warn: '<path d="M8 2.2 14.3 13H1.7z"/><path d="M8 6.5v3.2M8 11.4v.1"/>'
   };
   function slug(s) { return s.replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
-  function cardId(v, d) { return d.id; }
 
   var toastTimer = null;
   function toast(message) {
@@ -164,7 +173,8 @@
   }
 
   // Search: words must all appear in the zone, display, processor or venue
-  // name; a size like 1920x1080 matches exactly, zones and whole displays.
+  // name, id or canvas key; a size like 1920x1080 matches exactly, zones and
+  // whole displays. Enter on an exact id or key opens it.
   function matcher(query) {
     var q = query.trim().toLowerCase().replace(/,/g, '');
     if (!q) return null;
@@ -176,8 +186,8 @@
     var words = q.split(/\s+/);
     function has(hay) { hay = hay.toLowerCase(); return words.every(function (w) { return hay.indexOf(w) !== -1; }); }
     return {
-      zone: function (z, d, v) { return has([z.name, d.name, d.sheetName || '', d.group || '', d.processor || '', v.name, size(z.w, z.h)].join(' ')); },
-      display: function (d, v) { return has([d.name, d.sheetName || '', d.group || '', d.processor || '', v.name, size(d.w, d.h)].join(' ')); }
+      zone: function (z, d, v) { return has([z.name, z.id, (KEYS[z.id] || []).join(' '), d.name, d.sheetName || '', d.group || '', d.processor || '', v.name, size(z.w, z.h)].join(' ')); },
+      display: function (d, v) { return has([d.name, d.id, (KEYS[d.id] || []).join(' '), d.sheetName || '', d.group || '', d.processor || '', v.name, size(d.w, d.h)].join(' ')); }
     };
   }
 
@@ -195,14 +205,13 @@
     li.appendChild(b);
     return li;
   }
-  function boardCount(c) { return canvasCount(c); }
 
   function renderNav() {
     var searching = !!state.query.trim();
     el['nav-venues'].textContent = '';
     VENUES.forEach(function (v) {
       el['nav-venues'].appendChild(navButton(v.name, v.displays.length, !searching && !state.content && !state.page && state.venue === v.id, function () {
-        state.venue = v.id; state.content = null; state.page = null; clearSearch(); storageSet(VENUE_KEY, v.id); render(true);
+        go({ venue: v.id });
       }));
     });
     el['nav-ref'].textContent = '';
@@ -211,7 +220,7 @@
     });
     el['nav-broad'].textContent = '';
     DATA.content.broad.forEach(function (c) {
-      el['nav-broad'].appendChild(navButton(c.name, boardCount(c), !searching && state.content === c.id, function () { openContent(c.id); }));
+      el['nav-broad'].appendChild(navButton(c.name, canvasCount(c), !searching && state.content === c.id, function () { openContent(c.id); }));
     });
     el['nav-gameday'].textContent = '';
     DATA.content.gameDay.forEach(function (g) {
@@ -226,7 +235,7 @@
       det.appendChild(sum);
       var ul = node('ul');
       g.items.forEach(function (c) {
-        ul.appendChild(navButton(c.name.replace(/^(Score|Noise|Play 1|Play 2|Living Hold): /, ''), boardCount(c), !searching && state.content === c.id, function () { openContent(c.id); }));
+        ul.appendChild(navButton(c.name.replace(/^(Score|Noise|Play 1|Play 2|Living Hold): /, ''), canvasCount(c), !searching && state.content === c.id, function () { openContent(c.id); }));
       });
       det.appendChild(ul);
       li.appendChild(det);
@@ -234,8 +243,25 @@
     });
   }
 
-  function openContent(id) { state.content = id; state.page = null; clearSearch(); render(true); }
-  function openPage(id) { state.page = id; state.content = null; clearSearch(); render(true); }
+  // Every move between views goes through here: reset the view, apply the
+  // change, render and add a history entry.
+  function go(patch) {
+    state.content = null; state.page = null; state.display = null; state.layout = null; state.filter = 'all';
+    clearSearch();
+    Object.keys(patch).forEach(function (k) { state[k] = patch[k]; });
+    if (state.display) state.venue = BY_ID[state.display].v.id;
+    storageSet(VENUE_KEY, state.venue);
+    render(true, true);
+  }
+  function openContent(id) { go({ content: id }); }
+  function openPage(id) { go({ page: id }); }
+  function openBoard(id) { go({ display: id }); }
+  function boardLink(id, label, cls) {
+    var a = node('a', cls || '', label);
+    a.href = '?d=' + encodeURIComponent(id) + (state.share ? '&share=1' : '');
+    a.addEventListener('click', function (e) { if (e.metaKey || e.ctrlKey || e.shiftKey) return; e.preventDefault(); openBoard(id); });
+    return a;
+  }
   function clearSearch() { state.query = ''; el.search.value = ''; }
   function closeNav() { document.body.classList.remove('nav-open'); el.menu.setAttribute('aria-expanded', 'false'); }
   el.menu.addEventListener('click', function () {
@@ -247,30 +273,22 @@
 
   /* ---------------- drawing ---------------- */
 
-  function renderFigure(d, isHot) {
+  // The board, to scale. Canvas, crops, scrims and seams are SVG; zones are
+  // HTML buttons placed in % on top, so they can carry labels (shown only when
+  // the zone is big enough, via container queries), take focus, and link to
+  // their row. Zones that fill the whole board are the board itself.
+  // opts.big draws a taller board view; opts.show(row) returns 'show',
+  // 'dim' or 'hide' for each zone (layouts hide, filters dim).
+  function renderFigure(v, d, isHot, card, opts) {
+    opts = opts || {};
     var wrap = node('div', 'figure');
-    var svg = svgNode('svg', { viewBox: '0 0 ' + d.w + ' ' + d.h, preserveAspectRatio: 'xMidYMid meet', 'aria-hidden': 'true' });
+    var svg = svgNode('svg', { viewBox: '0 0 ' + d.w + ' ' + d.h, preserveAspectRatio: 'none', 'aria-hidden': 'true' });
     var id = 'hatch-' + slug((d.processor || '') + d.name + d.w);
     var defs = svgNode('defs', {});
     defs.innerHTML = '<pattern id="' + id + '" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="10" height="10" fill="currentColor" fill-opacity=".1"/><line x1="0" y1="0" x2="0" y2="10" stroke="currentColor" stroke-width="2.5" stroke-opacity=".7"/></pattern>';
     svg.appendChild(defs);
     svg.appendChild(svgNode('rect', { class: 'canvas', x: 0, y: 0, width: d.w, height: d.h, 'vector-effect': 'non-scaling-stroke' }));
     var used = {}, placed = 0;
-    d.zones.forEach(function (z) {
-      (z.at || []).forEach(function (p) {
-        var top = p.y, left = p.x;
-        if (left >= d.w || top >= d.h || left + z.w <= 0 || top + z.h <= 0) return;
-        placed++;
-        var from = z.atFrom === 'derived' ? 'derived' : 'stated';
-        used[from] = true;
-        svg.appendChild(svgNode('rect', {
-          class: 'zone zone-' + from + (isHot && isHot(z) ? ' is-hot' : ''), 'data-zone': d.name + '|' + z.n,
-          x: Math.max(0, left), y: Math.max(0, top),
-          width: Math.min(z.w, d.w - Math.max(0, left)), height: Math.min(z.h, d.h - Math.max(0, top)),
-          'vector-effect': 'non-scaling-stroke'
-        }));
-      });
-    });
     (d.overlays || []).forEach(function (o) {
       if (o.kind === 'crop' || o.kind === 'scrim') {
         var g = svgNode('g', { class: 'ov-' + o.kind });
@@ -286,14 +304,162 @@
         used[o.kind === 'break' ? 'break' : 'seam'] = true;
       }
     });
-    // Cap tall boards at 180 px (the figure narrows to keep its proportions);
-    // keep hairline ribbons at least 6 px so they stay visible.
-    wrap.style.maxWidth = Math.round((180 * d.w) / d.h) + 'px';
-    svg.style.minHeight = '6px';
     wrap.appendChild(svg);
+
+    var layer = node('div', 'hits');
+    // One rect per placed position, clipped to the board. Zones that fill the
+    // whole board are the board itself.
+    var rects = [];
+    groupZones(d.zones).forEach(function (row) {
+      var z = row.first;
+      var shown = opts.show ? opts.show(row) : 'show';
+      if (shown === 'hide') return;
+      (z.at || []).forEach(function (p) {
+        if (p.x >= d.w || p.y >= d.h) return;
+        placed++;
+        used[z.atFrom === 'derived' ? 'derived' : 'stated'] = true;
+        if (z.w === d.w && z.h === d.h) {
+          // Not drawn, but it outlines the whole board when its row is hovered or picked.
+          var whole = node('span', 'zone-whole');
+          whole.setAttribute('data-zone', d.name + '|' + z.n);
+          layer.appendChild(whole);
+          return;
+        }
+        rects.push({ row: row, z: z, dim: shown === 'dim', x: p.x, y: p.y, w: Math.min(z.w, d.w - p.x), h: Math.min(z.h, d.h - p.y) });
+      });
+    });
+    // A zone that holds others is an alternative layout of the same space
+    // (Frame-Left around the wing and ads). Its label moves to its top-left
+    // corner, and when the zones inside fill most of it (over half, sampled on
+    // a 24 × 24 grid) it shows only on hover or pick.
+    function holds(a, b) { return a !== b && b.x >= a.x && b.y >= a.y && b.x + b.w <= a.x + a.w && b.y + b.h <= a.y + a.h && (a.w > b.w || a.h > b.h); }
+    function covered(r, kids) {
+      var hit = 0, n = 24;
+      for (var i = 0; i < n; i++) for (var j = 0; j < n; j++) {
+        var px = r.x + (i + 0.5) * r.w / n, py = r.y + (j + 0.5) * r.h / n;
+        if (kids.some(function (k) { return px >= k.x && px < k.x + k.w && py >= k.y && py < k.y + k.h; })) hit++;
+      }
+      return hit / (n * n);
+    }
+    rects.forEach(function (r) {
+      var kids = rects.filter(function (o) { return holds(r, o); });
+      r.parent = kids.length > 0;
+      r.hidden = r.parent && covered(r, kids) > 0.5;
+    });
+    // Largest first, so smaller zones sit on top and win the pointer.
+    rects.sort(function (a, b) { return b.w * b.h - a.w * a.h; });
+    rects.forEach(function (rc) {
+      var row = rc.row, z = rc.z;
+      var b = node('button', 'zone-hit zone-' + (z.atFrom === 'derived' ? 'derived' : 'stated') + (rc.parent ? ' is-parent' : '') + (rc.hidden ? ' is-covered' : '') + (rc.dim ? ' is-dim' : '') + (isHot && isHot(z) ? ' is-match' : ''));
+      b.type = 'button';
+      b.setAttribute('data-zone', d.name + '|' + z.n);
+      b.setAttribute('data-area', String(rc.w * rc.h));
+      b.style.left = (rc.x / d.w * 100) + '%';
+      b.style.top = (rc.y / d.h * 100) + '%';
+      b.style.width = (rc.w / d.w * 100) + '%';
+      b.style.height = (rc.h / d.h * 100) + '%';
+      b.title = row.base + ' · ' + pretty(z.w, z.h);
+      b.setAttribute('aria-label', row.base + ', ' + size(z.w, z.h) + ': show in the list');
+      var label = node('span', 'zone-label');
+      label.appendChild(node('b', '', row.base));
+      label.appendChild(node('i', '', pretty(z.w, z.h)));
+      b.appendChild(label);
+      var keys = row.zones.map(function (x) { return d.name + '|' + x.n; });
+      b.addEventListener('mouseenter', function () { hot(card, keys, true); });
+      b.addEventListener('mouseleave', function () { hot(card, keys, false); });
+      b.addEventListener('focus', function () { hot(card, keys, true); });
+      b.addEventListener('blur', function () { hot(card, keys, false); });
+      b.addEventListener('click', function () {
+        pick(card, keys);
+        var r = document.getElementById(row.first.id);
+        if (r) r.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
+      layer.appendChild(b);
+    });
+    wrap.appendChild(layer);
+    // Cap tall boards (260 px in a card, 440 px in the board view): the figure
+    // narrows to keep its proportions. In the board view, ribbons draw at
+    // least 64 px tall and scroll sideways instead of shrinking to a hairline.
+    var capH = opts.big ? 440 : 260;
+    wrap.style.maxWidth = Math.round((capH * d.w) / d.h) + 'px';
+    // The board view pins the drawing while the list scrolls, so it also
+    // keeps to 38% of the window height.
+    if (opts.big) wrap.style.maxWidth = 'min(' + wrap.style.maxWidth + ', calc(38vh * ' + (d.w / d.h).toFixed(4) + '))';
+    var ribbon = opts.big && d.w / d.h >= 8;
+    if (ribbon) { wrap.style.width = Math.round((64 * d.w) / d.h) + 'px'; wrap.style.maxWidth = 'none'; }
+    // The sizer's percent padding resolves against the figure's own width, so
+    // the drawing keeps the board's aspect ratio at any width; hairline
+    // ribbons stay at least 8 px tall.
+    var sizer = node('div', 'sizer');
+    sizer.style.paddingBottom = 'max(' + (d.h / d.w * 100) + '%, 8px)';
+    wrap.insertBefore(sizer, wrap.firstChild);
+    if (window.ResizeObserver) new ResizeObserver(function () { declutter(wrap); }).observe(wrap);
     var dw = node('div', 'dim dim-w'); dw.appendChild(node('span', '', d.w.toLocaleString('en-US') + ' px')); wrap.appendChild(dw);
     var dh = node('div', 'dim dim-h'); dh.appendChild(node('span', '', d.h.toLocaleString('en-US') + ' px')); wrap.appendChild(dh);
-    return { el: wrap, placed: placed, used: used };
+    return { el: wrap, placed: placed, used: used, ribbon: ribbon };
+  }
+
+  // Where a zone sits on its board, at thumbnail size. Falls back to the
+  // zone's own shape when no source gives a position.
+  function miniMap(d, z, w, h) {
+    var thumb = node('span', 'thumb');
+    if (!z || !z.at || !z.at.length || (z.w === d.w && z.h === d.h)) {
+      var box = node('i', 'shape');
+      var scale = Math.min(44 / w, 24 / h);
+      box.style.width = Math.max(2, w * scale) + 'px';
+      box.style.height = Math.max(2, h * scale) + 'px';
+      thumb.appendChild(box);
+      return thumb;
+    }
+    var board = node('i', 'board');
+    var bs = Math.min(48 / d.w, 26 / d.h);
+    board.style.width = Math.max(4, d.w * bs) + 'px';
+    board.style.height = Math.max(3, d.h * bs) + 'px';
+    z.at.forEach(function (p) {
+      var spot = node('b');
+      spot.style.left = (p.x / d.w * 100) + '%';
+      spot.style.top = (p.y / d.h * 100) + '%';
+      spot.style.width = Math.max(z.w / d.w * 100, 4) + '%';
+      spot.style.height = Math.max(z.h / d.h * 100, 12) + '%';
+      board.appendChild(spot);
+    });
+    thumb.appendChild(board);
+    thumb.title = 'Where it sits on ' + d.name;
+    return thumb;
+  }
+
+  // Every display at a venue on one shared scale: a skyline you can click.
+  function renderOverview(v) {
+    var maxW = Math.max.apply(null, v.displays.map(function (d) { return d.w; }));
+    var maxH = Math.max.apply(null, v.displays.map(function (d) { return d.h; }));
+    // One scale for every tile: the widest board fills a cell, the tallest fits.
+    var scale = Math.min(112 / maxW, 40 / maxH);
+    var box = node('nav', 'overview');
+    box.setAttribute('aria-label', v.name + ' displays, to scale');
+    var head = node('div', 'overview-head');
+    head.appendChild(node('span', '', 'At a glance'));
+    head.appendChild(node('small', '', 'Every display drawn on one scale. Pick one to jump to it.'));
+    box.appendChild(head);
+    var strip = node('div', 'overview-strip');
+    strip.style.setProperty('--tile-h', Math.max(8, Math.ceil(maxH * scale)) + 'px');
+    v.displays.forEach(function (d) {
+      var b = node('button', 'ov-item');
+      b.type = 'button';
+      var tile = node('span', 'ov-tile');
+      tile.style.width = Math.max(3, d.w * scale) + 'px';
+      tile.style.height = Math.max(2, d.h * scale) + 'px';
+      if ((d.issues || []).length || d.zones.some(function (z) { return z.issues; })) tile.classList.add('has-issue');
+      b.appendChild(tile);
+      var cap = node('span', 'ov-cap');
+      cap.appendChild(node('b', '', d.name));
+      cap.appendChild(node('i', '', pretty(d.w, d.h)));
+      b.appendChild(cap);
+      b.setAttribute('aria-label', d.name + ', ' + size(d.w, d.h));
+      b.addEventListener('click', function () { goTo(d.id); });
+      strip.appendChild(b);
+    });
+    box.appendChild(strip);
+    return box;
   }
 
   var LEGEND = {
@@ -368,59 +534,57 @@
 
   /* ---------------- display cards ---------------- */
 
-  function sourcePills(d) {
-    var wrap = node('span');
-    Object.keys(DATA.sources).forEach(function (key) {
-      if (!d.sources || !d.sources[key]) return;
-      var p = node('span', 'pill src', DATA.sources[key].label + (key === 'guide' ? ' ' + d.sources[key] : ''));
-      p.title = DATA.sources[key].detail + ' — listed as “' + d.sources[key] + '”';
-      wrap.appendChild(p);
-    });
-    return wrap;
-  }
-  function deliveryPills(delivery) {
-    if (!delivery) return null;
-    var wrap = node('span');
-    [['fps', function (v) { return v + ' fps'; }], ['video', null], ['still', function (v) { return 'Stills: ' + v; }], ['duration', null], ['audio', function (v) { return 'Audio: ' + v; }]]
-      .forEach(function (pair) {
-        var v = delivery[pair[0]];
-        if (v) wrap.appendChild(node('span', 'pill mono', pair[1] ? pair[1](v) : v));
-      });
-    return wrap;
-  }
-
-  function renderDisplay(v, d, match, showVenue) {
+  // opts.board: the one-board view (no head, large drawing); opts.show(row)
+  // as in renderFigure. Hidden and dimmed zones drop out of the list.
+  function renderDisplay(v, d, match, showVenue, opts) {
+    opts = opts || {};
     var displayHit = match && match.display(d, v);
     var zoneMatch = match && !displayHit ? function (z) { return match.zone(z, d, v); } : null;
     var zones = zoneMatch ? d.zones.filter(zoneMatch) : d.zones;
     if (match && !displayHit && !zones.length) return null;
 
-    var card = node('section', 'card');
-    card.id = cardId(v, d);
+    var card = node('section', 'card' + (opts.board ? ' is-board' : ''));
+    card.id = d.id;
     card.setAttribute('aria-label', v.name + ' ' + d.name);
     var head = node('div', 'card-head');
-    head.appendChild(node('h2', '', d.name));
-    if (showVenue) head.appendChild(node('span', 'venue-of', v.name));
-    if (d.processor) head.appendChild(node('span', 'pill mono', d.processor));
-    var dims = node('span', 'dims', pretty(d.w, d.h));
+    var title = node('div', 'card-title');
+    var h2 = node('h2');
+    h2.appendChild(boardLink(d.id, d.name, 'board-link'));
+    title.appendChild(h2);
+    if (showVenue) title.appendChild(node('span', 'venue-of', v.name));
+    if (d.processor) title.appendChild(node('span', 'processor', d.processor));
+    head.appendChild(title);
+    var dims = node('div', 'dims');
+    dims.appendChild(sizeButton(d.w, d.h, d.name));
     dims.appendChild(node('small', '', ratio(d.w, d.h) + (d.zones.length ? ' · ' + d.zones.length + ' zone' + (d.zones.length === 1 ? '' : 's') : '')));
     head.appendChild(dims);
-    card.appendChild(head);
+    if (!opts.board) card.appendChild(head);
 
     var props = node('div', 'card-props');
     props.appendChild(idPills(d.id));
-    props.appendChild(sourcePills(d));
-    var del = deliveryPills(d.delivery);
-    if (del) props.appendChild(del);
     card.appendChild(props);
 
     var drawing = node('div', 'drawing');
-    var fig = renderFigure(d, zoneMatch);
+    var fig = renderFigure(v, d, zoneMatch, card, { big: opts.board, show: opts.show });
+    if (fig.ribbon) drawing.classList.add('is-scroll');
+    // Pin the drawing while the list scrolls, but only when it shows zones.
+    // Rows scroll in below it (--pin feeds their scroll-margin-top).
+    if (opts.board && fig.placed) {
+      drawing.classList.add('is-pinned');
+      if (window.ResizeObserver) new ResizeObserver(function () { card.style.setProperty('--pin', drawing.offsetHeight + 'px'); }).observe(drawing);
+    }
     drawing.appendChild(fig.el);
     var legend = renderLegend(fig.used);
     if (legend) drawing.appendChild(legend);
-    var figNote = d.placedNote || (!fig.placed && d.zones.length ? 'The sources give sizes for this display, not zone positions.' : '');
-    if (figNote) drawing.appendChild(node('p', 'fig-note', figNote));
+    if (!fig.placed && d.zones.length) {
+      drawing.appendChild(node('p', 'fig-note', 'The sources give sizes for this display, not zone positions.'));
+      if (opts.board) {
+        var sc = renderScale(d, card, opts.show);
+        sc.style.width = fig.el.style.width;
+        sc.style.maxWidth = fig.el.style.maxWidth;
+        drawing.appendChild(sc);
+      }
+    }
     if (d.link) {
       var a = node('a', 'fig-link', d.link.label + ' ↗');
       a.href = d.link.href; a.target = '_blank'; a.rel = 'noopener noreferrer';
@@ -428,24 +592,24 @@
     }
     card.appendChild(drawing);
 
-    if (zones.length) {
+    var rows = groupZones(zones).filter(function (row) { return !opts.show || opts.show(row) === 'show'; });
+    if (rows.length) {
       var list = node('div', 'zones');
-      groupZones(zones).forEach(function (row) { list.appendChild(renderZoneRow(v, d, row, card, !!zoneMatch)); });
+      rows.forEach(function (row) { list.appendChild(renderZoneRow(v, d, row, card, !!zoneMatch)); });
       card.appendChild(list);
+    } else if (opts.board && d.zones.length) {
+      card.appendChild(node('p', 'zones-empty', 'No zones match this filter.'));
     }
 
     var foot = node('div', 'card-foot');
-    var info = (d.notes || []).slice();
-    var pads = d.zones.filter(function (z) { return z.pad; });
-    if (pads.length) info.push('Windows tagged “' + pads[0].pad + ' px pad”: keep content ' + pads[0].pad + ' px inside every edge; the board draws a border over them. Deliver at full size.');
-    if (info.length || (d.issues && d.issues.length)) {
+    if (d.issues && d.issues.length) {
       var notes = node('ul', 'notes');
-      (d.issues || []).forEach(function (i) { notes.appendChild(issueItem(i)); });
-      info.forEach(function (n) { notes.appendChild(node('li', '', n)); });
+      d.issues.forEach(function (i) { notes.appendChild(issueItem(i)); });
       foot.appendChild(notes);
     }
-    foot.appendChild(button('Copy ' + size(d.w, d.h), 'copy', function () { copy(size(d.w, d.h), 'Copied ' + size(d.w, d.h)); }));
-    foot.appendChild(button('Guide PNG', 'image', function () {
+    var acts = node('div', 'foot-actions');
+    foot.appendChild(acts);
+    acts.appendChild(button('Guide PNG', 'image', function () {
       downloadGuide({ w: d.w, h: d.h, zones: d.zones, overlays: d.overlays,
         label: (d.processor ? d.processor + ' · ' : '') + d.name + ' ' + size(d.w, d.h),
         filename: v.code + '_' + slug(d.name) + '_' + size(d.w, d.h) + '_guide.png' });
@@ -492,15 +656,6 @@
     return JSON.stringify(out, null, 2);
   }
 
-  function thumbFor(w, h) {
-    var thumb = node('span', 'thumb');
-    var box = node('i');
-    var scale = Math.min(40 / w, 22 / h);
-    box.style.width = Math.max(2, w * scale) + 'px';
-    box.style.height = Math.max(2, h * scale) + 'px';
-    thumb.appendChild(box);
-    return thumb;
-  }
   function specTags(z) {
     var tags = node('span', 'tags');
     if (z.stillOnly) tags.appendChild(node('span', 'tag', 'Stills only'));
@@ -524,33 +679,40 @@
     var r = node('div', 'zone-row' + (matching ? ' is-match' : ''));
     r.id = z.id;
     var keys = row.zones.map(function (x) { return d.name + '|' + x.n; });
+    r.setAttribute('data-zone', keys[0]);
     r.addEventListener('mouseenter', function () { hot(card, keys, true); });
-    r.addEventListener('mouseleave', function () { if (!matching) hot(card, keys, false); });
-    r.appendChild(thumbFor(row.w, row.h));
+    r.addEventListener('mouseleave', function () { hot(card, keys, false); });
+    r.addEventListener('click', function (e) { if (!e.target.closest('button, a')) pick(card, keys); });
+    r.appendChild(miniMap(d, z, row.w, row.h));
 
     var name = node('span', 'zone-name');
-    name.appendChild(node('b', '', row.base));
+    var line = node('span', 'zone-line');
+    line.appendChild(node('b', '', row.base));
     var tags = specTags(z);
-    row.layers.slice().reverse().forEach(function (l) { tags.insertBefore(node('span', 'tag', l), tags.firstChild); });
-    if (tags.childNodes.length) name.appendChild(tags);
-    var bits = [];
-    if (row.zones[0].n != null) bits.push('#' + row.zones.map(function (x) { return x.n; }).join(', #'));
-    bits.push(ratio(row.w, row.h));
-    if (z.at) bits.push(z.at.map(function (p) { return 'x ' + p.x + ', y ' + p.y; }).join(' · ') + (z.atFrom === 'derived' ? ' (from sizes)' : ''));
-    if (z.page) bits.push('guide p. ' + z.page);
-    name.appendChild(node('span', 'zone-meta', bits.join(' · ')));
-    var idLine = node('span', 'zone-id');
-    var idb = node('button', '', row.zones.map(function (x) { return x.id.slice(d.id.length + 1); }).join(' · '));
+    if (row.layers.length) {
+      var lt = node('span', 'tag layers', row.layers.join(' + '));
+      lt.title = row.layers.length > 1 ? 'Two processor layers of one window: one asset fills both unless the content needs them separately.' : 'Processor layer';
+      tags.insertBefore(lt, tags.firstChild);
+    }
+    if (tags.childNodes.length) line.appendChild(tags);
+    name.appendChild(line);
+    var meta = node('span', 'zone-meta');
+    var idb = node('button', 'zone-id', row.zones.map(function (x) { return x.id.slice(d.id.length + 1); }).join(' + '));
     idb.type = 'button';
-    idb.title = 'Copy ' + z.id;
+    idb.title = 'Copy id ' + z.id;
     idb.setAttribute('aria-label', 'Copy id ' + z.id);
     idb.addEventListener('click', function () { copy(z.id, 'Copied ' + z.id, idb); });
-    idLine.appendChild(idb);
-    name.appendChild(idLine);
-    if ((z.issues && z.issues.length) || (z.notes && z.notes.length)) {
+    meta.appendChild(idb);
+    var bits = [];
+    if (z.at) bits.push(z.at.map(function (p) { return 'x ' + p.x.toLocaleString('en-US') + ' y ' + p.y.toLocaleString('en-US'); }).join(' · ') + (z.atFrom === 'derived' ? ' (from sizes)' : ''));
+    bits.push(ratio(row.w, row.h));
+    var rest = node('span', '', bits.join(' · '));
+    if (row.zones[0].n != null) rest.title = 'Zone ' + row.zones.map(function (x) { return '#' + x.n; }).join(', ') + ' in the source sheet';
+    meta.appendChild(rest);
+    name.appendChild(meta);
+    if (z.issues && z.issues.length) {
       var ul = node('ul', 'zone-notes');
-      (z.issues || []).forEach(function (i) { var li = issueItem(i); li.className = 'red'; ul.appendChild(li); });
-      (z.notes || []).forEach(function (n) { ul.appendChild(node('li', '', n)); });
+      z.issues.forEach(function (i) { var li = issueItem(i); li.className = 'red'; ul.appendChild(li); });
       name.appendChild(ul);
     }
     r.appendChild(name);
@@ -578,13 +740,46 @@
     return r;
   }
 
-  function hot(card, keys, on) {
-    keys.forEach(function (k) {
-      Array.prototype.forEach.call(card.querySelectorAll('[data-zone="' + k.replace(/"/g, '\\"') + '"]'), function (rect) {
-        rect.classList.toggle('is-hot', on);
-      });
+  // Labels that would overlap a smaller zone's label hide until their zone is
+  // hovered or picked. Smallest first: the most specific zones keep theirs.
+  // Zones that hold others go last, so the zones inside keep their labels.
+  function declutter(fig) {
+    var hits = Array.prototype.slice.call(fig.querySelectorAll('.zone-hit:not(.is-covered)'));
+    hits.forEach(function (b) { b.classList.remove('is-crowded'); });
+    hits.sort(function (a, b) {
+      return a.classList.contains('is-parent') - b.classList.contains('is-parent') || a.getAttribute('data-area') - b.getAttribute('data-area');
+    });
+    var kept = [];
+    hits.forEach(function (b) {
+      var label = b.querySelector('.zone-label');
+      var r = label && label.getBoundingClientRect();
+      if (!r || !r.width) return;
+      var clash = kept.some(function (k) { return r.left < k.right + 2 && r.right > k.left - 2 && r.top < k.bottom + 1 && r.bottom > k.top - 1; });
+      if (clash) b.classList.add('is-crowded'); else kept.push(r);
     });
   }
+
+  // Click a zone in the drawing or its row to pick it; it stays lit until you
+  // pick another, pick it again or press Escape. Works without hover (touch).
+  function pick(card, keys) {
+    var again = card.getAttribute('data-picked') === keys[0];
+    clearPicks();
+    if (again) return;
+    card.setAttribute('data-picked', keys[0]);
+    eachZone(card, keys, function (n) { n.classList.add('is-picked'); });
+  }
+  function clearPicks() {
+    Array.prototype.forEach.call(document.querySelectorAll('.is-picked'), function (n) { n.classList.remove('is-picked'); });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-picked]'), function (n) { n.removeAttribute('data-picked'); });
+  }
+
+  // Every node (drawn zone, list row) that stands for one of these zones.
+  function eachZone(card, keys, fn) {
+    keys.forEach(function (k) {
+      Array.prototype.forEach.call(card.querySelectorAll('[data-zone="' + k.replace(/"/g, '\\"') + '"]'), fn);
+    });
+  }
+  function hot(card, keys, on) { eachZone(card, keys, function (n) { n.classList.toggle('is-hot', on); }); }
 
   /* ---------------- content types ---------------- */
 
@@ -675,7 +870,6 @@
       ? node('span', 'pill draft', 'Draft list: correct it in boards.json')
       : node('span', 'pill src', 'Colosseum deliverables'));
     el.props.hidden = false;
-    el.callout.textContent = '';
 
     setActions([
       button('Copy sizes', 'copy', function () {
@@ -698,7 +892,7 @@
       box.appendChild(h);
       mine.forEach(function (r) {
         var row = node('div', 't-row');
-        row.appendChild(thumbFor(r.w, r.h));
+        row.appendChild(miniMap(r.d, r.z.at ? r.z : null, r.w, r.h));
         var nm = node('span', 't-name');
         var a = node('a', '', r.label);
         var target = r.ids ? r.ids[0] : r.d.id;
@@ -706,13 +900,9 @@
         a.addEventListener('click', function (e) { e.preventDefault(); goTo(target); });
         var b = node('b'); b.appendChild(a); nm.appendChild(b);
         var tags = specTags(r.z);
-        (r.layers || []).slice().reverse().forEach(function (l) { tags.insertBefore(node('span', 'tag', l), tags.firstChild); });
+        if (r.layers && r.layers.length) tags.insertBefore(node('span', 'tag layers', r.layers.join(' + ')), tags.firstChild);
         if (r.count > 1) tags.insertBefore(node('span', 'tag', '×' + r.count), tags.firstChild);
         if (tags.childNodes.length) nm.appendChild(tags);
-        var del = r.d.delivery || {};
-        var spec = r.z.stillOnly ? [del.still || 'Stills'] : [del.fps ? del.fps + ' fps' : '', del.video || ''];
-        var sub = spec.concat([r.z.page ? 'guide p. ' + r.z.page : '']).filter(Boolean).join(' · ');
-        if (sub) nm.appendChild(node('span', 't-sub', sub));
         row.appendChild(nm);
         row.appendChild(sizeButton(r.w, r.h, r.label));
         var open = node('a', 'mini');
@@ -730,14 +920,17 @@
     el.empty.hidden = rows.length > 0;
   }
 
-  // Opens the venue that holds a display or zone id and flashes it. A BG
-  // layer shares its FG row, so fall back to the row's first zone, then the card.
-  function goTo(id, smooth) {
+  // Opens the venue that holds a display or zone id and flashes it; a zone on
+  // the board already open stays in that board's view. A BG layer shares its
+  // FG row, so fall back to the row's first zone, then the card.
+  function goTo(id, smooth, push) {
     var hit = BY_ID[id];
     if (!hit) return false;
-    state.venue = hit.v.id; state.content = null; state.page = null; clearSearch();
-    storageSet(VENUE_KEY, hit.v.id);
-    render(false);
+    if (!(hit.z && state.display === hit.d.id && !state.query)) {
+      state.venue = hit.v.id; state.content = null; state.page = null; state.display = null; clearSearch();
+      storageSet(VENUE_KEY, hit.v.id);
+      render(false, push !== false);
+    }
     var target = document.getElementById(id);
     if (!target && hit.z) {
       var rows = groupZones(hit.d.zones).filter(function (r) { return r.zones.indexOf(hit.z) !== -1; });
@@ -774,12 +967,13 @@
     });
     return out;
   }
-  function displaysCsv(match) {
+  function displaysCsv(match, only) {
     var rows = [['Id', 'Venue', 'Group', 'Processor', 'Display', 'Display size', 'Zone #', 'Zone', 'Width', 'Height',
       'Positions (x,y)', 'Position source', 'Frame rate', 'Video', 'Stills', 'Duration', 'Stills only', 'Border pad (px)', 'Guide page', 'Sources', 'Notes']];
     VENUES.forEach(function (v) {
       if (!match && v.id !== state.venue) return;
       v.displays.forEach(function (d) {
+        if (only && d !== only) return;
         var displayHit = match && match.display(d, v);
         var srcs = Object.keys(d.sources || {}).map(function (k) { return DATA.sources[k].label; }).join('; ');
         var del = d.delivery || {};
@@ -812,8 +1006,8 @@
       el.actions.appendChild(a);
     }
     el.actions.appendChild(button('Share link', 'link', function () {
-      copy(shareUrl(), 'Link copied. It opens this page with no way back to the rest of the site.');
-    }, 'primary'));
+      copy(shareUrl(), 'Link copied');
+    }));
   }
 
   /* ---------------- agents + issues pages ---------------- */
@@ -830,8 +1024,7 @@
     'Never hardcode or guess a board size. Look it up here and note the manifest version you used.',
     'Refer to boards by id (camp-randall/north-board/main-video-fg) or, in production tools, by canvas key (MAIN_VIDEO). Names keep the processor’s typos; ids and keys never change.',
     'Sizes are width × height in px. Positions are {x, y} from the display’s top-left.',
-    'Check issues before final delivery and tell the person about them. Never resolve a conflict silently.',
-    'Respect delivery specs: fps, stills only, exact durations, border pad, audio. When fps is missing, ask or use 59.94.',
+    'Check issues on the boards you touch and tell the person about them. Never resolve a conflict silently.',
     'FG and BG are two processor layers of one window: build one asset unless the content needs both.',
     'To change a size, edit boards.json in the Wisconsin Creative repo and run node scripts/build-board-sizes.mjs. Never edit generated files.'
   ];
@@ -847,7 +1040,6 @@
     el.subtitle.textContent = sub;
     el.props.hidden = true;
     el.props.textContent = '';
-    el.callout.textContent = '';
     el.summary.textContent = '';
     el.empty.hidden = true;
     el.view.textContent = '';
@@ -935,7 +1127,7 @@
 
   function renderIssues() {
     pageHead('Reference', 'Open issues',
-      OPEN_ISSUES.length + ' places where the sources disagree or leave something open. Confirm these before final delivery; agents see the same list in every record’s issues.');
+      OPEN_ISSUES.length + ' places where the sources disagree or leave something open. Agents see the same list in every record’s issues.');
     setActions([]);
     Object.keys(ISSUE_LABEL).forEach(function (kind) {
       var mine = OPEN_ISSUES.filter(function (x) { return x.issue.kind === kind; });
@@ -961,27 +1153,149 @@
     });
   }
 
+  /* ---------------- one board ---------------- */
+
+  // Every zone of a board without positions, on the board's own scale (the
+  // list is as wide as the drawing), packed left to right.
+  function renderScale(d, card, show) {
+    var rows = groupZones(d.zones).filter(function (r) { return !show || show(r) === 'show'; });
+    var box = node('div', 'scale');
+    box.appendChild(node('p', 'scale-head', 'Zones to scale'));
+    var list = node('ul', 'scale-list');
+    rows.forEach(function (row) {
+      var li = node('li', 'scale-item');
+      var keys = row.zones.map(function (x) { return d.name + '|' + x.n; });
+      li.setAttribute('data-zone', keys[0]);
+      var bar = node('button', 'scale-bar');
+      bar.type = 'button';
+      li.style.width = (row.w / d.w * 100) + '%';
+      bar.style.aspectRatio = row.w + ' / ' + row.h;
+      bar.setAttribute('aria-label', row.base + ', ' + size(row.w, row.h) + ': show in the list');
+      bar.addEventListener('mouseenter', function () { hot(card, keys, true); });
+      bar.addEventListener('mouseleave', function () { hot(card, keys, false); });
+      bar.addEventListener('click', function () {
+        pick(card, keys);
+        var r = document.getElementById(row.first.id);
+        if (r) r.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
+      li.appendChild(bar);
+      var cap = node('span', 'scale-cap');
+      cap.appendChild(node('b', '', row.base));
+      cap.appendChild(node('i', '', pretty(row.w, row.h)));
+      li.appendChild(cap);
+      list.appendChild(li);
+    });
+    box.appendChild(list);
+    return box;
+  }
+
+  var FILTERS = [
+    ['all', 'All', function () { return true; }],
+    ['video', 'Video', function (z) { return !z.stillOnly; }],
+    ['stills', 'Stills only', function (z) { return !!z.stillOnly; }],
+    ['issues', 'Open issues', function (z, d) { return !!((z.issues && z.issues.length) || (d.issues && d.issues.length)); }]
+  ];
+  function neighbor(id, step) {
+    var all = [];
+    VENUES.forEach(function (v) { v.displays.forEach(function (d) { all.push(d); }); });
+    var i = all.map(function (d) { return d.id; }).indexOf(id);
+    return all[i + step] || null;
+  }
+  function chip(label, on, onClick, extra) {
+    var b = node('button', 'chip', label);
+    b.type = 'button';
+    b.setAttribute('aria-pressed', String(!!on));
+    if (extra != null) b.appendChild(node('span', 'chip-n', String(extra)));
+    b.addEventListener('click', onClick);
+    return b;
+  }
+
+  function renderBoard(v, d) {
+    el.crumbs.textContent = '';
+    var back = node('a', 'crumb-link', v.name);
+    back.href = '?v=' + v.id + (state.share ? '&share=1' : '');
+    back.addEventListener('click', function (e) { if (e.metaKey || e.ctrlKey) return; e.preventDefault(); go({ venue: v.id }); });
+    el.crumbs.appendChild(back);
+    if (d.group) el.crumbs.appendChild(document.createTextNode(' · ' + d.group));
+    el.title.textContent = d.name;
+    el.subtitle.textContent = [pretty(d.w, d.h) + ' px', ratio(d.w, d.h), d.zones.length + ' zone' + (d.zones.length === 1 ? '' : 's'), d.processor].filter(Boolean).join(' · ');
+    el.props.hidden = true;
+    el.props.textContent = '';
+    el.summary.textContent = '';
+    el.empty.hidden = true;
+
+    var prev = neighbor(d.id, -1), next = neighbor(d.id, 1);
+    var acts = [];
+    var pager = node('span', 'pager');
+    [[prev, '‹', 'Previous board'], [next, '›', 'Next board']].forEach(function (x) {
+      var b = node('button', 'btn pager-btn', x[1]);
+      b.type = 'button';
+      b.disabled = !x[0];
+      b.title = x[0] ? x[2] + ': ' + x[0].name + ' (' + (x[1] === '‹' ? '←' : '→') + ')' : x[2];
+      b.setAttribute('aria-label', b.title);
+      if (x[0]) b.addEventListener('click', function () { openBoard(x[0].id); });
+      pager.appendChild(b);
+    });
+    acts.push(pager);
+    acts.push(csvButton(function () { return displaysCsv(null, d); }, 'board-sizes_' + d.id.replace(/\//g, '_') + '.csv'));
+    setActions(acts);
+
+    var layout = state.layout && (d.layouts || []).filter(function (l) { return l.id === state.layout; })[0];
+    var inLayout = layout ? function (row) { return row.zones.some(function (z) { return layout.zones.indexOf(z.id) !== -1; }); } : null;
+    var filter = FILTERS.filter(function (f) { return f[0] === state.filter; })[0] || FILTERS[0];
+    function show(row) {
+      if (inLayout && !inLayout(row)) return 'hide';
+      return filter[2](row.first, d) ? 'show' : 'dim';
+    }
+
+    el.view.textContent = '';
+    var bar = node('div', 'board-bar');
+    if (d.layouts && d.layouts.length) {
+      var lg = node('div', 'chips');
+      lg.setAttribute('role', 'group');
+      lg.setAttribute('aria-label', 'Layouts');
+      lg.appendChild(node('span', 'chips-label', 'Layout'));
+      lg.appendChild(chip('All zones', !layout, function () { state.layout = null; render(false); }));
+      d.layouts.forEach(function (l) {
+        var c = chip(l.name, layout === l, function () { state.layout = l.id; render(false); });
+        if (l.draft) c.title = 'Draft: inferred from zone geometry, not yet confirmed';
+        lg.appendChild(c);
+      });
+      if (d.layouts.some(function (l) { return l.draft; })) {
+        var dt = node('span', 'tag draft-tag', 'Draft');
+        dt.title = 'Layouts inferred from zone geometry; confirm them, then drop draft in boards.json';
+        lg.appendChild(dt);
+      }
+      bar.appendChild(lg);
+    }
+    var rowsAll = groupZones(d.zones).filter(function (row) { return !inLayout || inLayout(row); });
+    var fg = node('div', 'chips');
+    fg.setAttribute('role', 'group');
+    fg.setAttribute('aria-label', 'Filter zones');
+    fg.appendChild(node('span', 'chips-label', 'Show'));
+    FILTERS.forEach(function (f) {
+      var n = rowsAll.filter(function (row) { return f[2](row.first, d); }).length;
+      if (f[0] !== 'all' && (!n || n === rowsAll.length)) return;
+      fg.appendChild(chip(f[1], filter === f, function () { state.filter = f[0]; render(false); }, n));
+    });
+    if (fg.querySelectorAll('.chip').length > 1) bar.appendChild(fg);
+    if (bar.childNodes.length) el.view.appendChild(bar);
+    el.view.appendChild(renderDisplay(v, d, null, false, { board: true, show: show }).el);
+  }
+
   /* ---------------- venue + search views ---------------- */
 
   function renderVenue(v, match) {
     el.crumbs.textContent = match ? 'Search' : 'Venues';
     el.props.hidden = true;
-    el.callout.textContent = '';
     var zones = 0;
     v.displays.forEach(function (d) { zones += d.zones.length; });
     el.title.textContent = match ? '“' + state.query.trim() + '”' : v.name;
     el.subtitle.textContent = match ? 'Matches across every venue.' : v.displays.length + ' display' + (v.displays.length === 1 ? '' : 's') + ' · ' + zones + ' zone' + (zones === 1 ? '' : 's');
-    if (!match && v.notes && v.notes.length) {
-      var box = node('div', 'callout');
-      box.appendChild(icon(ICONS.info));
-      var ul = node('ul');
-      v.notes.forEach(function (t) { ul.appendChild(node('li', '', t)); });
-      box.appendChild(ul);
-      el.callout.appendChild(box);
-    }
     setActions([csvButton(function () { return displaysCsv(match); }, match ? 'board-sizes_search.csv' : 'board-sizes_' + v.id + '.csv')]);
 
     el.view.textContent = '';
+    if (!match && v.displays.length > 1) el.view.appendChild(renderOverview(v));
     var shownDisplays = 0, shownZones = 0;
     (match ? VENUES : [v]).forEach(function (venue) {
       var first = true, group = null;
@@ -1006,33 +1320,36 @@
     if (state.query.trim()) p.set('q', state.query.trim());
     else if (state.page) p.set('p', state.page);
     else if (state.content) p.set('c', state.content);
+    else if (state.display) { p.set('d', state.display); if (state.layout) p.set('l', state.layout); }
     else p.set('v', state.venue);
     return p;
   }
-  function syncUrl() {
+  function syncUrl(push) {
     try {
       var p = currentParams();
       if (state.share) p.set('share', '1');
-      window.history.replaceState(null, '', window.location.pathname + '?' + p.toString());
+      var url = window.location.pathname + '?' + p.toString();
+      if (push && url !== window.location.pathname + window.location.search) window.history.pushState(null, '', url);
+      else window.history.replaceState(null, '', url + (push ? '' : window.location.hash));
     } catch (e) { /* file:// */ }
   }
 
-  function render(scrollTop) {
+  function render(scrollTop, push) {
     renderNav();
     var match = matcher(state.query);
-    if (!match && state.page === 'agents') renderAgents();
+    if (!match && state.display) renderBoard(BY_ID[state.display].v, BY_ID[state.display].d);
+    else if (!match && state.page === 'agents') renderAgents();
     else if (!match && state.page === 'issues') renderIssues();
     else if (!match && state.content && CONTENT[state.content]) renderContent(CONTENT[state.content]);
     else renderVenue(venueById[state.venue], match);
+    document.body.classList.toggle('is-board-view', !match && !!state.display);
     el['mobile-title'].textContent = el.title.textContent;
     document.title = el.title.textContent + ' · Board Sizes';
-    syncUrl();
+    syncUrl(push);
     if (scrollTop) window.scrollTo(0, 0);
   }
 
-  el.footnote.textContent = 'Manifest ' + DATA.version + ' (updated ' + DATA.updated + '). Sizes are width × height in px; positions are x, y from the top-left. Sources: ' +
-    Object.keys(DATA.sources).map(function (k) { return DATA.sources[k].detail; }).join('; ') +
-    '. Red notes are open issues: confirm those before final delivery.';
+  el.footnote.textContent = 'Manifest ' + DATA.version + ' (updated ' + DATA.updated + '). Sizes are width × height in px; positions are x, y from the top-left. Red notes are open questions.';
 
   var searchTimer = null;
   el.search.value = state.query;
@@ -1040,16 +1357,37 @@
     clearTimeout(searchTimer);
     searchTimer = setTimeout(function () { state.query = el.search.value; render(false); }, 120);
   });
+  el.search.addEventListener('keydown', function (event) {
+    if (event.key !== 'Enter') return;
+    var q = el.search.value.trim();
+    var id = BY_ID[q] ? q : KEY_ID[q.toUpperCase()];
+    if (!id) return;
+    event.preventDefault();
+    el.search.blur();
+    if (isDisplay(id)) openBoard(id);
+    else { openBoard(BY_ID[id].d.id); goTo(id, true, false); }
+  });
   document.addEventListener('keydown', function (event) {
     var typing = /^(input|textarea|select)$/i.test((event.target.tagName || ''));
     if (event.key === '/' && !typing) { event.preventDefault(); el.search.focus(); el.search.select(); }
+    else if ((event.key === 'ArrowLeft' || event.key === 'ArrowRight') && (document.activeElement === document.body || !document.activeElement) && state.display && !state.query && !event.metaKey && !event.altKey) {
+      var nb = neighbor(state.display, event.key === 'ArrowLeft' ? -1 : 1);
+      if (nb) { event.preventDefault(); openBoard(nb.id); }
+    }
     else if (event.key === 'Escape') {
       if (document.body.classList.contains('nav-open')) closeNav();
+      else if (document.querySelector('.is-picked') && document.activeElement !== el.search) clearPicks();
       else if (document.activeElement === el.search && el.search.value) { clearSearch(); render(false); }
     }
   });
 
   var initialHash = decodeURIComponent(window.location.hash.slice(1));
-  if (!(initialHash && !state.query && !state.content && !state.page && goTo(initialHash, false))) render(false);
-  window.addEventListener('hashchange', function () { goTo(decodeURIComponent(window.location.hash.slice(1))); });
+  if (!(initialHash && !state.query && !state.content && !state.page && goTo(initialHash, false, false))) render(false);
+  window.addEventListener('popstate', function () {
+    readParams();
+    el.search.value = state.query;
+    var hash = decodeURIComponent(window.location.hash.slice(1));
+    if (!(hash && !state.query && !state.content && !state.page && goTo(hash, false, false))) render(true);
+  });
+  window.addEventListener('hashchange', function () { goTo(decodeURIComponent(window.location.hash.slice(1)), true, false); });
 })();

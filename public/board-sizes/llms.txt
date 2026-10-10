@@ -1,6 +1,6 @@
 # Wisconsin Board Sizes
 
-> Every video board, ribbon, table and IPTV canvas at Camp Randall, the Kohl Center, the Field House, LaBahn Arena and Goodman Diamond (Wisconsin Athletics). Manifest 2026-10-08.1, updated 2026-10-08.
+> Every video board, ribbon, table and IPTV canvas at Camp Randall, the Kohl Center, the Field House, LaBahn Arena and Goodman Diamond (Wisconsin Athletics). Manifest 2026-10-08.2, updated 2026-10-08.
 
 Use this whenever you create or check anything that will play on a Wisconsin venue board: After Effects comps, Photoshop/Illustrator artboards, templates, render presets, code that lays out or validates board content, and sponsor or Colosseum deliverables.
 
@@ -60,6 +60,13 @@ Zones inherit their display's issues in index.json.
 
 id `camp-randall/north-board` · 4:1 · 60 fps · MP4 · H.264 · keys `MAIN_FULL`, `DAILY_MAIN_FULL`
 
+Layouts (draft: inferred from geometry, not yet confirmed):
+- Fullscreen (`fullscreen`): `fullscreen-fg`
+- Main + frames (`main-frames`): `main-video-fg`, `frame-left`, `frame-right`
+- Main + wings (`main-wings`): `main-video-fg`, `wing-left-fg`, `wing-right-fg`, `stat-box-left-fg`, `stat-box-right-fg`
+- Main + short wings (`main-short-wings`): `main-video-fg`, `wing-short-left-fg`, `wing-short-right-fg`, `ad-bottom-left`, `ad-bottom-right`, `stat-box-left-fg`, `stat-box-right-fg`
+- Main + ad stack (`main-ads`): `main-video-fg`, `ad-top-left`, `ad-middle-left`, `ad-bottom-left`, `ad-top-right`, `ad-middle-right`, `ad-bottom-right`, `stat-box-left-fg`, `stat-box-right-fg`
+
 | zone id | size | at (x,y) | fps | keys |
 |---|---|---|---|---|
 | `fullscreen-fg` | 5760x1440 | 0,0 | 60 | – |
@@ -102,6 +109,13 @@ id `camp-randall/north-board-hd-feed` · 16:9 · 59.94 fps · MP4 · H.264 · pr
 
 id `camp-randall/club-board` · 16:3
 
+Layouts (draft: inferred from geometry, not yet confirmed):
+- Full screen (`full-screen`): `full-screen`
+- Three 1080s (`thirds`): `1080-left`, `1080-center`, `1080-right`
+- Two thirds left (`two-thirds-left`): `two-thirds-left`, `1080-right`
+- Two thirds right (`two-thirds-right`): `1080-left`, `two-thirds-right`
+- Pillars + center (`pillars`): `pillar-left-fg`, `1080-center`, `pillar-right-fg`
+
 | zone id | size | at (x,y) | fps | keys |
 |---|---|---|---|---|
 | `full-screen` | 5760x1080 | 0,0 | – | – |
@@ -142,6 +156,11 @@ id `camp-randall/east-fascia` · 110:1 · 60 fps · MP4 · H.264
 ### Kellner: 1692x540 (CR-AUX-P)
 
 id `camp-randall/kellner` · 3.13:1 · 60 fps · MP4 · H.264 · keys `KELLNER`
+
+Layouts (draft: inferred from geometry, not yet confirmed):
+- Fullscreen (`fullscreen`): `fullscreen-fg`
+- Main + wings (`main-wings`): `main-video-fg`, `wing-left-fg`, `wing-right-fg`
+- Main + ads (`main-ads`): `main-video-fg`, `ad-top-left`, `ad-bottom-left`, `ad-top-right`, `ad-bottom-right`
 
 | zone id | size | at (x,y) | fps | keys |
 |---|---|---|---|---|
@@ -447,5 +466,6 @@ id `goodman/main` · 20:11
 
 ## Changes
 
+- 2026-10-08.2: Adds draft `layouts` to the North Board, Kellner and Club Board: named sets of zone ids that fill the board together (for example Main + frames). Inferred from zone geometry and marked `draft: true` until confirmed. Sizes, ids and canvas keys are unchanged.
 - 2026-10-08.1: Agent-ready: stable ids on every display and zone, positions as {x, y}, open questions as typed `issues`, `notes` everywhere for plain information, `stillOnly` on zones to match canvases. Generated index.json, boards.csv and llms.txt. Canvas keys and every size are unchanged.
 - 2026-09-24.1: First published manifest: five venues cross-referenced from the Board Info sheet, the 2024 Camp Randall guide, Colosseum’s deliverables sheet and the Board Builder; 58 canvas keys.

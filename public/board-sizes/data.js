@@ -4,9 +4,14 @@
   'use strict';
   var BOARD_DATA = {
     "schema": "wisconsin-board-sizes/1",
-    "version": "2026-10-08.1",
+    "version": "2026-10-08.2",
     "updated": "2026-10-08",
     "changes": [
+      {
+        "version": "2026-10-08.2",
+        "date": "2026-10-08",
+        "summary": "Adds draft `layouts` to the North Board, Kellner and Club Board: named sets of zone ids that fill the board together (for example Main + frames). Inferred from zone geometry and marked `draft: true` until confirmed. Sizes, ids and canvas keys are unchanged."
+      },
       {
         "version": "2026-10-08.1",
         "date": "2026-10-08",
@@ -5503,7 +5508,69 @@
                 "label": "Speaker scrim"
               }
             ],
-            "placedNote": "Positions: the Board Builder’s North Board geometry. Top and middle ad positions follow from it (200 + 830 = the 1030 short wing)."
+            "placedNote": "Positions: the Board Builder’s North Board geometry. Top and middle ad positions follow from it (200 + 830 = the 1030 short wing).",
+            "layouts": [
+              {
+                "id": "fullscreen",
+                "name": "Fullscreen",
+                "zones": [
+                  "camp-randall/north-board/fullscreen-fg"
+                ],
+                "draft": true
+              },
+              {
+                "id": "main-frames",
+                "name": "Main + frames",
+                "zones": [
+                  "camp-randall/north-board/main-video-fg",
+                  "camp-randall/north-board/frame-left",
+                  "camp-randall/north-board/frame-right"
+                ],
+                "draft": true
+              },
+              {
+                "id": "main-wings",
+                "name": "Main + wings",
+                "zones": [
+                  "camp-randall/north-board/main-video-fg",
+                  "camp-randall/north-board/wing-left-fg",
+                  "camp-randall/north-board/wing-right-fg",
+                  "camp-randall/north-board/stat-box-left-fg",
+                  "camp-randall/north-board/stat-box-right-fg"
+                ],
+                "draft": true
+              },
+              {
+                "id": "main-short-wings",
+                "name": "Main + short wings",
+                "zones": [
+                  "camp-randall/north-board/main-video-fg",
+                  "camp-randall/north-board/wing-short-left-fg",
+                  "camp-randall/north-board/wing-short-right-fg",
+                  "camp-randall/north-board/ad-bottom-left",
+                  "camp-randall/north-board/ad-bottom-right",
+                  "camp-randall/north-board/stat-box-left-fg",
+                  "camp-randall/north-board/stat-box-right-fg"
+                ],
+                "draft": true
+              },
+              {
+                "id": "main-ads",
+                "name": "Main + ad stack",
+                "zones": [
+                  "camp-randall/north-board/main-video-fg",
+                  "camp-randall/north-board/ad-top-left",
+                  "camp-randall/north-board/ad-middle-left",
+                  "camp-randall/north-board/ad-bottom-left",
+                  "camp-randall/north-board/ad-top-right",
+                  "camp-randall/north-board/ad-middle-right",
+                  "camp-randall/north-board/ad-bottom-right",
+                  "camp-randall/north-board/stat-box-left-fg",
+                  "camp-randall/north-board/stat-box-right-fg"
+                ],
+                "draft": true
+              }
+            ]
           },
           {
             "id": "camp-randall/north-board-hd-feed",
@@ -5736,6 +5803,54 @@
             "placedNote": "Positions from the Board Info sheet.",
             "notes": [
               "Only in the Board Info sheet; neither the 2024 guide nor Colosseum lists it."
+            ],
+            "layouts": [
+              {
+                "id": "full-screen",
+                "name": "Full screen",
+                "zones": [
+                  "camp-randall/club-board/full-screen"
+                ],
+                "draft": true
+              },
+              {
+                "id": "thirds",
+                "name": "Three 1080s",
+                "zones": [
+                  "camp-randall/club-board/1080-left",
+                  "camp-randall/club-board/1080-center",
+                  "camp-randall/club-board/1080-right"
+                ],
+                "draft": true
+              },
+              {
+                "id": "two-thirds-left",
+                "name": "Two thirds left",
+                "zones": [
+                  "camp-randall/club-board/two-thirds-left",
+                  "camp-randall/club-board/1080-right"
+                ],
+                "draft": true
+              },
+              {
+                "id": "two-thirds-right",
+                "name": "Two thirds right",
+                "zones": [
+                  "camp-randall/club-board/1080-left",
+                  "camp-randall/club-board/two-thirds-right"
+                ],
+                "draft": true
+              },
+              {
+                "id": "pillars",
+                "name": "Pillars + center",
+                "zones": [
+                  "camp-randall/club-board/pillar-left-fg",
+                  "camp-randall/club-board/1080-center",
+                  "camp-randall/club-board/pillar-right-fg"
+                ],
+                "draft": true
+              }
             ]
           },
           {
@@ -6184,7 +6299,39 @@
               "still": "JPG · RGB · 72 dpi",
               "audio": "None"
             },
-            "placedNote": "Positions from the Board Builder’s Kellner geometry."
+            "placedNote": "Positions from the Board Builder’s Kellner geometry.",
+            "layouts": [
+              {
+                "id": "fullscreen",
+                "name": "Fullscreen",
+                "zones": [
+                  "camp-randall/kellner/fullscreen-fg"
+                ],
+                "draft": true
+              },
+              {
+                "id": "main-wings",
+                "name": "Main + wings",
+                "zones": [
+                  "camp-randall/kellner/main-video-fg",
+                  "camp-randall/kellner/wing-left-fg",
+                  "camp-randall/kellner/wing-right-fg"
+                ],
+                "draft": true
+              },
+              {
+                "id": "main-ads",
+                "name": "Main + ads",
+                "zones": [
+                  "camp-randall/kellner/main-video-fg",
+                  "camp-randall/kellner/ad-top-left",
+                  "camp-randall/kellner/ad-bottom-left",
+                  "camp-randall/kellner/ad-top-right",
+                  "camp-randall/kellner/ad-bottom-right"
+                ],
+                "draft": true
+              }
+            ]
           },
           {
             "id": "camp-randall/south-upper-fascia",

@@ -1,0 +1,134 @@
+{
+  "title": "Board drawings, fixed",
+  "eyebrow": "Web · /board-sizes · Wisconsin Creative",
+  "lede": "Every board now draws at its true proportions, zone labels stop piling up, and picking a zone works by click or tap, not just hover.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "Side by side",
+      "note": "Before is the page after the internal-use cut, captured earlier today. After differs only by this change. Same manifest (2026-10-08.1), Chromium, light mode, 1× scale, and the same viewport and clip.",
+      "pairs": [
+        {
+          "title": "Venue page",
+          "sub": "Camp Randall, top of page.",
+          "before": "before/venue.png",
+          "beforeCap": "North Board wing columns stack four labels on top of each other (Wing Short, Ad-Middle, Wing-Left, Frame-Left).",
+          "after": "after/venue.png",
+          "afterCap": "Each column shows the windows inside it. Frame and wing alternatives show their labels on hover or pick.",
+          "beforeEvidence": "before/venue.capture.json",
+          "afterEvidence": "after/venue.capture.json"
+        },
+        {
+          "title": "North Board card",
+          "sub": "Drawing and the top of the zone list.",
+          "before": "before/north.png",
+          "beforeCap": "Unreadable label pile-ups in both wing columns.",
+          "after": "after/north.png",
+          "afterCap": "Each window labeled once; the zone list below is unchanged.",
+          "beforeEvidence": "before/north.capture.json",
+          "afterEvidence": "after/north.capture.json"
+        },
+        {
+          "title": "Kohl Center",
+          "sub": "360 Fascia and the top of 300 Level & Tunnels.",
+          "before": "before/kohl.png",
+          "beforeCap": "300 Level & Tunnels (1152 × 360) is drawn 768 px wide at the card's full-width height, so it reads narrower than 3.2:1.",
+          "after": "after/kohl.png",
+          "afterCap": "Drawn 832 px wide, at 3.2:1. The bottom of the drawing is out of frame in both.",
+          "beforeEvidence": "before/kohl.capture.json",
+          "afterEvidence": "after/kohl.capture.json"
+        },
+        {
+          "title": "Phone",
+          "sub": "North Board at 390 px. No visible difference expected: at this width the zones are too small for labels either way.",
+          "before": "before/mobile.png",
+          "beforeCap": "Only Main Video is big enough to label.",
+          "after": "after/mobile.png",
+          "afterCap": "Same. Included to show the phone layout didn't regress.",
+          "beforeEvidence": "before/mobile.capture.json",
+          "afterEvidence": "after/mobile.capture.json"
+        }
+      ]
+    },
+    {
+      "heading": "After only",
+      "note": "No matched baseline for these: the distorted versions were seen in earlier working captures that weren't kept. What was wrong: the HD feed (16:9) drew as a portrait rectangle, Section A (336 × 264) about 660 px tall, and the IPTV Video Wall Ad (960 × 1080) about 950 px tall.",
+      "shots": [
+        {
+          "title": "North Board HD feed",
+          "image": "extra/hd-feed.png",
+          "cap": "1920 × 1080 at 16:9, with the crop bands and title safe. The title-safe label hides under Visible on the board until you hover it."
+        },
+        {
+          "title": "Club Board",
+          "image": "extra/club-board.png",
+          "cap": "1080 Left and 1080 Right hold a pillar each, so they label their top-left corner. Two Thirds Left and Right are fully covered and label on hover."
+        },
+        {
+          "title": "Section A",
+          "image": "extra/section-a.png",
+          "cap": "336 × 264, drawn wider than tall."
+        },
+        {
+          "title": "IPTV Video Wall Ad",
+          "image": "extra/iptv-wall-ad.png",
+          "cap": "960 × 1080, capped at 260 px tall with the 540 px seam."
+        },
+        {
+          "title": "Picked container, dark mode",
+          "image": "extra/dark-frame-left.png",
+          "cap": "Frame-Left picked from its row: the zones inside light up and its corner label sits on a solid backing above Ad-Top Left."
+        },
+        {
+          "title": "Picked full-board zone, dark mode",
+          "image": "extra/dark-borders.png",
+          "cap": "Borders picked from its row: the whole board is outlined."
+        },
+        {
+          "title": "HD feed on a phone",
+          "image": "extra/mobile-hd.png",
+          "cap": "390 px wide, still 16:9."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Proportions",
+      "was": "The drawing's height came from a percentage that resolved against the card, not the narrowed figure. Anything not much wider than tall was stretched tall.",
+      "now": "A sizer inside the figure carries the aspect ratio. Tall boards cap at 260 px; ribbons stay at least 8 px."
+    },
+    {
+      "h": "Nested zones",
+      "was": "Alternative layouts of one area (Frame-Left around the wing and ads; Two Thirds around 1080s) all centered their labels in the same spot.",
+      "now": "A zone that holds others labels its top-left corner. If the zones inside fill more than half of it, its label shows only on hover or pick."
+    },
+    {
+      "h": "Overlapping labels",
+      "was": "Partly overlapping zones printed labels over each other.",
+      "now": "After layout (and on every resize), a label that would overlap a smaller zone's label hides until hovered."
+    },
+    {
+      "h": "Picking",
+      "was": "Highlighting only worked on hover, so touch got nothing; clicking a zone scrolled the list to center it.",
+      "now": "Click or tap a zone or its row to pick it. Full-board zones (Fullscreen, Borders) outline the whole board. The list scrolls only as far as needed. Escape clears the pick."
+    },
+    {
+      "h": "Logic",
+      "was": "Search matches and hover shared one class, so leaving a row in search mode left its zone lit. Hover and pick repeated the same lookup. There were two one-line aliases (cardId, boardCount).",
+      "now": "Search matches use their own class. One eachZone helper serves hover and pick. The aliases are gone."
+    }
+  ],
+  "verification": [
+    "tests/static-tools.test.ts: 46 passed",
+    "node scripts/hash-static-tools.mjs: app.js restamped",
+    "npm run verify:docs (exit 0) and git diff --check: pass",
+    "Playwright: row hover lights its zone and clears on leave; clicking a zone picks it and its row; clicking a row picks it; Escape clears; picking Borders lights .zone-whole; ?q=1920x1080 marks 3 drawn zones and 3 rows; no page errors",
+    "All 27 drawings across the five venues captured after the final change and checked by eye, light mode; picked states also checked in dark mode",
+    "Corner labels: only Club Board shows them (1080 Left, 1080 Right); none at Kohl Center, Field House, LaBahn or Goodman"
+  ],
+  "notes": [
+    "Ribbon boards (fascias, the 360 Fascia) draw at the 8 px minimum, so their zones carry no labels; the list below names them. A zoom-on-hover for ribbons would be the next geometry improvement.",
+    "Not done: search by id or key, and Back-button history."
+  ]
+}

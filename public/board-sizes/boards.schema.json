@@ -106,7 +106,20 @@
         "link": { "type": "object", "required": ["href", "label"], "properties": { "href": { "type": "string", "format": "uri" }, "label": { "type": "string" } } },
         "notes": { "$ref": "#/$defs/notes" },
         "issues": { "$ref": "#/$defs/issues" },
-        "zones": { "type": "array", "items": { "$ref": "#/$defs/zone" } }
+        "zones": { "type": "array", "items": { "$ref": "#/$defs/zone" } },
+        "layouts": {
+          "type": "array",
+          "description": "Named sets of zones used together that fill the board without overlapping. Zones are listed by id; a FG id stands for its BG layer too.",
+          "items": {
+            "type": "object", "required": ["id", "name", "zones"],
+            "properties": {
+              "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+              "name": { "type": "string" },
+              "zones": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/id" } },
+              "draft": { "type": "boolean", "description": "Inferred from zone geometry; not yet confirmed against production." }
+            }
+          }
+        }
       }
     },
     "zone": {
