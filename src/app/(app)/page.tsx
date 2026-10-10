@@ -372,7 +372,7 @@ function InternalDashboardPage() {
         {/* ══════ Flagged Items Banner (staff/admin only) ══════ */}
         {isStaff && data && data.flaggedItems.length > 0 && (
           <DashboardStateSurface key="flagged-items" layout>
-            <FlaggedItemsBanner items={data.flaggedItems} />
+            <FlaggedItemsBanner items={data.flaggedItems} onChanged={loadData} />
           </DashboardStateSurface>
         )}
 

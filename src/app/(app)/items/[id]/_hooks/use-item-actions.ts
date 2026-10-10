@@ -101,11 +101,25 @@ export default function useItemActions({
         invalidateItemCatalog();
         loadAsset();
       } else if (action === "maintenance") {
-        const res = await fetch(`/api/assets/${asset.id}/maintenance`, { method: "POST" });
+        const releasing = asset.status === "MAINTENANCE";
+        if (releasing && !await confirmDialog({
+          title: "Clear maintenance hold?",
+          message: "Confirm this item has been inspected and is ready to use. Damage reports and their evidence remain in its history.",
+          confirmLabel: "Inspected — clear hold",
+        })) return;
+        const res = await fetch(`/api/assets/${asset.id}/maintenance`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            status: releasing ? "AVAILABLE" : "MAINTENANCE",
+            expectedUpdatedAt: asset.updatedAt,
+          }),
+        });
         if (handleAuthRedirect(res)) return;
         if (!res.ok) {
           const msg = await parseErrorMessage(res, "Action failed");
           toast.error(msg);
+          loadAsset();
           return;
         }
         invalidateItemCatalog();
@@ -129,7 +143,10 @@ export default function useItemActions({
         }
       }
     } catch {
-      toast.error("Network error — please try again.");
+      if (action === "maintenance") loadAsset();
+      toast.error(action === "maintenance"
+        ? "Couldn't confirm the maintenance change. Refresh and check its status before trying again."
+        : "Network error — please try again.");
     } finally {
       busyRef.current = false;
       setActionBusy(false);
