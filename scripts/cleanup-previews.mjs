@@ -39,16 +39,19 @@ for (const branch of await provider.branches(config.preview.projectId)) {
     else await provider.suspendEndpoints(config.preview.projectId, woken);
   }
 }
-// Leave the compute running if anything else may be using it: a last_seen_at bump since
-// this branch's inspection began (taken before the idle snapshot, less a margin for clock
-// skew), or another session of the preview's role, which catches requests inside the
-// app's heartbeat throttle. Cleanup's HTTP queries hold no session and never bump
-// last_seen_at. No SQL handle or an unreadable row fails closed.
-async function usedDuringReview({ sql, startedAt }) {
+// Leave the compute running if anything else may be using it: another session of the
+// preview's role (catches requests inside the app's heartbeat throttle), or a
+// last_seen_at bump since this branch's inspection began (taken before the idle
+// snapshot, less a margin for clock skew). Unattested children have no runtime row, so
+// only the session check applies. Cleanup's HTTP queries hold no session and never
+// bump last_seen_at. No SQL handle or a failed check fails closed.
+async function usedDuringReview({ sql, startedAt, unattested }) {
   if (!sql) return true;
   try {
-    const [row] = await sql.query(`SELECT (SELECT last_seen_at >= $1::timestamptz - interval '2 minutes' FROM wc_preview_meta.runtime WHERE id=true)
-      OR EXISTS (SELECT 1 FROM pg_stat_activity WHERE datname=current_database() AND usename=current_user AND backend_type='client backend' AND pid<>pg_backend_pid()) AS used`, [startedAt.toISOString()]);
+    const [{ busy }] = await sql.query("SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE datname=current_database() AND usename=current_user AND backend_type='client backend' AND pid<>pg_backend_pid()) AS busy");
+    if (busy !== false) return true;
+    if (unattested) return false;
+    const [row] = await sql.query("SELECT last_seen_at >= $1::timestamptz - interval '2 minutes' AS used FROM wc_preview_meta.runtime WHERE id=true", [startedAt.toISOString()]);
     return row?.used !== false;
   } catch { return true; }
 }
@@ -57,7 +60,7 @@ async function review(branch, inspection) {
   const direct = await provider.connection(config.preview.projectId, branch.id, config.preview.database, config.preview.ownerRole, false);
   const sql = neon(direct); inspection.sql = sql;
   const baseline = await loadMigrationBaseline(sql, localChecksums());
-  if (!baseline || baseline.approval?.kind !== "sanitized-child") { console.log({ branch: branch.id, status: "unattested-retained" }); return; }
+  if (!baseline || baseline.approval?.kind !== "sanitized-child") { inspection.unattested = true; console.log({ branch: branch.id, status: "unattested-retained" }); return; }
   const gitBranch = baseline.approval.gitBranch;
   assertProviderLineage(branch, gitBranch, config);
   const state = { projectId: config.preview.projectId, branchId: branch.id, endpointId: baseline.target.endpoint, gitBranch, key: branchKey(gitBranch), environment: { DATABASE_URL: pooled, DIRECT_URL: direct, DATABASE_URL_UNPOOLED: direct } };

@@ -140,13 +140,19 @@ describe("managed preview cleanup compute", () => {
     const fetcher = async (url, { method }) => {
       calls.push(`${method} ${url.replace("https://console.neon.tech/api/v2", "")}`);
       if (url.endsWith("/endpoints")) return new Response(JSON.stringify({ endpoints: [{ id: "ep-idle", current_state: "idle" }, { id: "ep-busy", current_state: "active" }, { id: "ep-starting", current_state: "init", pending_state: "active" }, { id: "ep-waking", current_state: "idle", pending_state: "active" }] }));
-      return url.includes("ep-gone") ? new Response(null, { status: 404 }) : new Response(JSON.stringify({ operations: [] }));
+      if (url.includes("ep-gone")) return new Response(null, { status: 404 });
+      if (url.includes("/operations/")) return new Response(JSON.stringify({ operation: { id: "op-1", status: "finished" } }));
+      return new Response(JSON.stringify({ operations: [{ id: "op-1", action: "suspend_compute", status: "running" }] }));
     };
     const api = new NeonPreviewApi("token", fetcher);
     const woken = await api.idleEndpoints("project", "br-test");
     expect(woken).toEqual(["ep-idle"]);
     await api.suspendEndpoints("project", [...woken, "ep-gone"]);
-    expect(calls).toEqual(["GET /projects/project/branches/br-test/endpoints", "POST /projects/project/endpoints/ep-idle/suspend", "POST /projects/project/endpoints/ep-gone/suspend"]);
+    expect(calls).toEqual(["GET /projects/project/branches/br-test/endpoints", "POST /projects/project/endpoints/ep-idle/suspend", "GET /projects/project/operations/op-1", "POST /projects/project/endpoints/ep-gone/suspend"]);
+  });
+  it("fails the sweep when a suspend operation fails", async () => {
+    const api = new NeonPreviewApi("token", async () => new Response(JSON.stringify({ operations: [{ id: "op-1", action: "suspend_compute", status: "failed" }] })));
+    await expect(api.suspendEndpoints("project", ["ep-idle"])).rejects.toThrow(/suspend_compute failed/);
   });
   it("propagates suspension failures other than a vanished endpoint", async () => {
     const api = new NeonPreviewApi("token", async () => new Response(null, { status: 503 }));
@@ -161,6 +167,8 @@ describe("managed preview cleanup compute", () => {
     expect(source.indexOf("startedAt: new Date()")).toBeLessThan(source.indexOf("provider.idleEndpoints("));
     expect(source).not.toMatch(/retainPreview/);
     expect(source).toMatch(/if \(!sql\) return true;/);
-    expect(source).toMatch(/pg_stat_activity[^`]*usename=current_user[^`]*pid<>pg_backend_pid\(\)/);
+    expect(source).toMatch(/pg_stat_activity[^"]*usename=current_user[^"]*pid<>pg_backend_pid\(\)/);
+    expect(source).toMatch(/inspection\.unattested = true/);
+    expect(source).toMatch(/if \(unattested\) return false;/);
   });
 });

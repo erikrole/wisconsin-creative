@@ -36,16 +36,27 @@ export class NeonPreviewApi {
   }
   // Cleanup wakes each child to read its retention row. Suspend only the computes
   // it woke so a sweep never exhausts the active-endpoint limit or bills idle time.
-  // A vanished endpoint is fine; any other failure stops the sweep rather than
-  // silently leaving computes active.
+  // Wait for each suspend operation to finish before moving on. A vanished endpoint
+  // is fine; any other failure stops the sweep rather than silently leaving computes active.
   async suspendEndpoints(project, endpointIds) {
     for (const id of endpointIds) {
-      try { await this.request(`/projects/${project}/endpoints/${id}/suspend`, { method: "POST" }); }
+      let operations;
+      try { ({ operations = [] } = await this.request(`/projects/${project}/endpoints/${id}/suspend`, { method: "POST" })); }
       catch (error) {
         if (error.status !== 404) throw error;
-        console.warn({ endpoint: id, status: "suspend-skipped-not-found" });
+        console.warn({ endpoint: id, status: "suspend-skipped-not-found" }); continue;
       }
+      for (const operation of operations) await this.finishedOperation(project, operation);
     }
+  }
+  async finishedOperation(project, operation, attempts = 60) {
+    for (let attempt = 0, current = operation; attempt < attempts; attempt += 1) {
+      if (["finished", "skipped"].includes(current.status)) return;
+      if (["failed", "error", "cancelled"].includes(current.status)) throw new Error(`Neon ${current.action ?? "operation"} ${current.status}. Inspect the endpoint before retrying.`);
+      await delay(1_000);
+      ({ operation: current } = await this.request(`/projects/${project}/operations/${operation.id}`));
+    }
+    throw new Error("Neon operation did not finish. Inspect the endpoint before retrying.");
   }
   async connection(project, branch, database, role, pooled) {
     const query = new URLSearchParams({ branch_id: branch, database_name: database, role_name: role, pooled: String(pooled) });
