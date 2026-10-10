@@ -7,7 +7,8 @@ describe("iOS notifications read recovery", () => {
     expect(state).not.toContain("guard unreadNotifCount != oldValue else { return }");
     // Notification refresh cannot depend on dashboard/trade success or its throttle.
     const refresh = state.slice(state.indexOf("func refresh(forceRefresh:"));
-    expect(refresh.indexOf("await refreshUnread()")).toBeLessThan(refresh.indexOf("guard !isRefreshing"));
+    expect(refresh).toContain("async let unread: Void = refreshUnread()");
+    expect(refresh.indexOf("async let unread")).toBeLessThan(refresh.indexOf("guard !isRefreshing"));
     expect(refresh).not.toContain("async let countTask");
   });
 

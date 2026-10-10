@@ -199,11 +199,15 @@ final class AppState {
     }
 
     func refresh(forceRefresh: Bool = false) async {
-        let boundary = authSessionBoundary.capture()
         // Inbox truth must not depend on dashboard/trade availability or the
-        // non-critical shell refresh throttle.
-        await refreshUnread()
-        guard authSessionBoundary.owns(boundary), !Task.isCancelled else { return }
+        // non-critical shell refresh throttle, and a slow count endpoint must
+        // not hold the shell counters back, so the two run side by side.
+        async let unread: Void = refreshUnread()
+        await refreshShellCounters(forceRefresh: forceRefresh)
+        await unread
+    }
+
+    private func refreshShellCounters(forceRefresh: Bool) async {
         let startedAt = Date()
         guard !isRefreshing else {
             appStatePerformanceLog.debug("launch.appState.refresh result=skipped reason=inFlight durationMs=\(elapsedMilliseconds(since: startedAt), privacy: .public)")
