@@ -367,7 +367,11 @@ export const GET = withAuth(async (req, { user }) => {
     user.role === "ADMIN" || user.role === "STAFF"
       ? db.checkinItemReport.findMany({
           // Serialized reports only; lost batteries surface via lostBulkUnits.
-          where: { assetId: { not: null }, createdAt: { gte: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) } },
+          where: {
+            assetId: { not: null },
+            createdAt: { gte: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) },
+            dismissedAt: null,
+          },
           orderBy: { createdAt: "desc" },
           take: 10,
           include: {

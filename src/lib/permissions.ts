@@ -72,6 +72,9 @@ export const PERMISSIONS: Record<string, Record<string, Role[]>> = {
     manage_custody: ["ADMIN", "STAFF"],
     merge: ["ADMIN", "STAFF"],
   },
+  checkin_report: {
+    dismiss: ["ADMIN", "STAFF"],
+  },
   bulk_sku: {
     view: ["ADMIN", "STAFF", "STUDENT"],
     create: ["ADMIN", "STAFF"],

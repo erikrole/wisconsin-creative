@@ -1,0 +1,21 @@
+{
+  "sourceRevision": "447e30bb91b0bb0937c60ba6498e7d46b0509ed3",
+  "component": "src/app/(app)/items/[id]/_components/ItemConditionReports.tsx",
+  "componentSha256": "f58306873bb232911aea13cdeb924124101564b05e1dada268bda8185e9cc7bb",
+  "evidence": "After-only isolated server-rendered component with production CSS and sample data; not an authenticated page or interactive save test.",
+  "viewports": [
+    [
+      1200,
+      800
+    ],
+    [
+      390,
+      844
+    ]
+  ],
+  "role": "STAFF fixture",
+  "appearance": "light",
+  "dateZone": "America/Chicago",
+  "photo": "Labeled SVG placeholder; not a real damage photograph",
+  "baseline": "Unavailable: branch preview has an unrelated pending migration. No before comparison claimed."
+}

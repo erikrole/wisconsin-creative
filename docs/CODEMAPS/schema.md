@@ -131,7 +131,7 @@ Values: `UPLOADING`, `FINALIZING`, `COMMITTED`, `FAILED`
 
 ## Model `User`
 
-Fields: 129
+Fields: 130
 
 - `id                            String                           @id @default(cuid())`
 - `name                          String`
@@ -197,6 +197,7 @@ Fields: 129
 - `blastsReceived                BlastRecipient[]                 @relation("BlastRecipient")`
 - `bookingPhotos                 BookingPhoto[]                   @relation("BookingPhotoActor")`
 - `checkinReports                CheckinItemReport[]              @relation("CheckinReports")`
+- `dismissedCheckinReports       CheckinItemReport[]              @relation("CheckinReportDismissals")`
 - `allowedEmailsCreated          AllowedEmail[]                   @relation("AllowedEmailCreator")`
 - `allowedEmailsClaimed          AllowedEmail[]                   @relation("AllowedEmailClaimer")`
 - `licenseCodesHeld              LicenseCode[]                    @relation("LicenseClaimedBy")`
@@ -2360,7 +2361,7 @@ Indexes and constraints:
 
 ## Model `CheckinItemReport`
 
-Fields: 16
+Fields: 19
 
 - `id            String            @id @default(cuid())`
 - `bookingId     String            @map("booking_id")`
@@ -2373,11 +2374,14 @@ Fields: 16
 - `imageUrl      String?           @map("image_url")`
 - `reportedById  String            @map("reported_by_id")`
 - `createdAt     DateTime          @default(now()) @map("created_at")`
+- `dismissedAt   DateTime?         @map("dismissed_at")`
+- `dismissedById String?           @map("dismissed_by_id")`
 - `booking     Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)`
 - `asset       Asset?       @relation(fields: [assetId], references: [id], onDelete: Restrict)`
 - `bulkSkuUnit BulkSkuUnit? @relation(fields: [bulkSkuUnitId], references: [id], onDelete: Cascade)`
 - `bulkSku     BulkSku?     @relation(fields: [bulkSkuId], references: [id], onDelete: Cascade)`
 - `reportedBy  User         @relation("CheckinReports", fields: [reportedById], references: [id], onDelete: Restrict)`
+- `dismissedBy User?        @relation("CheckinReportDismissals", fields: [dismissedById], references: [id], onDelete: SetNull)`
 
 Indexes and constraints:
 

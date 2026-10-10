@@ -1,0 +1,194 @@
+
+ RUN  v4.1.11 /Users/role/Code/wisconsin-creative
+
+ ❯ tests/asset-maintenance-route.test.ts (6 tests | 4 failed) 8ms
+     × records an explicit release and its audit together 5ms
+     × rejects release after a newer report or item change 1ms
+     × rejects release after a retired item 0ms
+     × does not toggle an explicit available request back into maintenance 0ms
+ ❯ tests/checkin-item-report-custody-race.test.ts (8 tests | 4 failed) 7ms
+     × holds damaged gear for staff and audits the hold in the report transaction 2ms
+     × does not overwrite evidence changed while the submission was in flight 1ms
+     × rejects damage without a description, a photo, or existing evidence 0ms
+     × updates the item version for fresh damage evidence even when it is already held 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 8 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/asset-maintenance-route.test.ts > maintenance release > records an explicit release and its audit together
+AssertionError: expected "vi.fn()" to be called with arguments: [ { asset: { …(2) } }, …(1) ]
+
+Number of calls: 0
+
+ ❯ tests/asset-maintenance-route.test.ts:35:19
+     33|     expect(response.status).toBe(200);
+     34|     expect(await response.json()).toMatchObject({ data: { status: "AVA…
+     35|     expect(audit).toHaveBeenCalledWith(tx, expect.objectContaining({
+       |                   ^
+     36|       action: "cleared_maintenance", before: { status: "MAINTENANCE" }…
+     37|     }));
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯
+
+ FAIL  tests/asset-maintenance-route.test.ts > maintenance release > rejects release after a newer report or item change
+ FAIL  tests/asset-maintenance-route.test.ts > maintenance release > rejects release after a retired item
+AssertionError: expected 200 to be 409 // Object.is equality
+
+- Expected
++ Received
+
+- 409
++ 200
+
+ ❯ tests/asset-maintenance-route.test.ts:45:89
+     43|   ])("rejects release after %s", async (_, status, updatedAt) => {
+     44|     tx.asset.findUnique.mockResolvedValue({ id: "a1", status, updatedA…
+     45|     expect((await request({ status: "AVAILABLE", expectedUpdatedAt: ve…
+       |                                                                                         ^
+     46|     expect(tx.asset.update).not.toHaveBeenCalled();
+     47|     expect(audit).not.toHaveBeenCalled();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯
+
+ FAIL  tests/asset-maintenance-route.test.ts > maintenance release > does not toggle an explicit available request back into maintenance
+AssertionError: expected "vi.fn()" to not be called at all, but actually been called 1 times
+
+Received:
+
+  1st vi.fn() call:
+
+    Array [
+      Object {
+        "data": Object {
+          "status": "MAINTENANCE",
+        },
+        "include": Object {
+          "category": true,
+          "location": true,
+        },
+        "where": Object {
+          "id": "a1",
+        },
+      },
+    ]
+
+
+Number of calls: 1
+
+ ❯ tests/asset-maintenance-route.test.ts:53:33
+     51|     tx.asset.findUnique.mockResolvedValue({ id: "a1", status: "AVAILAB…
+     52|     expect((await request({ status: "AVAILABLE", expectedUpdatedAt: ve…
+     53|     expect(tx.asset.update).not.toHaveBeenCalled();
+       |                                 ^
+     54|   });
+     55|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/8]⎯
+
+ FAIL  tests/checkin-item-report-custody-race.test.ts > web damage report safety > holds damaged gear for staff and audits the hold in the report transaction
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/checkin-item-report-custody-race.test.ts:91:33
+     89|   it("holds damaged gear for staff and audits the hold in the report t…
+     90|     const result = await submitCheckinItemReport({ ...args, kiosk: und…
+     91|     expect(result.heldForStaff).toBe(true);
+       |                                 ^
+     92|     expect(tx.asset.update).toHaveBeenCalledWith({ where: { id: "a1" }…
+     93|     expect(createAuditEntryTx).toHaveBeenCalledWith(tx, expect.objectC…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/8]⎯
+
+ FAIL  tests/checkin-item-report-custody-race.test.ts > web damage report safety > does not overwrite evidence changed while the submission was in flight
+AssertionError: promise resolved "{ report: { id: 'r1', …(2) }, …(4) }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "asset": {
++     "assetTag": "CAM-1",
++     "id": "a1",
++     "name": "CAM-1",
++   },
++   "completed": false,
++   "completedAt": null,
++   "heldForStaff": false,
++   "report": {
++     "id": "r1",
++     "imageUrl": null,
++     "type": "DAMAGED",
++   },
+  }
+
+ ❯ tests/checkin-item-report-custody-race.test.ts:102:89
+    100|   it("does not overwrite evidence changed while the submission was in …
+    101|     tx.checkinItemReport.findUnique.mockResolvedValue({ createdAt: new…
+    102|     await expect(submitCheckinItemReport({ ...args, kiosk: undefined, …
+       |                                                                                         ^
+    103|     expect(tx.checkinItemReport.upsert).not.toHaveBeenCalled();
+    104|     expect(tx.asset.update).not.toHaveBeenCalled();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/8]⎯
+
+ FAIL  tests/checkin-item-report-custody-race.test.ts > web damage report safety > rejects damage without a description, a photo, or existing evidence
+AssertionError: promise resolved "{ report: { id: 'r1', …(2) }, …(4) }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "asset": {
++     "assetTag": "CAM-1",
++     "id": "a1",
++     "name": "CAM-1",
++   },
++   "completed": false,
++   "completedAt": null,
++   "heldForStaff": false,
++   "report": {
++     "id": "r1",
++     "imageUrl": null,
++     "type": "DAMAGED",
++   },
+  }
+
+ ❯ tests/checkin-item-report-custody-race.test.ts:108:109
+    106|
+    107|   it("rejects damage without a description, a photo, or existing evide…
+    108|     await expect(submitCheckinItemReport({ ...args, kiosk: undefined, …
+       |                                                                                                             ^
+    109|     expect(tx.checkinItemReport.upsert).not.toHaveBeenCalled();
+    110|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/8]⎯
+
+ FAIL  tests/checkin-item-report-custody-race.test.ts > web damage report safety > updates the item version for fresh damage evidence even when it is already held
+AssertionError: expected "vi.fn()" to be called with arguments: [ { where: { id: 'a1' }, …(1) } ]
+
+Number of calls: 0
+
+ ❯ tests/checkin-item-report-custody-race.test.ts:115:29
+    113|     tx.asset.findUnique.mockResolvedValue({ status: "MAINTENANCE" });
+    114|     await submitCheckinItemReport({ ...args, kiosk: undefined, type: "…
+    115|     expect(tx.asset.update).toHaveBeenCalledWith({ where: { id: "a1" }…
+       |                             ^
+    116|   });
+    117|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/8]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  8 failed | 6 passed (14)
+   Start at  22:48:33
+   Duration  233ms (transform 98ms, setup 24ms, import 249ms, tests 15ms, environment 0ms)
+
