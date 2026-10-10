@@ -967,8 +967,16 @@ struct EventDetailView: View {
 
     private var claimsPaused: Bool { vm.shiftGroup?.claimsPaused == true }
 
+    /// A crew staff have not released yet. The server rejects claims on it
+    /// ("Draft shifts are not open for pickup"), so none is offered. Servers
+    /// that omit `publication` keep the previous behaviour.
+    private var crewUnreleased: Bool {
+        guard let publication = vm.shiftGroup?.publication else { return false }
+        return publication.publishedAt == nil
+    }
+
     private var claimableStudentShifts: [EventShift] {
-        guard isStudent, myShifts.isEmpty, !eventHasEnded, !claimsPaused else { return [] }
+        guard isStudent, myShifts.isEmpty, !eventHasEnded, !claimsPaused, !crewUnreleased else { return [] }
         return vm.displayedShifts.filter {
             $0.workerType == "ST"
                 && $0.isOpen
@@ -978,7 +986,7 @@ struct EventDetailView: View {
     }
 
     private var pendingStudentClaimShifts: [EventShift] {
-        guard isStudent, myShifts.isEmpty, !eventHasEnded else { return [] }
+        guard isStudent, myShifts.isEmpty, !eventHasEnded, !crewUnreleased else { return [] }
         return vm.displayedShifts.filter {
             $0.workerType == "ST"
                 && $0.isOpen
@@ -990,7 +998,7 @@ struct EventDetailView: View {
     private var showsOpenShiftSection: Bool {
         !claimableStudentShifts.isEmpty
             || !pendingStudentClaimShifts.isEmpty
-            || (isStudent && claimsPaused && !eventHasEnded && myShifts.isEmpty
+            || (isStudent && (claimsPaused || crewUnreleased) && !eventHasEnded && myShifts.isEmpty
                 && vm.displayedShifts.contains { $0.workerType == "ST" && $0.isOpen })
     }
 
@@ -1039,8 +1047,10 @@ struct EventDetailView: View {
     private var openShiftSection: some View {
         VStack(alignment: .leading, spacing: Brand.Space.sm) {
             BrandSectionHeader("Open Shifts", systemImage: "person.badge.plus")
-            if claimsPaused && isStudent && claimableStudentShifts.isEmpty {
-                Text("Staff are updating this crew. Claims open after the changes are released.")
+            if (claimsPaused || crewUnreleased) && isStudent && claimableStudentShifts.isEmpty {
+                Text(crewUnreleased
+                    ? "Staff haven't released this crew yet. Claims open once it is released."
+                    : "Staff are updating this crew. Claims open after the changes are released.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -1857,7 +1867,7 @@ struct EventDetailView: View {
                     isStudent: isStudent && !showsOpenShiftSection,
                     onAssign: { shift in assignTarget = shift },
                     onConvertAndReplace: { shift in replaceTarget = shift },
-                    onRequest: { shift in confirmation = .claim(shift) },
+                    onRequest: crewUnreleased ? nil : { shift in confirmation = .claim(shift) },
                     onPostTrade: { shift, assignment in
                         postTradeTarget = TradePostCandidate(
                             assignment: assignment,
