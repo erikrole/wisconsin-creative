@@ -62,7 +62,8 @@ describe("schedule open work source contracts", () => {
     expect(route).toContain("pickupOpenShift(body.shiftId, user.id)");
     expect(route).toContain("shift_pickup_requested");
     expect(route).toContain("dispatchScheduleAssignmentNotifications(assignment.id, \"requested\")");
-    expect(service).toContain("Draft shifts are not open for pickup");
+    expect(service).toContain("crewClaimClosedReason(shift.shiftGroup)");
+    expect(source("src/lib/shift-claim-eligibility.ts")).toContain("Draft shifts are not open for pickup");
     expect(service).toContain("shiftClaimEligibilityReason(user, shift)");
     expect(service).toContain("primaryArea: true");
     expect(service).toContain("const window = effectiveWindow(shift)");

@@ -7,6 +7,8 @@ describe("iOS event detail unreleased crew", () => {
     const view = source("ios/Wisconsin/Views/EventDetailSheet.swift");
 
     expect(model).toContain("var publication: EventShiftGroupPublication?");
+    expect(model).toContain("var claimsOpen: Bool?");
+    expect(view).toContain("vm.shiftGroup?.claimsOpen");
     expect(view).toContain("private var crewUnreleased: Bool");
     expect(view).toContain("!claimsPaused, !crewUnreleased");
     expect(view).toContain("onRequest: crewUnreleased ? nil");

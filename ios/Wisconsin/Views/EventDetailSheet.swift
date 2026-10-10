@@ -971,6 +971,7 @@ struct EventDetailView: View {
     /// ("Draft shifts are not open for pickup"), so none is offered. Servers
     /// that omit `publication` keep the previous behaviour.
     private var crewUnreleased: Bool {
+        if let claimsOpen = vm.shiftGroup?.claimsOpen { return !claimsOpen }
         guard let publication = vm.shiftGroup?.publication else { return false }
         return publication.publishedAt == nil
     }
