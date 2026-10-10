@@ -136,11 +136,11 @@ final class AppPreferencesTests: XCTestCase {
     func testMenuBarCountIsOnByDefaultAndPersists() {
         let defaults = isolatedDefaults()
         let first = AppPreferencesStore(defaults: defaults)
-        XCTAssertTrue(first.showsMenuBarCount)
+        XCTAssertEqual(first.menuBarCountMode, .open)
 
-        first.showsMenuBarCount = false
+        first.menuBarCountMode = .hidden
 
-        XCTAssertFalse(AppPreferencesStore(defaults: defaults).showsMenuBarCount)
+        XCTAssertEqual(AppPreferencesStore(defaults: defaults).menuBarCountMode, .hidden)
     }
 
     func testAlertSoundIsOffByDefaultAndPersists() {
@@ -198,6 +198,6 @@ final class AppPreferencesTests: XCTestCase {
         defaults.set(Data(legacy.utf8), forKey: "GearOpsAppPreferencesV1")
 
         XCTAssertTrue(AppPreferencesStore(defaults: defaults).showsMenuBarExtra)
-        XCTAssertFalse(AppPreferencesStore(defaults: defaults).showsMenuBarCount)
+        XCTAssertEqual(AppPreferencesStore(defaults: defaults).menuBarCountMode, .hidden)
     }
 }

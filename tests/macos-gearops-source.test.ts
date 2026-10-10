@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
 
+/** The extra's popover spans the main view plus its card and health files. */
+function popover(): string {
+  return [
+    "macos/GearOps/MenuBarContentView.swift",
+    "macos/GearOps/BookingCards.swift",
+    "macos/GearOps/HealthPanel.swift",
+  ].map(source).join("\n");
+}
+
 describe("GearOps macOS menu bar contracts", () => {
   it("stays a separate menu-only macOS target", () => {
     const project = source("macos/project.yml");
@@ -24,7 +33,7 @@ describe("GearOps macOS menu bar contracts", () => {
 
   it("resolves the shared app icon from the bundle instead of the generic placeholder", () => {
     const icon = source("macos/GearOps/WisconsinCreativeIcon.swift");
-    const view = source("macos/GearOps/MenuBarContentView.swift");
+    const view = popover();
     const login = source("macos/GearOps/LoginView.swift");
 
     // `applicationIconImage` and `icon(forFile:)` substitute Apple's generic
@@ -49,7 +58,7 @@ describe("GearOps macOS menu bar contracts", () => {
   it("treats an idle kiosk heartbeat as normal rather than a fault", () => {
     const health = source("macos/GearOps/Health.swift");
     const model = source("macos/GearOps/GearOpsModel.swift");
-    const view = source("macos/GearOps/MenuBarContentView.swift");
+    const view = popover();
     const app = source("macos/GearOps/GearOpsApp.swift");
 
     // A kiosk between five minutes and 24 hours since its last heartbeat is
@@ -83,7 +92,7 @@ describe("GearOps macOS menu bar contracts", () => {
     const model = source("macos/GearOps/GearOpsModel.swift");
     const view = source("macos/GearOps/SettingsView.swift");
     const app = source("macos/GearOps/GearOpsApp.swift");
-    const menu = source("macos/GearOps/MenuBarContentView.swift");
+    const menu = popover();
 
     expect(settings).toContain("enum BookingChangeCategory");
     expect(settings).toContain("func allows(_ category: BookingChangeCategory) -> Bool");
@@ -142,15 +151,18 @@ describe("GearOps macOS menu bar contracts", () => {
     expect(prefs).toContain("SMAppService.openSystemSettingsLoginItems()");
 
     expect(view).toContain('Toggle("Open at login"');
-    expect(view).toContain('Toggle("Show open booking count"');
-    expect(app).toContain("model.appPreferences.showsMenuBarCount");
+    expect(view).toContain('Picker("Count beside the icon", selection: $preferences.menuBarCountMode)');
+    expect(prefs).toContain("case showsMenuBarCount");
+    expect(prefs).toContain("menuBarCountMode = showsCount ? .open : .hidden");
+    expect(app).toContain("model.menuBarCount(at: model.labelClock)");
+    expect(app).not.toContain("Timer.publish");
     expect(app).toContain("isInserted: $preferences.showsMenuBarExtra");
     expect(app).toContain(".symbolRenderingMode(.monochrome)");
     expect(app).not.toContain(".contentTransition(.numericText())");
     expect(app).toContain("too complex for a flat");
     expect(app).toContain("GearOpsActivation.apply(showsMenuBarExtra: visible)");
     expect(view).toContain(".gearOpsOpenSettings");
-    expect(source("macos/GearOps/MenuBarContentView.swift")).toContain(".gearOpsOpenSettings");
+    expect(popover()).toContain(".gearOpsOpenSettings");
     expect(source("macos/GearOps/CompanionPushBridge.swift")).not.toContain("gearOpsOpenDashboard");
     expect(source("macos/GearOps/CompanionPushBridge.swift")).not.toContain("gearOpsRefresh");
     expect(source("macos/GearOps/CompanionPushBridge.swift")).toContain("applicationShouldHandleReopen");
@@ -183,7 +195,7 @@ describe("GearOps macOS menu bar contracts", () => {
   });
 
   it("groups system health into one panel with actionable rows", () => {
-    const view = source("macos/GearOps/MenuBarContentView.swift");
+    const view = popover();
 
     // Health and kiosk rows point at real pages, so they behave as controls.
     expect(view).toContain("action: model.kioskAccess == .available ? { model.openKioskDevices() } : nil");
@@ -224,7 +236,7 @@ describe("GearOps macOS menu bar contracts", () => {
   });
 
   it("keeps one popover width and unambiguous footer controls", () => {
-    const view = source("macos/GearOps/MenuBarContentView.swift");
+    const view = popover();
     const login = source("macos/GearOps/LoginView.swift");
 
     expect(view).toContain("static let popoverWidth: CGFloat = 380");
@@ -241,7 +253,7 @@ describe("GearOps macOS menu bar contracts", () => {
   });
 
   it("surfaces overdue custody and hover affordances in the popover", () => {
-    const view = source("macos/GearOps/MenuBarContentView.swift");
+    const view = popover();
     const model = source("macos/GearOps/GearOpsModel.swift");
 
     expect(model).toContain("func overdueBookingCount(at now: Date = .now) -> Int");
@@ -286,7 +298,7 @@ describe("GearOps macOS menu bar contracts", () => {
     expect(model).toContain("repeated missing reads keep the last projection visible");
     expect(model).not.toContain("confirmMissingCredential");
     expect(model).toContain("shouldRetryCredentialRestore");
-    expect(source("macos/GearOps/MenuBarContentView.swift")).toContain(
+    expect(popover()).toContain(
       "await model.restoreSession()"
     );
     expect(model).not.toContain("fromSource");
@@ -296,7 +308,7 @@ describe("GearOps macOS menu bar contracts", () => {
     expect(model).toContain("await self?.restoreSession()");
     expect(model).not.toContain("startPolling");
     expect(model).not.toContain('method: "PATCH"');
-    expect(source("macos/GearOps/MenuBarContentView.swift")).toContain("await model.refresh()");
+    expect(popover()).toContain("await model.refresh()");
   });
 
   it("recovers the enrolled identity from Keychain when a crash loses preferences", () => {
@@ -395,7 +407,7 @@ describe("GearOps macOS menu bar contracts", () => {
   });
 
   it("renders open bookings then conditional pickups before health without summary cards", () => {
-    const view = source("macos/GearOps/MenuBarContentView.swift");
+    const view = popover();
 
     expect(view.indexOf("openBookingsList")).toBeLessThan(view.indexOf("systemHealth"));
     expect(view.indexOf("pendingPickupsList")).toBeLessThan(view.indexOf("systemHealth"));
@@ -407,7 +419,7 @@ describe("GearOps macOS menu bar contracts", () => {
   });
 
   it("keeps the popover compact without multiplying timeline or layout work", () => {
-    const view = source("macos/GearOps/MenuBarContentView.swift");
+    const view = popover();
 
     expect(view).toContain("onGeometryChange(for: CGFloat.self");
     expect(view).toContain("maximumContentHeight: CGFloat = 500");
@@ -417,7 +429,7 @@ describe("GearOps macOS menu bar contracts", () => {
   });
 
   it("uses interactive Liquid Glass only for booking actions with a fallback", () => {
-    const view = source("macos/GearOps/MenuBarContentView.swift");
+    const view = popover();
 
     expect(view).toContain("#available(macOS 26.0, *)");
     expect(view).toContain("GlassEffectContainer(spacing: 8)");
@@ -430,7 +442,7 @@ describe("GearOps macOS menu bar contracts", () => {
   });
 
   it("shows requester profile images with an initials fallback", () => {
-    const view = source("macos/GearOps/MenuBarContentView.swift");
+    const view = popover();
     const avatar = source("macos/GearOps/UserAvatarView.swift");
     const models = source("macos/GearOps/Models.swift");
 
@@ -456,7 +468,7 @@ describe("GearOps macOS menu bar contracts", () => {
   });
 
   it("keeps booking detail keyboard-first with copyable references", () => {
-    const view = source("macos/GearOps/MenuBarContentView.swift");
+    const view = popover();
     const model = source("macos/GearOps/GearOpsModel.swift");
 
     expect(view).toContain(".keyboardShortcut(.cancelAction)");
@@ -498,7 +510,7 @@ describe("GearOps macOS menu bar contracts", () => {
   });
 
   it("keeps the extra a glance: problems first, bounded live picture", () => {
-    const view = source("macos/GearOps/MenuBarContentView.swift");
+    const view = popover();
     const operations = view.slice(
       view.indexOf("private var operationsView"),
       view.indexOf("private func header(")
@@ -525,7 +537,7 @@ describe("GearOps macOS menu bar contracts", () => {
   });
 
   it("opens booking details and items inside the extra", () => {
-    const view = source("macos/GearOps/MenuBarContentView.swift");
+    const view = popover();
     const models = source("macos/GearOps/Models.swift");
     const projection = source("src/lib/services/companion-projection.ts");
 
@@ -534,7 +546,10 @@ describe("GearOps macOS menu bar contracts", () => {
     expect(view).toContain("Shows details and items");
     expect(view).toContain("Open in Wisconsin Creative");
     expect(view).toContain("All bookings");
-    expect(view).toContain("Item names are not in this snapshot yet");
+    expect(view).toContain("Item details aren't available for this booking.");
+    expect(view).not.toContain("Sign in again to load them");
+    expect(view).toContain("CompanionProjectionLimits.itemsPerBooking");
+    expect(models).toContain("Mirrors `MAX_COMPANION_ITEMS`");
     expect(view).toContain("ExtraBookingDetail(");
     expect(models).toContain("let assetTag: String?");
     expect(models).toContain("decodeIfPresent([OpenBooking.ItemReference].self, forKey: .serializedItems)");
@@ -543,10 +558,10 @@ describe("GearOps macOS menu bar contracts", () => {
   });
 
   it("places aggregate severity with health and prioritizes kiosk heartbeat age", () => {
-    const view = source("macos/GearOps/MenuBarContentView.swift");
+    const view = popover();
 
     expect(view).toContain("WisconsinCreativeIcon(size: 30)");
-    expect(view).toContain("Label(model.healthLabel, systemImage: model.healthSeverity.symbol)");
+    expect(view).toContain("Label(model.healthLabel(at: now), systemImage: model.healthSeverity(at: now).symbol)");
     expect(view).toContain('title: model.kioskAccess == .available ? "Kiosks" : "Kiosk access"');
     expect(view).toContain('return "\\(device.location.name) · Last seen');
     expect(view).toContain("device.pendingPickupCount");
@@ -645,7 +660,8 @@ describe("GearOps macOS menu bar contracts", () => {
     expect(model).toContain("clearPrivateNotifications()");
     expect(model).toContain("GearOpsAvatarCache.removeAll()");
     expect(model).toContain("var custodyCount: Int? { snapshot?.stats.checkedOut }");
-    expect(menu).toContain("model.custodyCount");
+    expect(model).toMatch(/case \.open:\s*\n\s*return custodyCount/);
+    expect(menu).toContain("model.menuBarAccessibilityLabel(at: model.labelClock)");
 
     expect(login).toContain("if let errorMessage = model.statusMessage");
     expect(login).toContain('Button("Settings…")');
@@ -655,5 +671,79 @@ describe("GearOps macOS menu bar contracts", () => {
     expect(login).toContain("accessibilityAddTraits(.updatesFrequently)");
     expect(avatar).toContain('scheme == "https"');
     expect(avatar).toContain("maxResponseBytes = 2_000_000");
+  });
+
+  it("re-reads a missed projection on presentation without polling", () => {
+    const model = source("macos/GearOps/GearOpsModel.swift");
+    const view = popover();
+    const events = source("macos/GearOps/ExtraWindowEvents.swift");
+
+    expect(model).toContain("static let staleSnapshotAge: TimeInterval = 15 * 60");
+    expect(model).toContain("if statusMessage != nil || snapshotIsStale(snapshot, at: now) { return .attention }");
+    expect(model).toContain("func refreshOnPresentation() async");
+    expect(model).toMatch(/guard !restoreInFlight else \{ return \}\s*\n\s*if shouldRetryCredentialRestore/);
+    expect(model).toContain("if !isRefreshing { await refresh() }");
+    expect(view).toContain("guard model.user != nil, searchIsFocused else { return false }");
+    expect(model).toContain("if let lastConfirmedAt, now.timeIntervalSince(lastConfirmedAt) < interval { return }");
+    expect(model).toContain("now.timeIntervalSince(lastConfirmedAt ?? snapshot.receivedAt) > Self.staleSnapshotAge");
+    expect(model).toContain("static let presentationRefreshInterval: TimeInterval = 60");
+    expect(model).toContain("lastRefreshAttemptAt = now");
+    expect(model).not.toContain("Timer.publish");
+    expect(view).toContain("await model.refreshOnPresentation()");
+    expect(view).toContain('"Unconfirmed for " + GearOpsSnapshot.compactElapsed(from: confirmedAt, to: now)');
+    expect(events).toContain("NSWindow.didBecomeKeyNotification");
+    expect(model).not.toContain("countDataIsPartial");
+    expect(model).not.toContain("openBookingTotal");
+  });
+
+  it("shares one projection trust check between the server read and the cache", () => {
+    const model = source("macos/GearOps/GearOpsModel.swift");
+    const models = source("macos/GearOps/Models.swift");
+
+    expect(models).toContain("enum CompanionProjectionLimits");
+    expect(models.match(/CompanionProjectionLimits\.accepts\(/g)).toHaveLength(1);
+    expect(model.match(/CompanionProjectionLimits\.accepts\(/g)).toHaveLength(1);
+    expect(models).not.toContain("partialFailures: [String]\n}\n\nstruct OpenBooking");
+    expect(model).toContain("private func apply(_ projection: CompanionProjection)");
+    expect(model).toMatch(/func loadFixture[\s\S]*?apply\(projection\)/);
+  });
+
+  it("searches the projection and navigates rows from the keyboard", () => {
+    const model = source("macos/GearOps/GearOpsModel.swift");
+    const models = source("macos/GearOps/Models.swift");
+    const view = popover();
+    const events = source("macos/GearOps/ExtraWindowEvents.swift");
+
+    expect(model).toContain("func searchBookings(_ query: String, at now: Date = .now) -> [BookingSearchResult]");
+    expect(models).toContain("let matchedItem: OpenBooking.ItemReference?");
+    expect(models).toContain("[.caseInsensitive, .diacriticInsensitive]");
+    expect(view).toContain('TextField("Search bookings, people, or gear", text: $searchText)');
+    expect(view).toContain('.keyboardShortcut("f", modifiers: .command)');
+    expect(view).toContain("private func handleKey(_ key: ExtraKey) -> Bool");
+    expect(view).toContain("proxy.scrollTo(route)");
+    expect(view).toContain(".strokeBorder(Color.accentColor, lineWidth: 2)");
+    expect(events).toContain("NSEvent.addLocalMonitorForEvents(matching: .keyDown)");
+    expect(events).toContain("event.windowNumber == windowNumber");
+  });
+
+  it("opens status from anywhere without Accessibility permission", () => {
+    const app = source("macos/GearOps/GearOpsApp.swift");
+    const shortcut = source("macos/GearOps/GlobalShortcut.swift");
+    const bridge = source("macos/GearOps/CompanionPushBridge.swift");
+    const settings = source("macos/GearOps/SettingsView.swift");
+
+    expect(shortcut).toContain("RegisterEventHotKey(UInt32(kVK_ANSI_G)");
+    expect(shortcut).not.toContain("addGlobalMonitorForEvents");
+    expect(shortcut).toContain("button.performClick(nil)");
+    expect(app).toContain("Window(GearOpsApp.statusWindowTitle, id: GearOpsWindow.status)");
+    expect(app).toContain("GlobalShortcut.shared.setEnabled(enabled)");
+    expect(app).toContain("if GearOpsFixture.isActive { return }");
+    // A TimelineView inside the MenuBarExtra label re-renders the status
+    // button endlessly and hangs launch.
+    const label = app.slice(app.indexOf("} label: {"), app.indexOf(".menuBarExtraStyle"));
+    expect(label).not.toContain("TimelineView");
+    expect(bridge).toContain('dockItem("Show Status"');
+    expect(bridge).toContain("GearOpsStatusPresenter.showWindow()");
+    expect(settings).toContain("GlobalShortcut.displayString");
   });
 });
