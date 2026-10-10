@@ -229,7 +229,7 @@ struct NotificationSettingsView: View {
                 pauseButton(title: "Pause 1 day", seconds: 24 * 60 * 60)
                 pauseButton(title: "Pause 1 week", seconds: 7 * 24 * 60 * 60)
                 Button {
-                    customPauseUntil = Date().addingTimeInterval(3 * 60 * 60)
+                    customPauseUntil = QuarterHour.roundedUp(Date().addingTimeInterval(3 * 60 * 60))
                     showingCustomPause = true
                 } label: {
                     Text("Pause until…")

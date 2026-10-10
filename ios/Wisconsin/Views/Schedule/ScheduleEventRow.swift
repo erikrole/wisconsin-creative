@@ -382,6 +382,8 @@ struct VenueDot: View {
 struct ScheduleDateHeader: View {
     let date: Date
     let eventCount: Int
+    /// What the count is of. Bookings reuses this header for its day groups.
+    var countNoun: (singular: String, plural: String) = ("event", "events")
 
     /// Read from the environment so the midnight rollover re-renders the
     /// header; a wall-clock check here left "Tomorrow" on today's events.
@@ -411,7 +413,7 @@ struct ScheduleDateHeader: View {
     }
 
     private var countText: String {
-        eventCount == 1 ? "1 event" : "\(eventCount) events"
+        eventCount == 1 ? "1 \(countNoun.singular)" : "\(eventCount) \(countNoun.plural)"
     }
 
     var body: some View {

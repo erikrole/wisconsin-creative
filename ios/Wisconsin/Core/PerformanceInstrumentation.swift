@@ -70,6 +70,10 @@ enum AppRuntimeMode {
         /// changing from one own row to the shared team list when the request
         /// drops its requester filter.
         case studentBookings = "student-bookings"
+        /// The real Bookings tab as staff, against a week of rows that covers
+        /// every handoff state the list has to tell apart: overdue, a missed
+        /// pickup, due and picking up today, and later in the week.
+        case staffBookings = "staff-bookings"
         /// Booking detail against a canned booking, plus its three sheets.
         /// Extend, Edit, and Cancel are local state opened by a tap, so each
         /// gets its own scenario rather than a tap script.
@@ -164,7 +168,7 @@ enum AppRuntimeMode {
         case .resourcesGuides, .previewChrome, .resourcesUsers, .resourcesLicenses, .resourcesLicensesOpen,
              .schedule, .tradeBoardStaff, .tradeBoardStudent,
              .home, .homeAllClear, .scoreboard, .profile,
-             .studentBookings,
+             .studentBookings, .staffBookings,
              .bookingDetail, .bookingExtend, .bookingEdit, .bookingCancel,
              .itemEdit, .createBookingScanner, .createBookingEvents, .search, .searchPartial,
              .itemsList, .reports, .accountSecurity, .notifications, .login:

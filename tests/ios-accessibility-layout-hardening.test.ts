@@ -56,8 +56,10 @@ describe("iOS accessibility-size layout hardening", () => {
 
     expect(bookings).toContain("private func accessibilityRow(now: Date) -> some View");
     expect(bookings).toContain("private func compactRow(now: Date) -> some View");
-    expect(bookings).toContain("timingLine(now: now, lineLimit: nil)");
-    expect(bookings).toContain("metadataLine(lineLimit: nil)");
+    // The accessibility layout spells the handoff out in full instead of the
+    // compact time column.
+    expect(bookings).toContain("Text(timing(now: now).text)");
+    expect(bookings).toContain("metadataLine(now: now, lineLimit: nil)");
   });
 
   it("keeps item identity ahead of status badges at accessibility sizes", () => {

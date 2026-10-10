@@ -321,12 +321,13 @@ describe("student field mobile contracts", () => {
     );
 
     expect(detail).toContain("BookingDetailsSection(");
-    expect(detail).toContain("Label(\"Edit Details\", systemImage: \"pencil\")");
+    // A plain "Edit" toolbar button, the system's own word for it.
+    expect(detail).toContain('Button("Edit") { showEdit = true }');
     expect(detail).toContain(".accessibilityLabel(\"Edit booking details\")");
     expect(editor).toContain(".navigationTitle(\"Edit Booking\")");
     expect(editor).toContain("Gear and pickup details stay read-only on your phone.");
     expect(editor).toContain('BrandSectionHeader("Booking Name")');
-    expect(editor).toContain('Text("Due back")');
+    expect(editor).toContain('factRow("Due back")');
     expect(editor).toContain("DayTimeChipPicker(");
     expect(editor).toContain("APIClient.shared.bookingAvailability");
     expect(editor).not.toContain("OptionPickerView(");
@@ -334,9 +335,8 @@ describe("student field mobile contracts", () => {
     expect(apiClient).toContain("let locationId: String?");
     expect(apiClient).toContain("locationId: locationId");
     expect(detail).toContain('BrandSectionHeader(title: "Gear")');
-    expect(detail).toContain("if canExtendBooking");
-    expect(detail).toContain("if canCancelBooking");
-    expect(detail).toContain("BookingExtendBar");
+    expect(detail).toContain("if canExtendBooking || canCancelBooking");
+    expect(detail).toContain("BookingActionBar");
     expect(editor).toContain("guard canSave else { return }");
     expect(detail).toContain("if isActioning { return }");
     expect(extendSheet).toContain("if isLoading { return }");

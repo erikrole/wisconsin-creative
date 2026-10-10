@@ -54,9 +54,8 @@ describe("iOS booking list sort contract", () => {
   });
 
   it("orders each loaded page by its next operational handoff", () => {
-    expect(bookingsView).toContain(
-      "booking.kind == .reservation ? booking.startsAt : booking.endsAt",
-    );
+    expect(bookingsView).toContain("status == .open ? endsAt : startsAt");
+    expect(bookingsView).toContain("booking.nextHandoff");
     expect(bookingsView).toContain(
       "sortedBookings = bookings.sorted(by: Self.operationalTimeSort)",
     );

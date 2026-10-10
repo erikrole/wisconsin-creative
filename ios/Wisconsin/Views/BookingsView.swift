@@ -295,10 +295,12 @@ final class BookingsViewModel {
         sortedBookings = bookings
     }
 
-    /// One merged list ordered by the next operational handoff: scheduled
-    /// pickup for a reservation, due-back time for gear already checked out.
+    /// One merged list ordered by the next operational handoff: the kiosk
+    /// pickup until gear is out, then the due-back time. The same time picks
+    /// the row's day group and its time column, so a pending pickup never
+    /// sorts by a return date while reading as a pickup.
     private static func operationalTime(for booking: Booking) -> Date {
-        booking.kind == .reservation ? booking.startsAt : booking.endsAt
+        booking.nextHandoff
     }
 
     private static func operationalTimeSort(_ lhs: Booking, _ rhs: Booking) -> Bool {
@@ -438,6 +440,53 @@ struct BookingsView: View {
         vm.statusFilter == .active ? "Active" : vm.statusFilter.label
     }
 
+    /// Day groups only make sense when the list is in handoff order and the
+    /// rows still have a handoff ahead of them. A title sort, or a filter of
+    /// finished bookings, stays one group under the scope's name.
+    private var groupsByDay: Bool {
+        vm.sortOption == .operational && ![.completed, .cancelled].contains(vm.statusFilter)
+    }
+
+    private var listGroups: [BookingListGroup] {
+        BookingListGroup.groups(
+            for: vm.sortedBookings,
+            byDay: groupsByDay,
+            flatTitle: sectionTitle,
+            now: .now
+        )
+    }
+
+    private func bookingGroupSection(_ group: BookingListGroup) -> some View {
+        let rows = group.bookings
+        let showsDay: Bool
+        if case .day = group { showsDay = false } else { showsDay = true }
+        return Section {
+            ForEach(Array(rows.enumerated()), id: \.element.id) { index, booking in
+                bookingRowLink(
+                    booking,
+                    position: EventRowGroupPosition(index: index, count: rows.count),
+                    showsDay: showsDay
+                )
+            }
+        } header: {
+            bookingGroupHeader(group)
+                .listRowInsets(EdgeInsets())
+        }
+        .listSectionSeparator(.hidden)
+    }
+
+    @ViewBuilder
+    private func bookingGroupHeader(_ group: BookingListGroup) -> some View {
+        switch group {
+        case .attention(let rows):
+            BookingListSection.Header(title: "Needs attention", count: rows.count, tone: .red)
+        case .day(let date, let rows):
+            ScheduleDateHeader(date: date, eventCount: rows.count, countNoun: ("booking", "bookings"))
+        case .flat(let title, let rows):
+            BookingListSection.Header(title: title, count: rows.count)
+        }
+    }
+
     private var isDefaultFiltering: Bool {
         vm.statusFilter == .active && vm.sortOption == .operational
     }
@@ -498,10 +547,8 @@ struct BookingsView: View {
                         }
                     } else {
                         List {
-                            BookingListSection(title: sectionTitle, count: vm.sortedBookings.count) {
-                                ForEach(vm.sortedBookings) { booking in
-                                    bookingRowLink(booking)
-                                }
+                            ForEach(listGroups) { group in
+                                bookingGroupSection(group)
                             }
                             if let pageError = vm.pageError {
                                 VStack(spacing: 8) {
@@ -527,6 +574,7 @@ struct BookingsView: View {
                             }
                         }
                         .listStyle(.plain)
+                        .listSectionSpacing(6)
                         .scrollContentBackground(.hidden)
                         .background(Color(.systemGroupedBackground))
                     }
@@ -747,9 +795,16 @@ struct BookingsView: View {
         return !isCollaborator || hasCapability("RESERVATION_CANCEL_OWN")
     }
 
-    private func bookingRowLink(_ booking: Booking) -> some View {
+    private func bookingRowLink(
+        _ booking: Booking,
+        position: EventRowGroupPosition,
+        showsDay: Bool
+    ) -> some View {
         BookingRowLink(
             booking: booking,
+            isMine: booking.requester.id == session.currentUser?.id,
+            position: position,
+            showsDay: showsDay,
             canEdit: canEdit(booking),
             canTransfer: canTransfer(booking),
             canExtend: booking.kind == .checkout && canExtend(booking),
@@ -876,30 +931,45 @@ private struct BookingEmptyState<Actions: View>: View {
     }
 }
 
-private struct BookingListSection<Content: View>: View {
-    let title: String
-    let count: Int
-    @ViewBuilder let content: () -> Content
+/// Header for a group that is not a single day: the scope's own name on a
+/// flat list, or Needs attention above the late rows. Same weight and place as
+/// a Schedule day header, so the two kinds of group read as one list.
+enum BookingListSection {
+    struct Header: View {
+        let title: String
+        let count: Int
+        var tone: StatusTone? = nil
 
-    var body: some View {
-        Section {
-            content()
-        } header: {
-            HStack(spacing: 6) {
+        var body: some View {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(title)
+                    .font(.title3)
+                    .fontWeight(.heavy)
+                    .foregroundStyle(tone.map { Color.statusText($0) } ?? Color.primary)
                 Text("\(count)")
-                    .font(.caption2.weight(.semibold))
+                    .font(.subheadline.monospacedDigit())
                     .foregroundStyle(.secondary)
+                Spacer(minLength: 8)
             }
-            .textCase(.none)
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(.secondary)
+            .lineLimit(1)
+            .textCase(nil)
+            .padding(.horizontal, 32)
+            .padding(.top, 14)
+            .padding(.bottom, 8)
+            .frame(maxWidth: .infinity)
+            .background(Color(.systemGroupedBackground))
+            .accessibilityElement(children: .ignore)
+            .accessibilityAddTraits(.isHeader)
+            .accessibilityLabel("\(title), \(count) booking\(count == 1 ? "" : "s")")
         }
     }
 }
 
 private struct BookingRowLink: View {
     let booking: Booking
+    let isMine: Bool
+    let position: EventRowGroupPosition
+    let showsDay: Bool
     let canEdit: Bool
     let canTransfer: Bool
     let canExtend: Bool
@@ -912,7 +982,7 @@ private struct BookingRowLink: View {
     var body: some View {
         ZStack {
             NavigationLink(value: booking) { EmptyView() }.opacity(0)
-            BookingRow(booking: booking)
+            BookingRow(booking: booking, showsDay: showsDay)
         }
         // The same actions the context menu carries, one swipe away. Long-press
         // is discoverable only once you know it is there; a swipe is the list
@@ -977,9 +1047,11 @@ private struct BookingRowLink: View {
                 }
             }
         }
+        // A slice of the group's rounded card, tinted blue when the booking
+        // is yours -- the same surface Schedule rows use.
         .listRowSeparator(.hidden)
-        .listRowBackground(Color.clear)
-        .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
+        .listRowBackground(EventRowBackground(isMine: isMine, position: position))
+        .listRowInsets(EdgeInsets(top: 11, leading: 32, bottom: 11, trailing: 32))
     }
 }
 
@@ -998,10 +1070,89 @@ private struct BookingsSearchModifier: ViewModifier {
     }
 }
 
+extension Booking {
+    /// The next moment someone has to act on this booking: the kiosk pickup
+    /// until the gear is out, then the return. The list sorts, groups, and
+    /// labels a row by this one time, so a row never sits under one day's
+    /// header while naming another.
+    var nextHandoff: Date {
+        status == .open ? endsAt : startsAt
+    }
+}
+
+/// How the Bookings list is cut up on screen. The default handoff order groups
+/// by day, with overdue returns and missed pickups pulled into a leading group
+/// of their own; any other order or a finished-status filter is one group,
+/// because a day header over a title-sorted list would be a lie.
+enum BookingListGroup: Identifiable {
+    case attention([Booking])
+    case day(Date, [Booking])
+    case flat(String, [Booking])
+
+    var id: String {
+        switch self {
+        case .attention: "attention"
+        case .day(let date, _): "day-\(date.timeIntervalSinceReferenceDate)"
+        case .flat(let title, _): "flat-\(title)"
+        }
+    }
+
+    var bookings: [Booking] {
+        switch self {
+        case .attention(let rows), .day(_, let rows), .flat(_, let rows): rows
+        }
+    }
+
+    /// Late returns and pickups whose time has passed -- the rows someone at
+    /// the desk has to chase, whatever day they were due.
+    static func isLate(_ booking: Booking, now: Date) -> Bool {
+        switch booking.status {
+        case .open: booking.endsAt < now
+        case .booked, .pendingPickup: booking.startsAt < now
+        default: false
+        }
+    }
+
+    static func groups(
+        for bookings: [Booking],
+        byDay: Bool,
+        flatTitle: String,
+        now: Date,
+        calendar: Calendar = .current
+    ) -> [BookingListGroup] {
+        guard byDay else { return bookings.isEmpty ? [] : [.flat(flatTitle, bookings)] }
+        var late: [Booking] = []
+        var days: [(day: Date, rows: [Booking])] = []
+        for booking in bookings {
+            if isLate(booking, now: now) {
+                late.append(booking)
+                continue
+            }
+            let day = calendar.startOfDay(for: booking.nextHandoff)
+            if let last = days.indices.last, days[last].day == day {
+                days[last].rows.append(booking)
+            } else {
+                days.append((day, [booking]))
+            }
+        }
+        var result: [BookingListGroup] = []
+        if !late.isEmpty { result.append(.attention(late)) }
+        result += days.map { .day($0.day, $0.rows) }
+        return result
+    }
+}
+
+/// One booking in the list: avatar, title, one quiet meta line, and the
+/// handoff time trailing. Mirrors the Schedule row -- the group card, the day
+/// header, and the time column carry what the old rail, shadow, and dated
+/// timing sentence used to.
 struct BookingRow: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     let booking: Booking
+    /// Under a day header the time column shows only the time. In Needs
+    /// attention or a single flat group it has to name the day too.
+    var showsDay = false
 
     private func isOverdue(now: Date) -> Bool {
         booking.status == .open && booking.endsAt < now
@@ -1019,9 +1170,8 @@ struct BookingRow: View {
         booking.serializedItems.count + booking.bulkItems.reduce(0) { $0 + $1.plannedQuantity }
     }
 
-    /// The rail and timing color carry the state on their own: blue rail plus
-    /// "Due" reads as out, purple rail plus "Pickup" reads as reserved. A
-    /// badge restating either is noise, so only the odder statuses get one.
+    /// Whether the VoiceOver label names the status outright. Open checkouts
+    /// and booked rows are already said by their timing sentence.
     private func showsStatusBadge(now: Date) -> Bool {
         switch booking.status {
         case .open: booking.kind != .checkout
@@ -1030,8 +1180,8 @@ struct BookingRow: View {
         }
     }
 
-    /// Accent tone for the leading bar — overdue shouts red, otherwise the
-    /// status' own tone (reservation purple, checkout blue, pickup orange).
+    /// Overdue shouts red, otherwise the status' own tone (reservation purple,
+    /// checkout blue, pickup orange).
     private func accentTone(now: Date) -> StatusTone {
         if isOverdue(now: now) { return .red }
         if isPendingPickup(now: now) { return .orange }
@@ -1044,6 +1194,8 @@ struct BookingRow: View {
     }
 
     var body: some View {
+        // Minute cadence, not the midnight `today`: a checkout turns overdue at
+        // its due time, mid-afternoon as often as not.
         TimelineView(.periodic(from: .now, by: 60)) { context in
             Group {
                 if dynamicTypeSize.isAccessibilitySize {
@@ -1052,107 +1204,126 @@ struct BookingRow: View {
                     compactRow(now: context.date)
                 }
             }
-            .padding(.vertical, 12)
-            .padding(.horizontal, 14)
+            .padding(.vertical, 2)
             .frame(maxWidth: .infinity, alignment: .leading)
-            // Faint red wash so an overdue row reads as different at a glance,
-            // rather than only by the hue of its rail and timing text. Deliberately
-            // light: a bad week can put several of these on screen at once.
-            .background(isOverdue(now: context.date) ? Color.statusBackground(.red) : Color.cardSurface)
-            .clipShape(RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous)
-                    .strokeBorder(Color.hairline, lineWidth: 0.5)
-            )
-            .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 3)
+            .contentShape(Rectangle())
             .accessibilityElement(children: .combine)
             .accessibilityLabel(rowAccessibilityLabel(now: context.date))
         }
     }
 
     private func compactRow(now: Date) -> some View {
-        HStack(spacing: 12) {
+        HStack(alignment: .top, spacing: 12) {
+            // The one state mark: red overdue, orange pickup, purple
+            // reserved, blue out -- the rail the list has always used, now
+            // inside the day's card instead of on a card of its own.
             StatusRail(tone: accentTone(now: now))
-            UserAvatarView(name: booking.requester.name, avatarUrl: booking.requester.avatarUrl, size: 40)
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    bookingTitle.lineLimit(1)
-                    Spacer(minLength: 8)
-                    if showsStatusBadge(now: now) {
-                        statusBadge(now: now)
-                    }
-                }
-                timingLine(now: now, lineLimit: 1)
-                metadataLine(lineLimit: 1)
+            avatar
+            VStack(alignment: .leading, spacing: 3) {
+                bookingTitle.lineLimit(2)
+                metadataLine(now: now, lineLimit: 1)
             }
-            disclosureIndicator
+            .frame(maxWidth: .infinity, alignment: .leading)
+            timeColumn(now: now)
         }
     }
 
     private func accessibilityRow(now: Date) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            StatusRail(tone: accentTone(now: now))
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .top, spacing: 10) {
-                    UserAvatarView(name: booking.requester.name, avatarUrl: booking.requester.avatarUrl, size: 40)
-                    bookingTitle
-                        .fixedSize(horizontal: false, vertical: true)
-                    Spacer(minLength: 4)
-                    disclosureIndicator
-                }
-                if showsStatusBadge(now: now) {
-                    statusBadge(now: now)
-                }
-                timingLine(now: now, lineLimit: nil)
-                metadataLine(lineLimit: nil)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 10) {
+                StatusRail(tone: accentTone(now: now))
+                avatar
+                bookingTitle
+                    .fixedSize(horizontal: false, vertical: true)
             }
+            metadataLine(now: now, lineLimit: nil)
+            Text(timing(now: now).text)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Color.statusText(accentTone(now: now)))
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
+    private var avatar: some View {
+        UserAvatarView(name: booking.requester.name, avatarUrl: booking.requester.avatarUrl, size: 32)
+            .accessibilityHidden(true)
+    }
+
     private var bookingTitle: some View {
+        // Gotham, matching Home's Next Up rows: the two lists name the same
+        // work and must not change typeface between them.
         Text(booking.title)
             .font(.gothamBold(size: 16))
     }
 
-    private func statusBadge(now: Date) -> some View {
-        StatusBadge(status: booking.status, kind: booking.kind, isOverdue: isOverdue(now: now))
-    }
-
-    private var disclosureIndicator: some View {
-        Image(systemName: "chevron.right")
-            .font(.caption2.weight(.semibold))
-            .foregroundStyle(.tertiary)
-            .accessibilityHidden(true)
-    }
-
-    private func timingLine(now: Date, lineLimit: Int?) -> some View {
-        let info = timing(now: now)
-        return Text(info.text)
-            .font(.caption.weight(.semibold))
+    private func metadataLine(now: Date, lineLimit: Int?) -> some View {
+        // The state lives on the rail and in the time column; the meta line
+        // stays the same two facts on every row.
+        var parts: [Text] = [Text(booking.requester.name)]
+        if itemCount > 0 {
+            parts.append(Text("\(itemCount) item\(itemCount == 1 ? "" : "s")").monospacedDigit())
+        }
+        let line = parts.dropFirst().reduce(parts[0]) { Text("\($0) · \($1)") }
+        return line
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
             .lineLimit(lineLimit)
             .fixedSize(horizontal: false, vertical: true)
-            .foregroundStyle(info.urgent ? AnyShapeStyle(Color.statusText(.red)) : AnyShapeStyle(Color.statusText(accentTone(now: now))))
     }
 
-    private func metadataLine(lineLimit: Int?) -> some View {
-        HStack(spacing: 4) {
-            Text(booking.requester.name)
-            Text("·")
-            Text(booking.location.name)
-            if itemCount > 0 {
-                Text("·")
-                Text("\(itemCount) item\(itemCount == 1 ? "" : "s")")
-                    .monospacedDigit()
-            }
+    // MARK: Time column
+
+    /// "Due" / "Pickup" under the time, in the state's tone. A late row says
+    /// what was missed instead.
+    private func actionWord(now: Date) -> String {
+        if isOverdue(now: now) { return "Overdue" }
+        switch booking.status {
+        case .open: return "Due back"
+        case .booked where booking.kind == .reservation:
+            return booking.startsAt < now ? "Pickup missed" : "Reserved"
+        case .booked, .pendingPickup:
+            return booking.startsAt < now ? "Pickup missed" : "Awaiting pickup"
+        case .completed: return "Returned"
+        case .cancelled: return "Cancelled"
+        default: return "Starts"
         }
-        .font(.caption)
-        .foregroundStyle(.secondary)
-        .lineLimit(lineLimit)
-        .fixedSize(horizontal: false, vertical: true)
     }
 
-    /// Shared relative-day wording. Urgency lives in the rail and text color,
-    /// not a repeated overdue badge or duration.
+    /// The time alone under a day header; elsewhere the day, unless it is
+    /// today, where the time is the more useful fact.
+    private func primaryTime(now: Date) -> String {
+        let time = booking.nextHandoff.formatted(date: .omitted, time: .shortened)
+        guard showsDay else { return time }
+        let calendar = Calendar.current
+        switch calendar.dayOffset(of: booking.nextHandoff, from: now) {
+        case 0: return time
+        case -1: return "Yesterday"
+        case 1: return "Tomorrow"
+        default:
+            let sameYear = calendar.component(.year, from: booking.nextHandoff) == calendar.component(.year, from: now)
+            return sameYear
+                ? booking.nextHandoff.formatted(.dateTime.month(.abbreviated).day())
+                : booking.nextHandoff.formatted(.dateTime.month(.abbreviated).day().year())
+        }
+    }
+
+    private func timeColumn(now: Date) -> some View {
+        VStack(alignment: .trailing, spacing: 2) {
+            Text(primaryTime(now: now))
+                .font(.subheadline.weight(.heavy).monospacedDigit())
+                .foregroundStyle(Color.primary)
+            Text(actionWord(now: now))
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Color.statusText(accentTone(now: now)))
+        }
+        .lineLimit(1)
+        .fixedSize()
+        .padding(.top, 1)
+        .accessibilityHidden(true)
+    }
+
+    /// Shared relative-day wording, used whole by the accessibility layout
+    /// and the VoiceOver label.
     private func timing(now: Date) -> (text: String, urgent: Bool) {
         if booking.kind == .checkout {
             switch booking.status {

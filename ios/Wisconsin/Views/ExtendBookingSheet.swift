@@ -10,6 +10,7 @@ struct ExtendBookingSheet: View {
     @State private var error: String?
     @State private var showDiscardConfirm = false
     @State private var nextNeedAt: Date?
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
 
     init(booking: Booking, onSuccess: @escaping (Booking) -> Void) {
         self.booking = booking
@@ -46,31 +47,51 @@ struct ExtendBookingSheet: View {
         chipDayTime(date)
     }
 
-    private var dueOverline: String {
-        let relative = RelativeDateTimeFormatter()
-        relative.unitsStyle = .full
-        let text = relative.localizedString(for: currentEndsAt, relativeTo: Date())
-        return currentEndsAt < Date() ? "OVERDUE · \(text.uppercased())" : "DUE \(text.uppercased())"
+    private var isOverdue: Bool { currentEndsAt < Date() }
+
+    /// The current due time, said once: "Due back today at 3:30 AM", or
+    /// "Overdue · was due yesterday at 6:00 PM".
+    private var stateLine: String {
+        let when = currentEndsAt.operationalDateTimeLabel(capitalizesRelativeDay: false)
+        return isOverdue ? "Overdue · was due \(when)" : "Due back \(when)"
     }
 
-    private func neededNextCard(_ needAt: Date) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: "clock.badge.exclamationmark")
-                .font(.title3)
-                .foregroundStyle(Color.statusText(.orange))
-            VStack(alignment: .leading, spacing: 2) {
-                Text("NEEDED NEXT")
-                    .font(.caption2.weight(.bold))
-                    .tracking(0.8)
-                    .foregroundStyle(.secondary)
-                Text(dayTime(needAt))
-                    .font(.headline)
+    /// One card for the one constraint: when the gear is needed next and,
+    /// from that, the latest this booking can run.
+    @ViewBuilder
+    private var limitCard: some View {
+        if let nextNeedAt {
+            let canExtend = (latestEndsAt ?? currentEndsAt) > currentEndsAt
+            let tone: StatusTone = canExtend ? .orange : .red
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "clock.badge.exclamationmark")
+                    .font(.title3)
+                    .foregroundStyle(Color.statusText(tone))
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Needed again \(nextNeedAt.operationalDateTimeLabel(capitalizesRelativeDay: false))")
+                        .font(.subheadline.weight(.semibold))
+                    if canExtend, let latestEndsAt {
+                        Text("Extend until \(latestEndsAt.operationalDateTimeLabel(capitalizesRelativeDay: false)) at the latest.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text("This can't be extended.")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(Color.statusText(.red))
+                    }
+                }
+                Spacer(minLength: 0)
             }
-            Spacer(minLength: 0)
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.statusBackground(tone), in: RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous))
+            .accessibilityElement(children: .combine)
+        } else {
+            Text("Nothing else needs this gear, so pick any time.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.statusBackground(.orange), in: RoundedRectangle(cornerRadius: 14))
     }
 
     private func sectionHeading(_ text: String) -> some View {
@@ -83,64 +104,36 @@ struct ExtendBookingSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(dueOverline)
-                            .font(.caption2.weight(.bold))
-                            .tracking(0.8)
-                            .foregroundStyle(currentEndsAt < Date() ? Color.statusText(.red) : Color.statusText(.blue))
+                    // Same header as Booking detail: title, who, and state.
+                    VStack(alignment: .leading, spacing: 3) {
                         Text(booking.title)
-                            .font(.title.weight(.heavy))
+                            .font(.gothamBold(size: 24))
                             .lineLimit(2)
-                        Text("\(booking.requester.name) · ends \(dayTime(currentEndsAt))")
-                            .font(.subheadline)
+                        Text(booking.requester.name)
+                            .font(.subheadline.weight(.medium))
                             .foregroundStyle(.secondary)
+                        Text(stateLine)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Color.statusText(isOverdue ? .red : .blue))
                     }
 
-                    if let latestEndsAt, latestEndsAt > currentEndsAt {
-                        Text("Can go until \(dayTime(latestEndsAt))")
-                            .font(.title3.weight(.heavy))
-                            .padding(.top, 6)
-                        if let nextNeedAt {
-                            neededNextCard(nextNeedAt)
-                        }
-                    } else if nextNeedAt != nil {
-                        Text("This can't be extended")
-                            .font(.title3.weight(.heavy))
-                            .foregroundStyle(Color.statusText(.red))
-                            .padding(.top, 6)
-                        if let nextNeedAt { neededNextCard(nextNeedAt) }
-                    } else {
-                        Text("Nothing else needs this gear, so pick any time.")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .padding(.top, 6)
-                    }
+                    limitCard
 
                     sectionHeading("Extend until")
                     DayTimeChipPicker(selection: $newEndsAt, minimum: currentEndsAt, latest: latestEndsAt)
 
+                    // The new time itself is on the button below; this line
+                    // only says what it buys, or why it can't be had.
                     if hasChanges {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("NEW DUE TIME")
-                                .font(.caption2.weight(.bold))
-                                .tracking(0.8)
-                                .foregroundStyle(.secondary)
-                            Text(dayTime(newEndsAt))
-                                .font(.title2.weight(.heavy))
-                            Text(moreTime)
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                            if exceedsLimit, let latestEndsAt {
-                                Label("Gear is needed again then. Latest is \(dayTime(latestEndsAt)).", systemImage: "exclamationmark.triangle.fill")
-                                    .font(.footnote)
-                                    .foregroundStyle(Color.statusText(.red))
-                                    .padding(.top, 4)
-                            }
+                        if exceedsLimit, let latestEndsAt {
+                            Label("Gear is needed again then. Latest is \(dayTime(latestEndsAt)).", systemImage: "exclamationmark.triangle.fill")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(Color.statusText(.red))
+                        } else {
+                            Label(moreTime, systemImage: "plus.circle.fill")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Color.statusText(.blue))
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(16)
-                        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
-                        .accessibilityElement(children: .combine)
                     }
                 }
                 .padding(.horizontal, 16)
@@ -150,29 +143,10 @@ struct ExtendBookingSheet: View {
             }
             .background(Color(.systemGroupedBackground))
             .safeAreaInset(edge: .bottom) {
-                Button {
-                    Task { await extend() }
-                } label: {
-                    Group {
-                        if isLoading {
-                            ProgressView()
-                        } else {
-                            Text(canSubmit ? "Extend to \(dayTime(newEndsAt))" : "Pick a new time")
-                        }
-                    }
-                    .font(.headline)
-                    .frame(maxWidth: .infinity, minHeight: 56)
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(canSubmit ? Color.white : Color.secondary)
-                .background(
-                    canSubmit ? Color.statusText(.blue) : Color(.tertiarySystemFill),
-                    in: RoundedRectangle(cornerRadius: 16)
-                )
-                .disabled(!canSubmit || isLoading)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(.bar)
+                extendButton
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(.bar)
             }
             .safeAreaInset(edge: .top) {
                 if let error {
@@ -196,19 +170,6 @@ struct ExtendBookingSheet: View {
                     }
                     .disabled(isLoading)
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button {
-                        Task { await extend() }
-                    } label: {
-                        if isLoading {
-                            ProgressView().controlSize(.small)
-                        } else {
-                            Text("Extend").fontWeight(.semibold)
-                        }
-                    }
-                    .disabled(!canSubmit || isLoading)
-                    .accessibilityLabel(isLoading ? "Extending booking" : "Extend booking")
-                }
             }
             .interactiveDismissDisabled(isLoading || hasChanges)
             .confirmationDialog(
@@ -224,6 +185,42 @@ struct ExtendBookingSheet: View {
         }
     }
 
+    /// The filled capsule Booking detail uses, once there is a time to
+    /// extend to. Before that, a plain outlined prompt that stays legible --
+    /// a disabled filled button fades to near-invisible.
+    @ViewBuilder
+    private var extendButton: some View {
+        if canSubmit || isLoading {
+            Button {
+                Task { await extend() }
+            } label: {
+                Group {
+                    if isLoading {
+                        ProgressView()
+                    } else {
+                        Text("Extend to \(dayTime(newEndsAt))")
+                    }
+                }
+                .font(.headline)
+                .frame(maxWidth: .infinity)
+                .foregroundStyle(Color.statusControlForeground(.blue, contrast: colorSchemeContrast))
+            }
+            .buttonStyle(.borderedProminent)
+            .buttonBorderShape(.capsule)
+            .controlSize(.large)
+            .tint(Color.statusText(.blue))
+            .disabled(isLoading)
+            .accessibilityLabel(isLoading ? "Extending booking" : "Extend booking")
+        } else {
+            Text(exceedsLimit ? "Pick an earlier time" : "Pick a new time")
+                .font(.headline)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, minHeight: 50)
+                .background(Color(.tertiarySystemFill), in: Capsule())
+                .accessibilityAddTraits(.isStaticText)
+        }
+    }
+
     /// "+2 days 3 hours" style gap between the current and new end.
     private var moreTime: String {
         let parts = calendar.dateComponents([.day, .hour, .minute], from: currentEndsAt, to: newEndsAt)
@@ -231,7 +228,7 @@ struct ExtendBookingSheet: View {
         if let d = parts.day, d > 0 { out.append("\(d) day\(d == 1 ? "" : "s")") }
         if let h = parts.hour, h > 0 { out.append("\(h) hour\(h == 1 ? "" : "s")") }
         if let m = parts.minute, m > 0, parts.day == 0 { out.append("\(m) min") }
-        return out.isEmpty ? "No extra time" : "+" + out.joined(separator: " ") + " more"
+        return out.isEmpty ? "No extra time" : out.joined(separator: " ") + " more"
     }
 
     private func extend() async {

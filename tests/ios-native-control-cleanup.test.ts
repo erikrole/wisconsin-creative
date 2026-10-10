@@ -74,22 +74,16 @@ describe("iOS native control cleanup", () => {
 
   it("uses native bordered booking detail actions instead of glass buttons", () => {
     const booking = source("ios/Wisconsin/Views/BookingDetailView.swift");
-    const actions = sliceBetween(
+    const bar = sliceBetween(
       booking,
-      "private struct ActionsSection",
-      "private struct BookingExtendBar",
-    );
-    const extendBar = sliceBetween(
-      booking,
-      "private struct BookingExtendBar",
+      "private struct BookingActionBar",
       "// MARK: - Shared",
     );
 
-    expect(actions).not.toContain(".buttonStyle(.glass)");
-    expect(actions).toMatch(/Label\("Cancel Booking"[\s\S]*?\.buttonStyle\(\.bordered\)[\s\S]*?\.buttonBorderShape\(\.capsule\)[\s\S]*?\.controlSize\(\.large\)/);
-    expect(extendBar).not.toContain(".buttonStyle(.glass)");
-    expect(extendBar).toMatch(/Label\("Extend Return Date"[\s\S]*?\.buttonStyle\(\.bordered\)[\s\S]*?\.buttonBorderShape\(\.capsule\)[\s\S]*?\.controlSize\(\.large\)/);
-    expect(extendBar).toContain(".background(.ultraThinMaterial)");
-    expect(extendBar).not.toContain("Divider()");
+    expect(bar).not.toContain(".buttonStyle(.glass)");
+    expect(bar).toMatch(/Label\(onExtend == nil \? "Cancel Booking" : "Cancel"[\s\S]*?\.buttonStyle\(\.bordered\)[\s\S]*?\.buttonBorderShape\(\.capsule\)[\s\S]*?\.controlSize\(\.large\)/);
+    expect(bar).toMatch(/Label\("Extend Return Date"[\s\S]*?\.buttonStyle\(\.borderedProminent\)[\s\S]*?\.buttonBorderShape\(\.capsule\)[\s\S]*?\.controlSize\(\.large\)/);
+    expect(bar).toContain(".background(.ultraThinMaterial)");
+    expect(bar).not.toContain("Divider()");
   });
 });

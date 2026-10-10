@@ -36,11 +36,12 @@ describe("iOS bookings empty state recovery", () => {
     expect(source).toContain("var sortedBookings: [Booking]");
     // Checkouts and reservations interleave on the next operational handoff:
     // reservation pickup time or checkout due-back time.
-    expect(source).toContain("booking.kind == .reservation ? booking.startsAt : booking.endsAt");
+    expect(source).toContain("status == .open ? endsAt : startsAt");
     expect(source).toContain("sortedBookings = bookings.sorted(by: Self.operationalTimeSort)");
-    // One merged section for both kinds; its header names the selected
-    // scope, which is "Active" on the default list.
-    expect(source).toContain("BookingListSection(title: sectionTitle");
+    // Both kinds share each group: day groups (plus Needs attention) in
+    // handoff order, otherwise one group named for the selected scope.
+    expect(source).toContain("flatTitle: sectionTitle");
+    expect(source).toContain('BookingListSection.Header(title: "Needs attention"');
     expect(source).toContain('vm.statusFilter == .active ? "Active" : vm.statusFilter.label');
     expect(source).not.toContain('BookingListSection(title: "Checkouts"');
     expect(source).not.toContain('BookingListSection(title: "Reservations"');

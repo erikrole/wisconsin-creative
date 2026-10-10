@@ -654,6 +654,30 @@ final class StudentBookingsScreenshotUITests: XCTestCase {
         screenshot.lifetime = .keepAlways
         add(screenshot)
     }
+
+    /// Staff list over a week of handoffs: overdue, a missed pickup, due and
+    /// picking up today, tomorrow, and later. The fixture builds its dates
+    /// from the start of today, so the day groups hold still across runs.
+    func testStaffBookingsCaptures() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "staff-bookings"
+        app.launch()
+
+        XCTAssertTrue(app.navigationBars["Bookings"].waitForExistence(timeout: 20), "Bookings never rendered")
+        XCTAssertTrue(app.staticTexts["Volleyball baseline kit"].waitForExistence(timeout: 20),
+                      "Booking rows never rendered")
+
+        let top = XCTAttachment(screenshot: app.screenshot())
+        top.name = "staff-bookings"
+        top.lifetime = .keepAlways
+        add(top)
+
+        app.swipeUp()
+        let scrolled = XCTAttachment(screenshot: app.screenshot())
+        scrolled.name = "staff-bookings-scrolled"
+        scrolled.lifetime = .keepAlways
+        add(scrolled)
+    }
 }
 
 /// Captures the Trade Board review queue as staff. The fixture holds two claims

@@ -51,7 +51,7 @@ describe("iOS focused booking edit and transfer", () => {
       detail.indexOf("struct TransferBookingOwnerSheet"),
     );
     expect(editor).toContain('BrandSectionHeader("Booking Name")');
-    expect(editor).toContain('Text("Due back")');
+    expect(editor).toContain('factRow("Due back")');
     expect(editor).toContain("DayTimeChipPicker(");
     expect(editor).toContain("APIClient.shared.bookingAvailability");
     expect(editor).toContain('Label("This return time works"');

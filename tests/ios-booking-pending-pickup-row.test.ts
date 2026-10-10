@@ -10,9 +10,10 @@ describe("iOS booking pending-pickup row", () => {
   const row = source.slice(source.indexOf("struct BookingRow: View"));
 
   it("orders reservations by pickup time and checkouts by due-back time", () => {
-    expect(viewModel).toContain(
-      "booking.kind == .reservation ? booking.startsAt : booking.endsAt",
-    );
+    // One next-handoff time: pickup until the gear is out, then the return.
+    // It drives the sort, the day group, and the row's time column alike.
+    expect(source).toContain("status == .open ? endsAt : startsAt");
+    expect(viewModel).toContain("booking.nextHandoff");
     expect(viewModel).toContain(
       "sortedBookings = bookings.sorted(by: Self.operationalTimeSort)",
     );

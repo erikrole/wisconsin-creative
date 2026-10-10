@@ -75,6 +75,8 @@ struct PerformanceTestRootView: View {
             PasswordSetupView(email: "avery.nakamura@wisc.edu")
         case .studentBookings:
             StudentBookingsHarnessView()
+        case .staffBookings:
+            StaffBookingsHarnessView()
         case .bookingDetail, .bookingExtend, .bookingEdit, .bookingCancel:
             BookingDetailHarnessView()
         case .itemEdit:
@@ -325,6 +327,15 @@ struct StudentBookingsHarnessView: View {
     var body: some View {
         BookingsView()
             .onAppear { session.currentUser = TradeBoardFixtures.student }
+    }
+}
+
+struct StaffBookingsHarnessView: View {
+    @Environment(SessionStore.self) private var session
+
+    var body: some View {
+        BookingsView()
+            .onAppear { session.currentUser = TradeBoardFixtures.staff }
     }
 }
 
@@ -849,6 +860,15 @@ enum BookingFixtureAPI {
         "bk-student-own": ("Student camera kit", "OPEN", "CHECKOUT"),
         "bk-team-reservation": ("Volleyball photo package", "BOOKED", "RESERVATION"),
         "bk-team-pickup": ("Field audio pickup", "PENDING_PICKUP", "CHECKOUT"),
+        // Staff list rows, so each state's detail screen can be opened.
+        "bk-staff-overdue": ("Volleyball baseline kit", "OPEN", "CHECKOUT"),
+        "bk-staff-missed": ("Hockey road audio kit", "BOOKED", "RESERVATION"),
+        "bk-staff-due-today": ("Football fall camp — video", "OPEN", "CHECKOUT"),
+        "bk-staff-pickup-checkout": ("Women's soccer portraits", "PENDING_PICKUP", "CHECKOUT"),
+        "bk-staff-pickup-today": ("Kohl Center studio shoot", "BOOKED", "RESERVATION"),
+        "bk-staff-tomorrow": ("Ohio State photo kit", "BOOKED", "RESERVATION"),
+        "bk-staff-tomorrow-due": ("Cross country drone package", "OPEN", "CHECKOUT"),
+        "bk-staff-later": ("Men's basketball media day", "BOOKED", "RESERVATION"),
     ]
 
     static func booking(for id: String) -> Data? {
@@ -953,22 +973,100 @@ enum BookingFixtureAPI {
         // Server-owned row actions. Defaults to none so team rows keep showing
         // a student what they may not do; the student's own OPEN checkout gets
         // the pair the checkout matrix in `booking-rules.ts` actually grants.
-        allowedActions: [String] = []
+        allowedActions: [String] = [],
+        startsAtISO: String? = nil,
+        endsAtISO: String? = nil,
+        bulkQuantity: Int = 0
     ) -> String {
         let sportJSON = sportCode.map { "\"\($0)\"" } ?? "null"
+        let bulkJSON = bulkQuantity > 0
+            ? "{\"id\":\"bi-\(id)\",\"plannedQuantity\":\(bulkQuantity),\"checkedOutQuantity\":0,\"checkedInQuantity\":0,\"bulkSku\":{\"id\":\"sku-1\",\"name\":\"V-Mount Battery\",\"unit\":\"battery\",\"imageUrl\":null,\"trackByNumber\":true},\"unitAllocations\":null}"
+            : ""
         let actionsJSON = allowedActions.map { "\"\($0)\"" }.joined(separator: ",")
         return """
         {"id":"\(id)","kind":"\(kind)","title":"\(title)","status":"\(status)",
-         "startsAt":"\(studentISO(startsIn))","endsAt":"\(studentISO(endsIn))","notes":null,"refNumber":null,
+         "startsAt":"\(startsAtISO ?? studentISO(startsIn))","endsAt":"\(endsAtISO ?? studentISO(endsIn))","notes":null,"refNumber":null,
          "requester":{"id":"\(requesterId)","name":"\(requesterName)","email":null,"avatarUrl":null},
          "location":{"id":"loc-1","name":"Camp Randall Creative Desk"},
-         "serializedItems":[],"bulkItems":[],
+         "serializedItems":[],"bulkItems":[\(bulkJSON)],
          "event":{"id":"event-\(id)","summary":"\(title)","sportCode":\(sportJSON),"opponent":null,"isHome":null},
          "allowedActions":[\(actionsJSON)],"updatedAt":"\(studentISO(-15))","pickupKioskDevice":null}
         """
     }
 
+    /// Start of today plus a day offset and a fixed hour, so the staff list
+    /// lands in the same day groups whatever time the capture runs.
+    private static func dayISO(_ dayOffset: Int, hour: Int, minute: Int = 0) -> String {
+        let calendar = Calendar.current
+        let start = calendar.startOfDay(for: .now)
+        let day = calendar.date(byAdding: .day, value: dayOffset, to: start) ?? start
+        let date = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: day) ?? day
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.string(from: date)
+    }
+
+    private static func staffRow(
+        _ id: String, _ kind: String, _ title: String, _ status: String,
+        requester: (id: String, name: String),
+        starts: (day: Int, hour: Int), ends: (day: Int, hour: Int),
+        items: Int, sport: String? = nil, actions: [String] = []
+    ) -> String {
+        listBooking(
+            id: id, kind: kind, title: title, status: status,
+            requesterId: requester.id, requesterName: requester.name,
+            startsIn: 0, endsIn: 0, sportCode: sport, allowedActions: actions,
+            startsAtISO: dayISO(starts.day, hour: starts.hour),
+            endsAtISO: dayISO(ends.day, hour: ends.hour),
+            bulkQuantity: items
+        )
+    }
+
+    /// Staff list: every handoff state, two rows owned by the signed-in
+    /// staff user (`fixture-staff`), spread over a week. Times sit in the
+    /// small hours or the evening so "overdue" and "upcoming" do not depend
+    /// on when the capture runs: the overdue return and the missed pickup
+    /// were both yesterday, and today's rows sit late in the evening.
+    static func staffList(for request: URLRequest) -> Data {
+        let me = (id: "fixture-staff", name: "Jordan Lee")
+        let avery = (id: "u-avery", name: "Avery Nakamura")
+        let rowan = (id: "fixture-student", name: "Rowan Diaz")
+        let sam = (id: "u-sam", name: "Sam Okafor")
+        let rows = [
+            staffRow("bk-staff-overdue", "CHECKOUT", "Volleyball baseline kit", "OPEN",
+                     requester: avery, starts: (-2, 14), ends: (-1, 18), items: 6, sport: "VB",
+                     actions: ["edit", "extend", "transfer-owner"]),
+            staffRow("bk-staff-missed", "RESERVATION", "Hockey road audio kit", "BOOKED",
+                     requester: sam, starts: (-1, 20), ends: (1, 22), items: 4, sport: "MHO",
+                     actions: ["edit", "cancel", "transfer-owner"]),
+            staffRow("bk-staff-due-today", "CHECKOUT", "Football fall camp — video", "OPEN",
+                     requester: me, starts: (-1, 9), ends: (0, 23), items: 9, sport: "FB",
+                     actions: ["edit", "extend", "transfer-owner"]),
+            staffRow("bk-staff-pickup-checkout", "CHECKOUT", "Women's soccer portraits", "PENDING_PICKUP",
+                     requester: rowan, starts: (0, 22), ends: (4, 18), items: 3, sport: "WSO",
+                     actions: ["edit", "transfer-owner"]),
+            staffRow("bk-staff-pickup-today", "RESERVATION", "Kohl Center studio shoot", "BOOKED",
+                     requester: avery, starts: (0, 23), ends: (2, 12), items: 5,
+                     actions: ["edit", "cancel", "transfer-owner"]),
+            staffRow("bk-staff-tomorrow", "RESERVATION", "Ohio State photo kit", "BOOKED",
+                     requester: me, starts: (1, 9), ends: (2, 23), items: 7, sport: "FB",
+                     actions: ["edit", "cancel", "transfer-owner"]),
+            staffRow("bk-staff-tomorrow-due", "CHECKOUT", "Cross country drone package", "OPEN",
+                     requester: rowan, starts: (-1, 7), ends: (1, 17), items: 2, sport: "XC",
+                     actions: ["edit", "extend", "transfer-owner"]),
+            staffRow("bk-staff-later", "RESERVATION", "Men's basketball media day", "BOOKED",
+                     requester: sam, starts: (5, 10), ends: (5, 22), items: 11, sport: "MBB",
+                     actions: ["edit", "cancel", "transfer-owner"]),
+        ]
+        let ownOnly = request.url?.query?.contains("requester_id=fixture-staff") == true
+        let visibleRows = ownOnly ? [rows[2], rows[5]] : rows
+        return Data("{\"data\":[\(visibleRows.joined(separator: ","))],\"total\":\(visibleRows.count),\"limit\":30,\"offset\":0}".utf8)
+    }
+
     static func list(for request: URLRequest) -> Data {
+        if AppRuntimeMode.performanceScenario == .staffBookings {
+            return staffList(for: request)
+        }
         let ownOnly = request.url?.query?.contains("requester_id=fixture-student") == true
         let rows = [
             listBooking(
