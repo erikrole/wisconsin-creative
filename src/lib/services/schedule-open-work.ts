@@ -18,6 +18,7 @@ import { createAuditEntryTx } from "@/lib/audit";
 import { claimReviewDeadlines } from "@/lib/claim-review-deadlines";
 import {
   claimableShiftAreas,
+  crewClaimClosedReason,
   shiftClaimAreaEligibilityReason,
   shiftClaimEligibilityReason,
 } from "@/lib/shift-claim-eligibility";
@@ -468,10 +469,8 @@ export async function pickupOpenShiftTx(tx: Prisma.TransactionClient, shiftId: s
     if (!user) throw new HttpError(404, "User not found");
     const eligibilityReason = shiftClaimEligibilityReason(user, shift);
     if (eligibilityReason) throw new HttpError(400, eligibilityReason);
-    if (!shift.shiftGroup.publishedAt) throw new HttpError(400, "Draft shifts are not open for pickup");
-    if (shift.shiftGroup.archivedAt || shift.shiftGroup.event.archivedAt || shift.shiftGroup.event.isHidden || shift.shiftGroup.event.status === "CANCELLED") {
-      throw new HttpError(400, "This shift is not open for pickup");
-    }
+    const crewClosedReason = crewClaimClosedReason(shift.shiftGroup);
+    if (crewClosedReason) throw new HttpError(400, crewClosedReason);
     const window = effectiveWindow(shift);
     if (window.startsAt <= new Date()) throw new HttpError(400, "This shift has already started");
 

@@ -1,6 +1,20 @@
 [
   {
     "date": "2026-10-10",
+    "title": "No Claim on unreleased crews",
+    "type": "fixes",
+    "summary": "Students no longer see a Claim button on shifts staff haven't released yet.",
+    "details": [
+      "Open shifts on a crew that hasn't been released now say claims open once it is released, instead of failing with a draft error.",
+      "Once staff release the crew, the Claim buttons appear as usual."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 451
+  },
+  {
+    "date": "2026-10-10",
     "title": "Stay signed in",
     "type": "improvement",
     "summary": "You stay signed in while you keep using the app, and a password sign-in can quietly become a passkey.",

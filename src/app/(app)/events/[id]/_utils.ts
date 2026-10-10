@@ -32,6 +32,8 @@ export type ShiftGroupSummary = {
   id: string;
   hasWorkingCopy?: boolean;
   claimsPaused?: boolean;
+  /** Server verdict: false when the crew is unreleased, archived, hidden or cancelled. */
+  claimsOpen?: boolean;
   coverage?: { total: number; filled: number; percentage: number };
   publication?: {
     status: "draft" | "published" | "changed";
