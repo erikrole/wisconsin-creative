@@ -1,6 +1,22 @@
 [
   {
     "date": "2026-10-09",
+    "title": "Equipment sheet export",
+    "type": "improvement",
+    "summary": "Organizers can download the equipment department's order sheet already filled from everyone's submitted gear picks, instead of copying a CSV into it by hand.",
+    "details": [
+      "Each item and color gets one row, with counts by size, in the department's own sheet.",
+      "Shoes, sideline gear and headwear, and team catalog items land in their matching sections.",
+      "Sizes the sheet has no column for, like pant waists and fitted caps, are listed in the notes.",
+      "Totals and the remaining budget calculate when the sheet opens."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 446
+  },
+  {
+    "date": "2026-10-09",
     "title": "Release notes",
     "type": "feature",
     "summary": "A public Releases page lists what shipped and when across web, iOS, the kiosk, and the Mac app, going back to the first build.",

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Fragment, useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ChevronDownIcon, ChevronRightIcon, DownloadIcon, EyeOffIcon, ShirtIcon, Trash2Icon, UserPlusIcon, UsersIcon } from "lucide-react";
+import { ChevronDownIcon, ChevronRightIcon, DownloadIcon, EyeOffIcon, SheetIcon, ShirtIcon, Trash2Icon, UserPlusIcon, UsersIcon } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { OperationalMetricCard } from "@/components/OperationalFeedback";
@@ -123,10 +123,16 @@ export function GearPicksAdmin() {
             Pick list
           </Link>
         </Button>
-        <Button asChild className="min-h-10">
+        <Button asChild variant="outline" className="min-h-10">
           <a href="/api/gear-picks/admin/export.csv" download>
             <DownloadIcon data-icon="inline-start" />
             Export CSV
+          </a>
+        </Button>
+        <Button asChild className="min-h-10">
+          <a href="/api/gear-picks/admin/export.xlsx" download>
+            <SheetIcon data-icon="inline-start" />
+            Equipment sheet
           </a>
         </Button>
       </PageHeader>

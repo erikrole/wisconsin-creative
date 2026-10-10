@@ -55,9 +55,9 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 
 - Doc: `docs/AREA_GEAR_PICKS.md`
 - Pages: _none matched_
-- APIs: `/api/gear-picks/admin/export.csv`, `/api/gear-picks/admin`, `/api/gear-picks/me`, `/api/gear-picks/users/[userId]`
+- APIs: `/api/gear-picks/admin/export.csv`, `/api/gear-picks/admin/export.xlsx`, `/api/gear-picks/admin`, `/api/gear-picks/me`, `/api/gear-picks/users/[userId]`
 - Services: `src/lib/services/gear-picks.ts`
-- Tests: `tests/gear-picks-pricing.test.ts`, `tests/gear-picks-routes.test.ts`
+- Tests: `tests/gear-picks-equipment-sheet.test.ts`, `tests/gear-picks-pricing.test.ts`, `tests/gear-picks-routes.test.ts`
 
 ## importer
 
