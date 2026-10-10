@@ -521,6 +521,7 @@
 ### `/api/gear-picks`
 
 - `/api/gear-picks/admin/export.csv`
+- `/api/gear-picks/admin/export.xlsx`
 - `/api/gear-picks/admin`
 - `/api/gear-picks/me`
 - `/api/gear-picks/users/[userId]`

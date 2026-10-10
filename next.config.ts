@@ -34,6 +34,10 @@ const baseConfig: NextConfig = {
   },
   transpilePackages: ["@mdxeditor/editor"],
   serverExternalPackages: ["web-push"],
+  // The equipment sheet route reads the department's workbook template at runtime.
+  outputFileTracingIncludes: {
+    "/api/gear-picks/admin/export.xlsx": ["./src/lib/gear-picks/templates/**"],
+  },
   images: {
     remotePatterns: [
       {
