@@ -39,6 +39,8 @@ Audit files intentionally remain at root for now because the repo audit skills r
 
 ## Active Follow-up Ledgers
 
+- [scoreboard-football-results-plan-2026-10-01.md](scoreboard-football-results-plan-2026-10-01.md) - UW/ESPN football final-score matching, source observations, web Scoreboard enrichment, and preview/migration/production proof boundaries.
+
 - `infrastructure-hardening-plan-2026-09-22.md` - Vercel/Neon repairs, branch previews, cross-agent handoff and pending source/cutover gates.
 
 - `ios-entry-point-hardening-plan-2026-09-16.md` - one destination map for quick actions, Control Center, deep links, and every notification family.

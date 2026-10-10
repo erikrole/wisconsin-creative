@@ -45,11 +45,12 @@
 | `src/lib/services/event-travel.ts` | 32 |
 | `src/lib/services/event-worker.ts` | 125 |
 | `src/lib/services/firmware-watch.ts` | 329 |
+| `src/lib/services/football-results.ts` | 138 |
 | `src/lib/services/game-record.ts` | 169 |
 | `src/lib/services/gear-picks.ts` | 612 |
 | `src/lib/services/hidden-users-cleanup.ts` | 122 |
 | `src/lib/services/item-cleanup-wizard.ts` | 762 |
-| `src/lib/services/job-runs.ts` | 52 |
+| `src/lib/services/job-runs.ts` | 53 |
 | `src/lib/services/kiosk-active-checkout-items.ts` | 492 |
 | `src/lib/services/kiosk-actor.ts` | 51 |
 | `src/lib/services/kiosk-checkin-undo.ts` | 176 |
@@ -92,7 +93,7 @@
 | `src/lib/services/schedule-publication.ts` | 1110 |
 | `src/lib/services/schedule-template-review.ts` | 554 |
 | `src/lib/services/schedule-working-copy.ts` | 1190 |
-| `src/lib/services/scoreboard.ts` | 282 |
+| `src/lib/services/scoreboard.ts` | 288 |
 | `src/lib/services/shift-assignment-conflicts.ts` | 43 |
 | `src/lib/services/shift-assignments.ts` | 727 |
 | `src/lib/services/shift-generation.ts` | 629 |
@@ -105,7 +106,7 @@
 | `src/lib/services/sport-roster-preview.ts` | 108 |
 | `src/lib/services/sport-setup.ts` | 210 |
 | `src/lib/services/status.ts` | 444 |
-| `src/lib/services/team-scoreboard.ts` | 598 |
+| `src/lib/services/team-scoreboard.ts` | 609 |
 | `src/lib/services/usage-analytics-report.ts` | 114 |
 | `src/lib/services/user-deactivation.ts` | 579 |
 
@@ -177,6 +178,7 @@
 | `src/lib/fetch-with-timeout.ts` | 25 |
 | `src/lib/firmware-watch-targets.ts` | 124 |
 | `src/lib/football-gameday-kits.ts` | 79 |
+| `src/lib/football-results.ts` | 178 |
 | `src/lib/format.ts` | 320 |
 | `src/lib/guide-categories.ts` | 140 |
 | `src/lib/guide-content.ts` | 270 |
@@ -480,6 +482,7 @@
 ### `/api/cron`
 
 - `/api/cron/audit-archive`
+- `/api/cron/football-results`
 - `/api/cron/live-activities`
 - `/api/cron/morning-refresh`
 - `/api/cron/notifications`
@@ -729,6 +732,7 @@
 
 ### `/api/scoreboard`
 
+- `/api/scoreboard/results/refresh`
 - `/api/scoreboard`
 
 ### `/api/seed`

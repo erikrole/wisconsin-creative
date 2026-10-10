@@ -1,0 +1,31 @@
+{
+  "title": "Football finals in Scoreboard",
+  "eyebrow": "Wisconsin Creative · Local implementation · 2026-10-01",
+  "lede": "Final scores combine UWBadgers and ESPN on existing football events. Scores appear only when game identity, both numeric results, and the official W/L/T agree.",
+  "sections": [
+    {
+      "heading": "Desktop component states",
+      "note": "After-only fixture using the actual score and refresh components with application CSS. No authenticated app or database. No trustworthy authenticated before capture was available, so there is no before/after comparison.",
+      "shots": [{"image": "after-desktop.png", "title": "Desktop light fixture", "tag": "After only · component fixture", "wide": true, "cap": "1100 × 820 CSS pixels, light appearance. Verified, disputed, pending, and delayed-refresh states. Wisconsin is always the first score; source links lead to public game pages."}]
+    },
+    {
+      "heading": "Narrow layout and recovery",
+      "note": "A mocked partial refresh produces the status message. This capture proves component presentation and interaction only.",
+      "shots": [{"image": "after-narrow-dark.png", "title": "Narrow dark fixture", "tag": "After only · component fixture", "cap": "390 × 844 CSS pixels, dark appearance. Source links wrap without horizontal overflow. Their measured target height is 40 CSS pixels. Body text uses Arial as a fixture fallback for app-loaded Geist."}]
+    }
+  ],
+  "verification": [
+    "92 focused tests passed across 13 files: parsing, identity matching, refresh persistence, permissions, team/person Scoreboard regressions, native source contracts, and cron rules/authentication.",
+    "TypeScript and targeted ESLint passed. The compile-only application build passed and generated 272 pages; pre-existing kiosk dashboard and Sidebar unused-variable warnings remain.",
+    "Offline Prisma migration generation and validation passed. A disposable PostgreSQL 17 instance accepted the forward migration and verified uniqueness, foreign key rejection, cascading delete, and generated Prisma relation reads with serializable advisory locking. The instance was stopped afterward.",
+    "Playwright checked status presentation, non-JSON failure recovery, partial refresh status, keyboard reachability, source target height, no horizontal overflow, and no browser page errors.",
+    "Both full public provider payloads agree on all four completed football games. Minimal fixtures and public-input hashes are retained. UW calendar W/L/T and crew participation math remain authoritative."
+  ],
+  "notesHeading": "Remaining acceptance gates",
+  "notes": [
+    "No commit, push, PR, deployment, or hosted database mutation has been performed. GAP-88 tracks rollout.",
+    "This branch has no hosted preview because it has no open PR to main. After authorized commit/push/PR and successful CI/Managed previews, apply the migration through the branch-owned environment and verify authenticated refresh, persistence, audit records, permissions, and both full Scoreboard routes.",
+    "One TypeScript attempt raced the build's regeneration of generated type files; an isolated rerun after the build passed.",
+    "This slice covers current-season final football scores. Native presentation, other sports, richer player/team statistics, live-game data, and play-by-play remain separate work."
+  ]
+}

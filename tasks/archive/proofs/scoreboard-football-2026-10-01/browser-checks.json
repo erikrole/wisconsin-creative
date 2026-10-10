@@ -1,0 +1,51 @@
+{
+  "evidence": "isolated actual components; mocked refresh responses; no authenticated server/database",
+  "viewports": [
+    [
+      1100,
+      820
+    ],
+    [
+      390,
+      844
+    ]
+  ],
+  "sources": [
+    {
+      "url": "https://uwbadgers.com/game-center/17144",
+      "height": 40
+    },
+    {
+      "url": "https://www.espn.com/college-football/game/_/gameId/401858466",
+      "height": 40
+    },
+    {
+      "url": "https://uwbadgers.com/game-center/17144",
+      "height": 40
+    },
+    {
+      "url": "https://www.espn.com/college-football/game/_/gameId/401858466",
+      "height": 40
+    },
+    {
+      "url": "https://uwbadgers.com/game-center/17144",
+      "height": 40
+    },
+    {
+      "url": "https://uwbadgers.com/game-center/17144",
+      "height": 40
+    },
+    {
+      "url": "https://www.espn.com/college-football/game/_/gameId/401858466",
+      "height": 40
+    }
+  ],
+  "checks": [
+    "verified, disputed, pending, and stale presentation",
+    "HTML error response recovery",
+    "partial refresh status",
+    "source link focus and target height",
+    "no horizontal overflow",
+    "no browser page errors"
+  ]
+}

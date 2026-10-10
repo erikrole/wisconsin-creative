@@ -13,6 +13,7 @@ export type JobName =
   | "schedule_release"
   | "shift_reminder"
   | "morning_refresh"
+  | "football_results"
   | "applicant_retention";
 
 export function latenessBucket(dueAt: Date | null | undefined, now = new Date()): string | null {

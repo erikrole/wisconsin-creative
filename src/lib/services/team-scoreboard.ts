@@ -7,6 +7,7 @@ import { OFFICIAL_RECORD_EVENT_EXCLUSION } from "@/lib/services/game-record";
 import { participatedByAnyoneWhere } from "@/lib/services/event-worker";
 import { SCOREBOARD_SCOPE } from "@/lib/services/scoreboard";
 import { SITE_LABELS, trimmedOrNull, winRate as rate } from "@/lib/scoreboard-display";
+import { footballScoreForEvent, type FootballScore } from "@/lib/football-results";
 
 const TEAM_SCOREBOARD_MINIMUM_RATE_GAMES = 3;
 
@@ -103,6 +104,7 @@ export type TeamScoreboard = {
   byOpponent: TeamScoreboardBreakdown[];
   bySite: TeamScoreboardBreakdown[];
   leaderboard: TeamScoreboardPerson[];
+  footballGames?: Array<{ id: string; opponent: string | null; startsAt: string; allDay: boolean; site: CalendarEventSite | null; finalScore: FootballScore | null }>;
 };
 
 const VISIBLE_PERSON_WHERE = {
@@ -122,6 +124,11 @@ const TEAM_EVENT_SELECT = {
   site: true,
   rawLocationText: true,
   result: true,
+  startsAt: true,
+  allDay: true,
+  rawStartsAt: true,
+  rawAllDay: true,
+  resultObservations: true,
   shiftGroup: {
     select: {
       shifts: {
@@ -551,6 +558,10 @@ export async function getTeamScoreboard(
   const games = wins + losses + ties;
   return {
     generatedAt: now.toISOString(),
+    footballGames: filteredRecordEvents.filter((event) => event.sportCode === "FB")
+      .map((event) => ({ id: event.id, opponent: event.opponent, startsAt: event.startsAt.toISOString(), allDay: event.allDay,
+        site: event.site, finalScore: footballScoreForEvent(event, event.resultObservations, now) }))
+      .sort((a, b) => b.startsAt.localeCompare(a.startsAt) || a.id.localeCompare(b.id)),
     scope: {
       key: SCOREBOARD_SCOPE.key,
       label: SCOREBOARD_SCOPE.label,

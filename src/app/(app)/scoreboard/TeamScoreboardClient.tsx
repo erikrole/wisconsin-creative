@@ -31,7 +31,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { BucketBar, RankMark, RecordMeter, ScoreboardDataRegion } from "@/components/scoreboard/ScoreboardVisuals";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useFetch } from "@/hooks/use-fetch";
-import { formatRelativeTime } from "@/lib/format";
+import { formatDateShort, formatRelativeTime } from "@/lib/format";
+import { FootballFinalScore } from "@/components/scoreboard/FootballFinalScore";
+import { FootballResultsRefresh } from "@/components/scoreboard/FootballResultsRefresh";
 import { rateLabel, recordLabel } from "@/lib/scoreboard-digest";
 import {
   EMPTY_TEAM_SCOREBOARD_FILTERS,
@@ -794,6 +796,22 @@ function TeamScoreboardExplorer() {
               />
             </ReportSectionCard>
           </div>
+
+          {(data.footballGames?.length ?? 0) > 0 && (
+            <ReportSectionCard title="Football finals" description="Games covered in this view. Scores appear when UWBadgers and ESPN agree." contentClassName="p-0">
+              {(currentUser?.role === "ADMIN" || currentUser?.role === "STAFF") && <FootballResultsRefresh onRefresh={reload} />}
+              <div className="divide-y divide-border/40">
+                {data.footballGames?.map((game) => (
+                  <div key={game.id} className="px-4 py-3">
+                    <p className="text-sm font-medium">{game.site === "AWAY" ? "at" : "vs"} {game.opponent ?? "Opponent not recorded"}
+                      <span className="ml-2 text-xs font-normal text-muted-foreground">{formatDateShort(game.startsAt, game.allDay)}</span>
+                    </p>
+                    <FootballFinalScore score={game.finalScore} />
+                  </div>
+                ))}
+              </div>
+            </ReportSectionCard>
+          )}
 
           <Collapsible className="mt-4">
             <CollapsibleTrigger asChild>

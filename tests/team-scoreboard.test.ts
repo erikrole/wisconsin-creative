@@ -43,6 +43,11 @@ function event(
 ) {
   return {
     id,
+    startsAt: new Date("2026-09-26T21:00:00Z"),
+    allDay: false,
+    rawStartsAt: null,
+    rawAllDay: null,
+    resultObservations: [],
     sportCode,
     opponent: dimensions.opponent ?? null,
     site: dimensions.site ?? null,

@@ -49,6 +49,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { BucketBar, RecordMeter, ScoreboardDataRegion } from "@/components/scoreboard/ScoreboardVisuals";
 import type { ScoreboardBucket, ScoreboardEvent, UserScoreboard } from "@/lib/services/scoreboard";
+import { FootballFinalScore } from "@/components/scoreboard/FootballFinalScore";
 
 type ResultFilter = PersonScoreboardResultFilter;
 type SiteFilter = PersonScoreboardSiteFilter;
@@ -334,29 +335,21 @@ function EventRow({ event, linkEvents }: { event: ScoreboardEvent; linkEvents: b
         </span>
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">{matchupLabel(event)}</p>
+        <p className="truncate text-sm font-medium">
+          {linkEvents ? <Link href={`/events/${event.id}`} className="inline-flex min-h-10 items-center hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{matchupLabel(event)}</Link> : matchupLabel(event)}
+        </p>
         <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
           <SiteIcon site={event.site} />
           <span className="truncate">{siteLabel(event.site)} · {event.venue ?? "Venue not recorded"}</span>
         </p>
         {areas ? <p className="mt-0.5 truncate text-[11px] text-muted-foreground/80">{areas}</p> : null}
+        <FootballFinalScore score={event.finalScore} />
       </div>
     </>
   );
   const className = "flex min-h-16 items-start gap-3 px-4 py-3 sm:px-5";
 
-  if (!linkEvents) {
-    return <div className={className}>{content}</div>;
-  }
-
-  return (
-    <Link
-      href={`/events/${event.id}`}
-      className={`${className} transition-colors hover:bg-muted/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring`}
-    >
-      {content}
-    </Link>
-  );
+  return <div className={className}>{content}</div>;
 }
 
 function GamesCard({

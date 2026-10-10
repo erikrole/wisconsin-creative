@@ -1261,50 +1261,51 @@ Indexes and constraints:
 
 ## Model `CalendarEvent`
 
-Fields: 42
+Fields: 43
 
-- `id              String                @id @default(cuid())`
-- `sourceId        String?               @map("source_id")`
-- `externalId      String                @map("external_id")`
-- `summary         String`
-- `description     String?`
-- `rawSummary      String?               @map("raw_summary")`
-- `rawLocationText String?               @map("raw_location_text")`
-- `rawDescription  String?               @map("raw_description")`
-- `startsAt        DateTime              @map("starts_at")`
-- `endsAt          DateTime              @map("ends_at")`
-- `allDay          Boolean               @default(false) @map("all_day")`
-- `rawStartsAt     DateTime?             @map("raw_starts_at")`
-- `rawEndsAt       DateTime?             @map("raw_ends_at")`
-- `rawAllDay       Boolean?              @map("raw_all_day")`
-- `status          CalendarEventStatus   @default(CONFIRMED)`
-- `result          CalendarEventResult?`
-- `site            CalendarEventSite?`
-- `locationId      String?               @map("location_id")`
-- `sportCode       String?               @map("sport_code")`
-- `isHome          Boolean?              @map("is_home")`
-- `isHidden        Boolean               @default(false) @map("is_hidden")`
-- `summaryLocked   Boolean               @default(false) @map("summary_locked")`
-- `isHomeLocked    Boolean               @default(false) @map("is_home_locked")`
-- `locationLocked  Boolean               @default(false) @map("location_locked")`
-- `timingLocked    Boolean               @default(false) @map("timing_locked")`
-- `archivedAt      DateTime?             @map("archived_at")`
-- `subtitle        String?`
-- `opponent        String?`
-- `combinedIntoId  String?               @map("combined_into_id")`
-- `createdAt       DateTime              @default(now()) @map("created_at")`
-- `updatedAt       DateTime              @updatedAt @map("updated_at")`
-- `source          CalendarSource?       @relation(fields: [sourceId], references: [id], onDelete: Cascade)`
-- `location        Location?             @relation(fields: [locationId], references: [id], onDelete: SetNull)`
-- `bookings        Booking[]`
-- `bookingLinks    BookingEvent[]`
-- `shiftGroup      ShiftGroup?`
-- `travelMembers   EventTravelMember[]`
-- `follows         ScheduleEventFollow[]`
-- `blasts          Blast[]`
-- `workers         EventWorker[]`
-- `combinedInto    CalendarEvent?        @relation("CalendarEventCombination", fields: [combinedIntoId], references: [id], onDelete: SetNull)`
-- `combinedEvents  CalendarEvent[]       @relation("CalendarEventCombination")`
+- `id                 String                  @id @default(cuid())`
+- `sourceId           String?                 @map("source_id")`
+- `externalId         String                  @map("external_id")`
+- `summary            String`
+- `description        String?`
+- `rawSummary         String?                 @map("raw_summary")`
+- `rawLocationText    String?                 @map("raw_location_text")`
+- `rawDescription     String?                 @map("raw_description")`
+- `startsAt           DateTime                @map("starts_at")`
+- `endsAt             DateTime                @map("ends_at")`
+- `allDay             Boolean                 @default(false) @map("all_day")`
+- `rawStartsAt        DateTime?               @map("raw_starts_at")`
+- `rawEndsAt          DateTime?               @map("raw_ends_at")`
+- `rawAllDay          Boolean?                @map("raw_all_day")`
+- `status             CalendarEventStatus     @default(CONFIRMED)`
+- `result             CalendarEventResult?`
+- `site               CalendarEventSite?`
+- `locationId         String?                 @map("location_id")`
+- `sportCode          String?                 @map("sport_code")`
+- `isHome             Boolean?                @map("is_home")`
+- `isHidden           Boolean                 @default(false) @map("is_hidden")`
+- `summaryLocked      Boolean                 @default(false) @map("summary_locked")`
+- `isHomeLocked       Boolean                 @default(false) @map("is_home_locked")`
+- `locationLocked     Boolean                 @default(false) @map("location_locked")`
+- `timingLocked       Boolean                 @default(false) @map("timing_locked")`
+- `archivedAt         DateTime?               @map("archived_at")`
+- `subtitle           String?`
+- `opponent           String?`
+- `combinedIntoId     String?                 @map("combined_into_id")`
+- `createdAt          DateTime                @default(now()) @map("created_at")`
+- `updatedAt          DateTime                @updatedAt @map("updated_at")`
+- `source             CalendarSource?         @relation(fields: [sourceId], references: [id], onDelete: Cascade)`
+- `location           Location?               @relation(fields: [locationId], references: [id], onDelete: SetNull)`
+- `bookings           Booking[]`
+- `bookingLinks       BookingEvent[]`
+- `shiftGroup         ShiftGroup?`
+- `travelMembers      EventTravelMember[]`
+- `follows            ScheduleEventFollow[]`
+- `blasts             Blast[]`
+- `workers            EventWorker[]`
+- `combinedInto       CalendarEvent?          @relation("CalendarEventCombination", fields: [combinedIntoId], references: [id], onDelete: SetNull)`
+- `combinedEvents     CalendarEvent[]         @relation("CalendarEventCombination")`
+- `resultObservations GameResultObservation[]`
 
 Indexes and constraints:
 
@@ -1315,6 +1316,30 @@ Indexes and constraints:
 - `@@index([combinedIntoId])`
 - `@@index([archivedAt])`
 - `@@map("calendar_events")`
+
+## Enum `GameResultProvider`
+
+Values: `UW`, `ESPN`
+
+## Model `GameResultObservation`
+
+Fields: 9
+
+- `id            String             @id @default(cuid())`
+- `eventId       String             @map("event_id")`
+- `provider      GameResultProvider`
+- `externalId    String             @map("external_id")`
+- `snapshot      Json`
+- `observedAt    DateTime           @map("observed_at")`
+- `lastAttemptAt DateTime           @map("last_attempt_at")`
+- `lastError     String?            @map("last_error")`
+- `event         CalendarEvent      @relation(fields: [eventId], references: [id], onDelete: Cascade)`
+
+Indexes and constraints:
+
+- `@@unique([eventId, provider])`
+- `@@unique([provider, externalId])`
+- `@@map("game_result_observations")`
 
 ## Enum `ScheduleFollowSource`
 

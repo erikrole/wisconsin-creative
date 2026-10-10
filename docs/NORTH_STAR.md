@@ -212,7 +212,7 @@ Use these questions before adding or changing a feature:
 |---|---|
 | Reservation and checkout templates | Useful only after repeated operator patterns are stable enough to encode |
 | Advanced analytics | Current operational trust, freshness, and exception reporting matter more |
-| Multi-source event ingestion beyond current UW sources | Add only when a concrete source and owner exist |
+| General multi-source event creation beyond current UW sources | D-056 permits the requested UW/ESPN football score enrichment on existing events; broader event creation still requires a concrete source and owner |
 | Database-configurable equipment guidance rules | Current code-defined rules are sufficient until operators need frequent rule edits |
 | Unattended kiosk security, PIN, or NFC | Staffed-counter trust model is accepted for V1 |
 | Full staff-mobile parity for every destructive admin action | Web remains the safer control room for broad admin work |
