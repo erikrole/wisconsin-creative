@@ -395,7 +395,10 @@ final class GearOpsModel {
                 // lived only in crash-vulnerable preferences.
                 try? await credentialStore.saveUser(user)
             }
-            await refresh()
+            // A presentation or push read already in flight covers this
+            // restore. Queuing behind it would read the projection and rotate
+            // the credential twice for one activation.
+            if !isRefreshing { await refresh() }
             guard sessionIsCurrent(generation: generation, token: token) else { return }
             scheduleSupplementarySetup(expectedGeneration: generation, token: token)
         } catch {
@@ -603,7 +606,8 @@ final class GearOpsModel {
             await restoreSession()
             return
         }
-        guard user != nil, companionToken != nil, !isRefreshing, !isSigningIn, !isSigningOut else { return }
+        // An activation restore in flight ends in its own refresh.
+        guard user != nil, companionToken != nil, !isRefreshing, !restoreInFlight, !isSigningIn, !isSigningOut else { return }
         let now = currentDate()
         let interval = Self.presentationRefreshInterval
         if let lastConfirmedAt, now.timeIntervalSince(lastConfirmedAt) < interval { return }

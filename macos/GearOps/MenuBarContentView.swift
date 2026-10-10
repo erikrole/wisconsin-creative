@@ -120,7 +120,9 @@ struct MenuBarContentView: View {
     /// the highlighted booking; Escape clears the search. Anything unhandled
     /// falls through to the field and the existing shortcuts.
     private func handleKey(_ key: ExtraKey) -> Bool {
-        guard model.user != nil else { return false }
+        // Only while search owns focus: once Tab moves to a button, Return and
+        // Escape belong to that control, not the highlighted booking.
+        guard model.user != nil, searchIsFocused else { return false }
         switch key {
         case .down, .up:
             guard selectedRoute == nil else { return false }
