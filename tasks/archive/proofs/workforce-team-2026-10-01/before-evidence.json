@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "bf01a32c1f21a89d75bfd2ac498f06d6cf86ba71",
+  "sourcePatchSha256": "acc92dd5fe9c276824380c7becf3ab1330a5b2efce8b39cd581d7cd9df4cfa97",
+  "settings": {
+    "device": "Playwright Chromium headless, CSS scale 1",
+    "viewport": [
+      1440,
+      1200
+    ],
+    "fixture": "fictional roster 7b432710a101929682d766672db6f31001238a688f98d2704d10368ab765618d",
+    "role": "admin presentation fixture, no authenticated server",
+    "route": "/workforce, Fall 2026",
+    "appearance": "light",
+    "textSize": "default, repository Gotham headings and Arial body fallback",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "2026-10-01T17:00:00Z, Fall 2026 term",
+    "scroll": [
+      0,
+      0
+    ]
+  },
+  "imageSha256": "7545929a94778b525eca2a8e668725fa41b4fb5079c7a8253646dad34301f1fb",
+  "dimensions": [
+    1440,
+    1200
+  ]
+}

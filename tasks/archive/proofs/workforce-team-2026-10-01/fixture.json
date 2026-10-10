@@ -1,0 +1,14 @@
+[
+ {"id":"staff-video","name":"Morgan Reed","staffingType":"FT","title":"Director of Video","primaryArea":"VIDEO"},
+ {"id":"staff-photo","name":"Cameron Ellis","staffingType":"FT","title":"Lead Photographer","primaryArea":"PHOTO"},
+ {"id":"staff-design","name":"Riley Parker","staffingType":"FT","title":"Creative Director","primaryArea":"GRAPHICS"},
+ {"id":"alex","name":"Alex Morgan","primaryArea":"VIDEO","gradYear":2027,"directReportName":"Morgan Reed","sportAssignments":[{"sportCode":"FB"},{"sportCode":"MBB"}],"termPlacements":[{"term":"FALL","year":2026,"area":"VIDEO","sportCodes":["FB","MBB"]}]},
+ {"id":"jordan","name":"Jordan Rivera","primaryArea":"PHOTO","gradYear":2028,"directReportName":"Cameron Ellis","sportAssignments":[{"sportCode":"VB"}],"termPlacements":[{"term":"FALL","year":2025,"area":"PHOTO","sportCodes":["FB"]},{"term":"FALL","year":2026,"area":"PHOTO","sportCodes":["VB"]}]},
+ {"id":"taylor","name":"Taylor Johnson-Williams","primaryArea":"GRAPHICS","gradYear":2028,"directReportName":"Riley Parker","sportAssignments":[{"sportCode":"MBB"},{"sportCode":"WBB"}]},
+ {"id":"casey","name":"Casey Lee","primaryArea":"VIDEO","gradYear":2029,"directReportName":"Morgan Reed","sportAssignments":[{"sportCode":"FB"},{"sportCode":"VB"}]},
+ {"id":"sam","name":"Sam Chen","primaryArea":"PHOTO","gradYear":null,"graduationTerm":null,"sportAssignments":[{"sportCode":"MH"}]},
+ {"id":"avery","name":"Avery Brooks","primaryArea":"SOCIAL","gradYear":2028,"sportAssignments":[{"sportCode":"FB"}]},
+ {"id":"quinn","name":"Quinn Davis","primaryArea":"LIVE_PRODUCTION","gradYear":2027,"sportAssignments":[{"sportCode":"MBB"},{"sportCode":"VB"}]},
+ {"id":"jamie","name":"Jamie Foster","primaryArea":null,"gradYear":2029,"termPlacements":[{"term":"FALL","year":2027,"area":"GRAPHICS","sportCodes":["WBB"]}]},
+ {"id":"former","name":"Rowan Hayes","active":false,"primaryArea":"VIDEO","gradYear":2026,"termPlacements":[{"term":"FALL","year":2025,"area":"VIDEO","sportCodes":["FB","MBB"]}]}
+]

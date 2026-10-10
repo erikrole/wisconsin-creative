@@ -321,6 +321,25 @@ describe("import routes", () => {
     expect(models.$transaction).not.toHaveBeenCalled();
   });
 
+  it("previews and applies agent intake through the admin import with no decision state", async () => {
+    const agentResults = { version: 1, source: "pageup", requisitionId: "512089", applicants: [{ applicationId: "900010", name: "Agent Sample", email: "agent@example.edu", relevantExperience: "Submitted sample shows camera work.", applicationFormUrl: "https://example.com/form" }] };
+    const preview = await importApplicants(post("/api/hiring/import", { cycleId: CYCLE, agentResults }), ctx);
+    expect(preview.status).toBe(200);
+    expect((await preview.json()).data.counts.create).toBe(1);
+    expect(models.$transaction).not.toHaveBeenCalled();
+    const applied = await importApplicants(post("/api/hiring/import", { cycleId: CYCLE, agentResults, apply: true }), ctx);
+    expect(applied.status).toBe(200);
+    expect(tx.application.createMany.mock.calls[0]![0].data[0]).toMatchObject({ externalApplicationId: "900010", stage: "APPLIED", reviewed: false, interviewedAt: null, decidedAt: null, sourcePayload: { "Application Form": "https://example.com/form" } });
+    expect(tx.applicationNote.createMany.mock.calls[0]![0].data[0].body).toContain("Submitted sample shows camera work.");
+  });
+
+  it("agent intake cannot use blank-decision rules to pass applicants", async () => {
+    models.hiringCycle.findUnique.mockResolvedValue({ id: CYCLE, label: "Fall 2026", status: "CLOSED" });
+    const res = await importApplicants(post("/api/hiring/import", { cycleId: CYCLE, agentResults: { version: 1, source: "pageup", requisitionId: "512089", applicants: [{ applicationId: "900010", name: "Agent Sample", email: "agent@example.edu" }] }, blankDecisionMeansPassed: true, apply: true }), ctx);
+    expect(res.status).toBe(400);
+    expect(models.$transaction).not.toHaveBeenCalled();
+  });
+
   it("dry-run writes nothing and returns a report without emails", async () => {
     const res = await importApplicants(post("/api/hiring/import", { cycleId: CYCLE, csv: PAGEUP }), ctx);
     expect(res.status).toBe(200);

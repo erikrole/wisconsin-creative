@@ -341,6 +341,7 @@ export default function ApplicationSheet({ applicationId, onClose, onChanged, on
 
             <div className="flex flex-wrap gap-4">
               <ExternalLinkRow label="Portfolio" href={detail.applicant.portfolioUrl} />
+              {detail.sourceLinks?.map((link) => <ExternalLinkRow key={link.label} label={link.label} href={link.url} />)}
               <ExternalLinkRow label="Interview" href={detail.interviewUrl} />
             </div>
 
@@ -420,7 +421,7 @@ export default function ApplicationSheet({ applicationId, onClose, onChanged, on
                 </div>
               </div>
               {detail.documents.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No files yet. PDF, PNG, or JPEG up to 4 MB.</p>
+                <p className="text-sm text-muted-foreground">{detail.sourceLinks?.length ? "Linked materials are available above. No files uploaded here yet." : "No files yet. PDF, PNG, or JPEG up to 4 MB."}</p>
               ) : (
                 <>
                   <ul className="flex flex-wrap gap-2">

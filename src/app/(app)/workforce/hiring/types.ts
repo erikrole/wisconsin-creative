@@ -32,6 +32,8 @@ export type BoardApplication = {
   ratingAverage: number | null;
   ratingCount: number;
   externalApplicationId: string | null;
+  experienceSummary?: string | null;
+  sourceLinks?: { label: string; url: string }[];
 };
 
 export type ApplicationDetail = {
@@ -64,6 +66,7 @@ export type ApplicationDetail = {
     hiredUserId: string | null;
     history: { id: string; stage: ApplicationStage; cycleLabel: string }[];
   };
+  sourceLinks?: { label: string; url: string }[];
   documents: { id: string; kind: string; fileName: string; contentType: string; sizeBytes: number; createdAt: string }[];
   notes: { id: string; body: string; rating: number | null; createdAt: string; author: { id: string; name: string } | null }[];
 };

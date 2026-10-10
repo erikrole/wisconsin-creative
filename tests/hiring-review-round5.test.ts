@@ -100,11 +100,7 @@ describe("hiring UI", () => {
     expect(dialogs).toContain("}, [open, label]);");
   });
 
-  it("does not invent a graduation term for a year-only record", () => {
-    const page = source("src/app/(app)/workforce/page.tsx");
-    expect(page).not.toContain('"Spring"}');
-    expect(page).toContain('u.graduationTerm ? `${TERM_LABELS[u.graduationTerm]} ` : ""');
-  });
+  // Graduation formatting is covered behaviorally by workforce-team.test.ts.
 
   it("only offers 'a blank decision means passed over' for a finished cycle", () => {
     expect(board).toContain('disabled={cycle.status === "OPEN" || cycle.status === "PLANNING"}');

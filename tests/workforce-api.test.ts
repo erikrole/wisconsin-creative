@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/auth", () => ({ requireAuth: vi.fn() }));
-vi.mock("@/lib/audit", () => ({ createAuditEntry: vi.fn() }));
+vi.mock("@/lib/audit", () => ({ createAuditEntryTx: vi.fn() }));
 vi.mock("@/lib/rate-limit", () => ({
   enforceRateLimit: vi.fn(),
   SETTINGS_MUTATION_LIMIT: { limit: 100, windowMs: 60_000 },
@@ -12,10 +12,11 @@ const models = {
   user: { findUnique: vi.fn(), update: vi.fn() },
   studentTermPlacement: { upsert: vi.fn(), findUnique: vi.fn(), delete: vi.fn() },
 };
-vi.mock("@/lib/db", () => ({ get db() { return models; } }));
+const transaction = vi.fn();
+vi.mock("@/lib/db", () => ({ get db() { return { ...models, $transaction: transaction }; } }));
 
 import { requireAuth } from "@/lib/auth";
-import { createAuditEntry } from "@/lib/audit";
+import { createAuditEntryTx } from "@/lib/audit";
 import { GET as getPerson, PATCH as patchPerson } from "@/app/api/workforce/people/[id]/route";
 import { DELETE as deletePlacement, POST as upsertPlacement } from "@/app/api/workforce/people/[id]/placements/route";
 import { compareTerms, startTermSchema, upsertPlacementSchema } from "@/lib/workforce/contract";
@@ -37,7 +38,10 @@ const req = (url: string, method: string, body?: unknown) =>
   });
 const ctx = { params: Promise.resolve({ id: "u1" }) };
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.resetAllMocks();
+  transaction.mockImplementation(async (callback) => callback(models));
+});
 
 describe("workforce routes are ADMIN-only", () => {
   const calls: Array<[string, () => Promise<Response>]> = [
@@ -52,7 +56,7 @@ describe("workforce routes are ADMIN-only", () => {
       it(`${role} gets 403 on ${label}`, async () => {
         vi.mocked(requireAuth).mockResolvedValue(user(role) as never);
         expect((await call()).status).toBe(403);
-        expect(createAuditEntry).not.toHaveBeenCalled();
+        expect(createAuditEntryTx).not.toHaveBeenCalled();
         for (const model of Object.values(models)) for (const fn of Object.values(model)) expect(fn).not.toHaveBeenCalled();
       });
     }
@@ -67,7 +71,7 @@ describe("start term", () => {
     const res = await patchPerson(req("/api/workforce/people/u1", "PATCH", { startTerm: "FALL", startTermYear: 2025 }), ctx);
     expect(res.status).toBe(200);
     expect(models.user.update).toHaveBeenCalledWith({ where: { id: "u1" }, data: { startTerm: "FALL", startTermYear: 2025 } });
-    expect(createAuditEntry).toHaveBeenCalledWith(expect.objectContaining({ action: "start_term_update" }));
+    expect(createAuditEntryTx).toHaveBeenCalledWith(models, expect.objectContaining({ action: "start_term_update" }));
   });
 
   it("rejects a term without a year", async () => {
@@ -125,8 +129,35 @@ describe("term placements", () => {
     const res = await deletePlacement(req("/api/workforce/people/u1/placements?placementId=p1", "DELETE"), ctx);
     expect(res.status).toBe(200);
     expect(models.studentTermPlacement.delete).toHaveBeenCalledWith({ where: { id: "p1" } });
-    expect(createAuditEntry).toHaveBeenCalledWith(expect.objectContaining({ action: "delete" }));
+    expect(createAuditEntryTx).toHaveBeenCalledWith(models, expect.objectContaining({ action: "delete" }));
   });
+});
+
+describe("atomic workforce audit", () => {
+  // Audit failure must reject the transaction callback rather than happen after commit.
+  // Prisma owns rollback; this route test verifies the audit shares that boundary.
+  for (const [label, call] of [
+    ["start term", () => patchPerson(req("/api/workforce/people/u1", "PATCH", { startTerm: "FALL", startTermYear: 2025 }), ctx)],
+    ["placement save", () => upsertPlacement(req("/api/workforce/people/u1/placements", "POST", { term: "FALL", year: 2025 }), ctx)],
+    ["placement removal", () => deletePlacement(req("/api/workforce/people/u1/placements?placementId=p1", "DELETE"), ctx)],
+  ] as const) {
+    it(`${label} cannot commit when its audit fails`, async () => {
+      vi.mocked(requireAuth).mockResolvedValue(user("ADMIN") as never);
+      models.user.findUnique.mockResolvedValue({ id: "u1", staffingType: "ST", startTerm: null, startTermYear: null });
+      models.studentTermPlacement.findUnique.mockResolvedValue({ id: "p1", userId: "u1", term: "FALL", year: 2025, area: "VIDEO", sportCodes: [], notes: null });
+      models.studentTermPlacement.upsert.mockResolvedValue({ id: "p1", term: "FALL", year: 2025, area: null, sportCodes: [], notes: null });
+      vi.mocked(createAuditEntryTx).mockRejectedValue(new Error("Audit unavailable"));
+      let committed = false;
+      transaction.mockImplementation(async (callback) => {
+        const result = await callback(models);
+        committed = true;
+        return result;
+      });
+      expect((await call()).status).toBe(500);
+      expect(transaction).toHaveBeenCalledOnce();
+      expect(committed).toBe(false);
+    });
+  }
 });
 
 describe("term ordering", () => {

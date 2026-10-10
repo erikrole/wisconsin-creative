@@ -1568,7 +1568,7 @@ These are non-negotiable integrity constraints. Every feature must preserve them
 
 ## D-065: Student Hiring Pipeline Is Admin-Only, Person-Centered, and Converts to Users by Staged Invite
 - Date: 2026-09-30
-- Status: Proposed; brief only, no code or schema yet.
+- Status: Accepted; foundation implemented. Team-view follow-up remains local pending deployment.
 - Decision:
   - Applicants live in their own tables (`Applicant`, `Application`, `ApplicantDocument`, notes), not in `User`. `Applicant.hiredUserId` links to a `User` only after the hire claims an invite.
   - Hiring routes, APIs, documents, and exports are `ADMIN` only. This is stricter than the Users area, where `STAFF` can edit all users, and applies because applicant data includes resumes, contact details, and evaluation notes.
@@ -1577,6 +1577,7 @@ These are non-negotiable integrity constraints. Every feature must preserve them
   - The workforce overview is a read model over `User`; it does not duplicate profile editing.
 - Guardrails: Every mutation is audited. Resumes use private blob storage with authenticated reads. Applicant data keeps the name forever and purges everything else 36 months after the cycle closes. No real PII in docs, fixtures, or tests. Import is dry-run-first and preserves each source row.
 - Consequences: New data class and lifecycle. Planning view depends on structured grad term and mapped area, so the importer must normalize both.
+- Team-first amendment (2026-10-01): Workforce’s default is the creative team by area and term, with staff and interns separated; Looking ahead and Hiring support that primary workflow. Past intern membership requires recorded term placements and never comes from projecting today’s active roster backward. Future roster views distinguish recorded placements from graduation/start-date projections. Staff/manager history is not inferred. Hiring-cycle area targets own planned hires; applicant pipeline is not staffing.
 - Hosting (2026-09-30): the Workforce area stays in the main app on the main hostname, protected by the ADMIN-only `hiring` and `workforce` permissions, not moved behind a separate Cloudflare Access hostname. Reasons: hire, invite, claim, overview, and planning are in-database operations today, and a split would need a second database or service API, deploy, and preview setup. Revisit if applicant data needs isolation from a compromise of the main app (separate app and database), or if front-door SSO and MFA is wanted for these pages; a second hostname with server-side Access JWT verification was scoped but not built.
 - Review amendments: audit rows are hard-deleted at 90 days, so purges are recorded in a durable non-PII ledger; hiring audits never snapshot contact data; code uses `applicant` (not `candidate`) naming. See brief section 14.
 - Reference: `docs/BRIEF_WORKFORCE_HIRING_V1.md`.

@@ -1,0 +1,15 @@
+{
+  "checks": [
+    "Area filter narrows the team",
+    "Person drawer opens with selected term and preserves existing area/sports",
+    "Future projection removes graduates and flags incomplete dates",
+    "History includes former interns and excludes unrecorded staff",
+    "Mobile team stays within viewport",
+    "Planning renders cycle-owned hiring goals separately from headcount",
+    "Review next uses current filtered sort order and excludes decided/reviewed applicants",
+    "Hiring view, cycle and sort survive reload",
+    "Linked resume is recognized in the applicant materials state"
+  ],
+  "consoleErrors": [],
+  "scope": "Actual components with fictional users and in-memory API/navigation adapters. No authenticated server, import, or persisted mutation proof."
+}

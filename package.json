@@ -57,6 +57,7 @@
     }
   },
   "scripts": {
+    "workforce": "node scripts/workforce/cli.mjs",
     "dev": "node scripts/preview.mjs dev",
     "dev:preview": "node scripts/preview.mjs dev",
     "auth:local": "node scripts/preview.mjs auth",

@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "bf01a32c1f21a89d75bfd2ac498f06d6cf86ba71",
+  "sourcePatchSha256": "e865e6e42268673223f03633ad4311e014d3e390c17f829e57a1eaa513e6ec17",
+  "settings": {
+    "device": "Playwright Chromium, headless; CSS device scale 1",
+    "viewport": [
+      1280,
+      1100
+    ],
+    "fixture": "Fictional five-candidate fixture f655f98c0837a5ed98606e0d0123e72dd3e5dc72bae66a1d85701a7821dd83d8",
+    "role": "admin presentation fixture; no authenticated server",
+    "route": "Hiring board extracted markup and actual ApplicantCard component",
+    "appearance": "light",
+    "textSize": "default; Arial body fallback, repository Gotham headings",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "No clock-dependent UI in fixture",
+    "scroll": [
+      0,
+      0
+    ]
+  },
+  "imageSha256": "d3b27bdae81427a0c72ddf4a7d3794d5ca5388363c79c329d1f54cde9f9c1ef1",
+  "dimensions": [
+    1280,
+    1100
+  ]
+}

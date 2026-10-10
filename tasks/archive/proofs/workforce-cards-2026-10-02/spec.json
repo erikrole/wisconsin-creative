@@ -1,0 +1,51 @@
+{
+  "title": "Hiring cards: clearer applicant review",
+  "eyebrow": "Workforce \u00b7 Local design review",
+  "lede": "Stronger names and specialty hierarchy, readable experience summaries, and review controls separated from application details. Fictional candidates shown.",
+  "sections": [
+    {
+      "heading": "Same candidates, same viewport",
+      "note": "Baseline retains the prior uncommitted Hiring card implementation. Both captures use identical fixture data, shared CSS, browser settings and wrapper. Source snapshots are retained; this is presentation evidence, not an authenticated preview.",
+      "pairs": [
+        {
+          "title": "Hiring board",
+          "before": "before.png",
+          "after": "after.png",
+          "beforeEvidence": "before-evidence.json",
+          "afterEvidence": "after-evidence.json",
+          "beforeCap": "Dense tags, small summary text, and unlabeled material icons.",
+          "afterCap": "Stronger name and specialty hierarchy, readable summaries, labeled materials, and a distinct review footer."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Applicant identity",
+      "was": "Small name with truncation and every specialty competing as a badge.",
+      "now": "Wrapping semibold name, one primary specialty badge, and secondary areas as quieter text."
+    },
+    {
+      "h": "Evidence at a glance",
+      "was": "Small summary text and unlabeled material icons.",
+      "now": "Three-line readable summary, labeled material indicators, direct source links, and rating count."
+    },
+    {
+      "h": "Controls and board layout",
+      "was": "Review control competed with plain source links in a compact card.",
+      "now": "Separate review footer with saving state, more column spacing, explicit empty columns, and local horizontal scrolling."
+    }
+  ],
+  "verification": [
+    "183 focused Hiring/Workforce tests and 11 CLI tests passed.",
+    "Keyboard opening and review toggle passed in the actual card fixture; no browser errors.",
+    "390 CSS-pixel mobile fixture: page width remained 390 pixels; card contents fit their containers.",
+    "Dark appearance and missing-data/long-name fixtures visually inspected.",
+    "Production data independently verified: 76 candidates, 55 Applied, 5 Round 1, 16 Passed; 1 Maybe note. Blank sheet decisions and review flags preserved."
+  ],
+  "notes": [
+    "The card redesign is local and has not been committed, pushed or deployed.",
+    "The merged Workforce branch has no managed preview environment. Authenticated server proof of the changed UI remains pending.",
+    "Source snapshots and matching metadata are retained alongside this review. Mobile and dark captures are supplemental after-only evidence."
+  ]
+}

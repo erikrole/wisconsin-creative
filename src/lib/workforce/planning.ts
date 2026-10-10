@@ -41,10 +41,15 @@ export type PlanningCell = {
   projected: number;
   /** Hires still needed to match the first column's headcount. */
   need: number;
+  /** Explicit hiring goals, not a target for total staff headcount. */
+  hiringTarget: number | null;
+  hiresNeeded: number | null;
   leaving: string[];
   hiredNames: string[];
   pipelineNames: string[];
 };
+
+export type PlanningTarget = { area: ShiftArea; academicYearStart: number; target: number; hired: number };
 
 export type PlanningRow = { area: PlanningAreaKey; baseline: number; cells: PlanningCell[] };
 
@@ -81,10 +86,12 @@ export function buildPlanning(
   students: PlanningStudent[],
   applicants: PlanningApplicant[],
   years: number[],
+  targets: PlanningTarget[] = [],
 ): PlanningRow[] {
   const areas = new Set<PlanningAreaKey>();
   for (const s of students) areas.add(s.area ?? NO_AREA);
   for (const a of applicants) areas.add(a.area ?? NO_AREA);
+  for (const target of targets) if (years.includes(target.academicYearStart)) areas.add(target.area);
 
   const order: PlanningAreaKey[] = ["VIDEO", "PHOTO", "GRAPHICS", "SOCIAL", "COMMS", "LIVE_PRODUCTION", NO_AREA];
   return order
@@ -100,6 +107,10 @@ export function buildPlanning(
         const hired = applicantsInArea.filter((a) => a.stage === "HIRE" && presentInYear(a, year));
         const pipeline = applicantsInArea.filter((a) => a.stage !== "HIRE" && presentInYear(a, year));
         const projected = here.length + hired.length;
+        const goals = targets.filter(target => target.area === area && target.academicYearStart === year);
+        const hiringTarget = goals.length ? goals.reduce((total, goal) => total + goal.target, 0) : null;
+        // Each cycle owns its goal; exceeding one cycle's target does not erase another's opening.
+        const hiresNeeded = goals.length ? goals.reduce((total, goal) => total + Math.max(0, goal.target - goal.hired), 0) : null;
         return {
           academicYearStart: year,
           continuing: here.length,
@@ -108,6 +119,8 @@ export function buildPlanning(
           pipeline: pipeline.length,
           projected,
           need: Math.max(0, baseline - projected),
+          hiringTarget,
+          hiresNeeded,
           leaving: previous ? previous.filter((s) => !presentInYear(s, year)).map((s) => s.name) : [],
           hiredNames: hired.map((a) => a.name),
           pipelineNames: pipeline.map((a) => a.name),

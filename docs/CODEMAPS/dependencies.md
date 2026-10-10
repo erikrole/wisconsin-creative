@@ -138,6 +138,7 @@
 - `test:watch`: `vitest`
 - `verify:docs`: `npm run codemap:check`
 - `verify:skills`: `python3 -B scripts/verify-skills.py`
+- `workforce`: `node scripts/workforce/cli.mjs`
 
 ## Environment Variables From `.env.example`
 

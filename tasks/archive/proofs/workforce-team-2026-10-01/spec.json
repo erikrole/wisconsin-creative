@@ -1,0 +1,51 @@
+{
+  "title": "Workforce: the creative team across time",
+  "eyebrow": "Wisconsin Creative \u00b7 Local review",
+  "lede": "Team is the main workspace. See staff and interns by area, move between terms, and use Hiring for openings and candidate review. All people shown are fictional.",
+  "sections": [
+    {
+      "heading": "Team first",
+      "note": "Matched viewport, fictional roster, shared tokens and clock. The baseline uses the preserved original page and person card; the after capture uses the actual new TeamView. Server data and Next navigation are adapted in the fixture.",
+      "pairs": [
+        {
+          "title": "Current team",
+          "before": "00-before-team.png",
+          "after": "01-current-team.png",
+          "beforeEvidence": "before-evidence.json",
+          "afterEvidence": "after-evidence.json",
+          "beforeCap": "A current-roster list with staff and interns mixed in each area.",
+          "afterCap": "Area teams separate staff and interns, show recorded managers, and expose academic-year and term navigation."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "A useful team structure",
+      "was": "Current staffing was a flat sequence of area rosters.",
+      "now": "Staff and interns are separated within each creative area; profile links, sports, managers and graduation cues stay close to each person."
+    },
+    {
+      "h": "Past and upcoming years",
+      "was": "The main view only represented active profiles today.",
+      "now": "Past terms use recorded intern placements, including former interns. Future terms distinguish recorded placements from projected returns and flag incomplete graduation dates."
+    },
+    {
+      "h": "Hiring supports the team",
+      "was": "Management controls dominated the hiring toolbar; viewing and sorting were temporary.",
+      "now": "Review next, quick views, URL-backed filters/sort and cycle links make review easier. Planning uses explicit cycle hiring goals."
+    }
+  ],
+  "verification": [
+    "220 focused Hiring/Workforce tests and 11 CLI tests passed.",
+    "Typecheck and touched-file lint passed; app build passed, with the pre-existing unrelated Sidebar unused-variable warning.",
+    "Nine checks passed against actual components with fictional data: filters, term selection and prefill, future graduates, historical membership, mobile width, planning goals, review order, URL reload, and linked materials. No browser errors.",
+    "Matched desktop, narrow-screen, dark appearance, empty history, future/history, person drawer, Hiring and Planning renders were inspected."
+  ],
+  "notes": [
+    "Local changes only. No staffing or applicant data changed in this pass, and no commit, push or deployment occurred.",
+    "Historical staff/manager membership is not recorded. Historical names and graduation fields reflect current profiles, so this is not an immutable snapshot.",
+    "The annual Looking ahead headcount uses profile assignments; exact term placements are shown in Team. Hires awaiting accounts appear in Looking ahead.",
+    "The merged branch has no managed preview. Fixture evidence does not establish authenticated Next routing, server authorization or persistent writes."
+  ]
+}

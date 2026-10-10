@@ -6,18 +6,20 @@ import { createAuditEntryTx } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { normalizeName } from "@/lib/hiring/contract";
 import { MAX_IMPORT_CHARS, MAX_IMPORT_ROWS, parseApplicantCsv, planImport, type PlanAction } from "@/lib/hiring/import";
+import { agentBatchSchema, parseAgentApplicants } from "@/lib/hiring/agent-import";
 import { HttpError, ok } from "@/lib/http";
 import { enforceRateLimit, SETTINGS_MUTATION_LIMIT } from "@/lib/rate-limit";
 import { requirePermission } from "@/lib/rbac";
 
 const importSchema = z.object({
   cycleId: z.string().cuid(),
-  csv: z.string().min(1).max(MAX_IMPORT_CHARS),
+  csv: z.string().min(1).max(MAX_IMPORT_CHARS).optional(),
+  agentResults: agentBatchSchema.optional(),
   /** false (default) returns the dry-run report and writes nothing. */
   apply: z.boolean().default(false),
   /** Archived cycles: a blank decision means the applicant was passed over. */
   blankDecisionMeansPassed: z.boolean().default(false),
-});
+}).refine((v) => Boolean(v.csv) !== Boolean(v.agentResults), "Provide CSV or structured applicant results, not both");
 
 const DECIDED = new Set(["HIRE", "PASSED", "WITHDRAWN"]);
 
@@ -34,7 +36,9 @@ export const POST = withAuth(async (req, { user }) => {
     throw new HttpError(400, "Close the cycle before importing with 'a blank decision means passed over'. An open cycle has undecided applicants.");
   }
 
-  const parsed = parseApplicantCsv(body.csv, { blankDecisionMeansPassed: body.blankDecisionMeansPassed });
+  if (body.agentResults && body.blankDecisionMeansPassed) throw new HttpError(400, "Applicant intake records applicants as Applied. Decisions stay in Hiring.");
+  if (body.agentResults && JSON.stringify(body.agentResults).length > MAX_IMPORT_CHARS) throw new HttpError(413, "Applicant results are too large. Split the batch.");
+  const parsed = body.agentResults ? parseAgentApplicants(body.agentResults) : parseApplicantCsv(body.csv!, { blankDecisionMeansPassed: body.blankDecisionMeansPassed });
   if (parsed.records.length + parsed.invalid.length > MAX_IMPORT_ROWS) {
     throw new HttpError(413, `Imports are limited to ${MAX_IMPORT_ROWS} rows. Split the file and import in parts.`);
   }
@@ -153,7 +157,7 @@ export const POST = withAuth(async (req, { user }) => {
           after: { created: counts.create, attached: counts.attach, skipped: counts.skip_existing + counts.duplicate_in_file, needsReview: counts.needs_review },
         });
       },
-      { timeout: 30_000 },
+      { timeout: 30_000, isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
     applied = true;
   }

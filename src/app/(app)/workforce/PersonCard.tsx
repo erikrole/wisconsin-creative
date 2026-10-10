@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Trash2 } from "lucide-react";
@@ -29,11 +30,18 @@ export type PersonCardData = {
   graduatesThisYear: boolean;
   sports: string[];
   academicYearEnd: number;
+  selectedTerm?: keyof typeof TERM_LABELS;
+  selectedYear?: number;
+  historical?: boolean;
+  manager?: string | null;
+  basis?: "profile" | "recorded" | "projected";
+  unknownGraduation?: boolean;
 };
 
 type Placement = { id: string; term: keyof typeof TERM_LABELS; year: number; area: string | null; sportCodes: string[]; notes: string | null };
 type PersonDetail = {
   id: string;
+  staffingType: "FT" | "ST";
   name: string;
   startTerm: keyof typeof TERM_LABELS | null;
   startTermYear: number | null;
@@ -56,8 +64,10 @@ export function PersonCard({ person }: { person: PersonCardData }) {
       >
         <UserAvatar name={person.name} avatarUrl={person.avatarUrl} size="default" />
         <div className="min-w-0 flex-1">
-          <p className="truncate font-medium">{person.name}</p>
-          <p className="truncate text-xs text-muted-foreground">{subtitle}</p>
+          <p className="break-words font-medium">{person.name}</p>
+          <p className="text-xs text-muted-foreground">{subtitle}</p>
+          {person.manager && <p className="mt-1 text-xs text-muted-foreground">Reports to {person.manager}</p>}
+          {person.kind === "STUDENT" && person.basis && person.basis !== "profile" && <p className="mt-1 text-xs text-muted-foreground">{person.basis === "recorded" ? "Placement recorded" : person.basis === "projected" ? person.unknownGraduation ? "Projected · graduation incomplete" : "Projected return" : "Current profile"}</p>}
           {person.sports.length > 0 && (
             <p className="mt-1 flex flex-wrap gap-1">
               {person.sports.slice(0, 4).map((s) => (
@@ -69,7 +79,7 @@ export function PersonCard({ person }: { person: PersonCardData }) {
             </p>
           )}
         </div>
-        {person.graduatesThisYear && (
+        {person.graduatesThisYear && !person.historical && (
           <Badge variant="orange" size="sm">
             Graduating
           </Badge>
@@ -81,12 +91,13 @@ export function PersonCard({ person }: { person: PersonCardData }) {
 }
 
 function PersonSheet({ person, onClose }: { person: PersonCardData; onClose: () => void }) {
+  const router = useRouter();
   const [detail, setDetail] = useState<PersonDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [startTerm, setStartTerm] = useState("");
   const [startYear, setStartYear] = useState("");
-  const [form, setForm] = useState({ term: "FALL", year: String(person.academicYearEnd - 1), area: "", notes: "" });
+  const [form, setForm] = useState({ term: person.selectedTerm ?? "FALL", year: String(person.selectedYear ?? person.academicYearEnd - 1), area: "", notes: "" });
   const [sports, setSports] = useState<string[]>([]);
 
   const load = useCallback(async () => {
@@ -108,6 +119,15 @@ function PersonSheet({ person, onClose }: { person: PersonCardData; onClose: () 
     void load();
   }, [load]);
 
+  const canEditPlacements = person.kind === "STUDENT" && detail?.staffingType === "ST";
+
+  useEffect(() => {
+    if (!detail) return;
+    const existing = detail.termPlacements.find(placement => placement.term === form.term && placement.year === Number(form.year));
+    setForm(value => ({ ...value, area: existing?.area ?? "", notes: existing?.notes ?? "" }));
+    setSports(existing?.sportCodes ?? []);
+  }, [detail, form.term, form.year]);
+
   async function send(url: string, init: RequestInit, failure: string) {
     setBusy(true);
     try {
@@ -115,6 +135,7 @@ function PersonSheet({ person, onClose }: { person: PersonCardData; onClose: () 
       if (handleAuthRedirect(res)) return false;
       if (!res.ok) throw new Error(await parseErrorMessage(res, failure));
       await load();
+      router.refresh();
       return true;
     } catch (err) {
       toast.error(err instanceof Error ? err.message : failure);
@@ -137,7 +158,7 @@ function PersonSheet({ person, onClose }: { person: PersonCardData; onClose: () 
 
   async function addPlacement(e: React.FormEvent) {
     e.preventDefault();
-    const saved = await send(
+    await send(
       `/api/workforce/people/${person.id}/placements`,
       {
         method: "POST",
@@ -152,10 +173,6 @@ function PersonSheet({ person, onClose }: { person: PersonCardData; onClose: () 
       },
       "Could not save the placement.",
     );
-    if (saved) {
-      setSports([]);
-      setForm((f) => ({ ...f, notes: "" }));
-    }
   }
 
   return (
@@ -173,9 +190,7 @@ function PersonSheet({ person, onClose }: { person: PersonCardData; onClose: () 
         </SheetHeader>
 
         {error && (
-          <p role="alert" className="px-4 text-sm text-destructive">
-            {error}
-          </p>
+          <div role="alert" className="flex items-center gap-3 px-4 text-sm text-destructive"><p>{error}</p><Button variant="outline" onClick={() => void load()}>Retry</Button></div>
         )}
         {!detail && !error && <Skeleton className="mx-4 h-48" />}
 
@@ -184,7 +199,8 @@ function PersonSheet({ person, onClose }: { person: PersonCardData; onClose: () 
         )}
         {detail && person.kind === "STUDENT" && (
           <div className="grid gap-6 px-4 pb-6">
-            <section aria-label="Start term" className="grid gap-2">
+            {!canEditPlacements && <p className="text-sm text-muted-foreground">This person is now staff. Their recorded intern placements remain available here.</p>}
+            {canEditPlacements && <section aria-label="Start term" className="grid gap-2">
               <h3 className="text-sm font-semibold">Started</h3>
               <div className="flex flex-wrap items-end gap-2">
                 <div className="grid gap-1.5">
@@ -206,7 +222,7 @@ function PersonSheet({ person, onClose }: { person: PersonCardData; onClose: () 
                   Save
                 </Button>
               </div>
-            </section>
+            </section>}
 
             <section aria-label="Term placements" className="grid gap-3">
               <h3 className="text-sm font-semibold">Placements by term</h3>
@@ -232,7 +248,7 @@ function PersonSheet({ person, onClose }: { person: PersonCardData; onClose: () 
                         )}
                         {p.notes && <p className="mt-1 text-xs text-muted-foreground">{p.notes}</p>}
                       </div>
-                      <Button
+                      {canEditPlacements && <Button
                         variant="outline"
                         size="icon"
                         aria-label={`Remove ${TERM_LABELS[p.term]} ${p.year} placement`}
@@ -240,16 +256,16 @@ function PersonSheet({ person, onClose }: { person: PersonCardData; onClose: () 
                         onClick={() => void send(`/api/workforce/people/${person.id}/placements?placementId=${p.id}`, { method: "DELETE" }, "Could not remove the placement.")}
                       >
                         <Trash2 className="size-4" aria-hidden />
-                      </Button>
+                      </Button>}
                     </li>
                   ))}
                 </ul>
               )}
 
-              <form onSubmit={addPlacement} className="grid gap-3 rounded-md border border-dashed p-3">
+              {canEditPlacements && <form onSubmit={addPlacement} className="grid gap-3 rounded-md border border-dashed p-3">
                 <p className="text-sm font-medium">Add or update a term</p>
                 <div className="grid grid-cols-3 gap-2">
-                  <NativeSelect aria-label="Term" value={form.term} onChange={(e) => setForm((f) => ({ ...f, term: e.target.value }))}>
+                  <NativeSelect aria-label="Term" value={form.term} onChange={(e) => setForm((f) => ({ ...f, term: e.target.value as keyof typeof TERM_LABELS }))}>
                     {Object.entries(TERM_LABELS).map(([value, label]) => (
                       <option key={value} value={value}>
                         {label}
@@ -295,7 +311,7 @@ function PersonSheet({ person, onClose }: { person: PersonCardData; onClose: () 
                     Save term
                   </Button>
                 </div>
-              </form>
+              </form>}
             </section>
           </div>
         )}

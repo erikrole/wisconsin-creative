@@ -1,0 +1,38 @@
+{
+  "keyboardOpen": true,
+  "reviewToggle": true,
+  "geometry": {
+    "body": 390,
+    "viewport": 390,
+    "cards": [
+      {
+        "width": 262,
+        "client": 260,
+        "scroll": 260
+      },
+      {
+        "width": 262,
+        "client": 260,
+        "scroll": 260
+      },
+      {
+        "width": 262,
+        "client": 260,
+        "scroll": 260
+      },
+      {
+        "width": 262,
+        "client": 260,
+        "scroll": 260
+      },
+      {
+        "width": 262,
+        "client": 260,
+        "scroll": 260
+      }
+    ],
+    "summaryDisplay": "flow-root"
+  },
+  "consoleErrors": [],
+  "scope": "Fictional fixture and callback state only; no server mutations"
+}

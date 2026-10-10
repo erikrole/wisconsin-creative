@@ -1,0 +1,134 @@
+[
+  {
+    "applicantId": "sample-1",
+    "email": null,
+    "standing": "JUNIOR",
+    "gradTerm": "SPRING",
+    "gradYear": 2028,
+    "location": null,
+    "hasPortfolio": true,
+    "stage": "APPLIED",
+    "reviewed": false,
+    "hasInterview": false,
+    "summerAvailable": null,
+    "rawAreas": [
+      "Video",
+      "Photography",
+      "Live production"
+    ],
+    "primaryArea": "VIDEO",
+    "hasResume": true,
+    "ratingAverage": null,
+    "ratingCount": 0,
+    "externalApplicationId": null,
+    "id": "sample-1",
+    "name": "Alex Morgan",
+    "experienceSummary": "Shoots and edits game highlights for campus athletics. Experience operating cameras, cutting social clips, and recording interviews.",
+    "sourceLinks": [
+      {
+        "label": "PageUp resume",
+        "url": "https://example.com/resume"
+      },
+      {
+        "label": "PageUp application",
+        "url": "https://example.com/application"
+      }
+    ]
+  },
+  {
+    "applicantId": "sample-2",
+    "email": null,
+    "standing": "SOPHOMORE",
+    "gradTerm": "SPRING",
+    "gradYear": 2029,
+    "location": null,
+    "hasPortfolio": true,
+    "stage": "APPLIED",
+    "reviewed": true,
+    "hasInterview": false,
+    "summerAvailable": null,
+    "rawAreas": [
+      "Photography"
+    ],
+    "primaryArea": "PHOTO",
+    "hasResume": true,
+    "ratingAverage": null,
+    "ratingCount": 0,
+    "externalApplicationId": null,
+    "id": "sample-2",
+    "name": "Jordan Rivera",
+    "experienceSummary": "Event photographer for the student newspaper. Selects and edits images in Lightroom and delivers galleries on deadline."
+  },
+  {
+    "applicantId": "sample-3",
+    "email": null,
+    "standing": null,
+    "gradTerm": null,
+    "gradYear": null,
+    "location": null,
+    "hasPortfolio": false,
+    "stage": "APPLIED",
+    "reviewed": false,
+    "hasInterview": false,
+    "summerAvailable": null,
+    "rawAreas": [
+      "Graphic design",
+      "Video",
+      "Social"
+    ],
+    "primaryArea": "GRAPHICS",
+    "hasResume": true,
+    "ratingAverage": null,
+    "ratingCount": 0,
+    "externalApplicationId": null,
+    "id": "sample-3",
+    "name": "Taylor Alexandra Johnson-Williams",
+    "experienceSummary": "Designs posters and animated social graphics for campus organizations. Uses Photoshop, Illustrator, and After Effects."
+  },
+  {
+    "applicantId": "sample-4",
+    "email": null,
+    "standing": "SENIOR",
+    "gradTerm": "SPRING",
+    "gradYear": 2027,
+    "location": null,
+    "hasPortfolio": false,
+    "stage": "ROUND_1",
+    "reviewed": true,
+    "hasInterview": true,
+    "summerAvailable": null,
+    "rawAreas": [
+      "Live production",
+      "Video"
+    ],
+    "primaryArea": "LIVE_PRODUCTION",
+    "hasResume": true,
+    "ratingAverage": 4.5,
+    "ratingCount": 2,
+    "externalApplicationId": null,
+    "id": "sample-4",
+    "name": "Casey Lee",
+    "experienceSummary": "Runs replay and camera positions for live sporting events. Familiar with control-room communication and fast turnaround."
+  },
+  {
+    "applicantId": "sample-5",
+    "email": null,
+    "standing": null,
+    "gradTerm": null,
+    "gradYear": null,
+    "location": null,
+    "hasPortfolio": false,
+    "stage": "ROUND_1",
+    "reviewed": false,
+    "hasInterview": false,
+    "summerAvailable": null,
+    "rawAreas": [],
+    "primaryArea": null,
+    "hasResume": false,
+    "ratingAverage": null,
+    "ratingCount": 0,
+    "externalApplicationId": null,
+    "id": "sample-5",
+    "name": "Sam Chen"
+  }
+]

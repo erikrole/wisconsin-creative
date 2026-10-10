@@ -9,6 +9,7 @@ import {
   normalizeName,
   normalizePhone,
 } from "@/lib/hiring/contract";
+import { applicantSourceLinks } from "@/lib/hiring/agent-import";
 import { HttpError, ok } from "@/lib/http";
 import { enforceRateLimit, SETTINGS_MUTATION_LIMIT } from "@/lib/rate-limit";
 import { requirePermission } from "@/lib/rbac";
@@ -63,6 +64,8 @@ export const GET = withAuth(async (req, { user }) => {
         ratingAverage: ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : null,
         ratingCount: ratings.length,
         externalApplicationId: row.externalApplicationId,
+        sourceLinks: applicantSourceLinks(row.sourcePayload),
+        experienceSummary: row.sourcePayload && typeof row.sourcePayload === "object" && !Array.isArray(row.sourcePayload) && typeof row.sourcePayload["Relevant Experience"] === "string" ? row.sourcePayload["Relevant Experience"].slice(0, 3000) : null,
       };
     }),
   });

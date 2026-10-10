@@ -1,0 +1,42 @@
+{
+  "title": "Workforce applicant intake",
+  "eyebrow": "Wisconsin Creative \u00b7 Local implementation",
+  "lede": "Factual applicant logging, direct material links, and a faster review control. These changes have not been deployed.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "Rendered evidence pending",
+      "note": "No matched captures are available: this merged branch has no managed preview. Production currently runs the prior interface. No before/after images or visual acceptance are claimed.",
+      "pairs": []
+    }
+  ],
+  "changes": [
+    {
+      "h": "Submitted materials at hand",
+      "was": "Applicant cards did not surface recognized source document links or logged experience summaries.",
+      "now": "Cards and detail views expose recognized HTTPS document links; cards show the logged experience summary."
+    },
+    {
+      "h": "Review from the board",
+      "was": "Marking Reviewed required opening applicant details.",
+      "now": "A dedicated Reviewed control saves from the board and guards repeated submissions."
+    },
+    {
+      "h": "Recover failed lists",
+      "was": "Cycle and application loading errors offered no direct retry.",
+      "now": "Separate failure states offer retry and ignore superseded responses."
+    }
+  ],
+  "verification": [
+    "183 focused Hiring/Workforce tests and 8 CLI tests passed.",
+    "Type checking, touched-file lint, app build and docs verification passed.",
+    "77 completed PageUp submissions verified; 76 canonical candidates imported and read back.",
+    "The current production Hiring UI visibly rendered the 76 imported candidates. Screenshot retained privately outside repository proof.",
+    "New UI controls/source-link presentation remain locally implemented and lack matched preview evidence."
+  ],
+  "notes": [
+    "Managed preview unavailable for this merged branch; no matching before/after UI captures are claimed.",
+    "Private applicant data, source documents, shortlist and live screenshot are outside this repository.",
+    "No commit, push, deployment or spreadsheet edit performed."
+  ]
+}

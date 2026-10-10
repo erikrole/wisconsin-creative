@@ -1,8 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { hiringView, hiringSort, inHiringView, sortHiringApplications } from "./board-view";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { FileText, Link2, MessageSquare, Plus, Search, Video } from "lucide-react";
+import { ArrowRight, MoreHorizontal, Plus, Search } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { useConfirm } from "@/components/ConfirmDialog";
 import EmptyState from "@/components/EmptyState";
@@ -17,12 +20,11 @@ import {
   APPLICATION_STAGES,
   CONFIRM_STAGES,
   STAGE_LABELS,
-  STANDING_LABELS,
-  TERM_LABELS,
 } from "@/lib/hiring/contract";
 import type { ApplicationStage } from "@prisma/client";
 import CsvImportDialog from "../CsvImportDialog";
 import ApplicationSheet from "./ApplicationSheet";
+import ApplicantCard from "./ApplicantCard";
 import BulkResumeDialog from "./BulkResumeDialog";
 import { AddApplicantDialog, CloseCycleDialog, NewCycleDialog } from "./HiringDialogs";
 import { AREA_LABEL, AREA_OPTIONS, type BoardApplication, type CycleSummary } from "./types";
@@ -37,14 +39,19 @@ const STAGE_BADGE: Record<ApplicationStage, "gray" | "blue" | "green" | "orange"
 
 export default function HiringClient() {
   const confirm = useConfirm();
+  const params = useSearchParams();
+  const requestedCycle = params.get("cycle");
+  const initialCycle = useRef(requestedCycle);
+  const search = params.get("q") ?? "";
+  const areaFilter = params.get("area") ?? "";
+  const reviewFilter = params.get("review") ?? "";
+  const view = hiringView(params.get("view"));
+  const sort = hiringSort(params.get("sort"));
   const [cycles, setCycles] = useState<CycleSummary[] | null>(null);
   const [cycleId, setCycleId] = useState<string | null>(null);
   const [apps, setApps] = useState<BoardApplication[] | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
-  const [areaFilter, setAreaFilter] = useState("");
-  const [reviewFilter, setReviewFilter] = useState<"" | "unreviewed" | "reviewed">("");
-  const [showPassed, setShowPassed] = useState(false);
+  const [cyclesError, setCyclesError] = useState<string | null>(null);
+  const [appsError, setAppsError] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [cycleOpen, setCycleOpen] = useState(false);
@@ -52,6 +59,8 @@ export default function HiringClient() {
   const [resumesOpen, setResumesOpen] = useState(false);
   const [closeOpen, setCloseOpen] = useState(false);
   const [blankPassed, setBlankPassed] = useState(false);
+  const reviewBusy = useRef(new Set<string>());
+  const [reviewPending, setReviewPending] = useState<string[]>([]);
   const [dragId, setDragId] = useState<string | null>(null);
 
   const loadCycles = useCallback(async (select?: string) => {
@@ -61,10 +70,11 @@ export default function HiringClient() {
       const json = await parseJsonSafely<{ data?: CycleSummary[] }>(res);
       if (!res.ok) throw new Error(messageOf(json, "Could not load hiring cycles."));
       const list = json?.data ?? [];
+      setCyclesError(null);
       setCycles(list);
-      setCycleId((current) => select ?? current ?? list.find((c) => c.status === "OPEN")?.id ?? list[0]?.id ?? null);
+      setCycleId((current) => select ?? (list.some(c => c.id === current) ? current : null) ?? list.find(c => c.id === initialCycle.current)?.id ?? list.find((c) => c.status === "OPEN")?.id ?? list[0]?.id ?? null);
     } catch (err) {
-      setLoadError(err instanceof Error ? err.message : "Could not load hiring cycles.");
+      setCyclesError(err instanceof Error ? err.message : "Could not load hiring cycles.");
     }
   }, []);
 
@@ -73,6 +83,7 @@ export default function HiringClient() {
   const appsRequest = useRef(0);
   const loadApps = useCallback(async (id: string) => {
     const ticket = ++appsRequest.current;
+    setAppsError(null);
     try {
       const res = await fetch(`/api/hiring/applications?cycleId=${encodeURIComponent(id)}`);
       if (handleAuthRedirect(res)) return;
@@ -80,9 +91,10 @@ export default function HiringClient() {
       if (ticket !== appsRequest.current) return;
       if (!res.ok) throw new Error(messageOf(json, "Could not load applicants."));
       setApps(json?.data ?? []);
-      setLoadError(null);
+      setAppsError(null);
     } catch (err) {
-      setLoadError(err instanceof Error ? err.message : "Could not load applicants.");
+      if (ticket !== appsRequest.current) return;
+      setAppsError(err instanceof Error ? err.message : "Could not load applicants.");
     }
   }, []);
 
@@ -96,22 +108,37 @@ export default function HiringClient() {
     void loadApps(cycleId);
   }, [cycleId, loadApps]);
 
+  useEffect(() => {
+    if (requestedCycle && cycles?.some(c => c.id === requestedCycle)) setCycleId(requestedCycle);
+  }, [requestedCycle, cycles]);
+
+  function updateFilter(key: string, value: string) {
+    const next = new URLSearchParams(params.toString());
+    if (cycleId) next.set("cycle", cycleId);
+    if (value) next.set(key, value); else next.delete(key);
+    if (key === "view") next.delete("review");
+    window.history.replaceState(null, "", `/workforce/hiring?${next.toString()}`);
+  }
+
   const cycle = cycles?.find((c) => c.id === cycleId) ?? null;
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return (apps ?? []).filter((a) => {
+    return sortHiringApplications((apps ?? []).filter((a) => {
+      if (!inHiringView(a, view)) return false;
       if (q && !`${a.name} ${a.email ?? ""} ${a.rawAreas.join(" ")}`.toLowerCase().includes(q)) return false;
       if (areaFilter && a.primaryArea !== areaFilter && !a.rawAreas.some((r) => r.toLowerCase() === (AREA_LABEL[areaFilter] ?? "").toLowerCase())) return false;
       if (reviewFilter === "reviewed" && !a.reviewed) return false;
       if (reviewFilter === "unreviewed" && a.reviewed) return false;
       return true;
-    });
-  }, [apps, search, areaFilter, reviewFilter]);
+    }), sort);
+  }, [apps, search, areaFilter, reviewFilter, view, sort]);
 
-  const columns = APPLICATION_STAGES.filter((s) => showPassed || (s !== "PASSED" && s !== "WITHDRAWN"));
+  const columns = useMemo(() => APPLICATION_STAGES.filter(s => view === "round1" ? s === "ROUND_1" : view === "review" ? s === "APPLIED" || s === "ROUND_1" : view === "all" || (s !== "PASSED" && s !== "WITHDRAWN")), [view]);
   // Review shortcuts walk only what is visible on the board.
   const queueIds = useMemo(() => filtered.filter((a) => columns.includes(a.stage)).map((a) => a.id), [filtered, columns]);
+
+  const nextReview = filtered.find(a => !a.reviewed && (a.stage === "APPLIED" || a.stage === "ROUND_1"));
 
   async function setCycleStatus(status: "OPEN" | "CLOSED", closedOn?: string) {
     if (!cycle) return;
@@ -164,30 +191,51 @@ export default function HiringClient() {
     [apps, confirm, loadCycles],
   );
 
-  if (loadError && !cycles) {
+  async function toggleReviewed(application: BoardApplication) {
+    if (reviewBusy.current.has(application.id)) return;
+    reviewBusy.current.add(application.id);
+    setReviewPending([...reviewBusy.current]);
+    try {
+      const res = await fetch(`/api/hiring/applications/${application.id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reviewed: !application.reviewed }),
+      });
+      if (handleAuthRedirect(res)) return;
+      if (!res.ok) throw new Error(await parseErrorMessage(res, "Could not save review state."));
+      setApps((list) => list?.map((a) => a.id === application.id ? { ...a, reviewed: !application.reviewed } : a) ?? list);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not save review state.");
+    } finally {
+      reviewBusy.current.delete(application.id);
+      setReviewPending([...reviewBusy.current]);
+    }
+  }
+
+  if (cyclesError && !cycles) {
     return (
       <>
         <PageHeader title="Hiring" />
-        <EmptyState title="Could not load hiring" description={loadError} />
+        <EmptyState title="Could not load hiring" description={cyclesError} actionLabel="Retry" onAction={() => void loadCycles()} />
       </>
     );
   }
 
   return (
     <>
-      <PageHeader title="Hiring" description="Run each student hiring cycle: applicants, resumes, interviews, and decisions.">
-        <Button variant="outline" onClick={() => setCycleOpen(true)}>
-          New cycle
-        </Button>
-        <Button variant="outline" onClick={() => setImportOpen(true)} disabled={!cycle}>
-          Import CSV
-        </Button>
-        <Button variant="outline" onClick={() => setResumesOpen(true)} disabled={!apps?.length}>
-          Upload resumes
-        </Button>
-        <Button onClick={() => setAddOpen(true)} disabled={!cycle}>
-          <Plus className="size-4" aria-hidden /> Add applicant
-        </Button>
+      <PageHeader title="Hiring" description="Openings, applicants, and decisions for your creative team.">
+        <Button disabled={!nextReview || Boolean(appsError)} onClick={() => nextReview && setOpenId(nextReview.id)}>Review next <ArrowRight className="size-4" aria-hidden /></Button>
+        <Button variant="outline" onClick={() => setAddOpen(true)} disabled={!cycle}><Plus className="size-4" aria-hidden /> Add applicant</Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild><Button variant="outline" aria-label="Hiring actions"><MoreHorizontal className="size-4" aria-hidden />Manage</Button></DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={() => setCycleOpen(true)}>New cycle</DropdownMenuItem>
+            <DropdownMenuItem disabled={!cycle} onSelect={() => setImportOpen(true)}>Import CSV</DropdownMenuItem>
+            <DropdownMenuItem disabled={!apps?.length} onSelect={() => setResumesOpen(true)}>Upload resumes</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {cycle && (cycle.status === "OPEN" || cycle.status === "PLANNING") && <DropdownMenuItem onSelect={() => setCloseOpen(true)}>Close cycle</DropdownMenuItem>}
+            {cycle && (cycle.status === "CLOSED" || cycle.status === "ARCHIVED") && <DropdownMenuItem onSelect={() => void setCycleStatus("OPEN")}>Reopen cycle</DropdownMenuItem>}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </PageHeader>
 
       {!cycles ? (
@@ -207,7 +255,7 @@ export default function HiringClient() {
               aria-label="Hiring cycle"
               className="w-48"
               value={cycleId ?? ""}
-              onChange={(e) => setCycleId(e.target.value)}
+              onChange={(e) => { setApps(null); updateFilter("cycle", e.target.value); }}
             >
               {cycles.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -223,10 +271,10 @@ export default function HiringClient() {
                 placeholder="Search name, email, area"
                 className="pl-9"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => updateFilter("q", e.target.value)}
               />
             </div>
-            <NativeSelect aria-label="Filter by area" className="w-44" value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)}>
+            <NativeSelect aria-label="Filter by area" className="w-44" value={areaFilter} onChange={(e) => updateFilter("area", e.target.value)}>
               <option value="">All areas</option>
               {AREA_OPTIONS.map((a) => (
                 <option key={a.value} value={a.value}>
@@ -238,26 +286,17 @@ export default function HiringClient() {
               aria-label="Filter by review state"
               className="w-40"
               value={reviewFilter}
-              onChange={(e) => setReviewFilter(e.target.value as typeof reviewFilter)}
+              onChange={(e) => updateFilter("review", e.target.value)}
             >
               <option value="">Any review state</option>
               <option value="unreviewed">Not reviewed</option>
               <option value="reviewed">Reviewed</option>
             </NativeSelect>
-            {cycle && (cycle.status === "OPEN" || cycle.status === "PLANNING") && (
-              <Button variant="outline" onClick={() => setCloseOpen(true)}>
-                Close cycle
-              </Button>
-            )}
-            {cycle && (cycle.status === "CLOSED" || cycle.status === "ARCHIVED") && (
-              <Button variant="outline" onClick={() => void setCycleStatus("OPEN")}>
-                Reopen cycle
-              </Button>
-            )}
-            <label className="flex items-center gap-2 text-sm text-muted-foreground">
-              <input type="checkbox" checked={showPassed} onChange={(e) => setShowPassed(e.target.checked)} />
-              Show passed
-            </label>
+            <NativeSelect aria-label="Sort applicants" className="w-40" value={sort} onChange={e => updateFilter("sort", e.target.value)}><option value="newest">Newest first</option><option value="name">Name A–Z</option><option value="unreviewed">Unreviewed first</option></NativeSelect>
+          </div>
+
+          <div className="mb-4 flex flex-wrap gap-2" role="group" aria-label="Applicant views">
+            {([ ["active", "Active"], ["review", "Needs review"], ["round1", "Round 1"], ["all", "All applicants"] ] as const).map(([value, label]) => <Button key={value} variant={view === value ? "secondary" : "ghost"} aria-pressed={view === value} onClick={() => updateFilter("view", value)}>{label}<Badge variant="gray" size="sm">{apps ? apps.filter(a => inHiringView(a, value)).length : "—"}</Badge></Button>)}
           </div>
 
           {cycle && cycle.slots.length > 0 && (
@@ -273,76 +312,56 @@ export default function HiringClient() {
             </div>
           )}
 
-          {!apps ? (
+          {appsError ? (
+            <EmptyState title="Could not load applicants" description={appsError} actionLabel="Retry" onAction={() => cycleId && void loadApps(cycleId)} />
+          ) : !apps ? (
             <Skeleton className="h-64 w-full" />
           ) : (
-            <div className="grid gap-3 overflow-x-auto pb-2" style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(15rem, 1fr))` }}>
+            <div className="grid items-start gap-4 overflow-x-auto pb-4" style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(18rem, 1fr))` }}>
               {columns.map((stage) => {
                 const items = filtered.filter((a) => a.stage === stage);
                 return (
                   <section
                     key={stage}
                     aria-label={`${STAGE_LABELS[stage]} column`}
-                    className="flex min-h-48 flex-col rounded-lg border bg-muted/30 p-2"
+                    className="flex min-h-48 min-w-0 flex-col rounded-xl border bg-muted/30 p-3"
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={() => {
                       if (dragId) void changeStage(dragId, stage);
                       setDragId(null);
                     }}
                   >
-                    <h2 className="mb-2 flex items-center justify-between px-1 text-sm font-semibold">
+                    <h2 className="mb-3 flex items-center justify-between px-1 py-1 text-sm font-semibold">
                       {STAGE_LABELS[stage]}
                       <Badge variant={STAGE_BADGE[stage]} size="sm">
                         {items.length}
                       </Badge>
                     </h2>
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-3">
                       {items.map((a) => (
-                        <button
+                        <ApplicantCard
                           key={a.id}
-                          type="button"
-                          draggable
+                          application={a}
+                          reviewPending={reviewPending.includes(a.id)}
+                          onOpen={() => setOpenId(a.id)}
+                          onReview={() => void toggleReviewed(a)}
                           onDragStart={() => setDragId(a.id)}
                           onDragEnd={() => setDragId(null)}
-                          onClick={() => setOpenId(a.id)}
-                          className="rounded-md border bg-card p-3 text-left shadow-sm transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring"
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <span className="truncate font-medium">{a.name}</span>
-                            {!a.reviewed && <span className="mt-1.5 size-2 shrink-0 rounded-full bg-primary" title="Not reviewed" />}
-                          </div>
-                          <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                            {[a.standing ? STANDING_LABELS[a.standing] : null, a.gradTerm && a.gradYear ? `${TERM_LABELS[a.gradTerm]} ${a.gradYear}` : null]
-                              .filter(Boolean)
-                              .join(" · ") || "No class info"}
-                          </p>
-                          <div className="mt-2 flex flex-wrap gap-1">
-                            {(a.rawAreas.length ? a.rawAreas : a.primaryArea ? [AREA_LABEL[a.primaryArea] ?? a.primaryArea] : []).map((r) => (
-                              <Badge key={r} variant="gray" size="sm">
-                                {r}
-                              </Badge>
-                            ))}
-                          </div>
-                          <div className="mt-2 flex items-center gap-2 text-muted-foreground">
-                            {a.hasResume && <FileText className="size-3.5" aria-label="Has resume" />}
-                            {a.hasPortfolio && <Link2 className="size-3.5" aria-label="Has portfolio" />}
-                            {a.hasInterview && <Video className="size-3.5" aria-label="Has interview" />}
-                            {a.ratingAverage != null && (
-                              <span className="ml-auto flex items-center gap-1 text-xs">
-                                <MessageSquare className="size-3.5" aria-hidden /> {a.ratingAverage.toFixed(1)}
-                              </span>
-                            )}
-                          </div>
-                        </button>
+                        />
                       ))}
-                      {items.length === 0 && <p className="px-1 py-4 text-center text-xs text-muted-foreground">No applicants</p>}
+                      {items.length === 0 && <p className="rounded-lg border border-dashed px-3 py-8 text-center text-sm text-muted-foreground">No applicants</p>}
                     </div>
                   </section>
                 );
               })}
             </div>
           )}
-          {loadError && <p role="alert" className="mt-3 text-sm text-destructive">{loadError}</p>}
+          {cyclesError && (
+            <div role="alert" className="mt-3 flex items-center gap-3 text-sm text-destructive">
+              <p>{cyclesError}</p>
+              <Button variant="outline" onClick={() => void loadCycles()}>Retry cycles</Button>
+            </div>
+          )}
         </>
       )}
 

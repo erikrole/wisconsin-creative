@@ -9,13 +9,13 @@ export default function WorkforceNav() {
     <SectionNav aria-label="Workforce sections">
       <SectionNavList>
         <SectionNavLink href="/workforce" active={pathname === "/workforce"}>
-          Overview
+          Team
+        </SectionNavLink>
+        <SectionNavLink href="/workforce/planning" active={pathname.startsWith("/workforce/planning")}>
+          Looking ahead
         </SectionNavLink>
         <SectionNavLink href="/workforce/hiring" active={pathname.startsWith("/workforce/hiring")}>
           Hiring
-        </SectionNavLink>
-        <SectionNavLink href="/workforce/planning" active={pathname.startsWith("/workforce/planning")}>
-          Planning
         </SectionNavLink>
       </SectionNavList>
     </SectionNav>

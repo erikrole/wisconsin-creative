@@ -148,3 +148,23 @@ describe("collapseApplicants", () => {
     expect(video!.cells[0]!.pipeline).toBe(0);
   });
 });
+
+describe("cycle-owned hiring goals", () => {
+  it("uses explicit goals and all decided hires instead of treating returning students as new hires", () => {
+    const students = [student("returning", "VIDEO", "SPRING", 2029)];
+    const [video] = buildPlanning(students, [], [2026, 2027], [
+      { area: "VIDEO", academicYearStart: 2026, target: 4, hired: 2 },
+    ]);
+    expect(video!.cells[0]).toMatchObject({ projected: 1, hiringTarget: 4, hiresNeeded: 2 });
+    expect(video!.cells[1]).toMatchObject({ hiringTarget: null, hiresNeeded: null });
+  });
+  it("shows target-only areas and does not use one cycle's excess hires to erase another's opening", () => {
+    const rows = buildPlanning([], [], [2026], [
+      { area: "PHOTO", academicYearStart: 2026, target: 1, hired: 2 },
+      { area: "PHOTO", academicYearStart: 2026, target: 2, hired: 0 },
+      { area: "VIDEO", academicYearStart: 2030, target: 10, hired: 0 },
+    ]);
+    expect(rows.map(row => row.area)).toEqual(["PHOTO"]);
+    expect(rows[0]!.cells[0]).toMatchObject({ projected: 0, hiringTarget: 3, hiresNeeded: 2 });
+  });
+});

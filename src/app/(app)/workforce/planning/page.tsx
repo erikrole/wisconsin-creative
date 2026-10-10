@@ -1,8 +1,11 @@
+import Link from "next/link";
 import { ShiftWorkerType } from "@prisma/client";
 import { Role } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/PageHeader";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { currentTeamTerm } from "@/lib/workforce/team";
 import EmptyState from "@/components/EmptyState";
 import { requireAuth } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -17,11 +20,10 @@ export default async function WorkforcePlanningPage() {
   const user = await requireAuth();
   if (user.role !== Role.ADMIN) redirect("/");
 
-  const now = new Date();
-  const currentStart = now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;
+  const currentStart = currentTeamTerm().academicYear;
   const years = Array.from({ length: YEARS_AHEAD }, (_, i) => currentStart + i);
 
-  const [users, applications] = await Promise.all([
+  const [users, applications, cycles] = await Promise.all([
     db.user.findMany({
       where: { active: true, hiddenFromRoster: false, role: { in: [Role.ADMIN, Role.STAFF, Role.STUDENT] }, staffingType: ShiftWorkerType.ST },
       select: {
@@ -52,6 +54,10 @@ export default async function WorkforcePlanningPage() {
         applicant: { select: { name: true, gradTerm: true, gradYear: true } },
       },
     }),
+    db.hiringCycle.findMany({
+      where: { year: { gte: currentStart, lte: currentStart + YEARS_AHEAD }, status: { in: ["PLANNING", "OPEN", "CLOSED"] } },
+      select: { term: true, year: true, slots: { select: { area: true, targetCount: true } }, applications: { where: { stage: "HIRE" }, select: { primaryArea: true } } },
+    }),
   ]);
 
   const rows = buildPlanning(
@@ -78,14 +84,20 @@ export default async function WorkforcePlanningPage() {
       })),
     ),
     years,
+    cycles.flatMap(cycle => cycle.slots.map(slot => ({
+      area: slot.area,
+      academicYearStart: cycle.year - (cycle.term === "FALL" ? 0 : 1),
+      target: slot.targetCount,
+      hired: cycle.applications.filter(application => application.primaryArea === slot.area).length,
+    }))),
   );
 
   return (
     <>
       <PageHeader
-        title="Planning"
-        description="Projected student headcount by area for the next academic years. Counts current students who have not graduated, plus hires who have not registered yet. Pipeline applicants are shown separately."
-      />
+        title="Looking ahead"
+        description="See returning interns, graduation changes, and hiring goals over the next three academic years. Candidates stay separate from expected staffing."
+      ><Button asChild variant="outline"><Link href="/workforce">View team by term</Link></Button><Button asChild><Link href="/workforce/hiring">Manage openings</Link></Button></PageHeader>
 
       {rows.length === 0 ? (
         <EmptyState icon="chart" title="Nothing to project yet" description="Active students and hired or open-cycle applicants appear here." />
@@ -112,18 +124,19 @@ export default async function WorkforcePlanningPage() {
                   <th scope="row" className="sticky left-0 border-b bg-background p-3 text-left font-medium">
                     {row.area === "NONE" ? "No area set" : AREA_LABEL[row.area]}
                   </th>
-                  {row.cells.map((cell, i) => (
+                  {row.cells.map((cell) => (
                     <td key={cell.academicYearStart} className="min-w-44 border-b p-3">
                       <div className="flex items-baseline gap-2">
                         <span className="text-2xl font-semibold">{cell.projected}</span>
-                        {i > 0 && cell.need > 0 && <Badge variant="orange">Need {cell.need}</Badge>}
-                        {i > 0 && cell.need === 0 && row.baseline > 0 && <Badge variant="green">On track</Badge>}
+                        {cell.hiresNeeded != null && cell.hiresNeeded > 0 && <Badge variant="orange">{cell.hiresNeeded} {cell.hiresNeeded === 1 ? "hire" : "hires"} to make</Badge>}
+                        {cell.hiresNeeded === 0 && cell.hiringTarget != null && cell.hiringTarget > 0 && <Badge variant="green">Hiring goal met</Badge>}
                       </div>
                       <p className="mt-1 text-xs text-muted-foreground">
                         {cell.continuing} continuing
                         {cell.hired > 0 ? ` · ${cell.hired} hired` : ""}
                         {cell.pipeline > 0 ? ` · +${cell.pipeline} in pipeline` : ""}
                       </p>
+                      <p className="mt-1 text-xs text-muted-foreground">{cell.hiringTarget == null ? "No hiring goal set" : `${cell.hiringTarget} planned hires across this year’s cycles`}</p>
                       {cell.unknownGrad > 0 && (
                         <p className="text-xs text-muted-foreground">{cell.unknownGrad} with no graduation date (assumed staying)</p>
                       )}
@@ -154,7 +167,7 @@ export default async function WorkforcePlanningPage() {
             </tbody>
           </table>
           <p className="mt-3 text-xs text-muted-foreground">
-            Need compares each year with this year&apos;s headcount for the area and counts hires only, not pipeline. Full-time staff are not included.
+            Hiring goals come from each cycle’s area targets. Hires to make counts remaining decisions against those goals, including hires who already joined the team. Headcount projects current profile assignments and graduation dates; it does not carry future term placements across a full year. Full-time staff are shown in Team.
           </p>
         </div>
       )}

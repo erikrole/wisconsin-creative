@@ -4,6 +4,7 @@ import { createAuditEntryTx } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { updateApplicationSchema } from "@/lib/hiring/contract";
 import { purgeDate } from "@/lib/hiring/retention";
+import { applicantSourceLinks } from "@/lib/hiring/agent-import";
 import { HttpError, ok } from "@/lib/http";
 import { enforceRateLimit, SETTINGS_MUTATION_LIMIT } from "@/lib/rate-limit";
 import { requirePermission } from "@/lib/rbac";
@@ -86,6 +87,7 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
         hiredUserId: applicant.hiredUserId,
         history: applicant.applications.map((a) => ({ id: a.id, stage: a.stage, cycleLabel: a.cycle.label })),
       },
+      sourceLinks: applicantSourceLinks(application.sourcePayload),
       documents: application.documents,
       notes: application.reviewNotes,
     },
