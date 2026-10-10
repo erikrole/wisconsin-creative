@@ -139,6 +139,8 @@ export function FlaggedItemsBanner({ items, onChanged }: Props) {
           return;
         }
       }
+    } catch {
+      toast.error("Couldn't dismiss the damage flag. Check your connection and try again.");
     } finally {
       // Refresh even on a partial failure so dismissed reports leave the list.
       setDismissingAssetId(null);

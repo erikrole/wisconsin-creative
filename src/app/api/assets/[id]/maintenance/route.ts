@@ -16,7 +16,15 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
   // Older native clients send no body. New callers set an explicit state
   // against the version they reviewed so a retry cannot toggle it back.
   const text = await req.text();
-  const request = text.trim() ? maintenanceRequest.parse(JSON.parse(text)) : null;
+  let body: unknown = null;
+  if (text.trim()) {
+    try {
+      body = JSON.parse(text);
+    } catch {
+      throw new HttpError(400, "Invalid JSON body");
+    }
+  }
+  const request = body === null ? null : maintenanceRequest.parse(body);
 
   const asset = await db.$transaction(async (tx) => {
     const before = await tx.asset.findUnique({ where: { id } });

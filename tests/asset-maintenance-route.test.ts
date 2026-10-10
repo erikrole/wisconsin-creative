@@ -58,6 +58,16 @@ describe("maintenance release", () => {
     expect(tx.asset.update).toHaveBeenCalledWith(expect.objectContaining({ data: { status: "AVAILABLE" } }));
   });
 
+  it("rejects a malformed JSON body as a client error", async () => {
+    const response = await POST(new Request("https://app.example.com/api/assets/a1/maintenance", {
+      method: "POST",
+      headers: { host: "app.example.com", origin: "https://app.example.com", "content-type": "application/json" },
+      body: "{not json",
+    }), { params: Promise.resolve({ id: "a1" }) });
+    expect(response.status).toBe(400);
+    expect(transact).not.toHaveBeenCalled();
+  });
+
   it("denies students before any database mutation", async () => {
     auth.mockResolvedValue({ id: "student1", role: "STUDENT" });
     expect((await request({ status: "AVAILABLE", expectedUpdatedAt: version })).status).toBe(403);
