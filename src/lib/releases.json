@@ -1,6 +1,20 @@
 [
   {
     "date": "2026-10-09",
+    "title": "Accurate notification badge",
+    "type": "fixes",
+    "summary": "The iPhone app's badge now matches your unread notifications.",
+    "details": [
+      "Tapping a notification marks it read.",
+      "The app icon badge updates to your real unread count instead of a stale number."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 449
+  },
+  {
+    "date": "2026-10-09",
     "title": "Release notes",
     "type": "feature",
     "summary": "A public Releases page lists what shipped and when across web, iOS, the kiosk, and the Mac app, going back to the first build.",
