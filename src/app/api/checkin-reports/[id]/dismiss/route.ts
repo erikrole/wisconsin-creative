@@ -22,6 +22,9 @@ export const POST = withAuth<{ id: string }>(async (_req, { user, params }) => {
         select: { id: true, assetId: true, bookingId: true, type: true, dismissedAt: true },
       });
       if (!before) throw new HttpError(404, "Report not found");
+      // Only damage flags can be dismissed; a lost item stays on the dashboard
+      // until it is found or resolved.
+      if (before.type !== "DAMAGED") throw new HttpError(409, "Only damage reports can be dismissed");
       if (before.dismissedAt) return before;
 
       const updated = await tx.checkinItemReport.update({

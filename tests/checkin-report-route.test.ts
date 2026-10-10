@@ -140,6 +140,10 @@ describe("check-in report route", () => {
       method: "POST", headers: { host: "app.example.com", origin: "https://app.example.com" }, body: form,
     }), { params: Promise.resolve({ id: "booking-1" }) });
     expect(response.status).toBe(200);
+    // Updated evidence reopens a flag staff dismissed from the dashboard.
+    expect(db.checkinItemReport.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      update: expect.objectContaining({ dismissedAt: null, dismissedById: null }),
+    }));
     expect(deleteImage).not.toHaveBeenCalled();
     expect(createAuditEntryTx).toHaveBeenCalledWith(db, expect.objectContaining({
       entityType: "booking",

@@ -108,6 +108,21 @@ describe("POST /api/checkin-reports/[id]/dismiss", () => {
     expect(createAuditEntryTx).not.toHaveBeenCalled();
   });
 
+  it("refuses to dismiss a lost report", async () => {
+    vi.mocked(db.checkinItemReport.findUnique).mockResolvedValue({
+      id: "report-1",
+      assetId: "asset-1",
+      bookingId: "booking-1",
+      type: "LOST",
+      dismissedAt: null,
+    } as never);
+
+    const res = await dismiss(post(), context);
+
+    expect(res.status).toBe(409);
+    expect(db.checkinItemReport.update).not.toHaveBeenCalled();
+  });
+
   it("returns 404 for an unknown report", async () => {
     vi.mocked(db.checkinItemReport.findUnique).mockResolvedValue(null);
 
