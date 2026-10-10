@@ -1,6 +1,6 @@
 import { MotionConfig } from "motion/react";
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import AppShell from "@/components/AppShell";
 import { QueryProvider } from "@/components/QueryProvider";
 import { Toaster } from "@/components/ui/sonner";
@@ -9,6 +9,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { requireAuth } from "@/lib/auth";
 import { HttpError } from "@/lib/http";
+import { loginPathWithReturnTo } from "@/lib/return-to";
 import { ProductUsageTracker } from "@/components/ProductUsageTracker";
 import { canViewUsageAnalytics } from "@/lib/usage-analytics";
 import WebMCPProvider from "@/components/WebMCPProvider";
@@ -19,7 +20,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     user = await requireAuth();
   } catch (error) {
     if (error instanceof HttpError && error.status === 401) {
-      redirect("/login");
+      redirect(loginPathWithReturnTo((await headers()).get("x-pathname")));
     }
     throw error;
   }

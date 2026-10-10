@@ -1,4 +1,6 @@
-import { WebAuthnError } from "@simplewebauthn/browser";
+import { startRegistration, WebAuthnError } from "@simplewebauthn/browser";
+import type { PublicKeyCredentialCreationOptionsJSON } from "@simplewebauthn/server";
+import { parseJsonSafely } from "@/lib/errors";
 
 /** Shared browser-side passkey helpers for the login screen and Settings Security. */
 
@@ -69,4 +71,55 @@ export function passkeyStorageLabel(deviceType: string | null | undefined, backe
   if (backedUp || deviceType === "multiDevice") return "Synced";
   if (deviceType === "singleDevice") return "This device only";
   return null;
+}
+
+type ClientCapabilities = Record<string, boolean | undefined>;
+type PublicKeyCredentialWithCapabilities = {
+  getClientCapabilities?: () => Promise<ClientCapabilities>;
+};
+
+/** WebAuthn conditional create: the browser's password manager can save a passkey without a prompt. */
+export async function supportsAutomaticPasskeyUpgrade(): Promise<boolean> {
+  if (typeof window === "undefined") return false;
+  const credential = window.PublicKeyCredential as unknown as PublicKeyCredentialWithCapabilities | undefined;
+  if (typeof credential?.getClientCapabilities !== "function") return false;
+  try {
+    return (await credential.getClientCapabilities()).conditionalCreate === true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Right after a password sign-in, ask the password manager that just filled
+ * the password to also save a passkey (WebAuthn conditional create). There is
+ * no prompt, and every failure is silent: a manager that declines, an account
+ * that already has a passkey, or an unsupported browser all leave sign-in
+ * exactly as it was. The password re-authenticates the enrollment (D-043).
+ *
+ * Fire and forget. Sign-in navigates client-side, so the ceremony keeps
+ * running after the login form unmounts.
+ */
+export async function upgradeToPasskeyAfterSignIn(currentPassword: string): Promise<boolean> {
+  if (!currentPassword || !(await supportsAutomaticPasskeyUpgrade())) return false;
+  try {
+    const optionsResponse = await fetch("/api/auth/passkey/registration/options", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ currentPassword, automatic: true }),
+    });
+    if (!optionsResponse.ok) return false;
+    const body = await parseJsonSafely<{ options?: PublicKeyCredentialCreationOptionsJSON | null }>(optionsResponse);
+    if (!body?.options) return false;
+
+    const response = await startRegistration({ optionsJSON: body.options, useAutoRegister: true });
+    const verifyResponse = await fetch("/api/auth/passkey/registration/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ response }),
+    });
+    return verifyResponse.ok;
+  } catch {
+    return false;
+  }
 }

@@ -446,3 +446,83 @@ describe("passkey authentication", () => {
     expect(createSession).not.toHaveBeenCalled();
   });
 });
+
+describe("automatic passkey upgrade after password sign-in", () => {
+  it("starts a prompt-free ceremony with user verification preferred, still behind the password", async () => {
+    const response = await registrationOptions(
+      request("/api/auth/passkey/registration/options", { currentPassword: "correct-password", automatic: true }),
+      { params: Promise.resolve({}) },
+    );
+
+    expect(response.status).toBe(200);
+    expect(verifyPassword).toHaveBeenCalledWith("password-hash", "correct-password");
+    expect(generateRegistrationOptions).toHaveBeenCalledWith(expect.objectContaining({
+      authenticatorSelection: { residentKey: "required", userVerification: "preferred" },
+    }));
+    expect(dbMock.passkeyChallenge.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ type: "REGISTRATION", automatic: true }),
+    });
+  });
+
+  it("skips an account that already has a passkey", async () => {
+    dbMock.passkeyCredential.findMany.mockResolvedValue([{ credentialId: "existing", transports: [] }]);
+
+    const response = await registrationOptions(
+      request("/api/auth/passkey/registration/options", { currentPassword: "correct-password", automatic: true }),
+      { params: Promise.resolve({}) },
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ options: null });
+    expect(generateRegistrationOptions).not.toHaveBeenCalled();
+    expect(dbMock.passkeyChallenge.create).not.toHaveBeenCalled();
+  });
+
+  it("keeps user verification required for a deliberate Settings enrollment", async () => {
+    await registrationOptions(
+      request("/api/auth/passkey/registration/options", { currentPassword: "correct-password" }),
+      { params: Promise.resolve({}) },
+    );
+
+    expect(generateRegistrationOptions).toHaveBeenCalledWith(expect.objectContaining({
+      authenticatorSelection: { residentKey: "required", userVerification: "required" },
+    }));
+    expect(dbMock.passkeyChallenge.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ automatic: false }),
+    });
+  });
+
+  it("relaxes enrollment user verification only for the ceremony that was started as automatic", async () => {
+    mockVerifiedRegistration();
+    dbMock.passkeyChallenge.findUnique.mockResolvedValue({
+      id: "challenge-1",
+      challenge: "registration-challenge",
+      type: "REGISTRATION",
+      userId: "user-1",
+      rememberMe: false,
+      automatic: true,
+      expiresAt: new Date(Date.now() + 60_000),
+    });
+
+    const response = await registrationVerify(
+      request("/api/auth/passkey/registration/verify", { response: REGISTRATION_RESPONSE }),
+      { params: Promise.resolve({}) },
+    );
+
+    expect(response.status).toBe(201);
+    expect(verifyRegistrationResponse).toHaveBeenCalledWith(expect.objectContaining({ requireUserVerification: false }));
+    expect(createAuditEntry).toHaveBeenCalledWith(expect.objectContaining({
+      action: "passkey_registered",
+      after: expect.objectContaining({ automatic: true }),
+    }));
+
+    vi.mocked(verifyRegistrationResponse).mockClear();
+    mockVerifiedRegistration();
+    await registrationVerify(
+      request("/api/auth/passkey/registration/verify", { response: REGISTRATION_RESPONSE, automatic: true }),
+      { params: Promise.resolve({}) },
+    );
+    // A client cannot opt out of UV by claiming "automatic" at verify time.
+    expect(verifyRegistrationResponse).toHaveBeenCalledWith(expect.objectContaining({ requireUserVerification: true }));
+  });
+});

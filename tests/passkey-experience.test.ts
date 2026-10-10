@@ -81,11 +81,23 @@ describe("web passkey sign-in contract", () => {
     expect(login).toContain("if (isPasskeyCancellation(error)) return assertionReceived;");
   });
 
-  it("lets a passkey sign-in choose the 30-day session", () => {
+  it("lets every sign-in path, passkey included, stay signed in", () => {
     // The checkbox used to render only on the password step, so a passkey
-    // sign-in could never be remembered.
-    expect(login).toContain("{!isOnboarding && (");
+    // sign-in could never be remembered. It now shows on every step, starts
+    // ticked, and also reaches account creation.
+    expect(login).not.toContain("{!isOnboarding && (");
+    expect(login).toContain("useState(true);");
     expect(login).toContain('body: JSON.stringify({ rememberMe }),');
+    expect(login).toMatch(/password,\n\s+rememberMe,\n\s+\}\);/);
+  });
+
+  it("turns a password sign-in into a passkey without a prompt", () => {
+    const client = source("src/lib/passkey-client.ts");
+    expect(client).toContain("getClientCapabilities()).conditionalCreate === true");
+    expect(client).toContain("useAutoRegister: true");
+    expect(client).toContain("JSON.stringify({ currentPassword, automatic: true })");
+    // Never during a forced change: that password is about to be replaced.
+    expect(login).toContain('if (!data.user?.forcePasswordChange) void upgradeToPasskeyAfterSignIn(passwordRef.current?.value ?? "");');
   });
 
   it("hides the passkey button instead of failing after the tap", () => {

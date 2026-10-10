@@ -11,6 +11,7 @@ describe("iOS passkey source contract", () => {
     expect(service).toContain("createCredentialAssertionRequest");
     expect(service).toContain("ASAuthorizationController");
     expect(service).toContain("request.userVerificationPreference = .required");
+    expect(service).toContain("request.requestStyle = .conditional");
     expect(service).toContain("rawClientDataJSON");
     expect(service).toContain("attestationObject");
     expect(service).toContain("rawAuthenticatorData");
@@ -42,6 +43,9 @@ describe("iOS passkey source contract", () => {
     expect(api).toContain("DataWrapper<PasskeyRegistrationConfirmation>");
     expect(api).toContain("/api/me/passkeys");
     expect(session).toContain("PasskeyService.shared.authenticate");
+    expect(session).toContain("register(options: options, style: .automaticUpgrade)");
+    expect(session).toContain("if !user.forcePasswordChange {");
+    expect(api).toContain("let options: PasskeyRegistrationOptions?");
     expect(session).toContain("func armPasskeyAutoFill() async");
     expect(session).toContain("presentation: .autoFill");
     // A dismissed system sheet is a choice; it must not read as a failed login.

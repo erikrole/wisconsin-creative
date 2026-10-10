@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "c7c9fff51c6fadf27615d9974f45c6f9d97db47b",
+  "sourcePatchSha256": null,
+  "settings": {
+    "device": "Playwright Chromium, deviceScaleFactor 2",
+    "viewport": [
+      430,
+      900
+    ],
+    "fixture": "discover=onboarding-flow, passkey options 503, login 200 (Playwright route mocks)",
+    "role": "signed out",
+    "route": "/login",
+    "appearance": "light",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "wall clock (no time-dependent UI)",
+    "scroll": [
+      0,
+      0
+    ]
+  },
+  "imageSha256": "524ade7dc2550a2e1e82a16a0df686066b1d6ee5ff55150e67f2df6e00232dac",
+  "dimensions": [
+    696,
+    1068
+  ]
+}

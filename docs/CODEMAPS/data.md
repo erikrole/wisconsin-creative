@@ -12,10 +12,10 @@
 | Model | Fields | Model-level indexes/constraints |
 |---|---:|---:|
 | `User` | 129 | 5 |
-| `Session` | 6 | 2 |
+| `Session` | 7 | 2 |
 | `PasswordResetToken` | 6 | 2 |
 | `PasskeyCredential` | 12 | 2 |
-| `PasskeyChallenge` | 9 | 3 |
+| `PasskeyChallenge` | 10 | 3 |
 | `Location` | 17 | 1 |
 | `Department` | 7 | 1 |
 | `Category` | 9 | 3 |
