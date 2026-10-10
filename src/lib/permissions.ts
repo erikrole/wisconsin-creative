@@ -19,6 +19,22 @@ export const PERMISSIONS: Record<string, Record<string, Role[]>> = {
   role_preview: {
     manage: ["ADMIN"],
   },
+  // YouTube metadata tool: admin only. "draft" covers the stored review queue;
+  // "publish" covers every write to the channel.
+  youtube: {
+    view: ["ADMIN"],
+    connect: ["ADMIN"],
+    draft: ["ADMIN"],
+    publish: ["ADMIN"],
+  },
+  // UA staff gear picks: any internal role may read and submit, but the
+  // service also requires an explicit participant row for the cycle.
+  // "manage" covers the admin results, deadline, roster, and CSV export.
+  gear_picks: {
+    view: ["ADMIN", "STAFF", "STUDENT"],
+    submit: ["ADMIN", "STAFF", "STUDENT"],
+    manage: ["ADMIN"],
+  },
   user: {
     view: ["ADMIN", "STAFF", "STUDENT"],
     edit_self: ["ADMIN", "STAFF", "STUDENT", "COLLABORATOR"],

@@ -2154,3 +2154,75 @@ tr.cursor-pointer td {
   }
 
 }
+
+/* ── YouTube Studio Lite ─────────────────────────────────────────────────
+   Scoped to /youtube. Borrows the dot-grid canvas and sheet surfaces of the
+   static tool pages (QR Studio, Golden Hour); every colour derives from the
+   app tokens so dark mode follows for free. No italics. */
+.yt-studio {
+  --yt-dot: color-mix(in srgb, var(--foreground) 11%, transparent);
+  --yt-sheet: var(--card);
+  --yt-line: var(--border);
+  position: relative;
+  isolation: isolate;
+  border-radius: 20px;
+  padding: 20px;
+  background-color: color-mix(in srgb, var(--foreground) 4%, var(--background));
+  background-image: radial-gradient(var(--yt-dot) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+.yt-sheet {
+  background: var(--yt-sheet);
+  border: 1px solid var(--yt-line);
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.05), 0 12px 28px -14px rgb(0 0 0 / 0.25);
+}
+.yt-mono {
+  font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.yt-mark {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  background: #a00000;
+  color: #fff;
+  box-shadow: 0 6px 14px -6px #a00000;
+}
+.yt-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 5.5rem;
+  padding: 8px 14px;
+  border: 1px solid var(--yt-line);
+  border-radius: 12px;
+  background: var(--yt-sheet);
+}
+.yt-stat b { font-size: 1.5rem; line-height: 1.1; font-weight: 800; }
+.yt-stat span { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted-foreground); }
+.yt-pulse { animation: yt-pulse 2.4s ease-in-out infinite; }
+@keyframes yt-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+.yt-rise { animation: yt-rise 0.35s cubic-bezier(0.2, 0, 0, 1) both; }
+@keyframes yt-rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.yt-row {
+  position: relative;
+  transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1), background-color 0.15s;
+}
+.yt-row:hover { transform: translateX(2px); }
+.yt-row::before {
+  content: "";
+  position: absolute;
+  inset: 6px auto 6px 0;
+  width: 4px;
+  border-radius: 0 4px 4px 0;
+  background: var(--yt-rail, var(--border));
+}
+@media (prefers-reduced-motion: reduce) {
+  .yt-pulse, .yt-rise { animation: none; }
+  .yt-row, .yt-row:hover { transition: none; transform: none; }
+}

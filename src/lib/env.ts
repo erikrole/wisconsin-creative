@@ -27,6 +27,17 @@ export const env = {
   get softwareVaultKey() {
     return getRequired("SOFTWARE_VAULT_KEY");
   },
+  /** YouTube tool OAuth client. Empty in previews unless a preview-scoped value exists. */
+  get youtubeOAuthClientId() {
+    return isolatedIntegrationValue("YOUTUBE_OAUTH_CLIENT_ID");
+  },
+  get youtubeOAuthClientSecret() {
+    return isolatedIntegrationValue("YOUTUBE_OAUTH_CLIENT_SECRET");
+  },
+  /** Dedicated AES-256-GCM key for the stored YouTube refresh token. */
+  get youtubeTokenKey() {
+    return isolatedIntegrationValue("YOUTUBE_TOKEN_KEY");
+  },
   get appTimezone() {
     return process.env.APP_TIMEZONE || "America/Chicago";
   },

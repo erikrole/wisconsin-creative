@@ -47,6 +47,15 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 - The Workforce overview, start terms, and per-term placements use the separate `workforce` permission, also ADMIN only.
 - `STAFF`, `STUDENT`, `COLLABORATOR`: no access. The sidebar entry is hidden, the page redirects, and every `/api/hiring/*` route returns 403, including an admin previewing as Staff. This is stricter than Users, where Staff can edit all users.
 
+### YouTube
+- `ADMIN`: view the `/youtube` tool, connect or disconnect the Badgers channel, and (in later slices) publish metadata through the `youtube` permission (`view`, `connect`, `publish`). See [AREA_YOUTUBE.md](AREA_YOUTUBE.md).
+- `STAFF`, `STUDENT`, `COLLABORATOR`: no access. The sidebar entry is hidden, the page redirects, and every `/api/youtube/*` route returns 403, including an admin previewing another role.
+
+### UA staff gear picks
+- `ADMIN`, `STAFF`, `STUDENT`: may read and save their own picks through `gear_picks.view` and `gear_picks.submit`, but only when an explicit participant row exists for the cycle. Everyone else sees a short explanation and every save returns 403.
+- `ADMIN`: results, deadline, roster, and CSV export through `gear_picks.manage`. See [AREA_GEAR_PICKS.md](AREA_GEAR_PICKS.md).
+- `COLLABORATOR`: no access. Role preview stays read-only and cannot download the export.
+
 ### Scoreboard
 - `ADMIN`, `STAFF`, `STUDENT`, and `COLLABORATOR` may view the shared team Scoreboard and an active, non-hidden person’s Scoreboard through the explicit `scoreboard.view` permission.
 - The team Scoreboard is a generic current-season explorer. Sport, Schedule venue, opponent, and Home/Away/Neutral site each accept one exact value and combine with AND semantics; totals, dimensional breakdowns, the Snapshot, and every person ranking are recomputed from that same intersection. Filter choices remain stable across narrowing. Web explorer state is URL-backed, so a stacked view can be refreshed or shared. Opening a person keeps that stack on the URL; sport and site also filter the person Scoreboard, and All leaders restores the team view. The leaderboard can be searched by name without changing the underlying rank. Snapshot labels follow the last loaded intersection while a new stack refreshes.

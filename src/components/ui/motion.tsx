@@ -8,6 +8,22 @@ import { cn } from "@/lib/utils";
    Import these instead of raw motion components.
    ══════════════════════════════════════════════ */
 
+// ── Spring tokens: shared timing for movement that follows the user ──
+// Pass through `springTransition(reduced)` so reduced-motion users get an
+// instant move instead of a spring.
+export const springs = {
+  fast: { type: "spring", stiffness: 600, damping: 40, mass: 0.8 },
+  moderate: { type: "spring", stiffness: 400, damping: 36, mass: 1 },
+  slow: { type: "spring", stiffness: 250, damping: 32, mass: 1 },
+} as const;
+
+export function springTransition(
+  reduced: boolean | null,
+  spring: keyof typeof springs = "fast",
+) {
+  return reduced ? ({ duration: 0 } as const) : springs[spring];
+}
+
 // ── Fade Up: default page content entrance ──
 export function FadeUp({
   children,

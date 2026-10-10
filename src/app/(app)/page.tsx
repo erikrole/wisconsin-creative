@@ -26,6 +26,7 @@ import { FilterChips } from "./dashboard/filter-chips";
 import { OverdueBanner } from "./dashboard/overdue-banner";
 import { FlaggedItemsBanner } from "./dashboard/flagged-items-banner";
 import { ProfileCompletionBanner } from "./dashboard/profile-completion-banner";
+import { GearPicksBanner } from "./dashboard/gear-picks-banner";
 import { LostBulkUnitsCard } from "./dashboard/lost-bulk-units-card";
 import { MyGearColumn } from "./dashboard/my-gear-column";
 import { TeamActivityColumn } from "./dashboard/team-activity-column";
@@ -227,6 +228,7 @@ function InternalDashboardPage() {
   return (
     <PageTransition>
       <ProfileCompletionBanner />
+      <GearPicksBanner />
       {/* ══════ Page Header + Quick Actions ══════ */}
       <PageHeader
         title="Dashboard"

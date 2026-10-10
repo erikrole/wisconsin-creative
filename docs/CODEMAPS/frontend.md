@@ -19,6 +19,8 @@
 | `/checkouts` | `src/app/(app)/checkouts/page.tsx` |
 | `/events/[id]` | `src/app/(app)/events/[id]/page.tsx` |
 | `/events` | `src/app/(app)/events/page.tsx` |
+| `/gear/admin` | `src/app/(app)/gear/admin/page.tsx` |
+| `/gear` | `src/app/(app)/gear/page.tsx` |
 | `/import` | `src/app/(app)/import/page.tsx` |
 | `/items/[id]` | `src/app/(app)/items/[id]/page.tsx` |
 | `/items/hygiene` | `src/app/(app)/items/hygiene/page.tsx` |
@@ -85,11 +87,13 @@
 | `/workforce/hiring` | `src/app/(app)/workforce/hiring/page.tsx` |
 | `/workforce` | `src/app/(app)/workforce/page.tsx` |
 | `/workforce/planning` | `src/app/(app)/workforce/planning/page.tsx` |
+| `/youtube` | `src/app/(app)/youtube/page.tsx` |
 | `/about/features` | `src/app/(public)/about/features/page.tsx` |
 | `/about/field-work` | `src/app/(public)/about/field-work/page.tsx` |
 | `/about` | `src/app/(public)/about/page.tsx` |
 | `/about/security` | `src/app/(public)/about/security/page.tsx` |
 | `/about/tech-stack` | `src/app/(public)/about/tech-stack/page.tsx` |
+| `/releases` | `src/app/(public)/releases/page.tsx` |
 | `/change-password` | `src/app/change-password/page.tsx` |
 | `/forgot-password` | `src/app/forgot-password/page.tsx` |
 | `/login` | `src/app/login/page.tsx` |
@@ -111,6 +115,7 @@
 | `/settings` | `src/app/(app)/settings/layout.tsx` |
 | `/workforce` | `src/app/(app)/workforce/layout.tsx` |
 | `/about` | `src/app/(public)/about/layout.tsx` |
+| `/releases` | `src/app/(public)/releases/layout.tsx` |
 | `/` | `src/app/layout.tsx` |
 
 ## Largest Components
@@ -134,7 +139,7 @@
 | `src/components/schedule/SportSetupWizard.tsx` | 675 |
 | `src/components/booking-wizard/WizardStep1.tsx` | 599 |
 | `src/components/booking-details/BookingHeader.tsx` | 472 |
-| `src/components/Sidebar.tsx` | 448 |
+| `src/components/Sidebar.tsx` | 452 |
 | `src/components/event-editor/EventEditorFields.tsx` | 435 |
 | `src/components/ui/heatmap.tsx` | 434 |
 | `src/components/ui/chart.tsx` | 389 |
@@ -144,9 +149,9 @@
 | `src/components/shift-detail/ShiftSlotCard.tsx` | 345 |
 | `src/components/booking-details/EditBookingEventsDialog.tsx` | 342 |
 | `src/components/shift-detail/crew-row.tsx` | 334 |
+| `src/components/public-showroom/ReleasesFeed.tsx` | 314 |
 | `src/components/public-showroom/showroom-blocks.tsx` | 290 |
 | `src/components/CheckoutMergeDialog.tsx` | 286 |
-| `src/components/booking-details/BookingSheetOverview.tsx` | 285 |
 
 ## Hooks
 
@@ -162,6 +167,7 @@
 | `src/hooks/use-fetch.ts` | 113 |
 | `src/hooks/use-form-options.ts` | 32 |
 | `src/hooks/use-form-submit.ts` | 188 |
+| `src/hooks/use-gear-picks.ts` | 47 |
 | `src/hooks/use-item-cache-invalidation.ts` | 18 |
 | `src/hooks/use-item-change-sync.ts` | 86 |
 | `src/hooks/use-last-audit.ts` | 77 |

@@ -3,11 +3,11 @@ import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
 
 describe("schedule automation source contract", () => {
-  it("keeps schedule automation under morning-refresh instead of adding another cron route", () => {
+  it("keeps schedule automation under morning-refresh instead of adding another schedule cron route (youtube-sweep is the YouTube queue, which needs its own 60s budget)", () => {
     const cronRoutes = readdirSync("src/app/api/cron").sort();
     const morningRefresh = source("src/app/api/cron/morning-refresh/route.ts");
 
-    expect(cronRoutes).toEqual(["audit-archive", "live-activities", "morning-refresh", "notifications", "rehost-images"]);
+    expect(cronRoutes).toEqual(["audit-archive", "live-activities", "morning-refresh", "notifications", "rehost-images", "youtube-sweep"]);
     expect(morningRefresh).toContain("getScheduleAutomationDigest");
     expect(morningRefresh).toContain("scheduleAutomation");
   });

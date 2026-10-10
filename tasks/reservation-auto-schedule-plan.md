@@ -68,4 +68,4 @@ When an active internal user reserves gear for a scheduled event, treat that res
 - Verified: Full test suite, focused lifecycle tests, typecheck, lint, production app build, migration prefix check, Prisma client generation, codemap/docs verification, and whitespace.
 - Deferred: Authenticated browser confirmation and production behavior proof.
 - Blocked: No local code or test blocker. Authenticated browser proof and migration application remain external rollout gates.
-- Final diff review: Unrelated kiosk changes and the parallel `tasks/booking-rename-transfer-fix-plan.md` remain untouched.
+- Final diff review: Unrelated kiosk changes and the parallel `tasks/archive/completed-2026-10-06/booking-rename-transfer-fix-plan.md` remain untouched.

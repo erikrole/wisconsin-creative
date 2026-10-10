@@ -29,6 +29,7 @@ describe("public showroom content", () => {
       "/about/tech-stack",
       "/about/security",
       "/about/field-work",
+      "/releases",
     ]);
   });
 
@@ -103,7 +104,7 @@ describe("public showroom content", () => {
   });
 
   it("ships deploy smoke coverage for public routes and seeded-login checks", () => {
-    for (const href of ["/about", "/about/features", "/about/tech-stack", "/about/security", "/about/field-work", "/privacy", "/login"]) {
+    for (const href of ["/about", "/about/features", "/about/tech-stack", "/about/security", "/about/field-work", "/releases", "/privacy", "/login"]) {
       expect(deploySmokeSource).toContain(`path: "${href}"`);
     }
     expect(deploySmokeSource).toContain("DEPLOY_SMOKE_EMAIL");

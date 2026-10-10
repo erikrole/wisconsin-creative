@@ -25,6 +25,7 @@ import {
   UsersIcon,
   BookOpenIcon,
   ScrollTextIcon,
+  ShirtIcon,
   BarChart3Icon,
   SettingsIcon,
   HelpCircleIcon,
@@ -39,6 +40,7 @@ import {
   ChevronsUpDownIcon,
   UserIcon,
   UserPlusIcon,
+  MonitorPlayIcon,
 } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
@@ -115,6 +117,7 @@ const navGroups: NavGroup[] = [
       { label: "Accountability", href: "/accountability", icon: ShieldAlertIcon },
       { label: "Users", href: "/users", icon: UsersIcon },
       { label: "Workforce", href: "/workforce", icon: UserPlusIcon, requiredRole: "ADMIN" },
+      { label: "UA Gear Picks", href: "/gear/admin", icon: ShirtIcon, requiredRole: "ADMIN" },
     ],
   },
   {
@@ -122,6 +125,7 @@ const navGroups: NavGroup[] = [
     items: [
       { label: "Resources", href: "/resources", icon: ScrollTextIcon },
       { label: "Software", href: "/licenses", icon: KeyIcon },
+      { label: "YouTube Studio Lite", href: "/youtube", icon: MonitorPlayIcon, requiredRole: "ADMIN" },
     ],
   },
   {

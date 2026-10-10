@@ -173,7 +173,7 @@ Decision: [D-055](../docs/DECISIONS.md). Supersedes `tasks/schedule-mvp-end-to-e
 - [x] Escalate an unreviewed claim and then auto-approve it on a per-claim durable workflow, standing down for a human when the approval itself reports a blocker.
 - [x] Give web and native a Staff Review queue and a student-facing Waiting on Staff state, and retire the "legacy request" and "assigned immediately" copy those surfaces still carried.
 - [x] Add native Trade Board area filtering and paging (both deferred P2s in `tasks/audit-trade-board-ios.md`).
-- [x] Add Schedule swipe-to-post, closing the reachable half of `tasks/shift-trade-actions-plan.md` slice 4.
+- [x] Add Schedule swipe-to-post, closing the reachable half of `tasks/archive/completed-2026-10-06/shift-trade-actions-plan.md` slice 4.
 - [ ] Authenticated web and native runtime proof of a claim held for review and an approval completing the swap.
 
 - **Shipped locally:** student claims are approval-first on both paths again, the review surface that had been left orphaned since 2026-07-02 is live rather than half-removed, and no claim can sit unreviewed into its own shift.
@@ -563,7 +563,7 @@ Plan: `tasks/sidebar-ownership-pass.md`
 
 ## Completed: Sweeping Users ownership pass (2026-07-10)
 
-Plan: `tasks/users-ownership-pass.md`
+Plan: `tasks/archive/completed-2026-10-06/users-ownership-pass.md`
 
 - [x] Unify roster hierarchy, filters, summary, and row identity.
 - [x] Tighten onboarding, org chart, and profile handoffs.
@@ -883,7 +883,7 @@ Plan: `tasks/kiosk-active-checkout-item-editing-plan.md`
 
 ## Active: Booking owner transfer (2026-07-09)
 
-Plan: `tasks/booking-owner-transfer-plan.md`
+Plan: `tasks/archive/completed-2026-10-07/booking-owner-transfer-plan.md`
 
 - [x] Add staff/admin-only transfer ownership API and lifecycle audit.
 - [x] Wire the shared booking detail page and sheet action.
@@ -1272,7 +1272,7 @@ Plan: `tasks/ios-snow-leopard-release-plan.md`
 
 ## Active: Remove premier events (2026-07-02)
 
-Plan: `tasks/remove-premier-events-plan.md`
+Plan: `tasks/archive/completed-2026-10-06/remove-premier-events-plan.md`
 
 - [x] Audit Schedule docs, Prisma schema, services, web, iOS, and contract tests for premier-event dependencies.
 - [ ] Drop premier schema fields through the Prisma migration workflow. Schema fields are removed; migration generation is blocked until the remote Neon `migrate dev` risk is explicitly approved or a safe local/shadow database path is provided.
@@ -2067,7 +2067,7 @@ Plans: `tasks/monitor-battery-product-family-plan.md` and `tasks/archive/complet
 
 ## Active: Item data cleanup (2026-06-25)
 
-Plan: `tasks/item-data-cleanup-plan.md`
+Plan: `tasks/archive/completed-2026-07/item-data-cleanup-plan.md` (residual physical queues: `tasks/item-data-hygiene-status-2026-10-07.md`)
 
 - [x] Write the execution prompt and slice plan.
 - [x] Add a repeatable read-only item-data audit script.
@@ -3207,7 +3207,7 @@ Archived to `tasks/archive/completed-2026-06/codex-readiness-legacy-tail-cleanup
 
 ### Active: iOS Apple Design full audit (2026-07-10)
 
-- [x] Execute `tasks/ios-apple-design-full-audit-plan.md` and publish `tasks/audit-ios-apple-design-full.md` plus `tasks/ios-apple-design-remediation-slices.md`.
+- [x] Execute `tasks/archive/completed-2026-10-06/ios-apple-design-full-audit-plan.md` and publish `tasks/audit-ios-apple-design-full.md` plus `tasks/ios-apple-design-remediation-slices.md`.
 - [x] Implement every source-level remediation slice and reconcile Mobile, Kiosk, Schedule, Search, Reservations, Resources, Notifications, Decisions, tests, and codemaps.
 - [x] Verify 170 iOS-focused tests, both simulator targets, iOS drift/audit/project gates, docs, app production build, and diff hygiene.
 - [x] Redesign the checkout-return Live Activity around a neutral, minute-level, privacy-conscious lock-screen and Dynamic Island hierarchy; preserve its server lifecycle and booking-detail route.

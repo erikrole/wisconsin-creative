@@ -1,0 +1,296 @@
+diff --git a/src/app/(app)/gear/GearPicker.tsx b/src/app/(app)/gear/GearPicker.tsx
+index ebb5a86b..68b12e4d 100644
+--- a/src/app/(app)/gear/GearPicker.tsx
++++ b/src/app/(app)/gear/GearPicker.tsx
+@@ -3,7 +3,7 @@
+ import Image from "next/image";
+ import Link from "next/link";
+ import { useRouter } from "next/navigation";
+-import { useCallback, useEffect, useMemo, useState } from "react";
++import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+ import { useQueryClient } from "@tanstack/react-query";
+ import { toast } from "sonner";
+ import { BarChart3Icon, ListChecksIcon, LockIcon, SearchIcon } from "lucide-react";
+@@ -62,7 +62,7 @@ export function GearPicker() {
+     );
+   }
+ 
+-  if (isError) {
++  if (isError && !data) {
+     return (
+       <EmptyState
+         icon="wifi-off"
+@@ -109,7 +109,7 @@ export function GearPicker() {
+     );
+   }
+ 
+-  return <GearPickerForm data={data} />;
++  return <GearPickerForm key={`${data.cycle.id}:${data.participant.id}`} data={data} />;
+ }
+ 
+ /** The color a card shows: the one the person tapped, else the first color already in their list. */
+@@ -148,6 +148,11 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
+ 
+   const [lines, setLines] = useState<DraftLine[]>(() => draftLinesFromServer(data));
+   const [dirty, setDirty] = useState(false);
++  // The version belongs to the list being edited, not the latest query cache.
++  const [baseVersion, setBaseVersion] = useState(serverVersion);
++  const [reloading, setReloading] = useState(false);
++  const [saveIssue, setSaveIssue] = useState<string | null>(null);
++  const requestInFlight = useRef(false);
+   const [saving, setSaving] = useState<"draft" | "submit" | null>(null);
+   const [search, setSearch] = useState("");
+   const [collection, setCollection] = useState("all");
+@@ -157,12 +162,13 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
+   const [preview, setPreview] = useState<GearPreview | null>(null);
+   const [sheetMode, setSheetMode] = useState<GearPicksSheetMode | null>(null);
+ 
+-  // Adopt the server's list whenever it changes and nothing local is unsaved.
+-  const serverStamp = data.submission?.updatedAt ?? null;
++  // Refresh clean lists, but never rebase unsaved edits onto another tab's version.
+   useEffect(() => {
+-    if (!dirty) setLines(draftLinesFromServer(data));
+-    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-sync only on a new server version
+-  }, [serverStamp, serverVersion]);
++    if (!dirty && !saving && !reloading) {
++      setLines(draftLinesFromServer(data));
++      setBaseVersion(serverVersion);
++    }
++  }, [data, dirty, saving, reloading, serverVersion]);
+ 
+   useEffect(() => {
+     if (!dirty) return;
+@@ -215,6 +221,7 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
+   const categories = GEAR_CATALOG.categories.filter((entry) => items.some((item) => item.category === entry));
+ 
+   const updateLines = useCallback((updater: (current: DraftLine[]) => DraftLine[]) => {
++    if (requestInFlight.current) return;
+     setLines(updater);
+     setDirty(true);
+   }, []);
+@@ -262,43 +269,64 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
+     }, 250);
+   }, []);
+ 
+-  // Replace local edits with the server's list. Set lines directly: a refused
+-  // save (e.g. the deadline just passed) leaves the version unchanged, so the
+-  // version-keyed sync effect wouldn't fire.
++  // Only an explicit, successful fresh read may replace the local list.
+   const reloadFromServer = useCallback(async () => {
+-    await queryClient.refetchQueries({ queryKey: GEAR_PICKS_ME_QUERY_KEY, exact: true });
+-    setLines(draftLinesFromServer(queryClient.getQueryData<GearPicksMeResponse | null>(GEAR_PICKS_ME_QUERY_KEY)));
+-    setDirty(false);
++    if (requestInFlight.current) return;
++    requestInFlight.current = true;
++    setReloading(true);
++    try {
++      await queryClient.cancelQueries({ queryKey: GEAR_PICKS_ME_QUERY_KEY, exact: true });
++      const response = await fetch("/api/gear-picks/me", { cache: "no-store" });
++      if (handleAuthRedirect(response, "/gear")) return;
++      const json = await parseJsonSafely<{ data?: GearPicksMeResponse }>(response);
++      if (!response.ok || !json?.data?.cycle || !json.data.participant) {
++        throw new Error("Could not reload picks");
++      }
++      setLines(draftLinesFromServer(json.data));
++      setBaseVersion(json.data.submission?.version ?? 0);
++      setDirty(false);
++      setSaveIssue(null);
++      queryClient.setQueryData(GEAR_PICKS_ME_QUERY_KEY, json.data);
++    } catch {
++      setSaveIssue("Couldn't load the saved list. Your unsaved picks are still here. Try reloading again when you're connected.");
++    } finally {
++      requestInFlight.current = false;
++      setReloading(false);
++    }
+   }, [queryClient]);
+ 
+   /** Returns true once the server has the list, so the review panel can close. */
+   async function save(submit: boolean): Promise<boolean> {
++    if (requestInFlight.current || readOnly || baseVersion !== serverVersion || over || problems.length > 0) return false;
++    requestInFlight.current = true;
++    setSaveIssue(null);
+     setSaving(submit ? "submit" : "draft");
+     try {
++      await queryClient.cancelQueries({ queryKey: GEAR_PICKS_ME_QUERY_KEY, exact: true });
+       const response = await fetch("/api/gear-picks/me", {
+         method: "PUT",
+         headers: { "Content-Type": "application/json" },
+         body: JSON.stringify({
+           lines: lines.map(({ sku, size, quantity }) => ({ sku, size, quantity })),
+           submit,
+-          version: serverVersion,
++          version: baseVersion,
+         }),
+       });
+       if (handleAuthRedirect(response, "/gear")) return false;
+       const json = await parseJsonSafely<{ data?: GearPickSubmissionDto; error?: string; code?: string }>(response);
+       if (!response.ok || !json?.data) {
+-        const message = json?.error ?? "Your picks weren't saved. Try again.";
+-        if (json?.code === "GEAR_PICKS_STALE") {
+-          toast.error(message, { action: { label: "Reload", onClick: () => void reloadFromServer() }, duration: 10_000 });
+-        } else if (json?.code === "GEAR_PICKS_CLOSED") {
+-          toast.error(message);
+-          await reloadFromServer();
+-        } else {
+-          toast.error(message);
++        const message = json?.error ?? "We couldn't confirm the save. Your picks are still here. Retry safely, or reload the saved list to check.";
++        setSaveIssue(message);
++        if (json?.code === "GEAR_PICKS_CLOSED") {
++          queryClient.setQueryData<GearPicksMeResponse | null>(GEAR_PICKS_ME_QUERY_KEY, (current) =>
++            current?.cycle ? { ...current, cycle: { ...current.cycle, isOpen: false } } : current,
++          );
+         }
+         return false;
+       }
+       const saved = json.data;
++      setLines(draftLinesFromServer({ ...data, submission: saved }));
++      setBaseVersion(saved.version);
+       setDirty(false);
+       queryClient.setQueryData<GearPicksMeResponse | null>(GEAR_PICKS_ME_QUERY_KEY, (current) =>
+         current ? { ...current, submission: saved } : current,
+@@ -313,17 +341,32 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
+       }
+       return true;
+     } catch {
+-      toast.error("Couldn't reach the server. Your picks are still here, so try again.");
++      setSaveIssue("We couldn't confirm whether your picks saved. Your list is still here. Retry safely, or reload the saved list to check.");
+       return false;
+     } finally {
++      requestInFlight.current = false;
+       setSaving(null);
+     }
+   }
+ 
+   const kit = GEAR_CATALOG.kits[fit];
+   const allowanceLabel = formatUsd(allowanceCents);
+-  const canSave = !readOnly && dirty && !over && problems.length === 0 && saving === null;
+-  const canSubmit = !readOnly && lines.length > 0 && !over && problems.length === 0 && saving === null;
++  const busy = saving !== null || reloading;
++  const conflict = dirty && baseVersion !== serverVersion;
++  const recoveryMessage = saveIssue ?? (conflict
++    ? "Your saved picks changed in another tab. Your unsaved list is still here. Reload the saved list before making more changes."
++    : null);
++  const recovery = recoveryMessage ? (
++    <div className="my-3 space-y-2 rounded-lg border border-border bg-muted/40 p-3 text-sm" role="alert">
++      <p>{recoveryMessage}</p>
++      <p className="text-xs text-muted-foreground">Reloading replaces your unsaved changes with the saved list.</p>
++      <Button type="button" variant="outline" disabled={busy} onClick={() => void reloadFromServer()}>
++        {reloading ? "Reloading…" : "Discard edits & reload saved picks"}
++      </Button>
++    </div>
++  ) : null;
++  const canSave = !readOnly && dirty && !over && problems.length === 0 && !busy && !conflict;
++  const canSubmit = !readOnly && lines.length > 0 && !over && problems.length === 0 && !busy && !conflict;
+ 
+   return (
+     <FadeUp>
+@@ -338,12 +381,14 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
+         {data.isAdmin && <AdminResultsLink />}
+       </PageHeader>
+ 
++      {recovery}
++
+       {readOnly && (
+         <div className="mb-4 flex items-start gap-2 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm" role="status">
+           <LockIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+           <p>
+             <span className="font-semibold">Picks are closed.</span>{" "}
+-            {submittedAt ? "This is the list you submitted." : lines.length > 0 ? "This draft was never submitted; ask an admin if you still need gear." : "You didn't pick anything this year."}
++            {dirty ? "Your unsaved changes are still shown below. Reload the saved list to see what was recorded." : submittedAt ? "This is the list you submitted." : lines.length > 0 ? "This draft was never submitted; ask an admin if you still need gear." : "You didn't pick anything this year."}
+           </p>
+         </div>
+       )}
+@@ -444,6 +489,13 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
+             icon="search"
+             compact
+             title="No items match"
++            actionLabel="Show all gear"
++            onAction={() => {
++              setSearch("");
++              setCollection("all");
++              setCategory("all");
++              setFitsOnly(false);
++            }}
+             description={
+               fitsOnly && hiddenForBudget > 0
+                 ? "Everything that matches costs more than you have left. Turn off Fits my budget to see it."
+@@ -466,7 +518,7 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
+                     item={item}
+                     selectedCode={cardColorCode(item, selectedColors, linesByStyle)}
+                     lines={linesByStyle.get(item.style) ?? []}
+-                    readOnly={readOnly}
++                    readOnly={readOnly || busy}
+                     onSelectColor={(code) => selectColor(item.style, code)}
+                     onPreview={() =>
+                       setPreview({ kind: "item", item, colorCode: cardColorCode(item, selectedColors, linesByStyle) })
+@@ -497,7 +549,7 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
+               </span>
+               <span
+                 className={cn(
+-                  "tabular-nums max-sm:hidden",
++                  "tabular-nums",
+                   over ? "font-semibold text-[var(--red-text)]" : "text-muted-foreground",
+                 )}
+               >
+@@ -542,7 +594,7 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
+               <Button
+                 type="button"
+                 className="min-h-10"
+-                disabled={lines.length === 0 || (Boolean(submittedAt) && !dirty)}
++                disabled={busy || lines.length === 0 || (Boolean(submittedAt) && !dirty)}
+                 onClick={() => openSheet("review")}
+               >
+                 <span className="sm:hidden">Review</span>
+@@ -561,6 +613,8 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
+         }}
+         lines={lines}
+         readOnly={readOnly}
++        busy={busy}
++        feedback={recovery}
+         totalCents={totalCents}
+         allowanceCents={allowanceCents}
+         deadline={cycle.deadline ? formatDateTime(cycle.deadline) : null}
+diff --git a/src/app/(app)/gear/GearPicksSheet.tsx b/src/app/(app)/gear/GearPicksSheet.tsx
+index 1a7f348f..0d22ed78 100644
+--- a/src/app/(app)/gear/GearPicksSheet.tsx
++++ b/src/app/(app)/gear/GearPicksSheet.tsx
+@@ -1,5 +1,6 @@
+ "use client";
+ 
++import type { ReactNode } from "react";
+ import { AlertTriangleIcon } from "lucide-react";
+ import { Button } from "@/components/ui/button";
+ import {
+@@ -28,6 +29,8 @@ export function GearPicksSheet({
+   onOpenChange,
+   lines,
+   readOnly,
++  busy,
++  feedback,
+   totalCents,
+   allowanceCents,
+   deadline,
+@@ -44,6 +47,8 @@ export function GearPicksSheet({
+   onOpenChange: (open: boolean) => void;
+   lines: DraftLine[];
+   readOnly: boolean;
++  busy: boolean;
++  feedback: ReactNode;
+   totalCents: number;
+   allowanceCents: number;
+   /** Formatted deadline, if one is set. */
+@@ -84,12 +89,13 @@ export function GearPicksSheet({
+             <GearPickLineList
+               lines={lines}
+               onJump={onJump}
+-              onRemoveLine={readOnly ? undefined : onRemoveLine}
++              onRemoveLine={readOnly || busy ? undefined : onRemoveLine}
+             />
+           )}
+         </SheetBody>
+ 
+         <SheetFooter className="flex-col gap-3 sm:flex-col sm:justify-start">
++          {feedback}
+           <dl className="grid grid-cols-[1fr_auto] gap-y-1 text-sm">
+             <dt className="text-muted-foreground">Picked</dt>
+             <dd className="text-right font-semibold tabular-nums">{formatUsd(totalCents)}</dd>

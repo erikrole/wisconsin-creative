@@ -16,7 +16,7 @@ function hex(src: string, name: string) {
   const match = src.match(new RegExp(`static let ${name} = \\w+\\(0x([0-9A-Fa-f]{6})`));
   expect(match, name).not.toBeNull();
   const value = match?.[1];
-  if (!value) throw new Error(`Missing color token ${name}`);
+  if (!value) throw new Error(`Missing hex value for ${name}`);
   return value.toUpperCase();
 }
 

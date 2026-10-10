@@ -1,0 +1,62 @@
+{
+  "title": "UA gear picker: safer saves and recovery",
+  "eyebrow": "Wisconsin Creative \u00b7 Local browser fixtures",
+  "lede": "Keep staff choices intact through stale saves and connection failures, and make filtered gear easy to find again.",
+  "sections": [
+    {
+      "heading": "Persistent recovery",
+      "note": "Same staff fixture, search, selected size, failed save, desktop viewport, and scroll position. Components loaded from the original revision versus local edits.",
+      "pairs": [
+        {
+          "title": "Save conflict",
+          "sub": "1280 \u00d7 900 browser fixture",
+          "before": "before/conflict-desktop.png",
+          "after": "after/conflict-desktop.png",
+          "beforeEvidence": "before/conflict-desktop.capture.json",
+          "afterEvidence": "after/conflict-desktop.capture.json",
+          "beforeCap": "Recovery appeared in a temporary toast overlapping the footer.",
+          "afterCap": "Persistent recovery explains that reloading replaces unsaved changes."
+        }
+      ]
+    },
+    {
+      "heading": "Find gear again",
+      "note": "Same empty search and 390 \u00d7 900 viewport. Synthetic page shell; not the authenticated app shell.",
+      "pairs": [
+        {
+          "title": "Empty search on a narrow screen",
+          "before": "before/empty-mobile.png",
+          "after": "after/empty-mobile.png",
+          "beforeEvidence": "before/empty-mobile.capture.json",
+          "afterEvidence": "after/empty-mobile.capture.json",
+          "beforeCap": "The empty state only suggested changing filters. Remaining allowance was hidden.",
+          "afterCap": "Show all gear resets filters directly. Remaining allowance is visible."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Keep the save version tied to the edited list",
+      "was": "A background refresh could update the version while leaving older local edits in place.",
+      "now": "Unsaved edits retain their base version and newer server versions block saving until an explicit reload."
+    },
+    {
+      "h": "Preserve choices through failures",
+      "was": "Failed reads could unmount the form or clear dirty state; controls remained editable during saves.",
+      "now": "Failed reads retain choices, in-flight edits are blocked, and successful saves adopt the acknowledged list."
+    }
+  ],
+  "verification": [
+    "45 existing gear pricing and route tests passed.",
+    "7 browser regressions passed; original components fail all seven scenarios.",
+    "Application-only build and changed-file lint passed. Keyboard filter reset and narrow-screen overflow checked.",
+    "Matched captures inspected; metadata receipts bind images to declared source and fixture settings."
+  ],
+  "notes": [
+    "Local fixture proof only. Authenticated save/persistence and production behavior are not verified.",
+    "Standalone TypeScript check is blocked by existing TS2532 errors in tests/ios-auth-design.test.ts:18 and tests/ios-flat-surface.test.ts:15.",
+    "No managed preview exists for the new branch. Push/PR authorization and CI provisioning are required for authenticated proof.",
+    "No commit, push, deployment, or database change."
+  ]
+}

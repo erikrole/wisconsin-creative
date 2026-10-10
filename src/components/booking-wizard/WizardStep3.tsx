@@ -103,7 +103,7 @@ export function WizardStep3({
           >
             <CalendarIcon className="size-6" />
           </div>
-          <h2 className="mt-5 text-2xl font-semibold tracking-tight text-balance">
+          <h2 className="mt-5 text-balance">
             Review your {config.label}
           </h2>
           <p className="mt-6 text-2xl font-semibold tracking-tight text-balance md:text-3xl">

@@ -1,10 +1,13 @@
 # Tasks Index
 
-Last updated: 2026-09-18
+Last updated: 2026-10-07
 
 ## Start Here
 
-- Use `DESLOPPIFY.md` for the current cleanup backlog and next recommended desloppify task.
+- Use `DESLOPPIFY.md` for standing cleanup policy (backlog closed 2026-06-22).
+- Use `tasks/repo-hygiene-cleanup-plan-2026-10-07.md` for the current hygiene slice and remaining database follow-ups.
+- Use `tasks/item-data-hygiene-status-2026-10-07.md` for item catalog data quality: what is done, physical queues, and Operations hygiene parity.
+- Use `tasks/item-cleanup-wizard-plan-2026-10-07.md` for the guided Cleanup wizard (legacy QR + missing serial).
 - Use `tasks/todo.md` for active execution notes and recent closeout reviews.
 - Use this index for the task-root contract, archive buckets, and active follow-up ledgers.
 - Treat `plans/README.md` as historical improve-plan context unless a current task explicitly references it.
@@ -25,13 +28,12 @@ Move completed plan files to the current dated `tasks/archive/completed-YYYY-MM-
 
 ## Current Root Shape
 
-As of this cleanup pass, root `tasks/` contains:
+As of the 2026-10-07 hygiene pass, root `tasks/` contains:
 
-- 195 root files.
-- 55 root `*-plan.md` files.
-- 86 root audit files.
-- 19 roadmap/reference files.
-- 5 follow-up files.
+- 299 root markdown files.
+- 145 root `*-plan*.md` files.
+- 65 root audit files.
+- Audit and many shipped-but-proof-gated plans remain at root on purpose.
 
 Audit files intentionally remain at root for now because the repo audit skills read and write `tasks/audit-*.md` paths directly.
 
@@ -57,12 +59,10 @@ Audit files intentionally remain at root for now because the repo audit skills r
 - `ios-notifications-polish-plan-2026-09-07.md` - native inbox, reminder and settings polish; local tests and visual evidence tracked separately from APNs/device acceptance.
 
 - `database-audit-plan-2026-09-07.md` - production integrity and migration-checksum audit, local overlap-guard repair, and remaining historical reconciliation/application gates.
-- `ios-schedule-hierarchy-plan-2026-09-07.md` - readable native Schedule rows and calmer Event detail hierarchy, with matched iPhone 16 Pro fixture review; local acceptance and release tracked separately.
 - `ios-dashboard-hierarchy-plan-2026-09-07.md` - compact native Home greeting and actionable summaries, with iPhone 16 Pro fixture proof and a local visual review; release and signed-in acceptance remain separate.
 - `schedule-stabilization-plan-2026-09-04.md` - incident-driven first-use fixes for incomplete reads, pending-release visibility, lost edits, and uncertain mutations; tracks isolated role-specific proof and remaining native/timer/delivery acceptance.
 - `combined-schedule-events-plan-2026-09-03.md` - combine overlapping same-family source events at one venue into one operational Schedule row and canonical crew while preserving both source identities; migration, authenticated UI, native parity, deployment, and live Cross Country acceptance remain open.
 - `event-checkout-assignments-plan-2026-09-03.md` - recover the event-custody migration safely, restore the reservation quality-of-life release, prove authenticated iOS booking reads, and gate any Emma Hansen cleanup through the shipped merge preview.
-- `event-checkout-assignments-plan-2026-09-02.md` - superseded event-assignee proposal retained for history.
 - `shared-travel-case-checkout-plan-2026-09-03.md` - custodian-neutral travel case/truck checkout with personally carried gear kept on separate personal checkouts.
 - `checkout-merge-plan-2026-09-04.md` - explicit Staff/Admin repair for compatible same-event open duplicate checkouts, with custody/history preservation and deployment/runtime proof still open.
 - `student-away-neutral-call-times-plan-2026-09-03.md` - suppress Student call-time projections for Away/road and Neutral events while retaining raw windows for staff and scheduling integrity; local source/native evidence passes, while authenticated/render/deployment gates remain.
@@ -114,6 +114,8 @@ Audit files intentionally remain at root for now because the repo audit skills r
 
 - `tasks/archive/completed-2026-08-23/` - completed Accountability, profile/team Scoreboard hardening and explorer work, plus Gotham operational-identity typography plans.
 - `tasks/archive/completed-2026-08-12/` - completed launch and Login visual-polish plan.
+- `tasks/archive/completed-2026-10-07/` - hygiene archive: weatherkit removal, July repo cleanup, bulk-battery hardening, ops consolidation, Prisma direct-URL hardening, schedule scroll, cancelled-booking unassign, booking owner transfer.
+- `tasks/archive/completed-2026-10-06/` - plans closed in the 2026-10-06 open-task audit (work shipped in source or superseded): booking rename/transfer fix, UI buckets 3-5 audits, edit-event modal, superseded event-checkout assignments, iOS Apple design audit plan, iOS Schedule hierarchy, kiosk check-in/out fixes, onboarding status page, photo requirement, preview schema baseline, premier-event removal, security/integrity follow-up, shift trade actions, student field readiness, SwiftData, users ownership.
 - `tasks/archive/completed-2026-08-19/` - completed Scoreboard and profile season-event-total plan.
 - `tasks/archive/completed-2026-06/` - completed plans and queue cleanup summaries from the June cleanup run.
 - `tasks/archive/completed-2026-07/` - completed plans moved during the July 11 repository cleanup.

@@ -24,6 +24,7 @@ import {
   ItemTitle,
 } from "@/components/ui/item";
 import { cn } from "@/lib/utils";
+import { LabelCartReview, LabelGenerators, labelTotal, newCartEntry, useLabelCart } from "./LabelCart";
 
 function LabelQRCode({ value }: { value: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -64,6 +65,7 @@ type Asset = {
   primaryScanCode?: string;
   serialNumber: string;
   location: { name: string };
+  category?: { name: string } | null;
 };
 
 type BulkItemFamily = {
@@ -81,6 +83,8 @@ type BulkItemFamily = {
 type LabelItem = {
   id: string;
   title: string;
+  name: string;
+  category?: string | null;
   description: string;
   qrCodeValue: string;
   primaryScanCode?: string;
@@ -109,6 +113,8 @@ function mapAssetToLabelItem(asset: Asset): LabelItem {
   return {
     id: asset.id,
     title: asset.assetTag,
+    name: asset.name?.trim() || `${asset.brand} ${asset.model}`.trim(),
+    category: asset.category?.name,
     description,
     qrCodeValue: asset.qrCodeValue,
     primaryScanCode: asset.primaryScanCode,
@@ -126,6 +132,8 @@ function mapFamilyToLabelItem(family: BulkItemFamily): LabelItem {
   return {
     id: `bulk-${family.id}`,
     title: family.name,
+    name: family.name,
+    category: family.category,
     description: [tracking, availability, family.category].filter(Boolean).join(" · "),
     qrCodeValue: family.binQrCodeValue,
     primaryScanCode: family.binQrCodeValue,
@@ -134,6 +142,17 @@ function mapFamilyToLabelItem(family: BulkItemFamily): LabelItem {
     ariaLabel: `Open ${trackingLabel} ${family.name} at ${family.locationName}`,
     selectAriaLabel: `Select ${trackingLabel} ${family.name} at ${family.locationName}`,
   };
+}
+
+function toCartEntry(item: LabelItem) {
+  return newCartEntry({
+    id: item.id,
+    title: item.title,
+    name: item.name,
+    category: item.category,
+    qrCodeValue: item.qrCodeValue,
+    primaryScanCode: item.primaryScanCode,
+  });
 }
 
 function LabelMetric({
@@ -172,7 +191,7 @@ export default function LabelsPage() {
   const searchParams = useSearchParams();
   const preselectedItems = searchParams.get("items");
   const [search, setSearch] = useState("");
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const { cart, hydrated, has, add, remove, update, clear } = useLabelCart();
   const [didPreselect, setDidPreselect] = useState(false);
 
 
@@ -199,34 +218,25 @@ export default function LabelsPage() {
 
   // Auto-select items from URL param on first load
   useEffect(() => {
-    if (!didPreselect && preselectedItems && labelItems && labelItems.length > 0) {
+    if (!didPreselect && hydrated && preselectedItems && labelItems && labelItems.length > 0) {
       const ids = new Set(preselectedItems.split(","));
-      const matching = new Set(
-        labelItems.filter((item) => ids.has(item.id)).map((item) => item.id),
-      );
-      if (matching.size > 0) setSelectedIds(matching);
+      add(labelItems.filter((item) => ids.has(item.id)).map(toCartEntry));
       setDidPreselect(true);
     }
-  }, [didPreselect, preselectedItems, labelItems]);
+  }, [didPreselect, hydrated, preselectedItems, labelItems, add]);
 
-  const toggleSelect = (id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  const toggleSelect = (item: LabelItem) => {
+    if (has(item.id)) remove(item.id);
+    else add([toCartEntry(item)]);
   };
 
   const selectAll = () => {
-    if (labelItems) setSelectedIds(new Set(labelItems.map((item) => item.id)));
+    if (labelItems) add(labelItems.map(toCartEntry));
   };
 
-  const selectNone = () => {
-    setSelectedIds(new Set());
-  };
-
-  const selectedItems = (labelItems ?? []).filter((item) => selectedIds.has(item.id));
+  // The cart, not the visible search results, is what prints.
+  const selectedItems = cart;
+  const selectedIds = new Set(cart.map((entry) => entry.id));
   const matchingCount = labelItems?.length ?? 0;
   const hasSearch = search.trim().length > 0;
   const allVisibleSelected =
@@ -236,7 +246,7 @@ export default function LabelsPage() {
     <FadeUp>
       <PageHeader
         title="Print Labels"
-        description="Build a focused queue of item, family, and QR labels before sending them to browser print."
+        description="Add items to the print cart, review the tag and number lines, then export a Brother P-touch CSV or browser print."
         className="no-print"
       >
         <Button className="h-10" variant="outline" asChild>
@@ -253,14 +263,14 @@ export default function LabelsPage() {
         >
           <Printer className="mr-1.5 size-4" />
           {selectedItems.length > 0
-            ? `Print ${labelCount(selectedItems.length)}`
+            ? `Print ${labelCount(labelTotal(selectedItems))}`
             : "Print labels"}
         </Button>
       </PageHeader>
 
       <div className="no-print mb-4 grid gap-2 rounded-md border border-border/60 bg-muted/20 p-2 sm:grid-cols-3">
         <LabelMetric label="Matching items" value={matchingCount} />
-        <LabelMetric label="Selected" value={selectedItems.length} tone="green" />
+        <LabelMetric label="In cart" value={selectedItems.length} tone="green" />
         <LabelMetric
           label="Ready to print"
           value={selectedItems.filter((item) => item.qrCodeValue).length}
@@ -282,7 +292,7 @@ export default function LabelsPage() {
             />
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="outline" className="tabular-nums">
-                {selectedItems.length} selected
+                {selectedItems.length} in cart
               </Badge>
               <Button
                 variant="outline"
@@ -291,16 +301,16 @@ export default function LabelsPage() {
                 onClick={selectAll}
                 disabled={matchingCount === 0 || allVisibleSelected}
               >
-                Select visible
+                Add visible
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
                 className="h-10"
-                onClick={selectNone}
+                onClick={clear}
                 disabled={selectedItems.length === 0}
               >
-                Clear queue
+                Clear cart
               </Button>
             </div>
           </div>
@@ -363,7 +373,7 @@ export default function LabelsPage() {
               >
                 <Checkbox
                   checked={selectedIds.has(item.id)}
-                  onCheckedChange={() => toggleSelect(item.id)}
+                  onCheckedChange={() => toggleSelect(item)}
                   aria-label={item.selectAriaLabel}
                 />
                 <ItemMedia variant="icon" className="bg-background">
@@ -407,24 +417,33 @@ export default function LabelsPage() {
         )}
       </Card>
 
+      <LabelGenerators onAdd={add} />
+
+      <LabelCartReview cart={cart} onUpdate={update} onRemove={remove} onClear={clear} />
+
       {selectedItems.length > 0 && (
         <div className="label-print-grid">
-          {selectedItems.map((item) => (
-            <div key={item.id} className="label-print-card">
-              <div className="shrink-0">
-                <LabelQRCode value={item.qrCodeValue} />
-              </div>
+          {selectedItems.flatMap((item) =>
+            Array.from({ length: Math.max(1, item.copies) }, (_, copy) => (
+            <div key={`${item.id}-${copy}`} className="label-print-card">
+              {item.qrCodeValue && (
+                <div className="shrink-0">
+                  <LabelQRCode value={item.qrCodeValue} />
+                </div>
+              )}
               <div className="flex-1 min-w-0">
-                <div className="font-bold text-sm mb-0.5">{item.title}</div>
+                <div className="font-bold text-sm mb-0.5">
+                  {[item.dept, item.model, item.number].filter(Boolean).join(" ")}
+                </div>
                 <div className="text-[11px] text-muted-foreground">
-                  {item.description}
+                  {item.name}
                 </div>
                 {item.primaryScanCode && (
                   <div className="font-mono text-[10px] text-muted-foreground mt-0.5">{item.primaryScanCode}</div>
                 )}
               </div>
             </div>
-          ))}
+          )))}
         </div>
       )}
     </FadeUp>

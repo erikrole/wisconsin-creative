@@ -51,6 +51,14 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Services: `src/lib/services/combined-schedule-events.ts`
 - Tests: `tests/all-day-events-have-no-call-time.test.ts`, `tests/booking-events-route-contract.test.ts`, `tests/calendar-events-route.test.ts`, `tests/combined-schedule-events-projection.test.ts`, `tests/combined-schedule-events-source.test.ts`, `tests/combined-schedule-events.test.ts`, `tests/kiosk-events-route.test.ts`, `tests/update-booking-events.test.ts`
 
+## gear-picks
+
+- Doc: `docs/AREA_GEAR_PICKS.md`
+- Pages: _none matched_
+- APIs: `/api/gear-picks/admin/export.csv`, `/api/gear-picks/admin`, `/api/gear-picks/me`, `/api/gear-picks/users/[userId]`
+- Services: `src/lib/services/gear-picks.ts`
+- Tests: `tests/gear-picks-pricing.test.ts`, `tests/gear-picks-routes.test.ts`
+
 ## importer
 
 - Doc: `docs/AREA_IMPORTER.md`
@@ -65,7 +73,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/items/[id]`, `/items/hygiene`, `/items`
 - APIs: `/api/assets/[id]/accessories`, `/api/assets/[id]/activity`, `/api/assets/[id]/duplicate`, `/api/assets/[id]/favorite`, `/api/assets/[id]/generate-qr`, `/api/assets/[id]/image`, `/api/assets/[id]/insights`, `/api/assets/[id]/maintenance`, `/api/assets/[id]/retire`, `/api/assets/[id]`
 - Services: `src/lib/services/kiosk-active-checkout-items.ts`
-- Tests: `tests/api-assets-item-families.test.ts`, `tests/assets-missing-gaps-route.test.ts`, `tests/checkin-items.test.ts`, `tests/ios-items-empty-state-recovery.test.ts`, `tests/ios-items-error-copy.test.ts`, `tests/ios-items-favorite-recovery.test.ts`, `tests/ios-items-retired-reserve-gating.test.ts`, `tests/ios-items-row-accessibility.test.ts`
+- Tests: `tests/api-assets-item-families.test.ts`, `tests/assets-missing-gaps-route.test.ts`, `tests/ios-items-empty-state-recovery.test.ts`, `tests/ios-items-error-copy.test.ts`, `tests/ios-items-favorite-recovery.test.ts`, `tests/ios-items-retired-reserve-gating.test.ts`, `tests/ios-items-row-accessibility.test.ts`, `tests/items-filter-options.test.ts`
 
 ## kiosk
 
@@ -199,6 +207,14 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 
 - Doc: `docs/AREA_USERS.md`
 - Pages: `/profile`, `/settings/allowed-emails`, `/settings/profile`, `/users/[id]`, `/users/onboarding-status`, `/users/org-chart`, `/users`
-- APIs: `/api/allowed-emails/[id]`, `/api/allowed-emails/preview`, `/api/allowed-emails`, `/api/kiosk/users`, `/api/me/profile-completion`, `/api/me/profile`, `/api/profile`, `/api/users/[id]/activity`, `/api/users/[id]/availability/[blockId]`, `/api/users/[id]/availability`
+- APIs: `/api/allowed-emails/[id]`, `/api/allowed-emails/preview`, `/api/allowed-emails`, `/api/gear-picks/users/[userId]`, `/api/kiosk/users`, `/api/me/profile-completion`, `/api/me/profile`, `/api/profile`, `/api/users/[id]/activity`, `/api/users/[id]/availability/[blockId]`
 - Services: `src/lib/services/hidden-users-cleanup.ts`, `src/lib/services/onboarding-lifecycle.ts`
 - Tests: `tests/allowed-emails-preview.test.ts`, `tests/allowed-emails.test.ts`, `tests/email-first-onboarding-source.test.ts`, `tests/hidden-users-cleanup.test.ts`, `tests/ios-notification-categories-profile.test.ts`, `tests/onboarding-dialog-source.test.ts`, `tests/onboarding-lifecycle.test.ts`, `tests/onboarding-readiness-route.test.ts`
+
+## youtube
+
+- Doc: `docs/AREA_YOUTUBE.md`
+- Pages: `/youtube`
+- APIs: `/api/cron/youtube-sweep`, `/api/youtube/connection`, `/api/youtube/drafts/[videoId]/check-playlists`, `/api/youtube/drafts/[videoId]/check-send`, `/api/youtube/drafts/[videoId]/game`, `/api/youtube/drafts/[videoId]/make-public`, `/api/youtube/drafts/[videoId]/playlists`, `/api/youtube/drafts/[videoId]/prepare`, `/api/youtube/drafts/[videoId]/publish`, `/api/youtube/drafts/[videoId]`
+- Services: _none matched_
+- Tests: `tests/youtube-connection.test.ts`, `tests/youtube-diff.test.ts`, `tests/youtube-playlist-service.test.ts`, `tests/youtube-publish-service.test.ts`, `tests/youtube-publishing.test.ts`, `tests/youtube-queue-service.test.ts`, `tests/youtube-review-queue.test.ts`, `tests/youtube-rules.test.ts`

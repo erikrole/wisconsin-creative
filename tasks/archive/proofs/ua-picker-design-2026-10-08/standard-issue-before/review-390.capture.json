@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "e5b141cd4a5e1d939252771cc775d6cee83f51ee",
+  "sourcePatchSha256": "bbb1b85f384e2b46b96ea72ac5fd4d4fa5b2e11927ec0b9898f50a5e347dd7fd",
+  "settings": {
+    "device": "Chromium 149.0.7827.55 fixture harness",
+    "viewport": [
+      390,
+      900
+    ],
+    "fixture": "86cee60509d83f2b27530f3c6fe9d3d91db9524bb348b40e796066c019a055e5",
+    "role": "staff",
+    "route": "/gear",
+    "appearance": "light",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "2026-10-08T17:00:00Z",
+    "scroll": [
+      0,
+      0
+    ]
+  },
+  "imageSha256": "7fdf7bc4c9d5cf914dedc9d1347aaa316d03518195c059625cd6e19893eb31df",
+  "dimensions": [
+    390,
+    900
+  ]
+}

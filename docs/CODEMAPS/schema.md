@@ -131,7 +131,7 @@ Values: `UPLOADING`, `FINALIZING`, `COMMITTED`, `FAILED`
 
 ## Model `User`
 
-Fields: 129
+Fields: 130
 
 - `id                            String                           @id @default(cuid())`
 - `name                          String`
@@ -203,6 +203,7 @@ Fields: 129
 - `licenseCodesHeld              LicenseCode[]                    @relation("LicenseClaimedBy")`
 - `licenseCodesCreated           LicenseCode[]                    @relation("LicenseCreatedBy")`
 - `licenseClaims                 LicenseCodeClaim[]`
+- `gearPickParticipations        GearPickParticipant[]`
 - `resources                     Resource[]`
 - `resourcesVerified             Resource[]                       @relation("ResourceLastVerifiedBy")`
 - `resourceAssetFoldersCreated   ResourceAssetFolder[]            @relation("ResourceAssetFolderCreator")`
@@ -2113,7 +2114,7 @@ Indexes and constraints:
 
 ## Model `ShiftGroup`
 
-Fields: 20
+Fields: 17
 
 - `id                    String                       @id @default(cuid())`
 - `eventId               String                       @unique @map("event_id")`
@@ -2124,9 +2125,6 @@ Fields: 20
 - `publishedById         String?                      @map("published_by_id")`
 - `lastPublishedSnapshot Json?                        @map("last_published_snapshot")`
 - `publishedVersion      Int                          @default(0) @map("published_version")`
-- `notifyAfter           DateTime?                    @map("notify_after")`
-- `notifyAttemptedAt     DateTime?                    @map("notify_attempted_at")`
-- `notifyError           String?                      @map("notify_error")`
 - `archivedAt            DateTime?                    @map("archived_at")`
 - `createdAt             DateTime                     @default(now()) @map("created_at")`
 - `updatedAt             DateTime                     @updatedAt @map("updated_at")`
@@ -2140,7 +2138,6 @@ Indexes and constraints:
 
 - `@@index([publishedAt])`
 - `@@index([publishedById])`
-- `@@index([notifyAfter])`
 - `@@map("shift_groups")`
 
 ## Model `ShiftGroupWorkingCopy`
@@ -2869,3 +2866,207 @@ Indexes and constraints:
 - `@@index([applicantId])`
 - `@@index([purgedAt])`
 - `@@map("applicant_retention_events")`
+
+## Model `YouTubeConnection`
+
+Fields: 10
+
+- `id                    String    @id @default(cuid())`
+- `channelId             String    @unique @map("channel_id")`
+- `channelTitle          String    @map("channel_title")`
+- `encryptedRefreshToken String    @map("encrypted_refresh_token")`
+- `scopes                String[]  @default([])`
+- `connectedById         String    @map("connected_by_id")`
+- `connectedAt           DateTime  @default(now()) @map("connected_at")`
+- `lastUsedAt            DateTime? @map("last_used_at")`
+- `revokedAt             DateTime? @map("revoked_at")`
+- `updatedAt             DateTime  @updatedAt @map("updated_at")`
+
+Indexes and constraints:
+
+- `@@map("youtube_connections")`
+
+## Model `YouTubeLibraryVideo`
+
+Fields: 5
+
+- `videoId      String   @id @map("video_id")`
+- `live         Json`
+- `publishedAt  DateTime @map("published_at")`
+- `thumbnailUrl String?  @map("thumbnail_url")`
+- `checkedAt    DateTime @map("checked_at")`
+
+Indexes and constraints:
+
+- `@@index([publishedAt])`
+- `@@map("youtube_library_videos")`
+
+## Model `YouTubeReviewDraft`
+
+Fields: 20
+
+- `videoId             String    @id @map("video_id")`
+- `version             Int       @default(1)`
+- `matchedTitle        String?   @map("matched_title")`
+- `matchedGame         Json?     @map("matched_game")`
+- `recap               Json?`
+- `selectedSentenceIds String[]  @default([]) @map("selected_sentence_ids")`
+- `editedTitle         String?   @map("edited_title")`
+- `editedDescription   String?   @map("edited_description")`
+- `manualSource        Boolean   @default(false) @map("manual_source")`
+- `manualVideo         Boolean   @default(false) @map("manual_video")`
+- `conferenceKind      String?   @map("conference_kind")`
+- `speakerIds          String[]  @default([]) @map("speaker_ids")`
+- `plannedPlaylistIds  String[]  @default([]) @map("planned_playlist_ids")`
+- `matchKind           String?   @map("match_kind")`
+- `gameChoices         Json?     @map("game_choices")`
+- `hold                String?`
+- `preparedAt          DateTime? @map("prepared_at")`
+- `updatedById         String?   @map("updated_by_id")`
+- `createdAt           DateTime  @default(now()) @map("created_at")`
+- `updatedAt           DateTime  @updatedAt @map("updated_at")`
+
+Indexes and constraints:
+
+- `@@map("youtube_review_drafts")`
+
+## Model `YouTubeLibraryState`
+
+Fields: 8
+
+- `channelId       String    @id @map("channel_id")`
+- `checkedAt       DateTime? @map("checked_at")`
+- `reachedLimit    Boolean   @default(false) @map("reached_limit")`
+- `lastFailure     String?   @map("last_failure")`
+- `playlists       Json      @default("[]")`
+- `playlistMembers Json      @default("{}") @map("playlist_members")`
+- `playlistFailure String?   @map("playlist_failure")`
+- `updatedAt       DateTime  @updatedAt @map("updated_at")`
+
+Indexes and constraints:
+
+- `@@map("youtube_library_state")`
+
+## Model `YouTubePublishRecord`
+
+Fields: 15
+
+- `id             String    @id`
+- `videoId        String    @map("video_id")`
+- `operation      String`
+- `undoOf         String?   @map("undo_of")`
+- `phase          String`
+- `before         Json`
+- `expected       Json`
+- `readBack       Json?     @map("read_back")`
+- `sourceUrl      String    @map("source_url")`
+- `sourceSha256   String    @map("source_sha256")`
+- `failureMessage String?   @map("failure_message")`
+- `actorId        String?   @map("actor_id")`
+- `createdAt      DateTime  @map("created_at")`
+- `verifiedAt     DateTime? @map("verified_at")`
+- `updatedAt      DateTime  @updatedAt @map("updated_at")`
+
+Indexes and constraints:
+
+- `@@index([videoId, createdAt(sort: Desc)])`
+- `@@map("youtube_publish_records")`
+
+## Model `YouTubePlaylistAddition`
+
+Fields: 11
+
+- `id             String   @id`
+- `videoId        String   @map("video_id")`
+- `videoTitle     String   @map("video_title")`
+- `playlist       Json`
+- `playlistId     String   @map("playlist_id")`
+- `phase          String`
+- `membership     Json?`
+- `failureMessage String?  @map("failure_message")`
+- `actorId        String?  @map("actor_id")`
+- `createdAt      DateTime @map("created_at")`
+- `updatedAt      DateTime @updatedAt @map("updated_at")`
+
+Indexes and constraints:
+
+- `@@index([videoId, createdAt(sort: Desc)])`
+- `@@map("youtube_playlist_additions")`
+
+## Enum `GearPickFit`
+
+Values: `MEN`, `WOMEN`
+
+## Model `GearPickCycle`
+
+Fields: 7
+
+- `id           String                @id`
+- `title        String`
+- `deadline     DateTime?`
+- `launchedAt   DateTime?             @map("launched_at")`
+- `createdAt    DateTime              @default(now()) @map("created_at")`
+- `updatedAt    DateTime              @updatedAt @map("updated_at")`
+- `participants GearPickParticipant[]`
+
+Indexes and constraints:
+
+- `@@map("gear_pick_cycles")`
+
+## Model `GearPickParticipant`
+
+Fields: 10
+
+- `id             String              @id @default(cuid())`
+- `cycleId        String              @map("cycle_id")`
+- `userId         String              @map("user_id")`
+- `fit            GearPickFit`
+- `allowanceCents Int                 @map("allowance_cents")`
+- `createdAt      DateTime            @default(now()) @map("created_at")`
+- `updatedAt      DateTime            @updatedAt @map("updated_at")`
+- `cycle          GearPickCycle       @relation(fields: [cycleId], references: [id], onDelete: Cascade)`
+- `user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)`
+- `submission     GearPickSubmission?`
+
+Indexes and constraints:
+
+- `@@unique([cycleId, userId])`
+- `@@index([userId])`
+- `@@map("gear_pick_participants")`
+
+## Model `GearPickSubmission`
+
+Fields: 9
+
+- `id            String              @id @default(cuid())`
+- `participantId String              @unique @map("participant_id")`
+- `submittedAt   DateTime?           @map("submitted_at")`
+- `totalCents    Int                 @default(0) @map("total_cents")`
+- `version       Int                 @default(1)`
+- `createdAt     DateTime            @default(now()) @map("created_at")`
+- `updatedAt     DateTime            @updatedAt @map("updated_at")`
+- `participant   GearPickParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)`
+- `lines         GearPickLine[]`
+
+Indexes and constraints:
+
+- `@@map("gear_pick_submissions")`
+
+## Model `GearPickLine`
+
+Fields: 9
+
+- `id             String             @id @default(cuid())`
+- `submissionId   String             @map("submission_id")`
+- `sku            String`
+- `style          String`
+- `colorCode      String             @map("color_code")`
+- `size           String?`
+- `quantity       Int`
+- `unitPriceCents Int                @map("unit_price_cents")`
+- `submission     GearPickSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)`
+
+Indexes and constraints:
+
+- `@@unique([submissionId, sku, size])`
+- `@@map("gear_pick_lines")`

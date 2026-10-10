@@ -84,7 +84,7 @@ describe("past-event Schedule backfill route", () => {
       "admin-1",
       3,
       "ADMIN",
-      { clearNotificationPending: true },
+      { expectedDraftId: undefined },
     );
     expect(mocks.onShiftsWorked).toHaveBeenCalledWith({ userId: "user-1" }, { notify: false });
     await expect(response.json()).resolves.toEqual({ data: { marker: "published" } });
@@ -121,7 +121,7 @@ describe("past-event Schedule backfill route", () => {
       "admin-1",
       4,
       "ADMIN",
-      { clearNotificationPending: true },
+      { expectedDraftId: undefined },
     );
     expect(mocks.onShiftsWorked).toHaveBeenCalledWith({ userId: "user-1" }, { notify: false });
     await expect(response.json()).resolves.toEqual({ data: { marker: "published" } });
