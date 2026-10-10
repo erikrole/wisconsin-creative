@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 // @ts-expect-error -- plain .mjs script without type declarations
 import { HASHED_TOOLS, stamp } from "../scripts/hash-static-tools.mjs";
 // @ts-expect-error -- plain .mjs script without type declarations
-import { renderAll, renderDataJs, validateManifest } from "../scripts/build-board-sizes.mjs";
+import { checkGuides, readGuides, renderAll, renderDataJs, validateManifest } from "../scripts/build-board-sizes.mjs";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 function loadCore(path: string, name: string): any {
@@ -51,7 +51,7 @@ describe("static tools: routing, headers, and page contracts", () => {
     expect(readdirSync("public/golden-hour").sort()).toEqual(["app.js", "core.js", "index.html"]);
     expect(readdirSync("public/timelapse").sort()).toEqual(["app.js", "core.js", "index.html"]);
     expect(readdirSync("public/board-sizes").sort()).toEqual(
-      ["app.js", "boards.csv", "boards.json", "boards.schema.json", "data.js", "index.html", "index.json", "llms.txt"],
+      ["app.js", "boards.csv", "boards.json", "boards.schema.json", "data.js", "design", "index.html", "index.json", "llms.txt"],
     );
     expect(readdirSync("public/tools").sort()).toEqual(["index.html"]);
   });
@@ -431,6 +431,35 @@ describe("Board Sizes agent files", () => {
     expect(llms).toContain("Never hardcode or guess a board size");
     for (const b of index.boards) if (b.type === "display") expect(llms).toContain(`id \`${b.id}\``);
     expect(llms).toContain("`camp-randall/north-board/gip` (tbd, h)");
+  });
+
+  it("writes one design guide per venue from the manifest and the guidance", () => {
+    expect(readdirSync("public/board-sizes/design").sort()).toEqual(manifest.venues.map((v: { id: string }) => `${v.id}.md`).sort());
+    expect(checkGuides(manifest, readGuides(manifest))).toEqual([]);
+    const cr = readFileSync("public/board-sizes/design/camp-randall.md", "utf8");
+    expect(cr).toMatch(/^# Camp Randall design guide\n/);
+    expect(cr).toContain(`manifest ${manifest.version}`);
+    expect(cr).toContain("id `camp-randall/north-board`");
+    expect(cr).toContain("`camp-randall/north-board/gip` (tbd, h)");
+    expect(cr).not.toContain("id `kohl-center/");
+    expect(cr).not.toMatch(/\{\{/);
+    const llms = readFileSync("public/board-sizes/llms.txt", "utf8");
+    for (const v of manifest.venues) expect(llms).toContain(`/design/${v.id}.md`);
+  });
+
+  it("keeps sizes out of the guidance and every board token real", () => {
+    const problems = checkGuides(manifest, {
+      "camp-randall": "Clear {{north-board/gip}} and {{MAIN_VIDEO}}.\nKeep 3096x1440 clear.\nSee {{north-board/nope}}.",
+      "all-venues": "Relative ids like {{north-board}} don't work here.",
+      nowhere: "",
+    }).join("\n");
+    expect(problems).toMatch(/camp-randall.md:2: literal size "3096x1440"/);
+    expect(problems).toMatch(/camp-randall.md:3: \{\{north-board\/nope\}\} names no board/);
+    expect(problems).toMatch(/all-venues.md:1: \{\{north-board\}\} names no board/);
+    expect(problems).toMatch(/no venue nowhere/);
+    expect(problems).not.toMatch(/camp-randall.md:1/);
+    const out: Record<string, string> = renderAll(readFileSync("public/board-sizes/boards.json", "utf8"), { "camp-randall": "Clear {{north-board/main-video-fg}}." });
+    expect(out["public/board-sizes/design/camp-randall.md"]).toContain("Clear `camp-randall/north-board/main-video-fg` (3096×1440 at 1332,0).");
   });
 
   it("publishes a JSON Schema that describes the manifest", () => {

@@ -9,11 +9,15 @@
 //   index.json  one flat record per display and zone, resolved for lookups
 //   boards.csv  the same records as a spreadsheet
 //   llms.txt    how agents should use all of this, plus every size
+//   design/<venue>.md  one design guide per venue: that venue's boards from
+//               the manifest, then the hand-written build guidance in
+//               docs/board-design/<venue>.md and docs/board-design/all-venues.md
 // and restamps the page's script hashes. Run `node scripts/build-board-sizes.mjs`
 // after an edit; `--check` exits 1 when a generated file is stale or the
 // manifest is invalid. tests/static-tools.test.ts runs the same checks.
 import { createHash } from "node:crypto";
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
 import { stamp } from "./hash-static-tools.mjs";
 
 export const MANIFEST_PATH = "public/board-sizes/boards.json";
@@ -22,6 +26,9 @@ export const INDEX_PATH = "public/board-sizes/index.json";
 export const CSV_PATH = "public/board-sizes/boards.csv";
 export const LLMS_PATH = "public/board-sizes/llms.txt";
 export const PAGE_PATH = "public/board-sizes/index.html";
+export const DESIGN_DIR = "public/board-sizes/design";
+export const GUIDE_DIR = "docs/board-design";
+export const SHARED_GUIDE = "all-venues";
 export const SITE = "https://wisconsincreative.com/board-sizes";
 
 export const ISSUE_KINDS = {
@@ -273,9 +280,145 @@ export function renderCsv(index) {
   return [head, ...rows].map((r) => r.map(csvCell).join(",")).join("\n") + "\n";
 }
 
+const fmt = (b) => `${b.w}x${b.h}`;
+
+// One venue's displays as llms.txt and the design guides print them: heading,
+// spec line, layouts and the zone table. With notes, each display also lists
+// its own and its zones' manifest notes (speaker scrims, safe areas, audio).
+function renderDisplays(v, index, L, { notes }) {
+  for (const d of v.displays) {
+    const rec = index.boards.find((b) => b.id === d.id);
+    const spec = [rec.fps ? `${rec.fps} fps` : null, rec.video, rec.duration].filter(Boolean).join(" · ");
+    L.push(`### ${d.name}: ${fmt(d)}${d.processor ? ` (${d.processor})` : ""}`, "");
+    L.push(`id \`${d.id}\` · ${rec.aspect}${spec ? ` · ${spec}` : ""}${rec.canvasKeys.length ? ` · keys ${rec.canvasKeys.map((k) => `\`${k}\``).join(", ")}` : ""}`);
+    for (const i of d.issues ?? []) L.push(`- ⚠ ${i.kind}: ${i.text}`);
+    L.push("");
+    if (d.layouts?.length) {
+      L.push(`Layouts${d.layouts.some((l) => l.draft) ? " (draft: inferred from geometry, not yet confirmed)" : ""}:`);
+      for (const l of d.layouts) L.push(`- ${l.name} (\`${l.id}\`): ${l.zones.map((id) => `\`${id.slice(d.id.length + 1)}\``).join(", ")}`);
+      L.push("");
+    }
+    if (d.zones.length) {
+      L.push("| zone id | size | at (x,y) | fps | keys |", "|---|---|---|---|---|");
+      for (const z of d.zones) {
+        const zr = index.boards.find((b) => b.id === z.id);
+        const tags = [zr.stillOnly ? "stills" : zr.fps ? String(zr.fps) : "", zr.pad ? `pad ${zr.pad}` : "", z.issues ? `⚠ ${z.issues.map((i) => i.kind).join(", ")}` : ""].filter(Boolean).join(" · ");
+        L.push(`| \`${z.id.slice(d.id.length + 1)}\` | ${fmt(z)} | ${zr.at.map((p) => `${p.x},${p.y}`).join(" ") || "–"} | ${tags || "–"} | ${zr.canvasKeys.join(" ") || "–"} |`);
+      }
+      L.push("");
+    }
+    if (notes) renderNotes(d, L);
+  }
+}
+
+function renderNotes(d, L) {
+  const lines = (d.notes ?? []).map((n) => `- ${n}`);
+  // FG/BG pairs repeat the same note; print it once, against the pair.
+  const seen = new Set();
+  for (const z of d.zones) {
+    const zone = z.id.slice(d.id.length + 1).replace(/-(fg|bg)$/, "-fg/bg");
+    for (const n of z.notes ?? []) {
+      const pair = /-(fg|bg)$/.test(z.id) && d.zones.some((o) => o !== z && o.id.replace(/-(fg|bg)$/, "") === z.id.replace(/-(fg|bg)$/, ""));
+      const line = `- \`${pair ? zone : z.id.slice(d.id.length + 1)}\`: ${n}`;
+      if (!seen.has(line)) lines.push(line);
+      seen.add(line);
+    }
+  }
+  if (lines.length) L.push("Manifest notes:", ...lines, "");
+}
+
+/* ---------------- design guides ---------------- */
+
+// Guidance never carries a size of its own. It names boards with tokens that
+// this script expands from the manifest, so a size change reaches every guide:
+//   {{camp-randall/north-board/gip}}  full id (a display or a zone)
+//   {{north-board/gip}}               id relative to the guide's venue
+//   {{MAIN_VIDEO}}                    a canvas key
+// Each expands to `id` (w×h at x,y). A token that names nothing is an error.
+const TOKEN = /\{\{\s*([^}\s]+)\s*\}\}/g;
+
+function boardRef(index, venueId, token) {
+  const canvas = index.canvases.find((c) => c.key === token);
+  const id = canvas ? canvas.zoneId ?? canvas.displayId : token;
+  const rec = index.boards.find((b) => b.id === id) ?? (venueId ? index.boards.find((b) => b.id === `${venueId}/${id}`) : null);
+  if (!rec) return null;
+  const at = rec.type === "zone" && rec.at.length ? ` at ${rec.at.map((p) => `${p.x},${p.y}`).join(" / ")}` : "";
+  const warn = rec.issues.length ? `, ⚠ ${[...new Set(rec.issues.map((i) => i.kind))].join(", ")}` : "";
+  return `\`${rec.id}\` (${rec.w}×${rec.h}${at}${warn})`;
+}
+
+// Literal sizes belong in boards.json. This catches "3096x1440" and "1920 × 1080";
+// write a token, or move the fact into the manifest as a zone or note. Code
+// spans are skipped: they quote names (`PlayerID - LaBahn - Main 1920x1080`).
+const LITERAL_SIZE = /\b\d{2,5}\s*[x×]\s*\d{2,5}\b/;
+
+export function checkGuides(manifest, guides) {
+  const index = buildIndex(manifest, "");
+  const problems = [];
+  for (const [name, text] of Object.entries(guides)) {
+    const shared = name === SHARED_GUIDE;
+    if (!shared && !manifest.venues.some((v) => v.id === name)) problems.push(`${GUIDE_DIR}/${name}.md: no venue ${name} in the manifest`);
+    text.split("\n").forEach((line, i) => {
+      const at = `${GUIDE_DIR}/${name}.md:${i + 1}`;
+      // The shared guide is printed into every venue's file, so it takes full ids only.
+      for (const [, t] of line.matchAll(TOKEN)) if (!boardRef(index, shared ? "" : name, t)) problems.push(`${at}: {{${t}}} names no board, zone or canvas key`);
+      const literal = LITERAL_SIZE.exec(line.replace(TOKEN, "").replace(/`[^`]*`/g, ""));
+      if (literal) problems.push(`${at}: literal size "${literal[0]}"; use a {{board}} token or put the size in boards.json`);
+    });
+  }
+  return problems;
+}
+
+export function readGuides(manifest) {
+  const guides = {};
+  for (const name of [SHARED_GUIDE, ...manifest.venues.map((v) => v.id)]) {
+    const path = `${GUIDE_DIR}/${name}.md`;
+    if (existsSync(path)) guides[name] = readFileSync(path, "utf8");
+  }
+  return guides;
+}
+
+export const designPath = (venueId) => `${DESIGN_DIR}/${venueId}.md`;
+
+// Guides are written with ## sections; inside the design file they sit one level down.
+const demote = (md) => md.replace(/^(#{1,5}) /gm, "#$1 ");
+
+export function renderDesign(manifest, index, v, guides) {
+  const expand = (text, venueId) => demote(text.replace(TOKEN, (m, t) => boardRef(index, venueId, t) ?? m).trim());
+  const L = [
+    `# ${v.name} design guide`,
+    "",
+    `> How we build content for every board at ${v.name}. Sizes, frame rates and zones come from the Wisconsin board manifest ${manifest.version} (updated ${manifest.updated}); the build guidance is ours.`,
+    "",
+    `GENERATED by \`scripts/build-board-sizes.mjs\` from \`public/board-sizes/boards.json\`, \`${GUIDE_DIR}/${v.id}.md\` and \`${GUIDE_DIR}/${SHARED_GUIDE}.md\` in the Wisconsin Creative repo. Edit those, never this file. Sizes change only in boards.json.`,
+    "",
+    "## Read this first",
+    "",
+    "1. Take every size, position and frame rate from the Boards section below (or from `index.json` by id), never from an old project, a screenshot or memory.",
+    `2. Refer to boards by id (e.g. \`${v.displays[0].id}\`) or canvas key, and say which manifest version you used (${manifest.version}).`,
+    "3. Check the open issues on every board you touch and tell the person you are working for.",
+    `4. Then read Building for ${v.name} and Rules for every venue before you build.`,
+    "",
+    `## Open issues at ${v.name}`,
+    "",
+  ];
+  const open = v.displays.flatMap((d) => [
+    ...(d.issues ?? []).map((i) => [d.id, i]),
+    ...d.zones.flatMap((z) => (z.issues ?? []).map((i) => [z.id, i])),
+  ]);
+  for (const [id, i] of open) L.push(`- \`${id}\` (${i.kind}${i.field ? `, ${i.field}` : ""}): ${i.text}`);
+  if (!open.length) L.push("None in this manifest.");
+  L.push("", `## Boards (manifest ${manifest.version})`, "");
+  for (const n of v.notes ?? []) L.push(`- ${n}`);
+  if (v.notes?.length) L.push("");
+  renderDisplays(v, index, L, { notes: true });
+  L.push(`## Building for ${v.name}`, "", guides[v.id] ? expand(guides[v.id], v.id) : `No ${v.name} guidance yet. Add it to \`${GUIDE_DIR}/${v.id}.md\`.`, "");
+  if (guides[SHARED_GUIDE]) L.push("## Rules for every venue", "", expand(guides[SHARED_GUIDE], ""), "");
+  return L.join("\n");
+}
+
 export function renderLlms(manifest, index) {
   const L = [];
-  const fmt = (b) => `${b.w}x${b.h}`;
   L.push(
     "# Wisconsin Board Sizes",
     "",
@@ -299,6 +442,7 @@ export function renderLlms(manifest, index) {
     `- [boards.json](${SITE}/boards.json): the hand-edited source (schema \`${manifest.schema}\`). Pin this exact file for production tools; the After Effects Board Builder does.`,
     `- [boards.schema.json](${SITE}/boards.schema.json): JSON Schema for boards.json.`,
     `- [boards.csv](${SITE}/boards.csv): index.json as a spreadsheet.`,
+    `- Design guides, one per venue: ${manifest.venues.map((v) => `[${v.name}](${SITE}/design/${v.id}.md)`).join(", ")}. Read the venue's guide before building for it: its boards from this manifest plus how we build them (GIP and scrim coverage, kickouts, seams, deliverable splits, naming, motion and type rules).`,
     `- [Board Sizes](${SITE}): the human page. \`?v=<venue>#<id>\` opens one board; \`?c=<content id>\` lists every canvas a piece of content needs.`,
     "",
     "## Lookup recipes",
@@ -338,28 +482,7 @@ export function renderLlms(manifest, index) {
     L.push(`## ${v.name} (\`${v.id}\`)`, "");
     for (const n of v.notes ?? []) L.push(`- ${n}`);
     if (v.notes?.length) L.push("");
-    for (const d of v.displays) {
-      const rec = index.boards.find((b) => b.id === d.id);
-      const spec = [rec.fps ? `${rec.fps} fps` : null, rec.video, rec.duration].filter(Boolean).join(" · ");
-      L.push(`### ${d.name}: ${fmt(d)}${d.processor ? ` (${d.processor})` : ""}`, "");
-      L.push(`id \`${d.id}\` · ${rec.aspect}${spec ? ` · ${spec}` : ""}${rec.canvasKeys.length ? ` · keys ${rec.canvasKeys.map((k) => `\`${k}\``).join(", ")}` : ""}`);
-      for (const i of d.issues ?? []) L.push(`- ⚠ ${i.kind}: ${i.text}`);
-      L.push("");
-      if (d.layouts?.length) {
-        L.push(`Layouts${d.layouts.some((l) => l.draft) ? " (draft: inferred from geometry, not yet confirmed)" : ""}:`);
-        for (const l of d.layouts) L.push(`- ${l.name} (\`${l.id}\`): ${l.zones.map((id) => `\`${id.slice(d.id.length + 1)}\``).join(", ")}`);
-        L.push("");
-      }
-      if (d.zones.length) {
-        L.push("| zone id | size | at (x,y) | fps | keys |", "|---|---|---|---|---|");
-        for (const z of d.zones) {
-          const zr = index.boards.find((b) => b.id === z.id);
-          const tags = [zr.stillOnly ? "stills" : zr.fps ? String(zr.fps) : "", zr.pad ? `pad ${zr.pad}` : "", z.issues ? `⚠ ${z.issues.map((i) => i.kind).join(", ")}` : ""].filter(Boolean).join(" · ");
-          L.push(`| \`${z.id.slice(d.id.length + 1)}\` | ${fmt(z)} | ${zr.at.map((p) => `${p.x},${p.y}`).join(" ") || "–"} | ${tags || "–"} | ${zr.canvasKeys.join(" ") || "–"} |`);
-        }
-        L.push("");
-      }
-    }
+    renderDisplays(v, index, L, { notes: false });
   }
   L.push("## Changes", "");
   for (const c of manifest.changes) L.push(`- ${c.version}: ${c.summary}`);
@@ -367,7 +490,7 @@ export function renderLlms(manifest, index) {
   return L.join("\n");
 }
 
-export function renderAll(manifestBytes) {
+export function renderAll(manifestBytes, guides = readGuides(JSON.parse(manifestBytes))) {
   const manifest = JSON.parse(manifestBytes);
   const index = buildIndex(manifest, manifestBytes);
   return {
@@ -375,6 +498,7 @@ export function renderAll(manifestBytes) {
     [INDEX_PATH]: renderIndexJson(index),
     [CSV_PATH]: renderCsv(index),
     [LLMS_PATH]: renderLlms(manifest, index),
+    ...Object.fromEntries(manifest.venues.map((v) => [designPath(v.id), renderDesign(manifest, index, v, guides)])),
   };
 }
 
@@ -387,6 +511,11 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     console.error(`${MANIFEST_PATH} is invalid:\n  ${problems.join("\n  ")}`);
     process.exit(1);
   }
+  const guideProblems = checkGuides(manifest, readGuides(manifest));
+  if (guideProblems.length) {
+    console.error(`design guidance needs fixing:\n  ${guideProblems.join("\n  ")}`);
+    process.exit(1);
+  }
   const outputs = renderAll(bytes);
   const read = (p) => { try { return readFileSync(p, "utf8"); } catch { return null; } };
   const stale = Object.keys(outputs).filter((p) => read(p) !== outputs[p]);
@@ -394,7 +523,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     for (const p of stale) console.error(`${p} is stale: run node scripts/build-board-sizes.mjs`);
     process.exit(stale.length ? 1 : 0);
   }
-  for (const p of stale) writeFileSync(p, outputs[p]);
+  for (const p of stale) { mkdirSync(dirname(p), { recursive: true }); writeFileSync(p, outputs[p]); }
   const page = readFileSync(PAGE_PATH, "utf8");
   const stamped = stamp(PAGE_PATH);
   if (stamped !== page) writeFileSync(PAGE_PATH, stamped);

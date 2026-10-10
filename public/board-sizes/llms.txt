@@ -20,6 +20,7 @@ Use this whenever you create or check anything that will play on a Wisconsin ven
 - [boards.json](https://wisconsincreative.com/board-sizes/boards.json): the hand-edited source (schema `wisconsin-board-sizes/1`). Pin this exact file for production tools; the After Effects Board Builder does.
 - [boards.schema.json](https://wisconsincreative.com/board-sizes/boards.schema.json): JSON Schema for boards.json.
 - [boards.csv](https://wisconsincreative.com/board-sizes/boards.csv): index.json as a spreadsheet.
+- Design guides, one per venue: [Camp Randall](https://wisconsincreative.com/board-sizes/design/camp-randall.md), [Kohl Center](https://wisconsincreative.com/board-sizes/design/kohl-center.md), [Field House](https://wisconsincreative.com/board-sizes/design/field-house.md), [LaBahn Arena](https://wisconsincreative.com/board-sizes/design/labahn.md), [Goodman Diamond](https://wisconsincreative.com/board-sizes/design/goodman.md). Read the venue's guide before building for it: its boards from this manifest plus how we build them (GIP and scrim coverage, kickouts, seams, deliverable splits, naming, motion and type rules).
 - [Board Sizes](https://wisconsincreative.com/board-sizes): the human page. `?v=<venue>#<id>` opens one board; `?c=<content id>` lists every canvas a piece of content needs.
 
 ## Lookup recipes
