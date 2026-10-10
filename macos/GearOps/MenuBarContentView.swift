@@ -688,12 +688,14 @@ struct MenuBarContentView: View {
     }
 
     private func apiHealthDetail(at now: Date) -> String {
-        guard let snapshot = model.snapshot else { return "Unavailable" }
-        // Past the stale threshold, say how long the data has gone unconfirmed;
-        // otherwise, when the server last changed it.
-        if model.snapshotIsStale(at: now), let confirmedAt = model.confirmedAt {
+        guard model.snapshot != nil, let confirmedAt = model.confirmedAt else { return "Unavailable" }
+        // Both read from the last confirmed read, not the projection's
+        // generation time: an unchanged projection on a quiet day is still
+        // freshly synced.
+        if model.snapshotIsStale(at: now) {
             return "Unconfirmed for " + GearOpsSnapshot.compactElapsed(from: confirmedAt, to: now)
         }
-        return "Last synced " + snapshot.freshnessLabel(at: now).replacingOccurrences(of: "Updated ", with: "")
+        let age = max(0, now.timeIntervalSince(confirmedAt))
+        return age < 60 ? "Last synced just now" : "Last synced \(GearOpsSnapshot.compactElapsed(from: confirmedAt, to: now)) ago"
     }
 }

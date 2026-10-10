@@ -71,6 +71,12 @@ final class GearOpsModel {
     private var lastRefreshAttemptAt: Date?
     private var lastConfirmedAt: Date?
     private let currentDate: () -> Date
+    /// The time the menu bar label evaluates overdue against. D-047 forbids
+    /// timers in this client, so it advances only on events that already
+    /// happen: a refresh (push, wake, manual), presenting the extra, and an
+    /// installed or confirmed projection. A booking that passes its due time
+    /// joins the overdue count at the next of those, not on the minute.
+    private(set) var labelClock: Date = .now
 
     var user: GearOpsUser?
     var snapshot: GearOpsSnapshot?
@@ -521,6 +527,7 @@ final class GearOpsModel {
     /// Every post-enrollment refresh reads only the external Upstash projection.
     /// Failure preserves the last trusted local snapshot.
     func refresh() async {
+        labelClock = currentDate()
         guard user != nil else { return }
         guard let companionToken else {
             // Manual refresh must retry secure storage, rather than silently
@@ -565,6 +572,7 @@ final class GearOpsModel {
 
                 if installedProjection == projection {
                     lastConfirmedAt = currentDate()
+        labelClock = lastConfirmedAt ?? labelClock
                     statusMessage = nil
                 } else {
                     await install(
@@ -590,6 +598,7 @@ final class GearOpsModel {
     /// that push may have missed is re-read then, bounded so repeated opens do
     /// not churn the credential. This is user-driven, not a timer.
     func refreshOnPresentation() async {
+        labelClock = currentDate()
         if shouldRetryCredentialRestore {
             await restoreSession()
             return
@@ -847,6 +856,7 @@ final class GearOpsModel {
         let previousActivity = knownBookingActivity
         let sortedActivity = apply(projection)
         lastConfirmedAt = currentDate()
+        labelClock = lastConfirmedAt ?? labelClock
         statusMessage = nil
 
         knownBookingActivity = Dictionary(

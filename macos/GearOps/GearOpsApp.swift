@@ -10,11 +10,6 @@ enum GearOpsWindow {
 struct GearOpsApp: App {
     @NSApplicationDelegateAdaptor(GearOpsAppDelegate.self) private var appDelegate
     @State private var model = GearOpsApp.makeModel()
-    /// Lets overdue mode follow the clock past a due time. A `TimelineView`
-    /// cannot be used here: inside a `MenuBarExtra` label it re-renders the
-    /// status button endlessly and hangs launch. This reads nothing from the
-    /// network.
-    @State private var labelClock = Date.now
     @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
@@ -30,13 +25,12 @@ struct GearOpsApp: App {
             HStack(spacing: 4) {
                 Image(systemName: model.menuBarSymbol)
                     .symbolRenderingMode(.monochrome)
-                if let count = model.menuBarCount(at: labelClock) {
+                if let count = model.menuBarCount(at: model.labelClock) {
                     Text(count, format: .number)
                         .monospacedDigit()
                 }
             }
-            .accessibilityLabel(model.menuBarAccessibilityLabel(at: labelClock))
-            .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { labelClock = $0 }
+            .accessibilityLabel(model.menuBarAccessibilityLabel(at: model.labelClock))
         }
         // Bookings, pickups, health, and sign-in are too complex for a flat
         // command menu, which is Apple's documented exception to "display a

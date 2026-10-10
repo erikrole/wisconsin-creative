@@ -154,7 +154,8 @@ describe("GearOps macOS menu bar contracts", () => {
     expect(view).toContain('Picker("Count beside the icon", selection: $preferences.menuBarCountMode)');
     expect(prefs).toContain("case showsMenuBarCount");
     expect(prefs).toContain("menuBarCountMode = showsCount ? .open : .hidden");
-    expect(app).toContain("model.menuBarCount(at: labelClock)");
+    expect(app).toContain("model.menuBarCount(at: model.labelClock)");
+    expect(app).not.toContain("Timer.publish");
     expect(app).toContain("isInserted: $preferences.showsMenuBarExtra");
     expect(app).toContain(".symbolRenderingMode(.monochrome)");
     expect(app).not.toContain(".contentTransition(.numericText())");
@@ -647,7 +648,7 @@ describe("GearOps macOS menu bar contracts", () => {
     expect(model).toContain("GearOpsAvatarCache.removeAll()");
     expect(model).toContain("var custodyCount: Int? { snapshot?.stats.checkedOut }");
     expect(model).toMatch(/case \.open:\s*\n\s*return custodyCount/);
-    expect(menu).toContain("model.menuBarAccessibilityLabel(at: labelClock)");
+    expect(menu).toContain("model.menuBarAccessibilityLabel(at: model.labelClock)");
 
     expect(login).toContain("if let errorMessage = model.statusMessage");
     expect(login).toContain('Button("Settings…")');
