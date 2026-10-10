@@ -10,7 +10,7 @@ export class NeonPreviewApi {
       method, headers: { Authorization: `Bearer ${this.token}`, "Content-Type": "application/json" },
       ...(body ? { body: JSON.stringify(body) } : {}), signal: AbortSignal.timeout(30_000),
     });
-    if (!response.ok) throw new Error(`Neon ${method} failed (${response.status}). Inspect the named branch before retrying; credentials and response bodies are not logged.`);
+    if (!response.ok) throw Object.assign(new Error(`Neon ${method} failed (${response.status}). Inspect the named branch before retrying; credentials and response bodies are not logged.`), { status: response.status });
     return response.status === 204 ? {} : response.json();
   }
   async branches(project) {
@@ -34,12 +34,16 @@ export class NeonPreviewApi {
     return endpoints.filter((endpoint) => endpoint.current_state !== "active").map((endpoint) => endpoint.id);
   }
   // Cleanup wakes each child to read its retention row. Suspend only the computes
-  // it woke so a sweep never exhausts the active-endpoint limit or bills idle time,
-  // and never interrupts a preview someone is using.
+  // it woke so a sweep never exhausts the active-endpoint limit or bills idle time.
+  // A vanished endpoint is fine; any other failure stops the sweep rather than
+  // silently leaving computes active.
   async suspendEndpoints(project, endpointIds) {
     for (const id of endpointIds) {
       try { await this.request(`/projects/${project}/endpoints/${id}/suspend`, { method: "POST" }); }
-      catch { console.warn({ endpoint: id, status: "suspend-skipped" }); }
+      catch (error) {
+        if (error.status !== 404) throw error;
+        console.warn({ endpoint: id, status: "suspend-skipped-not-found" });
+      }
     }
   }
   async connection(project, branch, database, role, pooled) {

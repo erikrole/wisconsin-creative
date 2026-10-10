@@ -140,7 +140,7 @@ describe("managed preview cleanup compute", () => {
     const fetcher = async (url, { method }) => {
       calls.push(`${method} ${url.replace("https://console.neon.tech/api/v2", "")}`);
       if (url.endsWith("/endpoints")) return new Response(JSON.stringify({ endpoints: [{ id: "ep-idle", current_state: "idle" }, { id: "ep-busy", current_state: "active" }] }));
-      return new Response(null, { status: url.includes("ep-gone") ? 404 : 200 });
+      return url.includes("ep-gone") ? new Response(null, { status: 404 }) : new Response(JSON.stringify({ operations: [] }));
     };
     const api = new NeonPreviewApi("token", fetcher);
     const woken = await api.idleEndpoints("project", "br-test");
@@ -148,8 +148,14 @@ describe("managed preview cleanup compute", () => {
     await api.suspendEndpoints("project", [...woken, "ep-gone"]);
     expect(calls).toEqual(["GET /projects/project/branches/br-test/endpoints", "POST /projects/project/endpoints/ep-idle/suspend", "POST /projects/project/endpoints/ep-gone/suspend"]);
   });
-  it("suspends after every reviewed branch, including early returns", () => {
+  it("propagates suspension failures other than a vanished endpoint", async () => {
+    const api = new NeonPreviewApi("token", async () => new Response(null, { status: 503 }));
+    await expect(api.suspendEndpoints("project", ["ep-idle"])).rejects.toMatchObject({ status: 503 });
+  });
+  it("suspends after every reviewed branch unless it was removed or used meanwhile", () => {
     const source = readFileSync("scripts/cleanup-previews.mjs", "utf8");
-    expect(source).toMatch(/try \{ await review\(branch\); \} finally \{ await provider\.suspendEndpoints/);
+    expect(source).toMatch(/try \{ await review\(branch, inspection\); \} finally \{/);
+    expect(source).toMatch(/inspection\.removed\)[\s\S]*usedDuringReview\(inspection\)[\s\S]*suspendEndpoints/);
+    expect(source).toMatch(/catch \{ return true; \}/);
   });
 });

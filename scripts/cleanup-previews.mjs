@@ -32,18 +32,34 @@ let refs = await references();
 for (const branch of await provider.branches(config.preview.projectId)) {
   if (branch.id === config.preview.templateBranchId || branch.protected || branch.default || branch.primary || branch.parent_id !== config.preview.templateBranchId || !/^wc-preview-[a-f0-9]{20}$/.test(branch.name)) continue;
   const woken = await provider.idleEndpoints(config.preview.projectId, branch.id);
-  try { await review(branch); } finally { await provider.suspendEndpoints(config.preview.projectId, woken); }
+  const inspection = {};
+  try { await review(branch, inspection); } finally {
+    if (inspection.removed) { /* branch and its computes are gone */ }
+    else if (await usedDuringReview(inspection)) console.log({ branch: branch.id, status: "in-use-left-active" });
+    else await provider.suspendEndpoints(config.preview.projectId, woken);
+  }
 }
-async function review(branch) {
+// A local lease or authenticated request bumps last_seen_at; leave that compute running.
+// An unreadable row fails closed (no suspend) so cleanup never interrupts a preview in use.
+async function usedDuringReview({ sql, lastSeenAt }) {
+  if (!sql || lastSeenAt === undefined) return false;
+  try {
+    const [row] = await sql.query("SELECT last_seen_at FROM wc_preview_meta.runtime WHERE id=true");
+    return new Date(row.last_seen_at).getTime() !== new Date(lastSeenAt).getTime();
+  } catch { return true; }
+}
+async function review(branch, inspection) {
   const pooled = await provider.connection(config.preview.projectId, branch.id, config.preview.database, config.preview.ownerRole, true);
   const direct = await provider.connection(config.preview.projectId, branch.id, config.preview.database, config.preview.ownerRole, false);
-  const sql = neon(direct), baseline = await loadMigrationBaseline(sql, localChecksums());
+  const sql = neon(direct); inspection.sql = sql;
+  const baseline = await loadMigrationBaseline(sql, localChecksums());
   if (!baseline || baseline.approval?.kind !== "sanitized-child") { console.log({ branch: branch.id, status: "unattested-retained" }); return; }
   const gitBranch = baseline.approval.gitBranch;
   assertProviderLineage(branch, gitBranch, config);
   const state = { projectId: config.preview.projectId, branchId: branch.id, endpointId: baseline.target.endpoint, gitBranch, key: branchKey(gitBranch), environment: { DATABASE_URL: pooled, DIRECT_URL: direct, DATABASE_URL_UNPOOLED: direct } };
   await verifyPreviewState(state, localChecksums(), config, { allowCleanup: true });
   const [runtime] = await sql.query("SELECT pinned,git_deleted_at,last_seen_at FROM wc_preview_meta.runtime WHERE id=true");
+  inspection.lastSeenAt = runtime.last_seen_at;
   const decision = previewRetentionDecision({ exists: refs.branches.has(gitBranch), openPullRequest: refs.prs.has(gitBranch), pinned: runtime.pinned, deletedAt: runtime.git_deleted_at, lastSeenAt: runtime.last_seen_at, graceDays: config.preview.cleanupGraceDays });
   console.log({ gitBranch, branch: branch.id, status: decision, apply });
   if (!apply) return;
@@ -82,5 +98,6 @@ async function review(branch) {
   const handoff = await handoffVariable(gitBranch, vercel, config);
   if (handoff) await vercel.request(`/v9/projects/${config.vercel.resourceProjectId}/env/${handoff.id}`, { method: "DELETE" });
   await provider.request(`/projects/${config.preview.projectId}/branches/${branch.id}`, { method: "DELETE" });
+  inspection.removed = true;
   console.log({ branch: branch.id, status: "removed-after-grace-period" });
 }
