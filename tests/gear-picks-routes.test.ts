@@ -38,6 +38,7 @@ import { checkRateLimit, enforceRateLimit } from "@/lib/rate-limit";
 import { GET as getMe, PUT as putMe } from "@/app/api/gear-picks/me/route";
 import { GET as getAdmin, PATCH as patchAdmin } from "@/app/api/gear-picks/admin/route";
 import { GET as exportCsv } from "@/app/api/gear-picks/admin/export.csv/route";
+import { GET as exportSheet } from "@/app/api/gear-picks/admin/export.xlsx/route";
 import { GET as getUserPicks } from "@/app/api/gear-picks/users/[userId]/route";
 
 type MockFn = ReturnType<typeof vi.fn>;
@@ -343,6 +344,7 @@ describe("admin routes", () => {
     expect((await getAdmin(new Request(`${ORIGIN}/api/gear-picks/admin`), context)).status).toBe(403);
     expect((await patchAdmin(patch({ action: "setDeadline", deadline: null }), context)).status).toBe(403);
     expect((await exportCsv(new Request(`${ORIGIN}/api/gear-picks/admin/export.csv`), context)).status).toBe(403);
+    expect((await exportSheet(new Request(`${ORIGIN}/api/gear-picks/admin/export.xlsx`), context)).status).toBe(403);
     expect(db.$transaction).not.toHaveBeenCalled();
   });
 
@@ -502,5 +504,31 @@ describe("admin routes", () => {
       `Staff Pick,Erik Role,${MEN_TEE},Athletics SS Tee,Black,L,2,15.00,30.00,2026-10-07T15:00:00.000Z`,
     ]);
     expect(createAuditEntry).toHaveBeenCalledWith(expect.objectContaining({ entityType: "gear_pick_cycle", action: "export" }));
+  });
+
+  it("exports the equipment department's workbook", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(admin);
+    vi.mocked(db.gearPickCycle.findUnique).mockResolvedValue(openCycle as never);
+    vi.mocked(db.user.findMany).mockResolvedValue([]);
+    vi.mocked(db.gearPickParticipant.findMany).mockResolvedValue([
+      {
+        id: "participant-1",
+        fit: "MEN",
+        allowanceCents: 18_500,
+        user: { id: "user-1", name: "Erik Role", email: "erik@example.com", active: true, topSize: "L", shoeSize: "11" },
+        submission: savedSubmission({ submittedAt: new Date("2026-10-07T15:00:00Z") }),
+      },
+    ] as never);
+
+    const response = await exportSheet(new Request(`${ORIGIN}/api/gear-picks/admin/export.xlsx`), context);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    expect(response.headers.get("content-disposition")).toContain("equipment-sheet-2027-28.xlsx");
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect((await response.arrayBuffer()).byteLength).toBeGreaterThan(10_000);
+    expect(createAuditEntry).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "export", after: expect.objectContaining({ format: "equipment_sheet", rowCount: 1 }) }),
+    );
   });
 });
