@@ -1,6 +1,22 @@
 [
   {
     "date": "2026-10-09",
+    "title": "Mac app status and shortcuts",
+    "type": "improvement",
+    "summary": "The GearOps menu bar app tells you when its numbers might be out of date and is quicker to use from the keyboard.",
+    "details": [
+      "Data that hasn't been confirmed for 15 minutes is marked Needs attention.",
+      "Opening the menu refreshes it, at most once a minute.",
+      "Search bookings, move through rows with the arrow keys, and choose to count only overdue items.",
+      "Control-Option-Command-G opens a Status window when macOS hides the menu bar icon."
+    ],
+    "platforms": [
+      "macOS"
+    ],
+    "pr": 448
+  },
+  {
+    "date": "2026-10-09",
     "title": "Release notes",
     "type": "feature",
     "summary": "A public Releases page lists what shipped and when across web, iOS, the kiosk, and the Mac app, going back to the first build.",
