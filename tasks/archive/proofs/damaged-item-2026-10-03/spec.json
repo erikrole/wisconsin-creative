@@ -1,0 +1,42 @@
+{
+  "title": "Damaged item reporting and staff follow-up",
+  "eyebrow": "Wisconsin Creative \u00b7 Local review \u00b7 October 3, 2026",
+  "lede": "Reports now hold damaged gear consistently, preserve evidence, and give staff a clear place to inspect it before release.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "After-only component evidence",
+      "note": "Sample data rendered with the actual ItemConditionReports component and compiled application CSS. Desktop and narrow-width states were inspected. No trustworthy authenticated before capture was available; no comparison is claimed.",
+      "pairs": []
+    }
+  ],
+  "changes": [
+    {
+      "h": "Reporting and evidence",
+      "was": "Web reports could save without a maintenance hold; damage could be submitted without evidence; old photos were deleted on replacement.",
+      "now": "Report, hold, and audit commit together. Damage needs a description or photo, including retained evidence. Conflicting in-flight edits return a conflict, and old evidence remains accessible through audit."
+    },
+    {
+      "h": "Staff follow-up",
+      "was": "Item detail did not expose the condition reports that explained the hold.",
+      "now": "Staff/admin see up to five recent reports with evidence, reporter, date, and checkout links. Reports remain visible when the hold is cleared."
+    },
+    {
+      "h": "Maintenance release",
+      "was": "A blind toggle could reverse the intended state, and a stale inspection could miss new damage.",
+      "now": "Item detail asks staff to confirm inspection and sends an explicit desired status against the item version they reviewed. New damage updates that version. Legacy bodyless callers remain compatible."
+    }
+  ],
+  "verification": [
+    "83 focused tests passed across 10 files, including native API/source compatibility.",
+    "Eight new safety regressions fail against isolated copies of the original service and maintenance route.",
+    "TypeScript, edited-file lint, final application build, documentation verification, and diff whitespace checks passed.",
+    "No schema change, production data mutation, commit, push, or deployment."
+  ],
+  "notes": [
+    "Authenticated browser/save proof is blocked by the unrelated pending Radio Clip migration 0156_radio_clip_sign_in in this branch preview.",
+    "Screenshots show an isolated static component, not the full item page. They do not prove persistence, notifications, actual damage photos, or the inspection confirmation interaction.",
+    "Native/list clients still use the legacy maintenance toggle; the explicit version guard is wired to web item detail.",
+    "No repair assignment, repair notes, or separate report-resolution state was introduced."
+  ]
+}

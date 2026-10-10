@@ -1,6 +1,22 @@
 [
   {
     "date": "2026-10-09",
+    "title": "Dismiss damage flags",
+    "type": "improvement",
+    "summary": "Staff can clear a handled damage flag from the dashboard, and an item's page now shows its recent condition reports.",
+    "details": [
+      "Each flagged item appears once on the dashboard, most serious first.",
+      "Click a damaged or lost item to review the report and photo, as before.",
+      "The × beside a damage flag hides it from the dashboard; the report stays in the item's history.",
+      "Item Info lists the five most recent condition reports with their photos."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 447
+  },
+  {
+    "date": "2026-10-09",
     "title": "Accurate notification badge",
     "type": "fixes",
     "summary": "The iPhone app's badge now matches your unread notifications.",
