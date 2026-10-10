@@ -11,8 +11,10 @@
 
 | Model | Fields | Model-level indexes/constraints |
 |---|---:|---:|
-| `User` | 129 | 5 |
-| `Session` | 6 | 2 |
+| `User` | 130 | 5 |
+| `RadioClipAuthorization` | 6 | 3 |
+| `RadioClipSession` | 6 | 3 |
+| `Session` | 8 | 2 |
 | `PasswordResetToken` | 6 | 2 |
 | `PasskeyCredential` | 12 | 2 |
 | `PasskeyChallenge` | 9 | 3 |

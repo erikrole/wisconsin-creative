@@ -131,7 +131,7 @@ Values: `UPLOADING`, `FINALIZING`, `COMMITTED`, `FAILED`
 
 ## Model `User`
 
-Fields: 129
+Fields: 130
 
 - `id                            String                           @id @default(cuid())`
 - `name                          String`
@@ -162,6 +162,7 @@ Fields: 129
 - `updatedAt                     DateTime                         @updatedAt @map("updated_at")`
 - `lastActiveAt                  DateTime?                        @map("last_active_at")`
 - `location                      Location?                        @relation(fields: [locationId], references: [id], onDelete: SetNull)`
+- `radioClipEnabled              Boolean                          @default(false) @map("radio_clip_enabled")`
 - `sessions                      Session[]`
 - `passkeyCredentials            PasskeyCredential[]`
 - `passkeyChallenges             PasskeyChallenge[]`
@@ -271,16 +272,52 @@ Indexes and constraints:
 - `@@index([directReportId])`
 - `@@map("users")`
 
-## Model `Session`
+## Model `RadioClipAuthorization`
 
 Fields: 6
 
-- `id        String   @id @default(cuid())`
-- `userId    String   @map("user_id")`
-- `tokenHash String   @unique @map("token_hash")`
-- `expiresAt DateTime @map("expires_at")`
-- `createdAt DateTime @default(now()) @map("created_at")`
-- `user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)`
+- `id              String   @id @default(cuid())`
+- `codeHash        String   @unique @map("code_hash")`
+- `challenge       String`
+- `parentSessionId String   @map("parent_session_id")`
+- `expiresAt       DateTime @map("expires_at")`
+- `parentSession   Session  @relation(fields: [parentSessionId], references: [id], onDelete: Cascade)`
+
+Indexes and constraints:
+
+- `@@index([parentSessionId])`
+- `@@index([expiresAt])`
+- `@@map("radio_clip_authorizations")`
+
+## Model `RadioClipSession`
+
+Fields: 6
+
+- `id              String   @id @default(cuid())`
+- `tokenHash       String   @unique @map("token_hash")`
+- `parentSessionId String   @map("parent_session_id")`
+- `expiresAt       DateTime @map("expires_at")`
+- `createdAt       DateTime @default(now()) @map("created_at")`
+- `parentSession   Session  @relation(fields: [parentSessionId], references: [id], onDelete: Cascade)`
+
+Indexes and constraints:
+
+- `@@index([parentSessionId])`
+- `@@index([expiresAt])`
+- `@@map("radio_clip_sessions")`
+
+## Model `Session`
+
+Fields: 8
+
+- `radioClipAuthorizations RadioClipAuthorization[]`
+- `radioClipSessions       RadioClipSession[]`
+- `id                      String                   @id @default(cuid())`
+- `userId                  String                   @map("user_id")`
+- `tokenHash               String                   @unique @map("token_hash")`
+- `expiresAt               DateTime                 @map("expires_at")`
+- `createdAt               DateTime                 @default(now()) @map("created_at")`
+- `user                    User                     @relation(fields: [userId], references: [id], onDelete: Cascade)`
 
 Indexes and constraints:
 

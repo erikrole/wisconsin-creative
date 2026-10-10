@@ -18,11 +18,20 @@ const PUBLIC_HANDLER_ROUTES: Record<string, string[]> = {
   "src/app/api/companion/projection/route.ts": ["GET"],
   "src/app/api/companion/session/route.ts": ["POST"],
   "src/app/api/kiosk/activate/route.ts": ["POST"],
+  "src/app/api/radio-clip/availability/route.ts": ["GET"],
+  "src/app/api/radio-clip/token/route.ts": ["POST"],
+  "src/app/api/radio-clip/session/route.ts": ["GET", "DELETE"],
   "src/app/api/seed/route.ts": ["POST"],
   "src/app/api/shifts/ics/[token]/route.ts": ["GET"],
 };
 const PUBLIC_HANDLER_ALLOWLIST = new Set(Object.keys(PUBLIC_HANDLER_ROUTES));
 const PUBLIC_ROUTE_SAFETY: Record<string, RegExp[]> = {
+  // Discovery returns only rollout availability, without an account/database read.
+  "src/app/api/radio-clip/availability/route.ts": [/\bradioClipAuthEnabled\s*\(/],
+  // Exchange validates a short-lived code and PKCE inside a serializable transaction.
+  "src/app/api/radio-clip/token/route.ts": [/\bexchangeRadioClip\s*\(/, /\benforceRateLimit\s*\(/, /\bgetClientIp\s*\(/],
+  // These use scoped native bearer auth, not browser-cookie auth.
+  "src/app/api/radio-clip/session/route.ts": [/\brequireRadioClipSession\s*\(/, /\brevokeRadioClipSession\s*\(/, /\benforceRateLimit\s*\(/, /\bgetClientIp\s*\(/],
   "src/app/api/auth/discover/route.ts": [
     /\b(?:checkRateLimit|enforceRateLimit)\s*\(/,
     /\bgetClientIp\s*\(/,

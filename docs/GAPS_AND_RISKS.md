@@ -304,3 +304,7 @@ Review duplicate automatic builds are removed; main protection, sanitized previe
 - 2026-07-16: Closed collaborator stale-response, audit-history, and hidden/draft event-link leak paths; centralized fixed profile policy; and added representative route-level denial coverage. Production rollout ordering and smoke remain open.
 - 2026-07-16: Applied the affiliation-policy migration through `0098`, preserved BTN parity, seeded Learfield suspended, and moved the remaining collaborator risk to authenticated production editor/client smoke.
 - 2026-07-11: Split the active registry from the full historical ledger. Resolved gap rows, decisions, and dated reconciliation notes remain in [GAPS_AND_RISKS_HISTORY.md](archive/GAPS_AND_RISKS_HISTORY.md); this file now contains only active follow-up and deliberate deferral.
+
+## Radio Clip sign-in rollout — 2026-10-02
+
+Local source only: [Radio Clip identity](AREA_RADIO_CLIP.md). Migration 0172, feature-owned preview, explicit account grants, PostgreSQL race proof, browser/native/Keychain acceptance and production release remain open. Roles alone grant no access.
