@@ -27,7 +27,7 @@ Signout records durable local intent before network work. Failed remote revocati
 
 ## Rollout and verification
 
-Migration `0156_radio_clip_sign_in` is additive, generated from local schema diff, not applied. Apply it through supported wrappers to a Radio Clip-owned preview first. Set `RADIO_CLIP_AUTH_ENABLED=true` only for that accepted target; unset/false fails closed. Grant a chosen test account through the Admin API. Native preview builds can set HTTPS `RadioClipIdentityOrigin` in Info.plist; default is `https://wisconsincreative.com`.
+Migration `0163_radio_clip_sign_in` is additive, generated from local schema diff, not applied. Apply it through supported wrappers to a Radio Clip-owned preview first. Set `RADIO_CLIP_AUTH_ENABLED=true` only for that accepted target; unset/false fails closed. Grant a chosen test account through the Admin API. Native preview builds can set HTTPS `RadioClipIdentityOrigin` in Info.plist; default is `https://wisconsincreative.com`.
 
 Verify student/staff/admin/disabled/revoked accounts, password and passkey roundtrips, cancellation/replay, PostgreSQL concurrent consumption, Keychain persistence, offline logout retry and parent-session revocation. Production migration/deployment/grants and native installation remain separately authorized actions.
 
