@@ -8,8 +8,10 @@
 
 /* Begin PBXBuildFile section */
 		055F4B0AC9B46FA4D636A436 /* GearOpsFixture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B86234D8CAF9A7591CFF289 /* GearOpsFixture.swift */; };
+		0EF78EA6F343466949CE051F /* BookingCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A6F4FA8BB55E3F1CFCCB2D2 /* BookingCards.swift */; };
 		12F954F7DF3DE2AF1D1D244E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 52BE26BCA53BFA17CE2331EA /* Assets.xcassets */; };
 		3819EF82C0CDD842A4EB5663 /* GearOpsClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD50E8F0C4AF83EA7C947D7C /* GearOpsClient.swift */; };
+		3F60A69E87E7B454ABCB3AA0 /* ExtraWindowEvents.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF3D90DEE6C6FF49150F5927 /* ExtraWindowEvents.swift */; };
 		42F9933796384A03AFFA4E27 /* Health.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C9EB2C7AC640C2978C0DCB2 /* Health.swift */; };
 		43734FB645FE39D54CC518A6 /* GearOpsModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C95649353663B9CE02034E7D /* GearOpsModel.swift */; };
 		471F3F8855DC46FAE536D10E /* NotificationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10844358F72CEB649BA44513 /* NotificationSettings.swift */; };
@@ -21,10 +23,12 @@
 		8E5B043CF8627775640CB555 /* UserAvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33D1C8F14EBFC0189BF52391 /* UserAvatarView.swift */; };
 		A04AC6934B1CB7ADF69821C5 /* WisconsinCreativeIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B630A1226F3437DDB20FBB6 /* WisconsinCreativeIcon.swift */; };
 		A59CF7CBAA3EEBC381E3C83C /* NotificationSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9E7B9D7A3F926D6A046A8F6 /* NotificationSettingsTests.swift */; };
+		A9712589CF314CC198AA9CBE /* HealthPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C6D6597C8A1E664A11EF9B0 /* HealthPanel.swift */; };
 		ADBA1160F72DAC2C1194FD3D /* MenuBarContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A59DF7FF790F4970DA140B64 /* MenuBarContentView.swift */; };
 		AF091A778AD4503CD473791E /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30468EAF0B11F845969A76D1 /* Models.swift */; };
 		B01CBCA0F661995E681CC51D /* BookingNotifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12328C9B02D83F0513C2CBEE /* BookingNotifications.swift */; };
 		B38828AF160371041FD13C59 /* GearOpsModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F8402E8593294E55B8C38BA /* GearOpsModelTests.swift */; };
+		B3DE78DDB729B8D7A450E1A0 /* GlobalShortcut.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46F7EC333B4EC0F11859FFCB /* GlobalShortcut.swift */; };
 		C29F47682B3F85B3B54181CB /* HealthTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B0421500DB5559BC742DAA5 /* HealthTests.swift */; };
 		C5134C168373D9D1EA7FF135 /* AppPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADEDBA439628BD9AF979D094 /* AppPreferences.swift */; };
 		CB125D495C4907162C5D0FF4 /* CompanionPushBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DB213E7BC6DC532FB07619F /* CompanionPushBridge.swift */; };
@@ -44,6 +48,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		0C6D6597C8A1E664A11EF9B0 /* HealthPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthPanel.swift; sourceTree = "<group>"; };
 		10844358F72CEB649BA44513 /* NotificationSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationSettings.swift; sourceTree = "<group>"; };
 		12328C9B02D83F0513C2CBEE /* BookingNotifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingNotifications.swift; sourceTree = "<group>"; };
 		13D43E7CA9B67EFFA943D416 /* BookingNotificationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingNotificationTests.swift; sourceTree = "<group>"; };
@@ -53,6 +58,7 @@
 		30468EAF0B11F845969A76D1 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		33D1C8F14EBFC0189BF52391 /* UserAvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserAvatarView.swift; sourceTree = "<group>"; };
 		3DB213E7BC6DC532FB07619F /* CompanionPushBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionPushBridge.swift; sourceTree = "<group>"; };
+		46F7EC333B4EC0F11859FFCB /* GlobalShortcut.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalShortcut.swift; sourceTree = "<group>"; };
 		4E865EC1D3FEAB5F9B4C5D4A /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
 		509274ABE0FA7D0BD3CA1D0D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		52BE26BCA53BFA17CE2331EA /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -60,6 +66,7 @@
 		62B91FAB211BD782021996F5 /* BrandScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrandScene.swift; sourceTree = "<group>"; };
 		645A0D5508191987C2B49246 /* WisconsinCreativeIconTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WisconsinCreativeIconTests.swift; sourceTree = "<group>"; };
 		696B6C89830D0610E053FC91 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		7A6F4FA8BB55E3F1CFCCB2D2 /* BookingCards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingCards.swift; sourceTree = "<group>"; };
 		7C9EB2C7AC640C2978C0DCB2 /* Health.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Health.swift; sourceTree = "<group>"; };
 		7F8402E8593294E55B8C38BA /* GearOpsModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GearOpsModelTests.swift; sourceTree = "<group>"; };
 		8B0421500DB5559BC742DAA5 /* HealthTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthTests.swift; sourceTree = "<group>"; };
@@ -72,6 +79,7 @@
 		C9E7B9D7A3F926D6A046A8F6 /* NotificationSettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationSettingsTests.swift; sourceTree = "<group>"; };
 		CB2E396E0DD7D90FDF196A04 /* GearOpsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GearOpsApp.swift; sourceTree = "<group>"; };
 		D9DB74AC3C748F38FD6400C0 /* GearOpsTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GearOpsTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		FF3D90DEE6C6FF49150F5927 /* ExtraWindowEvents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtraWindowEvents.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -97,15 +105,19 @@
 			isa = PBXGroup;
 			children = (
 				ADEDBA439628BD9AF979D094 /* AppPreferences.swift */,
+				7A6F4FA8BB55E3F1CFCCB2D2 /* BookingCards.swift */,
 				12328C9B02D83F0513C2CBEE /* BookingNotifications.swift */,
 				62B91FAB211BD782021996F5 /* BrandScene.swift */,
 				B27E701B37D3AE7CE57808AA /* CompanionCredentialStore.swift */,
 				3DB213E7BC6DC532FB07619F /* CompanionPushBridge.swift */,
+				FF3D90DEE6C6FF49150F5927 /* ExtraWindowEvents.swift */,
 				CB2E396E0DD7D90FDF196A04 /* GearOpsApp.swift */,
 				AD50E8F0C4AF83EA7C947D7C /* GearOpsClient.swift */,
 				5B86234D8CAF9A7591CFF289 /* GearOpsFixture.swift */,
 				C95649353663B9CE02034E7D /* GearOpsModel.swift */,
+				46F7EC333B4EC0F11859FFCB /* GlobalShortcut.swift */,
 				7C9EB2C7AC640C2978C0DCB2 /* Health.swift */,
+				0C6D6597C8A1E664A11EF9B0 /* HealthPanel.swift */,
 				696B6C89830D0610E053FC91 /* LoginView.swift */,
 				A59DF7FF790F4970DA140B64 /* MenuBarContentView.swift */,
 				30468EAF0B11F845969A76D1 /* Models.swift */,
@@ -270,15 +282,19 @@
 			buildActionMask = 2147483647;
 			files = (
 				C5134C168373D9D1EA7FF135 /* AppPreferences.swift in Sources */,
+				0EF78EA6F343466949CE051F /* BookingCards.swift in Sources */,
 				B01CBCA0F661995E681CC51D /* BookingNotifications.swift in Sources */,
 				F471188794B8B42BF9D54F7E /* BrandScene.swift in Sources */,
 				6FB835B637C72491D5AF315C /* CompanionCredentialStore.swift in Sources */,
 				CB125D495C4907162C5D0FF4 /* CompanionPushBridge.swift in Sources */,
+				3F60A69E87E7B454ABCB3AA0 /* ExtraWindowEvents.swift in Sources */,
 				51EF592216310A42F7EE3710 /* GearOpsApp.swift in Sources */,
 				3819EF82C0CDD842A4EB5663 /* GearOpsClient.swift in Sources */,
 				055F4B0AC9B46FA4D636A436 /* GearOpsFixture.swift in Sources */,
 				43734FB645FE39D54CC518A6 /* GearOpsModel.swift in Sources */,
+				B3DE78DDB729B8D7A450E1A0 /* GlobalShortcut.swift in Sources */,
 				42F9933796384A03AFFA4E27 /* Health.swift in Sources */,
+				A9712589CF314CC198AA9CBE /* HealthPanel.swift in Sources */,
 				FCF5D1DE7E1ADC35DC743C7C /* LoginView.swift in Sources */,
 				ADBA1160F72DAC2C1194FD3D /* MenuBarContentView.swift in Sources */,
 				AF091A778AD4503CD473791E /* Models.swift in Sources */,
@@ -307,7 +323,7 @@
 				CODE_SIGN_ENTITLEMENTS = GearOps/Supporting/GearOps.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = T26T3G8C7Q;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = GearOps/Supporting/Info.plist;
@@ -316,7 +332,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 1.0.5;
+				MARKETING_VERSION = 1.0.6;
 				PRODUCT_BUNDLE_IDENTIFIER = com.erikrole.GearOps;
 				PRODUCT_MODULE_NAME = GearOps;
 				PRODUCT_NAME = "Wisconsin Creative";
@@ -351,7 +367,7 @@
 				CODE_SIGN_ENTITLEMENTS = GearOps/Supporting/GearOps.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = T26T3G8C7Q;
 				INFOPLIST_FILE = GearOps/Supporting/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -359,7 +375,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 1.0.5;
+				MARKETING_VERSION = 1.0.6;
 				PRODUCT_BUNDLE_IDENTIFIER = com.erikrole.GearOps;
 				PRODUCT_MODULE_NAME = GearOps;
 				PRODUCT_NAME = "Wisconsin Creative";

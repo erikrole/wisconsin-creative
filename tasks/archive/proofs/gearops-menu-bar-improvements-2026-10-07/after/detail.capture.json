@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "447e30bb91b0bb0937c60ba6498e7d46b0509ed3",
+  "sourcePatchSha256": "8d6d70271748df56626ab7d64030f68bc77a50365ec94bbcd7be257c5ba8c40a",
+  "settings": {
+    "device": "MacBook Pro, macOS 27.0 (Darwin 27.0.0), Debug build, fixture Status window",
+    "viewport": [
+      380,
+      529
+    ],
+    "fixture": "GEAROPS_FIXTURE=glance (GearOpsFixture.swift, hour-anchored clock)",
+    "role": "STAFF (fixture user)",
+    "route": "booking detail: fixture-open-overdue",
+    "appearance": "light",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "2026-10-07 08:00-09:00 local hour anchor",
+    "scroll": [
+      0,
+      0
+    ]
+  },
+  "imageSha256": "7645b629f0de3e0459743edf64052d6f0048223554bfcdd6edbe60b98958bd37",
+  "dimensions": [
+    760,
+    1058
+  ]
+}

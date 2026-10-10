@@ -3,13 +3,18 @@ import SwiftUI
 
 enum GearOpsWindow {
     static let settings = "settings"
-    static let fixture = "fixture"
+    static let status = "status"
 }
 
 @main
 struct GearOpsApp: App {
     @NSApplicationDelegateAdaptor(GearOpsAppDelegate.self) private var appDelegate
     @State private var model = GearOpsApp.makeModel()
+    /// Lets overdue mode follow the clock past a due time. A `TimelineView`
+    /// cannot be used here: inside a `MenuBarExtra` label it re-renders the
+    /// status button endlessly and hangs launch. This reads nothing from the
+    /// network.
+    @State private var labelClock = Date.now
     @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
@@ -25,12 +30,13 @@ struct GearOpsApp: App {
             HStack(spacing: 4) {
                 Image(systemName: model.menuBarSymbol)
                     .symbolRenderingMode(.monochrome)
-                if model.appPreferences.showsMenuBarCount, let count = model.custodyCount {
+                if let count = model.menuBarCount(at: labelClock) {
                     Text(count, format: .number)
                         .monospacedDigit()
                 }
             }
-            .accessibilityLabel(model.menuBarAccessibilityLabel)
+            .accessibilityLabel(model.menuBarAccessibilityLabel(at: labelClock))
+            .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { labelClock = $0 }
         }
         // Bookings, pickups, health, and sign-in are too complex for a flat
         // command menu, which is Apple's documented exception to "display a
@@ -39,6 +45,24 @@ struct GearOpsApp: App {
         .onChange(of: preferences.showsMenuBarExtra, initial: true) { _, visible in
             GearOpsActivation.apply(showsMenuBarExtra: visible)
         }
+        .onChange(of: preferences.usesGlobalShortcut, initial: true) { _, enabled in
+            #if DEBUG
+            // Capture fixtures run beside the installed app; never take its key.
+            if GearOpsFixture.isActive { return }
+            #endif
+            GlobalShortcut.shared.setEnabled(enabled)
+        }
+
+        // The same glance content as the extra, in an ordinary window. The
+        // global shortcut and Dock reopen use it when the extra is hidden or
+        // macOS has tucked it away for space; capture fixtures present it.
+        Window(GearOpsApp.statusWindowTitle, id: GearOpsWindow.status) {
+            MenuBarContentView(model: model)
+        }
+        .windowResizability(.contentSize)
+        .defaultLaunchBehavior(GearOpsApp.presentsStatusAtLaunch ? .presented : .suppressed)
+        // A login item must not reopen this window unbidden at the next login.
+        .restorationBehavior(.disabled)
 
         // Not a `Settings` scene: an accessory app never activates itself, so
         // the settings window opened behind every other window and read as
@@ -59,16 +83,29 @@ struct GearOpsApp: App {
                 }
                 .keyboardShortcut(",", modifiers: .command)
             }
+            CommandGroup(after: .appSettings) {
+                Button(GearOpsStatusPresenter.menuItemTitle) {
+                    NSApplication.shared.activate()
+                    openWindow(id: GearOpsWindow.status)
+                }
+            }
         }
+    }
 
+    /// `GEAROPS_FIXTURE=glance` keeps the fixture title so review captures
+    /// stay matched to earlier baselines.
+    static var statusWindowTitle: String {
         #if DEBUG
-        // Capture surface for `GEAROPS_FIXTURE=glance`: the popover content in
-        // an ordinary window, since a menu bar extra cannot be opened by script.
-        Window("Wisconsin Creative Fixture", id: GearOpsWindow.fixture) {
-            MenuBarContentView(model: model)
-        }
-        .windowResizability(.contentSize)
-        .defaultLaunchBehavior(GearOpsFixture.isActive ? .presented : .suppressed)
+        if GearOpsFixture.isActive { return "Wisconsin Creative Fixture" }
+        #endif
+        return "Wisconsin Creative"
+    }
+
+    private static var presentsStatusAtLaunch: Bool {
+        #if DEBUG
+        return GearOpsFixture.isActive
+        #else
+        return false
         #endif
     }
 
