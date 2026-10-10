@@ -21,9 +21,10 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useFormSubmit } from "@/hooks/use-form-submit";
 import { classifyError, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { AUTH_EMAIL_DOMAIN_NOTE, shouldSuggestWiscEmail } from "@/lib/auth-email-guidance";
-import { isPasskeyCancellation, passkeyErrorMessage } from "@/lib/passkey-client";
+import { isPasskeyCancellation, passkeyErrorMessage, upgradeToPasskeyAfterSignIn } from "@/lib/passkey-client";
 import { AccountUsernameField, passwordRulesAttribute } from "@/components/auth/AccountUsernameField";
 import { validatePassword, validatePasswordConfirmation } from "@/lib/password-rules";
+import { safeReturnTo } from "@/lib/return-to";
 
 type LoginResponse = {
   user?: {
@@ -62,7 +63,10 @@ export default function LoginForm() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+  // On by default: people sign in from their own phones and laptops, and an
+  // unremembered session ends with the browser. Untick on a shared computer.
+  const [rememberMe, setRememberMe] = useState(true);
+  const [returnTo, setReturnTo] = useState<string | null>(null);
   const [step, setStep] = useState<AuthStep>("identity");
   const [identityLoading, setIdentityLoading] = useState(false);
   const [identityError, setIdentityError] = useState("");
@@ -81,8 +85,10 @@ export default function LoginForm() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    const invitedEmail = new URLSearchParams(window.location.search).get("email")?.trim() ?? "";
+    const params = new URLSearchParams(window.location.search);
+    const invitedEmail = params.get("email")?.trim() ?? "";
     if (invitedEmail) setEmail(invitedEmail);
+    setReturnTo(safeReturnTo(params.get("returnTo")));
   }, []);
 
   useEffect(() => {
@@ -100,7 +106,10 @@ export default function LoginForm() {
     url: "/api/auth/login",
     skipAuthRedirect: true,
     onSuccess: (data: LoginResponse) => {
-      router.replace(data.user?.forcePasswordChange ? "/change-password" : "/");
+      // A password the manager just filled can become a passkey with no prompt.
+      // Not during a forced change: that password is about to be replaced.
+      if (!data.user?.forcePasswordChange) void upgradeToPasskeyAfterSignIn(passwordRef.current?.value ?? "");
+      router.replace(data.user?.forcePasswordChange ? "/change-password" : returnTo ?? "/");
     },
     onError: (kind) => setIsNetworkError(kind === "network"),
   });
@@ -113,7 +122,10 @@ export default function LoginForm() {
   } = useFormSubmit({
     url: "/api/auth/register",
     skipAuthRedirect: true,
-    onSuccess: () => router.replace("/welcome"),
+    onSuccess: () => {
+      void upgradeToPasskeyAfterSignIn(passwordRef.current?.value ?? "");
+      router.replace("/welcome");
+    },
     onError: (kind) => setIsNetworkError(kind === "network"),
   });
 
@@ -231,6 +243,7 @@ export default function LoginForm() {
       name: name.trim(),
       email: email.trim().toLowerCase(),
       password,
+      rememberMe,
     });
   }
 
@@ -290,7 +303,7 @@ export default function LoginForm() {
       const result = await parseJsonSafely<LoginResponse>(verifyResponse);
       if (!isCurrent()) return assertionReceived;
       passkeyNavigatedRef.current = true;
-      router.replace(result?.user?.forcePasswordChange ? "/change-password" : "/");
+      router.replace(result?.user?.forcePasswordChange ? "/change-password" : returnTo ?? "/");
     } catch (error) {
       if (!isCurrent()) return assertionReceived;
       if (isPasskeyCancellation(error)) return assertionReceived;
@@ -512,18 +525,16 @@ export default function LoginForm() {
                 </div>
               )}
 
-              {!isOnboarding && (
-                <div className="login-rise flex items-center gap-2" style={{ "--rise-index": 4 } as React.CSSProperties}>
-                  <Checkbox
-                    id="rememberMe"
-                    name="rememberMe"
-                    checked={rememberMe}
-                    onCheckedChange={(checked) => setRememberMe(checked === true)}
-                    className="login-checkbox shrink-0"
-                  />
-                  <Label htmlFor="rememberMe" className="text-sm text-muted-foreground cursor-pointer font-normal leading-none">Remember me for 30 days</Label>
-                </div>
-              )}
+              <div className="login-rise flex items-center gap-2" style={{ "--rise-index": 4 } as React.CSSProperties}>
+                <Checkbox
+                  id="rememberMe"
+                  name="rememberMe"
+                  checked={rememberMe}
+                  onCheckedChange={(checked) => setRememberMe(checked === true)}
+                  className="login-checkbox shrink-0"
+                />
+                <Label htmlFor="rememberMe" className="text-sm text-muted-foreground cursor-pointer font-normal leading-none">Keep me signed in</Label>
+              </div>
 
               <div className="grid grid-rows-[0fr] transition-[grid-template-rows] duration-200 data-[visible=true]:grid-rows-[1fr]" data-visible={!!formError}>
                 <div className="overflow-hidden">

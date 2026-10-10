@@ -117,6 +117,7 @@
 
 - `/.well-known/apple-app-site-association` -> `src/app/.well-known/apple-app-site-association/route.ts`
 - `/.well-known/change-password` -> `src/app/.well-known/change-password/route.ts`
+- `/.well-known/passkey-endpoints` -> `src/app/.well-known/passkey-endpoints/route.ts`
 - `/releases/feed.xml` -> `src/app/(public)/releases/feed.xml/route.ts`
 - `/api/accountability/exclusions/[bookingId]` -> `src/app/api/accountability/exclusions/[bookingId]/route.ts`
 - `/api/accountability/exclusions` -> `src/app/api/accountability/exclusions/route.ts`

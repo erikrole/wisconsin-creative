@@ -1,5 +1,24 @@
 [
   {
+    "date": "2026-10-10",
+    "title": "Stay signed in",
+    "type": "improvement",
+    "summary": "You stay signed in while you keep using the app, and a password sign-in can quietly become a passkey.",
+    "details": [
+      "Using the app keeps your sign-in alive. A remembered sign-in lasts as long as you return at least once every 30 days.",
+      "\"Keep me signed in\" now starts ticked and also appears when you create your account. Untick it on a shared computer.",
+      "After signing in, you land back on the page you were trying to open.",
+      "After a password sign-in, your password manager can save a passkey for next time without asking.",
+      "The Mac app can fill in the password you saved for the website."
+    ],
+    "platforms": [
+      "Web",
+      "iOS",
+      "macOS"
+    ],
+    "pr": 450
+  },
+  {
     "date": "2026-10-09",
     "title": "Mac app status and shortcuts",
     "type": "improvement",

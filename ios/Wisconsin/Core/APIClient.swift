@@ -224,6 +224,24 @@ final class APIClient {
         return response.options
     }
 
+    /// Options for a prompt-free passkey upgrade straight after a password
+    /// sign-in, re-authenticated by that password. Nil when the account already
+    /// has a passkey, so the upgrade does nothing.
+    func automaticPasskeyRegistrationOptions(currentPassword: String) async throws -> PasskeyRegistrationOptions? {
+        struct Body: Encodable {
+            let currentPassword: String
+            let automatic = true
+        }
+        struct Response: Decodable {
+            let options: PasskeyRegistrationOptions?
+        }
+
+        var req = request(path: "/api/auth/passkey/registration/options", method: "POST")
+        req.httpBody = try JSONEncoder().encode(Body(currentPassword: currentPassword))
+        let response: Response = try await perform(req)
+        return response.options
+    }
+
     func verifyPasskeyRegistration(
         _ registration: PasskeyRegistrationPayload,
         name: String?

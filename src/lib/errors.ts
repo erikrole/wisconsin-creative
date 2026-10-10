@@ -7,6 +7,8 @@
  * - "server"  → Non-ok response or unexpected exception
  */
 
+import { loginPathWithReturnTo } from "@/lib/return-to";
+
 export type FetchErrorKind = "auth" | "network" | "server";
 
 /**
@@ -37,8 +39,9 @@ export function isAbortError(err: unknown): boolean {
  */
 export function handleAuthRedirect(res: Response, returnTo?: string): boolean {
   if (res.status === 401) {
-    const path = returnTo ? `/login?returnTo=${encodeURIComponent(returnTo)}` : "/login";
-    window.location.href = path;
+    window.location.href = loginPathWithReturnTo(
+      returnTo ?? `${window.location.pathname}${window.location.search}`,
+    );
     return true;
   }
   return false;

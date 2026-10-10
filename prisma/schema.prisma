@@ -349,12 +349,14 @@ model User {
 }
 
 model Session {
-  id        String   @id @default(cuid())
-  userId    String   @map("user_id")
-  tokenHash String   @unique @map("token_hash")
-  expiresAt DateTime @map("expires_at")
-  createdAt DateTime @default(now()) @map("created_at")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  tokenHash  String   @unique @map("token_hash")
+  expiresAt  DateTime @map("expires_at")
+  // Remembered sign-ins slide on a 30-day idle window; others on 12 hours.
+  persistent Boolean  @default(false)
+  createdAt  DateTime @default(now()) @map("created_at")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("sessions")
@@ -402,6 +404,8 @@ model PasskeyChallenge {
   type              PasskeyCeremonyType
   userId            String?             @map("user_id")
   rememberMe        Boolean             @default(false) @map("remember_me")
+  // An automatic upgrade after password sign-in; enrollment UV is relaxed.
+  automatic         Boolean             @default(false)
   expiresAt         DateTime            @map("expires_at")
   createdAt         DateTime            @default(now()) @map("created_at")
   user              User?               @relation(fields: [userId], references: [id], onDelete: Cascade)

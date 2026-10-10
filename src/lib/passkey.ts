@@ -94,6 +94,7 @@ async function saveCeremony(input: {
   userId?: string;
   challenge: string;
   rememberMe?: boolean;
+  automatic?: boolean;
 }) {
   const rawToken = randomHex(32);
   const now = new Date();
@@ -106,6 +107,7 @@ async function saveCeremony(input: {
       type: input.type,
       userId: input.userId,
       rememberMe: input.rememberMe ?? false,
+      automatic: input.automatic ?? false,
       expiresAt: new Date(now.getTime() + PASSKEY_CEREMONY_TTL_MS),
     },
   });
@@ -156,15 +158,29 @@ export async function verifyCurrentPassword(userId: string, currentPassword: str
   }
 }
 
-export async function createPasskeyRegistrationOptions(user: {
-  id: string;
-  email: string;
-  name: string;
-}) {
+/**
+ * Begin an enrollment ceremony. `automatic` is the upgrade a client attempts
+ * straight after a password sign-in (WebAuthn conditional create, iOS
+ * conditional registration): the password was just verified and the password
+ * manager saves the passkey without a prompt, so it may not perform user
+ * verification. Only that ceremony relaxes UV at enrollment; sign-in with the
+ * resulting passkey still requires it. Accounts that already have a passkey
+ * are skipped (null) so an upgrade never piles credentials onto someone who
+ * chose theirs deliberately.
+ */
+export async function createPasskeyRegistrationOptions(
+  user: {
+    id: string;
+    email: string;
+    name: string;
+  },
+  { automatic = false }: { automatic?: boolean } = {},
+) {
   const credentials = await db.passkeyCredential.findMany({
     where: { userId: user.id },
     select: { credentialId: true, transports: true },
   });
+  if (automatic && credentials.length > 0) return null;
   const options = await generateRegistrationOptions({
     rpName: env.passkeyRpName,
     rpID: env.passkeyRpId,
@@ -178,7 +194,7 @@ export async function createPasskeyRegistrationOptions(user: {
     })),
     authenticatorSelection: {
       residentKey: "required",
-      userVerification: "required",
+      userVerification: automatic ? "preferred" : "required",
     },
     timeout: 60_000,
   });
@@ -187,6 +203,7 @@ export async function createPasskeyRegistrationOptions(user: {
     type: PasskeyCeremonyType.REGISTRATION,
     userId: user.id,
     challenge: options.challenge,
+    automatic,
   });
   return options;
 }
@@ -206,7 +223,7 @@ export async function verifyPasskeyRegistration(
       expectedChallenge: ceremony.challenge,
       expectedOrigin: env.passkeyOrigins,
       expectedRPID: env.passkeyRpId,
-      requireUserVerification: true,
+      requireUserVerification: !ceremony.automatic,
     });
   } catch {
     throw new HttpError(400, "Passkey registration could not be verified. Try again.");
@@ -250,7 +267,7 @@ export async function verifyPasskeyRegistration(
   });
 
   await clearCeremonyCookie();
-  return created;
+  return { ...created, automatic: ceremony.automatic };
 }
 
 export async function createPasskeyAuthenticationOptions(rememberMe = false) {

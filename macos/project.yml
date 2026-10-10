@@ -47,6 +47,10 @@ targets:
       path: GearOps/Supporting/GearOps.entitlements
       properties:
         com.apple.developer.aps-environment: $(APS_ENVIRONMENT)
+        # Shared web credentials: AutoFill offers the password (and passkey)
+        # saved for the website, and saves new ones under the same item.
+        com.apple.developer.associated-domains:
+          - webcredentials:wisconsincreative.com
     settings:
       base:
         PRODUCT_NAME: Wisconsin Creative

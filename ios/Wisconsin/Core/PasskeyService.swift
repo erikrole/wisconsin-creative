@@ -33,6 +33,16 @@ enum PasskeyPresentation {
     case autoFill
 }
 
+/// How a passkey is created: one the person asked for in Settings, or a
+/// prompt-free upgrade right after they signed in with a saved password.
+enum PasskeyRegistrationStyle {
+    case standard
+    /// Conditional registration: the credential manager that just filled the
+    /// password saves a passkey with no sheet, or declines silently. The
+    /// server started this ceremony as automatic and accepts it without UV.
+    case automaticUpgrade
+}
+
 /// Owns the short-lived AuthenticationServices controller and converts Apple's
 /// native credentials into the JSON shape consumed by the shared WebAuthn API.
 /// The server remains responsible for challenge, origin, RP ID, user
@@ -45,7 +55,10 @@ final class PasskeyService: NSObject, ASAuthorizationControllerDelegate, ASAutho
     private var continuation: CheckedContinuation<ASAuthorization, Error>?
     private var presentationWindow: UIWindow?
 
-    func register(options: PasskeyRegistrationOptions) async throws -> PasskeyRegistrationPayload {
+    func register(
+        options: PasskeyRegistrationOptions,
+        style: PasskeyRegistrationStyle = .standard
+    ) async throws -> PasskeyRegistrationPayload {
         guard let challenge = Base64URL.decode(options.challenge),
               let userID = Base64URL.decode(options.user.id) else {
             throw PasskeyServiceError.invalidServerOptions
@@ -59,9 +72,16 @@ final class PasskeyService: NSObject, ASAuthorizationControllerDelegate, ASAutho
             name: options.user.name,
             userID: userID
         )
-        // The server verifies with `requireUserVerification`, so ask for it
-        // rather than relying on the platform default.
-        request.userVerificationPreference = .required
+        switch style {
+        case .standard:
+            // The server verifies with `requireUserVerification`, so ask for it
+            // rather than relying on the platform default.
+            request.userVerificationPreference = .required
+        case .automaticUpgrade:
+            // No sheet is shown, so the system cannot verify the person here.
+            request.requestStyle = .conditional
+            request.userVerificationPreference = .preferred
+        }
         // Without the server's exclude list a second enrollment on a device
         // that already holds a passkey silently creates a duplicate row.
         let excluded = (options.excludeCredentials ?? []).compactMap { descriptor in

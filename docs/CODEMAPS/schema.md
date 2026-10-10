@@ -274,14 +274,15 @@ Indexes and constraints:
 
 ## Model `Session`
 
-Fields: 6
+Fields: 7
 
-- `id        String   @id @default(cuid())`
-- `userId    String   @map("user_id")`
-- `tokenHash String   @unique @map("token_hash")`
-- `expiresAt DateTime @map("expires_at")`
-- `createdAt DateTime @default(now()) @map("created_at")`
-- `user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)`
+- `id         String   @id @default(cuid())`
+- `userId     String   @map("user_id")`
+- `tokenHash  String   @unique @map("token_hash")`
+- `expiresAt  DateTime @map("expires_at")`
+- `persistent Boolean  @default(false)`
+- `createdAt  DateTime @default(now()) @map("created_at")`
+- `user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)`
 
 Indexes and constraints:
 
@@ -332,7 +333,7 @@ Indexes and constraints:
 
 ## Model `PasskeyChallenge`
 
-Fields: 9
+Fields: 10
 
 - `id                String              @id @default(cuid())`
 - `ceremonyTokenHash String              @unique @map("ceremony_token_hash")`
@@ -340,6 +341,7 @@ Fields: 9
 - `type              PasskeyCeremonyType`
 - `userId            String?             @map("user_id")`
 - `rememberMe        Boolean             @default(false) @map("remember_me")`
+- `automatic         Boolean             @default(false)`
 - `expiresAt         DateTime            @map("expires_at")`
 - `createdAt         DateTime            @default(now()) @map("created_at")`
 - `user              User?               @relation(fields: [userId], references: [id], onDelete: Cascade)`

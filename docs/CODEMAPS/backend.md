@@ -125,7 +125,7 @@
 | `src/lib/assignment-conflict-review.ts` | 97 |
 | `src/lib/audit.ts` | 168 |
 | `src/lib/auth-email-guidance.ts` | 7 |
-| `src/lib/auth.ts` | 377 |
+| `src/lib/auth.ts` | 436 |
 | `src/lib/auto-fill-preview-types.ts` | 61 |
 | `src/lib/availability-copy.ts` | 343 |
 | `src/lib/avatar.ts` | 44 |
@@ -171,7 +171,7 @@
 | `src/lib/equipment-guidance.ts` | 127 |
 | `src/lib/equipment-section-filters.ts` | 87 |
 | `src/lib/equipment-sections.ts` | 155 |
-| `src/lib/errors.ts` | 80 |
+| `src/lib/errors.ts` | 83 |
 | `src/lib/event-editor.ts` | 107 |
 | `src/lib/external-url.ts` | 30 |
 | `src/lib/fetch-with-timeout.ts` | 25 |
@@ -205,8 +205,8 @@
 | `src/lib/observability.ts` | 19 |
 | `src/lib/operational-health.ts` | 2 |
 | `src/lib/ops-checks.ts` | 212 |
-| `src/lib/passkey-client.ts` | 73 |
-| `src/lib/passkey.ts` | 371 |
+| `src/lib/passkey-client.ts` | 126 |
+| `src/lib/passkey.ts` | 388 |
 | `src/lib/password-rules.ts` | 16 |
 | `src/lib/permissions.ts` | 256 |
 | `src/lib/preview-activity.ts` | 23 |
@@ -231,6 +231,7 @@
 | `src/lib/resource-import-images.ts` | 104 |
 | `src/lib/resource-import.ts` | 186 |
 | `src/lib/resource-search.ts` | 124 |
+| `src/lib/return-to.ts` | 42 |
 | `src/lib/role-preview.ts` | 226 |
 | `src/lib/sanitize.ts` | 40 |
 | `src/lib/schedule-assignee.ts` | 27 |
@@ -288,7 +289,7 @@
 | `src/lib/user-list-cache.ts` | 73 |
 | `src/lib/user-visibility.ts` | 86 |
 | `src/lib/utils.ts` | 22 |
-| `src/lib/validation.ts` | 878 |
+| `src/lib/validation.ts` | 883 |
 | `src/lib/venue-mapping-audit.ts` | 56 |
 | `src/lib/venue-mapping-contract.ts` | 46 |
 | `src/lib/venue-tone.ts` | 135 |
@@ -303,6 +304,10 @@
 ### `/.well-known/change-password`
 
 - `/.well-known/change-password`
+
+### `/.well-known/passkey-endpoints`
+
+- `/.well-known/passkey-endpoints`
 
 ### `/api/accountability`
 

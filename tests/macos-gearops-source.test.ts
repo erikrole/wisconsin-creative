@@ -380,6 +380,19 @@ describe("GearOps macOS menu bar contracts", () => {
     expect(entitlements).toContain("com.apple.developer.aps-environment");
   });
 
+  it("shares the website's saved credentials through AutoFill", () => {
+    // Without associated domains, AutoFill cannot match the GearOps sign-in to
+    // the password (or passkey) people already saved for the website.
+    const entitlements = source("macos/GearOps/Supporting/GearOps.entitlements");
+    const project = source("macos/project.yml");
+    const association = source("src/app/.well-known/apple-app-site-association/route.ts");
+    for (const file of [entitlements, project]) {
+      expect(file).toContain("webcredentials:wisconsincreative.com");
+    }
+    expect(association).toContain('"T26T3G8C7Q.com.erikrole.GearOps"');
+    expect(association).toContain("apps: [APP_ID, GEAROPS_APP_ID]");
+  });
+
   it("publishes kiosk heartbeats only after the existing database touch commits", () => {
     const auth = source("src/lib/auth.ts");
     const deferredActivity = auth.slice(
