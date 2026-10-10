@@ -1056,6 +1056,8 @@ final class GearOpsModelTests: XCTestCase {
         XCTAssertNil(morgan.first?.matchedItem)
 
         XCTAssertEqual(model.searchBookings("co-1051", at: now).map(\.id), ["open:fixture-open-today"])
+        // Reservations match by reference before they become open checkouts.
+        XCTAssertEqual(model.searchBookings("rv-2207", at: now).map(\.id), ["reservation:fixture-pickup"])
         XCTAssertTrue(model.searchBookings("zeppelin", at: now).isEmpty)
         XCTAssertTrue(model.searchBookings("   ", at: now).isEmpty)
     }

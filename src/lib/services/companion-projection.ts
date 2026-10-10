@@ -133,6 +133,7 @@ export async function buildCompanionProjection(
       startsAt: booking.startsAt,
       endsAt: booking.endsAt,
       updatedAt: booking.updatedAt,
+      refNumber: booking.refNumber,
       requester: booking.requester,
       location: booking.location,
       ...companionItemLists(booking),

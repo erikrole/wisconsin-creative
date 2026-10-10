@@ -278,6 +278,8 @@ struct BookingActivitySnapshot: Codable, Equatable, Identifiable, Sendable {
     let location: OpenBooking.Location
     let serializedItems: [OpenBooking.ItemReference]
     let bulkItems: [OpenBooking.ItemReference]
+    /// Optional so projections published before the field existed decode.
+    let refNumber: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -291,6 +293,7 @@ struct BookingActivitySnapshot: Codable, Equatable, Identifiable, Sendable {
         case location
         case serializedItems
         case bulkItems
+        case refNumber
     }
 
     init(
@@ -304,7 +307,8 @@ struct BookingActivitySnapshot: Codable, Equatable, Identifiable, Sendable {
         requester: OpenBooking.Person,
         location: OpenBooking.Location,
         serializedItems: [OpenBooking.ItemReference] = [],
-        bulkItems: [OpenBooking.ItemReference] = []
+        bulkItems: [OpenBooking.ItemReference] = [],
+        refNumber: String? = nil
     ) {
         self.id = id
         self.title = title
@@ -317,6 +321,7 @@ struct BookingActivitySnapshot: Codable, Equatable, Identifiable, Sendable {
         self.location = location
         self.serializedItems = serializedItems
         self.bulkItems = bulkItems
+        self.refNumber = refNumber
     }
 
     init(from decoder: Decoder) throws {
@@ -332,6 +337,7 @@ struct BookingActivitySnapshot: Codable, Equatable, Identifiable, Sendable {
         location = try container.decode(OpenBooking.Location.self, forKey: .location)
         serializedItems = try container.decodeIfPresent([OpenBooking.ItemReference].self, forKey: .serializedItems) ?? []
         bulkItems = try container.decodeIfPresent([OpenBooking.ItemReference].self, forKey: .bulkItems) ?? []
+        refNumber = try container.decodeIfPresent(String.self, forKey: .refNumber)
     }
 
     var items: [OpenBooking.ItemReference] { serializedItems + bulkItems }

@@ -113,6 +113,8 @@ describe("companion projection", () => {
       .toBe("Women's Soccer vs TCU");
     expect(projection.bookingActivity.find((booking) => booking.id === "checkout-1")?.serializedItems)
       .toEqual([{ id: "item-1", name: "FX3", assetTag: "CAM-1" }]);
+    // Reservations carry their reference so the Mac extra can search it.
+    expect(projection.bookingActivity.find((booking) => booking.id === "checkout-1")?.refNumber).toBe("C-1");
     expect(projection.kioskDevices[0]).toMatchObject({
       pendingPickupCount: 1,
       openCheckoutCount: 1,

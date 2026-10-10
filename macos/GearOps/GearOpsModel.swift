@@ -319,7 +319,7 @@ final class GearOpsModel {
             .compactMap { booking in
                 BookingSearchResult.match(
                     terms: terms,
-                    fields: [booking.title, booking.requester.name, booking.location.name],
+                    fields: [booking.title, booking.requester.name, booking.location.name, booking.refNumber],
                     items: booking.items,
                     booking: .reservation(booking)
                 )

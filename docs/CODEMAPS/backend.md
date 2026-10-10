@@ -39,7 +39,7 @@
 | `src/lib/services/collaborator-schedule.ts` | 228 |
 | `src/lib/services/combined-schedule-events.ts` | 295 |
 | `src/lib/services/companion-projection-publisher.ts` | 57 |
-| `src/lib/services/companion-projection.ts` | 250 |
+| `src/lib/services/companion-projection.ts` | 251 |
 | `src/lib/services/consolidation-shared.ts` | 21 |
 | `src/lib/services/dashboard-counts.ts` | 119 |
 | `src/lib/services/event-travel.ts` | 32 |
@@ -157,7 +157,7 @@
 | `src/lib/collaborator-access.ts` | 164 |
 | `src/lib/collaborator-gear.ts` | 151 |
 | `src/lib/combined-schedule-event-suggestions.ts` | 93 |
-| `src/lib/companion-projection-contract.ts` | 70 |
+| `src/lib/companion-projection-contract.ts` | 71 |
 | `src/lib/companion-store.ts` | 302 |
 | `src/lib/crew-pending-review.ts` | 44 |
 | `src/lib/cron.ts` | 35 |

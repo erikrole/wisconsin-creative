@@ -97,7 +97,8 @@ enum GearOpsFixture {
                 updatedAt: hours(-24),
                 requester: morgan,
                 location: videoOffice,
-                serializedItems: [.init(id: "i7", name: "DJI Ronin", assetTag: "SUP-044")]
+                serializedItems: [.init(id: "i7", name: "DJI Ronin", assetTag: "SUP-044")],
+                refNumber: "RV-2207"
             ),
         ]
 
