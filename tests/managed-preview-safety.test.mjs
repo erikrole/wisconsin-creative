@@ -139,7 +139,7 @@ describe("managed preview cleanup compute", () => {
     const calls = [];
     const fetcher = async (url, { method }) => {
       calls.push(`${method} ${url.replace("https://console.neon.tech/api/v2", "")}`);
-      if (url.endsWith("/endpoints")) return new Response(JSON.stringify({ endpoints: [{ id: "ep-idle", current_state: "idle" }, { id: "ep-busy", current_state: "active" }] }));
+      if (url.endsWith("/endpoints")) return new Response(JSON.stringify({ endpoints: [{ id: "ep-idle", current_state: "idle" }, { id: "ep-busy", current_state: "active" }, { id: "ep-starting", current_state: "init", pending_state: "active" }, { id: "ep-waking", current_state: "idle", pending_state: "active" }] }));
       return url.includes("ep-gone") ? new Response(null, { status: 404 }) : new Response(JSON.stringify({ operations: [] }));
     };
     const api = new NeonPreviewApi("token", fetcher);
@@ -160,5 +160,7 @@ describe("managed preview cleanup compute", () => {
     // The activity baseline predates the idle snapshot, so a lease started mid-review is seen.
     expect(source.indexOf("startedAt: new Date()")).toBeLessThan(source.indexOf("provider.idleEndpoints("));
     expect(source).not.toMatch(/retainPreview/);
+    expect(source).toMatch(/if \(!sql\) return true;/);
+    expect(source).toMatch(/pg_stat_activity[^`]*usename=current_user[^`]*pid<>pg_backend_pid\(\)/);
   });
 });

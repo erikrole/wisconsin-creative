@@ -31,7 +31,8 @@ export class NeonPreviewApi {
   }
   async idleEndpoints(project, branchId) {
     const { endpoints } = await this.request(`/projects/${project}/branches/${branchId}/endpoints`);
-    return endpoints.filter((endpoint) => endpoint.current_state !== "active").map((endpoint) => endpoint.id);
+    // Only definitively idle computes; one in "init" or with a pending "active" is being started by someone else.
+    return endpoints.filter((endpoint) => endpoint.current_state === "idle" && !endpoint.pending_state).map((endpoint) => endpoint.id);
   }
   // Cleanup wakes each child to read its retention row. Suspend only the computes
   // it woke so a sweep never exhausts the active-endpoint limit or bills idle time.

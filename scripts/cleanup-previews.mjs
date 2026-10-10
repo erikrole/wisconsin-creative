@@ -39,14 +39,16 @@ for (const branch of await provider.branches(config.preview.projectId)) {
     else await provider.suspendEndpoints(config.preview.projectId, woken);
   }
 }
-// A local lease or authenticated request bumps last_seen_at. Any bump since this
-// branch's inspection began (before the idle snapshot, with a margin for clock skew
-// between runner and database) leaves the compute running. Cleanup itself never
-// bumps it. An unreadable row fails closed so cleanup never interrupts a preview in use.
+// Leave the compute running if anything else may be using it: a last_seen_at bump since
+// this branch's inspection began (taken before the idle snapshot, less a margin for clock
+// skew), or another session of the preview's role, which catches requests inside the
+// app's heartbeat throttle. Cleanup's HTTP queries hold no session and never bump
+// last_seen_at. No SQL handle or an unreadable row fails closed.
 async function usedDuringReview({ sql, startedAt }) {
-  if (!sql) return false;
+  if (!sql) return true;
   try {
-    const [row] = await sql.query("SELECT last_seen_at >= $1::timestamptz - interval '2 minutes' AS used FROM wc_preview_meta.runtime WHERE id=true", [startedAt.toISOString()]);
+    const [row] = await sql.query(`SELECT (SELECT last_seen_at >= $1::timestamptz - interval '2 minutes' FROM wc_preview_meta.runtime WHERE id=true)
+      OR EXISTS (SELECT 1 FROM pg_stat_activity WHERE datname=current_database() AND usename=current_user AND backend_type='client backend' AND pid<>pg_backend_pid()) AS used`, [startedAt.toISOString()]);
     return row?.used !== false;
   } catch { return true; }
 }
