@@ -52,7 +52,7 @@ npm run preview:unpin
 
 Pin an unpublished branch or long-running manual acceptance environment. Cleanup only considers signed disposable children in the sanitized project. Existing Git branches, open PRs, pins, recent authenticated use, and active deployments retain the environment. The first confirmed absence records a deletion date; both deletion and last use must be at least seven days old. An atomic cleanup claim coordinates with local pin/start/handoff operations so they cannot both succeed. A partially failed retirement stays claimed and must be reconciled or resumed; do not reuse its credentials.
 
-`npm run preview:cleanup` is read-only by default. The protected scheduled workflow supplies `--apply`. It verifies resource ownership, removes only matching preview deployments and file stores, removes the private handoff, then deletes the disposable Neon child. Production, review, templates, unattested legacy branches, and Slice are excluded. No legacy branches were deleted during this hardening pass.
+`npm run preview:cleanup` is read-only by default. The protected scheduled workflow supplies `--apply`. It verifies resource ownership, removes only matching preview deployments and file stores, removes the private handoff, then deletes the disposable Neon child. Production, review, templates, unattested legacy branches, and Slice are excluded. Inspection wakes each child to read its retention row, then suspends only the computes it woke, so a sweep stays under the active-endpoint limit and never interrupts a preview in use. No legacy branches were deleted during this hardening pass.
 
 ## Production and manual review
 

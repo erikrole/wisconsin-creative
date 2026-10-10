@@ -9,6 +9,7 @@ import { readInfrastructureConfig } from "../scripts/lib/migration-baseline.mjs"
 import { previewRetentionDecision } from "../scripts/lib/preview-retention.mjs";
 import { privateHandoff, handoffVariable, missingEnvironmentReason } from "../scripts/lib/preview-handoff.mjs";
 import { VercelPreviewApi } from "../scripts/lib/vercel-preview-api.mjs";
+import { NeonPreviewApi } from "../scripts/lib/neon-preview-api.mjs";
 
 const temporary = [];
 function directory() { const path = mkdtempSync(join(tmpdir(), "wc-preview-test-")); temporary.push(path); return path; }
@@ -130,5 +131,44 @@ describe("missing preview environment diagnosis", () => {
   });
   it("falls back to the generic hint when gh is unusable", () => {
     expect(missingEnvironmentReason("b", gh(new Error("no gh"), []))).toEqual([]);
+  });
+});
+
+describe("managed preview cleanup compute", () => {
+  it("suspends only the computes cleanup woke, tolerating a deleted branch", async () => {
+    const calls = [];
+    const fetcher = async (url, { method }) => {
+      calls.push(`${method} ${url.replace("https://console.neon.tech/api/v2", "")}`);
+      if (url.endsWith("/endpoints")) return new Response(JSON.stringify({ endpoints: [{ id: "ep-idle", current_state: "idle" }, { id: "ep-busy", current_state: "active" }, { id: "ep-starting", current_state: "init", pending_state: "active" }, { id: "ep-waking", current_state: "idle", pending_state: "active" }] }));
+      if (url.includes("ep-gone")) return new Response(null, { status: 404 });
+      if (url.includes("/operations/")) return new Response(JSON.stringify({ operation: { id: "op-1", status: "finished" } }));
+      return new Response(JSON.stringify({ operations: [{ id: "op-1", action: "suspend_compute", status: "running" }] }));
+    };
+    const api = new NeonPreviewApi("token", fetcher);
+    const woken = await api.idleEndpoints("project", "br-test");
+    expect(woken).toEqual(["ep-idle"]);
+    await api.suspendEndpoints("project", [...woken, "ep-gone"]);
+    expect(calls).toEqual(["GET /projects/project/branches/br-test/endpoints", "POST /projects/project/endpoints/ep-idle/suspend", "GET /projects/project/operations/op-1", "POST /projects/project/endpoints/ep-gone/suspend"]);
+  });
+  it("fails the sweep when a suspend operation fails", async () => {
+    const api = new NeonPreviewApi("token", async () => new Response(JSON.stringify({ operations: [{ id: "op-1", action: "suspend_compute", status: "failed" }] })));
+    await expect(api.suspendEndpoints("project", ["ep-idle"])).rejects.toThrow(/suspend_compute failed/);
+  });
+  it("propagates suspension failures other than a vanished endpoint", async () => {
+    const api = new NeonPreviewApi("token", async () => new Response(null, { status: 503 }));
+    await expect(api.suspendEndpoints("project", ["ep-idle"])).rejects.toMatchObject({ status: 503 });
+  });
+  it("suspends after every reviewed branch unless it was removed or used meanwhile", () => {
+    const source = readFileSync("scripts/cleanup-previews.mjs", "utf8");
+    expect(source).toMatch(/try \{ await review\(branch, inspection\); \} finally \{/);
+    expect(source).toMatch(/inspection\.removed\)[\s\S]*usedDuringReview\(inspection\)[\s\S]*suspendEndpoints/);
+    expect(source).toMatch(/catch \{ return true; \}/);
+    // The activity baseline predates the idle snapshot, so a lease started mid-review is seen.
+    expect(source.indexOf("startedAt: new Date()")).toBeLessThan(source.indexOf("provider.idleEndpoints("));
+    expect(source).not.toMatch(/retainPreview/);
+    expect(source).toMatch(/if \(!sql\) return true;/);
+    expect(source).toMatch(/pg_stat_activity[^"]*usename=current_user[^"]*pid<>pg_backend_pid\(\)/);
+    expect(source).toMatch(/inspection\.unattested = true/);
+    expect(source).toMatch(/if \(unattested\) return false;/);
   });
 });
