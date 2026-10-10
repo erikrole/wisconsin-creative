@@ -157,5 +157,8 @@ describe("managed preview cleanup compute", () => {
     expect(source).toMatch(/try \{ await review\(branch, inspection\); \} finally \{/);
     expect(source).toMatch(/inspection\.removed\)[\s\S]*usedDuringReview\(inspection\)[\s\S]*suspendEndpoints/);
     expect(source).toMatch(/catch \{ return true; \}/);
+    // The activity baseline predates the idle snapshot, so a lease started mid-review is seen.
+    expect(source.indexOf("startedAt: new Date()")).toBeLessThan(source.indexOf("provider.idleEndpoints("));
+    expect(source).not.toMatch(/retainPreview/);
   });
 });

@@ -31,21 +31,23 @@ async function references() {
 let refs = await references();
 for (const branch of await provider.branches(config.preview.projectId)) {
   if (branch.id === config.preview.templateBranchId || branch.protected || branch.default || branch.primary || branch.parent_id !== config.preview.templateBranchId || !/^wc-preview-[a-f0-9]{20}$/.test(branch.name)) continue;
+  const inspection = { startedAt: new Date() };
   const woken = await provider.idleEndpoints(config.preview.projectId, branch.id);
-  const inspection = {};
   try { await review(branch, inspection); } finally {
     if (inspection.removed) { /* branch and its computes are gone */ }
     else if (await usedDuringReview(inspection)) console.log({ branch: branch.id, status: "in-use-left-active" });
     else await provider.suspendEndpoints(config.preview.projectId, woken);
   }
 }
-// A local lease or authenticated request bumps last_seen_at; leave that compute running.
-// An unreadable row fails closed (no suspend) so cleanup never interrupts a preview in use.
-async function usedDuringReview({ sql, lastSeenAt }) {
-  if (!sql || lastSeenAt === undefined) return false;
+// A local lease or authenticated request bumps last_seen_at. Any bump since this
+// branch's inspection began (before the idle snapshot, with a margin for clock skew
+// between runner and database) leaves the compute running. Cleanup itself never
+// bumps it. An unreadable row fails closed so cleanup never interrupts a preview in use.
+async function usedDuringReview({ sql, startedAt }) {
+  if (!sql) return false;
   try {
-    const [row] = await sql.query("SELECT last_seen_at FROM wc_preview_meta.runtime WHERE id=true");
-    return new Date(row.last_seen_at).getTime() !== new Date(lastSeenAt).getTime();
+    const [row] = await sql.query("SELECT last_seen_at >= $1::timestamptz - interval '2 minutes' AS used FROM wc_preview_meta.runtime WHERE id=true", [startedAt.toISOString()]);
+    return row?.used !== false;
   } catch { return true; }
 }
 async function review(branch, inspection) {
@@ -59,7 +61,6 @@ async function review(branch, inspection) {
   const state = { projectId: config.preview.projectId, branchId: branch.id, endpointId: baseline.target.endpoint, gitBranch, key: branchKey(gitBranch), environment: { DATABASE_URL: pooled, DIRECT_URL: direct, DATABASE_URL_UNPOOLED: direct } };
   await verifyPreviewState(state, localChecksums(), config, { allowCleanup: true });
   const [runtime] = await sql.query("SELECT pinned,git_deleted_at,last_seen_at FROM wc_preview_meta.runtime WHERE id=true");
-  inspection.lastSeenAt = runtime.last_seen_at;
   const decision = previewRetentionDecision({ exists: refs.branches.has(gitBranch), openPullRequest: refs.prs.has(gitBranch), pinned: runtime.pinned, deletedAt: runtime.git_deleted_at, lastSeenAt: runtime.last_seen_at, graceDays: config.preview.cleanupGraceDays });
   console.log({ gitBranch, branch: branch.id, status: decision, apply });
   if (!apply) return;
