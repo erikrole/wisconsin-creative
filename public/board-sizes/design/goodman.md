@@ -75,6 +75,7 @@ id `goodman/main` · 20:11
 - Build each board at its native size. If someone asks for an HD master instead, that's their call; note it and keep the native comp as well.
 - Frame rate: use the board's `fps`. When it is null or in conflict, ask; the house default for AE work is 59.94.
 - Vendor (196_WISC) comps often arrive at 30 or 29.97. Conform on purpose; don't let them set the project rate.
+- Known exception: the 2026 PlayerID master runs at 29.97 on every board by choice. Don't "fix" it.
 
 ### Render and delivery
 

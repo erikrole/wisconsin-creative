@@ -273,7 +273,7 @@ Manifest notes:
 ### North Board: GIP and safe areas
 
 - The GIP is an in-game scoreboard composited OVER the bottom of the main video. It is an overlay, not a crop: background can run behind it to the bottom edge, but lockups and important content must clear it.
-- Its height is not settled. The manifest's `camp-randall/north-board/gip` (3096×155, ⚠ tbd) is marked TBD; on 09-29 the band was confirmed as the bottom 140 px of the main. Use the manifest value once it is updated, and say which one you used.
+- Its height is not settled. The manifest's `camp-randall/north-board/gip` (3096×155, ⚠ tbd) is marked TBD, but on 09-29 the band was confirmed as the bottom 140 px of the main. Until boards.json changes, keep lockups clear of the larger value (bottom 155 px) and flag the open issue.
 - The main video deliverable is `Main_Standalone` at `camp-randall/north-board/main-video-fg` (3096×1440 at 1332,0). It cover-fits HD media (161.25%).
 - The HD feed is a different crop. The board shows only `camp-randall/north-board-hd-feed/visible-on-the-board` (1920×806 at 0,94) of `camp-randall/north-board-hd-feed` (1920×1080), but concourse and suite TVs show the full frame, so finish the cropped bands too. Centre feed content on the visible band, not the frame.
 - The North Board main design sits off-centre on purpose to suit that crop. Don't re-centre it, and don't use it as the base for other venues' HD mains.
@@ -386,6 +386,7 @@ Manifest notes:
 - Build each board at its native size. If someone asks for an HD master instead, that's their call; note it and keep the native comp as well.
 - Frame rate: use the board's `fps`. When it is null or in conflict, ask; the house default for AE work is 59.94.
 - Vendor (196_WISC) comps often arrive at 30 or 29.97. Conform on purpose; don't let them set the project rate.
+- Known exception: the 2026 PlayerID master runs at 29.97 on every board by choice. Don't "fix" it.
 
 ### Render and delivery
 

@@ -15,7 +15,7 @@
 ## North Board: GIP and safe areas
 
 - The GIP is an in-game scoreboard composited OVER the bottom of the main video. It is an overlay, not a crop: background can run behind it to the bottom edge, but lockups and important content must clear it.
-- Its height is not settled. The manifest's {{north-board/gip}} is marked TBD; on 09-29 the band was confirmed as the bottom 140 px of the main. Use the manifest value once it is updated, and say which one you used.
+- Its height is not settled. The manifest's {{north-board/gip}} is marked TBD, but on 09-29 the band was confirmed as the bottom 140 px of the main. Until boards.json changes, keep lockups clear of the larger value (bottom 155 px) and flag the open issue.
 - The main video deliverable is `Main_Standalone` at {{MAIN_VIDEO}}. It cover-fits HD media (161.25%).
 - The HD feed is a different crop. The board shows only {{north-board-hd-feed/visible-on-the-board}} of {{MAIN_HD}}, but concourse and suite TVs show the full frame, so finish the cropped bands too. Centre feed content on the visible band, not the frame.
 - The North Board main design sits off-centre on purpose to suit that crop. Don't re-centre it, and don't use it as the base for other venues' HD mains.
