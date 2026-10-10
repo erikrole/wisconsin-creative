@@ -256,7 +256,94 @@ Manifest notes:
 
 ## Building for Camp Randall
 
-No Camp Randall guidance yet. Add it to `docs/board-design/camp-randall.md`.
+### Frame rates
+
+- Camp Randall boards run at 60 fps. Only the 16:9 feed variants (the North Board HD feed and the IPTV full screen) are 59.94. When a ported project mixes 59.94 and 60, fix it to 60.
+- The template runs 60 fps, 896 frames (14.933 s). Aux boards in a full system loop on that length while the main plays its video; keep that one loop constant even inside longer comps.
+- Tempos: pick a BPM that lands beats on whole frames at 60 fps (128.571 BPM = 28 frames a beat; exactly 128 drifts). Never round a measured tempo.
+
+### North Board: build as one, render as parts
+
+- The North Board is built as one board and rendered as its parts (main, frames, wings, stat windows). Build one full-board background and nest it into every part at its own offset, so wings and frames register exactly. A wing background fitted to the wing instead of registered to the board shows a visible rectangle.
+- Each wing keeps its own animated W. Takeover type must not bleed into wings or stat windows.
+- Pops bleed onto every part (wings, stats, scrims, Kellner wing wrappers) so separately rendered files read as one board. Kellner and the Daily Driver get the pop through nesting; adding it there again doubles it.
+- Show end slates board by board on the Daily Driver sheet, never as one big image.
+- Mockup setting: `North Board - Main Options` stays at 1 (Main_Standalone + short wings). Check it by render.
+
+### North Board: GIP and safe areas
+
+- The GIP is an in-game scoreboard composited OVER the bottom of the main video. It is an overlay, not a crop: background can run behind it to the bottom edge, but lockups and important content must clear it.
+- Its height is not settled. The manifest's `camp-randall/north-board/gip` (3096×155, ⚠ tbd) is marked TBD; on 09-29 the band was confirmed as the bottom 140 px of the main. Use the manifest value once it is updated, and say which one you used.
+- The main video deliverable is `Main_Standalone` at `camp-randall/north-board/main-video-fg` (3096×1440 at 1332,0). It cover-fits HD media (161.25%).
+- The HD feed is a different crop. The board shows only `camp-randall/north-board-hd-feed/visible-on-the-board` (1920×806 at 0,94) of `camp-randall/north-board-hd-feed` (1920×1080), but concourse and suite TVs show the full frame, so finish the cropped bands too. Centre feed content on the visible band, not the frame.
+- The North Board main design sits off-centre on purpose to suit that crop. Don't re-centre it, and don't use it as the base for other venues' HD mains.
+- Photo windows crop tighter than 16:9: bias portraits high and keep helmets low. No red showing through photo dissolves.
+- Burned-in captions on the feed use the Camp Randall caption preset (snapped to 59.94) and the Camp Randall safe guide in `RESOURCES/GUIDES/Camp Randall Videoboard/`.
+
+### North Board: frames, wings, scrims and ads
+
+- The speaker scrims cover the inner top corner of each frame (`camp-randall/north-board/frame-left` (1332×1440 at 0,0), `camp-randall/north-board/frame-right` (1332×1440 at 4428,0)); leave that area blank. Over a lifted background they read as hard black rectangles. The Daily Driver scrim art is Target (left) and UW Health (right); the mockups mask those panels as static signs.
+- Stat windows (`camp-randall/north-board/stat-box-left-fg` (720×612 at 612,828), `camp-randall/north-board/stat-box-right-fg` (720×612 at 4428,828)) are stills by spec and show real game stats in-game; the template hides them. Projects sometimes animate them anyway; confirm before delivering motion there.
+- The bottom ad windows (`camp-randall/north-board/ad-bottom-left` (612×410 at 0,1030)) are the largest unused area in a takeover, and stills by spec.
+- Middle ads and fascia ads take different art per side: end file names in `_left` or `_right`.
+- Wing logos sit centred on the short wing, not aligned to the main lockup's axis. A throwback wing W is an accent rising from the bottom edge, not the main event.
+- Bucky belongs on the main boards (North main, Kellner, Kohl Center main), not the wings.
+
+### Kellner
+
+- Kellner is one full board: build `camp-randall/kellner` (1692×540) and window the main (`camp-randall/kellner/main-video-fg` (1152×540 at 270,0)) out of it, the same way as the North Board. Colosseum's rule is main or wings, one or the other.
+- It usually mirrors the main's centre picture, and stays out of fascia lighting rigs.
+- Overlays on Kellner render as QuickTime with alpha.
+- The four Kellner ad stills have never been filled by a project.
+
+### East and West fascias
+
+- East and West are two separate boards, each `camp-randall/west-fascia` (11880×108): ad left, GIP in the middle (`camp-randall/west-fascia/gip-west` (1880×108 at 5000,0)), ad right. The usual "Fascia" deliverable is the ad window (`camp-randall/west-fascia/ad-left-west` (5000×108 at 0,0)), used on both sides.
+- Lighting one fascia as a single unit fires both sidelines at once and nothing reads as travelling; split it into segments.
+- Run the two sideline fascias opposite each other. To mirror a fascia, mirror positions and flip the background, never the artwork, so letters stay readable.
+- Flow: the grass flows away from the North Board, letters flow toward it. When asked to "reverse direction", ask which element.
+- One centred message with a Motion W each side reads best. Repeated stats: three per side at most.
+- No ticker drift on the fascias.
+
+### South end zone fascias (SEZ)
+
+- Upper: the left board is `camp-randall/south-upper-fascia/fullscreen-left-fg` (1725×60 at 0,0). The right board is `camp-randall/south-upper-fascia/fullscreen-right-fg` (2550×60 at 1725,0), but its last part, the angle (`camp-randall/south-upper-fascia/angle` (825×60 at 3450,0)), is the kickout covered by out-of-town scores. Treat only its first stretch (the same width as the left board) as playable: reuse the left comp on the right, left-aligned, and leave the angle bare. The right board is usually switched off and the left file delivered as "SEZ Upper".
+- H.264 writes the upper-left file one pixel narrower (odd width); that's expected.
+- Lower: two ad windows either side of a GIP (`camp-randall/south-lower-fascia/gip` (625×60 at 1300,0)). "SEZ Lower" is one file, `camp-randall/south-lower-fascia/ad-left` (1300×60 at 0,0), used on both sides. Keep content out of the GIP.
+- On 60 px ribbons, cap Ws at 80% of board height (a Block W height-matched to a Motion W overflows). Size logos by their ink, not the file box.
+- Boards of the same size start with the same number of logos: derive the count from width divided by one shared pitch, and space marks evenly.
+- Sheen, keylines and hairline motion don't survive on boards under about 500 px on their short side (fascias, Kellner wings, Section A); judge them at full resolution, 1:1.
+- Aeternus is too small for names on aux boards; use Gotham Ultra.
+
+### Section A
+
+- The GIP is at the top (`camp-randall/section-a/gip` (336×80 at 0,0), stills); the main video is below it (`camp-randall/section-a/main-video-fg` (336×184 at 0,80)). Fill both; the contact sheet shows the full board.
+- Its physical position isn't in either mockup. Ask before power-pinning it.
+- It usually mirrors the main's centre picture and stays out of fascia lighting rigs.
+
+### Captioning and IPTV
+
+- The captioning board (`camp-randall/captioning` (600×72)) takes stills; it is not the same thing as burned-in captions on the HD feed.
+- IPTV full screens (`camp-randall/iptv-full-screen-ad` (1920×1080)) run exactly 15 s with a 100 px title safe. The video wall full (`camp-randall/iptv-video-wall-full` (5760×2160)) is for special events only and isn't sold to sponsors.
+
+### Seams and the 360 lap
+
+- A lap is boards lighting in sequence, not comets or sliding light. Ring order: North, East, South lefts, South rights, Section A, West.
+- Any wrap needs three copies (x − width, x, x + width); two copies drop part of the element for a frame every lap. Count laps by accumulation from the downbeat.
+- Ribbon tiles split their lockup across the tile edges so it reassembles at the seam. Doubling a tile halves the loop; check the loop still closes.
+- LED pixel pitch isn't written down anywhere, and the fascias differ in height, so don't assume boards share a pitch.
+
+### Timing across boards
+
+- Audio-synced shows (Kickoff, Run Out) play once, with every board going black on the same frame and identical pop frames everywhere.
+- Light rigs that propagate from the main use these delays in frames: wings 2, stats 3, E/W fascias 5 to 7, Kellner 12, SEZ upper 16, SEZ lower 18. Only use them when the piece is meant to travel; recognition entrances stay in sync.
+- Kick Cover plays during field goals: logos animate in and never out, and the background doesn't move.
+- Stadium audio ceiling: -6 dBTP.
+
+### Delivery
+
+- Recognition families (Honorary Captain, Internal Recognition) deliver Fascia, SEZ Upper, SEZ Lower, Short Wing Left/Right, Main and Full System (the rendered `CR - All` sheet), named `<Piece> - <Name> - <Board>.mp4`.
+- Deliver final files 2 weeks before the season opener, or 1 week before an event in season.
 
 ## Rules for every venue
 
