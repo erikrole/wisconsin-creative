@@ -5,3 +5,6 @@
 # blank context lines. Keep those captures intact; check report HTML normally.
 tasks/archive/proofs/ua-picker-*/**/source.patch whitespace=-blank-at-eol
 tasks/archive/proofs/ua-picker-*/baseline-source/*.txt whitespace=-blank-at-eol,-blank-at-eof
+# TestFlight release proof keeps the exact unified diff that shipped, including
+# tab-indented Swift context lines; check the review HTML normally.
+tasks/archive/proofs/ios-notification-badge-*/release-source.patch whitespace=-blank-at-eol,-space-before-tab,-blank-at-eof

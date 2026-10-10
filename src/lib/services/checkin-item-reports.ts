@@ -2,7 +2,7 @@ import { AssetStatus, BookingCustodyScope, BulkMovementKind, BulkUnitStatus, Che
 import { put } from "@vercel/blob";
 import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
-import { createAuditEntry, createAuditEntryTx } from "@/lib/audit";
+import { createAuditEntryTx } from "@/lib/audit";
 import { checkinReportSchema } from "@/lib/validation";
 import { deferPush, notifyItemReport } from "@/lib/services/notifications";
 import { maybeAutoComplete, wasReturnedOnTime } from "@/lib/services/bookings-checkin";
@@ -11,6 +11,14 @@ import { badges } from "@/lib/badges";
 import { reportedLostBulkBySku, upsertBulkBalancesAndMovements } from "@/lib/services/bookings-helpers";
 import { deleteImage, imageExtensionForType, isBlobUrl, validateImage, publicBlobAuth } from "@/lib/blob";
 import { claimKioskOperationReceiptTx, finishKioskOperationReceiptTx, type KioskOperationContext } from "@/lib/services/kiosk-operation-receipts";
+
+/**
+ * An updated report is new evidence: it reopens a dashboard dismissal and
+ * moves the report's recency so the dashboard and item page surface it.
+ */
+function reopenedReport() {
+  return { dismissedAt: null, dismissedById: null, lastReportedAt: new Date() };
+}
 
 const REPORT_DEDUP_WINDOW_MS = 5_000;
 
@@ -111,9 +119,9 @@ type KioskReportContext = {
  *   return can finish (web semantics, confirmed for the kiosk by Erik
  *   2026-09-25).
  *
- * With `kiosk`, the report commits in one SERIALIZABLE transaction with its
+ * The report commits in one SERIALIZABLE transaction with its
  * consequences: a DAMAGED item is held for staff (asset → MAINTENANCE, audited)
- * and a LOST report on the last outstanding item completes the return.
+ * and, at the kiosk, a LOST report on the last outstanding item completes the return.
  */
 export async function submitCheckinItemReport(args: {
   bookingId: string;
@@ -125,7 +133,8 @@ export async function submitCheckinItemReport(args: {
   reporter: { id: string; role: Role; name: string };
   kiosk?: KioskReportContext;
 }) {
-  const { bookingId: id, assetId, type, description } = args;
+  const { bookingId: id, assetId, type } = args;
+  const description = args.description?.trim() || undefined;
 
   const bookingItem = await db.bookingSerializedItem.findUnique({
     where: { bookingId_assetId: { bookingId: id, assetId } },
@@ -148,10 +157,14 @@ export async function submitCheckinItemReport(args: {
 
   const existingReport = await db.checkinItemReport.findUnique({
     where: { bookingId_assetId: { bookingId: id, assetId } },
-    select: { imageUrl: true, createdAt: true },
+    select: { imageUrl: true, createdAt: true, type: true, description: true, reportedById: true },
   });
   if (existingReport && Date.now() - existingReport.createdAt.getTime() < REPORT_DEDUP_WINDOW_MS) {
     throw new HttpError(409, "A report for this item was just submitted. Wait a moment before updating it.");
+  }
+
+  if (type === "DAMAGED" && !description && !args.file && !existingReport?.imageUrl && !existingReport?.description?.trim()) {
+    throw new HttpError(400, "Describe the damage or add a photo before submitting the report.");
   }
 
   const imageUrl = args.file ? await uploadReportImage(args.file, id, assetId) : undefined;
@@ -170,6 +183,8 @@ export async function submitCheckinItemReport(args: {
       description,
       ...(imageUrl ? { imageUrl } : {}),
       reportedById: args.reporter.id,
+      // New evidence reopens a flag staff dismissed from the dashboard.
+      ...reopenedReport(),
     },
   };
   const auditAfter = (reportImageUrl: string | null) => ({
@@ -183,78 +198,92 @@ export async function submitCheckinItemReport(args: {
   let heldForStaff = false;
   let completedAt: Date | null = null;
   try {
-    if (args.kiosk) {
-      const kiosk = args.kiosk;
-      const outcome = await db.$transaction(async (tx) => {
-        // Re-read the precondition inside the custody transaction: another
-        // kiosk may have scanned the item back since the checks above.
-        if (type === "LOST") {
-          const current = await tx.bookingSerializedItem.findUnique({
-            where: { bookingId_assetId: { bookingId: id, assetId } },
-            select: { allocationStatus: true },
-          });
-          if (!current) throw new HttpError(404, "Item not found in this checkout");
-          if (current.allocationStatus === "returned") {
-            throw new HttpError(409, "This item was already scanned back. Report it as damaged instead.");
-          }
-        } else {
-          const scanned = await tx.scanEvent.findFirst({
-            where: { bookingId: id, assetId, phase: ScanPhase.CHECKIN, success: true },
-            select: { id: true },
-          });
-          if (!scanned) throw new HttpError(400, "Item must be scanned before reporting damage");
+    const kiosk = args.kiosk;
+    const source = kiosk ? { source: "KIOSK", kioskDeviceId: kiosk.kioskId } : { source: "WEB" };
+    const outcome = await db.$transaction(async (tx) => {
+      const currentReport = await tx.checkinItemReport.findUnique({
+        where: { bookingId_assetId: { bookingId: id, assetId } },
+        select: { imageUrl: true, createdAt: true, type: true, description: true, reportedById: true },
+      });
+      if (currentReport?.createdAt.getTime() !== existingReport?.createdAt.getTime()
+        || currentReport?.type !== existingReport?.type
+        || currentReport?.description !== existingReport?.description
+        || currentReport?.imageUrl !== existingReport?.imageUrl
+        || currentReport?.reportedById !== existingReport?.reportedById) {
+        throw new HttpError(409, "This report changed while you were submitting it. Refresh before updating it.");
+      }
+      // Re-read the precondition inside the custody transaction: another
+      // kiosk may have scanned the item back since the checks above.
+      if (type === "LOST" && kiosk) {
+        const current = await tx.bookingSerializedItem.findUnique({
+          where: { bookingId_assetId: { bookingId: id, assetId } },
+          select: { allocationStatus: true },
+        });
+        if (!current) throw new HttpError(404, "Item not found in this checkout");
+        if (current.allocationStatus === "returned") {
+          throw new HttpError(409, "This item was already scanned back. Report it as damaged instead.");
         }
-        const saved = await tx.checkinItemReport.upsert(upsertArgs);
-        let held = false;
-        if (type === "DAMAGED") {
-          const asset = await tx.asset.findUnique({ where: { id: assetId }, select: { status: true } });
-          if (asset && asset.status === AssetStatus.AVAILABLE) {
-            await tx.asset.update({ where: { id: assetId }, data: { status: AssetStatus.MAINTENANCE } });
+      } else if (type === "DAMAGED") {
+        const scanned = await tx.scanEvent.findFirst({
+          where: { bookingId: id, assetId, phase: ScanPhase.CHECKIN, success: true },
+          select: { id: true },
+        });
+        if (!scanned) throw new HttpError(400, "Item must be scanned before reporting damage");
+      }
+      const saved = await tx.checkinItemReport.upsert(upsertArgs);
+      let held = false;
+      if (type === "DAMAGED") {
+        const asset = await tx.asset.findUnique({ where: { id: assetId }, select: { status: true } });
+        // Touch the version even when already held: a new report invalidates
+        // an inspection/release screen that was opened before this evidence.
+        if (asset && asset.status !== AssetStatus.RETIRED) {
+          await tx.asset.update({ where: { id: assetId }, data: { status: AssetStatus.MAINTENANCE } });
+          if (asset.status === AssetStatus.AVAILABLE) {
             await createAuditEntryTx(tx, {
               actorId: args.reporter.id,
               actorRole: args.reporter.role,
               entityType: "asset",
               entityId: assetId,
-              action: "kiosk_damage_held_for_staff",
+              action: kiosk ? "kiosk_damage_held_for_staff" : "marked_maintenance",
               before: { status: asset.status },
-              after: { status: AssetStatus.MAINTENANCE, bookingId: id, reportId: saved.id, source: "KIOSK", kioskDeviceId: kiosk.kioskId },
+              after: { status: AssetStatus.MAINTENANCE, bookingId: id, reportId: saved.id, ...source },
             });
           }
-          held = Boolean(asset) && asset?.status !== AssetStatus.RETIRED;
         }
-        await createAuditEntryTx(tx, {
-          actorId: args.reporter.id,
-          actorRole: args.reporter.role,
-          entityType: "booking",
-          entityId: id,
-          action: `checkin_report_${type.toLowerCase()}`,
-          before: existingReport ? { reported: true } : { reported: false },
-          after: { ...auditAfter(saved.imageUrl), source: "KIOSK", kioskDeviceId: kiosk.kioskId },
-        });
-        const completedAtTx = type === "LOST"
-          ? await maybeAutoComplete(tx, id, kiosk.booking.locationId, args.reporter.id, {
-              auditAction: "auto_completed_by_kiosk_checkin",
-              returnedFor: kiosk.booking,
-            })
-          : null;
-        return { saved, held, completedAt: completedAtTx };
-      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
-      report = outcome.saved;
-      heldForStaff = outcome.held;
-      completedAt = outcome.completedAt;
-    } else {
-      report = await db.checkinItemReport.upsert(upsertArgs);
-    }
+        held = Boolean(asset) && asset?.status !== AssetStatus.RETIRED;
+      }
+      await createAuditEntryTx(tx, {
+        actorId: args.reporter.id,
+        actorRole: args.reporter.role,
+        entityType: "booking",
+        entityId: id,
+        action: `checkin_report_${type.toLowerCase()}`,
+        before: currentReport ? { reported: true, ...currentReport, createdAt: currentReport.createdAt.toISOString() } : { reported: false },
+        after: { ...auditAfter(saved.imageUrl), type: saved.type, description: saved.description, reportedById: saved.reportedById, ...source },
+      });
+      const completedAtTx = type === "LOST" && kiosk
+        ? await maybeAutoComplete(tx, id, kiosk.booking.locationId, args.reporter.id, {
+            auditAction: "auto_completed_by_kiosk_checkin",
+            returnedFor: kiosk.booking,
+          })
+        : null;
+      return { saved, held, completedAt: completedAtTx };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    report = outcome.saved;
+    heldForStaff = outcome.held;
+    completedAt = outcome.completedAt;
   } catch (err) {
     if (imageUrl && isBlobUrl(imageUrl)) {
       await deleteImage(imageUrl).catch(() => {});
     }
+    if (err instanceof Prisma.PrismaClientKnownRequestError && ["P2002", "P2034"].includes(err.code)) {
+      throw new HttpError(409, "This item changed while you were submitting the report. Refresh before trying again.");
+    }
     throw err;
   }
 
-  if (imageUrl && existingReport?.imageUrl && isBlobUrl(existingReport.imageUrl)) {
-    await deleteImage(existingReport.imageUrl).catch(() => {});
-  }
+  // Replaced evidence remains available through the before/after audit.
+  // Only an upload from a failed transaction is cleaned up here.
 
   // Notify supervisors after the response; `deferPush` keeps the function
   // alive until the emails settle instead of letting it freeze mid-send.
@@ -266,23 +295,12 @@ export async function submitCheckinItemReport(args: {
     assetTag: bookingItem.asset.assetTag,
     itemDescription: itemDesc,
     reportType: type,
-    damageDescription: description,
+    damageDescription: report.description ?? undefined,
     evidenceImageUrl: report.imageUrl ?? undefined,
     reporterName: args.reporter.name,
   }).catch((err) => {
     console.error("[REPORT] Failed to send supervisor notifications:", err);
   }));
-
-  if (!args.kiosk) {
-    await createAuditEntry({
-      actorId: args.reporter.id,
-      actorRole: args.reporter.role,
-      entityType: "booking",
-      entityId: id,
-      action: `checkin_report_${type.toLowerCase()}`,
-      after: auditAfter(report.imageUrl),
-    });
-  }
 
   return {
     report,
@@ -439,7 +457,7 @@ export async function submitBulkCheckinReport(args: {
         saved = await tx.checkinItemReport.upsert({
           where: { bookingId_bulkSkuUnitId: { bookingId: id, bulkSkuUnitId: unit.id } },
           create: { ...data, bookingId: id, bulkSkuUnitId: unit.id, imageUrl: imageUrl ?? null },
-          update: { ...data, ...(imageUrl ? { imageUrl } : {}) },
+          update: { ...data, ...(imageUrl ? { imageUrl } : {}), ...reopenedReport() },
         });
       } else {
         const item = await tx.bookingBulkItem.findUnique({
@@ -504,6 +522,7 @@ export async function submitBulkCheckinReport(args: {
             description,
             ...(imageUrl ? { imageUrl } : {}),
             reportedById: args.reporter.id,
+            ...reopenedReport(),
           },
         });
         await createAuditEntryTx(tx, {

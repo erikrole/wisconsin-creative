@@ -217,6 +217,7 @@
 - `/api/calendar` -> `src/app/api/calendar/route.ts`
 - `/api/categories/[id]` -> `src/app/api/categories/[id]/route.ts`
 - `/api/categories` -> `src/app/api/categories/route.ts`
+- `/api/checkin-reports/[id]/dismiss` -> `src/app/api/checkin-reports/[id]/dismiss/route.ts`
 - `/api/checkouts/[id]/admin-override` -> `src/app/api/checkouts/[id]/admin-override/route.ts`
 - `/api/checkouts/[id]/checkin-bulk` -> `src/app/api/checkouts/[id]/checkin-bulk/route.ts`
 - `/api/checkouts/[id]/checkin-items` -> `src/app/api/checkouts/[id]/checkin-items/route.ts`
