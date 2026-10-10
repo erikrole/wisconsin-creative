@@ -11,7 +11,7 @@
 
 | Model | Fields | Model-level indexes/constraints |
 |---|---:|---:|
-| `User` | 128 | 5 |
+| `User` | 129 | 5 |
 | `Session` | 6 | 2 |
 | `PasswordResetToken` | 6 | 2 |
 | `PasskeyCredential` | 12 | 2 |
@@ -83,7 +83,7 @@
 | `SoftwareCredential` | 10 | 2 |
 | `SportConfig` | 9 | 1 |
 | `SportShiftConfig` | 12 | 2 |
-| `ShiftGroup` | 20 | 4 |
+| `ShiftGroup` | 17 | 3 |
 | `ShiftGroupWorkingCopy` | 17 | 3 |
 | `ScheduleBulkAssignment` | 13 | 3 |
 | `ScheduleBulkAssignmentItem` | 12 | 3 |
@@ -116,6 +116,12 @@
 | `YouTubeLibraryVideo` | 5 | 2 |
 | `YouTubeReviewDraft` | 20 | 1 |
 | `YouTubeLibraryState` | 8 | 1 |
+| `YouTubePublishRecord` | 15 | 2 |
+| `YouTubePlaylistAddition` | 11 | 2 |
+| `GearPickCycle` | 7 | 1 |
+| `GearPickParticipant` | 10 | 3 |
+| `GearPickSubmission` | 9 | 1 |
+| `GearPickLine` | 9 | 2 |
 
 ## Enums
 
@@ -529,3 +535,8 @@
 - `COVER_LETTER`
 - `PORTFOLIO_FILE`
 - `OTHER`
+
+### `GearPickFit`
+
+- `MEN`
+- `WOMEN`

@@ -1,0 +1,23 @@
+{
+  "sourceRevision": "1edb2f79b3b3c5c944df5c0e47b8ba831ace0df8",
+  "sourcePatchSha256": null,
+  "settings": {
+    "device": "Chromium 149.0.7827.55 fixture harness",
+    "viewport": [
+      390,
+      900
+    ],
+    "fixture": "08c579a89e254434eef3f4458294aace606ea1a7ac40a1259e84d1f171de0848",
+    "role": "staff",
+    "route": "/gear",
+    "appearance": "light",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "2026-10-08T17:00:00Z",
+    "scroll": [
+      0,
+      0
+    ]
+  }
+}

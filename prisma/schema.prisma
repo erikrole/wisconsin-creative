@@ -273,6 +273,7 @@ model User {
   licenseCodesHeld              LicenseCode[]                    @relation("LicenseClaimedBy")
   licenseCodesCreated           LicenseCode[]                    @relation("LicenseCreatedBy")
   licenseClaims                 LicenseCodeClaim[]
+  gearPickParticipations        GearPickParticipant[]
   resources                     Resource[]
   resourcesVerified             Resource[]                       @relation("ResourceLastVerifiedBy")
   resourceAssetFoldersCreated   ResourceAssetFolder[]            @relation("ResourceAssetFolderCreator")
@@ -2033,9 +2034,6 @@ model ShiftGroup {
   publishedById         String?                      @map("published_by_id")
   lastPublishedSnapshot Json?                        @map("last_published_snapshot")
   publishedVersion      Int                          @default(0) @map("published_version")
-  notifyAfter           DateTime?                    @map("notify_after")
-  notifyAttemptedAt     DateTime?                    @map("notify_attempted_at")
-  notifyError           String?                      @map("notify_error")
   archivedAt            DateTime?                    @map("archived_at")
   createdAt             DateTime                     @default(now()) @map("created_at")
   updatedAt             DateTime                     @updatedAt @map("updated_at")
@@ -2047,7 +2045,6 @@ model ShiftGroup {
 
   @@index([publishedAt])
   @@index([publishedById])
-  @@index([notifyAfter])
   @@map("shift_groups")
 }
 
@@ -2872,4 +2869,77 @@ model YouTubePlaylistAddition {
 
   @@index([videoId, createdAt(sort: Desc)])
   @@map("youtube_playlist_additions")
+}
+
+// ── UA staff gear picks ───────────────────────────────────
+
+/// Catalog fit a participant shops from. MEN sees MEN + UNISEX items; WOMEN sees WOMEN + UNISEX.
+enum GearPickFit {
+  MEN
+  WOMEN
+}
+
+/// One yearly Under Armour staff pick window. The catalog itself is static JSON
+/// keyed by `id` (src/lib/gear-picks); the row owns the admin-set deadline.
+model GearPickCycle {
+  id           String                @id
+  title        String
+  /// Picks are editable until this instant; null keeps the cycle open.
+  deadline     DateTime?
+  /// When admins opened picks to everyone on the list; until then only admins see them.
+  launchedAt   DateTime?             @map("launched_at")
+  createdAt    DateTime              @default(now()) @map("created_at")
+  updatedAt    DateTime              @updatedAt @map("updated_at")
+  participants GearPickParticipant[]
+
+  @@map("gear_pick_cycles")
+}
+
+/// An explicit invitation for one user to pick in one cycle, with the fit and allowance they shop with.
+model GearPickParticipant {
+  id             String              @id @default(cuid())
+  cycleId        String              @map("cycle_id")
+  userId         String              @map("user_id")
+  fit            GearPickFit
+  allowanceCents Int                 @map("allowance_cents")
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
+  cycle          GearPickCycle       @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  submission     GearPickSubmission?
+
+  @@unique([cycleId, userId])
+  @@index([userId])
+  @@map("gear_pick_participants")
+}
+
+/// A participant's saved pick list. `submittedAt` stays at the first submit; `version` guards concurrent saves.
+model GearPickSubmission {
+  id            String              @id @default(cuid())
+  participantId String              @unique @map("participant_id")
+  submittedAt   DateTime?           @map("submitted_at")
+  totalCents    Int                 @default(0) @map("total_cents")
+  version       Int                 @default(1)
+  createdAt     DateTime            @default(now()) @map("created_at")
+  updatedAt     DateTime            @updatedAt @map("updated_at")
+  participant   GearPickParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  lines         GearPickLine[]
+
+  @@map("gear_pick_submissions")
+}
+
+/// One picked SKU (`style-colorCode`) and size. Unit price is a server-side catalog snapshot.
+model GearPickLine {
+  id             String             @id @default(cuid())
+  submissionId   String             @map("submission_id")
+  sku            String
+  style          String
+  colorCode      String             @map("color_code")
+  size           String?
+  quantity       Int
+  unitPriceCents Int                @map("unit_price_cents")
+  submission     GearPickSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@unique([submissionId, sku, size])
+  @@map("gear_pick_lines")
 }

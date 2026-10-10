@@ -19,7 +19,7 @@
 | `src/lib/services/booking-ref.ts` | 26 |
 | `src/lib/services/booking-reuse.ts` | 219 |
 | `src/lib/services/booking-rules.ts` | 135 |
-| `src/lib/services/bookings-checkin.ts` | 940 |
+| `src/lib/services/bookings-checkin.ts` | 734 |
 | `src/lib/services/bookings-helpers.ts` | 310 |
 | `src/lib/services/bookings-lifecycle.ts` | 3386 |
 | `src/lib/services/bookings-queries.ts` | 311 |
@@ -37,7 +37,7 @@
 | `src/lib/services/claim-review-notifications.ts` | 197 |
 | `src/lib/services/collaborator-policies.ts` | 400 |
 | `src/lib/services/collaborator-schedule.ts` | 228 |
-| `src/lib/services/combined-schedule-events.ts` | 298 |
+| `src/lib/services/combined-schedule-events.ts` | 295 |
 | `src/lib/services/companion-projection-publisher.ts` | 57 |
 | `src/lib/services/companion-projection.ts` | 250 |
 | `src/lib/services/consolidation-shared.ts` | 21 |
@@ -46,7 +46,9 @@
 | `src/lib/services/event-worker.ts` | 125 |
 | `src/lib/services/firmware-watch.ts` | 329 |
 | `src/lib/services/game-record.ts` | 169 |
+| `src/lib/services/gear-picks.ts` | 612 |
 | `src/lib/services/hidden-users-cleanup.ts` | 122 |
+| `src/lib/services/item-cleanup-wizard.ts` | 762 |
 | `src/lib/services/job-runs.ts` | 52 |
 | `src/lib/services/kiosk-active-checkout-items.ts` | 492 |
 | `src/lib/services/kiosk-actor.ts` | 51 |
@@ -87,7 +89,7 @@
 | `src/lib/services/schedule-health.ts` | 383 |
 | `src/lib/services/schedule-notification-policy.ts` | 95 |
 | `src/lib/services/schedule-open-work.ts` | 600 |
-| `src/lib/services/schedule-publication.ts` | 1117 |
+| `src/lib/services/schedule-publication.ts` | 1110 |
 | `src/lib/services/schedule-template-review.ts` | 554 |
 | `src/lib/services/schedule-working-copy.ts` | 1190 |
 | `src/lib/services/scoreboard.ts` | 282 |
@@ -137,7 +139,7 @@
 | `src/lib/booking-display-title.ts` | 14 |
 | `src/lib/booking-status-display.ts` | 170 |
 | `src/lib/booking-statuses.ts` | 9 |
-| `src/lib/breadcrumbs.ts` | 179 |
+| `src/lib/breadcrumbs.ts` | 180 |
 | `src/lib/brother-label-csv.ts` | 134 |
 | `src/lib/bulk-batteries.ts` | 28 |
 | `src/lib/bulk-schedule-assignment-types.ts` | 213 |
@@ -202,22 +204,23 @@
 | `src/lib/notification-destination.ts` | 85 |
 | `src/lib/observability.ts` | 19 |
 | `src/lib/operational-health.ts` | 2 |
-| `src/lib/ops-checks.ts` | 176 |
+| `src/lib/ops-checks.ts` | 212 |
 | `src/lib/passkey-client.ts` | 73 |
 | `src/lib/passkey.ts` | 371 |
 | `src/lib/password-rules.ts` | 16 |
-| `src/lib/permissions.ts` | 245 |
+| `src/lib/permissions.ts` | 253 |
 | `src/lib/preview-activity.ts` | 23 |
 | `src/lib/prisma-errors.ts` | 38 |
 | `src/lib/profile-completion-events.ts` | 6 |
 | `src/lib/profile-completion.ts` | 159 |
 | `src/lib/profile-phone.ts` | 44 |
 | `src/lib/profile-sizing.ts` | 24 |
-| `src/lib/public-showroom.ts` | 444 |
+| `src/lib/public-showroom.ts` | 449 |
 | `src/lib/quarter-hour.ts` | 27 |
 | `src/lib/query-client.ts` | 56 |
 | `src/lib/rate-limit.ts` | 238 |
 | `src/lib/rbac.ts` | 59 |
+| `src/lib/releases.ts` | 104 |
 | `src/lib/remark-callouts.ts` | 77 |
 | `src/lib/request-limits.ts` | 17 |
 | `src/lib/reservation-pickup-locations.ts` | 68 |
@@ -481,6 +484,7 @@
 - `/api/cron/morning-refresh`
 - `/api/cron/notifications`
 - `/api/cron/rehost-images`
+- `/api/cron/youtube-sweep`
 
 ### `/api/dashboard`
 
@@ -514,6 +518,13 @@
 
 - `/api/form-options`
 
+### `/api/gear-picks`
+
+- `/api/gear-picks/admin/export.csv`
+- `/api/gear-picks/admin`
+- `/api/gear-picks/me`
+- `/api/gear-picks/users/[userId]`
+
 ### `/api/hiring`
 
 - `/api/hiring/applications/[id]/documents`
@@ -537,6 +548,7 @@
 ### `/api/items`
 
 - `/api/items/changes`
+- `/api/items/cleanup-wizard`
 
 ### `/api/items-page-init`
 
@@ -841,9 +853,18 @@
 ### `/api/youtube`
 
 - `/api/youtube/connection`
+- `/api/youtube/drafts/[videoId]/check-playlists`
+- `/api/youtube/drafts/[videoId]/check-send`
 - `/api/youtube/drafts/[videoId]/game`
+- `/api/youtube/drafts/[videoId]/make-public`
+- `/api/youtube/drafts/[videoId]/playlists`
 - `/api/youtube/drafts/[videoId]/prepare`
+- `/api/youtube/drafts/[videoId]/publish`
 - `/api/youtube/drafts/[videoId]`
 - `/api/youtube/library/refresh`
 - `/api/youtube/oauth/callback`
 - `/api/youtube/oauth/start`
+
+### `/releases/feed.xml`
+
+- `/releases/feed.xml`

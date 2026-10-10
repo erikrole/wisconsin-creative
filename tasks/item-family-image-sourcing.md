@@ -2,7 +2,9 @@
 
 Created: 2026-06-26
 Owner area: Items, Bulk Inventory
-Status: Needs sourced product images
+Status: Stale pending live audit — do not source images from this table until refreshed
+
+> **2026-10-07:** The 2026-07-15 battery consolidation retired product-specific battery families and archived the photo-less quantity `Sony Battery`. Several rows below likely no longer exist as active families. Run `npm run audit:item-data` on an authorized database, replace this queue with the live active-family missing-image list, then source photos. See `tasks/item-data-hygiene-status-2026-10-07.md`.
 
 ## Completed Safe Backfills
 

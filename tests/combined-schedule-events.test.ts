@@ -140,7 +140,7 @@ describe("combined Schedule events", () => {
     });
     expect(dbMock.shiftGroup.update).toHaveBeenCalledWith(expect.objectContaining({
       where: { id: "cmgroup00000000000000002" },
-      data: expect.objectContaining({ archivedAt: expect.any(Date), notifyAfter: null }),
+      data: expect.objectContaining({ archivedAt: expect.any(Date) }),
     }));
     expect(dbMock.calendarEvent.update).toHaveBeenCalledWith({
       where: { id: "cmevent000000000000000002" },
@@ -171,7 +171,7 @@ describe("combined Schedule events", () => {
     });
     expect(dbMock.shiftGroup.update).toHaveBeenCalledWith({
       where: { id: "cmgroup00000000000000002" },
-      data: { archivedAt: null, notifyAfter: null, notifyAttemptedAt: null, notifyError: null },
+      data: { archivedAt: null },
     });
     expect(dbMock.shiftGroupWorkingCopy.updateMany).toHaveBeenCalledWith({
       where: { shiftGroupId: "cmgroup00000000000000002", version: 9 },

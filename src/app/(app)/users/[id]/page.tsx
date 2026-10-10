@@ -13,6 +13,7 @@ import UserScoreboardTab from "./UserScoreboardTab";
 import UserActivityTab from "./UserActivityTab";
 import UserAvailabilityTab from "./UserAvailabilityTab";
 import UserBadgesTab from "./UserBadgesTab";
+import UserGearTab, { useProfileGearPicks } from "./UserGearTab";
 import { BadgeMedallion } from "@/components/badges/BadgeMedallion";
 import { toast } from "sonner";
 import { useBreadcrumbLabel } from "@/components/BreadcrumbContext";
@@ -74,7 +75,7 @@ import { formatAnticipatedGraduation } from "@/lib/student-profile";
 
 /* ── Tab Definitions ───────────────────────────────────── */
 
-type TabKey = "info" | "scoreboard" | "activity" | "availability" | "badges";
+type TabKey = "info" | "scoreboard" | "activity" | "availability" | "badges" | "gear";
 
 type BadgeDefinitionOption = {
   id: string;
@@ -222,6 +223,7 @@ const tabDefs: Array<{ key: TabKey; label: string }> = [
   { key: "activity", label: "Activity" },
   { key: "availability", label: "Availability" },
   { key: "badges", label: "Badges" },
+  { key: "gear", label: "Gear" },
 ];
 
 /* ── Main Page ─────────────────────────────────────────── */
@@ -309,6 +311,23 @@ export default function UserDetailPage() {
       setActiveTab("info");
     }
   }, [activeTab, setActiveTab, user]);
+
+  // Gear shows only to the participant themselves and to admins.
+  const gearPicks = useProfileGearPicks(id, isSelf, currentUserRole === "ADMIN");
+  const hasGearTab = Boolean(gearPicks.data?.cycle && gearPicks.data.participant);
+
+  useEffect(() => {
+    if (activeTab === "gear" && currentUserRole !== null && gearPicks.settled && !hasGearTab) {
+      setActiveTab("info");
+    }
+  }, [activeTab, setActiveTab, currentUserRole, gearPicks.settled, hasGearTab]);
+
+  // On phones the tab strip scrolls; keep a deep-linked tab (e.g. ?tab=gear) in view.
+  useEffect(() => {
+    document
+      .querySelector('[aria-label="Profile sections"] [data-state="active"]')
+      ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [activeTab, hasGearTab, user]);
 
   async function uploadAvatar(file: File): Promise<boolean> {
     if (avatarBusyRef.current) return false;
@@ -661,9 +680,9 @@ export default function UserDetailPage() {
     );
   }
   const hasStudentAvailability = profile.staffingType === "ST";
-  const availableTabs = hasStudentAvailability
-    ? tabDefs
-    : tabDefs.filter((tab) => tab.key !== "availability");
+  const availableTabs = tabDefs.filter(
+    (tab) => (tab.key !== "availability" || hasStudentAvailability) && (tab.key !== "gear" || hasGearTab),
+  );
   const selectedAwardDefinition =
     awardDefinitions?.find((definition) => definition.id === selectedAwardDefinitionId) ?? null;
   const selectedAwardRarity = selectedAwardDefinition
@@ -1073,6 +1092,10 @@ export default function UserDetailPage() {
           canAward={currentUserRole === "ADMIN"}
           onAwardRequest={handleAwardRequest}
         />
+      )}
+
+      {activeTab === "gear" && hasGearTab && gearPicks.data && (
+        <UserGearTab data={gearPicks.data} isSelf={isSelf} />
       )}
 
       <div className="mt-6">

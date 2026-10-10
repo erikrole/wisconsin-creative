@@ -883,7 +883,7 @@ Plan: `tasks/kiosk-active-checkout-item-editing-plan.md`
 
 ## Active: Booking owner transfer (2026-07-09)
 
-Plan: `tasks/booking-owner-transfer-plan.md`
+Plan: `tasks/archive/completed-2026-10-07/booking-owner-transfer-plan.md`
 
 - [x] Add staff/admin-only transfer ownership API and lifecycle audit.
 - [x] Wire the shared booking detail page and sheet action.
@@ -2067,7 +2067,7 @@ Plans: `tasks/monitor-battery-product-family-plan.md` and `tasks/archive/complet
 
 ## Active: Item data cleanup (2026-06-25)
 
-Plan: `tasks/item-data-cleanup-plan.md`
+Plan: `tasks/archive/completed-2026-07/item-data-cleanup-plan.md` (residual physical queues: `tasks/item-data-hygiene-status-2026-10-07.md`)
 
 - [x] Write the execution prompt and slice plan.
 - [x] Add a repeatable read-only item-data audit script.
