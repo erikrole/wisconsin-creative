@@ -423,7 +423,7 @@ struct RootView: View {
                 }
                 guard scenePhase == .active,
                       Date().timeIntervalSince(badgeRewardPollWindowStart) < Self.badgeRewardPollWindow,
-                      !KioskStore.isNightHours() else { continue }
+                      !Self.isBadgeRewardQuietHours() else { continue }
                 await pollBadgeRewards(for: user.id)
             }
         }
@@ -463,6 +463,12 @@ struct RootView: View {
             .opacity(0.01)
             .accessibilityHidden(true)
         }
+    }
+
+    /// 10 PM to 6 AM local. Nothing needs a reward check while the gear room is shut.
+    private static func isBadgeRewardQuietHours(_ date: Date = Date(), calendar: Calendar = .current) -> Bool {
+        let hour = calendar.component(.hour, from: date)
+        return hour >= 22 || hour < 6
     }
 
     private static let badgeRewardFastWindow: TimeInterval = 2 * 60

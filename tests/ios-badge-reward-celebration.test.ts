@@ -11,7 +11,8 @@ describe("iOS badge reward celebration", () => {
     expect(app).toContain("sinceForeground < Self.badgeRewardFastWindow ? 15 : 60");
     expect(app).toContain("Task.sleep(for: .seconds(delay))");
     expect(app).toContain("< Self.badgeRewardPollWindow");
-    expect(app).toContain("!KioskStore.isNightHours()");
+    expect(app).toContain("!Self.isBadgeRewardQuietHours()");
+    expect(app).not.toContain("KioskStore");
     expect(app).toContain("badgeRewardPollWindowStart = Date()");
     expect(app).toContain("statusCode == 400");
     expect(app).toContain("removeObject(forKey: cursorKey)");
