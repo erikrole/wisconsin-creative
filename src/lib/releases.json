@@ -27,6 +27,22 @@
   },
   {
     "date": "2026-10-12",
+    "title": "Blasts load recovery",
+    "type": "improvement",
+    "summary": "Blast history and welcome setup recover cleanly when the network fails, and blast detail is easier to scan.",
+    "details": [
+      "If blasts cannot load, you get a clear retry instead of an empty list that looks like nothing was ever sent.",
+      "Blast detail separates a missing blast from a failed load, refreshes on demand, and stacks recipients as cards on smaller screens.",
+      "Compose shows a retry when events or people cannot be loaded for targeting.",
+      "Welcome setup no longer stays on a loading screen forever when profile completion fails."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 452
+  },
+  {
+    "date": "2026-10-12",
     "title": "Reservations keep kit custody",
     "type": "fixes",
     "summary": "Calling a gameday kit on a reservation keeps the real status, so a checked-out camera is not labeled available.",
