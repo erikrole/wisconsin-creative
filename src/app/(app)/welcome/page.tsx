@@ -1,13 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { CheckCircle2, ClipboardCheck, UserRound } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { ProfileCompletionWizard } from "@/components/profile-completion/ProfileCompletionWizard";
 import EmptyState from "@/components/EmptyState";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useProfileCompletion } from "@/hooks/use-profile-completion";
@@ -18,13 +16,11 @@ export default function WelcomePage() {
 
   if (isLoading && !data) {
     return (
-      <Card className="mx-auto max-w-3xl" aria-busy="true">
-        <CardContent className="grid gap-4 p-8">
-          <Skeleton className="h-8 w-56" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-28 w-full" />
-        </CardContent>
-      </Card>
+      <div className="mx-auto max-w-4xl space-y-4 py-4" aria-busy="true">
+        <Skeleton className="h-10 w-72" />
+        <Skeleton className="h-4 w-full max-w-xl" />
+        <Skeleton className="h-64 w-full" />
+      </div>
     );
   }
 
@@ -63,84 +59,71 @@ export default function WelcomePage() {
     );
   }
 
+  const firstName = data.profile.name.split(" ")[0] || data.profile.name;
   const percent =
     data.completion.totalCount > 0
       ? Math.round((data.completion.completedCount / data.completion.totalCount) * 100)
       : 100;
   const collaborator = data.profile.role === "COLLABORATOR";
+  const student = data.profile.role === "STUDENT";
 
-  return (
-    <div className={isFetching ? "mx-auto flex max-w-3xl flex-col gap-5 py-4 opacity-80" : "mx-auto flex max-w-3xl flex-col gap-5 py-4"}>
-      <Card className="overflow-hidden">
-        <div className="h-1 bg-[var(--wi-red)]" />
-        <CardHeader className="gap-3 p-7 sm:p-9">
-          <Badge variant="gray" className="w-fit">Welcome to Wisconsin Creative</Badge>
-          <div className="grid gap-2">
-            <CardTitle asChild className="text-3xl">
-              <h1>Let’s set up your account, {data.profile.name.split(" ")[0]}</h1>
-            </CardTitle>
-            <CardDescription className="max-w-2xl text-base">
-              {collaborator
-                ? "Add a profile photo so the Wisconsin Creative team can recognize you."
-                : "Add the contact and identification details the team needs for daily work. Apparel and a photo can be finished now or later."}
-            </CardDescription>
-          </div>
-          <div className="grid gap-2 pt-2">
-            <div className="flex items-center justify-between text-sm">
-              <span>Profile progress</span>
-              <span className="tabular-nums text-muted-foreground">{percent}%</span>
-            </div>
-            <Progress value={percent} aria-label={`${percent}% profile complete`} />
-          </div>
-        </CardHeader>
-        <CardContent className="grid gap-4 border-t p-7 sm:grid-cols-2 sm:p-9">
-          <div className="flex gap-3">
-            <ClipboardCheck className="mt-0.5 size-5 text-[var(--wi-red)]" />
-            <div>
-              <p className="font-medium">Operationally ready</p>
-              <p className="text-sm text-muted-foreground">
-                {data.completion.operationalReady
-                  ? "You have supplied the essentials needed for access."
-                  : collaborator
-                    ? "Your welcome setup is ready; a photo can be added anytime."
-                    : "Complete contact, Wiscard, and student details where applicable."}
-              </p>
-            </div>
-          </div>
-          <div className="flex gap-3">
-            <UserRound className="mt-0.5 size-5 text-[var(--wi-red)]" />
-            <div>
-              <p className="font-medium">Profile complete</p>
-              <p className="text-sm text-muted-foreground">
-                {data.completion.profileComplete
-                  ? "Your full profile is complete."
-                  : collaborator
-                    ? "Add a photo if you want a complete profile."
-                    : "Add apparel, shoe sizing, and a photo for a complete profile."}
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {data.completion.profileComplete && (
+  if (data.completion.profileComplete) {
+    return (
+      <div className="mx-auto flex max-w-2xl flex-col gap-5 py-8">
         <Alert>
           <CheckCircle2 />
-          <AlertTitle>You’re all set</AlertTitle>
-          <AlertDescription className="flex items-center justify-between gap-4">
-            <span>Your account and profile are ready.</span>
-            <Button onClick={() => router.replace("/")}>Go to dashboard</Button>
+          <AlertTitle>You’re all set, {firstName}</AlertTitle>
+          <AlertDescription className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <span>Your account and profile are ready for Wisconsin Creative work.</span>
+            <Button className="h-10 shrink-0" onClick={() => router.replace("/")}>
+              Go to dashboard
+            </Button>
           </AlertDescription>
         </Alert>
-      )}
+      </div>
+    );
+  }
 
-      <p className="text-center text-sm text-muted-foreground">
-        You can continue later. We’ll remind you again tomorrow.
-      </p>
+  return (
+    <div
+      className={
+        isFetching
+          ? "mx-auto flex max-w-4xl flex-col gap-6 py-4 opacity-80"
+          : "mx-auto flex max-w-4xl flex-col gap-6 py-4"
+      }
+    >
+      <header className="space-y-3">
+        <p className="text-sm font-medium text-muted-foreground">Welcome to Wisconsin Creative</p>
+        <h1 className="text-balance">Let’s get you ready, {firstName}</h1>
+        <p className="max-w-2xl text-pretty text-sm text-muted-foreground">
+          {collaborator
+            ? "Add a profile photo so the Wisconsin Creative team can recognize you."
+            : student
+              ? "Add the contact, Wiscard, and student details the team needs for daily work. Apparel and a photo can wait."
+              : "Add the contact and identification details the team needs for daily work. Apparel and a photo can be finished now or later."}
+        </p>
+        <div className="grid max-w-md gap-2 pt-1">
+          <div className="flex items-center justify-between text-sm">
+            <span>
+              {data.completion.operationalReady
+                ? "Working details ready — finish the rest when you can"
+                : "Essentials first, then optional details"}
+            </span>
+            <span className="tabular-nums text-muted-foreground">{percent}%</span>
+          </div>
+          <Progress value={percent} aria-label={`${percent}% profile complete`} />
+        </div>
+      </header>
+
       <ProfileCompletionWizard
+        presentation="page"
         onComplete={() => router.replace("/")}
         onSnooze={() => router.replace("/")}
       />
+
+      <p className="text-center text-sm text-muted-foreground">
+        You can continue later from Home. We’ll remind you again tomorrow.
+      </p>
     </div>
   );
 }

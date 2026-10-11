@@ -9,7 +9,7 @@ describe("email-first onboarding source wiring", () => {
     expect(source).toContain('result?.flow === "onboarding" ? "onboarding" : "password"');
     expect(source).toContain('url: "/api/auth/register"');
     expect(source).toMatch(/onSuccess: \(\) => \{[\s\S]*?router\.replace\("\/welcome"\);/);
-    expect(source).toContain("Your email is approved.");
+    expect(source).toContain("You’re invited.");
     expect(source).not.toContain("Need an account?");
   });
 
