@@ -89,6 +89,9 @@ async function review(branch, inspection) {
   const decision = previewRetentionDecision({ exists: false, openPullRequest: refs.prs.has(gitBranch), pinned: runtime.pinned, deletedAt: runtime.git_deleted_at, lastSeenAt: runtime.last_seen_at, graceDays: config.preview.cleanupGraceDays });
   console.log({ gitBranch, branch: branch.id, status: decision, apply });
   if (!apply) return;
+  // Open PRs stay alive and pinned previews never expire; anything else keeps its original deletion date.
+  if (decision === "referenced") await provider.setExpiry(config.preview.projectId, branch.id, NeonPreviewApi.expiry(config.preview.branchTtlDays));
+  if (decision === "pinned") await provider.setExpiry(config.preview.projectId, branch.id, null);
   if (decision === "referenced") { await sql.query("UPDATE wc_preview_meta.runtime SET git_deleted_at=NULL WHERE id=true"); return; }
   if (decision === "record-deletion") { await sql.query("UPDATE wc_preview_meta.runtime SET git_deleted_at=now() WHERE id=true AND git_deleted_at IS NULL"); return; }
   if (decision !== "eligible") return;
