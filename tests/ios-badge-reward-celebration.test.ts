@@ -7,7 +7,12 @@ describe("iOS badge reward celebration", () => {
     const client = source("ios/Wisconsin/Core/APIClient.swift");
     expect(app).toContain('WisconsinBadgeRewardCursor.\\(userId)');
     expect(app).toContain("earnedBadgeQueue.appendUnique");
-    expect(app).toContain("Task.sleep(for: .seconds(15))");
+    // Polling backs off and stops so an open phone cannot keep the database awake overnight.
+    expect(app).toContain("sinceForeground < Self.badgeRewardFastWindow ? 15 : 60");
+    expect(app).toContain("Task.sleep(for: .seconds(delay))");
+    expect(app).toContain("< Self.badgeRewardPollWindow");
+    expect(app).toContain("!KioskStore.isNightHours()");
+    expect(app).toContain("badgeRewardPollWindowStart = Date()");
     expect(app).toContain("statusCode == 400");
     expect(app).toContain("removeObject(forKey: cursorKey)");
     expect(app).toContain("guard !badgeRewardPollInFlight else { return }");

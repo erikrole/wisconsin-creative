@@ -341,6 +341,8 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var earnedBadgeQueue: [EarnedBadgeReward] = []
     @State private var badgeRewardPollInFlight = false
+    /// Start of the current foreground window for reward polling. See `badge-rewards`.
+    @State private var badgeRewardPollWindowStart = Date()
 
     var body: some View {
         Group {
@@ -406,12 +408,22 @@ struct RootView: View {
             // can mint an easter egg, then fetch once more for its reward.
             await refreshBadgeRewardsForAppOpen(for: user.id)
 
+            // Each poll is a database read (session, user, badges). A phone or iPad left
+            // open on a desk polled every 15 seconds all night, which kept the Neon compute
+            // from ever suspending. Poll fast just after the app comes forward, slow down,
+            // stop after ten minutes, and never poll at night. Coming back to the
+            // foreground restarts the window and fetches immediately.
             while !Task.isCancelled {
+                let sinceForeground = Date().timeIntervalSince(badgeRewardPollWindowStart)
+                let delay: Double = sinceForeground < Self.badgeRewardFastWindow ? 15 : 60
                 do {
-                    try await Task.sleep(for: .seconds(15))
+                    try await Task.sleep(for: .seconds(delay))
                 } catch {
                     return
                 }
+                guard scenePhase == .active,
+                      Date().timeIntervalSince(badgeRewardPollWindowStart) < Self.badgeRewardPollWindow,
+                      !KioskStore.isNightHours() else { continue }
                 await pollBadgeRewards(for: user.id)
             }
         }
@@ -420,6 +432,7 @@ struct RootView: View {
                   let user = session.currentUser,
                   !user.forcePasswordChange,
                   !user.isReadOnlyRolePreview else { return }
+            badgeRewardPollWindowStart = Date()
             Task {
                 await APIClient.shared.recordProductEvent(eventName: "app_opened", surface: "home")
                 if user.role != "COLLABORATOR" {
@@ -451,6 +464,9 @@ struct RootView: View {
             .accessibilityHidden(true)
         }
     }
+
+    private static let badgeRewardFastWindow: TimeInterval = 2 * 60
+    private static let badgeRewardPollWindow: TimeInterval = 10 * 60
 
     @MainActor
     private func pollBadgeRewards(for userId: String) async {
