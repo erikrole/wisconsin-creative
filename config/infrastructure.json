@@ -15,7 +15,7 @@
     "database": "gear-tracker",
     "ownerRole": "preview_owner",
     "branchPrefix": "wc-preview-",
-    "cleanupGraceDays": 7,
+    "cleanupGraceDays": 2,
     "provisioningVersion": 1,
     "attestationPublicKey": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAp7uYZTI5/XEwZvwAmpcw/ns1DSnqZ6KUWQAjsc9ujHE=\n-----END PUBLIC KEY-----\n"
   }
