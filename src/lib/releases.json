@@ -6,7 +6,8 @@
     "summary": "The iOS app stops checking for new badges while it sits open, which keeps our servers asleep overnight.",
     "details": [
       "Badge celebrations still show right away when you open or return to the app.",
-      "A phone left open on a desk no longer checks for badges all night."
+      "A phone left open on a desk no longer checks for badges all night.",
+      "A badge someone else awards you while the app is already open appears the next time you open it."
     ],
     "platforms": [
       "iOS"

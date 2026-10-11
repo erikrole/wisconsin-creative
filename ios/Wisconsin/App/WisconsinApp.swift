@@ -341,8 +341,6 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var earnedBadgeQueue: [EarnedBadgeReward] = []
     @State private var badgeRewardPollInFlight = false
-    /// Start of the current foreground window for reward polling. See `badge-rewards`.
-    @State private var badgeRewardPollWindowStart = Date()
 
     var body: some View {
         Group {
@@ -407,32 +405,14 @@ struct RootView: View {
             // Establish the no-history-replay cursor before the app-open event
             // can mint an easter egg, then fetch once more for its reward.
             await refreshBadgeRewardsForAppOpen(for: user.id)
-
-            // Each poll is a database read (session, user, badges). A phone or iPad left
-            // open on a desk polled every 15 seconds all night, which kept the Neon compute
-            // from ever suspending. Poll fast just after the app comes forward, slow down,
-            // stop after ten minutes, and never poll at night. Coming back to the
-            // foreground restarts the window and fetches immediately.
-            while !Task.isCancelled {
-                let sinceForeground = Date().timeIntervalSince(badgeRewardPollWindowStart)
-                let delay: Double = sinceForeground < Self.badgeRewardFastWindow ? 15 : 60
-                do {
-                    try await Task.sleep(for: .seconds(delay))
-                } catch {
-                    return
-                }
-                guard scenePhase == .active,
-                      Date().timeIntervalSince(badgeRewardPollWindowStart) < Self.badgeRewardPollWindow,
-                      !Self.isBadgeRewardQuietHours() else { continue }
-                await pollBadgeRewards(for: user.id)
-            }
+            // No timer. A phone left open on a desk used to poll all night and keep the
+            // database awake; rewards now arrive with the foreground request instead.
         }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active,
                   let user = session.currentUser,
                   !user.forcePasswordChange,
                   !user.isReadOnlyRolePreview else { return }
-            badgeRewardPollWindowStart = Date()
             Task {
                 await APIClient.shared.recordProductEvent(eventName: "app_opened", surface: "home")
                 if user.role != "COLLABORATOR" {
@@ -464,15 +444,6 @@ struct RootView: View {
             .accessibilityHidden(true)
         }
     }
-
-    /// 10 PM to 6 AM local. Nothing needs a reward check while the gear room is shut.
-    private static func isBadgeRewardQuietHours(_ date: Date = Date(), calendar: Calendar = .current) -> Bool {
-        let hour = calendar.component(.hour, from: date)
-        return hour >= 22 || hour < 6
-    }
-
-    private static let badgeRewardFastWindow: TimeInterval = 2 * 60
-    private static let badgeRewardPollWindow: TimeInterval = 10 * 60
 
     @MainActor
     private func pollBadgeRewards(for userId: String) async {
@@ -508,9 +479,15 @@ struct RootView: View {
             await pollBadgeRewards(for: userId)
         }
         guard session.currentUser?.id == userId,
-              UserDefaults.standard.string(forKey: cursorKey) != nil else { return }
-        try? await APIClient.shared.recordBadgeAppOpen()
-        await pollBadgeRewards(for: userId)
+              let cursor = UserDefaults.standard.string(forKey: cursorKey) else { return }
+        // One request records the open and returns whatever was earned since the cursor.
+        if let rewards = try? await APIClient.shared.recordBadgeAppOpen(after: cursor) {
+            guard session.currentUser?.id == userId else { return }
+            UserDefaults.standard.set(rewards.nextCursor, forKey: cursorKey)
+            earnedBadgeQueue.appendUnique(contentsOf: rewards.awards)
+        } else {
+            await pollBadgeRewards(for: userId)
+        }
     }
 
 }

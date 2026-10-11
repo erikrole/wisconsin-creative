@@ -1322,15 +1322,25 @@ final class APIClient {
         return response.data
     }
 
-    func recordBadgeAppOpen() async throws {
+    /// Records a foreground and returns everything earned since `after`,
+    /// including what this open minted, so a foreground is one request.
+    /// Nil when the server had no usable cursor to answer from.
+    func recordBadgeAppOpen(after: String?) async throws -> RecentBadgeRewards? {
         struct AppOpenResponse: Decodable {
             let accepted: Bool
+            let awards: [EarnedBadgeReward]?
+            let nextCursor: String?
         }
 
+        var queryItems: [URLQueryItem] = []
+        if let after, !after.isEmpty {
+            queryItems.append(.init(name: "after", value: after))
+        }
         let response: DataWrapper<AppOpenResponse> = try await perform(
-            request(path: "/api/badges/events/app-open", method: "POST")
+            request(path: "/api/badges/events/app-open", method: "POST", queryItems: queryItems)
         )
-        _ = response.data.accepted
+        guard let awards = response.data.awards, let nextCursor = response.data.nextCursor else { return nil }
+        return RecentBadgeRewards(awards: awards, nextCursor: nextCursor)
     }
 
     /// Uploads one MetricKit diagnostic payload (crashes, hangs, resource
