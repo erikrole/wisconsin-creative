@@ -286,34 +286,48 @@ export default function ImportPage() {
     if (fileRef.current) fileRef.current.value = "";
   }
 
+  const stepOrder = STEP_LABELS.map((s) => s.key);
+  const currentStepIndex = Math.max(0, stepOrder.indexOf(step));
+
   return (
     <FadeUp>
-      <PageHeader title="Import Items">
+      <PageHeader
+        title="Import Items"
+        description="Upload a CSV, map columns (Cheqroom preset available), preview changes, then import. Source values are preserved even when a column has no first-class field."
+      >
         {step !== "upload" && step !== "importing" && (
-          <Button variant="outline" onClick={resetWizard}>Start over</Button>
+          <Button variant="outline" className="h-10" onClick={resetWizard}>
+            Start over
+          </Button>
         )}
       </PageHeader>
 
-      {/* Step indicator */}
-      <div className="mb-6 max-w-full overflow-x-auto pb-1">
-        <div className="flex w-max items-center gap-2">
-          {STEP_LABELS.map((s, i) => (
-            <div key={s.key} className="flex items-center gap-2">
-              {i > 0 && <div className="h-px w-6 bg-border" />}
-              <div
-                className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-sm ${
-                  step === s.key
-                    ? "bg-primary font-semibold text-primary-foreground"
-                    : "bg-muted text-muted-foreground"
-                }`}
-              >
-                <span>{i + 1}</span>
-                <span>{s.label}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      <nav aria-label="Import steps" className="mb-6 max-w-full overflow-x-auto pb-1">
+        <ol className="flex w-max items-center gap-2">
+          {STEP_LABELS.map((s, i) => {
+            const complete = i < currentStepIndex;
+            const current = i === currentStepIndex;
+            return (
+              <li key={s.key} className="flex items-center gap-2">
+                {i > 0 && <div className="h-px w-6 bg-border" aria-hidden="true" />}
+                <div
+                  className={
+                    current
+                      ? "flex h-10 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground"
+                      : complete
+                        ? "flex h-10 items-center gap-1.5 rounded-md border border-border bg-card px-3 text-sm text-foreground"
+                        : "flex h-10 items-center gap-1.5 rounded-md bg-muted px-3 text-sm text-muted-foreground"
+                  }
+                  aria-current={current ? "step" : undefined}
+                >
+                  <span className="tabular-nums">{i + 1}</span>
+                  <span>{s.label}</span>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      </nav>
 
       {error && (
         <Alert variant="destructive" className="mb-4">

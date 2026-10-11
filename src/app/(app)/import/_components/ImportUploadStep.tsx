@@ -71,6 +71,7 @@ export function ImportUploadStep({
           </Button>
           <div className="flex-1" />
           <Button
+            className="h-10"
             disabled={!file || loading}
             onClick={onParseHeaders}
           >
