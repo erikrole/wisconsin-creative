@@ -26,7 +26,7 @@
     "pr": 467
   },
   {
-    "date": "2026-10-11",
+    "date": "2026-10-12",
     "title": "Clearer first-day setup",
     "type": "improvement",
     "summary": "New accounts set up their profile on the Welcome page itself, and Blasts recover cleanly when a load fails.",
@@ -39,7 +39,7 @@
     "platforms": [
       "Web"
     ],
-    "pr": 452
+    "pr": 453
   },
   {
     "date": "2026-10-12",
