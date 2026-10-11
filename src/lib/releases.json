@@ -71,6 +71,21 @@
   },
   {
     "date": "2026-10-12",
+    "title": "Clearer Settings and account deletion",
+    "type": "improvement",
+    "summary": "Settings pages are easier to find and jump between, collaborator access warns before you leave unsaved changes, and you can delete your account from web Security.",
+    "details": [
+      "Settings names and related links now match what you see in the Settings menu, including clearer paths for calendar and overdue rules.",
+      "Collaborator access shows unsaved changes, lets you reset, and warns if you leave mid-edit.",
+      "On the web, Security now includes Delete account with the same password confirmation and retention rules as the iPhone app."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 457
+  },
+  {
+    "date": "2026-10-12",
     "title": "Kits list shows gear that's out",
     "type": "fixes",
     "summary": "The kits list no longer calls a kit Ready when some of its cameras are checked out, pending pickup, in maintenance, or retired.",
