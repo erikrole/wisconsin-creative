@@ -43,6 +43,21 @@
   },
   {
     "date": "2026-10-12",
+    "title": "Hiring board recovers",
+    "type": "improvement",
+    "summary": "Hiring keeps the applicant board when a refresh fails and gives a clear Retry instead of a dead end.",
+    "details": [
+      "If Hiring cannot load cycles or applicants, you get Retry instead of a stuck empty page.",
+      "A failed refresh keeps the last loaded board for that cycle so work is not wiped.",
+      "Search and filters that hide every applicant offer Clear filters."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 455
+  },
+  {
+    "date": "2026-10-12",
     "title": "Blasts load recovery",
     "type": "improvement",
     "summary": "Blast history and welcome setup recover cleanly when the network fails, and blast detail is easier to scan.",
