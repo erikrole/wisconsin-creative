@@ -1,5 +1,19 @@
 [
   {
+    "date": "2026-10-11",
+    "title": "Badge celebrations check less often",
+    "type": "improvement",
+    "summary": "The iOS app stops checking for new badges while it sits open, which keeps our servers asleep overnight.",
+    "details": [
+      "Badge celebrations still show right away when you open or return to the app.",
+      "A phone left open on a desk no longer checks for badges all night."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 458
+  },
+  {
     "date": "2026-10-10",
     "title": "No Claim on unreleased crews",
     "type": "fixes",
