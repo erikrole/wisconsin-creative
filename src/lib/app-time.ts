@@ -196,3 +196,17 @@ export function appTzDayRange(
   const lt = startOfDayInAppTz(noonUtc, 1, timeZone);
   return { gte, lt };
 }
+
+/** The hour (0-23) of an instant in the app timezone. */
+export function appTzHour(instant: Date = new Date(), timeZone: string = env.appTimezone): number {
+  const hour = new Intl.DateTimeFormat("en-US", { timeZone, hour: "2-digit", hourCycle: "h23" })
+    .formatToParts(instant)
+    .find((part) => part.type === "hour")?.value;
+  return Number(hour);
+}
+
+/** 10 PM to 6 AM in the app timezone, when the gear room is shut and polling can wait. */
+export function isOvernightQuietHours(instant: Date = new Date(), timeZone: string = env.appTimezone): boolean {
+  const hour = appTzHour(instant, timeZone);
+  return hour >= 22 || hour < 6;
+}

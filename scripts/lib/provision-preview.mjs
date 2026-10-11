@@ -67,17 +67,23 @@ export async function initializePreviewChild({ branch, gitBranch, pooledUrl, dir
 
 export async function provisionPreview(gitBranch, { api = new NeonPreviewApi(), config = readInfrastructureConfig(), root = process.cwd() } = {}) {
   const key = branchKey(gitBranch), name = `${config.preview.branchPrefix}${key}`;
-  let branch = (await api.branches(config.preview.projectId)).find((b) => b.name === name);
+  const existing = await api.branches(config.preview.projectId);
+  let branch = existing.find((b) => b.name === name);
   if (!branch) {
+    // Neon bills every branch past the plan's included ten, each hour. Warn loudly; cleanup and the expiry below remove the old ones.
+    const children = existing.filter((b) => b.name?.startsWith(config.preview.branchPrefix)).length;
+    if (children >= config.preview.maxPreviewBranches) console.warn(`::warning title=Neon preview branches over budget::${children} preview branches exist (budget ${config.preview.maxPreviewBranches}). Each extra branch bills hourly; merge or close old PRs or run Preview cleanup.`);
     if (!process.env.PREVIEW_SIGNING_KEY) throw new Error("New previews require the trusted provisioner's PREVIEW_SIGNING_KEY.");
     const result = await api.request(`/projects/${config.preview.projectId}/branches`, { method: "POST", body: {
-      branch: { parent_id: config.preview.templateBranchId, name },
+      branch: { parent_id: config.preview.templateBranchId, name, expires_at: NeonPreviewApi.expiry(config.preview.branchTtlDays) },
       endpoints: [{ type: "read_write", autoscaling_limit_min_cu: 0.25, autoscaling_limit_max_cu: 1, suspend_timeout_seconds: 300 }],
     } });
     branch = await api.readyBranch(config.preview.projectId, result.branch.id);
     assertProviderLineage(branch, gitBranch, config);
   }
   assertProviderLineage(branch, gitBranch, config);
+  // A push means the PR is alive: push the deletion date out again. Best effort, never blocks a preview.
+  if (!branch.protected) await api.setExpiry(config.preview.projectId, branch.id, NeonPreviewApi.expiry(config.preview.branchTtlDays)).catch(() => console.warn({ branch: branch.id, status: "expiry-refresh-skipped" }));
   let [pooledUrl, directUrl] = await Promise.all([
     api.connection(config.preview.projectId, branch.id, config.preview.database, config.preview.ownerRole, true),
     api.connection(config.preview.projectId, branch.id, config.preview.database, config.preview.ownerRole, false),

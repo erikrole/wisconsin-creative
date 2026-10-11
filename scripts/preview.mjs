@@ -9,7 +9,8 @@ import { provisionPreview } from "./lib/provision-preview.mjs";
 import { localChecksums } from "./lib/local-migrations.mjs";
 import { acquireProcessLock } from "./lib/process-lock.mjs";
 import { writeDotenvValue } from "./ensure-dev-env.mjs";
-import { readMigrationRows } from "./lib/migration-baseline.mjs";
+import { readMigrationRows, readInfrastructureConfig } from "./lib/migration-baseline.mjs";
+import { NeonPreviewApi } from "./lib/neon-preview-api.mjs";
 import { assertFallbackHistory } from "./prisma-migrate-deploy.mjs";
 
 const root = process.cwd(), mode = process.argv[2] ?? "status";
@@ -45,6 +46,9 @@ try {
     const pending = assertFallbackHistory(localChecksums(), await readMigrationRows(sql), baseline);
     if (["pin", "unpin"].includes(mode)) {
       await retainPreview(sql, mode === "pin");
+      // Pinned previews must not expire; unpinning starts the normal clock again. Needs the operator's Neon key.
+      if (process.env.NEON_API_KEY) await new NeonPreviewApi().setExpiry(state.projectId, state.branchId, mode === "pin" ? null : NeonPreviewApi.expiry(readInfrastructureConfig().preview.branchTtlDays));
+      else if (mode === "pin") console.warn("NEON_API_KEY is not set: this preview still expires 14 days after its last push unless the daily cleanup sees the pin.");
       show(state, { pinned: mode === "pin" });
     } else if (["status", "doctor"].includes(mode)) {
       show(state, { status: pending.length ? "migration-needed" : "ready", pending, templateVerified: true });

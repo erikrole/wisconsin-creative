@@ -20,6 +20,9 @@ const run = GET as unknown as (req: Request) => Promise<Response>;
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Noon in Chicago: the overnight quiet window must not depend on when CI runs.
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-10-12T17:00:00.000Z"));
   process.env.BADGES_ENABLED = "true";
   mocks.listEarnedBadgesSince.mockResolvedValue([]);
 });
@@ -57,5 +60,25 @@ describe("recent badge awards", () => {
     expect(json.disabled).toBe(true);
     expect(json.data.awards).toEqual([]);
     expect(mocks.listEarnedBadgesSince).not.toHaveBeenCalled();
+  });
+
+  it("answers an overnight poll with an empty page before auth or the database", async () => {
+    vi.setSystemTime(new Date("2026-10-12T07:00:00.000Z")); // 2 AM in Chicago
+    const after = "2026-10-12T05:00:00.000Z";
+    const response = await run(new Request(`http://test/api/badges/recent?after=${encodeURIComponent(after)}`));
+    const json = await response.json();
+
+    expect(json.quiet).toBe(true);
+    expect(json.data).toEqual({ awards: [], nextCursor: after });
+    expect(mocks.listEarnedBadgesSince).not.toHaveBeenCalled();
+  });
+
+  it("still establishes a cursor overnight when the app has none", async () => {
+    vi.setSystemTime(new Date("2026-10-12T07:00:00.000Z"));
+    const response = await run(new Request("http://test/api/badges/recent"));
+    const json = await response.json();
+
+    expect(json.quiet).toBeUndefined();
+    expect(Date.parse(json.data.nextCursor)).not.toBeNaN();
   });
 });

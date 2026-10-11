@@ -13,6 +13,12 @@ export class NeonPreviewApi {
     if (!response.ok) throw Object.assign(new Error(`Neon ${method} failed (${response.status}). Inspect the named branch before retrying; credentials and response bodies are not logged.`), { status: response.status });
     return response.status === 204 ? {} : response.json();
   }
+  // Neon deletes a branch at `expires_at`, so a preview nobody refreshes cannot keep billing
+  // branch-hours if cleanup is off or stuck. Pass null to keep a branch (pinned previews).
+  static expiry(days, now = Date.now()) { return new Date(now + days * 86_400_000).toISOString(); }
+  async setExpiry(project, branchId, expiresAt) {
+    await this.request(`/projects/${encodeURIComponent(project)}/branches/${encodeURIComponent(branchId)}`, { method: "PATCH", body: { branch: { expires_at: expiresAt } } });
+  }
   async branches(project) {
     const branches = []; let cursor;
     do {
