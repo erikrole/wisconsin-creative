@@ -4,13 +4,13 @@
 
 - Area: Yearly Under Armour staff gear picks for full-time creative staff
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-10-08
+- Last Updated: 2026-10-09
 - Status: Built on `feat/ua-gear-picks` for cycle 2027-28; authenticated preview proof pending.
 - Routes: `/gear` (participants), `/gear/admin` (ADMIN only)
 
 ## Direction
 
-Each year full-time creative staff pick Under Armour gear, on top of their standard issue covered by the department, up to a dollar allowance by fit (2027-28: Men's $192, Women's $357). This replaces a static pick-list page and a copy-and-paste email. Staff save and submit in the app; an admin reads the results and copies the CSV into the equipment order sheet by hand. There is no server-side Google Sheets integration.
+Each year full-time creative staff pick Under Armour gear, on top of their standard issue covered by the department, up to a dollar allowance by fit (2027-28: Men's $192, Women's $357). This replaces a static pick-list page and a copy-and-paste email. Staff save and submit in the app; an admin downloads the equipment department's budget workbook already filled from submitted picks (or the CSV). There is no server-side Google Sheets integration.
 
 ## Rules
 
@@ -52,13 +52,27 @@ It uses the direct database URL resolver (`DIRECT_URL`, then `DATABASE_URL_UNPOO
 | GET | `/api/gear-picks/admin` | `gear_picks:manage` | Every participant with status, lines, and totals; totals by SKU and size; addable people |
 | PATCH | `/api/gear-picks/admin` | `gear_picks:manage` | `setDeadline`, `addParticipant`, `updateParticipant`, `removeParticipant`; each audited with before/after |
 | GET | `/api/gear-picks/admin/export.csv` | `gear_picks:manage` | One row per line: Group ("Staff Pick"), Person, Item #, Item, Color, Size, Qty, Unit Price, Line Total, Submitted At. Only submitted picks are exported; drafts are left out. Audited and rate limited |
+| GET | `/api/gear-picks/admin/export.xlsx` | `gear_picks:manage` | The equipment department's workbook with the cycle tab filled (see Equipment Sheet). Submitted picks only. Audited (`format: equipment_sheet`) and rate limited with the CSV |
+
+## Equipment Sheet
+
+The equipment department's budget workbook ("Z-Brand Creative") is the official order form. `src/lib/gear-picks/templates/equipment-sheet-brand-creative.xlsx` is their file, converted once from `.xls` in Excel so styles and formulas survive. Only the cycle tab is kept: the repository is public, and the historic tabs are the department's record, not ours. `src/lib/gear-picks/equipment-sheet.ts` fills a copy of the cycle's tab (`2027-28` → `27-28`) the way the department filled earlier tabs by hand:
+
+- One row per item, color, and price, with summed counts across the size columns. No names; picks only (standard issue stays off the sheet for now, and Coaches/Staff issue is left blank).
+- Footwear → Shoe selection (columns 6, 6½ … 13, US men's sizes only). Sideline collection and headwear → Sideline apparel. Everything else → Team catalog.
+- Item names carry the fit prefix (`M …`, `W …`); unisex stays bare. Style #, Color #, Color, Unit Cost (snapshotted price), and QTY are filled; `tot.`, `Total`, and the budget/remaining formulas stay live (`fullCalcOnLoad`). `XXL` maps to `2XL`.
+- Sizes with no column (waist, fitted caps, `OSFA`, women's and catalog shoe sizes) go in QTY with a notes breakdown (`32 ×2`, `W 8 ×1`). Women's shoe sizes are never converted.
+- Rows holding the department's notes (for example "Talls may or may not be available") are skipped. A full section spills into Team catalog, then Golf, noted "(section full)"; if nothing is left the route returns 422 and the CSV still works.
+- The tab title typo ("2027-2078") is corrected on export.
+
+New cycle: get the department's updated workbook, delete every tab but the new cycle's, save it as `.xlsx` in Excel (File > Save As > Excel Workbook), and replace the template.
 
 ## UI
 
 - `/gear`: compact **Standard issue** disclosure explains that the department covers this gear separately from the allowance. **Choose your gear** offers search, collection/category filters, and optional **Within my allowance** (off by default). Cards preview colors and support size/quantity selection. The list and review edit the actual selected color, size, and quantity; duplicate and sizing problems remain visible, totals update immediately, and edits lock during saving. Profile lists remain read-only. A sticky footer shows the remaining allowance, total, save state, Save draft, and Review & submit (Review changes after submission). Adding the first line of a style that is already in the participant's department-covered kit (standard issue or core kit, matched by style for their fit) opens an "Included in your standard issue" (or core kit) dialog naming the kit color. It is awareness only: a duplicate or another color is fine, and "Add to picks" adds the line. Later sizes and colors of that style add without asking. Non-participants see an explanation.
 - `/gear` intro: a "How it works" splash (`GearPicksIntro.tsx`) opens automatically on a participant's first visit each cycle (normally right after the dashboard banner) while picks are open and not yet submitted. Seen state is per device in localStorage (`gear-picks-intro-seen:<cycleId>:<participantId>`, so a shared browser still shows it to each person). It shows the kit count for their fit, their allowance (or what is left on a draft), and the deadline with its time, plus tips: optional allowance filtering, photo/color previews, editing selected colors in review, checking item sizes with matching profile defaults only, and changes allowed until the deadline. A "How it works" header button reopens it while picks are open.
 
-- `/gear/admin`: summary counts, deadline editor, people table (status Not started / Draft / Submitted, fit, editable allowance, picked total, expandable lines, remove with confirmation), add-person picker, totals by item, color, and size, and Export CSV. Sidebar entry "UA Gear Picks" under Team for admins.
+- `/gear/admin`: summary counts, deadline editor, people table (status Not started / Draft / Submitted, fit, editable allowance, picked total, expandable lines, remove with confirmation), add-person picker, totals by item, color, and size, and Export CSV. Sidebar entry "UA Gear Picks" under Team for admins. The header has Export CSV and Equipment sheet (primary) downloads.
 - Dashboard: a banner for participants who haven't submitted while the cycle is open, with the allowance and deadline and a "Choose gear" button.
 
 ## Code
@@ -73,7 +87,7 @@ It uses the direct database URL resolver (`DIRECT_URL`, then `DATABASE_URL_UNPOO
 
 - Icon Lo (6024284) has a verified catalog size range but no confirmed US sizing system. It is labeled Catalog shoe size and never prefilled. User suspects men’s sizing; supplier confirmation remains open.
 
-- One cycle at a time: the service reads the cycle id from the catalog module. A new year needs a new catalog JSON, images, a cycle row, and a roster seed.
+- One cycle at a time: the service reads the cycle id from the catalog module. A new year needs a new catalog JSON, images, a cycle row, a roster seed, and the department's workbook with that year's tab.
 - Removing a participant deletes their saved lines (recorded in the audit log).
 
 ## Change Log
@@ -83,6 +97,7 @@ It uses the direct database URL resolver (`DIRECT_URL`, then `DATABASE_URL_UNPOO
 - 2026-10-07: First build for 2027-28: schema and migration `0169_gear_picks`, roster seed script, participant pick page, admin results with CSV export, dashboard banner, `gear_picks` permission.
 - 2026-10-08: Colors lead with Red, then White, then Black on every item.
 - 2026-10-08: Heads-up dialog when a pick is already in the participant's standard issue or core kit (`kitEntryForStyle`).
+- 2026-10-09: Equipment sheet export fills the department's workbook (`27-28` tab) from submitted picks.
 - 2026-10-08: Default allowances raised to Men's $192 and Women's $357 to match the equipment sheet. The 8 production participant rows were seeded at these amounts.
 
 ### Picker recovery acceptance (2026-10-08, local implementation)
