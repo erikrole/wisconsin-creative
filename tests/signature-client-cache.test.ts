@@ -8,11 +8,15 @@ import {
 } from "@/lib/signatures/client-cache";
 
 describe("Signature client cache freshness", () => {
-  it("invalidates the exact detail and both roster-list views without touching other collections", async () => {
+  it("invalidates shared roster and capture reads without touching unrelated app queries", async () => {
     const queryClient = new QueryClient();
     const detailKey = signatureCollectionQueryKey("collection-a");
     const otherDetailKey = signatureCollectionQueryKey("collection-b");
 
+    const bootstrapKey = ["fetch", "/api/signatures/collections/collection-b/members/member-b"];
+    const unrelatedKey = ["fetch", "/api/bookings"];
+    queryClient.setQueryData(bootstrapKey, { captureVersion: 0 });
+    queryClient.setQueryData(unrelatedKey, { bookings: [] });
     queryClient.setQueryData(detailKey, { id: "collection-a", complete: 0 });
     queryClient.setQueryData(otherDetailKey, { id: "collection-b", complete: 3 });
     for (const key of signatureCollectionListQueryKeys) {
@@ -25,7 +29,9 @@ describe("Signature client cache freshness", () => {
     for (const key of signatureCollectionListQueryKeys) {
       expect(queryClient.getQueryState(key)?.isInvalidated).toBe(true);
     }
-    expect(queryClient.getQueryState(otherDetailKey)?.isInvalidated).toBe(false);
+    expect(queryClient.getQueryState(otherDetailKey)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(bootstrapKey)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(unrelatedKey)?.isInvalidated).toBe(false);
   });
 
   it("wires successful Signature mutations into cache invalidation", () => {
