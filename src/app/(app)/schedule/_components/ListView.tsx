@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect, useLayoutEffect, useSyncExternalStore } from "react";
+import { useState, useCallback, useRef, useEffect, useLayoutEffect, useSyncExternalStore, type ReactNode } from "react";
 import Link from "next/link";
 import { ArchiveIcon, ArrowDownIcon, ArrowUpIcon, ChevronDownIcon, ChevronRightIcon, EyeOffIcon, LoaderCircleIcon, UserIcon, UsersRoundIcon, XIcon } from "lucide-react";
 import { toast } from "sonner";
-import { SkeletonTable } from "@/components/Skeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 import EmptyState from "@/components/EmptyState";
 import { formatDateShort, formatTimeShort } from "@/lib/format";
 import { formatCalendarEventAllDayLabel, formatCalendarEventDateRange, eventSpansMultipleDays } from "@/lib/calendar-event-dates";
@@ -113,6 +113,66 @@ type ListViewProps = {
 };
 
 const EVENT_GRID_CLASS = "grid-cols-[44px_72px_minmax(180px,1fr)_80px_minmax(100px,140px)_136px_40px]";
+
+/**
+ * The seven columns of a desktop event row, in track order.
+ *
+ * Header, body rows, and the loading skeleton all render through `EventGrid`,
+ * which emits exactly one cell per column. A grid places children by position,
+ * so a row that omitted a cell (an event with no shifts has no crew summary)
+ * silently slid every later cell one track left -- status landed in the crew
+ * column and the actions menu in the status column. Requiring a value for every
+ * column makes that shape unrepresentable.
+ */
+const EVENT_COLUMNS = ["toggle", "time", "event", "coverage", "crew", "status", "actions"] as const;
+type EventColumn = (typeof EVENT_COLUMNS)[number];
+
+function EventGrid({
+  cells,
+  className,
+}: {
+  cells: Record<EventColumn, ReactNode>;
+  className?: string;
+}) {
+  return (
+    <div className={cn("grid items-center gap-2", EVENT_GRID_CLASS, className)}>
+      {EVENT_COLUMNS.map((column) => (
+        <div key={column} data-event-column={column} className="min-w-0">
+          {cells[column]}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Row-shaped placeholder: same tracks as real rows, so loading never reflows into place. */
+function EventListSkeleton({ rows = 6 }: { rows?: number }) {
+  return (
+    <div role="status" aria-label="Loading schedule" className="schedule-enter">
+      {Array.from({ length: rows }, (_, row) => (
+        <div key={row} className="border-b border-l-[3px] border-border/20 border-l-transparent px-2 py-1.5">
+          <EventGrid
+            className="min-h-12"
+            cells={{
+              toggle: null,
+              time: <Skeleton className="h-3 w-10" />,
+              event: (
+                <div className="flex flex-col gap-1.5">
+                  <Skeleton className="h-3.5" style={{ width: `${55 + ((row * 17) % 35)}%` }} />
+                  <Skeleton className="h-2.5 w-20" />
+                </div>
+              ),
+              coverage: <Skeleton className="h-5 w-14 rounded-full" />,
+              crew: <Skeleton className="ml-auto h-6 w-16 rounded-full" />,
+              status: null,
+              actions: null,
+            }}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function shiftAssignee(shift: Shift) {
   const active = shift.assignments.find((a) => ACTIVE_STATUSES.includes(a.status));
@@ -1269,7 +1329,7 @@ export function ListView({
 
   return (
     <>
-      <div className="overflow-hidden rounded-md border border-border/60 bg-card" data-schedule-view="list">
+      <div className={cn("schedule-enter overflow-hidden rounded-md border border-border/60 bg-card transition-opacity duration-200", fillingWindow && "opacity-80")} aria-busy={fillingWindow || undefined} data-schedule-view="list">
         {/* ── Header ── */}
         <div className="flex items-center justify-between border-b border-border/60 bg-muted/15 px-3 py-2.5">
           <div className="flex items-center gap-2">
@@ -1304,18 +1364,23 @@ export function ListView({
           The 3px left border matches the venue rail every body row carries.
           Without it the header labels sit 3px left of the columns they name.
         */}
-        <div className={cn("hidden min-h-9 items-center gap-2 border-b border-l-[3px] border-border/50 border-l-transparent bg-muted/10 px-2 text-[11px] font-medium text-muted-foreground lg:grid", EVENT_GRID_CLASS)}>
-          <span aria-hidden="true" />
-          <span>Time</span>
-          <span>Event</span>
-          <span>Coverage</span>
-          <span className="text-right">Crew</span>
-          <span>Status</span>
-          <span className="sr-only">Actions</span>
+        <div className="hidden min-h-9 items-center border-b border-l-[3px] border-border/50 border-l-transparent bg-muted/10 px-2 text-[11px] font-medium text-muted-foreground lg:flex">
+          <EventGrid
+            className="w-full"
+            cells={{
+              toggle: <span aria-hidden="true" />,
+              time: <span>Time</span>,
+              event: <span>Event</span>,
+              coverage: <span>Coverage</span>,
+              crew: <span className="block text-right">Crew</span>,
+              status: <span>Status</span>,
+              actions: <span className="sr-only">Actions</span>,
+            }}
+          />
         </div>
 
         {loading ? (
-          <SkeletonTable rows={6} cols={3} />
+          <EventListSkeleton />
         ) : loadError ? (
           <div className="p-8 text-center">
             <p className="text-sm text-muted-foreground mb-3">
@@ -1592,7 +1657,7 @@ export function ListView({
                   key={entry.id}
                   data-schedule-event-id={entry.id}
                   className={cn(
-                    "relative border-b border-l-[3px] border-border/50 last:border-b-0",
+                    "schedule-enter relative border-b border-l-[3px] border-border/50 last:border-b-0",
                     venueTone.railClass,
                     isAssignedToMe && "bg-primary/5",
                   )}
@@ -1830,9 +1895,10 @@ function EventRows({
         )}
       >
         <td className="border-b border-border/20 px-2 py-1.5">
-          <div className={cn("grid min-h-12 items-center gap-2", EVENT_GRID_CLASS)}>
-            <div>
-              {hasShifts && (
+          <EventGrid
+            className="schedule-enter min-h-12"
+            cells={{
+              toggle: hasShifts ? (
                 <button
                   type="button"
                   aria-label={isExpanded ? "Collapse shifts" : "Expand shifts"}
@@ -1840,62 +1906,70 @@ function EventRows({
                   className="relative flex size-10 items-center justify-center rounded-md text-muted-foreground transition-[background-color,color,scale] hover:bg-muted hover:text-foreground active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2"
                   onClick={onToggle}
                 >
-                  {isExpanded ? <ChevronDownIcon className="size-4" /> : <ChevronRightIcon className="size-4" />}
+                  <ChevronRightIcon
+                    className={cn("size-4 transition-transform duration-200 ease-out motion-reduce:transition-none", isExpanded && "rotate-90")}
+                  />
                 </button>
-              )}
-            </div>
-            <span
-              className="shrink-0 text-[11px] tabular-nums text-muted-foreground"
-              style={{ fontFamily: entry.allDay ? "var(--font-heading)" : "var(--font-mono)" }}
-            >
-              {eventStartLabel(entry)}
-            </span>
-            <div className="min-w-0">
-              <Link
-                href={`/events/${entry.id}`}
-                className="flex min-h-10 items-center truncate rounded-sm text-sm font-semibold outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                {titleParts.title}
-              </Link>
-              <div className="mt-0.5 flex min-w-0 items-center gap-2 text-[11px] text-muted-foreground">
-                <span className="shrink-0">{venueTone.label}</span>
-                {(entry.combinedEventCount ?? 0) > 1 && (
-                  <Badge variant="secondary" size="sm">{entry.combinedEventCount} events · shared crew</Badge>
-                )}
-                {!entry.allDay && eventSpansMultipleDays(entry) && (
-                  <Badge variant="secondary" size="sm">{formatCalendarEventDateRange(entry)}</Badge>
-                )}
-                {titleParts.detail && <span className="truncate">{titleParts.detail}</span>}
-                {entry.subtitle && <span className="truncate font-medium text-primary/70">{entry.subtitle}</span>}
-              </div>
-            </div>
-            <div>{entry.coverage && <CoverageBadge percentage={entry.coverage.percentage} filled={entry.coverage.filled} total={entry.coverage.total} />}</div>
-            <CrewSummary entry={entry} />
-            <div className="flex min-w-0 flex-wrap items-center gap-1">
-              {showShiftStatus && shiftStatus === "Pending" && <Badge variant="orange" size="sm">{shiftStatus}</Badge>}
-              {entry.claimsPaused && canClaim && (
-                <Badge variant="secondary" size="sm">Updating</Badge>
-              )}
-              {entry.eventArchivedAt && (
-                <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground/60">
-                  <ArchiveIcon className="size-3" />
-                  Older record
+              ) : null,
+              time: (
+                <span
+                  className="block shrink-0 text-[11px] tabular-nums text-muted-foreground"
+                  style={{ fontFamily: entry.allDay ? "var(--font-heading)" : "var(--font-mono)" }}
+                >
+                  {eventStartLabel(entry)}
                 </span>
-              )}
-            </div>
-            {isStaff && (Boolean(entry.shiftGroupId) || onSetupCrew || onHide) ? (
-              <CrewRowActions
-                entry={entry}
-                isHiding={isHiding}
-                onHide={onHide}
-                onSetupCrew={onSetupCrew}
-                onQuickManageCrew={onQuickManageCrew}
-                isSettingUp={isSettingUp}
-              />
-            ) : (
-              <span aria-hidden="true" />
-            )}
-          </div>
+              ),
+              event: (
+                <>
+                  <Link
+                    href={`/events/${entry.id}`}
+                    className="flex min-h-10 items-center truncate rounded-sm text-sm font-semibold outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    {titleParts.title}
+                  </Link>
+                  <div className="mt-0.5 flex min-w-0 items-center gap-2 text-[11px] text-muted-foreground">
+                    <span className="shrink-0">{venueTone.label}</span>
+                    {(entry.combinedEventCount ?? 0) > 1 && (
+                      <Badge variant="secondary" size="sm">{entry.combinedEventCount} events · shared crew</Badge>
+                    )}
+                    {!entry.allDay && eventSpansMultipleDays(entry) && (
+                      <Badge variant="secondary" size="sm">{formatCalendarEventDateRange(entry)}</Badge>
+                    )}
+                    {titleParts.detail && <span className="truncate">{titleParts.detail}</span>}
+                    {entry.subtitle && <span className="truncate font-medium text-primary/70">{entry.subtitle}</span>}
+                  </div>
+                </>
+              ),
+              coverage: entry.coverage ? (
+                <CoverageBadge percentage={entry.coverage.percentage} filled={entry.coverage.filled} total={entry.coverage.total} />
+              ) : null,
+              crew: <CrewSummary entry={entry} />,
+              status: (
+                <div className="flex min-w-0 flex-wrap items-center gap-1">
+                  {showShiftStatus && shiftStatus === "Pending" && <Badge variant="orange" size="sm">{shiftStatus}</Badge>}
+                  {entry.claimsPaused && canClaim && (
+                    <Badge variant="secondary" size="sm">Updating</Badge>
+                  )}
+                  {entry.eventArchivedAt && (
+                    <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground/60">
+                      <ArchiveIcon className="size-3" />
+                      Older record
+                    </span>
+                  )}
+                </div>
+              ),
+              actions: isStaff && (Boolean(entry.shiftGroupId) || onSetupCrew || onHide) ? (
+                <CrewRowActions
+                  entry={entry}
+                  isHiding={isHiding}
+                  onHide={onHide}
+                  onSetupCrew={onSetupCrew}
+                  onQuickManageCrew={onQuickManageCrew}
+                  isSettingUp={isSettingUp}
+                />
+              ) : null,
+            }}
+          />
         </td>
       </tr>
 
@@ -1903,7 +1977,7 @@ function EventRows({
       {isExpanded && (
         <tr className="bg-muted/10">
           <td className="border-b border-border/15 px-4 py-2">
-            <div className="pl-[116px] pr-10">
+            <div className="schedule-enter pl-[116px] pr-10">
               {isStaff && entry.shiftGroupId ? (
                 <WorkingCrewEditor
                   entry={{
