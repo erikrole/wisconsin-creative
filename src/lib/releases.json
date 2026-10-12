@@ -1,6 +1,20 @@
 [
   {
     "date": "2026-10-12",
+    "title": "Schedule list rows line up",
+    "type": "fixes",
+    "summary": "Schedule list rows stay lined up with the header when an event has no crew yet.",
+    "details": [
+      "Events with no shifts no longer shift status and actions one column to the left.",
+      "The list fades in, and the loading placeholder matches the shape of a row."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 415
+  },
+  {
+    "date": "2026-10-12",
     "title": "Move a signature to the right person",
     "type": "fixes",
     "summary": "A signature saved on the wrong roster spot can be moved to the right person, and the signer's name shows on the line before you save.",
