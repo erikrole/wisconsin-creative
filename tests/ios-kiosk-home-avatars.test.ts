@@ -39,4 +39,10 @@ describe("kiosk home shared-case pickup", () => {
     expect(home).toContain('if pickup.custodyScope == "SHARED" {\n            sharedPickupAwaitingOperator = pickup');
     expect(home).toContain("SharedPickupOperatorSheet(pickup: pickup, users: users)");
   });
+
+  it("lets a shared case under Coming up be picked up early through the same sheet", () => {
+    const home = source("ios/Wisconsin/Kiosk/KioskHomeView.swift");
+    expect(home).toContain('reservation.custodyScope == "SHARED" || (reservation.requester.map');
+    expect(home).toContain("private var isPlain: Bool { !canOpen }");
+  });
 });

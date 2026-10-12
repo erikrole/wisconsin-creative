@@ -306,6 +306,16 @@ struct KioskHomeView: View {
     }
 
     private func selectUpcomingHolder(_ reservation: KioskDashboard.UpcomingReservation) {
+        // A shared case for a later day (an away game's travel case) can still
+        // be picked up early: same "who's picking up" step as today's cases.
+        if reservation.custodyScope == "SHARED" {
+            sharedPickupAwaitingOperator = KioskDashboard.HomePickup(
+                bookingId: reservation.id, title: reservation.title, requester: reservation.requester,
+                itemCount: reservation.itemCount, readyAt: reservation.startsAt,
+                custodyScope: reservation.custodyScope, eventId: nil, items: nil
+            )
+            return
+        }
         if let id = reservation.requester?.id, let user = users.first(where: { $0.id == id }) {
             onSelectUser(user)
         }
@@ -316,7 +326,7 @@ struct KioskHomeView: View {
             KioskSectionHeader(title: "Coming up", count: "\(upcoming.count)")
             VStack(spacing: 0) {
                 ForEach(upcoming) { reservation in
-                    HomeUpcomingRow(reservation: reservation, canOpen: reservation.requester.map { r in users.contains { $0.id == r.id } } ?? false) { selectUpcomingHolder(reservation) }
+                    HomeUpcomingRow(reservation: reservation, canOpen: reservation.custodyScope == "SHARED" || (reservation.requester.map { r in users.contains { $0.id == r.id } } ?? false)) { selectUpcomingHolder(reservation) }
                 }
             }
             .padding(.vertical, 6)
@@ -707,7 +717,7 @@ private struct HomeUpcomingRow: View {
     let action: () -> Void
 
     private var isShared: Bool { reservation.custodyScope == "SHARED" }
-    private var isPlain: Bool { isShared || !canOpen }
+    private var isPlain: Bool { !canOpen }
 
     private var holder: String {
         isShared ? "Shared" : homePersonName(reservation.requester?.name ?? "")
@@ -723,8 +733,9 @@ private struct HomeUpcomingRow: View {
         homeUpcomingWhen(reservation.startsAt)
     }
 
-    // SHARED reservations carry no requester, so there is no hub to open:
-    // render them as plain, non-interactive rows (no chevron, no button).
+    // Rows whose holder isn't on the roster have no hub to open: plain,
+    // non-interactive (no chevron, no button). Shared cases open the
+    // "who's picking up" sheet instead.
     @ViewBuilder var body: some View {
         if isPlain {
             content
