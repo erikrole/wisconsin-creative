@@ -138,7 +138,7 @@ struct KioskPickupView: View {
         pickupBody
             .fullScreenCover(isPresented: $addingItems) {
                 if let picker {
-                    KioskReservationEditView(reservationId: bookingId, title: detail?.title ?? "Reservation", user: picker) { saved in
+                    KioskReservationEditView(reservationId: bookingId, title: detail?.title ?? "Reservation", user: picker, addsItems: true) { saved in
                         addingItems = false
                         if saved {
                             Task {

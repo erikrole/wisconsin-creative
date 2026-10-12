@@ -152,4 +152,12 @@ describe("kiosk pickup Add items button", () => {
     // Scans pause while the editor owns the scanner.
     expect(pickup).toContain("!editingDetails, !addingItems");
   });
+
+  it("puts an Add items button beside Change items on the hub's ready-to-pick-up cards", () => {
+    const hub = source("ios/Wisconsin/Kiosk/KioskOperatorHubView.swift");
+    expect(hub.match(/Button\("Add items"\)/g)?.length).toBe(2);
+    expect(hub.match(/Button\("Change items"\)/g)?.length).toBe(2);
+    expect(hub).toContain("addsItems: reservationAddsItems");
+    expect(source("ios/Wisconsin/Kiosk/KioskChangesViews.swift")).toContain("var addsItems = false");
+  });
 });
