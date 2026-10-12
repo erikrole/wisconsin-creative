@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
 import { withKiosk } from "@/lib/api";
 import { HttpError, ok } from "@/lib/http";
 import { findAssetByScanValue } from "@/lib/services/kiosk-scan";
-import { addAndStageReservationPickupSerialized, assertKioskPickupPlanActor, kioskPickupPlanActorSelect, preflightReservationPickupSerializedAdd } from "@/lib/services/kiosk-pickup-add";
+import { addAndStageReservationPickupBulk, addAndStageReservationPickupSerialized, assertKioskPickupPlanActor, kioskPickupPlanActorSelect, preflightReservationPickupBulkAdd, preflightReservationPickupSerializedAdd, resolvePickupBulkAddTarget, type PickupBulkAddTarget } from "@/lib/services/kiosk-pickup-add";
 import { pickupScanBody } from "@/lib/schemas/kiosk";
 import { previewPickupSubstitution } from "@/lib/services/kiosk-pickup-substitute";
 import { scanKioskPickupBulkUnit, stageKioskReservationPickupBulkUnit } from "@/lib/services/bulk-unit-scans";
@@ -58,8 +58,20 @@ export const POST = withKiosk<{ id: string }>(async (req, { params }) => {
       : scanKioskPickupBulkUnit(tx, { bookingId: params.id, scanValue }),
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
   );
-  if (bulkResult.handled) {
+  // A numbered unit that is off-plan (another SKU) or past its planned
+  // quantity is an Add, not a dead end, on a reservation (same Add/Discard
+  // card as an off-plan serialized scan).
+  const bulkAddable = activeBooking.kind === "RESERVATION"
+    && bulkResult.handled
+    && !bulkResult.success
+    && (bulkResult.errorCode === "not_in_booking" || bulkResult.errorCode === "quantity_exceeded");
+  if (bulkResult.handled && !bulkAddable) {
     return ok(bulkResult);
+  }
+  if (bulkAddable) {
+    const target = await resolvePickupBulkAddTarget(scanValue);
+    if (!target) return ok(bulkResult);
+    return reservationBulkAdd({ bookingId: params.id, actorUserId: scanActorId, scanValue, target, intent, deviceContext: req.headers.get("user-agent") ?? "kiosk" });
   }
 
   const asset = await findAssetByScanValue(scanValue, {
@@ -71,6 +83,13 @@ export const POST = withKiosk<{ id: string }>(async (req, { params }) => {
   });
 
   if (!asset) {
+    if (activeBooking.kind === "RESERVATION") {
+      // A counted SKU's bin QR adds one more of that SKU to the reservation.
+      const target = await resolvePickupBulkAddTarget(scanValue);
+      if (target) {
+        return reservationBulkAdd({ bookingId: params.id, actorUserId: scanActorId, scanValue, target, intent, deviceContext: req.headers.get("user-agent") ?? "kiosk" });
+      }
+    }
     return ok({ success: false, error: "Item not found" });
   }
 
@@ -176,6 +195,30 @@ export const POST = withKiosk<{ id: string }>(async (req, { params }) => {
     },
   });
 });
+
+async function reservationBulkAdd(args: {
+  bookingId: string;
+  actorUserId: string;
+  scanValue: string;
+  target: PickupBulkAddTarget;
+  intent: "add" | null | undefined;
+  deviceContext: string;
+}) {
+  if (args.intent === "add") {
+    const added = await addAndStageReservationPickupBulk(args);
+    return ok(added.success
+      ? { success: true, addedToPlan: true, item: added.item }
+      : { success: false, error: added.error, errorCode: added.errorCode });
+  }
+  const preview = await preflightReservationPickupBulkAdd(args);
+  if (!preview.ok) return ok({ success: false, error: preview.error, errorCode: preview.errorCode });
+  return ok({
+    success: false,
+    error: `${args.target.item.name} is not on this reservation.`,
+    errorCode: "add_available",
+    item: args.target.item,
+  });
+}
 
 const unstageBulkBody = z.object({
   actorId: z.string().min(1),
