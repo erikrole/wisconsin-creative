@@ -1,10 +1,11 @@
 import { withKiosk } from "@/lib/api";
 import { HttpError, ok } from "@/lib/http";
 import { locationsShareKitPickup } from "@/lib/reservation-pickup-locations";
+import { attachKitMemberAvailability } from "@/lib/services/kit-member-availability";
 import { getKitDetail } from "@/lib/services/kits";
 
 export const GET = withKiosk<{ id: string }>(async (_req, { kiosk, params }) => {
-  const kit = await getKitDetail(params.id);
+  const kit = await attachKitMemberAvailability(await getKitDetail(params.id));
   if (!kit.active) {
     throw new HttpError(400, `${kit.name} is archived and cannot be added to a booking`);
   }
@@ -22,6 +23,8 @@ export const GET = withKiosk<{ id: string }>(async (_req, { kiosk, params }) => 
         assetTag: member.asset.assetTag,
         name: member.asset.name,
         imageUrl: member.asset.imageUrl ?? null,
+        computedStatus: member.asset.computedStatus,
+        holderName: member.asset.currentHolder?.holderName ?? null,
       })),
       bulkMembers: kit.bulkMembers.map((member) => ({
         bulkSkuId: member.bulkSku.id,

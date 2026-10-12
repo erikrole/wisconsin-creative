@@ -1,6 +1,19 @@
 [
   {
     "date": "2026-10-12",
+    "title": "Kit page shows who has gear",
+    "type": "fixes",
+    "summary": "A kit page now says when a camera is checked out or waiting for pickup, and names the person who has it.",
+    "details": [
+      "Checked-out and pending-pickup pieces no longer look available just because they are still marked on the shelf.",
+      "Maintenance and retired pieces keep those labels.",
+      "The kiosk kit checklist receives the same status and name."
+    ],
+    "platforms": ["Web", "Kiosk"],
+    "pr": 462
+  },
+  {
+    "date": "2026-10-12",
     "title": "Reserve gear that is out",
     "type": "improvement",
     "summary": "On iPhone, reservation search includes cameras and lenses that are checked out, as long as pickup starts after they come back.",
