@@ -101,6 +101,9 @@ export async function provisionPreview(gitBranch, { api = new NeonPreviewApi(), 
     ]);
   }
   const state = await initializePreviewChild({ branch, gitBranch, pooledUrl, directUrl, config });
+  // Publish the database handoff before blob stores. A rejected create must not
+  // leave extra store credentials on the resource project and make the next create larger.
+  await publishPreviewHandoff(state, { config });
   await provisionPreviewStorage(state, { config });
   await publishPreviewHandoff(state, { config });
   savePreviewState(state, root);

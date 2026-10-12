@@ -27,8 +27,10 @@ export async function publishPreviewHandoff(state, { api = new VercelPreviewApi(
   await retainPreview(sql);
   const existing = await handoffVariable(state.gitBranch, api, config);
   const project = config.vercel.resourceProjectId;
-  const body = { key: handoffKey(state.gitBranch), value: JSON.stringify(privateHandoff(state)), type: "encrypted", target: ["development"] };
-  await api.request(existing ? `/v9/projects/${project}/env/${existing.id}` : `/v10/projects/${project}/env`, { method: existing ? "PATCH" : "POST", body });
+  // Config, not Secret: preview:setup must read this value back. upsert covers a key the
+  // list call missed. A full project document still rejects a brand-new key.
+  const body = { key: handoffKey(state.gitBranch), value: JSON.stringify(privateHandoff(state)), type: "encrypted", visibility: "config", target: ["development"] };
+  await api.request(existing ? `/v9/projects/${project}/env/${existing.id}` : `/v10/projects/${project}/env?upsert=true`, { method: existing ? "PATCH" : "POST", body });
 }
 // Best-effort: name the real reason a branch has no environment. Returns [] when gh is unusable.
 export function missingEnvironmentReason(gitBranch, gh = (...args) => execFileSync("gh", args, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 15_000 })) {
