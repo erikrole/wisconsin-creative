@@ -24,6 +24,7 @@
   "overrides": {
     "esbuild": "0.28.1",
     "fast-uri": "3.1.8",
+    "http-cache-semantics": "4.3.0",
     "js-yaml": "4.3.2",
     "minimatch@3.1.5": {
       "brace-expansion": "1.1.21"
@@ -43,6 +44,7 @@
     },
     "proxy-addr": "2.0.8",
     "sharp": "0.35.5",
+    "source-map-js": "1.2.2",
     "undici": "7.29.1",
     "@workflow/core": {
       "nanoid": "5.1.16"
