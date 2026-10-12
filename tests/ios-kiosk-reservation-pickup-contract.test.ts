@@ -141,3 +141,15 @@ describe("iOS kiosk reservation pickup contract", () => {
     expect(pickupView).toContain('intent: "add"');
   });
 });
+
+describe("kiosk pickup Add items button", () => {
+  it("opens the reservation editor from a BOOKED pickup and refreshes on save", () => {
+    const pickup = source("ios/Wisconsin/Kiosk/KioskPickupView.swift");
+    expect(pickup).toContain('Button("Add items")');
+    expect(pickup).toContain("KioskReservationEditView(reservationId: bookingId");
+    expect(pickup).toContain("isReservation && picker != nil");
+    expect(pickup).toContain("await loadDetail(showLoading: false)");
+    // Scans pause while the editor owns the scanner.
+    expect(pickup).toContain("!editingDetails, !addingItems");
+  });
+});

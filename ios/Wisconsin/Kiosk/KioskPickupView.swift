@@ -38,6 +38,9 @@ struct KioskPickupView: View {
     // Context-card edit: the checkout details step, reused for title / event
     // and due-back time before pickup.
     @State private var editingDetails = false
+    /// The reservation's add-items sheet (typed or scanned codes), reached
+    /// from the Add items button so staff do not depend on an off-plan scan.
+    @State private var addingItems = false
     @State private var editEvents: [KioskCheckoutEvent] = []
     @State private var isLoadingEditEvents = false
     @State private var editLinked = false
@@ -133,6 +136,22 @@ struct KioskPickupView: View {
         // The editor covers the pickup instead of replacing it, so the scan
         // claim, queue, and loaded detail stay alive underneath.
         pickupBody
+            .fullScreenCover(isPresented: $addingItems) {
+                if let picker {
+                    KioskReservationEditView(reservationId: bookingId, title: detail?.title ?? "Reservation", user: picker) { saved in
+                        addingItems = false
+                        if saved {
+                            Task {
+                                await loadDetail(showLoading: false)
+                                processNextScanIfNeeded()
+                            }
+                        } else {
+                            processNextScanIfNeeded()
+                        }
+                    }
+                    .statusBarHidden(true)
+                }
+            }
             .opacity(editingDetails ? 0 : 1)
             .overlay {
                 if editingDetails, let detail {
@@ -181,7 +200,7 @@ struct KioskPickupView: View {
             }
         }
         .overlay(alignment: .bottom) {
-            if !editingDetails {
+            if !editingDetails && !addingItems {
             HIDScannerField(
                 onScan: { store.scanner.receive($0) },
                 onFocusChange: { scannerHasFocus = $0 }
@@ -228,8 +247,24 @@ struct KioskPickupView: View {
             }
             stage
                 .animation(KioskMotion.confirm(reduceMotion), value: lastAccepted)
+            if canAddItems {
+                Button("Add items") { openAddItems() }
+                    .kioskButtonRole(.secondary)
+                    .accessibilityHint("Add equipment to this reservation without scanning it first")
+            }
             bottomAction
         }
+    }
+
+    /// Only a BOOKED reservation can take more items, and only while no
+    /// off-plan card or pickup confirmation is open.
+    private var canAddItems: Bool {
+        isReservation && picker != nil && pendingAdd == nil && pendingBlock == nil && !isConfirming
+    }
+
+    private func openAddItems() {
+        store.resetInactivity()
+        addingItems = true
     }
 
     private func contextLine(_ detail: KioskCheckoutDetail) -> String {
@@ -541,7 +576,7 @@ struct KioskPickupView: View {
     }
 
     private func processNextScanIfNeeded() {
-        guard pendingAdd == nil, pendingBlock == nil, pendingRemove == nil, !editingDetails else { return }
+        guard pendingAdd == nil, pendingBlock == nil, pendingRemove == nil, !editingDetails, !addingItems else { return }
         guard let items = detail?.items, let entry = scanQueue.next() else { return }
         let flow = store.flowGeneration
         Task {
