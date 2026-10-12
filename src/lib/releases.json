@@ -97,6 +97,19 @@
   },
   {
     "date": "2026-10-12",
+    "title": "Add items before pickup",
+    "type": "feature",
+    "summary": "Reservations waiting at the kiosk have an Add items button, on the booking page and on the kiosk pickup screen.",
+    "details": [
+      "It opens equipment editing right away, with the same availability checks as before.",
+      "At the kiosk, scanning a battery or counted bin that is not on the reservation now offers Add instead of an error.",
+      "Items already picked up stay on their checkout."
+    ],
+    "platforms": ["Web", "Kiosk"],
+    "pr": 466
+  },
+  {
+    "date": "2026-10-12",
     "title": "Reserve gear that is out",
     "type": "improvement",
     "summary": "On iPhone, reservation search includes cameras and lenses that are checked out, as long as pickup starts after they come back.",
