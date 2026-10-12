@@ -84,6 +84,18 @@
   },
   {
     "date": "2026-10-12",
+    "title": "Schedule day headers stay put",
+    "type": "fixes",
+    "summary": "Schedule list day headers stay directly under the filter bar after you change filters, so the first rows of a day stay visible.",
+    "details": [
+      "Changing or clearing filters no longer leaves a blank gap under Load older records.",
+      "A day header no longer sticks mid-page and hides the first event of that day."
+    ],
+    "platforms": ["Web"],
+    "pr": 433
+  },
+  {
+    "date": "2026-10-12",
     "title": "Kit page shows who has gear",
     "type": "fixes",
     "summary": "A kit page now says when a camera is checked out or waiting for pickup, and names the person who has it.",
