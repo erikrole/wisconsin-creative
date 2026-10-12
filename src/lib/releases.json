@@ -1,6 +1,21 @@
 [
   {
     "date": "2026-10-12",
+    "title": "Reserve gear that is out",
+    "type": "improvement",
+    "summary": "On iPhone, reservation search includes cameras and lenses that are checked out, as long as pickup starts after they come back.",
+    "details": [
+      "Search and browse show checked-out, pending-pickup, and reserved gear, not only what is on the shelf.",
+      "You can add it when pickup is at least an hour after the current hold ends. A tighter handoff stays blocked and says who has it.",
+      "Scanning a barcode follows the same rule."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 404
+  },
+  {
+    "date": "2026-10-12",
     "title": "Schedule list rows line up",
     "type": "fixes",
     "summary": "Schedule list rows stay lined up with the header when an event has no crew yet.",
