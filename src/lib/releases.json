@@ -1,5 +1,21 @@
 [
   {
+    "date": "2026-10-12",
+    "title": "Move a signature to the right person",
+    "type": "fixes",
+    "summary": "A signature saved on the wrong roster spot can be moved to the right person, and the signer's name shows on the line before you save.",
+    "details": [
+      "The capture screen shows the person's name and number on the signature line so a wrong slot is obvious before Save.",
+      "Move signature to\u2026 sends the saved signature and its history to a blank person. Creative Staff signatures stay put.",
+      "Team rosters can add an unofficial player, marked Unofficial, until the official roster includes them.",
+      "Applying an official roster keeps staff-added players and adopts them when the same name appears officially."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 407
+  },
+  {
     "date": "2026-10-11",
     "title": "Badge celebrations check less often",
     "type": "improvement",
@@ -71,7 +87,7 @@
     "details": [
       "Each flagged item appears once on the dashboard, most serious first.",
       "Click a damaged or lost item to review the report and photo, as before.",
-      "The × beside a damage flag hides it from the dashboard; the report stays in the item's history.",
+      "The \u00d7 beside a damage flag hides it from the dashboard; the report stays in the item's history.",
       "Item Info lists the five most recent condition reports with their photos."
     ],
     "platforms": [

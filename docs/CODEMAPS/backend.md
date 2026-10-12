@@ -88,7 +88,7 @@
 | `src/lib/services/schedule-exports.ts` | 522 |
 | `src/lib/services/schedule-health.ts` | 383 |
 | `src/lib/services/schedule-notification-policy.ts` | 95 |
-| `src/lib/services/schedule-open-work.ts` | 600 |
+| `src/lib/services/schedule-open-work.ts` | 599 |
 | `src/lib/services/schedule-publication.ts` | 1110 |
 | `src/lib/services/schedule-template-review.ts` | 554 |
 | `src/lib/services/schedule-working-copy.ts` | 1190 |
@@ -98,7 +98,7 @@
 | `src/lib/services/shift-generation.ts` | 629 |
 | `src/lib/services/shift-trade-emails.ts` | 56 |
 | `src/lib/services/shift-trades.ts` | 1560 |
-| `src/lib/services/signatures.ts` | 2051 |
+| `src/lib/services/signatures.ts` | 2366 |
 | `src/lib/services/software.ts` | 272 |
 | `src/lib/services/sport-auto-assign-policies.ts` | 46 |
 | `src/lib/services/sport-configs.ts` | 263 |
@@ -118,7 +118,7 @@
 | `src/lib/api-dates.ts` | 38 |
 | `src/lib/api-handler.ts` | 63 |
 | `src/lib/api.ts` | 143 |
-| `src/lib/app-time.ts` | 199 |
+| `src/lib/app-time.ts` | 213 |
 | `src/lib/asset-attachments.ts` | 166 |
 | `src/lib/asset-image.ts` | 26 |
 | `src/lib/asset-qr-code.ts` | 9 |
@@ -208,7 +208,7 @@
 | `src/lib/passkey-client.ts` | 126 |
 | `src/lib/passkey.ts` | 388 |
 | `src/lib/password-rules.ts` | 16 |
-| `src/lib/permissions.ts` | 256 |
+| `src/lib/permissions.ts` | 258 |
 | `src/lib/preview-activity.ts` | 23 |
 | `src/lib/prisma-errors.ts` | 38 |
 | `src/lib/profile-completion-events.ts` | 6 |
@@ -267,7 +267,7 @@
 | `src/lib/serialization.ts` | 47 |
 | `src/lib/shell-navigation.ts` | 11 |
 | `src/lib/shift-call-windows.ts` | 200 |
-| `src/lib/shift-claim-eligibility.ts` | 48 |
+| `src/lib/shift-claim-eligibility.ts` | 65 |
 | `src/lib/shift-constants.ts` | 13 |
 | `src/lib/shift-display.ts` | 71 |
 | `src/lib/shift-reminder-workflow.ts` | 26 |
@@ -807,11 +807,13 @@
 - `/api/signatures/artifacts/[revisionId]/[kind]`
 - `/api/signatures/cleanup`
 - `/api/signatures/collections/[id]/archive`
+- `/api/signatures/collections/[id]/capture/[memberId]/move`
 - `/api/signatures/collections/[id]/capture/[memberId]`
 - `/api/signatures/collections/[id]/creative-staff`
 - `/api/signatures/collections/[id]/download`
 - `/api/signatures/collections/[id]/members/[memberId]/required`
 - `/api/signatures/collections/[id]/members/[memberId]`
+- `/api/signatures/collections/[id]/members`
 - `/api/signatures/collections/[id]/reset`
 - `/api/signatures/collections/[id]/restore`
 - `/api/signatures/collections/[id]`
