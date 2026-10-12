@@ -1,6 +1,19 @@
 [
   {
     "date": "2026-10-12",
+    "title": "Kits list shows gear that's out",
+    "type": "fixes",
+    "summary": "The kits list no longer calls a kit Ready when some of its cameras are checked out, pending pickup, in maintenance, or retired.",
+    "details": [
+      "A kit with some serialized pieces unavailable says how many are out.",
+      "A kit whose serialized pieces are all unavailable says Out.",
+      "Item families stay in the contents count and do not change that badge."
+    ],
+    "platforms": ["Web"],
+    "pr": 464
+  },
+  {
+    "date": "2026-10-12",
     "title": "Kit page shows who has gear",
     "type": "fixes",
     "summary": "A kit page now says when a camera is checked out or waiting for pickup, and names the person who has it.",
