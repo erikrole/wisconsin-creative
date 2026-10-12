@@ -15,6 +15,8 @@ import SwiftUI
 
 struct KioskHomeView: View {
     @Environment(\.today) private var today
+    /// A shared-case pickup waiting for whoever is standing at the kiosk to say who they are.
+    @State private var sharedPickupAwaitingOperator: KioskDashboard.HomePickup?
     let locationName: String?
     let checkouts: [KioskActiveCheckout]
     var pickups: [KioskDashboard.HomePickup] = []
@@ -52,6 +54,12 @@ struct KioskHomeView: View {
             .padding(.top, 16)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .sheet(item: $sharedPickupAwaitingOperator) { pickup in
+            SharedPickupOperatorSheet(pickup: pickup, users: users) { user in
+                sharedPickupAwaitingOperator = nil
+                if let onStartPickup { onStartPickup(user, pickup) } else { onSelectUser(user) }
+            }
+        }
     }
 
     // MARK: Clock band
@@ -285,6 +293,13 @@ struct KioskHomeView: View {
     }
 
     private func selectPickupHolder(_ pickup: KioskDashboard.HomePickup) {
+        // A shared case belongs to the team, not to whoever reserved it, and the
+        // reserver may not be on the kiosk roster. Ask who is picking it up so
+        // the tap always does something and the log names the right person.
+        if pickup.custodyScope == "SHARED" {
+            sharedPickupAwaitingOperator = pickup
+            return
+        }
         if let id = pickup.requester?.id, let user = users.first(where: { $0.id == id }) {
             if let onStartPickup { onStartPickup(user, pickup) } else { onSelectUser(user) }
         }
@@ -809,5 +824,44 @@ private struct HomeAvatarStack: View {
             }
         }
         .accessibilityElement(children: .ignore)
+    }
+}
+
+/// "Who's picking this up?" for a shared case: the person at the kiosk picks
+/// themselves from the roster, and the pickup runs as them.
+private struct SharedPickupOperatorSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let pickup: KioskDashboard.HomePickup
+    let users: [KioskUser]
+    let onPick: (KioskUser) -> Void
+
+    var body: some View {
+        let labels = homeGridNames(for: users)
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Who's picking up?")
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(KioskText.primary)
+                    Text("\(pickup.title) · for the team")
+                        .font(KioskType.meta)
+                        .foregroundStyle(KioskText.secondary)
+                }
+                Spacer()
+                Button("Cancel") { dismiss() }
+                    .font(.system(size: 17, weight: .semibold))
+                    .frame(minWidth: 44, minHeight: 44)
+            }
+            ScrollView {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 4), spacing: 6) {
+                    ForEach(users) { user in
+                        HomePersonTile(user: user, label: labels[user.id] ?? user.name, height: 56) { onPick(user) }
+                    }
+                }
+            }
+            .scrollIndicators(.hidden)
+        }
+        .padding(24)
+        .background(KioskSurface.base)
     }
 }
