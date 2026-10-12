@@ -1,6 +1,18 @@
 [
   {
     "date": "2026-10-12",
+    "title": "Reservations keep kit custody",
+    "type": "fixes",
+    "summary": "Calling a gameday kit on a reservation keeps the real status, so a checked-out camera is not labeled available.",
+    "details": [
+      "The kit loaded into the reservation includes who has each piece and when that hold ends.",
+      "Every piece in the kit is still added for review."
+    ],
+    "platforms": ["Web"],
+    "pr": 463
+  },
+  {
+    "date": "2026-10-12",
     "title": "Kits list shows gear that's out",
     "type": "fixes",
     "summary": "The kits list no longer calls a kit Ready when some of its cameras are checked out, pending pickup, in maintenance, or retired.",

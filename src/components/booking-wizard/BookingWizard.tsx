@@ -358,6 +358,8 @@ export function BookingWizard() {
               brand: string;
               model: string;
               status: string;
+              computedStatus?: string;
+              currentHolder?: { bookingId: string; bookingTitle: string; holderName: string; endsAt?: string | null } | null;
               imageUrl: string | null;
               category: { name: string } | null;
             };
@@ -544,7 +546,8 @@ export function BookingWizard() {
       model: member.asset.model,
       serialNumber: "",
       type: member.asset.type,
-      computedStatus: member.asset.status || "AVAILABLE",
+      computedStatus: member.asset.computedStatus || member.asset.status || "AVAILABLE",
+      currentHolder: member.asset.currentHolder ?? null,
       imageUrl: member.asset.imageUrl,
       categoryName: member.asset.category?.name ?? null,
       location: selectedKitDetail.location,
