@@ -110,6 +110,10 @@ function getKitStatus(kit: KitRow) {
   const counts = getKitCounts(kit);
   if (!kit.active) return { label: "Archived", variant: "outline" as const };
   if (counts.total === 0) return { label: "Empty", variant: "outline" as const };
+  const unavailable = kit.availability?.unavailable ?? 0;
+  const serialized = kit.availability?.serialized ?? 0;
+  if (serialized > 0 && unavailable >= serialized) return { label: "Out", variant: "destructive" as const };
+  if (unavailable > 0) return { label: `${unavailable} out`, variant: "secondary" as const };
   return { label: "Ready", variant: "default" as const };
 }
 
