@@ -204,7 +204,6 @@ async function loadOpenShiftRows(filters: OpenWorkFilters) {
         none: { status: { in: ACTIVE_STATUSES } },
       },
       shiftGroup: {
-        publishedAt: { not: null },
         archivedAt: null,
         event: {
           isHidden: false,
@@ -332,7 +331,6 @@ export async function getScheduleOpenWork(filters: OpenWorkFilters) {
             AND: [futureEffectiveShiftWhere(now)],
             ...(filters.area ? { area: filters.area } : {}),
             shiftGroup: {
-              publishedAt: { not: null },
               archivedAt: null,
               event: { isHidden: false, archivedAt: null, status: { not: "CANCELLED" } },
             },
