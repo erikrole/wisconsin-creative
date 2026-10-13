@@ -82,7 +82,7 @@
 | `src/lib/services/reservation-pickup-guard.ts` | 71 |
 | `src/lib/services/reservation-pickup-location.ts` | 34 |
 | `src/lib/services/reservation-rules.ts` | 46 |
-| `src/lib/services/reservation-schedule.ts` | 654 |
+| `src/lib/services/reservation-schedule.ts` | 461 |
 | `src/lib/services/scans.ts` | 168 |
 | `src/lib/services/schedule-automation.ts` | 336 |
 | `src/lib/services/schedule-call-time-sync.ts` | 470 |
@@ -91,9 +91,9 @@
 | `src/lib/services/schedule-health.ts` | 383 |
 | `src/lib/services/schedule-notification-policy.ts` | 95 |
 | `src/lib/services/schedule-open-work.ts` | 597 |
-| `src/lib/services/schedule-publication.ts` | 1110 |
+| `src/lib/services/schedule-publication.ts` | 1119 |
 | `src/lib/services/schedule-template-review.ts` | 554 |
-| `src/lib/services/schedule-working-copy.ts` | 1190 |
+| `src/lib/services/schedule-working-copy.ts` | 1202 |
 | `src/lib/services/scoreboard.ts` | 282 |
 | `src/lib/services/shift-assignment-conflicts.ts` | 43 |
 | `src/lib/services/shift-assignments.ts` | 727 |

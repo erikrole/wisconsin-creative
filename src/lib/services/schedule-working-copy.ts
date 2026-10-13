@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { Prisma, Role, ShiftAssignmentStatus, ShiftWorkerType } from "@prisma/client";
+import { Prisma, Role, ShiftAssignmentSource, ShiftAssignmentStatus, ShiftWorkerType } from "@prisma/client";
 import { createAuditEntryTx } from "@/lib/audit";
 import { ACTIVE_BOOKING_STATUSES } from "@/lib/booking-statuses";
 import { db } from "@/lib/db";
@@ -214,6 +214,18 @@ function effectiveSlotWindow(slot: WorkingSchedulePayload["slots"][number]) {
  * Refresh those facts before guards run so a canceled booking kept for audit
  * cannot remain a live edit blocker in an older draft.
  */
+/**
+ * Reservation-managed assignments were created by a gear reservation, not by
+ * staff, so their booking link never blocks staff from unassigning. Publishing
+ * clears the link when the assignment is removed.
+ */
+function blockingBookingCount(
+  assignment: { source: ShiftAssignmentSource; _count: { bookings: number } } | null | undefined,
+) {
+  if (!assignment || assignment.source === ShiftAssignmentSource.RESERVATION) return 0;
+  return assignment._count.bookings;
+}
+
 function refreshLiveAssignmentMetadata(
   payload: WorkingSchedulePayload,
   group: EditorGroup,
@@ -235,7 +247,7 @@ function refreshLiveAssignmentMetadata(
         assignment: {
           ...assignment,
           activeTradeId: live?.trades[0]?.id ?? null,
-          bookingCount: live?._count.bookings ?? 0,
+          bookingCount: blockingBookingCount(live),
         },
       };
     }),
@@ -288,7 +300,7 @@ export function buildWorkingSchedulePayload(group: EditorGroup): WorkingSchedule
           callEndsAt: shift.workerType === "FT" ? null : iso(assignment.callEndsAt),
           callNote: assignment.callNote,
           activeTradeId: assignment.trades[0]?.id ?? null,
-          bookingCount: assignment._count.bookings,
+          bookingCount: blockingBookingCount(assignment),
         } : null,
       };
     }),

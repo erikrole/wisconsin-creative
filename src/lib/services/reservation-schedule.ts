@@ -1,12 +1,9 @@
 import { Prisma, Role, ShiftArea, ShiftAssignmentSource, ShiftWorkerType } from "@prisma/client";
-import { normalizeAllDayToUtcMidnight } from "@/lib/app-time";
 import { HttpError } from "@/lib/http";
 import { ACTIVE_ASSIGNMENT_STATUSES } from "@/lib/shift-constants";
 import { shiftWorkerTypeForProfile } from "@/lib/shift-display";
-import { evaluateAvailabilityPreferences, type AvailabilityBlockLike } from "@/lib/student-availability";
-import { checkTimeConflict } from "@/lib/services/shift-assignments";
+import { type AvailabilityBlockLike } from "@/lib/student-availability";
 import { buildSchedulePublicationSnapshot } from "@/lib/services/schedule-publication";
-import { unique } from "@/lib/utils";
 
 const reservationScheduleGroupSelect = {
   id: true,
@@ -46,16 +43,6 @@ const reservationScheduleGroupSelect = {
   },
 } satisfies Prisma.ShiftGroupSelect;
 
-const reservationScheduleShiftSelect = {
-  id: true,
-  area: true,
-  workerType: true,
-  startsAt: true,
-  endsAt: true,
-  callStartsAt: true,
-  callEndsAt: true,
-} satisfies Prisma.ShiftSelect;
-
 const reservationAssignmentContextSelect = {
   id: true,
   userId: true,
@@ -77,14 +64,6 @@ const reservationAssignmentContextSelect = {
     },
   },
 } satisfies Prisma.ShiftAssignmentSelect;
-
-type ReservationScheduleGroup = Prisma.ShiftGroupGetPayload<{
-  select: typeof reservationScheduleGroupSelect;
-}>;
-
-type ReservationScheduleShiftBase = Prisma.ShiftGetPayload<{
-  select: typeof reservationScheduleShiftSelect;
-}>;
 
 export type ReservationScheduleRequester = {
   role: Role;
@@ -124,81 +103,6 @@ type ReservationScheduleReconciliation = {
   releasedAssignmentId: string | null;
   reason?: string;
 };
-
-const RESERVATION_ASSIGNMENT_NOTE = "Auto-assigned from an event gear reservation";
-
-function preferredAreas(requester: ReservationScheduleRequester) {
-  const areas = [
-    requester.primaryArea,
-    ...requester.areaAssignments
-      .filter((assignment) => assignment.isPrimary)
-      .map((assignment) => assignment.area),
-    ...requester.areaAssignments.map((assignment) => assignment.area),
-  ];
-  return unique(areas.filter((area): area is ShiftArea => Boolean(area)));
-}
-
-function effectiveReservationShiftWindow(
-  group: ReservationScheduleGroup,
-  shift: Pick<ReservationScheduleShiftBase, "startsAt" | "endsAt" | "callStartsAt" | "callEndsAt">,
-) {
-  if (shift.callStartsAt && shift.callEndsAt) {
-    return { startsAt: shift.callStartsAt, endsAt: shift.callEndsAt };
-  }
-  if (group.event.allDay) {
-    return {
-      startsAt: normalizeAllDayToUtcMidnight(group.event.startsAt),
-      endsAt: normalizeAllDayToUtcMidnight(group.event.endsAt),
-    };
-  }
-  return { startsAt: shift.startsAt, endsAt: shift.endsAt };
-}
-
-function snapshotAssignment(assignment: {
-  id: string;
-  userId: string;
-  status: string;
-  callStartsAt: Date | null;
-  callEndsAt: Date | null;
-  callNote: string | null;
-  acknowledgedAt: Date | null;
-}) {
-  return {
-    id: assignment.id,
-    userId: assignment.userId,
-    status: assignment.status,
-    callStartsAt: assignment.callStartsAt,
-    callEndsAt: assignment.callEndsAt,
-    callNote: assignment.callNote,
-    acknowledgedAt: assignment.acknowledgedAt,
-  };
-}
-
-async function refreshPublishedSnapshot(
-  tx: Prisma.TransactionClient,
-  group: ReservationScheduleGroup,
-  targetShift: ReservationScheduleShiftBase,
-  assignment: ReturnType<typeof snapshotAssignment>,
-  newShift: boolean,
-) {
-  const shifts = group.shifts.map((shift) =>
-    shift.id === targetShift.id
-      ? { ...shift, assignments: [...shift.assignments, assignment] }
-      : shift,
-  );
-
-  if (newShift) {
-    shifts.push({ ...targetShift, assignments: [assignment] });
-  }
-
-  const data: Prisma.ShiftGroupUpdateInput = { manuallyEdited: true };
-  if (group.publishedAt) {
-    data.publishedVersion = { increment: 1 };
-    data.lastPublishedSnapshot = buildSchedulePublicationSnapshot({ shifts }) as unknown as Prisma.InputJsonValue;
-  }
-
-  await tx.shiftGroup.update({ where: { id: group.id }, data });
-}
 
 async function loadReservationAssignmentContext(
   tx: Prisma.TransactionClient,
@@ -489,10 +393,10 @@ export async function reconcileReservationScheduleTx(
   });
   if (!assignment) {
     return {
-      status: "needs_review",
+      status: "not_applicable",
       assignment: null,
       releasedAssignmentId,
-      reason: "No safe schedule slot could be inferred for this reservation.",
+      reason: "The requester is not scheduled for this event, and reservations do not schedule people.",
     };
   }
 
@@ -509,9 +413,9 @@ export async function reconcileReservationScheduleTx(
 }
 
 /**
- * Infers one internal schedule assignment from an event-linked reservation.
- * This function deliberately runs inside the booking transaction so a booking
- * never points at a schedule assignment that was created by a separate write.
+ * Finds the requester's existing schedule assignment for an event-linked
+ * reservation. It never creates one. This runs inside the booking transaction
+ * so a booking never points at an assignment from a separate write.
  */
 export async function assignReservationRequesterToScheduleTx(
   tx: Prisma.TransactionClient,
@@ -550,104 +454,7 @@ export async function assignReservationRequesterToScheduleTx(
     };
   }
 
-  // A private staff working copy is intentionally not mutated by a booking.
-  // Staff can publish or reconcile that draft explicitly after reviewing it.
-  if (group.workingCopy) return null;
-
-  const areas = preferredAreas(args.requester);
-  const openShifts = group.shifts.filter(
-    (shift) => shift.workerType === workerType && shift.assignments.length === 0,
-  );
-  const targetShift = areas.length > 0
-    ? openShifts.find((shift) => areas.includes(shift.area))
-    : openShifts[0];
-
-  let selectedShift: ReservationScheduleShiftBase | null = targetShift ?? null;
-  let newShift = false;
-  if (!selectedShift) {
-    const template = areas.length > 0
-      ? group.shifts.find((shift) => areas.includes(shift.area))
-      : null;
-    if (!template) return null;
-
-    selectedShift = await tx.shift.create({
-      data: {
-        shiftGroupId: group.id,
-        area: template.area,
-        workerType,
-        startsAt: template.startsAt,
-        endsAt: template.endsAt,
-        callStartsAt: template.callStartsAt,
-        callEndsAt: template.callEndsAt,
-      },
-      select: reservationScheduleShiftSelect,
-    });
-    newShift = true;
-  }
-  if (!selectedShift) return null;
-
-  const conflictWindow = effectiveReservationShiftWindow(group, selectedShift);
-  await checkTimeConflict(
-    tx,
-    args.requesterUserId,
-    conflictWindow.startsAt,
-    conflictWindow.endsAt,
-  );
-
-  const availability = workerType === "ST"
-    ? evaluateAvailabilityPreferences(args.requester.availabilityBlocks, conflictWindow)
-    : null;
-  if (availability?.blocking) {
-    throw new HttpError(409, availability.blocking.note);
-  }
-  const conflictNote = availability?.advisory?.note ?? null;
-
-  await tx.shiftAssignment.updateMany({
-    where: {
-      shiftId: selectedShift.id,
-      status: "REQUESTED",
-    },
-    data: { status: "DECLINED" },
-  });
-
-  const assignment = await tx.shiftAssignment.create({
-    data: {
-      shiftId: selectedShift.id,
-      userId: args.requesterUserId,
-      status: "DIRECT_ASSIGNED",
-      source: ShiftAssignmentSource.RESERVATION,
-      assignedBy: args.createdBy,
-      notes: RESERVATION_ASSIGNMENT_NOTE,
-      hasConflict: Boolean(conflictNote),
-      conflictNote,
-    },
-    select: {
-      id: true,
-      userId: true,
-      status: true,
-      callStartsAt: true,
-      callEndsAt: true,
-      callNote: true,
-      acknowledgedAt: true,
-    },
-  });
-
-  await refreshPublishedSnapshot(
-    tx,
-    group,
-    selectedShift,
-    snapshotAssignment(assignment),
-    newShift,
-  );
-
-  return {
-    shiftAssignmentId: assignment.id,
-    shiftId: selectedShift.id,
-    eventId: args.eventId,
-    userId: args.requesterUserId,
-    area: selectedShift.area,
-    workerType: selectedShift.workerType,
-    created: true,
-    hasConflict: Boolean(conflictNote),
-  };
+  // A gear reservation never puts anyone on the schedule. Staff decide who
+  // works an event; the booking only links to a slot the requester already has.
+  return null;
 }
