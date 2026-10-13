@@ -1,5 +1,18 @@
 [
   {
+    "date": "2026-10-13",
+    "title": "Gear bookings no longer assign shifts",
+    "type": "fixes",
+    "summary": "Booking gear for an event no longer puts you on that event's schedule, and staff can remove people a booking added earlier.",
+    "details": [
+      "Linking a reservation to an event only attaches the gear to the event.",
+      "If you are already scheduled for the event, the booking still links to your slot.",
+      "Staff can now unassign someone a past gear booking placed on the schedule; the booking keeps its gear and event."
+    ],
+    "platforms": ["Web", "iOS"],
+    "pr": 467
+  },
+  {
     "date": "2026-10-12",
     "title": "Reservations keep kit custody",
     "type": "fixes",

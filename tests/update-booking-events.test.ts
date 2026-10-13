@@ -160,7 +160,7 @@ describe("updateBookingEvents", () => {
     });
   });
 
-  it("adds the requester when an existing reservation gains its first event link", async () => {
+  it("does not add the requester to the schedule when an existing reservation gains its first event link", async () => {
     mockTx.booking.findUnique.mockResolvedValue(reservation({
       requesterUserId: "student-1",
       custodyScope: "PERSON",
@@ -201,20 +201,17 @@ describe("updateBookingEvents", () => {
 
     await updateBookingEvents("reservation-1", "student-1", ["event-early"]);
 
-    expect(mockTx.booking.update).toHaveBeenCalledWith({
+    expect(mockTx.shiftAssignment.create).not.toHaveBeenCalled();
+    expect(mockTx.booking.update).not.toHaveBeenCalledWith({
       where: { id: "reservation-1" },
       data: { shiftAssignmentId: "assignment-new" },
     });
-    expect(mockTx.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({
-        entityType: "shift_assignment",
-        entityId: "assignment-new",
-        action: "shift_assigned",
-      }),
+    expect(mockTx.auditLog.create).not.toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ action: "shift_assigned" }),
     }));
   });
 
-  it("moves a reservation-managed assignment when the primary event changes", async () => {
+  it("releases a reservation-managed assignment when the primary event changes without scheduling again", async () => {
     mockTx.booking.findUnique.mockResolvedValue(reservation({
       requesterUserId: "student-1",
       custodyScope: "PERSON",
@@ -276,9 +273,7 @@ describe("updateBookingEvents", () => {
       where: { id: "assignment-old" },
       data: { status: "DECLINED" },
     });
-    expect(mockTx.shiftAssignment.create).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ source: ShiftAssignmentSource.RESERVATION }),
-    }));
+    expect(mockTx.shiftAssignment.create).not.toHaveBeenCalled();
     expect(mockTx.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({
         action: "shift_assignment_removed",

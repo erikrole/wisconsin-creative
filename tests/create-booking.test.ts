@@ -941,7 +941,7 @@ describe("createBooking", () => {
     }))).rejects.toThrow(`A booking may link at most ${MAX_LINKED_EVENTS_PER_BOOKING} events`);
   });
 
-  it("adds an internal event reservation requester to the schedule and links the booking", async () => {
+  it("does not add an event reservation requester to the schedule", async () => {
     mockTx.user.findUnique.mockResolvedValue({
       active: true,
       role: Role.STUDENT,
@@ -982,21 +982,14 @@ describe("createBooking", () => {
       eventId: "event-1",
     }));
 
-    expect(mockTx.booking.update).toHaveBeenCalledWith({
+    expect(mockTx.shiftAssignment.create).not.toHaveBeenCalled();
+    expect(mockTx.shift.create).not.toHaveBeenCalled();
+    expect(mockTx.booking.update).not.toHaveBeenCalledWith({
       where: { id: "b-new" },
       data: { shiftAssignmentId: "assignment-new" },
     });
-    expect(mockTx.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({
-        entityType: "shift_assignment",
-        entityId: "assignment-new",
-        action: "shift_assigned",
-        afterJson: expect.objectContaining({
-          source: "event_gear_reservation",
-          bookingId: "b-new",
-          eventId: "event-1",
-        }),
-      }),
+    expect(mockTx.auditLog.create).not.toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ action: "shift_assigned" }),
     }));
   });
 

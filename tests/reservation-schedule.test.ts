@@ -149,125 +149,27 @@ describe("assignReservationRequesterToScheduleTx", () => {
     expect(tx.shiftGroup.update).not.toHaveBeenCalled();
   });
 
-  it("assigns an open slot that matches the requester's area and class", async () => {
-    const result = await assignReservationRequesterToScheduleTx(tx as never, {
-      bookingId: "booking-1",
-      eventId,
-      requesterUserId: "user-1",
-      requester: requester(),
-      createdBy: "user-1",
-    });
-
-    expect(result).toMatchObject({
-      shiftAssignmentId: "assignment-1",
-      shiftId: "shift-1",
-      area: "VIDEO",
-      workerType: "ST",
-      created: true,
-    });
-    expect(tx.shiftAssignment.create).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({
-        shiftId: "shift-1",
-        userId: "user-1",
-        status: "DIRECT_ASSIGNED",
-        assignedBy: "user-1",
-      }),
-    }));
-    expect(tx.shiftGroup.update).toHaveBeenCalledWith({
-      where: { id: "group-1" },
-      data: { manuallyEdited: true },
-    });
-  });
-
-  it("creates a matching slot when every preferred-area slot is occupied", async () => {
-    const template = shift({ assignments: [createdAssignment({ id: "other-assignment", userId: "other-user" })] });
-    tx.shiftGroup.findUnique.mockResolvedValue(group({ shifts: [template] }));
-    tx.shift.create.mockResolvedValue({ ...template, id: "shift-2", assignments: undefined });
-
-    const result = await assignReservationRequesterToScheduleTx(tx as never, {
-      bookingId: "booking-1",
-      eventId,
-      requesterUserId: "user-1",
-      requester: requester(),
-      createdBy: "user-1",
-    });
-
-    expect(result).toMatchObject({ shiftId: "shift-2", created: true });
-    expect(tx.shift.create).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({
-        shiftGroupId: "group-1",
-        area: "VIDEO",
-        workerType: "ST",
-      }),
-    }));
-    expect(tx.shiftGroup.update).toHaveBeenCalledWith({
-      where: { id: "group-1" },
-      data: { manuallyEdited: true },
-    });
-  });
-
-  it("keeps published snapshots coherent after the assignment", async () => {
-    tx.shiftGroup.findUnique.mockResolvedValue(group({ publishedAt: new Date("2026-03-01T12:00:00Z") }));
-
-    await assignReservationRequesterToScheduleTx(tx as never, {
-      bookingId: "booking-1",
-      eventId,
-      requesterUserId: "user-1",
-      requester: requester(),
-      createdBy: "user-1",
-    });
-
-    expect(tx.shiftGroup.update).toHaveBeenCalledWith(expect.objectContaining({
-      where: { id: "group-1" },
-      data: expect.objectContaining({
-        manuallyEdited: true,
-        publishedVersion: { increment: 1 },
-        lastPublishedSnapshot: expect.objectContaining({ shifts: expect.any(Array) }),
-      }),
-    }));
-  });
-
   it.each([
-    ["collaborator", requester({ role: Role.COLLABORATOR }), group()],
-    ["missing group", requester(), null],
-    ["working copy", requester(), group({ workingCopy: { shiftGroupId: "group-1" } })],
-    ["no resolvable area or open class slot", requester({ primaryArea: null, areaAssignments: [] }), group({ shifts: [shift({ workerType: "FT", assignments: [createdAssignment({ userId: "other-user" })] })] })],
-  ] as const)("does not invent a schedule for %s", async (_label, profile, eventGroup) => {
+    ["an open slot in the requester's area", group()],
+    ["only occupied preferred-area slots", group({ shifts: [shift({ assignments: [createdAssignment({ id: "other-assignment", userId: "other-user" })] })] })],
+    ["a published schedule", group({ publishedAt: new Date("2026-03-01T12:00:00Z") })],
+    ["a working copy", group({ workingCopy: { shiftGroupId: "group-1" } })],
+    ["no schedule", null],
+  ] as const)("never puts the requester on the schedule with %s", async (_label, eventGroup) => {
     tx.shiftGroup.findUnique.mockResolvedValue(eventGroup);
 
     const result = await assignReservationRequesterToScheduleTx(tx as never, {
       bookingId: "booking-1",
       eventId,
       requesterUserId: "user-1",
-      requester: profile,
+      requester: requester(),
       createdBy: "user-1",
     });
 
     expect(result).toBeNull();
     expect(tx.shiftAssignment.create).not.toHaveBeenCalled();
     expect(tx.shift.create).not.toHaveBeenCalled();
-  });
-
-  it("blocks the reservation assignment when the requester has an active conflict", async () => {
-    tx.shiftAssignment.findMany.mockResolvedValue([{
-      shift: {
-        area: "PHOTO",
-        startsAt,
-        endsAt,
-        callStartsAt: null,
-        callEndsAt: null,
-        shiftGroup: { event: { startsAt, endsAt, allDay: false } },
-      },
-    }]);
-
-    await expect(assignReservationRequesterToScheduleTx(tx as never, {
-      bookingId: "booking-1",
-      eventId,
-      requesterUserId: "user-1",
-      requester: requester(),
-      createdBy: "user-1",
-    })).rejects.toMatchObject({ status: 409 });
-    expect(tx.shiftAssignment.create).not.toHaveBeenCalled();
+    expect(tx.shiftGroup.update).not.toHaveBeenCalled();
   });
 });
 
@@ -409,7 +311,7 @@ describe("reservation schedule lifecycle hardening", () => {
     expect(tx.booking.update).not.toHaveBeenCalled();
   });
 
-  it("moves a reservation-managed link when its primary event changes", async () => {
+  it("drops a reservation-managed link when its primary event changes and does not schedule the requester again", async () => {
     tx.shiftAssignment.findUnique.mockResolvedValue(assignmentContext());
     tx.shiftGroup.findUnique.mockResolvedValue(group());
 
@@ -422,13 +324,11 @@ describe("reservation schedule lifecycle hardening", () => {
       createdBy: "actor-1",
     });
 
-    expect(result).toMatchObject({ status: "scheduled", releasedAssignmentId: "assignment-1" });
-    expect(tx.shiftAssignment.create).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ source: ShiftAssignmentSource.RESERVATION }),
-    }));
+    expect(result).toMatchObject({ status: "not_applicable", releasedAssignmentId: "assignment-1" });
+    expect(tx.shiftAssignment.create).not.toHaveBeenCalled();
     expect(tx.booking.update).toHaveBeenCalledWith({
       where: { id: "booking-1" },
-      data: { shiftAssignmentId: "assignment-1" },
+      data: { shiftAssignmentId: null },
     });
   });
 
@@ -437,7 +337,6 @@ describe("reservation schedule lifecycle hardening", () => {
       userId: "original-owner",
       source: ShiftAssignmentSource.MANUAL,
     }));
-    tx.shiftAssignment.create.mockResolvedValue(createdAssignment({ id: "assignment-2", userId: "new-owner" }));
 
     const result = await reconcileReservationScheduleTx(tx as never, {
       bookingId: "booking-1",
@@ -453,6 +352,7 @@ describe("reservation schedule lifecycle hardening", () => {
       data: { shiftAssignmentId: null },
     });
     expect(tx.shiftAssignment.update).not.toHaveBeenCalled();
-    expect(result.assignment?.shiftAssignmentId).not.toBe("assignment-1");
+    expect(tx.shiftAssignment.create).not.toHaveBeenCalled();
+    expect(result.assignment).toBeNull();
   });
 });
