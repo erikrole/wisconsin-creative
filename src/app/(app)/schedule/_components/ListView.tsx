@@ -490,7 +490,6 @@ function ShiftRowList({
                     viewerRequest={viewerRequest}
                     canClaim={canClaim}
                     claimsPaused={Boolean(entry.claimsPaused)}
-                    isPublished={Boolean(entry.publication?.publishedAt)}
                     compact={compact}
                     onChanged={onClaimed}
                   />

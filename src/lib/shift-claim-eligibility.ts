@@ -52,11 +52,9 @@ export function shiftClaimEligibilityReason(
  * `claimsOpen`, so web and native never decide it themselves.
  */
 export function crewClaimClosedReason(group: {
-  publishedAt: Date | null;
   archivedAt: Date | null;
   event: { archivedAt: Date | null; isHidden: boolean; status: string };
 }): string | null {
-  if (!group.publishedAt) return "Draft shifts are not open for pickup";
   if (group.archivedAt || group.event.archivedAt || group.event.isHidden || group.event.status === "CANCELLED") {
     return "This shift is not open for pickup";
   }

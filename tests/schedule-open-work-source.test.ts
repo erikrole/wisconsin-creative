@@ -44,7 +44,7 @@ describe("schedule open work source contracts", () => {
     expect(service).toContain("function futureEffectiveShiftWhere");
     expect(service).toContain("AND: [futureEffectiveShiftWhere(now)]");
     expect(service).toContain("workerType: \"ST\"");
-    expect(service).toContain("publishedAt: { not: null }");
+    expect(service).not.toContain("publishedAt: { not: null }");
     expect(service).toContain("assignments: {\n        none: { status: { in: ACTIVE_STATUSES } },");
     expect(service).toContain("scoreCandidatesForShift");
     expect(service).toContain("availabilityContextFromCandidate");
@@ -63,7 +63,7 @@ describe("schedule open work source contracts", () => {
     expect(route).toContain("shift_pickup_requested");
     expect(route).toContain("dispatchScheduleAssignmentNotifications(assignment.id, \"requested\")");
     expect(service).toContain("crewClaimClosedReason(shift.shiftGroup)");
-    expect(source("src/lib/shift-claim-eligibility.ts")).toContain("Draft shifts are not open for pickup");
+    expect(source("src/lib/shift-claim-eligibility.ts")).not.toContain("Draft shifts are not open for pickup");
     expect(service).toContain("shiftClaimEligibilityReason(user, shift)");
     expect(service).toContain("primaryArea: true");
     expect(service).toContain("const window = effectiveWindow(shift)");

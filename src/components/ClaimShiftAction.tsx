@@ -30,7 +30,6 @@ type Props = {
   viewerRequest?: ClaimViewerRequest | null;
   canClaim: boolean;
   claimsPaused?: boolean;
-  isPublished: boolean;
   compact?: boolean;
   className?: string;
   onChanged?: () => void | Promise<void>;
@@ -49,7 +48,6 @@ export function ClaimShiftAction({
   viewerRequest,
   canClaim,
   claimsPaused = false,
-  isPublished,
   compact = false,
   className,
   onChanged,
@@ -62,7 +60,6 @@ export function ClaimShiftAction({
     && workerType === "ST"
     && !isAssigned
     && !isPending
-    && isPublished
     && isFuture
     && !claimsPaused;
 
