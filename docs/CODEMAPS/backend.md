@@ -64,6 +64,8 @@
 | `src/lib/services/kiosk-pickup-add.ts` | 273 |
 | `src/lib/services/kiosk-pickup-substitute.ts` | 300 |
 | `src/lib/services/kiosk-scan.ts` | 44 |
+| `src/lib/services/kit-list-availability.ts` | 35 |
+| `src/lib/services/kit-member-availability.ts` | 96 |
 | `src/lib/services/kits.ts` | 836 |
 | `src/lib/services/licenses.ts` | 603 |
 | `src/lib/services/live-activities.ts` | 629 |
@@ -88,7 +90,7 @@
 | `src/lib/services/schedule-exports.ts` | 522 |
 | `src/lib/services/schedule-health.ts` | 383 |
 | `src/lib/services/schedule-notification-policy.ts` | 95 |
-| `src/lib/services/schedule-open-work.ts` | 599 |
+| `src/lib/services/schedule-open-work.ts` | 597 |
 | `src/lib/services/schedule-publication.ts` | 1110 |
 | `src/lib/services/schedule-template-review.ts` | 554 |
 | `src/lib/services/schedule-working-copy.ts` | 1190 |
@@ -267,7 +269,7 @@
 | `src/lib/serialization.ts` | 47 |
 | `src/lib/shell-navigation.ts` | 11 |
 | `src/lib/shift-call-windows.ts` | 200 |
-| `src/lib/shift-claim-eligibility.ts` | 65 |
+| `src/lib/shift-claim-eligibility.ts` | 63 |
 | `src/lib/shift-constants.ts` | 13 |
 | `src/lib/shift-display.ts` | 71 |
 | `src/lib/shift-reminder-workflow.ts` | 26 |
