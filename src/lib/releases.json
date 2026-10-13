@@ -10,7 +10,7 @@
       "Staff can now unassign someone a past gear booking placed on the schedule; the booking keeps its gear and event."
     ],
     "platforms": ["Web", "iOS"],
-    "pr": 0
+    "pr": 467
   },
   {
     "date": "2026-10-12",
