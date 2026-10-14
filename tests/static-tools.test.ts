@@ -16,7 +16,7 @@ function loadCore(path: string, name: string): any {
 }
 
 const nextConfigSource = readFileSync("next.config.ts", "utf8");
-const TOOLS = ["golden-hour", "timelapse", "board-sizes", "apps"] as const;
+const TOOLS = ["golden-hour", "timelapse", "board-sizes"] as const;
 
 describe("static tools: routing, headers, and page contracts", () => {
   it("redirects each clean URL to its dotted file path so the nonce middleware skips it", () => {
@@ -53,15 +53,15 @@ describe("static tools: routing, headers, and page contracts", () => {
     expect(readdirSync("public/board-sizes").sort()).toEqual(
       ["app.js", "boards.csv", "boards.json", "boards.schema.json", "data.js", "design", "index.html", "index.json", "llms.txt"],
     );
-    expect(readdirSync("public/apps").sort()).toEqual(["icons", "index.html"]);
+    expect(readdirSync("public/apps").sort()).toEqual(["icons"]);
   });
 
   it("sends the old /tools URL to the apps page", () => {
-    expect(nextConfigSource).toContain('{ source: "/tools", destination: "/apps/index.html", permanent: false }');
+    expect(nextConfigSource).toContain('{ source: "/tools", destination: "/apps", permanent: false }');
   });
 
   it("lists every public tool on the apps page", () => {
-    const hub = readFileSync("public/apps/index.html", "utf8");
+    const hub = readFileSync("src/lib/apps-page.ts", "utf8");
     for (const href of ["/golden-hour", "/timelapse", "/board-sizes", "/qrcode"]) expect(hub).toContain(`href="${href}"`);
   });
 
