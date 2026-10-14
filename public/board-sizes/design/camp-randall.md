@@ -236,7 +236,7 @@ id `camp-randall/captioning` · 25:3 · keys `CLOSED_CAPTION`
 
 ### IPTV Full Screen Ad: 1920x1080
 
-id `camp-randall/iptv-full-screen-ad` · 16:9 · 59.94 fps · MP4 · Exactly 15 s · 100 px title safe · keys `IPTV_FULL_SCREEN`
+id `camp-randall/iptv-full-screen-ad` · 16:9 · 59.94 fps · MP4 · Exactly 15 s · keys `IPTV_FULL_SCREEN`
 
 | zone id | size | at (x,y) | fps | keys |
 |---|---|---|---|---|

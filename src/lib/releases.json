@@ -1,20 +1,6 @@
 [
   {
     "date": "2026-10-14",
-    "title": "Copy a board's exact size",
-    "type": "feature",
-    "summary": "Board Sizes lists every venue board so you can find one and copy its pixel size, aspect ratio, and any safe area already on file.",
-    "details": [
-      "Search across Camp Randall, the Kohl Center, the Field House, LaBahn, and Goodman, then narrow to one venue or to open questions.",
-      "Copy spec puts the size, aspect ratio, position, and recorded safe area on the clipboard.",
-      "Guide SVG and Guide PNG download at that board's exact pixel size.",
-      "Open questions stay on the board, including Kohl Center frame rates and the unconfirmed Goodman board."
-    ],
-    "platforms": ["Web"],
-    "pr": 473
-  },
-  {
-    "date": "2026-10-14",
     "title": "Fetch on the apps page",
     "type": "improvement",
     "summary": "The apps page now lists Fetch, a Mac app that saves videos and audio from a link, with a download button.",

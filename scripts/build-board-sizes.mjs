@@ -17,7 +17,8 @@
 // manifest is invalid. tests/static-tools.test.ts runs the same checks.
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname } from "node:path";
+import { stamp } from "./hash-static-tools.mjs";
 
 export const MANIFEST_PATH = "public/board-sizes/boards.json";
 export const DATA_PATH = "public/board-sizes/data.js";
@@ -29,17 +30,6 @@ export const DESIGN_DIR = "public/board-sizes/design";
 export const GUIDE_DIR = "docs/board-design";
 export const SHARED_GUIDE = "all-venues";
 export const SITE = "https://wisconsincreative.com/board-sizes";
-export const SCHEMA_PATH = "public/board-sizes/boards.schema.json";
-
-// Stamps script URLs with a content hash. public/sw.js serves .js cache-first,
-// so a script URL has to change whenever the file does.
-export function stampPage(htmlPath) {
-  const html = readFileSync(htmlPath, "utf8");
-  return html.replace(/<script src="([^"?]+)\?v=[0-9a-f]{12}"><\/script>/g, (_, file) => {
-    const hash = createHash("sha256").update(readFileSync(join(dirname(htmlPath), file))).digest("hex").slice(0, 12);
-    return `<script src="${file}?v=${hash}"></script>`;
-  });
-}
 
 export const ISSUE_KINDS = {
   conflict: "Sources disagree",
@@ -105,56 +95,6 @@ function checkLayouts(d, at, problems) {
   }
 }
 
-// Checks boards.json against boards.schema.json. Covers the keywords that
-// schema uses (type, const, enum, required, additionalProperties, pattern,
-// minimum, format, $ref). Empty means the document matches.
-export function validateSchema(data, schema) {
-  const problems = [];
-  const defs = schema.$defs ?? {};
-  const resolve = (node) => (node?.$ref ? defs[node.$ref.slice("#/$defs/".length)] : node);
-  function check(value, raw, at) {
-    const node = resolve(raw);
-    if (!node) return problems.push(`${at}: unknown schema node`);
-    let type = node.type;
-    if (Array.isArray(type)) {
-      if (value === null && type.includes("null")) return;
-      type = type.find((t) => t !== "null");
-    }
-    if (node.const !== undefined && value !== node.const) problems.push(`${at}: expected ${JSON.stringify(node.const)}`);
-    if (node.enum && !node.enum.includes(value)) problems.push(`${at}: ${JSON.stringify(value)} is not one of ${node.enum.join(", ")}`);
-    if (type === "object") {
-      if (value === null || typeof value !== "object" || Array.isArray(value)) return problems.push(`${at}: expected an object`);
-      for (const key of node.required ?? []) if (!(key in value)) problems.push(`${at}: missing ${key}`);
-      const props = node.properties ?? {};
-      for (const key of Object.keys(value)) {
-        if (props[key]) check(value[key], props[key], `${at}.${key}`);
-        else if (node.additionalProperties === false) problems.push(`${at}: unexpected property ${key}`);
-        else if (node.additionalProperties && typeof node.additionalProperties === "object") check(value[key], node.additionalProperties, `${at}.${key}`);
-      }
-      if (node.minProperties != null && Object.keys(value).length < node.minProperties) problems.push(`${at}: needs at least ${node.minProperties} properties`);
-    } else if (type === "array") {
-      if (!Array.isArray(value)) return problems.push(`${at}: expected an array`);
-      if (node.minItems != null && value.length < node.minItems) problems.push(`${at}: needs at least ${node.minItems} items`);
-      if (node.items) value.forEach((item, i) => check(item, node.items, `${at}[${i}]`));
-    } else if (type === "string") {
-      if (typeof value !== "string") return problems.push(`${at}: expected a string`);
-      if (node.pattern && !new RegExp(node.pattern).test(value)) problems.push(`${at}: ${JSON.stringify(value)} does not match ${node.pattern}`);
-      if (node.format === "date" && !/^\d{4}-\d{2}-\d{2}$/.test(value)) problems.push(`${at}: ${JSON.stringify(value)} is not a date`);
-      if (node.format === "uri") { try { new URL(value); } catch { problems.push(`${at}: ${JSON.stringify(value)} is not a URI`); } }
-    } else if (type === "integer") {
-      if (!Number.isInteger(value)) problems.push(`${at}: expected an integer`);
-      else if (node.minimum != null && value < node.minimum) problems.push(`${at}: ${value} is below ${node.minimum}`);
-    } else if (type === "number") {
-      if (typeof value !== "number" || !isFinite(value)) problems.push(`${at}: expected a number`);
-      else if (node.exclusiveMinimum != null && !(value > node.exclusiveMinimum)) problems.push(`${at}: must be greater than ${node.exclusiveMinimum}`);
-    } else if (type === "boolean") {
-      if (typeof value !== "boolean") problems.push(`${at}: expected a boolean`);
-    }
-  }
-  check(data, schema, "boards.json");
-  return problems;
-}
-
 // Returns a list of problems; empty means the manifest is usable.
 export function validateManifest(manifest) {
   const problems = [];
@@ -218,18 +158,6 @@ export function validateManifest(manifest) {
       problems.push(`${at}: ${c.w}x${c.h} but ${c.display} is ${display.w}x${display.h}`);
     }
   }
-  const insets = new Map();
-  for (const c of manifest.canvases ?? []) {
-    if (c.safeInset == null) continue;
-    const venue = manifest.venues.find((v) => v.id === c.venue);
-    const display = venue?.displays.find((d) => d.name === c.display);
-    const zone = c.zone != null ? display?.zones.find((z) => z.name === c.zone) : null;
-    const id = zone ? zone.id : display?.id;
-    if (!id) continue;
-    const prior = insets.get(id);
-    if (prior != null && prior !== c.safeInset) problems.push(`canvas safe insets disagree on ${id}: ${prior} and ${c.safeInset}`);
-    insets.set(id, c.safeInset);
-  }
   return problems;
 }
 
@@ -262,11 +190,6 @@ function canvasTargets(manifest) {
 export function buildIndex(manifest, manifestBytes) {
   const m = structuredClone(manifest);
   const keysFor = canvasTargets(m);
-  const insetFor = (id) => {
-    const values = (keysFor[id] ?? []).map((c) => c.safeInset).filter((n) => n != null);
-    if (!values.length || values.some((n) => n !== values[0])) return null;
-    return values[0];
-  };
   const sources = (d) => Object.keys(d.sources ?? {}).map((k) => ({ source: k, label: m.sources[k].label, ref: d.sources[k] }));
   const boards = [];
   for (const v of m.venues) {
@@ -284,7 +207,7 @@ export function buildIndex(manifest, manifestBytes) {
       boards.push({
         id: d.id, type: "display", ...base, zone: null, layer: null,
         w: d.w, h: d.h, aspect: aspect(d.w, d.h), at: [{ x: 0, y: 0 }], atFrom: null,
-        fps: fpsOf(d.id), stillOnly: false, ...delivery, pad: null, safeInset: insetFor(d.id),
+        fps: fpsOf(d.id), stillOnly: false, ...delivery, pad: null,
         canvasKeys: (keysFor[d.id] ?? []).map((c) => c.key),
         zoneCount: d.zones.length, sources: sources(d),
         issues: d.issues ?? [], notes: d.notes ?? [], url: url(v.id, d.id),
@@ -296,7 +219,7 @@ export function buildIndex(manifest, manifestBytes) {
           id: z.id, type: "zone", ...base, zone: z.name, zoneNumber: z.n ?? null, layer: layer ? layer[1] : null,
           w: z.w, h: z.h, aspect: aspect(z.w, z.h), at: z.at ?? [], atFrom: z.atFrom ?? null,
           fps: z.stillOnly ? null : fpsOf(z.id), stillOnly: !!z.stillOnly, ...delivery,
-          duration: z.duration ?? delivery.duration, pad: z.pad ?? null, safeInset: insetFor(z.id), guidePage: z.page ?? null,
+          duration: z.duration ?? delivery.duration, pad: z.pad ?? null, guidePage: z.page ?? null,
           canvasKeys: (keysFor[z.id] ?? []).map((c) => c.key),
           sources: sources(d), issues: [...(z.issues ?? []), ...(d.issues ?? [])],
           notes: z.notes ?? [], url: url(v.id, z.id),
@@ -326,7 +249,6 @@ export function buildIndex(manifest, manifestBytes) {
     conventions: {
       units: "px", size: "w × h", position: "at[] = {x, y} of each placement from the display's top-left; a display's own at is {x: 0, y: 0}",
       fps: "delivery frame rate where a source states one, else null (59.94 is the house default for AE work)",
-      safeInset: "px title-safe inset copied from the canvas that targets this board, or null when none is recorded",
       layer: "FG / BG for processor layer pairs; build one asset per pair unless the content needs both",
       issues: ISSUE_KINDS,
     },
@@ -349,10 +271,10 @@ export function renderIndexJson(index) {
 
 function csvCell(s) { s = String(s ?? ""); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; }
 export function renderCsv(index) {
-  const head = ["id", "type", "venue", "display", "zone", "layer", "w", "h", "aspect", "at (x,y)", "fps", "still only", "video", "still", "duration", "pad", "safe inset", "canvas keys", "issues", "url"];
+  const head = ["id", "type", "venue", "display", "zone", "layer", "w", "h", "aspect", "at (x,y)", "fps", "still only", "video", "still", "duration", "pad", "canvas keys", "issues", "url"];
   const rows = index.boards.map((b) => [
     b.id, b.type, b.venueName, b.display, b.zone, b.layer, b.w, b.h, b.aspect,
-    b.at.map((p) => `${p.x},${p.y}`).join(" | "), b.fps, b.stillOnly ? "yes" : "", b.video, b.still, b.duration, b.pad, b.safeInset,
+    b.at.map((p) => `${p.x},${p.y}`).join(" | "), b.fps, b.stillOnly ? "yes" : "", b.video, b.still, b.duration, b.pad,
     b.canvasKeys.join(" "), b.issues.map((i) => `${i.kind}: ${i.text}`).join(" / "), b.url,
   ]);
   return [head, ...rows].map((r) => r.map(csvCell).join(",")).join("\n") + "\n";
@@ -366,7 +288,7 @@ const fmt = (b) => `${b.w}x${b.h}`;
 function renderDisplays(v, index, L, { notes }) {
   for (const d of v.displays) {
     const rec = index.boards.find((b) => b.id === d.id);
-    const spec = [rec.fps ? `${rec.fps} fps` : null, rec.video, rec.duration, rec.safeInset ? `${rec.safeInset} px title safe` : null].filter(Boolean).join(" · ");
+    const spec = [rec.fps ? `${rec.fps} fps` : null, rec.video, rec.duration].filter(Boolean).join(" · ");
     L.push(`### ${d.name}: ${fmt(d)}${d.processor ? ` (${d.processor})` : ""}`, "");
     L.push(`id \`${d.id}\` · ${rec.aspect}${spec ? ` · ${spec}` : ""}${rec.canvasKeys.length ? ` · keys ${rec.canvasKeys.map((k) => `\`${k}\``).join(", ")}` : ""}`);
     for (const i of d.issues ?? []) L.push(`- ⚠ ${i.kind}: ${i.text}`);
@@ -380,7 +302,7 @@ function renderDisplays(v, index, L, { notes }) {
       L.push("| zone id | size | at (x,y) | fps | keys |", "|---|---|---|---|---|");
       for (const z of d.zones) {
         const zr = index.boards.find((b) => b.id === z.id);
-        const tags = [zr.stillOnly ? "stills" : zr.fps ? String(zr.fps) : "", zr.safeInset ? `safe ${zr.safeInset}` : "", zr.pad ? `pad ${zr.pad}` : "", z.issues ? `⚠ ${z.issues.map((i) => i.kind).join(", ")}` : ""].filter(Boolean).join(" · ");
+        const tags = [zr.stillOnly ? "stills" : zr.fps ? String(zr.fps) : "", zr.pad ? `pad ${zr.pad}` : "", z.issues ? `⚠ ${z.issues.map((i) => i.kind).join(", ")}` : ""].filter(Boolean).join(" · ");
         L.push(`| \`${z.id.slice(d.id.length + 1)}\` | ${fmt(z)} | ${zr.at.map((p) => `${p.x},${p.y}`).join(" ") || "–"} | ${tags || "–"} | ${zr.canvasKeys.join(" ") || "–"} |`);
       }
       L.push("");
@@ -512,14 +434,11 @@ export function renderLlms(manifest, index) {
     "4. Check `issues` before final delivery. `conflict` = sources disagree, `tbd` = value not final, `unconfirmed` = only one source, `naming` = zone names may change. Surface them to the user; never resolve one silently.",
     "5. Respect delivery specs: `fps`, `stillOnly`, `duration`, `pad` (keep content that many px inside every edge), `audio`. When `fps` is null, ask or use 59.94.",
     "6. FG/BG zones are two processor layers of one window. Build one asset unless the content needs both.",
-    "7. To change a size, edit `public/board-sizes/boards.json` in the Wisconsin Creative repo and run `node scripts/build-board-sizes.mjs`. Never edit the generated files. `node scripts/build-board-sizes.mjs --check` fails when a generated file has drifted.",
-    "8. `pad` is a zone inset in px. `safeInset` is a title-safe inset copied from the canvas that targets that board, or null when none is recorded. Crop, scrim, and seam overlays stay on the display in boards.json. Do not invent a safe area when those are absent.",
+    "7. To change a size, edit `public/board-sizes/boards.json` in the Wisconsin Creative repo and run `node scripts/build-board-sizes.mjs`. Never edit the generated files.",
     "",
     "## Files",
     "",
-    `- [index.json](${SITE}/index.json): start here. One flat record per display and zone (${index.boards.length}), with id, size, aspect, positions, fps, delivery, pad, safeInset (or null), canvas keys, issues and a deep link. Also canvases and content types resolved to ids.`,
-    "",
-    "The page's Copy spec button copies size, aspect ratio, and the safe area that is actually recorded (zone pad, canvas safeInset, crop and scrim overlays). When none is recorded it says `safe area: none recorded`. Guide SVG and Guide PNG download at that board's exact pixel size; they are layout aids, not new measurements.",
+    `- [index.json](${SITE}/index.json): start here. One flat record per display and zone (${index.boards.length}), with id, size, aspect, positions, fps, delivery, canvas keys, issues and a deep link. Also canvases and content types resolved to ids.`,
     `- [boards.json](${SITE}/boards.json): the hand-edited source (schema \`${manifest.schema}\`). Pin this exact file for production tools; the After Effects Board Builder does.`,
     `- [boards.schema.json](${SITE}/boards.schema.json): JSON Schema for boards.json.`,
     `- [boards.csv](${SITE}/boards.csv): index.json as a spreadsheet.`,
@@ -587,11 +506,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const check = process.argv.includes("--check");
   const bytes = readFileSync(MANIFEST_PATH, "utf8");
   const manifest = JSON.parse(bytes);
-  const schema = JSON.parse(readFileSync(SCHEMA_PATH, "utf8"));
-  const schemaProblems = validateSchema(manifest, schema);
   const problems = validateManifest(manifest);
-  if (schemaProblems.length || problems.length) {
-    console.error(`${MANIFEST_PATH} is invalid:\n  ${[...schemaProblems, ...problems].join("\n  ")}`);
+  if (problems.length) {
+    console.error(`${MANIFEST_PATH} is invalid:\n  ${problems.join("\n  ")}`);
     process.exit(1);
   }
   const guideProblems = checkGuides(manifest, readGuides(manifest));
@@ -604,17 +521,11 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const stale = Object.keys(outputs).filter((p) => read(p) !== outputs[p]);
   if (check) {
     for (const p of stale) console.error(`${p} is stale: run node scripts/build-board-sizes.mjs`);
-    if (stale.length) process.exit(1);
-    const page = readFileSync(PAGE_PATH, "utf8");
-    if (stampPage(PAGE_PATH) !== page) {
-      console.error(`${PAGE_PATH} script hashes are stale: run node scripts/build-board-sizes.mjs`);
-      process.exit(1);
-    }
-    process.exit(0);
+    process.exit(stale.length ? 1 : 0);
   }
   for (const p of stale) { mkdirSync(dirname(p), { recursive: true }); writeFileSync(p, outputs[p]); }
   const page = readFileSync(PAGE_PATH, "utf8");
-  const stamped = stampPage(PAGE_PATH);
+  const stamped = stamp(PAGE_PATH);
   if (stamped !== page) writeFileSync(PAGE_PATH, stamped);
   for (const p of Object.keys(outputs)) console.log(`${stale.includes(p) ? "wrote    " : "unchanged"} ${p}`);
   console.log(`manifest ${manifest.version}: ${manifest.canvases.length} canvases`);

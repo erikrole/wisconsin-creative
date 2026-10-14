@@ -16,7 +16,7 @@
   var DATA = window.BOARD_DATA;
   var VENUE_KEY = 'boards.venue.v1';
   var el = {};
-  ['search', 'nav-venues', 'nav-broad', 'nav-gameday', 'nav-ref', 'tools-link', 'side-foot', 'menu', 'scrim', 'mobile-title',
+  ['search', 'nav-venues', 'nav-ref', 'tools-link', 'side-foot',
    'crumbs', 'title', 'actions', 'subtitle', 'props', 'summary', 'view', 'empty', 'footnote', 'toast'
   ].forEach(function (id) { el[id] = document.getElementById(id); });
 
@@ -70,8 +70,6 @@
     state.content = CONTENT[params.get('c')] ? params.get('c') : null;
     state.page = PAGES[params.get('p')] ? params.get('p') : null;
     state.query = params.get('q') || '';
-    state.narrow = params.get('n') || '';
-    state.venueFilter = params.get('f') === 'issues' ? 'issues' : 'all';
     state.share = params.get('share') === '1';
   }
   readParams();
@@ -150,128 +148,6 @@
     b.addEventListener('click', onClick);
     return b;
   }
-  function escXml(s) {
-    return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; });
-  }
-  function canvasByKey(key) {
-    for (var i = 0; i < DATA.canvases.length; i++) if (DATA.canvases[i].key === key) return DATA.canvases[i];
-    return null;
-  }
-  // Title-safe inset only when every canvas for this id records the same one.
-  function recordedInset(id) {
-    var vals = (KEYS[id] || []).map(function (k) { var c = canvasByKey(k); return c && c.safeInset; }).filter(function (n) { return n != null; });
-    if (!vals.length || !vals.every(function (n) { return n === vals[0]; })) return null;
-    return vals[0];
-  }
-  function fpsConflict(d, z) {
-    var issues = ((z && z.issues) || []).concat(d.issues || []);
-    return issues.some(function (i) { return i.field === 'fps' || (i.kind === 'conflict' && /frame rate|fps/i.test(i.text)); });
-  }
-  // Exact size, aspect, and only the safe-area facts the manifest records.
-  function specText(v, d, z) {
-    var w = z ? z.w : d.w, h = z ? z.h : d.h;
-    var lines = [v.name + ' · ' + d.name + (z ? ' · ' + baseName(z.name) : ''), size(w, h), ratio(w, h)];
-    if (z && z.at && z.at.length) lines.push('at ' + z.at.map(function (p) { return p.x + ', ' + p.y; }).join(' / '));
-    var safe = [];
-    if (z && z.pad) safe.push('keep ' + z.pad + ' px inside every edge');
-    var inset = recordedInset(z ? z.id : d.id);
-    if (inset) safe.push(inset + ' px title safe');
-    if (!z && d.overlays) {
-      d.overlays.forEach(function (o) {
-        if ((o.kind === 'crop' || o.kind === 'scrim') && o.w && o.h) safe.push(o.label + ' ' + o.w + 'x' + o.h + ' at ' + o.x + ',' + o.y);
-        else if (o.x != null) safe.push(o.label + ' at x ' + o.x);
-        else if (o.y != null) safe.push(o.label + ' at y ' + o.y);
-      });
-    }
-    lines.push(safe.length ? 'safe area: ' + safe.join('; ') : 'safe area: none recorded');
-    if (z && z.stillOnly) lines.push('stills only');
-    else if (fpsConflict(d, z)) lines.push('frame rate: sources disagree');
-    else if (d.delivery && d.delivery.fps) lines.push('frame rate: ' + d.delivery.fps + ' fps');
-    lines.push('id: ' + (z ? z.id : d.id));
-    lines.push('manifest: ' + DATA.version);
-    return lines.join('\n');
-  }
-  function rowSpec(v, d, row) {
-    var text = specText(v, d, row.first);
-    if (row.layers && row.layers.length > 1) text = text.replace('\nid:', '\nlayers: ' + row.layers.join(' + ') + '\nid:');
-    return text;
-  }
-  function guideName(v, d, row, ext) {
-    return v.code + '_' + slug(d.name) + (row ? '_' + slug(row.base) : '') + '_' + size(row ? row.w : d.w, row ? row.h : d.h) + '_guide.' + ext;
-  }
-  function guideSvg(opts) {
-    var w = opts.w, h = opts.h, i = opts.inset;
-    var font = h < 80 ? Math.max(10, Math.round(h * 0.45)) : Math.max(14, Math.min(48, Math.round(Math.min(w, h) * 0.04)));
-    var out = [
-      '<?xml version="1.0" encoding="UTF-8"?>',
-      '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '">',
-      '<rect width="' + w + '" height="' + h + '" fill="#ffffff"/>',
-      '<rect x="0.5" y="0.5" width="' + (w - 1) + '" height="' + (h - 1) + '" fill="none" stroke="#1f1e1b" stroke-width="1"/>'
-    ];
-    if (i) out.push('<rect x="' + i + '" y="' + i + '" width="' + (w - i * 2) + '" height="' + (h - i * 2) + '" fill="none" stroke="#b3261e" stroke-width="2" stroke-dasharray="12 8"/>');
-    (opts.overlays || []).forEach(function (o) {
-      if (o.kind === 'crop' || o.kind === 'scrim') out.push('<rect x="' + o.x + '" y="' + o.y + '" width="' + o.w + '" height="' + o.h + '" fill="#b3261e" fill-opacity="0.16" stroke="#b3261e" stroke-width="2"/>');
-      else {
-        var vertical = o.x != null;
-        out.push('<line x1="' + (vertical ? o.x : 0) + '" y1="' + (vertical ? 0 : o.y) + '" x2="' + (vertical ? o.x : w) + '" y2="' + (vertical ? h : o.y) + '" stroke="#b3261e" stroke-width="2" stroke-dasharray="10 8"/>');
-      }
-    });
-    (opts.zones || []).forEach(function (z) {
-      if (z.w === w && z.h === h) return;
-      (z.at || []).forEach(function (p) {
-        out.push('<rect x="' + p.x + '" y="' + p.y + '" width="' + z.w + '" height="' + z.h + '" fill="none" stroke="#2b6cb0" stroke-width="2"/>');
-      });
-    });
-    out.push('<text x="' + Math.max(8, Math.round(w * 0.02)) + '" y="' + Math.max(font + 6, Math.round(Math.min(h - 8, h * 0.12))) + '" fill="#1f1e1b" font-family="ui-monospace, Menlo, monospace" font-size="' + font + '">' + escXml(opts.label) + '</text>');
-    out.push('</svg>', '');
-    return out.join('\n');
-  }
-  function downloadSvg(opts) {
-    download(opts.filename, guideSvg(opts), 'image/svg+xml');
-    toast('Downloaded ' + opts.filename);
-  }
-  function closeMenus(except) {
-    Array.prototype.forEach.call(document.querySelectorAll('details.menu[open]'), function (d) { if (d !== except) d.removeAttribute('open'); });
-  }
-  function moreMenu(items, name) {
-    var det = node('details', 'menu');
-    var sum = node('summary', 'btn');
-    sum.setAttribute('aria-label', 'More actions' + (name ? ' for ' + name : ''));
-    sum.appendChild(document.createTextNode('More'));
-    det.appendChild(sum);
-    var pop = node('div', 'menu-pop');
-    items.forEach(function (item) {
-      var b = node('button', 'menu-item', item.label);
-      b.type = 'button';
-      b.addEventListener('click', function () { det.removeAttribute('open'); item.onClick(); });
-      pop.appendChild(b);
-    });
-    det.appendChild(pop);
-    det.addEventListener('click', function (e) { e.stopPropagation(); });
-    det.addEventListener('toggle', function () {
-      if (!det.open) return;
-      closeMenus(det);
-      var r = sum.getBoundingClientRect();
-      pop.style.position = 'fixed';
-      pop.style.right = Math.max(8, window.innerWidth - r.right) + 'px';
-      pop.style.left = 'auto';
-      pop.style.top = (r.bottom + 4) + 'px';
-      requestAnimationFrame(function () {
-        var top = r.bottom + 4;
-        if (top + pop.offsetHeight > window.innerHeight - 8) top = Math.max(8, r.top - pop.offsetHeight - 4);
-        pop.style.top = top + 'px';
-      });
-    });
-    return det;
-  }
-  function shareItem() {
-    return { label: 'Share link', onClick: function () { copy(shareUrl(), 'Link copied'); } };
-  }
-  function withShare(items) {
-    if (DATA.links && DATA.links.aeTemplate) items.push({ label: 'AE template', onClick: function () { window.open(DATA.links.aeTemplate, '_blank', 'noopener'); } });
-    items.push(shareItem());
-    return items;
-  }
 
   // "Wing-Left-FG" and "Wing-Left-BG" are one zone with two layers; show them
   // as one row with FG / BG tags. Anything unpaired stays as its own row.
@@ -325,7 +201,7 @@
     b.appendChild(node('i', 'dot'));
     b.appendChild(node('span', '', label));
     if (count != null) b.appendChild(node('span', 'count', String(count)));
-    b.addEventListener('click', function () { onClick(); closeNav(); });
+    b.addEventListener('click', onClick);
     li.appendChild(b);
     return li;
   }
@@ -342,35 +218,12 @@
     [['agents', 'For agents & tools', null], ['issues', 'Open issues', OPEN_ISSUES.length]].forEach(function (pg) {
       el['nav-ref'].appendChild(navButton(pg[1], pg[2], !searching && state.page === pg[0], function () { openPage(pg[0]); }));
     });
-    el['nav-broad'].textContent = '';
-    DATA.content.broad.forEach(function (c) {
-      el['nav-broad'].appendChild(navButton(c.name, canvasCount(c), !searching && state.content === c.id, function () { openContent(c.id); }));
-    });
-    el['nav-gameday'].textContent = '';
-    DATA.content.gameDay.forEach(function (g) {
-      var li = node('li');
-      var det = node('details');
-      var open = g.items.some(function (c) { return c.id === state.content; });
-      if (open) det.open = true;
-      var sum = node('summary');
-      sum.appendChild(icon('<path d="M6 3.5 10.5 8 6 12.5"/>')).setAttribute('class', 'icon chev');
-      sum.appendChild(node('span', '', g.name));
-      sum.appendChild(node('span', 'count', String(g.items.length)));
-      det.appendChild(sum);
-      var ul = node('ul');
-      g.items.forEach(function (c) {
-        ul.appendChild(navButton(c.name.replace(/^(Score|Noise|Play 1|Play 2|Living Hold): /, ''), canvasCount(c), !searching && state.content === c.id, function () { openContent(c.id); }));
-      });
-      det.appendChild(ul);
-      li.appendChild(det);
-      el['nav-gameday'].appendChild(li);
-    });
   }
 
   // Every move between views goes through here: reset the view, apply the
   // change, render and add a history entry.
   function go(patch) {
-    state.content = null; state.page = null; state.display = null; state.layout = null; state.filter = 'all'; state.narrow = ''; state.venueFilter = 'all';
+    state.content = null; state.page = null; state.display = null; state.layout = null; state.filter = 'all';
     clearSearch();
     Object.keys(patch).forEach(function (k) { state[k] = patch[k]; });
     if (state.display) state.venue = BY_ID[state.display].v.id;
@@ -387,13 +240,6 @@
     return a;
   }
   function clearSearch() { state.query = ''; el.search.value = ''; }
-  function closeNav() { document.body.classList.remove('nav-open'); el.menu.setAttribute('aria-expanded', 'false'); }
-  el.menu.addEventListener('click', function () {
-    var open = !document.body.classList.contains('nav-open');
-    document.body.classList.toggle('nav-open', open);
-    el.menu.setAttribute('aria-expanded', String(open));
-  });
-  el.scrim.addEventListener('click', closeNav);
 
   /* ---------------- drawing ---------------- */
 
@@ -631,10 +477,9 @@
       if (o.x != null) { ctx.moveTo(o.x, 0); ctx.lineTo(o.x, h); } else { ctx.moveTo(0, o.y); ctx.lineTo(w, o.y); }
       ctx.stroke();
     });
-    var inset = opts.inset || opts.pad;
-    if (inset) {
+    if (opts.pad) {
       ctx.setLineDash([line * 2, line * 2]);
-      ctx.strokeRect(inset, inset, w - inset * 2, h - inset * 2);
+      ctx.strokeRect(opts.pad, opts.pad, w - opts.pad * 2, h - opts.pad * 2);
     }
     ctx.setLineDash([]);
     ctx.strokeStyle = '#00b3ff';
@@ -680,7 +525,7 @@
     if (d.processor) title.appendChild(node('span', 'processor', d.processor));
     head.appendChild(title);
     var dims = node('div', 'dims');
-    dims.appendChild(sizeButton(d.w, d.h, d.name, specText(v, d, null)));
+    dims.appendChild(sizeButton(d.w, d.h, d.name));
     dims.appendChild(node('small', '', ratio(d.w, d.h) + (d.zones.length ? ' · ' + d.zones.length + ' zone' + (d.zones.length === 1 ? '' : 's') : '')));
     head.appendChild(dims);
     if (!opts.board) card.appendChild(head);
@@ -691,11 +536,7 @@
 
     var drawing = node('div', 'drawing');
     var fig = renderFigure(v, d, zoneMatch, card, { big: opts.board, show: opts.show });
-    if (fig.ribbon) {
-      drawing.classList.add('is-scroll');
-      drawing.tabIndex = 0;
-      drawing.setAttribute('aria-label', d.name + ', scroll sideways for the full width');
-    }
+    if (fig.ribbon) drawing.classList.add('is-scroll');
     // Pin the drawing while the list scrolls, but only when it shows zones.
     // Rows scroll in below it (--pin feeds their scroll-margin-top).
     if (opts.board && fig.placed) {
@@ -736,15 +577,14 @@
       d.issues.forEach(function (i) { notes.appendChild(issueItem(i)); });
       foot.appendChild(notes);
     }
-    if (!opts.board) {
-      var acts = node('div', 'foot-actions');
-      foot.appendChild(acts);
-      acts.appendChild(moreMenu([
-        { label: 'Guide SVG', onClick: function () { downloadSvg(Object.assign({}, guideOpts(v, d, null), { filename: guideName(v, d, null, 'svg') })); } },
-        { label: 'Guide PNG', onClick: function () { downloadGuide(guideOpts(v, d, null)); } }
-      ], d.name));
-    }
-    if (foot.childNodes.length) card.appendChild(foot);
+    var acts = node('div', 'foot-actions');
+    foot.appendChild(acts);
+    acts.appendChild(button('Guide PNG', 'image', function () {
+      downloadGuide({ w: d.w, h: d.h, zones: d.zones, overlays: d.overlays,
+        label: (d.processor ? d.processor + ' · ' : '') + d.name + ' ' + size(d.w, d.h),
+        filename: v.code + '_' + slug(d.name) + '_' + size(d.w, d.h) + '_guide.png' });
+    }));
+    card.appendChild(foot);
     return { el: card, zones: zones.length };
   }
 
@@ -795,30 +635,12 @@
     (z.id && KEYS[z.id] || []).forEach(function (k) { var kt = node('span', 'tag mono', k); kt.title = 'Canvas key for production tools'; tags.appendChild(kt); });
     return tags;
   }
-  function guideOpts(v, d, row) {
-    var w = row ? row.w : d.w, h = row ? row.h : d.h;
-    var label = (row ? row.base : d.name) + ' ' + size(w, h);
-    return {
-      w: w, h: h,
-      inset: row ? row.first.pad : recordedInset(d.id),
-      overlays: row ? null : d.overlays,
-      zones: row ? null : d.zones,
-      pad: row ? row.first.pad : null,
-      label: label,
-      filename: guideName(v, d, row, 'png')
-    };
-  }
-  function sizeButton(w, h, label, spec) {
-    var b = node('button', 'size');
+  function sizeButton(w, h, label) {
+    var b = node('button', 'size', pretty(w, h));
     b.type = 'button';
-    b.appendChild(icon(ICONS.copy));
-    b.appendChild(document.createTextNode(pretty(w, h)));
-    b.title = 'Copy size, aspect ratio, and safe area';
-    b.setAttribute('aria-label', 'Copy spec for ' + (label || size(w, h)));
-    b.addEventListener('click', function (e) {
-      e.stopPropagation();
-      copy(spec || size(w, h), 'Copied ' + size(w, h), b);
-    });
+    b.title = 'Copy ' + size(w, h);
+    b.setAttribute('aria-label', 'Copy size ' + size(w, h) + (label ? ' for ' + label : ''));
+    b.addEventListener('click', function () { copy(size(w, h), 'Copied ' + size(w, h), b); });
     return b;
   }
 
@@ -864,14 +686,27 @@
       name.appendChild(ul);
     }
     r.appendChild(name);
-    r.appendChild(sizeButton(row.w, row.h, row.base, rowSpec(v, d, row)));
-    var pngOpts = guideOpts(v, d, row);
-    pngOpts.filename = guideName(v, d, row, 'png');
-    r.appendChild(moreMenu([
-      { label: 'Copy JSON', onClick: function () { copy(zoneJson(v, d, z, row), 'Copied JSON for ' + z.id); } },
-      { label: 'Guide SVG', onClick: function () { downloadSvg(Object.assign({}, pngOpts, { filename: guideName(v, d, row, 'svg') })); } },
-      { label: 'Guide PNG', onClick: function () { downloadGuide(pngOpts); } }
-    ], row.base));
+    r.appendChild(sizeButton(row.w, row.h, row.base));
+
+    var js = node('button', 'mini');
+    js.type = 'button';
+    js.title = 'Copy this zone as JSON (id, size, position, delivery, issues)';
+    js.setAttribute('aria-label', 'Copy JSON for ' + row.base);
+    js.appendChild(icon(ICONS.json));
+    js.addEventListener('click', function () { copy(zoneJson(v, d, z, row), 'Copied JSON for ' + z.id, js); });
+    var png = node('button', 'mini');
+    png.type = 'button';
+    png.title = 'Download a ' + size(row.w, row.h) + ' guide PNG';
+    png.setAttribute('aria-label', png.title + ' for ' + row.base);
+    png.appendChild(icon(ICONS.image));
+    png.addEventListener('click', function () {
+      downloadGuide({ w: row.w, h: row.h, pad: z.pad, label: row.base + ' ' + size(row.w, row.h),
+        filename: v.code + '_' + slug(d.name) + '_' + slug(row.base) + '_' + size(row.w, row.h) + '.png' });
+    });
+    var tools = node('span', 'row-tools');
+    tools.appendChild(js);
+    tools.appendChild(png);
+    r.appendChild(tools);
     return r;
   }
 
@@ -1007,31 +842,22 @@
     el.props.hidden = false;
 
     setActions([
-      button('Copy spec', 'copy', function () {
-        copy(rows.map(function (r) {
-          return specText(r.v, r.d, r.names && r.names.length ? r.z : null) + (r.count > 1 ? '\nplacements: ' + r.count : '');
-        }).join('\n\n'), 'Copied ' + rows.length + ' specs');
-      }, 'primary'),
-      moreMenu(withShare([
-        { label: 'AE comps', onClick: function () {
-          var name = 'board-sizes_' + slug(c.name).toLowerCase() + '.jsx';
-          download(name, aeScript(c, rows), 'text/plain');
-          toast('Downloaded ' + name + ' (' + rows.length + ' comps)');
-        } },
-        { label: 'CSV', onClick: function () {
-          var filename = 'board-sizes_' + slug(c.name).toLowerCase() + '.csv';
-          var table = contentCsv(c, rows);
-          download(filename, toCsv(table), 'text/csv');
-          toast('Downloaded ' + filename + ' (' + (table.length - 1) + ' rows)');
-        } }
-      ]), c.name)
+      button('Copy sizes', 'copy', function () {
+        copy(rows.map(function (r) { return r.v.name + ' · ' + r.label + (r.count > 1 ? ' (×' + r.count + ')' : '') + ' — ' + size(r.w, r.h); }).join('\n'), 'Copied ' + rows.length + ' sizes');
+      }),
+      button('AE comps', 'ae', function () {
+        var name = 'board-sizes_' + slug(c.name).toLowerCase() + '.jsx';
+        download(name, aeScript(c, rows), 'text/plain');
+        toast('Downloaded ' + name + ' (' + rows.length + ' comps)');
+      }),
+      csvButton(function () { return contentCsv(c, rows); }, 'board-sizes_' + slug(c.name).toLowerCase() + '.csv')
     ]);
 
     el.view.textContent = '';
     var box = node('div', 'targets');
     unique(rows.map(function (r) { return r.v.id; })).forEach(function (vid) {
       var mine = rows.filter(function (r) { return r.v.id === vid; });
-      var h = node('h2', '', venueById[vid].name);
+      var h = node('h3', '', venueById[vid].name);
       h.appendChild(node('small', '', mine.length + ' canvas' + (mine.length === 1 ? '' : 'es')));
       box.appendChild(h);
       mine.forEach(function (r) {
@@ -1048,7 +874,7 @@
         if (r.count > 1) tags.insertBefore(node('span', 'tag', '×' + r.count), tags.firstChild);
         if (tags.childNodes.length) nm.appendChild(tags);
         row.appendChild(nm);
-        row.appendChild(sizeButton(r.w, r.h, r.label, specText(r.v, r.d, r.names && r.names.length ? r.z : null)));
+        row.appendChild(sizeButton(r.w, r.h, r.label));
         var open = node('a', 'mini');
         open.href = a.href;
         open.title = 'Open ' + r.d.name;
@@ -1096,6 +922,13 @@
 
   function csvCell(s) { s = String(s == null ? '' : s); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
   function toCsv(rows) { return rows.map(function (r) { return r.map(csvCell).join(','); }).join('\n') + '\n'; }
+  function csvButton(build, filename) {
+    return button('CSV', 'download', function () {
+      var rows = build();
+      download(filename, toCsv(rows), 'text/csv');
+      toast('Downloaded ' + filename + ' (' + (rows.length - 1) + ' rows)');
+    });
+  }
   function contentCsv(c, rows) {
     var out = [['Content', 'Venue', 'Display', 'Zone', 'Ids', 'Placements', 'Width', 'Height', 'Frame rate', 'Video', 'Stills only', 'Duration', 'Border pad (px)', 'Guide page']];
     rows.forEach(function (r) {
@@ -1135,6 +968,16 @@
   function setActions(list) {
     el.actions.textContent = '';
     list.forEach(function (b) { el.actions.appendChild(b); });
+    if (DATA.links && DATA.links.aeTemplate) {
+      var a = node('a', 'btn');
+      a.href = DATA.links.aeTemplate; a.target = '_blank'; a.rel = 'noopener noreferrer';
+      a.appendChild(icon(ICONS.ae));
+      a.appendChild(document.createTextNode('AE template'));
+      el.actions.appendChild(a);
+    }
+    el.actions.appendChild(button('Share link', 'link', function () {
+      copy(shareUrl(), 'Link copied');
+    }));
   }
 
   /* ---------------- agents + issues pages ---------------- */
@@ -1191,10 +1034,7 @@
     prop('Manifest', node('span', 'pill mono', DATA.version));
     prop('Updated', document.createTextNode(DATA.updated));
     prop('Covers', document.createTextNode(VENUES.length + ' venues · ' + stats.displays + ' displays · ' + stats.zones + ' zones · ' + DATA.canvases.length + ' canvas keys'));
-    setActions([
-      button('Copy agent prompt', 'copy', function () { copy(SNIPPETS[2][1], 'Copied the agent prompt'); }, 'primary'),
-      moreMenu(withShare([]), 'agent files')
-    ]);
+    setActions([button('Copy agent prompt', 'copy', function () { copy(SNIPPETS[2][1], 'Copied the agent prompt'); })]);
 
     var files = section('Files', SITE + '/');
     var list = node('div', 'zones');
@@ -1226,7 +1066,7 @@
       'Every display has an id like camp-randall/north-board; every zone adds its own slug: camp-randall/north-board/frame-left. Click any id on this site to copy it.',
       'Canvas keys (UPPER_SNAKE, shown in grey mono tags) are the ' + DATA.canvases.length + ' canvases production tools build against. They point at a display or zone and always match its size.',
       'Link to any board with ?v=<venue>#<id>, e.g. ' + SITE + '?v=kohl-center#kohl-center/360-fascia. Content types link as ?c=<id>.',
-      'More on a zone copies it as JSON with its manifest version, or downloads an SVG or PNG guide at that zone’s exact pixel size.'
+      'The {} button on a zone copies it as JSON with its manifest version, ready to paste into a prompt or config.'
     ].forEach(function (t) { idl.appendChild(node('li', '', t)); });
     ids.appendChild(idl);
 
@@ -1258,7 +1098,7 @@
   function renderIssues() {
     pageHead('Reference', 'Open issues',
       OPEN_ISSUES.length + ' places where the sources disagree or leave something open. Agents see the same list in every record’s issues.');
-    setActions([moreMenu(withShare([]), 'open issues')]);
+    setActions([]);
     Object.keys(ISSUE_LABEL).forEach(function (kind) {
       var mine = OPEN_ISSUES.filter(function (x) { return x.issue.kind === kind; });
       if (!mine.length) return;
@@ -1299,8 +1139,7 @@
       var bar = node('button', 'scale-bar');
       bar.type = 'button';
       li.style.width = (row.w / d.w * 100) + '%';
-      bar.style.setProperty('--aw', row.w);
-      bar.style.setProperty('--ah', row.h);
+      bar.style.aspectRatio = row.w + ' / ' + row.h;
       bar.setAttribute('aria-label', row.base + ', ' + size(row.w, row.h) + ': show in the list');
       bar.addEventListener('mouseenter', function () { hot(card, keys, true); });
       bar.addEventListener('mouseleave', function () { hot(card, keys, false); });
@@ -1368,18 +1207,7 @@
       pager.appendChild(b);
     });
     acts.push(pager);
-    acts.push(button('Copy spec', 'copy', function () { copy(specText(v, d, null), 'Copied ' + d.name); }, 'primary'));
-    acts.push(moreMenu(withShare([
-      { label: 'Guide SVG', onClick: function () { downloadSvg(Object.assign({}, guideOpts(v, d, null), { filename: guideName(v, d, null, 'svg') })); } },
-      { label: 'Guide PNG', onClick: function () { downloadGuide(guideOpts(v, d, null)); } },
-      { label: 'CSV', onClick: function () {
-        var filename = 'board-sizes_' + d.id.replace(/\//g, '_') + '.csv';
-        var table = displaysCsv(null, d);
-        download(filename, toCsv(table), 'text/csv');
-        toast('Downloaded ' + filename + ' (' + (table.length - 1) + ' rows)');
-      } },
-      { label: 'Copy id', onClick: function () { copy(d.id, 'Copied ' + d.id); } }
-    ]), d.name));
+    acts.push(csvButton(function () { return displaysCsv(null, d); }, 'board-sizes_' + d.id.replace(/\//g, '_') + '.csv'));
     setActions(acts);
 
     var layout = state.layout && (d.layouts || []).filter(function (l) { return l.id === state.layout; })[0];
@@ -1428,57 +1256,20 @@
   /* ---------------- venue + search views ---------------- */
 
   function renderVenue(v, match) {
-    el.crumbs.textContent = match ? 'Search' : 'Venues';
+    el.crumbs.textContent = match ? 'Search' : '';
     el.props.hidden = true;
     var zones = 0;
     v.displays.forEach(function (d) { zones += d.zones.length; });
     el.title.textContent = match ? '“' + state.query.trim() + '”' : v.name;
     el.subtitle.textContent = match ? 'Matches across every venue.' : v.displays.length + ' display' + (v.displays.length === 1 ? '' : 's') + ' · ' + zones + ' zone' + (zones === 1 ? '' : 's');
-    setActions([moreMenu(withShare([
-      { label: 'CSV', onClick: function () {
-        var filename = match ? 'board-sizes_search.csv' : 'board-sizes_' + v.id + '.csv';
-        var table = displaysCsv(match);
-        download(filename, toCsv(table), 'text/csv');
-        toast('Downloaded ' + filename + ' (' + (table.length - 1) + ' rows)');
-      } }
-    ]), match ? 'search results' : v.name)]);
+    setActions([csvButton(function () { return displaysCsv(match); }, match ? 'board-sizes_search.csv' : 'board-sizes_' + v.id + '.csv')]);
 
-    function hasIssue(d) { return !!((d.issues && d.issues.length) || d.zones.some(function (z) { return z.issues && z.issues.length; })); }
-    function searchHit(venue, d) {
-      if (!match) return true;
-      if (match.display(d, venue)) return true;
-      return d.zones.some(function (z) { return match.zone(z, d, venue); });
-    }
     el.view.textContent = '';
-    var filters = node('div', 'chips');
-    filters.setAttribute('role', 'group');
-    if (match) {
-      var hits = VENUES.map(function (venue) {
-        return { id: venue.id, name: venue.name, n: venue.displays.filter(function (d) { return searchHit(venue, d); }).length };
-      }).filter(function (h) { return h.n; });
-      var allN = hits.reduce(function (s, h) { return s + h.n; }, 0);
-      var issueN = 0;
-      VENUES.forEach(function (venue) { venue.displays.forEach(function (d) { if (searchHit(venue, d) && hasIssue(d)) issueN++; }); });
-      if (state.narrow && state.narrow !== 'issues' && !hits.some(function (h) { return h.id === state.narrow; })) state.narrow = '';
-      filters.setAttribute('aria-label', 'Filter search results');
-      filters.appendChild(chip('All venues', !state.narrow, function () { state.narrow = ''; render(false); }, allN));
-      hits.forEach(function (h) { filters.appendChild(chip(h.name, state.narrow === h.id, function () { state.narrow = h.id; render(false); }, h.n)); });
-      if (issueN) filters.appendChild(chip('Open issues', state.narrow === 'issues', function () { state.narrow = 'issues'; render(false); }, issueN));
-      el.view.appendChild(filters);
-    } else if (v.displays.some(hasIssue)) {
-      filters.setAttribute('aria-label', 'Filter displays');
-      filters.appendChild(chip('All displays', state.venueFilter !== 'issues', function () { state.venueFilter = 'all'; render(false); }, v.displays.length));
-      filters.appendChild(chip('Open issues', state.venueFilter === 'issues', function () { state.venueFilter = 'issues'; render(false); }, v.displays.filter(hasIssue).length));
-      el.view.appendChild(filters);
-    }
-    if (!match && v.displays.length > 1 && state.venueFilter !== 'issues') el.view.appendChild(renderOverview(v));
+    if (!match && v.displays.length > 1) el.view.appendChild(renderOverview(v));
     var shownDisplays = 0, shownZones = 0;
     (match ? VENUES : [v]).forEach(function (venue) {
-      if (match && state.narrow && state.narrow !== 'issues' && venue.id !== state.narrow) return;
       var first = true, group = null;
       venue.displays.forEach(function (d) {
-        if (match && state.narrow === 'issues' && !hasIssue(d)) return;
-        if (!match && state.venueFilter === 'issues' && !hasIssue(d)) return;
         var out = renderDisplay(venue, d, match, false);
         if (!out) return;
         if (match && first) { el.view.appendChild(node('h2', 'group-title', venue.name)); first = false; }
@@ -1488,7 +1279,6 @@
         shownDisplays++; shownZones += out.zones;
       });
     });
-    el.empty.textContent = match ? 'Nothing matches that. Try a board name like “Fascia” or a size like 1920x1080.' : 'No displays with open issues at this venue.';
     el.empty.hidden = shownDisplays > 0;
     el.summary.textContent = match ? shownDisplays + ' display' + (shownDisplays === 1 ? '' : 's') + ', ' + shownZones + ' zone' + (shownZones === 1 ? '' : 's') : '';
   }
@@ -1497,17 +1287,11 @@
 
   function currentParams() {
     var p = new URLSearchParams();
-    if (state.query.trim()) {
-      p.set('q', state.query.trim());
-      if (state.narrow) p.set('n', state.narrow);
-    }
+    if (state.query.trim()) p.set('q', state.query.trim());
     else if (state.page) p.set('p', state.page);
     else if (state.content) p.set('c', state.content);
     else if (state.display) { p.set('d', state.display); if (state.layout) p.set('l', state.layout); }
-    else {
-      p.set('v', state.venue);
-      if (state.venueFilter === 'issues') p.set('f', 'issues');
-    }
+    else p.set('v', state.venue);
     return p;
   }
   function syncUrl(push) {
@@ -1529,19 +1313,12 @@
     else if (!match && state.content && CONTENT[state.content]) renderContent(CONTENT[state.content]);
     else renderVenue(venueById[state.venue], match);
     document.body.classList.toggle('is-board-view', !match && !!state.display);
-    el['mobile-title'].textContent = el.title.textContent;
     document.title = el.title.textContent + ' · Board Sizes';
     syncUrl(push);
     if (scrollTop) window.scrollTo(0, 0);
-    requestAnimationFrame(function () {
-      var sideEl = document.getElementById('side');
-      if (!sideEl) return;
-      if (sideEl.scrollHeight > sideEl.clientHeight + 2) sideEl.tabIndex = 0;
-      else sideEl.removeAttribute('tabindex');
-    });
   }
 
-  el.footnote.textContent = 'Manifest ' + DATA.version + ' (updated ' + DATA.updated + '). Copy spec includes the size, aspect ratio, and any safe area the manifest records. Red notes are open questions.';
+  el.footnote.textContent = 'Manifest ' + DATA.version + ' (updated ' + DATA.updated + '). Sizes are width × height in px; positions are x, y from the top-left. Red notes are open questions.';
 
   var searchTimer = null;
   el.search.value = state.query;
@@ -1559,8 +1336,6 @@
     if (isDisplay(id)) openBoard(id);
     else { openBoard(BY_ID[id].d.id); goTo(id, true, false); }
   });
-  document.addEventListener('click', function (e) { if (!e.target.closest || !e.target.closest('details.menu')) closeMenus(); });
-  window.addEventListener('scroll', function () { closeMenus(); }, true);
   document.addEventListener('keydown', function (event) {
     var typing = /^(input|textarea|select)$/i.test((event.target.tagName || ''));
     if (event.key === '/' && !typing) { event.preventDefault(); el.search.focus(); el.search.select(); }
@@ -1569,9 +1344,7 @@
       if (nb) { event.preventDefault(); openBoard(nb.id); }
     }
     else if (event.key === 'Escape') {
-      if (document.querySelector('details.menu[open]')) closeMenus();
-      else if (document.body.classList.contains('nav-open')) closeNav();
-      else if (document.querySelector('.is-picked') && document.activeElement !== el.search) clearPicks();
+      if (document.querySelector('.is-picked') && document.activeElement !== el.search) clearPicks();
       else if (document.activeElement === el.search && el.search.value) { clearSearch(); render(false); }
     }
   });

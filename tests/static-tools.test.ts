@@ -5,6 +5,8 @@ import { describe, expect, it } from "vitest";
 
 // @ts-expect-error -- plain .mjs script without type declarations
 import { HASHED_TOOLS, stamp } from "../scripts/hash-static-tools.mjs";
+// @ts-expect-error -- plain .mjs script without type declarations
+import { checkGuides, readGuides, renderAll, renderDataJs, validateManifest } from "../scripts/build-board-sizes.mjs";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 function loadCore(path: string, name: string): any {
@@ -245,3 +247,249 @@ describe("Timelapse core", () => {
     expect(stills.cardMb).toBe(100 * 35);
   });
 });
+
+describe("Board manifest", () => {
+  const manifest = JSON.parse(readFileSync("public/board-sizes/boards.json", "utf8"));
+
+  it("is valid and every generated file is fresh", () => {
+    expect(validateManifest(manifest)).toEqual([]);
+    expect(readFileSync("public/board-sizes/data.js", "utf8")).toBe(renderDataJs(manifest));
+    const outputs: Record<string, string> = renderAll(readFileSync("public/board-sizes/boards.json", "utf8"));
+    for (const [path, text] of Object.entries(outputs)) {
+      expect(readFileSync(path, "utf8") === text, `${path} is stale: run node scripts/build-board-sizes.mjs`).toBe(true);
+    }
+  });
+
+  it("logs every version in changes", () => {
+    expect(manifest.changes[0].version).toBe(manifest.version);
+    const drifted = structuredClone(manifest);
+    drifted.version = "2099-01-01.1";
+    expect(validateManifest(drifted).join("\n")).toMatch(/changes must start with an entry for 2099-01-01.1/);
+  });
+
+  it("gives every display and zone a unique, stable id", () => {
+    type Z = { id: string };
+    const ids = manifest.venues.flatMap((v: { displays: { id: string; zones: Z[] }[] }) => v.displays.flatMap((d) => [d.id, ...d.zones.map((z) => z.id)]));
+    expect(ids).toHaveLength(223);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const id of ["camp-randall/north-board", "camp-randall/north-board/main-video-fg", "kohl-center/360-fascia", "field-house/table/left-gip-bg-8", "goodman/main"]) expect(ids).toContain(id);
+    const dup = structuredClone(manifest);
+    dup.venues[0].displays[0].zones[1].id = dup.venues[0].displays[0].zones[0].id;
+    expect(validateManifest(dup).join("\n")).toMatch(/duplicate id camp-randall\/north-board\/fullscreen-fg/);
+  });
+
+  it("rejects a position outside its display and an unknown issue kind", () => {
+    const bad = structuredClone(manifest);
+    bad.venues[0].displays[0].zones[3].at = [{ x: 5000, y: 0 }];
+    bad.venues[1].displays[0].issues[0].kind = "maybe";
+    const problems = validateManifest(bad).join("\n");
+    expect(problems).toMatch(/Main Video-FG: at x 5000, y 0 falls outside the display/);
+    expect(problems).toMatch(/unknown issue kind maybe/);
+  });
+
+  it("keeps layouts to zones that exist on the board and don't overlap", () => {
+    const north = manifest.venues[0].displays.find((d: { id: string }) => d.id === "camp-randall/north-board");
+    expect(north.layouts.map((l: { id: string }) => l.id)).toEqual(["fullscreen", "main-frames", "main-wings", "main-short-wings", "main-ads"]);
+    const bad = structuredClone(manifest);
+    const layouts = bad.venues[0].displays.find((d: { id: string }) => d.id === "camp-randall/north-board").layouts;
+    layouts[1].zones.push("camp-randall/north-board/wing-left-fg");
+    layouts[2].zones.push("camp-randall/north-board/nope");
+    const problems = validateManifest(bad).join("\n");
+    expect(problems).toMatch(/layout main-frames: camp-randall\/north-board\/frame-left overlaps camp-randall\/north-board\/wing-left-fg/);
+    expect(problems).toMatch(/layout main-wings: no zone camp-randall\/north-board\/nope on this display/);
+  });
+
+  it("keeps the stable canvas keys production tools build against", () => {
+    const keys = manifest.canvases.map((c: { key: string }) => c.key);
+    expect(keys).toHaveLength(58);
+    for (const key of ["MAIN_FULL", "MAIN_HD", "FASCIA_FULL", "KELLNER_AD_4", "IPTV_L_WRAP", "KC_MAIN", "KC_FASCIA", "FH_MAIN", "LB_MAIN"]) expect(keys).toContain(key);
+    const by = (key: string) => manifest.canvases.find((c: { key: string }) => c.key === key);
+    expect(by("FASCIA_FULL")).toMatchObject({ w: 11880, h: 108, fps: 60 });
+    expect(by("KC_MAIN")).toMatchObject({ w: 1104, h: 624 });
+    expect(by("KC_FASCIA")).toMatchObject({ w: 12576, h: 144 });
+  });
+
+  it("catches a canvas that drifts from its board", () => {
+    const drifted = structuredClone(manifest);
+    drifted.canvases.find((c: { key: string }) => c.key === "KC_MAIN").h = 621;
+    expect(validateManifest(drifted).join("\n")).toMatch(/KC_MAIN: 1104x621 but Centerhung Main is 1104x624/);
+  });
+});
+
+describe("Board Sizes data", () => {
+  const data = loadCore("public/board-sizes/data.js", "BOARD_DATA");
+  type Issue = { kind: string; field?: string; text: string };
+  type Zone = { id: string; n: number; name: string; w: number; h: number; at?: { x: number; y: number }[]; atFrom?: string; notes?: string[]; issues?: Issue[] };
+  type Display = { id: string; name: string; processor?: string; w: number; h: number; zones: Zone[]; sources: Record<string, string>; notes?: string[]; issues?: Issue[] };
+  type Venue = { name: string; displays: Display[] };
+  const venues: Venue[] = data.venues;
+  const display = (venue: string, name: string) =>
+    venues.find((v) => v.name === venue)!.displays.find((d) => d.name === name)!;
+
+  it("covers every venue across the four sources", () => {
+    expect(venues.map((v) => v.name)).toEqual(["Camp Randall", "Kohl Center", "Field House", "LaBahn Arena", "Goodman Diamond"]);
+    expect(Object.keys(data.sources)).toEqual(["sheet", "guide", "colosseum", "builder"]);
+    expect(venues.map((v) => v.displays.reduce((n, d) => n + d.zones.length, 0))).toEqual([81, 91, 24, 0, 0]);
+  });
+
+  it("keeps the Board Info sheet's zones verbatim and in sheet order", () => {
+    for (const v of venues) {
+      for (const d of v.displays) {
+        if (!d.sources.sheet) continue;
+        expect(d.processor).toMatch(/^[A-Z]{2}-[A-Za-z]+-P$/);
+        d.zones.forEach((z, i) => expect(z.n, `${d.name}`).toBe(i + 1));
+      }
+    }
+  });
+
+  it("places every zone inside its display and says where each position came from", () => {
+    for (const v of venues) {
+      for (const d of v.displays) {
+        expect(Object.keys(d.sources).length, `${d.name} has no source`).toBeGreaterThan(0);
+        for (const z of d.zones) {
+          expect(z.w <= d.w && z.h <= d.h, `${d.name} / ${z.name} is larger than its display`).toBe(true);
+          for (const { x, y } of z.at ?? []) {
+            expect(["sheet", "guide", "builder", "derived"]).toContain(z.atFrom);
+            expect(y >= 0 && x >= 0 && y + z.h <= d.h && x + z.w <= d.w, `${d.name} / ${z.name} at ${x},${y}`).toBe(true);
+          }
+        }
+      }
+    }
+  });
+
+  it("matches the Board Builder's North Board geometry", () => {
+    const north = display("Camp Randall", "North Board");
+    const at = (name: string) => north.zones.find((z) => z.name === name)!.at![0];
+    expect(at("Main Video-FG")).toEqual({ x: 1332, y: 0 });
+    expect(at("Frame-Right")).toEqual({ x: 4428, y: 0 });
+    expect(at("Stat Box-Left-FG")).toEqual({ x: 612, y: 828 });
+    expect(at("Stat Box-Right-FG")).toEqual({ x: 4428, y: 828 });
+    expect(at("Wing Short-Right-FG")).toEqual({ x: 5148, y: 0 });
+    expect(at("Ad-Bottom Right")).toEqual({ x: 5148, y: 1030 });
+  });
+
+  it("carries the 2024 guide's safe areas and the sources' open questions", () => {
+    const feed = display("Camp Randall", "North Board HD feed");
+    expect(feed.zones[0]).toMatchObject({ w: 1920, h: 806, at: [{ x: 0, y: 94 }] });
+    expect(94 + 806 + 180).toBe(feed.h);
+    const north = display("Camp Randall", "North Board");
+    expect(north.zones.find((z) => z.name === "GIP")).toMatchObject({ w: 3096, h: 140, at: [{ x: 1332, y: 1300 }] });
+    expect(north.zones.find((z) => z.name === "GIP")!.issues).toBeUndefined();
+    expect(display("Kohl Center", "360 Fascia").notes!.join(" ")).toMatch(/72 px high/);
+    expect(display("Kohl Center", "360 Fascia").issues).toEqual([expect.objectContaining({ kind: "conflict", field: "fps", text: expect.stringMatching(/59\.94/) })]);
+    expect(display("Kohl Center", "Main 16:9 feed").issues!.map((i) => i.kind)).toEqual(["unconfirmed", "conflict"]);
+    expect(display("Field House", "Table").issues!.map((i) => i.text).join(" ")).toMatch(/Left GIP-BG.*twice/);
+    expect(display("Goodman Diamond", "Main").issues!.map((i) => i.kind)).toEqual(["unconfirmed"]);
+    expect(display("Goodman Diamond", "Main")).toMatchObject({ w: 560, h: 308, sources: { colosseum: expect.any(String) } });
+  });
+
+  it("maps every content type onto boards that exist", () => {
+    type Target = { venue: string; display: string; zones: string[] | null };
+    type Content = { id: string; name: string; targets: Target[]; draft?: boolean };
+    const base = (n: string) => n.replace(/[-\s]+(FG|BG)$/, "").replace(/-\s+/, "-");
+    const broad: Content[] = data.content.broad;
+    const gameDay: Content[] = data.content.gameDay.flatMap((g: { items: Content[] }) => g.items);
+    expect(broad.map((c) => c.id)).toEqual(["full-system", "sponsor-ad", "main-board-video", "iptv"]);
+    expect(broad.every((c) => c.draft)).toBe(true);
+    expect(gameDay).toHaveLength(27);
+    const ids = new Set<string>();
+    for (const c of [...broad, ...gameDay]) {
+      expect(ids.has(c.id), c.id).toBe(false);
+      ids.add(c.id);
+      expect(c.targets.length, c.name).toBeGreaterThan(0);
+      for (const t of c.targets) {
+        const d = display(venues.find((v) => (v as unknown as { id: string }).id === t.venue)!.name, t.display);
+        expect(d, `${c.name}: ${t.display}`).toBeTruthy();
+        for (const z of t.zones ?? []) expect(d.zones.map((x) => base(x.name)), `${c.name}: ${t.display} › ${z}`).toContain(z);
+      }
+    }
+    const touchdown = gameDay.find((c) => c.id === "score-touchdown")!;
+    expect(touchdown.targets.some((t) => t.display === "North Board HD feed")).toBe(true);
+  });
+});
+
+describe("Board Sizes agent files", () => {
+  const index = JSON.parse(readFileSync("public/board-sizes/index.json", "utf8"));
+  const manifest = JSON.parse(readFileSync("public/board-sizes/boards.json", "utf8"));
+  type Board = { id: string; type: string; w: number; h: number; fps: number | null; canvasKeys: string[]; issues: { kind: string }[]; url: string };
+  const board = (id: string): Board => index.boards.find((b: Board) => b.id === id);
+
+  it("flattens every display and zone with the manifest version and hash", () => {
+    expect(index).toMatchObject({ schema: "wisconsin-board-sizes-index/1", version: manifest.version });
+    expect(index.manifest.sha256).toMatch(/^[0-9a-f]{64}$/);
+    expect(index.boards).toHaveLength(223);
+    expect(board("camp-randall/north-board/main-video-fg")).toMatchObject({ type: "zone", w: 3096, h: 1440, fps: 60, canvasKeys: ["MAIN_VIDEO"] });
+    expect(board("kohl-center/centerhung-main")).toMatchObject({ type: "display", w: 1104, h: 624, fps: 59.94, canvasKeys: ["KC_MAIN"] });
+    expect(board("camp-randall/north-board").canvasKeys).toEqual(["MAIN_FULL", "DAILY_MAIN_FULL"]);
+    expect(board("kohl-center/centerhung-main/fullscreen-fg").issues.map((i) => i.kind)).toEqual(["conflict"]);
+    expect(board("goodman/main").url).toBe("https://wisconsincreative.com/board-sizes?v=goodman#goodman/main");
+  });
+
+  it("resolves every canvas key and content type to board ids", () => {
+    const ids = new Set(index.boards.map((b: Board) => b.id));
+    expect(index.canvases).toHaveLength(58);
+    for (const c of index.canvases) expect(ids.has(c.zoneId ?? c.displayId), c.key).toBe(true);
+    for (const c of index.content) {
+      expect(c.boards.length, c.id).toBeGreaterThan(0);
+      for (const id of c.boards) expect(ids.has(id), `${c.id}: ${id}`).toBe(true);
+    }
+  });
+
+  it("tells agents the rules and lists every open issue", () => {
+    const llms = readFileSync("public/board-sizes/llms.txt", "utf8");
+    expect(llms).toMatch(/^# Wisconsin Board Sizes\n/);
+    expect(llms).toContain(`Manifest ${manifest.version}`);
+    expect(llms).toContain("Never hardcode or guess a board size");
+    for (const b of index.boards) if (b.type === "display") expect(llms).toContain(`id \`${b.id}\``);
+    expect(llms).toContain("`goodman/main` (unconfirmed)");
+  });
+
+  it("writes one design guide per venue from the manifest and the guidance", () => {
+    expect(readdirSync("public/board-sizes/design").sort()).toEqual(manifest.venues.map((v: { id: string }) => `${v.id}.md`).sort());
+    expect(checkGuides(manifest, readGuides(manifest))).toEqual([]);
+    const cr = readFileSync("public/board-sizes/design/camp-randall.md", "utf8");
+    expect(cr).toMatch(/^# Camp Randall design guide\n/);
+    expect(cr).toContain(`manifest ${manifest.version}`);
+    expect(cr).toContain("id `camp-randall/north-board`");
+    expect(cr).toContain("- `gip`: Confirmed by Erik 2026-09-29");
+    expect(cr).not.toContain("id `kohl-center/");
+    expect(cr).not.toMatch(/\{\{/);
+    const llms = readFileSync("public/board-sizes/llms.txt", "utf8");
+    for (const v of manifest.venues) expect(llms).toContain(`/design/${v.id}.md`);
+  });
+
+  it("keeps sizes out of the guidance and every board token real", () => {
+    const problems = checkGuides(manifest, {
+      "camp-randall": "Clear {{north-board/gip}} and {{MAIN_VIDEO}}.\nKeep 3096x1440 clear.\nSee {{north-board/nope}}.",
+      "all-venues": "Relative ids like {{north-board}} don't work here.",
+      nowhere: "",
+    }).join("\n");
+    expect(problems).toMatch(/camp-randall.md:2: literal size "3096x1440"/);
+    expect(problems).toMatch(/camp-randall.md:3: \{\{north-board\/nope\}\} names no board/);
+    expect(problems).toMatch(/all-venues.md:1: \{\{north-board\}\} names no board/);
+    expect(problems).toMatch(/no venue nowhere/);
+    expect(problems).not.toMatch(/camp-randall.md:1/);
+    const out: Record<string, string> = renderAll(readFileSync("public/board-sizes/boards.json", "utf8"), { "camp-randall": "Clear {{north-board/main-video-fg}}." });
+    expect(out["public/board-sizes/design/camp-randall.md"]).toContain("Clear `camp-randall/north-board/main-video-fg` (3096×1440 at 1332,0).");
+  });
+
+  it("publishes a JSON Schema that describes the manifest", () => {
+    const schema = JSON.parse(readFileSync("public/board-sizes/boards.schema.json", "utf8"));
+    expect(schema.properties.schema.const).toBe(manifest.schema);
+    for (const key of schema.required) expect(manifest, key).toHaveProperty(key);
+    expect(schema.$defs.issues.items.properties.kind.enum).toEqual(["conflict", "tbd", "unconfirmed", "naming"]);
+  });
+});
+
+describe("Board Sizes page", () => {
+  const app = readFileSync("public/board-sizes/app.js", "utf8");
+  it("hides the way back to the site on shared links", () => {
+    expect(app).toMatch(/share(:| =) params\.get\('share'\) === '1'/);
+    expect(app).toMatch(/if \(state\.share\) \{[^}]*el\['side-foot'\]\.hidden = true;/);
+    expect(readFileSync("public/board-sizes/index.html", "utf8")).toMatch(/<div class="side-foot" id="side-foot">\s*<a href="\/apps"/);
+  });
+  it("only shows the AE template button once a link is configured", () => {
+    expect(app).toContain("if (DATA.links && DATA.links.aeTemplate)");
+  });
+});
+
