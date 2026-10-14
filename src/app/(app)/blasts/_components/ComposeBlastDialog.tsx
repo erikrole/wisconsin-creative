@@ -356,39 +356,75 @@ export function ComposeBlastDialog({
               </TabsList>
 
               <TabsContent value="EVENT_CREW" className="pt-3">
-                <FormCombobox
-                  value={eventId}
-                  onValueChange={setEventId}
-                  options={eventOptions}
-                  placeholder={events.loading ? "Loading events..." : "Pick an event"}
-                  searchPlaceholder="Search events..."
-                />
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Everyone actively assigned on the event&apos;s published schedule.
-                </p>
+                {events.error && !events.data ? (
+                  <div className="space-y-2 rounded-md border border-destructive/30 bg-destructive/5 p-3">
+                    <p className="text-sm text-destructive">
+                      {events.error === "network"
+                        ? "Couldn’t load events. Check your connection."
+                        : "Couldn’t load events right now."}
+                    </p>
+                    <Button type="button" variant="outline" className="h-10" onClick={events.reload}>
+                      Try again
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <FormCombobox
+                      value={eventId}
+                      onValueChange={setEventId}
+                      options={eventOptions}
+                      placeholder={events.loading ? "Loading events..." : "Pick an event"}
+                      searchPlaceholder="Search events..."
+                    />
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Everyone actively assigned on the event&apos;s published schedule.
+                    </p>
+                  </>
+                )}
               </TabsContent>
 
               <TabsContent value="USERS" className="pt-3">
-                <div className="max-h-56 overflow-y-auto rounded-md border">
-                  {(users.data ?? []).map((user) => {
-                    const checked = userIds.includes(user.id);
-                    return (
-                      <button
-                        key={user.id}
-                        type="button"
-                        onClick={() => setUserIds((prev) => toggle(prev, user.id))}
-                        className={cn(
-                          "flex w-full items-center gap-2 border-b px-3 py-2 text-left text-sm last:border-b-0",
-                          checked ? "bg-accent" : "hover:bg-accent/50",
-                        )}
-                      >
-                        <UserAvatar name={user.name} avatarUrl={user.avatarUrl} size="xs" />
-                        <span className="flex-1 truncate">{user.name}</span>
-                        <span className="text-xs text-muted-foreground">{user.role}</span>
-                      </button>
-                    );
-                  })}
-                </div>
+                {users.error && !users.data ? (
+                  <div className="space-y-2 rounded-md border border-destructive/30 bg-destructive/5 p-3">
+                    <p className="text-sm text-destructive">
+                      {users.error === "network"
+                        ? "Couldn’t load people. Check your connection."
+                        : "Couldn’t load people right now."}
+                    </p>
+                    <Button type="button" variant="outline" className="h-10" onClick={users.reload}>
+                      Try again
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="max-h-56 overflow-y-auto rounded-md border">
+                    {users.loading && !users.data ? (
+                      <p className="px-3 py-4 text-sm text-muted-foreground">Loading people...</p>
+                    ) : (users.data ?? []).length === 0 ? (
+                      <p className="px-3 py-4 text-sm text-muted-foreground">
+                        No people are available to target.
+                      </p>
+                    ) : (
+                      (users.data ?? []).map((user) => {
+                        const checked = userIds.includes(user.id);
+                        return (
+                          <button
+                            key={user.id}
+                            type="button"
+                            onClick={() => setUserIds((prev) => toggle(prev, user.id))}
+                            className={cn(
+                              "flex min-h-10 w-full items-center gap-2 border-b px-3 py-2 text-left text-sm last:border-b-0",
+                              checked ? "bg-accent" : "hover:bg-accent/50",
+                            )}
+                          >
+                            <UserAvatar name={user.name} avatarUrl={user.avatarUrl} size="xs" />
+                            <span className="flex-1 truncate">{user.name}</span>
+                            <span className="text-xs text-muted-foreground">{user.role}</span>
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="DYNAMIC" className="space-y-3 pt-3">

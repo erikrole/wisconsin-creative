@@ -121,8 +121,9 @@
 | `src/lib/api-handler.ts` | 63 |
 | `src/lib/api.ts` | 143 |
 | `src/lib/app-time.ts` | 213 |
+| `src/lib/apps-live-versions.ts` | 93 |
 | `src/lib/apps-page-format.ts` | 7 |
-| `src/lib/apps-page.ts` | 309 |
+| `src/lib/apps-page.ts` | 333 |
 | `src/lib/asset-attachments.ts` | 166 |
 | `src/lib/asset-image.ts` | 26 |
 | `src/lib/asset-qr-code.ts` | 9 |
@@ -202,7 +203,7 @@
 | `src/lib/live-activity-workflow.ts` | 34 |
 | `src/lib/local-traces.ts` | 28 |
 | `src/lib/media-embed.ts` | 68 |
-| `src/lib/nav-sections.ts` | 316 |
+| `src/lib/nav-sections.ts` | 317 |
 | `src/lib/notification-catalog.ts` | 322 |
 | `src/lib/notification-count-sync.ts` | 9 |
 | `src/lib/notification-destination.ts` | 85 |
@@ -216,7 +217,7 @@
 | `src/lib/preview-activity.ts` | 23 |
 | `src/lib/prisma-errors.ts` | 38 |
 | `src/lib/profile-completion-events.ts` | 6 |
-| `src/lib/profile-completion.ts` | 159 |
+| `src/lib/profile-completion.ts` | 223 |
 | `src/lib/profile-phone.ts` | 44 |
 | `src/lib/profile-sizing.ts` | 24 |
 | `src/lib/public-showroom.ts` | 454 |

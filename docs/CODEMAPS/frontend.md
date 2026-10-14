@@ -128,11 +128,11 @@
 | `src/components/AppShell.tsx` | 1029 |
 | `src/components/onboarding/OnboardingDialog.tsx` | 996 |
 | `src/components/schedule/AutoAssignDialog.tsx` | 966 |
+| `src/components/profile-completion/ProfileCompletionWizard.tsx` | 935 |
 | `src/components/BookingListPage.tsx` | 921 |
 | `src/components/EquipmentPicker.tsx` | 898 |
 | `src/components/ShiftDetailPanel.tsx` | 795 |
 | `src/components/ChooseImageModal.tsx` | 769 |
-| `src/components/profile-completion/ProfileCompletionWizard.tsx` | 769 |
 | `src/components/BookingDetailsSheet.tsx` | 711 |
 | `src/components/ui/sidebar.tsx` | 710 |
 | `src/components/schedule/SportSetupWizard.tsx` | 675 |
