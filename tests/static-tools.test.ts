@@ -53,7 +53,7 @@ describe("static tools: routing, headers, and page contracts", () => {
     expect(readdirSync("public/board-sizes").sort()).toEqual(
       ["app.js", "boards.csv", "boards.json", "boards.schema.json", "data.js", "design", "index.html", "index.json", "llms.txt"],
     );
-    expect(readdirSync("public/apps").sort()).toEqual(["icons"]);
+    expect(readdirSync("public/apps").sort()).toEqual(["icons", "motion-w.svg"]);
   });
 
   it("sends the old /tools URL to the apps page", () => {
