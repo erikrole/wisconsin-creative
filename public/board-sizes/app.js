@@ -16,7 +16,7 @@
   var DATA = window.BOARD_DATA;
   var VENUE_KEY = 'boards.venue.v1';
   var el = {};
-  ['search', 'nav-venues', 'nav-broad', 'nav-gameday', 'nav-ref', 'tools-link', 'side-foot', 'menu', 'scrim', 'mobile-title',
+  ['search', 'nav-venues', 'nav-ref', 'tools-link', 'side-foot',
    'crumbs', 'title', 'actions', 'subtitle', 'props', 'summary', 'view', 'empty', 'footnote', 'toast'
   ].forEach(function (id) { el[id] = document.getElementById(id); });
 
@@ -201,7 +201,7 @@
     b.appendChild(node('i', 'dot'));
     b.appendChild(node('span', '', label));
     if (count != null) b.appendChild(node('span', 'count', String(count)));
-    b.addEventListener('click', function () { onClick(); closeNav(); });
+    b.addEventListener('click', onClick);
     li.appendChild(b);
     return li;
   }
@@ -217,29 +217,6 @@
     el['nav-ref'].textContent = '';
     [['agents', 'For agents & tools', null], ['issues', 'Open issues', OPEN_ISSUES.length]].forEach(function (pg) {
       el['nav-ref'].appendChild(navButton(pg[1], pg[2], !searching && state.page === pg[0], function () { openPage(pg[0]); }));
-    });
-    el['nav-broad'].textContent = '';
-    DATA.content.broad.forEach(function (c) {
-      el['nav-broad'].appendChild(navButton(c.name, canvasCount(c), !searching && state.content === c.id, function () { openContent(c.id); }));
-    });
-    el['nav-gameday'].textContent = '';
-    DATA.content.gameDay.forEach(function (g) {
-      var li = node('li');
-      var det = node('details');
-      var open = g.items.some(function (c) { return c.id === state.content; });
-      if (open) det.open = true;
-      var sum = node('summary');
-      sum.appendChild(icon('<path d="M6 3.5 10.5 8 6 12.5"/>')).setAttribute('class', 'icon chev');
-      sum.appendChild(node('span', '', g.name));
-      sum.appendChild(node('span', 'count', String(g.items.length)));
-      det.appendChild(sum);
-      var ul = node('ul');
-      g.items.forEach(function (c) {
-        ul.appendChild(navButton(c.name.replace(/^(Score|Noise|Play 1|Play 2|Living Hold): /, ''), canvasCount(c), !searching && state.content === c.id, function () { openContent(c.id); }));
-      });
-      det.appendChild(ul);
-      li.appendChild(det);
-      el['nav-gameday'].appendChild(li);
     });
   }
 
@@ -263,13 +240,6 @@
     return a;
   }
   function clearSearch() { state.query = ''; el.search.value = ''; }
-  function closeNav() { document.body.classList.remove('nav-open'); el.menu.setAttribute('aria-expanded', 'false'); }
-  el.menu.addEventListener('click', function () {
-    var open = !document.body.classList.contains('nav-open');
-    document.body.classList.toggle('nav-open', open);
-    el.menu.setAttribute('aria-expanded', String(open));
-  });
-  el.scrim.addEventListener('click', closeNav);
 
   /* ---------------- drawing ---------------- */
 
@@ -1286,7 +1256,7 @@
   /* ---------------- venue + search views ---------------- */
 
   function renderVenue(v, match) {
-    el.crumbs.textContent = match ? 'Search' : 'Venues';
+    el.crumbs.textContent = match ? 'Search' : '';
     el.props.hidden = true;
     var zones = 0;
     v.displays.forEach(function (d) { zones += d.zones.length; });
@@ -1343,7 +1313,6 @@
     else if (!match && state.content && CONTENT[state.content]) renderContent(CONTENT[state.content]);
     else renderVenue(venueById[state.venue], match);
     document.body.classList.toggle('is-board-view', !match && !!state.display);
-    el['mobile-title'].textContent = el.title.textContent;
     document.title = el.title.textContent + ' · Board Sizes';
     syncUrl(push);
     if (scrollTop) window.scrollTo(0, 0);
@@ -1375,8 +1344,7 @@
       if (nb) { event.preventDefault(); openBoard(nb.id); }
     }
     else if (event.key === 'Escape') {
-      if (document.body.classList.contains('nav-open')) closeNav();
-      else if (document.querySelector('.is-picked') && document.activeElement !== el.search) clearPicks();
+      if (document.querySelector('.is-picked') && document.activeElement !== el.search) clearPicks();
       else if (document.activeElement === el.search && el.search.value) { clearSearch(); render(false); }
     }
   });
