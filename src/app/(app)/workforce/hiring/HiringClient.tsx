@@ -2,16 +2,18 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { FileText, Link2, MessageSquare, Plus, Search, Video } from "lucide-react";
+import { FileText, Link2, MessageSquare, Plus, RefreshCw, Search, Video } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { useConfirm } from "@/components/ConfirmDialog";
 import EmptyState from "@/components/EmptyState";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
+import { cn } from "@/lib/utils";
 import { messageOf } from "./types";
 import {
   APPLICATION_STAGES,
@@ -35,12 +37,30 @@ const STAGE_BADGE: Record<ApplicationStage, "gray" | "blue" | "green" | "orange"
   WITHDRAWN: "gray",
 };
 
+function BoardSkeleton() {
+  return (
+    <div className="grid gap-3 overflow-x-auto pb-2" style={{ gridTemplateColumns: "repeat(4, minmax(15rem, 1fr))" }} aria-busy="true" aria-label="Loading applicants">
+      {Array.from({ length: 4 }).map((_, column) => (
+        <div key={column} className="flex min-h-48 flex-col gap-2 rounded-lg border bg-muted/30 p-2">
+          <Skeleton className="h-5 w-24" />
+          <Skeleton className="h-24 w-full rounded-md" />
+          <Skeleton className="h-24 w-full rounded-md" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function HiringClient() {
   const confirm = useConfirm();
   const [cycles, setCycles] = useState<CycleSummary[] | null>(null);
   const [cycleId, setCycleId] = useState<string | null>(null);
   const [apps, setApps] = useState<BoardApplication[] | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  /** Cycle id the current `apps` rows belong to; kept across refreshes so a cycle switch can show the prior board until the new list arrives. */
+  const [appsCycleId, setAppsCycleId] = useState<string | null>(null);
+  const [cyclesError, setCyclesError] = useState<string | null>(null);
+  const [boardError, setBoardError] = useState<string | null>(null);
+  const [boardRefreshing, setBoardRefreshing] = useState(false);
   const [search, setSearch] = useState("");
   const [areaFilter, setAreaFilter] = useState("");
   const [reviewFilter, setReviewFilter] = useState<"" | "unreviewed" | "reviewed">("");
@@ -62,9 +82,10 @@ export default function HiringClient() {
       if (!res.ok) throw new Error(messageOf(json, "Could not load hiring cycles."));
       const list = json?.data ?? [];
       setCycles(list);
+      setCyclesError(null);
       setCycleId((current) => select ?? current ?? list.find((c) => c.status === "OPEN")?.id ?? list[0]?.id ?? null);
     } catch (err) {
-      setLoadError(err instanceof Error ? err.message : "Could not load hiring cycles.");
+      setCyclesError(err instanceof Error ? err.message : "Could not load hiring cycles.");
     }
   }, []);
 
@@ -73,6 +94,8 @@ export default function HiringClient() {
   const appsRequest = useRef(0);
   const loadApps = useCallback(async (id: string) => {
     const ticket = ++appsRequest.current;
+    setBoardRefreshing(true);
+    setBoardError(null);
     try {
       const res = await fetch(`/api/hiring/applications?cycleId=${encodeURIComponent(id)}`);
       if (handleAuthRedirect(res)) return;
@@ -80,9 +103,13 @@ export default function HiringClient() {
       if (ticket !== appsRequest.current) return;
       if (!res.ok) throw new Error(messageOf(json, "Could not load applicants."));
       setApps(json?.data ?? []);
-      setLoadError(null);
+      setAppsCycleId(id);
+      setBoardError(null);
     } catch (err) {
-      setLoadError(err instanceof Error ? err.message : "Could not load applicants.");
+      if (ticket !== appsRequest.current) return;
+      setBoardError(err instanceof Error ? err.message : "Could not load applicants.");
+    } finally {
+      if (ticket === appsRequest.current) setBoardRefreshing(false);
     }
   }, []);
 
@@ -92,7 +119,6 @@ export default function HiringClient() {
 
   useEffect(() => {
     if (!cycleId) return;
-    setApps(null);
     void loadApps(cycleId);
   }, [cycleId, loadApps]);
 
@@ -164,11 +190,29 @@ export default function HiringClient() {
     [apps, confirm, loadCycles],
   );
 
-  if (loadError && !cycles) {
+  const appsMatchCycle = apps !== null && appsCycleId === cycleId;
+  const hasBoardFilters = Boolean(search.trim() || areaFilter || reviewFilter);
+  const filterEmpty = appsMatchCycle && apps.length > 0 && filtered.length === 0;
+  const clearBoardFilters = () => {
+    setSearch("");
+    setAreaFilter("");
+    setReviewFilter("");
+  };
+  const retryBoard = () => {
+    if (cycleId) void loadApps(cycleId);
+  };
+
+  if (cyclesError && !cycles) {
     return (
       <>
-        <PageHeader title="Hiring" />
-        <EmptyState title="Could not load hiring" description={loadError} />
+        <PageHeader title="Hiring" description="Run each student hiring cycle: applicants, resumes, interviews, and decisions." />
+        <EmptyState
+          icon="wifi-off"
+          title="Couldn’t load hiring"
+          description={cyclesError}
+          actionLabel="Retry"
+          onAction={() => void loadCycles()}
+        />
       </>
     );
   }
@@ -182,7 +226,7 @@ export default function HiringClient() {
         <Button variant="outline" onClick={() => setImportOpen(true)} disabled={!cycle}>
           Import CSV
         </Button>
-        <Button variant="outline" onClick={() => setResumesOpen(true)} disabled={!apps?.length}>
+        <Button variant="outline" onClick={() => setResumesOpen(true)} disabled={!appsMatchCycle || !apps?.length}>
           Upload resumes
         </Button>
         <Button onClick={() => setAddOpen(true)} disabled={!cycle}>
@@ -191,7 +235,7 @@ export default function HiringClient() {
       </PageHeader>
 
       {!cycles ? (
-        <Skeleton className="h-64 w-full" />
+        <BoardSkeleton />
       ) : cycles.length === 0 ? (
         <EmptyState
           title="No hiring cycles yet"
@@ -258,12 +302,22 @@ export default function HiringClient() {
               <input type="checkbox" checked={showPassed} onChange={(e) => setShowPassed(e.target.checked)} />
               Show passed
             </label>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10"
+              onClick={retryBoard}
+              disabled={!cycleId || boardRefreshing}
+              aria-label="Refresh applicants"
+            >
+              <RefreshCw className={cn("size-4", boardRefreshing && "animate-spin")} />
+            </Button>
           </div>
 
           {cycle && cycle.slots.length > 0 && (
             <div className="mb-4 flex flex-wrap gap-2" aria-label="Hiring targets by area">
               {cycle.slots.map((slot) => {
-                const hired = (apps ?? []).filter((a) => a.stage === "HIRE" && a.primaryArea === slot.area).length;
+                const hired = (appsMatchCycle ? apps : []).filter((a) => a.stage === "HIRE" && a.primaryArea === slot.area).length;
                 return (
                   <Badge key={slot.area} variant={hired >= slot.targetCount ? "green" : "gray"}>
                     {AREA_LABEL[slot.area] ?? slot.area}: {hired} of {slot.targetCount} hired
@@ -273,10 +327,42 @@ export default function HiringClient() {
             </div>
           )}
 
-          {!apps ? (
-            <Skeleton className="h-64 w-full" />
+          {boardError && appsMatchCycle ? (
+            <Alert variant="destructive" className="mb-4">
+              <AlertTitle>Couldn’t refresh the board</AlertTitle>
+              <AlertDescription className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <p>{boardError} Showing the last loaded applicants.</p>
+                <Button variant="outline" className="h-10 w-fit" onClick={retryBoard} disabled={boardRefreshing}>
+                  Retry
+                </Button>
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
+          {!appsMatchCycle && boardError ? (
+            <EmptyState
+              icon="wifi-off"
+              title="Couldn’t load applicants"
+              description={boardError}
+              actionLabel="Retry"
+              onAction={retryBoard}
+            />
+          ) : !appsMatchCycle ? (
+            <BoardSkeleton />
+          ) : filterEmpty ? (
+            <EmptyState
+              icon="search"
+              title="No applicants match these filters"
+              description="Clear the search or area and review filters to see the full board."
+              actionLabel="Clear filters"
+              onAction={clearBoardFilters}
+            />
           ) : (
-            <div className="grid gap-3 overflow-x-auto pb-2" style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(15rem, 1fr))` }}>
+            <div
+              className={cn("grid gap-3 overflow-x-auto pb-2", boardRefreshing && "opacity-70")}
+              style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(15rem, 1fr))` }}
+              aria-busy={boardRefreshing || undefined}
+            >
               {columns.map((stage) => {
                 const items = filtered.filter((a) => a.stage === stage);
                 return (
@@ -335,14 +421,17 @@ export default function HiringClient() {
                           </div>
                         </button>
                       ))}
-                      {items.length === 0 && <p className="px-1 py-4 text-center text-xs text-muted-foreground">No applicants</p>}
+                      {items.length === 0 && (
+                        <p className="px-1 py-4 text-center text-xs text-muted-foreground">
+                          {hasBoardFilters ? "No matches" : "No applicants"}
+                        </p>
+                      )}
                     </div>
                   </section>
                 );
               })}
             </div>
           )}
-          {loadError && <p role="alert" className="mt-3 text-sm text-destructive">{loadError}</p>}
         </>
       )}
 

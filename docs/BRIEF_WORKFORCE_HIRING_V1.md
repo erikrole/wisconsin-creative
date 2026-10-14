@@ -249,3 +249,8 @@ Source: Fable read-only review, 2026-09-30, verified against the repo.
 - **Erasing an account** also deletes its term placements and clears its start term, and counts them in the erase evidence.
 - **Roster import:** a row whose campus and athletics addresses match different accounts is reported, not guessed, and the audit and response report what was actually written when guarded writes skip rows.
 - **Cycle creation** commits with its audit entry; the close dialog clears its date whenever it opens, closes, or targets another cycle; a year-only graduation shows as the year, with no invented term.
+
+## 27. Hiring board recovery (2026-10-11)
+- Cycle and applicant load failures use `EmptyState` with Retry instead of a dead-end message.
+- A failed refresh keeps the last loaded board for that cycle and offers Retry; switching cycles no longer blanks the board before the new list arrives.
+- Search/area/review filters that hide every applicant show a Clear filters empty state.
