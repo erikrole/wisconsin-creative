@@ -1,5 +1,5 @@
-// The /apps page, rendered per request so it can sit behind sign-in. Edit the app
-// data below (version, release date, links) when an app ships.
+// The /apps page, rendered per request so the script nonce and live versions
+// can be attached. It is public. Edit the app data below when an app ships.
 import { formatAppDate } from "@/lib/apps-page-format";
 import type { LiveVersions } from "@/lib/apps-live-versions";
 
