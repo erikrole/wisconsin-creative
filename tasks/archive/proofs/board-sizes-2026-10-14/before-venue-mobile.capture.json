@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "55124f219bdfcd53bb54e270759eefd8c01d6733",
+  "sourcePatchSha256": null,
+  "settings": {
+    "device": "Google Chrome headless, device scale 1",
+    "fixture": "boards.json manifest 2026-10-09.1",
+    "role": "staff",
+    "appearance": "light",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "2026-10-14T08:54:00-05:00",
+    "scroll": [
+      0,
+      0
+    ],
+    "viewport": [
+      390,
+      844
+    ],
+    "route": "/board-sizes/index.html?v=camp-randall"
+  },
+  "imageSha256": "8d280dcd6ea8020c00f03c02fd8b334dc13777e6241efe6d01709ba868edf00e",
+  "dimensions": [
+    390,
+    844
+  ]
+}
