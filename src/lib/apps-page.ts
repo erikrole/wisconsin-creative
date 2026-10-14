@@ -1,6 +1,5 @@
 // The /apps page, rendered per request so the script nonce and live versions
 // can be attached. It is public. Edit the app data below when an app ships.
-import { formatAppDate } from "@/lib/apps-page-format";
 import type { LiveVersions } from "@/lib/apps-live-versions";
 
 export type AppEntry = {
@@ -16,8 +15,6 @@ export type AppEntry = {
   blurb: string;
   version?: string;
   requires?: string;
-  /** ISO date (YYYY-MM-DD) in Madison time. */
-  released?: string;
   href?: string;
   cta?: string;
 };
@@ -49,7 +46,6 @@ export const appEntries: AppEntry[] = [
       "Connects gear reservations, event and shift schedules, and equipment lookup.",
     version: "1.2",
     requires: "iOS 26.0 or later",
-    released: "2026-09-14",
     href: "https://apps.apple.com/us/app/wisconsin-creative/id6763456945",
     cta: "View on the App Store",
   },
@@ -65,7 +61,6 @@ export const appEntries: AppEntry[] = [
       "Gets Sony FX6 and FX3 clips off the card, names them from the play-by-play, and files them in the archive.",
     version: "1.2.0",
     requires: "macOS 15.0 or later",
-    released: "2026-10-13",
     href: "https://github.com/erikrole/offload-releases/releases/download/v1.2.0/Offload-1.2.0.dmg",
     cta: "Download for macOS",
   },
@@ -112,7 +107,6 @@ function withLive(app: AppEntry, live: LiveVersions): AppEntry {
   return {
     ...app,
     version: fresh.version,
-    released: fresh.released ?? (same ? app.released : undefined),
     href: fresh.href ?? (app.versionedDownload && !same ? undefined : app.href),
     requires: same ? (app.requires ?? fresh.requires) : fresh.requires,
   };
@@ -123,7 +117,7 @@ function appCard(entry: AppEntry, live: LiveVersions) {
   const platformPill = app.platform ? `<span class="pill">${esc(app.platform)}</span>` : "";
   const statusPill = app.status ? `<span class="pill ${app.statusKind}">${esc(app.status)}</span>` : "";
   const icon = `<img src="/apps/icons/${esc(app.icon)}.png" alt="" width="72" height="72" decoding="async">`;
-  const release = [app.version ? `Version ${esc(app.version)}` : "", app.released ? formatAppDate(app.released) : ""].filter(Boolean).join(" · ");
+  const release = app.version ? `Version ${esc(app.version)}` : "";
   const requires = app.requires ? `Requires ${esc(app.requires)}` : "";
   const meta = [release, requires].filter(Boolean);
   const download = app.href && app.cta ? `<a class="go" href="${esc(app.href)}">${esc(app.cta)} <i aria-hidden="true">→</i></a>` : "";
