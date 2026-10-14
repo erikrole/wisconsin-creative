@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 /** Internal apps and tools page: signed-in staff only. */
 export async function GET(request: Request) {
   // `next dev` only: lets /apps be developed without a local database. Production builds never take this path.
-  if (process.env.NODE_ENV === "development") return htmlResponse();
+  if (process.env.NODE_ENV === "development") return htmlResponse(request);
   try {
     const user = await requireAuth();
     if (user.forcePasswordChange)
@@ -22,15 +22,18 @@ export async function GET(request: Request) {
     }
     throw error;
   }
-  return htmlResponse();
+  return htmlResponse(request);
 }
 
-function htmlResponse() {
-  return new NextResponse(renderAppsPage(), {
-    headers: {
-      "content-type": "text/html; charset=utf-8",
-      "cache-control": "private, no-store",
-      "x-robots-tag": "noindex",
+function htmlResponse(request: Request) {
+  return new NextResponse(
+    renderAppsPage(request.headers.get("x-nonce") ?? undefined),
+    {
+      headers: {
+        "content-type": "text/html; charset=utf-8",
+        "cache-control": "private, no-store",
+        "x-robots-tag": "noindex",
+      },
     },
-  });
+  );
 }

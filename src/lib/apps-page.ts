@@ -68,7 +68,7 @@ function appCard(app: AppEntry) {
     ? `<p class="meta">Version ${esc(app.version)}${app.released ? ` · ${formatAppDate(app.released)}` : ""}</p>`
     : "";
   const body = `
-          <div class="art">${platformPill}${statusPill}<img src="/apps/icons/${app.icon}.png" alt="" width="96" height="96"></div>
+          <div class="art">${platformPill}${statusPill}<img class="icon-light" src="/apps/icons/${app.icon}.png" alt="" width="96" height="96"><img class="icon-dark" src="/apps/icons/${app.icon}-dark.png" alt="" width="96" height="96"></div>
           <div class="copy">
             <h2>${esc(app.name)}</h2>
             <p>${esc(app.blurb)}</p>
@@ -80,7 +80,8 @@ function appCard(app: AppEntry) {
     : `<li><div class="tool app soon">${body}</div></li>`;
 }
 
-export function renderAppsPage() {
+export function renderAppsPage(nonce?: string) {
+  const n = nonce ? ` nonce="${esc(nonce)}"` : "";
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -88,9 +89,10 @@ export function renderAppsPage() {
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex">
-  <meta name="color-scheme" content="light">
+  <meta name="color-scheme" content="light dark">
   <meta name="theme-color" content="#c5050c">
   <title>Wisconsin Creative Tools</title>
+  <script${n}>try{var t=localStorage.getItem("apps-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3.5' fill='%23c5050c'/%3E%3Cpath fill='%23fff' d='M3 3h4v4H3zM9 3h4v4H9zM3 9h4v4H3zM9 9h4v4H9z'/%3E%3C/svg%3E">
   <style>
 @font-face { font-family: "Gotham"; src: url("/Gotham-Black.woff2") format("woff2"); font-weight: 800; font-display: swap; }
@@ -101,15 +103,32 @@ export function renderAppsPage() {
     /* The hub is plain paper so each tool's own look can show on its card. */
     :root {
       --paper: #f3f1ec; --ink: #15151a; --ink-2: #4a4a52; --ink-3: #7a7973; --line: #dcd9d1;
-      --red: #c5050c; --focus: #c5050c; --ease: cubic-bezier(0.2, 0, 0, 1);
+      --card: #fff; --card-art: #ebe8e1; --pill: rgba(255,255,255,0.85);
+      --beta-bg: #e6efff; --beta-line: #c9dbff; --beta-ink: #1d4fb3;
+      --red: #c5050c; --red-text: #c5050c; --focus: #c5050c; --ease: cubic-bezier(0.2, 0, 0, 1);
       --font: "Gotham", system-ui, -apple-system, "Segoe UI", sans-serif;
       --mono: var(--font);
     }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) { color-scheme: dark; --paper: #121214; --ink: #f2f1ee; --ink-2: #b9b8b2; --ink-3: #8a8984; --line: #2c2c30;
+      --card: #1c1c1f; --card-art: #26262a; --pill: rgba(28,28,31,0.88);
+      --beta-bg: #1b2a4d; --beta-line: #2b4278; --beta-ink: #8fb1ff;
+      --red-text: #ff5a60; --focus: #ff5a60; }
+      :root:not([data-theme="light"]) .icon-light { display: none; }
+      :root:not([data-theme="light"]) .icon-dark { display: block; }
+    }
+    :root[data-theme="dark"] { color-scheme: dark; --paper: #121214; --ink: #f2f1ee; --ink-2: #b9b8b2; --ink-3: #8a8984; --line: #2c2c30;
+      --card: #1c1c1f; --card-art: #26262a; --pill: rgba(28,28,31,0.88);
+      --beta-bg: #1b2a4d; --beta-line: #2b4278; --beta-ink: #8fb1ff;
+      --red-text: #ff5a60; --focus: #ff5a60; }
+    :root[data-theme="dark"] .icon-light { display: none; }
+    :root[data-theme="dark"] .icon-dark { display: block; }
+    .icon-dark { display: none; }
     * { box-sizing: border-box; }
     body { margin: 0; min-width: 300px; background: var(--paper); color: var(--ink); font-family: var(--font); font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
     :focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; border-radius: 18px; }
 
-    .topbar { display: flex; align-items: center; gap: 10px; padding: max(18px, env(safe-area-inset-top)) clamp(16px, 4vw, 40px) 0; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: max(18px, env(safe-area-inset-top)) clamp(16px, 4vw, 40px) 0; }
     .mw { width: 36px; height: 36px; display: block; }
     .mark { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 8px; background: var(--red); }
     .mark svg { width: 15px; height: 15px; }
@@ -117,9 +136,12 @@ export function renderAppsPage() {
 
     main { width: min(1200px, calc(100% - 32px)); margin: 0 auto; padding: clamp(36px, 8vw, 88px) 0 64px; }
     .band { height: 6px; background: var(--red); }
+    .picker { display: inline-flex; padding: 3px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); }
+    .picker button { appearance: none; border: 0; background: none; padding: 5px 12px; border-radius: 999px; color: var(--ink-2); font: 700 12px var(--font); cursor: pointer; }
+    .picker button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
     .kicker { margin: 0 0 14px; font-size: 12px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: var(--red); }
     h1 { margin: 0; font-size: clamp(36px, 7vw, 72px); font-weight: 800; letter-spacing: -0.03em; line-height: 0.95; text-transform: uppercase; }
-    h1 em { font-style: normal; color: var(--red); }
+    h1 em { font-style: normal; color: var(--red-text); }
     .lede { margin: 22px 0 clamp(32px, 6vw, 56px); max-width: 520px; font-size: 17px; color: var(--ink-2); }
 
     .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; list-style: none; margin: 0; padding: 0; }
@@ -181,17 +203,17 @@ export function renderAppsPage() {
 
     h2.section { margin: clamp(40px, 7vw, 72px) 0 18px; font-size: 13px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-3); }
     h2.section:first-of-type { margin-top: 0; }
-    .app { background: #fff; border: 1px solid var(--line); min-height: 0; }
-    .app .art { height: 176px; padding-top: 26px; display: grid; place-items: center; background: #ebe8e1; }
+    .app { background: var(--card); border: 1px solid var(--line); min-height: 0; }
+    .app .art { height: 176px; padding-top: 26px; display: grid; place-items: center; background: var(--card-art); }
     .app .art img { width: 96px; height: 96px; filter: drop-shadow(0 10px 14px rgba(20, 20, 25, 0.35)); }
     .app .copy p { color: var(--ink-2); }
     .app .copy p.meta { margin-top: 12px; font-size: 13px; font-weight: 700; color: var(--ink); }
-    .app .go { color: var(--red); }
+    .app .go { color: var(--red-text); }
     .app .go.pending { color: var(--ink-3); }
-    .pill { position: absolute; top: 14px; padding: 4px 11px; border-radius: 999px; background: rgba(255,255,255,0.85); border: 1px solid var(--line); color: var(--ink-2); font-size: 12px; font-weight: 700; letter-spacing: 0.01em; }
+    .pill { position: absolute; top: 14px; padding: 4px 11px; border-radius: 999px; background: var(--pill); border: 1px solid var(--line); color: var(--ink-2); font-size: 12px; font-weight: 700; letter-spacing: 0.01em; }
     .pill.left { left: 14px; }
     .pill.right { right: 14px; }
-    .pill.beta { background: #e6efff; border-color: #c9dbff; color: #1d4fb3; }
+    .pill.beta { background: var(--beta-bg); border-color: var(--beta-line); color: var(--beta-ink); }
     .pill.soon { color: var(--ink-3); }
     .app.soon { box-shadow: none; }
     .app.soon:hover { transform: none; }
@@ -206,6 +228,11 @@ export function renderAppsPage() {
   <div class="band" aria-hidden="true"></div>
   <header class="topbar">
     <img class="mw" src="/apps/motion-w.svg" alt="" width="36" height="36">
+    <div class="picker" role="group" aria-label="Appearance">
+      <button type="button" data-mode="auto" aria-pressed="true">Auto</button>
+      <button type="button" data-mode="light" aria-pressed="false">Light</button>
+      <button type="button" data-mode="dark" aria-pressed="false">Dark</button>
+    </div>
   </header>
   <main>
     <h1>Wisconsin Creative <em>Tools</em></h1>
@@ -282,6 +309,7 @@ export function renderAppsPage() {
 
     <p class="foot"><span></span><span><a href="/about" style="color:inherit">About</a> · <a href="/releases" style="color:inherit">Releases</a></span></p>
   </main>
+  <script${n}>(function(){var r=document.documentElement,b=document.querySelectorAll(".picker button");function show(m){b.forEach(function(x){x.setAttribute("aria-pressed",String(x.dataset.mode===m))})}var saved="auto";try{var t=localStorage.getItem("apps-theme");if(t==="light"||t==="dark")saved=t}catch(e){}show(saved);b.forEach(function(x){x.addEventListener("click",function(){var m=x.dataset.mode;if(m==="auto")delete r.dataset.theme;else r.dataset.theme=m;try{if(m==="auto")localStorage.removeItem("apps-theme");else localStorage.setItem("apps-theme",m)}catch(e){}show(m)})})})();</script>
 </body>
 </html>`;
 }

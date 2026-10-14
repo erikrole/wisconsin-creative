@@ -13,8 +13,9 @@ describe("apps page", () => {
     expect(existsSync("public/apps/index.html")).toBe(false);
   });
 
-  it("ships no script or inline handlers", () => {
-    expect(html).not.toMatch(/<script/i);
+  it("ships only nonced scripts and no inline handlers", () => {
+    expect(renderAppsPage("abc")).not.toMatch(/<script(?![^>]*nonce=)/i);
+    expect(renderAppsPage("abc")).toContain('<script nonce="abc">');
     expect(html).not.toMatch(/\son[a-z]+=/i);
   });
 
@@ -28,8 +29,10 @@ describe("apps page", () => {
 
   it("shows version and release date for released apps, and each icon file exists", () => {
     for (const app of appEntries) {
-      expect(html).toContain(`/apps/icons/${app.icon}.png`);
-      expect(existsSync(`public/apps/icons/${app.icon}.png`)).toBe(true);
+      for (const file of [`${app.icon}.png`, `${app.icon}-dark.png`]) {
+        expect(html).toContain(`/apps/icons/${file}`);
+        expect(existsSync(`public/apps/icons/${file}`)).toBe(true);
+      }
       if (app.version) expect(html).toContain(`Version ${app.version}`);
     }
     expect(html).toContain("Version 1.0.8");
