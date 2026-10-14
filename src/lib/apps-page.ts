@@ -207,10 +207,8 @@ export function renderAppsPage() {
   <div class="band" aria-hidden="true"></div>
   <header class="topbar">
     <img class="mw" src="/apps/motion-w.svg" alt="" width="36" height="36">
-    <span>Wisconsin Creative</span>
   </header>
   <main>
-    <p class="kicker">Wisconsin Athletics</p>
     <h1>Wisconsin Creative <em>Tools</em></h1>
     <p class="lede">Apps and tools for gear, footage, and game-day work.</p>
     <h2 class="section">Apps</h2>
@@ -283,7 +281,7 @@ export function renderAppsPage() {
       </li>
     </ul>
 
-    <p class="foot"><span>Wisconsin Creative · Wisconsin Athletics</span><span><a href="/about" style="color:inherit">About</a> · <a href="/releases" style="color:inherit">Releases</a></span></p>
+    <p class="foot"><span></span><span><a href="/about" style="color:inherit">About</a> · <a href="/releases" style="color:inherit">Releases</a></span></p>
   </main>
 </body>
 </html>`;
