@@ -52,7 +52,7 @@ export const appEntries: AppEntry[] = [
     platform: "",
     status: "Coming Late 2026",
     statusKind: "soon",
-    blurb: "The team's photo and video library.",
+    blurb: "Media asset management on top of our existing media drive. Metadata, search, and quick viewing without moving files.",
   },
 ];
 
