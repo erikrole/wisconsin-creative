@@ -1,0 +1,101 @@
+{
+  "title": "Board Sizes",
+  "eyebrow": "Web · Wisconsin Creative",
+  "lede": "Creative video staff need the exact pixel size of a venue board. The page now finds that board and copies the size, aspect ratio, and any safe area the sources already record.",
+  "stats": [
+    {"k": "Axe violations", "v": "0", "n": "axe-core 4.10.3 default rules, light and dark, on the venue, board, search, content, agents, issues, and tools pages.", "tone": "good"},
+    {"k": "Boards checked", "v": "223", "n": "Every display and zone id in manifest 2026-10-09.1. No size was added or changed."}
+  ],
+  "sections": [
+    {
+      "heading": "Side by side",
+      "note": "Before is the tools-branch snapshot at 55124f219bdfcd53bb54e270759eefd8c01d6733, because Board Sizes is not on main. After is this branch on top of main f59aee2a. Same Chrome headless settings, light appearance, manifest 2026-10-09.1, scroll at the top. The page does not render a clock.",
+      "pairs": [
+        {
+          "title": "Camp Randall, desktop",
+          "sub": "1440×900. Find a display, then copy its spec.",
+          "before": "before-venue-desktop.png",
+          "beforeCap": "Several equal actions: JSON, CSV, link, and a size that copies only the pixel count.",
+          "after": "after-venue-desktop.png",
+          "afterCap": "One primary action, Copy spec. CSV and the share link sit in More.",
+          "beforeEvidence": "before-venue-desktop.capture.json",
+          "afterEvidence": "after-venue-desktop.capture.json",
+          "wide": true
+        },
+        {
+          "title": "Camp Randall, phone",
+          "sub": "390×844.",
+          "before": "before-venue-mobile.png",
+          "beforeCap": "Browse opens the venue list. The size button is the only copy control on a card.",
+          "after": "after-venue-mobile.png",
+          "afterCap": "Copy spec stays in the header. Browse still opens the list, and Escape closes it.",
+          "beforeEvidence": "before-venue-mobile.capture.json",
+          "afterEvidence": "after-venue-mobile.capture.json"
+        },
+        {
+          "title": "North Board, desktop",
+          "sub": "1440×900. The 5760×1440 board and its zones.",
+          "before": "before-board-desktop.png",
+          "beforeCap": "Copy actions are split across the header. Safe area is not in the copied size.",
+          "after": "after-board-desktop.png",
+          "afterCap": "Copy spec includes 5760×1440, 4:1, the speaker scrims, and 60.00 fps. Guide SVG and PNG are in More.",
+          "beforeEvidence": "before-board-desktop.capture.json",
+          "afterEvidence": "after-board-desktop.capture.json",
+          "wide": true
+        },
+        {
+          "title": "North Board, phone",
+          "sub": "390×844.",
+          "before": "before-board-mobile.png",
+          "beforeCap": "The drawing and the zone list stack. Each row copies a bare size.",
+          "after": "after-board-mobile.png",
+          "afterCap": "Each row copies that zone's full spec. More holds the guide downloads.",
+          "beforeEvidence": "before-board-mobile.capture.json",
+          "afterEvidence": "after-board-mobile.capture.json"
+        },
+        {
+          "title": "Search for fascia",
+          "sub": "1440×900. Query fascia.",
+          "before": "before-search-desktop.png",
+          "beforeCap": "Search finds fascia boards. Filtering to one venue takes another click in the sidebar.",
+          "after": "after-search-desktop.png",
+          "afterCap": "Five fascia displays, with a chip for each venue that has a match. Copy spec is on every card.",
+          "beforeEvidence": "before-search-desktop.capture.json",
+          "afterEvidence": "after-search-desktop.capture.json",
+          "wide": true
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Copy the spec, not just the pixel count",
+      "was": "The size button copied 5760×1440. Aspect ratio, position, and safe area were somewhere else on the page.",
+      "now": "Copy spec writes the venue, board, size, aspect ratio, position, and only the safe area the manifest records. If none is recorded, the line says so."
+    },
+    {
+      "h": "Guides use the recorded pixels",
+      "was": "A downloaded guide was not one click away from the board.",
+      "now": "Guide SVG and Guide PNG are in More. The file is the board's exact width and height. A dashed inset is drawn only when a pad or title-safe inset is on file."
+    },
+    {
+      "h": "The manifest is the only size source",
+      "was": "data.js, the CSV, the index, and the design notes could drift from boards.json.",
+      "now": "node scripts/build-board-sizes.mjs regenerates them. --check fails when they drift, when a board grows an unknown field, or when a script hash on the page is stale."
+    }
+  ],
+  "verification": [
+    "node_modules/.bin/vitest run tests/board-sizes.test.ts: 18 passed.",
+    "node scripts/build-board-sizes.mjs --check: fresh. validateSchema and validateManifest reported no problems. No dimension in boards.json was edited.",
+    "axe-core 4.10.3 default rules: 0 violations on Camp Randall, North Board, fascia search, Kohl Center, Goodman, open issues, a content type, the agent page, and /tools, at 1440×900 and 390×844 where listed. The same two board pages were clean in dark mode.",
+    "Keyboard: / focuses search, Escape closes More and the phone venue list, Copy spec wrote the North Board spec (5760x1440, 4:1, speaker scrims, 60.00 fps).",
+    "npx tsc --noEmit --pretty false: clean after prisma generate. ESLint on tests/board-sizes.test.ts and next.config.ts: clean. npm run build:app: completed. npm run codemap:check: clean after the test-count update. git diff --check: clean.",
+    "Lighthouse was not run. axe-core's target-size rule is disabled by default; on a phone, some zones in the scaled North Board drawing are under 24px. The zone rows underneath are the 40px copy controls."
+  ],
+  "notes": [
+    "Twelve open questions stay in the manifest. Kohl Center frame rate disagrees (Colosseum 60 vs the After Effects project 59.94) on the centerhung, 16:9 feed, top ring, 360 fascia, tunnels, scorer's table, stanchion, and baseline table. The 16:9 feed is also unconfirmed. The Field House table names are not final, and zone 8 is still labeled Left GIP-BG. Goodman main is 560×308 from Colosseum only.",
+    "Nothing was invented to fill those gaps. Zones without a position still have no position. The house 59.94 note in the design guide is guidance, not a recorded frame rate.",
+    "This is not deployed. AC-10 in the showroom area doc stays unchecked until /board-sizes and /tools are proven on the deployed site.",
+    "Open pull request 471 also adds a copy of this tool, plus Golden Hour and Timelapse, and points /tools at a signed-in /apps page. This branch does not include those other tools."
+  ]
+}
