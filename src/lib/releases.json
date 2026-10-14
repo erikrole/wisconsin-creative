@@ -1,13 +1,13 @@
 [
   {
-    "date": "2026-10-14",
+    "date": "2026-10-13",
     "title": "Apps and tools page",
     "type": "feature",
-    "summary": "wisconsincreative.com/apps now lists the team's apps and browser tools in one place.",
+    "summary": "wisconsincreative.com/apps now lists the team's apps and tools in one place for signed-in staff.",
     "details": [
-      "Apps: the Wisconsin Creative iOS app, Offload, and Radio (coming soon).",
-      "Tools: the browser tools, in the same design as the Tools page.",
-      "An Apps link now appears in the public page navigation and footer."
+      "Apps: the Wisconsin Creative iPhone and iPad app, Offload, and Radio Clip (coming soon), with current versions and release dates.",
+      "Tools: Golden Hour, Timelapse, Board Sizes, and QR Studio.",
+      "You need to be signed in to open the page."
     ],
     "platforms": ["Web"],
     "pr": 471

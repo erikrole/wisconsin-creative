@@ -106,9 +106,8 @@ const baseConfig: NextConfig = {
       // file path keeps it outside the nonce-CSP middleware, whose matcher skips
       // dotted paths; the page carries its own stricter CSP.
       { source: "/qrcode", destination: "/qrcode/index.html", permanent: false },
-      { source: "/apps", destination: "/apps/index.html", permanent: false },
       // Same pattern for the other static tools and their hub.
-      { source: "/tools", destination: "/apps/index.html", permanent: false },
+      { source: "/tools", destination: "/apps", permanent: false },
       { source: "/golden-hour", destination: "/golden-hour/index.html", permanent: false },
       { source: "/timelapse", destination: "/timelapse/index.html", permanent: false },
       { source: "/board-sizes", destination: "/board-sizes/index.html", permanent: false },

@@ -1,20 +1,96 @@
-<!doctype html>
-<!-- Wisconsin Creative Apps and Tools. Canonical source: edit here. Reuses the Tools hub design. -->
+// The /apps page, rendered per request so it can sit behind sign-in. Edit the app
+// data below (version, release date, links) when an app ships.
+import { formatAppDate } from "@/lib/apps-page-format";
+
+export type AppEntry = {
+  name: string;
+  icon: string;
+  platform: string;
+  status: string;
+  statusKind: "live" | "beta" | "soon";
+  blurb: string;
+  version?: string;
+  /** ISO date (YYYY-MM-DD) in Madison time. */
+  released?: string;
+  href?: string;
+  cta?: string;
+};
+
+export const appEntries: AppEntry[] = [
+  {
+    name: "Wisconsin Creative",
+    icon: "wisconsin-creative",
+    platform: "iPhone and iPad",
+    status: "App Store",
+    statusKind: "live",
+    blurb: "Reserve gear, check your shifts, and look up equipment from the field. Schedule and notifications in one place.",
+    version: "1.3",
+    released: "2026-10-04",
+    href: undefined,
+    cta: "View on the App Store",
+  },
+  {
+    name: "Offload",
+    icon: "offload",
+    platform: "macOS",
+    status: "Beta",
+    statusKind: "beta",
+    blurb: "Card ingest for Sony FX6 and FX3. Copies cards, keeps the clips marked OK, matches them to the play-by-play, and renames them for editing.",
+    version: "1.0.8",
+    released: "2026-10-13",
+    href: undefined,
+    cta: "Download from GitHub",
+  },
+  {
+    name: "Radio Clip",
+    icon: "radio",
+    platform: "macOS",
+    status: "Coming soon",
+    statusKind: "soon",
+    blurb: "Turns Wisconsin radio broadcasts into highlight clips. Transcribes the game, matches the play-by-play, and exports approved clips as MP3.",
+  },
+];
+
+function esc(value: string) {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function appCard(app: AppEntry) {
+  const pill = `<span class="pill ${app.statusKind === "live" ? "" : app.statusKind}">${esc(app.platform)} · ${esc(app.status)}</span>`;
+  const meta = app.version
+    ? `<p class="meta">Version ${esc(app.version)}${app.released ? ` · Released ${formatAppDate(app.released)}` : ""}</p>`
+    : "";
+  const body = `
+          <div class="art" aria-hidden="true"><img src="/apps/icons/${app.icon}.png" alt="" width="96" height="96"></div>
+          <div class="copy">
+            ${pill}
+            <h2>${esc(app.name)}</h2>
+            <p>${esc(app.blurb)}</p>
+            ${meta}
+            ${app.href ? `<span class="go">${esc(app.cta ?? "Open")} <i>→</i></span>` : ""}
+          </div>`;
+  return app.href
+    ? `<li><a class="tool app" href="${esc(app.href)}">${body}</a></li>`
+    : `<li><div class="tool app soon">${body}</div></li>`;
+}
+
+export function renderAppsPage() {
+  return `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; font-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'; object-src 'none'">
   <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex">
   <meta name="color-scheme" content="light">
-  <meta name="theme-color" content="#f3f1ec">
-  <title>Wisconsin Creative Apps and Tools</title>
-  <meta name="description" content="Apps and free browser tools from Wisconsin Creative: the iOS app, Offload, Radio, and tools for planning and making the shot.">
+  <meta name="theme-color" content="#c5050c">
+  <title>Wisconsin Creative Tools</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3.5' fill='%23c5050c'/%3E%3Cpath fill='%23fff' d='M3 3h4v4H3zM9 3h4v4H9zM3 9h4v4H3zM9 9h4v4H9z'/%3E%3C/svg%3E">
   <style>
-    @font-face { font-family: "Gotham"; src: url("/Gotham-Black.woff2") format("woff2"); font-weight: 800; font-display: swap; }
+@font-face { font-family: "Gotham"; src: url("/Gotham-Black.woff2") format("woff2"); font-weight: 800; font-display: swap; }
     @font-face { font-family: "Gotham"; src: url("/Gotham-Bold.woff2") format("woff2"); font-weight: 700; font-display: swap; }
     @font-face { font-family: "Gotham"; src: url("/Gotham-Book.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+
 
     /* The hub is plain paper so each tool's own look can show on its card. */
     :root {
@@ -33,7 +109,9 @@
     .topbar span { font-size: 12px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; }
 
     main { width: min(1080px, calc(100% - 32px)); margin: 0 auto; padding: clamp(36px, 8vw, 88px) 0 64px; }
-    h1 { margin: 0; font-size: clamp(56px, 14vw, 132px); font-weight: 800; letter-spacing: -0.04em; line-height: 0.85; text-transform: uppercase; }
+    .band { height: 6px; background: var(--red); }
+    .kicker { margin: 0 0 14px; font-size: 12px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: var(--red); }
+    h1 { margin: 0; font-size: clamp(36px, 7vw, 72px); font-weight: 800; letter-spacing: -0.03em; line-height: 0.95; text-transform: uppercase; }
     h1 em { font-style: normal; color: var(--red); }
     .lede { margin: 22px 0 clamp(32px, 6vw, 56px); max-width: 520px; font-size: 17px; color: var(--ink-2); }
 
@@ -100,6 +178,7 @@
     .app .art { height: 150px; display: grid; place-items: center; background: #ebe8e1; }
     .app .art img { width: 96px; height: 96px; filter: drop-shadow(0 10px 14px rgba(20, 20, 25, 0.35)); }
     .app .copy p { color: var(--ink-2); }
+    .app .copy p.meta { margin-top: 12px; font-size: 13px; font-weight: 700; color: var(--ink); }
     .app .go { color: var(--red); }
     .pill { display: inline-block; margin-bottom: 10px; padding: 3px 10px; border-radius: 999px; background: #eceae4; color: var(--ink-2); font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
     .pill.beta { background: #e6efff; color: #1d4fb3; }
@@ -110,52 +189,24 @@
 
     .foot { margin-top: 40px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--ink-3); border-top: 1px solid var(--line); padding-top: 16px; }
     @media (prefers-reduced-motion: reduce) { .tool, .go i, .qr .code { transition: none; } .tool:hover { transform: none; } }
+  
   </style>
 </head>
 <body>
+  <div class="band" aria-hidden="true"></div>
   <header class="topbar">
     <span class="mark" aria-hidden="true"><svg viewBox="0 0 16 16"><path fill="#fff" d="M1 1h6v6H1zM9 1h6v6H9zM1 9h6v6H1zM9 9h6v6H9z"/></svg></span>
     <span>Wisconsin Creative</span>
   </header>
   <main>
-    <h1>Apps<em>.</em></h1>
-    <p class="lede">Apps for gear, footage, and game-day work, plus small tools that run in your browser.</p>
+    <p class="kicker">Wisconsin Athletics</p>
+    <h1>Wisconsin Creative <em>Tools</em></h1>
+    <p class="lede">Apps for gear, footage, and game-day work, plus small tools for planning and making the shot.</p>
     <h2 class="section">Apps</h2>
     <ul class="grid apps">
-      <li>
-        <a class="tool app" href="/about">
-          <div class="art" aria-hidden="true"><img src="/apps/icons/wisconsin-creative.png" alt="" width="96" height="96"></div>
-          <div class="copy">
-            <span class="pill">iPhone and iPad · Invite only</span>
-            <h2>Wisconsin Creative</h2>
-            <p>Reserve gear, check your shifts, and look up equipment from the field. Schedule and notifications in one place.</p>
-            <span class="go">How it works <i>→</i></span>
-          </div>
-        </a>
-      </li>
-      <li>
-        <div class="tool app soon">
-          <div class="art" aria-hidden="true"><img src="/apps/icons/offload.png" alt="" width="96" height="96"></div>
-          <div class="copy">
-            <span class="pill beta">Mac · Team beta</span>
-            <h2>Offload</h2>
-            <p>Card ingest for Sony FX6 and FX3. Copies cards, keeps the clips marked OK, matches them to the play-by-play, and renames them for editing.</p>
-          </div>
-        </div>
-      </li>
-      <li>
-        <div class="tool app soon">
-          <div class="art" aria-hidden="true"><img src="/apps/icons/radio.png" alt="" width="96" height="96"></div>
-          <div class="copy">
-            <span class="pill soon">Mac · Coming soon</span>
-            <h2>Radio</h2>
-            <p>Turns Wisconsin radio broadcasts into highlight clips. Transcribes the game, matches the play-by-play, and exports approved clips as MP3.</p>
-          </div>
-        </div>
-      </li>
+      ${appEntries.map(appCard).join("\n      ")}
     </ul>
     <h2 class="section">Tools</h2>
-    <p class="lede" style="margin-top:-6px">Free, no sign-in, and nothing leaves your browser.</p>
     <ul class="grid">
       <li>
         <a class="tool gh" href="/golden-hour">
@@ -220,7 +271,9 @@
         </a>
       </li>
     </ul>
+
     <p class="foot"><span>Wisconsin Creative · Wisconsin Athletics</span><span><a href="/about" style="color:inherit">About</a> · <a href="/releases" style="color:inherit">Releases</a></span></p>
   </main>
 </body>
-</html>
+</html>`;
+}

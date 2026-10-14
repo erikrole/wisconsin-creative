@@ -1,24 +1,36 @@
 import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { appEntries, renderAppsPage } from "@/lib/apps-page";
 
-const nextConfigSource = readFileSync("next.config.ts", "utf8");
-const html = readFileSync("public/apps/index.html", "utf8");
+const html = renderAppsPage();
+const routeSource = readFileSync("src/app/apps/route.ts", "utf8");
 
-describe("apps static page", () => {
-  it("redirects /apps to its dotted file path so the nonce middleware skips it", () => {
-    expect(nextConfigSource).toContain('{ source: "/apps", destination: "/apps/index.html", permanent: false }');
+describe("apps page", () => {
+  it("is signed-in only and not a public static file", () => {
+    expect(routeSource).toContain("requireAuth");
+    expect(routeSource).toContain('loginPathWithReturnTo("/apps")');
+    expect(existsSync("public/apps/index.html")).toBe(false);
   });
 
-  it("ships a strict CSP with no inline script or handlers", () => {
-    expect(html).toContain("default-src 'none'");
+  it("ships no script or inline handlers", () => {
     expect(html).not.toMatch(/<script/i);
     expect(html).not.toMatch(/\son[a-z]+=/i);
   });
 
-  it("shows an icon for every app and each icon file exists", () => {
-    for (const icon of ["wisconsin-creative", "offload", "radio"]) {
-      expect(html).toContain(`/apps/icons/${icon}.png`);
-      expect(existsSync(`public/apps/icons/${icon}.png`)).toBe(true);
+  it("uses Apple platform names and drops the public-tool claims", () => {
+    expect(html).toContain("iPhone and iPad");
+    expect(html).toContain("macOS");
+    expect(html).not.toMatch(/iOS app|\bMac ·|iPhone and iPad ·? ?Invite/);
+    expect(html).not.toMatch(/no sign-in|nothing leaves your browser/i);
+    expect(html).toContain("Radio Clip");
+  });
+
+  it("shows version and release date for released apps, and each icon file exists", () => {
+    for (const app of appEntries) {
+      expect(html).toContain(`/apps/icons/${app.icon}.png`);
+      expect(existsSync(`public/apps/icons/${app.icon}.png`)).toBe(true);
+      if (app.version) expect(html).toContain(`Version ${app.version}`);
     }
+    expect(html).toContain("Released Oct 13, 2026");
   });
 });
