@@ -36,7 +36,7 @@ describe("apps page", () => {
     expect(html).toContain("Version 1.0.8");
     expect(html).not.toContain("Oct 13, 2026");
     expect(html).toContain("Media Lab");
-    expect(html).toContain("Coming late 2026");
+    expect(html).toContain("Coming Late 2026");
     expect(html).toContain("https://apps.apple.com/us/app/wisconsin-creative/id6763456945");
   });
 });

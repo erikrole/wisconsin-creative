@@ -37,8 +37,6 @@ export const appEntries: AppEntry[] = [
     statusKind: "beta",
     blurb: "Copies Sony FX6 and FX3 cards, matches clips to the play-by-play, and renames them for editing.",
     version: "1.0.8",
-    href: undefined,
-    cta: "Download from GitHub",
   },
   {
     name: "Radio Clip",
@@ -51,7 +49,7 @@ export const appEntries: AppEntry[] = [
   {
     name: "Media Lab",
     platform: "",
-    status: "Coming late 2026",
+    status: "Coming Late 2026",
     statusKind: "soon",
     blurb: "Browse and organize the team's photo and video library.",
   },
@@ -64,14 +62,14 @@ function esc(value: string) {
 const placeholderIcon = `<svg viewBox="0 0 96 96" width="96" height="96"><rect width="96" height="96" rx="22" fill="#c5050c"/><rect x="22" y="26" width="52" height="44" rx="6" fill="none" stroke="#fff" stroke-width="4"/><circle cx="37" cy="41" r="5" fill="#fff"/><path d="M24 66l16-16 10 10 8-8 14 14z" fill="#fff"/></svg>`;
 
 function appCard(app: AppEntry) {
-  const pill = `<span class="pill ${app.statusKind === "live" ? "" : app.statusKind}">${[app.platform, app.status].filter(Boolean).map(esc).join(" · ")}</span>`;
+  const platformPill = app.platform ? `<span class="pill left">${esc(app.platform)}</span>` : "";
+  const statusPill = app.status ? `<span class="pill right ${app.statusKind}">${esc(app.status)}</span>` : "";
   const meta = app.version
-    ? `<p class="meta">Version ${esc(app.version)}${app.released ? ` · Released ${formatAppDate(app.released)}` : ""}</p>`
+    ? `<p class="meta">Version ${esc(app.version)}${app.released ? ` · ${formatAppDate(app.released)}` : ""}</p>`
     : "";
   const body = `
-          <div class="art" aria-hidden="true">${app.icon ? `<img src="/apps/icons/${app.icon}.png" alt="" width="96" height="96">` : placeholderIcon}</div>
+          <div class="art">${platformPill}${statusPill}${app.icon ? `<img src="/apps/icons/${app.icon}.png" alt="" width="96" height="96">` : placeholderIcon}</div>
           <div class="copy">
-            ${pill}
             <h2>${esc(app.name)}</h2>
             <p>${esc(app.blurb)}</p>
             ${meta}
@@ -105,39 +103,42 @@ export function renderAppsPage() {
       --paper: #f3f1ec; --ink: #15151a; --ink-2: #4a4a52; --ink-3: #7a7973; --line: #dcd9d1;
       --red: #c5050c; --focus: #c5050c; --ease: cubic-bezier(0.2, 0, 0, 1);
       --font: "Gotham", system-ui, -apple-system, "Segoe UI", sans-serif;
-      --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+      --mono: var(--font);
     }
     * { box-sizing: border-box; }
     body { margin: 0; min-width: 300px; background: var(--paper); color: var(--ink); font-family: var(--font); font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
     :focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; border-radius: 18px; }
 
     .topbar { display: flex; align-items: center; gap: 10px; padding: max(18px, env(safe-area-inset-top)) clamp(16px, 4vw, 40px) 0; }
+    .mw { width: 36px; height: 36px; display: block; }
     .mark { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 8px; background: var(--red); }
     .mark svg { width: 15px; height: 15px; }
     .topbar span { font-size: 12px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; }
 
-    main { width: min(1080px, calc(100% - 32px)); margin: 0 auto; padding: clamp(36px, 8vw, 88px) 0 64px; }
+    main { width: min(1200px, calc(100% - 32px)); margin: 0 auto; padding: clamp(36px, 8vw, 88px) 0 64px; }
     .band { height: 6px; background: var(--red); }
     .kicker { margin: 0 0 14px; font-size: 12px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: var(--red); }
     h1 { margin: 0; font-size: clamp(36px, 7vw, 72px); font-weight: 800; letter-spacing: -0.03em; line-height: 0.95; text-transform: uppercase; }
     h1 em { font-style: normal; color: var(--red); }
     .lede { margin: 22px 0 clamp(32px, 6vw, 56px); max-width: 520px; font-size: 17px; color: var(--ink-2); }
 
-    .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; list-style: none; margin: 0; padding: 0; }
-    @media (max-width: 700px) { .grid { grid-template-columns: 1fr; } }
+    .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; list-style: none; margin: 0; padding: 0; }
+    @media (max-width: 1000px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
     .tool {
-      position: relative; display: flex; flex-direction: column; height: 100%; min-height: 360px; overflow: hidden;
+      position: relative; display: flex; flex-direction: column; height: 100%; min-height: 340px; overflow: hidden;
       border-radius: 22px; color: inherit; text-decoration: none;
       box-shadow: 0 1px 2px rgba(20, 20, 25, 0.08), 0 18px 40px -24px rgba(20, 20, 25, 0.45);
       transition: transform 260ms var(--ease), box-shadow 260ms var(--ease);
     }
+    .tool::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.12); pointer-events: none; }
+    .app::after { box-shadow: none; }
     .tool:hover { transform: translateY(-4px); box-shadow: 0 1px 2px rgba(20, 20, 25, 0.08), 0 30px 60px -26px rgba(20, 20, 25, 0.55); }
-    .art { position: relative; flex: none; height: 210px; }
-    .copy { flex: 1; }
-    .copy { position: relative; padding: 20px 22px 22px; }
+    .art { position: relative; flex: none; height: 188px; }
+    .copy { position: relative; display: flex; flex-direction: column; flex: 1; padding: 20px 22px 22px; }
     .copy h2 { margin: 0 0 6px; font-size: 22px; font-weight: 800; letter-spacing: -0.01em; text-transform: uppercase; }
     .copy p { margin: 0; font-size: 14px; line-height: 1.5; }
-    .go { display: inline-flex; align-items: center; gap: 8px; margin-top: 16px; font-size: 12px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; }
+    .go { display: inline-flex; align-items: center; gap: 8px; margin-top: auto; padding-top: 16px; font-size: 14px; font-weight: 700; letter-spacing: 0.01em; }
     .go i { display: inline-block; transition: transform 260ms var(--ease); font-style: normal; }
     .tool:hover .go i { transform: translateX(4px); }
 
@@ -149,7 +150,7 @@ export function renderAppsPage() {
     /* Timelapse: the viewfinder */
     .tl { background: #0c0d0f; color: #f2f2ef; }
     .tl .copy p { color: #b9b9b3; }
-    .tl .art { height: 194px; margin: 16px 16px 0; border-radius: 14px; background: radial-gradient(80% 70% at 50% 45%, rgba(255,255,255,.06), transparent 70%), #050506; border: 1px solid #26272d; display: grid; place-items: center; }
+    .tl .art { height: 172px; margin: 16px 16px 0; border-radius: 14px; background: radial-gradient(80% 70% at 50% 45%, rgba(255,255,255,.06), transparent 70%), #050506; border: 1px solid #26272d; display: grid; place-items: center; }
     .tl .corner { position: absolute; width: 18px; height: 18px; border: 0 solid rgba(255,255,255,.75); }
     .tl .c1 { top: 10px; left: 10px; border-top-width: 2px; border-left-width: 2px; }
     .tl .c2 { top: 10px; right: 10px; border-top-width: 2px; border-right-width: 2px; }
@@ -180,19 +181,18 @@ export function renderAppsPage() {
 
     h2.section { margin: clamp(40px, 7vw, 72px) 0 18px; font-size: 13px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-3); }
     h2.section:first-of-type { margin-top: 0; }
-    .grid.apps { grid-template-columns: repeat(4, 1fr); }
-    @media (max-width: 1000px) { .grid.apps { grid-template-columns: repeat(2, 1fr); } }
-    @media (max-width: 560px) { .grid.apps { grid-template-columns: 1fr; } }
     .app { background: #fff; border: 1px solid var(--line); min-height: 0; }
-    .app .art { height: 150px; display: grid; place-items: center; background: #ebe8e1; }
+    .app .art { height: 176px; padding-top: 26px; display: grid; place-items: center; background: #ebe8e1; }
     .app .art img { width: 96px; height: 96px; filter: drop-shadow(0 10px 14px rgba(20, 20, 25, 0.35)); }
     .app .copy p { color: var(--ink-2); }
     .app .copy p.meta { margin-top: 12px; font-size: 13px; font-weight: 700; color: var(--ink); }
     .app .go { color: var(--red); }
     .app .go.pending { color: var(--ink-3); }
-    .pill { display: inline-block; margin-bottom: 10px; padding: 3px 10px; border-radius: 999px; background: #eceae4; color: var(--ink-2); font-size: 12px; font-weight: 700; letter-spacing: 0.01em; }
-    .pill.beta { background: #e6efff; color: #1d4fb3; }
-    .pill.soon { background: #eceae4; color: var(--ink-3); }
+    .pill { position: absolute; top: 14px; padding: 4px 11px; border-radius: 999px; background: rgba(255,255,255,0.85); border: 1px solid var(--line); color: var(--ink-2); font-size: 12px; font-weight: 700; letter-spacing: 0.01em; }
+    .pill.left { left: 14px; }
+    .pill.right { right: 14px; }
+    .pill.beta { background: #e6efff; border-color: #c9dbff; color: #1d4fb3; }
+    .pill.soon { color: var(--ink-3); }
     .app.soon { box-shadow: none; }
     .app.soon:hover { transform: none; }
     a.app .go, a.tool .go { }
@@ -205,7 +205,7 @@ export function renderAppsPage() {
 <body>
   <div class="band" aria-hidden="true"></div>
   <header class="topbar">
-    <span class="mark" aria-hidden="true"><svg viewBox="0 0 16 16"><path fill="#fff" d="M1 1h6v6H1zM9 1h6v6H9zM1 9h6v6H1zM9 9h6v6H9z"/></svg></span>
+    <img class="mw" src="/apps/motion-w.svg" alt="" width="36" height="36">
     <span>Wisconsin Creative</span>
   </header>
   <main>
@@ -258,7 +258,7 @@ export function renderAppsPage() {
               <rect x="10" y="22" width="118" height="55" stroke="#7fc3ff" stroke-dasharray="4 3" fill="rgba(127,195,255,.12)"/>
               <rect x="10" y="90" width="220" height="6" stroke="#eef5ff" stroke-width="1.2"/>
               <path d="M10 10h220M10 6v8M230 6v8" stroke="#ff7a6b"/>
-              <text x="120" y="8" fill="#b7cdec" font-size="8" font-family="ui-monospace, Menlo, monospace" text-anchor="middle">5760 px</text>
+              <text x="120" y="8" fill="#b7cdec" font-size="8" font-family="Gotham, system-ui, sans-serif" text-anchor="middle">5760 px</text>
             </svg>
           </div>
           <div class="copy">
