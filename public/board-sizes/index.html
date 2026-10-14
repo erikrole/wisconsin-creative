@@ -82,6 +82,7 @@
     .top-links a:hover { background: var(--hover); color: var(--ink); }
     .venue-tabs { max-width: 1240px; margin: 0 auto; padding: 12px clamp(16px, 4vw, 56px) 0; overflow-x: auto; scrollbar-width: none; }
     .venue-tabs::-webkit-scrollbar { display: none; }
+    .is-board-view .topbar-in, .is-board-view .venue-tabs { max-width: 1320px; }
     .tabs { display: flex; gap: 2px; min-width: max-content; }
     .tabs button { position: relative; min-height: 40px; padding: 0 14px; border-radius: 8px 8px 0 0; font-size: 14px; }
     .tabs button[aria-current="true"] { background: transparent; font-weight: 700; color: var(--ink); }
@@ -355,7 +356,7 @@
         <div class="top-links">
           <ul class="nav" id="nav-ref"></ul>
           <div class="side-foot" id="side-foot">
-            <a href="/apps" id="tools-link">Apps and tools</a>
+            <a href="/apps" id="tools-link">Apps</a>
           </div>
         </div>
       </div>

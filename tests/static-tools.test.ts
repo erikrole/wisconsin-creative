@@ -56,6 +56,12 @@ describe("static tools: routing, headers, and page contracts", () => {
     expect(readdirSync("public/apps").sort()).toEqual(["icons", "motion-w.svg"]);
   });
 
+  it("links every tool back to the apps page", () => {
+    for (const tool of ["golden-hour", "timelapse", "board-sizes", "qrcode"]) {
+      expect(readFileSync(`public/${tool}/index.html`, "utf8"), tool).toContain('href="/apps"');
+    }
+  });
+
   it("sends the old /tools URL to the apps page", () => {
     expect(nextConfigSource).toContain('{ source: "/tools", destination: "/apps", permanent: false }');
   });
