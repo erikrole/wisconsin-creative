@@ -45,6 +45,7 @@ export const appEntries: AppEntry[] = [
     status: "Coming soon",
     statusKind: "soon",
     blurb: "Turns radio broadcasts into highlight clips and exports them as MP3.",
+    version: "0.1.0",
   },
   {
     name: "Media Lab",

@@ -34,6 +34,7 @@ describe("apps page", () => {
       if (app.version) expect(html).toContain(`Version ${app.version}`);
     }
     expect(html).toContain("Version 1.0.8");
+    expect(html).toContain("Version 0.1.0");
     expect(html).not.toContain("Oct 13, 2026");
     expect(html).toContain("Media Lab");
     expect(html).toContain("Coming Late 2026");
