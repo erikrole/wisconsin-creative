@@ -32,5 +32,6 @@ describe("apps page", () => {
       if (app.version) expect(html).toContain(`Version ${app.version}`);
     }
     expect(html).toContain("Released Oct 13, 2026");
+    expect(html).toContain("https://apps.apple.com/us/app/wisconsin-creative/id6763456945");
   });
 });

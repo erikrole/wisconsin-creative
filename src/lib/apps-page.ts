@@ -24,9 +24,9 @@ export const appEntries: AppEntry[] = [
     status: "App Store",
     statusKind: "live",
     blurb: "Reserve gear, check your shifts, and look up equipment from the field. Schedule and notifications in one place.",
-    version: "1.3",
-    released: "2026-10-04",
-    href: undefined,
+    version: "1.2",
+    released: "2026-09-14",
+    href: "https://apps.apple.com/us/app/wisconsin-creative/id6763456945",
     cta: "View on the App Store",
   },
   {
