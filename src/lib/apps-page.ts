@@ -3,13 +3,6 @@
 import { formatAppDate } from "@/lib/apps-page-format";
 import type { LiveVersions } from "@/lib/apps-live-versions";
 
-export type AppShot = {
-  src: string;
-  width: number;
-  height: number;
-  alt: string;
-};
-
 export type AppEntry = {
   name: string;
   icon: string;
@@ -33,7 +26,6 @@ export type AppEntry = {
   releaseHref?: string;
   cta?: string;
   releaseCta?: string;
-  shot?: AppShot;
 };
 
 // Written values are the fallback when the App Store or GitHub lookup fails.
@@ -41,7 +33,7 @@ export type AppEntry = {
 // - Wisconsin Creative: iTunes lookup id 6763456945, version 1.2,
 //   currentVersionReleaseDate 2026-09-14T12:29:37Z, minimumOsVersion 26.0.
 //   The blurb is the App Store description's first sentence. Counter checkout
-//   stays on the kiosk. The screenshot is the listing's 01-home image.
+//   stays on the kiosk.
 // - Offload: github.com/erikrole/offload-releases README and release v1.2.0.
 //   Offload-1.2.0.dmg matches the published SHA-256. Info.plist in that disk
 //   image has CFBundleShortVersionString 1.2.0 and LSMinimumSystemVersion 15.0.
@@ -50,12 +42,10 @@ export type AppEntry = {
 // TODO(apps): Offload's v1.2.0 notes say "Notarized by Apple". No stapled ticket
 // was found in the disk image, and this machine cannot run spctl. Do not show
 // notarization until that check is done.
-// TODO(apps): Offload has no screenshot in the offload-releases README or the
-// v1.2.0 release assets.
 // TODO(apps): Radio Clip has no public README, release, Info.plist, or download
 // (erikrole public repos checked 2026-10-14). Do not show a version until one
 // is published. The blurb is this page's existing description, not a README.
-// TODO(apps): Media Lab has no README, screenshot, system requirement, or download.
+// TODO(apps): Media Lab has no README, system requirement, or download.
 export const appEntries: AppEntry[] = [
   {
     name: "Wisconsin Creative",
@@ -71,12 +61,6 @@ export const appEntries: AppEntry[] = [
     released: "2026-09-14",
     href: "https://apps.apple.com/us/app/wisconsin-creative/id6763456945",
     cta: "View on the App Store",
-    shot: {
-      src: "/apps/wisconsin-creative-home.jpg",
-      width: 320,
-      height: 696,
-      alt: "Wisconsin Creative home screen on iPhone",
-    },
   },
   {
     name: "Offload",
@@ -154,26 +138,24 @@ function appCard(entry: AppEntry, live: LiveVersions) {
   const app = withLive(entry, live);
   const platformPill = app.platform ? `<span class="pill">${esc(app.platform)}</span>` : "";
   const statusPill = app.status ? `<span class="pill ${app.statusKind}">${esc(app.status)}</span>` : "";
-  const shot = app.shot
-    ? `<img class="shot" src="${esc(app.shot.src)}" alt="${esc(app.shot.alt)}" width="${app.shot.width}" height="${app.shot.height}" decoding="async">`
-    : `<img src="/apps/icons/${esc(app.icon)}.png" alt="" width="96" height="96" decoding="async">`;
-  const meta = [
-    app.version ? `Version ${esc(app.version)}` : "",
-    app.released ? formatAppDate(app.released) : "",
-    app.requires ? `Requires ${esc(app.requires)}` : "",
-  ].filter(Boolean);
+  const icon = `<img src="/apps/icons/${esc(app.icon)}.png" alt="" width="72" height="72" decoding="async">`;
+  const release = [app.version ? `Version ${esc(app.version)}` : "", app.released ? formatAppDate(app.released) : ""].filter(Boolean).join(" · ");
+  const requires = app.requires ? `Requires ${esc(app.requires)}` : "";
+  const meta = [release, requires].filter(Boolean);
   const download = app.href && app.cta ? `<a class="go" href="${esc(app.href)}">${esc(app.cta)} <i aria-hidden="true">→</i></a>` : "";
   const notes = app.releaseHref && app.releaseCta ? `<a class="quiet" href="${esc(app.releaseHref)}">${esc(app.releaseCta)}</a>` : "";
   const actions = download || notes ? `<p class="actions">${download}${notes}</p>` : "";
-  return `<li><article class="app${app.shot ? " has-shot" : ""}${app.statusKind === "soon" ? " soon" : ""}">
-          <div class="art">${shot}</div>
+  return `<li><article class="app${app.statusKind === "soon" ? " soon" : ""}">
+          <div class="art">${icon}</div>
           <div class="copy">
-            <div class="titleline"><h3>${esc(app.name)}</h3>${platformPill}${statusPill}</div>
+            <div class="titleline"><h3>${esc(app.name)}</h3><div class="badges">${platformPill}${statusPill}</div></div>
             <p>${esc(app.blurb)}</p>
             ${app.detail ? `<p class="detail">${esc(app.detail)}</p>` : ""}
-            ${meta.length ? `<p class="meta">${meta.join(" · ")}</p>` : ""}
-            ${app.trust ? `<p class="trust">${esc(app.trust)}</p>` : ""}
-            ${actions}
+            <div class="facts">
+              ${meta.length ? `<p class="meta">${meta.map((line) => `<span>${line}</span>`).join("")}</p>` : ""}
+              ${app.trust ? `<p class="trust">${esc(app.trust)}</p>` : ""}
+              ${actions}
+            </div>
           </div>
         </article></li>`;
 }
@@ -295,21 +277,25 @@ export function renderAppsPage(nonce?: string, live: LiveVersions = {}) {
     .qr .ok { position: absolute; right: -14px; bottom: -14px; width: 40px; height: 40px; border-radius: 50%; background: #1f9d55; border: 3px solid #a00000; display: grid; place-items: center; }
     .qr .ok svg { width: 20px; height: 20px; }
 
-    .apps { grid-template-columns: 1fr 1fr; }
-    @media (max-width: 860px) { .apps { grid-template-columns: 1fr; } }
+    /* Every app card has the same shape: icon, title and badges, description, facts, then links pinned to the bottom. */
+    .apps { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: stretch; }
+    @media (max-width: 1000px) { .apps { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 620px) { .apps { grid-template-columns: 1fr; } }
     h2.section { margin: clamp(40px, 7vw, 72px) 0 18px; font-size: 13px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-3); }
     h2.section:first-of-type { margin-top: 0; }
-    .app { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 8px 18px; align-items: center; min-height: 0; padding: 16px; background: var(--card); border: 1px solid var(--line); border-radius: 22px; box-shadow: 0 1px 2px rgba(20, 20, 25, 0.08), 0 18px 40px -24px rgba(20, 20, 25, 0.45); }
-    .app.has-shot { grid-template-columns: 120px minmax(0, 1fr); align-items: start; }
-    .app .art { height: auto; display: grid; place-items: center; background: transparent; }
-    .app .copy { padding: 0; }
-    .app .art img { width: 72px; height: 72px; filter: drop-shadow(0 10px 14px rgba(20, 20, 25, 0.35)); }
-    .app .art img.shot { width: 120px; height: auto; border-radius: 18px; border: 1px solid var(--line); filter: none; }
-    .app .titleline { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .app { display: flex; flex-direction: column; gap: 16px; height: 100%; min-height: 0; padding: 22px; background: var(--card); border: 1px solid var(--line); border-radius: 22px; box-shadow: 0 1px 2px rgba(20, 20, 25, 0.08), 0 18px 40px -24px rgba(20, 20, 25, 0.45); }
+    .app .art { height: auto; display: block; background: transparent; }
+    .app .copy { padding: 0; flex: 1; }
+    .app .art img { display: block; width: 72px; height: 72px; filter: drop-shadow(0 8px 12px rgba(20, 20, 25, 0.3)); }
+    .app .copy { display: flex; flex-direction: column; }
+    .app .titleline { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; margin-bottom: 10px; }
     .app .titleline h3 { margin: 0; }
+    .app .badges { display: flex; flex-wrap: wrap; gap: 6px; min-height: 26px; }
+    .app .facts { margin-top: auto; padding-top: 14px; }
     .app .copy p { color: var(--ink-2); }
     .app .copy p.detail { margin-top: 6px; font-size: 13px; }
-    .app .copy p.meta { margin-top: 12px; font-size: 13px; font-weight: 700; color: var(--ink); }
+    .app .copy p.meta { margin-top: 0; font-size: 13px; font-weight: 700; color: var(--ink); }
+    .app .copy p.meta span { display: block; }
     .app .copy p.trust { margin-top: 4px; font-size: 13px; font-weight: 700; color: var(--ink); }
     .app .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 14px; }
     .app .go { margin: 0; padding: 0; color: var(--red-text); text-decoration: none; }
