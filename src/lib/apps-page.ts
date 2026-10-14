@@ -1,25 +1,61 @@
-// The /apps page, rendered per request so it can sit behind sign-in. Edit the app
-// data below (version, release date, links) when an app ships.
+// The /apps page, rendered per request so the script nonce and live versions
+// can be attached. It is public. Edit the app data below when an app ships.
 import { formatAppDate } from "@/lib/apps-page-format";
 import type { LiveVersions } from "@/lib/apps-live-versions";
+
+export type AppShot = {
+  src: string;
+  width: number;
+  height: number;
+  alt: string;
+};
 
 export type AppEntry = {
   name: string;
   icon: string;
   /** Key in LiveVersions: when present, the version shown comes from where the app is published. */
   liveKey?: keyof LiveVersions;
+  /** The download URL belongs to `version` and is hidden when a newer live release has no matching asset. */
+  versionedDownload?: boolean;
   platform: string;
   status: string;
   statusKind: "live" | "beta" | "soon";
   blurb: string;
+  /** Extra install fact from a named source. Kept when the live version matches. */
+  detail?: string;
   version?: string;
   requires?: string;
+  /** Verified for this exact version only. Hidden when the live version moves ahead. */
+  trust?: string;
   /** ISO date (YYYY-MM-DD) in Madison time. */
   released?: string;
   href?: string;
+  releaseHref?: string;
   cta?: string;
+  releaseCta?: string;
+  shot?: AppShot;
 };
 
+// Written values are the fallback when the App Store or GitHub lookup fails.
+// Checked 2026-10-14:
+// - Wisconsin Creative: iTunes lookup id 6763456945, version 1.2,
+//   currentVersionReleaseDate 2026-09-14T12:29:37Z, minimumOsVersion 26.0.
+//   The blurb is the App Store description's first sentence. Counter checkout
+//   stays on the kiosk. The screenshot is the listing's 01-home image.
+// - Offload: github.com/erikrole/offload-releases README and release v1.2.0.
+//   Offload-1.2.0.dmg matches the published SHA-256. Info.plist in that disk
+//   image has CFBundleShortVersionString 1.2.0 and LSMinimumSystemVersion 15.0.
+//   The binary is Developer ID signed. published_at 2026-10-14T03:27:05Z is
+//   Oct 13 in Madison.
+// TODO(apps): Offload's v1.2.0 notes say "Notarized by Apple". No stapled ticket
+// was found in the disk image, and this machine cannot run spctl. Do not show
+// notarization until that check is done.
+// TODO(apps): Offload has no screenshot in the offload-releases README or the
+// v1.2.0 release assets.
+// TODO(apps): Radio Clip has no public README, release, Info.plist, or download
+// (erikrole public repos checked 2026-10-14). Do not show a version until one
+// is published. The blurb is this page's existing description, not a README.
+// TODO(apps): Media Lab has no README, screenshot, system requirement, or download.
 export const appEntries: AppEntry[] = [
   {
     name: "Wisconsin Creative",
@@ -28,24 +64,40 @@ export const appEntries: AppEntry[] = [
     platform: "iPhone and iPad",
     status: "",
     statusKind: "live",
-    blurb: "Reserve and check out gear, see your shifts, and look up equipment.",
+    blurb:
+      "Connects gear reservations, event and shift schedules, and equipment lookup.",
     version: "1.2",
+    requires: "iOS 26.0 or later",
     released: "2026-09-14",
     href: "https://apps.apple.com/us/app/wisconsin-creative/id6763456945",
     cta: "View on the App Store",
+    shot: {
+      src: "/apps/wisconsin-creative-home.jpg",
+      width: 320,
+      height: 696,
+      alt: "Wisconsin Creative home screen on iPhone",
+    },
   },
   {
     name: "Offload",
     icon: "offload",
     liveKey: "offload",
+    versionedDownload: true,
     platform: "macOS",
     status: "Beta",
     statusKind: "beta",
-    blurb: "Ingests camera cards, matches clips to the play-by-play, and names them for editing.",
-    version: "1.1.2",
-    requires: "macOS 15 or later",
-    href: "https://github.com/erikrole/offload-releases/releases/latest/download/Offload.dmg",
+    blurb:
+      "Gets Sony FX6 and FX3 clips off the card, names them from the play-by-play, and files them in the archive.",
+    detail:
+      "Playing FX6 MXF clips needs Apple's free Pro Video Formats. Copying and naming work without it.",
+    version: "1.2.0",
+    requires: "macOS 15.0 or later",
+    trust: "Developer ID signed",
+    released: "2026-10-13",
+    href: "https://github.com/erikrole/offload-releases/releases/download/v1.2.0/Offload-1.2.0.dmg",
+    releaseHref: "https://github.com/erikrole/offload-releases/releases/tag/v1.2.0",
     cta: "Download for macOS",
+    releaseCta: "Offload release notes",
   },
   {
     name: "Fetch",
@@ -67,7 +119,6 @@ export const appEntries: AppEntry[] = [
     status: "Coming soon",
     statusKind: "soon",
     blurb: "Cuts highlight clips from radio broadcasts and exports them as MP3.",
-    version: "0.1.0",
   },
   {
     name: "Media Lab",
@@ -75,7 +126,8 @@ export const appEntries: AppEntry[] = [
     platform: "",
     status: "Coming Late 2026",
     statusKind: "soon",
-    blurb: "Media asset management on top of our existing media drive. Metadata, search, and quick viewing without moving files.",
+    blurb:
+      "Media asset management on top of our existing media drive. Metadata, search, and quick viewing without moving files.",
   },
 ];
 
@@ -83,25 +135,47 @@ function esc(value: string) {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-function appCard(app: AppEntry, live: LiveVersions) {
+function withLive(app: AppEntry, live: LiveVersions): AppEntry {
   const fresh = app.liveKey ? live[app.liveKey] : undefined;
-  if (fresh) app = { ...app, version: fresh.version, released: app.released === undefined ? undefined : (fresh.released ?? app.released) };
-  const platformPill = app.platform ? `<span class="pill left">${esc(app.platform)}</span>` : "";
-  const statusPill = app.status ? `<span class="pill right ${app.statusKind}">${esc(app.status)}</span>` : "";
-  const meta = app.version
-    ? `<p class="meta">Version ${esc(app.version)}${app.released ? ` · ${formatAppDate(app.released)}` : ""}${app.requires ? ` · Requires ${esc(app.requires)}` : ""}</p>`
-    : "";
-  const body = `
-          <div class="art">${platformPill}${statusPill}<img src="/apps/icons/${app.icon}.png" alt="" width="96" height="96"></div>
+  if (!fresh) return app;
+  const same = fresh.version === app.version;
+  return {
+    ...app,
+    version: fresh.version,
+    released: fresh.released ?? (same ? app.released : undefined),
+    href: fresh.href ?? (app.versionedDownload && !same ? undefined : app.href),
+    releaseHref: fresh.releaseHref ?? (same ? app.releaseHref : undefined),
+    requires: same ? (app.requires ?? fresh.requires) : fresh.requires,
+    trust: same ? app.trust : undefined,
+  };
+}
+
+function appCard(entry: AppEntry, live: LiveVersions) {
+  const app = withLive(entry, live);
+  const platformPill = app.platform ? `<span class="pill">${esc(app.platform)}</span>` : "";
+  const statusPill = app.status ? `<span class="pill ${app.statusKind}">${esc(app.status)}</span>` : "";
+  const shot = app.shot
+    ? `<img class="shot" src="${esc(app.shot.src)}" alt="${esc(app.shot.alt)}" width="${app.shot.width}" height="${app.shot.height}" decoding="async">`
+    : `<img src="/apps/icons/${esc(app.icon)}.png" alt="" width="96" height="96" decoding="async">`;
+  const meta = [
+    app.version ? `Version ${esc(app.version)}` : "",
+    app.released ? formatAppDate(app.released) : "",
+    app.requires ? `Requires ${esc(app.requires)}` : "",
+  ].filter(Boolean);
+  const download = app.href && app.cta ? `<a class="go" href="${esc(app.href)}">${esc(app.cta)} <i aria-hidden="true">→</i></a>` : "";
+  const notes = app.releaseHref && app.releaseCta ? `<a class="quiet" href="${esc(app.releaseHref)}">${esc(app.releaseCta)}</a>` : "";
+  const actions = download || notes ? `<p class="actions">${download}${notes}</p>` : "";
+  return `<li><article class="app${app.shot ? " has-shot" : ""}${app.statusKind === "soon" ? " soon" : ""}">
+          <div class="art">${shot}</div>
           <div class="copy">
-            <h2>${esc(app.name)}</h2>
+            <div class="titleline"><h3>${esc(app.name)}</h3>${platformPill}${statusPill}</div>
             <p>${esc(app.blurb)}</p>
-            ${meta}
-            ${app.cta ? `<span class="go${app.href ? "" : " pending"}">${esc(app.cta)} <i>→</i></span>` : ""}
-          </div>`;
-  return app.href
-    ? `<li><a class="tool app" href="${esc(app.href)}">${body}</a></li>`
-    : `<li><div class="tool app soon">${body}</div></li>`;
+            ${app.detail ? `<p class="detail">${esc(app.detail)}</p>` : ""}
+            ${meta.length ? `<p class="meta">${meta.join(" · ")}</p>` : ""}
+            ${app.trust ? `<p class="trust">${esc(app.trust)}</p>` : ""}
+            ${actions}
+          </div>
+        </article></li>`;
 }
 
 export function renderAppsPage(nonce?: string, live: LiveVersions = {}) {
@@ -113,6 +187,18 @@ export function renderAppsPage(nonce?: string, live: LiveVersions = {}) {
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex">
+  <meta name="description" content="Apps and tools for Wisconsin Athletics Creative: the iPhone and iPad app, Offload for Sony FX6 and FX3 cards, and the browser tools.">
+  <link rel="canonical" href="https://wisconsincreative.com/apps">
+  <meta property="og:title" content="Wisconsin Creative Tools">
+  <meta property="og:description" content="Apps and tools for Wisconsin Athletics Creative: the iPhone and iPad app, Offload for Sony FX6 and FX3 cards, and the browser tools.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://wisconsincreative.com/apps">
+  <meta property="og:image" content="https://wisconsincreative.com/apps/icons/wisconsin-creative.png">
+  <meta property="og:image:alt" content="Wisconsin Creative app icon">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Wisconsin Creative Tools">
+  <meta name="twitter:description" content="Apps and tools for Wisconsin Athletics Creative: the iPhone and iPad app, Offload for Sony FX6 and FX3 cards, and the browser tools.">
+  <meta name="twitter:image" content="https://wisconsincreative.com/apps/icons/wisconsin-creative.png">
   <meta name="color-scheme" content="light dark">
   <meta name="theme-color" content="#c5050c">
   <title>Wisconsin Creative Tools</title>
@@ -126,7 +212,7 @@ export function renderAppsPage(nonce?: string, live: LiveVersions = {}) {
 
     /* The hub is plain paper so each tool's own look can show on its card. */
     :root {
-      --paper: #f3f1ec; --ink: #15151a; --ink-2: #4a4a52; --ink-3: #7a7973; --line: #dcd9d1;
+      --paper: #f3f1ec; --ink: #15151a; --ink-2: #4a4a52; --ink-3: #5c5b55; --line: #dcd9d1;
       --card: #fff; --card-art: #ebe8e1; --pill: rgba(255,255,255,0.85);
       --beta-bg: #e6efff; --beta-line: #c9dbff; --beta-ink: #1d4fb3;
       --red: #c5050c; --red-text: #c5050c; --focus: #c5050c; --ease: cubic-bezier(0.2, 0, 0, 1);
@@ -177,7 +263,9 @@ export function renderAppsPage(nonce?: string, live: LiveVersions = {}) {
     .tool:hover { transform: translateY(-4px); box-shadow: 0 1px 2px rgba(20, 20, 25, 0.08), 0 30px 60px -26px rgba(20, 20, 25, 0.55); }
     .art { position: relative; flex: none; height: 188px; }
     .copy { position: relative; display: flex; flex-direction: column; flex: 1; padding: 20px 22px 22px; }
-    .copy h2 { margin: 0 0 6px; font-size: 22px; font-weight: 800; letter-spacing: -0.01em; text-transform: uppercase; }
+    .copy h2, .copy h3 { margin: 0 0 6px; font-size: 22px; font-weight: 800; letter-spacing: -0.01em; text-transform: uppercase; }
+    .skip { position: absolute; left: 16px; top: 8px; transform: translateY(-140%); background: var(--card); color: var(--ink); padding: 8px 12px; border-radius: 10px; font-weight: 700; z-index: 2; }
+    .skip:focus { transform: none; }
     .copy p { margin: 0; font-size: 14px; line-height: 1.5; }
     .go { display: inline-flex; align-items: center; gap: 8px; margin-top: auto; padding-top: 16px; font-size: 14px; font-weight: 700; letter-spacing: 0.01em; }
     .go i { display: inline-block; transition: transform 260ms var(--ease); font-style: normal; }
@@ -207,40 +295,49 @@ export function renderAppsPage(nonce?: string, live: LiveVersions = {}) {
     .qr .ok { position: absolute; right: -14px; bottom: -14px; width: 40px; height: 40px; border-radius: 50%; background: #1f9d55; border: 3px solid #a00000; display: grid; place-items: center; }
     .qr .ok svg { width: 20px; height: 20px; }
 
+    .apps { grid-template-columns: 1fr 1fr; }
+    @media (max-width: 860px) { .apps { grid-template-columns: 1fr; } }
     h2.section { margin: clamp(40px, 7vw, 72px) 0 18px; font-size: 13px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-3); }
     h2.section:first-of-type { margin-top: 0; }
-    .app { background: var(--card); border: 1px solid var(--line); min-height: 0; }
-    .app .art { height: 176px; padding-top: 26px; display: grid; place-items: center; background: var(--card-art); }
-    .app .art img { width: 96px; height: 96px; filter: drop-shadow(0 10px 14px rgba(20, 20, 25, 0.35)); }
+    .app { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 8px 18px; align-items: center; min-height: 0; padding: 16px; background: var(--card); border: 1px solid var(--line); border-radius: 22px; box-shadow: 0 1px 2px rgba(20, 20, 25, 0.08), 0 18px 40px -24px rgba(20, 20, 25, 0.45); }
+    .app.has-shot { grid-template-columns: 120px minmax(0, 1fr); align-items: start; }
+    .app .art { height: auto; display: grid; place-items: center; background: transparent; }
+    .app .copy { padding: 0; }
+    .app .art img { width: 72px; height: 72px; filter: drop-shadow(0 10px 14px rgba(20, 20, 25, 0.35)); }
+    .app .art img.shot { width: 120px; height: auto; border-radius: 18px; border: 1px solid var(--line); filter: none; }
+    .app .titleline { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .app .titleline h3 { margin: 0; }
     .app .copy p { color: var(--ink-2); }
+    .app .copy p.detail { margin-top: 6px; font-size: 13px; }
     .app .copy p.meta { margin-top: 12px; font-size: 13px; font-weight: 700; color: var(--ink); }
-    .app .go { color: var(--red-text); }
-    .app .go.pending { color: var(--ink-3); }
-    .pill { position: absolute; top: 14px; padding: 4px 11px; border-radius: 999px; background: var(--pill); border: 1px solid var(--line); color: var(--ink-2); font-size: 12px; font-weight: 700; letter-spacing: 0.01em; }
-    .pill.left { left: 14px; }
-    .pill.right { right: 14px; }
+    .app .copy p.trust { margin-top: 4px; font-size: 13px; font-weight: 700; color: var(--ink); }
+    .app .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 14px; }
+    .app .go { margin: 0; padding: 0; color: var(--red-text); text-decoration: none; }
+    .app .quiet { color: var(--ink-2); font-size: 14px; font-weight: 700; text-decoration: none; }
+    .app .quiet:hover { text-decoration: underline; }
+    .pill { display: inline-flex; padding: 4px 11px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); color: var(--ink-2); font-size: 12px; font-weight: 700; letter-spacing: 0.01em; }
     .pill.beta { background: var(--beta-bg); border-color: var(--beta-line); color: var(--beta-ink); }
     .pill.soon { color: var(--ink-3); }
     .app.soon { box-shadow: none; }
-    .app.soon:hover { transform: none; }
-    a.app .go, a.tool .go { }
 
     .foot { margin-top: 40px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--ink-3); border-top: 1px solid var(--line); padding-top: 16px; }
+    .foot a { color: inherit; }
     @media (prefers-reduced-motion: reduce) { .tool, .go i, .qr .code { transition: none; } .tool:hover { transform: none; } }
   
   </style>
 </head>
 <body>
+  <a class="skip" href="#content">Skip to content</a>
   <div class="band" aria-hidden="true"></div>
   <header class="topbar">
-    <img class="mw" src="/apps/motion-w.svg" alt="" width="36" height="36">
+    <img class="mw" src="/apps/motion-w.svg" alt="Wisconsin Creative" width="36" height="36">
     <div class="picker" role="group" aria-label="Appearance">
       <button type="button" data-mode="auto" aria-pressed="true">Auto</button>
       <button type="button" data-mode="light" aria-pressed="false">Light</button>
       <button type="button" data-mode="dark" aria-pressed="false">Dark</button>
     </div>
   </header>
-  <main>
+  <main id="content">
     <h1>Wisconsin Creative <em>Tools</em></h1>
     <p class="lede">Apps and tools for gear, footage, and game-day work.</p>
     <h2 class="section">Apps</h2>
@@ -261,7 +358,7 @@ export function renderAppsPage(nonce?: string, live: LiveVersions = {}) {
             </svg>
           </div>
           <div class="copy">
-            <h2>Golden Hour</h2>
+            <h3>Golden Hour</h3>
             <p>Golden hour times for Camp Randall and Big Ten road venues, in local time.</p>
             <span class="go">Open <i>→</i></span>
           </div>
@@ -281,7 +378,7 @@ export function renderAppsPage(nonce?: string, live: LiveVersions = {}) {
             </svg>
           </div>
           <div class="copy">
-            <h2>Timelapse</h2>
+            <h3>Timelapse</h3>
             <p>Interval, frame rate, roll time, and clip length for the FX3, A1, A1 II, A7 V, and A9 III.</p>
             <span class="go">Open <i>→</i></span>
           </div>
@@ -305,7 +402,7 @@ export function renderAppsPage(nonce?: string, live: LiveVersions = {}) {
             </svg>
           </div>
           <div class="copy">
-            <h2>Board Sizes</h2>
+            <h3>Board Sizes</h3>
             <p>Canvas sizes, zones, and delivery specs for every board at five venues, with guide PNGs.</p>
             <span class="go">Open <i>→</i></span>
           </div>
@@ -317,14 +414,14 @@ export function renderAppsPage(nonce?: string, live: LiveVersions = {}) {
             <div class="code"><svg viewBox="0 0 21 21" shape-rendering="crispEdges"><path fill="#15151a" d="M0 0h7v7H0zM1 1v5h5V1zM2 2h3v3H2zM14 0h7v7h-7zM15 1v5h5V1zM16 2h3v3h-3zM0 14h7v7H0zM1 15v5h5v-5zM2 16h3v3H2zM8 0h1v2H8zM10 1h2v1h-2zM9 3h3v1H9zM8 5h2v2H8zM11 6h2v2h-2zM8 8h3v1H8zM0 8h2v1H0zM3 9h3v1H3zM13 8h2v2h-2zM16 8h3v1h-3zM19 10h2v2h-2zM8 10h1v3H8zM10 11h3v1h-3zM14 11h3v2h-3zM1 11h2v2H1zM4 12h2v1H4zM9 14h2v2H9zM12 13h2v2h-2zM15 14h2v1h-2zM18 14h3v2h-3zM8 17h3v1H8zM12 16h1v3h-1zM14 17h3v2h-3zM18 17h1v1h-1zM9 19h2v2H9zM19 19h2v2h-2zM15 20h2v1h-2z"/></svg><span class="ok"><svg viewBox="0 0 20 20" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg></span></div>
           </div>
           <div class="copy">
-            <h2>QR Studio</h2>
+            <h3>QR Studio</h3>
             <p>Branded QR codes for links, Wi-Fi, and contacts, checked for scannability before export.</p>
             <span class="go">Open <i>→</i></span>
           </div>
         </a>
       </li>
     </ul>
-    <p class="foot"><span></span><span><a href="/about" style="color:inherit">About</a> · <a href="/releases" style="color:inherit">Releases</a></span></p>
+    <p class="foot"><span></span><span><a href="/about">About</a> · <a href="/releases">Releases</a></span></p>
   </main>
   <script${n}>(function(){var r=document.documentElement,b=document.querySelectorAll(".picker button");function show(m){b.forEach(function(x){x.setAttribute("aria-pressed",String(x.dataset.mode===m))})}var saved="auto";try{var t=localStorage.getItem("apps-theme");if(t==="light"||t==="dark")saved=t}catch(e){}show(saved);b.forEach(function(x){x.addEventListener("click",function(){var m=x.dataset.mode;if(m==="auto")delete r.dataset.theme;else r.dataset.theme=m;try{if(m==="auto")localStorage.removeItem("apps-theme");else localStorage.setItem("apps-theme",m)}catch(e){}show(m)})})})();</script>
 </body>
