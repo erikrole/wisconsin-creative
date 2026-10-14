@@ -35,6 +35,8 @@ describe("apps page", () => {
     }
     expect(html).toContain("Version 1.1.2 · Requires macOS 15 or later");
     expect(html).toContain("https://github.com/erikrole/offload-releases/releases/latest/download/Offload.dmg");
+    expect(html).toContain("Version 1.1.0 · Requires macOS 27 or later");
+    expect(html).toContain("https://github.com/erikrole/fetch-releases/releases/latest/download/Fetch.dmg");
     expect(html).toContain("Version 0.1.0");
     expect(html).not.toContain("Oct 13, 2026");
     expect(html).toContain("Media Lab");

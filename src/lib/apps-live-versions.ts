@@ -3,11 +3,12 @@
 // to the version written in apps-page.ts.
 export type LiveVersion = { version: string; released?: string };
 export type LiveVersions = Partial<
-  Record<"wisconsin-creative" | "offload", LiveVersion>
+  Record<"wisconsin-creative" | "offload" | "fetch", LiveVersion>
 >;
 
 const APP_STORE_ID = "6763456945";
 const OFFLOAD_RELEASES = "erikrole/offload-releases";
+const FETCH_RELEASES = "erikrole/fetch-releases";
 const REVALIDATE_SECONDS = 600;
 const TIMEOUT_MS = 3000;
 const VERSION = /^\d+(\.\d+){1,3}$/;
@@ -63,10 +64,14 @@ export function parseGithubRelease(body: unknown): LiveVersion | undefined {
 }
 
 export async function loadLiveVersions(): Promise<LiveVersions> {
-  const [store, offload] = await Promise.allSettled([
+  const [store, offload, fetchApp] = await Promise.allSettled([
     getJson(`https://itunes.apple.com/lookup?id=${APP_STORE_ID}&country=us`),
     getJson(
       `https://api.github.com/repos/${OFFLOAD_RELEASES}/releases/latest`,
+      { accept: "application/vnd.github+json" },
+    ),
+    getJson(
+      `https://api.github.com/repos/${FETCH_RELEASES}/releases/latest`,
       { accept: "application/vnd.github+json" },
     ),
   ]);
@@ -78,6 +83,10 @@ export async function loadLiveVersions(): Promise<LiveVersions> {
   if (offload.status === "fulfilled") {
     const parsed = parseGithubRelease(offload.value);
     if (parsed) live.offload = parsed;
+  }
+  if (fetchApp.status === "fulfilled") {
+    const parsed = parseGithubRelease(fetchApp.value);
+    if (parsed) live.fetch = parsed;
   }
   return live;
 }
