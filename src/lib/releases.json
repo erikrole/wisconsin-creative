@@ -1,5 +1,21 @@
 [
   {
+    "date": "2026-10-14",
+    "title": "Fetch on the apps page",
+    "type": "improvement",
+    "summary": "The apps page now lists Fetch, a Mac app that saves videos and audio from a link, with a download button.",
+    "details": [
+      "Fetch saves video as an MP4 that plays everywhere, or audio only, from YouTube, Instagram, X, podcasts and more.",
+      "The card shows the current version and requires macOS 27 or later.",
+      "All app icons on the page now appear at the same size."
+    ],
+    "platforms": [
+      "Web",
+      "macOS"
+    ],
+    "pr": 474
+  },
+  {
     "date": "2026-10-13",
     "title": "Apps and tools page",
     "type": "feature",
