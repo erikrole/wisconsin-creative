@@ -4,7 +4,7 @@
 
 - Area: YouTube metadata review and publishing for the Wisconsin Badgers channel
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-10-03
+- Last Updated: 2026-10-11
 - Status: In development (PR #423). Core rules, the channel connection and the read-only review queue are built; writes to YouTube and daily drafts are not.
 - Route: `/youtube` (ADMIN only)
 
@@ -76,6 +76,8 @@ Previews have no channel credentials. To exercise the queue locally, record read
 - The first live refresh can only run in production after merge; previews have no channel credentials.
 
 ## Change Log
+
+- 2026-10-11: Review queue recovery. An empty library offers Refresh library when the channel (or replay) can refresh; a failed refresh shows Retry refresh; filters that hide every upload offer Clear filters. Local source-contract proof; authenticated browser proof waits on Managed previews / replay.
 
 - 2026-10-03: Read-only review queue. Refresh stores the 30-day library, playlists and prepared drafts (recap excerpt for highlights, coach template for press conferences, official game choices when the match is ambiguous or the sport is unassigned). Editors save drafts per video with version checks and audit entries. Suggested highlight titles follow YOUTUBE_FORMATS.md (AP dates, `vs`/`at` from the schedule). New `youtube:draft` permission, migration `0165_youtube_review_queue`, local replay of recorded read-only API responses for preview proof.
 
