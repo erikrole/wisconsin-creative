@@ -159,42 +159,28 @@ export function renderAppsPage(nonce?: string) {
     .go i { display: inline-block; transition: transform 260ms var(--ease); font-style: normal; }
     .tool:hover .go i { transform: translateX(4px); }
 
-    /* Golden Hour: its evening sky and the sun's arc */
-    .gh { background: linear-gradient(180deg, #232552 0%, #4b3f78 30%, #9c5277 58%, #de7560 80%, #f4a24c 100%); color: #fff7ee; }
-    .gh .copy p { color: rgba(255, 247, 238, 0.82); }
-    .gh .art svg { position: absolute; inset: 16px 16px 0; width: calc(100% - 32px); height: calc(100% - 16px); }
+    /* Posters: each tool draws its own world; the art fills the top of the card. */
+    .art svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; overflow: visible; }
+    .art text { font-family: var(--font); font-weight: 700; }
 
-    /* Timelapse: the viewfinder */
-    .tl { background: #0c0d0f; color: #f2f2ef; }
+    .gh { background: linear-gradient(180deg, #1d2050 0%, #46407a 34%, #a2547a 62%, #e8795a 84%, #f7a64a 100%); color: #fff7ee; }
+    .gh .copy p { color: rgba(255, 247, 238, 0.84); }
+
+    .tl { background: #0b0c0e; color: #f2f2ef; }
     .tl .copy p { color: #b9b9b3; }
-    .tl .art { height: 172px; margin: 16px 16px 0; border-radius: 14px; background: radial-gradient(80% 70% at 50% 45%, rgba(255,255,255,.06), transparent 70%), #050506; border: 1px solid #26272d; display: grid; place-items: center; }
-    .tl .corner { position: absolute; width: 18px; height: 18px; border: 0 solid rgba(255,255,255,.75); }
-    .tl .c1 { top: 10px; left: 10px; border-top-width: 2px; border-left-width: 2px; }
-    .tl .c2 { top: 10px; right: 10px; border-top-width: 2px; border-right-width: 2px; }
-    .tl .c3 { bottom: 10px; left: 10px; border-bottom-width: 2px; border-left-width: 2px; }
-    .tl .c4 { bottom: 10px; right: 10px; border-bottom-width: 2px; border-right-width: 2px; }
-    .tl .rec { position: absolute; top: 12px; left: 36px; display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 11px; color: #b9b9b3; }
-    .tl .rec i { width: 7px; height: 7px; border-radius: 50%; background: #ff3b3b; box-shadow: 0 0 8px rgba(255,59,59,.8); }
-    .tl .readout { text-align: center; }
-    .tl .readout small { display: block; font-size: 10px; font-weight: 700; letter-spacing: 0.22em; color: #ffb224; }
-    .tl .readout b { font-size: 64px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
 
-    /* Board Sizes: blueprint */
     .bs { background: #0b2a52; color: #eef5ff;
-      background-image: linear-gradient(rgba(150,195,255,.12) 1px, transparent 1px), linear-gradient(90deg, rgba(150,195,255,.12) 1px, transparent 1px);
+      background-image: linear-gradient(rgba(150,195,255,.11) 1px, transparent 1px), linear-gradient(90deg, rgba(150,195,255,.11) 1px, transparent 1px);
       background-size: 22px 22px; }
     .bs .copy p { color: #b7cdec; }
-    .bs .art { display: grid; place-items: center; }
-    .bs .art svg { width: 78%; height: auto; }
 
-    /* QR Studio: its red and a code */
     .qr { background: #a00000; color: #fff; }
-    .qr .copy p { color: rgba(255, 255, 255, 0.84); }
-    .qr .art { display: grid; place-items: center; }
-    .qr .code { width: 132px; height: 132px; padding: 12px; border-radius: 16px; background: #fff; box-shadow: 0 16px 34px -14px rgba(0,0,0,.6); transform: rotate(-4deg); transition: transform 260ms var(--ease); }
+    .qr .copy p { color: rgba(255, 255, 255, 0.86); }
+    .qr .code { position: absolute; left: 50%; top: 50%; width: 128px; height: 128px; margin: -64px 0 0 -64px; padding: 12px; border-radius: 18px; background: #fff; box-shadow: 0 18px 34px -14px rgba(0,0,0,.65); transform: rotate(-4deg); transition: transform 260ms var(--ease); }
     .tool.qr:hover .code { transform: rotate(0); }
-    .qr .code svg { width: 100%; height: 100%; display: block; }
-
+    .qr .code svg { position: static; width: 100%; height: 100%; }
+    .qr .ok { position: absolute; right: -14px; bottom: -14px; width: 40px; height: 40px; border-radius: 50%; background: #1f9d55; border: 3px solid #a00000; display: grid; place-items: center; }
+    .qr .ok svg { width: 20px; height: 20px; }
 
     h2.section { margin: clamp(40px, 7vw, 72px) 0 18px; font-size: 13px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-3); }
     h2.section:first-of-type { margin-top: 0; }
@@ -241,12 +227,22 @@ export function renderAppsPage(nonce?: string) {
       <li>
         <a class="tool gh" href="/golden-hour">
           <div class="art" aria-hidden="true">
-            <svg viewBox="0 0 300 170" preserveAspectRatio="none">
-              <rect x="0" y="104" width="300" height="16" fill="#ffc861" opacity=".28"/>
-              <path d="M0 160 C 60 150, 90 20, 150 20 S 240 150, 300 160" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="2"/>
-              <path d="M58 120 L72 100" stroke="#ffc861" stroke-width="5" stroke-linecap="round"/>
-              <path d="M228 100 L242 120" stroke="#ffc861" stroke-width="5" stroke-linecap="round"/>
-              <line x1="0" x2="300" y1="112" y2="112" stroke="rgba(255,255,255,.55)" stroke-dasharray="2 5"/>
+            <svg viewBox="0 0 200 188" preserveAspectRatio="xMidYMid meet">
+              <defs>
+                <radialGradient id="glow" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ffd27a" stop-opacity=".75"/><stop offset="1" stop-color="#ffd27a" stop-opacity="0"/></radialGradient>
+                <linearGradient id="sun" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff0c2"/><stop offset="1" stop-color="#ffb347"/></linearGradient>
+              </defs>
+              <g fill="#fff" opacity=".7"><circle cx="30" cy="26" r="1.2"/><circle cx="70" cy="14" r="1"/><circle cx="150" cy="20" r="1.3"/><circle cx="182" cy="42" r="1"/><circle cx="118" cy="10" r=".9"/></g>
+              <circle cx="100" cy="142" r="78" fill="url(#glow)"/>
+              <path d="M16 148 C 46 148, 66 54, 100 54 S 154 148, 184 148" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="1.5" stroke-dasharray="3 5"/>
+              <path d="M16 148 C 26 148, 34 132, 42 114" fill="none" stroke="#ffc861" stroke-width="4" stroke-linecap="round"/>
+              <path d="M158 114 C 166 132, 174 148, 184 148" fill="none" stroke="#ffc861" stroke-width="4" stroke-linecap="round"/>
+              <circle cx="100" cy="148" r="30" fill="url(#sun)"/>
+              <path d="M-600 148 H800 V188 H-600Z" fill="#1a1230" opacity=".62"/>
+              <path d="M-600 148 H800" stroke="#ffd9a0" stroke-opacity=".7"/>
+              <text x="16" y="168" fill="#ffd9a0" font-size="8.5" letter-spacing="1.6">RISE</text>
+              <text x="184" y="168" fill="#ffd9a0" font-size="8.5" letter-spacing="1.6" text-anchor="end">SET</text>
+              <text x="100" y="168" fill="#fff" font-size="8.5" letter-spacing="1.4" text-anchor="middle" opacity=".8">GOLDEN HOUR</text>
             </svg>
           </div>
           <div class="copy">
@@ -259,9 +255,15 @@ export function renderAppsPage(nonce?: string) {
       <li>
         <a class="tool tl" href="/timelapse">
           <div class="art" aria-hidden="true">
-            <span class="corner c1"></span><span class="corner c2"></span><span class="corner c3"></span><span class="corner c4"></span>
-            <span class="rec"><i></i>S&amp;Q · 1 fps</span>
-            <div class="readout"><small>Clip length</small><b>20s</b></div>
+            <svg viewBox="0 0 200 188" preserveAspectRatio="xMidYMid meet">
+              <g fill="none" stroke="#f2f2ef" stroke-opacity=".8" stroke-width="2"><path d="M14 42V22h20M186 42V22h-20M14 150v20h20M186 150v20h-20"/></g>
+              <circle cx="28" cy="36" r="3.5" fill="#ff3b3b"/>
+              <text x="38" y="39.5" fill="#b9b9b3" font-size="9" letter-spacing="1.2">REC · 1 FPS</text>
+              <text x="100" y="76" fill="#ffb224" font-size="9" letter-spacing="2.4" text-anchor="middle">CLIP LENGTH</text>
+              <text x="100" y="122" fill="#f2f2ef" font-size="52" font-weight="800" letter-spacing="-2" text-anchor="middle">20s</text>
+              <g fill="#f2f2ef"><rect x="28" y="146" width="9" height="12" rx="1.5" opacity="0.2"/><rect x="45" y="146" width="9" height="12" rx="1.5" opacity="0.31"/><rect x="62" y="146" width="9" height="12" rx="1.5" opacity="0.43"/><rect x="79" y="146" width="9" height="12" rx="1.5" opacity="0.54"/><rect x="96" y="146" width="9" height="12" rx="1.5" opacity="0.66"/><rect x="113" y="146" width="9" height="12" rx="1.5" opacity="0.77"/><rect x="130" y="146" width="9" height="12" rx="1.5" opacity="0.89"/><rect x="147" y="146" width="9" height="12" rx="1.5" opacity="1.0"/></g>
+              <rect x="166" y="142" width="3" height="20" rx="1.5" fill="#ffb224"/>
+            </svg>
           </div>
           <div class="copy">
             <h2>Timelapse</h2>
@@ -273,12 +275,18 @@ export function renderAppsPage(nonce?: string) {
       <li>
         <a class="tool bs" href="/board-sizes">
           <div class="art" aria-hidden="true">
-            <svg viewBox="0 0 240 120" fill="none">
-              <rect x="10" y="22" width="220" height="55" stroke="#eef5ff" stroke-width="1.5"/>
-              <rect x="10" y="22" width="118" height="55" stroke="#7fc3ff" stroke-dasharray="4 3" fill="rgba(127,195,255,.12)"/>
-              <rect x="10" y="90" width="220" height="6" stroke="#eef5ff" stroke-width="1.2"/>
-              <path d="M10 10h220M10 6v8M230 6v8" stroke="#ff7a6b"/>
-              <text x="120" y="8" fill="#b7cdec" font-size="8" font-family="Gotham, system-ui, sans-serif" text-anchor="middle">5760 px</text>
+            <svg viewBox="0 0 200 188" preserveAspectRatio="xMidYMid meet" fill="none">
+              <defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path d="M0 0V6" stroke="#7fc3ff" stroke-opacity=".35"/></pattern></defs>
+              <rect x="28" y="46" width="152" height="84" stroke="#eef5ff" stroke-width="1.6"/>
+              <rect x="28" y="46" width="96" height="84" fill="url(#hatch)" stroke="#7fc3ff" stroke-dasharray="4 3"/>
+              <rect x="28" y="142" width="152" height="12" stroke="#eef5ff" stroke-width="1.2"/>
+              <path d="M28 30H180M28 25V35M180 25V35" stroke="#ff7a6b"/>
+              <path d="M14 46V130M9 46H19M9 130H19" stroke="#ff7a6b"/>
+              <text x="104" y="23" fill="#ffb1a8" font-size="9" letter-spacing="1.6" text-anchor="middle">W</text>
+              <text x="4" y="88" fill="#ffb1a8" font-size="9" letter-spacing="1.6" text-anchor="middle" transform="rotate(-90 4 88)">H</text>
+              <text x="76" y="91" fill="#bfe0ff" font-size="8" letter-spacing="1.4" text-anchor="middle">VIDEO ZONE</text>
+              <text x="152" y="91" fill="#b7cdec" font-size="8" letter-spacing="1.4" text-anchor="middle" opacity=".8">SCORE</text>
+              <text x="104" y="172" fill="#b7cdec" font-size="8" letter-spacing="1.4" text-anchor="middle">RIBBON</text>
             </svg>
           </div>
           <div class="copy">
@@ -291,7 +299,7 @@ export function renderAppsPage(nonce?: string) {
       <li>
         <a class="tool qr" href="/qrcode">
           <div class="art" aria-hidden="true">
-            <div class="code"><svg viewBox="0 0 21 21" shape-rendering="crispEdges"><path fill="#15151a" d="M0 0h7v7H0zM1 1v5h5V1zM2 2h3v3H2zM14 0h7v7h-7zM15 1v5h5V1zM16 2h3v3h-3zM0 14h7v7H0zM1 15v5h5v-5zM2 16h3v3H2zM8 0h1v2H8zM10 1h2v1h-2zM9 3h3v1H9zM8 5h2v2H8zM11 6h2v2h-2zM8 8h3v1H8zM0 8h2v1H0zM3 9h3v1H3zM13 8h2v2h-2zM16 8h3v1h-3zM19 10h2v2h-2zM8 10h1v3H8zM10 11h3v1h-3zM14 11h3v2h-3zM1 11h2v2H1zM4 12h2v1H4zM9 14h2v2H9zM12 13h2v2h-2zM15 14h2v1h-2zM18 14h3v2h-3zM8 17h3v1H8zM12 16h1v3h-1zM14 17h3v2h-3zM18 17h1v1h-1zM9 19h2v2H9zM19 19h2v2h-2zM15 20h2v1h-2z"/></svg></div>
+            <div class="code"><svg viewBox="0 0 21 21" shape-rendering="crispEdges"><path fill="#15151a" d="M0 0h7v7H0zM1 1v5h5V1zM2 2h3v3H2zM14 0h7v7h-7zM15 1v5h5V1zM16 2h3v3h-3zM0 14h7v7H0zM1 15v5h5v-5zM2 16h3v3H2zM8 0h1v2H8zM10 1h2v1h-2zM9 3h3v1H9zM8 5h2v2H8zM11 6h2v2h-2zM8 8h3v1H8zM0 8h2v1H0zM3 9h3v1H3zM13 8h2v2h-2zM16 8h3v1h-3zM19 10h2v2h-2zM8 10h1v3H8zM10 11h3v1h-3zM14 11h3v2h-3zM1 11h2v2H1zM4 12h2v1H4zM9 14h2v2H9zM12 13h2v2h-2zM15 14h2v1h-2zM18 14h3v2h-3zM8 17h3v1H8zM12 16h1v3h-1zM14 17h3v2h-3zM18 17h1v1h-1zM9 19h2v2H9zM19 19h2v2h-2zM15 20h2v1h-2z"/></svg><span class="ok"><svg viewBox="0 0 20 20" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg></span></div>
           </div>
           <div class="copy">
             <h2>QR Studio</h2>
@@ -301,7 +309,6 @@ export function renderAppsPage(nonce?: string) {
         </a>
       </li>
     </ul>
-
     <p class="foot"><span></span><span><a href="/about" style="color:inherit">About</a> · <a href="/releases" style="color:inherit">Releases</a></span></p>
   </main>
   <script${n}>(function(){var r=document.documentElement,b=document.querySelectorAll(".picker button");function show(m){b.forEach(function(x){x.setAttribute("aria-pressed",String(x.dataset.mode===m))})}var saved="auto";try{var t=localStorage.getItem("apps-theme");if(t==="light"||t==="dark")saved=t}catch(e){}show(saved);b.forEach(function(x){x.addEventListener("click",function(){var m=x.dataset.mode;if(m==="auto")delete r.dataset.theme;else r.dataset.theme=m;try{if(m==="auto")localStorage.removeItem("apps-theme");else localStorage.setItem("apps-theme",m)}catch(e){}show(m)})})})();</script>
