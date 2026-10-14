@@ -1,6 +1,20 @@
 [
   {
     "date": "2026-10-14",
+    "title": "Uniform app cards on the apps page",
+    "type": "improvement",
+    "summary": "Every app on the apps page now has the same card layout, with the Wisconsin Creative screenshot removed.",
+    "details": [
+      "Each card shows the app icon, name, badges, description, version and requirement, and the download link in the same places.",
+      "Cards line up in rows of three on a wide screen, two on a tablet and one on a phone."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 477
+  },
+  {
+    "date": "2026-10-14",
     "title": "Board Sizes layout restored with Copy spec",
     "type": "fixes",
     "summary": "Board Sizes has its top venue bar and dotted background back, and keeps the new Copy spec buttons.",
