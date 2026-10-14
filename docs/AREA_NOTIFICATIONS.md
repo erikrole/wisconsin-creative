@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Notifications
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-10-07
+- Last Updated: 2026-10-11
 - Status: Active; browser push is deployed to Production, with physical Android acceptance still open
 - Version: V1.9
 
@@ -406,6 +406,8 @@ renders a tap-only alert. Neither side needs to ship first.
 - Source/build, isolated native behavior tests, fixture captures, and physical-device delivery are separate gates. See `tasks/ios-notifications-polish-plan-2026-09-07.md` for evidence and limitations.
 
 ## Change Log
+- 2026-10-11: **Blasts web recovery and acknowledgment polish (local).** `/blasts` and `/blasts/[id]` now surface load failures with retry instead of an empty history or a false "not found", keep a Refresh action, and summarize people still waiting to acknowledge. Detail filters use the shared ToggleGroup, recipients stack as cards on narrow widths, and compose recovers when event or people lookups fail. Source contracts and focused tests cover the recovery paths; authenticated browser proof remains open.
+
 - 2026-10-07: **Dropped unused ShiftGroup notify-after columns.** The schedule flush/debounce pipeline was already deleted; migration `0168_drop_shift_group_notify_after` removes `notify_after`, `notify_attempted_at`, and `notify_error`, and publication/combine paths no longer clear those fields. Apply the migration before relying on a schema that omits them.
 
 - 2026-10-09: **Unread reconciliation no longer holds back shell counters (local, after build 33).** `AppState.refresh()` starts the unread count beside the dashboard and trade counters, so a slow `/api/notifications/count` no longer delays them. Build 33 shipped the earlier sequential version; this reaches testers in the next TestFlight build. iOS simulator build and source contracts pass.
