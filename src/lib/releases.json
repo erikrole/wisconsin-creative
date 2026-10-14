@@ -1,5 +1,15 @@
 [
   {
+    "date": "2026-10-14",
+    "title": "Apps and tools page",
+    "type": "feature",
+    "summary": "wisconsincreative.com/apps now lists the team's apps and browser tools in one place.",
+    "details": [
+      "Covers the Wisconsin Creative iOS app, Offload, and QR Studio, with Radio and Golden Hour marked coming soon."
+    ],
+    "platforms": ["Web"]
+  },
+  {
     "date": "2026-10-13",
     "title": "Request shifts before release",
     "type": "improvement",

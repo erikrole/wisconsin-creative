@@ -84,6 +84,11 @@ export const publicShowroomNav: ShowroomNavItem[] = [
     description: "Native iOS, kiosk, scanner, and game-day handoffs.",
   },
   {
+    href: "/apps",
+    label: "Apps",
+    description: "The iOS app, Offload, and browser tools like QR Studio.",
+  },
+  {
     href: "/releases",
     label: "Releases",
     description: "What shipped, when, across web, iOS, kiosk, and macOS.",

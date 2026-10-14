@@ -217,7 +217,8 @@
 | `src/lib/profile-completion.ts` | 159 |
 | `src/lib/profile-phone.ts` | 44 |
 | `src/lib/profile-sizing.ts` | 24 |
-| `src/lib/public-showroom.ts` | 449 |
+| `src/lib/public-apps.ts` | 79 |
+| `src/lib/public-showroom.ts` | 454 |
 | `src/lib/quarter-hour.ts` | 27 |
 | `src/lib/query-client.ts` | 56 |
 | `src/lib/rate-limit.ts` | 238 |

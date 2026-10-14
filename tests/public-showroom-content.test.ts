@@ -29,6 +29,7 @@ describe("public showroom content", () => {
       "/about/tech-stack",
       "/about/security",
       "/about/field-work",
+      "/apps",
       "/releases",
     ]);
   });
