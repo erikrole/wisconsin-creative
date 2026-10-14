@@ -1,6 +1,20 @@
 [
   {
     "date": "2026-10-14",
+    "title": "Board Sizes layout restored with Copy spec",
+    "type": "fixes",
+    "summary": "Board Sizes has its top venue bar and dotted background back, and keeps the new Copy spec buttons.",
+    "details": [
+      "Venues are tabs across the top again, and Content types and Game day are no longer in the navigation.",
+      "Copy spec, the More menu and the clearer dark colors from the last update stay."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 476
+  },
+  {
+    "date": "2026-10-14",
     "title": "Copy a board's exact size",
     "type": "feature",
     "summary": "Board Sizes lists every venue board so you can find one and copy its pixel size, aspect ratio, and any safe area already on file.",
