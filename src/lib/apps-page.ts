@@ -35,7 +35,7 @@ export const appEntries: AppEntry[] = [
     platform: "macOS",
     status: "Beta",
     statusKind: "beta",
-    blurb: "Ingests Sony FX6 and FX3 cards, matches clips to the play-by-play, and names them for editing.",
+    blurb: "Ingests camera cards, matches clips to the play-by-play, and names them for editing.",
     version: "1.0.8",
   },
   {
