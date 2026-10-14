@@ -16,7 +16,7 @@ function loadCore(path: string, name: string): any {
 }
 
 const nextConfigSource = readFileSync("next.config.ts", "utf8");
-const TOOLS = ["golden-hour", "timelapse", "board-sizes", "tools"] as const;
+const TOOLS = ["golden-hour", "timelapse", "board-sizes", "apps"] as const;
 
 describe("static tools: routing, headers, and page contracts", () => {
   it("redirects each clean URL to its dotted file path so the nonce middleware skips it", () => {
@@ -53,11 +53,15 @@ describe("static tools: routing, headers, and page contracts", () => {
     expect(readdirSync("public/board-sizes").sort()).toEqual(
       ["app.js", "boards.csv", "boards.json", "boards.schema.json", "data.js", "design", "index.html", "index.json", "llms.txt"],
     );
-    expect(readdirSync("public/tools").sort()).toEqual(["index.html"]);
+    expect(readdirSync("public/apps").sort()).toEqual(["icons", "index.html"]);
   });
 
-  it("lists every public tool on the hub", () => {
-    const hub = readFileSync("public/tools/index.html", "utf8");
+  it("sends the old /tools URL to the apps page", () => {
+    expect(nextConfigSource).toContain('{ source: "/tools", destination: "/apps/index.html", permanent: false }');
+  });
+
+  it("lists every public tool on the apps page", () => {
+    const hub = readFileSync("public/apps/index.html", "utf8");
     for (const href of ["/golden-hour", "/timelapse", "/board-sizes", "/qrcode"]) expect(hub).toContain(`href="${href}"`);
   });
 
@@ -476,7 +480,7 @@ describe("Board Sizes page", () => {
   it("hides the way back to the site on shared links", () => {
     expect(app).toMatch(/share(:| =) params\.get\('share'\) === '1'/);
     expect(app).toMatch(/if \(state\.share\) \{[^}]*el\['side-foot'\]\.hidden = true;/);
-    expect(readFileSync("public/board-sizes/index.html", "utf8")).toMatch(/<div class="side-foot" id="side-foot">\s*<a href="\/tools"/);
+    expect(readFileSync("public/board-sizes/index.html", "utf8")).toMatch(/<div class="side-foot" id="side-foot">\s*<a href="\/apps"/);
   });
   it("only shows the AE template button once a link is configured", () => {
     expect(app).toContain("if (DATA.links && DATA.links.aeTemplate)");
