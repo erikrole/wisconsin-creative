@@ -93,7 +93,6 @@
 | `/about` | `src/app/(public)/about/page.tsx` |
 | `/about/security` | `src/app/(public)/about/security/page.tsx` |
 | `/about/tech-stack` | `src/app/(public)/about/tech-stack/page.tsx` |
-| `/apps` | `src/app/(public)/apps/page.tsx` |
 | `/releases` | `src/app/(public)/releases/page.tsx` |
 | `/change-password` | `src/app/change-password/page.tsx` |
 | `/forgot-password` | `src/app/forgot-password/page.tsx` |
@@ -115,7 +114,6 @@
 | `/settings` | `src/app/(app)/settings/layout.tsx` |
 | `/workforce` | `src/app/(app)/workforce/layout.tsx` |
 | `/about` | `src/app/(public)/about/layout.tsx` |
-| `/apps` | `src/app/(public)/apps/layout.tsx` |
 | `/releases` | `src/app/(public)/releases/layout.tsx` |
 | `/` | `src/app/layout.tsx` |
 
