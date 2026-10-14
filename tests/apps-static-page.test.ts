@@ -33,7 +33,8 @@ describe("apps page", () => {
       expect(existsSync(`public/apps/icons/${app.icon}.png`)).toBe(true);
       if (app.version) expect(html).toContain(`Version ${app.version}`);
     }
-    expect(html).toContain("Version 1.0.8");
+    expect(html).toContain("Version 1.1.0 · Requires macOS 27");
+    expect(html).toContain("https://github.com/erikrole/offload-releases/releases/latest/download/Offload.dmg");
     expect(html).toContain("Version 0.1.0");
     expect(html).not.toContain("Oct 13, 2026");
     expect(html).toContain("Media Lab");

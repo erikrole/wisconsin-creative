@@ -10,6 +10,7 @@ export type AppEntry = {
   statusKind: "live" | "beta" | "soon";
   blurb: string;
   version?: string;
+  requires?: string;
   /** ISO date (YYYY-MM-DD) in Madison time. */
   released?: string;
   href?: string;
@@ -36,7 +37,10 @@ export const appEntries: AppEntry[] = [
     status: "Beta",
     statusKind: "beta",
     blurb: "Ingests camera cards, matches clips to the play-by-play, and names them for editing.",
-    version: "1.0.8",
+    version: "1.1.0",
+    requires: "macOS 27",
+    href: "https://github.com/erikrole/offload-releases/releases/latest/download/Offload.dmg",
+    cta: "Download for macOS",
   },
   {
     name: "Radio Clip",
@@ -65,7 +69,7 @@ function appCard(app: AppEntry) {
   const platformPill = app.platform ? `<span class="pill left">${esc(app.platform)}</span>` : "";
   const statusPill = app.status ? `<span class="pill right ${app.statusKind}">${esc(app.status)}</span>` : "";
   const meta = app.version
-    ? `<p class="meta">Version ${esc(app.version)}${app.released ? ` · ${formatAppDate(app.released)}` : ""}</p>`
+    ? `<p class="meta">Version ${esc(app.version)}${app.released ? ` · ${formatAppDate(app.released)}` : ""}${app.requires ? ` · Requires ${esc(app.requires)}` : ""}</p>`
     : "";
   const body = `
           <div class="art">${platformPill}${statusPill}<img src="/apps/icons/${app.icon}.png" alt="" width="96" height="96"></div>
