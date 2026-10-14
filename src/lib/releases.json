@@ -74,6 +74,21 @@
   },
   {
     "date": "2026-10-12",
+    "title": "YouTube queue recovers",
+    "type": "improvement",
+    "summary": "YouTube Studio Lite’s review queue offers clear next steps when the library is empty, a refresh fails, or filters hide every upload.",
+    "details": [
+      "An empty library shows Refresh library when the channel can be checked.",
+      "A failed refresh keeps the error visible with Retry refresh.",
+      "Filters that hide every upload offer Clear filters."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 456
+  },
+  {
+    "date": "2026-10-12",
     "title": "Reservations keep kit custody",
     "type": "fixes",
     "summary": "Calling a gameday kit on a reservation keeps the real status, so a checked-out camera is not labeled available.",
