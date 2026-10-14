@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { loadLiveVersions } from "@/lib/apps-live-versions";
 import { renderAppsPage } from "@/lib/apps-page";
 import { requireAuth } from "@/lib/auth";
 import { HttpError } from "@/lib/http";
@@ -9,7 +10,8 @@ export const dynamic = "force-dynamic";
 /** Internal apps and tools page: signed-in staff only. */
 export async function GET(request: Request) {
   // `next dev` only: lets /apps be developed without a local database. Production builds never take this path.
-  if (process.env.NODE_ENV === "development") return htmlResponse(request);
+  if (process.env.NODE_ENV === "development")
+    return await htmlResponse(request);
   try {
     const user = await requireAuth();
     if (user.forcePasswordChange)
@@ -22,12 +24,13 @@ export async function GET(request: Request) {
     }
     throw error;
   }
-  return htmlResponse(request);
+  return await htmlResponse(request);
 }
 
-function htmlResponse(request: Request) {
+async function htmlResponse(request: Request) {
+  const live = await loadLiveVersions().catch(() => ({}));
   return new NextResponse(
-    renderAppsPage(request.headers.get("x-nonce") ?? undefined),
+    renderAppsPage(request.headers.get("x-nonce") ?? undefined, live),
     {
       headers: {
         "content-type": "text/html; charset=utf-8",

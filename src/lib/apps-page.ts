@@ -1,10 +1,13 @@
 // The /apps page, rendered per request so it can sit behind sign-in. Edit the app
 // data below (version, release date, links) when an app ships.
 import { formatAppDate } from "@/lib/apps-page-format";
+import type { LiveVersions } from "@/lib/apps-live-versions";
 
 export type AppEntry = {
   name: string;
   icon: string;
+  /** Key in LiveVersions: when present, the version shown comes from where the app is published. */
+  liveKey?: keyof LiveVersions;
   platform: string;
   status: string;
   statusKind: "live" | "beta" | "soon";
@@ -21,6 +24,7 @@ export const appEntries: AppEntry[] = [
   {
     name: "Wisconsin Creative",
     icon: "wisconsin-creative",
+    liveKey: "wisconsin-creative",
     platform: "iPhone and iPad",
     status: "",
     statusKind: "live",
@@ -33,11 +37,12 @@ export const appEntries: AppEntry[] = [
   {
     name: "Offload",
     icon: "offload",
+    liveKey: "offload",
     platform: "macOS",
     status: "Beta",
     statusKind: "beta",
     blurb: "Ingests camera cards, matches clips to the play-by-play, and names them for editing.",
-    version: "1.1.1",
+    version: "1.1.2",
     requires: "macOS 15 or later",
     href: "https://github.com/erikrole/offload-releases/releases/latest/download/Offload.dmg",
     cta: "Download for macOS",
@@ -65,7 +70,9 @@ function esc(value: string) {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-function appCard(app: AppEntry) {
+function appCard(app: AppEntry, live: LiveVersions) {
+  const fresh = app.liveKey ? live[app.liveKey] : undefined;
+  if (fresh) app = { ...app, version: fresh.version, released: app.released === undefined ? undefined : (fresh.released ?? app.released) };
   const platformPill = app.platform ? `<span class="pill left">${esc(app.platform)}</span>` : "";
   const statusPill = app.status ? `<span class="pill right ${app.statusKind}">${esc(app.status)}</span>` : "";
   const meta = app.version
@@ -84,7 +91,7 @@ function appCard(app: AppEntry) {
     : `<li><div class="tool app soon">${body}</div></li>`;
 }
 
-export function renderAppsPage(nonce?: string) {
+export function renderAppsPage(nonce?: string, live: LiveVersions = {}) {
   const n = nonce ? ` nonce="${esc(nonce)}"` : "";
   return `<!doctype html>
 <html lang="en">
@@ -225,7 +232,7 @@ export function renderAppsPage(nonce?: string) {
     <p class="lede">Apps and tools for gear, footage, and game-day work.</p>
     <h2 class="section">Apps</h2>
     <ul class="grid apps">
-      ${appEntries.map(appCard).join("\n      ")}
+      ${appEntries.map((app) => appCard(app, live)).join("\n      ")}
     </ul>
     <h2 class="section">Tools</h2>
     <ul class="grid">
