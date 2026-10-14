@@ -27,6 +27,21 @@
   },
   {
     "date": "2026-10-12",
+    "title": "Faster Operations page",
+    "type": "improvement",
+    "summary": "Operations shows each check lane as soon as it loads, and Import’s wizard steps are clearer.",
+    "details": [
+      "Operations no longer waits for every queue before showing anything — ready lanes appear first, with the rest filling in.",
+      "If Operations cannot load at all, you get a clear retry instead of a blank page.",
+      "Import’s step rail and header explain the CSV → map → preview → import path with larger step targets."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 454
+  },
+  {
+    "date": "2026-10-12",
     "title": "Clearer first-day setup",
     "type": "improvement",
     "summary": "New accounts set up their profile on the Welcome page itself, and Blasts recover cleanly when a load fails.",
