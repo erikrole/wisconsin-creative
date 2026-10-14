@@ -10,9 +10,18 @@ enum GearOpsLayout {
     static let glanceKiosks = 4
 }
 
-private enum ExtraRoute: Hashable {
+enum ExtraRoute: Hashable {
     case open(id: String)
     case pickup(id: String)
+}
+
+extension BookingSearchResult {
+    var route: ExtraRoute {
+        switch booking {
+        case .open(let booking): .open(id: booking.id)
+        case .reservation(let booking): .pickup(id: booking.id)
+        }
+    }
 }
 
 struct MenuBarContentView: View {
@@ -27,6 +36,9 @@ struct MenuBarContentView: View {
     @State private var showsAllOpenBookings = false
     @State private var showsAllKiosks = false
     @State private var selectedRoute: ExtraRoute? = MenuBarContentView.fixtureRoute
+    @State private var searchText = MenuBarContentView.fixtureQuery
+    @State private var highlightedRoute: ExtraRoute?
+    @FocusState private var searchIsFocused: Bool
 
     /// `GEAROPS_FIXTURE_ROUTE=open:<id>` opens a booking detail for captures.
     private static var fixtureRoute: ExtraRoute? {
@@ -37,6 +49,20 @@ struct MenuBarContentView: View {
         if raw.hasPrefix("pickup:") { return .pickup(id: String(raw.dropFirst(7))) }
         #endif
         return nil
+    }
+
+    /// `GEAROPS_FIXTURE_QUERY=<text>` starts the capture with a search applied.
+    private static var fixtureQuery: String {
+        #if DEBUG
+        if GearOpsFixture.isActive {
+            return ProcessInfo.processInfo.environment["GEAROPS_FIXTURE_QUERY"] ?? ""
+        }
+        #endif
+        return ""
+    }
+
+    private var isSearching: Bool {
+        !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     private let minimumContentHeight: CGFloat = 180
@@ -56,10 +82,16 @@ struct MenuBarContentView: View {
                 operationsView
             }
         }
-        .onAppear {
-            guard model.shouldRetryCredentialRestore else { return }
-            Task { await model.restoreSession() }
-        }
+        // Each presentation makes the extra's window key. That is the moment
+        // the user is looking, so it retries a locked Keychain and re-reads a
+        // snapshot that push may have missed (bounded inside the model).
+        .background(ExtraWindowEvents(
+            onBecomeKey: {
+                Task { await model.refreshOnPresentation() }
+                if selectedRoute == nil, model.user != nil { searchIsFocused = true }
+            },
+            onKey: handleKey
+        ))
         .onChange(of: model.shouldRetryCredentialRestore) { _, shouldRetry in
             guard shouldRetry else { return }
             Task { await model.restoreSession() }
@@ -73,7 +105,63 @@ struct MenuBarContentView: View {
             showsAllOpenBookings = false
             showsAllKiosks = false
             selectedRoute = nil
+            searchText = ""
+            highlightedRoute = nil
         }
+        .onChange(of: searchText) { _, _ in
+            highlightedRoute = nil
+        }
+    }
+
+    // MARK: Keyboard
+
+    /// Arrow keys move a highlight through the visible booking rows while
+    /// focus stays in the search field, so typing keeps refining. Return opens
+    /// the highlighted booking; Escape clears the search. Anything unhandled
+    /// falls through to the field and the existing shortcuts.
+    private func handleKey(_ key: ExtraKey) -> Bool {
+        // Only while search owns focus: once Tab moves to a button, Return and
+        // Escape belong to that control, not the highlighted booking.
+        guard model.user != nil, searchIsFocused else { return false }
+        switch key {
+        case .down, .up:
+            guard selectedRoute == nil else { return false }
+            let routes = navigableRoutes(at: .now)
+            guard !routes.isEmpty else { return false }
+            let current = highlightedRoute.flatMap { routes.firstIndex(of: $0) }
+            let next: Int = switch (key, current) {
+            case (.down, nil): 0
+            case (.up, nil): routes.count - 1
+            case (.down, let index?): min(index + 1, routes.count - 1)
+            default: max((current ?? 0) - 1, 0)
+            }
+            highlightedRoute = routes[next]
+            return true
+        case .select:
+            guard selectedRoute == nil, let highlightedRoute else { return false }
+            selectedRoute = highlightedRoute
+            return true
+        case .cancel:
+            guard selectedRoute == nil else { return false }
+            if isSearching || highlightedRoute != nil {
+                searchText = ""
+                highlightedRoute = nil
+                return true
+            }
+            return false
+        }
+    }
+
+    /// The same order the rows render in, so the highlight never jumps.
+    private func navigableRoutes(at now: Date) -> [ExtraRoute] {
+        if isSearching {
+            return model.searchBookings(searchText, at: now).map(\.route)
+        }
+        let pickups = visibleItems(model.pendingPickupBookings(at: now), cap: GearOpsLayout.glancePickups, expanded: showsAllPickups)
+            .map { ExtraRoute.pickup(id: $0.id) }
+        let open = visibleItems(model.glanceOpenBookings(at: now), cap: GearOpsLayout.glanceOpenBookings, expanded: showsAllOpenBookings)
+            .map { ExtraRoute.open(id: $0.id) }
+        return pickups + open
     }
 
     private var restoringView: some View {
@@ -90,24 +178,33 @@ struct MenuBarContentView: View {
         TimelineView(.periodic(from: .now, by: 60)) { context in
             VStack(spacing: 0) {
                 header(at: context.date)
+                searchField
                 Divider()
-                ScrollView {
-                    Group {
-                        if let selectedRoute {
-                            bookingDetail(selectedRoute, at: context.date)
-                        } else {
-                            VStack(alignment: .leading, spacing: 16) {
-                                pendingPickupsList(at: context.date)
-                                openBookingsList(at: context.date)
-                                systemHealth(at: context.date)
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        Group {
+                            if let selectedRoute {
+                                bookingDetail(selectedRoute, at: context.date)
+                            } else if isSearching {
+                                searchResults(at: context.date)
+                            } else {
+                                VStack(alignment: .leading, spacing: 16) {
+                                    pendingPickupsList(at: context.date)
+                                    openBookingsList(at: context.date)
+                                    systemHealth(at: context.date)
+                                }
                             }
                         }
+                        .padding(16)
+                        .onGeometryChange(for: CGFloat.self, of: { proxy in
+                            ceil(proxy.size.height)
+                        }) { newHeight in
+                            measuredContentHeight = newHeight
+                        }
                     }
-                    .padding(16)
-                    .onGeometryChange(for: CGFloat.self, of: { proxy in
-                        ceil(proxy.size.height)
-                    }) { newHeight in
-                        measuredContentHeight = newHeight
+                    .onChange(of: highlightedRoute) { _, route in
+                        guard let route else { return }
+                        proxy.scrollTo(route)
                     }
                 }
                 // A fresh scroll position per route, so opening a booking
@@ -162,10 +259,101 @@ struct MenuBarContentView: View {
         .padding(16)
     }
 
+    private var searchField: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
+            TextField("Search bookings, people, or gear", text: $searchText)
+                .textFieldStyle(.plain)
+                .focused($searchIsFocused)
+                .accessibilityLabel("Search bookings, people, or gear")
+            if !searchText.isEmpty {
+                Button {
+                    searchText = ""
+                    searchIsFocused = true
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.tertiary)
+                }
+                .buttonStyle(.plain)
+                .help("Clear search (Esc)")
+                .accessibilityLabel("Clear search")
+            }
+        }
+        .font(.callout)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(Color.primary.opacity(0.06), in: .rect(cornerRadius: 8))
+        .padding(.horizontal, 16)
+        .padding(.bottom, 12)
+        .background {
+            // ⌘F returns to the field from a booking detail.
+            Button("") {
+                selectedRoute = nil
+                searchIsFocused = true
+            }
+            .keyboardShortcut("f", modifiers: .command)
+            .hidden()
+            .accessibilityHidden(true)
+        }
+    }
+
+    @ViewBuilder
+    private func searchResults(at now: Date) -> some View {
+        let results = model.searchBookings(searchText, at: now)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                sectionTitle("Results")
+                Spacer()
+                Text("\(results.count)")
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.secondary)
+                    .accessibilityLabel("\(results.count) result\(results.count == 1 ? "" : "s")")
+            }
+            if results.isEmpty {
+                Text("No open or upcoming bookings match “\(searchText.trimmingCharacters(in: .whitespacesAndNewlines))”.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                LazyVStack(spacing: 8) {
+                    ForEach(results) { result in
+                        switch result.booking {
+                        case .open(let booking):
+                            OpenBookingRow(
+                                booking: booking,
+                                now: now,
+                                matchedItem: result.matchedItem,
+                                isHighlighted: highlightedRoute == result.route,
+                                onOpenWeb: { model.openBooking(booking) }
+                            ) {
+                                selectedRoute = result.route
+                            }
+                            .id(result.route)
+                        case .reservation(let booking):
+                            PickupBookingRow(
+                                booking: booking,
+                                now: now,
+                                matchedItem: result.matchedItem,
+                                isHighlighted: highlightedRoute == result.route,
+                                onOpenWeb: { model.openBooking(booking) }
+                            ) {
+                                selectedRoute = result.route
+                            }
+                            .id(result.route)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     /// Custody, overdue, and freshness stay in the header so a glance does not
     /// require scrolling past rows.
     private func headerSubtitle(at now: Date) -> String {
-        guard let count = model.custodyCount else { return model.healthLabel }
+        guard let count = model.custodyCount else { return model.healthLabel(at: now) }
         var parts = ["\(count) open"]
         let overdue = model.overdueBookingCount(at: now)
         if overdue > 0 { parts.append("\(overdue) overdue") }
@@ -251,7 +439,7 @@ struct MenuBarContentView: View {
             }
 
             if model.openBookings.isEmpty {
-                Text(model.openBookingTotal == nil
+                Text(model.snapshot == nil
                     ? "Refresh to load current checkouts."
                     : "All gear is accounted for.")
                     .font(.callout)
@@ -305,10 +493,12 @@ struct MenuBarContentView: View {
             OpenBookingRow(
                 booking: booking,
                 now: now,
+                isHighlighted: highlightedRoute == .open(id: booking.id),
                 onOpenWeb: { model.openBooking(booking) }
             ) {
                 selectedRoute = .open(id: booking.id)
             }
+            .id(ExtraRoute.open(id: booking.id))
         }
     }
 
@@ -331,10 +521,12 @@ struct MenuBarContentView: View {
                         PickupBookingRow(
                             booking: booking,
                             now: now,
+                            isHighlighted: highlightedRoute == .pickup(id: booking.id),
                             onOpenWeb: { model.openBooking(booking) }
                         ) {
                             selectedRoute = .pickup(id: booking.id)
                         }
+                        .id(ExtraRoute.pickup(id: booking.id))
                     }
                 }
 
@@ -353,11 +545,11 @@ struct MenuBarContentView: View {
             HStack {
                 sectionTitle("System health")
                 Spacer()
-                Label(model.healthLabel, systemImage: model.healthSeverity.symbol)
+                Label(model.healthLabel(at: now), systemImage: model.healthSeverity(at: now).symbol)
                     .font(.caption.weight(.semibold))
                     .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(model.healthSeverity.color)
-                    .animation(reduceMotion ? nil : .smooth(duration: 0.2), value: model.healthSeverity)
+                    .foregroundStyle(model.healthSeverity(at: now).color)
+                    .animation(reduceMotion ? nil : .smooth(duration: 0.2), value: model.healthSeverity(at: now))
             }
             // Health is one grouped surface so the popover reads as two kinds
             // of content: actionable booking cards, then a status panel.
@@ -365,7 +557,7 @@ struct MenuBarContentView: View {
                 HealthRow(
                     title: "Companion data",
                     detail: apiHealthDetail(at: now),
-                    severity: model.companionHealthSeverity,
+                    severity: model.companionHealthSeverity(at: now),
                     // `refresh()` coalesces re-entry itself, so the row stays
                     // tappable mid-refresh and shows progress in place of the
                     // refresh glyph. A chevron would promise navigation.
@@ -498,507 +690,14 @@ struct MenuBarContentView: View {
     }
 
     private func apiHealthDetail(at now: Date) -> String {
-        if model.countDataIsPartial { return "Fresh totals not confirmed" }
-        guard let snapshot = model.snapshot else { return "Unavailable" }
-        return "Last synced " + snapshot.freshnessLabel(at: now).replacingOccurrences(of: "Updated ", with: "")
-    }
-}
-
-private struct PickupBookingRow: View {
-    let booking: BookingActivitySnapshot
-    let now: Date
-    let onOpenWeb: () -> Void
-    let action: () -> Void
-
-    private var timingLabel: String { booking.pickupLabel(at: now) }
-
-    var body: some View {
-        BookingGlanceCard(
-            tone: .orange,
-            isOverdue: false,
-            title: booking.title,
-            timing: timingLabel,
-            requester: booking.requester.name,
-            location: booking.location.name,
-            itemCount: nil,
-            avatarName: booking.requester.name,
-            avatarUrl: booking.requester.avatarUrl,
-            help: booking.title,
-            accessibilityLabel: "\(booking.title), \(timingLabel), \(booking.requester.name), \(booking.location.name)",
-            accessibilityHint: "Shows details and items",
-            refNumber: nil,
-            onOpenWeb: onOpenWeb,
-            action: action
-        )
-    }
-}
-
-private struct OpenBookingRow: View {
-    let booking: OpenBooking
-    let now: Date
-    let onOpenWeb: () -> Void
-    let action: () -> Void
-
-    private var isOverdue: Bool { booking.isOverdue(at: now) }
-    private var timingLabel: String { booking.dueLabel(at: now) }
-
-    var body: some View {
-        BookingGlanceCard(
-            tone: isOverdue ? .red : .blue,
-            isOverdue: isOverdue,
-            title: booking.title,
-            timing: timingLabel,
-            requester: booking.requester.name,
-            location: booking.location.name,
-            itemCount: booking.itemCount,
-            avatarName: booking.requester.name,
-            avatarUrl: booking.requester.avatarUrl,
-            help: booking.refNumber.map { "\(booking.title) · \($0)" } ?? booking.title,
-            accessibilityLabel: "\(isOverdue ? "Overdue, " : "")\(booking.title), \(booking.requester.name), \(booking.location.name), \(timingLabel)",
-            accessibilityHint: "Shows details and items",
-            refNumber: booking.refNumber,
-            onOpenWeb: onOpenWeb,
-            action: action
-        )
-    }
-}
-
-/// iOS `BookingRow` compact card: 4pt rail, 40pt avatar, 16pt title, operational
-/// timing, requester · location · items, 16pt continuous card.
-private struct BookingGlanceCard: View {
-    let tone: StatusTone
-    let isOverdue: Bool
-    let title: String
-    let timing: String
-    let requester: String
-    let location: String
-    let itemCount: Int?
-    let avatarName: String
-    let avatarUrl: String?
-    let help: String
-    let accessibilityLabel: String
-    let accessibilityHint: String
-    let refNumber: String?
-    let onOpenWeb: () -> Void
-    let action: () -> Void
-
-    @State private var isHovering = false
-
-    var body: some View {
-        card.contextMenu {
-            Button("Show Details", action: action)
-            Button("Open in Wisconsin Creative", action: onOpenWeb)
-            if let refNumber, !refNumber.isEmpty {
-                Divider()
-                Button("Copy Reference \(refNumber)") { Pasteboard.copy(refNumber) }
-            }
+        guard model.snapshot != nil, let confirmedAt = model.confirmedAt else { return "Unavailable" }
+        // Both read from the last confirmed read, not the projection's
+        // generation time: an unchanged projection on a quiet day is still
+        // freshly synced.
+        if model.snapshotIsStale(at: now) {
+            return "Unconfirmed for " + GearOpsSnapshot.compactElapsed(from: confirmedAt, to: now)
         }
-    }
-
-    @ViewBuilder
-    private var card: some View {
-        if #available(macOS 26.0, *) {
-            cardButton
-                .glassEffect(
-                    isOverdue
-                        ? .regular.tint(Color.red.opacity(0.12)).interactive()
-                        : .regular.interactive(),
-                    in: .rect(cornerRadius: Brand.Radius.md)
-                )
-                .onHover { isHovering = $0 }
-        } else {
-            cardButton
-                .background(
-                    fallbackBackground,
-                    in: RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous)
-                )
-                .overlay {
-                    RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous)
-                        .strokeBorder(Color.hairline, lineWidth: 0.5)
-                }
-                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 3)
-                .onHover { isHovering = $0 }
-        }
-    }
-
-    private var fallbackBackground: Color {
-        if isOverdue { return Color.statusBackground(.red) }
-        return isHovering ? Color.primary.opacity(0.1) : Color.primary.opacity(0.045)
-    }
-
-    private var cardButton: some View {
-        Button(action: action) {
-            HStack(spacing: 12) {
-                StatusRail(tone: tone)
-                UserAvatarView(name: avatarName, avatarUrl: avatarUrl, size: 40)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title)
-                        .font(.system(size: 16, weight: .bold))
-                        .lineLimit(1)
-                    Text(timing)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Color.statusText(tone))
-                        .lineLimit(1)
-                    HStack(spacing: 4) {
-                        Text(requester)
-                        Text("·")
-                        Text(location)
-                        if let itemCount, itemCount > 0 {
-                            Text("·")
-                            Text("\(itemCount) item\(itemCount == 1 ? "" : "s")")
-                                .monospacedDigit()
-                        }
-                    }
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                }
-                Spacer(minLength: 8)
-                Image(systemName: "chevron.right")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.tertiary)
-                    .accessibilityHidden(true)
-            }
-            .padding(.vertical, 12)
-            .padding(.horizontal, 14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(.rect)
-        }
-        .buttonStyle(.plain)
-        .help(help)
-        .accessibilityLabel(accessibilityLabel)
-        .accessibilityHint(accessibilityHint)
-    }
-}
-
-private struct ExtraBookingDetail: View {
-    let title: String
-    let timing: String
-    let tone: StatusTone
-    let isOverdue: Bool
-    let requester: OpenBooking.Person
-    let locationName: String
-    let refNumber: String?
-    let items: [OpenBooking.ItemReference]
-    let backLabel: String
-    let onBack: () -> Void
-    let onOpenWeb: () -> Void
-
-    private var namedItems: [OpenBooking.ItemReference] { items.filter(\.hasIdentity) }
-    private var itemsAreAnonymous: Bool { !items.isEmpty && namedItems.isEmpty }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Button(action: onBack) {
-                Label(backLabel, systemImage: "chevron.left")
-            }
-            .buttonStyle(.link)
-            .font(.callout.weight(.semibold))
-            .keyboardShortcut(.cancelAction)
-            .help("Back to all bookings (Esc)")
-            .accessibilityLabel(backLabel)
-
-            HStack(alignment: .top, spacing: 12) {
-                StatusRail(tone: tone)
-                UserAvatarView(name: requester.name, avatarUrl: requester.avatarUrl, size: 40)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title)
-                        .font(.system(size: 16, weight: .bold))
-                        .fixedSize(horizontal: false, vertical: true)
-                    Text(timing)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Color.statusText(tone))
-                    HStack(spacing: 4) {
-                        Text(requester.name)
-                        Text("·")
-                        Text(locationName)
-                    }
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    if let refNumber, !refNumber.isEmpty {
-                        Text(refNumber)
-                            .font(.caption.monospaced())
-                            .foregroundStyle(.tertiary)
-                    }
-                }
-                Spacer(minLength: 0)
-            }
-            .padding(.vertical, 12)
-            .padding(.horizontal, 14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                isOverdue ? Color.statusBackground(.red) : Color.primary.opacity(0.045),
-                in: RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous)
-            )
-
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text("Items")
-                        .font(.caption.weight(.semibold))
-                        .kerning(0.4)
-                        .foregroundStyle(.secondary)
-                        .textCase(.uppercase)
-                    Spacer()
-                    if !items.isEmpty {
-                        Text("\(items.count)")
-                            .font(.caption.monospacedDigit())
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                if items.isEmpty {
-                    Text("No items on this booking.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                } else if itemsAreAnonymous {
-                    Text("Item names are not in this snapshot yet. Sign in again to load them.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                } else {
-                    VStack(alignment: .leading, spacing: 0) {
-                        ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                            if index > 0 { Divider() }
-                            ExtraItemRow(item: item)
-                        }
-                    }
-                    if items.count >= 48 {
-                        Text("Showing the first 48 items.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
-
-            HStack(spacing: 8) {
-                Button(action: onOpenWeb) {
-                    Label("Open in Wisconsin Creative", systemImage: "arrow.up.forward.app")
-                }
-                .buttonStyle(.borderedProminent)
-                .keyboardShortcut(.defaultAction)
-                .help("Open this booking in your browser (Return)")
-                if let refNumber, !refNumber.isEmpty {
-                    CopyReferenceButton(refNumber: refNumber)
-                }
-            }
-            .controlSize(.regular)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
-private struct ExtraItemRow: View {
-    let item: OpenBooking.ItemReference
-
-    var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(item.listPrimaryTitle)
-                    .font(.callout.weight(.semibold))
-                    .lineLimit(1)
-                if let subtitle = item.listSecondaryTitle {
-                    Text(subtitle)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-            }
-            Spacer(minLength: 8)
-            if let quantity = item.quantity, quantity > 1 {
-                Text("×\(quantity)")
-                    .font(.callout.monospacedDigit())
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(.vertical, 8)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(accessibilityLabel)
-    }
-
-    private var accessibilityLabel: String {
-        var parts = [item.listPrimaryTitle]
-        if let subtitle = item.listSecondaryTitle { parts.append(subtitle) }
-        if let quantity = item.quantity { parts.append("quantity \(quantity)") }
-        return parts.joined(separator: ", ")
-    }
-}
-
-private struct HealthRow: View {
-    enum Accessory {
-        case chevron
-        case refresh
-        case progress
-    }
-
-    let title: String
-    let detail: String
-    let severity: GearOpsHealthSeverity
-    var accessory: Accessory = .chevron
-    var action: (() -> Void)?
-
-    @State private var isHovering = false
-
-    var body: some View {
-        if let action {
-            Button(action: action) { content }
-                .buttonStyle(.plain)
-                .background(isHovering ? Color.primary.opacity(0.06) : .clear)
-                .onHover { isHovering = $0 }
-                .accessibilityElement(children: .combine)
-                .accessibilityAddTraits(.isButton)
-        } else {
-            content.accessibilityElement(children: .combine)
-        }
-    }
-
-    private var content: some View {
-        HStack(spacing: 8) {
-            Image(systemName: severity.symbol)
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(color)
-            Text(title)
-            Spacer()
-            Text(detail)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.trailing)
-            if action != nil {
-                accessoryView
-                    .foregroundStyle(isHovering ? .secondary : .tertiary)
-                    .frame(width: 12)
-                    .accessibilityHidden(true)
-            }
-        }
-        .font(.callout)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
-        .contentShape(.rect)
-    }
-
-    @ViewBuilder
-    private var accessoryView: some View {
-        switch accessory {
-        case .chevron:
-            Image(systemName: "chevron.right")
-                .font(.caption2.weight(.semibold))
-        case .refresh:
-            Image(systemName: "arrow.clockwise")
-                .font(.caption2.weight(.semibold))
-        case .progress:
-            ProgressView()
-                .controlSize(.mini)
-        }
-    }
-
-    private var color: Color { severity.color }
-}
-
-/// Reference numbers are what staff read aloud or paste into a search, so the
-/// detail view offers a one-click copy with brief confirmation.
-private struct CopyReferenceButton: View {
-    let refNumber: String
-
-    @State private var didCopy = false
-
-    var body: some View {
-        Button {
-            Pasteboard.copy(refNumber)
-            didCopy = true
-            Task {
-                try? await Task.sleep(for: .seconds(1.5))
-                didCopy = false
-            }
-        } label: {
-            Label(didCopy ? "Copied" : "Copy Ref", systemImage: didCopy ? "checkmark" : "doc.on.doc")
-                .contentTransition(.symbolEffect(.replace))
-        }
-        .buttonStyle(.bordered)
-        .help("Copy \(refNumber)")
-        .accessibilityLabel(didCopy ? "Copied reference \(refNumber)" : "Copy reference \(refNumber)")
-    }
-}
-
-private enum Pasteboard {
-    @MainActor
-    static func copy(_ string: String) {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(string, forType: .string)
-    }
-}
-
-private struct KioskRow: View {
-    let device: KioskDevice
-    let now: Date
-    let action: () -> Void
-
-    @State private var isHovering = false
-
-    private var state: KioskConnectionState { device.connectionState(at: now) }
-
-    var body: some View {
-        Button(action: action) { content }
-            .buttonStyle(.plain)
-            .background(isHovering ? Color.primary.opacity(0.06) : .clear)
-            .onHover { isHovering = $0 }
-            .accessibilityElement(children: .combine)
-            .accessibilityAddTraits(.isButton)
-            .accessibilityHint("Opens kiosk devices in Wisconsin Creative")
-            .help(buildHelp)
-    }
-
-    private var content: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "ipad")
-                .symbolRenderingMode(.hierarchical)
-                .frame(width: 22)
-                .foregroundStyle(stateColor)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(device.name)
-                    .lineLimit(1)
-                Text(kioskDetail)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-            Spacer()
-            Text(state.label)
-                .font(.caption.weight(.medium))
-                .foregroundStyle(stateColor)
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
-        .contentShape(.rect)
-    }
-
-    private var kioskDetail: String {
-        if state == .online {
-            return "\(device.location.name) · \(device.pendingPickupCount) pickup\(device.pendingPickupCount == 1 ? "" : "s") · \(device.openCheckoutCount) open"
-        }
-        guard let lastSeenAt = device.lastSeenAt else {
-            return "\(device.location.name) · Never checked in"
-        }
-        return "\(device.location.name) · Last seen \(lastSeenAt.formatted(.relative(presentation: .named)))"
-    }
-
-    private var buildHelp: String {
-        device.buildLabel.map { "Build \($0)" } ?? "Build unknown"
-    }
-
-    private var stateColor: Color {
-        switch state {
-        case .online: .green
-        case .stale: .secondary
-        case .offline: .red
-        case .inactive: .secondary
-        }
-    }
-}
-
-private extension GearOpsHealthSeverity {
-    var color: Color {
-        switch self {
-        case .healthy: .green
-        case .attention: .orange
-        case .critical: .red
-        }
+        let age = max(0, now.timeIntervalSince(confirmedAt))
+        return age < 60 ? "Last synced just now" : "Last synced \(GearOpsSnapshot.compactElapsed(from: confirmedAt, to: now)) ago"
     }
 }

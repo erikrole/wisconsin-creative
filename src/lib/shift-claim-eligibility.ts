@@ -45,3 +45,18 @@ export function shiftClaimEligibilityReason(
   }
   return shiftClaimAreaEligibilityReason(profile.primaryArea, shift.area);
 }
+
+/**
+ * Why a crew cannot be claimed from at all, or null when it is open. The pickup
+ * endpoint enforces this and shift-group reads send the result to clients as
+ * `claimsOpen`, so web and native never decide it themselves.
+ */
+export function crewClaimClosedReason(group: {
+  archivedAt: Date | null;
+  event: { archivedAt: Date | null; isHidden: boolean; status: string };
+}): string | null {
+  if (group.archivedAt || group.event.archivedAt || group.event.isHidden || group.event.status === "CANCELLED") {
+    return "This shift is not open for pickup";
+  }
+  return null;
+}

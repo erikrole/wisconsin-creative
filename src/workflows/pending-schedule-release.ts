@@ -72,11 +72,8 @@ export async function releasePendingScheduleVersion(
       pending.updatedBy.role,
       // Re-checked inside the publish transaction: the draft can be discarded
       // and recreated at the same version between the read above and here.
-      ...(eventHasEnded || runId !== undefined
-        ? [{
-          ...(eventHasEnded ? { clearNotificationPending: true } : {}),
-          ...(runId !== undefined ? { expectedAutoReleaseRunId: runId } : {}),
-        }]
+      ...(runId !== undefined
+        ? [{ expectedAutoReleaseRunId: runId }]
         : []),
     );
 

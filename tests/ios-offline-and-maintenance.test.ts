@@ -67,7 +67,7 @@ describe("iOS item maintenance flag (GAP-36, field-work slice)", () => {
     // Toggle, not a setter: the route derives the next status itself.
     expect(route).toContain('before.status === "MAINTENANCE" ? "AVAILABLE" : "MAINTENANCE"');
     expect(route).toContain('isolationLevel: "Serializable"');
-    expect(route).toContain("createAuditEntry(");
+    expect(route).toContain("createAuditEntryTx(tx,");
   });
 
   /**

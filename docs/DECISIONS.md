@@ -67,6 +67,7 @@
 - D-061: Shared travel-case checkouts are custodian-neutral
 - D-062: Gameday kits are callable, exclusive per sport, and pickup-aliased
 - D-064: Kiosk peer transfer, anyone-nudge, and missing items follow the redesign
+- D-066: User sessions slide on activity, remembered by default
 
 ---
 
@@ -1013,6 +1014,7 @@ These are non-negotiable integrity constraints. Every feature must preserve them
 - Consequences:
   - Web can ship passkey enrollment and login without adding an identity-verification workflow or changing invite semantics.
   - Native iOS now uses the same server ceremony contract through `AuthenticationServices`, with the app associated to the canonical `webcredentials` domain. Production device and domain proof remain rollout gates.
+- Amendment (2026-10-09, automatic upgrade): Right after a password sign-in or account creation, web (WebAuthn conditional create via `useAutoRegister`) and iOS (`requestStyle = .conditional`) ask the credential manager that filled the password to save a passkey, with no prompt. The password just entered is the enrollment reauthentication. The ceremony is started with `automatic: true`, which (a) is skipped for accounts that already have a passkey, (b) requests `userVerification: "preferred"`, and (c) is recorded on `PasskeyChallenge.automatic`, so only that ceremony verifies without UV. A client cannot claim it at verify time. Sign-in with the resulting passkey still requires UV. Failures are silent. It is not attempted during a forced password change. The audit entry records `automatic`.
   - Production must configure an explicit WebAuthn RP ID and exact accepted origin before enrollment is enabled for real users.
 - Guardrails:
   - Never accept a passkey assertion without matching RP ID, origin, expected challenge, required user verification, active user, and one-time challenge consumption.
@@ -1580,3 +1582,16 @@ These are non-negotiable integrity constraints. Every feature must preserve them
 - Hosting (2026-09-30): the Workforce area stays in the main app on the main hostname, protected by the ADMIN-only `hiring` and `workforce` permissions, not moved behind a separate Cloudflare Access hostname. Reasons: hire, invite, claim, overview, and planning are in-database operations today, and a split would need a second database or service API, deploy, and preview setup. Revisit if applicant data needs isolation from a compromise of the main app (separate app and database), or if front-door SSO and MFA is wanted for these pages; a second hostname with server-side Access JWT verification was scoped but not built.
 - Review amendments: audit rows are hard-deleted at 90 days, so purges are recorded in a durable non-PII ledger; hiring audits never snapshot contact data; code uses `applicant` (not `candidate`) naming. See brief section 14.
 - Reference: `docs/BRIEF_WORKFORCE_HIRING_V1.md`.
+
+## D-066: User Sessions Slide on Activity, Remembered by Default
+- Date: 2026-10-09
+- Status: Accepted; shipped in code, rollout proof pending.
+- Context: User sessions had a fixed expiry set once at sign-in: 12 hours, or 30 days with "Remember me", which was off by default. Nothing extended them, so an active person was signed out mid-week, and the native app (always 30 days) signed everyone out monthly. Account creation always issued the 12-hour session. No earlier decision covered user session lifetime.
+- Decision:
+  - `Session.persistent` records whether the sign-in asked to be remembered. Authenticated activity slides `expiresAt` forward: remembered sessions to 30 idle days, capped at 90 days from sign-in; unremembered sessions to 12 idle hours, capped at 7 days.
+  - Slides are throttled (about one write a day when remembered, one an hour otherwise) and happen in `requireAuth`, also during an admin role preview.
+  - The database row is the only authority. The cookie is set once: a remembered sign-in gets a cookie that lasts to the 90-day cap, an unremembered one gets a browser-session cookie. A slide never re-issues the cookie, because server components cannot set cookies; a cookie that outlives its row is a dead token that returns 401.
+  - "Keep me signed in" starts ticked on web sign-in and account creation and shows on every step. Untick it on a shared computer. The native app keeps sending remembered sign-ins, and account creation defaults to remembered when the client says nothing.
+  - A signed-out visit returns to the page that was asked for: the app layout and client 401 handling pass a same-origin `returnTo`, which sign-in validates before using.
+- Guardrails: Revocation is unchanged. Password change or reset, deactivation, Settings sign-out, and sign-out all delete rows immediately. Kiosk sessions keep D-039. The macOS companion keeps D-047.
+- Consequences: An active person on their own device signs in at most once every 90 days, and with a passkey that sign-in takes one tap. A sign-in left on a shared computer with the box ticked stays live for up to 30 idle days, so the checkbox remains visible.

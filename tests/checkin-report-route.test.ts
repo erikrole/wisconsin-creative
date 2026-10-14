@@ -7,6 +7,8 @@ vi.mock("@/lib/auth", () => ({
 
 vi.mock("@/lib/db", () => ({
   db: {
+    $transaction: vi.fn(),
+    asset: { findUnique: vi.fn(), update: vi.fn() },
     bookingSerializedItem: {
       findUnique: vi.fn(),
     },
@@ -22,6 +24,7 @@ vi.mock("@/lib/db", () => ({
 
 vi.mock("@/lib/audit", () => ({
   createAuditEntry: vi.fn(),
+  createAuditEntryTx: vi.fn(),
 }));
 
 vi.mock("@/lib/blob", () => ({
@@ -42,6 +45,7 @@ vi.mock("@/lib/services/booking-rules", () => ({
 
 vi.mock("@/lib/services/notifications", () => ({
   notifyItemReport: vi.fn(async () => undefined),
+  deferPush: vi.fn(),
 }));
 
 vi.mock("@sentry/nextjs", () => ({
@@ -50,6 +54,7 @@ vi.mock("@sentry/nextjs", () => ({
 
 import { requireAuth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { createAuditEntryTx } from "@/lib/audit";
 import { deleteImage } from "@/lib/blob";
 import { put } from "@vercel/blob";
 import { requireBookingAction } from "@/lib/services/booking-rules";
@@ -77,6 +82,8 @@ function post(path: string, body: Record<string, unknown>) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(db.$transaction).mockImplementation(async (fn) => (fn as (tx: typeof db) => Promise<unknown>)(db));
+  vi.mocked(db.asset.findUnique).mockResolvedValue({ status: "AVAILABLE" } as never);
   vi.mocked(requireAuth).mockResolvedValue(staffUser);
   vi.mocked(requireBookingAction).mockResolvedValue(
     { id: "booking-1", title: "Checkout" } as unknown as Awaited<ReturnType<typeof requireBookingAction>>,
@@ -117,6 +124,31 @@ describe("check-in report route", () => {
 
     expect(res.status).toBe(409);
     expect(db.checkinItemReport.upsert).not.toHaveBeenCalled();
+  });
+
+  it("keeps replaced evidence available to the audit history", async () => {
+    vi.mocked(db.checkinItemReport.findUnique).mockResolvedValue({
+      imageUrl: "https://blob.example.com/original.jpg", createdAt: new Date("2026-01-01"),
+      type: CheckinReportType.DAMAGED, description: "Original evidence", reportedById: "staff-1",
+    } as never);
+    const form = new FormData();
+    form.set("assetId", "cm111111111111111111111111");
+    form.set("type", "DAMAGED");
+    form.set("description", "New evidence");
+    form.set("file", new File(["image"], "damage.jpg", { type: "image/jpeg" }));
+    const response = await checkinReport(new Request("https://app.example.com/api/checkouts/booking-1/checkin-report", {
+      method: "POST", headers: { host: "app.example.com", origin: "https://app.example.com" }, body: form,
+    }), { params: Promise.resolve({ id: "booking-1" }) });
+    expect(response.status).toBe(200);
+    // Updated evidence reopens a flag staff dismissed from the dashboard.
+    expect(db.checkinItemReport.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      update: expect.objectContaining({ dismissedAt: null, dismissedById: null, lastReportedAt: expect.any(Date) }),
+    }));
+    expect(deleteImage).not.toHaveBeenCalled();
+    expect(createAuditEntryTx).toHaveBeenCalledWith(db, expect.objectContaining({
+      entityType: "booking",
+      before: expect.objectContaining({ description: "Original evidence", imageUrl: "https://blob.example.com/original.jpg", createdAt: "2026-01-01T00:00:00.000Z" }),
+    }));
   });
 
   it("deletes newly uploaded report images when report persistence fails", async () => {

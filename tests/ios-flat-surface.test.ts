@@ -12,7 +12,9 @@ const PAIRS: Array<[flat: string, kiosk: string]> = [
 function hexAfter(src: string, name: string) {
   const match = src.match(new RegExp(`static let ${name} = [\\s\\S]*?0x([0-9A-Fa-f]{6})`));
   expect(match, name).not.toBeNull();
-  return match![1].toUpperCase();
+  const value = match?.[1];
+  if (!value) throw new Error(`Missing hex value for ${name}`);
+  return value.toUpperCase();
 }
 
 describe("iOS flat surface tokens", () => {

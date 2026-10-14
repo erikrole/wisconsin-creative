@@ -31,6 +31,7 @@ export type CompanionProjection = {
     startsAt: Date;
     endsAt: Date;
     updatedAt: Date;
+    refNumber: string | null;
     requester: { id: string; name: string; avatarUrl: string | null };
     location: { id: string; name: string };
     serializedItems: Array<{ id: string; name?: string; assetTag?: string }>;

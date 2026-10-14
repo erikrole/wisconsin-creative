@@ -49,7 +49,7 @@ describe("iOS notification long-press actions", () => {
     // Every foreground action shares one routing path with the plain tap.
     expect(delegate).toContain("private func routeNotificationDestination(");
     expect(delegate).toContain(
-      "routeNotificationDestination(userInfo: userInfo, notificationBoundary: notificationBoundary)",
+      "routeNotificationDestination(userInfo: userInfo, notificationBoundary: notificationBoundary,",
     );
   });
 

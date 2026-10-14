@@ -133,6 +133,10 @@ final class SessionStore {
                 guard self.authRequests.owns(requestToken) else { return }
                 self.didSeedFromSnapshot = false
                 self.publishCurrentUserIfChanged(user)
+                // Not during a forced change: that password is about to be replaced.
+                if !user.forcePasswordChange {
+                    Task { await Self.upgradeToPasskeyAfterSignIn(password: password) }
+                }
             } catch {
                 guard self.authRequests.owns(requestToken) else { return }
                 self.error = error.localizedDescription
@@ -153,6 +157,7 @@ final class SessionStore {
                 guard self.authRequests.owns(requestToken) else { return }
                 self.didSeedFromSnapshot = false
                 self.publishCurrentUserIfChanged(user)
+                Task { await Self.upgradeToPasskeyAfterSignIn(password: password) }
                 self.isOffline = false
             } catch {
                 guard self.authRequests.owns(requestToken) else { return }
@@ -161,6 +166,23 @@ final class SessionStore {
             if self.authRequests.owns(requestToken) { self.isLoading = false }
         }
         await mutation.value
+    }
+
+    /// After a password sign-in, asks the credential manager that filled the
+    /// password (Apple Passwords, 1Password) to save a passkey for this account
+    /// with no prompt. Every failure is silent: a declined upgrade, an account
+    /// that already has a passkey, or a password typed by hand all leave
+    /// sign-in exactly as it was. The password re-authenticates the enrollment.
+    private static func upgradeToPasskeyAfterSignIn(password: String) async {
+        do {
+            guard let options = try await APIClient.shared.automaticPasskeyRegistrationOptions(
+                currentPassword: password
+            ) else { return }
+            let registration = try await PasskeyService.shared.register(options: options, style: .automaticUpgrade)
+            _ = try await APIClient.shared.verifyPasskeyRegistration(registration, name: nil)
+        } catch {
+            // Intentionally silent; see above.
+        }
     }
 
     func loginWithPasskey() async {

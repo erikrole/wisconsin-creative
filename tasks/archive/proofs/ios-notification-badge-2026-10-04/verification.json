@@ -1,0 +1,26 @@
+{
+  "sourceTests": {
+    "passed": 669,
+    "files": 122
+  },
+  "nativeTests": {
+    "passed": 83,
+    "destination": "iPhone 18 Pro Max"
+  },
+  "versionBumpRetest": {
+    "passed": 6
+  },
+  "checksPassed": [
+    "xcode simulator test/build",
+    "xcode release archive",
+    "xcode export",
+    "ios:project:check",
+    "TypeScript",
+    "edited-test lint",
+    "verify:docs",
+    "git diff --check"
+  ],
+  "physicalAPNsVerified": false,
+  "matchedScreenshots": false,
+  "htmlBrowserInspection": "blocked: file protocol"
+}

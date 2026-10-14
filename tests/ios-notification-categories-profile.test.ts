@@ -151,7 +151,7 @@ describe("iOS notification category preferences", () => {
     const inbox = source("ios/Wisconsin/Views/NotificationsSheet.swift");
 
     expect(delegate).toContain('($0.request.content.userInfo["notificationId"] as? String).map(ids.contains)');
-    expect(delegate).toContain("completionHandler([.banner, .list, .badge])");
+    expect(delegate).toContain("completionHandler([.banner, .list])");
     expect(inbox).toContain("await clearDelivered([id])");
     expect(inbox).toContain("await clearDelivered(nil)");
   });

@@ -2,11 +2,11 @@
 
 Created: 2026-06-26
 Owner area: Items
-Status: Physical review required before mutation
+Status: Physical review required before mutation — operator path is Cleanup wizard (`attachment_candidate`)
 
 ## Purpose
 
-Finish the item-data cleanup by deciding which standalone camera/lens accessories should become child attachments. The data-only cleanup can attach rows only when the parent asset identity is provable from current fields. Everything below needs a physical shelf check or operator confirmation before changing `parentAssetId`.
+Finish the item-data cleanup by deciding which standalone camera/lens accessories should become child attachments. The data-only cleanup can attach rows only when the parent asset identity is provable from current fields. Everything below needs a physical shelf check or operator confirmation before changing `parentAssetId`. Prefer Items → Cleanup wizard → Attachment parents (`/items?cleanupWizard=attachment_candidate`) so attach/defer stays audited.
 
 ## Completed Safe Mapping
 

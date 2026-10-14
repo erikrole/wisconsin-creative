@@ -1,0 +1,213 @@
+
+ RUN  v4.1.11 /Users/role/Code/wisconsin-creative
+
+ ❯ tests/signature-service.test.ts (50 tests | 8 failed | 41 skipped) 26ms
+     × resumes a stale UPLOADING operation with the same verified draft and immutable paths 8ms
+     × exports current SVGs with clean unique names 4ms
+     × removes every retained revision for a signer (active: false) 3ms
+     × keeps live saves out of cleanup but allows erased committed history to retry 2ms
+     × reports the server settings lock even with no remaining signatures (null) 2ms
+     × reports the server settings lock even with no remaining signatures (Mon Sep 28 2026 07:00:00 GMT-0500 (Central Daylight Time)) 1ms
+     × does not revive an old team artifact after the canonical signature is removed 2ms
+     × reports retained inactive-member history independently of downloadable active signatures 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 8 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/signature-service.test.ts > signature save lifecycle > resumes a stale UPLOADING operation with the same verified draft and immutable paths
+AssertionError: expected "vi.fn()" to be called with arguments: [ ObjectContaining{…} ]
+
+Number of calls: 0
+
+ ❯ tests/signature-service.test.ts:273:43
+    271|     });
+    272|
+    273|     expect(tx.signatureCollection.update).toHaveBeenCalledWith(expect.…
+       |                                           ^
+    274|     expect(uploadPrivateSignatureArtifact).toHaveBeenCalledTimes(2);
+    275|     expect(uploadPrivateSignatureArtifact).toHaveBeenCalledWith(expect…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯
+
+ FAIL  tests/signature-service.test.ts > signature collection ZIP export > exports current SVGs with clean unique names
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/signature-service.test.ts:672:59
+    670|     }) as never);
+    671|
+    672|     await expect(getSignatureCollectionZip("collection-1")).resolves.s…
+       |                                                           ^
+    673|       expect(archive.filename).toBe("mbb-2026-27-signatures-svg.zip");
+    674|       expect(archive.fileCount).toBe(3);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯
+
+ FAIL  tests/signature-service.test.ts > signature history erasure > removes every retained revision for a signer (active: false)
+AssertionError: promise rejected "Error: This roster member is inactive and… { …(2) }" instead of resolving
+ ❯ tests/signature-service.test.ts:803:130
+    801|     dbMock.signatureArtifactRevision.updateMany.mockResolvedValue({ co…
+    802|
+    803|     await expect(removeSignatureCapture({ actor, collectionId: "collec…
+       |                                                                                                                                  ^
+    804|       removed: true,
+    805|       captureVersion: 4,
+
+Caused by: Error: This roster member is inactive and cannot receive a new signature
+ ❯ resolveSignatureCaptureTarget .tmp/signatures-audit/baseline-signatures.ts:318:39
+ ❯ Module.removeSignatureCapture .tmp/signatures-audit/baseline-signatures.ts:1600:18
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { status: 409, data: null }
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/8]⎯
+
+ FAIL  tests/signature-service.test.ts > signature history erasure > keeps live saves out of cleanup but allows erased committed history to retry
+AssertionError: expected "vi.fn()" to be called with arguments: [ ObjectContaining{…} ]
+
+Received:
+
+  1st vi.fn() call:
+
+@@ -1,14 +1,24 @@
+  [
+-   ObjectContaining {
++   {
++     "orderBy": {
++       "createdAt": "asc",
++     },
++     "select": {
++       "id": true,
++       "pngPath": true,
++       "svgPath": true,
++     },
++     "take": 50,
+      "where": {
+        "saveOperations": {
+          "none": {
+            "status": {
+              "in": [
+                "UPLOADING",
+                "FINALIZING",
++               "COMMITTED",
+              ],
+            },
+          },
+        },
+        "state": "PENDING_DELETE",
+
+
+Number of calls: 1
+
+ ❯ tests/signature-service.test.ts:894:55
+    892|       data: expect.objectContaining({ status: SignatureSaveStatus.FAIL…
+    893|     }));
+    894|     expect(dbMock.signatureArtifactRevision.findMany).toHaveBeenCalled…
+       |                                                       ^
+    895|       where: {
+    896|         state: SignatureArtifactState.PENDING_DELETE,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/8]⎯
+
+ FAIL  tests/signature-service.test.ts > signature collection detail shape > reports the server settings lock even with no remaining signatures (null)
+AssertionError: expected undefined to be false // Object.is equality
+
+- Expected:
+false
+
++ Received:
+undefined
+
+ ❯ tests/signature-service.test.ts:1202:35
+    1200|
+    1201|     const detail = await getSignatureCollection("collection-1");
+    1202|     expect(detail.settingsLocked).toBe(firstCaptureAt !== null);
+       |                                   ^
+    1203|     expect(detail.members).toEqual([]);
+    1204|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/8]⎯
+
+ FAIL  tests/signature-service.test.ts > signature collection detail shape > reports the server settings lock even with no remaining signatures (Mon Sep 28 2026 07:00:00 GMT-0500 (Central Daylight Time))
+AssertionError: expected undefined to be true // Object.is equality
+
+- Expected:
+true
+
++ Received:
+undefined
+
+ ❯ tests/signature-service.test.ts:1202:35
+    1200|
+    1201|     const detail = await getSignatureCollection("collection-1");
+    1202|     expect(detail.settingsLocked).toBe(firstCaptureAt !== null);
+       |                                   ^
+    1203|     expect(detail.members).toEqual([]);
+    1204|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/8]⎯
+
+ FAIL  tests/signature-service.test.ts > signature readiness requirements > does not revive an old team artifact after the canonical signature is removed
+AssertionError: expected [ { id: 'team', …(10) } ] to match object [ { …(3) } ]
+(12 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  [
+    {
+-     "downloadableCount": 0,
+-     "hasRetainedSignatures": true,
++     "downloadableCount": 1,
+      "staffCompleteness": {
+-       "complete": 0,
++       "complete": 1,
+        "total": 1,
+      },
+    },
+  ]
+
+ ❯ tests/signature-service.test.ts:1538:44
+    1536|       collection: { season: "2026-27" }, member: { linkedUserId: "user…
+    1537|     }]);
+    1538|     await expect(listSignatureCollections()).resolves.toMatchObject([{
+       |                                            ^
+    1539|       staffCompleteness: { complete: 0, total: 1 }, downloadableCount:…
+    1540|     }]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/8]⎯
+
+ FAIL  tests/signature-service.test.ts > signature readiness requirements > reports retained inactive-member history independently of downloadable active signatures
+AssertionError: expected [ { id: 'team', …(10) } ] to match object [ { activeMemberCount: +0, …(2) } ]
+(14 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  [
+    {
+      "activeMemberCount": 0,
+      "downloadableCount": 0,
+-     "hasRetainedSignatures": true,
+    },
+  ]
+
+ ❯ tests/signature-service.test.ts:1556:44
+    1554|       captures: [], _count: { captures: 1 },
+    1555|     }]);
+    1556|     await expect(listSignatureCollections()).resolves.toMatchObject([{
+       |                                            ^
+    1557|       activeMemberCount: 0, downloadableCount: 0, hasRetainedSignature…
+    1558|     }]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/8]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  8 failed | 1 passed | 41 skipped (50)
+   Start at  22:15:02
+   Duration  573ms (transform 131ms, setup 21ms, import 427ms, tests 26ms, environment 0ms)
+

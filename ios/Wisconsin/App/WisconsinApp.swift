@@ -405,15 +405,8 @@ struct RootView: View {
             // Establish the no-history-replay cursor before the app-open event
             // can mint an easter egg, then fetch once more for its reward.
             await refreshBadgeRewardsForAppOpen(for: user.id)
-
-            while !Task.isCancelled {
-                do {
-                    try await Task.sleep(for: .seconds(15))
-                } catch {
-                    return
-                }
-                await pollBadgeRewards(for: user.id)
-            }
+            // No timer. A phone left open on a desk used to poll all night and keep the
+            // database awake; rewards now arrive with the foreground request instead.
         }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active,
@@ -486,9 +479,15 @@ struct RootView: View {
             await pollBadgeRewards(for: userId)
         }
         guard session.currentUser?.id == userId,
-              UserDefaults.standard.string(forKey: cursorKey) != nil else { return }
-        try? await APIClient.shared.recordBadgeAppOpen()
-        await pollBadgeRewards(for: userId)
+              let cursor = UserDefaults.standard.string(forKey: cursorKey) else { return }
+        // One request records the open and returns whatever was earned since the cursor.
+        if let rewards = try? await APIClient.shared.recordBadgeAppOpen(after: cursor) {
+            guard session.currentUser?.id == userId else { return }
+            UserDefaults.standard.set(rewards.nextCursor, forKey: cursorKey)
+            earnedBadgeQueue.appendUnique(contentsOf: rewards.awards)
+        } else {
+            await pollBadgeRewards(for: userId)
+        }
     }
 
 }

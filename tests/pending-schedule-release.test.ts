@@ -118,7 +118,6 @@ describe("pending schedule release step", () => {
       "staff-1",
       4,
       "STAFF",
-      { clearNotificationPending: true },
     );
     expect(mocks.createInitialNotifications).not.toHaveBeenCalled();
     expect(mocks.notifyWorkers).not.toHaveBeenCalled();

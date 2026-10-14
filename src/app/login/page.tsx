@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { tokenHash } from "@/lib/auth";
+import { safeReturnTo } from "@/lib/return-to";
 import LoginForm from "./LoginForm";
 
 export const metadata: Metadata = {
@@ -29,9 +30,14 @@ async function hasActiveSession(): Promise<boolean> {
   }
 }
 
-export default async function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ returnTo?: string | string[] }>;
+}) {
   if (await hasActiveSession()) {
-    redirect("/");
+    const { returnTo } = await searchParams;
+    redirect(safeReturnTo(typeof returnTo === "string" ? returnTo : null) ?? "/");
   }
   return <LoginForm />;
 }

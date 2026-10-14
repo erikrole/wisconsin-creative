@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { expectSerializableIsolation } from "./_helpers/assert-transaction";
+import { crewClaimClosedReason } from "@/lib/shift-claim-eligibility";
 
 const transactionCalls: Array<{ options: unknown }> = [];
 
@@ -194,7 +195,6 @@ describe("schedule open work", () => {
         workerType: "ST",
         assignments: { none: { status: { in: ["DIRECT_ASSIGNED", "APPROVED"] } } },
         shiftGroup: expect.objectContaining({
-          publishedAt: { not: null },
           archivedAt: null,
         }),
       }),
@@ -468,18 +468,11 @@ describe("schedule open work", () => {
     expect(mockDb._mockTx.shiftAssignment.create).not.toHaveBeenCalled();
   });
 
-  it("rejects draft shifts before worker pickup", async () => {
-    mockDb._mockTx.shift.findUnique.mockResolvedValue(baseShift({
-      shiftGroup: {
-        id: "group-1",
-        publishedAt: null,
-        archivedAt: null,
-        event: baseEvent(),
-      },
-    }));
-    mockDb._mockTx.user.findUnique.mockResolvedValue(activeStudent());
-
-    await expect(pickupOpenShift("shift-1", "student-1")).rejects.toThrow("Draft shifts are not open for pickup");
+  it("does not close claims on a crew that has not been released", () => {
+    expect(crewClaimClosedReason({
+      archivedAt: null,
+      event: { archivedAt: null, isHidden: false, status: "CONFIRMED" },
+    })).toBeNull();
   });
 
   it("rejects already filled shifts", async () => {

@@ -167,7 +167,10 @@ extension AppDelegate: @preconcurrency UNUserNotificationCenterDelegate {
         // using the app; avoid repeating the full sound interruption on every
         // inbox, booking, or schedule update. `.list` keeps it in Notification
         // Center afterwards, where reading it in the app clears it.
-        completionHandler([.banner, .list, .badge])
+        completionHandler([.banner, .list])
+        // Foreground pushes use current inbox truth, not a possibly delayed
+        // APNs badge snapshot, and update the in-app bell at the same time.
+        Task { await sharedAppState?.refreshUnread() }
     }
 
     // User tapped notification (foreground or background)
@@ -284,8 +287,8 @@ extension AppDelegate: @preconcurrency UNUserNotificationCenterDelegate {
             break
         }
 
-        routeNotificationDestination(userInfo: userInfo, notificationBoundary: notificationBoundary)
-        completionHandler()
+        routeNotificationDestination(userInfo: userInfo, notificationBoundary: notificationBoundary,
+                                     completionHandler: completionHandler)
     }
 
     /// "Notification Settings" on the app's page in iOS Settings (and the
@@ -308,14 +311,29 @@ extension AppDelegate: @preconcurrency UNUserNotificationCenterDelegate {
     /// action, so an action can never reach a destination a tap could not.
     private func routeNotificationDestination(
         userInfo: [AnyHashable: Any],
-        notificationBoundary: UUID
+        notificationBoundary: UUID,
+        completionHandler: @escaping () -> Void
     ) {
+        let notificationId = userInfo["notificationId"] as? String
         let type = userInfo["type"] as? String
         let route = GearTrackerRouteParser.parseNotification(userInfo: userInfo, type: type)
         Task { @MainActor in
+            defer { completionHandler() }
             guard PushTokenStorage.registrationAllowed,
                   authSessionBoundary.owns(notificationBoundary) else { return }
             sharedAppState?.apply(route)
+            if let notificationId {
+                // Opening the destination reads the alert, just like an inbox
+                // tap. A failed write must not prevent navigation or invent a
+                // local decrement; the server count remains authoritative.
+                do {
+                    try await APIClient.shared.markNotificationRead(id: notificationId)
+                    guard authSessionBoundary.owns(notificationBoundary) else { return }
+                    await DeliveredNotifications.clear(inboxRowIDs: [notificationId])
+                } catch {}
+            }
+            guard authSessionBoundary.owns(notificationBoundary) else { return }
+            await sharedAppState?.refreshUnread()
         }
     }
 }

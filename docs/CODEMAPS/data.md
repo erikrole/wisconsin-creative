@@ -11,11 +11,11 @@
 
 | Model | Fields | Model-level indexes/constraints |
 |---|---:|---:|
-| `User` | 128 | 5 |
-| `Session` | 6 | 2 |
+| `User` | 130 | 5 |
+| `Session` | 7 | 2 |
 | `PasswordResetToken` | 6 | 2 |
 | `PasskeyCredential` | 12 | 2 |
-| `PasskeyChallenge` | 9 | 3 |
+| `PasskeyChallenge` | 10 | 3 |
 | `Location` | 17 | 1 |
 | `Department` | 7 | 1 |
 | `Category` | 9 | 3 |
@@ -83,7 +83,7 @@
 | `SoftwareCredential` | 10 | 2 |
 | `SportConfig` | 9 | 1 |
 | `SportShiftConfig` | 12 | 2 |
-| `ShiftGroup` | 20 | 4 |
+| `ShiftGroup` | 17 | 3 |
 | `ShiftGroupWorkingCopy` | 17 | 3 |
 | `ScheduleBulkAssignment` | 13 | 3 |
 | `ScheduleBulkAssignmentItem` | 12 | 3 |
@@ -94,7 +94,7 @@
 | `ShiftTrade` | 14 | 4 |
 | `StudentAvailabilityBlock` | 22 | 7 |
 | `BookingPhoto` | 8 | 2 |
-| `CheckinItemReport` | 16 | 5 |
+| `CheckinItemReport` | 20 | 5 |
 | `KioskDevice` | 19 | 3 |
 | `Resource` | 20 | 7 |
 | `ResourceAssetFolder` | 12 | 2 |
@@ -118,6 +118,10 @@
 | `YouTubeLibraryState` | 8 | 1 |
 | `YouTubePublishRecord` | 15 | 2 |
 | `YouTubePlaylistAddition` | 11 | 2 |
+| `GearPickCycle` | 7 | 1 |
+| `GearPickParticipant` | 10 | 3 |
+| `GearPickSubmission` | 9 | 1 |
+| `GearPickLine` | 9 | 2 |
 
 ## Enums
 
@@ -531,3 +535,8 @@
 - `COVER_LETTER`
 - `PORTFOLIO_FILE`
 - `OTHER`
+
+### `GearPickFit`
+
+- `MEN`
+- `WOMEN`

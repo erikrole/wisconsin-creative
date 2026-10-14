@@ -1,0 +1,30 @@
+{
+  "title": "Gear picks: How it works splash",
+  "eyebrow": "Web · Wisconsin Creative · /gear",
+  "lede": "A one-time splash on a participant's first visit to /gear this cycle (normally right after the dashboard banner). Per-person kit count, budget or what's left on a draft, and the deadline with its time. A header button reopens it.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "After only",
+      "note": "No before exists: the splash and its header button are new surfaces. Captures from the Claude desktop browser pane, dark appearance, authenticated local managed preview (localhost:3439, preview DB for feat/ua-gear-picks with this branch's two gear files applied), ADMIN 'Creative Admin' as a Men's participant with a submitted test list ($67.50 of a stale preview allowance of $185; production rows are $192 / $357). Opened via 'How it works' because this account has submitted, which correctly suppresses the automatic first-visit open. Pane screenshots are JPEG converted to PNG; the desktop capture is the pane's 800x562 downscale of a 1280x900 CSS viewport.",
+      "shots": [
+        {"tag": "After", "title": "Phone, splash", "image": "after-splash-phone.png", "cap": "390x844 CSS. Five tips, 'Start picking' closes and marks it seen for this cycle."},
+        {"tag": "After", "title": "Phone, header", "image": "after-header-phone.png", "cap": "'How it works' sits beside 'See results' (admin-only) in the page header; hidden once picks close."},
+        {"tag": "After", "title": "Desktop, splash", "image": "after-splash-desktop.png", "wide": true, "cap": "1280x900 CSS viewport, captured at 800x562."}
+      ]
+    }
+  ],
+  "changes": [
+    {"h": "First visit had no orientation", "was": "The banner dropped people straight into a 130-item catalog with the budget switch, kit strip, swatches, and drafts unexplained.", "now": "A short splash states what's already covered, what they can spend, how to preview and pick colors, that sizes come from their profile, and that edits stay open until the deadline time."}
+  ],
+  "verification": [
+    "npx tsc --noEmit passed (pre-existing tests/ios-* errors excluded); eslint on src/app/(app)/gear passed.",
+    "Authenticated preview: splash opened from 'How it works' at 390x844 and 1280x900; Escape and 'Start picking' close it; no console errors from the page (connection-refused entries were from a server restart before load).",
+    "Submitted participant: no automatic open on /gear (correct).",
+    "Production gear_pick_participants read 2026-10-08: MEN 19200 x6, WOMEN 35700 x2, so the splash will show $192 / $357."
+  ],
+  "notes": [
+    "Automatic first-visit open was not captured: the only preview participant has submitted. Logic: !readOnly && !submittedAt && !localStorage['gear-picks-intro-seen:<cycleId>'].",
+    "Seen state is per device (localStorage); a second device shows it once more."
+  ]
+}

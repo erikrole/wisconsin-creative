@@ -363,6 +363,24 @@
   }
 }
 
+/* Schedule: rows, detail panels, and views fade in on mount. Opacity only --
+   no transform or height -- so the timeline's scroll anchoring never sees the
+   layout move, and `backwards` fill leaves no stacking context behind. */
+@keyframes schedule-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.schedule-enter {
+  animation: schedule-fade-in 180ms var(--ease-out) backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .schedule-enter {
+    animation: none;
+  }
+}
+
 @keyframes theme-fade-out {
   from { opacity: 1; }
   to { opacity: 0; }

@@ -1,3 +1,8 @@
+/**
+ * Operator maintenance: read-only item catalog quality audit.
+ * Not a daily product path. Pair with cleanup:item-data dry-run after physical
+ * review queues in tasks/item-data-hygiene-status-2026-10-07.md.
+ */
 import { PrismaNeon } from "@prisma/adapter-neon";
 import { PrismaClient } from "@prisma/client";
 

@@ -1,6 +1,6 @@
 # Testing Guide
 
-Last refreshed: 2026-09-17
+Last refreshed: 2026-10-07
 
 ## Overview
 
@@ -8,12 +8,12 @@ The automated test suite uses Vitest in the Node.js environment. Tests live in `
 
 Current static inventory:
 
-- 391 test files under `tests/`
-- 2,331 `it()` / `test()` declarations by static grep
-- 55 iOS source-contract files named `ios-*.test.ts`
-- 79 source or contract files with `source` or `contract` in the filename
-- 66 route-focused files with `route` in the filename
-- 35 current `BUG:` references across 11 files
+- 740 test files under `tests/`
+- 5,013 `it()` / `test()` declarations by static grep
+- 125 iOS source-contract files named `ios-*.test.ts`
+- 138 source or contract files with `source` or `contract` in the filename
+- 115 route-focused files with `route` in the filename
+- 46 current `BUG:` references across 21 files
 
 Refresh the inventory with:
 

@@ -367,8 +367,12 @@ export const GET = withAuth(async (req, { user }) => {
     user.role === "ADMIN" || user.role === "STAFF"
       ? db.checkinItemReport.findMany({
           // Serialized reports only; lost batteries surface via lostBulkUnits.
-          where: { assetId: { not: null }, createdAt: { gte: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) } },
-          orderBy: { createdAt: "desc" },
+          where: {
+            assetId: { not: null },
+            lastReportedAt: { gte: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) },
+            dismissedAt: null,
+          },
+          orderBy: { lastReportedAt: "desc" },
           take: 10,
           include: {
             asset: { select: { id: true, assetTag: true, name: true, status: true } },
@@ -475,6 +479,7 @@ export const GET = withAuth(async (req, { user }) => {
     description: string | null;
     imageUrl: string | null;
     createdAt: Date;
+    lastReportedAt: Date;
     asset: { id: string; assetTag: string; name: string | null; status: string } | null;
     booking: { title: string };
     reportedBy: { name: string };
@@ -839,7 +844,7 @@ export const GET = withAuth(async (req, { user }) => {
           description: r.description ?? null,
           imageUrl: r.imageUrl ?? null,
           assetStatus: r.asset.status,
-          createdAt: r.createdAt.toISOString(),
+          createdAt: r.lastReportedAt.toISOString(),
         }]),
         ...maintenanceAssets.map((a) => ({
           id: `maint-${a.id}`,

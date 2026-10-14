@@ -1,4 +1,4 @@
-import { Prisma, Role, ShiftAssignmentStatus, ShiftArea, ShiftWorkerType } from "@prisma/client";
+import { Prisma, Role, ShiftAssignmentSource, ShiftAssignmentStatus, ShiftArea, ShiftWorkerType } from "@prisma/client";
 import { db } from "@/lib/db";
 import { createAuditEntryTx } from "@/lib/audit";
 import { ACTIVE_BOOKING_STATUSES } from "@/lib/booking-statuses";
@@ -249,6 +249,7 @@ async function findGroupForPublication(shiftGroupId: string, tx: Prisma.Transact
               id: true,
               userId: true,
               status: true,
+              source: true,
               callStartsAt: true,
               callEndsAt: true,
               callNote: true,
@@ -394,7 +395,7 @@ export async function collectPublishBlockers(
       if (assignment.trades.length > 0) {
         add("active_trade", "Cancel the active trade before publishing this assignment change.", slot, assignment.userId);
       }
-      if (assignment._count.bookings > 0) {
+      if (assignment.source !== ShiftAssignmentSource.RESERVATION && assignment._count.bookings > 0) {
         add("linked_booking", "Unlink the assignment's booking before publishing this assignment change.", slot, assignment.userId);
       }
     }
@@ -567,7 +568,6 @@ export async function publishShiftGroup(
    */
   options: {
     advanceNotificationMark?: boolean;
-    clearNotificationPending?: boolean;
     manualPublish?: boolean;
     requireWorkingCopy?: boolean;
     /**
@@ -584,7 +584,6 @@ export async function publishShiftGroup(
   } = {},
 ) {
   const advanceNotificationMark = options.advanceNotificationMark ?? true;
-  const clearNotificationPending = options.clearNotificationPending ?? false;
   const manualPublish = options.manualPublish ?? false;
   const requireWorkingCopy = options.requireWorkingCopy ?? false;
   return withSerializationRetry(() => db.$transaction(async (tx) => {
@@ -852,6 +851,14 @@ export async function publishShiftGroup(
               acknowledgedById: null,
             },
           });
+          if (currentAssignment.source === ShiftAssignmentSource.RESERVATION) {
+            // A reservation-created assignment is removable; the booking keeps
+            // its gear and event link but stops pointing at the dropped slot.
+            await tx.booking.updateMany({
+              where: { shiftAssignmentId: currentAssignment.id },
+              data: { shiftAssignmentId: null },
+            });
+          }
         }
       }
 
@@ -978,11 +985,6 @@ export async function publishShiftGroup(
         publishedAt,
         publishedById: actorId,
         publishedVersion: { increment: 1 },
-        ...(clearNotificationPending ? {
-          notifyAfter: null,
-          notifyAttemptedAt: publishedAt,
-          notifyError: null,
-        } : {}),
         ...(advanceNotificationMark
           ? { lastPublishedSnapshot: snapshot as unknown as Prisma.InputJsonValue }
           : {}),

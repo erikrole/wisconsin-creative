@@ -23,6 +23,7 @@ const SEGMENT_OVERRIDE: Record<string, { label: string; href?: string }> = {
   "app-activity": { label: "App activity" },
   "data-export": { label: "Data exports" },
   audit: { label: "Audit log" },
+  gear: { label: "UA gear" },
 };
 
 export type SiblingItem = {

@@ -28,6 +28,8 @@ describe("booking wizard kit fetching recovery", () => {
     expect(wizard).toContain("kitsLoadError={kitsLoadError}");
     expect(wizard).toContain("onRetryKits={retryKits}");
     expect(wizard).toContain("queryKey: [\"kitDetail\", kitId]");
+    expect(wizard).toContain("computedStatus: member.asset.computedStatus || member.asset.status || \"AVAILABLE\"");
+    expect(wizard).toContain("currentHolder: member.asset.currentHolder ?? null");
     expect(wizard).toContain("setSelectedAssetIds(snapshots.map((asset) => asset.id))");
     expect(wizard).toContain("setSelectedBulkItems(selectedKitDetail.bulkMembers.map((member) => ({");
     expect(wizard).toContain("suggestedKitId");

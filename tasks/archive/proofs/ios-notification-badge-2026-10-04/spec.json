@@ -1,0 +1,39 @@
+{
+  "title": "Notification badge repair \u2014 TestFlight 1.3 (33)",
+  "eyebrow": "Wisconsin Creative \u00b7 iOS",
+  "lede": "Push taps now read their notification, and the icon reconciles with the server unread count. Physical-device visual acceptance remains open.",
+  "sections": [],
+  "changes": [
+    {
+      "h": "Push tap read state",
+      "was": "Opening a push navigated to its destination without marking the inbox row read.",
+      "now": "The destination opens immediately; the app marks that row read and fetches the current unread count."
+    },
+    {
+      "h": "Stale icon count",
+      "was": "An unchanged cached count skipped the system badge write, even when APNs had changed the icon.",
+      "now": "Every successful unread refresh reapplies the count, including zero. Writes are serialized."
+    },
+    {
+      "h": "Independent refresh",
+      "was": "Dashboard or trade errors and a shell refresh throttle could prevent badge reconciliation.",
+      "now": "Unread reconciliation runs independently; foreground push presentation uses a fresh server count."
+    }
+  ],
+  "verification": [
+    "Two source regression checks failed on the pre-fix code and pass after the fix.",
+    "669 iOS source-contract tests passed.",
+    "83 native tests passed on iPhone 18 Pro Max; Xcode simulator build succeeded.",
+    "Signed Release archive for com.erikrole.Wisconsin, version 1.3 build 33 succeeded.",
+    "Project consistency, TypeScript, edited-test lint, documentation verification, and diff whitespace checks passed.",
+    "Version 1.3 (33) export and upload preflight passed. Earlier 1.2 upload was rejected because Apple closed that approved release train.",
+    "Apple reports version 1.3 (33) VALID and Internal QA IN_BETA_TESTING; group membership and en-US test notes verified."
+  ],
+  "notes": [
+    "Visual comparison unavailable: no authenticated physical APNs scenario or matched icon captures were collected. This page documents behavior and automated evidence; it is not screenshot proof.",
+    "On iPhone: tap a push, mark all read, return after reading elsewhere, receive a foreground push, and sign out. Compare the inbox unread count and app icon each time.",
+    "Existing unread inbox rows remain unread until read individually or marked all read. Merely opening the app does not erase unread history.",
+    "TestFlight processing and distribution are tracked in the release ledger.",
+    "Browser inspection of this local HTML was blocked by the browser file-URL policy; the report was generated and its content checked, but its rendered layout was not verified."
+  ]
+}

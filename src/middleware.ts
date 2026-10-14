@@ -37,6 +37,8 @@ export function middleware(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-nonce", nonce);
   requestHeaders.set("Content-Security-Policy", csp);
+  // Lets the app layout send a signed-out visitor back here after login.
+  requestHeaders.set("x-pathname", `${request.nextUrl.pathname}${request.nextUrl.search}`);
 
   const response = NextResponse.next({
     request: {

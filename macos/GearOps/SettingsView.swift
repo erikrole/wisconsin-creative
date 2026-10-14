@@ -106,13 +106,27 @@ private struct GeneralSettingsTab: View {
             Section {
                 Toggle("Show in menu bar", isOn: $preferences.showsMenuBarExtra)
                     .toggleStyle(.switch)
-                Toggle("Show open booking count", isOn: $preferences.showsMenuBarCount)
-                    .toggleStyle(.switch)
-                    .disabled(!preferences.showsMenuBarExtra)
+                Picker("Count beside the icon", selection: $preferences.menuBarCountMode) {
+                    ForEach(MenuBarCountMode.allCases) { mode in
+                        Text(mode.title).tag(mode)
+                    }
+                }
+                .disabled(!preferences.showsMenuBarExtra)
             } header: {
                 Text("Menu bar")
             } footer: {
-                Text("You choose whether the icon stays in the menu bar. Command-dragging it out also turns this off, and macOS may hide extras when space is tight. Wisconsin Creative then appears in the Dock, where Dashboard, Refresh, Show in Menu Bar, and Settings stay available.")
+                Text("You choose whether the icon stays in the menu bar. Command-dragging it out also turns this off, and macOS may hide extras when space is tight. Wisconsin Creative then appears in the Dock, where Status, Dashboard, Refresh, Show in Menu Bar, and Settings stay available. Overdue only shows a number just when something is overdue.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
+                Toggle("Open status with \(GlobalShortcut.displayString)", isOn: $preferences.usesGlobalShortcut)
+                    .toggleStyle(.switch)
+            } header: {
+                Text("Keyboard")
+            } footer: {
+                Text("Works from any app, including when macOS has hidden the menu bar icon. In the status view, type to search, use ↑ ↓ to choose a booking, Return to open it, and Esc to clear.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

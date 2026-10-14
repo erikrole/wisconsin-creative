@@ -268,11 +268,13 @@ model User {
   blastsReceived                BlastRecipient[]                 @relation("BlastRecipient")
   bookingPhotos                 BookingPhoto[]                   @relation("BookingPhotoActor")
   checkinReports                CheckinItemReport[]              @relation("CheckinReports")
+  dismissedCheckinReports       CheckinItemReport[]              @relation("CheckinReportDismissals")
   allowedEmailsCreated          AllowedEmail[]                   @relation("AllowedEmailCreator")
   allowedEmailsClaimed          AllowedEmail[]                   @relation("AllowedEmailClaimer")
   licenseCodesHeld              LicenseCode[]                    @relation("LicenseClaimedBy")
   licenseCodesCreated           LicenseCode[]                    @relation("LicenseCreatedBy")
   licenseClaims                 LicenseCodeClaim[]
+  gearPickParticipations        GearPickParticipant[]
   resources                     Resource[]
   resourcesVerified             Resource[]                       @relation("ResourceLastVerifiedBy")
   resourceAssetFoldersCreated   ResourceAssetFolder[]            @relation("ResourceAssetFolderCreator")
@@ -347,12 +349,14 @@ model User {
 }
 
 model Session {
-  id        String   @id @default(cuid())
-  userId    String   @map("user_id")
-  tokenHash String   @unique @map("token_hash")
-  expiresAt DateTime @map("expires_at")
-  createdAt DateTime @default(now()) @map("created_at")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  tokenHash  String   @unique @map("token_hash")
+  expiresAt  DateTime @map("expires_at")
+  // Remembered sign-ins slide on a 30-day idle window; others on 12 hours.
+  persistent Boolean  @default(false)
+  createdAt  DateTime @default(now()) @map("created_at")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("sessions")
@@ -400,6 +404,8 @@ model PasskeyChallenge {
   type              PasskeyCeremonyType
   userId            String?             @map("user_id")
   rememberMe        Boolean             @default(false) @map("remember_me")
+  // An automatic upgrade after password sign-in; enrollment UV is relaxed.
+  automatic         Boolean             @default(false)
   expiresAt         DateTime            @map("expires_at")
   createdAt         DateTime            @default(now()) @map("created_at")
   user              User?               @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -2033,9 +2039,6 @@ model ShiftGroup {
   publishedById         String?                      @map("published_by_id")
   lastPublishedSnapshot Json?                        @map("last_published_snapshot")
   publishedVersion      Int                          @default(0) @map("published_version")
-  notifyAfter           DateTime?                    @map("notify_after")
-  notifyAttemptedAt     DateTime?                    @map("notify_attempted_at")
-  notifyError           String?                      @map("notify_error")
   archivedAt            DateTime?                    @map("archived_at")
   createdAt             DateTime                     @default(now()) @map("created_at")
   updatedAt             DateTime                     @updatedAt @map("updated_at")
@@ -2047,7 +2050,6 @@ model ShiftGroup {
 
   @@index([publishedAt])
   @@index([publishedById])
-  @@index([notifyAfter])
   @@map("shift_groups")
 }
 
@@ -2268,26 +2270,33 @@ model BookingPhoto {
 }
 
 model CheckinItemReport {
-  id            String            @id @default(cuid())
-  bookingId     String            @map("booking_id")
+  id             String            @id @default(cuid())
+  bookingId      String            @map("booking_id")
   /// Exactly one target is set (CHECK in migration 0156): a serialized asset,
   /// a numbered bulk unit (battery #7), or counted bulk stock by SKU.
-  assetId       String?           @map("asset_id")
-  bulkSkuUnitId String?           @map("bulk_sku_unit_id")
-  bulkSkuId     String?           @map("bulk_sku_id")
+  assetId        String?           @map("asset_id")
+  bulkSkuUnitId  String?           @map("bulk_sku_unit_id")
+  bulkSkuId      String?           @map("bulk_sku_id")
   /// Counted stock only: how many were damaged or missing.
-  quantity      Int?
-  type          CheckinReportType
-  description   String?
-  imageUrl      String?           @map("image_url")
-  reportedById  String            @map("reported_by_id")
-  createdAt     DateTime          @default(now()) @map("created_at")
+  quantity       Int?
+  type           CheckinReportType
+  description    String?
+  imageUrl       String?           @map("image_url")
+  reportedById   String            @map("reported_by_id")
+  createdAt      DateTime          @default(now()) @map("created_at")
+  /// When the evidence last changed: creation, or a later kiosk update.
+  lastReportedAt DateTime          @default(now()) @map("last_reported_at")
+  // Staff/admin dismissed this flag from the dashboard. The report stays in
+  // history; it only drops out of the dashboard's recent-flags list.
+  dismissedAt    DateTime?         @map("dismissed_at")
+  dismissedById  String?           @map("dismissed_by_id")
 
   booking     Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   asset       Asset?       @relation(fields: [assetId], references: [id], onDelete: Restrict)
   bulkSkuUnit BulkSkuUnit? @relation(fields: [bulkSkuUnitId], references: [id], onDelete: Cascade)
   bulkSku     BulkSku?     @relation(fields: [bulkSkuId], references: [id], onDelete: Cascade)
   reportedBy  User         @relation("CheckinReports", fields: [reportedById], references: [id], onDelete: Restrict)
+  dismissedBy User?        @relation("CheckinReportDismissals", fields: [dismissedById], references: [id], onDelete: SetNull)
 
   @@unique([bookingId, assetId])
   @@unique([bookingId, bulkSkuUnitId])
@@ -2872,4 +2881,77 @@ model YouTubePlaylistAddition {
 
   @@index([videoId, createdAt(sort: Desc)])
   @@map("youtube_playlist_additions")
+}
+
+// ── UA staff gear picks ───────────────────────────────────
+
+/// Catalog fit a participant shops from. MEN sees MEN + UNISEX items; WOMEN sees WOMEN + UNISEX.
+enum GearPickFit {
+  MEN
+  WOMEN
+}
+
+/// One yearly Under Armour staff pick window. The catalog itself is static JSON
+/// keyed by `id` (src/lib/gear-picks); the row owns the admin-set deadline.
+model GearPickCycle {
+  id           String                @id
+  title        String
+  /// Picks are editable until this instant; null keeps the cycle open.
+  deadline     DateTime?
+  /// When admins opened picks to everyone on the list; until then only admins see them.
+  launchedAt   DateTime?             @map("launched_at")
+  createdAt    DateTime              @default(now()) @map("created_at")
+  updatedAt    DateTime              @updatedAt @map("updated_at")
+  participants GearPickParticipant[]
+
+  @@map("gear_pick_cycles")
+}
+
+/// An explicit invitation for one user to pick in one cycle, with the fit and allowance they shop with.
+model GearPickParticipant {
+  id             String              @id @default(cuid())
+  cycleId        String              @map("cycle_id")
+  userId         String              @map("user_id")
+  fit            GearPickFit
+  allowanceCents Int                 @map("allowance_cents")
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
+  cycle          GearPickCycle       @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  submission     GearPickSubmission?
+
+  @@unique([cycleId, userId])
+  @@index([userId])
+  @@map("gear_pick_participants")
+}
+
+/// A participant's saved pick list. `submittedAt` stays at the first submit; `version` guards concurrent saves.
+model GearPickSubmission {
+  id            String              @id @default(cuid())
+  participantId String              @unique @map("participant_id")
+  submittedAt   DateTime?           @map("submitted_at")
+  totalCents    Int                 @default(0) @map("total_cents")
+  version       Int                 @default(1)
+  createdAt     DateTime            @default(now()) @map("created_at")
+  updatedAt     DateTime            @updatedAt @map("updated_at")
+  participant   GearPickParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  lines         GearPickLine[]
+
+  @@map("gear_pick_submissions")
+}
+
+/// One picked SKU (`style-colorCode`) and size. Unit price is a server-side catalog snapshot.
+model GearPickLine {
+  id             String             @id @default(cuid())
+  submissionId   String             @map("submission_id")
+  sku            String
+  style          String
+  colorCode      String             @map("color_code")
+  size           String?
+  quantity       Int
+  unitPriceCents Int                @map("unit_price_cents")
+  submission     GearPickSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@unique([submissionId, sku, size])
+  @@map("gear_pick_lines")
 }

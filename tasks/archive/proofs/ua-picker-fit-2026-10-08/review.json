@@ -1,0 +1,63 @@
+{
+  "title": "UA gear: clearer choices, safer sizing",
+  "eyebrow": "Wisconsin Creative \u00b7 Selection follow-up",
+  "lede": "Colors edit the actual pick, sizing follows the item, and the catalog stays visible as the allowance changes.",
+  "sections": [
+    {
+      "heading": "Matched before and after",
+      "note": "Baseline preserves the prior uncommitted design and Standard issue wording. Same synthetic staff fixture, clock, viewport, and page shell; this is not authenticated persistence proof.",
+      "pairs": [
+        {
+          "title": "Browse the full catalog",
+          "before": "before/catalog-1280.png",
+          "after": "after/catalog-1280.png",
+          "beforeEvidence": "before/catalog-1280.capture.json",
+          "afterEvidence": "after/catalog-1280.capture.json",
+          "beforeCap": "Allowance filtering started on and could hide products as picks changed.",
+          "afterCap": "The full catalog stays visible by default; Within my allowance is optional."
+        },
+        {
+          "title": "Change the selected color",
+          "before": "before/review-390.png",
+          "after": "after/review-390.png",
+          "beforeEvidence": "before/review-390.capture.json",
+          "afterEvidence": "after/review-390.capture.json",
+          "beforeCap": "Review let staff change sizes and quantities but could not change colors.",
+          "afterCap": "The color control edits the saved SKU, preserving size and quantity. Duplicate selections block saving."
+        },
+        {
+          "title": "Choose the right hat size",
+          "before": "before/fitted-hat-390.png",
+          "after": "after/fitted-hat-390.png",
+          "beforeEvidence": "before/fitted-hat-390.capture.json",
+          "afterEvidence": "after/fitted-hat-390.capture.json",
+          "beforeCap": "Stretch Fit caps were automatically treated as one size.",
+          "afterCap": "Fitted hats require an item-specific size; missing selections are explained in the list and review."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Size each kind of gear correctly",
+      "was": "Shoes could save without sizes, shirts supplied defaults for pants, and all hats were one size.",
+      "now": "Shoes and fitted hats require sizes. Pants and base layers start without shirt defaults. Slides use whole-size options and matching US profile systems. Drive Pant uses even waist sizes."
+    },
+    {
+      "h": "Keep saved choices recoverable",
+      "was": "Invalid old sizes could appear valid.",
+      "now": "Saved sizes remain visible but unavailable item sizes must be corrected. Color changes preserve quantity and size, with duplicate detection."
+    }
+  ],
+  "verification": [
+    "53 focused pricing and route tests pass; 8 sizing/default regressions fail on the isolated pre-change source.",
+    "11 Chromium checks pass, including color payloads, duplicate feedback, optional filtering, and item sizing.",
+    "Application-only build and changed-file lint pass. TypeScript reports only the same two existing errors in unrelated iOS test helpers."
+  ],
+  "notes": [
+    "No commit, push, deployment, or database changes.",
+    "Icon Lo size range is verified, but its source does not identify the US size system. The user suspects men\u2019s sizing; automatic defaults remain off until confirmed.",
+    "Exact sizing sources: FW27_AE_Headwear_Wisconsin.pdf pages 2, 6, 9; Wisconsin Licensed Footwear.pdf page 1; FW27 Wisconsin Pinnacle B2B.pdf (6021743). All are supplied local UA documents in Downloads.",
+    "Authenticated preview remains unavailable: this branch needs an authorized PR and its own managed preview."
+  ]
+}

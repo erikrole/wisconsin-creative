@@ -86,8 +86,8 @@ targets:
         PRODUCT_NAME: Wisconsin Creative
         PRODUCT_MODULE_NAME: Wisconsin
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        MARKETING_VERSION: "1.2"
-        CURRENT_PROJECT_VERSION: "31"
+        MARKETING_VERSION: "1.3"
+        CURRENT_PROJECT_VERSION: "33"
         TARGETED_DEVICE_FAMILY: "1,2"
         SWIFT_STRICT_CONCURRENCY: complete
       configs:
@@ -219,8 +219,8 @@ targets:
       base:
         PRODUCT_NAME: WisconsinLiveActivities
         PRODUCT_BUNDLE_IDENTIFIER: com.erikrole.Wisconsin.LiveActivities
-        MARKETING_VERSION: "1.2"
-        CURRENT_PROJECT_VERSION: "31"
+        MARKETING_VERSION: "1.3"
+        CURRENT_PROJECT_VERSION: "33"
         SKIP_INSTALL: YES
         SWIFT_STRICT_CONCURRENCY: complete
 

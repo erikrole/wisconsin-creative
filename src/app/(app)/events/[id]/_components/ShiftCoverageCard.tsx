@@ -193,7 +193,6 @@ export function ShiftCoverageCard({
                         viewerRequest={shift.viewerRequest}
                         canClaim={currentUserRole === "STUDENT" && Boolean(currentUserId)}
                         claimsPaused={Boolean(shiftGroup.claimsPaused)}
-                        isPublished={Boolean(publication?.publishedAt)}
                         onChanged={onUpdated}
                       />
                     </TableCell>

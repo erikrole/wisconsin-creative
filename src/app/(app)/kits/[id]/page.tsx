@@ -78,6 +78,8 @@ type KitMember = {
     brand: string;
     model: string;
     status: string;
+    computedStatus?: string;
+    currentHolder?: { holderName: string; bookingTitle: string; endsAt: string } | null;
     imageUrl: string | null;
     category: { id: string; name: string } | null;
   };
@@ -806,7 +808,10 @@ export default function KitDetailPage() {
                                 {member.asset.brand} {member.asset.model}
                               </TableCell>
                               <TableCell>
-                                <AssetStatusBadge status={member.asset.status} />
+                                <AssetStatusBadge
+                                  status={member.asset.computedStatus || member.asset.status}
+                                  holderName={member.asset.currentHolder?.holderName}
+                                />
                               </TableCell>
                               <TableCell>
                                 <OperationalRowActions label={`Actions for ${member.asset.assetTag}`}>
@@ -1084,9 +1089,11 @@ export default function KitDetailPage() {
 
 // ── Helpers ───────────────────────────────────────────────
 
-function AssetStatusBadge({ status }: { status: string }) {
+function AssetStatusBadge({ status, holderName }: { status: string; holderName?: string }) {
   const map: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
     AVAILABLE: { label: "Available", variant: "default" },
+    CHECKED_OUT: { label: holderName ? `Checked out · ${holderName}` : "Checked out", variant: "secondary" },
+    PENDING_PICKUP: { label: holderName ? `Pending pickup · ${holderName}` : "Pending pickup", variant: "outline" },
     MAINTENANCE: { label: "Maintenance", variant: "outline" },
     RETIRED: { label: "Retired", variant: "secondary" },
   };

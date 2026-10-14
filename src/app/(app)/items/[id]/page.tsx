@@ -21,6 +21,7 @@ import useItemData from "./_hooks/use-item-data";
 import useItemActions from "./_hooks/use-item-actions";
 import { useItemChangeSync } from "@/hooks/use-item-change-sync";
 import { parseDetailTab, serializeDetailTab, useUrlState } from "@/hooks/use-url-state";
+import { ItemConditionReports } from "./_components/ItemConditionReports";
 import { ItemHeader } from "./_components/ItemHeader";
 import { BulkSkuDetailExperience } from "../../bulk-inventory/[id]/BulkSkuDetailExperience";
 import { BULK_ID_PREFIX } from "../lib/item-href";
@@ -291,6 +292,7 @@ function SerializedItemDetailsPage({ id }: { id: string }) {
       {/* Info tab — dashboard layout */}
       {activeTab === "info" && (
         <>
+          {canEdit && <ItemConditionReports asset={asset} busy={actionBusy} onClearHold={() => void handleAction("maintenance")} onSelectBooking={setSelectedBookingId} />}
           <div className="mt-3.5 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_420px]">
             <OperationalOverview
               asset={asset}

@@ -151,3 +151,5 @@ Sources reviewed:
 ## Recommended Next Task
 
 No DESLOPPIFY backlog items remain open. Future large-file work should start from the generated oversized-source watchlist and extract one stable responsibility only when the related area is already being changed.
+
+2026-10-07 follow-up: see `tasks/repo-hygiene-cleanup-plan-2026-10-07.md` for the current hygiene slice (notify-after column drop, dead web check-in removal, task archive) and remaining database gates (GAP-61, dormant assignee columns, migration-receipt reconciliation).

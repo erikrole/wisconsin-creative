@@ -22,6 +22,14 @@ export const PERMISSIONS: Record<string, Record<string, Role[]>> = {
     draft: ["ADMIN"],
     publish: ["ADMIN"],
   },
+  // UA staff gear picks: any internal role may read and submit, but the
+  // service also requires an explicit participant row for the cycle.
+  // "manage" covers the admin results, deadline, roster, and CSV export.
+  gear_picks: {
+    view: ["ADMIN", "STAFF", "STUDENT"],
+    submit: ["ADMIN", "STAFF", "STUDENT"],
+    manage: ["ADMIN"],
+  },
   user: {
     view: ["ADMIN", "STAFF", "STUDENT"],
     edit_self: ["ADMIN", "STAFF", "STUDENT", "COLLABORATOR"],
@@ -63,6 +71,9 @@ export const PERMISSIONS: Record<string, Record<string, Role[]>> = {
     admin_override: ["ADMIN", "STAFF"],
     manage_custody: ["ADMIN", "STAFF"],
     merge: ["ADMIN", "STAFF"],
+  },
+  checkin_report: {
+    dismiss: ["ADMIN", "STAFF"],
   },
   bulk_sku: {
     view: ["ADMIN", "STAFF", "STUDENT"],
@@ -222,6 +233,8 @@ export const PERMISSIONS: Record<string, Record<string, Role[]>> = {
     capture: ["ADMIN", "STAFF"],
     download: ["ADMIN", "STAFF"],
     remove: ["ADMIN", "STAFF"],
+    roster: ["ADMIN", "STAFF"],
+    reassign: ["ADMIN", "STAFF"],
     settings: ["ADMIN"],
     required: ["ADMIN"],
     archive: ["ADMIN"],

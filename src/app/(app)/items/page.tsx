@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { RowSelectionState, VisibilityState } from "@tanstack/react-table";
 import { toast } from "sonner";
 import {
@@ -32,6 +32,8 @@ import { type Asset, getColumns } from "./columns";
 import { DataTable, type Density } from "./data-table";
 import { NewItemSheet } from "./new-item-sheet";
 import { GapWizardDialog } from "./gap-wizard-dialog";
+import { CleanupWizardDialog } from "./cleanup-wizard-dialog";
+import type { CleanupWizardKind } from "@/lib/services/item-cleanup-wizard";
 import { normalizeItemsSorting, useUrlFilters } from "./hooks/use-url-filters";
 import { useItemsQuery, type BulkItem } from "./hooks/use-items-query";
 import {
@@ -85,10 +87,13 @@ export default function ItemsPage() {
     sortKey: filters.sortKey,
   });
 
+  const searchParams = useSearchParams();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [createSourceId, setCreateSourceId] = useState<string | null>(null);
   const [showGapWizard, setShowGapWizard] = useState(false);
+  const [showCleanupWizard, setShowCleanupWizard] = useState(false);
+  const [cleanupWizardKind, setCleanupWizardKind] = useState<CleanupWizardKind | null>(null);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [density, setDensity] = useState<Density>("comfortable");
@@ -98,6 +103,23 @@ export default function ItemsPage() {
     setCreateSourceId(null);
     setShowCreate(true);
   }
+
+  useEffect(() => {
+    const fillGaps = searchParams.get("fillGaps");
+    if (fillGaps === "1" || fillGaps === "category" || fillGaps === "department") {
+      setShowGapWizard(true);
+    }
+    const cleanup = searchParams.get("cleanupWizard");
+    if (
+      cleanup === "1"
+      || cleanup === "legacy_qr"
+      || cleanup === "missing_serial"
+      || cleanup === "attachment_candidate"
+    ) {
+      setCleanupWizardKind(cleanup === "1" ? null : cleanup);
+      setShowCleanupWizard(true);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     let nextColumnVisibility: VisibilityState = {};
@@ -642,6 +664,17 @@ export default function ItemsPage() {
               >
                 Fill gaps
               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="hidden h-10 min-w-[110px] sm:flex"
+                onClick={() => {
+                  setCleanupWizardKind(null);
+                  setShowCleanupWizard(true);
+                }}
+              >
+                Cleanup wizard
+              </Button>
               <Button variant="outline" size="sm" className="h-10 min-w-[76px]" asChild><Link href="/import">Import</Link></Button>
               <Button
                 size="sm"
@@ -753,6 +786,16 @@ export default function ItemsPage() {
         categories={options.categories}
         departments={options.departments}
         onAssigned={query.reload}
+      />
+
+      <CleanupWizardDialog
+        open={showCleanupWizard}
+        onOpenChange={(next) => {
+          setShowCleanupWizard(next);
+          if (!next) setCleanupWizardKind(null);
+        }}
+        initialKind={cleanupWizardKind}
+        onChanged={query.reload}
       />
 
       <div className="flex flex-col gap-4">

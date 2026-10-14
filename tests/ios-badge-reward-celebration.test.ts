@@ -7,13 +7,18 @@ describe("iOS badge reward celebration", () => {
     const client = source("ios/Wisconsin/Core/APIClient.swift");
     expect(app).toContain('WisconsinBadgeRewardCursor.\\(userId)');
     expect(app).toContain("earnedBadgeQueue.appendUnique");
-    expect(app).toContain("Task.sleep(for: .seconds(15))");
+    // No timer: an open phone must not keep the database awake. The foreground request
+    // records the open and returns what was earned since the cursor.
+    expect(app).not.toContain("Task.sleep");
+    expect(app).not.toContain("KioskStore");
+    expect(app).toContain("recordBadgeAppOpen(after: cursor)");
+    expect(app).toContain("earnedBadgeQueue.appendUnique(contentsOf: rewards.awards)");
     expect(app).toContain("statusCode == 400");
     expect(app).toContain("removeObject(forKey: cursorKey)");
     expect(app).toContain("guard !badgeRewardPollInFlight else { return }");
     const foregroundRefresh = app.slice(app.indexOf("private func refreshBadgeRewardsForAppOpen"));
     expect(foregroundRefresh.indexOf("await pollBadgeRewards(for: userId)")).toBeLessThan(
-      foregroundRefresh.indexOf("recordBadgeAppOpen()"),
+      foregroundRefresh.indexOf("recordBadgeAppOpen(after: cursor)"),
     );
     expect(client).toContain('request(path: "/api/badges/recent"');
   });

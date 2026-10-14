@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to Wisconsin Creative are documented here.
+All notable changes to Wisconsin Creative are documented here. Public release notes live at [wisconsincreative.com/releases](https://wisconsincreative.com/releases) (`src/lib/releases.json`).
 
 Versioning: [CalVer](https://calver.org/) — `YYYY.MM.DD.N` (N = build number that day).
 

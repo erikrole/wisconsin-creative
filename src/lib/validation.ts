@@ -382,6 +382,9 @@ export const passkeyLoginOptionsSchema = z.object({
 
 export const passkeyRegistrationOptionsSchema = z.object({
   currentPassword: z.string().min(1, "Current password is required."),
+  // Set right after a password sign-in: the client asks its password manager
+  // to save a passkey without a prompt (conditional create).
+  automatic: z.boolean().optional(),
 });
 
 export const passkeyRegistrationVerifySchema = z.object({
@@ -401,7 +404,9 @@ export const registerSchema = z.object({
   name: z.string().trim().min(1).max(100),
   email: z.string().max(254).email(),
   wiscardNumber: z.string().trim().max(128).nullable().optional(),
-  password: z.string().min(8).max(128)
+  password: z.string().min(8).max(128),
+  // Omitted by the native app, which always keeps people signed in.
+  rememberMe: z.boolean().optional(),
 });
 
 export const forgotPasswordSchema = z.object({

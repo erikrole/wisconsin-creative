@@ -118,6 +118,86 @@ describe("normalizeHygieneQueue", () => {
     expect(missingImage).toMatchObject({ severity: "info", ctaLabel: "Open items" });
   });
 
+  it("routes legacy QR, missing serial, and attachment queues to the Cleanup wizard", () => {
+    const checks = normalizeHygieneQueue(hygieneQueue({
+      issues: [
+        {
+          key: "legacy-qr-labels",
+          title: "Legacy QR labels",
+          description: "Shelf labels.",
+          count: 8,
+          samples: [],
+        },
+        {
+          key: "missing-serial",
+          title: "Missing serial numbers",
+          description: "No serial.",
+          count: 3,
+          samples: [],
+        },
+        {
+          key: "attachment-candidates",
+          title: "Attachment parent mapping",
+          description: "Needs parent.",
+          count: 12,
+          samples: [],
+        },
+      ],
+    }));
+
+    expect(checks).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        key: "legacy-qr-labels",
+        href: "/items?cleanupWizard=legacy_qr",
+        ctaLabel: "Open cleanup wizard",
+      }),
+      expect.objectContaining({
+        key: "missing-serial",
+        href: "/items?cleanupWizard=missing_serial",
+        ctaLabel: "Open cleanup wizard",
+      }),
+      expect.objectContaining({
+        key: "attachment-candidates",
+        href: "/items?cleanupWizard=attachment_candidate",
+        ctaLabel: "Open cleanup wizard",
+      }),
+    ]));
+  });
+
+  it("routes taxonomy gaps to the Items Fill gaps wizard", () => {
+    const checks = normalizeHygieneQueue(hygieneQueue({
+      issues: [
+        {
+          key: "missing-category",
+          title: "Missing category",
+          description: "Needs taxonomy.",
+          count: 2,
+          samples: [],
+        },
+        {
+          key: "family-missing-department",
+          title: "Item families missing department",
+          description: "Needs taxonomy.",
+          count: 1,
+          samples: [],
+        },
+      ],
+    }));
+
+    expect(checks).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        key: "missing-category",
+        href: "/items?fillGaps=1",
+        ctaLabel: "Fill gaps",
+      }),
+      expect.objectContaining({
+        key: "family-missing-department",
+        href: "/items?fillGaps=1",
+        ctaLabel: "Fill gaps",
+      }),
+    ]));
+  });
+
   it("falls back to safe defaults for unknown check keys", () => {
     const checks = normalizeHygieneQueue(hygieneQueue({
       issues: [

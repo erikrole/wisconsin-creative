@@ -8,6 +8,7 @@ import { createAuditEntry } from "@/lib/audit";
 import { getSchedulePublicationState } from "@/lib/services/schedule-publication";
 import { studentCallTimeAppliesToEvent } from "@/lib/shift-call-windows";
 import { ACTIVE_ASSIGNMENT_STATUSES } from "@/lib/shift-constants";
+import { crewClaimClosedReason } from "@/lib/shift-claim-eligibility";
 
 export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
   requirePermission(user.role, "shift", "view");
@@ -89,6 +90,9 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
       ...responseGroup,
       hasWorkingCopy: staffCanSeeWorkingState ? Boolean(workingCopy) : undefined,
       claimsPaused: Boolean(workingCopy),
+      // The server's verdict on whether this crew can be claimed from at all.
+      // Clients render it instead of re-deriving release rules.
+      claimsOpen: crewClaimClosedReason(group) === null,
       autoReleaseAt: pendingRelease?.autoReleaseAt,
       autoReleaseError: pendingRelease?.autoReleaseError,
       publication: getSchedulePublicationState(group),

@@ -199,7 +199,7 @@ export const POST = withHandler(async (req) => {
     throw error;
   }
 
-  await createSession(user.id);
+  await createSession(user.id, body.rememberMe ?? true);
   const collaboratorPolicy = collaboratorPolicyMetadataForActor(user);
 
   await createAuditEntry({

@@ -1,0 +1,220 @@
+diff --git a/ios/Wisconsin.xcodeproj/project.pbxproj b/ios/Wisconsin.xcodeproj/project.pbxproj
+index a7d64dda..953fbe65 100644
+--- a/ios/Wisconsin.xcodeproj/project.pbxproj
++++ b/ios/Wisconsin.xcodeproj/project.pbxproj
+@@ -1278,7 +1278,7 @@
+ 			isa = XCBuildConfiguration;
+ 			buildSettings = {
+ 				CODE_SIGN_ENTITLEMENTS = WisconsinLiveActivities/WisconsinLiveActivities.entitlements;
+-				CURRENT_PROJECT_VERSION = 31;
++				CURRENT_PROJECT_VERSION = 33;
+ 				INFOPLIST_FILE = WisconsinLiveActivities/Info.plist;
+ 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+ 				LD_RUNPATH_SEARCH_PATHS = (
+@@ -1286,7 +1286,7 @@
+ 					"@executable_path/Frameworks",
+ 					"@executable_path/../../Frameworks",
+ 				);
+-				MARKETING_VERSION = 1.2;
++				MARKETING_VERSION = 1.3;
+ 				PRODUCT_BUNDLE_IDENTIFIER = com.erikrole.Wisconsin.LiveActivities;
+ 				PRODUCT_NAME = WisconsinLiveActivities;
+ 				SDKROOT = iphoneos;
+@@ -1300,7 +1300,7 @@
+ 			isa = XCBuildConfiguration;
+ 			buildSettings = {
+ 				CODE_SIGN_ENTITLEMENTS = WisconsinLiveActivities/WisconsinLiveActivities.entitlements;
+-				CURRENT_PROJECT_VERSION = 31;
++				CURRENT_PROJECT_VERSION = 33;
+ 				INFOPLIST_FILE = WisconsinLiveActivities/Info.plist;
+ 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+ 				LD_RUNPATH_SEARCH_PATHS = (
+@@ -1308,7 +1308,7 @@
+ 					"@executable_path/Frameworks",
+ 					"@executable_path/../../Frameworks",
+ 				);
+-				MARKETING_VERSION = 1.2;
++				MARKETING_VERSION = 1.3;
+ 				PRODUCT_BUNDLE_IDENTIFIER = com.erikrole.Wisconsin.LiveActivities;
+ 				PRODUCT_NAME = WisconsinLiveActivities;
+ 				SDKROOT = iphoneos;
+@@ -1362,14 +1362,14 @@
+ 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+ 				CODE_SIGN_ENTITLEMENTS = Wisconsin/Wisconsin.entitlements;
+ 				CODE_SIGN_IDENTITY = "iPhone Developer";
+-				CURRENT_PROJECT_VERSION = 31;
++				CURRENT_PROJECT_VERSION = 33;
+ 				INFOPLIST_FILE = Wisconsin/Supporting/Info.plist;
+ 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+ 				LD_RUNPATH_SEARCH_PATHS = (
+ 					"$(inherited)",
+ 					"@executable_path/Frameworks",
+ 				);
+-				MARKETING_VERSION = 1.2;
++				MARKETING_VERSION = 1.3;
+ 				OTHER_SWIFT_FLAGS = "-DDEBUG";
+ 				PRODUCT_BUNDLE_IDENTIFIER = com.erikrole.Wisconsin;
+ 				PRODUCT_MODULE_NAME = Wisconsin;
+@@ -1386,14 +1386,14 @@
+ 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+ 				CODE_SIGN_ENTITLEMENTS = Wisconsin/Wisconsin.entitlements;
+ 				CODE_SIGN_IDENTITY = "iPhone Developer";
+-				CURRENT_PROJECT_VERSION = 31;
++				CURRENT_PROJECT_VERSION = 33;
+ 				INFOPLIST_FILE = Wisconsin/Supporting/Info.plist;
+ 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+ 				LD_RUNPATH_SEARCH_PATHS = (
+ 					"$(inherited)",
+ 					"@executable_path/Frameworks",
+ 				);
+-				MARKETING_VERSION = 1.2;
++				MARKETING_VERSION = 1.3;
+ 				PRODUCT_BUNDLE_IDENTIFIER = com.erikrole.Wisconsin;
+ 				PRODUCT_MODULE_NAME = Wisconsin;
+ 				PRODUCT_NAME = "Wisconsin Creative";
+diff --git a/ios/Wisconsin/App/AppDelegate.swift b/ios/Wisconsin/App/AppDelegate.swift
+index a8cebaad..07b05675 100644
+--- a/ios/Wisconsin/App/AppDelegate.swift
++++ b/ios/Wisconsin/App/AppDelegate.swift
+@@ -167,7 +167,10 @@ extension AppDelegate: @preconcurrency UNUserNotificationCenterDelegate {
+         // using the app; avoid repeating the full sound interruption on every
+         // inbox, booking, or schedule update. `.list` keeps it in Notification
+         // Center afterwards, where reading it in the app clears it.
+-        completionHandler([.banner, .list, .badge])
++        completionHandler([.banner, .list])
++        // Foreground pushes use current inbox truth, not a possibly delayed
++        // APNs badge snapshot, and update the in-app bell at the same time.
++        Task { await sharedAppState?.refreshUnread() }
+     }
+ 
+     // User tapped notification (foreground or background)
+@@ -284,8 +287,8 @@ extension AppDelegate: @preconcurrency UNUserNotificationCenterDelegate {
+             break
+         }
+ 
+-        routeNotificationDestination(userInfo: userInfo, notificationBoundary: notificationBoundary)
+-        completionHandler()
++        routeNotificationDestination(userInfo: userInfo, notificationBoundary: notificationBoundary,
++                                     completionHandler: completionHandler)
+     }
+ 
+     /// "Notification Settings" on the app's page in iOS Settings (and the
+@@ -308,14 +311,29 @@ extension AppDelegate: @preconcurrency UNUserNotificationCenterDelegate {
+     /// action, so an action can never reach a destination a tap could not.
+     private func routeNotificationDestination(
+         userInfo: [AnyHashable: Any],
+-        notificationBoundary: UUID
++        notificationBoundary: UUID,
++        completionHandler: @escaping () -> Void
+     ) {
++        let notificationId = userInfo["notificationId"] as? String
+         let type = userInfo["type"] as? String
+         let route = GearTrackerRouteParser.parseNotification(userInfo: userInfo, type: type)
+         Task { @MainActor in
++            defer { completionHandler() }
+             guard PushTokenStorage.registrationAllowed,
+                   authSessionBoundary.owns(notificationBoundary) else { return }
+             sharedAppState?.apply(route)
++            if let notificationId {
++                // Opening the destination reads the alert, just like an inbox
++                // tap. A failed write must not prevent navigation or invent a
++                // local decrement; the server count remains authoritative.
++                do {
++                    try await APIClient.shared.markNotificationRead(id: notificationId)
++                    guard authSessionBoundary.owns(notificationBoundary) else { return }
++                    await DeliveredNotifications.clear(inboxRowIDs: [notificationId])
++                } catch {}
++            }
++            guard authSessionBoundary.owns(notificationBoundary) else { return }
++            await sharedAppState?.refreshUnread()
+         }
+     }
+ }
+diff --git a/ios/Wisconsin/Core/AppState.swift b/ios/Wisconsin/Core/AppState.swift
+index f54eaea4..39d4dd2d 100644
+--- a/ios/Wisconsin/Core/AppState.swift
++++ b/ios/Wisconsin/Core/AppState.swift
+@@ -29,11 +29,18 @@ final class AppState {
+     /// push; syncing here clears it again as the inbox is read.
+     var unreadNotifCount = 0 {
+         didSet {
+-            guard unreadNotifCount != oldValue else { return }
+-            let count = unreadNotifCount
+-            Task { try? await UNUserNotificationCenter.current().setBadgeCount(count) }
++            // APNs can change the system badge without changing this value.
++            // Reapply even zero, and serialize writes so an older count cannot
++            // finish after a newer read or sign-out reset.
++            let count = max(0, unreadNotifCount)
++            let previous = badgeUpdateTask
++            badgeUpdateTask = Task {
++                await previous?.value
++                try? await UNUserNotificationCenter.current().setBadgeCount(count)
++            }
+         }
+     }
++    private var badgeUpdateTask: Task<Void, Never>?
+     var openTradeCount = 0
+     var pendingPushBookingId: String?
+     var pendingPushEventId: String?
+@@ -192,6 +199,11 @@ final class AppState {
+     }
+ 
+     func refresh(forceRefresh: Bool = false) async {
++        let boundary = authSessionBoundary.capture()
++        // Inbox truth must not depend on dashboard/trade availability or the
++        // non-critical shell refresh throttle.
++        await refreshUnread()
++        guard authSessionBoundary.owns(boundary), !Task.isCancelled else { return }
+         let startedAt = Date()
+         guard !isRefreshing else {
+             appStatePerformanceLog.debug("launch.appState.refresh result=skipped reason=inFlight durationMs=\(elapsedMilliseconds(since: startedAt), privacy: .public)")
+@@ -215,14 +227,12 @@ final class AppState {
+         do {
+             // Use the lightweight stats endpoint instead of the full dashboard payload.
+             async let statsTask = APIClient.shared.dashboardStats()
+-            async let countTask = APIClient.shared.notificationUnreadCount()
+             async let tradesTask = APIClient.shared.shiftTrades(status: "OPEN", limit: 1)
+-            let (stats, count, trades) = try await (statsTask, countTask, tradesTask)
++            let (stats, trades) = try await (statsTask, tradesTask)
+             guard refreshRequests.owns(requestToken), !Task.isCancelled else { return }
+             overdueCount = stats.overdueCount
+             myShiftCount = stats.myShiftsCount
+             myShiftTodayCount = stats.myShiftsTodayCount ?? 0
+-            unreadNotifCount = count
+             openTradeCount = min(trades.total, 9)
+             Task { await NotificationTelemetry.recordSurfaceLoad("home", startedAt: startedAt, succeeded: true) }
+             appStatePerformanceLog.info("launch.appState.refresh result=success durationMs=\(elapsedMilliseconds(since: startedAt), privacy: .public) overdue=\(self.overdueCount, privacy: .public) shifts=\(self.myShiftCount, privacy: .public) shiftsToday=\(self.myShiftTodayCount, privacy: .public) unread=\(self.unreadNotifCount, privacy: .public) openTrades=\(self.openTradeCount, privacy: .public)")
+@@ -240,6 +250,7 @@ final class AppState {
+             let count = try await APIClient.shared.notificationUnreadCount()
+             guard unreadRefreshRequests.owns(requestToken), !Task.isCancelled else { return }
+             unreadNotifCount = count
++            await badgeUpdateTask?.value
+         } catch {}
+     }
+ }
+diff --git a/ios/project.yml b/ios/project.yml
+index 610f100e..ec70cbe4 100644
+--- a/ios/project.yml
++++ b/ios/project.yml
+@@ -86,8 +86,8 @@ targets:
+         PRODUCT_NAME: Wisconsin Creative
+         PRODUCT_MODULE_NAME: Wisconsin
+         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+-        MARKETING_VERSION: "1.2"
+-        CURRENT_PROJECT_VERSION: "31"
++        MARKETING_VERSION: "1.3"
++        CURRENT_PROJECT_VERSION: "33"
+         TARGETED_DEVICE_FAMILY: "1,2"
+         SWIFT_STRICT_CONCURRENCY: complete
+       configs:
+@@ -219,8 +219,8 @@ targets:
+       base:
+         PRODUCT_NAME: WisconsinLiveActivities
+         PRODUCT_BUNDLE_IDENTIFIER: com.erikrole.Wisconsin.LiveActivities
+-        MARKETING_VERSION: "1.2"
+-        CURRENT_PROJECT_VERSION: "31"
++        MARKETING_VERSION: "1.3"
++        CURRENT_PROJECT_VERSION: "33"
+         SKIP_INSTALL: YES
+         SWIFT_STRICT_CONCURRENCY: complete
+ 

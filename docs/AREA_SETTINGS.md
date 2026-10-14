@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Settings
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-09-18
+- Last Updated: 2026-10-09
 - Status: Active
 - Version: V1
 
@@ -24,7 +24,7 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 
 ### Security (`/settings/security`) -- Personal
 - Change password: verify current password, set new one (min 8 chars), optional "sign out of all other devices" checkbox. Client-side confirm-password match before submit.
-- Active sessions list: shows each non-expired session with creation date, expiry date, and "This device" badge for the current session. Per-session "Sign out" button (cannot revoke the current session). "Sign out all other devices" bulk action.
+- Active sessions list: shows each non-expired session with creation date, current expiry date (it moves forward with use, D-066), and "This device" badge for the current session. Per-session "Sign out" button (cannot revoke the current session). "Sign out all other devices" bulk action.
 - Passkeys: active invite-granted users can add one or more discoverable passkeys after current-password reauthentication, name them, see last-used metadata, and revoke an individual credential. An unnamed passkey is named after the enrolling client (for example "Chrome on macOS" or "iPhone"), each row states whether the credential is synced or bound to one device, and removal takes its own confirmation dialog with its own current-password field. Password sign-in and recovery remain available during rollout.
 - `POST /api/me/change-password` (5/min rate limit -- brute-force protection; verifies bcrypt, sets new hash, optionally deletes other sessions).
 - `GET /api/me/sessions` (30/min; lists non-expired sessions with `isCurrent` flag -- tokenHash never exposed to client).
@@ -34,6 +34,7 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 - `POST /api/auth/passkey/login/options` and `POST /api/auth/passkey/login/verify` (public discoverable login, required user verification, existing cookie-backed session issuance).
 - `GET /api/me/passkeys` and `DELETE /api/me/passkeys/:id` (credential metadata and current-password-protected per-credential revocation).
 - `GET /.well-known/change-password` redirects (303) to this page against the requesting origin, so a password manager's "Change password" action lands on the form that changes it.
+- `GET /.well-known/passkey-endpoints` publishes this page as the W3C Passkey Endpoints `enroll` and `manage` URLs (absolute, from the requesting origin), so a password manager can offer "Add a passkey" on a saved login and link here.
 - Every password form on this page carries the signed-in address as a hidden `autocomplete="username"` field, so a manager files or updates the credential against the right account instead of saving it unattached.
 - Available to every authenticated user (STUDENT included).
 
@@ -184,7 +185,7 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 - Create device → server returns a one-shot 6-digit activation code; admin enters it on the iPad at `/kiosk` to bind the device.
 - Pending-activation devices have a "Regenerate code" affordance — invalidates the prior hash and surfaces a fresh code in the same dialog.
 - Activated kiosks can't regenerate (must deactivate first; server returns 409).
-- Kiosk sessions are **always-on**: a bound device has no server-side session expiry and stays active until an admin deactivates it. The HTTP-only cookie is rolled forward on every authenticated kiosk request (~395-day window) to stay under browser cookie-lifetime caps without ever forcing a re-activation on a live device.
+- Kiosk sessions slide (D-039): authenticated activity pushes the 7-day `sessionExpiresAt` back out, roughly once a day, and the cookie is re-issued with it. A live device never re-activates; only 7 dark days or admin deactivation ends a session. (The earlier always-on / ~395-day cookie model was replaced.)
 - Toggle active/inactive (deactivating clears the session token, which ends the session immediately), delete, and inspect last-seen timestamp.
 - Device rows use the shared shadcn-backed status indicator for `Online`, `Heartbeat stale`, `Offline`, `Pending activation`, and `Deactivated` health.
 
@@ -221,6 +222,10 @@ Navigation breadcrumb versioned roadmap: `tasks/breadcrumbs-roadmap.md`
 All versions shipped. Duplicate breadcrumb removed; parent-level sibling quick-jump dropdown on "Settings" crumb navigates between sub-pages. Role-gated Settings sibling menus now wait for the current role before becoming dropdowns, so the loading frame does not expose an empty menu. The global breadcrumb UI now uses a lighter trail treatment with the current Settings sub-page marked by a subtle underline instead of a filled chip.
 
 ## Change Log
+- 2026-10-09: **Passwords turn into passkeys on their own; GearOps shares saved logins.** After a password sign-in or account creation, web and iOS ask the password manager that filled the password to save a passkey with no prompt (D-043 amendment). Accounts that already have a passkey are skipped, and sign-in with the new passkey still requires Face ID, Touch ID or the device unlock. The GearOps menu bar app now has `webcredentials:wisconsincreative.com` and is listed in the apple-app-site-association file, so AutoFill offers the website's saved password there. Schema: `passkey_challenges.automatic` (same migration). Proof: server tests for the automatic mode, including that a client cannot claim it at verify time; web and Swift source-contract tests; the full vitest suite; `npm run build:app`. Also a generic iOS Simulator `xcodebuild` (the iPhone 18 Pro Max simulator was not installed), a signed GearOps build carrying the entitlement, and 82 passing GearOps tests. A local Chromium run reported `conditionalCreate: true` and sent the automatic options request after a mocked password sign-in. A real password-manager upgrade is unproven: that needs a device or browser with a saved password against a deployed server.
+
+- 2026-10-09: **People stay signed in.** User sessions now slide on activity (D-066): a remembered sign-in lasts while it is used at least once every 30 days, up to 90 days, and an unremembered one lasts 12 idle hours within the browser session. "Keep me signed in" starts ticked, shows on every sign-in step including account creation, and new accounts are no longer limited to 12 hours. Signing back in returns to the page that was asked for. `/.well-known/passkey-endpoints` points password managers at Security for adding a passkey. Schema: `sessions.persistent` (migration `0174_stay_signed_in`). Proof: focused session, return-path, passkey, and password-manager tests, the full vitest suite, `tsc`, lint, and `npm run build:app`. Migration deploy and authenticated preview proof are pending.
+
 - 2026-09-18: **Snow Leopard polish.** Settings keeps a single `main` landmark. ⌘K stays on the settings palette. Jump links clear the sticky header. Directory search can be cleared. Command palette no longer stacks a close control on the search field.
 
 - 2026-09-18: **Settings control room rehaul.** Overview is a searchable directory. The rail uses icons and groups Booking (checkout, reservation, extensions, overdue) separately from Schedule (sports, calendars, locations, venue mappings). Sports moved out of People. Page titles match nav labels. Related-page links sit under each tab. Shared save bars keep labels stable. Profile now exposes Slack handle. Local authenticated browser proof on overview search/filter, Profile, Appearance, Sports jump nav, Checkout policies dirty/reset save bar, and related links. `npm run build:app` was not run because Preview `next dev` owns port 3000. Evidence: `tasks/archive/proofs/settings-overhaul-2026-09-18/review.html`.

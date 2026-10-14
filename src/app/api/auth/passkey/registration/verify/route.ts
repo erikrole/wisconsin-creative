@@ -29,6 +29,7 @@ export const POST = withAuth(async (req, { user }) => {
       name: credential.name,
       deviceType: credential.deviceType,
       backedUp: credential.backedUp,
+      automatic: credential.automatic,
     },
   });
 

@@ -137,7 +137,17 @@ export const GET = withAuth<{ id: string }>(async (req, { user, params }) => {
   const [asset, derivedStatus, bookingHistory, activeAllocs, upcomingReservations, accessories, favoriteRow] = await Promise.all([
     db.asset.findUnique({
       where: { id: params.id },
-      include: { location: true, category: true, department: { select: { id: true, name: true } }, parent: { select: { id: true, assetTag: true, name: true, brand: true, model: true } } }
+      include: { location: true, category: true, department: { select: { id: true, name: true } }, parent: { select: { id: true, assetTag: true, name: true, brand: true, model: true } },
+        checkinReports: user.role === "ADMIN" || user.role === "STAFF" ? {
+          select: {
+            id: true, type: true, description: true, imageUrl: true, createdAt: true, lastReportedAt: true,
+            reportedBy: { select: { name: true } },
+            booking: { select: { id: true, title: true } },
+          },
+          orderBy: [{ lastReportedAt: "desc" }, { id: "desc" }],
+          take: 5,
+        } : false,
+      }
     }),
     deriveAssetStatus(params.id).catch(() => null),
     db.bookingSerializedItem.findMany({

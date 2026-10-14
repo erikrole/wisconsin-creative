@@ -81,29 +81,65 @@ const HYGIENE_CHECK_META: Record<string, HygieneCheckMeta> = {
     href: "/items",
     ctaLabel: "Open items",
   },
-  "camera-missing-attachments": {
+  "legacy-qr-labels": {
     severity: "warning",
+    priority: 3,
+    href: "/items?cleanupWizard=legacy_qr",
+    ctaLabel: "Open cleanup wizard",
+  },
+  "missing-serial": {
+    severity: "info",
+    priority: 4,
+    href: "/items?cleanupWizard=missing_serial",
+    ctaLabel: "Open cleanup wizard",
+  },
+  "attachment-candidates": {
+    severity: "info",
     priority: 5,
+    href: "/items?cleanupWizard=attachment_candidate",
+    ctaLabel: "Open cleanup wizard",
+  },
+  "camera-missing-attachments": {
+    severity: "info",
+    priority: 9,
     href: "/items",
     ctaLabel: "Review attachments",
   },
   "missing-category": {
     severity: "info",
     priority: 6,
-    href: "/items",
-    ctaLabel: "Open items",
+    href: "/items?fillGaps=1",
+    ctaLabel: "Fill gaps",
   },
   "missing-department": {
     severity: "info",
     priority: 7,
-    href: "/items",
-    ctaLabel: "Open items",
+    href: "/items?fillGaps=1",
+    ctaLabel: "Fill gaps",
+  },
+  "family-missing-category": {
+    severity: "info",
+    priority: 6,
+    href: "/items?fillGaps=1",
+    ctaLabel: "Fill gaps",
+  },
+  "family-missing-department": {
+    severity: "info",
+    priority: 7,
+    href: "/items?fillGaps=1",
+    ctaLabel: "Fill gaps",
   },
   "missing-image": {
     severity: "info",
     priority: 8,
     href: "/items",
     ctaLabel: "Open items",
+  },
+  "family-missing-image": {
+    severity: "info",
+    priority: 8,
+    href: "/bulk-inventory",
+    ctaLabel: "Open item families",
   },
 };
 

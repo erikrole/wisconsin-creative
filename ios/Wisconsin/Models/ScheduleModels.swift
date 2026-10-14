@@ -383,6 +383,17 @@ struct EventShiftGroup: Codable, Identifiable {
     /// Student-safe pause flag. True while a private working copy exists, without
     /// exposing that draft. Older servers omit it and claims stay offered.
     var claimsPaused: Bool?
+    /// Server verdict on whether the crew can be claimed at all (released, not
+    /// archived, hidden or cancelled). Older servers omit it.
+    var claimsOpen: Bool?
+    /// Release state of the crew. `publishedAt == nil` means staff have not
+    /// released it, and the server rejects claims on it. Older servers omit it
+    /// and claims stay offered.
+    var publication: EventShiftGroupPublication?
+}
+
+struct EventShiftGroupPublication: Codable {
+    let publishedAt: Date?
 }
 
 struct ShiftGroupEvent: Codable, Identifiable {

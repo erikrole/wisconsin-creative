@@ -10,51 +10,22 @@ enum KioskAccessState: String, Codable, Equatable, Sendable {
 }
 
 private struct GearOpsCachedState: Codable {
-    private static let maxOpenBookings = 1_000
-    private static let maxBookingActivity = 2_000
-    private static let maxKioskDevices = 256
-    private static let maxCount = 1_000_000
-
     let user: GearOpsUser
     let snapshot: GearOpsSnapshot?
     let openBookings: [OpenBooking]?
-    let openBookingTotal: Int?
     let activeBookingActivity: [BookingActivitySnapshot]?
     let kioskDevices: [KioskDevice]?
     let kioskAccess: KioskAccessState?
 
     var isTrustworthy: Bool {
-        guard !user.id.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-              openBookingTotal.map({ $0 >= 0 }) ?? true,
-              openBookings.map({ $0.count <= Self.maxOpenBookings }) ?? true,
-              activeBookingActivity.map({ $0.count <= Self.maxBookingActivity }) ?? true,
-              kioskDevices.map({ $0.count <= Self.maxKioskDevices }) ?? true,
-              openBookings.map({ Self.hasUniqueNonemptyIDs($0.map(\.id)) }) ?? true,
-              activeBookingActivity.map({ Self.hasUniqueNonemptyIDs($0.map(\.id)) }) ?? true,
-              kioskDevices.map({ Self.hasUniqueNonemptyIDs($0.map(\.id)) }) ?? true,
-              kioskDevices?.allSatisfy({
-                  $0.pendingPickupCount >= 0 && $0.pendingPickupCount <= Self.maxCount
-                      && $0.openCheckoutCount >= 0 && $0.openCheckoutCount <= Self.maxCount
-              }) ?? true else {
-            return false
-        }
-
-        guard let snapshot else { return true }
-        return snapshot.stats.checkedOut >= 0
-            && snapshot.stats.checkedOut <= Self.maxCount
-            && snapshot.stats.overdue >= 0
-            && snapshot.stats.overdue <= Self.maxCount
-            && snapshot.stats.reserved >= 0
-            && snapshot.stats.reserved <= Self.maxCount
-            && snapshot.stats.dueToday >= 0
-            && snapshot.stats.dueToday <= Self.maxCount
-            && snapshot.pendingPickupTotal >= 0
-            && snapshot.pendingPickupTotal <= Self.maxCount
-    }
-
-    private static func hasUniqueNonemptyIDs(_ ids: [String]) -> Bool {
-        ids.allSatisfy { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-            && Set(ids).count == ids.count
+        !user.id.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && CompanionProjectionLimits.accepts(
+                stats: snapshot?.stats,
+                pendingPickupTotal: snapshot?.pendingPickupTotal,
+                openBookings: openBookings ?? [],
+                bookingActivity: activeBookingActivity ?? [],
+                kioskDevices: kioskDevices ?? []
+            )
     }
 }
 
@@ -63,6 +34,20 @@ private struct GearOpsCachedState: Codable {
 final class GearOpsModel {
     private static let cacheKey = "GearOpsCachedStateV1"
     private static let signedOutKey = "GearOpsExplicitlySignedOutV1"
+
+    /// Push is the normal invalidation path, but APNs can be throttled. When
+    /// the projection has not been confirmed for this long, the health panel
+    /// stops presenting it as current, so silence never reads as "Healthy".
+    /// Confirmation is the client's last successful read, not the server's
+    /// `generatedAt`: the server rebuilds only on change, so an old
+    /// `generatedAt` on a quiet day is still current truth.
+    static let staleSnapshotAge: TimeInterval = 15 * 60
+
+    /// Opening the extra re-reads the projection only when the last
+    /// confirmation and the last attempt are both older than this. Every
+    /// refresh rotates the companion credential, which the server rate-limits
+    /// per IP.
+    static let presentationRefreshInterval: TimeInterval = 60
 
     private let client: any GearOpsServing
     private let defaults: UserDefaults
@@ -83,11 +68,19 @@ final class GearOpsModel {
     private var restoreQueued = false
     private var awaitingCredentialUnlock = false
     private var knownBookingActivity: [String: BookingActivitySnapshot] = [:]
+    private var lastRefreshAttemptAt: Date?
+    private var lastConfirmedAt: Date?
+    private let currentDate: () -> Date
+    /// The time the menu bar label evaluates overdue against. D-047 forbids
+    /// timers in this client, so it advances only on events that already
+    /// happen: a refresh (push, wake, manual), presenting the extra, and an
+    /// installed or confirmed projection. A booking that passes its due time
+    /// joins the overdue count at the next of those, not on the minute.
+    private(set) var labelClock: Date = .now
 
     var user: GearOpsUser?
     var snapshot: GearOpsSnapshot?
     var openBookings: [OpenBooking] = []
-    var openBookingTotal: Int?
     var activeBookingActivity: [BookingActivitySnapshot] = []
     var kioskDevices: [KioskDevice] = []
     var kioskAccess: KioskAccessState = .unknown
@@ -96,7 +89,6 @@ final class GearOpsModel {
     var isSigningOut = false
     var isRefreshing = false
     var statusMessage: String?
-    var countDataIsPartial = false
     var notificationAuthorization: BookingNotificationAuthorization = .unknown
 
     init(
@@ -106,8 +98,10 @@ final class GearOpsModel {
         credentialStore: any CompanionCredentialStoring = CompanionCredentialStore(),
         notificationSettings: NotificationSettingsStore? = nil,
         appPreferences: AppPreferencesStore? = nil,
-        autoStart: Bool = true
+        autoStart: Bool = true,
+        currentDate: @escaping () -> Date = { .now }
     ) {
+        self.currentDate = currentDate
         self.client = client
         self.defaults = defaults
         self.bookingNotifications = bookingNotifications
@@ -122,7 +116,6 @@ final class GearOpsModel {
             user = cached.user
             snapshot = cached.snapshot
             openBookings = cached.openBookings ?? []
-            openBookingTotal = cached.openBookingTotal
             activeBookingActivity = (cached.activeBookingActivity ?? [])
                 .sorted(using: KeyPathComparator(\.startsAt))
             kioskDevices = cached.kioskDevices ?? []
@@ -151,10 +144,33 @@ final class GearOpsModel {
     }
 
     var menuBarAccessibilityLabel: String {
+        menuBarAccessibilityLabel(at: .now)
+    }
+
+    func menuBarAccessibilityLabel(at now: Date) -> String {
         guard let count = custodyCount else {
             return user == nil ? "Wisconsin Creative, signed out" : "Wisconsin Creative, status unavailable"
         }
-        return "Wisconsin Creative, \(count) active checkout\(count == 1 ? "" : "s")"
+        var label = "Wisconsin Creative, \(count) active checkout\(count == 1 ? "" : "s")"
+        let overdue = overdueBookingCount(at: now)
+        if overdue > 0 { label += ", \(overdue) overdue" }
+        return label
+    }
+
+    /// The numeral beside the extra glyph, per the count preference. Overdue
+    /// mode shows nothing at zero so the numeral only appears when it is
+    /// actionable.
+    func menuBarCount(at now: Date) -> Int? {
+        switch appPreferences.menuBarCountMode {
+        case .open:
+            return custodyCount
+        case .overdue:
+            guard snapshot != nil else { return nil }
+            let overdue = overdueBookingCount(at: now)
+            return overdue > 0 ? overdue : nil
+        case .hidden:
+            return nil
+        }
     }
 
     /// The projection's checked-out statistic is the single physical-custody
@@ -162,10 +178,28 @@ final class GearOpsModel {
     var custodyCount: Int? { snapshot?.stats.checkedOut }
 
     var companionHealthSeverity: GearOpsHealthSeverity {
+        companionHealthSeverity(at: .now)
+    }
+
+    func companionHealthSeverity(at now: Date) -> GearOpsHealthSeverity {
         guard user != nil else { return .healthy }
-        if snapshot == nil { return .critical }
-        if countDataIsPartial || statusMessage != nil { return .attention }
+        guard let snapshot else { return .critical }
+        if statusMessage != nil || snapshotIsStale(snapshot, at: now) { return .attention }
         return .healthy
+    }
+
+    /// The last successful projection read this session, or the cached
+    /// snapshot's generation time before the first read after launch.
+    var confirmedAt: Date? {
+        lastConfirmedAt ?? snapshot?.receivedAt
+    }
+
+    func snapshotIsStale(at now: Date = .now) -> Bool {
+        snapshot.map { snapshotIsStale($0, at: now) } ?? false
+    }
+
+    private func snapshotIsStale(_ snapshot: GearOpsSnapshot, at now: Date) -> Bool {
+        now.timeIntervalSince(lastConfirmedAt ?? snapshot.receivedAt) > Self.staleSnapshotAge
     }
 
     var kioskHealthSeverity: GearOpsHealthSeverity {
@@ -183,7 +217,11 @@ final class GearOpsModel {
     }
 
     var healthSeverity: GearOpsHealthSeverity {
-        max(companionHealthSeverity, kioskHealthSeverity)
+        healthSeverity(at: .now)
+    }
+
+    func healthSeverity(at now: Date) -> GearOpsHealthSeverity {
+        max(companionHealthSeverity(at: now), kioskHealthSeverity)
     }
 
     var kioskStatusSummary: String {
@@ -204,7 +242,11 @@ final class GearOpsModel {
     }
 
     var healthLabel: String {
-        switch healthSeverity {
+        healthLabel(at: .now)
+    }
+
+    func healthLabel(at now: Date) -> String {
+        switch healthSeverity(at: now) {
         case .healthy: "Healthy"
         case .attention: "Needs attention"
         case .critical: "Critical"
@@ -253,6 +295,36 @@ final class GearOpsModel {
             if lhs.endsAt != rhs.endsAt { return lhs.endsAt < rhs.endsAt }
             return lhs.id < rhs.id
         }
+    }
+
+    /// Answers "who has this?" from the projection already on disk: every
+    /// whitespace-separated term must match the booking title, requester,
+    /// location, reference, or an item tag or name. Open checkouts come first
+    /// (overdue first), then upcoming and waiting reservations.
+    func searchBookings(_ query: String, at now: Date = .now) -> [BookingSearchResult] {
+        let terms = query.split(whereSeparator: \.isWhitespace).map(String.init)
+        guard !terms.isEmpty else { return [] }
+
+        let openIDs = Set(openBookings.map(\.id))
+        let open = glanceOpenBookings(at: now).compactMap { booking in
+            BookingSearchResult.match(
+                terms: terms,
+                fields: [booking.title, booking.requester.name, booking.location.name, booking.refNumber],
+                items: booking.items,
+                booking: .open(booking)
+            )
+        }
+        let upcoming = activeBookingActivity
+            .filter { !openIDs.contains($0.id) && ($0.status == .booked || $0.status == .pendingPickup) }
+            .compactMap { booking in
+                BookingSearchResult.match(
+                    terms: terms,
+                    fields: [booking.title, booking.requester.name, booking.location.name, booking.refNumber],
+                    items: booking.items,
+                    booking: .reservation(booking)
+                )
+            }
+        return open + upcoming
     }
 
     /// Derived from the same rows the popover renders rather than from the
@@ -323,7 +395,10 @@ final class GearOpsModel {
                 // lived only in crash-vulnerable preferences.
                 try? await credentialStore.saveUser(user)
             }
-            await refresh()
+            // A presentation or push read already in flight covers this
+            // restore. Queuing behind it would read the projection and rotate
+            // the credential twice for one activation.
+            if !isRefreshing { await refresh() }
             guard sessionIsCurrent(generation: generation, token: token) else { return }
             scheduleSupplementarySetup(expectedGeneration: generation, token: token)
         } catch {
@@ -455,6 +530,7 @@ final class GearOpsModel {
     /// Every post-enrollment refresh reads only the external Upstash projection.
     /// Failure preserves the last trusted local snapshot.
     func refresh() async {
+        labelClock = currentDate()
         guard user != nil else { return }
         guard let companionToken else {
             // Manual refresh must retry secure storage, rather than silently
@@ -498,6 +574,8 @@ final class GearOpsModel {
                 try projection.validate()
 
                 if installedProjection == projection {
+                    lastConfirmedAt = currentDate()
+        labelClock = lastConfirmedAt ?? labelClock
                     statusMessage = nil
                 } else {
                     await install(
@@ -517,6 +595,27 @@ final class GearOpsModel {
                 statusMessage = "Updates are unavailable. Showing the last confirmed data."
             }
         } while refreshQueued && sessionIsCurrent(generation: generation, token: requestToken)
+    }
+
+    /// Presenting the extra is a moment the user is looking, so a snapshot
+    /// that push may have missed is re-read then, bounded so repeated opens do
+    /// not churn the credential. This is user-driven, not a timer.
+    func refreshOnPresentation() async {
+        labelClock = currentDate()
+        // An activation restore in flight ends in its own refresh; retrying
+        // or refreshing beside it would read and rotate a second time.
+        guard !restoreInFlight else { return }
+        if shouldRetryCredentialRestore {
+            await restoreSession()
+            return
+        }
+        guard user != nil, companionToken != nil, !isRefreshing, !isSigningIn, !isSigningOut else { return }
+        let now = currentDate()
+        let interval = Self.presentationRefreshInterval
+        if let lastConfirmedAt, now.timeIntervalSince(lastConfirmedAt) < interval { return }
+        if let lastRefreshAttemptAt, now.timeIntervalSince(lastRefreshAttemptAt) < interval { return }
+        lastRefreshAttemptAt = now
+        await refresh()
     }
 
     func openDashboard() {
@@ -761,21 +860,9 @@ final class GearOpsModel {
             return
         }
         let previousActivity = knownBookingActivity
-        let sortedActivity = projection.bookingActivity.sorted(using: KeyPathComparator(\.startsAt))
-
-        snapshot = GearOpsSnapshot(
-            stats: projection.stats,
-            pendingPickupTotal: projection.pendingPickupTotal,
-            receivedAt: projection.generatedAt,
-            partialFailures: []
-        )
-        openBookings = projection.openBookings
-        openBookingTotal = projection.openBookings.count
-        activeBookingActivity = sortedActivity
-        kioskDevices = projection.kioskDevices
-        kioskAccess = KioskAccessState(rawValue: projection.kioskAccess) ?? .failed
-        installedProjection = projection
-        countDataIsPartial = false
+        let sortedActivity = apply(projection)
+        lastConfirmedAt = currentDate()
+        labelClock = lastConfirmedAt ?? labelClock
         statusMessage = nil
 
         knownBookingActivity = Dictionary(
@@ -809,23 +896,30 @@ final class GearOpsModel {
         }
     }
 
+    /// The visible-state half of `install`, shared with the capture fixture so
+    /// the two cannot present a projection differently.
+    @discardableResult
+    private func apply(_ projection: CompanionProjection) -> [BookingActivitySnapshot] {
+        let sortedActivity = projection.bookingActivity.sorted(using: KeyPathComparator(\.startsAt))
+        snapshot = GearOpsSnapshot(
+            stats: projection.stats,
+            pendingPickupTotal: projection.pendingPickupTotal,
+            receivedAt: projection.generatedAt
+        )
+        openBookings = projection.openBookings
+        activeBookingActivity = sortedActivity
+        kioskDevices = projection.kioskDevices
+        kioskAccess = KioskAccessState(rawValue: projection.kioskAccess) ?? .failed
+        installedProjection = projection
+        return sortedActivity
+    }
+
     #if DEBUG
     /// Installs a capture fixture synchronously, without notifications or
     /// persistence side effects beyond the fixture's in-memory defaults.
     func loadFixture(user: GearOpsUser, projection: CompanionProjection) {
         self.user = user
-        snapshot = GearOpsSnapshot(
-            stats: projection.stats,
-            pendingPickupTotal: projection.pendingPickupTotal,
-            receivedAt: projection.generatedAt,
-            partialFailures: []
-        )
-        openBookings = projection.openBookings
-        openBookingTotal = projection.openBookings.count
-        activeBookingActivity = projection.bookingActivity.sorted(using: KeyPathComparator(\.startsAt))
-        kioskDevices = projection.kioskDevices
-        kioskAccess = KioskAccessState(rawValue: projection.kioskAccess) ?? .failed
-        installedProjection = projection
+        apply(projection)
         isRestoring = false
     }
     #endif
@@ -836,7 +930,6 @@ final class GearOpsModel {
             user: user,
             snapshot: snapshot,
             openBookings: openBookings,
-            openBookingTotal: openBookingTotal,
             activeBookingActivity: activeBookingActivity,
             kioskDevices: kioskDevices,
             kioskAccess: kioskAccess
@@ -852,15 +945,15 @@ final class GearOpsModel {
         user = nil
         snapshot = nil
         openBookings = []
-        openBookingTotal = nil
         activeBookingActivity = []
         kioskDevices = []
         kioskAccess = .unknown
         knownBookingActivity = [:]
         installedProjection = nil
+        lastConfirmedAt = nil
+        lastRefreshAttemptAt = nil
         refreshQueued = false
         registeredDeviceCredential = nil
-        countDataIsPartial = false
         defaults.removeObject(forKey: Self.cacheKey)
     }
 

@@ -43,7 +43,9 @@ final class GearOpsAppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         if flag { return true }
-        openSettingsFromDock(nil)
+        // A Dock click means the extra is hidden; show the same status glance
+        // rather than Settings, which stays one item away in the Dock menu.
+        GearOpsStatusPresenter.showWindow()
         return false
     }
 
@@ -52,6 +54,7 @@ final class GearOpsAppDelegate: NSObject, NSApplicationDelegate {
         // functionality. This menu exists when the extra is hidden and the
         // Dock icon is the remaining native entry. Quit remains a system item.
         let menu = NSMenu()
+        menu.addItem(dockItem("Show Status", #selector(showStatusFromDock(_:))))
         menu.addItem(dockItem("Open Dashboard", #selector(openDashboardFromDock(_:))))
         menu.addItem(dockItem("Refresh", #selector(refreshFromDock(_:))))
         menu.addItem(.separator())
@@ -78,6 +81,10 @@ final class GearOpsAppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         NotificationCenter.default.post(name: .gearOpsOpenSettings, object: nil)
+    }
+
+    @objc private func showStatusFromDock(_ sender: Any?) {
+        GearOpsStatusPresenter.showWindow()
     }
 
     @objc private func openDashboardFromDock(_ sender: Any?) {

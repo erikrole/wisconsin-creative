@@ -59,7 +59,7 @@ async function publishEndedWorkingSchedule(
       actor.id,
       expectedVersion,
       actor.role,
-      { clearNotificationPending: true, expectedDraftId },
+      { expectedDraftId },
     );
     await Promise.allSettled(
       publication.affectedUserIds.map((userId) => badges.onShiftsWorked({ userId }, { notify: false })),

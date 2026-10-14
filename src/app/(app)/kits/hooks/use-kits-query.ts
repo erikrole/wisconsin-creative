@@ -14,6 +14,7 @@ export type KitRow = {
   updatedAt: string;
   location: { id: string; name: string };
   _count: { members: number; bulkMembers: number };
+  availability?: { serialized: number; unavailable: number };
 };
 
 type KitsSummary = {

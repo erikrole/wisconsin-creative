@@ -41,8 +41,21 @@ export type AuthUser = {
   preview?: RolePreviewInfo;
 };
 
-const SESSION_12H_MS = 1000 * 60 * 60 * 12;
-const SESSION_30D_MS = 1000 * 60 * 60 * 24 * 30;
+// User sessions slide on activity (D-066). A remembered sign-in stays alive
+// while it is used at least once every 30 days, up to a 90-day absolute cap;
+// an unremembered one ends after 12 idle hours or 7 days, and its cookie ends
+// with the browser. The database row is the only authority: the cookie is set
+// once to the absolute cap, so a slide never has to re-issue it (which server
+// components cannot do) and a cookie that outlives its row is just a dead token.
+const SESSION_IDLE_MS = 1000 * 60 * 60 * 12;
+const SESSION_REMEMBERED_IDLE_MS = 1000 * 60 * 60 * 24 * 30;
+const SESSION_MAX_MS = 1000 * 60 * 60 * 24 * 7;
+const SESSION_REMEMBERED_MAX_MS = 1000 * 60 * 60 * 24 * 90;
+// Throttle: slide only once this much of the idle window has been consumed, so
+// an active user costs about one session UPDATE per hour (or per day when
+// remembered) rather than one per request.
+const SESSION_SLIDE_AFTER_MS = 1000 * 60 * 60;
+const SESSION_REMEMBERED_SLIDE_AFTER_MS = 1000 * 60 * 60 * 24;
 const KIOSK_SESSION_MS = 1000 * 60 * 60 * 24 * 7;
 export const LAST_ACTIVE_REFRESH_MS = 1000 * 60 * 5;
 
@@ -74,10 +87,50 @@ export async function verifyPassword(hash: string, password: string) {
   return bcrypt.compare(password, hash);
 }
 
+export function sessionWindow(persistent: boolean) {
+  return persistent
+    ? { idleMs: SESSION_REMEMBERED_IDLE_MS, maxMs: SESSION_REMEMBERED_MAX_MS, slideAfterMs: SESSION_REMEMBERED_SLIDE_AFTER_MS }
+    : { idleMs: SESSION_IDLE_MS, maxMs: SESSION_MAX_MS, slideAfterMs: SESSION_SLIDE_AFTER_MS };
+}
+
+/**
+ * The expiry a session should slide to after activity at `now`, or null when
+ * it is not yet due (throttled) or already sits at its absolute cap.
+ */
+export function slidSessionExpiry(
+  session: { expiresAt: Date; createdAt: Date; persistent: boolean },
+  now = new Date(),
+): Date | null {
+  const { idleMs, maxMs, slideAfterMs } = sessionWindow(session.persistent);
+  const remaining = session.expiresAt.getTime() - now.getTime();
+  if (remaining > idleMs - slideAfterMs) return null;
+  const next = Math.min(now.getTime() + idleMs, session.createdAt.getTime() + maxMs);
+  return next > session.expiresAt.getTime() ? new Date(next) : null;
+}
+
+async function slideSession(
+  session: { id: string; expiresAt: Date; createdAt: Date; persistent: boolean },
+  now = new Date(),
+) {
+  const expiresAt = slidSessionExpiry(session, now);
+  if (!expiresAt) return;
+  try {
+    // Never move an expiry backwards if a concurrent request slid it further.
+    await db.session.updateMany({
+      where: { id: session.id, expiresAt: { lt: expiresAt } },
+      data: { expiresAt },
+    });
+  } catch (error) {
+    console.error("Failed to extend session", error);
+  }
+}
+
 export async function createSession(userId: string, rememberMe = false) {
   const raw = randomHex(32);
   const hashed = await tokenHash(raw);
-  const expiresAt = new Date(Date.now() + (rememberMe ? SESSION_30D_MS : SESSION_12H_MS));
+  const now = Date.now();
+  const { idleMs, maxMs } = sessionWindow(rememberMe);
+  const expiresAt = new Date(now + idleMs);
 
   const cookieStore = await cookies();
   // A new login must never inherit a preview selected for a prior session.
@@ -96,7 +149,8 @@ export async function createSession(userId: string, rememberMe = false) {
     data: {
       userId,
       tokenHash: hashed,
-      expiresAt
+      expiresAt,
+      persistent: rememberMe,
     }
   });
 
@@ -105,7 +159,8 @@ export async function createSession(userId: string, rememberMe = false) {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    expires: expiresAt
+    // Unremembered: a browser-session cookie. Remembered: the absolute cap.
+    ...(rememberMe ? { expires: new Date(now + maxMs) } : {}),
   });
 }
 
@@ -191,6 +246,10 @@ async function loadAuthenticatedUser(): Promise<AuthUser> {
   }
 
   requireActiveCollaboratorPolicy(session.user);
+
+  // Slide regardless of role preview: an admin previewing a role is still the
+  // one using the session.
+  await slideSession(session);
 
   const preview = session.user.role === Role.ADMIN ? await readRolePreviewCookie() : null;
   if (!preview) {

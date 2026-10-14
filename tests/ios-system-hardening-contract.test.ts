@@ -74,18 +74,17 @@ describe("iOS system hardening contracts", () => {
     expect(notificationRouting).toContain(
       "let notificationBoundary = authSessionBoundary.capture()",
     );
-    // Every branch that resumes on the main actor must re-check the boundary,
-    // or a notification delivered before a sign-out can route into the
-    // replacement account's shell. Counted against the branches themselves
-    // rather than a fixed number, so adding a branch cannot quietly skip the
-    // check. The snooze branch is deliberately not one of these: it is a plain
-    // `Task`, touches no session state, and never routes.
-    const mainActorBranches =
-      notificationRouting.match(/Task \{ @MainActor in/g)?.length ?? 0;
-    expect(mainActorBranches).toBeGreaterThanOrEqual(2);
-    expect(
-      notificationRouting.match(/authSessionBoundary\.owns\(notificationBoundary\)/g),
-    ).toHaveLength(mainActorBranches);
+    // Each actor branch must check ownership before its first suspension or
+    // routing write. Extra checks after network calls are required, too, and
+    // must not make this guard reject a safer implementation.
+    const mainActorBranches = notificationRouting.split("Task { @MainActor in").slice(1);
+    expect(mainActorBranches.length).toBeGreaterThanOrEqual(2);
+    for (const branch of mainActorBranches) {
+      const boundaryCheck = branch.indexOf("authSessionBoundary.owns(notificationBoundary)");
+      expect(boundaryCheck).toBeGreaterThanOrEqual(0);
+      const firstAwait = branch.indexOf("await ");
+      if (firstAwait >= 0) expect(boundaryCheck).toBeLessThan(firstAwait);
+    }
     expect(appState).toContain("PushTokenStorage.registrationAllowed = true");
     expect(app).toContain("AppDelegate.clearRemoteNotificationsForSignedOutUser()");
     expect(signedOutHandler).not.toContain(

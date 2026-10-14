@@ -2,6 +2,7 @@ import { withAuth } from "@/lib/api";
 import { ok } from "@/lib/http";
 import { parsePagination } from "@/lib/http";
 import { requirePermission, requirePermissionOrCollaboratorCapability } from "@/lib/rbac";
+import { summarizeKitListAvailability } from "@/lib/services/kit-list-availability";
 import { createKit, listKits, suggestFootballGamedayKit } from "@/lib/services/kits";
 import { optionalFootballGamedayKitRoleSchema } from "@/lib/football-gameday-kits";
 import { optionalSportCodeSchema } from "@/lib/validation";
@@ -51,8 +52,18 @@ export const GET = withAuth(async (req, { user }) => {
   const suggestedKitId = requesterUserId && locationId
     ? await suggestFootballGamedayKit({ requesterUserId, locationId })
     : null;
+  const availability = await summarizeKitListAvailability(result.data.map((kit) => kit.id));
 
-  return ok({ ...result, suggestedKitId, limit, offset });
+  return ok({
+    ...result,
+    data: result.data.map((kit) => ({
+      ...kit,
+      availability: availability.get(kit.id) ?? { serialized: 0, unavailable: 0 },
+    })),
+    suggestedKitId,
+    limit,
+    offset,
+  });
 });
 
 export const POST = withAuth(async (req, { user }) => {

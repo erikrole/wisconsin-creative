@@ -32,9 +32,9 @@ describe("working-copy mutation guard", () => {
     expect(guardCount).toBeGreaterThanOrEqual(5);
   });
 
-  it("keeps reservation-backed assignment out of a group with an open draft", () => {
+  it("keeps reservations from creating schedule assignments at all", () => {
     const source = readFileSync("src/lib/services/reservation-schedule.ts", "utf8");
-    expect(source).toContain("if (group.workingCopy) return null;");
+    expect(source).not.toContain("shiftAssignment.create");
   });
 
   it("rejects a live mutation with a recoverable 409, not a generic failure", () => {

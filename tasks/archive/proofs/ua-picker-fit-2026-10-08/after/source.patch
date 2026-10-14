@@ -1,0 +1,1212 @@
+diff --git a/src/app/(app)/gear/GearItemCard.tsx b/src/app/(app)/gear/GearItemCard.tsx
+index ed93b685..44c64183 100644
+--- a/src/app/(app)/gear/GearItemCard.tsx
++++ b/src/app/(app)/gear/GearItemCard.tsx
+@@ -1,7 +1,7 @@
+ "use client";
+ 
+ import Image from "next/image";
+-import { AlertTriangleIcon, MinusIcon, PlusIcon, Trash2Icon } from "lucide-react";
++import { AlertTriangleIcon, CheckIcon, MinusIcon, PlusIcon, Trash2Icon } from "lucide-react";
+ import { Badge } from "@/components/ui/badge";
+ import { Button } from "@/components/ui/button";
+ import { NativeSelect } from "@/components/ui/native-select";
+@@ -10,7 +10,8 @@ import {
+   formatUsd,
+   gearSku,
+   GEAR_MAX_QUANTITY,
+-  sizeKindForCategory,
++  isOneSizeItem,
++  gearSizeLabel,
+   type GearCatalogItem,
+ } from "@/lib/gear-picks/catalog";
+ import { cn } from "@/lib/utils";
+@@ -24,24 +25,17 @@ export function GearSwatches({
+   item,
+   selectedCode,
+   onSelect,
+-  onPhoto = false,
+   className,
+ }: {
+   item: GearCatalogItem;
+   selectedCode: string;
+   onSelect: (code: string) => void;
+-  /** Sits on the white product photo, so it uses light styling in either theme (dark swatches stay readable). */
+-  onPhoto?: boolean;
+   className?: string;
+ }) {
+   if (item.colors.length < 2) return null;
+   return (
+     <div
+-      className={cn(
+-        "flex flex-wrap gap-1.5",
+-        onPhoto && "gap-1 rounded-full bg-white/90 p-1 shadow-[0_1px_3px_rgba(0,0,0,0.18)] backdrop-blur-sm",
+-        className,
+-      )}
++      className={cn("-ml-2 flex flex-wrap", className)}
+       role="group"
+       aria-label={`${item.name} colors`}
+     >
+@@ -55,16 +49,13 @@ export function GearSwatches({
+             aria-label={`${color.label} (${color.code})`}
+             title={color.label}
+             onClick={() => onSelect(color.code)}
+-            className={cn(
+-              "relative size-7 rounded-full border shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08)] transition-shadow focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
+-              onPhoto ? "size-6 border-black/15" : "border-border",
+-              selected &&
+-                (onPhoto
+-                  ? "ring-2 ring-neutral-900 ring-offset-2 ring-offset-white"
+-                  : "ring-2 ring-foreground ring-offset-2 ring-offset-background"),
+-            )}
+-            style={{ backgroundColor: color.swatch }}
+-          />
++            className="flex size-11 items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
++          >
++            <span
++              className={cn("size-6 rounded-full border border-black/15 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08)]", selected && "ring-2 ring-foreground ring-offset-2 ring-offset-card")}
++              style={{ backgroundColor: color.swatch }}
++            />
++          </button>
+         );
+       })}
+     </div>
+@@ -90,12 +81,12 @@ export function GearItemCard({
+   onSelectColor: (code: string) => void;
+   onPreview: () => void;
+   onAddLine: (sku: string) => void;
+-  onChangeLine: (id: string, patch: Partial<Pick<DraftLine, "size" | "quantity">>) => void;
++  onChangeLine: (id: string, patch: Partial<Pick<DraftLine, "sku" | "size" | "quantity">>) => void;
+   onRemoveLine: (id: string) => void;
+ }) {
+   const color = item.colors.find((entry) => entry.code === selectedCode) ?? item.colors[0]!;
+   const sku = gearSku(item.style, color.code);
+-  const sizeKind = sizeKindForCategory(item.category);
++  const oneSize = isOneSizeItem(item);
+   const colorLines = lines.filter((line) => line.sku === sku);
+   const otherColors = item.colors
+     .filter((entry) => entry.code !== color.code)
+@@ -107,13 +98,14 @@ export function GearItemCard({
+     })
+     .filter(Boolean);
+   const picked = lines.length > 0;
++  const pickedCount = lines.reduce((sum, line) => sum + line.quantity, 0);
+ 
+   return (
+     <article
+       id={gearItemAnchorId(item.style)}
+       className={cn(
+         "flex scroll-mt-20 flex-col overflow-hidden rounded-lg border bg-card transition-colors",
+-        picked ? "border-[var(--wi-red)]/50" : "border-border",
++        picked ? "border-foreground/40" : "border-border",
+       )}
+       aria-label={item.name}
+     >
+@@ -121,14 +113,14 @@ export function GearItemCard({
+         <button
+           type="button"
+           onClick={onPreview}
+-          className="group relative aspect-square w-full bg-white focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ring/50"
++          className="group relative aspect-[4/3] w-full bg-white focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ring/50"
+           aria-label={`Preview ${item.name} in ${color.label} larger`}
+         >
+           <Image
+             src={color.image}
+             alt={`${item.name} in ${color.label}`}
+             fill
+-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 240px"
++            sizes="(max-width: 1023px) 50vw, (max-width: 1279px) 33vw, 25vw"
+             className="object-contain p-3 transition-transform duration-200 group-hover:scale-[1.02] motion-reduce:transition-none"
+           />
+           {color.imageNote && (
+@@ -136,64 +128,60 @@ export function GearItemCard({
+               {color.imageNote}
+             </Badge>
+           )}
+-          {item.collectionLabel && (
+-            <Badge size="sm" className="absolute right-2 top-2 bg-neutral-900 text-white">
+-              {item.collectionLabel.replace(/ collection$/i, "")}
+-            </Badge>
+-          )}
+         </button>
+-        <GearSwatches
+-          item={item}
+-          selectedCode={color.code}
+-          onSelect={onSelectColor}
+-          onPhoto
+-          className="absolute bottom-2 left-2 max-w-[calc(100%-1rem)]"
+-        />
++        {picked && (
++          <Badge variant="green" className={cn("absolute right-2 text-[11px]", color.imageNote ? "bottom-2" : "top-2")}>
++            <CheckIcon aria-hidden="true" /> Picked · {pickedCount}
++          </Badge>
++        )}
+       </div>
+ 
+       <div className="flex flex-1 flex-col gap-2 border-t border-border p-3">
+         <div className="min-w-0">
+-          <div className="flex items-start justify-between gap-2">
+-            <h3 className="text-sm font-semibold leading-snug text-foreground">{item.name}</h3>
+-            <span className="shrink-0 text-sm font-semibold tabular-nums">{formatUsd(dollarsToCents(item.price))}</span>
+-          </div>
++          {item.collectionLabel && (
++            <p className="mb-1 text-[11px] font-medium text-muted-foreground">{item.collectionLabel.replace(/ collection$/i, "")}</p>
++          )}
++          <h3 className="text-sm font-semibold leading-snug text-foreground">{item.name}</h3>
++          <p className="mt-1.5 text-base font-semibold tabular-nums">{formatUsd(dollarsToCents(item.price))}</p>
+           {item.priceNote && (
+             <p className="mt-0.5 flex items-start gap-1 text-[11.5px] leading-4 text-[var(--orange-text)]">
+               <AlertTriangleIcon className="mt-px size-3 shrink-0" aria-hidden="true" />
+               {item.priceNote}
+             </p>
+           )}
+-          <p className="mt-1 text-xs text-muted-foreground">{color.label}</p>
++          <p className="mt-2 text-xs text-muted-foreground">{color.label}</p>
++          <GearSwatches item={item} selectedCode={color.code} onSelect={onSelectColor} />
+         </div>
+ 
+         <div className="mt-auto flex flex-col gap-1.5 pt-1">
++          {colorLines.length > 0 && item.category === "Footwear" && <p className="text-xs text-muted-foreground">{gearSizeLabel(item)}{item.shoeSizeSystem === "CATALOG" ? " · Confirm against the catalog before ordering." : ""}</p>}
+           {colorLines.map((line) => (
+             // Wraps the stepper under the size on narrow cards so sizes like "XXL" never truncate.
+             <div key={line.id} className="flex flex-wrap items-center gap-1.5">
+-              {sizeKind === "HEADWEAR" ? (
++              {oneSize ? (
+                 <span className="min-w-0 flex-1 text-xs text-muted-foreground">One size</span>
+               ) : (
+                 <NativeSelect
+                   aria-label={`Size for ${item.name} in ${color.label}`}
+-                  className="h-9 min-w-[5.5rem] flex-1 basis-[5.5rem] px-2 text-sm"
++                  className="h-11 min-w-0 flex-1 basis-full px-2 text-sm"
+                   value={line.size ?? ""}
+                   disabled={readOnly}
+                   onChange={(event) => onChangeLine(line.id, { size: event.target.value || null })}
+                 >
+-                  <option value="">{sizeKind === "FOOTWEAR" ? "Shoe size" : "Size"}</option>
+-                  {sizeOptionsFor(sizeKind, line.size).map((size) => (
++                  <option value="">{gearSizeLabel(item)}</option>
++                  {sizeOptionsFor(item, line.size).map((size) => (
+                     <option key={size} value={size}>
+                       {size}
+                     </option>
+                   ))}
+                 </NativeSelect>
+               )}
+-              <div className="ml-auto flex shrink-0 items-center rounded-md border border-border">
++              <div className="flex w-full shrink-0 items-center justify-between rounded-md border border-border">
+                 <Button
+                   type="button"
+                   variant="ghost"
+                   size="icon"
+-                  className="size-9 rounded-r-none"
++                  className="size-11 rounded-r-none"
+                   disabled={readOnly}
+                   aria-label={line.quantity === 1 ? `Remove ${item.name} ${line.size ?? ""}` : `Fewer ${item.name}`}
+                   onClick={() =>
+@@ -209,7 +197,7 @@ export function GearItemCard({
+                   type="button"
+                   variant="ghost"
+                   size="icon"
+-                  className="size-9 rounded-l-none"
++                  className="size-11 rounded-l-none"
+                   disabled={readOnly || line.quantity >= GEAR_MAX_QUANTITY}
+                   aria-label={`More ${item.name}`}
+                   onClick={() => onChangeLine(line.id, { quantity: line.quantity + 1 })}
+@@ -220,16 +208,16 @@ export function GearItemCard({
+             </div>
+           ))}
+ 
+-          {!readOnly && (colorLines.length === 0 || sizeKind !== "HEADWEAR") && (
++          {!readOnly && (colorLines.length === 0 || !oneSize) && (
+             <Button
+               type="button"
+               variant={colorLines.length > 0 ? "ghost" : "outline"}
+               size="sm"
+-              className="min-h-10 w-full"
++              className="min-h-11 w-full px-2"
+               onClick={() => onAddLine(sku)}
+             >
+               <PlusIcon data-icon="inline-start" />
+-              {colorLines.length > 0 ? "Add another size" : "Add"}
++              {colorLines.length > 0 ? "Another size" : "Add to picks"}
+             </Button>
+           )}
+ 
+diff --git a/src/app/(app)/gear/GearPickLineList.tsx b/src/app/(app)/gear/GearPickLineList.tsx
+index 3fda80fe..1e323f48 100644
+--- a/src/app/(app)/gear/GearPickLineList.tsx
++++ b/src/app/(app)/gear/GearPickLineList.tsx
+@@ -2,9 +2,11 @@
+ 
+ import Image from "next/image";
+ import { AlertTriangleIcon, Trash2Icon } from "lucide-react";
++import { NativeSelect } from "@/components/ui/native-select";
+ import { Button } from "@/components/ui/button";
+-import { findGearSku, formatUsd } from "@/lib/gear-picks/catalog";
++import { findGearSku, formatUsd, gearSku, gearSizeLabel, gearSizeProblem, isOneSizeItem, GEAR_MAX_QUANTITY } from "@/lib/gear-picks/catalog";
+ import { cn } from "@/lib/utils";
++import { sizeOptionsFor } from "./gear-pick-state";
+ 
+ export type GearPickListLine = {
+   id: string;
+@@ -18,17 +20,22 @@ export type GearPickListLine = {
+ /**
+  * Photo rows for a pick list: name, color, size, quantity, and line price.
+  * Rows jump to the catalog card when `onJump` is set and show a remove button
+- * when `onRemoveLine` is set; without either the list is read-only.
++ * when `onRemoveLine` is set. `onChangeLine` enables inline size/quantity edits;
++ * profile consumers omit these callbacks and remain read-only.
+  */
+ export function GearPickLineList({
+   lines,
+   onJump,
+   onRemoveLine,
++  onChangeLine,
++  disabled = false,
+   className,
+ }: {
+   lines: GearPickListLine[];
+   onJump?: (style: string) => void;
+   onRemoveLine?: (id: string) => void;
++  onChangeLine?: (id: string, patch: Partial<Pick<GearPickListLine, "sku" | "size" | "quantity">>) => void;
++  disabled?: boolean;
+   className?: string;
+ }) {
+   return (
+@@ -44,7 +51,7 @@ export function GearPickLineList({
+           );
+         }
+         const unitPriceCents = line.unitPriceCents ?? entry.unitPriceCents;
+-        const needsSize = entry.sizeKind === "APPAREL" && !line.size;
++        const needsSize = Boolean(gearSizeProblem(entry.item, line.size));
+         const content = (
+           <>
+             <span className="relative size-16 shrink-0 overflow-hidden rounded-md bg-white">
+@@ -53,16 +60,16 @@ export function GearPickLineList({
+             <span className="min-w-0 flex-1">
+               <span className="block text-sm font-semibold leading-snug text-foreground">{entry.item.name}</span>
+               <span className="mt-0.5 block text-xs text-muted-foreground">{entry.color.label}</span>
+-              <span
++              {!onChangeLine && <span
+                 className={cn(
+                   "mt-0.5 flex items-center gap-1 text-xs",
+                   needsSize ? "font-medium text-[var(--orange-text)]" : "text-muted-foreground",
+                 )}
+               >
+                 {needsSize && <AlertTriangleIcon className="size-3 shrink-0" aria-hidden="true" />}
+-                {entry.sizeKind === "HEADWEAR" ? "One size" : needsSize ? "Choose a size" : `Size ${line.size}`}
++                {isOneSizeItem(entry.item) ? "One size" : needsSize ? "Choose a size" : `${gearSizeLabel(entry.item)} ${line.size}`}
+                 {` · Qty ${line.quantity}`}
+-              </span>
++              </span>}
+             </span>
+             <span className="shrink-0 text-right">
+               <span className="block text-sm font-semibold tabular-nums">{formatUsd(unitPriceCents * line.quantity)}</span>
+@@ -75,21 +82,64 @@ export function GearPickLineList({
+           </>
+         );
+         return (
+-          <li key={line.id} className="flex items-center gap-3 px-6 py-3">
+-            {onJump ? (
+-              <button
+-                type="button"
+-                onClick={() => onJump(entry.item.style)}
+-                className="flex min-w-0 flex-1 items-center gap-3 rounded-md text-left focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+-                aria-label={`${entry.item.name}, ${entry.color.label}. Show it in the catalog.`}
+-              >
+-                {content}
+-              </button>
+-            ) : (
+-              <div className="flex min-w-0 flex-1 items-center gap-3">{content}</div>
+-            )}
+-            {onRemoveLine && (
+-              <RemoveButton label={`${entry.item.name} ${line.size ?? ""}`} onClick={() => onRemoveLine(line.id)} />
++          <li key={line.id} className={cn("px-6", onChangeLine ? "py-4" : "py-3")}>
++            <div className="flex items-center gap-3">
++              {onJump ? (
++                <button
++                  type="button"
++                  onClick={() => onJump(entry.item.style)}
++                  className="flex min-w-0 flex-1 items-center gap-3 rounded-md text-left focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
++                  aria-label={`${entry.item.name}, ${entry.color.label}. Show it in the catalog.`}
++                >
++                  {content}
++                </button>
++              ) : (
++                <div className="flex min-w-0 flex-1 items-center gap-3">{content}</div>
++              )}
++              {onRemoveLine && (
++                <RemoveButton label={`${entry.item.name} ${line.size ?? ""}`} onClick={() => onRemoveLine(line.id)} />
++              )}
++            </div>
++            {onChangeLine && (
++              <div className="mt-3 grid grid-cols-2 gap-3">
++                {entry.item.colors.length > 1 && <label className="col-span-2 space-y-1 text-xs text-muted-foreground">
++                  <span>Color</span>
++                  <NativeSelect value={line.sku} disabled={disabled} aria-label={`Color for ${entry.item.name}`} className="h-11 text-sm text-foreground"
++                    onChange={(event) => onChangeLine(line.id, { sku: event.target.value })}>
++                    {entry.item.colors.map((color) => <option key={color.code} value={gearSku(entry.item.style, color.code)}>{color.label}</option>)}
++                  </NativeSelect>
++                </label>}
++                {entry.item.shoeSizeSystem === "CATALOG" && <p className="col-span-2 text-xs text-muted-foreground">Confirm your shoe size against the catalog before ordering.</p>}
++                {isOneSizeItem(entry.item) ? (
++                  <p className="self-end py-3 text-sm text-muted-foreground">One size</p>
++                ) : (
++                  <label className="space-y-1 text-xs text-muted-foreground">
++                    <span>{gearSizeLabel(entry.item)}</span>
++                    <NativeSelect
++                      value={line.size ?? ""}
++                      disabled={disabled}
++                      aria-label={`Size for ${entry.item.name} in ${entry.color.label}`}
++                      className="h-11 text-sm text-foreground"
++                      onChange={(event) => onChangeLine(line.id, { size: event.target.value || null })}
++                    >
++                      <option value="">Choose size</option>
++                      {sizeOptionsFor(entry.item, line.size).map((size) => <option key={size} value={size}>{size}</option>)}
++                    </NativeSelect>
++                  </label>
++                )}
++                <label className="space-y-1 text-xs text-muted-foreground">
++                  <span>Quantity</span>
++                  <NativeSelect
++                    value={line.quantity}
++                    disabled={disabled}
++                    aria-label={`Quantity for ${entry.item.name} in ${entry.color.label}`}
++                    className="h-11 text-sm text-foreground"
++                    onChange={(event) => onChangeLine(line.id, { quantity: Number(event.target.value) })}
++                  >
++                    {Array.from({ length: GEAR_MAX_QUANTITY }, (_, index) => index + 1).map((quantity) => <option key={quantity} value={quantity}>{quantity}</option>)}
++                  </NativeSelect>
++                </label>
++              </div>
+             )}
+           </li>
+         );
+diff --git a/src/app/(app)/gear/GearPicker.tsx b/src/app/(app)/gear/GearPicker.tsx
+index ebb5a86b..61c3ddf9 100644
+--- a/src/app/(app)/gear/GearPicker.tsx
++++ b/src/app/(app)/gear/GearPicker.tsx
+@@ -3,14 +3,15 @@
+ import Image from "next/image";
+ import Link from "next/link";
+ import { useRouter } from "next/navigation";
+-import { useCallback, useEffect, useMemo, useState } from "react";
++import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+ import { useQueryClient } from "@tanstack/react-query";
+ import { toast } from "sonner";
+-import { BarChart3Icon, ListChecksIcon, LockIcon, SearchIcon } from "lucide-react";
++import { BarChart3Icon, ChevronDownIcon, ListChecksIcon, LockIcon, SearchIcon, SlidersHorizontalIcon } from "lucide-react";
+ import EmptyState from "@/components/EmptyState";
+ import { PageHeader } from "@/components/PageHeader";
+ import { Badge } from "@/components/ui/badge";
+ import { Button } from "@/components/ui/button";
++import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+ import { Input } from "@/components/ui/input";
+ import { NativeSelect } from "@/components/ui/native-select";
+ import { Label } from "@/components/ui/label";
+@@ -28,7 +29,6 @@ import {
+   GEAR_CATALOG,
+   gearSku,
+   itemsForFit,
+-  sizeKindForCategory,
+   type GearCatalogItem,
+ } from "@/lib/gear-picks/catalog";
+ import type { GearPicksMeResponse, GearPickSubmissionDto } from "@/lib/gear-picks/types";
+@@ -62,7 +62,7 @@ export function GearPicker() {
+     );
+   }
+ 
+-  if (isError) {
++  if (isError && !data) {
+     return (
+       <EmptyState
+         icon="wifi-off"
+@@ -109,7 +109,7 @@ export function GearPicker() {
+     );
+   }
+ 
+-  return <GearPickerForm data={data} />;
++  return <GearPickerForm key={`${data.cycle.id}:${data.participant.id}`} data={data} />;
+ }
+ 
+ /** The color a card shows: the one the person tapped, else the first color already in their list. */
+@@ -148,21 +148,28 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
+ 
+   const [lines, setLines] = useState<DraftLine[]>(() => draftLinesFromServer(data));
+   const [dirty, setDirty] = useState(false);
++  // The version belongs to the list being edited, not the latest query cache.
++  const [baseVersion, setBaseVersion] = useState(serverVersion);
++  const [reloading, setReloading] = useState(false);
++  const [saveIssue, setSaveIssue] = useState<string | null>(null);
++  const requestInFlight = useRef(false);
+   const [saving, setSaving] = useState<"draft" | "submit" | null>(null);
+   const [search, setSearch] = useState("");
+   const [collection, setCollection] = useState("all");
+   const [category, setCategory] = useState("all");
+-  const [fitsOnly, setFitsOnly] = useState(true);
++  const [fitsOnly, setFitsOnly] = useState(false);
++  const [filtersOpen, setFiltersOpen] = useState(false);
+   const [selectedColors, setSelectedColors] = useState<Record<string, string>>({});
+   const [preview, setPreview] = useState<GearPreview | null>(null);
+   const [sheetMode, setSheetMode] = useState<GearPicksSheetMode | null>(null);
+ 
+-  // Adopt the server's list whenever it changes and nothing local is unsaved.
+-  const serverStamp = data.submission?.updatedAt ?? null;
++  // Refresh clean lists, but never rebase unsaved edits onto another tab's version.
+   useEffect(() => {
+-    if (!dirty) setLines(draftLinesFromServer(data));
+-    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-sync only on a new server version
+-  }, [serverStamp, serverVersion]);
++    if (!dirty && !saving && !reloading) {
++      setLines(draftLinesFromServer(data));
++      setBaseVersion(serverVersion);
++    }
++  }, [data, dirty, saving, reloading, serverVersion]);
+ 
+   useEffect(() => {
+     if (!dirty) return;
+@@ -215,6 +222,7 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
+   const categories = GEAR_CATALOG.categories.filter((entry) => items.some((item) => item.category === entry));
+ 
+   const updateLines = useCallback((updater: (current: DraftLine[]) => DraftLine[]) => {
++    if (requestInFlight.current) return;
+     setLines(updater);
+     setDirty(true);
+   }, []);
+@@ -223,7 +231,7 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
+     (sku: string) => {
+       const entry = findGearSku(sku);
+       if (!entry) return;
+-      const preferred = defaultSizeFor(sizeKindForCategory(entry.item.category), data.profile);
++      const preferred = defaultSizeFor(entry.item, data.profile);
+       updateLines((current) => {
+         const taken = current.some((line) => line.sku === sku && line.size === preferred);
+         return [...current, { id: draftLineId(), sku, size: taken ? null : preferred, quantity: 1 }];
+@@ -233,7 +241,7 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
+   );
+ 
+   const changeLine = useCallback(
+-    (id: string, patch: Partial<Pick<DraftLine, "size" | "quantity">>) => {
++    (id: string, patch: Partial<Pick<DraftLine, "sku" | "size" | "quantity">>) => {
+       updateLines((current) => current.map((line) => (line.id === id ? { ...line, ...patch } : line)));
+     },
+     [updateLines],
+@@ -262,43 +270,64 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
+     }, 250);
+   }, []);
+ 
+-  // Replace local edits with the server's list. Set lines directly: a refused
+-  // save (e.g. the deadline just passed) leaves the version unchanged, so the
+-  // version-keyed sync effect wouldn't fire.
++  // Only an explicit, successful fresh read may replace the local list.
+   const reloadFromServer = useCallback(async () => {
+-    await queryClient.refetchQueries({ queryKey: GEAR_PICKS_ME_QUERY_KEY, exact: true });
+-    setLines(draftLinesFromServer(queryClient.getQueryData<GearPicksMeResponse | null>(GEAR_PICKS_ME_QUERY_KEY)));
+-    setDirty(false);
++    if (requestInFlight.current) return;
++    requestInFlight.current = true;
++    setReloading(true);
++    try {
++      await queryClient.cancelQueries({ queryKey: GEAR_PICKS_ME_QUERY_KEY, exact: true });
++      const response = await fetch("/api/gear-picks/me", { cache: "no-store" });
++      if (handleAuthRedirect(response, "/gear")) return;
++      const json = await parseJsonSafely<{ data?: GearPicksMeResponse }>(response);
++      if (!response.ok || !json?.data?.cycle || !json.data.participant) {
++        throw new Error("Could not reload picks");
++      }
++      setLines(draftLinesFromServer(json.data));
++      setBaseVersion(json.data.submission?.version ?? 0);
++      setDirty(false);
++      setSaveIssue(null);
++      queryClient.setQueryData(GEAR_PICKS_ME_QUERY_KEY, json.data);
++    } catch {
++      setSaveIssue("Couldn't load the saved list. Your unsaved picks are still here. Try reloading again when you're connected.");
++    } finally {
++      requestInFlight.current = false;
++      setReloading(false);
++    }
+   }, [queryClient]);
+ 
+   /** Returns true once the server has the list, so the review panel can close. */
+   async function save(submit: boolean): Promise<boolean> {
++    if (requestInFlight.current || readOnly || baseVersion !== serverVersion || over || problems.length > 0) return false;
++    requestInFlight.current = true;
++    setSaveIssue(null);
+     setSaving(submit ? "submit" : "draft");
+     try {
++      await queryClient.cancelQueries({ queryKey: GEAR_PICKS_ME_QUERY_KEY, exact: true });
+       const response = await fetch("/api/gear-picks/me", {
+         method: "PUT",
+         headers: { "Content-Type": "application/json" },
+         body: JSON.stringify({
+           lines: lines.map(({ sku, size, quantity }) => ({ sku, size, quantity })),
+           submit,
+-          version: serverVersion,
++          version: baseVersion,
+         }),
+       });
+       if (handleAuthRedirect(response, "/gear")) return false;
+       const json = await parseJsonSafely<{ data?: GearPickSubmissionDto; error?: string; code?: string }>(response);
+       if (!response.ok || !json?.data) {
+-        const message = json?.error ?? "Your picks weren't saved. Try again.";
+-        if (json?.code === "GEAR_PICKS_STALE") {
+-          toast.error(message, { action: { label: "Reload", onClick: () => void reloadFromServer() }, duration: 10_000 });
+-        } else if (json?.code === "GEAR_PICKS_CLOSED") {
+-          toast.error(message);
+-          await reloadFromServer();
+-        } else {
+-          toast.error(message);
++        const message = json?.error ?? "We couldn't confirm the save. Your picks are still here. Retry safely, or reload the saved list to check.";
++        setSaveIssue(message);
++        if (json?.code === "GEAR_PICKS_CLOSED") {
++          queryClient.setQueryData<GearPicksMeResponse | null>(GEAR_PICKS_ME_QUERY_KEY, (current) =>
++            current?.cycle ? { ...current, cycle: { ...current.cycle, isOpen: false } } : current,
++          );
+         }
+         return false;
+       }
+       const saved = json.data;
++      setLines(draftLinesFromServer({ ...data, submission: saved }));
++      setBaseVersion(saved.version);
+       setDirty(false);
+       queryClient.setQueryData<GearPicksMeResponse | null>(GEAR_PICKS_ME_QUERY_KEY, (current) =>
+         current ? { ...current, submission: saved } : current,
+@@ -313,17 +342,32 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
+       }
+       return true;
+     } catch {
+-      toast.error("Couldn't reach the server. Your picks are still here, so try again.");
++      setSaveIssue("We couldn't confirm whether your picks saved. Your list is still here. Retry safely, or reload the saved list to check.");
+       return false;
+     } finally {
++      requestInFlight.current = false;
+       setSaving(null);
+     }
+   }
+ 
+   const kit = GEAR_CATALOG.kits[fit];
+   const allowanceLabel = formatUsd(allowanceCents);
+-  const canSave = !readOnly && dirty && !over && problems.length === 0 && saving === null;
+-  const canSubmit = !readOnly && lines.length > 0 && !over && problems.length === 0 && saving === null;
++  const busy = saving !== null || reloading;
++  const conflict = dirty && baseVersion !== serverVersion;
++  const recoveryMessage = saveIssue ?? (conflict
++    ? "Your saved picks changed in another tab. Your unsaved list is still here. Reload the saved list before making more changes."
++    : null);
++  const recovery = recoveryMessage ? (
++    <div className="my-3 space-y-2 rounded-lg border border-border bg-muted/40 p-3 text-sm" role="alert">
++      <p>{recoveryMessage}</p>
++      <p className="text-xs text-muted-foreground">Reloading replaces your unsaved changes with the saved list.</p>
++      <Button type="button" variant="outline" disabled={busy} onClick={() => void reloadFromServer()}>
++        {reloading ? "Reloading…" : "Discard edits & reload saved picks"}
++      </Button>
++    </div>
++  ) : null;
++  const canSave = !readOnly && dirty && !over && problems.length === 0 && !busy && !conflict;
++  const canSubmit = !readOnly && lines.length > 0 && !over && problems.length === 0 && !busy && !conflict;
+ 
+   return (
+     <FadeUp>
+@@ -332,86 +376,99 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
+         description={
+           readOnly
+             ? cycle.title
+-            : `${allowanceLabel} to spend${cycle.deadline ? ` · Due ${formatDateTime(cycle.deadline)}` : ""}`
++            : `${fit === "MEN" ? "Men’s" : "Women’s"} + unisex · ${allowanceLabel} for your picks${cycle.deadline ? ` · Due ${formatDateTime(cycle.deadline)}` : ""}`
+         }
+       >
+         {data.isAdmin && <AdminResultsLink />}
+       </PageHeader>
+ 
++      {recovery}
++
+       {readOnly && (
+         <div className="mb-4 flex items-start gap-2 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm" role="status">
+           <LockIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+           <p>
+             <span className="font-semibold">Picks are closed.</span>{" "}
+-            {submittedAt ? "This is the list you submitted." : lines.length > 0 ? "This draft was never submitted; ask an admin if you still need gear." : "You didn't pick anything this year."}
++            {dirty ? "Your unsaved changes are still shown below. Reload the saved list to see what was recorded." : submittedAt ? "This is the list you submitted." : lines.length > 0 ? "This draft was never submitted; ask an admin if you still need gear." : "You didn't pick anything this year."}
+           </p>
+         </div>
+       )}
+ 
+-      <section aria-labelledby="gear-kit-title" className="mb-6">
+-        <h2 id="gear-kit-title" className="mb-2 flex items-baseline gap-2 text-sm font-semibold">
+-          Already in your kit
+-          <span className="text-xs font-normal text-muted-foreground">Free</span>
+-        </h2>
+-        <ul className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 scrollbar-hide">
+-          {kit.map((entry) => (
+-            <li key={`${entry.style}-${entry.code}`} className="w-20 shrink-0 sm:w-24">
+-              <button
+-                type="button"
+-                className="group flex w-full flex-col overflow-hidden rounded-md border border-border bg-card text-left focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+-                onClick={() =>
+-                  setPreview({
+-                    kind: "kit",
+-                    name: entry.name,
+-                    label: KIT_LABELS[entry.kind],
+-                    sku: `${entry.style}-${entry.code}`,
+-                    image: entry.image,
+-                  })
+-                }
+-                aria-label={`${entry.name}, ${KIT_LABELS[entry.kind].toLowerCase()}. Preview larger`}
+-                title={entry.name}
+-              >
+-                <span className="relative block aspect-square w-full bg-white">
+-                  <Image src={entry.image} alt="" fill sizes="96px" className="object-contain p-1.5" />
+-                </span>
+-                <span className="block truncate px-1.5 py-1 text-[11px] font-medium">{entry.name}</span>
+-              </button>
+-            </li>
+-          ))}
+-        </ul>
+-      </section>
++      <Collapsible className="mb-8 rounded-lg border border-border bg-card">
++        <CollapsibleTrigger className="group flex min-h-20 w-full items-center gap-4 rounded-lg px-4 py-3 text-left transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">
++          <span className="hidden shrink-0 -space-x-2 sm:flex" aria-hidden="true">
++            {kit.slice(0, 3).map((entry) => (
++              <span key={`${entry.style}-${entry.code}`} className="relative block size-12 overflow-hidden rounded-md border border-border bg-white">
++                <Image src={entry.image} alt="" fill sizes="48px" className="object-contain p-1" />
++              </span>
++            ))}
++          </span>
++          <span className="min-w-0 flex-1">
++            <span className="block text-sm font-semibold">Standard issue</span>
++            <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">{kit.length} essentials covered by the department. Separate from your pick allowance.</span>
++          </span>
++          <span className="hidden text-xs font-medium text-muted-foreground sm:block">View kit</span>
++          <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180 motion-reduce:transition-none" aria-hidden="true" />
++        </CollapsibleTrigger>
++        <CollapsibleContent>
++          <ul className="flex gap-3 overflow-x-auto border-t border-border p-4">
++            {kit.map((entry) => (
++              <li key={`${entry.style}-${entry.code}`} className="w-28 shrink-0">
++                <button
++                  type="button"
++                  className="group flex h-full w-full flex-col overflow-hidden rounded-md border border-border bg-card text-left focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
++                  onClick={() => setPreview({ kind: "kit", name: entry.name, label: KIT_LABELS[entry.kind], sku: `${entry.style}-${entry.code}`, image: entry.image })}
++                  aria-label={`${entry.name}, ${KIT_LABELS[entry.kind].toLowerCase()}. Preview larger`}
++                >
++                  <span className="relative block aspect-square w-full bg-white">
++                    <Image src={entry.image} alt="" fill sizes="112px" className="object-contain p-2" />
++                  </span>
++                  <span className="block px-2 py-2 text-xs font-medium leading-snug">{entry.name}</span>
++                </button>
++              </li>
++            ))}
++          </ul>
++        </CollapsibleContent>
++      </Collapsible>
+ 
+       <section aria-label="Catalog">
++        <div className="mb-4 flex items-baseline justify-between gap-3">
++          <h2 className="text-xl font-semibold tracking-tight">Choose your gear</h2>
++          <span className="shrink-0 text-xs tabular-nums text-muted-foreground" role="status">{visible.length} styles</span>
++        </div>
+         <div className="mb-4 flex flex-col gap-3">
+           <div className="flex flex-wrap items-center gap-2">
+-            <div className="relative min-w-0 flex-1 basis-60">
++            <div className="relative min-w-0 flex-1 basis-48 md:basis-60">
+               <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+               <Input
+                 type="search"
+                 value={search}
+                 onChange={(event) => setSearch(event.target.value)}
+-                placeholder="Search gear"
++                placeholder="Search by name, color or item number"
+                 aria-label="Search gear by name, color, or item number"
+                 className="pl-9"
+               />
+             </div>
+-            {collections.length > 1 && (
+-              <NativeSelect
+-                value={collection}
+-                onChange={(event) => setCollection(event.target.value)}
+-                aria-label="Collection"
+-                className="h-10 w-auto"
+-              >
+-                <option value="all">All collections</option>
+-                {collections.map((entry) => (
+-                  <option key={entry.key} value={entry.key}>{entry.label}</option>
+-                ))}
++            <Button type="button" variant="outline" className="min-h-10 md:hidden" aria-expanded={filtersOpen} aria-controls="gear-catalog-filters" onClick={() => setFiltersOpen((open) => !open)}>
++              <SlidersHorizontalIcon data-icon="inline-start" />
++              Filters{collection !== "all" || category !== "all" ? ` (${Number(collection !== "all") + Number(category !== "all")})` : ""}
++            </Button>
++            <div id="gear-catalog-filters" className={cn("order-3 w-full flex-wrap gap-2 md:order-none md:flex md:w-auto", filtersOpen ? "flex" : "hidden")}>
++              {collections.length > 1 && (
++                <NativeSelect value={collection} onChange={(event) => setCollection(event.target.value)} aria-label="Collection" className="h-11 w-auto min-w-0 flex-1 md:h-10 md:flex-none">
++                  <option value="all">All collections</option>
++                  {collections.map((entry) => <option key={entry.key} value={entry.key}>{entry.label}</option>)}
++                </NativeSelect>
++              )}
++              <NativeSelect value={category} onChange={(event) => setCategory(event.target.value)} aria-label="Category" className="h-11 w-auto min-w-0 flex-1 md:hidden">
++                <option value="all">All categories</option>
++                {categories.map((entry) => <option key={entry} value={entry}>{entry}</option>)}
+               </NativeSelect>
+-            )}
+-            <div className="flex min-h-10 items-center gap-2">
++            </div>
++            <div className="order-2 flex min-h-10 basis-full items-center gap-2 md:order-none md:basis-auto">
+               <Switch id="gear-fits-budget" checked={fitsOnly} onCheckedChange={setFitsOnly} />
+               <Label htmlFor="gear-fits-budget" className="text-sm">
+-                Fits my budget
++                Within my allowance
+                 {hiddenForBudget > 0 && (
+                   <span className="font-normal tabular-nums text-muted-foreground"> ({hiddenForBudget} hidden)</span>
+                 )}
+@@ -419,7 +476,7 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
+             </div>
+           </div>
+           <div
+-            className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 scrollbar-hide"
++            className="hidden flex-wrap gap-1.5 md:flex"
+             role="group"
+             aria-label="Category"
+           >
+@@ -444,9 +501,16 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
+             icon="search"
+             compact
+             title="No items match"
++            actionLabel="Show all gear"
++            onAction={() => {
++              setSearch("");
++              setCollection("all");
++              setCategory("all");
++              setFitsOnly(false);
++            }}
+             description={
+               fitsOnly && hiddenForBudget > 0
+-                ? "Everything that matches costs more than you have left. Turn off Fits my budget to see it."
++                ? "Everything that matches costs more than you have left. Turn off Within my allowance to see it."
+                 : "Clear the search or change the filters."
+             }
+           />
+@@ -459,14 +523,14 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
+                   <span className="ml-1.5 font-normal tabular-nums text-muted-foreground">{section.items.length}</span>
+                 </h2>
+               )}
+-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
++              <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4">
+                 {section.items.map((item: GearCatalogItem) => (
+                   <GearItemCard
+                     key={item.style}
+                     item={item}
+                     selectedCode={cardColorCode(item, selectedColors, linesByStyle)}
+                     lines={linesByStyle.get(item.style) ?? []}
+-                    readOnly={readOnly}
++                    readOnly={readOnly || busy}
+                     onSelectColor={(code) => selectColor(item.style, code)}
+                     onPreview={() =>
+                       setPreview({ kind: "item", item, colorCode: cardColorCode(item, selectedColors, linesByStyle) })
+@@ -488,43 +552,37 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
+           over ? "border-[var(--red-text)]/40" : "border-border",
+         )}
+       >
+-        <div className="flex items-center gap-3">
++        <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-6">
+           <div className="min-w-0 flex-1">
+-            <div className="flex flex-wrap items-baseline gap-x-2 text-sm">
+-              <span className="font-semibold tabular-nums">
+-                {formatUsd(totalCents)}
+-                <span className="font-normal text-muted-foreground"> of {allowanceLabel}</span>
++            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
++              <span className={cn("text-lg font-semibold tabular-nums", over && "text-[var(--red-text)]")}>
++                {over ? `${formatUsd(-remainingCents)} over budget` : `${formatUsd(remainingCents)} left`}
+               </span>
+-              <span
+-                className={cn(
+-                  "tabular-nums max-sm:hidden",
+-                  over ? "font-semibold text-[var(--red-text)]" : "text-muted-foreground",
+-                )}
+-              >
+-                {over ? `Over by ${formatUsd(-remainingCents)}` : `${formatUsd(remainingCents)} left`}
+-              </span>
+-              <FooterStatus readOnly={readOnly} dirty={dirty} submittedAt={submittedAt} hasSaved={Boolean(data.submission)} />
++              <span className="text-xs tabular-nums text-muted-foreground">{formatUsd(totalCents)} of {allowanceLabel} picked</span>
+             </div>
+             <Progress
+               value={allowanceCents > 0 ? (totalCents / allowanceCents) * 100 : 0}
+               aria-label="Allowance used"
+               className={cn("mt-1.5 h-1.5", over && "[&>[data-slot=progress-indicator]]:bg-[var(--red-text)]")}
+             />
++            <div className="mt-1.5 flex min-h-4 items-center">
++              <FooterStatus readOnly={readOnly} dirty={dirty} submittedAt={submittedAt} hasSaved={Boolean(data.submission)} />
++            </div>
+             {!readOnly && problems.length > 0 && (
+-              <p className="mt-1 truncate text-xs text-[var(--orange-text)]">{problems[0]}</p>
++              <p className="mt-1 text-xs text-[var(--orange-text)]">{problems[0]}</p>
+             )}
+           </div>
+-          <div className="flex shrink-0 gap-2">
+-            <Button type="button" variant="outline" className="min-h-10" onClick={() => openSheet("list")}>
+-              <ListChecksIcon data-icon="inline-start" />
+-              <span className="max-sm:sr-only">Your picks</span>
++          <div className="flex shrink-0 items-center gap-2">
++            <Button type="button" variant="outline" className="min-h-11 max-md:flex-1" onClick={() => openSheet("list")}>
++              <ListChecksIcon data-icon="inline-start" className="max-sm:hidden" />
++              <span>Your picks</span>
+               <Badge variant="gray" size="sm" className="tabular-nums">{pickCount}</Badge>
+             </Button>
+             {!readOnly && !submittedAt && (
+               <Button
+                 type="button"
+-                variant="outline"
+-                className="min-h-10 max-sm:px-3"
++                variant="ghost"
++                className="min-h-11 max-sm:px-3"
+                 disabled={!canSave}
+                 onClick={() => void save(false)}
+               >
+@@ -541,8 +599,8 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
+             {!readOnly && (
+               <Button
+                 type="button"
+-                className="min-h-10"
+-                disabled={lines.length === 0 || (Boolean(submittedAt) && !dirty)}
++                className="min-h-11 max-md:flex-1"
++                disabled={busy || lines.length === 0 || (Boolean(submittedAt) && !dirty)}
+                 onClick={() => openSheet("review")}
+               >
+                 <span className="sm:hidden">Review</span>
+@@ -561,6 +619,8 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
+         }}
+         lines={lines}
+         readOnly={readOnly}
++        busy={busy}
++        feedback={recovery}
+         totalCents={totalCents}
+         allowanceCents={allowanceCents}
+         deadline={cycle.deadline ? formatDateTime(cycle.deadline) : null}
+@@ -573,6 +633,7 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
+         }}
+         onJump={jumpToItem}
+         onRemoveLine={removeLine}
++        onChangeLine={changeLine}
+       />
+ 
+       <GearPreviewDialog
+diff --git a/src/app/(app)/gear/GearPicksSheet.tsx b/src/app/(app)/gear/GearPicksSheet.tsx
+index 1a7f348f..a6b634c7 100644
+--- a/src/app/(app)/gear/GearPicksSheet.tsx
++++ b/src/app/(app)/gear/GearPicksSheet.tsx
+@@ -1,5 +1,6 @@
+ "use client";
+ 
++import type { ReactNode } from "react";
+ import { AlertTriangleIcon } from "lucide-react";
+ import { Button } from "@/components/ui/button";
+ import {
+@@ -28,6 +29,8 @@ export function GearPicksSheet({
+   onOpenChange,
+   lines,
+   readOnly,
++  busy,
++  feedback,
+   totalCents,
+   allowanceCents,
+   deadline,
+@@ -38,12 +41,15 @@ export function GearPicksSheet({
+   onSubmit,
+   onJump,
+   onRemoveLine,
++  onChangeLine,
+ }: {
+   open: boolean;
+   mode: GearPicksSheetMode;
+   onOpenChange: (open: boolean) => void;
+   lines: DraftLine[];
+   readOnly: boolean;
++  busy: boolean;
++  feedback: ReactNode;
+   totalCents: number;
+   allowanceCents: number;
+   /** Formatted deadline, if one is set. */
+@@ -55,6 +61,7 @@ export function GearPicksSheet({
+   onSubmit: () => void;
+   onJump: (style: string) => void;
+   onRemoveLine: (id: string) => void;
++  onChangeLine: (id: string, patch: Partial<Pick<DraftLine, "sku" | "size" | "quantity">>) => void;
+ }) {
+   const remainingCents = allowanceCents - totalCents;
+   const over = remainingCents < 0;
+@@ -68,7 +75,7 @@ export function GearPicksSheet({
+           <SheetTitle>{reviewing ? "Review your picks" : "Your picks"}</SheetTitle>
+           <SheetDescription>
+             {reviewing
+-              ? `Check each size and color before you submit.${deadline ? ` You can still change them until ${deadline}.` : ""}`
++              ? `Adjust colors, sizes, and quantities here.${deadline ? ` You can still change them until ${deadline}.` : ""}`
+               : count === 0
+                 ? "Nothing picked yet."
+                 : `${count} ${count === 1 ? "item" : "items"} · ${formatUsd(totalCents)} of ${formatUsd(allowanceCents)}`}
+@@ -84,12 +91,15 @@ export function GearPicksSheet({
+             <GearPickLineList
+               lines={lines}
+               onJump={onJump}
+-              onRemoveLine={readOnly ? undefined : onRemoveLine}
++              onRemoveLine={readOnly || busy ? undefined : onRemoveLine}
++              onChangeLine={readOnly ? undefined : onChangeLine}
++              disabled={busy}
+             />
+           )}
+         </SheetBody>
+ 
+         <SheetFooter className="flex-col gap-3 sm:flex-col sm:justify-start">
++          {feedback}
+           <dl className="grid grid-cols-[1fr_auto] gap-y-1 text-sm">
+             <dt className="text-muted-foreground">Picked</dt>
+             <dd className="text-right font-semibold tabular-nums">{formatUsd(totalCents)}</dd>
+@@ -102,16 +112,21 @@ export function GearPicksSheet({
+               {formatUsd(Math.abs(remainingCents))}
+             </dd>
+           </dl>
+-          <p className="text-xs text-muted-foreground">Free kit items (shown under Already in your kit) aren&apos;t listed here.</p>
++          <p className="text-xs text-muted-foreground">Standard issue is covered by the department and doesn’t use your pick allowance.</p>
+ 
+-          {reviewing && (
++          {!readOnly && (
+             <>
+               {(over || problems.length > 0) && (
+                 <p className="flex items-start gap-1.5 text-xs text-[var(--orange-text)]" role="status">
+                   <AlertTriangleIcon className="mt-px size-3.5 shrink-0" aria-hidden="true" />
+-                  {over ? `Remove ${formatUsd(-remainingCents)} of gear to submit.` : problems[0]}
++                  {problems[0] ?? `Remove ${formatUsd(-remainingCents)} of gear to submit.`}
+                 </p>
+               )}
++            </>
++          )}
++
++          {reviewing && (
++            <>
+               <div className="flex gap-2">
+                 <Button type="button" variant="outline" className="min-h-11 flex-1" onClick={() => onOpenChange(false)}>
+                   Keep picking
+diff --git a/src/app/(app)/gear/gear-pick-state.ts b/src/app/(app)/gear/gear-pick-state.ts
+index 4e8b90e7..1bc64280 100644
+--- a/src/app/(app)/gear/gear-pick-state.ts
++++ b/src/app/(app)/gear/gear-pick-state.ts
+@@ -2,10 +2,10 @@ import {
+   findGearSku,
+   GEAR_APPAREL_SIZES,
+   GEAR_ONE_SIZE,
+-  GEAR_SHOE_SIZES,
++  isOneSizeItem,
++  gearSizeProblem,
+   normalizeApparelSize,
+   type GearCatalogItem,
+-  type GearSizeKind,
+ } from "@/lib/gear-picks/catalog";
+ import type { GearPicksMeResponse } from "@/lib/gear-picks/types";
+ 
+@@ -37,20 +37,23 @@ export function draftTotalCents(lines: DraftLine[]) {
+   return lines.reduce((sum, line) => sum + (findGearSku(line.sku)?.unitPriceCents ?? 0) * line.quantity, 0);
+ }
+ 
+-export function defaultSizeFor(sizeKind: GearSizeKind, profile: GearPicksMeResponse["profile"]): string | null {
+-  if (sizeKind === "HEADWEAR") return GEAR_ONE_SIZE;
+-  if (sizeKind === "FOOTWEAR") return profile.shoeSize?.trim() || null;
+-  return normalizeApparelSize(profile.topSize);
++export function defaultSizeFor(item: GearCatalogItem, profile: GearPicksMeResponse["profile"]): string | null {
++  if (isOneSizeItem(item)) return GEAR_ONE_SIZE;
++  if (item.category === "Headwear" || item.category === "Pants & shorts" || item.category === "Base layer") return null;
++  if (item.category === "Footwear") {
++    if (!item.shoeSizeSystem || item.shoeSizeSystem === "CATALOG" || item.shoeSizeSystem !== profile.shoeSizeSystem) return null;
++    const size = profile.shoeSize?.trim() || null;
++    return gearSizeProblem(item, size) ? null : size;
++  }
++  const expectedFit = item.fit === "MEN" ? "MENS" : item.fit === "WOMEN" ? "WOMENS" : "UNISEX";
++  if (profile.topSizeFit !== expectedFit) return null;
++  const size = normalizeApparelSize(profile.topSize);
++  return gearSizeProblem(item, size) ? null : size;
+ }
+ 
+-/** Size options for a line, keeping a non-standard current value selectable. */
+-export function sizeOptionsFor(sizeKind: GearSizeKind, current: string | null): string[] {
+-  const base: string[] =
+-    sizeKind === "HEADWEAR"
+-      ? [GEAR_ONE_SIZE]
+-      : sizeKind === "FOOTWEAR"
+-        ? GEAR_SHOE_SIZES
+-        : [...GEAR_APPAREL_SIZES];
++/** Preserve old values visibly; validation requires correcting unavailable item sizes. */
++export function sizeOptionsFor(item: GearCatalogItem, current: string | null): string[] {
++  const base = item.sizes ?? (isOneSizeItem(item) ? [GEAR_ONE_SIZE] : [...GEAR_APPAREL_SIZES]);
+   if (current && !base.includes(current)) return [current, ...base];
+   return base;
+ }
+@@ -65,10 +68,11 @@ export function draftLineProblems(lines: DraftLine[]): string[] {
+       problems.push(`${line.sku} is no longer in the catalog. Remove it to continue.`);
+       continue;
+     }
+-    if (entry.sizeKind === "APPAREL" && !line.size) {
+-      problems.push(`Choose a size for ${entry.item.name} (${entry.color.label}).`);
++    const sizeProblem = gearSizeProblem(entry.item, line.size);
++    if (sizeProblem) {
++      problems.push(`${sizeProblem} for ${entry.item.name} (${entry.color.label}).`);
+     }
+-    const key = `${line.sku}|${line.size ?? ""}`;
++    const key = `${line.sku}|${line.size?.trim().toUpperCase() || (isOneSizeItem(entry.item) ? GEAR_ONE_SIZE : "")}`;
+     if (seen.has(key)) {
+       problems.push(`${entry.item.name} (${entry.color.label}${line.size ? `, ${line.size}` : ""}) is listed twice. Combine the quantities.`);
+     }
+diff --git a/src/lib/gear-picks/catalog-2027-28.json b/src/lib/gear-picks/catalog-2027-28.json
+index 34ff5dc3..5d9666d7 100644
+--- a/src/lib/gear-picks/catalog-2027-28.json
++++ b/src/lib/gear-picks/catalog-2027-28.json
+@@ -2274,6 +2274,7 @@
+   },
+   {
+    "style": "6021743",
++   "sizes": ["30", "32", "34", "36", "38", "40", "42", "44", "46", "48", "50"],
+    "name": "Unhemmed Drive Pant",
+    "fit": "MEN",
+    "category": "Pants & shorts",
+@@ -2428,6 +2429,7 @@
+   },
+   {
+    "style": "6026519",
++   "sizes": ["M/L", "L/XL"],
+    "name": "Blitzing Stretch Fit Cap",
+    "fit": "UNISEX",
+    "category": "Headwear",
+@@ -2546,6 +2548,7 @@
+   },
+   {
+    "style": "6026523",
++   "sizes": ["S/M", "M/L", "L/XL", "XL/XXL"],
+    "name": "ArmourVent Stretch Fit Cap",
+    "fit": "UNISEX",
+    "category": "Headwear",
+@@ -2645,6 +2648,7 @@
+   },
+   {
+    "style": "6026509",
++   "sizes": ["MD/LG", "LG/XL"],
+    "name": "ArmourVent Bucket Hat",
+    "fit": "UNISEX",
+    "category": "Headwear",
+@@ -2810,6 +2814,8 @@
+   },
+   {
+    "style": "6024284",
++   "sizes": ["3.5", "4", "4.5", "5", "5.5", "6", "6.5", "7", "7.5", "8", "8.5", "9", "9.5", "10", "10.5", "11", "11.5", "12", "12.5", "13", "14", "15", "16", "17", "18"],
++   "shoeSizeSystem": "CATALOG",
+    "name": "UA Icon Lo",
+    "fit": "UNISEX",
+    "category": "Footwear",
+@@ -2829,6 +2835,8 @@
+   },
+   {
+    "style": "6013320",
++   "sizes": ["7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18"],
++   "shoeSizeSystem": "US_MENS",
+    "name": "UA Ignite Pro 8 Slide",
+    "fit": "MEN",
+    "category": "Footwear",
+@@ -2848,6 +2856,8 @@
+   },
+   {
+    "style": "6013321",
++   "sizes": ["6", "7", "8", "9", "10", "11", "12"],
++   "shoeSizeSystem": "US_WOMENS",
+    "name": "W UA Ignite Pro 8 Slide",
+    "fit": "WOMEN",
+    "category": "Footwear",
+diff --git a/src/lib/gear-picks/catalog.ts b/src/lib/gear-picks/catalog.ts
+index a790304e..f7c6cfb4 100644
+--- a/src/lib/gear-picks/catalog.ts
++++ b/src/lib/gear-picks/catalog.ts
+@@ -20,6 +20,9 @@ export type GearCatalogColor = {
+ 
+ export type GearCatalogItem = {
+   style: string;
++  /** Verified item options; absent apparel options retain the free-text contract. */
++  sizes?: string[];
++  shoeSizeSystem?: "US_MENS" | "US_WOMENS" | "CATALOG";
+   name: string;
+   fit: GearItemFit;
+   category: string;
+@@ -48,7 +51,7 @@ export type GearCatalog = {
+   items: GearCatalogItem[];
+ };
+ 
+-/** How a line's size is chosen: apparel needs a size, footwear takes a shoe size, headwear is one size. */
++/** How a line's size is chosen: apparel needs a size, footwear takes a shoe size, headwear can be fitted or one size. */
+ export type GearSizeKind = "APPAREL" | "FOOTWEAR" | "HEADWEAR";
+ 
+ export type GearCatalogSku = {
+@@ -116,15 +119,6 @@ export function findGearSku(sku: string): GearCatalogSku | null {
+ /** Apparel sizes offered in the picker. Free text up to 12 characters is accepted server-side. */
+ export const GEAR_APPAREL_SIZES = ["XS", "S", "M", "L", "XL", "XXL", "3XL"] as const;
+ 
+-/** US shoe sizes 6–15 in half sizes. */
+-export const GEAR_SHOE_SIZES: string[] = (() => {
+-  const values: string[] = [];
+-  for (let half = 12; half <= 30; half += 1) {
+-    values.push(half % 2 === 0 ? String(half / 2) : (half / 2).toFixed(1));
+-  }
+-  return values;
+-})();
+-
+ export const GEAR_ONE_SIZE = "OSFA";
+ export const GEAR_SIZE_MAX_LENGTH = 12;
+ export const GEAR_MAX_QUANTITY = 5;
+@@ -136,3 +130,25 @@ export function normalizeApparelSize(size: string | null | undefined) {
+   if (value === "2XL") return "XXL";
+   return value;
+ }
++
++/** Fitted headwear overrides the category's one-size default. */
++export function isOneSizeItem(item: GearCatalogItem) {
++  return item.category === "Headwear" && !item.sizes;
++}
++
++export function gearSizeLabel(item: GearCatalogItem) {
++  if (item.shoeSizeSystem === "US_MENS") return "US men's shoe size";
++  if (item.shoeSizeSystem === "US_WOMENS") return "US women's shoe size";
++  if (item.category === "Footwear") return "Catalog shoe size";
++  if (item.style === "6021743") return "Waist size (inches)";
++  return "Size";
++}
++
++/** The same size gate runs before saving in the browser and at the pricing boundary. */
++export function gearSizeProblem(item: GearCatalogItem, size: string | null | undefined): string | null {
++  const value = size?.trim().toUpperCase();
++  if (isOneSizeItem(item)) return value && value !== GEAR_ONE_SIZE ? "Choose one size" : null;
++  if (!value) return "Choose a size";
++  if (item.sizes && !item.sizes.includes(value)) return "Choose an available size";
++  return null;
++}
+diff --git a/src/lib/gear-picks/pricing.ts b/src/lib/gear-picks/pricing.ts
+index c92c4139..4d4236dd 100644
+--- a/src/lib/gear-picks/pricing.ts
++++ b/src/lib/gear-picks/pricing.ts
+@@ -1,6 +1,9 @@
+ import { HttpError } from "@/lib/http";
+ import {
+   findGearSku,
++  gearSizeProblem,
++  isOneSizeItem,
++  GEAR_ONE_SIZE,
+   formatUsd,
+   GEAR_MAX_QUANTITY,
+   GEAR_SIZE_MAX_LENGTH,
+@@ -67,12 +70,13 @@ export function priceGearPickLines(params: {
+       throw new HttpError(400, `Choose between 1 and ${GEAR_MAX_QUANTITY} of ${entry.item.name}.`);
+     }
+ 
+-    const size = normalizeSize(line.size);
++    const size = normalizeSize(line.size) ?? (isOneSizeItem(entry.item) ? GEAR_ONE_SIZE : null);
+     if (size && size.length > GEAR_SIZE_MAX_LENGTH) {
+       throw new HttpError(400, `Sizes can be up to ${GEAR_SIZE_MAX_LENGTH} characters.`);
+     }
+-    if (!size && entry.sizeKind === "APPAREL") {
+-      throw new HttpError(400, `Choose a size for ${entry.item.name} (${entry.color.label}).`);
++    const sizeProblem = gearSizeProblem(entry.item, size);
++    if (sizeProblem) {
++      throw new HttpError(400, `${sizeProblem} for ${entry.item.name} (${entry.color.label}).`);
+     }
+ 
+     const key = `${entry.sku}|${size ?? ""}`;

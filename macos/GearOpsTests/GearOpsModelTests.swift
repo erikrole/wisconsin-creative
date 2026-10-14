@@ -341,7 +341,7 @@ final class GearOpsModelTests: XCTestCase {
         await model.refresh()
 
         XCTAssertEqual(model.openBookings.map(\.title), ["Camera checkout"])
-        XCTAssertEqual(model.openBookingTotal, 1)
+        XCTAssertNotNil(model.snapshot)
     }
 
     func testBookingNotificationBaselineIsQuietThenDeliversTransition() async {
@@ -499,8 +499,7 @@ final class GearOpsModelTests: XCTestCase {
         let snapshot = GearOpsSnapshot(
             stats: GearOpsStats(checkedOut: 1, overdue: 0, reserved: 0, dueToday: 0),
             pendingPickupTotal: 0,
-            receivedAt: now.addingTimeInterval(-125),
-            partialFailures: []
+            receivedAt: now.addingTimeInterval(-125)
         )
 
         XCTAssertEqual(snapshot.freshnessLabel(at: now), "Updated 2m ago")
@@ -951,6 +950,182 @@ final class GearOpsModelTests: XCTestCase {
         XCTAssertEqual(model.menuBarAccessibilityLabel, "Wisconsin Creative, 12 active checkouts")
     }
 
+    func testStaleSnapshotNeedsAttentionWithoutChangingTheGlyph() async {
+        let clock = TestClock()
+        let model = GearOpsModel(client: MockGearOpsClient(), defaults: isolatedDefaults(), bookingNotifications: NoopBookingNotifier(), credentialStore: InMemoryCredentialStore(), autoStart: false, currentDate: clock.read)
+        await model.signIn(email: "admin@wisc.edu", password: "password")
+        let confirmed = clock.now
+
+        let fresh = confirmed.addingTimeInterval(GearOpsModel.staleSnapshotAge - 60)
+        XCTAssertFalse(model.snapshotIsStale(at: fresh))
+        XCTAssertEqual(model.companionHealthSeverity(at: fresh), .healthy)
+
+        let stale = confirmed.addingTimeInterval(GearOpsModel.staleSnapshotAge + 60)
+        XCTAssertTrue(model.snapshotIsStale(at: stale))
+        XCTAssertEqual(model.companionHealthSeverity(at: stale), .attention)
+        XCTAssertEqual(model.healthLabel(at: stale), "Needs attention")
+        XCTAssertEqual(model.menuBarSymbol, "shippingbox.fill")
+    }
+
+    func testUnchangedProjectionReadConfirmsAnOldGeneration() async {
+        // The server rebuilds only on change, so a quiet day leaves an old
+        // `generatedAt`. A successful read still confirms it as current.
+        let clock = TestClock()
+        let model = GearOpsModel(client: MockGearOpsClient(), defaults: isolatedDefaults(), bookingNotifications: NoopBookingNotifier(), credentialStore: InMemoryCredentialStore(), autoStart: false, currentDate: clock.read)
+        await model.signIn(email: "admin@wisc.edu", password: "password")
+
+        clock.advance(by: 3 * 3_600)
+        XCTAssertTrue(model.snapshotIsStale(at: clock.now))
+        await model.refresh()
+        XCTAssertFalse(model.snapshotIsStale(at: clock.now))
+        XCTAssertEqual(model.companionHealthSeverity(at: clock.now), .healthy)
+    }
+
+    func testPresentationRefreshIsBoundedByConfirmationAndLastAttempt() async {
+        let clock = TestClock()
+        let client = MockGearOpsClient()
+        let model = GearOpsModel(client: client, defaults: isolatedDefaults(), bookingNotifications: NoopBookingNotifier(), credentialStore: InMemoryCredentialStore(), autoStart: false, currentDate: clock.read)
+        await model.signIn(email: "admin@wisc.edu", password: "password")
+        var reads = await client.projectionReads()
+
+        // Just confirmed: opening the extra does not read.
+        clock.advance(by: 30)
+        await model.refreshOnPresentation()
+        var now = await client.projectionReads()
+        XCTAssertEqual(now, reads)
+
+        // Older than the interval: one read on presentation.
+        clock.advance(by: 10 * 60)
+        await model.refreshOnPresentation()
+        now = await client.projectionReads()
+        XCTAssertEqual(now, reads + 1)
+        reads = now
+
+        // An immediate reopen does not rotate the credential again.
+        clock.advance(by: 20)
+        await model.refreshOnPresentation()
+        now = await client.projectionReads()
+        XCTAssertEqual(now, reads)
+
+        // A failing read is retried at most once per interval.
+        await client.setProjectionError(.network("offline"))
+        clock.advance(by: GearOpsModel.presentationRefreshInterval + 1)
+        await model.refreshOnPresentation()
+        now = await client.projectionReads()
+        XCTAssertEqual(now, reads + 1)
+        clock.advance(by: 20)
+        await model.refreshOnPresentation()
+        now = await client.projectionReads()
+        XCTAssertEqual(now, reads + 1)
+    }
+
+    func testPresentationRetriesLockedCredentialInsteadOfReading() async {
+        let defaults = isolatedDefaults()
+        let store = InMemoryCredentialStore()
+        let client = MockGearOpsClient()
+        let first = GearOpsModel(client: client, defaults: defaults, bookingNotifications: NoopBookingNotifier(), credentialStore: store, autoStart: false)
+        await first.signIn(email: "admin@wisc.edu", password: "password")
+        await store.removeTokenKeepingUser()
+
+        let relaunched = GearOpsModel(client: client, defaults: defaults, bookingNotifications: NoopBookingNotifier(), credentialStore: store, autoStart: false)
+        await relaunched.restoreSession()
+        XCTAssertTrue(relaunched.shouldRetryCredentialRestore)
+
+        await store.saveToken("credential-admin@wisc.edu")
+        await relaunched.refreshOnPresentation()
+        XCTAssertFalse(relaunched.shouldRetryCredentialRestore)
+        XCTAssertEqual(relaunched.custodyCount, 12)
+    }
+
+    func testSearchFindsBookingsByItemTagRequesterAndReservation() {
+        let model = fixtureModel()
+        let now = try! XCTUnwrap(model.snapshot?.receivedAt)
+
+        let fx6 = model.searchBookings("fx6", at: now)
+        XCTAssertEqual(fx6.map(\.id), ["open:fixture-open-overdue"])
+        XCTAssertEqual(fx6.first?.matchedItem?.assetTag, "CAM-014")
+
+        // Every term must match somewhere; tags are case-insensitive.
+        XCTAssertEqual(model.searchBookings("riley cam-031", at: now).map(\.id), ["open:fixture-open-tomorrow"])
+        XCTAssertEqual(model.searchBookings("field house", at: now).map(\.id), ["open:fixture-open-overdue", "open:fixture-open-tomorrow"])
+
+        // Reservations follow open checkouts and route to the pickup detail.
+        let morgan = model.searchBookings("Morgan", at: now)
+        XCTAssertEqual(morgan.map(\.id), ["open:fixture-open-today", "reservation:fixture-pickup"])
+        XCTAssertEqual(morgan.last?.route, .pickup(id: "fixture-pickup"))
+        XCTAssertNil(morgan.first?.matchedItem)
+
+        XCTAssertEqual(model.searchBookings("co-1051", at: now).map(\.id), ["open:fixture-open-today"])
+        // Reservations match by reference before they become open checkouts.
+        XCTAssertEqual(model.searchBookings("rv-2207", at: now).map(\.id), ["reservation:fixture-pickup"])
+        XCTAssertTrue(model.searchBookings("zeppelin", at: now).isEmpty)
+        XCTAssertTrue(model.searchBookings("   ", at: now).isEmpty)
+    }
+
+    func testMenuBarCountFollowsCountMode() {
+        let model = fixtureModel()
+        let now = try! XCTUnwrap(model.snapshot?.receivedAt)
+
+        XCTAssertEqual(model.appPreferences.menuBarCountMode, .open)
+        XCTAssertEqual(model.menuBarCount(at: now), 3)
+        XCTAssertEqual(model.menuBarAccessibilityLabel(at: now), "Wisconsin Creative, 3 active checkouts, 1 overdue")
+
+        model.appPreferences.menuBarCountMode = .overdue
+        XCTAssertEqual(model.menuBarCount(at: now), 1)
+        // Overdue mode hides a zero rather than showing a reassuring "0".
+        XCTAssertNil(model.menuBarCount(at: now.addingTimeInterval(-6 * 3_600)))
+
+        model.appPreferences.menuBarCountMode = .hidden
+        XCTAssertNil(model.menuBarCount(at: now))
+    }
+
+    func testLegacyCountPreferenceMigratesToCountMode() throws {
+        let hiddenDefaults = isolatedDefaults()
+        hiddenDefaults.set(Data(#"{"showsMenuBarCount":false,"showsMenuBarExtra":true}"#.utf8), forKey: "GearOpsAppPreferencesV1")
+        let hidden = AppPreferencesStore(defaults: hiddenDefaults)
+        XCTAssertEqual(hidden.menuBarCountMode, .hidden)
+        XCTAssertTrue(hidden.showsMenuBarExtra)
+        XCTAssertTrue(hidden.usesGlobalShortcut)
+
+        let shownDefaults = isolatedDefaults()
+        shownDefaults.set(Data(#"{"showsMenuBarCount":true,"showsMenuBarExtra":false}"#.utf8), forKey: "GearOpsAppPreferencesV1")
+        let shown = AppPreferencesStore(defaults: shownDefaults)
+        XCTAssertEqual(shown.menuBarCountMode, .open)
+        XCTAssertFalse(shown.showsMenuBarExtra)
+
+        shown.menuBarCountMode = .overdue
+        shown.usesGlobalShortcut = false
+        let reloaded = AppPreferencesStore(defaults: shownDefaults)
+        XCTAssertEqual(reloaded.menuBarCountMode, .overdue)
+        XCTAssertFalse(reloaded.usesGlobalShortcut)
+    }
+
+    func testCacheWrittenByEarlierVersionStillRestores() async throws {
+        let defaults = isolatedDefaults()
+        let first = GearOpsModel(client: MockGearOpsClient(), defaults: defaults, bookingNotifications: NoopBookingNotifier(), credentialStore: InMemoryCredentialStore(), autoStart: false)
+        await first.signIn(email: "admin@wisc.edu", password: "password")
+
+        // 1.0.5 also stored `openBookingTotal` and `snapshot.partialFailures`.
+        let data = try XCTUnwrap(defaults.data(forKey: "GearOpsCachedStateV1"))
+        var cache = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        var snapshot = try XCTUnwrap(cache["snapshot"] as? [String: Any])
+        snapshot["partialFailures"] = []
+        cache["snapshot"] = snapshot
+        cache["openBookingTotal"] = 1
+        defaults.set(try JSONSerialization.data(withJSONObject: cache), forKey: "GearOpsCachedStateV1")
+
+        let relaunched = GearOpsModel(client: MockGearOpsClient(), defaults: defaults, bookingNotifications: NoopBookingNotifier(), credentialStore: InMemoryCredentialStore(), autoStart: false)
+        XCTAssertEqual(relaunched.user?.id, "user-1")
+        XCTAssertEqual(relaunched.custodyCount, 12)
+        XCTAssertEqual(relaunched.openBookings.map(\.title), ["Camera checkout"])
+    }
+
+    private func fixtureModel() -> GearOpsModel {
+        let model = GearOpsModel(client: MockGearOpsClient(), defaults: isolatedDefaults(), bookingNotifications: NoopBookingNotifier(), credentialStore: InMemoryCredentialStore(), autoStart: false)
+        model.loadFixture(user: GearOpsFixture.user, projection: GearOpsFixture.projection(anchoredAt: Date(timeIntervalSince1970: 1_800_000_000)))
+        return model
+    }
+
     private func isolatedDefaults() -> UserDefaults {
         let suite = "GearOpsTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
@@ -1032,6 +1207,7 @@ private actor MockGearOpsClient: GearOpsServing {
     private var checkedOut = 12
     private var revision = 0
     private var registrations: [String] = []
+    private var projectionReadCount = 0
     private var revocations: [String] = []
     private let kioskAccess: String
 
@@ -1100,7 +1276,10 @@ private actor MockGearOpsClient: GearOpsServing {
         return renewed
     }
 
+    func projectionReads() -> Int { projectionReadCount }
+
     func companionProjection(token: String) async throws -> CompanionProjection {
+        projectionReadCount += 1
         if let projectionError { throw projectionError }
         if let nextProjection {
             self.nextProjection = nil
@@ -1390,6 +1569,13 @@ private actor SuspendedBookingNotifier: BookingNotificationDelivering {
     func deliver(_ change: BookingChange, playsSound: Bool) async {}
     func removeNotifications(identifiers: [String]) async {}
     func clearPrivateNotifications() async {}
+}
+
+@MainActor
+private final class TestClock {
+    var now = Date(timeIntervalSince1970: 1_790_000_000)
+    func advance(by seconds: TimeInterval) { now = now.addingTimeInterval(seconds) }
+    var read: () -> Date { { [unowned self] in self.now } }
 }
 
 private func makeOpenBooking(

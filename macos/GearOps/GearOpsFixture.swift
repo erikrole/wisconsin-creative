@@ -20,7 +20,10 @@ enum GearOpsFixture {
             credentialStore: FixtureCredentialStore(),
             autoStart: false
         )
-        model.loadFixture(user: user, projection: projection(anchoredAt: .now))
+        // `GEAROPS_FIXTURE_AGE_MINUTES=<n>` backdates the snapshot to capture
+        // the stale-data state.
+        let age = ProcessInfo.processInfo.environment["GEAROPS_FIXTURE_AGE_MINUTES"].flatMap(Double.init) ?? 0
+        model.loadFixture(user: user, projection: projection(anchoredAt: .now, snapshotAge: age * 60))
         return model
     }
 
@@ -33,7 +36,7 @@ enum GearOpsFixture {
 
     /// Times are anchored to the top of the current hour so two captures in
     /// the same hour render identical operational labels.
-    static func projection(anchoredAt now: Date) -> CompanionProjection {
+    static func projection(anchoredAt now: Date, snapshotAge: TimeInterval = 0) -> CompanionProjection {
         let calendar = Calendar.current
         let anchor = calendar.dateInterval(of: .hour, for: now)?.start ?? now
         func hours(_ value: Double) -> Date { anchor.addingTimeInterval(value * 3_600) }
@@ -94,7 +97,8 @@ enum GearOpsFixture {
                 updatedAt: hours(-24),
                 requester: morgan,
                 location: videoOffice,
-                serializedItems: [.init(id: "i7", name: "DJI Ronin", assetTag: "SUP-044")]
+                serializedItems: [.init(id: "i7", name: "DJI Ronin", assetTag: "SUP-044")],
+                refNumber: "RV-2207"
             ),
         ]
 
@@ -132,7 +136,7 @@ enum GearOpsFixture {
         return CompanionProjection(
             version: 1,
             revision: 1,
-            generatedAt: now,
+            generatedAt: now.addingTimeInterval(-snapshotAge),
             stats: GearOpsStats(checkedOut: openBookings.count, overdue: 1, reserved: 1, dueToday: 1),
             pendingPickupTotal: activity.count,
             openBookings: openBookings,

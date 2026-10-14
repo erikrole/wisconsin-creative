@@ -224,6 +224,24 @@ final class APIClient {
         return response.options
     }
 
+    /// Options for a prompt-free passkey upgrade straight after a password
+    /// sign-in, re-authenticated by that password. Nil when the account already
+    /// has a passkey, so the upgrade does nothing.
+    func automaticPasskeyRegistrationOptions(currentPassword: String) async throws -> PasskeyRegistrationOptions? {
+        struct Body: Encodable {
+            let currentPassword: String
+            let automatic = true
+        }
+        struct Response: Decodable {
+            let options: PasskeyRegistrationOptions?
+        }
+
+        var req = request(path: "/api/auth/passkey/registration/options", method: "POST")
+        req.httpBody = try JSONEncoder().encode(Body(currentPassword: currentPassword))
+        let response: Response = try await perform(req)
+        return response.options
+    }
+
     func verifyPasskeyRegistration(
         _ registration: PasskeyRegistrationPayload,
         name: String?
@@ -1304,15 +1322,25 @@ final class APIClient {
         return response.data
     }
 
-    func recordBadgeAppOpen() async throws {
+    /// Records a foreground and returns everything earned since `after`,
+    /// including what this open minted, so a foreground is one request.
+    /// Nil when the server had no usable cursor to answer from.
+    func recordBadgeAppOpen(after: String?) async throws -> RecentBadgeRewards? {
         struct AppOpenResponse: Decodable {
             let accepted: Bool
+            let awards: [EarnedBadgeReward]?
+            let nextCursor: String?
         }
 
+        var queryItems: [URLQueryItem] = []
+        if let after, !after.isEmpty {
+            queryItems.append(.init(name: "after", value: after))
+        }
         let response: DataWrapper<AppOpenResponse> = try await perform(
-            request(path: "/api/badges/events/app-open", method: "POST")
+            request(path: "/api/badges/events/app-open", method: "POST", queryItems: queryItems)
         )
-        _ = response.data.accepted
+        guard let awards = response.data.awards, let nextCursor = response.data.nextCursor else { return nil }
+        return RecentBadgeRewards(awards: awards, nextCursor: nextCursor)
     }
 
     /// Uploads one MetricKit diagnostic payload (crashes, hangs, resource

@@ -1,0 +1,113 @@
+{
+  "title": "Menu Bar Companion Improvements",
+  "eyebrow": "macOS · Wisconsin Creative menu bar app",
+  "lede": "Staff open the extra to answer two questions: is this data current, and who has a given piece of gear. The popover now says when it cannot confirm the data, re-reads on open, and searches the projection it already holds.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "Glance: before and after",
+      "note": "The same fixture data at the same clock hour (08:00–09:00 local) from the HEAD baseline and the changed Debug build. The after window is 39 pt taller because it adds the search field, so these are shown as separate captures rather than a pixel-matched pair.",
+      "shots": [
+        {
+          "tag": "Before",
+          "title": "Before glance",
+          "image": "before/glance.png",
+          "cap": "No search. Companion data says Healthy even when push goes quiet."
+        },
+        {
+          "tag": "After",
+          "title": "After glance",
+          "image": "after/glance.png",
+          "cap": "A search field sits under the header. Everything else is unchanged."
+        }
+      ]
+    },
+    {
+      "heading": "Booking detail: before and after",
+      "note": "The detail is unchanged apart from the search field above it.",
+      "shots": [
+        {
+          "tag": "Before",
+          "title": "Before detail",
+          "image": "before/detail.png",
+          "cap": "Baseline detail."
+        },
+        {
+          "tag": "After",
+          "title": "After detail",
+          "image": "after/detail.png",
+          "cap": "Same detail. ⌘F returns to search from here."
+        }
+      ]
+    },
+    {
+      "heading": "New states (after only)",
+      "note": "The baseline has no search, keyboard highlight, or snapshot-age fixture, so there is nothing to compare these against.",
+      "shots": [
+        {
+          "tag": "After",
+          "title": "Search by gear",
+          "image": "after/search.png",
+          "cap": "<b>fx6</b> finds the overdue booking and shows the item that matched: <b>CAM-014 · Sony FX6 Camera</b>."
+        },
+        {
+          "tag": "After",
+          "title": "No results",
+          "image": "after/search-empty.png",
+          "cap": "An empty result says what was searched and what scope it covers."
+        },
+        {
+          "tag": "After",
+          "title": "Stale snapshot",
+          "image": "after/stale.png",
+          "cap": "Data that has not been confirmed for 40 minutes turns Companion data amber: <b>Unconfirmed for 40m</b>. Before this change it read Healthy."
+        },
+        {
+          "tag": "After",
+          "title": "Keyboard highlight",
+          "image": "after/keyboard.png",
+          "cap": "Two ↓ presses highlight the second row while focus stays in the search field. Return opens it and Esc clears."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Silence read as Healthy",
+      "was": "Freshness appeared only as small text. If APNs was throttled, the health panel stayed green indefinitely.",
+      "now": "After 15 minutes without a successful read, the row turns amber: <b>Unconfirmed for 40m</b>. This is based on the client's last read, not the server's <code>generatedAt</code>, which only changes when the data does. Opening the extra re-reads the projection, at most once a minute and without a timer, because each read rotates a rate-limited credential."
+    },
+    {
+      "h": "Finding gear meant opening each booking",
+      "was": "Item tags and names were in the projection but visible only one booking at a time.",
+      "now": "Search matches title, person, location, reference, and item tag or name across open checkouts and upcoming reservations. The matched item shows on the card."
+    },
+    {
+      "h": "Mouse-only rows",
+      "was": "Booking rows needed a click.",
+      "now": "↑/↓ highlight, Return opens, and Esc clears. Opening the extra puts the cursor in search."
+    },
+    {
+      "h": "The count was not the actionable number",
+      "was": "The menu bar numeral always showed open checkouts.",
+      "now": "Settings › General offers Open bookings, Overdue only (hidden at zero), or Off. The glyph is unchanged."
+    },
+    {
+      "h": "A hidden extra had no way back in",
+      "was": "When macOS tucked the extra away for space, there was no Dock icon or other entry point.",
+      "now": "⌃⌥⌘G (a Carbon hot key that needs no Accessibility permission) opens the extra, or a Status window with the same content when the extra is not visible. Dock reopen and a new Dock item, Show Status, open that window too."
+    }
+  ],
+  "verification": [
+    "Native XCTest: <b>90 passed</b>, 0 failed (82 baseline plus 8 new).",
+    "Release build succeeded (unsigned).",
+    "Source contracts: 37 macOS (4 new) plus 21 companion tests passed.",
+    "Fixture keyboard path: <code>CGEvent</code>s posted to the fixture PID drove type, ↓↓, Return, and Esc.",
+    "<code>git diff --check</code> is clean. <code>verify:docs</code> reports codemap drift only in the in-progress signatures files, not this change."
+  ],
+  "notes": [
+    "A first draft hung launch: a <code>TimelineView</code> in the <code>MenuBarExtra</code> label re-rendered the status button forever. The test host caught it and <code>sample</code> confirmed it. It now uses a 60-second <code>Timer</code>, and a source contract forbids the pattern.",
+    "Unverified on the installed app: the real status-item popover, the ⌃⌥⌘G hot key (disabled in fixtures so it never takes the installed app's key), the Overdue-only minute tick in the menu bar, and whether a space-hidden status item reports itself as not visible.",
+    "Fixture captures prove presentation only. They do not prove APNs, authenticated refresh, or credential rotation against production."
+  ]
+}

@@ -13,6 +13,7 @@ const publicChecks = [
   { path: "/about/tech-stack", terms: ["Web app, Postgres data, native iOS.", "Major platform pieces."] },
   { path: "/about/security", terms: ["Public pages do not expose operations.", "Security controls at a high level."] },
   { path: "/about/field-work", terms: ["Native iOS and kiosk cover field work.", "Phone, counter, and web have different jobs."] },
+  { path: "/releases", terms: ["Releases", "New features, improvements, and fixes"] },
   { path: "/privacy", terms: ["Wisconsin Creative Privacy Policy", "What We Collect"] },
   { path: "/login", terms: ["Wisconsin Creative", "Sign in to your account"] },
 ];

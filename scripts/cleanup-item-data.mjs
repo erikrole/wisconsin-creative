@@ -1,3 +1,10 @@
+/**
+ * Operator maintenance: idempotent item catalog cleanup.
+ * Dry-run by default; pass --apply only after reviewing planned actions.
+ * Automatable taxonomy/scan work completed 2026-06; residual queues are physical
+ * (see tasks/item-data-hygiene-status-2026-10-07.md). Expect 0 planned mutations
+ * unless new gaps appear.
+ */
 import fs from "node:fs/promises";
 import path from "node:path";
 import { PrismaNeon } from "@prisma/adapter-neon";

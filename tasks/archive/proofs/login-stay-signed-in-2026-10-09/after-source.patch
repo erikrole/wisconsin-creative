@@ -1,0 +1,892 @@
+diff --git a/docs/AREA_SETTINGS.md b/docs/AREA_SETTINGS.md
+index 17c2fc5b..ab984b32 100644
+--- a/docs/AREA_SETTINGS.md
++++ b/docs/AREA_SETTINGS.md
+@@ -3,7 +3,7 @@
+ ## Document Control
+ - Area: Settings
+ - Owner: Wisconsin Athletics Creative Product
+-- Last Updated: 2026-09-18
++- Last Updated: 2026-10-09
+ - Status: Active
+ - Version: V1
+ 
+@@ -24,7 +24,7 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
+ 
+ ### Security (`/settings/security`) -- Personal
+ - Change password: verify current password, set new one (min 8 chars), optional "sign out of all other devices" checkbox. Client-side confirm-password match before submit.
+-- Active sessions list: shows each non-expired session with creation date, expiry date, and "This device" badge for the current session. Per-session "Sign out" button (cannot revoke the current session). "Sign out all other devices" bulk action.
++- Active sessions list: shows each non-expired session with creation date, current expiry date (it moves forward with use, D-066), and "This device" badge for the current session. Per-session "Sign out" button (cannot revoke the current session). "Sign out all other devices" bulk action.
+ - Passkeys: active invite-granted users can add one or more discoverable passkeys after current-password reauthentication, name them, see last-used metadata, and revoke an individual credential. An unnamed passkey is named after the enrolling client (for example "Chrome on macOS" or "iPhone"), each row states whether the credential is synced or bound to one device, and removal takes its own confirmation dialog with its own current-password field. Password sign-in and recovery remain available during rollout.
+ - `POST /api/me/change-password` (5/min rate limit -- brute-force protection; verifies bcrypt, sets new hash, optionally deletes other sessions).
+ - `GET /api/me/sessions` (30/min; lists non-expired sessions with `isCurrent` flag -- tokenHash never exposed to client).
+@@ -34,6 +34,7 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
+ - `POST /api/auth/passkey/login/options` and `POST /api/auth/passkey/login/verify` (public discoverable login, required user verification, existing cookie-backed session issuance).
+ - `GET /api/me/passkeys` and `DELETE /api/me/passkeys/:id` (credential metadata and current-password-protected per-credential revocation).
+ - `GET /.well-known/change-password` redirects (303) to this page against the requesting origin, so a password manager's "Change password" action lands on the form that changes it.
++- `GET /.well-known/passkey-endpoints` publishes this page as the W3C Passkey Endpoints `enroll` and `manage` URLs (absolute, from the requesting origin), so a password manager can offer "Add a passkey" on a saved login and link here.
+ - Every password form on this page carries the signed-in address as a hidden `autocomplete="username"` field, so a manager files or updates the credential against the right account instead of saving it unattached.
+ - Available to every authenticated user (STUDENT included).
+ 
+@@ -184,7 +185,7 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
+ - Create device → server returns a one-shot 6-digit activation code; admin enters it on the iPad at `/kiosk` to bind the device.
+ - Pending-activation devices have a "Regenerate code" affordance — invalidates the prior hash and surfaces a fresh code in the same dialog.
+ - Activated kiosks can't regenerate (must deactivate first; server returns 409).
+-- Kiosk sessions are **always-on**: a bound device has no server-side session expiry and stays active until an admin deactivates it. The HTTP-only cookie is rolled forward on every authenticated kiosk request (~395-day window) to stay under browser cookie-lifetime caps without ever forcing a re-activation on a live device.
++- Kiosk sessions slide (D-039): authenticated activity pushes the 7-day `sessionExpiresAt` back out, roughly once a day, and the cookie is re-issued with it. A live device never re-activates; only 7 dark days or admin deactivation ends a session. (The earlier always-on / ~395-day cookie model was replaced.)
+ - Toggle active/inactive (deactivating clears the session token, which ends the session immediately), delete, and inspect last-seen timestamp.
+ - Device rows use the shared shadcn-backed status indicator for `Online`, `Heartbeat stale`, `Offline`, `Pending activation`, and `Deactivated` health.
+ 
+@@ -221,6 +222,8 @@ Navigation breadcrumb versioned roadmap: `tasks/breadcrumbs-roadmap.md`
+ All versions shipped. Duplicate breadcrumb removed; parent-level sibling quick-jump dropdown on "Settings" crumb navigates between sub-pages. Role-gated Settings sibling menus now wait for the current role before becoming dropdowns, so the loading frame does not expose an empty menu. The global breadcrumb UI now uses a lighter trail treatment with the current Settings sub-page marked by a subtle underline instead of a filled chip.
+ 
+ ## Change Log
++- 2026-10-09: **People stay signed in.** User sessions now slide on activity (D-066): a remembered sign-in lasts while it is used at least once every 30 days, up to 90 days, and an unremembered one lasts 12 idle hours within the browser session. "Keep me signed in" starts ticked, shows on every sign-in step including account creation, and new accounts are no longer limited to 12 hours. Signing back in returns to the page that was asked for. `/.well-known/passkey-endpoints` points password managers at Security for adding a passkey. Schema: `sessions.persistent` (migration 0171). Proof: focused session, return-path, passkey, and password-manager tests, the full vitest suite, `tsc`, lint, and `npm run build:app`. Migration deploy and authenticated preview proof are pending.
++
+ - 2026-09-18: **Snow Leopard polish.** Settings keeps a single `main` landmark. ⌘K stays on the settings palette. Jump links clear the sticky header. Directory search can be cleared. Command palette no longer stacks a close control on the search field.
+ 
+ - 2026-09-18: **Settings control room rehaul.** Overview is a searchable directory. The rail uses icons and groups Booking (checkout, reservation, extensions, overdue) separately from Schedule (sports, calendars, locations, venue mappings). Sports moved out of People. Page titles match nav labels. Related-page links sit under each tab. Shared save bars keep labels stable. Profile now exposes Slack handle. Local authenticated browser proof on overview search/filter, Profile, Appearance, Sports jump nav, Checkout policies dirty/reset save bar, and related links. `npm run build:app` was not run because Preview `next dev` owns port 3000. Evidence: `tasks/archive/proofs/settings-overhaul-2026-09-18/review.html`.
+diff --git a/docs/CODEMAPS/architecture.md b/docs/CODEMAPS/architecture.md
+index b86fcff4..6fc7248e 100644
+--- a/docs/CODEMAPS/architecture.md
++++ b/docs/CODEMAPS/architecture.md
+@@ -11,10 +11,10 @@ Wisconsin Creative is a Next.js App Router application with a companion native i
+ |---|---:|
+ | App pages | 96 |
+ | App layouts | 10 |
+-| API route handlers | 375 |
++| API route handlers | 376 |
+ | Service files | 103 |
+ | Component files | 165 |
+-| Test files | 744 |
++| Test files | 745 |
+ 
+ ## Oversized Source Watchlist
+ 
+diff --git a/docs/CODEMAPS/backend.md b/docs/CODEMAPS/backend.md
+index 5a70fe46..c2924ac3 100644
+--- a/docs/CODEMAPS/backend.md
++++ b/docs/CODEMAPS/backend.md
+@@ -125,7 +125,7 @@
+ | `src/lib/assignment-conflict-review.ts` | 97 |
+ | `src/lib/audit.ts` | 168 |
+ | `src/lib/auth-email-guidance.ts` | 7 |
+-| `src/lib/auth.ts` | 377 |
++| `src/lib/auth.ts` | 436 |
+ | `src/lib/auto-fill-preview-types.ts` | 61 |
+ | `src/lib/availability-copy.ts` | 343 |
+ | `src/lib/avatar.ts` | 44 |
+@@ -171,7 +171,7 @@
+ | `src/lib/equipment-guidance.ts` | 127 |
+ | `src/lib/equipment-section-filters.ts` | 87 |
+ | `src/lib/equipment-sections.ts` | 155 |
+-| `src/lib/errors.ts` | 80 |
++| `src/lib/errors.ts` | 83 |
+ | `src/lib/event-editor.ts` | 107 |
+ | `src/lib/external-url.ts` | 30 |
+ | `src/lib/fetch-with-timeout.ts` | 25 |
+@@ -231,6 +231,7 @@
+ | `src/lib/resource-import-images.ts` | 104 |
+ | `src/lib/resource-import.ts` | 186 |
+ | `src/lib/resource-search.ts` | 124 |
++| `src/lib/return-to.ts` | 42 |
+ | `src/lib/role-preview.ts` | 226 |
+ | `src/lib/sanitize.ts` | 40 |
+ | `src/lib/schedule-assignee.ts` | 27 |
+@@ -288,7 +289,7 @@
+ | `src/lib/user-list-cache.ts` | 73 |
+ | `src/lib/user-visibility.ts` | 86 |
+ | `src/lib/utils.ts` | 22 |
+-| `src/lib/validation.ts` | 878 |
++| `src/lib/validation.ts` | 880 |
+ | `src/lib/venue-mapping-audit.ts` | 56 |
+ | `src/lib/venue-mapping-contract.ts` | 46 |
+ | `src/lib/venue-tone.ts` | 135 |
+@@ -304,6 +305,10 @@
+ 
+ - `/.well-known/change-password`
+ 
++### `/.well-known/passkey-endpoints`
++
++- `/.well-known/passkey-endpoints`
++
+ ### `/api/accountability`
+ 
+ - `/api/accountability/exclusions/[bookingId]`
+diff --git a/docs/CODEMAPS/data.md b/docs/CODEMAPS/data.md
+index e3b301fe..786acdfd 100644
+--- a/docs/CODEMAPS/data.md
++++ b/docs/CODEMAPS/data.md
+@@ -12,7 +12,7 @@
+ | Model | Fields | Model-level indexes/constraints |
+ |---|---:|---:|
+ | `User` | 129 | 5 |
+-| `Session` | 6 | 2 |
++| `Session` | 7 | 2 |
+ | `PasswordResetToken` | 6 | 2 |
+ | `PasskeyCredential` | 12 | 2 |
+ | `PasskeyChallenge` | 9 | 3 |
+diff --git a/docs/CODEMAPS/frontend.md b/docs/CODEMAPS/frontend.md
+index e73b697e..145c78dd 100644
+--- a/docs/CODEMAPS/frontend.md
++++ b/docs/CODEMAPS/frontend.md
+@@ -148,7 +148,7 @@
+ | `src/components/shift-detail/ShiftSlotCard.tsx` | 345 |
+ | `src/components/booking-details/EditBookingEventsDialog.tsx` | 342 |
+ | `src/components/shift-detail/crew-row.tsx` | 334 |
+-| `src/components/public-showroom/ReleasesFeed.tsx` | 302 |
++| `src/components/public-showroom/ReleasesFeed.tsx` | 314 |
+ | `src/components/public-showroom/showroom-blocks.tsx` | 290 |
+ | `src/components/CheckoutMergeDialog.tsx` | 286 |
+ 
+diff --git a/docs/CODEMAPS/routes.md b/docs/CODEMAPS/routes.md
+index 0a41a12e..6445685e 100644
+--- a/docs/CODEMAPS/routes.md
++++ b/docs/CODEMAPS/routes.md
+@@ -117,6 +117,7 @@
+ 
+ - `/.well-known/apple-app-site-association` -> `src/app/.well-known/apple-app-site-association/route.ts`
+ - `/.well-known/change-password` -> `src/app/.well-known/change-password/route.ts`
++- `/.well-known/passkey-endpoints` -> `src/app/.well-known/passkey-endpoints/route.ts`
+ - `/releases/feed.xml` -> `src/app/(public)/releases/feed.xml/route.ts`
+ - `/api/accountability/exclusions/[bookingId]` -> `src/app/api/accountability/exclusions/[bookingId]/route.ts`
+ - `/api/accountability/exclusions` -> `src/app/api/accountability/exclusions/route.ts`
+diff --git a/docs/CODEMAPS/schema.md b/docs/CODEMAPS/schema.md
+index 7066d8cd..af54b675 100644
+--- a/docs/CODEMAPS/schema.md
++++ b/docs/CODEMAPS/schema.md
+@@ -273,14 +273,15 @@ Indexes and constraints:
+ 
+ ## Model `Session`
+ 
+-Fields: 6
++Fields: 7
+ 
+-- `id        String   @id @default(cuid())`
+-- `userId    String   @map("user_id")`
+-- `tokenHash String   @unique @map("token_hash")`
+-- `expiresAt DateTime @map("expires_at")`
+-- `createdAt DateTime @default(now()) @map("created_at")`
+-- `user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)`
++- `id         String   @id @default(cuid())`
++- `userId     String   @map("user_id")`
++- `tokenHash  String   @unique @map("token_hash")`
++- `expiresAt  DateTime @map("expires_at")`
++- `persistent Boolean  @default(false)`
++- `createdAt  DateTime @default(now()) @map("created_at")`
++- `user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)`
+ 
+ Indexes and constraints:
+ 
+diff --git a/docs/DECISIONS.md b/docs/DECISIONS.md
+index 02d89217..0e9be431 100644
+--- a/docs/DECISIONS.md
++++ b/docs/DECISIONS.md
+@@ -67,6 +67,7 @@
+ - D-061: Shared travel-case checkouts are custodian-neutral
+ - D-062: Gameday kits are callable, exclusive per sport, and pickup-aliased
+ - D-064: Kiosk peer transfer, anyone-nudge, and missing items follow the redesign
++- D-066: User sessions slide on activity, remembered by default
+ 
+ ---
+ 
+@@ -1580,3 +1581,16 @@ These are non-negotiable integrity constraints. Every feature must preserve them
+ - Hosting (2026-09-30): the Workforce area stays in the main app on the main hostname, protected by the ADMIN-only `hiring` and `workforce` permissions, not moved behind a separate Cloudflare Access hostname. Reasons: hire, invite, claim, overview, and planning are in-database operations today, and a split would need a second database or service API, deploy, and preview setup. Revisit if applicant data needs isolation from a compromise of the main app (separate app and database), or if front-door SSO and MFA is wanted for these pages; a second hostname with server-side Access JWT verification was scoped but not built.
+ - Review amendments: audit rows are hard-deleted at 90 days, so purges are recorded in a durable non-PII ledger; hiring audits never snapshot contact data; code uses `applicant` (not `candidate`) naming. See brief section 14.
+ - Reference: `docs/BRIEF_WORKFORCE_HIRING_V1.md`.
++
++## D-066: User Sessions Slide on Activity, Remembered by Default
++- Date: 2026-10-09
++- Status: Accepted; shipped in code, rollout proof pending.
++- Context: User sessions had a fixed expiry set once at sign-in: 12 hours, or 30 days with "Remember me", which was off by default. Nothing extended them, so an active person was signed out mid-week, and the native app (always 30 days) signed everyone out monthly. Account creation always issued the 12-hour session. No earlier decision covered user session lifetime.
++- Decision:
++  - `Session.persistent` records whether the sign-in asked to be remembered. Authenticated activity slides `expiresAt` forward: remembered sessions to 30 idle days, capped at 90 days from sign-in; unremembered sessions to 12 idle hours, capped at 7 days.
++  - Slides are throttled (about one write a day when remembered, one an hour otherwise) and happen in `requireAuth`, also during an admin role preview.
++  - The database row is the only authority. The cookie is set once: a remembered sign-in gets a cookie that lasts to the 90-day cap, an unremembered one gets a browser-session cookie. A slide never re-issues the cookie, because server components cannot set cookies; a cookie that outlives its row is a dead token that returns 401.
++  - "Keep me signed in" starts ticked on web sign-in and account creation and shows on every step. Untick it on a shared computer. The native app keeps sending remembered sign-ins, and account creation defaults to remembered when the client says nothing.
++  - A signed-out visit returns to the page that was asked for: the app layout and client 401 handling pass a same-origin `returnTo`, which sign-in validates before using.
++- Guardrails: Revocation is unchanged. Password change or reset, deactivation, Settings sign-out, and sign-out all delete rows immediately. Kiosk sessions keep D-039. The macOS companion keeps D-047.
++- Consequences: An active person on their own device signs in at most once every 90 days, and with a passkey that sign-in takes one tap. A sign-in left on a shared computer with the box ticked stays live for up to 30 idle days, so the checkbox remains visible.
+diff --git a/docs/GAPS_AND_RISKS.md b/docs/GAPS_AND_RISKS.md
+index b319072f..8b985722 100644
+--- a/docs/GAPS_AND_RISKS.md
++++ b/docs/GAPS_AND_RISKS.md
+@@ -51,6 +51,7 @@ Review duplicate automatic builds are removed; main protection, sanitized previe
+ | GAP-85 | Kiosk kit lists return no availability | AREA_KIOSK / AREA_KITS | Active | `GET /api/kiosk/kits[/id]` returns membership only; a kit checklist can list gear that is already out, which is only discovered when scanned. |
+ | GAP-86 | Kiosk "Mark returned without scanning" and H5 target | AREA_KIOSK / AREA_RESERVATIONS | Resolved | 2026-09-28 (branch `claude/kiosk-redesign`): Erik decided "Mark returned without scanning" stays off the kiosk; staff use the web `checkouts/[id]/admin-override`. "Change what's reserved" shows only on real reservations: `kiosk/student/[userId]` now tags each pending pickup `kind: "reservation" \| "checkout"`, and the hub hides the button on legacy PENDING_PICKUP checkouts (older servers without `kind` keep showing it). Live-server read-back of the field is still pending with GAP-83. |
+ | GAP-87 | Kiosk damaged/missing reports for batteries and counted stock rollout | AREA_KIOSK / AREA_CHECKOUTS / AREA_BULK_INVENTORY | Active | The report gap is closed in source (branch `claude/kiosk-keyboard-field`, 2026-10-01): battery units and counted stock can be reported damaged or missing at the kiosk and on web. Rollout needs merge, migration `0162_checkin_reports_bulk_targets` applied through the runbook before app deploy (`asset_id` becomes nullable plus a one-target CHECK), then live proof: report a battery missing (unit LOST, return finishes, no restock), a counted quantity missing and damaged, and the damaged-page scan on a managed iPad. |
++| GAP-88 | Sliding user session rollout proof | AREA_SETTINGS / AREA_USERS | Active | D-066 sliding sessions, default-on "Keep me signed in", `returnTo`, and `/.well-known/passkey-endpoints` are implemented and covered by focused and full-suite tests plus `npm run build:app`. Migration `0171_session_persistent` must deploy before the compatible server code. Then prove an authenticated preview sign-in with the box ticked and unticked, a signed-out deep link returning to its page, and one slid `expiresAt` on a live row. |
+ 
+ ## Deferred Product Scope
+ 
+diff --git a/next-env.d.ts b/next-env.d.ts
+index 4b3f3b58..c690306b 100644
+--- a/next-env.d.ts
++++ b/next-env.d.ts
+@@ -1,6 +1,6 @@
+ /// <reference types="next" />
+ /// <reference types="next/image-types/global" />
+-/// <reference path="./.next/build/types/routes.d.ts" />
++/// <reference path="./.next/dev/types/routes.d.ts" />
+ 
+ // NOTE: This file should not be edited
+ // see https://nextjs.org/docs/app/api-reference/config/typescript for more information.
+diff --git a/prisma/schema.prisma b/prisma/schema.prisma
+index 86032750..c77c73fd 100644
+--- a/prisma/schema.prisma
++++ b/prisma/schema.prisma
+@@ -348,12 +348,14 @@ model User {
+ }
+ 
+ model Session {
+-  id        String   @id @default(cuid())
+-  userId    String   @map("user_id")
+-  tokenHash String   @unique @map("token_hash")
+-  expiresAt DateTime @map("expires_at")
+-  createdAt DateTime @default(now()) @map("created_at")
+-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
++  id         String   @id @default(cuid())
++  userId     String   @map("user_id")
++  tokenHash  String   @unique @map("token_hash")
++  expiresAt  DateTime @map("expires_at")
++  // Remembered sign-ins slide on a 30-day idle window; others on 12 hours.
++  persistent Boolean  @default(false)
++  createdAt  DateTime @default(now()) @map("created_at")
++  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+ 
+   @@index([userId])
+   @@map("sessions")
+diff --git a/src/app/(app)/layout.tsx b/src/app/(app)/layout.tsx
+index 01702b94..fef0b410 100644
+--- a/src/app/(app)/layout.tsx
++++ b/src/app/(app)/layout.tsx
+@@ -1,6 +1,6 @@
+ import { MotionConfig } from "motion/react";
+ import { redirect } from "next/navigation";
+-import { cookies } from "next/headers";
++import { cookies, headers } from "next/headers";
+ import AppShell from "@/components/AppShell";
+ import { QueryProvider } from "@/components/QueryProvider";
+ import { Toaster } from "@/components/ui/sonner";
+@@ -9,6 +9,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
+ import { OfflineBanner } from "@/components/OfflineBanner";
+ import { requireAuth } from "@/lib/auth";
+ import { HttpError } from "@/lib/http";
++import { loginPathWithReturnTo } from "@/lib/return-to";
+ import { ProductUsageTracker } from "@/components/ProductUsageTracker";
+ import { canViewUsageAnalytics } from "@/lib/usage-analytics";
+ import WebMCPProvider from "@/components/WebMCPProvider";
+@@ -19,7 +20,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
+     user = await requireAuth();
+   } catch (error) {
+     if (error instanceof HttpError && error.status === 401) {
+-      redirect("/login");
++      redirect(loginPathWithReturnTo((await headers()).get("x-pathname")));
+     }
+     throw error;
+   }
+diff --git a/src/app/api/auth/register/route.ts b/src/app/api/auth/register/route.ts
+index 127bc464..ad9da10b 100644
+--- a/src/app/api/auth/register/route.ts
++++ b/src/app/api/auth/register/route.ts
+@@ -199,7 +199,7 @@ export const POST = withHandler(async (req) => {
+     throw error;
+   }
+ 
+-  await createSession(user.id);
++  await createSession(user.id, body.rememberMe ?? true);
+   const collaboratorPolicy = collaboratorPolicyMetadataForActor(user);
+ 
+   await createAuditEntry({
+diff --git a/src/app/login/LoginForm.tsx b/src/app/login/LoginForm.tsx
+index 76ed0f26..57a3e118 100644
+--- a/src/app/login/LoginForm.tsx
++++ b/src/app/login/LoginForm.tsx
+@@ -24,6 +24,7 @@ import { AUTH_EMAIL_DOMAIN_NOTE, shouldSuggestWiscEmail } from "@/lib/auth-email
+ import { isPasskeyCancellation, passkeyErrorMessage } from "@/lib/passkey-client";
+ import { AccountUsernameField, passwordRulesAttribute } from "@/components/auth/AccountUsernameField";
+ import { validatePassword, validatePasswordConfirmation } from "@/lib/password-rules";
++import { safeReturnTo } from "@/lib/return-to";
+ 
+ type LoginResponse = {
+   user?: {
+@@ -62,7 +63,10 @@ export default function LoginForm() {
+   const [password, setPassword] = useState("");
+   const [confirmPassword, setConfirmPassword] = useState("");
+   const [showPassword, setShowPassword] = useState(false);
+-  const [rememberMe, setRememberMe] = useState(false);
++  // On by default: people sign in from their own phones and laptops, and an
++  // unremembered session ends with the browser. Untick on a shared computer.
++  const [rememberMe, setRememberMe] = useState(true);
++  const [returnTo, setReturnTo] = useState<string | null>(null);
+   const [step, setStep] = useState<AuthStep>("identity");
+   const [identityLoading, setIdentityLoading] = useState(false);
+   const [identityError, setIdentityError] = useState("");
+@@ -81,8 +85,10 @@ export default function LoginForm() {
+   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+ 
+   useEffect(() => {
+-    const invitedEmail = new URLSearchParams(window.location.search).get("email")?.trim() ?? "";
++    const params = new URLSearchParams(window.location.search);
++    const invitedEmail = params.get("email")?.trim() ?? "";
+     if (invitedEmail) setEmail(invitedEmail);
++    setReturnTo(safeReturnTo(params.get("returnTo")));
+   }, []);
+ 
+   useEffect(() => {
+@@ -100,7 +106,7 @@ export default function LoginForm() {
+     url: "/api/auth/login",
+     skipAuthRedirect: true,
+     onSuccess: (data: LoginResponse) => {
+-      router.replace(data.user?.forcePasswordChange ? "/change-password" : "/");
++      router.replace(data.user?.forcePasswordChange ? "/change-password" : returnTo ?? "/");
+     },
+     onError: (kind) => setIsNetworkError(kind === "network"),
+   });
+@@ -231,6 +237,7 @@ export default function LoginForm() {
+       name: name.trim(),
+       email: email.trim().toLowerCase(),
+       password,
++      rememberMe,
+     });
+   }
+ 
+@@ -290,7 +297,7 @@ export default function LoginForm() {
+       const result = await parseJsonSafely<LoginResponse>(verifyResponse);
+       if (!isCurrent()) return assertionReceived;
+       passkeyNavigatedRef.current = true;
+-      router.replace(result?.user?.forcePasswordChange ? "/change-password" : "/");
++      router.replace(result?.user?.forcePasswordChange ? "/change-password" : returnTo ?? "/");
+     } catch (error) {
+       if (!isCurrent()) return assertionReceived;
+       if (isPasskeyCancellation(error)) return assertionReceived;
+@@ -512,18 +519,16 @@ export default function LoginForm() {
+                 </div>
+               )}
+ 
+-              {!isOnboarding && (
+-                <div className="login-rise flex items-center gap-2" style={{ "--rise-index": 4 } as React.CSSProperties}>
+-                  <Checkbox
+-                    id="rememberMe"
+-                    name="rememberMe"
+-                    checked={rememberMe}
+-                    onCheckedChange={(checked) => setRememberMe(checked === true)}
+-                    className="login-checkbox shrink-0"
+-                  />
+-                  <Label htmlFor="rememberMe" className="text-sm text-muted-foreground cursor-pointer font-normal leading-none">Remember me for 30 days</Label>
+-                </div>
+-              )}
++              <div className="login-rise flex items-center gap-2" style={{ "--rise-index": 4 } as React.CSSProperties}>
++                <Checkbox
++                  id="rememberMe"
++                  name="rememberMe"
++                  checked={rememberMe}
++                  onCheckedChange={(checked) => setRememberMe(checked === true)}
++                  className="login-checkbox shrink-0"
++                />
++                <Label htmlFor="rememberMe" className="text-sm text-muted-foreground cursor-pointer font-normal leading-none">Keep me signed in</Label>
++              </div>
+ 
+               <div className="grid grid-rows-[0fr] transition-[grid-template-rows] duration-200 data-[visible=true]:grid-rows-[1fr]" data-visible={!!formError}>
+                 <div className="overflow-hidden">
+diff --git a/src/app/login/page.tsx b/src/app/login/page.tsx
+index 1eebdabf..22c9376e 100644
+--- a/src/app/login/page.tsx
++++ b/src/app/login/page.tsx
+@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
+ import { db } from "@/lib/db";
+ import { env } from "@/lib/env";
+ import { tokenHash } from "@/lib/auth";
++import { safeReturnTo } from "@/lib/return-to";
+ import LoginForm from "./LoginForm";
+ 
+ export const metadata: Metadata = {
+@@ -29,9 +30,14 @@ async function hasActiveSession(): Promise<boolean> {
+   }
+ }
+ 
+-export default async function LoginPage() {
++export default async function LoginPage({
++  searchParams,
++}: {
++  searchParams: Promise<{ returnTo?: string | string[] }>;
++}) {
+   if (await hasActiveSession()) {
+-    redirect("/");
++    const { returnTo } = await searchParams;
++    redirect(safeReturnTo(typeof returnTo === "string" ? returnTo : null) ?? "/");
+   }
+   return <LoginForm />;
+ }
+diff --git a/src/lib/auth.ts b/src/lib/auth.ts
+index 9b169130..002b16b6 100644
+--- a/src/lib/auth.ts
++++ b/src/lib/auth.ts
+@@ -41,8 +41,21 @@ export type AuthUser = {
+   preview?: RolePreviewInfo;
+ };
+ 
+-const SESSION_12H_MS = 1000 * 60 * 60 * 12;
+-const SESSION_30D_MS = 1000 * 60 * 60 * 24 * 30;
++// User sessions slide on activity (D-066). A remembered sign-in stays alive
++// while it is used at least once every 30 days, up to a 90-day absolute cap;
++// an unremembered one ends after 12 idle hours or 7 days, and its cookie ends
++// with the browser. The database row is the only authority: the cookie is set
++// once to the absolute cap, so a slide never has to re-issue it (which server
++// components cannot do) and a cookie that outlives its row is just a dead token.
++const SESSION_IDLE_MS = 1000 * 60 * 60 * 12;
++const SESSION_REMEMBERED_IDLE_MS = 1000 * 60 * 60 * 24 * 30;
++const SESSION_MAX_MS = 1000 * 60 * 60 * 24 * 7;
++const SESSION_REMEMBERED_MAX_MS = 1000 * 60 * 60 * 24 * 90;
++// Throttle: slide only once this much of the idle window has been consumed, so
++// an active user costs about one session UPDATE per hour (or per day when
++// remembered) rather than one per request.
++const SESSION_SLIDE_AFTER_MS = 1000 * 60 * 60;
++const SESSION_REMEMBERED_SLIDE_AFTER_MS = 1000 * 60 * 60 * 24;
+ const KIOSK_SESSION_MS = 1000 * 60 * 60 * 24 * 7;
+ export const LAST_ACTIVE_REFRESH_MS = 1000 * 60 * 5;
+ 
+@@ -74,10 +87,50 @@ export async function verifyPassword(hash: string, password: string) {
+   return bcrypt.compare(password, hash);
+ }
+ 
++export function sessionWindow(persistent: boolean) {
++  return persistent
++    ? { idleMs: SESSION_REMEMBERED_IDLE_MS, maxMs: SESSION_REMEMBERED_MAX_MS, slideAfterMs: SESSION_REMEMBERED_SLIDE_AFTER_MS }
++    : { idleMs: SESSION_IDLE_MS, maxMs: SESSION_MAX_MS, slideAfterMs: SESSION_SLIDE_AFTER_MS };
++}
++
++/**
++ * The expiry a session should slide to after activity at `now`, or null when
++ * it is not yet due (throttled) or already sits at its absolute cap.
++ */
++export function slidSessionExpiry(
++  session: { expiresAt: Date; createdAt: Date; persistent: boolean },
++  now = new Date(),
++): Date | null {
++  const { idleMs, maxMs, slideAfterMs } = sessionWindow(session.persistent);
++  const remaining = session.expiresAt.getTime() - now.getTime();
++  if (remaining > idleMs - slideAfterMs) return null;
++  const next = Math.min(now.getTime() + idleMs, session.createdAt.getTime() + maxMs);
++  return next > session.expiresAt.getTime() ? new Date(next) : null;
++}
++
++async function slideSession(
++  session: { id: string; expiresAt: Date; createdAt: Date; persistent: boolean },
++  now = new Date(),
++) {
++  const expiresAt = slidSessionExpiry(session, now);
++  if (!expiresAt) return;
++  try {
++    // Never move an expiry backwards if a concurrent request slid it further.
++    await db.session.updateMany({
++      where: { id: session.id, expiresAt: { lt: expiresAt } },
++      data: { expiresAt },
++    });
++  } catch (error) {
++    console.error("Failed to extend session", error);
++  }
++}
++
+ export async function createSession(userId: string, rememberMe = false) {
+   const raw = randomHex(32);
+   const hashed = await tokenHash(raw);
+-  const expiresAt = new Date(Date.now() + (rememberMe ? SESSION_30D_MS : SESSION_12H_MS));
++  const now = Date.now();
++  const { idleMs, maxMs } = sessionWindow(rememberMe);
++  const expiresAt = new Date(now + idleMs);
+ 
+   const cookieStore = await cookies();
+   // A new login must never inherit a preview selected for a prior session.
+@@ -96,7 +149,8 @@ export async function createSession(userId: string, rememberMe = false) {
+     data: {
+       userId,
+       tokenHash: hashed,
+-      expiresAt
++      expiresAt,
++      persistent: rememberMe,
+     }
+   });
+ 
+@@ -105,7 +159,8 @@ export async function createSession(userId: string, rememberMe = false) {
+     secure: process.env.NODE_ENV === "production",
+     sameSite: "lax",
+     path: "/",
+-    expires: expiresAt
++    // Unremembered: a browser-session cookie. Remembered: the absolute cap.
++    ...(rememberMe ? { expires: new Date(now + maxMs) } : {}),
+   });
+ }
+ 
+@@ -192,6 +247,10 @@ async function loadAuthenticatedUser(): Promise<AuthUser> {
+ 
+   requireActiveCollaboratorPolicy(session.user);
+ 
++  // Slide regardless of role preview: an admin previewing a role is still the
++  // one using the session.
++  await slideSession(session);
++
+   const preview = session.user.role === Role.ADMIN ? await readRolePreviewCookie() : null;
+   if (!preview) {
+     await refreshUserLastActive(session.user.id, session.user.lastActiveAt);
+diff --git a/src/lib/errors.ts b/src/lib/errors.ts
+index a5cb7741..dcbd773d 100644
+--- a/src/lib/errors.ts
++++ b/src/lib/errors.ts
+@@ -7,6 +7,8 @@
+  * - "server"  → Non-ok response or unexpected exception
+  */
+ 
++import { loginPathWithReturnTo } from "@/lib/return-to";
++
+ export type FetchErrorKind = "auth" | "network" | "server";
+ 
+ /**
+@@ -37,8 +39,9 @@ export function isAbortError(err: unknown): boolean {
+  */
+ export function handleAuthRedirect(res: Response, returnTo?: string): boolean {
+   if (res.status === 401) {
+-    const path = returnTo ? `/login?returnTo=${encodeURIComponent(returnTo)}` : "/login";
+-    window.location.href = path;
++    window.location.href = loginPathWithReturnTo(
++      returnTo ?? `${window.location.pathname}${window.location.search}`,
++    );
+     return true;
+   }
+   return false;
+diff --git a/src/lib/validation.ts b/src/lib/validation.ts
+index 47bb03dd..3216eb6a 100644
+--- a/src/lib/validation.ts
++++ b/src/lib/validation.ts
+@@ -401,7 +401,9 @@ export const registerSchema = z.object({
+   name: z.string().trim().min(1).max(100),
+   email: z.string().max(254).email(),
+   wiscardNumber: z.string().trim().max(128).nullable().optional(),
+-  password: z.string().min(8).max(128)
++  password: z.string().min(8).max(128),
++  // Omitted by the native app, which always keeps people signed in.
++  rememberMe: z.boolean().optional(),
+ });
+ 
+ export const forgotPasswordSchema = z.object({
+diff --git a/src/middleware.ts b/src/middleware.ts
+index bb821de1..6046714f 100644
+--- a/src/middleware.ts
++++ b/src/middleware.ts
+@@ -37,6 +37,8 @@ export function middleware(request: NextRequest) {
+   const requestHeaders = new Headers(request.headers);
+   requestHeaders.set("x-nonce", nonce);
+   requestHeaders.set("Content-Security-Policy", csp);
++  // Lets the app layout send a signed-out visitor back here after login.
++  requestHeaders.set("x-pathname", `${request.nextUrl.pathname}${request.nextUrl.search}`);
+ 
+   const response = NextResponse.next({
+     request: {
+diff --git a/tests/passkey-experience.test.ts b/tests/passkey-experience.test.ts
+index f6902985..b904e555 100644
+--- a/tests/passkey-experience.test.ts
++++ b/tests/passkey-experience.test.ts
+@@ -81,11 +81,14 @@ describe("web passkey sign-in contract", () => {
+     expect(login).toContain("if (isPasskeyCancellation(error)) return assertionReceived;");
+   });
+ 
+-  it("lets a passkey sign-in choose the 30-day session", () => {
++  it("lets every sign-in path, passkey included, stay signed in", () => {
+     // The checkbox used to render only on the password step, so a passkey
+-    // sign-in could never be remembered.
+-    expect(login).toContain("{!isOnboarding && (");
++    // sign-in could never be remembered. It now shows on every step, starts
++    // ticked, and also reaches account creation.
++    expect(login).not.toContain("{!isOnboarding && (");
++    expect(login).toContain("useState(true);");
+     expect(login).toContain('body: JSON.stringify({ rememberMe }),');
++    expect(login).toMatch(/password,\n\s+rememberMe,\n\s+\}\);/);
+   });
+ 
+   it("hides the passkey button instead of failing after the tap", () => {
+diff --git a/tests/user-session-auth.test.ts b/tests/user-session-auth.test.ts
+index cb15b339..cb014667 100644
+--- a/tests/user-session-auth.test.ts
++++ b/tests/user-session-auth.test.ts
+@@ -25,6 +25,7 @@ vi.mock("@/lib/db", () => ({
+       findUnique: vi.fn(),
+       deleteMany: vi.fn(),
+       create: vi.fn(),
++      updateMany: vi.fn(),
+     },
+     user: {
+       updateMany: vi.fn(),
+@@ -53,7 +54,7 @@ vi.mock("@/lib/role-preview", () => ({
+ import { cookies } from "next/headers";
+ import { db } from "@/lib/db";
+ import { clearRolePreviewCookie } from "@/lib/role-preview";
+-import { requireAuth } from "@/lib/auth";
++import { createSession, requireAuth, slidSessionExpiry } from "@/lib/auth";
+ 
+ describe("user session expiry", () => {
+   beforeEach(() => {
+@@ -108,3 +109,139 @@ describe("user session expiry", () => {
+     expect(db.session.deleteMany).not.toHaveBeenCalled();
+   });
+ });
++
++const HOUR = 60 * 60 * 1000;
++const DAY = 24 * HOUR;
++
++function activeSessionRow(overrides: Record<string, unknown>) {
++  return {
++    id: "session-1",
++    tokenHash: "hashed",
++    user: {
++      id: "user-1",
++      email: "staff@creative.local",
++      name: "Creative Staff",
++      role: Role.STAFF,
++      active: true,
++      affiliation: null,
++      collaboratorProfile: null,
++      collaboratorPolicy: null,
++      staffingType: null,
++      avatarUrl: null,
++      forcePasswordChange: false,
++      lastActiveAt: new Date(),
++    },
++    ...overrides,
++  };
++}
++
++describe("sliding session expiry", () => {
++  const now = new Date("2026-09-17T12:00:00.000Z");
++
++  it("leaves a remembered session alone until a day of its idle window is used", () => {
++    const createdAt = new Date(now.getTime() - 2 * HOUR);
++    const expiresAt = new Date(now.getTime() + 30 * DAY - 2 * HOUR);
++    expect(slidSessionExpiry({ createdAt, expiresAt, persistent: true }, now)).toBeNull();
++  });
++
++  it("pushes a remembered session back out to 30 idle days", () => {
++    const createdAt = new Date(now.getTime() - 10 * DAY);
++    const expiresAt = new Date(now.getTime() + 20 * DAY);
++    expect(slidSessionExpiry({ createdAt, expiresAt, persistent: true }, now)).toEqual(
++      new Date(now.getTime() + 30 * DAY),
++    );
++  });
++
++  it("never slides a remembered session past 90 days from sign-in", () => {
++    const createdAt = new Date(now.getTime() - 80 * DAY);
++    const expiresAt = new Date(now.getTime() + 2 * DAY);
++    expect(slidSessionExpiry({ createdAt, expiresAt, persistent: true }, now)).toEqual(
++      new Date(createdAt.getTime() + 90 * DAY),
++    );
++    const capped = new Date(createdAt.getTime() + 90 * DAY);
++    expect(slidSessionExpiry({ createdAt, expiresAt: capped, persistent: true }, now)).toBeNull();
++  });
++
++  it("slides an unremembered session hourly to 12 idle hours, capped at 7 days", () => {
++    const createdAt = new Date(now.getTime() - 3 * HOUR);
++    expect(
++      slidSessionExpiry({ createdAt, expiresAt: new Date(now.getTime() + 11.5 * HOUR), persistent: false }, now),
++    ).toBeNull();
++    expect(
++      slidSessionExpiry({ createdAt, expiresAt: new Date(now.getTime() + 9 * HOUR), persistent: false }, now),
++    ).toEqual(new Date(now.getTime() + 12 * HOUR));
++    const old = new Date(now.getTime() - 7 * DAY + 4 * HOUR);
++    expect(
++      slidSessionExpiry({ createdAt: old, expiresAt: new Date(now.getTime() + 2 * HOUR), persistent: false }, now),
++    ).toEqual(new Date(old.getTime() + 7 * DAY));
++  });
++});
++
++describe("session activity", () => {
++  beforeEach(() => {
++    vi.useFakeTimers();
++    vi.setSystemTime(new Date("2026-09-17T12:00:00.000Z"));
++    vi.mocked(cookies).mockResolvedValue(cookieStore as never);
++    cookieStore.get.mockReset();
++    cookieStore.set.mockReset();
++    cookieStore.delete.mockReset();
++    vi.mocked(db.session.updateMany).mockReset();
++    vi.mocked(db.session.create).mockReset();
++    vi.mocked(clearRolePreviewCookie).mockResolvedValue(undefined);
++  });
++
++  afterEach(() => {
++    vi.useRealTimers();
++  });
++
++  it("extends a used remembered session without touching the cookie", async () => {
++    const now = Date.now();
++    cookieStore.get.mockReturnValue({ value: "live-token" });
++    vi.mocked(db.session.findUnique).mockResolvedValue(activeSessionRow({
++      createdAt: new Date(now - 10 * DAY),
++      expiresAt: new Date(now + 20 * DAY),
++      persistent: true,
++    }) as never);
++
++    await requireAuth();
++
++    expect(db.session.updateMany).toHaveBeenCalledWith({
++      where: { id: "session-1", expiresAt: { lt: new Date(now + 30 * DAY) } },
++      data: { expiresAt: new Date(now + 30 * DAY) },
++    });
++    // Server components cannot set cookies; the row is the only authority.
++    expect(cookieStore.set).not.toHaveBeenCalled();
++  });
++
++  it("does not write when the session was extended recently", async () => {
++    const now = Date.now();
++    cookieStore.get.mockReturnValue({ value: "live-token" });
++    vi.mocked(db.session.findUnique).mockResolvedValue(activeSessionRow({
++      createdAt: new Date(now - HOUR),
++      expiresAt: new Date(now + 30 * DAY - HOUR),
++      persistent: true,
++    }) as never);
++
++    await requireAuth();
++
++    expect(db.session.updateMany).not.toHaveBeenCalled();
++  });
++
++  it("issues a remembered cookie to the 90-day cap and an unremembered one for the browser session", async () => {
++    const now = Date.now();
++    cookieStore.get.mockReturnValue(undefined);
++
++    await createSession("user-1", true);
++    expect(db.session.create).toHaveBeenCalledWith({
++      data: expect.objectContaining({ userId: "user-1", persistent: true, expiresAt: new Date(now + 30 * DAY) }),
++    });
++    expect(cookieStore.set.mock.calls[0]?.[2]).toMatchObject({ httpOnly: true, expires: new Date(now + 90 * DAY) });
++
++    await createSession("user-1", false);
++    expect(db.session.create).toHaveBeenLastCalledWith({
++      data: expect.objectContaining({ persistent: false, expiresAt: new Date(now + 12 * HOUR) }),
++    });
++    expect(cookieStore.set.mock.calls[1]?.[2]).not.toHaveProperty("expires");
++    expect(cookieStore.set.mock.calls[1]?.[2]).not.toHaveProperty("maxAge");
++  });
++});
+diff --git a/prisma/migrations/0171_session_persistent/migration.sql b/prisma/migrations/0171_session_persistent/migration.sql
+new file mode 100644
+index 00000000..1f52fe76
+--- /dev/null
++++ b/prisma/migrations/0171_session_persistent/migration.sql
+@@ -0,0 +1,4 @@
++-- Sessions slide on activity; `persistent` records whether the sign-in asked to be remembered,
++-- which picks the idle window (30 days vs 12 hours) the slide extends to.
++-- AlterTable
++ALTER TABLE "sessions" ADD COLUMN "persistent" BOOLEAN NOT NULL DEFAULT false;
+diff --git a/src/app/.well-known/passkey-endpoints/route.ts b/src/app/.well-known/passkey-endpoints/route.ts
+new file mode 100644
+index 00000000..d29603b7
+--- /dev/null
++++ b/src/app/.well-known/passkey-endpoints/route.ts
+@@ -0,0 +1,20 @@
++import { NextResponse, type NextRequest } from "next/server";
++
++/**
++ * GET /.well-known/passkey-endpoints — the W3C Passkey Endpoints document.
++ *
++ * Password managers (1Password, Chrome, Apple Passwords) read this to offer
++ * "Add a passkey" on a saved Wisconsin Creative login and to link straight to
++ * where passkeys are created and removed, instead of leaving people to find
++ * Settings → Security themselves.
++ *
++ * The spec requires absolute URLs. They are built from the incoming origin so
++ * preview deployments and local development point at themselves.
++ */
++export function GET(request: NextRequest) {
++  const security = new URL("/settings/security", request.url).toString();
++  return NextResponse.json(
++    { enroll: security, manage: security },
++    { headers: { "Cache-Control": "public, max-age=86400" } },
++  );
++}
+diff --git a/src/lib/return-to.ts b/src/lib/return-to.ts
+new file mode 100644
+index 00000000..f95008b8
+--- /dev/null
++++ b/src/lib/return-to.ts
+@@ -0,0 +1,41 @@
++const PLACEHOLDER_ORIGIN = "https://return-to.invalid";
++
++/**
++ * Where to send someone after they sign in, from an untrusted `?returnTo=`.
++ * Only a same-origin app path survives: absolute and protocol-relative URLs,
++ * backslash tricks, API routes, and the auth pages themselves all fall back
++ * to null so the caller uses its default destination.
++ */
++export function safeReturnTo(value: string | null | undefined): string | null {
++  if (!value || value.length > 2048) return null;
++  if (!value.startsWith("/") || value.startsWith("//") || value.includes("\\")) return null;
++  // Control characters (tabs, newlines) are stripped by URL parsing and can
++  // turn "/\t/evil.com" into a protocol-relative URL.
++  if (/[\u0000-\u001f\u007f]/.test(value)) return null;
++
++  let url: URL;
++  try {
++    url = new URL(value, PLACEHOLDER_ORIGIN);
++  } catch {
++    return null;
++  }
++  if (url.origin !== PLACEHOLDER_ORIGIN) return null;
++
++  const path = url.pathname;
++  if (
++    path === "/login" ||
++    path.startsWith("/api/") ||
++    path === "/change-password" ||
++    path === "/forgot-password" ||
++    path === "/reset-password" ||
++    path === "/register"
++  ) {
++    return null;
++  }
++  return `${url.pathname}${url.search}${url.hash}`;
++}
++
++export function loginPathWithReturnTo(returnTo: string | null | undefined): string {
++  const safe = safeReturnTo(returnTo);
++  return safe && safe !== "/" ? `/login?returnTo=${encodeURIComponent(safe)}` : "/login";
++}
+diff --git a/tests/return-to.test.ts b/tests/return-to.test.ts
+new file mode 100644
+index 00000000..55bca8f9
+--- /dev/null
++++ b/tests/return-to.test.ts
+@@ -0,0 +1,36 @@
++import { describe, expect, it } from "vitest";
++import { loginPathWithReturnTo, safeReturnTo } from "@/lib/return-to";
++
++describe("safeReturnTo", () => {
++  it("keeps same-origin app paths with their query and hash", () => {
++    expect(safeReturnTo("/checkouts/abc?tab=items#notes")).toBe("/checkouts/abc?tab=items#notes");
++    expect(safeReturnTo("/")).toBe("/");
++  });
++
++  it.each([
++    null,
++    "",
++    "https://evil.example/",
++    "//evil.example/",
++    "/\\evil.example",
++    "\\evil.example",
++    "/\t/evil.example", // a raw tab, which URL parsing strips
++    "javascript:alert(1)",
++    "checkouts",
++    "/login?returnTo=/items",
++    "/api/me",
++    "/change-password",
++    "/reset-password?token=x",
++  ])("rejects %j", (value) => {
++    expect(safeReturnTo(value)).toBeNull();
++  });
++});
++
++describe("loginPathWithReturnTo", () => {
++  it("encodes a safe destination and drops unsafe or trivial ones", () => {
++    expect(loginPathWithReturnTo("/items?q=a b")).toBe("/login?returnTo=%2Fitems%3Fq%3Da%2520b");
++    expect(loginPathWithReturnTo("/")).toBe("/login");
++    expect(loginPathWithReturnTo("//evil.example")).toBe("/login");
++    expect(loginPathWithReturnTo(null)).toBe("/login");
++  });
++});

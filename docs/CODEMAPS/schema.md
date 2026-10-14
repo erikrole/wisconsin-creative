@@ -131,7 +131,7 @@ Values: `UPLOADING`, `FINALIZING`, `COMMITTED`, `FAILED`
 
 ## Model `User`
 
-Fields: 128
+Fields: 130
 
 - `id                            String                           @id @default(cuid())`
 - `name                          String`
@@ -197,11 +197,13 @@ Fields: 128
 - `blastsReceived                BlastRecipient[]                 @relation("BlastRecipient")`
 - `bookingPhotos                 BookingPhoto[]                   @relation("BookingPhotoActor")`
 - `checkinReports                CheckinItemReport[]              @relation("CheckinReports")`
+- `dismissedCheckinReports       CheckinItemReport[]              @relation("CheckinReportDismissals")`
 - `allowedEmailsCreated          AllowedEmail[]                   @relation("AllowedEmailCreator")`
 - `allowedEmailsClaimed          AllowedEmail[]                   @relation("AllowedEmailClaimer")`
 - `licenseCodesHeld              LicenseCode[]                    @relation("LicenseClaimedBy")`
 - `licenseCodesCreated           LicenseCode[]                    @relation("LicenseCreatedBy")`
 - `licenseClaims                 LicenseCodeClaim[]`
+- `gearPickParticipations        GearPickParticipant[]`
 - `resources                     Resource[]`
 - `resourcesVerified             Resource[]                       @relation("ResourceLastVerifiedBy")`
 - `resourceAssetFoldersCreated   ResourceAssetFolder[]            @relation("ResourceAssetFolderCreator")`
@@ -272,14 +274,15 @@ Indexes and constraints:
 
 ## Model `Session`
 
-Fields: 6
+Fields: 7
 
-- `id        String   @id @default(cuid())`
-- `userId    String   @map("user_id")`
-- `tokenHash String   @unique @map("token_hash")`
-- `expiresAt DateTime @map("expires_at")`
-- `createdAt DateTime @default(now()) @map("created_at")`
-- `user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)`
+- `id         String   @id @default(cuid())`
+- `userId     String   @map("user_id")`
+- `tokenHash  String   @unique @map("token_hash")`
+- `expiresAt  DateTime @map("expires_at")`
+- `persistent Boolean  @default(false)`
+- `createdAt  DateTime @default(now()) @map("created_at")`
+- `user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)`
 
 Indexes and constraints:
 
@@ -330,7 +333,7 @@ Indexes and constraints:
 
 ## Model `PasskeyChallenge`
 
-Fields: 9
+Fields: 10
 
 - `id                String              @id @default(cuid())`
 - `ceremonyTokenHash String              @unique @map("ceremony_token_hash")`
@@ -338,6 +341,7 @@ Fields: 9
 - `type              PasskeyCeremonyType`
 - `userId            String?             @map("user_id")`
 - `rememberMe        Boolean             @default(false) @map("remember_me")`
+- `automatic         Boolean             @default(false)`
 - `expiresAt         DateTime            @map("expires_at")`
 - `createdAt         DateTime            @default(now()) @map("created_at")`
 - `user              User?               @relation(fields: [userId], references: [id], onDelete: Cascade)`
@@ -2076,7 +2080,7 @@ Indexes and constraints:
 
 ## Model `ShiftGroup`
 
-Fields: 20
+Fields: 17
 
 - `id                    String                       @id @default(cuid())`
 - `eventId               String                       @unique @map("event_id")`
@@ -2087,9 +2091,6 @@ Fields: 20
 - `publishedById         String?                      @map("published_by_id")`
 - `lastPublishedSnapshot Json?                        @map("last_published_snapshot")`
 - `publishedVersion      Int                          @default(0) @map("published_version")`
-- `notifyAfter           DateTime?                    @map("notify_after")`
-- `notifyAttemptedAt     DateTime?                    @map("notify_attempted_at")`
-- `notifyError           String?                      @map("notify_error")`
 - `archivedAt            DateTime?                    @map("archived_at")`
 - `createdAt             DateTime                     @default(now()) @map("created_at")`
 - `updatedAt             DateTime                     @updatedAt @map("updated_at")`
@@ -2103,7 +2104,6 @@ Indexes and constraints:
 
 - `@@index([publishedAt])`
 - `@@index([publishedById])`
-- `@@index([notifyAfter])`
 - `@@map("shift_groups")`
 
 ## Model `ShiftGroupWorkingCopy`
@@ -2363,24 +2363,28 @@ Indexes and constraints:
 
 ## Model `CheckinItemReport`
 
-Fields: 16
+Fields: 20
 
-- `id            String            @id @default(cuid())`
-- `bookingId     String            @map("booking_id")`
-- `assetId       String?           @map("asset_id")`
-- `bulkSkuUnitId String?           @map("bulk_sku_unit_id")`
-- `bulkSkuId     String?           @map("bulk_sku_id")`
-- `quantity      Int?`
-- `type          CheckinReportType`
-- `description   String?`
-- `imageUrl      String?           @map("image_url")`
-- `reportedById  String            @map("reported_by_id")`
-- `createdAt     DateTime          @default(now()) @map("created_at")`
+- `id             String            @id @default(cuid())`
+- `bookingId      String            @map("booking_id")`
+- `assetId        String?           @map("asset_id")`
+- `bulkSkuUnitId  String?           @map("bulk_sku_unit_id")`
+- `bulkSkuId      String?           @map("bulk_sku_id")`
+- `quantity       Int?`
+- `type           CheckinReportType`
+- `description    String?`
+- `imageUrl       String?           @map("image_url")`
+- `reportedById   String            @map("reported_by_id")`
+- `createdAt      DateTime          @default(now()) @map("created_at")`
+- `lastReportedAt DateTime          @default(now()) @map("last_reported_at")`
+- `dismissedAt    DateTime?         @map("dismissed_at")`
+- `dismissedById  String?           @map("dismissed_by_id")`
 - `booking     Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)`
 - `asset       Asset?       @relation(fields: [assetId], references: [id], onDelete: Restrict)`
 - `bulkSkuUnit BulkSkuUnit? @relation(fields: [bulkSkuUnitId], references: [id], onDelete: Cascade)`
 - `bulkSku     BulkSku?     @relation(fields: [bulkSkuId], references: [id], onDelete: Cascade)`
 - `reportedBy  User         @relation("CheckinReports", fields: [reportedById], references: [id], onDelete: Restrict)`
+- `dismissedBy User?        @relation("CheckinReportDismissals", fields: [dismissedById], references: [id], onDelete: SetNull)`
 
 Indexes and constraints:
 
@@ -2958,3 +2962,81 @@ Indexes and constraints:
 
 - `@@index([videoId, createdAt(sort: Desc)])`
 - `@@map("youtube_playlist_additions")`
+
+## Enum `GearPickFit`
+
+Values: `MEN`, `WOMEN`
+
+## Model `GearPickCycle`
+
+Fields: 7
+
+- `id           String                @id`
+- `title        String`
+- `deadline     DateTime?`
+- `launchedAt   DateTime?             @map("launched_at")`
+- `createdAt    DateTime              @default(now()) @map("created_at")`
+- `updatedAt    DateTime              @updatedAt @map("updated_at")`
+- `participants GearPickParticipant[]`
+
+Indexes and constraints:
+
+- `@@map("gear_pick_cycles")`
+
+## Model `GearPickParticipant`
+
+Fields: 10
+
+- `id             String              @id @default(cuid())`
+- `cycleId        String              @map("cycle_id")`
+- `userId         String              @map("user_id")`
+- `fit            GearPickFit`
+- `allowanceCents Int                 @map("allowance_cents")`
+- `createdAt      DateTime            @default(now()) @map("created_at")`
+- `updatedAt      DateTime            @updatedAt @map("updated_at")`
+- `cycle          GearPickCycle       @relation(fields: [cycleId], references: [id], onDelete: Cascade)`
+- `user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)`
+- `submission     GearPickSubmission?`
+
+Indexes and constraints:
+
+- `@@unique([cycleId, userId])`
+- `@@index([userId])`
+- `@@map("gear_pick_participants")`
+
+## Model `GearPickSubmission`
+
+Fields: 9
+
+- `id            String              @id @default(cuid())`
+- `participantId String              @unique @map("participant_id")`
+- `submittedAt   DateTime?           @map("submitted_at")`
+- `totalCents    Int                 @default(0) @map("total_cents")`
+- `version       Int                 @default(1)`
+- `createdAt     DateTime            @default(now()) @map("created_at")`
+- `updatedAt     DateTime            @updatedAt @map("updated_at")`
+- `participant   GearPickParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)`
+- `lines         GearPickLine[]`
+
+Indexes and constraints:
+
+- `@@map("gear_pick_submissions")`
+
+## Model `GearPickLine`
+
+Fields: 9
+
+- `id             String             @id @default(cuid())`
+- `submissionId   String             @map("submission_id")`
+- `sku            String`
+- `style          String`
+- `colorCode      String             @map("color_code")`
+- `size           String?`
+- `quantity       Int`
+- `unitPriceCents Int                @map("unit_price_cents")`
+- `submission     GearPickSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)`
+
+Indexes and constraints:
+
+- `@@unique([submissionId, sku, size])`
+- `@@map("gear_pick_lines")`

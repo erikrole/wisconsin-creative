@@ -29,7 +29,7 @@ Replace Asana-based shift scheduling with a native shift calendar in Wisconsin C
 - [x] Sport roster: students/staff assigned to sports, synced to user profiles
 - [x] Auto-generation: shifts created when calendar events sync from ICS
 - [x] Staff assignment: pick students from sport pool for each shift
-- [x] Open shift pickup: students claim published open Student shifts, creating a `REQUESTED` assignment that an Admin approves or declines
+- [x] Open shift pickup: students claim open Student shifts, released or not, creating a `REQUESTED` assignment that an Admin approves or declines
 - [x] Trade board: students post shifts for trade, area-filtered visibility
 - [x] Trade claims: a same-area student claim holds the post as `CLAIMED` for Admin review; approval executes the swap
 - [x] Claim eligibility: active Student-class workers may claim work in their primary area only; Photo and Graphics are the sole symmetric cross-area exception, and missing primary-area membership fails closed
@@ -121,8 +121,13 @@ Replace Asana-based shift scheduling with a native shift calendar in Wisconsin C
 - Sports code mappings (existing — `src/lib/sports.ts`)
 
 ## Change Log
+- 2026-10-13: **Students can request open Student shifts before the crew is released.** `crewClaimClosedReason` no longer treats an unreleased (draft) crew as closed, and Open Work queries no longer require `publishedAt`; archived, hidden or cancelled events, pending staff edits (`claimsPaused`), eligibility, conflicts and Admin approval are unchanged. Requests stay private `REQUESTED` rows, so the unreleased crew still shows no one until an Admin approves and the crew releases. Native follows through `claimsOpen`.
 - 2026-10-02: **Subscribed shift calendar titles match the app.** The `/api/shifts/ics/[token]` feed built titles from the raw sport code and the full opponent string ("Video: FB vs Michigan State - Homecoming / Red Out"). It now uses the Schedule's `scheduleEventTitleParts`, so the title reads "Video: Football vs Michigan State" and the promo qualifier moves to the event's `DESCRIPTION`. UIDs are unchanged, and subscribers pick up the new titles on their next refresh.
 - 2026-10-01: **Kiosk crew requests.** `POST /api/kiosk/events/[id]/crew-request` lets someone identified at the kiosk for an event checkout ask to join that event's crew in a chosen area. It reuses `pickupOpenShift`, so it files the same `REQUESTED` open-slot claim (eligibility, conflicts, reviewer alerts, claim-review deadline) that Admins approve or decline in the existing review queue; the kiosk never assigns directly.
+- 2026-10-01: **Schedule list row grid and motion (local, source-verified only).**
+  - **Row alignment:** desktop header, rows, and loading skeleton render through one `EventGrid` that emits exactly one cell per column. Previously an event with no shifts omitted its crew cell, shifting status and actions one column left (visible under filters such as unfilled coverage). `tests/schedule-list-row-grid-source.test.ts` pins the contract.
+  - **Motion:** opacity-only `schedule-enter` fades for rows, detail, mobile cards and views (reduced-motion safe); chevron rotation; row-shaped skeleton; list dims while filters fill the window; sticky-frame shadow eases.
+  - No schema, API, or permission change. Authenticated browser proof and the before/after review page remain pending a branch preview.
 - 2026-09-23: **Draft identity, pending-claim visibility, hashed feed tokens (local).**
   - **Drafts:** the working-copy editor reports `draftId` (the draft row's `createdAt`). PATCH, undo/redo, rebase, discard and publish accept `expectedDraftId`, and a mismatch returns 409 inside the version-check transaction. Legacy clients that omit it are unchanged.
   - **Open Work:** reports `openShiftsTruncated` and `pickupRequestsTruncated` instead of silently capping at 100.

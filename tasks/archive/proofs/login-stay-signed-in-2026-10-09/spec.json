@@ -1,0 +1,71 @@
+{
+  "title": "Stay Signed In",
+  "eyebrow": "Web sign-in \u00b7 Wisconsin Creative",
+  "lede": "People were signed out after 12 hours, or after 30 days when they ticked the box, however much they used the app. Now a session extends while it is used, and keeping people signed in is the default.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "Side by side",
+      "note": "Baseline is main at c7c9fff5 in a clean worktree. Both sides use the same Playwright Chromium viewport and the same mocked discover, passkey and login responses.",
+      "pairs": [
+        {
+          "title": "Email step",
+          "sub": "First screen of sign-in.",
+          "before": "before-identity.png",
+          "beforeCap": "\"Remember me for 30 days\" starts unticked.",
+          "after": "after-identity.png",
+          "afterCap": "\"Keep me signed in\" starts ticked, and it applies to a passkey sign-in from this step too.",
+          "beforeEvidence": "before-identity-evidence.json",
+          "afterEvidence": "after-identity-evidence.json"
+        },
+        {
+          "title": "Password step",
+          "sub": "Returning account.",
+          "before": "before-password.png",
+          "beforeCap": "\"Remember me for 30 days\" starts unticked, so most sign-ins ended after 12 hours.",
+          "after": "after-password.png",
+          "afterCap": "Starts ticked. With it ticked, the session lasts while it is used at least once every 30 days, up to 90 days.",
+          "beforeEvidence": "before-password-evidence.json",
+          "afterEvidence": "after-password-evidence.json"
+        }
+      ]
+    },
+    {
+      "heading": "Account creation (after only)",
+      "note": "Not shown as a pair because the new checkbox makes the two images different heights. Baseline image: before-onboarding.png, with receipt before-onboarding-evidence.json."
+    }
+  ],
+  "changes": [
+    {
+      "h": "Sessions ended on a fixed clock",
+      "was": "Expiry was set at sign-in and never moved. That meant 12 hours by default, 30 days when remembered, and 30 days for everyone on iPhone.",
+      "now": "Each use pushes expiry back out (D-066). Remembered sessions get 30 idle days with a 90-day cap. Unremembered ones get 12 idle hours, a 7-day cap, and end when the browser closes."
+    },
+    {
+      "h": "Remember me was opt-in and missing on account creation",
+      "was": "The box started unticked and was hidden while creating an account, so every new account began with a 12-hour session.",
+      "now": "\"Keep me signed in\" starts ticked and shows on every step. Account creation honors it, and native sign-up defaults to remembered."
+    },
+    {
+      "h": "Signing back in lost your place",
+      "was": "A signed-out deep link went to /login and then to the home page.",
+      "now": "The page you asked for is carried as a validated same-origin returnTo. In the after run, a mocked password sign-in from /login?returnTo=/items?q=lens navigated to /items?q=lens. The before run went to /."
+    },
+    {
+      "h": "Password managers can offer passkeys",
+      "was": "There was no passkey endpoints document.",
+      "now": "/.well-known/passkey-endpoints sends 1Password, Chrome and Apple Passwords to Settings \u2192 Security, where passkeys are created and managed."
+    }
+  ],
+  "verification": [
+    "Before run: box unticked, no box during account creation, login sent rememberMe false, landed on /.",
+    "After run: box ticked, box present during account creation, login sent rememberMe true, landed on /items?q=lens.",
+    "vitest: all 750 files pass (5,605 tests), including the new sliding-session and returnTo tests.",
+    "npx tsc --noEmit, eslint on the changed files, npm run build:app, npm run verify:docs, and db:migrate:check all pass."
+  ],
+  "notes": [
+    "Captures use mocked API responses. They show the screens and what the client sends, not real sessions.",
+    "Migration 0171 is not deployed. No authenticated preview proof yet; that needs the PR's managed preview (GAP-88).",
+    "Passkey device proof (GAP-62) is still open."
+  ]
+}

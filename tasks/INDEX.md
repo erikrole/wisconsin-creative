@@ -1,10 +1,13 @@
 # Tasks Index
 
-Last updated: 2026-10-06
+Last updated: 2026-10-07
 
 ## Start Here
 
-- Use `DESLOPPIFY.md` for the current cleanup backlog and next recommended desloppify task.
+- Use `DESLOPPIFY.md` for standing cleanup policy (backlog closed 2026-06-22).
+- Use `tasks/repo-hygiene-cleanup-plan-2026-10-07.md` for the current hygiene slice and remaining database follow-ups.
+- Use `tasks/item-data-hygiene-status-2026-10-07.md` for item catalog data quality: what is done, physical queues, and Operations hygiene parity.
+- Use `tasks/item-cleanup-wizard-plan-2026-10-07.md` for the guided Cleanup wizard (legacy QR + missing serial).
 - Use `tasks/todo.md` for active execution notes and recent closeout reviews.
 - Use this index for the task-root contract, archive buckets, and active follow-up ledgers.
 - Treat `plans/README.md` as historical improve-plan context unless a current task explicitly references it.
@@ -25,13 +28,12 @@ Move completed plan files to the current dated `tasks/archive/completed-YYYY-MM-
 
 ## Current Root Shape
 
-As of this cleanup pass, root `tasks/` contains:
+As of the 2026-10-07 hygiene pass, root `tasks/` contains:
 
-- 195 root files.
-- 55 root `*-plan.md` files.
-- 86 root audit files.
-- 19 roadmap/reference files.
-- 5 follow-up files.
+- 299 root markdown files.
+- 145 root `*-plan*.md` files.
+- 65 root audit files.
+- Audit and many shipped-but-proof-gated plans remain at root on purpose.
 
 Audit files intentionally remain at root for now because the repo audit skills read and write `tasks/audit-*.md` paths directly.
 
@@ -112,6 +114,7 @@ Audit files intentionally remain at root for now because the repo audit skills r
 
 - `tasks/archive/completed-2026-08-23/` - completed Accountability, profile/team Scoreboard hardening and explorer work, plus Gotham operational-identity typography plans.
 - `tasks/archive/completed-2026-08-12/` - completed launch and Login visual-polish plan.
+- `tasks/archive/completed-2026-10-07/` - hygiene archive: weatherkit removal, July repo cleanup, bulk-battery hardening, ops consolidation, Prisma direct-URL hardening, schedule scroll, cancelled-booking unassign, booking owner transfer.
 - `tasks/archive/completed-2026-10-06/` - plans closed in the 2026-10-06 open-task audit (work shipped in source or superseded): booking rename/transfer fix, UI buckets 3-5 audits, edit-event modal, superseded event-checkout assignments, iOS Apple design audit plan, iOS Schedule hierarchy, kiosk check-in/out fixes, onboarding status page, photo requirement, preview schema baseline, premier-event removal, security/integrity follow-up, shift trade actions, student field readiness, SwiftData, users ownership.
 - `tasks/archive/completed-2026-08-19/` - completed Scoreboard and profile season-event-total plan.
 - `tasks/archive/completed-2026-06/` - completed plans and queue cleanup summaries from the June cleanup run.

@@ -29,11 +29,18 @@ final class AppState {
     /// push; syncing here clears it again as the inbox is read.
     var unreadNotifCount = 0 {
         didSet {
-            guard unreadNotifCount != oldValue else { return }
-            let count = unreadNotifCount
-            Task { try? await UNUserNotificationCenter.current().setBadgeCount(count) }
+            // APNs can change the system badge without changing this value.
+            // Reapply even zero, and serialize writes so an older count cannot
+            // finish after a newer read or sign-out reset.
+            let count = max(0, unreadNotifCount)
+            let previous = badgeUpdateTask
+            badgeUpdateTask = Task {
+                await previous?.value
+                try? await UNUserNotificationCenter.current().setBadgeCount(count)
+            }
         }
     }
+    private var badgeUpdateTask: Task<Void, Never>?
     var openTradeCount = 0
     var pendingPushBookingId: String?
     var pendingPushEventId: String?
@@ -192,6 +199,15 @@ final class AppState {
     }
 
     func refresh(forceRefresh: Bool = false) async {
+        // Inbox truth must not depend on dashboard/trade availability or the
+        // non-critical shell refresh throttle, and a slow count endpoint must
+        // not hold the shell counters back, so the two run side by side.
+        async let unread: Void = refreshUnread()
+        await refreshShellCounters(forceRefresh: forceRefresh)
+        await unread
+    }
+
+    private func refreshShellCounters(forceRefresh: Bool) async {
         let startedAt = Date()
         guard !isRefreshing else {
             appStatePerformanceLog.debug("launch.appState.refresh result=skipped reason=inFlight durationMs=\(elapsedMilliseconds(since: startedAt), privacy: .public)")
@@ -215,14 +231,12 @@ final class AppState {
         do {
             // Use the lightweight stats endpoint instead of the full dashboard payload.
             async let statsTask = APIClient.shared.dashboardStats()
-            async let countTask = APIClient.shared.notificationUnreadCount()
             async let tradesTask = APIClient.shared.shiftTrades(status: "OPEN", limit: 1)
-            let (stats, count, trades) = try await (statsTask, countTask, tradesTask)
+            let (stats, trades) = try await (statsTask, tradesTask)
             guard refreshRequests.owns(requestToken), !Task.isCancelled else { return }
             overdueCount = stats.overdueCount
             myShiftCount = stats.myShiftsCount
             myShiftTodayCount = stats.myShiftsTodayCount ?? 0
-            unreadNotifCount = count
             openTradeCount = min(trades.total, 9)
             Task { await NotificationTelemetry.recordSurfaceLoad("home", startedAt: startedAt, succeeded: true) }
             appStatePerformanceLog.info("launch.appState.refresh result=success durationMs=\(elapsedMilliseconds(since: startedAt), privacy: .public) overdue=\(self.overdueCount, privacy: .public) shifts=\(self.myShiftCount, privacy: .public) shiftsToday=\(self.myShiftTodayCount, privacy: .public) unread=\(self.unreadNotifCount, privacy: .public) openTrades=\(self.openTradeCount, privacy: .public)")
@@ -240,6 +254,7 @@ final class AppState {
             let count = try await APIClient.shared.notificationUnreadCount()
             guard unreadRefreshRequests.owns(requestToken), !Task.isCancelled else { return }
             unreadNotifCount = count
+            await badgeUpdateTask?.value
         } catch {}
     }
 }
