@@ -14,12 +14,8 @@ export type AppEntry = {
   status: string;
   statusKind: "live" | "beta" | "soon";
   blurb: string;
-  /** Extra install fact from a named source. Kept when the live version matches. */
-  detail?: string;
   version?: string;
   requires?: string;
-  /** Verified for this exact version only. Hidden when the live version moves ahead. */
-  trust?: string;
   /** ISO date (YYYY-MM-DD) in Madison time. */
   released?: string;
   href?: string;
@@ -37,11 +33,8 @@ export type AppEntry = {
 // - Offload: github.com/erikrole/offload-releases README and release v1.2.0.
 //   Offload-1.2.0.dmg matches the published SHA-256. Info.plist in that disk
 //   image has CFBundleShortVersionString 1.2.0 and LSMinimumSystemVersion 15.0.
-//   The binary is Developer ID signed. published_at 2026-10-14T03:27:05Z is
+//   published_at 2026-10-14T03:27:05Z is
 //   Oct 13 in Madison.
-// TODO(apps): Offload's v1.2.0 notes say "Notarized by Apple". No stapled ticket
-// was found in the disk image, and this machine cannot run spctl. Do not show
-// notarization until that check is done.
 // TODO(apps): Radio Clip has no public README, release, Info.plist, or download
 // (erikrole public repos checked 2026-10-14). Do not show a version until one
 // is published. The blurb is this page's existing description, not a README.
@@ -72,11 +65,8 @@ export const appEntries: AppEntry[] = [
     statusKind: "beta",
     blurb:
       "Gets Sony FX6 and FX3 clips off the card, names them from the play-by-play, and files them in the archive.",
-    detail:
-      "Playing FX6 MXF clips needs Apple's free Pro Video Formats. Copying and naming work without it.",
     version: "1.2.0",
     requires: "macOS 15.0 or later",
-    trust: "Developer ID signed",
     released: "2026-10-13",
     href: "https://github.com/erikrole/offload-releases/releases/download/v1.2.0/Offload-1.2.0.dmg",
     releaseHref: "https://github.com/erikrole/offload-releases/releases/tag/v1.2.0",
@@ -130,7 +120,6 @@ function withLive(app: AppEntry, live: LiveVersions): AppEntry {
     href: fresh.href ?? (app.versionedDownload && !same ? undefined : app.href),
     releaseHref: fresh.releaseHref ?? (same ? app.releaseHref : undefined),
     requires: same ? (app.requires ?? fresh.requires) : fresh.requires,
-    trust: same ? app.trust : undefined,
   };
 }
 
@@ -150,10 +139,8 @@ function appCard(entry: AppEntry, live: LiveVersions) {
           <div class="copy">
             <div class="titleline"><h3>${esc(app.name)}</h3><div class="badges">${platformPill}${statusPill}</div></div>
             <p>${esc(app.blurb)}</p>
-            ${app.detail ? `<p class="detail">${esc(app.detail)}</p>` : ""}
             <div class="facts">
               ${meta.length ? `<p class="meta">${meta.map((line) => `<span>${line}</span>`).join("")}</p>` : ""}
-              ${app.trust ? `<p class="trust">${esc(app.trust)}</p>` : ""}
               ${actions}
             </div>
           </div>
@@ -293,10 +280,8 @@ export function renderAppsPage(nonce?: string, live: LiveVersions = {}) {
     .app .badges { display: flex; flex-wrap: wrap; gap: 6px; min-height: 26px; }
     .app .facts { margin-top: auto; padding-top: 14px; }
     .app .copy p { color: var(--ink-2); }
-    .app .copy p.detail { margin-top: 6px; font-size: 13px; }
     .app .copy p.meta { margin-top: 0; font-size: 13px; font-weight: 700; color: var(--ink); }
     .app .copy p.meta span { display: block; }
-    .app .copy p.trust { margin-top: 4px; font-size: 13px; font-weight: 700; color: var(--ink); }
     .app .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 14px; }
     .app .go { margin: 0; padding: 0; color: var(--red-text); text-decoration: none; }
     .app .quiet { color: var(--ink-2); font-size: 14px; font-weight: 700; text-decoration: none; }

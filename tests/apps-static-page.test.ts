@@ -34,7 +34,8 @@ describe("apps page", () => {
       if (app.version) expect(html).toContain(`Version ${app.version}`);
     }
     expect(html).toContain("<span>Version 1.2.0 · Oct 13, 2026</span><span>Requires macOS 15.0 or later</span>");
-    expect(html).toContain("Developer ID signed");
+    expect(html).not.toContain("Developer ID");
+    expect(html).not.toContain("Pro Video Formats");
     expect(html).toContain("https://github.com/erikrole/offload-releases/releases/download/v1.2.0/Offload-1.2.0.dmg");
     expect(html).toContain("https://github.com/erikrole/offload-releases/releases/tag/v1.2.0");
     expect(html).toContain("Sony FX6 and FX3");
