@@ -35,7 +35,7 @@ export const appEntries: AppEntry[] = [
     platform: "macOS",
     status: "Beta",
     statusKind: "beta",
-    blurb: "Copies Sony FX6 and FX3 cards, matches clips to the play-by-play, and renames them for editing.",
+    blurb: "Ingests Sony FX6 and FX3 cards, matches clips to the play-by-play, and names them for editing.",
     version: "1.0.8",
   },
   {
@@ -44,7 +44,7 @@ export const appEntries: AppEntry[] = [
     platform: "macOS",
     status: "Coming soon",
     statusKind: "soon",
-    blurb: "Turns radio broadcasts into highlight clips and exports them as MP3.",
+    blurb: "Cuts highlight clips from radio broadcasts and exports them as MP3.",
     version: "0.1.0",
   },
   {
@@ -52,7 +52,7 @@ export const appEntries: AppEntry[] = [
     platform: "",
     status: "Coming Late 2026",
     statusKind: "soon",
-    blurb: "Browse and organize the team's photo and video library.",
+    blurb: "The team's photo and video library.",
   },
 ];
 
@@ -212,7 +212,7 @@ export function renderAppsPage() {
   <main>
     <p class="kicker">Wisconsin Athletics</p>
     <h1>Wisconsin Creative <em>Tools</em></h1>
-    <p class="lede">Apps for gear, footage, and game-day work, plus small tools for planning and making the shot.</p>
+    <p class="lede">Apps and tools for gear, footage, and game-day work.</p>
     <h2 class="section">Apps</h2>
     <ul class="grid apps">
       ${appEntries.map(appCard).join("\n      ")}
@@ -232,7 +232,7 @@ export function renderAppsPage() {
           </div>
           <div class="copy">
             <h2>Golden Hour</h2>
-            <p>When the light is good today at Camp Randall or any Big Ten road venue, in local time.</p>
+            <p>Golden hour times for Camp Randall and Big Ten road venues, in local time.</p>
             <span class="go">Open <i>→</i></span>
           </div>
         </a>
@@ -246,7 +246,7 @@ export function renderAppsPage() {
           </div>
           <div class="copy">
             <h2>Timelapse</h2>
-            <p>Frame rate or interval, roll time and clip length for the FX3, A1, A1 II, A7 V and A9 III.</p>
+            <p>Interval, frame rate, roll time, and clip length for the FX3, A1, A1 II, A7 V, and A9 III.</p>
             <span class="go">Open <i>→</i></span>
           </div>
         </a>
@@ -264,7 +264,7 @@ export function renderAppsPage() {
           </div>
           <div class="copy">
             <h2>Board Sizes</h2>
-            <p>Every board, ribbon, table and IPTV canvas at five venues, with zones, delivery specs and guide PNGs.</p>
+            <p>Canvas sizes, zones, and delivery specs for every board at five venues, with guide PNGs.</p>
             <span class="go">Open <i>→</i></span>
           </div>
         </a>
@@ -276,7 +276,7 @@ export function renderAppsPage() {
           </div>
           <div class="copy">
             <h2>QR Studio</h2>
-            <p>Branded QR codes for links, Wi-Fi, contacts and more, checked to scan before you export.</p>
+            <p>Branded QR codes for links, Wi-Fi, and contacts, checked for scannability before export.</p>
             <span class="go">Open <i>→</i></span>
           </div>
         </a>
