@@ -54,8 +54,13 @@ export const publicApps: PublicApp[] = [
     platform: "Mac",
     status: "coming-soon",
     statusLabel: "Coming soon",
-    summary: "Clip and share radio broadcast moments. Details will land here when it is ready.",
-    highlights: [],
+    summary:
+      "Turns Wisconsin radio broadcasts into highlight clips. Radio transcribes the game, matches it to the official play-by-play, and exports the clips you approve as MP3.",
+    highlights: [
+      "Broadcast transcription and play-by-play matching",
+      "Listening review before anything is exported",
+      "MP3 export for each approved clip",
+    ],
   },
 ];
 
