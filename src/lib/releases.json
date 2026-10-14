@@ -196,6 +196,20 @@
   },
   {
     "date": "2026-10-12",
+    "title": "Shared case pickup works from home",
+    "type": "fixes",
+    "summary": "Tapping a shared case under Ready for pickup or Coming up on the kiosk now asks who is picking it up, instead of doing nothing.",
+    "details": [
+      "Pick yourself from the roster and the pickup starts as you.",
+      "The log shows who handed the case over, not whoever reserved it.",
+      "Works even when the person who reserved the case is not on the kiosk roster.",
+      "A shared case for a later day, like an away game, can be picked up early."
+    ],
+    "platforms": ["Kiosk"],
+    "pr": 465
+  },
+  {
+    "date": "2026-10-12",
     "title": "Schedule list rows line up",
     "type": "fixes",
     "summary": "Schedule list rows stay lined up with the header when an event has no crew yet.",
