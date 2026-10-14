@@ -1,6 +1,20 @@
 [
   {
     "date": "2026-10-14",
+    "title": "Apps page and Board Sizes restored",
+    "type": "fixes",
+    "summary": "The apps page and Board Sizes are back to the versions the team approved on Oct 13.",
+    "details": [
+      "Apps: the original layout with the Fetch card, open to signed-in staff only.",
+      "Board Sizes: the top venue bar, dotted background and simpler navigation."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 475
+  },
+  {
+    "date": "2026-10-14",
     "title": "Fetch on the apps page",
     "type": "improvement",
     "summary": "The apps page now lists Fetch, a Mac app that saves videos and audio from a link, with a download button.",
