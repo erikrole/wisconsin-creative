@@ -4,7 +4,7 @@ import { formatAppDate } from "@/lib/apps-page-format";
 
 export type AppEntry = {
   name: string;
-  icon?: string;
+  icon: string;
   platform: string;
   status: string;
   statusKind: "live" | "beta" | "soon";
@@ -49,6 +49,7 @@ export const appEntries: AppEntry[] = [
   },
   {
     name: "Media Lab",
+    icon: "media-lab",
     platform: "",
     status: "Coming Late 2026",
     statusKind: "soon",
@@ -60,8 +61,6 @@ function esc(value: string) {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-const placeholderIcon = `<svg viewBox="0 0 96 96" width="96" height="96"><rect width="96" height="96" rx="22" fill="#c5050c"/><rect x="22" y="26" width="52" height="44" rx="6" fill="none" stroke="#fff" stroke-width="4"/><circle cx="37" cy="41" r="5" fill="#fff"/><path d="M24 66l16-16 10 10 8-8 14 14z" fill="#fff"/></svg>`;
-
 function appCard(app: AppEntry) {
   const platformPill = app.platform ? `<span class="pill left">${esc(app.platform)}</span>` : "";
   const statusPill = app.status ? `<span class="pill right ${app.statusKind}">${esc(app.status)}</span>` : "";
@@ -69,7 +68,7 @@ function appCard(app: AppEntry) {
     ? `<p class="meta">Version ${esc(app.version)}${app.released ? ` · ${formatAppDate(app.released)}` : ""}</p>`
     : "";
   const body = `
-          <div class="art">${platformPill}${statusPill}${app.icon ? `<img src="/apps/icons/${app.icon}.png" alt="" width="96" height="96">` : placeholderIcon}</div>
+          <div class="art">${platformPill}${statusPill}<img src="/apps/icons/${app.icon}.png" alt="" width="96" height="96"></div>
           <div class="copy">
             <h2>${esc(app.name)}</h2>
             <p>${esc(app.blurb)}</p>
