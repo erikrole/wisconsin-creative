@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { browserSupportsWebAuthn, startRegistration } from "@simplewebauthn/browser";
 import type { PublicKeyCredentialCreationOptionsJSON } from "@simplewebauthn/server";
 import { KeyRound, Loader2, Monitor, Trash2 } from "lucide-react";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,6 +50,8 @@ type Passkey = {
 export default function SecuritySettingsPage() {
   // The address a password manager should file these credentials under. Every
   // password box on this page otherwise stands alone.
+  const router = useRouter();
+  const confirm = useConfirm();
   const { data: currentUser } = useCurrentUser();
   const accountEmail = currentUser?.email ?? "";
 
@@ -289,6 +293,70 @@ export default function SecuritySettingsPage() {
   const otherSessions = sessions.filter((s) => !s.isCurrent);
   const revoking = revokingId !== null || revokingAll;
 
+  // ── Delete account ────────────────────────────────────────────────────────
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const deletingRef = useRef(false);
+
+  function closeDeleteAccount() {
+    if (deletingRef.current) return;
+    setDeleteOpen(false);
+    setDeletePassword("");
+    setDeleteConfirmation("");
+    setDeleteError(null);
+  }
+
+  async function handleDeleteAccount(event: React.FormEvent) {
+    event.preventDefault();
+    if (deletingRef.current) return;
+    if (!deletePassword || deleteConfirmation !== "DELETE") return;
+
+    const acknowledged = await confirm({
+      title: "Permanently delete this account?",
+      message: "This cannot be undone from the app. You will be signed out on every device.",
+      confirmLabel: "Delete account",
+      variant: "danger",
+    });
+    if (!acknowledged) return;
+
+    deletingRef.current = true;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      const res = await fetch("/api/me/account", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentPassword: deletePassword,
+          confirmation: "DELETE",
+        }),
+      });
+      if (res.status === 401) {
+        handleAuthRedirect(res, "/settings/security");
+        return;
+      }
+      if (!res.ok) {
+        const msg = await parseErrorMessage(res, "Could not delete account.");
+        setDeleteError(msg);
+        toast.error(msg);
+        return;
+      }
+      toast.success("Account deleted.");
+      router.replace("/login");
+    } catch (err) {
+      if (isAbortError(err)) return;
+      const msg = "Could not reach the server. Check your connection.";
+      setDeleteError(msg);
+      toast.error(msg);
+    } finally {
+      deletingRef.current = false;
+      setDeleting(false);
+    }
+  }
+
   return (
     <SettingsPageShell href="/settings/security">
       <div className="flex flex-col gap-4">
@@ -297,6 +365,7 @@ export default function SecuritySettingsPage() {
             { href: "#passkeys", label: "Passkeys" },
             { href: "#password", label: "Password" },
             { href: "#sessions", label: "Sessions" },
+            { href: "#account", label: "Account" },
           ]}
         />
         {/* Passkeys */}
@@ -578,6 +647,28 @@ export default function SecuritySettingsPage() {
             )}
           </CardContent>
         </Card>
+
+        <Card id="account">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Delete account</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Deleting removes your profile and sign-in data, cancels future reservations, revokes every
+              device, and signs you out. You must return any checked-out gear first. Historical custody
+              and audit records are retained without your personal profile details.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <Button
+              type="button"
+              variant="destructive"
+              className="h-10"
+              onClick={() => setDeleteOpen(true)}
+            >
+              <Trash2 className="size-4" />
+              Delete account
+            </Button>
+          </CardContent>
+        </Card>
       </div>
 
       <Dialog open={!!removalTarget} onOpenChange={(open) => { if (!open) closePasskeyRemoval(); }}>
@@ -614,6 +705,80 @@ export default function SecuritySettingsPage() {
               <Button type="submit" variant="destructive" disabled={removing || !removalPassword}>
                 {removing && <Loader2 className="size-4 animate-spin" />}
                 {removing ? "Removing…" : "Remove passkey"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={deleteOpen}
+        onOpenChange={(open) => {
+          if (!open) closeDeleteAccount();
+          else setDeleteOpen(true);
+        }}
+      >
+        <DialogContent>
+          <form onSubmit={handleDeleteAccount} className="flex flex-col gap-4">
+            <AccountUsernameField email={accountEmail} id="account-delete-username" />
+            <DialogHeader>
+              <DialogTitle>Delete account</DialogTitle>
+              <DialogDescription>
+                Confirm your password and type DELETE to continue. Open checkouts block deletion until
+                gear is returned. This cannot be undone from the app.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="account-delete-pw">Current password</Label>
+              <Input
+                id="account-delete-pw"
+                name="accountDeletePassword"
+                type="password"
+                autoComplete="current-password"
+                value={deletePassword}
+                onChange={(e) => {
+                  setDeletePassword(e.target.value);
+                  setDeleteError(null);
+                }}
+                required
+                autoFocus
+                disabled={deleting}
+                aria-invalid={!!deleteError}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="account-delete-confirm">Type DELETE to confirm</Label>
+              <Input
+                id="account-delete-confirm"
+                name="accountDeleteConfirmation"
+                value={deleteConfirmation}
+                onChange={(e) => {
+                  setDeleteConfirmation(e.target.value);
+                  setDeleteError(null);
+                }}
+                required
+                disabled={deleting}
+                autoComplete="off"
+                spellCheck={false}
+                aria-describedby="account-delete-confirm-help"
+              />
+              <p id="account-delete-confirm-help" className="text-xs text-muted-foreground">
+                Confirmation must match DELETE exactly.
+              </p>
+            </div>
+            {deleteError && <p className="text-sm text-destructive" role="alert">{deleteError}</p>}
+            <DialogFooter>
+              <Button type="button" variant="outline" className="h-10" onClick={closeDeleteAccount} disabled={deleting}>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="destructive"
+                className="h-10"
+                disabled={deleting || !deletePassword || deleteConfirmation !== "DELETE"}
+                loading={deleting}
+              >
+                Delete account
               </Button>
             </DialogFooter>
           </form>

@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   Wrench,
 } from "lucide-react";
+import EmptyState from "@/components/EmptyState";
 import { OperationalMetricCard, OperationalPartialResultsAlert } from "@/components/OperationalFeedback";
 import { OperationalStatusRail, type OperationalStatusRailItem } from "@/components/OperationalStatusRail";
 import { PageHeader } from "@/components/PageHeader";
@@ -102,8 +103,14 @@ export default function OperationsClient({ isAdmin }: { isAdmin: boolean }) {
     transform: (json) => (json.data as { totals: BatteryTotals }).totals,
   });
 
-  const loading = (isAdmin && fixToday.loading) || hygiene.loading || batteries.loading;
   const refreshing = fixToday.refreshing || hygiene.refreshing || batteries.refreshing;
+  const hasAnyData = Boolean(
+    (isAdmin && fixToday.data) || hygiene.data || batteries.data,
+  );
+  const somethingStillLoading =
+    (isAdmin && fixToday.loading && !fixToday.data)
+    || (hygiene.loading && !hygiene.data)
+    || (batteries.loading && !batteries.data);
 
   function reloadAll() {
     if (isAdmin) fixToday.reload();
@@ -111,8 +118,38 @@ export default function OperationsClient({ isAdmin }: { isAdmin: boolean }) {
     batteries.reload();
   }
 
-  if (loading) {
+  const feedErrors = [
+    ...(isAdmin && fixToday.error && !fixToday.data ? ["the admin daily queue"] : []),
+    ...(hygiene.error && !hygiene.data ? ["inventory hygiene"] : []),
+    ...(batteries.error && !batteries.data ? ["battery totals"] : []),
+  ];
+  const expectedFeeds = isAdmin ? 3 : 2;
+  const totalFailure = !hasAnyData && feedErrors.length >= expectedFeeds && !somethingStillLoading;
+
+  if (!hasAnyData && somethingStillLoading) {
     return <OperationsSkeleton />;
+  }
+
+  if (totalFailure) {
+    return (
+      <div className="flex flex-col gap-5">
+        <PageHeader
+          title="Operations"
+          description="Run the day and keep inventory data clean. Open checks jump straight to the repair surface."
+        />
+        <EmptyState
+          icon="wifi-off"
+          title="Operations could not load"
+          description={
+            isAdmin
+              ? "The daily queue, inventory hygiene, and battery totals are unavailable right now."
+              : "Inventory hygiene and battery totals are unavailable right now."
+          }
+          actionLabel="Try again"
+          onAction={reloadAll}
+        />
+      </div>
+    );
   }
 
   const operationsChecks = sortOpsChecks(fixToday.data ? normalizeFixTodayQueue(fixToday.data) : []);
@@ -122,11 +159,6 @@ export default function OperationsClient({ isAdmin }: { isAdmin: boolean }) {
   const partialFailures = [
     ...(fixToday.data?.partialFailures ?? []),
     ...(hygiene.data?.partialFailures ?? []),
-  ];
-  const feedErrors = [
-    ...(isAdmin && fixToday.error && !fixToday.data ? ["the admin daily queue"] : []),
-    ...(hygiene.error && !hygiene.data ? ["inventory hygiene"] : []),
-    ...(batteries.error && !batteries.data ? ["battery totals"] : []),
   ];
   const latestGeneratedAt = [fixToday.data?.generatedAt, hygiene.data?.generatedAt]
     .filter((value): value is string => Boolean(value))
@@ -178,17 +210,32 @@ export default function OperationsClient({ isAdmin }: { isAdmin: boolean }) {
   ];
 
   return (
-    <div className="flex flex-col gap-5">
-      <PageHeader title="Operations">
+    <div
+      className={cn("flex flex-col gap-5", refreshing && "opacity-80")}
+      aria-busy={refreshing || somethingStillLoading}
+    >
+      <PageHeader
+        title="Operations"
+        description="Run the day and keep inventory data clean. Open checks jump straight to the repair surface."
+      >
         <div className="flex flex-wrap items-center justify-end gap-2">
           {latestGeneratedAt && (
             <span className="text-xs text-muted-foreground">
               Updated {formatGeneratedAt(latestGeneratedAt)}
             </span>
           )}
-          <Button variant="outline" size="sm" className="h-10" onClick={reloadAll} disabled={refreshing}>
-            <RefreshCw data-icon="inline-start" className={cn(refreshing && "animate-spin")} />
-            {refreshing ? "Refreshing..." : "Refresh"}
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-10"
+            onClick={reloadAll}
+            disabled={refreshing || somethingStillLoading}
+          >
+            <RefreshCw
+              data-icon="inline-start"
+              className={cn((refreshing || somethingStillLoading) && "animate-spin")}
+            />
+            {refreshing || somethingStillLoading ? "Refreshing..." : "Refresh"}
           </Button>
         </div>
       </PageHeader>
@@ -200,7 +247,11 @@ export default function OperationsClient({ isAdmin }: { isAdmin: boolean }) {
           icon: ShieldCheck,
         }}
         items={railItems}
-        allClearLabel={railItems.length === 0 && feedErrors.length === 0 ? "Operations are clear" : undefined}
+        allClearLabel={
+          railItems.length === 0 && feedErrors.length === 0 && !somethingStillLoading
+            ? "Operations are clear"
+            : undefined
+        }
         details={(
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
             <OperationalMetricCard label="Open records" value={totals.openItems} tone={totals.openItems ? "orange" : "muted"} />
@@ -216,7 +267,10 @@ export default function OperationsClient({ isAdmin }: { isAdmin: boolean }) {
           <CardContent className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
             <div className="flex items-center gap-2">
               <AlertTriangle className="size-4 shrink-0 text-[var(--orange-text)]" />
-              <span>Could not load {feedErrors.join(", ")}. The rest of this page is still live.</span>
+              <span>
+                Could not load {feedErrors.join(", ")}.
+                {hasAnyData ? " The rest of this page is still live." : ""}
+              </span>
             </div>
             <Button variant="outline" size="sm" className="h-10" onClick={reloadAll}>
               <RefreshCw data-icon="inline-start" />
@@ -228,25 +282,48 @@ export default function OperationsClient({ isAdmin }: { isAdmin: boolean }) {
 
       <OperationalPartialResultsAlert failures={partialFailures} />
 
-      {batteries.data && <BatterySummaryCard totals={batteries.data} />}
+      {batteries.loading && !batteries.data ? (
+        <Skeleton className="h-20 w-full rounded-lg" />
+      ) : batteries.data ? (
+        <BatterySummaryCard totals={batteries.data} />
+      ) : null}
 
-      {isAdmin && fixToday.data && (
+      {isAdmin && (fixToday.loading && !fixToday.data ? (
+        <LaneSkeleton title="Run the day" />
+      ) : fixToday.data ? (
         <CheckLane
           title="Run the day"
           description="Custody, kiosk, calendar, and license exceptions that block today's handoffs."
           badge="Admin only"
           checks={operationsChecks}
         />
-      )}
+      ) : null)}
 
-      {hygiene.data && (
+      {hygiene.loading && !hygiene.data ? (
+        <LaneSkeleton title="Keep data clean" />
+      ) : hygiene.data ? (
         <CheckLane
           title="Keep data clean"
           description="Catalog, scan identity, kit, and attachment cleanup that keeps scan-first workflows reliable."
           checks={hygieneChecks}
         />
-      )}
+      ) : null}
     </div>
+  );
+}
+
+function LaneSkeleton({ title }: { title: string }) {
+  return (
+    <section className="flex flex-col gap-3" aria-busy="true" aria-label={`Loading ${title}`}>
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="text-base font-semibold">{title}</h2>
+        <span className="text-xs text-muted-foreground">Loading checks…</span>
+      </div>
+      <div className="grid gap-4 xl:grid-cols-2">
+        <Skeleton className="h-56 w-full rounded-lg" />
+        <Skeleton className="h-56 w-full rounded-lg" />
+      </div>
+    </section>
   );
 }
 
