@@ -7,7 +7,8 @@
     "details": [
       "Covers the Wisconsin Creative iOS app, Offload, and QR Studio, with Radio and Golden Hour marked coming soon."
     ],
-    "platforms": ["Web"]
+    "platforms": ["Web"],
+    "pr": 471
   },
   {
     "date": "2026-10-13",
