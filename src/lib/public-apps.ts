@@ -68,7 +68,7 @@ export const publicTools: PublicTool[] = [
   {
     name: "QR Studio",
     summary:
-      "Branded, scan-checked QR codes for links, Wi-Fi, email, phone, SMS, contacts, and text. Runs entirely in your browser.",
+      "Branded QR codes for links, Wi-Fi, contacts, and more, checked to scan before you export. Runs entirely in your browser.",
     status: "live",
     statusLabel: "Live",
     href: "/qrcode",
@@ -76,7 +76,19 @@ export const publicTools: PublicTool[] = [
   },
   {
     name: "Golden Hour",
-    summary: "Sunrise, sunset, and golden hour times for planning outdoor shoots.",
+    summary: "When the light is good today at Camp Randall or any Big Ten road venue, in local time.",
+    status: "coming-soon",
+    statusLabel: "Coming soon",
+  },
+  {
+    name: "Timelapse",
+    summary: "Frame rate or interval, roll time, and clip length for the FX3, A1, A1 II, A7 V, and A9 III.",
+    status: "coming-soon",
+    statusLabel: "Coming soon",
+  },
+  {
+    name: "Board Sizes",
+    summary: "Every board, ribbon, table, and IPTV canvas at five venues, with zones, delivery specs, and guide PNGs.",
     status: "coming-soon",
     statusLabel: "Coming soon",
   },
