@@ -1,5 +1,19 @@
 [
   {
+    "date": "2026-10-14",
+    "title": "Smarter assignment picker",
+    "type": "improvement",
+    "summary": "Choosing who to assign to a shift now shows why someone is a good or risky pick and ranks people more fairly.",
+    "details": [
+      "Conflicts and fit notes appear under each name instead of only on hover.",
+      "People who are unavailable are listed last and cannot be selected; advisory conflicts ask you to confirm first.",
+      "Ranking now accounts for short turnarounds, sport experience, and workload compared with others.",
+      "The iOS assign sheet says when ranking could not load."
+    ],
+    "platforms": ["Web", "iOS"],
+    "pr": 434
+  },
+  {
     "date": "2026-10-13",
     "title": "Request shifts before release",
     "type": "improvement",
