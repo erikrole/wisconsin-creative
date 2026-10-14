@@ -229,12 +229,14 @@ export function renderAppsPage(nonce?: string) {
           <div class="art" aria-hidden="true">
             <svg viewBox="0 0 200 188" preserveAspectRatio="xMidYMid meet">
               <defs>
-                <radialGradient id="glow" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ffd27a" stop-opacity=".7"/><stop offset="1" stop-color="#ffd27a" stop-opacity="0"/></radialGradient>
-                <linearGradient id="sun" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff0c2"/><stop offset="1" stop-color="#ffb347"/></linearGradient>
+                <radialGradient id="glow" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ffd27a" stop-opacity=".8"/><stop offset="1" stop-color="#ffd27a" stop-opacity="0"/></radialGradient>
+                <linearGradient id="sun" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff2c9"/><stop offset="1" stop-color="#ffb347"/></linearGradient>
               </defs>
-              <circle cx="100" cy="150" r="84" fill="url(#glow)"/>
-              <path d="M24 150 C 54 150, 70 58, 100 58 S 146 150, 176 150" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1.5"/>
-              <circle cx="100" cy="150" r="30" fill="url(#sun)"/>
+              <ellipse cx="172" cy="150" rx="70" ry="22" fill="url(#glow)"/>
+              <circle cx="172" cy="112" r="52" fill="url(#glow)"/>
+              <path d="M-14 150 Q100 -10 214 150" pathLength="100" fill="none" stroke="rgba(255,255,255,.42)" stroke-width="1.5" stroke-dasharray="2 4"/>
+              <path d="M-14 150 Q100 -10 214 150" pathLength="100" fill="none" stroke="#ffd27a" stroke-width="2" stroke-linecap="butt" stroke-dasharray="0 74 26 0"/>
+              <circle cx="172" cy="112" r="13" fill="url(#sun)"/>
               <path d="M-600 150 H800 V188 H-600Z" fill="#1a1230" opacity=".5"/>
             </svg>
           </div>
