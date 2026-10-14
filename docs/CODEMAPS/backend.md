@@ -121,6 +121,8 @@
 | `src/lib/api-handler.ts` | 63 |
 | `src/lib/api.ts` | 143 |
 | `src/lib/app-time.ts` | 213 |
+| `src/lib/apps-page-format.ts` | 7 |
+| `src/lib/apps-page.ts` | 309 |
 | `src/lib/asset-attachments.ts` | 166 |
 | `src/lib/asset-image.ts` | 26 |
 | `src/lib/asset-qr-code.ts` | 9 |
@@ -878,6 +880,10 @@
 - `/api/youtube/library/refresh`
 - `/api/youtube/oauth/callback`
 - `/api/youtube/oauth/start`
+
+### `/apps`
+
+- `/apps`
 
 ### `/releases/feed.xml`
 
