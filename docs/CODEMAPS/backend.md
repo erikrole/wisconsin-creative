@@ -61,7 +61,7 @@
 | `src/lib/services/kiosk-location.ts` | 72 |
 | `src/lib/services/kiosk-nudge.ts` | 118 |
 | `src/lib/services/kiosk-operation-receipts.ts` | 128 |
-| `src/lib/services/kiosk-pickup-add.ts` | 273 |
+| `src/lib/services/kiosk-pickup-add.ts` | 431 |
 | `src/lib/services/kiosk-pickup-substitute.ts` | 300 |
 | `src/lib/services/kiosk-scan.ts` | 44 |
 | `src/lib/services/kit-list-availability.ts` | 35 |
