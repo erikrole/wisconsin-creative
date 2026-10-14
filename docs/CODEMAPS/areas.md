@@ -153,7 +153,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/reports/scans`
 - APIs: `/api/checkouts/[id]/checkin-scan`, `/api/checkouts/[id]/scan-status`, `/api/checkouts/[id]/scan`, `/api/checkouts/[id]/start-scan-session`, `/api/kiosk/checkin/[id]/scan`, `/api/kiosk/checkout/scan`, `/api/kiosk/pickup/[id]/scan`, `/api/kiosk/resolve-scan`, `/api/kiosk/scan-lookup`, `/api/reports/scans`
 - Services: `src/lib/services/bulk-unit-scans.ts`, `src/lib/services/kiosk-scan.ts`, `src/lib/services/scans.ts`
-- Tests: `tests/bulk-unit-kiosk-scans.test.ts`, `tests/ios-kiosk-rapid-scan-atomicity.test.ts`, `tests/ios-kiosk-scan-rejection-sound.test.ts`, `tests/ios-kiosk-scanner-focus.test.ts`, `tests/ios-scan-result-retry.test.ts`, `tests/kiosk-checkout-scan-badges.test.ts`, `tests/kiosk-resolve-scan-route.test.ts`, `tests/kiosk-scan-lookup-free-until.test.ts`
+- Tests: `tests/bulk-unit-kiosk-scans.test.ts`, `tests/ios-kiosk-rapid-scan-atomicity.test.ts`, `tests/ios-kiosk-scan-rejection-sound.test.ts`, `tests/ios-kiosk-scanner-focus.test.ts`, `tests/ios-scan-result-retry.test.ts`, `tests/kiosk-checkout-scan-badges.test.ts`, `tests/kiosk-pickup-scan-bulk-add.test.ts`, `tests/kiosk-resolve-scan-route.test.ts`
 
 ## search
 
@@ -209,4 +209,4 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/youtube`
 - APIs: `/api/cron/youtube-sweep`, `/api/youtube/connection`, `/api/youtube/drafts/[videoId]/check-playlists`, `/api/youtube/drafts/[videoId]/check-send`, `/api/youtube/drafts/[videoId]/game`, `/api/youtube/drafts/[videoId]/make-public`, `/api/youtube/drafts/[videoId]/playlists`, `/api/youtube/drafts/[videoId]/prepare`, `/api/youtube/drafts/[videoId]/publish`, `/api/youtube/drafts/[videoId]`
 - Services: _none matched_
-- Tests: `tests/youtube-connection.test.ts`, `tests/youtube-diff.test.ts`, `tests/youtube-playlist-service.test.ts`, `tests/youtube-publish-service.test.ts`, `tests/youtube-publishing.test.ts`, `tests/youtube-queue-service.test.ts`, `tests/youtube-review-queue.test.ts`, `tests/youtube-rules.test.ts`
+- Tests: `tests/youtube-connection.test.ts`, `tests/youtube-diff.test.ts`, `tests/youtube-playlist-service.test.ts`, `tests/youtube-publish-service.test.ts`, `tests/youtube-publishing.test.ts`, `tests/youtube-queue-service.test.ts`, `tests/youtube-review-queue-ui-source.test.ts`, `tests/youtube-review-queue.test.ts`

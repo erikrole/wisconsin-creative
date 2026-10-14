@@ -75,6 +75,7 @@ export default function BookingDetailPage({
 
   // Edit sheet state
   const [editSheetOpen, setEditSheetOpen] = useState(false);
+  const [editSheetEquipment, setEditSheetEquipment] = useState(false);
   const [transferOwnerOpen, setTransferOwnerOpen] = useState(false);
   const [editEventsOpen, setEditEventsOpen] = useState(false);
 
@@ -198,6 +199,8 @@ export default function BookingDetailPage({
   const canTransferOwner = allowedActions.includes("transfer-owner");
   const canManageCustody = kind === "CHECKOUT" && allowedActions.includes("manage-custody");
   const canEditEvents = canEdit;
+  // Ready-for-pickup (and draft) reservations take new items; active checkouts change gear at the kiosk.
+  const canAddItems = canEdit && kind === "RESERVATION" && (booking?.status === "BOOKED" || booking?.status === "DRAFT");
   const isOpen = booking?.status === "OPEN";
   const isActive = isOpen || booking?.status === "BOOKED";
   const kioskHandoffLabel =
@@ -434,7 +437,11 @@ export default function BookingDetailPage({
       {/* ── Two-column layout: Equipment + Info ── */}
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_420px]">
         {/* Left: Equipment manifest */}
-        <BookingEquipmentTab booking={booking} onBookingUpdated={patchLocal} />
+        <BookingEquipmentTab
+          booking={booking}
+          onBookingUpdated={patchLocal}
+          onAddItems={canAddItems ? () => { setEditSheetEquipment(true); setEditSheetOpen(true); } : undefined}
+        />
 
         {/* Right: Info card */}
         <BookingInfoCard
@@ -491,9 +498,11 @@ export default function BookingDetailPage({
       {/* ── Edit sheet ── */}
       <BookingDetailsSheet
         bookingId={editSheetOpen ? id : null}
-        onClose={() => setEditSheetOpen(false)}
+        startInEquipmentEdit={editSheetEquipment}
+        onClose={() => { setEditSheetOpen(false); setEditSheetEquipment(false); }}
         onUpdated={() => {
           setEditSheetOpen(false);
+          setEditSheetEquipment(false);
           reload();
         }}
       />

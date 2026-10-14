@@ -16,7 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { AlertCircle, Check, ImageIcon, MoreHorizontal, Search } from "lucide-react";
+import { AlertCircle, Check, ImageIcon, MoreHorizontal, Plus, Search } from "lucide-react";
 import { StaggerList, StaggerItem } from "@/components/ui/motion";
 import { toast } from "sonner";
 import type { BookingDetail, SerializedItem, BulkItem } from "@/components/booking-details/types";
@@ -79,9 +79,12 @@ type BulkTurnaroundRiskInfo = {
 export default function BookingEquipmentTab({
   booking,
   onBookingUpdated,
+  onAddItems,
 }: {
   booking: BookingDetail;
   onBookingUpdated: (booking: BookingDetail) => void;
+  /** Present when staff or the owner may add items to this booking. */
+  onAddItems?: () => void;
 }) {
   const [search, setSearch] = useState("");
   const [holderItem, setHolderItem] = useState<SerializedItem | null>(null);
@@ -261,9 +264,17 @@ export default function BookingEquipmentTab({
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-3">
               <CardTitle className="text-base tracking-tight">Equipment</CardTitle>
-              <Badge variant="secondary" size="sm" className="tabular-nums">
-                {itemCount} item{itemCount !== 1 ? "s" : ""}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" size="sm" className="tabular-nums">
+                  {itemCount} item{itemCount !== 1 ? "s" : ""}
+                </Badge>
+                {onAddItems && (
+                  <Button type="button" variant="outline" size="sm" className="h-10" onClick={onAddItems}>
+                    <Plus className="size-4" />
+                    Add items
+                  </Button>
+                )}
+              </div>
             </div>
             {showProgress && (
               <div className="flex items-center gap-2 mt-1">

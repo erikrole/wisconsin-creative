@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Settings
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-10-09
+- Last Updated: 2026-10-11
 - Status: Active
 - Version: V1
 
@@ -26,6 +26,7 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 - Change password: verify current password, set new one (min 8 chars), optional "sign out of all other devices" checkbox. Client-side confirm-password match before submit.
 - Active sessions list: shows each non-expired session with creation date, current expiry date (it moves forward with use, D-066), and "This device" badge for the current session. Per-session "Sign out" button (cannot revoke the current session). "Sign out all other devices" bulk action.
 - Passkeys: active invite-granted users can add one or more discoverable passkeys after current-password reauthentication, name them, see last-used metadata, and revoke an individual credential. An unnamed passkey is named after the enrolling client (for example "Chrome on macOS" or "iPhone"), each row states whether the credential is synced or bound to one device, and removal takes its own confirmation dialog with its own current-password field. Password sign-in and recovery remain available during rollout.
+- Delete account: web Security exposes the same self-service deletion path as native Account & Security. The dialog requires the current password, an exact `DELETE` confirmation token, and a second destructive confirm. `DELETE /api/me/account` reauthenticates, blocks when open checkouts remain, erases personal profile/auth data, revokes sessions and credentials, and retains historical custody/audit attribution. Success signs the browser out to `/login`.
 - `POST /api/me/change-password` (5/min rate limit -- brute-force protection; verifies bcrypt, sets new hash, optionally deletes other sessions).
 - `GET /api/me/sessions` (30/min; lists non-expired sessions with `isCurrent` flag -- tokenHash never exposed to client).
 - `DELETE /api/me/sessions/:id` (10/min; rejects current session with 400, confirms ownership before delete).
@@ -67,13 +68,13 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 - Saved per-device in `localStorage` (`theme`, `text-scale`); the cold-load script in `src/app/layout.tsx` applies both on first paint to avoid FOUC.
 - Available to every authenticated user (STUDENT included).
 
-### Checkout Policies (`/settings/checkout-policies`) -- Booking, ADMIN
+### Checkout policies (`/settings/checkout-policies`) -- Booking, ADMIN
 - **Default loan duration** (`defaultLoanDays`, default 3): used as the fallback `endsAt` when a checkout POST omits the end date. The creation form can use this to prefill the due-date picker.
 - **Overdue grace period** (`gracePeriodHours`, default 0): items become overdue and the first overdue notification becomes eligible at `endsAt + gracePeriodHours`. Due-time, +4h, and +24h notification offsets remain exact relative to `endsAt`; manual nudges use the same grace boundary.
 - **Max active checkouts per user** (`maxItemsPerUser`, default null = no limit): enforced at checkout POST time; counts OPEN + PENDING_PICKUP bookings for the requester. Rejects with 409 when at/over cap.
 - `GET/PUT /api/settings/checkout-policies` (ADMIN, rate-limited at `SETTINGS_MUTATION_LIMIT`). Stored in `SystemConfig.checkout_policies`. Missing/null key falls back to defaults -- no behavior change for existing data.
 
-### Reservation Rules (`/settings/reservation-rules`) -- Booking, ADMIN
+### Reservation rules (`/settings/reservation-rules`) -- Booking, ADMIN
 - **Advance booking window** (`advanceWindowDays`, default null = no limit): reservations whose `startsAt` is further out than the window are rejected with 409.
 - **No-show expiry** (`noShowExpiryHours`, default 48): starts when a booked
   reservation reaches `startsAt`. Loaded at cron run time in
@@ -83,7 +84,7 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 - **Max concurrent reservations** (`maxConcurrentReservations`, default null = no limit): enforced at reservation POST time; counts BOOKED reservations for the requester. Rejects with 409 when at/over cap.
 - `GET/PUT /api/settings/reservation-rules` (ADMIN, rate-limited). Stored in `SystemConfig.reservation_rules`. Missing key falls back to defaults.
 
-### Categories (`/settings/categories`)
+### Categories (`/settings/categories`) — Inventory, STAFF+
 - Hierarchical tree of equipment categories with inline rename, subcategory creation, move (reparent), and delete.
 - Search filters the tree (preserves parent nodes for structure).
 - Sort toggles A→Z / Z→A.
@@ -93,15 +94,16 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 - Delete is guarded: blocked if category has items or children, and STAFF cannot delete (ADMIN-only). The kebab item is disabled with an inline reason in those cases.
 - Duplicate names are blocked within the same tree level, and rows show last audit actor/time when audit history exists.
 
-### Departments (`/settings/departments`)
+### Departments (`/settings/departments`) — Inventory, STAFF+
 - Staff/admin catalog of inventory ownership groups used by item forms, filters, bulk SKUs, and utilization reports.
 - Add a department, inline rename by clicking the name, and deactivate/reactivate without breaking existing item or bulk references.
 - Active departments appear in new item and bulk SKU pickers; inactive departments are hidden from pickers but remain on existing records.
 - Usage counts show how many serialized items and bulk SKUs still reference each department.
 - Rows show the last audit actor/time when audit history exists.
 
-### Sports (`/settings/sports`)
+### Sports (`/settings/sports`) — Schedule, STAFF+
 - Schedule-group configuration for shift generation, not People access.
+- Related Settings destination: Calendar sources.
 - Configure one Non-game template with per-area Staff and Student counts for events without an opponent.
 - Toggle sports active/inactive for shift generation.
 - Configure separate Staff and Student home/away shift counts per area (Video, Photo, Graphics, Comms).
@@ -110,15 +112,17 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 - Expandable roster panel per sport — add/remove users.
 - Mobile: card layout replaces dense table for shift configs.
 
-### Escalation (`/settings/escalation`)
+### Overdue escalation (`/settings/escalation`) -- Booking, ADMIN
 - Configure the -2h, due-time, grace-expiry, +4h, and +24h checkout notification rules.
 - Assign up to ten active visible STAFF/ADMIN overdue responders per active checkout location. Empty assignments fall back to the active staff/admin booking creator, then active admins.
 - Fatigue controls split requester stages from responder/admin rows per due-date version, so staff fanout cannot silence borrower reminders or exceed its own cap.
 - The +4h and +24h stages reach location responders; +24h also reaches all admins by in-app + email while push remains responder-only.
+- Related Settings destinations: Checkout policies and Reservation rules.
 - Migration `0111_checkout_overdue_notification_policy` and authenticated production rollout proof remain pending.
 
-### Audit Log (`/settings/audit`) — System, ADMIN
+### Audit log (`/settings/audit`) — System, ADMIN
 - Admin-only live feed of every create, update, and delete action across the system.
+- Related Settings destinations: Data exports and Database diagnostics.
 - First page loads on mount; "Load older entries" button fetches the next keyset-paginated page via `?cursor=<nextCursor>`.
 - Older-page failures preserve the loaded entries and show persistent inline recovery copy plus a retry-labeled pagination action so partial history is not mistaken for complete history.
 - **Auto-refresh** toggle: when on, polls `GET /api/audit?after=<newestCursor>` every 30 seconds while the browser is visible, online, and recently active, then prepends new rows with a dismissible new-count banner. Polling pauses after two minutes without activity and checks immediately when the user returns.
@@ -128,18 +132,20 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 - Each row: timestamp, entity type + entity ID (8-char prefix), action badge, actor name (or "System" for server-generated events).
 - `GET /api/audit` (ADMIN, 60/min): keyset pagination on `(createdAt DESC, id DESC)`; supports `?cursor`, `?after`, `?entityType`, `?actor`, `?action`, `?from`, `?to`, `?limit` (default 50, max 100). Returns `{ data, nextCursor, hasMore, retentionDays }`.
 
-### Data Export (`/settings/data-export`) — System, ADMIN
+### Data exports (`/settings/data-export`) — System, ADMIN
 - Admin-only hub for exporting data as CSV.
 - Five exports: Items (assets), Users, Licenses, Bookings (checkouts + reservations), Audit Log.
 - Bookings and Audit Log are new -- the other three surface existing endpoints in one place.
 - All exports capped at 5,000 rows; `X-Truncated` + `X-Total-Count` response headers surface truncation; the UI shows a warning toast when capped.
+- Related Settings destinations: Audit log and Database diagnostics.
 - `GET /api/bookings/export` (ADMIN, 5/min, optional `?from=&to=&kind=`).
 - `GET /api/audit/export` (ADMIN, 5/min, optional `?from=&to=&entity_type=`).
 
-### Database (`/settings/database`)
+### Database diagnostics (`/settings/database`) — System, ADMIN
 - On-demand schema health diagnostics.
 - Checks: migration table, tables, enums, extensions, column drift.
 - Shows remediation steps when issues detected.
+- Related Settings destinations: Audit log and Data exports. This is a bounded baseline check, not complete schema-health proof.
 
 ### App activity (`/settings/app-activity`) — System, configured product owner only
 - Read-only dashboard of every active or inactive user that is visible in the roster, with whether the app has reported an app-open event and the last launch time.
@@ -148,24 +154,26 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 - iOS clients are marked `Latest`, `Stale`, `Newer`, or `Compare unavailable` against `IOS_LATEST_APP_VERSION` and `IOS_LATEST_APP_BUILD` when those server settings are configured. The report never presents an unconfigured comparison as current.
 - `GET /api/settings/app-activity` is owner-allowlisted and returns no hidden-roster users. The durable installation key is server-HMACed; the app does not store or send a UDID, serial number, IDFA, raw receipt, or raw installation key in the database.
 - Loading, refresh, error, and no-client states preserve the existing roster/report context. This page does not expose mutation controls.
+- Owner-isolated: no Related Settings strip to other System destinations.
 
-### Locations (`/settings/locations`)
+### Locations (`/settings/locations`) — Schedule, ADMIN
 - Admin-only catalog of physical locations referenced by items, kiosks, calendar events, and venue mappings.
 - Add a location with optional address; toggle isHomeVenue inline; rename inline by clicking the name.
 - Deactivate (soft-delete) hides a location from new pickers but keeps existing references intact. Deactivated locations show in their own card with the count of references that still point at them, and can be reactivated.
 - Hard delete is intentionally not exposed — locations are referenced by many models (FK constraints would block it anyway).
 - This tab also owns Home Venue toggling, which previously lived under Venue Mappings.
 
-### Calendar Sources (`/settings/calendar-sources`)
+### Calendar sources (`/settings/calendar-sources`) — Schedule, STAFF+
 - Enable/disable ICS calendar sources for event sync.
 - Sync status badges use the shared shadcn-backed status indicator: green for active, orange for stale/needs attention, red for errors, and gray for disabled or never synced.
 - Manual "Sync Now" button. Add/delete sources.
 - Manual sync reports returned feed errors, event add/refresh/cancel/skip counts, and shift-generation outcome instead of treating every 200 response as success.
 - Manual sync, test, add, enable/disable, and delete actions use immediate duplicate-action guards before React disabled state renders.
+- Related Settings destinations: Sports (visible to STAFF), plus Locations and Venue mappings for ADMIN.
 - Per D-026 and D-035: daily calendar sync runs through `/api/cron/morning-refresh` at 08:00 UTC, with manual refresh for changes that cannot wait for the next run.
 - Morning refresh records per-source consecutive hard sync failures in `SystemConfig`, resets the count after a hard-error-free cron sync, creates in-app notifications for active admins starting at 3 consecutive hard failures, and Admin Fix Today shows the repeated-failure count next to the latest source error.
 
-### Venue Mappings (`/settings/venue-mappings`)
+### Venue mappings (`/settings/venue-mappings`) — Schedule, ADMIN
 - Admin-only regex-to-location mapping table.
 - Pattern validation on create/update (rejects invalid regex).
 - Priority + longest-match tie-breaking.
@@ -173,14 +181,15 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 - Home venue toggling moved to the Locations tab as of 2026-04-25.
 - Read-only Mapping Audit surfaces home venues without mappings, mappings to inactive or missing locations, and home-looking mappings pointed at non-home locations. Missing-home-venue rows can prefill Add mapping with the location name and ID.
 
-### Bookings (`/settings/bookings`)
+### Booking extensions (`/settings/bookings`) -- Booking, ADMIN
 - Configure the extend-due-date presets shown when extending a booking.
 - Up to 10 presets, each with a free-text label and a duration picked from a fixed list (15m → 1 month).
 - Save button is always rendered (disabled when clean → "Saved", enabled when dirty → "Save changes").
 - Browser `beforeunload` guard warns before navigating away with unsaved presets.
 - Persisted to `system_config.extend_presets` (ADMIN-only PUT).
+- Route URL stays `/settings/bookings` for compatibility; nav label is Booking extensions.
 
-### Kiosk Devices (`/settings/kiosk-devices`)
+### Kiosks (`/settings/kiosk-devices`) — Devices, ADMIN
 - Manage iPad kiosk stations for self-serve checkout (admin-only).
 - Create device → server returns a one-shot 6-digit activation code; admin enters it on the iPad at `/kiosk` to bind the device.
 - Pending-activation devices have a "Regenerate code" affordance — invalidates the prior hash and surfaces a fresh code in the same dialog.
@@ -189,8 +198,8 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 - Toggle active/inactive (deactivating clears the session token, which ends the session immediately), delete, and inspect last-seen timestamp.
 - Device rows use the shared shadcn-backed status indicator for `Online`, `Heartbeat stale`, `Offline`, `Pending activation`, and `Deactivated` health.
 
-### Allowed Emails (`/settings/allowed-emails`)
-- Admin-managed email allowlist for registration gating (D-029).
+### Registration access (`/settings/allowed-emails`) — People, STAFF+
+- Staff/admin email allowlist for registration gating (D-029).
 - Add invitations through the shared onboarding dialog with bulk paste, local CSV upload using the existing `email, role` intake, or one-email intake. STAFF can invite STUDENT only; ADMIN can invite STAFF, STUDENT, or COLLABORATOR.
 - Bulk invite preview groups ready, duplicate, invalid, role-blocked, existing-user, pending-invite, and claimed-invite rows before write. Existing registered or already-invited addresses are visible only to authenticated operators through the preview endpoint; final write responses keep generic skip behavior.
 - When a batch write is not confirmed, the completion panel keeps the attempted rows visible with a retry action. This is transient client recovery; it does not create a persisted failed-invitation status.
@@ -198,6 +207,16 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 - Onboarding Status links to `/users/onboarding-status`, where staff/admin can review pending, stale pending, and claimed onboarding access across the allowlist, copy the generic app login link, and remove unclaimed invites before reissuing access.
 - Delete unclaimed entries. Claimed entries preserved (audit trail).
 - Filter by status (all/unclaimed/claimed).
+- Related Settings destination for ADMIN: Collaborator access.
+
+### Collaborator access (`/settings/collaborator-access`) — People, ADMIN
+- Admin-only affiliation policies for outside partners (for example BTN and Learfield).
+- Create an affiliation; new policies start suspended with no capabilities (default deny).
+- Edit display name and badge label; replace the capability set with dependency-normalized validation; suspend or reactivate with affected-count previews.
+- Dirty policy cards use the shared `SettingsSaveBar` (unsaved status, Reset, Save policy), disable related controls while a write is in flight, and warn with `beforeunload` when leaving with unsaved edits.
+- History restoration and constrained archival for prior policy versions.
+- Related Settings destination: Registration access.
+- These controls never expose internal notes, private profiles, audit history, borrower identity, or custody mutations.
 
 ## Acceptance Criteria
 - [x] AC-1: Role-aware grouped navigation across all settings pages
@@ -222,6 +241,12 @@ Navigation breadcrumb versioned roadmap: `tasks/breadcrumbs-roadmap.md`
 All versions shipped. Duplicate breadcrumb removed; parent-level sibling quick-jump dropdown on "Settings" crumb navigates between sub-pages. Role-gated Settings sibling menus now wait for the current role before becoming dropdowns, so the loading frame does not expose an empty menu. The global breadcrumb UI now uses a lighter trail treatment with the current Settings sub-page marked by a subtle underline instead of a filled chip.
 
 ## Change Log
+- 2026-10-11: **Web Security can delete an account.** `/settings/security` adds a Delete account section with current-password reauthentication, typed `DELETE` confirmation, and a second destructive confirm before calling existing `DELETE /api/me/account`. Copy matches the native retention and open-checkout rules; success routes to `/login`. API behavior unchanged. Proof: focused Security source contract, `tests/me-account-deletion.test.ts`, and `tsc --noEmit`. Authenticated browser destructive completion intentionally not run against a real account.
+
+- 2026-10-11: **Collaborator access save trust matches Booking/Profile.** Dirty affiliation policy cards now use `SettingsSaveBar` (unsaved status, Reset, Save policy), disable name/badge/status/capability controls while saving, guard duplicate submits, and warn with `beforeunload` when leaving dirty. Capability model, preview confirmation, restore, and archive are unchanged. Proof: focused collaborator/settings source contracts and `tsc --noEmit`. Authenticated browser edit→leave→warn proof not run (preview server unavailable in this environment).
+
+- 2026-10-11: **Settings labels and Related links match the nav.** Sub-Page headings now use the canonical `SETTINGS_SECTIONS` labels (Registration access, Collaborator access, Booking extensions, Overdue escalation, Kiosks, Data exports, Database diagnostics, and the rest). Collaborator access has a Sub-Page section. Related destinations now link Calendar sources ↔ Sports (so STAFF always has a Related path), Overdue escalation ↔ Reservation rules (Checkout policies kept), and Audit log ↔ Data exports ↔ Database diagnostics. App activity stays owner-isolated with no Related strip. URLs unchanged. Proof: focused Settings source contracts, `npx tsc --noEmit --pretty false`, and `npm run verify:docs`. Authenticated browser Related-strip proof not run in this slice.
+
 - 2026-10-09: **Passwords turn into passkeys on their own; GearOps shares saved logins.** After a password sign-in or account creation, web and iOS ask the password manager that filled the password to save a passkey with no prompt (D-043 amendment). Accounts that already have a passkey are skipped, and sign-in with the new passkey still requires Face ID, Touch ID or the device unlock. The GearOps menu bar app now has `webcredentials:wisconsincreative.com` and is listed in the apple-app-site-association file, so AutoFill offers the website's saved password there. Schema: `passkey_challenges.automatic` (same migration). Proof: server tests for the automatic mode, including that a client cannot claim it at verify time; web and Swift source-contract tests; the full vitest suite; `npm run build:app`. Also a generic iOS Simulator `xcodebuild` (the iPhone 18 Pro Max simulator was not installed), a signed GearOps build carrying the entitlement, and 82 passing GearOps tests. A local Chromium run reported `conditionalCreate: true` and sent the automatic options request after a mocked password sign-in. A real password-manager upgrade is unproven: that needs a device or browser with a saved password against a deployed server.
 
 - 2026-10-09: **People stay signed in.** User sessions now slide on activity (D-066): a remembered sign-in lasts while it is used at least once every 30 days, up to 90 days, and an unremembered one lasts 12 idle hours within the browser session. "Keep me signed in" starts ticked, shows on every sign-in step including account creation, and new accounts are no longer limited to 12 hours. Signing back in returns to the page that was asked for. `/.well-known/passkey-endpoints` points password managers at Security for adding a passkey. Schema: `sessions.persistent` (migration `0174_stay_signed_in`). Proof: focused session, return-path, passkey, and password-manager tests, the full vitest suite, `tsc`, lint, and `npm run build:app`. Migration deploy and authenticated preview proof are pending.

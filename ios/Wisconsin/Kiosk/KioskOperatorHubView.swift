@@ -28,6 +28,8 @@ struct KioskOperatorHubView: View {
     @State private var extendTarget: KioskCheckoutDrawerContext?
     @State private var transferTarget: KioskCheckoutDrawerContext?
     @State private var reservationTarget: KioskIntentBooking?
+    /// Opens the reservation editor straight into its scan-to-add prompt.
+    @State private var reservationAddsItems = false
     @State private var staffFlowTarget: KioskCheckoutDrawerContext?
     @State private var changeNotice: String?
 
@@ -227,7 +229,7 @@ struct KioskOperatorHubView: View {
             .statusBarHidden(true)
         }
         .fullScreenCover(item: $reservationTarget) { booking in
-            KioskReservationEditView(reservationId: booking.id, title: booking.title, user: user) { saved in
+            KioskReservationEditView(reservationId: booking.id, title: booking.title, user: user, addsItems: reservationAddsItems) { saved in
                 reservationTarget = nil
                 if saved { finishChange("Reservation saved.") {} }
             }
@@ -342,7 +344,13 @@ struct KioskOperatorHubView: View {
                             Button("Pick up") { startPickup(id: pickup.id, title: pickup.title, startsAt: pickup.startsAt) }
                                 .kioskButtonRole(.primary)
                             if pickup.canChangeReservedItems {
+                                Button("Add items") {
+                                    reservationAddsItems = true
+                                    reservationTarget = KioskIntentBooking(id: pickup.id, title: pickup.title, startsAt: pickup.startsAt, endsAt: nil)
+                                }
+                                .kioskButtonRole(.secondary)
                                 Button("Change items") {
+                                    reservationAddsItems = false
                                     reservationTarget = KioskIntentBooking(id: pickup.id, title: pickup.title, startsAt: pickup.startsAt, endsAt: nil)
                                 }
                                 .kioskButtonRole(.secondary)
@@ -359,7 +367,13 @@ struct KioskOperatorHubView: View {
                             Button("Pick up") { startPickup(id: reservation.id, title: reservation.title, startsAt: reservation.startsAt) }
                                 .kioskButtonRole(.primary)
                                 .accessibilityHint("Start pickup now")
+                            Button("Add items") {
+                                reservationAddsItems = true
+                                reservationTarget = KioskIntentBooking(id: reservation.id, title: reservation.title, startsAt: reservation.startsAt, endsAt: nil)
+                            }
+                            .kioskButtonRole(.secondary)
                             Button("Change items") {
+                                reservationAddsItems = false
                                 reservationTarget = KioskIntentBooking(id: reservation.id, title: reservation.title, startsAt: reservation.startsAt, endsAt: nil)
                             }
                             .kioskButtonRole(.secondary)

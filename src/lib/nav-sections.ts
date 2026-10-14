@@ -131,7 +131,7 @@ export const SETTINGS_SECTIONS: ReadonlyArray<SettingsSection> = [
     group: "Booking",
     description: "Advance booking window, no-show expiry, and concurrent reservation cap.",
     keywords: ["advance", "window", "no-show", "expiry", "pending", "pickup", "max concurrent", "reservation"],
-    relatedHrefs: ["/settings/checkout-policies", "/settings/bookings"],
+    relatedHrefs: ["/settings/checkout-policies", "/settings/bookings", "/settings/escalation"],
   },
   {
     href: "/settings/bookings",
@@ -149,7 +149,7 @@ export const SETTINGS_SECTIONS: ReadonlyArray<SettingsSection> = [
     group: "Booking",
     description: "Overdue notification triggers and fatigue cap.",
     keywords: ["overdue", "notification", "alert", "trigger", "fatigue"],
-    relatedHrefs: ["/settings/checkout-policies"],
+    relatedHrefs: ["/settings/checkout-policies", "/settings/reservation-rules"],
   },
   // Schedule sources
   {
@@ -168,7 +168,7 @@ export const SETTINGS_SECTIONS: ReadonlyArray<SettingsSection> = [
     group: "Schedule",
     description: "ICS calendar feeds — add, sync, and monitor health.",
     keywords: ["ics", "feed", "sync", "events"],
-    relatedHrefs: ["/settings/locations", "/settings/venue-mappings"],
+    relatedHrefs: ["/settings/sports", "/settings/locations", "/settings/venue-mappings"],
   },
   {
     href: "/settings/locations",
@@ -206,7 +206,7 @@ export const SETTINGS_SECTIONS: ReadonlyArray<SettingsSection> = [
     group: "System",
     description: "Live admin feed of all create, update, and delete actions across the system.",
     keywords: ["history", "activity", "log", "trail", "changes", "who", "when", "admin"],
-    relatedHrefs: ["/settings/data-export"],
+    relatedHrefs: ["/settings/data-export", "/settings/database"],
   },
   {
     href: "/settings/data-export",
@@ -215,7 +215,7 @@ export const SETTINGS_SECTIONS: ReadonlyArray<SettingsSection> = [
     group: "System",
     description: "Download inventory, bookings, users, and audit logs as CSV.",
     keywords: ["csv", "export", "download", "backup", "report", "audit", "bookings", "users", "items"],
-    relatedHrefs: ["/settings/audit"],
+    relatedHrefs: ["/settings/audit", "/settings/database"],
   },
   {
     href: "/settings/database",
@@ -224,6 +224,7 @@ export const SETTINGS_SECTIONS: ReadonlyArray<SettingsSection> = [
     group: "System",
     description: "On-demand schema health diagnostics.",
     keywords: ["schema", "migration", "diagnostics", "drift", "prisma"],
+    relatedHrefs: ["/settings/audit", "/settings/data-export"],
   },
   {
     href: "/settings/app-activity",
