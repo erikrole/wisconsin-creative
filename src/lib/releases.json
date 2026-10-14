@@ -27,6 +27,21 @@
   },
   {
     "date": "2026-10-12",
+    "title": "Faster Operations page",
+    "type": "improvement",
+    "summary": "Operations shows each check lane as soon as it loads, and Import’s wizard steps are clearer.",
+    "details": [
+      "Operations no longer waits for every queue before showing anything — ready lanes appear first, with the rest filling in.",
+      "If Operations cannot load at all, you get a clear retry instead of a blank page.",
+      "Import’s step rail and header explain the CSV → map → preview → import path with larger step targets."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 454
+  },
+  {
+    "date": "2026-10-12",
     "title": "Clearer first-day setup",
     "type": "improvement",
     "summary": "New accounts set up their profile on the Welcome page itself, and Blasts recover cleanly when a load fails.",
@@ -59,6 +74,21 @@
   },
   {
     "date": "2026-10-12",
+    "title": "YouTube queue recovers",
+    "type": "improvement",
+    "summary": "YouTube Studio Lite’s review queue offers clear next steps when the library is empty, a refresh fails, or filters hide every upload.",
+    "details": [
+      "An empty library shows Refresh library when the channel can be checked.",
+      "A failed refresh keeps the error visible with Retry refresh.",
+      "Filters that hide every upload offer Clear filters."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 456
+  },
+  {
+    "date": "2026-10-12",
     "title": "Reservations keep kit custody",
     "type": "fixes",
     "summary": "Calling a gameday kit on a reservation keeps the real status, so a checked-out camera is not labeled available.",
@@ -68,6 +98,21 @@
     ],
     "platforms": ["Web"],
     "pr": 463
+  },
+  {
+    "date": "2026-10-12",
+    "title": "Clearer Settings and account deletion",
+    "type": "improvement",
+    "summary": "Settings pages are easier to find and jump between, collaborator access warns before you leave unsaved changes, and you can delete your account from web Security.",
+    "details": [
+      "Settings names and related links now match what you see in the Settings menu, including clearer paths for calendar and overdue rules.",
+      "Collaborator access shows unsaved changes, lets you reset, and warns if you leave mid-edit.",
+      "On the web, Security now includes Delete account with the same password confirmation and retention rules as the iPhone app."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 457
   },
   {
     "date": "2026-10-12",

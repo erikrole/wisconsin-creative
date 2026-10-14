@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Importer
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-05-24
+- Last Updated: 2026-10-11
 - Status: Active
 - Version: V1
 
@@ -202,6 +202,7 @@ No column is discarded.
 5. Emit detailed import report and full audit events.
 
 ## Change Log
+- 2026-10-11: Import wizard chrome pass (local). Page header describes the CSV → map → preview → import path, the step rail uses 40px targets with current/complete states, and primary upload/start-over actions meet the hit-target baseline. Import pipeline behavior is unchanged.
 - 2026-05-24: Web bug sweep Batch 14. Import preview/import submissions now use shared auth, safe-JSON, and server-error parsing; duplicate preview/import actions are ref-guarded; malformed mapping JSON and unsupported import modes return explicit 400 errors before database work; summary results now include bulk item-family and image-queue counts; and import wizard controls expose stable form metadata.
 - 2026-03-01: Initial importer area scope created for Cheqroom CSV migration.
 - 2026-03-11: Docs hardening — reframed as generic CSV mapper with Cheqroom preset. Removed Cheqroom-specific framing from title, direction, and pipeline. Added preset architecture section. Updated AREA_PLATFORM_INTEGRITY ref to DECISIONS.md.
