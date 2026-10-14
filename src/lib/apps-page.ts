@@ -229,20 +229,13 @@ export function renderAppsPage(nonce?: string) {
           <div class="art" aria-hidden="true">
             <svg viewBox="0 0 200 188" preserveAspectRatio="xMidYMid meet">
               <defs>
-                <radialGradient id="glow" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ffd27a" stop-opacity=".75"/><stop offset="1" stop-color="#ffd27a" stop-opacity="0"/></radialGradient>
+                <radialGradient id="glow" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ffd27a" stop-opacity=".7"/><stop offset="1" stop-color="#ffd27a" stop-opacity="0"/></radialGradient>
                 <linearGradient id="sun" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff0c2"/><stop offset="1" stop-color="#ffb347"/></linearGradient>
               </defs>
-              <g fill="#fff" opacity=".7"><circle cx="30" cy="26" r="1.2"/><circle cx="70" cy="14" r="1"/><circle cx="150" cy="20" r="1.3"/><circle cx="182" cy="42" r="1"/><circle cx="118" cy="10" r=".9"/></g>
-              <circle cx="100" cy="142" r="78" fill="url(#glow)"/>
-              <path d="M16 148 C 46 148, 66 54, 100 54 S 154 148, 184 148" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="1.5" stroke-dasharray="3 5"/>
-              <path d="M16 148 C 26 148, 34 132, 42 114" fill="none" stroke="#ffc861" stroke-width="4" stroke-linecap="round"/>
-              <path d="M158 114 C 166 132, 174 148, 184 148" fill="none" stroke="#ffc861" stroke-width="4" stroke-linecap="round"/>
-              <circle cx="100" cy="148" r="30" fill="url(#sun)"/>
-              <path d="M-600 148 H800 V188 H-600Z" fill="#1a1230" opacity=".62"/>
-              <path d="M-600 148 H800" stroke="#ffd9a0" stroke-opacity=".7"/>
-              <text x="16" y="168" fill="#ffd9a0" font-size="8.5" letter-spacing="1.6">RISE</text>
-              <text x="184" y="168" fill="#ffd9a0" font-size="8.5" letter-spacing="1.6" text-anchor="end">SET</text>
-              <text x="100" y="168" fill="#fff" font-size="8.5" letter-spacing="1.4" text-anchor="middle" opacity=".8">GOLDEN HOUR</text>
+              <circle cx="100" cy="150" r="84" fill="url(#glow)"/>
+              <path d="M24 150 C 54 150, 70 58, 100 58 S 146 150, 176 150" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1.5"/>
+              <circle cx="100" cy="150" r="30" fill="url(#sun)"/>
+              <path d="M-600 150 H800 V188 H-600Z" fill="#1a1230" opacity=".5"/>
             </svg>
           </div>
           <div class="copy">
