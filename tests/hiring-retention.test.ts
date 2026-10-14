@@ -350,13 +350,13 @@ describe("runApplicantRetention (runs inside the weekly audit-archive cron)", ()
   it("leaves file deletion queued when time runs out right after a purge commits", async () => {
     models.applicant.findMany.mockResolvedValueOnce([{ id: "a1" }]).mockResolvedValue([]);
     tx.applicant.findUnique.mockImplementation(async () => person("a1"));
-    // The purge itself eats the whole working window.
+    // Working window is budgetMs minus the 1500ms per-item margin, so 400ms.
+    // Sleep past that. A 400ms timer can fire before Date.now() has moved 400ms,
+    // which lets the file sweep run and flakes this assertion on a fast runner.
     models.$transaction.mockImplementation(async (fn: (t: typeof tx) => Promise<unknown>) => {
-      await new Promise((resolve) => setTimeout(resolve, 400));
+      await new Promise((resolve) => setTimeout(resolve, 600));
       return fn(tx);
     });
-    // 400 ms of room before the per-item margin: enough for a slow CI runner to
-    // start the purge, and the purge itself uses all of it.
     const result = await runApplicantRetention(NOW, { budgetMs: 1900 });
     expect(result.purged).toBe(1);
     expect(deleteApplicantFile).not.toHaveBeenCalled(); // queued durably, deleted by a later run

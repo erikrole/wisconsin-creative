@@ -17,6 +17,8 @@ describe("Settings sweeping UI contracts", () => {
 
     expect(nav).toContain('href: "/settings/allowed-emails"');
     expect(nav).toContain('label: "Registration access"');
+    expect(nav).toContain('href: "/settings/collaborator-access"');
+    expect(nav).toContain('label: "Collaborator access"');
     expect(nav).toContain('label: "Booking extensions"');
     expect(nav).toContain('label: "Overdue escalation"');
     expect(nav).toContain('label: "Database diagnostics"');
@@ -26,6 +28,47 @@ describe("Settings sweeping UI contracts", () => {
     expect(nav).toContain('group: "Schedule"');
     expect(nav).toContain("relatedHrefs");
     expect(nav).toContain("export function getRelatedSettingsSections");
+  });
+
+  it("keeps Settings Related links role-useful without changing URLs", () => {
+    const nav = source("src/lib/nav-sections.ts");
+    const area = source("docs/AREA_SETTINGS.md");
+
+    expect(nav).toMatch(
+      /href: "\/settings\/calendar-sources"[\s\S]*?relatedHrefs: \["\/settings\/sports", "\/settings\/locations", "\/settings\/venue-mappings"\]/
+    );
+    expect(nav).toMatch(
+      /href: "\/settings\/sports"[\s\S]*?relatedHrefs: \["\/settings\/calendar-sources"\]/
+    );
+    expect(nav).toMatch(
+      /href: "\/settings\/escalation"[\s\S]*?relatedHrefs: \["\/settings\/checkout-policies", "\/settings\/reservation-rules"\]/
+    );
+    expect(nav).toMatch(
+      /href: "\/settings\/reservation-rules"[\s\S]*?relatedHrefs: \["\/settings\/checkout-policies", "\/settings\/bookings", "\/settings\/escalation"\]/
+    );
+    expect(nav).toMatch(
+      /href: "\/settings\/audit"[\s\S]*?relatedHrefs: \["\/settings\/data-export", "\/settings\/database"\]/
+    );
+    expect(nav).toMatch(
+      /href: "\/settings\/data-export"[\s\S]*?relatedHrefs: \["\/settings\/audit", "\/settings\/database"\]/
+    );
+    expect(nav).toMatch(
+      /href: "\/settings\/database"[\s\S]*?relatedHrefs: \["\/settings\/audit", "\/settings\/data-export"\]/
+    );
+    expect(nav).toMatch(
+      /href: "\/settings\/app-activity"[\s\S]*?keywords: \[[\s\S]*?\]\s*,?\s*\n\s*\}/
+    );
+    expect(nav).not.toMatch(
+      /href: "\/settings\/app-activity"[\s\S]*?relatedHrefs:/
+    );
+
+    expect(area).toContain("### Registration access (`/settings/allowed-emails`)");
+    expect(area).toContain("### Collaborator access (`/settings/collaborator-access`)");
+    expect(area).toContain("### Booking extensions (`/settings/bookings`)");
+    expect(area).toContain("### Overdue escalation (`/settings/escalation`)");
+    expect(area).toContain("### Kiosks (`/settings/kiosk-devices`)");
+    expect(area).toContain("### Data exports (`/settings/data-export`)");
+    expect(area).toContain("### Database diagnostics (`/settings/database`)");
   });
 
   it("does not render failed extension loads as an empty configuration", () => {
