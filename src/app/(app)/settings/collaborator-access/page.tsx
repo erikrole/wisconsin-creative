@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { AlertTriangle, Archive, History, Plus, RotateCcw, Save } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { AlertTriangle, Archive, History, Plus, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useFetch } from "@/hooks/use-fetch";
 import { parseErrorMessage } from "@/lib/errors";
 import { SettingsPageShell } from "../SettingsPageShell";
+import { SettingsSaveBar } from "../_components/SettingsSaveBar";
 import EmptyState from "@/components/EmptyState";
 
 type Capability =
@@ -158,6 +159,7 @@ function PolicyCard({ policy, onChanged }: { policy: Policy; onChanged: () => vo
   const [capabilities, setCapabilities] = useState<Capability[]>(policy.capabilities);
   const [saving, setSaving] = useState(false);
   const [history, setHistory] = useState<Revision[] | null>(null);
+  const savingRef = useRef(false);
   const dirty =
     name !== policy.affiliation.displayName
     || badge !== policy.affiliation.badgeLabel
@@ -165,7 +167,25 @@ function PolicyCard({ policy, onChanged }: { policy: Policy; onChanged: () => vo
     || capabilities.length !== policy.capabilities.length
     || capabilities.some((capability) => !policy.capabilities.includes(capability));
 
+  useEffect(() => {
+    if (!dirty && !saving) return;
+    const warnBeforeLeaving = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warnBeforeLeaving);
+    return () => window.removeEventListener("beforeunload", warnBeforeLeaving);
+  }, [dirty, saving]);
+
+  function resetChanges() {
+    setName(policy.affiliation.displayName);
+    setBadge(policy.affiliation.badgeLabel);
+    setStatus(policy.status);
+    setCapabilities(policy.capabilities);
+  }
+
   function toggleCapability(key: Capability, checked: boolean) {
+    if (saving) return;
     if (checked) {
       setCapabilities(normalizeCapabilities([...capabilities, key]));
       return;
@@ -175,6 +195,8 @@ function PolicyCard({ policy, onChanged }: { policy: Policy; onChanged: () => vo
   }
 
   async function save() {
+    if (!dirty || savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     try {
       const previewResponse = await fetch(`/api/collaborator-affiliations/${policy.id}/preview`, {
@@ -216,6 +238,7 @@ function PolicyCard({ policy, onChanged }: { policy: Policy; onChanged: () => vo
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not save policy");
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   }
@@ -285,20 +308,62 @@ function PolicyCard({ policy, onChanged }: { policy: Policy; onChanged: () => vo
       </CardHeader>
       <CardContent className="flex flex-col gap-5">
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="grid gap-1.5"><Label htmlFor={`${policy.id}-name`}>Name</Label><Input id={`${policy.id}-name`} value={name} onChange={(event) => setName(event.target.value)} /></div>
-          <div className="grid gap-1.5"><Label htmlFor={`${policy.id}-badge`}>Badge</Label><Input id={`${policy.id}-badge`} value={badge} maxLength={12} onChange={(event) => setBadge(event.target.value)} /></div>
+          <div className="grid gap-1.5">
+            <Label htmlFor={`${policy.id}-name`}>Name</Label>
+            <Input
+              id={`${policy.id}-name`}
+              name={`${policy.id}-name`}
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              disabled={saving}
+              className="h-10"
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor={`${policy.id}-badge`}>Badge</Label>
+            <Input
+              id={`${policy.id}-badge`}
+              name={`${policy.id}-badge`}
+              value={badge}
+              maxLength={12}
+              onChange={(event) => setBadge(event.target.value)}
+              disabled={saving}
+              className="h-10"
+            />
+          </div>
         </div>
         <div className="flex items-center justify-between gap-3 rounded-md border p-3">
-          <div><p className="font-medium">Affiliation access</p><p className="text-sm text-muted-foreground">Suspension blocks login, invitations, registration, kiosk roster, and every capability.</p></div>
-          <Button variant={status === "ACTIVE" ? "outline" : "default"} onClick={() => setStatus(status === "ACTIVE" ? "SUSPENDED" : "ACTIVE")}>{status === "ACTIVE" ? "Suspend" : "Activate"}</Button>
+          <div>
+            <p className="font-medium">Affiliation access</p>
+            <p className="text-sm text-muted-foreground">Suspension blocks login, invitations, registration, kiosk roster, and every capability.</p>
+          </div>
+          <Button
+            type="button"
+            className="h-10"
+            variant={status === "ACTIVE" ? "outline" : "default"}
+            disabled={saving}
+            onClick={() => setStatus(status === "ACTIVE" ? "SUSPENDED" : "ACTIVE")}
+          >
+            {status === "ACTIVE" ? "Suspend" : "Activate"}
+          </Button>
         </div>
         {(["Can see", "Can do", "Kiosk"] as const).map((group) => (
           <div key={group} className="grid gap-2">
             <p className="text-sm font-semibold">{group}</p>
             {CAPABILITIES.filter((entry) => entry.group === group).map((entry) => (
-              <label key={entry.key} className="flex cursor-pointer items-start gap-3 rounded-md border p-3">
-                <Checkbox checked={capabilities.includes(entry.key)} onCheckedChange={(checked) => toggleCapability(entry.key, checked === true)} />
-                <span><span className="block text-sm font-medium">{entry.label}</span><span className="block text-xs text-muted-foreground">{entry.description}</span></span>
+              <label
+                key={entry.key}
+                className={`flex items-start gap-3 rounded-md border p-3 ${saving ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
+              >
+                <Checkbox
+                  checked={capabilities.includes(entry.key)}
+                  disabled={saving}
+                  onCheckedChange={(checked) => toggleCapability(entry.key, checked === true)}
+                />
+                <span>
+                  <span className="block text-sm font-medium">{entry.label}</span>
+                  <span className="block text-xs text-muted-foreground">{entry.description}</span>
+                </span>
               </label>
             ))}
           </div>
@@ -310,17 +375,50 @@ function PolicyCard({ policy, onChanged }: { policy: Policy; onChanged: () => vo
           <Count label="Reservations" value={policy.counts.activeReservations} />
           <Count label="Checkouts" value={policy.counts.activeCheckouts} />
         </div>
-        <div className="flex flex-wrap justify-between gap-2">
-          <div className="flex gap-2"><Button variant="outline" onClick={loadHistory}><History />History</Button><Button variant="outline" onClick={archive} disabled={status !== "SUSPENDED"}><Archive />Archive</Button></div>
-          <Button onClick={save} disabled={saving || !dirty} loading={saving}><Save />Save policy</Button>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="outline" className="h-10" onClick={loadHistory} disabled={saving}>
+            <History />
+            History
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-10"
+            onClick={archive}
+            disabled={saving || status !== "SUSPENDED"}
+          >
+            <Archive />
+            Archive
+          </Button>
         </div>
+        <SettingsSaveBar
+          dirty={dirty}
+          saving={saving}
+          onReset={resetChanges}
+          onSave={() => void save()}
+          saveLabel="Save policy"
+          savedLabel="Saved"
+        />
         {history && (
           <div className="grid gap-2 rounded-md border p-3">
             <p className="font-semibold">Policy history</p>
             {history.map((revision) => (
               <div key={revision.id} className="flex items-center justify-between gap-3 border-t pt-2 first:border-0 first:pt-0">
-                <div><p className="text-sm font-medium">Version {revision.version} · {revision.status}</p><p className="text-xs text-muted-foreground">{revision.capabilities.length} capabilities · {revision.actor?.name ?? "Migration"} · {new Date(revision.createdAt).toLocaleString()}</p></div>
-                <Button className="h-10" variant="ghost" disabled={revision.version === policy.version} onClick={() => restore(revision)}><RotateCcw />Restore</Button>
+                <div>
+                  <p className="text-sm font-medium">Version {revision.version} · {revision.status}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {revision.capabilities.length} capabilities · {revision.actor?.name ?? "Migration"} · {new Date(revision.createdAt).toLocaleString()}
+                  </p>
+                </div>
+                <Button
+                  className="h-10"
+                  variant="ghost"
+                  disabled={saving || revision.version === policy.version}
+                  onClick={() => restore(revision)}
+                >
+                  <RotateCcw />
+                  Restore
+                </Button>
               </div>
             ))}
           </div>

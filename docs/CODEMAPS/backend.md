@@ -200,7 +200,7 @@
 | `src/lib/live-activity-workflow.ts` | 34 |
 | `src/lib/local-traces.ts` | 28 |
 | `src/lib/media-embed.ts` | 68 |
-| `src/lib/nav-sections.ts` | 316 |
+| `src/lib/nav-sections.ts` | 317 |
 | `src/lib/notification-catalog.ts` | 322 |
 | `src/lib/notification-count-sync.ts` | 9 |
 | `src/lib/notification-destination.ts` | 85 |
