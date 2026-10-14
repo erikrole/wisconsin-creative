@@ -68,7 +68,7 @@ function appCard(app: AppEntry) {
     ? `<p class="meta">Version ${esc(app.version)}${app.released ? ` · ${formatAppDate(app.released)}` : ""}</p>`
     : "";
   const body = `
-          <div class="art">${platformPill}${statusPill}<img class="icon-light" src="/apps/icons/${app.icon}.png" alt="" width="96" height="96"><img class="icon-dark" src="/apps/icons/${app.icon}-dark.png" alt="" width="96" height="96"></div>
+          <div class="art">${platformPill}${statusPill}<img src="/apps/icons/${app.icon}.png" alt="" width="96" height="96"></div>
           <div class="copy">
             <h2>${esc(app.name)}</h2>
             <p>${esc(app.blurb)}</p>
@@ -114,16 +114,11 @@ export function renderAppsPage(nonce?: string) {
       --card: #1c1c1f; --card-art: #26262a; --pill: rgba(28,28,31,0.88);
       --beta-bg: #1b2a4d; --beta-line: #2b4278; --beta-ink: #8fb1ff;
       --red-text: #ff5a60; --focus: #ff5a60; }
-      :root:not([data-theme="light"]) .icon-light { display: none; }
-      :root:not([data-theme="light"]) .icon-dark { display: block; }
     }
     :root[data-theme="dark"] { color-scheme: dark; --paper: #121214; --ink: #f2f1ee; --ink-2: #b9b8b2; --ink-3: #8a8984; --line: #2c2c30;
       --card: #1c1c1f; --card-art: #26262a; --pill: rgba(28,28,31,0.88);
       --beta-bg: #1b2a4d; --beta-line: #2b4278; --beta-ink: #8fb1ff;
       --red-text: #ff5a60; --focus: #ff5a60; }
-    :root[data-theme="dark"] .icon-light { display: none; }
-    :root[data-theme="dark"] .icon-dark { display: block; }
-    .icon-dark { display: none; }
     * { box-sizing: border-box; }
     body { margin: 0; min-width: 300px; background: var(--paper); color: var(--ink); font-family: var(--font); font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
     :focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; border-radius: 18px; }

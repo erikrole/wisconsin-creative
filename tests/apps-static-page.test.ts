@@ -29,10 +29,8 @@ describe("apps page", () => {
 
   it("shows version and release date for released apps, and each icon file exists", () => {
     for (const app of appEntries) {
-      for (const file of [`${app.icon}.png`, `${app.icon}-dark.png`]) {
-        expect(html).toContain(`/apps/icons/${file}`);
-        expect(existsSync(`public/apps/icons/${file}`)).toBe(true);
-      }
+      expect(html).toContain(`/apps/icons/${app.icon}.png`);
+      expect(existsSync(`public/apps/icons/${app.icon}.png`)).toBe(true);
       if (app.version) expect(html).toContain(`Version ${app.version}`);
     }
     expect(html).toContain("Version 1.0.8");
