@@ -164,6 +164,7 @@ export function renderAppsPage(nonce?: string) {
     .art text { font-family: var(--font); font-weight: 700; }
 
     .gh { background: linear-gradient(180deg, #1d2050 0%, #46407a 34%, #a2547a 62%, #e8795a 84%, #f7a64a 100%); color: #fff7ee; }
+    .gh .art svg { inset: 16px 16px 0; width: calc(100% - 32px); height: calc(100% - 16px); overflow: hidden; }
     .gh .copy p { color: rgba(255, 247, 238, 0.84); }
 
     .tl { background: #0b0c0e; color: #f2f2ef; }
@@ -227,17 +228,12 @@ export function renderAppsPage(nonce?: string) {
       <li>
         <a class="tool gh" href="/golden-hour">
           <div class="art" aria-hidden="true">
-            <svg viewBox="0 0 200 188" preserveAspectRatio="xMidYMid meet">
-              <defs>
-                <radialGradient id="glow" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ffd27a" stop-opacity=".8"/><stop offset="1" stop-color="#ffd27a" stop-opacity="0"/></radialGradient>
-                <linearGradient id="sun" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff2c9"/><stop offset="1" stop-color="#ffb347"/></linearGradient>
-              </defs>
-              <ellipse cx="172" cy="150" rx="70" ry="22" fill="url(#glow)"/>
-              <circle cx="172" cy="112" r="52" fill="url(#glow)"/>
-              <path d="M-14 150 Q100 -10 214 150" pathLength="100" fill="none" stroke="rgba(255,255,255,.42)" stroke-width="1.5" stroke-dasharray="2 4"/>
-              <path d="M-14 150 Q100 -10 214 150" pathLength="100" fill="none" stroke="#ffd27a" stroke-width="2" stroke-linecap="butt" stroke-dasharray="0 74 26 0"/>
-              <circle cx="172" cy="112" r="13" fill="url(#sun)"/>
-              <path d="M-600 150 H800 V188 H-600Z" fill="#1a1230" opacity=".5"/>
+            <svg viewBox="0 0 300 170" preserveAspectRatio="none">
+              <rect x="0" y="104" width="300" height="16" fill="#ffc861" opacity=".28"/>
+              <path d="M0 160 C 60 150, 90 20, 150 20 S 240 150, 300 160" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="2"/>
+              <path d="M58 120 L72 100" stroke="#ffc861" stroke-width="5" stroke-linecap="round"/>
+              <path d="M228 100 L242 120" stroke="#ffc861" stroke-width="5" stroke-linecap="round"/>
+              <line x1="0" x2="300" y1="112" y2="112" stroke="rgba(255,255,255,.55)" stroke-dasharray="2 5"/>
             </svg>
           </div>
           <div class="copy">
