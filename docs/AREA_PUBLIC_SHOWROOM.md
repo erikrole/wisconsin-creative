@@ -47,7 +47,6 @@ Make `/about` a shareable public overview for Wisconsin Creative. It should expl
 
 ## Verification
 - `npx vitest run tests/public-showroom-content.test.ts tests/public-releases-content.test.ts tests/check-release-note.test.ts tests/qrcode-static-tool.test.ts`
-- `npx vitest run tests/static-tools.test.ts tests/apps-static-page.test.ts tests/apps-live-versions.test.ts`
 - `npx tsc --noEmit --pretty false`
 - `npm run codemap`
 - `npm run verify:docs`
@@ -55,6 +54,7 @@ Make `/about` a shareable public overview for Wisconsin Creative. It should expl
 - `npm run build:app`
 - `npm run smoke:deploy`
 - Browser smoke `/about`, `/about/features`, `/about/tech-stack`, `/about/security`, `/about/field-work`, `/releases`, `/login`, and protected `/`.
+- `npx vitest run tests/static-tools.test.ts tests/apps-static-page.test.ts tests/apps-live-versions.test.ts`
 
 ## Change Log
 - 2026-10-08: Added `/releases`, a public release-notes page backfilled with per-feature releases (mapped to merged PRs where they exist), grouped by date, from the first build (2026-02-27) through 2026-10-08. Entries are static JSON with a content test for date order, unique anchors, and public-safe copy. The showroom nav and footer gain a Releases link, and the about and releases layouts share one footer component. Backfilled dates are when work landed on `main`, not announcement dates. From now on every PR to `main` must add or update a release entry, enforced in the required CI `validate` job (opt out with the `no-release-note` label), with a PR template checkbox to match. Design pass: recent-first view with earlier history behind a button, app and type filters, sticky month headers, collapsed fix roundups, neutral platform tags (red reserved for New), summary text darker than detail bullets, PR numbers kept in data but not shown, a Latest line, and an RSS feed.
