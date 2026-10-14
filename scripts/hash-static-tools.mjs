@@ -9,7 +9,7 @@ import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
-export const HASHED_TOOLS = ["public/golden-hour/index.html", "public/timelapse/index.html", "public/board-sizes/index.html"];
+export const HASHED_TOOLS = ["public/golden-hour/index.html", "public/timelapse/index.html"];
 
 export function stamp(htmlPath) {
   const html = readFileSync(htmlPath, "utf8");

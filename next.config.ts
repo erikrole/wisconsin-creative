@@ -102,15 +102,16 @@ const baseConfig: NextConfig = {
     return [
       { source: "/guides", destination: "/resources", permanent: true },
       { source: "/guides/:path*", destination: "/resources/:path*", permanent: true },
+      // /tools now opens the apps page. Golden Hour and Timelapse are static
+      // files; the dotted path stays outside the nonce-CSP middleware, the same
+      // way QR Studio does. Board Sizes is not in this branch.
+      { source: "/tools", destination: "/apps", permanent: false },
+      { source: "/golden-hour", destination: "/golden-hour/index.html", permanent: false },
+      { source: "/timelapse", destination: "/timelapse/index.html", permanent: false },
       // QR Studio is a static, client-only tool in public/qrcode. Linking to the
       // file path keeps it outside the nonce-CSP middleware, whose matcher skips
       // dotted paths; the page carries its own stricter CSP.
       { source: "/qrcode", destination: "/qrcode/index.html", permanent: false },
-      // Same pattern for the other static tools and their hub.
-      { source: "/tools", destination: "/apps", permanent: false },
-      { source: "/golden-hour", destination: "/golden-hour/index.html", permanent: false },
-      { source: "/timelapse", destination: "/timelapse/index.html", permanent: false },
-      { source: "/board-sizes", destination: "/board-sizes/index.html", permanent: false },
     ];
   },
 };
