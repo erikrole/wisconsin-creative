@@ -121,9 +121,9 @@
 | `src/lib/api-handler.ts` | 63 |
 | `src/lib/api.ts` | 143 |
 | `src/lib/app-time.ts` | 213 |
-| `src/lib/apps-live-versions.ts` | 93 |
+| `src/lib/apps-live-versions.ts` | 195 |
 | `src/lib/apps-page-format.ts` | 7 |
-| `src/lib/apps-page.ts` | 333 |
+| `src/lib/apps-page.ts` | 430 |
 | `src/lib/asset-attachments.ts` | 166 |
 | `src/lib/asset-image.ts` | 26 |
 | `src/lib/asset-qr-code.ts` | 9 |

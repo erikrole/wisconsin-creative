@@ -4,12 +4,12 @@ import { appEntries, renderAppsPage } from "@/lib/apps-page";
 
 const html = renderAppsPage();
 const routeSource = readFileSync("src/app/apps/route.ts", "utf8");
+const pageSource = readFileSync("src/lib/apps-page.ts", "utf8");
 
 describe("apps page", () => {
-  it("is signed-in only and not a public static file", () => {
-    expect(routeSource).toContain("requireAuth");
-    expect(routeSource).toContain('process.env.NODE_ENV === "development"');
-    expect(routeSource).toContain('loginPathWithReturnTo("/apps")');
+  it("opens without signing in and is not a static file", () => {
+    expect(routeSource).not.toContain("requireAuth");
+    expect(routeSource).not.toContain("loginPathWithReturnTo");
     expect(existsSync("public/apps/index.html")).toBe(false);
   });
 
@@ -27,20 +27,34 @@ describe("apps page", () => {
     expect(html).toContain("Radio Clip");
   });
 
-  it("shows version and release date for released apps, and each icon file exists", () => {
+  it("shows sourced version, requirement, and download facts, and each icon file exists", () => {
     for (const app of appEntries) {
-      expect(html).toContain(`/apps/icons/${app.icon}.png`);
+      if (!app.shot) {
+        expect(html).toContain(`/apps/icons/${app.icon}.png`);
+      }
       expect(existsSync(`public/apps/icons/${app.icon}.png`)).toBe(true);
       if (app.version) expect(html).toContain(`Version ${app.version}`);
     }
-    expect(html).toContain("Version 1.1.2 · Requires macOS 15 or later");
-    expect(html).toContain("https://github.com/erikrole/offload-releases/releases/latest/download/Offload.dmg");
+    expect(html).toContain("Version 1.2.0 · Oct 13, 2026 · Requires macOS 15.0 or later");
+    expect(html).toContain("Developer ID signed");
+    expect(html).toContain("https://github.com/erikrole/offload-releases/releases/download/v1.2.0/Offload-1.2.0.dmg");
+    expect(html).toContain("https://github.com/erikrole/offload-releases/releases/tag/v1.2.0");
+    expect(html).toContain("Sony FX6 and FX3");
+    expect(html).toContain("Version 1.2 · Sep 14, 2026 · Requires iOS 26.0 or later");
+    expect(html).toContain("/apps/wisconsin-creative-home.jpg");
+    expect(existsSync("public/apps/wisconsin-creative-home.jpg")).toBe(true);
     expect(html).toContain("Version 1.1.0 · Requires macOS 27 or later");
     expect(html).toContain("https://github.com/erikrole/fetch-releases/releases/latest/download/Fetch.dmg");
-    expect(html).toContain("Version 0.1.0");
-    expect(html).not.toContain("Oct 13, 2026");
+    expect(html).not.toContain("Version 0.1.0");
+    expect(html).not.toContain("Notarized");
+    expect(html).toContain("Radio Clip");
     expect(html).toContain("Media Lab");
     expect(html).toContain("Coming Late 2026");
     expect(html).toContain("https://apps.apple.com/us/app/wisconsin-creative/id6763456945");
+    expect(html).toContain('name="description"');
+    expect(html).toContain('property="og:title"');
+    expect(html).toContain('content="noindex"');
+    expect(html).toContain("<h3>Offload</h3>");
+    expect(pageSource).toContain("TODO(apps):");
   });
 });

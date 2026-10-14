@@ -33,15 +33,29 @@
     "date": "2026-10-13",
     "title": "Apps and tools page",
     "type": "feature",
-    "summary": "wisconsincreative.com/apps now lists the team's apps and tools in one place for signed-in staff.",
+    "summary": "wisconsincreative.com/apps now lists the team's apps and tools in one place.",
     "details": [
       "Apps: the Wisconsin Creative iPhone and iPad app, Offload, and Radio Clip (coming soon), with current versions and release dates.",
       "Tools: Golden Hour, Timelapse, Board Sizes, and QR Studio.",
       "Light and dark appearance, following your system by default, with a picker at the top.",
-      "You need to be signed in to open the page."
+      "The page opens without signing in."
     ],
     "platforms": ["Web"],
     "pr": 471
+  },
+  {
+    "date": "2026-10-13",
+    "title": "Sourced apps page facts",
+    "type": "improvement",
+    "summary": "The apps page now uses the published App Store and Offload release facts, including the home screenshot, and opens without signing in.",
+    "details": [
+      "Wisconsin Creative shows its App Store version, the iOS it requires, and the home screenshot.",
+      "Offload shows version 1.2.0, macOS 15.0 or later, and that version's download.",
+      "Radio Clip no longer shows a version that was never published.",
+      "The page opens without signing in. It is still left out of search."
+    ],
+    "platforms": ["Web"],
+    "pr": 472
   },
   {
     "date": "2026-10-13",
