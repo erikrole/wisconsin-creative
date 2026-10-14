@@ -28,11 +28,15 @@ describe("apps page", () => {
 
   it("shows version and release date for released apps, and each icon file exists", () => {
     for (const app of appEntries) {
+      if (!app.icon) continue;
       expect(html).toContain(`/apps/icons/${app.icon}.png`);
       expect(existsSync(`public/apps/icons/${app.icon}.png`)).toBe(true);
       if (app.version) expect(html).toContain(`Version ${app.version}`);
     }
-    expect(html).toContain("Released Oct 13, 2026");
+    expect(html).toContain("Version 1.0.8");
+    expect(html).not.toContain("Oct 13, 2026");
+    expect(html).toContain("Media Lab");
+    expect(html).toContain("Coming late 2026");
     expect(html).toContain("https://apps.apple.com/us/app/wisconsin-creative/id6763456945");
   });
 });

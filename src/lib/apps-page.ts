@@ -4,7 +4,7 @@ import { formatAppDate } from "@/lib/apps-page-format";
 
 export type AppEntry = {
   name: string;
-  icon: string;
+  icon?: string;
   platform: string;
   status: string;
   statusKind: "live" | "beta" | "soon";
@@ -21,9 +21,9 @@ export const appEntries: AppEntry[] = [
     name: "Wisconsin Creative",
     icon: "wisconsin-creative",
     platform: "iPhone and iPad",
-    status: "App Store",
+    status: "",
     statusKind: "live",
-    blurb: "Reserve gear, check your shifts, and look up equipment from the field. Schedule and notifications in one place.",
+    blurb: "Reserve and check out gear, see your shifts, and look up equipment.",
     version: "1.2",
     released: "2026-09-14",
     href: "https://apps.apple.com/us/app/wisconsin-creative/id6763456945",
@@ -35,9 +35,8 @@ export const appEntries: AppEntry[] = [
     platform: "macOS",
     status: "Beta",
     statusKind: "beta",
-    blurb: "Card ingest for Sony FX6 and FX3. Copies cards, keeps the clips marked OK, matches them to the play-by-play, and renames them for editing.",
+    blurb: "Copies Sony FX6 and FX3 cards, matches clips to the play-by-play, and renames them for editing.",
     version: "1.0.8",
-    released: "2026-10-13",
     href: undefined,
     cta: "Download from GitHub",
   },
@@ -47,7 +46,14 @@ export const appEntries: AppEntry[] = [
     platform: "macOS",
     status: "Coming soon",
     statusKind: "soon",
-    blurb: "Turns Wisconsin radio broadcasts into highlight clips. Transcribes the game, matches the play-by-play, and exports approved clips as MP3.",
+    blurb: "Turns radio broadcasts into highlight clips and exports them as MP3.",
+  },
+  {
+    name: "Media Lab",
+    platform: "",
+    status: "Coming late 2026",
+    statusKind: "soon",
+    blurb: "Browse and organize the team's photo and video library.",
   },
 ];
 
@@ -55,19 +61,21 @@ function esc(value: string) {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+const placeholderIcon = `<svg viewBox="0 0 96 96" width="96" height="96"><rect width="96" height="96" rx="22" fill="#c5050c"/><rect x="22" y="26" width="52" height="44" rx="6" fill="none" stroke="#fff" stroke-width="4"/><circle cx="37" cy="41" r="5" fill="#fff"/><path d="M24 66l16-16 10 10 8-8 14 14z" fill="#fff"/></svg>`;
+
 function appCard(app: AppEntry) {
-  const pill = `<span class="pill ${app.statusKind === "live" ? "" : app.statusKind}">${esc(app.platform)} · ${esc(app.status)}</span>`;
+  const pill = `<span class="pill ${app.statusKind === "live" ? "" : app.statusKind}">${[app.platform, app.status].filter(Boolean).map(esc).join(" · ")}</span>`;
   const meta = app.version
     ? `<p class="meta">Version ${esc(app.version)}${app.released ? ` · Released ${formatAppDate(app.released)}` : ""}</p>`
     : "";
   const body = `
-          <div class="art" aria-hidden="true"><img src="/apps/icons/${app.icon}.png" alt="" width="96" height="96"></div>
+          <div class="art" aria-hidden="true">${app.icon ? `<img src="/apps/icons/${app.icon}.png" alt="" width="96" height="96">` : placeholderIcon}</div>
           <div class="copy">
             ${pill}
             <h2>${esc(app.name)}</h2>
             <p>${esc(app.blurb)}</p>
             ${meta}
-            ${app.href ? `<span class="go">${esc(app.cta ?? "Open")} <i>→</i></span>` : ""}
+            ${app.cta ? `<span class="go${app.href ? "" : " pending"}">${esc(app.cta)} <i>→</i></span>` : ""}
           </div>`;
   return app.href
     ? `<li><a class="tool app" href="${esc(app.href)}">${body}</a></li>`
@@ -172,15 +180,17 @@ export function renderAppsPage() {
 
     h2.section { margin: clamp(40px, 7vw, 72px) 0 18px; font-size: 13px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-3); }
     h2.section:first-of-type { margin-top: 0; }
-    .grid.apps { grid-template-columns: repeat(3, 1fr); }
-    @media (max-width: 900px) { .grid.apps { grid-template-columns: 1fr; } }
+    .grid.apps { grid-template-columns: repeat(4, 1fr); }
+    @media (max-width: 1000px) { .grid.apps { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 560px) { .grid.apps { grid-template-columns: 1fr; } }
     .app { background: #fff; border: 1px solid var(--line); min-height: 0; }
     .app .art { height: 150px; display: grid; place-items: center; background: #ebe8e1; }
     .app .art img { width: 96px; height: 96px; filter: drop-shadow(0 10px 14px rgba(20, 20, 25, 0.35)); }
     .app .copy p { color: var(--ink-2); }
     .app .copy p.meta { margin-top: 12px; font-size: 13px; font-weight: 700; color: var(--ink); }
     .app .go { color: var(--red); }
-    .pill { display: inline-block; margin-bottom: 10px; padding: 3px 10px; border-radius: 999px; background: #eceae4; color: var(--ink-2); font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+    .app .go.pending { color: var(--ink-3); }
+    .pill { display: inline-block; margin-bottom: 10px; padding: 3px 10px; border-radius: 999px; background: #eceae4; color: var(--ink-2); font-size: 12px; font-weight: 700; letter-spacing: 0.01em; }
     .pill.beta { background: #e6efff; color: #1d4fb3; }
     .pill.soon { background: #eceae4; color: var(--ink-3); }
     .app.soon { box-shadow: none; }
