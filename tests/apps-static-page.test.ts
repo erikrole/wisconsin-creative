@@ -8,6 +8,7 @@ const routeSource = readFileSync("src/app/apps/route.ts", "utf8");
 describe("apps page", () => {
   it("is signed-in only and not a public static file", () => {
     expect(routeSource).toContain("requireAuth");
+    expect(routeSource).toContain('process.env.NODE_ENV === "development"');
     expect(routeSource).toContain('loginPathWithReturnTo("/apps")');
     expect(existsSync("public/apps/index.html")).toBe(false);
   });

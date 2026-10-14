@@ -8,6 +8,8 @@ export const dynamic = "force-dynamic";
 
 /** Internal apps and tools page: signed-in staff only. */
 export async function GET(request: Request) {
+  // `next dev` only: lets /apps be developed without a local database. Production builds never take this path.
+  if (process.env.NODE_ENV === "development") return htmlResponse();
   try {
     const user = await requireAuth();
     if (user.forcePasswordChange)
@@ -20,6 +22,10 @@ export async function GET(request: Request) {
     }
     throw error;
   }
+  return htmlResponse();
+}
+
+function htmlResponse() {
   return new NextResponse(renderAppsPage(), {
     headers: {
       "content-type": "text/html; charset=utf-8",
