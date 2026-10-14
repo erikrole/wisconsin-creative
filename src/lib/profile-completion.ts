@@ -52,6 +52,70 @@ const FIELD_STEP: Record<ProfileCompletionField, ProfileCompletionStep> = {
   photo: "PHOTO",
 };
 
+/** Product-language labels for missing-field chips and onboarding status. */
+export const PROFILE_FIELD_LABELS: Record<ProfileCompletionField, string> = {
+  campusEmail: "Campus login email",
+  athleticsEmail: "Athletics email",
+  personalPhone: "Personal phone",
+  workPhone: "Work phone",
+  wiscard: "Wiscard",
+  studentYear: "Year",
+  anticipatedGraduation: "Anticipated graduation",
+  clothingSize: "Clothing size",
+  shoeSize: "Shoe size",
+  photo: "Profile photo",
+};
+
+/** Shorter labels for dense banners and operator tables. */
+export const PROFILE_FIELD_SHORT_LABELS: Record<ProfileCompletionField, string> = {
+  campusEmail: "campus email",
+  athleticsEmail: "Athletics email",
+  personalPhone: "personal phone",
+  workPhone: "work phone",
+  wiscard: "Wiscard",
+  studentYear: "student year",
+  anticipatedGraduation: "graduation details",
+  clothingSize: "clothing size",
+  shoeSize: "shoe size",
+  photo: "profile photo",
+};
+
+export const PROFILE_STEP_COPY: Record<ProfileCompletionStep, { title: string; description: string }> = {
+  EMAIL: {
+    title: "Confirm your email addresses",
+    description: "Your campus email is also your Wisconsin Creative login. Add your required Athletics address.",
+  },
+  PHONES: {
+    title: "Add your phone numbers",
+    description: "Identify any number already on your account, then add the other contact number.",
+  },
+  WISCARD: {
+    title: "Link your Wiscard",
+    description: "Type the card number and issue code printed for your card. This is used for kiosk identification.",
+  },
+  STUDENT: {
+    title: "Add your student details",
+    description: "Tell us your current year and when you expect to graduate.",
+  },
+  APPAREL: {
+    title: "Add your apparel sizes",
+    description: "Choose the sizing systems that make clothing and shoe orders unambiguous.",
+  },
+  PHOTO: {
+    title: "Add a profile photo",
+    description: "A clear photo helps teammates recognize you across the roster, schedule, and kiosk.",
+  },
+};
+
+export const PROFILE_STEP_SHORT_LABELS: Record<ProfileCompletionStep, string> = {
+  EMAIL: "Email",
+  PHONES: "Phone",
+  WISCARD: "Wiscard",
+  STUDENT: "Student",
+  APPAREL: "Apparel",
+  PHOTO: "Photo",
+};
+
 const INTERNAL_OPERATIONAL_FIELDS: ProfileCompletionField[] = [
   "campusEmail",
   "athleticsEmail",

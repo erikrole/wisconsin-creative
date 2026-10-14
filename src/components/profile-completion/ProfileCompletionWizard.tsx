@@ -34,7 +34,12 @@ import { UserAvatar } from "@/components/UserAvatar";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { OPEN_PROFILE_COMPLETION_EVENT } from "@/lib/profile-completion-events";
-import { visibleProfileSteps, type ProfileCompletionStep } from "@/lib/profile-completion";
+import {
+  PROFILE_STEP_COPY,
+  PROFILE_STEP_SHORT_LABELS,
+  visibleProfileSteps,
+  type ProfileCompletionStep,
+} from "@/lib/profile-completion";
 import { AvatarCropDialog } from "@/app/(app)/users/[id]/AvatarCropDialog";
 import { formatPhoneInput } from "@/lib/profile-phone";
 import { MENS_SHOE_SIZE_OPTIONS, TOP_SIZE_OPTIONS, WOMENS_SHOE_SIZE_OPTIONS } from "@/lib/profile-sizing";
@@ -50,33 +55,7 @@ import {
   type ProfileCompletionResponse,
   useProfileCompletion,
 } from "@/hooks/use-profile-completion";
-
-const STEP_COPY: Record<ProfileCompletionStep, { title: string; description: string }> = {
-  EMAIL: {
-    title: "Confirm your email addresses",
-    description: "Your campus email is also your Wisconsin Creative login. Add your required Athletics address.",
-  },
-  PHONES: {
-    title: "Add your phone numbers",
-    description: "Identify any number already on your account, then add the other contact number.",
-  },
-  WISCARD: {
-    title: "Link your Wiscard",
-    description: "Type the card number and issue code printed for your card. This is used for kiosk identification.",
-  },
-  STUDENT: {
-    title: "Add your student details",
-    description: "Tell us your current year and when you expect to graduate.",
-  },
-  APPAREL: {
-    title: "Add your apparel sizes",
-    description: "Choose the sizing systems that make clothing and shoe orders unambiguous.",
-  },
-  PHOTO: {
-    title: "Add a profile photo",
-    description: "A clear photo helps teammates recognize you across the roster, schedule, and kiosk.",
-  },
-};
+import { cn } from "@/lib/utils";
 
 type LegacyPhoneType = "PERSONAL" | "WORK" | "";
 type ApiEnvelope = { data?: ProfileCompletionResponse };
@@ -117,13 +96,20 @@ type ProfileCompletionWizardProps = {
   onComplete?: () => void;
   onSnooze?: () => void;
   autoOpen?: boolean;
+  /**
+   * `dialog` — returning-user modal in the app shell.
+   * `page` — first-session inline setup on `/welcome` (matches native Welcome).
+   */
+  presentation?: "dialog" | "page";
 };
 
 export function ProfileCompletionWizard({
   onComplete,
   onSnooze,
   autoOpen = true,
+  presentation = "dialog",
 }: ProfileCompletionWizardProps = {}) {
+  const isPage = presentation === "page";
   const queryClient = useQueryClient();
   const { data } = useProfileCompletion();
   const reduceMotion = Boolean(useReducedMotion());
@@ -191,11 +177,25 @@ export function ProfileCompletionWizard({
   }, [data]);
 
   useEffect(() => {
-    if (!autoOpen || !data?.completion.shouldPrompt || autoOpenedRef.current) return;
+    if (!data) return;
+    if (isPage) {
+      if (autoOpenedRef.current) return;
+      autoOpenedRef.current = true;
+      setStep(
+        data.completion.firstIncompleteStep
+          ?? (data.profile.role === "STUDENT" || data.profile.role === "COLLABORATOR" ? "PHONES" : "EMAIL"),
+      );
+      setOpen(true);
+      return;
+    }
+    if (!autoOpen || !data.completion.shouldPrompt || autoOpenedRef.current) return;
     autoOpenedRef.current = true;
-    setStep(data.completion.firstIncompleteStep ?? (data.profile.role === "STUDENT" || data.profile.role === "COLLABORATOR" ? "PHONES" : "EMAIL"));
+    setStep(
+      data.completion.firstIncompleteStep
+        ?? (data.profile.role === "STUDENT" || data.profile.role === "COLLABORATOR" ? "PHONES" : "EMAIL"),
+    );
     setOpen(true);
-  }, [autoOpen, data]);
+  }, [autoOpen, data, isPage]);
 
   useEffect(() => {
     const openWizard = () => {
@@ -222,7 +222,7 @@ export function ProfileCompletionWizard({
   const hasSimplePhoneStep = isStudent || isCollaborator;
   const copy = step === "PHONES" && hasSimplePhoneStep
     ? { title: "Add your phone number", description: "Add the personal phone number we should use to reach you." }
-    : STEP_COPY[step];
+    : PROFILE_STEP_COPY[step];
   const stepMotionContext = { direction: stepDirection, reduceMotion };
   const needsLegacyClassification = Boolean(
     !hasSimplePhoneStep && legacyPhone && !data?.profile.personalPhone && !data?.profile.workPhone,
@@ -438,47 +438,20 @@ export function ProfileCompletionWizard({
 
   if (!data) return null;
 
-  return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="grid max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-lg sm:max-w-2xl">
-        <DialogHeader className="flex-col items-start gap-3 pr-14">
-          <div className="flex w-full items-center justify-between gap-4">
-            <Badge variant="orange" size="sm">Step {stepIndex + 1} of {visibleSteps.length}</Badge>
-            <span className="text-xs text-muted-foreground">
-              {data.completion.completedCount} of {data.completion.totalCount} details complete
-            </span>
-          </div>
-          <Progress value={((stepIndex + 1) / visibleSteps.length) * 100} aria-label={`Step ${stepIndex + 1} of ${visibleSteps.length}`} />
-          <div className="grid w-full">
-            <AnimatePresence initial={false} custom={stepMotionContext}>
-              <motion.div
-                key={`heading-${step}`}
-                custom={stepMotionContext}
-                variants={STEP_TRANSITION_VARIANTS}
-                initial="initial"
-                animate="animate"
-                exit="exit"
-                className="col-start-1 row-start-1 flex flex-col gap-1"
-              >
-                <DialogTitle>{copy.title}</DialogTitle>
-                <DialogDescription>{copy.description}</DialogDescription>
-              </motion.div>
-            </AnimatePresence>
-          </div>
-        </DialogHeader>
+  // Page presentation always shows the active step; dialog waits for open.
+  if (!isPage && !open) {
+    return (
+      <AvatarCropDialog
+        file={photoFile}
+        profileName={data.profile.name}
+        onClose={() => setPhotoFile(null)}
+        onConfirm={uploadPhoto}
+      />
+    );
+  }
 
-        <DialogBody className="flex min-h-0 flex-col gap-5 py-5 sm:min-h-[300px]">
-          <div className="relative grid flex-1">
-            <AnimatePresence initial={false} custom={stepMotionContext}>
-              <motion.div
-                key={`body-${step}`}
-                custom={stepMotionContext}
-                variants={STEP_TRANSITION_VARIANTS}
-                initial="initial"
-                animate="animate"
-                exit="exit"
-                className="col-start-1 row-start-1"
-              >
+  const stepFields = (
+              <>
           {step === "EMAIL" && (
             <div className="flex flex-col gap-5">
               <div className="flex flex-col gap-2">
@@ -725,6 +698,220 @@ export function ProfileCompletionWizard({
               </div>
             </div>
           )}
+              </>
+  );
+
+  const actions = (
+    <>
+      <Button type="button" variant="ghost" onClick={snooze} disabled={saving} className="mr-auto h-10">
+        Remind me tomorrow
+      </Button>
+      {stepIndex > 0 && (
+        <Button
+          type="button"
+          variant="outline"
+          className="h-10"
+          onClick={() => goToStep(visibleSteps[stepIndex - 1]!, -1)}
+          disabled={saving}
+        >
+          <ArrowLeftIcon data-icon="inline-start" />
+          Back
+        </Button>
+      )}
+      {(step === "APPAREL" || step === "PHOTO") && !canContinue && (
+        <Button type="button" variant="outline" className="h-10" onClick={skipOptionalStep} disabled={saving}>
+          Skip for now
+        </Button>
+      )}
+      <Button
+        type="button"
+        className="h-10"
+        onClick={step === "PHOTO" ? finishPhotoStep : saveCurrentStep}
+        disabled={saving || !canContinue}
+      >
+        {saving ? <Spinner data-icon="inline-start" /> : isLastStep ? <CheckIcon data-icon="inline-start" /> : null}
+        {isLastStep ? "Finish" : "Continue"}
+        {!saving && !isLastStep && <ArrowRightIcon data-icon="inline-end" />}
+      </Button>
+    </>
+  );
+
+  const cropDialog = (
+    <AvatarCropDialog
+      file={photoFile}
+      profileName={data.profile.name}
+      onClose={() => setPhotoFile(null)}
+      onConfirm={uploadPhoto}
+    />
+  );
+
+  if (isPage) {
+    return (
+      <div className="grid gap-6 lg:grid-cols-[200px_minmax(0,1fr)]">
+        <nav aria-label="Setup steps" className="hidden lg:block">
+          <ol className="space-y-1">
+            {visibleSteps.map((visibleStep, index) => {
+              const current = visibleStep === step;
+              const completeByStep =
+                visibleStep === "EMAIL"
+                  ? data.completion.completeByField.campusEmail
+                    && data.completion.completeByField.athleticsEmail
+                  : visibleStep === "PHONES"
+                    ? data.completion.completeByField.personalPhone
+                      && (hasSimplePhoneStep || data.completion.completeByField.workPhone)
+                    : visibleStep === "WISCARD"
+                      ? data.completion.completeByField.wiscard
+                      : visibleStep === "STUDENT"
+                        ? data.completion.completeByField.studentYear
+                          && data.completion.completeByField.anticipatedGraduation
+                        : visibleStep === "APPAREL"
+                          ? data.completion.completeByField.clothingSize
+                            && data.completion.completeByField.shoeSize
+                          : data.completion.completeByField.photo;
+              return (
+                <li key={visibleStep}>
+                  <button
+                    type="button"
+                    onClick={() => goToStep(visibleStep, index > stepIndex ? 1 : -1)}
+                    disabled={saving}
+                    className={cn(
+                      "flex h-10 w-full items-center gap-2 rounded-md px-2.5 text-left text-sm transition-colors",
+                      current
+                        ? "bg-accent font-medium text-accent-foreground"
+                        : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground",
+                    )}
+                    aria-current={current ? "step" : undefined}
+                  >
+                    <span
+                      className={cn(
+                        "flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold tabular-nums",
+                        completeByStep
+                          ? "bg-[var(--green-bg)] text-[var(--green-text)]"
+                          : current
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted text-muted-foreground",
+                      )}
+                    >
+                      {completeByStep ? <CheckIcon className="size-3" aria-hidden="true" /> : index + 1}
+                    </span>
+                    {PROFILE_STEP_SHORT_LABELS[visibleStep]}
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+        </nav>
+
+        <section className="min-w-0 rounded-lg border bg-card shadow-xs">
+          <header className="space-y-3 border-b px-5 py-4 sm:px-6">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Badge variant="orange" size="sm">
+                Step {stepIndex + 1} of {visibleSteps.length}
+              </Badge>
+              <span className="text-xs text-muted-foreground tabular-nums">
+                {data.completion.completedCount} of {data.completion.totalCount} details complete
+              </span>
+            </div>
+            <Progress
+              value={((stepIndex + 1) / visibleSteps.length) * 100}
+              aria-label={`Step ${stepIndex + 1} of ${visibleSteps.length}`}
+            />
+            <div className="grid">
+              <AnimatePresence initial={false} custom={stepMotionContext}>
+                <motion.div
+                  key={`heading-${step}`}
+                  custom={stepMotionContext}
+                  variants={STEP_TRANSITION_VARIANTS}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                  className="col-start-1 row-start-1 flex flex-col gap-1"
+                >
+                  <h2 className="text-lg font-semibold tracking-tight">{copy.title}</h2>
+                  <p className="text-sm text-muted-foreground">{copy.description}</p>
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </header>
+
+          <div className="flex min-h-[280px] flex-col gap-5 px-5 py-5 sm:px-6">
+            <div className="relative grid flex-1">
+              <AnimatePresence initial={false} custom={stepMotionContext}>
+                <motion.div
+                  key={`body-${step}`}
+                  custom={stepMotionContext}
+                  variants={STEP_TRANSITION_VARIANTS}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                  className="col-start-1 row-start-1"
+                >
+                  {stepFields}
+                </motion.div>
+              </AnimatePresence>
+            </div>
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircleIcon />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+          </div>
+
+          <footer className="flex flex-wrap items-center gap-2 border-t px-5 py-4 sm:px-6">
+            {actions}
+          </footer>
+        </section>
+        {cropDialog}
+      </div>
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="grid max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-lg sm:max-w-2xl">
+        <DialogHeader className="flex-col items-start gap-3 pr-14">
+          <div className="flex w-full items-center justify-between gap-4">
+            <Badge variant="orange" size="sm">Step {stepIndex + 1} of {visibleSteps.length}</Badge>
+            <span className="text-xs text-muted-foreground">
+              {data.completion.completedCount} of {data.completion.totalCount} details complete
+            </span>
+          </div>
+          <Progress
+            value={((stepIndex + 1) / visibleSteps.length) * 100}
+            aria-label={`Step ${stepIndex + 1} of ${visibleSteps.length}`}
+          />
+          <div className="grid w-full">
+            <AnimatePresence initial={false} custom={stepMotionContext}>
+              <motion.div
+                key={`heading-${step}`}
+                custom={stepMotionContext}
+                variants={STEP_TRANSITION_VARIANTS}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                className="col-start-1 row-start-1 flex flex-col gap-1"
+              >
+                <DialogTitle>{copy.title}</DialogTitle>
+                <DialogDescription>{copy.description}</DialogDescription>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </DialogHeader>
+
+        <DialogBody className="flex min-h-0 flex-col gap-5 py-5 sm:min-h-[300px]">
+          <div className="relative grid flex-1">
+            <AnimatePresence initial={false} custom={stepMotionContext}>
+              <motion.div
+                key={`body-${step}`}
+                custom={stepMotionContext}
+                variants={STEP_TRANSITION_VARIANTS}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                className="col-start-1 row-start-1"
+              >
+                {stepFields}
               </motion.div>
             </AnimatePresence>
           </div>
@@ -738,31 +925,10 @@ export function ProfileCompletionWizard({
         </DialogBody>
 
         <DialogFooter className="border-t pt-4">
-          <Button type="button" variant="ghost" onClick={snooze} disabled={saving} className="mr-auto">
-            Remind me tomorrow
-          </Button>
-          {stepIndex > 0 && (
-            <Button type="button" variant="outline" onClick={() => goToStep(visibleSteps[stepIndex - 1]!, -1)} disabled={saving}>
-              <ArrowLeftIcon data-icon="inline-start" />
-              Back
-            </Button>
-          )}
-          {(step === "APPAREL" || step === "PHOTO") && !canContinue && (
-            <Button type="button" variant="outline" onClick={skipOptionalStep} disabled={saving}>Skip for now</Button>
-          )}
-          <Button type="button" onClick={step === "PHOTO" ? finishPhotoStep : saveCurrentStep} disabled={saving || !canContinue}>
-            {saving ? <Spinner data-icon="inline-start" /> : isLastStep ? <CheckIcon data-icon="inline-start" /> : null}
-            {isLastStep ? "Finish" : "Continue"}
-            {!saving && !isLastStep && <ArrowRightIcon data-icon="inline-end" />}
-          </Button>
+          {actions}
         </DialogFooter>
       </DialogContent>
-      <AvatarCropDialog
-        file={photoFile}
-        profileName={data.profile.name}
-        onClose={() => setPhotoFile(null)}
-        onConfirm={uploadPhoto}
-      />
+      {cropDialog}
     </Dialog>
   );
 }

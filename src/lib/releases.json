@@ -27,6 +27,22 @@
   },
   {
     "date": "2026-10-12",
+    "title": "Clearer first-day setup",
+    "type": "improvement",
+    "summary": "New accounts set up their profile on the Welcome page itself, and Blasts recover cleanly when a load fails.",
+    "details": [
+      "After you create your account, Welcome walks through contact, Wiscard, and other details on the page instead of opening a separate dialog over a status card.",
+      "On a wider screen, a step list shows what is done and what is next. You can still continue later from Home.",
+      "Invited sign-in copy explains that a short welcome setup follows password creation.",
+      "If blasts or welcome setup cannot load, you get a clear retry instead of an empty or stuck screen."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 453
+  },
+  {
+    "date": "2026-10-12",
     "title": "Blasts load recovery",
     "type": "improvement",
     "summary": "Blast history and welcome setup recover cleanly when the network fails, and blast detail is easier to scan.",

@@ -5,23 +5,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useProfileCompletion } from "@/hooks/use-profile-completion";
 import { openProfileCompletion } from "@/lib/profile-completion-events";
-import type { ProfileCompletionField } from "@/lib/profile-completion";
-
-const FIELD_LABELS: Record<ProfileCompletionField, string> = {
-  campusEmail: "campus email",
-  athleticsEmail: "Athletics email",
-  personalPhone: "personal phone",
-  workPhone: "work phone",
-  wiscard: "Wiscard",
-  studentYear: "student year",
-  anticipatedGraduation: "graduation details",
-  clothingSize: "clothing size",
-  shoeSize: "shoe size",
-  photo: "profile photo",
-};
+import { PROFILE_FIELD_SHORT_LABELS, type ProfileCompletionField } from "@/lib/profile-completion";
 
 function formatMissingFields(fields: ProfileCompletionField[]) {
-  const labels = fields.map((field) => FIELD_LABELS[field]);
+  const labels = fields.map((field) => PROFILE_FIELD_SHORT_LABELS[field]);
   if (labels.length <= 2) return labels.join(" and ");
   return `${labels.slice(0, -1).join(", ")}, and ${labels.at(-1)}`;
 }
@@ -36,11 +23,12 @@ export function ProfileCompletionBanner() {
 
   const missingCount = missingFields.length;
   const missingLabel = missingCount === 1 ? "1 detail left" : `${missingCount} details left`;
-  const description = data.profile.role === "COLLABORATOR"
-    ? "Add a profile photo so teammates can recognize you across the roster."
-    : data.completion.operationalReady
-      ? "Your working details are ready. Add the remaining profile details when you have a minute."
-      : "Add the remaining contact and identification details so the team can reach you and keep handoffs moving.";
+  const description =
+    data.profile.role === "COLLABORATOR"
+      ? "Add a profile photo so teammates can recognize you across the roster."
+      : data.completion.operationalReady
+        ? "Your working details are ready. Add the remaining profile details when you have a minute."
+        : "Add the remaining contact and identification details so the team can reach you and keep handoffs moving.";
 
   return (
     <section
@@ -74,10 +62,11 @@ export function ProfileCompletionBanner() {
             className="text-[13px] font-semibold text-foreground"
             style={{ fontFamily: "var(--font-heading)", fontWeight: 600 }}
           >
-            Complete your profile
+            Finish your setup
           </h2>
           <p className="mt-0.5 text-[12px] leading-5 text-muted-foreground">
-            {description} <span className="text-muted-foreground/75">Missing: {formatMissingFields(missingFields)}.</span>
+            {description}{" "}
+            <span className="text-muted-foreground/75">Missing: {formatMissingFields(missingFields)}.</span>
           </p>
         </div>
 
