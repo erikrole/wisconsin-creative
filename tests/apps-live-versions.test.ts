@@ -70,6 +70,8 @@ describe("apps live versions", () => {
     expect(html).toContain("Version 8.8 · Nov 1, 2026 · Requires iOS 27.0 or later");
     expect(html).toContain("Version 1.2.0 · Oct 13, 2026 · Requires macOS 15.0 or later");
     expect(renderAppsPage("n")).toContain("Version 1.2 · Sep 14, 2026 · Requires iOS 26.0 or later");
-    expect(renderAppsPage("n", { fetch: { version: "2.0.0" } })).toContain("Version 2.0.0 · Requires macOS 27 or later");
+    const fetchLive = renderAppsPage("n", { fetch: { version: "2.0.0" } });
+    expect(fetchLive).toContain("Version 2.0.0");
+    expect(fetchLive).not.toContain("Requires macOS 27 or later");
   });
 });
