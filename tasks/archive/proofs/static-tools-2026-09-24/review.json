@@ -1,0 +1,176 @@
+{
+  "title": "Golden Hour, Timelapse and the Tools hub",
+  "eyebrow": "Web · public tools · wisconsincreative.com/tools",
+  "lede": "Two local tools audited end to end and ported into the site as <code>/golden-hour</code> and <code>/timelapse</code>, plus a <code>/tools</code> hub. Golden Hour answers \"when is the light good at this venue, in its local time\"; Timelapse answers \"what do I dial in, and how long do I roll\" for the team's actual bodies.",
+  "stats": [
+    {
+      "k": "venues with real time zones (4 UW + 17 Big Ten)",
+      "v": "21"
+    },
+    {
+      "k": "camera bodies, 3 methods, limits from Sony Help Guides",
+      "v": "5"
+    },
+    {
+      "k": "new tests: routing, headers, CSP, hashes, maths",
+      "v": "27"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Golden Hour",
+      "note": "Same fixed clock (Sep 24, 6:35 PM CDT, inside evening golden hour), same viewport, empty storage, location not granted. Top-of-page viewport captures; full pages are further down.",
+      "pairs": [
+        {
+          "title": "Phone, during evening golden hour",
+          "sub": "390 × 844, light",
+          "before": "before/gh-evening-mobile.png",
+          "beforeEvidence": "before/gh-evening-mobile.capture.json",
+          "beforeCap": "No location shown up top; date is a raw 09/24/2026 field; golden hour ends at sunset (6:53).",
+          "after": "after/gh-evening-mobile.png",
+          "afterEvidence": "after/gh-evening-mobile.capture.json",
+          "afterCap": "Venue picker first, readable date, photographer convention: golden runs to 7:11 (−4°), 36m left."
+        },
+        {
+          "title": "Desktop",
+          "sub": "1280 × 900, light",
+          "before": "before/gh-evening-desktop.png",
+          "beforeEvidence": "before/gh-evening-desktop.capture.json",
+          "beforeCap": "Theme switch takes the header; no way back to other tools.",
+          "after": "after/gh-evening-desktop.png",
+          "afterEvidence": "after/gh-evening-desktop.capture.json",
+          "afterCap": "Shared tools chrome with a link to the hub; blue hour sits inside each window's card."
+        },
+        {
+          "title": "Changing location",
+          "sub": "Before: tap Change. After: pick UCLA.",
+          "before": "before/gh-location-mobile.png",
+          "beforeEvidence": "before/gh-location-mobile.capture.json",
+          "beforeCap": "Raw latitude/longitude boxes, and times always on the device clock, so a road venue reads wrong.",
+          "after": "after/gh-location-mobile.png",
+          "afterEvidence": "after/gh-location-mobile.capture.json",
+          "afterCap": "Pick a venue; times switch to PDT and say so. The interaction differs by design."
+        }
+      ]
+    },
+    {
+      "heading": "Timelapse",
+      "note": "Same clock and viewport, empty storage. The stills scenario is the old “α · interval shooting” vs the new A7 V → Interval, both in clip-length mode with a 20 s clip and a 30 min window.",
+      "pairs": [
+        {
+          "title": "Phone, first open",
+          "sub": "390 × 844, light",
+          "before": "before/tl-default-mobile.png",
+          "beforeEvidence": "before/tl-default-mobile.capture.json",
+          "beforeCap": "Two hard-coded rigs; default plan made a 4-minute clip.",
+          "after": "after/tl-default-mobile.png",
+          "afterEvidence": "after/tl-default-mobile.capture.json",
+          "afterCap": "Camera picker plus the methods that body really has; default is a usable 20 s clip."
+        },
+        {
+          "title": "Desktop, first open",
+          "sub": "1280 × 900, light",
+          "before": "before/tl-default-desktop.png",
+          "beforeEvidence": "before/tl-default-desktop.capture.json",
+          "beforeCap": "",
+          "after": "after/tl-default-desktop.png",
+          "afterEvidence": "after/tl-default-desktop.capture.json",
+          "afterCap": "Roll time now takes seconds, which short S&Q rolls need."
+        },
+        {
+          "title": "Stills, find the setting",
+          "sub": "20 s clip from a 30 min window",
+          "before": "before/tl-clip-stills-mobile.png",
+          "beforeEvidence": "before/tl-clip-stills-mobile.capture.json",
+          "beforeCap": "Worked here by luck (3 s); other windows produced fractional intervals the camera can't set.",
+          "after": "after/tl-clip-stills-mobile.png",
+          "afterEvidence": "after/tl-clip-stills-mobile.capture.json",
+          "afterCap": "Snaps to whole seconds and states the exact roll; body-specific file size (A7 V compressed RAW ≈ 35 MB)."
+        }
+      ]
+    },
+    {
+      "heading": "New surfaces and full pages (after only)",
+      "note": "No baseline exists for the hub, dark mode checks, or the Time-lapse method; these are after-only.",
+      "shots": [
+        {
+          "title": "Tools hub, desktop",
+          "image": "full/hub-desktop.png",
+          "cap": "<code>/tools</code>: static, no script, links all three tools.",
+          "wide": true
+        },
+        {
+          "title": "Tools hub, phone",
+          "image": "full/hub-mobile.png",
+          "cap": ""
+        },
+        {
+          "title": "Golden Hour, dark, full page",
+          "image": "full/gh-evening-mobile-dark.png",
+          "cap": "NOW tag sits on the card border so it can't collide with the title."
+        },
+        {
+          "title": "A9 III Time-lapse in 4K, 2 h window",
+          "image": "full/tl-tl4k-mobile-dark.png",
+          "cap": "Needs 12 s; 4K stops at 5 s, so the plan is refused and 6 s+ rows read “HD only”."
+        },
+        {
+          "title": "Timelapse stills plan, full page",
+          "image": "full/tl-clip-stills-mobile.png",
+          "cap": "Every setting with its roll time; no clipped columns on a phone."
+        },
+        {
+          "title": "Before: stills plan, full page",
+          "image": "full/before-tl-clip-stills-mobile.png",
+          "cap": "“ON THE Α” (uppercase Greek alpha) and the table cut off at the right edge."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Road shoots showed home-clock times",
+      "was": "Golden Hour used only the device clock. Planning a UCLA or Rutgers shoot from Madison gave times 1–2 hours off, with only a warning.",
+      "now": "21 venues carry IANA time zones; times, 'today', midnight bounds and DST are computed in the venue's zone. GPS and typed coordinates still use the device clock."
+    },
+    {
+      "h": "Geolocation was blocked on the site",
+      "was": "The site-wide <code>Permissions-Policy: geolocation=()</code> would have silently broken “Use my location”.",
+      "now": "<code>/golden-hour/*</code> alone gets <code>geolocation=(self)</code>; every other route is unchanged. Verified on a local Next server."
+    },
+    {
+      "h": "Golden hour ended at sunset",
+      "was": "Golden = −0.833° to 6°, blue = all of civil twilight.",
+      "now": "Photographer convention: golden +6° to −4°, blue −4° to −6°, sunrise/sunset shown for reference."
+    },
+    {
+      "h": "Stale page after midnight; null in copied text",
+      "was": "A page left open past midnight stopped updating; copying on a day without a 6° crossing printed <code>null</code>.",
+      "now": "Follows today while you're on today; copy text handles every case and names the zone."
+    },
+    {
+      "h": "Timelapse modelled two imaginary rigs",
+      "was": "“FX3 video vs α stills”, with 24/33/61 MP sizes, flat bitrates and no in-camera Time-lapse.",
+      "now": "FX3, A1, A1 II, A7 V, A9 III. S&Q on all, interval stills on all (FX3 included), Time-lapse movie on A7 V/A1 II/A9 III with the 5 s 4K cap. Bitrates per record frame rate and file sizes per body, from Sony's guides."
+    },
+    {
+      "h": "“Find the setting” produced settings you can't dial in",
+      "was": "Fractional stills intervals and off-list S&Q rates, with shot counts that didn't match the menu card.",
+      "now": "Snaps to real settings and gives the exact roll that yields the requested clip, plus what your full window would give."
+    }
+  ],
+  "verification": [
+    "<b>PASS</b> · <code>npx vitest run tests/static-tools.test.ts tests/qrcode-static-tool.test.ts</code>: 31 passed.",
+    "<b>PASS</b> · <code>npx tsc --noEmit</code> clean; eslint: no errors (unused <code>catch (e)</code> warnings match QR Studio).",
+    "<b>PASS</b> · <code>npm run verify:docs</code> (codemaps current) and <code>git diff --check</code>.",
+    "<b>PASS</b> · <code>npm run build:app</code> exit 0.",
+    "<b>PASS</b> · Local <code>next dev</code>: /tools, /golden-hour, /timelapse, /qrcode 307 to their files with query strings kept; geolocation=(self) only on /golden-hour; GPS fix, shared link, copy times/link and hub navigation driven in Playwright.",
+    "<b>NOTE</b> · Console shows pre-existing site-wide Permissions-Policy warnings (<code>web-share</code>, <code>tools</code>), unrelated to this change.",
+    "<b>OPEN</b> · Deploy proof not yet run; no real-device check of the iOS Safari date picker or geolocation prompt."
+  ],
+  "notes": [
+    "Sony doesn't publish RAW/JPEG sizes; card figures are derived from each body's recordable-images table and labelled approximate.",
+    "Time-lapse recording limits (≈120 min; A9 III 4K ≈60 min) are Sony's approximate figures, surfaced as a warning only.",
+    "QR Studio has no link back to /tools yet; its page is generated from the Work Projects source, so that change belongs there."
+  ]
+}

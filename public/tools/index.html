@@ -1,0 +1,173 @@
+<!doctype html>
+<!-- Wisconsin Creative Tools hub. Canonical source: edit here. Add a card when a tool ships under public/. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; font-src 'self'; img-src data:; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#f3f1ec">
+  <title>Wisconsin Creative Tools</title>
+  <meta name="description" content="Small, free tools from Wisconsin Creative for planning and making the shot.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3.5' fill='%23c5050c'/%3E%3Cpath fill='%23fff' d='M3 3h4v4H3zM9 3h4v4H9zM3 9h4v4H3zM9 9h4v4H9z'/%3E%3C/svg%3E">
+  <style>
+    @font-face { font-family: "Gotham"; src: url("/Gotham-Black.woff2") format("woff2"); font-weight: 800; font-display: swap; }
+    @font-face { font-family: "Gotham"; src: url("/Gotham-Bold.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+    @font-face { font-family: "Gotham"; src: url("/Gotham-Book.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+
+    /* The hub is plain paper so each tool's own look can show on its card. */
+    :root {
+      --paper: #f3f1ec; --ink: #15151a; --ink-2: #4a4a52; --ink-3: #7a7973; --line: #dcd9d1;
+      --red: #c5050c; --focus: #c5050c; --ease: cubic-bezier(0.2, 0, 0, 1);
+      --font: "Gotham", system-ui, -apple-system, "Segoe UI", sans-serif;
+      --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 300px; background: var(--paper); color: var(--ink); font-family: var(--font); font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    :focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; border-radius: 18px; }
+
+    .topbar { display: flex; align-items: center; gap: 10px; padding: max(18px, env(safe-area-inset-top)) clamp(16px, 4vw, 40px) 0; }
+    .mark { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 8px; background: var(--red); }
+    .mark svg { width: 15px; height: 15px; }
+    .topbar span { font-size: 12px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; }
+
+    main { width: min(1080px, calc(100% - 32px)); margin: 0 auto; padding: clamp(36px, 8vw, 88px) 0 64px; }
+    h1 { margin: 0; font-size: clamp(56px, 14vw, 132px); font-weight: 800; letter-spacing: -0.04em; line-height: 0.85; text-transform: uppercase; }
+    h1 em { font-style: normal; color: var(--red); }
+    .lede { margin: 22px 0 clamp(32px, 6vw, 56px); max-width: 520px; font-size: 17px; color: var(--ink-2); }
+
+    .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; list-style: none; margin: 0; padding: 0; }
+    @media (max-width: 700px) { .grid { grid-template-columns: 1fr; } }
+    .tool {
+      position: relative; display: flex; flex-direction: column; height: 100%; min-height: 360px; overflow: hidden;
+      border-radius: 22px; color: inherit; text-decoration: none;
+      box-shadow: 0 1px 2px rgba(20, 20, 25, 0.08), 0 18px 40px -24px rgba(20, 20, 25, 0.45);
+      transition: transform 260ms var(--ease), box-shadow 260ms var(--ease);
+    }
+    .tool:hover { transform: translateY(-4px); box-shadow: 0 1px 2px rgba(20, 20, 25, 0.08), 0 30px 60px -26px rgba(20, 20, 25, 0.55); }
+    .art { position: relative; flex: none; height: 210px; }
+    .copy { flex: 1; }
+    .copy { position: relative; padding: 20px 22px 22px; }
+    .copy h2 { margin: 0 0 6px; font-size: 22px; font-weight: 800; letter-spacing: -0.01em; text-transform: uppercase; }
+    .copy p { margin: 0; font-size: 14px; line-height: 1.5; }
+    .go { display: inline-flex; align-items: center; gap: 8px; margin-top: 16px; font-size: 12px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; }
+    .go i { display: inline-block; transition: transform 260ms var(--ease); font-style: normal; }
+    .tool:hover .go i { transform: translateX(4px); }
+
+    /* Golden Hour: its evening sky and the sun's arc */
+    .gh { background: linear-gradient(180deg, #232552 0%, #4b3f78 30%, #9c5277 58%, #de7560 80%, #f4a24c 100%); color: #fff7ee; }
+    .gh .copy p { color: rgba(255, 247, 238, 0.82); }
+    .gh .art svg { position: absolute; inset: 16px 16px 0; width: calc(100% - 32px); height: calc(100% - 16px); }
+
+    /* Timelapse: the viewfinder */
+    .tl { background: #0c0d0f; color: #f2f2ef; }
+    .tl .copy p { color: #b9b9b3; }
+    .tl .art { height: 194px; margin: 16px 16px 0; border-radius: 14px; background: radial-gradient(80% 70% at 50% 45%, rgba(255,255,255,.06), transparent 70%), #050506; border: 1px solid #26272d; display: grid; place-items: center; }
+    .tl .corner { position: absolute; width: 18px; height: 18px; border: 0 solid rgba(255,255,255,.75); }
+    .tl .c1 { top: 10px; left: 10px; border-top-width: 2px; border-left-width: 2px; }
+    .tl .c2 { top: 10px; right: 10px; border-top-width: 2px; border-right-width: 2px; }
+    .tl .c3 { bottom: 10px; left: 10px; border-bottom-width: 2px; border-left-width: 2px; }
+    .tl .c4 { bottom: 10px; right: 10px; border-bottom-width: 2px; border-right-width: 2px; }
+    .tl .rec { position: absolute; top: 12px; left: 36px; display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 11px; color: #b9b9b3; }
+    .tl .rec i { width: 7px; height: 7px; border-radius: 50%; background: #ff3b3b; box-shadow: 0 0 8px rgba(255,59,59,.8); }
+    .tl .readout { text-align: center; }
+    .tl .readout small { display: block; font-size: 10px; font-weight: 700; letter-spacing: 0.22em; color: #ffb224; }
+    .tl .readout b { font-size: 64px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
+
+    /* Board Sizes: blueprint */
+    .bs { background: #0b2a52; color: #eef5ff;
+      background-image: linear-gradient(rgba(150,195,255,.12) 1px, transparent 1px), linear-gradient(90deg, rgba(150,195,255,.12) 1px, transparent 1px);
+      background-size: 22px 22px; }
+    .bs .copy p { color: #b7cdec; }
+    .bs .art { display: grid; place-items: center; }
+    .bs .art svg { width: 78%; height: auto; }
+
+    /* QR Studio: its red and a code */
+    .qr { background: #a00000; color: #fff; }
+    .qr .copy p { color: rgba(255, 255, 255, 0.84); }
+    .qr .art { display: grid; place-items: center; }
+    .qr .code { width: 132px; height: 132px; padding: 12px; border-radius: 16px; background: #fff; box-shadow: 0 16px 34px -14px rgba(0,0,0,.6); transform: rotate(-4deg); transition: transform 260ms var(--ease); }
+    .tool.qr:hover .code { transform: rotate(0); }
+    .qr .code svg { width: 100%; height: 100%; display: block; }
+
+    .foot { margin-top: 40px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--ink-3); border-top: 1px solid var(--line); padding-top: 16px; }
+    @media (prefers-reduced-motion: reduce) { .tool, .go i, .qr .code { transition: none; } .tool:hover { transform: none; } }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <span class="mark" aria-hidden="true"><svg viewBox="0 0 16 16"><path fill="#fff" d="M1 1h6v6H1zM9 1h6v6H9zM1 9h6v6H1zM9 9h6v6H9z"/></svg></span>
+    <span>Wisconsin Creative</span>
+  </header>
+  <main>
+    <h1>Tools<em>.</em></h1>
+    <p class="lede">Small utilities for planning and making the shot. They run in your browser, need no sign-in, and send nothing anywhere.</p>
+    <ul class="grid">
+      <li>
+        <a class="tool gh" href="/golden-hour">
+          <div class="art" aria-hidden="true">
+            <svg viewBox="0 0 300 170" preserveAspectRatio="none">
+              <rect x="0" y="104" width="300" height="16" fill="#ffc861" opacity=".28"/>
+              <path d="M0 160 C 60 150, 90 20, 150 20 S 240 150, 300 160" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="2"/>
+              <path d="M58 120 L72 100" stroke="#ffc861" stroke-width="5" stroke-linecap="round"/>
+              <path d="M228 100 L242 120" stroke="#ffc861" stroke-width="5" stroke-linecap="round"/>
+              <line x1="0" x2="300" y1="112" y2="112" stroke="rgba(255,255,255,.55)" stroke-dasharray="2 5"/>
+            </svg>
+          </div>
+          <div class="copy">
+            <h2>Golden Hour</h2>
+            <p>When the light is good today at Camp Randall or any Big Ten road venue, in local time.</p>
+            <span class="go">Open <i>→</i></span>
+          </div>
+        </a>
+      </li>
+      <li>
+        <a class="tool tl" href="/timelapse">
+          <div class="art" aria-hidden="true">
+            <span class="corner c1"></span><span class="corner c2"></span><span class="corner c3"></span><span class="corner c4"></span>
+            <span class="rec"><i></i>S&amp;Q · 1 fps</span>
+            <div class="readout"><small>Clip length</small><b>20s</b></div>
+          </div>
+          <div class="copy">
+            <h2>Timelapse</h2>
+            <p>Frame rate or interval, roll time and clip length for the FX3, A1, A1 II, A7 V and A9 III.</p>
+            <span class="go">Open <i>→</i></span>
+          </div>
+        </a>
+      </li>
+      <li>
+        <a class="tool bs" href="/board-sizes">
+          <div class="art" aria-hidden="true">
+            <svg viewBox="0 0 240 120" fill="none">
+              <rect x="10" y="22" width="220" height="55" stroke="#eef5ff" stroke-width="1.5"/>
+              <rect x="10" y="22" width="118" height="55" stroke="#7fc3ff" stroke-dasharray="4 3" fill="rgba(127,195,255,.12)"/>
+              <rect x="10" y="90" width="220" height="6" stroke="#eef5ff" stroke-width="1.2"/>
+              <path d="M10 10h220M10 6v8M230 6v8" stroke="#ff7a6b"/>
+              <text x="120" y="8" fill="#b7cdec" font-size="8" font-family="ui-monospace, Menlo, monospace" text-anchor="middle">5760 px</text>
+            </svg>
+          </div>
+          <div class="copy">
+            <h2>Board Sizes</h2>
+            <p>Every board, ribbon, table and IPTV canvas at five venues, with zones, delivery specs and guide PNGs.</p>
+            <span class="go">Open <i>→</i></span>
+          </div>
+        </a>
+      </li>
+      <li>
+        <a class="tool qr" href="/qrcode">
+          <div class="art" aria-hidden="true">
+            <div class="code"><svg viewBox="0 0 21 21" shape-rendering="crispEdges"><path fill="#15151a" d="M0 0h7v7H0zM1 1v5h5V1zM2 2h3v3H2zM14 0h7v7h-7zM15 1v5h5V1zM16 2h3v3h-3zM0 14h7v7H0zM1 15v5h5v-5zM2 16h3v3H2zM8 0h1v2H8zM10 1h2v1h-2zM9 3h3v1H9zM8 5h2v2H8zM11 6h2v2h-2zM8 8h3v1H8zM0 8h2v1H0zM3 9h3v1H3zM13 8h2v2h-2zM16 8h3v1h-3zM19 10h2v2h-2zM8 10h1v3H8zM10 11h3v1h-3zM14 11h3v2h-3zM1 11h2v2H1zM4 12h2v1H4zM9 14h2v2H9zM12 13h2v2h-2zM15 14h2v1h-2zM18 14h3v2h-3zM8 17h3v1H8zM12 16h1v3h-1zM14 17h3v2h-3zM18 17h1v1h-1zM9 19h2v2H9zM19 19h2v2h-2zM15 20h2v1h-2z"/></svg></div>
+          </div>
+          <div class="copy">
+            <h2>QR Studio</h2>
+            <p>Branded QR codes for links, Wi-Fi, contacts and more, checked to scan before you export.</p>
+            <span class="go">Open <i>→</i></span>
+          </div>
+        </a>
+      </li>
+    </ul>
+    <p class="foot"><span>Wisconsin Creative · Wisconsin Athletics</span><span>Free to use. Nothing leaves your browser.</span></p>
+  </main>
+</body>
+</html>

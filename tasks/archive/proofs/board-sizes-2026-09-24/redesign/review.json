@@ -1,0 +1,95 @@
+{
+  "title": "Board Sizes: content types and a calmer UI",
+  "eyebrow": "Web · /board-sizes",
+  "lede": "Pick a piece of content and see every board it needs; share a link with no way back to the site; export sizes, CSV or an After Effects script. Restyled from blueprint to a quiet, document-like app.",
+  "stats": [
+    {
+      "k": "content types: 4 broad (draft) + 27 game-day from Colosseum",
+      "v": "31"
+    },
+    {
+      "k": "distinct canvases for a Touchdown (54 placements)",
+      "v": "28"
+    },
+    {
+      "k": "tests passing (with QR Studio: 40)",
+      "v": "36"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Screens (after only)",
+      "note": "Static page at 1440 × 900 and 390 × 844; light unless noted.",
+      "shots": [
+        {
+          "title": "Content type: Score: Touchdown",
+          "image": "content-touchdown.png",
+          "cap": "Every canvas by venue, identical ones merged (×4), specs per row, actions up top.",
+          "wide": true
+        },
+        {
+          "title": "Shared link (sponsor ad windows)",
+          "image": "share-sponsor-ad.png",
+          "cap": "share=1: no “All tools” link; stills-only rows show the stills spec."
+        },
+        {
+          "title": "Venue, dark",
+          "image": "venue-dark.png",
+          "cap": "Same drawings and data, calmer chrome."
+        },
+        {
+          "title": "Venue, light",
+          "image": "venue-light.png",
+          "cap": ""
+        },
+        {
+          "title": "Jump from a content row to its board",
+          "image": "jump-to-display.png",
+          "cap": "The row’s arrow opens the venue and scrolls to that display."
+        },
+        {
+          "title": "Phone: browse drawer",
+          "image": "phone-browse.png",
+          "cap": ""
+        },
+        {
+          "title": "Phone: content type",
+          "image": "phone-content.png",
+          "cap": ""
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "No way to see what a piece of content needs",
+      "was": "You had to know which boards to build for.",
+      "now": "Content types in the sidebar: our four broad types (marked draft) and Colosseum’s 27 game-day pieces, grouped Scoring, Noise, Plays, Living holds, Moments."
+    },
+    {
+      "h": "Sharing sent people into the site",
+      "was": "A link included the Tools navigation.",
+      "now": "“Share link” copies a URL with share=1; that view has no link back to the site."
+    },
+    {
+      "h": "Setting up AE by hand",
+      "was": "Type each comp size.",
+      "now": "“AE comps” downloads a .jsx that creates one named comp per distinct canvas at the right size, frame rate and duration."
+    },
+    {
+      "h": "Blueprint styling",
+      "was": "Heavy blue grid, outlined display type.",
+      "now": "System type, hairlines, light/dark, sidebar navigation; drawings kept."
+    }
+  ],
+  "verification": [
+    "<b>PASS</b> · <code>npx vitest run tests/static-tools.test.ts tests/qrcode-static-tool.test.ts</code>: 40 passed, including every content type resolving to real boards and share mode hiding the site link.",
+    "<b>PASS</b> · <code>npx tsc --noEmit</code>, <code>npm run verify:docs</code>, <code>git diff --check</code>; no console errors in any capture.",
+    "<b>PASS</b> · AE script generated for Touchdown: 28 addComp specs (sample-ae-comps.jsx in this folder). Not yet run inside After Effects.",
+    "<b>OPEN</b> · AE template button waits on the Box/Drive link. Not deployed; no real-iPhone check."
+  ],
+  "notes": [
+    "The four broad content types are my draft; correct them in public/board-sizes/data.js (tests will catch a board that doesn't exist).",
+    "Colosseum’s broadcast-package rows (lower thirds, score bug, etc.) and mockups aren’t board content and are left out."
+  ]
+}

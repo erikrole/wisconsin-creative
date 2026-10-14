@@ -47,10 +47,10 @@ const baseConfig: NextConfig = {
     ],
   },
   async headers() {
-    const permissionsPolicy = [
+    const permissionsPolicyFor = (geolocation: string) => [
       "camera=(self)",
       "microphone=()",
-      "geolocation=()",
+      `geolocation=${geolocation}`,
       "payment=()",
       "usb=()",
       "serial=()",
@@ -68,6 +68,7 @@ const baseConfig: NextConfig = {
       "web-share=(self)",
       "tools=(self)",
     ].join(", ");
+    const permissionsPolicy = permissionsPolicyFor("()");
 
     return [
       {
@@ -89,6 +90,12 @@ const baseConfig: NextConfig = {
         source: "/(login|register|forgot-password|reset-password)",
         headers: [{ key: "Cache-Control", value: "no-store" }],
       },
+      // Golden Hour's "Use my location" is the one place the site asks for
+      // geolocation. Later matches override earlier ones for the same key.
+      {
+        source: "/golden-hour/:path*",
+        headers: [{ key: "Permissions-Policy", value: permissionsPolicyFor("(self)") }],
+      },
     ];
   },
   async redirects() {
@@ -100,6 +107,11 @@ const baseConfig: NextConfig = {
       // dotted paths; the page carries its own stricter CSP.
       { source: "/qrcode", destination: "/qrcode/index.html", permanent: false },
       { source: "/apps", destination: "/apps/index.html", permanent: false },
+      // Same pattern for the other static tools and their hub.
+      { source: "/tools", destination: "/tools/index.html", permanent: false },
+      { source: "/golden-hour", destination: "/golden-hour/index.html", permanent: false },
+      { source: "/timelapse", destination: "/timelapse/index.html", permanent: false },
+      { source: "/board-sizes", destination: "/board-sizes/index.html", permanent: false },
     ];
   },
 };
