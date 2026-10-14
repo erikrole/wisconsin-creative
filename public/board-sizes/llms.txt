@@ -12,11 +12,14 @@ Use this whenever you create or check anything that will play on a Wisconsin ven
 4. Check `issues` before final delivery. `conflict` = sources disagree, `tbd` = value not final, `unconfirmed` = only one source, `naming` = zone names may change. Surface them to the user; never resolve one silently.
 5. Respect delivery specs: `fps`, `stillOnly`, `duration`, `pad` (keep content that many px inside every edge), `audio`. When `fps` is null, ask or use 59.94.
 6. FG/BG zones are two processor layers of one window. Build one asset unless the content needs both.
-7. To change a size, edit `public/board-sizes/boards.json` in the Wisconsin Creative repo and run `node scripts/build-board-sizes.mjs`. Never edit the generated files.
+7. To change a size, edit `public/board-sizes/boards.json` in the Wisconsin Creative repo and run `node scripts/build-board-sizes.mjs`. Never edit the generated files. `node scripts/build-board-sizes.mjs --check` fails when a generated file has drifted.
+8. `pad` is a zone inset in px. `safeInset` is a title-safe inset copied from the canvas that targets that board, or null when none is recorded. Crop, scrim, and seam overlays stay on the display in boards.json. Do not invent a safe area when those are absent.
 
 ## Files
 
-- [index.json](https://wisconsincreative.com/board-sizes/index.json): start here. One flat record per display and zone (223), with id, size, aspect, positions, fps, delivery, canvas keys, issues and a deep link. Also canvases and content types resolved to ids.
+- [index.json](https://wisconsincreative.com/board-sizes/index.json): start here. One flat record per display and zone (223), with id, size, aspect, positions, fps, delivery, pad, safeInset (or null), canvas keys, issues and a deep link. Also canvases and content types resolved to ids.
+
+The page's Copy spec button copies size, aspect ratio, and the safe area that is actually recorded (zone pad, canvas safeInset, crop and scrim overlays). When none is recorded it says `safe area: none recorded`. Guide SVG and Guide PNG download at that board's exact pixel size; they are layout aids, not new measurements.
 - [boards.json](https://wisconsincreative.com/board-sizes/boards.json): the hand-edited source (schema `wisconsin-board-sizes/1`). Pin this exact file for production tools; the After Effects Board Builder does.
 - [boards.schema.json](https://wisconsincreative.com/board-sizes/boards.schema.json): JSON Schema for boards.json.
 - [boards.csv](https://wisconsincreative.com/board-sizes/boards.csv): index.json as a spreadsheet.
@@ -227,7 +230,7 @@ id `camp-randall/captioning` · 25:3 · keys `CLOSED_CAPTION`
 
 ### IPTV Full Screen Ad: 1920x1080
 
-id `camp-randall/iptv-full-screen-ad` · 16:9 · 59.94 fps · MP4 · Exactly 15 s · keys `IPTV_FULL_SCREEN`
+id `camp-randall/iptv-full-screen-ad` · 16:9 · 59.94 fps · MP4 · Exactly 15 s · 100 px title safe · keys `IPTV_FULL_SCREEN`
 
 | zone id | size | at (x,y) | fps | keys |
 |---|---|---|---|---|

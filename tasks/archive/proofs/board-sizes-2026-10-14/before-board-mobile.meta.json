@@ -1,0 +1,23 @@
+{
+  "sourceRevision": "55124f219bdfcd53bb54e270759eefd8c01d6733",
+  "sourcePatchSha256": null,
+  "settings": {
+    "device": "Google Chrome headless, device scale 1",
+    "fixture": "boards.json manifest 2026-10-09.1",
+    "role": "staff",
+    "appearance": "light",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "2026-10-14T08:54:00-05:00",
+    "scroll": [
+      0,
+      0
+    ],
+    "viewport": [
+      390,
+      844
+    ],
+    "route": "/board-sizes/index.html?d=camp-randall/north-board"
+  }
+}
