@@ -15,6 +15,19 @@
   },
   {
     "date": "2026-10-13",
+    "title": "Sourced apps page facts",
+    "type": "improvement",
+    "summary": "The apps page now uses the published App Store and Offload release facts, including the home screenshot.",
+    "details": [
+      "Wisconsin Creative shows its App Store version, the iOS it requires, and the home screenshot.",
+      "Offload shows version 1.2.0, macOS 15.0 or later, and that version's download.",
+      "Radio Clip no longer shows a version that was never published."
+    ],
+    "platforms": ["Web"],
+    "pr": 472
+  },
+  {
+    "date": "2026-10-13",
     "title": "Request shifts before release",
     "type": "improvement",
     "summary": "Students can now request an open Student shift as soon as it exists, without waiting for staff to release the crew.",

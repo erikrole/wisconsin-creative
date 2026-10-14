@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "552ecffda5ed0dc9e8e70f38bfc9665d7a42245b",
+  "sourcePatchSha256": "7752c046e0f6410439caa27fadcb8740003ecf6f59ff5c5f1e1570046897b50a",
+  "settings": {
+    "device": "Google Chrome headless",
+    "viewport": [
+      390,
+      844
+    ],
+    "fixture": "renderAppsPage fallback, no live fetch",
+    "role": "staff HTML fixture",
+    "route": "/apps",
+    "appearance": "light",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "2026-10-14T03:40:00-05:00",
+    "scroll": [
+      0,
+      0
+    ]
+  },
+  "imageSha256": "8de2bdfc5c3b57b93b4100771388d031576a4fa7b15bb2fae930e5971a8e7464",
+  "dimensions": [
+    390,
+    844
+  ]
+}

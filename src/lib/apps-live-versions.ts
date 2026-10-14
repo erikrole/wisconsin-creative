@@ -1,7 +1,15 @@
 // Current versions for the /apps cards, read from where each app is published so the
 // page does not go stale. Every lookup is optional: on any failure the page falls back
 // to the version written in apps-page.ts.
-export type LiveVersion = { version: string; released?: string };
+export type LiveVersion = {
+  version: string;
+  released?: string;
+  /** Versioned download URL, only when the release asset names that version. */
+  href?: string;
+  releaseHref?: string;
+  /** Minimum system version stated by the release, such as "macOS 15 or later". */
+  requires?: string;
+};
 export type LiveVersions = Partial<
   Record<"wisconsin-creative" | "offload" | "fetch", LiveVersion>
 >;
@@ -35,12 +43,16 @@ export function madisonDate(iso: string): string | undefined {
   }).format(date);
 }
 
+const IOS_VERSION = /^\d+(\.\d+){1,2}$/;
+const MACOS_REQUIREMENT = /macOS\s+(\d+(?:\.\d+){0,2})\s+(?:or|and)\s+later/i;
+
 export function parseAppStore(body: unknown): LiveVersion | undefined {
   const first = (
     body as {
       results?: Array<{
         version?: unknown;
         currentVersionReleaseDate?: unknown;
+        minimumOsVersion?: unknown;
       }>;
     }
   )?.results?.[0];
@@ -54,13 +66,103 @@ export function parseAppStore(body: unknown): LiveVersion | undefined {
     typeof first.currentVersionReleaseDate === "string"
       ? madisonDate(first.currentVersionReleaseDate)
       : undefined;
-  return { version: first.version, released };
+  const requires =
+    typeof first.minimumOsVersion === "string" &&
+    IOS_VERSION.test(first.minimumOsVersion)
+      ? `iOS ${first.minimumOsVersion} or later`
+      : undefined;
+  return compact({ version: first.version, released, requires });
+}
+
+function githubDownload(url: unknown): string | undefined {
+  if (typeof url !== "string") return undefined;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:" || parsed.hostname !== "github.com")
+      return undefined;
+    if (
+      !parsed.pathname.startsWith(
+        `/${OFFLOAD_RELEASES}/releases/download/`,
+      )
+    )
+      return undefined;
+    return parsed.toString();
+  } catch {
+    return undefined;
+  }
+}
+
+function pickDmg(assets: unknown, version: string): string | undefined {
+  if (!Array.isArray(assets)) return undefined;
+  const dmgs = assets.flatMap((asset) => {
+    const name = (asset as { name?: unknown })?.name;
+    const href = githubDownload(
+      (asset as { browser_download_url?: unknown })?.browser_download_url,
+    );
+    return typeof name === "string" && name.endsWith(".dmg") && href
+      ? [{ name, href }]
+      : [];
+  });
+  return (
+    dmgs.find((asset) => asset.name === `Offload-${version}.dmg`)?.href ??
+    dmgs.find((asset) => asset.name === "Offload.dmg")?.href
+  );
+}
+
+function releasePage(url: unknown): string | undefined {
+  if (typeof url !== "string") return undefined;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:" || parsed.hostname !== "github.com")
+      return undefined;
+    if (!parsed.pathname.startsWith(`/${OFFLOAD_RELEASES}/releases/tag/`))
+      return undefined;
+    return parsed.toString();
+  } catch {
+    return undefined;
+  }
+}
+
+function macOSFromNotes(notes: unknown): string | undefined {
+  if (typeof notes !== "string") return undefined;
+  const match = notes.match(MACOS_REQUIREMENT);
+  return match ? `macOS ${match[1]} or later` : undefined;
+}
+
+function compact(version: LiveVersion): LiveVersion {
+  return {
+    version: version.version,
+    ...(version.released ? { released: version.released } : {}),
+    ...(version.href ? { href: version.href } : {}),
+    ...(version.releaseHref ? { releaseHref: version.releaseHref } : {}),
+    ...(version.requires ? { requires: version.requires } : {}),
+  };
 }
 
 export function parseGithubRelease(body: unknown): LiveVersion | undefined {
-  const tag = (body as { tag_name?: unknown })?.tag_name;
-  const version = typeof tag === "string" ? tag.replace(/^v/i, "") : "";
-  return VERSION.test(version) ? { version } : undefined;
+  const record = body as {
+    tag_name?: unknown;
+    published_at?: unknown;
+    html_url?: unknown;
+    body?: unknown;
+    assets?: unknown;
+  } | null;
+  const version =
+    typeof record?.tag_name === "string"
+      ? record.tag_name.replace(/^v/i, "")
+      : "";
+  if (!VERSION.test(version)) return undefined;
+  const released =
+    typeof record?.published_at === "string"
+      ? madisonDate(record.published_at)
+      : undefined;
+  return compact({
+    version,
+    released,
+    href: pickDmg(record?.assets, version),
+    releaseHref: releasePage(record?.html_url),
+    requires: macOSFromNotes(record?.body),
+  });
 }
 
 export async function loadLiveVersions(): Promise<LiveVersions> {
