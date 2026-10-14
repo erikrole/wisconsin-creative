@@ -29,21 +29,20 @@ describe("apps page", () => {
 
   it("shows sourced version, requirement, and download facts, and each icon file exists", () => {
     for (const app of appEntries) {
-      if (!app.shot) {
-        expect(html).toContain(`/apps/icons/${app.icon}.png`);
-      }
+      expect(html).toContain(`/apps/icons/${app.icon}.png`);
       expect(existsSync(`public/apps/icons/${app.icon}.png`)).toBe(true);
       if (app.version) expect(html).toContain(`Version ${app.version}`);
     }
-    expect(html).toContain("Version 1.2.0 · Oct 13, 2026 · Requires macOS 15.0 or later");
-    expect(html).toContain("Developer ID signed");
+    expect(html).toContain("<span>Version 1.2.0</span><span>Requires macOS 15.0 or later</span>");
+    expect(html).not.toContain("Developer ID");
+    expect(html).not.toContain("Pro Video Formats");
     expect(html).toContain("https://github.com/erikrole/offload-releases/releases/download/v1.2.0/Offload-1.2.0.dmg");
-    expect(html).toContain("https://github.com/erikrole/offload-releases/releases/tag/v1.2.0");
+    expect(html).not.toContain("release notes");
     expect(html).toContain("Sony FX6 and FX3");
-    expect(html).toContain("Version 1.2 · Sep 14, 2026 · Requires iOS 26.0 or later");
-    expect(html).toContain("/apps/wisconsin-creative-home.jpg");
-    expect(existsSync("public/apps/wisconsin-creative-home.jpg")).toBe(true);
-    expect(html).toContain("Version 1.1.0 · Requires macOS 27 or later");
+    expect(html).toContain("<span>Version 1.2</span><span>Requires iOS 26.0 or later</span>");
+    expect(html).not.toContain("wisconsin-creative-home");
+    expect(html).not.toContain('class="shot"');
+    expect(html).toContain("<span>Version 1.1.0</span><span>Requires macOS 27 or later</span>");
     expect(html).toContain("https://github.com/erikrole/fetch-releases/releases/latest/download/Fetch.dmg");
     expect(html).not.toContain("Version 0.1.0");
     expect(html).not.toContain("Notarized");
