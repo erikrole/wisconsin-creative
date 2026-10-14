@@ -37,7 +37,7 @@ describe("apps page", () => {
     expect(html).not.toContain("Developer ID");
     expect(html).not.toContain("Pro Video Formats");
     expect(html).toContain("https://github.com/erikrole/offload-releases/releases/download/v1.2.0/Offload-1.2.0.dmg");
-    expect(html).toContain("https://github.com/erikrole/offload-releases/releases/tag/v1.2.0");
+    expect(html).not.toContain("release notes");
     expect(html).toContain("Sony FX6 and FX3");
     expect(html).toContain("<span>Version 1.2 · Sep 14, 2026</span><span>Requires iOS 26.0 or later</span>");
     expect(html).not.toContain("wisconsin-creative-home");

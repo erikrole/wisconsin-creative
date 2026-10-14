@@ -19,9 +19,7 @@ export type AppEntry = {
   /** ISO date (YYYY-MM-DD) in Madison time. */
   released?: string;
   href?: string;
-  releaseHref?: string;
   cta?: string;
-  releaseCta?: string;
 };
 
 // Written values are the fallback when the App Store or GitHub lookup fails.
@@ -69,9 +67,7 @@ export const appEntries: AppEntry[] = [
     requires: "macOS 15.0 or later",
     released: "2026-10-13",
     href: "https://github.com/erikrole/offload-releases/releases/download/v1.2.0/Offload-1.2.0.dmg",
-    releaseHref: "https://github.com/erikrole/offload-releases/releases/tag/v1.2.0",
     cta: "Download for macOS",
-    releaseCta: "Offload release notes",
   },
   {
     name: "Fetch",
@@ -118,7 +114,6 @@ function withLive(app: AppEntry, live: LiveVersions): AppEntry {
     version: fresh.version,
     released: fresh.released ?? (same ? app.released : undefined),
     href: fresh.href ?? (app.versionedDownload && !same ? undefined : app.href),
-    releaseHref: fresh.releaseHref ?? (same ? app.releaseHref : undefined),
     requires: same ? (app.requires ?? fresh.requires) : fresh.requires,
   };
 }
@@ -132,8 +127,7 @@ function appCard(entry: AppEntry, live: LiveVersions) {
   const requires = app.requires ? `Requires ${esc(app.requires)}` : "";
   const meta = [release, requires].filter(Boolean);
   const download = app.href && app.cta ? `<a class="go" href="${esc(app.href)}">${esc(app.cta)} <i aria-hidden="true">→</i></a>` : "";
-  const notes = app.releaseHref && app.releaseCta ? `<a class="quiet" href="${esc(app.releaseHref)}">${esc(app.releaseCta)}</a>` : "";
-  const actions = download || notes ? `<p class="actions">${download}${notes}</p>` : "";
+  const actions = download ? `<p class="actions">${download}</p>` : "";
   return `<li><article class="app${app.statusKind === "soon" ? " soon" : ""}">
           <div class="art">${icon}</div>
           <div class="copy">
@@ -284,8 +278,6 @@ export function renderAppsPage(nonce?: string, live: LiveVersions = {}) {
     .app .copy p.meta span { display: block; }
     .app .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 14px; }
     .app .go { margin: 0; padding: 0; color: var(--red-text); text-decoration: none; }
-    .app .quiet { color: var(--ink-2); font-size: 14px; font-weight: 700; text-decoration: none; }
-    .app .quiet:hover { text-decoration: underline; }
     .pill { display: inline-flex; padding: 4px 11px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); color: var(--ink-2); font-size: 12px; font-weight: 700; letter-spacing: 0.01em; }
     .pill.beta { background: var(--beta-bg); border-color: var(--beta-line); color: var(--beta-ink); }
     .pill.soon { color: var(--ink-3); }
