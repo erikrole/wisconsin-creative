@@ -147,6 +147,7 @@
       grid-template-areas: "header header" "canvas inspector";
     }
 
+    a.ghost-btn { text-decoration: none; }
     .topbar {
       grid-area: header;
       display: flex;
@@ -685,6 +686,7 @@
         <span class="brand-name">QR Studio</span>
         <span class="brand-sub">Wisconsin Creative</span>
       </div>
+      <a class="ghost-btn" href="/apps">Apps</a>
       <button class="ghost-btn" id="open-library" type="button" aria-haspopup="dialog" aria-controls="library">
         <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>
         Library <span class="count" id="library-count">0</span>

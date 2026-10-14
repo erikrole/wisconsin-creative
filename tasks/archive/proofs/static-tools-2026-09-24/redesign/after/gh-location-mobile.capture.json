@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "acc954af21c02ceac7aa0b6c5409494ec5a9dea1",
+  "sourcePatchSha256": "361cdf13136ceaee44f17fa3ff86478bf44869768622327f81dae9695a7c1857",
+  "settings": {
+    "device": "Playwright Chromium headless, deviceScaleFactor 2",
+    "viewport": [
+      390,
+      844
+    ],
+    "fixture": "static page, empty localStorage, geolocation not granted",
+    "role": "anonymous",
+    "route": "/golden-hour/index.html#location-change",
+    "appearance": "light",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "2026-09-24T18:35:00-05:00",
+    "scroll": [
+      0,
+      0
+    ]
+  },
+  "imageSha256": "2bca30f8bd5574dd6fa8c0b749931ce0339155169816c50a68d91bed95ae56d8",
+  "dimensions": [
+    780,
+    1688
+  ]
+}

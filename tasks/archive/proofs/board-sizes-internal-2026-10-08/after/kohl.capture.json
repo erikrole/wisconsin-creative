@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "4a1b0178e9c790850872e149dee03685bdb0644f",
+  "sourcePatchSha256": "270edfe5fdef6f1d6282566d29d943b57de274afecd6c6a8dbe5214a9f45c1ae",
+  "settings": {
+    "device": "Playwright Chromium, deviceScaleFactor 1",
+    "viewport": [
+      1280,
+      1200
+    ],
+    "fixture": "boards.json manifest 2026-10-08.1 (unchanged)",
+    "role": "anonymous (public static page)",
+    "route": "/board-sizes/?v=kohl-center",
+    "appearance": "light",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "n/a",
+    "scroll": [
+      0,
+      0
+    ]
+  },
+  "imageSha256": "dd4704d436b7eb34c55830e9a5af699d3ab37263910e18621f2f16572ebc7a9c",
+  "dimensions": [
+    1280,
+    1200
+  ]
+}

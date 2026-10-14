@@ -121,6 +121,9 @@
 | `src/lib/api-handler.ts` | 63 |
 | `src/lib/api.ts` | 143 |
 | `src/lib/app-time.ts` | 213 |
+| `src/lib/apps-live-versions.ts` | 93 |
+| `src/lib/apps-page-format.ts` | 7 |
+| `src/lib/apps-page.ts` | 333 |
 | `src/lib/asset-attachments.ts` | 166 |
 | `src/lib/asset-image.ts` | 26 |
 | `src/lib/asset-qr-code.ts` | 9 |
@@ -217,7 +220,7 @@
 | `src/lib/profile-completion.ts` | 223 |
 | `src/lib/profile-phone.ts` | 44 |
 | `src/lib/profile-sizing.ts` | 24 |
-| `src/lib/public-showroom.ts` | 449 |
+| `src/lib/public-showroom.ts` | 454 |
 | `src/lib/quarter-hour.ts` | 27 |
 | `src/lib/query-client.ts` | 56 |
 | `src/lib/rate-limit.ts` | 238 |
@@ -878,6 +881,10 @@
 - `/api/youtube/library/refresh`
 - `/api/youtube/oauth/callback`
 - `/api/youtube/oauth/start`
+
+### `/apps`
+
+- `/apps`
 
 ### `/releases/feed.xml`
 

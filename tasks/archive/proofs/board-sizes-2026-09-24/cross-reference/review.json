@@ -1,0 +1,112 @@
+{
+  "title": "Board Sizes: cross-referenced",
+  "eyebrow": "Web · /board-sizes · four sources",
+  "lede": "The Board Info sheet, the 2024 Camp Randall content guide, Colosseum’s 196_WISC deliverables sheet and the Wisconsin Board Builder, merged display by display. Every position and note says which source it came from; where they disagree, the page says so.",
+  "stats": [
+    {
+      "k": "displays (was 19): HD feed, 4 IPTV, KC 16:9 feed, LaBahn, Goodman",
+      "v": "27"
+    },
+    {
+      "k": "of the guide's 27 sizes present; Colosseum's 37 all present except the flagged 12576 × 72",
+      "v": "27/27"
+    },
+    {
+      "k": "tests passing (with QR Studio: 37)",
+      "v": "33"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "New and enriched displays (after only)",
+      "note": "Element captures from the static page at 1280 px; the sticky search bar appears at the top of some crops.",
+      "shots": [
+        {
+          "title": "North Board",
+          "image": "north-board.png",
+          "cap": "Full layout from the Board Builder: frames, wings, ad column, stat windows, speaker scrims (hatched). Every window tagged with its guide page, stills-only, exact duration and 20 px pad.",
+          "wide": true
+        },
+        {
+          "title": "North Board HD feed",
+          "image": "north-board-hd-feed.png",
+          "cap": "New: the 1920 × 1080 signal, with the 94 / 180 px crop and 90% title safe from guide p. 6."
+        },
+        {
+          "title": "East Fascia",
+          "image": "east-fascia.png",
+          "cap": "Positions follow from 5000 + 1880 + 5000; neutral note that the GIP exists only in the sheet."
+        },
+        {
+          "title": "South Upper Fascia",
+          "image": "south-upper-fascia.png",
+          "cap": "Angle break at 3450; the guide’s “pixel 1726” explained as 1-based."
+        },
+        {
+          "title": "IPTV Full Screen Ad",
+          "image": "iptv-full-screen.png",
+          "cap": "New IPTV group: 100 px title safe, exactly 15 s."
+        },
+        {
+          "title": "Kohl Center 360 Fascia",
+          "image": "kohl-center-360-fascia.png",
+          "cap": "Red: frame-rate conflict (60 vs 59.94). Neutral: why Colosseum says 72 px and the canvas says 144."
+        },
+        {
+          "title": "Kohl Center 16:9 feed",
+          "image": "kohl-center-16x9-feed.png",
+          "cap": "Only in Colosseum’s list; flagged to confirm."
+        },
+        {
+          "title": "Goodman Diamond",
+          "image": "goodman.png",
+          "cap": "New venue from Colosseum only; flagged to confirm."
+        },
+        {
+          "title": "Search 1920x1080",
+          "image": "search-1920x1080.png",
+          "cap": "Size search now matches whole displays too (HD feed, IPTV, KC feed)."
+        },
+        {
+          "title": "Phone",
+          "image": "phone.png",
+          "cap": "Venue tabs scroll with an edge fade; venue delivery rules up top."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "The sheet had sizes; the guide had the rules",
+      "was": "Frame rates, stills-only windows, 30 s exact durations, 20 px border pad, speaker-scrim blanks and safe areas lived only in a 42-page PDF.",
+      "now": "Each display shows its delivery spec; each window shows its tags and guide page; the drawings show crops, scrims and seams."
+    },
+    {
+      "h": "Zones had no positions",
+      "was": "Only the Club Board had offsets.",
+      "now": "North Board, Kellner and Section A from the Board Builder’s geometry; fascias and south end zone where the sizes force the layout (and the sheet’s older tab agrees). Stated vs derived positions are drawn differently."
+    },
+    {
+      "h": "Missing boards",
+      "was": "No HD feed, IPTV, LaBahn or Goodman; the sheet’s LaBahn and Goodman tabs are empty.",
+      "now": "All added with their sources: guide and Board Builder for the feed and IPTV, Colosseum plus the production AEP for LaBahn, Colosseum only for Goodman (flagged)."
+    },
+    {
+      "h": "Sources disagreed silently",
+      "was": "Colosseum lists the Kohl Center fascia at 72 px and builds at 60 fps; the sheet says 144 px; the AE project renders at 59.94.",
+      "now": "Red notes for anything to confirm; neutral notes for provenance and explanations."
+    }
+  ],
+  "verification": [
+    "<b>PASS</b> · <code>npx vitest run tests/static-tools.test.ts tests/qrcode-static-tool.test.ts</code>: 37 passed (venue list, sheet zones verbatim and in order, every placed zone inside its display with a named source, North Board geometry equals the Board Builder, HD-feed crop adds to 1080, open questions present).",
+    "<b>PASS</b> · Every resolution in the 2024 guide (27) is in the data; every Colosseum resolution (37) is too, except 12576 × 72, which is the flagged fascia conflict.",
+    "<b>PASS</b> · <code>npx tsc --noEmit</code>, <code>npm run verify:docs</code>, <code>git diff --check</code>; no console errors in any capture; guide PNG and CSV downloads work.",
+    "<b>OPEN</b> · <code>npm run build:app</code> last passed before this data change (only <code>public/</code> and tests changed since). Not deployed; no real-iPhone check."
+  ],
+  "notes": [
+    "The 2022 guide describes the retired system (6000 × 72 fascia, 306 × 414 wings, TriLogo main) and matches the sheet’s hidden OLD CR tab; it’s used only to confirm history, not as a source.",
+    "Colosseum’s social sizes (1080 × 1920, 1080 × 1350) are deliverables, not boards, and are left out.",
+    "Contact names and phone numbers in the guides are not published on this public page.",
+    "Kohl Center zone positions exist only in the sheet’s OLD tab; not used, since that tab is superseded."
+  ]
+}
