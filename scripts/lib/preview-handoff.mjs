@@ -4,6 +4,7 @@ import { readInfrastructureConfig } from "./migration-baseline.mjs";
 import { localChecksums } from "./local-migrations.mjs";
 import { VercelPreviewApi } from "./vercel-preview-api.mjs";
 import { retainPreview } from "./preview-lifecycle.mjs";
+import { previewDatabaseDecision } from "./preview-change-scope.mjs";
 
 export const handoffKey = (branch) => `WC_PREVIEW_${branchKey(branch).toUpperCase()}_STATE`;
 export function privateHandoff(state) {
@@ -42,8 +43,16 @@ export function missingEnvironmentReason(gitBranch, gh = (...args) => execFileSy
   if (!enabled) return ["Managed previews are not enabled (repository variable MANAGED_PREVIEWS_ENABLED is not 'true'), so CI will not create environments. An authorized operator must enable it (docs/PREVIEW_ENVIRONMENTS.md, cutover step 2)."];
   try {
     // Previews only run for same-repository PRs that target main.
-    const prs = JSON.parse(gh("pr", "list", "--head", gitBranch, "--state", "open", "--base", "main", "--json", "number,isCrossRepository")).filter((pr) => !pr.isCrossRepository);
-    return [prs.length ? `PR #${prs[0].number} is open: wait for CI and the Managed previews run to pass.` : `Branch ${gitBranch} has no open same-repository PR targeting main; push it and open one.`];
+    const prs = JSON.parse(gh("pr", "list", "--head", gitBranch, "--state", "open", "--base", "main", "--json", "number,isCrossRepository,files,author,headRefName")).filter((pr) => !pr.isCrossRepository);
+    if (!prs.length) return [`Branch ${gitBranch} has no open same-repository PR targeting main; push it and open one.`];
+    const pr = prs[0];
+    const decision = previewDatabaseDecision({
+      files: Array.isArray(pr.files) ? pr.files : undefined,
+      author: pr.author,
+      branch: pr.headRefName || gitBranch,
+    });
+    if (decision.skip) return [decision.reason];
+    return [`PR #${pr.number} is open: wait for CI and the Managed previews run to pass.`];
   } catch { return []; }
 }
 export async function fetchPreviewHandoff(gitBranch, { api = new VercelPreviewApi(), config = readInfrastructureConfig() } = {}) {

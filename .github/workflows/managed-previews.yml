@@ -21,6 +21,7 @@ jobs:
       github.event.workflow_run.event == 'pull_request' &&
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.actor.login != 'dependabot[bot]' &&
+      !startsWith(github.event.workflow_run.head_branch, 'dependabot/') &&
       github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: ubuntu-latest
     environment: preview-infrastructure
@@ -32,13 +33,23 @@ jobs:
           ref: main
           fetch-depth: 0
           persist-credentials: false
+      # Explicit needed=false skips. A missing output still provisions.
+      - name: Decide whether this pull request needs a preview database
+        id: scope
+        run: node scripts/preview-ci-gate.mjs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
       - uses: actions/setup-node@v4
+        if: steps.scope.outputs.needed != 'false'
         with:
           node-version: 22
           cache: npm
       - run: npm install --global npm@11.17.0 vercel@59.11.7
+        if: steps.scope.outputs.needed != 'false'
       - run: npm ci
+        if: steps.scope.outputs.needed != 'false'
       - name: Provision and upload exact validated PR
+        if: steps.scope.outputs.needed != 'false'
         run: node scripts/preview-ci.mjs
         env:
           GITHUB_TOKEN: ${{ github.token }}
