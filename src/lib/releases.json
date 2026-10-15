@@ -1,5 +1,20 @@
 [
   {
+    "date": "2026-10-15",
+    "title": "Photo Frame for showcasing photos",
+    "type": "feature",
+    "summary": "Drop in a photo and get a clean, modern frame with its camera settings and photographer credit, ready to post.",
+    "details": [
+      "Reads camera, lens, focal length, aperture, shutter speed and ISO from the photo itself, and every field can be edited or switched off.",
+      "Sized for social by default: 4:5, with 1:1, 9:16 and Original as options. Frames are black, with preset colors and a color picker.",
+      "Exports a PNG, 2160 px wide for the social sizes or the photo's full resolution for Original. The photo never leaves your browser."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 478
+  },
+  {
     "date": "2026-10-14",
     "title": "Uniform app cards on the apps page",
     "type": "improvement",
