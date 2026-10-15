@@ -82,9 +82,10 @@
   // Sizes are in units of u; u is a hundredth of the canvas width (fixed ratios)
   // or of the photo's short side (Original).
   var SIZES = {
-    social: { pad: 5.5, big: 3.1, small: 2.3, lead: 4.4, line: 1.3, radius: 1.1, tail: 0 },
-    original: { pad: 4, big: 2.2, small: 1.65, lead: 3.4, line: 1, radius: 0.7, tail: 3.6 }
+    social: { pad: 5.5, big: 2.5, small: 1.9, lead: 3.6, line: 1, radius: 1.1, tail: 0 },
+    original: { pad: 4, big: 2.1, small: 1.6, lead: 3.2, line: 0.9, radius: 0.7, tail: 0 }
   };
+
 
   /** Measures the strip for a column `innerW` wide and returns what to paint and how tall it is. */
   function layoutStrip(u, z, innerW) {
@@ -142,7 +143,7 @@
       c.gear ? { text: c.gear, weight: 400, dim: true } : null,
       small
     );
-    if (h) h -= z.line * u;
+    if (h) h -= z.line * u + lines[lines.length - 1].size * 0.25;
     return { lines: lines, h: h ? z.lead * u + h : 0, lead: z.lead * u, gap: gap };
   }
 
@@ -206,7 +207,7 @@
       u = Math.min(photoW, photoH) / 100;
       strip = layoutStrip(u, z, photoW);
       W = Math.round(photoW + 2 * z.pad * u);
-      H = Math.round(z.pad * u + photoH + strip.h + (strip.lines.length ? z.tail * u : z.pad * u));
+      H = Math.round(z.pad * u + photoH + strip.h + z.pad * u);
       left = z.pad * u;
       top = z.pad * u;
     }
