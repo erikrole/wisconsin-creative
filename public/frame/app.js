@@ -30,7 +30,14 @@
     { name: 'Badger red', hex: '#a00000' }
   ];
 
-  var state = { color: '#000000', on: {}, values: {}, name: 'photo', bitmap: null, preview: null, width: 0, height: 0 };
+  var FORMATS = {
+    '4x5': { label: '4:5', ratio: 4 / 5 },
+    '1x1': { label: '1:1', ratio: 1 },
+    '9x16': { label: '9:16', ratio: 9 / 16 },
+    original: { label: 'Original', ratio: 0 }
+  };
+
+  var state = { format: '4x5', color: '#000000', on: {}, values: {}, name: 'photo', bitmap: null, preview: null, width: 0, height: 0 };
   var saved = { credit: '' };
 
   var $ = function (id) { return document.getElementById(id); };
@@ -41,7 +48,7 @@
   }
   function storageSet() {
     try {
-      window.localStorage.setItem(STORE, JSON.stringify({ color: state.color, on: state.on, credit: saved.credit }));
+      window.localStorage.setItem(STORE, JSON.stringify({ format: state.format, color: state.color, on: state.on, credit: saved.credit }));
     } catch (e) { /* private mode: the choices just don't stick */ }
   }
 
@@ -76,27 +83,16 @@
     return out;
   }
 
-  /** Draws the framed photo into `canvas` with the photo `photoW` px wide. Returns false if the canvas is refused. */
-  function draw(canvas, source, photoW) {
-    var photoH = Math.round(photoW * state.height / state.width);
-    var u = Math.min(photoW, photoH) / 100;
-    var pad = 4 * u;
-    var gap = 5 * u;
-    var labelSize = 1.25 * u;
-    var valueSize = 2.6 * u;
-    var cellH = labelSize + 1.1 * u + valueSize;
-    var rowGap = 3 * u;
-    var innerW = photoW;
-
+  /** Rows of cells for a footer `innerW` wide, plus their height. All sizes derive from the unit `u`. */
+  function layoutFooter(u, z, innerW) {
     var probe = document.createElement('canvas').getContext('2d');
-    var ink = core.inkFor(state.color);
     var cells = cellsFor();
-
+    var gap = z.gap * u;
     function measure(cell) {
-      probe.font = '700 ' + valueSize + 'px ' + FONT;
+      probe.font = '700 ' + z.value * u + 'px ' + FONT;
       var vw = probe.measureText(cell.value).width;
-      probe.font = '700 ' + labelSize + 'px ' + FONT;
-      var lw = trackedWidth(probe, cell.label.toUpperCase(), labelSize * 0.16);
+      probe.font = '700 ' + z.label * u + 'px ' + FONT;
+      var lw = trackedWidth(probe, cell.label.toUpperCase(), z.label * u * 0.16);
       cell.w = Math.min(Math.max(vw, lw), innerW);
     }
     cells.left.concat(cells.right).forEach(measure);
@@ -116,18 +112,73 @@
       if (row.length) rows.push(row);
       return rows;
     }
-
     var rows = [];
-    var oneRow = cells.left.length && cells.right.length && span(cells.left) + span(cells.right) + 2 * gap <= innerW;
-    if (oneRow) rows.push({ left: cells.left, right: cells.right });
-    else {
+    if (cells.left.length && cells.right.length && span(cells.left) + span(cells.right) + 2 * gap <= innerW) {
+      rows.push({ left: cells.left, right: cells.right });
+    } else {
       wrap(cells.left).forEach(function (r) { rows.push({ left: r, right: [] }); });
       wrap(cells.right).forEach(function (r) { rows.push({ left: r, right: [] }); });
     }
+    var cellH = (z.label + z.labelGap + z.value) * u;
+    var rowGap = z.rowGap * u;
+    return {
+      rows: rows,
+      span: span,
+      cellH: cellH,
+      rowGap: rowGap,
+      gap: gap,
+      lead: z.lead * u,
+      h: rows.length ? z.lead * u + rows.length * cellH + (rows.length - 1) * rowGap : 0
+    };
+  }
 
-    var footerH = rows.length ? 3.4 * u + rows.length * cellH + (rows.length - 1) * rowGap : 0;
-    var W = Math.round(photoW + 2 * pad);
-    var H = Math.round(pad + photoH + footerH + (rows.length ? 4 * u : pad));
+  var ORIGINAL_SIZES = { pad: 4, gap: 5, label: 1.25, labelGap: 1.1, value: 2.6, rowGap: 3, lead: 3.4, tail: 4 };
+  var SOCIAL_SIZES = { pad: 5, gap: 4, label: 1.7, labelGap: 1.3, value: 3.4, rowGap: 3.2, lead: 4, tail: 0 };
+
+  /**
+   * Draws the framed photo into `canvas`. For a fixed ratio `size` is the canvas width and the photo
+   * is fitted inside it with its credit strip, centered. For Original it is the photo's width and the
+   * canvas grows around it.
+   */
+  function draw(canvas, source, size) {
+    var ratio = FORMATS[state.format].ratio;
+    var asp = state.height / state.width;
+    var ink = core.inkFor(state.color);
+    var z, u, fu, W, H, photoW, photoH, footer, left, top;
+
+    if (ratio) {
+      z = SOCIAL_SIZES;
+      W = Math.round(size);
+      H = Math.round(size / ratio);
+      u = W / 100;
+      var pad = z.pad * u;
+      photoW = W - 2 * pad;
+      // A tall photo narrows the column, so the type steps down with it and the strip stays short.
+      var inner = W - 2 * pad;
+      for (var i = 0; i < 6; i++) {
+        fu = u * Math.max(0.72, Math.min(1, photoW / inner));
+        footer = layoutFooter(fu, z, photoW);
+        var room = Math.min(W - 2 * pad, (H - 2 * pad - footer.h) / asp);
+        if (Math.abs(room - photoW) < 1) break;
+        photoW = Math.max(u, room);
+      }
+      photoH = photoW * asp;
+      var block = photoH + footer.h;
+      left = (W - photoW) / 2;
+      top = (H - block) / 2;
+    } else {
+      z = ORIGINAL_SIZES;
+      photoW = size;
+      photoH = Math.round(size * asp);
+      u = Math.min(photoW, photoH) / 100;
+      fu = u;
+      footer = layoutFooter(u, z, photoW);
+      W = Math.round(photoW + 2 * z.pad * u);
+      H = Math.round(z.pad * u + photoH + footer.h + (footer.rows.length ? z.tail * u : z.pad * u));
+      left = z.pad * u;
+      top = z.pad * u;
+    }
+
     canvas.width = W;
     canvas.height = H;
     var ctx = canvas.getContext('2d');
@@ -137,14 +188,16 @@
     ctx.fillRect(0, 0, W, H);
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(source, pad, pad, photoW, photoH);
+    ctx.drawImage(source, left, top, photoW, photoH);
     ctx.strokeStyle = ink.hair;
     ctx.lineWidth = Math.max(1, u * 0.12);
-    ctx.strokeRect(pad - ctx.lineWidth / 2, pad - ctx.lineWidth / 2, photoW + ctx.lineWidth, photoH + ctx.lineWidth);
+    ctx.strokeRect(left - ctx.lineWidth / 2, top - ctx.lineWidth / 2, photoW + ctx.lineWidth, photoH + ctx.lineWidth);
 
     ctx.textBaseline = 'alphabetic';
-    var y = pad + photoH + 3.4 * u;
-    rows.forEach(function (row) {
+    var y = top + photoH + footer.lead;
+    var labelSize = z.label * fu;
+    var valueSize = z.value * fu;
+    footer.rows.forEach(function (row) {
       function paint(list, startX) {
         var x = startX;
         list.forEach(function (c) {
@@ -153,15 +206,21 @@
           tracked(ctx, c.label.toUpperCase(), x, y + labelSize, labelSize * 0.16);
           ctx.fillStyle = ink.ink;
           ctx.font = (c.strong ? '700 ' : '400 ') + valueSize + 'px ' + FONT;
-          ctx.fillText(fit(ctx, c.value, innerW), x, y + labelSize + 1.1 * u + valueSize * 0.82);
-          x += c.w + gap;
+          ctx.fillText(fit(ctx, c.value, photoW), x, y + labelSize + z.labelGap * fu + valueSize * 0.82);
+          x += c.w + footer.gap;
         });
       }
-      paint(row.left, pad);
-      if (row.right.length) paint(row.right, pad + innerW - span(row.right));
-      y += cellH + rowGap;
+      paint(row.left, left);
+      if (row.right.length) paint(row.right, left + photoW - footer.span(row.right));
+      y += footer.cellH + footer.rowGap;
     });
     return true;
+  }
+
+  function outputSize(forExport) {
+    var f = FORMATS[state.format];
+    if (f.ratio) return forExport ? 2160 : 1080;
+    return forExport ? state.width : state.preview.width;
   }
 
   /* ---------- page ---------- */
@@ -173,8 +232,7 @@
 
   function renderPreview() {
     if (!state.preview) return;
-    var width = state.preview.width;
-    draw(els.canvas, state.preview, width);
+    draw(els.canvas, state.preview, outputSize(false));
     els.canvas.setAttribute('aria-label', 'Framed preview of ' + state.name);
   }
 
@@ -197,6 +255,17 @@
       b.dataset.hex = s.hex;
       b.addEventListener('click', function () { setColor(s.hex); });
       els.swatches.appendChild(b);
+    });
+
+    els.formats.innerHTML = '';
+    Object.keys(FORMATS).forEach(function (key) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'seg-button';
+      b.textContent = FORMATS[key].label;
+      b.dataset.format = key;
+      b.addEventListener('click', function () { state.format = key; syncControls(); storageSet(); schedule(); });
+      els.formats.appendChild(b);
     });
 
     els.fields.innerHTML = '';
@@ -235,6 +304,9 @@
     FIELDS.forEach(function (f) {
       $('on-' + f.id).checked = !!state.on[f.id];
       $('val-' + f.id).value = state.values[f.id] || '';
+    });
+    Array.prototype.forEach.call(els.formats.children, function (b) {
+      b.setAttribute('aria-pressed', String(b.dataset.format === state.format));
     });
     var match = false;
     Array.prototype.forEach.call(els.swatches.children, function (b) {
@@ -315,7 +387,7 @@
     if (!state.bitmap) return;
     els.export.disabled = true;
     setStatus('Rendering full resolution…');
-    var width = state.width;
+    var width = outputSize(true);
     var attempt = 0;
     function run() {
       var canvas = document.createElement('canvas');
@@ -339,7 +411,7 @@
       a.click();
       a.remove();
       window.setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
-      var reduced = width < state.width;
+      var reduced = width < outputSize(true);
       setStatus('Saved ' + a.download + ' (' + res.canvas.width + ' × ' + res.canvas.height + ')' +
         (reduced ? '. This browser limits canvas size, so it was scaled down to fit.' : '.'));
     }).catch(function () {
@@ -348,12 +420,13 @@
   }
 
   function init() {
-    ['stage', 'canvas', 'fields', 'swatches', 'color', 'colorHex', 'custom', 'status', 'file', 'fileName', 'export', 'drop', 'choose'].forEach(function (id) {
+    ['stage', 'canvas', 'fields', 'swatches', 'color', 'colorHex', 'custom', 'status', 'file', 'fileName', 'export', 'drop', 'choose', 'formats'].forEach(function (id) {
       els[id] = $(id.replace(/[A-Z]/g, function (c) { return '-' + c.toLowerCase(); }));
     });
     var stored = storageGet();
     FIELDS.forEach(function (f) { state.on[f.id] = f.on; });
     if (stored) {
+      if (stored.format in FORMATS) state.format = stored.format;
       if (/^#[0-9a-f]{6}$/i.test(stored.color || '')) state.color = stored.color;
       if (stored.on) FIELDS.forEach(function (f) { if (typeof stored.on[f.id] === 'boolean') state.on[f.id] = stored.on[f.id]; });
       if (typeof stored.credit === 'string') saved.credit = stored.credit;
