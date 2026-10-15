@@ -19,6 +19,19 @@ describe("hiring board", () => {
     expect(board).toMatch(/queueIds = useMemo\(\(\) => filtered\.filter\(\(a\) => columns\.includes\(a\.stage\)\)/);
   });
 
+  it("keeps the loaded board across refreshes and recovers with Retry", () => {
+    // appsCycleId tracks which cycle the rows belong to so a refresh does not blank the board,
+    // and cycle/board failures expose EmptyState Retry instead of a dead-end message.
+    expect(board).toContain("appsCycleId");
+    expect(board).toContain("appsMatchCycle");
+    expect(board).toContain('actionLabel="Retry"');
+    expect(board).toContain("Couldn’t load hiring");
+    expect(board).toContain("Couldn’t load applicants");
+    expect(board).toContain("Showing the last loaded applicants");
+    expect(board).toContain("Clear filters");
+    expect(board).not.toMatch(/setApps\(null\)/);
+  });
+
   it("gives admins an in-app way to close and reopen a cycle (starts the retention clock)", () => {
     expect(board).toContain("setCycleStatus");
     expect(board).toContain('method: "PATCH"');

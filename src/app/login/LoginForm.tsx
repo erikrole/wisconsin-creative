@@ -375,7 +375,13 @@ export default function LoginForm() {
 
   return (
     <AuthScreen
-      subtitle={isOnboarding ? "Set up your account" : "Sign in to your account"}
+      subtitle={
+        isOnboarding
+          ? "Create your password to join Wisconsin Creative"
+          : isPassword
+            ? "Enter your password"
+            : "Sign in to your account"
+      }
       footer={
         <p className="login-rise text-center text-sm text-white/55 mt-6" style={{ "--rise-index": 6 } as React.CSSProperties}>
           Access is by invitation only.{" "}
@@ -431,7 +437,9 @@ export default function LoginForm() {
                 <>
                   <Alert role="status" aria-live="polite" className="bg-muted/40">
                     <AlertCircle className="size-4" />
-                    <AlertDescription>Your email is approved. Set your password now, then we’ll walk you through the details needed for work.</AlertDescription>
+                    <AlertDescription>
+                      You’re invited. Choose a password to create your account, then a short welcome setup collects the details the team needs for work.
+                    </AlertDescription>
                   </Alert>
 
                   <div className="flex flex-col gap-1.5">

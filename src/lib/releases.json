@@ -1,5 +1,107 @@
 [
   {
+    "date": "2026-10-15",
+    "title": "Live updates pause overnight",
+    "type": "improvement",
+    "summary": "Booking, inventory, and audit live updates pause from 10 PM to 6 AM Central, then pick up again in the morning.",
+    "details": [
+      "Open booking and inventory pages stop asking for changes overnight and refresh on their own after 6 AM.",
+      "Audit auto-refresh follows the same overnight pause.",
+      "Badge celebrations wait until morning instead of checking through the night.",
+      "Bringing a tab back during the day still refreshes right away."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 479
+  },
+  {
+    "date": "2026-10-14",
+    "title": "Uniform app cards on the apps page",
+    "type": "improvement",
+    "summary": "Every app on the apps page now has the same card layout, with the Wisconsin Creative screenshot removed.",
+    "details": [
+      "Each card shows the app icon, name, badges, description, version and requirement, and the download link in the same places.",
+      "Cards line up in rows of three on a wide screen, two on a tablet and one on a phone."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 477
+  },
+  {
+    "date": "2026-10-14",
+    "title": "Board Sizes layout restored with Copy spec",
+    "type": "fixes",
+    "summary": "Board Sizes has its top venue bar and dotted background back, and keeps the new Copy spec buttons.",
+    "details": [
+      "Venues are tabs across the top again, and Content types and Game day are no longer in the navigation.",
+      "Copy spec, the More menu and the clearer dark colors from the last update stay."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 476
+  },
+  {
+    "date": "2026-10-14",
+    "title": "Copy a board's exact size",
+    "type": "feature",
+    "summary": "Board Sizes lists every venue board so you can find one and copy its pixel size, aspect ratio, and any safe area already on file.",
+    "details": [
+      "Search across Camp Randall, the Kohl Center, the Field House, LaBahn, and Goodman, then narrow to one venue or to open questions.",
+      "Copy spec puts the size, aspect ratio, position, and recorded safe area on the clipboard.",
+      "Guide SVG and Guide PNG download at that board's exact pixel size.",
+      "Open questions stay on the board, including Kohl Center frame rates and the unconfirmed Goodman board."
+    ],
+    "platforms": ["Web"],
+    "pr": 473
+  },
+  {
+    "date": "2026-10-14",
+    "title": "Fetch on the apps page",
+    "type": "improvement",
+    "summary": "The apps page now lists Fetch, a Mac app that saves videos and audio from a link, with a download button.",
+    "details": [
+      "Fetch saves video as an MP4 that plays everywhere, or audio only, from YouTube, Instagram, X, podcasts and more.",
+      "The card shows the current version and requires macOS 27 or later.",
+      "All app icons on the page now appear at the same size."
+    ],
+    "platforms": [
+      "Web",
+      "macOS"
+    ],
+    "pr": 474
+  },
+  {
+    "date": "2026-10-13",
+    "title": "Apps and tools page",
+    "type": "feature",
+    "summary": "wisconsincreative.com/apps now lists the team's apps and tools in one place.",
+    "details": [
+      "Apps: the Wisconsin Creative iPhone and iPad app, Offload, and Radio Clip (coming soon), with current versions and release dates.",
+      "Tools: Golden Hour, Timelapse, Board Sizes, and QR Studio.",
+      "Light and dark appearance, following your system by default, with a picker at the top.",
+      "The page opens without signing in."
+    ],
+    "platforms": ["Web"],
+    "pr": 471
+  },
+  {
+    "date": "2026-10-13",
+    "title": "Sourced apps page facts",
+    "type": "improvement",
+    "summary": "The apps page now uses the published App Store and Offload release facts, including the home screenshot, and opens without signing in.",
+    "details": [
+      "Wisconsin Creative shows its App Store version, the iOS it requires, and the home screenshot.",
+      "Offload shows version 1.2.0, macOS 15.0 or later, and that version's download.",
+      "Radio Clip no longer shows a version that was never published.",
+      "The page opens without signing in. It is still left out of search."
+    ],
+    "platforms": ["Web"],
+    "pr": 472
+  },
+  {
     "date": "2026-10-13",
     "title": "Request shifts before release",
     "type": "improvement",
@@ -27,6 +129,83 @@
   },
   {
     "date": "2026-10-12",
+    "title": "Faster Operations page",
+    "type": "improvement",
+    "summary": "Operations shows each check lane as soon as it loads, and Import’s wizard steps are clearer.",
+    "details": [
+      "Operations no longer waits for every queue before showing anything — ready lanes appear first, with the rest filling in.",
+      "If Operations cannot load at all, you get a clear retry instead of a blank page.",
+      "Import’s step rail and header explain the CSV → map → preview → import path with larger step targets."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 454
+  },
+  {
+    "date": "2026-10-12",
+    "title": "Clearer first-day setup",
+    "type": "improvement",
+    "summary": "New accounts set up their profile on the Welcome page itself, and Blasts recover cleanly when a load fails.",
+    "details": [
+      "After you create your account, Welcome walks through contact, Wiscard, and other details on the page instead of opening a separate dialog over a status card.",
+      "On a wider screen, a step list shows what is done and what is next. You can still continue later from Home.",
+      "Invited sign-in copy explains that a short welcome setup follows password creation.",
+      "If blasts or welcome setup cannot load, you get a clear retry instead of an empty or stuck screen."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 453
+  },
+  {
+    "date": "2026-10-12",
+    "title": "Hiring board recovers",
+    "type": "improvement",
+    "summary": "Hiring keeps the applicant board when a refresh fails and gives a clear Retry instead of a dead end.",
+    "details": [
+      "If Hiring cannot load cycles or applicants, you get Retry instead of a stuck empty page.",
+      "A failed refresh keeps the last loaded board for that cycle so work is not wiped.",
+      "Search and filters that hide every applicant offer Clear filters."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 455
+  },
+  {
+    "date": "2026-10-12",
+    "title": "Blasts load recovery",
+    "type": "improvement",
+    "summary": "Blast history and welcome setup recover cleanly when the network fails, and blast detail is easier to scan.",
+    "details": [
+      "If blasts cannot load, you get a clear retry instead of an empty list that looks like nothing was ever sent.",
+      "Blast detail separates a missing blast from a failed load, refreshes on demand, and stacks recipients as cards on smaller screens.",
+      "Compose shows a retry when events or people cannot be loaded for targeting.",
+      "Welcome setup no longer stays on a loading screen forever when profile completion fails."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 452
+  },
+  {
+    "date": "2026-10-12",
+    "title": "YouTube queue recovers",
+    "type": "improvement",
+    "summary": "YouTube Studio Lite’s review queue offers clear next steps when the library is empty, a refresh fails, or filters hide every upload.",
+    "details": [
+      "An empty library shows Refresh library when the channel can be checked.",
+      "A failed refresh keeps the error visible with Retry refresh.",
+      "Filters that hide every upload offer Clear filters."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 456
+  },
+  {
+    "date": "2026-10-12",
     "title": "Reservations keep kit custody",
     "type": "fixes",
     "summary": "Calling a gameday kit on a reservation keeps the real status, so a checked-out camera is not labeled available.",
@@ -36,6 +215,21 @@
     ],
     "platforms": ["Web"],
     "pr": 463
+  },
+  {
+    "date": "2026-10-12",
+    "title": "Clearer Settings and account deletion",
+    "type": "improvement",
+    "summary": "Settings pages are easier to find and jump between, collaborator access warns before you leave unsaved changes, and you can delete your account from web Security.",
+    "details": [
+      "Settings names and related links now match what you see in the Settings menu, including clearer paths for calendar and overdue rules.",
+      "Collaborator access shows unsaved changes, lets you reset, and warns if you leave mid-edit.",
+      "On the web, Security now includes Delete account with the same password confirmation and retention rules as the iPhone app."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 457
   },
   {
     "date": "2026-10-12",
@@ -52,6 +246,18 @@
   },
   {
     "date": "2026-10-12",
+    "title": "Schedule day headers stay put",
+    "type": "fixes",
+    "summary": "Schedule list day headers stay directly under the filter bar after you change filters, so the first rows of a day stay visible.",
+    "details": [
+      "Changing or clearing filters no longer leaves a blank gap under Load older records.",
+      "A day header no longer sticks mid-page and hides the first event of that day."
+    ],
+    "platforms": ["Web"],
+    "pr": 433
+  },
+  {
+    "date": "2026-10-12",
     "title": "Kit page shows who has gear",
     "type": "fixes",
     "summary": "A kit page now says when a camera is checked out or waiting for pickup, and names the person who has it.",
@@ -62,6 +268,19 @@
     ],
     "platforms": ["Web", "Kiosk"],
     "pr": 462
+  },
+  {
+    "date": "2026-10-12",
+    "title": "Add items before pickup",
+    "type": "feature",
+    "summary": "Reservations waiting at the kiosk have an Add items button, on the booking page and on the kiosk pickup screen.",
+    "details": [
+      "It opens equipment editing right away, with the same availability checks as before.",
+      "At the kiosk, scanning a battery or counted bin that is not on the reservation now offers Add instead of an error.",
+      "Items already picked up stay on their checkout."
+    ],
+    "platforms": ["Web", "Kiosk"],
+    "pr": 466
   },
   {
     "date": "2026-10-12",
@@ -77,6 +296,20 @@
       "iOS"
     ],
     "pr": 404
+  },
+  {
+    "date": "2026-10-12",
+    "title": "Shared case pickup works from home",
+    "type": "fixes",
+    "summary": "Tapping a shared case under Ready for pickup or Coming up on the kiosk now asks who is picking it up, instead of doing nothing.",
+    "details": [
+      "Pick yourself from the roster and the pickup starts as you.",
+      "The log shows who handed the case over, not whoever reserved it.",
+      "Works even when the person who reserved the case is not on the kiosk roster.",
+      "A shared case for a later day, like an away game, can be picked up early."
+    ],
+    "platforms": ["Kiosk"],
+    "pr": 465
   },
   {
     "date": "2026-10-12",

@@ -13,8 +13,9 @@ describe("profile completion web wiring", () => {
     expect(wizard).not.toContain('matchMedia("(min-width: 768px)")');
     expect(wizard).toContain('if (!data) return null;');
     expect(wizard).toContain("max-h-[calc(100dvh-1rem)]");
-    expect(wizard).toContain("data?.completion.shouldPrompt");
+    expect(wizard).toContain("data.completion.shouldPrompt");
     expect(wizard).toContain("autoOpen = true");
+    expect(wizard).toContain('presentation?: "dialog" | "page"');
     expect(wizard).toContain("Remind me tomorrow");
     expect(wizard).toContain('step: "SNOOZE"');
     expect(wizard).not.toContain("Drawer");
@@ -30,17 +31,20 @@ describe("profile completion web wiring", () => {
     expect(banner).toContain("data.completion.shouldPrompt");
     expect(banner).toContain('aria-labelledby="profile-completion-banner-title"');
     expect(banner).toContain("Finish setup");
+    expect(banner).toContain("Finish your setup");
     expect(banner).toContain("min-h-10");
     expect(banner).toContain("Missing:");
   });
 
   it("keeps the requested role-aware field semantics", () => {
-    expect(wizard).toContain('title: "Confirm your email addresses"');
-    expect(wizard).toContain('title: "Add your phone numbers"');
-    expect(wizard).toContain('title: "Link your Wiscard"');
-    expect(wizard).toContain('title: "Add your student details"');
-    expect(wizard).toContain('title: "Add your apparel sizes"');
-    expect(wizard).toContain('title: "Add a profile photo"');
+    const shared = readFileSync("src/lib/profile-completion.ts", "utf8");
+    expect(shared).toContain('title: "Confirm your email addresses"');
+    expect(shared).toContain('title: "Add your phone numbers"');
+    expect(shared).toContain('title: "Link your Wiscard"');
+    expect(shared).toContain('title: "Add your student details"');
+    expect(shared).toContain('title: "Add your apparel sizes"');
+    expect(shared).toContain('title: "Add a profile photo"');
+    expect(wizard).toContain("PROFILE_STEP_COPY[step]");
     expect(wizard).toContain("Skip for now");
     expect(wizard).toContain("Which number is it?");
     expect(wizard).toContain("I don’t have a work phone");
@@ -65,7 +69,7 @@ describe("profile completion web wiring", () => {
     expect(wizard).toContain("type StepDirection = -1 | 1");
     expect(wizard).toContain("const reduceMotion = Boolean(useReducedMotion())");
     expect(wizard).toContain("setStepDirection(direction)");
-    expect(wizard.match(/<AnimatePresence initial=\{false\} custom=\{stepMotionContext\}>/g)).toHaveLength(2);
+    expect(wizard.match(/<AnimatePresence initial=\{false\} custom=\{stepMotionContext\}>/g)).toHaveLength(4);
     expect(wizard).toContain("translate3d(0, ${direction * 4}px, 0)");
     expect(wizard).toContain("translate3d(0, ${direction * -4}px, 0)");
     expect(wizard).toContain("duration: reduceMotion ? 0.12 : 0.2");
@@ -87,7 +91,19 @@ describe("profile completion web wiring", () => {
     const welcome = readFileSync("src/app/(app)/welcome/page.tsx", "utf8");
 
     expect(welcome).toContain("Add a profile photo so the Wisconsin Creative team can recognize you.");
+    expect(welcome).toContain('presentation="page"');
+    expect(welcome).toContain("Let’s get you ready");
     expect(welcome).not.toContain("Add a phone number and a profile photo");
     expect(welcome).not.toContain("Add a phone number so the team can reach you.");
+  });
+
+  it("uses an inline first-session Welcome wizard instead of a status card under a modal", () => {
+    const welcome = readFileSync("src/app/(app)/welcome/page.tsx", "utf8");
+
+    expect(welcome).toContain('presentation="page"');
+    expect(wizard).toContain('presentation === "page"');
+    expect(wizard).toContain('aria-label="Setup steps"');
+    expect(welcome).not.toContain("Operationally ready");
+    expect(welcome).not.toContain("Profile complete");
   });
 });

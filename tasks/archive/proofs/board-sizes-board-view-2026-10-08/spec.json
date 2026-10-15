@@ -1,0 +1,88 @@
+{
+  "title": "One board at a time",
+  "eyebrow": "Web · /board-sizes · Wisconsin Creative",
+  "lede": "Click any board's name to open it on its own: a larger drawing that stays pinned while you scroll its zones, layouts you can switch between, filters, and arrow keys to move to the next board.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "After only",
+      "note": "This is a new view, so there's no before. Chromium at 1440 × 1000 and 390 × 844, light mode, manifest 2026-10-08.2.",
+      "shots": [
+        {
+          "title": "North Board",
+          "image": "shots/bv-north.png",
+          "cap": "Opened from the card title. Layout chips (Draft) and filters with counts sit above a drawing that uses the wider page."
+        },
+        {
+          "title": "Layout: Main + wings",
+          "image": "shots/bv-north-layout.png",
+          "cap": "Only that layout's zones are drawn and listed. The filter counts follow the layout."
+        },
+        {
+          "title": "Scrolled, hovering Ad-Top Left",
+          "image": "shots/bv-north-scrolled.png",
+          "cap": "The drawing stays pinned while the list scrolls, so hovering a row always lights something you can see."
+        },
+        {
+          "title": "Club Board: Pillars + center",
+          "image": "shots/bv-club-filter.png",
+          "cap": "The left and right ends stay blank in this layout, matching the geometry."
+        },
+        {
+          "title": "West Fascia (ribbon)",
+          "image": "shots/bv-fascia-cr.png",
+          "cap": "Drawn 64 px tall and scrolled sideways instead of shrinking to 8 px. Labels sit at each zone's left edge."
+        },
+        {
+          "title": "Kohl Center 360 Fascia (no positions)",
+          "image": "shots/bv-kohl-fascia.png",
+          "cap": "Zones to scale on the board's own scale: Fullscreen, the 11,472 Sideline Extended pair, the 8,160 Sidelines and the 4,416 Endzone-South compare at a glance. The bars run off the right edge and scroll with the ribbon."
+        },
+        {
+          "title": "Kohl Center 300 Level & Tunnels (40 zones, no positions)",
+          "image": "shots/bv-kohl-300.png",
+          "cap": "The same chart, packed left to right. The drawing doesn't pin, since it has no zones to point at."
+        },
+        {
+          "title": "Phone",
+          "image": "shots/bv-mobile.png",
+          "cap": "The drawing pins under the top bar while the list scrolls."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "One-board view",
+      "was": "Every board was a card in a long venue page.",
+      "now": "?d=<display id> opens a single board, from its card title, from search, or by link. ← and → step through every board."
+    },
+    {
+      "h": "Layouts (draft)",
+      "was": "North Board's 26 zones were all drawn at once.",
+      "now": "Manifest 2026-10-08.2 adds named layouts to the North Board, Kellner and Club Board, inferred from geometry and marked draft. The build script rejects a layout zone that doesn't exist or that overlaps another."
+    },
+    {
+      "h": "Filters",
+      "was": "Nothing.",
+      "now": "Video, Stills only and Open issues chips with counts. A filter only appears when it would narrow the list. Filtered-out zones dim in the drawing and leave the list."
+    },
+    {
+      "h": "History and search",
+      "was": "Back left the page, and searching for an id or canvas key found nothing.",
+      "now": "Each view change is a history entry. Search matches ids and keys; Enter on an exact one opens the board and flashes the zone."
+    }
+  ],
+  "verification": [
+    "tests/static-tools.test.ts: 47 passed (new: layout zones must exist and must not overlap)",
+    "node scripts/build-board-sizes.mjs: manifest 2026-10-08.2 valid; data.js, index.json and llms.txt regenerated; boards.csv unchanged",
+    "npm run verify:docs (exit 0) and git diff --check: pass",
+    "Playwright: card title opens ?d=camp-randall/kellner; → opens South Upper Fascia; Back twice returns to Kellner, then Camp Randall; MAIN_VIDEO finds 1 row and Enter opens the North Board at main-video-fg; Enter on kohl-center/360-fascia opens it; no page errors",
+    "Playwright: after scrolling the list, clicking Main Video in the pinned drawing lands its row below the drawing (1440: row top 337 vs drawing bottom 329; 390: 237 vs 229). ← / → with focus on a chip keeps the board",
+    "Browser pane (dark mode): Kellner with the Main + ads layout renders, no console errors"
+  ],
+  "notes": [
+    "Layouts are a guess from geometry until someone who runs the boards confirms them. To confirm, drop draft: true from each layout in boards.json and bump the version.",
+    "Kohl Center and Field House still have no zone positions. The Board Info sheet's OLD tabs have positions for the retired KC-Ring-P / KC-Fascia-P layout, but zone names, sizes and processors differ from today's (e.g. ring sponsor 1046 vs 1056 wide), so nothing was imported. A Display Studio zone export, or screenshots of each processor's zone X/Y, would fill them in."
+  ]
+}

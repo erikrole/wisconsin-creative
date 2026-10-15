@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "acc954af21c02ceac7aa0b6c5409494ec5a9dea1",
+  "sourcePatchSha256": "361cdf13136ceaee44f17fa3ff86478bf44869768622327f81dae9695a7c1857",
+  "settings": {
+    "device": "Playwright Chromium headless, deviceScaleFactor 2",
+    "viewport": [
+      390,
+      844
+    ],
+    "fixture": "static page, empty localStorage, geolocation not granted",
+    "role": "anonymous",
+    "route": "/timelapse/index.html#stills-clip-mode-20s",
+    "appearance": "light",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "2026-09-24T18:35:00-05:00",
+    "scroll": [
+      0,
+      0
+    ]
+  },
+  "imageSha256": "76f68966512b9b47d2bf9f465c6e10a446e54aed9f5899da736c3ddbc9f34d86",
+  "dimensions": [
+    780,
+    1688
+  ]
+}

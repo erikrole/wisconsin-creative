@@ -1,0 +1,36 @@
+{
+  "title": "Board Sizes, internal",
+  "eyebrow": "Web · /board-sizes · Wisconsin Creative",
+  "lede": "Board Sizes is now an internal layout reference: board sizes, zones and drawings, without the delivery instructions written for outside partners.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "Side by side",
+      "note": "Before is the working tree as it stood at the start of this change (HEAD 4a1b0178 plus the uncommitted redesign). After differs only by this cut. Both use the same manifest (2026-10-08.1), Chromium, light mode, 1× scale and the same viewport and clip.",
+      "pairs": [
+        { "title": "Venue page", "sub": "Camp Randall, top of page at 1280 × 1000.", "before": "before/venue.png", "beforeCap": "Delivery deadlines and partner instructions sit above the boards; Share link is the primary button.", "after": "after/venue.png", "afterCap": "The boards start right under the title. Share link is a plain button.", "beforeEvidence": "before/venue.capture.json", "afterEvidence": "after/venue.capture.json" },
+        { "title": "A full display card", "sub": "North Board, 26 zones.", "before": "before/north.png", "beforeCap": "Codec, stills, dpi and audio pills; a provenance line under the drawing; delivery notes and guide page numbers on zones; a Sources row.", "after": "after/north.png", "afterCap": "Ids and keys, the drawing, zones with sizes and positions. Open issues (GIP, red) and pad tags stay.", "beforeEvidence": "before/north.capture.json", "afterEvidence": "after/north.capture.json" },
+        { "title": "Kohl Center fascia", "sub": "360 Fascia card.", "before": "before/kohl.png", "beforeCap": "Footer carries Display Studio naming tips, Colosseum delivery notes and a Sources row under the open issue.", "after": "after/kohl.png", "afterCap": "Only the open issue remains in the footer.", "beforeEvidence": "before/kohl.capture.json", "afterEvidence": "after/kohl.capture.json" },
+        { "title": "Content type", "sub": "Sponsor ad windows.", "before": "before/content.png", "beforeCap": "Each row repeats frame rate, codec and guide page.", "after": "after/content.png", "afterCap": "Each row shows the canvas, its tags and its size.", "beforeEvidence": "before/content.capture.json", "afterEvidence": "after/content.capture.json" },
+        { "title": "Phone", "sub": "North Board at 390 px wide.", "before": "before/mobile.png", "beforeCap": "Delivery pills take two extra lines above the drawing, and a provenance paragraph sits under it.", "after": "after/mobile.png", "afterCap": "The drawing appears sooner.", "beforeEvidence": "before/mobile.capture.json", "afterEvidence": "after/mobile.capture.json" }
+      ]
+    }
+  ],
+  "changes": [
+    { "h": "Venue delivery callout", "was": "Deadlines, who designs full-system pieces, and how partners deliver.", "now": "Removed. That's guidance for outside partners." },
+    { "h": "Delivery pills and sources", "was": "fps, codec, stills, dpi and audio on every card, plus a Sources row and a provenance line under each drawing.", "now": "Removed from the page. boards.json, index.json and llms.txt still carry every field." },
+    { "h": "Notes", "was": "Display and zone notes mixed layout facts with file naming, audio specs and who designs what.", "now": "Only open issues show. The drawing's overlays already show scrims, crops and seams, and pad tags keep their tooltip." },
+    { "h": "Share link", "was": "Primary button; the toast warned about hiding the way back to the site.", "now": "Plain button, toast just says Link copied." }
+  ],
+  "verification": [
+    "tests/static-tools.test.ts: 46 passed",
+    "node scripts/hash-static-tools.mjs: app.js restamped",
+    "npm run verify:docs and git diff --check: pass",
+    "No page errors in any capture (Playwright pageerror listener)"
+  ],
+  "notes": [
+    "Content types, Game day, For agents & tools and Open issues are still in the sidebar; dropping or demoting them is a separate call.",
+    "Pre-existing: zone labels overlap in the North Board drawing where the wings stack (Wing Short / Ad-Middle / Wing-Left).",
+    "Not done: search by id or key, and Back-button history."
+  ]
+}

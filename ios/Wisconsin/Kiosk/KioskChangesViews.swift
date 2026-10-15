@@ -700,6 +700,8 @@ struct KioskReservationEditView: View {
     let reservationId: String
     let title: String
     let user: KioskUser
+    /// Opened from an Add items button: the screen leads with adding.
+    var addsItems = false
     let onClose: (Bool) -> Void
 
     @State private var manifest: KioskReservationManifest?
@@ -722,7 +724,7 @@ struct KioskReservationEditView: View {
 
     var body: some View {
         KioskTaskScaffold(header: KioskTaskHeader(
-            title: "Change reservation",
+            title: addsItems ? "Add items" : "Change reservation",
             subtitle: "\(user.shortName) · \(manifest?.title ?? title)",
             avatarURL: user.avatarUrl,
             avatarInitials: user.initials,
@@ -731,7 +733,7 @@ struct KioskReservationEditView: View {
             }
         )) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Change your reservation")
+                Text(addsItems ? "Add to your reservation" : "Change your reservation")
                     .font(KioskType.heroAction)
                     .foregroundStyle(KioskText.primary)
                 Text("Scan something to add it. Swap or remove on the right. Nothing changes until you save.")

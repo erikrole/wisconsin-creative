@@ -34,6 +34,7 @@ import {
 import { useFetch } from "@/hooks/use-fetch";
 import { classifyError, handleAuthRedirect, isAbortError, parseErrorMessage } from "@/lib/errors";
 import { formatDateFull, formatRelativeTime } from "@/lib/format";
+import { PROFILE_FIELD_LABELS } from "@/lib/profile-completion";
 import { AlertTriangle, ClipboardList, Copy, ExternalLink, RefreshCw, Trash2, UserPlus, WifiOff } from "lucide-react";
 
 type Role = "ADMIN" | "STAFF" | "STUDENT" | "COLLABORATOR";
@@ -84,16 +85,11 @@ const ROLE_META: Record<Role, { label: string; variant: BadgeProps["variant"] }>
   STUDENT: { label: "Student", variant: "gray" },
   COLLABORATOR: { label: "Collaborator", variant: "blue" },
 };
+
 const READINESS_FIELD_LABELS: Record<string, string> = {
+  ...PROFILE_FIELD_LABELS,
   campusEmail: "Campus login",
-  athleticsEmail: "Athletics email",
-  personalPhone: "Personal phone",
-  workPhone: "Work phone",
-  wiscard: "Wiscard",
-  studentYear: "Year",
   anticipatedGraduation: "Graduation",
-  clothingSize: "Clothing size",
-  shoeSize: "Shoe size",
   photo: "Photo",
 };
 
@@ -253,7 +249,7 @@ export default function OnboardingStatusPage() {
     <div className="flex flex-col gap-4">
       <PageHeader
         title="Onboarding Status"
-        description="Track invitations and the readiness of every active account."
+        description="Track invitations and account readiness. New people sign in at the app login with their invited email, set a password, then finish Welcome setup."
       >
         <Button variant="ghost" size="icon" className="size-10" onClick={reload} disabled={loading} aria-label="Refresh onboarding status">
           <RefreshCw className={`size-4 ${loading ? "animate-spin" : ""}`} />

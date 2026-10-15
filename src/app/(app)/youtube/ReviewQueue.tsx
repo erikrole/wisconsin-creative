@@ -9,7 +9,7 @@ import { useConfirm } from "@/components/ConfirmDialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Spinner } from "@/components/ui/spinner";
@@ -51,6 +51,16 @@ export function ReviewQueue({ queue, canRefresh, replay }: { queue: Queue; canRe
   const [search, setSearch] = useState("");
   const [privacy, setPrivacy] = useState("All visibility");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const clearFilters = () => {
+    setView("queue");
+    setSport("All sports");
+    setPrivacy("All visibility");
+    setSearch("");
+    setShowRaw(false);
+  };
+  const hasActiveFilters =
+    view !== "queue" || sport !== "All sports" || privacy !== "All visibility" || search.trim().length > 0 || showRaw;
 
   const items = useMemo(() => queue.items.filter((item) => showRaw || !isRawClip(item)), [queue.items, showRaw]);
   const rawCount = queue.items.filter(isRawClip).length;
@@ -164,7 +174,21 @@ export function ReviewQueue({ queue, canRefresh, replay }: { queue: Queue; canRe
 
       {queue.lastFailure && (
         <Alert variant="destructive">
-          <AlertDescription>The last refresh failed: {queue.lastFailure}</AlertDescription>
+          <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <span>The last refresh failed: {queue.lastFailure}</span>
+            {canRefresh ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10 w-fit bg-card"
+                onClick={refresh}
+                disabled={refreshing}
+              >
+                {refreshing ? <Spinner /> : <RefreshCwIcon />}
+                {refreshing ? "Checking uploads…" : "Retry refresh"}
+              </Button>
+            ) : null}
+          </AlertDescription>
         </Alert>
       )}
 
@@ -173,9 +197,19 @@ export function ReviewQueue({ queue, canRefresh, replay }: { queue: Queue; canRe
           <EmptyHeader>
             <EmptyTitle>No uploads loaded</EmptyTitle>
             <EmptyDescription>
-              {canRefresh ? "Refresh the library to load the last 30 days of uploads." : "Connect the channel, then refresh the library."}
+              {canRefresh
+                ? "Refresh the library to load the last 30 days of uploads."
+                : "Connect the channel, then refresh the library."}
             </EmptyDescription>
           </EmptyHeader>
+          {canRefresh ? (
+            <EmptyContent>
+              <Button type="button" onClick={refresh} disabled={refreshing}>
+                {refreshing ? <Spinner /> : <RefreshCwIcon />}
+                {refreshing ? "Checking uploads…" : "Refresh library"}
+              </Button>
+            </EmptyContent>
+          ) : null}
         </Empty>
       ) : (
         <>
@@ -223,7 +257,20 @@ export function ReviewQueue({ queue, canRefresh, replay }: { queue: Queue; canRe
 
           <div className="grid gap-4 lg:grid-cols-[minmax(0,23rem)_minmax(0,1fr)]">
             <ul className="yt-sheet flex max-h-[72vh] flex-col gap-1 self-start overflow-y-auto p-1.5" aria-label="Uploads">
-              {visible.length === 0 && <li className="p-4 text-sm text-muted-foreground">Nothing matches. Try loosening the filters.</li>}
+              {visible.length === 0 ? (
+                <li className="flex flex-col gap-3 p-4">
+                  <p className="text-sm text-muted-foreground">
+                    {hasActiveFilters
+                      ? "Nothing matches these filters. Clear them to see the rest of the queue."
+                      : "Nothing to show in this view."}
+                  </p>
+                  {hasActiveFilters ? (
+                    <Button type="button" variant="outline" className="h-10 w-fit bg-card" onClick={clearFilters}>
+                      Clear filters
+                    </Button>
+                  ) : null}
+                </li>
+              ) : null}
               {visible.map((item) => (
                 <li key={item.id}>
                   <QueueRow item={item} active={item.id === selected?.id} onSelect={() => setSelectedId(item.id)} />
@@ -233,7 +280,11 @@ export function ReviewQueue({ queue, canRefresh, replay }: { queue: Queue; canRe
             {selected ? (
               <VideoReview key={`${selected.id}:${selected.draft?.version ?? 0}:${selected.publish?.phase ?? ""}`} item={selected} playlists={queue.playlists} canSend={!replay && canRefresh} />
             ) : (
-              <p className="yt-sheet p-6 text-sm text-muted-foreground">Pick an upload from the strip to start.</p>
+              <p className="yt-sheet p-6 text-sm text-muted-foreground">
+                {visible.length === 0 && hasActiveFilters
+                  ? "Clear the filters to pick an upload."
+                  : "Pick an upload from the strip to start."}
+              </p>
             )}
           </div>
         </>

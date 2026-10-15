@@ -36,6 +36,8 @@ describe("booking real-time sync source contract", () => {
     expect(hook).toContain("useOperationalPollingActivity(enabled && Boolean(userId))");
     expect(hook).toContain('pollingState !== "active"');
     expect(hook).toContain('pollingState === "idle"');
+    expect(hook).toContain('pollingState === "quiet"');
+    expect(hook).toContain("pauses overnight and resumes in the morning");
   });
 
   it("invalidates dashboard, stats, booking lists, and changed booking details", () => {

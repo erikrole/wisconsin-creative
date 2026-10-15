@@ -64,6 +64,8 @@ import type {
 type Props = {
   bookingId: string | null;
   initialTab?: TabKey | null;
+  /** Open straight into equipment editing (the booking page's Add items). */
+  startInEquipmentEdit?: boolean;
   onClose: () => void;
   onUpdated?: () => void;
 };
@@ -114,6 +116,7 @@ function SectionHead({
 export default function BookingDetailsSheet({
   bookingId,
   initialTab,
+  startInEquipmentEdit,
   onClose,
   onUpdated,
 }: Props) {
@@ -213,6 +216,20 @@ export default function BookingDetailsSheet({
     });
     return () => window.cancelAnimationFrame(frame);
   }, [bookingId, booking, loading, equipEditMode, initialTab]);
+
+  // Add items opens straight into equipment editing, once per open.
+  const autoEnteredEquipEditRef = useRef(false);
+  useEffect(() => {
+    if (!bookingId) {
+      autoEnteredEquipEditRef.current = false;
+      return;
+    }
+    if (!startInEquipmentEdit || loading || !booking || equipEditMode) return;
+    if (autoEnteredEquipEditRef.current) return;
+    autoEnteredEquipEditRef.current = true;
+    enterEquipEditMode();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookingId, booking, loading, equipEditMode, startInEquipmentEdit]);
 
   const loadFormOptions = useCallback(async () => {
     try {

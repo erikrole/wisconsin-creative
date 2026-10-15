@@ -495,3 +495,4 @@
 - `/api/youtube/library/refresh` -> `src/app/api/youtube/library/refresh/route.ts`
 - `/api/youtube/oauth/callback` -> `src/app/api/youtube/oauth/callback/route.ts`
 - `/api/youtube/oauth/start` -> `src/app/api/youtube/oauth/start/route.ts`
+- `/apps` -> `src/app/apps/route.ts`
