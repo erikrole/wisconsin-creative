@@ -1,26 +1,34 @@
-/* Photo Frame — drop a photo, get it matted with its camera settings under it.
+/* Photo Frame — drop a photo, get it matted with its credit and camera settings.
    Everything runs in this tab: the file is read with FileReader, decoded with
    createImageBitmap, drawn on a canvas and saved as PNG. Nothing is uploaded.
-   Only the frame color, the credit and the on/off choices live in localStorage. */
+   Only the size, frame color, credit and on/off choices live in localStorage. */
 (function () {
   'use strict';
 
   var core = window.PhotoFrameCore;
-  var STORE = 'photo-frame-v1';
-  var PREVIEW_WIDTH = 1400;
+  var STORE = 'photo-frame-v2';
+  var PREVIEW_SOURCE = 1600;
   var FONT = '"Gotham", system-ui, -apple-system, "Segoe UI", sans-serif';
 
   var FIELDS = [
-    { id: 'credit', label: 'Credit', cell: 'Photo', kind: 'id', on: true, ph: 'Name' },
-    { id: 'caption', label: 'Caption', cell: 'Caption', kind: 'id', on: false, ph: 'Wisconsin vs. Iowa' },
-    { id: 'camera', label: 'Camera', cell: 'Camera', kind: 'gear', on: true, ph: 'Sony A1' },
-    { id: 'lens', label: 'Lens', cell: 'Lens', kind: 'gear', on: true, ph: 'FE 70-200mm F2.8 GM OII' },
-    { id: 'date', label: 'Date', cell: 'Date', kind: 'gear', on: false, ph: 'Oct 14, 2026' },
-    { id: 'focal', label: 'Focal length', cell: 'Focal length', kind: 'stat', on: true, ph: '200 mm' },
-    { id: 'aperture', label: 'Aperture', cell: 'Aperture', kind: 'stat', on: true, ph: 'f/2.8' },
-    { id: 'shutter', label: 'Shutter', cell: 'Shutter', kind: 'stat', on: true, ph: '1/1000 s' },
-    { id: 'iso', label: 'ISO', cell: 'ISO', kind: 'stat', on: true, ph: '800' }
+    { id: 'credit', label: 'Credit', on: true, ph: 'Photographer' },
+    { id: 'caption', label: 'Caption', on: false, ph: 'Wisconsin vs. Iowa' },
+    { id: 'camera', label: 'Camera', on: true, ph: 'Sony A1' },
+    { id: 'lens', label: 'Lens', on: true, ph: 'FE 70-200mm F2.8 GM OII' },
+    { id: 'date', label: 'Date', on: false, ph: 'Oct 14, 2026' },
+    { id: 'focal', label: 'Focal length', on: true, ph: '200 mm' },
+    { id: 'aperture', label: 'Aperture', on: true, ph: 'f/2.8' },
+    { id: 'shutter', label: 'Shutter', on: true, ph: '1/1000 s' },
+    { id: 'iso', label: 'ISO', on: true, ph: '800' }
   ];
+  var STATS = ['focal', 'aperture', 'shutter', 'iso'];
+
+  var FORMATS = {
+    '4x5': { label: '4:5', ratio: 4 / 5 },
+    '1x1': { label: '1:1', ratio: 1 },
+    '9x16': { label: '9:16', ratio: 9 / 16 },
+    original: { label: 'Original', ratio: 0 }
+  };
 
   var SWATCHES = [
     { name: 'Black', hex: '#000000' },
@@ -30,16 +38,8 @@
     { name: 'Badger red', hex: '#a00000' }
   ];
 
-  var FORMATS = {
-    '4x5': { label: '4:5', ratio: 4 / 5 },
-    '1x1': { label: '1:1', ratio: 1 },
-    '9x16': { label: '9:16', ratio: 9 / 16 },
-    original: { label: 'Original', ratio: 0 }
-  };
-
   var state = { format: '4x5', color: '#000000', on: {}, values: {}, name: 'photo', bitmap: null, preview: null, width: 0, height: 0 };
   var saved = { credit: '' };
-
   var $ = function (id) { return document.getElementById(id); };
   var els = {};
 
@@ -54,127 +54,159 @@
 
   /* ---------- drawing ---------- */
 
-  function tracked(ctx, text, x, y, space) {
-    var cx = x;
-    for (var i = 0; i < text.length; i++) {
-      ctx.fillText(text[i], cx, y);
-      cx += ctx.measureText(text[i]).width + space;
-    }
-  }
-  function trackedWidth(ctx, text, space) {
-    var w = 0;
-    for (var i = 0; i < text.length; i++) w += ctx.measureText(text[i]).width + space;
-    return Math.max(0, w - space);
-  }
-  function fit(ctx, text, max) {
-    if (ctx.measureText(text).width <= max) return text;
-    var t = text;
-    while (t.length > 1 && ctx.measureText(t + '…').width > max) t = t.slice(0, -1);
-    return t + '…';
+  function value(id) {
+    return state.on[id] ? (state.values[id] || '').trim() : '';
   }
 
-  function cellsFor() {
-    var out = { left: [], right: [] };
-    FIELDS.forEach(function (f) {
-      var value = (state.values[f.id] || '').trim();
-      if (!state.on[f.id] || !value) return;
-      (f.kind === 'stat' ? out.right : out.left).push({ label: f.cell, value: value, strong: f.id !== 'caption' });
-    });
-    return out;
+  /** The text on the strip: credit and stats on the first line, caption/date and gear on the second. */
+  function content() {
+    var stats = STATS.map(function (id) {
+      var v = value(id);
+      return v && id === 'iso' ? 'ISO ' + v : v;
+    }).filter(Boolean);
+    var sub = [value('caption'), value('date')].filter(Boolean).join('  ·  ');
+    var gear = [value('camera'), value('lens')].filter(Boolean).join('  ·  ');
+    return { credit: value('credit'), stats: stats, sub: sub, gear: gear };
   }
 
-  /** Rows of cells for a footer `innerW` wide, plus their height. All sizes derive from the unit `u`. */
-  function layoutFooter(u, z, innerW) {
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  // Sizes are in units of u; u is a hundredth of the canvas width (fixed ratios)
+  // or of the photo's short side (Original).
+  var SIZES = {
+    social: { pad: 5.5, big: 3.1, small: 2.3, lead: 4.4, line: 1.3, radius: 1.1, tail: 0 },
+    original: { pad: 4, big: 2.2, small: 1.65, lead: 3.4, line: 1, radius: 0.7, tail: 3.6 }
+  };
+
+  /** Measures the strip for a column `innerW` wide and returns what to paint and how tall it is. */
+  function layoutStrip(u, z, innerW) {
+    var c = content();
     var probe = document.createElement('canvas').getContext('2d');
-    var cells = cellsFor();
-    var gap = z.gap * u;
-    function measure(cell) {
-      probe.font = '700 ' + z.value * u + 'px ' + FONT;
-      var vw = probe.measureText(cell.value).width;
-      probe.font = '700 ' + z.label * u + 'px ' + FONT;
-      var lw = trackedWidth(probe, cell.label.toUpperCase(), z.label * u * 0.16);
-      cell.w = Math.min(Math.max(vw, lw), innerW);
+    var big = z.big * u;
+    var small = z.small * u;
+    var gap = big * 1.5;
+    var side = big * 2.2;
+    var lines = [];
+    var h = 0;
+
+    function width(text, size, weight) {
+      probe.font = weight + ' ' + size + 'px ' + FONT;
+      return probe.measureText(text).width;
     }
-    cells.left.concat(cells.right).forEach(measure);
-    function span(list) {
-      return list.reduce(function (n, c, i) { return n + c.w + (i ? gap : 0); }, 0);
+    function ellipsize(text, size, weight, max) {
+      if (width(text, size, weight) <= max) return text;
+      var t = text;
+      while (t.length > 1 && width(t + '…', size, weight) > max) t = t.slice(0, -1);
+      return t + '…';
     }
-    function wrap(list) {
-      var rows = [];
-      var row = [];
-      var used = 0;
-      list.forEach(function (c) {
-        var next = row.length ? used + gap + c.w : c.w;
-        if (row.length && next > innerW) { rows.push(row); row = []; next = c.w; }
-        row.push(c);
-        used = next;
+    function addLine(parts, size) {
+      lines.push({ parts: parts, size: size, y: h });
+      h += size * 1.5 + z.line * u;
+    }
+
+    // `left` and `right` are { text, weight, dim } or { stats, weight }; they share a row when they fit.
+    function pair(left, right, size) {
+      if (left) left.w = width(left.text, size, left.weight);
+      if (right) right.w = right.stats
+        ? right.stats.reduce(function (n, s, i) { return n + width(s, size, right.weight) + (i ? gap : 0); }, 0)
+        : width(right.text, size, right.weight);
+      if (left && right && left.w + right.w + side <= innerW) {
+        left.align = 'left';
+        right.align = 'right';
+        addLine([left, right], size);
+        return;
+      }
+      [left, right].forEach(function (p) {
+        if (!p) return;
+        p.align = 'left';
+        if (p.text) { p.text = ellipsize(p.text, size, p.weight, innerW); p.w = width(p.text, size, p.weight); }
+        addLine([p], size);
       });
-      if (row.length) rows.push(row);
-      return rows;
     }
-    var rows = [];
-    if (cells.left.length && cells.right.length && span(cells.left) + span(cells.right) + 2 * gap <= innerW) {
-      rows.push({ left: cells.left, right: cells.right });
-    } else {
-      wrap(cells.left).forEach(function (r) { rows.push({ left: r, right: [] }); });
-      wrap(cells.right).forEach(function (r) { rows.push({ left: r, right: [] }); });
-    }
-    var cellH = (z.label + z.labelGap + z.value) * u;
-    var rowGap = z.rowGap * u;
-    return {
-      rows: rows,
-      span: span,
-      cellH: cellH,
-      rowGap: rowGap,
-      gap: gap,
-      lead: z.lead * u,
-      h: rows.length ? z.lead * u + rows.length * cellH + (rows.length - 1) * rowGap : 0
-    };
+
+    pair(
+      c.credit ? { text: c.credit, weight: 700 } : null,
+      c.stats.length ? { stats: c.stats, weight: 500 } : null,
+      big
+    );
+    pair(
+      c.sub ? { text: c.sub, weight: 400, dim: true } : null,
+      c.gear ? { text: c.gear, weight: 400, dim: true } : null,
+      small
+    );
+    if (h) h -= z.line * u;
+    return { lines: lines, h: h ? z.lead * u + h : 0, lead: z.lead * u, gap: gap };
   }
 
-  var ORIGINAL_SIZES = { pad: 4, gap: 5, label: 1.25, labelGap: 1.1, value: 2.6, rowGap: 3, lead: 3.4, tail: 4 };
-  var SOCIAL_SIZES = { pad: 5, gap: 4, label: 1.7, labelGap: 1.3, value: 3.4, rowGap: 3.2, lead: 4, tail: 0 };
+  function paintStrip(ctx, strip, ink, x0, y0, innerW) {
+    strip.lines.forEach(function (line) {
+      var y = y0 + strip.lead + line.y + line.size * 1.05;
+      line.parts.forEach(function (p) {
+        ctx.fillStyle = p.dim ? ink.dim : ink.ink;
+        ctx.font = p.weight + ' ' + line.size + 'px ' + FONT;
+        var x = p.align === 'right' ? x0 + innerW - p.w : x0;
+        if (!p.stats) {
+          ctx.fillText(p.text, x, y);
+          return;
+        }
+        p.stats.forEach(function (s, i) {
+          if (i) {
+            ctx.fillStyle = ink.hair;
+            ctx.fillRect(x - strip.gap / 2, y - line.size * 0.78, Math.max(1, line.size * 0.05), line.size * 0.86);
+            ctx.fillStyle = ink.ink;
+          }
+          ctx.fillText(s, x, y);
+          x += ctx.measureText(s).width + strip.gap;
+        });
+      });
+    });
+  }
 
   /**
    * Draws the framed photo into `canvas`. For a fixed ratio `size` is the canvas width and the photo
-   * is fitted inside it with its credit strip, centered. For Original it is the photo's width and the
+   * is fitted and centered with the strip under it. For Original it is the photo's width and the
    * canvas grows around it.
    */
   function draw(canvas, source, size) {
     var ratio = FORMATS[state.format].ratio;
     var asp = state.height / state.width;
     var ink = core.inkFor(state.color);
-    var z, u, fu, W, H, photoW, photoH, footer, left, top;
+    var z, u, W, H, photoW, photoH, strip, left, top;
 
     if (ratio) {
-      z = SOCIAL_SIZES;
+      z = SIZES.social;
       W = Math.round(size);
       H = Math.round(size / ratio);
       u = W / 100;
       var pad = z.pad * u;
-      photoW = W - 2 * pad;
-      // A tall photo narrows the column, so the type steps down with it and the strip stays short.
-      var inner = W - 2 * pad;
+      var innerW = W - 2 * pad;
+      photoW = innerW;
+      // A tall photo narrows the column, so the strip is laid out again at that width.
       for (var i = 0; i < 6; i++) {
-        fu = u * Math.max(0.72, Math.min(1, photoW / inner));
-        footer = layoutFooter(fu, z, photoW);
-        var room = Math.min(W - 2 * pad, (H - 2 * pad - footer.h) / asp);
+        strip = layoutStrip(u, z, photoW);
+        var room = Math.min(innerW, (H - 2 * pad - strip.h) / asp);
         if (Math.abs(room - photoW) < 1) break;
         photoW = Math.max(u, room);
       }
       photoH = photoW * asp;
-      var block = photoH + footer.h;
       left = (W - photoW) / 2;
-      top = (H - block) / 2;
+      top = (H - photoH - strip.h) / 2;
     } else {
-      z = ORIGINAL_SIZES;
+      z = SIZES.original;
       photoW = size;
       photoH = Math.round(size * asp);
       u = Math.min(photoW, photoH) / 100;
-      fu = u;
-      footer = layoutFooter(u, z, photoW);
+      strip = layoutStrip(u, z, photoW);
       W = Math.round(photoW + 2 * z.pad * u);
-      H = Math.round(z.pad * u + photoH + footer.h + (footer.rows.length ? z.tail * u : z.pad * u));
+      H = Math.round(z.pad * u + photoH + strip.h + (strip.lines.length ? z.tail * u : z.pad * u));
       left = z.pad * u;
       top = z.pad * u;
     }
@@ -188,38 +220,19 @@
     ctx.fillRect(0, 0, W, H);
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
+    ctx.save();
+    roundRect(ctx, left, top, photoW, photoH, z.radius * u);
+    ctx.clip();
     ctx.drawImage(source, left, top, photoW, photoH);
-    ctx.strokeStyle = ink.hair;
-    ctx.lineWidth = Math.max(1, u * 0.12);
-    ctx.strokeRect(left - ctx.lineWidth / 2, top - ctx.lineWidth / 2, photoW + ctx.lineWidth, photoH + ctx.lineWidth);
+    ctx.restore();
 
     ctx.textBaseline = 'alphabetic';
-    var y = top + photoH + footer.lead;
-    var labelSize = z.label * fu;
-    var valueSize = z.value * fu;
-    footer.rows.forEach(function (row) {
-      function paint(list, startX) {
-        var x = startX;
-        list.forEach(function (c) {
-          ctx.fillStyle = ink.dim;
-          ctx.font = '700 ' + labelSize + 'px ' + FONT;
-          tracked(ctx, c.label.toUpperCase(), x, y + labelSize, labelSize * 0.16);
-          ctx.fillStyle = ink.ink;
-          ctx.font = (c.strong ? '700 ' : '400 ') + valueSize + 'px ' + FONT;
-          ctx.fillText(fit(ctx, c.value, photoW), x, y + labelSize + z.labelGap * fu + valueSize * 0.82);
-          x += c.w + footer.gap;
-        });
-      }
-      paint(row.left, left);
-      if (row.right.length) paint(row.right, left + photoW - footer.span(row.right));
-      y += footer.cellH + footer.rowGap;
-    });
+    paintStrip(ctx, strip, ink, left, top + photoH, photoW);
     return true;
   }
 
   function outputSize(forExport) {
-    var f = FORMATS[state.format];
-    if (f.ratio) return forExport ? 2160 : 1080;
+    if (FORMATS[state.format].ratio) return forExport ? 2160 : 1080;
     return forExport ? state.width : state.preview.width;
   }
 
@@ -244,20 +257,6 @@
   }
 
   function buildControls() {
-    els.swatches.innerHTML = '';
-    SWATCHES.forEach(function (s) {
-      var b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'swatch';
-      b.style.setProperty('--c', s.hex);
-      b.title = s.name;
-      b.setAttribute('aria-label', s.name);
-      b.dataset.hex = s.hex;
-      b.addEventListener('click', function () { setColor(s.hex); });
-      els.swatches.appendChild(b);
-    });
-
-    els.formats.innerHTML = '';
     Object.keys(FORMATS).forEach(function (key) {
       var b = document.createElement('button');
       b.type = 'button';
@@ -268,14 +267,24 @@
       els.formats.appendChild(b);
     });
 
-    els.fields.innerHTML = '';
+    SWATCHES.forEach(function (s) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'swatch';
+      b.style.setProperty('--c', s.hex);
+      b.title = s.name;
+      b.setAttribute('aria-label', s.name);
+      b.dataset.hex = s.hex;
+      b.addEventListener('click', function () { setColor(s.hex); });
+      els.swatches.insertBefore(b, els.custom);
+    });
+
     FIELDS.forEach(function (f) {
       var row = document.createElement('div');
       row.className = 'field';
       var check = document.createElement('input');
       check.type = 'checkbox';
       check.id = 'on-' + f.id;
-      check.checked = !!state.on[f.id];
       check.setAttribute('aria-label', 'Show ' + f.label);
       var label = document.createElement('label');
       label.htmlFor = 'val-' + f.id;
@@ -286,8 +295,12 @@
       input.placeholder = f.ph;
       input.autocomplete = 'off';
       input.spellcheck = false;
-      input.value = state.values[f.id] || '';
-      check.addEventListener('change', function () { state.on[f.id] = check.checked; storageSet(); schedule(); });
+      check.addEventListener('change', function () {
+        state.on[f.id] = check.checked;
+        row.classList.toggle('off', !check.checked);
+        storageSet();
+        schedule();
+      });
       input.addEventListener('input', function () {
         state.values[f.id] = input.value;
         if (f.id === 'credit') { saved.credit = input.value; storageSet(); }
@@ -304,18 +317,19 @@
     FIELDS.forEach(function (f) {
       $('on-' + f.id).checked = !!state.on[f.id];
       $('val-' + f.id).value = state.values[f.id] || '';
+      $('on-' + f.id).parentNode.classList.toggle('off', !state.on[f.id]);
     });
     Array.prototype.forEach.call(els.formats.children, function (b) {
       b.setAttribute('aria-pressed', String(b.dataset.format === state.format));
     });
     var match = false;
-    Array.prototype.forEach.call(els.swatches.children, function (b) {
+    Array.prototype.forEach.call(els.swatches.querySelectorAll('.swatch'), function (b) {
       var active = b.dataset.hex.toLowerCase() === state.color.toLowerCase();
       b.setAttribute('aria-pressed', String(active));
       match = match || active;
     });
     els.color.value = state.color;
-    els.colorHex.textContent = state.color.toUpperCase();
+    els.custom.style.setProperty('--c', state.color);
     els.custom.classList.toggle('active', !match);
   }
 
@@ -356,7 +370,7 @@
       state.width = bitmap.width;
       state.height = bitmap.height;
       state.name = file.name.replace(/\.[^.]+$/, '') || 'photo';
-      var scale = Math.min(1, PREVIEW_WIDTH / bitmap.width);
+      var scale = Math.min(1, PREVIEW_SOURCE / bitmap.width);
       var small = document.createElement('canvas');
       small.width = Math.max(1, Math.round(bitmap.width * scale));
       small.height = Math.max(1, Math.round(bitmap.height * scale));
@@ -368,12 +382,12 @@
       state.values.credit = saved.credit || info.artist || '';
       state.values.caption = '';
       els.stage.classList.add('has-photo');
-      els.fileName.textContent = file.name;
       els.export.disabled = false;
+      els.change.hidden = false;
       syncControls();
       renderPreview();
       var found = ['camera', 'lens', 'focal', 'aperture', 'shutter', 'iso'].filter(function (k) { return info[k]; }).length;
-      setStatus(found ? '' : 'No camera settings found in this file. Type them in on the left.');
+      setStatus(!found ? 'No camera settings found in this file. Open Details to type them in.' : state.values.credit ? '' : 'Add a credit in Details. It is remembered for next time.');
     }).catch(function () {
       setStatus('That file could not be opened as a photo.', true);
     });
@@ -386,8 +400,9 @@
   function exportPng() {
     if (!state.bitmap) return;
     els.export.disabled = true;
-    setStatus('Rendering full resolution…');
-    var width = outputSize(true);
+    setStatus('Rendering…');
+    var target = outputSize(true);
+    var width = target;
     var attempt = 0;
     function run() {
       var canvas = document.createElement('canvas');
@@ -411,16 +426,19 @@
       a.click();
       a.remove();
       window.setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
-      var reduced = width < outputSize(true);
-      setStatus('Saved ' + a.download + ' (' + res.canvas.width + ' × ' + res.canvas.height + ')' +
-        (reduced ? '. This browser limits canvas size, so it was scaled down to fit.' : '.'));
+      setStatus('Saved ' + res.canvas.width + ' × ' + res.canvas.height + (width < target ? '. This browser limits canvas size, so it was scaled down to fit.' : ''));
     }).catch(function () {
       setStatus('This browser could not render the export. Try a smaller photo or another browser.', true);
     }).then(function () { els.export.disabled = !state.bitmap; });
   }
 
+  function toggleDetails(open) {
+    els.details.hidden = !open;
+    els.detailsToggle.setAttribute('aria-expanded', String(open));
+  }
+
   function init() {
-    ['stage', 'canvas', 'fields', 'swatches', 'color', 'colorHex', 'custom', 'status', 'file', 'fileName', 'export', 'drop', 'choose', 'formats'].forEach(function (id) {
+    ['stage', 'canvas', 'fields', 'swatches', 'color', 'custom', 'status', 'file', 'export', 'drop', 'change', 'formats', 'details', 'detailsToggle'].forEach(function (id) {
       els[id] = $(id.replace(/[A-Z]/g, function (c) { return '-' + c.toLowerCase(); }));
     });
     var stored = storageGet();
@@ -438,7 +456,11 @@
     els.color.addEventListener('input', function () { setColor(els.color.value); });
     els.file.addEventListener('change', function () { loadPhoto(els.file.files[0]); els.file.value = ''; });
     els.export.addEventListener('click', exportPng);
-    els.choose.addEventListener('click', function () { els.file.click(); });
+    els.change.addEventListener('click', function () { els.file.click(); });
+    els.detailsToggle.addEventListener('click', function () { toggleDetails(els.details.hidden); });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && !els.details.hidden) { toggleDetails(false); els.detailsToggle.focus(); }
+    });
     els.drop.addEventListener('keydown', function (e) {
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); els.file.click(); }
     });
@@ -463,7 +485,7 @@
 
     // Draw again once Gotham arrives, so the first frame doesn't use the fallback face.
     if (document.fonts && document.fonts.load) {
-      Promise.all([document.fonts.load('700 20px Gotham'), document.fonts.load('400 20px Gotham')])
+      Promise.all([document.fonts.load('700 20px Gotham'), document.fonts.load('500 20px Gotham'), document.fonts.load('400 20px Gotham')])
         .then(function () { schedule(); }, function () { /* system font stays */ });
     }
   }

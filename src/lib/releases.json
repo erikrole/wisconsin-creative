@@ -3,7 +3,7 @@
     "date": "2026-10-15",
     "title": "Photo Frame for showcasing photos",
     "type": "feature",
-    "summary": "Drop in a photo and get a clean frame that shows the camera settings and photographer credit, ready to export.",
+    "summary": "Drop in a photo and get a clean, modern frame with its camera settings and photographer credit, ready to post.",
     "details": [
       "Reads camera, lens, focal length, aperture, shutter speed and ISO from the photo itself, and every field can be edited or switched off.",
       "Sized for social by default: 4:5, with 1:1, 9:16 and Original as options. Frames are black, with preset colors and a color picker.",
