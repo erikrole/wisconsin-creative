@@ -100,8 +100,9 @@ jobs:
       DIRECT_URL: "postgresql://placeholder:placeholder@localhost:5432/placeholder"
       SESSION_SECRET: "0000000000000000000000000000000000000000000000000000000000000000"
     steps:
-      # Same sparse checkout as postgres-integrity, plus the one tasks file
-      # npm test reads. The screenshot trees stay on the server.
+      # Same sparse checkout as postgres-integrity, plus top-level tasks/*.md.
+      # npm test reads those notes (audit docs and submission copy). Screenshot
+      # trees under tasks/ and goldie/ stay on the server.
       - uses: actions/checkout@v4
         with:
           fetch-depth: 1
@@ -110,7 +111,7 @@ jobs:
             /*
             !/tasks/**
             !/goldie/**
-            /tasks/app-store-connect-submission-content.md
+            /tasks/*.md
       - name: Fetch commits the diff checks compare
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
