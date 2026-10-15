@@ -1,6 +1,22 @@
 [
   {
     "date": "2026-10-15",
+    "title": "Lighter pages on the web",
+    "type": "improvement",
+    "summary": "Heavy screens download less JavaScript before they can be used. The pages themselves look the same.",
+    "details": [
+      "The overdue report loads its chart only when that chart is needed, the same way the other reports do.",
+      "Schedule week and calendar views load when you switch to them.",
+      "Date fields load the calendar grid separately from the rest of the page.",
+      "Public about pages and several staff screens open with a smaller first download."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 482
+  },
+  {
+    "date": "2026-10-15",
     "title": "Live updates pause overnight",
     "type": "improvement",
     "summary": "Booking, inventory, and audit live updates pause from 10 PM to 6 AM Central, then pick up again in the morning.",
