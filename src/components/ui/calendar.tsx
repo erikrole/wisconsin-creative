@@ -1,18 +1,30 @@
 "use client"
 
-import * as React from "react"
+import dynamic from "next/dynamic"
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
-import { DayPicker } from "react-day-picker"
+import type { DayPickerProps } from "react-day-picker"
 
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
+
+const DayPicker = dynamic(
+  () => import("react-day-picker").then((mod) => mod.DayPicker),
+  { ssr: false },
+)
+
+// The picker module is on the page, but the calendar grid is only shown from a
+// closed popover. Start the chunk as soon as this module loads so opening the
+// popover does not wait on the network.
+if (typeof window !== "undefined") {
+  void import("react-day-picker")
+}
 
 function Calendar({
   className,
   classNames,
   showOutsideDays = true,
   ...props
-}: React.ComponentProps<typeof DayPicker>) {
+}: DayPickerProps) {
   return (
     <DayPicker
       data-slot="calendar"

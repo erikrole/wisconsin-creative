@@ -6,12 +6,10 @@
 | Package | Version |
 |---|---|
 | `@fontsource/barlow` | `^5.3.0` |
-| `@hookform/resolvers` | `^5.9.1` |
 | `@mdxeditor/editor` | `^4.0.4` |
 | `@neondatabase/serverless` | `1.1.0` |
 | `@prisma/adapter-neon` | `^6.19.3` |
 | `@prisma/client` | `^6.19.3` |
-| `@radix-ui/react-progress` | `^1.1.16` |
 | `@sentry/nextjs` | `^10.50.0` |
 | `@simplewebauthn/browser` | `^13.3.0` |
 | `@simplewebauthn/server` | `^13.3.3` |
@@ -26,7 +24,6 @@
 | `@vercel/blob` | `^2.4.1` |
 | `@vercel/functions` | `3.9.9` |
 | `@vercel/speed-insights` | `2.0.0` |
-| `barcode-detector` | `^3.2.2` |
 | `bcryptjs` | `^3.0.3` |
 | `class-variance-authority` | `^0.7.1` |
 | `clsx` | `^2.1.1` |
@@ -43,7 +40,6 @@
 | `react` | `^19.2.7` |
 | `react-day-picker` | `^9.14.0` |
 | `react-dom` | `^19.2.7` |
-| `react-hook-form` | `^7.89.0` |
 | `react-markdown` | `^10.1.0` |
 | `recharts` | `^3.10.1` |
 | `remark-gfm` | `^4.0.1` |

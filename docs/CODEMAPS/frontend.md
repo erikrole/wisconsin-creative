@@ -125,7 +125,7 @@
 | `src/components/resources/BrandAssetLibrary.tsx` | 1827 |
 | `src/components/ActivityTimeline.tsx` | 1387 |
 | `src/components/booking-wizard/BookingWizard.tsx` | 1112 |
-| `src/components/AppShell.tsx` | 1029 |
+| `src/components/AppShell.tsx` | 1035 |
 | `src/components/onboarding/OnboardingDialog.tsx` | 996 |
 | `src/components/schedule/AutoAssignDialog.tsx` | 966 |
 | `src/components/profile-completion/ProfileCompletionWizard.tsx` | 935 |
@@ -141,7 +141,7 @@
 | `src/components/Sidebar.tsx` | 452 |
 | `src/components/event-editor/EventEditorFields.tsx` | 435 |
 | `src/components/ui/heatmap.tsx` | 434 |
-| `src/components/ui/chart.tsx` | 389 |
+| `src/components/ui/chart.tsx` | 387 |
 | `src/components/resources/MarkdownReader.tsx` | 378 |
 | `src/components/booking-details/BookingInfoCard.tsx` | 358 |
 | `src/components/FormCombobox.tsx` | 352 |
@@ -158,7 +158,7 @@
 |---|---:|
 | `src/hooks/booking-action-copy.ts` | 22 |
 | `src/hooks/use-assignment-grid.ts` | 226 |
-| `src/hooks/use-booking-change-sync.ts` | 167 |
+| `src/hooks/use-booking-change-sync.ts` | 169 |
 | `src/hooks/use-copy-feedback.ts` | 62 |
 | `src/hooks/use-current-user.ts` | 53 |
 | `src/hooks/use-dashboard-data.ts` | 234 |
@@ -168,10 +168,10 @@
 | `src/hooks/use-form-submit.ts` | 188 |
 | `src/hooks/use-gear-picks.ts` | 47 |
 | `src/hooks/use-item-cache-invalidation.ts` | 18 |
-| `src/hooks/use-item-change-sync.ts` | 86 |
+| `src/hooks/use-item-change-sync.ts` | 87 |
 | `src/hooks/use-last-audit.ts` | 77 |
 | `src/hooks/use-mobile.ts` | 20 |
-| `src/hooks/use-operational-polling-activity.ts` | 131 |
+| `src/hooks/use-operational-polling-activity.ts` | 155 |
 | `src/hooks/use-profile-completion.ts` | 65 |
 | `src/hooks/use-schedule-data.ts` | 1269 |
 | `src/hooks/use-url-state.ts` | 129 |
