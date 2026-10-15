@@ -15,8 +15,13 @@ on:
       - ".github/ISSUE_TEMPLATE/**"
       - ".github/PULL_REQUEST_TEMPLATE/**"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   claude-review:
+    if: github.event.pull_request.draft == false
     # Optional: Filter by PR author
     # if: |
     #   github.event.pull_request.user.login == 'external-contributor' ||
