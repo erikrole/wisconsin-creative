@@ -9,6 +9,7 @@ import { assertFallbackHistory } from "../prisma-migrate-deploy.mjs";
 import { NeonPreviewApi } from "./neon-preview-api.mjs";
 import { provisionPreviewStorage } from "./provision-preview-storage.mjs";
 import { publishPreviewHandoff } from "./preview-handoff.mjs";
+import { previewDatabaseDecision } from "./preview-change-scope.mjs";
 
 /** Neon bills every branch past the plan's included ten. Refuse a new child at the budget instead of creating one that bills hourly. */
 export function assertPreviewBranchCapacity(existingCount, limit) {
@@ -72,7 +73,16 @@ export async function initializePreviewChild({ branch, gitBranch, pooledUrl, dir
   return state;
 }
 
-export async function provisionPreview(gitBranch, { api = new NeonPreviewApi(), config = readInfrastructureConfig(), root = process.cwd() } = {}) {
+export async function provisionPreview(gitBranch, options = {}) {
+  const change = options.change ?? {};
+  const decision = previewDatabaseDecision({ files: change.files, author: change.author, branch: change.branch ?? gitBranch });
+  if (decision.skip) {
+    console.log(decision.reason);
+    return { skipped: true, gitBranch, reason: decision.reason };
+  }
+  const api = options.api ?? new NeonPreviewApi();
+  const config = options.config ?? readInfrastructureConfig();
+  const root = options.root ?? process.cwd();
   const key = branchKey(gitBranch), name = `${config.preview.branchPrefix}${key}`;
   const existing = await api.branches(config.preview.projectId);
   let branch = existing.find((b) => b.name === name);

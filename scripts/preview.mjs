@@ -1,11 +1,12 @@
 #!/usr/bin/env node
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { currentBranch, previewStatePath, readPreviewState, savePreviewState, verifyPreviewState, localPreviewEnvironment, availablePreviewPort } from "./lib/preview-environment.mjs";
 import { fetchPreviewHandoff } from "./lib/preview-handoff.mjs";
 import { retainPreview } from "./lib/preview-lifecycle.mjs";
 import { provisionPreview } from "./lib/provision-preview.mjs";
+import { pathsFromNameStatus } from "./lib/preview-change-scope.mjs";
 import { localChecksums } from "./lib/local-migrations.mjs";
 import { acquireProcessLock } from "./lib/process-lock.mjs";
 import { writeDotenvValue } from "./ensure-dev-env.mjs";
@@ -14,6 +15,11 @@ import { NeonPreviewApi } from "./lib/neon-preview-api.mjs";
 import { assertFallbackHistory } from "./prisma-migrate-deploy.mjs";
 
 const root = process.cwd(), mode = process.argv[2] ?? "status";
+function localPreviewChange(branch) {
+  const diff = spawnSync("git", ["diff", "--name-status", "--find-renames", "origin/main...HEAD"], { cwd: root, encoding: "utf8" });
+  if (diff.status !== 0) return { branch };
+  return { branch, files: pathsFromNameStatus(diff.stdout) };
+}
 const serverPath = join(root, ".tmp", "preview-server.json");
 const show = (state, extra = {}) => console.log(JSON.stringify({ gitBranch: state.gitBranch, projectId: state.projectId, branchId: state.branchId, endpointId: state.endpointId, ...extra }, null, 2));
 async function run(script, environment, args = [], lease) {
@@ -32,7 +38,11 @@ try {
       state = readPreviewState(root); await verifyPreviewState(state, localChecksums());
     } else {
       state = process.env.NEON_API_KEY && process.env.PREVIEW_SIGNING_KEY
-        ? await provisionPreview(branch) : await fetchPreviewHandoff(branch);
+        ? await provisionPreview(branch, { change: localPreviewChange(branch) }) : await fetchPreviewHandoff(branch);
+      if (state?.skipped) {
+        console.log(state.reason);
+        process.exit(0);
+      }
       savePreviewState(state, root);
     }
     show(state, { status: "ready", next: "npm run dev:preview" });

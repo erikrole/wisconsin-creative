@@ -1,5 +1,10 @@
 name: CI
 
+# Do not add paths or paths-ignore here. validate and postgres-integrity are
+# required checks: a workflow skipped by path filters never reports, and the
+# pull request cannot merge. Docs-only pull requests still run both jobs.
+# They skip install, tests, the app build, and the database integrity script.
+
 on:
   pull_request:
     branches: [main]
@@ -29,13 +34,26 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Decide whether this pull request needs the heavy checks
+        id: scope
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/ci-heavy-scope.mjs
       - uses: actions/setup-node@v4
+        if: steps.scope.outputs.heavy == 'true'
         with:
           node-version: 22
           cache: npm
       - run: npm install --global npm@11.17.0
+        if: steps.scope.outputs.heavy == 'true'
       - run: npm ci
+        if: steps.scope.outputs.heavy == 'true'
       - run: node scripts/check-postgres-integrity.mjs
+        if: steps.scope.outputs.heavy == 'true'
+      - name: Docs-only database check
+        if: steps.scope.outputs.heavy == 'false'
+        run: echo "Docs-only pull request. postgres-integrity reports success without a database run."
 
   validate:
     runs-on: ubuntu-latest
@@ -48,14 +66,24 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Decide whether this pull request needs the heavy checks
+        id: scope
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/ci-heavy-scope.mjs
+
       - uses: actions/setup-node@v4
+        if: steps.scope.outputs.heavy == 'true'
         with:
           node-version: 22
           cache: npm
 
       - run: npm install --global npm@11.17.0
+        if: steps.scope.outputs.heavy == 'true'
 
       - run: npm ci
+        if: steps.scope.outputs.heavy == 'true'
 
       - name: Require a /releases entry
         if: github.event_name == 'pull_request'
@@ -70,9 +98,17 @@ jobs:
             node scripts/check-release-note.mjs
 
       - run: npm run db:migrate:guard -- --base "${{ github.event.pull_request.base.sha || github.event.before }}"
+        if: steps.scope.outputs.heavy == 'true'
 
       - run: node scripts/audit-gate.mjs
+        if: steps.scope.outputs.heavy == 'true'
 
       - run: npm test
+        if: steps.scope.outputs.heavy == 'true'
 
       - run: npm run build:app
+        if: steps.scope.outputs.heavy == 'true'
+
+      - name: Docs-only app check
+        if: steps.scope.outputs.heavy == 'false'
+        run: echo "Docs-only pull request. validate reports success without install, tests, or the app build."
