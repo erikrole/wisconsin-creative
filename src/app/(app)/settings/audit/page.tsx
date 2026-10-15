@@ -170,6 +170,7 @@ export default function AuditLogPage() {
       setRefreshError(null);
       return;
     }
+    // Paused while hidden, idle, offline, or overnight. Becoming visible during the day polls immediately.
     if (pollingState !== "active") return;
 
     void pollForNew();

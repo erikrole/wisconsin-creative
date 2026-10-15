@@ -79,7 +79,9 @@ export function useBookingChangeSync(enabled = true) {
           ? "Booking freshness sync will retry when the browser is online."
           : pollingState === "idle"
             ? "Booking freshness sync paused after inactivity and will resume when you return."
-            : "Booking freshness sync pauses while this tab is in the background.",
+            : pollingState === "quiet"
+              ? "Booking freshness sync pauses overnight and resumes in the morning."
+              : "Booking freshness sync pauses while this tab is in the background.",
         lastCheckedAt: prev.lastCheckedAt,
       }));
       return;

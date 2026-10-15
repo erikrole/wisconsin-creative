@@ -13,6 +13,8 @@ describe("earned badge celebration", () => {
     expect(shell).toContain("response.status === 400 && after");
     expect(shell).toContain("memoryCursor = null");
     expect(shell).toContain("if (!hasRewardCursor())");
+    expect(shell).toContain("isBackgroundPollingPaused()");
+    expect(shell).toContain("isBackgroundPollingPaused(false)");
     const foregroundRefresh = shell.slice(shell.indexOf("async function refreshBadgeRewards"));
     expect(foregroundRefresh.indexOf("await loadEarnedBadges()"))
       .toBeLessThan(foregroundRefresh.indexOf('/api/badges/events/app-open'));

@@ -35,6 +35,7 @@ import { assetSearchTitle } from "@/lib/search-result-title";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { BOOKING_CHANGE_SYNC_EVENT } from "@/hooks/use-booking-change-sync";
+import { isBackgroundPollingPaused } from "@/hooks/use-operational-polling-activity";
 import { NOTIFICATION_COUNT_CHANGED_EVENT } from "@/lib/notification-count-sync";
 import { ProfileCompletionWizard } from "@/components/profile-completion/ProfileCompletionWizard";
 import { hasDashboardCountFailure } from "@/app/(app)/dashboard-types";
@@ -348,7 +349,7 @@ export default function AppShell({
     }
 
     async function loadEarnedBadges() {
-      if (loading || document.visibilityState === "hidden") return;
+      if (loading || isBackgroundPollingPaused()) return;
       loading = true;
 
       try {
@@ -403,6 +404,8 @@ export default function AppShell({
     }
 
     async function refreshBadgeRewards() {
+      // Overnight and background tabs must not mint an app-open award or read badges.
+      if (isBackgroundPollingPaused()) return;
       // Establish the no-replay cursor before a foreground easter egg can
       // create an award, then immediately read again so the reward cannot be
       // skipped by first-load cursor initialization.
@@ -424,6 +427,9 @@ export default function AppShell({
     void refreshBadgeRewards().then(startSteadyPolling);
     const onVisibilityChange = () => {
       if (document.visibilityState !== "visible") return;
+      // Coming back during the day refreshes immediately. Quiet hours stay paused
+      // until the steady timer notices morning.
+      if (isBackgroundPollingPaused(false)) return;
       // A refocus is a fresh signal that the user is here: drop back to the
       // fast cadence before re-reading.
       resetPollDelay();
