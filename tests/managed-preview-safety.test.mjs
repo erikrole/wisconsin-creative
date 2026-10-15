@@ -10,6 +10,17 @@ import { previewRetentionDecision } from "../scripts/lib/preview-retention.mjs";
 import { privateHandoff, handoffVariable, missingEnvironmentReason } from "../scripts/lib/preview-handoff.mjs";
 import { VercelPreviewApi, vercelFailureMessage } from "../scripts/lib/vercel-preview-api.mjs";
 import { NeonPreviewApi } from "../scripts/lib/neon-preview-api.mjs";
+import { assertPreviewBranchCapacity } from "../scripts/lib/provision-preview.mjs";
+import {
+  CLEANUP_COMPUTE_BATCH,
+  endpointsInspectionWouldStart,
+  isEndpointLimitError,
+  openPreviewNames,
+  partitionPreviewCleanup,
+  rotateCleanupBranches,
+  takeCleanupBatch,
+} from "../scripts/lib/preview-cleanup-plan.mjs";
+import { branchKey as previewBranchKey } from "../scripts/lib/preview-environment.mjs";
 
 const temporary = [];
 function directory() { const path = mkdtempSync(join(tmpdir(), "wc-preview-test-")); temporary.push(path); return path; }
@@ -192,17 +203,67 @@ describe("managed preview cleanup compute", () => {
     const api = new NeonPreviewApi("token", async () => new Response(null, { status: 503 }));
     await expect(api.suspendEndpoints("project", ["ep-idle"])).rejects.toMatchObject({ status: 503 });
   });
-  it("suspends after every reviewed branch unless it was removed or used meanwhile", () => {
+  it("suspends endpoints it started and does not leave them active", () => {
     const source = readFileSync("scripts/cleanup-previews.mjs", "utf8");
-    expect(source).toMatch(/try \{ await review\(branch, inspection\); \} finally \{/);
-    expect(source).toMatch(/inspection\.removed\)[\s\S]*usedDuringReview\(inspection\)[\s\S]*suspendEndpoints/);
-    expect(source).toMatch(/catch \{ return true; \}/);
-    // The activity baseline predates the idle snapshot, so a lease started mid-review is seen.
-    expect(source.indexOf("startedAt: new Date()")).toBeLessThan(source.indexOf("provider.idleEndpoints("));
+    expect(source).toContain("provider.endpoints(projectId)");
+    expect(source).toContain("config.preview.projectId");
+    expect(source).toContain("/^wc-preview-[a-f0-9]{20}$/");
+    expect(source).not.toContain("in-use-left-active");
+    expect(source).not.toContain("costWatch");
+    expect(source).toMatch(/if \(!inspection\.removed && started\.length\) await suspendStarted/);
+    expect(source).toContain('status: "retry-later", reason: "endpoint-limit"');
+    expect(source).toContain('status: "referenced", via: "metadata"');
     expect(source).not.toMatch(/retainPreview/);
-    expect(source).toMatch(/if \(!sql\) return true;/);
-    expect(source).toMatch(/pg_stat_activity[^"]*usename=current_user[^"]*pid<>pg_backend_pid\(\)/);
-    expect(source).toMatch(/inspection\.unattested = true/);
-    expect(source).toMatch(/if \(unattested\) return false;/);
+  });
+});
+
+describe("preview cleanup planning", () => {
+  const prefix = "wc-preview-";
+  const nameFor = (gitBranch) => `${prefix}${previewBranchKey(gitBranch)}`;
+  const child = (name, id = name) => ({ id, name, parent_id: "template", protected: false, default: false, primary: false });
+
+  it("matches open PRs by preview branch name and leaves closed ones for SQL", () => {
+    const open = openPreviewNames(["cursor/cost", "main"], { branchPrefix: prefix });
+    expect(open.get(nameFor("cursor/cost"))).toBe("cursor/cost");
+    expect([...open.keys()]).toHaveLength(1);
+    const branches = [child(nameFor("cursor/cost"), "br-open"), child(nameFor("cursor/closed"), "br-closed")];
+    const plan = partitionPreviewCleanup(branches, open);
+    expect(plan.metadata.map((item) => item.gitBranch)).toEqual(["cursor/cost"]);
+    expect(plan.database.map((item) => item.id)).toEqual(["br-closed"]);
+  });
+
+  it("starts only idle endpoints and treats the active-endpoint cap as retry-later", () => {
+    expect(endpointsInspectionWouldStart([
+      { id: "ep-idle", current_state: "idle" },
+      { id: "ep-busy", current_state: "active" },
+      { id: "ep-waking", current_state: "idle", pending_state: "active" },
+    ])).toEqual(["ep-idle"]);
+    expect(isEndpointLimitError(Object.assign(new Error("Neon POST failed (402)."), { status: 402 }))).toBe(true);
+    expect(isEndpointLimitError(new Error("project cannot have more than 20 concurrently active endpoints"))).toBe(true);
+    expect(isEndpointLimitError(new Error("connection reset"))).toBe(false);
+    expect(CLEANUP_COMPUTE_BATCH).toBeLessThanOrEqual(3);
+  });
+
+  it("stops a sweep at the time budget and rotates which child goes first", () => {
+    const branches = ["a", "b", "c", "d"].map((id) => ({ id }));
+    expect(takeCleanupBatch(branches, { elapsedMs: 0, budgetMs: 1_000, batchSize: 2 })).toEqual({
+      batch: branches.slice(0, 2), deferred: branches.slice(2), reason: null,
+    });
+    expect(takeCleanupBatch(branches, { elapsedMs: 1_000, budgetMs: 1_000 }).reason).toBe("time-budget");
+    const rotated = rotateCleanupBranches(branches, 86_400_000);
+    expect(rotated.map((branch) => branch.id)).toEqual(["b", "c", "d", "a"]);
+  });
+});
+
+describe("preview branch budget", () => {
+  it("refuses to create a child once the preview budget is full", () => {
+    expect(() => assertPreviewBranchCapacity(9, 9)).toThrow(/Refusing to create a preview branch: 9 preview branches already exist \(limit 9\)/);
+    expect(() => assertPreviewBranchCapacity(8, 9)).not.toThrow();
+    const source = readFileSync("scripts/lib/provision-preview.mjs", "utf8");
+    const check = source.indexOf("assertPreviewBranchCapacity(");
+    const create = source.indexOf("branches`, { method: \"POST\"");
+    expect(check).toBeGreaterThan(-1);
+    expect(create).toBeGreaterThan(check);
+    expect(source).not.toContain("::warning title=Neon preview branches over budget");
   });
 });

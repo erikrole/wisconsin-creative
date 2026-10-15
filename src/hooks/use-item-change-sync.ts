@@ -29,6 +29,7 @@ export function useItemChangeSync() {
   const inFlightRef = useRef(false);
 
   useEffect(() => {
+    // Paused while hidden, idle, offline, or overnight. Becoming active polls immediately.
     if (pollingState !== "active") return;
 
     let cancelled = false;

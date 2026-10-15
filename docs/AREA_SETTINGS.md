@@ -125,7 +125,7 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 - Related Settings destinations: Data exports and Database diagnostics.
 - First page loads on mount; "Load older entries" button fetches the next keyset-paginated page via `?cursor=<nextCursor>`.
 - Older-page failures preserve the loaded entries and show persistent inline recovery copy plus a retry-labeled pagination action so partial history is not mistaken for complete history.
-- **Auto-refresh** toggle: when on, polls `GET /api/audit?after=<newestCursor>` every 30 seconds while the browser is visible, online, and recently active, then prepends new rows with a dismissible new-count banner. Polling pauses after two minutes without activity and checks immediately when the user returns.
+- **Auto-refresh** toggle: when on, polls `GET /api/audit?after=<newestCursor>` every 30 seconds while the browser is visible, online, recently active, and outside overnight quiet hours (10 PM–6 AM Central), then prepends new rows with a dismissible new-count banner. Polling pauses after two minutes without activity, while the tab is hidden, and overnight. It checks immediately when the user returns during the day, and resumes on its own after quiet hours.
 - Auto-refresh failures preserve the loaded entries, show an inline stale-data warning, and expose `Retry now` so admins do not mistake a failed live-tail check for a current audit feed.
 - Filters: entity type (exact), action (substring), from date, to date. The filter row uses the shared operational toolbar and removable active-filter chips. Apply validates invalid or inverted dates inline before a fresh first-page load; "Clear filters" resets to unfiltered.
 - Retention banner shows the configured retention window (90 days) from the API response.
@@ -231,7 +231,7 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 - [x] AC-10: Allowed emails: add/delete with role pre-assignment, registration gating enforced
 - [x] AC-11: Departments: staff/admin CRUD surface for inventory ownership groups
 - [x] AC-12: Sports: separate Staff and Student staffing counts plus default call-time copy
-- [x] AC-13: Audit auto-refresh stops requests for hidden, offline, or two-minute-idle sessions and checks immediately when activity resumes.
+- [x] AC-13: Audit auto-refresh stops requests for hidden, offline, two-minute-idle, or overnight (10 PM–6 AM Central) sessions and checks immediately when activity resumes during the day.
 - [ ] AC-14: App activity passes migrated, configured, authenticated owner/non-owner acceptance, including a signed TestFlight/App Store client and stale/latest build comparison.
 
 ## Breadcrumb Roadmap
@@ -241,6 +241,7 @@ Navigation breadcrumb versioned roadmap: `tasks/breadcrumbs-roadmap.md`
 All versions shipped. Duplicate breadcrumb removed; parent-level sibling quick-jump dropdown on "Settings" crumb navigates between sub-pages. Role-gated Settings sibling menus now wait for the current role before becoming dropdowns, so the loading frame does not expose an empty menu. The global breadcrumb UI now uses a lighter trail treatment with the current Settings sub-page marked by a subtle underline instead of a filled chip.
 
 ## Change Log
+- 2026-10-15: **Audit auto-refresh pauses overnight.** The live tail still polls every 30 seconds while an admin is active, and it also stops from 10 PM to 6 AM Central, including while a tab sits open. Bringing the tab back during the day checks immediately. Filters, pagination, and stale-feed recovery are unchanged.
 - 2026-10-11: **Web Security can delete an account.** `/settings/security` adds a Delete account section with current-password reauthentication, typed `DELETE` confirmation, and a second destructive confirm before calling existing `DELETE /api/me/account`. Copy matches the native retention and open-checkout rules; success routes to `/login`. API behavior unchanged. Proof: focused Security source contract, `tests/me-account-deletion.test.ts`, and `tsc --noEmit`. Authenticated browser destructive completion intentionally not run against a real account.
 
 - 2026-10-11: **Collaborator access save trust matches Booking/Profile.** Dirty affiliation policy cards now use `SettingsSaveBar` (unsaved status, Reset, Save policy), disable name/badge/status/capability controls while saving, guard duplicate submits, and warn with `beforeunload` when leaving dirty. Capability model, preview confirmation, restore, and archive are unchanged. Proof: focused collaborator/settings source contracts and `tsc --noEmit`. Authenticated browser edit→leave→warn proof not run (preview server unavailable in this environment).

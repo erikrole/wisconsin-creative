@@ -1,5 +1,21 @@
 [
   {
+    "date": "2026-10-15",
+    "title": "Live updates pause overnight",
+    "type": "improvement",
+    "summary": "Booking, inventory, and audit live updates pause from 10 PM to 6 AM Central, then pick up again in the morning.",
+    "details": [
+      "Open booking and inventory pages stop asking for changes overnight and refresh on their own after 6 AM.",
+      "Audit auto-refresh follows the same overnight pause.",
+      "Badge celebrations wait until morning instead of checking through the night.",
+      "Bringing a tab back during the day still refreshes right away."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 479
+  },
+  {
     "date": "2026-10-14",
     "title": "Uniform app cards on the apps page",
     "type": "improvement",
