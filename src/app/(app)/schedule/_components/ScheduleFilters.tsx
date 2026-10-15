@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import { FilterIcon, ListIcon, CalendarIcon, CalendarDaysIcon, LoaderCircleIcon, XIcon, WorkflowIcon } from "lucide-react";
 import { SportPicker } from "@/components/SportPicker";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ import {
 import type { ScheduleFilters as ScheduleFiltersType, ViewMode, HomeAwayFilter } from "@/hooks/use-schedule-data";
 import type { ScheduleSourceSignal as ScheduleSourceSignalData } from "@/lib/calendar-source-freshness";
 import { ScheduleSourceSignal } from "./ScheduleSourceSignal";
+import { preloadScheduleView } from "./schedule-view-preload";
 
 type ScheduleFiltersProps = {
   filters: ScheduleFiltersType;
@@ -70,6 +71,7 @@ export function ScheduleFilters({
   sourceSignal = null,
 }: ScheduleFiltersProps) {
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const viewRequest = useRef(0);
   /**
    * Sport is the one filter the server applies, so a selected sport narrows the
    * loaded window to itself. Deriving the menu from those rows offered only the
@@ -165,7 +167,13 @@ export function ScheduleFilters({
             data-schedule-view-controls
             value={filters.viewMode}
             onValueChange={(value) => {
-              if (value) filters.setViewMode(value as ViewMode);
+              if (!value) return;
+              const mode = value as ViewMode;
+              const request = ++viewRequest.current;
+              void preloadScheduleView(mode).then(() => {
+                if (viewRequest.current !== request) return;
+                filters.setViewMode(mode);
+              });
             }}
             className="bg-transparent p-0"
             aria-label="Schedule view"
@@ -176,6 +184,8 @@ export function ScheduleFilters({
                 value={mode.value}
                 aria-label={`${mode.label} view`}
                 className="h-10 gap-1.5 px-3 text-[13px]"
+                onPointerEnter={() => void preloadScheduleView(mode.value)}
+                onFocus={() => void preloadScheduleView(mode.value)}
               >
                 {mode.icon}
                 <span className="max-sm:hidden">{mode.label}</span>

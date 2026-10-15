@@ -29,8 +29,7 @@ import { FadeUp } from "@/components/ui/motion";
 import { toast } from "sonner";
 import { useScheduleData } from "@/hooks/use-schedule-data";
 import { ScheduleFilters } from "./_components/ScheduleFilters";
-import { CalendarView } from "./_components/CalendarView";
-import { WeekView } from "./_components/WeekView";
+import { preloadScheduleView } from "./_components/schedule-view-preload";
 import { classifyError, handleAuthRedirect, isAbortError, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { ListView } from "./_components/ListView";
 import { NewEventSheet } from "./_components/NewEventSheet";
@@ -57,6 +56,12 @@ const ShiftDetailPanel = dynamic(
 const TradeBoard = dynamic(() => import("@/components/TradeBoard"), {
   ssr: false,
 });
+const CalendarView = dynamic(
+  () => import("./_components/CalendarView").then((m) => ({ default: m.CalendarView })),
+);
+const WeekView = dynamic(
+  () => import("./_components/WeekView").then((m) => ({ default: m.WeekView })),
+);
 
 const SCHEDULE_EXPORTS = [
   { type: "roster", label: "Weekly roster" },
@@ -80,6 +85,18 @@ export default function SchedulePage() {
 
 function InternalSchedulePage() {
   const data = useScheduleData();
+  useEffect(() => {
+    const warm = () => {
+      void preloadScheduleView("week");
+      void preloadScheduleView("calendar");
+    };
+    if (typeof window.requestIdleCallback === "function") {
+      const id = window.requestIdleCallback(warm);
+      return () => window.cancelIdleCallback(id);
+    }
+    const id = window.setTimeout(warm, 200);
+    return () => window.clearTimeout(id);
+  }, []);
   const isStaff = data.currentUserRole === "STAFF" || data.currentUserRole === "ADMIN";
   const canReviewClaims = data.currentUserRole === "ADMIN";
   const { loadData, setExpandedRowId, setTradeSheetOpen } = data;

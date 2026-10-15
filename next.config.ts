@@ -24,7 +24,19 @@ const baseConfig: NextConfig = {
     ignoreBuildErrors: isVercelDeployment,
   },
   experimental: {
-    optimizePackageImports: ["date-fns", "motion"],
+    // lucide-react and recharts are already in Next's default list.
+    // These are the barrels this app imports that the default list misses.
+    optimizePackageImports: [
+      "date-fns",
+      "motion",
+      "motion/react",
+      "radix-ui",
+      "@tanstack/react-query",
+      "@tanstack/react-query-persist-client",
+      "@tanstack/react-table",
+      "cmdk",
+      "react-day-picker",
+    ],
     devtoolSegmentExplorer: false,
     // Sentry and Workflow both customize webpack, so Next does not enable its
     // separate build worker automatically. Isolate compilation and release
