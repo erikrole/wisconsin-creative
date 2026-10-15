@@ -14,7 +14,7 @@ function loadCore(path: string, name: string): any {
 }
 
 const nextConfigSource = readFileSync("next.config.ts", "utf8");
-const TOOLS = ["golden-hour", "timelapse", "board-sizes"] as const;
+const TOOLS = ["golden-hour", "timelapse", "board-sizes", "frame"] as const;
 
 describe("static tools: routing, headers, and page contracts", () => {
   it("redirects each clean URL to its dotted file path so the nonce middleware skips it", () => {
@@ -48,6 +48,7 @@ describe("static tools: routing, headers, and page contracts", () => {
   it("keeps each tool folder to its own files", () => {
     expect(readdirSync("public/golden-hour").sort()).toEqual(["app.js", "core.js", "index.html"]);
     expect(readdirSync("public/timelapse").sort()).toEqual(["app.js", "core.js", "index.html"]);
+    expect(readdirSync("public/frame").sort()).toEqual(["app.js", "core.js", "index.html"]);
     expect(readdirSync("public/board-sizes").sort()).toEqual(
       ["app.js", "boards.csv", "boards.json", "boards.schema.json", "data.js", "design", "index.html", "index.json", "llms.txt"],
     );
@@ -55,7 +56,7 @@ describe("static tools: routing, headers, and page contracts", () => {
   });
 
   it("links every tool back to the apps page", () => {
-    for (const tool of ["golden-hour", "timelapse", "board-sizes", "qrcode"]) {
+    for (const tool of ["golden-hour", "timelapse", "board-sizes", "qrcode", "frame"]) {
       expect(readFileSync(`public/${tool}/index.html`, "utf8"), tool).toContain('href="/apps"');
     }
   });
@@ -66,7 +67,7 @@ describe("static tools: routing, headers, and page contracts", () => {
 
   it("lists every public tool on the apps page", () => {
     const hub = readFileSync("src/lib/apps-page.ts", "utf8");
-    for (const href of ["/golden-hour", "/timelapse", "/board-sizes", "/qrcode"]) expect(hub).toContain(`href="${href}"`);
+    for (const href of ["/golden-hour", "/timelapse", "/board-sizes", "/qrcode", "/frame"]) expect(hub).toContain(`href="${href}"`);
   });
 
   it("never writes a GPS fix into the shareable URL", () => {

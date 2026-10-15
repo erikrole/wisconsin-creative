@@ -1,5 +1,20 @@
 [
   {
+    "date": "2026-10-15",
+    "title": "Photo Frame for showcasing photos",
+    "type": "feature",
+    "summary": "Drop in a photo and get a clean frame that shows the camera settings and photographer credit, ready to export.",
+    "details": [
+      "Reads camera, lens, focal length, aperture, shutter speed and ISO from the photo itself, and every field can be edited or switched off.",
+      "Frames are black by default, with preset colors and a color picker.",
+      "Exports a PNG at the photo's full resolution. The photo never leaves your browser."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 0
+  },
+  {
     "date": "2026-10-14",
     "title": "Uniform app cards on the apps page",
     "type": "improvement",

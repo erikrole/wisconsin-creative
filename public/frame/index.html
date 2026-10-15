@@ -1,0 +1,170 @@
+<!doctype html>
+<!-- Photo Frame. Canonical source: edit here. Run `node scripts/hash-static-tools.mjs` after changing a script. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; font-src 'self'; img-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0c0d0f">
+  <meta name="robots" content="noindex">
+  <title>Photo Frame</title>
+  <meta name="description" content="Drop in a photo and get a clean frame with its camera settings and photographer credit, ready to export as a PNG.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3.5' fill='%230c0d0f'/%3E%3Crect x='3' y='2.5' width='10' height='8' fill='none' stroke='%23fff' stroke-width='1.2'/%3E%3Crect x='3' y='12' width='5' height='1.4' fill='%23a00000'/%3E%3C/svg%3E">
+  <style>
+    @font-face { font-family: "Gotham"; src: url("/Gotham-Black.woff2") format("woff2"); font-weight: 800; font-display: swap; }
+    @font-face { font-family: "Gotham"; src: url("/Gotham-Bold.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+    @font-face { font-family: "Gotham"; src: url("/Gotham-Medium.woff2") format("woff2"); font-weight: 500; font-display: swap; }
+    @font-face { font-family: "Gotham"; src: url("/Gotham-Book.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+
+    :root {
+      --body: #0c0d0f;
+      --panel: #141518;
+      --field: #0f1012;
+      --line: #26272d;
+      --line-2: #34353c;
+      --ink: #f2f2ef;
+      --ink-2: #b9b9b3;
+      --ink-3: #85857f;
+      --red: #a00000;
+      --red-hi: #c40a0a;
+      --danger: #ff6b6b;
+      --font: "Gotham", system-ui, -apple-system, "Segoe UI", sans-serif;
+      --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+      --ease: cubic-bezier(0.2, 0, 0, 1);
+      color-scheme: dark;
+    }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    html { background: var(--body); }
+    body { margin: 0; min-width: 300px; min-height: 100vh; color: var(--ink); font-family: var(--font); font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; background: var(--body); }
+    button, input { font: inherit; color: inherit; }
+    :focus-visible { outline: 2px solid #fff; outline-offset: 2px; border-radius: 6px; }
+
+    .topbar { display: flex; align-items: center; gap: 12px; height: 60px; padding: env(safe-area-inset-top) clamp(16px, 4vw, 28px) 0; border-bottom: 1px solid var(--line); }
+    .brand { display: flex; align-items: center; gap: 11px; margin-right: auto; }
+    .brand-mark { width: 30px; height: 30px; flex: none; display: grid; place-items: center; border-radius: 8px; background: #000; box-shadow: 0 0 0 1px var(--line-2); }
+    .brand-mark svg { width: 18px; height: 18px; }
+    .brand-name { font-weight: 800; font-size: 13px; letter-spacing: 0.18em; text-transform: uppercase; }
+    .brand-tag { font-family: var(--mono); font-size: 11px; color: var(--ink-3); letter-spacing: 0.06em; }
+    .pill { display: inline-flex; align-items: center; gap: 7px; min-height: 34px; padding: 0 13px; border-radius: 8px; background: var(--panel); border: 1px solid var(--line-2); color: var(--ink-2); text-decoration: none; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
+    .pill:hover { color: var(--ink); border-color: var(--ink-3); }
+    .icon { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+    @media (max-width: 460px) { .brand-tag { display: none; } }
+
+    main { width: min(1240px, calc(100% - 32px)); margin: 0 auto; padding: clamp(18px, 3vw, 32px) 0 calc(56px + env(safe-area-inset-bottom)); display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 20px; align-items: start; }
+    @media (max-width: 880px) { main { grid-template-columns: 1fr; } .stage-col { order: -1; } }
+    .controls { display: grid; gap: 16px; }
+    .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; }
+    .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 11px 16px; border-bottom: 1px solid var(--line); font-size: 11px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-3); }
+    .panel-body { padding: 16px; display: grid; gap: 14px; }
+
+    .button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 16px; border-radius: 9px; border: 1px solid var(--line-2); background: var(--field); color: var(--ink); font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; transition: border-color 140ms var(--ease), background 140ms var(--ease); }
+    .button:hover { border-color: var(--ink-3); }
+    .button.primary { background: var(--red); border-color: var(--red); color: #fff; }
+    .button.primary:hover { background: var(--red-hi); border-color: var(--red-hi); }
+    .button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .file-name { margin: 0; font-family: var(--mono); font-size: 12px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .swatches { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .swatch { width: 34px; height: 34px; padding: 0; border-radius: 50%; background: var(--c); border: 1px solid var(--line-2); cursor: pointer; transition: transform 140ms var(--ease); }
+    .swatch:hover { transform: scale(1.08); }
+    .swatch[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--body), 0 0 0 4px #fff; }
+    .custom { position: relative; display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px 0 4px; border-radius: 999px; border: 1px solid var(--line-2); background: var(--field); font-family: var(--mono); font-size: 12px; color: var(--ink-2); cursor: pointer; }
+    .custom.active { border-color: #fff; color: var(--ink); }
+    .custom input { width: 26px; height: 26px; padding: 0; border: 0; border-radius: 50%; background: none; cursor: pointer; }
+    .custom input::-webkit-color-swatch-wrapper { padding: 0; }
+    .custom input::-webkit-color-swatch { border: 1px solid var(--line-2); border-radius: 50%; }
+    .custom input::-moz-color-swatch { border: 1px solid var(--line-2); border-radius: 50%; }
+
+    .field { display: grid; grid-template-columns: 22px 92px minmax(0, 1fr); align-items: center; gap: 8px; }
+    .field label { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); }
+    .field input[type="checkbox"] { width: 18px; height: 18px; margin: 0; accent-color: var(--red-hi); cursor: pointer; }
+    .field input[type="text"] { width: 100%; height: 40px; padding: 0 11px; border-radius: 8px; background: var(--field); border: 1px solid var(--line-2); font-size: 14px; transition: border-color 140ms var(--ease); }
+    .field input[type="text"]:hover { border-color: var(--ink-3); }
+    .field input[type="text"]:focus { border-color: #fff; outline: none; }
+    .field input[type="text"]::placeholder { color: #4d4d52; }
+    .field:has(input[type="checkbox"]:not(:checked)) label, .field:has(input[type="checkbox"]:not(:checked)) input[type="text"] { opacity: 0.45; }
+
+    .stage-col { display: grid; gap: 12px; min-width: 0; position: sticky; top: 16px; }
+    @media (max-width: 880px) { .stage-col { position: static; } }
+    .stage { position: relative; display: grid; place-items: center; min-height: min(70vh, 640px); padding: clamp(14px, 3vw, 28px); border-radius: 14px; border: 1px solid var(--line); background: radial-gradient(800px 420px at 50% 0%, rgba(255, 255, 255, 0.04), transparent 70%), #101113; overflow: hidden; }
+    .stage.has-photo { min-height: 0; }
+    .stage.dragging { border-color: #fff; background-color: #17181b; }
+    .drop { display: grid; justify-items: center; gap: 14px; max-width: 360px; padding: 34px 20px; text-align: center; border: 1.5px dashed var(--line-2); border-radius: 14px; width: 100%; cursor: pointer; transition: border-color 140ms var(--ease); }
+    .drop:hover, .stage.dragging .drop { border-color: var(--ink-2); }
+    .drop svg { width: 38px; height: 38px; }
+    .drop strong { font-size: 18px; font-weight: 800; letter-spacing: -0.01em; }
+    .drop span { font-size: 13px; color: var(--ink-3); }
+    .stage.has-photo .drop { display: none; }
+    #canvas { display: none; max-width: 100%; max-height: min(78vh, 900px); width: auto; height: auto; box-shadow: 0 30px 70px -30px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.06); }
+    .stage.has-photo #canvas { display: block; }
+    .status { min-height: 22px; margin: 0; font-size: 13px; color: var(--ink-2); }
+    .status.error { color: var(--danger); }
+    .footnote { margin: 0; font-size: 12px; color: var(--ink-3); }
+    .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none"><rect x="2.5" y="2.5" width="15" height="11" stroke="#fff" stroke-width="1.5"/><rect x="2.5" y="15.5" width="6" height="2" fill="#a00000"/></svg></span>
+      <span class="brand-name">Photo Frame</span>
+      <span class="brand-tag">Photo · settings · credit</span>
+    </div>
+    <a class="pill" href="/apps">
+      <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="5" height="5" rx="1.2"/><rect x="9" y="2" width="5" height="5" rx="1.2"/><rect x="2" y="9" width="5" height="5" rx="1.2"/><rect x="9" y="9" width="5" height="5" rx="1.2"/></svg>
+      Apps
+    </a>
+  </header>
+
+  <main>
+    <div class="controls">
+      <section class="panel">
+        <div class="panel-head"><span>Photo</span></div>
+        <div class="panel-body">
+          <button class="button" type="button" id="choose">Choose a photo</button>
+          <input class="visually-hidden" id="file" type="file" accept="image/jpeg,image/png,image/webp">
+          <p class="file-name" id="file-name">JPEG, PNG or WebP. Stays on this device.</p>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><span>Frame</span></div>
+        <div class="panel-body">
+          <div class="swatches" id="swatches" role="group" aria-label="Frame color"></div>
+          <label class="custom" id="custom" title="Pick any color">
+            <input type="color" id="color" value="#000000" aria-label="Custom frame color">
+            <span id="color-hex">#000000</span>
+          </label>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><span>On the frame</span></div>
+        <div class="panel-body" id="fields"></div>
+      </section>
+    </div>
+
+    <div class="stage-col">
+      <div class="stage" id="stage">
+        <label class="drop" id="drop" for="file" tabindex="0">
+          <svg viewBox="0 0 40 40" fill="none" stroke="#85857f" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="6" width="30" height="22" rx="2"/><path d="M5 22l8-7 7 6 5-4 10 8"/><path d="M20 36V30M16.5 33.5L20 30l3.5 3.5"/></svg>
+          <strong>Drop a photo here</strong>
+          <span>or click to choose one. You can also paste.</span>
+        </label>
+        <canvas id="canvas" role="img" aria-label="Framed preview"></canvas>
+      </div>
+      <p class="status" id="status" role="status"></p>
+      <div>
+        <button class="button primary" id="export" type="button" disabled>Export PNG</button>
+      </div>
+      <p class="footnote">Exports at the photo's full resolution. Settings come from the photo's own EXIF data; edit any of them on the left.</p>
+    </div>
+  </main>
+
+  <script src="core.js?v=3c69bf5c3da9"></script>
+  <script src="app.js?v=1b19e1dba814"></script>
+</body>
+</html>
