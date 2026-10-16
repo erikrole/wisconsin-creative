@@ -11,7 +11,7 @@
 
 | Model | Fields | Model-level indexes/constraints |
 |---|---:|---:|
-| `User` | 130 | 5 |
+| `User` | 131 | 5 |
 | `Session` | 7 | 2 |
 | `PasswordResetToken` | 6 | 2 |
 | `PasskeyCredential` | 12 | 2 |
@@ -19,7 +19,7 @@
 | `Location` | 17 | 1 |
 | `Department` | 7 | 1 |
 | `Category` | 9 | 3 |
-| `Asset` | 42 | 8 |
+| `Asset` | 43 | 8 |
 | `FirmwareWatchTarget` | 17 | 3 |
 | `Booking` | 44 | 15 |
 | `BookingAccountabilityExclusion` | 11 | 4 |
@@ -27,7 +27,7 @@
 | `BookingSerializedItem` | 10 | 4 |
 | `BookingBulkItem` | 10 | 3 |
 | `AssetAllocation` | 11 | 4 |
-| `BulkSku` | 30 | 5 |
+| `BulkSku` | 31 | 5 |
 | `BulkSkuProduct` | 11 | 3 |
 | `BulkStockBalance` | 7 | 4 |
 | `BulkStockMovement` | 13 | 4 |
@@ -122,6 +122,9 @@
 | `GearPickParticipant` | 10 | 3 |
 | `GearPickSubmission` | 9 | 1 |
 | `GearPickLine` | 9 | 2 |
+| `Budget` | 8 | 3 |
+| `BudgetLine` | 22 | 5 |
+| `BudgetLineItem` | 10 | 5 |
 
 ## Enums
 
@@ -540,3 +543,24 @@
 
 - `MEN`
 - `WOMEN`
+
+### `BudgetLineStatus`
+
+- `PLANNED`
+- `ORDERED`
+- `PURCHASED`
+- `CANCELLED`
+
+### `BudgetCategory`
+
+- `AWARDS_PRIZES`
+- `BUSINESS_TRAVEL`
+- `EQUIPMENT`
+- `IT_SERVICES`
+- `LEASES`
+- `MAINTENANCE_REPAIRS`
+- `MATERIALS_SUPPLIES`
+- `RENTALS`
+- `SERVICES`
+- `SUBSCRIPTIONS_DUES`
+- `TELECOMMUNICATIONS`

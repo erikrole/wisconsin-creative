@@ -11,6 +11,7 @@
 | `/blasts/[id]` | `src/app/(app)/blasts/[id]/page.tsx` |
 | `/blasts` | `src/app/(app)/blasts/page.tsx` |
 | `/bookings` | `src/app/(app)/bookings/page.tsx` |
+| `/budget` | `src/app/(app)/budget/page.tsx` |
 | `/bulk-inventory/[id]` | `src/app/(app)/bulk-inventory/[id]/page.tsx` |
 | `/bulk-inventory/batteries` | `src/app/(app)/bulk-inventory/batteries/page.tsx` |
 | `/bulk-inventory` | `src/app/(app)/bulk-inventory/page.tsx` |
@@ -138,7 +139,7 @@
 | `src/components/schedule/SportSetupWizard.tsx` | 675 |
 | `src/components/booking-wizard/WizardStep1.tsx` | 599 |
 | `src/components/booking-details/BookingHeader.tsx` | 472 |
-| `src/components/Sidebar.tsx` | 452 |
+| `src/components/Sidebar.tsx` | 454 |
 | `src/components/event-editor/EventEditorFields.tsx` | 435 |
 | `src/components/ui/heatmap.tsx` | 434 |
 | `src/components/ui/chart.tsx` | 387 |

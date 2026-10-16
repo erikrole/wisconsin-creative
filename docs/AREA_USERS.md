@@ -57,6 +57,9 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 - `ADMIN`: results, deadline, roster, and CSV export through `gear_picks.manage`. See [AREA_GEAR_PICKS.md](AREA_GEAR_PICKS.md).
 - `COLLABORATOR`: no access. Role preview stays read-only and cannot download the export.
 
+### Budget
+- `ADMIN`: view and manage budgets, lines, and purchases through `budget.view` and `budget.manage`. `STAFF`, `STUDENT`, `COLLABORATOR`: no access; the sidebar entry is hidden, the page redirects, and every `/api/budget/*` route returns 403. See [AREA_BUDGET.md](AREA_BUDGET.md).
+
 ### Scoreboard
 - `ADMIN`, `STAFF`, `STUDENT`, and `COLLABORATOR` may view the shared team Scoreboard and an active, non-hidden person’s Scoreboard through the explicit `scoreboard.view` permission.
 - The team Scoreboard is a generic current-season explorer. Sport, Schedule venue, opponent, and Home/Away/Neutral site each accept one exact value and combine with AND semantics; totals, dimensional breakdowns, the Snapshot, and every person ranking are recomputed from that same intersection. Filter choices remain stable across narrowing. Web explorer state is URL-backed, so a stacked view can be refreshed or shared. Opening a person keeps that stack on the URL; sport and site also filter the person Scoreboard, and All leaders restores the team view. The leaderboard can be searched by name without changing the underlying rank. Snapshot labels follow the last loaded intersection while a new stack refreshes.
