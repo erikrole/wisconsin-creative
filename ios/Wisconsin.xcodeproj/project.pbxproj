@@ -57,6 +57,7 @@
 		2E557BDFACDF537A54930972 /* BadgeEarnedCelebration.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDF1537A041998300D3A8FA8 /* BadgeEarnedCelebration.swift */; };
 		2F57AAE5BC711AFCB6825C38 /* KioskChangesViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8720CD7A10389DB790C6C2D /* KioskChangesViews.swift */; };
 		2F641BB2A7FBF81DEDEE7FE1 /* CurrentDayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7F7F41A126A5E914C982A9 /* CurrentDayTests.swift */; };
+		2FD2DC461CD2264F0A56E51E /* GearPickModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC7B22E7033F1442ADEF6691 /* GearPickModels.swift */; };
 		30A2174F020A46E7B8538492 /* CreateBookingPickers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AFF5F65A92CEAED518EF6E6 /* CreateBookingPickers.swift */; };
 		31591DD0437B097C2510AB84 /* UserAvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2BBAACBEA87B1EE9FEBC287 /* UserAvatarView.swift */; };
 		31BA906AD0D633053D4804B7 /* AccountSecuritySettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 552E4A9FC0A2CB73C36F51C6 /* AccountSecuritySettingsView.swift */; };
@@ -78,9 +79,8 @@
 		46010B21A5285A7396574B59 /* DayTimeChipPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1284B141E75FF8117D418B12 /* DayTimeChipPicker.swift */; };
 		46239E3116E5DE148E7A9C4F /* ItemListText.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC04AA628BB1DEA764D7EEAC /* ItemListText.swift */; };
 		470F79B703DF9EB55FECE070 /* FormModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6148A160C162A021FF9DE4C0 /* FormModels.swift */; };
-		A8C31E6B4F902D7A15B6C084 /* GearPickModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4E8A17B2D905F6A3B1C8E47 /* GearPickModels.swift */; };
-		D5F07A92E1B34C68A0D29F15 /* GearPicksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E17B3A9C4D628F05A6C2B8E4 /* GearPicksView.swift */; };
 		47DD202255737DB455061266 /* LatestRequestGeneration.swift in Sources */ = {isa = PBXBuildFile; fileRef = D39486DE707928DB17EA4667 /* LatestRequestGeneration.swift */; };
+		48ED42A7AF3A2894F3C9C7E6 /* GearPicksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 278E72E73C5B3A226373D733 /* GearPicksView.swift */; };
 		4B2A968B07EADEF18DEAD46D /* KioskActivationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 783E3F89AF08A64D8BE2685D /* KioskActivationView.swift */; };
 		4B5FFF1D1D5E4C8FF671E34F /* PasswordSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DCFCD62823EAF922978F5E0 /* PasswordSetupView.swift */; };
 		4BE20F645C24D0868E431ACB /* UtilizationReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 609E4E02EB555D808A50CE2A /* UtilizationReportView.swift */; };
@@ -306,6 +306,7 @@
 		2363560B00A9C04C250BD02D /* ReportLibraryModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportLibraryModels.swift; sourceTree = "<group>"; };
 		2536547429CB16E12CB069C0 /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
 		25CAFE07992F1EB02F507AE2 /* Gotham-Black.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Gotham-Black.ttf"; sourceTree = "<group>"; };
+		278E72E73C5B3A226373D733 /* GearPicksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GearPicksView.swift; sourceTree = "<group>"; };
 		294553EF02A8AC64D71ED849 /* Wisconsin.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Wisconsin.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2A73B2A1C9B274552CBA7C8B /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
 		2B0058FB3644F501479BA0D5 /* ExtendBookingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtendBookingSheet.swift; sourceTree = "<group>"; };
@@ -351,8 +352,6 @@
 		5FB4AEDFE7F83CC6E155C12D /* EventDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventDetailSheet.swift; sourceTree = "<group>"; };
 		609E4E02EB555D808A50CE2A /* UtilizationReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UtilizationReportView.swift; sourceTree = "<group>"; };
 		6148A160C162A021FF9DE4C0 /* FormModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormModels.swift; sourceTree = "<group>"; };
-		C4E8A17B2D905F6A3B1C8E47 /* GearPickModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GearPickModels.swift; sourceTree = "<group>"; };
-		E17B3A9C4D628F05A6C2B8E4 /* GearPicksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GearPicksView.swift; sourceTree = "<group>"; };
 		649B6E0F68D9B5DB4D054656 /* KioskIdleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskIdleView.swift; sourceTree = "<group>"; };
 		64AD62D4B6264BA6FE15C183 /* ProfileCompletionDraft.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileCompletionDraft.swift; sourceTree = "<group>"; };
 		64F14676788E6FA7CDD08D48 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
@@ -428,6 +427,7 @@
 		BA5C2531E017BDBDE5EFDDFE /* KioskAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskAPIClient.swift; sourceTree = "<group>"; };
 		BB8C14E1F7005B408A6A4CCD /* DashboardModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardModels.swift; sourceTree = "<group>"; };
 		BC3FF25073EAA237E97D6BED /* ScoreboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoreboardView.swift; sourceTree = "<group>"; };
+		BC7B22E7033F1442ADEF6691 /* GearPickModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GearPickModels.swift; sourceTree = "<group>"; };
 		BC88ED41091D463A9A8D5503 /* ProfileCompletionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileCompletionModels.swift; sourceTree = "<group>"; };
 		BCCC7961E6B24938024D1C80 /* PublishedScheduleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublishedScheduleView.swift; sourceTree = "<group>"; };
 		BDFEAF3DBE56A4AF4AAFDBC5 /* ReservationDraftCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReservationDraftCard.swift; sourceTree = "<group>"; };
@@ -684,7 +684,7 @@
 				9DAF420E532759A9116D675B /* DraftModels.swift */,
 				0E6123A836C8A0D47EA24AA1 /* EventCatalogModels.swift */,
 				6148A160C162A021FF9DE4C0 /* FormModels.swift */,
-				C4E8A17B2D905F6A3B1C8E47 /* GearPickModels.swift */,
+				BC7B22E7033F1442ADEF6691 /* GearPickModels.swift */,
 				05EBE060593FB25BDE4B18E0 /* InventoryReadModels.swift */,
 				5B540C9027D1885BCBEA2E4D /* Models.swift */,
 				229CAC26AA9E3BB5EEC36678 /* NotificationModels.swift */,
@@ -846,8 +846,8 @@
 				5FB4AEDFE7F83CC6E155C12D /* EventDetailSheet.swift */,
 				379F929043CF47B63E8FD5E6 /* EventsView.swift */,
 				2B0058FB3644F501479BA0D5 /* ExtendBookingSheet.swift */,
+				278E72E73C5B3A226373D733 /* GearPicksView.swift */,
 				A5159F2511DF2C09D8E495B8 /* GuideMarkdown.swift */,
-				E17B3A9C4D628F05A6C2B8E4 /* GearPicksView.swift */,
 				14DA88A1DF6F8D23066A07BC /* GuidesView.swift */,
 				64F14676788E6FA7CDD08D48 /* HomeView.swift */,
 				80CA4880F08046F8E23F079B /* ItemDetailView.swift */,
@@ -1287,8 +1287,8 @@
 				F638E74E3B0DD964350FB270 /* FlatSurface.swift in Sources */,
 				F8198BB80C4CB84C0C12ED6A /* FloatingSearchButton.swift in Sources */,
 				470F79B703DF9EB55FECE070 /* FormModels.swift in Sources */,
-				A8C31E6B4F902D7A15B6C084 /* GearPickModels.swift in Sources */,
-				D5F07A92E1B34C68A0D29F15 /* GearPicksView.swift in Sources */,
+				2FD2DC461CD2264F0A56E51E /* GearPickModels.swift in Sources */,
+				48ED42A7AF3A2894F3C9C7E6 /* GearPicksView.swift in Sources */,
 				795277BA3B90A0AB27B5C672 /* GearStore.swift in Sources */,
 				CEF64765984853FDCDFE272F /* GearTrackerRoute.swift in Sources */,
 				37F0EBD3CF55156C593EB7E5 /* GearWidgetPublisher.swift in Sources */,
