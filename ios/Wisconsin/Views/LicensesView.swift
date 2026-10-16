@@ -97,10 +97,17 @@ final class LicensesViewModel {
         notice = nil
         error = nil
         do {
-            _ = try await APIClient.shared.claimLicense(id: code.id)
+            let result = try await APIClient.shared.claimLicense(id: code.id)
             await load(forceRefresh: true)
+            // The claim response carries the code, so the person never has to
+            // find a Copy button before pasting it into Photo Mechanic.
+            UIPasteboard.general.setObjects(
+                [result.code],
+                localOnly: false,
+                expirationDate: Date().addingTimeInterval(120)
+            )
             Haptics.success()
-            showNotice("License claimed. Use Copy Code when you’re ready.")
+            showNotice("License claimed. Code copied for 2 minutes.")
         } catch {
             Haptics.error()
             self.error = error.localizedDescription
@@ -137,6 +144,28 @@ final class LicensesViewModel {
     }
 }
 
+
+extension LicensesViewModel {
+    /// Seats in use on a code. Released claims never count.
+    static func activeClaims(of code: LicenseCode) -> [LicenseCodeClaim] {
+        code.claims.filter { $0.releasedAt == nil }
+    }
+
+    /// The code "Claim a license" fills. Mirrors `handleClaimBest` on the web:
+    /// half-used codes first so whole codes stay free, then the longest-lived
+    /// expiry (no expiry counts as latest).
+    static func bestClaimableCode(in codes: [LicenseCode]) -> LicenseCode? {
+        func rank(_ code: LicenseCode) -> Int { code.status == .partial ? 0 : 1 }
+        func expiry(_ code: LicenseCode) -> Date {
+            LicenseExpiry.calendarDay(from: code.expiresAt) ?? .distantFuture
+        }
+        return codes
+            .filter { ($0.status == .available || $0.status == .partial) && activeClaims(of: $0).count < 2 }
+            .sorted { rank($0) != rank($1) ? rank($0) < rank($1) : expiry($0) > expiry($1) }
+            .first
+    }
+}
+
 struct LicensesView: View {
     var wrapsInNavigationStack = true
 
@@ -145,6 +174,9 @@ struct LicensesView: View {
     @State private var vm = LicensesViewModel()
     @State private var claimCandidate: LicenseCode?
     @State private var showReturnConfirm = false
+    @State private var showHistory = false
+    @State private var inspectedCode: LicenseCode?
+    @State private var filter: LicensePoolFilter = .all
 
     private static let webManagementURL = AppEnvironment.url(path: "/licenses")
 
@@ -153,12 +185,28 @@ struct LicensesView: View {
         return role == "STAFF" || role == "ADMIN"
     }
 
-    private var openSlotCount: Int {
-        vm.codes.reduce(into: 0) { total, code in
-            guard code.status != .retired else { return }
-            let activeClaims = code.claims.filter { $0.releasedAt == nil }.count
-            total += max(0, 2 - min(activeClaims, 2))
-        }
+    private var activeCodes: [LicenseCode] {
+        vm.codes.filter { $0.status != .retired }
+    }
+
+    private var totalSlots: Int { activeCodes.count * 2 }
+
+    private var usedSlots: Int {
+        activeCodes.reduce(0) { $0 + min(LicensesViewModel.activeClaims(of: $1).count, 2) }
+    }
+
+    private var openSlotCount: Int { max(totalSlots - usedSlots, 0) }
+
+    private var bestCode: LicenseCode? {
+        LicensesViewModel.bestClaimableCode(in: vm.codes)
+    }
+
+    private var expiringCount: Int {
+        activeCodes.filter { LicensePoolFilter.expiring.matches($0) }.count
+    }
+
+    private var retiredCount: Int {
+        vm.codes.filter { $0.status == .retired }.count
     }
 
     var body: some View {
@@ -181,8 +229,17 @@ struct LicensesView: View {
                 guard appState.resetTab == 7 else { return }
                 claimCandidate = nil
                 showReturnConfirm = false
+                showHistory = false
+                inspectedCode = nil
+                filter = .all
                 vm.resetDefaults()
                 Task { await vm.load() }
+            }
+            .sheet(isPresented: $showHistory) {
+                LicenseHistorySheet()
+            }
+            .sheet(item: $inspectedCode) { code in
+                LicenseCodeSheet(code: vm.codes.first { $0.id == code.id } ?? code, managementURL: Self.webManagementURL)
             }
             .confirmationDialog(
                 "Claim Photo Mechanic license?",
@@ -199,9 +256,7 @@ struct LicensesView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                if let claimCandidate {
-                    Text("This fills one slot on \(licenseTitle(claimCandidate)).")
-                }
+                Text("This takes one open slot and copies the code. You can return it at any time.")
             }
             .confirmationDialog(
                 "Return Photo Mechanic license?",
@@ -253,17 +308,11 @@ struct LicensesView: View {
         }
     }
 
+    /// One job per role. A holder sees their license; a student without one sees
+    /// a single claim button; staff see the pool as a dense list of codes.
     private var licenseList: some View {
         List {
-            Section {
-                LicensePoolOverview(
-                    hasActiveLicense: vm.activeClaim != nil,
-                    openSlotCount: openSlotCount,
-                    codeCount: vm.codes.filter { $0.status != .retired }.count
-                )
-            }
-            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
-            .listRowBackground(Color.clear)
+            primarySection
 
             if let notice = vm.notice {
                 Section {
@@ -286,343 +335,412 @@ struct LicensesView: View {
                 }
             }
 
-            activeLicenseSection
-            licensePoolSection
-
             if isStaffOrAdmin {
-                Section {
-                    Link(destination: Self.webManagementURL) {
-                        SettingsMenuRow(
-                            title: "Manage on web",
-                            subtitle: "Create, renew, retire, export, and audit license codes.",
-                            systemImage: "arrow.up.right.square",
-                            tint: Color.statusText(.blue)
-                        ) {
-                            EmptyView()
-                        }
-                    }
-                }
+                staffPool
+            } else {
+                LicenseHoldersSection(codes: vm.codes, currentUserId: session.currentUser?.id)
             }
         }
         .listStyle(.insetGrouped)
+        .listSectionSpacing(.compact)
     }
 
-    private var activeLicenseSection: some View {
-        Section("My License") {
-            if let activeClaim = vm.activeClaim {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack(alignment: .center, spacing: 12) {
-                        Image(systemName: "key.fill")
-                            .font(.headline)
-                            .foregroundStyle(Color.statusText(.blue))
-                            .frame(width: 40, height: 40)
-                            .background(Color.statusBackground(.blue), in: Circle())
-
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(activeClaim.label?.isEmpty == false ? activeClaim.label! : "Photo Mechanic")
-                                .font(.headline)
-                            Text(claimedSummary(activeClaim.claimedAt))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-
-                        Spacer(minLength: 8)
-
-                        StatusPill(label: "Yours", tone: .blue)
-                    }
-
-                    Text(activeClaim.code)
-                        .font(.system(.body, design: .monospaced).weight(.medium))
-                        .textSelection(.enabled)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.82)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 10)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.cardSurfaceRaised, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-
-                    Label(expirySummary(activeClaim.expiresAt), systemImage: "calendar")
-                        .font(.caption)
-                        .foregroundStyle(expiryTone(activeClaim.expiresAt))
-
-                    Divider()
-
-                    ViewThatFits(in: .horizontal) {
-                        HStack(spacing: 10) {
-                            activeLicenseButtons(activeClaim)
-                        }
-                        VStack(alignment: .leading, spacing: 10) {
-                            activeLicenseButtons(activeClaim)
-                        }
-                    }
-                }
-                .padding(.vertical, 6)
-                .listRowBackground(Color.statusBackground(.blue))
-            } else {
-                HStack(spacing: 12) {
-                    Image(systemName: "key.slash")
-                        .font(.headline)
-                        .foregroundStyle(.secondary)
-                        .frame(width: 40, height: 40)
-                        .background(Color.cardSurfaceRaised, in: Circle())
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("No active license")
-                            .font(.headline)
-                        Text(openSlotCount > 0 ? "Choose an open slot below when you need one." : "Every shared slot is currently in use.")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .padding(.vertical, 4)
+    @ViewBuilder
+    private var primarySection: some View {
+        if let activeClaim = vm.activeClaim {
+            Section {
+                LicenseHeroCard(
+                    claim: activeClaim,
+                    isStaffOrAdmin: isStaffOrAdmin,
+                    isPending: vm.pendingActionId != nil,
+                    onCopy: { vm.copyActiveCode() },
+                    onHistory: { showHistory = true },
+                    onReturn: { showReturnConfirm = true }
+                )
             }
+            .listRowBackground(Color.statusBackground(.blue))
+        } else if !isStaffOrAdmin {
+            Section {
+                ClaimLicenseHero(
+                    openSlots: openSlotCount,
+                    totalSlots: totalSlots,
+                    isPending: vm.pendingActionId != nil,
+                    onClaim: { claimCandidate = bestCode }
+                )
+            }
+            .listRowBackground(Color.clear)
+            .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
         }
     }
 
-    private func activeLicenseButtons(_ activeClaim: ActiveLicenseClaim) -> some View {
-        Group {
-            Button("Copy Code") {
-                vm.copyActiveCode()
-            }
-            .buttonStyle(.bordered)
-            .buttonBorderShape(.capsule)
-            .controlSize(.small)
-            .frame(minHeight: 44)
-            .tint(Color.statusText(.blue))
-
-            Button("Return License") {
-                showReturnConfirm = true
-            }
-            .buttonStyle(.bordered)
-            .buttonBorderShape(.capsule)
-            .controlSize(.small)
-            .frame(minHeight: 44)
-            .disabled(vm.pendingActionId != nil)
-        }
-    }
-
-    private var retiredCount: Int {
-        vm.codes.filter { $0.status == .retired }.count
-    }
-
-    private var licensePoolSection: some View {
+    @ViewBuilder
+    private var staffPool: some View {
         Section {
-            ForEach(vm.codes) { code in
-                LicensePoolRow(
-                    code: code,
-                    currentUserId: session.currentUser?.id,
-                    activeClaimId: vm.activeClaim?.id,
-                    canRevealUnclaimedCodes: isStaffOrAdmin,
-                    isPending: vm.pendingActionId == code.id
-                ) {
-                    claimCandidate = code
+            LicenseStaffSummary(
+                openSlots: openSlotCount,
+                totalSlots: totalSlots,
+                expiringCount: expiringCount,
+                canClaimForMe: vm.activeClaim == nil && bestCode != nil,
+                isPending: vm.pendingActionId != nil,
+                onClaimForMe: { claimCandidate = bestCode }
+            )
+        }
+
+        Section {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(LicensePoolFilter.allCases) { item in
+                        LicenseFilterChip(title: item.title, isSelected: filter == item) {
+                            filter = item
+                        }
+                    }
                 }
             }
-        } header: {
-            Text("License Pool")
+            .scrollClipDisabled()
+        }
+        .listRowBackground(Color.clear)
+        .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
+
+        let rows = vm.codes.enumerated().filter { filter.matches($0.element) }
+        Section {
+            if rows.isEmpty {
+                Text("No codes match this filter.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            } else {
+                ForEach(rows, id: \.element.id) { item in
+                    Button { inspectedCode = item.element } label: {
+                        LicenseCodeRow(code: item.element)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
         } footer: {
-            // Staff and admin receive retired codes from `/api/licenses`, but
-            // the capacity summary above deliberately counts only live ones.
-            // Without this the header said "across 2 codes" over a list of
-            // three rows and left the reader to work out which was which.
             if retiredCount > 0 {
                 Text(retiredCount == 1
-                     ? "1 retired code is kept for reference. The summary above counts live codes only."
-                     : "\(retiredCount) retired codes are kept for reference. The summary above counts live codes only.")
+                     ? "1 retired code is listed for reference and is not counted as open."
+                     : "\(retiredCount) retired codes are listed for reference and are not counted as open.")
+            }
+        }
+
+        Section {
+            Link(destination: Self.webManagementURL) {
+                SettingsMenuRow(
+                    title: "Manage on web",
+                    subtitle: "Create, renew, retire, export, and audit license codes.",
+                    systemImage: "arrow.up.right.square",
+                    tint: Color.statusText(.blue)
+                ) {
+                    EmptyView()
+                }
             }
         }
     }
 }
 
-private struct LicensePoolOverview: View {
-    let hasActiveLicense: Bool
-    let openSlotCount: Int
-    let codeCount: Int
+enum LicensePoolFilter: String, CaseIterable, Identifiable {
+    case all, available, full, expiring
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .all: "All"
+        case .available: "Has open slot"
+        case .full: "Full"
+        case .expiring: "Expiring"
+        }
+    }
+
+    func matches(_ code: LicenseCode) -> Bool {
+        switch self {
+        case .all: return true
+        case .available: return code.status == .available || code.status == .partial
+        case .full: return code.status == .claimed
+        case .expiring:
+            guard code.status != .retired,
+                  let daysLeft = LicenseExpiry.daysUntil(code.expiresAt) else { return false }
+            return daysLeft <= 30
+        }
+    }
+}
+
+private struct LicenseFilterChip: View {
+    let title: String
+    let isSelected: Bool
+    let action: () -> Void
 
     var body: some View {
-        HStack(spacing: 16) {
-            Image(systemName: hasActiveLicense ? "checkmark.seal.fill" : "key.horizontal.fill")
-                .font(.title2)
-                .foregroundStyle(Color.statusText(hasActiveLicense ? .blue : availabilityTone))
-                .frame(width: 48, height: 48)
-                .background(Color.statusBackground(hasActiveLicense ? .blue : availabilityTone), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        Button(action: action) {
+            Text(title)
+                .font(.subheadline.weight(isSelected ? .semibold : .regular))
+                .padding(.horizontal, 14)
+                .frame(minHeight: 44)
+                .foregroundStyle(isSelected ? Color.statusText(.blue) : Color.primary)
+                .background(
+                    isSelected ? Color.statusBackground(.blue) : Color.cardSurface,
+                    in: Capsule()
+                )
+                .overlay {
+                    Capsule().strokeBorder(isSelected ? Color.statusText(.blue).opacity(0.4) : Color.hairline, lineWidth: 0.5)
+                }
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+}
 
-            VStack(alignment: .leading, spacing: 3) {
-                Text(hasActiveLicense ? "Your license is ready" : availabilityTitle)
-                    .font(.headline)
-                Text(summary)
+/// Used and open slots as a row of capsules: solid blue is in use, light green is open.
+private struct LicenseSlotMeter: View {
+    let usedSlots: Int
+    let totalSlots: Int
+
+    var body: some View {
+        HStack(spacing: 3) {
+            ForEach(0..<max(totalSlots, 1), id: \.self) { index in
+                Capsule()
+                    .fill(index < usedSlots ? Color.statusText(.blue) : Color.statusText(.green).opacity(0.35))
+                    .frame(height: 10)
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("License slots")
+        .accessibilityValue("\(usedSlots) of \(totalSlots) in use, \(max(totalSlots - usedSlots, 0)) open")
+    }
+}
+
+/// A student without a license gets one job: claim. The app picks the code.
+private struct ClaimLicenseHero: View {
+    let openSlots: Int
+    let totalSlots: Int
+    let isPending: Bool
+    let onClaim: () -> Void
+
+    private var hasOpenSlot: Bool { openSlots > 0 }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Get a license code")
+                    .font(.title2.weight(.semibold))
+                    .accessibilityAddTraits(.isHeader)
+                Text(hasOpenSlot
+                     ? "One license code works on two machines. We pick an open slot for you and copy the code."
+                     : "Every slot is in use. Check back after someone returns theirs.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
 
-            Spacer(minLength: 8)
+            VStack(alignment: .leading, spacing: 6) {
+                LicenseSlotMeter(usedSlots: totalSlots - openSlots, totalSlots: totalSlots)
+                Text("\(openSlots) of \(totalSlots) slots open")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            if hasOpenSlot {
+                Button(action: onClaim) {
+                    Label("Claim a code", systemImage: "key.horizontal.fill")
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                }
+                .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.capsule)
+                .tint(Color.statusText(.green))
+                .disabled(isPending)
+            }
         }
         .padding(16)
-        .background(Color.cardSurface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background(Color.statusBackground(hasOpenSlot ? .green : .gray), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(Color.hairline, lineWidth: 0.5)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .strokeBorder(Color.statusText(hasOpenSlot ? .green : .gray).opacity(0.25), lineWidth: 0.5)
         }
-        .accessibilityElement(children: .combine)
-    }
-
-    private var availabilityTitle: String {
-        openSlotCount == 0 ? "All licenses are in use" : "Licenses are available"
-    }
-
-    private var summary: String {
-        let codeLabel = codeCount == 1 ? "code" : "codes"
-        let slotLabel = openSlotCount == 1 ? "slot" : "slots"
-        if hasActiveLicense {
-            return "Copy your code below. \(openSlotCount) open \(slotLabel) remain across \(codeCount) \(codeLabel)."
-        }
-        return "\(openSlotCount) open \(slotLabel) across \(codeCount) shared \(codeLabel)."
-    }
-
-    private var availabilityTone: StatusTone {
-        openSlotCount > 0 ? .green : .gray
+        .padding(.horizontal, 16)
+        .accessibilityElement(children: .contain)
     }
 }
 
-private struct LicensePoolRow: View {
-    let code: LicenseCode
+/// Student view of the pool: who is using Photo Mechanic right now. Names and
+/// claim age only; no code strings, no per-code detail, no expiry.
+private struct LicenseHoldersSection: View {
+    let codes: [LicenseCode]
     let currentUserId: String?
-    let activeClaimId: String?
-    let canRevealUnclaimedCodes: Bool
-    let isPending: Bool
-    let onClaim: () -> Void
+    @Environment(\.dynamicTypeSize) private var typeSize
 
-    private var activeClaims: [LicenseCodeClaim] {
-        code.claims.filter { $0.releasedAt == nil }
-    }
-
-    private var slotCount: Int {
-        min(activeClaims.count, 2)
-    }
-
-    private var isCurrentHolder: Bool {
-        code.id == activeClaimId || activeClaims.contains { claim in
-            guard let currentUserId else { return false }
-            return claim.userId == currentUserId
-        }
-    }
-
-    private var canClaim: Bool {
-        activeClaimId == nil && (code.status == .available || code.status == .partial) && slotCount < 2
-    }
-
-    private var canRevealCode: Bool {
-        canRevealUnclaimedCodes || isCurrentHolder
-    }
-
-    /// A retired code cannot be claimed by anyone, ever. Occupancy, a claim
-    /// affordance, and "hidden until claimed" all describe a future it does not
-    /// have, so the row drops to a single honest line.
-    private var isRetired: Bool {
-        code.status == .retired
-    }
-
-    /// The code string is already on screen, larger and selectable, in the
-    /// My License card above. Repeating it here bought the reader nothing and
-    /// put the same secret on the glass twice.
-    private var showsCodeLine: Bool {
-        !isRetired && !isCurrentHolder
-    }
-
-    /// Every code in the pool normally carries the same annual expiry, so a
-    /// per-row date was three identical lines of chrome. Keep the line only
-    /// when it has become something to act on.
-    private var showsExpiry: Bool {
-        guard !isRetired, !isCurrentHolder else { return false }
-        guard let daysLeft = LicenseExpiry.daysUntil(code.expiresAt) else { return false }
-        return daysLeft <= 30
+    private var holders: [LicenseCodeClaim] {
+        codes
+            .filter { $0.status != .retired }
+            .flatMap(LicensesViewModel.activeClaims(of:))
+            .filter { ($0.user?.name.isEmpty == false) }
+            .sorted { (parseLicenseDate($0.claimedAt) ?? .distantPast) > (parseLicenseDate($1.claimedAt) ?? .distantPast) }
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .center, spacing: 12) {
-                Image(systemName: statusSystemImage)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color.statusText(statusTone))
-                    .frame(width: 36, height: 36)
-                    .background(Color.statusBackground(statusTone), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(licenseTitle(code))
-                        .font(.headline)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.85)
-
-                    if showsCodeLine {
-                        Text(codeDisplay)
-                            .font(.system(.caption, design: .monospaced))
-                            .foregroundStyle(code.code.isEmpty ? .secondary : .primary)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
-                    } else if isRetired {
-                        Text(retiredSummary)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
-                    }
-                }
-
-                Spacer(minLength: 8)
-
-                // One pill, not two. A row you hold used to carry its open-slot
-                // count and a separate "Yours", which read as two competing
-                // verdicts on the same row.
-                StatusPill(label: isCurrentHolder ? "Yours" : availabilityLabel,
-                           tone: isCurrentHolder ? .blue : statusTone)
-            }
-
-            if !isRetired {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Label(slotSummary, systemImage: "person.2")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-
-                    Spacer(minLength: 8)
-
-                    if canClaim {
-                        Button("Claim") {
-                            onClaim()
+        let holders = holders
+        if !holders.isEmpty {
+            Section {
+                ForEach(holders) { claim in
+                    let isYou = claim.userId == currentUserId
+                    let age = claimAge(claim.claimedAt)
+                    HStack(spacing: 12) {
+                        UserAvatarView(name: claim.user?.name ?? "", avatarUrl: claim.user?.avatarUrl, size: 32)
+                            .accessibilityHidden(true)
+                        if typeSize.isAccessibilitySize {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(claim.user?.name ?? "")
+                                    .font(.body)
+                                Text([isYou ? "you" : "", age].filter { !$0.isEmpty }.joined(separator: " · "))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer(minLength: 0)
+                        } else {
+                            Text(claim.user?.name ?? "")
+                                .font(.body)
+                                .lineLimit(1)
+                            if isYou {
+                                Text("you")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer(minLength: 8)
+                            Text(age)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
                         }
-                        .buttonStyle(.borderedProminent)
-                        .buttonBorderShape(.capsule)
-                        .controlSize(.small)
-                        .frame(minHeight: 44)
-                        .tint(Color.statusText(.green))
-                        .disabled(isPending)
                     }
+                    .frame(minHeight: 44)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(claim.user?.name ?? "")
+                    .accessibilityValue([isYou ? "you" : "", age.isEmpty ? "" : "claimed \(age)"]
+                        .filter { !$0.isEmpty }.joined(separator: ", "))
                 }
-            }
-
-            if canRevealUnclaimedCodes, !code.code.isEmpty {
-                Button("Copy Code", systemImage: "doc.on.doc") {
-                    UIPasteboard.general.string = code.code
-                }
-                .buttonStyle(.bordered)
-                .buttonBorderShape(.capsule)
-                .controlSize(.small)
-                .frame(minHeight: 44)
-                .tint(Color.statusText(.blue))
-            }
-
-            if showsExpiry {
-                Label(expirySummary(code.expiresAt), systemImage: "calendar")
-                    .font(.caption)
-                    .foregroundStyle(expiryTone(code.expiresAt))
+            } header: {
+                Text("In use now · \(holders.count)")
             }
         }
-        .padding(.vertical, 6)
-        .opacity(isRetired ? 0.7 : 1)
-        // A claimed code exists to be pasted into something else, and the row
-        // renders it in a monospaced line you cannot select. Gated on the same
-        // `canRevealCode` the visible line is: long press must never surface a
-        // code the row is deliberately hiding.
+    }
+
+    private func claimAge(_ raw: String?) -> String {
+        guard let date = parseLicenseDate(raw) else { return "" }
+        return date.formatted(.relative(presentation: .named, unitsStyle: .abbreviated))
+    }
+}
+
+/// Staff status summary: slot meter, open count, expiring count, and the one
+/// action that is theirs when they hold nothing.
+private struct LicenseStaffSummary: View {
+    let openSlots: Int
+    let totalSlots: Int
+    let expiringCount: Int
+    let canClaimForMe: Bool
+    let isPending: Bool
+    let onClaimForMe: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .firstTextBaseline) {
+                    title
+                    Spacer(minLength: 8)
+                    pill
+                }
+                VStack(alignment: .leading, spacing: 6) {
+                    title
+                    pill
+                }
+            }
+            LicenseSlotMeter(usedSlots: totalSlots - openSlots, totalSlots: totalSlots)
+            if canClaimForMe {
+                Button(action: onClaimForMe) {
+                    Label("Claim for me", systemImage: "key.horizontal.fill")
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                }
+                .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.capsule)
+                .tint(Color.statusText(.green))
+                .disabled(isPending)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private var title: some View {
+        Text("\(openSlots) of \(totalSlots) slots open")
+            .font(.headline)
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    @ViewBuilder
+    private var pill: some View {
+        if expiringCount > 0 {
+            StatusPill(label: "\(expiringCount) expiring", tone: .orange)
+        }
+    }
+}
+
+/// One row per code: code, label and holder names, two seats, expiry, chevron.
+private struct LicenseCodeRow: View {
+    let code: LicenseCode
+
+    private var claims: [LicenseCodeClaim] { LicensesViewModel.activeClaims(of: code) }
+
+    private var revealsCode: Bool { !code.code.isEmpty }
+
+    private func name(_ claim: LicenseCodeClaim) -> String {
+        if let name = claim.user?.name, !name.isEmpty { return name }
+        if let label = claim.occupantLabel, !label.isEmpty { return label }
+        return "Unknown"
+    }
+
+    /// Holder names when any seat is filled; otherwise the label, or "Open".
+    private var subtitle: String {
+        if !claims.isEmpty { return claims.map(name).joined(separator: ", ") }
+        let label = code.label?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return label.isEmpty ? "Open" : "\(label) · Open"
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(code.code.isEmpty ? "License" : code.code)
+                        .font(.system(.subheadline, design: .monospaced).weight(.semibold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 10) { seats; status }
+                    VStack(alignment: .leading, spacing: 6) { seats; status }
+                }
+            }
+            Spacer(minLength: 6)
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.tertiary)
+                .accessibilityHidden(true)
+                .frame(minHeight: 28)
+        }
+        .padding(.vertical, 4)
+        .frame(minHeight: 44)
+        .opacity(code.status == .retired ? 0.6 : 1)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(code.code.isEmpty ? "License" : code.code)
+        .accessibilityValue("\(subtitle), \(min(claims.count, 2)) of 2 slots in use\(statusSpoken)")
+        .accessibilityHint("Opens license details")
+        .accessibilityAddTraits(.isButton)
         .contextMenu {
-            if canRevealCode, !code.code.isEmpty {
+            if revealsCode {
                 Button {
                     UIPasteboard.general.string = code.code
                 } label: {
@@ -632,77 +750,351 @@ private struct LicensePoolRow: View {
         }
     }
 
-    /// Retired rows say the two things that are still true — when it lapsed and
-    /// that it is out of service — instead of "No one is using this code",
-    /// which reads as an invitation.
-    private var retiredSummary: String {
-        guard LicenseExpiry.calendarDay(from: code.expiresAt) != nil else { return "No longer claimable" }
-        return "\(expirySummary(code.expiresAt)) · No longer claimable"
-    }
-
-    private var codeDisplay: String {
-        canRevealCode && !code.code.isEmpty ? code.code : "Code hidden until claimed"
-    }
-
-    private var slotSummary: String {
-        if activeClaims.isEmpty { return "No one is using this code" }
-        guard canRevealUnclaimedCodes else {
-            return slotCount == 1 ? "1 of 2 slots in use" : "Both slots in use"
+    private var seats: some View {
+        HStack(spacing: 6) {
+            ForEach(0..<2, id: \.self) { index in
+                seat(index < claims.count ? claims[index] : nil)
+            }
         }
-        let names = activeClaims.map { claim -> String in
-            if let name = claim.user?.name, !name.isEmpty { return name }
-            if let label = claim.occupantLabel, !label.isEmpty { return label }
-            return "Unknown occupant"
-        }
-        return "\(slotCount)/2 filled: \(names.joined(separator: ", "))"
+        // Avatars are fixed-size discs; capping their initials keeps them inside the circle.
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
     }
 
-    private var statusTone: StatusTone {
-        switch code.status {
-        case .available: StatusTone.green
-        case .partial: StatusTone.blue
-        case .claimed: StatusTone.blue
-        case .retired: StatusTone.gray
-        case .unknown: StatusTone.gray
+    @ViewBuilder
+    private var status: some View {
+        if code.status == .retired {
+            StatusPill(label: "Retired", tone: .gray)
+        } else {
+            LicenseExpiryChip(raw: code.expiresAt)
         }
     }
 
-    private var availabilityLabel: String {
-        switch code.status {
-        case .available: "2 open"
-        case .partial: "1 open"
-        case .claimed: "Full"
-        case .retired: "Retired"
-        case .unknown: "Unknown"
-        }
+    private var statusSpoken: String {
+        code.status == .retired ? ", retired" : ", \(expirySummary(code.expiresAt))"
     }
 
-    private var statusSystemImage: String {
-        // On a code you hold, the status glyph is about you, not about the
-        // remaining capacity — `person.badge.plus` read as "add someone".
-        if isCurrentHolder { return "key.fill" }
-        switch code.status {
-        case .available: return "checkmark"
-        case .partial: return "person.badge.plus"
-        case .claimed: return "person.2.fill"
-        case .retired: return "archivebox.fill"
-        case .unknown: return "questionmark"
+    @ViewBuilder
+    private func seat(_ claim: LicenseCodeClaim?) -> some View {
+        if let claim {
+            UserAvatarView(name: name(claim), avatarUrl: claim.user?.avatarUrl, size: 28)
+        } else {
+            Circle()
+                .strokeBorder(Color.statusText(.green).opacity(0.6), style: StrokeStyle(lineWidth: 1, dash: [3, 2]))
+                .frame(width: 28, height: 28)
         }
     }
-
 }
 
-private func licenseTitle(_ code: LicenseCode) -> String {
-    if let label = code.label?.trimmingCharacters(in: .whitespacesAndNewlines), !label.isEmpty {
-        return label
+/// Staff detail for one code: copy it, see both seats, and hand off to the web
+/// page for create, renew, retire, and audit.
+private struct LicenseCodeSheet: View {
+    let code: LicenseCode
+    let managementURL: URL
+    @Environment(\.dismiss) private var dismiss
+    @State private var copied = false
+
+    private var claims: [LicenseCodeClaim] { LicensesViewModel.activeClaims(of: code) }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    Text(code.code.isEmpty ? "Code unavailable" : code.code)
+                        .font(.system(.title3, design: .monospaced).weight(.semibold))
+                        .textSelection(.enabled)
+                    if let label = code.label, !label.isEmpty {
+                        LabeledContent("Label", value: label)
+                    }
+                    if let email = code.accountEmail, !email.isEmpty {
+                        LabeledContent("Account", value: email)
+                    }
+                    LabeledContent("Expires", value: expiryDate(code.expiresAt))
+                    if !code.code.isEmpty {
+                        Button {
+                            UIPasteboard.general.setObjects([code.code], localOnly: false, expirationDate: Date().addingTimeInterval(120))
+                            Haptics.success()
+                            copied = true
+                        } label: {
+                            Label(copied ? "Copied for 2 minutes" : "Copy Code", systemImage: "doc.on.doc")
+                                .frame(minHeight: 44)
+                        }
+                    }
+                }
+
+                Section("Slots") {
+                    ForEach(0..<2, id: \.self) { index in
+                        let claim = index < claims.count ? claims[index] : nil
+                        HStack(spacing: 10) {
+                            if let claim {
+                                let name = claim.user?.name ?? claim.occupantLabel ?? "Unknown"
+                                UserAvatarView(name: name, avatarUrl: claim.user?.avatarUrl, size: 28)
+                                Text(name)
+                            } else {
+                                Circle()
+                                    .strokeBorder(Color.statusText(.green).opacity(0.6), style: StrokeStyle(lineWidth: 1, dash: [3, 2]))
+                                    .frame(width: 28, height: 28)
+                                Text("Open slot").foregroundStyle(Color.statusText(.green))
+                            }
+                        }
+                        .frame(minHeight: 44)
+                        .accessibilityElement(children: .combine)
+                    }
+                }
+
+                Section {
+                    Link(destination: managementURL) {
+                        Label("Manage on web", systemImage: "arrow.up.right.square")
+                            .frame(minHeight: 44)
+                    }
+                } footer: {
+                    Text("Renew, retire, release a slot, export, and audit on the web page.")
+                }
+            }
+            .navigationTitle("License")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+            }
+        }
+        .presentationDetents([.medium, .large])
     }
-    return "Photo Mechanic"
+}
+
+/// The signed-in person's own license: the code is the whole point, so it is
+/// the largest thing on the card and the whole block copies it.
+private struct LicenseHeroCard: View {
+    let claim: ActiveLicenseClaim
+    let isStaffOrAdmin: Bool
+    let isPending: Bool
+    let onCopy: () -> Void
+    let onHistory: () -> Void
+    let onReturn: () -> Void
+
+    private var status: (label: String, tone: StatusTone) {
+        guard let daysLeft = LicenseExpiry.daysUntil(claim.expiresAt) else { return ("Active", .green) }
+        if daysLeft < 0 { return ("Expired", .red) }
+        if daysLeft == 0 { return ("Expires today", .orange) }
+        if daysLeft <= 30 { return ("\(daysLeft)d left", .orange) }
+        return ("Active", .green)
+    }
+
+    private var urgentExpiryTone: Color {
+        LicenseExpiry.daysUntil(claim.expiresAt).map { $0 <= 30 } == true ? expiryTone(claim.expiresAt) : .primary
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text("Your Photo Mechanic license")
+                    .font(.caption.weight(.semibold))
+                    .textCase(.uppercase)
+                    .tracking(0.8)
+                    .foregroundStyle(Color.statusText(.blue))
+                    .accessibilityAddTraits(.isHeader)
+                Spacer(minLength: 8)
+                StatusPill(label: status.label, tone: status.tone)
+            }
+
+            Button(action: onCopy) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(claim.code)
+                        .font(.system(.title2, design: .monospaced).weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.7)
+                        .multilineTextAlignment(.leading)
+                    HStack(spacing: 5) {
+                        Image(systemName: "doc.on.doc")
+                        Text("Tap to copy")
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                }
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.cardSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .strokeBorder(Color.hairline, lineWidth: 0.5)
+                }
+                .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("License code \(claim.code)")
+            .accessibilityHint("Copies the code")
+
+            HStack(alignment: .top, spacing: 24) {
+                fact(isStaffOrAdmin ? "Held" : "Claimed", claimedDate(claim.claimedAt))
+                fact("Expires", expiryDate(claim.expiresAt), tone: urgentExpiryTone)
+            }
+
+            actions
+        }
+        .padding(.vertical, 6)
+    }
+
+    private var actions: some View {
+        VStack(spacing: 4) {
+            Button(action: onCopy) {
+                HStack(spacing: 6) {
+                    Image(systemName: "doc.on.doc")
+                    Text("Copy Code")
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity, minHeight: 44)
+            }
+            .buttonStyle(.borderedProminent)
+            .buttonBorderShape(.capsule)
+            .tint(Color.statusText(.blue))
+
+            HStack(spacing: 8) {
+                quietAction("History", "clock", action: onHistory)
+                quietAction(isStaffOrAdmin ? "Release" : "Return", "rectangle.portrait.and.arrow.right", action: onReturn)
+                    .disabled(isPending)
+            }
+        }
+    }
+
+    private func quietAction(_ title: String, _ icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                Text(title)
+            }
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, minHeight: 44)
+        }
+        .buttonStyle(.borderless)
+        .tint(.secondary)
+    }
+
+    private func fact(_ title: String, _ value: String, tone: Color = .primary) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(tone)
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
+private struct LicenseExpiryChip: View {
+    let raw: String?
+
+    var body: some View {
+        if let daysLeft = LicenseExpiry.daysUntil(raw),
+           let day = LicenseExpiry.calendarDay(from: raw) {
+            let date = day.formatted(date: .abbreviated, time: .omitted)
+            if daysLeft < 0 {
+                StatusPill(label: "Expired \(date)", tone: .red)
+            } else if daysLeft <= 30 {
+                StatusPill(label: "\(daysLeft == 0 ? "Expires today" : "\(daysLeft)d left") · \(date)", tone: .orange)
+            } else {
+                Text("Renews \(date)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+}
+
+/// The holder's recent claims and returns, from `/api/licenses/my/history`.
+private struct LicenseHistorySheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var entries: [LicenseHistoryEntry] = []
+    @State private var isLoading = true
+    @State private var loadFailed = false
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if isLoading {
+                    ProgressView("Loading history")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if loadFailed {
+                    ContentUnavailableView {
+                        Label("History couldn't load", systemImage: "exclamationmark.triangle")
+                    } actions: {
+                        Button("Retry") { Task { await load() } }
+                            .buttonStyle(.borderedProminent)
+                    }
+                } else if entries.isEmpty {
+                    ContentUnavailableView("No license claims yet", systemImage: "clock")
+                } else {
+                    List {
+                        Section {
+                            ForEach(entries) { entry in
+                                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Text(entry.licenseCode.label ?? "Photo Mechanic license")
+                                            .font(.subheadline.weight(.medium))
+                                        Text(summary(entry))
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    Spacer(minLength: 8)
+                                    StatusPill(label: entry.releasedAt == nil ? "Active" : "Returned",
+                                               tone: entry.releasedAt == nil ? .green : .gray)
+                                }
+                                .frame(minHeight: 44)
+                                .accessibilityElement(children: .combine)
+                            }
+                        } footer: {
+                            Text("Your recent Photo Mechanic claims and returns.")
+                        }
+                    }
+                    .listStyle(.insetGrouped)
+                }
+            }
+            .navigationTitle("License history")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+            .task { await load() }
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    private func summary(_ entry: LicenseHistoryEntry) -> String {
+        let claimed = claimedSummary(entry.claimedAt)
+        guard entry.releasedAt != nil else { return claimed }
+        return "\(claimed) · \(claimedSummary(entry.releasedAt).replacingOccurrences(of: "Claimed", with: "returned"))"
+    }
+
+    private func load() async {
+        isLoading = true
+        loadFailed = false
+        do {
+            entries = try await APIClient.shared.myLicenseHistory()
+        } catch {
+            loadFailed = true
+        }
+        isLoading = false
+    }
 }
 
 @MainActor
 private func claimedSummary(_ raw: String?) -> String {
     guard let date = parseLicenseDate(raw) else { return "Claimed" }
     return "Claimed \(date.formatted(date: .abbreviated, time: .omitted))"
+}
+
+private func claimedDate(_ raw: String?) -> String {
+    guard let date = parseLicenseDate(raw) else { return "—" }
+    return date.formatted(date: .abbreviated, time: .omitted)
+}
+
+private func expiryDate(_ raw: String?) -> String {
+    guard let raw, !raw.isEmpty else { return "No expiry set" }
+    guard let day = LicenseExpiry.calendarDay(from: raw) else { return "On file" }
+    return day.formatted(date: .abbreviated, time: .omitted)
 }
 
 /// Expiry dates are calendar dates, not instants.

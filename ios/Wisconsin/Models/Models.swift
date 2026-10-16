@@ -921,6 +921,19 @@ struct ActiveLicenseClaim: Codable, Identifiable, Equatable {
     let claimId: String
 }
 
+struct LicenseHistoryEntry: Codable, Identifiable, Equatable {
+    struct Code: Codable, Equatable {
+        let id: String
+        let label: String?
+        let expiresAt: String?
+    }
+
+    let id: String
+    let claimedAt: String?
+    let releasedAt: String?
+    let licenseCode: Code
+}
+
 struct LicenseClaimResult: Codable, Equatable {
     let id: String
     let code: String
