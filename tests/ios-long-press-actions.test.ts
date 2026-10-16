@@ -148,15 +148,15 @@ describe("iOS in-app long press", () => {
   });
 
   /**
-   * The row hides an unclaimed code behind "Code hidden until claimed". Long
-   * press must be gated on the same condition, or the gesture becomes a way
-   * around the rule the visible line enforces.
+   * Only staff code rows exist on this page (students never see a code string
+   * except their own, in the hero card). Long press is still gated on the code
+   * being present, so the gesture never copies a code the API withheld.
    */
   it("never copies a license code the row is hiding", () => {
     const menu = licenses.slice(licenses.indexOf(".contextMenu {"));
     expect(menu).toContain("if revealsCode {");
     expect(menu).toContain('Label("Copy License Code", systemImage: "doc.on.doc")');
-    expect(licenses).toContain("(isStaffOrAdmin || isOwn) && !code.code.isEmpty");
+    expect(licenses).toContain("private var revealsCode: Bool { !code.code.isEmpty }");
   });
 });
 

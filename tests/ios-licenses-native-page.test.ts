@@ -59,7 +59,9 @@ describe("iOS native Licenses page", () => {
     expect(view).not.toContain("UIPasteboard.general.string = result.code");
     expect(view).toContain("UIPasteboard.general.setObjects(");
     expect(view).toContain("expirationDate: Date().addingTimeInterval(120)");
-    expect(view).toContain("License claimed. Use Copy Code when you’re ready.");
+    // A successful claim copies the code itself instead of asking for a second tap.
+    expect(view).toContain("[result.code]");
+    expect(view).toContain("License claimed. Code copied for 2 minutes.");
   });
 
   it("only calls release from the active-license path, not from arbitrary pool rows", () => {
@@ -71,19 +73,42 @@ describe("iOS native Licenses page", () => {
     expect(view).not.toContain("releaseLicense(id: code.id)");
   });
 
-  it("leads a holder with a hero license card and a person without one with a single claim prompt", () => {
+  it("gives a student without a license one Claim a license button over a slot meter", () => {
     const view = source("ios/Wisconsin/Views/LicensesView.swift");
-    const hero = view.slice(view.indexOf("private struct LicenseHeroCard"), view.indexOf("private struct LicenseClaimPrompt"));
+    const hero = view.slice(view.indexOf("private struct ClaimLicenseHero"), view.indexOf("private struct LicenseHoldersSection"));
+
+    expect(view).toContain("ClaimLicenseHero(");
+    expect(view).toContain("onClaim: { claimCandidate = bestCode }");
+    expect(hero).toContain('"Get Photo Mechanic"');
+    expect(hero).toContain('"\\(openSlots) of \\(totalSlots) slots open"');
+    expect(hero).toContain('Label("Claim a license"');
+    expect(hero).toContain("LicenseSlotMeter(");
+    expect(hero).toContain("minHeight: 44");
+    // No per-code cards, filters, or expiry for students.
+    expect(view).not.toContain("LicensePoolCard");
+    expect(view).not.toContain("LicenseClaimPrompt");
+  });
+
+  it("auto-picks the code like the web: half-used first, then latest expiry, no expiry latest", () => {
+    const view = source("ios/Wisconsin/Views/LicensesView.swift");
+    const pick = view.slice(view.indexOf("static func bestClaimableCode"), view.indexOf("struct LicensesView"));
+
+    expect(pick).toContain("code.status == .partial ? 0 : 1");
+    expect(pick).toContain("?? .distantFuture");
+    expect(pick).toContain("($0.status == .available || $0.status == .partial)");
+    expect(pick).toContain("activeClaims(of: $0).count < 2");
+    expect(pick).toContain("expiry($0) > expiry($1)");
+  });
+
+  it("leads a holder with a hero license card and quiet History and Return", () => {
+    const view = source("ios/Wisconsin/Views/LicensesView.swift");
+    const hero = view.slice(view.indexOf("private struct LicenseHeroCard"), view.indexOf("private struct LicenseExpiryChip"));
 
     expect(view).toContain("LicenseHeroCard(");
-    expect(view).toContain("LicenseClaimPrompt(openSlotCount: openSlotCount)");
-    expect(view).toContain('"\\(openSlotCount) \\(openSlotCount == 1 ? "slot" : "slots") ready to claim"');
-    // The code is the largest thing on the card and the whole block copies it.
     expect(hero).toContain('.font(.system(.title2, design: .monospaced).weight(.semibold))');
     expect(hero).toContain("Tap to copy");
     expect(hero).toContain('Text("Copy Code")');
     expect(hero).toMatch(/Button\(action: onCopy\)[\s\S]*?\.buttonStyle\(\.borderedProminent\)/);
-    // History and Return are quiet, and every control keeps a 44pt target.
     expect(hero).toContain("quietAction(");
     expect(hero).toContain('isStaffOrAdmin ? "Release" : "Return"');
     expect(hero).toContain("minHeight: 44");
@@ -91,77 +116,46 @@ describe("iOS native Licenses page", () => {
     expect(view).not.toContain('Button("Return License", role: .destructive)');
   });
 
-  it("renders every code as a card with two slot seats and one status chip", () => {
+  it("lists who is using a license for students by name only, never a code string", () => {
     const view = source("ios/Wisconsin/Views/LicensesView.swift");
+    const holders = view.slice(view.indexOf("private struct LicenseHoldersSection"), view.indexOf("private struct LicenseStaffSummary"));
 
-    expect(view).toContain("private struct LicensePoolCard");
-    expect(view).toContain("private struct LicenseSlotSeat");
-    expect(view).toContain("ForEach(0..<2");
-    expect(view).toContain('"Open slot"');
-    expect(view).toContain('case .available: return ("Open", .green)');
-    expect(view).toContain('case .partial: return ("1 slot left", .green)');
-    expect(view).toContain('case .claimed: return ("Full", .gray)');
-    expect(view).toContain('if isOwn { return ("Yours", .blue) }');
+    expect(view).toContain("LicenseHoldersSection(codes: vm.codes");
+    expect(holders).toContain('Text("In use now · \\(holders.count)")');
+    expect(holders).toContain("UserAvatarView(name:");
+    expect(holders).toContain("$0.user?.name.isEmpty == false");
+    expect(holders).toContain("$0.status != .retired");
+    expect(holders).not.toContain("code.code");
+    expect(holders).not.toContain("expiresAt");
   });
 
-  it("keeps holder names visible to students and never dims or hides a full card", () => {
+  it("shows staff a status summary, filter chips, and a dense row per code with two seats", () => {
     const view = source("ios/Wisconsin/Views/LicensesView.swift");
-    const seat = view.slice(view.indexOf("private struct LicenseSlotSeat"), view.indexOf("private struct LicenseExpiryChip"));
-    const card = view.slice(view.indexOf("private struct LicensePoolCard"), view.indexOf("private struct LicenseSlotSeat"));
+    const row = view.slice(view.indexOf("private struct LicenseCodeRow"), view.indexOf("private struct LicenseCodeSheet"));
 
-    expect(seat).toContain("claim.user?.name");
-    expect(seat).toContain("UserAvatarView(name: holderName");
-    // Only staff see an occupant label for a claim without a linked user.
-    expect(seat).toContain("if isStaffOrAdmin, let label = claim.occupantLabel");
-    expect(card).toContain("opacity(isRetired ? 0.7 : 1)");
-    expect(card).not.toContain(".claimed ? 0.");
-    expect(card).not.toContain("slotCount");
-  });
-
-  it("masks codes for students: label or License N, own code revealed", () => {
-    const view = source("ios/Wisconsin/Views/LicensesView.swift");
-
-    expect(view).toContain("(isStaffOrAdmin || isOwn) && !code.code.isEmpty");
-    expect(view).toContain('trimmedLabel ?? "License \\(position)"');
-    expect(view).not.toContain("Code hidden until claimed");
-    expect(view).toContain("if revealsCode {");
-  });
-
-  it("shows filters and expiry chips to staff and admin only", () => {
-    const view = source("ios/Wisconsin/Views/LicensesView.swift");
-
-    expect(view).toContain("if isStaffOrAdmin {\n                    ScrollView(.horizontal");
-    expect(view).toContain("isStaffOrAdmin ? filter.matches(code) : true");
+    expect(view).toContain("LicenseStaffSummary(");
     expect(view).toContain('case .available: "Has open slot"');
+    expect(view).toContain('case .full: "Full"');
     expect(view).toContain('case .expiring: "Expiring"');
-    expect(view).toContain("let showsExpiry = isStaffOrAdmin && !isRetired && code.expiresAt != nil");
-    expect(view).toContain("LicenseExpiryChip(raw: code.expiresAt)");
+    expect(view).toContain("filter.matches($0.element)");
+    expect(view).toContain('Label("Claim for me"');
+    expect(view).toContain("canClaimForMe: vm.activeClaim == nil && bestCode != nil");
+    expect(row).toContain("ForEach(0..<2");
+    expect(row).toContain("dash: [3, 2]");
+    expect(row).toContain("LicenseExpiryChip(raw: code.expiresAt)");
+    expect(row).toContain('Image(systemName: "chevron.right")');
+    expect(row).toContain("minHeight: 44");
+    // Tapping a row opens the detail sheet, which hands management to the web.
+    expect(view).toContain("inspectedCode = item.element");
+    expect(view).toContain("LicenseCodeSheet(");
   });
 
-  it("only offers Claim on an open card when the person holds no license", () => {
+  it("lists retired codes for staff without counting them as open", () => {
     const view = source("ios/Wisconsin/Views/LicensesView.swift");
 
-    expect(view).toContain("private var canClaim: Bool { claimable && activeClaim == nil }");
-    expect(view).toContain('Text(isOwn ? "Your license" : "Return yours to switch")');
-    expect(view).toMatch(/Button\("Claim"\)[\s\S]*?\.buttonStyle\(\.borderedProminent\)[\s\S]*?\.tint\(Color\.statusText\(\.green\)\)/);
-  });
-
-  it("lists retired codes for staff without offering a claim", () => {
-    const view = source("ios/Wisconsin/Views/LicensesView.swift");
-
-    expect(view).toContain("private var isRetired: Bool { code.status == .retired }");
-    expect(view).toContain("(code.status == .available || code.status == .partial) && activeClaims.count < 2");
+    expect(view).toContain("vm.codes.filter { $0.status != .retired }");
     expect(view).toContain("private var retiredCount: Int");
     expect(view).toContain("are listed for reference and are not counted as open.");
-  });
-
-  it("drops the per-row status wash so the claimed card stays the only tinted block", () => {
-    const view = source("ios/Wisconsin/Views/LicensesView.swift");
-
-    expect(view).not.toContain("listRowBackground(rowBackground)");
-    expect(view).not.toContain("private var rowBackground: Color");
-    // The active-license card keeps its tint; it is the one thing that is yours.
-    expect(view).toContain(".listRowBackground(Color.statusBackground(.blue))");
   });
 
   it("gives consequential license actions haptics and announces transient notices", () => {
