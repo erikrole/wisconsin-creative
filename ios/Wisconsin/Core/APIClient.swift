@@ -1786,6 +1786,7 @@ final class APIClient {
         var req = request(path: "/api/me/blasts/\(id)/ack", method: "POST")
         req.httpBody = Data()
         let _: SuccessResponse = try await perform(req)
+        BlastArchive.markAcknowledged(id)
     }
 
     // MARK: - Notification preferences

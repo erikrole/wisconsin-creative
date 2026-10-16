@@ -58,6 +58,7 @@ BookingDetailView.swift                | booking-detail              | audit
 CreateBookingSheet.swift               | create-booking              | audit
 ExtendBookingSheet.swift               | extend-booking              | audit
 BrowseView.swift                       | browse                      | audit
+BlastsView.swift                       | blasts                      | audit
 ItemsView.swift                        | items                       | audit
 ItemDetailView.swift                   | item-detail                 | audit
 ScheduleView.swift                     | schedule                    | audit
