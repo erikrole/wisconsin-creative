@@ -240,7 +240,7 @@ notification that demands an explicit acknowledgment back.
 
 | Concern | Behavior |
 |---|---|
-| Who can send | ADMIN + STAFF, web only (`/blasts`). iOS is receive-only in V1. |
+| Who can send | ADMIN + STAFF, web only (`/blasts`). iOS is receive-only. Browse → Blasts rereads messages this phone has already fetched; it does not compose, cancel, or show recipient tracking. |
 | Targeting | Event crew (active assignments on a **published** shift group), named people (max 200), or dynamic groups (ShiftArea / ShiftWorkerType / sportCode). No "everyone". |
 | Delivery | Batched APNs dispatch plus a banner pinned at the top of the iOS dashboard. |
 | Acknowledgment | The banner stays until the recipient taps "Got it". |
@@ -406,6 +406,7 @@ renders a tap-only alert. Neither side needs to ship first.
 - Source/build, isolated native behavior tests, fixture captures, and physical-device delivery are separate gates. See `tasks/ios-notifications-polish-plan-2026-09-07.md` for evidence and limitations.
 
 ## Change Log
+- 2026-10-16: **Native blast history is the messages this phone already fetched (local).** Browse → Blasts lists and opens them with the existing `/api/me/blasts` client. Acknowledging removes the home banner and keeps the message in the on-device list. The list is cleared at sign-out. It is not a second copy of the web staff tracker, and it cannot recover a blast this install never downloaded. Xcode and authenticated phone proof remain open.
 - 2026-10-11: **Blasts web recovery and acknowledgment polish (local).** `/blasts` and `/blasts/[id]` now surface load failures with retry instead of an empty history or a false "not found", keep a Refresh action, and summarize people still waiting to acknowledge. Detail filters use the shared ToggleGroup, recipients stack as cards on narrow widths, and compose recovers when event or people lookups fail. Source contracts and focused tests cover the recovery paths; authenticated browser proof remains open.
 
 - 2026-10-07: **Dropped unused ShiftGroup notify-after columns.** The schedule flush/debounce pipeline was already deleted; migration `0168_drop_shift_group_notify_after` removes `notify_after`, `notify_attempted_at`, and `notify_error`, and publication/combine paths no longer clear those fields. Apply the migration before relying on a schema that omits them.

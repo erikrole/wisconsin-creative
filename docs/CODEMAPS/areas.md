@@ -49,7 +49,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/events/[id]`, `/events`
 - APIs: `/api/badges/events/app-open`, `/api/bookings/[id]/events`, `/api/calendar-events/[id]/command-center`, `/api/calendar-events/[id]`, `/api/calendar-events/[id]/travel/[memberId]`, `/api/calendar-events/[id]/travel/defaults`, `/api/calendar-events/[id]/travel`, `/api/calendar-events/[id]/visibility`, `/api/calendar-events/[id]/workers/[workerId]`, `/api/calendar-events/[id]/workers`
 - Services: `src/lib/services/combined-schedule-events.ts`
-- Tests: `tests/all-day-events-have-no-call-time.test.ts`, `tests/booking-events-route-contract.test.ts`, `tests/calendar-events-route.test.ts`, `tests/combined-schedule-events-projection.test.ts`, `tests/combined-schedule-events-source.test.ts`, `tests/combined-schedule-events.test.ts`, `tests/kiosk-events-route.test.ts`, `tests/update-booking-events.test.ts`
+- Tests: `tests/all-day-events-have-no-call-time.test.ts`, `tests/booking-events-route-contract.test.ts`, `tests/calendar-events-route.test.ts`, `tests/combined-schedule-events-projection.test.ts`, `tests/combined-schedule-events-source.test.ts`, `tests/combined-schedule-events.test.ts`, `tests/ios-events-browse.test.ts`, `tests/kiosk-events-route.test.ts`
 
 ## gear-picks
 
@@ -81,7 +81,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/settings/kiosk-devices`
 - APIs: `/api/kiosk-devices/[id]/regenerate-code`, `/api/kiosk-devices/[id]`, `/api/kiosk-devices`, `/api/kiosk/activate`, `/api/kiosk/checkin/[id]/complete`, `/api/kiosk/checkin/[id]/quantity`, `/api/kiosk/checkin/[id]/report`, `/api/kiosk/checkin/[id]/scan`, `/api/kiosk/checkout/[id]/extend-window`, `/api/kiosk/checkout/[id]/nudge`
 - Services: `src/lib/services/kiosk-active-checkout-items.ts`, `src/lib/services/kiosk-actor.ts`, `src/lib/services/kiosk-checkin-undo.ts`, `src/lib/services/kiosk-checkout-allowance.ts`, `src/lib/services/kiosk-checkout-complete.ts`, `src/lib/services/kiosk-dashboard-home.ts`, `src/lib/services/kiosk-extend-window.ts`, `src/lib/services/kiosk-item-transfer.ts`
-- Tests: `tests/bulk-unit-kiosk-scans.test.ts`, `tests/ios-kiosk-actionable-availability.test.ts`, `tests/ios-kiosk-all-day-contract.test.ts`, `tests/ios-kiosk-availability-status.test.ts`, `tests/ios-kiosk-back-button.test.ts`, `tests/ios-kiosk-changes.test.ts`, `tests/ios-kiosk-checkout-details-polish.test.ts`, `tests/ios-kiosk-checkout-kits-interruptions.test.ts`
+- Tests: `tests/bulk-unit-kiosk-scans.test.ts`, `tests/ios-blasts-and-kiosk-completion.test.ts`, `tests/ios-kiosk-actionable-availability.test.ts`, `tests/ios-kiosk-all-day-contract.test.ts`, `tests/ios-kiosk-availability-status.test.ts`, `tests/ios-kiosk-back-button.test.ts`, `tests/ios-kiosk-changes.test.ts`, `tests/ios-kiosk-checkout-details-polish.test.ts`
 
 ## kits
 
