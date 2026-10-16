@@ -22,6 +22,7 @@ vi.mock("@sentry/nextjs", () => ({
 import { requireAuth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { GET as getBatteryOps } from "@/app/api/bulk-skus/batteries/route";
+import { batterySkuCandidateWhere } from "@/lib/bulk-batteries";
 
 const noParams = { params: Promise.resolve({}) };
 
@@ -511,5 +512,55 @@ describe("battery ops live counts", () => {
         },
       ],
     });
+  });
+
+  it("loads battery candidates and camera-like assets instead of the whole catalog", async () => {
+    vi.mocked(db.bulkSku.findMany).mockResolvedValue(batterySkus([
+      {
+        id: "sku-battery",
+        name: "Sony Battery",
+        category: "Batteries",
+        trackByNumber: false,
+        minThreshold: 4,
+        binQrCodeValue: "sony",
+        location: { id: "loc-1", name: "Camp Randall" },
+        categoryRel: null,
+        balances: [{ onHandQuantity: 4 }],
+        products: [],
+        units: [],
+      },
+      {
+        id: "sku-tape",
+        name: "Gaffer Tape",
+        category: "Expendables",
+        trackByNumber: false,
+        minThreshold: 1,
+        binQrCodeValue: "tape",
+        location: { id: "loc-1", name: "Camp Randall" },
+        categoryRel: { id: "cat-tape", name: "Tape" },
+        balances: [{ onHandQuantity: 12 }],
+        products: [],
+        units: [],
+      },
+    ]));
+    vi.mocked(db.asset.findMany).mockResolvedValue(cameraAssets([]));
+
+    const res = await getBatteryOps(makeGetRequest("/api/bulk-skus/batteries"), noParams);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(db.bulkSku.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { active: true, ...batterySkuCandidateWhere() },
+    }));
+    expect(db.asset.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        status: { not: "RETIRED" },
+        parentAssetId: null,
+        OR: expect.arrayContaining([
+          expect.objectContaining({ type: { contains: "camera", mode: "insensitive" } }),
+        ]),
+      }),
+    }));
+    expect(body.data.skus.map((sku: { id: string }) => sku.id)).toEqual(["sku-battery"]);
   });
 });

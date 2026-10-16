@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   bookingSerializedItemFindMany: vi.fn(),
   bookingBulkItemFindMany: vi.fn(),
   scanEventFindMany: vi.fn(),
+  queryRaw: vi.fn(),
 }));
 
 vi.mock("@/lib/auth", () => ({
@@ -48,6 +49,7 @@ vi.mock("@/lib/db", () => ({
     scanEvent: {
       findMany: mocks.scanEventFindMany,
     },
+    $queryRaw: mocks.queryRaw,
   },
 }));
 
@@ -158,6 +160,7 @@ beforeEach(() => {
   mocks.bookingSerializedItemFindMany.mockResolvedValue([]);
   mocks.bookingBulkItemFindMany.mockResolvedValue([]);
   mocks.scanEventFindMany.mockResolvedValue([]);
+  mocks.queryRaw.mockResolvedValue([]);
 });
 
 describe("/api/assets item-family rows", () => {
@@ -364,29 +367,25 @@ describe("/api/assets item-family rows", () => {
       numberedBatterySku({ id: "sku-battery", name: "Sony Battery" }),
       numberedBatterySku({ id: "sku-card", name: "SanDisk Card", trackByNumber: false, units: [], balances: [{ onHandQuantity: 8 }] }),
     ]);
-    mocks.bookingSerializedItemFindMany.mockResolvedValue([
-      {
-        assetId: "camera-1",
-        createdAt: daysAgo(1),
-        booking: { kind: "CHECKOUT", startsAt: daysAgo(1) },
-      },
-      {
-        assetId: "lens-1",
-        createdAt: daysAgo(2),
-        booking: { kind: "RESERVATION", startsAt: daysAgo(2) },
-      },
-    ]);
-    mocks.bookingBulkItemFindMany.mockResolvedValue([
-      {
-        bulkSkuId: "sku-battery",
-        plannedQuantity: 2,
-        createdAt: daysAgo(3),
-        booking: { kind: "CHECKOUT", startsAt: daysAgo(3) },
-      },
-    ]);
-    mocks.scanEventFindMany
-      .mockResolvedValueOnce([{ assetId: "tripod-1", createdAt: daysAgo(4) }])
-      .mockResolvedValueOnce([{ bulkSkuId: "sku-card", createdAt: daysAgo(4) }]);
+    mocks.queryRaw.mockImplementation(async (query: TemplateStringsArray) => {
+      const sql = Array.isArray(query) ? query.join(" ") : "";
+      if (sql.includes("booking_serialized_items")) {
+        return [
+          { asset_id: "camera-1", weight: 5, last_activity: daysAgo(1) },
+          { asset_id: "lens-1", weight: 3, last_activity: daysAgo(2) },
+        ];
+      }
+      if (sql.includes("booking_bulk_items")) {
+        return [{ bulk_sku_id: "sku-battery", weight: 10, last_activity: daysAgo(3) }];
+      }
+      if (sql.includes("scan_events") && sql.includes("bulk_sku_id")) {
+        return [{ bulk_sku_id: "sku-card", weight: 1, last_activity: daysAgo(4) }];
+      }
+      if (sql.includes("scan_events")) {
+        return [{ asset_id: "tripod-1", weight: 1, last_activity: daysAgo(4) }];
+      }
+      return [];
+    });
 
     const omitted = await getAssets(request("/api/assets?limit=5"), {
       params: Promise.resolve({}),
@@ -423,6 +422,9 @@ describe("/api/assets item-family rows", () => {
       "Sony Battery",
       "SanDisk Card",
     ]);
+    expect(mocks.queryRaw).toHaveBeenCalled();
+    expect(mocks.scanEventFindMany).not.toHaveBeenCalled();
+    expect(mocks.bookingSerializedItemFindMany).not.toHaveBeenCalled();
   });
 
   it("excludes retired serialized rows from the default list", async () => {

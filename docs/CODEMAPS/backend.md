@@ -133,7 +133,7 @@
 | `src/lib/auto-fill-preview-types.ts` | 61 |
 | `src/lib/availability-copy.ts` | 343 |
 | `src/lib/avatar.ts` | 44 |
-| `src/lib/battery-compatibility.ts` | 146 |
+| `src/lib/battery-compatibility.ts` | 152 |
 | `src/lib/bhphoto-image.ts` | 67 |
 | `src/lib/blob.ts` | 170 |
 | `src/lib/booking-action-policy.ts` | 215 |
@@ -145,7 +145,7 @@
 | `src/lib/booking-statuses.ts` | 9 |
 | `src/lib/breadcrumbs.ts` | 180 |
 | `src/lib/brother-label-csv.ts` | 134 |
-| `src/lib/bulk-batteries.ts` | 28 |
+| `src/lib/bulk-batteries.ts` | 49 |
 | `src/lib/bulk-schedule-assignment-types.ts` | 213 |
 | `src/lib/bulk-unit-qr.ts` | 111 |
 | `src/lib/bulk-unit-status.ts` | 52 |

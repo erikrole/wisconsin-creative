@@ -93,6 +93,12 @@ function isBatteryCamera(asset: BatteryCameraLike) {
   return /\b(cameras?|camcorder|cinema|mirrorless|dslr|bod(?:y|ies))\b/.test(text);
 }
 
+/**
+ * Substrings that cover every `isBatteryCamera` match. A query can use these
+ * to skip non-camera assets, then `isBatteryCamera` drops substring false positives.
+ */
+export const BATTERY_CAMERA_SEARCH_TERMS = ["camera", "camcorder", "cinema", "mirrorless", "dslr", "body"] as const;
+
 function quantityForSku(sku: BatterySkuLike) {
   return sku.availableQuantity ?? sku.currentQuantity ?? 0;
 }
