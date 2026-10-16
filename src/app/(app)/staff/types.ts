@@ -138,6 +138,8 @@ export type ListResponse = {
     inactive: number;
     missingPhotos: number;
     byRole: Record<Role, number>;
+    /** Whole-result group sizes by primary area ("NONE" = no area), independent of paging. */
+    areaCounts?: Record<string, number>;
   };
 };
 

@@ -205,11 +205,12 @@ function RosterSummary({
   );
 }
 
-function GroupHeading({ label, count }: { label: string; count: number }) {
+function GroupHeading({ label, count, continued = false }: { label: string; count: number; continued?: boolean }) {
   return (
     <h2 className="flex items-baseline gap-2 text-sm font-semibold" style={{ fontFamily: "var(--font-heading)" }}>
       {label}
       <span className="text-xs font-normal tabular-nums text-muted-foreground">{count}</span>
+      {continued && <span className="text-xs font-normal text-muted-foreground">continued</span>}
     </h2>
   );
 }
@@ -300,7 +301,7 @@ export default function UsersPage() {
       return;
     }
     setPage(0);
-  }, [search, roleFilter, locationFilter, yearFilter, sportFilter, areaFilter, sort, showInactive, showHiddenUsers, setPage]);
+  }, [search, roleFilter, locationFilter, yearFilter, sportFilter, areaFilter, sort, groupBy, showInactive, showHiddenUsers, setPage]);
 
   // Auth
   const { data: meData } = useFetch<{ user: { id: string; role: Role }; canViewHiddenUsers: boolean }>({
@@ -326,7 +327,9 @@ export default function UsersPage() {
     params.set("offset", String(page * LIMIT));
     const query = search.trim();
     if (query) params.set("q", query);
-    if (sort) params.set("sort", sort);
+    // Grouped views sort by area on the server so a group is contiguous across pages.
+    if (groupBy === "area") params.set("sort", "area");
+    else if (sort) params.set("sort", sort);
     if (roleFilter) params.set("role", roleFilter);
     if (locationFilter) params.set("locationId", locationFilter);
     if (yearFilter) params.set("year", yearFilter);
@@ -335,7 +338,7 @@ export default function UsersPage() {
     if (showInactive) params.set("active", "all");
     if (canShowHiddenUsers && showHiddenUsers) params.set("includeHidden", "1");
     return `/api/users?${params}`;
-  }, [page, search, sort, roleFilter, locationFilter, yearFilter, sportFilter, areaFilter, showInactive, canShowHiddenUsers, showHiddenUsers]);
+  }, [page, search, sort, groupBy, roleFilter, locationFilter, yearFilter, sportFilter, areaFilter, showInactive, canShowHiddenUsers, showHiddenUsers]);
 
   const exportHref = useMemo(() => {
     const params = new URLSearchParams();
@@ -366,22 +369,31 @@ export default function UsersPage() {
   });
 
   const users = useMemo(() => listData?.data ?? [], [listData]);
-  // Grouping applies to the loaded page only, so a group can continue on the next page.
+  const total = listData?.total ?? 0;
+  const stats = listData?.stats;
+  // The server sorts by area when grouped, so each group is contiguous across pages.
+  // Headings use whole-result counts and flag a group that continues from the previous page.
   const groups = useMemo(() => {
-    if (groupBy !== "area") return [{ key: "all", label: null as string | null, users }];
+    if (groupBy !== "area") return [{ key: "all", label: null as string | null, users, count: users.length, continued: false }];
     const byKey = new Map<string, typeof users>();
     for (const user of users) {
       const key = user.primaryArea && AREA_LABELS[user.primaryArea] ? user.primaryArea : "__none__";
       byKey.set(key, [...(byKey.get(key) ?? []), user]);
     }
     const order = [...Object.keys(AREA_LABELS), "__none__"];
-    return order
-      .filter((key) => byKey.has(key))
-      .map((key) => ({ key, label: key === "__none__" ? "No area" : AREA_LABELS[key], users: byKey.get(key) ?? [] }));
-  }, [groupBy, users]);
-  const total = listData?.total ?? 0;
-  const stats = listData?.stats;
-
+    const areaCounts = stats?.areaCounts;
+    const offset = page * LIMIT;
+    let before = 0;
+    const out: { key: string; label: string | null; users: typeof users; count: number; continued: boolean }[] = [];
+    for (const key of order) {
+      const count = areaCounts?.[key === "__none__" ? "NONE" : key] ?? byKey.get(key)?.length ?? 0;
+      if (byKey.has(key)) {
+        out.push({ key, label: key === "__none__" ? "No area" : (AREA_LABELS[key] ?? key), users: byKey.get(key) ?? [], count, continued: offset > before });
+      }
+      before += count;
+    }
+    return out;
+  }, [groupBy, users, stats, page]);
   // Form options
   const {
     data: formOptions,
@@ -642,7 +654,7 @@ export default function UsersPage() {
               <div className="hidden sm:flex flex-col gap-4">
                 {groups.map((group) => (
                   <section key={group.key} aria-label={group.label ?? undefined} className="flex flex-col gap-2">
-                    {group.label && <GroupHeading label={group.label} count={group.users.length} />}
+                    {group.label && <GroupHeading label={group.label} count={group.count} continued={group.continued} />}
                     <div className="grid grid-cols-3 gap-3 lg:grid-cols-4 xl:grid-cols-5">
                       {group.users.map((user) => (
                         <UserGridCard key={user.id} user={user} />
@@ -673,7 +685,7 @@ export default function UsersPage() {
                         {group.label && (
                           <TableRow className="bg-muted/40 hover:bg-muted/40">
                             <TableCell colSpan={4} className="py-2">
-                              <GroupHeading label={group.label} count={group.users.length} />
+                              <GroupHeading label={group.label} count={group.count} continued={group.continued} />
                             </TableCell>
                           </TableRow>
                         )}
@@ -691,7 +703,7 @@ export default function UsersPage() {
             <div className="block sm:hidden flex flex-col gap-2">
               {groups.map((group) => (
                 <Fragment key={group.key}>
-                  {group.label && <GroupHeading label={group.label} count={group.users.length} />}
+                  {group.label && <GroupHeading label={group.label} count={group.count} continued={group.continued} />}
                   {group.users.map((user) => (
                     <UserMobileCard key={user.id} user={user} />
                   ))}

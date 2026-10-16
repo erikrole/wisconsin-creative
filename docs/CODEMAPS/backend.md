@@ -289,7 +289,7 @@
 | `src/lib/title-normalization.ts` | 101 |
 | `src/lib/url-sync.ts` | 16 |
 | `src/lib/usage-analytics.ts` | 71 |
-| `src/lib/user-directory-query.ts` | 107 |
+| `src/lib/user-directory-query.ts` | 110 |
 | `src/lib/user-list-cache.ts` | 73 |
 | `src/lib/user-visibility.ts` | 86 |
 | `src/lib/utils.ts` | 22 |
