@@ -189,7 +189,7 @@ export function LicenseTable({
                   {actionLabel}
                 </span>
               ) : (
-                <span className="text-xs text-muted-foreground">{claimable ? "Return yours to switch" : "No open slots"}</span>
+                <span className="text-xs text-muted-foreground">{isOwn ? "Your license" : claimable ? "Return yours to switch" : "No open slots"}</span>
               )}
             </div>
           </>
