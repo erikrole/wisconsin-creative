@@ -11,6 +11,14 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Services: _none matched_
 - Tests: `tests/badges-award-route.test.ts`, `tests/badges-bulk-award-route.test.ts`, `tests/badges-celebration-ui.test.ts`, `tests/badges-display.test.ts`, `tests/badges-manual-awards.test.ts`, `tests/badges-mvp-polish.test.ts`, `tests/badges-operations-page.test.ts`, `tests/badges-recent-route.test.ts`
 
+## budget
+
+- Doc: `docs/AREA_BUDGET.md`
+- Pages: `/budget`
+- APIs: `/api/budget/[id]/lines`, `/api/budget/[id]`, `/api/budget/for-asset/[assetId]`, `/api/budget/item-search`, `/api/budget/lines/[lineId]/links`, `/api/budget/lines/[lineId]`, `/api/budget/lines/[lineId]/suggestions`, `/api/budget/links/[linkId]/apply`, `/api/budget/links/[linkId]`, `/api/budget`
+- Services: `src/lib/services/budget.ts`
+- Tests: `tests/budget-autofill.test.ts`, `tests/budget-contract.test.ts`, `tests/budget-matching.test.ts`, `tests/budget-routes.test.ts`, `tests/budget-table.test.ts`, `tests/kiosk-neon-compute-budget.test.ts`
+
 ## bulk-inventory
 
 - Doc: `docs/AREA_BULK_INVENTORY.md`
@@ -159,7 +167,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 
 - Doc: `docs/AREA_SEARCH.md`
 - Pages: `/search`
-- APIs: `/api/assets/picker-search`, `/api/image-search`
+- APIs: `/api/assets/picker-search`, `/api/budget/item-search`, `/api/image-search`
 - Services: _none matched_
 - Tests: `tests/api-image-search.test.ts`, `tests/app-shell-search-source.test.ts`, `tests/equipment-picker-search-route.test.ts`, `tests/guide-search-result.test.ts`, `tests/image-search.test.ts`, `tests/ios-search-hig-remediation.test.ts`, `tests/ios-search-partial-results.test.ts`, `tests/resource-search.test.ts`
 

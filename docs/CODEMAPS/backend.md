@@ -24,6 +24,7 @@
 | `src/lib/services/bookings-lifecycle.ts` | 3386 |
 | `src/lib/services/bookings-queries.ts` | 311 |
 | `src/lib/services/bookings.ts` | 9 |
+| `src/lib/services/budget.ts` | 750 |
 | `src/lib/services/bulk-assignment-batches.ts` | 253 |
 | `src/lib/services/bulk-schedule-assignment.ts` | 971 |
 | `src/lib/services/bulk-unit-scans.ts` | 718 |
@@ -212,7 +213,7 @@
 | `src/lib/passkey-client.ts` | 126 |
 | `src/lib/passkey.ts` | 388 |
 | `src/lib/password-rules.ts` | 16 |
-| `src/lib/permissions.ts` | 258 |
+| `src/lib/permissions.ts` | 263 |
 | `src/lib/preview-activity.ts` | 23 |
 | `src/lib/prisma-errors.ts` | 38 |
 | `src/lib/profile-completion-events.ts` | 6 |
@@ -407,6 +408,19 @@
 - `/api/bookings/changes`
 - `/api/bookings/export`
 - `/api/bookings`
+
+### `/api/budget`
+
+- `/api/budget/[id]/lines`
+- `/api/budget/[id]`
+- `/api/budget/for-asset/[assetId]`
+- `/api/budget/item-search`
+- `/api/budget/lines/[lineId]/links`
+- `/api/budget/lines/[lineId]`
+- `/api/budget/lines/[lineId]/suggestions`
+- `/api/budget/links/[linkId]/apply`
+- `/api/budget/links/[linkId]`
+- `/api/budget`
 
 ### `/api/bulk-skus`
 
