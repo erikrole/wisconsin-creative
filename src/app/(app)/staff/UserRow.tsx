@@ -180,8 +180,8 @@ export const UserTableRow = memo(function UserTableRow({ user }: { user: UserRow
       tabIndex={0}
       role="link"
       aria-label={`View ${user.name}`}
-      onClick={() => router.push(`/users/${user.id}`)}
-      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); router.push(`/users/${user.id}`); } }}
+      onClick={() => router.push(`/staff/${user.id}`)}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); router.push(`/staff/${user.id}`); } }}
     >
       <TableCell className="w-[26rem]">
         <div className="flex items-center gap-3 min-w-0">
@@ -230,7 +230,7 @@ export const UserMobileCard = memo(function UserMobileCard({ user }: { user: Use
 
   return (
     <Link
-      href={`/users/${user.id}`}
+      href={`/staff/${user.id}`}
       className="block rounded-lg no-underline outline-none transition-[scale] active:scale-[0.96] focus-visible:ring-[3px] focus-visible:ring-ring/50"
     >
       <Card className="transition-[box-shadow] duration-150 hover:shadow-sm">

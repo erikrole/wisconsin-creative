@@ -120,7 +120,7 @@ function NodeRow({ tree, depth }: { tree: Tree; depth: number }) {
         }
       >
         <Link
-          href={`/users/${user.id}`}
+          href={`/staff/${user.id}`}
           className="group flex items-center gap-3 py-2 pr-3 -mx-2 px-2 rounded-md hover:bg-accent transition-colors"
         >
           <UserAvatar
@@ -203,8 +203,8 @@ export default function OrgChartPage() {
     <>
       <PageHeader title="Org chart" description="Reporting relationships for active staff and students.">
         <Button className="h-10" asChild variant="outline">
-          <Link href="/users">
-            <ArrowLeft data-icon="inline-start" /> Back to users
+          <Link href="/staff">
+            <ArrowLeft data-icon="inline-start" /> Back to staff
           </Link>
         </Button>
       </PageHeader>

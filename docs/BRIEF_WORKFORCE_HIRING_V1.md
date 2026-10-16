@@ -69,7 +69,7 @@ One admin gate lives in `src/app/(app)/workforce/layout.tsx`; the sidebar has a 
 ### Overview
 - Header stats: staff count, student count, by area, graduating this spring, graduating within 12 months.
 - Area columns (Video, Graphic Design, Photography, Social, Comms, Live Production): people as compact cards with avatar, name, class standing derived from grad term, sport assignments as chips. A toggle switches to a dense table. Staff section above students, direct reports shown via the existing org-chart data.
-- Click a person: side drawer with the profile summary and a link to `/users/[id]`. Edit stays in the existing profile page; the overview does not duplicate editing.
+- Click a person: side drawer with the profile summary and a link to `/staff/[id]`. Edit stays in the existing profile page; the overview does not duplicate editing.
 - Standing is derived from grad term (not typed), with `studentYearOverride` honored.
 
 ### Hiring board

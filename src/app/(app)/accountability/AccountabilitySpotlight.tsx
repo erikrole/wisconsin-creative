@@ -164,7 +164,7 @@ export function AccountabilitySpotlight({
                             {RANK_LABELS[index]}
                           </div>
                           <Link
-                            href={`/users/${person.userId}`}
+                            href={`/staff/${person.userId}`}
                             className="brand-identity mt-1 block truncate font-semibold text-foreground underline-offset-4 hover:underline focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                           >
                             {person.name}

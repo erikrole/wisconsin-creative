@@ -1096,7 +1096,7 @@ function PersonRows({
             <div className="min-w-0">
               <div className="flex min-w-0 items-center gap-2">
                 <Link
-                  href={`/users/${person.userId}`}
+                  href={`/staff/${person.userId}`}
                   className="brand-identity truncate font-semibold hover:underline"
                 >
                   {person.name}
@@ -1184,7 +1184,7 @@ function PersonMobileCard({
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground tabular-nums">#{rank}</span>
               <Link
-                href={`/users/${person.userId}`}
+                href={`/staff/${person.userId}`}
                 className="brand-identity truncate font-semibold hover:underline"
               >
                 {person.name}

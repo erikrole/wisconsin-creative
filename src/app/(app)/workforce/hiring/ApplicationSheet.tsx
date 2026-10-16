@@ -367,7 +367,7 @@ export default function ApplicationSheet({ applicationId, onClose, onChanged, on
                 ) : detail.invite ? (
                   <p className="text-sm text-muted-foreground">
                     Invite sent. It links automatically when they register.{" "}
-                    <Link href="/users/onboarding-status" className="underline underline-offset-2">
+                    <Link href="/staff/onboarding-status" className="underline underline-offset-2">
                       Onboarding status
                     </Link>
                   </p>

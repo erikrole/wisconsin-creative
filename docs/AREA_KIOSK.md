@@ -65,7 +65,7 @@ Files under `ios/Wisconsin/Kiosk/`:
   - `GET /dashboard` — live stats (active checkouts, today's events, team status) with partial-result fallbacks so one failed read does not blank the idle screen
   - `GET /events` — visible upcoming events for checkout context, capped to the next 7 days
   - `GET /kits`, `GET /kits/[id]` — active kits at this kiosk pickup (Camp Randall aliases included) for checkout setup
-  - `GET /users` — global roster of active, visible internal users plus policy-eligible collaborators
+  - `GET /staff` — global roster of active, visible internal users plus policy-eligible collaborators
   - `POST /identify` — resolves a scanned Wiscard value to an active, visible kiosk user regardless of saved profile location
   - `GET /student/[userId]` — global person context with active checkouts, pending pickups, reservations, and `checkoutAllowance`
   - `POST /checkout/scan`, `POST /checkout/complete`, `GET/PATCH/POST/DELETE /checkout/[id]`

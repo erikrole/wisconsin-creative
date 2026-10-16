@@ -117,7 +117,7 @@ Implementation: `src/lib/checkout-escalation-policy.ts`, `src/lib/services/notif
 | Manual badge awarded by admin | `badge_awarded` | Awarded user | In-app |
 
 - Persistent inbox only. No toast fanout, email, APNs, or push in this slice.
-- Link target comes from `payload.href` and points to `/users/{userId}?tab=badges`.
+- Link target comes from `payload.href` and points to `/staff/{userId}?tab=badges`.
 - Delivery respects `User.notificationPrefs.badges`; missing or old preference shapes default to enabled.
 - Implementation: `POST /api/badges/award` and `awardBadgeManually` in `src/lib/badges/queries.ts`.
 

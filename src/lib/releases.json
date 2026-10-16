@@ -1,5 +1,18 @@
 [
   {
+    "date": "2026-10-16",
+    "title": "Users is now Staff",
+    "type": "improvement",
+    "summary": "The Users page and menu item are now called Staff. Old Users links and bookmarks still take you to the right place.",
+    "details": [
+      "The sidebar, page title, search results, and breadcrumbs say Staff.",
+      "Profile links now live under /staff, and old /users links redirect automatically.",
+      "Nothing about who can see the page or what it shows has changed."
+    ],
+    "platforms": ["Web"],
+    "pr": 484
+  },
+  {
     "date": "2026-10-15",
     "title": "Lighter pages on the web",
     "type": "improvement",
