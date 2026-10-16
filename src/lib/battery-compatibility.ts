@@ -88,16 +88,22 @@ function haystack(parts: Array<string | null | undefined>) {
   return parts.filter(Boolean).join(" ").toLowerCase();
 }
 
+/** Whole words `isBatteryCamera` accepts. Longer forms are first so `camera` does not hide `cameras`. */
+const BATTERY_CAMERA_WORDS = ["cameras", "camcorder", "camera", "mirrorless", "cinema", "bodies", "dslr", "body"] as const;
+
+const BATTERY_CAMERA_PATTERN = new RegExp(`\\b(?:${BATTERY_CAMERA_WORDS.join("|")})\\b`);
+
 function isBatteryCamera(asset: BatteryCameraLike) {
   const text = haystack([asset.type, asset.categoryName, asset.brand, asset.model]);
-  return /\b(cameras?|camcorder|cinema|mirrorless|dslr|bod(?:y|ies))\b/.test(text);
+  return BATTERY_CAMERA_PATTERN.test(text);
 }
 
 /**
- * Substrings that cover every `isBatteryCamera` match. A query can use these
- * to skip non-camera assets, then `isBatteryCamera` drops substring false positives.
+ * `contains` needles for Battery Ops. Each accepted word includes one of
+ * these, so a name that passes `isBatteryCamera` is still loaded. `bodies`
+ * does not contain `body`, and the check still drops substring false positives.
  */
-export const BATTERY_CAMERA_SEARCH_TERMS = ["camera", "camcorder", "cinema", "mirrorless", "dslr", "body"] as const;
+export const BATTERY_CAMERA_SEARCH_TERMS = ["cameras", "camcorder", "camera", "mirrorless", "cinema", "bodies", "dslr", "body"] as const;
 
 function quantityForSku(sku: BatterySkuLike) {
   return sku.availableQuantity ?? sku.currentQuantity ?? 0;

@@ -7,7 +7,7 @@
     "details": [
       "Most popular still ranks the same way, and it totals recent use in the database instead of loading every booking and scan.",
       "Battery Ops looks at battery-like families and camera-like gear first, then keeps the same families as before.",
-      "Scan history, open unit allocations, and recent condition flags have new indexes. The migration is included and is not applied yet.",
+      "Scan history, open unit checkouts, and recent condition flags show up faster.",
       "Reports, Settings, Resources, UA staff gear, signatures, YouTube, Blasts, Operations, Scoreboard, and Software show a page skeleton while they load.",
       "Add item, Fill gaps, and Cleanup load separately from the Items list."
     ],

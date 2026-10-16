@@ -558,6 +558,7 @@ describe("battery ops live counts", () => {
         parentAssetId: null,
         OR: expect.arrayContaining([
           expect.objectContaining({ type: { contains: "camera", mode: "insensitive" } }),
+          expect.objectContaining({ type: { contains: "bodies", mode: "insensitive" } }),
         ]),
       }),
     }));

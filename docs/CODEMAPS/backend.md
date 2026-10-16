@@ -133,7 +133,7 @@
 | `src/lib/auto-fill-preview-types.ts` | 61 |
 | `src/lib/availability-copy.ts` | 343 |
 | `src/lib/avatar.ts` | 44 |
-| `src/lib/battery-compatibility.ts` | 152 |
+| `src/lib/battery-compatibility.ts` | 158 |
 | `src/lib/bhphoto-image.ts` | 67 |
 | `src/lib/blob.ts` | 170 |
 | `src/lib/booking-action-policy.ts` | 215 |
