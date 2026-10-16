@@ -17,6 +17,39 @@
   },
   {
     "date": "2026-10-16",
+    "title": "Kits and batteries on iPhone",
+    "type": "feature",
+    "summary": "Staff and students can read kits and item families on iPhone. Staff can also open Battery Ops to see what is low and who has batteries out.",
+    "details": [
+      "Kits show whether the gear is ready, who has something out, and when it is due.",
+      "Item families show how many are available and which units are checked out.",
+      "Battery Ops lists low camera pairings and the batteries that are out.",
+      "Reserve is the action on a kit or family. Editing, receiving, labels, and repairs stay on the web."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 492
+  },
+  {
+    "date": "2026-10-16",
+    "title": "Faster lists and reports",
+    "type": "improvement",
+    "summary": "Items, Battery Ops, and condition flags read less from the database, and several staff pages show their own loading state while they open.",
+    "details": [
+      "Most popular still ranks the same way, and it totals recent use in the database instead of loading every booking and scan.",
+      "Battery Ops looks at battery-like families and camera-like gear first, then keeps the same families as before.",
+      "Scan history, open unit checkouts, and recent condition flags show up faster.",
+      "Reports, Settings, Resources, UA staff gear, signatures, YouTube, Blasts, Operations, Scoreboard, and Software show a page skeleton while they load.",
+      "Add item, Fill gaps, and Cleanup load separately from the Items list."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 491
+  },
+  {
+    "date": "2026-10-16",
     "title": "Full reports on iPhone",
     "type": "feature",
     "summary": "Staff can open the rest of the reports from the iPhone Reports screen. Spreadsheets still download on the web.",
