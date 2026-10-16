@@ -83,10 +83,10 @@
 | `/staff/onboarding-status` | `src/app/(app)/staff/onboarding-status/page.tsx` |
 | `/staff/org-chart` | `src/app/(app)/staff/org-chart/page.tsx` |
 | `/staff` | `src/app/(app)/staff/page.tsx` |
+| `/staff/workforce/hiring` | `src/app/(app)/staff/workforce/hiring/page.tsx` |
+| `/staff/workforce` | `src/app/(app)/staff/workforce/page.tsx` |
+| `/staff/workforce/planning` | `src/app/(app)/staff/workforce/planning/page.tsx` |
 | `/welcome` | `src/app/(app)/welcome/page.tsx` |
-| `/workforce/hiring` | `src/app/(app)/workforce/hiring/page.tsx` |
-| `/workforce` | `src/app/(app)/workforce/page.tsx` |
-| `/workforce/planning` | `src/app/(app)/workforce/planning/page.tsx` |
 | `/youtube` | `src/app/(app)/youtube/page.tsx` |
 | `/about/features` | `src/app/(public)/about/features/page.tsx` |
 | `/about/field-work` | `src/app/(public)/about/field-work/page.tsx` |
@@ -112,7 +112,8 @@
 | `/reports/usage` | `src/app/(app)/reports/usage/layout.tsx` |
 | `/settings/app-activity` | `src/app/(app)/settings/app-activity/layout.tsx` |
 | `/settings` | `src/app/(app)/settings/layout.tsx` |
-| `/workforce` | `src/app/(app)/workforce/layout.tsx` |
+| `/staff` | `src/app/(app)/staff/layout.tsx` |
+| `/staff/workforce` | `src/app/(app)/staff/workforce/layout.tsx` |
 | `/about` | `src/app/(public)/about/layout.tsx` |
 | `/releases` | `src/app/(public)/releases/layout.tsx` |
 | `/` | `src/app/layout.tsx` |
@@ -138,7 +139,7 @@
 | `src/components/schedule/SportSetupWizard.tsx` | 675 |
 | `src/components/booking-wizard/WizardStep1.tsx` | 599 |
 | `src/components/booking-details/BookingHeader.tsx` | 472 |
-| `src/components/Sidebar.tsx` | 452 |
+| `src/components/Sidebar.tsx` | 450 |
 | `src/components/event-editor/EventEditorFields.tsx` | 435 |
 | `src/components/ui/heatmap.tsx` | 434 |
 | `src/components/ui/chart.tsx` | 387 |
