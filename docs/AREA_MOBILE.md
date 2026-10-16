@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Mobile Operations
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-10-12
+- Last Updated: 2026-10-16
 - Status: Active
 - Version: V1
 
@@ -31,10 +31,10 @@ Cheqroom mobile patterns show useful primitives but too much menu depth and too 
    - Dashboard
    - Bookings / My Gear
    - Schedule
-   - Browse, with Scoreboard for every role, Items, Guides, Licenses, Users, and Reports (STAFF/ADMIN)
+   - Browse, with Scoreboard for every role, Events for internal roles, Items, Guides, Blasts, Licenses, Users, and Reports (STAFF/ADMIN)
    - Search, with scan as an in-surface action
 2. Native iOS uses the system tab bar. Browse is the compact hub tab for secondary browseable destinations (the Apple Music Library pattern); do not add a hamburger drawer or a sixth compact tab that forces Search out of the trailing search position.
-3. Student view should hide admin-only create/manage affordances outside allowed ownership scope. Browse hides the Reports row for anyone outside STAFF/ADMIN rather than offering a row the report endpoints will refuse, and it stays out of the COLLABORATOR capability list entirely. Scoreboard is the deliberate universal read-only exception and appears first in Browse for every authenticated role.
+3. Student view should hide admin-only create/manage affordances outside allowed ownership scope. Browse hides the Reports row for anyone outside STAFF/ADMIN rather than offering a row the report endpoints will refuse, and it stays out of the COLLABORATOR capability list entirely. Events is the read-only internal calendar directory (list plus gear and bookings) and is hidden from collaborators because `/api/calendar-events` refuses them. Scoreboard is the deliberate universal read-only exception and appears first in Browse for every authenticated role. Blasts is the other universal row: every role can receive one, and the phone only reads messages that person already fetched.
 4. Badge counts can appear on Reservations and Check-outs for overdue or due-today urgency.
 
 ## Production Host Contract
@@ -145,6 +145,8 @@ Navigation shell versioned roadmap: `tasks/sidebar-roadmap.md` (revised 2026-03-
 
 ## Change Log
 
+- 2026-10-16: **Browse keeps a dismissed blast (local).** Blasts is a read-only list and detail for every signed-in role, using `GET /api/me/blasts` and the existing read and acknowledge calls. Got it still clears the home banner. The message stays on this phone so it can be opened again. Compose, cancel, and recipient tracking stay on the web. A blast this phone never fetched is not shown. Source contracts cover the wiring; Xcode build and authenticated device proof remain open.
+- 2026-10-16: **Native Events browse (local, read-only).** Browse gains an Events row for every internal role. The list reads `/api/calendar-events` (upcoming, or the past 30 days). Detail reads `/api/calendar-events/:id`, staff gear and bookings from `/api/calendar-events/:id/command-center`, the signed-in person's event gear from `/api/my-shifts?eventId=`, and booking rows from `/api/bookings/:id`. The one action opens the existing Schedule event sheet. Collaborators do not see the row. Creating, editing, hiding, and removing events stays on the web. Authenticated device proof remains open under GAP-89.
 - 2026-10-12: **Native reservation search includes gear that is out now.** A checked-out camera or lens stays in Gear search and can be reserved once the pickup is at least 60 minutes after it is due back. Overlapping holds stay blocked and name who has the item. Source contracts updated; authenticated device proof remains open.
 - 2026-10-07: **iPad signature capture (local).** Browse gains a Signatures row on iPad for STAFF/ADMIN only (`SignatureCaptureAvailability`), opening native collections, roster, and Apple Pencil capture screens under `Views/Signatures/`. Contracts and acceptance live in `docs/AREA_SIGNATURES.md`; fixture scenarios `signature-collections`, `signature-roster`, and `signature-capture` render the screens without a session.
 

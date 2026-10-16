@@ -58,10 +58,13 @@ BookingDetailView.swift                | booking-detail              | audit
 CreateBookingSheet.swift               | create-booking              | audit
 ExtendBookingSheet.swift               | extend-booking              | audit
 BrowseView.swift                       | browse                      | audit
+BlastsView.swift                       | blasts                      | audit
 ItemsView.swift                        | items                       | audit
 ItemDetailView.swift                   | item-detail                 | audit
 ScheduleView.swift                     | schedule                    | audit
 EventDetailSheet.swift                 | event-detail                | audit
+EventsView.swift                       | events                      | audit
+EventCatalogDetailView.swift           | events                      | audit
 NotificationsSheet.swift               | notifications-sheet         | audit
 OverdueReportView.swift                | overdue-report              | audit
 ReportsView.swift                      | reports                     | audit
