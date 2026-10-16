@@ -9,7 +9,8 @@
       "Hiring and Planning sit inside the Workforce tab.",
       "Old Workforce links redirect to the new location."
     ],
-    "platforms": ["Web"]
+    "platforms": ["Web"],
+    "pr": 485
   },
   {
     "date": "2026-10-16",
