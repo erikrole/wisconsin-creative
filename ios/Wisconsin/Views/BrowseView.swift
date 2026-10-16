@@ -12,10 +12,10 @@ struct BrowseView: View {
 
     private var destinations: [BrowseDestination] {
         guard session.currentUser?.role == "COLLABORATOR" else {
-            // Reports are staff analytics, and Events reads the internal
-            // calendar. Both endpoints refuse a collaborator, so those rows are
-            // hidden rather than offered and refused.
-            return [.scoreboard, .events, .items, .guides, .blasts, .licenses, .users] + (isStaffOrAdmin ? [.reports] : [])
+            // Reports are staff analytics. Events and Brand assets read
+            // internal resources. Those endpoints refuse a collaborator, so
+            // those rows are hidden rather than offered and refused.
+            return [.scoreboard, .events, .items, .guides, .brandAssets, .blasts, .licenses, .users] + (isStaffOrAdmin ? [.reports] : [])
         }
         let capabilities = Set(session.currentUser?.capabilities ?? [])
         return [.scoreboard] + [
@@ -81,6 +81,8 @@ struct BrowseView: View {
             ItemsView(wrapsInNavigationStack: false)
         case .guides:
             GuidesView(wrapsInNavigationStack: false)
+        case .brandAssets:
+            BrandAssetsView(wrapsInNavigationStack: false)
         case .licenses:
             LicensesView(wrapsInNavigationStack: false)
         case .users:
@@ -98,6 +100,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
     case events
     case items
     case guides
+    case brandAssets
     case blasts
     case licenses
     case users
@@ -111,6 +114,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
         case .events: "Events"
         case .items: "Items"
         case .guides: "Guides"
+        case .brandAssets: "Brand assets"
         case .blasts: "Blasts"
         case .licenses: "Licenses"
         case .users: "Users"
@@ -128,6 +132,8 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
             "Find gear, item families, status, and availability."
         case .guides:
             "Read team reference docs, contacts, venue notes, and workflows."
+        case .brandAssets:
+            "Logos, PDFs, and other brand files."
         case .blasts:
             "Read a broadcast again after you dismiss it."
         case .licenses:
@@ -145,6 +151,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
         case .events: "calendar"
         case .items: "archivebox"
         case .guides: "book.closed"
+        case .brandAssets: "folder"
         case .blasts: "megaphone"
         case .licenses: "key"
         case .users: "person.2"
@@ -158,6 +165,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
         case .events: Color.statusText(.blue)
         case .items: Color.statusText(.blue)
         case .guides: Color.statusText(.purple)
+        case .brandAssets: Color.statusText(.blue)
         case .blasts: Color.statusText(.blue)
         case .licenses: Color.statusText(.orange)
         case .users: Color.statusText(.green)

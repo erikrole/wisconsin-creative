@@ -123,6 +123,20 @@ final class APIClient {
         return URLSession(configuration: config)
     }()
 
+    /// Brand asset files can be a large PDF on venue wifi. The shared session
+    /// cuts a transfer off at 30 seconds, which is too short for that download.
+    private let fileSession: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.httpCookieStorage = HTTPCookieStorage.shared
+        config.httpShouldSetCookies = true
+        config.httpCookieAcceptPolicy = .always
+        config.waitsForConnectivity = false
+        config.timeoutIntervalForRequest = 30
+        config.timeoutIntervalForResource = 180
+        config.multipathServiceType = .none
+        return URLSession(configuration: config)
+    }()
+
     private let decoder: JSONDecoder = {
         let d = JSONDecoder()
         d.keyDecodingStrategy = .convertFromSnakeCase
@@ -1216,6 +1230,90 @@ final class APIClient {
     func guide(slug: String) async throws -> GuideListItem {
         let resp: DataWrapper<GuideListItem> = try await perform(request(path: "/api/resources/\(slug)"))
         return resp.data
+    }
+
+    /// `GET /api/resources/assets`. Read-only folder listing. Search uses
+    /// `scope=all` so a logo can be found under the current folder.
+    func brandAssets(folderId: String?, search: String?, sort: String) async throws -> BrandAssetLibraryPage {
+        var items: [URLQueryItem] = [
+            .init(name: "sort", value: sort),
+        ]
+        if let folderId, !folderId.isEmpty {
+            items.append(.init(name: "folderId", value: folderId))
+        }
+        let trimmedSearch = search?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !trimmedSearch.isEmpty {
+            items.append(.init(name: "q", value: trimmedSearch))
+            items.append(.init(name: "scope", value: "all"))
+        }
+        let response: DataWrapper<BrandAssetLibraryPage> = try await perform(
+            request(path: "/api/resources/assets", queryItems: items)
+        )
+        return response.data
+    }
+
+    /// Authenticated current-file download. The bytes stay in a temp file and
+    /// are never a public Blob URL.
+    func brandAssetFile(id: String, fallbackName: String) async throws -> BrandAssetDownload {
+        let req = request(path: "/api/resources/assets/\(id)/download")
+        let requestBoundary = authSessionBoundary.capture()
+        let temp: URL
+        let response: URLResponse
+        do {
+            (temp, response) = try await fileSession.download(for: req)
+        } catch let error as URLError where error.code == .cancelled {
+            throw CancellationError()
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            throw APIError.networkError(error)
+        }
+
+        guard authSessionBoundary.owns(requestBoundary) else {
+            try? FileManager.default.removeItem(at: temp)
+            throw APIError.sessionChanged
+        }
+        guard let http = response as? HTTPURLResponse else {
+            try? FileManager.default.removeItem(at: temp)
+            throw APIError.serverError("Invalid response")
+        }
+        guard (200...299).contains(http.statusCode) else {
+            let data = (try? Data(contentsOf: temp)) ?? Data()
+            try? FileManager.default.removeItem(at: temp)
+            if http.statusCode == 401 {
+                broadcastSessionExpiry(for: requestBoundary)
+                throw APIError.unauthorized
+            }
+            if http.statusCode == 404 {
+                throw APIError.notFound
+            }
+            let message = (try? JSONDecoder().decode(ServerErrorBody.self, from: data))?.error
+                ?? "Couldn't open that file."
+            throw APIError.httpError(statusCode: http.statusCode, message: message)
+        }
+
+        let filename = brandAssetDownloadName(
+            header: http.value(forHTTPHeaderField: "Content-Disposition"),
+            fallback: fallbackName
+        )
+        let safeId = String(id.unicodeScalars.filter { scalar in
+            CharacterSet.alphanumerics.contains(scalar) || scalar == "-" || scalar == "_"
+        })
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("brand-assets", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let destination = directory.appendingPathComponent("\(safeId.isEmpty ? "file" : safeId)-\(filename)")
+        if FileManager.default.fileExists(atPath: destination.path) {
+            try FileManager.default.removeItem(at: destination)
+        }
+        do {
+            try FileManager.default.moveItem(at: temp, to: destination)
+        } catch {
+            try FileManager.default.copyItem(at: temp, to: destination)
+            try? FileManager.default.removeItem(at: temp)
+        }
+        let contentType = http.value(forHTTPHeaderField: "Content-Type") ?? "application/octet-stream"
+        return BrandAssetDownload(fileURL: destination, contentType: contentType)
     }
 
     // MARK: - Assets
