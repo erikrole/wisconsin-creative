@@ -1,5 +1,19 @@
 [
   {
+    "date": "2026-10-16",
+    "title": "Redesigned Photo Mechanic licenses",
+    "type": "improvement",
+    "summary": "The Photo Mechanic page now shows each license as a card with its two machine slots, so open slots are easy to spot and claim.",
+    "details": [
+      "Your license is a large card with a tap-to-copy code, expiry, and return.",
+      "Every code shows its two slots, with who holds each and which are open.",
+      "New filters show codes with an open slot, full codes, or codes expiring soon.",
+      "A slot meter shows how much of the pool is in use."
+    ],
+    "platforms": ["Web"],
+    "pr": 488
+  },
+  {
     "date": "2026-10-15",
     "title": "Lighter pages on the web",
     "type": "improvement",
