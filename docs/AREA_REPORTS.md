@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Reports & Analytics
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-09-18
+- Last Updated: 2026-10-16
 - Status: Active
 - Version: V1
 
@@ -148,14 +148,22 @@ Provide staff and admin with analytics dashboards to track checkout/reservation 
 
 ## Native iOS surface
 
-`/reports` on web has no native equivalent; iOS instead carries one glanceable operational report at Browse > Reports (`ios/Wisconsin/Views/ReportsView.swift`), visible only to STAFF/ADMIN.
+`/reports` on web has no native equivalent. iOS carries a glance plus read-only full reports at Browse > Reports (`ios/Wisconsin/Views/ReportsView.swift`), visible only to STAFF/ADMIN. The glance stays the floor summary. A Full reports section opens the screens below. CSV export and the Audit report stay on web.
 
-- **Reads:** `GET /api/reports/utilization?days=` and `GET /api/reports/checkouts?days=`, both unchanged by the native client.
-- **Period:** a single 30d/90d control. Checkouts accepts 7/30/90 and utilization accepts 30/90/365, so the shared picker uses the overlap. A period change clears values from the old window, becomes the newest request owner immediately, and rejects any late response from the superseded window.
-- **Reliability:** utilization and checkout activity load as independent failure domains. One successful response remains visible if its peer fails. Additive `partialFailures` keeps usable response data visible with an incomplete-data warning and prevents the result from being marked fresh.
-- **Content:** utilization rate, checkouts with a prior-period delta, currently overdue, an interactive checkout-activity chart, a status donut, most-used gear by custody days, and idle / never-checked-out counts. Overdue pushes the existing native `OverdueReportView`.
-- **Deliberately web-only:** CSV export, audit, badge analytics, missing units, breakdown drill-downs, and every filter beyond the period. Deep reporting and authoring stay on web per the mobile scope contract.
-- **Version tolerance:** the utilization `custody` block, `days`, `activeAssets`, and both report `partialFailures` fields decode as optional. A shipped build meeting a server that predates the custody rebuild or failure metadata still renders the response it understands. `ios/WisconsinTests/ReportModelsTests.swift` pins both payload shapes.
+- **Glance reads:** `GET /api/reports/utilization?days=` and `GET /api/reports/checkouts?days=`.
+- **Glance period:** a single 30d/90d control. Checkouts accepts 7/30/90 and utilization accepts 30/90/365, so the shared picker uses the overlap. A period change clears values from the old window, becomes the newest request owner immediately, and rejects any late response from the superseded window.
+- **Glance reliability:** utilization and checkout activity load as independent failure domains. One successful response remains visible if its peer fails. Additive `partialFailures` keeps usable response data visible with an incomplete-data warning and prevents the result from being marked fresh.
+- **Glance content:** utilization rate, checkouts with a prior-period delta, currently overdue, an interactive checkout-activity chart, a status donut, most-used gear by custody days, and idle / never-checked-out counts. Overdue pushes the existing native `OverdueReportView`.
+- **Full reports:** each screen reads the same JSON endpoint as web and never sends `format=csv`.
+  - Utilization (`UtilizationReportView`): 30/90/365, status donut, most-used bars, location/type/category/department shares, idle gear.
+  - Checkouts (`CheckoutReportView`): 7/30/90, trend, top requesters, recent rows that open booking detail.
+  - Scans (`ScanReportView`): 7/30/90/all and Checkout/Check-in, daily volume, paged scan rows.
+  - Missing Units (`MissingUnitsReportView`): location and category filters, family and person shares, recent check-ins, battery missing units and checkout history.
+  - Badges (`BadgeReportView`): 30/90/365, leaderboard, distribution, rarely awarded badges, recent awards.
+  - Usage (`UsageReportView`): 7/30/90 aggregate counts. The row appears only when `GET /api/me` returns `canViewUsageAnalytics: true`. A 403 shows an owner-only state. This is the aggregate report, not the named App activity roster in Settings.
+- **Request ownership:** each full report keeps one `ReportSession`. A new period or filter discards the previous value before the replacement request can publish, and a late response cannot overwrite the selection.
+- **Deliberately web-only:** CSV export, the Audit report, checkout heatmap day focus, and items-page drill-downs from breakdown rows. Authoring stays on web.
+- **Version tolerance:** the utilization `custody` block, `days`, `activeAssets`, breakdown lists, and both report `partialFailures` fields decode as optional. A shipped build meeting a server that predates the custody rebuild or failure metadata still renders the response it understands. `ios/WisconsinTests/ReportModelsTests.swift` pins the glance payloads. `ios/WisconsinTests/ReportLibraryModelTests.swift` pins the full-report payloads.
 
 ## Components
 
@@ -215,8 +223,10 @@ Provide staff and admin with analytics dashboards to track checkout/reservation 
 - [x] AC-19: Accountability is discoverable in primary navigation for ADMIN/STAFF/STUDENT, keeps COLLABORATOR default-deny, and redacts ADMIN-only export and exclusion capabilities from non-admin responses.
 - [x] AC-20: Accountability serves one shared three-line draw from 50 unique reviewed jeers for identical ordered leaderboard state; the draw remains stable across roles, reloads, and clock-only late-hour changes, then rotates when membership, ranking order, or incident state changes.
 - [x] AC-21: Accountability keeps its friendly wrong-leaderboard spotlight while the full ranking uses a five-concept desktop summary, prominent continuously colored return record, responsive card fallback, explicit 40px history controls, and grouped incident evidence without changing rank or custody semantics.
+- [x] AC-22: Native Reports opens read-only Utilization, Checkouts, Scans, Missing Units, and Badges, plus Usage only when `/api/me` allows it. CSV export and Audit stay on web.
 
 ## Change Log
+- 2026-10-16: Native Reports now opens read-only Utilization, Checkouts, Scans, Missing Units, and Badges from the existing Reports screen, and Usage only when `/api/me` returns `canViewUsageAnalytics`. Each screen reads the shared JSON endpoint and leaves CSV export and the Audit report on web. Source contracts and the iOS project check are the local proof; an Xcode build and an authenticated iPhone walkthrough remain open.
 - 2026-09-18: Accountability now counts currently overdue checkouts against on-time rate, keeps filter state in the URL, downloads CSV in place, highlights the signed-in viewer, and searches the ranking locally. Active overdue receipts sort first. Item summaries load only for incident rows. Focused tests pass locally; authenticated browser proof is in `tasks/archive/proofs/accountability-2026-09-18/`.
 - 2026-09-07: Client CSV escaping now protects whitespace-prefixed formulas. Download completion retains warning severity when truncation metadata lacks a total, and JSON null/non-object error bodies use the standard failure message. Focused regressions pass locally; authenticated browser and deployment remain unverified.
 - 2026-09-07: Checkout report JSON and CSV requests now require a whole-number days value from 1 through 366; partially numeric and fractional values no longer silently select a different reporting window. Missing or empty days retains the 30-day default. Acceptance: focused route regressions pass locally; authenticated runtime and deployment remain unverified.
