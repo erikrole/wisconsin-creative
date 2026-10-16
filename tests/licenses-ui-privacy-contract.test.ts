@@ -16,7 +16,8 @@ describe("licenses UI and privacy contracts", () => {
     const table = source("src/app/(app)/licenses/LicenseTable.tsx");
 
     expect(table).toContain("const showName = isAdmin || isOwn || claim.user !== null;");
-    expect(table).toContain("const displayCode = isAdmin || isOwn ? code.code : MASKED_CODE;");
+    expect(table).toContain("const revealed = isAdmin || isOwn;");
+    expect(table).toContain("const displayCode = revealed ? code.code : MASKED_CODE;");
     expect(table).toContain("const adminCanInspect = isAdmin;");
     expect(table).toContain("if (!isClickable) return;");
   });

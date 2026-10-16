@@ -64,7 +64,7 @@ export function MyLicensePanel({ license, isStaff, onReleased }: Props) {
           className="group relative mt-3 block w-full rounded-xl border bg-background/80 px-4 py-4 text-left transition-colors hover:bg-background focus-visible:outline-2 focus-visible:outline-ring"
           aria-label="Copy license code"
         >
-          <code className="block break-all font-mono text-lg font-semibold tracking-[0.08em] text-foreground min-[420px]:text-2xl min-[420px]:tracking-[0.14em] sm:text-3xl sm:tracking-[0.16em]">
+          <code className="block break-all font-mono text-xl font-semibold tracking-[0.1em] text-foreground sm:text-3xl sm:tracking-[0.16em]">
             {license.code}
           </code>
           <span className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -73,7 +73,7 @@ export function MyLicensePanel({ license, isStaff, onReleased }: Props) {
           </span>
         </button>
 
-        <dl className="relative mt-4 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-3">
+        <dl className="relative mt-4 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
           <div>
             <dt className="text-xs text-muted-foreground">{timeLabel}</dt>
             <dd className="font-medium">{license.claimedAt ? formatRelativeTime(license.claimedAt, new Date()) : "—"}</dd>
@@ -82,10 +82,6 @@ export function MyLicensePanel({ license, isStaff, onReleased }: Props) {
             <dt className="text-xs text-muted-foreground">Expires</dt>
             <dd className="font-medium">{license.expiresAt ? formatLicenseExpiryDate(license.expiresAt) : "No expiry set"}</dd>
           </div>
-          <div>
-            <dt className="text-xs text-muted-foreground">Activation</dt>
-            <dd className="font-medium">Shared across two machines</dd>
-          </div>
         </dl>
 
         <div className="relative mt-5 flex flex-wrap items-center gap-2">
@@ -93,15 +89,15 @@ export function MyLicensePanel({ license, isStaff, onReleased }: Props) {
             {copied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}
             {copied ? "Copied" : "Copy code"}
           </Button>
-          <Button type="button" variant="outline" className="h-10" onClick={() => setShowHistory(true)}>
+          <Button type="button" variant="ghost" className="h-10 text-muted-foreground" onClick={() => setShowHistory(true)}>
             <Clock3 data-icon="inline-start" />
             History
           </Button>
           <Button
             type="button"
-            variant="outline"
+            variant="ghost"
             onClick={() => setShowRelease(true)}
-            className="h-10 text-destructive hover:text-destructive sm:ml-auto"
+            className="h-10 text-muted-foreground hover:text-destructive sm:ml-auto"
           >
             <LogOut data-icon="inline-start" />
             {releaseLabel}

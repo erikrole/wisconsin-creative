@@ -186,12 +186,13 @@ export function PhotoMechanicLicenses({
     if (!code.expiresAt) return false;
     return licenseDaysUntilExpiry(code.expiresAt) <= 30;
   }).length;
+  const claimableFirst = (code: LicenseCode) => (code.status === "AVAILABLE" || code.status === "PARTIAL" ? 0 : 1);
   const filteredCodes = visibleCodes.filter((code) => {
     if (filter === "available") return code.status === "AVAILABLE" || code.status === "PARTIAL";
     if (filter === "full") return code.status === "CLAIMED";
     if (filter === "expiring") return !!code.expiresAt && licenseDaysUntilExpiry(code.expiresAt) <= 30;
     return true;
-  });
+  }).sort((a, b) => (isAdmin ? 0 : claimableFirst(a) - claimableFirst(b)));
   const hasRetired = allCodes.some((code) => code.status === "RETIRED");
   const hasExpiry = allCodes.some((code) => code.expiresAt);
 
@@ -247,7 +248,7 @@ export function PhotoMechanicLicenses({
         </p>
       ) : null}
 
-      {!codesLoading && allCodes.length > 0 && (
+      {isAdmin && !codesLoading && allCodes.length > 0 && (
         <LicenseSummary
           activeCodes={activeCodes.length}
           usedSlots={usedSlots}
@@ -307,7 +308,11 @@ export function PhotoMechanicLicenses({
         </OperationalToolbar>
       )}
 
-      {!codesLoading && codesError && allCodes.length === 0 ? (
+      {!isAdmin && myLicense ? (
+        <p className="px-1 text-sm text-muted-foreground">
+          {openSlots} of {totalSlots} department slots are open. Return yours to pick a different code.
+        </p>
+      ) : !codesLoading && codesError && allCodes.length === 0 ? (
         <EmptyState
           icon="wifi-off"
           title="Couldn't load Photo Mechanic licenses"
@@ -333,7 +338,7 @@ export function PhotoMechanicLicenses({
         />
       ) : (
         <>
-          <div className="flex flex-wrap gap-2" role="group" aria-label="Filter license codes">
+          {isAdmin && <div className="flex flex-wrap gap-2" role="group" aria-label="Filter license codes">
             {FILTERS.map((item) => (
               <Button
                 key={item.id}
@@ -347,7 +352,7 @@ export function PhotoMechanicLicenses({
                 {item.label}
               </Button>
             ))}
-          </div>
+          </div>}
           {filteredCodes.length === 0 && !codesLoading ? (
             <p className="rounded-xl border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
               No codes match this filter.

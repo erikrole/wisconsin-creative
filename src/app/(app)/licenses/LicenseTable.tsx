@@ -136,14 +136,16 @@ export function LicenseTable({
 
   return (
     <StaggerList className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-      {codes.map((code) => {
+      {codes.map((code, index) => {
         const myActiveClaim = code.claims.find((claim) => claim.userId === currentUserId);
         const isOwn = !!myActiveClaim;
         const claimable = code.status === "AVAILABLE" || code.status === "PARTIAL";
         const studentCanClaim = claimable && !hasMyLicense;
         const adminCanInspect = isAdmin;
         const isClickable = studentCanClaim || adminCanInspect;
-        const displayCode = isAdmin || isOwn ? code.code : MASKED_CODE;
+        const revealed = isAdmin || isOwn;
+        const displayCode = revealed ? code.code : MASKED_CODE;
+        const title = revealed ? code.code : (code.label ?? `License ${index + 1}`);
         const actionLabel = adminCanInspect ? "Inspect" : "Claim";
         const status = statusLabel(code.status, isOwn);
 
@@ -159,10 +161,14 @@ export function LicenseTable({
           <>
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <code className="block break-all font-mono text-sm font-semibold tracking-wide text-foreground">
-                  {displayCode}
-                </code>
-                {code.label && <p className="mt-0.5 break-words text-xs text-muted-foreground">{code.label}</p>}
+                {revealed ? (
+                  <code className="block break-all font-mono text-sm font-semibold tracking-wide text-foreground">
+                    {displayCode}
+                  </code>
+                ) : (
+                  <p className="text-sm font-semibold text-foreground">{title}</p>
+                )}
+                {revealed && code.label && <p className="mt-0.5 break-words text-xs text-muted-foreground">{code.label}</p>}
                 {code.accountEmail && isAdmin && (
                   <p className="mt-0.5 break-all text-xs text-muted-foreground">{code.accountEmail}</p>
                 )}
@@ -182,14 +188,14 @@ export function LicenseTable({
             </div>
 
             <div className="mt-3 flex min-h-8 items-center justify-between gap-2">
-              {showExpiry && code.expiresAt ? <ExpiryChip expiresAt={code.expiresAt} /> : <span />}
+              {isAdmin && showExpiry && code.expiresAt ? <ExpiryChip expiresAt={code.expiresAt} /> : <span />}
               {isClickable ? (
                 <span className="inline-flex items-center gap-1.5 text-sm font-medium">
                   {adminCanInspect ? <Eye className="size-4" aria-hidden="true" /> : <KeyRound className="size-4" aria-hidden="true" />}
                   {actionLabel}
                 </span>
               ) : (
-                <span className="text-xs text-muted-foreground">{isOwn ? "Your license" : claimable ? "Return yours to switch" : "No open slots"}</span>
+                <span className="text-xs text-muted-foreground">{isOwn ? "Your license" : claimable ? "Return yours to switch" : null}</span>
               )}
             </div>
           </>
@@ -204,7 +210,7 @@ export function LicenseTable({
                 type="button"
                 variant="ghost"
                 className={cn(cardClass, "h-auto whitespace-normal font-normal shadow-none hover:bg-muted/60 active:scale-[0.99]")}
-                aria-label={`${actionLabel} license ${displayCode}`}
+                aria-label={`${actionLabel} ${title}`}
                 onClick={handleClick}
               >
                 {content}
