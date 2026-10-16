@@ -64,7 +64,7 @@ export function MyLicensePanel({ license, isStaff, onReleased }: Props) {
           className="group relative mt-3 block w-full rounded-xl border bg-background/80 px-4 py-4 text-left transition-colors hover:bg-background focus-visible:outline-2 focus-visible:outline-ring"
           aria-label="Copy license code"
         >
-          <code className="block break-all font-mono text-2xl font-semibold tracking-[0.16em] text-foreground sm:text-3xl">
+          <code className="block break-all font-mono text-lg font-semibold tracking-[0.08em] text-foreground min-[420px]:text-2xl min-[420px]:tracking-[0.14em] sm:text-3xl sm:tracking-[0.16em]">
             {license.code}
           </code>
           <span className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
