@@ -60,13 +60,28 @@ Booking/BookingActionSheets.swift      |                             | exempt-sh
 CreateBookingSheet.swift               | create-booking              | audit
 ExtendBookingSheet.swift               | extend-booking              | audit
 BrowseView.swift                       | browse                      | audit
+BlastsView.swift                       | blasts                      | audit
 ItemsView.swift                        | items                       | audit
 ItemDetailView.swift                   | item-detail                 | audit
+KitsView.swift                         | kits                        | audit
+KitDetailView.swift                    | kit-detail                  | audit
+BulkInventoryDetailView.swift          | bulk-inventory              | audit
+BatteryOpsView.swift                   | battery-ops                 | audit
 ScheduleView.swift                     | schedule                    | audit
 EventDetailSheet.swift                 | event-detail                | audit
+EventsView.swift                       | events                      | audit
+EventCatalogDetailView.swift           | events                      | audit
 NotificationsSheet.swift               | notifications-sheet         | audit
 OverdueReportView.swift                | overdue-report              | audit
 ReportsView.swift                      | reports                     | audit
+Reports/CheckoutReportView.swift       | reports                     | audit
+Reports/UtilizationReportView.swift    | reports                     | audit
+Reports/ScanReportView.swift           | reports                     | audit
+Reports/MissingUnitsReportView.swift   | reports                     | audit
+Reports/BadgeReportView.swift          | reports                     | audit
+Reports/UsageReportView.swift          | reports                     | audit
+Reports/ReportChrome.swift             |                             | exempt-shared
+Reports/ReportSession.swift            |                             | exempt-infra
 LoginView.swift                        | login                       | audit
 NativeAuthViews.swift                  | login                       | audit
 PasswordSetupView.swift                | login                       | audit
