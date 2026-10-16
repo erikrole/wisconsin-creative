@@ -5,7 +5,7 @@ import { BudgetView } from "./BudgetView";
 
 export const metadata = { title: "Budget" };
 
-/** Admin-only department budgets: planned vs. spent lines by fiscal year and pot (Creative, Football). */
+/** Admin-only department budgets: planned vs. spent lines by fiscal year and budget name (Creative, Football). */
 export default async function BudgetPage({
   searchParams,
 }: {

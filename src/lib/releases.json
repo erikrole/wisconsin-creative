@@ -3,7 +3,7 @@
     "date": "2026-10-16",
     "title": "Budget tracking for admins",
     "type": "feature",
-    "summary": "Admins can now track planned and actual spending by fiscal year on a new Budget page, with separate budgets for each pot of money.",
+    "summary": "Admins can now track planned and actual spending by fiscal year on a new Budget page, with separate budgets for Creative and Football.",
     "details": [
       "Create a budget for a fiscal year and add lines with category, supplier, quantity, and cost.",
       "See spent, still to spend, and remaining at a glance, with a spending bar for each category, and record the PO and order numbers once something is bought.",

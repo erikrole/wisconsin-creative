@@ -5,7 +5,7 @@ import { enforceRateLimit, SETTINGS_MUTATION_LIMIT } from "@/lib/rate-limit";
 import { requirePermission } from "@/lib/rbac";
 import { createBudget, listBudgets } from "@/lib/services/budget";
 
-/** Every budget (one per pot and fiscal year). Admin only. */
+/** Every budget (one per name and fiscal year). Admin only. */
 export const GET = withAuth(async (_req, { user }) => {
   requirePermission(user.role, "budget", "view");
   return ok({ data: await listBudgets() });

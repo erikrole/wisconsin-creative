@@ -2,7 +2,7 @@
 
 ## Document Control
 
-- Area: Department budgets and purchases (planned vs. actual spend by fiscal year and pot of money)
+- Area: Department budgets and purchases (planned vs. actual spend by fiscal year and budget name)
 - Owner: Wisconsin Athletics Creative Product
 - Last Updated: 2026-10-16
 - Status: Slices 1 and 2 built on `claude/project-thread-a6omy6`: tables, admin-only API, the Budget page, and links between purchases and inventory with match suggestions. Importer is next. Authenticated preview proof pending.
@@ -11,12 +11,12 @@
 
 ## Direction
 
-The team's budget lives in a Google Sheet with one tab per fiscal year plus a football tab each year. This area replaces it with real tables so spend can be charted, audited, and linked to the inventory it bought. Football is a separate pot of money, so it is a separate `Budget` rather than a category.
+The team's budget lives in a Google Sheet with one tab per fiscal year plus a football tab each year. This area replaces it with real tables so spend can be charted, audited, and linked to the inventory it bought. Football has its own budget, so it is a separate `Budget` rather than a category.
 
 ## Rules
 
 1. Admin only. `budget.view` and `budget.manage` are ADMIN. Staff, students, and collaborators get 403 from every route and a redirect from the page, including an admin previewing as Staff.
-2. A `Budget` is one pot and one fiscal year (`Creative` + `2026-27`). The pair is unique. `fiscalYear` is `YYYY-YY`.
+2. A `Budget` is one named budget (Creative, Football) for one fiscal year (`Creative` + `2026-27`). The pair is unique. `fiscalYear` is `YYYY-YY`.
 3. A `BudgetLine` holds both the plan and the result. Planned cost is `unitCostCents x quantity` and is never stored. `spentCents` and `quantityBought` are recorded once bought and may differ from the plan.
 4. Status is `PLANNED`, `ORDERED`, `PURCHASED`, or `CANCELLED`. Cancelled lines are excluded from every total.
 5. Categories are the department's closed list of eleven (equipment, IT & services, rentals, and so on).
@@ -57,7 +57,7 @@ Migration `0175_budget`: enums `BudgetLineStatus` and `BudgetCategory`; `budgets
 
 ## Not built yet
 
-- Import from the budget workbook (clean text prices, month names, mismatched totals) with all fiscal years and both pots.
+- Import from the budget workbook (clean text prices, month names, mismatched totals) with all fiscal years and both budgets.
 - Bulk matching of an imported sheet to inventory in one pass (today suggestions are per line or per item).
 - Charts by month and requester, football-aware link suggestions, requester picker from Staff, CSV/XLSX export.
 

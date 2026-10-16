@@ -711,7 +711,7 @@ function NewBudgetDialog({ onClose, onCreated }: { onClose: () => void; onCreate
             <WalletIcon className="mr-2 inline size-4" />
             New budget
           </DialogTitle>
-          <DialogDescription>One budget per pot of money and fiscal year, like Creative 2026-27 or Football 2026-27.</DialogDescription>
+          <DialogDescription>One budget per fiscal year, like Creative 2026-27 or Football 2026-27.</DialogDescription>
         </DialogHeader>
         <DialogBody className="flex flex-col gap-3">
           <Field label="Name">
