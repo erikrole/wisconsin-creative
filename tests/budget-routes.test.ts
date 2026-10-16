@@ -155,6 +155,16 @@ describe("budget routes", () => {
     expect(createAuditEntryTx).toHaveBeenCalledWith(tx, expect.objectContaining({ entityType: "budget_line", action: "create" }));
   });
 
+  it("rejects dates that look right but don't exist", async () => {
+    for (const purchasedOn of ["2026-13-45", "2026-02-30"]) {
+      const response = await createLine(
+        json("POST", "/api/budget/budget-1/lines", { category: "EQUIPMENT", description: "x", unitCostCents: 100, purchasedOn }),
+        idContext,
+      );
+      expect(response.status).toBe(400);
+    }
+  });
+
   it("rejects negative money and non-http links", async () => {
     const bad = await createLine(
       json("POST", "/api/budget/budget-1/lines", { category: "EQUIPMENT", description: "x", unitCostCents: -1 }),

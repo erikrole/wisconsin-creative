@@ -20,6 +20,10 @@ const optionalUrl = z
 const dateOnly = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Use a date like 2026-05-14")
+  .refine((value) => {
+    const date = new Date(`${value}T00:00:00.000Z`);
+    return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(value);
+  }, "That date doesn't exist")
   .nullable();
 
 export const createBudgetSchema = z.object({
