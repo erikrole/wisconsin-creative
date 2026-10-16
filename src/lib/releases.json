@@ -9,7 +9,8 @@
       "Profile links now live under /staff, and old /users links redirect automatically.",
       "Nothing about who can see the page or what it shows has changed."
     ],
-    "platforms": ["Web"]
+    "platforms": ["Web"],
+    "pr": 484
   },
   {
     "date": "2026-10-15",
