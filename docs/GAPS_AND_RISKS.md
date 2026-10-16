@@ -3,7 +3,7 @@
 ## Document Control
 
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-10-08
+- Last Updated: 2026-10-16
 - Status: Active registry
 - Purpose: Track only open gaps, pending decisions, active risks, and intentionally deferred scope.
 - Historical record: [GAPS_AND_RISKS_HISTORY.md](archive/GAPS_AND_RISKS_HISTORY.md)
@@ -96,6 +96,7 @@ Review duplicate automatic builds are removed; main protection, sanitized previe
 | Brand asset storage or migration skew | A Brand assets route reaches an environment without migrations `0135`/`0136` or the dedicated private Blob token, or a public media token is reused | Preview now has migrations `0135`/`0136` and the dedicated private-store credential; preserve fail-closed configuration, then verify authenticated upload, replacement, restore copy, private preview/download, favorites, and database/audit read-back before rollout | Engineering |
 
 ## Change Log
+- 2026-10-16: Native iOS now reads kits, item-family detail, and Battery Ops through the existing list and detail routes. Authoring, receiving, labels, count changes, and stale-flag repair stay on the web, so no registry gap opens. An Xcode build on a Mac is still required before calling the screens runtime-ready.
 - 2026-10-07: The macOS companion now marks data it has not confirmed for 15 minutes as Needs attention and re-reads the projection when the extra opens (at most once a minute, no timer). It also gained projection search, keyboard row navigation, an overdue-only count mode, and ⌃⌥⌘G, which opens a Status window when macOS hides the extra. The Companion delivery gap still owns real APNs, installed interaction, and notarized distribution.
 - 2026-10-01: Added GAP-87. Kiosk "Report a problem" no longer leaves out batteries and counted stock (they were told to tell staff); the remaining gate is migration `0162_checkin_reports_bulk_targets` and deploy plus live proof.
 - 2026-09-28: Resolved GAP-86. Kiosk "Mark returned without scanning" is left out by decision (web admin override instead); the hub offers "Change what's reserved" only on pickups the student route marks `kind: "reservation"`.

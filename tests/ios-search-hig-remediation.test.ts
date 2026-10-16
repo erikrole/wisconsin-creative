@@ -40,8 +40,10 @@ describe("iOS global Search HIG remediation", () => {
   it("makes typed and scanned family results reserveable", () => {
     expect(sheet).toContain("private func startReservation(forFamily family: AssetFamilySearchResult)");
     expect(sheet).toContain("composer.prefillReservation(forFamily: family)");
-    expect(sheet).toContain("ItemFamilyResultRow(family: family, showsReserveAction: true)");
-    expect(sheet).toContain("Starts a reservation for this item family.");
+    expect(sheet).toContain("navigationPath.append(BulkSkuRoute(id: family.id))");
+    expect(sheet).toContain("ItemFamilyResultRow(family: family, showsReserveAction: false)");
+    expect(sheet).toContain("Opens this item family.");
+    expect(sheet).toContain("startReservation(forFamily: family)");
     expect(sheet).toContain("suppressNextQuerySearch = true");
     expect(row).toContain("var showsReserveAction = false");
     expect(row).toContain('Label("Reserve", systemImage: "plus.circle")');
@@ -53,6 +55,6 @@ describe("iOS global Search HIG remediation", () => {
     expect(sheet).not.toContain("if isCollaborator {\n                            recentsView");
     expect(sheet).toContain("private func rememberActiveQuery()");
     expect(sheet).toContain("rememberActiveQuery()\n                            navigationPath.append");
-    expect(sheet).toContain("rememberActiveQuery()\n                            startReservation(forFamily: family)");
+    expect(sheet).toContain("rememberActiveQuery()\n                                startReservation(forFamily: family)");
   });
 });

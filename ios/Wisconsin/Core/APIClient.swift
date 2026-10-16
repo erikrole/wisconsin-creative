@@ -1046,6 +1046,45 @@ final class APIClient {
         return resp.data
     }
 
+    func kitList(search: String?, locationId: String?, includeArchived: Bool, limit: Int, offset: Int) async throws -> KitListPage {
+        var items: [URLQueryItem] = [
+            .init(name: "limit", value: String(limit)),
+            .init(name: "offset", value: String(offset)),
+            .init(name: "sort", value: "name"),
+            .init(name: "order", value: "asc"),
+        ]
+        let query = search?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !query.isEmpty {
+            items.append(.init(name: "q", value: query))
+        }
+        if let locationId, !locationId.isEmpty {
+            items.append(.init(name: "location_id", value: locationId))
+        }
+        if includeArchived {
+            items.append(.init(name: "include_archived", value: "true"))
+        }
+        let req = request(path: "/api/kits", queryItems: items)
+        return try await perform(req)
+    }
+
+    func kitReadDetail(id: String) async throws -> KitReadDetail {
+        let req = request(path: "/api/kits/\(id)")
+        let resp: DataWrapper<KitReadDetail> = try await perform(req)
+        return resp.data
+    }
+
+    func bulkSkuReadDetail(id: String) async throws -> BulkSkuReadDetail {
+        let req = request(path: "/api/bulk-skus/\(id)")
+        let resp: DataWrapper<BulkSkuReadDetail> = try await perform(req)
+        return resp.data
+    }
+
+    func batteryOps() async throws -> BatteryOpsSnapshot {
+        let req = request(path: "/api/bulk-skus/batteries")
+        let resp: DataWrapper<BatteryOpsSnapshot> = try await perform(req)
+        return resp.data
+    }
+
     func formOptions() async throws -> FormOptions {
         let req = request(path: "/api/form-options")
         let resp: DataWrapper<FormOptions> = try await perform(req)

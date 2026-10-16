@@ -73,6 +73,11 @@ struct ItemDetailView: View {
                         }
                         UpcomingReservationsCard(reservations: asset.upcomingReservations)
                         ItemDetailsCard(asset: asset, canSeeProcurement: canEditAsset)
+                        ItemRelatedInventoryCard(
+                            asset: asset,
+                            role: session.currentUser?.role ?? "",
+                            capabilities: session.currentUser?.capabilities
+                        )
                         ItemBookingsLinkCard(history: asset.history)
                         if let notes = asset.notes, !notes.isEmpty {
                             NotesCard(notes: notes)
@@ -862,6 +867,76 @@ private struct UpcomingReservationsCard: View {
             }
         }
         .brandCard()
+    }
+}
+
+private struct ItemRelatedInventoryCard: View {
+    let asset: AssetDetail
+    let role: String
+    let capabilities: [String]?
+
+    private var showsKits: Bool {
+        InventoryReadAccess.canViewKits(role: role, capabilities: capabilities)
+            && InventoryReadAccess.categoryBelongsInKits(asset.category?.name)
+    }
+
+    private var showsBatteryOps: Bool {
+        InventoryReadAccess.canOpenBatteryOps(role: role)
+            && InventoryReadAccess.isBatteryFamily(name: asset.displayName, category: asset.category?.name)
+    }
+
+    var body: some View {
+        if showsKits || showsBatteryOps {
+            VStack(spacing: 0) {
+                if showsKits {
+                    NavigationLink {
+                        KitsView(
+                            locationId: asset.location.id.isEmpty ? nil : asset.location.id,
+                            locationName: asset.location.name,
+                            wrapsInNavigationStack: false
+                        )
+                    } label: {
+                        relatedRow(
+                            title: asset.location.name.isEmpty ? "Kits" : "Kits at \(asset.location.name)",
+                            systemImage: "square.stack.3d.up"
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+                if showsKits && showsBatteryOps {
+                    Divider()
+                }
+                if showsBatteryOps {
+                    NavigationLink {
+                        BatteryOpsView(wrapsInNavigationStack: false)
+                    } label: {
+                        relatedRow(title: "Battery Ops", systemImage: "battery.100")
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .brandCard(padding: 0)
+        }
+    }
+
+    private func relatedRow(title: String, systemImage: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: systemImage)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: 24)
+                .accessibilityHidden(true)
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.primary)
+            Spacer(minLength: 8)
+            Image(systemName: "chevron.right")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.tertiary)
+                .accessibilityHidden(true)
+        }
+        .padding(Brand.Space.md)
+        .contentShape(Rectangle())
     }
 }
 

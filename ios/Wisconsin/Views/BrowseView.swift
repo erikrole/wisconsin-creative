@@ -12,13 +12,19 @@ struct BrowseView: View {
 
     private var destinations: [BrowseDestination] {
         guard session.currentUser?.role == "COLLABORATOR" else {
-            // Reports are staff analytics; the endpoints 403 anyone else, so the
-            // row is hidden rather than offered and refused.
-            return [.scoreboard, .items, .guides, .licenses, .users] + (isStaffOrAdmin ? [.reports] : [])
+            // Reports and Battery Ops are staff analytics; those endpoints 403
+            // anyone else, so the rows are hidden rather than offered and refused.
+            var rows: [BrowseDestination] = [.scoreboard, .items, .kits, .guides, .licenses, .users]
+            if isStaffOrAdmin {
+                rows.insert(.batteries, at: 3)
+                rows.append(.reports)
+            }
+            return rows
         }
         let capabilities = Set(session.currentUser?.capabilities ?? [])
         return [.scoreboard] + [
             capabilities.contains("GEAR_CATALOG_VIEW") ? .items : nil,
+            capabilities.contains("RESERVATION_CREATE") ? .kits : nil,
             capabilities.contains("PEOPLE_DIRECTORY_VIEW") ? .users : nil,
         ].compactMap { $0 }
     }
@@ -75,6 +81,10 @@ struct BrowseView: View {
             TeamScoreboardView(wrapsInNavigationStack: false)
         case .items:
             ItemsView(wrapsInNavigationStack: false)
+        case .kits:
+            KitsView(wrapsInNavigationStack: false)
+        case .batteries:
+            BatteryOpsView(wrapsInNavigationStack: false)
         case .guides:
             GuidesView(wrapsInNavigationStack: false)
         case .licenses:
@@ -90,6 +100,8 @@ struct BrowseView: View {
 private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
     case scoreboard
     case items
+    case kits
+    case batteries
     case guides
     case licenses
     case users
@@ -101,6 +113,8 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
         switch self {
         case .scoreboard: "Scoreboard"
         case .items: "Items"
+        case .kits: "Kits"
+        case .batteries: "Battery Ops"
         case .guides: "Guides"
         case .licenses: "Licenses"
         case .users: "Users"
@@ -114,6 +128,10 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
             "Team totals, sport breakdowns, and per-person leaderboards."
         case .items:
             "Find gear, item families, status, and availability."
+        case .kits:
+            "See gameday kits and whether the cameras are on the shelf."
+        case .batteries:
+            "See battery families, who has units out, and what is running low."
         case .guides:
             "Read team reference docs, contacts, venue notes, and workflows."
         case .licenses:
@@ -129,6 +147,8 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
         switch self {
         case .scoreboard: "trophy"
         case .items: "archivebox"
+        case .kits: "square.stack.3d.up"
+        case .batteries: "battery.100"
         case .guides: "book.closed"
         case .licenses: "key"
         case .users: "person.2"
@@ -140,6 +160,8 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
         switch self {
         case .scoreboard: Color.statusText(.orange)
         case .items: Color.statusText(.blue)
+        case .kits: Color.statusText(.purple)
+        case .batteries: Color.statusText(.orange)
         case .guides: Color.statusText(.purple)
         case .licenses: Color.statusText(.orange)
         case .users: Color.statusText(.green)
