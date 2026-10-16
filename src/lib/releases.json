@@ -11,7 +11,10 @@
       "Staff get a compact list of codes with both slots at a glance, plus filters for open, full, and expiring codes."
     ],
     "platforms": ["Web", "iOS"],
-    "pr": 488,
+    "pr": 488
+  },
+  {
+    "date": "2026-10-16",
     "title": "Blasts stay after you dismiss them",
     "type": "improvement",
     "summary": "The phone keeps blasts you have already seen, and a kiosk handoff no longer crashes when the saved request is incomplete.",
