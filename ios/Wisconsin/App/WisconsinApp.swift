@@ -98,6 +98,7 @@ struct WisconsinApp: App {
             AppDelegate.clearRemoteNotificationsForSignedOutUser()
             SearchRecentsStorage.clear()
             ScheduleWindowCache.clear()
+            BlastArchive.clear()
             ShiftCalendarTokenStore.removeAll()
             // A Home Screen widget renders without unlocking the app, so the
             // previous account's shift and gear cannot outlive their session.

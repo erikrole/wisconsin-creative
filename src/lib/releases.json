@@ -1,6 +1,23 @@
 [
   {
     "date": "2026-10-16",
+    "title": "Blasts stay after you dismiss them",
+    "type": "improvement",
+    "summary": "The phone keeps blasts you have already seen, and a kiosk handoff no longer crashes when the saved request is incomplete.",
+    "details": [
+      "Browse has a Blasts list and a detail screen for broadcasts you have opened on this phone.",
+      "Got it still clears the home banner. The message stays in Blasts so you can read it again.",
+      "A blast this phone has never fetched is not in that list.",
+      "Kiosk checkout and pickup retries report an error instead of crashing when the handoff request has no address or body."
+    ],
+    "platforms": [
+      "iOS",
+      "Kiosk"
+    ],
+    "pr": 489
+  },
+  {
+    "date": "2026-10-16",
     "title": "Events in the iOS app",
     "type": "feature",
     "summary": "The iOS app can browse events, including linked gear and bookings, from the same calendar the website uses.",
