@@ -1,5 +1,22 @@
 [
   {
+    "date": "2026-10-16",
+    "title": "Edit reservations on iPhone",
+    "type": "feature",
+    "summary": "Reservations on iPhone can be updated the same way as on the web. Checkout screens also pick up the extra actions staff already have there.",
+    "details": [
+      "Change a reservation's name, notes, pickup, dates, remaining gear, and linked events.",
+      "Save waits until that gear is available for the new window.",
+      "Gear that was already picked up stays on the checkout.",
+      "Checkouts can nudge, close without a scan, transfer, or switch between shared and personal when those actions are allowed.",
+      "Extend stays the main action on a checkout. Gear on an active checkout still changes at a kiosk."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 493
+  },
+  {
     "date": "2026-10-15",
     "title": "Lighter pages on the web",
     "type": "improvement",

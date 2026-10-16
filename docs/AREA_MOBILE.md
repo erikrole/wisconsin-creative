@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Mobile Operations
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-10-12
+- Last Updated: 2026-10-16
 - Status: Active
 - Version: V1
 
@@ -145,6 +145,7 @@ Navigation shell versioned roadmap: `tasks/sidebar-roadmap.md` (revised 2026-03-
 
 ## Change Log
 
+- 2026-10-16: **Native reservation edit and checkout actions (local/source only).** A reservation on iPhone can change its name, notes, Camp Randall or Kohl Center pickup, window, remaining gear, and up to five linked events through the same `/api/bookings` and `/api/bookings/:id/events` writes as the web sheet. Save sends only the fields that changed, keeps picked-up gear on the checkout, and will not save a window or gear change until availability checks clear. Checkout detail keeps Extend as the only bottom action. When the server allows them, the toolbar menu can nudge, close without a scan, force checkout, close a reservation's remaining gear, transfer ownership, switch shared or personal custody, edit linked events, and re-reserve. Active checkout gear still changes only at a kiosk. Source contracts pass; an iPhone 18 Pro Max build and authenticated device proof remain open.
 - 2026-10-12: **Native reservation search includes gear that is out now.** A checked-out camera or lens stays in Gear search and can be reserved once the pickup is at least 60 minutes after it is due back. Overlapping holds stay blocked and name who has the item. Source contracts updated; authenticated device proof remains open.
 - 2026-10-07: **iPad signature capture (local).** Browse gains a Signatures row on iPad for STAFF/ADMIN only (`SignatureCaptureAvailability`), opening native collections, roster, and Apple Pencil capture screens under `Views/Signatures/`. Contracts and acceptance live in `docs/AREA_SIGNATURES.md`; fixture scenarios `signature-collections`, `signature-roster`, and `signature-capture` render the screens without a session.
 
