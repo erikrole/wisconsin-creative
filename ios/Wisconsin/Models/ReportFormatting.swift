@@ -43,10 +43,9 @@ enum ReportFormatting {
     static func dayLabel(_ ymd: String) -> String {
         guard let date = ReportTrendPoint.parseDay(ymd) else { return ymd }
         return date.formatted(
-            Date.FormatStyle()
+            Date.FormatStyle(timeZone: TimeZone(secondsFromGMT: 0) ?? .gmt)
                 .month(.abbreviated)
                 .day()
-                .timeZone(TimeZone(secondsFromGMT: 0) ?? .gmt)
         )
     }
 
