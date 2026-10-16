@@ -12,10 +12,10 @@ struct BrowseView: View {
 
     private var destinations: [BrowseDestination] {
         guard session.currentUser?.role == "COLLABORATOR" else {
-            // Reports are staff analytics, and Events reads the internal
-            // calendar. Both endpoints refuse a collaborator, so those rows are
-            // hidden rather than offered and refused.
-            return [.scoreboard, .events, .items, .guides, .blasts, .licenses, .users] + (isStaffOrAdmin ? [.reports] : [])
+            // Accountability, Events, and Reports read internal team data.
+            // Those endpoints refuse a collaborator, so the rows are hidden
+            // rather than offered and refused.
+            return [.scoreboard, .accountability, .events, .items, .guides, .blasts, .licenses, .users] + (isStaffOrAdmin ? [.reports] : [])
         }
         let capabilities = Set(session.currentUser?.capabilities ?? [])
         return [.scoreboard] + [
@@ -75,6 +75,8 @@ struct BrowseView: View {
         switch destination {
         case .scoreboard:
             TeamScoreboardView(wrapsInNavigationStack: false)
+        case .accountability:
+            AccountabilityView(wrapsInNavigationStack: false)
         case .events:
             EventsView(wrapsInNavigationStack: false)
         case .items:
@@ -95,6 +97,7 @@ struct BrowseView: View {
 
 private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
     case scoreboard
+    case accountability
     case events
     case items
     case guides
@@ -108,6 +111,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
     var title: String {
         switch self {
         case .scoreboard: "Scoreboard"
+        case .accountability: "Accountability"
         case .events: "Events"
         case .items: "Items"
         case .guides: "Guides"
@@ -122,6 +126,8 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
         switch self {
         case .scoreboard:
             "Team totals, sport breakdowns, and per-person leaderboards."
+        case .accountability:
+            "See who returned gear late, and open the checkout."
         case .events:
             "Event details, linked gear, and bookings."
         case .items:
@@ -142,6 +148,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
     var systemImage: String {
         switch self {
         case .scoreboard: "trophy"
+        case .accountability: "clock.badge.exclamationmark"
         case .events: "calendar"
         case .items: "archivebox"
         case .guides: "book.closed"
@@ -155,6 +162,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
     var tint: Color {
         switch self {
         case .scoreboard: Color.statusText(.orange)
+        case .accountability: Color.statusText(.red)
         case .events: Color.statusText(.blue)
         case .items: Color.statusText(.blue)
         case .guides: Color.statusText(.purple)
