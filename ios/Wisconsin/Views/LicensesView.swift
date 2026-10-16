@@ -522,7 +522,7 @@ private struct ClaimLicenseHero: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Get Photo Mechanic")
+                Text("Get a license code")
                     .font(.title2.weight(.semibold))
                     .accessibilityAddTraits(.isHeader)
                 Text(hasOpenSlot
@@ -541,7 +541,7 @@ private struct ClaimLicenseHero: View {
 
             if hasOpenSlot {
                 Button(action: onClaim) {
-                    Label("Claim a license", systemImage: "key.horizontal.fill")
+                    Label("Claim a code", systemImage: "key.horizontal.fill")
                         .font(.headline)
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity, minHeight: 44)

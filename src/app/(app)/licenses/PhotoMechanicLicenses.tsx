@@ -123,7 +123,7 @@ function ClaimLicenseHero({
       <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <p className="text-2xl font-semibold leading-tight" style={{ fontFamily: "var(--font-heading)" }}>
-            Get Photo Mechanic
+            Get a license code
           </p>
           <p className="mt-1.5 text-sm text-muted-foreground">
             One license code works on two machines. We pick an open slot for you and copy the code.
@@ -137,7 +137,7 @@ function ClaimLicenseHero({
         </div>
         <Button type="button" size="lg" className="h-12 shrink-0 px-6 text-base" onClick={onClaim}>
           <KeyRound data-icon="inline-start" />
-          Claim a license
+          Claim a code
         </Button>
       </div>
     </section>

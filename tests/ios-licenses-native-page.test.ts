@@ -73,15 +73,15 @@ describe("iOS native Licenses page", () => {
     expect(view).not.toContain("releaseLicense(id: code.id)");
   });
 
-  it("gives a student without a license one Claim a license button over a slot meter", () => {
+  it("gives a student without a license one Claim a code button over a slot meter", () => {
     const view = source("ios/Wisconsin/Views/LicensesView.swift");
     const hero = view.slice(view.indexOf("private struct ClaimLicenseHero"), view.indexOf("private struct LicenseHoldersSection"));
 
     expect(view).toContain("ClaimLicenseHero(");
     expect(view).toContain("onClaim: { claimCandidate = bestCode }");
-    expect(hero).toContain('"Get Photo Mechanic"');
+    expect(hero).toContain('"Get a license code"');
     expect(hero).toContain('"\\(openSlots) of \\(totalSlots) slots open"');
-    expect(hero).toContain('Label("Claim a license"');
+    expect(hero).toContain('Label("Claim a code"');
     expect(hero).toContain("LicenseSlotMeter(");
     expect(hero).toContain("minHeight: 44");
     // No per-code cards, filters, or expiry for students.
