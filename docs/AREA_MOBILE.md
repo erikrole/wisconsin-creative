@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Mobile Operations
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-10-12
+- Last Updated: 2026-10-16
 - Status: Active
 - Version: V1
 
@@ -145,6 +145,7 @@ Navigation shell versioned roadmap: `tasks/sidebar-roadmap.md` (revised 2026-03-
 
 ## Change Log
 
+- 2026-10-16: **Native Reports opens the read-only web reports staff were missing.** The existing Reports glance stays. A Full reports section adds Utilization, Checkouts, Scans, Missing Units, and Badges, plus Usage when `/api/me` says this account may see it. Charts stay in the chart palette. CSV export and the Audit report stay on the web. Xcode and an authenticated iPhone walkthrough are still open.
 - 2026-10-12: **Native reservation search includes gear that is out now.** A checked-out camera or lens stays in Gear search and can be reserved once the pickup is at least 60 minutes after it is due back. Overlapping holds stay blocked and name who has the item. Source contracts updated; authenticated device proof remains open.
 - 2026-10-07: **iPad signature capture (local).** Browse gains a Signatures row on iPad for STAFF/ADMIN only (`SignatureCaptureAvailability`), opening native collections, roster, and Apple Pencil capture screens under `Views/Signatures/`. Contracts and acceptance live in `docs/AREA_SIGNATURES.md`; fixture scenarios `signature-collections`, `signature-roster`, and `signature-capture` render the screens without a session.
 

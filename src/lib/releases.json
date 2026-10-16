@@ -1,5 +1,22 @@
 [
   {
+    "date": "2026-10-16",
+    "title": "Full reports on iPhone",
+    "type": "feature",
+    "summary": "Staff can open the rest of the reports from the iPhone Reports screen. Spreadsheets still download on the web.",
+    "details": [
+      "Utilization, Checkouts, Scans, Missing Units, and Badges are read-only on the phone.",
+      "Checkouts and utilization keep a simple chart for the period you pick.",
+      "Scans can be limited to checkout or check-in, and Missing Units can be limited to a location or category.",
+      "Usage appears only for the account allowed to see those counts.",
+      "CSV downloads stay on the web."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 490
+  },
+  {
     "date": "2026-10-15",
     "title": "Lighter pages on the web",
     "type": "improvement",

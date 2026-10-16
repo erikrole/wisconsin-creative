@@ -80,3 +80,24 @@ Captured through the new `GT_PERFORMANCE_SCENARIO=reports` scenario on iPhone 16
       Found by construction rather than by inspection: the first fixture omitted `topUsed`, which is exactly the shape an older or partial server would send, and the report died on it.
       `ios/Wisconsin/Models/Models.swift` -- `UtilizationCustody`.
       Suggested fix: `let topUsed: [UtilizationTopUsedAsset]?` with an empty-array fallback at the read site, matching the tolerance the surrounding model already claims.
+
+## 2026-10-16 Read-only report library
+
+The glance stays. Reports now also opens read-only screens for the reports iOS was missing.
+
+| Screen | Endpoint | What the phone shows | What stays on web |
+| --- | --- | --- | --- |
+| Utilization | `GET /api/reports/utilization` | 30/90/365, status donut, most-used bars, breakdown shares, idle gear | CSV, items drill-down |
+| Checkouts | `GET /api/reports/checkouts` | 7/30/90, trend, requesters, recent rows into booking detail | CSV, heatmap day focus |
+| Scans | `GET /api/reports/scans` | 7/30/90/all, phase, daily volume, paged rows | CSV |
+| Missing Units | `GET /api/reports/bulk-losses` | Location and category, families, people, recent check-ins, battery units and history | CSV |
+| Badges | `GET /api/reports/badges` | 30/90/365, leaderboard, distribution, rarely awarded, recent awards | CSV of the visible rows |
+| Usage | `GET /api/reports/usage` | Aggregate counts, only when `GET /api/me` sets `canViewUsageAnalytics` | The named App activity roster in Settings |
+
+A new period or filter discards the previous value before the replacement request can publish. Usage stays off the list until `/api/me` allows it, and a 403 shows an owner-only state.
+
+- [x] `tests/ios-report-library-contract.test.ts`
+- [x] `ios/WisconsinTests/ReportLibraryModelTests.swift` and `ReportSessionTests.swift` (source; not executed here)
+- [x] `npm run ios:project:check`, `npm run drift:ios`, `npm run audit:ios:gaps`
+- [ ] Xcode build of `Wisconsin` for iPhone 18 Pro Max, plus the new XCTest cases
+- [ ] Authenticated iPhone walkthrough: each report, a period change during load, Usage hidden and shown, and no CSV action
