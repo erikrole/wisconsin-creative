@@ -186,13 +186,12 @@ export function PhotoMechanicLicenses({
     if (!code.expiresAt) return false;
     return licenseDaysUntilExpiry(code.expiresAt) <= 30;
   }).length;
-  const claimableFirst = (code: LicenseCode) => (code.status === "AVAILABLE" || code.status === "PARTIAL" ? 0 : 1);
   const filteredCodes = visibleCodes.filter((code) => {
     if (filter === "available") return code.status === "AVAILABLE" || code.status === "PARTIAL";
     if (filter === "full") return code.status === "CLAIMED";
     if (filter === "expiring") return !!code.expiresAt && licenseDaysUntilExpiry(code.expiresAt) <= 30;
     return true;
-  }).sort((a, b) => (isAdmin ? 0 : claimableFirst(a) - claimableFirst(b)));
+  });
   const hasRetired = allCodes.some((code) => code.status === "RETIRED");
   const hasExpiry = allCodes.some((code) => code.expiresAt);
 
@@ -308,11 +307,7 @@ export function PhotoMechanicLicenses({
         </OperationalToolbar>
       )}
 
-      {!isAdmin && myLicense ? (
-        <p className="px-1 text-sm text-muted-foreground">
-          {openSlots} of {totalSlots} department slots are open. Return yours to pick a different code.
-        </p>
-      ) : !codesLoading && codesError && allCodes.length === 0 ? (
+      {!codesLoading && codesError && allCodes.length === 0 ? (
         <EmptyState
           icon="wifi-off"
           title="Couldn't load Photo Mechanic licenses"

@@ -65,7 +65,7 @@ The `/licenses` route is presented as **Software** in the sidebar. Photo Mechani
   - Every authenticated role can open Licenses from Browse or Settings > Directory, view the license pool, claim one open slot, copy their active code, and return their own slot.
   - Student pool rows hide code strings unless the row is their active claim; staff/admin rows can reveal pool codes.
   - Staff/admin users get a web-management link for create, bulk create, renew, retire, export, unknown occupants, and full history workflows.
-- Role focus: students without a license see a claim prompt and open codes first (no rail, filters, expiry, or real code strings); students holding a license see only their license card plus one quiet pool line; staff/admins keep the status rail, filters, expiry, and management toolbar.
+- Role focus: students without a license see a claim prompt and open codes first (no rail, filters, expiry, or real code strings); students holding a license see their license card first, then the same pool (holder names stay visible to students; full cards are never dimmed or hidden); staff/admins keep the status rail, filters, expiry, and management toolbar.
 - Components:
   - `PhotoMechanicLicenses.tsx` — default Software panel: holder/claim hero first, then capacity rail, pool toolbar (staff add/renew/export), filter chips (All, Has open slot, Full, Expiring), and the card grid
   - `MyLicensePanel.tsx` — hero license card: large tap-to-copy code, claimed/expiry/activation facts, copy, history, and return
