@@ -66,10 +66,10 @@ The `/licenses` route is presented as **Software** in the sidebar. Photo Mechani
   - Student pool rows hide code strings unless the row is their active claim; staff/admin rows can reveal pool codes.
   - Staff/admin users get a web-management link for create, bulk create, renew, retire, export, unknown occupants, and full history workflows.
 - Components:
-  - `PhotoMechanicLicenses.tsx` — default Software panel: holder/claim hero first, then capacity rail, pool toolbar (staff add/renew/export), and pool table
-  - `MyLicensePanel.tsx` — student banner showing their active code with copy + return
+  - `PhotoMechanicLicenses.tsx` — default Software panel: holder/claim hero first, then capacity rail, pool toolbar (staff add/renew/export), filter chips (All, Has open slot, Full, Expiring), and the card grid
+  - `MyLicensePanel.tsx` — hero license card: large tap-to-copy code, claimed/expiry/activation facts, copy, history, and return
   - `MyLicenseHistoryDialog.tsx` — user-visible recent claim/return history from the active-license banner
-  - `LicenseTable.tsx` — main table with masked codes, safe linked-holder identities for students, staff/admin-only management actions, and expiry tooltips
+  - `LicenseTable.tsx` — responsive card grid (name kept from the old table): each code shows two slot seats (holder or open), masked codes, safe linked-holder identities for students, staff/admin-only inspect action, and an expiry chip
   - `ConfirmClaimDialog.tsx` — student claim confirmation, copies code on success
   - `ReleaseDialog.tsx` — student return confirmation
   - `AdminClaimSheet.tsx` — admin detail sheet (slots, self-claim of an open slot, occupant, editable label/account/expiry, danger zone, history)
@@ -77,7 +77,7 @@ The `/licenses` route is presented as **Software** in the sidebar. Photo Mechani
   - `BulkAddSheet.tsx` — paste many codes at once
   - `BulkRenewDialog.tsx` — admin renewal dialog for expiring/expired visible codes or all visible active codes
 
-The Photo Mechanic tab also renders a responsive mobile card/list view so capacity, holders, expiry, and Claim/Inspect actions remain visible without horizontal table scrolling.
+The pool is one card grid at every width (1 column on phones, 2 on tablets, 3 on wide screens), so there is no horizontal scrolling.
 
 ### Visual states
 - AVAILABLE row: tinted green, `cursor-pointer` if user has no claim

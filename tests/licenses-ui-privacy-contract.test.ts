@@ -12,12 +12,12 @@ describe("licenses UI and privacy contracts", () => {
     expect(route).toContain("occupantLabel: null");
   });
 
-  it("keeps the management action column staff/admin-only while student rows remain claimable", () => {
+  it("keeps names masked for students while open and own cards remain claimable", () => {
     const table = source("src/app/(app)/licenses/LicenseTable.tsx");
 
-    expect(table).toContain("{isAdmin && <TableHead className=\"w-28 text-right\">Action</TableHead>}");
-    expect(table).toContain("{isAdmin && (\n                    <TableCell className=\"text-right\">");
     expect(table).toContain("const showName = isAdmin || isOwn || claim.user !== null;");
+    expect(table).toContain("const displayCode = isAdmin || isOwn ? code.code : MASKED_CODE;");
+    expect(table).toContain("const adminCanInspect = isAdmin;");
     expect(table).toContain("if (!isClickable) return;");
   });
 
@@ -32,22 +32,18 @@ describe("licenses UI and privacy contracts", () => {
   it("shows explicit claim and inspect actions with active-use color semantics", () => {
     const table = source("src/app/(app)/licenses/LicenseTable.tsx");
 
-    expect(table).toMatch(/<Eye[\s\S]*?Inspect/);
-    expect(table).toMatch(/<KeyRound[\s\S]*?Claim/);
+    expect(table).toMatch(/<Eye[\s\S]*?<KeyRound/);
     expect(table).toContain('code.status === "CLAIMED" && "bg-[var(--blue-bg)]');
     expect(table).not.toContain('code.status === "CLAIMED" && "bg-[var(--red-bg)]');
   });
 
-  it("keeps Photo Mechanic license details actionable without a narrow-screen table", () => {
+  it("renders each code as a two-slot card instead of a table", () => {
     const table = source("src/app/(app)/licenses/LicenseTable.tsx");
 
-    expect(table).toContain('className="grid gap-2 md:hidden" role="list"');
-    expect(table).toContain('className="hidden overflow-x-auto rounded-md border md:block"');
-    expect(table).toContain('className="text-xs font-medium text-muted-foreground">Capacity');
-    expect(table).toContain('className="text-xs font-medium text-muted-foreground">Holders');
-    expect(table).toContain('className="text-xs font-medium text-muted-foreground">Expires');
-    expect(table).toContain('className="ml-auto h-10 w-24 rounded-md"');
-    expect(table).toContain('className="ml-auto inline-flex min-h-10 items-center');
+    expect(table).not.toContain("<Table");
+    expect(table).toContain("const MAX_SLOTS = 2;");
+    expect(table).toContain("Open slot");
+    expect(table).toContain("slots in use");
   });
 
   it("lets staff assign an open slot to an active user through the managed occupy route", () => {
