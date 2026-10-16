@@ -29,6 +29,7 @@ The team's budget lives in a Google Sheet with one tab per fiscal year plus a fo
 12. Linking does not change the item. Price and purchase date on the item stay as they are.
 13. Autofill is a separate, explicit step (`src/lib/budget/autofill.ts`). From a linked item an admin can fill purchase date, purchase price (spend / units bought, else the planned unit cost), product link, and a notes trail ("Bought from X · PO · Order N · Budget FY budget"). The item page offers only fields that are empty (`fill`); a field that holds another value (`differs`) is shown but never overwritten, and notes are appended, never replaced. The serial number is not on an order, so it stays an item field and is displayed beside the PO. Each apply is audited on the asset as `fill_from_order`.
 14. Navigation runs both ways. The item's Purchase card links to `/budget?b=<budgetId>&line=<lineId>`, which opens that budget and highlights the line. The line shows each linked item's tag and serial. A bought line with fewer linked units than `quantityBought ?? quantity` shows "N not linked", and a callout filters to those lines.
+15. The lines table can be searched (description, supplier, PO, order number, category; every word must match), filtered by status, and sorted (as entered, biggest, newest, A to Z). `src/lib/budget/table.ts` is pure and tested; nothing here hits the server.
 
 ## Data Model
 
@@ -65,3 +66,4 @@ Migration `0175_budget`: enums `BudgetLineStatus` and `BudgetCategory`; `budgets
 - 2026-10-16: Slice 1 added (schema, admin-only API, page, tests).
 - 2026-10-16: Slice 2 added: links between lines and inventory, match suggestions, a Purchase card on the item page (admins only).
 - 2026-10-16: Slice 3 added: autofill an item from its linked order, deep link from the item to its budget line, and a needs-items indicator on the budget.
+- 2026-10-16: Lines table search, status filter, and sort.

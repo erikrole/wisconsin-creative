@@ -40,6 +40,7 @@ import {
   type BudgetLineStatusValue,
   type BudgetSummary,
 } from "@/lib/budget/contract";
+import { LINE_SORT_LABELS, LINE_SORTS, filterAndSortLines, type LineSort } from "@/lib/budget/table";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 
 type BudgetListItem = { id: string; name: string; fiscalYear: string; allocationCents: number | null; lineCount: number };
@@ -246,7 +247,10 @@ function BudgetBody({
   const over = summary.remainingCents < 0;
   const [onlyUnlinked, setOnlyUnlinked] = useState(false);
   const needItems = lines.filter((line) => unlinkedUnits(line) > 0);
-  const shown = onlyUnlinked ? needItems : lines;
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<BudgetLineStatusValue | "ALL">("ALL");
+  const [sort, setSort] = useState<LineSort>("entered");
+  const shown = filterAndSortLines(onlyUnlinked ? needItems : lines, { query, status: statusFilter, sort });
 
   useEffect(() => {
     if (!focusLineId) return;
@@ -286,7 +290,7 @@ function BudgetBody({
         <OperationalMetricCard
           label="Still to spend"
           value={formatCents(summary.outstandingCents)}
-          helper={`${summary.counts.PLANNED + summary.counts.ORDERED} lines open`}
+          helper={`${summary.counts.PLANNED + summary.counts.ORDERED} ${summary.counts.PLANNED + summary.counts.ORDERED === 1 ? "line" : "lines"} open`}
         />
         <OperationalMetricCard
           label={over ? "Over by" : "Remaining"}
@@ -333,6 +337,53 @@ function BudgetBody({
       {lines.length === 0 ? (
         <EmptyState icon="clipboard" title="No lines yet" description={`Add the first planned expense for ${budget.name} ${budget.fiscalYear}.`} />
       ) : (
+        <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <Input
+            aria-label="Search lines"
+            placeholder="Search lines, suppliers, PO numbers"
+            className="w-full sm:w-72"
+            value={query}
+            maxLength={80}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+          <NativeSelect
+            aria-label="Filter by status"
+            className="w-auto"
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value as BudgetLineStatusValue | "ALL")}
+          >
+            <option value="ALL">All statuses</option>
+            {BUDGET_LINE_STATUSES.map((status) => (
+              <option key={status} value={status}>
+                {BUDGET_STATUS_LABELS[status]}
+              </option>
+            ))}
+          </NativeSelect>
+          <NativeSelect aria-label="Sort lines" className="w-auto" value={sort} onChange={(event) => setSort(event.target.value as LineSort)}>
+            {LINE_SORTS.map((value) => (
+              <option key={value} value={value}>
+                {LINE_SORT_LABELS[value]}
+              </option>
+            ))}
+          </NativeSelect>
+          <span className="text-sm text-muted-foreground" aria-live="polite">
+            {shown.length === lines.length ? `${lines.length} lines` : `${shown.length} of ${lines.length} lines`}
+          </span>
+        </div>
+        {shown.length === 0 ? (
+          <EmptyState
+            icon="search"
+            title="No lines match"
+            description="Try a different search or clear the filters."
+            actionLabel="Clear filters"
+            onAction={() => {
+              setQuery("");
+              setStatusFilter("ALL");
+              setOnlyUnlinked(false);
+            }}
+          />
+        ) : (
         <Card>
           <CardContent className="overflow-x-auto p-0">
             <Table>
@@ -450,6 +501,8 @@ function BudgetBody({
             </Table>
           </CardContent>
         </Card>
+        )}
+        </div>
       )}
     </div>
   );
