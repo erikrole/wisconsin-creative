@@ -229,7 +229,7 @@ struct AppTabView: View {
                     .tabPlacement(.sidebarOnly)
                     .customizationID("resources.licenses")
 
-                    Tab("Users", systemImage: "person.2", value: 5) {
+                    Tab("Staff", systemImage: "person.2", value: 5) {
                         UsersView()
                     }
                     .tabPlacement(.sidebarOnly)

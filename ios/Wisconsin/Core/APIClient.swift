@@ -1234,7 +1234,7 @@ final class APIClient {
         includeInactive: Bool = false,
         limit: Int = 50,
         offset: Int = 0
-    ) async throws -> PaginatedResponse<AppUser> {
+    ) async throws -> UserListResponse {
         var items: [URLQueryItem] = [
             .init(name: "limit", value: "\(limit)"),
             .init(name: "offset", value: "\(offset)"),
