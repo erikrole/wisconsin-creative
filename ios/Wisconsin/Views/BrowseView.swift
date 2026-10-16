@@ -12,12 +12,13 @@ struct BrowseView: View {
 
     private var destinations: [BrowseDestination] {
         guard session.currentUser?.role == "COLLABORATOR" else {
-            // Reports and Battery Ops are staff analytics, and Events reads the
-            // internal calendar. Those endpoints refuse anyone else, so the rows
-            // are hidden rather than offered and refused.
+            // Reports and Battery Ops are staff analytics. Badges is the staff
+            // catalog. Events reads the internal calendar. Those rows stay
+            // hidden rather than offered and refused.
             var rows: [BrowseDestination] = [.scoreboard, .events, .items, .kits, .guides, .blasts, .licenses, .users]
             if isStaffOrAdmin {
                 rows.insert(.batteries, at: 4)
+                rows.append(.badges)
                 rows.append(.reports)
             }
             return rows
@@ -95,6 +96,8 @@ struct BrowseView: View {
             LicensesView(wrapsInNavigationStack: false)
         case .users:
             UsersView(wrapsInNavigationStack: false)
+        case .badges:
+            TeamBadgesView(wrapsInNavigationStack: false)
         case .reports:
             ReportsView()
         case .blasts:
@@ -113,6 +116,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
     case blasts
     case licenses
     case users
+    case badges
     case reports
 
     var id: String { rawValue }
@@ -128,6 +132,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
         case .blasts: "Blasts"
         case .licenses: "Licenses"
         case .users: "Users"
+        case .badges: "Badges"
         case .reports: "Reports"
         }
     }
@@ -152,6 +157,8 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
             "Claim, copy, or return a Photo Mechanic license."
         case .users:
             "Find teammates, roles, titles, and work areas."
+        case .badges:
+            "See the badges staff can award."
         case .reports:
             "See what is going out, what sits idle, and who is overdue."
         }
@@ -168,6 +175,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
         case .blasts: "megaphone"
         case .licenses: "key"
         case .users: "person.2"
+        case .badges: "medal"
         case .reports: "chart.bar.xaxis"
         }
     }
@@ -183,6 +191,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
         case .blasts: Color.statusText(.blue)
         case .licenses: Color.statusText(.orange)
         case .users: Color.statusText(.green)
+        case .badges: Color.statusText(.purple)
         case .reports: Color.statusText(.red)
         }
     }

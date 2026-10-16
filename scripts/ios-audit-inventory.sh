@@ -77,6 +77,7 @@ Reports/UtilizationReportView.swift    | reports                     | audit
 Reports/ScanReportView.swift           | reports                     | audit
 Reports/MissingUnitsReportView.swift   | reports                     | audit
 Reports/BadgeReportView.swift          | reports                     | audit
+TeamBadgesView.swift                   | team-badges                 | audit
 Reports/UsageReportView.swift          | reports                     | audit
 Reports/ReportChrome.swift             |                             | exempt-shared
 Reports/ReportSession.swift            |                             | exempt-infra

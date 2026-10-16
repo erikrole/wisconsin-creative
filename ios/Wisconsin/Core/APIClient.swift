@@ -1369,6 +1369,15 @@ final class APIClient {
         return resp.data
     }
 
+    /// The staff award catalog. `manualOnly` is the same filter the website
+    /// uses on `/badges`. Awarding stays on the web.
+    func teamBadgeCatalog() async throws -> TeamBadgeCatalog {
+        try await perform(request(
+            path: "/api/badges",
+            queryItems: [URLQueryItem(name: "manualOnly", value: "true")]
+        ))
+    }
+
     /// Shared, read-only team totals. The server owns the window, stacked
     /// filter intersection, and counting rules; iOS only supplies exact facet
     /// selections and ranks the returned people for display.
