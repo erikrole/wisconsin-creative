@@ -12,12 +12,14 @@ struct BrowseView: View {
 
     private var destinations: [BrowseDestination] {
         guard session.currentUser?.role == "COLLABORATOR" else {
-            // Reports are staff analytics; the endpoints 403 anyone else, so the
-            // row is hidden rather than offered and refused.
-            return [.scoreboard, .items, .guides, .licenses, .users] + (isStaffOrAdmin ? [.reports] : [])
+            // Reports are staff analytics, and Events reads the internal
+            // calendar. Both endpoints refuse a collaborator, so those rows are
+            // hidden rather than offered and refused.
+            return [.scoreboard, .events, .items, .guides, .blasts, .licenses, .users] + (isStaffOrAdmin ? [.reports] : [])
         }
         let capabilities = Set(session.currentUser?.capabilities ?? [])
         return [.scoreboard] + [
+            Optional.some(BrowseDestination.blasts),
             capabilities.contains("GEAR_CATALOG_VIEW") ? .items : nil,
             capabilities.contains("PEOPLE_DIRECTORY_VIEW") ? .users : nil,
         ].compactMap { $0 }
@@ -73,6 +75,8 @@ struct BrowseView: View {
         switch destination {
         case .scoreboard:
             TeamScoreboardView(wrapsInNavigationStack: false)
+        case .events:
+            EventsView(wrapsInNavigationStack: false)
         case .items:
             ItemsView(wrapsInNavigationStack: false)
         case .guides:
@@ -83,14 +87,18 @@ struct BrowseView: View {
             UsersView(wrapsInNavigationStack: false)
         case .reports:
             ReportsView()
+        case .blasts:
+            BlastsView(wrapsInNavigationStack: false)
         }
     }
 }
 
 private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
     case scoreboard
+    case events
     case items
     case guides
+    case blasts
     case licenses
     case users
     case reports
@@ -100,8 +108,10 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
     var title: String {
         switch self {
         case .scoreboard: "Scoreboard"
+        case .events: "Events"
         case .items: "Items"
         case .guides: "Guides"
+        case .blasts: "Blasts"
         case .licenses: "Licenses"
         case .users: "Users"
         case .reports: "Reports"
@@ -112,10 +122,14 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
         switch self {
         case .scoreboard:
             "Team totals, sport breakdowns, and per-person leaderboards."
+        case .events:
+            "Event details, linked gear, and bookings."
         case .items:
             "Find gear, item families, status, and availability."
         case .guides:
             "Read team reference docs, contacts, venue notes, and workflows."
+        case .blasts:
+            "Read a broadcast again after you dismiss it."
         case .licenses:
             "Claim, copy, or return a Photo Mechanic license."
         case .users:
@@ -128,8 +142,10 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
     var systemImage: String {
         switch self {
         case .scoreboard: "trophy"
+        case .events: "calendar"
         case .items: "archivebox"
         case .guides: "book.closed"
+        case .blasts: "megaphone"
         case .licenses: "key"
         case .users: "person.2"
         case .reports: "chart.bar.xaxis"
@@ -139,8 +155,10 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
     var tint: Color {
         switch self {
         case .scoreboard: Color.statusText(.orange)
+        case .events: Color.statusText(.blue)
         case .items: Color.statusText(.blue)
         case .guides: Color.statusText(.purple)
+        case .blasts: Color.statusText(.blue)
         case .licenses: Color.statusText(.orange)
         case .users: Color.statusText(.green)
         case .reports: Color.statusText(.red)

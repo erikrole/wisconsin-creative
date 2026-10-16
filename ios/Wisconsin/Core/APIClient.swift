@@ -1098,6 +1098,79 @@ final class APIClient {
         return try await perform(req)
     }
 
+    /// Same checkout payload as `checkoutActivityReport`, including the rows
+    /// and requester ranking the glance does not draw. Never requests CSV.
+    func checkoutDetailReport(days: Int) async throws -> CheckoutDetailReport {
+        let req = request(
+            path: "/api/reports/checkouts",
+            queryItems: [.init(name: "days", value: String(days))]
+        )
+        return try await perform(req)
+    }
+
+    /// Same utilization payload as `utilizationReport`, including breakdowns
+    /// and idle gear. Never requests CSV.
+    func utilizationDetailReport(days: Int) async throws -> UtilizationDetailReport {
+        let req = request(
+            path: "/api/reports/utilization",
+            queryItems: [.init(name: "days", value: String(days))]
+        )
+        return try await perform(req)
+    }
+
+    /// Owner-only aggregate counts. The server returns 403 for everyone else.
+    func usageReport(days: Int) async throws -> UsageReport {
+        let req = request(
+            path: "/api/reports/usage",
+            queryItems: [.init(name: "days", value: String(days))]
+        )
+        return try await perform(req)
+    }
+
+    func scanReport(startDate: String?, phase: String?, limit: Int, offset: Int) async throws -> ScanHistoryReport {
+        var items = [
+            URLQueryItem(name: "limit", value: String(limit)),
+            URLQueryItem(name: "offset", value: String(offset)),
+        ]
+        if let startDate {
+            items.append(URLQueryItem(name: "startDate", value: startDate))
+        }
+        if let phase {
+            items.append(URLQueryItem(name: "phase", value: phase))
+        }
+        return try await perform(request(path: "/api/reports/scans", queryItems: items))
+    }
+
+    func missingUnitsReport(categoryId: String?, locationId: String?) async throws -> MissingUnitsReport {
+        var items: [URLQueryItem] = []
+        if let categoryId {
+            items.append(URLQueryItem(name: "category", value: categoryId))
+        }
+        if let locationId {
+            items.append(URLQueryItem(name: "location", value: locationId))
+        }
+        return try await perform(request(
+            path: "/api/reports/bulk-losses",
+            queryItems: items.isEmpty ? nil : items
+        ))
+    }
+
+    func badgeReport(days: Int) async throws -> BadgeReport {
+        let req = request(
+            path: "/api/reports/badges",
+            queryItems: [.init(name: "days", value: String(days))]
+        )
+        return try await perform(req)
+    }
+
+    /// `/api/me` already returns this allowlist flag beside the user. Missing
+    /// on an older server means the report stays hidden.
+    func canViewUsageAnalytics() async throws -> Bool {
+        let req = request(path: "/api/me")
+        let resp: MeResponse = try await perform(req)
+        return resp.canViewUsageAnalytics ?? false
+    }
+
     // MARK: - Licenses
 
     func licenses() async throws -> [LicenseCode] {
@@ -1492,6 +1565,40 @@ final class APIClient {
         return response.data
     }
 
+    /// One page of `/api/calendar-events`. The Browse events list follows
+    /// `total` the same way Schedule does, without Schedule's week window.
+    func calendarEventsPage(
+        includePast: Bool,
+        window: DateInterval? = nil,
+        limit: Int,
+        offset: Int
+    ) async throws -> ScheduleEventsResponse {
+        try await calendarEventPage(
+            includePast: includePast,
+            window: window,
+            limit: limit,
+            offset: offset
+        )
+    }
+
+    /// `GET /api/calendar-events/:id`. Richer than the list row: source,
+    /// subtitle, hidden, and combined-event identity. Read-only.
+    func calendarEventDetail(id: String) async throws -> CalendarEventDetail {
+        let response: DataWrapper<CalendarEventDetail> = try await perform(
+            request(path: "/api/calendar-events/\(id)")
+        )
+        return response.data
+    }
+
+    /// Staff/admin gear and booking summary for one event. Students receive
+    /// 403; callers treat that as "no team gear" rather than a failed event.
+    func eventCommandCenter(id: String) async throws -> EventCommandCenter {
+        let response: DataWrapper<EventCommandCenter> = try await perform(
+            request(path: "/api/calendar-events/\(id)/command-center")
+        )
+        return response.data
+    }
+
     /// Reads the complete event window through the API's total-driven pages.
     /// SwiftUI still renders the result lazily, while the client no longer
     /// mistakes the first 60 events (roughly one month during a busy season)
@@ -1626,6 +1733,7 @@ final class APIClient {
     /// teammate's profile; if the answer cannot be attributed, return nothing.
     private func myShiftsPage(
         userId: String?,
+        eventId: String? = nil,
         window: DateInterval? = nil,
         limit: Int,
         offset: Int
@@ -1635,6 +1743,7 @@ final class APIClient {
             .init(name: "offset", value: "\(offset)"),
         ]
         if let userId { items.append(.init(name: "userId", value: userId)) }
+        if let eventId { items.append(.init(name: "eventId", value: eventId)) }
         items += Self.windowQueryItems(window)
         return try await perform(request(path: "/api/my-shifts", queryItems: items))
     }
@@ -1643,6 +1752,14 @@ final class APIClient {
         let resp = try await myShiftsPage(userId: userId, limit: limit, offset: 0)
         if let userId, resp.userId != userId { return [] }
         return resp.data
+    }
+
+    /// The signed-in person's shifts on one event, including the gear bookings
+    /// linked to that event. The route caps a page at 20; one person does not
+    /// have more active assignments than that on a single event.
+    func myShifts(eventId: String) async throws -> [MyShift] {
+        let response = try await myShiftsPage(userId: nil, eventId: eventId, limit: 20, offset: 0)
+        return response.data
     }
 
     /// Reads every active assignment for the caller. The route is still
@@ -1786,6 +1903,7 @@ final class APIClient {
         var req = request(path: "/api/me/blasts/\(id)/ack", method: "POST")
         req.httpBody = Data()
         let _: SuccessResponse = try await perform(req)
+        BlastArchive.markAcknowledged(id)
     }
 
     // MARK: - Notification preferences
@@ -2512,6 +2630,7 @@ private struct PasskeyOptionsResponse<T: Decodable>: Decodable {
 
 private struct MeResponse: Decodable {
     let user: CurrentUser
+    let canViewUsageAnalytics: Bool?
 }
 
 private struct RolePreviewMutationResponse: Decodable {
