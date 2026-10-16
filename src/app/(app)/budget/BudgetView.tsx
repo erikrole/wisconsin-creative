@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ExternalLinkIcon, LinkIcon, PencilIcon, PlusIcon, Trash2Icon, UnlinkIcon, WalletIcon } from "lucide-react";
@@ -8,6 +8,7 @@ import EmptyState from "@/components/EmptyState";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { OperationalMetricCard } from "@/components/OperationalFeedback";
 import { PageHeader } from "@/components/PageHeader";
+import { AssetImage } from "@/components/AssetImage";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -68,6 +69,7 @@ type LinkView = {
   kind: "asset" | "bulk";
   targetId: string;
   label: string;
+  imageUrl: string | null;
   detail: string | null;
   href: string;
 };
@@ -75,6 +77,7 @@ type Suggestion = {
   kind: "asset" | "bulk";
   targetId: string;
   label: string;
+  imageUrl: string | null;
   detail: string | null;
   href: string;
   suggestedQuantity: number;
@@ -82,7 +85,7 @@ type Suggestion = {
   confidence: "high" | "likely" | "possible";
   reasons: string[];
 };
-type SearchResult = { kind: "asset" | "bulk"; targetId: string; label: string; detail: string | null };
+type SearchResult = { kind: "asset" | "bulk"; targetId: string; label: string; imageUrl: string | null; detail: string | null };
 type Detail = {
   budget: { id: string; name: string; fiscalYear: string; allocationCents: number | null; notes: string | null };
   lines: LineView[];
@@ -347,13 +350,18 @@ function BudgetBody({
               </TableHeader>
               <TableBody>
                 {shown.map((line) => (
+                  <Fragment key={line.id}>
                   <TableRow
-                    key={line.id}
                     id={`line-${line.id}`}
                     data-state={line.id === focusLineId ? "selected" : undefined}
                     className={line.status === "CANCELLED" ? "opacity-60" : undefined}
                   >
                     <TableCell className="max-w-80">
+                      <div className="flex items-center gap-3">
+                      {line.links.some((link) => link.imageUrl) && (
+                        <AssetImage src={line.links.find((link) => link.imageUrl)?.imageUrl} alt="" size={40} />
+                      )}
+                      <div className="min-w-0">
                       <div className="flex items-center gap-1.5 font-medium">
                         <span className="truncate">{line.description}</span>
                         {line.linkUrl && (
@@ -365,6 +373,8 @@ function BudgetBody({
                       <p className="truncate text-xs text-muted-foreground">
                         {[line.supplier, line.requesterName ?? line.requesterNote].filter(Boolean).join(" · ")}
                       </p>
+                      </div>
+                      </div>
                     </TableCell>
                     <TableCell>{BUDGET_CATEGORY_LABELS[line.category]}</TableCell>
                     <TableCell>
@@ -409,6 +419,32 @@ function BudgetBody({
                       </div>
                     </TableCell>
                   </TableRow>
+                  {line.id === focusLineId && (
+                    <TableRow className="bg-muted/40 hover:bg-muted/40">
+                      <TableCell colSpan={8}>
+                        <div className="flex flex-wrap items-center gap-2 py-1">
+                          {line.links.map((link) => (
+                            <a
+                              key={link.id}
+                              href={link.href}
+                              className="flex items-center gap-2 rounded-lg border bg-background py-1.5 pl-1.5 pr-3 text-sm hover:bg-muted"
+                            >
+                              <AssetImage src={link.imageUrl} alt={link.label} size={32} />
+                              <span className="font-medium">{link.label}</span>
+                              {link.detail && <span className="text-xs text-muted-foreground">{link.detail}</span>}
+                            </a>
+                          ))}
+                          {unlinkedUnits(line) > 0 && (
+                            <Button type="button" variant="outline" onClick={() => onLinks(line)}>
+                              <LinkIcon />
+                              Link {unlinkedUnits(line)} more
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  </Fragment>
                 ))}
               </TableBody>
             </Table>
@@ -733,7 +769,8 @@ function LinksDialog({ line, onClose, onChanged }: { line: LineView; onClose: ()
               <p className="text-sm text-muted-foreground">Nothing linked yet.</p>
             ) : (
               line.links.map((item) => (
-                <div key={item.id} className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
+                <div key={item.id} className="flex items-center gap-3 rounded-md border px-3 py-2 text-sm">
+                  <AssetImage src={item.imageUrl} alt={item.label} size={40} />
                   <a className="min-w-0 flex-1 truncate font-medium hover:underline" href={item.href}>
                     {item.label}
                     {item.detail ? <span className="ml-2 text-xs text-muted-foreground">{item.detail}</span> : null}
@@ -764,7 +801,8 @@ function LinksDialog({ line, onClose, onChanged }: { line: LineView; onClose: ()
               </p>
             ) : (
               visibleSuggestions.map((item) => (
-                <div key={`${item.kind}:${item.targetId}`} className="flex items-start gap-2 rounded-md border px-3 py-2 text-sm">
+                <div key={`${item.kind}:${item.targetId}`} className="flex items-start gap-3 rounded-md border px-3 py-2 text-sm">
+                  <AssetImage src={item.imageUrl} alt={item.label} size={40} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="truncate font-medium">{item.label}</span>
@@ -796,7 +834,8 @@ function LinksDialog({ line, onClose, onChanged }: { line: LineView; onClose: ()
               maxLength={80}
             />
             {visibleResults.map((item) => (
-              <div key={`${item.kind}:${item.targetId}`} className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
+              <div key={`${item.kind}:${item.targetId}`} className="flex items-center gap-3 rounded-md border px-3 py-2 text-sm">
+                <AssetImage src={item.imageUrl} alt={item.label} size={40} />
                 <span className="min-w-0 flex-1 truncate">
                   {item.label}
                   {item.detail ? <span className="ml-2 text-xs text-muted-foreground">{item.detail}</span> : null}

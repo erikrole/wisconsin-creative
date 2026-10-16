@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { AssetImage } from "@/components/AssetImage";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,7 +45,7 @@ type Suggestion = {
   confidence: "high" | "likely" | "possible";
   reasons: string[];
 };
-type Data = { serialNumber: string | null; linked: Linked[]; suggestions: Suggestion[] };
+type Data = { serialNumber: string | null; imageUrl: string | null; linked: Linked[]; suggestions: Suggestion[] };
 
 const CONFIDENCE_VARIANT = { high: "green", likely: "blue", possible: "gray" } as const;
 
@@ -101,6 +102,7 @@ export function ItemPurchasePanel({ assetId }: { assetId: string }) {
             return (
               <div key={row.linkId} className="flex flex-col gap-2 rounded-md border px-3 py-2 text-sm">
                 <div className="flex items-center gap-3">
+                  <AssetImage src={data.imageUrl} alt="" size={48} />
                   <div className="min-w-0 flex-1">
                     <Link
                       href={`/budget?b=${row.budgetId}&line=${row.lineId}`}

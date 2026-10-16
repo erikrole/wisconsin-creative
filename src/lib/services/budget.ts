@@ -38,8 +38,8 @@ const lineSelect = {
     select: {
       id: true,
       quantity: true,
-      asset: { select: { id: true, assetTag: true, name: true, brand: true, model: true, serialNumber: true } },
-      bulkSku: { select: { id: true, name: true } },
+      asset: { select: { id: true, assetTag: true, name: true, brand: true, model: true, serialNumber: true, imageUrl: true } },
+      bulkSku: { select: { id: true, name: true, imageUrl: true } },
     },
   },
 } satisfies Prisma.BudgetLineSelect;
@@ -52,6 +52,7 @@ export type BudgetLineLinkView = {
   kind: "asset" | "bulk";
   targetId: string;
   label: string;
+  imageUrl: string | null;
   detail: string | null;
   href: string;
 };
@@ -71,6 +72,7 @@ function toLinkView(row: LineRow["items"][number]): BudgetLineLinkView {
       kind: "asset",
       targetId: row.asset.id,
       label,
+      imageUrl: row.asset.imageUrl,
       detail: [row.asset.assetTag, row.asset.serialNumber ? `SN ${row.asset.serialNumber}` : null].filter(Boolean).join(" · "),
       href: `/items/${row.asset.id}`,
     };
@@ -81,6 +83,7 @@ function toLinkView(row: LineRow["items"][number]): BudgetLineLinkView {
     kind: "bulk",
     targetId: row.bulkSku!.id,
     label: row.bulkSku!.name,
+    imageUrl: row.bulkSku!.imageUrl,
     detail: null,
     href: `/bulk-inventory`,
   };
@@ -278,6 +281,7 @@ export type ItemSuggestion = MatchResult & {
   kind: "asset" | "bulk";
   targetId: string;
   label: string;
+  imageUrl: string | null;
   detail: string | null;
   href: string;
   suggestedQuantity: number;
@@ -356,7 +360,7 @@ export async function suggestItemsForLine(lineId: string): Promise<ItemSuggestio
         OR: [{ purchasePrice: priceBand }, ...(dateBand ? [{ purchaseDate: dateBand }] : []), ...words],
       },
       take: CANDIDATE_LIMIT,
-      select: { id: true, assetTag: true, name: true, brand: true, model: true, purchasePrice: true, purchaseDate: true, notes: true },
+      select: { id: true, assetTag: true, name: true, brand: true, model: true, purchasePrice: true, purchaseDate: true, notes: true, imageUrl: true },
     }),
     db.bulkSku.findMany({
       where: {
@@ -364,7 +368,7 @@ export async function suggestItemsForLine(lineId: string): Promise<ItemSuggestio
         OR: [{ purchasePrice: priceBand }, ...tokens(line.description).filter((w) => w.length >= 3).slice(0, 6).map((word) => ({ name: { contains: word, mode: "insensitive" as const } }))],
       },
       take: CANDIDATE_LIMIT,
-      select: { id: true, name: true, purchasePrice: true, notes: true },
+      select: { id: true, name: true, purchasePrice: true, notes: true, imageUrl: true },
     }),
   ]);
 
@@ -385,6 +389,7 @@ export async function suggestItemsForLine(lineId: string): Promise<ItemSuggestio
       kind: "asset",
       targetId: asset.id,
       label: asset.name?.trim() || `${asset.brand} ${asset.model}`.trim(),
+      imageUrl: asset.imageUrl,
       detail: asset.assetTag,
       href: `/items/${asset.id}`,
       suggestedQuantity: 1,
@@ -399,6 +404,7 @@ export async function suggestItemsForLine(lineId: string): Promise<ItemSuggestio
       kind: "bulk",
       targetId: sku.id,
       label: sku.name,
+      imageUrl: sku.imageUrl,
       detail: "Bulk item",
       href: "/bulk-inventory",
       suggestedQuantity: line.quantityBought ?? line.quantity,
@@ -410,13 +416,14 @@ export async function suggestItemsForLine(lineId: string): Promise<ItemSuggestio
 /** Budget lines that might have paid for this asset, for the item page. */
 export async function suggestLinesForAsset(
   assetId: string,
-): Promise<{ serialNumber: string | null; linked: BudgetLineLinkViewForAsset[]; suggestions: LineSuggestion[] }> {
+): Promise<{ serialNumber: string | null; imageUrl: string | null; linked: BudgetLineLinkViewForAsset[]; suggestions: LineSuggestion[] }> {
   const asset = await db.asset.findUnique({
     where: { id: assetId },
     select: {
       name: true,
       brand: true,
       model: true,
+      imageUrl: true,
       serialNumber: true,
       purchasePrice: true,
       purchaseDate: true,
@@ -484,7 +491,7 @@ export async function suggestLinesForAsset(
       ),
     };
   });
-  if (linked.length > 0) return { serialNumber: asset.serialNumber, linked, suggestions: [] };
+  if (linked.length > 0) return { serialNumber: asset.serialNumber, imageUrl: asset.imageUrl, linked, suggestions: [] };
 
   const item: MatchItem = {
     name: asset.name,
@@ -539,7 +546,7 @@ export async function suggestLinesForAsset(
       poNumber: line.poNumber,
     });
   }
-  return { serialNumber: asset.serialNumber, linked, suggestions: suggestions.sort((a, b) => b.score - a.score).slice(0, SUGGESTION_LIMIT) };
+  return { serialNumber: asset.serialNumber, imageUrl: asset.imageUrl, linked, suggestions: suggestions.sort((a, b) => b.score - a.score).slice(0, SUGGESTION_LIMIT) };
 }
 
 export type BudgetLineLinkViewForAsset = {
@@ -615,7 +622,7 @@ export async function unlinkItem(actor: Actor, linkId: string) {
   });
 }
 
-export type ItemSearchResult = { kind: "asset" | "bulk"; targetId: string; label: string; detail: string | null };
+export type ItemSearchResult = { kind: "asset" | "bulk"; targetId: string; label: string; imageUrl: string | null; detail: string | null };
 
 /** Quick lookup for linking by hand when no suggestion fits. */
 export async function searchItemsToLink(query: string): Promise<ItemSearchResult[]> {
@@ -634,13 +641,13 @@ export async function searchItemsToLink(query: string): Promise<ItemSearchResult
       },
       take: 8,
       orderBy: { assetTag: "asc" },
-      select: { id: true, assetTag: true, name: true, brand: true, model: true },
+      select: { id: true, assetTag: true, name: true, brand: true, model: true, imageUrl: true },
     }),
     db.bulkSku.findMany({
       where: { active: true, name: { contains: q, mode: "insensitive" } },
       take: 4,
       orderBy: { name: "asc" },
-      select: { id: true, name: true },
+      select: { id: true, name: true, imageUrl: true },
     }),
   ]);
   return [
@@ -648,9 +655,10 @@ export async function searchItemsToLink(query: string): Promise<ItemSearchResult
       kind: "asset" as const,
       targetId: asset.id,
       label: asset.name?.trim() || `${asset.brand} ${asset.model}`.trim(),
+      imageUrl: asset.imageUrl,
       detail: asset.assetTag,
     })),
-    ...skus.map((sku) => ({ kind: "bulk" as const, targetId: sku.id, label: sku.name, detail: "Bulk item" })),
+    ...skus.map((sku) => ({ kind: "bulk" as const, targetId: sku.id, label: sku.name, imageUrl: sku.imageUrl, detail: "Bulk item" })),
   ];
 }
 
