@@ -4,6 +4,7 @@ import { HttpError } from "@/lib/http";
 import { ResourceType, Role, ShiftArea } from "@prisma/client";
 import { sanitizeJsonStrings, sanitizeText } from "@/lib/sanitize";
 import {
+  guideSearchQueryCouldSpanMarkdownLink,
   legacyGuideMarkdown,
   markdownToPlainText,
   summarizeGuideContent,
@@ -111,6 +112,11 @@ export async function listGuides(opts: {
       // a specific phrase does not pull every guide body into the function.
       // Empty markdown stays in the candidate set: those legacy rows keep their
       // body in `content`, which the in-memory pass below still reads.
+      //
+      // `markdownToPlainText` turns `[cam](url)era` into `camera`. The label
+      // itself is still in the stored markdown, but a query that crosses the
+      // removed destination is not. Any guide with a link stays in the
+      // candidate set for those queries; the in-memory pass is still exact.
       ...(q ? {
         OR: [
           { title: { contains: q, mode: "insensitive" as const } },
@@ -119,6 +125,9 @@ export async function listGuides(opts: {
           { author: { name: { contains: q, mode: "insensitive" as const } } },
           { markdown: null },
           { markdown: "" },
+          ...(guideSearchQueryCouldSpanMarkdownLink(q)
+            ? [{ markdown: { contains: "](", mode: "insensitive" as const } }]
+            : []),
         ],
       } : {}),
     },

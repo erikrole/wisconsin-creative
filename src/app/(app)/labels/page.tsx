@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/PageHeader";
 import EmptyState from "@/components/EmptyState";
-import { useFetch } from "@/hooks/use-fetch";
+import { useLabelCatalog } from "./use-label-catalog";
 import { FadeUp } from "@/components/ui/motion";
 import {
   Item,
@@ -195,24 +195,13 @@ export default function LabelsPage() {
   const [didPreselect, setDidPreselect] = useState(false);
 
 
-  // Build fetch URL from search state
-  const fetchUrl = (() => {
-    // Alphabetical page, without the catalog status chips. The list below
-    // re-sorts this page by title; ranking the whole catalog first only to
-    // throw that order away loaded thousands of rows.
-    const params = new URLSearchParams({ limit: "200", sort: "assetTag", counts: "0" });
-    if (search) params.set("q", search);
-    return `/api/assets?${params}`;
-  })();
-
-  const { data: labelItems, loading, error, reload } = useFetch<LabelItem[]>({
-    url: fetchUrl,
+  const { data: labelItems, loading, error, reload } = useLabelCatalog(search, {
     // Keep the previous list visible while a changed search refetches instead
     // of flashing skeletons on every committed keystroke.
     keepPreviousData: true,
-    transform: (json) => {
-      const assets = ((json.data as Asset[] | undefined) ?? []).map(mapAssetToLabelItem);
-      const families = ((json.bulkItems as BulkItemFamily[] | undefined) ?? []).map(mapFamilyToLabelItem);
+    transform: (catalog) => {
+      const assets = (catalog.assets as Asset[]).map(mapAssetToLabelItem);
+      const families = (catalog.families as BulkItemFamily[]).map(mapFamilyToLabelItem);
       return [...assets, ...families].sort((a, b) =>
         a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: "base" }),
       );
