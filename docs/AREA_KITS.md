@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Kits Management
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-10-12
+- Last Updated: 2026-10-16
 - Status: Active
 - Version: V1
 - Brief: `BRIEF_KIT_MANAGEMENT_V1.md`
@@ -103,6 +103,7 @@ See `AREA_ITEMS.md` 2026-04-06 entry for kit detail page hardening work:
 - [x] AC-7: Football kits can own Slow 1, Slow 2, Bench, or Roam 1–4 at a pickup; calling surfaces hide empty kits and can suggest last week’s job
 
 ## Change Log
+- 2026-10-16: **Native iOS can read kits.** Browse lists active kits for students and for collaborators who can create a reservation. Staff can include archived kits. Detail shows pickup, sport, football job, shelf status, serialized gear with the current holder, and item families. Reserve for an event opens the existing reservation composer with that kit chosen. Creating, editing, and membership changes stay on the web. Source contracts pass. An Xcode build on a Mac is still required.
 - 2026-10-12: **Calling a kit on a reservation keeps real custody.** The kit detail read used by the web reservation wizard now includes derived status and the current holder. Gear that is checked out or pending pickup is no longer labeled Available just because the shelf status says so. The wizard still adds every kit member for review. Local source and service tests; authenticated browser proof remains open.
 - 2026-10-12: **The kits list stops calling a short kit Ready.** Each row counts serialized members that are checked out, pending pickup, in maintenance, or retired. The badge says Ready, "2 out", or Out. Item families stay in the contents count and do not flip the badge. Local source and service tests; authenticated browser proof remains open.
 - 2026-10-12: **Kit detail names gear that is out.** Serialized members show derived custody (checked out, pending pickup, maintenance, retired) instead of the stored shelf status, including who has a checked-out or pending-pickup piece. The kiosk kit checklist payload carries the same status and holder name. Local source and service tests; authenticated browser and physical kiosk proof remain open.

@@ -244,6 +244,7 @@ struct AccountabilityView: View {
         }
     }
 
+    @ViewBuilder
     private func standingDetail(_ person: AccountabilityPerson) -> some View {
         let late = person.lateEventCount == 1 ? "1 late return" : "\(person.lateEventCount) late returns"
         if let stillOut = person.stillOutLabel {

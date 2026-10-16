@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Items
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-10-07
+- Last Updated: 2026-10-16
 - Status: Active
 - Version: V1
 
@@ -447,6 +447,7 @@ Item families can optionally enable `trackByNumber` on the backing `BulkSku` imp
 
 ## Change Log
 
+- 2026-10-16: **Most popular no longer loads every recent booking and scan row (local).** `/api/assets` still ranks the same way: checkout bookings weigh 5, other bookings weigh 3, each successful scan weighs 1, bulk lines multiply by at least one planned unit, and activity inside 14 days adds 2. Those totals now come from grouped SQL. Add item, Fill gaps, and Cleanup load in separate chunks from the Items list. Migration `0175_scan_checkin_and_bulk_allocation_indexes` adds scan `createdAt` indexes for this aggregate and scan history; it is not applied.
 - 2026-10-07: **Cleanup wizard attachment parent mapping.** The wizard now includes an `attachment_candidate` queue for standalone cages, plates, caps, and grips. Staff pick a suggested or searched parent (or defer keep-standalone); attach writes `parentAssetId`, disables booking policy flags, audits `cleanup_wizard_attach`, and blocks active custody. Operations Keep data clean routes the queue into the wizard.
 - 2026-10-07: **Cleanup wizard for physical catalog review.** Staff/Admin can walk legacy QR-label and missing-serial queues one item at a time, answer whether a printed QR or readable serial exists, then save audited updates or deferrals. Operations surfaces both queues; Items exposes the wizard beside Fill gaps.
 - 2026-10-07: **Inventory hygiene parity with the item-data audit.** `/api/inventory-hygiene` now excludes retired rows from missing-field counts, reports active item-family category/department/image gaps, counts duplicate scan identity across serialized scan fields and active family bin QR (true total, not sample-capped), and labels camera-without-attachments as advisory. Operations taxonomy CTAs open `/items?fillGaps=1`. Residual physical queues are tracked in `tasks/item-data-hygiene-status-2026-10-07.md`; the June image-sourcing ledger is marked stale pending a live audit after battery consolidation.
