@@ -2411,6 +2411,29 @@ final class APIClient {
         return response.data.avatarUrl
     }
 
+    // MARK: - Gear picks
+
+    /// The signed-in person's cycle, saved list, and the fit-filtered catalog.
+    /// `catalog=1` is optional on the server so the website's banner stays small.
+    func myGearPicks() async throws -> GearPicksMePayload {
+        let req = request(path: "/api/gear-picks/me", queryItems: [.init(name: "catalog", value: "1")])
+        let resp: DataWrapper<GearPicksMePayload> = try await perform(req)
+        return resp.data
+    }
+
+    /// Replace the participant's whole list. The server prices every line and checks the allowance.
+    func saveMyGearPicks(lines: [GearPickSaveLine], submit: Bool, version: Int) async throws -> GearPickSubmission {
+        struct Body: Encodable {
+            let lines: [GearPickSaveLine]
+            let submit: Bool
+            let version: Int
+        }
+        var req = request(path: "/api/gear-picks/me", method: "PUT")
+        req.httpBody = try JSONEncoder().encode(Body(lines: lines, submit: submit, version: version))
+        let resp: DataWrapper<GearPickSubmission> = try await perform(req)
+        return resp.data
+    }
+
     // MARK: - Internals
 
     private func mutateWorkingSchedule(

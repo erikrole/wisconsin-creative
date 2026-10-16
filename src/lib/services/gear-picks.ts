@@ -9,6 +9,7 @@ import {
   formatUsd,
   GEAR_CATALOG,
   GEAR_PICK_CYCLE_ID,
+  gearPickPhoneCatalog,
   isItemAllowedForFit,
   type GearPickFitKey,
 } from "@/lib/gear-picks/catalog";
@@ -112,8 +113,12 @@ function auditLines(lines: { sku: string; size: string | null; quantity: number;
 
 // ── Participant (self-service) ─────────────────────────────
 
-export async function getMyGearPicks(user: Actor, now: Date = new Date()): Promise<GearPicksMeResponse> {
-  return getGearPicksForUser(user.id, user, now);
+export async function getMyGearPicks(
+  user: Actor,
+  now: Date = new Date(),
+  options?: { includeCatalog?: boolean },
+): Promise<GearPicksMeResponse> {
+  return getGearPicksForUser(user.id, user, now, options);
 }
 
 /**
@@ -126,6 +131,7 @@ export async function getGearPicksForUser(
   userId: string,
   viewer: Actor,
   now: Date = new Date(),
+  options?: { includeCatalog?: boolean },
 ): Promise<GearPicksMeResponse> {
   const [cycle, participant, profile] = await Promise.all([
     db.gearPickCycle.findUnique({
@@ -146,19 +152,24 @@ export async function getGearPicksForUser(
   const visibleCycle = cycle && (cycle.launchedAt || isSignedInAdmin(viewer)) ? cycle : null;
   const visibleParticipant = visibleCycle ? participant : null;
 
+  const profileDto = {
+    topSize: profile?.topSize ?? null,
+    topSizeFit: profile?.topSizeFit ?? null,
+    shoeSize: profile?.shoeSize ?? null,
+    shoeSizeSystem: profile?.shoeSizeSystem ?? null,
+  };
+
   return {
     cycle: visibleCycle ? cycleDto(visibleCycle, now) : null,
     participant: visibleParticipant
       ? { id: visibleParticipant.id, fit: visibleParticipant.fit, allowanceCents: visibleParticipant.allowanceCents }
       : null,
     submission: submissionDto(visibleParticipant?.submission ?? null),
-    profile: {
-      topSize: profile?.topSize ?? null,
-      topSizeFit: profile?.topSizeFit ?? null,
-      shoeSize: profile?.shoeSize ?? null,
-      shoeSizeSystem: profile?.shoeSizeSystem ?? null,
-    },
+    profile: profileDto,
     isAdmin,
+    ...(options?.includeCatalog && visibleParticipant
+      ? { catalog: gearPickPhoneCatalog(visibleParticipant.fit, profileDto) }
+      : {}),
   };
 }
 

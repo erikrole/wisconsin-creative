@@ -1,10 +1,10 @@
 import {
+  defaultGearPickSize,
   findGearSku,
   GEAR_APPAREL_SIZES,
   GEAR_ONE_SIZE,
   isOneSizeItem,
   gearSizeProblem,
-  normalizeApparelSize,
   type GearCatalogItem,
 } from "@/lib/gear-picks/catalog";
 import type { GearPicksMeResponse } from "@/lib/gear-picks/types";
@@ -38,17 +38,7 @@ export function draftTotalCents(lines: DraftLine[]) {
 }
 
 export function defaultSizeFor(item: GearCatalogItem, profile: GearPicksMeResponse["profile"]): string | null {
-  if (isOneSizeItem(item)) return GEAR_ONE_SIZE;
-  if (item.category === "Headwear" || item.category === "Pants & shorts" || item.category === "Base layer") return null;
-  if (item.category === "Footwear") {
-    if (!item.shoeSizeSystem || item.shoeSizeSystem === "CATALOG" || item.shoeSizeSystem !== profile.shoeSizeSystem) return null;
-    const size = profile.shoeSize?.trim() || null;
-    return gearSizeProblem(item, size) ? null : size;
-  }
-  const expectedFit = item.fit === "MEN" ? "MENS" : item.fit === "WOMEN" ? "WOMENS" : "UNISEX";
-  if (profile.topSizeFit !== expectedFit) return null;
-  const size = normalizeApparelSize(profile.topSize);
-  return gearSizeProblem(item, size) ? null : size;
+  return defaultGearPickSize(item, profile);
 }
 
 /** Preserve old values visibly; validation requires correcting unavailable item sizes. */

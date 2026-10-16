@@ -4,7 +4,7 @@
 
 - Area: Yearly Under Armour staff gear picks for full-time creative staff
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-10-09
+- Last Updated: 2026-10-16
 - Status: Built on `feat/ua-gear-picks` for cycle 2027-28; authenticated preview proof pending.
 - Routes: `/gear` (participants), `/gear/admin` (ADMIN only)
 
@@ -92,6 +92,7 @@ New cycle: get the department's updated workbook, delete every tab but the new c
 
 ## Change Log
 
+- 2026-10-16: **iPhone participant picker (local, not deployed).** Browse → UA Gear uses `GET /api/gear-picks/me?catalog=1` and `PUT /api/gear-picks/me`. The catalog is omitted unless the phone asks, so the website banner stays the same size. Admin roster, deadline, launch, CSV, and the equipment spreadsheet stay on `/gear/admin`. An Xcode build and a signed-in walkthrough are still open.
 - 2026-10-08 (local, not deployed): Picker save/reload race protections, persistent recovery, narrow-screen budget visibility, and direct filter reset. See recovery acceptance below.
 
 - 2026-10-07: First build for 2027-28: schema and migration `0169_gear_picks`, roster seed script, participant pick page, admin results with CSV export, dashboard banner, `gear_picks` permission.
