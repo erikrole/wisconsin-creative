@@ -128,7 +128,7 @@ export default async function WorkforcePage() {
           ],
           ["Need attention", String(attention.length), attention.length === 0 ? "Every area stays covered" : "Areas losing half or more of their students"],
         ].map(([label, value, hint]) => (
-          <div key={label} className="rounded-lg border bg-card p-4">
+          <div key={label} className="rounded-xl border bg-card shadow-xs p-4">
             <dt className="text-sm text-muted-foreground">{label}</dt>
             <dd className="mt-1 text-2xl font-semibold">{value}</dd>
             <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
@@ -137,7 +137,7 @@ export default async function WorkforcePage() {
       </dl>
 
       {coverage.length > 0 && (
-        <section aria-label="Coverage by area" className="mb-8 rounded-lg border bg-card">
+        <section aria-label="Coverage by area" className="mb-8 overflow-hidden rounded-xl border bg-card shadow-xs">
           <div className="border-b p-4">
             <h2 className="text-base font-semibold">Coverage by area</h2>
             <p className="text-sm text-muted-foreground">Who stays and who graduates, so gaps show up before they happen. Select an area to jump to its people.</p>

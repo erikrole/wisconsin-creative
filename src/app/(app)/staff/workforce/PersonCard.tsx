@@ -52,7 +52,7 @@ export function PersonCard({ person }: { person: PersonCardData }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex min-h-14 w-full items-center gap-3 rounded-lg border bg-card p-3 text-left transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring"
+        className="flex min-h-14 w-full items-center gap-3 rounded-xl border bg-card shadow-xs p-3 text-left transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring"
       >
         <UserAvatar name={person.name} avatarUrl={person.avatarUrl} size="default" />
         <div className="min-w-0 flex-1">

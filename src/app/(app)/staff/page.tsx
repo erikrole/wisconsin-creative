@@ -591,7 +591,7 @@ export default function UsersPage() {
         )}
 
         {isInitialLoad ? (
-          <div className="rounded-md border">
+          <div className="rounded-xl border bg-card shadow-xs overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -667,7 +667,7 @@ export default function UsersPage() {
 
             {/* Desktop table */}
             <div className={view === "grid" ? "hidden" : "hidden sm:block"}>
-              <div className="rounded-md border">
+              <div className="rounded-xl border bg-card shadow-xs overflow-hidden">
                 <Table>
                   <TableHeader>
                     <TableRow>
