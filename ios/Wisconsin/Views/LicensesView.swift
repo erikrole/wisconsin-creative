@@ -342,6 +342,7 @@ struct LicensesView: View {
             }
         }
         .listStyle(.insetGrouped)
+        .listSectionSpacing(.compact)
     }
 
     @ViewBuilder
@@ -368,7 +369,7 @@ struct LicensesView: View {
                 )
             }
             .listRowBackground(Color.clear)
-            .listRowInsets(EdgeInsets())
+            .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
         }
     }
 
@@ -490,7 +491,7 @@ private struct LicenseFilterChip: View {
     }
 }
 
-/// Used and open slots as a row of capsules: blue is in use, green is open.
+/// Used and open slots as a row of capsules: solid blue is in use, light green is open.
 private struct LicenseSlotMeter: View {
     let usedSlots: Int
     let totalSlots: Int
@@ -504,7 +505,8 @@ private struct LicenseSlotMeter: View {
             }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(usedSlots) of \(totalSlots) slots in use")
+        .accessibilityLabel("License slots")
+        .accessibilityValue("\(usedSlots) of \(totalSlots) in use, \(max(totalSlots - usedSlots, 0)) open")
     }
 }
 
@@ -550,7 +552,7 @@ private struct ClaimLicenseHero: View {
                 .disabled(isPending)
             }
         }
-        .padding(18)
+        .padding(16)
         .background(Color.statusBackground(hasOpenSlot ? .green : .gray), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 20, style: .continuous)
@@ -566,6 +568,7 @@ private struct ClaimLicenseHero: View {
 private struct LicenseHoldersSection: View {
     let codes: [LicenseCode]
     let currentUserId: String?
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     private var holders: [LicenseCodeClaim] {
         codes
@@ -580,23 +583,40 @@ private struct LicenseHoldersSection: View {
         if !holders.isEmpty {
             Section {
                 ForEach(holders) { claim in
+                    let isYou = claim.userId == currentUserId
+                    let age = claimAge(claim.claimedAt)
                     HStack(spacing: 12) {
                         UserAvatarView(name: claim.user?.name ?? "", avatarUrl: claim.user?.avatarUrl, size: 32)
-                        Text(claim.user?.name ?? "")
-                            .font(.body)
-                            .lineLimit(1)
-                        if claim.userId == currentUserId {
-                            Text("you")
+                            .accessibilityHidden(true)
+                        if typeSize.isAccessibilitySize {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(claim.user?.name ?? "")
+                                    .font(.body)
+                                Text([isYou ? "you" : "", age].filter { !$0.isEmpty }.joined(separator: " · "))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer(minLength: 0)
+                        } else {
+                            Text(claim.user?.name ?? "")
+                                .font(.body)
+                                .lineLimit(1)
+                            if isYou {
+                                Text("you")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer(minLength: 8)
+                            Text(age)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
-                        Spacer(minLength: 8)
-                        Text(claimAge(claim.claimedAt))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
                     }
                     .frame(minHeight: 44)
-                    .accessibilityElement(children: .combine)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(claim.user?.name ?? "")
+                    .accessibilityValue([isYou ? "you" : "", age.isEmpty ? "" : "claimed \(age)"]
+                        .filter { !$0.isEmpty }.joined(separator: ", "))
                 }
             } header: {
                 Text("In use now · \(holders.count)")
@@ -622,28 +642,45 @@ private struct LicenseStaffSummary: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .firstTextBaseline) {
-                Text("\(openSlots) of \(totalSlots) slots open")
-                    .font(.headline)
-                    .accessibilityAddTraits(.isHeader)
-                Spacer(minLength: 8)
-                if expiringCount > 0 {
-                    StatusPill(label: "\(expiringCount) expiring", tone: .orange)
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .firstTextBaseline) {
+                    title
+                    Spacer(minLength: 8)
+                    pill
+                }
+                VStack(alignment: .leading, spacing: 6) {
+                    title
+                    pill
                 }
             }
             LicenseSlotMeter(usedSlots: totalSlots - openSlots, totalSlots: totalSlots)
             if canClaimForMe {
                 Button(action: onClaimForMe) {
-                    Label("Claim for me", systemImage: "key.horizontal")
+                    Label("Claim for me", systemImage: "key.horizontal.fill")
+                        .font(.headline)
+                        .foregroundStyle(.white)
                         .frame(maxWidth: .infinity, minHeight: 44)
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.borderedProminent)
                 .buttonBorderShape(.capsule)
                 .tint(Color.statusText(.green))
                 .disabled(isPending)
             }
         }
         .padding(.vertical, 4)
+    }
+
+    private var title: some View {
+        Text("\(openSlots) of \(totalSlots) slots open")
+            .font(.headline)
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    @ViewBuilder
+    private var pill: some View {
+        if expiringCount > 0 {
+            StatusPill(label: "\(expiringCount) expiring", tone: .orange)
+        }
     }
 }
 
@@ -661,46 +698,47 @@ private struct LicenseCodeRow: View {
         return "Unknown"
     }
 
+    /// Holder names when any seat is filled; otherwise the label, or "Open".
     private var subtitle: String {
+        if !claims.isEmpty { return claims.map(name).joined(separator: ", ") }
         let label = code.label?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let holders = claims.isEmpty ? "Open" : claims.map(name).joined(separator: " · ")
-        return [label, holders].filter { !$0.isEmpty }.joined(separator: " · ")
+        return label.isEmpty ? "Open" : "\(label) · Open"
     }
 
     var body: some View {
-        HStack(spacing: 10) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(code.code.isEmpty ? "License" : code.code)
-                    .font(.system(.subheadline, design: .monospaced).weight(.semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-            Spacer(minLength: 6)
-            HStack(spacing: -4) {
-                ForEach(0..<2, id: \.self) { index in
-                    seat(index < claims.count ? claims[index] : nil)
+        HStack(alignment: .top, spacing: 10) {
+            VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(code.code.isEmpty ? "License" : code.code)
+                        .font(.system(.subheadline, design: .monospaced).weight(.semibold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 10) { seats; status }
+                    VStack(alignment: .leading, spacing: 6) { seats; status }
                 }
             }
-            if code.status == .retired {
-                StatusPill(label: "Retired", tone: .gray)
-            } else {
-                LicenseExpiryChip(raw: code.expiresAt)
-            }
+            Spacer(minLength: 6)
             Image(systemName: "chevron.right")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.tertiary)
                 .accessibilityHidden(true)
+                .frame(minHeight: 28)
         }
+        .padding(.vertical, 4)
         .frame(minHeight: 44)
         .opacity(code.status == .retired ? 0.6 : 1)
         .contentShape(Rectangle())
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(code.code), \(subtitle), \(min(claims.count, 2)) of 2 slots in use")
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(code.code.isEmpty ? "License" : code.code)
+        .accessibilityValue("\(subtitle), \(min(claims.count, 2)) of 2 slots in use\(statusSpoken)")
         .accessibilityHint("Opens license details")
+        .accessibilityAddTraits(.isButton)
         .contextMenu {
             if revealsCode {
                 Button {
@@ -710,6 +748,29 @@ private struct LicenseCodeRow: View {
                 }
             }
         }
+    }
+
+    private var seats: some View {
+        HStack(spacing: 6) {
+            ForEach(0..<2, id: \.self) { index in
+                seat(index < claims.count ? claims[index] : nil)
+            }
+        }
+        // Avatars are fixed-size discs; capping their initials keeps them inside the circle.
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+    }
+
+    @ViewBuilder
+    private var status: some View {
+        if code.status == .retired {
+            StatusPill(label: "Retired", tone: .gray)
+        } else {
+            LicenseExpiryChip(raw: code.expiresAt)
+        }
+    }
+
+    private var statusSpoken: String {
+        code.status == .retired ? ", retired" : ", \(expirySummary(code.expiresAt))"
     }
 
     @ViewBuilder
