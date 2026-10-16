@@ -39,7 +39,6 @@ import {
   TrophyIcon,
   ChevronsUpDownIcon,
   UserIcon,
-  UserPlusIcon,
   MonitorPlayIcon,
 } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -116,7 +115,6 @@ const navGroups: NavGroup[] = [
       { label: "Scoreboard", href: "/scoreboard", icon: TrophyIcon },
       { label: "Accountability", href: "/accountability", icon: ShieldAlertIcon },
       { label: "Staff", href: "/staff", icon: UsersIcon },
-      { label: "Workforce", href: "/workforce", icon: UserPlusIcon, requiredRole: "ADMIN" },
       { label: "UA Gear Picks", href: "/gear/admin", icon: ShirtIcon, requiredRole: "ADMIN" },
     ],
   },

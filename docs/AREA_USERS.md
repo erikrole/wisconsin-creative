@@ -145,6 +145,7 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 6. Ensure audit logs include actor role, target owner, and exception metadata.
 
 ## Change Log
+- 2026-10-16: **Workforce is an admin-only tab under Staff.** `/workforce`, `/workforce/hiring`, and `/workforce/planning` moved to `/staff/workforce/*` with permanent redirects; the sidebar item is gone. A Staff layout shows Roster and Workforce tabs to admins only, and the Workforce layout still redirects non-admins (D-065). `/api/workforce/*` is unchanged. Local source tests, typecheck, and lint; authenticated browser proof pending.
 - 2026-10-16: **Users is now Staff on the web.** The roster and profiles moved from `/users` to `/staff` (including `/staff/[id]`, `/staff/org-chart`, `/staff/onboarding-status`); `/users` and `/users/*` permanently redirect. Sidebar, page title, search, and command palette say Staff (collaborators still see People). `/api/users` is unchanged, the analytics surface keeps its `users` name, and the iOS universal-link list keeps `/users/*` so old links still open. Local source tests, typecheck, and lint; authenticated browser proof pending.
 - 2026-10-11: **Hiring board recovery.** `/workforce/hiring` retries cycle and applicant load failures, keeps the last loaded board across same-cycle refreshes, and clears search/area/review filters when they hide every applicant. Local source-contract proof; authenticated browser proof waits on Managed previews.
 

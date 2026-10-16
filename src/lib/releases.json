@@ -1,6 +1,18 @@
 [
   {
     "date": "2026-10-16",
+    "title": "Workforce moves under Staff",
+    "type": "improvement",
+    "summary": "Workforce is now a tab on the Staff page instead of its own menu item. It is still visible to admins only.",
+    "details": [
+      "Admins see Roster and Workforce tabs at the top of Staff.",
+      "Hiring and Planning sit inside the Workforce tab.",
+      "Old Workforce links redirect to the new location."
+    ],
+    "platforms": ["Web"]
+  },
+  {
+    "date": "2026-10-16",
     "title": "Users is now Staff",
     "type": "improvement",
     "summary": "The Users page and menu item are now called Staff. Old Users links and bookmarks still take you to the right place.",
