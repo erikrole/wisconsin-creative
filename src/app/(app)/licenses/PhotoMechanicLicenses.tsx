@@ -129,7 +129,11 @@ function ClaimLicenseHero({
             One license code works on two machines. We pick an open slot for you and copy the code.
           </p>
           <SlotMeter usedSlots={totalSlots - openSlots} totalSlots={totalSlots} />
-          <p className="mt-1.5 text-xs text-muted-foreground">{openSlots} of {totalSlots} slots open</p>
+          <p className="mt-1.5 flex items-center gap-3 text-xs text-muted-foreground">
+            <span>{openSlots} of {totalSlots} slots open</span>
+            <span className="flex items-center gap-1"><span className="size-2 rounded-full bg-[var(--blue)]" />In use</span>
+            <span className="flex items-center gap-1"><span className="size-2 rounded-full bg-[var(--green)]/35" />Open</span>
+          </p>
         </div>
         <Button type="button" size="lg" className="h-12 shrink-0 px-6 text-base" onClick={onClaim}>
           <KeyRound data-icon="inline-start" />

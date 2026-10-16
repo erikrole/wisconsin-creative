@@ -83,6 +83,9 @@ export function LicenseTable({ codes, loading, onInspect }: Props) {
               <span className="mt-0.5 block truncate text-xs text-muted-foreground">
                 {[code.label, holderNames(code)].filter(Boolean).join(" · ")}
               </span>
+              {code.expiresAt && code.status !== "RETIRED" && (
+                <span className="mt-1 flex sm:hidden"><ExpiryChip expiresAt={code.expiresAt} /></span>
+              )}
             </span>
             <Seats code={code} />
             <span className="hidden w-28 shrink-0 justify-end sm:flex">
