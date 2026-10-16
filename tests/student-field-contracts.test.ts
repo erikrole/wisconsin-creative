@@ -351,10 +351,10 @@ describe("student field mobile contracts", () => {
     const models = source("ios/Wisconsin/Models/Models.swift");
     const scheduleModels = source("ios/Wisconsin/Models/ScheduleModels.swift");
     const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
-    const webAvailability = source("src/app/(app)/users/[id]/UserAvailabilityTab.tsx");
+    const webAvailability = source("src/app/(app)/staff/[id]/UserAvailabilityTab.tsx");
     const meRoute = source("src/app/api/me/route.ts");
     const auth = source("src/lib/auth.ts");
-    const userPage = source("src/app/(app)/users/[id]/page.tsx");
+    const userPage = source("src/app/(app)/staff/[id]/page.tsx");
     const availabilityRoute = source("src/app/api/users/[id]/availability/route.ts");
 
     expect(notifications).toContain("title: \"Push alerts\"");

@@ -71,7 +71,7 @@ async function notifyTimeOffReview(
 
   const payload = {
     availabilityBlockId: block.id,
-    href: `/users/${block.userId}?tab=availability`,
+    href: `/staff/${block.userId}?tab=availability`,
   };
   // Re-reviewing to a status the block already had dedupes to the existing row
   // (and stays silent) instead of failing the save on the unique key.

@@ -4,7 +4,7 @@ import { source } from "./_helpers/source";
 describe("collaborator affiliation-neutral copy and policy integrity", () => {
   it("does not present shared collaborator surfaces as BTN-only", () => {
     const schedule = source("src/app/(app)/schedule/_components/CollaboratorSchedule.tsx");
-    const users = source("src/app/(app)/users/page.tsx");
+    const users = source("src/app/(app)/staff/page.tsx");
 
     expect(schedule).toContain('description="Upcoming events and crew assignments."');
     expect(schedule).not.toContain("Big Ten Network events");

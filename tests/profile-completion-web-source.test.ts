@@ -5,7 +5,7 @@ describe("profile completion web wiring", () => {
   const wizard = readFileSync("src/components/profile-completion/ProfileCompletionWizard.tsx", "utf8");
   const notice = readFileSync("src/components/profile-completion/ProfileCompletionNotice.tsx", "utf8");
   const shell = readFileSync("src/components/AppShell.tsx", "utf8");
-  const profilePage = readFileSync("src/app/(app)/users/[id]/page.tsx", "utf8");
+  const profilePage = readFileSync("src/app/(app)/staff/[id]/page.tsx", "utf8");
   const banner = readFileSync("src/app/(app)/dashboard/profile-completion-banner.tsx", "utf8");
 
   it("mounts one responsive returning-user wizard in authenticated web chrome", () => {

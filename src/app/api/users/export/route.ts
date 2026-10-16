@@ -19,7 +19,7 @@ function canExportSensitiveContact(actorRole: string, targetRole: string): boole
 }
 
 // Derive student year from grad year using Sept→Aug academic calendar.
-// Mirrors src/app/(app)/users/types.ts deriveStudentYear so list and export agree.
+// Mirrors src/app/(app)/staff/types.ts deriveStudentYear so list and export agree.
 function deriveYear(
   gradYear: number | null,
   override: StudentYear | null,

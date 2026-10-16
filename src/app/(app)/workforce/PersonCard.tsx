@@ -166,7 +166,7 @@ function PersonSheet({ person, onClose }: { person: PersonCardData; onClose: () 
           <SheetDescription>
             {person.kind === "FULL_TIME" ? (person.title ?? "Full-time") : "Student"}
             {" · "}
-            <Link href={`/users/${person.id}`} className="underline underline-offset-2">
+            <Link href={`/staff/${person.id}`} className="underline underline-offset-2">
               Open full profile
             </Link>
           </SheetDescription>

@@ -741,7 +741,7 @@ export async function awardBadgeManually(args: ManualAwardArgs) {
             userId: args.userId,
             badgeDefinitionId: definition.id,
             studentBadgeId: award.id,
-            href: `/users/${args.userId}?tab=badges`,
+            href: `/staff/${args.userId}?tab=badges`,
           },
           channel: "IN_APP",
           sentAt: new Date(),

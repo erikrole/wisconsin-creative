@@ -121,7 +121,7 @@ describe("manual badge awards", () => {
         userId: "staff-1",
         type: "badge_awarded",
         payload: expect.objectContaining({
-          href: "/users/staff-1?tab=badges",
+          href: "/staff/staff-1?tab=badges",
         }),
       }),
     });

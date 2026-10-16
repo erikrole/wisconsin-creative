@@ -14,8 +14,8 @@ export function RosterRelatedLinks({ canOpenStaffTools }: { canOpenStaffTools: b
   const links: RelatedLink[] = [
     ...(canOpenStaffTools
       ? [
-          { href: "/users/org-chart", label: "Org chart", icon: Network },
-          { href: "/users/onboarding-status", label: "Onboarding status", icon: ClipboardList },
+          { href: "/staff/org-chart", label: "Org chart", icon: Network },
+          { href: "/staff/onboarding-status", label: "Onboarding status", icon: ClipboardList },
         ]
       : []),
     { href: "/scoreboard", label: "Team Scoreboard", icon: Trophy },

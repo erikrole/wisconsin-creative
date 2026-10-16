@@ -419,7 +419,7 @@ export default function UsersPage() {
   return (
     <FadeUp>
       {/* Header */}
-      <PageHeader title={isCollaboratorDirectory ? "People" : "Users"} className="mb-5">
+      <PageHeader title={isCollaboratorDirectory ? "People" : "Staff"} className="mb-5">
         {canEdit && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -436,10 +436,10 @@ export default function UsersPage() {
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuItem asChild>
-                  <Link href="/users/onboarding-status"><ClipboardList />Onboarding status</Link>
+                  <Link href="/staff/onboarding-status"><ClipboardList />Onboarding status</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/users/org-chart"><Network />Org chart</Link>
+                  <Link href="/staff/org-chart"><Network />Org chart</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <a href={exportHref} download><Download />Export current roster</a>

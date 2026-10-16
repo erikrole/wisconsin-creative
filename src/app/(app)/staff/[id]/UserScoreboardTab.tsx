@@ -569,7 +569,7 @@ function UserScoreboardExplorer({
   // response only knows its own subtotal, and the season card has to be able to
   // say what fraction of the season is on screen.
   const [seasonResolvedGames, setSeasonResolvedGames] = useState<number | null>(null);
-  const scoreboardReturnTo = returnTo ?? `/users/${userId}?tab=scoreboard`;
+  const scoreboardReturnTo = returnTo ?? `/staff/${userId}?tab=scoreboard`;
 
   const requestUrl = useMemo(() => {
     const params = new URLSearchParams({ limit: String(INITIAL_LIMIT) });

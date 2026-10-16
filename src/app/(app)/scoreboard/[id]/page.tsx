@@ -9,7 +9,7 @@ import { requireAuth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { parseTeamScoreboardFilters, parseTeamScoreboardSort, personScoreboardPath, teamScoreboardPath } from "@/lib/scoreboard-explorer";
 import { canReadSharedScoreboard } from "@/lib/user-visibility";
-import UserScoreboardTab from "../../users/[id]/UserScoreboardTab";
+import UserScoreboardTab from "../../staff/[id]/UserScoreboardTab";
 
 function searchFromNextQuery(query: Record<string, string | string[] | undefined>): URLSearchParams {
   const params = new URLSearchParams();

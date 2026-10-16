@@ -6,7 +6,7 @@ import { requireAuth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
 import { STANDING_LABELS, TERM_LABELS } from "@/lib/hiring/contract";
-import { deriveStudentYear } from "../users/types";
+import { deriveStudentYear } from "../staff/types";
 import { PersonCard } from "./PersonCard";
 import RosterImportButton from "./RosterImportButton";
 import { AREA_LABEL, AREA_OPTIONS } from "./hiring/types";

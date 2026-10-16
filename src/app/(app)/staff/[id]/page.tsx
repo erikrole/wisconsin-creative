@@ -269,7 +269,7 @@ export default function UserDetailPage() {
     reload: loadUser,
   } = useFetch<UserDetail>({
     url: `/api/users/${id}`,
-    returnTo: `/users/${id}`,
+    returnTo: `/staff/${id}`,
   });
 
   // We need local user state for optimistic updates (avatar, active toggle)
@@ -577,7 +577,7 @@ export default function UserDetailPage() {
                 Retry
               </Button>
               <Button variant="ghost" className="h-10 active:scale-[0.96]" asChild>
-                <Link href="/users">Back to users</Link>
+                <Link href="/staff">Back to staff</Link>
               </Button>
             </div>
           </AlertDescription>

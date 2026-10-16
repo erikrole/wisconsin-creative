@@ -605,7 +605,7 @@ export default function UserAvailabilityTab({
     reload,
   } = useFetch<AvailabilityBlock[]>({
     url: `/api/users/${userId}/availability`,
-    returnTo: `/users/${userId}`,
+    returnTo: `/staff/${userId}`,
     transform: (json) => sortBlocks((json as { data: AvailabilityBlock[] }).data ?? []),
   });
 
