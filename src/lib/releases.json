@@ -18,6 +18,57 @@
     "pr": 494
   },
   {
+    "date": "2026-10-16",
+    "title": "Full reports on iPhone",
+    "type": "feature",
+    "summary": "Staff can open the rest of the reports from the iPhone Reports screen. Spreadsheets still download on the web.",
+    "details": [
+      "Utilization, Checkouts, Scans, Missing Units, and Badges are read-only on the phone.",
+      "Checkouts and utilization keep a simple chart for the period you pick.",
+      "Scans can be limited to checkout or check-in, and Missing Units can be limited to a location or category.",
+      "Usage appears only for the account allowed to see those counts.",
+      "CSV downloads stay on the web."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 490
+  },
+  {
+    "date": "2026-10-16",
+    "title": "Blasts stay after you dismiss them",
+    "type": "improvement",
+    "summary": "The phone keeps blasts you have already seen, and a kiosk handoff no longer crashes when the saved request is incomplete.",
+    "details": [
+      "Browse has a Blasts list and a detail screen for broadcasts you have opened on this phone.",
+      "Got it still clears the home banner. The message stays in Blasts so you can read it again.",
+      "A blast this phone has never fetched is not in that list.",
+      "Kiosk checkout and pickup retries report an error instead of crashing when the handoff request has no address or body."
+    ],
+    "platforms": [
+      "iOS",
+      "Kiosk"
+    ],
+    "pr": 489
+  },
+  {
+    "date": "2026-10-16",
+    "title": "Events in the iOS app",
+    "type": "feature",
+    "summary": "The iOS app can browse events, including linked gear and bookings, from the same calendar the website uses.",
+    "details": [
+      "Browse includes Events for anyone who can see the calendar.",
+      "The list shows what is coming up, or the past 30 days.",
+      "An event shows when it is, where it is, who it came from, and the bookings and gear linked to it.",
+      "Open in Schedule shows the crew and call times that were already on Schedule.",
+      "Creating or editing an event stays on the website."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 487
+  },
+  {
     "date": "2026-10-15",
     "title": "Lighter pages on the web",
     "type": "improvement",
