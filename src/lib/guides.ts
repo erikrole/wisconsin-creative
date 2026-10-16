@@ -102,10 +102,25 @@ export async function listGuides(opts: {
   search?: string;
   audience?: GuideAudience;
 }): Promise<GuideListItem[]> {
+  const q = opts.search?.trim().toLowerCase();
   const guides = await db.resource.findMany({
     where: {
       ...(opts.published !== undefined && { published: opts.published }),
       ...(opts.category && { category: opts.category }),
+      // Command search hits this on each query. Match in the database first so
+      // a specific phrase does not pull every guide body into the function.
+      // Empty markdown stays in the candidate set: those legacy rows keep their
+      // body in `content`, which the in-memory pass below still reads.
+      ...(q ? {
+        OR: [
+          { title: { contains: q, mode: "insensitive" as const } },
+          { category: { contains: q, mode: "insensitive" as const } },
+          { markdown: { contains: q, mode: "insensitive" as const } },
+          { author: { name: { contains: q, mode: "insensitive" as const } } },
+          { markdown: null },
+          { markdown: "" },
+        ],
+      } : {}),
     },
     select: {
       id: true,
@@ -128,8 +143,6 @@ export async function listGuides(opts: {
     },
     orderBy: { updatedAt: "desc" },
   });
-
-  const q = opts.search?.trim().toLowerCase();
 
   const prepared = guides.map((guide) => {
     const markdown = legacyGuideMarkdown(guide.markdown, guide.content);

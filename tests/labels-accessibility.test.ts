@@ -15,4 +15,10 @@ describe("labels page accessibility", () => {
     expect(source).not.toContain("Open item family ${family.name}");
     expect(source).not.toContain("Select item family ${item.title}");
   });
+
+  it("loads an alphabetical page and skips the catalog status counts", () => {
+    const source = readFileSync("src/app/(app)/labels/page.tsx", "utf8");
+
+    expect(source).toContain('limit: "200", sort: "assetTag", counts: "0"');
+  });
 });

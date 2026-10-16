@@ -73,6 +73,15 @@ describe("guide service", () => {
     expect(guides).toHaveLength(1);
     expect(guides[0]?.id).toBe("guide-1");
     expect(guides[0]?.summary).not.toContain("minn-cam-reset");
+    expect(db.resource.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        published: true,
+        OR: expect.arrayContaining([
+          { markdown: { contains: "minn-cam-reset", mode: "insensitive" } },
+          { author: { name: { contains: "minn-cam-reset", mode: "insensitive" } } },
+        ]),
+      }),
+    }));
   });
 
   it("preserves featured rank when only the rank changes on an already featured guide", async () => {

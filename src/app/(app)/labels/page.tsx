@@ -197,7 +197,10 @@ export default function LabelsPage() {
 
   // Build fetch URL from search state
   const fetchUrl = (() => {
-    const params = new URLSearchParams({ limit: "200" });
+    // Alphabetical page, without the catalog status chips. The list below
+    // re-sorts this page by title; ranking the whole catalog first only to
+    // throw that order away loaded thousands of rows.
+    const params = new URLSearchParams({ limit: "200", sort: "assetTag", counts: "0" });
     if (search) params.set("q", search);
     return `/api/assets?${params}`;
   })();

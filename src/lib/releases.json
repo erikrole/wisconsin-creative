@@ -1,6 +1,23 @@
 [
   {
     "date": "2026-10-16",
+    "title": "Faster search and item lists",
+    "type": "improvement",
+    "summary": "Searching the catalog and opening item families reads less from the database, and the family photo control shows when it has keyboard focus.",
+    "details": [
+      "Command search and scans skip the six catalog-wide status counts the Items page still uses.",
+      "Item families count units in the database instead of loading every unit onto the list.",
+      "Guide search reads matching guides instead of every guide body.",
+      "Print Labels asks for an alphabetical page instead of ranking the whole catalog first.",
+      "The item-family photo button shows its Edit label and a focus ring from the keyboard."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 499
+  },
+  {
+    "date": "2026-10-16",
     "title": "Kits and batteries on iPhone",
     "type": "feature",
     "summary": "Staff and students can read kits and item families on iPhone. Staff can also open Battery Ops to see what is low and who has batteries out.",
