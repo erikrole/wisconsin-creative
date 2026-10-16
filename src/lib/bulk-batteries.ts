@@ -1,3 +1,5 @@
+import type { Prisma } from "@prisma/client";
+
 const BATTERY_TERMS = [
   "battery",
   "batteries",
@@ -24,4 +26,23 @@ export function isBatterySku(sku: {
 }) {
   const text = [sku.name, sku.category ?? "", sku.categoryRel?.name ?? ""].join(" ").toLowerCase();
   return BATTERY_TERM_PATTERNS.some((pattern) => pattern.test(text));
+}
+
+/**
+ * Database prefilter for Battery Ops. `contains` is a superset of the
+ * word-boundary check in `isBatterySku`, so callers still apply that check
+ * and drop substring false positives.
+ */
+export function batterySkuCandidateWhere(): Prisma.BulkSkuWhereInput {
+  const contains = (term: string): Prisma.StringFilter => ({
+    contains: term,
+    mode: "insensitive",
+  });
+  return {
+    OR: BATTERY_TERMS.flatMap((term) => [
+      { name: contains(term) },
+      { category: contains(term) },
+      { categoryRel: { is: { name: contains(term) } } },
+    ]),
+  };
 }
