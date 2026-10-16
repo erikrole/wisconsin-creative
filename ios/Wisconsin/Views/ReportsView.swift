@@ -39,6 +39,9 @@ final class ReportsViewModel {
     @ObservationIgnored private var activeWindow: Int?
 
     var hasAnyData: Bool { utilization != nil || checkouts != nil }
+    /// Owner-only. Hidden until `/api/me` says this account may open Usage.
+    var showsUsageReport = false
+    @ObservationIgnored private let usageAccess = ReportSession<Bool>()
 
     init(
         utilizationLoader: @escaping UtilizationLoader = { days in
@@ -124,6 +127,17 @@ final class ReportsViewModel {
         isLoading = false
     }
 
+    func loadUsageAccess(force: Bool = false) async {
+        guard let token = usageAccess.begin(key: "access", force: force) else { return }
+        do {
+            let allowed = try await APIClient.shared.canViewUsageAnalytics()
+            guard usageAccess.succeed(token, value: allowed, incomplete: false) else { return }
+            showsUsageReport = allowed
+        } catch {
+            usageAccess.fail(token, message: error.localizedDescription)
+        }
+    }
+
     private func loadUtilization(days: Int) async -> ReportLoadOutcome<UtilizationReport> {
         do {
             return .success(try await utilizationLoader(days))
@@ -189,7 +203,11 @@ struct ReportsView: View {
         .navigationTitle("Reports")
         .navigationBarTitleDisplayMode(.inline)
         .task(id: vm.days) { await vm.load() }
-        .refreshable { await vm.load(forceRefresh: true) }
+        .task { await vm.loadUsageAccess() }
+        .refreshable {
+            await vm.load(forceRefresh: true)
+            await vm.loadUsageAccess(force: true)
+        }
     }
 
     private var content: some View {
@@ -217,8 +235,50 @@ struct ReportsView: View {
             statusSection
             mostUsedSection
             shelfSection
+            librarySection
         }
         .listStyle(.insetGrouped)
+    }
+
+    // MARK: Library
+
+    private var librarySection: some View {
+        Section {
+            NavigationLink {
+                UtilizationReportView()
+            } label: {
+                Label("Utilization", systemImage: "chart.pie")
+            }
+            NavigationLink {
+                CheckoutReportView()
+            } label: {
+                Label("Checkouts", systemImage: "arrow.left.arrow.right")
+            }
+            NavigationLink {
+                MissingUnitsReportView()
+            } label: {
+                Label("Missing Units", systemImage: "shippingbox")
+            }
+            NavigationLink {
+                ScanReportView()
+            } label: {
+                Label("Scans", systemImage: "barcode.viewfinder")
+            }
+            NavigationLink {
+                BadgeReportView()
+            } label: {
+                Label("Badges", systemImage: "rosette")
+            }
+            if vm.showsUsageReport {
+                NavigationLink {
+                    UsageReportView()
+                } label: {
+                    Label("Usage", systemImage: "chart.bar.xaxis")
+                }
+            }
+        } header: {
+            Text("Full reports")
+        }
     }
 
     // MARK: Summary
