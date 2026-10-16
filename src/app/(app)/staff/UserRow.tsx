@@ -283,3 +283,31 @@ export const UserMobileCard = memo(function UserMobileCard({ user }: { user: Use
     </Link>
   );
 });
+
+/* ── Headshot Grid Card ───────────────────────────────── */
+
+export const UserGridCard = memo(function UserGridCard({ user }: { user: UserRowType }) {
+  const subtitle = titleLabel(user) ?? areaLabel(user.primaryArea);
+
+  return (
+    <Link
+      href={`/staff/${user.id}`}
+      className="block rounded-lg no-underline outline-none transition-[scale] active:scale-[0.96] focus-visible:ring-[3px] focus-visible:ring-ring/50"
+    >
+      <Card className="h-full transition-[box-shadow] duration-150 hover:shadow-sm">
+        <CardContent className="flex flex-col items-center gap-2 p-4 text-center">
+          <PresenceAvatar user={user} size="lg" />
+          <div className="flex w-full min-w-0 flex-col items-center gap-0.5">
+            <UserNameLine
+              user={user}
+              className="max-w-full justify-center text-[13.5px] leading-tight"
+              style={{ fontFamily: "var(--font-heading)", fontWeight: 600 }}
+            />
+            {subtitle ? <span className="w-full truncate text-xs text-muted-foreground">{subtitle}</span> : null}
+          </div>
+          <RoleBadge role={user.role} affiliationLabel={rosterAffiliationLabel(user)} />
+        </CardContent>
+      </Card>
+    </Link>
+  );
+});

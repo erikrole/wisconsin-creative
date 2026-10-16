@@ -26,7 +26,8 @@ describe("Users sweeping ownership contracts", () => {
     const rail = source("src/components/OperationalStatusRail.tsx");
 
     expect(page).toContain('className="mb-5"');
-    expect(page).toContain('detailsLabel="Roster breakdown"');
+    expect(page).toContain("<RoleTabs");
+    expect(page).not.toContain('detailsLabel="Roster breakdown"');
     expect(page).toContain("Title / area");
     expect(page).toContain('label="Last active" sortKey="lastActive"');
     expect(page).not.toContain('>Location</TableHead>');

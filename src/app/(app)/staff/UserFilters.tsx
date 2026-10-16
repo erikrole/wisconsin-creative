@@ -13,14 +13,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Location } from "./types";
-import { AREA_LABELS, ROLE_OPTIONS, STUDENT_YEAR_OPTIONS } from "./types";
+import { AREA_LABELS, STUDENT_YEAR_OPTIONS } from "./types";
 import { SPORT_CODES, sportLabel } from "@/lib/sports";
 
 export default function UserFilters({
   search,
   onSearchChange,
-  roleFilter,
-  onRoleChange,
   locationFilter,
   onLocationChange,
   locations,
@@ -44,8 +42,6 @@ export default function UserFilters({
 }: {
   search: string;
   onSearchChange: (v: string) => void;
-  roleFilter: string;
-  onRoleChange: (v: string) => void;
   locationFilter: string;
   onLocationChange: (v: string) => void;
   locations: Location[];
@@ -69,8 +65,7 @@ export default function UserFilters({
 }) {
   const [draftSearch, setDraftSearch] = useState(search);
   const [filtersOpen, setFiltersOpen] = useState(
-    !!roleFilter ||
-      !!locationFilter ||
+    !!locationFilter ||
       !!yearFilter ||
       !!sportFilter ||
       !!areaFilter ||
@@ -79,7 +74,6 @@ export default function UserFilters({
   );
   const previousFilterCountRef = useRef(0);
   const activeFilterCount =
-    (roleFilter ? 1 : 0) +
     (locationFilter ? 1 : 0) +
     (areaFilter ? 1 : 0) +
     (yearFilter ? 1 : 0) +
@@ -89,13 +83,6 @@ export default function UserFilters({
   const hasFilters = activeFilterCount > 0;
   const locationFilterUnavailable = locationsLoading || locationsError;
   const activeFilters: OperationalActiveFilter[] = [
-    ...(roleFilter
-      ? [{
-        key: "role",
-        label: `Role: ${ROLE_OPTIONS.find((o) => o.value === roleFilter)?.label ?? roleFilter}`,
-        onRemove: () => onRoleChange(""),
-      }]
-      : []),
     ...(locationFilter
       ? [{
         key: "location",
@@ -222,17 +209,6 @@ export default function UserFilters({
       </div>
       {filtersOpen && (
         <div className="flex flex-wrap items-center gap-2 border-t border-border/50 pt-2">
-          <Select value={roleFilter || "__all__"} onValueChange={(v) => onRoleChange(v === "__all__" ? "" : v)}>
-            <SelectTrigger size="sm" className="h-10 w-[130px]">
-              <SelectValue placeholder="All roles" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all__">All roles</SelectItem>
-              {ROLE_OPTIONS.map((o) => (
-                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
           {!directoryMode && <Select
             value={locationFilter || "__all__"}
             onValueChange={(v) => onLocationChange(v === "__all__" ? "" : v)}

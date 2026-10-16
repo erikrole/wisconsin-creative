@@ -5,7 +5,9 @@ import { AnimatePresence, motion } from "motion/react";
 import EmptyState from "@/components/EmptyState";
 import type { Location, Role, SortKey, ListResponse } from "./types";
 import { AREA_LABELS, ROLE_OPTIONS, STUDENT_YEAR_OPTIONS } from "./types";
-import { UserTableRow, UserMobileCard } from "./UserRow";
+import { UserTableRow, UserMobileCard, UserGridCard } from "./UserRow";
+import RoleTabs from "./RoleTabs";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import UserFilters from "./UserFilters";
 import BulkBadgeAwardDialog from "./BulkBadgeAwardDialog";
 import OnboardingDialog from "@/components/onboarding/OnboardingDialog";
@@ -21,14 +23,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import Link from "next/link";
-import { ArrowDown, ArrowUp, ArrowUpDown, Award, ClipboardList, Download, ImageOff, MoreHorizontal, Network, UserPlus, UserRoundX, WifiOff } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Award, ClipboardList, Download, ImageOff, LayoutGrid, List, MoreHorizontal, Network, UserPlus, UserRoundX, WifiOff } from "lucide-react";
 import { useFetch } from "@/hooks/use-fetch";
 import { PageHeader } from "@/components/PageHeader";
 import { FadeUp } from "@/components/ui/motion";
 import { useUrlState, serializeOptionalString } from "@/hooks/use-url-state";
 import { SPORT_CODES } from "@/lib/sports";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { OperationalMetricCard } from "@/components/OperationalFeedback";
 import { OperationalStatusRail, type OperationalStatusRailItem } from "@/components/OperationalStatusRail";
 import { RosterRelatedLinks } from "./_components/RosterRelatedLinks";
 
@@ -57,6 +58,14 @@ function parseStringParam(raw: string | null): string {
 
 function parseRoleParam(raw: string | null): string {
   return raw && ROLE_VALUES.has(raw) ? raw : "";
+}
+
+function parseViewParam(raw: string | null): "table" | "grid" {
+  return raw === "grid" ? "grid" : "table";
+}
+
+function serializeViewParam(value: "table" | "grid"): string | null {
+  return value === "grid" ? "grid" : null;
 }
 
 function parseYearParam(raw: string | null): string {
@@ -173,12 +182,10 @@ function SortableHead({
 function RosterSummary({
   stats,
   canEdit,
-  onRoleChange,
   onShowInactive,
 }: {
   stats: NonNullable<ListResponse["stats"]>;
   canEdit: boolean;
-  onRoleChange: (role: string) => void;
   onShowInactive: () => void;
 }) {
   const items: OperationalStatusRailItem[] = [
@@ -190,16 +197,6 @@ function RosterSummary({
       orientation={{ label: "Active roster", value: String(stats.active), icon: UserPlus }}
       items={items}
       allClearLabel={items.length === 0 ? "Roster profiles are complete" : undefined}
-      detailsLabel="Roster breakdown"
-      details={(
-        <div className="grid gap-2 sm:grid-cols-5">
-          <OperationalMetricCard label="All matching" value={stats.total} />
-          <OperationalMetricCard label="Students" value={stats.byRole.STUDENT} onClick={() => onRoleChange("STUDENT")} />
-          <OperationalMetricCard label="Staff" value={stats.byRole.STAFF} onClick={() => onRoleChange("STAFF")} />
-          <OperationalMetricCard label="Admins" value={stats.byRole.ADMIN} onClick={() => onRoleChange("ADMIN")} />
-          <OperationalMetricCard label="Collaborators" value={stats.byRole.COLLABORATOR} onClick={() => onRoleChange("COLLABORATOR")} />
-        </div>
-      )}
     />
   );
 }
@@ -237,6 +234,11 @@ export default function UsersPage() {
     "area",
     parseAreaParam,
     serializeOptionalString,
+  );
+  const [view, setView] = useUrlState<"table" | "grid">(
+    "view",
+    parseViewParam,
+    serializeViewParam,
   );
   const [sort, setSort] = useUrlState<SortKey | string>(
     "sort",
@@ -480,8 +482,6 @@ export default function UsersPage() {
         <UserFilters
           search={search}
           onSearchChange={setSearch}
-          roleFilter={roleFilter}
-          onRoleChange={setRoleFilter}
           locationFilter={locationFilter}
           onLocationChange={setLocationFilter}
           locations={locations}
@@ -515,8 +515,22 @@ export default function UsersPage() {
           </Alert>
         )}
 
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          {isCollaboratorDirectory ? <span /> : <RoleTabs value={roleFilter} stats={stats} onChange={setRoleFilter} />}
+          <ToggleGroup
+            type="single"
+            value={view}
+            onValueChange={(next) => { if (next === "table" || next === "grid") setView(next); }}
+            aria-label="Roster layout"
+            className="hidden sm:inline-flex"
+          >
+            <ToggleGroupItem value="table" aria-label="Table view"><List className="size-4" /></ToggleGroupItem>
+            <ToggleGroupItem value="grid" aria-label="Photo grid view"><LayoutGrid className="size-4" /></ToggleGroupItem>
+          </ToggleGroup>
+        </div>
+
         {stats && !isInitialLoad && !loadError && (
-          <RosterSummary stats={stats} canEdit={canEdit} onRoleChange={setRoleFilter} onShowInactive={() => setShowInactive(true)} />
+          <RosterSummary stats={stats} canEdit={canEdit} onShowInactive={() => setShowInactive(true)} />
         )}
 
         {isInitialLoad ? (
@@ -578,8 +592,17 @@ export default function UsersPage() {
           />
         ) : (
           <>
+            {/* Desktop photo grid */}
+            {view === "grid" && (
+              <div className="hidden sm:grid grid-cols-3 gap-3 lg:grid-cols-4 xl:grid-cols-5">
+                {users.map((user) => (
+                  <UserGridCard key={user.id} user={user} />
+                ))}
+              </div>
+            )}
+
             {/* Desktop table */}
-            <div className="hidden sm:block">
+            <div className={view === "grid" ? "hidden" : "hidden sm:block"}>
               <div className="rounded-md border">
                 <Table>
                   <TableHeader>
