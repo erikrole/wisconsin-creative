@@ -1112,6 +1112,12 @@ final class APIClient {
         return resp.data
     }
 
+    func myLicenseHistory() async throws -> [LicenseHistoryEntry] {
+        let req = request(path: "/api/licenses/my/history")
+        let resp: DataWrapper<[LicenseHistoryEntry]> = try await perform(req)
+        return resp.data
+    }
+
     func claimLicense(id: String) async throws -> LicenseClaimResult {
         let req = request(path: "/api/licenses/\(id)/claim", method: "POST")
         let resp: DataWrapper<LicenseClaimResult> = try await perform(req)

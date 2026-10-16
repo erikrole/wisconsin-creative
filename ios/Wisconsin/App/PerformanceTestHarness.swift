@@ -511,6 +511,7 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
             return AppRuntimeMode.performanceScenario == .resourcesLicensesOpen
                 ? FixtureAPI.noLicense
                 : FixtureAPI.myLicense
+        case "/api/licenses/my/history": return FixtureAPI.licenseHistory
         case "/api/me":
             return AppRuntimeMode.performanceScenario == .previewChrome
                 ? PreviewChromeFixtures.me
@@ -1108,6 +1109,15 @@ private enum FixtureAPI {
         ] }
         """)
     }
+
+    static let licenseHistory = json("""
+    { "data": [
+      { "id": "c1", "claimedAt": "2026-08-16T14:00:00.000Z", "releasedAt": null,
+        "licenseCode": { "id": "l1", "label": "Photo Mechanic Seat 1", "expiresAt": "2026-12-31T00:00:00.000Z" } },
+      { "id": "c0", "claimedAt": "2026-05-02T14:00:00.000Z", "releasedAt": "2026-06-20T18:00:00.000Z",
+        "licenseCode": { "id": "l2", "label": "Photo Mechanic Seat 2", "expiresAt": "2026-12-31T00:00:00.000Z" } }
+    ], "limit": 20 }
+    """)
 
     static let noLicense = json("""
     { "data": null }

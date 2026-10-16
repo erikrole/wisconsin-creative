@@ -154,9 +154,9 @@ describe("iOS in-app long press", () => {
    */
   it("never copies a license code the row is hiding", () => {
     const menu = licenses.slice(licenses.indexOf(".contextMenu {"));
-    expect(menu).toContain("if canRevealCode, !code.code.isEmpty {");
+    expect(menu).toContain("if revealsCode {");
     expect(menu).toContain('Label("Copy License Code", systemImage: "doc.on.doc")');
-    expect(licenses).toContain('canRevealCode && !code.code.isEmpty ? code.code : "Code hidden until claimed"');
+    expect(licenses).toContain("(isStaffOrAdmin || isOwn) && !code.code.isEmpty");
   });
 });
 
