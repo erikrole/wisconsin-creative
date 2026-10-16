@@ -8,9 +8,9 @@ enum ReportFormatting {
             .split(separator: " ")
             .map { word -> String in
                 switch word.lowercased() {
-                case "ios": "iOS"
-                case "macos": "macOS"
-                case "·": "·"
+                case "ios": return "iOS"
+                case "macos": return "macOS"
+                case "·": return "·"
                 default:
                     let lower = word.lowercased()
                     guard let first = lower.first else { return "" }
