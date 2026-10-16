@@ -29,7 +29,7 @@ export function ProfileRelatedLinks({
     ...(canOpenStaffTools
       ? [
           { href: `/bookings?requesterUserId=${encodeURIComponent(userId)}`, label: "Bookings", icon: ShoppingCart },
-          { href: "/users/org-chart", label: "Org chart", icon: Network },
+          { href: "/staff/org-chart", label: "Org chart", icon: Network },
         ]
       : []),
     { href: "/scoreboard", label: "Team Scoreboard", icon: Trophy },

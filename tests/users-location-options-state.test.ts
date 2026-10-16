@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 describe("users location options state", () => {
   it("does not silently treat failed form-options locations as no-location user data", () => {
-    const source = readFileSync("src/app/(app)/users/page.tsx", "utf8");
+    const source = readFileSync("src/app/(app)/staff/page.tsx", "utf8");
 
     expect(source).toContain("error: formOptionsError");
     expect(source).toContain("reload: reloadFormOptions");
@@ -26,7 +26,7 @@ describe("users location options state", () => {
   });
 
   it("marks the roster location filter unavailable when location options are loading or failed", () => {
-    const source = readFileSync("src/app/(app)/users/UserFilters.tsx", "utf8");
+    const source = readFileSync("src/app/(app)/staff/UserFilters.tsx", "utf8");
 
     expect(source).toContain("locationsLoading");
     expect(source).toContain("locationsError");

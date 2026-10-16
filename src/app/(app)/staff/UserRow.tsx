@@ -9,6 +9,7 @@ import { UserAvatar } from "@/components/UserAvatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { TableRow, TableCell } from "@/components/ui/table";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { cn } from "@/lib/utils";
 
 const ACTIVE_NOW_MS = 1000 * 60 * 5;
@@ -169,6 +170,43 @@ function UserNameLine({
   );
 }
 
+/* ── Quick view (hover card) ───────────────────────────── */
+
+function UserQuickView({ user }: { user: UserRowType }) {
+  const details = [
+    { label: "Title", value: titleLabel(user) ?? areaLabel(user.primaryArea) },
+    { label: "Location", value: user.location },
+    { label: "Email", value: user.email || null },
+    { label: "Phone", value: user.phone },
+    { label: "Last active", value: user.lastActiveAt ? lastActiveLabel(user.lastActiveAt) : null },
+  ].filter((row): row is { label: string; value: string } => Boolean(row.value));
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-3">
+        <PresenceAvatar user={user} size="lg" />
+        <div className="flex min-w-0 flex-col gap-1">
+          <span className="truncate text-sm font-semibold">{user.name}</span>
+          <RoleBadge role={user.role} affiliationLabel={rosterAffiliationLabel(user)} />
+        </div>
+      </div>
+      {details.length > 0 && (
+        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+          {details.map((row) => (
+            <div key={row.label} className="contents">
+              <dt className="text-muted-foreground">{row.label}</dt>
+              <dd className="truncate">{row.value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+      <Link href={`/staff/${user.id}`} className="text-xs font-medium text-primary underline-offset-4 hover:underline">
+        Open profile
+      </Link>
+    </div>
+  );
+}
+
 /* ── Desktop Table Row ────────────────────────────────── */
 
 export const UserTableRow = memo(function UserTableRow({ user }: { user: UserRowType }) {
@@ -180,10 +218,12 @@ export const UserTableRow = memo(function UserTableRow({ user }: { user: UserRow
       tabIndex={0}
       role="link"
       aria-label={`View ${user.name}`}
-      onClick={() => router.push(`/users/${user.id}`)}
-      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); router.push(`/users/${user.id}`); } }}
+      onClick={() => router.push(`/staff/${user.id}`)}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); router.push(`/staff/${user.id}`); } }}
     >
       <TableCell className="w-[26rem]">
+        <HoverCard openDelay={400} closeDelay={100}>
+        <HoverCardTrigger asChild>
         <div className="flex items-center gap-3 min-w-0">
           <PresenceAvatar
             user={user}
@@ -207,6 +247,11 @@ export const UserTableRow = memo(function UserTableRow({ user }: { user: UserRow
             ) : null}
           </div>
         </div>
+        </HoverCardTrigger>
+        <HoverCardContent className="w-80">
+          <UserQuickView user={user} />
+        </HoverCardContent>
+        </HoverCard>
       </TableCell>
       <TableCell className="w-28">
         <RoleBadge role={user.role} affiliationLabel={rosterAffiliationLabel(user)} />
@@ -230,7 +275,7 @@ export const UserMobileCard = memo(function UserMobileCard({ user }: { user: Use
 
   return (
     <Link
-      href={`/users/${user.id}`}
+      href={`/staff/${user.id}`}
       className="block rounded-lg no-underline outline-none transition-[scale] active:scale-[0.96] focus-visible:ring-[3px] focus-visible:ring-ring/50"
     >
       <Card className="transition-[box-shadow] duration-150 hover:shadow-sm">
@@ -278,6 +323,34 @@ export const UserMobileCard = memo(function UserMobileCard({ user }: { user: Use
               ))}
             </div>
           )}
+        </CardContent>
+      </Card>
+    </Link>
+  );
+});
+
+/* ── Headshot Grid Card ───────────────────────────────── */
+
+export const UserGridCard = memo(function UserGridCard({ user }: { user: UserRowType }) {
+  const subtitle = titleLabel(user) ?? areaLabel(user.primaryArea);
+
+  return (
+    <Link
+      href={`/staff/${user.id}`}
+      className="block rounded-lg no-underline outline-none transition-[scale] active:scale-[0.96] focus-visible:ring-[3px] focus-visible:ring-ring/50"
+    >
+      <Card className="h-full transition-[box-shadow] duration-150 hover:shadow-sm">
+        <CardContent className="flex flex-col items-center gap-2 p-4 text-center">
+          <PresenceAvatar user={user} size="lg" />
+          <div className="flex w-full min-w-0 flex-col items-center gap-0.5">
+            <UserNameLine
+              user={user}
+              className="max-w-full justify-center text-[13.5px] leading-tight"
+              style={{ fontFamily: "var(--font-heading)", fontWeight: 600 }}
+            />
+            {subtitle ? <span className="w-full truncate text-xs text-muted-foreground">{subtitle}</span> : null}
+          </div>
+          <RoleBadge role={user.role} affiliationLabel={rosterAffiliationLabel(user)} />
         </CardContent>
       </Card>
     </Link>

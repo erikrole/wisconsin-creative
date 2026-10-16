@@ -17,7 +17,7 @@ describe("full-color CSS token syntax", () => {
     const sources = [
       "src/app/(app)/schedule/_components/ListView.tsx",
       "src/app/(app)/schedule/_components/ScheduleFilters.tsx",
-      "src/app/(app)/users/[id]/UserBadgesTab.tsx",
+      "src/app/(app)/staff/[id]/UserBadgesTab.tsx",
     ].map((path) => source(path));
 
     for (const source of sources) {

@@ -120,7 +120,7 @@ export default function OnboardingStatusPage() {
     lastRefreshed,
   } = useFetch<AllowedEmailsResponse>({
     url: "/api/users/onboarding-readiness",
-    returnTo: "/users/onboarding-status",
+    returnTo: "/staff/onboarding-status",
     transform: (json) => {
       const payload = json.data as AllowedEmailsResponse | undefined;
       return { invitations: payload?.invitations ?? [], accounts: payload?.accounts ?? [] };
@@ -229,7 +229,7 @@ export default function OnboardingStatusPage() {
     setDeletingId(row.id);
     try {
       const response = await fetch(`/api/allowed-emails/${row.id}`, { method: "DELETE" });
-      if (handleAuthRedirect(response, "/users/onboarding-status")) return;
+      if (handleAuthRedirect(response, "/staff/onboarding-status")) return;
       if (!response.ok) {
         toast.error(await parseErrorMessage(response, "Failed to remove pending invite"));
         return;
@@ -258,7 +258,7 @@ export default function OnboardingStatusPage() {
           <Link href="/settings/allowed-emails">Allowed emails</Link>
         </Button>
         <Button asChild>
-          <Link href="/users?onboard=1">
+          <Link href="/staff?onboard=1">
             <UserPlus data-icon="inline-start" />
             Add users
           </Link>
@@ -460,7 +460,7 @@ export default function OnboardingStatusPage() {
             <TableBody>
               {visibleAccounts.map((account) => (
                 <TableRow key={account.id}>
-                  <TableCell><Link href={`/users/${account.id}`} className="font-medium hover:underline">{account.name}</Link><div className="text-xs text-muted-foreground">{account.email}</div></TableCell>
+                  <TableCell><Link href={`/staff/${account.id}`} className="font-medium hover:underline">{account.name}</Link><div className="text-xs text-muted-foreground">{account.email}</div></TableCell>
                   <TableCell><Badge variant={ROLE_META[account.role].variant} size="sm">{ROLE_META[account.role].label}</Badge></TableCell>
                   <TableCell>{account.profileComplete ? <Badge variant="green">Profile complete</Badge> : account.operationalReady ? <Badge variant="blue">Operationally ready</Badge> : <Badge variant="orange">Setup needed</Badge>}</TableCell>
                   <TableCell className="tabular-nums text-muted-foreground">{account.completedCount}/{account.totalCount}</TableCell>

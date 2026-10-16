@@ -26,7 +26,7 @@ import {
   parseErrorMessage,
   parseJsonSafely,
 } from "@/lib/errors";
-import { AREA_OPTIONS } from "@/app/(app)/users/types";
+import { AREA_OPTIONS } from "@/app/(app)/staff/types";
 import { PROFILE_COMPLETION_QUERY_KEY } from "@/hooks/use-profile-completion";
 import { SettingsPageShell } from "../SettingsPageShell";
 import { SettingsSaveBar } from "../_components/SettingsSaveBar";

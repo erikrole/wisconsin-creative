@@ -19,7 +19,7 @@ This is intentionally an availability-warning system. It does not prevent staff/
 ## Shipped Behavior
 
 - `StudentAvailabilityBlock` stores recurring weekly blocks tied to a user.
-- `/users/[id]` includes an Availability tab.
+- `/staff/[id]` includes an Availability tab.
 - Student-role users can manage only their own blocks.
 - Staff-role users can manage their own blocks when their Scheduling class is Student.
 - Staff and admins can view and manage blocks for any Student-scheduling-class user.

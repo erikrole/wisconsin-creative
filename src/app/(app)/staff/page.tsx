@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import EmptyState from "@/components/EmptyState";
 import type { Location, Role, SortKey, ListResponse } from "./types";
 import { AREA_LABELS, ROLE_OPTIONS, STUDENT_YEAR_OPTIONS } from "./types";
-import { UserTableRow, UserMobileCard } from "./UserRow";
+import { UserTableRow, UserMobileCard, UserGridCard } from "./UserRow";
+import RoleTabs from "./RoleTabs";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import UserFilters from "./UserFilters";
 import BulkBadgeAwardDialog from "./BulkBadgeAwardDialog";
 import OnboardingDialog from "@/components/onboarding/OnboardingDialog";
@@ -21,14 +23,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import Link from "next/link";
-import { ArrowDown, ArrowUp, ArrowUpDown, Award, ClipboardList, Download, ImageOff, MoreHorizontal, Network, UserPlus, UserRoundX, WifiOff } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Award, ClipboardList, Download, ImageOff, LayoutGrid, List, Rows3, MoreHorizontal, Network, UserPlus, UserRoundX, WifiOff } from "lucide-react";
 import { useFetch } from "@/hooks/use-fetch";
 import { PageHeader } from "@/components/PageHeader";
 import { FadeUp } from "@/components/ui/motion";
 import { useUrlState, serializeOptionalString } from "@/hooks/use-url-state";
 import { SPORT_CODES } from "@/lib/sports";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { OperationalMetricCard } from "@/components/OperationalFeedback";
 import { OperationalStatusRail, type OperationalStatusRailItem } from "@/components/OperationalStatusRail";
 import { RosterRelatedLinks } from "./_components/RosterRelatedLinks";
 
@@ -57,6 +58,18 @@ function parseStringParam(raw: string | null): string {
 
 function parseRoleParam(raw: string | null): string {
   return raw && ROLE_VALUES.has(raw) ? raw : "";
+}
+
+function parseViewParam(raw: string | null): "table" | "grid" {
+  return raw === "grid" ? "grid" : "table";
+}
+
+function serializeViewParam(value: "table" | "grid"): string | null {
+  return value === "grid" ? "grid" : null;
+}
+
+function parseGroupParam(raw: string | null): "" | "area" {
+  return raw === "area" ? "area" : "";
 }
 
 function parseYearParam(raw: string | null): string {
@@ -173,12 +186,10 @@ function SortableHead({
 function RosterSummary({
   stats,
   canEdit,
-  onRoleChange,
   onShowInactive,
 }: {
   stats: NonNullable<ListResponse["stats"]>;
   canEdit: boolean;
-  onRoleChange: (role: string) => void;
   onShowInactive: () => void;
 }) {
   const items: OperationalStatusRailItem[] = [
@@ -190,17 +201,16 @@ function RosterSummary({
       orientation={{ label: "Active roster", value: String(stats.active), icon: UserPlus }}
       items={items}
       allClearLabel={items.length === 0 ? "Roster profiles are complete" : undefined}
-      detailsLabel="Roster breakdown"
-      details={(
-        <div className="grid gap-2 sm:grid-cols-5">
-          <OperationalMetricCard label="All matching" value={stats.total} />
-          <OperationalMetricCard label="Students" value={stats.byRole.STUDENT} onClick={() => onRoleChange("STUDENT")} />
-          <OperationalMetricCard label="Staff" value={stats.byRole.STAFF} onClick={() => onRoleChange("STAFF")} />
-          <OperationalMetricCard label="Admins" value={stats.byRole.ADMIN} onClick={() => onRoleChange("ADMIN")} />
-          <OperationalMetricCard label="Collaborators" value={stats.byRole.COLLABORATOR} onClick={() => onRoleChange("COLLABORATOR")} />
-        </div>
-      )}
     />
+  );
+}
+
+function GroupHeading({ label, count }: { label: string; count: number }) {
+  return (
+    <h2 className="flex items-baseline gap-2 text-sm font-semibold" style={{ fontFamily: "var(--font-heading)" }}>
+      {label}
+      <span className="text-xs font-normal tabular-nums text-muted-foreground">{count}</span>
+    </h2>
   );
 }
 
@@ -237,6 +247,16 @@ export default function UsersPage() {
     "area",
     parseAreaParam,
     serializeOptionalString,
+  );
+  const [groupBy, setGroupBy] = useUrlState<"" | "area">(
+    "group",
+    parseGroupParam,
+    serializeOptionalString,
+  );
+  const [view, setView] = useUrlState<"table" | "grid">(
+    "view",
+    parseViewParam,
+    serializeViewParam,
   );
   const [sort, setSort] = useUrlState<SortKey | string>(
     "sort",
@@ -345,7 +365,20 @@ export default function UsersPage() {
     refetchOnMount: "always",
   });
 
-  const users = listData?.data ?? [];
+  const users = useMemo(() => listData?.data ?? [], [listData]);
+  // Grouping applies to the loaded page only, so a group can continue on the next page.
+  const groups = useMemo(() => {
+    if (groupBy !== "area") return [{ key: "all", label: null as string | null, users }];
+    const byKey = new Map<string, typeof users>();
+    for (const user of users) {
+      const key = user.primaryArea && AREA_LABELS[user.primaryArea] ? user.primaryArea : "__none__";
+      byKey.set(key, [...(byKey.get(key) ?? []), user]);
+    }
+    const order = [...Object.keys(AREA_LABELS), "__none__"];
+    return order
+      .filter((key) => byKey.has(key))
+      .map((key) => ({ key, label: key === "__none__" ? "No area" : AREA_LABELS[key], users: byKey.get(key) ?? [] }));
+  }, [groupBy, users]);
   const total = listData?.total ?? 0;
   const stats = listData?.stats;
 
@@ -419,7 +452,7 @@ export default function UsersPage() {
   return (
     <FadeUp>
       {/* Header */}
-      <PageHeader title={isCollaboratorDirectory ? "People" : "Users"} className="mb-5">
+      <PageHeader title={isCollaboratorDirectory ? "People" : "Staff"} className="mb-5">
         {canEdit && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -436,10 +469,10 @@ export default function UsersPage() {
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuItem asChild>
-                  <Link href="/users/onboarding-status"><ClipboardList />Onboarding status</Link>
+                  <Link href="/staff/onboarding-status"><ClipboardList />Onboarding status</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/users/org-chart"><Network />Org chart</Link>
+                  <Link href="/staff/org-chart"><Network />Org chart</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <a href={exportHref} download><Download />Export current roster</a>
@@ -478,10 +511,9 @@ export default function UsersPage() {
       {/* Users List */}
       <div className="flex flex-col gap-3">
         <UserFilters
+          roleFilter={roleFilter}
           search={search}
           onSearchChange={setSearch}
-          roleFilter={roleFilter}
-          onRoleChange={setRoleFilter}
           locationFilter={locationFilter}
           onLocationChange={setLocationFilter}
           locations={locations}
@@ -515,8 +547,35 @@ export default function UsersPage() {
           </Alert>
         )}
 
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          {isCollaboratorDirectory ? <span /> : <RoleTabs value={roleFilter} stats={stats} onChange={setRoleFilter} />}
+          <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant={groupBy === "area" ? "secondary" : "outline"}
+            size="sm"
+            className="h-10"
+            aria-pressed={groupBy === "area"}
+            onClick={() => setGroupBy(groupBy === "area" ? "" : "area")}
+          >
+            <Rows3 data-icon="inline-start" />
+            Group by area
+          </Button>
+          <ToggleGroup
+            type="single"
+            value={view}
+            onValueChange={(next) => { if (next === "table" || next === "grid") setView(next); }}
+            aria-label="Roster layout"
+            className="hidden sm:inline-flex"
+          >
+            <ToggleGroupItem value="table" aria-label="Table view"><List className="size-4" /></ToggleGroupItem>
+            <ToggleGroupItem value="grid" aria-label="Photo grid view"><LayoutGrid className="size-4" /></ToggleGroupItem>
+          </ToggleGroup>
+          </div>
+        </div>
+
         {stats && !isInitialLoad && !loadError && (
-          <RosterSummary stats={stats} canEdit={canEdit} onRoleChange={setRoleFilter} onShowInactive={() => setShowInactive(true)} />
+          <RosterSummary stats={stats} canEdit={canEdit} onShowInactive={() => setShowInactive(true)} />
         )}
 
         {isInitialLoad ? (
@@ -578,8 +637,24 @@ export default function UsersPage() {
           />
         ) : (
           <>
+            {/* Desktop photo grid */}
+            {view === "grid" && (
+              <div className="hidden sm:flex flex-col gap-4">
+                {groups.map((group) => (
+                  <section key={group.key} aria-label={group.label ?? undefined} className="flex flex-col gap-2">
+                    {group.label && <GroupHeading label={group.label} count={group.users.length} />}
+                    <div className="grid grid-cols-3 gap-3 lg:grid-cols-4 xl:grid-cols-5">
+                      {group.users.map((user) => (
+                        <UserGridCard key={user.id} user={user} />
+                      ))}
+                    </div>
+                  </section>
+                ))}
+              </div>
+            )}
+
             {/* Desktop table */}
-            <div className="hidden sm:block">
+            <div className={view === "grid" ? "hidden" : "hidden sm:block"}>
               <div className="rounded-md border">
                 <Table>
                   <TableHeader>
@@ -593,8 +668,19 @@ export default function UsersPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {users.map((user) => (
-                      <UserTableRow key={user.id} user={user} />
+                    {groups.map((group) => (
+                      <Fragment key={group.key}>
+                        {group.label && (
+                          <TableRow className="bg-muted/40 hover:bg-muted/40">
+                            <TableCell colSpan={4} className="py-2">
+                              <GroupHeading label={group.label} count={group.users.length} />
+                            </TableCell>
+                          </TableRow>
+                        )}
+                        {group.users.map((user) => (
+                          <UserTableRow key={user.id} user={user} />
+                        ))}
+                      </Fragment>
                     ))}
                   </TableBody>
                 </Table>
@@ -603,8 +689,13 @@ export default function UsersPage() {
 
             {/* Mobile cards */}
             <div className="block sm:hidden flex flex-col gap-2">
-              {users.map((user) => (
-                <UserMobileCard key={user.id} user={user} />
+              {groups.map((group) => (
+                <Fragment key={group.key}>
+                  {group.label && <GroupHeading label={group.label} count={group.users.length} />}
+                  {group.users.map((user) => (
+                    <UserMobileCard key={user.id} user={user} />
+                  ))}
+                </Fragment>
               ))}
             </div>
           </>

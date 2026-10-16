@@ -1,5 +1,61 @@
 [
   {
+    "date": "2026-10-16",
+    "title": "Clearer Workforce overview",
+    "type": "improvement",
+    "summary": "The Workforce overview now shows, area by area, who stays and who graduates, so gaps are visible before they happen.",
+    "details": [
+      "A new Coverage by area list shows each area's full-time staff and how many students stay or graduate.",
+      "Areas that lose half or more of their students, or all of them, are flagged and listed first.",
+      "The top tiles add context, such as the share of students graduating.",
+      "Select an area in the list to jump to its people."
+    ],
+    "platforms": ["Web"],
+    "pr": 486
+  },
+  {
+    "date": "2026-10-16",
+    "title": "Cleaner Staff roster",
+    "type": "improvement",
+    "summary": "The Staff page now filters by role with one tap, and you can switch the roster between a table and a photo grid.",
+    "details": [
+      "Role tabs at the top show how many students, staff, admins, and collaborators match your search and filters.",
+      "The role dropdown and the separate breakdown cards are gone, so there is one place to look.",
+      "A new photo grid view shows everyone as headshot cards. Your choice stays in the page link.",
+      "Group by area splits the list under Photo, Video, and the other areas.",
+      "Hover a name in the table to see a quick card with title, location, and contact details.",
+      "Year and sport filters only appear when they apply to students."
+    ],
+    "platforms": ["Web"],
+    "pr": 486
+  },
+  {
+    "date": "2026-10-16",
+    "title": "Workforce moves under Staff",
+    "type": "improvement",
+    "summary": "Workforce is now a tab on the Staff page instead of its own menu item. It is still visible to admins only.",
+    "details": [
+      "Admins see Roster and Workforce tabs at the top of Staff.",
+      "Hiring and Planning sit inside the Workforce tab.",
+      "Old Workforce links redirect to the new location."
+    ],
+    "platforms": ["Web"],
+    "pr": 485
+  },
+  {
+    "date": "2026-10-16",
+    "title": "Users is now Staff",
+    "type": "improvement",
+    "summary": "The Users page and menu item are now called Staff. Old Users links and bookmarks still take you to the right place.",
+    "details": [
+      "The sidebar, page title, search results, and breadcrumbs say Staff.",
+      "Profile links now live under /staff, and old /users links redirect automatically.",
+      "Nothing about who can see the page or what it shows has changed."
+    ],
+    "platforms": ["Web"],
+    "pr": 484
+  },
+  {
     "date": "2026-10-15",
     "title": "Lighter pages on the web",
     "type": "improvement",

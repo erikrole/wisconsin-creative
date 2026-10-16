@@ -357,7 +357,7 @@ function DirectReportField({
                 <CommandEmpty>Type at least 2 characters…</CommandEmpty>
               )}
               {results.length > 0 && (
-                <CommandGroup heading="Users">
+                <CommandGroup heading="Staff">
                   {results.map((r) => (
                     <CommandItem
                       key={r.id}

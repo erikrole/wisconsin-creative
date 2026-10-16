@@ -711,7 +711,7 @@ function BadgeDetailDialog({
     setRevokeBusy(true);
     try {
       const res = await fetch(`/api/badges/award/${awardId}`, { method: "DELETE" });
-      if (handleAuthRedirect(res, `/users/${userId}?tab=badges`)) return;
+      if (handleAuthRedirect(res, `/staff/${userId}?tab=badges`)) return;
       if (!res.ok) {
         toast.error(await parseErrorMessage(res, "Failed to revoke badge"));
         return;
@@ -918,7 +918,7 @@ export default function UserBadgesTab({
   const [revision, setRevision] = useState(0);
   const { data, loading, error } = useFetch<UserBadgesResponse>({
     url: `/api/badges/user/${userId}?_r=${revision}`,
-    returnTo: `/users/${userId}?tab=badges`,
+    returnTo: `/staff/${userId}?tab=badges`,
     refetchOnFocus: false,
   });
 

@@ -6,7 +6,7 @@ import { requireAuth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
 import { STANDING_LABELS, TERM_LABELS } from "@/lib/hiring/contract";
-import { deriveStudentYear } from "../users/types";
+import { deriveStudentYear } from "../types";
 import { PersonCard } from "./PersonCard";
 import RosterImportButton from "./RosterImportButton";
 import { AREA_LABEL, AREA_OPTIONS } from "./hiring/types";
@@ -89,6 +89,28 @@ export default async function WorkforcePage() {
     byArea.set(key, [...(byArea.get(key) ?? []), p]);
   }
 
+  const coverage = areaOrder
+    .filter((key) => key !== "NONE" && byArea.has(key))
+    .map((key) => {
+      const members = byArea.get(key) ?? [];
+      const studs = members.filter((m) => m.kind === "STUDENT");
+      const leaving = studs.filter((m) => m.graduatesThisYear).length;
+      const staying = studs.length - leaving;
+      const risk: "gap" | "thin" | null =
+        studs.length > 0 && staying === 0 ? "gap" : studs.length > 0 && leaving * 2 >= studs.length ? "thin" : null;
+      return {
+        key,
+        label: AREA_LABEL[key] ?? key,
+        fullTime: members.length - studs.length,
+        total: studs.length,
+        staying,
+        leaving,
+        risk,
+      };
+    })
+    .sort((a, b) => Number(b.risk === "gap") - Number(a.risk === "gap") || Number(b.risk === "thin") - Number(a.risk === "thin"));
+  const attention = coverage.filter((row) => row.risk !== null);
+
   return (
     <>
       <PageHeader title="Workforce" description="Full-time staff and students across every area, with who graduates and where the gaps will be.">
@@ -97,17 +119,61 @@ export default async function WorkforcePage() {
 
       <dl className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
-          ["Full-time", fullTime.length],
-          ["Students", students.length],
-          [`Graduating by ${academicYearEnd}`, graduating.length],
-          ["Areas covered", [...byArea.keys()].filter((k) => k !== "NONE").length],
-        ].map(([label, value]) => (
+          ["Full-time", String(fullTime.length), "Staff on the roster"],
+          ["Students", String(students.length), "Student workers"],
+          [
+            `Graduating by ${academicYearEnd}`,
+            String(graduating.length),
+            students.length > 0 ? `${Math.round((graduating.length / students.length) * 100)}% of students` : "No students yet",
+          ],
+          ["Need attention", String(attention.length), attention.length === 0 ? "Every area stays covered" : "Areas losing half or more of their students"],
+        ].map(([label, value, hint]) => (
           <div key={label} className="rounded-lg border bg-card p-4">
             <dt className="text-sm text-muted-foreground">{label}</dt>
             <dd className="mt-1 text-2xl font-semibold">{value}</dd>
+            <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
           </div>
         ))}
       </dl>
+
+      {coverage.length > 0 && (
+        <section aria-label="Coverage by area" className="mb-8 rounded-lg border bg-card">
+          <div className="border-b p-4">
+            <h2 className="text-base font-semibold">Coverage by area</h2>
+            <p className="text-sm text-muted-foreground">Who stays and who graduates, so gaps show up before they happen. Select an area to jump to its people.</p>
+          </div>
+          <ul className="divide-y">
+            {coverage.map((row) => (
+              <li key={row.key}>
+                <a
+                  href={`#area-${row.key}`}
+                  className="grid gap-2 p-4 transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring sm:grid-cols-[12rem_1fr_auto] sm:items-center sm:gap-4"
+                >
+                  <span className="font-medium">{row.label}</span>
+                  <span className="flex items-center gap-3">
+                    <span
+                      role="img"
+                      aria-label={`${row.staying} students staying, ${row.leaving} graduating`}
+                      className="flex h-2.5 min-w-24 flex-1 overflow-hidden rounded-full bg-muted"
+                    >
+                      <span className="bg-primary" style={{ width: `${row.total ? (row.staying / row.total) * 100 : 0}%` }} />
+                      <span className="bg-orange-400" style={{ width: `${row.total ? (row.leaving / row.total) * 100 : 0}%` }} />
+                    </span>
+                    <span className="w-24 shrink-0 text-xs text-muted-foreground">
+                      {row.total === 0 ? "No students" : `${row.staying} stay · ${row.leaving} leave`}
+                    </span>
+                  </span>
+                  <span className="flex flex-wrap items-center gap-2">
+                    <Badge variant="gray">{row.fullTime} full-time</Badge>
+                    {row.risk === "gap" && <Badge variant="red">No students next year</Badge>}
+                    {row.risk === "thin" && <Badge variant="orange">Losing half or more</Badge>}
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {people.length === 0 ? (
         <EmptyState icon="users" title="No active workforce yet" description="Active staff and students appear here." />
@@ -121,7 +187,7 @@ export default async function WorkforcePage() {
               const studs = members.filter((m) => m.kind === "STUDENT");
               const leaving = studs.filter((m) => m.graduatesThisYear).length;
               return (
-                <section key={key} aria-label={key === "NONE" ? "No area" : AREA_LABEL[key]}>
+                <section key={key} id={`area-${key}`} className="scroll-mt-20" aria-label={key === "NONE" ? "No area" : AREA_LABEL[key]}>
                   <div className="mb-2 flex flex-wrap items-center gap-2">
                     <h2 className="text-lg font-semibold">{key === "NONE" ? "No area set" : AREA_LABEL[key]}</h2>
                     <Badge variant="gray">{staff.length} full-time</Badge>
