@@ -95,6 +95,9 @@ struct ScannerDebuggerView: View {
             .navigationDestination(for: BookingRouteId.self) { route in
                 BookingDetailView(bookingId: route.id)
             }
+            .navigationDestination(for: BulkSkuRoute.self) { route in
+                BulkInventoryDetailView(skuId: route.id)
+            }
             .sheet(isPresented: Binding(
                 get: { results != nil || resultError != nil },
                 set: { presented in
@@ -267,11 +270,13 @@ struct ScanResultSheet: View {
                 }
                 .refreshable { await onRefresh() }
             } else if let family = results.singleFamilyMatch {
-                // One bulk-unit match → rich hero card. No detail screen
-                // exists for bulk SKUs on iOS; the card is the destination.
                 ScrollView {
                     ScanFamilyHeroCard(
                         family: family,
+                        onViewFamily: {
+                            navigationPath.append(BulkSkuRoute(id: family.id))
+                            dismiss()
+                        },
                         onReserve: { startReservation(forFamily: family) },
                         onOpenBooking: openBooking
                     )

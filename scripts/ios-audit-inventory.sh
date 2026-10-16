@@ -61,6 +61,10 @@ BrowseView.swift                       | browse                      | audit
 BlastsView.swift                       | blasts                      | audit
 ItemsView.swift                        | items                       | audit
 ItemDetailView.swift                   | item-detail                 | audit
+KitsView.swift                         | kits                        | audit
+KitDetailView.swift                    | kit-detail                  | audit
+BulkInventoryDetailView.swift          | bulk-inventory              | audit
+BatteryOpsView.swift                   | battery-ops                 | audit
 ScheduleView.swift                     | schedule                    | audit
 EventDetailSheet.swift                 | event-detail                | audit
 EventsView.swift                       | events                      | audit
