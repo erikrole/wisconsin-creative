@@ -9,7 +9,8 @@
       "The role dropdown and the separate breakdown cards are gone, so there is one place to look.",
       "A new photo grid view shows everyone as headshot cards. Your choice stays in the page link."
     ],
-    "platforms": ["Web"]
+    "platforms": ["Web"],
+    "pr": 486
   },
   {
     "date": "2026-10-16",
