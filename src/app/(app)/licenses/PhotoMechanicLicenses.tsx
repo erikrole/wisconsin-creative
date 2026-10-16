@@ -14,6 +14,7 @@ import { useFetch } from "@/hooks/use-fetch";
 import { formatRelativeTime } from "@/lib/format";
 import { handleAuthRedirect, parseErrorMessage } from "@/lib/errors";
 import { licenseDaysUntilExpiry, localDateKey } from "@/lib/license-dates";
+import { LicenseHolders } from "./LicenseHolders";
 import { LicenseTable } from "./LicenseTable";
 import { MyLicensePanel } from "./MyLicensePanel";
 import { ConfirmClaimDialog } from "./ConfirmClaimDialog";
@@ -30,7 +31,7 @@ function SlotMeter({ usedSlots, totalSlots }: { usedSlots: number; totalSlots: n
     <div
       role="img"
       aria-label={`${usedSlots} of ${totalSlots} slots in use`}
-      className="flex h-2.5 gap-0.5 overflow-hidden rounded-full"
+      className="mt-4 flex h-2.5 gap-0.5 overflow-hidden rounded-full"
     >
       {Array.from({ length: totalSlots }, (_, i) => (
         <span
@@ -105,22 +106,35 @@ function LicenseSummary({
 }
 
 
-function ClaimLicensePrompt({ openSlots }: { openSlots: number }) {
+function ClaimLicenseHero({
+  openSlots,
+  totalSlots,
+  onClaim,
+}: {
+  openSlots: number;
+  totalSlots: number;
+  onClaim: () => void;
+}) {
   return (
     <section
       aria-label="Claim a Photo Mechanic license"
-      className="flex items-center gap-4 rounded-2xl border border-[var(--green)]/30 bg-gradient-to-br from-[var(--green-bg)] to-background p-5"
+      className="rounded-2xl border border-[var(--green)]/30 bg-gradient-to-br from-[var(--green-bg)] to-background p-6 sm:p-8"
     >
-      <div className="flex size-12 shrink-0 items-center justify-center rounded-xl border border-[var(--green)]/25 bg-background text-[var(--green-text)]">
-        <KeyRound className="size-6" aria-hidden="true" />
-      </div>
-      <div className="min-w-0">
-        <p className="text-lg font-semibold leading-tight" style={{ fontFamily: "var(--font-heading)" }}>
-          {openSlots} {openSlots === 1 ? "slot" : "slots"} ready to claim
-        </p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Pick any open card below. One code activates two machines, and the code copies for you.
-        </p>
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-2xl font-semibold leading-tight" style={{ fontFamily: "var(--font-heading)" }}>
+            Get Photo Mechanic
+          </p>
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            One license code works on two machines. We pick an open slot for you and copy the code.
+          </p>
+          <SlotMeter usedSlots={totalSlots - openSlots} totalSlots={totalSlots} />
+          <p className="mt-1.5 text-xs text-muted-foreground">{openSlots} of {totalSlots} slots open</p>
+        </div>
+        <Button type="button" size="lg" className="h-12 shrink-0 px-6 text-base" onClick={onClaim}>
+          <KeyRound data-icon="inline-start" />
+          Claim a license
+        </Button>
       </div>
     </section>
   );
@@ -193,15 +207,19 @@ export function PhotoMechanicLicenses({
     return true;
   });
   const hasRetired = allCodes.some((code) => code.status === "RETIRED");
-  const hasExpiry = allCodes.some((code) => code.expiresAt);
 
-  function handleClickAvailable(code: LicenseCode) {
+  // Fill half-used codes first so whole codes stay free; longest-lived expiry breaks ties.
+  function handleClaimBest() {
     if (myLicense) return;
-    setClaimTarget(code);
+    const rank = (code: LicenseCode) => (code.status === "PARTIAL" ? 0 : 1);
+    const expiry = (code: LicenseCode) => (code.expiresAt ? code.expiresAt : "9999-12-31");
+    const best = activeCodes
+      .filter((code) => code.status === "AVAILABLE" || code.status === "PARTIAL")
+      .sort((a, b) => rank(a) - rank(b) || expiry(b).localeCompare(expiry(a)))[0];
+    if (best) setClaimTarget(best);
   }
 
-  function handleClickClaimed(code: LicenseCode) {
-    // Students without admin rights get their own view via MyLicensePanel — skip the sheet.
+  function handleInspect(code: LicenseCode) {
     if (!isAdmin) return;
     setAdminTarget(code);
   }
@@ -239,9 +257,9 @@ export function PhotoMechanicLicenses({
         <MyLicensePanel license={myLicense} isStaff={isAdmin} onReleased={reloadAll} />
       ) : codesLoading ? (
         <Skeleton className="h-28 w-full rounded-lg" />
-      ) : allCodes.length > 0 && openSlots > 0 ? (
-        <ClaimLicensePrompt openSlots={openSlots} />
-      ) : allCodes.length > 0 ? (
+      ) : allCodes.length > 0 && openSlots > 0 && !isAdmin ? (
+        <ClaimLicenseHero openSlots={openSlots} totalSlots={totalSlots} onClaim={handleClaimBest} />
+      ) : allCodes.length > 0 && !isAdmin ? (
         <p className="rounded-md border bg-muted/30 px-3 py-2.5 text-sm text-muted-foreground">
           Every Photo Mechanic slot is in use. Return a code or ask staff to add one.
         </p>
@@ -298,6 +316,12 @@ export function PhotoMechanicLicenses({
               <Button type="button" variant="outline" size="sm" className="h-10" onClick={() => setShowBulk(true)}>
                 Bulk add codes
               </Button>
+              {!myLicense && openSlots > 0 && (
+                <Button type="button" variant="outline" size="sm" className="h-10" onClick={handleClaimBest}>
+                  <KeyRound data-icon="inline-start" />
+                  Claim for me
+                </Button>
+              )}
               <Button type="button" size="sm" className="h-10" onClick={() => setShowAdd(true)}>
                 <Plus data-icon="inline-start" />
                 Add license code
@@ -331,9 +355,11 @@ export function PhotoMechanicLicenses({
           actionLabel={isAdmin ? "Show retired" : undefined}
           onAction={isAdmin ? () => setShowRetired(true) : undefined}
         />
+      ) : !isAdmin ? (
+        <LicenseHolders codes={allCodes} currentUserId={currentUserId} />
       ) : (
         <>
-          {isAdmin && <div className="flex flex-wrap gap-2" role="group" aria-label="Filter license codes">
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Filter license codes">
             {FILTERS.map((item) => (
               <Button
                 key={item.id}
@@ -347,7 +373,7 @@ export function PhotoMechanicLicenses({
                 {item.label}
               </Button>
             ))}
-          </div>}
+          </div>
           {filteredCodes.length === 0 && !codesLoading ? (
             <p className="rounded-xl border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
               No codes match this filter.
@@ -356,12 +382,7 @@ export function PhotoMechanicLicenses({
         <LicenseTable
           codes={filteredCodes}
           loading={codesLoading}
-          currentUserId={currentUserId}
-          isAdmin={isAdmin}
-          hasMyLicense={!!myLicense}
-          onClickAvailable={handleClickAvailable}
-          onClickClaimed={handleClickClaimed}
-          showExpiry={hasExpiry}
+          onInspect={handleInspect}
         />
           )}
         </>

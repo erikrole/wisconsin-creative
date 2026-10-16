@@ -1,226 +1,101 @@
 "use client";
 
-import { Eye, KeyRound, Lock } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { StaggerItem, StaggerList } from "@/components/ui/motion";
 import { UserAvatar } from "@/components/UserAvatar";
 import { formatLicenseExpiryDate, licenseDaysUntilExpiry } from "@/lib/license-dates";
 import { cn } from "@/lib/utils";
-import type { ActiveClaim, LicenseCode } from "./types";
+import type { LicenseCode } from "./types";
 
 const MAX_SLOTS = 2;
-
-const MASKED_CODE = "••••-••••-••••-••••";
 
 function ExpiryChip({ expiresAt }: { expiresAt: string }) {
   const days = licenseDaysUntilExpiry(expiresAt);
   const dateStr = formatLicenseExpiryDate(expiresAt);
-
   if (days < 0) return <Badge variant="destructive" className="text-xs">Expired {dateStr}</Badge>;
   if (days <= 30) {
-    return (
-      <Badge variant="orange" className="text-xs">
-        {days <= 0 ? "Expires today" : `${days}d left`} · {dateStr}
-      </Badge>
-    );
+    return <Badge variant="orange" className="text-xs">{days <= 0 ? "Expires today" : `${days}d left`}</Badge>;
   }
-  return <span className="text-xs text-muted-foreground">Renews {dateStr}</span>;
+  return <span className="text-xs text-muted-foreground">{dateStr}</span>;
 }
 
-/** One seat of the two-machine activation: filled with the holder, or an open outline. */
-function SlotSeat({
-  claim,
-  isAdmin,
-  isOwn,
-}: {
-  claim: ActiveClaim | null;
-  isAdmin: boolean;
-  isOwn: boolean;
-}) {
-  if (!claim) {
-    return (
-      <div className="flex min-h-11 items-center gap-2 rounded-lg border border-dashed border-[var(--green)]/50 px-2.5 text-sm text-[var(--green-text)]">
-        <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-dashed border-[var(--green)]/60" aria-hidden="true" />
-        Open slot
-      </div>
-    );
-  }
-
-  const showName = isAdmin || isOwn || claim.user !== null;
-  const name = claim.user?.name ?? claim.occupantLabel ?? "Unknown";
-
+/** Two seats as avatars: a filled seat shows its holder, an open seat is a dashed ring. */
+function Seats({ code }: { code: LicenseCode }) {
   return (
-    <div
-      className={cn(
-        "flex min-h-11 min-w-0 items-center gap-2 rounded-lg border px-2.5 text-sm",
-        isOwn ? "border-[var(--blue)]/50 bg-background font-medium" : "bg-background/70",
-      )}
-    >
-      {showName ? (
-        <UserAvatar name={name} avatarUrl={claim.user?.avatarUrl ?? null} size="xs" />
-      ) : (
-        <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground" aria-hidden="true">
-          <Lock className="size-3" />
-        </span>
-      )}
-      <span className={cn("min-w-0 flex-1 truncate", !showName && "text-muted-foreground")}>
-        {showName ? name : "In use"}
-      </span>
-      {isOwn && <span className="text-xs text-muted-foreground">you</span>}
-      {claim.userId === null && isAdmin && (
-        <Badge variant="outline" className="h-4 px-1.5 py-0 text-[10px]">unknown</Badge>
-      )}
+    <div className="flex items-center gap-1.5" aria-label={`${code.claims.length} of ${MAX_SLOTS} slots in use`}>
+      {Array.from({ length: MAX_SLOTS }, (_, i) => {
+        const claim = code.claims[i];
+        if (!claim) {
+          return <span key={`open-${i}`} className="size-7 rounded-full border border-dashed border-[var(--green)]/60" title="Open slot" />;
+        }
+        const name = claim.user?.name ?? claim.occupantLabel ?? "Unknown";
+        return <UserAvatar key={claim.id} name={name} avatarUrl={claim.user?.avatarUrl ?? null} size="sm" />;
+      })}
     </div>
   );
 }
 
-function statusLabel(status: LicenseCode["status"], isOwn: boolean) {
-  if (isOwn) return { text: "Yours", variant: "blue" as const };
-  if (status === "AVAILABLE") return { text: "Open", variant: "green" as const };
-  if (status === "PARTIAL") return { text: "1 slot left", variant: "green" as const };
-  if (status === "CLAIMED") return { text: "Full", variant: "gray" as const };
-  return { text: "Retired", variant: "gray" as const };
-}
-
-function toneClasses(code: LicenseCode, isOwn: boolean) {
-  return cn(
-    code.status === "AVAILABLE" && "border-[var(--green)]/30 bg-[var(--green-bg)]/50",
-    code.status === "PARTIAL" && "border-[var(--green)]/30 bg-[var(--green-bg)]/30",
-    code.status === "CLAIMED" && "bg-[var(--blue-bg)]/40",
-    code.status === "RETIRED" && "opacity-50",
-    isOwn && "border-[var(--blue)]/60 ring-1 ring-[var(--blue)]/30",
-  );
-}
-
-function LicenseCardLoading({ count = 6 }: { count?: number }) {
-  return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-hidden="true">
-      {Array.from({ length: count }, (_, i) => (
-        <div key={i} className="space-y-3 rounded-xl border p-4">
-          <div className="flex items-center justify-between">
-            <Skeleton className="h-5 w-40" />
-            <Skeleton className="h-5 w-16 rounded-full" />
-          </div>
-          <Skeleton className="h-11 w-full rounded-lg" />
-          <Skeleton className="h-11 w-full rounded-lg" />
-        </div>
-      ))}
-    </div>
-  );
+function holderNames(code: LicenseCode) {
+  if (code.claims.length === 0) return "Open";
+  return code.claims.map((claim) => claim.user?.name ?? claim.occupantLabel ?? "Unknown").join(" · ");
 }
 
 type Props = {
   codes: LicenseCode[];
   loading: boolean;
-  currentUserId: string | null;
-  isAdmin: boolean;
-  hasMyLicense: boolean;
-  onClickAvailable: (code: LicenseCode) => void;
-  onClickClaimed: (code: LicenseCode) => void;
-  showExpiry?: boolean;
+  onInspect: (code: LicenseCode) => void;
 };
 
-export function LicenseTable({
-  codes,
-  loading,
-  currentUserId,
-  isAdmin,
-  hasMyLicense,
-  onClickAvailable,
-  onClickClaimed,
-  showExpiry = false,
-}: Props) {
-  if (loading && codes.length === 0) return <LicenseCardLoading />;
+/** Staff management list: one dense row per license code. */
+export function LicenseTable({ codes, loading, onInspect }: Props) {
+  if (loading && codes.length === 0) {
+    return (
+      <div className="divide-y rounded-xl border" aria-hidden="true">
+        {Array.from({ length: 6 }, (_, i) => (
+          <div key={i} className="flex items-center gap-3 p-3">
+            <Skeleton className="h-4 w-44" />
+            <Skeleton className="ml-auto size-7 rounded-full" />
+            <Skeleton className="size-7 rounded-full" />
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
-    <StaggerList className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-      {codes.map((code, index) => {
-        const myActiveClaim = code.claims.find((claim) => claim.userId === currentUserId);
-        const isOwn = !!myActiveClaim;
-        const claimable = code.status === "AVAILABLE" || code.status === "PARTIAL";
-        const studentCanClaim = claimable && !hasMyLicense;
-        const adminCanInspect = isAdmin;
-        const isClickable = studentCanClaim || adminCanInspect;
-        const revealed = isAdmin || isOwn;
-        const displayCode = revealed ? code.code : MASKED_CODE;
-        const title = revealed ? code.code : (code.label ?? `License ${index + 1}`);
-        const actionLabel = adminCanInspect ? "Inspect" : "Claim";
-        const status = statusLabel(code.status, isOwn);
-
-        function handleClick() {
-          if (!isClickable) return;
-          if (isOwn || adminCanInspect) return onClickClaimed(code);
-          if (studentCanClaim) return onClickAvailable(code);
-        }
-
-        const seats = Array.from({ length: MAX_SLOTS }, (_, i) => code.claims[i] ?? null);
-
-        const content = (
-          <>
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                {revealed ? (
-                  <code className="block break-all font-mono text-sm font-semibold tracking-wide text-foreground">
-                    {displayCode}
-                  </code>
-                ) : (
-                  <p className="text-sm font-semibold text-foreground">{title}</p>
-                )}
-                {revealed && code.label && <p className="mt-0.5 break-words text-xs text-muted-foreground">{code.label}</p>}
-                {code.accountEmail && isAdmin && (
-                  <p className="mt-0.5 break-all text-xs text-muted-foreground">{code.accountEmail}</p>
-                )}
-              </div>
-              <Badge variant={status.variant} className="shrink-0">{status.text}</Badge>
-            </div>
-
-            <div className="mt-3 grid gap-1.5" aria-label={`${code.claims.length} of ${MAX_SLOTS} slots in use`}>
-              {seats.map((claim, i) => (
-                <SlotSeat
-                  key={claim?.id ?? `open-${i}`}
-                  claim={claim}
-                  isAdmin={isAdmin}
-                  isOwn={!!claim && claim.id === myActiveClaim?.id}
-                />
-              ))}
-            </div>
-
-            <div className="mt-3 flex min-h-8 items-center justify-between gap-2">
-              {isAdmin && showExpiry && code.expiresAt ? <ExpiryChip expiresAt={code.expiresAt} /> : <span />}
-              {isClickable ? (
-                <span className="inline-flex items-center gap-1.5 text-sm font-medium">
-                  {adminCanInspect ? <Eye className="size-4" aria-hidden="true" /> : <KeyRound className="size-4" aria-hidden="true" />}
-                  {actionLabel}
-                </span>
-              ) : (
-                <span className="text-xs text-muted-foreground">{isOwn ? "Your license" : claimable ? "Return yours to switch" : null}</span>
-              )}
-            </div>
-          </>
-        );
-
-        const cardClass = cn("block w-full rounded-xl border p-4 text-left transition-[background-color,transform] duration-150", toneClasses(code, isOwn));
-
-        return (
-          <StaggerItem key={code.id}>
-            {isClickable ? (
-              <Button
-                type="button"
-                variant="ghost"
-                className={cn(cardClass, "h-auto whitespace-normal font-normal shadow-none hover:bg-muted/60 active:scale-[0.99]")}
-                aria-label={`${actionLabel} ${title}`}
-                onClick={handleClick}
-              >
-                {content}
-              </Button>
-            ) : (
-              <div className={cardClass}>{content}</div>
+    <ul className="divide-y overflow-hidden rounded-xl border bg-card" role="list">
+      {codes.map((code) => (
+        <li key={code.id}>
+          <Button
+            type="button"
+            variant="ghost"
+            className={cn(
+              "h-auto min-h-14 w-full justify-start gap-3 whitespace-normal rounded-none px-3 py-2.5 text-left font-normal",
+              code.status === "RETIRED" && "opacity-50",
             )}
-          </StaggerItem>
-        );
-      })}
-    </StaggerList>
+            aria-label={`Inspect license ${code.code}`}
+            onClick={() => onInspect(code)}
+          >
+            <span className="min-w-0 flex-1">
+              <code className="block break-all font-mono text-sm font-semibold">{code.code}</code>
+              <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                {[code.label, holderNames(code)].filter(Boolean).join(" · ")}
+              </span>
+            </span>
+            <Seats code={code} />
+            <span className="hidden w-28 shrink-0 justify-end sm:flex">
+              {code.status === "RETIRED" ? (
+                <Badge variant="gray">Retired</Badge>
+              ) : code.expiresAt ? (
+                <ExpiryChip expiresAt={code.expiresAt} />
+              ) : null}
+            </span>
+            <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+          </Button>
+        </li>
+      ))}
+    </ul>
   );
 }

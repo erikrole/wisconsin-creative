@@ -12,14 +12,14 @@ describe("licenses UI and privacy contracts", () => {
     expect(route).toContain("occupantLabel: null");
   });
 
-  it("keeps names masked for students while open and own cards remain claimable", () => {
-    const table = source("src/app/(app)/licenses/LicenseTable.tsx");
+  it("shows students only a flat holder list and never renders code strings for the pool", () => {
+    const holders = source("src/app/(app)/licenses/LicenseHolders.tsx");
+    const licenses = source("src/app/(app)/licenses/PhotoMechanicLicenses.tsx");
 
-    expect(table).toContain("const showName = isAdmin || isOwn || claim.user !== null;");
-    expect(table).toContain("const revealed = isAdmin || isOwn;");
-    expect(table).toContain("const displayCode = revealed ? code.code : MASKED_CODE;");
-    expect(table).toContain("const adminCanInspect = isAdmin;");
-    expect(table).toContain("if (!isClickable) return;");
+    expect(holders).not.toContain("code.code");
+    expect(holders).toContain("claim.user !== null");
+    expect(licenses).toContain("<LicenseHolders codes={allCodes}");
+    expect(licenses).toContain("handleClaimBest");
   });
 
   it("keeps renewal controls behind the staff role gate", () => {
@@ -30,21 +30,13 @@ describe("licenses UI and privacy contracts", () => {
     expect(licenses).toContain("Renew licenses");
   });
 
-  it("shows explicit claim and inspect actions with active-use color semantics", () => {
+  it("gives staff one dense inspectable row per code with two seats", () => {
     const table = source("src/app/(app)/licenses/LicenseTable.tsx");
 
-    expect(table).toMatch(/<Eye[\s\S]*?<KeyRound/);
-    expect(table).toContain('code.status === "CLAIMED" && "bg-[var(--blue-bg)]');
-    expect(table).not.toContain('code.status === "CLAIMED" && "bg-[var(--red-bg)]');
-  });
-
-  it("renders each code as a two-slot card instead of a table", () => {
-    const table = source("src/app/(app)/licenses/LicenseTable.tsx");
-
-    expect(table).not.toContain("<Table");
     expect(table).toContain("const MAX_SLOTS = 2;");
-    expect(table).toContain("Open slot");
-    expect(table).toContain("slots in use");
+    expect(table).toContain("onInspect(code)");
+    expect(table).toContain("Inspect license");
+    expect(table).not.toContain("<Table");
   });
 
   it("lets staff assign an open slot to an active user through the managed occupy route", () => {

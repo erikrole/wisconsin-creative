@@ -68,12 +68,13 @@ The `/licenses` route is presented as **Software** in the sidebar. Photo Mechani
   - Expiry chips and the filter chips (All, Has open slot, Full, Expiring) are staff/admin only.
   - History opens a sheet backed by the existing `/api/licenses/my/history` route.
   - Staff/admin users get a web-management link for create, bulk create, renew, retire, export, unknown occupants, and full history workflows.
-- Role focus: students without a license see a claim prompt and open codes first (no rail, filters, expiry, or real code strings); students holding a license see their license card first, then the same pool (holder names stay visible to students; full cards are never dimmed or hidden); staff/admins keep the status rail, filters, expiry, and management toolbar.
+- Role focus (web, rebuilt 2026-10-16): students without a license get one "Claim a license" button (the app picks the best open slot: half-used codes first) and an "In use now" holder list with names only, never code strings; students with a license get the license card plus the same list; staff/admins get the status rail, filters, a dense one-row-per-code list with two seat avatars and expiry, and a "Claim for me" button.
 - Components:
   - `PhotoMechanicLicenses.tsx` — default Software panel: holder/claim hero first, then capacity rail, pool toolbar (staff add/renew/export), filter chips (All, Has open slot, Full, Expiring), and the card grid
   - `MyLicensePanel.tsx` — hero license card: large tap-to-copy code, claimed/expiry/activation facts, copy, history, and return
   - `MyLicenseHistoryDialog.tsx` — user-visible recent claim/return history from the active-license banner
-  - `LicenseTable.tsx` — responsive card grid (name kept from the old table): each code shows two slot seats (holder or open), masked codes, safe linked-holder identities for students, staff/admin-only inspect action, and an expiry chip
+  - `LicenseTable.tsx` — staff-only dense code list (one row per code, two seat avatars, expiry chip, Inspect)
+  - `LicenseHolders.tsx` — student-facing "In use now" list (names and claim age only)
   - `ConfirmClaimDialog.tsx` — student claim confirmation, copies code on success
   - `ReleaseDialog.tsx` — student return confirmation
   - `AdminClaimSheet.tsx` — admin detail sheet (slots, self-claim of an open slot, occupant, editable label/account/expiry, danger zone, history)

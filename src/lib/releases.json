@@ -3,13 +3,12 @@
     "date": "2026-10-16",
     "title": "Redesigned Photo Mechanic licenses",
     "type": "improvement",
-    "summary": "The Photo Mechanic page now shows each license as a card with its two machine slots, so open slots are easy to spot and claim.",
+    "summary": "Getting a Photo Mechanic license is now one button, and staff manage codes from a compact list.",
     "details": [
+      "Students claim with one button; the best open slot is picked and the code is copied.",
+      "A new list shows who is using Photo Mechanic right now.",
       "Your license is a large card with a tap-to-copy code, expiry, and return.",
-      "Every code shows its two slots, with who holds each and which are open.",
-      "New filters show codes with an open slot, full codes, or codes expiring soon.",
-      "A slot meter shows how much of the pool is in use.",
-      "The iPhone app has the same cards, plus a History view of your claims."
+      "Staff get a compact list of codes with both slots at a glance, plus filters for open, full, and expiring codes."
     ],
     "platforms": ["Web", "iOS"],
     "pr": 488
