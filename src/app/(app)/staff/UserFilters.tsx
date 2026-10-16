@@ -39,6 +39,7 @@ export default function UserFilters({
   onClearAll,
   searching = false,
   directoryMode = false,
+  roleFilter = "",
 }: {
   search: string;
   onSearchChange: (v: string) => void;
@@ -62,7 +63,10 @@ export default function UserFilters({
   onClearAll: () => void;
   searching?: boolean;
   directoryMode?: boolean;
+  /** Year and sport only describe students, so they hide for other role tabs. */
+  roleFilter?: string;
 }) {
+  const studentFiltersApply = !roleFilter || roleFilter === "STUDENT";
   const [draftSearch, setDraftSearch] = useState(search);
   const [filtersOpen, setFiltersOpen] = useState(
     !!locationFilter ||
@@ -237,7 +241,7 @@ export default function UserFilters({
               ))}
             </SelectContent>
           </Select>}
-          {!directoryMode && <Select value={yearFilter || "__all__"} onValueChange={(v) => onYearChange(v === "__all__" ? "" : v)}>
+          {!directoryMode && studentFiltersApply && <Select value={yearFilter || "__all__"} onValueChange={(v) => onYearChange(v === "__all__" ? "" : v)}>
             <SelectTrigger size="sm" className="h-10 w-[130px]">
               <SelectValue placeholder="All years" />
             </SelectTrigger>
@@ -248,7 +252,7 @@ export default function UserFilters({
               ))}
             </SelectContent>
           </Select>}
-          {!directoryMode && <Select value={sportFilter || "__all__"} onValueChange={(v) => onSportChange(v === "__all__" ? "" : v)}>
+          {!directoryMode && studentFiltersApply && <Select value={sportFilter || "__all__"} onValueChange={(v) => onSportChange(v === "__all__" ? "" : v)}>
             <SelectTrigger size="sm" className="h-10 w-[150px]">
               <SelectValue placeholder="All sports" />
             </SelectTrigger>

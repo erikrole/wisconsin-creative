@@ -24,4 +24,11 @@ describe("Staff roster role tabs and photo grid", () => {
     expect(page).toContain("<UserGridCard");
     expect(page).toContain('aria-label="Roster layout"');
   });
+
+  it("groups the loaded page by area, shows a hover quick view, and hides student-only filters for other roles", () => {
+    expect(page).toContain('"group"');
+    expect(page).toContain("<GroupHeading");
+    expect(source("src/app/(app)/staff/UserRow.tsx")).toContain("<UserQuickView");
+    expect(filters).toContain("studentFiltersApply");
+  });
 });
