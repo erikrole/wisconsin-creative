@@ -32,8 +32,8 @@
 | `BulkStockBalance` | 7 | 4 |
 | `BulkStockMovement` | 13 | 4 |
 | `BulkSkuUnit` | 15 | 5 |
-| `BookingBulkUnitAllocation` | 8 | 3 |
-| `ScanEvent` | 19 | 4 |
+| `BookingBulkUnitAllocation` | 8 | 4 |
+| `ScanEvent` | 19 | 7 |
 | `ScanSession` | 9 | 2 |
 | `OverrideEvent` | 8 | 4 |
 | `AuditLog` | 9 | 4 |
@@ -94,7 +94,7 @@
 | `ShiftTrade` | 14 | 4 |
 | `StudentAvailabilityBlock` | 22 | 7 |
 | `BookingPhoto` | 8 | 2 |
-| `CheckinItemReport` | 20 | 5 |
+| `CheckinItemReport` | 20 | 7 |
 | `KioskDevice` | 19 | 3 |
 | `Resource` | 20 | 7 |
 | `ResourceAssetFolder` | 12 | 2 |

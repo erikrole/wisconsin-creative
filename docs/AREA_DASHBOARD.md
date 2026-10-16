@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Dashboard
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-10-11
+- Last Updated: 2026-10-16
 - Status: Active — V3 shipped, reliability + UX polish complete
 - Version: V3
 
@@ -187,6 +187,7 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 
 ## Change Log
 
+- 2026-10-16: **Recent condition flags can use a dismissed-and-reported index (local).** Dashboard flagged reports and item condition history keep the same filters and order. Migration `0175_scan_checkin_and_bulk_allocation_indexes` adds `checkin_item_reports` indexes on `dismissedAt, lastReportedAt` and `assetId, lastReportedAt`. The migration is not applied, and the dashboard read itself is unchanged.
 - 2026-10-07: **macOS companion flags stale data and gains search and shortcuts (local).** Data not confirmed by a successful read for 15 minutes turns Companion data to Needs attention ("Unconfirmed for 40m"), and "Last synced" reads from that confirmation, not the server's generation time. Presenting the extra re-reads the projection at most once a minute and never beside an in-flight restore. The extra adds projection search with arrow-key row navigation while search has focus, an overdue-only count mode (hidden at zero), booking cards, and a health panel. The menu bar count has no timer (D-047): it updates on refresh, presentation, and confirmed projections. ⌃⌥⌘G opens a Status window when macOS hides the extra. Installed shortcut, real status-item interaction, APNs, and notarization remain separate gates. Review: `tasks/archive/proofs/gearops-menu-bar-improvements-2026-10-07/review.html`.
 
 - 2026-09-22: **macOS companion 1.0.5 polish.** Overdue rows now say "Was due …" instead of "Due …". The Companion data health row shows a refresh glyph, and a spinner while refreshing, in place of a navigation chevron. Booking detail responds to Esc (back) and Return (open in Wisconsin Creative), has a Copy Ref button, and scrolls to the top when a booking opens. Booking cards have a context menu (Show Details, Open in Wisconsin Creative, Copy Reference). Open-booking links use the shared query-encoded deep-link builder. Release builds no longer include coverage instrumentation. A Debug-only `GEAROPS_FIXTURE=glance` mode makes review captures repeatable. The Developer ID signed build is installed locally; notarization is still a separate gate. Review: `tasks/archive/proofs/gearops-menu-bar-polish-2026-09-22/review.html`.

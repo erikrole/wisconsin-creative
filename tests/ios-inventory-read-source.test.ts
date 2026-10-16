@@ -26,7 +26,7 @@ describe("native kits and bulk inventory reads", () => {
     expect(browse).toContain("KitsView(wrapsInNavigationStack: false)");
     expect(browse).toContain("BatteryOpsView(wrapsInNavigationStack: false)");
     expect(browse).toContain('capabilities.contains("RESERVATION_CREATE") ? .kits : nil');
-    expect(browse).toContain("rows.insert(.batteries, at: 3)");
+    expect(browse).toContain("rows.insert(.batteries, at: 4)");
     expect(items).toContain("BulkInventoryDetailView(skuId: route.id)");
     expect(source("ios/Wisconsin/Views/Search/GlobalSearchSheet.swift")).toContain("navigationPath.append(BulkSkuRoute(id: family.id))");
     expect(itemDetail).toContain("InventoryReadAccess.categoryBelongsInKits");
