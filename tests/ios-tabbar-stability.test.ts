@@ -27,7 +27,7 @@ describe("iOS tab bar stability", () => {
     expect(appTab).toContain("TeamScoreboardView()");
     expect(appTab).toContain('TabSection("Resources")');
     expect(appTab).toContain('Tab("Guides", systemImage: "book.closed", value: 6)');
-    expect(appTab).toContain('Tab("Users", systemImage: "person.2", value: 5)');
+    expect(appTab).toContain('Tab("Staff", systemImage: "person.2", value: 5)');
     expect(appTab).toContain('Tab("Licenses", systemImage: "key", value: 7)');
     expect(appTab.match(/\.tabPlacement\(\.sidebarOnly\)/g)).toHaveLength(4);
     expect(appTab).not.toContain('TabSection("Admin")');
@@ -75,7 +75,7 @@ describe("iOS tab bar stability", () => {
     expect(appTab).toContain("restoreSidebarDestinationIfNeeded()");
     expect(appTab).toContain("appState.pendingBrowseDestination = destination");
     expect(appTab).toContain("appState.selectedTab = 2");
-    expect(appTab).not.toMatch(/if isStaffOrAdmin \{[\s\S]*?Tab\("Users"/);
+    expect(appTab).not.toMatch(/if isStaffOrAdmin \{[\s\S]*?Tab\("Staff"/);
   });
 
   it("uses lightweight web fallbacks only for sidebar destinations without native iOS screens", () => {

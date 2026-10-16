@@ -102,8 +102,8 @@ describe("student field mobile contracts", () => {
 
     expect(appTab).toContain("isStaffOrAdmin ? \"Bookings\" : \"My Gear\"");
     expect(appTab).toContain('Tab("Browse", systemImage: "square.grid.2x2", value: 2)');
-    expect(appTab).toContain('Tab("Users", systemImage: "person.2", value: 5)');
-    expect(appTab).not.toMatch(/if isStaffOrAdmin \{[\s\S]*?Tab\("Users"/);
+    expect(appTab).toContain('Tab("Staff", systemImage: "person.2", value: 5)');
+    expect(appTab).not.toMatch(/if isStaffOrAdmin \{[\s\S]*?Tab\("Staff"/);
     expect(searchView).toContain("@State private var isSearchPresented = false");
     expect(searchView).toContain("isPresented: $isSearchPresented");
     expect(searchView).toContain("isSearchPresented = true");

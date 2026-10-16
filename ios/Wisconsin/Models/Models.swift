@@ -1152,6 +1152,20 @@ struct PaginatedResponse<T: Codable & Sendable>: Codable, Sendable {
     let offset: Int
 }
 
+/// `/api/users` page plus the roster summary the web role tabs use. `stats`
+/// is optional so an older server keeps decoding.
+struct UserListResponse: Codable, Sendable {
+    struct Stats: Codable, Sendable {
+        let byRole: [String: Int]
+    }
+
+    let data: [AppUser]
+    let total: Int
+    let limit: Int
+    let offset: Int
+    let stats: Stats?
+}
+
 struct APIResponse<T: Codable>: Codable {
     let data: T?
     let error: String?

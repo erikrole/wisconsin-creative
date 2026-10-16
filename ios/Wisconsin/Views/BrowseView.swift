@@ -103,7 +103,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
         case .items: "Items"
         case .guides: "Guides"
         case .licenses: "Licenses"
-        case .users: "Users"
+        case .users: "Staff"
         case .reports: "Reports"
         }
     }

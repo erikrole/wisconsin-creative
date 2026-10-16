@@ -65,7 +65,7 @@ describe("iOS Browse tab", () => {
     const appTab = appTabViewShell();
     const browse = source("ios/Wisconsin/Views/BrowseView.swift");
 
-    expect(appTab).not.toMatch(/if isStaffOrAdmin \{[\s\S]*?Tab\("Users"/);
+    expect(appTab).not.toMatch(/if isStaffOrAdmin \{[\s\S]*?Tab\("Staff"/);
 
     expect(browse).toContain("case .users:");
     expect(browse).toContain("UsersView(wrapsInNavigationStack: false)");
