@@ -1,6 +1,20 @@
 [
   {
     "date": "2026-10-16",
+    "title": "Clearer Workforce overview",
+    "type": "improvement",
+    "summary": "The Workforce overview now shows, area by area, who stays and who graduates, so gaps are visible before they happen.",
+    "details": [
+      "A new Coverage by area list shows each area's full-time staff and how many students stay or graduate.",
+      "Areas that lose half or more of their students, or all of them, are flagged and listed first.",
+      "The top tiles add context, such as the share of students graduating.",
+      "Select an area in the list to jump to its people."
+    ],
+    "platforms": ["Web"],
+    "pr": 486
+  },
+  {
+    "date": "2026-10-16",
     "title": "Cleaner Staff roster",
     "type": "improvement",
     "summary": "The Staff page now filters by role with one tap, and you can switch the roster between a table and a photo grid.",
