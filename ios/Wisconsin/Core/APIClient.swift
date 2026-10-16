@@ -1492,6 +1492,40 @@ final class APIClient {
         return response.data
     }
 
+    /// One page of `/api/calendar-events`. The Browse events list follows
+    /// `total` the same way Schedule does, without Schedule's week window.
+    func calendarEventsPage(
+        includePast: Bool,
+        window: DateInterval? = nil,
+        limit: Int,
+        offset: Int
+    ) async throws -> ScheduleEventsResponse {
+        try await calendarEventPage(
+            includePast: includePast,
+            window: window,
+            limit: limit,
+            offset: offset
+        )
+    }
+
+    /// `GET /api/calendar-events/:id`. Richer than the list row: source,
+    /// subtitle, hidden, and combined-event identity. Read-only.
+    func calendarEventDetail(id: String) async throws -> CalendarEventDetail {
+        let response: DataWrapper<CalendarEventDetail> = try await perform(
+            request(path: "/api/calendar-events/\(id)")
+        )
+        return response.data
+    }
+
+    /// Staff/admin gear and booking summary for one event. Students receive
+    /// 403; callers treat that as "no team gear" rather than a failed event.
+    func eventCommandCenter(id: String) async throws -> EventCommandCenter {
+        let response: DataWrapper<EventCommandCenter> = try await perform(
+            request(path: "/api/calendar-events/\(id)/command-center")
+        )
+        return response.data
+    }
+
     /// Reads the complete event window through the API's total-driven pages.
     /// SwiftUI still renders the result lazily, while the client no longer
     /// mistakes the first 60 events (roughly one month during a busy season)
@@ -1626,6 +1660,7 @@ final class APIClient {
     /// teammate's profile; if the answer cannot be attributed, return nothing.
     private func myShiftsPage(
         userId: String?,
+        eventId: String? = nil,
         window: DateInterval? = nil,
         limit: Int,
         offset: Int
@@ -1635,6 +1670,7 @@ final class APIClient {
             .init(name: "offset", value: "\(offset)"),
         ]
         if let userId { items.append(.init(name: "userId", value: userId)) }
+        if let eventId { items.append(.init(name: "eventId", value: eventId)) }
         items += Self.windowQueryItems(window)
         return try await perform(request(path: "/api/my-shifts", queryItems: items))
     }
@@ -1643,6 +1679,14 @@ final class APIClient {
         let resp = try await myShiftsPage(userId: userId, limit: limit, offset: 0)
         if let userId, resp.userId != userId { return [] }
         return resp.data
+    }
+
+    /// The signed-in person's shifts on one event, including the gear bookings
+    /// linked to that event. The route caps a page at 20; one person does not
+    /// have more active assignments than that on a single event.
+    func myShifts(eventId: String) async throws -> [MyShift] {
+        let response = try await myShiftsPage(userId: nil, eventId: eventId, limit: 20, offset: 0)
+        return response.data
     }
 
     /// Reads every active assignment for the caller. The route is still
