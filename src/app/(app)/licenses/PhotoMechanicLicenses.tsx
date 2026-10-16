@@ -340,7 +340,7 @@ export function PhotoMechanicLicenses({
                 type="button"
                 size="sm"
                 variant={filter === item.id ? "secondary" : "outline"}
-                className="h-9 rounded-full"
+                className="h-10 rounded-full"
                 aria-pressed={filter === item.id}
                 onClick={() => setFilter(item.id)}
               >
