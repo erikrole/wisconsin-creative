@@ -257,7 +257,7 @@
 
 ### Next batch
 
-1. Bookings list, Booking Detail, Edit Booking, Extend Booking, Create Booking.
+1. Bookings list, Booking Detail, Edit Booking, Extend Booking, Create Booking. Closed 2026-10-16. Those screens were already captured. This pass adds the reservation edit flow and the checkout detail actions the web booking page offers: nudge, close without scan, force checkout, close remaining, transfer, shared or personal custody, and linked events. Extend stays the only bottom action. Checkout gear edits stay at the kiosk. Source contracts only; iPhone 18 Pro Max and authenticated device proof remain open.
 2. More directory, Items, Item Detail, Guides, Licenses, Users, badges.
 3. Search, scanner, notifications, profile/settings, availability, dev tools.
 4. Kiosk-only screens under the `WisconsinKiosk` target.
