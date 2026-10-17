@@ -17,6 +17,90 @@
   },
   {
     "date": "2026-10-16",
+    "title": "Faster search and item lists",
+    "type": "improvement",
+    "summary": "Searching the catalog and opening item families reads less from the database, and the family photo control shows when it has keyboard focus.",
+    "details": [
+      "Command search and scans skip the six catalog-wide status counts the Items page still uses.",
+      "Item families count units in the database instead of loading every unit onto the list.",
+      "Guide search still finds a word split across a markdown link, and skips bodies that cannot contain the phrase.",
+      "Print Labels reads every alphabetical page and skips the catalog status counts.",
+      "The item-family photo button shows its Edit label and a focus ring from the keyboard."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 499
+  },
+  {
+    "date": "2026-10-16",
+    "title": "UA gear picks on iPhone",
+    "type": "feature",
+    "summary": "People on this year's Under Armour list can choose their gear on iPhone, up to their allowance, and submit it.",
+    "details": [
+      "Browse includes UA Gear for students, staff, and admins.",
+      "The list is the fit you were given, with prices and sizes from this year's catalog.",
+      "Save a draft or submit. You can still change a submitted list until the deadline.",
+      "After the deadline the saved list stays visible and locked.",
+      "The roster, deadline, and equipment spreadsheet stay on the web."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 498
+  },
+  {
+    "date": "2026-10-16",
+    "title": "Brand assets on iPhone",
+    "type": "feature",
+    "summary": "The iPhone app can open logos and PDFs from Brand assets. Adding files stays on the web.",
+    "details": [
+      "Browse includes Brand assets for anyone who can read Resources.",
+      "Open a folder, or search the library by name.",
+      "A logo or PDF opens on the phone. Other files can be shared to another app.",
+      "Adding folders, uploading, and restoring an older version stay on the web."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 496
+  },
+  {
+    "date": "2026-10-16",
+    "title": "Late returns on iPhone",
+    "type": "feature",
+    "summary": "Students and staff can open the late-return list on iPhone and go from a person to the checkout.",
+    "details": [
+      "Browse includes Accountability for students, staff, and admins.",
+      "The list covers this academic year or all time, sorted by late returns, late time, or most recent.",
+      "Your own place on the list stays at the top. Search looks through the names already loaded.",
+      "A person shows each late checkout, and opening one shows the gear.",
+      "Spreadsheets and taking a checkout off the list stay on the website."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 495
+  },
+  {
+    "date": "2026-10-16",
+    "title": "Edit reservations on iPhone",
+    "type": "feature",
+    "summary": "Reservations on iPhone can be updated the same way as on the web. Checkout screens also pick up the extra actions staff already have there.",
+    "details": [
+      "Change a reservation's name, notes, pickup, dates, remaining gear, and linked events.",
+      "Save waits until that gear is available for the new window.",
+      "Gear that was already picked up stays on the checkout.",
+      "Checkouts can nudge, close without a scan, transfer, or switch between shared and personal when those actions are allowed.",
+      "Extend stays the main action on a checkout. Gear on an active checkout still changes at a kiosk."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 493
+  },
+  {
+    "date": "2026-10-16",
     "title": "Kits and batteries on iPhone",
     "type": "feature",
     "summary": "Staff and students can read kits and item families on iPhone. Staff can also open Battery Ops to see what is low and who has batteries out.",

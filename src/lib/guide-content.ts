@@ -184,6 +184,16 @@ export function blockNoteToMarkdown(content: unknown): string {
     .trim();
 }
 
+/**
+ * True when `query` could exist only after a markdown link is flattened.
+ * `[cam](url)era` does not contain `camera`, and `markdownToPlainText` joins
+ * the label to the next characters. A one-character query cannot cross that
+ * removed destination.
+ */
+export function guideSearchQueryCouldSpanMarkdownLink(query: string): boolean {
+  return Array.from(query).length >= 2;
+}
+
 export function markdownToPlainText(markdown: string): string {
   return markdown
     .replace(/!\[[^\]]*]\([^)]*\)/g, " ")
