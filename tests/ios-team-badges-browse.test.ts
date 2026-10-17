@@ -19,7 +19,7 @@ describe("iOS team badge shelf", () => {
     expect(internalRows.indexOf("rows.append(.badges)")).toBeLessThan(internalRows.indexOf("rows.append(.reports)"));
     expect(internalRows).toContain("if isStaffOrAdmin {");
     expect(menu).toContain('case .badges: "Badges"');
-    expect(menu).toContain("See the badges staff can award.");
+    expect(menu).toContain("Recognition and staff awards");
     expect(menu).toContain("TeamBadgesView(wrapsInNavigationStack: false)");
     expect(menu).toContain('case .badges: "medal"');
     expect(menu).toContain("case .badges: Color.statusText(.purple)");

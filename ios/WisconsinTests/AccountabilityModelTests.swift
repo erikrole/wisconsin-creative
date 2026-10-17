@@ -4,6 +4,17 @@ import XCTest
 /// Trimmed `GET /api/accountability` body. A decode failure here is the bug
 /// that would compile and then show an empty leaderboard.
 final class AccountabilityModelTests: XCTestCase {
+    func testFractionalGracePeriodsDecodeAndKeepTheirPrecisionInCopy() throws {
+        for (hours, phrase) in [(0.0, "0 hours"), (0.5, "0.5 hours"), (1.0, "1 hour"), (12.5, "12.5 hours")] {
+            let body = """
+            {"gracePeriodHours":\(hours),"minimumCheckoutsForRate":3,"sort":"events","ranking":"Late events"}
+            """
+            let methodology = try JSONDecoder().decode(AccountabilityMethodology.self, from: Data(body.utf8))
+            XCTAssertEqual(Double(methodology.gracePeriodHours), hours)
+            XCTAssertEqual(methodology.graceSentence, "A return is late after \(phrase) past due.")
+        }
+    }
+
     func testReportDecodesLeaderboardAndIgnoresAdminFields() throws {
         let json = """
         {

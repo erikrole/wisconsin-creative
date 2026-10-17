@@ -4,6 +4,7 @@ import UIKit
 /// Files the phone will open in place. Anything larger is shared instead of
 /// decoded into memory on a venue network.
 let brandAssetInlineByteLimit = 40 * 1024 * 1024
+let brandAssetSVGByteLimit = 1_500_000
 
 enum BrandAssetKind: String, Codable, Hashable {
     case logo = "LOGO"
@@ -132,7 +133,7 @@ struct BrandAssetSummary: Decodable, Identifiable, Hashable {
     }
 
     var opensInline: Bool {
-        guard let currentVersion, currentVersion.sizeBytes <= brandAssetInlineByteLimit else { return false }
+        guard let currentVersion, currentVersion.sizeBytes <= brandAssetPreviewByteLimit(currentVersion.contentType) else { return false }
         switch brandAssetPreviewKind(currentVersion.contentType) {
         case .image, .svg, .pdf: return true
         case .other: return false
@@ -146,9 +147,41 @@ struct BrandAssetLibraryPage: Decodable, Equatable {
     let assets: [BrandAssetSummary]
 }
 
-struct BrandAssetDownload: Equatable {
+/// Owns one private temporary download for the lifetime of its file page.
+/// Copies passed to a share sheet remain valid while the page is retained.
+final class BrandAssetDownload {
     let fileURL: URL
     let contentType: String
+
+    init(fileURL: URL, contentType: String) {
+        self.fileURL = fileURL
+        self.contentType = contentType
+    }
+
+    deinit { try? FileManager.default.removeItem(at: fileURL.deletingLastPathComponent()) }
+
+    static var directory: URL {
+        FileManager.default.temporaryDirectory.appendingPathComponent("brand-assets", isDirectory: true)
+    }
+
+    static func removeTemporaryFiles() {
+        try? FileManager.default.removeItem(at: directory)
+    }
+}
+
+func brandAssetPreviewByteLimit(_ contentType: String) -> Int {
+    brandAssetPreviewKind(contentType) == .svg ? brandAssetSVGByteLimit : brandAssetInlineByteLimit
+}
+
+/// Check the file on disk before any decoder reads it. Metadata alone may be
+/// stale or incorrect, including when a user downloads a large file to share.
+func brandAssetCanPreview(version: BrandAssetVersion, at url: URL) -> Bool {
+    let limit = brandAssetPreviewByteLimit(version.contentType)
+    guard brandAssetPreviewKind(version.contentType) != .other,
+          version.sizeBytes <= limit,
+          let attributes = try? FileManager.default.attributesOfItem(atPath: url.path),
+          let bytes = attributes[.size] as? NSNumber else { return false }
+    return bytes.int64Value <= Int64(limit)
 }
 
 func brandAssetPreviewKind(_ contentType: String) -> BrandAssetPreviewKind {
@@ -237,11 +270,13 @@ func brandAssetDownloadName(header: String?, fallback: String) -> String {
 }
 
 func brandAssetSVGDocument(from data: Data) -> String? {
-    guard data.count <= 1_500_000, var source = String(data: data, encoding: .utf8) else { return nil }
+    guard data.count <= brandAssetSVGByteLimit, var source = String(data: data, encoding: .utf8) else { return nil }
     guard source.range(of: "<svg", options: .caseInsensitive) != nil else { return nil }
     let patterns = [
         "(?is)<script\\b[^>]*>.*?</script>",
         "(?is)<foreignObject\\b[^>]*>.*?</foreignObject>",
+        "(?is)<meta\\b[^>]*>",
+        "(?is)<base\\b[^>]*>",
         "(?i)</body",
         "(?i)</html",
         "(?i)\\son[a-z]+\\s*=\\s*(\"[^\"]*\"|'[^']*'|[^\\s>]+)",

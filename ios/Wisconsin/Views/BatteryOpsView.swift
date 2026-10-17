@@ -4,18 +4,23 @@ import SwiftUI
 @Observable
 final class BatteryOpsModel {
     var snapshot: BatteryOpsSnapshot?
-    var isLoading = false
+    var isLoading = true
     var error: String?
+    private var loads = LatestRequestGeneration()
 
     func load() async {
+        let token = loads.begin()
+        defer { if loads.owns(token) { isLoading = false } }
         if snapshot == nil { isLoading = true }
         error = nil
         do {
-            snapshot = try await APIClient.shared.batteryOps()
+            let fetched = try await APIClient.shared.batteryOps()
+            guard loads.owns(token), !Task.isCancelled else { return }
+            snapshot = fetched
         } catch {
+            guard loads.owns(token), !Task.isCancelled else { return }
             self.error = error.localizedDescription
         }
-        isLoading = false
     }
 }
 
@@ -71,11 +76,16 @@ struct BatteryOpsView: View {
                 }
             }
             Section {
-                metric("Available", value: snapshot.totals.available, tone: .green)
-                metric("Checked out", value: snapshot.totals.checkedOut, tone: .blue)
-                metric("Missing", value: snapshot.totals.lost, tone: .red)
-                metric("Retired", value: snapshot.totals.retired, tone: .gray)
-                metric("Low families", value: snapshot.totals.lowSkus, tone: .orange)
+                ReportMetricGrid(metrics: [
+                    ReportMetricModel(id: "available", value: "\(snapshot.totals.available)", label: "Available", tone: .green),
+                    ReportMetricModel(id: "out", value: "\(snapshot.totals.checkedOut)", label: "Checked out", tone: .blue),
+                    ReportMetricModel(id: "missing", value: "\(snapshot.totals.lost)", label: "Missing", tone: .red),
+                    ReportMetricModel(id: "low", value: "\(snapshot.totals.lowSkus)", label: "Low stock", tone: .orange),
+                ])
+            } header: {
+                Text("Inventory")
+            } footer: {
+                Text("\(snapshot.totals.total) batteries · \(snapshot.totals.retired) retired")
             }
 
             if snapshot.staleCheckedOutCount > 0 {
@@ -126,14 +136,6 @@ struct BatteryOpsView: View {
             }
         }
         .listStyle(.insetGrouped)
-    }
-
-    private func metric(_ title: String, value: Int, tone: StatusTone) -> some View {
-        LabeledContent(title) {
-            Text("\(value)")
-                .monospacedDigit()
-                .foregroundStyle(value > 0 ? Color.statusText(tone) : Color.secondary)
-        }
     }
 
     @ViewBuilder

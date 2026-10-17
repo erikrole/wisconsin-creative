@@ -244,6 +244,7 @@ struct BookingEventsSheet: View {
                 titles: $titles,
                 currentEvents: booking.linkedEvents
             )
+            .disabled(isSaving)
             .navigationTitle("Linked events")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -289,12 +290,13 @@ struct BookingEventsSheet: View {
 
     private func save() async {
         guard hasChanges, !isSaving else { return }
+        let requestedIds = uniqueIds(selectedIds)
         isSaving = true
         error = nil
         do {
             let updated = try await APIClient.shared.updateBookingEvents(
                 id: booking.id,
-                eventIds: uniqueIds(selectedIds),
+                eventIds: requestedIds,
                 updatedAt: booking.updatedAt
             )
             Haptics.success()

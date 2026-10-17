@@ -8,6 +8,7 @@ import Foundation
 @MainActor
 final class ReportSession<Value: Sendable> {
     private(set) var value: Value?
+    private(set) var revision: UUID?
     private(set) var isLoading = false
     private(set) var error: String?
     private var requests = LatestRequestGeneration()
@@ -56,6 +57,7 @@ final class ReportSession<Value: Sendable> {
             return false
         }
         self.value = value
+        revision = token
         error = nil
         loadedKey = activeKey
         loadedAt = incomplete ? nil : now()
@@ -64,10 +66,15 @@ final class ReportSession<Value: Sendable> {
     }
 
     @discardableResult
-    func fail(_ token: UUID, message: String) -> Bool {
+    func fail(_ token: UUID, message: String, discardValue: Bool = false) -> Bool {
         guard requests.owns(token) else { return false }
         isLoading = false
         if Task.isCancelled { return false }
+        if discardValue {
+            value = nil
+            loadedKey = nil
+            loadedAt = nil
+        }
         error = message
         return true
     }
@@ -75,9 +82,10 @@ final class ReportSession<Value: Sendable> {
     /// Replaces a finished page without opening a new request. Used when a
     /// report appends the next page of rows onto data it already showed.
     @discardableResult
-    func replace(_ value: Value, key: String) -> Bool {
-        guard loadedKey == key, !isLoading else { return false }
+    func replace(_ value: Value, key: String, revision: UUID) -> Bool {
+        guard self.revision == revision, loadedKey == key, !isLoading else { return false }
         self.value = value
+        error = nil
         return true
     }
 
@@ -90,6 +98,7 @@ final class ReportSession<Value: Sendable> {
     /// request settles, which avoids an empty flash.
     func discard() {
         requests.invalidate()
+        revision = nil
         value = nil
         error = nil
         loadedKey = nil

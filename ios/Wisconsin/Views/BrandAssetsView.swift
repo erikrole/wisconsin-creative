@@ -71,7 +71,9 @@ final class BrandAssetFolderModel {
 @Observable
 final class BrandAssetFileModel {
     let asset: BrandAssetSummary
-    var fileURL: URL?
+    private var downloadedFile: BrandAssetDownload?
+    var fileURL: URL? { downloadedFile?.fileURL }
+    var canPreview = false
     var previewImage: UIImage?
     var svgHTML: String?
     var isLoading = false
@@ -88,7 +90,7 @@ final class BrandAssetFileModel {
     }
 
     func download() async {
-        guard asset.currentVersion != nil else { return }
+        guard let version = asset.currentVersion, !isLoading else { return }
         let token = loads.begin()
         isLoading = true
         error = nil
@@ -98,10 +100,11 @@ final class BrandAssetFileModel {
         do {
             let download = try await APIClient.shared.brandAssetFile(
                 id: asset.id,
-                fallbackName: asset.currentVersion?.originalName ?? asset.name
+                versionId: version.id,
+                fallbackName: version.originalName
             )
             guard loads.owns(token), !Task.isCancelled else { return }
-            fileURL = download.fileURL
+            downloadedFile = download
             preparePreview(at: download.fileURL)
             error = nil
         } catch is CancellationError {
@@ -114,6 +117,8 @@ final class BrandAssetFileModel {
 
     private func preparePreview(at url: URL) {
         guard let version = asset.currentVersion else { return }
+        canPreview = brandAssetCanPreview(version: version, at: url)
+        guard canPreview else { return }
         switch brandAssetPreviewKind(version.contentType) {
         case .image:
             previewImage = brandAssetPreviewImage(at: url)
@@ -171,7 +176,7 @@ private struct BrandAssetFolderPage: View {
     var body: some View {
         content
             .navigationTitle(model.folderName)
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitleDisplayMode(folderId == nil ? .large : .inline)
             .searchable(
                 text: $searchText,
                 placement: .navigationBarDrawer(displayMode: .always),
@@ -261,6 +266,8 @@ private struct BrandAssetFolderPage: View {
                                 BrandAssetFolderRow(folder: folder)
                             }
                         }
+                    } header: {
+                        Text("Folders")
                     }
                 }
 
@@ -274,6 +281,8 @@ private struct BrandAssetFolderPage: View {
                                 )
                             }
                         }
+                    } header: {
+                        Text(model.showingSearchResults ? "Search results" : "Files")
                     }
                 }
             }
@@ -290,7 +299,8 @@ private struct BrandAssetFolderRow: View {
             Image(systemName: "folder")
                 .font(.body)
                 .foregroundStyle(.secondary)
-                .frame(width: 28, height: 28)
+                .frame(width: 36, height: 40)
+                .background(Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 8))
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(folder.name)
@@ -317,7 +327,8 @@ private struct BrandAssetFileRow: View {
             Image(systemName: asset.kind.systemImage)
                 .font(.body)
                 .foregroundStyle(.secondary)
-                .frame(width: 28, height: 28)
+                .frame(width: 36, height: 40)
+                .background(Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 8))
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(asset.name)
@@ -446,7 +457,7 @@ private struct BrandAssetFilePage: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: 360)
                 .accessibilityLabel(asset.name)
-        } else if let fileURL = model.fileURL, asset.currentVersion.map({ brandAssetPreviewKind($0.contentType) == .pdf }) == true {
+        } else if model.canPreview, let fileURL = model.fileURL, asset.currentVersion.map({ brandAssetPreviewKind($0.contentType) == .pdf }) == true {
             BrandAssetPDFView(url: fileURL)
                 .frame(maxWidth: .infinity)
                 .frame(height: 480)
@@ -469,7 +480,7 @@ private struct BrandAssetFilePage: View {
 
     private var unavailableCopy: String {
         guard let version = asset.currentVersion else { return "This file opens in another app." }
-        if version.sizeBytes > brandAssetInlineByteLimit,
+        if version.sizeBytes > brandAssetPreviewByteLimit(version.contentType) || (model.fileURL != nil && !model.canPreview),
            brandAssetPreviewKind(version.contentType) != .other {
             return "This file is too large to preview here. Share it to open it."
         }
@@ -535,6 +546,7 @@ private struct BrandAssetSVGView: UIViewRepresentable {
         preferences.allowsContentJavaScript = false
         let configuration = WKWebViewConfiguration()
         configuration.defaultWebpagePreferences = preferences
+        configuration.websiteDataStore = .nonPersistent()
         let view = WKWebView(frame: .zero, configuration: configuration)
         view.navigationDelegate = context.coordinator
         view.isOpaque = false
@@ -550,13 +562,17 @@ private struct BrandAssetSVGView: UIViewRepresentable {
         Coordinator()
     }
 
+    @MainActor
     final class Coordinator: NSObject, WKNavigationDelegate {
-        nonisolated func webView(
+        func webView(
             _ webView: WKWebView,
             decidePolicyFor navigationAction: WKNavigationAction,
-            decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
+            decisionHandler: @escaping @MainActor (WKNavigationActionPolicy) -> Void
         ) {
-            decisionHandler(navigationAction.navigationType == .other ? .allow : .cancel)
+            let initialDocument = navigationAction.navigationType == .other
+                && navigationAction.request.url?.absoluteString == "about:blank"
+                && navigationAction.targetFrame?.isMainFrame == true
+            decisionHandler(initialDocument ? .allow : .cancel)
         }
     }
 }

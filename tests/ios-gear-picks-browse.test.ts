@@ -14,10 +14,10 @@ describe("iOS UA gear picks", () => {
       menu.indexOf("let capabilities"),
     );
 
-    expect(internalRows).toContain("[.scoreboard, .accountability, .events, .items, .kits, .guides, .brandAssets, .blasts, .licenses, .users, .gearPicks]");
+    expect(internalRows).toContain("[.scoreboard, .accountability, .items, .kits, .guides, .brandAssets, .blasts, .licenses, .users, .gearPicks]");
     expect(internalRows).toContain("rows.insert(.batteries, at: 5)");
     expect(menu).toContain('case .gearPicks: "UA Gear"');
-    expect(menu).toContain("Pick this year's Under Armour gear.");
+    expect(menu).toContain("Your Under Armour gear picks");
     expect(menu).toContain("GearPicksView(wrapsInNavigationStack: false)");
 
     const collaboratorRows = menu.slice(menu.indexOf("let capabilities"), menu.indexOf("var body: some View"));

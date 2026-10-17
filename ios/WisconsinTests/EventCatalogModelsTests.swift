@@ -2,6 +2,18 @@ import XCTest
 @testable import Wisconsin
 
 final class EventCatalogModelsTests: XCTestCase {
+    func testFallbackIncludesEveryBookingAndDeduplicatesSharedReferences() {
+        let plans = [
+            EventGearPlan(requesterUserId: "one", requesterName: "Alex", bookingIds: ["a", "b"], title: "Event gear", state: "reserved", itemCount: 3),
+            EventGearPlan(requesterUserId: "two", requesterName: "Jordan", bookingIds: ["b", "c"], title: "Other gear", state: "checked_out", itemCount: 1),
+        ]
+        let rows = eventBookingFallbackRows(plans: plans, shifts: [], ids: ["a", "b"])
+        XCTAssertEqual(rows.map(\.id), ["a", "b"])
+        XCTAssertEqual(rows.map(\.bookingId), ["a", "b"])
+        XCTAssertEqual(rows.map(\.title), ["Booking", "Booking"])
+        XCTAssertEqual(rows.map(\.statusLabel), ["Details unavailable", "Details unavailable"])
+    }
+
     func testSourceLabelPrefersThePublicCalendarHost() {
         let badgers = CalendarEventSource(id: "src", name: "Badgers", url: "webcal://uwbadgers.com/calendar")
         XCTAssertEqual(eventCatalogSourceLabel(source: badgers, createdByName: "Ignored"), "UWBadgers.com")
