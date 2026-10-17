@@ -1,4 +1,5 @@
 import { withAuth } from "@/lib/api";
+import { appTzDateKey, appTzWeekday } from "@/lib/app-time";
 import { db } from "@/lib/db";
 import { ok } from "@/lib/http";
 import { requirePermission } from "@/lib/rbac";
@@ -67,7 +68,7 @@ function computeWindow(
   // --- Monthly trend ---
   const monthMap = new Map<string, { checkouts: number; reservations: number }>();
   for (const b of filtered) {
-    const key = `${b.startsAt.getFullYear()}-${String(b.startsAt.getMonth() + 1).padStart(2, "0")}`;
+    const key = appTzDateKey(b.startsAt).slice(0, 7);
     const entry = monthMap.get(key) || { checkouts: 0, reservations: 0 };
     if (b.kind === "CHECKOUT") entry.checkouts++;
     else entry.reservations++;
@@ -118,7 +119,7 @@ function computeWindow(
   // --- Day of week ---
   const byDayOfWeek = [0, 0, 0, 0, 0, 0, 0]; // Mon=0..Sun=6
   for (const b of filtered) {
-    const jsDay = b.startsAt.getDay(); // 0=Sun
+    const jsDay = appTzWeekday(b.startsAt); // 0=Sun, Madison calendar day
     const idx = jsDay === 0 ? 6 : jsDay - 1; // shift to Mon=0
     byDayOfWeek[idx] = (byDayOfWeek[idx] ?? 0) + 1; // idx is always 0-6, byDayOfWeek has exactly 7 elements
   }
