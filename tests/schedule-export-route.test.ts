@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Role } from "@prisma/client";
 
 vi.mock("@/lib/auth", () => ({ requireAuth: vi.fn() }));
@@ -24,6 +24,10 @@ function req(path: string) {
 }
 
 describe("schedule export route", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(requireAuth).mockResolvedValue({
@@ -75,6 +79,21 @@ describe("schedule export route", () => {
 
     expect(res.status).toBe(400);
     expect(buildScheduleExport).not.toHaveBeenCalled();
+  });
+
+  it("keeps an evening event on the last Chicago day inside the default window", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-17T18:00:00.000Z"));
+
+    const res = await GET(req("/api/schedule/export?type=roster"), { params: Promise.resolve({}) });
+    const eveningOnLastDay = new Date("2026-10-25T01:00:00.000Z");
+    const nextChicagoMidnight = new Date("2026-10-25T05:00:00.000Z");
+    const call = vi.mocked(buildScheduleExport).mock.calls[0]?.[0];
+
+    expect(res.status).toBe(200);
+    expect(call?.parsedStartDate).toEqual(new Date("2026-10-17T05:00:00.000Z"));
+    expect(call?.parsedEndDate).toEqual(new Date(nextChicagoMidnight.getTime() - 1));
+    expect(eveningOnLastDay.getTime()).toBeLessThanOrEqual(call!.parsedEndDate.getTime());
   });
 
   it("denies students before building an export", async () => {

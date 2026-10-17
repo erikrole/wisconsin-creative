@@ -1,13 +1,13 @@
 [
   {
     "date": "2026-10-17",
-    "title": "Madison hours and item charts",
+    "title": "Madison hours, charts, and exports",
     "type": "fixes",
-    "summary": "Profile hours, staffing workload, and item insight charts follow the Madison day. Catalog attachments stay with the items a collaborator can open.",
+    "summary": "Profile hours, staffing workload, item insight charts, and the default schedule export follow the Madison day. Catalog attachments stay with the items a collaborator can open.",
     "details": [
-      "Profile hours count the Madison week and month, including Sunday evening and a week that crosses the month.",
-      "Staffing suggestions use that same week and month when they judge how busy someone is.",
+      "Profile hours and staffing suggestions count the Madison week and month, including Sunday evening and a week that crosses the month.",
       "Item insight charts file an evening checkout on the Madison day.",
+      "A schedule export with no end date includes an evening event on the last day.",
       "The calendar source list is limited to people who can view sources.",
       "A collaborator who can browse the catalog sees an item's attachments, without serial numbers.",
       "Filling open shifts and copying a previous crew read each person once for the whole preview."
