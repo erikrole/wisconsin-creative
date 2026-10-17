@@ -40,6 +40,82 @@ struct BulkReservationRequest: Codable, Equatable {
     let quantity: Int
 }
 
+/// Bounds shared with the web booking schemas. The server remains the authority.
+enum BookingEditRules {
+    static let maxTitleLength = 500
+    static let maxNotesLength = 10_000
+    static let minReasonLength = 10
+    static let maxReasonLength = 1_000
+    static let maxSerializedItems = 500
+    static let maxBulkLines = 50
+    static let maxBulkQuantity = 1_000_000
+    static let maxLinkedEvents = 5
+
+    static func validatedTitle(_ value: String) throws -> String {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, trimmed.count <= maxTitleLength else {
+            throw APIError.serverError("Name must be between 1 and 500 characters.")
+        }
+        return trimmed
+    }
+
+    static func validateNotes(_ value: String) throws {
+        guard value.count <= maxNotesLength else {
+            throw APIError.serverError("Notes must be 10,000 characters or fewer.")
+        }
+    }
+
+    static func validatedReason(_ value: String) throws -> String {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= minReasonLength else {
+            throw APIError.serverError("Reason must be at least 10 characters")
+        }
+        guard trimmed.count <= maxReasonLength else {
+            throw APIError.serverError("Reason must be 1,000 characters or fewer.")
+        }
+        return trimmed
+    }
+
+    static func validatedOptionalNote(_ value: String) throws -> String? {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        guard trimmed.count <= maxReasonLength else {
+            throw APIError.serverError("Note must be 1,000 characters or fewer.")
+        }
+        return trimmed
+    }
+
+    static func validateSerializedIds(_ ids: [String]) throws {
+        guard ids.count <= maxSerializedItems else {
+            throw APIError.serverError("A reservation can include at most 500 items.")
+        }
+    }
+
+    static func validateBulkItems(_ items: [BulkReservationRequest]) throws {
+        guard items.count <= maxBulkLines else {
+            throw APIError.serverError("A reservation can include at most 50 supply lines.")
+        }
+        var seen = Set<String>()
+        for item in items {
+            guard item.quantity >= 1, item.quantity <= maxBulkQuantity else {
+                throw APIError.serverError("Quantity must be between 1 and 1000000.")
+            }
+            guard seen.insert(item.bulkSkuId).inserted else {
+                throw APIError.serverError("Duplicate bulk item")
+            }
+        }
+    }
+
+    static func validateEventIds(_ ids: [String]) throws {
+        guard ids.count <= maxLinkedEvents else {
+            throw APIError.serverError("A booking may link at most 5 events.")
+        }
+        guard Set(ids).count == ids.count else {
+            throw APIError.serverError("eventIds must be unique")
+        }
+    }
+}
+
 /// A preflight check is useful only when the caller can distinguish "clear"
 /// from "could not check." Keep the old empty-result API below for rollout
 /// compatibility, while new flows preserve the last known availability state
@@ -675,6 +751,154 @@ final class APIClient {
         let iso = ISO8601DateFormatter()
         iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         req.httpBody = try JSONEncoder().encode(Body(endsAt: iso.string(from: endsAt)))
+        let response: DataWrapper<Booking> = try await perform(req)
+        return response.data
+    }
+
+    /// Reservation edit. Checkout requester, pickup, start, and gear stay on
+    /// their own routes; this PATCH is the reservation plan the web sheet saves.
+    func updateReservation(
+        id: String,
+        title: String? = nil,
+        notes: String? = nil,
+        locationId: String? = nil,
+        startsAt: Date? = nil,
+        endsAt: Date? = nil,
+        serializedAssetIds: [String]? = nil,
+        bulkItems: [BulkReservationRequest]? = nil,
+        updatedAt: Date?
+    ) async throws -> Booking {
+        guard let updatedAt else {
+            throw APIError.serverError("Refresh this reservation before editing it.")
+        }
+        if let title {
+            _ = try BookingEditRules.validatedTitle(title)
+        }
+        if let notes {
+            try BookingEditRules.validateNotes(notes)
+        }
+        if let startsAt, let endsAt, endsAt <= startsAt {
+            throw APIError.serverError("endsAt must be later than startsAt")
+        }
+        if let serializedAssetIds {
+            try BookingEditRules.validateSerializedIds(serializedAssetIds)
+        }
+        if let bulkItems {
+            try BookingEditRules.validateBulkItems(bulkItems)
+        }
+        struct Body: Encodable {
+            let title: String?
+            let notes: String?
+            let locationId: String?
+            let startsAt: String?
+            let endsAt: String?
+            let serializedAssetIds: [String]?
+            let bulkItems: [BulkReservationRequest]?
+
+            func encode(to encoder: Encoder) throws {
+                var container = encoder.container(keyedBy: CodingKeys.self)
+                try container.encodeIfPresent(title, forKey: .title)
+                try container.encodeIfPresent(notes, forKey: .notes)
+                try container.encodeIfPresent(locationId, forKey: .locationId)
+                try container.encodeIfPresent(startsAt, forKey: .startsAt)
+                try container.encodeIfPresent(endsAt, forKey: .endsAt)
+                try container.encodeIfPresent(serializedAssetIds, forKey: .serializedAssetIds)
+                try container.encodeIfPresent(bulkItems, forKey: .bulkItems)
+            }
+
+            private enum CodingKeys: String, CodingKey {
+                case title, notes, locationId, startsAt, endsAt, serializedAssetIds, bulkItems
+            }
+        }
+        var req = request(path: "/api/bookings/\(id)", method: "PATCH")
+        req.setValue(bookingSnapshotString(updatedAt), forHTTPHeaderField: "X-Booking-Updated-At")
+        req.httpBody = try JSONEncoder().encode(Body(
+            title: title.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) },
+            notes: notes,
+            locationId: locationId,
+            startsAt: startsAt.map(bookingSnapshotString),
+            endsAt: endsAt.map(bookingSnapshotString),
+            serializedAssetIds: serializedAssetIds,
+            bulkItems: bulkItems
+        ))
+        let response: DataWrapper<Booking> = try await perform(req)
+        return response.data
+    }
+
+    func updateBookingEvents(id: String, eventIds: [String], updatedAt: Date?) async throws -> Booking {
+        guard let updatedAt else {
+            throw APIError.serverError("Refresh this booking before editing its events.")
+        }
+        try BookingEditRules.validateEventIds(eventIds)
+        struct Body: Encodable { let eventIds: [String] }
+        var req = request(path: "/api/bookings/\(id)/events", method: "POST")
+        req.setValue(bookingSnapshotString(updatedAt), forHTTPHeaderField: "X-Booking-Updated-At")
+        req.httpBody = try JSONEncoder().encode(Body(eventIds: eventIds))
+        let response: DataWrapper<Booking> = try await perform(req)
+        return response.data
+    }
+
+    /// `true` when this hour's reminder was already sent.
+    func nudgeCheckout(id: String) async throws -> Bool {
+        struct Result: Decodable {
+            let alreadyNudged: Bool?
+        }
+        var req = request(path: "/api/bookings/\(id)/nudge", method: "POST")
+        req.httpBody = Data()
+        let result: Result = try await perform(req)
+        return result.alreadyNudged == true
+    }
+
+    func forceCompleteCheckout(id: String, reason: String) async throws -> Booking {
+        let reason = try BookingEditRules.validatedReason(reason)
+        struct Body: Encodable { let reason: String }
+        var req = request(path: "/api/bookings/\(id)/force-complete", method: "POST")
+        req.httpBody = try JSONEncoder().encode(Body(reason: reason))
+        let response: DataWrapper<Booking> = try await perform(req)
+        return response.data
+    }
+
+    func updateCheckoutCustody(id: String, custodyScope: String, updatedAt: Date?) async throws -> Booking {
+        guard let updatedAt else {
+            throw APIError.serverError("Refresh this checkout before changing custody.")
+        }
+        guard custodyScope == "PERSON" || custodyScope == "SHARED" else {
+            throw APIError.serverError("Custody must be personal or shared.")
+        }
+        struct Body: Encodable { let custodyScope: String }
+        var req = request(path: "/api/bookings/\(id)/custody-scope", method: "POST")
+        req.setValue(bookingSnapshotString(updatedAt), forHTTPHeaderField: "X-Booking-Updated-At")
+        req.httpBody = try JSONEncoder().encode(Body(custodyScope: custodyScope))
+        let response: DataWrapper<Booking> = try await perform(req)
+        return response.data
+    }
+
+    func forceCheckoutReservation(id: String, reason: String) async throws -> Booking {
+        let reason = try BookingEditRules.validatedReason(reason)
+        struct Body: Encodable { let reason: String }
+        var req = request(path: "/api/reservations/\(id)/force-checkout", method: "POST")
+        req.httpBody = try JSONEncoder().encode(Body(reason: reason))
+        let response: DataWrapper<Booking> = try await perform(req)
+        return response.data
+    }
+
+    func closeReservationRemaining(id: String, reason: String?) async throws -> Booking {
+        let note: String?
+        if let reason {
+            note = try BookingEditRules.validatedOptionalNote(reason)
+        } else {
+            note = nil
+        }
+        struct Body: Encodable {
+            let reason: String?
+            func encode(to encoder: Encoder) throws {
+                var container = encoder.container(keyedBy: CodingKeys.self)
+                try container.encodeIfPresent(reason, forKey: .reason)
+            }
+            private enum CodingKeys: String, CodingKey { case reason }
+        }
+        var req = request(path: "/api/reservations/\(id)/close-remaining", method: "POST")
+        req.httpBody = try JSONEncoder().encode(Body(reason: note))
         let response: DataWrapper<Booking> = try await perform(req)
         return response.data
     }
