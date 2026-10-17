@@ -734,6 +734,51 @@ describe("kiosk pickup serialized scan guard", () => {
     });
   });
 
+  it("returns 400 when a personal pickup scan omits the operator", async () => {
+    mocks.bookingFindUnique.mockResolvedValue({
+      id: "booking-1",
+      status: "PENDING_PICKUP",
+      kind: "CHECKOUT",
+      custodyScope: "PERSON",
+      requesterUserId: "user-1",
+      locationId: "loc-1",
+    });
+
+    await expect(scanKioskPickup(new Request("http://test", {
+      method: "POST",
+      body: JSON.stringify({ scanValue: "23723854" }),
+    }), routeCtx("booking-1"))).rejects.toMatchObject({
+      status: 400,
+      message: "Choose an operator before scanning",
+    });
+    expect(mocks.userFindFirst).not.toHaveBeenCalled();
+    expect(mocks.scanKioskPickupBulkUnit).not.toHaveBeenCalled();
+    expect(mocks.scanEventCreate).not.toHaveBeenCalled();
+    expect(mocks.findAssetByScanValue).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when a shared pickup scan omits the operator", async () => {
+    mocks.bookingFindUnique.mockResolvedValue({
+      id: "reservation-1",
+      status: "BOOKED",
+      kind: "RESERVATION",
+      custodyScope: "SHARED",
+      requesterUserId: "creator-1",
+      locationId: "loc-1",
+    });
+
+    await expect(scanKioskPickup(new Request("http://test", {
+      method: "POST",
+      body: JSON.stringify({ scanValue: "FB-FX3-1" }),
+    }), routeCtx("reservation-1"))).rejects.toMatchObject({
+      status: 400,
+      message: "Choose an operator before scanning shared gear",
+    });
+    expect(mocks.userFindFirst).not.toHaveBeenCalled();
+    expect(mocks.stageKioskReservationPickupBulkUnit).not.toHaveBeenCalled();
+    expect(mocks.scanEventCreate).not.toHaveBeenCalled();
+  });
+
   it("rejects another student before staging or recording a personal pickup scan", async () => {
     mocks.bookingFindUnique.mockResolvedValue({
       id: "booking-1",
