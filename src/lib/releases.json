@@ -1,6 +1,23 @@
 [
   {
     "date": "2026-10-16",
+    "title": "Faster search and item lists",
+    "type": "improvement",
+    "summary": "Searching the catalog and opening item families reads less from the database, and the family photo control shows when it has keyboard focus.",
+    "details": [
+      "Command search and scans skip the six catalog-wide status counts the Items page still uses.",
+      "Item families count units in the database instead of loading every unit onto the list.",
+      "Guide search still finds a word split across a markdown link, and skips bodies that cannot contain the phrase.",
+      "Print Labels reads every alphabetical page and skips the catalog status counts.",
+      "The item-family photo button shows its Edit label and a focus ring from the keyboard."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 499
+  },
+  {
+    "date": "2026-10-16",
     "title": "UA gear picks on iPhone",
     "type": "feature",
     "summary": "People on this year's Under Armour list can choose their gear on iPhone, up to their allowance, and submit it.",
