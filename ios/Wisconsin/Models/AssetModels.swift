@@ -532,7 +532,7 @@ struct AssetDetail: Codable, Identifiable, Hashable {
     let history: [AssetBookingHistoryEntry]
     let parentAsset: AssetParentLink?
     let accessories: [AssetAccessory]?
-    let checkinReports: [AssetConditionReport] = []
+    var checkinReports: [AssetConditionReport] = []
     let metadata: AssetMetadata?
     let purchaseDate: String?
     let purchasePrice: String?   // Prisma Decimal serializes as string

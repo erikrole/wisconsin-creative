@@ -976,9 +976,12 @@ private struct ItemConditionReportsCard: View {
 
     private func reportDate(_ date: Date) -> String {
         date.formatted(
-            Date.FormatStyle(date: .abbreviated, time: .omitted)
-                .locale(Locale(identifier: "en_US"))
-                .timeZone(Preferences.appTimeZone)
+            Date.FormatStyle(
+                date: .abbreviated,
+                time: .omitted,
+                locale: Locale(identifier: "en_US"),
+                timeZone: NotificationPrefsViewModel.appTimeZone
+            )
         )
     }
 }
