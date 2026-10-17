@@ -12,10 +12,10 @@ struct BrowseView: View {
 
     private var destinations: [BrowseDestination] {
         guard session.currentUser?.role == "COLLABORATOR" else {
-            // Accountability and Events read internal team data, and Reports and
-            // Battery Ops are staff analytics. Those endpoints refuse anyone else,
-            // so the rows are hidden rather than offered and refused.
-            var rows: [BrowseDestination] = [.scoreboard, .accountability, .events, .items, .kits, .guides, .blasts, .licenses, .users]
+            // Accountability, Events, and Brand assets read internal team data,
+            // and Reports and Battery Ops are staff analytics. Those endpoints
+            // refuse anyone else, so the rows are hidden rather than offered and refused.
+            var rows: [BrowseDestination] = [.scoreboard, .accountability, .events, .items, .kits, .guides, .brandAssets, .blasts, .licenses, .users]
             if isStaffOrAdmin {
                 rows.insert(.batteries, at: 5)
                 rows.append(.reports)
@@ -93,6 +93,8 @@ struct BrowseView: View {
             BatteryOpsView(wrapsInNavigationStack: false)
         case .guides:
             GuidesView(wrapsInNavigationStack: false)
+        case .brandAssets:
+            BrandAssetsView(wrapsInNavigationStack: false)
         case .licenses:
             LicensesView(wrapsInNavigationStack: false)
         case .users:
@@ -113,6 +115,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
     case kits
     case batteries
     case guides
+    case brandAssets
     case blasts
     case licenses
     case users
@@ -129,6 +132,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
         case .kits: "Kits"
         case .batteries: "Battery Ops"
         case .guides: "Guides"
+        case .brandAssets: "Brand assets"
         case .blasts: "Blasts"
         case .licenses: "Licenses"
         case .users: "Users"
@@ -152,6 +156,8 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
             "See battery families, who has units out, and what is running low."
         case .guides:
             "Read team reference docs, contacts, venue notes, and workflows."
+        case .brandAssets:
+            "Logos, PDFs, and other brand files."
         case .blasts:
             "Read a broadcast again after you dismiss it."
         case .licenses:
@@ -172,6 +178,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
         case .kits: "square.stack.3d.up"
         case .batteries: "battery.100"
         case .guides: "book.closed"
+        case .brandAssets: "folder"
         case .blasts: "megaphone"
         case .licenses: "key"
         case .users: "person.2"
@@ -188,6 +195,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
         case .kits: Color.statusText(.purple)
         case .batteries: Color.statusText(.orange)
         case .guides: Color.statusText(.purple)
+        case .brandAssets: Color.statusText(.blue)
         case .blasts: Color.statusText(.blue)
         case .licenses: Color.statusText(.orange)
         case .users: Color.statusText(.green)

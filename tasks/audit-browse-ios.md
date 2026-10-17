@@ -20,6 +20,7 @@ Native iOS Browse tab in `ios/Wisconsin/Views/BrowseView.swift`.
 - Guides and Licenses remain read/self-service native surfaces with web-owned admin workflows.
 
 ## Follow-Ups
+- 2026-10-16: Browse adds a Brand assets row for internal roles. The folder list and file page live in `BrandAssetsView.swift` and are covered by `tasks/audit-brand-assets-ios.md`.
 - 2026-10-16: Browse adds a Blasts row for every signed-in role. The list and detail live in `BlastsView.swift` and are covered by `tasks/audit-blasts-ios.md`.
 - Resolved 2026-07-17: Items and Users now use non-nested wrappers inside Browse while preserving standalone stack behavior for regular-width/sidebar entry points.
 - Visual interaction proof remains to be repeated on an authenticated simulator or physical device; this pass had no booted simulator available after source, XCTest, simulator-build, and generic-device-build verification completed.

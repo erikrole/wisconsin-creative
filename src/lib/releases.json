@@ -1,6 +1,22 @@
 [
   {
     "date": "2026-10-16",
+    "title": "Brand assets on iPhone",
+    "type": "feature",
+    "summary": "The iPhone app can open logos and PDFs from Brand assets. Adding files stays on the web.",
+    "details": [
+      "Browse includes Brand assets for anyone who can read Resources.",
+      "Open a folder, or search the library by name.",
+      "A logo or PDF opens on the phone. Other files can be shared to another app.",
+      "Adding folders, uploading, and restoring an older version stay on the web."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 496
+  },
+  {
+    "date": "2026-10-16",
     "title": "Late returns on iPhone",
     "type": "feature",
     "summary": "Students and staff can open the late-return list on iPhone and go from a person to the checkout.",

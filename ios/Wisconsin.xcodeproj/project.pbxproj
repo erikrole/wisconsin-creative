@@ -53,6 +53,7 @@
 		28EE6E9E2F95C9BA9B138B38 /* BlastModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5827A13830B73BC3EB57808 /* BlastModels.swift */; };
 		2A37E7B9C1A68005651FAC4A /* CreateBookingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB412E1DD8493D282F261563 /* CreateBookingViewModel.swift */; };
 		2C1482077FD5A009856F4093 /* EventCatalogModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0F125F7F77142B7AB7F206E /* EventCatalogModelsTests.swift */; };
+		2C6B96B64D01EF1B40948AFD /* BrandAssetModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8C20C664649F7DA20E7EE91 /* BrandAssetModelTests.swift */; };
 		2C79A800F537F80CF5C414B0 /* ProfilePhotoCropView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BD749C0D91CAF1E8784E04F /* ProfilePhotoCropView.swift */; };
 		2CED1D2B5A4282EB13E29796 /* ScheduleModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = D50B2D1EA31765C957FED322 /* ScheduleModels.swift */; };
 		2DF5EDC0EA7BAAF2547F1035 /* LinkStickerWizard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41D51AC00210AD1B6DE0E466 /* LinkStickerWizard.swift */; };
@@ -71,6 +72,7 @@
 		3A34548DD720E71C6B54BB31 /* ItemsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F12684601FE641B454D0219B /* ItemsView.swift */; };
 		3C1AF895D25D70A9E5081E9B /* MissingUnitsReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBC77DC85721D10BD0331AD0 /* MissingUnitsReportView.swift */; };
 		3C5D633C4299CA79C40FCFBA /* Gotham-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = F79BD5C4616572A064F43254 /* Gotham-Bold.ttf */; };
+		3C75E1BEF022199B034CAACC /* BrandAssetsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AF2795089BD5B00BFA48D63 /* BrandAssetsView.swift */; };
 		3F0879ADAE07E40D10144C86 /* ScheduleCalendarSubscriptionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 796958C4A59FDC2C36ED1E38 /* ScheduleCalendarSubscriptionSheet.swift */; };
 		411CF014B25A6515F8E6869E /* CreateBookingEquipmentRows.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4C885700380306D486A94C9 /* CreateBookingEquipmentRows.swift */; };
 		41891E6B69644BB1DB025CB9 /* Brand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A9DAB950F60885A23620BEC /* Brand.swift */; };
@@ -103,6 +105,7 @@
 		617342117832FB9352D3188A /* SpotlightIndexer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07B3B943DF177C91612E3BB7 /* SpotlightIndexer.swift */; };
 		654893DACB94A0EDA73141DF /* KioskAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA5C2531E017BDBDE5EFDDFE /* KioskAPIClient.swift */; };
 		6634743A4A38550DD5933AFD /* KitDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5447D133A30CB4437C234F83 /* KitDetailView.swift */; };
+		6717F1F3A66106F5F83D2160 /* BrandAssetModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 180AF28376E70B61036C413D /* BrandAssetModels.swift */; };
 		69DD68092CDC35D6924052DF /* BookingDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA04562F7C424114F304B494 /* BookingDetailView.swift */; };
 		6A29F42A3F64F9E6FDD5EB53 /* UserDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B64F325136AF7626ECECE8C /* UserDetailView.swift */; };
 		6A2AF05B82DC2BA24217048C /* BannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 843772771897AABEF8DD1F93 /* BannerView.swift */; };
@@ -302,6 +305,7 @@
 		14DA88A1DF6F8D23066A07BC /* GuidesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuidesView.swift; sourceTree = "<group>"; };
 		1615C6F17BFBA54D91D47F78 /* BlastArchive.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlastArchive.swift; sourceTree = "<group>"; };
 		1770023701735D8701DCAA5B /* OverdueReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverdueReportView.swift; sourceTree = "<group>"; };
+		180AF28376E70B61036C413D /* BrandAssetModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrandAssetModels.swift; sourceTree = "<group>"; };
 		1B440FC4AD4F07C1163F8856 /* CheckoutReturnLiveActivityWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckoutReturnLiveActivityWidget.swift; sourceTree = "<group>"; };
 		21093FA38C7231AD95DA04B0 /* GearTrackerRouteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GearTrackerRouteTests.swift; sourceTree = "<group>"; };
 		2228A84C3CCBC90ABF9103F1 /* BookingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingsView.swift; sourceTree = "<group>"; };
@@ -369,6 +373,7 @@
 		68542663977099AEC90AAFE5 /* LicenseExpiryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LicenseExpiryTests.swift; sourceTree = "<group>"; };
 		687337C19E47FE94FE56F9BF /* KioskReturnView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskReturnView.swift; sourceTree = "<group>"; };
 		6A2DFDC7A0C7BD6C018D43D2 /* PushPrePromptView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushPrePromptView.swift; sourceTree = "<group>"; };
+		6AF2795089BD5B00BFA48D63 /* BrandAssetsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrandAssetsView.swift; sourceTree = "<group>"; };
 		6AFF5F65A92CEAED518EF6E6 /* CreateBookingPickers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateBookingPickers.swift; sourceTree = "<group>"; };
 		6B64F325136AF7626ECECE8C /* UserDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDetailView.swift; sourceTree = "<group>"; };
 		6D6258D04F2CBF34C14EBB69 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
@@ -478,6 +483,7 @@
 		E3DAC11C4B916E9E50AAEBF3 /* ReportLibraryModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportLibraryModelTests.swift; sourceTree = "<group>"; };
 		E476FBFFA1229259FF006C64 /* KioskEventDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskEventDetailSheet.swift; sourceTree = "<group>"; };
 		E725DC3AA9C81B02F5CF4435 /* KioskOperatorHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskOperatorHubView.swift; sourceTree = "<group>"; };
+		E8C20C664649F7DA20E7EE91 /* BrandAssetModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrandAssetModelTests.swift; sourceTree = "<group>"; };
 		E968BAF46C8E557831F73C27 /* KioskSuccessView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskSuccessView.swift; sourceTree = "<group>"; };
 		EB6A309FA698276EE001EE07 /* Preferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Preferences.swift; sourceTree = "<group>"; };
 		EC04AA628BB1DEA764D7EEAC /* ItemListText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemListText.swift; sourceTree = "<group>"; };
@@ -689,6 +695,7 @@
 				279D279A34DC519AA0A42205 /* AccountabilityModels.swift */,
 				3967BD5EC55792F3B9E94724 /* AssetModels.swift */,
 				A5827A13830B73BC3EB57808 /* BlastModels.swift */,
+				180AF28376E70B61036C413D /* BrandAssetModels.swift */,
 				BB8C14E1F7005B408A6A4CCD /* DashboardModels.swift */,
 				9DAF420E532759A9116D675B /* DraftModels.swift */,
 				0E6123A836C8A0D47EA24AA1 /* EventCatalogModels.swift */,
@@ -849,6 +856,7 @@
 				D81B8CCF65841AC7E7668763 /* BlastsView.swift */,
 				BA04562F7C424114F304B494 /* BookingDetailView.swift */,
 				2228A84C3CCBC90ABF9103F1 /* BookingsView.swift */,
+				6AF2795089BD5B00BFA48D63 /* BrandAssetsView.swift */,
 				58ABE954706326D6137979FB /* BrowseView.swift */,
 				C47A1F9B414D1FC2CEA2AD4C /* BulkInventoryDetailView.swift */,
 				F1F3FA2D4C06E966E6BA030B /* CreateBookingSheet.swift */,
@@ -914,6 +922,7 @@
 				264334A2FD54BFCA6ADD8B6D /* AccountabilityModelTests.swift */,
 				F1AB4E32967E7E27BF878BA9 /* BlastHistoryTests.swift */,
 				33E539B4DF2AE3F73D36C2BA /* BookingModelsTests.swift */,
+				E8C20C664649F7DA20E7EE91 /* BrandAssetModelTests.swift */,
 				FE7F7F41A126A5E914C982A9 /* CurrentDayTests.swift */,
 				F0F125F7F77142B7AB7F206E /* EventCatalogModelsTests.swift */,
 				21093FA38C7231AD95DA04B0 /* GearTrackerRouteTests.swift */,
@@ -1160,6 +1169,7 @@
 				F177CB625773D440DFADA946 /* AccountabilityModelTests.swift in Sources */,
 				2127E8FF340C558E288B43E7 /* BlastHistoryTests.swift in Sources */,
 				ADB0FD771E094960BDFC5D6B /* BookingModelsTests.swift in Sources */,
+				2C6B96B64D01EF1B40948AFD /* BrandAssetModelTests.swift in Sources */,
 				2F641BB2A7FBF81DEDEE7FE1 /* CurrentDayTests.swift in Sources */,
 				2C1482077FD5A009856F4093 /* EventCatalogModelsTests.swift in Sources */,
 				563D04BBDE05CA2EDE98513A /* GearTrackerRouteTests.swift in Sources */,
@@ -1286,6 +1296,8 @@
 				A71171A7BA1D1B302A533883 /* BookingEntity.swift in Sources */,
 				B2FEB545EEB4F42FE18F292F /* BookingsView.swift in Sources */,
 				41891E6B69644BB1DB025CB9 /* Brand.swift in Sources */,
+				6717F1F3A66106F5F83D2160 /* BrandAssetModels.swift in Sources */,
+				3C75E1BEF022199B034CAACC /* BrandAssetsView.swift in Sources */,
 				71675D3559403AAD9354C225 /* BrowseView.swift in Sources */,
 				784E7CA7101AF7458D03D926 /* BulkInventoryDetailView.swift in Sources */,
 				27CB9D802700C529953BDEE1 /* CheckoutReportView.swift in Sources */,
