@@ -1,5 +1,9 @@
 # Audit: item detail (iOS) — 2026-05-08
 
+## 2026-10-17 — Condition reports
+
+Staff and admin item detail now shows the website's five most recent condition reports (`checkinReports` on `GET /api/assets/:id`). Damage is orange, a missing item is red, a photo opens full screen, and the row opens the checkout. Reserve stays the primary action. Clearing maintenance stays in the toolbar menu. A malformed report row is skipped so the item still loads. Students and collaborators do not see the section. Source contract: `tests/ios-item-condition-reports.test.ts`. An Xcode build on a Mac and an authenticated iPhone walkthrough remain open.
+
 **MVP verdict (pre-fix):** ships, but the floor-relevant CTA — "Reserve this gear" — is missing. The list has it (swipe action + context menu); detail doesn't. Plus a few polish gaps inherited from this morning's pattern (edit save haptic, QR copy feedback, favorite haptic on load).
 **Ship bar:** student-friendly, fully functional for core flows, zero hiccups in front of a class.
 **Audit type:** static source (no build/run/UI tests).

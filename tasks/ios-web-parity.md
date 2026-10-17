@@ -1,19 +1,20 @@
 # iOS ↔ web parity
 
-Last updated: 2026-10-16
+Last updated: 2026-10-17
 
 This is the handoff for the next native slice. Compare the website's pages and staff actions with the iPhone app under `ios/`. Count a row as covered when it is on `main` or in an open pull request listed below. Do not edit files those pull requests already change unless the slice cannot exist without a shared file (`BrowseView.swift`, `APIClient.swift`, `project.pbxproj`, `src/lib/releases.json`, `docs/AREA_MOBILE.md`).
 
 Open, and off limits for file overlap:
 
-- #492 kits, kit detail, bulk inventory, and Battery Ops
-- #493 reservation edit and checkout detail actions
-- #494 admin budget linked to items (web only; do not start a phone version from those files)
-- #491 web list performance and route loading states (not an iOS slice)
-- #478 Photo Frame on `/apps` (draft static web tool; it also edits `src/lib/releases.json`)
-- Erik's drafts, even where they are not parity work: #483 Fetch/Offload pages, #484 Users→Staff rename, #485 Workforce under Staff, #486 staff roster, #488 Photo Mechanic licenses redesign
+- #502 shared software logins (`LicensesView.swift` and the software models)
+- #503 Madison hours, charts, and exports (item insight charts, schedule export, profile hours)
+- #504 iPhone browse hardening (also edits `src/lib/releases.json`, `docs/AREA_MOBILE.md`, and `docs/GAPS_AND_RISKS.md`)
+- #497, #486, #485, and #484 Users to Staff renaming and role tabs
+- #494 Budget
+- #488 Photo Mechanic licenses redesign
+- #478 Photo Frame on `/apps` (also edits `src/lib/releases.json`)
 
-#490 reports, #489 blasts, and #487 events are already on `main`.
+Reports, blasts, events, kits, accountability, brand assets, UA Gear, and the team badge shelf are already on `main`.
 
 ## How to pick
 
@@ -23,7 +24,7 @@ Take the first item under **Missing** whose blocked note is clear. Keep one scre
 
 - [x] Home action queue (personal overdue, due today, pending pickup, upcoming reservations, next shift)
 - [x] Schedule: week list, event detail, claim, trade board, assign, add shift, availability, calendar feed
-- [x] Bookings list and detail, including create reservation, extend, cancel, and re-reserve. Edit and the remaining checkout actions are #493.
+- [x] Bookings list and detail, including create reservation, edit, extend, cancel, re-reserve, and the checkout actions that stay off the kiosk.
 - [x] Search, including camera scan
 - [x] Items list and item detail: reserve, needs maintenance, attachments, booking history
 - [x] Scoreboard, including a person's record
@@ -37,23 +38,25 @@ Take the first item under **Missing** whose blocked note is clear. Keep one scre
 - [x] Welcome and profile completion
 - [x] Widgets, Live Activity, and Home Screen quick actions
 - [x] Kiosk custody (separate iPad app): checkout, pickup, return
-- [x] Accountability: this year or all time, three sorts, name search, personal standing, open the checkout. Added in this slice. Location, incident state, active-user filters, the continuous on-time bar, CSV, and exclusion edits stay on the web.
+- [x] Accountability: this year or all time, three sorts, name search, personal standing, open the checkout. Location, incident state, active-user filters, the continuous on-time bar, CSV, and exclusion edits stay on the web.
+- [x] Brand assets: folders, search, and opening a logo or PDF. Favorites, folder create, upload, and version restore stay on the web.
+- [x] UA Gear, for a participant. Admin roster, deadline, and the equipment spreadsheet stay on the web.
+- [x] Team badge shelf. A person's own badges stay on Profile. Awarding a group stays on the web.
+- [x] Item condition reports. Staff and admin see the five newest damage and missing-item reports on the item, with the photo and the checkout. Added in this slice. Students do not see them. Clearing maintenance stays in the item menu.
 
 ## Missing
 
-- [ ] **Brand assets.** `/resources?tab=brand-assets` is a file library (folders, preview, download, favorites). Guides on the phone are Markdown only. A read-only library is the next field slice: creative staff need a logo or PDF at a venue. Folder create, upload, and version restore stay on the web.
-- [ ] **UA Gear Picks, for a participant.** `/gear` shops one fit against an allowance (`GET`/`PUT /api/gear-picks/me`). It is seasonal. Confirm the cycle is open before building it. Admin roster, deadline, and the equipment spreadsheet stay on the web.
-- [ ] **Shared software logins.** `/licenses` has a vault beside Photo Mechanic. The phone only does Photo Mechanic. Blocked until #488 merges, because that pull request owns `LicensesView.swift`.
-- [ ] **Native signature capture.** `docs/AREA_MOBILE.md` (2026-10-07) describes `Views/Signatures/` and an iPad Browse row. Those files are not on `main`. The live capture path is iPad Safari with Apple Pencil. Confirm the native screens were dropped before rebuilding them.
-- [ ] **Guide authoring.** Create, edit, delete, and Mark verified stay off the phone today. Add them only if staff actually edit guides away from a desk.
-- [ ] **Team badge shelf.** `/badges` is the staff catalog and award surface. A person's own badges already open from Profile. Bulk award is admin work and sits inside the Staff rename drafts; do not start it from those files.
+- [ ] **Item activity.** The website History tab is `GET /api/assets/:id/activity` for staff and admin (all activity, item updates, or booking activity). The phone already lists previous bookings. The touch log is still web-only.
+- [ ] **Shared software logins.** `/licenses` has a vault beside Photo Mechanic. The phone only does Photo Mechanic. Blocked by #502, which owns `LicensesView.swift`.
+- [ ] **Native signature capture.** Waiting on Erik. The live capture path is iPad Safari with Apple Pencil. Do not rebuild `Views/Signatures/` until that decision is made.
+- [ ] **Guide authoring.** Waiting on Erik. Create, edit, delete, and Mark verified stay off the phone until staff need to edit guides away from a desk.
 
 ## Intentionally web-only
 
 - [x] **YouTube Studio Lite** (`/youtube`). Admin review queue, Google connection, and channel writes. Desktop work.
 - [x] **Workforce and hiring.** Admin planning. Also in #485, under the Staff rename.
 - [x] **UA Gear Picks admin** (`/gear/admin`). Roster, allowances, deadline, CSV, and the equipment workbook.
-- [x] **Operations hub** (`/operations`). Fix Today (offline kiosks, calendar sync, license expirations) and inventory hygiene are cleanup. Battery totals move to Battery Ops in #492.
+- [x] **Operations hub** (`/operations`). Fix Today (offline kiosks, calendar sync, license expirations) and inventory hygiene are cleanup. Battery totals are on the phone under Battery Ops.
 - [x] **Import, labels, and item intake.** Add item, import, export, fill gaps, and the cleanup wizard are desk workflows.
 - [x] **Item catalog actions.** Duplicate, retire, and delete stay web-only (GAP-36). Needs Maintenance is already on the phone.
 - [x] **Event authoring.** Create, edit, hide, and remove stay on the web (GAP-81). Combine, week view, and auto-assign stay on the web.
