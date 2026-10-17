@@ -90,14 +90,15 @@ struct AccountabilityAcademicYear: Decodable, Sendable {
 }
 
 struct AccountabilityMethodology: Decodable, Sendable {
-    let gracePeriodHours: Int
+    let gracePeriodHours: Double
     let minimumCheckoutsForRate: Int
     let sort: String
     let ranking: String
 
     var graceSentence: String {
         let unit = gracePeriodHours == 1 ? "hour" : "hours"
-        return "A return is late after \(gracePeriodHours) \(unit) past due."
+        let hours = gracePeriodHours.formatted(.number.precision(.fractionLength(0...6)))
+        return "A return is late after \(hours) \(unit) past due."
     }
 }
 

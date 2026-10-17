@@ -197,7 +197,11 @@ struct AccountabilityView: View {
                     }
                 }
             } header: {
-                Text(report.scopeTitle)
+                HStack {
+                    Text(report.scopeTitle)
+                    Spacer()
+                    Text(model.sort.label)
+                }
             }
 
             if report.truncated == true {
@@ -248,9 +252,8 @@ struct AccountabilityView: View {
     private func standingDetail(_ person: AccountabilityPerson) -> some View {
         let late = person.lateEventCount == 1 ? "1 late return" : "\(person.lateEventCount) late returns"
         if let stillOut = person.stillOutLabel {
-            Text(late).foregroundStyle(.secondary)
-                + Text(" · ").foregroundStyle(.secondary)
-                + Text(stillOut).foregroundStyle(Color.statusText(.red))
+            Text("\(late) · \(Text(stillOut).foregroundStyle(Color.statusText(.red)))")
+                .foregroundStyle(.secondary)
         } else {
             Text(late).foregroundStyle(.secondary)
         }
@@ -263,10 +266,9 @@ struct AccountabilityView: View {
     }
 
     private func summary(_ metrics: AccountabilityMetrics) -> some View {
-        Text(metrics.peoplePhrase + " · ")
-            + Text(metrics.stillOutPhrase)
-                .foregroundStyle(metrics.activeOverdue > 0 ? Color.statusText(.red) : Color.secondary)
-            + Text(" · " + metrics.latePhrase)
+        let stillOut = Text(metrics.stillOutPhrase)
+            .foregroundStyle(metrics.activeOverdue > 0 ? Color.statusText(.red) : Color.secondary)
+        return Text("\(metrics.peoplePhrase) · \(stillOut) · \(metrics.latePhrase)")
     }
 }
 
@@ -275,8 +277,35 @@ private struct AccountabilityRankRow: View {
     let rank: Int
     let sort: AccountabilitySort
     let isYou: Bool
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
+        Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("#\(rank)")
+                        Spacer()
+                        Text(trailing)
+                    }
+                    .font(.subheadline.weight(.semibold).monospacedDigit())
+                    .foregroundStyle(.secondary)
+                    Text(person.name)
+                        .font(.body.weight(.semibold))
+                        .fixedSize(horizontal: false, vertical: true)
+                    if isYou { Text("You").foregroundStyle(.secondary) }
+                    if !person.active { StatusPill(label: "Inactive", tone: .gray) }
+                    subtitle
+                }
+            } else {
+                standardRow
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityText)
+    }
+
+    private var standardRow: some View {
         HStack(alignment: .center, spacing: 12) {
             Text("\(rank)")
                 .font(.subheadline.weight(.semibold).monospacedDigit())
@@ -314,15 +343,16 @@ private struct AccountabilityRankRow: View {
 
     @ViewBuilder
     private var subtitle: some View {
-        HStack(spacing: 0) {
+        if let stillOut = person.stillOutLabel {
+            Text("\(quietSubtitle) · \(Text(stillOut).foregroundStyle(Color.statusText(.red)))")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        } else {
             Text(quietSubtitle)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
-            if let stillOut = person.stillOutLabel {
-                Text(quietSubtitle.isEmpty ? stillOut : " · \(stillOut)")
-                    .font(.subheadline)
-                    .foregroundStyle(Color.statusText(.red))
-            }
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 

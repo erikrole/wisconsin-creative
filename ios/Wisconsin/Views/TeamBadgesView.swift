@@ -97,16 +97,6 @@ struct TeamBadgesView: View {
                 }
             }
 
-            Section {
-                NavigationLink {
-                    BadgeReportView()
-                } label: {
-                    Label("View report", systemImage: "chart.bar.xaxis")
-                }
-            } footer: {
-                Text("Awarding a group stays on the web.")
-            }
-
             if let error = model.error {
                 Section {
                     Text(error)
@@ -131,6 +121,16 @@ struct TeamBadgesView: View {
                     Text("Manual badges")
                 }
             }
+            Section {
+                NavigationLink {
+                    BadgeReportView()
+                } label: {
+                    Label("View report", systemImage: "chart.bar.xaxis")
+                }
+            } footer: {
+                Text("Awarding a group stays on the web.")
+            }
+
         }
         .listStyle(.insetGrouped)
     }

@@ -1,6 +1,24 @@
 [
   {
     "date": "2026-10-17",
+    "title": "Clearer, more reliable iPhone workflows",
+    "type": "improvement",
+    "summary": "The iPhone app groups secondary tools in Browse and makes gear choices easier to review. Schedule is now the single destination for events.",
+    "details": [
+      "Browse groups tools into Work, Equipment, Resources, and Team, with Events removed in favor of Schedule.",
+      "UA Gear uses catalog size pickers on item and review screens, with separate controls for quantity, color, and size.",
+      "Gear drafts and reservation edits recover more reliably when loading or saving fails.",
+      "Accountability, Kits, Reports, Brand assets, Badges, Blasts, and Battery Ops have clearer layouts and improved large-text support.",
+      "Offline status leaves navigation buttons accessible, and inventory details load when first opened.",
+      "Reports keep pagination consistent, and Brand assets opens the file version shown in the list."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 504
+  },
+  {
+    "date": "2026-10-17",
     "title": "Shared logins on iPhone",
     "type": "feature",
     "summary": "Staff, students, and collaborators can copy a department login from the iPhone. Adding and archiving those logins stays on the website.",
@@ -305,7 +323,9 @@
       "Guide SVG and Guide PNG download at that board's exact pixel size.",
       "Open questions stay on the board, including Kohl Center frame rates and the unconfirmed Goodman board."
     ],
-    "platforms": ["Web"],
+    "platforms": [
+      "Web"
+    ],
     "pr": 473
   },
   {
@@ -335,7 +355,9 @@
       "Light and dark appearance, following your system by default, with a picker at the top.",
       "The page opens without signing in."
     ],
-    "platforms": ["Web"],
+    "platforms": [
+      "Web"
+    ],
     "pr": 471
   },
   {
@@ -349,7 +371,9 @@
       "Radio Clip no longer shows a version that was never published.",
       "The page opens without signing in. It is still left out of search."
     ],
-    "platforms": ["Web"],
+    "platforms": [
+      "Web"
+    ],
     "pr": 472
   },
   {
@@ -362,7 +386,10 @@
       "Requests still go to an Admin for approval, and you can withdraw one while it waits.",
       "Staff edits in progress still pause requests until they are released."
     ],
-    "platforms": ["Web", "iOS"],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
     "pr": 468
   },
   {
@@ -375,7 +402,10 @@
       "If you are already scheduled for the event, the booking still links to your slot.",
       "Staff can now unassign someone a past gear booking placed on the schedule; the booking keeps its gear and event."
     ],
-    "platforms": ["Web", "iOS"],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
     "pr": 467
   },
   {
@@ -464,7 +494,9 @@
       "The kit loaded into the reservation includes who has each piece and when that hold ends.",
       "Every piece in the kit is still added for review."
     ],
-    "platforms": ["Web"],
+    "platforms": [
+      "Web"
+    ],
     "pr": 463
   },
   {
@@ -492,7 +524,9 @@
       "A kit whose serialized pieces are all unavailable says Out.",
       "Item families stay in the contents count and do not change that badge."
     ],
-    "platforms": ["Web"],
+    "platforms": [
+      "Web"
+    ],
     "pr": 464
   },
   {
@@ -504,7 +538,9 @@
       "Changing or clearing filters no longer leaves a blank gap under Load older records.",
       "A day header no longer sticks mid-page and hides the first event of that day."
     ],
-    "platforms": ["Web"],
+    "platforms": [
+      "Web"
+    ],
     "pr": 433
   },
   {
@@ -517,7 +553,10 @@
       "Maintenance and retired pieces keep those labels.",
       "The kiosk kit checklist receives the same status and name."
     ],
-    "platforms": ["Web", "Kiosk"],
+    "platforms": [
+      "Web",
+      "Kiosk"
+    ],
     "pr": 462
   },
   {
@@ -530,7 +569,10 @@
       "At the kiosk, scanning a battery or counted bin that is not on the reservation now offers Add instead of an error.",
       "Items already picked up stay on their checkout."
     ],
-    "platforms": ["Web", "Kiosk"],
+    "platforms": [
+      "Web",
+      "Kiosk"
+    ],
     "pr": 466
   },
   {
@@ -559,7 +601,9 @@
       "Works even when the person who reserved the case is not on the kiosk roster.",
       "A shared case for a later day, like an away game, can be picked up early."
     ],
-    "platforms": ["Kiosk"],
+    "platforms": [
+      "Kiosk"
+    ],
     "pr": 465
   },
   {
@@ -583,7 +627,7 @@
     "summary": "A signature saved on the wrong roster spot can be moved to the right person, and the signer's name shows on the line before you save.",
     "details": [
       "The capture screen shows the person's name and number on the signature line so a wrong slot is obvious before Save.",
-      "Move signature to\u2026 sends the saved signature and its history to a blank person. Creative Staff signatures stay put.",
+      "Move signature to… sends the saved signature and its history to a blank person. Creative Staff signatures stay put.",
       "Team rosters can add an unofficial player, marked Unofficial, until the official roster includes them.",
       "Applying an official roster keeps staff-added players and adopts them when the same name appears officially."
     ],
@@ -664,7 +708,7 @@
     "details": [
       "Each flagged item appears once on the dashboard, most serious first.",
       "Click a damaged or lost item to review the report and photo, as before.",
-      "The \u00d7 beside a damage flag hides it from the dashboard; the report stays in the item's history.",
+      "The × beside a damage flag hides it from the dashboard; the report stays in the item's history.",
       "Item Info lists the five most recent condition reports with their photos."
     ],
     "platforms": [

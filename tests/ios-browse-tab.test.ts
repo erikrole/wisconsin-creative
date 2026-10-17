@@ -79,6 +79,6 @@ describe("iOS Browse tab", () => {
     expect(browse).toContain("return [.scoreboard] + [");
     expect(browse).toContain("case scoreboard");
     expect(browse).toContain('case .scoreboard: "Scoreboard"');
-    expect(browse).toContain("Team totals, sport breakdowns, and per-person leaderboards.");
+    expect(browse).toContain("Team totals and leaderboards");
   });
 });
