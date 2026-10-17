@@ -405,6 +405,114 @@ struct AssetMetadata: Codable, Hashable {
     }
 }
 
+/// One damage or missing-item report from `GET /api/assets/:id`.
+/// Staff and admin receive the five most recent. Students and collaborators
+/// omit the key. A single bad row is dropped so the rest of the item still loads.
+struct AssetConditionReport: Identifiable {
+    let id: String
+    /// `DAMAGED`, `LOST`, or an unrecognized server value.
+    let typeRaw: String
+    let description: String?
+    let imageUrl: String?
+    let createdAt: Date
+    let lastReportedAt: Date?
+    let reporterName: String
+    let bookingId: String
+    let bookingTitle: String
+
+    var reportedAt: Date { lastReportedAt ?? createdAt }
+
+    var isMissing: Bool { typeRaw == "LOST" }
+    var isDamaged: Bool { typeRaw == "DAMAGED" }
+
+    var photoURL: URL? {
+        guard let imageUrl,
+              let url = URL(string: imageUrl),
+              let scheme = url.scheme?.lowercased(),
+              scheme == "https" || scheme == "http"
+        else { return nil }
+        return url
+    }
+
+    var photoAccessibilityLabel: String {
+        isMissing
+            ? "Open evidence photo for missing item report"
+            : "Open evidence photo for damage report"
+    }
+}
+
+extension AssetConditionReport: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case id, type, description, imageUrl, createdAt, lastReportedAt, reportedBy, booking
+    }
+
+    private struct Person: Codable { let name: String }
+    private struct Booking: Codable {
+        let id: String
+        let title: String?
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        typeRaw = try container.decodeIfPresent(String.self, forKey: .type) ?? ""
+        description = try container.decodeIfPresent(String.self, forKey: .description)
+        imageUrl = try container.decodeIfPresent(String.self, forKey: .imageUrl)
+        guard let created = Self.parseDate(try container.decode(String.self, forKey: .createdAt)) else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .createdAt,
+                in: container,
+                debugDescription: "Condition report createdAt is not an ISO-8601 date"
+            )
+        }
+        createdAt = created
+        if let raw = try container.decodeIfPresent(String.self, forKey: .lastReportedAt) {
+            lastReportedAt = Self.parseDate(raw)
+        } else {
+            lastReportedAt = nil
+        }
+        reporterName = try container.decode(Person.self, forKey: .reportedBy).name
+        let booking = try container.decode(Booking.self, forKey: .booking)
+        bookingId = booking.id
+        bookingTitle = booking.title?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(typeRaw, forKey: .type)
+        try container.encodeIfPresent(description, forKey: .description)
+        try container.encodeIfPresent(imageUrl, forKey: .imageUrl)
+        try container.encode(Self.isoString(createdAt), forKey: .createdAt)
+        if let lastReportedAt {
+            try container.encode(Self.isoString(lastReportedAt), forKey: .lastReportedAt)
+        }
+        try container.encode(Person(name: reporterName), forKey: .reportedBy)
+        try container.encode(Booking(id: bookingId, title: bookingTitle), forKey: .booking)
+    }
+
+    private static func isoString(_ date: Date) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.string(from: date)
+    }
+
+    private static func parseDate(_ raw: String) -> Date? {
+        let fractional = ISO8601DateFormatter()
+        fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = fractional.date(from: raw) { return date }
+        return ISO8601DateFormatter().date(from: raw)
+    }
+}
+
+private struct LenientConditionReport: Decodable {
+    let report: AssetConditionReport?
+
+    init(from decoder: Decoder) throws {
+        report = try? AssetConditionReport(from: decoder)
+    }
+}
+
 struct AssetDetail: Codable, Identifiable, Hashable {
     let id: String
     let assetTag: String?
@@ -424,6 +532,7 @@ struct AssetDetail: Codable, Identifiable, Hashable {
     let history: [AssetBookingHistoryEntry]
     let parentAsset: AssetParentLink?
     let accessories: [AssetAccessory]?
+    let checkinReports: [AssetConditionReport] = []
     let metadata: AssetMetadata?
     let purchaseDate: String?
     let purchasePrice: String?   // Prisma Decimal serializes as string
@@ -474,7 +583,7 @@ extension AssetDetail {
     private enum SafeCodingKeys: String, CodingKey {
         case id, assetTag, name, brand, model, serialNumber, imageUrl, qrCodeValue, linkUrl
         case computedStatus, location, category, department, activeBooking, upcomingReservations, history
-        case parentAsset, accessories, metadata, purchaseDate, purchasePrice, residualValue, notes, isFavorited
+        case parentAsset, accessories, checkinReports, metadata, purchaseDate, purchasePrice, residualValue, notes, isFavorited
     }
 
     init(from decoder: Decoder) throws {
@@ -498,6 +607,10 @@ extension AssetDetail {
         history = try c.decodeIfPresent([AssetBookingHistoryEntry].self, forKey: .history) ?? []
         parentAsset = try c.decodeIfPresent(AssetParentLink.self, forKey: .parentAsset)
         accessories = try c.decodeIfPresent([AssetAccessory].self, forKey: .accessories)
+        // Absent for students and collaborators. One malformed row is skipped
+        // instead of failing the item the person just scanned.
+        checkinReports = (try? c.decodeIfPresent([LenientConditionReport].self, forKey: .checkinReports))?
+            .compactMap(\.report) ?? []
         metadata = try c.decodeIfPresent(AssetMetadata.self, forKey: .metadata)
         purchaseDate = try c.decodeIfPresent(String.self, forKey: .purchaseDate)
         purchasePrice = try c.decodeIfPresent(String.self, forKey: .purchasePrice)
@@ -527,6 +640,7 @@ extension AssetDetail {
             history: history,
             parentAsset: parentAsset,
             accessories: accessories,
+            checkinReports: checkinReports,
             metadata: metadata,
             purchaseDate: purchaseDate,
             purchasePrice: purchasePrice,

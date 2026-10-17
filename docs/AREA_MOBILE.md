@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Mobile Operations
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-10-16
+- Last Updated: 2026-10-17
 - Status: Active
 - Version: V1
 
@@ -145,6 +145,7 @@ Navigation shell versioned roadmap: `tasks/sidebar-roadmap.md` (revised 2026-03-
 
 ## Change Log
 
+- 2026-10-17: **Native item detail shows condition reports (local).** Staff and admin see the five most recent damage and missing-item reports on an item, from the `checkinReports` already returned by `GET /api/assets/:id`. A photo opens full screen. The row opens the checkout. Reserve stays the screen action, and clearing maintenance stays in the item menu. Students and collaborators do not get the list. Source contracts pass. An Xcode build on a Mac and an authenticated iPhone walkthrough remain open.
 - 2026-10-16: **Native Badges is a read-only staff shelf.** Browse opens Badges for staff and admins. The list reads `GET /api/badges?manualOnly=true`, the same manual catalog as the website, and View report opens the existing badge report. Students keep their own badges on Profile. Awarding a group stays on the web. Source contracts pass. An Xcode build on a Mac is still required.
 - 2026-10-16: **UA Gear picks on iPhone (local).** Browse opens UA Gear for students, staff, and admins. A participant shops their fit from `GET /api/gear-picks/me?catalog=1` and saves or submits with `PUT /api/gear-picks/me`. The list locks after the deadline. Someone who is not on the roster, or who opens it before an admin launches the cycle, gets an explanation. Roster, allowance edits, deadline, CSV, and the equipment spreadsheet stay on the web. Source contracts pass. An Xcode build on a Mac is still required.
 - 2026-10-16: **Native Brand assets browse (local, read-only).** Browse gains a Brand assets row for every internal role. The list reads `/api/resources/assets` (the current folder, or search with `scope=all`). A logo, SVG, or PDF at or under 40 MB opens on the phone. Other files share from the authenticated download. Collaborators do not see the row. Creating folders, uploading, and restoring an older version stay on the web. Xcode build and authenticated iPhone 18 Pro Max proof remain open.

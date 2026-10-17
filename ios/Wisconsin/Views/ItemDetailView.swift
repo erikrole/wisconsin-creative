@@ -71,6 +71,12 @@ struct ItemDetailView: View {
                                 startReservation(for: asset.asAsset)
                             }
                         }
+                        if canEditAsset, !asset.checkinReports.isEmpty {
+                            ItemConditionReportsCard(
+                                reports: asset.checkinReports,
+                                heldForStaff: asset.computedStatus == .maintenance
+                            )
+                        }
                         UpcomingReservationsCard(reservations: asset.upcomingReservations)
                         ItemDetailsCard(asset: asset, canSeeProcurement: canEditAsset)
                         ItemRelatedInventoryCard(
@@ -803,6 +809,183 @@ private struct ItemAvailabilityCard: View {
         .frame(minHeight: 44)
         .brandCard(padding: Brand.Space.md)
         .accessibilityElement(children: .combine)
+    }
+}
+
+// MARK: - Condition reports
+
+private struct ConditionReportPhoto: Identifiable {
+    let id: String
+    let url: URL
+    let label: String
+}
+
+/// The same five-report record the website shows on item Info. Reserve stays
+/// the screen's action. Opening a checkout is the row action. Clearing
+/// maintenance stays in the toolbar menu.
+private struct ItemConditionReportsCard: View {
+    let reports: [AssetConditionReport]
+    let heldForStaff: Bool
+    @State private var photo: ConditionReportPhoto?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Condition reports")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+                    .tracking(0.04)
+                summary()
+            }
+            ForEach(Array(reports.enumerated()), id: \.element.id) { index, report in
+                reportSeparator(show: index > 0)
+                reportRow(report)
+            }
+            olderNote()
+        }
+        .brandCard()
+        .fullScreenCover(item: $photo) { photo in
+            ZoomableImageViewer(url: photo.url, photoLabel: photo.label)
+        }
+    }
+
+    @ViewBuilder
+    private func summary() -> some View {
+        if heldForStaff {
+            Text("Held for staff. Inspect the item and review the evidence before clearing maintenance.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        } else {
+            Text("Recent reports remain here as a record. The item's current status is shown above.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    @ViewBuilder
+    private func reportSeparator(show: Bool) -> some View {
+        if show {
+            Divider()
+        } else {
+            EmptyView()
+        }
+    }
+
+    @ViewBuilder
+    private func olderNote() -> some View {
+        if reports.count == 5 {
+            Text("Showing the five most recent reports.")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+        } else {
+            EmptyView()
+        }
+    }
+
+    private func reportRow(_ report: AssetConditionReport) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            statusLabel(for: report)
+            Text("\(report.reporterName) · \(reportDate(report.reportedAt))")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            descriptionText(report.note)
+            evidence(for: report)
+            checkoutLink(for: report)
+        }
+    }
+
+    @ViewBuilder
+    private func statusLabel(for report: AssetConditionReport) -> some View {
+        if report.isMissing {
+            Text("Reported missing")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Color.statusText(.red))
+        } else if report.isDamaged {
+            Text("Damage reported")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Color.statusText(.orange))
+        } else {
+            Text("Condition report")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private func descriptionText(_ text: String) -> some View {
+        if text.isEmpty {
+            Text("No description was provided.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        } else {
+            Text(text)
+                .font(.subheadline)
+                .foregroundStyle(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    @ViewBuilder
+    private func evidence(for report: AssetConditionReport) -> some View {
+        if let url = report.photoURL {
+            Button {
+                photo = ConditionReportPhoto(id: report.id, url: url, label: report.photoAccessibilityLabel)
+            } label: {
+                CachedThumbnail(url: url, size: 88, contentMode: .fill)
+                    .frame(width: 88, height: 66)
+                    .clipped()
+                    .clipShape(RoundedRectangle(cornerRadius: Brand.Radius.sm, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .frame(minWidth: 44, minHeight: 44, alignment: .leading)
+            .accessibilityLabel(report.photoAccessibilityLabel)
+        } else {
+            Text("No photo attached")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func checkoutLink(for report: AssetConditionReport) -> some View {
+        NavigationLink(destination: BookingDetailView(bookingId: report.bookingId)) {
+            HStack(spacing: 8) {
+                Text(checkoutTitle(report.bookingTitle))
+                    .font(.subheadline)
+                    .foregroundStyle(.primary)
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(2)
+                Spacer(minLength: 8)
+                Image(systemName: "chevron.right")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+                    .accessibilityHidden(true)
+            }
+            .frame(minHeight: 44)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("View checkout, \(checkoutTitle(report.bookingTitle))")
+    }
+
+    private func checkoutTitle(_ title: String) -> String {
+        title.isEmpty ? "View checkout" : "View checkout · \(title)"
+    }
+
+    private func reportDate(_ date: Date) -> String {
+        date.formatted(
+            Date.FormatStyle(date: .abbreviated, time: .omitted)
+                .locale(Locale(identifier: "en_US"))
+                .timeZone(Preferences.appTimeZone)
+        )
+    }
+}
+
+private extension AssetConditionReport {
+    var note: String {
+        description?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     }
 }
 
