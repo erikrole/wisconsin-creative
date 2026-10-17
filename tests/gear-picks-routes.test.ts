@@ -157,6 +157,20 @@ describe("GET /api/gear-picks/me", () => {
 
     expect(json.data).toMatchObject({ cycle: { launchedAt: null }, participant: { id: "participant-1" }, isAdmin: true });
   });
+
+  it("adds the caller's fit catalog only when the phone asks for it", async () => {
+    vi.mocked(db.gearPickCycle.findUnique).mockResolvedValue(openCycle as never);
+    vi.mocked(db.gearPickParticipant.findUnique).mockResolvedValue(participant as never);
+    vi.mocked(db.user.findUnique).mockResolvedValue({ topSize: "M", topSizeFit: "MENS", shoeSize: "11", shoeSizeSystem: "US_MENS" } as never);
+
+    const plain = await (await getMe(new Request(`${ORIGIN}/api/gear-picks/me`), context)).json();
+    expect(plain.data.catalog).toBeUndefined();
+
+    const json = await (await getMe(new Request(`${ORIGIN}/api/gear-picks/me?catalog=1`), context)).json();
+    expect(json.data.catalog.items.some((item: { style: string }) => item.style === "6021649")).toBe(true);
+    expect(json.data.catalog.items.some((item: { style: string }) => item.style === "6021628")).toBe(false);
+    expect(json.data.catalog.items.find((item: { style: string }) => item.style === "6021649").priceCents).toBe(1500);
+  });
 });
 
 describe("GET /api/gear-picks/users/[userId]", () => {

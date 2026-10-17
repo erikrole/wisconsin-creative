@@ -103,6 +103,7 @@ SettingsView.swift                     | profile                     | audit
 LicensesView.swift                     | licenses                    | audit
 GuidesView.swift                       | resources                   | audit
 BrandAssetsView.swift                  | brand-assets                | audit
+GearPicksView.swift                    | gear-picks                  | audit
 GuideMarkdown.swift                    |                             | exempt-infra
 SidebarWebDestinationView.swift        |                             | exempt-tiny
 NotificationSettingsView.swift         | profile                     | audit

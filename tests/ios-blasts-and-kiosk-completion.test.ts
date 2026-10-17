@@ -35,7 +35,7 @@ describe("native Blasts list", () => {
 
     expect(browse).toContain('case .blasts: "Blasts"');
     expect(browse).toContain("BlastsView(wrapsInNavigationStack: false)");
-    expect(browse).toContain(".blasts, .licenses, .users]");
+    expect(browse).toContain(".blasts, .licenses, .users, .gearPicks]");
     expect(browse).toContain("Optional.some(BrowseDestination.blasts)");
     expect(api).toContain('request(path: "/api/me/blasts")');
     expect(api).toContain('request(path: "/api/me/blasts/\\(id)/read"');

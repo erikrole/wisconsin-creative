@@ -1,6 +1,23 @@
 [
   {
     "date": "2026-10-16",
+    "title": "UA gear picks on iPhone",
+    "type": "feature",
+    "summary": "People on this year's Under Armour list can choose their gear on iPhone, up to their allowance, and submit it.",
+    "details": [
+      "Browse includes UA Gear for students, staff, and admins.",
+      "The list is the fit you were given, with prices and sizes from this year's catalog.",
+      "Save a draft or submit. You can still change a submitted list until the deadline.",
+      "After the deadline the saved list stays visible and locked.",
+      "The roster, deadline, and equipment spreadsheet stay on the web."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 498
+  },
+  {
+    "date": "2026-10-16",
     "title": "Brand assets on iPhone",
     "type": "feature",
     "summary": "The iPhone app can open logos and PDFs from Brand assets. Adding files stays on the web.",

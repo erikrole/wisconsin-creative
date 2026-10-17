@@ -15,7 +15,7 @@ describe("iOS Accountability browse", () => {
       menu.indexOf("let capabilities"),
     );
 
-    expect(internalRows).toContain("[.scoreboard, .accountability, .events, .items, .kits, .guides, .brandAssets, .blasts, .licenses, .users]");
+    expect(internalRows).toContain("[.scoreboard, .accountability, .events, .items, .kits, .guides, .brandAssets, .blasts, .licenses, .users, .gearPicks]");
     expect(menu).toContain('case .accountability: "Accountability"');
     expect(menu).toContain("See who returned gear late, and open the checkout.");
     expect(menu).toContain("AccountabilityView(wrapsInNavigationStack: false)");
