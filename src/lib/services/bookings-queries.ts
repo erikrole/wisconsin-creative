@@ -36,6 +36,24 @@ export const BOOKING_SORT_MAP: Record<string, Prisma.BookingOrderByWithRelationI
   endsAt_desc: [{ endsAt: "desc" }, { id: "asc" }],
 };
 
+/**
+ * `from`/`to` narrow `startsAt`. When a special filter already sets that
+ * field, both windows apply.
+ */
+function startsAtQueryRange(
+  existing: Prisma.BookingWhereInput["startsAt"],
+  fromDate?: Date,
+  toDate?: Date,
+): Prisma.BookingWhereInput {
+  if (!fromDate && !toDate) return {};
+  const range: Prisma.DateTimeFilter = {
+    ...(fromDate ? { gte: fromDate } : {}),
+    ...(toDate ? { lte: toDate } : {}),
+  };
+  if (!existing) return { startsAt: range };
+  return { AND: [{ startsAt: range }] };
+}
+
 function parseSearchDate(value: string | null, paramName: string): Date | undefined {
   if (!value) return undefined;
   const d = new Date(value);
@@ -104,14 +122,7 @@ export async function listBookings(
       : searchParams.get("requester_id")
         ? { requesterUserId: searchParams.get("requester_id")! }
         : {}),
-    ...(fromDate || toDate
-      ? {
-          startsAt: {
-            ...(fromDate ? { gte: fromDate } : {}),
-            ...(toDate ? { lte: toDate } : {})
-          }
-        }
-      : {}),
+    ...startsAtQueryRange(extraWhere?.startsAt, fromDate, toDate),
     ...(q ? {
       OR: [
         { title: { contains: q, mode: "insensitive" as const } },

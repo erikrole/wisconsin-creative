@@ -16,6 +16,7 @@ vi.mock("@/lib/db", () => ({
     booking: {
       count: vi.fn(),
       findFirst: vi.fn(),
+      findMany: vi.fn(),
     },
     auditLog: {
       findFirst: vi.fn(),
@@ -63,6 +64,7 @@ import { deferCompanionProjectionRefreshForCommittedMutation } from "@/lib/servi
 import { HttpError } from "@/lib/http";
 import { GET as getCheckouts, POST as postCheckouts } from "@/app/api/checkouts/route";
 import { GET as getReservations, POST as postReservations } from "@/app/api/reservations/route";
+import { GET as getBookings } from "@/app/api/bookings/route";
 
 const adminUser = {
   id: "admin-1",
@@ -235,6 +237,96 @@ describe("booking list routes", () => {
       }),
       undefined,
     );
+  });
+
+  it("uses the Madison day for due today on the evening before UTC midnight", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-18T01:30:00.000Z"));
+    try {
+      const madisonStart = "2026-10-17T05:00:00.000Z";
+      const madisonEnd = "2026-10-18T05:00:00.000Z";
+
+      const reservationRes = await getReservations(
+        get("/api/reservations?filter=due-today"),
+        { params: Promise.resolve({}) },
+      );
+      expect(reservationRes.status).toBe(200);
+      expect(listBookings).toHaveBeenCalledWith(
+        BookingKind.RESERVATION,
+        expect.any(URLSearchParams),
+        expect.objectContaining({
+          status: BookingStatus.BOOKED,
+          startsAt: {
+            gte: new Date(madisonStart),
+            lt: new Date(madisonEnd),
+          },
+        }),
+        undefined,
+      );
+
+      const checkoutRes = await getCheckouts(
+        get("/api/checkouts?filter=due-today"),
+        { params: Promise.resolve({}) },
+      );
+      expect(checkoutRes.status).toBe(200);
+      expect(listBookings).toHaveBeenCalledWith(
+        BookingKind.CHECKOUT,
+        expect.any(URLSearchParams),
+        expect.objectContaining({
+          status: "OPEN",
+          endsAt: {
+            gte: new Date(madisonStart),
+            lt: new Date(madisonEnd),
+          },
+        }),
+        undefined,
+      );
+
+      vi.mocked(db.booking.findMany).mockResolvedValue([]);
+      vi.mocked(db.booking.count).mockResolvedValue(0);
+      const allRes = await getBookings(
+        get("/api/bookings?filter=due-today"),
+        { params: Promise.resolve({}) },
+      );
+      expect(allRes.status).toBe(200);
+      expect(db.booking.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            endsAt: {
+              gte: new Date(madisonStart),
+              lt: new Date(madisonEnd),
+            },
+          }),
+        }),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("uses the Madison day for due today during standard time", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-16T01:30:00.000Z"));
+    try {
+      const res = await getCheckouts(
+        get("/api/checkouts?filter=due-today"),
+        { params: Promise.resolve({}) },
+      );
+      expect(res.status).toBe(200);
+      expect(listBookings).toHaveBeenCalledWith(
+        BookingKind.CHECKOUT,
+        expect.any(URLSearchParams),
+        expect.objectContaining({
+          endsAt: {
+            gte: new Date("2026-01-15T06:00:00.000Z"),
+            lt: new Date("2026-01-16T06:00:00.000Z"),
+          },
+        }),
+        undefined,
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("maps the event-day queue to booked reservations starting today", async () => {

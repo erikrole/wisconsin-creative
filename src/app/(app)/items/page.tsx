@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { RowSelectionState, VisibilityState } from "@tanstack/react-table";
@@ -30,10 +31,11 @@ import {
 } from "@/components/ui/table";
 import { type Asset, getColumns } from "./columns";
 import { DataTable, type Density } from "./data-table";
-import { NewItemSheet } from "./new-item-sheet";
-import { GapWizardDialog } from "./gap-wizard-dialog";
-import { CleanupWizardDialog } from "./cleanup-wizard-dialog";
 import type { CleanupWizardKind } from "@/lib/services/item-cleanup-wizard";
+
+const NewItemSheet = dynamic(() => import("./new-item-sheet").then((mod) => mod.NewItemSheet));
+const GapWizardDialog = dynamic(() => import("./gap-wizard-dialog").then((mod) => mod.GapWizardDialog));
+const CleanupWizardDialog = dynamic(() => import("./cleanup-wizard-dialog").then((mod) => mod.CleanupWizardDialog));
 import { normalizeItemsSorting, useUrlFilters } from "./hooks/use-url-filters";
 import { useItemsQuery, type BulkItem } from "./hooks/use-items-query";
 import {

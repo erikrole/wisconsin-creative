@@ -22,7 +22,7 @@
 | `src/lib/services/bookings-checkin.ts` | 734 |
 | `src/lib/services/bookings-helpers.ts` | 310 |
 | `src/lib/services/bookings-lifecycle.ts` | 3386 |
-| `src/lib/services/bookings-queries.ts` | 311 |
+| `src/lib/services/bookings-queries.ts` | 322 |
 | `src/lib/services/bookings.ts` | 9 |
 | `src/lib/services/bulk-assignment-batches.ts` | 253 |
 | `src/lib/services/bulk-schedule-assignment.ts` | 971 |
@@ -46,7 +46,7 @@
 | `src/lib/services/event-worker.ts` | 125 |
 | `src/lib/services/firmware-watch.ts` | 329 |
 | `src/lib/services/game-record.ts` | 169 |
-| `src/lib/services/gear-picks.ts` | 612 |
+| `src/lib/services/gear-picks.ts` | 623 |
 | `src/lib/services/hidden-users-cleanup.ts` | 122 |
 | `src/lib/services/item-cleanup-wizard.ts` | 762 |
 | `src/lib/services/job-runs.ts` | 52 |
@@ -135,7 +135,7 @@
 | `src/lib/auto-fill-preview-types.ts` | 61 |
 | `src/lib/availability-copy.ts` | 343 |
 | `src/lib/avatar.ts` | 44 |
-| `src/lib/battery-compatibility.ts` | 146 |
+| `src/lib/battery-compatibility.ts` | 158 |
 | `src/lib/bhphoto-image.ts` | 67 |
 | `src/lib/blob.ts` | 170 |
 | `src/lib/booking-action-policy.ts` | 215 |
@@ -147,7 +147,7 @@
 | `src/lib/booking-statuses.ts` | 9 |
 | `src/lib/breadcrumbs.ts` | 180 |
 | `src/lib/brother-label-csv.ts` | 134 |
-| `src/lib/bulk-batteries.ts` | 28 |
+| `src/lib/bulk-batteries.ts` | 49 |
 | `src/lib/bulk-schedule-assignment-types.ts` | 213 |
 | `src/lib/bulk-unit-qr.ts` | 111 |
 | `src/lib/bulk-unit-status.ts` | 52 |
@@ -185,18 +185,18 @@
 | `src/lib/football-gameday-kits.ts` | 79 |
 | `src/lib/format.ts` | 320 |
 | `src/lib/guide-categories.ts` | 140 |
-| `src/lib/guide-content.ts` | 270 |
+| `src/lib/guide-content.ts` | 280 |
 | `src/lib/guide-keyboard.ts` | 139 |
 | `src/lib/guide-ranking.ts` | 80 |
 | `src/lib/guide-search-result.ts` | 49 |
-| `src/lib/guides.ts` | 344 |
+| `src/lib/guides.ts` | 366 |
 | `src/lib/http.ts` | 130 |
 | `src/lib/ics-token.ts` | 26 |
 | `src/lib/image-search-modal.ts` | 59 |
 | `src/lib/image-search.ts` | 240 |
 | `src/lib/item-asset-tag-sort.ts` | 244 |
 | `src/lib/item-family-products.ts` | 14 |
-| `src/lib/item-family-state.ts` | 75 |
+| `src/lib/item-family-state.ts` | 101 |
 | `src/lib/item-image-draft.ts` | 88 |
 | `src/lib/kiosk-activation.ts` | 8 |
 | `src/lib/kiosk-staff-token.ts` | 65 |

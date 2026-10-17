@@ -355,15 +355,22 @@ struct KioskAPI {
     /// Persist the exact request before transmission. A retry uses these bytes,
     /// even after relaunch, until the server confirms a handoff or seals a rejection.
     private func performCompletion<T: Decodable>(_ request: URLRequest, actorId: String) async throws -> T {
-        var pending = request
-        let key = completionKey(path: request.url!.path, actorId: actorId)
-        if let saved = UserDefaults.standard.data(forKey: key) {
-            pending.httpBody = saved
+        let savedBody: Data?
+        if let path = request.url?.path {
+            savedBody = UserDefaults.standard.data(forKey: completionKey(path: path, actorId: actorId))
         } else {
-            var body = try JSONSerialization.jsonObject(with: request.httpBody!) as! [String: Any]
-            body["requestId"] = "\(Int64(Date().timeIntervalSince1970 * 1000)):\(UUID().uuidString)"
-            pending.httpBody = try JSONSerialization.data(withJSONObject: body, options: [.sortedKeys])
-            UserDefaults.standard.set(pending.httpBody, forKey: key)
+            savedBody = nil
+        }
+        let prepared = try KioskCompletionPreparation.prepare(
+            request: request,
+            savedBody: savedBody,
+            requestId: "\(Int64(Date().timeIntervalSince1970 * 1000)):\(UUID().uuidString)"
+        )
+        var pending = request
+        pending.httpBody = prepared.body
+        let key = completionKey(path: prepared.path, actorId: actorId)
+        if prepared.shouldPersist {
+            UserDefaults.standard.set(prepared.body, forKey: key)
         }
         // Decode once inside the normal credential boundary. The envelope can
         // contain either a committed receipt or an explicit, sealed rejection.
@@ -1054,5 +1061,44 @@ enum KioskReportTarget: Equatable {
             return .counted(bulkSkuId: bulkSkuId, quantity: max(1, quantity))
         }
         return item.isNumberedBulk ? .bulkUnit(id: item.id) : .asset(id: item.id)
+    }
+}
+
+/// The bytes a kiosk handoff will send, decided before anything touches the network.
+struct KioskPreparedCompletion: Equatable {
+    var path: String
+    var body: Data
+    var shouldPersist: Bool
+}
+
+/// Builds the idempotent handoff body. A missing URL, a missing body, or a body
+/// that is not a JSON object throws `APIError` instead of crashing the kiosk.
+enum KioskCompletionPreparation {
+    static func prepare(request: URLRequest, savedBody: Data?, requestId: String) throws -> KioskPreparedCompletion {
+        guard let url = request.url else {
+            throw APIError.serverError("Could not save this handoff. Try again.")
+        }
+        if let savedBody {
+            return KioskPreparedCompletion(path: url.path, body: savedBody, shouldPersist: false)
+        }
+        guard let httpBody = request.httpBody else {
+            throw APIError.serverError("Could not save this handoff. Try again.")
+        }
+        let parsed: Any
+        do {
+            parsed = try JSONSerialization.jsonObject(with: httpBody)
+        } catch {
+            throw APIError.serverError("Could not save this handoff. Try again.")
+        }
+        guard var body = parsed as? [String: Any] else {
+            throw APIError.serverError("Could not save this handoff. Try again.")
+        }
+        body["requestId"] = requestId
+        do {
+            let data = try JSONSerialization.data(withJSONObject: body, options: [.sortedKeys])
+            return KioskPreparedCompletion(path: url.path, body: data, shouldPersist: true)
+        } catch {
+            throw APIError.serverError("Could not save this handoff. Try again.")
+        }
     }
 }

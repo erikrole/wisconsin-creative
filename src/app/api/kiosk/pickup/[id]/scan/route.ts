@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { createAuditEntryTx } from "@/lib/audit";
 import { parseDerivedBulkUnitQr } from "@/lib/bulk-unit-qr";
-import { BookingCustodyScope, Prisma } from "@prisma/client";
+import { BookingCustodyScope, Prisma, Role } from "@prisma/client";
 import { db } from "@/lib/db";
 import { withKiosk } from "@/lib/api";
 import { HttpError, ok } from "@/lib/http";
@@ -35,17 +35,30 @@ export const POST = withKiosk<{ id: string }>(async (req, { params }) => {
     throw new HttpError(404, "Pending pickup not found");
   }
   const activeBooking = booking;
-  if (activeBooking.custodyScope === BookingCustodyScope.SHARED) {
-    if (!actorId) throw new HttpError(400, "Choose an operator before scanning shared gear");
-    const actor = await db.user.findFirst({
-      where: { id: actorId, ...kioskRosterUserWhere() },
-      select: { id: true },
-    });
-    if (!actor) throw new HttpError(403, "This user cannot operate kiosk custody");
+  // The body names the person at the kiosk. Personal pickups record that
+  // operator, and only the requester or staff may scan them.
+  if (!actorId) {
+    throw new HttpError(
+      400,
+      activeBooking.custodyScope === BookingCustodyScope.SHARED
+        ? "Choose an operator before scanning shared gear"
+        : "Choose an operator before scanning",
+    );
   }
-  const scanActorId = activeBooking.custodyScope === BookingCustodyScope.SHARED
-    ? actorId!
-    : activeBooking.requesterUserId;
+  const actor = await db.user.findFirst({
+    where: { id: actorId, ...kioskRosterUserWhere() },
+    select: { id: true, role: true },
+  });
+  if (!actor) throw new HttpError(403, "This user cannot operate kiosk custody");
+  const staffAssist = actor.role === Role.ADMIN || actor.role === Role.STAFF;
+  if (
+    activeBooking.custodyScope !== BookingCustodyScope.SHARED
+    && actor.id !== activeBooking.requesterUserId
+    && !staffAssist
+  ) {
+    throw new HttpError(403, "Only the person this pickup belongs to can scan it");
+  }
+  const scanActorId = actor.id;
 
   const bulkResult = await db.$transaction(
     (tx) => activeBooking.kind === "RESERVATION"

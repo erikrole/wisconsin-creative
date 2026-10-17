@@ -830,6 +830,7 @@ Indexes and constraints:
 
 - `@@unique([bookingBulkItemId, bulkSkuUnitId])`
 - `@@index([bulkSkuUnitId])`
+- `@@index([checkedInAt, checkedOutAt(sort: Desc)], map: "bulk_unit_alloc_checked_in_out_idx")`
 - `@@map("booking_bulk_unit_allocations")`
 
 ## Model `ScanEvent`
@@ -861,6 +862,9 @@ Indexes and constraints:
 - `@@index([bookingId, phase])`
 - `@@index([scanValue])`
 - `@@index([actorUserId])`
+- `@@index([createdAt(sort: Desc)])`
+- `@@index([assetId, createdAt(sort: Desc)])`
+- `@@index([bulkSkuId, createdAt(sort: Desc)])`
 - `@@map("scan_events")`
 
 ## Model `ScanSession`
@@ -2392,6 +2396,8 @@ Indexes and constraints:
 - `@@unique([bookingId, bulkSkuUnitId])`
 - `@@unique([bookingId, bulkSkuId, type])`
 - `@@index([bookingId])`
+- `@@index([dismissedAt, lastReportedAt(sort: Desc)])`
+- `@@index([assetId, lastReportedAt(sort: Desc)])`
 - `@@map("checkin_item_reports")`
 
 ## Model `KioskDevice`

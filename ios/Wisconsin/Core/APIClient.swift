@@ -40,6 +40,82 @@ struct BulkReservationRequest: Codable, Equatable {
     let quantity: Int
 }
 
+/// Bounds shared with the web booking schemas. The server remains the authority.
+enum BookingEditRules {
+    static let maxTitleLength = 500
+    static let maxNotesLength = 10_000
+    static let minReasonLength = 10
+    static let maxReasonLength = 1_000
+    static let maxSerializedItems = 500
+    static let maxBulkLines = 50
+    static let maxBulkQuantity = 1_000_000
+    static let maxLinkedEvents = 5
+
+    static func validatedTitle(_ value: String) throws -> String {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, trimmed.count <= maxTitleLength else {
+            throw APIError.serverError("Name must be between 1 and 500 characters.")
+        }
+        return trimmed
+    }
+
+    static func validateNotes(_ value: String) throws {
+        guard value.count <= maxNotesLength else {
+            throw APIError.serverError("Notes must be 10,000 characters or fewer.")
+        }
+    }
+
+    static func validatedReason(_ value: String) throws -> String {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= minReasonLength else {
+            throw APIError.serverError("Reason must be at least 10 characters")
+        }
+        guard trimmed.count <= maxReasonLength else {
+            throw APIError.serverError("Reason must be 1,000 characters or fewer.")
+        }
+        return trimmed
+    }
+
+    static func validatedOptionalNote(_ value: String) throws -> String? {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        guard trimmed.count <= maxReasonLength else {
+            throw APIError.serverError("Note must be 1,000 characters or fewer.")
+        }
+        return trimmed
+    }
+
+    static func validateSerializedIds(_ ids: [String]) throws {
+        guard ids.count <= maxSerializedItems else {
+            throw APIError.serverError("A reservation can include at most 500 items.")
+        }
+    }
+
+    static func validateBulkItems(_ items: [BulkReservationRequest]) throws {
+        guard items.count <= maxBulkLines else {
+            throw APIError.serverError("A reservation can include at most 50 supply lines.")
+        }
+        var seen = Set<String>()
+        for item in items {
+            guard item.quantity >= 1, item.quantity <= maxBulkQuantity else {
+                throw APIError.serverError("Quantity must be between 1 and 1000000.")
+            }
+            guard seen.insert(item.bulkSkuId).inserted else {
+                throw APIError.serverError("Duplicate bulk item")
+            }
+        }
+    }
+
+    static func validateEventIds(_ ids: [String]) throws {
+        guard ids.count <= maxLinkedEvents else {
+            throw APIError.serverError("A booking may link at most 5 events.")
+        }
+        guard Set(ids).count == ids.count else {
+            throw APIError.serverError("eventIds must be unique")
+        }
+    }
+}
+
 /// A preflight check is useful only when the caller can distinguish "clear"
 /// from "could not check." Keep the old empty-result API below for rollout
 /// compatibility, while new flows preserve the last known availability state
@@ -120,6 +196,20 @@ final class APIClient {
             config.protocolClasses = [FixtureAPIProtocol.self] + (config.protocolClasses ?? [])
         }
 #endif
+        return URLSession(configuration: config)
+    }()
+
+    /// Brand asset files can be a large PDF on venue wifi. The shared session
+    /// cuts a transfer off at 30 seconds, which is too short for that download.
+    private let fileSession: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.httpCookieStorage = HTTPCookieStorage.shared
+        config.httpShouldSetCookies = true
+        config.httpCookieAcceptPolicy = .always
+        config.waitsForConnectivity = false
+        config.timeoutIntervalForRequest = 30
+        config.timeoutIntervalForResource = 180
+        config.multipathServiceType = .none
         return URLSession(configuration: config)
     }()
 
@@ -679,6 +769,154 @@ final class APIClient {
         return response.data
     }
 
+    /// Reservation edit. Checkout requester, pickup, start, and gear stay on
+    /// their own routes; this PATCH is the reservation plan the web sheet saves.
+    func updateReservation(
+        id: String,
+        title: String? = nil,
+        notes: String? = nil,
+        locationId: String? = nil,
+        startsAt: Date? = nil,
+        endsAt: Date? = nil,
+        serializedAssetIds: [String]? = nil,
+        bulkItems: [BulkReservationRequest]? = nil,
+        updatedAt: Date?
+    ) async throws -> Booking {
+        guard let updatedAt else {
+            throw APIError.serverError("Refresh this reservation before editing it.")
+        }
+        if let title {
+            _ = try BookingEditRules.validatedTitle(title)
+        }
+        if let notes {
+            try BookingEditRules.validateNotes(notes)
+        }
+        if let startsAt, let endsAt, endsAt <= startsAt {
+            throw APIError.serverError("endsAt must be later than startsAt")
+        }
+        if let serializedAssetIds {
+            try BookingEditRules.validateSerializedIds(serializedAssetIds)
+        }
+        if let bulkItems {
+            try BookingEditRules.validateBulkItems(bulkItems)
+        }
+        struct Body: Encodable {
+            let title: String?
+            let notes: String?
+            let locationId: String?
+            let startsAt: String?
+            let endsAt: String?
+            let serializedAssetIds: [String]?
+            let bulkItems: [BulkReservationRequest]?
+
+            func encode(to encoder: Encoder) throws {
+                var container = encoder.container(keyedBy: CodingKeys.self)
+                try container.encodeIfPresent(title, forKey: .title)
+                try container.encodeIfPresent(notes, forKey: .notes)
+                try container.encodeIfPresent(locationId, forKey: .locationId)
+                try container.encodeIfPresent(startsAt, forKey: .startsAt)
+                try container.encodeIfPresent(endsAt, forKey: .endsAt)
+                try container.encodeIfPresent(serializedAssetIds, forKey: .serializedAssetIds)
+                try container.encodeIfPresent(bulkItems, forKey: .bulkItems)
+            }
+
+            private enum CodingKeys: String, CodingKey {
+                case title, notes, locationId, startsAt, endsAt, serializedAssetIds, bulkItems
+            }
+        }
+        var req = request(path: "/api/bookings/\(id)", method: "PATCH")
+        req.setValue(bookingSnapshotString(updatedAt), forHTTPHeaderField: "X-Booking-Updated-At")
+        req.httpBody = try JSONEncoder().encode(Body(
+            title: title.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) },
+            notes: notes,
+            locationId: locationId,
+            startsAt: startsAt.map(bookingSnapshotString),
+            endsAt: endsAt.map(bookingSnapshotString),
+            serializedAssetIds: serializedAssetIds,
+            bulkItems: bulkItems
+        ))
+        let response: DataWrapper<Booking> = try await perform(req)
+        return response.data
+    }
+
+    func updateBookingEvents(id: String, eventIds: [String], updatedAt: Date?) async throws -> Booking {
+        guard let updatedAt else {
+            throw APIError.serverError("Refresh this booking before editing its events.")
+        }
+        try BookingEditRules.validateEventIds(eventIds)
+        struct Body: Encodable { let eventIds: [String] }
+        var req = request(path: "/api/bookings/\(id)/events", method: "POST")
+        req.setValue(bookingSnapshotString(updatedAt), forHTTPHeaderField: "X-Booking-Updated-At")
+        req.httpBody = try JSONEncoder().encode(Body(eventIds: eventIds))
+        let response: DataWrapper<Booking> = try await perform(req)
+        return response.data
+    }
+
+    /// `true` when this hour's reminder was already sent.
+    func nudgeCheckout(id: String) async throws -> Bool {
+        struct Result: Decodable {
+            let alreadyNudged: Bool?
+        }
+        var req = request(path: "/api/bookings/\(id)/nudge", method: "POST")
+        req.httpBody = Data()
+        let result: Result = try await perform(req)
+        return result.alreadyNudged == true
+    }
+
+    func forceCompleteCheckout(id: String, reason: String) async throws -> Booking {
+        let reason = try BookingEditRules.validatedReason(reason)
+        struct Body: Encodable { let reason: String }
+        var req = request(path: "/api/bookings/\(id)/force-complete", method: "POST")
+        req.httpBody = try JSONEncoder().encode(Body(reason: reason))
+        let response: DataWrapper<Booking> = try await perform(req)
+        return response.data
+    }
+
+    func updateCheckoutCustody(id: String, custodyScope: String, updatedAt: Date?) async throws -> Booking {
+        guard let updatedAt else {
+            throw APIError.serverError("Refresh this checkout before changing custody.")
+        }
+        guard custodyScope == "PERSON" || custodyScope == "SHARED" else {
+            throw APIError.serverError("Custody must be personal or shared.")
+        }
+        struct Body: Encodable { let custodyScope: String }
+        var req = request(path: "/api/bookings/\(id)/custody-scope", method: "POST")
+        req.setValue(bookingSnapshotString(updatedAt), forHTTPHeaderField: "X-Booking-Updated-At")
+        req.httpBody = try JSONEncoder().encode(Body(custodyScope: custodyScope))
+        let response: DataWrapper<Booking> = try await perform(req)
+        return response.data
+    }
+
+    func forceCheckoutReservation(id: String, reason: String) async throws -> Booking {
+        let reason = try BookingEditRules.validatedReason(reason)
+        struct Body: Encodable { let reason: String }
+        var req = request(path: "/api/reservations/\(id)/force-checkout", method: "POST")
+        req.httpBody = try JSONEncoder().encode(Body(reason: reason))
+        let response: DataWrapper<Booking> = try await perform(req)
+        return response.data
+    }
+
+    func closeReservationRemaining(id: String, reason: String?) async throws -> Booking {
+        let note: String?
+        if let reason {
+            note = try BookingEditRules.validatedOptionalNote(reason)
+        } else {
+            note = nil
+        }
+        struct Body: Encodable {
+            let reason: String?
+            func encode(to encoder: Encoder) throws {
+                var container = encoder.container(keyedBy: CodingKeys.self)
+                try container.encodeIfPresent(reason, forKey: .reason)
+            }
+            private enum CodingKeys: String, CodingKey { case reason }
+        }
+        var req = request(path: "/api/reservations/\(id)/close-remaining", method: "POST")
+        req.httpBody = try JSONEncoder().encode(Body(reason: note))
+        let response: DataWrapper<Booking> = try await perform(req)
+        return response.data
+    }
+
     func createReservation(
         title: String,
         requesterUserId: String,
@@ -1046,6 +1284,45 @@ final class APIClient {
         return resp.data
     }
 
+    func kitList(search: String?, locationId: String?, includeArchived: Bool, limit: Int, offset: Int) async throws -> KitListPage {
+        var items: [URLQueryItem] = [
+            .init(name: "limit", value: String(limit)),
+            .init(name: "offset", value: String(offset)),
+            .init(name: "sort", value: "name"),
+            .init(name: "order", value: "asc"),
+        ]
+        let query = search?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !query.isEmpty {
+            items.append(.init(name: "q", value: query))
+        }
+        if let locationId, !locationId.isEmpty {
+            items.append(.init(name: "location_id", value: locationId))
+        }
+        if includeArchived {
+            items.append(.init(name: "include_archived", value: "true"))
+        }
+        let req = request(path: "/api/kits", queryItems: items)
+        return try await perform(req)
+    }
+
+    func kitReadDetail(id: String) async throws -> KitReadDetail {
+        let req = request(path: "/api/kits/\(id)")
+        let resp: DataWrapper<KitReadDetail> = try await perform(req)
+        return resp.data
+    }
+
+    func bulkSkuReadDetail(id: String) async throws -> BulkSkuReadDetail {
+        let req = request(path: "/api/bulk-skus/\(id)")
+        let resp: DataWrapper<BulkSkuReadDetail> = try await perform(req)
+        return resp.data
+    }
+
+    func batteryOps() async throws -> BatteryOpsSnapshot {
+        let req = request(path: "/api/bulk-skus/batteries")
+        let resp: DataWrapper<BatteryOpsSnapshot> = try await perform(req)
+        return resp.data
+    }
+
     func formOptions() async throws -> FormOptions {
         let req = request(path: "/api/form-options")
         let resp: DataWrapper<FormOptions> = try await perform(req)
@@ -1068,6 +1345,22 @@ final class APIClient {
         let req = request(path: "/api/dashboard/stats", queryItems: [.init(name: "scope", value: "ios-home")])
         let resp: DataWrapper<DashboardStatsPayload> = try await perform(req)
         return resp.data
+    }
+
+    // MARK: - Accountability
+
+    /// `GET /api/accountability`. The body is the report itself, same as the
+    /// report routes, not a `{ data }` envelope. Sends only `sort` and, for
+    /// all-time, `year=all`. Those are the values the route validates.
+    func accountabilityReport(
+        scope: AccountabilityScope,
+        sort: AccountabilitySort
+    ) async throws -> AccountabilityReport {
+        let req = request(
+            path: "/api/accountability",
+            queryItems: AccountabilityQuery.items(scope: scope, sort: sort)
+        )
+        return try await perform(req)
     }
 
     // MARK: - Reports
@@ -1096,6 +1389,79 @@ final class APIClient {
             queryItems: [.init(name: "days", value: String(days))]
         )
         return try await perform(req)
+    }
+
+    /// Same checkout payload as `checkoutActivityReport`, including the rows
+    /// and requester ranking the glance does not draw. Never requests CSV.
+    func checkoutDetailReport(days: Int) async throws -> CheckoutDetailReport {
+        let req = request(
+            path: "/api/reports/checkouts",
+            queryItems: [.init(name: "days", value: String(days))]
+        )
+        return try await perform(req)
+    }
+
+    /// Same utilization payload as `utilizationReport`, including breakdowns
+    /// and idle gear. Never requests CSV.
+    func utilizationDetailReport(days: Int) async throws -> UtilizationDetailReport {
+        let req = request(
+            path: "/api/reports/utilization",
+            queryItems: [.init(name: "days", value: String(days))]
+        )
+        return try await perform(req)
+    }
+
+    /// Owner-only aggregate counts. The server returns 403 for everyone else.
+    func usageReport(days: Int) async throws -> UsageReport {
+        let req = request(
+            path: "/api/reports/usage",
+            queryItems: [.init(name: "days", value: String(days))]
+        )
+        return try await perform(req)
+    }
+
+    func scanReport(startDate: String?, phase: String?, limit: Int, offset: Int) async throws -> ScanHistoryReport {
+        var items = [
+            URLQueryItem(name: "limit", value: String(limit)),
+            URLQueryItem(name: "offset", value: String(offset)),
+        ]
+        if let startDate {
+            items.append(URLQueryItem(name: "startDate", value: startDate))
+        }
+        if let phase {
+            items.append(URLQueryItem(name: "phase", value: phase))
+        }
+        return try await perform(request(path: "/api/reports/scans", queryItems: items))
+    }
+
+    func missingUnitsReport(categoryId: String?, locationId: String?) async throws -> MissingUnitsReport {
+        var items: [URLQueryItem] = []
+        if let categoryId {
+            items.append(URLQueryItem(name: "category", value: categoryId))
+        }
+        if let locationId {
+            items.append(URLQueryItem(name: "location", value: locationId))
+        }
+        return try await perform(request(
+            path: "/api/reports/bulk-losses",
+            queryItems: items.isEmpty ? nil : items
+        ))
+    }
+
+    func badgeReport(days: Int) async throws -> BadgeReport {
+        let req = request(
+            path: "/api/reports/badges",
+            queryItems: [.init(name: "days", value: String(days))]
+        )
+        return try await perform(req)
+    }
+
+    /// `/api/me` already returns this allowlist flag beside the user. Missing
+    /// on an older server means the report stays hidden.
+    func canViewUsageAnalytics() async throws -> Bool {
+        let req = request(path: "/api/me")
+        let resp: MeResponse = try await perform(req)
+        return resp.canViewUsageAnalytics ?? false
     }
 
     // MARK: - Licenses
@@ -1143,6 +1509,90 @@ final class APIClient {
     func guide(slug: String) async throws -> GuideListItem {
         let resp: DataWrapper<GuideListItem> = try await perform(request(path: "/api/resources/\(slug)"))
         return resp.data
+    }
+
+    /// `GET /api/resources/assets`. Read-only folder listing. Search uses
+    /// `scope=all` so a logo can be found under the current folder.
+    func brandAssets(folderId: String?, search: String?, sort: String) async throws -> BrandAssetLibraryPage {
+        var items: [URLQueryItem] = [
+            .init(name: "sort", value: sort),
+        ]
+        if let folderId, !folderId.isEmpty {
+            items.append(.init(name: "folderId", value: folderId))
+        }
+        let trimmedSearch = search?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !trimmedSearch.isEmpty {
+            items.append(.init(name: "q", value: trimmedSearch))
+            items.append(.init(name: "scope", value: "all"))
+        }
+        let response: DataWrapper<BrandAssetLibraryPage> = try await perform(
+            request(path: "/api/resources/assets", queryItems: items)
+        )
+        return response.data
+    }
+
+    /// Authenticated current-file download. The bytes stay in a temp file and
+    /// are never a public Blob URL.
+    func brandAssetFile(id: String, fallbackName: String) async throws -> BrandAssetDownload {
+        let req = request(path: "/api/resources/assets/\(id)/download")
+        let requestBoundary = authSessionBoundary.capture()
+        let temp: URL
+        let response: URLResponse
+        do {
+            (temp, response) = try await fileSession.download(for: req)
+        } catch let error as URLError where error.code == .cancelled {
+            throw CancellationError()
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            throw APIError.networkError(error)
+        }
+
+        guard authSessionBoundary.owns(requestBoundary) else {
+            try? FileManager.default.removeItem(at: temp)
+            throw APIError.sessionChanged
+        }
+        guard let http = response as? HTTPURLResponse else {
+            try? FileManager.default.removeItem(at: temp)
+            throw APIError.serverError("Invalid response")
+        }
+        guard (200...299).contains(http.statusCode) else {
+            let data = (try? Data(contentsOf: temp)) ?? Data()
+            try? FileManager.default.removeItem(at: temp)
+            if http.statusCode == 401 {
+                broadcastSessionExpiry(for: requestBoundary)
+                throw APIError.unauthorized
+            }
+            if http.statusCode == 404 {
+                throw APIError.notFound
+            }
+            let message = (try? JSONDecoder().decode(ServerErrorBody.self, from: data))?.error
+                ?? "Couldn't open that file."
+            throw APIError.httpError(statusCode: http.statusCode, message: message)
+        }
+
+        let filename = brandAssetDownloadName(
+            header: http.value(forHTTPHeaderField: "Content-Disposition"),
+            fallback: fallbackName
+        )
+        let safeId = String(id.unicodeScalars.filter { scalar in
+            CharacterSet.alphanumerics.contains(scalar) || scalar == "-" || scalar == "_"
+        })
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("brand-assets", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let destination = directory.appendingPathComponent("\(safeId.isEmpty ? "file" : safeId)-\(filename)")
+        if FileManager.default.fileExists(atPath: destination.path) {
+            try FileManager.default.removeItem(at: destination)
+        }
+        do {
+            try FileManager.default.moveItem(at: temp, to: destination)
+        } catch {
+            try FileManager.default.copyItem(at: temp, to: destination)
+            try? FileManager.default.removeItem(at: temp)
+        }
+        let contentType = http.value(forHTTPHeaderField: "Content-Type") ?? "application/octet-stream"
+        return BrandAssetDownload(fileURL: destination, contentType: contentType)
     }
 
     // MARK: - Assets
@@ -1255,6 +1705,15 @@ final class APIClient {
         let req = request(path: "/api/badges/user/\(userId)")
         let resp: DataWrapper<BadgeProfile> = try await perform(req)
         return resp.data
+    }
+
+    /// The staff award catalog. `manualOnly` is the same filter the website
+    /// uses on `/badges`. Awarding stays on the web.
+    func teamBadgeCatalog() async throws -> TeamBadgeCatalog {
+        try await perform(request(
+            path: "/api/badges",
+            queryItems: [URLQueryItem(name: "manualOnly", value: "true")]
+        ))
     }
 
     /// Shared, read-only team totals. The server owns the window, stacked
@@ -1492,6 +1951,40 @@ final class APIClient {
         return response.data
     }
 
+    /// One page of `/api/calendar-events`. The Browse events list follows
+    /// `total` the same way Schedule does, without Schedule's week window.
+    func calendarEventsPage(
+        includePast: Bool,
+        window: DateInterval? = nil,
+        limit: Int,
+        offset: Int
+    ) async throws -> ScheduleEventsResponse {
+        try await calendarEventPage(
+            includePast: includePast,
+            window: window,
+            limit: limit,
+            offset: offset
+        )
+    }
+
+    /// `GET /api/calendar-events/:id`. Richer than the list row: source,
+    /// subtitle, hidden, and combined-event identity. Read-only.
+    func calendarEventDetail(id: String) async throws -> CalendarEventDetail {
+        let response: DataWrapper<CalendarEventDetail> = try await perform(
+            request(path: "/api/calendar-events/\(id)")
+        )
+        return response.data
+    }
+
+    /// Staff/admin gear and booking summary for one event. Students receive
+    /// 403; callers treat that as "no team gear" rather than a failed event.
+    func eventCommandCenter(id: String) async throws -> EventCommandCenter {
+        let response: DataWrapper<EventCommandCenter> = try await perform(
+            request(path: "/api/calendar-events/\(id)/command-center")
+        )
+        return response.data
+    }
+
     /// Reads the complete event window through the API's total-driven pages.
     /// SwiftUI still renders the result lazily, while the client no longer
     /// mistakes the first 60 events (roughly one month during a busy season)
@@ -1626,6 +2119,7 @@ final class APIClient {
     /// teammate's profile; if the answer cannot be attributed, return nothing.
     private func myShiftsPage(
         userId: String?,
+        eventId: String? = nil,
         window: DateInterval? = nil,
         limit: Int,
         offset: Int
@@ -1635,6 +2129,7 @@ final class APIClient {
             .init(name: "offset", value: "\(offset)"),
         ]
         if let userId { items.append(.init(name: "userId", value: userId)) }
+        if let eventId { items.append(.init(name: "eventId", value: eventId)) }
         items += Self.windowQueryItems(window)
         return try await perform(request(path: "/api/my-shifts", queryItems: items))
     }
@@ -1643,6 +2138,14 @@ final class APIClient {
         let resp = try await myShiftsPage(userId: userId, limit: limit, offset: 0)
         if let userId, resp.userId != userId { return [] }
         return resp.data
+    }
+
+    /// The signed-in person's shifts on one event, including the gear bookings
+    /// linked to that event. The route caps a page at 20; one person does not
+    /// have more active assignments than that on a single event.
+    func myShifts(eventId: String) async throws -> [MyShift] {
+        let response = try await myShiftsPage(userId: nil, eventId: eventId, limit: 20, offset: 0)
+        return response.data
     }
 
     /// Reads every active assignment for the caller. The route is still
@@ -1786,6 +2289,7 @@ final class APIClient {
         var req = request(path: "/api/me/blasts/\(id)/ack", method: "POST")
         req.httpBody = Data()
         let _: SuccessResponse = try await perform(req)
+        BlastArchive.markAcknowledged(id)
     }
 
     // MARK: - Notification preferences
@@ -2254,6 +2758,29 @@ final class APIClient {
         return response.data.avatarUrl
     }
 
+    // MARK: - Gear picks
+
+    /// The signed-in person's cycle, saved list, and the fit-filtered catalog.
+    /// `catalog=1` is optional on the server so the website's banner stays small.
+    func myGearPicks() async throws -> GearPicksMePayload {
+        let req = request(path: "/api/gear-picks/me", queryItems: [.init(name: "catalog", value: "1")])
+        let resp: DataWrapper<GearPicksMePayload> = try await perform(req)
+        return resp.data
+    }
+
+    /// Replace the participant's whole list. The server prices every line and checks the allowance.
+    func saveMyGearPicks(lines: [GearPickSaveLine], submit: Bool, version: Int) async throws -> GearPickSubmission {
+        struct Body: Encodable {
+            let lines: [GearPickSaveLine]
+            let submit: Bool
+            let version: Int
+        }
+        var req = request(path: "/api/gear-picks/me", method: "PUT")
+        req.httpBody = try JSONEncoder().encode(Body(lines: lines, submit: submit, version: version))
+        let resp: DataWrapper<GearPickSubmission> = try await perform(req)
+        return resp.data
+    }
+
     // MARK: - Internals
 
     private func mutateWorkingSchedule(
@@ -2512,6 +3039,7 @@ private struct PasskeyOptionsResponse<T: Decodable>: Decodable {
 
 private struct MeResponse: Decodable {
     let user: CurrentUser
+    let canViewUsageAnalytics: Bool?
 }
 
 private struct RolePreviewMutationResponse: Decodable {

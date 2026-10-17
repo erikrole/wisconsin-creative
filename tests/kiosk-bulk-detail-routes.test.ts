@@ -150,6 +150,11 @@ beforeEach(() => {
   });
   mocks.createBooking.mockResolvedValue({ id: "checkout-1" });
   mocks.earnedBadgesSince.mockResolvedValue([]);
+  mocks.userFindFirst.mockImplementation(async (args: { where?: { id?: string } } | undefined) => {
+    const id = args?.where?.id;
+    if (!id) return null;
+    return { id, role: "STUDENT" };
+  });
 });
 
 describe("kiosk checkout detail bulk units", () => {
@@ -729,6 +734,73 @@ describe("kiosk pickup serialized scan guard", () => {
     });
   });
 
+  it("returns 400 when a personal pickup scan omits the operator", async () => {
+    mocks.bookingFindUnique.mockResolvedValue({
+      id: "booking-1",
+      status: "PENDING_PICKUP",
+      kind: "CHECKOUT",
+      custodyScope: "PERSON",
+      requesterUserId: "user-1",
+      locationId: "loc-1",
+    });
+
+    await expect(scanKioskPickup(new Request("http://test", {
+      method: "POST",
+      body: JSON.stringify({ scanValue: "23723854" }),
+    }), routeCtx("booking-1"))).rejects.toMatchObject({
+      status: 400,
+      message: "Choose an operator before scanning",
+    });
+    expect(mocks.userFindFirst).not.toHaveBeenCalled();
+    expect(mocks.scanKioskPickupBulkUnit).not.toHaveBeenCalled();
+    expect(mocks.scanEventCreate).not.toHaveBeenCalled();
+    expect(mocks.findAssetByScanValue).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when a shared pickup scan omits the operator", async () => {
+    mocks.bookingFindUnique.mockResolvedValue({
+      id: "reservation-1",
+      status: "BOOKED",
+      kind: "RESERVATION",
+      custodyScope: "SHARED",
+      requesterUserId: "creator-1",
+      locationId: "loc-1",
+    });
+
+    await expect(scanKioskPickup(new Request("http://test", {
+      method: "POST",
+      body: JSON.stringify({ scanValue: "FB-FX3-1" }),
+    }), routeCtx("reservation-1"))).rejects.toMatchObject({
+      status: 400,
+      message: "Choose an operator before scanning shared gear",
+    });
+    expect(mocks.userFindFirst).not.toHaveBeenCalled();
+    expect(mocks.stageKioskReservationPickupBulkUnit).not.toHaveBeenCalled();
+    expect(mocks.scanEventCreate).not.toHaveBeenCalled();
+  });
+
+  it("rejects another student before staging or recording a personal pickup scan", async () => {
+    mocks.bookingFindUnique.mockResolvedValue({
+      id: "booking-1",
+      status: "PENDING_PICKUP",
+      kind: "CHECKOUT",
+      custodyScope: "PERSON",
+      requesterUserId: "user-1",
+      locationId: "loc-1",
+    });
+
+    await expect(scanKioskPickup(new Request("http://test", {
+      method: "POST",
+      body: JSON.stringify({ actorId: "maya", scanValue: "23723854" }),
+    }), routeCtx("booking-1"))).rejects.toMatchObject({
+      status: 403,
+      message: "Only the person this pickup belongs to can scan it",
+    });
+    expect(mocks.scanKioskPickupBulkUnit).not.toHaveBeenCalled();
+    expect(mocks.scanEventCreate).not.toHaveBeenCalled();
+    expect(mocks.findAssetByScanValue).not.toHaveBeenCalled();
+  });
+
   it("records successful serialized pickup scans before confirmation", async () => {
     mocks.scanKioskPickupBulkUnit.mockResolvedValue({ handled: false });
     mocks.bookingFindUnique.mockResolvedValue({
@@ -753,7 +825,7 @@ describe("kiosk pickup serialized scan guard", () => {
     const res = await scanKioskPickup(new Request("http://test", {
       method: "POST",
       headers: { "user-agent": "vitest-kiosk" },
-      body: JSON.stringify({ scanValue: "23723854" }),
+      body: JSON.stringify({ actorId: "user-1", scanValue: "23723854" }),
     }), routeCtx("booking-1"));
     const json = await res.json();
 
@@ -804,7 +876,7 @@ describe("kiosk pickup serialized scan guard", () => {
     const res = await scanKioskPickup(new Request("http://test", {
       method: "POST",
       headers: { "user-agent": "vitest-kiosk" },
-      body: JSON.stringify({ scanValue: "23723854" }),
+      body: JSON.stringify({ actorId: "user-1", scanValue: "23723854" }),
     }), routeCtx("booking-1"));
     const json = await res.json();
 
@@ -839,7 +911,7 @@ describe("kiosk pickup serialized scan guard", () => {
 
     const res = await scanKioskPickup(new Request("http://test", {
       method: "POST",
-      body: JSON.stringify({ scanValue: "23723854" }),
+      body: JSON.stringify({ actorId: "user-1", scanValue: "23723854" }),
     }), routeCtx("reservation-1"));
 
     expect(await res.json()).toEqual({
@@ -869,7 +941,7 @@ describe("kiosk pickup serialized scan guard", () => {
 
     const res = await scanKioskPickup(new Request("http://test", {
       method: "POST",
-      body: JSON.stringify({ scanValue: "23723854" }),
+      body: JSON.stringify({ actorId: "user-1", scanValue: "23723854" }),
     }), routeCtx("reservation-1"));
 
     expect(await res.json()).toEqual({
@@ -902,7 +974,7 @@ describe("kiosk pickup serialized scan guard", () => {
 
     const res = await scanKioskPickup(new Request("http://test", {
       method: "POST",
-      body: JSON.stringify({ scanValue: "755CX3" }),
+      body: JSON.stringify({ actorId: "user-1", scanValue: "755CX3" }),
     }), routeCtx("reservation-1"));
 
     expect(await res.json()).toEqual({
@@ -939,7 +1011,7 @@ describe("kiosk pickup serialized scan guard", () => {
 
     const res = await scanKioskPickup(new Request("http://test", {
       method: "POST",
-      body: JSON.stringify({ scanValue: "755CX3", intent: "add" }),
+      body: JSON.stringify({ actorId: "user-1", scanValue: "755CX3", intent: "add" }),
     }), routeCtx("reservation-1"));
 
     expect(await res.json()).toEqual({

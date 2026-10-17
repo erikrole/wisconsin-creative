@@ -1,4 +1,4 @@
-import type { GearPickFitKey } from "./catalog";
+import type { GearPickFitKey, GearPickPhoneCatalog } from "./catalog";
 
 /** Client-safe response shapes for /api/gear-picks/*. Dates are ISO strings. */
 
@@ -50,6 +50,8 @@ export type GearPicksMeResponse = {
     shoeSizeSystem: "US_WOMENS" | "US_MENS" | null;
   };
   isAdmin: boolean;
+  /** Present only when the caller asks for it. The website already bundles the catalog. */
+  catalog?: GearPickPhoneCatalog;
 };
 
 export type GearPickSubmissionStatus = "NOT_STARTED" | "DRAFT" | "SUBMITTED";

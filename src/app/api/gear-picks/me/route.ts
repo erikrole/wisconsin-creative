@@ -23,9 +23,10 @@ const putSchema = z.object({
 });
 
 /** The signed-in person's gear pick cycle, participation, saved list, and profile size defaults. */
-export const GET = withAuth(async (_req, { user }) => {
+export const GET = withAuth(async (req, { user }) => {
   requirePermission(user.role, "gear_picks", "view");
-  return ok({ data: await getMyGearPicks(user) });
+  const includeCatalog = new URL(req.url).searchParams.get("catalog") === "1";
+  return ok({ data: await getMyGearPicks(user, new Date(), { includeCatalog }) });
 });
 
 /** Replace the signed-in participant's pick list (draft or submit). Prices come from the catalog. */

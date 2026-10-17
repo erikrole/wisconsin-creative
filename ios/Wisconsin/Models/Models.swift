@@ -397,6 +397,11 @@ struct PickupKioskDevice: Codable, Identifiable {
     let location: BookingLocation
 }
 
+struct BookingDerivedCheckout: Codable, Identifiable, Hashable {
+    let id: String
+    let refNumber: String?
+}
+
 struct Booking: Codable, Identifiable, Hashable {
     static func == (lhs: Booking, rhs: Booking) -> Bool { lhs.id == rhs.id }
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
@@ -416,6 +421,9 @@ struct Booking: Codable, Identifiable, Hashable {
     let event: BookingEvent?
     var events: [BookingEvent]? = nil
     var allowedActions: [String]? = nil
+    /// Absent on older payloads. `SHARED` is the travel-case checkout.
+    var custodyScope: String? = nil
+    var derivedCheckouts: [BookingDerivedCheckout]? = nil
     let updatedAt: Date?
     let pickupKioskDevice: PickupKioskDevice?
 
