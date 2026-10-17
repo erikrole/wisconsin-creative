@@ -17,6 +17,40 @@
   },
   {
     "date": "2026-10-16",
+    "title": "Late returns on iPhone",
+    "type": "feature",
+    "summary": "Students and staff can open the late-return list on iPhone and go from a person to the checkout.",
+    "details": [
+      "Browse includes Accountability for students, staff, and admins.",
+      "The list covers this academic year or all time, sorted by late returns, late time, or most recent.",
+      "Your own place on the list stays at the top. Search looks through the names already loaded.",
+      "A person shows each late checkout, and opening one shows the gear.",
+      "Spreadsheets and taking a checkout off the list stay on the website."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 495
+  },
+  {
+    "date": "2026-10-16",
+    "title": "Edit reservations on iPhone",
+    "type": "feature",
+    "summary": "Reservations on iPhone can be updated the same way as on the web. Checkout screens also pick up the extra actions staff already have there.",
+    "details": [
+      "Change a reservation's name, notes, pickup, dates, remaining gear, and linked events.",
+      "Save waits until that gear is available for the new window.",
+      "Gear that was already picked up stays on the checkout.",
+      "Checkouts can nudge, close without a scan, transfer, or switch between shared and personal when those actions are allowed.",
+      "Extend stays the main action on a checkout. Gear on an active checkout still changes at a kiosk."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 493
+  },
+  {
+    "date": "2026-10-16",
     "title": "Kits and batteries on iPhone",
     "type": "feature",
     "summary": "Staff and students can read kits and item families on iPhone. Staff can also open Battery Ops to see what is low and who has batteries out.",

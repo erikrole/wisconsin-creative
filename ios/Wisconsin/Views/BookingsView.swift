@@ -582,8 +582,14 @@ struct BookingsView: View {
             .sheet(item: $presentedAction) { action in
                 switch action {
                 case .edit(let booking):
-                    EditBookingSheet(booking: booking) { updatedBooking in
-                        vm.install(updatedBooking)
+                    if booking.kind == .reservation {
+                        ReservationEditFlow(booking: booking) { updatedBooking in
+                            vm.install(updatedBooking)
+                        }
+                    } else {
+                        EditBookingSheet(booking: booking) { updatedBooking in
+                            vm.install(updatedBooking)
+                        }
                     }
                 case .transfer(let booking):
                     TransferBookingOwnerSheet(booking: booking) { updatedBooking in
