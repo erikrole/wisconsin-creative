@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Bulk Inventory Management
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-10-16
+- Last Updated: 2026-10-17
 - Status: Active
 - Version: V1
 
@@ -208,6 +208,7 @@ See `AREA_ITEMS.md` 2026-04-06 entry for bulk inventory page hardening:
 - [ ] AC-14: Deploy and replay the 2026-09-11 battery integrity fixes at the native kiosk: cross-location removal, partial-family removal, shared-return operator/scan evidence, custody-safe status changes, and deficit-only repair. Local verification is tracked in `tasks/battery-data-flow-hardening-2026-09-11.md`.
 
 ## Change Log
+- 2026-10-17: **Item-family unit and product lists use the catalog permission.** `GET /api/bulk-skus/[id]/units` and `GET /api/bulk-skus/[id]/products` now require the same `bulk_sku` view permission as the family itself, including a collaborator's gear-catalog capability. Students, staff, and admins keep the lists they already use.
 - 2026-10-16: **Native iOS can read item families and Battery Ops.** Items, Search, and kit detail open a read-only family screen with availability, identity, products, and a status-filtered unit list. Staff and admins open Battery Ops from Browse, from a battery item, and from a battery family. The cockpit shows totals, cameras running low, checked-out units, stale checked-out flags, and every battery family. Reserve is the only native action. Receiving, labels, count changes, and stale-flag repair stay on the web. Source contracts pass. An Xcode build on a Mac is still required.
 - 2026-10-16: **Battery Ops reads a candidate set, then keeps the same families (local).** `GET /api/bulk-skus/batteries` limits the catalog query to battery-like names and categories and camera-like parent assets, then still applies `isBatterySku` and `isBatteryCamera`. The camera candidate words include every word that check accepts, including Bodies. Family membership, counts, and repair behavior are unchanged. Migration `0175_scan_checkin_and_bulk_allocation_indexes` indexes open bulk-unit allocations on `checkedInAt` and `checkedOutAt`; it is not applied.
 - 2026-09-11: **Battery data and flow hardening prepared locally.** Stale repair cannot double-count stock, status recovery cannot override OPEN/PENDING_PICKUP custody even with LOST/RETIRED flags, status decrements cannot produce negative local balances, and receiving/status audits commit with inventory. Ended-allocation recovery preserves allocation IDs/timestamps in audit evidence. Battery Ops uses a repeatable-read allocation-consistent snapshot. Kiosk battery returns record exact scan, operator, and location evidence; removal restores the kiosk location and permits an unreturned unit to be removed after another unit in its family was returned without deleting that history. Production read-only audit at 2026-09-12 03:50 UTC found five families, 103 units, 99 claimable and four held, with matching balances and no stale flags/ended allocations; Football Sony Battery already has 12 units. No production writes occurred. Local checks and external acceptance are recorded in the task ledger.

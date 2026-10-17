@@ -14,7 +14,7 @@ describe("iOS shared logins", () => {
       menu.indexOf("let capabilities"),
     );
 
-    expect(internalRows).toContain(".licenses, .sharedLogins, .users]");
+    expect(internalRows).toContain("[.scoreboard, .accountability, .events, .items, .kits, .guides, .brandAssets, .blasts, .licenses, .sharedLogins, .users, .gearPicks]");
     expect(menu).toContain('case .sharedLogins: "Shared logins"');
     expect(menu).toContain("Copy a department login when you need it.");
     expect(menu).toContain("SharedLoginsView(wrapsInNavigationStack: false)");

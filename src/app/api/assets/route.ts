@@ -6,8 +6,8 @@ import { db } from "@/lib/db";
 import { HttpError, ok, parsePagination } from "@/lib/http";
 import { requirePermission, requirePermissionOrCollaboratorCapability } from "@/lib/rbac";
 import { buildDerivedStatusWhere, enrichAssetsWithStatusFromLoaded } from "@/lib/services/status";
-import { buildActiveBulkUnitAllocationMap } from "@/lib/bulk-unit-status";
-import { summarizeItemFamilyState } from "@/lib/item-family-state";
+import { ACTIVE_BULK_UNIT_ALLOCATION_WHERE, buildActiveBulkUnitAllocationMap } from "@/lib/bulk-unit-status";
+import { summarizeItemFamilyState, summarizeNumberedFamilyCounts } from "@/lib/item-family-state";
 import { parseDerivedBulkUnitQr } from "@/lib/bulk-unit-qr";
 import {
   buildAssetTagSortFields,
@@ -15,7 +15,7 @@ import {
   getAssetTagSearchAliases,
 } from "@/lib/item-asset-tag-sort";
 import { databaseIdSchema, moneyDecimalSchema, nullableHttpUrlSchema } from "@/lib/validation";
-import { AssetStatus, BookingKind, BookingStatus, Prisma } from "@prisma/client";
+import { AssetStatus, BookingKind, BookingStatus, BulkUnitStatus, Prisma } from "@prisma/client";
 import {
   sanitizeCollaboratorBulkItem,
   sanitizeCollaboratorPickerAsset,
@@ -60,7 +60,6 @@ const bulkSkuInclude = {
   categoryRel: { select: { id: true, name: true } },
   department: { select: { id: true, name: true } },
   balances: { select: { onHandQuantity: true } },
-  units: { select: { id: true, unitNumber: true, status: true } },
 };
 
 type AssetListRow = Prisma.AssetGetPayload<{ include: typeof assetInclude }>;
@@ -154,11 +153,52 @@ async function buildBulkListItems(
   bulkSkus: BulkSkuListRow[],
   derivedBulkUnitQr: DerivedBulkUnitQr
 ): Promise<BulkListItem[]> {
-  const bulkUnitIds = bulkSkus.flatMap((sku) => sku.units.map((unit) => unit.id));
-  const activeUnitAllocations = bulkUnitIds.length > 0
+  const numberedIds = bulkSkus.filter((sku) => sku.trackByNumber).map((sku) => sku.id);
+  const rosterSkuId = derivedBulkUnitQr && numberedIds.includes(derivedBulkUnitQr.bulkSkuId)
+    ? derivedBulkUnitQr.bulkSkuId
+    : null;
+
+  // List rows only need totals. Counting in SQL avoids shipping every physical
+  // unit of every family. An exact unit scan still loads that one family's roster.
+  const [statusGroups, heldGroups, rosterUnits] = await Promise.all([
+    numberedIds.length > 0
+      ? db.bulkSkuUnit.groupBy({
+          by: ["bulkSkuId", "status"],
+          where: { bulkSkuId: { in: numberedIds } },
+          _count: { _all: true },
+        })
+      : Promise.resolve([]),
+    numberedIds.length > 0
+      ? db.bulkSkuUnit.groupBy({
+          by: ["bulkSkuId"],
+          where: {
+            bulkSkuId: { in: numberedIds },
+            status: { notIn: [BulkUnitStatus.LOST, BulkUnitStatus.RETIRED] },
+            allocations: { some: ACTIVE_BULK_UNIT_ALLOCATION_WHERE },
+          },
+          _count: { _all: true },
+        })
+      : Promise.resolve([]),
+    rosterSkuId
+      ? db.bulkSkuUnit.findMany({
+          where: { bulkSkuId: rosterSkuId },
+          select: { id: true, unitNumber: true, status: true },
+        })
+      : Promise.resolve([]),
+  ]);
+
+  const statusBySku = new Map<string, Partial<Record<BulkUnitStatus, number>>>();
+  for (const group of statusGroups) {
+    const counts = statusBySku.get(group.bulkSkuId) ?? {};
+    counts[group.status] = group._count._all;
+    statusBySku.set(group.bulkSkuId, counts);
+  }
+  const heldBySku = new Map(heldGroups.map((group) => [group.bulkSkuId, group._count._all]));
+
+  const activeUnitAllocations = rosterUnits.length > 0
     ? await db.bookingBulkUnitAllocation.findMany({
         where: {
-          bulkSkuUnitId: { in: bulkUnitIds },
+          bulkSkuUnitId: { in: rosterUnits.map((unit) => unit.id) },
           checkedOutAt: { not: null },
           checkedInAt: null,
         },
@@ -181,11 +221,23 @@ async function buildBulkListItems(
       })
     : [];
   const activeAllocationByUnitId = buildActiveBulkUnitAllocationMap(activeUnitAllocations);
+  const rosterSku = rosterSkuId ? bulkSkus.find((sku) => sku.id === rosterSkuId) : null;
+  const rosterState = rosterSku
+    ? summarizeItemFamilyState(
+        { trackByNumber: true, units: rosterUnits, balances: rosterSku.balances },
+        activeAllocationByUnitId,
+      )
+    : null;
 
   return bulkSkus.map((sku) => {
-    const state = summarizeItemFamilyState(sku, activeAllocationByUnitId);
+    const balanceOnHand = sku.balances.reduce((sum, balance) => sum + balance.onHandQuantity, 0);
+    const numbered = sku.trackByNumber
+      ? sku.id === rosterSkuId && rosterState
+        ? rosterState
+        : summarizeNumberedFamilyCounts(statusBySku.get(sku.id) ?? {}, heldBySku.get(sku.id) ?? 0)
+      : null;
     const matchedUnit = derivedBulkUnitQr?.bulkSkuId === sku.id
-      ? state.effectiveUnits.find((unit) => unit.unitNumber === derivedBulkUnitQr.unitNumber)
+      ? rosterState?.effectiveUnits.find((unit) => unit.unitNumber === derivedBulkUnitQr.unitNumber) ?? null
       : null;
     const matchedUnitAllocation = matchedUnit ? activeAllocationByUnitId.get(matchedUnit.id) : null;
     const matchedUnitBooking = matchedUnitAllocation?.bookingBulkItem.booking;
@@ -206,11 +258,11 @@ async function buildBulkListItems(
       category: sku.categoryRel?.name ?? sku.category,
       unit: sku.unit,
       trackByNumber: sku.trackByNumber,
-      onHandQuantity: state.onHandQuantity,
-      availableQuantity: state.availableQuantity,
-      checkedOutQuantity: state.checkedOutQuantity,
-      lostQuantity: state.lostQuantity,
-      retiredQuantity: state.retiredQuantity,
+      onHandQuantity: numbered ? numbered.onHandQuantity : Math.max(0, balanceOnHand),
+      availableQuantity: numbered ? numbered.availableQuantity : Math.max(0, balanceOnHand),
+      checkedOutQuantity: numbered ? numbered.checkedOutQuantity : 0,
+      lostQuantity: numbered ? numbered.lostQuantity : 0,
+      retiredQuantity: numbered ? numbered.retiredQuantity : 0,
       ...(matchedUnit
         ? {
             matchedUnitNumber: matchedUnit.unitNumber,
@@ -218,10 +270,10 @@ async function buildBulkListItems(
             ...matchedUnitCustody,
             // Per-unit roster, only on the exact-unit scan path so list
             // searches don't ship every unit of every SKU.
-            units: state.effectiveUnits
+            units: rosterState?.effectiveUnits
               .slice()
               .sort((a, b) => a.unitNumber - b.unitNumber)
-              .map((u) => ({ unitNumber: u.unitNumber, status: u.status })),
+              .map((unit) => ({ unitNumber: unit.unitNumber, status: unit.status })) ?? [],
           }
         : {}),
       imageUrl: sku.imageUrl,
@@ -935,9 +987,13 @@ export const GET = withAuth(async (req, { user }) => {
     isFavorited: favoriteBulkSkuIds.has(b.id),
   }));
 
-  // Status breakdown counts using derived status logic
+  // The Items catalog is the only caller that renders these six chips. Each
+  // count is a derived-status scan, so lookups that omit `sort` (command
+  // search, scans, iOS search) or pass `counts=0` skip them. `sort` is what
+  // the Items page always sends.
+  const includeStatusBreakdown = searchParams.get("counts") !== "0" && searchParams.has("sort");
   const statusKeys = ["AVAILABLE", "CHECKED_OUT", "PENDING_PICKUP", "RESERVED", "MAINTENANCE", "RETIRED"] as const;
-  const assetBreakdownCounts: [number, number, number, number, number, number] = includeSerializedRows
+  const assetBreakdownCounts: [number, number, number, number, number, number] = includeSerializedRows && includeStatusBreakdown
     ? await Promise.all(
         statusKeys.map((s) => {
           const clauses = buildDerivedStatusWhere([s]);
