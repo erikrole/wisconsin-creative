@@ -17,6 +17,8 @@ export type AppEntry = {
   requires?: string;
   href?: string;
   cta?: string;
+  /** Product page on this site, linked from the card. */
+  page?: string;
 };
 
 // Written values are the fallback when the App Store or GitHub lookup fails.
@@ -63,6 +65,7 @@ export const appEntries: AppEntry[] = [
     requires: "macOS 15.0 or later",
     href: "https://github.com/erikrole/offload-releases/releases/download/v1.2.0/Offload-1.2.0.dmg",
     cta: "Download for macOS",
+    page: "/apps/offload",
   },
   {
     name: "Fetch",
@@ -76,6 +79,7 @@ export const appEntries: AppEntry[] = [
     requires: "macOS 27 or later",
     href: "https://github.com/erikrole/fetch-releases/releases/latest/download/Fetch.dmg",
     cta: "Download for macOS",
+    page: "/apps/fetch",
   },
   {
     name: "Radio Clip",
@@ -121,7 +125,8 @@ function appCard(entry: AppEntry, live: LiveVersions) {
   const requires = app.requires ? `Requires ${esc(app.requires)}` : "";
   const meta = [release, requires].filter(Boolean);
   const download = app.href && app.cta ? `<a class="go" href="${esc(app.href)}">${esc(app.cta)} <i aria-hidden="true">→</i></a>` : "";
-  const actions = download ? `<p class="actions">${download}</p>` : "";
+  const learn = app.page ? `<a class="go" href="${esc(app.page)}">Learn more <i aria-hidden="true">→</i></a>` : "";
+  const actions = download || learn ? `<p class="actions">${learn}${download}</p>` : "";
   return `<li><article class="app${app.statusKind === "soon" ? " soon" : ""}">
           <div class="art">${icon}</div>
           <div class="copy">
