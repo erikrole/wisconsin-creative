@@ -1,5 +1,6 @@
 import { BookingKind, Prisma } from "@prisma/client";
 import { withAuth } from "@/lib/api";
+import { startOfDayInAppTz } from "@/lib/app-time";
 import { HttpError, ok } from "@/lib/http";
 import { requirePermission, requirePermissionOrCollaboratorCapability } from "@/lib/rbac";
 import { listBookings } from "@/lib/services/bookings";
@@ -16,8 +17,9 @@ export const GET = withAuth(async (req, { user }) => {
   const filterParam = searchParams.get("filter");
 
   const now = new Date();
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
+  // Madison's calendar day. An evening return stays on today's list until Chicago midnight.
+  const todayStart = startOfDayInAppTz(now);
+  const todayEnd = startOfDayInAppTz(now, 1);
 
   let overdueThreshold = now;
   if (filterParam === "overdue") {
