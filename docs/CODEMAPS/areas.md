@@ -105,7 +105,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/settings/kiosk-devices`
 - APIs: `/api/kiosk-devices/[id]/regenerate-code`, `/api/kiosk-devices/[id]`, `/api/kiosk-devices`, `/api/kiosk/activate`, `/api/kiosk/checkin/[id]/complete`, `/api/kiosk/checkin/[id]/quantity`, `/api/kiosk/checkin/[id]/report`, `/api/kiosk/checkin/[id]/scan`, `/api/kiosk/checkout/[id]/extend-window`, `/api/kiosk/checkout/[id]/nudge`
 - Services: `src/lib/services/kiosk-active-checkout-items.ts`, `src/lib/services/kiosk-actor.ts`, `src/lib/services/kiosk-checkin-undo.ts`, `src/lib/services/kiosk-checkout-allowance.ts`, `src/lib/services/kiosk-checkout-complete.ts`, `src/lib/services/kiosk-dashboard-home.ts`, `src/lib/services/kiosk-extend-window.ts`, `src/lib/services/kiosk-item-transfer.ts`
-- Tests: `tests/bulk-unit-kiosk-scans.test.ts`, `tests/ios-27-native-chrome.test.ts`, `tests/ios-accessibility-layout-hardening.test.ts`, `tests/ios-action-error-recovery.test.ts`, `tests/ios-all-day-calendar-date.test.ts`, `tests/ios-api-contract.test.ts`, `tests/ios-app-intents.test.ts`, `tests/ios-app-web-trust-contract.test.ts`
+- Tests: `tests/bulk-unit-kiosk-scans.test.ts`, `tests/ios-27-native-chrome.test.ts`, `tests/ios-accessibility-layout-hardening.test.ts`, `tests/ios-accountability-browse.test.ts`, `tests/ios-action-error-recovery.test.ts`, `tests/ios-all-day-calendar-date.test.ts`, `tests/ios-api-contract.test.ts`, `tests/ios-app-intents.test.ts`
 
 ## notifications
 

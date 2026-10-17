@@ -1,6 +1,23 @@
 [
   {
     "date": "2026-10-16",
+    "title": "Late returns on iPhone",
+    "type": "feature",
+    "summary": "Students and staff can open the late-return list on iPhone and go from a person to the checkout.",
+    "details": [
+      "Browse includes Accountability for students, staff, and admins.",
+      "The list covers this academic year or all time, sorted by late returns, late time, or most recent.",
+      "Your own place on the list stays at the top. Search looks through the names already loaded.",
+      "A person shows each late checkout, and opening one shows the gear.",
+      "Spreadsheets and taking a checkout off the list stay on the website."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 495
+  },
+  {
+    "date": "2026-10-16",
     "title": "Edit reservations on iPhone",
     "type": "feature",
     "summary": "Reservations on iPhone can be updated the same way as on the web. Checkout screens also pick up the extra actions staff already have there.",

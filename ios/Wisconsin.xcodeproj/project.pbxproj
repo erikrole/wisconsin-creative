@@ -11,6 +11,7 @@
 		015371E187F17F4CE2241673 /* KioskCheckoutDetailsStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14951B258A7FE7AD4B9F5059 /* KioskCheckoutDetailsStep.swift */; };
 		01C0E89D9110CBB8DA80D650 /* SearchResultRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD7494E64F4395E73A7AA6C1 /* SearchResultRow.swift */; };
 		021A7B27623C3C8544FE58BB /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B04517A8131BAA862DB3FF5E /* ProfileView.swift */; };
+		0339935CD1C1694BA5409B04 /* AccountabilityModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 279D279A34DC519AA0A42205 /* AccountabilityModels.swift */; };
 		0342D7B9F506A8995685BC69 /* ItemListText.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC04AA628BB1DEA764D7EEAC /* ItemListText.swift */; };
 		03D13CE00A34B9C6DD2AB6EF /* KioskPickupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB5E4D4F3F432CE124DE63A8 /* KioskPickupView.swift */; };
 		045D72067A5662DABE89377E /* NativeAuthViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 050BCD6259A4475915E97169 /* NativeAuthViews.swift */; };
@@ -201,6 +202,7 @@
 		D26919265FC80896DFC0085F /* AppEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5932CB2D580EFEB5EA22D828 /* AppEnvironment.swift */; };
 		D3B8D7EAA8E21FFADF3BA2AA /* EventCatalogDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05EDCE16A6E704EDF55C5198 /* EventCatalogDetailView.swift */; };
 		D4355A04DA0626C754E3993C /* CheckoutReturnActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = E11254A1E4647B8B02F4890A /* CheckoutReturnActivityAttributes.swift */; };
+		D5A660B4A7D2D9AD347D60F0 /* AccountabilityPersonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01CC6AF91AAA5BB9E1632337 /* AccountabilityPersonView.swift */; };
 		D622D6499DAFD051C68A9C25 /* PasskeyModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71D4B19DF59FC05500A7F758 /* PasskeyModels.swift */; };
 		D6AFE2C4EFEE0397AA81C6DC /* KioskFlowRouting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3505D284815BD7237ACFED5F /* KioskFlowRouting.swift */; };
 		D90FDB80F8FFF8F2921E26A5 /* LatestRequestGenerationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7E2243115099DA4F3973F11 /* LatestRequestGenerationTests.swift */; };
@@ -209,6 +211,7 @@
 		DC10577F4AF30D4E44E08B63 /* AssignStudentSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9374732F63AA4EA283094F0 /* AssignStudentSheet.swift */; };
 		DEF5863F656AD6A5D707FDC1 /* ReservationDraftStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5FEA50A163963BC17612FB6 /* ReservationDraftStore.swift */; };
 		DF903B01D6C6E80FD5ABB03E /* ProfileCompletionDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64AD62D4B6264BA6FE15C183 /* ProfileCompletionDraft.swift */; };
+		DF9D5CD07F84E63E30627EBA /* AccountabilityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E70592C49A02FCFFAB9105A /* AccountabilityView.swift */; };
 		E05F7723FFEB7EB135EC8EA8 /* ScheduleEventRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7F97C3C6D850E4FB17D6F8F /* ScheduleEventRow.swift */; };
 		E6F51692EA10D1DF6DA5F049 /* KioskSuccessView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E968BAF46C8E557831F73C27 /* KioskSuccessView.swift */; };
 		E74AB0C45B70B59CEBC79AC4 /* AppTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B208F1EB8DD4DA49DADC1CAB /* AppTabView.swift */; };
@@ -217,6 +220,7 @@
 		EB431E266D465DDA520852CB /* OverdueReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1770023701735D8701DCAA5B /* OverdueReportView.swift */; };
 		ECC9462F50A2804BF6D7ED3D /* BlastArchive.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1615C6F17BFBA54D91D47F78 /* BlastArchive.swift */; };
 		EF7FE74D513941148FDDA452 /* ReportFormatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBF5F57A830BEA38433C56E1 /* ReportFormatting.swift */; };
+		F177CB625773D440DFADA946 /* AccountabilityModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 264334A2FD54BFCA6ADD8B6D /* AccountabilityModelTests.swift */; };
 		F2A0A3013F3F22792FA32C84 /* KioskComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 348C1E3385689A947929A115 /* KioskComponents.swift */; };
 		F3AE80E47FC7B6AAA76035B6 /* KioskStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA38BB094C95612DBF9F1C24 /* KioskStore.swift */; };
 		F638E74E3B0DD964350FB270 /* FlatSurface.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C6B12C97D45B058A9E678BB /* FlatSurface.swift */; };
@@ -276,6 +280,7 @@
 
 /* Begin PBXFileReference section */
 		0189482D68508F45B086F46F /* SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStore.swift; sourceTree = "<group>"; };
+		01CC6AF91AAA5BB9E1632337 /* AccountabilityPersonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountabilityPersonView.swift; sourceTree = "<group>"; };
 		02B29E7150D396D5C8236398 /* KioskModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskModels.swift; sourceTree = "<group>"; };
 		046675A42DFADB1133461EDD /* KioskNativeTextField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskNativeTextField.swift; sourceTree = "<group>"; };
 		050BCD6259A4475915E97169 /* NativeAuthViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeAuthViews.swift; sourceTree = "<group>"; };
@@ -306,6 +311,8 @@
 		2363560B00A9C04C250BD02D /* ReportLibraryModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportLibraryModels.swift; sourceTree = "<group>"; };
 		2536547429CB16E12CB069C0 /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
 		25CAFE07992F1EB02F507AE2 /* Gotham-Black.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Gotham-Black.ttf"; sourceTree = "<group>"; };
+		264334A2FD54BFCA6ADD8B6D /* AccountabilityModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountabilityModelTests.swift; sourceTree = "<group>"; };
+		279D279A34DC519AA0A42205 /* AccountabilityModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountabilityModels.swift; sourceTree = "<group>"; };
 		294553EF02A8AC64D71ED849 /* Wisconsin.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Wisconsin.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2A73B2A1C9B274552CBA7C8B /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
 		2B0058FB3644F501479BA0D5 /* ExtendBookingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtendBookingSheet.swift; sourceTree = "<group>"; };
@@ -335,6 +342,7 @@
 		4654A0A61430D64DD8A38F71 /* ScheduleQuickFilterBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleQuickFilterBar.swift; sourceTree = "<group>"; };
 		468E248680EC5A61BEC1EE38 /* Skeleton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Skeleton.swift; sourceTree = "<group>"; };
 		4A9DAB950F60885A23620BEC /* Brand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Brand.swift; sourceTree = "<group>"; };
+		4E70592C49A02FCFFAB9105A /* AccountabilityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountabilityView.swift; sourceTree = "<group>"; };
 		50023637E6B61A75BF40891B /* CrewRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrewRow.swift; sourceTree = "<group>"; };
 		512445D206E12968A205246E /* KioskIdentityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskIdentityView.swift; sourceTree = "<group>"; };
 		5447D133A30CB4437C234F83 /* KitDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KitDetailView.swift; sourceTree = "<group>"; };
@@ -678,6 +686,7 @@
 		81829E068FCED51275ACCDFB /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				279D279A34DC519AA0A42205 /* AccountabilityModels.swift */,
 				3967BD5EC55792F3B9E94724 /* AssetModels.swift */,
 				A5827A13830B73BC3EB57808 /* BlastModels.swift */,
 				BB8C14E1F7005B408A6A4CCD /* DashboardModels.swift */,
@@ -830,6 +839,8 @@
 		E5EFEF895EF2453C237A9A5C /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				01CC6AF91AAA5BB9E1632337 /* AccountabilityPersonView.swift */,
+				4E70592C49A02FCFFAB9105A /* AccountabilityView.swift */,
 				073F98039DAC37B5AC72487C /* AccountAvatar.swift */,
 				552E4A9FC0A2CB73C36F51C6 /* AccountSecuritySettingsView.swift */,
 				B208F1EB8DD4DA49DADC1CAB /* AppTabView.swift */,
@@ -900,6 +911,7 @@
 		EDA403CEE6E28FEE6DB3375A /* WisconsinTests */ = {
 			isa = PBXGroup;
 			children = (
+				264334A2FD54BFCA6ADD8B6D /* AccountabilityModelTests.swift */,
 				F1AB4E32967E7E27BF878BA9 /* BlastHistoryTests.swift */,
 				33E539B4DF2AE3F73D36C2BA /* BookingModelsTests.swift */,
 				FE7F7F41A126A5E914C982A9 /* CurrentDayTests.swift */,
@@ -1145,6 +1157,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F177CB625773D440DFADA946 /* AccountabilityModelTests.swift in Sources */,
 				2127E8FF340C558E288B43E7 /* BlastHistoryTests.swift in Sources */,
 				ADB0FD771E094960BDFC5D6B /* BookingModelsTests.swift in Sources */,
 				2F641BB2A7FBF81DEDEE7FE1 /* CurrentDayTests.swift in Sources */,
@@ -1246,6 +1259,9 @@
 				1AC641AD94A229A52FE17AE0 /* APIClient.swift in Sources */,
 				84BE753FF259E17D637E6482 /* AccountAvatar.swift in Sources */,
 				31BA906AD0D633053D4804B7 /* AccountSecuritySettingsView.swift in Sources */,
+				0339935CD1C1694BA5409B04 /* AccountabilityModels.swift in Sources */,
+				D5A660B4A7D2D9AD347D60F0 /* AccountabilityPersonView.swift in Sources */,
+				DF9D5CD07F84E63E30627EBA /* AccountabilityView.swift in Sources */,
 				A6176C75B21A5C4695A8E11F /* AddShiftSheet.swift in Sources */,
 				33F2166407B607A0DADC78B2 /* AppDelegate.swift in Sources */,
 				D26919265FC80896DFC0085F /* AppEnvironment.swift in Sources */,

@@ -1333,6 +1333,22 @@ final class APIClient {
         return resp.data
     }
 
+    // MARK: - Accountability
+
+    /// `GET /api/accountability`. The body is the report itself, same as the
+    /// report routes, not a `{ data }` envelope. Sends only `sort` and, for
+    /// all-time, `year=all`. Those are the values the route validates.
+    func accountabilityReport(
+        scope: AccountabilityScope,
+        sort: AccountabilitySort
+    ) async throws -> AccountabilityReport {
+        let req = request(
+            path: "/api/accountability",
+            queryItems: AccountabilityQuery.items(scope: scope, sort: sort)
+        )
+        return try await perform(req)
+    }
+
     // MARK: - Reports
 
     /// `/api/reports/overdue` returns the report shape directly (no `data` envelope).

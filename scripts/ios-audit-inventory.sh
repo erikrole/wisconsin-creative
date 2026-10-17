@@ -71,6 +71,8 @@ ScheduleView.swift                     | schedule                    | audit
 EventDetailSheet.swift                 | event-detail                | audit
 EventsView.swift                       | events                      | audit
 EventCatalogDetailView.swift           | events                      | audit
+AccountabilityView.swift               | accountability              | audit
+AccountabilityPersonView.swift         | accountability              | audit
 NotificationsSheet.swift               | notifications-sheet         | audit
 OverdueReportView.swift                | overdue-report              | audit
 ReportsView.swift                      | reports                     | audit
