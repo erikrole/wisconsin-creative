@@ -330,13 +330,26 @@ struct SharedLoginsView: View {
                     .foregroundStyle(.secondary)
                 Text(value)
                     .font(.body.monospaced())
-                    .textSelection(isSecret && value != "••••••••" ? .enabled : .disabled)
+                    .textSelectable(isSecret && value != "••••••••")
                     .privacySensitive(isSecret)
                     .lineLimit(3)
                     .accessibilityLabel("\(title), \(accessibilityValue)")
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             actions()
+        }
+    }
+}
+
+private extension View {
+    /// `textSelection` takes a distinct type for enabled and disabled, so the
+    /// two cases cannot share a ternary.
+    @ViewBuilder
+    func textSelectable(_ selectable: Bool) -> some View {
+        if selectable {
+            textSelection(.enabled)
+        } else {
+            textSelection(.disabled)
         }
     }
 }
