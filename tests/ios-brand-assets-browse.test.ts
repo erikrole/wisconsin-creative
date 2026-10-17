@@ -14,7 +14,7 @@ describe("iOS Brand assets browse", () => {
       menu.indexOf("let capabilities"),
     );
 
-    expect(internalRows).toContain("[.scoreboard, .accountability, .items, .kits, .guides, .brandAssets, .blasts, .licenses, .users, .gearPicks]");
+    expect(internalRows).toContain("[.scoreboard, .accountability, .items, .kits, .guides, .brandAssets, .blasts, .licenses, .sharedLogins, .users, .gearPicks]");
     expect(internalRows).toContain("rows.insert(.batteries, at: 5)");
     expect(menu).toContain('case .brandAssets: "Brand assets"');
     expect(menu).toContain("Logos, guidelines, and templates");

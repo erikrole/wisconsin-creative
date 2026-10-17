@@ -14,6 +14,8 @@ describe("iOS team badge shelf", () => {
       menu.indexOf("let capabilities"),
     );
 
+    expect(internalRows).toContain("[.scoreboard, .accountability, .items, .kits, .guides, .brandAssets, .blasts, .licenses, .sharedLogins, .users, .gearPicks]");
+    expect(internalRows).toContain("rows.insert(.batteries, at: 5)");
     expect(internalRows).toContain("rows.append(.badges)");
     expect(internalRows).toContain("rows.append(.reports)");
     expect(internalRows.indexOf("rows.append(.badges)")).toBeLessThan(internalRows.indexOf("rows.append(.reports)"));

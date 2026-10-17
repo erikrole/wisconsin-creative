@@ -43,3 +43,9 @@ The user added a native UI pass with the Simulator visible, requested size picke
 [UI review](proofs/ios-latest-2026-10-17/review.html) and [capture source/steps](proofs/ios-latest-2026-10-17/README.md). Build/test/runtime logs remain under /tmp/wisconsin-ios-device-20261017/.
 
 GAP-89 closes because the duplicate Events surface was removed, not because every retained Events flow was authenticated. GAP-90 still owns authenticated Accountability proof. Production draft/submit persistence, adversarial network ordering in live reservation flows, full permission/role walkthroughs, external share-extension completion, APNs, camera, passkeys, and a final physical UI build remain outside proven acceptance. Earlier device logs included system input/PointerUI, shared preference, zero-height render, and PDF diagnostics without an observed app crash or failed startup request; those messages are not claimed fixed.
+
+## PR integration verification
+
+PR #504 integrates main at 67547099, preserving Shared logins and its collaborator capability in the Resources group while Events stays removed. The integrated iPhone 18 Pro Max build passes without compiler warnings: 226 native tests, 718 iOS source contracts, XcodeGen, drift (120 Swift files), and audit inventory (77/77) pass. Result bundle: /tmp/wisconsin-ios-device-20261017/shared-logins-integration-tests.xcresult. Earlier matched captures retain their recorded source revisions.
+
+The preview-capacity blocker exposed a separate cleanup timestamp bug: JavaScript Date discarded PostgreSQL microseconds, causing the exact atomic claim to reject unchanged rows. Runtime reads now preserve timestamp text. The disposable PostgreSQL gate uses microseconds in both race orderings, passes on the fix, and fails with the original read; 35 focused preview safety tests pass. The protected cleanup workflow executes trusted main-branch code, so the fix must reach main before the already approved cleanup can use it.

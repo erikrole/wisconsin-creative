@@ -16,7 +16,7 @@ struct BrowseView: View {
             // Reports and Battery Ops are staff analytics, and Badges is the staff
             // catalog. UA Gear is the seasonal participant list. Those endpoints
             // refuse anyone else, so the rows are hidden rather than offered and refused.
-            var rows: [BrowseDestination] = [.scoreboard, .accountability, .items, .kits, .guides, .brandAssets, .blasts, .licenses, .users, .gearPicks]
+            var rows: [BrowseDestination] = [.scoreboard, .accountability, .items, .kits, .guides, .brandAssets, .blasts, .licenses, .sharedLogins, .users, .gearPicks]
             if isStaffOrAdmin {
                 rows.insert(.batteries, at: 5)
                 rows.append(.badges)
@@ -27,6 +27,7 @@ struct BrowseView: View {
         let capabilities = Set(session.currentUser?.capabilities ?? [])
         return [.scoreboard] + [
             Optional.some(BrowseDestination.blasts),
+            capabilities.contains("SOFTWARE_VAULT_VIEW") ? .sharedLogins : nil,
             capabilities.contains("GEAR_CATALOG_VIEW") ? .items : nil,
             capabilities.contains("RESERVATION_CREATE") ? .kits : nil,
             capabilities.contains("PEOPLE_DIRECTORY_VIEW") ? .users : nil,
@@ -103,6 +104,8 @@ struct BrowseView: View {
             BrandAssetsView(wrapsInNavigationStack: false)
         case .licenses:
             LicensesView(wrapsInNavigationStack: false)
+        case .sharedLogins:
+            SharedLoginsView(wrapsInNavigationStack: false)
         case .users:
             UsersView(wrapsInNavigationStack: false)
         case .badges:
@@ -135,6 +138,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
     case brandAssets
     case blasts
     case licenses
+    case sharedLogins
     case users
     case gearPicks
     case badges
@@ -146,7 +150,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
         switch self {
         case .blasts: .work
         case .items, .kits, .batteries, .accountability, .reports: .equipment
-        case .guides, .brandAssets, .licenses: .resources
+        case .guides, .brandAssets, .licenses, .sharedLogins: .resources
         case .scoreboard, .users, .gearPicks, .badges: .team
         }
     }
@@ -162,6 +166,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
         case .brandAssets: "Brand assets"
         case .blasts: "Blasts"
         case .licenses: "Licenses"
+        case .sharedLogins: "Shared logins"
         case .users: "Users"
         case .gearPicks: "UA Gear"
         case .badges: "Badges"
@@ -189,6 +194,8 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
             "Team updates and announcements"
         case .licenses:
             "Photo Mechanic licenses"
+        case .sharedLogins:
+            "Copy a department login when you need it."
         case .users:
             "People, roles, and work areas"
         case .gearPicks:
@@ -211,6 +218,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
         case .brandAssets: "folder"
         case .blasts: "megaphone"
         case .licenses: "key"
+        case .sharedLogins: "lock.rectangle"
         case .users: "person.2"
         case .gearPicks: "tshirt"
         case .badges: "medal"
@@ -229,6 +237,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
         case .brandAssets: Color.statusText(.blue)
         case .blasts: Color.statusText(.blue)
         case .licenses: Color.statusText(.orange)
+        case .sharedLogins: Color.statusText(.blue)
         case .users: Color.statusText(.green)
         case .gearPicks: Color.statusText(.purple)
         case .badges: Color.statusText(.purple)

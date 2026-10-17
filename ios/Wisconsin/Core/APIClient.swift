@@ -1502,6 +1502,27 @@ final class APIClient {
         return resp.data
     }
 
+    // MARK: - Shared logins
+
+    /// Active department logins this person may see. The payload has emails, never passwords.
+    func softwareLogins() async throws -> [SoftwareLogin] {
+        let req = request(path: "/api/software")
+        let resp: DataWrapper<[SoftwareLogin]> = try await perform(req)
+        return resp.data
+    }
+
+    /// One audited password reveal. The caller must not log or persist the result.
+    func softwareLoginPassword(id: String) async throws -> String {
+        struct Secret: Decodable { let password: String }
+        var req = request(path: "/api/software/\(id)/secret", method: "POST")
+        req.httpBody = Data()
+        let resp: DataWrapper<Secret> = try await perform(req)
+        guard !resp.data.password.isEmpty else {
+            throw APIError.serverError("Password response was incomplete")
+        }
+        return resp.data.password
+    }
+
     // MARK: - Resources
 
     func guides(search: String? = nil, category: String? = nil) async throws -> [GuideListItem] {
