@@ -1,6 +1,22 @@
 [
   {
     "date": "2026-10-16",
+    "title": "Team badges on iPhone",
+    "type": "feature",
+    "summary": "Staff can read the badge catalog on iPhone. Awarding a group of people still happens on the website.",
+    "details": [
+      "Browse includes Badges for staff and admins.",
+      "The list shows the manual badges that can be awarded, with the same names and descriptions as the website.",
+      "View report opens the existing read-only badge report.",
+      "Awarding a badge to several people stays on the website."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 500
+  },
+  {
+    "date": "2026-10-16",
     "title": "Faster search and item lists",
     "type": "improvement",
     "summary": "Searching the catalog and opening item families reads less from the database, and the family photo control shows when it has keyboard focus.",

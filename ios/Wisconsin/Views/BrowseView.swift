@@ -12,13 +12,14 @@ struct BrowseView: View {
 
     private var destinations: [BrowseDestination] {
         guard session.currentUser?.role == "COLLABORATOR" else {
-            // Accountability, Events, and Brand assets read internal team data,
-            // and Reports and Battery Ops are staff analytics. UA Gear is the
-            // seasonal participant list. Those endpoints refuse anyone else, so
-            // the rows are hidden rather than offered and refused.
+            // Accountability, Events, and Brand assets read internal team data.
+            // Reports and Battery Ops are staff analytics, and Badges is the staff
+            // catalog. UA Gear is the seasonal participant list. Those endpoints
+            // refuse anyone else, so the rows are hidden rather than offered and refused.
             var rows: [BrowseDestination] = [.scoreboard, .accountability, .events, .items, .kits, .guides, .brandAssets, .blasts, .licenses, .users, .gearPicks]
             if isStaffOrAdmin {
                 rows.insert(.batteries, at: 5)
+                rows.append(.badges)
                 rows.append(.reports)
             }
             return rows
@@ -100,6 +101,8 @@ struct BrowseView: View {
             LicensesView(wrapsInNavigationStack: false)
         case .users:
             UsersView(wrapsInNavigationStack: false)
+        case .badges:
+            TeamBadgesView(wrapsInNavigationStack: false)
         case .reports:
             ReportsView()
         case .blasts:
@@ -123,6 +126,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
     case licenses
     case users
     case gearPicks
+    case badges
     case reports
 
     var id: String { rawValue }
@@ -141,6 +145,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
         case .licenses: "Licenses"
         case .users: "Users"
         case .gearPicks: "UA Gear"
+        case .badges: "Badges"
         case .reports: "Reports"
         }
     }
@@ -171,6 +176,8 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
             "Find teammates, roles, titles, and work areas."
         case .gearPicks:
             "Pick this year's Under Armour gear."
+        case .badges:
+            "See the badges staff can award."
         case .reports:
             "See what is going out, what sits idle, and who is overdue."
         }
@@ -190,6 +197,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
         case .licenses: "key"
         case .users: "person.2"
         case .gearPicks: "tshirt"
+        case .badges: "medal"
         case .reports: "chart.bar.xaxis"
         }
     }
@@ -208,6 +216,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
         case .licenses: Color.statusText(.orange)
         case .users: Color.statusText(.green)
         case .gearPicks: Color.statusText(.purple)
+        case .badges: Color.statusText(.purple)
         case .reports: Color.statusText(.red)
         }
     }
