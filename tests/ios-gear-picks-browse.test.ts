@@ -14,7 +14,7 @@ describe("iOS UA gear picks", () => {
       menu.indexOf("let capabilities"),
     );
 
-    expect(internalRows).toContain("[.scoreboard, .events, .items, .kits, .guides, .blasts, .licenses, .users, .gearPicks]");
+    expect(internalRows).toContain("[.scoreboard, .accountability, .events, .items, .kits, .guides, .brandAssets, .blasts, .licenses, .users, .gearPicks]");
     expect(internalRows).toContain("rows.insert(.batteries, at: 4)");
     expect(menu).toContain('case .gearPicks: "UA Gear"');
     expect(menu).toContain("Pick this year's Under Armour gear.");
