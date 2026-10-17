@@ -1,6 +1,23 @@
 [
   {
     "date": "2026-10-17",
+    "title": "Shared logins on iPhone",
+    "type": "feature",
+    "summary": "Staff, students, and collaborators can copy a department login from the iPhone. Adding and archiving those logins stays on the website.",
+    "details": [
+      "Browse includes Shared logins next to Photo Mechanic licenses.",
+      "Each login shows the account email. The password stays hidden until you show or copy it.",
+      "A shown password hides again after 30 seconds, and a copied password stays on this iPhone for 2 minutes.",
+      "Collaborators see the row only when shared software access is turned on.",
+      "Creating, editing, and archiving logins stays on the website."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 502
+  },
+  {
+    "date": "2026-10-17",
     "title": "Fetch and Offload app pages",
     "type": "feature",
     "summary": "Fetch and Offload each have a dedicated page with features, Mac requirements, and download links. Open either page from Learn more on its app card.",
