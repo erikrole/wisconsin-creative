@@ -73,6 +73,51 @@ describe("guide service", () => {
     expect(guides).toHaveLength(1);
     expect(guides[0]?.id).toBe("guide-1");
     expect(guides[0]?.summary).not.toContain("minn-cam-reset");
+    expect(db.resource.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        published: true,
+        OR: expect.arrayContaining([
+          { markdown: { contains: "minn-cam-reset", mode: "insensitive" } },
+          { author: { name: { contains: "minn-cam-reset", mode: "insensitive" } } },
+          { markdown: { contains: "](", mode: "insensitive" } },
+        ]),
+      }),
+    }));
+  });
+
+  it("finds a word joined across a markdown link", async () => {
+    vi.mocked(db.resource.findMany).mockResolvedValue([
+      guideListRow({
+        title: "Lighting notes",
+        category: "SOP",
+        markdown: "Set the [cam](https://example.test)era before the interview.",
+      }),
+    ] as never);
+
+    const guides = await listGuides({ published: true, search: "camera" });
+
+    expect(guides.map((guide) => guide.id)).toEqual(["guide-1"]);
+    expect(db.resource.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        OR: expect.arrayContaining([
+          { markdown: { contains: "](", mode: "insensitive" } },
+        ]),
+      }),
+    }));
+  });
+
+  it("keeps a one-character query on the direct markdown match", async () => {
+    vi.mocked(db.resource.findMany).mockResolvedValue([] as never);
+
+    await listGuides({ published: true, search: "q" });
+
+    const where = vi.mocked(db.resource.findMany).mock.calls[0]?.[0]?.where;
+    expect(where).toEqual(expect.objectContaining({
+      OR: expect.arrayContaining([
+        { markdown: { contains: "q", mode: "insensitive" } },
+      ]),
+    }));
+    expect(JSON.stringify(where)).not.toContain("](");
   });
 
   it("preserves featured rank when only the rank changes on an already featured guide", async () => {

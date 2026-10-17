@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { BulkUnitStatus } from "@prisma/client";
-import { summarizeItemFamilyState } from "@/lib/item-family-state";
+import { summarizeItemFamilyState, summarizeNumberedFamilyCounts } from "@/lib/item-family-state";
 
 describe("summarizeItemFamilyState", () => {
   it("uses active allocations over stored unit status for unit-tracked families", () => {
@@ -75,5 +75,40 @@ describe("summarizeItemFamilyState", () => {
     expect(state.availableQuantity).toBe(5);
     expect(state.checkedOutQuantity).toBe(0);
     expect(state.effectiveUnits).toEqual([]);
+  });
+});
+
+describe("summarizeNumberedFamilyCounts", () => {
+  it("matches unit-row totals without loading each unit", () => {
+    const counts = summarizeNumberedFamilyCounts(
+      {
+        [BulkUnitStatus.AVAILABLE]: 1,
+        [BulkUnitStatus.CHECKED_OUT]: 1,
+        [BulkUnitStatus.LOST]: 1,
+        [BulkUnitStatus.RETIRED]: 1,
+      },
+      1,
+    );
+
+    expect(counts).toEqual({
+      onHandQuantity: 3,
+      availableQuantity: 1,
+      checkedOutQuantity: 1,
+      lostQuantity: 1,
+      retiredQuantity: 1,
+    });
+  });
+
+  it("treats a stored checkout with no active hold as available", () => {
+    expect(summarizeNumberedFamilyCounts({
+      [BulkUnitStatus.AVAILABLE]: 43,
+      [BulkUnitStatus.CHECKED_OUT]: 2,
+      [BulkUnitStatus.LOST]: 1,
+    }, 0)).toMatchObject({
+      onHandQuantity: 46,
+      availableQuantity: 45,
+      checkedOutQuantity: 0,
+      lostQuantity: 1,
+    });
   });
 });

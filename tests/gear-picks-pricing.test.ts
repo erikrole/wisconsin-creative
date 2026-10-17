@@ -8,6 +8,7 @@ import {
   GEAR_CATALOG,
   isItemAllowedForFit,
   itemsForFit,
+  gearPickPhoneCatalog,
   kitEntryForStyle,
   normalizeApparelSize,
   sortGearColors,
@@ -252,5 +253,26 @@ describe("admin aggregation and CSV rows", () => {
       },
       expect.objectContaining({ itemNumber: UNISEX_CAP, size: "", unitPrice: "21.50", lineTotal: "21.50" }),
     ]);
+  });
+});
+
+describe("phone gear catalog", () => {
+  const profile = { topSize: "M", topSizeFit: "MENS" as const, shoeSize: "10", shoeSizeSystem: "US_MENS" as const };
+
+  it("sends one fit, catalog cents, and a kit note without the other fit", () => {
+    const catalog = gearPickPhoneCatalog("MEN", profile);
+    const tee = catalog.items.find((item) => item.style === "6021649");
+    const icon = catalog.items.find((item) => item.style === "6024284");
+
+    expect(catalog.items.some((item) => item.style === "6021628")).toBe(false);
+    expect(catalog.items.every((item) => item.fit === "MEN" || item.fit === "UNISEX")).toBe(true);
+    expect(tee).toMatchObject({ priceCents: 1500, defaultSize: "M", kit: { kind: "CORE_KIT", colorCode: "834" } });
+    expect(tee?.colors[0]?.image.startsWith("/gear/2027-28/")).toBe(true);
+    expect(icon).toMatchObject({ sizeLabel: "Catalog shoe size", defaultSize: null, sizesAreExact: true });
+    expect(icon?.sizes).toContain("10");
+
+    const withRed = catalog.items.find((item) => item.colors.some((color) => color.label === "Red") && item.colors.length > 1);
+    expect(withRed?.colors[0]?.label).toBe("Red");
+    expect(catalog.categories[0]).toBe(GEAR_CATALOG.categories.find((category) => catalog.items.some((item) => item.category === category)));
   });
 });

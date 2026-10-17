@@ -55,6 +55,8 @@ read -r -d '' REGISTRY <<'EOF' || true
 HomeView.swift                         | dashboard                   | audit
 BookingsView.swift                     | bookings                    | audit
 BookingDetailView.swift                | booking-detail              | audit
+Booking/ReservationEditFlow.swift      |                             | exempt-shared
+Booking/BookingActionSheets.swift      |                             | exempt-shared
 CreateBookingSheet.swift               | create-booking              | audit
 ExtendBookingSheet.swift               | extend-booking              | audit
 BrowseView.swift                       | browse                      | audit
@@ -69,6 +71,8 @@ ScheduleView.swift                     | schedule                    | audit
 EventDetailSheet.swift                 | event-detail                | audit
 EventsView.swift                       | events                      | audit
 EventCatalogDetailView.swift           | events                      | audit
+AccountabilityView.swift               | accountability              | audit
+AccountabilityPersonView.swift         | accountability              | audit
 NotificationsSheet.swift               | notifications-sheet         | audit
 OverdueReportView.swift                | overdue-report              | audit
 ReportsView.swift                      | reports                     | audit
@@ -77,6 +81,7 @@ Reports/UtilizationReportView.swift    | reports                     | audit
 Reports/ScanReportView.swift           | reports                     | audit
 Reports/MissingUnitsReportView.swift   | reports                     | audit
 Reports/BadgeReportView.swift          | reports                     | audit
+TeamBadgesView.swift                   | team-badges                 | audit
 Reports/UsageReportView.swift          | reports                     | audit
 Reports/ReportChrome.swift             |                             | exempt-shared
 Reports/ReportSession.swift            |                             | exempt-infra
@@ -98,6 +103,8 @@ TeamScoreboardView.swift               | team-scoreboard              | audit
 SettingsView.swift                     | profile                     | audit
 LicensesView.swift                     | licenses                    | audit
 GuidesView.swift                       | resources                   | audit
+BrandAssetsView.swift                  | brand-assets                | audit
+GearPicksView.swift                    | gear-picks                  | audit
 GuideMarkdown.swift                    |                             | exempt-infra
 SidebarWebDestinationView.swift        |                             | exempt-tiny
 NotificationSettingsView.swift         | profile                     | audit

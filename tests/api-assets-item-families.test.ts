@@ -9,6 +9,8 @@ const mocks = vi.hoisted(() => ({
   favoriteItemFamilyFindMany: vi.fn(),
   bulkSkuFindMany: vi.fn(),
   bookingBulkUnitAllocationFindMany: vi.fn(),
+  bulkSkuUnitGroupBy: vi.fn(),
+  bulkSkuUnitFindMany: vi.fn(),
   bookingSerializedItemFindMany: vi.fn(),
   bookingBulkItemFindMany: vi.fn(),
   scanEventFindMany: vi.fn(),
@@ -39,6 +41,10 @@ vi.mock("@/lib/db", () => ({
     },
     bookingBulkUnitAllocation: {
       findMany: mocks.bookingBulkUnitAllocationFindMany,
+    },
+    bulkSkuUnit: {
+      groupBy: mocks.bulkSkuUnitGroupBy,
+      findMany: mocks.bulkSkuUnitFindMany,
     },
     bookingSerializedItem: {
       findMany: mocks.bookingSerializedItemFindMany,
@@ -79,6 +85,20 @@ const authedUser = {
 
 function request(path: string) {
   return new Request(`https://gear.test${path}`);
+}
+
+function mockNumberedFamilyCounts(sku: ReturnType<typeof numberedBatterySku>) {
+  const units = sku.units as Array<{ status: string }>;
+  mocks.bulkSkuUnitGroupBy.mockImplementation(async (args: { by?: string[] }) => {
+    if (!args.by?.includes("status")) return [];
+    const counts = new Map<string, number>();
+    for (const unit of units) counts.set(unit.status, (counts.get(unit.status) ?? 0) + 1);
+    return [...counts.entries()].map(([status, count]) => ({
+      bulkSkuId: sku.id,
+      status,
+      _count: { _all: count },
+    }));
+  });
 }
 
 function numberedBatterySku(overrides: Record<string, unknown> = {}) {
@@ -157,6 +177,8 @@ beforeEach(() => {
   mocks.favoriteItemFamilyFindMany.mockResolvedValue([]);
   mocks.bulkSkuFindMany.mockResolvedValue([]);
   mocks.bookingBulkUnitAllocationFindMany.mockResolvedValue([]);
+  mocks.bulkSkuUnitGroupBy.mockResolvedValue([]);
+  mocks.bulkSkuUnitFindMany.mockResolvedValue([]);
   mocks.bookingSerializedItemFindMany.mockResolvedValue([]);
   mocks.bookingBulkItemFindMany.mockResolvedValue([]);
   mocks.scanEventFindMany.mockResolvedValue([]);
@@ -511,7 +533,9 @@ describe("/api/assets item-family rows", () => {
   });
 
   it("returns one unit-tracked item-family row with availability counts for search", async () => {
-    mocks.bulkSkuFindMany.mockResolvedValue([numberedBatterySku()]);
+    const sku = numberedBatterySku();
+    mocks.bulkSkuFindMany.mockResolvedValue([sku]);
+    mockNumberedFamilyCounts(sku);
 
     const res = await getAssets(request("/api/assets?q=battery&limit=25"), {
       params: Promise.resolve({}),
@@ -536,6 +560,13 @@ describe("/api/assets item-family rows", () => {
         departmentName: "Production",
       },
     ]);
+    expect(body.bulkItems[0].units).toBeUndefined();
+    expect(body.statusBreakdown).toMatchObject({ available: 1, checkedOut: 0, retired: 0 });
+    expect(mocks.bulkSkuFindMany).toHaveBeenCalledWith(expect.objectContaining({
+      include: expect.not.objectContaining({ units: expect.anything() }),
+    }));
+    expect(mocks.bulkSkuUnitFindMany).not.toHaveBeenCalled();
+    expect(mocks.assetCount).toHaveBeenCalledTimes(1);
   });
 
   it("uses the canonical category relation for item-family display", async () => {
@@ -560,11 +591,13 @@ describe("/api/assets item-family rows", () => {
   });
 
   it("resolves a derived unit QR to the parent item family with unit status", async () => {
+    const sku = numberedBatterySku();
     mocks.bulkSkuFindMany
       .mockResolvedValueOnce([
         { id: "sku-battery", binQrCodeValue: "BAT", trackByNumber: true },
       ])
-      .mockResolvedValueOnce([numberedBatterySku()]);
+      .mockResolvedValueOnce([sku]);
+    mocks.bulkSkuUnitFindMany.mockResolvedValue(sku.units);
 
     const res = await getAssets(request("/api/assets?qr=BAT-44&limit=5"), {
       params: Promise.resolve({}),
@@ -597,11 +630,13 @@ describe("/api/assets item-family rows", () => {
   });
 
   it("includes custody context when an exact unit QR is checked out", async () => {
+    const sku = numberedBatterySku();
     mocks.bulkSkuFindMany
       .mockResolvedValueOnce([
         { id: "sku-battery", binQrCodeValue: "BAT", trackByNumber: true },
       ])
-      .mockResolvedValueOnce([numberedBatterySku()]);
+      .mockResolvedValueOnce([sku]);
+    mocks.bulkSkuUnitFindMany.mockResolvedValue(sku.units);
     mocks.bookingBulkUnitAllocationFindMany.mockResolvedValue([{
       bulkSkuUnitId: "unit-44",
       bookingBulkItem: {

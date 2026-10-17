@@ -15,4 +15,15 @@ describe("labels page accessibility", () => {
     expect(source).not.toContain("Open item family ${family.name}");
     expect(source).not.toContain("Select item family ${item.title}");
   });
+
+  it("pages the whole catalog and skips the catalog status counts", () => {
+    const page = readFileSync("src/app/(app)/labels/page.tsx", "utf8");
+    const catalog = readFileSync("src/app/(app)/labels/label-catalog.ts", "utf8");
+
+    expect(page).toContain("useLabelCatalog");
+    expect(catalog).toContain("collectLabelCatalog");
+    expect(catalog).toContain('sort: "assetTag"');
+    expect(catalog).toContain('counts: "0"');
+    expect(catalog).toContain("LABEL_CATALOG_PAGE_SIZE = 200");
+  });
 });
