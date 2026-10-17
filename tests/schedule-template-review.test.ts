@@ -10,7 +10,7 @@ vi.mock("@/lib/db", () => ({
 }));
 
 vi.mock("@/lib/services/candidate-scoring", () => ({
-  getCandidateScoresForShift: vi.fn(),
+  getCandidateScoresForShiftIds: vi.fn(),
 }));
 
 vi.mock("@/lib/services/shift-assignments", () => ({
@@ -23,7 +23,7 @@ vi.mock("@/lib/audit", () => ({
 
 import { createAuditEntry } from "@/lib/audit";
 import { db } from "@/lib/db";
-import { getCandidateScoresForShift } from "@/lib/services/candidate-scoring";
+import { getCandidateScoresForShiftIds } from "@/lib/services/candidate-scoring";
 import { directAssignShift } from "@/lib/services/shift-assignments";
 import {
   applyCopyForwardCrew,
@@ -122,7 +122,7 @@ beforeEach(() => {
   mockDb.shiftGroup.findUnique.mockResolvedValue(targetGroup);
   mockDb.sportConfig.findUnique.mockResolvedValue(sportConfig);
   mockDb.calendarEvent.findMany.mockResolvedValue([]);
-  vi.mocked(getCandidateScoresForShift).mockResolvedValue([]);
+  vi.mocked(getCandidateScoresForShiftIds).mockResolvedValue(new Map());
   vi.mocked(directAssignShift).mockResolvedValue({ id: "assignment-1" } as Awaited<ReturnType<typeof directAssignShift>>);
   vi.mocked(createAuditEntry).mockResolvedValue(undefined);
 });
@@ -229,23 +229,27 @@ describe("getScheduleTemplateReview", () => {
         },
       },
     ]);
-    vi.mocked(getCandidateScoresForShift).mockImplementation(async (shiftId) => {
-      if (shiftId === "target-video-st") {
-        return [score({ userId: "student-active", score: 92 })];
+    vi.mocked(getCandidateScoresForShiftIds).mockImplementation(async (shiftIds) => {
+      const scores = new Map<string, CandidateRecommendation[]>();
+      for (const shiftId of shiftIds) {
+        if (shiftId === "target-video-st") {
+          scores.set(shiftId, [score({ userId: "student-active", score: 92 })]);
+        } else if (shiftId === "target-graphics-st") {
+          scores.set(shiftId, [
+            score({
+              userId: "student-time-off",
+              score: 20,
+              blockingConflict: true,
+              advisoryConflict: true,
+              advisoryConflictNote: "Approved time off 09:00-17:00",
+              warnings: [{ code: "approved_time_off", label: "Approved time off 09:00-17:00", weight: -70 }],
+            }),
+          ]);
+        } else {
+          scores.set(shiftId, []);
+        }
       }
-      if (shiftId === "target-graphics-st") {
-        return [
-          score({
-            userId: "student-time-off",
-            score: 20,
-            blockingConflict: true,
-            advisoryConflict: true,
-            advisoryConflictNote: "Approved time off 09:00-17:00",
-            warnings: [{ code: "approved_time_off", label: "Approved time off 09:00-17:00", weight: -70 }],
-          }),
-        ];
-      }
-      return [];
+      return scores;
     });
 
     const review = await getScheduleTemplateReview("group-target");
@@ -306,10 +310,14 @@ describe("applyCopyForwardCrew", () => {
         },
       },
     ]);
-    vi.mocked(getCandidateScoresForShift).mockImplementation(async (shiftId) => {
-      if (shiftId === "target-video-st") return [score({ userId: "student-active", score: 92 })];
-      if (shiftId === "target-video-ft") return [score({ userId: "staff-busy", score: 88 })];
-      return [];
+    vi.mocked(getCandidateScoresForShiftIds).mockImplementation(async (shiftIds) => {
+      const scores = new Map<string, CandidateRecommendation[]>();
+      for (const shiftId of shiftIds) {
+        if (shiftId === "target-video-st") scores.set(shiftId, [score({ userId: "student-active", score: 92 })]);
+        else if (shiftId === "target-video-ft") scores.set(shiftId, [score({ userId: "staff-busy", score: 88 })]);
+        else scores.set(shiftId, []);
+      }
+      return scores;
     });
     vi.mocked(directAssignShift).mockImplementation(async (shiftId) => {
       if (shiftId === "target-video-ft") throw new HttpError(409, "This shift already has an active assignment");

@@ -8,7 +8,7 @@ import type {
   AutoFillPreviewSkippedReasonCode,
   AutoFillPreviewSkippedSlot,
 } from "@/lib/auto-fill-preview-types";
-import { getCandidateScoresForShift } from "@/lib/services/candidate-scoring";
+import { getCandidateScoresForShiftIds } from "@/lib/services/candidate-scoring";
 import { isSportRosterEligible, isTravelEligible } from "@/lib/schedule-assignment-eligibility";
 import {
   policyAllowsWorkerType,
@@ -285,7 +285,7 @@ export async function getAutoFillPreview(shiftGroupId: string): Promise<AutoFill
   if (!group) throw new HttpError(404, "Shift group not found");
 
   const openShifts = group.shifts.filter(isOpenShift);
-  const [users, scorePairs] = await Promise.all([
+  const [users, scoresByShiftId] = await Promise.all([
     db.user.findMany({
       where: visibleActiveUserWhere(),
       select: {
@@ -297,7 +297,7 @@ export async function getAutoFillPreview(shiftGroupId: string): Promise<AutoFill
       },
       orderBy: { name: "asc" },
     }),
-    Promise.all(openShifts.map(async (shift) => [shift.id, await getCandidateScoresForShift(shift.id)] as const)),
+    getCandidateScoresForShiftIds(openShifts.map((shift) => shift.id)),
   ]);
 
   return buildAutoFillPreview({
@@ -316,6 +316,6 @@ export async function getAutoFillPreview(shiftGroupId: string): Promise<AutoFill
     generatedAt: new Date(),
     shifts: group.shifts,
     users,
-    scoresByShiftId: Object.fromEntries(scorePairs),
+    scoresByShiftId: Object.fromEntries(scoresByShiftId),
   });
 }

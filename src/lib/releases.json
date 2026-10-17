@@ -1,6 +1,24 @@
 [
   {
     "date": "2026-10-17",
+    "title": "Madison hours and item charts",
+    "type": "fixes",
+    "summary": "Profile hours, staffing workload, and item insight charts follow the Madison day. Catalog attachments stay with the items a collaborator can open.",
+    "details": [
+      "Profile hours count the Madison week and month, including Sunday evening and a week that crosses the month.",
+      "Staffing suggestions use that same week and month when they judge how busy someone is.",
+      "Item insight charts file an evening checkout on the Madison day.",
+      "The calendar source list is limited to people who can view sources.",
+      "A collaborator who can browse the catalog sees an item's attachments, without serial numbers.",
+      "Filling open shifts and copying a previous crew read each person once for the whole preview."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 503
+  },
+  {
+    "date": "2026-10-17",
     "title": "Safer due dates and scans",
     "type": "fixes",
     "summary": "Due today follows the Madison day. Pickup scans stay with the person at the kiosk, and scan codes stay on the checkouts people are allowed to see.",
