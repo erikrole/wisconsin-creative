@@ -15,7 +15,7 @@ describe("iOS Events browse", () => {
       menu.indexOf("let capabilities"),
     );
 
-    expect(internalRows).toContain("[.scoreboard, .events, .items, .kits, .guides, .blasts, .licenses, .users]");
+    expect(internalRows).toContain("[.scoreboard, .events, .items, .kits, .guides, .blasts, .licenses, .sharedLogins, .users]");
     expect(menu).toContain('case .events: "Events"');
     expect(menu).toContain("Event details, linked gear, and bookings.");
     expect(menu).toContain("EventsView(wrapsInNavigationStack: false)");

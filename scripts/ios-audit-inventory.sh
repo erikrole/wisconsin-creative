@@ -97,6 +97,7 @@ ScoreboardView.swift                   | profile                     | audit
 TeamScoreboardView.swift               | team-scoreboard              | audit
 SettingsView.swift                     | profile                     | audit
 LicensesView.swift                     | licenses                    | audit
+SharedLoginsView.swift                 | shared-logins               | audit
 GuidesView.swift                       | resources                   | audit
 GuideMarkdown.swift                    |                             | exempt-infra
 SidebarWebDestinationView.swift        |                             | exempt-tiny

@@ -15,7 +15,7 @@ struct BrowseView: View {
             // Reports and Battery Ops are staff analytics, and Events reads the
             // internal calendar. Those endpoints refuse anyone else, so the rows
             // are hidden rather than offered and refused.
-            var rows: [BrowseDestination] = [.scoreboard, .events, .items, .kits, .guides, .blasts, .licenses, .users]
+            var rows: [BrowseDestination] = [.scoreboard, .events, .items, .kits, .guides, .blasts, .licenses, .sharedLogins, .users]
             if isStaffOrAdmin {
                 rows.insert(.batteries, at: 4)
                 rows.append(.reports)
@@ -25,6 +25,7 @@ struct BrowseView: View {
         let capabilities = Set(session.currentUser?.capabilities ?? [])
         return [.scoreboard] + [
             Optional.some(BrowseDestination.blasts),
+            capabilities.contains("SOFTWARE_VAULT_VIEW") ? .sharedLogins : nil,
             capabilities.contains("GEAR_CATALOG_VIEW") ? .items : nil,
             capabilities.contains("RESERVATION_CREATE") ? .kits : nil,
             capabilities.contains("PEOPLE_DIRECTORY_VIEW") ? .users : nil,
@@ -93,6 +94,8 @@ struct BrowseView: View {
             GuidesView(wrapsInNavigationStack: false)
         case .licenses:
             LicensesView(wrapsInNavigationStack: false)
+        case .sharedLogins:
+            SharedLoginsView(wrapsInNavigationStack: false)
         case .users:
             UsersView(wrapsInNavigationStack: false)
         case .reports:
@@ -112,6 +115,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
     case guides
     case blasts
     case licenses
+    case sharedLogins
     case users
     case reports
 
@@ -127,6 +131,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
         case .guides: "Guides"
         case .blasts: "Blasts"
         case .licenses: "Licenses"
+        case .sharedLogins: "Shared logins"
         case .users: "Users"
         case .reports: "Reports"
         }
@@ -150,6 +155,8 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
             "Read a broadcast again after you dismiss it."
         case .licenses:
             "Claim, copy, or return a Photo Mechanic license."
+        case .sharedLogins:
+            "Copy a department login when you need it."
         case .users:
             "Find teammates, roles, titles, and work areas."
         case .reports:
@@ -167,6 +174,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
         case .guides: "book.closed"
         case .blasts: "megaphone"
         case .licenses: "key"
+        case .sharedLogins: "lock.rectangle"
         case .users: "person.2"
         case .reports: "chart.bar.xaxis"
         }
@@ -182,6 +190,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
         case .guides: Color.statusText(.purple)
         case .blasts: Color.statusText(.blue)
         case .licenses: Color.statusText(.orange)
+        case .sharedLogins: Color.statusText(.blue)
         case .users: Color.statusText(.green)
         case .reports: Color.statusText(.red)
         }
