@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-10-17",
+    "title": "Safer due dates and scans",
+    "type": "fixes",
+    "summary": "Due today follows the Madison day. Pickup scans stay with the person at the kiosk, and scan codes stay on the checkouts people are allowed to see.",
+    "details": [
+      "Due today on checkouts, reservations, and the combined list uses the Madison day, including the evening before midnight.",
+      "A start date range stays inside the reservation due-today queue.",
+      "A personal pickup scan has to be the requester or a staff member at the kiosk.",
+      "Checkout scan progress, including item codes, is limited to people who can view that checkout.",
+      "Item family units and products use the same catalog permission as the family."
+    ],
+    "platforms": [
+      "Web",
+      "Kiosk"
+    ],
+    "pr": 501
+  },
+  {
     "date": "2026-10-16",
     "title": "Team badges on iPhone",
     "type": "feature",
