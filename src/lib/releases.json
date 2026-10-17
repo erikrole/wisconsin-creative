@@ -18,6 +18,22 @@
   },
   {
     "date": "2026-10-17",
+    "title": "Fetch and Offload app pages",
+    "type": "feature",
+    "summary": "Fetch and Offload each have a dedicated page with features, Mac requirements, and download links. Open either page from Learn more on its app card.",
+    "details": [
+      "See what each app does and how to get started before downloading it.",
+      "Find the Mac requirements, version, and download link together on each page.",
+      "Use Learn more on the Fetch and Offload cards to open their product pages."
+    ],
+    "platforms": [
+      "Web",
+      "macOS"
+    ],
+    "pr": 483
+  },
+  {
+    "date": "2026-10-17",
     "title": "Safer due dates and scans",
     "type": "fixes",
     "summary": "Due today follows the Madison day. Pickup scans stay with the person at the kiosk, and scan codes stay on the checkouts people are allowed to see.",
