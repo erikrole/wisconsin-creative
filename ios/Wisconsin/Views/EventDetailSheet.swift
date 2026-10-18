@@ -335,6 +335,7 @@ struct EventDetailView: View {
     @State private var actionErrorTitle = "Couldn't update event"
     @State private var undoCoordinator = ScheduleWorkingCopyUndoCoordinator()
     @State private var seededSystemUndo = false
+    @State private var travel = EventTravelModel()
 
     init(event: ScheduleEvent, myShift: MyShift?, eventWork: DashboardEventWork? = nil) {
         self.init(event: event, myShifts: myShift.map { [$0] } ?? [], eventWork: eventWork)
@@ -379,6 +380,9 @@ struct EventDetailView: View {
                     openShiftSection
                 }
                 crewSection
+                if EventTravelAccess.canRead(role: session.currentUser?.role, event: event) {
+                    EventTravelSection(event: event, role: session.currentUser?.role, model: travel)
+                }
                 crewNotesSection
             }
             .padding(.horizontal, Brand.Space.md)
@@ -420,6 +424,7 @@ struct EventDetailView: View {
             .task {
                 await vm.load(includeWorkingCopy: canManageShifts)
                 seedSystemUndoIfNeeded()
+                await travel.load(event: event, role: session.currentUser?.role, force: false)
             }
             .task(id: vm.workingEditor?.autoReleaseAt) {
                 guard let releaseAt = vm.workingEditor?.autoReleaseAt else { return }
@@ -427,7 +432,10 @@ struct EventDetailView: View {
                 try? await Task.sleep(for: .seconds(delay))
                 if !Task.isCancelled { await vm.load() }
             }
-            .refreshable { await vm.load(forceRefresh: true) }
+            .refreshable {
+                await vm.load(forceRefresh: true)
+                await travel.load(event: event, role: session.currentUser?.role, force: true)
+            }
             .onChange(of: vm.workingEditor?.hasWorkingCopy) { _, hasWorkingCopy in
                 if hasWorkingCopy != true {
                     undoCoordinator.clear(manager: undoManager)

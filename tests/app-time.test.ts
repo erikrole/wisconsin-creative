@@ -6,6 +6,11 @@ import {
   formatAllDayDate,
   appTzDateKey,
   appTzDayRange,
+  appTzWeekday,
+  startOfAppWeek,
+  endOfAppWeek,
+  startOfAppMonth,
+  endOfAppMonth,
 } from "@/lib/app-time";
 
 describe("startOfTodayInAppTz", () => {
@@ -106,5 +111,26 @@ describe("appTzDayRange", () => {
     const range = appTzDayRange("2026-03-08", "America/Chicago");
     expect(range.gte.toISOString()).toBe("2026-03-08T06:00:00.000Z");
     expect(range.lt.toISOString()).toBe("2026-03-09T05:00:00.000Z");
+  });
+});
+
+describe("Madison week and month", () => {
+  it("keeps Sunday evening in the week that started the previous Monday", () => {
+    // Sun Oct 11, 2026, 8:00pm CDT = Mon Oct 12, 01:00 UTC.
+    const now = new Date("2026-10-12T01:00:00.000Z");
+    expect(appTzWeekday(now, "America/Chicago")).toBe(0);
+    expect(startOfAppWeek(now, "America/Chicago").toISOString()).toBe("2026-10-05T05:00:00.000Z");
+    expect(endOfAppWeek(now, "America/Chicago").toISOString()).toBe("2026-10-12T05:00:00.000Z");
+    expect(startOfAppMonth(now, "America/Chicago").toISOString()).toBe("2026-10-01T05:00:00.000Z");
+    expect(endOfAppMonth(now, "America/Chicago").toISOString()).toBe("2026-11-01T05:00:00.000Z");
+  });
+
+  it("starts a winter month at Central midnight, including the year boundary", () => {
+    // Thu Dec 31, 2026, 11:00pm CST = Fri Jan 1, 2027, 05:00 UTC.
+    const now = new Date("2027-01-01T05:00:00.000Z");
+    expect(startOfAppWeek(now, "America/Chicago").toISOString()).toBe("2026-12-28T06:00:00.000Z");
+    expect(endOfAppWeek(now, "America/Chicago").toISOString()).toBe("2027-01-04T06:00:00.000Z");
+    expect(startOfAppMonth(now, "America/Chicago").toISOString()).toBe("2026-12-01T06:00:00.000Z");
+    expect(endOfAppMonth(now, "America/Chicago").toISOString()).toBe("2027-01-01T06:00:00.000Z");
   });
 });

@@ -84,6 +84,15 @@ _None._ Auth/role gating is enforced server-side. The Edit pencil is gated clien
 - [ ] [Polish] **Deferred.** "View on web" link for a fuller history view (audit log, scan events). Web has a sidebar; iOS intentionally doesn't (project rule: power-user info stays on web). Logged for completeness, not action.
 - [ ] [Hardening] **Deferred.** Optimistic cancel — today the cancel API call awaits before reloading. On a slow network the user sees a 1–2 s lag. Optimistic UI would feel faster but adds rollback complexity for a destructive action. Skip.
 
+## 2026-10-16 reservation edit and checkout actions
+
+- [x] Reservations open `ReservationEditFlow` from the detail pencil and the bookings list. Checkouts still open the narrow `EditBookingSheet` (name and due back only).
+- [x] One Save commits changed plan fields, then linked events. Gear and events are navigation destinations, not extra save buttons. A failed availability check turns that button into Check availability and blocks the write.
+- [x] Pickup choices stay on Camp Randall and Kohl Center. Picked-up serialized lines cannot be removed. Bulk quantity cannot drop below what is already out.
+- [x] Checkout detail keeps Extend as the only bottom action and Cancel in the scroll. Extra server-allowed actions live in one toolbar menu: nudge, close without scan, force checkout, close remaining, transfer, shared or personal custody, linked events, and re-reserve.
+- [x] Active checkout equipment is not editable on the phone.
+- [ ] iPhone 18 Pro Max build, fixture capture, and authenticated device proof remain open. This pass is source and contract only.
+
 ## Acceptance criteria status
 
 Per `AREA_BOOKINGS.md` (and the prior 2026-04-24 audit):

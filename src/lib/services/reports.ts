@@ -1,5 +1,5 @@
 import { BookingStatus, Prisma } from "@prisma/client";
-import { appTzDateKey, appTzDayRange } from "@/lib/app-time";
+import { appTzDateKey, appTzDayRange, startOfDayInAppTz } from "@/lib/app-time";
 import { isBatterySku } from "@/lib/bulk-batteries";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
@@ -568,15 +568,20 @@ export async function getCheckoutReport(days: number, focusDate?: string | null)
 
   // Day keys are app-timezone calendar days on both sides -- the SQL buckets
   // and this cursor must agree, or the trend line reads one day off the cells.
+  // Step Chicago midnights. A UTC or local setDate(+1) keeps the clock time of
+  // `since`, so spring-forward skips a Madison day and fall-back repeats one.
   const sinceKey = appTzDateKey(since);
+  const todayKey = appTzDateKey(now);
   const dailyTrend: { date: string; count: number }[] = [];
-  const cursor = new Date(since);
-  while (cursor <= now) {
+  let cursor = startOfDayInAppTz(since);
+  while (appTzDateKey(cursor) <= todayKey) {
     const key = appTzDateKey(cursor);
     if (key >= sinceKey) {
       dailyTrend.push({ date: key, count: dayMap.get(key) ?? 0 });
     }
-    cursor.setDate(cursor.getDate() + 1);
+    const next = startOfDayInAppTz(cursor, 1);
+    if (next.getTime() <= cursor.getTime()) break;
+    cursor = next;
   }
 
   const heatmap = Array.from(dayMap.entries())

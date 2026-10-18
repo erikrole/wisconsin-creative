@@ -1,0 +1,198 @@
+{
+  "title": "A clearer iPhone Browse",
+  "eyebrow": "Wisconsin Creative \u00b7 Local Simulator review \u00b7 October 17, 2026",
+  "lede": "Native controls, clearer hierarchy, and safer recovery across the latest iPhone screens. Schedule remains the single event destination.",
+  "stats": [
+    {
+      "k": "Native regression tests",
+      "v": "222 / 222",
+      "n": "Final picker build"
+    },
+    {
+      "k": "iOS source contracts",
+      "v": "715 / 715",
+      "n": "135 suites"
+    },
+    {
+      "k": "Matched comparisons",
+      "v": "10",
+      "n": "Original PNGs with hash-bound receipts"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Before and after",
+      "note": "The baseline preserves the hardening work before the visual pass. The same corrected offline fixtures are applied to both builds. These are presentation fixtures, not authenticated production records.",
+      "pairs": [
+        {
+          "title": "Browse",
+          "sub": "Same device, staff fixtures, text size, appearance, and scroll position.",
+          "before": "before-browse.png",
+          "beforeCap": "One long list.",
+          "beforeEvidence": "before-browse.capture.json",
+          "after": "after-browse.png",
+          "afterCap": "Grouped destinations; Events removed in favor of Schedule.",
+          "afterEvidence": "after-browse.capture.json"
+        },
+        {
+          "title": "UA Gear",
+          "sub": "Same device, staff fixtures, text size, appearance, and scroll position.",
+          "before": "before-gearPicks.png",
+          "beforeCap": "Allowance information occupied six separate rows.",
+          "beforeEvidence": "before-gearPicks.capture.json",
+          "after": "after-gearPicks.png",
+          "afterCap": "Remaining allowance, progress, status, and deadline in one summary.",
+          "afterEvidence": "after-gearPicks.capture.json"
+        },
+        {
+          "title": "Accountability",
+          "sub": "Same device, staff fixtures, text size, appearance, and scroll position.",
+          "before": "before-accountability.png",
+          "beforeCap": "Competing subtitle columns and a hidden sort label.",
+          "beforeEvidence": "before-accountability.capture.json",
+          "after": "after-accountability.png",
+          "afterCap": "Flowing subtitle and visible year and sort context.",
+          "afterEvidence": "after-accountability.capture.json"
+        },
+        {
+          "title": "Kits",
+          "sub": "Same device, staff fixtures, text size, appearance, and scroll position.",
+          "before": "before-kits.png",
+          "beforeCap": "Single-line metadata could truncate.",
+          "beforeEvidence": "before-kits.capture.json",
+          "after": "after-kits.png",
+          "afterCap": "Wrapping metadata; accessibility sizes stack the status beneath the name.",
+          "afterEvidence": "after-kits.capture.json"
+        },
+        {
+          "title": "Battery Ops",
+          "sub": "Same device, staff fixtures, text size, appearance, and scroll position.",
+          "before": "before-batteries.png",
+          "beforeCap": "The initial empty view never started its loading task.",
+          "beforeEvidence": "before-batteries.capture.json",
+          "after": "after-batteries.png",
+          "afterCap": "Inventory loads and presents four readable stock metrics.",
+          "afterEvidence": "after-batteries.capture.json"
+        },
+        {
+          "title": "Brand assets",
+          "sub": "Same device, staff fixtures, text size, appearance, and scroll position.",
+          "before": "before-brandAssets.png",
+          "beforeCap": "Folders and files shared an unlabeled hierarchy.",
+          "beforeEvidence": "before-brandAssets.capture.json",
+          "after": "after-brandAssets.png",
+          "afterCap": "Explicit folder and file sections with consistent icons.",
+          "afterEvidence": "after-brandAssets.capture.json"
+        },
+        {
+          "title": "Reports",
+          "sub": "Same device, staff fixtures, text size, appearance, and scroll position.",
+          "before": "before-reports.png",
+          "beforeCap": "Charts appeared ahead of the report destinations.",
+          "beforeEvidence": "before-reports.capture.json",
+          "after": "after-reports.png",
+          "afterCap": "Full reports are available directly beneath the summary.",
+          "afterEvidence": "after-reports.capture.json"
+        },
+        {
+          "title": "Badges",
+          "sub": "Same device, staff fixtures, text size, appearance, and scroll position.",
+          "before": "before-badges.png",
+          "beforeCap": "The report shortcut preceded the catalog.",
+          "beforeEvidence": "before-badges.capture.json",
+          "after": "after-badges.png",
+          "afterCap": "The badge catalog is primary; reporting follows it.",
+          "afterEvidence": "after-badges.capture.json"
+        },
+        {
+          "title": "Blasts",
+          "sub": "Same device, staff fixtures, text size, appearance, and scroll position.",
+          "before": "before-blasts.png",
+          "beforeCap": "Small inline page title.",
+          "beforeEvidence": "before-blasts.capture.json",
+          "after": "after-blasts.png",
+          "afterCap": "Consistent large list title and readable message hierarchy.",
+          "afterEvidence": "after-blasts.capture.json"
+        },
+        {
+          "title": "Offline navigation",
+          "sub": "Same device, staff fixtures, text size, appearance, and scroll position.",
+          "before": "before-offline-banner.png",
+          "beforeCap": "The connection banner covered Back and Review.",
+          "beforeEvidence": "before-offline-banner.capture.json",
+          "after": "after-offline-banner.png",
+          "afterCap": "Banner and navigation have separate space; Review remains usable.",
+          "afterEvidence": "after-offline-banner.capture.json"
+        }
+      ]
+    },
+    {
+      "heading": "Size controls and large text",
+      "note": "After-only interaction and accessibility captures. No matched baseline is claimed for these states.",
+      "shots": [
+        {
+          "title": "Item size picker",
+          "image": "after-size-picker.png",
+          "cap": "Catalog sizes use a native picker. No custom text entry."
+        },
+        {
+          "title": "Review size picker",
+          "image": "after-review-size-picker.png",
+          "cap": "Color, size, and quantity have separate system rows. Selecting XL updates the in-memory picks; Color opens its own menu."
+        },
+        {
+          "title": "Accountability at accessibility size",
+          "image": "after-accountability-accessibility-dark.png",
+          "cap": "Accessibility Large, dark appearance. Names and subtitles stack without truncation."
+        },
+        {
+          "title": "Reports at accessibility size",
+          "image": "after-reports-accessibility-dark.png",
+          "cap": "Summary metrics stack at large accessibility sizes."
+        },
+        {
+          "title": "UA Gear at accessibility size",
+          "image": "after-gearPicks-accessibility-dark.png",
+          "cap": "The allowance summary expands vertically."
+        },
+        {
+          "title": "Large resource file",
+          "image": "after-large-file.png",
+          "cap": "Files above the inline limit explain the share workflow."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "One place for events",
+      "was": "Browse repeated the Schedule event list.",
+      "now": "Events is removed from Browse; legacy Events navigation opens Schedule."
+    },
+    {
+      "h": "Safer edits and reads",
+      "was": "Old reads and failed reloads could lose draft or refresh state.",
+      "now": "Request ownership, save snapshots, and partial-save receipts protect current state."
+    },
+    {
+      "h": "Private resource handling",
+      "was": "Downloads could drift to a newer file version and preview size relied on metadata.",
+      "now": "Downloads pin the displayed version, check actual bytes, limit SVG previews, and clean up per-owner and session files."
+    }
+  ],
+  "verification": [
+    "Xcode 27.1: warning-free Simulator build on iPhone 18 Pro Max, iOS 27.0.",
+    "222 native tests pass, including fractional grace periods, report generations, file byte limits, and temporary-file lifetime.",
+    "715 iOS source-contract tests, TypeScript, changed-test lint, project generation, iOS drift, and audit-gap checks pass.",
+    "Manual fixture interaction: size menu selection, local add, review menu selection from L to XL, independent Color menu, and offline Review access.",
+    "Earlier signed build installed and launched on iPhone 16 Pro; account refresh and widget snapshot read-back succeeded.",
+    "Final physical install deferred when the phone disconnected, per the user's choice to finish with Simulator."
+  ],
+  "notes": [
+    "The retained source patches and capture manifests document which build produced each comparison. Hash-bound receipts prove image integrity and matching declared inputs, not an independent build attestation.",
+    "No production mutation, authenticated save/reload race exercise, share-extension completion, APNs delivery, camera, or passkey proof is claimed.",
+    "Earlier device console contained system input, PointerUI, shared preferences, and PDF diagnostics. No app crash or failed startup request was observed; those diagnostics are not represented as fixed.",
+    "Changes remain local and uncommitted.",
+    "The browser policy blocked file-URL rendering of this report. The source PNGs were inspected individually, and receipt and HTML generation validation passed; the Codex file-panel open was queued."
+  ]
+}

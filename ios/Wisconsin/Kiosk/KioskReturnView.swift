@@ -439,6 +439,7 @@ struct KioskReturnView: View {
                 }
             } catch {
                 guard store.ownsFlow(flow) else { return }
+                await loadDetail(showLoading: false)
                 let message = (error as? APIError)?.errorDescription ?? "Scan failed"
                 showFeedback(.error(message))
             }
@@ -644,9 +645,9 @@ struct KioskReturnView: View {
         }
     }
 
-    private func loadDetail() async {
-        isLoading = true
-        loadError = nil
+    private func loadDetail(showLoading: Bool = true) async {
+        if showLoading { isLoading = true }
+        if showLoading { loadError = nil }
         do {
             let loaded = try await KioskAPI.shared.kioskCheckoutDetail(id: bookingId)
             guard !Task.isCancelled else { return }
@@ -666,7 +667,9 @@ struct KioskReturnView: View {
             }
             processNextScanIfNeeded()
         } catch {
-            self.loadError = (error as? APIError)?.errorDescription ?? "Could not load return details."
+            if showLoading || detail == nil {
+                self.loadError = (error as? APIError)?.errorDescription ?? "Could not load return details."
+            }
         }
         isLoading = false
     }

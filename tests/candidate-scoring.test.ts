@@ -223,4 +223,28 @@ describe("scoreCandidatesForShift", () => {
     expect(score?.workload.weekHours).toBe(12);
     expect(score?.warnings.map((warning) => warning.code)).toContain("workload_overloaded");
   });
+
+  it("keeps Saturday-night work in the same Madison week and month", () => {
+    const eveningShift = {
+      ...shift,
+      startsAt: new Date("2026-10-12T01:00:00.000Z"),
+      endsAt: new Date("2026-10-12T04:00:00.000Z"),
+      callStartsAt: null,
+      callEndsAt: null,
+    };
+    const [score] = scoreCandidatesForShift({
+      shift: eveningShift,
+      candidates: [
+        candidate({
+          id: "week",
+          assignments: [assignment("friday", "2026-10-09T18:00:00.000Z", "2026-10-09T22:00:00.000Z")],
+        }),
+      ],
+      now: new Date("2026-10-12T01:00:00.000Z"),
+    });
+
+    expect(score?.workload.weekAssignments).toBe(1);
+    expect(score?.workload.weekHours).toBe(4);
+    expect(score?.workload.monthAssignments).toBe(1);
+  });
 });

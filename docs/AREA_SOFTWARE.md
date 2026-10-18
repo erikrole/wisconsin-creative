@@ -4,7 +4,7 @@
 
 - Area: Shared software access
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-23
+- Last Updated: 2026-10-17
 - Status: Active in production — baseline vault is live; first-class tab separation and local hardening are verified locally; role-scoped and secret-lifecycle acceptance remains
 - Route: `/licenses` (presented as **Software**)
 
@@ -48,6 +48,7 @@ All mutations use the existing authenticated audit path. Secret endpoints return
 - Staff/admin management controls use a dialog for add/edit and an AlertDialog for archive. Editing leaves the password blank unless it is intentionally replaced.
 - Add/edit includes a clear audience checklist for Staff, Students, and Collaborators. The selected audiences appear on each card, while collaborator policy access remains a separate admin-controlled capability.
 - Copying a masked password writes it directly to the clipboard, keeps the password masked, and briefly swaps the copy icon for a check confirmation.
+- Native iOS Browse opens the same active list for students, staff, and admins, and for a collaborator with `SOFTWARE_VAULT_VIEW`. Show and Copy use the existing reveal route. A shown password clears after 30 seconds, and a copy stays on that iPhone for 2 minutes. Creating, editing, archiving, and restoring stay on the web.
 - Admin/staff archived records are separated from active records and can be restored.
 - The Photo Mechanic tab keeps its student claim, masking, expiry, and staff/admin management behavior. It uses contextual pool actions and a mobile card/list layout so capacity, holders, expiry, and Claim/Inspect remain visible without horizontal scrolling.
 
@@ -67,6 +68,7 @@ All mutations use the existing authenticated audit path. Secret endpoints return
 
 ## Change Log
 
+- 2026-10-17: **Native iOS can read and copy shared logins.** Browse lists the audience-filtered active records from `GET /api/software` and requests a password only for Show or Copy. The phone does not create, edit, archive, or restore records. Source contracts pass. An Xcode build and a signed-in phone walkthrough are still required; no secret was read during this slice.
 - 2026-08-23: Made Photo Mechanic the default `/licenses` landing. Shared logins moved to `?tab=shared-logins`; `?tab=photo-mechanic` remains compatible. Quiet Shared logins chrome so it no longer restates the tab title or treats Photo Mechanic as a footnote.
 
 - 2026-08-20: Reconciled Software into two first-class URL-backed workflows on `/licenses`: Shared logins (default) and Photo Mechanic licenses (`?tab=photo-mechanic`). Contextualized Photo Mechanic actions, removed the product suggestion from shared-login copy, added mobile license cards, moved shared-login mutations and reveal auditing into serializable transactions, changed secret reveal to POST, minimized student license DTOs, and hardened CSV export/release behavior. Local gates pass; this follow-up is not represented as deployed without authenticated runtime proof.

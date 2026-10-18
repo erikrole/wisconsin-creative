@@ -5,14 +5,12 @@ import { HttpError } from "@/lib/http";
 import { requirePermission } from "@/lib/rbac";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { buildScheduleExport, parseScheduleExportType } from "@/lib/services/schedule-exports";
-import { startOfTodayInAppTz } from "@/lib/app-time";
+import { startOfDayInAppTz, startOfTodayInAppTz } from "@/lib/app-time";
 import { optionalSportCodeSchema } from "@/lib/validation";
 
+/** Inclusive end of the Chicago day seven days after `start`. */
 function defaultEndDate(start: Date) {
-  const end = new Date(start);
-  end.setDate(end.getDate() + 7);
-  end.setHours(23, 59, 59, 999);
-  return end;
+  return new Date(startOfDayInAppTz(start, 8).getTime() - 1);
 }
 
 export const GET = withAuth(async (req, { user }) => {

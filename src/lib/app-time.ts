@@ -197,6 +197,50 @@ export function appTzDayRange(
   return { gte, lt };
 }
 
+const WEEKDAY_SUN0: Record<string, number> = {
+  Sun: 0,
+  Mon: 1,
+  Tue: 2,
+  Wed: 3,
+  Thu: 4,
+  Fri: 5,
+  Sat: 6,
+};
+
+/** Sunday = 0 … Saturday = 6, on the app-timezone calendar. */
+export function appTzWeekday(instant: Date = new Date(), timeZone: string = env.appTimezone): number {
+  const weekday = new Intl.DateTimeFormat("en-US", { timeZone, weekday: "short" }).format(instant);
+  const day = WEEKDAY_SUN0[weekday];
+  if (day === undefined) {
+    throw new Error(`Unrecognized weekday "${weekday}" in ${timeZone}`);
+  }
+  return day;
+}
+
+/** Monday 00:00 in the app timezone for the week that contains `instant`. */
+export function startOfAppWeek(instant: Date = new Date(), timeZone: string = env.appTimezone): Date {
+  const daysSinceMonday = (appTzWeekday(instant, timeZone) + 6) % 7;
+  return startOfDayInAppTz(instant, -daysSinceMonday, timeZone);
+}
+
+/** Exclusive end of that week: the following Monday 00:00 in the app timezone. */
+export function endOfAppWeek(instant: Date = new Date(), timeZone: string = env.appTimezone): Date {
+  return startOfDayInAppTz(startOfAppWeek(instant, timeZone), 7, timeZone);
+}
+
+/** The first instant of the app-timezone month that contains `instant`. */
+export function startOfAppMonth(instant: Date = new Date(), timeZone: string = env.appTimezone): Date {
+  const day = Number(appTzDateKey(instant, timeZone).slice(8, 10));
+  return startOfDayInAppTz(instant, 1 - day, timeZone);
+}
+
+/** Exclusive end of that month: the first instant of the next app-timezone month. */
+export function endOfAppMonth(instant: Date = new Date(), timeZone: string = env.appTimezone): Date {
+  const [year, month] = appTzDateKey(startOfAppMonth(instant, timeZone), timeZone).split("-").map(Number);
+  const nextMonthNoon = new Date(Date.UTC(year!, month!, 1, 12));
+  return startOfDayInAppTz(nextMonthNoon, 0, timeZone);
+}
+
 /** The hour (0-23) of an instant in the app timezone. */
 export function appTzHour(instant: Date = new Date(), timeZone: string = env.appTimezone): number {
   const hour = new Intl.DateTimeFormat("en-US", { timeZone, hour: "2-digit", hourCycle: "h23" })

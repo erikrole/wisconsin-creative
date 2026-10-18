@@ -4,7 +4,7 @@
 
 - Area: Yearly Under Armour staff gear picks for full-time creative staff
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-10-09
+- Last Updated: 2026-10-16
 - Status: Built on `feat/ua-gear-picks` for cycle 2027-28; authenticated preview proof pending.
 - Routes: `/gear` (participants), `/gear/admin` (ADMIN only)
 
@@ -92,6 +92,7 @@ New cycle: get the department's updated workbook, delete every tab but the new c
 
 ## Change Log
 
+- 2026-10-16: **iPhone participant picker (local, not deployed).** Browse → UA Gear uses `GET /api/gear-picks/me?catalog=1` and `PUT /api/gear-picks/me`. The catalog is omitted unless the phone asks, so the website banner stays the same size. Admin roster, deadline, launch, CSV, and the equipment spreadsheet stay on `/gear/admin`. An Xcode build and a signed-in walkthrough are still open.
 - 2026-10-08 (local, not deployed): Picker save/reload race protections, persistent recovery, narrow-screen budget visibility, and direct filter reset. See recovery acceptance below.
 
 - 2026-10-07: First build for 2027-28: schema and migration `0169_gear_picks`, roster seed script, participant pick page, admin results with CSV export, dashboard banner, `gear_picks` permission.
@@ -128,3 +129,9 @@ New cycle: get the department's updated workbook, delete every tab but the new c
 
 
 - 2026-10-08 shipping preparation: preserved the new How it works splash and aligned its copy with Standard issue, optional allowance filtering, color editing in review, and matching-size defaults. Full tests (5,564), integrated Chromium checks (12), application build, and standalone TypeScript pass. Earlier TypeScript blockers were fixed in their two test helpers. [Integrated intro capture](../tasks/archive/proofs/ua-picker-fit-2026-10-08/integration/intro-390.png) is after-only fixture proof; hosted/authenticated acceptance is recorded in PR #442 before merge.
+
+### Native iPhone sizing and recovery (2026-10-17, local)
+
+- Native item and review screens use a size picker for all sized gear. Options come from the API catalog; a previously saved size stays visible, while exact-size validation can still require a replacement. There is no custom text entry on iPhone. One-size items remain OSFA. Web sizing behavior is unchanged.
+- The allowance card emphasizes what remains. Saves invalidate older reads; failed destructive reloads retain dirty and conflict state. Controls lock while saving or replacing a draft.
+- Acceptance: the Simulator walkthrough selected a catalog size and added it to the local review sheet; 222 native tests and 715 iOS source contracts pass. Authenticated draft/submit persistence remains unverified. See the [native review](../tasks/archive/proofs/ios-latest-2026-10-17/review.html).

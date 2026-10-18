@@ -35,7 +35,7 @@ describe("iOS current-day rollover", () => {
 
   it("provides the current day at both iOS app roots", () => {
     expect(source("ios/Wisconsin/App/WisconsinApp.swift")).toContain(".providesCurrentDay()");
-    expect(source("ios/Wisconsin/KioskOnly/KioskOnlyApp.swift")).toContain(".providesCurrentDay()");
+    expect(source("ios/Wisconsin/KioskOnly/KioskOnlyApp.swift")).toContain(".providesKioskDay()");
   });
 
   it("refreshes on midnight, clock changes, and foregrounding", () => {

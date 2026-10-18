@@ -6,6 +6,12 @@
 
 Scope: `EventDetailSheet` + `EventDetailViewModel` + `CoveragePill` + `AreaBlock` + `ShiftRow` + `EditShiftTimesSheet` in `ios/Wisconsin/Views/EventDetailSheet.swift`. Slice 8 (2026-05-07) shipped status-token migration on the embedded "Pending" pill + Approve/Decline mini buttons; this is the focused follow-up.
 
+## 2026-10-18 Travel roster
+
+- [x] Away games with a sport show the read-only travel roster from `GET /api/calendar-events/:id/travel` for students, staff, and admins. Home games and collaborators do not request it.
+- [x] The list names each person and their area. The row opens that person's profile. A failed refresh keeps the previous list.
+- [x] Adding and removing travelers stays on the website. An Xcode build on a Mac is still required.
+
 ## 2026-07-18 Full-screen Redesign Follow-up
 
 - [x] `EventDetailSheet` presentation was refactored into reusable `EventDetailView` and now uses the parent navigation stack with standard Back behavior.

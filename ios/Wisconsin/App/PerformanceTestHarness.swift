@@ -53,6 +53,8 @@ struct PerformanceTestRootView: View {
             GuidesView()
         case .previewChrome:
             PreviewChromeHarnessView()
+        case .latestBrowse:
+            LatestBrowseHarnessView()
         case .resourcesUsers:
             UsersView()
         case .resourcesLicenses, .resourcesLicensesOpen:
@@ -493,6 +495,11 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
 
     private static func body(for request: URLRequest) -> Data? {
         guard let path = request.url?.path else { return nil }
+        if AppRuntimeMode.performanceScenario == .latestBrowse, path == "/api/calendar-events" {
+            return LatestBrowseFixtureAPI.calendarEvents(for: request)
+        }
+        if AppRuntimeMode.performanceScenario == .latestBrowse,
+           let body = LatestBrowseFixtureAPI.body(path: path) { return body }
         switch path {
         case "/api/resources": return FixtureAPI.guides
         case let path where path.hasPrefix("/api/resources/"):
@@ -1720,7 +1727,7 @@ private enum PreviewChromeFixtures {
     }
 }
 
-private enum ScheduleFixtures {
+enum ScheduleFixtures {
     static let staffUser = CurrentUser(
         id: "fixture-staff",
         name: "Bucky Badger",
@@ -2273,4 +2280,5 @@ private extension Calendar {
         date(bySettingHour: hour, minute: 0, second: 0, of: startOfDay(for: day))
     }
 }
+
 #endif

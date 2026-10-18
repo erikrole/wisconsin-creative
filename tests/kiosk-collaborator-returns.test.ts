@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   bookingUpdate: vi.fn(),
   bookingBulkItemFindUnique: vi.fn(),
   bookingBulkItemUpdate: vi.fn(),
+  bookingBulkItemUpdateMany: vi.fn(),
   bookingBulkItemFindMany: vi.fn(),
   bookingSerializedItemCount: vi.fn(),
   scanEventCreate: vi.fn(),
@@ -64,6 +65,7 @@ beforeEach(() => {
     bookingBulkItem: {
       findUnique: mocks.bookingBulkItemFindUnique,
       update: mocks.bookingBulkItemUpdate,
+      updateMany: mocks.bookingBulkItemUpdateMany,
       findMany: mocks.bookingBulkItemFindMany,
     },
     bookingSerializedItem: { count: mocks.bookingSerializedItemCount },
@@ -77,6 +79,7 @@ beforeEach(() => {
   mocks.bookingSerializedItemCount.mockResolvedValue(1);
   mocks.bookingBulkItemFindMany.mockResolvedValue([]);
   mocks.scanEventFindMany.mockResolvedValue([]);
+  mocks.bookingBulkItemUpdateMany.mockResolvedValue({ count: 1 });
 });
 
 describe("counted-quantity return (B6)", () => {
@@ -124,6 +127,25 @@ describe("counted-quantity return (B6)", () => {
     await expect(returnCountedQuantity(returnRequest(), ctx("checkout-1")))
       .rejects.toMatchObject({ status: 404, message: "Person not found" });
     expect(mocks.bookingBulkItemUpdate).not.toHaveBeenCalled();
+  });
+
+  it("does not count a return twice when the outstanding quantity was claimed first", async () => {
+    mocks.userFindFirst.mockResolvedValue({ id: "collab-1", role: "COLLABORATOR" });
+    mocks.bookingBulkItemFindUnique.mockResolvedValue({
+      id: "bulk-item-1",
+      bulkSkuId: "sku-cables",
+      checkedOutQuantity: 3,
+      checkedInQuantity: 0,
+      bulkSku: { name: "XLR Cable", trackByNumber: false, binQrCodeValue: "bin-xlr" },
+      booking: { kind: "CHECKOUT", status: "OPEN", requesterUserId: "user-1", custodyScope: "PERSON" },
+    });
+    mocks.bookingBulkItemUpdateMany.mockResolvedValue({ count: 0 });
+
+    await expect(returnCountedQuantity(returnRequest(), ctx("checkout-1")))
+      .rejects.toMatchObject({ status: 409, message: "The remaining quantity changed. Refresh before returning more." });
+    expect(mocks.scanEventCreate).not.toHaveBeenCalled();
+    expect(mocks.upsertBulkBalancesAndMovements).not.toHaveBeenCalled();
+    expect(mocks.createAuditEntryTx).not.toHaveBeenCalled();
   });
 });
 

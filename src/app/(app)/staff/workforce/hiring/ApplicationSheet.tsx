@@ -206,27 +206,6 @@ export default function ApplicationSheet({ applicationId, onClose, onChanged, on
     onChanged();
   }
 
-  async function emailInvite(): Promise<void> {
-    if (!detail?.invite) return;
-    const confirmed = await confirm({
-      title: "Email login link",
-      message: `Send ${detail.applicant.name} an email with the app login link? It goes to the address the invite was created for.`,
-      confirmLabel: "Send email",
-    });
-    if (!confirmed) return;
-    setBusy(true);
-    try {
-      const res = await fetch(`/api/allowed-emails/${detail.invite.id}/send`, { method: "POST" });
-      if (handleAuthRedirect(res)) return;
-      if (!res.ok) throw new Error(await parseErrorMessage(res, "Could not send the email."));
-      toast.success("Login link emailed");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not send the email.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   type InviteOptions = { linkExistingUser?: boolean; linkUserId?: string; confirmNewAccount?: boolean };
   async function createInvite(options: InviteOptions = {}): Promise<void> {
     if (!detail) return;
@@ -242,7 +221,7 @@ export default function ApplicationSheet({ applicationId, onClose, onChanged, on
       const json = await parseJsonSafely<{
         error?: string;
         code?: string;
-        data?: { user?: { name: string }; users?: AccountChoice[] };
+        data?: { user?: { name: string }; users?: AccountChoice[]; emailStatus?: "sent" | "failed" | "not_configured" };
       }>(res);
       if (res.status === 409 && json?.code === "user_exists" && !options.linkExistingUser) {
         const confirmed = await confirm({
@@ -259,7 +238,15 @@ export default function ApplicationSheet({ applicationId, onClose, onChanged, on
         return;
       }
       if (!res.ok) throw new Error(messageOf(json, "Could not create the invite."));
-      toast.success(options.linkExistingUser || options.linkUserId ? "Linked to the existing account" : "Student invite created");
+      if (options.linkExistingUser || options.linkUserId) {
+        toast.success("Linked to the existing account");
+      } else if (json?.data?.emailStatus === "sent") {
+        toast.success("Student invite created and emailed");
+      } else if (json?.data?.emailStatus === "failed") {
+        toast.warning("Invite created, but the email could not be sent. Resend it from Onboarding.");
+      } else {
+        toast.warning("Invite created. Email is not set up yet, so tell the student to sign in with this address.");
+      }
       await load(detail.id);
       onChanged();
     } catch (err) {
@@ -499,13 +486,6 @@ export default function ApplicationSheet({ applicationId, onClose, onChanged, on
                         Onboarding status
                       </Link>
                     </p>
-                    {!detail.invite.claimed && (
-                      <div>
-                        <Button variant="outline" disabled={busy} onClick={() => void emailInvite()}>
-                          Email login link
-                        </Button>
-                      </div>
-                    )}
                   </>
                 ) : (
                   <>

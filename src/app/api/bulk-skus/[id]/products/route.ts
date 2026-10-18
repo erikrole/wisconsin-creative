@@ -8,10 +8,11 @@ import {
   cleanOptionalItemFamilyProductText,
   normalizeItemFamilyProductName,
 } from "@/lib/item-family-products";
-import { requirePermission } from "@/lib/rbac";
+import { requirePermission, requirePermissionOrCollaboratorCapability } from "@/lib/rbac";
 import { createBulkSkuProductSchema } from "@/lib/validation";
 
-export const GET = withAuth<{ id: string }>(async (_req, { params }) => {
+export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
+  requirePermissionOrCollaboratorCapability(user, "bulk_sku", "view", "GEAR_CATALOG_VIEW");
   const [family, products] = await Promise.all([
     db.bulkSku.findUnique({ where: { id: params.id }, select: { id: true } }),
     db.bulkSkuProduct.findMany({

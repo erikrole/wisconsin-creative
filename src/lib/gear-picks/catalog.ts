@@ -140,6 +140,14 @@ export function kitEntryForStyle(fit: GearPickFitKey, style: string, catalog: Ge
 /** Apparel sizes offered in the picker. Free text up to 12 characters is accepted server-side. */
 export const GEAR_APPAREL_SIZES = ["XS", "S", "M", "L", "XL", "XXL", "3XL"] as const;
 
+/** Profile fields that can prefill a size. Shoe systems never convert across scales. */
+export type GearPickSizeProfile = {
+  topSize: string | null;
+  topSizeFit: "UNISEX" | "WOMENS" | "MENS" | null;
+  shoeSize: string | null;
+  shoeSizeSystem: "US_WOMENS" | "US_MENS" | null;
+};
+
 export const GEAR_ONE_SIZE = "OSFA";
 export const GEAR_SIZE_MAX_LENGTH = 12;
 export const GEAR_MAX_QUANTITY = 5;
@@ -163,6 +171,98 @@ export function gearSizeLabel(item: GearCatalogItem) {
   if (item.category === "Footwear") return "Catalog shoe size";
   if (item.style === "6021743") return "Waist size (inches)";
   return "Size";
+}
+
+/**
+ * A matching profile size, or null when the person still has to choose.
+ * Tops match fit. Pants, base layers, and fitted hats do not prefill.
+ * Shoes match the US system and an offered size, with no conversion.
+ * Catalog shoe sizes (Icon Lo) never prefill.
+ */
+export function defaultGearPickSize(item: GearCatalogItem, profile: GearPickSizeProfile): string | null {
+  if (isOneSizeItem(item)) return GEAR_ONE_SIZE;
+  if (item.category === "Headwear" || item.category === "Pants & shorts" || item.category === "Base layer") return null;
+  if (item.category === "Footwear") {
+    if (!item.shoeSizeSystem || item.shoeSizeSystem === "CATALOG" || item.shoeSizeSystem !== profile.shoeSizeSystem) return null;
+    const size = profile.shoeSize?.trim() || null;
+    return gearSizeProblem(item, size) ? null : size;
+  }
+  const expectedFit = item.fit === "MEN" ? "MENS" : item.fit === "WOMEN" ? "WOMENS" : "UNISEX";
+  if (profile.topSizeFit !== expectedFit) return null;
+  const size = normalizeApparelSize(profile.topSize);
+  return gearSizeProblem(item, size) ? null : size;
+}
+
+/** Sizes the picker offers. Exact lists are enforced; apparel without a list still accepts other text up to 12 characters. */
+export function gearPickSizeChoices(item: GearCatalogItem): { sizes: string[]; exact: boolean } {
+  if (isOneSizeItem(item)) return { sizes: [GEAR_ONE_SIZE], exact: true };
+  if (item.sizes && item.sizes.length > 0) return { sizes: item.sizes, exact: true };
+  return { sizes: [...GEAR_APPAREL_SIZES], exact: false };
+}
+
+export type GearPickPhoneKit = {
+  kind: "STANDARD_ISSUE" | "CORE_KIT";
+  colorCode: string;
+};
+
+export type GearPickPhoneColor = {
+  code: string;
+  label: string;
+  swatch: string;
+  image: string;
+};
+
+export type GearPickPhoneItem = {
+  style: string;
+  name: string;
+  fit: GearItemFit;
+  category: string;
+  priceCents: number;
+  sizeLabel: string;
+  sizes: string[];
+  sizesAreExact: boolean;
+  oneSize: boolean;
+  defaultSize: string | null;
+  kit: GearPickPhoneKit | null;
+  colors: GearPickPhoneColor[];
+};
+
+/** The fit-filtered catalog a phone can shop. Prices are cents from the same JSON the server prices with. */
+export type GearPickPhoneCatalog = {
+  maxQuantity: number;
+  categories: string[];
+  items: GearPickPhoneItem[];
+};
+
+export function gearPickPhoneCatalog(fit: GearPickFitKey, profile: GearPickSizeProfile): GearPickPhoneCatalog {
+  const items = itemsForFit(fit).map((item): GearPickPhoneItem => {
+    const choices = gearPickSizeChoices(item);
+    const kit = kitEntryForStyle(fit, item.style);
+    return {
+      style: item.style,
+      name: item.name,
+      fit: item.fit,
+      category: item.category,
+      priceCents: dollarsToCents(item.price),
+      sizeLabel: gearSizeLabel(item),
+      sizes: choices.sizes,
+      sizesAreExact: choices.exact,
+      oneSize: isOneSizeItem(item),
+      defaultSize: defaultGearPickSize(item, profile),
+      kit: kit ? { kind: kit.kind, colorCode: kit.code } : null,
+      colors: item.colors.map((color) => ({
+        code: color.code,
+        label: color.label,
+        swatch: color.swatch,
+        image: color.image,
+      })),
+    };
+  });
+  return {
+    maxQuantity: GEAR_MAX_QUANTITY,
+    categories: GEAR_CATALOG.categories.filter((category) => items.some((item) => item.category === category)),
+    items,
+  };
 }
 
 /** The same size gate runs before saving in the browser and at the pricing boundary. */

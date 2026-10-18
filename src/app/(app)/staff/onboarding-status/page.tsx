@@ -254,10 +254,15 @@ export default function OnboardingStatusPage() {
     if (!ok) return;
     setEmailingId(row.id);
     try {
-      const response = await fetch(`/api/allowed-emails/${row.id}/send`, { method: "POST" });
+      const response = await fetch(`/api/allowed-emails/${row.id}/resend`, { method: "POST" });
       if (handleAuthRedirect(response, "/staff/onboarding-status")) return;
       if (!response.ok) {
         toast.error(await parseErrorMessage(response, "Could not send the email"));
+        return;
+      }
+      const json = (await response.json().catch(() => null)) as { data?: { emailStatus?: string } } | null;
+      if (json?.data?.emailStatus === "not_configured") {
+        toast.warning("Email isn't set up on this site yet. Copy the login link and send it yourself.");
         return;
       }
       toast.success(`Login link emailed to ${row.email}`);
@@ -514,7 +519,7 @@ function AccountRow({ account }: { account: ReadinessAccount }) {
       </div>
       <div className="text-sm text-muted-foreground">{missing.length ? `Missing ${missing.join(", ")}` : "Everything done"}</div>
       <div className="md:text-right">
-        <Button asChild variant="ghost" size="sm" className="h-8 px-2 text-xs">
+        <Button asChild variant="ghost" className="h-10 px-3 text-sm">
           <Link href={`/staff/${account.id}`} aria-label={`Open ${account.name}`}>Open</Link>
         </Button>
       </div>

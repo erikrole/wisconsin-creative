@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { createAuditEntryTx } from "@/lib/audit";
 import { parseDerivedBulkUnitQr } from "@/lib/bulk-unit-qr";
-import { BookingCustodyScope, Prisma } from "@prisma/client";
+import { BookingCustodyScope, Prisma, Role } from "@prisma/client";
 import { db } from "@/lib/db";
 import { withKiosk } from "@/lib/api";
 import { HttpError, ok } from "@/lib/http";
@@ -35,17 +35,30 @@ export const POST = withKiosk<{ id: string }>(async (req, { params }) => {
     throw new HttpError(404, "Pending pickup not found");
   }
   const activeBooking = booking;
-  if (activeBooking.custodyScope === BookingCustodyScope.SHARED) {
-    if (!actorId) throw new HttpError(400, "Choose an operator before scanning shared gear");
-    const actor = await db.user.findFirst({
-      where: { id: actorId, ...kioskRosterUserWhere() },
-      select: { id: true },
-    });
-    if (!actor) throw new HttpError(403, "This user cannot operate kiosk custody");
+  // The body names the person at the kiosk. Personal pickups record that
+  // operator, and only the requester or staff may scan them.
+  if (!actorId) {
+    throw new HttpError(
+      400,
+      activeBooking.custodyScope === BookingCustodyScope.SHARED
+        ? "Choose an operator before scanning shared gear"
+        : "Choose an operator before scanning",
+    );
   }
-  const scanActorId = activeBooking.custodyScope === BookingCustodyScope.SHARED
-    ? actorId!
-    : activeBooking.requesterUserId;
+  const actor = await db.user.findFirst({
+    where: { id: actorId, ...kioskRosterUserWhere() },
+    select: { id: true, role: true },
+  });
+  if (!actor) throw new HttpError(403, "This user cannot operate kiosk custody");
+  const staffAssist = actor.role === Role.ADMIN || actor.role === Role.STAFF;
+  if (
+    activeBooking.custodyScope !== BookingCustodyScope.SHARED
+    && actor.id !== activeBooking.requesterUserId
+    && !staffAssist
+  ) {
+    throw new HttpError(403, "Only the person this pickup belongs to can scan it");
+  }
+  const scanActorId = actor.id;
 
   const bulkResult = await db.$transaction(
     (tx) => activeBooking.kind === "RESERVATION"
@@ -157,21 +170,22 @@ export const POST = withKiosk<{ id: string }>(async (req, { params }) => {
     return ok({ success: false, error: `${label} already picked up`, errorCode: "duplicate" });
   }
 
-  const existingScan = await db.scanEvent.findFirst({
-    where: {
-      bookingId: activeBooking.id,
-      phase: "CHECKOUT",
-      success: true,
-      assetId: asset.id,
-    },
-    select: { id: true },
-  });
-  if (existingScan) {
-    const label = asset.name || asset.assetTag;
-    return ok({ success: false, error: `${label} already scanned`, errorCode: "duplicate" });
-  }
-
-  await db.$transaction(async (tx) => {
+  const label = asset.name || asset.assetTag;
+  // The duplicate check and the scan write share one transaction, and the
+  // booking row lock makes the second of two double-taps see the first scan
+  // instead of inserting another custody event.
+  const claimed = await db.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM bookings WHERE id = ${activeBooking.id} FOR UPDATE`;
+    const existingScan = await tx.scanEvent.findFirst({
+      where: {
+        bookingId: activeBooking.id,
+        phase: "CHECKOUT",
+        success: true,
+        assetId: asset.id,
+      },
+      select: { id: true },
+    });
+    if (existingScan) return false;
     await tx.scanEvent.create({
       data: {
         bookingId: activeBooking.id,
@@ -184,7 +198,11 @@ export const POST = withKiosk<{ id: string }>(async (req, { params }) => {
         deviceContext: req.headers.get("user-agent") ?? "kiosk",
       },
     });
-  });
+    return true;
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  if (!claimed) {
+    return ok({ success: false, error: `${label} already scanned`, errorCode: "duplicate" });
+  }
 
   return ok({
     success: true,

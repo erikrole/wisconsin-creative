@@ -3,7 +3,7 @@ import { source } from "./_helpers/source";
 
 describe("Settings UI polish contracts", () => {
   it("lets operators filter the overview directory without leaving the page", () => {
-    const page = source("src/app/(app)/settings/page.tsx");
+    const page = source("src/app/(app)/settings/SettingsDirectory.tsx");
 
     expect(page).toContain('aria-label="Find a setting — try allowlist, kiosk, or overdue"');
     expect(page).toContain("Resume {lastSection.label}");
