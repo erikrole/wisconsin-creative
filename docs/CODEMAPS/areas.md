@@ -17,7 +17,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/budget`
 - APIs: `/api/budget/[id]/lines/bulk`, `/api/budget/[id]/lines`, `/api/budget/[id]`, `/api/budget/for-asset/[assetId]`, `/api/budget/item-search`, `/api/budget/lines/[lineId]/history`, `/api/budget/lines/[lineId]/links`, `/api/budget/lines/[lineId]`, `/api/budget/lines/[lineId]/suggestions`, `/api/budget/links/[linkId]/apply`
 - Services: `src/lib/services/budget.ts`
-- Tests: `tests/budget-autofill.test.ts`, `tests/budget-contract.test.ts`, `tests/budget-history.test.ts`, `tests/budget-matching.test.ts`, `tests/budget-routes.test.ts`, `tests/budget-table.test.ts`, `tests/kiosk-neon-compute-budget.test.ts`
+- Tests: `tests/budget-autofill.test.ts`, `tests/budget-contract.test.ts`, `tests/budget-history.test.ts`, `tests/budget-insights.test.ts`, `tests/budget-matching.test.ts`, `tests/budget-routes.test.ts`, `tests/budget-table.test.ts`, `tests/kiosk-neon-compute-budget.test.ts`
 
 ## bulk-inventory
 

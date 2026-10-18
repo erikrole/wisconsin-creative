@@ -200,6 +200,7 @@
 - `/api/budget/links/[linkId]/apply` -> `src/app/api/budget/links/[linkId]/apply/route.ts`
 - `/api/budget/links/[linkId]` -> `src/app/api/budget/links/[linkId]/route.ts`
 - `/api/budget` -> `src/app/api/budget/route.ts`
+- `/api/budget/trend` -> `src/app/api/budget/trend/route.ts`
 - `/api/bulk-skus/[id]/activity` -> `src/app/api/bulk-skus/[id]/activity/route.ts`
 - `/api/bulk-skus/[id]/adjust` -> `src/app/api/bulk-skus/[id]/adjust/route.ts`
 - `/api/bulk-skus/[id]/convert-to-numbered` -> `src/app/api/bulk-skus/[id]/convert-to-numbered/route.ts`

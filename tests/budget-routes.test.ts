@@ -36,6 +36,7 @@ import { GET as listBudgets, POST as createBudget } from "@/app/api/budget/route
 import { GET as getBudget } from "@/app/api/budget/[id]/route";
 import { POST as createLine } from "@/app/api/budget/[id]/lines/route";
 import { POST as bulkLines } from "@/app/api/budget/[id]/lines/bulk/route";
+import { GET as budgetTrend } from "@/app/api/budget/trend/route";
 import { GET as lineHistory } from "@/app/api/budget/lines/[lineId]/history/route";
 import { DELETE as deleteLine, PATCH as patchLine } from "@/app/api/budget/lines/[lineId]/route";
 import { POST as linkItem } from "@/app/api/budget/lines/[lineId]/links/route";
@@ -362,5 +363,29 @@ describe("bulk changes and history", () => {
       { field: "status", label: "Status", from: "Planned", to: "Purchased" },
       { field: "spentCents", label: "Spent", from: "none", to: "$1,296" },
     ]);
+  });
+});
+
+describe("year over year", () => {
+  it("totals one budget name across fiscal years, admin only", async () => {
+    (requireAuth as unknown as MockFn).mockResolvedValue(staff);
+    expect((await budgetTrend(json("GET", "/api/budget/trend?name=Creative"), { params: Promise.resolve({}) })).status).toBe(403);
+
+    (requireAuth as unknown as MockFn).mockResolvedValue(admin);
+    (db.budget.findMany as unknown as MockFn).mockResolvedValue([
+      {
+        fiscalYear: "2025-26",
+        allocationCents: 3_000_000,
+        lines: [
+          { status: "PURCHASED", category: "EQUIPMENT", unitCostCents: 100_00, quantity: 1, spentCents: 110_00, refundCents: null, unplanned: false },
+          { status: "CANCELLED", category: "EQUIPMENT", unitCostCents: 50_00, quantity: 1, spentCents: null, refundCents: null, unplanned: false },
+        ],
+      },
+    ]);
+    const res = await budgetTrend(json("GET", "/api/budget/trend?name=Creative"), { params: Promise.resolve({}) });
+    expect((await res.json()).data).toEqual([
+      { fiscalYear: "2025-26", submittedCents: 150_00, spentCents: 110_00, forecastCents: 110_00, allocationCents: 3_000_000 },
+    ]);
+    expect((await budgetTrend(json("GET", "/api/budget/trend"), { params: Promise.resolve({}) })).status).toBe(400);
   });
 });

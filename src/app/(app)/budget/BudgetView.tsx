@@ -41,6 +41,8 @@ import {
   type BudgetSummary,
 } from "@/lib/budget/contract";
 import type { LineHistoryEntry } from "@/lib/services/budget";
+import { InsightsPanel } from "./InsightsPanel";
+import { linesToCsv } from "@/lib/budget/insights";
 import { LINE_SORT_LABELS, LINE_SORTS, filterAndSortLines, type LineSort } from "@/lib/budget/table";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 
@@ -326,6 +328,7 @@ function BudgetBody({
     }
   }
 
+  const [view, setView] = useState<"lines" | "insights">("lines");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const searchRef = useRef<HTMLInputElement>(null);
   const toggleSelected = (id: string) =>
@@ -433,6 +436,16 @@ function BudgetBody({
     }
   }
 
+  function downloadCsv() {
+    const blob = new Blob([linesToCsv(lines)], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${budget.name}-${budget.fiscalYear}-budget.csv`.replace(/\s+/g, "-").toLowerCase();
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   const submitted = summary.submittedCents;
   const vsSubmitted = summary.forecastCents - submitted;
   const stillPlanned = summary.counts.PLANNED + summary.counts.ORDERED;
@@ -459,6 +472,35 @@ function BudgetBody({
         <StatCard label={over ? "Over by" : "Remaining"} value={formatCentsCompact(Math.abs(summary.remainingCents))} tone={over ? "red" : "green"} />
       </div>
 
+      <div className="flex items-center gap-3">
+        <div className="flex gap-0.5 rounded-[10px] bg-muted p-[3px]" role="group" aria-label="Budget view">
+          {(["lines", "insights"] as const).map((value) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={view === value}
+              onClick={() => setView(value)}
+              className={`rounded-lg px-3.5 py-1.5 text-[13px] font-bold ${view === value ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              {value === "lines" ? "Lines" : "Insights"}
+            </button>
+          ))}
+        </div>
+        <Button type="button" variant="outline" className="ml-auto" onClick={downloadCsv} disabled={lines.length === 0}>
+          Download CSV
+        </Button>
+      </div>
+
+      {view === "insights" ? (
+        <InsightsPanel
+          name={budget.name}
+          fiscalYear={budget.fiscalYear}
+          summary={summary}
+          lines={lines}
+          unlinkedLines={needItems.length}
+        />
+      ) : (
+      <>
       <section className="flex flex-col gap-3.5 rounded-2xl border bg-card p-5" aria-label="Where it went">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-bold">Where it went</h2>
@@ -756,6 +798,8 @@ function BudgetBody({
             </div>
           )}
         </div>
+      )}
+      </>
       )}
     </div>
   );

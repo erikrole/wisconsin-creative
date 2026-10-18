@@ -845,3 +845,38 @@ export async function getLineHistory(lineId: string): Promise<LineHistoryEntry[]
     changes: describeLineChanges(row.beforeJson as Record<string, unknown> | null, row.afterJson as Record<string, unknown> | null),
   }));
 }
+
+
+export type BudgetTrendRow = {
+  fiscalYear: string;
+  submittedCents: number;
+  spentCents: number;
+  forecastCents: number;
+  allocationCents: number | null;
+};
+
+/** One budget name across fiscal years, oldest first, for the year-over-year view. */
+export async function getBudgetTrend(name: string): Promise<BudgetTrendRow[]> {
+  const budgets = await db.budget.findMany({
+    where: { name },
+    orderBy: { fiscalYear: "asc" },
+    select: {
+      fiscalYear: true,
+      allocationCents: true,
+      lines: { select: { status: true, category: true, unitCostCents: true, quantity: true, spentCents: true, refundCents: true, unplanned: true } },
+    },
+  });
+  return budgets.map((budget) => {
+    const summary = summarizeBudget(
+      budget.lines.map((line) => ({ ...line, status: line.status as BudgetLineStatusValue, category: line.category as BudgetCategoryValue })),
+      budget.allocationCents,
+    );
+    return {
+      fiscalYear: budget.fiscalYear,
+      submittedCents: summary.submittedCents,
+      spentCents: summary.spentCents,
+      forecastCents: summary.forecastCents,
+      allocationCents: budget.allocationCents,
+    };
+  });
+}
