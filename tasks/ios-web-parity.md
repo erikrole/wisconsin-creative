@@ -6,8 +6,6 @@ This is the handoff for the next native slice. Compare the website's pages and s
 
 Open, and off limits for file overlap:
 
-- #512 My hours on the profile
-- #511 kiosk scans and due days
 - #510 kit return times
 - #497, #486, #485, and #484 Users to Staff and role tabs
 - #494 Budget
@@ -51,6 +49,7 @@ Take the first item under **Missing** whose blocked note is clear. Keep one scre
 - [x] **Shared software logins.** Read and copy from Browse (#502). Creating, editing, and archiving stay on the web. Photo Mechanic redesign remains #488.
 - [x] **Team badge shelf.** Read-only staff catalog. Awarding a group stays on the web.
 - [x] **Away-game travel roster.** Event detail lists who is traveling and opens a profile. Adding and removing travelers stays on the website.
+- [x] **My hours.** Your profile shows this week and this month from `GET /api/shifts/my-hours`. Students, staff, and admins see it. Collaborators do not. A failed refresh keeps the totals already on screen. Added in this slice.
 - [x] **Item activity.** Staff and admin read `GET /api/assets/:id/activity` (all activity, item updates, or bookings). A booking row opens that booking. Students do not see it.
 
 ## Missing

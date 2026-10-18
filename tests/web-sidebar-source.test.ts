@@ -123,7 +123,7 @@ describe("web sidebar source contract", () => {
     const appShell = source("src/components/AppShell.tsx");
     const sidebar = source("src/components/Sidebar.tsx");
 
-    expect(sidebar).toContain('href={`/users/${user.id}`}');
+    expect(sidebar).toContain('href={`/staff/${user.id}`}');
     expect(sidebar).toContain('aria-label="Account menu"');
     expect(appShell).not.toContain('aria-label="My profile"');
     expect(appShell).not.toContain("<TooltipContent>Profile</TooltipContent>");
@@ -134,7 +134,7 @@ describe("web sidebar source contract", () => {
     const sidebar = source("src/components/Sidebar.tsx");
     const sectionNav = source("src/components/SectionNav.tsx");
 
-    expect(sidebar).toMatch(/<Link\s+prefetch=\{false\}\s+href=\{`\/users\/\$\{user\.id\}`\}/);
+    expect(sidebar).toMatch(/<Link\s+prefetch=\{false\}\s+href=\{`\/staff\/\$\{user\.id\}`\}/);
     expect(sidebar).toMatch(/<Link prefetch=\{false\} href=\{href\}/);
     expect(appShell).toContain('<Link prefetch={false} href="/notifications"');
     expect(sectionNav).toMatch(/<Link\s+prefetch=\{false\}\s+href=\{href\}/);

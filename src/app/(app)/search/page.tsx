@@ -66,7 +66,7 @@ const SEARCH_RESULT_SOURCES = {
   items: "Items",
   checkouts: "Checkouts",
   reservations: "Reservations",
-  users: "Users",
+  users: "Staff",
   guides: "Guides",
 } as const;
 
@@ -229,7 +229,7 @@ export default function SearchPage() {
             id: u.id,
             title: u.name ?? "Unnamed user",
             subtitle: [u.role, u.email].filter(Boolean).join(" · "),
-            href: `/users/${u.id}`,
+            href: `/staff/${u.id}`,
           });
         }
       } else {
@@ -328,7 +328,7 @@ export default function SearchPage() {
     item: "Items",
     checkout: "Checkouts",
     reservation: "Reservations",
-    user: "Users",
+    user: "Staff",
   };
 
   const sectionViewAllHrefs: Record<string, string> = {
@@ -336,7 +336,7 @@ export default function SearchPage() {
     item: `/items?q=${encodeURIComponent(query.trim())}`,
     checkout: `/bookings?tab=checkouts&q=${encodeURIComponent(query.trim())}`,
     reservation: `/bookings?tab=reservations&q=${encodeURIComponent(query.trim())}`,
-    user: `/users?q=${encodeURIComponent(query.trim())}`,
+    user: `/staff?q=${encodeURIComponent(query.trim())}`,
   };
 
   return (

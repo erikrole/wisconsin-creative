@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { tokenHash, randomHex } from "@/lib/auth";
-import { EMAIL_THEME, buildEmailDocument, escapeEmailHtml, sendEmail } from "@/lib/email";
+import { renderEmail, sendEmail } from "@/lib/email";
 import { env } from "@/lib/env";
 import { HttpError, ok } from "@/lib/http";
 import { forgotPasswordSchema } from "@/lib/validation";
@@ -47,7 +47,7 @@ export const POST = withHandler(async (req) => {
     await sendEmail({
       to: user.email,
       subject: "Reset your password — Wisconsin Creative",
-      html: buildResetEmail(user.name, resetUrl),
+      ...buildResetEmail(user.name, resetUrl),
     });
 
     // Audit the issuance so reset abuse against a target account is traceable.
@@ -63,13 +63,17 @@ export const POST = withHandler(async (req) => {
   return ok({ message: "If that email exists, we sent a reset link.", resetEmailConfigured: true });
 });
 
-function buildResetEmail(name: string, resetUrl: string): string {
-  return buildEmailDocument({
-    title: "Password Reset",
-    content: `
-  <p style="font-size: 15px; line-height: 1.5; color: ${EMAIL_THEME.body};">Hi ${escapeEmailHtml(name)},</p>
-  <p style="font-size: 15px; line-height: 1.5;">Click the link below to reset your password. This link expires in 1 hour.</p>
-  <p><a href="${escapeEmailHtml(resetUrl)}" style="display: inline-block; padding: 10px 24px; background: ${EMAIL_THEME.brand}; color: ${EMAIL_THEME.onBrand}; text-decoration: none; border-radius: 6px; font-weight: 600;">Reset Password</a></p>
-  <p style="font-size: 13px; color: ${EMAIL_THEME.muted};">If you didn&rsquo;t request this, you can safely ignore this email.</p>`.trim(),
+function buildResetEmail(name: string, resetUrl: string) {
+  const firstName = name.trim().split(/\s+/)[0];
+  return renderEmail({
+    preheader: "Use this link within one hour to choose a new password.",
+    eyebrow: "Password reset",
+    headline: "Reset your password",
+    paragraphs: [
+      `${firstName ? `Hi ${firstName}, we` : "We"} got a request to reset the password on your account. This link works for one hour.`,
+    ],
+    action: { label: "Choose a new password", url: resetUrl },
+    note: "Didn't ask for this? Ignore this email and your password stays the same.",
+    showFallbackLink: true,
   });
 }

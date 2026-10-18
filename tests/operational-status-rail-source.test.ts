@@ -52,7 +52,7 @@ describe("operational status rail source contract", () => {
       "src/app/(app)/notifications/page.tsx",
       "src/app/(app)/kits/page.tsx",
       "src/app/(app)/licenses/page.tsx",
-      "src/app/(app)/users/onboarding-status/page.tsx",
+      "src/app/(app)/staff/onboarding-status/page.tsx",
       "src/app/(app)/settings/allowed-emails/page.tsx",
     ];
 
@@ -67,7 +67,7 @@ describe("operational status rail source contract", () => {
 
   it("preserves filter selection in rail details where the summary is a facet", () => {
     const notifications = source("src/app/(app)/notifications/page.tsx");
-    const onboarding = source("src/app/(app)/users/onboarding-status/page.tsx");
+    const onboarding = source("src/app/(app)/staff/onboarding-status/page.tsx");
     const allowedEmails = source("src/app/(app)/settings/allowed-emails/page.tsx");
 
     expect(notifications).toContain('value={unreadOnly ? "unread" : "all"}');

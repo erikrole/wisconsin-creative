@@ -109,7 +109,7 @@ async function grantBadges(tx: TxClient, args: {
         userId: args.userId,
         badgeDefinitionId: award.definitionId,
         studentBadgeId: award.id,
-        href: `/users/${args.userId}?tab=badges`,
+        href: `/staff/${args.userId}?tab=badges`,
       },
       channel: "IN_APP" as const,
       sentAt,

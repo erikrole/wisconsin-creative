@@ -320,9 +320,9 @@ describe("hidden smoke user visibility", () => {
     expect(body.canViewHiddenUsers).toBe(true);
   });
 
-  it("keeps /users hidden-user opt-in behind the /api/me capability", () => {
-    const pageSource = readFileSync("src/app/(app)/users/page.tsx", "utf8");
-    const filtersSource = readFileSync("src/app/(app)/users/UserFilters.tsx", "utf8");
+  it("keeps /staff hidden-user opt-in behind the /api/me capability", () => {
+    const pageSource = readFileSync("src/app/(app)/staff/page.tsx", "utf8");
+    const filtersSource = readFileSync("src/app/(app)/staff/UserFilters.tsx", "utf8");
 
     expect(pageSource).toContain("canViewHiddenUsers");
     expect(pageSource).toContain('params.set("includeHidden", "1")');

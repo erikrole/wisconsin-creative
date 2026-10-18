@@ -127,7 +127,9 @@ beforeEach(() => {
     },
     scanEvent: {
       create: mocks.scanEventCreate,
+      findFirst: mocks.scanEventFindFirst,
     },
+    $queryRaw: vi.fn().mockResolvedValue([]),
     user: {
       findUnique: mocks.userFindUnique,
       // Pickup confirm resolves its actor with the kiosk roster rule
@@ -887,6 +889,59 @@ describe("kiosk pickup serialized scan guard", () => {
     });
     expect(mocks.scanEventCreate).not.toHaveBeenCalled();
     expect(mocks.badgeOnScanResult).not.toHaveBeenCalled();
+  });
+
+  it("does not record a second pickup scan when another request already claimed the item", async () => {
+    mocks.scanKioskPickupBulkUnit.mockResolvedValue({ handled: false });
+    mocks.bookingFindUnique.mockResolvedValue({
+      id: "booking-1",
+      status: "PENDING_PICKUP",
+      kind: "CHECKOUT",
+      requesterUserId: "user-1",
+      locationId: "loc-1",
+    });
+    mocks.findAssetByScanValue.mockResolvedValue({
+      id: "asset-1",
+      assetTag: "FX3 1",
+      name: "FX3 1",
+    });
+    mocks.bookingSerializedItemFindUnique.mockResolvedValue({
+      id: "serialized-1",
+      bookingId: "booking-1",
+      assetId: "asset-1",
+    });
+    // The pre-read outside the write misses the race. The claim inside the
+    // transaction sees the scan the other request already inserted.
+    mocks.scanEventFindFirst.mockResolvedValue(null);
+    const txFindFirst = vi.fn().mockResolvedValue({ id: "scan-raced" });
+    mocks.transaction.mockImplementation((handler) => handler({
+      booking: {
+        findUnique: mocks.bookingFindUnique,
+        updateMany: mocks.bookingUpdateMany,
+      },
+      scanEvent: {
+        create: mocks.scanEventCreate,
+        findFirst: txFindFirst,
+      },
+      user: {
+        findUnique: mocks.userFindUnique,
+        findFirst: mocks.userFindUnique,
+      },
+      $queryRaw: vi.fn().mockResolvedValue([]),
+    }));
+
+    const res = await scanKioskPickup(new Request("http://test", {
+      method: "POST",
+      headers: { "user-agent": "vitest-kiosk" },
+      body: JSON.stringify({ actorId: "user-1", scanValue: "23723854" }),
+    }), routeCtx("booking-1"));
+
+    expect(await res.json()).toEqual({
+      success: false,
+      error: "FX3 1 already scanned",
+      errorCode: "duplicate",
+    });
+    expect(mocks.scanEventCreate).not.toHaveBeenCalled();
   });
 
   it("returns duplicate feedback for a serialized item handed over in an earlier partial pickup", async () => {

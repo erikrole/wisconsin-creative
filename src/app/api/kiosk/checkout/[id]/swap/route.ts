@@ -7,6 +7,7 @@ import { activeCheckoutSwapItemBody } from "@/lib/schemas/kiosk";
 import { findAssetByScanValue } from "@/lib/services/kiosk-scan";
 import { findBulkUnitByScanValue } from "@/lib/services/bulk-unit-scans";
 import { assertKioskCheckoutEditor, requireKioskActor } from "@/lib/services/kiosk-actor";
+import { requireKioskStaffCardUnlessHolder } from "@/lib/kiosk-staff-token";
 import {
   addScannedItemToActiveCheckout,
   isSameAssetModel,
@@ -47,6 +48,7 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
       const actor = await requireKioskActor(tx, actorId);
       const booking = await requireEditableCheckout(tx, { checkoutId: params.id });
       assertKioskCheckoutEditor(actor, booking);
+      requireKioskStaffCardUnlessHolder(req, booking, actor.id, kiosk.kioskId);
 
       let removedLabel: string;
       if ("assetId" in remove) {
