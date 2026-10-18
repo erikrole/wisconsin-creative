@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Download, ExternalLink, Trash2, Upload } from "lucide-react";
+import { Download, ExternalLink, Play, Trash2, Upload } from "lucide-react";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { APPLICATION_STAGES, STAGE_LABELS, STANDING_LABELS, TERM_LABELS, isHttpsUrl } from "@/lib/hiring/contract";
 import type { ApplicationStage } from "@prisma/client";
+import { cn } from "@/lib/utils";
 import { PickAccountDialog, type AccountChoice } from "./HiringDialogs";
+import { AREA_COLORS } from "../../types";
 import { AREA_LABEL, messageOf, type ApplicationDetail } from "./types";
 
 type Props = {
@@ -34,6 +36,57 @@ function ExternalLinkRow({ label, href }: { label: string; href: string | null }
     <a href={href} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-sm underline underline-offset-2">
       {label} <ExternalLink className="size-3.5" aria-hidden />
     </a>
+  );
+}
+
+const STEPS: { stage: ApplicationStage; label: string }[] = [
+  { stage: "APPLIED", label: "Applied" },
+  { stage: "ROUND_1", label: "Round 1" },
+  { stage: "HIRE", label: "Hire" },
+];
+
+/** Applied, Round 1, Hire as a progress track. Passed and withdrawn applicants show a badge instead. */
+function StageStepper({ stage }: { stage: ApplicationStage }) {
+  const current = STEPS.findIndex((step) => step.stage === stage);
+  if (current === -1) {
+    return <Badge variant={stage === "PASSED" ? "orange" : "gray"}>{STAGE_LABELS[stage]}</Badge>;
+  }
+  return (
+    <ol className="flex items-start" aria-label="Application progress">
+      {STEPS.map((step, index) => {
+        const done = index < current || (stage === "HIRE" && index === current);
+        const active = index === current && !done;
+        return (
+          <li key={step.stage} className="flex flex-1 items-start last:flex-none" aria-current={index === current ? "step" : undefined}>
+            <div className="flex flex-col items-center gap-1">
+              <span
+                className={cn(
+                  "flex size-5 items-center justify-center rounded-full text-[11px] font-black",
+                  done ? "bg-[#218358] text-white" : active ? "bg-primary text-white" : "bg-muted text-muted-foreground",
+                )}
+                aria-hidden
+              >
+                {done ? "✓" : ""}
+              </span>
+              <span className={cn("text-xs font-bold", index > current ? "text-muted-foreground" : "text-foreground")}>{step.label}</span>
+            </div>
+            {index < STEPS.length - 1 && <span className={cn("mx-2 mt-2.5 h-0.5 flex-1", index < current ? "bg-[#218358]" : "bg-muted")} aria-hidden />}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+function Stars({ value, className }: { value: number; className?: string }) {
+  return (
+    <span className={cn("text-[#e5a200]", className)} role="img" aria-label={`${value} of 5`}>
+      {[1, 2, 3, 4, 5].map((n) => (
+        <span key={n} className={n <= Math.floor(value) ? undefined : "text-[#d5d7de]"} aria-hidden>
+          ★
+        </span>
+      ))}
+    </span>
   );
 }
 
@@ -265,13 +318,35 @@ export default function ApplicationSheet({ applicationId, onClose, onChanged, on
   }, [applicationId, detail, queue]);
 
   const activeDocument = detail?.documents.find((d) => d.id === activeDoc) ?? null;
+  const ratedNotes = (detail?.notes ?? []).filter((n) => n.rating != null);
+  const ratingAverage = ratedNotes.length ? ratedNotes.reduce((sum, n) => sum + (n.rating ?? 0), 0) / ratedNotes.length : 0;
 
   return (
     <Sheet open={applicationId !== null} onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="w-full overflow-y-auto sm:max-w-2xl">
         <SheetHeader>
           <SheetTitle>{detail?.applicant.name ?? "Applicant"}</SheetTitle>
-          <SheetDescription>{detail ? `${detail.cycle.label} application` : "Loading"}</SheetDescription>
+          <SheetDescription className="flex items-center gap-2">
+            {detail ? (
+              <>
+                {detail.primaryArea && (
+                  <span className="size-2 shrink-0 rounded-full" style={{ background: AREA_COLORS[detail.primaryArea] ?? "#8b8d98" }} aria-hidden />
+                )}
+                <span>
+                  {[
+                    detail.primaryArea ? AREA_LABEL[detail.primaryArea] : null,
+                    detail.applicant.standing ? STANDING_LABELS[detail.applicant.standing] : null,
+                    detail.applicant.gradTerm && detail.applicant.gradYear ? `grad ${detail.applicant.gradYear}` : null,
+                    `${detail.cycle.label} application`,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </span>
+              </>
+            ) : (
+              "Loading"
+            )}
+          </SheetDescription>
         </SheetHeader>
 
         {error && (
@@ -283,6 +358,37 @@ export default function ApplicationSheet({ applicationId, onClose, onChanged, on
 
         {detail && (
           <div className="grid gap-5 px-4 pb-6">
+            <StageStepper stage={detail.stage} />
+
+            {ratedNotes.length > 0 && (
+              <div className="flex items-center gap-3 rounded-xl border border-[#f5e6b3] bg-[#fffbeb] px-4 py-2.5">
+                <span className="text-3xl font-black tracking-tight tabular-nums">{ratingAverage.toFixed(1)}</span>
+                <div>
+                  <Stars value={ratingAverage} />
+                  <p className="text-xs text-muted-foreground">
+                    {ratedNotes.length} {ratedNotes.length === 1 ? "review" : "reviews"}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {detail.interviewUrl && isHttpsUrl(detail.interviewUrl) && (
+              <a
+                href={detail.interviewUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-3 rounded-xl border border-[#d9e2ff] bg-[#f5f8ff] px-4 py-3 text-foreground no-underline hover:bg-[#eef2ff]"
+              >
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-white">
+                  <Play className="size-4 fill-current" aria-hidden />
+                </span>
+                <span>
+                  <span className="block text-sm font-black">Watch interview</span>
+                  <span className="block text-xs text-muted-foreground">Opens in a new tab</span>
+                </span>
+              </a>
+            )}
+
             <div className="flex flex-wrap items-end gap-3">
               <div className="grid gap-1.5">
                 <Label htmlFor="sheet-stage">Stage</Label>
@@ -362,7 +468,7 @@ export default function ApplicationSheet({ applicationId, onClose, onChanged, on
 
             <div className="flex flex-wrap gap-4">
               <ExternalLinkRow label="Portfolio" href={detail.applicant.portfolioUrl} />
-              <ExternalLinkRow label="Interview" href={detail.interviewUrl} />
+              {!(detail.interviewUrl && isHttpsUrl(detail.interviewUrl)) && <ExternalLinkRow label="Interview" href={detail.interviewUrl} />}
             </div>
 
             {detail.applicant.history.length > 0 && (
@@ -509,16 +615,33 @@ export default function ApplicationSheet({ applicationId, onClose, onChanged, on
               </form>
               <ul className="grid gap-3">
                 {detail.notes.map((n) => (
-                  <li key={n.id} className="rounded-md border p-3 text-sm">
-                    <p className="whitespace-pre-wrap">{n.body}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {n.author?.name ?? "Former user"} · {new Date(n.createdAt).toLocaleDateString()}
-                      {n.rating != null ? ` · ${n.rating} of 5` : ""}
-                    </p>
+                  <li key={n.id} className="rounded-xl bg-muted/60 px-3.5 py-3 text-sm">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-black">{n.author?.name ?? "Former user"}</span>
+                      <span className="text-xs text-muted-foreground">{new Date(n.createdAt).toLocaleDateString()}</span>
+                    </div>
+                    {n.rating != null && <Stars value={n.rating} className="text-xs" />}
+                    <p className="mt-1 whitespace-pre-wrap">{n.body}</p>
                   </li>
                 ))}
               </ul>
             </section>
+          </div>
+        )}
+        {detail && (
+          <div className="sticky bottom-0 mt-auto flex items-center gap-2 border-t bg-card px-4 py-3">
+            {detail.stage !== "PASSED" && (
+              <Button variant="outline" className="border-[#f3c7c7] text-[#b42318] hover:text-[#b42318]" onClick={() => void onStageChange(detail.id, "PASSED").then(() => load(detail.id))}>
+                Pass
+              </Button>
+            )}
+            <span className="flex-1" />
+            <Button variant="outline" onClick={() => noteRef.current?.focus()}>
+              Add note
+            </Button>
+            {detail.stage !== "HIRE" && (
+              <Button onClick={() => void onStageChange(detail.id, "HIRE").then(() => load(detail.id))}>Mark as Hire</Button>
+            )}
           </div>
         )}
       </SheetContent>

@@ -24,7 +24,7 @@
       "Profiles get Email and Call buttons, an area chip, and an At a glance card.",
       "Roster rows show an area dot and a Graduating chip, and hide the role column when a role tab already says it.",
       "The roster shows an On shift now strip, and a new Today tab lists who is working which event now, later, and tomorrow.",
-      "Hiring and Onboarding Status get the same look: a targets strip with area dots, calmer board cards with ratings and an Interviewed chip, and one list that puts stale and waiting invites first."
+      "Hiring and Onboarding Status get the same look: a targets strip, calmer board cards, one onboarding list, and an application sheet with a progress track, average rating, Watch interview card, and Pass and Hire buttons that stay in view."
     ],
     "platforms": ["Web"],
     "pr": 486
