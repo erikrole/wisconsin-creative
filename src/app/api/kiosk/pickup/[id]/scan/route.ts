@@ -170,21 +170,22 @@ export const POST = withKiosk<{ id: string }>(async (req, { params }) => {
     return ok({ success: false, error: `${label} already picked up`, errorCode: "duplicate" });
   }
 
-  const existingScan = await db.scanEvent.findFirst({
-    where: {
-      bookingId: activeBooking.id,
-      phase: "CHECKOUT",
-      success: true,
-      assetId: asset.id,
-    },
-    select: { id: true },
-  });
-  if (existingScan) {
-    const label = asset.name || asset.assetTag;
-    return ok({ success: false, error: `${label} already scanned`, errorCode: "duplicate" });
-  }
-
-  await db.$transaction(async (tx) => {
+  const label = asset.name || asset.assetTag;
+  // The duplicate check and the scan write share one transaction, and the
+  // booking row lock makes the second of two double-taps see the first scan
+  // instead of inserting another custody event.
+  const claimed = await db.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM bookings WHERE id = ${activeBooking.id} FOR UPDATE`;
+    const existingScan = await tx.scanEvent.findFirst({
+      where: {
+        bookingId: activeBooking.id,
+        phase: "CHECKOUT",
+        success: true,
+        assetId: asset.id,
+      },
+      select: { id: true },
+    });
+    if (existingScan) return false;
     await tx.scanEvent.create({
       data: {
         bookingId: activeBooking.id,
@@ -197,7 +198,11 @@ export const POST = withKiosk<{ id: string }>(async (req, { params }) => {
         deviceContext: req.headers.get("user-agent") ?? "kiosk",
       },
     });
-  });
+    return true;
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  if (!claimed) {
+    return ok({ success: false, error: `${label} already scanned`, errorCode: "duplicate" });
+  }
 
   return ok({
     success: true,

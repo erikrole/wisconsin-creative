@@ -306,7 +306,7 @@ struct KioskOperatorHubView: View {
                             detail: itemsLine(checkout),
                             status: dueStatus(checkout),
                             statusColor: checkout.isOverdue ? KioskStatus.problem
-                                : (Calendar.current.dayOffset(of: checkout.endsAt, from: today) == 0 ? KioskStatus.attention : KioskText.secondary),
+                                : (dueOnChicagoToday(checkout) ? KioskStatus.attention : KioskText.secondary),
                             items: checkout.items
                         ) {
                             Button("Return") { startReturn(drawerContext(for: checkout)) }
@@ -474,16 +474,20 @@ struct KioskOperatorHubView: View {
     }
 
     private func dueStatus(_ checkout: KioskStudentCheckout) -> String {
-        let time = checkout.endsAt.formatted(.dateTime.hour().minute())
+        let time = checkout.endsAt.kioskWallTime()
         if checkout.isOverdue { return "Overdue" }
-        if Calendar.current.dayOffset(of: checkout.endsAt, from: today) == 0 { return "Due today \(time)" }
+        if dueOnChicagoToday(checkout) { return "Due today \(time)" }
         return "Due \(checkout.endsAt.formatted(.dateTime.weekday(.abbreviated))) \(time)"
+    }
+
+    private func dueOnChicagoToday(_ checkout: KioskStudentCheckout) -> Bool {
+        checkout.isDueToday ?? (KioskTime.calendar.dayOffset(of: checkout.endsAt, from: today) == 0)
     }
 
     private func readyLine(_ startsAt: Date) -> String {
         if startsAt <= Date() { return "ready now" }
-        if Calendar.current.dayOffset(of: startsAt, from: today) == 0 {
-            return "ready from \(startsAt.formatted(.dateTime.hour().minute()))"
+        if KioskTime.calendar.dayOffset(of: startsAt, from: today) == 0 {
+            return "ready from \(startsAt.kioskWallTime())"
         }
         return "from \(startsAt.formatted(.dateTime.weekday(.abbreviated).hour().minute()))"
     }

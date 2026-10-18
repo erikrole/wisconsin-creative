@@ -1,4 +1,37 @@
+import Combine
 import Foundation
+import SwiftUI
+import UIKit
+
+/// Institution clock for the kiosk. Due days, night hours, and "Today" chips
+/// follow America/Chicago even when the iPad's timezone is something else.
+enum KioskTime {
+    static let timeZone = TimeZone(identifier: "America/Chicago")!
+
+    static var calendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        return calendar
+    }
+
+    static func startOfDay(for date: Date = .now) -> Date {
+        calendar.startOfDay(for: date)
+    }
+}
+
+extension Date {
+    /// Clock time in the kiosk's Chicago zone.
+    func kioskWallTime() -> String {
+        kioskFormatted(.dateTime.hour().minute())
+    }
+
+    /// `style` evaluated in the kiosk's Chicago zone.
+    func kioskFormatted(_ style: Date.FormatStyle) -> String {
+        var style = style
+        style.timeZone = KioskTime.timeZone
+        return formatted(style)
+    }
+}
 
 // MARK: - Kiosk date formatting
 //
@@ -10,7 +43,7 @@ extension Date {
     /// within days, so the year is pure noise and the weekday is what staff
     /// actually read. The year only reappears when the date is not this year,
     /// which is the only case where omitting it could mislead.
-    func kioskDueStamp(now: Date = Date(), calendar: Calendar = .current) -> String {
+    func kioskDueStamp(now: Date = Date(), calendar: Calendar = KioskTime.calendar) -> String {
         guard calendar.component(.year, from: self) == calendar.component(.year, from: now) else {
             return formatted(date: .abbreviated, time: .shortened)
         }
@@ -27,9 +60,9 @@ extension Date {
     func kioskDashboardDueStamp(
         isOverdue: Bool,
         now: Date = Date(),
-        calendar: Calendar = .current
+        calendar: Calendar = KioskTime.calendar
     ) -> String {
-        let time = formatted(.dateTime.hour().minute())
+        let time = kioskWallTime()
 
         if isOverdue {
             return "Overdue · \(kioskCompactDuration(now.timeIntervalSince(self)))"
@@ -77,7 +110,7 @@ extension Date {
     }
 
     func kioskClockParts() -> (time: String, seconds: String, meridiem: String) {
-        let components = Calendar.current.dateComponents([.hour, .minute, .second], from: self)
+        let components = KioskTime.calendar.dateComponents([.hour, .minute, .second], from: self)
         let rawHour = components.hour ?? 0
         let hour = rawHour % 12 == 0 ? 12 : rawHour % 12
         let minute = components.minute ?? 0
@@ -120,7 +153,7 @@ extension KioskEvent {
             let start = kioskDisplayStartDay
             let rawEndExclusiveDay = kioskDisplayDay(for: endsAt)
             guard rawEndExclusiveDay > start else { return start }
-            return Calendar.current.date(byAdding: .day, value: -1, to: rawEndExclusiveDay) ?? start
+            return KioskTime.calendar.date(byAdding: .day, value: -1, to: rawEndExclusiveDay) ?? start
         }
 
         return kioskDisplayDay(for: endsAt.addingTimeInterval(-1))
@@ -139,7 +172,7 @@ extension KioskEvent {
     }
 
     private var kioskDisplayDayCalendar: Calendar {
-        guard allDay else { return .current }
+        guard allDay else { return KioskTime.calendar }
         var calendar = Calendar(identifier: .gregorian)
         if let utc = TimeZone(identifier: "UTC") {
             calendar.timeZone = utc
@@ -149,10 +182,55 @@ extension KioskEvent {
 
     private func kioskDisplayDay(for instant: Date) -> Date {
         let components = kioskDisplayDayCalendar.dateComponents([.year, .month, .day], from: instant)
-        return Calendar.current.date(from: DateComponents(
+        return KioskTime.calendar.date(from: DateComponents(
+            timeZone: KioskTime.timeZone,
             year: components.year,
             month: components.month,
             day: components.day
-        )) ?? Calendar.current.startOfDay(for: instant)
+        )) ?? KioskTime.startOfDay(for: instant)
+    }
+}
+
+private struct KioskDayProvider: ViewModifier {
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var today = KioskTime.startOfDay()
+
+    func body(content: Content) -> some View {
+        content
+            .environment(\.today, today)
+            .environment(\.calendar, KioskTime.calendar)
+            .environment(\.timeZone, KioskTime.timeZone)
+            .onReceive(
+                NotificationCenter.default.publisher(for: .NSCalendarDayChanged)
+                    .merge(with: NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification))
+                    .receive(on: RunLoop.main)
+            ) { _ in refresh() }
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active { refresh() }
+            }
+            .task(id: today) {
+                let next = KioskTime.calendar.date(byAdding: .day, value: 1, to: today) ?? today.addingTimeInterval(24 * 60 * 60)
+                let delay = next.timeIntervalSinceNow
+                guard delay > 0 else {
+                    refresh()
+                    return
+                }
+                try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                refresh()
+            }
+    }
+
+    private func refresh() {
+        let current = KioskTime.startOfDay()
+        if current != today { today = current }
+    }
+}
+
+extension View {
+    /// Chicago calendar day for kiosk Today/Tomorrow and due-back buckets.
+    /// Replaces `providesCurrentDay()` on the kiosk root so a device set to
+    /// another timezone still rolls the day at Chicago midnight.
+    func providesKioskDay() -> some View {
+        modifier(KioskDayProvider())
     }
 }

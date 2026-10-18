@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   bulkUnitAllocationFindFirst: vi.fn(),
   serializedFindUnique: vi.fn(),
   serializedUpdate: vi.fn(),
+  serializedUpdateMany: vi.fn(),
   assetAllocationUpdateMany: vi.fn(),
   bookingUpdate: vi.fn(),
   scanSessionUpdateMany: vi.fn(),
@@ -130,6 +131,7 @@ beforeEach(() => {
         count: mocks.serializedCount,
         findUnique: mocks.serializedFindUnique,
         update: mocks.serializedUpdate,
+        updateMany: mocks.serializedUpdateMany,
       },
       checkinItemReport: { findMany: vi.fn(async () => []) },
       bookingBulkItem: { findMany: mocks.bulkFindMany },
@@ -139,6 +141,7 @@ beforeEach(() => {
       auditLog: { findFirst: mocks.auditLogFindFirst },
     }),
   );
+  mocks.serializedUpdateMany.mockResolvedValue({ count: 1 });
   mocks.auditLogFindFirst.mockResolvedValue(null);
   mocks.findBulkUnitByScanValue.mockResolvedValue(null);
   mocks.scanKioskCheckinBulkUnit.mockResolvedValue({ handled: false });
@@ -926,5 +929,27 @@ describe("returns completed by a scan", () => {
     expect(mocks.createAuditEntryTx).toHaveBeenCalledWith(expect.anything(), expect.not.objectContaining({
       after: expect.anything(),
     }));
+  });
+
+  it("does not restock or finish a return when another scan already claimed the item", async () => {
+    const { kioskCheckinAsset: realKioskCheckinAsset } = await vi.importActual<
+      typeof import("@/lib/services/bookings-checkin")
+    >("@/lib/services/bookings-checkin");
+    mocks.serializedFindUnique.mockResolvedValue({ id: "item-1", allocationStatus: "active" });
+    mocks.serializedUpdateMany.mockResolvedValue({ count: 0 });
+    mocks.bookingFindUnique.mockResolvedValue({
+      locationId: "loc-1",
+      requesterUserId: "user-1",
+      custodyScope: "PERSON",
+      endsAt: new Date("2026-05-06T12:00:00.000Z"),
+    });
+
+    const outcome = await mocks.transaction((tx: Parameters<typeof realKioskCheckinAsset>[0]) =>
+      realKioskCheckinAsset(tx, { bookingId: "booking-1", assetId: "asset-1", actorUserId: "user-2" }));
+
+    expect(outcome).toEqual({ ok: false, reason: "already_returned" });
+    expect(mocks.assetAllocationUpdateMany).not.toHaveBeenCalled();
+    expect(mocks.createAuditEntryTx).not.toHaveBeenCalled();
+    expect(mocks.bookingUpdate).not.toHaveBeenCalled();
   });
 });

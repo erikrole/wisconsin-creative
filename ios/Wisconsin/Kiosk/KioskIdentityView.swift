@@ -510,7 +510,7 @@ extension KioskIdentityView {
         let dueLine: String = {
             guard let endsAt else { return "OUT NOW" }
             if isOverdue { return "OVERDUE · DUE \(KioskDueCopy.relative(endsAt, now: today).uppercased())" }
-            if Calendar.current.dayOffset(of: endsAt, from: today) == 0 { return "DUE BACK TODAY · \(endsAt.formatted(.dateTime.hour().minute()))" }
+            if KioskTime.calendar.dayOffset(of: endsAt, from: today) == 0 { return "DUE BACK TODAY · \(endsAt.kioskWallTime())" }
             return "DUE BACK \(KioskDueCopy.relative(endsAt, now: today).uppercased())"
         }()
         let items = returnDetail?.items.filter { !$0.returned } ?? []

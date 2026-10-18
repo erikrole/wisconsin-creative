@@ -7,7 +7,6 @@ This is the handoff for the next native slice. Compare the website's pages and s
 Open, and off limits for file overlap:
 
 - #512 My hours on the profile
-- #511 kiosk scans and due days
 - #510 kit return times
 - #497, #486, #485, and #484 Users to Staff and role tabs
 - #494 Budget
