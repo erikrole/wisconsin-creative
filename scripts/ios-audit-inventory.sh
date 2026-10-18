@@ -55,6 +55,7 @@ read -r -d '' REGISTRY <<'EOF' || true
 HomeView.swift                         | dashboard                   | audit
 BookingsView.swift                     | bookings                    | audit
 BookingDetailView.swift                | booking-detail              | audit
+Booking/BookingActivityView.swift      |                             | exempt-shared
 Booking/ReservationEditFlow.swift      |                             | exempt-shared
 Booking/BookingActionSheets.swift      |                             | exempt-shared
 CreateBookingSheet.swift               | create-booking              | audit
@@ -63,6 +64,7 @@ BrowseView.swift                       | browse                      | audit
 BlastsView.swift                       | blasts                      | audit
 ItemsView.swift                        | items                       | audit
 ItemDetailView.swift                   | item-detail                 | audit
+ItemActivityView.swift                 | item-detail                 | audit
 KitsView.swift                         | kits                        | audit
 KitDetailView.swift                    | kit-detail                  | audit
 BulkInventoryDetailView.swift          | bulk-inventory              | audit
