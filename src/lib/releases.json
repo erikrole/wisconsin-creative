@@ -60,7 +60,7 @@
       "An Order table rolls staff kits, student kits and picks up into one quantity per item and size. Student shoes join once their style is chosen.",
       "Each person shows Standard issue (covered by the department), Core kit where their fit has one, and the number of pieces they picked.",
       "Add students to the list, see who is missing a top or shoe size, and fill sizes in for them. Sizes are saved to the student's profile.",
-      "Tabs for Overview, People, Order, Receiving and Handout keep the page easy to follow, and a Needs attention list shows what to fix next."
+      "Tabs for Overview, People, Order, Receiving, Handout and History keep the page easy to follow, and a Needs attention list shows what to fix next. History opens last year with its budget, items and people."
     ],
     "platforms": [
       "Web"

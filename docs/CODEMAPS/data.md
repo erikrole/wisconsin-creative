@@ -121,6 +121,9 @@
 | `GearPickCycle` | 17 | 1 |
 | `GearPickHandout` | 11 | 3 |
 | `GearPickReceipt` | 11 | 2 |
+| `GearPastCycle` | 9 | 1 |
+| `GearPastItem` | 10 | 2 |
+| `GearPastPerson` | 8 | 2 |
 | `GearPickStudent` | 6 | 3 |
 | `GearPickParticipant` | 10 | 3 |
 | `GearPickSubmission` | 9 | 1 |

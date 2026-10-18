@@ -3045,6 +3045,62 @@ Indexes and constraints:
 - `@@index([cycleId, sku])`
 - `@@map("gear_pick_receipts")`
 
+## Model `GearPastCycle`
+
+Fields: 9
+
+- `id                 String          @id`
+- `title              String`
+- `budgetCents        Int             @map("budget_cents")`
+- `budgetedSpendCents Int             @map("budgeted_spend_cents")`
+- `otherSpendCents    Int             @default(0) @map("other_spend_cents")`
+- `note               String?`
+- `createdAt          DateTime        @default(now()) @map("created_at")`
+- `items              GearPastItem[]`
+- `people             GearPastPerson[]`
+
+Indexes and constraints:
+
+- `@@map("gear_past_cycles")`
+
+## Model `GearPastItem`
+
+Fields: 10
+
+- `id             String        @id @default(cuid())`
+- `cycleId        String        @map("cycle_id")`
+- `sku            String`
+- `itemName       String        @map("item_name")`
+- `colorLabel     String        @map("color_label")`
+- `unitPriceCents Int           @map("unit_price_cents")`
+- `plannedQty     Int           @map("planned_qty")`
+- `orderedQty     Int           @default(0) @map("ordered_qty")`
+- `receivedQty    Int           @default(0) @map("received_qty")`
+- `cycle          GearPastCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)`
+
+Indexes and constraints:
+
+- `@@index([cycleId])`
+- `@@map("gear_past_items")`
+
+## Model `GearPastPerson`
+
+Fields: 8
+
+- `id         String        @id @default(cuid())`
+- `cycleId    String        @map("cycle_id")`
+- `name       String`
+- `groupLabel String        @map("group_label")`
+- `fit        String`
+- `topSize    String?       @map("top_size")`
+- `shoeSize   String?       @map("shoe_size")`
+- `cycle      GearPastCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)`
+
+Indexes and constraints:
+
+- `@@index([cycleId])`
+- `@@map("gear_past_people")`
+
 ## Model `GearPickStudent`
 
 Fields: 6

@@ -19,6 +19,7 @@ import type {
   GearPickAggregateRow,
   GearPickAdminStudent,
   GearPickBudgetDto,
+  GearPastCycleDto,
   GearPickCycleDto,
   GearPickHandoutDto,
   GearPickReceiptDto,
@@ -959,4 +960,31 @@ export function buildGearPicksCsvRows(participants: GearPickAdminParticipant[]):
     }
   }
   return rows;
+}
+
+/** Past years of UA gear, newest first. They live in their own tables and never affect the live cycle. */
+export async function getGearPastCycles(): Promise<GearPastCycleDto[]> {
+  const cycles = await db.gearPastCycle.findMany({
+    orderBy: { id: "desc" },
+    select: {
+      id: true,
+      title: true,
+      budgetCents: true,
+      budgetedSpendCents: true,
+      otherSpendCents: true,
+      note: true,
+      items: {
+        select: { sku: true, itemName: true, colorLabel: true, unitPriceCents: true, plannedQty: true, orderedQty: true, receivedQty: true },
+        orderBy: [{ itemName: "asc" }, { sku: "asc" }],
+      },
+      people: {
+        select: { name: true, groupLabel: true, fit: true, topSize: true, shoeSize: true },
+        orderBy: [{ groupLabel: "asc" }, { name: "asc" }],
+      },
+    },
+  });
+  return cycles.map((cycle) => ({
+    ...cycle,
+    remainingCents: cycle.budgetCents - cycle.budgetedSpendCents,
+  }));
 }

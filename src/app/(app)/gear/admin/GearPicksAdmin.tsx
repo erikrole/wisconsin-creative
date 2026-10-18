@@ -22,6 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AllotmentOverview } from "./AllotmentOverview";
 import { HandoutBoard } from "./HandoutBoard";
+import { HistoryBoard } from "./HistoryBoard";
 import { OrderPlan } from "./OrderPlan";
 import { OrderTracking } from "./OrderTracking";
 import { KitPills } from "./KitPills";
@@ -68,7 +69,7 @@ type AdminChange =
   | { action: "updateParticipant"; participantId: string; fit?: GearPickFitKey; allowanceCents?: number }
   | { action: "removeParticipant"; participantId: string };
 
-const TABS = ["overview", "people", "order", "receiving", "handout"] as const;
+const TABS = ["overview", "people", "order", "receiving", "handout", "history"] as const;
 type AdminTab = (typeof TABS)[number];
 /** Section anchors (used by the Needs attention links) and the tab each one lives on. */
 const TAB_FOR_ANCHOR: Record<string, AdminTab> = {
@@ -202,6 +203,7 @@ export function GearPicksAdmin() {
           <TabsTrigger value="order">Order</TabsTrigger>
           <TabsTrigger value="receiving">Receiving</TabsTrigger>
           <TabsTrigger value="handout">Handout</TabsTrigger>
+          <TabsTrigger value="history">History</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview">
@@ -317,6 +319,10 @@ export function GearPicksAdmin() {
 
         <TabsContent value="handout">
           <HandoutBoard participants={data.participants} students={data.students} handouts={data.handouts} pending={pending} onApply={applyChange} />
+        </TabsContent>
+
+        <TabsContent value="history">
+          <HistoryBoard />
         </TabsContent>
       </Tabs>
     </FadeUp>

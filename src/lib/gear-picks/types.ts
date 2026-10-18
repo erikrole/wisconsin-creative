@@ -140,3 +140,26 @@ export type GearPickHandoutDto = {
   quantity: number;
   handedOutAt: string;
 };
+
+/** A finished year, read-only. Money is in whole cents. */
+export type GearPastCycleDto = {
+  id: string;
+  title: string;
+  budgetCents: number;
+  /** Spend the old sheet counted against the budget. */
+  budgetedSpendCents: number;
+  otherSpendCents: number;
+  /** Budget minus budgeted spend. Negative means over budget. */
+  remainingCents: number;
+  note: string | null;
+  items: {
+    sku: string;
+    itemName: string;
+    colorLabel: string;
+    unitPriceCents: number;
+    plannedQty: number;
+    orderedQty: number;
+    receivedQty: number;
+  }[];
+  people: { name: string; groupLabel: string; fit: string; topSize: string | null; shoeSize: string | null }[];
+};

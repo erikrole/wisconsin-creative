@@ -30,6 +30,7 @@ vi.mock("@/lib/db", () => {
       gearPickStudent: { findMany: vi.fn() },
       gearPickReceipt: { findMany: vi.fn() },
       gearPickHandout: { findMany: vi.fn() },
+      gearPastCycle: { findMany: vi.fn() },
       user: { findUnique: vi.fn(), findMany: vi.fn() },
       $transaction: vi.fn(),
       _mockTx: tx,
@@ -43,6 +44,7 @@ import { db } from "@/lib/db";
 import { checkRateLimit, enforceRateLimit } from "@/lib/rate-limit";
 import { GET as getMe, PUT as putMe } from "@/app/api/gear-picks/me/route";
 import { GET as getAdmin, PATCH as patchAdmin } from "@/app/api/gear-picks/admin/route";
+import { GET as getHistory } from "@/app/api/gear-picks/admin/history/route";
 import { GET as exportCsv } from "@/app/api/gear-picks/admin/export.csv/route";
 import { GET as exportSheet } from "@/app/api/gear-picks/admin/export.xlsx/route";
 import { GET as getUserPicks } from "@/app/api/gear-picks/users/[userId]/route";
@@ -585,6 +587,21 @@ describe("admin routes", () => {
       context,
     );
     expect(bad.status).toBe(400);
+  });
+
+  it("serves past years to admins only, with the remaining budget worked out", async () => {
+    vi.mocked(db.gearPastCycle.findMany).mockResolvedValue([
+      { id: "2026-27", title: "2026–27", budgetCents: 550_000, budgetedSpendCents: 583_100, otherSpendCents: 46_250, note: null, items: [], people: [] },
+    ] as never);
+
+    vi.mocked(requireAuth).mockResolvedValue(staff);
+    expect((await getHistory(new Request(`${ORIGIN}/api/gear-picks/admin/history`), context)).status).toBe(403);
+
+    vi.mocked(requireAuth).mockResolvedValue(admin);
+    const response = await getHistory(new Request(`${ORIGIN}/api/gear-picks/admin/history`), context);
+    expect(response.status).toBe(200);
+    const { data } = await response.json();
+    expect(data.cycles[0]).toMatchObject({ id: "2026-27", remainingCents: -33_100 });
   });
 
   it("launches the cycle to staff with an audit entry", async () => {

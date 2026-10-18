@@ -2967,6 +2967,51 @@ model GearPickReceipt {
   @@map("gear_pick_receipts")
 }
 
+/// A finished year of UA gear, kept read-only and separate from the live pick cycle.
+model GearPastCycle {
+  id                 String          @id
+  title              String
+  budgetCents        Int             @map("budget_cents")
+  budgetedSpendCents Int             @map("budgeted_spend_cents")
+  otherSpendCents    Int             @default(0) @map("other_spend_cents")
+  note               String?
+  createdAt          DateTime        @default(now()) @map("created_at")
+  items              GearPastItem[]
+  people             GearPastPerson[]
+
+  @@map("gear_past_cycles")
+}
+
+model GearPastItem {
+  id             String        @id @default(cuid())
+  cycleId        String        @map("cycle_id")
+  sku            String
+  itemName       String        @map("item_name")
+  colorLabel     String        @map("color_label")
+  unitPriceCents Int           @map("unit_price_cents")
+  plannedQty     Int           @map("planned_qty")
+  orderedQty     Int           @default(0) @map("ordered_qty")
+  receivedQty    Int           @default(0) @map("received_qty")
+  cycle          GearPastCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+
+  @@index([cycleId])
+  @@map("gear_past_items")
+}
+
+model GearPastPerson {
+  id         String        @id @default(cuid())
+  cycleId    String        @map("cycle_id")
+  name       String
+  groupLabel String        @map("group_label")
+  fit        String
+  topSize    String?       @map("top_size")
+  shoeSize   String?       @map("shoe_size")
+  cycle      GearPastCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+
+  @@index([cycleId])
+  @@map("gear_past_people")
+}
+
 /// A student on the UA roster for one cycle. Sizes come from their profile; the kit price is on the cycle.
 model GearPickStudent {
   id        String        @id @default(cuid())
