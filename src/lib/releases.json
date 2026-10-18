@@ -3,13 +3,13 @@
     "date": "2026-10-16",
     "title": "Budget tracking for admins",
     "type": "feature",
-    "summary": "Admins can now track planned and actual spending by fiscal year on a new Budget page, with separate budgets for Creative and Football.",
+    "summary": "Admins can now track planned and actual spending by fiscal year on a new Budget page, with separate budgets for Creative and Football. Staff and admins also get a Wish list.",
     "details": [
-      "Create a budget for a fiscal year and add lines with category, supplier, quantity, and cost.",
-      "See spent, still to spend, and remaining at a glance, with a spending bar for each category, and record the PO and order numbers once something is bought.",
-      "Link a purchase to the items it bought, with suggested matches by price, date, PO number, and name.",
-      "On an item page, admins see where it was bought, link it to a purchase, and fill in its purchase date, price, product link, and a note about the order in one click, without overwriting anything already there.",
-      "Open the budget line from an item to see the whole budget, and spot bought lines whose units are not linked to items yet.",
+      "Create a budget for a fiscal year, add lines with category, supplier, quantity, and cost, and record the PO and order numbers once something is bought.",
+      "See spent, planned but not bought, and remaining at a glance. Dropped lines stay in the fixed submitted plan, and lines added later are marked Unplanned.",
+      "Fiscal years read as FY26 · Jul 2025 – Jun 2026, matching the July 1 start.",
+      "Link a purchase to the items it bought, with suggested matches, and fill an item's purchase details from the order without overwriting anything already there.",
+      "A new Wish list lets staff and admins paste a link or type what they need. Admins approve, decline, or move a wish into the budget as a line.",
       "Only admins can see or change the budget, and every change is logged."
     ],
     "platforms": [

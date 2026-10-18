@@ -111,6 +111,7 @@
 | `src/lib/services/team-scoreboard.ts` | 598 |
 | `src/lib/services/usage-analytics-report.ts` | 114 |
 | `src/lib/services/user-deactivation.ts` | 579 |
+| `src/lib/services/wishlist.ts` | 193 |
 
 ## Key Library Files
 
@@ -213,7 +214,7 @@
 | `src/lib/passkey-client.ts` | 126 |
 | `src/lib/passkey.ts` | 388 |
 | `src/lib/password-rules.ts` | 16 |
-| `src/lib/permissions.ts` | 263 |
+| `src/lib/permissions.ts` | 269 |
 | `src/lib/preview-activity.ts` | 23 |
 | `src/lib/prisma-errors.ts` | 38 |
 | `src/lib/profile-completion-events.ts` | 6 |
@@ -873,6 +874,12 @@
 - `/api/users/onboarding-readiness`
 - `/api/users/org-chart`
 - `/api/users`
+
+### `/api/wishlist`
+
+- `/api/wishlist/[id]/promote`
+- `/api/wishlist/[id]`
+- `/api/wishlist`
 
 ### `/api/workforce`
 

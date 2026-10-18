@@ -131,7 +131,7 @@ Values: `UPLOADING`, `FINALIZING`, `COMMITTED`, `FAILED`
 
 ## Model `User`
 
-Fields: 131
+Fields: 132
 
 - `id                            String                           @id @default(cuid())`
 - `name                          String`
@@ -264,6 +264,7 @@ Fields: 131
 - `startTermYear       Int?            @map("start_term_year")`
 - `deactivatedAt       DateTime?       @map("deactivated_at")`
 - `budgetLinesRequested BudgetLine[] @relation("BudgetLineRequester")`
+- `wishesRequested      WishItem[]   @relation("WishRequester")`
 
 Indexes and constraints:
 
@@ -3073,7 +3074,7 @@ Indexes and constraints:
 
 ## Model `BudgetLine`
 
-Fields: 23
+Fields: 24
 
 - `id              String           @id @default(cuid())`
 - `budgetId        String           @map("budget_id")`
@@ -3098,6 +3099,7 @@ Fields: 23
 - `budget          Budget           @relation(fields: [budgetId], references: [id], onDelete: Cascade)`
 - `requester       User?            @relation("BudgetLineRequester", fields: [requesterUserId], references: [id], onDelete: SetNull)`
 - `items           BudgetLineItem[]`
+- `wish            WishItem?`
 
 Indexes and constraints:
 
@@ -3129,3 +3131,33 @@ Indexes and constraints:
 - `@@index([assetId])`
 - `@@index([bulkSkuId])`
 - `@@map("budget_line_items")`
+
+## Enum `WishStatus`
+
+Values: `OPEN`, `APPROVED`, `IN_BUDGET`, `DECLINED`
+
+## Model `WishItem`
+
+Fields: 15
+
+- `id             String     @id @default(cuid())`
+- `title          String`
+- `linkUrl        String?    @map("link_url")`
+- `estimateCents  Int?       @map("estimate_cents")`
+- `quantity       Int        @default(1)`
+- `neededBy       DateTime?  @map("needed_by") @db.Date`
+- `reason         String?`
+- `status         WishStatus @default(OPEN)`
+- `statusNote     String?    @map("status_note")`
+- `requestedById  String?    @map("requested_by_id")`
+- `budgetLineId   String?    @unique @map("budget_line_id")`
+- `createdAt      DateTime   @default(now()) @map("created_at")`
+- `updatedAt      DateTime   @updatedAt @map("updated_at")`
+- `requestedBy    User?      @relation("WishRequester", fields: [requestedById], references: [id], onDelete: SetNull)`
+- `budgetLine     BudgetLine? @relation(fields: [budgetLineId], references: [id], onDelete: SetNull)`
+
+Indexes and constraints:
+
+- `@@index([status, createdAt])`
+- `@@index([requestedById])`
+- `@@map("wish_items")`

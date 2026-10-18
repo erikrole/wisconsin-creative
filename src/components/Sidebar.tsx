@@ -27,6 +27,7 @@ import {
   ScrollTextIcon,
   ShirtIcon,
   WalletIcon,
+  GiftIcon,
   BarChart3Icon,
   SettingsIcon,
   HelpCircleIcon,
@@ -75,6 +76,8 @@ type NavItem = {
   icon: React.ElementType;
   badge?: string;
   requiredRole?: "ADMIN" | "STAFF";
+  /** Shown to both staff and admins (requiredRole matches one role exactly). */
+  staffOrAdmin?: boolean;
 };
 
 const COLLABORATOR_NAV_CAPABILITY: Partial<Record<string, string>> = {
@@ -119,6 +122,7 @@ const navGroups: NavGroup[] = [
       { label: "Users", href: "/users", icon: UsersIcon },
       { label: "Workforce", href: "/workforce", icon: UserPlusIcon, requiredRole: "ADMIN" },
       { label: "Budget", href: "/budget", icon: WalletIcon, requiredRole: "ADMIN" },
+      { label: "Wish list", href: "/wishlist", icon: GiftIcon, staffOrAdmin: true },
       { label: "UA Gear Picks", href: "/gear/admin", icon: ShirtIcon, requiredRole: "ADMIN" },
     ],
   },
@@ -216,6 +220,7 @@ export default function AppSidebar({
       ...group,
       items: group.items
         .filter((item) => !item.requiredRole || item.requiredRole === user?.role)
+        .filter((item) => !item.staffOrAdmin || canUseAdminNav)
         .filter((item) => {
           if (!isCollaborator) return true;
           if (!(COLLABORATOR_NAV_HREFS as readonly string[]).includes(item.href)) return false;

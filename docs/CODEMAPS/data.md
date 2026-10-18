@@ -11,7 +11,7 @@
 
 | Model | Fields | Model-level indexes/constraints |
 |---|---:|---:|
-| `User` | 131 | 5 |
+| `User` | 132 | 5 |
 | `Session` | 7 | 2 |
 | `PasswordResetToken` | 6 | 2 |
 | `PasskeyCredential` | 12 | 2 |
@@ -123,8 +123,9 @@
 | `GearPickSubmission` | 9 | 1 |
 | `GearPickLine` | 9 | 2 |
 | `Budget` | 8 | 3 |
-| `BudgetLine` | 23 | 5 |
+| `BudgetLine` | 24 | 5 |
 | `BudgetLineItem` | 10 | 5 |
+| `WishItem` | 15 | 3 |
 
 ## Enums
 
@@ -564,3 +565,10 @@
 - `SERVICES`
 - `SUBSCRIPTIONS_DUES`
 - `TELECOMMUNICATIONS`
+
+### `WishStatus`
+
+- `OPEN`
+- `APPROVED`
+- `IN_BUDGET`
+- `DECLINED`

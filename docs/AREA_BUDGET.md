@@ -34,6 +34,10 @@ The team's budget lives in a Google Sheet with one tab per fiscal year plus a fo
 
 ## Data Model
 
+Migration `0178_wish_items` adds enum `WishStatus` and `wish_items` (title, link_url, estimate_cents, quantity, needed_by, reason, status, status_note, requested_by_id, budget_line_id unique). The requester link and the budget line link are `SetNull`.
+
+Migration `0177_budget_line_unplanned` adds `budget_lines.unplanned`.
+
 Migration `0176_budget_item_links` adds `budget_line_items` (line, asset or bulk SKU, quantity, created by) with a CHECK that exactly one target is set and unique (line, asset) and (line, bulk SKU); it cascades from the line, the asset, and the bulk SKU.
 
 Migration `0175_budget`: enums `BudgetLineStatus` and `BudgetCategory`; `budgets` (name, fiscal_year, allocation_cents, notes; unique name + year); `budget_lines` (category, status, description, supplier, unit_cost_cents, quantity, quantity_bought, spent_cents, purchased_on, order_number, po_number, link_url, justification, requester_user_id, requester_note). Lines cascade from the budget; the requester link is `SetNull` on user delete.
@@ -55,9 +59,15 @@ Migration `0175_budget`: enums `BudgetLineStatus` and `BudgetCategory`; `budgets
 | POST | `/api/budget/links/[linkId]/apply` | `budget:manage` | Fill chosen item fields from the linked order |
 | GET | `/api/budget/for-asset/[assetId]` | `budget:view` | The item's serial, its linked lines with autofill proposals, or suggested lines |
 | GET | `/api/budget/item-search` | `budget:view` | Find an item to link by hand |
+| GET | `/api/wishlist` | `wish:view` (staff, admin) | Every wish; everyone sees all |
+| POST | `/api/wishlist` | `wish:create` | Add a wish |
+| PATCH | `/api/wishlist/[id]` | `wish:create` | Edit own open wish; admins edit any and approve, decline, or re-open |
+| DELETE | `/api/wishlist/[id]` | `wish:create` | Remove own open wish; admins remove any |
+| POST | `/api/wishlist/[id]/promote` | `wish:manage` (admin) | Create a planned or unplanned budget line from the wish and link it back |
 
 ## Not built yet
 
+- Wish list: fill the title, photo, and price from a pasted link (needs a safe server-side fetch), notify the requester on approval, filter by fiscal year.
 - Import from the budget workbook (clean text prices, month names, mismatched totals) with all fiscal years and both budgets.
 - Bulk matching of an imported sheet to inventory in one pass (today suggestions are per line or per item).
 - Charts by month and requester, football-aware link suggestions, requester picker from Staff, CSV/XLSX export.
@@ -68,3 +78,5 @@ Migration `0175_budget`: enums `BudgetLineStatus` and `BudgetCategory`; `budgets
 - 2026-10-16: Slice 2 added: links between lines and inventory, match suggestions, a Purchase card on the item page (admins only).
 - 2026-10-16: Slice 3 added: autofill an item from its linked order, deep link from the item to its budget line, and a needs-items indicator on the budget.
 - 2026-10-16: Lines table search, status filter, and sort.
+- 2026-10-18: Plan-change states (dropped, unplanned, submitted plan fixed), fiscal-year labels, and the new board look on the budget page.
+- 2026-10-18: Wish list for staff and admins, with admin review and move-to-budget.

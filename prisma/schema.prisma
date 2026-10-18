@@ -342,6 +342,7 @@ model User {
   deactivatedAt       DateTime?       @map("deactivated_at")
 
   budgetLinesRequested BudgetLine[] @relation("BudgetLineRequester")
+  wishesRequested      WishItem[]   @relation("WishRequester")
 
   @@index([active, hiddenFromRoster])
   @@index([role, affiliation])
@@ -3035,6 +3036,7 @@ model BudgetLine {
   budget          Budget           @relation(fields: [budgetId], references: [id], onDelete: Cascade)
   requester       User?            @relation("BudgetLineRequester", fields: [requesterUserId], references: [id], onDelete: SetNull)
   items           BudgetLineItem[]
+  wish            WishItem?
 
   @@index([budgetId, category])
   @@index([budgetId, status])
@@ -3063,4 +3065,37 @@ model BudgetLineItem {
   @@index([assetId])
   @@index([bulkSkuId])
   @@map("budget_line_items")
+}
+
+enum WishStatus {
+  OPEN
+  APPROVED
+  IN_BUDGET
+  DECLINED
+}
+
+/// Something staff would like the department to buy. It does not touch the budget until an admin
+/// moves it there, which creates a budget line and links it back here. Staff and admins see every wish.
+model WishItem {
+  id             String     @id @default(cuid())
+  title          String
+  linkUrl        String?    @map("link_url")
+  /// Rough unit price in cents; null when unknown.
+  estimateCents  Int?       @map("estimate_cents")
+  quantity       Int        @default(1)
+  neededBy       DateTime?  @map("needed_by") @db.Date
+  reason         String?
+  status         WishStatus @default(OPEN)
+  /// Why it was declined, shown on the list.
+  statusNote     String?    @map("status_note")
+  requestedById  String?    @map("requested_by_id")
+  budgetLineId   String?    @unique @map("budget_line_id")
+  createdAt      DateTime   @default(now()) @map("created_at")
+  updatedAt      DateTime   @updatedAt @map("updated_at")
+  requestedBy    User?      @relation("WishRequester", fields: [requestedById], references: [id], onDelete: SetNull)
+  budgetLine     BudgetLine? @relation(fields: [budgetLineId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([requestedById])
+  @@map("wish_items")
 }
