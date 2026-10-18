@@ -280,3 +280,12 @@ export function parseDollarsToCents(input: string): number | null {
   if (!/^\d+(\.\d{1,2})?$/.test(cleaned)) return null;
   return Math.round(Number(cleaned) * 100);
 }
+
+/** How many standard-issue and core-kit pieces the department covers for a fit (core kit is men's only). */
+export function kitCountsForFit(fit: GearPickFitKey, catalog: GearCatalog = GEAR_CATALOG) {
+  const entries = catalog.kits[fit];
+  return {
+    standardIssue: entries.filter((entry) => entry.kind === "STANDARD_ISSUE").length,
+    coreKit: entries.filter((entry) => entry.kind === "CORE_KIT").length,
+  };
+}

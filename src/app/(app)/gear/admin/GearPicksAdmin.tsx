@@ -20,6 +20,7 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AllotmentOverview } from "./AllotmentOverview";
+import { KitPills } from "./KitPills";
 import { GEAR_PICKS_ME_QUERY_KEY } from "@/hooks/use-gear-picks";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { formatDateTime } from "@/lib/format";
@@ -500,6 +501,7 @@ function ParticipantsTable({
             <TableHead>Person</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Fit</TableHead>
+            <TableHead>Kit</TableHead>
             <TableHead className="text-right">Allowance</TableHead>
             <TableHead className="text-right">Picked</TableHead>
             <TableHead>Last change</TableHead>
@@ -553,6 +555,9 @@ function ParticipantsTable({
                       <option value="WOMEN">{FIT_LABELS.WOMEN}</option>
                     </NativeSelect>
                   </TableCell>
+                  <TableCell>
+                    <KitPills fit={participant.fit} pickCount={lines.reduce((sum, line) => sum + line.quantity, 0)} />
+                  </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end">
                       <AllowanceInput participant={participant} pending={pending} onApply={onApply} />
@@ -595,7 +600,7 @@ function ParticipantsTable({
                 </TableRow>
                 {isExpanded && lines.length > 0 && (
                   <TableRow className="bg-muted/30 hover:bg-muted/30">
-                    <TableCell colSpan={7} className="py-2">
+                    <TableCell colSpan={8} className="py-2">
                       <ul className="flex flex-col gap-1 pl-6 text-sm">
                         {lines.map((line) => (
                           <li key={`${line.sku}|${line.size ?? ""}`} className="flex flex-wrap items-baseline gap-x-2">

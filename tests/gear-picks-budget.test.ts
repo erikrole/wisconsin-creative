@@ -22,3 +22,11 @@ describe("gearPickBudget", () => {
     expect(gearPickBudget(1000, true, 1500).remainingCents).toBe(-500);
   });
 });
+
+describe("kitCountsForFit", () => {
+  it("gives men a core kit and women standard issue only", async () => {
+    const { kitCountsForFit } = await import("@/lib/gear-picks/catalog");
+    expect(kitCountsForFit("MEN")).toEqual({ standardIssue: 4, coreKit: 5 });
+    expect(kitCountsForFit("WOMEN")).toEqual({ standardIssue: 4, coreKit: 0 });
+  });
+});

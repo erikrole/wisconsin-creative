@@ -1,13 +1,14 @@
 [
   {
     "date": "2026-10-18",
-    "title": "Budget on the UA gear results",
+    "title": "Budget and kit labels on the UA gear results",
     "type": "feature",
-    "summary": "Admins see the Under Armour budget at the top of the gear results, with what staff picks have used so far and what is left.",
+    "summary": "Admins see the Under Armour budget at the top of the gear results, plus a Kit column that shows what the department covers for each person.",
     "details": [
       "Edit the total budget and mark it confirmed. Until then it carries a Placeholder tag.",
       "The budget and totals are visible to admins only.",
-      "Only staff picks are counted for now. Student kits and standard issue come in later changes."
+      "Only staff picks are counted for now. Student kits and standard issue come in later changes.",
+      "Each person shows Standard issue (covered by the department), Core kit where their fit has one, and the number of pieces they picked."
     ],
     "platforms": [
       "Web"
