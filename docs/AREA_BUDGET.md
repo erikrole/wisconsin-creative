@@ -63,6 +63,8 @@ Migration `0175_budget`: enums `BudgetLineStatus` and `BudgetCategory`; `budgets
 | POST | `/api/budget/[id]/lines/bulk` | `budget:manage` | Drop, restore, or recategorize several lines; returns previous values for undo |
 | GET | `/api/budget/lines/[lineId]/history` | `budget:view` | A line's audit trail in plain words |
 | GET | `/api/budget/trend?name=` | `budget:view` | Submitted, spent, and forecast per fiscal year for one budget name |
+| POST | `/api/budget/[id]/import` | `budget:manage` | Preview an uploaded .xlsx/.csv as candidate lines; saves nothing |
+| PUT | `/api/budget/[id]/import` | `budget:manage` | Save the reviewed lines; same-name lines are updated, not duplicated |
 | GET | `/api/budget/item-search` | `budget:view` | Find an item to link by hand |
 | GET | `/api/wishlist` | `wish:view` (staff, admin) | Every wish; everyone sees all |
 | POST | `/api/wishlist` | `wish:create` | Add a wish |
@@ -73,7 +75,7 @@ Migration `0175_budget`: enums `BudgetLineStatus` and `BudgetCategory`; `budgets
 ## Not built yet
 
 - Wish list: fill the title, photo, and price from a pasted link (needs a safe server-side fetch), notify the requester on approval, filter by fiscal year.
-- Import from the budget workbook (clean text prices, month names, mismatched totals) with all fiscal years and both budgets.
+- Import is built for one sheet and one budget at a time; the real workbook (one tab per year plus Football) hasn't been run through it yet.
 - Bulk matching of an imported sheet to inventory in one pass (today suggestions are per line or per item).
 - Football-aware link suggestions, requester picker from Staff, XLSX export, per-category limits (the Insights bars compare spent to planned).
 
@@ -87,3 +89,4 @@ Migration `0175_budget`: enums `BudgetLineStatus` and `BudgetCategory`; `budgets
 - 2026-10-18: Wish list for staff and admins, with admin review and move-to-budget.
 - 2026-10-18: Refunds and credits, yearly-repeat lines copied into a new budget, line history, bulk drop and recategorize with an undo toast, and `/` to search.
 - 2026-10-18: Insights view (needs attention, spend by month, categories, forecast, suppliers, year over year) and CSV download.
+- 2026-10-18: Import from .xlsx/.csv with a preview (ready, check, skipped), dropped-or-planned choice for unbought lines, and no duplicates on re-run.

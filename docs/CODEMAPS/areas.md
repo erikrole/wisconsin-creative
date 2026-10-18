@@ -15,9 +15,9 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 
 - Doc: `docs/AREA_BUDGET.md`
 - Pages: `/budget`
-- APIs: `/api/budget/[id]/lines/bulk`, `/api/budget/[id]/lines`, `/api/budget/[id]`, `/api/budget/for-asset/[assetId]`, `/api/budget/item-search`, `/api/budget/lines/[lineId]/history`, `/api/budget/lines/[lineId]/links`, `/api/budget/lines/[lineId]`, `/api/budget/lines/[lineId]/suggestions`, `/api/budget/links/[linkId]/apply`
+- APIs: `/api/budget/[id]/import`, `/api/budget/[id]/lines/bulk`, `/api/budget/[id]/lines`, `/api/budget/[id]`, `/api/budget/for-asset/[assetId]`, `/api/budget/item-search`, `/api/budget/lines/[lineId]/history`, `/api/budget/lines/[lineId]/links`, `/api/budget/lines/[lineId]`, `/api/budget/lines/[lineId]/suggestions`
 - Services: `src/lib/services/budget.ts`
-- Tests: `tests/budget-autofill.test.ts`, `tests/budget-contract.test.ts`, `tests/budget-history.test.ts`, `tests/budget-insights.test.ts`, `tests/budget-matching.test.ts`, `tests/budget-routes.test.ts`, `tests/budget-table.test.ts`, `tests/kiosk-neon-compute-budget.test.ts`
+- Tests: `tests/budget-autofill.test.ts`, `tests/budget-contract.test.ts`, `tests/budget-history.test.ts`, `tests/budget-import.test.ts`, `tests/budget-insights.test.ts`, `tests/budget-matching.test.ts`, `tests/budget-routes.test.ts`, `tests/budget-table.test.ts`
 
 ## bulk-inventory
 
@@ -71,9 +71,9 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 
 - Doc: `docs/AREA_IMPORTER.md`
 - Pages: `/import`
-- APIs: `/api/assets/import`, `/api/hiring/import`, `/api/resources/import`, `/api/signatures/import/apply`, `/api/signatures/import/preview`, `/api/workforce/import`
+- APIs: `/api/assets/import`, `/api/budget/[id]/import`, `/api/hiring/import`, `/api/resources/import`, `/api/signatures/import/apply`, `/api/signatures/import/preview`, `/api/workforce/import`
 - Services: _none matched_
-- Tests: `tests/hiring-import.test.ts`, `tests/import-route.test.ts`, `tests/resource-import-images.test.ts`, `tests/resource-import-route.test.ts`, `tests/resource-import.test.ts`
+- Tests: `tests/budget-import.test.ts`, `tests/hiring-import.test.ts`, `tests/import-route.test.ts`, `tests/resource-import-images.test.ts`, `tests/resource-import-route.test.ts`, `tests/resource-import.test.ts`
 
 ## items
 

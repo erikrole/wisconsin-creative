@@ -41,6 +41,7 @@ import {
   type BudgetSummary,
 } from "@/lib/budget/contract";
 import type { LineHistoryEntry } from "@/lib/services/budget";
+import { ImportDialog } from "./ImportDialog";
 import { InsightsPanel } from "./InsightsPanel";
 import { linesToCsv } from "@/lib/budget/insights";
 import { LINE_SORT_LABELS, LINE_SORTS, filterAndSortLines, type LineSort } from "@/lib/budget/table";
@@ -169,6 +170,7 @@ export function BudgetView({ initialBudgetId = null, focusLineId = null }: { ini
   const [budgetDialog, setBudgetDialog] = useState(false);
   const [linksFor, setLinksFor] = useState<string | null>(null);
   const [historyFor, setHistoryFor] = useState<LineView | null>(null);
+  const [importing, setImporting] = useState(false);
 
   const list = useQuery<BudgetListItem[]>({
     queryKey: LIST_KEY,
@@ -205,6 +207,11 @@ export function BudgetView({ initialBudgetId = null, focusLineId = null }: { ini
           <PlusIcon data-icon="inline-start" />
           New budget
         </Button>
+        {activeId && (
+          <Button type="button" variant="outline" onClick={() => setImporting(true)}>
+            Import
+          </Button>
+        )}
         {activeId && (
           <Button type="button" className="bg-[#3E63DD] text-white hover:bg-[#3452B8]" onClick={() => setLineDialog({ line: null })}>
             <PlusIcon data-icon="inline-start" />
@@ -258,6 +265,18 @@ export function BudgetView({ initialBudgetId = null, focusLineId = null }: { ini
           line={detail.data.lines.find((line) => line.id === linksFor)!}
           onClose={() => setLinksFor(null)}
           onChanged={() => void refresh()}
+        />
+      )}
+      {importing && activeId && detail.data && (
+        <ImportDialog
+          budgetId={activeId}
+          name={detail.data.budget.name}
+          fiscalYear={detail.data.budget.fiscalYear}
+          onClose={() => setImporting(false)}
+          onImported={() => {
+            setImporting(false);
+            void refresh();
+          }}
         />
       )}
       {historyFor && <HistoryDialog line={historyFor} onClose={() => setHistoryFor(null)} />}

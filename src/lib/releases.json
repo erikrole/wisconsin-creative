@@ -9,7 +9,7 @@
       "See spent, planned but not bought, and remaining at a glance, with an Insights view of spend by month, suppliers, and year over year, and a CSV download. Dropped lines stay in the fixed submitted plan, and lines added later are marked Unplanned.",
       "Fiscal years read as FY26 · Jul 2025 – Jun 2026, matching the July 1 start.",
       "Link a purchase to the items it bought, with suggested matches, and fill an item's purchase details from the order without overwriting anything already there. Every line keeps a history, refunds and credits count against its cost, and you can drop or recategorize many lines at once with an undo.",
-      "A new Wish list lets staff and admins paste a link or type what they need. Admins approve, decline, or move a wish into the budget as a line.",
+      "A new Wish list lets staff and admins paste a link or type what they need. Admins approve, decline, or move a wish into the budget as a line, and past years can be imported from a spreadsheet.",
       "Only admins can see or change the budget, and every change is logged."
     ],
     "platforms": [

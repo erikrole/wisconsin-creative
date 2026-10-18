@@ -116,3 +116,26 @@ export const bulkLinesSchema = z
   })
   .refine((value) => value.status !== undefined || value.category !== undefined, "Nothing to change");
 export type BulkLinesInput = z.infer<typeof bulkLinesSchema>;
+
+/** The reviewed lines of an import. Lines whose name matches an existing line update it instead of adding another. */
+export const importLinesSchema = z.object({
+  lines: z
+    .array(
+      z.object({
+        description: lineFields.description,
+        category: lineFields.category,
+        status: lineFields.status,
+        supplier: lineFields.supplier,
+        unitCostCents: lineFields.unitCostCents,
+        quantity: lineFields.quantity,
+        spentCents: lineFields.spentCents,
+        purchasedOn: lineFields.purchasedOn,
+        poNumber: lineFields.poNumber,
+        orderNumber: lineFields.orderNumber,
+        unplanned: lineFields.unplanned,
+      }),
+    )
+    .min(1)
+    .max(500),
+});
+export type ImportLinesInput = z.infer<typeof importLinesSchema>;

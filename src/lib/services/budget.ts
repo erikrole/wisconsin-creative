@@ -8,6 +8,7 @@ import { summarizeBudget, type BudgetCategoryValue, type BudgetLineStatusValue }
 import { describeLineChanges, type LineChange } from "@/lib/budget/history";
 import type {
   BulkLinesInput,
+  ImportLinesInput,
   CreateBudgetInput,
   CreateLineInput,
   UpdateBudgetInput,
@@ -878,5 +879,55 @@ export async function getBudgetTrend(name: string): Promise<BudgetTrendRow[]> {
       forecastCents: summary.forecastCents,
       allocationCents: budget.allocationCents,
     };
+  });
+}
+
+
+/**
+ * Save the reviewed lines of an import. A line with the same name (ignoring case) already in the budget is
+ * updated, so running the import again doesn't duplicate anything.
+ */
+export async function importLines(actor: Actor, budgetId: string, input: ImportLinesInput) {
+  return db.$transaction(async (tx) => {
+    const budget = await tx.budget.findUnique({ where: { id: budgetId }, select: { id: true } });
+    if (!budget) throw new HttpError(404, "Budget not found.");
+    const existing = await tx.budgetLine.findMany({ where: { budgetId }, select: { id: true, description: true } });
+    const byName = new Map(existing.map((line) => [line.description.trim().toLowerCase(), line.id]));
+    let created = 0;
+    let updated = 0;
+    for (const line of input.lines) {
+      const data = {
+        category: line.category,
+        status: line.status,
+        description: line.description,
+        supplier: line.supplier,
+        unitCostCents: line.unitCostCents,
+        quantity: line.quantity,
+        quantityBought: line.spentCents === null ? null : line.quantity,
+        spentCents: line.spentCents,
+        purchasedOn: toDate(line.purchasedOn) ?? null,
+        poNumber: line.poNumber,
+        orderNumber: line.orderNumber,
+        unplanned: line.unplanned,
+      };
+      const matchId = byName.get(line.description.trim().toLowerCase());
+      if (matchId) {
+        await tx.budgetLine.update({ where: { id: matchId }, data });
+        updated += 1;
+      } else {
+        const row = await tx.budgetLine.create({ data: { ...data, budgetId }, select: { id: true } });
+        byName.set(line.description.trim().toLowerCase(), row.id);
+        created += 1;
+      }
+    }
+    await createAuditEntryTx(tx, {
+      actorId: actor.id,
+      actorRole: actor.role,
+      entityType: "budget",
+      entityId: budgetId,
+      action: "import",
+      after: { created, updated },
+    });
+    return { created, updated };
   });
 }

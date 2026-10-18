@@ -188,6 +188,7 @@
 - `/api/bookings/changes` -> `src/app/api/bookings/changes/route.ts`
 - `/api/bookings/export` -> `src/app/api/bookings/export/route.ts`
 - `/api/bookings` -> `src/app/api/bookings/route.ts`
+- `/api/budget/[id]/import` -> `src/app/api/budget/[id]/import/route.ts`
 - `/api/budget/[id]/lines/bulk` -> `src/app/api/budget/[id]/lines/bulk/route.ts`
 - `/api/budget/[id]/lines` -> `src/app/api/budget/[id]/lines/route.ts`
 - `/api/budget/[id]` -> `src/app/api/budget/[id]/route.ts`

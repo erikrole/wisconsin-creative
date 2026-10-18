@@ -36,6 +36,7 @@ import { GET as listBudgets, POST as createBudget } from "@/app/api/budget/route
 import { GET as getBudget } from "@/app/api/budget/[id]/route";
 import { POST as createLine } from "@/app/api/budget/[id]/lines/route";
 import { POST as bulkLines } from "@/app/api/budget/[id]/lines/bulk/route";
+import { POST as previewImport, PUT as commitImport } from "@/app/api/budget/[id]/import/route";
 import { GET as budgetTrend } from "@/app/api/budget/trend/route";
 import { GET as lineHistory } from "@/app/api/budget/lines/[lineId]/history/route";
 import { DELETE as deleteLine, PATCH as patchLine } from "@/app/api/budget/lines/[lineId]/route";
@@ -387,5 +388,62 @@ describe("year over year", () => {
       { fiscalYear: "2025-26", submittedCents: 150_00, spentCents: 110_00, forecastCents: 110_00, allocationCents: 3_000_000 },
     ]);
     expect((await budgetTrend(json("GET", "/api/budget/trend"), { params: Promise.resolve({}) })).status).toBe(400);
+  });
+});
+
+describe("spreadsheet import", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (db.$transaction as unknown as MockFn).mockImplementation(async (fn: (t: unknown) => unknown) => fn(tx));
+  });
+
+  function upload(csv: string, name = "FY26.csv") {
+    const form = new FormData();
+    form.set("file", new File([csv], name, { type: "text/csv" }));
+    return new Request(`${ORIGIN}/api/budget/budget-1/import`, { method: "POST", headers: { origin: ORIGIN }, body: form });
+  }
+
+  it("previews a sheet without saving anything", async () => {
+    (requireAuth as unknown as MockFn).mockResolvedValue(admin);
+    (db.budget.findUnique as unknown as MockFn).mockResolvedValue({
+      id: "budget-1",
+      name: "Creative",
+      fiscalYear: "2025-26",
+      allocationCents: null,
+      notes: null,
+      lines: [],
+    });
+    const res = await previewImport(upload("Item,Qty,Budgeted,Spent,Month\nSony FX3,1,$7995,$8000,May 28\nTotal,,$7995,$8000,\n"), idContext);
+    expect(res.status).toBe(200);
+    const { data } = await res.json();
+    expect(data.candidates.map((c: { description: string; result: string }) => [c.description, c.result])).toEqual([
+      ["Sony FX3", "ready"],
+      ["Total", "skipped"],
+    ]);
+    expect(data.candidates[0].purchasedOn).toBe("2026-05-28");
+    expect(tx.budgetLine!.create!).not.toHaveBeenCalled();
+  });
+
+  it("rejects other file types and keeps import admin only", async () => {
+    (requireAuth as unknown as MockFn).mockResolvedValue(admin);
+    expect((await previewImport(upload("x", "notes.txt"), idContext)).status).toBe(400);
+    (requireAuth as unknown as MockFn).mockResolvedValue(staff);
+    expect((await previewImport(upload("x"), idContext)).status).toBe(403);
+  });
+
+  it("updates lines it already made instead of duplicating them", async () => {
+    (requireAuth as unknown as MockFn).mockResolvedValue(admin);
+    tx.budget!.findUnique!.mockResolvedValue({ id: "budget-1" });
+    tx.budgetLine!.findMany!.mockResolvedValue([{ id: "line-1", description: "Sony FX3" }]);
+    tx.budgetLine!.create!.mockResolvedValue({ id: "line-2" });
+    const base = { category: "EQUIPMENT", status: "PURCHASED", supplier: null, unitCostCents: 100, quantity: 1, spentCents: 100, purchasedOn: null, poNumber: null, orderNumber: null, unplanned: false };
+    const res = await commitImport(
+      json("PUT", "/api/budget/budget-1/import", { lines: [{ ...base, description: "sony fx3" }, { ...base, description: "Dell laptop" }] }),
+      idContext,
+    );
+    expect(res.status).toBe(200);
+    expect((await res.json()).data).toEqual({ created: 1, updated: 1 });
+    expect(tx.budgetLine!.update!).toHaveBeenCalledTimes(1);
+    expect(tx.budgetLine!.create!).toHaveBeenCalledTimes(1);
   });
 });
