@@ -1,19 +1,19 @@
 # iOS ↔ web parity
 
-Last updated: 2026-10-16
+Last updated: 2026-10-18
 
 This is the handoff for the next native slice. Compare the website's pages and staff actions with the iPhone app under `ios/`. Count a row as covered when it is on `main` or in an open pull request listed below. Do not edit files those pull requests already change unless the slice cannot exist without a shared file (`BrowseView.swift`, `APIClient.swift`, `project.pbxproj`, `src/lib/releases.json`, `docs/AREA_MOBILE.md`).
 
 Open, and off limits for file overlap:
 
-- #492 kits, kit detail, bulk inventory, and Battery Ops
-- #493 reservation edit and checkout detail actions
-- #494 admin budget linked to items (web only; do not start a phone version from those files)
-- #491 web list performance and route loading states (not an iOS slice)
-- #478 Photo Frame on `/apps` (draft static web tool; it also edits `src/lib/releases.json`)
-- Erik's drafts, even where they are not parity work: #483 Fetch/Offload pages, #484 Users→Staff rename, #485 Workforce under Staff, #486 staff roster, #488 Photo Mechanic licenses redesign
+- #503 hours, charts, and exports
+- #505 condition reports
+- #497, #486, #485, and #484 Users to Staff and role tabs
+- #494 Budget
+- #488 Photo Mechanic licenses
+- #478 Photo Frame
 
-#490 reports, #489 blasts, and #487 events are already on `main`.
+Shared logins (#502) and the Fetch and Offload pages (#483) are already merged. Native signatures and guide authoring wait on Erik's decision.
 
 ## How to pick
 
@@ -39,14 +39,16 @@ Take the first item under **Missing** whose blocked note is clear. Keep one scre
 - [x] Kiosk custody (separate iPad app): checkout, pickup, return
 - [x] Accountability: this year or all time, three sorts, name search, personal standing, open the checkout. Added in this slice. Location, incident state, active-user filters, the continuous on-time bar, CSV, and exclusion edits stay on the web.
 
+- [x] **Brand assets.** Read-only folders, search, and opening a logo or PDF. Folder create, upload, and version restore stay on the web.
+- [x] **UA Gear Picks, for a participant.** One fit against an allowance. Admin roster, deadline, and the equipment spreadsheet stay on the web.
+- [x] **Shared software logins.** Read and copy from Browse (#502). Creating, editing, and archiving stay on the web. Photo Mechanic redesign remains #488.
+- [x] **Team badge shelf.** Read-only staff catalog. Awarding a group stays on the web.
+- [x] **Away-game travel roster.** Event detail lists who is traveling and opens a profile. Adding and removing travelers stays on the website.
+
 ## Missing
 
-- [ ] **Brand assets.** `/resources?tab=brand-assets` is a file library (folders, preview, download, favorites). Guides on the phone are Markdown only. A read-only library is the next field slice: creative staff need a logo or PDF at a venue. Folder create, upload, and version restore stay on the web.
-- [ ] **UA Gear Picks, for a participant.** `/gear` shops one fit against an allowance (`GET`/`PUT /api/gear-picks/me`). It is seasonal. Confirm the cycle is open before building it. Admin roster, deadline, and the equipment spreadsheet stay on the web.
-- [ ] **Shared software logins.** `/licenses` has a vault beside Photo Mechanic. The phone only does Photo Mechanic. Blocked until #488 merges, because that pull request owns `LicensesView.swift`.
-- [ ] **Native signature capture.** `docs/AREA_MOBILE.md` (2026-10-07) describes `Views/Signatures/` and an iPad Browse row. Those files are not on `main`. The live capture path is iPad Safari with Apple Pencil. Confirm the native screens were dropped before rebuilding them.
-- [ ] **Guide authoring.** Create, edit, delete, and Mark verified stay off the phone today. Add them only if staff actually edit guides away from a desk.
-- [ ] **Team badge shelf.** `/badges` is the staff catalog and award surface. A person's own badges already open from Profile. Bulk award is admin work and sits inside the Staff rename drafts; do not start it from those files.
+- [ ] **Native signature capture.** Waiting on Erik's decision. The live capture path is iPad Safari with Apple Pencil. Do not rebuild `Views/Signatures/` until that decision lands.
+- [ ] **Guide authoring.** Waiting on Erik's decision. Create, edit, delete, and Mark verified stay off the phone until staff need to edit guides away from a desk.
 
 ## Intentionally web-only
 

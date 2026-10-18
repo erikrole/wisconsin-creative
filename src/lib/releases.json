@@ -1,5 +1,22 @@
 [
   {
+    "date": "2026-10-18",
+    "title": "Away game travel list",
+    "type": "feature",
+    "summary": "An away game on iPhone lists who is traveling. Adding or removing someone stays on the website.",
+    "details": [
+      "Open an away game in Schedule to see who is traveling.",
+      "Each person shows their name and area. Tap a person to open their profile.",
+      "A failed refresh keeps the travelers already on screen.",
+      "Home games do not show a travel section.",
+      "Adding and removing travelers stays on the website."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 506
+  },
+  {
     "date": "2026-10-17",
     "title": "Clearer, more reliable iPhone workflows",
     "type": "improvement",
