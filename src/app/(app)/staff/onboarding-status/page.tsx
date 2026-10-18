@@ -514,7 +514,7 @@ function AccountRow({ account }: { account: ReadinessAccount }) {
       </div>
       <div className="text-sm text-muted-foreground">{missing.length ? `Missing ${missing.join(", ")}` : "Everything done"}</div>
       <div className="md:text-right">
-        <Button asChild variant="ghost" size="sm" className="h-8 px-2 text-xs">
+        <Button asChild variant="ghost" size="sm" className="h-10 px-3 text-xs">
           <Link href={`/staff/${account.id}`} aria-label={`Open ${account.name}`}>Open</Link>
         </Button>
       </div>
