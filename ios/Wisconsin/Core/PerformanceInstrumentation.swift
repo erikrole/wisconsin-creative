@@ -106,6 +106,13 @@ enum AppRuntimeMode {
         case announcement
         case announcementImages = "announcement-images"
         case announcementPlain = "announcement-plain"
+        /// Worst-case content: a long title, four images, many bullets, a block
+        /// type the app does not know, and an https button.
+        case announcementStress = "announcement-stress"
+        /// The server has nothing for this person (`data: null`).
+        case announcementNone = "announcement-none"
+        /// The announcements request fails; the app must show nothing and stay usable.
+        case announcementError = "announcement-error"
 
         /// The booking scenarios share one fixture and differ only in which
         /// sheet is seeded open.
@@ -176,7 +183,8 @@ enum AppRuntimeMode {
              .bookingDetail, .bookingExtend, .bookingEdit, .bookingCancel,
              .itemEdit, .createBookingScanner, .createBookingEvents, .search, .searchPartial,
              .itemsList, .reports, .accountSecurity, .notifications, .login,
-             .announcement, .announcementImages, .announcementPlain:
+             .announcement, .announcementImages, .announcementPlain,
+             .announcementStress, .announcementNone, .announcementError:
             return true
         default:
             return false

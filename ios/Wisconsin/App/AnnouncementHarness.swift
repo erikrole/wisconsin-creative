@@ -71,6 +71,32 @@ enum AnnouncementFixtureAPI {
 
     private static var items: [Item] {
         switch AppRuntimeMode.performanceScenario {
+        case .announcementNone, .announcementError:
+            return []
+        case .announcementStress:
+            return [
+                Item(
+                    id: "fx-stress", kind: "FEATURE", kindLabel: "New",
+                    title: "Everything you need to run a long, busy Saturday from one place on your phone",
+                    blocks: [
+                        Block(type: "paragraph", text: "This is a deliberately long announcement to see how the sheet behaves when the message outgrows the screen. It keeps going so the body has to scroll while the buttons stay reachable."),
+                        Block(type: "video", text: "an unknown block type the app must skip"),
+                        Block(type: "list", items: [
+                            "Claim open trades without leaving Schedule",
+                            "See who is on your crew and what they are carrying",
+                            "Scan gear in and out with a confirmation before anything changes",
+                            "Get a heads-up when a booking is due back within the hour",
+                            "Offload cards with live progress and a verified copy",
+                            "Find any item, booking, or person from one search",
+                        ]),
+                        Block(type: "paragraph", text: "Questions? Ask in the usual channel."),
+                    ],
+                    ctaLabel: "Read the full guide", ctaUrl: "https://wisconsincreative.com/releases",
+                    imageUrls: ["fixture-image:0", "fixture-image:1", "fixture-image:2", "fixture-image:3"],
+                    imageAlt: "Four screens from the app",
+                    publishedAt: "2026-10-18T15:00:00.000Z"
+                ),
+            ]
         case .announcementImages:
             return [
                 Item(

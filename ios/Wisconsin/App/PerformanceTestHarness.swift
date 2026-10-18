@@ -93,7 +93,8 @@ struct PerformanceTestRootView: View {
             AccountSecurityHarnessView()
         case .notifications:
             NotificationSettingsHarnessView()
-        case .announcement, .announcementImages, .announcementPlain:
+        case .announcement, .announcementImages, .announcementPlain,
+             .announcementStress, .announcementNone, .announcementError:
             AnnouncementHarnessView()
         }
     }
@@ -527,7 +528,8 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
         // Lets the login capture reach the password step without a real host.
         case "/api/auth/discover": return AuthFixtureAPI.discoverPassword
         case "/api/me/passkeys": return PasskeyFixtureAPI.passkeys
-        case "/api/announcements/active": return AnnouncementFixtureAPI.active()
+        case "/api/announcements/active":
+            return AppRuntimeMode.performanceScenario == .announcementError ? nil : AnnouncementFixtureAPI.active()
         case let path where path.hasPrefix("/api/announcements/") && path.hasSuffix("/dismiss"):
             return AnnouncementFixtureAPI.dismiss(path: path)
         case "/api/dashboard":
