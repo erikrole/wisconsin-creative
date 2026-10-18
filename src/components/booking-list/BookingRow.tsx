@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { TableRow, TableCell } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { operationalBookingStatus } from "@/lib/booking-status-display";
+import { rowKeyActivates } from "@/lib/a11y-resilience";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PackageOpen } from "lucide-react";
 
@@ -51,10 +52,9 @@ export function BookingTableRow({
         aria-label={`View booking: ${item.title}`}
         onClick={onClick}
         onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            onClick();
-          }
+          if (!rowKeyActivates(event)) return;
+          event.preventDefault();
+          onClick();
         }}
       >
         {selectable && (

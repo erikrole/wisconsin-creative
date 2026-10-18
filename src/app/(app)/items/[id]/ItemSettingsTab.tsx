@@ -469,8 +469,11 @@ function AttachmentPickerDialog({
           )}
 
           {searchError && !searching && (
-            <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-              {searchError}
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+              <span>{searchError}</span>
+              <Button type="button" variant="outline" className="h-10" onClick={() => onSearch(searchQuery)}>
+                Try again
+              </Button>
             </div>
           )}
 

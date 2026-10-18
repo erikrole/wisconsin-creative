@@ -17,6 +17,7 @@ import { AssetImage } from "@/components/AssetImage";
 import { CategoryCombobox, FormCombobox } from "@/components/FormCombobox";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { buildCategoryPathOptions } from "@/lib/category-options";
+import { gapCountCaption } from "@/lib/a11y-resilience";
 import type { CategoryOption } from "@/types/category";
 
 type GapField = "category" | "department";
@@ -341,7 +342,7 @@ export function GapWizardDialog({ open, onOpenChange, categories, departments, o
                 </span>
                 <Button className="h-10" variant="outline" onClick={loadCounts}>
                   <RotateCcw className="size-3.5" />
-                  Retry
+                  Try again
                 </Button>
               </div>
             )}
@@ -364,11 +365,7 @@ export function GapWizardDialog({ open, onOpenChange, categories, departments, o
                     <span className="min-w-0">
                       <span className="block text-sm font-medium">{label}</span>
                       <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
-                        {isLoading
-                          ? "Counting..."
-                          : isEmpty
-                            ? "All items have a value"
-                            : `${count} item${count !== 1 ? "s" : ""} missing`}
+                        {gapCountCaption(count, Boolean(countError))}
                       </span>
                     </span>
                     {!isLoading && !isEmpty && <Badge variant="secondary">{count}</Badge>}
