@@ -121,6 +121,7 @@ Replace Asana-based shift scheduling with a native shift calendar in Wisconsin C
 - Sports code mappings (existing — `src/lib/sports.ts`)
 
 ## Change Log
+- 2026-10-18: **Native profile shows your hours (local).** iPhone Profile, and your own person screen, read `GET /api/shifts/my-hours`. The server still owns the Monday–Sunday week and the calendar month in Central time. Students, staff, and admins see this week and this month, with the shift count. Collaborators do not. A failed refresh keeps the last totals. Source contracts pass. An Xcode build on a Mac is still required.
 - 2026-10-18: **Schedule venue words and collaborator recovery (local).** Desktop calendar chips show the same home, away, or neutral word already used on week and list, and the staff action name includes that word. Week staff actions include it too. A collaborator schedule that cannot read the event list shows an error with Try again instead of an empty schedule. Source tests cover the helpers; authenticated browser proof is still open.
 - 2026-10-17: **Hours and workload follow the Madison week.** Profile hours and candidate workload count Monday–Sunday and the calendar month in Central time. A Sunday evening shift stays in the week that started Monday, and a week that crosses the month still includes both sides. Auto-fill and copy-forward score every open slot from one read of people and assignments. A schedule export with no end date closes at the end of the Chicago day seven days later, so an evening event on that last day is included.
 

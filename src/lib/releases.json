@@ -18,6 +18,23 @@
   },
   {
     "date": "2026-10-18",
+    "title": "Hours on your profile",
+    "type": "feature",
+    "summary": "Your profile on iPhone shows the hours you worked this week and this month, using the same Monday-to-Sunday count as the website.",
+    "details": [
+      "Open your profile to see this week and this month, with the number of shifts in each.",
+      "The week runs Monday through Sunday, Central time, including a Sunday evening shift.",
+      "If hours fail to load, the rest of your profile stays up and Try again is available.",
+      "A later refresh that fails keeps the hours already on screen.",
+      "Collaborators do not see hours."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 512
+  },
+  {
+    "date": "2026-10-18",
     "title": "Safer kiosk scans",
     "type": "fixes",
     "summary": "A second scan at the kiosk no longer creates another custody record, and due today follows the Chicago day.",

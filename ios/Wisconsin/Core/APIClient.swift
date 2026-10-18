@@ -2207,6 +2207,16 @@ final class APIClient {
         return response.data
     }
 
+    /// Hours the signed-in person has worked. The server owns the window:
+    /// Monday–Sunday and the calendar month, both in Central time.
+    /// Collaborators are refused; this is only the caller's own totals.
+    func myHours() async throws -> MyHours {
+        let response: DataWrapper<MyHours> = try await perform(
+            request(path: "/api/shifts/my-hours")
+        )
+        return response.data
+    }
+
     /// Reads every active assignment for the caller. The route is still
     /// page-compatible with older servers: if `total` is absent, return the
     /// first response instead of guessing at more offsets.
