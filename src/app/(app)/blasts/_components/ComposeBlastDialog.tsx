@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { MegaphoneIcon, UsersIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { FormCombobox } from "@/components/FormCombobox";
 import { UserAvatar } from "@/components/UserAvatar";
 import { useConfirm } from "@/components/ConfirmDialog";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import { useFetch } from "@/hooks/use-fetch";
 import { classifyError, isAbortError, parseErrorMessage, handleAuthRedirect, ERROR_MESSAGES } from "@/lib/errors";
 import { SPORT_CODES } from "@/lib/sports";
@@ -128,6 +130,8 @@ export function ComposeBlastDialog({
   onSent: () => void;
 }) {
   const confirm = useConfirm();
+  const { data: me } = useCurrentUser();
+  const isAdmin = me?.role === "ADMIN";
 
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -286,6 +290,16 @@ export function ComposeBlastDialog({
           <DialogTitle>New blast</DialogTitle>
           <DialogDescription>
             Reaches every targeted person on iOS with a push and a banner they must acknowledge.
+            {isAdmin ? (
+              <>
+                {" "}
+                News that everyone should see once, with no push?{" "}
+                <Link href="/settings/announcements" className="font-medium text-foreground underline underline-offset-2">
+                  Post an announcement
+                </Link>{" "}
+                instead.
+              </>
+            ) : null}
           </DialogDescription>
         </DialogHeader>
 

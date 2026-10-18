@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Copy, Eye, ImagePlus, MoreHorizontal, Plus, X } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useConfirm } from "@/components/ConfirmDialog";
 import EmptyState from "@/components/EmptyState";
@@ -354,6 +356,7 @@ function FieldError({ id, message }: { id: string; message?: string }) {
 
 function Composer({ initial, onClose, onSaved }: { initial: Draft; onClose: () => void; onSaved: () => void }) {
   const confirm = useConfirm();
+  const router = useRouter();
   const [draft, setDraft] = useState<Draft>(initial);
   const [saving, setSaving] = useState<null | "draft" | "publish">(null);
   const [uploading, setUploading] = useState(0);
@@ -402,8 +405,8 @@ function Composer({ initial, onClose, onSaved }: { initial: Draft; onClose: () =
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
 
-  async function close() {
-    if (saving) return;
+  async function close(): Promise<boolean> {
+    if (saving) return false;
     if (dirty) {
       const ok = await confirm({
         title: "Discard your changes?",
@@ -411,9 +414,10 @@ function Composer({ initial, onClose, onSaved }: { initial: Draft; onClose: () =
         confirmLabel: "Discard",
         variant: "danger",
       });
-      if (!ok) return;
+      if (!ok) return false;
     }
     onClose();
+    return true;
   }
 
   const audience = ANNOUNCEMENT_AUDIENCES.find((a) => a.id === draft.audience) ?? ANNOUNCEMENT_AUDIENCES[0];
@@ -486,7 +490,21 @@ function Composer({ initial, onClose, onSaved }: { initial: Draft; onClose: () =
       >
         <DialogHeader className="flex-col items-start gap-1 px-6 pt-6 pr-14 text-left">
           <DialogTitle>{draft.id ? "Edit announcement" : "New announcement"}</DialogTitle>
-          <DialogDescription>People see it once, then it is gone for them. Change it any time without a deploy.</DialogDescription>
+          <DialogDescription>
+            People see it once, then it is gone for them. Change it any time without a deploy. Need a crew to act on it?{" "}
+            <Link
+              href="/blasts"
+              className="font-medium text-foreground underline underline-offset-2"
+              onClick={(e) => {
+                // Leaving goes through the same unsaved-changes check as closing.
+                e.preventDefault();
+                void close().then((closed) => closed && router.push("/blasts"));
+              }}
+            >
+              Send a blast
+            </Link>{" "}
+            instead.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-6 px-6 pb-2 md:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">

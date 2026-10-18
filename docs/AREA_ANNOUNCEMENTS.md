@@ -22,6 +22,7 @@ Admins post a short splash ("new feature", "update", "heads up") from Settings a
 10. Publishing asks for confirmation naming the audience. Editing a live announcement saves in place; people who already closed it see the edit only after Show to everyone again.
 11. Long messages scroll inside the splash while its buttons stay pinned, on any screen down to 320px wide or 390px tall. An image that fails to load drops out instead of showing a broken icon.
 12. The editor checks the same rules as the API beside each field after the first save attempt (`validateAnnouncementDraft`), asks before discarding unsaved edits, waits for image uploads before saving, and checks image type and size before uploading. An edit leaves an untouched end date alone, so an ended announcement can still be corrected; publishing needs a future end date or none.
+13. Announcements and Blasts stay separate (decided 2026-10-18): Blasts are targeted, pushed, and acknowledged; announcements are role-wide, shown once on open, and never pushed. Each composer links to the other so admins pick the right one.
 8. Role preview and a dismiss that fails offline both fail safe: the splash shows again later.
 
 ## API
