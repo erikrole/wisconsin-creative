@@ -131,6 +131,24 @@
   },
   {
     "date": "2026-10-18",
+    "title": "Budget, kits and students for UA gear",
+    "type": "feature",
+    "summary": "Admins see the Under Armour budget, what the department covers for each person, and a student list with sizes on the gear results.",
+    "details": [
+      "Edit the total budget and student kit price, and mark it confirmed. Until then it carries a Placeholder tag. The budget and totals are visible to admins only.",
+      "Record the order the Equipment department places (PO, order number, dates), check gear in as it arrives, and mark pieces handed out person by person.",
+      "An Order table rolls staff kits, student kits and picks up into one quantity per item and size. Student shoes join once their style is chosen.",
+      "Each person shows Standard issue (covered by the department), Core kit where their fit has one, and the number of pieces they picked.",
+      "Add students to the list, see who is missing a top or shoe size, and fill sizes in for them. Sizes are saved to the student's profile.",
+      "Tabs for Overview, People, Order, Receiving, Handout and History keep the page easy to follow, and a Needs attention list shows what to fix next. History opens last year with its budget, items and people, and Save this year to History keeps a read-only copy of the current year."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 514
+  },
+  {
+    "date": "2026-10-18",
     "title": "Checkout days and kit privacy",
     "type": "fixes",
     "summary": "The checkout activity chart keeps every Madison day when the clocks change. A collaborator opening a kit no longer sees who currently has each piece.",

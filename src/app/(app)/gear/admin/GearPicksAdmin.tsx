@@ -18,7 +18,17 @@ import { Input } from "@/components/ui/input";
 import { FadeUp } from "@/components/ui/motion";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { AllotmentOverview } from "./AllotmentOverview";
+import { HandoutBoard } from "./HandoutBoard";
+import { HistoryBoard } from "./HistoryBoard";
+import { OrderPlan } from "./OrderPlan";
+import { OrderTracking } from "./OrderTracking";
+import { KitPills } from "./KitPills";
+import { NeedsAttention } from "./NeedsAttention";
+import { gearAttentionItems } from "@/lib/gear-picks/attention";
+import { StudentsSection } from "./StudentsSection";
 import { GEAR_PICKS_ME_QUERY_KEY } from "@/hooks/use-gear-picks";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { formatDateTime } from "@/lib/format";
@@ -42,12 +52,57 @@ const FIT_LABELS: Record<GearPickFitKey, string> = { MEN: "Men’s", WOMEN: "Wom
 type AdminChange =
   | { action: "setDeadline"; deadline: string | null }
   | { action: "setLaunched"; launched: boolean }
+  | { action: "setBudget"; budgetCents: number; confirmed: boolean; studentKitCents: number }
+  | { action: "addStudent"; userId: string }
+  | { action: "removeStudent"; studentId: string }
+  | {
+      action: "setHandout";
+      userId: string;
+      handed: boolean;
+      pieces: { sku: string; size: string; source: "STANDARD_ISSUE" | "CORE_KIT" | "STUDENT_KIT" | "PICK"; quantity: number }[];
+    }
+  | { action: "setOrder"; placedAt: string | null; poNumber: string | null; orderNumber: string | null; expectedAt: string | null }
+  | { action: "addReceipt"; sku: string; size: string | null; quantity: number; receivedAt: string; note?: string | null }
+  | { action: "removeReceipt"; receiptId: string }
+  | { action: "setStudentSizes"; studentId: string; topSize: string | null; shoeSize: string | null }
   | { action: "addParticipant"; userId: string; fit: GearPickFitKey }
   | { action: "updateParticipant"; participantId: string; fit?: GearPickFitKey; allowanceCents?: number }
   | { action: "removeParticipant"; participantId: string };
 
+const TABS = ["overview", "people", "order", "receiving", "handout", "history"] as const;
+type AdminTab = (typeof TABS)[number];
+/** Section anchors (used by the Needs attention links) and the tab each one lives on. */
+const TAB_FOR_ANCHOR: Record<string, AdminTab> = {
+  "gear-admin-access": "overview",
+  "gear-admin-people": "people",
+  "gear-admin-students": "people",
+};
+
+/** Tab state lives in the URL hash so a refresh or a shared link lands on the same tab. */
+function useAdminTab() {
+  const [tab, setTab] = useState<AdminTab>("overview");
+  useEffect(() => {
+    function sync() {
+      const hash = window.location.hash.replace(/^#/, "");
+      const next = (TABS as readonly string[]).includes(hash) ? (hash as AdminTab) : TAB_FOR_ANCHOR[hash];
+      if (!next) return;
+      setTab(next);
+      if (TAB_FOR_ANCHOR[hash]) window.setTimeout(() => document.getElementById(hash)?.scrollIntoView({ block: "start", behavior: "smooth" }), 50);
+    }
+    sync();
+    window.addEventListener("hashchange", sync);
+    return () => window.removeEventListener("hashchange", sync);
+  }, []);
+  function choose(next: string) {
+    setTab(next as AdminTab);
+    window.history.replaceState(null, "", `#${next}`);
+  }
+  return [tab, choose] as const;
+}
+
 export function GearPicksAdmin() {
   const queryClient = useQueryClient();
+  const [tab, chooseTab] = useAdminTab();
   const { data, isLoading, isError, refetch } = useQuery<GearPicksAdminResponse | null>({
     queryKey: ADMIN_QUERY_KEY,
     queryFn: async ({ signal }) => {
@@ -110,6 +165,7 @@ export function GearPicksAdmin() {
   }
 
   const { cycle, summary } = data;
+  const attentionCount = gearAttentionItems(data).length;
 
   return (
     <FadeUp>
@@ -137,6 +193,31 @@ export function GearPicksAdmin() {
         </Button>
       </PageHeader>
 
+      <Tabs value={tab} onValueChange={chooseTab} className="gap-4">
+        <TabsList aria-label="Gear sections">
+          <TabsTrigger value="overview">
+            Overview
+            {attentionCount > 0 && <span className="ml-1.5 rounded-full bg-[#FFF1BD] px-1.5 text-[11px] font-bold text-[#AB6400]">{attentionCount}</span>}
+          </TabsTrigger>
+          <TabsTrigger value="people">People <span className="ml-1.5 font-mono text-[11px] text-muted-foreground">{data.participants.length + data.students.length}</span></TabsTrigger>
+          <TabsTrigger value="order">Order</TabsTrigger>
+          <TabsTrigger value="receiving">Receiving</TabsTrigger>
+          <TabsTrigger value="handout">Handout</TabsTrigger>
+          <TabsTrigger value="history">History</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview">
+      <AllotmentOverview
+        title={cycle.title}
+        budget={data.budget}
+        pending={pending}
+        onSave={(budgetCents, confirmed, studentKitCents) =>
+          applyChange({ action: "setBudget", budgetCents, confirmed, studentKitCents }, "Budget saved")
+        }
+      />
+
+      <NeedsAttention data={data} />
+
       <StaffAccessCard
         launchedAt={cycle.launchedAt}
         deadline={cycle.deadline}
@@ -159,6 +240,9 @@ export function GearPicksAdmin() {
 
       <DeadlineCard deadline={cycle.deadline} isOpen={cycle.isOpen} pending={pending} onApply={applyChange} />
 
+        </TabsContent>
+
+        <TabsContent value="people">
       <section aria-labelledby="gear-admin-people" className="mb-6">
         <div className="mb-2 flex flex-wrap items-end justify-between gap-2">
           <h2 id="gear-admin-people" className="text-base font-semibold">People</h2>
@@ -171,8 +255,22 @@ export function GearPicksAdmin() {
         )}
       </section>
 
-      <section aria-labelledby="gear-admin-totals" className="mb-6">
-        <h2 id="gear-admin-totals" className="mb-2 text-base font-semibold">Totals by item, color, and size</h2>
+      <StudentsSection
+        students={data.students}
+        candidates={data.studentCandidates}
+        studentKitCents={data.budget.studentKitCents}
+        pending={pending}
+        onApply={applyChange}
+      />
+
+        </TabsContent>
+
+        <TabsContent value="order">
+      <OrderPlan participants={data.participants} students={data.students} />
+
+      <details className="mb-6">
+        <summary className="mb-2 min-h-10 cursor-pointer text-sm font-semibold text-muted-foreground">Staff picks only, by item, color and size</summary>
+        <h2 id="gear-admin-totals" className="sr-only">Totals by item, color, and size</h2>
         {data.totals.length === 0 ? (
           <EmptyState icon="chart" compact title="Nothing picked yet" description="Totals appear as people save picks." />
         ) : (
@@ -204,7 +302,29 @@ export function GearPicksAdmin() {
             </Table>
           </div>
         )}
-      </section>
+      </details>
+        </TabsContent>
+
+        <TabsContent value="receiving">
+      <OrderTracking
+        participants={data.participants}
+        students={data.students}
+        order={data.order}
+        receipts={data.receipts}
+        pending={pending}
+        onApply={applyChange}
+      />
+
+        </TabsContent>
+
+        <TabsContent value="handout">
+          <HandoutBoard participants={data.participants} students={data.students} handouts={data.handouts} pending={pending} onApply={applyChange} />
+        </TabsContent>
+
+        <TabsContent value="history">
+          <HistoryBoard />
+        </TabsContent>
+      </Tabs>
     </FadeUp>
   );
 }
@@ -256,7 +376,7 @@ function StaffAccessCard({
   }
 
   return (
-    <Card className="mb-4">
+    <Card id="gear-admin-access" className="mb-4">
       <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center">
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold">Not open to staff yet</p>
@@ -491,6 +611,7 @@ function ParticipantsTable({
             <TableHead>Person</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Fit</TableHead>
+            <TableHead>Kit</TableHead>
             <TableHead className="text-right">Allowance</TableHead>
             <TableHead className="text-right">Picked</TableHead>
             <TableHead>Last change</TableHead>
@@ -544,6 +665,9 @@ function ParticipantsTable({
                       <option value="WOMEN">{FIT_LABELS.WOMEN}</option>
                     </NativeSelect>
                   </TableCell>
+                  <TableCell>
+                    <KitPills fit={participant.fit} pickCount={lines.reduce((sum, line) => sum + line.quantity, 0)} />
+                  </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end">
                       <AllowanceInput participant={participant} pending={pending} onApply={onApply} />
@@ -586,7 +710,7 @@ function ParticipantsTable({
                 </TableRow>
                 {isExpanded && lines.length > 0 && (
                   <TableRow className="bg-muted/30 hover:bg-muted/30">
-                    <TableCell colSpan={7} className="py-2">
+                    <TableCell colSpan={8} className="py-2">
                       <ul className="flex flex-col gap-1 pl-6 text-sm">
                         {lines.map((line) => (
                           <li key={`${line.sku}|${line.size ?? ""}`} className="flex flex-wrap items-baseline gap-x-2">
