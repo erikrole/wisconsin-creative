@@ -1057,7 +1057,9 @@ private enum FixtureAPI {
     """)
 
     static let users = json("""
-    { "total": 5, "limit": 50, "offset": 0, "data": [
+    { "total": 5, "limit": 50, "offset": 0,
+      "stats": { "byRole": { "ADMIN": 1, "STAFF": 1, "STUDENT": 2, "COLLABORATOR": 0 } },
+      "data": [
       { "id": "u1", "name": "Alex Rivera", "email": "alex.rivera@wisc.edu", "role": "STAFF",
         "title": "Photo Lead", "primaryArea": "PHOTO", "active": true },
       { "id": "u2", "name": "Erik Role", "email": "erik.role@wisc.edu", "role": "ADMIN",
