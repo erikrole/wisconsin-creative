@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, List, Network } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { cn } from "@/lib/utils";
 import EmptyState from "@/components/EmptyState";
 import { UserAvatar } from "@/components/UserAvatar";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
@@ -160,10 +162,94 @@ function NodeRow({ tree, depth }: { tree: Tree; depth: number }) {
   );
 }
 
+const ROLE_LABEL: Record<Role, string> = { ADMIN: "Admin", STAFF: "Staff", STUDENT: "Student", COLLABORATOR: "Collaborator" };
+
+function nodeSubtitle(user: OrgUser) {
+  if (user.title) return user.title;
+  const area = user.primaryArea ? (AREA_LABELS[user.primaryArea] ?? user.primaryArea) : null;
+  return [ROLE_LABEL[user.role], area].filter(Boolean).join(" · ");
+}
+
+function PersonCard({ user }: { user: OrgUser }) {
+  return (
+    <Link
+      href={`/staff/${user.id}`}
+      className="flex w-44 items-center gap-2.5 rounded-xl border bg-card text-foreground px-3 py-2.5 text-left shadow-xs transition-[box-shadow,border-color] hover:border-primary/40 hover:shadow-sm focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+    >
+      <UserAvatar name={user.name} avatarUrl={user.avatarUrl} size="default" />
+      <span className="min-w-0">
+        <span className="block truncate text-sm font-bold">{user.name}</span>
+        <span className="block truncate text-xs text-muted-foreground">{nodeSubtitle(user)}</span>
+      </span>
+    </Link>
+  );
+}
+
+/** One branch of the chart: a person, a stub down, and their reports in a row beneath. */
+function ChartBranch({ tree }: { tree: Tree }) {
+  const { user, children } = tree;
+  return (
+    <div className="flex flex-col items-center">
+      <PersonCard user={user} />
+      {children.length > 0 && (
+        <>
+          <span aria-hidden className="h-5 w-px bg-border" />
+          <div className="flex items-start">
+            {children.map((child, index) => (
+              <div key={child.user.id} className="relative flex flex-col items-center px-1.5 pt-5">
+                <span aria-hidden className="absolute left-1/2 top-0 h-5 w-px bg-border" />
+                {children.length > 1 && index > 0 && <span aria-hidden className="absolute left-0 top-0 w-1/2 border-t border-border" />}
+                {children.length > 1 && index < children.length - 1 && (
+                  <span aria-hidden className="absolute right-0 top-0 w-1/2 border-t border-border" />
+                )}
+                <ChartBranch tree={child} />
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function OrgChartTree({ forest }: { forest: Tree[] }) {
+  const branches = forest.filter((tree) => tree.children.length > 0);
+  const alone = forest.filter((tree) => tree.children.length === 0);
+  return (
+    <div className="flex flex-col gap-8">
+      {branches.length > 0 && (
+        <div className="overflow-x-auto pb-4">
+          <div className="mx-auto flex w-max min-w-full flex-col items-center gap-10">
+            {branches.map((tree) => (
+              <ChartBranch key={tree.user.id} tree={tree} />
+            ))}
+          </div>
+        </div>
+      )}
+      {alone.length > 0 && (
+        <section aria-label="Not placed in a team yet" className="border-t pt-5">
+          <h2 className="text-sm font-bold">
+            Not placed yet <span className="ml-1 font-normal tabular-nums text-muted-foreground">{alone.length}</span>
+          </h2>
+          <p className="mb-3 mt-0.5 text-xs text-muted-foreground">No manager is linked and nobody reports to them. Link a manager on their profile to place them in the chart.</p>
+          <ul className="flex flex-wrap gap-2">
+            {alone.map((tree) => (
+              <li key={tree.user.id}>
+                <PersonCard user={tree.user} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </div>
+  );
+}
+
 export default function OrgChartPage() {
   const [users, setUsers] = useState<OrgUser[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [view, setView] = useState<"chart" | "list">("chart");
 
   const loadOrgChart = useCallback((signal?: AbortSignal) => {
     (async () => {
@@ -198,6 +284,7 @@ export default function OrgChartPage() {
   }, [loadOrgChart]);
 
   const forest = useMemo(() => (users ? buildForest(users) : []), [users]);
+  const nameOnlyManagers = useMemo(() => (users ?? []).filter((u) => u.directReportName && !u.directReportId).length, [users]);
 
   return (
     <>
@@ -209,8 +296,30 @@ export default function OrgChartPage() {
         </Button>
       </PageHeader>
 
-      <Card>
-        <CardContent className="p-4">
+      {!loading && !error && nameOnlyManagers > 0 && (
+        <div role="status" className="mb-4 flex items-center gap-3 rounded-xl border border-[#f5e29a] bg-[#fff8e1] px-4 py-3 text-sm text-[#5c4400]">
+          <span aria-hidden className="size-2 shrink-0 rounded-full bg-[#f5b800]" />
+          <span>
+            <strong>{nameOnlyManagers} {nameOnlyManagers === 1 ? "person lists" : "people list"}</strong> a manager by name only, so they appear at the top level. Link their manager on their profile to place them.
+          </span>
+        </div>
+      )}
+
+      {!loading && !error && forest.length > 0 && (
+        <div className="mb-3 flex justify-end">
+          <ToggleGroup type="single" value={view} onValueChange={(next) => next && setView(next as "chart" | "list")} aria-label="Org chart view">
+            <ToggleGroupItem value="chart" aria-label="Chart view">
+              <Network className="mr-1.5 size-4" aria-hidden /> Chart
+            </ToggleGroupItem>
+            <ToggleGroupItem value="list" aria-label="List view">
+              <List className="mr-1.5 size-4" aria-hidden /> List
+            </ToggleGroupItem>
+          </ToggleGroup>
+        </div>
+      )}
+
+      <Card className="rounded-xl">
+        <CardContent className={cn("p-4", view === "chart" && !loading && !error && forest.length > 0 && "sm:p-8")}>
           {loading && (
             <div className="flex flex-col gap-3">
               {Array.from({ length: 6 }).map((_, i) => (
@@ -240,7 +349,8 @@ export default function OrgChartPage() {
               description="Add users and set their direct report to populate the org chart."
             />
           )}
-          {!loading && !error && forest.length > 0 && (
+          {!loading && !error && forest.length > 0 && view === "chart" && <OrgChartTree forest={forest} />}
+          {!loading && !error && forest.length > 0 && view === "list" && (
             <ul className="text-sm">
               {forest.map((root) => (
                 <NodeRow key={root.user.id} tree={root} depth={0} />

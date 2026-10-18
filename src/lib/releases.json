@@ -25,6 +25,7 @@
       "Group by area splits the whole list under Photo, Video, and the other areas, with each area's full headcount, even across pages.",
       "Hover a name in the table to see a quick card with title, location, and contact details.",
       "Year and sport filters only appear when they apply to students.",
+      "The org chart is now a real chart with cards and connectors, a notice for people whose manager is listed by name only, and a Not placed yet section. A list view is still one tap away.",
       "Staff and Workforce have a fresh look: Lato type, a calm blue accent, softer cards, and a colored dot for each area."
     ],
     "platforms": ["Web"],
