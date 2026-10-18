@@ -20,6 +20,7 @@ import type {
   GearPickAdminStudent,
   GearPickBudgetDto,
   GearPickCycleDto,
+  GearPickHandoutDto,
   GearPickReceiptDto,
   GearPickLineDto,
   GearPicksAdminResponse,
@@ -375,7 +376,7 @@ export function gearPickBudget(params: {
 
 export async function getGearPicksAdmin(now: Date = new Date()): Promise<GearPicksAdminResponse> {
   const cycle = await loadCycleOrThrow(db);
-  const [participants, users, studentRows, studentUsers, receiptRows] = await Promise.all([
+  const [participants, users, studentRows, studentUsers, receiptRows, handoutRows] = await Promise.all([
     db.gearPickParticipant.findMany({
       where: { cycleId: cycle.id },
       select: {
@@ -427,7 +428,20 @@ export async function getGearPicksAdmin(now: Date = new Date()): Promise<GearPic
       },
       orderBy: [{ receivedAt: "desc" }, { createdAt: "desc" }],
     }),
+    db.gearPickHandout.findMany({
+      where: { cycleId: cycle.id },
+      select: { userId: true, sku: true, size: true, source: true, quantity: true, handedOutAt: true },
+    }),
   ]);
+
+  const handouts = handoutRows.map((row) => ({
+    userId: row.userId,
+    sku: row.sku,
+    size: row.size,
+    source: row.source as GearPickHandoutDto["source"],
+    quantity: row.quantity,
+    handedOutAt: row.handedOutAt.toISOString(),
+  }));
 
   const receipts: GearPickReceiptDto[] = receiptRows.map((row) => ({
     id: row.id,
@@ -492,6 +506,7 @@ export async function getGearPicksAdmin(now: Date = new Date()): Promise<GearPic
       expectedAt: cycle.expectedAt?.toISOString() ?? null,
     },
     receipts,
+    handouts,
   };
 }
 
@@ -502,6 +517,12 @@ export type GearPicksAdminChange =
   | { action: "setOrder"; placedAt: string | null; poNumber: string | null; orderNumber: string | null; expectedAt: string | null }
   | { action: "addReceipt"; sku: string; size: string | null; quantity: number; receivedAt: string; note?: string | null }
   | { action: "removeReceipt"; receiptId: string }
+  | {
+      action: "setHandout";
+      userId: string;
+      handed: boolean;
+      pieces: { sku: string; size: string; source: GearPickHandoutDto["source"]; quantity: number }[];
+    }
   | { action: "addStudent"; userId: string }
   | { action: "removeStudent"; studentId: string }
   | { action: "setStudentSizes"; studentId: string; topSize: string | null; shoeSize: string | null }
@@ -683,6 +704,51 @@ export async function applyGearPicksAdminChange(actor: Actor, change: GearPicksA
             entityId: receipt.id,
             action: "remove_receipt",
             before: { sku: receipt.sku, size: receipt.size, quantity: receipt.quantity },
+          });
+          return { cycleId: cycle.id };
+        }
+
+        case "setHandout": {
+          const user = await tx.user.findUnique({ where: { id: change.userId }, select: { id: true, name: true } });
+          if (!user) throw new HttpError(404, "That person doesn't exist.");
+          const handedOutAt = new Date();
+          for (const piece of change.pieces) {
+            if (change.handed) {
+              await tx.gearPickHandout.upsert({
+                where: {
+                  cycleId_userId_sku_size_source: {
+                    cycleId: cycle.id,
+                    userId: change.userId,
+                    sku: piece.sku,
+                    size: piece.size,
+                    source: piece.source,
+                  },
+                },
+                create: {
+                  cycleId: cycle.id,
+                  userId: change.userId,
+                  sku: piece.sku,
+                  size: piece.size,
+                  source: piece.source,
+                  quantity: piece.quantity,
+                  handedOutAt,
+                  handedOutById: actor.id,
+                },
+                update: { quantity: piece.quantity, handedOutAt, handedOutById: actor.id },
+              });
+            } else {
+              await tx.gearPickHandout.deleteMany({
+                where: { cycleId: cycle.id, userId: change.userId, sku: piece.sku, size: piece.size, source: piece.source },
+              });
+            }
+          }
+          await createAuditEntryTx(tx, {
+            actorId: actor.id,
+            actorRole: actor.role,
+            entityType: "gear_pick_handout",
+            entityId: `${cycle.id}:${change.userId}`,
+            action: change.handed ? "hand_out" : "undo_hand_out",
+            after: { userId: change.userId, name: user.name, handed: change.handed, pieces: change.pieces },
           });
           return { cycleId: cycle.id };
         }

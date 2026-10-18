@@ -8,7 +8,7 @@ const CARD = "overflow-hidden rounded-[14px] border border-[#E8E8EC] bg-white sh
 const HEAD = "text-[11px] font-bold uppercase tracking-[0.09em] text-[#6B6F7A] dark:text-muted-foreground";
 const ROW = "grid grid-cols-[minmax(180px,1.5fr)_130px_minmax(160px,2fr)_56px_90px] items-center gap-3.5 border-b border-[#F0F1F3] px-5 py-3 text-sm last:border-b-0 dark:border-white/10";
 
-const SOURCE: Record<OrderSource, { label: string; className: string }> = {
+export const SOURCE: Record<OrderSource, { label: string; className: string }> = {
   STANDARD_ISSUE: { label: "Standard issue", className: "border border-dashed border-[#BFC1CC] bg-[#F7F7F9] text-[#60646C] dark:bg-white/5 dark:text-muted-foreground" },
   CORE_KIT: { label: "Core kit", className: "bg-[#F3EBFB] text-[#6E3AA8] dark:bg-[#8E4EC6]/20 dark:text-[#D9BFF2]" },
   STUDENT_KIT: { label: "Student kit", className: "bg-[#E3F6F3] text-[#0B7A6D] dark:bg-[#12A594]/20 dark:text-[#8EE0D5]" },

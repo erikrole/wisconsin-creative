@@ -89,6 +89,7 @@ export type GearPicksAdminResponse = {
   budget: GearPickBudgetDto;
   order: GearPickOrderDto;
   receipts: GearPickReceiptDto[];
+  handouts: GearPickHandoutDto[];
 };
 
 /** The order record. The Equipment department places the order; the site only records it. */
@@ -128,4 +129,14 @@ export type GearPickAdminStudent = {
   topSizeFit: "UNISEX" | "WOMENS" | "MENS" | null;
   shoeSize: string | null;
   needsSize: boolean;
+};
+
+/** A piece handed out to a person. The key is the person, SKU, size and source. */
+export type GearPickHandoutDto = {
+  userId: string;
+  sku: string;
+  size: string;
+  source: "STANDARD_ISSUE" | "CORE_KIT" | "STUDENT_KIT" | "PICK";
+  quantity: number;
+  handedOutAt: string;
 };

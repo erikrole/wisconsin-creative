@@ -20,6 +20,7 @@ vi.mock("@/lib/db", () => {
     gearPickLine: { deleteMany: vi.fn(), createMany: vi.fn() },
     gearPickStudent: { findFirst: vi.fn(), create: vi.fn(), delete: vi.fn() },
     gearPickReceipt: { findFirst: vi.fn(), create: vi.fn(), delete: vi.fn() },
+    gearPickHandout: { upsert: vi.fn(), deleteMany: vi.fn() },
     user: { findUnique: vi.fn(), update: vi.fn() },
   };
   return {
@@ -28,6 +29,7 @@ vi.mock("@/lib/db", () => {
       gearPickParticipant: { findUnique: vi.fn(), findMany: vi.fn() },
       gearPickStudent: { findMany: vi.fn() },
       gearPickReceipt: { findMany: vi.fn() },
+      gearPickHandout: { findMany: vi.fn() },
       user: { findUnique: vi.fn(), findMany: vi.fn() },
       $transaction: vi.fn(),
       _mockTx: tx,
@@ -97,6 +99,7 @@ beforeEach(() => {
   vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, remaining: 9, resetAt: Date.now() + 60_000 });
   vi.mocked(db.gearPickStudent.findMany).mockResolvedValue([]);
   vi.mocked(db.gearPickReceipt.findMany).mockResolvedValue([]);
+  vi.mocked(db.gearPickHandout.findMany).mockResolvedValue([]);
   tx.gearPickCycle!.findUnique!.mockResolvedValue(openCycle);
   tx.gearPickParticipant!.findUnique!.mockResolvedValue(participant);
   tx.gearPickSubmission!.create!.mockResolvedValue({ id: "submission-1" });
@@ -542,6 +545,46 @@ describe("admin routes", () => {
     tx.gearPickReceipt!.findFirst!.mockResolvedValueOnce(null);
     const missing = await patchAdmin(patch({ action: "removeReceipt", receiptId: "nope" }), context);
     expect(missing.status).toBe(404);
+  });
+
+  it("marks a piece handed out and undoes it, with audit entries", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(admin);
+    tx.user!.findUnique!.mockResolvedValue({ id: "user-1", name: "Erik Role" });
+    const piece = { sku: "6021649-834", size: "M", source: "CORE_KIT", quantity: 1 };
+
+    const handed = await patchAdmin(patch({ action: "setHandout", userId: "user-1", pieces: [piece], handed: true }), context);
+    expect(handed.status).toBe(200);
+    expect(tx.gearPickHandout!.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { cycleId_userId_sku_size_source: { cycleId: "2027-28", userId: "user-1", sku: "6021649-834", size: "M", source: "CORE_KIT" } },
+        create: expect.objectContaining({ quantity: 1, handedOutById: "admin-1" }),
+      }),
+    );
+    expect(createAuditEntryTx).toHaveBeenCalledWith(tx, expect.objectContaining({ action: "hand_out" }));
+
+    const undone = await patchAdmin(patch({ action: "setHandout", userId: "user-1", pieces: [piece], handed: false }), context);
+    expect(undone.status).toBe(200);
+    expect(tx.gearPickHandout!.deleteMany).toHaveBeenCalledWith({
+      where: { cycleId: "2027-28", userId: "user-1", sku: "6021649-834", size: "M", source: "CORE_KIT" },
+    });
+    expect(createAuditEntryTx).toHaveBeenCalledWith(tx, expect.objectContaining({ action: "undo_hand_out" }));
+  });
+
+  it("rejects a handout for an unknown person or a bad source", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(admin);
+    tx.user!.findUnique!.mockResolvedValue(null);
+
+    const missing = await patchAdmin(
+      patch({ action: "setHandout", userId: "nobody", handed: true, pieces: [{ sku: "6021649-834", size: "M", source: "CORE_KIT", quantity: 1 }] }),
+      context,
+    );
+    expect(missing.status).toBe(404);
+
+    const bad = await patchAdmin(
+      patch({ action: "setHandout", userId: "user-1", handed: true, pieces: [{ sku: "6021649-834", size: "M", source: "GIFT", quantity: 1 }] }),
+      context,
+    );
+    expect(bad.status).toBe(400);
   });
 
   it("launches the cycle to staff with an audit entry", async () => {

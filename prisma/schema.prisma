@@ -277,6 +277,7 @@ model User {
   gearPickParticipations        GearPickParticipant[]
   gearPickStudents              GearPickStudent[]
   gearPickReceipts              GearPickReceipt[]
+  gearPickHandouts              GearPickHandout[]
   resources                     Resource[]
   resourcesVerified             Resource[]                       @relation("ResourceLastVerifiedBy")
   resourceAssetFoldersCreated   ResourceAssetFolder[]            @relation("ResourceAssetFolderCreator")
@@ -2923,8 +2924,29 @@ model GearPickCycle {
   participants GearPickParticipant[]
   students     GearPickStudent[]
   receipts     GearPickReceipt[]
+  handouts     GearPickHandout[]
 
   @@map("gear_pick_cycles")
+}
+
+/// A piece physically handed out to one person. One row per assigned piece (cycle, user, sku, size, source).
+model GearPickHandout {
+  id            String        @id @default(cuid())
+  cycleId       String        @map("cycle_id")
+  userId        String        @map("user_id")
+  sku           String
+  size          String
+  /// STANDARD_ISSUE, CORE_KIT, STUDENT_KIT or PICK.
+  source        String
+  quantity      Int
+  handedOutAt   DateTime      @map("handed_out_at")
+  handedOutById String?       @map("handed_out_by_id")
+  cycle         GearPickCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([cycleId, userId, sku, size, source])
+  @@index([userId])
+  @@map("gear_pick_handouts")
 }
 
 /// Gear checked in against the order. Several receipts can exist per SKU and size (partial shipments).

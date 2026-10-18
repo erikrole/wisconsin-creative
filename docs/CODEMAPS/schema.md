@@ -131,7 +131,7 @@ Values: `UPLOADING`, `FINALIZING`, `COMMITTED`, `FAILED`
 
 ## Model `User`
 
-Fields: 132
+Fields: 133
 
 - `id                            String                           @id @default(cuid())`
 - `name                          String`
@@ -206,6 +206,7 @@ Fields: 132
 - `gearPickParticipations        GearPickParticipant[]`
 - `gearPickStudents              GearPickStudent[]`
 - `gearPickReceipts              GearPickReceipt[]`
+- `gearPickHandouts              GearPickHandout[]`
 - `resources                     Resource[]`
 - `resourcesVerified             Resource[]                       @relation("ResourceLastVerifiedBy")`
 - `resourceAssetFoldersCreated   ResourceAssetFolder[]            @relation("ResourceAssetFolderCreator")`
@@ -2977,7 +2978,7 @@ Values: `MEN`, `WOMEN`
 
 ## Model `GearPickCycle`
 
-Fields: 16
+Fields: 17
 
 - `id           String                @id`
 - `title        String`
@@ -2995,10 +2996,33 @@ Fields: 16
 - `participants GearPickParticipant[]`
 - `students     GearPickStudent[]`
 - `receipts     GearPickReceipt[]`
+- `handouts     GearPickHandout[]`
 
 Indexes and constraints:
 
 - `@@map("gear_pick_cycles")`
+
+## Model `GearPickHandout`
+
+Fields: 11
+
+- `id            String        @id @default(cuid())`
+- `cycleId       String        @map("cycle_id")`
+- `userId        String        @map("user_id")`
+- `sku           String`
+- `size          String`
+- `source        String`
+- `quantity      Int`
+- `handedOutAt   DateTime      @map("handed_out_at")`
+- `handedOutById String?       @map("handed_out_by_id")`
+- `cycle         GearPickCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)`
+- `user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)`
+
+Indexes and constraints:
+
+- `@@unique([cycleId, userId, sku, size, source])`
+- `@@index([userId])`
+- `@@map("gear_pick_handouts")`
 
 ## Model `GearPickReceipt`
 

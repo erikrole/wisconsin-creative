@@ -21,6 +21,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AllotmentOverview } from "./AllotmentOverview";
+import { HandoutBoard } from "./HandoutBoard";
 import { OrderPlan } from "./OrderPlan";
 import { OrderTracking } from "./OrderTracking";
 import { KitPills } from "./KitPills";
@@ -53,6 +54,12 @@ type AdminChange =
   | { action: "setBudget"; budgetCents: number; confirmed: boolean; studentKitCents: number }
   | { action: "addStudent"; userId: string }
   | { action: "removeStudent"; studentId: string }
+  | {
+      action: "setHandout";
+      userId: string;
+      handed: boolean;
+      pieces: { sku: string; size: string; source: "STANDARD_ISSUE" | "CORE_KIT" | "STUDENT_KIT" | "PICK"; quantity: number }[];
+    }
   | { action: "setOrder"; placedAt: string | null; poNumber: string | null; orderNumber: string | null; expectedAt: string | null }
   | { action: "addReceipt"; sku: string; size: string | null; quantity: number; receivedAt: string; note?: string | null }
   | { action: "removeReceipt"; receiptId: string }
@@ -61,7 +68,7 @@ type AdminChange =
   | { action: "updateParticipant"; participantId: string; fit?: GearPickFitKey; allowanceCents?: number }
   | { action: "removeParticipant"; participantId: string };
 
-const TABS = ["overview", "people", "order", "receiving"] as const;
+const TABS = ["overview", "people", "order", "receiving", "handout"] as const;
 type AdminTab = (typeof TABS)[number];
 /** Section anchors (used by the Needs attention links) and the tab each one lives on. */
 const TAB_FOR_ANCHOR: Record<string, AdminTab> = {
@@ -194,6 +201,7 @@ export function GearPicksAdmin() {
           <TabsTrigger value="people">People <span className="ml-1.5 font-mono text-[11px] text-muted-foreground">{data.participants.length + data.students.length}</span></TabsTrigger>
           <TabsTrigger value="order">Order</TabsTrigger>
           <TabsTrigger value="receiving">Receiving</TabsTrigger>
+          <TabsTrigger value="handout">Handout</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview">
@@ -305,6 +313,10 @@ export function GearPicksAdmin() {
         onApply={applyChange}
       />
 
+        </TabsContent>
+
+        <TabsContent value="handout">
+          <HandoutBoard participants={data.participants} students={data.students} handouts={data.handouts} pending={pending} onApply={applyChange} />
         </TabsContent>
       </Tabs>
     </FadeUp>

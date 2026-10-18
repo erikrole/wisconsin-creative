@@ -47,6 +47,22 @@ const patchSchema = z.discriminatedUnion("action", [
     receiptId: z.string().trim().min(1).max(64),
   }),
   z.object({
+    action: z.literal("setHandout"),
+    userId: z.string().trim().min(1).max(64),
+    handed: z.boolean(),
+    pieces: z
+      .array(
+        z.object({
+          sku: z.string().trim().regex(/^\d{6,8}-\d{3}$/),
+          size: z.string().trim().min(1).max(12),
+          source: z.enum(["STANDARD_ISSUE", "CORE_KIT", "STUDENT_KIT", "PICK"]),
+          quantity: z.number().int().min(1).max(50),
+        }),
+      )
+      .min(1)
+      .max(40),
+  }),
+  z.object({
     action: z.literal("addStudent"),
     userId: z.string().trim().min(1).max(64),
   }),
