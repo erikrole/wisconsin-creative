@@ -1,6 +1,21 @@
 [
   {
     "date": "2026-10-19",
+    "title": "Emails have a new look",
+    "type": "improvement",
+    "summary": "Every email from the app now uses the same Wisconsin Creative design, with the logo, one clear button, and a plain-text version.",
+    "details": [
+      "Invites, password resets, shift trades, and reminders all share the new layout.",
+      "Overdue gear and damage reports use a red label so they stand out.",
+      "Replies can go to a staff inbox once one is set up."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 518
+  },
+  {
+    "date": "2026-10-19",
     "title": "Hiring invites are emailed",
     "type": "improvement",
     "summary": "New students now get an email with a sign-in link when you invite them, and you can resend it from Onboarding.",

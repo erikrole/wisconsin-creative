@@ -53,6 +53,10 @@ export const env = {
   get emailFrom() {
     return process.env.EMAIL_FROM || "Wisconsin Creative <noreply@wisconsincreative.com>";
   },
+  /** Where replies to transactional email go. Unset means no reply-to header. */
+  get emailReplyTo() {
+    return process.env.EMAIL_REPLY_TO || "";
+  },
   /** Base URL for the app (used in emails). Falls back to VERCEL_URL or localhost. */
   get appUrl() {
     return process.env.APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");

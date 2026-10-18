@@ -1,29 +1,25 @@
 import { env } from "@/lib/env";
+import { EMAIL_THEME, escapeEmailHtml, renderEmail, type RenderedEmail } from "@/lib/email-template";
+
+export { EMAIL_THEME, escapeEmailHtml, renderEmail };
+export type { RenderedEmail };
 
 type EmailParams = {
   to: string;
   subject: string;
   html: string;
+  /** Plain-text alternative. Mail clients and spam filters both prefer having one. */
+  text?: string;
 };
 
 export const EMAIL_SEND_TIMEOUT_MS = 4_000;
-
-export const EMAIL_THEME = {
-  background: "#FFFFFF",
-  text: "#1A1A2E",
-  body: "#333333",
-  muted: "#6B7280",
-  divider: "#E5E7EB",
-  brand: "#A00000",
-  onBrand: "#FFFFFF",
-} as const;
 
 /**
  * Send a transactional email via Resend.
  * Falls back to console.log when RESEND_API_KEY is not set (dev mode).
  * Failures are non-fatal — logged but never thrown.
  */
-export async function sendEmail({ to, subject, html }: EmailParams): Promise<boolean> {
+export async function sendEmail({ to, subject, html, text }: EmailParams): Promise<boolean> {
   if (!env.resendApiKey) {
     console.log(`[EMAIL-DEV] To: ${to} | Subject: ${subject}`);
     return true;
@@ -47,6 +43,8 @@ export async function sendEmail({ to, subject, html }: EmailParams): Promise<boo
           to,
           subject,
           html,
+          ...(text ? { text } : {}),
+          ...(env.emailReplyTo ? { replyTo: env.emailReplyTo } : {}),
         },
         requestOptions,
       );
@@ -66,36 +64,36 @@ export async function sendEmail({ to, subject, html }: EmailParams): Promise<boo
   }
 }
 
-export function buildEmailDocument({ title, content }: { title: string; content: string }): string {
-  return `
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"></head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; background-color: ${EMAIL_THEME.background}; color: ${EMAIL_THEME.text};">
-  <div style="border-bottom: 3px solid ${EMAIL_THEME.brand}; padding-bottom: 12px; margin-bottom: 20px;">
-    <strong style="font-size: 18px;">${escapeEmailHtml(title)}</strong>
-  </div>
-  ${content}
-  <hr style="border: none; border-top: 1px solid ${EMAIL_THEME.divider}; margin: 24px 0;">
-  <p style="font-size: 11px; color: ${EMAIL_THEME.muted};">Wisconsin Creative &mdash; University of Wisconsin&ndash;Madison</p>
-</body>
-</html>`.trim();
-}
-
 /**
- * Build notification email HTML. Minimal inline-styled template.
+ * Build a notification email. Spread the result into `sendEmail` arguments so
+ * the HTML and plain-text versions travel together.
  */
+export type NotificationEmailKind = "checkout" | "schedule" | "item";
+
+const NOTIFICATION_KINDS: Record<
+  NotificationEmailKind,
+  { eyebrow: string; titleLabel: string; dateLabel: string; actionLabel: string; path: string }
+> = {
+  checkout: { eyebrow: "Checkout", titleLabel: "Checkout", dateLabel: "Due", actionLabel: "View checkout", path: "/checkouts" },
+  schedule: { eyebrow: "Schedule", titleLabel: "Event", dateLabel: "Call time", actionLabel: "View your schedule", path: "/schedule" },
+  item: { eyebrow: "Item report", titleLabel: "Item", dateLabel: "Reported", actionLabel: "Review item", path: "/items" },
+};
+
 export function buildNotificationEmail({
   title,
   body,
   bookingTitle,
   dueAt,
+  kind,
 }: {
   title: string;
   body: string;
   bookingTitle?: string;
   dueAt?: string;
-}): string {
+  /** Picks the label, fact names, and button destination. Omit for a generic notice. */
+  kind?: NotificationEmailKind;
+}): RenderedEmail {
+  const copy = kind ? NOTIFICATION_KINDS[kind] : null;
   const dueStr = dueAt
     ? new Date(dueAt).toLocaleString("en-US", {
         // Emails are built on the server, which runs in UTC. Without the
@@ -110,19 +108,22 @@ export function buildNotificationEmail({
       })
     : null;
 
-  return buildEmailDocument({
-    title,
-    content: `
-  <p style="font-size: 15px; line-height: 1.5; color: ${EMAIL_THEME.body};">${escapeEmailHtml(body)}</p>
-  ${bookingTitle ? `<p style="font-size: 13px; color: ${EMAIL_THEME.muted};">Booking: <strong>${escapeEmailHtml(bookingTitle)}</strong></p>` : ""}
-  ${dueStr ? `<p style="font-size: 13px; color: ${EMAIL_THEME.muted};">Due: ${escapeEmailHtml(dueStr)}</p>` : ""}`.trim(),
-  });
-}
+  const facts = [
+    ...(bookingTitle ? [{ label: copy?.titleLabel ?? "Booking", value: bookingTitle }] : []),
+    ...(dueStr ? [{ label: copy?.dateLabel ?? "Due", value: dueStr }] : []),
+  ];
 
-export function escapeEmailHtml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+  return renderEmail({
+    preheader: body,
+    eyebrow: copy?.eyebrow,
+    // Overdue and damage notices read as urgent; everything else stays neutral.
+    urgent: kind === "item" || /overdue/i.test(title),
+    headline: title,
+    paragraphs: [body],
+    facts,
+    action: copy
+      ? { label: copy.actionLabel, url: `${env.appUrl}${copy.path}` }
+      : { label: "Open Wisconsin Creative", url: env.appUrl },
+    manageNotifications: true,
+  });
 }

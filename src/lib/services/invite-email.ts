@@ -1,4 +1,4 @@
-import { EMAIL_THEME, buildEmailDocument, escapeEmailHtml, sendEmail } from "@/lib/email";
+import { renderEmail, sendEmail } from "@/lib/email";
 import { env } from "@/lib/env";
 
 export type InviteEmailKind = "invite" | "reminder";
@@ -23,27 +23,45 @@ export function buildInviteEmail({
   name?: string | null;
   email: string;
   kind?: InviteEmailKind;
-}): { subject: string; html: string } {
-  const greeting = firstName(name) ? `Hi ${escapeEmailHtml(firstName(name))},` : "Hi,";
+}): { subject: string; html: string; text: string } {
+  const first = firstName(name);
+  /** "Hi Maya, you've..." with a name, "You've..." without. */
+  const lead = (sentence: string) =>
+    first ? `Hi ${first}, ${sentence}` : `${sentence.charAt(0).toUpperCase()}${sentence.slice(1)}`;
   const loginUrl = inviteLoginUrl(email);
-  const intro =
-    kind === "reminder"
-      ? "A reminder that your Wisconsin Creative account is waiting for you."
-      : "You have been added to Wisconsin Creative, the team's home for schedules, gear, and reservations.";
-  const subject =
-    kind === "reminder" ? "Finish setting up your Wisconsin Creative account" : "You're invited to Wisconsin Creative";
+  const reminder = kind === "reminder";
+  const subject = reminder ? "Finish setting up your Wisconsin Creative account" : "You're invited to Wisconsin Creative";
 
-  const html = buildEmailDocument({
-    title: subject,
-    content: `
-  <p style="font-size: 15px; line-height: 1.5; color: ${EMAIL_THEME.body};">${greeting}</p>
-  <p style="font-size: 15px; line-height: 1.5; color: ${EMAIL_THEME.body};">${intro}</p>
-  <p style="font-size: 15px; line-height: 1.5; color: ${EMAIL_THEME.body};">Sign in with <strong>${escapeEmailHtml(email)}</strong> to finish setup. It takes a couple of minutes: add a photo, your availability, and your sizes.</p>
-  <p style="margin: 24px 0;"><a href="${escapeEmailHtml(loginUrl)}" style="display: inline-block; background-color: ${EMAIL_THEME.brand}; color: ${EMAIL_THEME.onBrand}; text-decoration: none; font-weight: 600; font-size: 15px; padding: 12px 20px; border-radius: 8px;">Set up your account</a></p>
-  <p style="font-size: 13px; line-height: 1.5; color: ${EMAIL_THEME.muted};">Use this exact address. If the button does not work, open ${escapeEmailHtml(loginUrl)} in your browser. If you were not expecting this, you can ignore it.</p>`.trim(),
+  const rendered = renderEmail({
+    preheader: reminder
+      ? "Sign in and finish your profile so we can schedule you."
+      : "Your account is ready. Finishing your profile takes about three minutes.",
+    eyebrow: reminder ? "Quick reminder" : "You're invited",
+    headline: reminder ? "Your account is still waiting" : "Welcome to the crew",
+    paragraphs: reminder
+      ? [lead("we can't schedule you for shifts until you've signed in and finished your profile. It takes about three minutes.")]
+      : [
+          lead(
+            "you've been added to Wisconsin Creative, where we schedule shifts, check out gear, and keep game days running. Finishing your profile takes about three minutes."
+          ),
+        ],
+    steps: reminder
+      ? undefined
+      : {
+          heading: "What you'll set up",
+          items: [
+            "Contact details so we can reach you",
+            "Student details like year and graduation",
+            "Apparel sizes and a photo for team gear and your badge",
+          ],
+        },
+    action: { label: reminder ? "Finish setting up" : "Set up your account", url: loginUrl },
+    note: `Sign in with ${email}. Use this exact address so we can find your invite.`,
+    footer: ["Questions? Reply to this email. Wasn't expecting this? You can ignore it, nothing happens until you sign in."],
+    showFallbackLink: true,
   });
 
-  return { subject, html };
+  return { subject, ...rendered };
 }
 
 /** Never throws: callers decide what to tell the admin from the returned status. */
@@ -53,7 +71,7 @@ export async function sendInviteEmail(input: {
   kind?: InviteEmailKind;
 }): Promise<InviteEmailStatus> {
   if (!env.resendApiKey) return "not_configured";
-  const { subject, html } = buildInviteEmail(input);
-  const delivered = await sendEmail({ to: input.email, subject, html });
+  const { subject, html, text } = buildInviteEmail(input);
+  const delivered = await sendEmail({ to: input.email, subject, html, text });
   return delivered ? "sent" : "failed";
 }
