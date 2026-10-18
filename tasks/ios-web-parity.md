@@ -6,14 +6,12 @@ This is the handoff for the next native slice. Compare the website's pages and s
 
 Open, and off limits for file overlap:
 
-- #503 hours, charts, and exports
-- #505 condition reports
 - #497, #486, #485, and #484 Users to Staff and role tabs
 - #494 Budget
 - #488 Photo Mechanic licenses
 - #478 Photo Frame
 
-Shared logins (#502) and the Fetch and Offload pages (#483) are already merged. Native signatures and guide authoring wait on Erik's decision.
+Hours and exports (#503), condition reports (#505), and the away-game travel roster (#506) are already merged, along with shared logins (#502), the Fetch and Offload pages (#483), item activity (#508), my hours (#512), and booking activity (#513). Kit return times are covered in this branch. Native signatures and guide authoring wait on Erik's decision.
 
 ## How to pick
 
@@ -42,16 +40,20 @@ Take the first item under **Missing** whose blocked note is clear. Keep one scre
 - [x] UA Gear, for a participant. Admin roster, deadline, and the equipment spreadsheet stay on the web.
 - [x] Team badge shelf. A person's own badges stay on Profile. Awarding a group stays on the web.
 - [x] Item condition reports. Staff and admin see the five newest damage and missing-item reports on the item, with the photo and the checkout. Added in this slice. Students do not see them. Clearing maintenance stays in the item menu.
+- [x] Item activity. Staff and admin read the website History tab: all activity, item updates, or bookings, with older pages. A booking row opens that booking. Students do not see it. Previous bookings stay on the item.
+- [x] **Booking activity.** Students, staff, and admins open Activity on a reservation or checkout and read the same history the website shows (`auditLogs` on `GET /api/bookings/:id`): all activity, booking changes, or equipment changes. The newest 50 entries are on the phone. Older history stays on the website. Collaborators do not see Activity. Extend stays the booking's main action. Added in #513.
 
 - [x] **Brand assets.** Read-only folders, search, and opening a logo or PDF. Folder create, upload, and version restore stay on the web.
 - [x] **UA Gear Picks, for a participant.** One fit against an allowance. Admin roster, deadline, and the equipment spreadsheet stay on the web.
 - [x] **Shared software logins.** Read and copy from Browse (#502). Creating, editing, and archiving stay on the web. Photo Mechanic redesign remains #488.
 - [x] **Team badge shelf.** Read-only staff catalog. Awarding a group stays on the web.
 - [x] **Away-game travel roster.** Event detail lists who is traveling and opens a profile. Adding and removing travelers stays on the website.
+- [x] **Kit return time.** When a kit item has a return time and the holder name is hidden, the row says Back plus that time. Staff and admin still see With plus the name and the return time. A hold with neither stays blank. Added in #510.
+- [x] **My hours.** Your profile shows this week and this month from `GET /api/shifts/my-hours`. Students, staff, and admins see it. Collaborators do not. A failed refresh keeps the totals already on screen. Added in this slice.
+- [x] **Item activity.** Staff and admin read `GET /api/assets/:id/activity` (all activity, item updates, or bookings). A booking row opens that booking. Students do not see it.
 
 ## Missing
 
-- [ ] **Item activity.** The website History tab is `GET /api/assets/:id/activity` for staff and admin (all activity, item updates, or booking activity). The phone already lists previous bookings. The touch log is still web-only.
 - [ ] **Native signature capture.** Waiting on Erik's decision. The live capture path is iPad Safari with Apple Pencil. Do not rebuild `Views/Signatures/` until that decision lands.
 - [ ] **Guide authoring.** Waiting on Erik's decision. Create, edit, delete, and Mark verified stay off the phone until staff need to edit guides away from a desk.
 

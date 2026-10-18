@@ -24,7 +24,11 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
     const reportedLost = (await reportedLostBulkBySku(tx, params.id)).get(item.bulkSkuId) ?? 0;
     const outstanding = item.checkedOutQuantity - item.checkedInQuantity - reportedLost;
     if (outstanding !== body.expectedOutstanding || body.quantity > outstanding) throw new HttpError(409, "The remaining quantity changed. Refresh before returning more.");
-    await tx.bookingBulkItem.update({ where: { id: item.id }, data: { checkedInQuantity: { increment: body.quantity } } });
+    const claimed = await tx.bookingBulkItem.updateMany({
+      where: { id: item.id, checkedInQuantity: item.checkedInQuantity, checkedOutQuantity: item.checkedOutQuantity },
+      data: { checkedInQuantity: { increment: body.quantity } },
+    });
+    if (claimed.count !== 1) throw new HttpError(409, "The remaining quantity changed. Refresh before returning more.");
     await upsertBulkBalancesAndMovements(tx, { bookingId: params.id, locationId: kiosk.locationId, actorUserId: actor.id, kind: "CHECKIN", items: [{ bulkSkuId: item.bulkSkuId, quantity: body.quantity }] });
     await tx.scanEvent.create({ data: { bookingId: params.id, actorUserId: actor.id, scanType: "BULK_BIN", scanValue: item.bulkSku.binQrCodeValue ?? item.bulkSkuId, bulkSkuId: item.bulkSkuId, quantity: body.quantity, success: true, phase: "CHECKIN", actualLocationId: kiosk.locationId, deviceContext: `kiosk:${kiosk.kioskId}:counted-return` } });
     await createAuditEntryTx(tx, { actorId: actor.id, actorRole: actor.role, entityType: "booking", entityId: params.id, action: "kiosk_quantity_returned", before: { outstanding }, after: { remaining: outstanding - body.quantity, quantity: body.quantity, bulkSkuId: item.bulkSkuId, locationId: kiosk.locationId } });

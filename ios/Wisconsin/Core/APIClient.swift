@@ -549,6 +549,15 @@ final class APIClient {
         return resp.data
     }
 
+    /// Newest booking history from the same detail payload the website uses.
+    /// Collaborator responses omit `auditLogs`; the caller hides Activity first.
+    func bookingActivity(id: String) async throws -> BookingActivityPage {
+        let response: DataWrapper<BookingActivityPage> = try await perform(
+            request(path: "/api/bookings/\(id)")
+        )
+        return response.data
+    }
+
     func bookingReusePlan(id: String) async throws -> BookingReusePlan {
         let req = request(path: "/api/bookings/\(id)/reuse-plan")
         let resp: DataWrapper<BookingReusePlan> = try await perform(req)
@@ -1658,6 +1667,22 @@ final class APIClient {
         return resp.data
     }
 
+    /// Staff and admin item History. Same route as the website: `scope` is
+    /// `all`, `asset`, or `booking`, and `cursor` loads the next older page.
+    func assetActivity(
+        assetId: String,
+        scope: AssetActivityScope,
+        cursor: String?
+    ) async throws -> AssetActivityPage {
+        var items: [URLQueryItem] = [
+            .init(name: "scope", value: scope.rawValue),
+        ]
+        if let cursor, !cursor.isEmpty {
+            items.append(.init(name: "cursor", value: cursor))
+        }
+        return try await perform(request(path: "/api/assets/\(assetId)/activity", queryItems: items))
+    }
+
     func assetsLookup(rawScan: String) async throws -> String? {
         let resp = try await scannedAssets(rawScan: rawScan, limit: 5)
         return resp.data.first?.id
@@ -2179,6 +2204,16 @@ final class APIClient {
     /// have more active assignments than that on a single event.
     func myShifts(eventId: String) async throws -> [MyShift] {
         let response = try await myShiftsPage(userId: nil, eventId: eventId, limit: 20, offset: 0)
+        return response.data
+    }
+
+    /// Hours the signed-in person has worked. The server owns the window:
+    /// Monday–Sunday and the calendar month, both in Central time.
+    /// Collaborators are refused; this is only the caller's own totals.
+    func myHours() async throws -> MyHours {
+        let response: DataWrapper<MyHours> = try await perform(
+            request(path: "/api/shifts/my-hours")
+        )
         return response.data
     }
 

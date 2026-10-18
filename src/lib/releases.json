@@ -1,5 +1,56 @@
 [
   {
+    "date": "2026-10-19",
+    "title": "Booking activity on iPhone",
+    "type": "feature",
+    "summary": "A reservation or checkout on iPhone shows what changed, including gear that was added or removed. Collaborators do not see this history.",
+    "details": [
+      "Open Activity on a reservation or checkout to read the same history as the website.",
+      "Filter the list to booking changes or equipment changes.",
+      "A failed refresh keeps the history already on screen.",
+      "The newest 50 entries are shown. Older history stays on the website.",
+      "Collaborators do not see Activity."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 513
+  },
+  {
+    "date": "2026-10-18",
+    "title": "Hours on your profile",
+    "type": "feature",
+    "summary": "Your profile on iPhone shows the hours you worked this week and this month, using the same Monday-to-Sunday count as the website.",
+    "details": [
+      "Open your profile to see this week and this month, with the number of shifts in each.",
+      "The week runs Monday through Sunday, Central time, including a Sunday evening shift.",
+      "If hours fail to load, the rest of your profile stays up and Try again is available.",
+      "A later refresh that fails keeps the hours already on screen.",
+      "Collaborators do not see hours."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 512
+  },
+  {
+    "date": "2026-10-18",
+    "title": "Safer kiosk scans",
+    "type": "fixes",
+    "summary": "A second scan at the kiosk no longer creates another custody record, and due today follows the Chicago day.",
+    "details": [
+      "Scanning an item that was already picked up or returned does not create a second custody record.",
+      "Returning a counted quantity that was already returned does not count it twice.",
+      "Due today, day chips, and night hours follow the Chicago day.",
+      "If a scan response is lost, the pickup or return list reloads from the server.",
+      "Staff need a staff card to add, remove, or swap gear on someone else's checkout."
+    ],
+    "platforms": [
+      "Kiosk"
+    ],
+    "pr": 511
+  },
+  {
     "date": "2026-10-18",
     "title": "Kit return time on iPhone",
     "type": "fixes",
@@ -13,6 +64,39 @@
       "iOS"
     ],
     "pr": 510
+  },
+  {
+    "date": "2026-10-18",
+    "title": "Clearer status and recovery",
+    "type": "improvement",
+    "summary": "Reservations, checkouts, items, schedule, and kiosk stay understandable from the keyboard, and a failed list says so instead of looking empty.",
+    "details": [
+      "Calendar and week events name home, away, or neutral in the control, not only by color.",
+      "A failed schedule, reservation check, parent search, gap count, or attachment search offers Try again.",
+      "Closing a confirmation, retire prompt, or kiosk activation dialog returns focus to the control that opened it.",
+      "Row menus, favorites, filters, and the item-type toggle keep the keyboard instead of paging or opening the row."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 509
+  },
+  {
+    "date": "2026-10-18",
+    "title": "Item activity on iPhone",
+    "type": "feature",
+    "summary": "Staff can read an item's history on iPhone, filtered to all activity, item updates, or bookings.",
+    "details": [
+      "Open Activity on an item to see who changed it and when.",
+      "Filter to all activity, item updates, or bookings, and load older pages.",
+      "A booking row opens that booking.",
+      "A failed refresh keeps the history already on screen.",
+      "Students and collaborators do not see Activity. Previous bookings stay on the item."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 508
   },
   {
     "date": "2026-10-18",
