@@ -115,6 +115,7 @@ export function StudentsSection({ students, candidates, studentKitCents, pending
                       <span className="col-span-2 flex justify-end gap-1.5">
                         <Button
                           size="sm"
+                          className="min-h-10"
                           disabled={pending}
                           onClick={async () => {
                             const ok = await onApply(
@@ -126,7 +127,7 @@ export function StudentsSection({ students, candidates, studentKitCents, pending
                         >
                           Save
                         </Button>
-                        <Button size="sm" variant="ghost" disabled={pending} onClick={() => setEditingId(null)}>
+                        <Button size="sm" variant="ghost" className="min-h-10" disabled={pending} onClick={() => setEditingId(null)}>
                           Cancel
                         </Button>
                       </span>
@@ -201,7 +202,7 @@ function SizeSelect({ label, value, options, onChange }: { label: string; value:
       aria-label={label}
       value={value}
       onChange={(event) => onChange(event.target.value)}
-      className="h-9 rounded-lg border border-[#E8E8EC] bg-white px-2 font-mono text-[13px] dark:border-white/10 dark:bg-card"
+      className="h-10 rounded-lg border border-[#E8E8EC] bg-white px-2 font-mono text-[13px] dark:border-white/10 dark:bg-card"
     >
       <option value="">None</option>
       {value && !options.includes(value) && <option value={value}>{value}</option>}
