@@ -1,7 +1,7 @@
 import { GEAR_ONE_SIZE, findGearSku, gearSku, normalizeApparelSize, type GearPickFitKey } from "./catalog";
 import type { GearPicksAdminResponse } from "./types";
 
-export type OrderSource = "STANDARD_ISSUE" | "CORE_KIT" | "PICK";
+export type OrderSource = "STANDARD_ISSUE" | "CORE_KIT" | "STUDENT_KIT" | "PICK";
 
 export type OrderLine = {
   sku: string;
@@ -22,20 +22,29 @@ export type OrderPlan = {
   pickCents: number;
   /** People whose kit pieces have no size on file yet. */
   missingSizePeople: string[];
+  /** Students on the roster. Each also gets a shoe, but the style is not chosen yet. */
+  studentShoes: number;
 };
+
+/** Student kit: CW Momentum 1/4 Zip ($52.50) and Drive Polo ($40.00), both in Red (834). */
+export const STUDENT_KIT_SKUS = {
+  MEN: ["6021673-834", "6021712-834"],
+  WOMEN: ["6021680-834", "6021715-834"],
+} as const;
 
 export const SIZE_NEEDED = "Size needed";
 
-const SOURCE_ORDER: Record<OrderSource, number> = { STANDARD_ISSUE: 0, CORE_KIT: 1, PICK: 2 };
+const SOURCE_ORDER: Record<OrderSource, number> = { STANDARD_ISSUE: 0, CORE_KIT: 1, STUDENT_KIT: 2, PICK: 3 };
 
 /**
  * Roll staff kits and picks up into one quantity per item, color and size. Standard issue and core kit
- * come from each person's fit and profile sizes; picks come from their saved lists. Student kits are
- * not included until their items are chosen.
+ * come from each person's fit and profile sizes; picks come from their saved lists; students get the
+ * zip and polo. The student shoe is only counted, since its style is not chosen.
  */
 export function buildOrderPlan(
   participants: GearPicksAdminResponse["participants"],
   kits: Record<GearPickFitKey, { kind: "STANDARD_ISSUE" | "CORE_KIT"; style: string; code: string; name: string }[]>,
+  students: GearPicksAdminResponse["students"] = [],
 ): OrderPlan {
   const lines = new Map<string, OrderLine>();
   const missing = new Set<string>();
@@ -47,7 +56,7 @@ export function buildOrderPlan(
     if (!line) {
       line = {
         sku,
-        itemName: found?.item.name ?? kitName ?? sku,
+        itemName: `${found?.item.name ?? kitName ?? sku}${found?.item.fit === "WOMEN" ? " (women’s)" : ""}`,
         colorLabel: found?.color.label ?? "",
         source,
         sizes: [],
@@ -85,6 +94,14 @@ export function buildOrderPlan(
     }
   }
 
+  // Students are fitted from their profile; unisex or no fit falls back to the men's cut.
+  for (const student of students) {
+    const fit: GearPickFitKey = student.topSizeFit === "WOMENS" ? "WOMEN" : "MEN";
+    const size = normalizeApparelSize(student.topSize);
+    if (!size) missing.add(student.user.name);
+    for (const sku of STUDENT_KIT_SKUS[fit]) add("STUDENT_KIT", sku, size ?? SIZE_NEEDED, 1, findGearSku(sku)?.unitPriceCents ?? 0);
+  }
+
   const sorted = [...lines.values()].sort(
     (a, b) => SOURCE_ORDER[a.source] - SOURCE_ORDER[b.source] || a.itemName.localeCompare(b.itemName) || a.colorLabel.localeCompare(b.colorLabel),
   );
@@ -93,5 +110,6 @@ export function buildOrderPlan(
     pieces: sorted.reduce((sum, line) => sum + line.quantity, 0),
     pickCents,
     missingSizePeople: [...missing].sort((a, b) => a.localeCompare(b)),
+    studentShoes: students.length,
   };
 }

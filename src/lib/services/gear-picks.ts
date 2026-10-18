@@ -389,6 +389,7 @@ export async function getGearPicksAdmin(now: Date = new Date()): Promise<GearPic
             name: true,
             active: true,
             topSize: true,
+            topSizeFit: true,
             shoeSize: true,
           },
         },
@@ -406,6 +407,7 @@ export async function getGearPicksAdmin(now: Date = new Date()): Promise<GearPic
     id: row.id,
     user: { id: row.user.id, name: row.user.name, active: row.user.active },
     topSize: row.user.topSize,
+    topSizeFit: row.user.topSizeFit,
     shoeSize: row.user.shoeSize,
     needsSize: !row.user.topSize || !row.user.shoeSize,
   }));

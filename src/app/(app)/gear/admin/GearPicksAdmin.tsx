@@ -199,7 +199,7 @@ export function GearPicksAdmin() {
         onApply={applyChange}
       />
 
-      <OrderPlan participants={data.participants} />
+      <OrderPlan participants={data.participants} students={data.students} />
 
       <section aria-labelledby="gear-admin-totals" className="mb-6">
         <h2 id="gear-admin-totals" className="mb-2 text-base font-semibold">Totals by item, color, and size</h2>

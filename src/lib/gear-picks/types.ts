@@ -105,6 +105,7 @@ export type GearPickAdminStudent = {
   id: string;
   user: { id: string; name: string; active: boolean };
   topSize: string | null;
+  topSizeFit: "UNISEX" | "WOMENS" | "MENS" | null;
   shoeSize: string | null;
   needsSize: boolean;
 };

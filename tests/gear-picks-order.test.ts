@@ -62,4 +62,27 @@ describe("buildOrderPlan", () => {
     expect(plan.pickCents).toBe(1500);
     expect(plan.pieces).toBe(plan.lines.reduce((sum, line) => sum + line.quantity, 0));
   });
+
+  it("gives students a zip and polo by their fit and size, and counts their shoes", () => {
+    const student = (id: string, topSizeFit: "WOMENS" | "MENS" | null, topSize: string | null) => ({
+      id,
+      user: { id, name: `Student ${id}`, active: true },
+      topSize,
+      topSizeFit,
+      shoeSize: null,
+      needsSize: !topSize,
+    });
+    const plan = buildOrderPlan([], GEAR_CATALOG.kits, [student("a", "MENS", "M"), student("b", "WOMENS", "S"), student("c", null, null)]);
+
+    const kit = plan.lines.filter((line) => line.source === "STUDENT_KIT");
+    expect(kit.map((line) => line.sku).sort()).toEqual(["6021673-834", "6021680-834", "6021712-834", "6021715-834"]);
+    const menZip = kit.find((line) => line.sku === "6021673-834")!;
+    expect(menZip.sizes).toEqual([
+      { size: "M", quantity: 1 },
+      { size: SIZE_NEEDED, quantity: 1 },
+    ]);
+    expect(menZip.totalCents).toBe(2 * 5250);
+    expect(plan.studentShoes).toBe(3);
+    expect(plan.missingSizePeople).toEqual(["Student c"]);
+  });
 });

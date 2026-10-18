@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { GEAR_CATALOG } from "@/lib/gear-picks/catalog";
 import { SIZE_NEEDED, buildOrderPlan, type OrderSource } from "@/lib/gear-picks/order";
-import type { GearPickAdminParticipant } from "@/lib/gear-picks/types";
+import type { GearPickAdminParticipant, GearPickAdminStudent } from "@/lib/gear-picks/types";
 
 const usd = (cents: number) => (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
 const CARD = "overflow-hidden rounded-[14px] border border-[#E8E8EC] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-card";
@@ -11,12 +11,13 @@ const ROW = "grid grid-cols-[minmax(180px,1.5fr)_130px_minmax(160px,2fr)_56px_90
 const SOURCE: Record<OrderSource, { label: string; className: string }> = {
   STANDARD_ISSUE: { label: "Standard issue", className: "border border-dashed border-[#BFC1CC] bg-[#F7F7F9] text-[#60646C] dark:bg-white/5 dark:text-muted-foreground" },
   CORE_KIT: { label: "Core kit", className: "bg-[#F3EBFB] text-[#6E3AA8] dark:bg-[#8E4EC6]/20 dark:text-[#D9BFF2]" },
+  STUDENT_KIT: { label: "Student kit", className: "bg-[#E3F6F3] text-[#0B7A6D] dark:bg-[#12A594]/20 dark:text-[#8EE0D5]" },
   PICK: { label: "Pick", className: "bg-[#EEF1FD] text-[#3E63DD] dark:bg-[#3E63DD]/20 dark:text-[#AEBDF5]" },
 };
 
 /** One quantity per item, color and size for the staff order: kits from each fit and profile, plus saved picks. */
-export function OrderPlan({ participants }: { participants: GearPickAdminParticipant[] }) {
-  const plan = useMemo(() => buildOrderPlan(participants, GEAR_CATALOG.kits), [participants]);
+export function OrderPlan({ participants, students }: { participants: GearPickAdminParticipant[]; students: GearPickAdminStudent[] }) {
+  const plan = useMemo(() => buildOrderPlan(participants, GEAR_CATALOG.kits, students), [participants, students]);
 
   return (
     <section aria-labelledby="gear-admin-order" className="mb-6">
@@ -69,7 +70,7 @@ export function OrderPlan({ participants }: { participants: GearPickAdminPartici
           </div>
         </div>
       )}
-      <p className="mt-2 text-xs text-[#8B8D98]">Staff only for now. Student kits join once their items are chosen. Kit prices are what the department pays, not the budget.</p>
+      <p className="mt-2 text-xs text-[#8B8D98]">{plan.studentShoes > 0 ? `${plan.studentShoes} student shoes are not listed because the style is not chosen yet. ` : ""}Students are fitted from their profile, men’s cut if none is set. Kit prices are what the department pays, not the budget.</p>
     </section>
   );
 }

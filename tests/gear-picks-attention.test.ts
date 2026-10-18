@@ -5,7 +5,7 @@ const base = {
   cycle: { id: "2027-28", title: "2027-28", deadline: null, isOpen: true, launchedAt: "2026-10-10T00:00:00.000Z" },
   summary: { participantCount: 9, submittedCount: 9, draftCount: 0, notStartedCount: 0, totalCents: 0 },
   budget: { budgetCents: 550000, confirmed: true, picksCents: 0, studentKitsCents: 0, studentKitCents: 14250, committedCents: 0, remainingCents: 550000 },
-  students: [{ id: "1", user: { id: "u1", name: "A", active: true }, topSize: "M", shoeSize: "9", needsSize: false }],
+  students: [{ id: "1", user: { id: "u1", name: "A", active: true }, topSize: "M", topSizeFit: null, shoeSize: "9", needsSize: false }],
 };
 
 describe("gearAttentionItems", () => {
