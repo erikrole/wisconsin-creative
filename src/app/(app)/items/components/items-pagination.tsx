@@ -50,7 +50,7 @@ export function ItemsPagination({
               value={String(limit)}
               onValueChange={(v) => onLimitChange(Number(v))}
             >
-              <SelectTrigger size="sm" className="h-10 w-[76px]">
+              <SelectTrigger size="sm" className="h-10 w-[76px]" aria-label="Rows per page">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

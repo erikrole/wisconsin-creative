@@ -85,6 +85,12 @@ struct ItemDetailView: View {
                             capabilities: session.currentUser?.capabilities
                         )
                         ItemBookingsLinkCard(history: asset.history)
+                        if canEditAsset {
+                            ItemActivityLink(
+                                assetId: asset.id,
+                                assetName: asset.name.nonBlankText ?? asset.itemListPrimaryTitle
+                            )
+                        }
                         if let notes = asset.notes, !notes.isEmpty {
                             NotesCard(notes: notes)
                         }
