@@ -1,14 +1,16 @@
 [
   {
     "date": "2026-10-18",
-    "title": "Budget and kit labels for UA gear",
+    "title": "Budget, kits and students for UA gear",
     "type": "feature",
-    "summary": "Admins see the Under Armour budget at the top of the gear results, plus a Kit column that shows what the department covers for each person.",
+    "summary": "Admins see the Under Armour budget, what the department covers for each person, and a student list with sizes on the gear results.",
     "details": [
       "Edit the total budget and mark it confirmed. Until then it carries a Placeholder tag.",
       "The budget and totals are visible to admins only.",
       "Only staff picks are counted for now. Student kits and standard issue come in later changes.",
-      "Each person shows Standard issue (covered by the department), Core kit where their fit has one, and the number of pieces they picked."
+      "Each person shows Standard issue (covered by the department), Core kit where their fit has one, and the number of pieces they picked.",
+      "Add students to the list, and see who is missing a top or shoe size. Sizes come from each student's profile.",
+      "The student kit price is set with the budget, and every student on the list counts against it."
     ],
     "platforms": [
       "Web"

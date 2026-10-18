@@ -83,6 +83,8 @@ export type GearPicksAdminResponse = {
     totalCents: number;
   };
   candidates: { id: string; name: string; role: string }[];
+  students: GearPickAdminStudent[];
+  studentCandidates: { id: string; name: string }[];
   /** Admin-only budget view. `committedCents` counts staff picks only for now. */
   budget: GearPickBudgetDto;
 };
@@ -91,6 +93,18 @@ export type GearPickBudgetDto = {
   budgetCents: number;
   confirmed: boolean;
   /** Dollar total of every saved pick list, drafts included. */
+  picksCents: number;
+  /** Student kit price times the students on the roster. */
+  studentKitsCents: number;
+  studentKitCents: number;
   committedCents: number;
   remainingCents: number;
+};
+
+export type GearPickAdminStudent = {
+  id: string;
+  user: { id: string; name: string; active: boolean };
+  topSize: string | null;
+  shoeSize: string | null;
+  needsSize: boolean;
 };

@@ -131,7 +131,7 @@ Values: `UPLOADING`, `FINALIZING`, `COMMITTED`, `FAILED`
 
 ## Model `User`
 
-Fields: 130
+Fields: 131
 
 - `id                            String                           @id @default(cuid())`
 - `name                          String`
@@ -204,6 +204,7 @@ Fields: 130
 - `licenseCodesCreated           LicenseCode[]                    @relation("LicenseCreatedBy")`
 - `licenseClaims                 LicenseCodeClaim[]`
 - `gearPickParticipations        GearPickParticipant[]`
+- `gearPickStudents              GearPickStudent[]`
 - `resources                     Resource[]`
 - `resourcesVerified             Resource[]                       @relation("ResourceLastVerifiedBy")`
 - `resourceAssetFoldersCreated   ResourceAssetFolder[]            @relation("ResourceAssetFolderCreator")`
@@ -2975,7 +2976,7 @@ Values: `MEN`, `WOMEN`
 
 ## Model `GearPickCycle`
 
-Fields: 9
+Fields: 11
 
 - `id           String                @id`
 - `title        String`
@@ -2983,13 +2984,32 @@ Fields: 9
 - `launchedAt   DateTime?             @map("launched_at")`
 - `budgetCents      Int               @default(0) @map("budget_cents")`
 - `budgetConfirmed  Boolean           @default(false) @map("budget_confirmed")`
+- `studentKitCents  Int               @default(0) @map("student_kit_cents")`
 - `createdAt    DateTime              @default(now()) @map("created_at")`
 - `updatedAt    DateTime              @updatedAt @map("updated_at")`
 - `participants GearPickParticipant[]`
+- `students     GearPickStudent[]`
 
 Indexes and constraints:
 
 - `@@map("gear_pick_cycles")`
+
+## Model `GearPickStudent`
+
+Fields: 6
+
+- `id        String        @id @default(cuid())`
+- `cycleId   String        @map("cycle_id")`
+- `userId    String        @map("user_id")`
+- `createdAt DateTime      @default(now()) @map("created_at")`
+- `cycle     GearPickCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)`
+- `user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)`
+
+Indexes and constraints:
+
+- `@@unique([cycleId, userId])`
+- `@@index([userId])`
+- `@@map("gear_pick_students")`
 
 ## Model `GearPickParticipant`
 

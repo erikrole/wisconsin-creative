@@ -17,9 +17,18 @@ describe("parseDollarsToCents", () => {
 });
 
 describe("gearPickBudget", () => {
-  it("reports what is left, and goes negative when picks exceed the budget", () => {
-    expect(gearPickBudget(550000, false, 100000)).toEqual({ budgetCents: 550000, confirmed: false, committedCents: 100000, remainingCents: 450000 });
-    expect(gearPickBudget(1000, true, 1500).remainingCents).toBe(-500);
+  it("adds student kits to the picks, and goes negative when over the budget", () => {
+    const base = { budgetCents: 550000, confirmed: false, picksCents: 100000, studentKitCents: 14250, studentCount: 16 };
+    expect(gearPickBudget(base)).toEqual({
+      budgetCents: 550000,
+      confirmed: false,
+      picksCents: 100000,
+      studentKitsCents: 228000,
+      studentKitCents: 14250,
+      committedCents: 328000,
+      remainingCents: 222000,
+    });
+    expect(gearPickBudget({ ...base, budgetCents: 1000, studentCount: 0, picksCents: 1500 }).remainingCents).toBe(-500);
   });
 });
 

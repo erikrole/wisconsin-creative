@@ -18,12 +18,14 @@ vi.mock("@/lib/db", () => {
     gearPickParticipant: { findUnique: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
     gearPickSubmission: { create: vi.fn(), update: vi.fn(), findUniqueOrThrow: vi.fn() },
     gearPickLine: { deleteMany: vi.fn(), createMany: vi.fn() },
+    gearPickStudent: { findFirst: vi.fn(), create: vi.fn(), delete: vi.fn() },
     user: { findUnique: vi.fn() },
   };
   return {
     db: {
       gearPickCycle: { findUnique: vi.fn() },
       gearPickParticipant: { findUnique: vi.fn(), findMany: vi.fn() },
+      gearPickStudent: { findMany: vi.fn() },
       user: { findUnique: vi.fn(), findMany: vi.fn() },
       $transaction: vi.fn(),
       _mockTx: tx,
@@ -91,6 +93,7 @@ beforeEach(() => {
   vi.mocked(requireAuth).mockResolvedValue(staff);
   vi.mocked(enforceRateLimit).mockResolvedValue(undefined);
   vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, remaining: 9, resetAt: Date.now() + 60_000 });
+  vi.mocked(db.gearPickStudent.findMany).mockResolvedValue([]);
   tx.gearPickCycle!.findUnique!.mockResolvedValue(openCycle);
   tx.gearPickParticipant!.findUnique!.mockResolvedValue(participant);
   tx.gearPickSubmission!.create!.mockResolvedValue({ id: "submission-1" });
@@ -409,6 +412,56 @@ describe("admin routes", () => {
     expect(tx.gearPickCycle!.update).not.toHaveBeenCalled();
   });
 
+  it("adds an active student to the list with an audit entry, and refuses staff accounts", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(admin);
+    tx.user!.findUnique!.mockResolvedValue({ id: "student-1", name: "Student One", active: true, role: Role.STUDENT });
+    tx.gearPickStudent!.create!.mockResolvedValue({ id: "gps-1" });
+
+    const response = await patchAdmin(patch({ action: "addStudent", userId: "student-1" }), context);
+
+    expect(response.status).toBe(200);
+    expect(tx.gearPickStudent!.create).toHaveBeenCalledWith({
+      data: { cycleId: "2027-28", userId: "student-1" },
+      select: { id: true },
+    });
+    expect(createAuditEntryTx).toHaveBeenCalledWith(
+      tx,
+      expect.objectContaining({ entityType: "gear_pick_student", action: "add_student", after: { userId: "student-1", name: "Student One" } }),
+    );
+
+    tx.gearPickStudent!.create!.mockClear();
+    tx.user!.findUnique!.mockResolvedValue({ id: "staff-1", name: "Staff", active: true, role: Role.STAFF });
+    expect((await patchAdmin(patch({ action: "addStudent", userId: "staff-1" }), context)).status).toBe(404);
+    expect(tx.gearPickStudent!.create).not.toHaveBeenCalled();
+  });
+
+  it("answers a duplicate student with a friendly conflict", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(admin);
+    tx.user!.findUnique!.mockResolvedValue({ id: "student-1", name: "Student One", active: true, role: Role.STUDENT });
+    tx.gearPickStudent!.create!.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError("Unique constraint failed", { code: "P2002", clientVersion: "test" }),
+    );
+
+    const response = await patchAdmin(patch({ action: "addStudent", userId: "student-1" }), context);
+
+    expect(response.status).toBe(409);
+    expect((await response.json()).error).toMatch(/already on the student list/);
+  });
+
+  it("removes a student from the list with an audit entry", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(admin);
+    tx.gearPickStudent!.findFirst!.mockResolvedValue({ id: "gps-1", user: { id: "student-1", name: "Student One" } });
+
+    const response = await patchAdmin(patch({ action: "removeStudent", studentId: "gps-1" }), context);
+
+    expect(response.status).toBe(200);
+    expect(tx.gearPickStudent!.delete).toHaveBeenCalledWith({ where: { id: "gps-1" } });
+    expect(createAuditEntryTx).toHaveBeenCalledWith(
+      tx,
+      expect.objectContaining({ action: "remove_student", before: { userId: "student-1", name: "Student One" } }),
+    );
+  });
+
   it("launches the cycle to staff with an audit entry", async () => {
     vi.mocked(requireAuth).mockResolvedValue(admin);
     tx.gearPickCycle!.findUnique!.mockResolvedValue(unlaunchedCycle);
@@ -517,6 +570,24 @@ describe("admin routes", () => {
       expect(response.status).toBe(200);
       expect(tx.gearPickParticipant!.update).toHaveBeenCalled();
     });
+  });
+
+  it("lists students with their profile sizes, flags missing ones, and counts their kits in the budget", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(admin);
+    vi.mocked(db.gearPickCycle.findUnique).mockResolvedValue({ ...openCycle, budgetCents: 550_000, budgetConfirmed: false, studentKitCents: 14_250 } as never);
+    vi.mocked(db.gearPickParticipant.findMany).mockResolvedValue([]);
+    vi.mocked(db.gearPickStudent.findMany).mockResolvedValue([
+      { id: "gps-1", user: { id: "s1", name: "Student One", active: true, topSize: "M", shoeSize: "9" } },
+      { id: "gps-2", user: { id: "s2", name: "Student Two", active: true, topSize: null, shoeSize: "10" } },
+    ] as never);
+    vi.mocked(db.user.findMany).mockResolvedValue([]);
+
+    const response = await getAdmin(new Request(`${ORIGIN}/api/gear-picks/admin`), context);
+    const { data } = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.students.map((student: { needsSize: boolean }) => student.needsSize)).toEqual([false, true]);
+    expect(data.budget).toMatchObject({ studentKitsCents: 28_500, committedCents: 28_500, remainingCents: 521_500 });
   });
 
   it("exports one CSV row per line with the sheet's columns", async () => {

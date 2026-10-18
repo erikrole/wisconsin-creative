@@ -23,6 +23,16 @@ const patchSchema = z.discriminatedUnion("action", [
     // Whole cents, up to $1,000,000, so a typo can't create an unbounded budget.
     budgetCents: z.number().int().min(0).max(100_000_000),
     confirmed: z.boolean(),
+    // Per-student kit price in whole cents, up to $1,000.
+    studentKitCents: z.number().int().min(0).max(100_000).optional(),
+  }),
+  z.object({
+    action: z.literal("addStudent"),
+    userId: z.string().trim().min(1).max(64),
+  }),
+  z.object({
+    action: z.literal("removeStudent"),
+    studentId: z.string().trim().min(1).max(64),
   }),
   z.object({
     action: z.literal("addParticipant"),

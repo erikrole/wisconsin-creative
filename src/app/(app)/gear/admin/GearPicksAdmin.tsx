@@ -21,6 +21,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AllotmentOverview } from "./AllotmentOverview";
 import { KitPills } from "./KitPills";
+import { StudentsSection } from "./StudentsSection";
 import { GEAR_PICKS_ME_QUERY_KEY } from "@/hooks/use-gear-picks";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { formatDateTime } from "@/lib/format";
@@ -44,7 +45,9 @@ const FIT_LABELS: Record<GearPickFitKey, string> = { MEN: "Men’s", WOMEN: "Wom
 type AdminChange =
   | { action: "setDeadline"; deadline: string | null }
   | { action: "setLaunched"; launched: boolean }
-  | { action: "setBudget"; budgetCents: number; confirmed: boolean }
+  | { action: "setBudget"; budgetCents: number; confirmed: boolean; studentKitCents: number }
+  | { action: "addStudent"; userId: string }
+  | { action: "removeStudent"; studentId: string }
   | { action: "addParticipant"; userId: string; fit: GearPickFitKey }
   | { action: "updateParticipant"; participantId: string; fit?: GearPickFitKey; allowanceCents?: number }
   | { action: "removeParticipant"; participantId: string };
@@ -144,7 +147,9 @@ export function GearPicksAdmin() {
         title={cycle.title}
         budget={data.budget}
         pending={pending}
-        onSave={(budgetCents, confirmed) => applyChange({ action: "setBudget", budgetCents, confirmed }, "Budget saved")}
+        onSave={(budgetCents, confirmed, studentKitCents) =>
+          applyChange({ action: "setBudget", budgetCents, confirmed, studentKitCents }, "Budget saved")
+        }
       />
 
       <StaffAccessCard
@@ -180,6 +185,14 @@ export function GearPicksAdmin() {
           <ParticipantsTable participants={data.participants} pending={pending} onApply={applyChange} />
         )}
       </section>
+
+      <StudentsSection
+        students={data.students}
+        candidates={data.studentCandidates}
+        studentKitCents={data.budget.studentKitCents}
+        pending={pending}
+        onApply={applyChange}
+      />
 
       <section aria-labelledby="gear-admin-totals" className="mb-6">
         <h2 id="gear-admin-totals" className="mb-2 text-base font-semibold">Totals by item, color, and size</h2>
