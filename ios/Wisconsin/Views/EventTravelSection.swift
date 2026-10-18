@@ -52,9 +52,9 @@ final class EventTravelModel {
         } catch {
             guard loads.owns(token), !Task.isCancelled else { return }
             if members == nil {
-                error = "Couldn't load travelers."
+                self.error = "Couldn't load travelers."
             } else {
-                error = "Couldn't refresh. The list is unchanged."
+                self.error = "Couldn't refresh. The list is unchanged."
             }
         }
     }
