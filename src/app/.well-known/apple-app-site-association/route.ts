@@ -26,6 +26,7 @@ export function GET() {
             { "/": "/schedule/*" },
             { "/": "/items" },
             { "/": "/items/*" },
+            { "/": "/staff/*" },
             { "/": "/users/*" },
             { "/": "/licenses" },
             { "/": "/notifications" },

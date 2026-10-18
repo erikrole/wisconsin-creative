@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 describe("onboarding status page source wiring", () => {
   it("renders a dedicated onboarding status route from invitation and account readiness truth", () => {
-    const source = readFileSync("src/app/(app)/users/onboarding-status/page.tsx", "utf8");
+    const source = readFileSync("src/app/(app)/staff/onboarding-status/page.tsx", "utf8");
 
     expect(source).toContain("Onboarding Status");
     expect(source).toContain('url: "/api/users/onboarding-readiness"');
@@ -37,19 +37,19 @@ describe("onboarding status page source wiring", () => {
   });
 
   it("links the status page from onboarding entry points", () => {
-    const users = readFileSync("src/app/(app)/users/page.tsx", "utf8");
+    const users = readFileSync("src/app/(app)/staff/page.tsx", "utf8");
     const allowedEmails = readFileSync("src/app/(app)/settings/allowed-emails/page.tsx", "utf8");
     const dialog = readFileSync("src/components/onboarding/OnboardingDialog.tsx", "utf8");
 
-    expect(users).toContain('href="/users/onboarding-status"');
+    expect(users).toContain('href="/staff/onboarding-status"');
     expect(users).toContain("Onboarding");
-    expect(allowedEmails).toContain('href="/users/onboarding-status"');
+    expect(allowedEmails).toContain('href="/staff/onboarding-status"');
     expect(allowedEmails).toContain("Status");
     expect(allowedEmails).toContain('name="allowedEmailStatusFilter"');
     expect(allowedEmails).toContain('id="allowed-email-status-filter"');
     expect(allowedEmails).toContain('aria-label="Allowed email status filter"');
     expect(allowedEmails).toContain('className="flex flex-wrap items-center gap-2"');
-    expect(dialog).toContain('href="/users/onboarding-status"');
+    expect(dialog).toContain('href="/staff/onboarding-status"');
     expect(dialog).toContain("View status");
   });
 });

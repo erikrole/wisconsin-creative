@@ -603,7 +603,7 @@ describe("student availability routes", () => {
         title: "Time off approved",
         payload: expect.objectContaining({
           availabilityBlockId: "block-2",
-          href: "/users/student-1?tab=availability",
+          href: "/staff/student-1?tab=availability",
         }),
         channel: "IN_APP",
       })],

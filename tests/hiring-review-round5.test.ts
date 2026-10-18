@@ -57,11 +57,11 @@ describe("deactivation date (starts the hired-student retention clock)", () => {
 });
 
 describe("hiring UI", () => {
-  const bulk = source("src/app/(app)/workforce/hiring/BulkResumeDialog.tsx");
-  const csv = source("src/app/(app)/workforce/CsvImportDialog.tsx");
-  const sheet = source("src/app/(app)/workforce/hiring/ApplicationSheet.tsx");
-  const dialogs = source("src/app/(app)/workforce/hiring/HiringDialogs.tsx");
-  const board = source("src/app/(app)/workforce/hiring/HiringClient.tsx");
+  const bulk = source("src/app/(app)/staff/workforce/hiring/BulkResumeDialog.tsx");
+  const csv = source("src/app/(app)/staff/workforce/CsvImportDialog.tsx");
+  const sheet = source("src/app/(app)/staff/workforce/hiring/ApplicationSheet.tsx");
+  const dialogs = source("src/app/(app)/staff/workforce/hiring/HiringDialogs.tsx");
+  const board = source("src/app/(app)/staff/workforce/hiring/HiringClient.tsx");
 
   it("tells same-name applicants apart in the resume assignment menu", () => {
     expect(bulk).toContain("a.email ?");
@@ -101,7 +101,7 @@ describe("hiring UI", () => {
   });
 
   it("does not invent a graduation term for a year-only record", () => {
-    const page = source("src/app/(app)/workforce/page.tsx");
+    const page = source("src/app/(app)/staff/workforce/page.tsx");
     expect(page).not.toContain('"Spring"}');
     expect(page).toContain('u.graduationTerm ? `${TERM_LABELS[u.graduationTerm]} ` : ""');
   });

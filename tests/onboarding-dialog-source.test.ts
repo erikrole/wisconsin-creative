@@ -61,7 +61,7 @@ describe("onboarding dialog source wiring", () => {
   });
 
   it("opens the shared onboarding surface from Users and Allowed Emails", () => {
-    const usersSource = readFileSync("src/app/(app)/users/page.tsx", "utf8");
+    const usersSource = readFileSync("src/app/(app)/staff/page.tsx", "utf8");
     const allowedEmailsSource = readFileSync("src/app/(app)/settings/allowed-emails/page.tsx", "utf8");
 
     expect(usersSource).toContain("Add users");

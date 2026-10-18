@@ -53,7 +53,7 @@ describe("isDynamicSegment", () => {
       "allowed-emails", "appearance", "calendar-sources", "categories",
       "checkout-policies", "data-export", "database", "departments",
       "escalation", "kiosk-devices", "locations", "reservation-rules",
-      "security", "sports", "venue-mappings", "users", "onboarding-status",
+      "security", "sports", "venue-mappings", "users", "staff", "onboarding-status",
       "org-chart",
     ];
     for (const segment of staticSegments) {

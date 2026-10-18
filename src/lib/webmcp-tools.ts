@@ -70,7 +70,7 @@ const WEBMCP_PAGE_DEFINITIONS = [
   { key: "profile", label: "Profile", href: "/profile" },
   { key: "operations", label: "Operations", href: "/operations" },
   { key: "battery-ops", label: "Battery Ops", href: "/bulk-inventory/batteries" },
-  { key: "users", label: "Users", href: "/users" },
+  { key: "users", label: "Staff", href: "/staff" },
   { key: "reports", label: "Reports", href: "/reports" },
   { key: "settings", label: "Settings", href: "/settings" },
 ] as const;

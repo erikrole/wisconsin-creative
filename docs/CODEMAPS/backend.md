@@ -49,6 +49,7 @@
 | `src/lib/services/game-record.ts` | 169 |
 | `src/lib/services/gear-picks.ts` | 623 |
 | `src/lib/services/hidden-users-cleanup.ts` | 122 |
+| `src/lib/services/invite-email.ts` | 78 |
 | `src/lib/services/item-cleanup-wizard.ts` | 762 |
 | `src/lib/services/job-runs.ts` | 52 |
 | `src/lib/services/kiosk-active-checkout-items.ts` | 492 |
@@ -74,7 +75,7 @@
 | `src/lib/services/non-game-schedule-defaults.ts` | 49 |
 | `src/lib/services/notification-deliveries.ts` | 59 |
 | `src/lib/services/notification-prefs.ts` | 348 |
-| `src/lib/services/notifications.ts` | 1966 |
+| `src/lib/services/notifications.ts` | 1974 |
 | `src/lib/services/onboarding-lifecycle.ts` | 546 |
 | `src/lib/services/pending-pickup-expiry.ts` | 370 |
 | `src/lib/services/product-event-log.ts` | 43 |
@@ -99,7 +100,7 @@
 | `src/lib/services/shift-assignment-conflicts.ts` | 43 |
 | `src/lib/services/shift-assignments.ts` | 727 |
 | `src/lib/services/shift-generation.ts` | 629 |
-| `src/lib/services/shift-trade-emails.ts` | 56 |
+| `src/lib/services/shift-trade-emails.ts` | 62 |
 | `src/lib/services/shift-trades.ts` | 1560 |
 | `src/lib/services/signatures.ts` | 2366 |
 | `src/lib/services/software.ts` | 272 |
@@ -174,8 +175,9 @@
 | `src/lib/csv.ts` | 17 |
 | `src/lib/db.ts` | 32 |
 | `src/lib/editor-snippets.ts` | 52 |
-| `src/lib/email.ts` | 129 |
-| `src/lib/env.ts` | 140 |
+| `src/lib/email-template.ts` | 202 |
+| `src/lib/email.ts` | 130 |
+| `src/lib/env.ts` | 144 |
 | `src/lib/environment-safety.ts` | 17 |
 | `src/lib/equipment-guidance.ts` | 127 |
 | `src/lib/equipment-section-filters.ts` | 87 |
@@ -294,7 +296,7 @@
 | `src/lib/title-normalization.ts` | 101 |
 | `src/lib/url-sync.ts` | 16 |
 | `src/lib/usage-analytics.ts` | 71 |
-| `src/lib/user-directory-query.ts` | 107 |
+| `src/lib/user-directory-query.ts` | 110 |
 | `src/lib/user-list-cache.ts` | 73 |
 | `src/lib/user-visibility.ts` | 86 |
 | `src/lib/utils.ts` | 22 |
@@ -331,6 +333,7 @@
 
 ### `/api/allowed-emails`
 
+- `/api/allowed-emails/[id]/resend`
 - `/api/allowed-emails/[id]`
 - `/api/allowed-emails/preview`
 - `/api/allowed-emails`
@@ -878,9 +881,11 @@
 - `/api/users/bulk-create`
 - `/api/users/export`
 - `/api/users/hidden-cleanup`
+- `/api/users/on-shift`
 - `/api/users/onboarding-readiness`
 - `/api/users/org-chart`
 - `/api/users`
+- `/api/users/today`
 
 ### `/api/wishlist`
 

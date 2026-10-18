@@ -41,7 +41,6 @@ import {
   TrophyIcon,
   ChevronsUpDownIcon,
   UserIcon,
-  UserPlusIcon,
   MonitorPlayIcon,
 } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -84,7 +83,7 @@ const COLLABORATOR_NAV_CAPABILITY: Partial<Record<string, string>> = {
   "/schedule": "PUBLISHED_SCHEDULE_VIEW",
   "/items": "GEAR_CATALOG_VIEW",
   "/bookings": "MY_GEAR_VIEW",
-  "/users": "PEOPLE_DIRECTORY_VIEW",
+  "/staff": "PEOPLE_DIRECTORY_VIEW",
   "/licenses": "SOFTWARE_VAULT_VIEW",
 };
 
@@ -94,7 +93,7 @@ const COLLABORATOR_NAV_HREFS = [
   "/scoreboard",
   "/items",
   "/bookings",
-  "/users",
+  "/staff",
   "/licenses",
   "/settings",
 ] as const;
@@ -119,8 +118,7 @@ const navGroups: NavGroup[] = [
     items: [
       { label: "Scoreboard", href: "/scoreboard", icon: TrophyIcon },
       { label: "Accountability", href: "/accountability", icon: ShieldAlertIcon },
-      { label: "Users", href: "/users", icon: UsersIcon },
-      { label: "Workforce", href: "/workforce", icon: UserPlusIcon, requiredRole: "ADMIN" },
+      { label: "Staff", href: "/staff", icon: UsersIcon },
       { label: "Budget", href: "/budget", icon: WalletIcon, requiredRole: "ADMIN" },
       { label: "Wish list", href: "/wishlist", icon: GiftIcon, staffOrAdmin: true },
       { label: "UA Gear Picks", href: "/gear/admin", icon: ShirtIcon, requiredRole: "ADMIN" },
@@ -230,7 +228,7 @@ export default function AppSidebar({
         .map((item) => {
           if (!isCollaborator) return item;
           if (item.href === "/bookings") return { ...item, label: "My Gear" };
-          if (item.href === "/users") return { ...item, label: "People" };
+          if (item.href === "/staff") return { ...item, label: "People" };
           return item;
         }),
     }))
@@ -403,7 +401,7 @@ export default function AppSidebar({
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild className="min-h-10">
-                    <Link prefetch={false} href={`/users/${user.id}`}>
+                    <Link prefetch={false} href={`/staff/${user.id}`}>
                       <UserIcon />
                       Profile
                     </Link>
