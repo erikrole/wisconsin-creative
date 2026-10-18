@@ -23,7 +23,7 @@ Take the first item under **Missing** whose blocked note is clear. Keep one scre
 
 - [x] Home action queue (personal overdue, due today, pending pickup, upcoming reservations, next shift)
 - [x] Schedule: week list, event detail, claim, trade board, assign, add shift, availability, calendar feed
-- [x] Bookings list and detail, including create reservation, extend, cancel, and re-reserve. Edit and the remaining checkout actions are #493.
+- [x] Bookings list and detail, including create reservation, edit, extend, cancel, re-reserve, and the checkout actions that stay off the kiosk.
 - [x] Search, including camera scan
 - [x] Items list and item detail: reserve, needs maintenance, attachments, booking history
 - [x] Scoreboard, including a person's record
@@ -37,7 +37,11 @@ Take the first item under **Missing** whose blocked note is clear. Keep one scre
 - [x] Welcome and profile completion
 - [x] Widgets, Live Activity, and Home Screen quick actions
 - [x] Kiosk custody (separate iPad app): checkout, pickup, return
-- [x] Accountability: this year or all time, three sorts, name search, personal standing, open the checkout. Added in this slice. Location, incident state, active-user filters, the continuous on-time bar, CSV, and exclusion edits stay on the web.
+- [x] Accountability: this year or all time, three sorts, name search, personal standing, open the checkout. Location, incident state, active-user filters, the continuous on-time bar, CSV, and exclusion edits stay on the web.
+- [x] Brand assets: folders, search, and opening a logo or PDF. Favorites, folder create, upload, and version restore stay on the web.
+- [x] UA Gear, for a participant. Admin roster, deadline, and the equipment spreadsheet stay on the web.
+- [x] Team badge shelf. A person's own badges stay on Profile. Awarding a group stays on the web.
+- [x] Item condition reports. Staff and admin see the five newest damage and missing-item reports on the item, with the photo and the checkout. Added in this slice. Students do not see them. Clearing maintenance stays in the item menu.
 
 - [x] **Brand assets.** Read-only folders, search, and opening a logo or PDF. Folder create, upload, and version restore stay on the web.
 - [x] **UA Gear Picks, for a participant.** One fit against an allowance. Admin roster, deadline, and the equipment spreadsheet stay on the web.
@@ -47,6 +51,7 @@ Take the first item under **Missing** whose blocked note is clear. Keep one scre
 
 ## Missing
 
+- [ ] **Item activity.** The website History tab is `GET /api/assets/:id/activity` for staff and admin (all activity, item updates, or booking activity). The phone already lists previous bookings. The touch log is still web-only.
 - [ ] **Native signature capture.** Waiting on Erik's decision. The live capture path is iPad Safari with Apple Pencil. Do not rebuild `Views/Signatures/` until that decision lands.
 - [ ] **Guide authoring.** Waiting on Erik's decision. Create, edit, delete, and Mark verified stay off the phone until staff need to edit guides away from a desk.
 
@@ -55,7 +60,7 @@ Take the first item under **Missing** whose blocked note is clear. Keep one scre
 - [x] **YouTube Studio Lite** (`/youtube`). Admin review queue, Google connection, and channel writes. Desktop work.
 - [x] **Workforce and hiring.** Admin planning. Also in #485, under the Staff rename.
 - [x] **UA Gear Picks admin** (`/gear/admin`). Roster, allowances, deadline, CSV, and the equipment workbook.
-- [x] **Operations hub** (`/operations`). Fix Today (offline kiosks, calendar sync, license expirations) and inventory hygiene are cleanup. Battery totals move to Battery Ops in #492.
+- [x] **Operations hub** (`/operations`). Fix Today (offline kiosks, calendar sync, license expirations) and inventory hygiene are cleanup. Battery totals are on the phone under Battery Ops.
 - [x] **Import, labels, and item intake.** Add item, import, export, fill gaps, and the cleanup wizard are desk workflows.
 - [x] **Item catalog actions.** Duplicate, retire, and delete stay web-only (GAP-36). Needs Maintenance is already on the phone.
 - [x] **Event authoring.** Create, edit, hide, and remove stay on the web (GAP-81). Combine, week view, and auto-assign stay on the web.

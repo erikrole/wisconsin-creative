@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Items
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-10-16
+- Last Updated: 2026-10-17
 - Status: Active
 - Version: V1
 
@@ -448,6 +448,7 @@ Item families can optionally enable `trackByNumber` on the backing `BulkSku` imp
 ## Change Log
 
 - 2026-10-17: **Item insights and collaborator attachments.** Day-of-week and monthly insight buckets use the Madison calendar day, so an evening checkout stays on that day. A collaborator who can browse the catalog sees an item's attachments on the item, without serial numbers, and cannot list attachments for an item they cannot open.
+- 2026-10-17: **iPhone item detail reads the same five condition reports as the website.** Staff and admin see damage and missing-item evidence, the reporter, the Madison date, and the checkout on the item. The list still comes from `GET /api/assets/:id` (`checkinReports`, newest first, five rows). Students and collaborators still omit that list. Clearing a maintenance hold stays the existing phone menu action. An Xcode build on a Mac is still required.
 - 2026-10-16: **Item lists count families in the database, and catalog lookups skip unused status chips.** `/api/assets` list rows no longer load every physical unit to total a numbered family. An exact unit scan still loads that one family's roster and custody. The six derived-status counts run only when the request sends `sort` and does not pass `counts=0`; the Items page still sends `sort`, so its chips stay accurate. Print Labels walks every alphabetical page (`sort=assetTag&counts=0`, 200 rows at a time) so a catalog larger than one page is still listed. The item-family photo control shows its Edit label and focus ring from the keyboard.
 - 2026-10-16: **Most popular no longer loads every recent booking and scan row (local).** `/api/assets` still ranks the same way: checkout bookings weigh 5, other bookings weigh 3, each successful scan weighs 1, bulk lines multiply by at least one planned unit, and activity inside 14 days adds 2. Those totals now come from grouped SQL. Add item, Fill gaps, and Cleanup load in separate chunks from the Items list. Migration `0175_scan_checkin_and_bulk_allocation_indexes` adds scan `createdAt` indexes for this aggregate and scan history; it is not applied.
 - 2026-10-07: **Cleanup wizard attachment parent mapping.** The wizard now includes an `attachment_candidate` queue for standalone cages, plates, caps, and grips. Staff pick a suggested or searched parent (or defer keep-standalone); attach writes `parentAssetId`, disables booking policy flags, audits `cleanup_wizard_attach`, and blocks active custody. Operations Keep data clean routes the queue into the wizard.

@@ -36,6 +36,22 @@
   },
   {
     "date": "2026-10-17",
+    "title": "Condition reports on iPhone",
+    "type": "feature",
+    "summary": "Staff can read damage and missing-item reports on an item, including the photo and the checkout they came from. Clearing maintenance stays in the item menu.",
+    "details": [
+      "Open an item to see the five most recent condition reports, the same record as the website.",
+      "Damage is marked in orange and a missing item in red.",
+      "A photo opens full screen, and the checkout row opens that checkout.",
+      "Reports stay after maintenance is cleared. Students do not see this record."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 505
+  },
+  {
+    "date": "2026-10-17",
     "title": "Shared logins on iPhone",
     "type": "feature",
     "summary": "Staff, students, and collaborators can copy a department login from the iPhone. Adding and archiving those logins stays on the website.",
