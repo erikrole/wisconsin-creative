@@ -183,6 +183,34 @@ struct BookingDetailView: View {
                                 )
                             }
                         }
+                        if BookingActivityAccess.canRead(role: session.currentUser?.role) {
+                            FormCard {
+                                NavigationLink {
+                                    BookingActivityView(bookingId: booking.id)
+                                } label: {
+                                    HStack(spacing: Brand.Space.sm) {
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text("Activity")
+                                                .font(.body.weight(.semibold))
+                                                .foregroundStyle(.primary)
+                                            Text("What changed on this booking.")
+                                                .font(.subheadline)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                        Spacer(minLength: Brand.Space.sm)
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundStyle(.tertiary)
+                                            .accessibilityHidden(true)
+                                    }
+                                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                                    .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel("Activity")
+                                .accessibilityHint("Shows what changed on this booking")
+                            }
+                        }
                         if canCancelBooking {
                             ActionsSection(
                                 isActioning: isActioning,
