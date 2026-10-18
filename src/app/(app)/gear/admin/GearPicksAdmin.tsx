@@ -21,6 +21,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AllotmentOverview } from "./AllotmentOverview";
 import { KitPills } from "./KitPills";
+import { NeedsAttention } from "./NeedsAttention";
 import { StudentsSection } from "./StudentsSection";
 import { GEAR_PICKS_ME_QUERY_KEY } from "@/hooks/use-gear-picks";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
@@ -152,6 +153,8 @@ export function GearPicksAdmin() {
         }
       />
 
+      <NeedsAttention data={data} />
+
       <StaffAccessCard
         launchedAt={cycle.launchedAt}
         deadline={cycle.deadline}
@@ -279,7 +282,7 @@ function StaffAccessCard({
   }
 
   return (
-    <Card className="mb-4">
+    <Card id="gear-admin-access" className="mb-4">
       <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center">
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold">Not open to staff yet</p>
