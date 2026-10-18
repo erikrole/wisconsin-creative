@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Events
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-10-16
+- Last Updated: 2026-10-18
 - Status: Active
 
 ## Direction
@@ -106,6 +106,7 @@ Make athletics schedule data the operational backbone for booking and checkout w
 4. Fallback behavior for incomplete events is implemented — treat event context as non-blocking metadata on all booking flows.
 
 ## Change Log
+- 2026-10-18: **Native event detail reads the away-game travel roster.** Students, staff, and admins see who is traveling from `GET /api/calendar-events/:id/travel` when the event is away and has a sport. A row opens the person's profile. Home games and collaborators do not request the roster. Adding and removing travelers stays on the website. Source contracts pass. An Xcode build on a Mac is still required.
 - 2026-10-16: **Native iOS can browse events without editing them.** Browse → Events lists the same calendar read Schedule uses, and the detail shows identity, linked bookings, and linked gear. Team bookings come from the event command center (staff and admin). A student sees bookings linked to them. Open in Schedule pushes the existing event sheet for crew. Authoring stays on the web. Authenticated device proof remains open under GAP-89.
 - 2026-09-24: **Travel card can add the sport's default travelers in one step.** Staff press **Add defaults** on an away game's Travel card to put every active, non-collaborator default traveler for that sport on the trip, then use **Add** for the rotating seats. `POST /api/calendar-events/[id]/travel/defaults` shares the single-add away-game gate (`loadTravelEvent`), lets the `(eventId, userId)` constraint skip people already on the trip so repeat presses and concurrent staff are safe, returns the full roster with `added`/`defaultCount`, and writes one `event_travel_defaults_added` audit entry only when someone was added. Authenticated visual proof remains a local gate.
 - 2026-09-24: **Event travel roster default-traveler toggle works, and adds are validated server-side.** The sport roster read now returns `defaultTraveler` and only active, visible people, so the Travel card's plane toggle can unset a default traveler, defaults sort first, and the picker no longer offers people who would be rejected. Adding a traveler now requires an away game with a sport (the same gate as the card), rejects cancelled and combined events, excludes collaborators, and requires the person to be on that sport's roster; an event deleted mid-add returns 404 instead of a foreign-key 500. Removal is a scoped `deleteMany`, so a concurrent remove succeeds quietly without a duplicate audit entry. The default-traveler PATCH audits the stored before value instead of the inverse of the request. Authenticated visual proof remains a local gate.

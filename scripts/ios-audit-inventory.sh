@@ -69,6 +69,7 @@ BulkInventoryDetailView.swift          | bulk-inventory              | audit
 BatteryOpsView.swift                   | battery-ops                 | audit
 ScheduleView.swift                     | schedule                    | audit
 EventDetailSheet.swift                 | event-detail                | audit
+EventTravelSection.swift               |                             | exempt-shared
 EventsView.swift                       | events                      | audit
 EventCatalogDetailView.swift           | events                      | audit
 AccountabilityView.swift               | accountability              | audit

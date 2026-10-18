@@ -2060,6 +2060,14 @@ final class APIClient {
         return resp.data.first
     }
 
+    /// Away-game travel roster. Read-only: adding and removing travelers stays on the website.
+    func eventTravelMembers(eventId: String) async throws -> [EventTravelMember] {
+        let response: DataWrapper<[EventTravelMember]> = try await perform(
+            request(path: "/api/calendar-events/\(eventId)/travel")
+        )
+        return response.data
+    }
+
     /// Staff-only versioned working schedule. The relational shift group stays
     /// the published read model; this additive editor contract carries private
     /// draft slots and the optimistic version needed for every mutation.
