@@ -406,7 +406,7 @@ enum KioskStatus {
     /// amber on the day it is due, red once it is past due.
     static func custody(isOverdue: Bool, dueAt: Date, today: Date) -> Color {
         if isOverdue { return problem }
-        return Calendar.current.dayOffset(of: dueAt, from: today) == 0 ? attention : active
+        return KioskTime.calendar.dayOffset(of: dueAt, from: today) == 0 ? attention : active
     }
 }
 

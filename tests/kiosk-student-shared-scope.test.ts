@@ -39,6 +39,7 @@ vi.mock("@/lib/rate-limit", () => ({
   getClientIp: mocks.getClientIp,
 }));
 
+import { startOfDayInAppTz } from "@/lib/app-time";
 import { GET as getKioskStudent } from "@/app/api/kiosk/student/[userId]/route";
 
 type Row = Record<string, unknown> & {
@@ -136,5 +137,43 @@ describe("kiosk operator hub excludes SHARED custody from personal lists (D-061)
     for (const [args] of mocks.bookingFindMany.mock.calls) {
       expect(args.where).toMatchObject({ requesterUserId: "user-1", custodyScope: "PERSON" });
     }
+  });
+
+  it("marks a checkout due today from the Chicago day, including one that is already tomorrow in UTC", async () => {
+    const now = new Date("2026-10-18T02:30:00.000Z");
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(now);
+    const todayStart = startOfDayInAppTz(now);
+    const tomorrowStart = startOfDayInAppTz(now, 1);
+    const rows: Row[] = [
+      booking({
+        id: "due-tonight",
+        kind: "CHECKOUT",
+        status: "OPEN",
+        custodyScope: "PERSON",
+        endsAt: new Date(tomorrowStart.getTime() - 60_000),
+      }),
+      booking({
+        id: "due-tomorrow",
+        kind: "CHECKOUT",
+        status: "OPEN",
+        custodyScope: "PERSON",
+        endsAt: new Date(tomorrowStart.getTime() + 10 * hour),
+      }),
+    ];
+    mocks.bookingFindMany.mockImplementation(async ({ where }: { where: Record<string, unknown> }) =>
+      rows.filter((row) => matches(row, where)));
+
+    const res = await getKioskStudent(
+      new Request("http://test"),
+      { params: Promise.resolve({ userId: "user-1" }) },
+    );
+    const json = await res.json();
+    const byId = Object.fromEntries(json.checkouts.map((row: { id: string }) => [row.id, row]));
+
+    expect(todayStart.toISOString()).toBe("2026-10-17T05:00:00.000Z");
+    expect(byId["due-tonight"].isDueToday).toBe(true);
+    expect(byId["due-tomorrow"].isDueToday).toBe(false);
+    vi.useRealTimers();
   });
 });

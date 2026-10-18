@@ -145,6 +145,32 @@ describe("kiosk pickup scan: off-plan bulk items on a reservation", () => {
     });
   });
 
+  it("gives the reserved slot back when the added unit cannot be staged", async () => {
+    mocks.stage
+      .mockResolvedValueOnce({ handled: true, success: false, error: "Wrong battery type", errorCode: "not_in_booking" })
+      .mockResolvedValueOnce({ handled: true, success: false, error: "could not stage", errorCode: "unavailable" });
+    mocks.findUnit.mockResolvedValue(sonyUnit);
+
+    const body = await scan("FZ-9", "add");
+    expect(body).toMatchObject({ success: false, errorCode: "unavailable" });
+    expect(mocks.updateReservation).toHaveBeenLastCalledWith("rv-1", "david", {
+      serializedAssetIds: [],
+      bulkItems: [{ bulkSkuId: "sony", quantity: 2 }],
+    });
+  });
+
+  it("does not report the add as skipped when undoing the reserved slot fails", async () => {
+    mocks.stage
+      .mockResolvedValueOnce({ handled: true, success: false, error: "Wrong battery type", errorCode: "not_in_booking" })
+      .mockResolvedValueOnce({ handled: true, success: false, error: "could not stage", errorCode: "unavailable" });
+    mocks.findUnit.mockResolvedValue(sonyUnit);
+    mocks.updateReservation
+      .mockResolvedValueOnce({ updatedAt: new Date() })
+      .mockRejectedValueOnce(new Error("reservation undo failed"));
+
+    await expect(scan("FZ-9", "add")).rejects.toThrow("reservation undo failed");
+  });
+
   it("still reports Item not found for an unknown code", async () => {
     mocks.stage.mockResolvedValue({ handled: false });
     mocks.findAsset.mockResolvedValue(null);

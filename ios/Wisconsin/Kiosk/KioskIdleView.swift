@@ -195,7 +195,7 @@ struct KioskIdleView: View {
     }
 
     private static func isLocalNightHours(_ date: Date) -> Bool {
-        let hour = Calendar.current.component(.hour, from: date)
+        let hour = KioskTime.calendar.component(.hour, from: date)
         return hour >= 22 || hour < 6
     }
 
@@ -729,7 +729,7 @@ struct KioskIdleView: View {
     @ViewBuilder
     private var eventSections: some View {
         if let dashboard {
-            let calendar = Calendar.current
+            let calendar = KioskTime.calendar
             let tomorrow = calendar.date(byAdding: .day, value: 1, to: today) ?? today
             let todayEvents = dashboard.events.filter { $0.kioskOccurs(on: today, calendar: calendar) }
             let tomorrowEvents = dashboard.events.filter { $0.kioskOccurs(on: tomorrow, calendar: calendar) }

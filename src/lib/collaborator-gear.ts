@@ -135,6 +135,30 @@ type BulkCatalogItem = {
   isFavorited?: boolean;
 };
 
+type KitDetailForCollaborator = {
+  members: Array<{
+    asset: {
+      currentHolder: { endsAt: string } | null;
+    };
+  }>;
+};
+
+/** Keep when the current hold ends so a kit can still be reserved after it. Drop who has it. */
+export function sanitizeCollaboratorKitDetail<T extends KitDetailForCollaborator>(kit: T) {
+  return {
+    ...kit,
+    members: kit.members.map((member) => ({
+      ...member,
+      asset: {
+        ...member.asset,
+        currentHolder: member.asset.currentHolder
+          ? { endsAt: member.asset.currentHolder.endsAt }
+          : null,
+      },
+    })),
+  };
+}
+
 export function sanitizeCollaboratorBulkItem(item: BulkCatalogItem) {
   return {
     id: item.id,
