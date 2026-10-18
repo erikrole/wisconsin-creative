@@ -478,6 +478,7 @@
 - `/api/users/bulk-create` -> `src/app/api/users/bulk-create/route.ts`
 - `/api/users/export` -> `src/app/api/users/export/route.ts`
 - `/api/users/hidden-cleanup` -> `src/app/api/users/hidden-cleanup/route.ts`
+- `/api/users/on-shift` -> `src/app/api/users/on-shift/route.ts`
 - `/api/users/onboarding-readiness` -> `src/app/api/users/onboarding-readiness/route.ts`
 - `/api/users/org-chart` -> `src/app/api/users/org-chart/route.ts`
 - `/api/users` -> `src/app/api/users/route.ts`

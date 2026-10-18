@@ -7,6 +7,7 @@ import type { Location, Role, SortKey, ListResponse } from "./types";
 import { AREA_COLORS, AREA_LABELS, ROLE_OPTIONS, STUDENT_YEAR_OPTIONS } from "./types";
 import { UserTableRow, UserMobileCard, UserGridCard } from "./UserRow";
 import RoleTabs from "./RoleTabs";
+import OnShiftNow from "./_components/OnShiftNow";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import UserFilters from "./UserFilters";
 import BulkBadgeAwardDialog from "./BulkBadgeAwardDialog";
@@ -561,6 +562,8 @@ export default function UsersPage() {
             </AlertDescription>
           </Alert>
         )}
+
+        <OnShiftNow enabled={currentUserRole !== null && !isCollaboratorDirectory} />
 
         <div className="flex flex-wrap items-center justify-between gap-2">
           {isCollaboratorDirectory ? <span /> : <RoleTabs value={roleFilter} stats={stats} onChange={setRoleFilter} />}

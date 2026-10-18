@@ -856,6 +856,7 @@
 - `/api/users/bulk-create`
 - `/api/users/export`
 - `/api/users/hidden-cleanup`
+- `/api/users/on-shift`
 - `/api/users/onboarding-readiness`
 - `/api/users/org-chart`
 - `/api/users`
