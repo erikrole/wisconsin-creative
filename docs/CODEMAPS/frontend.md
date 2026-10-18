@@ -107,6 +107,7 @@
 
 | Route | File |
 |---|---|
+| `/budget` | `src/app/(app)/budget/layout.tsx` |
 | `/kits` | `src/app/(app)/kits/layout.tsx` |
 | `/` | `src/app/(app)/layout.tsx` |
 | `/reports` | `src/app/(app)/reports/layout.tsx` |
