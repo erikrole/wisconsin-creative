@@ -33,13 +33,15 @@ export const GET = withAuth(async (req, { user }) => {
     includeHidden,
     active: activeParam === "false" ? "inactive" : activeParam === "all" ? "all" : "active",
   });
-  const { summaryWhere, where } = directoryQuery;
+  const { summaryWhere, roleCountsWhere, where } = directoryQuery;
 
   // Build orderBy
   const orderBy: Prisma.UserOrderByWithRelationInput[] = (() => {
     switch (isCollaboratorDirectory && !["name", "name_desc", "role", "role_desc"].includes(sort) ? "name" : sort) {
       case "name_desc":
         return [{ name: "desc" as const }];
+      case "area":
+        return [{ primaryArea: { sort: "asc" as const, nulls: "last" as const } }, { name: "asc" as const }];
       case "role":
         return [{ role: "asc" as const }, { name: "asc" as const }];
       case "role_desc":
@@ -67,7 +69,7 @@ export const GET = withAuth(async (req, { user }) => {
     }
   })();
 
-  const [data, total, active, inactive, missingPhotos, roleGroups] = await Promise.all([
+  const [data, total, active, inactive, missingPhotos, roleGroups, areaGroups] = await Promise.all([
     db.user.findMany({
       where,
       orderBy: [...orderBy, { id: "asc" }],
@@ -98,7 +100,13 @@ export const GET = withAuth(async (req, { user }) => {
     db.user.count({ where: { AND: [summaryWhere, { active: true }, { avatarUrl: null }] } }),
     db.user.groupBy({
       by: ["role"],
-      where: { AND: [summaryWhere, { active: true }] },
+      where: { AND: [roleCountsWhere, { active: true }] },
+      _count: { _all: true },
+    }),
+    // Whole-result group sizes, so a group split across pages still shows its true count.
+    db.user.groupBy({
+      by: ["primaryArea"],
+      where,
       _count: { _all: true },
     }),
   ]);
@@ -111,6 +119,10 @@ export const GET = withAuth(async (req, { user }) => {
   };
   for (const group of roleGroups) {
     byRole[group.role] = group._count._all;
+  }
+  const areaCounts: Record<string, number> = {};
+  for (const group of areaGroups) {
+    areaCounts[group.primaryArea ?? "NONE"] = group._count._all;
   }
 
   return ok({
@@ -190,6 +202,7 @@ export const GET = withAuth(async (req, { user }) => {
       inactive,
       missingPhotos,
       byRole,
+      areaCounts,
     },
   });
 });

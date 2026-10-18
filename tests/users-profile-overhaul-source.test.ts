@@ -3,7 +3,7 @@ import { source } from "./_helpers/source";
 
 describe("User profile overhaul contracts", () => {
   it("keeps identity in the header and Scoreboard as a jump, not a duplicate hero", () => {
-    const page = source("src/app/(app)/users/[id]/page.tsx");
+    const page = source("src/app/(app)/staff/[id]/page.tsx");
 
     expect(page).toContain("function profileHeaderSubtitle");
     expect(page).toContain("function ProfileHeaderFacts");
@@ -17,7 +17,7 @@ describe("User profile overhaul contracts", () => {
   });
 
   it("groups Info into Contact, Work, and Assignments without jump chips or Slack", () => {
-    const info = source("src/app/(app)/users/[id]/UserInfoTab.tsx");
+    const info = source("src/app/(app)/staff/[id]/UserInfoTab.tsx");
 
     expect(info).toContain('id="contact"');
     expect(info).toContain('id="work"');
@@ -32,9 +32,9 @@ describe("User profile overhaul contracts", () => {
   });
 
   it("keeps activity, availability, and badge filters on the 40px baseline", () => {
-    const activity = source("src/app/(app)/users/[id]/UserActivityTab.tsx");
-    const availability = source("src/app/(app)/users/[id]/UserAvailabilityTab.tsx");
-    const badges = source("src/app/(app)/users/[id]/UserBadgesTab.tsx");
+    const activity = source("src/app/(app)/staff/[id]/UserActivityTab.tsx");
+    const availability = source("src/app/(app)/staff/[id]/UserAvailabilityTab.tsx");
+    const badges = source("src/app/(app)/staff/[id]/UserBadgesTab.tsx");
 
     expect(activity).toContain('aria-label="Filter activity"');
     expect(activity).toContain('className="h-10"');
@@ -45,7 +45,7 @@ describe("User profile overhaul contracts", () => {
   });
 
   it("keeps the profile Scoreboard as a compact season strip", () => {
-    const tab = source("src/app/(app)/users/[id]/UserScoreboardTab.tsx");
+    const tab = source("src/app/(app)/staff/[id]/UserScoreboardTab.tsx");
 
     expect(tab).toContain("scoreboardHighlights(scoreboard)");
     expect(tab).toContain("text-2xl font-semibold tabular-nums");
@@ -54,12 +54,12 @@ describe("User profile overhaul contracts", () => {
   });
 
   it("adds related jumps from roster and profile without changing route URLs", () => {
-    const roster = source("src/app/(app)/users/page.tsx");
-    const related = source("src/app/(app)/users/_components/RosterRelatedLinks.tsx");
-    const profileRelated = source("src/app/(app)/users/[id]/_components/ProfileRelatedLinks.tsx");
+    const roster = source("src/app/(app)/staff/page.tsx");
+    const related = source("src/app/(app)/staff/_components/RosterRelatedLinks.tsx");
+    const profileRelated = source("src/app/(app)/staff/[id]/_components/ProfileRelatedLinks.tsx");
 
     expect(roster).toContain("<RosterRelatedLinks canOpenStaffTools={canEdit} />");
-    expect(related).toContain('href: "/users/org-chart"');
+    expect(related).toContain('href: "/staff/org-chart"');
     expect(related).toContain('href: "/scoreboard"');
     expect(profileRelated).toContain("`/bookings?requesterUserId=${encodeURIComponent(userId)}`");
     expect(profileRelated).toContain('href: "/settings/profile"');

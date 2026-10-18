@@ -1,6 +1,36 @@
 [
   {
     "date": "2026-10-19",
+    "title": "Emails have a new look",
+    "type": "improvement",
+    "summary": "Every email from the app now uses the same Wisconsin Creative design, with the logo, one clear button, and a plain-text version.",
+    "details": [
+      "Invites, password resets, shift trades, and reminders all share the new layout.",
+      "Overdue gear and damage reports use a red label so they stand out.",
+      "Replies can go to a staff inbox once one is set up."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 518
+  },
+  {
+    "date": "2026-10-19",
+    "title": "Hiring invites are emailed",
+    "type": "improvement",
+    "summary": "New students now get an email with a sign-in link when you invite them, and you can resend it from Onboarding.",
+    "details": [
+      "The link opens the login page with the invited address already filled in.",
+      "If email is not set up or a send fails, the invite is still created and the page tells you so.",
+      "Resend is limited to three per person per hour."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 515
+  },
+  {
+    "date": "2026-10-19",
     "title": "Booking activity on iPhone",
     "type": "feature",
     "summary": "A reservation or checkout on iPhone shows what changed, including gear that was added or removed. Collaborators do not see this history.",
@@ -101,6 +131,24 @@
   },
   {
     "date": "2026-10-18",
+    "title": "Budget, kits and students for UA gear",
+    "type": "feature",
+    "summary": "Admins see the Under Armour budget, what the department covers for each person, and a student list with sizes on the gear results.",
+    "details": [
+      "Edit the total budget and student kit price, and mark it confirmed. Until then it carries a Placeholder tag. The budget and totals are visible to admins only.",
+      "Record the order the Equipment department places (PO, order number, dates), check gear in as it arrives, and mark pieces handed out person by person.",
+      "An Order table rolls staff kits, student kits and picks up into one quantity per item and size. Student shoes join once their style is chosen.",
+      "Each person shows Standard issue (covered by the department), Core kit where their fit has one, and the number of pieces they picked.",
+      "Add students to the list, see who is missing a top or shoe size, and fill sizes in for them. Sizes are saved to the student's profile.",
+      "Tabs for Overview, People, Order, Receiving, Handout and History keep the page easy to follow, and a Needs attention list shows what to fix next. History opens last year with its budget, items and people, and Save this year to History keeps a read-only copy of the current year."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 514
+  },
+  {
+    "date": "2026-10-18",
     "title": "Checkout days and kit privacy",
     "type": "fixes",
     "summary": "The checkout activity chart keeps every Madison day when the clocks change. A collaborator opening a kit no longer sees who currently has each piece.",
@@ -132,6 +180,24 @@
       "iOS"
     ],
     "pr": 506
+  },
+  {
+    "date": "2026-10-18",
+    "title": "A fresher Staff section",
+    "type": "improvement",
+    "summary": "Staff, Workforce, Hiring and Onboarding have a new look, and Staff now shows who is working today.",
+    "details": [
+      "Lato type, a calm blue accent, softer cards, and a colored dot for each area.",
+      "The org chart is a real chart with cards and connectors, plus a Not placed yet section.",
+      "Profiles get Email and Call buttons, an area chip, and an At a glance card.",
+      "Roster rows show an area dot and a Graduating chip, and hide the role column when a role tab already says it.",
+      "The roster shows an On shift now strip, and a new Today tab lists who is working which event now, later, and tomorrow.",
+      "Hiring and Onboarding Status get the same look: a targets strip, calmer board cards, one onboarding list, and an application sheet with a progress track, average rating, Watch interview card, and Pass and Hire buttons that stay in view."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 486
   },
   {
     "date": "2026-10-17",
@@ -371,6 +437,24 @@
   },
   {
     "date": "2026-10-16",
+    "title": "Budget tracking for admins",
+    "type": "feature",
+    "summary": "Admins can now track planned and actual spending by fiscal year on a new Budget page, with separate budgets for Creative and Football. Staff and admins also get a Wish list.",
+    "details": [
+      "Create a budget for a fiscal year, add lines with category, supplier, quantity, and cost, and record the PO and order numbers once something is bought.",
+      "See spent, planned but not bought, and remaining at a glance, with an Insights view of spend by month, suppliers, and year over year, and a CSV download. Dropped lines stay in the fixed submitted plan, and lines added later are marked Unplanned.",
+      "Fiscal years read as FY26 · Jul 2025 – Jun 2026, matching the July 1 start.",
+      "Link a purchase to the items it bought, with suggested matches, and fill an item's purchase details from the order without overwriting anything already there. Every line keeps a history, refunds and credits count against its cost, and you can drop or recategorize many lines at once with an undo.",
+      "A new Wish list lets staff and admins paste a link or type what they need. Admins approve, decline, or move a wish into the budget as a line, and past years can be imported from a spreadsheet.",
+      "Only admins can see or change the budget, and every change is logged."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 494
+  },
+  {
+    "date": "2026-10-16",
     "title": "Full reports on iPhone",
     "type": "feature",
     "summary": "Staff can open the rest of the reports from the iPhone Reports screen. Spreadsheets still download on the web.",
@@ -419,6 +503,70 @@
       "iOS"
     ],
     "pr": 487
+  },
+  {
+    "date": "2026-10-16",
+    "title": "Clearer Workforce overview",
+    "type": "improvement",
+    "summary": "The Workforce overview now shows, area by area, who stays and who graduates, so gaps are visible before they happen.",
+    "details": [
+      "A new Coverage by area list shows each area's full-time staff and how many students stay or graduate.",
+      "Areas that lose half or more of their students, or all of them, are flagged and listed first.",
+      "The top tiles add context, such as the share of students graduating.",
+      "Select an area in the list to jump to its people."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 486
+  },
+  {
+    "date": "2026-10-16",
+    "title": "Cleaner Staff roster",
+    "type": "improvement",
+    "summary": "The Staff page now filters by role with one tap, and you can switch the roster between a table and a photo grid.",
+    "details": [
+      "Role tabs at the top show how many students, staff, admins, and collaborators match your search and filters.",
+      "The role dropdown and the separate breakdown cards are gone, so there is one place to look.",
+      "A new photo grid view shows everyone as headshot cards. Your choice stays in the page link.",
+      "Group by area splits the whole list under Photo, Video, and the other areas, with each area's full headcount, even across pages.",
+      "Hover a name in the table to see a quick card with title, location, and contact details.",
+      "Year and sport filters only appear when they apply to students."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 486
+  },
+  {
+    "date": "2026-10-16",
+    "title": "Workforce moves under Staff",
+    "type": "improvement",
+    "summary": "Workforce is now a tab on the Staff page instead of its own menu item. It is still visible to admins only.",
+    "details": [
+      "Admins see Roster and Workforce tabs at the top of Staff.",
+      "Hiring and Planning sit inside the Workforce tab.",
+      "Old Workforce links redirect to the new location."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 485
+  },
+  {
+    "date": "2026-10-16",
+    "title": "Users is now Staff",
+    "type": "improvement",
+    "summary": "The Users page and menu item are now called Staff. Old Users links and bookmarks still take you to the right place.",
+    "details": [
+      "The sidebar, page title, search results, and breadcrumbs say Staff.",
+      "Profile links now live under /staff, and old /users links redirect automatically.",
+      "Nothing about who can see the page or what it shows has changed."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 484
   },
   {
     "date": "2026-10-15",

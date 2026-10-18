@@ -121,7 +121,7 @@ function downloadCsv(data: BadgeReportData) {
 
 function RecentAwardMobileCard({ award }: { award: RecentBadgeAward }) {
   return (
-    <ReportMobileCardLink href={`/users/${award.user.id}?tab=badges`}>
+    <ReportMobileCardLink href={`/staff/${award.user.id}?tab=badges`}>
       <div className="flex items-center justify-between gap-3">
         <span className="font-medium text-foreground">{award.user.name}</span>
         <Badge variant={sourceVariant(award.source)}>{formatBadgeSourceLabel(award.source)}</Badge>
@@ -265,7 +265,7 @@ export default function BadgeReportPage() {
                           {index === 0 && data.leaderboard.length > 1 ? (
                             <Badge variant="green" size="sm">Top</Badge>
                           ) : null}
-                          <ReportTableLink href={`/users/${row.userId}?tab=badges`}>
+                          <ReportTableLink href={`/staff/${row.userId}?tab=badges`}>
                             {row.name}
                           </ReportTableLink>
                         </div>
@@ -377,7 +377,7 @@ export default function BadgeReportPage() {
             ) : (
               <div className="divide-y">
                 {recentManualAwards.slice(0, 6).map((award) => (
-                  <ReportMobileCardLink key={award.id} href={`/users/${award.user.id}?tab=badges`} className="rounded-none border-0">
+                  <ReportMobileCardLink key={award.id} href={`/staff/${award.user.id}?tab=badges`} className="rounded-none border-0">
                     <div className="flex items-center justify-between gap-3">
                       <span className="font-medium text-foreground">{award.definition.name}</span>
                       <Badge variant={categoryVariant(award.definition.category)}>
@@ -426,7 +426,7 @@ export default function BadgeReportPage() {
                     {data.recentAwards.map((award) => (
                       <TableRow key={award.id}>
                         <TableCell>
-                          <ReportTableLink href={`/users/${award.user.id}?tab=badges`}>
+                          <ReportTableLink href={`/staff/${award.user.id}?tab=badges`}>
                             {award.user.name}
                           </ReportTableLink>
                         </TableCell>
@@ -469,7 +469,7 @@ export default function BadgeReportPage() {
           <div className="flex flex-col gap-2 text-sm text-muted-foreground">
             <ReportListRow className="min-h-0 px-0 py-2">
               <span>Primary profile experience</span>
-              <Link href="/users" className="font-medium text-foreground underline-offset-4 hover:underline">
+              <Link href="/staff" className="font-medium text-foreground underline-offset-4 hover:underline">
                 User profile badges tab
               </Link>
             </ReportListRow>

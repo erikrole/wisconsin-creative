@@ -36,4 +36,4 @@ Decode `ActiveAnnouncement` (`id`, `kind`, `kindLabel`, `title`, `blocks` as `pa
 ## Changelog
 - 2026-10-18: Editor hardening: inline checks, discard guard, upload race fix, image reorder, duplicate, Cmd/Ctrl+Enter to save, one-row footer on phones. The API rejects a past end date.
 - 2026-10-18: Stress pass and design pass: pinned buttons with a fade for long messages, long words wrap, broken images drop out, white sheet surface, kind pill, brighter red for small text in dark mode.
-- 2026-10-18: V1 web (migration 0184, Settings > Announcements, splash in the app layout), with banner images, phone bottom sheet, editor preview-as-splash, publish confirmation, and seen-by reach.
+- 2026-10-18: V1 web (migration 0187, Settings > Announcements, splash in the app layout), with banner images, phone bottom sheet, editor preview-as-splash, publish confirmation, and seen-by reach.

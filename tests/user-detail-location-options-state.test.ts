@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 describe("user detail location options state", () => {
   it("passes form-options location loading, error, and retry state into the profile info tab", () => {
-    const source = readFileSync("src/app/(app)/users/[id]/page.tsx", "utf8");
+    const source = readFileSync("src/app/(app)/staff/[id]/page.tsx", "utf8");
 
     expect(source).toContain("error: formOptionsError");
     expect(source).toContain("reload: reloadFormOptions");
@@ -13,7 +13,7 @@ describe("user detail location options state", () => {
   });
 
   it("does not make a failed profile location-options load look like no saved location", () => {
-    const source = readFileSync("src/app/(app)/users/[id]/UserInfoTab.tsx", "utf8");
+    const source = readFileSync("src/app/(app)/staff/[id]/UserInfoTab.tsx", "utf8");
 
     expect(source).toContain("locationsLoading");
     expect(source).toContain("locationsError");

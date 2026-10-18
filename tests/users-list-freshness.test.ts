@@ -49,10 +49,10 @@ describe("Users list freshness", () => {
   });
 
   it("wires detail and Settings mutations into roster synchronization", () => {
-    const detailPage = readFileSync("src/app/(app)/users/[id]/page.tsx", "utf8");
-    const infoTab = readFileSync("src/app/(app)/users/[id]/UserInfoTab.tsx", "utf8");
+    const detailPage = readFileSync("src/app/(app)/staff/[id]/page.tsx", "utf8");
+    const infoTab = readFileSync("src/app/(app)/staff/[id]/UserInfoTab.tsx", "utf8");
     const settingsProfile = readFileSync("src/app/(app)/settings/profile/page.tsx", "utf8");
-    const usersPage = readFileSync("src/app/(app)/users/page.tsx", "utf8");
+    const usersPage = readFileSync("src/app/(app)/staff/page.tsx", "utf8");
 
     expect(detailPage).toContain("syncCachedUserLists(queryClient, id, { avatarUrl })");
     expect(detailPage).toContain("syncCachedUserLists(queryClient, id, { active: newActive })");

@@ -24,6 +24,7 @@
 | `src/lib/services/bookings-lifecycle.ts` | 3386 |
 | `src/lib/services/bookings-queries.ts` | 322 |
 | `src/lib/services/bookings.ts` | 9 |
+| `src/lib/services/budget.ts` | 934 |
 | `src/lib/services/bulk-assignment-batches.ts` | 253 |
 | `src/lib/services/bulk-schedule-assignment.ts` | 971 |
 | `src/lib/services/bulk-unit-scans.ts` | 721 |
@@ -46,8 +47,9 @@
 | `src/lib/services/event-worker.ts` | 125 |
 | `src/lib/services/firmware-watch.ts` | 329 |
 | `src/lib/services/game-record.ts` | 169 |
-| `src/lib/services/gear-picks.ts` | 623 |
+| `src/lib/services/gear-picks.ts` | 1070 |
 | `src/lib/services/hidden-users-cleanup.ts` | 122 |
+| `src/lib/services/invite-email.ts` | 78 |
 | `src/lib/services/item-cleanup-wizard.ts` | 762 |
 | `src/lib/services/job-runs.ts` | 52 |
 | `src/lib/services/kiosk-active-checkout-items.ts` | 492 |
@@ -73,7 +75,7 @@
 | `src/lib/services/non-game-schedule-defaults.ts` | 49 |
 | `src/lib/services/notification-deliveries.ts` | 59 |
 | `src/lib/services/notification-prefs.ts` | 348 |
-| `src/lib/services/notifications.ts` | 1966 |
+| `src/lib/services/notifications.ts` | 1974 |
 | `src/lib/services/onboarding-lifecycle.ts` | 546 |
 | `src/lib/services/pending-pickup-expiry.ts` | 370 |
 | `src/lib/services/product-event-log.ts` | 43 |
@@ -98,7 +100,7 @@
 | `src/lib/services/shift-assignment-conflicts.ts` | 43 |
 | `src/lib/services/shift-assignments.ts` | 727 |
 | `src/lib/services/shift-generation.ts` | 629 |
-| `src/lib/services/shift-trade-emails.ts` | 56 |
+| `src/lib/services/shift-trade-emails.ts` | 62 |
 | `src/lib/services/shift-trades.ts` | 1560 |
 | `src/lib/services/signatures.ts` | 2366 |
 | `src/lib/services/software.ts` | 272 |
@@ -110,6 +112,7 @@
 | `src/lib/services/team-scoreboard.ts` | 598 |
 | `src/lib/services/usage-analytics-report.ts` | 114 |
 | `src/lib/services/user-deactivation.ts` | 579 |
+| `src/lib/services/wishlist.ts` | 193 |
 
 ## Key Library Files
 
@@ -173,8 +176,9 @@
 | `src/lib/csv.ts` | 17 |
 | `src/lib/db.ts` | 32 |
 | `src/lib/editor-snippets.ts` | 52 |
-| `src/lib/email.ts` | 129 |
-| `src/lib/env.ts` | 140 |
+| `src/lib/email-template.ts` | 202 |
+| `src/lib/email.ts` | 130 |
+| `src/lib/env.ts` | 144 |
 | `src/lib/environment-safety.ts` | 17 |
 | `src/lib/equipment-guidance.ts` | 127 |
 | `src/lib/equipment-section-filters.ts` | 87 |
@@ -216,7 +220,7 @@
 | `src/lib/passkey-client.ts` | 126 |
 | `src/lib/passkey.ts` | 388 |
 | `src/lib/password-rules.ts` | 16 |
-| `src/lib/permissions.ts` | 262 |
+| `src/lib/permissions.ts` | 273 |
 | `src/lib/preview-activity.ts` | 23 |
 | `src/lib/prisma-errors.ts` | 38 |
 | `src/lib/profile-completion-events.ts` | 6 |
@@ -293,7 +297,7 @@
 | `src/lib/title-normalization.ts` | 101 |
 | `src/lib/url-sync.ts` | 16 |
 | `src/lib/usage-analytics.ts` | 71 |
-| `src/lib/user-directory-query.ts` | 107 |
+| `src/lib/user-directory-query.ts` | 110 |
 | `src/lib/user-list-cache.ts` | 73 |
 | `src/lib/user-visibility.ts` | 86 |
 | `src/lib/utils.ts` | 22 |
@@ -330,6 +334,7 @@
 
 ### `/api/allowed-emails`
 
+- `/api/allowed-emails/[id]/resend`
 - `/api/allowed-emails/[id]`
 - `/api/allowed-emails/preview`
 - `/api/allowed-emails`
@@ -419,6 +424,23 @@
 - `/api/bookings/changes`
 - `/api/bookings/export`
 - `/api/bookings`
+
+### `/api/budget`
+
+- `/api/budget/[id]/import`
+- `/api/budget/[id]/lines/bulk`
+- `/api/budget/[id]/lines`
+- `/api/budget/[id]`
+- `/api/budget/for-asset/[assetId]`
+- `/api/budget/item-search`
+- `/api/budget/lines/[lineId]/history`
+- `/api/budget/lines/[lineId]/links`
+- `/api/budget/lines/[lineId]`
+- `/api/budget/lines/[lineId]/suggestions`
+- `/api/budget/links/[linkId]/apply`
+- `/api/budget/links/[linkId]`
+- `/api/budget`
+- `/api/budget/trend`
 
 ### `/api/bulk-skus`
 
@@ -547,6 +569,7 @@
 
 - `/api/gear-picks/admin/export.csv`
 - `/api/gear-picks/admin/export.xlsx`
+- `/api/gear-picks/admin/history`
 - `/api/gear-picks/admin`
 - `/api/gear-picks/me`
 - `/api/gear-picks/users/[userId]`
@@ -868,9 +891,17 @@
 - `/api/users/bulk-create`
 - `/api/users/export`
 - `/api/users/hidden-cleanup`
+- `/api/users/on-shift`
 - `/api/users/onboarding-readiness`
 - `/api/users/org-chart`
 - `/api/users`
+- `/api/users/today`
+
+### `/api/wishlist`
+
+- `/api/wishlist/[id]/promote`
+- `/api/wishlist/[id]`
+- `/api/wishlist`
 
 ### `/api/workforce`
 

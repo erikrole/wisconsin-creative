@@ -36,7 +36,7 @@ describe("Brand identity typography contracts", () => {
 
   it("brands person identity in organization, reporting, and activity rows", () => {
     const cases: Array<[string, string]> = [
-      ["src/app/(app)/users/org-chart/page.tsx", 'className="brand-identity truncate font-medium group-hover:underline"'],
+      ["src/app/(app)/staff/org-chart/page.tsx", 'className="brand-identity truncate font-medium group-hover:underline"'],
       ["src/app/(app)/reports/overdue/page.tsx", 'className="brand-identity font-semibold">{entry.name}'],
       ["src/app/(app)/settings/app-activity/page.tsx", 'className="brand-identity font-medium text-foreground">{user.name}'],
     ];

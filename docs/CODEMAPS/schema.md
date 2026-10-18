@@ -131,7 +131,7 @@ Values: `UPLOADING`, `FINALIZING`, `COMMITTED`, `FAILED`
 
 ## Model `User`
 
-Fields: 132
+Fields: 137
 
 - `id                            String                           @id @default(cuid())`
 - `name                          String`
@@ -206,6 +206,9 @@ Fields: 132
 - `licenseCodesCreated           LicenseCode[]                    @relation("LicenseCreatedBy")`
 - `licenseClaims                 LicenseCodeClaim[]`
 - `gearPickParticipations        GearPickParticipant[]`
+- `gearPickStudents              GearPickStudent[]`
+- `gearPickReceipts              GearPickReceipt[]`
+- `gearPickHandouts              GearPickHandout[]`
 - `resources                     Resource[]`
 - `resourcesVerified             Resource[]                       @relation("ResourceLastVerifiedBy")`
 - `resourceAssetFoldersCreated   ResourceAssetFolder[]            @relation("ResourceAssetFolderCreator")`
@@ -265,6 +268,8 @@ Fields: 132
 - `startTerm           GraduationTerm? @map("start_term")`
 - `startTermYear       Int?            @map("start_term_year")`
 - `deactivatedAt       DateTime?       @map("deactivated_at")`
+- `budgetLinesRequested BudgetLine[] @relation("BudgetLineRequester")`
+- `wishesRequested      WishItem[]   @relation("WishRequester")`
 
 Indexes and constraints:
 
@@ -418,7 +423,7 @@ Indexes and constraints:
 
 ## Model `Asset`
 
-Fields: 42
+Fields: 43
 
 - `id                      String                  @id @default(cuid())`
 - `assetTag                String                  @unique @map("asset_tag")`
@@ -462,6 +467,7 @@ Fields: 42
 - `kitMemberships          KitMembership[]`
 - `favoritedBy             FavoriteItem[]`
 - `checkinReports          CheckinItemReport[]`
+- `budgetLines BudgetLineItem[] @relation("AssetBudgetLines")`
 
 Indexes and constraints:
 
@@ -680,7 +686,7 @@ Indexes and constraints:
 
 ## Model `BulkSku`
 
-Fields: 30
+Fields: 31
 
 - `id                  String               @id @default(cuid())`
 - `name                String`
@@ -712,6 +718,7 @@ Fields: 30
 - `checkinReports      CheckinItemReport[]`
 - `kitBulkMembers      KitBulkMembership[]`
 - `favoritedBy         FavoriteItemFamily[]`
+- `budgetLines BudgetLineItem[] @relation("BulkSkuBudgetLines")`
 
 Indexes and constraints:
 
@@ -2977,19 +2984,145 @@ Values: `MEN`, `WOMEN`
 
 ## Model `GearPickCycle`
 
-Fields: 7
+Fields: 17
 
 - `id           String                @id`
 - `title        String`
 - `deadline     DateTime?`
 - `launchedAt   DateTime?             @map("launched_at")`
+- `budgetCents      Int               @default(0) @map("budget_cents")`
+- `budgetConfirmed  Boolean           @default(false) @map("budget_confirmed")`
+- `studentKitCents  Int               @default(0) @map("student_kit_cents")`
+- `orderPlacedAt DateTime?            @map("order_placed_at")`
+- `poNumber      String?              @map("po_number")`
+- `orderNumber   String?              @map("order_number")`
+- `expectedAt    DateTime?            @map("expected_at")`
 - `createdAt    DateTime              @default(now()) @map("created_at")`
 - `updatedAt    DateTime              @updatedAt @map("updated_at")`
 - `participants GearPickParticipant[]`
+- `students     GearPickStudent[]`
+- `receipts     GearPickReceipt[]`
+- `handouts     GearPickHandout[]`
 
 Indexes and constraints:
 
 - `@@map("gear_pick_cycles")`
+
+## Model `GearPickHandout`
+
+Fields: 11
+
+- `id            String        @id @default(cuid())`
+- `cycleId       String        @map("cycle_id")`
+- `userId        String        @map("user_id")`
+- `sku           String`
+- `size          String`
+- `source        String`
+- `quantity      Int`
+- `handedOutAt   DateTime      @map("handed_out_at")`
+- `handedOutById String?       @map("handed_out_by_id")`
+- `cycle         GearPickCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)`
+- `user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)`
+
+Indexes and constraints:
+
+- `@@unique([cycleId, userId, sku, size, source])`
+- `@@index([userId])`
+- `@@map("gear_pick_handouts")`
+
+## Model `GearPickReceipt`
+
+Fields: 11
+
+- `id           String        @id @default(cuid())`
+- `cycleId      String        @map("cycle_id")`
+- `sku          String`
+- `size         String?`
+- `quantity     Int`
+- `receivedAt   DateTime      @map("received_at")`
+- `receivedById String?       @map("received_by_id")`
+- `note         String?`
+- `createdAt    DateTime      @default(now()) @map("created_at")`
+- `cycle        GearPickCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)`
+- `receivedBy   User?         @relation(fields: [receivedById], references: [id], onDelete: SetNull)`
+
+Indexes and constraints:
+
+- `@@index([cycleId, sku])`
+- `@@map("gear_pick_receipts")`
+
+## Model `GearPastCycle`
+
+Fields: 9
+
+- `id                 String          @id`
+- `title              String`
+- `budgetCents        Int             @map("budget_cents")`
+- `budgetedSpendCents Int             @map("budgeted_spend_cents")`
+- `otherSpendCents    Int             @default(0) @map("other_spend_cents")`
+- `note               String?`
+- `createdAt          DateTime        @default(now()) @map("created_at")`
+- `items              GearPastItem[]`
+- `people             GearPastPerson[]`
+
+Indexes and constraints:
+
+- `@@map("gear_past_cycles")`
+
+## Model `GearPastItem`
+
+Fields: 10
+
+- `id             String        @id @default(cuid())`
+- `cycleId        String        @map("cycle_id")`
+- `sku            String`
+- `itemName       String        @map("item_name")`
+- `colorLabel     String        @map("color_label")`
+- `unitPriceCents Int           @map("unit_price_cents")`
+- `plannedQty     Int           @map("planned_qty")`
+- `orderedQty     Int           @default(0) @map("ordered_qty")`
+- `receivedQty    Int           @default(0) @map("received_qty")`
+- `cycle          GearPastCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)`
+
+Indexes and constraints:
+
+- `@@index([cycleId])`
+- `@@map("gear_past_items")`
+
+## Model `GearPastPerson`
+
+Fields: 8
+
+- `id         String        @id @default(cuid())`
+- `cycleId    String        @map("cycle_id")`
+- `name       String`
+- `groupLabel String        @map("group_label")`
+- `fit        String`
+- `topSize    String?       @map("top_size")`
+- `shoeSize   String?       @map("shoe_size")`
+- `cycle      GearPastCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)`
+
+Indexes and constraints:
+
+- `@@index([cycleId])`
+- `@@map("gear_past_people")`
+
+## Model `GearPickStudent`
+
+Fields: 6
+
+- `id        String        @id @default(cuid())`
+- `cycleId   String        @map("cycle_id")`
+- `userId    String        @map("user_id")`
+- `createdAt DateTime      @default(now()) @map("created_at")`
+- `cycle     GearPickCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)`
+- `user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)`
+
+Indexes and constraints:
+
+- `@@unique([cycleId, userId])`
+- `@@index([userId])`
+- `@@map("gear_pick_students")`
 
 ## Model `GearPickParticipant`
 
@@ -3049,9 +3182,128 @@ Indexes and constraints:
 - `@@unique([submissionId, sku, size])`
 - `@@map("gear_pick_lines")`
 
-## Enum `AnnouncementKind`
+## Enum `BudgetLineStatus`
 
-Values: `FEATURE`, `UPDATE`, `NOTICE`
+Values: `PLANNED`, `ORDERED`, `PURCHASED`, `CANCELLED`
+
+## Enum `BudgetCategory`
+
+Values: `AWARDS_PRIZES`, `BUSINESS_TRAVEL`, `EQUIPMENT`, `IT_SERVICES`, `LEASES`, `MAINTENANCE_REPAIRS`, `MATERIALS_SUPPLIES`, `RENTALS`, `SERVICES`, `SUBSCRIPTIONS_DUES`, `TELECOMMUNICATIONS`
+
+## Model `Budget`
+
+Fields: 8
+
+- `id              String       @id @default(cuid())`
+- `name            String`
+- `fiscalYear      String       @map("fiscal_year")`
+- `allocationCents Int?         @map("allocation_cents")`
+- `notes           String?`
+- `createdAt       DateTime     @default(now()) @map("created_at")`
+- `updatedAt       DateTime     @updatedAt @map("updated_at")`
+- `lines           BudgetLine[]`
+
+Indexes and constraints:
+
+- `@@unique([name, fiscalYear])`
+- `@@index([fiscalYear])`
+- `@@map("budgets")`
+
+## Model `BudgetLine`
+
+Fields: 26
+
+- `id              String           @id @default(cuid())`
+- `budgetId        String           @map("budget_id")`
+- `category        BudgetCategory`
+- `status          BudgetLineStatus @default(PLANNED)`
+- `description     String`
+- `supplier        String?`
+- `unitCostCents   Int              @map("unit_cost_cents")`
+- `quantity        Int              @default(1)`
+- `quantityBought  Int?             @map("quantity_bought")`
+- `spentCents      Int?             @map("spent_cents")`
+- `purchasedOn     DateTime?        @map("purchased_on") @db.Date`
+- `orderNumber     String?          @map("order_number")`
+- `poNumber        String?          @map("po_number")`
+- `linkUrl         String?          @map("link_url")`
+- `justification   String?`
+- `requesterUserId String?          @map("requester_user_id")`
+- `requesterNote   String?          @map("requester_note")`
+- `unplanned       Boolean          @default(false)`
+- `refundCents     Int?             @map("refund_cents")`
+- `recurring       Boolean          @default(false)`
+- `createdAt       DateTime         @default(now()) @map("created_at")`
+- `updatedAt       DateTime         @updatedAt @map("updated_at")`
+- `budget          Budget           @relation(fields: [budgetId], references: [id], onDelete: Cascade)`
+- `requester       User?            @relation("BudgetLineRequester", fields: [requesterUserId], references: [id], onDelete: SetNull)`
+- `items           BudgetLineItem[]`
+- `wish            WishItem?`
+
+Indexes and constraints:
+
+- `@@index([budgetId, category])`
+- `@@index([budgetId, status])`
+- `@@index([requesterUserId])`
+- `@@index([poNumber])`
+- `@@map("budget_lines")`
+
+## Model `BudgetLineItem`
+
+Fields: 10
+
+- `id           String     @id @default(cuid())`
+- `budgetLineId String     @map("budget_line_id")`
+- `assetId      String?    @map("asset_id")`
+- `bulkSkuId    String?    @map("bulk_sku_id")`
+- `quantity     Int        @default(1)`
+- `createdById  String?    @map("created_by_id")`
+- `createdAt    DateTime   @default(now()) @map("created_at")`
+- `budgetLine   BudgetLine @relation(fields: [budgetLineId], references: [id], onDelete: Cascade)`
+- `asset        Asset?     @relation("AssetBudgetLines", fields: [assetId], references: [id], onDelete: Cascade)`
+- `bulkSku      BulkSku?   @relation("BulkSkuBudgetLines", fields: [bulkSkuId], references: [id], onDelete: Cascade)`
+
+Indexes and constraints:
+
+- `@@unique([budgetLineId, assetId])`
+- `@@unique([budgetLineId, bulkSkuId])`
+- `@@index([assetId])`
+- `@@index([bulkSkuId])`
+- `@@map("budget_line_items")`
+
+## Enum `WishStatus`
+
+Values: `OPEN`, `APPROVED`, `IN_BUDGET`, `DECLINED`
+
+## Model `WishItem`
+
+Fields: 19
+
+- `id             String     @id @default(cuid())`
+- `title          String`
+- `linkUrl        String?    @map("link_url")`
+- `estimateCents  Int?       @map("estimate_cents")`
+- `quantity       Int        @default(1)`
+- `neededBy       DateTime?  @map("needed_by") @db.Date`
+- `reason         String?`
+- `status         WishStatus @default(OPEN)`
+- `statusNote     String?    @map("status_note")`
+- `requestedById  String?    @map("requested_by_id")`
+- `budgetLineId   String?    @unique @map("budget_line_id")`
+- `createdAt      DateTime   @default(now()) @map("created_at")`
+- `updatedAt      DateTime   @updatedAt @map("updated_at")`
+- `requestedBy    User?      @relation("WishRequester", fields: [requestedById], references: [id], onDelete: SetNull)`
+- `budgetLine     BudgetLine? @relation(fields: [budgetLineId], references: [id], onDelete: SetNull)`
+- `enum AnnouncementKind {`
+- `FEATURE`
+- `UPDATE`
+- `NOTICE`
+
+Indexes and constraints:
+
+- `@@index([status, createdAt])`
+- `@@index([requestedById])`
+- `@@map("wish_items")`
 
 ## Model `Announcement`
 

@@ -273,3 +273,19 @@ export function gearSizeProblem(item: GearCatalogItem, size: string | null | und
   if (item.sizes && !item.sizes.includes(value)) return "Choose an available size";
   return null;
 }
+
+/** Parse a typed dollar amount ("5,500", "$5500.5") into whole cents, or null when it isn't a plain amount. */
+export function parseDollarsToCents(input: string): number | null {
+  const cleaned = input.replace(/[$,\s]/g, "");
+  if (!/^\d+(\.\d{1,2})?$/.test(cleaned)) return null;
+  return Math.round(Number(cleaned) * 100);
+}
+
+/** How many standard-issue and core-kit pieces the department covers for a fit (core kit is men's only). */
+export function kitCountsForFit(fit: GearPickFitKey, catalog: GearCatalog = GEAR_CATALOG) {
+  const entries = catalog.kits[fit];
+  return {
+    standardIssue: entries.filter((entry) => entry.kind === "STANDARD_ISSUE").length,
+    coreKit: entries.filter((entry) => entry.kind === "CORE_KIT").length,
+  };
+}
