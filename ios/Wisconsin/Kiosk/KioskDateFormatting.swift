@@ -22,7 +22,14 @@ enum KioskTime {
 extension Date {
     /// Clock time in the kiosk's Chicago zone.
     func kioskWallTime() -> String {
-        formatted(.dateTime.hour().minute().timeZone(KioskTime.timeZone))
+        kioskFormatted(.dateTime.hour().minute())
+    }
+
+    /// `style` evaluated in the kiosk's Chicago zone.
+    func kioskFormatted(_ style: Date.FormatStyle) -> String {
+        var style = style
+        style.timeZone = KioskTime.timeZone
+        return formatted(style)
     }
 }
 

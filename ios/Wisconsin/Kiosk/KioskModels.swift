@@ -693,6 +693,7 @@ struct KioskStudentCheckout: Decodable, Identifiable {
         case items
         case endsAt
         case isOverdue
+        case isDueToday
     }
 
     init(from decoder: Decoder) throws {
@@ -704,6 +705,7 @@ struct KioskStudentCheckout: Decodable, Identifiable {
         items = try container.decodeIfPresent(LossyDecodableArray<StudentItem>.self, forKey: .items)?.elements ?? []
         endsAt = try container.decode(Date.self, forKey: .endsAt)
         isOverdue = try container.decodeIfPresent(Bool.self, forKey: .isOverdue) ?? (endsAt < Date())
+        isDueToday = try container.decodeIfPresent(Bool.self, forKey: .isDueToday)
     }
 }
 

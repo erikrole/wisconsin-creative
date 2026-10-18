@@ -554,7 +554,7 @@ struct KioskOtherDateSheet: View {
                     .font(KioskType.overline)
                     .tracking(KioskType.overlineTracking)
                     .foregroundStyle(KioskText.tertiary)
-                Text(chosen.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day().timeZone(KioskTime.timeZone)) + " at " + chosen.kioskWallTime())
+                Text(chosen.kioskFormatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()) + " at " + chosen.kioskWallTime())
                     .font(.system(size: 24, weight: .heavy))
                     .foregroundStyle(KioskText.primary)
             }
