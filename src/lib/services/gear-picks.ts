@@ -20,6 +20,7 @@ import type {
   GearPickAdminStudent,
   GearPickBudgetDto,
   GearPickCycleDto,
+  GearPickReceiptDto,
   GearPickLineDto,
   GearPicksAdminResponse,
   GearPicksMeResponse,
@@ -308,7 +309,19 @@ export async function saveMyGearPicks(params: {
 async function loadCycleOrThrow(client: Prisma.TransactionClient | typeof db) {
   const cycle = await client.gearPickCycle.findUnique({
     where: { id: GEAR_PICK_CYCLE_ID },
-    select: { id: true, title: true, deadline: true, launchedAt: true, budgetCents: true, budgetConfirmed: true, studentKitCents: true },
+    select: {
+      id: true,
+      title: true,
+      deadline: true,
+      launchedAt: true,
+      budgetCents: true,
+      budgetConfirmed: true,
+      studentKitCents: true,
+      orderPlacedAt: true,
+      poNumber: true,
+      orderNumber: true,
+      expectedAt: true,
+    },
   });
   if (!cycle) throw new HttpError(404, "The 2027–28 gear pick cycle hasn't been set up.");
   return cycle;
@@ -362,7 +375,7 @@ export function gearPickBudget(params: {
 
 export async function getGearPicksAdmin(now: Date = new Date()): Promise<GearPicksAdminResponse> {
   const cycle = await loadCycleOrThrow(db);
-  const [participants, users, studentRows, studentUsers] = await Promise.all([
+  const [participants, users, studentRows, studentUsers, receiptRows] = await Promise.all([
     db.gearPickParticipant.findMany({
       where: { cycleId: cycle.id },
       select: {
@@ -401,7 +414,30 @@ export async function getGearPicksAdmin(now: Date = new Date()): Promise<GearPic
       select: { id: true, name: true },
       orderBy: [{ name: "asc" }, { id: "asc" }],
     }),
+    db.gearPickReceipt.findMany({
+      where: { cycleId: cycle.id },
+      select: {
+        id: true,
+        sku: true,
+        size: true,
+        quantity: true,
+        receivedAt: true,
+        note: true,
+        receivedBy: { select: { name: true } },
+      },
+      orderBy: [{ receivedAt: "desc" }, { createdAt: "desc" }],
+    }),
   ]);
+
+  const receipts: GearPickReceiptDto[] = receiptRows.map((row) => ({
+    id: row.id,
+    sku: row.sku,
+    size: row.size,
+    quantity: row.quantity,
+    receivedAt: row.receivedAt.toISOString(),
+    note: row.note,
+    receivedBy: row.receivedBy?.name ?? null,
+  }));
 
   const students: GearPickAdminStudent[] = studentRows.map((row) => ({
     id: row.id,
@@ -449,6 +485,13 @@ export async function getGearPicksAdmin(now: Date = new Date()): Promise<GearPic
       studentKitCents: cycle.studentKitCents,
       studentCount: students.length,
     }),
+    order: {
+      placedAt: cycle.orderPlacedAt?.toISOString() ?? null,
+      poNumber: cycle.poNumber,
+      orderNumber: cycle.orderNumber,
+      expectedAt: cycle.expectedAt?.toISOString() ?? null,
+    },
+    receipts,
   };
 }
 
@@ -456,6 +499,9 @@ export type GearPicksAdminChange =
   | { action: "setDeadline"; deadline: string | null }
   | { action: "setLaunched"; launched: boolean }
   | { action: "setBudget"; budgetCents: number; confirmed: boolean; studentKitCents?: number }
+  | { action: "setOrder"; placedAt: string | null; poNumber: string | null; orderNumber: string | null; expectedAt: string | null }
+  | { action: "addReceipt"; sku: string; size: string | null; quantity: number; receivedAt: string; note?: string | null }
+  | { action: "removeReceipt"; receiptId: string }
   | { action: "addStudent"; userId: string }
   | { action: "removeStudent"; studentId: string }
   | { action: "setStudentSizes"; studentId: string; topSize: string | null; shoeSize: string | null }
@@ -565,6 +611,78 @@ export async function applyGearPicksAdminChange(actor: Actor, change: GearPicksA
             action: "set_student_sizes",
             before: { userId: student.user.id, topSize: student.user.topSize, shoeSize: student.user.shoeSize },
             after: { userId: student.user.id, topSize: change.topSize, shoeSize: change.shoeSize },
+          });
+          return { cycleId: cycle.id };
+        }
+
+        case "setOrder": {
+          const next = {
+            orderPlacedAt: change.placedAt ? new Date(change.placedAt) : null,
+            poNumber: change.poNumber,
+            orderNumber: change.orderNumber,
+            expectedAt: change.expectedAt ? new Date(change.expectedAt) : null,
+          };
+          await tx.gearPickCycle.update({ where: { id: cycle.id }, data: next });
+          await createAuditEntryTx(tx, {
+            actorId: actor.id,
+            actorRole: actor.role,
+            entityType: "gear_pick_cycle",
+            entityId: cycle.id,
+            action: "set_order",
+            before: {
+              placedAt: cycle.orderPlacedAt?.toISOString() ?? null,
+              poNumber: cycle.poNumber,
+              orderNumber: cycle.orderNumber,
+              expectedAt: cycle.expectedAt?.toISOString() ?? null,
+            },
+            after: {
+              placedAt: next.orderPlacedAt?.toISOString() ?? null,
+              poNumber: next.poNumber,
+              orderNumber: next.orderNumber,
+              expectedAt: next.expectedAt?.toISOString() ?? null,
+            },
+          });
+          return { cycleId: cycle.id };
+        }
+
+        case "addReceipt": {
+          const receipt = await tx.gearPickReceipt.create({
+            data: {
+              cycleId: cycle.id,
+              sku: change.sku,
+              size: change.size,
+              quantity: change.quantity,
+              receivedAt: new Date(change.receivedAt),
+              receivedById: actor.id,
+              note: change.note ?? null,
+            },
+            select: { id: true },
+          });
+          await createAuditEntryTx(tx, {
+            actorId: actor.id,
+            actorRole: actor.role,
+            entityType: "gear_pick_receipt",
+            entityId: receipt.id,
+            action: "add_receipt",
+            after: { sku: change.sku, size: change.size, quantity: change.quantity, receivedAt: change.receivedAt },
+          });
+          return { cycleId: cycle.id };
+        }
+
+        case "removeReceipt": {
+          const receipt = await tx.gearPickReceipt.findFirst({
+            where: { id: change.receiptId, cycleId: cycle.id },
+            select: { id: true, sku: true, size: true, quantity: true },
+          });
+          if (!receipt) throw new HttpError(404, "That receipt doesn't exist.");
+          await tx.gearPickReceipt.delete({ where: { id: receipt.id } });
+          await createAuditEntryTx(tx, {
+            actorId: actor.id,
+            actorRole: actor.role,
+            entityType: "gear_pick_receipt",
+            entityId: receipt.id,
+            action: "remove_receipt",
+            before: { sku: receipt.sku, size: receipt.size, quantity: receipt.quantity },
           });
           return { cycleId: cycle.id };
         }

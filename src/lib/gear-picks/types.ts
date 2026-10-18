@@ -87,6 +87,26 @@ export type GearPicksAdminResponse = {
   studentCandidates: { id: string; name: string }[];
   /** Admin-only budget view. `committedCents` counts staff picks only for now. */
   budget: GearPickBudgetDto;
+  order: GearPickOrderDto;
+  receipts: GearPickReceiptDto[];
+};
+
+/** The order record. The Equipment department places the order; the site only records it. */
+export type GearPickOrderDto = {
+  placedAt: string | null;
+  poNumber: string | null;
+  orderNumber: string | null;
+  expectedAt: string | null;
+};
+
+export type GearPickReceiptDto = {
+  id: string;
+  sku: string;
+  size: string | null;
+  quantity: number;
+  receivedAt: string;
+  note: string | null;
+  receivedBy: string | null;
 };
 
 export type GearPickBudgetDto = {

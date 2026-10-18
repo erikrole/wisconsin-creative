@@ -276,6 +276,7 @@ model User {
   licenseClaims                 LicenseCodeClaim[]
   gearPickParticipations        GearPickParticipant[]
   gearPickStudents              GearPickStudent[]
+  gearPickReceipts              GearPickReceipt[]
   resources                     Resource[]
   resourcesVerified             Resource[]                       @relation("ResourceLastVerifiedBy")
   resourceAssetFoldersCreated   ResourceAssetFolder[]            @relation("ResourceAssetFolderCreator")
@@ -2912,12 +2913,36 @@ model GearPickCycle {
   budgetConfirmed  Boolean           @default(false) @map("budget_confirmed")
   /// Per-student kit price in cents (zip, polo, shoe budget); every student on the roster counts against the budget.
   studentKitCents  Int               @default(0) @map("student_kit_cents")
+  /// The order record. The Equipment department places the order; the site only records it.
+  orderPlacedAt DateTime?            @map("order_placed_at")
+  poNumber      String?              @map("po_number")
+  orderNumber   String?              @map("order_number")
+  expectedAt    DateTime?            @map("expected_at")
   createdAt    DateTime              @default(now()) @map("created_at")
   updatedAt    DateTime              @updatedAt @map("updated_at")
   participants GearPickParticipant[]
   students     GearPickStudent[]
+  receipts     GearPickReceipt[]
 
   @@map("gear_pick_cycles")
+}
+
+/// Gear checked in against the order. Several receipts can exist per SKU and size (partial shipments).
+model GearPickReceipt {
+  id           String        @id @default(cuid())
+  cycleId      String        @map("cycle_id")
+  sku          String
+  size         String?
+  quantity     Int
+  receivedAt   DateTime      @map("received_at")
+  receivedById String?       @map("received_by_id")
+  note         String?
+  createdAt    DateTime      @default(now()) @map("created_at")
+  cycle        GearPickCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  receivedBy   User?         @relation(fields: [receivedById], references: [id], onDelete: SetNull)
+
+  @@index([cycleId, sku])
+  @@map("gear_pick_receipts")
 }
 
 /// A student on the UA roster for one cycle. Sizes come from their profile; the kit price is on the cycle.

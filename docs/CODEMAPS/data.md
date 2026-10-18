@@ -11,7 +11,7 @@
 
 | Model | Fields | Model-level indexes/constraints |
 |---|---:|---:|
-| `User` | 131 | 5 |
+| `User` | 132 | 5 |
 | `Session` | 7 | 2 |
 | `PasswordResetToken` | 6 | 2 |
 | `PasskeyCredential` | 12 | 2 |
@@ -118,7 +118,8 @@
 | `YouTubeLibraryState` | 8 | 1 |
 | `YouTubePublishRecord` | 15 | 2 |
 | `YouTubePlaylistAddition` | 11 | 2 |
-| `GearPickCycle` | 11 | 1 |
+| `GearPickCycle` | 16 | 1 |
+| `GearPickReceipt` | 11 | 2 |
 | `GearPickStudent` | 6 | 3 |
 | `GearPickParticipant` | 10 | 3 |
 | `GearPickSubmission` | 9 | 1 |

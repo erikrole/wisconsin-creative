@@ -21,6 +21,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AllotmentOverview } from "./AllotmentOverview";
 import { OrderPlan } from "./OrderPlan";
+import { OrderTracking } from "./OrderTracking";
 import { KitPills } from "./KitPills";
 import { NeedsAttention } from "./NeedsAttention";
 import { StudentsSection } from "./StudentsSection";
@@ -50,6 +51,9 @@ type AdminChange =
   | { action: "setBudget"; budgetCents: number; confirmed: boolean; studentKitCents: number }
   | { action: "addStudent"; userId: string }
   | { action: "removeStudent"; studentId: string }
+  | { action: "setOrder"; placedAt: string | null; poNumber: string | null; orderNumber: string | null; expectedAt: string | null }
+  | { action: "addReceipt"; sku: string; size: string | null; quantity: number; receivedAt: string; note?: string | null }
+  | { action: "removeReceipt"; receiptId: string }
   | { action: "setStudentSizes"; studentId: string; topSize: string | null; shoeSize: string | null }
   | { action: "addParticipant"; userId: string; fit: GearPickFitKey }
   | { action: "updateParticipant"; participantId: string; fit?: GearPickFitKey; allowanceCents?: number }
@@ -200,6 +204,15 @@ export function GearPicksAdmin() {
       />
 
       <OrderPlan participants={data.participants} students={data.students} />
+
+      <OrderTracking
+        participants={data.participants}
+        students={data.students}
+        order={data.order}
+        receipts={data.receipts}
+        pending={pending}
+        onApply={applyChange}
+      />
 
       <section aria-labelledby="gear-admin-totals" className="mb-6">
         <h2 id="gear-admin-totals" className="mb-2 text-base font-semibold">Totals by item, color, and size</h2>

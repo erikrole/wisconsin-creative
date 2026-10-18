@@ -19,6 +19,7 @@ vi.mock("@/lib/db", () => {
     gearPickSubmission: { create: vi.fn(), update: vi.fn(), findUniqueOrThrow: vi.fn() },
     gearPickLine: { deleteMany: vi.fn(), createMany: vi.fn() },
     gearPickStudent: { findFirst: vi.fn(), create: vi.fn(), delete: vi.fn() },
+    gearPickReceipt: { findFirst: vi.fn(), create: vi.fn(), delete: vi.fn() },
     user: { findUnique: vi.fn(), update: vi.fn() },
   };
   return {
@@ -26,6 +27,7 @@ vi.mock("@/lib/db", () => {
       gearPickCycle: { findUnique: vi.fn() },
       gearPickParticipant: { findUnique: vi.fn(), findMany: vi.fn() },
       gearPickStudent: { findMany: vi.fn() },
+      gearPickReceipt: { findMany: vi.fn() },
       user: { findUnique: vi.fn(), findMany: vi.fn() },
       $transaction: vi.fn(),
       _mockTx: tx,
@@ -94,6 +96,7 @@ beforeEach(() => {
   vi.mocked(enforceRateLimit).mockResolvedValue(undefined);
   vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, remaining: 9, resetAt: Date.now() + 60_000 });
   vi.mocked(db.gearPickStudent.findMany).mockResolvedValue([]);
+  vi.mocked(db.gearPickReceipt.findMany).mockResolvedValue([]);
   tx.gearPickCycle!.findUnique!.mockResolvedValue(openCycle);
   tx.gearPickParticipant!.findUnique!.mockResolvedValue(participant);
   tx.gearPickSubmission!.create!.mockResolvedValue({ id: "submission-1" });
@@ -491,6 +494,54 @@ describe("admin routes", () => {
 
     expect(response.status).toBe(404);
     expect(tx.user!.update).not.toHaveBeenCalled();
+  });
+
+  it("records the order with an audit entry", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(admin);
+    tx.gearPickCycle!.findUnique!.mockResolvedValue({ ...openCycle, orderPlacedAt: null, poNumber: null, orderNumber: null, expectedAt: null });
+
+    const response = await patchAdmin(
+      patch({ action: "setOrder", placedAt: "2026-10-20T12:00:00Z", poNumber: "PO-1", orderNumber: "UA-9", expectedAt: "2027-07-01T12:00:00Z" }),
+      context,
+    );
+
+    expect(response.status).toBe(200);
+    expect(tx.gearPickCycle!.update).toHaveBeenCalledWith({
+      where: { id: "2027-28" },
+      data: { orderPlacedAt: new Date("2026-10-20T12:00:00Z"), poNumber: "PO-1", orderNumber: "UA-9", expectedAt: new Date("2027-07-01T12:00:00Z") },
+    });
+    expect(createAuditEntryTx).toHaveBeenCalledWith(tx, expect.objectContaining({ action: "set_order" }));
+  });
+
+  it("records a receipt for a SKU and size, and rejects a bad SKU", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(admin);
+    tx.gearPickReceipt!.create!.mockResolvedValue({ id: "r-1" });
+
+    const response = await patchAdmin(
+      patch({ action: "addReceipt", sku: "6021649-834", size: "M", quantity: 4, receivedAt: "2027-07-08T12:00:00Z" }),
+      context,
+    );
+    expect(response.status).toBe(200);
+    expect(tx.gearPickReceipt!.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ sku: "6021649-834", size: "M", quantity: 4, receivedById: "admin-1" }) }),
+    );
+    expect(createAuditEntryTx).toHaveBeenCalledWith(tx, expect.objectContaining({ action: "add_receipt" }));
+
+    const bad = await patchAdmin(patch({ action: "addReceipt", sku: "nope", size: null, quantity: 1, receivedAt: "2027-07-08T12:00:00Z" }), context);
+    expect(bad.status).toBe(400);
+  });
+
+  it("removes a receipt, and 404s on an unknown one", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(admin);
+    tx.gearPickReceipt!.findFirst!.mockResolvedValueOnce({ id: "r-1", sku: "6021649-834", size: "M", quantity: 4 });
+
+    const response = await patchAdmin(patch({ action: "removeReceipt", receiptId: "r-1" }), context);
+    expect(response.status).toBe(200);
+    expect(tx.gearPickReceipt!.delete).toHaveBeenCalledWith({ where: { id: "r-1" } });
+
+    tx.gearPickReceipt!.findFirst!.mockResolvedValueOnce(null);
+    const missing = await patchAdmin(patch({ action: "removeReceipt", receiptId: "nope" }), context);
+    expect(missing.status).toBe(404);
   });
 
   it("launches the cycle to staff with an audit entry", async () => {

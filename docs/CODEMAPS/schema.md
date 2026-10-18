@@ -131,7 +131,7 @@ Values: `UPLOADING`, `FINALIZING`, `COMMITTED`, `FAILED`
 
 ## Model `User`
 
-Fields: 131
+Fields: 132
 
 - `id                            String                           @id @default(cuid())`
 - `name                          String`
@@ -205,6 +205,7 @@ Fields: 131
 - `licenseClaims                 LicenseCodeClaim[]`
 - `gearPickParticipations        GearPickParticipant[]`
 - `gearPickStudents              GearPickStudent[]`
+- `gearPickReceipts              GearPickReceipt[]`
 - `resources                     Resource[]`
 - `resourcesVerified             Resource[]                       @relation("ResourceLastVerifiedBy")`
 - `resourceAssetFoldersCreated   ResourceAssetFolder[]            @relation("ResourceAssetFolderCreator")`
@@ -2976,7 +2977,7 @@ Values: `MEN`, `WOMEN`
 
 ## Model `GearPickCycle`
 
-Fields: 11
+Fields: 16
 
 - `id           String                @id`
 - `title        String`
@@ -2985,14 +2986,40 @@ Fields: 11
 - `budgetCents      Int               @default(0) @map("budget_cents")`
 - `budgetConfirmed  Boolean           @default(false) @map("budget_confirmed")`
 - `studentKitCents  Int               @default(0) @map("student_kit_cents")`
+- `orderPlacedAt DateTime?            @map("order_placed_at")`
+- `poNumber      String?              @map("po_number")`
+- `orderNumber   String?              @map("order_number")`
+- `expectedAt    DateTime?            @map("expected_at")`
 - `createdAt    DateTime              @default(now()) @map("created_at")`
 - `updatedAt    DateTime              @updatedAt @map("updated_at")`
 - `participants GearPickParticipant[]`
 - `students     GearPickStudent[]`
+- `receipts     GearPickReceipt[]`
 
 Indexes and constraints:
 
 - `@@map("gear_pick_cycles")`
+
+## Model `GearPickReceipt`
+
+Fields: 11
+
+- `id           String        @id @default(cuid())`
+- `cycleId      String        @map("cycle_id")`
+- `sku          String`
+- `size         String?`
+- `quantity     Int`
+- `receivedAt   DateTime      @map("received_at")`
+- `receivedById String?       @map("received_by_id")`
+- `note         String?`
+- `createdAt    DateTime      @default(now()) @map("created_at")`
+- `cycle        GearPickCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)`
+- `receivedBy   User?         @relation(fields: [receivedById], references: [id], onDelete: SetNull)`
+
+Indexes and constraints:
+
+- `@@index([cycleId, sku])`
+- `@@map("gear_pick_receipts")`
 
 ## Model `GearPickStudent`
 
