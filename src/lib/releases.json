@@ -1,21 +1,5 @@
 [
   {
-    "date": "2026-10-18",
-    "title": "Clearer status and recovery",
-    "type": "improvement",
-    "summary": "Reservations, checkouts, items, schedule, and kiosk stay understandable from the keyboard, and a failed list says so instead of looking empty.",
-    "details": [
-      "Calendar and week events name home, away, or neutral in the control, not only by color.",
-      "A failed schedule, reservation check, parent search, gap count, or attachment search offers Try again.",
-      "Closing a confirmation, retire prompt, or kiosk activation dialog returns focus to the control that opened it.",
-      "Row menus, favorites, filters, and the item-type toggle keep the keyboard instead of paging or opening the row."
-    ],
-    "platforms": [
-      "Web"
-    ],
-    "pr": 509
-  },
-  {
     "date": "2026-10-19",
     "title": "Booking activity on iPhone",
     "type": "feature",
@@ -31,6 +15,22 @@
       "iOS"
     ],
     "pr": 513
+  },
+  {
+    "date": "2026-10-18",
+    "title": "Clearer status and recovery",
+    "type": "improvement",
+    "summary": "Reservations, checkouts, items, schedule, and kiosk stay understandable from the keyboard, and a failed list says so instead of looking empty.",
+    "details": [
+      "Calendar and week events name home, away, or neutral in the control, not only by color.",
+      "A failed schedule, reservation check, parent search, gap count, or attachment search offers Try again.",
+      "Closing a confirmation, retire prompt, or kiosk activation dialog returns focus to the control that opened it.",
+      "Row menus, favorites, filters, and the item-type toggle keep the keyboard instead of paging or opening the row."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 509
   },
   {
     "date": "2026-10-18",
