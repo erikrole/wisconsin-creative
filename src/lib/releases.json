@@ -1,6 +1,23 @@
 [
   {
     "date": "2026-10-18",
+    "title": "Item activity on iPhone",
+    "type": "feature",
+    "summary": "Staff can read an item's history on iPhone, filtered to all activity, item updates, or bookings.",
+    "details": [
+      "Open Activity on an item to see who changed it and when.",
+      "Filter to all activity, item updates, or bookings, and load older pages.",
+      "A booking row opens that booking.",
+      "A failed refresh keeps the history already on screen.",
+      "Students and collaborators do not see Activity. Previous bookings stay on the item."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 508
+  },
+  {
+    "date": "2026-10-18",
     "title": "Away game travel list",
     "type": "feature",
     "summary": "An away game on iPhone lists who is traveling. Adding or removing someone stays on the website.",
