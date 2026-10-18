@@ -2,7 +2,7 @@ import { memo } from "react";
 import type { CSSProperties } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AREA_LABELS, type UserRow as UserRowType } from "./types";
+import { AREA_COLORS, AREA_LABELS, graduatesThisAcademicYear, type UserRow as UserRowType } from "./types";
 import RoleBadge from "./RoleBadge";
 import { formatRelativeTime } from "@/lib/format";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -57,6 +57,21 @@ function rosterAffiliationLabel(user: UserRowType): string | null {
   return affiliation?.badgeLabel?.trim() || affiliation?.displayName?.trim() || null;
 }
 
+function AreaDot({ area }: { area: string | null }) {
+  if (!area) return null;
+  return <span aria-hidden="true" className="size-2 shrink-0 rounded-full" style={{ background: AREA_COLORS[area] ?? "#b9bbc6" }} />;
+}
+
+/** Amber chip for students who finish this academic year, so gaps are visible at a glance. */
+function GraduatingChip({ user }: { user: UserRowType }) {
+  if (!graduatesThisAcademicYear(user.role, user.gradYear)) return null;
+  return (
+    <Badge variant="orange" size="sm" className="shrink-0">
+      Graduating
+    </Badge>
+  );
+}
+
 function TitleAreaValue({ user }: { user: UserRowType }) {
   const title = titleLabel(user);
   const area = areaLabel(user.primaryArea);
@@ -64,9 +79,12 @@ function TitleAreaValue({ user }: { user: UserRowType }) {
 
   return (
     <div className="flex min-w-0 flex-col gap-0.5">
-      <span className="truncate text-sm text-foreground/80">{title ?? area ?? "\u2014"}</span>
+      <span className="flex min-w-0 items-center gap-2 text-sm text-foreground/80">
+        <AreaDot area={user.primaryArea} />
+        <span className="truncate">{title ?? area ?? "\u2014"}</span>
+      </span>
       {showAreaAsSecondary ? (
-        <span className="truncate text-[11px] leading-tight text-muted-foreground">{area}</span>
+        <span className="truncate pl-4 text-[11px] leading-tight text-muted-foreground">{area}</span>
       ) : null}
     </div>
   );
@@ -166,6 +184,7 @@ function UserNameLine({
           Inactive
         </Badge>
       )}
+      <GraduatingChip user={user} />
     </span>
   );
 }
@@ -209,7 +228,7 @@ function UserQuickView({ user }: { user: UserRowType }) {
 
 /* ── Desktop Table Row ────────────────────────────────── */
 
-export const UserTableRow = memo(function UserTableRow({ user }: { user: UserRowType }) {
+export const UserTableRow = memo(function UserTableRow({ user, showRole = true }: { user: UserRowType; showRole?: boolean }) {
   const router = useRouter();
 
   return (
@@ -253,9 +272,11 @@ export const UserTableRow = memo(function UserTableRow({ user }: { user: UserRow
         </HoverCardContent>
         </HoverCard>
       </TableCell>
-      <TableCell className="w-28">
-        <RoleBadge role={user.role} affiliationLabel={rosterAffiliationLabel(user)} />
-      </TableCell>
+      {showRole && (
+        <TableCell className="w-28">
+          <RoleBadge role={user.role} affiliationLabel={rosterAffiliationLabel(user)} />
+        </TableCell>
+      )}
       <TableCell className="hidden min-w-[18rem] md:table-cell">
         <TitleAreaValue user={user} />
       </TableCell>
@@ -270,7 +291,7 @@ export const UserTableRow = memo(function UserTableRow({ user }: { user: UserRow
 
 /* ── Mobile Card ──────────────────────────────────────── */
 
-export const UserMobileCard = memo(function UserMobileCard({ user }: { user: UserRowType }) {
+export const UserMobileCard = memo(function UserMobileCard({ user, showRole = true }: { user: UserRowType; showRole?: boolean }) {
   const metaParts = mobileMetaParts(user);
 
   return (
@@ -307,7 +328,7 @@ export const UserMobileCard = memo(function UserMobileCard({ user }: { user: Use
                   Inactive
                 </Badge>
               )}
-              <RoleBadge role={user.role} affiliationLabel={rosterAffiliationLabel(user)} />
+              {showRole && <RoleBadge role={user.role} affiliationLabel={rosterAffiliationLabel(user)} />}
             </div>
           </div>
           {metaParts.length > 0 && (
@@ -331,7 +352,7 @@ export const UserMobileCard = memo(function UserMobileCard({ user }: { user: Use
 
 /* ── Headshot Grid Card ───────────────────────────────── */
 
-export const UserGridCard = memo(function UserGridCard({ user }: { user: UserRowType }) {
+export const UserGridCard = memo(function UserGridCard({ user, showRole = true }: { user: UserRowType; showRole?: boolean }) {
   const subtitle = titleLabel(user) ?? areaLabel(user.primaryArea);
 
   return (
@@ -348,9 +369,14 @@ export const UserGridCard = memo(function UserGridCard({ user }: { user: UserRow
               className="max-w-full justify-center text-[13.5px] leading-tight"
               style={{ fontFamily: "var(--font-heading)", fontWeight: 600 }}
             />
-            {subtitle ? <span className="w-full truncate text-xs text-muted-foreground">{subtitle}</span> : null}
+            {subtitle ? (
+              <span className="flex w-full items-center justify-center gap-1.5 text-xs text-muted-foreground">
+                <AreaDot area={user.primaryArea} />
+                <span className="truncate">{subtitle}</span>
+              </span>
+            ) : null}
           </div>
-          <RoleBadge role={user.role} affiliationLabel={rosterAffiliationLabel(user)} />
+          {showRole && <RoleBadge role={user.role} affiliationLabel={rosterAffiliationLabel(user)} />}
         </CardContent>
       </Card>
     </Link>

@@ -175,6 +175,13 @@ export const AREA_LABELS: Record<string, string> = {
   LIVE_PRODUCTION: "Live Production",
 };
 
+/** True when a student's graduation year is the current academic year or earlier (the year ends in July). */
+export function graduatesThisAcademicYear(role: Role, gradYear: number | null, now = new Date()): boolean {
+  if (role !== "STUDENT" || gradYear == null) return false;
+  const academicYearEnd = now.getMonth() >= 7 ? now.getFullYear() + 1 : now.getFullYear();
+  return gradYear <= academicYearEnd;
+}
+
 /** Dot colors per area, shared by the roster headings and the profile header. */
 export const AREA_COLORS: Record<string, string> = {
   VIDEO: "#3e63dd",

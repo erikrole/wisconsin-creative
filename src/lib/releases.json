@@ -27,6 +27,7 @@
       "Year and sport filters only appear when they apply to students.",
       "The org chart is now a real chart with cards and connectors, a notice for people whose manager is listed by name only, and a Not placed yet section. A list view is still one tap away.",
       "Profiles get Email and Call buttons, an area chip, and an At a glance card showing who the person reports to and when they were last active.",
+      "Roster rows show an area dot and a Graduating chip for students finishing this year, and hide the role column when a role tab already says it.",
       "Staff and Workforce have a fresh look: Lato type, a calm blue accent, softer cards, and a colored dot for each area."
     ],
     "platforms": ["Web"],

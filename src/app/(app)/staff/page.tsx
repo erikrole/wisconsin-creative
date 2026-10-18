@@ -660,7 +660,7 @@ export default function UsersPage() {
                     {group.label && <GroupHeading label={group.label} count={group.count} continued={group.continued} />}
                     <div className="grid grid-cols-3 gap-3 lg:grid-cols-4 xl:grid-cols-5">
                       {group.users.map((user) => (
-                        <UserGridCard key={user.id} user={user} />
+                        <UserGridCard key={user.id} user={user} showRole={!roleFilter} />
                       ))}
                     </div>
                   </section>
@@ -675,7 +675,7 @@ export default function UsersPage() {
                   <TableHeader>
                     <TableRow>
                       <SortableHead label="Name" sortKey="name" currentSort={sort} onSort={setSort} className="w-[26rem] normal-case tracking-normal" />
-                      <SortableHead label="Role" sortKey="role" currentSort={sort} onSort={setSort} className="w-28 normal-case tracking-normal" />
+                      {!roleFilter && <SortableHead label="Role" sortKey="role" currentSort={sort} onSort={setSort} className="w-28 normal-case tracking-normal" />}
                       <TableHead className="hidden min-w-[18rem] normal-case tracking-normal md:table-cell">Title / area</TableHead>
                       {!isCollaboratorDirectory && (
                         <SortableHead label="Last active" sortKey="lastActive" currentSort={sort} onSort={setSort} className="hidden w-36 normal-case tracking-normal xl:table-cell" />
@@ -687,13 +687,13 @@ export default function UsersPage() {
                       <Fragment key={group.key}>
                         {group.label && (
                           <TableRow className="bg-muted/40 hover:bg-muted/40">
-                            <TableCell colSpan={4} className="py-2">
+                            <TableCell colSpan={roleFilter ? 3 : 4} className="py-2">
                               <GroupHeading label={group.label} count={group.count} continued={group.continued} />
                             </TableCell>
                           </TableRow>
                         )}
                         {group.users.map((user) => (
-                          <UserTableRow key={user.id} user={user} />
+                          <UserTableRow key={user.id} user={user} showRole={!roleFilter} />
                         ))}
                       </Fragment>
                     ))}
@@ -708,7 +708,7 @@ export default function UsersPage() {
                 <Fragment key={group.key}>
                   {group.label && <GroupHeading label={group.label} count={group.count} continued={group.continued} />}
                   {group.users.map((user) => (
-                    <UserMobileCard key={user.id} user={user} />
+                    <UserMobileCard key={user.id} user={user} showRole={!roleFilter} />
                   ))}
                 </Fragment>
               ))}
