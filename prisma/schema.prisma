@@ -3056,7 +3056,7 @@ model BudgetLine {
 }
 
 /// Ties a budget line to the inventory it bought: one serialized asset, or a quantity of a bulk SKU.
-/// Exactly one of assetId / bulkSkuId is set (enforced by a CHECK in migration 0176). Admin only.
+/// Exactly one of assetId / bulkSkuId is set (enforced by a CHECK in migration 0177). Admin only.
 model BudgetLineItem {
   id           String     @id @default(cuid())
   budgetLineId String     @map("budget_line_id")

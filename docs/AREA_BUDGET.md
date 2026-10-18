@@ -21,7 +21,7 @@ The team's budget lives in a Google Sheet with one tab per fiscal year plus a fo
 4. Status is `PLANNED`, `ORDERED`, `PURCHASED`, or `CANCELLED`. `CANCELLED` is shown as Dropped and is excluded from every total except the submitted plan.
 5. Categories are the department's closed list of eleven (equipment, IT & services, rentals, and so on).
 6. Money is whole cents, capped at $10,000,000 per value. Links must be http(s).
-7. The submitted plan is fixed: it sums every line that was on it, dropped ones included. A line added later is marked `unplanned` (migration `0177`) and stays out of the submitted plan. Freed up is what dropped lines gave back; Unplanned is what late additions cost. Vs plan is spent minus planned per line.
+7. The submitted plan is fixed: it sums every line that was on it, dropped ones included. A line added later is marked `unplanned` (migration `0178`) and stays out of the submitted plan. Freed up is what dropped lines gave back; Unplanned is what late additions cost. Vs plan is spent minus planned per line.
 7. Summary: planned = non-cancelled planned total; spent = recorded spend; outstanding = planned for lines not yet bought (planned or ordered with no spend); forecast = spent + outstanding; remaining = (allocation, or planned when there is no cap) - forecast. Negative means over.
 8. Every mutation is audited with before and after (`budget`, `budget_line`).
 9. `poNumber` and `orderNumber` come from order confirmations and are the strongest keys for linking a line to inventory items.
@@ -34,15 +34,15 @@ The team's budget lives in a Google Sheet with one tab per fiscal year plus a fo
 
 ## Data Model
 
-Migration `0179_budget_line_refund_recurring` adds `budget_lines.refund_cents` (a refund or credit; the real cost is spent minus refund, never below zero) and `recurring` (copied into next year's budget when it is created).
+Migration `0180_budget_line_refund_recurring` adds `budget_lines.refund_cents` (a refund or credit; the real cost is spent minus refund, never below zero) and `recurring` (copied into next year's budget when it is created).
 
-Migration `0178_wish_items` adds enum `WishStatus` and `wish_items` (title, link_url, estimate_cents, quantity, needed_by, reason, status, status_note, requested_by_id, budget_line_id unique). The requester link and the budget line link are `SetNull`.
+Migration `0179_wish_items` adds enum `WishStatus` and `wish_items` (title, link_url, estimate_cents, quantity, needed_by, reason, status, status_note, requested_by_id, budget_line_id unique). The requester link and the budget line link are `SetNull`.
 
-Migration `0177_budget_line_unplanned` adds `budget_lines.unplanned`.
+Migration `0178_budget_line_unplanned` adds `budget_lines.unplanned`.
 
-Migration `0176_budget_item_links` adds `budget_line_items` (line, asset or bulk SKU, quantity, created by) with a CHECK that exactly one target is set and unique (line, asset) and (line, bulk SKU); it cascades from the line, the asset, and the bulk SKU.
+Migration `0177_budget_item_links` adds `budget_line_items` (line, asset or bulk SKU, quantity, created by) with a CHECK that exactly one target is set and unique (line, asset) and (line, bulk SKU); it cascades from the line, the asset, and the bulk SKU.
 
-Migration `0175_budget`: enums `BudgetLineStatus` and `BudgetCategory`; `budgets` (name, fiscal_year, allocation_cents, notes; unique name + year); `budget_lines` (category, status, description, supplier, unit_cost_cents, quantity, quantity_bought, spent_cents, purchased_on, order_number, po_number, link_url, justification, requester_user_id, requester_note). Lines cascade from the budget; the requester link is `SetNull` on user delete.
+Migration `0176_budget`: enums `BudgetLineStatus` and `BudgetCategory`; `budgets` (name, fiscal_year, allocation_cents, notes; unique name + year); `budget_lines` (category, status, description, supplier, unit_cost_cents, quantity, quantity_bought, spent_cents, purchased_on, order_number, po_number, link_url, justification, requester_user_id, requester_note). Lines cascade from the budget; the requester link is `SetNull` on user delete.
 
 ## API Surface
 
