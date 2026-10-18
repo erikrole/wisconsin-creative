@@ -43,6 +43,7 @@ describe("iOS announcement splash", () => {
     expect(brand).toContain("static let brandPrimary = Color(UIColor(dynamicProvider:");
     expect(sheet).toContain(".tint(.wisconsinRed)");
     expect(sheet).not.toContain("brandPrimary");
+    expect(sheet).toContain("colorScheme == .dark ? Color(red: 1.0, green: 0.38, blue: 0.36)");
   });
 
   it("keeps the fixture scenarios out of release builds", () => {

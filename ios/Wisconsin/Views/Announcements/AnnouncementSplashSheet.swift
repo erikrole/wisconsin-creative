@@ -108,10 +108,17 @@ struct AnnouncementSplashSheet: View {
     let onClose: () -> Void
 
     @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.colorScheme) private var colorScheme
     @State private var contentHeight: CGFloat = 0
     @State private var footerHeight: CGFloat = 0
-    @ScaledMetric(relativeTo: .body) private var tileSize: CGFloat = 44
-    @ScaledMetric(relativeTo: .body) private var checkSize: CGFloat = 20
+    @ScaledMetric(relativeTo: .body) private var tileSize: CGFloat = 40
+    @ScaledMetric(relativeTo: .body) private var checkSize: CGFloat = 22
+
+    /// Small red type and glyphs: #C80000 on a dark sheet is under 3:1, so dark
+    /// mode lifts it. Fills (button, checks, tile wash) stay Wisconsin red.
+    private var accent: Color {
+        colorScheme == .dark ? Color(red: 1.0, green: 0.38, blue: 0.36) : .wisconsinRed
+    }
 
     private var hasImages: Bool { !announcement.imageUrls.isEmpty }
 
@@ -126,6 +133,8 @@ struct AnnouncementSplashSheet: View {
             VStack(alignment: .leading, spacing: 0) {
                 if hasImages {
                     AnnouncementMedia(urls: announcement.imageUrls, alt: announcement.imageAlt)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 28)
                 }
                 header
                 bodyBlocks
@@ -142,17 +151,17 @@ struct AnnouncementSplashSheet: View {
         .background(alignment: .topLeading) {
             if !hasImages {
                 RadialGradient(
-                    colors: [Color.wisconsinRed.opacity(0.14), .clear],
+                    colors: [Color.wisconsinRed.opacity(colorScheme == .dark ? 0.12 : 0.16), .clear],
                     center: .topLeading,
                     startRadius: 0,
-                    endRadius: 360
+                    endRadius: 440
                 )
                 .allowsHitTesting(false)
             }
         }
         .presentationDetents([.height(fittedHeight), .large])
         .presentationDragIndicator(.visible)
-        .presentationCornerRadius(28)
+        .presentationCornerRadius(32)
         .presentationBackground(Color(.systemBackground))
     }
 
@@ -160,13 +169,15 @@ struct AnnouncementSplashSheet: View {
         VStack(alignment: .leading, spacing: 18) {
             kindRow
             Text(announcement.title)
-                .font(.title.weight(.semibold))
+                .font(.gothamBold(size: 27, relativeTo: .title))
+                .tracking(-0.3)
+                .lineSpacing(3)
                 .foregroundStyle(.primary)
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader)
         }
         .padding(.horizontal, 24)
-        .padding(.top, hasImages ? 20 : 28)
+        .padding(.top, hasImages ? 22 : 30)
         .padding(.bottom, 14)
     }
 
@@ -178,20 +189,16 @@ struct AnnouncementSplashSheet: View {
         layout {
             Image(systemName: announcement.kindSymbol)
                 .font(.title3.weight(.regular))
-                .foregroundStyle(Color.wisconsinRed)
+                .foregroundStyle(accent)
                 .frame(width: tileSize, height: tileSize)
-                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .strokeBorder(Color.wisconsinRed.opacity(0.18), lineWidth: 1)
-                }
+                .background(Color.wisconsinRed.opacity(0.12), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .accessibilityHidden(true)
 
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(announcement.kindLabel.uppercased())
                     .font(.caption.weight(.semibold))
                     .tracking(1.0)
-                    .foregroundStyle(Color.wisconsinRed)
+                    .foregroundStyle(accent)
                     .lineLimit(1)
                     .fixedSize()
                 if let date = announcement.publishedDate {
@@ -227,6 +234,7 @@ struct AnnouncementSplashSheet: View {
                 case .paragraph(let text):
                     Text(text)
                         .font(.body)
+                        .lineSpacing(3)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 case .list(let items):
@@ -234,10 +242,10 @@ struct AnnouncementSplashSheet: View {
                         ForEach(Array(items.enumerated()), id: \.offset) { _, item in
                             HStack(alignment: .firstTextBaseline, spacing: 12) {
                                 Image(systemName: "checkmark")
-                                    .font(.system(size: 10, weight: .bold))
-                                    .foregroundStyle(Color.wisconsinRed)
+                                    .font(.system(size: 11, weight: .heavy))
+                                    .foregroundStyle(.white)
                                     .frame(width: checkSize, height: checkSize)
-                                    .background(Color.wisconsinRed.opacity(0.13), in: Circle())
+                                    .background(Color.wisconsinRed, in: Circle())
                                     .accessibilityHidden(true)
                                 Text(item)
                                     .font(.body)
@@ -265,10 +273,11 @@ struct AnnouncementSplashSheet: View {
             .buttonBorderShape(.capsule)
             .controlSize(.large)
             .tint(.wisconsinRed)
+            .shadow(color: Color.wisconsinRed.opacity(0.3), radius: 10, y: 4)
 
             if announcement.hasCta {
                 Button("Close", action: onClose)
-                    .font(.body)
+                    .font(.subheadline.weight(.medium))
                     .foregroundStyle(.secondary)
                     .frame(minHeight: 44)
             }
@@ -277,7 +286,18 @@ struct AnnouncementSplashSheet: View {
         .padding(.top, 10)
         .padding(.bottom, 12)
         .frame(maxWidth: .infinity)
-        .background(Color(.systemBackground))
+        .background {
+            // Text fades out under the buttons instead of ending on a hard bar.
+            LinearGradient(
+                stops: [
+                    .init(color: Color(.systemBackground).opacity(0), location: 0),
+                    .init(color: Color(.systemBackground), location: 0.3),
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea(edges: .bottom)
+        }
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { footerHeight = $0 }
     }
 }
@@ -305,7 +325,8 @@ private struct AnnouncementMedia: View {
         }
         .aspectRatio(16.0 / 9.0, contentMode: .fit)
         .frame(maxWidth: .infinity)
-        .clipped()
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .shadow(color: .black.opacity(0.16), radius: 14, y: 6)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(alt ?? "Announcement image")
         .accessibilityValue(urls.count > 1 ? "Image \(page + 1) of \(urls.count)" : "")
