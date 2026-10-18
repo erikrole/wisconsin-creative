@@ -83,6 +83,7 @@
 | `/staff/onboarding-status` | `src/app/(app)/staff/onboarding-status/page.tsx` |
 | `/staff/org-chart` | `src/app/(app)/staff/org-chart/page.tsx` |
 | `/staff` | `src/app/(app)/staff/page.tsx` |
+| `/staff/today` | `src/app/(app)/staff/today/page.tsx` |
 | `/staff/workforce/hiring` | `src/app/(app)/staff/workforce/hiring/page.tsx` |
 | `/staff/workforce` | `src/app/(app)/staff/workforce/page.tsx` |
 | `/staff/workforce/planning` | `src/app/(app)/staff/workforce/planning/page.tsx` |

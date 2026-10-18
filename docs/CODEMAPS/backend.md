@@ -860,6 +860,7 @@
 - `/api/users/onboarding-readiness`
 - `/api/users/org-chart`
 - `/api/users`
+- `/api/users/today`
 
 ### `/api/workforce`
 

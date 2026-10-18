@@ -11,7 +11,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
   return (
     <div className={`wc-fresh ${lato.variable}`}>
       <StaffTheme classNames={`wc-fresh ${lato.variable}`} />
-      <StaffNav isAdmin={user.role === Role.ADMIN} />
+      <StaffNav isAdmin={user.role === Role.ADMIN} canSeeToday={user.role !== Role.COLLABORATOR} />
       {children}
     </div>
   );

@@ -1,5 +1,20 @@
 [
   {
+    "date": "2026-10-18",
+    "title": "A fresher Staff section",
+    "type": "improvement",
+    "summary": "Staff and Workforce have a new look, and Staff now shows who is working today.",
+    "details": [
+      "Lato type, a calm blue accent, softer cards, and a colored dot for each area.",
+      "The org chart is a real chart with cards and connectors, plus a Not placed yet section.",
+      "Profiles get Email and Call buttons, an area chip, and an At a glance card.",
+      "Roster rows show an area dot and a Graduating chip, and hide the role column when a role tab already says it.",
+      "The roster shows an On shift now strip, and a new Today tab lists who is working which event now, later, and tomorrow."
+    ],
+    "platforms": ["Web"],
+    "pr": 486
+  },
+  {
     "date": "2026-10-16",
     "title": "Clearer Workforce overview",
     "type": "improvement",
@@ -24,12 +39,7 @@
       "A new photo grid view shows everyone as headshot cards. Your choice stays in the page link.",
       "Group by area splits the whole list under Photo, Video, and the other areas, with each area's full headcount, even across pages.",
       "Hover a name in the table to see a quick card with title, location, and contact details.",
-      "Year and sport filters only appear when they apply to students.",
-      "The org chart is now a real chart with cards and connectors, a notice for people whose manager is listed by name only, and a Not placed yet section. A list view is still one tap away.",
-      "Profiles get Email and Call buttons, an area chip, and an At a glance card showing who the person reports to and when they were last active.",
-      "Roster rows show an area dot and a Graduating chip for students finishing this year, and hide the role column when a role tab already says it.",
-      "The roster shows an On shift now strip with who is working a published shift this minute, until when, and at which event.",
-      "Staff and Workforce have a fresh look: Lato type, a calm blue accent, softer cards, and a colored dot for each area."
+      "Year and sport filters only appear when they apply to students."
     ],
     "platforms": ["Web"],
     "pr": 486
