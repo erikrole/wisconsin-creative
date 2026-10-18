@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { FormCombobox } from "@/components/FormCombobox";
 import { AssetImage } from "@/components/AssetImage";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
+import { parentSearchOutcome } from "@/lib/a11y-resilience";
 import type { CleanupWizardItem, CleanupWizardKind } from "@/lib/services/item-cleanup-wizard";
 
 type Stage = "pick" | "ask" | "enter" | "done";
@@ -110,6 +111,8 @@ export function CleanupWizardDialog({ open, onOpenChange, initialKind = null, on
   const [parentSearch, setParentSearch] = useState("");
   const [parentSearchHits, setParentSearchHits] = useState<ParentSearchHit[]>([]);
   const [parentSearching, setParentSearching] = useState(false);
+  const [parentSearchError, setParentSearchError] = useState(false);
+  const [parentSearchAttempt, setParentSearchAttempt] = useState(0);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -129,6 +132,7 @@ export function CleanupWizardDialog({ open, onOpenChange, initialKind = null, on
     setParentId("");
     setParentSearch("");
     setParentSearchHits([]);
+    setParentSearchError(false);
     setLoading(false);
     setSaving(false);
     setLoadError(null);
@@ -235,29 +239,37 @@ export function CleanupWizardDialog({ open, onOpenChange, initialKind = null, on
     if (query.length < 2) {
       setParentSearchHits([]);
       setParentSearching(false);
+      setParentSearchError(false);
       return;
     }
 
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       setParentSearching(true);
+      setParentSearchError(false);
       try {
         const res = await fetch(
           `/api/assets?q=${encodeURIComponent(query)}&limit=10&include_accessories=true`,
           { signal: controller.signal },
         );
-        if (handleAuthRedirect(res)) return;
-        if (!res.ok) {
+        if (handleAuthRedirect(res) || controller.signal.aborted) return;
+        const json = res.ok ? await parseJsonSafely<{ data?: ParentSearchHit[] }>(res) : null;
+        const outcome = parentSearchOutcome({ query, ok: res.ok, payload: json });
+        if (controller.signal.aborted) return;
+        if (outcome.status !== "hits") {
           setParentSearchHits([]);
+          setParentSearchError(true);
           return;
         }
-        const json = await parseJsonSafely<{ data?: ParentSearchHit[] }>(res);
-        const rows = Array.isArray(json?.data) ? json.data : [];
+        const rows = outcome.hits as ParentSearchHit[];
         setParentSearchHits(
           rows.filter((row) => row.id !== item?.id && !row.parentAssetId).slice(0, 8),
         );
       } catch {
-        if (!controller.signal.aborted) setParentSearchHits([]);
+        if (!controller.signal.aborted) {
+          setParentSearchHits([]);
+          setParentSearchError(true);
+        }
       } finally {
         if (!controller.signal.aborted) setParentSearching(false);
       }
@@ -267,7 +279,7 @@ export function CleanupWizardDialog({ open, onOpenChange, initialKind = null, on
       controller.abort();
       window.clearTimeout(timer);
     };
-  }, [item?.id, kind, parentSearch, stage]);
+  }, [item?.id, kind, parentSearch, parentSearchAttempt, stage]);
 
   const parentOptions = useMemo(() => {
     const byId = new Map<string, { value: string; label: string }>();
@@ -612,15 +624,24 @@ export function CleanupWizardDialog({ open, onOpenChange, initialKind = null, on
                         className="h-11"
                         placeholder="Type an asset tag or name"
                       />
-                      <p className="text-xs text-muted-foreground">
-                        {parentSearching
-                          ? "Searching..."
-                          : parentSearch.trim().length < 2
-                            ? "Type at least 2 characters to search the catalog."
-                            : parentSearchHits.length === 0
-                              ? "No additional parents found."
-                              : `${parentSearchHits.length} added to the list above.`}
-                      </p>
+                      {parentSearchError ? (
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-xs text-destructive">Parent search did not load.</p>
+                          <Button type="button" variant="outline" className="h-10" onClick={() => setParentSearchAttempt((attempt) => attempt + 1)}>
+                            Try again
+                          </Button>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          {parentSearching
+                            ? "Searching..."
+                            : parentSearch.trim().length < 2
+                              ? "Type at least 2 characters to search the catalog."
+                              : parentSearchHits.length === 0
+                                ? "No additional parents found."
+                                : `${parentSearchHits.length} added to the list above.`}
+                        </p>
+                      )}
                     </div>
                     {saveError && (
                       <div className="flex items-center gap-1.5 text-xs text-destructive">

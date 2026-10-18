@@ -39,6 +39,9 @@ final class ReportsViewModel {
     @ObservationIgnored private var activeWindow: Int?
 
     var hasAnyData: Bool { utilization != nil || checkouts != nil }
+    /// Owner-only. Hidden until `/api/me` says this account may open Usage.
+    var showsUsageReport = false
+    @ObservationIgnored private let usageAccess = ReportSession<Bool>()
 
     init(
         utilizationLoader: @escaping UtilizationLoader = { days in
@@ -124,6 +127,17 @@ final class ReportsViewModel {
         isLoading = false
     }
 
+    func loadUsageAccess(force: Bool = false) async {
+        guard let token = usageAccess.begin(key: "access", force: force) else { return }
+        do {
+            let allowed = try await APIClient.shared.canViewUsageAnalytics()
+            guard usageAccess.succeed(token, value: allowed, incomplete: false) else { return }
+            showsUsageReport = allowed
+        } catch {
+            usageAccess.fail(token, message: error.localizedDescription)
+        }
+    }
+
     private func loadUtilization(days: Int) async -> ReportLoadOutcome<UtilizationReport> {
         do {
             return .success(try await utilizationLoader(days))
@@ -167,6 +181,7 @@ enum ReportPeriod: Int, CaseIterable, Identifiable {
 struct ReportsView: View {
     @State private var vm = ReportsViewModel()
     @State private var selectedDay: Date?
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         Group {
@@ -187,9 +202,13 @@ struct ReportsView: View {
             }
         }
         .navigationTitle("Reports")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitleDisplayMode(.large)
         .task(id: vm.days) { await vm.load() }
-        .refreshable { await vm.load(forceRefresh: true) }
+        .task { await vm.loadUsageAccess() }
+        .refreshable {
+            await vm.load(forceRefresh: true)
+            await vm.loadUsageAccess(force: true)
+        }
     }
 
     private var content: some View {
@@ -213,6 +232,7 @@ struct ReportsView: View {
             }
 
             summarySection
+            librarySection
             activitySection
             statusSection
             mostUsedSection
@@ -221,19 +241,63 @@ struct ReportsView: View {
         .listStyle(.insetGrouped)
     }
 
+    // MARK: Library
+
+    private var librarySection: some View {
+        Section {
+            NavigationLink {
+                UtilizationReportView()
+            } label: {
+                Label("Utilization", systemImage: "chart.pie")
+            }
+            NavigationLink {
+                CheckoutReportView()
+            } label: {
+                Label("Checkouts", systemImage: "arrow.left.arrow.right")
+            }
+            NavigationLink {
+                MissingUnitsReportView()
+            } label: {
+                Label("Missing Units", systemImage: "shippingbox")
+            }
+            NavigationLink {
+                ScanReportView()
+            } label: {
+                Label("Scans", systemImage: "barcode.viewfinder")
+            }
+            NavigationLink {
+                BadgeReportView()
+            } label: {
+                Label("Badges", systemImage: "rosette")
+            }
+            if vm.showsUsageReport {
+                NavigationLink {
+                    UsageReportView()
+                } label: {
+                    Label("Usage", systemImage: "chart.bar.xaxis")
+                }
+            }
+        } header: {
+            Text("Full reports")
+        }
+    }
+
     // MARK: Summary
 
     @ViewBuilder
     private var summarySection: some View {
         Section {
-            HStack(alignment: .top, spacing: 16) {
+            let layout = dynamicTypeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: 16))
+                : AnyLayout(HStackLayout(alignment: .top, spacing: 16))
+            layout {
                 if let custody = vm.utilization?.custody {
                     metric(
                         value: percentLabel(custody.utilizationRate),
                         label: "Utilization",
                         tone: .blue
                     )
-                    Divider().frame(height: 34)
+                    if !dynamicTypeSize.isAccessibilitySize { Divider().frame(height: 34) }
                 }
                 if let checkouts = vm.checkouts {
                     metric(
@@ -245,14 +309,14 @@ struct ReportsView: View {
                             previous: checkouts.previousTotalCheckouts
                         )
                     )
-                    Divider().frame(height: 34)
+                    if !dynamicTypeSize.isAccessibilitySize { Divider().frame(height: 34) }
                     metric(
                         value: "\(checkouts.overdueCheckouts)",
                         label: "Overdue",
                         tone: checkouts.overdueCheckouts > 0 ? .red : .gray
                     )
                 }
-                Spacer(minLength: 0)
+                if !dynamicTypeSize.isAccessibilitySize { Spacer(minLength: 0) }
             }
             .padding(.vertical, 4)
 

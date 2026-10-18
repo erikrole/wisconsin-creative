@@ -16,7 +16,7 @@ import { normalizeBookingTitle } from "@/lib/title-normalization";
 import { displayBookingTitle } from "@/lib/booking-display-title";
 import { MAX_EQUIPMENT_SELECTIONS_PER_REQUEST } from "@/lib/request-limits";
 import { assertKioskCheckoutEditor, requireKioskActor } from "@/lib/services/kiosk-actor";
-import { readKioskStaffToken, verifyKioskStaffToken } from "@/lib/kiosk-staff-token";
+import { requireKioskStaffCardUnlessHolder } from "@/lib/kiosk-staff-token";
 import { addScannedItemToActiveCheckout, removeActiveCheckoutItem, requireEditableCheckout } from "@/lib/services/kiosk-active-checkout-items";
 
 function activeBulkQuantity(item: { checkedOutQuantity: number; checkedInQuantity: number }) {
@@ -426,9 +426,7 @@ export const PATCH = withKiosk<{ id: string }>(async (req, { kiosk, params }) =>
     assertKioskCheckoutEditor(actor, booking);
     // C5: changing someone else's due back as staff needs a staff card scan,
     // not a tapped name. The holder and SHARED custody are unchanged.
-    if (booking.custodyScope !== BookingCustodyScope.SHARED && booking.requesterUserId !== actor.id) {
-      verifyKioskStaffToken(readKioskStaffToken(req), { actorId: actor.id, kioskId: kiosk.kioskId });
-    }
+    requireKioskStaffCardUnlessHolder(req, booking, actor.id, kiosk.kioskId);
 
     if (requestedEndsAt && requestedEndsAt <= new Date()) {
       throw new HttpError(400, "Return time must be in the future");
@@ -522,6 +520,7 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
     const actor = await requireKioskActor(tx, actorId);
     const booking = await requireEditableCheckout(tx, { checkoutId: params.id });
     assertKioskCheckoutEditor(actor, booking);
+    requireKioskStaffCardUnlessHolder(req, booking, actor.id, kiosk.kioskId);
     return addScannedItemToActiveCheckout(tx, { actor, booking, kiosk, scanValue, bulkUnit, asset });
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
@@ -536,6 +535,7 @@ export const DELETE = withKiosk<{ id: string }>(async (req, { kiosk, params }) =
     const actor = await requireKioskActor(tx, actorId);
     const booking = await requireEditableCheckout(tx, { checkoutId: params.id });
     assertKioskCheckoutEditor(actor, booking);
+    requireKioskStaffCardUnlessHolder(req, booking, actor.id, kiosk.kioskId);
 
     const removed = await removeActiveCheckoutItem(tx, {
       actor,

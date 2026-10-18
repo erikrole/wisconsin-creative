@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { generateBaselineSql } from "./bootstrap-empty-database.mjs";
-import { retainPreviewSql, claimPreviewCleanupSql } from "./lib/preview-lifecycle.mjs";
+import { retainPreviewSql, claimPreviewCleanupSql, previewCleanupRuntimeSql } from "./lib/preview-lifecycle.mjs";
 
 const connection = process.env.POSTGRES_TEST_URL;
 if (!connection) throw new Error("POSTGRES_TEST_URL is required");
@@ -111,11 +111,15 @@ try {
     await peer.$executeRawUnsafe("SET application_name='wc_cleanup_race_peer'");
     for (const cleanupFirst of [false, true]) {
       await db.$executeRawUnsafe("TRUNCATE wc_preview_meta.runtime");
-      await db.$executeRawUnsafe("INSERT INTO wc_preview_meta.runtime(id,last_seen_at,git_deleted_at) VALUES(true,'2000-01-01','2000-01-01')");
+      await db.$executeRawUnsafe("INSERT INTO wc_preview_meta.runtime(id,last_seen_at,git_deleted_at) VALUES(true,'2000-01-01T00:00:00.123456Z','2000-01-01T00:00:00.654321Z')");
       let release, started;
       const held = new Promise((resolve) => { release = resolve; });
       const locked = new Promise((resolve) => { started = resolve; });
-      const cleanupArgs = ["2000-01-01", "2000-01-01", 7];
+      const [runtime] = await db.$queryRawUnsafe(previewCleanupRuntimeSql);
+      if (typeof runtime.git_deleted_at !== "string" || typeof runtime.last_seen_at !== "string") {
+        throw new Error("Cleanup runtime timestamps lost PostgreSQL precision in JavaScript");
+      }
+      const cleanupArgs = [runtime.git_deleted_at, runtime.last_seen_at, 7];
       const first = db.$transaction(async (transaction) => {
         const rows = await transaction.$queryRawUnsafe(cleanupFirst ? claimPreviewCleanupSql : retainPreviewSql, ...(cleanupFirst ? cleanupArgs : [true]));
         if (rows.length !== 1) throw new Error("First lifecycle claim failed");

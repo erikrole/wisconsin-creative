@@ -123,6 +123,9 @@ struct GlobalSearchSheet: View {
                     UserDetailView(userId: id)
                 }
             }
+            .navigationDestination(for: BulkSkuRoute.self) { route in
+                BulkInventoryDetailView(skuId: route.id)
+            }
         }
         .fullScreenCover(isPresented: $showScanner, onDismiss: {
             if let destination = pendingScannerDestination {
@@ -349,12 +352,12 @@ struct GlobalSearchSheet: View {
                     ForEach(results.itemFamilies) { family in
                         Button {
                             rememberActiveQuery()
-                            startReservation(forFamily: family)
+                            navigationPath.append(BulkSkuRoute(id: family.id))
                         } label: {
-                            ItemFamilyResultRow(family: family, showsReserveAction: true)
+                            ItemFamilyResultRow(family: family, showsReserveAction: false)
                         }
                         .buttonStyle(.plain)
-                        .accessibilityHint("Starts a reservation for this item family.")
+                        .accessibilityHint("Opens this item family.")
                         .contextMenu {
                             Button {
                                 rememberActiveQuery()

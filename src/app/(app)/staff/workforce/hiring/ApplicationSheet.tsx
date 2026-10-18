@@ -242,7 +242,7 @@ export default function ApplicationSheet({ applicationId, onClose, onChanged, on
       const json = await parseJsonSafely<{
         error?: string;
         code?: string;
-        data?: { user?: { name: string }; users?: AccountChoice[] };
+        data?: { user?: { name: string }; users?: AccountChoice[]; emailStatus?: "sent" | "failed" | "not_configured" };
       }>(res);
       if (res.status === 409 && json?.code === "user_exists" && !options.linkExistingUser) {
         const confirmed = await confirm({
@@ -259,7 +259,15 @@ export default function ApplicationSheet({ applicationId, onClose, onChanged, on
         return;
       }
       if (!res.ok) throw new Error(messageOf(json, "Could not create the invite."));
-      toast.success(options.linkExistingUser || options.linkUserId ? "Linked to the existing account" : "Student invite created");
+      if (options.linkExistingUser || options.linkUserId) {
+        toast.success("Linked to the existing account");
+      } else if (json?.data?.emailStatus === "sent") {
+        toast.success("Student invite created and emailed");
+      } else if (json?.data?.emailStatus === "failed") {
+        toast.warning("Invite created, but the email could not be sent. Resend it from Onboarding.");
+      } else {
+        toast.warning("Invite created. Email is not set up yet, so tell the student to sign in with this address.");
+      }
       await load(detail.id);
       onChanged();
     } catch (err) {

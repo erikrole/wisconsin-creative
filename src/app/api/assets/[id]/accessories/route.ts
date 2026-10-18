@@ -3,7 +3,7 @@ import { withAuth } from "@/lib/api";
 import { createAuditEntry } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { HttpError, ok } from "@/lib/http";
-import { requirePermission } from "@/lib/rbac";
+import { requirePermission, requirePermissionOrCollaboratorCapability } from "@/lib/rbac";
 
 const attachSchema = z.object({
   childAssetId: z.string().cuid(),
@@ -13,23 +13,50 @@ const moveSchema = z.object({
   newParentAssetId: z.string().cuid(),
 });
 
+const accessorySelect = {
+  id: true,
+  assetTag: true,
+  name: true,
+  brand: true,
+  model: true,
+  serialNumber: true,
+  status: true,
+  type: true,
+  imageUrl: true,
+} as const;
+
 /** GET /api/assets/[id]/accessories — list accessories for a parent item */
-export const GET = withAuth<{ id: string }>(async (req, { params }) => {
+export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
+  requirePermissionOrCollaboratorCapability(user, "asset", "view", "GEAR_CATALOG_VIEW");
   const { id } = params;
+
+  if (user.role === "COLLABORATOR") {
+    const parent = await db.asset.findFirst({
+      where: {
+        id,
+        parentAssetId: null,
+        availableForReservation: true,
+        status: { not: "RETIRED" },
+      },
+      select: { id: true },
+    });
+    if (!parent) throw new HttpError(404, "Asset not found");
+  }
 
   const accessories = await db.asset.findMany({
     where: { parentAssetId: id },
-    select: {
-      id: true,
-      assetTag: true,
-      name: true,
-      brand: true,
-      model: true,
-      serialNumber: true,
-      status: true,
-      type: true,
-      imageUrl: true,
-    },
+    select: user.role === "COLLABORATOR"
+      ? {
+          id: true,
+          assetTag: true,
+          name: true,
+          brand: true,
+          model: true,
+          status: true,
+          type: true,
+          imageUrl: true,
+        }
+      : accessorySelect,
     orderBy: { assetTag: "asc" },
   });
 

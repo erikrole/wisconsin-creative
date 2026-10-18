@@ -1,6 +1,6 @@
 import { withAuth } from "@/lib/api";
-import { getBatteryCompatibilitySummaries } from "@/lib/battery-compatibility";
-import { isBatterySku } from "@/lib/bulk-batteries";
+import { BATTERY_CAMERA_SEARCH_TERMS, getBatteryCompatibilitySummaries } from "@/lib/battery-compatibility";
+import { batterySkuCandidateWhere, isBatterySku } from "@/lib/bulk-batteries";
 import { ACTIVE_BULK_UNIT_ALLOCATION_WHERE, buildActiveBulkUnitAllocationMap, effectiveBulkUnitStatus } from "@/lib/bulk-unit-status";
 import { db } from "@/lib/db";
 import { ok } from "@/lib/http";
@@ -34,10 +34,12 @@ export const GET = withAuth(async (req, { user }) => {
   }
 
   const now = new Date();
+  const cameraText = (term: string) => ({ contains: term, mode: "insensitive" as const });
   const [rawSkus, cameraAssets, activeUnitAllocations] = await db.$transaction([
     db.bulkSku.findMany({
       where: {
         active: true,
+        ...batterySkuCandidateWhere(),
       },
       include: {
         location: { select: { id: true, name: true } },
@@ -65,6 +67,12 @@ export const GET = withAuth(async (req, { user }) => {
       where: {
         status: { not: "RETIRED" },
         parentAssetId: null,
+        OR: BATTERY_CAMERA_SEARCH_TERMS.flatMap((term) => [
+          { type: cameraText(term) },
+          { brand: cameraText(term) },
+          { model: cameraText(term) },
+          { category: { is: { name: cameraText(term) } } },
+        ]),
       },
       select: {
         brand: true,

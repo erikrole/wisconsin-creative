@@ -201,6 +201,6 @@ describe("iOS native Licenses page", () => {
     expect(view).toContain("if isStaffOrAdmin {");
     expect(view).toContain('title: "Manage on web"');
     expect(browse).toContain("LicensesView(wrapsInNavigationStack: false)");
-    expect(browse).toContain('"Claim, copy, or return a Photo Mechanic license."');
+    expect(browse).toContain('"Photo Mechanic licenses"');
   });
 });

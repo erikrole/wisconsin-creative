@@ -1,5 +1,6 @@
 import { BookingStatus, Prisma } from "@prisma/client";
 import { withAuth } from "@/lib/api";
+import { startOfDayInAppTz } from "@/lib/app-time";
 import { db } from "@/lib/db";
 import { HttpError, ok, parsePagination } from "@/lib/http";
 import { BOOKING_SORT_MAP } from "@/lib/services/bookings-queries";
@@ -64,8 +65,8 @@ export const GET = withAuth(async (req, { user }) => {
   const collaboratorPreview = user.role === "COLLABORATOR" && user.preview?.role === "COLLABORATOR";
 
   const now = new Date();
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const todayEnd = new Date(todayStart.getTime() + 86400_000);
+  const todayStart = startOfDayInAppTz(now);
+  const todayEnd = startOfDayInAppTz(now, 1);
   const operationalFilterStatuses = status ? {} : { status: { in: [BookingStatus.OPEN, BookingStatus.BOOKED] } };
 
   const where: Prisma.BookingWhereInput = {

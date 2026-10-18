@@ -20,7 +20,7 @@ struct WisconsinKioskApp: App {
         WindowGroup {
             KioskShellView()
                 .environment(kioskStore)
-                .providesCurrentDay()
+                .providesKioskDay()
                 .preferredColorScheme(.dark)
                 .frame(minWidth: 640, minHeight: 540)
                 .onAppear {

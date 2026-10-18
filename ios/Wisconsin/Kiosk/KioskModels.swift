@@ -293,7 +293,7 @@ struct KioskEvent: Decodable, Identifiable {
 
     private var hasLocalMidnightSpan: Bool {
         guard let endsAt, endsAt > startsAt else { return false }
-        let calendar = Calendar.current
+        let calendar = KioskTime.calendar
         let startOfStartDay = calendar.startOfDay(for: startsAt)
         let startOfEndDay = calendar.startOfDay(for: endsAt)
         guard startOfEndDay > startOfStartDay else { return false }
@@ -469,6 +469,8 @@ struct KioskActiveCheckout: Decodable, Identifiable {
     let itemCount: Int
     let endsAt: Date
     let isOverdue: Bool
+    /// Server Chicago-day flag. Older servers omit it.
+    let isDueToday: Bool?
     /// Additive: set once someone nudged this booking today.
     var nudgedToday: Bool?
     let eventId: String?
@@ -485,6 +487,7 @@ struct KioskActiveCheckout: Decodable, Identifiable {
         case itemCount
         case endsAt
         case isOverdue
+        case isDueToday
         case nudgedToday
         case eventId
     }
@@ -509,6 +512,7 @@ struct KioskActiveCheckout: Decodable, Identifiable {
         itemCount = try container.decodeIfPresent(Int.self, forKey: .itemCount) ?? items.count
         endsAt = try container.decode(Date.self, forKey: .endsAt)
         isOverdue = try container.decodeIfPresent(Bool.self, forKey: .isOverdue) ?? (endsAt < Date())
+        isDueToday = try container.decodeIfPresent(Bool.self, forKey: .isDueToday)
         nudgedToday = try container.decodeIfPresent(Bool.self, forKey: .nudgedToday)
         eventId = try container.decodeIfPresent(String.self, forKey: .eventId)
     }
@@ -658,6 +662,8 @@ struct KioskStudentCheckout: Decodable, Identifiable {
     let items: [StudentItem]
     let endsAt: Date
     let isOverdue: Bool
+    /// Server Chicago-day flag. Older servers omit it.
+    let isDueToday: Bool?
 
     struct StudentItem: Decodable {
         let name: String
@@ -687,6 +693,7 @@ struct KioskStudentCheckout: Decodable, Identifiable {
         case items
         case endsAt
         case isOverdue
+        case isDueToday
     }
 
     init(from decoder: Decoder) throws {
@@ -698,6 +705,7 @@ struct KioskStudentCheckout: Decodable, Identifiable {
         items = try container.decodeIfPresent(LossyDecodableArray<StudentItem>.self, forKey: .items)?.elements ?? []
         endsAt = try container.decode(Date.self, forKey: .endsAt)
         isOverdue = try container.decodeIfPresent(Bool.self, forKey: .isOverdue) ?? (endsAt < Date())
+        isDueToday = try container.decodeIfPresent(Bool.self, forKey: .isDueToday)
     }
 }
 

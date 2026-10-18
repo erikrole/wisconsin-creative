@@ -149,7 +149,7 @@ struct KioskHomeView: View {
     private var eventGroups: [EventGroup] {
         let now = Date()
         return events
-            .filter { Calendar.current.dayOffset(of: $0.startsAt, from: today) == 0 }
+            .filter { KioskTime.calendar.dayOffset(of: $0.startsAt, from: today) == 0 }
             .sorted { $0.startsAt < $1.startsAt }
             .compactMap { event in
                 let linkedPickups = pickups.filter { $0.eventId == event.id }.sorted { $0.readyAt < $1.readyAt }
@@ -175,11 +175,17 @@ struct KioskHomeView: View {
 
     private func sections(excluding grouped: Set<String>) -> [CustodySection] {
         let now = Date()
-        let calendar = Calendar.current
+        let calendar = KioskTime.calendar
         let sorted = checkouts.filter { !grouped.contains($0.id) }.sorted { $0.endsAt < $1.endsAt }
         let overdue = sorted.filter { $0.isOverdue || $0.endsAt < now }
-        let dueToday = sorted.filter { !$0.isOverdue && $0.endsAt >= now && calendar.dayOffset(of: $0.endsAt, from: today) == 0 }
-        let later = sorted.filter { !$0.isOverdue && $0.endsAt >= now && calendar.dayOffset(of: $0.endsAt, from: today) != 0 }
+        let dueToday = sorted.filter { checkout in
+            guard !checkout.isOverdue, checkout.endsAt >= now else { return false }
+            return checkout.isDueToday ?? (calendar.dayOffset(of: checkout.endsAt, from: today) == 0)
+        }
+        let later = sorted.filter { checkout in
+            guard !checkout.isOverdue, checkout.endsAt >= now else { return false }
+            return !(checkout.isDueToday ?? (calendar.dayOffset(of: checkout.endsAt, from: today) == 0))
+        }
         return [
             CustodySection(id: "overdue", title: "Overdue", rows: overdue),
             CustodySection(id: "today", title: "Due back today", rows: dueToday),
@@ -492,7 +498,9 @@ private struct HomeCustodyRow: View {
     let action: () -> Void
 
     private var isOverdue: Bool { checkout.isOverdue || checkout.endsAt < Date() }
-    private var isToday: Bool { Calendar.current.dayOffset(of: checkout.endsAt, from: today) == 0 }
+    private var isToday: Bool {
+        checkout.isDueToday ?? (KioskTime.calendar.dayOffset(of: checkout.endsAt, from: today) == 0)
+    }
 
     private var dotColor: Color {
         if isOverdue { return KioskSection.problem.accent }
@@ -503,7 +511,7 @@ private struct HomeCustodyRow: View {
 
     private var trailing: (String, Color) {
         if isOverdue {
-            let days = Calendar.current.dateComponents([.day], from: checkout.endsAt, to: Date()).day ?? 0
+            let days = KioskTime.calendar.dateComponents([.day], from: checkout.endsAt, to: Date()).day ?? 0
             if days >= 1 { return ("\(days) day\(days == 1 ? "" : "s")", KioskSection.problem.text) }
             let hours = max(1, Int(Date().timeIntervalSince(checkout.endsAt) / 3600))
             return ("\(hours) hr", KioskSection.problem.text)
