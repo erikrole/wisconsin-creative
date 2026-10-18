@@ -296,7 +296,7 @@ export default function OverdueLeaderboardPage() {
           tooltip="Checkouts currently past their return date"
           href="/checkouts?filter=overdue"
         />
-        <MetricCard value={leaderboard.length} label="People with overdue gear" tooltip="Number of people with at least one overdue checkout" href="/users" />
+        <MetricCard value={leaderboard.length} label="People with overdue gear" tooltip="Number of people with at least one overdue checkout" href="/staff" />
       </ReportMetricGrid>
 
       {leaderboard.length > 0 && (

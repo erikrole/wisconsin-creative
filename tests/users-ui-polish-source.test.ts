@@ -3,7 +3,7 @@ import { source } from "./_helpers/source";
 
 describe("Users interaction-detail contracts", () => {
   it("keeps directory commands, sort controls, recovery, and pagination on the 40px baseline", () => {
-    const page = source("src/app/(app)/users/page.tsx");
+    const page = source("src/app/(app)/staff/page.tsx");
 
     expect(page).toContain('className="group -ml-3 h-10');
     expect(page).not.toContain('className="group -ml-3 h-8"');
@@ -12,14 +12,14 @@ describe("Users interaction-detail contracts", () => {
   });
 
   it("uses full 40px labeled targets for roster visibility filters", () => {
-    const filters = source("src/app/(app)/users/UserFilters.tsx");
+    const filters = source("src/app/(app)/staff/UserFilters.tsx");
 
     expect(filters).toContain('<Label htmlFor="show-inactive" className="flex h-10 cursor-pointer');
     expect(filters).toContain('<Label htmlFor="show-hidden-users" className="flex h-10 cursor-pointer');
   });
 
   it("animates sort-state icons without replaying them on initial render", () => {
-    const page = source("src/app/(app)/users/page.tsx");
+    const page = source("src/app/(app)/staff/page.tsx");
 
     expect(page).toContain('<AnimatePresence initial={false} mode="popLayout">');
     expect(page).toContain('initial={{ opacity: 0, scale: 0.25, filter: "blur(4px)" }}');
@@ -27,7 +27,7 @@ describe("Users interaction-detail contracts", () => {
   });
 
   it("gives roster avatars neutral outlines and mobile cards tactile keyboard feedback", () => {
-    const row = source("src/app/(app)/users/UserRow.tsx");
+    const row = source("src/app/(app)/staff/UserRow.tsx");
 
     expect(row).toContain("outline-black/10 dark:outline-white/10");
     expect(row).not.toContain('className="ring-1 ring-border"');

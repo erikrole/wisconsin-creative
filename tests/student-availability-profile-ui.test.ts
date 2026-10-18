@@ -3,7 +3,7 @@ import { source } from "./_helpers/source";
 
 describe("student availability profile UI", () => {
   it("summarizes availability by operational scheduling impact", () => {
-    const tab = source("src/app/(app)/users/[id]/UserAvailabilityTab.tsx");
+    const tab = source("src/app/(app)/staff/[id]/UserAvailabilityTab.tsx");
 
     expect(tab).toContain("function AvailabilityImpactSummary");
     expect(tab).toContain("const approvedTimeOffCount = blocks.filter(isApprovedTimeOff).length");
@@ -18,7 +18,7 @@ describe("student availability profile UI", () => {
   });
 
   it("keeps the profile buckets broad enough for weekly and dated availability signals", () => {
-    const tab = source("src/app/(app)/users/[id]/UserAvailabilityTab.tsx");
+    const tab = source("src/app/(app)/staff/[id]/UserAvailabilityTab.tsx");
 
     expect(tab).toContain("Weekly class schedule");
     expect(tab).toContain("One-off days and ranges");

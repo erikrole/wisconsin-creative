@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-const tab = readFileSync("src/app/(app)/users/[id]/UserScoreboardTab.tsx", "utf8");
+const tab = readFileSync("src/app/(app)/staff/[id]/UserScoreboardTab.tsx", "utf8");
 const visuals = readFileSync("src/components/scoreboard/ScoreboardVisuals.tsx", "utf8");
 
 describe("profile Scoreboard sport filter", () => {

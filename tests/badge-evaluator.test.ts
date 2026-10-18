@@ -1050,7 +1050,7 @@ describe("badge earned notifications", () => {
           payload: expect.objectContaining({
             studentBadgeId: "award-77",
             badgeDefinitionId: "checkout-2",
-            href: "/users/user-1?tab=badges",
+            href: "/staff/user-1?tab=badges",
           }),
         }),
       ],
