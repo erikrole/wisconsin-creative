@@ -24,7 +24,8 @@
       "A new photo grid view shows everyone as headshot cards. Your choice stays in the page link.",
       "Group by area splits the whole list under Photo, Video, and the other areas, with each area's full headcount, even across pages.",
       "Hover a name in the table to see a quick card with title, location, and contact details.",
-      "Year and sport filters only appear when they apply to students."
+      "Year and sport filters only appear when they apply to students.",
+      "Staff and Workforce have a fresh look: Lato type, a calm blue accent, softer cards, and a colored dot for each area."
     ],
     "platforms": ["Web"],
     "pr": 486

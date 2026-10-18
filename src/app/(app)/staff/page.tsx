@@ -205,9 +205,19 @@ function RosterSummary({
   );
 }
 
+const AREA_DOT_COLORS: Record<string, string> = {
+  Video: "#3e63dd",
+  Photo: "#8e4ec6",
+  Graphics: "#d6409f",
+  Social: "#12a594",
+  Communications: "#e5a200",
+  "Live Production": "#f76808",
+};
+
 function GroupHeading({ label, count, continued = false }: { label: string; count: number; continued?: boolean }) {
   return (
-    <h2 className="flex items-baseline gap-2 text-sm font-semibold" style={{ fontFamily: "var(--font-heading)" }}>
+    <h2 className="flex items-center gap-2 text-sm font-semibold" style={{ fontFamily: "var(--font-heading)" }}>
+      <span aria-hidden="true" className="size-2 rounded-full" style={{ background: AREA_DOT_COLORS[label] ?? "#b9bbc6" }} />
       {label}
       <span className="text-xs font-normal tabular-nums text-muted-foreground">{count}</span>
       {continued && <span className="text-xs font-normal text-muted-foreground">continued</span>}

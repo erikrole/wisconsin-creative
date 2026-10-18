@@ -147,7 +147,7 @@ export default async function WorkforcePage() {
               <li key={row.key}>
                 <a
                   href={`#area-${row.key}`}
-                  className="grid gap-2 p-4 transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring sm:grid-cols-[12rem_1fr_auto] sm:items-center sm:gap-4"
+                  className="grid gap-2 p-4 text-foreground transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring sm:grid-cols-[12rem_1fr_auto] sm:items-center sm:gap-4"
                 >
                   <span className="font-medium">{row.label}</span>
                   <span className="flex items-center gap-3">
