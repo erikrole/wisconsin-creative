@@ -5,6 +5,7 @@ import {
   audienceIdForRoles,
   isSafeAnnouncementUrl,
   parseAnnouncementBody,
+  validateAnnouncementDraft,
 } from "@/lib/announcements";
 import { announcementCreateBody, announcementPatchBody } from "@/lib/schemas/announcements";
 
@@ -146,5 +147,67 @@ describe("announcement read routes", () => {
     expect(mocks.upsert).toHaveBeenCalledWith(expect.objectContaining({ update: {} }));
     mocks.findUnique.mockResolvedValue(null);
     await expect(dismiss(new Request("http://test", { method: "POST" }), ctx)).rejects.toThrow("Announcement not found");
+  });
+});
+
+describe("validateAnnouncementDraft", () => {
+  const ok = {
+    title: "Scheduling is faster",
+    body: "Open trades sit at the top.",
+    ctaLabel: "",
+    ctaUrl: "",
+    showOnWeb: true,
+    showOnIos: true,
+    endsAt: "",
+  };
+  const now = new Date("2026-10-18T12:00:00");
+
+  it("accepts a complete draft", () => {
+    expect(validateAnnouncementDraft(ok, now)).toEqual({});
+  });
+
+  it("asks for a title and a message", () => {
+    expect(validateAnnouncementDraft({ ...ok, title: "  ", body: "" }, now)).toEqual({
+      title: "Add a title",
+      body: "Add a message",
+    });
+  });
+
+  it("wants a button label and link together, and a safe link", () => {
+    expect(validateAnnouncementDraft({ ...ok, ctaLabel: "Open" }, now).ctaUrl).toMatch(/Add a link/);
+    expect(validateAnnouncementDraft({ ...ok, ctaUrl: "/releases" }, now).ctaLabel).toMatch(/Add a label/);
+    expect(validateAnnouncementDraft({ ...ok, ctaLabel: "Open", ctaUrl: "javascript:x" }, now).ctaUrl).toMatch(/https/);
+    expect(validateAnnouncementDraft({ ...ok, ctaLabel: "Open", ctaUrl: "/releases" }, now)).toEqual({});
+  });
+
+  it("needs at least one platform and a future end time", () => {
+    expect(validateAnnouncementDraft({ ...ok, showOnWeb: false, showOnIos: false }, now).platforms).toBeDefined();
+    expect(validateAnnouncementDraft({ ...ok, endsAt: "2026-10-18T11:00" }, now).endsAt).toMatch(/future/);
+    expect(validateAnnouncementDraft({ ...ok, endsAt: "2026-10-19T11:00" }, now)).toEqual({});
+  });
+});
+
+describe("announcement schema end time", () => {
+  const base = {
+    kind: "FEATURE",
+    title: "Hello",
+    body: "World",
+    imageUrls: [],
+    roles: [],
+    showOnWeb: true,
+    showOnIos: true,
+  };
+
+  it("rejects a past end time on create and edit", () => {
+    const past = new Date(Date.now() - 60_000).toISOString();
+    expect(() => announcementCreateBody.parse({ ...base, endsAt: past })).toThrow(ZodError);
+    expect(() => announcementPatchBody.parse({ endsAt: past })).toThrow(ZodError);
+    expect(() => announcementPatchBody.parse({ showOnWeb: false, showOnIos: false })).toThrow(ZodError);
+  });
+
+  it("accepts a future end time or none", () => {
+    const future = new Date(Date.now() + 3_600_000).toISOString();
+    expect(announcementCreateBody.parse({ ...base, endsAt: future }).endsAt).toBeInstanceOf(Date);
+    expect(announcementCreateBody.parse({ ...base, endsAt: null }).endsAt).toBeNull();
   });
 });
