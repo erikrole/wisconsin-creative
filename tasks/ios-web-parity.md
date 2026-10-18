@@ -1,20 +1,19 @@
 # iOS ↔ web parity
 
-Last updated: 2026-10-17
+Last updated: 2026-10-18
 
 This is the handoff for the next native slice. Compare the website's pages and staff actions with the iPhone app under `ios/`. Count a row as covered when it is on `main` or in an open pull request listed below. Do not edit files those pull requests already change unless the slice cannot exist without a shared file (`BrowseView.swift`, `APIClient.swift`, `project.pbxproj`, `src/lib/releases.json`, `docs/AREA_MOBILE.md`).
 
 Open, and off limits for file overlap:
 
-- #502 shared software logins (`LicensesView.swift` and the software models)
-- #503 Madison hours, charts, and exports (item insight charts, schedule export, profile hours)
-- #504 iPhone browse hardening (also edits `src/lib/releases.json`, `docs/AREA_MOBILE.md`, and `docs/GAPS_AND_RISKS.md`)
-- #497, #486, #485, and #484 Users to Staff renaming and role tabs
+- #503 hours, charts, and exports
+- #505 condition reports
+- #497, #486, #485, and #484 Users to Staff and role tabs
 - #494 Budget
-- #488 Photo Mechanic licenses redesign
-- #478 Photo Frame on `/apps` (also edits `src/lib/releases.json`)
+- #488 Photo Mechanic licenses
+- #478 Photo Frame
 
-Reports, blasts, events, kits, accountability, brand assets, UA Gear, and the team badge shelf are already on `main`.
+Shared logins (#502) and the Fetch and Offload pages (#483) are already merged. Native signatures and guide authoring wait on Erik's decision.
 
 ## How to pick
 
@@ -44,12 +43,17 @@ Take the first item under **Missing** whose blocked note is clear. Keep one scre
 - [x] Team badge shelf. A person's own badges stay on Profile. Awarding a group stays on the web.
 - [x] Item condition reports. Staff and admin see the five newest damage and missing-item reports on the item, with the photo and the checkout. Added in this slice. Students do not see them. Clearing maintenance stays in the item menu.
 
+- [x] **Brand assets.** Read-only folders, search, and opening a logo or PDF. Folder create, upload, and version restore stay on the web.
+- [x] **UA Gear Picks, for a participant.** One fit against an allowance. Admin roster, deadline, and the equipment spreadsheet stay on the web.
+- [x] **Shared software logins.** Read and copy from Browse (#502). Creating, editing, and archiving stay on the web. Photo Mechanic redesign remains #488.
+- [x] **Team badge shelf.** Read-only staff catalog. Awarding a group stays on the web.
+- [x] **Away-game travel roster.** Event detail lists who is traveling and opens a profile. Adding and removing travelers stays on the website.
+
 ## Missing
 
 - [ ] **Item activity.** The website History tab is `GET /api/assets/:id/activity` for staff and admin (all activity, item updates, or booking activity). The phone already lists previous bookings. The touch log is still web-only.
-- [ ] **Shared software logins.** `/licenses` has a vault beside Photo Mechanic. The phone only does Photo Mechanic. Blocked by #502, which owns `LicensesView.swift`.
-- [ ] **Native signature capture.** Waiting on Erik. The live capture path is iPad Safari with Apple Pencil. Do not rebuild `Views/Signatures/` until that decision is made.
-- [ ] **Guide authoring.** Waiting on Erik. Create, edit, delete, and Mark verified stay off the phone until staff need to edit guides away from a desk.
+- [ ] **Native signature capture.** Waiting on Erik's decision. The live capture path is iPad Safari with Apple Pencil. Do not rebuild `Views/Signatures/` until that decision lands.
+- [ ] **Guide authoring.** Waiting on Erik's decision. Create, edit, delete, and Mark verified stay off the phone until staff need to edit guides away from a desk.
 
 ## Intentionally web-only
 

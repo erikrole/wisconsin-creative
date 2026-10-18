@@ -6,6 +6,7 @@ struct ReservationEditFlow: View {
     let onSaved: (Booking) -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(SessionStore.self) private var session
     @State private var baseline: Baseline
     @State private var title: String
     @State private var notes: String
@@ -20,6 +21,7 @@ struct ReservationEditFlow: View {
     @State private var locationsError: String?
     @State private var availability: Availability = .idle
     @State private var availabilityTask: Task<Void, Never>?
+    @State private var availabilityGeneration = UUID()
     @State private var isSaving = false
     @State private var error: String?
     @State private var showDiscard = false
@@ -84,8 +86,13 @@ struct ReservationEditFlow: View {
 
     private var hasChanges: Bool { hasPlanChanges || hasEventChanges }
 
+    private var canReadInternalEvents: Bool { session.currentUser?.role != "COLLABORATOR" }
+
     private var needsAvailability: Bool {
-        locationId != baseline.locationId || startsAt != baseline.startsAt || endsAt != baseline.endsAt
+        // Collaborators can edit their own reservations but cannot call the
+        // internal availability hint. The mutation still validates allocations.
+        guard canReadInternalEvents else { return false }
+        return locationId != baseline.locationId || startsAt != baseline.startsAt || endsAt != baseline.endsAt
             || currentAssetIds != baseline.assetIds || currentBulk != baseline.bulk
     }
 
@@ -209,6 +216,7 @@ struct ReservationEditFlow: View {
                     } label: {
                         LabeledContent("Gear", value: gearSummary)
                     }
+                    if canReadInternalEvents {
                     NavigationLink {
                         BookingEventChooser(
                             selectedIds: $selectedEventIds,
@@ -220,8 +228,10 @@ struct ReservationEditFlow: View {
                     } label: {
                         LabeledContent("Events", value: eventSummary)
                     }
+                    }
                 }
             }
+            .disabled(isSaving)
             .navigationTitle("Edit Reservation")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -273,9 +283,15 @@ struct ReservationEditFlow: View {
             } message: {
                 Text("Your changes will be lost.")
             }
-            .task { await loadLocations() }
+            .task {
+                scheduleAvailabilityCheck()
+                await loadLocations()
+            }
             .onChange(of: availabilityKey) { _, _ in scheduleAvailabilityCheck() }
-            .onDisappear { availabilityTask?.cancel() }
+            .onDisappear {
+                availabilityTask?.cancel()
+                availabilityGeneration = UUID()
+            }
         }
     }
 
@@ -309,21 +325,24 @@ struct ReservationEditFlow: View {
         }
     }
 
-    private func scheduleAvailabilityCheck() {
+    private func scheduleAvailabilityCheck(immediate: Bool = false) {
         availabilityTask?.cancel()
+        let generation = UUID()
+        availabilityGeneration = generation
+        let key = availabilityKey
         guard needsAvailability, windowProblem == nil else {
             availability = .idle
             return
         }
         availability = .checking
         availabilityTask = Task {
-            try? await Task.sleep(for: .milliseconds(350))
+            if !immediate { try? await Task.sleep(for: .milliseconds(350)) }
             guard !Task.isCancelled else { return }
-            await runAvailabilityCheck()
+            await runAvailabilityCheck(generation: generation, key: key)
         }
     }
 
-    private func runAvailabilityCheck() async {
+    private func runAvailabilityCheck(generation: UUID, key: String) async {
         let remainingAssets = lines.compactMap { line -> String? in
             guard line.kind == .serialized, !line.isPickedUp else { return nil }
             return line.id
@@ -343,7 +362,7 @@ struct ReservationEditFlow: View {
             bookingKind: .reservation,
             bulkItems: remainingBulk
         )
-        guard !Task.isCancelled else { return }
+        guard availabilityGeneration == generation, availabilityKey == key, !Task.isCancelled else { return }
         if let result = outcome.result {
             availability = result.isAvailable
                 ? .clear
@@ -355,7 +374,7 @@ struct ReservationEditFlow: View {
 
     private func primaryAction() async {
         if needsAvailability, case .failed = availability {
-            await runAvailabilityCheck()
+            scheduleAvailabilityCheck(immediate: true)
             return
         }
         await save()
@@ -365,40 +384,50 @@ struct ReservationEditFlow: View {
         guard canSave, !isSaving else { return }
         isSaving = true
         error = nil
+        var desired = baseline
+        desired.title = trimmedTitle
+        desired.notes = notes
+        desired.locationId = locationId
+        desired.startsAt = startsAt
+        desired.endsAt = endsAt
+        desired.assetIds = currentAssetIds
+        desired.bulk = currentBulk
+        desired.eventIds = Set(selectedEventIds)
+        let savePlan = hasPlanChanges
+        let saveEvents = hasEventChanges
+        let requestedBulk = bulkPayload
         var committed: Booking?
         do {
             var updatedAt = baseline.updatedAt
-            if hasPlanChanges {
+            if savePlan {
                 let saved = try await APIClient.shared.updateReservation(
                     id: baseline.id,
-                    title: trimmedTitle != baseline.title ? trimmedTitle : nil,
-                    notes: notes != baseline.notes ? notes : nil,
-                    locationId: locationId != baseline.locationId ? locationId : nil,
-                    startsAt: startsAt != baseline.startsAt ? startsAt : nil,
-                    endsAt: endsAt != baseline.endsAt ? endsAt : nil,
-                    serializedAssetIds: currentAssetIds != baseline.assetIds ? currentAssetIds.sorted() : nil,
-                    bulkItems: currentBulk != baseline.bulk ? bulkPayload : nil,
+                    title: desired.title != baseline.title ? desired.title : nil,
+                    notes: desired.notes != baseline.notes ? desired.notes : nil,
+                    locationId: desired.locationId != baseline.locationId ? desired.locationId : nil,
+                    startsAt: desired.startsAt != baseline.startsAt ? desired.startsAt : nil,
+                    endsAt: desired.endsAt != baseline.endsAt ? desired.endsAt : nil,
+                    serializedAssetIds: desired.assetIds != baseline.assetIds ? desired.assetIds.sorted() : nil,
+                    bulkItems: desired.bulk != baseline.bulk ? requestedBulk : nil,
                     updatedAt: updatedAt
                 )
                 committed = saved
                 updatedAt = saved.updatedAt
-                baseline.title = trimmedTitle
-                baseline.notes = notes
-                baseline.locationId = locationId
-                baseline.startsAt = startsAt
-                baseline.endsAt = endsAt
-                baseline.assetIds = currentAssetIds
-                baseline.bulk = currentBulk
+                // Acknowledge only the values sent. If event linking fails,
+                // retry it against this new version without repeating the plan.
+                let previousEventIds = baseline.eventIds
+                baseline = desired
+                baseline.eventIds = previousEventIds
                 baseline.updatedAt = saved.updatedAt
             }
-            if hasEventChanges {
+            if saveEvents {
                 let saved = try await APIClient.shared.updateBookingEvents(
                     id: baseline.id,
-                    eventIds: uniqueIds(selectedEventIds),
+                    eventIds: desired.eventIds.sorted(),
                     updatedAt: updatedAt
                 )
                 committed = saved
-                baseline.eventIds = Set(selectedEventIds)
+                baseline.eventIds = desired.eventIds
                 baseline.updatedAt = saved.updatedAt
             }
             if let committed { onSaved(committed) }
@@ -406,7 +435,9 @@ struct ReservationEditFlow: View {
             dismiss()
         } catch {
             if let committed { onSaved(committed) }
-            self.error = error.localizedDescription
+            self.error = committed == nil
+                ? error.localizedDescription
+                : "Reservation saved. Event changes still need saving. \(error.localizedDescription)"
             Haptics.warning()
             isSaving = false
         }

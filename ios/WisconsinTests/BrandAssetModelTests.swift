@@ -127,6 +127,7 @@ final class BrandAssetModelTests: XCTestCase {
         let hostile = """
         <svg xmlns="http://www.w3.org/2000/svg">
           <script>alert(1)</script>
+          <meta http-equiv="refresh" content="0;url=https://example.com">
           <foreignObject><div></div></foreignObject>
           <a href="javascript:alert(1)" onclick="alert(1)"><rect width="1" height="1"/></a>
           </body></html>
@@ -139,6 +140,7 @@ final class BrandAssetModelTests: XCTestCase {
         XCTAssertFalse(html.lowercased().contains("foreignobject"))
         XCTAssertFalse(html.lowercased().contains("javascript:"))
         XCTAssertFalse(html.lowercased().contains("onclick"))
+        XCTAssertFalse(html.lowercased().contains("http-equiv=\"refresh\""))
         XCTAssertEqual(html.lowercased().components(separatedBy: "</body>").count, 2)
         XCTAssertEqual(html.lowercased().components(separatedBy: "</html>").count, 2)
         XCTAssertNil(brandAssetSVGDocument(from: Data("not svg".utf8)))
@@ -146,6 +148,36 @@ final class BrandAssetModelTests: XCTestCase {
         var oversized = Data("<svg></svg>".utf8)
         oversized.append(Data(count: 1_500_001))
         XCTAssertNil(brandAssetSVGDocument(from: oversized))
+    }
+
+
+    func testPreviewChecksActualBytesBeforeReadingIncludingSVGAndSharedPDF() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("file")
+        FileManager.default.createFile(atPath: url.path, contents: nil)
+        let handle = try FileHandle(forWritingTo: url)
+        defer { try? handle.close() }
+        for (type, limit) in [("application/pdf", brandAssetInlineByteLimit), ("image/svg+xml", brandAssetSVGByteLimit)] {
+            let version = try XCTUnwrap(summary(kind: "DOCUMENT", contentType: type, sizeBytes: 10).currentVersion)
+            try handle.truncate(atOffset: UInt64(limit))
+            XCTAssertTrue(brandAssetCanPreview(version: version, at: url))
+            try handle.truncate(atOffset: UInt64(limit + 1))
+            XCTAssertFalse(brandAssetCanPreview(version: version, at: url))
+        }
+    }
+
+    func testTemporaryDownloadIsRemovedWhenItsOwnerIsReleased() throws {
+        let directory = BrandAssetDownload.directory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let url = directory.appendingPathComponent("private.pdf")
+        try Data("private file".utf8).write(to: url)
+        var owner: BrandAssetDownload? = BrandAssetDownload(fileURL: url, contentType: "application/pdf")
+        XCTAssertEqual(owner?.fileURL, url)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: url.path))
+        owner = nil
+        XCTAssertFalse(FileManager.default.fileExists(atPath: directory.path))
     }
 
     private func summary(kind: String, contentType: String, sizeBytes: Int) -> BrandAssetSummary {

@@ -177,6 +177,8 @@ extension Notification.Name {
 final class APIClient {
     static let shared = APIClient()
 
+    private init() { BrandAssetDownload.removeTemporaryFiles() }
+
     private var baseURL: URL { AppEnvironment.activeAPIBaseURL }
 
     private let session: URLSession = {
@@ -210,6 +212,11 @@ final class APIClient {
         config.timeoutIntervalForRequest = 30
         config.timeoutIntervalForResource = 180
         config.multipathServiceType = .none
+#if DEBUG
+        if AppRuntimeMode.usesFixtureAPI {
+            config.protocolClasses = [FixtureAPIProtocol.self] + (config.protocolClasses ?? [])
+        }
+#endif
         return URLSession(configuration: config)
     }()
 
@@ -1420,13 +1427,16 @@ final class APIClient {
         return try await perform(req)
     }
 
-    func scanReport(startDate: String?, phase: String?, limit: Int, offset: Int) async throws -> ScanHistoryReport {
+    func scanReport(startDate: String?, endDate: String?, phase: String?, limit: Int, offset: Int) async throws -> ScanHistoryReport {
         var items = [
             URLQueryItem(name: "limit", value: String(limit)),
             URLQueryItem(name: "offset", value: String(offset)),
         ]
         if let startDate {
             items.append(URLQueryItem(name: "startDate", value: startDate))
+        }
+        if let endDate {
+            items.append(URLQueryItem(name: "endDate", value: endDate))
         }
         if let phase {
             items.append(URLQueryItem(name: "phase", value: phase))
@@ -1552,10 +1562,10 @@ final class APIClient {
         return response.data
     }
 
-    /// Authenticated current-file download. The bytes stay in a temp file and
+    /// Authenticated version-specific download. The bytes stay in a temp file and
     /// are never a public Blob URL.
-    func brandAssetFile(id: String, fallbackName: String) async throws -> BrandAssetDownload {
-        let req = request(path: "/api/resources/assets/\(id)/download")
+    func brandAssetFile(id: String, versionId: String, fallbackName: String) async throws -> BrandAssetDownload {
+        let req = request(path: "/api/resources/assets/\(id)/download", queryItems: [.init(name: "versionId", value: versionId)])
         let requestBoundary = authSessionBoundary.capture()
         let temp: URL
         let response: URLResponse
@@ -1596,16 +1606,11 @@ final class APIClient {
             header: http.value(forHTTPHeaderField: "Content-Disposition"),
             fallback: fallbackName
         )
-        let safeId = String(id.unicodeScalars.filter { scalar in
-            CharacterSet.alphanumerics.contains(scalar) || scalar == "-" || scalar == "_"
-        })
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("brand-assets", isDirectory: true)
+        // A unique directory prevents another page/version from replacing a
+        // file while PDFKit or a share extension is still reading it.
+        let directory = BrandAssetDownload.directory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        let destination = directory.appendingPathComponent("\(safeId.isEmpty ? "file" : safeId)-\(filename)")
-        if FileManager.default.fileExists(atPath: destination.path) {
-            try FileManager.default.removeItem(at: destination)
-        }
+        let destination = directory.appendingPathComponent(filename)
         do {
             try FileManager.default.moveItem(at: temp, to: destination)
         } catch {
@@ -2053,6 +2058,14 @@ final class APIClient {
         ])
         let resp: ShiftGroupsResponse = try await perform(req)
         return resp.data.first
+    }
+
+    /// Away-game travel roster. Read-only: adding and removing travelers stays on the website.
+    func eventTravelMembers(eventId: String) async throws -> [EventTravelMember] {
+        let response: DataWrapper<[EventTravelMember]> = try await perform(
+            request(path: "/api/calendar-events/\(eventId)/travel")
+        )
+        return response.data
     }
 
     /// Staff-only versioned working schedule. The relational shift group stays

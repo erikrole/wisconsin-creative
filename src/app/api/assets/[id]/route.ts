@@ -104,7 +104,7 @@ export const GET = withAuth<{ id: string }>(async (req, { user, params }) => {
   requirePermissionOrCollaboratorCapability(user, "asset", "view", "GEAR_CATALOG_VIEW");
 
   if (user.role === "COLLABORATOR") {
-    const [asset, computedStatus] = await Promise.all([
+    const [asset, computedStatus, accessories] = await Promise.all([
       db.asset.findFirst({
         where: {
           id: params.id,
@@ -124,13 +124,30 @@ export const GET = withAuth<{ id: string }>(async (req, { user, params }) => {
         },
       }),
       deriveAssetStatus(params.id).catch(() => null),
+      db.asset.findMany({
+        where: { parentAssetId: params.id },
+        select: {
+          id: true,
+          assetTag: true,
+          name: true,
+          brand: true,
+          model: true,
+          status: true,
+          type: true,
+          imageUrl: true,
+        },
+        orderBy: { assetTag: "asc" },
+      }),
     ]);
     if (!asset) throw new HttpError(404, "Asset not found");
     return ok({
-      data: sanitizeCollaboratorPickerAsset({
-        ...asset,
-        computedStatus: computedStatus ?? "UNAVAILABLE",
-      }),
+      data: {
+        ...sanitizeCollaboratorPickerAsset({
+          ...asset,
+          computedStatus: computedStatus ?? "UNAVAILABLE",
+        }),
+        accessories,
+      },
     });
   }
 

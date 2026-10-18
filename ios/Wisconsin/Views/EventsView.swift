@@ -34,6 +34,7 @@ final class EventsListModel {
     var pageError: String?
     var hasMore = true
 
+    private var failedReset = false
     private var offset = 0
     private let pageSize = 50
     private var seenIds = Set<String>()
@@ -89,6 +90,7 @@ final class EventsListModel {
             return
         } catch {
             guard loads.owns(token), scope == requestScope, !Task.isCancelled else { return }
+            failedReset = reset
             if reset && events.isEmpty {
                 self.error = error.localizedDescription
                 hasMore = false
@@ -102,7 +104,7 @@ final class EventsListModel {
     func retryPage() async {
         pageError = nil
         hasMore = true
-        await load(reset: false)
+        await load(reset: failedReset)
     }
 }
 
@@ -125,22 +127,20 @@ struct EventsView: View {
     }
 
     private var configuredContent: some View {
-        content
-            .navigationTitle("Events")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        Picker("When", selection: scopeBinding) {
-                            ForEach(EventsListScope.allCases) { scope in
-                                Text(scope.label).tag(scope)
-                            }
-                        }
-                    } label: {
-                        Label(model.scope.label, systemImage: "line.3.horizontal.decrease")
-                    }
-                    .accessibilityLabel("When, \(model.scope.label)")
+        VStack(spacing: 0) {
+            Picker("When", selection: scopeBinding) {
+                ForEach(EventsListScope.allCases) { scope in
+                    Text(scope.label).tag(scope)
                 }
             }
+            .pickerStyle(.segmented)
+            .padding(.horizontal, Brand.Space.md)
+            .padding(.vertical, 8)
+            .background(.bar)
+            content
+        }
+            .navigationTitle("Events")
+            .navigationBarTitleDisplayMode(.inline)
             .refreshable { await model.load(reset: true) }
             .task { await model.load(reset: true) }
             .navigationDestination(for: EventCatalogRoute.self) { route in

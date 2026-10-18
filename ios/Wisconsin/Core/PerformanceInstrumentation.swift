@@ -17,6 +17,8 @@ enum AppRuntimeMode {
         /// The signed Student preview shell, used to compare the persistent
         /// preview marker without real credentials or production data.
         case previewChrome = "preview-chrome"
+        /// Latest Browse screens with representative, offline API responses.
+        case latestBrowse = "latest-browse"
         case resourcesUsers
         case resourcesLicenses
         /// Licenses with nothing claimed by the viewer and a code inside the
@@ -161,7 +163,7 @@ enum AppRuntimeMode {
     static var usesFixtureAPI: Bool {
 #if DEBUG
         switch performanceScenario {
-        case .resourcesGuides, .previewChrome, .resourcesUsers, .resourcesLicenses, .resourcesLicensesOpen,
+        case .resourcesGuides, .previewChrome, .latestBrowse, .resourcesUsers, .resourcesLicenses, .resourcesLicensesOpen,
              .schedule, .tradeBoardStaff, .tradeBoardStudent,
              .home, .homeAllClear, .scoreboard, .profile,
              .studentBookings,

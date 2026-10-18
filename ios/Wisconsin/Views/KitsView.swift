@@ -9,57 +9,77 @@ final class KitsViewModel {
     var isLoading = false
     var isLoadingMore = false
     var error: String?
-    var searchText = ""
-    var includeArchived = false
+    var searchText = "" { didSet { if searchText != oldValue { queryChanged() } } }
+    var includeArchived = false { didSet { if includeArchived != oldValue { queryChanged() } } }
 
     let locationId: String?
 
     private var loadID = UUID()
     private let pageSize = 50
+    private var nextOffset = 0
+    private var loadedQuery: String?
+    private var exhausted = false
+    private var queryKey: String { "\(searchText)|\(includeArchived)" }
 
     init(locationId: String?) {
         self.locationId = locationId
     }
 
-    var hasMore: Bool { kits.count < total }
+    var hasMore: Bool { loadedQuery == queryKey && !exhausted && nextOffset < total }
+
+    private func queryChanged() {
+        loadID = UUID()
+        isLoading = false
+        isLoadingMore = false
+        error = nil
+    }
 
     func load(reset: Bool) async {
+        if !reset { guard hasMore, !isLoading, !isLoadingMore else { return } }
         let requestID = UUID()
+        let requestQuery = queryKey
+        let requestSearch = searchText
+        let requestArchived = includeArchived
         loadID = requestID
         if reset {
-            if kits.isEmpty { isLoading = true }
+            isLoading = true
+            isLoadingMore = false
             error = nil
         } else {
-            guard hasMore, !isLoadingMore else { return }
             isLoadingMore = true
         }
-
-        let offset = reset ? 0 : kits.count
+        defer {
+            if loadID == requestID {
+                isLoading = false
+                isLoadingMore = false
+            }
+        }
+        let offset = reset ? 0 : nextOffset
         do {
             let page = try await APIClient.shared.kitList(
-                search: searchText,
+                search: requestSearch,
                 locationId: locationId,
-                includeArchived: includeArchived,
+                includeArchived: requestArchived,
                 limit: pageSize,
                 offset: offset
             )
-            guard loadID == requestID else { return }
+            guard loadID == requestID, requestQuery == queryKey, !Task.isCancelled else { return }
             if reset {
                 kits = page.data
             } else {
                 let seen = Set(kits.map(\.id))
                 kits.append(contentsOf: page.data.filter { !seen.contains($0.id) })
             }
+            loadedQuery = requestQuery
+            nextOffset = offset + page.data.count
+            exhausted = page.data.isEmpty
             total = page.total
             summary = page.summary
             error = nil
         } catch {
-            guard loadID == requestID else { return }
+            guard loadID == requestID, requestQuery == queryKey, !Task.isCancelled else { return }
             self.error = error.localizedDescription
         }
-        guard loadID == requestID else { return }
-        isLoading = false
-        isLoadingMore = false
     }
 }
 
@@ -117,6 +137,7 @@ struct KitsView: View {
                     await vm.load(reset: true)
                 }
             }
+            .onDisappear { searchTask?.cancel() }
             .refreshable { await vm.load(reset: true) }
             .task { await vm.load(reset: true) }
             .navigationDestination(for: KitRoute.self) { route in
@@ -181,7 +202,7 @@ struct KitsView: View {
                                     .frame(maxWidth: .infinity)
                             }
                         }
-                        .disabled(vm.isLoadingMore)
+                        .disabled(vm.isLoading || vm.isLoadingMore)
                     }
                 } header: {
                     if let summary = vm.summary, vm.searchText.isEmpty {
@@ -217,20 +238,25 @@ struct KitsView: View {
 
 private struct KitListRow: View {
     let kit: KitListItem
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
-        HStack(alignment: .center, spacing: 12) {
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+            : AnyLayout(HStackLayout(alignment: .center, spacing: 12))
+        layout {
             VStack(alignment: .leading, spacing: 3) {
                 Text(kit.name)
                     .font(.body.weight(.semibold))
                     .foregroundStyle(.primary)
-                    .lineLimit(1)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
                 Text(kit.subtitle)
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            Spacer(minLength: 8)
+            if !dynamicTypeSize.isAccessibilitySize { Spacer(minLength: 8) }
             StatusPill(label: kit.shelf.label, tone: kit.shelf.tone)
         }
         .accessibilityElement(children: .combine)

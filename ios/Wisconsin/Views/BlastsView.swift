@@ -96,7 +96,7 @@ struct BlastsView: View {
     private var configuredContent: some View {
         content
             .navigationTitle("Blasts")
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitleDisplayMode(.large)
             .refreshable {
                 guard let userId = session.currentUser?.id else { return }
                 await vm.load(userId: userId, forceRefresh: true)
@@ -270,6 +270,7 @@ private struct BlastDetailView: View {
                 .disabled(isAcknowledging)
                 .padding(.horizontal, 20)
                 .padding(.vertical, 12)
+                .background(.bar)
                 .accessibilityLabel("Acknowledge: \(entry.blast.title)")
             }
         }

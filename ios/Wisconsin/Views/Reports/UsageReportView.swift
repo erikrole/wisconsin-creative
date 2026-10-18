@@ -25,14 +25,17 @@ final class UsageReportModel {
         sync()
         do {
             let fetched = try await APIClient.shared.usageReport(days: window)
-            forbidden = false
-            session.succeed(token, value: fetched, incomplete: false)
+            if session.succeed(token, value: fetched, incomplete: false) {
+                forbidden = false
+            }
         } catch {
-            forbidden = Self.isForbidden(error)
-            let message = forbidden
+            let denied = Self.isForbidden(error)
+            let message = denied
                 ? "Usage counts are limited to the owner."
                 : error.localizedDescription
-            session.fail(token, message: message)
+            if session.fail(token, message: message, discardValue: denied) {
+                forbidden = denied
+            }
         }
         sync()
     }

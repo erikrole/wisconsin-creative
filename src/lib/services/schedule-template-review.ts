@@ -3,7 +3,6 @@ import { createAuditEntry } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { sportDefaultShiftWindow } from "@/lib/schedule-defaults";
 import { HttpError } from "@/lib/http";
-import type { CandidateRecommendation } from "@/lib/candidate-scoring-types";
 import type {
   CopyForwardApplyResult,
   CopyForwardPreview,
@@ -13,7 +12,7 @@ import type {
   ScheduleTemplateDriftPreview,
   ScheduleTemplateReview,
 } from "@/lib/schedule-template-review-types";
-import { getCandidateScoresForShift } from "@/lib/services/candidate-scoring";
+import { getCandidateScoresForShiftIds } from "@/lib/services/candidate-scoring";
 import { directAssignShift } from "@/lib/services/shift-assignments";
 import { ACTIVE_ASSIGNMENT_STATUSES } from "@/lib/shift-constants";
 import { shiftWorkerTypeForProfile } from "@/lib/shift-display";
@@ -346,11 +345,7 @@ async function buildCopyForwardPreview(group: LoadedTargetGroup): Promise<CopyFo
   const source = pickSourceCandidate(group, candidates);
   const openShifts = group.shifts.filter(isOpenShift).sort(sortSlots);
   const sourceAssignments = sourceAssignmentsBySlot(source);
-  const scorePairs = await Promise.all(openShifts.map(async (shift) => {
-    const scores = await getCandidateScoresForShift(shift.id);
-    return [shift.id, scores] as const;
-  }));
-  const scoresByShift = new Map<string, CandidateRecommendation[]>(scorePairs);
+  const scoresByShift = await getCandidateScoresForShiftIds(openShifts.map((shift) => shift.id));
   const usedUserIds = new Set<string>();
   const proposals: CopyForwardProposal[] = [];
   const skipped: CopyForwardSkippedSlot[] = [];

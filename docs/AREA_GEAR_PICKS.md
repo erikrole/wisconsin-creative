@@ -129,3 +129,9 @@ New cycle: get the department's updated workbook, delete every tab but the new c
 
 
 - 2026-10-08 shipping preparation: preserved the new How it works splash and aligned its copy with Standard issue, optional allowance filtering, color editing in review, and matching-size defaults. Full tests (5,564), integrated Chromium checks (12), application build, and standalone TypeScript pass. Earlier TypeScript blockers were fixed in their two test helpers. [Integrated intro capture](../tasks/archive/proofs/ua-picker-fit-2026-10-08/integration/intro-390.png) is after-only fixture proof; hosted/authenticated acceptance is recorded in PR #442 before merge.
+
+### Native iPhone sizing and recovery (2026-10-17, local)
+
+- Native item and review screens use a size picker for all sized gear. Options come from the API catalog; a previously saved size stays visible, while exact-size validation can still require a replacement. There is no custom text entry on iPhone. One-size items remain OSFA. Web sizing behavior is unchanged.
+- The allowance card emphasizes what remains. Saves invalidate older reads; failed destructive reloads retain dirty and conflict state. Controls lock while saving or replacing a draft.
+- Acceptance: the Simulator walkthrough selected a catalog size and added it to the local review sheet; 222 native tests and 715 iOS source contracts pass. Authenticated draft/submit persistence remains unverified. See the [native review](../tasks/archive/proofs/ios-latest-2026-10-17/review.html).

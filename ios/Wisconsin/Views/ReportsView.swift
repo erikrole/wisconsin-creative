@@ -181,6 +181,7 @@ enum ReportPeriod: Int, CaseIterable, Identifiable {
 struct ReportsView: View {
     @State private var vm = ReportsViewModel()
     @State private var selectedDay: Date?
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         Group {
@@ -201,7 +202,7 @@ struct ReportsView: View {
             }
         }
         .navigationTitle("Reports")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitleDisplayMode(.large)
         .task(id: vm.days) { await vm.load() }
         .task { await vm.loadUsageAccess() }
         .refreshable {
@@ -231,11 +232,11 @@ struct ReportsView: View {
             }
 
             summarySection
+            librarySection
             activitySection
             statusSection
             mostUsedSection
             shelfSection
-            librarySection
         }
         .listStyle(.insetGrouped)
     }
@@ -286,14 +287,17 @@ struct ReportsView: View {
     @ViewBuilder
     private var summarySection: some View {
         Section {
-            HStack(alignment: .top, spacing: 16) {
+            let layout = dynamicTypeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: 16))
+                : AnyLayout(HStackLayout(alignment: .top, spacing: 16))
+            layout {
                 if let custody = vm.utilization?.custody {
                     metric(
                         value: percentLabel(custody.utilizationRate),
                         label: "Utilization",
                         tone: .blue
                     )
-                    Divider().frame(height: 34)
+                    if !dynamicTypeSize.isAccessibilitySize { Divider().frame(height: 34) }
                 }
                 if let checkouts = vm.checkouts {
                     metric(
@@ -305,14 +309,14 @@ struct ReportsView: View {
                             previous: checkouts.previousTotalCheckouts
                         )
                     )
-                    Divider().frame(height: 34)
+                    if !dynamicTypeSize.isAccessibilitySize { Divider().frame(height: 34) }
                     metric(
                         value: "\(checkouts.overdueCheckouts)",
                         label: "Overdue",
                         tone: checkouts.overdueCheckouts > 0 ? .red : .gray
                     )
                 }
-                Spacer(minLength: 0)
+                if !dynamicTypeSize.isAccessibilitySize { Spacer(minLength: 0) }
             }
             .padding(.vertical, 4)
 

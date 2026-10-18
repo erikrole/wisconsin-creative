@@ -4,8 +4,9 @@ import SwiftUI
 @Observable
 final class BulkInventoryDetailModel {
     var sku: BulkSkuReadDetail?
-    var isLoading = false
+    var isLoading = true
     var error: String?
+    private var loads = LatestRequestGeneration()
     private let skuId: String
 
     init(skuId: String) {
@@ -13,14 +14,18 @@ final class BulkInventoryDetailModel {
     }
 
     func load() async {
+        let token = loads.begin()
+        defer { if loads.owns(token) { isLoading = false } }
         if sku == nil { isLoading = true }
         error = nil
         do {
-            sku = try await APIClient.shared.bulkSkuReadDetail(id: skuId)
+            let fetched = try await APIClient.shared.bulkSkuReadDetail(id: skuId)
+            guard loads.owns(token), !Task.isCancelled else { return }
+            sku = fetched
         } catch {
+            guard loads.owns(token), !Task.isCancelled else { return }
             self.error = error.localizedDescription
         }
-        isLoading = false
     }
 }
 
