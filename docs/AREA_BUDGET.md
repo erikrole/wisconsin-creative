@@ -63,8 +63,8 @@ Migration `0176_budget`: enums `BudgetLineStatus` and `BudgetCategory`; `budgets
 | POST | `/api/budget/[id]/lines/bulk` | `budget:manage` | Drop, restore, or recategorize several lines; returns previous values for undo |
 | GET | `/api/budget/lines/[lineId]/history` | `budget:view` | A line's audit trail in plain words |
 | GET | `/api/budget/trend?name=` | `budget:view` | Submitted, spent, and forecast per fiscal year for one budget name |
-| POST | `/api/budget/[id]/import` | `budget:manage` | Preview an uploaded .xlsx/.csv as candidate lines; saves nothing |
-| PUT | `/api/budget/[id]/import` | `budget:manage` | Save the reviewed lines; same-name lines are updated, not duplicated |
+| POST | `/api/budget/[id]/import` | `budget:manage` | Preview an uploaded .xlsx/.csv as candidate lines (optional `sheet` tab; answers with the tab list and a suggested tab); saves nothing |
+| PUT | `/api/budget/[id]/import` | `budget:manage` | Save the reviewed lines; a re-run updates same-name lines, and two lines that share a name stay two lines |
 | GET | `/api/budget/item-search` | `budget:view` | Find an item to link by hand |
 | GET | `/api/wishlist` | `wish:view` (staff, admin) | Every wish; everyone sees all |
 | POST | `/api/wishlist` | `wish:create` | Add a wish |
@@ -75,7 +75,7 @@ Migration `0176_budget`: enums `BudgetLineStatus` and `BudgetCategory`; `budgets
 ## Not built yet
 
 - Wish list: fill the title, photo, and price from a pasted link (needs a safe server-side fetch), notify the requester on approval, filter by fiscal year.
-- Import is built for one sheet and one budget at a time; the real workbook (one tab per year plus Football) hasn't been run through it yet.
+- Import reads one tab into one budget at a time. Backfilling every year is a run per tab (Creative and Football tabs go to their own budgets); there is no one-click "import all tabs".
 - Bulk matching of an imported sheet to inventory in one pass (today suggestions are per line or per item).
 - Football-aware link suggestions, requester picker from Staff, XLSX export, per-category limits (the Insights bars compare spent to planned).
 
@@ -90,3 +90,4 @@ Migration `0176_budget`: enums `BudgetLineStatus` and `BudgetCategory`; `budgets
 - 2026-10-18: Refunds and credits, yearly-repeat lines copied into a new budget, line history, bulk drop and recategorize with an undo toast, and `/` to search.
 - 2026-10-18: Insights view (needs attention, spend by month, categories, forecast, suppliers, year over year) and CSV download.
 - 2026-10-18: Import from .xlsx/.csv with a preview (ready, check, skipped), dropped-or-planned choice for unbought lines, and no duplicates on re-run.
+- 2026-10-18: Import run against the department's real workbook (13 tabs). Reads its columns (Status, Price Per Unit, Total Budgeted, Total Spent, Month Purchased), offers the tabs and suggests the one for the budget's year and Football, treats bought rows with no budget as Unplanned, ignores the category summary under the purchases, and keeps same-name lines. 26-27 spend matches the sheet's own total to the cent.
