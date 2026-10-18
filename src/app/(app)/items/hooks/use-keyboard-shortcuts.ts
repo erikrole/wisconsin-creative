@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, type RefObject } from "react";
+import { itemsShortcut, shortcutContext } from "@/lib/a11y-resilience";
 
 type ShortcutActions = {
   searchInputRef: RefObject<HTMLInputElement | null>;
@@ -25,44 +26,34 @@ export function useKeyboardShortcuts({
 }: ShortcutActions) {
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      const target = e.target;
-      const isInput =
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement ||
-        target instanceof HTMLSelectElement ||
-        (target instanceof HTMLElement && target.isContentEditable);
-
-      // "/" to focus search (only when not in an input)
-      if (e.key === "/" && !isInput && !e.metaKey && !e.ctrlKey) {
+      const action = itemsShortcut({
+        key: e.key,
+        metaKey: e.metaKey,
+        ctrlKey: e.ctrlKey,
+        context: shortcutContext(e.target),
+        searchFocused: document.activeElement === searchInputRef.current,
+        hasSelection,
+        canGoBack,
+        canGoForward,
+      });
+      if (!action) return;
+      if (action.type === "focus-search") {
         e.preventDefault();
         searchInputRef.current?.focus();
         return;
       }
-
-      // Escape: clear search if focused, else clear selection
-      if (e.key === "Escape") {
-        if (document.activeElement === searchInputRef.current) {
-          onClearSearch();
-          searchInputRef.current?.blur();
-        } else if (hasSelection) {
-          onClearSelection();
-        }
+      if (action.type === "clear-search") {
+        onClearSearch();
+        searchInputRef.current?.blur();
         return;
       }
-
-      // Arrow keys for pagination (only when not in an input)
-      if (!isInput) {
-        if (e.key === "ArrowLeft" && canGoBack) {
-          e.preventDefault();
-          onPreviousPage();
-          return;
-        }
-        if (e.key === "ArrowRight" && canGoForward) {
-          e.preventDefault();
-          onNextPage();
-          return;
-        }
+      if (action.type === "clear-selection") {
+        onClearSelection();
+        return;
       }
+      e.preventDefault();
+      if (action.type === "previous-page") onPreviousPage();
+      else onNextPage();
     }
 
     document.addEventListener("keydown", handleKeyDown);

@@ -29,6 +29,7 @@ import { AlertCircle, ChevronDown, PackageCheck } from "lucide-react";
 import BookingDetailsSheet from "@/components/BookingDetailsSheet";
 import { toast } from "sonner";
 import { useBreadcrumbLabel } from "@/components/BreadcrumbContext";
+import { shortcutContext } from "@/lib/a11y-resilience";
 
 import { useBookingDetail } from "@/hooks/useBookingDetail";
 import { useBookingActions } from "@/hooks/useBookingActions";
@@ -216,7 +217,7 @@ export default function BookingDetailPage({
   useEffect(() => {
     if (!canEdit) return;
     function onKeyDown(e: KeyboardEvent) {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return;
+      if (shortcutContext(e.target) !== "page") return;
       if (e.key === "e" && !e.metaKey && !e.ctrlKey && !e.altKey) {
         e.preventDefault();
         setEditSheetOpen(true);
