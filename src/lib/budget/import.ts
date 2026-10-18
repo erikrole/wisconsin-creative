@@ -286,8 +286,9 @@ export function parseBudgetSheet(rows: string[][], options: ImportOptions): { ca
     } else if (sheetStatus === "PURCHASED" || flag === true) {
       status = "PURCHASED";
       spentCents = budgeted;
-      result = "check";
-      notes.push("Marked bought with no amount spent. Using the planned amount.");
+      // A sheet with no spent column at all (older years) can only say "bought"; a blank cell in a Spent column is worth a look.
+      if (cols.spent !== undefined) result = "check";
+      notes.push(cols.spent !== undefined ? "Marked bought with no amount spent. Using the planned amount." : "Marked bought. Using the planned amount.");
     } else if (options.unboughtAs === "PURCHASED" && flag === null) {
       status = "PURCHASED";
       spentCents = budgeted;

@@ -140,6 +140,8 @@ describe("budget sheet import", () => {
       expect(asBought.candidates[0]).toMatchObject({ status: "PURCHASED", spentCents: 249_500, budgetedCents: 249_500 });
       const flagged = parseBudgetSheet(rows, { ...workbookOptions, fiscalYear: "2025-26", unboughtAs: "CANCELLED" });
       expect(flagged.candidates.map((c) => [c.status, c.spentCents])).toEqual([["PURCHASED", 618_800], ["CANCELLED", null]]);
+      // No spent column to leave blank, so a ticked box is ready, not a question.
+      expect(flagged.candidates[0]).toMatchObject({ result: "ready", note: "Marked bought. Using the planned amount." });
     });
 
     it("suggests the tab for the budget's year and for Football", () => {
