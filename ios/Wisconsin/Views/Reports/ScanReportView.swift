@@ -33,6 +33,11 @@ final class ScanReportModel {
     var isLoading = false
     var isLoadingMore = false
     var error: String?
+    private(set) var hasMore = false
+    private var nextOffset = 0
+    private var windowStart: String?
+    private var windowEnd: String?
+    private var pages = LatestRequestGeneration()
     var days: Int = 30 {
         didSet { queryChanged(from: oldValue, to: days) }
     }
@@ -49,15 +54,26 @@ final class ScanReportModel {
         let window = days
         let phaseQuery = phase.query
         guard let token = session.begin(key: query, force: force) else { return }
+        pages.invalidate()
+        isLoadingMore = false
+        let now = Date()
+        let start = ReportFormatting.scanWindowStart(days: window, now: now)
+        let end = now.ISO8601Format()
         sync()
         do {
             let fetched = try await APIClient.shared.scanReport(
-                startDate: ReportFormatting.scanWindowStart(days: window),
+                startDate: start,
+                endDate: end,
                 phase: phaseQuery,
                 limit: Self.pageSize,
                 offset: 0
             )
-            session.succeed(token, value: fetched, incomplete: false)
+            if session.succeed(token, value: fetched, incomplete: false) {
+                windowStart = start
+                windowEnd = end
+                nextOffset = fetched.rows.count
+                hasMore = !fetched.rows.isEmpty && nextOffset < fetched.total
+            }
         } catch {
             session.fail(token, message: error.localizedDescription)
         }
@@ -65,24 +81,29 @@ final class ScanReportModel {
     }
 
     func loadMore() async {
-        guard let report, report.rows.count < report.total, !isLoading, !isLoadingMore else { return }
+        guard let report, let revision = session.revision, hasMore, !isLoading, !isLoadingMore else { return }
         let query = key
-        let window = days
+        let token = pages.begin()
+        let offset = nextOffset
         let phaseQuery = phase.query
         isLoadingMore = true
-        defer { isLoadingMore = false }
+        defer { if pages.owns(token) { isLoadingMore = false } }
         do {
             let page = try await APIClient.shared.scanReport(
-                startDate: ReportFormatting.scanWindowStart(days: window),
+                startDate: windowStart,
+                endDate: windowEnd,
                 phase: phaseQuery,
                 limit: Self.pageSize,
-                offset: report.rows.count
+                offset: offset
             )
-            guard !page.rows.isEmpty else { return }
-            guard session.replace(report.appending(page), key: query) else { return }
+            guard pages.owns(token), query == key, !Task.isCancelled else { return }
+            guard session.replace(report.appending(page), key: query, revision: revision) else { return }
+            // Advance by server rows, including duplicates, not displayed rows.
+            nextOffset = offset + page.rows.count
+            hasMore = !page.rows.isEmpty && nextOffset < page.total
             sync()
         } catch {
-            guard query == key else { return }
+            guard pages.owns(token), query == key, !Task.isCancelled else { return }
             session.note(error.localizedDescription)
             sync()
         }
@@ -90,6 +111,10 @@ final class ScanReportModel {
 
     private func queryChanged<T: Equatable>(from old: T, to new: T) {
         guard old != new else { return }
+        pages.invalidate()
+        isLoadingMore = false
+        hasMore = false
+        nextOffset = 0
         session.discard()
         sync()
     }
@@ -228,7 +253,7 @@ struct ScanReportView: View {
                 ForEach(report.rows) { row in
                     scanRow(row)
                 }
-                if report.rows.count < report.total {
+                if model.hasMore {
                     Button {
                         Task { await model.loadMore() }
                     } label: {
@@ -238,7 +263,7 @@ struct ScanReportView: View {
                             Text("Show more")
                         }
                     }
-                    .disabled(model.isLoadingMore)
+                    .disabled(model.isLoading || model.isLoadingMore)
                 }
             }
         } header: {

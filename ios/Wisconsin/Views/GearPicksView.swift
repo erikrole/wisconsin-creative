@@ -21,6 +21,7 @@ final class GearPicksModel {
     var submittedAt: String?
     var isDirty = false
     var isSaving = false
+    var isReloading = false
     var saveMessage: String?
     var conflictMessage: String?
     var serverClosed = false
@@ -30,7 +31,7 @@ final class GearPicksModel {
     private var hasLoaded = false
 
     var canEdit: Bool {
-        phase == .ready && cycle?.isOpen == true && !isSaving && conflictMessage == nil && !serverClosed
+        phase == .ready && cycle?.isOpen == true && !isSaving && !isReloading && conflictMessage == nil && !serverClosed
     }
 
     var maxQuantity: Int { catalog?.maxQuantity ?? 5 }
@@ -60,16 +61,21 @@ final class GearPicksModel {
     }
 
     func load(replacingDraft: Bool) async {
+        guard !isSaving, !isReloading else { return }
         let requestID = UUID()
         loadID = requestID
+        // A destructive reload owns the draft only after it succeeds. Keep
+        // dirty/conflict state intact if the network fails.
+        isReloading = replacingDraft
+        defer { if loadID == requestID { isReloading = false } }
         if !hasLoaded { phase = .loading }
         do {
             let payload = try await APIClient.shared.myGearPicks()
-            guard loadID == requestID else { return }
+            guard loadID == requestID, !Task.isCancelled else { return }
             apply(payload, replacingDraft: replacingDraft || !isDirty)
             hasLoaded = true
         } catch {
-            guard loadID == requestID else { return }
+            guard loadID == requestID, !Task.isCancelled else { return }
             if hasLoaded {
                 saveMessage = error.localizedDescription
             } else {
@@ -79,8 +85,6 @@ final class GearPicksModel {
     }
 
     func discardAndReload() async {
-        isDirty = false
-        conflictMessage = nil
         await load(replacingDraft: true)
     }
 
@@ -153,6 +157,8 @@ final class GearPicksModel {
             guard canSaveDraft else { return false }
         }
         let wasSubmitted = submittedAt != nil
+        // Any GET begun before this mutation must never replace its receipt.
+        loadID = UUID()
         isSaving = true
         defer { isSaving = false }
         do {
@@ -333,8 +339,7 @@ struct GearPicksView: View {
         if model.phase == .ready {
             ToolbarItem(placement: .topBarTrailing) {
                 if model.pickCount > 0 {
-                    Button(model.canEdit ? "Review" : "Your picks") { showReview = true }
-                        .badge(model.pickCount)
+                    Button("\(model.canEdit ? "Review" : "Your picks") (\(model.pickCount))") { showReview = true }
                 } else {
                     Button(model.canEdit ? "Review" : "Your picks") { showReview = true }
                 }
@@ -414,19 +419,37 @@ struct GearPicksView: View {
 
     private var summary: some View {
         Section {
-            LabeledContent("Status") { statusPill }
-            LabeledContent("Catalog", value: GearPickFitLabel.name(model.participant?.fit))
-            LabeledContent("Allowance", value: GearPickMoney.format(model.participant?.allowanceCents ?? 0))
-            LabeledContent("Picked", value: GearPickMoney.format(model.totalCents))
-            LabeledContent("Left") {
-                Text(model.remainingCents < 0
-                    ? "Over by \(GearPickMoney.format(abs(model.remainingCents)))"
-                    : GearPickMoney.format(model.remainingCents))
-                    .foregroundStyle(model.remainingCents < 0 ? Color.statusText(.red) : Color.primary)
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text(GearPickFitLabel.name(model.participant?.fit))
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    statusPill
+                }
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .firstTextBaseline, spacing: 20) {
+                        allowanceRemaining
+                        Spacer(minLength: 0)
+                        allowanceUsed
+                    }
+                    VStack(alignment: .leading, spacing: 8) {
+                        allowanceRemaining
+                        allowanceUsed
+                    }
+                }
+                ProgressView(value: min(Double(model.totalCents), Double(max(model.participant?.allowanceCents ?? 0, 1))),
+                             total: Double(max(model.participant?.allowanceCents ?? 0, 1)))
+                    .tint(model.remainingCents < 0 ? Color.statusText(.red) : Color.statusText(.purple))
+                    .accessibilityLabel("Allowance used")
+                    .accessibilityValue(GearPickMoney.format(model.totalCents))
+                if let deadline = GearPickDate.label(model.cycle?.deadline) {
+                    Label("\(model.cycle?.isOpen == true ? "Open until" : "Closed") \(deadline)", systemImage: "calendar")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
             }
-            if let deadline = GearPickDate.label(model.cycle?.deadline) {
-                LabeledContent(model.cycle?.isOpen == true ? "Open until" : "Closed", value: deadline)
-            }
+            .padding(.vertical, 4)
             if let message = model.conflictMessage ?? model.saveMessage {
                 Text(message)
                     .font(.subheadline)
@@ -442,6 +465,27 @@ struct GearPicksView: View {
             }
         } footer: {
             Text(footerText)
+        }
+    }
+
+    private var allowanceRemaining: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(GearPickMoney.format(abs(model.remainingCents)))
+                .font(.title2.weight(.semibold).monospacedDigit())
+                .foregroundStyle(model.remainingCents < 0 ? Color.statusText(.red) : Color.primary)
+            Text(model.remainingCents < 0 ? "Over allowance" : "Left to spend")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var allowanceUsed: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("\(GearPickMoney.format(model.totalCents)) picked")
+                .font(.subheadline.weight(.medium).monospacedDigit())
+            Text("of \(GearPickMoney.format(model.participant?.allowanceCents ?? 0))")
+                .font(.subheadline.monospacedDigit())
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -514,7 +558,13 @@ private struct GearPickThumbnail: View {
             if let image = phase.image {
                 image.resizable().scaledToFill()
             } else {
-                Color(.secondarySystemFill)
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color(.secondarySystemFill))
+                    .overlay {
+                        Image(systemName: "photo")
+                            .font(size > 100 ? .largeTitle : .body)
+                            .foregroundStyle(.tertiary)
+                    }
             }
         }
         .frame(width: size, height: size)
@@ -638,7 +688,7 @@ struct GearPickItemView: View {
             if model.canEdit {
                 Section {
                     Button(existing == nil ? "Add to picks" : "Update") { add(item) }
-                        .disabled(!item.oneSize && size.isEmpty)
+                        .disabled(!item.oneSize && (GearPickValidation.normalizedSize(size) == nil || size.count > GearPickValidation.sizeLimit))
                     if existing != nil {
                         Button("Remove", role: .destructive) {
                             if let existing { model.remove(id: existing.id) }
@@ -731,10 +781,8 @@ struct GearPicksReviewView: View {
                     Text(model.canEdit ? "Add gear from the list, then come back to save it." : "Nothing was saved for this cycle.")
                 }
             } else {
-                Section {
-                    ForEach(model.lines) { line in
-                        reviewRow(line)
-                    }
+                ForEach(model.lines) { line in
+                    reviewRow(line)
                 }
             }
             Section {
@@ -804,7 +852,7 @@ struct GearPicksReviewView: View {
     @ViewBuilder
     private func reviewRow(_ line: GearPickDraftLine) -> some View {
         let item = model.item(style: line.style)
-        VStack(alignment: .leading, spacing: 8) {
+        Section {
             HStack(alignment: .top, spacing: 12) {
                 GearPickThumbnail(path: item?.colors.first { $0.code == line.colorCode }?.image, size: 44)
                 VStack(alignment: .leading, spacing: 2) {
@@ -815,6 +863,11 @@ struct GearPicksReviewView: View {
                     Text(GearPickMoney.format((item?.priceCents ?? line.unitPriceCents) * line.quantity))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
+                }
+            }
+            .swipeActions {
+                if model.canEdit {
+                    Button("Remove", role: .destructive) { model.remove(id: line.id) }
                 }
             }
             if model.canEdit {
@@ -835,21 +888,17 @@ struct GearPicksReviewView: View {
                     }
                 }
                 if let item, !item.oneSize {
-                    Picker(item.sizeLabel, selection: Binding(
+                    let sizeBinding = Binding(
                         get: { line.size ?? "" },
                         set: { model.setSize(id: line.id, size: $0) }
-                    )) {
+                    )
+                    Picker(item.sizeLabel, selection: sizeBinding) {
                         if line.size == nil { Text("Choose").tag("") }
                         ForEach(GearPickValidation.sizeChoices(item: item, current: line.size), id: \.self) { option in
                             Text(option).tag(option)
                         }
                     }
                 }
-            }
-        }
-        .swipeActions {
-            if model.canEdit {
-                Button("Remove", role: .destructive) { model.remove(id: line.id) }
             }
         }
     }

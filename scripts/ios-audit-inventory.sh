@@ -69,6 +69,7 @@ BulkInventoryDetailView.swift          | bulk-inventory              | audit
 BatteryOpsView.swift                   | battery-ops                 | audit
 ScheduleView.swift                     | schedule                    | audit
 EventDetailSheet.swift                 | event-detail                | audit
+EventTravelSection.swift               |                             | exempt-shared
 EventsView.swift                       | events                      | audit
 EventCatalogDetailView.swift           | events                      | audit
 AccountabilityView.swift               | accountability              | audit
@@ -102,6 +103,7 @@ ScoreboardView.swift                   | profile                     | audit
 TeamScoreboardView.swift               | team-scoreboard              | audit
 SettingsView.swift                     | profile                     | audit
 LicensesView.swift                     | licenses                    | audit
+SharedLoginsView.swift                 | shared-logins               | audit
 GuidesView.swift                       | resources                   | audit
 BrandAssetsView.swift                  | brand-assets                | audit
 GearPicksView.swift                    | gear-picks                  | audit

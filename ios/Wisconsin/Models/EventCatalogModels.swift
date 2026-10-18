@@ -249,3 +249,32 @@ func eventCatalogRecentWindow(now: Date = .now) -> DateInterval {
     let start = calendar.date(byAdding: .day, value: -30, to: end) ?? end.addingTimeInterval(-30 * 86_400)
     return DateInterval(start: min(start, end), end: max(start, end))
 }
+
+/// One fallback per booking, even when a requester has several bookings or
+/// several assignments refer to the same one. Fully loaded rows filter these.
+func eventBookingFallbackRows(plans: [EventGearPlan], shifts: [MyShift], ids: [String]) -> [EventBookingFallback] {
+    let allowed = Set(ids)
+    var rows: [EventBookingFallback] = []
+    var covered = Set<String>()
+    for shift in shifts {
+        for booking in shift.gear.bookings where allowed.contains(booking.id) && covered.insert(booking.id).inserted {
+            let status = eventCatalogBookingStatusCode(booking.status)
+            rows.append(EventBookingFallback(
+                id: booking.id, bookingId: booking.id,
+                title: eventBookingKindLabel(BookingKind(rawValue: booking.kind) ?? .unknown),
+                subtitle: booking.itemCount == 1 ? "1 item" : "\(booking.itemCount) items",
+                statusLabel: status.label, tone: status.tone
+            ))
+        }
+    }
+    for plan in plans {
+        for id in plan.bookingIds where allowed.contains(id) && covered.insert(id).inserted {
+            rows.append(EventBookingFallback(
+                id: id, bookingId: id, title: "Booking",
+                subtitle: plan.requesterName,
+                statusLabel: "Details unavailable", tone: .gray
+            ))
+        }
+    }
+    return rows
+}

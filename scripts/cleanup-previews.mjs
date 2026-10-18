@@ -9,7 +9,7 @@ import { validateResourceManifest } from "./lib/provision-preview-storage.mjs";
 import { previewRetentionDecision } from "./lib/preview-retention.mjs";
 import { assertProviderLineage } from "./lib/provision-preview.mjs";
 import { handoffVariable } from "./lib/preview-handoff.mjs";
-import { claimPreviewCleanupSql } from "./lib/preview-lifecycle.mjs";
+import { claimPreviewCleanupSql, previewCleanupRuntimeSql } from "./lib/preview-lifecycle.mjs";
 import {
   endpointsByBranchId,
   endpointsInspectionWouldStart,
@@ -110,7 +110,7 @@ async function review(branch, inspection) {
   assertProviderLineage(branch, gitBranch, config);
   const state = { projectId: config.preview.projectId, branchId: branch.id, endpointId: baseline.target.endpoint, gitBranch, key: branchKey(gitBranch), environment: { DATABASE_URL: pooled, DIRECT_URL: direct, DATABASE_URL_UNPOOLED: direct } };
   await verifyPreviewState(state, localChecksums(), config, { allowCleanup: true });
-  const [runtime] = await sql.query("SELECT pinned,git_deleted_at,last_seen_at FROM wc_preview_meta.runtime WHERE id=true");
+  const [runtime] = await sql.query(previewCleanupRuntimeSql);
   const decision = previewRetentionDecision({ exists: false, openPullRequest: refs.prs.has(gitBranch), pinned: runtime.pinned, deletedAt: runtime.git_deleted_at, lastSeenAt: runtime.last_seen_at, graceDays: config.preview.cleanupGraceDays });
   console.log({ gitBranch, branch: branch.id, status: decision, apply });
   if (!apply) return;
@@ -131,7 +131,7 @@ async function review(branch, inspection) {
   refs = await references();
   const { branch: currentBranch } = await provider.request(`/projects/${config.preview.projectId}/branches/${branch.id}`);
   assertProviderLineage(currentBranch, gitBranch, config);
-  const [current] = await sql.query("SELECT pinned,git_deleted_at,last_seen_at FROM wc_preview_meta.runtime WHERE id=true");
+  const [current] = await sql.query(previewCleanupRuntimeSql);
   if (previewRetentionDecision({ exists: false, openPullRequest: refs.prs.has(gitBranch), pinned: current.pinned, deletedAt: current.git_deleted_at, lastSeenAt: current.last_seen_at, graceDays: config.preview.cleanupGraceDays }) !== "eligible") return;
   const inventory = (await vercel.request("/v1/storage/stores")).stores;
   const present = resources.stores.filter((s) => inventory.some((i) => i.id === s.id));

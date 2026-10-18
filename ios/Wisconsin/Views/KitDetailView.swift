@@ -4,8 +4,9 @@ import SwiftUI
 @Observable
 final class KitDetailModel {
     var kit: KitReadDetail?
-    var isLoading = false
+    var isLoading = true
     var error: String?
+    private var loads = LatestRequestGeneration()
 
     private let kitId: String
 
@@ -14,14 +15,18 @@ final class KitDetailModel {
     }
 
     func load() async {
+        let token = loads.begin()
+        defer { if loads.owns(token) { isLoading = false } }
         if kit == nil { isLoading = true }
         error = nil
         do {
-            kit = try await APIClient.shared.kitReadDetail(id: kitId)
+            let fetched = try await APIClient.shared.kitReadDetail(id: kitId)
+            guard loads.owns(token), !Task.isCancelled else { return }
+            kit = fetched
         } catch {
+            guard loads.owns(token), !Task.isCancelled else { return }
             self.error = error.localizedDescription
         }
-        isLoading = false
     }
 }
 

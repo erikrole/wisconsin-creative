@@ -14,10 +14,10 @@ describe("iOS Brand assets browse", () => {
       menu.indexOf("let capabilities"),
     );
 
-    expect(internalRows).toContain("[.scoreboard, .accountability, .events, .items, .kits, .guides, .brandAssets, .blasts, .licenses, .users, .gearPicks]");
+    expect(internalRows).toContain("[.scoreboard, .accountability, .items, .kits, .guides, .brandAssets, .blasts, .licenses, .sharedLogins, .users, .gearPicks]");
     expect(internalRows).toContain("rows.insert(.batteries, at: 5)");
     expect(menu).toContain('case .brandAssets: "Brand assets"');
-    expect(menu).toContain("Logos, PDFs, and other brand files.");
+    expect(menu).toContain("Logos, guidelines, and templates");
     expect(menu).toContain("BrandAssetsView(wrapsInNavigationStack: false)");
     expect(menu).toContain('case .users: "Users"');
 
@@ -47,12 +47,12 @@ describe("iOS Brand assets browse", () => {
     expect(view).not.toMatch(/\.foregroundStyle\(\.(red|green|blue|orange|purple)\)/);
   });
 
-  it("reads the existing asset list and downloads the current file only", () => {
+  it("reads the existing asset list and pins downloads to the displayed version", () => {
     const api = client();
     const catalog = models();
 
     expect(api).toContain('request(path: "/api/resources/assets", queryItems: items)');
-    expect(api).toContain('request(path: "/api/resources/assets/\\(id)/download")');
+    expect(api).toContain('request(path: "/api/resources/assets/\\(id)/download", queryItems: [.init(name: "versionId", value: versionId)])');
     expect(api).toContain('items.append(.init(name: "scope", value: "all"))');
     expect(api).toContain("timeoutIntervalForResource = 180");
     expect(api).not.toContain("/api/resources/assets/complete");

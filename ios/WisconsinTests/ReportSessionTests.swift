@@ -66,9 +66,9 @@ final class ReportSessionTests: XCTestCase {
         let token = session.begin(key: "scans", force: false)
         XCTAssertTrue(session.succeed(token!, value: 1, incomplete: false))
 
-        XCTAssertTrue(session.replace(2, key: "scans"))
+        XCTAssertTrue(session.replace(2, key: "scans", revision: token!))
         XCTAssertEqual(session.value, 2)
-        XCTAssertFalse(session.replace(3, key: "other"))
+        XCTAssertFalse(session.replace(3, key: "other", revision: token!))
         XCTAssertEqual(session.value, 2)
     }
 
@@ -84,4 +84,30 @@ final class ReportSessionTests: XCTestCase {
         XCTAssertEqual(session.error, "Offline")
         XCTAssertFalse(session.isLoading)
     }
+    func testLatePageCannotReplaceARefreshedReportWithTheSameKey() {
+        let session = makeSession(clock: Clock())
+        let original = session.begin(key: "scans", force: false)!
+        session.succeed(original, value: 10, incomplete: false)
+        let refresh = session.begin(key: "scans", force: true)!
+        session.succeed(refresh, value: 20, incomplete: false)
+        XCTAssertFalse(session.replace(11, key: "scans", revision: original))
+        XCTAssertEqual(session.value, 20)
+        session.note("Page failed")
+        XCTAssertTrue(session.replace(21, key: "scans", revision: refresh))
+        XCTAssertNil(session.error)
+        XCTAssertEqual(session.value, 21)
+    }
+
+    func testAccessDenialDiscardsCachedDataOnlyForTheOwningRequest() {
+        let session = makeSession(clock: Clock())
+        let original = session.begin(key: "usage", force: false)!
+        session.succeed(original, value: 10, incomplete: false)
+        let refresh = session.begin(key: "usage", force: true)!
+        XCTAssertFalse(session.fail(original, message: "Forbidden", discardValue: true))
+        XCTAssertEqual(session.value, 10)
+        XCTAssertTrue(session.fail(refresh, message: "Forbidden", discardValue: true))
+        XCTAssertNil(session.value)
+        XCTAssertNotNil(session.begin(key: "usage", force: false))
+    }
+
 }
