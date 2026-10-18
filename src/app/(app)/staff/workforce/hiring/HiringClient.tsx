@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { FileText, Link2, MessageSquare, Plus, RefreshCw, Search, Video } from "lucide-react";
+import { FileText, Link2, Plus, RefreshCw, Search } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { useConfirm } from "@/components/ConfirmDialog";
 import EmptyState from "@/components/EmptyState";
@@ -20,21 +20,22 @@ import {
   CONFIRM_STAGES,
   STAGE_LABELS,
   STANDING_LABELS,
-  TERM_LABELS,
 } from "@/lib/hiring/contract";
 import type { ApplicationStage } from "@prisma/client";
 import CsvImportDialog from "../CsvImportDialog";
 import ApplicationSheet from "./ApplicationSheet";
 import BulkResumeDialog from "./BulkResumeDialog";
 import { AddApplicantDialog, CloseCycleDialog, NewCycleDialog } from "./HiringDialogs";
+import { AREA_COLORS } from "../../types";
 import { AREA_LABEL, AREA_OPTIONS, type BoardApplication, type CycleSummary } from "./types";
 
-const STAGE_BADGE: Record<ApplicationStage, "gray" | "blue" | "green" | "orange" | "red"> = {
-  APPLIED: "gray",
-  ROUND_1: "blue",
-  HIRE: "green",
-  PASSED: "orange",
-  WITHDRAWN: "gray",
+/** Dot beside each column heading; the column itself stays quiet. */
+const STAGE_DOT: Record<ApplicationStage, string> = {
+  APPLIED: "bg-[#8b8d98]",
+  ROUND_1: "bg-[#3e63dd]",
+  HIRE: "bg-[#218358]",
+  PASSED: "bg-[#8b8d98]",
+  WITHDRAWN: "bg-[#8b8d98]",
 };
 
 function BoardSkeleton() {
@@ -315,13 +316,23 @@ export default function HiringClient() {
           </div>
 
           {cycle && cycle.slots.length > 0 && (
-            <div className="mb-4 flex flex-wrap gap-2" aria-label="Hiring targets by area">
+            <div
+              className="mb-4 flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl border bg-card px-4 py-3 shadow-xs"
+              aria-label="Hiring targets by area"
+            >
+              <span className="text-sm font-black">{cycle.label} targets</span>
               {cycle.slots.map((slot) => {
                 const hired = (appsMatchCycle ? apps : []).filter((a) => a.stage === "HIRE" && a.primaryArea === slot.area).length;
+                const met = hired >= slot.targetCount;
                 return (
-                  <Badge key={slot.area} variant={hired >= slot.targetCount ? "green" : "gray"}>
-                    {AREA_LABEL[slot.area] ?? slot.area}: {hired} of {slot.targetCount} hired
-                  </Badge>
+                  <span key={slot.area} className="inline-flex items-center gap-2 text-sm">
+                    <span className="size-2 rounded-full" style={{ background: AREA_COLORS[slot.area] ?? "#8b8d98" }} aria-hidden />
+                    {AREA_LABEL[slot.area] ?? slot.area}
+                    <b className={cn("tabular-nums", met && "text-[#1b6e47]")}>
+                      {hired}/{slot.targetCount}
+                    </b>
+                    <span className="sr-only">hired</span>
+                  </span>
                 );
               })}
             </div>
@@ -369,18 +380,19 @@ export default function HiringClient() {
                   <section
                     key={stage}
                     aria-label={`${STAGE_LABELS[stage]} column`}
-                    className="flex min-h-48 flex-col rounded-lg border bg-muted/30 p-2"
+                    className="flex min-h-48 flex-col rounded-xl bg-muted/60 p-3"
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={() => {
                       if (dragId) void changeStage(dragId, stage);
                       setDragId(null);
                     }}
                   >
-                    <h2 className="mb-2 flex items-center justify-between px-1 text-sm font-semibold">
-                      {STAGE_LABELS[stage]}
-                      <Badge variant={STAGE_BADGE[stage]} size="sm">
-                        {items.length}
-                      </Badge>
+                    <h2 className="mb-3 flex items-center justify-between px-1 text-sm font-black">
+                      <span className="flex items-center gap-2">
+                        <span className={cn("size-2 rounded-full", STAGE_DOT[stage])} aria-hidden />
+                        {STAGE_LABELS[stage]}
+                      </span>
+                      <span className="text-[13px] font-bold tabular-nums text-muted-foreground">{items.length}</span>
                     </h2>
                     <div className="flex flex-col gap-2">
                       {items.map((a) => (
@@ -391,34 +403,46 @@ export default function HiringClient() {
                           onDragStart={() => setDragId(a.id)}
                           onDragEnd={() => setDragId(null)}
                           onClick={() => setOpenId(a.id)}
-                          className="rounded-md border bg-card p-3 text-left shadow-sm transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring"
+                          className="rounded-xl border bg-card px-3.5 py-3 text-left shadow-xs transition-shadow hover:shadow-sm focus-visible:outline-2 focus-visible:outline-ring"
                         >
                           <div className="flex items-start justify-between gap-2">
-                            <span className="truncate font-medium">{a.name}</span>
-                            {!a.reviewed && <span className="mt-1.5 size-2 shrink-0 rounded-full bg-primary" title="Not reviewed" />}
+                            <span className="truncate text-sm font-bold">{a.name}</span>
+                            <span className="flex shrink-0 items-center gap-2">
+                              {a.ratingAverage != null && (
+                                <span className="text-xs font-bold text-[#8a5200]" title="Average rating">
+                                  ★ {a.ratingAverage.toFixed(1)}
+                                </span>
+                              )}
+                              {!a.reviewed && <span className="size-2 rounded-full bg-primary" title="Not reviewed" />}
+                            </span>
                           </div>
-                          <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                            {[a.standing ? STANDING_LABELS[a.standing] : null, a.gradTerm && a.gradYear ? `${TERM_LABELS[a.gradTerm]} ${a.gradYear}` : null]
-                              .filter(Boolean)
-                              .join(" · ") || "No class info"}
-                          </p>
-                          <div className="mt-2 flex flex-wrap gap-1">
-                            {(a.rawAreas.length ? a.rawAreas : a.primaryArea ? [AREA_LABEL[a.primaryArea] ?? a.primaryArea] : []).map((r) => (
-                              <Badge key={r} variant="gray" size="sm">
-                                {r}
-                              </Badge>
-                            ))}
-                          </div>
-                          <div className="mt-2 flex items-center gap-2 text-muted-foreground">
-                            {a.hasResume && <FileText className="size-3.5" aria-label="Has resume" />}
-                            {a.hasPortfolio && <Link2 className="size-3.5" aria-label="Has portfolio" />}
-                            {a.hasInterview && <Video className="size-3.5" aria-label="Has interview" />}
-                            {a.ratingAverage != null && (
-                              <span className="ml-auto flex items-center gap-1 text-xs">
-                                <MessageSquare className="size-3.5" aria-hidden /> {a.ratingAverage.toFixed(1)}
-                              </span>
+                          <p className="mt-1 flex items-center gap-1.5 truncate text-xs text-muted-foreground">
+                            {a.primaryArea && (
+                              <span className="size-2 shrink-0 rounded-full" style={{ background: AREA_COLORS[a.primaryArea] ?? "#8b8d98" }} aria-hidden />
                             )}
-                          </div>
+                            <span className="truncate">
+                              {[
+                                a.primaryArea ? AREA_LABEL[a.primaryArea] : a.rawAreas[0],
+                                a.gradTerm && a.gradYear ? `grad ${a.gradYear}` : null,
+                                a.standing ? STANDING_LABELS[a.standing] : null,
+                              ]
+                                .filter(Boolean)
+                                .join(" · ") || "No class info"}
+                            </span>
+                          </p>
+                          {(a.hasInterview || a.hasResume || a.hasPortfolio) && (
+                            <div className="mt-2 flex items-center gap-2">
+                              {a.hasInterview && (
+                                <Badge variant="green" size="sm">
+                                  Interviewed
+                                </Badge>
+                              )}
+                              <span className="ml-auto flex items-center gap-2 text-muted-foreground">
+                                {a.hasResume && <FileText className="size-3.5" aria-label="Has resume" />}
+                                {a.hasPortfolio && <Link2 className="size-3.5" aria-label="Has portfolio" />}
+                              </span>
+                            </div>
+                          )}
                         </button>
                       ))}
                       {items.length === 0 && (

@@ -12,7 +12,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
@@ -23,22 +23,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { useFetch } from "@/hooks/use-fetch";
 import { classifyError, handleAuthRedirect, isAbortError, parseErrorMessage } from "@/lib/errors";
 import { formatDateFull, formatRelativeTime } from "@/lib/format";
 import { PROFILE_FIELD_LABELS } from "@/lib/profile-completion";
-import { AlertTriangle, ClipboardList, Copy, ExternalLink, RefreshCw, Trash2, UserPlus, WifiOff } from "lucide-react";
+import { AlertTriangle, ClipboardList, Copy, ExternalLink, Mail, RefreshCw, Trash2, UserPlus, WifiOff } from "lucide-react";
 
 type Role = "ADMIN" | "STAFF" | "STUDENT" | "COLLABORATOR";
-type StatusFilter = "all" | "pending" | "stale" | "claimed";
+type StatusFilter = "all" | "pending" | "stale" | "claimed" | "setup" | "ready";
 type OnboardingStatus = "pending" | "stale" | "claimed";
 
 type AllowedEmail = {
@@ -105,6 +97,28 @@ function statusBadge(status: OnboardingStatus) {
   return <Badge variant="blue">Pending</Badge>;
 }
 
+
+type PersonRow =
+  | { kind: "invite"; key: string; sortRank: number; invite: AllowedEmail & { onboardingStatus: OnboardingStatus } }
+  | { kind: "account"; key: string; sortRank: number; account: ReadinessAccount };
+
+function initialsOf(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+}
+
+function accountStatus(account: ReadinessAccount) {
+  if (account.profileComplete) return <Badge variant="green">Profile complete</Badge>;
+  if (account.operationalReady) return <Badge variant="blue">Operationally ready</Badge>;
+  return <Badge variant="orange">Setup needed</Badge>;
+}
+
+const ROW_GRID = "md:grid md:grid-cols-[minmax(0,1.4fr)_150px_minmax(0,1fr)_minmax(0,1.2fr)_44px] md:items-center md:gap-4";
+
 export default function OnboardingStatusPage() {
   const confirm = useConfirm();
   const [query, setQuery] = useState("");
@@ -163,16 +177,29 @@ export default function OnboardingStatusPage() {
     return accounts.filter((account) => account.name.toLowerCase().includes(normalizedQuery) || account.email.toLowerCase().includes(normalizedQuery));
   }, [accounts, query]);
 
-  const visibleRows = useMemo(() => {
+  const visibleRows = useMemo<PersonRow[]>(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    return enrichedRows.filter((row) => {
-      if (statusFilter !== "all" && row.onboardingStatus !== statusFilter) return false;
-      if (!normalizedQuery) return true;
-      return row.email.toLowerCase().includes(normalizedQuery) ||
-        row.createdBy.name.toLowerCase().includes(normalizedQuery) ||
-        (row.claimedBy?.name.toLowerCase().includes(normalizedQuery) ?? false);
-    });
-  }, [enrichedRows, query, statusFilter]);
+    const matches = (...values: (string | undefined)[]) =>
+      !normalizedQuery || values.some((value) => value?.toLowerCase().includes(normalizedQuery));
+    const people: PersonRow[] = [];
+
+    for (const invite of enrichedRows) {
+      const claimed = invite.onboardingStatus === "claimed";
+      // A claimed invite is already an account row below; it only shows when asked for.
+      if (claimed ? statusFilter !== "claimed" : statusFilter !== "all" && statusFilter !== invite.onboardingStatus) continue;
+      if (!matches(invite.email, invite.createdBy.name, invite.claimedBy?.name)) continue;
+      people.push({ kind: "invite", key: `invite-${invite.id}`, sortRank: invite.onboardingStatus === "stale" ? 0 : claimed ? 9 : 1, invite });
+    }
+    for (const account of visibleAccounts) {
+      const state = account.profileComplete ? "ready" : account.operationalReady ? "ready" : "setup";
+      if (statusFilter === "all" || statusFilter === state || (statusFilter === "setup" && !account.operationalReady)) {
+        if (statusFilter === "ready" && !account.operationalReady) continue;
+        if (statusFilter === "setup" && account.operationalReady) continue;
+        people.push({ kind: "account", key: `account-${account.id}`, sortRank: account.operationalReady ? (account.profileComplete ? 4 : 3) : 2, account });
+      }
+    }
+    return people.sort((a, b) => a.sortRank - b.sortRank);
+  }, [enrichedRows, statusFilter, visibleAccounts, query]);
 
   const isInitialLoad = loading && rows.length === 0;
   const railItems: OperationalStatusRailItem[] = [
@@ -285,193 +312,181 @@ export default function OnboardingStatusPage() {
         )}
       />
 
-      <Card>
-        <CardHeader className="gap-3">
-          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="text-base">Onboarding access</CardTitle>
-            {lastRefreshed && (
-              <p className="text-xs text-muted-foreground">Updated {formatRelativeTime(lastRefreshed.toISOString(), new Date())}</p>
-            )}
-          </div>
-          <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_180px]">
-            <Input
-              id="onboarding-status-search"
-              name="onboardingStatusSearch"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search email, creator, or claimed user"
-              className="h-10"
-              aria-label="Search onboarding access"
-            />
-            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as StatusFilter)}>
-              <SelectTrigger id="onboarding-status-filter" className="h-10" aria-label="Onboarding status filter">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="stale">Stale pending</SelectItem>
-                <SelectItem value="claimed">Claimed</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardHeader>
+      <div className="flex flex-wrap items-center gap-2">
+        <Input
+          id="onboarding-status-search"
+          name="onboardingStatusSearch"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search name, email, creator, or claimed user"
+          className="h-10 min-w-64 flex-1 sm:max-w-sm"
+          aria-label="Search onboarding access"
+        />
+        <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as StatusFilter)}>
+          <SelectTrigger id="onboarding-status-filter" className="h-10 w-48" aria-label="Onboarding status filter">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All statuses</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="stale">Stale pending</SelectItem>
+            <SelectItem value="setup">Setup needed</SelectItem>
+            <SelectItem value="ready">Operationally ready</SelectItem>
+            <SelectItem value="claimed">Claimed</SelectItem>
+          </SelectContent>
+        </Select>
+        {lastRefreshed && (
+          <p className="ml-auto text-xs text-muted-foreground">Updated {formatRelativeTime(lastRefreshed.toISOString(), new Date())}</p>
+        )}
+      </div>
 
-        {error ? (
-          <CardContent>
-            <Alert variant="destructive">
-              {error === "network" ? <WifiOff className="size-4" /> : <AlertTriangle className="size-4" />}
-              <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <span>{error === "network" ? "Could not connect to the server." : "Failed to load onboarding status."}</span>
-                <Button type="button" variant="outline" onClick={reload} className="h-10 shrink-0">
-                  Retry
-                </Button>
-              </AlertDescription>
-            </Alert>
-          </CardContent>
-        ) : isInitialLoad ? (
+      {error ? (
+        <Alert variant="destructive">
+          {error === "network" ? <WifiOff className="size-4" /> : <AlertTriangle className="size-4" />}
+          <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <span>{error === "network" ? "Could not connect to the server." : "Failed to load onboarding status."}</span>
+            <Button type="button" variant="outline" onClick={reload} className="h-10 shrink-0">
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      ) : isInitialLoad ? (
+        <Card>
           <StatusSkeleton />
-        ) : visibleRows.length === 0 ? (
-          <CardContent>
+        </Card>
+      ) : visibleRows.length === 0 ? (
+        <Card>
+          <CardContent className="pt-6">
             <EmptyState
               inline
               icon="search"
-              title={rows.length === 0 ? "No onboarding rows yet" : "No onboarding rows match"}
-              description={rows.length === 0 ? "Use Add users to create invitations." : "Adjust the search or status filter."}
+              title={rows.length === 0 && accounts.length === 0 ? "No onboarding rows yet" : "No onboarding rows match"}
+              description={rows.length === 0 && accounts.length === 0 ? "Use Add users to create invitations." : "Adjust the search or status filter."}
             />
           </CardContent>
-        ) : (
-          <>
-          <div className="grid gap-2 p-3 md:hidden">
-            {visibleRows.map((row) => (
-              <Card key={row.id}>
-                <CardContent className="flex flex-col gap-3 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="truncate font-medium">{row.email}</div>
-                      <div className="mt-1 flex flex-wrap items-center gap-2">
-                        <Badge variant={ROLE_META[row.role].variant} size="sm">{row.collaboratorPolicy?.affiliation.badgeLabel ?? ROLE_META[row.role].label}</Badge>
-                        {statusBadge(row.onboardingStatus)}
-                      </div>
-                    </div>
-                    <OperationalRowActions label={`Actions for ${row.email}`}>
-                      {!row.claimedAt ? (
-                        <>
-                          <DropdownMenuItem onClick={copyLoginLink}><Copy />Copy app login link</DropdownMenuItem>
-                          <DropdownMenuItem asChild><Link href={loginPath()} target="_blank" rel="noreferrer"><ExternalLink />Open app login</Link></DropdownMenuItem>
-                          <DropdownMenuItem variant="destructive" onClick={() => removeInvite(row)} disabled={deletingId === row.id}><Trash2 />{deletingId === row.id ? "Removing" : "Remove pending invite"}</DropdownMenuItem>
-                        </>
-                      ) : (
-                        <DropdownMenuItem disabled>Claimed invites stay for audit</DropdownMenuItem>
-                      )}
-                    </OperationalRowActions>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3 text-xs text-muted-foreground">
-                    <div><div className="font-medium text-foreground">Created</div>{formatRelativeTime(row.createdAt, now)} by {row.createdBy.name}</div>
-                    <div><div className="font-medium text-foreground">Claimed</div>{row.claimedBy ? row.claimedBy.name : "Not claimed"}</div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+        </Card>
+      ) : (
+        <Card className="overflow-hidden rounded-xl p-0">
+          <div className={`hidden border-b bg-muted/40 px-5 py-2.5 text-xs font-bold text-muted-foreground ${ROW_GRID}`}>
+            <span>Person</span>
+            <span>Status</span>
+            <span>Sent / progress</span>
+            <span>Next</span>
+            <span className="sr-only">Actions</span>
           </div>
-          <Table className="hidden md:table">
-            <TableHeader>
-              <TableRow>
-                <TableHead>Email</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Age</TableHead>
-                <TableHead>Created by</TableHead>
-                <TableHead>Claimed by</TableHead>
-                <TableHead className="w-12"><span className="sr-only">Actions</span></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {visibleRows.map((row) => (
-                <TableRow key={row.id}>
-                  <TableCell className="font-medium">{row.email}</TableCell>
-                  <TableCell>
-                    <Badge variant={ROLE_META[row.role].variant} size="sm">
-                      {row.collaboratorPolicy?.affiliation.badgeLabel ?? ROLE_META[row.role].label}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{statusBadge(row.onboardingStatus)}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    <div>{formatRelativeTime(row.createdAt, now)}</div>
-                    <div className="text-xs">{formatDateFull(row.createdAt)}</div>
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{row.createdBy.name}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {row.claimedBy ? (
-                      <div>
-                        <div>{row.claimedBy.name}</div>
-                        {row.claimedAt && <div className="text-xs">{formatDateFull(row.claimedAt)}</div>}
-                      </div>
-                    ) : (
-                      "Not claimed"
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <OperationalRowActions label={`Actions for ${row.email}`}>
-                      {!row.claimedAt && (
-                        <>
-                          <DropdownMenuItem onClick={copyLoginLink}>
-                            <Copy className="size-4" />
-                            Copy app login link
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href={loginPath()} target="_blank" rel="noreferrer">
-                              <ExternalLink className="size-4" />
-                              Open app login
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-destructive focus:text-destructive"
-                            onClick={() => removeInvite(row)}
-                            disabled={deletingId === row.id}
-                          >
-                            <Trash2 className="size-4" />
-                            {deletingId === row.id ? "Removing..." : "Remove pending invite"}
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                      {row.claimedAt && (
-                        <DropdownMenuItem disabled>
-                          Claimed invites stay for audit
-                        </DropdownMenuItem>
-                      )}
-                    </OperationalRowActions>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          </>
-        )}
-      </Card>
-
-      <Card>
-        <CardHeader><CardTitle className="text-base">Active account readiness</CardTitle></CardHeader>
-        {visibleAccounts.length === 0 ? (
-          <CardContent><EmptyState inline icon="search" title="No active accounts match" description="Adjust the search above." /></CardContent>
-        ) : (
-          <Table>
-            <TableHeader><TableRow><TableHead>Person</TableHead><TableHead>Role</TableHead><TableHead>Readiness</TableHead><TableHead>Progress</TableHead><TableHead>Missing</TableHead></TableRow></TableHeader>
-            <TableBody>
-              {visibleAccounts.map((account) => (
-                <TableRow key={account.id}>
-                  <TableCell><Link href={`/staff/${account.id}`} className="font-medium hover:underline">{account.name}</Link><div className="text-xs text-muted-foreground">{account.email}</div></TableCell>
-                  <TableCell><Badge variant={ROLE_META[account.role].variant} size="sm">{ROLE_META[account.role].label}</Badge></TableCell>
-                  <TableCell>{account.profileComplete ? <Badge variant="green">Profile complete</Badge> : account.operationalReady ? <Badge variant="blue">Operationally ready</Badge> : <Badge variant="orange">Setup needed</Badge>}</TableCell>
-                  <TableCell className="tabular-nums text-muted-foreground">{account.completedCount}/{account.totalCount}</TableCell>
-                  <TableCell className="max-w-sm text-sm text-muted-foreground">{account.missingFields.length ? account.missingFields.map((field) => READINESS_FIELD_LABELS[field] ?? field).join(", ") : "None"}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </Card>
+          <ul className="divide-y">
+            {visibleRows.map((row) =>
+              row.kind === "invite" ? (
+                <InviteRow
+                  key={row.key}
+                  row={row.invite}
+                  now={now}
+                  deleting={deletingId === row.invite.id}
+                  onCopy={copyLoginLink}
+                  onRemove={() => removeInvite(row.invite)}
+                  loginHref={loginPath()}
+                />
+              ) : (
+                <AccountRow key={row.key} account={row.account} />
+              ),
+            )}
+          </ul>
+        </Card>
+      )}
     </div>
+  );
+}
+
+function InviteRow({
+  row,
+  now,
+  deleting,
+  onCopy,
+  onRemove,
+  loginHref,
+}: {
+  row: AllowedEmail & { onboardingStatus: OnboardingStatus };
+  now: Date;
+  deleting: boolean;
+  onCopy: () => void;
+  onRemove: () => void;
+  loginHref: string;
+}) {
+  const next =
+    row.onboardingStatus === "claimed"
+      ? row.claimedBy
+        ? `Claimed by ${row.claimedBy.name}${row.claimedAt ? `, ${formatDateFull(row.claimedAt)}` : ""}`
+        : "Not claimed"
+      : row.onboardingStatus === "stale"
+        ? `Still unclaimed after ${STALE_DAYS} days. Send the login link again.`
+        : "Waiting for first sign-in";
+  return (
+    <li className={`flex flex-col gap-2 px-5 py-3.5 ${ROW_GRID}`}>
+      <div className="flex min-w-0 items-center gap-3">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground" aria-hidden>
+          <Mail className="size-4" />
+        </span>
+        <div className="min-w-0">
+          <div className="truncate text-sm font-bold">{row.email}</div>
+          <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+            <Badge variant={ROLE_META[row.role].variant} size="sm">{row.collaboratorPolicy?.affiliation.badgeLabel ?? ROLE_META[row.role].label}</Badge>
+            <span>Invited by {row.createdBy.name}</span>
+          </div>
+        </div>
+      </div>
+      <div>{statusBadge(row.onboardingStatus)}</div>
+      <div className="text-sm text-muted-foreground">
+        <div>{formatRelativeTime(row.createdAt, now)}</div>
+        <div className="text-xs">{formatDateFull(row.createdAt)}</div>
+      </div>
+      <div className="text-sm text-muted-foreground">{next}</div>
+      <div className="md:text-right">
+        <OperationalRowActions label={`Actions for ${row.email}`}>
+          {!row.claimedAt ? (
+            <>
+              <DropdownMenuItem onClick={onCopy}><Copy className="size-4" />Copy app login link</DropdownMenuItem>
+              <DropdownMenuItem asChild><Link href={loginHref} target="_blank" rel="noreferrer"><ExternalLink className="size-4" />Open app login</Link></DropdownMenuItem>
+              <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={onRemove} disabled={deleting}>
+                <Trash2 className="size-4" />{deleting ? "Removing..." : "Remove pending invite"}
+              </DropdownMenuItem>
+            </>
+          ) : (
+            <DropdownMenuItem disabled>Claimed invites stay for audit</DropdownMenuItem>
+          )}
+        </OperationalRowActions>
+      </div>
+    </li>
+  );
+}
+
+function AccountRow({ account }: { account: ReadinessAccount }) {
+  const percent = account.totalCount > 0 ? Math.round((account.completedCount / account.totalCount) * 100) : 0;
+  const missing = account.missingFields.map((field) => READINESS_FIELD_LABELS[field] ?? field);
+  return (
+    <li className={`flex flex-col gap-2 px-5 py-3.5 ${ROW_GRID}`}>
+      <div className="flex min-w-0 items-center gap-3">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary" aria-hidden>
+          {initialsOf(account.name)}
+        </span>
+        <div className="min-w-0">
+          <Link href={`/staff/${account.id}`} className="block truncate text-sm font-bold text-foreground hover:underline">{account.name}</Link>
+          <div className="truncate text-xs text-muted-foreground">{account.email}</div>
+        </div>
+      </div>
+      <div>{accountStatus(account)}</div>
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <div className="h-1.5 w-20 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100} aria-label={`${account.name} profile progress`}>
+          <div className={`h-full rounded-full ${account.profileComplete ? "bg-[#218358]" : "bg-primary"}`} style={{ width: `${percent}%` }} />
+        </div>
+        <span className="tabular-nums">{account.completedCount}/{account.totalCount}</span>
+      </div>
+      <div className="text-sm text-muted-foreground">{missing.length ? `Missing ${missing.join(", ")}` : "Everything done"}</div>
+      <div className="md:text-right">
+        <Button asChild variant="ghost" size="sm" className="h-8 px-2 text-xs">
+          <Link href={`/staff/${account.id}`} aria-label={`Open ${account.name}`}>Open</Link>
+        </Button>
+      </div>
+    </li>
   );
 }
 
