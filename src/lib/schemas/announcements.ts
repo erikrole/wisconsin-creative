@@ -16,7 +16,7 @@ const fields = {
   body: z.string().trim().min(1, "Add a message").max(1200),
   ctaLabel: optionalText(32),
   ctaUrl: optionalText(500),
-  roles: z.array(z.enum(["ADMIN", "STAFF", "STUDENT", "COLLABORATOR"])).max(4),
+  roles: z.array(z.enum(["ADMIN", "STAFF", "STUDENT"])).max(4),
   showOnWeb: z.boolean(),
   showOnIos: z.boolean(),
   endsAt: z.coerce.date().nullable().optional(),

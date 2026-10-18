@@ -90,6 +90,8 @@ describe("announcement schemas", () => {
   });
 });
 
+const noParams = { params: Promise.resolve({}) };
+
 describe("announcement read routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -98,14 +100,14 @@ describe("announcement read routes", () => {
 
   it("returns null when nothing is unseen", async () => {
     mocks.findFirst.mockResolvedValue(null);
-    const res = await getActive(new Request("http://test/api/announcements/active"), {});
+    const res = await getActive(new Request("http://test/api/announcements/active"), noParams);
     expect(await res.json()).toEqual({ data: null });
   });
 
   it("filters to published, not ended, this role and platform, not yet dismissed", async () => {
     mocks.findFirst.mockResolvedValue(null);
-    await getActive(new Request("http://test/api/announcements/active?platform=ios"), {});
-    const { where } = mocks.findFirst.mock.calls[0][0];
+    await getActive(new Request("http://test/api/announcements/active?platform=ios"), noParams);
+    const { where } = mocks.findFirst.mock.calls[0]![0];
     expect(where.showOnIos).toBe(true);
     expect(where.showOnWeb).toBeUndefined();
     expect(where.dismissals).toEqual({ none: { userId: "user-1" } });
@@ -117,7 +119,7 @@ describe("announcement read routes", () => {
       id: "a1", kind: "FEATURE", title: "Hi", body: "One\n\n- Two", ctaLabel: null, ctaUrl: null,
       publishedAt: new Date("2026-10-18T00:00:00Z"),
     });
-    const json = await (await getActive(new Request("http://test/api/announcements/active"), {})).json();
+    const json = await (await getActive(new Request("http://test/api/announcements/active"), noParams)).json();
     expect(json.data).toMatchObject({
       id: "a1", kindLabel: "New", title: "Hi", ctaLabel: null,
       blocks: [{ type: "paragraph", text: "One" }, { type: "list", items: ["Two"] }],

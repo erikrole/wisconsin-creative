@@ -13,7 +13,6 @@ export const ANNOUNCEMENT_AUDIENCES = [
   { id: "everyone", label: "Everyone", roles: [] as Role[] },
   { id: "team", label: "Admins and staff", roles: ["ADMIN", "STAFF"] as Role[] },
   { id: "students", label: "Students", roles: ["STUDENT"] as Role[] },
-  { id: "collaborators", label: "Collaborators", roles: ["COLLABORATOR"] as Role[] },
 ] as const;
 
 export function audienceIdForRoles(roles: readonly Role[]): string {

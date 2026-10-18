@@ -36,7 +36,7 @@ type Row = {
   body: string;
   ctaLabel: string | null;
   ctaUrl: string | null;
-  roles: ("ADMIN" | "STAFF" | "STUDENT" | "COLLABORATOR")[];
+  roles: ("ADMIN" | "STAFF" | "STUDENT")[];
   showOnWeb: boolean;
   showOnIos: boolean;
   publishedAt: string | null;

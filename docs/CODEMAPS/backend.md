@@ -118,7 +118,7 @@
 | `src/lib/a11y-resilience.ts` | 116 |
 | `src/lib/accountability-jeers.ts` | 121 |
 | `src/lib/admin-fix-today.ts` | 408 |
-| `src/lib/announcements.ts` | 98 |
+| `src/lib/announcements.ts` | 97 |
 | `src/lib/api-dates.ts` | 38 |
 | `src/lib/api-handler.ts` | 63 |
 | `src/lib/api.ts` | 143 |

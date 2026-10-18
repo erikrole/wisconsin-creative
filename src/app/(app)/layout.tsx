@@ -38,7 +38,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <TooltipProvider>
             {!user.preview && <ProductUsageTracker />}
             <OfflineBanner />
-            <AnnouncementSplash enabled={!user.preview} />
+            <AnnouncementSplash enabled={!user.preview && user.role !== "COLLABORATOR"} />
             <AppShell
               initialUser={{ ...user, canViewUsageAnalytics: canViewUsageAnalytics(user) }}
               defaultSidebarOpen={defaultSidebarOpen}

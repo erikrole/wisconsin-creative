@@ -11,7 +11,7 @@
 Admins post a short splash ("new feature", "update", "heads up") from Settings and people see it once, with no deploy. It is for quick blasts, not a notification inbox (see Blasts for crew-targeted acknowledged messages).
 
 ## Core Rules
-1. Admin only to write (`announcement.manage`); every signed-in role can read what is meant for them.
+1. Admin only to write (`announcement.manage`); admins, staff, and students can read what is meant for them (collaborators never see it).
 2. An announcement is live when it is published, not ended, matches the viewer's role and platform, and the viewer has not dismissed it. An empty role list means everyone.
 3. One announcement shows at a time, newest first. Dismissing (Got it, Not now, close, or the button) records a dismissal; the next unseen one then loads.
 4. Body is plain text: blank line = paragraph, `- ` = bullet. No HTML or markdown.
