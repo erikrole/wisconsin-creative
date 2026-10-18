@@ -1,5 +1,9 @@
 # Audit: item detail (iOS) — 2026-05-08
 
+## 2026-10-18 — Item activity
+
+Staff and admin open Activity from the item. The screen reads `GET /api/assets/:id/activity` (all activity, item updates, or bookings) and can load older pages. A booking row opens that booking. Reserve stays the item's action. Students and collaborators do not see the row. A failed refresh keeps the rows already on screen. Source contract: `tests/ios-item-activity.test.ts`. An Xcode build on a Mac and an authenticated iPhone walkthrough remain open.
+
 ## 2026-10-17 — Condition reports
 
 Staff and admin item detail now shows the website's five most recent condition reports (`checkinReports` on `GET /api/assets/:id`). Damage is orange, a missing item is red, a photo opens full screen, and the row opens the checkout. Reserve stays the primary action. Clearing maintenance stays in the toolbar menu. A malformed report row is skipped so the item still loads. Students and collaborators do not see the section. Source contract: `tests/ios-item-condition-reports.test.ts`. An Xcode build on a Mac and an authenticated iPhone walkthrough remain open.

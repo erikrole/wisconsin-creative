@@ -119,6 +119,7 @@
 		6D30C6F8EA800382F2619212 /* KioskFlowRoutingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F93CDFD1D75D7CAC2D88211 /* KioskFlowRoutingTests.swift */; };
 		6EDD624F00353B180789238C /* ShiftCalendarTokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EB452081D764A6DFD0FD57C /* ShiftCalendarTokenStore.swift */; };
 		6F494116C14B986CBC4F1C86 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B798A9A6A730D69BA6E9597B /* SettingsView.swift */; };
+		70A3E38B8611D73E220C8B59 /* ItemActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD3AE6ABC6E4E6D32F563D8E /* ItemActivityView.swift */; };
 		713FB9080DFAA1073EE5FA8C /* EventDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FB4AEDFE7F83CC6E155C12D /* EventDetailSheet.swift */; };
 		71675D3559403AAD9354C225 /* BrowseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58ABE954706326D6137979FB /* BrowseView.swift */; };
 		743F290B3CC3C134AA27607E /* KioskReturnReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D91ED4DEB3FC6F670DC60EDB /* KioskReturnReportView.swift */; };
@@ -212,6 +213,7 @@
 		D24677599DC4E06E3E093A81 /* PushPrePromptView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A2DFDC7A0C7BD6C018D43D2 /* PushPrePromptView.swift */; };
 		D26919265FC80896DFC0085F /* AppEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5932CB2D580EFEB5EA22D828 /* AppEnvironment.swift */; };
 		D3B8D7EAA8E21FFADF3BA2AA /* EventCatalogDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05EDCE16A6E704EDF55C5198 /* EventCatalogDetailView.swift */; };
+		D403B2F000A63EC5E1F72819 /* ItemActivityModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8D8E449F6154B6414DA7CF4 /* ItemActivityModels.swift */; };
 		D4355A04DA0626C754E3993C /* CheckoutReturnActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = E11254A1E4647B8B02F4890A /* CheckoutReturnActivityAttributes.swift */; };
 		D5A660B4A7D2D9AD347D60F0 /* AccountabilityPersonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01CC6AF91AAA5BB9E1632337 /* AccountabilityPersonView.swift */; };
 		D622D6499DAFD051C68A9C25 /* PasskeyModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71D4B19DF59FC05500A7F758 /* PasskeyModels.swift */; };
@@ -493,6 +495,7 @@
 		DBC77DC85721D10BD0331AD0 /* MissingUnitsReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MissingUnitsReportView.swift; sourceTree = "<group>"; };
 		DC5E3C096214B8CB5202573F /* ScanReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanReportView.swift; sourceTree = "<group>"; };
 		DCF214F1C7EC3ABF1589721B /* ReportChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportChrome.swift; sourceTree = "<group>"; };
+		DD3AE6ABC6E4E6D32F563D8E /* ItemActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemActivityView.swift; sourceTree = "<group>"; };
 		DDD21416289B346FEE851FB9 /* ProfileCompletionModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileCompletionModelsTests.swift; sourceTree = "<group>"; };
 		DE250FADCDB66EDCBD5DF234 /* AvailabilityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvailabilityView.swift; sourceTree = "<group>"; };
 		DEF52CE902DAB5F4F5AFC87D /* SoftwareLoginModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoftwareLoginModelTests.swift; sourceTree = "<group>"; };
@@ -504,6 +507,7 @@
 		E476FBFFA1229259FF006C64 /* KioskEventDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskEventDetailSheet.swift; sourceTree = "<group>"; };
 		E725DC3AA9C81B02F5CF4435 /* KioskOperatorHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskOperatorHubView.swift; sourceTree = "<group>"; };
 		E8C20C664649F7DA20E7EE91 /* BrandAssetModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrandAssetModelTests.swift; sourceTree = "<group>"; };
+		E8D8E449F6154B6414DA7CF4 /* ItemActivityModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemActivityModels.swift; sourceTree = "<group>"; };
 		E968BAF46C8E557831F73C27 /* KioskSuccessView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskSuccessView.swift; sourceTree = "<group>"; };
 		EB6A309FA698276EE001EE07 /* Preferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Preferences.swift; sourceTree = "<group>"; };
 		EC04AA628BB1DEA764D7EEAC /* ItemListText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemListText.swift; sourceTree = "<group>"; };
@@ -724,6 +728,7 @@
 				6148A160C162A021FF9DE4C0 /* FormModels.swift */,
 				BC7B22E7033F1442ADEF6691 /* GearPickModels.swift */,
 				05EBE060593FB25BDE4B18E0 /* InventoryReadModels.swift */,
+				E8D8E449F6154B6414DA7CF4 /* ItemActivityModels.swift */,
 				5B540C9027D1885BCBEA2E4D /* Models.swift */,
 				229CAC26AA9E3BB5EEC36678 /* NotificationModels.swift */,
 				71D4B19DF59FC05500A7F758 /* PasskeyModels.swift */,
@@ -894,6 +899,7 @@
 				A5159F2511DF2C09D8E495B8 /* GuideMarkdown.swift */,
 				14DA88A1DF6F8D23066A07BC /* GuidesView.swift */,
 				64F14676788E6FA7CDD08D48 /* HomeView.swift */,
+				DD3AE6ABC6E4E6D32F563D8E /* ItemActivityView.swift */,
 				80CA4880F08046F8E23F079B /* ItemDetailView.swift */,
 				F12684601FE641B454D0219B /* ItemsView.swift */,
 				5447D133A30CB4437C234F83 /* KitDetailView.swift */,
@@ -1370,6 +1376,8 @@
 				6B9E7D074E50DBAB24DAC522 /* Haptics.swift in Sources */,
 				B1DDE3C06BD40F1F8615A227 /* HomeView.swift in Sources */,
 				59047C1F15964210773081BC /* InventoryReadModels.swift in Sources */,
+				D403B2F000A63EC5E1F72819 /* ItemActivityModels.swift in Sources */,
+				70A3E38B8611D73E220C8B59 /* ItemActivityView.swift in Sources */,
 				FC55F8C00EAB32F578B178F0 /* ItemDetailView.swift in Sources */,
 				0342D7B9F506A8995685BC69 /* ItemListText.swift in Sources */,
 				3A34548DD720E71C6B54BB31 /* ItemsView.swift in Sources */,

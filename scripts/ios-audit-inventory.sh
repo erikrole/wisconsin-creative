@@ -63,6 +63,7 @@ BrowseView.swift                       | browse                      | audit
 BlastsView.swift                       | blasts                      | audit
 ItemsView.swift                        | items                       | audit
 ItemDetailView.swift                   | item-detail                 | audit
+ItemActivityView.swift                 | item-detail                 | audit
 KitsView.swift                         | kits                        | audit
 KitDetailView.swift                    | kit-detail                  | audit
 BulkInventoryDetailView.swift          | bulk-inventory              | audit

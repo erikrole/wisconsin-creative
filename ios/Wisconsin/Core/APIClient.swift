@@ -1658,6 +1658,22 @@ final class APIClient {
         return resp.data
     }
 
+    /// Staff and admin item History. Same route as the website: `scope` is
+    /// `all`, `asset`, or `booking`, and `cursor` loads the next older page.
+    func assetActivity(
+        assetId: String,
+        scope: AssetActivityScope,
+        cursor: String?
+    ) async throws -> AssetActivityPage {
+        var items: [URLQueryItem] = [
+            .init(name: "scope", value: scope.rawValue),
+        ]
+        if let cursor, !cursor.isEmpty {
+            items.append(.init(name: "cursor", value: cursor))
+        }
+        return try await perform(request(path: "/api/assets/\(assetId)/activity", queryItems: items))
+    }
+
     func assetsLookup(rawScan: String) async throws -> String? {
         let resp = try await scannedAssets(rawScan: rawScan, limit: 5)
         return resp.data.first?.id

@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Items
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-10-17
+- Last Updated: 2026-10-18
 - Status: Active
 - Version: V1
 
@@ -447,6 +447,7 @@ Item families can optionally enable `trackByNumber` on the backing `BulkSku` imp
 
 ## Change Log
 
+- 2026-10-18: **iPhone item Activity reads the website History tab.** Staff and admin open Activity on an item. It uses `GET /api/assets/:id/activity` with the same scopes (all activity, item updates, bookings) and cursor pages. A booking row opens that booking. Students and collaborators still do not get `asset.audit`. Previous bookings on the item are unchanged. An Xcode build on a Mac is still required.
 - 2026-10-17: **Item insights and collaborator attachments.** Day-of-week and monthly insight buckets use the Madison calendar day, so an evening checkout stays on that day. A collaborator who can browse the catalog sees an item's attachments on the item, without serial numbers, and cannot list attachments for an item they cannot open.
 - 2026-10-17: **iPhone item detail reads the same five condition reports as the website.** Staff and admin see damage and missing-item evidence, the reporter, the Madison date, and the checkout on the item. The list still comes from `GET /api/assets/:id` (`checkinReports`, newest first, five rows). Students and collaborators still omit that list. Clearing a maintenance hold stays the existing phone menu action. An Xcode build on a Mac is still required.
 - 2026-10-16: **Item lists count families in the database, and catalog lookups skip unused status chips.** `/api/assets` list rows no longer load every physical unit to total a numbered family. An exact unit scan still loads that one family's roster and custody. The six derived-status counts run only when the request sends `sort` and does not pass `counts=0`; the Items page still sends `sort`, so its chips stay accurate. Print Labels walks every alphabetical page (`sort=assetTag&counts=0`, 200 rows at a time) so a catalog larger than one page is still listed. The item-family photo control shows its Edit label and focus ring from the keyboard.
