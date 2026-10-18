@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState, type ComponentType } from "react";
 import type { UserDetail, Location, Role } from "../types";
-import { AREA_LABELS, deriveStudentYear, STUDENT_YEAR_OPTIONS } from "../types";
+import { AREA_COLORS, AREA_LABELS, deriveStudentYear, STUDENT_YEAR_OPTIONS } from "../types";
 import { useFetch } from "@/hooks/use-fetch";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import RoleBadge from "../RoleBadge";
@@ -59,7 +59,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Aperture, AudioLines, Award, AlertCircle, BadgeCheck, BatteryCharging, Binoculars, Cable, CameraIcon, ChevronDown, CloudRain, Copy, Flame, Handshake, KeyRound, LifeBuoy, MoonStar, PackageCheck, Shield, ShieldCheck, ShoppingCart, TrashIcon, Trophy, UserCheck, UserRound } from "lucide-react";
+import { Aperture, AudioLines, Award, AlertCircle, BadgeCheck, BatteryCharging, Binoculars, Cable, CameraIcon, ChevronDown, CloudRain, Copy, Flame, Handshake, KeyRound, LifeBuoy, Mail, MoonStar, PackageCheck, Phone, Shield, ShieldCheck, ShoppingCart, TrashIcon, Trophy, UserCheck, UserRound } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { badgeRarityVariant, customBadgeIconOptions, getBadgeRarity, manualAwardGuidance, type BadgeRarity, type CustomBadgeIcon } from "@/lib/badges/display";
 import { cn } from "@/lib/utils";
@@ -761,6 +761,12 @@ export default function UserDetailPage() {
             {profile.collaboratorPolicy?.affiliation.displayName ? (
               <Badge variant="outline">{profile.collaboratorPolicy.affiliation.displayName}</Badge>
             ) : null}
+            {profile.primaryArea ? (
+              <Badge variant="gray">
+                <span aria-hidden="true" className="mr-1.5 inline-block size-1.5 rounded-full" style={{ background: AREA_COLORS[profile.primaryArea] ?? "#b9bbc6" }} />
+                {AREA_LABELS[profile.primaryArea] ?? profile.primaryArea}
+              </Badge>
+            ) : null}
             {profile.active === false && (
               <Badge variant="outline" className="text-muted-foreground">Inactive</Badge>
             )}
@@ -771,6 +777,22 @@ export default function UserDetailPage() {
         sideBySideAt="sm"
         actions={
           <>
+            {!isSelf && profile.email ? (
+              <Button asChild variant="outline" className="h-10 gap-1.5 active:scale-[0.96]">
+                <a href={`mailto:${profile.email}`}>
+                  <Mail />
+                  Email
+                </a>
+              </Button>
+            ) : null}
+            {!isSelf && profile.phone ? (
+              <Button asChild variant="outline" className="h-10 gap-1.5 active:scale-[0.96]">
+                <a href={`tel:${profile.phone.replace(/[^+\d]/g, "")}`}>
+                  <Phone />
+                  Call
+                </a>
+              </Button>
+            ) : null}
             {(isSelf || currentUserRole === "ADMIN") && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

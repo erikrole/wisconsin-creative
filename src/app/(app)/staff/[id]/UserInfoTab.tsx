@@ -53,7 +53,9 @@ import {
   anticipatedGraduationValue,
   parseAnticipatedGraduation,
 } from "@/lib/student-profile";
-import { formatDateFull } from "@/lib/format";
+import { formatDateFull, formatRelativeTime } from "@/lib/format";
+import Link from "next/link";
+import { UserAvatar } from "@/components/UserAvatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 type ApiEnvelope<T = unknown> = {
   data?: T;
@@ -1123,6 +1125,8 @@ export default function UserInfoTab({
       )}
       </div>
 
+      <div className="flex flex-col gap-4">
+      <ProfileGlanceCard user={user} />
       <Card id="assignments" className="scroll-mt-16">
         <CardHeader>
           <CardTitle>Assignments</CardTitle>
@@ -1312,8 +1316,42 @@ export default function UserInfoTab({
         </CardContent>
       </Card>
       </div>
+      </div>
 
     </div>
+  );
+}
+
+/** Read-only summary: who this person reports to and whether the account is in use. */
+function ProfileGlanceCard({ user }: { user: UserDetail }) {
+  const manager = user.directReport;
+  return (
+    <Card className="rounded-xl">
+      <CardHeader>
+        <CardTitle>At a glance</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4 pb-5 text-sm">
+        <div>
+          <p className="mb-1.5 text-xs font-bold text-muted-foreground">Reports to</p>
+          {manager ? (
+            <Link href={`/staff/${manager.id}`} className="flex items-center gap-2.5 rounded-lg border px-3 py-2 text-foreground no-underline transition-colors hover:bg-muted">
+              <UserAvatar name={manager.name} avatarUrl={null} size="sm" />
+              <span className="min-w-0 truncate font-bold">{manager.name}</span>
+            </Link>
+          ) : user.directReportName ? (
+            <p className="text-muted-foreground">{user.directReportName} <span className="text-xs">(listed by name only)</span></p>
+          ) : (
+            <p className="text-muted-foreground">No manager linked yet.</p>
+          )}
+        </div>
+        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2">
+          <dt className="text-muted-foreground">Account</dt>
+          <dd className="text-right font-bold">{user.active === false ? "Inactive" : "Active"}</dd>
+          <dt className="text-muted-foreground">Last active</dt>
+          <dd className="text-right font-bold">{user.lastActiveAt ? formatRelativeTime(user.lastActiveAt, new Date()) : "Never"}</dd>
+        </dl>
+      </CardContent>
+    </Card>
   );
 }
 

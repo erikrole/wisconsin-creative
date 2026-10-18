@@ -175,6 +175,16 @@ export const AREA_LABELS: Record<string, string> = {
   LIVE_PRODUCTION: "Live Production",
 };
 
+/** Dot colors per area, shared by the roster headings and the profile header. */
+export const AREA_COLORS: Record<string, string> = {
+  VIDEO: "#3e63dd",
+  PHOTO: "#8e4ec6",
+  GRAPHICS: "#d6409f",
+  SOCIAL: "#12a594",
+  COMMS: "#e5a200",
+  LIVE_PRODUCTION: "#f76808",
+};
+
 export const AREA_OPTIONS = Object.entries(AREA_LABELS).map(([value, label]) => ({
   value,
   label,

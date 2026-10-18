@@ -4,7 +4,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import EmptyState from "@/components/EmptyState";
 import type { Location, Role, SortKey, ListResponse } from "./types";
-import { AREA_LABELS, ROLE_OPTIONS, STUDENT_YEAR_OPTIONS } from "./types";
+import { AREA_COLORS, AREA_LABELS, ROLE_OPTIONS, STUDENT_YEAR_OPTIONS } from "./types";
 import { UserTableRow, UserMobileCard, UserGridCard } from "./UserRow";
 import RoleTabs from "./RoleTabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -205,19 +205,12 @@ function RosterSummary({
   );
 }
 
-const AREA_DOT_COLORS: Record<string, string> = {
-  Video: "#3e63dd",
-  Photo: "#8e4ec6",
-  Graphics: "#d6409f",
-  Social: "#12a594",
-  Communications: "#e5a200",
-  "Live Production": "#f76808",
-};
+const AREA_KEY_BY_LABEL: Record<string, string> = Object.fromEntries(Object.entries(AREA_LABELS).map(([key, label]) => [label, key]));
 
 function GroupHeading({ label, count, continued = false }: { label: string; count: number; continued?: boolean }) {
   return (
     <h2 className="flex items-center gap-2 text-sm font-semibold" style={{ fontFamily: "var(--font-heading)" }}>
-      <span aria-hidden="true" className="size-2 rounded-full" style={{ background: AREA_DOT_COLORS[label] ?? "#b9bbc6" }} />
+      <span aria-hidden="true" className="size-2 rounded-full" style={{ background: AREA_COLORS[AREA_KEY_BY_LABEL[label] ?? ""] ?? "#b9bbc6" }} />
       {label}
       <span className="text-xs font-normal tabular-nums text-muted-foreground">{count}</span>
       {continued && <span className="text-xs font-normal text-muted-foreground">continued</span>}
