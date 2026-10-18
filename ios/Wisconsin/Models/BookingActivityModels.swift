@@ -3,12 +3,32 @@ import Foundation
 /// Booking history already returned by `GET /api/bookings/:id`.
 ///
 /// The website renders `auditLogs` (newest 50) for students, staff, and admins.
-/// Collaborator responses omit the field, and the phone does not ask. Optional
-/// properties are `var` so synthesized decoding still reads them: a `let` with
-/// a default is skipped.
+/// Collaborator responses omit the field, and the phone does not ask. A row
+/// with an unreadable time is skipped so the rest of the history still loads.
 struct BookingActivityPage: Decodable {
     var auditLogs: [BookingActivityEntry]?
     var hasMoreAuditLogs: Bool?
+
+    private enum CodingKeys: String, CodingKey {
+        case auditLogs, hasMoreAuditLogs
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        hasMoreAuditLogs = try container.decodeIfPresent(Bool.self, forKey: .hasMoreAuditLogs)
+        // One unreadable row is dropped. A throw from the entry would reject the page.
+        let wrapped = try container.decodeIfPresent([OptionalBookingActivityEntry].self, forKey: .auditLogs)
+        auditLogs = wrapped?.compactMap(\.entry)
+    }
+}
+
+/// Decodes one history row without letting that row fail the rest of the list.
+private struct OptionalBookingActivityEntry: Decodable {
+    var entry: BookingActivityEntry?
+
+    init(from decoder: Decoder) throws {
+        entry = try? BookingActivityEntry(from: decoder)
+    }
 }
 
 struct BookingActivityActor: Decodable, Hashable {
@@ -33,7 +53,17 @@ struct BookingActivityEntry: Decodable, Identifiable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(String.self, forKey: .id)
         action = try container.decode(String.self, forKey: .action)
-        createdAt = try container.decode(Date.self, forKey: .createdAt)
+        // The app decoder's plain `.iso8601` strategy rejects fractional seconds
+        // (`2026-10-18T14:58:00.123Z`) on some toolchains and would blank the list.
+        let rawCreatedAt = try container.decode(String.self, forKey: .createdAt)
+        guard let createdAt = BookingActivityDate.parse(rawCreatedAt) else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .createdAt,
+                in: container,
+                debugDescription: "Activity time could not be read"
+            )
+        }
+        self.createdAt = createdAt
         actor = try container.decodeIfPresent(BookingActivityActor.self, forKey: .actor)
         // A missing or non-object payload stays blank. `decode` throws for null,
         // and `try?` keeps that row instead of failing the whole history.
@@ -70,6 +100,21 @@ struct BookingActivityJSON: Decodable, Hashable {
             return nil
         }
         return value
+    }
+}
+
+enum BookingActivityDate {
+    /// Audit timestamps include fractional seconds (`2026-10-18T14:58:00.123Z`).
+    /// A plain ISO-8601 parse rejects those on some toolchains.
+    static func parse(_ raw: String) -> Date? {
+        let withFraction = ISO8601DateFormatter()
+        withFraction.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = withFraction.date(from: raw) {
+            return date
+        }
+        let plain = ISO8601DateFormatter()
+        plain.formatOptions = [.withInternetDateTime]
+        return plain.date(from: raw)
     }
 }
 
@@ -306,8 +351,7 @@ enum BookingActivityCopy {
         case "endsAt": "Return"
         case "locationId": "Location"
         case "requesterUserId": "Requester"
-        default:
-            return humanized(key)
+        default: humanized(key)
         }
     }
 
@@ -326,12 +370,7 @@ enum BookingActivityCopy {
     }
 
     private static func timestamp(_ raw: String?) -> String? {
-        guard let raw else { return nil }
-        let withFraction = ISO8601DateFormatter()
-        withFraction.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        let plain = ISO8601DateFormatter()
-        plain.formatOptions = [.withInternetDateTime]
-        guard let date = withFraction.date(from: raw) ?? plain.date(from: raw) else { return nil }
+        guard let raw, let date = BookingActivityDate.parse(raw) else { return nil }
         return date.gearShort
     }
 

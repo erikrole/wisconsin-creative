@@ -56,6 +56,15 @@ describe("iOS booking activity", () => {
     expect(catalog).toContain("booking.items_added");
     expect(catalog).toContain("booking.items_removed");
     expect(catalog).toContain("Updated notes");
+    const fieldLabel = catalog.slice(catalog.indexOf("func fieldLabel"), catalog.indexOf("func gearCount"));
+    expect(fieldLabel).toContain("default: humanized(key)");
+    expect(fieldLabel).not.toMatch(/return /);
+    expect(catalog).toContain("decode(String.self, forKey: .createdAt)");
+    expect(catalog).not.toContain("decode(Date.self, forKey: .createdAt)");
+    expect(catalog).toContain(".withFractionalSeconds");
+    expect(catalog).toContain("formatOptions = [.withInternetDateTime]");
+    expect(catalog).toContain("try? BookingActivityEntry(from: decoder)");
+    expect(catalog).toContain("compactMap(\\.entry)");
   });
 
   it("registers the new files in the XcodeGen project", () => {
