@@ -48,14 +48,14 @@ struct KioskExtendScreen: View {
 
     /// Four day choices starting from the later of now and the current due day.
     private var days: [Date] {
-        let calendar = Calendar.current
+        let calendar = KioskTime.calendar
         let start = calendar.startOfDay(for: max(Date(), currentEndsAt))
         return (0..<4).compactMap { calendar.date(byAdding: .day, value: $0, to: start) }
     }
 
     /// Eight hourly times on the chosen day, all after the current due time.
     private var times: [Date] {
-        let calendar = Calendar.current
+        let calendar = KioskTime.calendar
         let floor = max(Date(), currentEndsAt)
         let first: Date
         if calendar.isDate(day, inSameDayAs: floor) {
@@ -116,12 +116,12 @@ struct KioskExtendScreen: View {
                         KioskSlotChip(
                             title: Self.dayTitle(value, today: today),
                             detail: value.formatted(.dateTime.month(.abbreviated).day()),
-                            isSelected: Calendar.current.isDate(value, inSameDayAs: day),
+                            isSelected: KioskTime.calendar.isDate(value, inSameDayAs: day),
                             // A day that starts after the latest allowed time can't be picked.
                             isEnabled: window?.maxEndsAt.map { value <= $0 } ?? true
                         ) {
                             day = value
-                            if let chosen, !Calendar.current.isDate(chosen, inSameDayAs: value) { self.chosen = nil }
+                            if let chosen, !KioskTime.calendar.isDate(chosen, inSameDayAs: value) { self.chosen = nil }
                         }
                     }
                 }
@@ -135,7 +135,7 @@ struct KioskExtendScreen: View {
                         isSelected: chosen == latest,
                         isEnabled: true
                     ) {
-                        day = Calendar.current.startOfDay(for: latest)
+                        day = KioskTime.calendar.startOfDay(for: latest)
                         chosen = latest
                     }
                 }
@@ -189,7 +189,7 @@ struct KioskExtendScreen: View {
         do {
             let loaded = try await KioskAPI.shared.kioskExtendWindow(checkoutId: checkoutId)
             window = loaded
-            day = Calendar.current.startOfDay(for: max(Date(), loaded.currentEndsAt))
+            day = KioskTime.calendar.startOfDay(for: max(Date(), loaded.currentEndsAt))
         } catch {
             loadError = (error as? APIError)?.errorDescription ?? "Couldn't check how far this can go."
         }
@@ -233,7 +233,7 @@ struct KioskExtendScreen: View {
     }
 
     static func dayTitle(_ date: Date, today: Date) -> String {
-        let calendar = Calendar.current
+        let calendar = KioskTime.calendar
         if calendar.dayOffset(of: date, from: today) == 0 { return "Today" }
         if calendar.dayOffset(of: date, from: today) == 1 { return "Tomorrow" }
         return date.formatted(.dateTime.weekday(.abbreviated))
@@ -1293,7 +1293,7 @@ struct KioskStaffActionsFlow: View {
 
     private var statusLine: String {
         guard context.isOverdue else { return KioskDueCopy.due(context.endsAt).uppercased() }
-        let days = Calendar.current.dateComponents([.day], from: context.endsAt, to: Date()).day ?? 0
+        let days = KioskTime.calendar.dateComponents([.day], from: context.endsAt, to: Date()).day ?? 0
         return days >= 1 ? "OVERDUE · \(days) DAY\(days == 1 ? "" : "S")" : "OVERDUE"
     }
 

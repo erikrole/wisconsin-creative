@@ -62,3 +62,17 @@ export function verifyKioskStaffToken(
 export function readKioskStaffToken(req: Request): string | null {
   return req.headers.get(KIOSK_STAFF_TOKEN_HEADER);
 }
+
+/**
+ * Staff may edit someone else's personal checkout only after a staff card
+ * scan. The holder and SHARED custody stay open without that card.
+ */
+export function requireKioskStaffCardUnlessHolder(
+  req: Request,
+  booking: { custodyScope: string; requesterUserId: string },
+  actorId: string,
+  kioskId: string,
+): void {
+  if (booking.custodyScope === "SHARED" || booking.requesterUserId === actorId) return;
+  verifyKioskStaffToken(readKioskStaffToken(req), { actorId, kioskId });
+}

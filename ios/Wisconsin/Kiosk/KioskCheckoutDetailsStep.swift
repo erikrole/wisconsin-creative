@@ -277,7 +277,7 @@ struct KioskCheckoutDetailsStep: View {
                     choiceChip(
                         title: dayTitle(day),
                         detail: dayDetail(day),
-                        isSelected: Calendar.current.isDate(day, inSameDayAs: dueBackAt)
+                        isSelected: KioskTime.calendar.isDate(day, inSameDayAs: dueBackAt)
                     ) { selectDay(day) }
                 }
             }
@@ -365,19 +365,19 @@ struct KioskCheckoutDetailsStep: View {
     // MARK: Choices
 
     private var dayChoices: [Date] {
-        let today = Calendar.current.startOfDay(for: Date())
-        return (0..<4).compactMap { Calendar.current.date(byAdding: .day, value: $0, to: today) }
+        let today = KioskTime.calendar.startOfDay(for: Date())
+        return (0..<4).compactMap { KioskTime.calendar.date(byAdding: .day, value: $0, to: today) }
     }
 
     private func dayTitle(_ day: Date) -> String {
-        let calendar = Calendar.current
+        let calendar = KioskTime.calendar
         if calendar.dayOffset(of: day, from: today) == 0 { return "Today" }
         if calendar.dayOffset(of: day, from: today) == 1 { return "Tomorrow" }
         return day.formatted(.dateTime.weekday(.abbreviated))
     }
 
     private func dayDetail(_ day: Date) -> String {
-        let calendar = Calendar.current
+        let calendar = KioskTime.calendar
         if (0...1).contains(calendar.dayOffset(of: day, from: today)) {
             return day.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
         }
@@ -386,7 +386,7 @@ struct KioskCheckoutDetailsStep: View {
 
     /// Keeps the chosen time of day on the new day, then clamps to the future.
     private func selectDay(_ day: Date) {
-        let calendar = Calendar.current
+        let calendar = KioskTime.calendar
         let time = calendar.dateComponents([.hour, .minute], from: dueBackAt)
         var candidate = calendar.date(bySettingHour: time.hour ?? 17, minute: time.minute ?? 0, second: 0, of: day) ?? day
         if candidate <= Date() {
@@ -405,9 +405,9 @@ struct KioskCheckoutDetailsStep: View {
     /// minutes after it ends, then the usual return times on the chosen day.
     /// Without one: the usual return times alone.
     private var timeChoices: [TimeChoice] {
-        let calendar = Calendar.current
+        let calendar = KioskTime.calendar
         let now = Date()
-        func time(_ date: Date) -> String { date.formatted(.dateTime.hour().minute()) }
+        func time(_ date: Date) -> String { date.kioskWallTime() }
         let day = calendar.startOfDay(for: dueBackAt)
         var fixed = [9, 12, 15, 17, 19, 21, 22, 23].compactMap { hour -> TimeChoice? in
             guard let date = calendar.date(bySettingHour: hour, minute: 0, second: 0, of: day), date > now else { return nil }
@@ -432,8 +432,8 @@ enum KioskDueCopy {
     /// "Today at 6:00 PM", "Tomorrow at 11:00 PM", "Sat at 9:00 AM",
     /// "Tue, Sep 29 at 12:00 PM".
     static func relative(_ date: Date, now: Date = Date()) -> String {
-        let calendar = Calendar.current
-        let time = date.formatted(.dateTime.hour().minute())
+        let calendar = KioskTime.calendar
+        let time = date.kioskWallTime()
         let days = calendar.dayOffset(of: date, from: now)
         if days == 0 { return "Today at \(time)" }
         if days == 1 { return "Tomorrow at \(time)" }
@@ -511,7 +511,7 @@ struct KioskOtherDateSheet: View {
         self.initial = initial
         self.onCancel = onCancel
         self.onUse = onUse
-        let calendar = Calendar.current
+        let calendar = KioskTime.calendar
         _day = State(initialValue: calendar.startOfDay(for: initial))
         let initialHour = calendar.component(.hour, from: initial)
         _hour = State(initialValue: Self.hours.contains(initialHour) ? initialHour : 12)
@@ -521,7 +521,7 @@ struct KioskOtherDateSheet: View {
     static let hours = [9, 11, 12, 13, 15, 17, 19, 21]
 
     private var chosen: Date {
-        Calendar.current.date(bySettingHour: hour, minute: 0, second: 0, of: day) ?? day
+        KioskTime.calendar.date(bySettingHour: hour, minute: 0, second: 0, of: day) ?? day
     }
 
     var body: some View {
@@ -541,9 +541,9 @@ struct KioskOtherDateSheet: View {
                 .padding(.horizontal, 2)
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
                 ForEach(Self.hours, id: \.self) { value in
-                    let date = Calendar.current.date(bySettingHour: value, minute: 0, second: 0, of: day) ?? day
+                    let date = KioskTime.calendar.date(bySettingHour: value, minute: 0, second: 0, of: day) ?? day
                     KioskTimeChip(
-                        title: date.formatted(.dateTime.hour().minute()),
+                        title: date.kioskWallTime(),
                         isSelected: hour == value,
                         isEnabled: date > Date()
                     ) { hour = value }
@@ -554,7 +554,7 @@ struct KioskOtherDateSheet: View {
                     .font(KioskType.overline)
                     .tracking(KioskType.overlineTracking)
                     .foregroundStyle(KioskText.tertiary)
-                Text(chosen.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()) + " at " + chosen.formatted(.dateTime.hour().minute()))
+                Text(chosen.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day().timeZone(KioskTime.timeZone)) + " at " + chosen.kioskWallTime())
                     .font(.system(size: 24, weight: .heavy))
                     .foregroundStyle(KioskText.primary)
             }
@@ -568,7 +568,7 @@ struct KioskOtherDateSheet: View {
     }
 
     static func startOfMonth(_ date: Date) -> Date {
-        let calendar = Calendar.current
+        let calendar = KioskTime.calendar
         return calendar.date(from: calendar.dateComponents([.year, .month], from: date)) ?? date
     }
 }
@@ -604,7 +604,7 @@ struct KioskMonthGrid: View {
     @Binding var monthStart: Date
     @Binding var selectedDay: Date
 
-    private var calendar: Calendar { Calendar.current }
+    private var calendar: Calendar { KioskTime.calendar }
     private var today: Date { calendar.startOfDay(for: Date()) }
 
     private var days: [Date?] {
