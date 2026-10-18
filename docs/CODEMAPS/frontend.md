@@ -11,6 +11,7 @@
 | `/blasts/[id]` | `src/app/(app)/blasts/[id]/page.tsx` |
 | `/blasts` | `src/app/(app)/blasts/page.tsx` |
 | `/bookings` | `src/app/(app)/bookings/page.tsx` |
+| `/budget` | `src/app/(app)/budget/page.tsx` |
 | `/bulk-inventory/[id]` | `src/app/(app)/bulk-inventory/[id]/page.tsx` |
 | `/bulk-inventory/batteries` | `src/app/(app)/bulk-inventory/batteries/page.tsx` |
 | `/bulk-inventory` | `src/app/(app)/bulk-inventory/page.tsx` |
@@ -88,6 +89,7 @@
 | `/staff/workforce` | `src/app/(app)/staff/workforce/page.tsx` |
 | `/staff/workforce/planning` | `src/app/(app)/staff/workforce/planning/page.tsx` |
 | `/welcome` | `src/app/(app)/welcome/page.tsx` |
+| `/wishlist` | `src/app/(app)/wishlist/page.tsx` |
 | `/youtube` | `src/app/(app)/youtube/page.tsx` |
 | `/about/features` | `src/app/(public)/about/features/page.tsx` |
 | `/about/field-work` | `src/app/(public)/about/field-work/page.tsx` |
@@ -107,6 +109,7 @@
 
 | Route | File |
 |---|---|
+| `/budget` | `src/app/(app)/budget/layout.tsx` |
 | `/kits` | `src/app/(app)/kits/layout.tsx` |
 | `/` | `src/app/(app)/layout.tsx` |
 | `/reports` | `src/app/(app)/reports/layout.tsx` |
@@ -115,6 +118,7 @@
 | `/settings` | `src/app/(app)/settings/layout.tsx` |
 | `/staff` | `src/app/(app)/staff/layout.tsx` |
 | `/staff/workforce` | `src/app/(app)/staff/workforce/layout.tsx` |
+| `/wishlist` | `src/app/(app)/wishlist/layout.tsx` |
 | `/about` | `src/app/(public)/about/layout.tsx` |
 | `/releases` | `src/app/(public)/releases/layout.tsx` |
 | `/` | `src/app/layout.tsx` |
@@ -140,7 +144,7 @@
 | `src/components/schedule/SportSetupWizard.tsx` | 675 |
 | `src/components/booking-wizard/WizardStep1.tsx` | 599 |
 | `src/components/booking-details/BookingHeader.tsx` | 472 |
-| `src/components/Sidebar.tsx` | 450 |
+| `src/components/Sidebar.tsx` | 457 |
 | `src/components/event-editor/EventEditorFields.tsx` | 435 |
 | `src/components/ui/heatmap.tsx` | 434 |
 | `src/components/ui/chart.tsx` | 387 |
