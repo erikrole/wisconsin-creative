@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Reports & Analytics
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-10-16
+- Last Updated: 2026-10-18
 - Status: Active
 - Version: V1
 
@@ -227,6 +227,7 @@ Provide staff and admin with analytics dashboards to track checkout/reservation 
 - [x] AC-23: Native Accountability is a read-only Browse list for ADMIN, STAFF, and STUDENT. It uses `GET /api/accountability`, this year or all time, and the three server sorts. Location, incident state, user state, CSV, and exclusions stay on the web. Authenticated iPhone proof is GAP-90.
 
 ## Change Log
+- 2026-10-18: Checkout activity lists every Madison day in the selected period, including the day the clocks change. The chart no longer skips or repeats a day when the period crosses daylight saving time.
 - 2026-10-16: Native Accountability is a read-only list in Browse for students, staff, and admins. It reads the shared leaderboard, names whether the signed-in person is on it, and opens a checkout from an incident. Power filters, the continuous on-time bar, CSV export, and exclusion edits stay on the web. Source contracts pass locally. An Xcode build and an authenticated iPhone walkthrough remain open under GAP-90.
 - 2026-10-16: Native Reports now opens read-only Utilization, Checkouts, Scans, Missing Units, and Badges from the existing Reports screen, and Usage only when `/api/me` returns `canViewUsageAnalytics`. Each screen reads the shared JSON endpoint and leaves CSV export and the Audit report on web. Source contracts and the iOS project check are the local proof; an Xcode build and an authenticated iPhone walkthrough remain open.
 - 2026-09-18: Accountability now counts currently overdue checkouts against on-time rate, keeps filter state in the URL, downloads CSV in place, highlights the signed-in viewer, and searches the ranking locally. Active overdue receipts sort first. Item summaries load only for incident rows. Focused tests pass locally; authenticated browser proof is in `tasks/archive/proofs/accountability-2026-09-18/`.
