@@ -100,6 +100,12 @@ enum AppRuntimeMode {
         /// Search with two of its four sources deliberately failing, so the
         /// partial-result notice can be seen rather than reasoned about.
         case searchPartial = "search-partial"
+        /// The announcement splash over the real app shell, served canned
+        /// announcements: a banner image with another waiting behind it,
+        /// a swipeable set of images, and a text-only notice.
+        case announcement
+        case announcementImages = "announcement-images"
+        case announcementPlain = "announcement-plain"
 
         /// The booking scenarios share one fixture and differ only in which
         /// sheet is seeded open.
@@ -169,7 +175,8 @@ enum AppRuntimeMode {
              .studentBookings,
              .bookingDetail, .bookingExtend, .bookingEdit, .bookingCancel,
              .itemEdit, .createBookingScanner, .createBookingEvents, .search, .searchPartial,
-             .itemsList, .reports, .accountSecurity, .notifications, .login:
+             .itemsList, .reports, .accountSecurity, .notifications, .login,
+             .announcement, .announcementImages, .announcementPlain:
             return true
         default:
             return false

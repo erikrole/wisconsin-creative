@@ -1,10 +1,10 @@
-# Announcements Area Scope (V1 Web Implemented, iOS Specified)
+# Announcements Area Scope (V1 Web and iOS Implemented)
 
 ## Document Control
 - Area: Announcements
 - Owner: Wisconsin Athletics Creative Product
 - Last Updated: 2026-10-18
-- Status: Web built on a draft PR; iOS not started
+- Status: Web and iOS built on draft PRs
 - Version: V1.0
 
 ## Direction
@@ -27,8 +27,10 @@ Admins post a short splash ("new feature", "update", "heads up") from Settings a
 - `POST /api/announcements/{id}/dismiss` is idempotent.
 - Admin: `GET/POST /api/announcements`, `PATCH/DELETE /api/announcements/{id}` (`state: draft|live|ended`, `showAgain`). All writes are audited and rate limited.
 
-## iOS spec (not built)
+## iOS (built)
+Shipped as `AnnouncementSplashSheet.swift` (store, modifier, sheet) over `AnnouncementModels.swift`; wired in `RootView`. DEBUG scenarios `announcement`, `announcement-images`, `announcement-plain` (`GT_PERFORMANCE_SCENARIO`) serve canned announcements for capture. Original spec:
 Decode `ActiveAnnouncement` (`id`, `kind`, `kindLabel`, `title`, `blocks` as `paragraph{text}` or `list{items}`, optional `ctaLabel`/`ctaUrl`, `imageUrls`, optional `imageAlt`, `publishedAt`, `remaining`), tolerating unknown block types by skipping them. Fetch with `platform=ios` on launch and on foreground, present as a sheet using the web card layout (banner or paged images, kind icon, kind label and date, title, body, check bullets, primary button, Close), then POST dismiss. A `ctaUrl` starting with `/` maps to an in-app destination or the website; unknown paths open the website. Needs an Xcode build and the web-side source-contract test before merge.
 
 ## Changelog
+- 2026-10-18: iOS splash (native sheet, paged images, in-app CTA routing, DEBUG fixture scenarios).
 - 2026-10-18: V1 web (migration 0184, Settings > Announcements, splash in the app layout), with banner images, phone bottom sheet, editor preview-as-splash, publish confirmation, and seen-by reach.

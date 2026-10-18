@@ -16,6 +16,7 @@
 		03D13CE00A34B9C6DD2AB6EF /* KioskPickupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB5E4D4F3F432CE124DE63A8 /* KioskPickupView.swift */; };
 		045D72067A5662DABE89377E /* NativeAuthViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 050BCD6259A4475915E97169 /* NativeAuthViews.swift */; };
 		0530FB6892E8A44F4C8F967C /* AppIntentsData.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9D82991FC6AE45A56917938 /* AppIntentsData.swift */; };
+		06BF3BC1B205C3B9E8B1C155 /* AnnouncementHarness.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFFC2DEAFF4B4E5054970B25 /* AnnouncementHarness.swift */; };
 		085E8467FC2D0385A67DD157 /* QRScannerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44E5D1DB0C8CBAD5E452E807 /* QRScannerSheet.swift */; };
 		089493883612791C05515FAE /* LicensesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B3D4226E94BA750868A4D0B /* LicensesView.swift */; };
 		0A7B733B24619FD907F15B4A /* QuickActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC8192CC2274AB7D7E83D4FD /* QuickActions.swift */; };
@@ -145,6 +146,7 @@
 		880C3E570298237A5D3A7EF0 /* ProfileCompletionWelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5740ABDA01126CBBB53F25EF /* ProfileCompletionWelcomeView.swift */; };
 		889D5483CAC2EA6C8E25DDFD /* ShiftTradeModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC21A466188CE0D3011728F2 /* ShiftTradeModels.swift */; };
 		899247599162DB5F38910752 /* PublishedScheduleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCCC7961E6B24938024D1C80 /* PublishedScheduleView.swift */; };
+		8AB0BC3DEFB40827B77A7B6C /* AnnouncementModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98D7A852B8982340011FD05F /* AnnouncementModels.swift */; };
 		8AD1ECE2467134BBDC92A41B /* KioskIdentityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 512445D206E12968A205246E /* KioskIdentityView.swift */; };
 		8AD8110B0A79C58084C6CB22 /* UsersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F94CA79BF538DBB6FF7F225 /* UsersView.swift */; };
 		8AF1D9B30757EC04020B0A22 /* CrewRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50023637E6B61A75BF40891B /* CrewRow.swift */; };
@@ -194,6 +196,7 @@
 		BAE863712FA11717C1C77B29 /* NotificationsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E58906A0DD7BCF5024161BE /* NotificationsSheet.swift */; };
 		BC65F462F70527063603B045 /* GearWidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = D49E4A7AC5C05860AAB8EBE5 /* GearWidgetSnapshot.swift */; };
 		BC6EB10D11084CD15ABC7C72 /* BlastsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D81B8CCF65841AC7E7668763 /* BlastsView.swift */; };
+		BC815AF152ACBF9E704B2BA5 /* AnnouncementSplashSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89F3793202C8507234E6488F /* AnnouncementSplashSheet.swift */; };
 		BF476A31687D54A1DB40F63B /* BadgeReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D2BEE3AD98754BF8D799A18 /* BadgeReportView.swift */; };
 		C102925440D4EB154CF681D1 /* LicenseExpiryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68542663977099AEC90AAFE5 /* LicenseExpiryTests.swift */; };
 		C3ADFDC332E02AC83743947D /* BookingActionSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD1E235656D8727D0F626EBA /* BookingActionSheets.swift */; };
@@ -417,6 +420,7 @@
 		84430D9886900EA2E8F3CB0B /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		88F162C9B5233CB44C35E9E5 /* WisconsinLiveActivities.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = WisconsinLiveActivities.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		88FF0CACAB4BD4886FD0219B /* CreateBookingEventViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateBookingEventViews.swift; sourceTree = "<group>"; };
+		89F3793202C8507234E6488F /* AnnouncementSplashSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnouncementSplashSheet.swift; sourceTree = "<group>"; };
 		8B792FF3569918A5A54D8693 /* CurrentDay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrentDay.swift; sourceTree = "<group>"; };
 		8C6B12C97D45B058A9E678BB /* FlatSurface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlatSurface.swift; sourceTree = "<group>"; };
 		8EE808994D4A26C719DA2432 /* ScoreboardModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoreboardModelsTests.swift; sourceTree = "<group>"; };
@@ -428,6 +432,7 @@
 		93A02FB7D1B8ADC547189F1A /* ScanPrePromptView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanPrePromptView.swift; sourceTree = "<group>"; };
 		96636E404DEEEDA5C6046ADB /* AddShiftSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddShiftSheet.swift; sourceTree = "<group>"; };
 		966B6B986CA5E9C123B8EC01 /* KioskCheckoutDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskCheckoutDetailSheet.swift; sourceTree = "<group>"; };
+		98D7A852B8982340011FD05F /* AnnouncementModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnouncementModels.swift; sourceTree = "<group>"; };
 		98F3B72469F3E6BFC5B50CE5 /* QuarterHourTimePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuarterHourTimePicker.swift; sourceTree = "<group>"; };
 		9C02E3259C05C85AFCA83327 /* TeamScoreboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamScoreboardView.swift; sourceTree = "<group>"; };
 		9C450858455B38900B99D9C1 /* ReportSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportSession.swift; sourceTree = "<group>"; };
@@ -467,6 +472,7 @@
 		BCCC7961E6B24938024D1C80 /* PublishedScheduleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublishedScheduleView.swift; sourceTree = "<group>"; };
 		BD1E235656D8727D0F626EBA /* BookingActionSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingActionSheets.swift; sourceTree = "<group>"; };
 		BDFEAF3DBE56A4AF4AAFDBC5 /* ReservationDraftCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReservationDraftCard.swift; sourceTree = "<group>"; };
+		BFFC2DEAFF4B4E5054970B25 /* AnnouncementHarness.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnouncementHarness.swift; sourceTree = "<group>"; };
 		C139D1C1F9A3D2C4AB5EEF42 /* LaunchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchView.swift; sourceTree = "<group>"; };
 		C2159F738CA242773EA9D438 /* NotificationSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationSettingsView.swift; sourceTree = "<group>"; };
 		C22B3A50B4815BC1451C26DD /* HIDScannerField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HIDScannerField.swift; sourceTree = "<group>"; };
@@ -645,6 +651,7 @@
 		597D878F5B57CA4F5E2F5F05 /* App */ = {
 			isa = PBXGroup;
 			children = (
+				BFFC2DEAFF4B4E5054970B25 /* AnnouncementHarness.swift */,
 				5E180A2286F2673D3B7E2179 /* AppDelegate.swift */,
 				663DC1D3F890A7577C4D89D5 /* AppIntents.swift */,
 				B9D82991FC6AE45A56917938 /* AppIntentsData.swift */,
@@ -722,6 +729,7 @@
 			isa = PBXGroup;
 			children = (
 				279D279A34DC519AA0A42205 /* AccountabilityModels.swift */,
+				98D7A852B8982340011FD05F /* AnnouncementModels.swift */,
 				3967BD5EC55792F3B9E94724 /* AssetModels.swift */,
 				A5827A13830B73BC3EB57808 /* BlastModels.swift */,
 				5BF2723F39EDA8F73473EB8E /* BookingActivityModels.swift */,
@@ -767,6 +775,14 @@
 				84430D9886900EA2E8F3CB0B /* AppIcon.icon */,
 			);
 			path = AppIcons;
+			sourceTree = "<group>";
+		};
+		A0FD8D74EB1B296CC60D042B /* Announcements */ = {
+			isa = PBXGroup;
+			children = (
+				89F3793202C8507234E6488F /* AnnouncementSplashSheet.swift */,
+			);
+			path = Announcements;
 			sourceTree = "<group>";
 		};
 		B98530FDE6F2D3820422A8EF /* Kiosk */ = {
@@ -931,6 +947,7 @@
 				9C02E3259C05C85AFCA83327 /* TeamScoreboardView.swift */,
 				6B64F325136AF7626ECECE8C /* UserDetailView.swift */,
 				8F94CA79BF538DBB6FF7F225 /* UsersView.swift */,
+				A0FD8D74EB1B296CC60D042B /* Announcements */,
 				FD17EDBF8309C42C3F9EECB6 /* Booking */,
 				4E310D05AC0591B9C424B405 /* Components */,
 				EC8F8121B14F9F92C8A25372 /* CreateBooking */,
@@ -1316,6 +1333,9 @@
 				D5A660B4A7D2D9AD347D60F0 /* AccountabilityPersonView.swift in Sources */,
 				DF9D5CD07F84E63E30627EBA /* AccountabilityView.swift in Sources */,
 				A6176C75B21A5C4695A8E11F /* AddShiftSheet.swift in Sources */,
+				06BF3BC1B205C3B9E8B1C155 /* AnnouncementHarness.swift in Sources */,
+				8AB0BC3DEFB40827B77A7B6C /* AnnouncementModels.swift in Sources */,
+				BC815AF152ACBF9E704B2BA5 /* AnnouncementSplashSheet.swift in Sources */,
 				33F2166407B607A0DADC78B2 /* AppDelegate.swift in Sources */,
 				D26919265FC80896DFC0085F /* AppEnvironment.swift in Sources */,
 				355A828828C691446420E0DB /* AppIntents.swift in Sources */,
