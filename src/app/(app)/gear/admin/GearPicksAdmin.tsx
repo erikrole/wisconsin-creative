@@ -18,12 +18,14 @@ import { Input } from "@/components/ui/input";
 import { FadeUp } from "@/components/ui/motion";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AllotmentOverview } from "./AllotmentOverview";
 import { OrderPlan } from "./OrderPlan";
 import { OrderTracking } from "./OrderTracking";
 import { KitPills } from "./KitPills";
 import { NeedsAttention } from "./NeedsAttention";
+import { gearAttentionItems } from "@/lib/gear-picks/attention";
 import { StudentsSection } from "./StudentsSection";
 import { GEAR_PICKS_ME_QUERY_KEY } from "@/hooks/use-gear-picks";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
@@ -59,8 +61,40 @@ type AdminChange =
   | { action: "updateParticipant"; participantId: string; fit?: GearPickFitKey; allowanceCents?: number }
   | { action: "removeParticipant"; participantId: string };
 
+const TABS = ["overview", "people", "order", "receiving"] as const;
+type AdminTab = (typeof TABS)[number];
+/** Section anchors (used by the Needs attention links) and the tab each one lives on. */
+const TAB_FOR_ANCHOR: Record<string, AdminTab> = {
+  "gear-admin-access": "overview",
+  "gear-admin-people": "people",
+  "gear-admin-students": "people",
+};
+
+/** Tab state lives in the URL hash so a refresh or a shared link lands on the same tab. */
+function useAdminTab() {
+  const [tab, setTab] = useState<AdminTab>("overview");
+  useEffect(() => {
+    function sync() {
+      const hash = window.location.hash.replace(/^#/, "");
+      const next = (TABS as readonly string[]).includes(hash) ? (hash as AdminTab) : TAB_FOR_ANCHOR[hash];
+      if (!next) return;
+      setTab(next);
+      if (TAB_FOR_ANCHOR[hash]) window.setTimeout(() => document.getElementById(hash)?.scrollIntoView({ block: "start", behavior: "smooth" }), 50);
+    }
+    sync();
+    window.addEventListener("hashchange", sync);
+    return () => window.removeEventListener("hashchange", sync);
+  }, []);
+  function choose(next: string) {
+    setTab(next as AdminTab);
+    window.history.replaceState(null, "", `#${next}`);
+  }
+  return [tab, choose] as const;
+}
+
 export function GearPicksAdmin() {
   const queryClient = useQueryClient();
+  const [tab, chooseTab] = useAdminTab();
   const { data, isLoading, isError, refetch } = useQuery<GearPicksAdminResponse | null>({
     queryKey: ADMIN_QUERY_KEY,
     queryFn: async ({ signal }) => {
@@ -123,6 +157,7 @@ export function GearPicksAdmin() {
   }
 
   const { cycle, summary } = data;
+  const attentionCount = gearAttentionItems(data).length;
 
   return (
     <FadeUp>
@@ -150,6 +185,18 @@ export function GearPicksAdmin() {
         </Button>
       </PageHeader>
 
+      <Tabs value={tab} onValueChange={chooseTab} className="gap-4">
+        <TabsList aria-label="Gear sections">
+          <TabsTrigger value="overview">
+            Overview
+            {attentionCount > 0 && <span className="ml-1.5 rounded-full bg-[#FFF1BD] px-1.5 text-[11px] font-bold text-[#AB6400]">{attentionCount}</span>}
+          </TabsTrigger>
+          <TabsTrigger value="people">People <span className="ml-1.5 font-mono text-[11px] text-muted-foreground">{data.participants.length + data.students.length}</span></TabsTrigger>
+          <TabsTrigger value="order">Order</TabsTrigger>
+          <TabsTrigger value="receiving">Receiving</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview">
       <AllotmentOverview
         title={cycle.title}
         budget={data.budget}
@@ -183,6 +230,9 @@ export function GearPicksAdmin() {
 
       <DeadlineCard deadline={cycle.deadline} isOpen={cycle.isOpen} pending={pending} onApply={applyChange} />
 
+        </TabsContent>
+
+        <TabsContent value="people">
       <section aria-labelledby="gear-admin-people" className="mb-6">
         <div className="mb-2 flex flex-wrap items-end justify-between gap-2">
           <h2 id="gear-admin-people" className="text-base font-semibold">People</h2>
@@ -203,19 +253,14 @@ export function GearPicksAdmin() {
         onApply={applyChange}
       />
 
+        </TabsContent>
+
+        <TabsContent value="order">
       <OrderPlan participants={data.participants} students={data.students} />
 
-      <OrderTracking
-        participants={data.participants}
-        students={data.students}
-        order={data.order}
-        receipts={data.receipts}
-        pending={pending}
-        onApply={applyChange}
-      />
-
-      <section aria-labelledby="gear-admin-totals" className="mb-6">
-        <h2 id="gear-admin-totals" className="mb-2 text-base font-semibold">Totals by item, color, and size</h2>
+      <details className="mb-6">
+        <summary className="mb-2 min-h-10 cursor-pointer text-sm font-semibold text-muted-foreground">Staff picks only, by item, color and size</summary>
+        <h2 id="gear-admin-totals" className="sr-only">Totals by item, color, and size</h2>
         {data.totals.length === 0 ? (
           <EmptyState icon="chart" compact title="Nothing picked yet" description="Totals appear as people save picks." />
         ) : (
@@ -247,7 +292,21 @@ export function GearPicksAdmin() {
             </Table>
           </div>
         )}
-      </section>
+      </details>
+        </TabsContent>
+
+        <TabsContent value="receiving">
+      <OrderTracking
+        participants={data.participants}
+        students={data.students}
+        order={data.order}
+        receipts={data.receipts}
+        pending={pending}
+        onApply={applyChange}
+      />
+
+        </TabsContent>
+      </Tabs>
     </FadeUp>
   );
 }

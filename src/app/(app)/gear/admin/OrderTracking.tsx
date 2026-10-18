@@ -148,7 +148,14 @@ function ReceivingTable({
 }: Pick<Props, "receipts" | "pending" | "onApply"> & { rows: ReceivingRow[]; orderedPieces: number; receivedPieces: number }) {
   const confirm = useConfirm();
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [filter, setFilter] = useState<"all" | "left">("all");
+  const [query, setQuery] = useState("");
   const keyOf = (row: ReceivingRow) => `${row.sku}|${row.size ?? ""}`;
+  const leftCount = rows.filter((row) => row.outstanding > 0).length;
+  const needle = query.trim().toLowerCase();
+  const shown = rows.filter(
+    (row) => (filter === "all" || row.outstanding > 0) && (!needle || `${row.itemName} ${row.colorLabel} ${row.size ?? ""}`.toLowerCase().includes(needle)),
+  );
   const nameFor = (sku: string) => rows.find((row) => row.sku === sku)?.itemName ?? sku;
 
   return (
@@ -157,6 +164,31 @@ function ReceivingTable({
         <h3 className="text-base font-extrabold tracking-[-0.02em]">Receiving</h3>
         <span className="text-sm text-[#60646C] dark:text-muted-foreground">{receivedPieces} of {orderedPieces} pieces received</span>
       </div>
+      {rows.length > 0 && (
+        <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <Input
+            type="search"
+            aria-label="Search items to receive"
+            placeholder="Search items or sizes"
+            className="min-h-10 sm:max-w-xs"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+          <div className="flex gap-0.5 rounded-[10px] bg-[#F0F1F3] p-[3px] dark:bg-white/10" role="group" aria-label="Filter items">
+            {([["all", `All ${rows.length}`], ["left", `Still to arrive ${leftCount}`]] as const).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                aria-pressed={filter === key}
+                onClick={() => setFilter(key)}
+                className={`rounded-lg px-3 py-1.5 text-[13px] font-bold ${filter === key ? "bg-white shadow-[0_1px_2px_rgba(0,0,0,0.08)] dark:bg-card" : "text-[#60646C] dark:text-muted-foreground"}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       {rows.length === 0 ? (
         <div className={`${CARD} px-5 py-8 text-center text-sm text-[#60646C] dark:text-muted-foreground`}>Nothing to receive yet.</div>
       ) : (
@@ -170,7 +202,12 @@ function ReceivingTable({
               <span className={`${HEAD} text-right`}>Left</span>
               <span className={HEAD}>Check in</span>
             </div>
-            {rows.map((row) => {
+            {shown.length === 0 && (
+              <div className="px-5 py-6 text-center text-sm text-[#60646C] dark:text-muted-foreground">
+                {needle ? "No items match that search." : "Everything has arrived."}
+              </div>
+            )}
+            {shown.map((row) => {
               const key = keyOf(row);
               const draft = drafts[key] ?? "";
               const quantity = Number.parseInt(draft, 10);
