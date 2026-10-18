@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Copy, Eye, ImagePlus, MoreHorizontal, Plus, X } from "lucide-react";
+import { ArrowLeft, Copy, Eye, ImagePlus, MoreHorizontal, Plus, X } from "lucide-react";
 import Image from "next/image";
 import { toast } from "sonner";
 import { useConfirm } from "@/components/ConfirmDialog";
@@ -296,52 +296,105 @@ export default function AnnouncementsSettingsPage() {
         </ul>
       )}
 
-      {draft ? <Composer draft={draft} onChange={setDraft} onClose={() => setDraft(null)} onSaved={() => void refresh()} /> : null}
+      {draft ? (
+        <Composer key={draft.id ?? "new"} initial={draft} onClose={() => setDraft(null)} onSaved={() => void refresh()} />
+      ) : null}
     </SettingsPageShell>
   );
 }
 
-function Composer({
-  draft,
-  onChange,
-  onClose,
-  onSaved,
-}: {
-  draft: Draft;
-  onChange: (d: Draft) => void;
-  onClose: () => void;
-  onSaved: () => void;
-}) {
+type Field = "title" | "body" | "ctaLabel" | "ctaUrl" | "platforms" | "endsAt";
+
+/** Where each field's error shows, in page order, so saving can focus the first one. */
+const FIELD_INPUT_ID: Record<Field, string> = {
+  title: "ann-title",
+  body: "ann-body",
+  ctaLabel: "ann-cta-label",
+  ctaUrl: "ann-cta-url",
+  endsAt: "ann-ends",
+  platforms: "ann-web",
+};
+
+function toPayload(draft: Draft, initial: Draft) {
+  const audience = ANNOUNCEMENT_AUDIENCES.find((a) => a.id === draft.audience) ?? ANNOUNCEMENT_AUDIENCES[0];
+  return {
+    kind: draft.kind,
+    title: draft.title,
+    body: draft.body,
+    ctaLabel: draft.ctaLabel,
+    ctaUrl: draft.ctaUrl.trim(),
+    imageUrls: draft.imageUrls,
+    imageAlt: draft.imageUrls.length ? draft.imageAlt : "",
+    roles: audience.roles,
+    showOnWeb: draft.showOnWeb,
+    showOnIos: draft.showOnIos,
+    // An edit leaves an untouched end date alone, so fixing a typo on an ended announcement still saves.
+    ...(draft.id && draft.endsAt === initial.endsAt ? {} : { endsAt: draft.endsAt ? new Date(draft.endsAt).toISOString() : null }),
+  };
+}
+
+/**
+ * The shared rules, plus one editor-only allowance: an ended announcement keeps
+ * its past end date when you only fix its words, but publishing needs a future one.
+ */
+function validate(draft: Draft, initial: Draft, publish: boolean): Partial<Record<Field, string>> {
+  const errors = validateAnnouncementDraft(draft);
+  if (errors.endsAt && draft.id && !publish && draft.endsAt === initial.endsAt) delete errors.endsAt;
+  return errors;
+}
+
+function FieldError({ id, message }: { id: string; message?: string }) {
+  if (!message) return null;
+  return (
+    <p id={id} className="m-0 text-xs text-destructive">
+      {message}
+    </p>
+  );
+}
+
+function Composer({ initial, onClose, onSaved }: { initial: Draft; onClose: () => void; onSaved: () => void }) {
   const confirm = useConfirm();
+  const [draft, setDraft] = useState<Draft>(initial);
   const [saving, setSaving] = useState<null | "draft" | "publish">(null);
+  const [uploading, setUploading] = useState(0);
   const [previewing, setPreviewing] = useState(false);
+  // Errors appear after the first save attempt, so a blank form isn't shouted at.
+  const [attempt, setAttempt] = useState<null | "save" | "publish">(null);
   const [error, setError] = useState<string | null>(null);
-  const [submitted, setSubmitted] = useState(false);
-  const initial = useRef(JSON.stringify(draft));
-  const dirty = JSON.stringify(draft) !== initial.current;
-  const set = <K extends keyof Draft>(key: K, value: Draft[K]) => onChange({ ...draft, [key]: value });
+  // Updates go through the latest draft, so an upload that finishes while you type never undoes your typing.
+  const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setDraft((d) => ({ ...d, [key]: value }));
   const recent = useMemo(() => releases.slice(0, 8), []);
   const blocks = useMemo(() => parseAnnouncementBody(draft.body), [draft.body]);
+  const dirty = JSON.stringify(draft) !== JSON.stringify(initial);
+  const errors = attempt ? validate(draft, initial, attempt === "publish") : {};
+  const describedBy = (field: Field) => (errors[field] ? `${FIELD_INPUT_ID[field]}-error` : undefined);
 
-  function fromRelease(index: string) {
+  async function fromRelease(index: string) {
     const r = recent[Number(index)];
     if (!r) return;
-    const bullets = (r.details ?? []).slice(0, 4).map((d) => `- ${d}`).join("\n");
-    onChange({
-      ...draft,
+    if (draft.title.trim() || draft.body.trim()) {
+      const ok = await confirm({
+        title: "Replace what you wrote?",
+        message: `The title, message, and button switch to the "${r.title}" release note.`,
+        confirmLabel: "Replace",
+      });
+      if (!ok) return;
+    }
+    const bullets = (r.details ?? [])
+      .slice(0, 4)
+      .map((d) => `- ${d}`)
+      .join("\n");
+    setDraft((d) => ({
+      ...d,
       kind: r.type === "feature" ? "FEATURE" : "UPDATE",
-      title: r.title,
-      body: [r.summary, bullets].filter(Boolean).join("\n\n"),
+      title: r.title.slice(0, 80),
+      body: [r.summary, bullets].filter(Boolean).join("\n\n").slice(0, 1200),
       ctaLabel: "See what's new",
       ctaUrl: "/releases",
-    });
+    }));
   }
 
-  const problems = useMemo(() => validateAnnouncementDraft(draft), [draft]);
-  // Mistakes show beside the field only after a first save attempt, so a blank form isn't shouted at.
-  const shown = submitted ? problems : {};
-
-  // Leaving with unsaved edits asks first; closing the tab warns the browser's way.
+  // Closing the tab with unsaved edits gets the browser's own warning.
   useEffect(() => {
     if (!dirty) return;
     const warn = (e: BeforeUnloadEvent) => e.preventDefault();
@@ -349,16 +402,16 @@ function Composer({
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
 
-  async function requestClose() {
-    if (saving !== null) return;
+  async function close() {
+    if (saving) return;
     if (dirty) {
-      const discard = await confirm({
+      const ok = await confirm({
         title: "Discard your changes?",
-        message: "What you typed hasn't been saved.",
+        message: draft.id ? "Your edits to this announcement won't be saved." : "This announcement hasn't been saved.",
         confirmLabel: "Discard",
         variant: "danger",
       });
-      if (!discard) return;
+      if (!ok) return;
     }
     onClose();
   }
@@ -378,12 +431,12 @@ function Composer({
   };
 
   async function save(publish: boolean) {
-    setSubmitted(true);
-    const firstProblem = (["title", "body", "ctaLabel", "ctaUrl", "endsAt", "platforms"] as const).find((k) => problems[k]);
-    if (firstProblem) {
-      const target = { title: "ann-title", body: "ann-body", ctaLabel: "ann-cta-label", ctaUrl: "ann-cta-url", endsAt: "ann-ends", platforms: "ann-web" }[firstProblem];
-      document.getElementById(target)?.focus();
+    setAttempt(publish ? "publish" : "save");
+    const problems = validate(draft, initial, publish);
+    const first = (Object.keys(FIELD_INPUT_ID) as Field[]).find((f) => problems[f]);
+    if (first) {
       setError(null);
+      document.getElementById(FIELD_INPUT_ID[first])?.focus();
       return;
     }
     if (publish) {
@@ -399,26 +452,14 @@ function Composer({
     }
     setSaving(publish ? "publish" : "draft");
     setError(null);
-    const payload = {
-      kind: draft.kind,
-      title: draft.title,
-      body: draft.body,
-      ctaLabel: draft.ctaLabel,
-      ctaUrl: draft.ctaUrl,
-      imageUrls: draft.imageUrls,
-      imageAlt: draft.imageUrls.length ? draft.imageAlt : "",
-      roles: audience.roles,
-      showOnWeb: draft.showOnWeb,
-      showOnIos: draft.showOnIos,
-      endsAt: draft.endsAt ? new Date(draft.endsAt).toISOString() : null,
-    };
+    const payload = toPayload(draft, initial);
     try {
       if (draft.id) {
         await send(`/api/announcements/${draft.id}`, "PATCH", { ...payload, ...(publish ? { state: "live" } : {}) });
       } else {
         await send("/api/announcements", "POST", { ...payload, publish });
       }
-      toast.success(publish ? "Published. People see it the next time they open the app." : isLive ? "Changes saved" : "Draft saved");
+      toast.success(publish ? "Published. People see it the next time they open the app." : isLive ? "Changes saved" : "Saved");
       onSaved();
       onClose();
     } catch (e) {
@@ -428,9 +469,21 @@ function Composer({
     }
   }
 
+  const busy = saving !== null || uploading > 0;
+  const primaryLabel = draft.state === "ended" ? "Publish again" : "Publish now";
+
   return (
-    <Dialog open onOpenChange={(open) => (open ? undefined : void requestClose())}>
-      <DialogContent className="max-h-[min(94dvh,54rem)] max-w-[920px] sm:rounded-2xl">
+    <Dialog open onOpenChange={(open) => (open ? undefined : void close())}>
+      <DialogContent
+        className="max-h-[min(94dvh,54rem)] max-w-[920px] sm:rounded-2xl"
+        onKeyDown={(e) => {
+          // Cmd/Ctrl+Enter saves, the way it does in most editors.
+          if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !busy) {
+            e.preventDefault();
+            void save(false);
+          }
+        }}
+      >
         <DialogHeader className="flex-col items-start gap-1 px-6 pt-6 pr-14 text-left">
           <DialogTitle>{draft.id ? "Edit announcement" : "New announcement"}</DialogTitle>
           <DialogDescription>People see it once, then it is gone for them. Change it any time without a deploy.</DialogDescription>
@@ -441,7 +494,7 @@ function Composer({
             {!draft.id ? (
               <div className="flex flex-col gap-1.5">
                 <Label>Start from a release note</Label>
-                <Select onValueChange={fromRelease}>
+                <Select value="" onValueChange={(v) => void fromRelease(v)}>
                   <SelectTrigger><SelectValue placeholder="Optional" /></SelectTrigger>
                   <SelectContent>
                     {recent.map((r, i) => (
@@ -452,7 +505,7 @@ function Composer({
               </div>
             ) : null}
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-3 sm:grid-cols-2">
               <div className="flex flex-col gap-1.5">
                 <Label>Type</Label>
                 <Select value={draft.kind} onValueChange={(v) => set("kind", v as AnnouncementKindValue)}>
@@ -482,50 +535,118 @@ function Composer({
                 <Label htmlFor="ann-title">Title</Label>
                 <span className="text-xs tabular-nums text-muted-foreground">{draft.title.length}/80</span>
               </div>
-              <Input id="ann-title" value={draft.title} maxLength={80} aria-invalid={Boolean(shown.title)} aria-describedby={shown.title ? "ann-title-err" : undefined} onChange={(e) => set("title", e.target.value)} placeholder="Scheduling is faster now" />
-              <FieldError id="ann-title-err" message={shown.title} />
+              <Input
+                id="ann-title"
+                value={draft.title}
+                maxLength={80}
+                onChange={(e) => set("title", e.target.value)}
+                placeholder="Scheduling is faster now"
+                aria-invalid={Boolean(errors.title) || undefined}
+                aria-describedby={describedBy("title")}
+              />
+              <FieldError id="ann-title-error" message={errors.title} />
             </div>
 
             <div className="flex flex-col gap-1.5">
               <div className="flex items-baseline justify-between">
                 <Label htmlFor="ann-body">Message</Label>
-                <span className={`text-xs tabular-nums ${draft.body.length > 1100 ? "text-foreground" : "text-muted-foreground"}`}>{draft.body.length}/1200</span>
+                <span className="text-xs tabular-nums text-muted-foreground">{draft.body.length}/1200</span>
               </div>
-              <Textarea id="ann-body" rows={6} value={draft.body} maxLength={1200} aria-invalid={Boolean(shown.body)} aria-describedby={shown.body ? "ann-body-err" : undefined} onChange={(e) => set("body", e.target.value)} placeholder={"One or two sentences.\n\n- Start a line with a dash for a bullet"} />
-              <FieldError id="ann-body-err" message={shown.body} />
-              <p className="m-0 text-xs text-muted-foreground">A blank line starts a new paragraph. Start a line with a dash for a bullet.</p>
+              <Textarea
+                id="ann-body"
+                rows={6}
+                value={draft.body}
+                maxLength={1200}
+                onChange={(e) => set("body", e.target.value)}
+                placeholder={"One or two sentences.\n\n- Start a line with a dash for a bullet"}
+                aria-invalid={Boolean(errors.body) || undefined}
+                aria-describedby={describedBy("body") ?? "ann-body-hint"}
+              />
+              {errors.body ? (
+                <FieldError id="ann-body-error" message={errors.body} />
+              ) : (
+                <p id="ann-body-hint" className="m-0 text-xs text-muted-foreground">
+                  A blank line starts a new paragraph. Start a line with a dash for a bullet.
+                </p>
+              )}
             </div>
 
             <ImagePicker
               images={draft.imageUrls}
               alt={draft.imageAlt}
-              onImagesChange={(imageUrls) => onChange({ ...draft, imageUrls })}
+              onImagesChange={(update) => setDraft((d) => ({ ...d, imageUrls: update(d.imageUrls) }))}
               onAltChange={(imageAlt) => set("imageAlt", imageAlt)}
+              onUploadingChange={(delta) => setUploading((n) => n + delta)}
             />
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="ann-cta-label">Button label (optional)</Label>
-                <Input id="ann-cta-label" value={draft.ctaLabel} maxLength={32} aria-invalid={Boolean(shown.ctaLabel)} aria-describedby={shown.ctaLabel ? "ann-cta-label-err" : undefined} onChange={(e) => set("ctaLabel", e.target.value)} placeholder="See what's new" />
-                <FieldError id="ann-cta-label-err" message={shown.ctaLabel} />
+            <div className="flex flex-col gap-1.5">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="ann-cta-label">Button label (optional)</Label>
+                  <Input
+                    id="ann-cta-label"
+                    value={draft.ctaLabel}
+                    maxLength={32}
+                    onChange={(e) => set("ctaLabel", e.target.value)}
+                    placeholder="See what's new"
+                    aria-invalid={Boolean(errors.ctaLabel) || undefined}
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="ann-cta-url">Button link</Label>
+                  <Input
+                    id="ann-cta-url"
+                    value={draft.ctaUrl}
+                    maxLength={500}
+                    inputMode="url"
+                    autoCapitalize="off"
+                    spellCheck={false}
+                    onChange={(e) => set("ctaUrl", e.target.value)}
+                    placeholder="/releases"
+                    aria-invalid={Boolean(errors.ctaUrl) || undefined}
+                    aria-describedby={describedBy("ctaUrl") ?? "ann-cta-hint"}
+                  />
+                </div>
               </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="ann-cta-url">Button link</Label>
-                <Input id="ann-cta-url" value={draft.ctaUrl} aria-invalid={Boolean(shown.ctaUrl)} aria-describedby="ann-cta-url-hint" onChange={(e) => set("ctaUrl", e.target.value)} placeholder="/releases" />
-                {shown.ctaUrl ? <FieldError id="ann-cta-url-hint" message={shown.ctaUrl} /> : <p id="ann-cta-url-hint" className="m-0 text-xs text-muted-foreground">An app path like /releases, or an https link.</p>}
-              </div>
+              {errors.ctaUrl || errors.ctaLabel ? (
+                <FieldError id="ann-cta-url-error" message={errors.ctaUrl ?? errors.ctaLabel} />
+              ) : (
+                <p id="ann-cta-hint" className="m-0 text-xs text-muted-foreground">
+                  A page in the app like /schedule, or a full https:// link. Without a button, people see Got it.
+                </p>
+              )}
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-3 sm:grid-cols-2">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="ann-ends">Stop showing on (optional)</Label>
-                <Input id="ann-ends" type="datetime-local" value={draft.endsAt} aria-invalid={Boolean(shown.endsAt)} aria-describedby={shown.endsAt ? "ann-ends-err" : undefined} onChange={(e) => set("endsAt", e.target.value)} />
-                <FieldError id="ann-ends-err" message={shown.endsAt} />
+                <div className="flex items-center gap-1">
+                  <Input
+                    id="ann-ends"
+                    type="datetime-local"
+                    value={draft.endsAt}
+                    min={toLocalInput(new Date().toISOString())}
+                    onChange={(e) => set("endsAt", e.target.value)}
+                    aria-invalid={Boolean(errors.endsAt) || undefined}
+                    aria-describedby={describedBy("endsAt")}
+                  />
+                  {draft.endsAt ? (
+                    <Button type="button" variant="ghost" size="icon" aria-label="Clear the end date" onClick={() => set("endsAt", "")}>
+                      <X className="size-4" />
+                    </Button>
+                  ) : null}
+                </div>
+                <FieldError id="ann-ends-error" message={errors.endsAt} />
               </div>
               <div className="flex flex-col justify-end gap-2 pb-1.5">
                 <label className="flex items-center justify-between gap-3 text-sm">
                   Web
-                  <Switch id="ann-web" checked={draft.showOnWeb} onCheckedChange={(v) => set("showOnWeb", v)} />
+                  <Switch
+                    id="ann-web"
+                    checked={draft.showOnWeb}
+                    onCheckedChange={(v) => set("showOnWeb", v)}
+                    aria-invalid={Boolean(errors.platforms) || undefined}
+                  />
                 </label>
                 <label className="flex items-center justify-between gap-3 text-sm">
                   iPhone app
@@ -533,12 +654,10 @@ function Composer({
                 </label>
               </div>
             </div>
-            <FieldError id="ann-platforms-err" message={shown.platforms} />
-            {draft.showOnIos ? (
+            {errors.platforms ? (
+              <FieldError id="ann-web-error" message={errors.platforms} />
+            ) : draft.showOnIos ? (
               <p className="m-0 -mt-2 text-xs text-muted-foreground">The iPhone app starts showing announcements with its next update.</p>
-            ) : null}
-            {draft.imageUrls.length > 0 && !draft.imageAlt.trim() ? (
-              <p className="m-0 -mt-2 text-xs text-muted-foreground">Add an image description so people using screen readers know what the banner shows.</p>
             ) : null}
 
             {isLive ? (
@@ -558,23 +677,31 @@ function Composer({
           </div>
         </div>
 
-        <DialogFooter className="sticky bottom-0 z-10 border-t bg-background px-6 py-4">
-          <Button variant="ghost" onClick={() => setPreviewing(true)} className="sm:mr-auto">
+        {/* One row on phones too: the header's X already cancels, and Preview shrinks to its icon. */}
+        <DialogFooter className="sticky bottom-0 z-10 flex-row items-center border-t bg-background px-4 py-3 sm:px-6 sm:py-4">
+          <Button variant="ghost" onClick={() => setPreviewing(true)} className="mr-auto max-sm:px-2.5" aria-label="Preview as people see it">
             <Eye className="size-4" aria-hidden="true" />
-            Preview as people see it
+            <span className="max-sm:hidden">Preview as people see it</span>
           </Button>
-          <Button variant="ghost" onClick={() => void requestClose()} disabled={saving !== null}>Cancel</Button>
+          {uploading > 0 ? (
+            <span role="status" className="text-xs text-muted-foreground max-sm:hidden">
+              Uploading images…
+            </span>
+          ) : null}
+          <Button variant="ghost" onClick={() => void close()} disabled={saving !== null} className="max-sm:hidden">
+            Cancel
+          </Button>
           {isLive ? (
-            <Button variant="brand" onClick={() => void save(false)} loading={saving === "draft"} disabled={saving !== null}>
+            <Button variant="brand" onClick={() => void save(false)} loading={saving === "draft"} disabled={busy}>
               Save changes
             </Button>
           ) : (
             <>
-              <Button variant="outline" onClick={() => void save(false)} loading={saving === "draft"} disabled={saving !== null}>
-                Save draft
+              <Button variant="outline" onClick={() => void save(false)} loading={saving === "draft"} disabled={busy}>
+                {draft.state === "ended" ? "Save" : "Save draft"}
               </Button>
-              <Button variant="brand" onClick={() => void save(true)} loading={saving === "publish"} disabled={saving !== null}>
-                Publish now
+              <Button variant="brand" onClick={() => void save(true)} loading={saving === "publish"} disabled={busy}>
+                {primaryLabel}
               </Button>
             </>
           )}
@@ -591,37 +718,48 @@ function Composer({
   );
 }
 
-function FieldError({ id, message }: { id: string; message?: string }) {
-  if (!message) return null;
-  return (
-    <p id={id} role="alert" className="m-0 text-xs text-destructive">
-      {message}
-    </p>
-  );
-}
-
 const MAX_IMAGES = 4;
+const MAX_IMAGE_BYTES = 4.5 * 1024 * 1024;
+const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
-/** Banner images: upload, remove, and a shared description for screen readers. */
+/** Banner images: upload, reorder, remove, and a shared description for screen readers. */
 function ImagePicker({
   images,
   alt,
   onImagesChange,
   onAltChange,
+  onUploadingChange,
 }: {
   images: string[];
   alt: string;
-  onImagesChange: (urls: string[]) => void;
+  onImagesChange: (update: (current: string[]) => string[]) => void;
   onAltChange: (alt: string) => void;
+  onUploadingChange: (delta: number) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(0);
 
   async function upload(files: FileList | null) {
     if (!files?.length) return;
-    const picked = Array.from(files).slice(0, MAX_IMAGES - images.length);
-    setUploading(picked.length);
-    const urls: string[] = [];
+    const all = Array.from(files);
+    const room = MAX_IMAGES - images.length - uploading;
+    if (all.length > room) toast.error(`Up to ${MAX_IMAGES} images. Only the first ${room} were added.`);
+    // Check type and size here so a wrong file fails at once instead of after an upload.
+    const picked = all.slice(0, Math.max(0, room)).filter((file) => {
+      if (!IMAGE_TYPES.includes(file.type)) {
+        toast.error(`${file.name}: use a JPEG, PNG, WebP, or GIF`);
+        return false;
+      }
+      if (file.size > MAX_IMAGE_BYTES) {
+        toast.error(`${file.name}: images must be under 4.5 MB`);
+        return false;
+      }
+      return true;
+    });
+    if (inputRef.current) inputRef.current.value = "";
+    if (!picked.length) return;
+    setUploading((n) => n + picked.length);
+    onUploadingChange(picked.length);
     for (const file of picked) {
       const body = new FormData();
       body.append("file", file);
@@ -629,20 +767,30 @@ function ImagePicker({
         const res = await fetch("/api/announcements/images", { method: "POST", body });
         const json = (await res.json().catch(() => null)) as { url?: string; error?: string } | null;
         if (!res.ok || !json?.url) throw new Error(json?.error ?? "Upload failed");
-        urls.push(json.url);
+        const url = json.url;
+        onImagesChange((current) => (current.length < MAX_IMAGES ? [...current, url] : current));
       } catch (e) {
         toast.error(`${file.name}: ${e instanceof Error ? e.message : "Upload failed"}`);
       } finally {
         setUploading((n) => n - 1);
+        onUploadingChange(-1);
       }
     }
-    if (urls.length) onImagesChange([...images, ...urls]);
-    if (inputRef.current) inputRef.current.value = "";
+  }
+
+  function moveEarlier(index: number) {
+    onImagesChange((current) => {
+      const moved = current[index];
+      if (moved === undefined || index < 1) return current;
+      const next = current.filter((_, i) => i !== index);
+      next.splice(index - 1, 0, moved);
+      return next;
+    });
   }
 
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="flex items-baseline justify-between">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3">
         <Label>Banner images (optional)</Label>
         <span className="text-xs text-muted-foreground">Wide, about 2:1. Up to {MAX_IMAGES}; more than one swipes.</span>
       </div>
@@ -650,12 +798,24 @@ function ImagePicker({
         {images.map((src, i) => (
           <div key={src} className="group relative aspect-[2/1] w-32 overflow-hidden rounded-lg border bg-muted">
             <Image src={src} alt="" fill sizes="128px" className="object-cover" />
+            {i > 0 ? (
+              <Button
+                type="button"
+                variant="secondary"
+                size="icon-xs"
+                aria-label={`Move image ${i + 1} earlier`}
+                onClick={() => moveEarlier(i)}
+                className="absolute left-1 top-1 rounded-full bg-background/90 shadow-sm"
+              >
+                <ArrowLeft />
+              </Button>
+            ) : null}
             <Button
               type="button"
               variant="secondary"
               size="icon-xs"
               aria-label={`Remove image ${i + 1}`}
-              onClick={() => onImagesChange(images.filter((_, j) => j !== i))}
+              onClick={() => onImagesChange((current) => current.filter((url) => url !== src))}
               className="absolute right-1 top-1 rounded-full bg-background/90 shadow-sm"
             >
               <X />
@@ -680,21 +840,29 @@ function ImagePicker({
         <input
           ref={inputRef}
           type="file"
-          accept="image/jpeg,image/png,image/webp,image/gif"
+          accept={IMAGE_TYPES.join(",")}
           multiple
           hidden
           onChange={(e) => void upload(e.target.files)}
         />
       </div>
       {images.length ? (
-        <Input
-          aria-label="Image description"
-          className="mt-1"
-          value={alt}
-          maxLength={200}
-          onChange={(e) => onAltChange(e.target.value)}
-          placeholder="Image description, read aloud by screen readers"
-        />
+        <>
+          <Input
+            id="ann-image-alt"
+            aria-label="Image description"
+            className="mt-1"
+            value={alt}
+            maxLength={200}
+            onChange={(e) => onAltChange(e.target.value)}
+            placeholder="Image description, read aloud by screen readers"
+          />
+          {!alt.trim() ? (
+            <p className="m-0 text-xs text-muted-foreground">
+              Add a description so people using screen readers know what the banner shows.
+            </p>
+          ) : null}
+        </>
       ) : null}
     </div>
   );
