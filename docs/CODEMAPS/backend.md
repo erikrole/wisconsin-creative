@@ -169,7 +169,7 @@
 | `src/lib/csv.ts` | 17 |
 | `src/lib/db.ts` | 32 |
 | `src/lib/editor-snippets.ts` | 52 |
-| `src/lib/email.ts` | 129 |
+| `src/lib/email.ts` | 142 |
 | `src/lib/env.ts` | 140 |
 | `src/lib/environment-safety.ts` | 17 |
 | `src/lib/equipment-guidance.ts` | 127 |
@@ -327,6 +327,7 @@
 ### `/api/allowed-emails`
 
 - `/api/allowed-emails/[id]`
+- `/api/allowed-emails/[id]/send`
 - `/api/allowed-emails/preview`
 - `/api/allowed-emails`
 

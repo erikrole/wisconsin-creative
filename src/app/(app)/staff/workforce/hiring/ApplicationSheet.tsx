@@ -153,6 +153,27 @@ export default function ApplicationSheet({ applicationId, onClose, onChanged, on
     onChanged();
   }
 
+  async function emailInvite(): Promise<void> {
+    if (!detail?.invite) return;
+    const confirmed = await confirm({
+      title: "Email login link",
+      message: `Send ${detail.applicant.name} an email with the app login link? It goes to the address the invite was created for.`,
+      confirmLabel: "Send email",
+    });
+    if (!confirmed) return;
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/allowed-emails/${detail.invite.id}/send`, { method: "POST" });
+      if (handleAuthRedirect(res)) return;
+      if (!res.ok) throw new Error(await parseErrorMessage(res, "Could not send the email."));
+      toast.success("Login link emailed");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not send the email.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   type InviteOptions = { linkExistingUser?: boolean; linkUserId?: string; confirmNewAccount?: boolean };
   async function createInvite(options: InviteOptions = {}): Promise<void> {
     if (!detail) return;
@@ -365,12 +386,21 @@ export default function ApplicationSheet({ applicationId, onClose, onChanged, on
                 {detail.applicant.hiredUserId ? (
                   <p className="text-sm text-muted-foreground">Linked to a student account.</p>
                 ) : detail.invite ? (
-                  <p className="text-sm text-muted-foreground">
-                    Invite sent. It links automatically when they register.{" "}
-                    <Link href="/staff/onboarding-status" className="underline underline-offset-2">
-                      Onboarding status
-                    </Link>
-                  </p>
+                  <>
+                    <p className="text-sm text-muted-foreground">
+                      Invite created. It links automatically when they register.{" "}
+                      <Link href="/staff/onboarding-status" className="underline underline-offset-2">
+                        Onboarding status
+                      </Link>
+                    </p>
+                    {!detail.invite.claimed && (
+                      <div>
+                        <Button variant="outline" disabled={busy} onClick={() => void emailInvite()}>
+                          Email login link
+                        </Button>
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <>
                     <p className="text-sm text-muted-foreground">

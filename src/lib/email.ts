@@ -126,3 +126,16 @@ export function escapeEmailHtml(str: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 }
+
+/** Invitation email: tells a pre-approved person where to sign in and what happens next. */
+export function buildInviteEmail({ name, loginUrl }: { name?: string | null; loginUrl: string }): string {
+  const greeting = name ? `Hi ${escapeEmailHtml(name.split(/\s+/)[0] ?? name)},` : "Hi,";
+  return buildEmailDocument({
+    title: "You're invited to Wisconsin Creative",
+    content: `
+  <p style="font-size: 15px; line-height: 1.5; color: ${EMAIL_THEME.body};">${greeting}</p>
+  <p style="font-size: 15px; line-height: 1.5; color: ${EMAIL_THEME.body};">Your Wisconsin Creative account is ready to set up. Sign in with this email address, choose a password, and finish the short Welcome setup.</p>
+  <p style="margin: 24px 0;"><a href="${escapeEmailHtml(loginUrl)}" style="background-color: ${EMAIL_THEME.brand}; color: ${EMAIL_THEME.onBrand}; padding: 10px 18px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 600;">Set up my account</a></p>
+  <p style="font-size: 13px; color: ${EMAIL_THEME.muted};">Or open this link: ${escapeEmailHtml(loginUrl)}</p>`.trim(),
+  });
+}

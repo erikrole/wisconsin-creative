@@ -1,6 +1,20 @@
 [
   {
     "date": "2026-10-18",
+    "title": "Email the login link to new people",
+    "type": "improvement",
+    "summary": "Pending invites and new hires can now be sent an email with their login link, instead of you copying it by hand.",
+    "details": [
+      "Onboarding Status has an Email login link action on every invite that hasn't been claimed yet.",
+      "The hiring application sheet has the same button once a hire's invite exists.",
+      "Nothing is sent until you press the button and confirm, and each send is recorded.",
+      "If email isn't set up on the site yet, you get a clear message and can still copy the link."
+    ],
+    "platforms": ["Web"],
+    "pr": 486
+  },
+  {
+    "date": "2026-10-18",
     "title": "A fresher Staff section",
     "type": "improvement",
     "summary": "Staff, Workforce, Hiring and Onboarding have a new look, and Staff now shows who is working today.",

@@ -127,6 +127,7 @@
 - `/api/admin/fix-today` -> `src/app/api/admin/fix-today/route.ts`
 - `/api/admin/role-preview` -> `src/app/api/admin/role-preview/route.ts`
 - `/api/allowed-emails/[id]` -> `src/app/api/allowed-emails/[id]/route.ts`
+- `/api/allowed-emails/[id]/send` -> `src/app/api/allowed-emails/[id]/send/route.ts`
 - `/api/allowed-emails/preview` -> `src/app/api/allowed-emails/preview/route.ts`
 - `/api/allowed-emails` -> `src/app/api/allowed-emails/route.ts`
 - `/api/assets/[id]/accessories` -> `src/app/api/assets/[id]/accessories/route.ts`

@@ -27,7 +27,7 @@ import { useFetch } from "@/hooks/use-fetch";
 import { classifyError, handleAuthRedirect, isAbortError, parseErrorMessage } from "@/lib/errors";
 import { formatDateFull, formatRelativeTime } from "@/lib/format";
 import { PROFILE_FIELD_LABELS } from "@/lib/profile-completion";
-import { AlertTriangle, ClipboardList, Copy, ExternalLink, Mail, RefreshCw, Trash2, UserPlus, WifiOff } from "lucide-react";
+import { AlertTriangle, ClipboardList, Copy, ExternalLink, Mail, RefreshCw, Send, Trash2, UserPlus, WifiOff } from "lucide-react";
 
 type Role = "ADMIN" | "STAFF" | "STUDENT" | "COLLABORATOR";
 type StatusFilter = "all" | "pending" | "stale" | "claimed" | "setup" | "ready";
@@ -124,6 +124,7 @@ export default function OnboardingStatusPage() {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [emailingId, setEmailingId] = useState<string | null>(null);
   const now = useMemo(() => new Date(), []);
 
   const {
@@ -241,6 +242,30 @@ export default function OnboardingStatusPage() {
       toast.success("App login link copied");
     } catch {
       toast.error("Could not copy the link. Use Open app login and copy the address instead.");
+    }
+  }
+
+  async function emailInvite(row: AllowedEmail) {
+    const ok = await confirm({
+      title: "Email login link",
+      message: `Send ${row.email} an email with the app login link?`,
+      confirmLabel: "Send email",
+    });
+    if (!ok) return;
+    setEmailingId(row.id);
+    try {
+      const response = await fetch(`/api/allowed-emails/${row.id}/send`, { method: "POST" });
+      if (handleAuthRedirect(response, "/staff/onboarding-status")) return;
+      if (!response.ok) {
+        toast.error(await parseErrorMessage(response, "Could not send the email"));
+        return;
+      }
+      toast.success(`Login link emailed to ${row.email}`);
+    } catch (error) {
+      if (isAbortError(error)) return;
+      toast.error(classifyError(error) === "network" ? "You\u2019re offline. Check your connection." : "Could not send the email");
+    } finally {
+      setEmailingId(null);
     }
   }
 
@@ -382,6 +407,8 @@ export default function OnboardingStatusPage() {
                   row={row.invite}
                   now={now}
                   deleting={deletingId === row.invite.id}
+                  emailing={emailingId === row.invite.id}
+                  onEmail={() => emailInvite(row.invite)}
                   onCopy={copyLoginLink}
                   onRemove={() => removeInvite(row.invite)}
                   loginHref={loginPath()}
@@ -401,6 +428,8 @@ function InviteRow({
   row,
   now,
   deleting,
+  emailing,
+  onEmail,
   onCopy,
   onRemove,
   loginHref,
@@ -408,6 +437,8 @@ function InviteRow({
   row: AllowedEmail & { onboardingStatus: OnboardingStatus };
   now: Date;
   deleting: boolean;
+  emailing: boolean;
+  onEmail: () => void;
   onCopy: () => void;
   onRemove: () => void;
   loginHref: string;
@@ -444,6 +475,7 @@ function InviteRow({
         <OperationalRowActions label={`Actions for ${row.email}`}>
           {!row.claimedAt ? (
             <>
+              <DropdownMenuItem onClick={onEmail} disabled={emailing}><Send className="size-4" />{emailing ? "Sending..." : "Email login link"}</DropdownMenuItem>
               <DropdownMenuItem onClick={onCopy}><Copy className="size-4" />Copy app login link</DropdownMenuItem>
               <DropdownMenuItem asChild><Link href={loginHref} target="_blank" rel="noreferrer"><ExternalLink className="size-4" />Open app login</Link></DropdownMenuItem>
               <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={onRemove} disabled={deleting}>
