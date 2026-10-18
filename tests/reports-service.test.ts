@@ -214,6 +214,30 @@ describe("reports service", () => {
     expect(rawSqlText).toContain("\"status\" IN ('OPEN', 'COMPLETED')");
   });
 
+  it("keeps one Madison day on the checkout chart across daylight saving time", async () => {
+    vi.mocked(db.booking.count).mockResolvedValue(0);
+    vi.mocked(db.booking.findMany).mockResolvedValue([]);
+    vi.mocked(db.booking.groupBy).mockResolvedValue([]);
+    vi.mocked(db.user.findMany).mockResolvedValue([]);
+
+    // The window starts late on March 7. A one-day step that keeps that clock
+    // time drops March 9 here, and the same step in UTC drops March 8.
+    vi.setSystemTime(new Date("2026-03-09T05:30:00.000Z"));
+    vi.mocked(db.$queryRaw).mockResolvedValue([{ date: "2026-03-08", count: 4n }]);
+    const spring = await getCheckoutReport(1);
+    expect(spring.dailyTrend).toEqual([
+      { date: "2026-03-07", count: 0 },
+      { date: "2026-03-08", count: 4 },
+      { date: "2026-03-09", count: 0 },
+    ]);
+
+    // A 24-hour window that stays on November 1 in Chicago. UTC +24h repeats that day.
+    vi.setSystemTime(new Date("2026-11-02T05:30:00.000Z"));
+    vi.mocked(db.$queryRaw).mockResolvedValue([]);
+    const fall = await getCheckoutReport(1);
+    expect(fall.dailyTrend.map((point) => point.date)).toEqual(["2026-11-01"]);
+  });
+
   it("counts only outstanding gear in the overdue report", async () => {
     vi.mocked(db.booking.findMany).mockResolvedValue(bookingRows([
       {

@@ -18,6 +18,23 @@
   },
   {
     "date": "2026-10-18",
+    "title": "Checkout days and kit privacy",
+    "type": "fixes",
+    "summary": "The checkout activity chart keeps every Madison day when the clocks change. A collaborator opening a kit no longer sees who currently has each piece.",
+    "details": [
+      "Checkout activity includes the Madison day the clocks spring forward, and does not repeat the day they fall back.",
+      "A collaborator can still see whether a kit item is out and when that hold ends.",
+      "The person's name and the booking title stay off the collaborator kit response.",
+      "Staff and admin kit detail still names who has the gear."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 507
+  },
+  {
+    "date": "2026-10-18",
     "title": "Away game travel list",
     "type": "feature",
     "summary": "An away game on iPhone lists who is traveling. Adding or removing someone stays on the website.",
