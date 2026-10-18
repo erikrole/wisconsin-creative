@@ -92,6 +92,7 @@ New cycle: get the department's updated workbook, delete every tab but the new c
 
 ## Change Log
 
+- 2026-10-18: **Order table.** `src/lib/gear-picks/order.ts` (`buildOrderPlan`) rolls each participant's standard issue and core kit (from fit and profile sizes; shoes use the shoe size) and saved picks into one quantity per item, color and size, shown in the Order section of `/gear/admin`. People with no size show as "Size needed". Student kits are not included until their items are chosen. The standard-issue shoe is not in the shop catalog, so it has no price yet.
 - 2026-10-18: **Admin edits student sizes.** New admin action `setStudentSizes` (permission `gear_picks` manage) updates the student's profile top and shoe size from the Students table (pencil icon) and writes a `set_student_sizes` audit entry with before and after. Sizes stay on the profile, so the change shows there too.
 - 2026-10-18: **Seeded roster.** Migration `0183_ua_seed_students` adds last year's 14 students to the 2027-28 cycle by matching active student accounts on exact name; unmatched names are skipped and added by hand in the Students section. Shoe styles are deferred; admins editing others' sizes is approved but not built yet.
 - 2026-10-18: **Needs attention.** `/gear/admin` opens with an ordered list from `src/lib/gear-picks/attention.ts` (over budget, students missing a size, placeholder budget, picks not launched or staff not submitted, no students), each linking to its section. Empty state: "Nothing needs attention."

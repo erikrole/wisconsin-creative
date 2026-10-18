@@ -20,6 +20,7 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AllotmentOverview } from "./AllotmentOverview";
+import { OrderPlan } from "./OrderPlan";
 import { KitPills } from "./KitPills";
 import { NeedsAttention } from "./NeedsAttention";
 import { StudentsSection } from "./StudentsSection";
@@ -197,6 +198,8 @@ export function GearPicksAdmin() {
         pending={pending}
         onApply={applyChange}
       />
+
+      <OrderPlan participants={data.participants} />
 
       <section aria-labelledby="gear-admin-totals" className="mb-6">
         <h2 id="gear-admin-totals" className="mb-2 text-base font-semibold">Totals by item, color, and size</h2>
