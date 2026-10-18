@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
+import { reservationCandidatesFromPayload } from "@/lib/a11y-resilience";
 import { cn } from "@/lib/utils";
 import { EQUIPMENT_SECTIONS, classifyAssetType } from "@/lib/equipment-sections";
 import { getUnsatisfiedRequirements } from "@/lib/equipment-guidance";
@@ -401,7 +402,11 @@ export function BookingWizard() {
       eventIds: form.selectedEvents.map((event) => event.id),
     };
   }, [form.custodyScope, form.endsAt, form.locationId, form.requester, form.selectedEvents, form.startsAt, form.title, meData?.id]);
-  const { data: reservationCandidates = [] } = useQuery({
+  const {
+    data: reservationCandidates = [],
+    isError: candidatesError,
+    refetch: refetchCandidates,
+  } = useQuery({
     queryKey: ["reservationCandidates", candidatePayload],
     enabled: candidatePayload !== null,
     staleTime: 10_000,
@@ -413,7 +418,7 @@ export function BookingWizard() {
         signal,
       });
       if (handleAuthRedirect(res)) return [];
-      if (!res.ok) return [];
+      if (!res.ok) throw new Error("Could not check for an existing reservation");
       const json = await parseJsonSafely<{
         data?: Array<{
           id: string;
@@ -424,7 +429,14 @@ export function BookingWizard() {
           disposition: "will_consolidate" | "review_differences" | "pickup_started";
         }>;
       }>(res);
-      return json?.data ?? [];
+      return reservationCandidatesFromPayload(json) as Array<{
+        id: string;
+        title: string;
+        refNumber: string | null;
+        serializedItemCount: number;
+        bulkQuantity: number;
+        disposition: "will_consolidate" | "review_differences" | "pickup_started";
+      }>;
     },
   });
   const exactCandidate = reservationCandidates.find(
@@ -952,6 +964,18 @@ export function BookingWizard() {
             {reuseSource.custodyScope === "SHARED"
               ? `Copied “${reuseSource.title}”. Choose this week’s event; pickup and return follow the same timing as last time.`
               : `Copied “${reuseSource.title}”${reuseSource.requesterName ? ` for ${reuseSource.requesterName}` : ""}. Choose this week’s event; pickup and return follow the same timing as last time.`}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {candidatesError && (
+        <Alert variant="destructive" className="mb-5">
+          <AlertCircleIcon />
+          <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+            <span>Could not check for an existing reservation on this event.</span>
+            <Button variant="outline" className="h-10 shrink-0" onClick={() => void refetchCandidates()}>
+              Try again
+            </Button>
           </AlertDescription>
         </Alert>
       )}

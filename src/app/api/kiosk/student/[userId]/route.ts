@@ -6,6 +6,7 @@ import { isGlobalKioskCollaborator } from "@/lib/collaborator-access";
 import { collaboratorPolicyActorSelect } from "@/lib/services/collaborator-policies";
 import { displayBookingTitle } from "@/lib/booking-display-title";
 import { evaluateKioskCheckoutAllowance } from "@/lib/services/kiosk-checkout-allowance";
+import { startOfDayInAppTz } from "@/lib/app-time";
 
 /** Get a student's active checkouts, pending pickups, and upcoming reservations */
 export const GET = withKiosk<{ userId: string }>(async (req, { kiosk, params }) => {
@@ -38,6 +39,8 @@ export const GET = withKiosk<{ userId: string }>(async (req, { kiosk, params }) 
   }
 
   const now = new Date();
+  const todayStart = startOfDayInAppTz(now);
+  const tomorrowStart = startOfDayInAppTz(now, 1);
 
   // This hub lists the person's own custody and pickups. SHARED travel-case
   // bookings keep a requester only as compatibility metadata (D-061), so they
@@ -201,6 +204,7 @@ export const GET = withKiosk<{ userId: string }>(async (req, { kiosk, params }) 
       })),
       endsAt: c.endsAt,
       isOverdue: c.endsAt < now,
+      isDueToday: c.endsAt >= todayStart && c.endsAt < tomorrowStart,
     })),
     pendingPickups: [
       // `kind` tells the hub which pickups are still reservations (their

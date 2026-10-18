@@ -5,6 +5,7 @@ import { HttpError, ok } from "@/lib/http";
 import { requirePermission, requirePermissionOrCollaboratorCapability } from "@/lib/rbac";
 import { createBooking, listBookings } from "@/lib/services/bookings";
 import { bookingInclude } from "@/lib/services/bookings-helpers";
+import { startOfDayInAppTz } from "@/lib/app-time";
 import { parseDateRange } from "@/lib/time";
 import { createReservationSchema, sanitizeBookingFields } from "@/lib/validation";
 import { createReservationLifecycleNotification } from "@/lib/services/notifications";
@@ -46,8 +47,9 @@ export const GET = withAuth(async (req, { user }) => {
   const { searchParams } = new URL(req.url);
   const filterParam = searchParams.get("filter");
   const now = new Date();
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
+  // Same Madison day the checkout list and dashboard counts use.
+  const todayStart = startOfDayInAppTz(now);
+  const todayEnd = startOfDayInAppTz(now, 1);
   const extraWhere: Prisma.BookingWhereInput | undefined =
     filterParam === "overdue"
       ? { status: BookingStatus.BOOKED, endsAt: { lt: now } }

@@ -1,7 +1,23 @@
 import { describe, expect, it } from "vitest";
-import { getBatteryCompatibilitySummaries } from "@/lib/battery-compatibility";
+import { BATTERY_CAMERA_SEARCH_TERMS, getBatteryCompatibilitySummaries } from "@/lib/battery-compatibility";
+
+const ACCEPTED_CAMERA_WORDS = ["camera", "cameras", "camcorder", "cinema", "mirrorless", "dslr", "body", "bodies"] as const;
 
 describe("getBatteryCompatibilitySummaries", () => {
+  it("keeps the camera prefilter a superset of every accepted camera word", () => {
+    for (const word of ACCEPTED_CAMERA_WORDS) {
+      expect(
+        BATTERY_CAMERA_SEARCH_TERMS.some((term) => word.includes(term)),
+        word,
+      ).toBe(true);
+      const summaries = getBatteryCompatibilitySummaries({
+        cameraAssets: [{ brand: "Sony", model: "FX3", type: word === "bodies" ? "Bodies" : word }],
+        bulkSkus: [{ id: "sony-battery", name: "Sony Battery", availableQuantity: 1 }],
+      });
+      expect(summaries.some((summary) => summary.ruleId === "sony-np-fz100"), word).toBe(true);
+    }
+  });
+
   it("warns when selected camera model has fewer compatible batteries than threshold", () => {
     const alerts = getBatteryCompatibilitySummaries({
       cameraAssets: [

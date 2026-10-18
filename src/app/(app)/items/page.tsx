@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { RowSelectionState, VisibilityState } from "@tanstack/react-table";
@@ -30,10 +31,11 @@ import {
 } from "@/components/ui/table";
 import { type Asset, getColumns } from "./columns";
 import { DataTable, type Density } from "./data-table";
-import { NewItemSheet } from "./new-item-sheet";
-import { GapWizardDialog } from "./gap-wizard-dialog";
-import { CleanupWizardDialog } from "./cleanup-wizard-dialog";
 import type { CleanupWizardKind } from "@/lib/services/item-cleanup-wizard";
+
+const NewItemSheet = dynamic(() => import("./new-item-sheet").then((mod) => mod.NewItemSheet));
+const GapWizardDialog = dynamic(() => import("./gap-wizard-dialog").then((mod) => mod.GapWizardDialog));
+const CleanupWizardDialog = dynamic(() => import("./cleanup-wizard-dialog").then((mod) => mod.CleanupWizardDialog));
 import { normalizeItemsSorting, useUrlFilters } from "./hooks/use-url-filters";
 import { useItemsQuery, type BulkItem } from "./hooks/use-items-query";
 import {
@@ -63,6 +65,7 @@ import {
 import { FadeUp } from "@/components/ui/motion";
 import { OperationalMetricCard, OperationalPartialResultsAlert } from "@/components/OperationalFeedback";
 import { OperationalStatusRail, type OperationalStatusRailItem } from "@/components/OperationalStatusRail";
+import { restoreDialogFocus } from "@/lib/a11y-resilience";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { buildBulkRowId, getItemHref, parseBulkRowId } from "./lib/item-href";
 import { compareItemAssetTags } from "@/lib/item-asset-tag-sort";
@@ -150,6 +153,7 @@ export default function ItemsPage() {
     try { localStorage.setItem("items-density", density); } catch { /* ignore */ }
   }, [density, preferencesLoaded]);
   const [retireTarget, setRetireTarget] = useState<Asset | null>(null);
+  const retireOpenerRef = useRef<HTMLElement | null>(null);
   const [actionBusy, setActionBusy] = useState(false);
   const busyRef = useRef(false);
   // Per-asset lock so rapid star clicks don't fire racing toggles that desync
@@ -485,7 +489,12 @@ export default function ItemsPage() {
         }
         break;
       case "retire":
-        setRetireTarget(asset);
+        requestAnimationFrame(() => {
+          const opener = document.activeElement;
+          retireOpenerRef.current =
+            opener instanceof HTMLElement && opener !== document.body ? opener : null;
+          setRetireTarget(asset);
+        });
         break;
     }
   }, [reloadItems, router]);
@@ -609,7 +618,11 @@ export default function ItemsPage() {
       <div className="mx-auto w-full max-w-screen-2xl">
       {/* Single-item retire confirmation */}
       <AlertDialog open={!!retireTarget} onOpenChange={(open) => { if (!open) setRetireTarget(null); }}>
-        <AlertDialogContent>
+        <AlertDialogContent
+          onCloseAutoFocus={(event) => {
+            restoreDialogFocus(retireOpenerRef.current, event);
+          }}
+        >
           <AlertDialogHeader>
             <AlertDialogTitle>Retire {retireTarget?.assetTag}?</AlertDialogTitle>
             <AlertDialogDescription>

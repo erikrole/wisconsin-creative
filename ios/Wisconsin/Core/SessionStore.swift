@@ -102,6 +102,7 @@ final class SessionStore {
                       authSessionBoundary.owns(requestBoundary),
                       self.currentUser != nil else { return }
                 authSessionBoundary.advance()
+                BrandAssetDownload.removeTemporaryFiles()
                 self.authRequests.invalidate()
                 self.isRestoring = false
                 self.isInitialSessionValidationInFlight = false
@@ -287,6 +288,7 @@ final class SessionStore {
         // request so it cannot repopulate the signed-out shell afterward.
         authRequests.invalidate()
         authSessionBoundary.advance()
+        BrandAssetDownload.removeTemporaryFiles()
         SessionSnapshot.clear()
         didSeedFromSnapshot = false
         isInitialSessionValidationInFlight = false
@@ -310,6 +312,7 @@ final class SessionStore {
     func clearDeletedAccountLocally() async {
         authRequests.invalidate()
         authSessionBoundary.advance()
+        BrandAssetDownload.removeTemporaryFiles()
         SessionSnapshot.clear()
         didSeedFromSnapshot = false
         isInitialSessionValidationInFlight = false
@@ -411,6 +414,7 @@ final class SessionStore {
         } catch APIError.unauthorized {
             guard authRequests.owns(requestToken) else { return }
             authSessionBoundary.advance()
+            BrandAssetDownload.removeTemporaryFiles()
             authRequests.invalidate()
             SessionSnapshot.clear()
             currentUser = nil
@@ -461,6 +465,7 @@ final class SessionStore {
             // Confirmed revoked/expired session — drop the optimistic shell and
             // send the user to Login.
             authSessionBoundary.advance()
+            BrandAssetDownload.removeTemporaryFiles()
             authRequests.invalidate()
             isRestoring = false
             isOffline = false
@@ -487,6 +492,7 @@ final class SessionStore {
         notice = nil
         if currentUser?.id != user.id {
             authSessionBoundary.advance()
+            BrandAssetDownload.removeTemporaryFiles()
         }
         if currentUser != user {
             currentUser = user

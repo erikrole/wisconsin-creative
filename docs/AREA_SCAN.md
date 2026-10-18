@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Scan
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-09-20
+- Last Updated: 2026-10-17
 - Status: Web surface removed; native iOS owns lookup and kiosk owns custody scans
 - Decision Refs: D-028, D-040
 
@@ -52,6 +52,7 @@ Kiosk execution endpoints are documented in `docs/AREA_KIOSK.md`.
 
 | Date | Change |
 |---|---|
+| 2026-10-17 | Checkout scan progress (`GET /api/checkouts/{id}/scan-status`) now requires checkout view. Students and private collaborators only receive scan codes for their own checkouts. Staff and admins can still follow any return. |
 | 2026-09-20 | Removed the unreferenced app-side scan service functions (`startScanSession`, `recordScan`, `completeCheckoutScan`, `completeCheckinScan`) and their tests; every scan now runs through the kiosk endpoints in `docs/AREA_KIOSK.md`. The kiosk-gated 403 stubs stay as the app contract; `createAdminOverride` is the only remaining export. |
 | 2026-08-03 | Removed the standalone web `/scan` route, browser camera decoder, web navigation/search/breadcrumb entry points, and embedded camera triggers from booking and item intake surfaces. Native iOS keeps lookup, kiosk keeps custody, and `/reports/scans` keeps history. |
 | 2026-07-10 | Scan item preview drawer: the Current custody label unifies to the sanctioned small-uppercase label style. Visual only. |

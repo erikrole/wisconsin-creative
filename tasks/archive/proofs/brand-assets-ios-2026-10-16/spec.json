@@ -1,0 +1,42 @@
+{
+  "title": "Brand assets on iPhone",
+  "eyebrow": "iOS · Wisconsin Creative",
+  "lede": "Internal roles can open a logo or PDF from Browse. Folder create, upload, and version restore stay on the web.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "No matched capture",
+      "note": "This environment has no Xcode and no iPhone 18 Pro Max simulator, so there is no before or after screenshot. The comparison is the source contract, not a picture of the screen."
+    }
+  ],
+  "changes": [
+    {
+      "h": "Browse can open the file library",
+      "was": "Brand assets lived on the web. The phone could read Guides, which are Markdown, and had no way to open a logo or PDF at a venue.",
+      "now": "Browse adds Brand assets for every role except collaborator. The list is the current folder, with search and a Name, Recent, or Type sort."
+    },
+    {
+      "h": "A logo or PDF opens on the phone",
+      "was": "Opening the file meant using the website.",
+      "now": "An image, SVG, or PDF at or under 40 MB opens in the file page. Larger files, video, fonts, and other types share from the authenticated download. A font says sharing does not install it."
+    },
+    {
+      "h": "Uploads stay on the web",
+      "was": "The website can create folders, upload, favorite, and restore an older version.",
+      "now": "The phone only reads the list and the current file. A file with no version says uploading stays on the web."
+    }
+  ],
+  "verification": [
+    "Vitest: 773 files passed, 5798 tests passed, 1 skipped. The public release-note tests passed again after the new entry.",
+    "<code>npm run build:app</code> compiled successfully, including typecheck, and generated 286 static pages.",
+    "iOS drift check found no anti-patterns across 109 Swift files.",
+    "iOS audit inventory reports 68 covered surfaces and no gaps.",
+    "TypeScript <code>tsc --noEmit</code> passed. ESLint passed on the new source-contract test. <code>git diff --check</code> passed.",
+    "Codemap check is current after regenerating the test count and the items-area test list.",
+    "xcodebuild, <code>npm run ios:project:check</code>, and an authenticated iPhone 18 Pro Max walkthrough were not run here."
+  ],
+  "notes": [
+    "No screenshot pair exists. A trustworthy before would be the current Browse menu on iPhone 18 Pro Max, and the after would be the same menu plus Brand assets, then a folder, a logo, and a PDF. Those captures need a Mac with the iOS 26 simulator.",
+    "The checked-in Xcode project lists the new Swift files by hand. <code>xcodegen generate</code> on a Mac is the proof those ids still match."
+  ]
+}

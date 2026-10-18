@@ -69,48 +69,49 @@ final class EventCatalogDetailModel {
     private func loadLinks(token: UUID) async {
         isLoadingLinks = true
         linksError = nil
-        hiddenBookingCount = 0
         defer {
             if loads.owns(token) { isLoadingLinks = false }
         }
 
-        let center: EventCommandCenter?
+        var sourceError: String?
+        var center: EventCommandCenter?
+        var teamVisible = false
         if includeTeamGear {
             do {
                 center = try await APIClient.shared.eventCommandCenter(id: eventId)
-                showsTeamGear = true
-            } catch let error as APIError {
-                center = nil
-                showsTeamGear = false
-                if !Self.isExpectedGearRefusal(error), loads.owns(token) {
-                    linksError = error.localizedDescription
-                }
-            } catch is CancellationError {
-                return
+                teamVisible = true
             } catch {
-                center = nil
-                showsTeamGear = false
-                if loads.owns(token) { linksError = error.localizedDescription }
+                guard loads.owns(token), !Task.isCancelled else { return }
+                if let apiError = error as? APIError, Self.isExpectedGearRefusal(apiError) {
+                    // Permission withdrawal must not retain previously visible
+                    // team data while the personal source is retried.
+                    bookings = []
+                    fallbackRows = []
+                    showsTeamGear = false
+                } else {
+                    sourceError = error.localizedDescription
+                }
             }
-        } else {
-            center = nil
-            showsTeamGear = false
         }
         guard loads.owns(token), !Task.isCancelled else { return }
 
-        let shifts: [MyShift]
+        var shifts: [MyShift] = []
         do {
             shifts = try await APIClient.shared.myShifts(eventId: eventId)
-        } catch is CancellationError {
-            return
         } catch {
-            shifts = []
-            if loads.owns(token), linksError == nil {
-                linksError = error.localizedDescription
-            }
+            guard loads.owns(token), !Task.isCancelled else { return }
+            sourceError = sourceError ?? error.localizedDescription
         }
         guard loads.owns(token), !Task.isCancelled else { return }
+        // A failed refresh is not proof that previously known bookings went
+        // away. Keep the last coherent links and label them as stale.
+        if let sourceError, !bookings.isEmpty || !fallbackRows.isEmpty {
+            linksError = "Couldn't refresh bookings. Showing the previous results. \(sourceError)"
+            return
+        }
         personalShifts = shifts
+        showsTeamGear = teamVisible
+        linksError = sourceError
 
         var ids: [String] = []
         var seen = Set<String>()
@@ -127,7 +128,7 @@ final class EventCatalogDetailModel {
 
         let visibleIds = Array(ids.prefix(eventCatalogBookingFetchCap))
         hiddenBookingCount = max(0, ids.count - visibleIds.count)
-        fallbackRows = fallbackRows(plans: center?.gearPlans ?? [], shifts: shifts, ids: visibleIds)
+        let summaries = eventBookingFallbackRows(plans: center?.gearPlans ?? [], shifts: shifts, ids: visibleIds)
 
         var loaded: [Booking] = []
         var failures = 0
@@ -139,50 +140,19 @@ final class EventCatalogDetailModel {
                 return
             } catch {
                 failures += 1
+                if let apiError = error as? APIError, Self.isExpectedGearRefusal(apiError) { continue }
+                if let previous = bookings.first(where: { $0.id == id }) { loaded.append(previous) }
             }
         }
         guard loads.owns(token), !Task.isCancelled else { return }
         bookings = loaded.sorted { $0.startsAt < $1.startsAt }
-        if failures > 0 && linksError == nil && loaded.count < visibleIds.count {
+        let loadedIds = Set(loaded.map(\.id))
+        fallbackRows = summaries.filter { !loadedIds.contains($0.id) }
+        if failures > 0 && linksError == nil {
             linksError = failures == visibleIds.count
                 ? "Couldn't load the linked bookings."
                 : "Some linked bookings didn't load."
         }
-    }
-
-    private func fallbackRows(plans: [EventGearPlan], shifts: [MyShift], ids: [String]) -> [EventBookingFallback] {
-        let allowed = Set(ids)
-        var rows: [EventBookingFallback] = []
-        var covered = Set<String>()
-        for plan in plans where plan.bookingIds.contains(where: allowed.contains) {
-            let status = eventGearPlanStatus(plan.state)
-            let bookingId = plan.bookingIds.first { allowed.contains($0) }
-            if let bookingId { covered.insert(bookingId) }
-            let countLabel = plan.itemCount == 1 ? "1 item" : "\(plan.itemCount) items"
-            rows.append(EventBookingFallback(
-                id: "plan-\(plan.requesterUserId)",
-                bookingId: bookingId,
-                title: plan.title,
-                subtitle: "\(plan.requesterName) · \(countLabel)",
-                statusLabel: status.label,
-                tone: status.tone
-            ))
-        }
-        for shift in shifts {
-            for booking in shift.gear.bookings where allowed.contains(booking.id) && !covered.contains(booking.id) {
-                let status = eventCatalogBookingStatusCode(booking.status)
-                let countLabel = booking.itemCount == 1 ? "1 item" : "\(booking.itemCount) items"
-                rows.append(EventBookingFallback(
-                    id: booking.id,
-                    bookingId: booking.id,
-                    title: eventBookingKindLabel(BookingKind(rawValue: booking.kind) ?? .unknown),
-                    subtitle: countLabel,
-                    statusLabel: status.label,
-                    tone: status.tone
-                ))
-            }
-        }
-        return rows
     }
 
     /// A missing command center, or a role the route refuses, is an empty team
@@ -341,15 +311,14 @@ struct EventCatalogDetailView: View {
             } else if model.bookings.isEmpty && model.fallbackRows.isEmpty {
                 Text(emptyLinksMessage)
                     .foregroundStyle(.secondary)
-            } else if model.bookings.isEmpty {
-                ForEach(model.fallbackRows) { row in
-                    bookingFallbackRow(row)
-                }
             } else {
                 ForEach(model.bookings) { booking in
                     NavigationLink(value: BookingRouteId(id: booking.id)) {
                         bookingRow(booking)
                     }
+                }
+                ForEach(model.fallbackRows) { row in
+                    bookingFallbackRow(row)
                 }
             }
             if model.hiddenBookingCount > 0 {
@@ -366,7 +335,11 @@ struct EventCatalogDetailView: View {
                 }
             }
         } header: {
-            Text("Bookings")
+            Text(canReadTeamGear ? "Related bookings" : "Your active bookings")
+        } footer: {
+            Text(canReadTeamGear
+                ? "This view may omit bookings for events without a crew. Check Bookings for full history."
+                : "Shows active bookings found through your assignments. Completed bookings and other event bookings are available in Bookings.")
         }
     }
 
@@ -395,16 +368,12 @@ struct EventCatalogDetailView: View {
         }
     }
 
-    private var emptyLinksMessage: String {
-        model.showsTeamGear
-            ? "No bookings are linked to this event."
-            : "No bookings are linked to you for this event."
-    }
+    private var emptyLinksMessage: String { "No bookings to show here." }
 
     private var gearEmptyMessage: String {
         if !model.bookings.isEmpty { return "These bookings don't list any gear." }
         if !model.fallbackRows.isEmpty { return "Open a booking to see its gear." }
-        return "No linked gear."
+        return "No gear to show here."
     }
 
     private func bookingRow(_ booking: Booking) -> some View {

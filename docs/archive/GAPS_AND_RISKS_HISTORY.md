@@ -8,6 +8,10 @@
 
 ---
 
+## Closed 2026-10-17
+
+- **GAP-89 — Native Events browse proof:** Superseded by an explicit product decision to remove the duplicate Events destination from Browse. Schedule remains the event destination and Bookings owns gear. Legacy Events navigation redirects to Schedule. This closes the separate-surface requirement, not authenticated evidence for retained catalog code.
+
 ## Pending Decisions
 
 ### PENDING-SCHEDULE-01: Explicit Scheduling Worker Class

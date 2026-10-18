@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Brand assets on iPhone</title>
+<style>
+  :root {
+    --ground:#EEF0F4; --surface:#FFFFFF; --raised:#F7F8FA;
+    --ink:#14171C; --muted:#5B6472; --faint:#8B95A3;
+    --line:#D8DDE5; --accent:#C5050C; --good:#1B7F3B; --warn:#A65A00;
+    --shadow:0 1px 2px rgba(20,23,28,.06), 0 8px 24px rgba(20,23,28,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#131519; --surface:#1B1E24; --raised:#22262E;
+      --ink:#E9ECF1; --muted:#9AA4B2; --faint:#727D8C;
+      --line:#2C313A; --accent:#F2545B; --good:#4ADE80; --warn:#F0A64A;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#131519; --surface:#1B1E24; --raised:#22262E;
+    --ink:#E9ECF1; --muted:#9AA4B2; --faint:#727D8C;
+    --line:#2C313A; --accent:#F2545B; --good:#4ADE80; --warn:#F0A64A;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; background:var(--ground); color:var(--ink);
+    font-family:"Public Sans", ui-sans-serif, system-ui, sans-serif;
+    font-size:16px; line-height:1.6; -webkit-font-smoothing:antialiased;
+  }
+  .wrap { max-width:1080px; margin:0 auto; padding:56px 24px 96px; }
+  .eyebrow {
+    font-family:"IBM Plex Mono", ui-monospace, monospace; font-size:.72rem;
+    letter-spacing:.14em; text-transform:uppercase; color:var(--accent); margin:0 0 14px;
+  }
+  h1 {
+    font-family:"Archivo Narrow", Arial Narrow, sans-serif; font-weight:700;
+    font-size:clamp(2.4rem,6vw,3.9rem); line-height:1.02; letter-spacing:-.015em;
+    margin:0 0 18px; text-wrap:balance;
+  }
+  .lede { font-size:1.12rem; color:var(--muted); max-width:60ch; margin:0; }
+  .rule { height:2px; background:var(--accent); width:64px; margin:34px 0 0; border:0; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:14px; margin:44px 0 0; }
+  .stat { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:20px; box-shadow:var(--shadow); }
+  .stat .k { font-family:"IBM Plex Mono", monospace; font-size:.68rem; letter-spacing:.12em;
+             text-transform:uppercase; color:var(--faint); margin:0 0 10px; }
+  .stat .v { font-family:"Archivo Narrow", sans-serif; font-weight:700; font-size:2.15rem;
+             line-height:1; margin:0 0 6px; font-variant-numeric:tabular-nums; }
+  .stat .n { font-size:.86rem; color:var(--muted); margin:0; line-height:1.45; }
+  .down { color:var(--good); }
+  h2 { font-family:"Archivo Narrow", sans-serif; font-weight:700;
+       font-size:1.9rem; letter-spacing:-.01em; margin:72px 0 6px; }
+  .sec-note { color:var(--muted); margin:0 0 26px; font-size:.95rem; }
+  .pair { margin:0 0 40px; }
+  .pair-head h3 { font-family:"Archivo Narrow",sans-serif; font-weight:600; font-size:1.2rem; margin:0 0 2px; }
+  .pair-head p { margin:0 0 16px; color:var(--muted); font-size:.92rem; }
+  .shots { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+  figure { margin:0; display:flex; flex-direction:column; gap:10px; }
+  figure img { width:100%; height:auto; display:block; border-radius:14px;
+               border:1px solid var(--line); box-shadow:var(--shadow); background:var(--surface); }
+  figcaption { font-size:.85rem; color:var(--muted); line-height:1.5; }
+  .tag { font-family:"IBM Plex Mono",monospace; font-size:.66rem; letter-spacing:.12em;
+         text-transform:uppercase; padding:4px 9px; border-radius:5px; align-self:flex-start; font-weight:600; }
+  .tag-before { background:color-mix(in srgb, var(--muted) 14%, transparent); color:var(--muted); }
+  .tag-after { background:color-mix(in srgb, var(--accent) 13%, transparent); color:var(--accent); }
+  .change { border-top:1px solid var(--line); padding:22px 0 4px; }
+  .change h3 { font-family:"Archivo Narrow",sans-serif; font-weight:600; font-size:1.18rem; margin:0 0 14px; }
+  .ba { display:grid; grid-template-columns:1fr 1fr; gap:26px; }
+  .ba p { margin:6px 0 0; font-size:.93rem; color:var(--muted); }
+  .lbl { font-family:"IBM Plex Mono",monospace; font-size:.64rem; letter-spacing:.13em;
+         text-transform:uppercase; font-weight:600; }
+  .lbl-b { color:var(--faint); }
+  .lbl-a { color:var(--accent); }
+  .panel { background:var(--surface); border:1px solid var(--line); border-radius:12px;
+           padding:24px 26px; box-shadow:var(--shadow); }
+  .panel ul { margin:0; padding-left:19px; }
+  .panel li { margin:0 0 9px; font-size:.94rem; }
+  .panel li:last-child { margin-bottom:0; }
+  code { font-family:"IBM Plex Mono",monospace; font-size:.86em; background:var(--raised);
+         border:1px solid var(--line); padding:1px 5px; border-radius:4px; }
+  .flag { border-left:3px solid var(--warn); }
+  @media (max-width:720px) {
+    .wrap { padding:36px 16px 64px; }
+    .ba { grid-template-columns:1fr; gap:16px; }
+  }
+</style></head><body>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">iOS · Wisconsin Creative</p>
+    <h1>Brand assets on iPhone</h1>
+    <p class="lede">Internal roles can open a logo or PDF from Browse. Folder create, upload, and version restore stay on the web.</p>
+    <hr class="rule">
+  </header>
+  
+  
+  <h2>No matched capture</h2>
+  <p class="sec-note">This environment has no Xcode and no iPhone 18 Pro Max simulator, so there is no before or after screenshot. The comparison is the source contract, not a picture of the screen.</p>
+  
+  
+  <h2>What changed, and why</h2>
+  <div class="change">
+    <h3>Browse can open the file library</h3>
+    <div class="ba">
+      <div><span class="lbl lbl-b">Was</span><p>Brand assets lived on the web. The phone could read Guides, which are Markdown, and had no way to open a logo or PDF at a venue.</p></div>
+      <div><span class="lbl lbl-a">Now</span><p>Browse adds Brand assets for every role except collaborator. The list is the current folder, with search and a Name, Recent, or Type sort.</p></div>
+    </div>
+  </div>
+  <div class="change">
+    <h3>A logo or PDF opens on the phone</h3>
+    <div class="ba">
+      <div><span class="lbl lbl-b">Was</span><p>Opening the file meant using the website.</p></div>
+      <div><span class="lbl lbl-a">Now</span><p>An image, SVG, or PDF at or under 40 MB opens in the file page. Larger files, video, fonts, and other types share from the authenticated download. A font says sharing does not install it.</p></div>
+    </div>
+  </div>
+  <div class="change">
+    <h3>Uploads stay on the web</h3>
+    <div class="ba">
+      <div><span class="lbl lbl-b">Was</span><p>The website can create folders, upload, favorite, and restore an older version.</p></div>
+      <div><span class="lbl lbl-a">Now</span><p>The phone only reads the list and the current file. A file with no version says uploading stays on the web.</p></div>
+    </div>
+  </div>
+  <h2>Verification</h2><div class="panel"><ul><li>Vitest: 773 files passed, 5798 tests passed, 1 skipped. The public release-note tests passed again after the new entry.</li><li><code>npm run build:app</code> compiled successfully, including typecheck, and generated 286 static pages.</li><li>iOS drift check found no anti-patterns across 109 Swift files.</li><li>iOS audit inventory reports 68 covered surfaces and no gaps.</li><li>TypeScript <code>tsc --noEmit</code> passed. ESLint passed on the new source-contract test. <code>git diff --check</code> passed.</li><li>Codemap check is current after regenerating the test count and the items-area test list.</li><li>xcodebuild, <code>npm run ios:project:check</code>, and an authenticated iPhone 18 Pro Max walkthrough were not run here.</li></ul></div>
+  <h2>Things to know</h2><div class="panel flag"><ul><li>No screenshot pair exists. A trustworthy before would be the current Browse menu on iPhone 18 Pro Max, and the after would be the same menu plus Brand assets, then a folder, a logo, and a PDF. Those captures need a Mac with the iOS 26 simulator.</li><li>The checked-in Xcode project lists the new Swift files by hand. <code>xcodegen generate</code> on a Mac is the proof those ids still match.</li></ul></div>
+</div>
+</body></html>

@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Reports & Analytics
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-10-16
+- Last Updated: 2026-10-18
 - Status: Active
 - Version: V1
 
@@ -17,7 +17,7 @@ Provide staff and admin with analytics dashboards to track checkout/reservation 
 4. Data is cached via React Query with focus refresh.
 5. Empty states and error states use EmptyState + retry. Report bodies dim and set `aria-busy` while a background refresh is in flight, so stale numbers never read as current. When independent query groups fail, usable sections remain visible with additive `partialFailures` and a warning that zeros or empty sections are not final.
 6. Report-local CSV exports download only the currently visible report rows and must say that in the action/copy, except Utilization, Checkouts, Overdue, Audit, Scans, and Missing Units where the CSV action exports the full filtered, report-evidence, or row-level inventory result from a bounded server-backed endpoint.
-7. `/reports/overdue` remains the live open-custody queue and therefore has no period selector. `/accountability` owns historical late-return patterns, appears in primary navigation for ADMIN/STAFF/STUDENT, and never replaces or mutates custody evidence. Collaborators remain default-deny under D-041. Overdue links admins across to Accountability without merging the two surfaces.
+7. `/reports/overdue` remains the live open-custody queue and therefore has no period selector. `/accountability` owns historical late-return patterns, appears in primary navigation for ADMIN/STAFF/STUDENT, and never replaces or mutates custody evidence. Collaborators remain default-deny under D-041. Overdue links admins across to Accountability without merging the two surfaces. Native iOS Browse shows the same read for students, staff, and admins: this academic year or all time, sorted by late returns, late time, or most recent. Opening a person lists that person's incidents and opens the checkout. Location, incident-state, and active-user filters, the continuous on-time bar, CSV export, and exclusion edits stay on the web.
 8. Prior-period deltas appear only where a comparable preceding window exists. All-time selections show no delta, an empty prior window shows the raw difference instead of an infinite percentage, and metrics that are themselves rates report percentage points.
 9. Report surfaces print without app chrome: sidebar, section nav, refresh/export controls, pagination, and expand toggles are omitted, while active filter chips are retained so a printout states its own scope.
 10. `/reports/usage` is not role-granted. It is visible only when the signed-in email appears in the default-deny `USAGE_ANALYTICS_OWNER_EMAILS` environment allowlist. ADMIN alone is insufficient.
@@ -224,8 +224,11 @@ Provide staff and admin with analytics dashboards to track checkout/reservation 
 - [x] AC-20: Accountability serves one shared three-line draw from 50 unique reviewed jeers for identical ordered leaderboard state; the draw remains stable across roles, reloads, and clock-only late-hour changes, then rotates when membership, ranking order, or incident state changes.
 - [x] AC-21: Accountability keeps its friendly wrong-leaderboard spotlight while the full ranking uses a five-concept desktop summary, prominent continuously colored return record, responsive card fallback, explicit 40px history controls, and grouped incident evidence without changing rank or custody semantics.
 - [x] AC-22: Native Reports opens read-only Utilization, Checkouts, Scans, Missing Units, and Badges, plus Usage only when `/api/me` allows it. CSV export and Audit stay on web.
+- [x] AC-23: Native Accountability is a read-only Browse list for ADMIN, STAFF, and STUDENT. It uses `GET /api/accountability`, this year or all time, and the three server sorts. Location, incident state, user state, CSV, and exclusions stay on the web. Authenticated iPhone proof is GAP-90.
 
 ## Change Log
+- 2026-10-18: Checkout activity lists every Madison day in the selected period, including the day the clocks change. The chart no longer skips or repeats a day when the period crosses daylight saving time.
+- 2026-10-16: Native Accountability is a read-only list in Browse for students, staff, and admins. It reads the shared leaderboard, names whether the signed-in person is on it, and opens a checkout from an incident. Power filters, the continuous on-time bar, CSV export, and exclusion edits stay on the web. Source contracts pass locally. An Xcode build and an authenticated iPhone walkthrough remain open under GAP-90.
 - 2026-10-16: Native Reports now opens read-only Utilization, Checkouts, Scans, Missing Units, and Badges from the existing Reports screen, and Usage only when `/api/me` returns `canViewUsageAnalytics`. Each screen reads the shared JSON endpoint and leaves CSV export and the Audit report on web. Source contracts and the iOS project check are the local proof; an Xcode build and an authenticated iPhone walkthrough remain open.
 - 2026-09-18: Accountability now counts currently overdue checkouts against on-time rate, keeps filter state in the URL, downloads CSV in place, highlights the signed-in viewer, and searches the ranking locally. Active overdue receipts sort first. Item summaries load only for incident rows. Focused tests pass locally; authenticated browser proof is in `tasks/archive/proofs/accountability-2026-09-18/`.
 - 2026-09-07: Client CSV escaping now protects whitespace-prefixed formulas. Download completion retains warning severity when truncation metadata lacks a total, and JSON null/non-object error bodies use the standard failure message. Focused regressions pass locally; authenticated browser and deployment remain unverified.

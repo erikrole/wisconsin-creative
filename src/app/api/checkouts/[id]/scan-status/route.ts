@@ -2,6 +2,7 @@ import { ScanPhase, ScanType } from "@prisma/client";
 import { withAuth } from "@/lib/api";
 import { db } from "@/lib/db";
 import { HttpError, ok } from "@/lib/http";
+import { requirePermission, requirePermissionOrCollaboratorCapability } from "@/lib/rbac";
 
 /**
  * GET /api/checkouts/[id]/scan-status?phase=CHECKOUT|CHECKIN
@@ -16,6 +17,12 @@ export const GET = withAuth<{ id: string }>(async (req, { user, params }) => {
 
   if (!phase || !["CHECKOUT", "CHECKIN"].includes(phase)) {
     throw new HttpError(400, "phase query param required (CHECKOUT or CHECKIN)");
+  }
+
+  if (user.role === "COLLABORATOR") {
+    requirePermissionOrCollaboratorCapability(user, "checkout", "view", "MY_GEAR_VIEW");
+  } else {
+    requirePermission(user.role, "checkout", "view");
   }
 
   const booking = await db.booking.findUnique({
@@ -58,8 +65,11 @@ export const GET = withAuth<{ id: string }>(async (req, { user, params }) => {
     throw new HttpError(404, "Checkout not found");
   }
 
-  // Students can only view scan status for their own checkouts
-  if (user.role === "STUDENT" && booking.requester.id !== user.id) {
+  // Scan codes are custody credentials. Students and private collaborators
+  // see their own checkouts; staff and admins can follow any return.
+  const collaboratorPreview = user.role === "COLLABORATOR" && user.preview?.role === "COLLABORATOR";
+  const ownCheckoutsOnly = user.role === "STUDENT" || (user.role === "COLLABORATOR" && !collaboratorPreview);
+  if (ownCheckoutsOnly && booking.requester.id !== user.id) {
     throw new HttpError(403, "You can only view scan status for your own checkouts");
   }
 

@@ -2,12 +2,13 @@ import { Prisma } from "@prisma/client";
 import { withAuth } from "@/lib/api";
 import { db } from "@/lib/db";
 import { HttpError, ok } from "@/lib/http";
-import { requirePermission } from "@/lib/rbac";
+import { requirePermission, requirePermissionOrCollaboratorCapability } from "@/lib/rbac";
 import { addBulkUnitsSchema } from "@/lib/validation";
 import { createAuditEntryTx } from "@/lib/audit";
 import { MAX_BULK_UNIT_NUMBER } from "@/lib/request-limits";
 
-export const GET = withAuth<{ id: string }>(async (_req, { params }) => {
+export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
+  requirePermissionOrCollaboratorCapability(user, "bulk_sku", "view", "GEAR_CATALOG_VIEW");
   const { id } = params;
 
   const sku = await db.bulkSku.findUnique({ where: { id } });

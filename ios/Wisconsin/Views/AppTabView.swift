@@ -597,17 +597,19 @@ private struct AppTabStatusOverlays: ViewModifier {
     let isReadOnlyPreview: Bool
 
     func body(content: Content) -> some View {
-        content
-            .safeAreaInset(edge: .top, spacing: 0) {
-                if !network.isConnected {
-                    BannerView(
-                        severity: .warning,
-                        message: "No connection — some actions may fail",
-                        systemImage: "wifi.slash"
-                    )
-                    .transition(.move(edge: .top).combined(with: .opacity))
-                }
+        // A TabView's navigation bars can draw over a top safe-area inset.
+        // Give the banner its own space so Back and review actions stay usable.
+        VStack(spacing: 0) {
+            if !network.isConnected {
+                BannerView(
+                    severity: .warning,
+                    message: "No connection — some actions may fail",
+                    systemImage: "wifi.slash"
+                )
+                .transition(.move(edge: .top).combined(with: .opacity))
             }
+            content
+        }
             .overlay {
                 if isReadOnlyPreview {
                     Rectangle()

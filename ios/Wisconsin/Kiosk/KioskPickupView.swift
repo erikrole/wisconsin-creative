@@ -601,6 +601,9 @@ struct KioskPickupView: View {
                         acceptScan(item, undo: undoTarget(for: item))
                         showFeedback(.success(result.locationMessage ?? item.name))
                     }
+                } else if result.errorCode == "duplicate" {
+                    await loadDetail(showLoading: false)
+                    showFeedback(.alreadyConfirmed(result.error ?? "Already scanned"))
                 } else if result.errorCode == "add_available", let item = result.item {
                     presentAddOrDiscard(scanValue: entry.value, item: item, replaces: result.substitution?.reserved)
                 } else if Self.blockedAddErrorCodes.contains(result.errorCode ?? "") {
@@ -611,6 +614,7 @@ struct KioskPickupView: View {
                 }
             } catch {
                 guard store.ownsFlow(flow) else { return }
+                await loadDetail(showLoading: false)
                 let message = (error as? APIError)?.errorDescription ?? "Scan failed"
                 showFeedback(.error(message))
             }
@@ -1046,8 +1050,10 @@ struct KioskPickupView: View {
     // MARK: - Loading
 
     private func loadDetail(showLoading: Bool = true) async {
-        if showLoading { isLoading = true }
-        error = nil
+        if showLoading {
+            isLoading = true
+            error = nil
+        }
         do {
             let loaded = try await KioskAPI.shared.kioskCheckoutDetail(id: bookingId)
             guard !Task.isCancelled else { return }
@@ -1068,7 +1074,9 @@ struct KioskPickupView: View {
             detail = loaded
             processNextScanIfNeeded()
         } catch {
-            self.error = (error as? APIError)?.errorDescription ?? "Could not load pickup details."
+            if showLoading || detail == nil {
+                self.error = (error as? APIError)?.errorDescription ?? "Could not load pickup details."
+            }
         }
         isLoading = false
     }

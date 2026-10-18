@@ -12,15 +12,24 @@ struct BrowseView: View {
 
     private var destinations: [BrowseDestination] {
         guard session.currentUser?.role == "COLLABORATOR" else {
-            // Reports are staff analytics, and Events reads the internal
-            // calendar. Both endpoints refuse a collaborator, so those rows are
-            // hidden rather than offered and refused.
-            return [.scoreboard, .events, .items, .guides, .blasts, .licenses, .users] + (isStaffOrAdmin ? [.reports] : [])
+            // Accountability and Brand assets read internal team data.
+            // Reports and Battery Ops are staff analytics, and Badges is the staff
+            // catalog. UA Gear is the seasonal participant list. Those endpoints
+            // refuse anyone else, so the rows are hidden rather than offered and refused.
+            var rows: [BrowseDestination] = [.scoreboard, .accountability, .items, .kits, .guides, .brandAssets, .blasts, .licenses, .sharedLogins, .users, .gearPicks]
+            if isStaffOrAdmin {
+                rows.insert(.batteries, at: 5)
+                rows.append(.badges)
+                rows.append(.reports)
+            }
+            return rows
         }
         let capabilities = Set(session.currentUser?.capabilities ?? [])
         return [.scoreboard] + [
             Optional.some(BrowseDestination.blasts),
+            capabilities.contains("SOFTWARE_VAULT_VIEW") ? .sharedLogins : nil,
             capabilities.contains("GEAR_CATALOG_VIEW") ? .items : nil,
+            capabilities.contains("RESERVATION_CREATE") ? .kits : nil,
             capabilities.contains("PEOPLE_DIRECTORY_VIEW") ? .users : nil,
         ].compactMap { $0 }
     }
@@ -28,16 +37,19 @@ struct BrowseView: View {
     var body: some View {
         NavigationStack(path: $navigationPath) {
             List {
-                Section {
-                    ForEach(destinations) { destination in
-                        NavigationLink(value: destination) {
-                            SettingsMenuRow(
-                                title: destination.title,
-                                subtitle: destination.subtitle,
-                                systemImage: destination.systemImage,
-                                tint: destination.tint
-                            ) {
-                                EmptyView()
+                ForEach(BrowseGroup.allCases) { group in
+                    let rows = destinations.filter { $0.group == group }
+                    if !rows.isEmpty {
+                        Section(group.rawValue) {
+                            ForEach(rows) { destination in
+                                NavigationLink(value: destination) {
+                                    SettingsMenuRow(
+                                        title: destination.title,
+                                        subtitle: destination.subtitle,
+                                        systemImage: destination.systemImage,
+                                        tint: destination.tint
+                                    ) { EmptyView() }
+                                }
                             }
                         }
                     }
@@ -62,10 +74,13 @@ struct BrowseView: View {
     }
 
     private func consumePendingDestination() {
-        guard let rawValue = appState.pendingBrowseDestination,
-              let destination = BrowseDestination(rawValue: rawValue)
-        else { return }
+        guard let rawValue = appState.pendingBrowseDestination else { return }
         appState.pendingBrowseDestination = nil
+        if rawValue == "events" {
+            appState.selectedTab = 1
+            return
+        }
+        guard let destination = BrowseDestination(rawValue: rawValue) else { return }
         navigationPath = NavigationPath()
         navigationPath.append(destination)
     }
@@ -75,45 +90,86 @@ struct BrowseView: View {
         switch destination {
         case .scoreboard:
             TeamScoreboardView(wrapsInNavigationStack: false)
-        case .events:
-            EventsView(wrapsInNavigationStack: false)
+        case .accountability:
+            AccountabilityView(wrapsInNavigationStack: false)
         case .items:
             ItemsView(wrapsInNavigationStack: false)
+        case .kits:
+            KitsView(wrapsInNavigationStack: false)
+        case .batteries:
+            BatteryOpsView(wrapsInNavigationStack: false)
         case .guides:
             GuidesView(wrapsInNavigationStack: false)
+        case .brandAssets:
+            BrandAssetsView(wrapsInNavigationStack: false)
         case .licenses:
             LicensesView(wrapsInNavigationStack: false)
+        case .sharedLogins:
+            SharedLoginsView(wrapsInNavigationStack: false)
         case .users:
             UsersView(wrapsInNavigationStack: false)
+        case .badges:
+            TeamBadgesView(wrapsInNavigationStack: false)
         case .reports:
             ReportsView()
         case .blasts:
             BlastsView(wrapsInNavigationStack: false)
+        case .gearPicks:
+            GearPicksView(wrapsInNavigationStack: false)
         }
     }
 }
 
+private enum BrowseGroup: String, CaseIterable, Identifiable {
+    case work = "Work"
+    case equipment = "Equipment"
+    case resources = "Resources"
+    case team = "Team"
+    var id: String { rawValue }
+}
+
 private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
     case scoreboard
-    case events
+    case accountability
     case items
+    case kits
+    case batteries
     case guides
+    case brandAssets
     case blasts
     case licenses
+    case sharedLogins
     case users
+    case gearPicks
+    case badges
     case reports
 
     var id: String { rawValue }
 
+    var group: BrowseGroup {
+        switch self {
+        case .blasts: .work
+        case .items, .kits, .batteries, .accountability, .reports: .equipment
+        case .guides, .brandAssets, .licenses, .sharedLogins: .resources
+        case .scoreboard, .users, .gearPicks, .badges: .team
+        }
+    }
+
     var title: String {
         switch self {
         case .scoreboard: "Scoreboard"
-        case .events: "Events"
+        case .accountability: "Accountability"
         case .items: "Items"
+        case .kits: "Kits"
+        case .batteries: "Battery Ops"
         case .guides: "Guides"
+        case .brandAssets: "Brand assets"
         case .blasts: "Blasts"
         case .licenses: "Licenses"
+        case .sharedLogins: "Shared logins"
         case .users: "Users"
+        case .gearPicks: "UA Gear"
+        case .badges: "Badges"
         case .reports: "Reports"
         }
     }
@@ -121,33 +177,51 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
     var subtitle: String {
         switch self {
         case .scoreboard:
-            "Team totals, sport breakdowns, and per-person leaderboards."
-        case .events:
-            "Event details, linked gear, and bookings."
+            "Team totals and leaderboards"
+        case .accountability:
+            "Late returns and overdue gear"
         case .items:
-            "Find gear, item families, status, and availability."
+            "Find gear and check availability"
+        case .kits:
+            "Gameday kits and shelf status"
+        case .batteries:
+            "Battery stock and checkouts"
         case .guides:
-            "Read team reference docs, contacts, venue notes, and workflows."
+            "Team references and workflows"
+        case .brandAssets:
+            "Logos, guidelines, and templates"
         case .blasts:
-            "Read a broadcast again after you dismiss it."
+            "Team updates and announcements"
         case .licenses:
-            "Claim, copy, or return a Photo Mechanic license."
+            "Photo Mechanic licenses"
+        case .sharedLogins:
+            "Copy a department login when you need it."
         case .users:
-            "Find teammates, roles, titles, and work areas."
+            "People, roles, and work areas"
+        case .gearPicks:
+            "Your Under Armour gear picks"
+        case .badges:
+            "Recognition and staff awards"
         case .reports:
-            "See what is going out, what sits idle, and who is overdue."
+            "Usage, activity, and inventory"
         }
     }
 
     var systemImage: String {
         switch self {
         case .scoreboard: "trophy"
-        case .events: "calendar"
+        case .accountability: "clock.badge.exclamationmark"
         case .items: "archivebox"
+        case .kits: "square.stack.3d.up"
+        case .batteries: "battery.100"
         case .guides: "book.closed"
+        case .brandAssets: "folder"
         case .blasts: "megaphone"
         case .licenses: "key"
+        case .sharedLogins: "lock.rectangle"
         case .users: "person.2"
+        case .gearPicks: "tshirt"
+        case .badges: "medal"
         case .reports: "chart.bar.xaxis"
         }
     }
@@ -155,12 +229,18 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
     var tint: Color {
         switch self {
         case .scoreboard: Color.statusText(.orange)
-        case .events: Color.statusText(.blue)
+        case .accountability: Color.statusText(.red)
         case .items: Color.statusText(.blue)
+        case .kits: Color.statusText(.purple)
+        case .batteries: Color.statusText(.orange)
         case .guides: Color.statusText(.purple)
+        case .brandAssets: Color.statusText(.blue)
         case .blasts: Color.statusText(.blue)
         case .licenses: Color.statusText(.orange)
+        case .sharedLogins: Color.statusText(.blue)
         case .users: Color.statusText(.green)
+        case .gearPicks: Color.statusText(.purple)
+        case .badges: Color.statusText(.purple)
         case .reports: Color.statusText(.red)
         }
     }
