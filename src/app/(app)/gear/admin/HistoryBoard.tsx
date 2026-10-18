@@ -1,8 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import EmptyState from "@/components/EmptyState";
+import { useConfirm } from "@/components/ConfirmDialog";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
@@ -12,6 +15,46 @@ const usd = (cents: number) => (cents / 100).toLocaleString("en-US", { style: "c
 const CARD = "overflow-hidden rounded-[14px] border border-[#E8E8EC] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-card";
 const HEAD = "text-[11px] font-bold uppercase tracking-[0.09em] text-[#6B6F7A] dark:text-muted-foreground";
 const ROW = "grid grid-cols-[minmax(200px,2fr)_80px_64px_72px_80px_96px] items-center gap-3 border-b border-[#F0F1F3] px-5 py-2.5 text-sm last:border-b-0 dark:border-white/10";
+
+/** Snapshots the live year into History; saving again replaces the earlier snapshot of the same year. */
+function SaveYearButton() {
+  const queryClient = useQueryClient();
+  const confirm = useConfirm();
+  const [saving, setSaving] = useState(false);
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      className="min-h-10"
+      disabled={saving}
+      onClick={async () => {
+        const ok = await confirm({
+          title: "Save this year to History?",
+          message: "This saves a read-only copy of the current year's budget, items, receipts and people. Saving again replaces the earlier copy. The live year keeps working.",
+          confirmLabel: "Save to History",
+        });
+        if (!ok) return;
+        setSaving(true);
+        try {
+          const response = await fetch("/api/gear-picks/admin/history", { method: "POST" });
+          if (handleAuthRedirect(response, "/gear/admin")) return;
+          if (!response.ok) {
+            toast.error(await parseErrorMessage(response, "Could not save this year. Try again."));
+            return;
+          }
+          await queryClient.invalidateQueries({ queryKey: ["gear-picks", "admin", "history"] });
+          toast.success("This year was saved to History.");
+        } catch {
+          toast.error("Couldn't reach the server. Try again.");
+        } finally {
+          setSaving(false);
+        }
+      }}
+    >
+      {saving ? "Saving…" : "Save this year to History"}
+    </Button>
+  );
+}
 
 /** Past years of UA gear, read-only: the budget outcome, what was planned and received, and who was on the list. */
 export function HistoryBoard() {
@@ -34,7 +77,12 @@ export function HistoryBoard() {
     return <EmptyState icon="wifi-off" title="Couldn't load past years" description="Check your connection and try again." actionLabel="Retry" onAction={() => void refetch()} />;
   }
   if (data.length === 0) {
-    return <EmptyState icon="chart" compact title="No past years yet" description="Finished years appear here once they are added." />;
+    return (
+      <div className="flex flex-col items-center gap-3">
+        <EmptyState icon="chart" compact title="No past years yet" description="Save the current year to keep a read-only copy here." />
+        <SaveYearButton />
+      </div>
+    );
   }
 
   const cycle = data.find((candidate) => candidate.id === selected) ?? data[0]!;
@@ -49,6 +97,7 @@ export function HistoryBoard() {
     <section aria-labelledby="gear-admin-history" className="mb-6">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h2 id="gear-admin-history" className="text-[22px] font-extrabold tracking-[-0.03em]">{cycle.title}</h2>
+        <SaveYearButton />
         {data.length > 1 && (
           <div className="flex gap-0.5 rounded-[10px] bg-[#F0F1F3] p-[3px] dark:bg-white/10" role="group" aria-label="Choose a year">
             {data.map((candidate) => (

@@ -13,6 +13,7 @@ import {
   isItemAllowedForFit,
   type GearPickFitKey,
 } from "@/lib/gear-picks/catalog";
+import { buildOrderPlan } from "@/lib/gear-picks/order";
 import { isGearPickCycleOpen, priceGearPickLines, type GearPickLineInput } from "@/lib/gear-picks/pricing";
 import type {
   GearPickAdminParticipant,
@@ -987,4 +988,82 @@ export async function getGearPastCycles(): Promise<GearPastCycleDto[]> {
     ...cycle,
     remainingCents: cycle.budgetCents - cycle.budgetedSpendCents,
   }));
+}
+
+/**
+ * Save the live year to History: its budget, one row per item with planned, ordered and received units, and
+ * everyone on the list. Saving again replaces the earlier snapshot of the same year.
+ */
+export async function archiveCurrentGearCycle(actor: Actor) {
+  const data = await getGearPicksAdmin();
+  const plan = buildOrderPlan(data.participants, GEAR_CATALOG.kits, data.students);
+  const orderPlaced = data.order.placedAt !== null;
+
+  const items = new Map<string, { sku: string; itemName: string; colorLabel: string; unitPriceCents: number; plannedQty: number; receivedQty: number }>();
+  for (const line of plan.lines) {
+    const row = items.get(line.sku) ?? {
+      sku: line.sku,
+      itemName: line.itemName,
+      colorLabel: line.colorLabel,
+      unitPriceCents: findGearSku(line.sku)?.unitPriceCents ?? 0,
+      plannedQty: 0,
+      receivedQty: 0,
+    };
+    row.plannedQty += line.quantity;
+    items.set(line.sku, row);
+  }
+  for (const receipt of data.receipts) {
+    const row = items.get(receipt.sku);
+    if (row) row.receivedQty += receipt.quantity;
+  }
+
+  const fitLabel = (fit: GearPickFitKey) => (fit === "WOMEN" ? "Women" : "Men");
+  const people = [
+    ...data.participants.map((person) => ({
+      name: person.user.name,
+      groupLabel: "Staff",
+      fit: fitLabel(person.fit),
+      topSize: person.user.topSize,
+      shoeSize: person.user.shoeSize,
+    })),
+    ...data.students.map((student) => ({
+      name: student.user.name,
+      groupLabel: "Student",
+      fit: student.topSizeFit === "WOMENS" ? "Women" : "Men",
+      topSize: student.topSize,
+      shoeSize: student.shoeSize,
+    })),
+  ];
+
+  await withSerializationRetry(() =>
+    db.$transaction(async (tx) => {
+      await tx.gearPastCycle.deleteMany({ where: { id: data.cycle.id } });
+      await tx.gearPastCycle.create({
+        data: {
+          id: data.cycle.id,
+          title: data.cycle.title,
+          budgetCents: data.budget.budgetCents,
+          budgetedSpendCents: data.budget.committedCents,
+          otherSpendCents: 0,
+          note: `Saved from the live year. ${data.budget.confirmed ? "" : "The budget was still a placeholder. "}Student shoes are not included.`.trim(),
+          items: {
+            create: [...items.values()].map((item) => ({
+              ...item,
+              orderedQty: orderPlaced ? item.plannedQty : 0,
+            })),
+          },
+          people: { create: people },
+        },
+      });
+      await createAuditEntryTx(tx, {
+        actorId: actor.id,
+        actorRole: actor.role,
+        entityType: "gear_past_cycle",
+        entityId: data.cycle.id,
+        action: "archive_cycle",
+        after: { items: items.size, people: people.length, budgetedSpendCents: data.budget.committedCents },
+      });
+    }, SERIALIZABLE),
+  );
+  return { cycleId: data.cycle.id, items: items.size, people: people.length };
 }
