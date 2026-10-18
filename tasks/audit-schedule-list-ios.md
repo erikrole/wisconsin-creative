@@ -63,7 +63,7 @@ _None._ The schedule loads, the calendar paginates, the trade board opens, the i
 
 - [ ] [Polish] **Deferred.** Day-cell dot legend doesn't expose itself to VoiceOver as a coherent group ("Calendar dot legend: My Shift, Home, Away"). Low-impact — once the dot info is included in each `DayCell`'s combined label, the legend is informational decoration.
 - [ ] [Polish] **Deferred.** `homeAwayFilter` segment chips in the list-mode header have raw `.white` / `.secondary` foreground colors — these are intentional capsule treatments, not status drift, and reading from `Color(.tertiarySystemFill)` for the unselected state is correct.
-- [ ] [Parity] Per `AREA_SHIFTS.md` — Week strip, My Hours stat strip, full filter bar (Sport/Area/Coverage/Time) intentionally web-only by `feedback_ios_vs_web_role.md`.
+- [ ] [Parity] Per `AREA_SHIFTS.md` — Week strip and the full filter bar (Sport/Area/Coverage/Time) stay web-only. My Hours is on Profile as of 2026-10-18, not a Schedule strip.
 
 ## Acceptance criteria status
 

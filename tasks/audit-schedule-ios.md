@@ -176,7 +176,7 @@ Scope: `ScheduleView` (List + Calendar modes) + `ScheduleCalendarView` + `Schedu
 ## P2 — post-MVP
 
 - [ ] [Parity] AREA_SHIFTS lists three view modes — List / Week / Calendar — iOS has only List + Calendar (no Week strip). Acceptable for V1.
-- [ ] [Parity] **Deferred — power-user parity, not a defect.** My Hours stat strip (`GET /api/shifts/my-hours`) not on iOS. Useful for shift-totaling but not on the V1 student bar.
+- [x] [Parity] **Shipped on Profile, 2026-10-18.** My Hours is not a Schedule strip. The website shows it on your own profile, and iPhone does the same from `GET /api/shifts/my-hours`.
 - [ ] [Parity] **Deferred — power-user parity, not a defect.** AREA_SHIFTS filter bar (Sport / Area / Coverage / Time / My Shifts) — iOS has only "My Shifts". Power-user surface.
 - [ ] [Parity] ShiftDetailPanel (per-event admin assignment management) not on iOS — admin-only, web-first by design.
 - [x] [Correctness] Calendar mode's day list rendered in API insertion order, not chronological order — `eventsByDay` was assigned unsorted while list groups sorted. Fixed 2026-08-19; guarded by `tests/ios-schedule-ui-cleanup.test.ts`.

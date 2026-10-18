@@ -6,8 +6,10 @@ This is the handoff for the next native slice. Compare the website's pages and s
 
 Open, and off limits for file overlap:
 
-- #503 hours, charts, and exports
-- #505 condition reports
+- #508 item activity
+- #511 kiosk scans and due days
+- #510 kit return time
+- #509 keyboard, status, and failed lists (web)
 - #497, #486, #485, and #484 Users to Staff and role tabs
 - #494 Budget
 - #488 Photo Mechanic licenses
@@ -48,10 +50,11 @@ Take the first item under **Missing** whose blocked note is clear. Keep one scre
 - [x] **Shared software logins.** Read and copy from Browse (#502). Creating, editing, and archiving stay on the web. Photo Mechanic redesign remains #488.
 - [x] **Team badge shelf.** Read-only staff catalog. Awarding a group stays on the web.
 - [x] **Away-game travel roster.** Event detail lists who is traveling and opens a profile. Adding and removing travelers stays on the website.
+- [x] **My hours.** Your profile shows this week and this month from `GET /api/shifts/my-hours`. Students, staff, and admins see it. Collaborators do not. A failed refresh keeps the totals already on screen. Added in this slice.
+- [x] **Item activity.** Staff and admin History on an item (`GET /api/assets/:id/activity`) is #508. Do not edit those files.
 
 ## Missing
 
-- [ ] **Item activity.** The website History tab is `GET /api/assets/:id/activity` for staff and admin (all activity, item updates, or booking activity). The phone already lists previous bookings. The touch log is still web-only.
 - [ ] **Native signature capture.** Waiting on Erik's decision. The live capture path is iPad Safari with Apple Pencil. Do not rebuild `Views/Signatures/` until that decision lands.
 - [ ] **Guide authoring.** Waiting on Erik's decision. Create, edit, delete, and Mark verified stay off the phone until staff need to edit guides away from a desk.
 

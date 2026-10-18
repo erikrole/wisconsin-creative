@@ -28,6 +28,8 @@ struct ProfileView: View {
     @State private var ownCheckouts: [Booking] = []
     @State private var ownReservations: [Booking] = []
     @State private var ownShifts: [MyShift] = []
+    @State private var ownHours: MyHours?
+    @State private var hoursLoading = true
     @State private var showBadgeGallery = false
     @State private var selectedBadge: UserBadge?
     @State private var pushedBookingId: String?
@@ -65,6 +67,7 @@ struct ProfileView: View {
             List {
                 headerSection
                 nextUpSection
+                hoursSection
                 scoreboardSection
                 badgeSection
                 profileCompletionSection
@@ -109,6 +112,12 @@ struct ProfileView: View {
         .task { await prefsVM.load() }
         .task { await refreshPushAuth() }
         .task { await loadOwnProfile() }
+        .task { await loadHours() }
+        .refreshable {
+            async let profile: Void = loadOwnProfile()
+            async let hours: Void = loadHours()
+            _ = await (profile, hours)
+        }
         .sheet(isPresented: $showBadgeGallery) {
             if let ownBadges {
                 BadgeGallerySheet(profile: ownBadges)
@@ -268,6 +277,30 @@ struct ProfileView: View {
         ownCheckouts = checkouts?.data ?? []
         ownReservations = reservations?.data ?? []
         ownShifts = shifts ?? []
+    }
+
+    /// Your own week and month, the same totals the website shows on your
+    /// profile. Next Up stays above it: what to do comes before the count.
+    /// Someone else's profile never asks for this — the route only returns
+    /// the signed-in person, and collaborators are refused.
+    @ViewBuilder
+    private var hoursSection: some View {
+        if MyHoursAccess.canRead(role: session.currentUser?.role) {
+            Section {
+                MyHoursCard(
+                    hours: ownHours,
+                    isLoading: hoursLoading,
+                    retry: { Task { await loadHours() } }
+                )
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+            }
+        }
+    }
+
+    private func loadHours() async {
+        guard MyHoursAccess.canRead(role: session.currentUser?.role) else { return }
+        await MyHoursAccess.load($ownHours, loading: $hoursLoading)
     }
 
     @ViewBuilder
@@ -544,5 +577,154 @@ private struct ProfilePlaceholderView: View {
         default:
             "This page is not available for your role on this device."
         }
+    }
+}
+
+// MARK: - My hours
+
+/// Week and month totals from `GET /api/shifts/my-hours`. The server counts
+/// Monday–Sunday and the calendar month in Central time.
+struct MyHours: Decodable, Equatable {
+    let thisWeek: Double
+    let thisMonth: Double
+    let shiftCountWeek: Int
+    let shiftCountMonth: Int
+
+    var weekLabel: String { Self.hoursLabel(thisWeek) }
+    var monthLabel: String { Self.hoursLabel(thisMonth) }
+    var weekShiftLabel: String { Self.shiftLabel(shiftCountWeek) }
+    var monthShiftLabel: String { Self.shiftLabel(shiftCountMonth) }
+
+    var accessibilityLabel: String {
+        "\(Self.spokenHours(thisWeek)) this week, \(weekShiftLabel). \(Self.spokenHours(thisMonth)) this month, \(monthShiftLabel)."
+    }
+
+    static func hoursLabel(_ value: Double) -> String {
+        guard value.isFinite else { return "0h" }
+        if value == value.rounded(), let whole = Int(exactly: value) {
+            return "\(whole)h"
+        }
+        return String(format: "%.1fh", value)
+    }
+
+    static func shiftLabel(_ count: Int) -> String {
+        count == 1 ? "1 shift" : "\(count) shifts"
+    }
+
+    static func spokenHours(_ value: Double) -> String {
+        let number = hoursLabel(value).replacingOccurrences(of: "h", with: "")
+        return value == 1 ? "\(number) hour" : "\(number) hours"
+    }
+}
+
+enum MyHoursAccess {
+    /// Students, staff, and admins. The route refuses collaborators.
+    static func canRead(role: String?) -> Bool {
+        switch role {
+        case "ADMIN", "STAFF", "STUDENT":
+            true
+        default:
+            false
+        }
+    }
+
+    static func isCancellation(_ error: Error) -> Bool {
+        if error is CancellationError { return true }
+        if let urlError = error as? URLError, urlError.code == .cancelled { return true }
+        if case APIError.networkError(let underlying) = error {
+            return isCancellation(underlying)
+        }
+        return false
+    }
+
+    /// Keeps the last totals when a refresh fails. Try again appears only
+    /// when nothing is on screen yet.
+    @MainActor
+    static func load(_ hours: Binding<MyHours?>, loading: Binding<Bool>) async {
+        if hours.wrappedValue == nil { loading.wrappedValue = true }
+        do {
+            hours.wrappedValue = try await APIClient.shared.myHours()
+            loading.wrappedValue = false
+        } catch {
+            // A cancelled refresh must not wipe totals already on screen.
+            // A cancelled first load stops the spinner so Try again can show.
+            if isCancellation(error), hours.wrappedValue != nil { return }
+            loading.wrappedValue = false
+        }
+    }
+}
+
+struct MyHoursCard: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    let hours: MyHours?
+    let isLoading: Bool
+    let retry: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            BrandSectionHeader(
+                "My hours",
+                subtitle: "Monday through Sunday, Central time.",
+                systemImage: "clock"
+            )
+            content
+        }
+        .brandCard()
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        if let hours {
+            figures(hours)
+        } else if isLoading {
+            ProgressView()
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .accessibilityLabel("Loading hours")
+        } else {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Hours could not load.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Button("Try again", action: retry)
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+                    .accessibilityHint("Loads your hours again.")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func figures(_ hours: MyHours) -> some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: 12) {
+                figure(hours.weekLabel, caption: "This week (\(hours.weekShiftLabel))")
+                figure(hours.monthLabel, caption: "This month (\(hours.monthShiftLabel))")
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(hours.accessibilityLabel)
+        } else {
+            HStack(alignment: .top, spacing: 16) {
+                figure(hours.weekLabel, caption: "This week (\(hours.weekShiftLabel))")
+                figure(hours.monthLabel, caption: "This month (\(hours.monthShiftLabel))")
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(hours.accessibilityLabel)
+        }
+    }
+
+    private func figure(_ value: String, caption: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(value)
+                .font(.title2.weight(.semibold))
+                .monospacedDigit()
+                .foregroundStyle(.primary)
+            Text(caption)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
     }
 }
