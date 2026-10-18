@@ -83,4 +83,14 @@ export type GearPicksAdminResponse = {
     totalCents: number;
   };
   candidates: { id: string; name: string; role: string }[];
+  /** Admin-only budget view. `committedCents` counts staff picks only for now. */
+  budget: GearPickBudgetDto;
+};
+
+export type GearPickBudgetDto = {
+  budgetCents: number;
+  confirmed: boolean;
+  /** Dollar total of every saved pick list, drafts included. */
+  committedCents: number;
+  remainingCents: number;
 };

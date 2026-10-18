@@ -19,6 +19,12 @@ const patchSchema = z.discriminatedUnion("action", [
     launched: z.boolean(),
   }),
   z.object({
+    action: z.literal("setBudget"),
+    // Whole cents, up to $1,000,000, so a typo can't create an unbounded budget.
+    budgetCents: z.number().int().min(0).max(100_000_000),
+    confirmed: z.boolean(),
+  }),
+  z.object({
     action: z.literal("addParticipant"),
     userId: z.string().trim().min(1).max(64),
     fit: fitSchema,

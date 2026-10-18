@@ -383,6 +383,32 @@ describe("admin routes", () => {
     );
   });
 
+  it("sets the budget with a before/after audit and rejects bad amounts", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(admin);
+    tx.gearPickCycle!.findUnique!.mockResolvedValue({ ...unlaunchedCycle, budgetCents: 550000, budgetConfirmed: false });
+
+    const response = await patchAdmin(patch({ action: "setBudget", budgetCents: 600000, confirmed: true }), context);
+
+    expect(response.status).toBe(200);
+    expect(tx.gearPickCycle!.update).toHaveBeenCalledWith({
+      where: { id: "2027-28" },
+      data: { budgetCents: 600000, budgetConfirmed: true },
+    });
+    expect(createAuditEntryTx).toHaveBeenCalledWith(
+      tx,
+      expect.objectContaining({
+        action: "set_budget",
+        before: { budgetCents: 550000, confirmed: false },
+        after: { budgetCents: 600000, confirmed: true },
+      }),
+    );
+
+    tx.gearPickCycle!.update!.mockClear();
+    expect((await patchAdmin(patch({ action: "setBudget", budgetCents: -1, confirmed: true }), context)).status).toBe(400);
+    expect((await patchAdmin(patch({ action: "setBudget", budgetCents: 1.5, confirmed: true }), context)).status).toBe(400);
+    expect(tx.gearPickCycle!.update).not.toHaveBeenCalled();
+  });
+
   it("launches the cycle to staff with an audit entry", async () => {
     vi.mocked(requireAuth).mockResolvedValue(admin);
     tx.gearPickCycle!.findUnique!.mockResolvedValue(unlaunchedCycle);

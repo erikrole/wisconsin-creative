@@ -273,3 +273,10 @@ export function gearSizeProblem(item: GearCatalogItem, size: string | null | und
   if (item.sizes && !item.sizes.includes(value)) return "Choose an available size";
   return null;
 }
+
+/** Parse a typed dollar amount ("5,500", "$5500.5") into whole cents, or null when it isn't a plain amount. */
+export function parseDollarsToCents(input: string): number | null {
+  const cleaned = input.replace(/[$,\s]/g, "");
+  if (!/^\d+(\.\d{1,2})?$/.test(cleaned)) return null;
+  return Math.round(Number(cleaned) * 100);
+}

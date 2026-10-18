@@ -17,6 +17,7 @@ import { isGearPickCycleOpen, priceGearPickLines, type GearPickLineInput } from 
 import type {
   GearPickAdminParticipant,
   GearPickAggregateRow,
+  GearPickBudgetDto,
   GearPickCycleDto,
   GearPickLineDto,
   GearPicksAdminResponse,
@@ -306,7 +307,7 @@ export async function saveMyGearPicks(params: {
 async function loadCycleOrThrow(client: Prisma.TransactionClient | typeof db) {
   const cycle = await client.gearPickCycle.findUnique({
     where: { id: GEAR_PICK_CYCLE_ID },
-    select: { id: true, title: true, deadline: true, launchedAt: true },
+    select: { id: true, title: true, deadline: true, launchedAt: true, budgetCents: true, budgetConfirmed: true },
   });
   if (!cycle) throw new HttpError(404, "The 2027–28 gear pick cycle hasn't been set up.");
   return cycle;
@@ -336,6 +337,10 @@ export function aggregateGearPickTotals(
       || a.colorLabel.localeCompare(b.colorLabel)
       || (a.size ?? "").localeCompare(b.size ?? "", undefined, { numeric: true }),
   );
+}
+
+export function gearPickBudget(budgetCents: number, confirmed: boolean, committedCents: number): GearPickBudgetDto {
+  return { budgetCents, confirmed, committedCents, remainingCents: budgetCents - committedCents };
 }
 
 export async function getGearPicksAdmin(now: Date = new Date()): Promise<GearPicksAdminResponse> {
@@ -370,6 +375,7 @@ export async function getGearPicksAdmin(now: Date = new Date()): Promise<GearPic
 
   const participantUserIds = new Set(rows.map((row) => row.user.id));
   const allLines = rows.flatMap((row) => row.submission?.lines ?? []);
+  const committedCents = rows.reduce((sum, row) => sum + (row.submission?.totalCents ?? 0), 0);
 
   return {
     cycle: cycleDto(cycle, now),
@@ -385,12 +391,14 @@ export async function getGearPicksAdmin(now: Date = new Date()): Promise<GearPic
     candidates: users
       .filter((user) => !participantUserIds.has(user.id))
       .map((user) => ({ id: user.id, name: user.name, role: user.role })),
+    budget: gearPickBudget(cycle.budgetCents, cycle.budgetConfirmed, committedCents),
   };
 }
 
 export type GearPicksAdminChange =
   | { action: "setDeadline"; deadline: string | null }
   | { action: "setLaunched"; launched: boolean }
+  | { action: "setBudget"; budgetCents: number; confirmed: boolean }
   | { action: "addParticipant"; userId: string; fit: GearPickFitKey; allowanceCents?: number }
   | { action: "updateParticipant"; participantId: string; fit?: GearPickFitKey; allowanceCents?: number }
   | { action: "removeParticipant"; participantId: string };
@@ -427,6 +435,23 @@ export async function applyGearPicksAdminChange(actor: Actor, change: GearPicksA
             action: change.launched ? "launch" : "unlaunch",
             before: { launchedAt: cycle.launchedAt?.toISOString() ?? null },
             after: { launchedAt: launchedAt?.toISOString() ?? null },
+          });
+          return { cycleId: cycle.id };
+        }
+
+        case "setBudget": {
+          await tx.gearPickCycle.update({
+            where: { id: cycle.id },
+            data: { budgetCents: change.budgetCents, budgetConfirmed: change.confirmed },
+          });
+          await createAuditEntryTx(tx, {
+            actorId: actor.id,
+            actorRole: actor.role,
+            entityType: "gear_pick_cycle",
+            entityId: cycle.id,
+            action: "set_budget",
+            before: { budgetCents: cycle.budgetCents, confirmed: cycle.budgetConfirmed },
+            after: { budgetCents: change.budgetCents, confirmed: change.confirmed },
           });
           return { cycleId: cycle.id };
         }

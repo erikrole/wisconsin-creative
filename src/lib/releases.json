@@ -1,6 +1,21 @@
 [
   {
     "date": "2026-10-18",
+    "title": "Budget on the UA gear results",
+    "type": "feature",
+    "summary": "Admins see the Under Armour budget at the top of the gear results, with what staff picks have used so far and what is left.",
+    "details": [
+      "Edit the total budget and mark it confirmed. Until then it carries a Placeholder tag.",
+      "The budget and totals are visible to admins only.",
+      "Only staff picks are counted for now. Student kits and standard issue come in later changes."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 0
+  },
+  {
+    "date": "2026-10-18",
     "title": "Checkout days and kit privacy",
     "type": "fixes",
     "summary": "The checkout activity chart keeps every Madison day when the clocks change. A collaborator opening a kit no longer sees who currently has each piece.",

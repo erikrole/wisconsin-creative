@@ -19,6 +19,7 @@ import { FadeUp } from "@/components/ui/motion";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { AllotmentOverview } from "./AllotmentOverview";
 import { GEAR_PICKS_ME_QUERY_KEY } from "@/hooks/use-gear-picks";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { formatDateTime } from "@/lib/format";
@@ -42,6 +43,7 @@ const FIT_LABELS: Record<GearPickFitKey, string> = { MEN: "Men’s", WOMEN: "Wom
 type AdminChange =
   | { action: "setDeadline"; deadline: string | null }
   | { action: "setLaunched"; launched: boolean }
+  | { action: "setBudget"; budgetCents: number; confirmed: boolean }
   | { action: "addParticipant"; userId: string; fit: GearPickFitKey }
   | { action: "updateParticipant"; participantId: string; fit?: GearPickFitKey; allowanceCents?: number }
   | { action: "removeParticipant"; participantId: string };
@@ -136,6 +138,13 @@ export function GearPicksAdmin() {
           </a>
         </Button>
       </PageHeader>
+
+      <AllotmentOverview
+        title={cycle.title}
+        budget={data.budget}
+        pending={pending}
+        onSave={(budgetCents, confirmed) => applyChange({ action: "setBudget", budgetCents, confirmed }, "Budget saved")}
+      />
 
       <StaffAccessCard
         launchedAt={cycle.launchedAt}

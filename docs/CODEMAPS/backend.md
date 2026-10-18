@@ -29,7 +29,7 @@
 | `src/lib/services/bulk-unit-scans.ts` | 718 |
 | `src/lib/services/calendar-sync-health.ts` | 165 |
 | `src/lib/services/calendar-sync.ts` | 754 |
-| `src/lib/services/candidate-scoring.ts` | 437 |
+| `src/lib/services/candidate-scoring.ts` | 509 |
 | `src/lib/services/category-mutations.ts` | 168 |
 | `src/lib/services/checkin-item-reports.ts` | 618 |
 | `src/lib/services/checkout-consolidation.ts` | 596 |
@@ -46,7 +46,7 @@
 | `src/lib/services/event-worker.ts` | 125 |
 | `src/lib/services/firmware-watch.ts` | 329 |
 | `src/lib/services/game-record.ts` | 169 |
-| `src/lib/services/gear-picks.ts` | 623 |
+| `src/lib/services/gear-picks.ts` | 648 |
 | `src/lib/services/hidden-users-cleanup.ts` | 122 |
 | `src/lib/services/item-cleanup-wizard.ts` | 762 |
 | `src/lib/services/job-runs.ts` | 52 |
@@ -77,7 +77,7 @@
 | `src/lib/services/onboarding-lifecycle.ts` | 546 |
 | `src/lib/services/pending-pickup-expiry.ts` | 370 |
 | `src/lib/services/product-event-log.ts` | 43 |
-| `src/lib/services/reports.ts` | 1932 |
+| `src/lib/services/reports.ts` | 1937 |
 | `src/lib/services/reservation-consolidation.ts` | 240 |
 | `src/lib/services/reservation-pickup-guard.ts` | 71 |
 | `src/lib/services/reservation-pickup-location.ts` | 34 |
@@ -92,7 +92,7 @@
 | `src/lib/services/schedule-notification-policy.ts` | 95 |
 | `src/lib/services/schedule-open-work.ts` | 597 |
 | `src/lib/services/schedule-publication.ts` | 1119 |
-| `src/lib/services/schedule-template-review.ts` | 554 |
+| `src/lib/services/schedule-template-review.ts` | 549 |
 | `src/lib/services/schedule-working-copy.ts` | 1202 |
 | `src/lib/services/scoreboard.ts` | 282 |
 | `src/lib/services/shift-assignment-conflicts.ts` | 43 |
@@ -122,7 +122,7 @@
 | `src/lib/api.ts` | 143 |
 | `src/lib/app-product-page.ts` | 151 |
 | `src/lib/app-product-pages.ts` | 71 |
-| `src/lib/app-time.ts` | 213 |
+| `src/lib/app-time.ts` | 257 |
 | `src/lib/apps-live-versions.ts` | 195 |
 | `src/lib/apps-page.ts` | 392 |
 | `src/lib/asset-attachments.ts` | 166 |
@@ -161,7 +161,7 @@
 | `src/lib/claim-review-workflow.ts` | 48 |
 | `src/lib/clipboard.ts` | 19 |
 | `src/lib/collaborator-access.ts` | 164 |
-| `src/lib/collaborator-gear.ts` | 151 |
+| `src/lib/collaborator-gear.ts` | 175 |
 | `src/lib/combined-schedule-event-suggestions.ts` | 93 |
 | `src/lib/companion-projection-contract.ts` | 71 |
 | `src/lib/companion-store.ts` | 302 |

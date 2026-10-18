@@ -92,6 +92,8 @@ New cycle: get the department's updated workbook, delete every tab but the new c
 
 ## Change Log
 
+- 2026-10-18: **Allotment budget (admin-only).** Migration `0176_ua_allotment_budget` adds `budgetCents` and `budgetConfirmed` to `GearPickCycle` (2027-28 starts at $5,500, unconfirmed). `/gear/admin` opens with a Budget summary in the new allotment design (`AllotmentOverview.tsx`): total budget, staff picks so far (drafts included), and what is left. `PATCH setBudget` is audited. Student kits, core kit, and standard issue are not counted yet. Overlaps the Budget module in PR #494; reconcile which table owns the UA budget when that lands.
+
 - 2026-10-16: **iPhone participant picker (local, not deployed).** Browse → UA Gear uses `GET /api/gear-picks/me?catalog=1` and `PUT /api/gear-picks/me`. The catalog is omitted unless the phone asks, so the website banner stays the same size. Admin roster, deadline, launch, CSV, and the equipment spreadsheet stay on `/gear/admin`. An Xcode build and a signed-in walkthrough are still open.
 - 2026-10-08 (local, not deployed): Picker save/reload race protections, persistent recovery, narrow-screen budget visibility, and direct filter reset. See recovery acceptance below.
 

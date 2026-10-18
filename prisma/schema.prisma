@@ -2906,6 +2906,9 @@ model GearPickCycle {
   deadline     DateTime?
   /// When admins opened picks to everyone on the list; until then only admins see them.
   launchedAt   DateTime?             @map("launched_at")
+  /// Total UA budget in cents. Admin-only; a placeholder until `budgetConfirmed`.
+  budgetCents      Int               @default(0) @map("budget_cents")
+  budgetConfirmed  Boolean           @default(false) @map("budget_confirmed")
   createdAt    DateTime              @default(now()) @map("created_at")
   updatedAt    DateTime              @updatedAt @map("updated_at")
   participants GearPickParticipant[]

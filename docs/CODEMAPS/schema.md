@@ -2975,12 +2975,14 @@ Values: `MEN`, `WOMEN`
 
 ## Model `GearPickCycle`
 
-Fields: 7
+Fields: 9
 
 - `id           String                @id`
 - `title        String`
 - `deadline     DateTime?`
 - `launchedAt   DateTime?             @map("launched_at")`
+- `budgetCents      Int               @default(0) @map("budget_cents")`
+- `budgetConfirmed  Boolean           @default(false) @map("budget_confirmed")`
 - `createdAt    DateTime              @default(now()) @map("created_at")`
 - `updatedAt    DateTime              @updatedAt @map("updated_at")`
 - `participants GearPickParticipant[]`
