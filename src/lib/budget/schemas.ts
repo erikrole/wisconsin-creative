@@ -31,6 +31,8 @@ export const createBudgetSchema = z.object({
   fiscalYear: z.string().trim().regex(FISCAL_YEAR_PATTERN, "Use a fiscal year like 2026-27"),
   allocationCents: cents.nullable().optional(),
   notes: optionalText(2000).optional(),
+  /** Copy this budget's recurring lines in as planned lines for the new year. */
+  copyRecurringFromBudgetId: z.string().trim().min(1).max(64).optional(),
 });
 
 export const updateBudgetSchema = z
@@ -57,6 +59,8 @@ const lineFields = {
   requesterUserId: z.string().trim().min(1).max(64).nullable(),
   requesterNote: optionalText(200),
   unplanned: z.boolean(),
+  refundCents: cents.nullable(),
+  recurring: z.boolean(),
 };
 
 export const createLineSchema = z.object({
@@ -74,6 +78,8 @@ export const createLineSchema = z.object({
   requesterUserId: lineFields.requesterUserId.optional(),
   requesterNote: lineFields.requesterNote.optional(),
   unplanned: lineFields.unplanned.default(false),
+  refundCents: lineFields.refundCents.optional(),
+  recurring: lineFields.recurring.default(false),
 });
 
 export const updateLineSchema = z
@@ -100,3 +106,13 @@ export const linkItemSchema = z
 export const applyOrderSchema = z.object({
   fields: z.array(z.enum(AUTOFILL_FIELDS)).min(1).max(AUTOFILL_FIELDS.length),
 });
+
+/** Change several lines at once: drop or restore them, or move them to another category. */
+export const bulkLinesSchema = z
+  .object({
+    lineIds: z.array(z.string().trim().min(1).max(64)).min(1).max(200),
+    status: z.enum(BUDGET_LINE_STATUSES).optional(),
+    category: z.enum(BUDGET_CATEGORIES).optional(),
+  })
+  .refine((value) => value.status !== undefined || value.category !== undefined, "Nothing to change");
+export type BulkLinesInput = z.infer<typeof bulkLinesSchema>;

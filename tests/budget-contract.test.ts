@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fiscalYearLabel, fiscalYearOf, formatCents, parseDollarsToCents, plannedCents, summarizeBudget, varianceCents, type BudgetLineMoney } from "@/lib/budget/contract";
+import { netSpentCents, fiscalYearLabel, fiscalYearOf, formatCents, parseDollarsToCents, plannedCents, summarizeBudget, varianceCents, type BudgetLineMoney } from "@/lib/budget/contract";
 
 const line = (overrides: Partial<BudgetLineMoney>): BudgetLineMoney => ({
   status: "PLANNED",
@@ -102,5 +102,19 @@ describe("fiscal years", () => {
   it("finds the fiscal year a date falls in", () => {
     expect(fiscalYearOf(new Date("2026-06-30T12:00:00Z"))).toBe("2025-26");
     expect(fiscalYearOf(new Date("2026-07-01T00:00:00Z"))).toBe("2026-27");
+  });
+});
+
+describe("refunds", () => {
+  it("counts the real cost after a refund or credit", () => {
+    expect(netSpentCents({ spentCents: 400_00, refundCents: 150_00 })).toBe(250_00);
+    expect(netSpentCents({ spentCents: 400_00, refundCents: null })).toBe(400_00);
+    expect(netSpentCents({ spentCents: null, refundCents: 50_00 })).toBeNull();
+  });
+
+  it("uses the net cost in totals and variance", () => {
+    const refunded = line({ status: "PURCHASED", unitCostCents: 400_00, spentCents: 420_00, refundCents: 100_00 });
+    expect(summarizeBudget([refunded], null).spentCents).toBe(320_00);
+    expect(varianceCents(refunded)).toBe(-80_00);
   });
 });

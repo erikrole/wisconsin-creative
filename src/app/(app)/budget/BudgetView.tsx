@@ -1,9 +1,9 @@
 "use client";
 
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ExternalLinkIcon, LinkIcon, PencilIcon, PlusIcon, Trash2Icon, UnlinkIcon, WalletIcon } from "lucide-react";
+import { ClockIcon, ExternalLinkIcon, LinkIcon, PencilIcon, PlusIcon, Trash2Icon, UnlinkIcon, WalletIcon } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { PageHeader } from "@/components/PageHeader";
@@ -32,12 +32,15 @@ import {
   formatCentsCompact,
   parseDollarsToCents,
   fiscalYearLabel,
+  fiscalYearOf,
+  netSpentCents,
   plannedCents,
   varianceCents,
   type BudgetCategoryValue,
   type BudgetLineStatusValue,
   type BudgetSummary,
 } from "@/lib/budget/contract";
+import type { LineHistoryEntry } from "@/lib/services/budget";
 import { LINE_SORT_LABELS, LINE_SORTS, filterAndSortLines, type LineSort } from "@/lib/budget/table";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 
@@ -61,6 +64,8 @@ type LineView = {
   requesterName: string | null;
   requesterNote: string | null;
   unplanned: boolean;
+  refundCents: number | null;
+  recurring: boolean;
   links: LinkView[];
 };
 type LinkView = {
@@ -96,7 +101,7 @@ const LIST_KEY = ["budget", "list"] as const;
 const detailKey = (id: string) => ["budget", "detail", id] as const;
 
 const GRID =
-  "grid grid-cols-[minmax(200px,1fr)_92px_40px_78px_88px_88px_78px_72px_112px_104px_72px] items-center gap-3 px-5";
+  "grid grid-cols-[20px_minmax(200px,1fr)_92px_40px_78px_88px_96px_78px_72px_112px_104px_116px] items-center gap-3 px-5";
 const MONO = "font-mono text-xs";
 const CATEGORY_COLORS = ["#3E63DD", "#8E4EC6", "#12A594", "#E5484D", "#F76B15", "#0090FF"];
 
@@ -161,6 +166,7 @@ export function BudgetView({ initialBudgetId = null, focusLineId = null }: { ini
   const [lineDialog, setLineDialog] = useState<{ line: LineView | null } | null>(null);
   const [budgetDialog, setBudgetDialog] = useState(false);
   const [linksFor, setLinksFor] = useState<string | null>(null);
+  const [historyFor, setHistoryFor] = useState<LineView | null>(null);
 
   const list = useQuery<BudgetListItem[]>({
     queryKey: LIST_KEY,
@@ -229,6 +235,7 @@ export function BudgetView({ initialBudgetId = null, focusLineId = null }: { ini
           focusLineId={focusLineId}
           onEdit={(line) => setLineDialog({ line })}
           onLinks={(line) => setLinksFor(line.id)}
+          onHistory={(line) => setHistoryFor(line)}
           onChanged={() => void refresh()}
         />
       )}
@@ -251,8 +258,10 @@ export function BudgetView({ initialBudgetId = null, focusLineId = null }: { ini
           onChanged={() => void refresh()}
         />
       )}
+      {historyFor && <HistoryDialog line={historyFor} onClose={() => setHistoryFor(null)} />}
       {budgetDialog && (
         <NewBudgetDialog
+          budgets={list.data ?? []}
           onClose={() => setBudgetDialog(false)}
           onCreated={(id) => {
             setBudgetDialog(false);
@@ -270,12 +279,14 @@ function BudgetBody({
   focusLineId,
   onEdit,
   onLinks,
+  onHistory,
   onChanged,
 }: {
   detail: Detail;
   focusLineId: string | null;
   onEdit: (line: LineView) => void;
   onLinks: (line: LineView) => void;
+  onHistory: (line: LineView) => void;
   onChanged: () => void;
 }) {
   const confirm = useConfirm();
@@ -315,13 +326,120 @@ function BudgetBody({
     }
   }
 
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const searchRef = useRef<HTMLInputElement>(null);
+  const toggleSelected = (id: string) =>
+    setSelected((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const selectedLines = lines.filter((line) => selected.has(line.id));
+  const allShownSelected = shown.length > 0 && shown.every((line) => selected.has(line.id));
+
+  // "/" jumps to search, like most tools with a big table.
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      if (event.key !== "/" || event.metaKey || event.ctrlKey || event.altKey) return;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT" || target.isContentEditable)) return;
+      event.preventDefault();
+      searchRef.current?.focus();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  async function bulk(body: { status?: BudgetLineStatusValue; category?: BudgetCategoryValue }, ids: string[]) {
+    const response = await fetch(`/api/budget/${budget.id}/lines/bulk`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lineIds: ids, ...body }),
+    });
+    if (!response.ok) throw new Error(await parseErrorMessage(response, "That didn't save. Try again."));
+    const json = await parseJsonSafely<{ data?: { previous: { id: string; status: BudgetLineStatusValue; category: BudgetCategoryValue }[] } }>(response);
+    return json?.data?.previous ?? [];
+  }
+
+  /** Drop lines (their planned money returns to the budget) with a toast that puts them back. */
+  async function dropSelected() {
+    const targets = selectedLines.filter((line) => line.status !== "CANCELLED");
+    if (targets.length === 0) return void toast.error("Those lines are already dropped.");
+    const freed = targets.reduce((sum, line) => sum + (line.unplanned ? 0 : plannedCents(line)), 0);
+    try {
+      const previous = await bulk({ status: "CANCELLED" }, targets.map((line) => line.id));
+      setSelected(new Set());
+      onChanged();
+      toast(`Dropped ${targets.length} ${targets.length === 1 ? "line" : "lines"}. ${formatCentsCompact(freed)} goes back to the budget.`, {
+        duration: 10_000,
+        action: {
+          label: "Undo",
+          onClick: async () => {
+            try {
+              for (const status of new Set(previous.map((row) => row.status))) {
+                await bulk({ status }, previous.filter((row) => row.status === status).map((row) => row.id));
+              }
+              onChanged();
+              toast.success("Put back.");
+            } catch (error) {
+              toast.error(error instanceof Error ? error.message : "Couldn't undo that.");
+            }
+          },
+        },
+      });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Couldn't reach the server. Try again.");
+    }
+  }
+
+  async function restoreSelected() {
+    const targets = selectedLines.filter((line) => line.status === "CANCELLED");
+    if (targets.length === 0) return void toast.error("None of those lines are dropped.");
+    try {
+      await bulk({ status: "PLANNED" }, targets.map((line) => line.id));
+      setSelected(new Set());
+      onChanged();
+      toast.success("Restored to planned.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Couldn't reach the server. Try again.");
+    }
+  }
+
+  async function recategorizeSelected(category: BudgetCategoryValue) {
+    const ids = selectedLines.map((line) => line.id);
+    try {
+      const previous = await bulk({ category }, ids);
+      setSelected(new Set());
+      onChanged();
+      toast(`Moved ${ids.length} ${ids.length === 1 ? "line" : "lines"} to ${BUDGET_CATEGORY_LABELS[category]}.`, {
+        duration: 10_000,
+        action: {
+          label: "Undo",
+          onClick: async () => {
+            try {
+              for (const value of new Set(previous.map((row) => row.category))) {
+                await bulk({ category: value }, previous.filter((row) => row.category === value).map((row) => row.id));
+              }
+              onChanged();
+            } catch (error) {
+              toast.error(error instanceof Error ? error.message : "Couldn't undo that.");
+            }
+          },
+        },
+      });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Couldn't reach the server. Try again.");
+    }
+  }
+
   const submitted = summary.submittedCents;
   const vsSubmitted = summary.forecastCents - submitted;
   const stillPlanned = summary.counts.PLANNED + summary.counts.ORDERED;
   const pctSpent = cap > 0 ? Math.round((summary.spentCents / cap) * 100) : 0;
   const barTotal = Math.max(cap, summary.forecastCents, 1);
   const shownBudgeted = shown.filter((line) => !line.unplanned).reduce((sum, line) => sum + plannedCents(line), 0);
-  const shownSpent = shown.reduce((sum, line) => sum + (line.spentCents ?? 0), 0);
+  const shownSpent = shown.reduce((sum, line) => sum + (netSpentCents(line) ?? 0), 0);
 
   return (
     <div className="flex flex-col gap-7">
@@ -411,8 +529,9 @@ function BudgetBody({
         <div className="flex flex-col gap-3.5">
           <div className="flex flex-wrap items-center gap-2.5">
             <Input
+              ref={searchRef}
               aria-label="Search lines"
-              placeholder="Search lines, suppliers, POs"
+              placeholder="Search lines, suppliers, POs  ( / )"
               className="w-full rounded-[9px] sm:w-64"
               value={query}
               maxLength={80}
@@ -444,6 +563,30 @@ function BudgetBody({
               {shown.length === lines.length ? `${lines.length} lines` : `${shown.length} of ${lines.length} lines`}
             </span>
           </div>
+          {selectedLines.length > 0 && (
+            <div className="flex flex-wrap items-center gap-3 rounded-xl bg-[#1C2024] px-4 py-2.5 text-sm text-white" role="toolbar" aria-label="Bulk actions">
+              <b>{selectedLines.length} selected</b>
+              <span className="text-[#B9BBC6]">
+                {formatCentsCompact(selectedLines.reduce((sum, line) => sum + (netSpentCents(line) ?? (line.unplanned ? 0 : plannedCents(line))), 0))}
+              </span>
+              <span className="ml-auto flex flex-wrap items-center gap-4 font-bold">
+                <select
+                  aria-label="Change category"
+                  className="rounded-md bg-white/10 px-2 py-1 text-white"
+                  value=""
+                  onChange={(event) => event.target.value && void recategorizeSelected(event.target.value as BudgetCategoryValue)}
+                >
+                  <option value="">Change category</option>
+                  {BUDGET_CATEGORIES.map((value) => (
+                    <option key={value} value={value} className="text-black">{BUDGET_CATEGORY_LABELS[value]}</option>
+                  ))}
+                </select>
+                <button type="button" onClick={() => void restoreSelected()}>Restore</button>
+                <button type="button" onClick={() => void dropSelected()}>Drop</button>
+                <button type="button" className="font-normal text-[#B9BBC6]" onClick={() => setSelected(new Set())}>Clear</button>
+              </span>
+            </div>
+          )}
           {shown.length === 0 ? (
             <EmptyState
               icon="search"
@@ -458,8 +601,16 @@ function BudgetBody({
             />
           ) : (
             <div className="overflow-x-auto rounded-2xl border bg-card" role="table" aria-label="Budget lines">
-              <div className="min-w-[1220px]">
+              <div className="min-w-[1300px]">
                 <div role="row" className={`${GRID} border-b bg-muted/40 py-3 text-[11px] font-bold uppercase tracking-[0.09em] text-muted-foreground`}>
+                  <span role="columnheader">
+                    <input
+                      type="checkbox"
+                      aria-label="Select all shown lines"
+                      checked={allShownSelected}
+                      onChange={() => setSelected(allShownSelected ? new Set() : new Set(shown.map((line) => line.id)))}
+                    />
+                  </span>
                   <span role="columnheader">Line</span>
                   <span role="columnheader">Status</span>
                   <span role="columnheader" className="text-right">Qty</span>
@@ -484,6 +635,14 @@ function BudgetBody({
                         data-state={line.id === focusLineId ? "selected" : undefined}
                         className={`${GRID} items-center border-b py-3.5 data-[state=selected]:bg-muted/50`}
                       >
+                        <span role="cell">
+                          <input
+                            type="checkbox"
+                            aria-label={`Select ${line.description}`}
+                            checked={selected.has(line.id)}
+                            onChange={() => toggleSelected(line.id)}
+                          />
+                        </span>
                         <div role="cell" className="flex min-w-0 items-center gap-3">
                           {line.links.some((link) => link.imageUrl) && (
                             <AssetImage src={line.links.find((link) => link.imageUrl)?.imageUrl} alt="" size={40} />
@@ -513,7 +672,10 @@ function BudgetBody({
                         <span role="cell" className={`${MONO} text-right ${dropped ? "text-muted-foreground" : ""}`}>
                           {line.unplanned ? "—" : formatCentsCompact(plannedCents(line))}
                         </span>
-                        <span role="cell" className={`${MONO} text-right font-medium`}>{line.spentCents === null ? "—" : formatCentsCompact(line.spentCents)}</span>
+                        <span role="cell" className={`${MONO} text-right font-medium`}>
+                          {line.spentCents === null ? "—" : formatCentsCompact(netSpentCents(line) ?? 0)}
+                          {line.refundCents ? <span className="block text-[11px] font-normal text-[#218358]">refund −{formatCentsCompact(line.refundCents)}</span> : null}
+                        </span>
                         <span role="cell" className={`${MONO} text-right ${variance === null ? "" : variance > 0 ? "text-[#C62A2F]" : variance < 0 ? "text-[#218358]" : ""}`}>
                           {variance === null || variance === 0 ? "—" : `${variance > 0 ? "+" : "−"}${formatCentsCompact(Math.abs(variance))}`}
                         </span>
@@ -539,6 +701,9 @@ function BudgetBody({
                           )}
                         </span>
                         <div role="cell" className="flex justify-end gap-1">
+                          <Button type="button" variant="ghost" size="icon-sm" aria-label="Line history" onClick={() => onHistory(line)}>
+                            <ClockIcon />
+                          </Button>
                           <Button type="button" variant="ghost" size="icon-sm" aria-label="Edit line" onClick={() => onEdit(line)}>
                             <PencilIcon />
                           </Button>
@@ -572,6 +737,7 @@ function BudgetBody({
                   );
                 })}
                 <div role="row" className={`${GRID} bg-muted/40 py-3.5 text-[13px] font-bold text-muted-foreground`}>
+                  <span role="cell" />
                   <span role="cell">Total shown</span>
                   <span role="cell" />
                   <span role="cell" />
@@ -592,6 +758,57 @@ function BudgetBody({
         </div>
       )}
     </div>
+  );
+}
+
+function HistoryDialog({ line, onClose }: { line: LineView; onClose: () => void }) {
+  const history = useQuery<LineHistoryEntry[]>({
+    queryKey: ["budget", "history", line.id],
+    queryFn: async ({ signal }) => readJson(await fetch(`/api/budget/lines/${line.id}/history`, { signal }), "Could not load the history"),
+  });
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>History</DialogTitle>
+          <DialogDescription>{line.description}</DialogDescription>
+        </DialogHeader>
+        <DialogBody className="flex max-h-[60vh] flex-col gap-4 overflow-y-auto">
+          {history.isLoading ? (
+            <Skeleton className="h-24 w-full" />
+          ) : history.isError ? (
+            <p className="text-sm text-muted-foreground">{history.error.message}</p>
+          ) : (history.data ?? []).length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nothing recorded yet.</p>
+          ) : (
+            (history.data ?? []).map((entry) => (
+              <div key={entry.id} className="border-l-2 border-[#E8E8EC] pl-3">
+                <div className="text-[13px] text-muted-foreground">
+                  <b className="font-bold text-foreground">{entry.actorName ?? "Someone"}</b> ·{" "}
+                  {new Date(entry.at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                </div>
+                <ul className="mt-1 text-sm">
+                  {entry.action === "create" ? <li>Added the line</li> : null}
+                  {entry.action === "delete" ? <li>Deleted the line</li> : null}
+                  {entry.action === "update" && entry.changes.length === 0 ? <li>Edited</li> : null}
+                  {entry.action !== "delete" &&
+                    entry.changes
+                      .filter(() => entry.action === "update")
+                      .map((change) => (
+                        <li key={change.field}>
+                          {change.label}: <span className="text-muted-foreground">{change.from}</span> → <b className="font-bold">{change.to}</b>
+                        </li>
+                      ))}
+                </ul>
+              </div>
+            ))
+          )}
+        </DialogBody>
+        <DialogFooter>
+          <Button type="button" variant="ghost" onClick={onClose}>Close</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -636,13 +853,17 @@ function LineDialog({
     requesterNote: line?.requesterNote ?? "",
     justification: line?.justification ?? "",
     unplanned: line?.unplanned ?? false,
+    recurring: line?.recurring ?? false,
+    refund: centsToInput(line?.refundCents ?? null),
   });
-  const set = (key: Exclude<keyof typeof form, "unplanned">) => (value: string) => setForm((current) => ({ ...current, [key]: value }));
+  const set = (key: Exclude<keyof typeof form, "unplanned" | "recurring">) => (value: string) => setForm((current) => ({ ...current, [key]: value }));
 
   async function save() {
     const unitCostCents = parseDollarsToCents(form.unitCost);
     const quantity = Number(form.quantity);
     const spentCents = form.spent.trim() === "" ? null : parseDollarsToCents(form.spent);
+    const refundCents = form.refund.trim() === "" ? null : parseDollarsToCents(form.refund);
+    if (form.refund.trim() !== "" && refundCents === null) return void toast.error("Enter the refund in dollars.");
     if (!form.description.trim()) return void toast.error("Add a description.");
     if (unitCostCents === null) return void toast.error("Enter the unit cost in dollars, like 1299.50.");
     if (!Number.isInteger(quantity) || quantity < 1) return void toast.error("Quantity must be a whole number, 1 or more.");
@@ -668,6 +889,8 @@ function LineDialog({
       requesterNote: form.requesterNote,
       justification: form.justification,
       unplanned: form.unplanned,
+      recurring: form.recurring,
+      refundCents,
     };
     setPending(true);
     try {
@@ -730,6 +953,14 @@ function LineDialog({
             />
             Added after the plan was submitted (unplanned)
           </label>
+          <label className="flex items-center gap-2 text-sm sm:col-span-2">
+            <input
+              type="checkbox"
+              checked={form.recurring}
+              onChange={(e) => setForm((current) => ({ ...current, recurring: e.target.checked }))}
+            />
+            Repeats every year (offered when you create next year&apos;s budget)
+          </label>
           <Field label="Unit cost ($)">
             <Input inputMode="decimal" value={form.unitCost} onChange={(e) => set("unitCost")(e.target.value)} />
           </Field>
@@ -738,6 +969,9 @@ function LineDialog({
           </Field>
           <Field label="Spent ($)">
             <Input inputMode="decimal" value={form.spent} onChange={(e) => set("spent")(e.target.value)} />
+          </Field>
+          <Field label="Refund or credit ($)">
+            <Input inputMode="decimal" value={form.refund} onChange={(e) => set("refund")(e.target.value)} />
           </Field>
           <Field label="Quantity bought">
             <Input inputMode="numeric" value={form.quantityBought} onChange={(e) => set("quantityBought")(e.target.value)} />
@@ -769,7 +1003,16 @@ function LineDialog({
   );
 }
 
-function NewBudgetDialog({ onClose, onCreated }: { onClose: () => void; onCreated: (id: string) => void }) {
+function NewBudgetDialog({
+  budgets,
+  onClose,
+  onCreated,
+}: {
+  budgets: BudgetListItem[];
+  onClose: () => void;
+  onCreated: (id: string) => void;
+}) {
+  const [copyFrom, setCopyFrom] = useState("");
   const [name, setName] = useState("Creative");
   const [fiscalYear, setFiscalYear] = useState("");
   const [allocation, setAllocation] = useState("");
@@ -783,7 +1026,7 @@ function NewBudgetDialog({ onClose, onCreated }: { onClose: () => void; onCreate
       const response = await fetch("/api/budget", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, fiscalYear, allocationCents }),
+        body: JSON.stringify({ name, fiscalYear, allocationCents, ...(copyFrom ? { copyRecurringFromBudgetId: copyFrom } : {}) }),
       });
       if (!response.ok) {
         toast.error(await parseErrorMessage(response, "That budget wasn't created. Try again."));
@@ -815,11 +1058,22 @@ function NewBudgetDialog({ onClose, onCreated }: { onClose: () => void; onCreate
             <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} />
           </Field>
           <Field label="Fiscal year">
-            <Input placeholder="2026-27" value={fiscalYear} onChange={(e) => setFiscalYear(e.target.value)} maxLength={7} />
+            <Input placeholder={fiscalYearOf(new Date())} value={fiscalYear} onChange={(e) => setFiscalYear(e.target.value)} maxLength={7} />
+            <p className="text-xs text-muted-foreground">{fiscalYearLabel(fiscalYear) !== fiscalYear ? fiscalYearLabel(fiscalYear) : "Fiscal years start July 1, so 2025-26 is Jul 2025 to Jun 2026."}</p>
           </Field>
           <Field label="Overall allocation ($, optional)">
             <Input inputMode="decimal" value={allocation} onChange={(e) => setAllocation(e.target.value)} />
           </Field>
+          {budgets.length > 0 && (
+            <Field label="Copy yearly lines from (optional)">
+              <NativeSelect value={copyFrom} onChange={(e) => setCopyFrom(e.target.value)}>
+                <option value="">Don&apos;t copy</option>
+                {budgets.map((budget) => (
+                  <option key={budget.id} value={budget.id}>{budget.name} · {fiscalYearLabel(budget.fiscalYear)}</option>
+                ))}
+              </NativeSelect>
+            </Field>
+          )}
         </DialogBody>
         <DialogFooter>
           <Button type="button" variant="ghost" onClick={onClose} disabled={pending}>Cancel</Button>

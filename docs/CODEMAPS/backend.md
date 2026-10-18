@@ -24,7 +24,7 @@
 | `src/lib/services/bookings-lifecycle.ts` | 3386 |
 | `src/lib/services/bookings-queries.ts` | 311 |
 | `src/lib/services/bookings.ts` | 9 |
-| `src/lib/services/budget.ts` | 753 |
+| `src/lib/services/budget.ts` | 848 |
 | `src/lib/services/bulk-assignment-batches.ts` | 253 |
 | `src/lib/services/bulk-schedule-assignment.ts` | 971 |
 | `src/lib/services/bulk-unit-scans.ts` | 718 |
@@ -412,10 +412,12 @@
 
 ### `/api/budget`
 
+- `/api/budget/[id]/lines/bulk`
 - `/api/budget/[id]/lines`
 - `/api/budget/[id]`
 - `/api/budget/for-asset/[assetId]`
 - `/api/budget/item-search`
+- `/api/budget/lines/[lineId]/history`
 - `/api/budget/lines/[lineId]/links`
 - `/api/budget/lines/[lineId]`
 - `/api/budget/lines/[lineId]/suggestions`

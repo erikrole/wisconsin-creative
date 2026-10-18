@@ -3031,6 +3031,10 @@ model BudgetLine {
   requesterNote   String?          @map("requester_note")
   /// Added after the plan was submitted, so it is not part of the submitted total.
   unplanned       Boolean          @default(false)
+  /// Money returned by the supplier (refund or credit); the line's real cost is spent minus this.
+  refundCents     Int?             @map("refund_cents")
+  /// Repeats every year; offered when the next year's budget is created.
+  recurring       Boolean          @default(false)
   createdAt       DateTime         @default(now()) @map("created_at")
   updatedAt       DateTime         @updatedAt @map("updated_at")
   budget          Budget           @relation(fields: [budgetId], references: [id], onDelete: Cascade)

@@ -12,7 +12,7 @@ vi.mock("@/lib/audit", () => ({ createAuditEntry: vi.fn(), createAuditEntryTx: v
 vi.mock("@/lib/db", () => {
   const tx = {
     budget: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
-    budgetLine: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
+    budgetLine: { findUnique: vi.fn(), findMany: vi.fn(), create: vi.fn(), createMany: vi.fn(), update: vi.fn(), updateMany: vi.fn(), delete: vi.fn() },
     budgetLineItem: { create: vi.fn(), findUnique: vi.fn(), delete: vi.fn() },
     asset: { findUnique: vi.fn(), update: vi.fn() },
     bulkSku: { findUnique: vi.fn() },
@@ -21,6 +21,7 @@ vi.mock("@/lib/db", () => {
   return {
     db: {
       budget: { findMany: vi.fn(), findUnique: vi.fn() },
+      auditLog: { findMany: vi.fn() },
       $transaction: vi.fn(),
       _mockTx: tx,
     },
@@ -34,6 +35,8 @@ import { enforceRateLimit } from "@/lib/rate-limit";
 import { GET as listBudgets, POST as createBudget } from "@/app/api/budget/route";
 import { GET as getBudget } from "@/app/api/budget/[id]/route";
 import { POST as createLine } from "@/app/api/budget/[id]/lines/route";
+import { POST as bulkLines } from "@/app/api/budget/[id]/lines/bulk/route";
+import { GET as lineHistory } from "@/app/api/budget/lines/[lineId]/history/route";
 import { DELETE as deleteLine, PATCH as patchLine } from "@/app/api/budget/lines/[lineId]/route";
 import { POST as linkItem } from "@/app/api/budget/lines/[lineId]/links/route";
 import { DELETE as unlinkItem } from "@/app/api/budget/links/[linkId]/route";
@@ -305,5 +308,59 @@ describe("fill an item from its order", () => {
     tx.budgetLineItem!.findUnique!.mockResolvedValue(null);
     expect((await applyOrder(json("POST", "/api/budget/links/link-1/apply", { fields: ["notes"] }), linkContext)).status).toBe(404);
     expect(tx.asset!.update!).not.toHaveBeenCalled();
+  });
+});
+
+describe("bulk changes and history", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (db.$transaction as unknown as MockFn).mockImplementation(async (fn: (t: unknown) => unknown) => fn(tx));
+  });
+
+  it("drops several lines and returns their previous values for undo", async () => {
+    (requireAuth as unknown as MockFn).mockResolvedValue(admin);
+    tx.budgetLine!.findMany!.mockResolvedValue([
+      { id: "l1", status: "PLANNED", category: "EQUIPMENT" },
+      { id: "l2", status: "ORDERED", category: "RENTALS" },
+    ]);
+    const res = await bulkLines(json("POST", "/api/budget/budget-1/lines/bulk", { lineIds: ["l1", "l2"], status: "CANCELLED" }), idContext);
+    expect(res.status).toBe(200);
+    expect(tx.budgetLine!.updateMany!.mock.calls[0]![0].data).toEqual({ status: "CANCELLED" });
+    expect((await res.json()).data.previous).toHaveLength(2);
+    expect(createAuditEntryTx).toHaveBeenCalledTimes(2);
+  });
+
+  it("refuses a bulk change that names a line from another budget", async () => {
+    (requireAuth as unknown as MockFn).mockResolvedValue(admin);
+    tx.budgetLine!.findMany!.mockResolvedValue([{ id: "l1", status: "PLANNED", category: "EQUIPMENT" }]);
+    const res = await bulkLines(json("POST", "/api/budget/budget-1/lines/bulk", { lineIds: ["l1", "other"], status: "CANCELLED" }), idContext);
+    expect(res.status).toBe(404);
+    expect(tx.budgetLine!.updateMany!).not.toHaveBeenCalled();
+  });
+
+  it("keeps bulk changes and history admin only", async () => {
+    (requireAuth as unknown as MockFn).mockResolvedValue(staff);
+    expect((await bulkLines(json("POST", "/api/budget/budget-1/lines/bulk", { lineIds: ["l1"], status: "CANCELLED" }), idContext)).status).toBe(403);
+    expect((await lineHistory(json("GET", "/api/budget/lines/line-1/history"), lineContext)).status).toBe(403);
+  });
+
+  it("reads a line's history in plain words", async () => {
+    (requireAuth as unknown as MockFn).mockResolvedValue(admin);
+    (db.auditLog.findMany as unknown as MockFn).mockResolvedValue([
+      {
+        id: "a1",
+        action: "update",
+        createdAt: new Date("2026-06-10T12:00:00Z"),
+        beforeJson: { status: "PLANNED", spentCents: null },
+        afterJson: { status: "PURCHASED", spentCents: 129_600 },
+        actor: { name: "Erik" },
+      },
+    ]);
+    const body = await (await lineHistory(json("GET", "/api/budget/lines/line-1/history"), lineContext)).json();
+    expect(body.data[0].actorName).toBe("Erik");
+    expect(body.data[0].changes).toEqual([
+      { field: "status", label: "Status", from: "Planned", to: "Purchased" },
+      { field: "spentCents", label: "Spent", from: "none", to: "$1,296" },
+    ]);
   });
 });

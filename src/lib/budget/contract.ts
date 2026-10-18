@@ -54,7 +54,15 @@ export type BudgetLineMoney = {
   spentCents: number | null;
   /** Added after the plan was submitted; it has no place in the submitted plan. */
   unplanned?: boolean;
+  /** Refund or credit received; the real cost is spent minus this. */
+  refundCents?: number | null;
 };
+
+/** What the line really cost after any refund or credit; null while nothing is spent. */
+export function netSpentCents(line: Pick<BudgetLineMoney, "spentCents" | "refundCents">): number | null {
+  if (line.spentCents === null) return null;
+  return Math.max(0, line.spentCents - (line.refundCents ?? 0));
+}
 
 /** What the line was planned to cost. */
 export function plannedCents(line: Pick<BudgetLineMoney, "unitCostCents" | "quantity">): number {
@@ -107,9 +115,9 @@ export function summarizeBudget(lines: BudgetLineMoney[], allocationCents: numbe
       if (!line.unplanned) freed += plannedCents(line);
       continue;
     }
-    if (line.unplanned) unplannedTotal += line.spentCents ?? plannedCents(line);
+    if (line.unplanned) unplannedTotal += netSpentCents(line) ?? plannedCents(line);
     const linePlanned = plannedCents(line);
-    const lineSpent = line.spentCents ?? 0;
+    const lineSpent = netSpentCents(line) ?? 0;
     planned += linePlanned;
     spent += lineSpent;
     if (line.status !== "PURCHASED" && line.spentCents === null) outstanding += linePlanned;
@@ -142,8 +150,9 @@ export function summarizeBudget(lines: BudgetLineMoney[], allocationCents: numbe
  */
 export function varianceCents(line: BudgetLineMoney): number | null {
   if (line.status === "CANCELLED") return line.unplanned ? 0 : -plannedCents(line);
-  if (line.spentCents === null) return null;
-  return line.spentCents - (line.unplanned ? 0 : plannedCents(line));
+  const net = netSpentCents(line);
+  if (net === null) return null;
+  return net - (line.unplanned ? 0 : plannedCents(line));
 }
 
 /** "2026-27" style labels only; keeps the unique (name, year) key tidy. */

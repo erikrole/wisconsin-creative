@@ -5,7 +5,9 @@ import { HttpError } from "@/lib/http";
 import { applyNote, buildAutofill, unitPriceCents, type AutofillField, type AutofillProposal } from "@/lib/budget/autofill";
 import { scoreLineItemMatch, tokens, type MatchItem, type MatchLine, type MatchResult } from "@/lib/budget/matching";
 import { summarizeBudget, type BudgetCategoryValue, type BudgetLineStatusValue } from "@/lib/budget/contract";
+import { describeLineChanges, type LineChange } from "@/lib/budget/history";
 import type {
+  BulkLinesInput,
   CreateBudgetInput,
   CreateLineInput,
   UpdateBudgetInput,
@@ -33,6 +35,8 @@ const lineSelect = {
   requesterUserId: true,
   requesterNote: true,
   unplanned: true,
+  refundCents: true,
+  recurring: true,
   requester: { select: { id: true, name: true } },
   items: {
     orderBy: { createdAt: "asc" },
@@ -137,6 +141,7 @@ export async function getBudgetDetail(budgetId: string) {
       quantity: line.quantity,
       spentCents: line.spentCents,
       unplanned: line.unplanned,
+      refundCents: line.refundCents,
     })),
     rest.allocationCents,
   );
@@ -155,13 +160,36 @@ export async function createBudget(actor: Actor, input: CreateBudgetInput) {
       },
       select: { id: true, name: true, fiscalYear: true, allocationCents: true },
     });
+    let copied = 0;
+    if (input.copyRecurringFromBudgetId) {
+      const recurring = await tx.budgetLine.findMany({
+        where: { budgetId: input.copyRecurringFromBudgetId, recurring: true, status: { not: "CANCELLED" } },
+        select: {
+          category: true,
+          description: true,
+          supplier: true,
+          unitCostCents: true,
+          quantity: true,
+          linkUrl: true,
+          justification: true,
+          requesterUserId: true,
+          requesterNote: true,
+        },
+      });
+      if (recurring.length > 0) {
+        await tx.budgetLine.createMany({
+          data: recurring.map((line) => ({ ...line, budgetId: budget.id, status: "PLANNED" as const, recurring: true })),
+        });
+      }
+      copied = recurring.length;
+    }
     await createAuditEntryTx(tx, {
       actorId: actor.id,
       actorRole: actor.role,
       entityType: "budget",
       entityId: budget.id,
       action: "create",
-      after: budget,
+      after: { ...budget, copiedRecurringLines: copied },
     });
     return budget;
   });
@@ -190,6 +218,13 @@ export async function updateBudget(actor: Actor, budgetId: string, input: Update
     });
     return after;
   });
+}
+
+/** A refund can't be larger than what was spent. Throwing inside the transaction rolls the change back. */
+function assertRefund(row: { refundCents: number | null; spentCents: number | null }) {
+  if (row.refundCents !== null && row.refundCents > (row.spentCents ?? 0)) {
+    throw new HttpError(400, "A refund can't be more than what was spent.");
+  }
 }
 
 async function assertRequester(tx: Prisma.TransactionClient, userId: string | null | undefined) {
@@ -222,9 +257,12 @@ export async function createLine(actor: Actor, budgetId: string, input: CreateLi
         requesterUserId: input.requesterUserId ?? null,
         requesterNote: input.requesterNote ?? null,
         unplanned: input.unplanned,
+        refundCents: input.refundCents ?? null,
+        recurring: input.recurring,
       },
       select: lineSelect,
     });
+    assertRefund(row);
     await createAuditEntryTx(tx, {
       actorId: actor.id,
       actorRole: actor.role,
@@ -248,6 +286,7 @@ export async function updateLine(actor: Actor, lineId: string, input: UpdateLine
       data: { ...rest, ...(purchasedOn !== undefined ? { purchasedOn: toDate(purchasedOn) } : {}) },
       select: lineSelect,
     });
+    assertRefund(row);
     await createAuditEntryTx(tx, {
       actorId: actor.id,
       actorRole: actor.role,
@@ -749,4 +788,60 @@ export async function applyOrderToAsset(actor: Actor, linkId: string, fields: Au
     });
     return { assetId: asset.id, filled: Object.keys(after) };
   });
+}
+
+
+/** Drop, restore, or recategorize several lines at once. Returns each line's previous values so the caller can undo. */
+export async function bulkUpdateLines(actor: Actor, budgetId: string, input: BulkLinesInput) {
+  return db.$transaction(async (tx) => {
+    const before = await tx.budgetLine.findMany({
+      where: { budgetId, id: { in: input.lineIds } },
+      select: { id: true, status: true, category: true },
+    });
+    if (before.length !== new Set(input.lineIds).size) throw new HttpError(404, "Some of those lines aren't in this budget.");
+    await tx.budgetLine.updateMany({
+      where: { budgetId, id: { in: input.lineIds } },
+      data: { ...(input.status ? { status: input.status } : {}), ...(input.category ? { category: input.category } : {}) },
+    });
+    for (const line of before) {
+      await createAuditEntryTx(tx, {
+        actorId: actor.id,
+        actorRole: actor.role,
+        entityType: "budget_line",
+        entityId: line.id,
+        action: "update",
+        before: { status: line.status, category: line.category },
+        after: {
+          status: input.status ?? line.status,
+          category: input.category ?? line.category,
+        },
+      });
+    }
+    return { previous: before };
+  });
+}
+
+export type LineHistoryEntry = {
+  id: string;
+  action: string;
+  at: string;
+  actorName: string | null;
+  changes: LineChange[];
+};
+
+/** What happened to a line, newest first, in plain words. */
+export async function getLineHistory(lineId: string): Promise<LineHistoryEntry[]> {
+  const rows = await db.auditLog.findMany({
+    where: { entityType: "budget_line", entityId: lineId },
+    orderBy: { createdAt: "desc" },
+    take: 100,
+    select: { id: true, action: true, createdAt: true, beforeJson: true, afterJson: true, actor: { select: { name: true } } },
+  });
+  return rows.map((row) => ({
+    id: row.id,
+    action: row.action,
+    at: row.createdAt.toISOString(),
+    actorName: row.actor?.name ?? null,
+    changes: describeLineChanges(row.beforeJson as Record<string, unknown> | null, row.afterJson as Record<string, unknown> | null),
+  }));
 }

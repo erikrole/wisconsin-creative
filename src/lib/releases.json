@@ -8,7 +8,7 @@
       "Create a budget for a fiscal year, add lines with category, supplier, quantity, and cost, and record the PO and order numbers once something is bought.",
       "See spent, planned but not bought, and remaining at a glance. Dropped lines stay in the fixed submitted plan, and lines added later are marked Unplanned.",
       "Fiscal years read as FY26 · Jul 2025 – Jun 2026, matching the July 1 start.",
-      "Link a purchase to the items it bought, with suggested matches, and fill an item's purchase details from the order without overwriting anything already there.",
+      "Link a purchase to the items it bought, with suggested matches, and fill an item's purchase details from the order without overwriting anything already there. Every line keeps a history, refunds and credits count against its cost, and you can drop or recategorize many lines at once with an undo.",
       "A new Wish list lets staff and admins paste a link or type what they need. Admins approve, decline, or move a wish into the budget as a line.",
       "Only admins can see or change the budget, and every change is logged."
     ],

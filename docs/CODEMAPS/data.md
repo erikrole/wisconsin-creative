@@ -123,7 +123,7 @@
 | `GearPickSubmission` | 9 | 1 |
 | `GearPickLine` | 9 | 2 |
 | `Budget` | 8 | 3 |
-| `BudgetLine` | 24 | 5 |
+| `BudgetLine` | 26 | 5 |
 | `BudgetLineItem` | 10 | 5 |
 | `WishItem` | 15 | 3 |
 

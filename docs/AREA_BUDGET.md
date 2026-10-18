@@ -34,6 +34,8 @@ The team's budget lives in a Google Sheet with one tab per fiscal year plus a fo
 
 ## Data Model
 
+Migration `0179_budget_line_refund_recurring` adds `budget_lines.refund_cents` (a refund or credit; the real cost is spent minus refund, never below zero) and `recurring` (copied into next year's budget when it is created).
+
 Migration `0178_wish_items` adds enum `WishStatus` and `wish_items` (title, link_url, estimate_cents, quantity, needed_by, reason, status, status_note, requested_by_id, budget_line_id unique). The requester link and the budget line link are `SetNull`.
 
 Migration `0177_budget_line_unplanned` adds `budget_lines.unplanned`.
@@ -58,6 +60,8 @@ Migration `0175_budget`: enums `BudgetLineStatus` and `BudgetCategory`; `budgets
 | DELETE | `/api/budget/links/[linkId]` | `budget:manage` | Remove a link |
 | POST | `/api/budget/links/[linkId]/apply` | `budget:manage` | Fill chosen item fields from the linked order |
 | GET | `/api/budget/for-asset/[assetId]` | `budget:view` | The item's serial, its linked lines with autofill proposals, or suggested lines |
+| POST | `/api/budget/[id]/lines/bulk` | `budget:manage` | Drop, restore, or recategorize several lines; returns previous values for undo |
+| GET | `/api/budget/lines/[lineId]/history` | `budget:view` | A line's audit trail in plain words |
 | GET | `/api/budget/item-search` | `budget:view` | Find an item to link by hand |
 | GET | `/api/wishlist` | `wish:view` (staff, admin) | Every wish; everyone sees all |
 | POST | `/api/wishlist` | `wish:create` | Add a wish |
@@ -80,3 +84,4 @@ Migration `0175_budget`: enums `BudgetLineStatus` and `BudgetCategory`; `budgets
 - 2026-10-16: Lines table search, status filter, and sort.
 - 2026-10-18: Plan-change states (dropped, unplanned, submitted plan fixed), fiscal-year labels, and the new board look on the budget page.
 - 2026-10-18: Wish list for staff and admins, with admin review and move-to-budget.
+- 2026-10-18: Refunds and credits, yearly-repeat lines copied into a new budget, line history, bulk drop and recategorize with an undo toast, and `/` to search.

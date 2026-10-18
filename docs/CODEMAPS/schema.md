@@ -3074,7 +3074,7 @@ Indexes and constraints:
 
 ## Model `BudgetLine`
 
-Fields: 24
+Fields: 26
 
 - `id              String           @id @default(cuid())`
 - `budgetId        String           @map("budget_id")`
@@ -3094,6 +3094,8 @@ Fields: 24
 - `requesterUserId String?          @map("requester_user_id")`
 - `requesterNote   String?          @map("requester_note")`
 - `unplanned       Boolean          @default(false)`
+- `refundCents     Int?             @map("refund_cents")`
+- `recurring       Boolean          @default(false)`
 - `createdAt       DateTime         @default(now()) @map("created_at")`
 - `updatedAt       DateTime         @updatedAt @map("updated_at")`
 - `budget          Budget           @relation(fields: [budgetId], references: [id], onDelete: Cascade)`
