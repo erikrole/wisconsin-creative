@@ -33,24 +33,6 @@
   },
   {
     "date": "2026-10-18",
-    "title": "A fresher Staff section",
-    "type": "improvement",
-    "summary": "Staff, Workforce, Hiring and Onboarding have a new look, and Staff now shows who is working today.",
-    "details": [
-      "Lato type, a calm blue accent, softer cards, and a colored dot for each area.",
-      "The org chart is a real chart with cards and connectors, plus a Not placed yet section.",
-      "Profiles get Email and Call buttons, an area chip, and an At a glance card.",
-      "Roster rows show an area dot and a Graduating chip, and hide the role column when a role tab already says it.",
-      "The roster shows an On shift now strip, and a new Today tab lists who is working which event now, later, and tomorrow.",
-      "Hiring and Onboarding Status get the same look: a targets strip, calmer board cards, one onboarding list, and an application sheet with a progress track, average rating, Watch interview card, and Pass and Hire buttons that stay in view."
-    ],
-    "platforms": [
-      "Web"
-    ],
-    "pr": 486
-  },
-  {
-    "date": "2026-10-18",
     "title": "Hours on your profile",
     "type": "feature",
     "summary": "Your profile on iPhone shows the hours you worked this week and this month, using the same Monday-to-Sunday count as the website.",
@@ -149,6 +131,24 @@
       "iOS"
     ],
     "pr": 506
+  },
+  {
+    "date": "2026-10-18",
+    "title": "A fresher Staff section",
+    "type": "improvement",
+    "summary": "Staff, Workforce, Hiring and Onboarding have a new look, and Staff now shows who is working today.",
+    "details": [
+      "Lato type, a calm blue accent, softer cards, and a colored dot for each area.",
+      "The org chart is a real chart with cards and connectors, plus a Not placed yet section.",
+      "Profiles get Email and Call buttons, an area chip, and an At a glance card.",
+      "Roster rows show an area dot and a Graduating chip, and hide the role column when a role tab already says it.",
+      "The roster shows an On shift now strip, and a new Today tab lists who is working which event now, later, and tomorrow.",
+      "Hiring and Onboarding Status get the same look: a targets strip, calmer board cards, one onboarding list, and an application sheet with a progress track, average rating, Watch interview card, and Pass and Hire buttons that stay in view."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 486
   },
   {
     "date": "2026-10-17",
@@ -252,70 +252,6 @@
       "Kiosk"
     ],
     "pr": 501
-  },
-  {
-    "date": "2026-10-16",
-    "title": "Clearer Workforce overview",
-    "type": "improvement",
-    "summary": "The Workforce overview now shows, area by area, who stays and who graduates, so gaps are visible before they happen.",
-    "details": [
-      "A new Coverage by area list shows each area's full-time staff and how many students stay or graduate.",
-      "Areas that lose half or more of their students, or all of them, are flagged and listed first.",
-      "The top tiles add context, such as the share of students graduating.",
-      "Select an area in the list to jump to its people."
-    ],
-    "platforms": [
-      "Web"
-    ],
-    "pr": 486
-  },
-  {
-    "date": "2026-10-16",
-    "title": "Cleaner Staff roster",
-    "type": "improvement",
-    "summary": "The Staff page now filters by role with one tap, and you can switch the roster between a table and a photo grid.",
-    "details": [
-      "Role tabs at the top show how many students, staff, admins, and collaborators match your search and filters.",
-      "The role dropdown and the separate breakdown cards are gone, so there is one place to look.",
-      "A new photo grid view shows everyone as headshot cards. Your choice stays in the page link.",
-      "Group by area splits the whole list under Photo, Video, and the other areas, with each area's full headcount, even across pages.",
-      "Hover a name in the table to see a quick card with title, location, and contact details.",
-      "Year and sport filters only appear when they apply to students."
-    ],
-    "platforms": [
-      "Web"
-    ],
-    "pr": 486
-  },
-  {
-    "date": "2026-10-16",
-    "title": "Workforce moves under Staff",
-    "type": "improvement",
-    "summary": "Workforce is now a tab on the Staff page instead of its own menu item. It is still visible to admins only.",
-    "details": [
-      "Admins see Roster and Workforce tabs at the top of Staff.",
-      "Hiring and Planning sit inside the Workforce tab.",
-      "Old Workforce links redirect to the new location."
-    ],
-    "platforms": [
-      "Web"
-    ],
-    "pr": 485
-  },
-  {
-    "date": "2026-10-16",
-    "title": "Users is now Staff",
-    "type": "improvement",
-    "summary": "The Users page and menu item are now called Staff. Old Users links and bookmarks still take you to the right place.",
-    "details": [
-      "The sidebar, page title, search results, and breadcrumbs say Staff.",
-      "Profile links now live under /staff, and old /users links redirect automatically.",
-      "Nothing about who can see the page or what it shows has changed."
-    ],
-    "platforms": [
-      "Web"
-    ],
-    "pr": 484
   },
   {
     "date": "2026-10-16",
@@ -500,6 +436,70 @@
       "iOS"
     ],
     "pr": 487
+  },
+  {
+    "date": "2026-10-16",
+    "title": "Clearer Workforce overview",
+    "type": "improvement",
+    "summary": "The Workforce overview now shows, area by area, who stays and who graduates, so gaps are visible before they happen.",
+    "details": [
+      "A new Coverage by area list shows each area's full-time staff and how many students stay or graduate.",
+      "Areas that lose half or more of their students, or all of them, are flagged and listed first.",
+      "The top tiles add context, such as the share of students graduating.",
+      "Select an area in the list to jump to its people."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 486
+  },
+  {
+    "date": "2026-10-16",
+    "title": "Cleaner Staff roster",
+    "type": "improvement",
+    "summary": "The Staff page now filters by role with one tap, and you can switch the roster between a table and a photo grid.",
+    "details": [
+      "Role tabs at the top show how many students, staff, admins, and collaborators match your search and filters.",
+      "The role dropdown and the separate breakdown cards are gone, so there is one place to look.",
+      "A new photo grid view shows everyone as headshot cards. Your choice stays in the page link.",
+      "Group by area splits the whole list under Photo, Video, and the other areas, with each area's full headcount, even across pages.",
+      "Hover a name in the table to see a quick card with title, location, and contact details.",
+      "Year and sport filters only appear when they apply to students."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 486
+  },
+  {
+    "date": "2026-10-16",
+    "title": "Workforce moves under Staff",
+    "type": "improvement",
+    "summary": "Workforce is now a tab on the Staff page instead of its own menu item. It is still visible to admins only.",
+    "details": [
+      "Admins see Roster and Workforce tabs at the top of Staff.",
+      "Hiring and Planning sit inside the Workforce tab.",
+      "Old Workforce links redirect to the new location."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 485
+  },
+  {
+    "date": "2026-10-16",
+    "title": "Users is now Staff",
+    "type": "improvement",
+    "summary": "The Users page and menu item are now called Staff. Old Users links and bookmarks still take you to the right place.",
+    "details": [
+      "The sidebar, page title, search results, and breadcrumbs say Staff.",
+      "Profile links now live under /staff, and old /users links redirect automatically.",
+      "Nothing about who can see the page or what it shows has changed."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 484
   },
   {
     "date": "2026-10-15",
