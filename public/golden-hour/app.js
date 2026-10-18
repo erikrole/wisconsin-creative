@@ -1,5 +1,5 @@
 /* Golden Hour page wiring. Venues and sun maths live in core.js.
-   Client-only: no network requests. The last location lives in localStorage. */
+   Client-only except one optional weather request to Open-Meteo. The last location lives in localStorage. */
 (function () {
   'use strict';
 
@@ -11,6 +11,7 @@
   var VENUE_GROUPS = C.VENUE_GROUPS, VENUES = C.VENUES, DEFAULT_VENUE = C.DEFAULT_VENUE, HOUR_MS = C.HOUR_MS;
   var sunAltitude = C.sunAltitude, sunTimes = C.sunTimes, phaseFor = C.phaseFor, DEVICE_TZ = C.DEVICE_TZ;
   var offsetMs = C.offsetMs, zonedInstant = C.zonedInstant, civilIn = C.civilIn;
+  var weatherUrl = C.weatherUrl, weatherAt = C.weatherAt, lightOutlook = C.lightOutlook;
   var addDays = C.addDays, sameDay = C.sameDay, dayToValue = C.dayToValue, valueToDay = C.valueToDay;
 
   /* ---------------- formatting ---------------- */
@@ -89,7 +90,7 @@
   var el = {};
   ['venue', 'date', 'date-label', 'prev-day', 'next-day', 'today-link', 'zone-note',
    'hero-eyebrow', 'hero-title', 'hero-sub', 'path', 'morning-card', 'evening-card', 'morning-tag', 'evening-tag',
-   'morning-range', 'morning-sub', 'morning-blue', 'evening-range', 'evening-sub', 'evening-blue',
+   'morning-range', 'morning-sub', 'morning-wx', 'morning-blue', 'evening-range', 'evening-sub', 'evening-wx', 'evening-blue',
    'custom', 'lat', 'lon', 'apply-custom', 'copy-times', 'copy-link', 'status'
   ].forEach(function (id) { el[id] = document.getElementById(id); });
   var themeColor = document.querySelector('meta[name="theme-color"]');
@@ -221,6 +222,37 @@
     }
   }
 
+  /* ---------------- weather ----------------
+     Best effort: any failure leaves the weather lines empty and the sun times
+     untouched. A token drops responses that arrive after the user moved on. */
+
+  var wxToken = 0, wxCache = {};
+
+  function showWeather(prefix, wx, windowOk) {
+    var node = el[prefix + '-wx'];
+    if (!wx || !windowOk) { node.hidden = true; return; }
+    node.hidden = false;
+    node.textContent = wx.label + ' · ' + wx.cloud + '% cloud' + (wx.temp !== null ? ' · ' + wx.temp + '°F' : '') +
+      ' — ' + lightOutlook(wx.cloud);
+  }
+
+  function loadWeather(t) {
+    var token = ++wxToken;
+    var loc = state.loc, day = state.day;
+    var url = weatherUrl(loc.lat, loc.lon, day, civilIn(new Date(), loc.tz));
+    showWeather('morning', null); showWeather('evening', null);
+    if (!url || typeof fetch !== 'function') return;
+    var ready = wxCache[url] ? Promise.resolve(wxCache[url]) : fetch(url, { referrerPolicy: 'no-referrer' })
+      .then(function (res) { if (!res.ok) throw new Error('weather ' + res.status); return res.json(); })
+      .then(function (json) { wxCache[url] = json; return json; });
+    ready.then(function (json) {
+      if (token !== wxToken) return;
+      var m = t.goldStart && t.goldEnd, e = t.goldEvStart && t.goldEvEnd;
+      showWeather('morning', m ? weatherAt(json, t.goldStart, t.goldEnd, loc.tz) : null, m);
+      showWeather('evening', e ? weatherAt(json, t.goldEvStart, t.goldEvEnd, loc.tz) : null, e);
+    }).catch(function () { /* offline or blocked: leave the sun times alone */ });
+  }
+
   /* ---------------- sun path ----------------
      The sun's real altitude through the day, sampled every 6 minutes. The
      golden and blue altitude bands are drawn as stripes, so where the curve
@@ -315,6 +347,7 @@
     el['date-label'].textContent = dayHeading(state.day);
     renderWindow('morning', t.goldStart, t.goldEnd, t.sunrise, 'sunrise', t.blueStart, t.goldStart);
     renderWindow('evening', t.goldEvStart, t.goldEvEnd, t.sunset, 'sunset', t.goldEvEnd, t.blueEnd);
+    loadWeather(t);
     pathDrawn = false;
     renderPath(t, bounds, sameDay(state.day, civilIn(new Date(), state.loc.tz)) ? new Date() : null);
     renderZoneNote();

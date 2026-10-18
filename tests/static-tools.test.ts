@@ -33,7 +33,7 @@ describe("static tools: routing, headers, and page contracts", () => {
 
   it.each(TOOLS)("%s ships a strict CSP with no inline script or handlers", (tool) => {
     const html = readFileSync(join("public", tool, "index.html"), "utf8");
-    expect(html).toMatch(/<meta http-equiv="Content-Security-Policy" content="default-src 'none';[^"]*connect-src 'none'|<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'/);
+    expect(html).toMatch(/<meta http-equiv="Content-Security-Policy" content="default-src 'none';[^"]*connect-src (?:'none'|https:\/\/api\.open-meteo\.com https:\/\/archive-api\.open-meteo\.com);|<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'/);
     expect(html).not.toMatch(/<script(?![^>]*\ssrc=)[^>]*>/i);
     expect(html).not.toMatch(/\son[a-z]+=/i);
   });
@@ -128,6 +128,30 @@ describe("Golden Hour core", () => {
       }
     }
     expect(ids.size).toBe(21);
+  });
+
+  it("builds Open-Meteo requests with rounded coordinates and the right endpoint", () => {
+    const today = { y: 2026, m: 10, d: 18 };
+    const recent = gh.weatherUrl(43.0700123, -89.4127456, { y: 2026, m: 10, d: 17 }, today);
+    expect(recent).toContain("https://api.open-meteo.com/v1/forecast?latitude=43.07&longitude=-89.41");
+    expect(recent).toContain("start_date=2026-10-17&end_date=2026-10-17");
+    expect(gh.weatherUrl(43.07, -89.41, { y: 2026, m: 3, d: 1 }, today)).toContain("archive-api.open-meteo.com");
+    expect(gh.weatherUrl(43.07, -89.41, { y: 2026, m: 12, d: 25 }, today)).toBeNull();
+  });
+
+  it("reads cloud cover at the hour nearest the middle of a golden window", () => {
+    const tz = madison.tz;
+    const t = gh.sunTimes({ y: 2026, m: 9, d: 24 }, madison.lat, madison.lon);
+    const time = Array.from({ length: 24 }, (_, h) => `2026-09-24T${String(h).padStart(2, "0")}:00`);
+    const json = { hourly: { time, cloud_cover: time.map((_, h) => h * 4), temperature_2m: time.map(() => 61.4), weather_code: time.map(() => 2) } };
+    const wx = gh.weatherAt(json, t.goldEvStart, t.goldEvEnd, tz);
+    const mid = gh.zonedParts(new Date((t.goldEvStart.getTime() + t.goldEvEnd.getTime()) / 2), tz);
+    const hour = mid.h + (mid.mi >= 30 ? 1 : 0);
+    expect(wx).toEqual({ cloud: hour * 4, temp: 61, label: "Partly cloudy" });
+    expect(gh.weatherAt({ hourly: { time: [], cloud_cover: [] } }, t.goldEvStart, t.goldEvEnd, tz)).toBeNull();
+    expect(gh.weatherAt(null, t.goldEvStart, t.goldEvEnd, tz)).toBeNull();
+    expect(gh.lightOutlook(10)).toMatch(/Clear/);
+    expect(gh.lightOutlook(95)).toMatch(/flat/);
   });
 
   it("measures DST changeover days by the clock, not as 24 hours", () => {

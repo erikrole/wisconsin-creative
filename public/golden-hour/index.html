@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; font-src 'self'; img-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; font-src 'self'; img-src data:; connect-src https://api.open-meteo.com https://archive-api.open-meteo.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <meta name="referrer" content="no-referrer">
   <meta name="color-scheme" content="dark light">
   <meta name="theme-color" content="#1a1f44">
@@ -323,12 +323,14 @@
         <div class="window-head"><h2 class="window-label" id="morning-label">Morning</h2><span class="window-tag" id="morning-tag" hidden>Now</span></div>
         <p class="window-range" id="morning-range">—</p>
         <p class="window-sub" id="morning-sub"></p>
+        <p class="window-sub window-wx" id="morning-wx" hidden></p>
         <p class="window-blue" id="morning-blue" hidden></p>
       </section>
       <section class="window" id="evening-card" aria-labelledby="evening-label">
         <div class="window-head"><h2 class="window-label" id="evening-label">Evening</h2><span class="window-tag" id="evening-tag" hidden>Now</span></div>
         <p class="window-range" id="evening-range">—</p>
         <p class="window-sub" id="evening-sub"></p>
+        <p class="window-sub window-wx" id="evening-wx" hidden></p>
         <p class="window-blue" id="evening-blue" hidden></p>
       </section>
     </div>
@@ -360,7 +362,7 @@
     </p>
   </main>
 
-  <script src="core.js?v=25daa40d13f8"></script>
-  <script src="app.js?v=ee6361ded8e3"></script>
+  <script src="core.js?v=63094b582722"></script>
+  <script src="app.js?v=e3c1260fb150"></script>
 </body>
 </html>

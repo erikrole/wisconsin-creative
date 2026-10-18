@@ -158,11 +158,71 @@
     return sameDay(day, check) ? day : null;
   }
 
+  /* ---------------- weather (Open-Meteo, free, no key) ----------------
+     Pure helpers only; app.js does the fetch. Cloud cover decides whether the
+     golden light actually shows up, so each window gets the hour nearest its
+     middle. */
+
+  var WX_FORECAST = 'https://api.open-meteo.com/v1/forecast';
+  var WX_ARCHIVE = 'https://archive-api.open-meteo.com/v1/archive';
+  var WX_FORECAST_BACK_DAYS = 85, WX_FORECAST_AHEAD_DAYS = 15;
+
+  // URL for one civil day at a point, or null when the date is outside what
+  // either endpoint serves. Coordinates are rounded to ~1 km before leaving
+  // the page so a GPS fix is never sent at full precision.
+  function weatherUrl(lat, lon, day, today) {
+    var offset = Math.round((Date.UTC(day.y, day.m - 1, day.d) - Date.UTC(today.y, today.m - 1, today.d)) / DAY_MS);
+    if (offset > WX_FORECAST_AHEAD_DAYS) return null;
+    var value = dayToValue(day);
+    return (offset < -WX_FORECAST_BACK_DAYS ? WX_ARCHIVE : WX_FORECAST) +
+      '?latitude=' + lat.toFixed(2) + '&longitude=' + lon.toFixed(2) +
+      '&start_date=' + value + '&end_date=' + value +
+      '&hourly=cloud_cover,temperature_2m,weather_code' +
+      '&temperature_unit=fahrenheit&timezone=auto';
+  }
+
+  var WX_LABELS = [
+    [[0], 'Clear'], [[1], 'Mostly clear'], [[2], 'Partly cloudy'], [[3], 'Overcast'], [[45, 48], 'Fog'],
+    [[51, 53, 55, 56, 57], 'Drizzle'], [[61, 63, 65, 66, 67, 80, 81, 82], 'Rain'],
+    [[71, 73, 75, 77, 85, 86], 'Snow'], [[95, 96, 99], 'Thunderstorm']
+  ];
+  function weatherLabel(code) {
+    for (var i = 0; i < WX_LABELS.length; i++) if (WX_LABELS[i][0].indexOf(code) !== -1) return WX_LABELS[i][1];
+    return 'Weather';
+  }
+
+  // Will the light be worth shooting? Heavy cloud flattens it; broken cloud
+  // can be the best sky of all.
+  function lightOutlook(cloud) {
+    if (cloud <= 25) return 'Clear skies, clean light';
+    if (cloud <= 65) return 'Some cloud, good for colour';
+    if (cloud <= 85) return 'Mostly cloudy, softer light';
+    return 'Heavy cloud, flat light';
+  }
+
+  // The hourly row nearest the middle of [start, end], read in the venue's zone
+  // (timezone=auto returns the point's local wall clock). Null if absent.
+  function weatherAt(json, start, end, tz) {
+    var h = json && json.hourly;
+    if (!h || !h.time || !h.cloud_cover) return null;
+    var p = zonedParts(new Date((start.getTime() + end.getTime()) / 2), tz);
+    var hour = p.h + (p.mi >= 30 ? 1 : 0);
+    var stamp = p.y + '-' + pad(p.m) + '-' + pad(p.d) + 'T' + pad(Math.min(hour, 23)) + ':00';
+    var i = h.time.indexOf(stamp);
+    if (i === -1 || h.cloud_cover[i] == null) return null;
+    return {
+      cloud: Math.round(h.cloud_cover[i]),
+      temp: h.temperature_2m && h.temperature_2m[i] != null ? Math.round(h.temperature_2m[i]) : null,
+      label: weatherLabel(h.weather_code ? h.weather_code[i] : -1)
+    };
+  }
+
   var api = {
     VENUE_GROUPS: VENUE_GROUPS, VENUES: VENUES, DEFAULT_VENUE: DEFAULT_VENUE, HOUR_MS: HOUR_MS,
     sunAltitude: sunAltitude, sunTimes: sunTimes, phaseFor: phaseFor, DEVICE_TZ: DEVICE_TZ,
     zonedParts: zonedParts, offsetMs: offsetMs, zonedInstant: zonedInstant, civilIn: civilIn,
-    addDays: addDays, sameDay: sameDay, dayToValue: dayToValue, valueToDay: valueToDay
+    addDays: addDays, sameDay: sameDay, dayToValue: dayToValue, valueToDay: valueToDay,
+    weatherUrl: weatherUrl, weatherAt: weatherAt, lightOutlook: lightOutlook
   };
   root.GoldenHourCore = api;
   if (typeof module === 'object' && module.exports) module.exports = api;
