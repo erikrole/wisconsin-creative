@@ -6,6 +6,7 @@ import { EMAIL_THEME, buildEmailDocument, buildNotificationEmail, escapeEmailHtm
 const producerPaths = [
   "src/lib/services/shift-trade-emails.ts",
   "src/app/api/auth/forgot-password/route.ts",
+  "src/lib/services/invite-email.ts",
 ] as const;
 
 function rgb(hex: string): [number, number, number] {
