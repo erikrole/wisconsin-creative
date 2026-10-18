@@ -1,6 +1,21 @@
 [
   {
     "date": "2026-10-19",
+    "title": "Weather on Golden Hour",
+    "type": "improvement",
+    "summary": "Golden Hour now shows cloud cover and temperature under each golden window, so you can tell whether the light will show up.",
+    "details": [
+      "Each window reads the forecast for its middle hour at that venue, in the venue's own time zone.",
+      "A short line says what to expect, from clear and clean to heavy cloud and flat.",
+      "Past dates and the next two weeks are covered. If the weather is unavailable, the sun times still show."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 521
+  },
+  {
+    "date": "2026-10-19",
     "title": "Emails have a new look",
     "type": "improvement",
     "summary": "Every email from the app now uses the same Wisconsin Creative design, with the logo, one clear button, and a plain-text version.",
