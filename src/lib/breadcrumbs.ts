@@ -22,6 +22,7 @@ const SEGMENT_OVERRIDE: Record<string, { label: string; href?: string }> = {
   database: { label: "Database diagnostics" },
   "app-activity": { label: "App activity" },
   "data-export": { label: "Data exports" },
+  announcements: { label: "Announcements" },
   audit: { label: "Audit log" },
   gear: { label: "UA gear" },
 };

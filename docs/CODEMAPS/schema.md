@@ -131,7 +131,7 @@ Values: `UPLOADING`, `FINALIZING`, `COMMITTED`, `FAILED`
 
 ## Model `User`
 
-Fields: 130
+Fields: 132
 
 - `id                            String                           @id @default(cuid())`
 - `name                          String`
@@ -193,6 +193,8 @@ Fields: 130
 - `liveActivityStartTokens       LiveActivityStartToken[]`
 - `liveActivityStarts            LiveActivityStart[]`
 - `blastsAuthored                Blast[]                          @relation("BlastAuthor")`
+- `announcementsAuthored         Announcement[]                   @relation("AnnouncementAuthor")`
+- `announcementDismissals        AnnouncementDismissal[]`
 - `blastsCancelled               Blast[]                          @relation("BlastCanceller")`
 - `blastsReceived                BlastRecipient[]                 @relation("BlastRecipient")`
 - `bookingPhotos                 BookingPhoto[]                   @relation("BookingPhotoActor")`
@@ -3046,3 +3048,51 @@ Indexes and constraints:
 
 - `@@unique([submissionId, sku, size])`
 - `@@map("gear_pick_lines")`
+
+## Enum `AnnouncementKind`
+
+Values: `FEATURE`, `UPDATE`, `NOTICE`
+
+## Model `Announcement`
+
+Fields: 16
+
+- `id          String                  @id @default(cuid())`
+- `kind        AnnouncementKind        @default(UPDATE)`
+- `title       String`
+- `body        String`
+- `ctaLabel    String?                 @map("cta_label")`
+- `ctaUrl      String?                 @map("cta_url")`
+- `roles       Role[]`
+- `showOnWeb   Boolean                 @default(true) @map("show_on_web")`
+- `showOnIos   Boolean                 @default(true) @map("show_on_ios")`
+- `publishedAt DateTime?               @map("published_at")`
+- `endsAt      DateTime?               @map("ends_at")`
+- `createdById String                  @map("created_by_id")`
+- `createdAt   DateTime                @default(now()) @map("created_at")`
+- `updatedAt   DateTime                @updatedAt @map("updated_at")`
+- `createdBy   User                    @relation("AnnouncementAuthor", fields: [createdById], references: [id], onDelete: Restrict)`
+- `dismissals  AnnouncementDismissal[]`
+
+Indexes and constraints:
+
+- `@@index([publishedAt, endsAt])`
+- `@@index([createdById])`
+- `@@map("announcements")`
+
+## Model `AnnouncementDismissal`
+
+Fields: 6
+
+- `id             String       @id @default(cuid())`
+- `announcementId String       @map("announcement_id")`
+- `userId         String       @map("user_id")`
+- `dismissedAt    DateTime     @default(now()) @map("dismissed_at")`
+- `announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)`
+- `user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)`
+
+Indexes and constraints:
+
+- `@@unique([announcementId, userId])`
+- `@@index([userId])`
+- `@@map("announcement_dismissals")`

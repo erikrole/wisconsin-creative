@@ -200,6 +200,15 @@ export const SETTINGS_SECTIONS: ReadonlyArray<SettingsSection> = [
   },
   // System
   {
+    href: "/settings/announcements",
+    label: "Announcements",
+    requiredRole: "ADMIN",
+    group: "System",
+    description: "Post a one-time splash for new features and updates in the web and iOS apps.",
+    keywords: ["splash", "popup", "news", "whats new", "release", "banner", "message"],
+    relatedHrefs: ["/settings/audit"],
+  },
+  {
     href: "/settings/audit",
     label: "Audit log",
     requiredRole: "ADMIN",

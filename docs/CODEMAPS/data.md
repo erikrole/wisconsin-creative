@@ -11,7 +11,7 @@
 
 | Model | Fields | Model-level indexes/constraints |
 |---|---:|---:|
-| `User` | 130 | 5 |
+| `User` | 132 | 5 |
 | `Session` | 7 | 2 |
 | `PasswordResetToken` | 6 | 2 |
 | `PasskeyCredential` | 12 | 2 |
@@ -122,6 +122,8 @@
 | `GearPickParticipant` | 10 | 3 |
 | `GearPickSubmission` | 9 | 1 |
 | `GearPickLine` | 9 | 2 |
+| `Announcement` | 16 | 3 |
+| `AnnouncementDismissal` | 6 | 3 |
 
 ## Enums
 
@@ -540,3 +542,9 @@
 
 - `MEN`
 - `WOMEN`
+
+### `AnnouncementKind`
+
+- `FEATURE`
+- `UPDATE`
+- `NOTICE`
