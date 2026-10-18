@@ -1,5 +1,22 @@
 [
   {
+    "date": "2026-10-19",
+    "title": "Booking activity on iPhone",
+    "type": "feature",
+    "summary": "A reservation or checkout on iPhone shows what changed, including gear that was added or removed. Collaborators do not see this history.",
+    "details": [
+      "Open Activity on a reservation or checkout to read the same history as the website.",
+      "Filter the list to booking changes or equipment changes.",
+      "A failed refresh keeps the history already on screen.",
+      "The newest 50 entries are shown. Older history stays on the website.",
+      "Collaborators do not see Activity."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 513
+  },
+  {
     "date": "2026-10-18",
     "title": "Checkout days and kit privacy",
     "type": "fixes",
