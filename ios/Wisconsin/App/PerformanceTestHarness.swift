@@ -94,7 +94,8 @@ struct PerformanceTestRootView: View {
         case .notifications:
             NotificationSettingsHarnessView()
         case .announcement, .announcementImages, .announcementPlain,
-             .announcementStress, .announcementNone, .announcementError:
+             .announcementStress, .announcementNone, .announcementError,
+             .announcementLong, .announcementQueue, .announcementBrokenImage, .announcementCtaRoute:
             AnnouncementHarnessView()
         }
     }
@@ -468,6 +469,10 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
             }
         }
 #endif
+        if url.path == "/api/announcements/active", AppRuntimeMode.performanceScenario == .announcementError {
+            mapped = Data(#"{"error":"The server had a problem. Try again in a moment."}"#.utf8)
+            statusCode = 500
+        }
         let payload = mapped ?? Data(#"{"error":"Not served by the fixture harness"}"#.utf8)
         let response = HTTPURLResponse(
             url: url,
@@ -528,8 +533,7 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
         // Lets the login capture reach the password step without a real host.
         case "/api/auth/discover": return AuthFixtureAPI.discoverPassword
         case "/api/me/passkeys": return PasskeyFixtureAPI.passkeys
-        case "/api/announcements/active":
-            return AppRuntimeMode.performanceScenario == .announcementError ? nil : AnnouncementFixtureAPI.active()
+        case "/api/announcements/active": return AnnouncementFixtureAPI.active()
         case let path where path.hasPrefix("/api/announcements/") && path.hasSuffix("/dismiss"):
             return AnnouncementFixtureAPI.dismiss(path: path)
         case "/api/dashboard":

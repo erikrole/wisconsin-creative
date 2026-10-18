@@ -113,6 +113,14 @@ enum AppRuntimeMode {
         case announcementNone = "announcement-none"
         /// The announcements request fails; the app must show nothing and stay usable.
         case announcementError = "announcement-error"
+        /// An 80-character title, a ~1200-character body, and 8 bullets.
+        case announcementLong = "announcement-long"
+        /// Three waiting, so "N more" counts down 2, 1, then gone.
+        case announcementQueue = "announcement-queue"
+        /// One image that cannot load, to see the failure placeholder.
+        case announcementBrokenImage = "announcement-broken-image"
+        /// A button whose in-app link opens its native screen.
+        case announcementCtaRoute = "announcement-cta-route"
 
         /// The booking scenarios share one fixture and differ only in which
         /// sheet is seeded open.
@@ -184,7 +192,8 @@ enum AppRuntimeMode {
              .itemEdit, .createBookingScanner, .createBookingEvents, .search, .searchPartial,
              .itemsList, .reports, .accountSecurity, .notifications, .login,
              .announcement, .announcementImages, .announcementPlain,
-             .announcementStress, .announcementNone, .announcementError:
+             .announcementStress, .announcementNone, .announcementError,
+             .announcementLong, .announcementQueue, .announcementBrokenImage, .announcementCtaRoute:
             return true
         default:
             return false

@@ -36,6 +36,15 @@ describe("iOS announcement splash", () => {
     expect(sheet).toContain('hasPrefix("/")');
   });
 
+  it("uses the fixed Wisconsin red for the splash and leaves brandPrimary alone", () => {
+    const brand = source("ios/Wisconsin/Core/Brand.swift");
+    const sheet = source("ios/Wisconsin/Views/Announcements/AnnouncementSplashSheet.swift");
+    expect(brand).toContain("static let wisconsinRed = Color(red: 200.0 / 255.0, green: 0, blue: 0)");
+    expect(brand).toContain("static let brandPrimary = Color(UIColor(dynamicProvider:");
+    expect(sheet).toContain(".tint(.wisconsinRed)");
+    expect(sheet).not.toContain("brandPrimary");
+  });
+
   it("keeps the fixture scenarios out of release builds", () => {
     const harness = source("ios/Wisconsin/App/AnnouncementHarness.swift");
     expect(harness.startsWith("#if DEBUG")).toBe(true);

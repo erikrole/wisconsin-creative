@@ -73,6 +73,76 @@ enum AnnouncementFixtureAPI {
         switch AppRuntimeMode.performanceScenario {
         case .announcementNone, .announcementError:
             return []
+        case .announcementLong:
+            return [
+                Item(
+                    id: "fx-long", kind: "FEATURE", kindLabel: "New",
+                    title: "Everything you need to run a long, busy Saturday all in one place on your phone.",
+                    blocks: [
+                        Block(type: "paragraph", text: "This is a deliberately long announcement to see how the sheet behaves when the message outgrows the screen on any iPhone, at any text size. It keeps going so the body has to scroll while the buttons stay reachable, and so we can check that the title, the paragraphs and the checklist all wrap cleanly without clipping or overlapping the pinned button bar at the bottom of the sheet."),
+                        Block(type: "list", items: [
+                            "Claim open trades without leaving Schedule",
+                            "See who is on your crew and what they carry",
+                            "Scan gear in and out with a confirmation",
+                            "Get a heads-up when a booking is due back",
+                            "Offload cards with live progress",
+                            "Find any item, booking, or person",
+                            "Read the badge shelf for your crew",
+                            "Everything works offline for reading",
+                        ]),
+                        Block(type: "paragraph", text: "Shift trades now sit at the top of Schedule, so you can claim one without digging through the week. Gear scans confirm before they change anything, due dates follow the booking instead of the checkout, and the Home tab shows what needs you first. If something looks wrong, tell us in the usual channel and we will sort it out the same day, even on a game weekend when the equipment room is at its busiest."),
+                        Block(type: "paragraph", text: "Card offloads run from your phone with live progress and a verified copy at the end, so you know the footage is safe before you wipe the card. Search finds items, bookings and people from one box, and the new badge shelf shows what your crew has earned this season. Everything here works offline for reading, and syncs the moment you are back on Wi-Fi or cellular, so a dead spot in the stadium never costs you a scan."),
+                    ],
+                    ctaLabel: "Open Schedule", ctaUrl: "/schedule",
+                    imageUrls: [], imageAlt: nil,
+                    publishedAt: "2026-10-18T15:00:00.000Z"
+                ),
+            ]
+        case .announcementQueue:
+            return [
+                Item(
+                    id: "fx-q1", kind: "FEATURE", kindLabel: "New",
+                    title: "Open trades come first",
+                    blocks: [Block(type: "paragraph", text: "Open trades now sit at the top of Schedule.")],
+                    ctaLabel: nil, ctaUrl: nil, imageUrls: [], imageAlt: nil,
+                    publishedAt: "2026-10-18T15:00:00.000Z"
+                ),
+                Item(
+                    id: "fx-q2", kind: "UPDATE", kindLabel: "Update",
+                    title: "Scans confirm before they change anything",
+                    blocks: [Block(type: "paragraph", text: "A scan now asks you to confirm first.")],
+                    ctaLabel: nil, ctaUrl: nil, imageUrls: [], imageAlt: nil,
+                    publishedAt: "2026-10-17T15:00:00.000Z"
+                ),
+                Item(
+                    id: "fx-q3", kind: "NOTICE", kindLabel: "Heads up",
+                    title: "Equipment room closed Friday",
+                    blocks: [Block(type: "paragraph", text: "Pick up gear Thursday before 5 p.m.")],
+                    ctaLabel: nil, ctaUrl: nil, imageUrls: [], imageAlt: nil,
+                    publishedAt: "2026-10-16T15:00:00.000Z"
+                ),
+            ]
+        case .announcementBrokenImage:
+            return [
+                Item(
+                    id: "fx-broken", kind: "FEATURE", kindLabel: "New",
+                    title: "A banner that cannot load",
+                    blocks: [Block(type: "paragraph", text: "The image below points at nothing, so the sheet shows its placeholder and the text still reads.")],
+                    ctaLabel: nil, ctaUrl: nil,
+                    imageUrls: ["http://127.0.0.1:9/missing.png"], imageAlt: "A missing banner",
+                    publishedAt: "2026-10-18T15:00:00.000Z"
+                ),
+            ]
+        case .announcementCtaRoute:
+            return [
+                Item(
+                    id: "fx-route", kind: "UPDATE", kindLabel: "Update",
+                    title: "Licenses live in Browse",
+                    blocks: [Block(type: "paragraph", text: "The button opens the Licenses screen in the app, not the website.")],
+                    ctaLabel: "Open Licenses", ctaUrl: "/licenses", imageUrls: [], imageAlt: nil,
+                    publishedAt: "2026-10-18T15:00:00.000Z"
+                ),
+            ]
         case .announcementStress:
             return [
                 Item(

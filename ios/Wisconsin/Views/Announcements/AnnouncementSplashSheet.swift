@@ -142,7 +142,7 @@ struct AnnouncementSplashSheet: View {
         .background(alignment: .topLeading) {
             if !hasImages {
                 RadialGradient(
-                    colors: [Color.brandPrimary.opacity(0.14), .clear],
+                    colors: [Color.wisconsinRed.opacity(0.14), .clear],
                     center: .topLeading,
                     startRadius: 0,
                     endRadius: 360
@@ -178,12 +178,12 @@ struct AnnouncementSplashSheet: View {
         layout {
             Image(systemName: announcement.kindSymbol)
                 .font(.title3.weight(.regular))
-                .foregroundStyle(Color.brandPrimary)
+                .foregroundStyle(Color.wisconsinRed)
                 .frame(width: tileSize, height: tileSize)
                 .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                 .overlay {
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .strokeBorder(Color.brandPrimary.opacity(0.18), lineWidth: 1)
+                        .strokeBorder(Color.wisconsinRed.opacity(0.18), lineWidth: 1)
                 }
                 .accessibilityHidden(true)
 
@@ -191,7 +191,7 @@ struct AnnouncementSplashSheet: View {
                 Text(announcement.kindLabel.uppercased())
                     .font(.caption.weight(.semibold))
                     .tracking(1.0)
-                    .foregroundStyle(Color.brandPrimary)
+                    .foregroundStyle(Color.wisconsinRed)
                     .lineLimit(1)
                     .fixedSize()
                 if let date = announcement.publishedDate {
@@ -235,9 +235,9 @@ struct AnnouncementSplashSheet: View {
                             HStack(alignment: .firstTextBaseline, spacing: 12) {
                                 Image(systemName: "checkmark")
                                     .font(.system(size: 10, weight: .bold))
-                                    .foregroundStyle(Color.brandPrimary)
+                                    .foregroundStyle(Color.wisconsinRed)
                                     .frame(width: checkSize, height: checkSize)
-                                    .background(Color.brandPrimary.opacity(0.13), in: Circle())
+                                    .background(Color.wisconsinRed.opacity(0.13), in: Circle())
                                     .accessibilityHidden(true)
                                 Text(item)
                                     .font(.body)
@@ -264,7 +264,7 @@ struct AnnouncementSplashSheet: View {
             .buttonStyle(.borderedProminent)
             .buttonBorderShape(.capsule)
             .controlSize(.large)
-            .tint(.brandPrimary)
+            .tint(.wisconsinRed)
 
             if announcement.hasCta {
                 Button("Close", action: onClose)
