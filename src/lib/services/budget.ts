@@ -891,8 +891,13 @@ export async function importLines(actor: Actor, budgetId: string, input: ImportL
   return db.$transaction(async (tx) => {
     const budget = await tx.budget.findUnique({ where: { id: budgetId }, select: { id: true } });
     if (!budget) throw new HttpError(404, "Budget not found.");
-    const existing = await tx.budgetLine.findMany({ where: { budgetId }, select: { id: true, description: true } });
-    const byName = new Map(existing.map((line) => [line.description.trim().toLowerCase(), line.id]));
+    const existing = await tx.budgetLine.findMany({ where: { budgetId }, orderBy: { createdAt: "asc" }, select: { id: true, description: true } });
+    // Lines can share a name (two "SD card" purchases), so each sheet row takes the next unused line of that name.
+    const byName = new Map<string, string[]>();
+    for (const line of existing) {
+      const key = line.description.trim().toLowerCase();
+      byName.set(key, [...(byName.get(key) ?? []), line.id]);
+    }
     let created = 0;
     let updated = 0;
     for (const line of input.lines) {
@@ -910,13 +915,12 @@ export async function importLines(actor: Actor, budgetId: string, input: ImportL
         orderNumber: line.orderNumber,
         unplanned: line.unplanned,
       };
-      const matchId = byName.get(line.description.trim().toLowerCase());
+      const matchId = byName.get(line.description.trim().toLowerCase())?.shift();
       if (matchId) {
         await tx.budgetLine.update({ where: { id: matchId }, data });
         updated += 1;
       } else {
-        const row = await tx.budgetLine.create({ data: { ...data, budgetId }, select: { id: true } });
-        byName.set(line.description.trim().toLowerCase(), row.id);
+        await tx.budgetLine.create({ data: { ...data, budgetId }, select: { id: true } });
         created += 1;
       }
     }

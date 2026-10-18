@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
-import { BUDGET_CATEGORY_LABELS, fiscalYearLabel, formatCentsCompact } from "@/lib/budget/contract";
+import { BUDGET_CATEGORY_LABELS, fiscalYearLabel, fiscalYearOf, formatCentsCompact } from "@/lib/budget/contract";
 import type { ImportCandidate } from "@/lib/budget/import";
 import { parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 
@@ -28,22 +28,27 @@ export function ImportDialog({
   onImported: () => void;
 }) {
   const [file, setFile] = useState<File | null>(null);
-  const [unboughtAs, setUnboughtAs] = useState<"CANCELLED" | "PLANNED">("CANCELLED");
+  const [unboughtAs, setUnboughtAs] = useState<"CANCELLED" | "PLANNED" | "PURCHASED">(fiscalYear >= fiscalYearOf(new Date()) ? "PLANNED" : "CANCELLED");
+  const [sheets, setSheets] = useState<{ name: string; usable: boolean }[]>([]);
+  const [sheet, setSheet] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<ImportCandidate[] | null>(null);
   const [included, setIncluded] = useState<Set<number>>(new Set());
   const [pending, setPending] = useState(false);
 
-  async function preview() {
+  async function preview(tab?: string) {
     if (!file) return void toast.error("Choose an .xlsx or .csv file.");
     setPending(true);
     try {
       const form = new FormData();
       form.set("file", file);
       form.set("unboughtAs", unboughtAs);
+      if (tab) form.set("sheet", tab);
       const response = await fetch(`/api/budget/${budgetId}/import`, { method: "POST", body: form });
       if (!response.ok) return void toast.error(await parseErrorMessage(response, "Couldn't read that file."));
-      const json = await parseJsonSafely<{ data?: { candidates: ImportCandidate[] } }>(response);
+      const json = await parseJsonSafely<{ data?: { sheet: string; sheets: { name: string; usable: boolean }[]; candidates: ImportCandidate[] } }>(response);
       const rows = json?.data?.candidates ?? [];
+      setSheets(json?.data?.sheets ?? []);
+      setSheet(json?.data?.sheet ?? null);
       setCandidates(rows);
       setIncluded(new Set(rows.filter((row) => row.result !== "skipped").map((row) => row.row)));
     } catch {
@@ -114,14 +119,15 @@ export function ImportDialog({
                 <input id="budget-import-file" type="file" accept=".xlsx,.csv" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
               </div>
               <div className="flex flex-col gap-1.5 sm:col-span-2">
-                <Label>Lines with a budget but nothing spent</Label>
-                <NativeSelect value={unboughtAs} onChange={(event) => setUnboughtAs(event.target.value as "CANCELLED" | "PLANNED")}>
+                <Label>Lines with a budget, nothing spent, and no Status</Label>
+                <NativeSelect value={unboughtAs} onChange={(event) => setUnboughtAs(event.target.value as "CANCELLED" | "PLANNED" | "PURCHASED")}>
                   <option value="CANCELLED">Import as Dropped (past years)</option>
                   <option value="PLANNED">Import as Planned (this year)</option>
+                  <option value="PURCHASED">Count as bought at the planned amount (older years list only what was bought)</option>
                 </NativeSelect>
               </div>
               <p className="text-xs text-muted-foreground sm:col-span-2">
-                Columns are matched by name: Item or Line, Qty, Each, Budgeted, Spent, Month or Ordered, PO, Supplier, Category. Running it again updates lines with the same name and won&apos;t add duplicates.
+                Columns are matched by name: Item or Description, Category, Status, Quantity, Price Per Unit, Total Budgeted, Total Spent, Month Purchased, Supplier, PO. A workbook with a tab per year is fine; you pick the tab next. Running it again updates lines with the same name and won&apos;t add duplicates.
               </p>
             </div>
           ) : (
@@ -129,7 +135,20 @@ export function ImportDialog({
               <div className="flex items-center gap-2 rounded-xl border border-[#B8E3C8] bg-[#E6F6EB] px-4 py-2.5 text-sm text-[#18794E] dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200">
                 <b>{counts.ready} ready.</b> {counts.check > 0 ? `${counts.check} need a look; they import as suggested unless you untick them.` : "Nothing needs a look."}
               </div>
-              <div className="max-h-[50vh] overflow-auto rounded-xl border">
+              {sheets.length > 1 && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Label htmlFor="budget-import-tab">Tab</Label>
+                  <NativeSelect id="budget-import-tab" className="w-56" value={sheet ?? ""} disabled={pending} onChange={(event) => void preview(event.target.value)}>
+                    {sheets.map((tab) => (
+                      <option key={tab.name} value={tab.name} disabled={!tab.usable}>
+                        {tab.name}
+                        {tab.usable ? "" : " (no header row)"}
+                      </option>
+                    ))}
+                  </NativeSelect>
+                </div>
+              )}
+              <div className="max-h-[40vh] overflow-auto rounded-xl border">
                 <table className="w-full text-sm">
                   <thead className="sticky top-0 bg-muted/60 text-[11px] uppercase tracking-[0.09em] text-muted-foreground">
                     <tr>
