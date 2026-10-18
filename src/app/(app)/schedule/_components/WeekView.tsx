@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import EmptyState from "@/components/EmptyState";
 import { cn } from "@/lib/utils";
 import { VENUE_TONES, venueToneFromEvent } from "@/lib/venue-tone";
+import { scheduleEventActionName } from "@/lib/a11y-resilience";
 import { eventOccursOnCalendarDay, formatCalendarEventAllDayLabel } from "@/lib/calendar-event-dates";
 import {
   type CalendarEntry,
@@ -167,7 +168,11 @@ function EventCard({
         <TooltipTrigger asChild>
           <button
             className={wrapClass}
-            aria-label={`${entry.shiftGroupId ? "Manage crew for" : "Set up crew for"} ${titleParts.title}`}
+            aria-label={scheduleEventActionName(
+              entry.shiftGroupId ? "Manage crew for" : "Set up crew for",
+              titleParts.title,
+              venueTone.label,
+            )}
             onClick={() => onOpenCrew(entry)}
           >
             {inner}

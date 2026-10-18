@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { useConfirm } from "@/components/ConfirmDialog";
 import EmptyState from "@/components/EmptyState";
@@ -43,6 +43,7 @@ import {
   WifiOff,
   X,
 } from "lucide-react";
+import { restoreDialogFocus } from "@/lib/a11y-resilience";
 import { handleAuthRedirect, parseErrorMessage, classifyError, isAbortError, parseJsonSafely } from "@/lib/errors";
 import { copyTextToClipboard } from "@/lib/clipboard";
 import { useFetch } from "@/hooks/use-fetch";
@@ -150,6 +151,7 @@ export default function KioskDevicesPage() {
 
   // Activation code display
   const [codeDialog, setCodeDialog] = useState<{ name: string; code: string } | null>(null);
+  const addKioskRef = useRef<HTMLButtonElement>(null);
 
   // Pending pickup clear dialog
   const [pickupDialog, setPickupDialog] = useState<KioskDevice | null>(null);
@@ -391,7 +393,7 @@ export default function KioskDevicesPage() {
       mainClassName="flex flex-col gap-4"
       actions={
         !showAdd ? (
-          <Button onClick={() => setShowAdd(true)} className="min-h-10">
+          <Button ref={addKioskRef} onClick={() => setShowAdd(true)} className="min-h-10">
             <Plus className="size-4" />
             Add kiosk
           </Button>
@@ -673,8 +675,17 @@ export default function KioskDevicesPage() {
       )}
 
       {/* Activation code dialog — shown after creating a device */}
-      <Dialog open={!!codeDialog} onOpenChange={() => setCodeDialog(null)}>
-        <DialogContent>
+      <Dialog
+        open={!!codeDialog}
+        onOpenChange={(next) => {
+          if (!next) setCodeDialog(null);
+        }}
+      >
+        <DialogContent
+          onCloseAutoFocus={(event) => {
+            restoreDialogFocus(addKioskRef.current, event);
+          }}
+        >
           <DialogHeader>
             <DialogTitle>Kiosk Activation Code</DialogTitle>
             <DialogDescription>

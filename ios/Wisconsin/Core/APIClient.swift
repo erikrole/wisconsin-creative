@@ -549,6 +549,15 @@ final class APIClient {
         return resp.data
     }
 
+    /// Newest booking history from the same detail payload the website uses.
+    /// Collaborator responses omit `auditLogs`; the caller hides Activity first.
+    func bookingActivity(id: String) async throws -> BookingActivityPage {
+        let response: DataWrapper<BookingActivityPage> = try await perform(
+            request(path: "/api/bookings/\(id)")
+        )
+        return response.data
+    }
+
     func bookingReusePlan(id: String) async throws -> BookingReusePlan {
         let req = request(path: "/api/bookings/\(id)/reuse-plan")
         let resp: DataWrapper<BookingReusePlan> = try await perform(req)

@@ -6,6 +6,9 @@ This is the handoff for the next native slice. Compare the website's pages and s
 
 Open, and off limits for file overlap:
 
+- #512 My hours on the profile
+- #511 kiosk scans and due days
+- #510 kit return times
 - #497, #486, #485, and #484 Users to Staff and role tabs
 - #494 Budget
 - #488 Photo Mechanic licenses
@@ -39,8 +42,9 @@ Take the first item under **Missing** whose blocked note is clear. Keep one scre
 - [x] Brand assets: folders, search, and opening a logo or PDF. Favorites, folder create, upload, and version restore stay on the web.
 - [x] UA Gear, for a participant. Admin roster, deadline, and the equipment spreadsheet stay on the web.
 - [x] Team badge shelf. A person's own badges stay on Profile. Awarding a group stays on the web.
-- [x] Item condition reports. Staff and admin see the five newest damage and missing-item reports on the item, with the photo and the checkout. Students do not see them. Clearing maintenance stays in the item menu.
+- [x] Item condition reports. Staff and admin see the five newest damage and missing-item reports on the item, with the photo and the checkout. Added in this slice. Students do not see them. Clearing maintenance stays in the item menu.
 - [x] Item activity. Staff and admin read the website History tab: all activity, item updates, or bookings, with older pages. A booking row opens that booking. Students do not see it. Previous bookings stay on the item.
+- [x] **Booking activity.** Students, staff, and admins open Activity on a reservation or checkout and read the same history the website shows (`auditLogs` on `GET /api/bookings/:id`): all activity, booking changes, or equipment changes. The newest 50 entries are on the phone. Older history stays on the website. Collaborators do not see Activity. Extend stays the booking's main action. Added in #513.
 
 - [x] **Brand assets.** Read-only folders, search, and opening a logo or PDF. Folder create, upload, and version restore stay on the web.
 - [x] **UA Gear Picks, for a participant.** One fit against an allowance. Admin roster, deadline, and the equipment spreadsheet stay on the web.

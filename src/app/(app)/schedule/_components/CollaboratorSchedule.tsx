@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
+import { publishedEventsFromPayload } from "@/lib/a11y-resilience";
 
 type PublishedCrewMember = {
   assignmentId: string;
@@ -68,7 +69,12 @@ export function CollaboratorSchedule({ canFollow }: { canFollow: boolean }) {
         return;
       }
       const json = await parseJsonSafely<{ data?: PublishedEvent[] }>(response);
-      setEvents(json?.data ?? []);
+      const parsed = publishedEventsFromPayload(json);
+      if (!parsed.ok) {
+        setError(true);
+        return;
+      }
+      setEvents(parsed.events as PublishedEvent[]);
     } catch {
       setError(true);
     } finally {
@@ -111,7 +117,7 @@ export function CollaboratorSchedule({ canFollow }: { canFollow: boolean }) {
       {loading ? (
         <OperationalLoadingState variant="page" title="Loading schedule" rows={4} />
       ) : error ? (
-        <EmptyState icon="wifi-off" title="Could not load the schedule" description="Retry before relying on this event list." actionLabel="Retry" onAction={() => void load()} />
+        <EmptyState icon="wifi-off" title="Could not load the schedule" description="Try again before relying on this event list." actionLabel="Try again" onAction={() => void load()} />
       ) : events.length === 0 ? (
         <EmptyState icon="calendar" title="No scheduled events" description="Events will appear here when crew assignments are ready." />
       ) : (

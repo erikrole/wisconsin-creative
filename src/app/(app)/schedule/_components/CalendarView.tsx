@@ -7,6 +7,7 @@ import { formatTimeShort } from "@/lib/format";
 import { eventOccursOnCalendarDay, formatCalendarEventAllDayLabel } from "@/lib/calendar-event-dates";
 import { cn } from "@/lib/utils";
 import { VENUE_TONES, venueToneFromEvent } from "@/lib/venue-tone";
+import { scheduleEventActionName } from "@/lib/a11y-resilience";
 import type { CalendarEntry } from "./types";
 import { ACTIVE_STATUSES, AREA_LABELS, scheduleEventTitleParts } from "./types";
 import { CoverageTag } from "./Coverage";
@@ -133,7 +134,10 @@ function EventChip({
       <div className={cn("w-[2.5px] flex-shrink-0", venueTone.solidClass)} />
       <div className={cn("min-w-0 flex-1 px-1.5 py-1", venueTone.surfaceClass)}>
         <div className="mb-0.5 flex items-center justify-between gap-1 text-[9px] text-muted-foreground">
-          <span className="truncate">{entry.allDay ? "All day" : formatTimeShort(entry.startsAt)}</span>
+          <span className="truncate">
+            {entry.allDay ? "All day" : formatTimeShort(entry.startsAt)}
+            <span> · {venueTone.label}</span>
+          </span>
           {entry.coverage ? (
             <CoverageTag
               percentage={entry.coverage.percentage}
@@ -159,7 +163,11 @@ function EventChip({
         <TooltipTrigger asChild>
           <button
             className={chipClass}
-            aria-label={`${entry.shiftGroupId ? "Manage crew for" : "Set up crew for"} ${titleParts.title}`}
+            aria-label={scheduleEventActionName(
+              entry.shiftGroupId ? "Manage crew for" : "Set up crew for",
+              titleParts.title,
+              venueTone.label,
+            )}
             onClick={() => onOpenCrew(entry)}
           >
             {inner}
@@ -237,7 +245,11 @@ function MobileCalendarEvent({
   return canManageCrew ? (
     <button
       className={className}
-      aria-label={`${entry.shiftGroupId ? "Manage crew for" : "Set up crew for"} ${titleParts.title}`}
+      aria-label={scheduleEventActionName(
+        entry.shiftGroupId ? "Manage crew for" : "Set up crew for",
+        titleParts.title,
+        venueTone.label,
+      )}
       onClick={() => onOpenCrew(entry)}
     >
       {content}

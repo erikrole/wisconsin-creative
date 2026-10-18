@@ -1,6 +1,7 @@
 "use client";
 
 import { type ReactNode } from "react";
+import { rowKeyActivates } from "@/lib/a11y-resilience";
 import { AnimatePresence, motion } from "motion/react";
 import {
   type ColumnDef,
@@ -402,7 +403,11 @@ export function DataTable({
                         if (e.metaKey || e.ctrlKey || e.button === 1) openItem(true);
                         else openItem();
                       }}
-                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); router.push(href); } }}
+                      onKeyDown={(e) => {
+                        if (!rowKeyActivates(e)) return;
+                        e.preventDefault();
+                        router.push(href);
+                      }}
                     >
                       {row.getVisibleCells().map((cell) => (
                         <TableCell key={cell.id}>
