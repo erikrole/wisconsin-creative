@@ -19,7 +19,7 @@ vi.mock("@/lib/db", () => {
     gearPickSubmission: { create: vi.fn(), update: vi.fn(), findUniqueOrThrow: vi.fn() },
     gearPickLine: { deleteMany: vi.fn(), createMany: vi.fn() },
     gearPickStudent: { findFirst: vi.fn(), create: vi.fn(), delete: vi.fn() },
-    user: { findUnique: vi.fn() },
+    user: { findUnique: vi.fn(), update: vi.fn() },
   };
   return {
     db: {
@@ -460,6 +460,37 @@ describe("admin routes", () => {
       tx,
       expect.objectContaining({ action: "remove_student", before: { userId: "student-1", name: "Student One" } }),
     );
+  });
+
+  it("lets an admin set a student's sizes with an audit entry", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(admin);
+    tx.gearPickStudent!.findFirst!.mockResolvedValue({
+      id: "gps-1",
+      user: { id: "student-1", name: "Student One", topSize: null, shoeSize: "9" },
+    });
+
+    const response = await patchAdmin(patch({ action: "setStudentSizes", studentId: "gps-1", topSize: "M", shoeSize: "9" }), context);
+
+    expect(response.status).toBe(200);
+    expect(tx.user!.update).toHaveBeenCalledWith({ where: { id: "student-1" }, data: { topSize: "M", shoeSize: "9" } });
+    expect(createAuditEntryTx).toHaveBeenCalledWith(
+      tx,
+      expect.objectContaining({
+        action: "set_student_sizes",
+        before: { userId: "student-1", topSize: null, shoeSize: "9" },
+        after: { userId: "student-1", topSize: "M", shoeSize: "9" },
+      }),
+    );
+  });
+
+  it("404s when setting sizes for a student who is not on the list", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(admin);
+    tx.gearPickStudent!.findFirst!.mockResolvedValue(null);
+
+    const response = await patchAdmin(patch({ action: "setStudentSizes", studentId: "nope", topSize: "M", shoeSize: null }), context);
+
+    expect(response.status).toBe(404);
+    expect(tx.user!.update).not.toHaveBeenCalled();
   });
 
   it("launches the cycle to staff with an audit entry", async () => {

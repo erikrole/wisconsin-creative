@@ -35,6 +35,12 @@ const patchSchema = z.discriminatedUnion("action", [
     studentId: z.string().trim().min(1).max(64),
   }),
   z.object({
+    action: z.literal("setStudentSizes"),
+    studentId: z.string().trim().min(1).max(64),
+    topSize: z.string().trim().min(1).max(40).nullable(),
+    shoeSize: z.string().trim().min(1).max(40).nullable(),
+  }),
+  z.object({
     action: z.literal("addParticipant"),
     userId: z.string().trim().min(1).max(64),
     fit: fitSchema,

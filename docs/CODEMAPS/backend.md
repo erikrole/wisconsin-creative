@@ -46,7 +46,7 @@
 | `src/lib/services/event-worker.ts` | 125 |
 | `src/lib/services/firmware-watch.ts` | 329 |
 | `src/lib/services/game-record.ts` | 169 |
-| `src/lib/services/gear-picks.ts` | 754 |
+| `src/lib/services/gear-picks.ts` | 777 |
 | `src/lib/services/hidden-users-cleanup.ts` | 122 |
 | `src/lib/services/item-cleanup-wizard.ts` | 762 |
 | `src/lib/services/job-runs.ts` | 52 |

@@ -49,6 +49,7 @@ type AdminChange =
   | { action: "setBudget"; budgetCents: number; confirmed: boolean; studentKitCents: number }
   | { action: "addStudent"; userId: string }
   | { action: "removeStudent"; studentId: string }
+  | { action: "setStudentSizes"; studentId: string; topSize: string | null; shoeSize: string | null }
   | { action: "addParticipant"; userId: string; fit: GearPickFitKey }
   | { action: "updateParticipant"; participantId: string; fit?: GearPickFitKey; allowanceCents?: number }
   | { action: "removeParticipant"; participantId: string };

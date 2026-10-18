@@ -456,6 +456,7 @@ export type GearPicksAdminChange =
   | { action: "setBudget"; budgetCents: number; confirmed: boolean; studentKitCents?: number }
   | { action: "addStudent"; userId: string }
   | { action: "removeStudent"; studentId: string }
+  | { action: "setStudentSizes"; studentId: string; topSize: string | null; shoeSize: string | null }
   | { action: "addParticipant"; userId: string; fit: GearPickFitKey; allowanceCents?: number }
   | { action: "updateParticipant"; participantId: string; fit?: GearPickFitKey; allowanceCents?: number }
   | { action: "removeParticipant"; participantId: string };
@@ -542,6 +543,28 @@ export async function applyGearPicksAdminChange(actor: Actor, change: GearPicksA
             }
             throw error;
           }
+        }
+
+        case "setStudentSizes": {
+          const student = await tx.gearPickStudent.findFirst({
+            where: { id: change.studentId, cycleId: cycle.id },
+            select: { id: true, user: { select: { id: true, name: true, topSize: true, shoeSize: true } } },
+          });
+          if (!student) throw new HttpError(404, "That student isn't on the list.");
+          await tx.user.update({
+            where: { id: student.user.id },
+            data: { topSize: change.topSize, shoeSize: change.shoeSize },
+          });
+          await createAuditEntryTx(tx, {
+            actorId: actor.id,
+            actorRole: actor.role,
+            entityType: "gear_pick_student",
+            entityId: student.id,
+            action: "set_student_sizes",
+            before: { userId: student.user.id, topSize: student.user.topSize, shoeSize: student.user.shoeSize },
+            after: { userId: student.user.id, topSize: change.topSize, shoeSize: change.shoeSize },
+          });
+          return { cycleId: cycle.id };
         }
 
         case "removeStudent": {
