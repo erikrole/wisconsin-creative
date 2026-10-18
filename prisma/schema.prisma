@@ -3223,6 +3223,7 @@ model WishItem {
   @@index([status, createdAt])
   @@index([requestedById])
   @@map("wish_items")
+}
 
 // ── Announcements ───────────────────────────────────────
 
