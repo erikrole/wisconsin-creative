@@ -131,7 +131,7 @@ Values: `UPLOADING`, `FINALIZING`, `COMMITTED`, `FAILED`
 
 ## Model `User`
 
-Fields: 132
+Fields: 135
 
 - `id                            String                           @id @default(cuid())`
 - `name                          String`
@@ -204,6 +204,9 @@ Fields: 132
 - `licenseCodesCreated           LicenseCode[]                    @relation("LicenseCreatedBy")`
 - `licenseClaims                 LicenseCodeClaim[]`
 - `gearPickParticipations        GearPickParticipant[]`
+- `gearPickStudents              GearPickStudent[]`
+- `gearPickReceipts              GearPickReceipt[]`
+- `gearPickHandouts              GearPickHandout[]`
 - `resources                     Resource[]`
 - `resourcesVerified             Resource[]                       @relation("ResourceLastVerifiedBy")`
 - `resourceAssetFoldersCreated   ResourceAssetFolder[]            @relation("ResourceAssetFolderCreator")`
@@ -2979,19 +2982,145 @@ Values: `MEN`, `WOMEN`
 
 ## Model `GearPickCycle`
 
-Fields: 7
+Fields: 17
 
 - `id           String                @id`
 - `title        String`
 - `deadline     DateTime?`
 - `launchedAt   DateTime?             @map("launched_at")`
+- `budgetCents      Int               @default(0) @map("budget_cents")`
+- `budgetConfirmed  Boolean           @default(false) @map("budget_confirmed")`
+- `studentKitCents  Int               @default(0) @map("student_kit_cents")`
+- `orderPlacedAt DateTime?            @map("order_placed_at")`
+- `poNumber      String?              @map("po_number")`
+- `orderNumber   String?              @map("order_number")`
+- `expectedAt    DateTime?            @map("expected_at")`
 - `createdAt    DateTime              @default(now()) @map("created_at")`
 - `updatedAt    DateTime              @updatedAt @map("updated_at")`
 - `participants GearPickParticipant[]`
+- `students     GearPickStudent[]`
+- `receipts     GearPickReceipt[]`
+- `handouts     GearPickHandout[]`
 
 Indexes and constraints:
 
 - `@@map("gear_pick_cycles")`
+
+## Model `GearPickHandout`
+
+Fields: 11
+
+- `id            String        @id @default(cuid())`
+- `cycleId       String        @map("cycle_id")`
+- `userId        String        @map("user_id")`
+- `sku           String`
+- `size          String`
+- `source        String`
+- `quantity      Int`
+- `handedOutAt   DateTime      @map("handed_out_at")`
+- `handedOutById String?       @map("handed_out_by_id")`
+- `cycle         GearPickCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)`
+- `user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)`
+
+Indexes and constraints:
+
+- `@@unique([cycleId, userId, sku, size, source])`
+- `@@index([userId])`
+- `@@map("gear_pick_handouts")`
+
+## Model `GearPickReceipt`
+
+Fields: 11
+
+- `id           String        @id @default(cuid())`
+- `cycleId      String        @map("cycle_id")`
+- `sku          String`
+- `size         String?`
+- `quantity     Int`
+- `receivedAt   DateTime      @map("received_at")`
+- `receivedById String?       @map("received_by_id")`
+- `note         String?`
+- `createdAt    DateTime      @default(now()) @map("created_at")`
+- `cycle        GearPickCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)`
+- `receivedBy   User?         @relation(fields: [receivedById], references: [id], onDelete: SetNull)`
+
+Indexes and constraints:
+
+- `@@index([cycleId, sku])`
+- `@@map("gear_pick_receipts")`
+
+## Model `GearPastCycle`
+
+Fields: 9
+
+- `id                 String          @id`
+- `title              String`
+- `budgetCents        Int             @map("budget_cents")`
+- `budgetedSpendCents Int             @map("budgeted_spend_cents")`
+- `otherSpendCents    Int             @default(0) @map("other_spend_cents")`
+- `note               String?`
+- `createdAt          DateTime        @default(now()) @map("created_at")`
+- `items              GearPastItem[]`
+- `people             GearPastPerson[]`
+
+Indexes and constraints:
+
+- `@@map("gear_past_cycles")`
+
+## Model `GearPastItem`
+
+Fields: 10
+
+- `id             String        @id @default(cuid())`
+- `cycleId        String        @map("cycle_id")`
+- `sku            String`
+- `itemName       String        @map("item_name")`
+- `colorLabel     String        @map("color_label")`
+- `unitPriceCents Int           @map("unit_price_cents")`
+- `plannedQty     Int           @map("planned_qty")`
+- `orderedQty     Int           @default(0) @map("ordered_qty")`
+- `receivedQty    Int           @default(0) @map("received_qty")`
+- `cycle          GearPastCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)`
+
+Indexes and constraints:
+
+- `@@index([cycleId])`
+- `@@map("gear_past_items")`
+
+## Model `GearPastPerson`
+
+Fields: 8
+
+- `id         String        @id @default(cuid())`
+- `cycleId    String        @map("cycle_id")`
+- `name       String`
+- `groupLabel String        @map("group_label")`
+- `fit        String`
+- `topSize    String?       @map("top_size")`
+- `shoeSize   String?       @map("shoe_size")`
+- `cycle      GearPastCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)`
+
+Indexes and constraints:
+
+- `@@index([cycleId])`
+- `@@map("gear_past_people")`
+
+## Model `GearPickStudent`
+
+Fields: 6
+
+- `id        String        @id @default(cuid())`
+- `cycleId   String        @map("cycle_id")`
+- `userId    String        @map("user_id")`
+- `createdAt DateTime      @default(now()) @map("created_at")`
+- `cycle     GearPickCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)`
+- `user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)`
+
+Indexes and constraints:
+
+- `@@unique([cycleId, userId])`
+- `@@index([userId])`
+- `@@map("gear_pick_students")`
 
 ## Model `GearPickParticipant`
 

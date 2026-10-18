@@ -275,6 +275,9 @@ model User {
   licenseCodesCreated           LicenseCode[]                    @relation("LicenseCreatedBy")
   licenseClaims                 LicenseCodeClaim[]
   gearPickParticipations        GearPickParticipant[]
+  gearPickStudents              GearPickStudent[]
+  gearPickReceipts              GearPickReceipt[]
+  gearPickHandouts              GearPickHandout[]
   resources                     Resource[]
   resourcesVerified             Resource[]                       @relation("ResourceLastVerifiedBy")
   resourceAssetFoldersCreated   ResourceAssetFolder[]            @relation("ResourceAssetFolderCreator")
@@ -2913,11 +2916,121 @@ model GearPickCycle {
   deadline     DateTime?
   /// When admins opened picks to everyone on the list; until then only admins see them.
   launchedAt   DateTime?             @map("launched_at")
+  /// Total UA budget in cents. Admin-only; a placeholder until `budgetConfirmed`.
+  budgetCents      Int               @default(0) @map("budget_cents")
+  budgetConfirmed  Boolean           @default(false) @map("budget_confirmed")
+  /// Per-student kit price in cents (zip, polo, shoe budget); every student on the roster counts against the budget.
+  studentKitCents  Int               @default(0) @map("student_kit_cents")
+  /// The order record. The Equipment department places the order; the site only records it.
+  orderPlacedAt DateTime?            @map("order_placed_at")
+  poNumber      String?              @map("po_number")
+  orderNumber   String?              @map("order_number")
+  expectedAt    DateTime?            @map("expected_at")
   createdAt    DateTime              @default(now()) @map("created_at")
   updatedAt    DateTime              @updatedAt @map("updated_at")
   participants GearPickParticipant[]
+  students     GearPickStudent[]
+  receipts     GearPickReceipt[]
+  handouts     GearPickHandout[]
 
   @@map("gear_pick_cycles")
+}
+
+/// A piece physically handed out to one person. One row per assigned piece (cycle, user, sku, size, source).
+model GearPickHandout {
+  id            String        @id @default(cuid())
+  cycleId       String        @map("cycle_id")
+  userId        String        @map("user_id")
+  sku           String
+  size          String
+  /// STANDARD_ISSUE, CORE_KIT, STUDENT_KIT or PICK.
+  source        String
+  quantity      Int
+  handedOutAt   DateTime      @map("handed_out_at")
+  handedOutById String?       @map("handed_out_by_id")
+  cycle         GearPickCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([cycleId, userId, sku, size, source])
+  @@index([userId])
+  @@map("gear_pick_handouts")
+}
+
+/// Gear checked in against the order. Several receipts can exist per SKU and size (partial shipments).
+model GearPickReceipt {
+  id           String        @id @default(cuid())
+  cycleId      String        @map("cycle_id")
+  sku          String
+  size         String?
+  quantity     Int
+  receivedAt   DateTime      @map("received_at")
+  receivedById String?       @map("received_by_id")
+  note         String?
+  createdAt    DateTime      @default(now()) @map("created_at")
+  cycle        GearPickCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  receivedBy   User?         @relation(fields: [receivedById], references: [id], onDelete: SetNull)
+
+  @@index([cycleId, sku])
+  @@map("gear_pick_receipts")
+}
+
+/// A finished year of UA gear, kept read-only and separate from the live pick cycle.
+model GearPastCycle {
+  id                 String          @id
+  title              String
+  budgetCents        Int             @map("budget_cents")
+  budgetedSpendCents Int             @map("budgeted_spend_cents")
+  otherSpendCents    Int             @default(0) @map("other_spend_cents")
+  note               String?
+  createdAt          DateTime        @default(now()) @map("created_at")
+  items              GearPastItem[]
+  people             GearPastPerson[]
+
+  @@map("gear_past_cycles")
+}
+
+model GearPastItem {
+  id             String        @id @default(cuid())
+  cycleId        String        @map("cycle_id")
+  sku            String
+  itemName       String        @map("item_name")
+  colorLabel     String        @map("color_label")
+  unitPriceCents Int           @map("unit_price_cents")
+  plannedQty     Int           @map("planned_qty")
+  orderedQty     Int           @default(0) @map("ordered_qty")
+  receivedQty    Int           @default(0) @map("received_qty")
+  cycle          GearPastCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+
+  @@index([cycleId])
+  @@map("gear_past_items")
+}
+
+model GearPastPerson {
+  id         String        @id @default(cuid())
+  cycleId    String        @map("cycle_id")
+  name       String
+  groupLabel String        @map("group_label")
+  fit        String
+  topSize    String?       @map("top_size")
+  shoeSize   String?       @map("shoe_size")
+  cycle      GearPastCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+
+  @@index([cycleId])
+  @@map("gear_past_people")
+}
+
+/// A student on the UA roster for one cycle. Sizes come from their profile; the kit price is on the cycle.
+model GearPickStudent {
+  id        String        @id @default(cuid())
+  cycleId   String        @map("cycle_id")
+  userId    String        @map("user_id")
+  createdAt DateTime      @default(now()) @map("created_at")
+  cycle     GearPickCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([cycleId, userId])
+  @@index([userId])
+  @@map("gear_pick_students")
 }
 
 /// An explicit invitation for one user to pick in one cycle, with the fit and allowance they shop with.
