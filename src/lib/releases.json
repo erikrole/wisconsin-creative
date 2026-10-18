@@ -1,5 +1,18 @@
 [
   {
+    "date": "2026-10-18",
+    "title": "Hiring invites are emailed",
+    "type": "improvement",
+    "summary": "New students now get an email with a sign-in link when you invite them, and you can resend it from Onboarding.",
+    "details": [
+      "The link opens the login page with the invited address already filled in.",
+      "If email is not set up or a send fails, the invite is still created and the page tells you so.",
+      "Resend is limited to three per person per hour."
+    ],
+    "platforms": ["Web"],
+    "pr": 515
+  },
+  {
     "date": "2026-10-19",
     "title": "Booking activity on iPhone",
     "type": "feature",
