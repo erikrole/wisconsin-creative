@@ -122,7 +122,7 @@
 | `GearPickParticipant` | 10 | 3 |
 | `GearPickSubmission` | 9 | 1 |
 | `GearPickLine` | 9 | 2 |
-| `Announcement` | 16 | 3 |
+| `Announcement` | 18 | 3 |
 | `AnnouncementDismissal` | 6 | 3 |
 
 ## Enums

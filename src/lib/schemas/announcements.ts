@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { isSafeAnnouncementUrl } from "@/lib/announcements";
+import { isAnnouncementImageUrl, isSafeAnnouncementUrl } from "@/lib/announcements";
 
 const optionalText = (max: number) =>
   z
@@ -16,6 +16,10 @@ const fields = {
   body: z.string().trim().min(1, "Add a message").max(1200),
   ctaLabel: optionalText(32),
   ctaUrl: optionalText(500),
+  imageUrls: z
+    .array(z.string().trim().max(1000).refine(isAnnouncementImageUrl, "Upload images here instead of linking them"))
+    .max(4, "Use up to 4 images"),
+  imageAlt: optionalText(200),
   roles: z.array(z.enum(["ADMIN", "STAFF", "STUDENT"])).max(4),
   showOnWeb: z.boolean(),
   showOnIos: z.boolean(),
@@ -31,7 +35,7 @@ function ctaPair(v: { ctaLabel?: string | null; ctaUrl?: string | null }, ctx: z
 }
 
 export const announcementCreateBody = z
-  .object({ ...fields, publish: z.boolean().default(false) })
+  .object({ ...fields, imageUrls: fields.imageUrls.default([]), publish: z.boolean().default(false) })
   .superRefine(ctaPair)
   .refine((v) => v.showOnWeb || v.showOnIos, { message: "Show it on web, iOS, or both", path: ["showOnWeb"] });
 

@@ -3055,7 +3055,7 @@ Values: `FEATURE`, `UPDATE`, `NOTICE`
 
 ## Model `Announcement`
 
-Fields: 16
+Fields: 18
 
 - `id          String                  @id @default(cuid())`
 - `kind        AnnouncementKind        @default(UPDATE)`
@@ -3063,6 +3063,8 @@ Fields: 16
 - `body        String`
 - `ctaLabel    String?                 @map("cta_label")`
 - `ctaUrl      String?                 @map("cta_url")`
+- `imageUrls   String[]                @default([]) @map("image_urls")`
+- `imageAlt    String?                 @map("image_alt")`
 - `roles       Role[]`
 - `showOnWeb   Boolean                 @default(true) @map("show_on_web")`
 - `showOnIos   Boolean                 @default(true) @map("show_on_ios")`

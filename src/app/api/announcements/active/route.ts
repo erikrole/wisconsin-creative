@@ -28,10 +28,13 @@ export const GET = withAuth(async (req, { user }) => {
     dismissals: { none: { userId: user.id } },
   };
 
-  const row = await db.announcement.findFirst({
-    where,
-    orderBy: [{ publishedAt: "desc" }, { id: "desc" }],
-  });
+  const [row, total] = await Promise.all([
+    db.announcement.findFirst({
+      where,
+      orderBy: [{ publishedAt: "desc" }, { id: "desc" }],
+    }),
+    db.announcement.count({ where }),
+  ]);
 
   const data: ActiveAnnouncement | null = row
     ? {
@@ -42,7 +45,10 @@ export const GET = withAuth(async (req, { user }) => {
         blocks: parseAnnouncementBody(row.body),
         ctaLabel: row.ctaLabel,
         ctaUrl: row.ctaUrl,
+        imageUrls: row.imageUrls,
+        imageAlt: row.imageAlt,
         publishedAt: row.publishedAt!.toISOString(),
+        remaining: Math.max(0, total - 1),
       }
     : null;
 

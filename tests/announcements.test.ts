@@ -10,6 +10,7 @@ import { announcementCreateBody, announcementPatchBody } from "@/lib/schemas/ann
 
 const mocks = vi.hoisted(() => ({
   findFirst: vi.fn(),
+  count: vi.fn(),
   findUnique: vi.fn(),
   upsert: vi.fn(),
   user: { id: "user-1", role: "STUDENT" },
@@ -17,7 +18,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@/lib/db", () => ({
   db: {
-    announcement: { findFirst: mocks.findFirst, findUnique: mocks.findUnique },
+    announcement: { findFirst: mocks.findFirst, findUnique: mocks.findUnique, count: mocks.count },
     announcementDismissal: { upsert: mocks.upsert },
   },
 }));
@@ -85,6 +86,14 @@ describe("announcement schemas", () => {
     expect(() => announcementCreateBody.parse({ ...base, showOnWeb: false, showOnIos: false })).toThrow(ZodError);
   });
 
+  it("accepts only our own uploaded images, at most 4", () => {
+    const blob = "https://abc.public.blob.vercel-storage.com/announcements/1.png";
+    expect(announcementCreateBody.parse({ ...base, imageUrls: [blob] }).imageUrls).toEqual([blob]);
+    expect(announcementCreateBody.parse(base).imageUrls).toEqual([]);
+    expect(() => announcementCreateBody.parse({ ...base, imageUrls: ["https://evil.example/x.png"] })).toThrow(ZodError);
+    expect(() => announcementCreateBody.parse({ ...base, imageUrls: Array(5).fill(blob) })).toThrow(ZodError);
+  });
+
   it("turns blank optional text into null on edit", () => {
     expect(announcementPatchBody.parse({ ctaLabel: "", ctaUrl: "" })).toMatchObject({ ctaLabel: null, ctaUrl: null });
   });
@@ -96,6 +105,7 @@ describe("announcement read routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.user = { id: "user-1", role: "STUDENT" };
+    mocks.count.mockResolvedValue(0);
   });
 
   it("returns null when nothing is unseen", async () => {
@@ -117,11 +127,14 @@ describe("announcement read routes", () => {
   it("shapes the payload the apps decode", async () => {
     mocks.findFirst.mockResolvedValue({
       id: "a1", kind: "FEATURE", title: "Hi", body: "One\n\n- Two", ctaLabel: null, ctaUrl: null,
+      imageUrls: ["https://x.public.blob.vercel-storage.com/a.png"], imageAlt: "Shift board",
       publishedAt: new Date("2026-10-18T00:00:00Z"),
     });
+    mocks.count.mockResolvedValue(3);
     const json = await (await getActive(new Request("http://test/api/announcements/active"), noParams)).json();
     expect(json.data).toMatchObject({
-      id: "a1", kindLabel: "New", title: "Hi", ctaLabel: null,
+      id: "a1", kindLabel: "New", title: "Hi", ctaLabel: null, remaining: 2, imageAlt: "Shift board",
+      imageUrls: ["https://x.public.blob.vercel-storage.com/a.png"],
       blocks: [{ type: "paragraph", text: "One" }, { type: "list", items: ["Two"] }],
     });
   });

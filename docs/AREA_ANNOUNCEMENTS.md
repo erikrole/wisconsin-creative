@@ -17,7 +17,9 @@ Admins post a short splash ("new feature", "update", "heads up") from Settings a
 4. Body is plain text: blank line = paragraph, `- ` = bullet. No HTML or markdown.
 5. The button link is an app path (`/releases`) or `https`. Anything else is rejected.
 6. "Show to everyone again" deletes the dismissals; "End now" sets `endsAt`.
-7. No polling. The web client reads once per page load; iOS reads on launch and when the app returns to the foreground (same rule as the badge fetch in #458).
+7. No polling. The web client reads on page load and again only when someone returns to a tab after 30 minutes away; iOS reads on launch and when the app returns to the foreground (same rule as the badge fetch in #458). After a dismiss it refetches only when `remaining` says more are waiting.
+9. Up to 4 banner images, uploaded to Blob through `POST /api/announcements/images` (raster types checked by their bytes). Only Blob URLs are accepted, since next/image optimizes only that host. One image is a banner; several swipe.
+10. Publishing asks for confirmation naming the audience. Editing a live announcement saves in place; people who already closed it see the edit only after Show to everyone again.
 8. Role preview and a dismiss that fails offline both fail safe: the splash shows again later.
 
 ## API
@@ -26,7 +28,7 @@ Admins post a short splash ("new feature", "update", "heads up") from Settings a
 - Admin: `GET/POST /api/announcements`, `PATCH/DELETE /api/announcements/{id}` (`state: draft|live|ended`, `showAgain`). All writes are audited and rate limited.
 
 ## iOS spec (not built)
-Decode `ActiveAnnouncement` (`id`, `kind`, `kindLabel`, `title`, `blocks` as `paragraph{text}` or `list{items}`, optional `ctaLabel`/`ctaUrl`, `publishedAt`), tolerating unknown block types by skipping them. Fetch with `platform=ios` on launch and on foreground, present as a medium/large sheet using the web card layout (kind icon, kind label, title, body, bullets, primary button, "Not now"), then POST dismiss. A `ctaUrl` starting with `/` maps to an in-app destination or the website; unknown paths open the website. Needs an Xcode build and the web-side source-contract test before merge.
+Decode `ActiveAnnouncement` (`id`, `kind`, `kindLabel`, `title`, `blocks` as `paragraph{text}` or `list{items}`, optional `ctaLabel`/`ctaUrl`, `imageUrls`, optional `imageAlt`, `publishedAt`, `remaining`), tolerating unknown block types by skipping them. Fetch with `platform=ios` on launch and on foreground, present as a sheet using the web card layout (banner or paged images, kind icon, kind label and date, title, body, check bullets, primary button, Close), then POST dismiss. A `ctaUrl` starting with `/` maps to an in-app destination or the website; unknown paths open the website. Needs an Xcode build and the web-side source-contract test before merge.
 
 ## Changelog
-- 2026-10-18: V1 web (migration 0184, Settings > Announcements, splash in the app layout).
+- 2026-10-18: V1 web (migration 0184, Settings > Announcements, splash in the app layout), with banner images, phone bottom sheet, editor preview-as-splash, publish confirmation, and seen-by reach.

@@ -8,6 +8,8 @@ CREATE TABLE "announcements" (
     "body" TEXT NOT NULL,
     "cta_label" TEXT,
     "cta_url" TEXT,
+    "image_urls" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "image_alt" TEXT,
     "roles" "Role"[],
     "show_on_web" BOOLEAN NOT NULL DEFAULT true,
     "show_on_ios" BOOLEAN NOT NULL DEFAULT true,

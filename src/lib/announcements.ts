@@ -8,6 +8,9 @@ export const ANNOUNCEMENT_KIND_LABEL: Record<AnnouncementKindValue, string> = {
   NOTICE: "Heads up",
 };
 
+/** Roles that can ever see an announcement. Collaborators are external and never do. */
+export const ANNOUNCEMENT_ROLES: Role[] = ["ADMIN", "STAFF", "STUDENT"];
+
 /** Audience presets the editor offers. An empty role list means everyone. */
 export const ANNOUNCEMENT_AUDIENCES = [
   { id: "everyone", label: "Everyone", roles: [] as Role[] },
@@ -71,6 +74,16 @@ export function isSafeAnnouncementUrl(value: string): boolean {
   }
 }
 
+/** Banner images must be our own Blob uploads: next/image only optimizes that host. */
+export function isAnnouncementImageUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && url.hostname.endsWith(".public.blob.vercel-storage.com");
+  } catch {
+    return false;
+  }
+}
+
 export type AnnouncementState = "draft" | "scheduled" | "live" | "ended";
 
 export function announcementState(
@@ -92,5 +105,9 @@ export type ActiveAnnouncement = {
   blocks: AnnouncementBlock[];
   ctaLabel: string | null;
   ctaUrl: string | null;
+  imageUrls: string[];
+  imageAlt: string | null;
   publishedAt: string;
+  /** How many more unseen announcements wait behind this one. */
+  remaining: number;
 };
