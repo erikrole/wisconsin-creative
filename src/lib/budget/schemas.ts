@@ -56,6 +56,7 @@ const lineFields = {
   justification: optionalText(2000),
   requesterUserId: z.string().trim().min(1).max(64).nullable(),
   requesterNote: optionalText(200),
+  unplanned: z.boolean(),
 };
 
 export const createLineSchema = z.object({
@@ -72,6 +73,7 @@ export const createLineSchema = z.object({
   justification: lineFields.justification.optional(),
   requesterUserId: lineFields.requesterUserId.optional(),
   requesterNote: lineFields.requesterNote.optional(),
+  unplanned: lineFields.unplanned.default(false),
 });
 
 export const updateLineSchema = z

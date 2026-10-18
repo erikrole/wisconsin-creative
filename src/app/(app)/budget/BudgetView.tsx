@@ -6,12 +6,10 @@ import { toast } from "sonner";
 import { ExternalLinkIcon, LinkIcon, PencilIcon, PlusIcon, Trash2Icon, UnlinkIcon, WalletIcon } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
 import { useConfirm } from "@/components/ConfirmDialog";
-import { OperationalMetricCard } from "@/components/OperationalFeedback";
 import { PageHeader } from "@/components/PageHeader";
 import { AssetImage } from "@/components/AssetImage";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogBody,
@@ -24,18 +22,18 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
-import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import {
   BUDGET_CATEGORIES,
   BUDGET_CATEGORY_LABELS,
   BUDGET_LINE_STATUSES,
   BUDGET_STATUS_LABELS,
-  formatCents,
+  formatCentsCompact,
   parseDollarsToCents,
+  fiscalYearLabel,
   plannedCents,
+  varianceCents,
   type BudgetCategoryValue,
   type BudgetLineStatusValue,
   type BudgetSummary,
@@ -62,6 +60,7 @@ type LineView = {
   requesterUserId: string | null;
   requesterName: string | null;
   requesterNote: string | null;
+  unplanned: boolean;
   links: LinkView[];
 };
 type LinkView = {
@@ -96,12 +95,50 @@ type Detail = {
 const LIST_KEY = ["budget", "list"] as const;
 const detailKey = (id: string) => ["budget", "detail", id] as const;
 
-const STATUS_VARIANT: Record<BudgetLineStatusValue, "gray" | "blue" | "green" | "red"> = {
-  PLANNED: "gray",
-  ORDERED: "blue",
-  PURCHASED: "green",
-  CANCELLED: "red",
+const GRID =
+  "grid grid-cols-[minmax(200px,1fr)_92px_40px_78px_88px_88px_78px_72px_112px_104px_72px] items-center gap-3 px-5";
+const MONO = "font-mono text-xs";
+const CATEGORY_COLORS = ["#3E63DD", "#8E4EC6", "#12A594", "#E5484D", "#F76B15", "#0090FF"];
+
+const PILL_STYLES: Record<BudgetLineStatusValue, string> = {
+  PLANNED: "bg-muted text-muted-foreground",
+  ORDERED: "bg-[#EEF2FF] text-[#3E63DD] dark:bg-[#3E63DD]/20",
+  PURCHASED: "bg-[#E6F6EB] text-[#18794E] dark:bg-emerald-500/15 dark:text-emerald-300",
+  CANCELLED: "bg-muted text-muted-foreground",
 };
+
+function StatusPill({ status }: { status: BudgetLineStatusValue }) {
+  return (
+    <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-bold ${PILL_STYLES[status]}`}>
+      {BUDGET_STATUS_LABELS[status]}
+    </span>
+  );
+}
+
+const STAT_TONES = {
+  default: "",
+  accent: "text-[#3E63DD]",
+  amber: "text-[#AB6400] dark:text-amber-400",
+  green: "text-[#218358] dark:text-emerald-400",
+  red: "text-[#C62A2F] dark:text-red-400",
+} as const;
+
+function StatCard({ label, value, tone = "default", helper }: { label: string; value: string; tone?: keyof typeof STAT_TONES; helper?: string }) {
+  return (
+    <div className="rounded-2xl border bg-card px-5 py-[18px]">
+      <div className="text-[11px] font-bold uppercase tracking-[0.09em] text-muted-foreground">{label}</div>
+      <div className={`mt-1.5 text-[32px] font-black leading-[1.05] tracking-[-0.04em] tabular-nums ${STAT_TONES[tone]}`}>{value}</div>
+      {helper && <div className="mt-1 text-xs text-muted-foreground">{helper}</div>}
+    </div>
+  );
+}
+
+/** "May 28" from a YYYY-MM-DD date, without a timezone shift. */
+function formatShortDate(value: string | null): string {
+  if (!value) return "—";
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+}
 
 async function readJson<T>(response: Response, fallback: string): Promise<T> {
   if (handleAuthRedirect(response, "/budget")) throw new Error("Signing in again");
@@ -151,7 +188,7 @@ export function BudgetView({ initialBudgetId = null, focusLineId = null }: { ini
           >
             {list.data.map((budget) => (
               <option key={budget.id} value={budget.id}>
-                {budget.name} {budget.fiscalYear}
+                {budget.name} · {fiscalYearLabel(budget.fiscalYear)}
               </option>
             ))}
           </NativeSelect>
@@ -161,7 +198,7 @@ export function BudgetView({ initialBudgetId = null, focusLineId = null }: { ini
           New budget
         </Button>
         {activeId && (
-          <Button type="button" onClick={() => setLineDialog({ line: null })}>
+          <Button type="button" className="bg-[#3E63DD] text-white hover:bg-[#3452B8]" onClick={() => setLineDialog({ line: null })}>
             <PlusIcon data-icon="inline-start" />
             Add line
           </Button>
@@ -278,202 +315,240 @@ function BudgetBody({
     }
   }
 
+  const submitted = summary.submittedCents;
+  const vsSubmitted = summary.forecastCents - submitted;
+  const stillPlanned = summary.counts.PLANNED + summary.counts.ORDERED;
+  const pctSpent = cap > 0 ? Math.round((summary.spentCents / cap) * 100) : 0;
+  const barTotal = Math.max(cap, summary.forecastCents, 1);
+  const shownBudgeted = shown.filter((line) => !line.unplanned).reduce((sum, line) => sum + plannedCents(line), 0);
+  const shownSpent = shown.reduce((sum, line) => sum + (line.spentCents ?? 0), 0);
+
   return (
-    <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <OperationalMetricCard
-          label={summary.allocationCents === null ? "Planned" : "Allocation"}
-          value={formatCents(cap)}
-          helper={summary.allocationCents === null ? "No overall cap set" : `${formatCents(summary.plannedCents)} planned`}
+    <div className="flex flex-col gap-7">
+      <div className="grid grid-cols-2 gap-3.5 lg:grid-cols-4">
+        <StatCard
+          label={summary.allocationCents === null ? "Planned" : "Allocated"}
+          value={formatCentsCompact(cap)}
+          helper={summary.allocationCents === null ? "No overall cap set" : undefined}
         />
-        <OperationalMetricCard label="Spent" value={formatCents(summary.spentCents)} tone="blue" />
-        <OperationalMetricCard
-          label="Still to spend"
-          value={formatCents(summary.outstandingCents)}
-          helper={`${summary.counts.PLANNED + summary.counts.ORDERED} ${summary.counts.PLANNED + summary.counts.ORDERED === 1 ? "line" : "lines"} open`}
+        <StatCard label="Spent" value={formatCentsCompact(summary.spentCents)} tone="accent" />
+        <StatCard
+          label="Planned, not bought"
+          value={formatCentsCompact(summary.outstandingCents)}
+          tone="amber"
+          helper={`${stillPlanned} ${stillPlanned === 1 ? "line" : "lines"} open`}
         />
-        <OperationalMetricCard
-          label={over ? "Over by" : "Remaining"}
-          value={formatCents(Math.abs(summary.remainingCents))}
-          tone={over ? "red" : "green"}
-          helper={`Forecast ${formatCents(summary.forecastCents)}`}
-        />
+        <StatCard label={over ? "Over by" : "Remaining"} value={formatCentsCompact(Math.abs(summary.remainingCents))} tone={over ? "red" : "green"} />
       </div>
 
-      {summary.byCategory.length > 0 && (
-        <Card>
-          <CardContent className="flex flex-col gap-3 py-4">
-            <h2 className="text-sm font-semibold">By category</h2>
-            {summary.byCategory.map((row) => {
-              const pct = row.plannedCents > 0 ? Math.round((row.spentCents / row.plannedCents) * 100) : 0;
-              return (
-                <div key={row.category} className="grid grid-cols-[minmax(0,12rem)_1fr_auto] items-center gap-3 text-sm">
-                  <span className="truncate">{BUDGET_CATEGORY_LABELS[row.category]}</span>
-                  <Progress value={pct} aria-label={`${BUDGET_CATEGORY_LABELS[row.category]} spent`} />
-                  <span className="tabular-nums text-muted-foreground">
-                    {formatCents(row.spentCents)} of {formatCents(row.plannedCents)}
-                  </span>
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
-      )}
+      <section className="flex flex-col gap-3.5 rounded-2xl border bg-card p-5" aria-label="Where it went">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-bold">Where it went</h2>
+          <span className="text-[13px] text-muted-foreground">{pctSpent}% of allocation spent</span>
+        </div>
+        <div className="flex h-3 gap-0.5 overflow-hidden rounded-full bg-muted" role="img" aria-label="Spend by category, then planned and unspent">
+          {summary.byCategory.map((row, index) =>
+            row.spentCents > 0 ? (
+              <div key={row.category} style={{ flex: row.spentCents / barTotal, background: CATEGORY_COLORS[index % CATEGORY_COLORS.length] }} />
+            ) : null,
+          )}
+          {summary.outstandingCents > 0 && (
+            <div
+              style={{
+                flex: summary.outstandingCents / barTotal,
+                background: "repeating-linear-gradient(135deg,#F5D90A 0 4px,#FFEF5C 4px 8px)",
+              }}
+            />
+          )}
+        </div>
+        <div className="flex flex-wrap gap-x-5 gap-y-2 text-[13px] text-muted-foreground">
+          {summary.byCategory.map((row, index) => (
+            <span key={row.category} className="flex items-center gap-1.5">
+              <span className="size-2 rounded-full" style={{ background: CATEGORY_COLORS[index % CATEGORY_COLORS.length] }} />
+              {BUDGET_CATEGORY_LABELS[row.category]} <b className="font-bold text-foreground">{formatCentsCompact(row.spentCents)}</b>
+            </span>
+          ))}
+          {summary.outstandingCents > 0 && (
+            <span className="flex items-center gap-1.5">
+              <span className="size-2 rounded-full bg-[#F5D90A]" />
+              Planned <b className="font-bold text-foreground">{formatCentsCompact(summary.outstandingCents)}</b>
+            </span>
+          )}
+        </div>
+      </section>
+
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 rounded-xl border bg-card px-4 py-3 text-[13px] text-muted-foreground">
+        <span>
+          Submitted plan <b className="font-bold text-foreground">{formatCentsCompact(submitted)}</b> <span className="opacity-70">fixed</span>
+        </span>
+        <span>
+          Freed up <b className="font-bold text-[#218358]">{formatCentsCompact(summary.freedCents)}</b>
+        </span>
+        <span>
+          Unplanned <b className="font-bold text-[#3E63DD]">{formatCentsCompact(summary.unplannedCents)}</b>
+        </span>
+        <span className="ml-auto">
+          <b className={`font-bold ${vsSubmitted > 0 ? "text-[#C62A2F]" : "text-[#218358]"}`}>{formatCentsCompact(Math.abs(vsSubmitted))} {vsSubmitted > 0 ? "over" : "under"}</b>{" "}
+          the submitted plan
+        </span>
+      </div>
 
       {needItems.length > 0 && (
-        <Card>
-          <CardContent className="flex flex-wrap items-center gap-3 py-3 text-sm">
-            <span>
-              {needItems.length} bought {needItems.length === 1 ? "line has" : "lines have"} units not linked to an item yet.
-              Linking lets each item show its order, serial number, and fiscal year.
-            </span>
-            <Button type="button" variant="outline" onClick={() => setOnlyUnlinked((value) => !value)}>
-              {onlyUnlinked ? "Show all lines" : "Show only these"}
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="flex flex-wrap items-center gap-3.5 rounded-xl border border-[#F5E29A] bg-[#FFF8E1] px-4 py-3 text-sm text-[#5C4400] dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
+          <span className="size-2 rounded-full bg-[#F5B800]" />
+          <span className="min-w-0 flex-1 basis-72">
+            <b className="font-bold">{needItems.reduce((sum, line) => sum + unlinkedUnits(line), 0)} bought units</b> aren&apos;t linked to an item yet. Linking fills in each item&apos;s order, PO and serial.
+          </span>
+          <button type="button" className="text-[13px] font-bold text-[#3E63DD] hover:underline" onClick={() => setOnlyUnlinked((value) => !value)}>
+            {onlyUnlinked ? "Show all lines" : "Show only these →"}
+          </button>
+        </div>
       )}
 
       {lines.length === 0 ? (
-        <EmptyState icon="clipboard" title="No lines yet" description={`Add the first planned expense for ${budget.name} ${budget.fiscalYear}.`} />
+        <EmptyState icon="clipboard" title="No lines yet" description={`Add the first planned expense for ${budget.name} ${fiscalYearLabel(budget.fiscalYear)}.`} />
       ) : (
-        <div className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <Input
-            aria-label="Search lines"
-            placeholder="Search lines, suppliers, PO numbers"
-            className="w-full sm:w-72"
-            value={query}
-            maxLength={80}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-          <NativeSelect
-            aria-label="Filter by status"
-            className="w-auto"
-            value={statusFilter}
-            onChange={(event) => setStatusFilter(event.target.value as BudgetLineStatusValue | "ALL")}
-          >
-            <option value="ALL">All statuses</option>
-            {BUDGET_LINE_STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {BUDGET_STATUS_LABELS[status]}
-              </option>
-            ))}
-          </NativeSelect>
-          <NativeSelect aria-label="Sort lines" className="w-auto" value={sort} onChange={(event) => setSort(event.target.value as LineSort)}>
-            {LINE_SORTS.map((value) => (
-              <option key={value} value={value}>
-                {LINE_SORT_LABELS[value]}
-              </option>
-            ))}
-          </NativeSelect>
-          <span className="text-sm text-muted-foreground" aria-live="polite">
-            {shown.length === lines.length ? `${lines.length} lines` : `${shown.length} of ${lines.length} lines`}
-          </span>
-        </div>
-        {shown.length === 0 ? (
-          <EmptyState
-            icon="search"
-            title="No lines match"
-            description="Try a different search or clear the filters."
-            actionLabel="Clear filters"
-            onAction={() => {
-              setQuery("");
-              setStatusFilter("ALL");
-              setOnlyUnlinked(false);
-            }}
-          />
-        ) : (
-        <Card>
-          <CardContent className="overflow-x-auto p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Item</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Planned</TableHead>
-                  <TableHead className="text-right">Spent</TableHead>
-                  <TableHead>PO</TableHead>
-                  <TableHead>Items</TableHead>
-                  <TableHead className="w-24" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {shown.map((line) => (
-                  <Fragment key={line.id}>
-                  <TableRow
-                    id={`line-${line.id}`}
-                    data-state={line.id === focusLineId ? "selected" : undefined}
-                    className={line.status === "CANCELLED" ? "opacity-60" : undefined}
-                  >
-                    <TableCell className="max-w-80">
-                      <div className="flex items-center gap-3">
-                      {line.links.some((link) => link.imageUrl) && (
-                        <AssetImage src={line.links.find((link) => link.imageUrl)?.imageUrl} alt="" size={40} />
-                      )}
-                      <div className="min-w-0">
-                      <div className="flex items-center gap-1.5 font-medium">
-                        <span className="truncate">{line.description}</span>
-                        {line.linkUrl && (
-                          <a href={line.linkUrl} target="_blank" rel="noreferrer noopener" aria-label="Open product link">
-                            <ExternalLinkIcon className="size-3.5 text-muted-foreground" />
-                          </a>
-                        )}
-                      </div>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {[line.supplier, line.requesterName ?? line.requesterNote].filter(Boolean).join(" · ")}
-                      </p>
-                      </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{BUDGET_CATEGORY_LABELS[line.category]}</TableCell>
-                    <TableCell>
-                      <Badge variant={STATUS_VARIANT[line.status]}>{BUDGET_STATUS_LABELS[line.status]}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatCents(plannedCents(line))}
-                      {line.quantity > 1 && (
-                        <span className="block text-xs text-muted-foreground">
-                          {line.quantity} × {formatCents(line.unitCostCents)}
+        <div className="flex flex-col gap-3.5">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <Input
+              aria-label="Search lines"
+              placeholder="Search lines, suppliers, POs"
+              className="w-full rounded-[9px] sm:w-64"
+              value={query}
+              maxLength={80}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+            <div className="flex gap-0.5 rounded-[10px] bg-muted p-[3px]" role="group" aria-label="Filter by status">
+              {(["ALL", ...BUDGET_LINE_STATUSES] as const).map((status) => (
+                <button
+                  key={status}
+                  type="button"
+                  aria-pressed={statusFilter === status}
+                  onClick={() => setStatusFilter(status)}
+                  className={`rounded-lg px-3.5 py-1.5 text-[13px] font-bold ${
+                    statusFilter === status ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {status === "ALL" ? "All" : BUDGET_STATUS_LABELS[status]}
+                </button>
+              ))}
+            </div>
+            <NativeSelect aria-label="Sort lines" className="w-auto" value={sort} onChange={(event) => setSort(event.target.value as LineSort)}>
+              {LINE_SORTS.map((value) => (
+                <option key={value} value={value}>
+                  Sort: {LINE_SORT_LABELS[value]}
+                </option>
+              ))}
+            </NativeSelect>
+            <span className="ml-auto text-[13px] text-muted-foreground" aria-live="polite">
+              {shown.length === lines.length ? `${lines.length} lines` : `${shown.length} of ${lines.length} lines`}
+            </span>
+          </div>
+          {shown.length === 0 ? (
+            <EmptyState
+              icon="search"
+              title="No lines match"
+              description="Try a different search or clear the filters."
+              actionLabel="Clear filters"
+              onAction={() => {
+                setQuery("");
+                setStatusFilter("ALL");
+                setOnlyUnlinked(false);
+              }}
+            />
+          ) : (
+            <div className="overflow-x-auto rounded-2xl border bg-card" role="table" aria-label="Budget lines">
+              <div className="min-w-[1220px]">
+                <div role="row" className={`${GRID} border-b bg-muted/40 py-3 text-[11px] font-bold uppercase tracking-[0.09em] text-muted-foreground`}>
+                  <span role="columnheader">Line</span>
+                  <span role="columnheader">Status</span>
+                  <span role="columnheader" className="text-right">Qty</span>
+                  <span role="columnheader" className="text-right">Each</span>
+                  <span role="columnheader" className="text-right">Budgeted</span>
+                  <span role="columnheader" className="text-right">Spent</span>
+                  <span role="columnheader" className="text-right">Vs plan</span>
+                  <span role="columnheader">Ordered</span>
+                  <span role="columnheader">PO</span>
+                  <span role="columnheader">Items</span>
+                  <span role="columnheader" className="sr-only">Actions</span>
+                </div>
+                {shown.map((line) => {
+                  const variance = varianceCents(line);
+                  const dropped = line.status === "CANCELLED";
+                  const unlinked = unlinkedUnits(line);
+                  return (
+                    <Fragment key={line.id}>
+                      <div
+                        role="row"
+                        id={`line-${line.id}`}
+                        data-state={line.id === focusLineId ? "selected" : undefined}
+                        className={`${GRID} items-center border-b py-3.5 data-[state=selected]:bg-muted/50`}
+                      >
+                        <div role="cell" className="flex min-w-0 items-center gap-3">
+                          {line.links.some((link) => link.imageUrl) && (
+                            <AssetImage src={line.links.find((link) => link.imageUrl)?.imageUrl} alt="" size={40} />
+                          )}
+                          <div className="min-w-0">
+                            <div className={`flex items-center gap-2 text-[15px] font-bold ${dropped ? "text-muted-foreground line-through" : ""}`}>
+                              <span className="truncate">{line.description}</span>
+                              {line.unplanned && (
+                                <span className="rounded-md bg-[#EEF2FF] px-1.5 py-0.5 text-[11px] font-bold text-[#3E63DD] no-underline dark:bg-[#3E63DD]/20">Unplanned</span>
+                              )}
+                              {line.linkUrl && (
+                                <a href={line.linkUrl} target="_blank" rel="noreferrer noopener" aria-label="Open product link">
+                                  <ExternalLinkIcon className="size-3.5 text-muted-foreground" />
+                                </a>
+                              )}
+                            </div>
+                            <p className="truncate text-[13px] text-muted-foreground">
+                              {[line.supplier, BUDGET_CATEGORY_LABELS[line.category], line.requesterName ?? line.requesterNote].filter(Boolean).join(" · ")}
+                            </p>
+                          </div>
+                        </div>
+                        <span role="cell">
+                          <StatusPill status={line.status} />
                         </span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {line.spentCents === null ? "—" : formatCents(line.spentCents)}
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{line.poNumber ?? "—"}</TableCell>
-                    <TableCell>
-                      <Button type="button" variant="ghost" onClick={() => onLinks(line)}>
-                        <LinkIcon />
-                        {line.links.length === 0 ? "Link" : `${line.links.length} linked`}
-                      </Button>
-                      {unlinkedUnits(line) > 0 && (
-                        <span className="block text-xs text-amber-600 dark:text-amber-400">
-                          {unlinkedUnits(line)} not linked
+                        <span role="cell" className={`${MONO} text-right`}>{line.quantity}</span>
+                        <span role="cell" className={`${MONO} text-right text-muted-foreground`}>{line.unplanned ? "—" : formatCentsCompact(line.unitCostCents)}</span>
+                        <span role="cell" className={`${MONO} text-right ${dropped ? "text-muted-foreground" : ""}`}>
+                          {line.unplanned ? "—" : formatCentsCompact(plannedCents(line))}
                         </span>
-                      )}
-                      {line.links.some((link) => link.detail) && (
-                        <span className="block max-w-56 truncate text-xs text-muted-foreground">
-                          {line.links.map((link) => link.detail).filter(Boolean).join(", ")}
+                        <span role="cell" className={`${MONO} text-right font-medium`}>{line.spentCents === null ? "—" : formatCentsCompact(line.spentCents)}</span>
+                        <span role="cell" className={`${MONO} text-right ${variance === null ? "" : variance > 0 ? "text-[#C62A2F]" : variance < 0 ? "text-[#218358]" : ""}`}>
+                          {variance === null || variance === 0 ? "—" : `${variance > 0 ? "+" : "−"}${formatCentsCompact(Math.abs(variance))}`}
                         </span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex justify-end gap-1">
-                        <Button type="button" variant="ghost" size="icon-sm" aria-label="Edit line" onClick={() => onEdit(line)}>
-                          <PencilIcon />
-                        </Button>
-                        <Button type="button" variant="ghost" size="icon-sm" aria-label="Delete line" onClick={() => void removeLine(line)}>
-                          <Trash2Icon />
-                        </Button>
+                        <span role="cell" className="text-[13px] text-muted-foreground">{formatShortDate(line.purchasedOn)}</span>
+                        <span role="cell" className={`${MONO} truncate text-muted-foreground`}>{line.poNumber ?? "—"}</span>
+                        <span role="cell" className="text-[13px]">
+                          {dropped ? (
+                            <span className="text-muted-foreground">Frees {formatCentsCompact(plannedCents(line))}</span>
+                          ) : line.status !== "PURCHASED" ? (
+                            <span className="text-muted-foreground">After it&apos;s bought</span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => onLinks(line)}
+                              className={`font-bold hover:underline ${unlinked > 0 ? "text-[#AB6400] dark:text-amber-400" : "text-[#218358]"}`}
+                            >
+                              {line.links.length === 0
+                                ? "Not linked"
+                                : unlinked > 0
+                                  ? `${(line.quantityBought ?? line.quantity) - unlinked} of ${line.quantityBought ?? line.quantity}`
+                                  : "Linked"}
+                            </button>
+                          )}
+                        </span>
+                        <div role="cell" className="flex justify-end gap-1">
+                          <Button type="button" variant="ghost" size="icon-sm" aria-label="Edit line" onClick={() => onEdit(line)}>
+                            <PencilIcon />
+                          </Button>
+                          <Button type="button" variant="ghost" size="icon-sm" aria-label="Delete line" onClick={() => void removeLine(line)}>
+                            <Trash2Icon />
+                          </Button>
+                        </div>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                  {line.id === focusLineId && (
-                    <TableRow className="bg-muted/40 hover:bg-muted/40">
-                      <TableCell colSpan={8}>
-                        <div className="flex flex-wrap items-center gap-2 py-1">
+                      {line.id === focusLineId && (
+                        <div role="row" className="flex flex-wrap items-center gap-2 border-b bg-muted/40 px-5 py-3">
                           {line.links.map((link) => (
                             <a
                               key={link.id}
@@ -485,23 +560,35 @@ function BudgetBody({
                               {link.detail && <span className="text-xs text-muted-foreground">{link.detail}</span>}
                             </a>
                           ))}
-                          {unlinkedUnits(line) > 0 && (
+                          {unlinked > 0 && (
                             <Button type="button" variant="outline" onClick={() => onLinks(line)}>
                               <LinkIcon />
-                              Link {unlinkedUnits(line)} more
+                              Link {unlinked} more
                             </Button>
                           )}
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                  </Fragment>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-        )}
+                      )}
+                    </Fragment>
+                  );
+                })}
+                <div role="row" className={`${GRID} bg-muted/40 py-3.5 text-[13px] font-bold text-muted-foreground`}>
+                  <span role="cell">Total shown</span>
+                  <span role="cell" />
+                  <span role="cell" />
+                  <span role="cell" />
+                  <span role="cell" className={`${MONO} text-right text-foreground`}>{formatCentsCompact(shownBudgeted)}</span>
+                  <span role="cell" className={`${MONO} text-right text-foreground`}>{formatCentsCompact(shownSpent)}</span>
+                  <span role="cell" className={`${MONO} text-right ${shownSpent - shownBudgeted > 0 ? "text-[#C62A2F]" : "text-[#218358]"}`}>
+                    {shownSpent - shownBudgeted === 0 ? "—" : `${shownSpent - shownBudgeted > 0 ? "+" : "−"}${formatCentsCompact(Math.abs(shownSpent - shownBudgeted))}`}
+                  </span>
+                  <span role="cell" />
+                  <span role="cell" />
+                  <span role="cell" />
+                  <span role="cell" />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -548,8 +635,9 @@ function LineDialog({
     linkUrl: line?.linkUrl ?? "",
     requesterNote: line?.requesterNote ?? "",
     justification: line?.justification ?? "",
+    unplanned: line?.unplanned ?? false,
   });
-  const set = (key: keyof typeof form) => (value: string) => setForm((current) => ({ ...current, [key]: value }));
+  const set = (key: Exclude<keyof typeof form, "unplanned">) => (value: string) => setForm((current) => ({ ...current, [key]: value }));
 
   async function save() {
     const unitCostCents = parseDollarsToCents(form.unitCost);
@@ -579,6 +667,7 @@ function LineDialog({
       linkUrl: form.linkUrl,
       requesterNote: form.requesterNote,
       justification: form.justification,
+      unplanned: form.unplanned,
     };
     setPending(true);
     try {
@@ -633,6 +722,14 @@ function LineDialog({
           <Field label="Requested by">
             <Input value={form.requesterNote} onChange={(e) => set("requesterNote")(e.target.value)} maxLength={200} />
           </Field>
+          <label className="flex items-center gap-2 text-sm sm:col-span-2">
+            <input
+              type="checkbox"
+              checked={form.unplanned}
+              onChange={(e) => setForm((current) => ({ ...current, unplanned: e.target.checked }))}
+            />
+            Added after the plan was submitted (unplanned)
+          </label>
           <Field label="Unit cost ($)">
             <Input inputMode="decimal" value={form.unitCost} onChange={(e) => set("unitCost")(e.target.value)} />
           </Field>

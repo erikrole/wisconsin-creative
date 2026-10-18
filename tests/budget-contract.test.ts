@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatCents, parseDollarsToCents, plannedCents, summarizeBudget, type BudgetLineMoney } from "@/lib/budget/contract";
+import { fiscalYearLabel, fiscalYearOf, formatCents, parseDollarsToCents, plannedCents, summarizeBudget, varianceCents, type BudgetLineMoney } from "@/lib/budget/contract";
 
 const line = (overrides: Partial<BudgetLineMoney>): BudgetLineMoney => ({
   status: "PLANNED",
@@ -66,5 +66,41 @@ describe("money helpers", () => {
   it("formats cents", () => {
     expect(formatCents(129_950)).toBe("$1,299.50");
     expect(formatCents(-5_000)).toBe("-$50.00");
+  });
+});
+
+describe("plan changes", () => {
+  const lines = [
+    line({ status: "PURCHASED", unitCostCents: 400_00, spentCents: 410_00 }),
+    line({ status: "CANCELLED", unitCostCents: 180_00 }),
+    line({ status: "PURCHASED", unitCostCents: 0, spentCents: 64_00, unplanned: true }),
+    line({ unitCostCents: 220_00 }),
+  ];
+
+  it("keeps the submitted plan fixed, with dropped lines in it and unplanned lines out", () => {
+    const summary = summarizeBudget(lines, null);
+    expect(summary.submittedCents).toBe(800_00);
+    expect(summary.freedCents).toBe(180_00);
+    expect(summary.unplannedCents).toBe(64_00);
+    expect(summary.forecastCents).toBe(410_00 + 64_00 + 220_00);
+  });
+
+  it("measures each line against the plan", () => {
+    expect(varianceCents(lines[0]!)).toBe(10_00);
+    expect(varianceCents(lines[1]!)).toBe(-180_00);
+    expect(varianceCents(lines[2]!)).toBe(64_00);
+    expect(varianceCents(lines[3]!)).toBeNull();
+  });
+});
+
+describe("fiscal years", () => {
+  it("labels the July 1 fiscal year", () => {
+    expect(fiscalYearLabel("2025-26")).toBe("FY26 · Jul 2025 – Jun 2026");
+    expect(fiscalYearLabel("nonsense")).toBe("nonsense");
+  });
+
+  it("finds the fiscal year a date falls in", () => {
+    expect(fiscalYearOf(new Date("2026-06-30T12:00:00Z"))).toBe("2025-26");
+    expect(fiscalYearOf(new Date("2026-07-01T00:00:00Z"))).toBe("2026-27");
   });
 });

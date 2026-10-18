@@ -3028,6 +3028,8 @@ model BudgetLine {
   requesterUserId String?          @map("requester_user_id")
   /// Free-text requester for roles or people without an account.
   requesterNote   String?          @map("requester_note")
+  /// Added after the plan was submitted, so it is not part of the submitted total.
+  unplanned       Boolean          @default(false)
   createdAt       DateTime         @default(now()) @map("created_at")
   updatedAt       DateTime         @updatedAt @map("updated_at")
   budget          Budget           @relation(fields: [budgetId], references: [id], onDelete: Cascade)

@@ -26,7 +26,7 @@ export const BUDGET_STATUS_LABELS: Record<BudgetLineStatusValue, string> = {
   PLANNED: "Planned",
   ORDERED: "Ordered",
   PURCHASED: "Purchased",
-  CANCELLED: "Cancelled",
+  CANCELLED: "Dropped",
 };
 
 export const BUDGET_CATEGORY_LABELS: Record<BudgetCategoryValue, string> = {
@@ -52,6 +52,8 @@ export type BudgetLineMoney = {
   unitCostCents: number;
   quantity: number;
   spentCents: number | null;
+  /** Added after the plan was submitted; it has no place in the submitted plan. */
+  unplanned?: boolean;
 };
 
 /** What the line was planned to cost. */
@@ -66,8 +68,14 @@ export type BudgetCategoryTotal = {
 };
 
 export type BudgetSummary = {
-  /** Planned total of every line that is not cancelled. */
+  /** Planned total of every line that is not dropped. */
   plannedCents: number;
+  /** The plan as submitted: every line that was on it, dropped ones included. Never moves. */
+  submittedCents: number;
+  /** Money returned to the budget by dropped lines. */
+  freedCents: number;
+  /** What lines added after the plan was submitted cost (spent, or estimated until bought). */
+  unplannedCents: number;
   /** Money actually spent so far. */
   spentCents: number;
   /** Planned money for lines not bought yet (planned or ordered with no spend recorded). */
@@ -86,12 +94,20 @@ export function summarizeBudget(lines: BudgetLineMoney[], allocationCents: numbe
   const counts: Record<BudgetLineStatusValue, number> = { PLANNED: 0, ORDERED: 0, PURCHASED: 0, CANCELLED: 0 };
   const categories = new Map<BudgetCategoryValue, BudgetCategoryTotal>();
   let planned = 0;
+  let submitted = 0;
+  let freed = 0;
+  let unplannedTotal = 0;
   let spent = 0;
   let outstanding = 0;
 
   for (const line of lines) {
     counts[line.status] += 1;
-    if (line.status === "CANCELLED") continue;
+    if (!line.unplanned) submitted += plannedCents(line);
+    if (line.status === "CANCELLED") {
+      if (!line.unplanned) freed += plannedCents(line);
+      continue;
+    }
+    if (line.unplanned) unplannedTotal += line.spentCents ?? plannedCents(line);
     const linePlanned = plannedCents(line);
     const lineSpent = line.spentCents ?? 0;
     planned += linePlanned;
@@ -107,6 +123,9 @@ export function summarizeBudget(lines: BudgetLineMoney[], allocationCents: numbe
   const forecast = spent + outstanding;
   return {
     plannedCents: planned,
+    submittedCents: submitted,
+    freedCents: freed,
+    unplannedCents: unplannedTotal,
     spentCents: spent,
     outstandingCents: outstanding,
     forecastCents: forecast,
@@ -115,6 +134,16 @@ export function summarizeBudget(lines: BudgetLineMoney[], allocationCents: numbe
     counts,
     byCategory: [...categories.values()].sort((a, b) => b.plannedCents - a.plannedCents),
   };
+}
+
+/**
+ * How a line landed against the submitted plan, in cents (positive is over). Null while it is
+ * still planned. Dropped lines free their whole plan; unplanned lines are entirely over.
+ */
+export function varianceCents(line: BudgetLineMoney): number | null {
+  if (line.status === "CANCELLED") return line.unplanned ? 0 : -plannedCents(line);
+  if (line.spentCents === null) return null;
+  return line.spentCents - (line.unplanned ? 0 : plannedCents(line));
 }
 
 /** "2026-27" style labels only; keeps the unique (name, year) key tidy. */
@@ -126,9 +155,27 @@ export function formatCents(cents: number): string {
   return `${sign}$${(abs / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+/** Whole dollars when the amount is exact, otherwise with cents: "$7,995" or "$1,299.50". */
+export function formatCentsCompact(cents: number): string {
+  return cents % 100 === 0 ? formatCents(cents).replace(/\.00$/, "") : formatCents(cents);
+}
+
 /** "1,299.50", "$1299" -> whole cents; null when empty or not a money amount. */
 export function parseDollarsToCents(input: string): number | null {
   const cleaned = input.replace(/[$,\s]/g, "");
   if (!/^\d+(\.\d{1,2})?$/.test(cleaned)) return null;
   return Math.round(Number(cleaned) * 100);
+}
+
+/** UW-Madison's fiscal year runs July 1 to June 30; "2025-26" is Jul 2025 to Jun 2026. */
+export function fiscalYearLabel(fiscalYear: string): string {
+  if (!FISCAL_YEAR_PATTERN.test(fiscalYear)) return fiscalYear;
+  const start = Number(fiscalYear.slice(0, 4));
+  return `FY${String(start + 1).slice(-2)} · Jul ${start} – Jun ${start + 1}`;
+}
+
+/** The stored label for the fiscal year a date falls in: July onward starts the next one. */
+export function fiscalYearOf(date: Date): string {
+  const start = date.getUTCMonth() >= 6 ? date.getUTCFullYear() : date.getUTCFullYear() - 1;
+  return `${start}-${String(start + 1).slice(-2)}`;
 }

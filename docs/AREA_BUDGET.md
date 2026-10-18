@@ -16,11 +16,12 @@ The team's budget lives in a Google Sheet with one tab per fiscal year plus a fo
 ## Rules
 
 1. Admin only. `budget.view` and `budget.manage` are ADMIN. Staff, students, and collaborators get 403 from every route and a redirect from the page, including an admin previewing as Staff.
-2. A `Budget` is one named budget (Creative, Football) for one fiscal year (`Creative` + `2026-27`). The pair is unique. `fiscalYear` is `YYYY-YY`.
+2. A `Budget` is one named budget (Creative, Football) for one fiscal year (`Creative` + `2026-27`). The pair is unique. `fiscalYear` is `YYYY-YY` and runs July 1 to June 30 (`2025-26` is Jul 2025 to Jun 2026, shown as "FY26 · Jul 2025 – Jun 2026").
 3. A `BudgetLine` holds both the plan and the result. Planned cost is `unitCostCents x quantity` and is never stored. `spentCents` and `quantityBought` are recorded once bought and may differ from the plan.
-4. Status is `PLANNED`, `ORDERED`, `PURCHASED`, or `CANCELLED`. Cancelled lines are excluded from every total.
+4. Status is `PLANNED`, `ORDERED`, `PURCHASED`, or `CANCELLED`. `CANCELLED` is shown as Dropped and is excluded from every total except the submitted plan.
 5. Categories are the department's closed list of eleven (equipment, IT & services, rentals, and so on).
 6. Money is whole cents, capped at $10,000,000 per value. Links must be http(s).
+7. The submitted plan is fixed: it sums every line that was on it, dropped ones included. A line added later is marked `unplanned` (migration `0177`) and stays out of the submitted plan. Freed up is what dropped lines gave back; Unplanned is what late additions cost. Vs plan is spent minus planned per line.
 7. Summary: planned = non-cancelled planned total; spent = recorded spend; outstanding = planned for lines not yet bought (planned or ordered with no spend); forecast = spent + outstanding; remaining = (allocation, or planned when there is no cap) - forecast. Negative means over.
 8. Every mutation is audited with before and after (`budget`, `budget_line`).
 9. `poNumber` and `orderNumber` come from order confirmations and are the strongest keys for linking a line to inventory items.

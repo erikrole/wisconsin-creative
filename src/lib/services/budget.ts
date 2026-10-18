@@ -32,6 +32,7 @@ const lineSelect = {
   justification: true,
   requesterUserId: true,
   requesterNote: true,
+  unplanned: true,
   requester: { select: { id: true, name: true } },
   items: {
     orderBy: { createdAt: "asc" },
@@ -135,6 +136,7 @@ export async function getBudgetDetail(budgetId: string) {
       unitCostCents: line.unitCostCents,
       quantity: line.quantity,
       spentCents: line.spentCents,
+      unplanned: line.unplanned,
     })),
     rest.allocationCents,
   );
@@ -219,6 +221,7 @@ export async function createLine(actor: Actor, budgetId: string, input: CreateLi
         justification: input.justification ?? null,
         requesterUserId: input.requesterUserId ?? null,
         requesterNote: input.requesterNote ?? null,
+        unplanned: input.unplanned,
       },
       select: lineSelect,
     });
