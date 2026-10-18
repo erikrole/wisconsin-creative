@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-import { EMAIL_THEME, buildEmailDocument, buildNotificationEmail, escapeEmailHtml } from "@/lib/email";
+import { EMAIL_THEME, buildNotificationEmail, escapeEmailHtml, renderEmail } from "@/lib/email";
 
 const producerPaths = [
   "src/lib/services/shift-trade-emails.ts",
@@ -33,6 +33,11 @@ describe("transactional email color contract", () => {
     for (const role of ["text", "body", "muted"] as const) {
       expect(contrast(EMAIL_THEME[role], EMAIL_THEME.background), role).toBeGreaterThanOrEqual(4.5);
     }
+    // Footer and eyebrow text sit directly on the page color, not the card.
+    expect(contrast(EMAIL_THEME.muted, EMAIL_THEME.page), "muted on page").toBeGreaterThanOrEqual(4.5);
+    expect(contrast(EMAIL_THEME.muted, EMAIL_THEME.surface), "muted on surface").toBeGreaterThanOrEqual(4.5);
+    expect(contrast(EMAIL_THEME.brand, EMAIL_THEME.page), "link on page").toBeGreaterThanOrEqual(4.5);
+    expect(contrast(EMAIL_THEME.danger, EMAIL_THEME.background), "urgent eyebrow").toBeGreaterThanOrEqual(4.5);
 
     expect(contrast(EMAIL_THEME.onBrand, EMAIL_THEME.brand), "button label").toBeGreaterThanOrEqual(4.5);
   });
@@ -40,8 +45,7 @@ describe("transactional email color contract", () => {
   it("keeps email HTML on the shared shell and palette", () => {
     for (const path of producerPaths) {
       const source = readFileSync(path, "utf8");
-      expect(source, path).toContain("buildEmailDocument");
-      expect(source, path).toContain("EMAIL_THEME");
+      expect(source, path).toContain("renderEmail");
       expect(source, path).not.toContain("<!DOCTYPE html>");
       expect(source, path).not.toMatch(/#[0-9a-f]{3,8}/i);
     }
@@ -55,12 +59,13 @@ describe("transactional email color contract", () => {
       body: "Bring A & B",
       bookingTitle: 'Camera "A"',
     });
-    expect(notification).toContain("Gear &lt;return&gt;");
-    expect(notification).toContain("Bring A &amp; B");
-    expect(notification).toContain("Camera &quot;A&quot;");
-    expect(notification).toContain(`font-size: 11px; color: ${EMAIL_THEME.muted}`);
+    expect(notification.html).toContain("Gear &lt;return&gt;");
+    expect(notification.html).toContain("Bring A &amp; B");
+    expect(notification.html).toContain("Camera &quot;A&quot;");
+    expect(notification.html).toContain(`color: ${EMAIL_THEME.muted}`);
+    expect(notification.text).toContain("Booking: Camera \"A\"");
 
-    const document = buildEmailDocument({ title: "Safe", content: "<p>Trusted content</p>" });
-    expect(document).toContain(`background-color: ${EMAIL_THEME.background}`);
+    const document = renderEmail({ headline: "Safe", paragraphs: ["Trusted content"] });
+    expect(document.html).toContain(`background-color: ${EMAIL_THEME.background}`);
   });
 });

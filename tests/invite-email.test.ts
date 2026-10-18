@@ -34,15 +34,15 @@ describe("invite email", () => {
     expect(subject).toBe("You're invited to Wisconsin Creative");
     expect(html).toContain("Hi &lt;b&gt;Maya&lt;/b&gt;,");
     expect(html).not.toContain("<b>Maya");
-    expect(html).toContain("<strong>maya@wisc.edu</strong>");
+    expect(html).toContain("Sign in with maya@wisc.edu.");
     expect(html).toContain("https://creative.example.test/login?email=maya%40wisc.edu");
   });
 
   it("uses reminder wording for a resend and a neutral greeting without a name", () => {
     const { subject, html } = buildInviteEmail({ email: "x@wisc.edu", kind: "reminder" });
     expect(subject).toBe("Finish setting up your Wisconsin Creative account");
-    expect(html).toContain("Hi,");
-    expect(html).toContain("A reminder that your Wisconsin Creative account is waiting for you.");
+    expect(html).toContain("We can&#39;t schedule you".replace("&#39;", "'"));
+    expect(html).not.toContain("Hi,");
   });
 
   it("reports not_configured and sends nothing when no provider key is set", async () => {
