@@ -46,7 +46,7 @@ Take the first item under **Missing** whose blocked note is clear. Keep one scre
 - [x] Team badge shelf. A person's own badges stay on Profile. Awarding a group stays on the web.
 - [x] Item condition reports. Staff and admin see the five newest damage and missing-item reports on the item, with the photo and the checkout. Added in this slice. Students do not see them. Clearing maintenance stays in the item menu.
 - [x] **Item activity.** Staff and admin open Activity on an item for the website History tab (`GET /api/assets/:id/activity`): all activity, item updates, or bookings. #508. Do not edit those files.
-- [x] **Booking activity.** Students, staff, and admins open Activity on a reservation or checkout and read the same history the website shows (`auditLogs` on `GET /api/bookings/:id`): all activity, booking changes, or equipment changes. The newest 50 entries are on the phone. Older history stays on the website. Collaborators do not see Activity. Extend stays the booking's main action. Added in this slice.
+- [x] **Booking activity.** Students, staff, and admins open Activity on a reservation or checkout and read the same history the website shows (`auditLogs` on `GET /api/bookings/:id`): all activity, booking changes, or equipment changes. The newest 50 entries are on the phone. Older history stays on the website. Collaborators do not see Activity. Extend stays the booking's main action. Added in #513.
 
 - [x] **Brand assets.** Read-only folders, search, and opening a logo or PDF. Folder create, upload, and version restore stay on the web.
 - [x] **UA Gear Picks, for a participant.** One fit against an allowance. Admin roster, deadline, and the equipment spreadsheet stay on the web.
