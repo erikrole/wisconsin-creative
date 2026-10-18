@@ -20,6 +20,7 @@ Admins post a short splash ("new feature", "update", "heads up") from Settings a
 7. No polling. The web client reads on page load and again only when someone returns to a tab after 30 minutes away; iOS reads on launch and when the app returns to the foreground (same rule as the badge fetch in #458). After a dismiss it refetches only when `remaining` says more are waiting.
 9. Up to 4 banner images, uploaded to Blob through `POST /api/announcements/images` (raster types checked by their bytes). Only Blob URLs are accepted, since next/image optimizes only that host. One image is a banner; several swipe.
 10. Publishing asks for confirmation naming the audience. Editing a live announcement saves in place; people who already closed it see the edit only after Show to everyone again.
+11. Long messages scroll inside the splash while its buttons stay pinned, on any screen down to 320px wide or 390px tall. An image that fails to load drops out instead of showing a broken icon.
 8. Role preview and a dismiss that fails offline both fail safe: the splash shows again later.
 
 ## API
@@ -31,4 +32,5 @@ Admins post a short splash ("new feature", "update", "heads up") from Settings a
 Decode `ActiveAnnouncement` (`id`, `kind`, `kindLabel`, `title`, `blocks` as `paragraph{text}` or `list{items}`, optional `ctaLabel`/`ctaUrl`, `imageUrls`, optional `imageAlt`, `publishedAt`, `remaining`), tolerating unknown block types by skipping them. Fetch with `platform=ios` on launch and on foreground, present as a sheet using the web card layout (banner or paged images, kind icon, kind label and date, title, body, check bullets, primary button, Close), then POST dismiss. A `ctaUrl` starting with `/` maps to an in-app destination or the website; unknown paths open the website. Needs an Xcode build and the web-side source-contract test before merge.
 
 ## Changelog
+- 2026-10-18: Stress pass and design pass: pinned buttons with a fade for long messages, long words wrap, broken images drop out, white sheet surface, kind pill, brighter red for small text in dark mode.
 - 2026-10-18: V1 web (migration 0184, Settings > Announcements, splash in the app layout), with banner images, phone bottom sheet, editor preview-as-splash, publish confirmation, and seen-by reach.

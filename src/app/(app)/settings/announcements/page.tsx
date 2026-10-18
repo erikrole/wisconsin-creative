@@ -481,7 +481,7 @@ function Composer({
 
           <div className="hidden flex-col gap-2 self-start md:sticky md:top-4 md:flex">
             <p className="m-0 text-xs font-medium uppercase tracking-wide text-muted-foreground">Preview</p>
-            <div className="overflow-hidden rounded-2xl border bg-background shadow-lg">
+            <div className="overflow-hidden rounded-[22px] border border-black/[0.06] bg-popover shadow-[0_24px_64px_-16px_rgb(0_0_0/0.22),0_2px_6px_rgb(0_0_0/0.05)] dark:border-white/10">
               <AnnouncementCard preview announcement={previewAnnouncement} />
             </div>
           </div>
