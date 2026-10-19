@@ -208,6 +208,87 @@ export async function releaseCode(
   );
 }
 
+/**
+ * A holder reports that their code won't activate. Their seat is released, the
+ * code is retired and stamped so admins can see it was reported (nobody else is
+ * handed it), and they get a different open code in the same transaction.
+ * `replacement` is null when the pool has nothing else open.
+ */
+export async function reportBrokenCode(codeId: string, userId: string, actorRole: Role) {
+  return withSerializationRetry(() =>
+    db.$transaction(
+      async (tx) => {
+        const claim = await tx.licenseCodeClaim.findFirst({
+          where: { licenseCodeId: codeId, userId, releasedAt: null },
+        });
+        if (!claim) throw new HttpError(404, "You don't currently hold this license code.");
+
+        const now = new Date();
+        await tx.licenseCodeClaim.update({
+          where: { id: claim.id },
+          data: { releasedAt: now, notes: "Reported not working" },
+        });
+        const remaining = await tx.licenseCodeClaim.findFirst({
+          where: { licenseCodeId: codeId, releasedAt: null },
+          orderBy: { claimedAt: "asc" },
+        });
+        await tx.licenseCode.update({
+          where: { id: codeId },
+          data: {
+            status: LicenseCodeStatus.RETIRED,
+            reportedBrokenAt: now,
+            reportedBrokenById: userId,
+            claimedById: remaining?.userId ?? null,
+            claimedAt: remaining?.claimedAt ?? null,
+            nagSentAt: null,
+          },
+        });
+
+        // Same preference as the claim button: fill half-used codes first, then
+        // the longest-lived expiry. Expiry dates are UTC-midnight calendar days.
+        const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+        const candidates = await tx.licenseCode.findMany({
+          where: {
+            id: { not: codeId },
+            status: { in: [LicenseCodeStatus.AVAILABLE, LicenseCodeStatus.PARTIAL] },
+            OR: [{ expiresAt: null }, { expiresAt: { gte: today } }],
+          },
+          include: { claims: { where: { releasedAt: null }, select: { id: true } } },
+        });
+        const rank = (c: { status: LicenseCodeStatus }) => (c.status === LicenseCodeStatus.PARTIAL ? 0 : 1);
+        const expiry = (c: { expiresAt: Date | null }) => c.expiresAt?.getTime() ?? Number.MAX_SAFE_INTEGER;
+        const next = candidates
+          .filter((c) => c.claims.length < MAX_SLOTS)
+          .sort((a, b) => rank(a) - rank(b) || expiry(b) - expiry(a) || a.createdAt.getTime() - b.createdAt.getTime())[0];
+
+        let replacement: { id: string; code: string } | null = null;
+        if (next) {
+          await tx.licenseCodeClaim.create({ data: { licenseCodeId: next.id, userId, claimedAt: now } });
+          const updated = await tx.licenseCode.update({
+            where: { id: next.id },
+            data: {
+              status: next.claims.length + 1 >= MAX_SLOTS ? LicenseCodeStatus.CLAIMED : LicenseCodeStatus.PARTIAL,
+              ...(next.claims.length === 0 ? { claimedById: userId, claimedAt: now } : {}),
+            },
+          });
+          replacement = { id: updated.id, code: updated.code };
+        }
+
+        await createAuditEntryTx(tx, {
+          actorId: userId,
+          actorRole,
+          entityType: "license_code",
+          entityId: codeId,
+          action: "report_broken",
+          after: { claimId: claim.id, replacementId: replacement?.id ?? null },
+        });
+        return { replacement };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+    )
+  );
+}
+
 export async function addUnknownOccupant(codeId: string, label: string) {
   return withSerializationRetry(() =>
     db.$transaction(

@@ -90,7 +90,7 @@ export function LicenseTable({ codes, loading, onInspect }: Props) {
             <Seats code={code} />
             <span className="hidden w-28 shrink-0 justify-end sm:flex">
               {code.status === "RETIRED" ? (
-                <Badge variant="gray">Retired</Badge>
+                <Badge variant={code.reportedBrokenAt ? "orange" : "gray"}>{code.reportedBrokenAt ? "Reported" : "Retired"}</Badge>
               ) : code.expiresAt ? (
                 <ExpiryChip expiresAt={code.expiresAt} />
               ) : null}

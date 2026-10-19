@@ -1,6 +1,22 @@
 [
   {
     "date": "2026-10-19",
+    "title": "Photo Mechanic: swap a code that won't work",
+    "type": "feature",
+    "summary": "If your Photo Mechanic code won't activate, you can now get a different one without asking staff.",
+    "details": [
+      "Tap Code not working? on your license, confirm, and a new open code appears right away.",
+      "The bad code is flagged for staff to check and isn't handed to anyone else.",
+      "If no open codes are left, staff can see the flagged code in the license list and replace it."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 0
+  },
+  {
+    "date": "2026-10-19",
     "title": "Position labels on event crew",
     "type": "feature",
     "summary": "Staff can now tag each person on an event's crew with a position label, like SLOW1, and say which half they cover.",

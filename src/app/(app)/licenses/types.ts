@@ -21,6 +21,7 @@ export type LicenseCode = {
   accountEmail: string | null;
   expiresAt: string | null;
   status: LicenseCodeStatus;
+  reportedBrokenAt?: string | null;
   claims: ActiveClaim[];
   createdAt: string;
 };

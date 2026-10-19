@@ -132,6 +132,35 @@ final class LicensesViewModel {
         pendingActionId = nil
     }
 
+    /// "Code not working?": the server flags the bad code, retires it, and hands
+    /// back another open one in the same call.
+    func reportBrokenActiveClaim() async {
+        guard let activeClaim, pendingActionId == nil else { return }
+        pendingActionId = activeClaim.id
+        notice = nil
+        error = nil
+        do {
+            let result = try await APIClient.shared.reportBrokenLicense(id: activeClaim.id)
+            await load(forceRefresh: true)
+            if let replacement = result.replacement {
+                UIPasteboard.general.setObjects(
+                    [replacement.code],
+                    localOnly: false,
+                    expirationDate: Date().addingTimeInterval(120)
+                )
+                Haptics.success()
+                showNotice("New code ready and copied for 2 minutes. The old one was flagged for staff.")
+            } else {
+                Haptics.warning()
+                showNotice("No open codes right now. The old one was flagged for staff to check.")
+            }
+        } catch {
+            Haptics.error()
+            self.error = error.localizedDescription
+        }
+        pendingActionId = nil
+    }
+
     func copyActiveCode() {
         guard let activeClaim else { return }
         UIPasteboard.general.setObjects(
@@ -173,6 +202,7 @@ struct LicensesView: View {
     @Environment(AppState.self) private var appState
     @State private var vm = LicensesViewModel()
     @State private var claimCandidate: LicenseCode?
+    @State private var showReportConfirm = false
     @State private var showReturnConfirm = false
     @State private var showHistory = false
     @State private var inspectedCode: LicenseCode?
@@ -229,6 +259,7 @@ struct LicensesView: View {
                 guard appState.resetTab == 7 else { return }
                 claimCandidate = nil
                 showReturnConfirm = false
+                showReportConfirm = false
                 showHistory = false
                 inspectedCode = nil
                 filter = .all
@@ -269,6 +300,18 @@ struct LicensesView: View {
                 Button("Cancel", role: .cancel) {}
             } message: {
                 Text("The slot becomes available for someone else.")
+            }
+            .confirmationDialog(
+                "Code not working?",
+                isPresented: $showReportConfirm,
+                titleVisibility: .visible
+            ) {
+                Button("Get a New Code") {
+                    Task { await vm.reportBrokenActiveClaim() }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("We'll flag this code for staff, make sure nobody else gets it, and give you a different open one.")
             }
     }
 
@@ -355,7 +398,8 @@ struct LicensesView: View {
                     isPending: vm.pendingActionId != nil,
                     onCopy: { vm.copyActiveCode() },
                     onHistory: { showHistory = true },
-                    onReturn: { showReturnConfirm = true }
+                    onReturn: { showReturnConfirm = true },
+                    onReportBroken: { showReportConfirm = true }
                 )
             }
             .listRowBackground(Color.statusBackground(.blue))
@@ -875,6 +919,7 @@ private struct LicenseHeroCard: View {
     let onCopy: () -> Void
     let onHistory: () -> Void
     let onReturn: () -> Void
+    let onReportBroken: () -> Void
 
     private var status: (label: String, tone: StatusTone) {
         guard let daysLeft = LicenseExpiry.daysUntil(claim.expiresAt) else { return ("Active", .green) }
@@ -958,6 +1003,8 @@ private struct LicenseHeroCard: View {
                 quietAction(isStaffOrAdmin ? "Release" : "Return", "rectangle.portrait.and.arrow.right", action: onReturn)
                     .disabled(isPending)
             }
+            quietAction("Code not working?", "arrow.triangle.2.circlepath", action: onReportBroken)
+                .disabled(isPending)
         }
     }
 

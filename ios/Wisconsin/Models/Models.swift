@@ -947,6 +947,10 @@ struct LicenseClaimResult: Codable, Equatable {
     let code: String
 }
 
+struct LicenseReportBrokenResult: Codable, Equatable {
+    let replacement: LicenseClaimResult?
+}
+
 // MARK: - Resources
 
 enum ResourceType: String, Codable, CaseIterable, Identifiable {
