@@ -137,11 +137,6 @@ export const PERMISSIONS: Record<string, Record<string, Role[]>> = {
     view: ["ADMIN", "STAFF", "STUDENT"],
     manage_exclusions: ["ADMIN"],
   },
-  // Out-of-town scoreboard at /ots: staff and admins switch it between live, demo and hold.
-  // The board itself reads its mode from a public GET; only the change is gated.
-  ots_board: {
-    control: ["ADMIN", "STAFF"],
-  },
   scoreboard: {
     // D-056: Scoreboard identity and metrics are shared authenticated team data.
     view: ["ADMIN", "STAFF", "STUDENT", "COLLABORATOR"],

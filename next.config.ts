@@ -108,11 +108,6 @@ const baseConfig: NextConfig = {
         source: "/golden-hour/:path*",
         headers: [{ key: "Permissions-Policy", value: permissionsPolicyFor("(self)") }],
       },
-      // The OTS scenario review page frames the board itself, so the board allows same-origin framing.
-      {
-        source: "/ots/:path*",
-        headers: [{ key: "X-Frame-Options", value: "SAMEORIGIN" }],
-      },
     ];
   },
   async redirects() {
@@ -135,11 +130,11 @@ const baseConfig: NextConfig = {
       { source: "/timelapse", destination: "/timelapse/index.html", permanent: false },
       { source: "/board-sizes", destination: "/board-sizes/index.html", permanent: false },
       { source: "/frame", destination: "/frame/index.html", permanent: false },
-      // Out-of-town scoreboard for the Camp Randall south end zone fascia (Daktronics web page playback).
-      { source: "/ots", destination: "/ots/index.html", permanent: false },
-      { source: "/ots/control", destination: "/ots/control.html", permanent: false },
-      { source: "/ots/chip", destination: "/ots/chip.html", permanent: false },
-      { source: "/ots/output", destination: "/ots/output.html", permanent: false },
+      // The out-of-town scoreboard moved to its own Cloudflare Worker; old links and .uri files keep working.
+      { source: "/ots", destination: "https://ots.wisconsincreative.com/", permanent: false },
+      { source: "/ots/index.html", destination: "https://ots.wisconsincreative.com/", permanent: false },
+      { source: "/ots/:page(control|chip|output|scenarios).html", destination: "https://ots.wisconsincreative.com/:page", permanent: false },
+      { source: "/ots/:path*", destination: "https://ots.wisconsincreative.com/:path*", permanent: false },
     ];
   },
 };
