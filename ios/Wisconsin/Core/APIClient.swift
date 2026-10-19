@@ -1853,6 +1853,26 @@ final class APIClient {
         return RecentBadgeRewards(awards: awards, nextCursor: nextCursor)
     }
 
+    /// The one announcement this person should see now, or nil. Read on launch
+    /// and on foreground only; there is no polling behind it.
+    func activeAnnouncement() async throws -> ActiveAnnouncement? {
+        let response: DataWrapper<ActiveAnnouncement?> = try await perform(
+            request(
+                path: "/api/announcements/active",
+                queryItems: [URLQueryItem(name: "platform", value: "ios")]
+            )
+        )
+        return response.data
+    }
+
+    /// Records that this person has seen the announcement. Idempotent server-side.
+    func dismissAnnouncement(id: String) async throws {
+        struct Dismissed: Decodable { let dismissed: Bool }
+        let _: DataWrapper<Dismissed> = try await perform(
+            request(path: "/api/announcements/\(id)/dismiss", method: "POST")
+        )
+    }
+
     /// Uploads one MetricKit diagnostic payload (crashes, hangs, resource
     /// exceptions). Carries no user identity; best-effort.
     func uploadDiagnosticPayload(_ json: Data) async {

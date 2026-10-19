@@ -3277,7 +3277,7 @@ Values: `OPEN`, `APPROVED`, `IN_BUDGET`, `DECLINED`
 
 ## Model `WishItem`
 
-Fields: 19
+Fields: 15
 
 - `id             String     @id @default(cuid())`
 - `title          String`
@@ -3294,16 +3294,16 @@ Fields: 19
 - `updatedAt      DateTime   @updatedAt @map("updated_at")`
 - `requestedBy    User?      @relation("WishRequester", fields: [requestedById], references: [id], onDelete: SetNull)`
 - `budgetLine     BudgetLine? @relation(fields: [budgetLineId], references: [id], onDelete: SetNull)`
-- `enum AnnouncementKind {`
-- `FEATURE`
-- `UPDATE`
-- `NOTICE`
 
 Indexes and constraints:
 
 - `@@index([status, createdAt])`
 - `@@index([requestedById])`
 - `@@map("wish_items")`
+
+## Enum `AnnouncementKind`
+
+Values: `FEATURE`, `UPDATE`, `NOTICE`
 
 ## Model `Announcement`
 

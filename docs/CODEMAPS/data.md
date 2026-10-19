@@ -131,7 +131,7 @@
 | `Budget` | 8 | 3 |
 | `BudgetLine` | 26 | 5 |
 | `BudgetLineItem` | 10 | 5 |
-| `WishItem` | 19 | 3 |
+| `WishItem` | 15 | 3 |
 | `Announcement` | 18 | 3 |
 | `AnnouncementDismissal` | 6 | 3 |
 
@@ -580,3 +580,9 @@
 - `APPROVED`
 - `IN_BUDGET`
 - `DECLINED`
+
+### `AnnouncementKind`
+
+- `FEATURE`
+- `UPDATE`
+- `NOTICE`
