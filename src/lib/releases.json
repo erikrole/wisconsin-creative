@@ -144,6 +144,21 @@
   },
   {
     "date": "2026-10-18",
+    "title": "Kit return time on iPhone",
+    "type": "fixes",
+    "summary": "A collaborator sees when a kit item comes back, even when the holder's name is hidden.",
+    "details": [
+      "Open a kit and read Back plus the return time when the name is hidden.",
+      "Staff and admin still see With the name and the return time.",
+      "A hold with no return time stays unnamed."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 510
+  },
+  {
+    "date": "2026-10-18",
     "title": "Clearer status and recovery",
     "type": "improvement",
     "summary": "Reservations, checkouts, items, schedule, and kiosk stay understandable from the keyboard, and a failed list says so instead of looking empty.",

@@ -204,12 +204,20 @@ private struct KitGearRow: View {
     }
 
     private var holderLine: String? {
-        guard let holder = member.asset.currentHolder, !holder.holderName.isEmpty else { return nil }
-        var parts = ["With \(holder.holderName)"]
-        if let due = InventoryReadFormatting.date(from: holder.endsAt) {
-            parts.append(due.operationalDateTimeLabel(now: today, capitalizesRelativeDay: false))
+        guard let holder = member.asset.currentHolder else { return nil }
+        let name = holder.holderName.nonBlankText
+        let due = InventoryReadFormatting.date(from: holder.endsAt)
+            .map { $0.operationalDateTimeLabel(now: today, capitalizesRelativeDay: false) }
+        if let name {
+            if let due {
+                return "With \(name) · \(due)"
+            }
+            return "With \(name)"
         }
-        return parts.joined(separator: " · ")
+        if let due {
+            return "Back \(due)"
+        }
+        return nil
     }
 }
 
