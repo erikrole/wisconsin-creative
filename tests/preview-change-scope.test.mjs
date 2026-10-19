@@ -57,6 +57,19 @@ describe("preview database skip", () => {
     expect(previewDatabaseDecision({ files: [{ filename: "docs/moved.md", previous_filename: "src/old.tsx" }], branch: "feat/move" }).skip).toBe(false);
   });
 
+  it("does not provision for a release note alone, but still does when real app code changes too", () => {
+    expect(previewDatabaseDecision({ files: ["src/lib/releases.json", "public/ots/board.js", "docs/A.md"], branch: "feat/static" }).skip).toBe(true);
+    expect(previewDatabaseDecision({ files: ["src/lib/releases.json", "src/app/page.tsx"], branch: "feat/app" }).skip).toBe(false);
+  });
+
+  it("skips a pull request labeled no-preview, whatever it changes", () => {
+    const decision = previewDatabaseDecision({ files: ["src/app/page.tsx"], branch: "feat/small", labels: [{ name: "no-preview" }] });
+    expect(decision.skip).toBe(true);
+    expect(decision.reason).toMatch(/no-preview/);
+    expect(previewDatabaseDecision({ files: ["src/app/page.tsx"], branch: "feat/small", labels: [{ name: "bug" }] }).skip).toBe(false);
+    expect(previewDatabaseDecision({ files: ["src/app/page.tsx"], branch: "feat/small", labels: ["no-preview"] }).skip).toBe(true);
+  });
+
   it("does not skip when the file list is missing or a path cannot be classified", () => {
     expect(previewDatabaseDecision({ author: "erik", branch: "feat/app" }).skip).toBe(false);
     expect(previewDatabaseDecision({ files: ["../src/secret.ts"], branch: "feat/app" }).skip).toBe(false);
