@@ -8,7 +8,7 @@ Scope: `KitDetailView`. The list audit is `tasks/audit-kits-ios.md`.
 
 ## P0 — blocks MVP
 
-- [x] [Flows] Detail decodes derived status and `currentHolder` from `GET /api/kits/[id]`.
+- [x] [Flows] Detail decodes derived status and `currentHolder` from `GET /api/kits/[id]`. A holder name still reads `With [name] · [return time]`. A return time with no name reads `Back [return time]`.
 - [x] [Flows] The bottom action is Reserve for an event. It stays hidden when the kit is empty or archived.
 
 ## P1 — polish before ship
