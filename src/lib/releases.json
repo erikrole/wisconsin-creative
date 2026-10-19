@@ -1,6 +1,20 @@
 [
   {
     "date": "2026-10-19",
+    "title": "World Series chip and router output",
+    "type": "feature",
+    "summary": "A compact World Series score chip for the corner of the Camp Randall main videoboard, plus a 1920×1080 output that carries both scoreboards over HDMI for the video router.",
+    "details": [
+      "The chip shows both teams' logos and scores, the inning and the outs, and follows the same controller as the fascia board.",
+      "wisconsincreative.com/ots/output puts the fascia board and the chip at exact pixel size on one full-HD frame, so a laptop can feed them straight into the router with no scaling."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 530
+  },
+  {
+    "date": "2026-10-19",
     "title": "Controller for the out-of-town scoreboard",
     "type": "feature",
     "summary": "Staff can switch the Camp Randall out-of-town scoreboard between live, a demo and a frozen frame from wisconsincreative.com/ots/control, on any device.",
