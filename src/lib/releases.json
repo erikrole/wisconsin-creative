@@ -533,6 +533,20 @@
   },
   {
     "date": "2026-10-16",
+    "title": "Redesigned Photo Mechanic licenses",
+    "type": "improvement",
+    "summary": "Getting a Photo Mechanic license is now one button, and staff manage codes from a compact list.",
+    "details": [
+      "Students claim with one button; the best open slot is picked and the code is copied.",
+      "A new list shows who is using Photo Mechanic right now.",
+      "Your license is a large card with a tap-to-copy code, expiry, and return.",
+      "Staff get a compact list of codes with both slots at a glance, plus filters for open, full, and expiring codes."
+    ],
+    "platforms": ["Web", "iOS"],
+    "pr": 488
+  },
+  {
+    "date": "2026-10-16",
     "title": "Blasts stay after you dismiss them",
     "type": "improvement",
     "summary": "The phone keeps blasts you have already seen, and a kiosk handoff no longer crashes when the saved request is incomplete.",

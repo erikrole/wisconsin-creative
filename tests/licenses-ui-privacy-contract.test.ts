@@ -12,13 +12,14 @@ describe("licenses UI and privacy contracts", () => {
     expect(route).toContain("occupantLabel: null");
   });
 
-  it("keeps the management action column staff/admin-only while student rows remain claimable", () => {
-    const table = source("src/app/(app)/licenses/LicenseTable.tsx");
+  it("shows students only a flat holder list and never renders code strings for the pool", () => {
+    const holders = source("src/app/(app)/licenses/LicenseHolders.tsx");
+    const licenses = source("src/app/(app)/licenses/PhotoMechanicLicenses.tsx");
 
-    expect(table).toContain("{isAdmin && <TableHead className=\"w-28 text-right\">Action</TableHead>}");
-    expect(table).toContain("{isAdmin && (\n                    <TableCell className=\"text-right\">");
-    expect(table).toContain("const showName = isAdmin || isOwn || claim.user !== null;");
-    expect(table).toContain("if (!isClickable) return;");
+    expect(holders).not.toContain("code.code");
+    expect(holders).toContain("claim.user !== null");
+    expect(licenses).toContain("<LicenseHolders codes={allCodes}");
+    expect(licenses).toContain("handleClaimBest");
   });
 
   it("keeps renewal controls behind the staff role gate", () => {
@@ -29,25 +30,13 @@ describe("licenses UI and privacy contracts", () => {
     expect(licenses).toContain("Renew licenses");
   });
 
-  it("shows explicit claim and inspect actions with active-use color semantics", () => {
+  it("gives staff one dense inspectable row per code with two seats", () => {
     const table = source("src/app/(app)/licenses/LicenseTable.tsx");
 
-    expect(table).toMatch(/<Eye[\s\S]*?Inspect/);
-    expect(table).toMatch(/<KeyRound[\s\S]*?Claim/);
-    expect(table).toContain('code.status === "CLAIMED" && "bg-[var(--blue-bg)]');
-    expect(table).not.toContain('code.status === "CLAIMED" && "bg-[var(--red-bg)]');
-  });
-
-  it("keeps Photo Mechanic license details actionable without a narrow-screen table", () => {
-    const table = source("src/app/(app)/licenses/LicenseTable.tsx");
-
-    expect(table).toContain('className="grid gap-2 md:hidden" role="list"');
-    expect(table).toContain('className="hidden overflow-x-auto rounded-md border md:block"');
-    expect(table).toContain('className="text-xs font-medium text-muted-foreground">Capacity');
-    expect(table).toContain('className="text-xs font-medium text-muted-foreground">Holders');
-    expect(table).toContain('className="text-xs font-medium text-muted-foreground">Expires');
-    expect(table).toContain('className="ml-auto h-10 w-24 rounded-md"');
-    expect(table).toContain('className="ml-auto inline-flex min-h-10 items-center');
+    expect(table).toContain("const MAX_SLOTS = 2;");
+    expect(table).toContain("onInspect(code)");
+    expect(table).toContain("Inspect license");
+    expect(table).not.toContain("<Table");
   });
 
   it("lets staff assign an open slot to an active user through the managed occupy route", () => {
