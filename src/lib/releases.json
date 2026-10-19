@@ -1,6 +1,22 @@
 [
   {
     "date": "2026-10-19",
+    "title": "Position labels on event crew",
+    "type": "feature",
+    "summary": "Staff can now tag each person on an event's crew with a position label, like SLOW1, and say which half they cover.",
+    "details": [
+      "Add a label and choose Full game, 1st half, or 2nd half from the crew editor.",
+      "The tag shows next to the name on the Schedule list and the event page, including for students.",
+      "Labels go out with the rest of the schedule and don't send a new notification by themselves.",
+      "Replacing someone clears the label for that spot."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 523
+  },
+  {
+    "date": "2026-10-19",
     "title": "Announcements on iPhone",
     "type": "feature",
     "summary": "Announcements posted from Settings now also appear in the iPhone app as a sheet the first time you open it.",
@@ -542,7 +558,10 @@
       "Your license is a large card with a tap-to-copy code, expiry, and return.",
       "Staff get a compact list of codes with both slots at a glance, plus filters for open, full, and expiring codes."
     ],
-    "platforms": ["Web", "iOS"],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
     "pr": 488
   },
   {
