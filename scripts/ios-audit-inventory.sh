@@ -110,6 +110,7 @@ GuidesView.swift                       | resources                   | audit
 BrandAssetsView.swift                  | brand-assets                | audit
 GearPicksView.swift                    | gear-picks                  | audit
 GuideMarkdown.swift                    |                             | exempt-infra
+Announcements/AnnouncementSplashSheet.swift |                          | exempt-shared
 SidebarWebDestinationView.swift        |                             | exempt-tiny
 NotificationSettingsView.swift         | profile                     | audit
 AccountSecuritySettingsView.swift      | profile                     | audit

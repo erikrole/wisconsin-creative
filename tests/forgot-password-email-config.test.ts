@@ -19,14 +19,7 @@ vi.mock("@/lib/db", () => ({
 
 vi.mock("@/lib/email", () => ({
   sendEmail: vi.fn(),
-  EMAIL_THEME: {
-    body: "#111111",
-    brand: "#c5050c",
-    onBrand: "#ffffff",
-    muted: "#555555",
-  },
-  buildEmailDocument: vi.fn(({ content }: { content: string }) => content),
-  escapeEmailHtml: vi.fn((value: string) => value),
+  renderEmail: vi.fn(() => ({ html: "<p>reset</p>", text: "reset" })),
 }));
 
 vi.mock("@/lib/audit", () => ({

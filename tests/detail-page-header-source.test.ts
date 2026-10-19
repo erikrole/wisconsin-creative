@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
 
 const DETAIL_HEADER_CONSUMERS = [
-  "src/app/(app)/users/[id]/page.tsx",
+  "src/app/(app)/staff/[id]/page.tsx",
   "src/app/(app)/items/[id]/_components/ItemHeader.tsx",
   "src/app/(app)/bulk-inventory/[id]/_components/BulkSkuHeader.tsx",
   "src/components/booking-details/BookingHeader.tsx",
@@ -47,7 +47,7 @@ describe("Detail page header contracts", () => {
 
   it("keeps detail header action triggers at the 40px operational baseline", () => {
     // size="sm" resolves to h-8 (32px), which is below the documented minimum.
-    const users = source("src/app/(app)/users/[id]/page.tsx");
+    const users = source("src/app/(app)/staff/[id]/page.tsx");
     expect(users).toContain('className="h-10 gap-1.5 active:scale-[0.96]"');
 
     const booking = source("src/components/booking-details/BookingHeader.tsx");
@@ -59,7 +59,7 @@ describe("Detail page header contracts", () => {
   });
 
   it("keeps the profile header free of decorative brand tint", () => {
-    const users = source("src/app/(app)/users/[id]/page.tsx");
+    const users = source("src/app/(app)/staff/[id]/page.tsx");
     expect(users).not.toContain("radial-gradient(ellipse at 0% 0%");
     expect(users).not.toContain("rgba(160,0,0,0.045)");
   });

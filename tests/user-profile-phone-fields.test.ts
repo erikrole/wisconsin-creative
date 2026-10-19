@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { updateProfileSchema } from "@/lib/validation";
 import { formatPhoneInput, normalizeProfilePhone } from "@/lib/profile-phone";
 
-const userInfo = readFileSync("src/app/(app)/users/[id]/UserInfoTab.tsx", "utf8");
+const userInfo = readFileSync("src/app/(app)/staff/[id]/UserInfoTab.tsx", "utf8");
 const settingsProfile = readFileSync("src/app/(app)/settings/profile/page.tsx", "utf8");
 const staffRoute = readFileSync("src/app/api/users/[id]/route.ts", "utf8");
 const selfRoute = readFileSync("src/app/api/profile/route.ts", "utf8");

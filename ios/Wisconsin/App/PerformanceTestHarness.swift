@@ -93,6 +93,10 @@ struct PerformanceTestRootView: View {
             AccountSecurityHarnessView()
         case .notifications:
             NotificationSettingsHarnessView()
+        case .announcement, .announcementImages, .announcementPlain,
+             .announcementStress, .announcementNone, .announcementError,
+             .announcementLong, .announcementQueue, .announcementBrokenImage, .announcementCtaRoute:
+            AnnouncementHarnessView()
         }
     }
 }
@@ -465,6 +469,10 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
             }
         }
 #endif
+        if url.path == "/api/announcements/active", AppRuntimeMode.performanceScenario == .announcementError {
+            mapped = Data(#"{"error":"The server had a problem. Try again in a moment."}"#.utf8)
+            statusCode = 500
+        }
         let payload = mapped ?? Data(#"{"error":"Not served by the fixture harness"}"#.utf8)
         let response = HTTPURLResponse(
             url: url,
@@ -525,6 +533,9 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
         // Lets the login capture reach the password step without a real host.
         case "/api/auth/discover": return AuthFixtureAPI.discoverPassword
         case "/api/me/passkeys": return PasskeyFixtureAPI.passkeys
+        case "/api/announcements/active": return AnnouncementFixtureAPI.active()
+        case let path where path.hasPrefix("/api/announcements/") && path.hasSuffix("/dismiss"):
+            return AnnouncementFixtureAPI.dismiss(path: path)
         case "/api/dashboard":
             return AppRuntimeMode.performanceScenario == .homeAllClear
                 ? HomeFixtureAPI.allClearDashboard
@@ -1057,7 +1068,9 @@ private enum FixtureAPI {
     """)
 
     static let users = json("""
-    { "total": 5, "limit": 50, "offset": 0, "data": [
+    { "total": 5, "limit": 50, "offset": 0,
+      "stats": { "byRole": { "ADMIN": 1, "STAFF": 1, "STUDENT": 2, "COLLABORATOR": 0 } },
+      "data": [
       { "id": "u1", "name": "Alex Rivera", "email": "alex.rivera@wisc.edu", "role": "STAFF",
         "title": "Photo Lead", "primaryArea": "PHOTO", "active": true },
       { "id": "u2", "name": "Erik Role", "email": "erik.role@wisc.edu", "role": "ADMIN",

@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
-import { EMAIL_THEME, buildEmailDocument, escapeEmailHtml, sendEmail } from "@/lib/email";
+import { env } from "@/lib/env";
+import { renderEmail, sendEmail } from "@/lib/email";
 import { normalizePrefs, shouldDeliverCategory, shouldDeliverEmail } from "@/lib/services/notification-prefs";
 
 export type ShiftTradeEmail = {
@@ -30,7 +31,7 @@ export async function sendShiftTradeEmail({
   return sendEmail({
     to: user.email,
     subject: title,
-    html: buildShiftTradeEmail({ title, body, eventSummary, area }),
+    ...buildShiftTradeEmail({ title, body, eventSummary, area }),
   });
 }
 
@@ -44,12 +45,17 @@ function buildShiftTradeEmail({
   body: string;
   eventSummary: string;
   area: string;
-}): string {
-  return buildEmailDocument({
-    title,
-    content: `
-  <p style="font-size: 15px; line-height: 1.5; color: ${EMAIL_THEME.body};">${escapeEmailHtml(body)}</p>
-  <p style="font-size: 13px; color: ${EMAIL_THEME.muted};">Event: <strong>${escapeEmailHtml(eventSummary)}</strong></p>
-  <p style="font-size: 13px; color: ${EMAIL_THEME.muted};">Area: ${escapeEmailHtml(area)}</p>`.trim(),
+}) {
+  return renderEmail({
+    preheader: body,
+    eyebrow: "Shift trade",
+    headline: title,
+    paragraphs: [body],
+    facts: [
+      { label: "Event", value: eventSummary },
+      { label: "Area", value: area },
+    ],
+    action: { label: "Open your schedule", url: `${env.appUrl}/schedule` },
+    manageNotifications: true,
   });
 }

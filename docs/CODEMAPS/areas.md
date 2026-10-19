@@ -3,6 +3,14 @@
 
 This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, services, and tests by area keywords. Treat it as a navigation aid, not an authorization or ownership source of truth.
 
+## announcements
+
+- Doc: `docs/AREA_ANNOUNCEMENTS.md`
+- Pages: `/settings/announcements`
+- APIs: `/api/announcements/[id]/dismiss`, `/api/announcements/[id]`, `/api/announcements/active`, `/api/announcements/images`, `/api/announcements`
+- Services: _none matched_
+- Tests: `tests/announcements.test.ts`
+
 ## badges
 
 - Doc: `docs/AREA_BADGES.md`
@@ -10,6 +18,14 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - APIs: `/api/badges/award/[id]`, `/api/badges/award/bulk`, `/api/badges/award`, `/api/badges/events/app-open`, `/api/badges/recent`, `/api/badges`, `/api/badges/user/[userId]`, `/api/reports/badges`
 - Services: _none matched_
 - Tests: `tests/badges-award-route.test.ts`, `tests/badges-bulk-award-route.test.ts`, `tests/badges-celebration-ui.test.ts`, `tests/badges-display.test.ts`, `tests/badges-manual-awards.test.ts`, `tests/badges-mvp-polish.test.ts`, `tests/badges-operations-page.test.ts`, `tests/badges-recent-route.test.ts`
+
+## budget
+
+- Doc: `docs/AREA_BUDGET.md`
+- Pages: `/budget`
+- APIs: `/api/budget/[id]/import`, `/api/budget/[id]/lines/bulk`, `/api/budget/[id]/lines`, `/api/budget/[id]`, `/api/budget/for-asset/[assetId]`, `/api/budget/item-search`, `/api/budget/lines/[lineId]/history`, `/api/budget/lines/[lineId]/links`, `/api/budget/lines/[lineId]`, `/api/budget/lines/[lineId]/suggestions`
+- Services: `src/lib/services/budget.ts`
+- Tests: `tests/budget-autofill.test.ts`, `tests/budget-contract.test.ts`, `tests/budget-history.test.ts`, `tests/budget-import.test.ts`, `tests/budget-insights.test.ts`, `tests/budget-matching.test.ts`, `tests/budget-routes.test.ts`, `tests/budget-table.test.ts`
 
 ## bulk-inventory
 
@@ -55,17 +71,17 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 
 - Doc: `docs/AREA_GEAR_PICKS.md`
 - Pages: _none matched_
-- APIs: `/api/gear-picks/admin/export.csv`, `/api/gear-picks/admin/export.xlsx`, `/api/gear-picks/admin`, `/api/gear-picks/me`, `/api/gear-picks/users/[userId]`
+- APIs: `/api/gear-picks/admin/export.csv`, `/api/gear-picks/admin/export.xlsx`, `/api/gear-picks/admin/history`, `/api/gear-picks/admin`, `/api/gear-picks/me`, `/api/gear-picks/users/[userId]`
 - Services: `src/lib/services/gear-picks.ts`
-- Tests: `tests/gear-picks-equipment-sheet.test.ts`, `tests/gear-picks-pricing.test.ts`, `tests/gear-picks-routes.test.ts`, `tests/ios-gear-picks-browse.test.ts`
+- Tests: `tests/gear-picks-attention.test.ts`, `tests/gear-picks-budget.test.ts`, `tests/gear-picks-equipment-sheet.test.ts`, `tests/gear-picks-handout.test.ts`, `tests/gear-picks-order.test.ts`, `tests/gear-picks-pricing.test.ts`, `tests/gear-picks-receiving.test.ts`, `tests/gear-picks-routes.test.ts`
 
 ## importer
 
 - Doc: `docs/AREA_IMPORTER.md`
 - Pages: `/import`
-- APIs: `/api/assets/import`, `/api/hiring/import`, `/api/resources/import`, `/api/signatures/import/apply`, `/api/signatures/import/preview`, `/api/workforce/import`
+- APIs: `/api/assets/import`, `/api/budget/[id]/import`, `/api/hiring/import`, `/api/resources/import`, `/api/signatures/import/apply`, `/api/signatures/import/preview`, `/api/workforce/import`
 - Services: _none matched_
-- Tests: `tests/hiring-import.test.ts`, `tests/import-route.test.ts`, `tests/resource-import-images.test.ts`, `tests/resource-import-route.test.ts`, `tests/resource-import.test.ts`
+- Tests: `tests/budget-import.test.ts`, `tests/hiring-import.test.ts`, `tests/import-route.test.ts`, `tests/resource-import-images.test.ts`, `tests/resource-import-route.test.ts`, `tests/resource-import.test.ts`
 
 ## items
 
@@ -105,7 +121,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/settings/kiosk-devices`
 - APIs: `/api/kiosk-devices/[id]/regenerate-code`, `/api/kiosk-devices/[id]`, `/api/kiosk-devices`, `/api/kiosk/activate`, `/api/kiosk/checkin/[id]/complete`, `/api/kiosk/checkin/[id]/quantity`, `/api/kiosk/checkin/[id]/report`, `/api/kiosk/checkin/[id]/scan`, `/api/kiosk/checkout/[id]/extend-window`, `/api/kiosk/checkout/[id]/nudge`
 - Services: `src/lib/services/kiosk-active-checkout-items.ts`, `src/lib/services/kiosk-actor.ts`, `src/lib/services/kiosk-checkin-undo.ts`, `src/lib/services/kiosk-checkout-allowance.ts`, `src/lib/services/kiosk-checkout-complete.ts`, `src/lib/services/kiosk-dashboard-home.ts`, `src/lib/services/kiosk-extend-window.ts`, `src/lib/services/kiosk-item-transfer.ts`
-- Tests: `tests/bulk-unit-kiosk-scans.test.ts`, `tests/ios-27-native-chrome.test.ts`, `tests/ios-accessibility-layout-hardening.test.ts`, `tests/ios-accountability-browse.test.ts`, `tests/ios-action-error-recovery.test.ts`, `tests/ios-all-day-calendar-date.test.ts`, `tests/ios-api-contract.test.ts`, `tests/ios-app-intents.test.ts`
+- Tests: `tests/bulk-unit-kiosk-scans.test.ts`, `tests/ios-27-native-chrome.test.ts`, `tests/ios-accessibility-layout-hardening.test.ts`, `tests/ios-accountability-browse.test.ts`, `tests/ios-action-error-recovery.test.ts`, `tests/ios-all-day-calendar-date.test.ts`, `tests/ios-announcement-splash.test.ts`, `tests/ios-api-contract.test.ts`
 
 ## notifications
 
@@ -159,14 +175,14 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 
 - Doc: `docs/AREA_SEARCH.md`
 - Pages: `/search`
-- APIs: `/api/assets/picker-search`, `/api/image-search`
+- APIs: `/api/assets/picker-search`, `/api/budget/item-search`, `/api/image-search`
 - Services: _none matched_
 - Tests: `tests/api-image-search.test.ts`, `tests/app-shell-search-source.test.ts`, `tests/equipment-picker-search-route.test.ts`, `tests/guide-search-result.test.ts`, `tests/image-search.test.ts`, `tests/ios-search-hig-remediation.test.ts`, `tests/ios-search-partial-results.test.ts`, `tests/resource-search.test.ts`
 
 ## settings
 
 - Doc: `docs/AREA_SETTINGS.md`
-- Pages: `/settings/allowed-emails`, `/settings/app-activity`, `/settings/appearance`, `/settings/audit`, `/settings/bookings`, `/settings/calendar-sources`, `/settings/categories`, `/settings/checkout-policies`
+- Pages: `/settings/allowed-emails`, `/settings/announcements`, `/settings/app-activity`, `/settings/appearance`, `/settings/audit`, `/settings/bookings`, `/settings/calendar-sources`, `/settings/categories`
 - APIs: `/api/settings/app-activity`, `/api/settings/checkout-policies`, `/api/settings/escalation`, `/api/settings/extend-presets`, `/api/settings/non-game-schedule`, `/api/settings/reservation-rules`
 - Services: _none matched_
 - Tests: `tests/ios-settings-detail-menus.test.ts`, `tests/ios-settings-first-class.test.ts`, `tests/settings-allowed-emails-display.test.ts`, `tests/settings-audit-command-surface-source.test.ts`, `tests/settings-audit-filters.test.ts`, `tests/settings-audit-pagination.test.ts`, `tests/settings-calendar-sources-load-state.test.ts`, `tests/settings-kiosk-devices-location-state.test.ts`
@@ -198,8 +214,8 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 ## users
 
 - Doc: `docs/AREA_USERS.md`
-- Pages: `/profile`, `/settings/allowed-emails`, `/settings/profile`, `/users/[id]`, `/users/onboarding-status`, `/users/org-chart`, `/users`
-- APIs: `/api/allowed-emails/[id]`, `/api/allowed-emails/preview`, `/api/allowed-emails`, `/api/gear-picks/users/[userId]`, `/api/kiosk/users`, `/api/me/profile-completion`, `/api/me/profile`, `/api/profile`, `/api/users/[id]/activity`, `/api/users/[id]/availability/[blockId]`
+- Pages: `/profile`, `/settings/allowed-emails`, `/settings/profile`, `/staff/onboarding-status`
+- APIs: `/api/allowed-emails/[id]/resend`, `/api/allowed-emails/[id]`, `/api/allowed-emails/preview`, `/api/allowed-emails`, `/api/gear-picks/users/[userId]`, `/api/kiosk/users`, `/api/me/profile-completion`, `/api/me/profile`, `/api/profile`, `/api/users/[id]/activity`
 - Services: `src/lib/services/hidden-users-cleanup.ts`, `src/lib/services/onboarding-lifecycle.ts`
 - Tests: `tests/allowed-emails-preview.test.ts`, `tests/allowed-emails.test.ts`, `tests/email-first-onboarding-source.test.ts`, `tests/hidden-users-cleanup.test.ts`, `tests/ios-notification-categories-profile.test.ts`, `tests/onboarding-dialog-source.test.ts`, `tests/onboarding-lifecycle.test.ts`, `tests/onboarding-readiness-route.test.ts`
 

@@ -1735,7 +1735,7 @@ final class APIClient {
         includeInactive: Bool = false,
         limit: Int = 50,
         offset: Int = 0
-    ) async throws -> PaginatedResponse<AppUser> {
+    ) async throws -> UserListResponse {
         var items: [URLQueryItem] = [
             .init(name: "limit", value: "\(limit)"),
             .init(name: "offset", value: "\(offset)"),
@@ -1851,6 +1851,26 @@ final class APIClient {
         )
         guard let awards = response.data.awards, let nextCursor = response.data.nextCursor else { return nil }
         return RecentBadgeRewards(awards: awards, nextCursor: nextCursor)
+    }
+
+    /// The one announcement this person should see now, or nil. Read on launch
+    /// and on foreground only; there is no polling behind it.
+    func activeAnnouncement() async throws -> ActiveAnnouncement? {
+        let response: DataWrapper<ActiveAnnouncement?> = try await perform(
+            request(
+                path: "/api/announcements/active",
+                queryItems: [URLQueryItem(name: "platform", value: "ios")]
+            )
+        )
+        return response.data
+    }
+
+    /// Records that this person has seen the announcement. Idempotent server-side.
+    func dismissAnnouncement(id: String) async throws {
+        struct Dismissed: Decodable { let dismissed: Bool }
+        let _: DataWrapper<Dismissed> = try await perform(
+            request(path: "/api/announcements/\(id)/dismiss", method: "POST")
+        )
     }
 
     /// Uploads one MetricKit diagnostic payload (crashes, hangs, resource

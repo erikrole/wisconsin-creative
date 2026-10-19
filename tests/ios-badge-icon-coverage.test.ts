@@ -161,7 +161,7 @@ describe("iOS badge display parity with the web tab", () => {
   it("shows manual award attribution and retired history the way the web does", () => {
     const models = source("ios/Wisconsin/Models/Models.swift");
     const detail = source("ios/Wisconsin/Views/UserDetailView.swift");
-    const badgesTab = source("src/app/(app)/users/[id]/UserBadgesTab.tsx");
+    const badgesTab = source("src/app/(app)/staff/[id]/UserBadgesTab.tsx");
     const queries = source("src/lib/badges/queries.ts");
 
     // Served on every award row, and previously dropped on the floor by iOS.
@@ -179,7 +179,7 @@ describe("iOS badge display parity with the web tab", () => {
   it("keeps the native gallery on the same shelf contract as the web tab", () => {
     const detail = source("ios/Wisconsin/Views/UserDetailView.swift");
     const models = source("ios/Wisconsin/Models/Models.swift");
-    const tab = source("src/app/(app)/users/[id]/UserBadgesTab.tsx");
+    const tab = source("src/app/(app)/staff/[id]/UserBadgesTab.tsx");
 
     expect(detail).toContain('if trigger == "checkout:returned" { return .reliability }');
     expect(detail).toContain('if trigger == "checkout:opened" { return .gearFlow }');

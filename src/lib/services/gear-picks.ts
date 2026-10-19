@@ -13,11 +13,17 @@ import {
   isItemAllowedForFit,
   type GearPickFitKey,
 } from "@/lib/gear-picks/catalog";
+import { buildOrderPlan } from "@/lib/gear-picks/order";
 import { isGearPickCycleOpen, priceGearPickLines, type GearPickLineInput } from "@/lib/gear-picks/pricing";
 import type {
   GearPickAdminParticipant,
   GearPickAggregateRow,
+  GearPickAdminStudent,
+  GearPickBudgetDto,
+  GearPastCycleDto,
   GearPickCycleDto,
+  GearPickHandoutDto,
+  GearPickReceiptDto,
   GearPickLineDto,
   GearPicksAdminResponse,
   GearPicksMeResponse,
@@ -306,7 +312,19 @@ export async function saveMyGearPicks(params: {
 async function loadCycleOrThrow(client: Prisma.TransactionClient | typeof db) {
   const cycle = await client.gearPickCycle.findUnique({
     where: { id: GEAR_PICK_CYCLE_ID },
-    select: { id: true, title: true, deadline: true, launchedAt: true },
+    select: {
+      id: true,
+      title: true,
+      deadline: true,
+      launchedAt: true,
+      budgetCents: true,
+      budgetConfirmed: true,
+      studentKitCents: true,
+      orderPlacedAt: true,
+      poNumber: true,
+      orderNumber: true,
+      expectedAt: true,
+    },
   });
   if (!cycle) throw new HttpError(404, "The 2027–28 gear pick cycle hasn't been set up.");
   return cycle;
@@ -338,9 +356,29 @@ export function aggregateGearPickTotals(
   );
 }
 
+export function gearPickBudget(params: {
+  budgetCents: number;
+  confirmed: boolean;
+  picksCents: number;
+  studentKitCents: number;
+  studentCount: number;
+}): GearPickBudgetDto {
+  const studentKitsCents = params.studentKitCents * params.studentCount;
+  const committedCents = params.picksCents + studentKitsCents;
+  return {
+    budgetCents: params.budgetCents,
+    confirmed: params.confirmed,
+    picksCents: params.picksCents,
+    studentKitsCents,
+    studentKitCents: params.studentKitCents,
+    committedCents,
+    remainingCents: params.budgetCents - committedCents,
+  };
+}
+
 export async function getGearPicksAdmin(now: Date = new Date()): Promise<GearPicksAdminResponse> {
   const cycle = await loadCycleOrThrow(db);
-  const [participants, users] = await Promise.all([
+  const [participants, users, studentRows, studentUsers, receiptRows, handoutRows] = await Promise.all([
     db.gearPickParticipant.findMany({
       where: { cycleId: cycle.id },
       select: {
@@ -357,7 +395,75 @@ export async function getGearPicksAdmin(now: Date = new Date()): Promise<GearPic
       select: { id: true, name: true, role: true },
       orderBy: [{ name: "asc" }, { id: "asc" }],
     }),
+    db.gearPickStudent.findMany({
+      where: { cycleId: cycle.id },
+      select: {
+        id: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            active: true,
+            topSize: true,
+            topSizeFit: true,
+            shoeSize: true,
+          },
+        },
+      },
+      orderBy: [{ user: { name: "asc" } }, { id: "asc" }],
+    }),
+    db.user.findMany({
+      where: { active: true, role: Role.STUDENT },
+      select: { id: true, name: true },
+      orderBy: [{ name: "asc" }, { id: "asc" }],
+    }),
+    db.gearPickReceipt.findMany({
+      where: { cycleId: cycle.id },
+      select: {
+        id: true,
+        sku: true,
+        size: true,
+        quantity: true,
+        receivedAt: true,
+        note: true,
+        receivedBy: { select: { name: true } },
+      },
+      orderBy: [{ receivedAt: "desc" }, { createdAt: "desc" }],
+    }),
+    db.gearPickHandout.findMany({
+      where: { cycleId: cycle.id },
+      select: { userId: true, sku: true, size: true, source: true, quantity: true, handedOutAt: true },
+    }),
   ]);
+
+  const handouts = handoutRows.map((row) => ({
+    userId: row.userId,
+    sku: row.sku,
+    size: row.size,
+    source: row.source as GearPickHandoutDto["source"],
+    quantity: row.quantity,
+    handedOutAt: row.handedOutAt.toISOString(),
+  }));
+
+  const receipts: GearPickReceiptDto[] = receiptRows.map((row) => ({
+    id: row.id,
+    sku: row.sku,
+    size: row.size,
+    quantity: row.quantity,
+    receivedAt: row.receivedAt.toISOString(),
+    note: row.note,
+    receivedBy: row.receivedBy?.name ?? null,
+  }));
+
+  const students: GearPickAdminStudent[] = studentRows.map((row) => ({
+    id: row.id,
+    user: { id: row.user.id, name: row.user.name, active: row.user.active },
+    topSize: row.user.topSize,
+    topSizeFit: row.user.topSizeFit,
+    shoeSize: row.user.shoeSize,
+    needsSize: !row.user.topSize || !row.user.shoeSize,
+  }));
+  const rosterStudentIds = new Set(studentRows.map((row) => row.user.id));
 
   const rows: GearPickAdminParticipant[] = participants.map((participant) => ({
     id: participant.id,
@@ -370,6 +476,7 @@ export async function getGearPicksAdmin(now: Date = new Date()): Promise<GearPic
 
   const participantUserIds = new Set(rows.map((row) => row.user.id));
   const allLines = rows.flatMap((row) => row.submission?.lines ?? []);
+  const committedCents = rows.reduce((sum, row) => sum + (row.submission?.totalCents ?? 0), 0);
 
   return {
     cycle: cycleDto(cycle, now),
@@ -385,12 +492,42 @@ export async function getGearPicksAdmin(now: Date = new Date()): Promise<GearPic
     candidates: users
       .filter((user) => !participantUserIds.has(user.id))
       .map((user) => ({ id: user.id, name: user.name, role: user.role })),
+    students,
+    studentCandidates: studentUsers.filter((user) => !rosterStudentIds.has(user.id)),
+    budget: gearPickBudget({
+      budgetCents: cycle.budgetCents,
+      confirmed: cycle.budgetConfirmed,
+      picksCents: committedCents,
+      studentKitCents: cycle.studentKitCents,
+      studentCount: students.length,
+    }),
+    order: {
+      placedAt: cycle.orderPlacedAt?.toISOString() ?? null,
+      poNumber: cycle.poNumber,
+      orderNumber: cycle.orderNumber,
+      expectedAt: cycle.expectedAt?.toISOString() ?? null,
+    },
+    receipts,
+    handouts,
   };
 }
 
 export type GearPicksAdminChange =
   | { action: "setDeadline"; deadline: string | null }
   | { action: "setLaunched"; launched: boolean }
+  | { action: "setBudget"; budgetCents: number; confirmed: boolean; studentKitCents?: number }
+  | { action: "setOrder"; placedAt: string | null; poNumber: string | null; orderNumber: string | null; expectedAt: string | null }
+  | { action: "addReceipt"; sku: string; size: string | null; quantity: number; receivedAt: string; note?: string | null }
+  | { action: "removeReceipt"; receiptId: string }
+  | {
+      action: "setHandout";
+      userId: string;
+      handed: boolean;
+      pieces: { sku: string; size: string; source: GearPickHandoutDto["source"]; quantity: number }[];
+    }
+  | { action: "addStudent"; userId: string }
+  | { action: "removeStudent"; studentId: string }
+  | { action: "setStudentSizes"; studentId: string; topSize: string | null; shoeSize: string | null }
   | { action: "addParticipant"; userId: string; fit: GearPickFitKey; allowanceCents?: number }
   | { action: "updateParticipant"; participantId: string; fit?: GearPickFitKey; allowanceCents?: number }
   | { action: "removeParticipant"; participantId: string };
@@ -427,6 +564,211 @@ export async function applyGearPicksAdminChange(actor: Actor, change: GearPicksA
             action: change.launched ? "launch" : "unlaunch",
             before: { launchedAt: cycle.launchedAt?.toISOString() ?? null },
             after: { launchedAt: launchedAt?.toISOString() ?? null },
+          });
+          return { cycleId: cycle.id };
+        }
+
+        case "setBudget": {
+          const studentKitCents = change.studentKitCents ?? cycle.studentKitCents;
+          await tx.gearPickCycle.update({
+            where: { id: cycle.id },
+            data: { budgetCents: change.budgetCents, budgetConfirmed: change.confirmed, studentKitCents },
+          });
+          await createAuditEntryTx(tx, {
+            actorId: actor.id,
+            actorRole: actor.role,
+            entityType: "gear_pick_cycle",
+            entityId: cycle.id,
+            action: "set_budget",
+            before: { budgetCents: cycle.budgetCents, confirmed: cycle.budgetConfirmed, studentKitCents: cycle.studentKitCents },
+            after: { budgetCents: change.budgetCents, confirmed: change.confirmed, studentKitCents },
+          });
+          return { cycleId: cycle.id };
+        }
+
+        case "addStudent": {
+          const user = await tx.user.findUnique({
+            where: { id: change.userId },
+            select: { id: true, name: true, active: true, role: true },
+          });
+          if (!user || !user.active || user.role !== Role.STUDENT) {
+            throw new HttpError(404, "That person isn't an active student account.");
+          }
+          try {
+            const student = await tx.gearPickStudent.create({
+              data: { cycleId: cycle.id, userId: user.id },
+              select: { id: true },
+            });
+            await createAuditEntryTx(tx, {
+              actorId: actor.id,
+              actorRole: actor.role,
+              entityType: "gear_pick_student",
+              entityId: student.id,
+              action: "add_student",
+              after: { userId: user.id, name: user.name },
+            });
+            return { cycleId: cycle.id, studentId: student.id };
+          } catch (error) {
+            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+              throw new HttpError(409, `${user.name} is already on the student list.`);
+            }
+            throw error;
+          }
+        }
+
+        case "setStudentSizes": {
+          const student = await tx.gearPickStudent.findFirst({
+            where: { id: change.studentId, cycleId: cycle.id },
+            select: { id: true, user: { select: { id: true, name: true, topSize: true, shoeSize: true } } },
+          });
+          if (!student) throw new HttpError(404, "That student isn't on the list.");
+          await tx.user.update({
+            where: { id: student.user.id },
+            data: { topSize: change.topSize, shoeSize: change.shoeSize },
+          });
+          await createAuditEntryTx(tx, {
+            actorId: actor.id,
+            actorRole: actor.role,
+            entityType: "gear_pick_student",
+            entityId: student.id,
+            action: "set_student_sizes",
+            before: { userId: student.user.id, topSize: student.user.topSize, shoeSize: student.user.shoeSize },
+            after: { userId: student.user.id, topSize: change.topSize, shoeSize: change.shoeSize },
+          });
+          return { cycleId: cycle.id };
+        }
+
+        case "setOrder": {
+          const next = {
+            orderPlacedAt: change.placedAt ? new Date(change.placedAt) : null,
+            poNumber: change.poNumber,
+            orderNumber: change.orderNumber,
+            expectedAt: change.expectedAt ? new Date(change.expectedAt) : null,
+          };
+          await tx.gearPickCycle.update({ where: { id: cycle.id }, data: next });
+          await createAuditEntryTx(tx, {
+            actorId: actor.id,
+            actorRole: actor.role,
+            entityType: "gear_pick_cycle",
+            entityId: cycle.id,
+            action: "set_order",
+            before: {
+              placedAt: cycle.orderPlacedAt?.toISOString() ?? null,
+              poNumber: cycle.poNumber,
+              orderNumber: cycle.orderNumber,
+              expectedAt: cycle.expectedAt?.toISOString() ?? null,
+            },
+            after: {
+              placedAt: next.orderPlacedAt?.toISOString() ?? null,
+              poNumber: next.poNumber,
+              orderNumber: next.orderNumber,
+              expectedAt: next.expectedAt?.toISOString() ?? null,
+            },
+          });
+          return { cycleId: cycle.id };
+        }
+
+        case "addReceipt": {
+          const receipt = await tx.gearPickReceipt.create({
+            data: {
+              cycleId: cycle.id,
+              sku: change.sku,
+              size: change.size,
+              quantity: change.quantity,
+              receivedAt: new Date(change.receivedAt),
+              receivedById: actor.id,
+              note: change.note ?? null,
+            },
+            select: { id: true },
+          });
+          await createAuditEntryTx(tx, {
+            actorId: actor.id,
+            actorRole: actor.role,
+            entityType: "gear_pick_receipt",
+            entityId: receipt.id,
+            action: "add_receipt",
+            after: { sku: change.sku, size: change.size, quantity: change.quantity, receivedAt: change.receivedAt },
+          });
+          return { cycleId: cycle.id };
+        }
+
+        case "removeReceipt": {
+          const receipt = await tx.gearPickReceipt.findFirst({
+            where: { id: change.receiptId, cycleId: cycle.id },
+            select: { id: true, sku: true, size: true, quantity: true },
+          });
+          if (!receipt) throw new HttpError(404, "That receipt doesn't exist.");
+          await tx.gearPickReceipt.delete({ where: { id: receipt.id } });
+          await createAuditEntryTx(tx, {
+            actorId: actor.id,
+            actorRole: actor.role,
+            entityType: "gear_pick_receipt",
+            entityId: receipt.id,
+            action: "remove_receipt",
+            before: { sku: receipt.sku, size: receipt.size, quantity: receipt.quantity },
+          });
+          return { cycleId: cycle.id };
+        }
+
+        case "setHandout": {
+          const user = await tx.user.findUnique({ where: { id: change.userId }, select: { id: true, name: true } });
+          if (!user) throw new HttpError(404, "That person doesn't exist.");
+          const handedOutAt = new Date();
+          for (const piece of change.pieces) {
+            if (change.handed) {
+              await tx.gearPickHandout.upsert({
+                where: {
+                  cycleId_userId_sku_size_source: {
+                    cycleId: cycle.id,
+                    userId: change.userId,
+                    sku: piece.sku,
+                    size: piece.size,
+                    source: piece.source,
+                  },
+                },
+                create: {
+                  cycleId: cycle.id,
+                  userId: change.userId,
+                  sku: piece.sku,
+                  size: piece.size,
+                  source: piece.source,
+                  quantity: piece.quantity,
+                  handedOutAt,
+                  handedOutById: actor.id,
+                },
+                update: { quantity: piece.quantity, handedOutAt, handedOutById: actor.id },
+              });
+            } else {
+              await tx.gearPickHandout.deleteMany({
+                where: { cycleId: cycle.id, userId: change.userId, sku: piece.sku, size: piece.size, source: piece.source },
+              });
+            }
+          }
+          await createAuditEntryTx(tx, {
+            actorId: actor.id,
+            actorRole: actor.role,
+            entityType: "gear_pick_handout",
+            entityId: `${cycle.id}:${change.userId}`,
+            action: change.handed ? "hand_out" : "undo_hand_out",
+            after: { userId: change.userId, name: user.name, handed: change.handed, pieces: change.pieces },
+          });
+          return { cycleId: cycle.id };
+        }
+
+        case "removeStudent": {
+          const student = await tx.gearPickStudent.findFirst({
+            where: { id: change.studentId, cycleId: cycle.id },
+            select: { id: true, user: { select: { id: true, name: true } } },
+          });
+          if (!student) throw new HttpError(404, "That student isn't on the list.");
+          await tx.gearPickStudent.delete({ where: { id: student.id } });
+          await createAuditEntryTx(tx, {
+            actorId: actor.id,
+            actorRole: actor.role,
+            entityType: "gear_pick_student",
+            entityId: student.id,
+            action: "remove_student",
+            before: { userId: student.user.id, name: student.user.name },
           });
           return { cycleId: cycle.id };
         }
@@ -619,4 +961,109 @@ export function buildGearPicksCsvRows(participants: GearPickAdminParticipant[]):
     }
   }
   return rows;
+}
+
+/** Past years of UA gear, newest first. They live in their own tables and never affect the live cycle. */
+export async function getGearPastCycles(): Promise<GearPastCycleDto[]> {
+  const cycles = await db.gearPastCycle.findMany({
+    orderBy: { id: "desc" },
+    select: {
+      id: true,
+      title: true,
+      budgetCents: true,
+      budgetedSpendCents: true,
+      otherSpendCents: true,
+      note: true,
+      items: {
+        select: { sku: true, itemName: true, colorLabel: true, unitPriceCents: true, plannedQty: true, orderedQty: true, receivedQty: true },
+        orderBy: [{ itemName: "asc" }, { sku: "asc" }],
+      },
+      people: {
+        select: { name: true, groupLabel: true, fit: true, topSize: true, shoeSize: true },
+        orderBy: [{ groupLabel: "asc" }, { name: "asc" }],
+      },
+    },
+  });
+  return cycles.map((cycle) => ({
+    ...cycle,
+    remainingCents: cycle.budgetCents - cycle.budgetedSpendCents,
+  }));
+}
+
+/**
+ * Save the live year to History: its budget, one row per item with planned, ordered and received units, and
+ * everyone on the list. Saving again replaces the earlier snapshot of the same year.
+ */
+export async function archiveCurrentGearCycle(actor: Actor) {
+  const data = await getGearPicksAdmin();
+  const plan = buildOrderPlan(data.participants, GEAR_CATALOG.kits, data.students);
+  const orderPlaced = data.order.placedAt !== null;
+
+  const items = new Map<string, { sku: string; itemName: string; colorLabel: string; unitPriceCents: number; plannedQty: number; receivedQty: number }>();
+  for (const line of plan.lines) {
+    const row = items.get(line.sku) ?? {
+      sku: line.sku,
+      itemName: line.itemName,
+      colorLabel: line.colorLabel,
+      unitPriceCents: findGearSku(line.sku)?.unitPriceCents ?? 0,
+      plannedQty: 0,
+      receivedQty: 0,
+    };
+    row.plannedQty += line.quantity;
+    items.set(line.sku, row);
+  }
+  for (const receipt of data.receipts) {
+    const row = items.get(receipt.sku);
+    if (row) row.receivedQty += receipt.quantity;
+  }
+
+  const fitLabel = (fit: GearPickFitKey) => (fit === "WOMEN" ? "Women" : "Men");
+  const people = [
+    ...data.participants.map((person) => ({
+      name: person.user.name,
+      groupLabel: "Staff",
+      fit: fitLabel(person.fit),
+      topSize: person.user.topSize,
+      shoeSize: person.user.shoeSize,
+    })),
+    ...data.students.map((student) => ({
+      name: student.user.name,
+      groupLabel: "Student",
+      fit: student.topSizeFit === "WOMENS" ? "Women" : "Men",
+      topSize: student.topSize,
+      shoeSize: student.shoeSize,
+    })),
+  ];
+
+  await withSerializationRetry(() =>
+    db.$transaction(async (tx) => {
+      await tx.gearPastCycle.deleteMany({ where: { id: data.cycle.id } });
+      await tx.gearPastCycle.create({
+        data: {
+          id: data.cycle.id,
+          title: data.cycle.title,
+          budgetCents: data.budget.budgetCents,
+          budgetedSpendCents: data.budget.committedCents,
+          otherSpendCents: 0,
+          note: `Saved from the live year. ${data.budget.confirmed ? "" : "The budget was still a placeholder. "}Student shoes are not included.`.trim(),
+          items: {
+            create: [...items.values()].map((item) => ({
+              ...item,
+              orderedQty: orderPlaced ? item.plannedQty : 0,
+            })),
+          },
+          people: { create: people },
+        },
+      });
+      await createAuditEntryTx(tx, {
+        actorId: actor.id,
+        actorRole: actor.role,
+        entityType: "gear_past_cycle",
+        entityId: data.cycle.id,
+        action: "archive_cycle",
+        after: { items: items.size, people: people.length, budgetedSpendCents: data.budget.committedCents },
+      });
+    }, SERIALIZABLE),
+  );
+  return { cycleId: data.cycle.id, items: items.size, people: people.length };
 }

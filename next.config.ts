@@ -112,6 +112,12 @@ const baseConfig: NextConfig = {
   },
   async redirects() {
     return [
+      // Users was renamed Staff. Old bookmarks, push links, and emails keep working.
+      { source: "/users", destination: "/staff", permanent: true },
+      { source: "/users/:path*", destination: "/staff/:path*", permanent: true },
+      // Workforce now lives under Staff as an admin-only tab.
+      { source: "/workforce", destination: "/staff/workforce", permanent: true },
+      { source: "/workforce/:path*", destination: "/staff/workforce/:path*", permanent: true },
       { source: "/guides", destination: "/resources", permanent: true },
       { source: "/guides/:path*", destination: "/resources/:path*", permanent: true },
       // QR Studio is a static, client-only tool in public/qrcode. Linking to the
@@ -123,6 +129,7 @@ const baseConfig: NextConfig = {
       { source: "/golden-hour", destination: "/golden-hour/index.html", permanent: false },
       { source: "/timelapse", destination: "/timelapse/index.html", permanent: false },
       { source: "/board-sizes", destination: "/board-sizes/index.html", permanent: false },
+      { source: "/frame", destination: "/frame/index.html", permanent: false },
     ];
   },
 };

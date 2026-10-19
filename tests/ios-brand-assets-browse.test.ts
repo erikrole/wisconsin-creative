@@ -19,7 +19,7 @@ describe("iOS Brand assets browse", () => {
     expect(menu).toContain('case .brandAssets: "Brand assets"');
     expect(menu).toContain("Logos, guidelines, and templates");
     expect(menu).toContain("BrandAssetsView(wrapsInNavigationStack: false)");
-    expect(menu).toContain('case .users: "Users"');
+    expect(menu).toContain('case .users: "Staff"');
 
     const collaboratorRows = menu.slice(
       menu.indexOf("let capabilities"),

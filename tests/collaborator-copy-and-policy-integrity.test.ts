@@ -4,12 +4,14 @@ import { source } from "./_helpers/source";
 describe("collaborator affiliation-neutral copy and policy integrity", () => {
   it("does not present shared collaborator surfaces as BTN-only", () => {
     const schedule = source("src/app/(app)/schedule/_components/CollaboratorSchedule.tsx");
-    const users = source("src/app/(app)/users/page.tsx");
+    const users = source("src/app/(app)/staff/page.tsx");
 
     expect(schedule).toContain('description="Upcoming events and crew assignments."');
     expect(schedule).not.toContain("Big Ten Network events");
-    expect(users).toContain('label="Collaborators"');
+    const roleTabs = source("src/app/(app)/staff/RoleTabs.tsx");
+    expect(roleTabs).toContain('label: "Collaborators"');
     expect(users).not.toContain('label="BTN collaborators"');
+    expect(roleTabs).not.toContain("BTN collaborators");
   });
 
   it("enforces assigned active policies at login and session refresh", () => {

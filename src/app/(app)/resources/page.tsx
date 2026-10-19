@@ -1253,7 +1253,7 @@ function SportAssignmentsDirectory({
                   {group.users.slice(0, 5).map((user) => (
                     <Link
                       key={user.id}
-                      href={`/users/${user.id}`}
+                      href={`/staff/${user.id}`}
                       className="flex min-h-10 min-w-0 items-center gap-2 rounded-md px-1 text-sm transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
                     >
                       <UserAvatar
@@ -1535,7 +1535,7 @@ function ContactCard({ user }: { user: ContactUser }) {
 
       <CardFooter className="px-4 pb-4 pt-0">
         <Button asChild variant="outline" size="sm" className="h-10 w-full justify-center">
-          <Link href={`/users/${user.id}`}>View profile</Link>
+          <Link href={`/staff/${user.id}`}>View profile</Link>
         </Button>
       </CardFooter>
     </Card>

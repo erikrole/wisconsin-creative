@@ -11,6 +11,7 @@
 | `/blasts/[id]` | `src/app/(app)/blasts/[id]/page.tsx` |
 | `/blasts` | `src/app/(app)/blasts/page.tsx` |
 | `/bookings` | `src/app/(app)/bookings/page.tsx` |
+| `/budget` | `src/app/(app)/budget/page.tsx` |
 | `/bulk-inventory/[id]` | `src/app/(app)/bulk-inventory/[id]/page.tsx` |
 | `/bulk-inventory/batteries` | `src/app/(app)/bulk-inventory/batteries/page.tsx` |
 | `/bulk-inventory` | `src/app/(app)/bulk-inventory/page.tsx` |
@@ -55,6 +56,7 @@
 | `/scoreboard` | `src/app/(app)/scoreboard/page.tsx` |
 | `/search` | `src/app/(app)/search/page.tsx` |
 | `/settings/allowed-emails` | `src/app/(app)/settings/allowed-emails/page.tsx` |
+| `/settings/announcements` | `src/app/(app)/settings/announcements/page.tsx` |
 | `/settings/app-activity` | `src/app/(app)/settings/app-activity/page.tsx` |
 | `/settings/appearance` | `src/app/(app)/settings/appearance/page.tsx` |
 | `/settings/audit` | `src/app/(app)/settings/audit/page.tsx` |
@@ -79,14 +81,16 @@
 | `/signatures/[id]/capture/[memberId]` | `src/app/(app)/signatures/[id]/capture/[memberId]/page.tsx` |
 | `/signatures/[id]` | `src/app/(app)/signatures/[id]/page.tsx` |
 | `/signatures` | `src/app/(app)/signatures/page.tsx` |
-| `/users/[id]` | `src/app/(app)/users/[id]/page.tsx` |
-| `/users/onboarding-status` | `src/app/(app)/users/onboarding-status/page.tsx` |
-| `/users/org-chart` | `src/app/(app)/users/org-chart/page.tsx` |
-| `/users` | `src/app/(app)/users/page.tsx` |
+| `/staff/[id]` | `src/app/(app)/staff/[id]/page.tsx` |
+| `/staff/onboarding-status` | `src/app/(app)/staff/onboarding-status/page.tsx` |
+| `/staff/org-chart` | `src/app/(app)/staff/org-chart/page.tsx` |
+| `/staff` | `src/app/(app)/staff/page.tsx` |
+| `/staff/today` | `src/app/(app)/staff/today/page.tsx` |
+| `/staff/workforce/hiring` | `src/app/(app)/staff/workforce/hiring/page.tsx` |
+| `/staff/workforce` | `src/app/(app)/staff/workforce/page.tsx` |
+| `/staff/workforce/planning` | `src/app/(app)/staff/workforce/planning/page.tsx` |
 | `/welcome` | `src/app/(app)/welcome/page.tsx` |
-| `/workforce/hiring` | `src/app/(app)/workforce/hiring/page.tsx` |
-| `/workforce` | `src/app/(app)/workforce/page.tsx` |
-| `/workforce/planning` | `src/app/(app)/workforce/planning/page.tsx` |
+| `/wishlist` | `src/app/(app)/wishlist/page.tsx` |
 | `/youtube` | `src/app/(app)/youtube/page.tsx` |
 | `/about/features` | `src/app/(public)/about/features/page.tsx` |
 | `/about/field-work` | `src/app/(public)/about/field-work/page.tsx` |
@@ -106,13 +110,16 @@
 
 | Route | File |
 |---|---|
+| `/budget` | `src/app/(app)/budget/layout.tsx` |
 | `/kits` | `src/app/(app)/kits/layout.tsx` |
 | `/` | `src/app/(app)/layout.tsx` |
 | `/reports` | `src/app/(app)/reports/layout.tsx` |
 | `/reports/usage` | `src/app/(app)/reports/usage/layout.tsx` |
 | `/settings/app-activity` | `src/app/(app)/settings/app-activity/layout.tsx` |
 | `/settings` | `src/app/(app)/settings/layout.tsx` |
-| `/workforce` | `src/app/(app)/workforce/layout.tsx` |
+| `/staff` | `src/app/(app)/staff/layout.tsx` |
+| `/staff/workforce` | `src/app/(app)/staff/workforce/layout.tsx` |
+| `/wishlist` | `src/app/(app)/wishlist/layout.tsx` |
 | `/about` | `src/app/(public)/about/layout.tsx` |
 | `/releases` | `src/app/(public)/releases/layout.tsx` |
 | `/` | `src/app/layout.tsx` |
@@ -124,7 +131,7 @@
 | `src/components/TradeBoard.tsx` | 1853 |
 | `src/components/resources/BrandAssetLibrary.tsx` | 1827 |
 | `src/components/ActivityTimeline.tsx` | 1387 |
-| `src/components/booking-wizard/BookingWizard.tsx` | 1112 |
+| `src/components/booking-wizard/BookingWizard.tsx` | 1136 |
 | `src/components/AppShell.tsx` | 1035 |
 | `src/components/onboarding/OnboardingDialog.tsx` | 996 |
 | `src/components/schedule/AutoAssignDialog.tsx` | 966 |
@@ -138,7 +145,7 @@
 | `src/components/schedule/SportSetupWizard.tsx` | 675 |
 | `src/components/booking-wizard/WizardStep1.tsx` | 599 |
 | `src/components/booking-details/BookingHeader.tsx` | 472 |
-| `src/components/Sidebar.tsx` | 452 |
+| `src/components/Sidebar.tsx` | 457 |
 | `src/components/event-editor/EventEditorFields.tsx` | 435 |
 | `src/components/ui/heatmap.tsx` | 434 |
 | `src/components/ui/chart.tsx` | 387 |

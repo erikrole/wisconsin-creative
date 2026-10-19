@@ -2,12 +2,12 @@ import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
 
 // Source-contract checks for race and safety behavior in the Workforce client code.
-const board = source("src/app/(app)/workforce/hiring/HiringClient.tsx");
-const sheet = source("src/app/(app)/workforce/hiring/ApplicationSheet.tsx");
-const dialogs = source("src/app/(app)/workforce/hiring/HiringDialogs.tsx");
-const bulk = source("src/app/(app)/workforce/hiring/BulkResumeDialog.tsx");
-const csvDialog = source("src/app/(app)/workforce/CsvImportDialog.tsx");
-const personCard = source("src/app/(app)/workforce/PersonCard.tsx");
+const board = source("src/app/(app)/staff/workforce/hiring/HiringClient.tsx");
+const sheet = source("src/app/(app)/staff/workforce/hiring/ApplicationSheet.tsx");
+const dialogs = source("src/app/(app)/staff/workforce/hiring/HiringDialogs.tsx");
+const bulk = source("src/app/(app)/staff/workforce/hiring/BulkResumeDialog.tsx");
+const csvDialog = source("src/app/(app)/staff/workforce/CsvImportDialog.tsx");
+const personCard = source("src/app/(app)/staff/workforce/PersonCard.tsx");
 
 describe("hiring board", () => {
   it("drops applicant-list responses from superseded requests", () => {

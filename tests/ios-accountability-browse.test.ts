@@ -19,7 +19,7 @@ describe("iOS Accountability browse", () => {
     expect(menu).toContain('case .accountability: "Accountability"');
     expect(menu).toContain("Late returns and overdue gear");
     expect(menu).toContain("AccountabilityView(wrapsInNavigationStack: false)");
-    expect(menu).toContain('case .users: "Users"');
+    expect(menu).toContain('case .users: "Staff"');
 
     const collaboratorRows = menu.slice(
       menu.indexOf("let capabilities"),

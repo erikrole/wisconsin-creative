@@ -20,7 +20,7 @@ describe("iOS Events browse", () => {
     expect(menu).not.toContain("EventsView(wrapsInNavigationStack: false)");
     expect(menu).toContain('if rawValue == "events"');
     expect(menu).toContain("appState.selectedTab = 1");
-    expect(menu).toContain('case .users: "Users"');
+    expect(menu).toContain('case .users: "Staff"');
 
     const collaboratorRows = menu.slice(
       menu.indexOf("let capabilities"),

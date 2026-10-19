@@ -44,7 +44,7 @@ describe("web badge artwork is one system", () => {
     // The defect this guards is the one iOS was fixed for in July: the badge
     // shelf and the reward celebration each carried their own Lucide table, so
     // they were free to drift apart glyph by glyph.
-    const tabbed = source("src/app/(app)/users/[id]/UserBadgesTab.tsx");
+    const tabbed = source("src/app/(app)/staff/[id]/UserBadgesTab.tsx");
     const celebration = source("src/components/badges/BadgeEarnedCelebration.tsx");
     const declaration = "const iconMap: Record<string, ComponentType<{ className?: string }>>";
     expect(tabbed).not.toContain(declaration);
@@ -65,8 +65,8 @@ describe("web badge artwork is one system", () => {
     expect(medallion).not.toContain("BadgeMedallionShape");
 
     for (const file of [
-      "src/app/(app)/users/[id]/UserBadgesTab.tsx",
-      "src/app/(app)/users/[id]/page.tsx",
+      "src/app/(app)/staff/[id]/UserBadgesTab.tsx",
+      "src/app/(app)/staff/[id]/page.tsx",
       "src/components/badges/BadgeEarnedCelebration.tsx",
       "src/components/badges/badge-artwork.ts",
     ]) {
@@ -115,7 +115,7 @@ describe("badge revoke targets the award row", () => {
   });
 
   it("sends the award id, never the definition id", () => {
-    const tabbed = source("src/app/(app)/users/[id]/UserBadgesTab.tsx");
+    const tabbed = source("src/app/(app)/staff/[id]/UserBadgesTab.tsx");
     // The defect this guards: `/api/badges/award/${badge.id}` posted a
     // `BadgeDefinition` id to a route that looks up a `StudentBadge` by id, so
     // every revoke in the badge tab 404'd with "Badge award not found".
@@ -174,7 +174,7 @@ describe("app open cannot be minted by a formatting failure", () => {
 });
 
 describe("a badge shelf stays readable at catalog scale", () => {
-  const tab = () => source("src/app/(app)/users/[id]/UserBadgesTab.tsx");
+  const tab = () => source("src/app/(app)/staff/[id]/UserBadgesTab.tsx");
 
   it("collapses a long shelf instead of rendering all 98 tiles", () => {
     // The flat always-visible shelf was designed against a 30-badge catalog.
@@ -257,7 +257,7 @@ describe("rarity says when it is a guess", () => {
   it("serves the flag rather than leaving each client to re-derive it", () => {
     expect(source("src/lib/badges/queries.ts")).toContain("rarityProvisional: rarityDetail.provisional,");
     // And the tab must actually say so, in both places rarity appears.
-    const tab = source("src/app/(app)/users/[id]/UserBadgesTab.tsx");
+    const tab = source("src/app/(app)/staff/[id]/UserBadgesTab.tsx");
     expect(tab).toContain('if (badge.rarityProvisional) return "Too new to rate by scarcity yet";');
     expect(tab).toContain("`${rarity} (provisional)`");
   });

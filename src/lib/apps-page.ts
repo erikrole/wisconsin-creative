@@ -249,6 +249,10 @@ export function renderAppsPage(nonce?: string, live: LiveVersions = {}) {
       background-size: 22px 22px; }
     .bs .copy p { color: #b7cdec; }
 
+
+    .pf { background: #0b0c0e; color: #f2f2ef; }
+    .pf .copy p { color: #b9b9b3; }
+
     .qr { background: #a00000; color: #fff; }
     .qr .copy p { color: rgba(255, 255, 255, 0.86); }
     .qr .code { position: absolute; left: 50%; top: 50%; width: 128px; height: 128px; margin: -64px 0 0 -64px; padding: 12px; border-radius: 18px; background: #fff; box-shadow: 0 18px 34px -14px rgba(0,0,0,.65); transform: rotate(-4deg); transition: transform 260ms var(--ease); }
@@ -378,6 +382,28 @@ export function renderAppsPage(nonce?: string, live: LiveVersions = {}) {
           <div class="copy">
             <h3>QR Studio</h3>
             <p>Branded QR codes for links, Wi-Fi, and contacts, checked for scannability before export.</p>
+            <span class="go">Open <i>→</i></span>
+          </div>
+        </a>
+      </li>
+      <li>
+        <a class="tool pf" href="/frame">
+          <div class="art" aria-hidden="true">
+            <svg viewBox="0 0 200 188" preserveAspectRatio="xMidYMid meet" fill="none">
+              <rect x="30" y="26" width="140" height="136" fill="#000" stroke="#34353c"/>
+              <rect x="40" y="36" width="120" height="82" fill="#1d2050"/>
+              <path d="M40 118V92l30-22 26 18 24-30 40 32v28z" fill="#46407a"/>
+              <circle cx="128" cy="58" r="9" fill="#e8795a"/>
+              <rect x="40" y="130" width="18" height="2.4" fill="#85857f"/>
+              <rect x="40" y="136" width="34" height="4" rx="1" fill="#f2f2ef"/>
+              <g fill="#f2f2ef"><rect x="104" y="136" width="14" height="4" rx="1"/><rect x="124" y="136" width="10" height="4" rx="1"/><rect x="140" y="136" width="20" height="4" rx="1"/></g>
+              <g fill="#85857f"><rect x="104" y="130" width="14" height="2.4"/><rect x="124" y="130" width="10" height="2.4"/><rect x="140" y="130" width="20" height="2.4"/></g>
+              <rect x="40" y="146" width="20" height="3" fill="#a00000"/>
+            </svg>
+          </div>
+          <div class="copy">
+            <h3>Photo Frame</h3>
+            <p>Drop in a photo and get a clean frame with its camera settings and credit, exported as a full-size PNG.</p>
             <span class="go">Open <i>→</i></span>
           </div>
         </a>

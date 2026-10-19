@@ -1,9 +1,9 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-const info = readFileSync("src/app/(app)/users/[id]/UserInfoTab.tsx", "utf8");
-const page = readFileSync("src/app/(app)/users/[id]/page.tsx", "utf8");
-const cropDialog = readFileSync("src/app/(app)/users/[id]/AvatarCropDialog.tsx", "utf8");
+const info = readFileSync("src/app/(app)/staff/[id]/UserInfoTab.tsx", "utf8");
+const page = readFileSync("src/app/(app)/staff/[id]/page.tsx", "utf8");
+const cropDialog = readFileSync("src/app/(app)/staff/[id]/AvatarCropDialog.tsx", "utf8");
 const schema = readFileSync("prisma/schema.prisma", "utf8");
 
 describe("annotated user profile contract", () => {

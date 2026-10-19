@@ -40,7 +40,7 @@ export function notificationDestinationPath(
 
   if (type === "badge_awarded") {
     const userId = firstString(payload?.userId);
-    if (userId) return `/users/${userId}?tab=badges`;
+    if (userId) return `/staff/${userId}?tab=badges`;
   }
 
   const payloadType = firstString(payload?.type);
