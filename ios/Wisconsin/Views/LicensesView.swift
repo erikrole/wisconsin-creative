@@ -754,7 +754,12 @@ private struct LicenseCodeRow: View {
     private var seats: some View {
         HStack(spacing: 6) {
             ForEach(0..<2, id: \.self) { index in
-                seat(index < claims.count ? claims[index] : nil)
+                if index < claims.count {
+                    seat(claims[index])
+                } else if code.status != .retired {
+                    // A retired code has no open seats to show.
+                    seat(nil)
+                }
             }
         }
         // Avatars are fixed-size discs; capping their initials keeps them inside the circle.

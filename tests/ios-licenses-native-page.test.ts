@@ -158,6 +158,13 @@ describe("iOS native Licenses page", () => {
     expect(view).toContain("are listed for reference and are not counted as open.");
   });
 
+  it("labels a retired code Retired and draws no open seats for it", () => {
+    const view = source("ios/Wisconsin/Views/LicensesView.swift");
+
+    expect(view).toContain('code.status == .retired ? "Retired" : "Open"');
+    expect(view).toContain("} else if code.status != .retired {");
+  });
+
   it("gives consequential license actions haptics and announces transient notices", () => {
     const view = source("ios/Wisconsin/Views/LicensesView.swift");
 
