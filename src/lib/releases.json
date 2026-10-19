@@ -1,6 +1,20 @@
 [
   {
     "date": "2026-10-19",
+    "title": "Out-of-town scoreboard has its own site",
+    "type": "improvement",
+    "summary": "The World Series out-of-town scoreboard, chip, router output and controller now live at ots.wisconsincreative.com, and old wisconsincreative.com/ots links redirect there.",
+    "details": [
+      "Changes to the board go live in seconds instead of waiting on a full site deploy.",
+      "The controller now uses its own password instead of a staff sign-in."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 0
+  },
+  {
+    "date": "2026-10-19",
     "title": "World Series chip and router output",
     "type": "feature",
     "summary": "A compact World Series score chip for the corner of the Camp Randall main videoboard, plus a 1920×1080 output that carries both scoreboards over HDMI for the video router.",
