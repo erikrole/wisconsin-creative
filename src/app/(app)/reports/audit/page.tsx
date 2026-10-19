@@ -12,7 +12,7 @@ import { FadeUp } from "@/components/ui/motion";
 import dynamic from "next/dynamic";
 import MetricCard from "../MetricCard";
 import ActivityTimeline, { TimelineSkeleton, type AuditEntry as TimelineEntry } from "@/components/ActivityTimeline";
-import { AUDIT_RETENTION_DAYS } from "@/lib/audit";
+import { AUDIT_RETENTION_DAYS } from "@/lib/audit-retention";
 
 const LazyActionBreakdownChart = dynamic(
   () => import("./charts").then((m) => ({ default: m.ActionBreakdownChart })),
