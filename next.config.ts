@@ -138,6 +138,8 @@ const baseConfig: NextConfig = {
       // Out-of-town scoreboard for the Camp Randall south end zone fascia (Daktronics web page playback).
       { source: "/ots", destination: "/ots/index.html", permanent: false },
       { source: "/ots/control", destination: "/ots/control.html", permanent: false },
+      { source: "/ots/chip", destination: "/ots/chip.html", permanent: false },
+      { source: "/ots/output", destination: "/ots/output.html", permanent: false },
     ];
   },
 };
