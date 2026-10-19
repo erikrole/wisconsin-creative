@@ -167,7 +167,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
         case .blasts: "Blasts"
         case .licenses: "Licenses"
         case .sharedLogins: "Shared logins"
-        case .users: "Users"
+        case .users: "Staff"
         case .gearPicks: "UA Gear"
         case .badges: "Badges"
         case .reports: "Reports"
