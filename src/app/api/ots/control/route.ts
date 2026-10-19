@@ -3,7 +3,7 @@ import { withAuth, withHandler } from "@/lib/api";
 import { createAuditEntry } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { ok } from "@/lib/http";
-import { enforceRateLimit, SETTINGS_MUTATION_LIMIT } from "@/lib/rate-limit";
+import { enforceRateLimit, getClientIp, SETTINGS_MUTATION_LIMIT } from "@/lib/rate-limit";
 import { requirePermission } from "@/lib/rbac";
 import {
   normalizeOtsControl,
@@ -12,11 +12,15 @@ import {
   type OtsControl,
 } from "@/lib/services/ots-control";
 
+const OTS_CONTROL_READ_LIMIT = { max: 120, windowMs: 60_000 };
+
 /**
  * GET /api/ots/control: public. The board on the Daktronics player polls this
  * every few seconds and cannot sign in. It exposes only the board's mode.
+ * Rate-limited per IP well above one board's 12 polls a minute.
  */
-export const GET = withHandler(async () => {
+export const GET = withHandler(async (req) => {
+  await enforceRateLimit(`ots-control:read:${getClientIp(req)}`, OTS_CONTROL_READ_LIMIT);
   const row = await db.systemConfig.findUnique({ where: { key: OTS_CONTROL_KEY } });
   const control = normalizeOtsControl(row?.value);
   return NextResponse.json(
