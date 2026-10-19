@@ -17,6 +17,8 @@ type ShiftAssignment = {
   callStartsAt?: string | null;
   callEndsAt?: string | null;
   callNote?: string | null;
+  crewLabel?: string | null;
+  crewHalf?: "FIRST" | "SECOND" | null;
   user: ShiftUser;
 };
 

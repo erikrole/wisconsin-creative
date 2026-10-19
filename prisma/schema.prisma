@@ -1978,6 +1978,12 @@ enum ShiftAssignmentSource {
   AUTO_FILL
 }
 
+/// Which half of a game a worker covers. null means the whole event.
+enum ShiftAssignmentHalf {
+  FIRST
+  SECOND
+}
+
 /// How far auto assignment may go for a sport. Sports are run differently:
 /// some are crewed entirely by auto assignment, some staff the full-time
 /// positions and deliberately leave student slots open for students to request,
@@ -2165,6 +2171,9 @@ model ShiftAssignment {
   callStartsAt     DateTime?             @map("call_starts_at")
   callEndsAt       DateTime?             @map("call_ends_at")
   callNote         String?               @map("call_note")
+  /// Short position tag shown beside the worker's name, e.g. "SLOW1".
+  crewLabel        String?               @map("crew_label")
+  crewHalf         ShiftAssignmentHalf?  @map("crew_half")
   notes            String?
   hasConflict      Boolean               @default(false) @map("has_conflict")
   conflictNote     String?               @map("conflict_note")

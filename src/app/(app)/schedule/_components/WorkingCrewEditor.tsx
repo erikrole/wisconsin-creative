@@ -34,6 +34,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { UserAvatar } from "@/components/UserAvatar";
 import { CrewPendingReview } from "@/components/shift-detail/CrewPendingReview";
+import { CrewTagEditor } from "@/components/shift-detail/CrewTag";
 import { UserAvatarPicker, type PickerUser } from "@/components/shift-detail/UserAvatarPicker";
 import { handleAuthRedirect, isAbortError, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { formatTimeShort } from "@/lib/format";
@@ -49,6 +50,7 @@ import {
   AssignSlotButton,
   CREW_CALL_TRIGGER_CLASS,
   CREW_ROW_GROUP,
+  CREW_ROW_REVEAL,
   CrewAreaHeading,
   CrewAssignFaceOverlay,
   CrewFaceClearButton,
@@ -949,6 +951,17 @@ export function WorkingCrewEditor({
                           />
                         </CrewFaceFrame>
                         <span className="min-w-0 truncate text-sm">{user?.name ?? "Assigned worker"}</span>
+                        <CrewTagEditor
+                          label={slot.assignment.crewLabel}
+                          half={slot.assignment.crewHalf}
+                          personName={user?.name ?? "assigned worker"}
+                          disabled={actionsDisabled}
+                          revealClassName={CREW_ROW_REVEAL}
+                          onSave={(label, half) => void mutate(
+                            { type: "setCrewLabel", slotKey: slot.key, label, half },
+                            `${slot.key}-crew-label`,
+                          )}
+                        />
                         {pendingTrade && (
                           <CrewPendingReview
                             trade={pendingTrade}

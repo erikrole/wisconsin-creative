@@ -2035,6 +2035,10 @@ Values: `DIRECT_ASSIGNED`, `REQUESTED`, `APPROVED`, `DECLINED`, `SWAPPED`
 
 Values: `MANUAL`, `RESERVATION`, `AUTO_FILL`
 
+## Enum `ShiftAssignmentHalf`
+
+Values: `FIRST`, `SECOND`
+
 ## Enum `SportAutoAssignPolicy`
 
 Values: `FULL_CREW`, `STAFF_ONLY`, `HOLD`
@@ -2222,7 +2226,7 @@ Indexes and constraints:
 
 ## Model `ShiftAssignment`
 
-Fields: 26
+Fields: 28
 
 - `id               String                @id @default(cuid())`
 - `shiftId          String                @map("shift_id")`
@@ -2234,6 +2238,8 @@ Fields: 26
 - `callStartsAt     DateTime?             @map("call_starts_at")`
 - `callEndsAt       DateTime?             @map("call_ends_at")`
 - `callNote         String?               @map("call_note")`
+- `crewLabel        String?               @map("crew_label")`
+- `crewHalf         ShiftAssignmentHalf?  @map("crew_half")`
 - `notes            String?`
 - `hasConflict      Boolean               @default(false) @map("has_conflict")`
 - `conflictNote     String?               @map("conflict_note")`
