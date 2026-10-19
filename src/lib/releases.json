@@ -1,6 +1,21 @@
 [
   {
     "date": "2026-10-19",
+    "title": "World Series out-of-town scoreboard",
+    "type": "feature",
+    "summary": "A live scoreboard for World Series Game 2 at wisconsincreative.com/ots, built for the out-of-town strip on Camp Randall's south end zone fascia.",
+    "details": [
+      "Shows each team's city, logo and score, the inning, bases, count and outs, updating every few seconds from MLB's live feed.",
+      "Switches on its own between pregame, live innings, inning breaks and the final.",
+      "Plays on the board through Daktronics web page playback and keeps the last good score if the feed drops."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 526
+  },
+  {
+    "date": "2026-10-19",
     "title": "Position labels on event crew",
     "type": "feature",
     "summary": "Staff can now tag each person on an event's crew with a position label, like SLOW1, and say which half they cover.",

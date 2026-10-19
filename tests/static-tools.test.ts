@@ -78,6 +78,37 @@ describe("static tools: routing, headers, and page contracts", () => {
   });
 });
 
+describe("World Series OTS board", () => {
+  const html = readFileSync("public/ots/index.html", "utf8");
+  const board = readFileSync("public/ots/board.js", "utf8");
+
+  it("redirects /ots to its dotted file path and allows only same-origin framing", () => {
+    expect(nextConfigSource).toContain('{ source: "/ots", destination: "/ots/index.html", permanent: false }');
+    expect(nextConfigSource).toMatch(/source: "\/ots\/:path\*",\s*headers: \[\{ key: "X-Frame-Options", value: "SAMEORIGIN" \}\]/);
+  });
+
+  it("ships a strict CSP that reaches only MLB's feed and logos", () => {
+    expect(html).toContain("default-src 'none'; script-src 'self';");
+    expect(html).toContain("connect-src 'self' https://statsapi.mlb.com;");
+    expect(html).toContain("img-src 'self' data: https://www.mlbstatic.com;");
+    for (const page of [html, readFileSync("public/ots/scenarios.html", "utf8")]) {
+      expect(page).not.toMatch(/<script(?![^>]*\ssrc=)[^>]*>/i);
+      expect(page).not.toMatch(/\son[a-z]+=/i);
+    }
+  });
+
+  // Daktronics web page playback renders with a Chromium 66 build: no ?? or ?. and no flexbox gap.
+  it("stays inside what the Daktronics player's Chromium 66 can run", () => {
+    expect(board).not.toMatch(/\?\?|\?\.[A-Za-z_$]/);
+    expect(html).not.toMatch(/[{;]\s*gap:/);
+  });
+
+  it("keeps the board folder to its own files", () => {
+    expect(readdirSync("public/ots").sort()).toEqual(["board.js", "index.html", "logos", "scenarios.html", "scenarios.js"]);
+    expect(readdirSync("public/ots/logos").sort()).toEqual(["CLE.svg", "MIL.svg", "TB.svg"]);
+  });
+});
+
 describe("Golden Hour core", () => {
   const gh = loadCore("public/golden-hour/core.js", "GoldenHourCore");
   const minutesIn = (date: Date, tz: string) => {
