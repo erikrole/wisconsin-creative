@@ -698,11 +698,12 @@ private struct LicenseCodeRow: View {
         return "Unknown"
     }
 
-    /// Holder names when any seat is filled; otherwise the label, or "Open".
+    /// Holder names when any seat is filled; otherwise the label, or "Open" ("Retired" for a retired code).
     private var subtitle: String {
         if !claims.isEmpty { return claims.map(name).joined(separator: ", ") }
         let label = code.label?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return label.isEmpty ? "Open" : "\(label) · Open"
+        let state = code.status == .retired ? "Retired" : "Open"
+        return label.isEmpty ? state : "\(label) · \(state)"
     }
 
     var body: some View {
