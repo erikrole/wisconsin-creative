@@ -25,11 +25,12 @@
   const $ = (id) => document.getElementById(id);
   const nz = (v, d) => (v === null || v === undefined ? d : v);   // stand-in for nullish coalescing, which Chromium 66 lacks
 
+  if (qs.get('square') === '1') $('board').style.borderRadius = '0';   // chip over HDMI/SDI: no alpha, so no rounded corners
   const scale = Number(qs.get('scale'));
   if (scale > 0) {
     $('board').style.transform = `scale(${scale})`;
-    document.body.style.width = 825 * scale + 'px';
-    document.body.style.height = 60 * scale + 'px';
+    document.body.style.width = $('board').offsetWidth * scale + 'px';     // 825x60 fascia or 312x176 chip
+    document.body.style.height = $('board').offsetHeight * scale + 'px';
   }
 
   // ---------- rendering: one normalised model -> the board ----------

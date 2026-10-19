@@ -95,7 +95,12 @@ describe("World Series OTS board", () => {
     expect(control).toContain("default-src 'none'; script-src 'self';");
     expect(control).toContain("connect-src 'self';");
     expect(nextConfigSource).toContain('{ source: "/ots/control", destination: "/ots/control.html", permanent: false }');
-    for (const page of [html, control, readFileSync("public/ots/scenarios.html", "utf8")]) {
+    const chip = readFileSync("public/ots/chip.html", "utf8");
+    expect(chip).toContain("connect-src 'self' https://statsapi.mlb.com;");
+    const output = readFileSync("public/ots/output.html", "utf8");
+    expect(output).toContain("default-src 'none'; script-src 'self';");
+    expect(output).toContain("frame-src 'self';");
+    for (const page of [html, control, chip, output, readFileSync("public/ots/scenarios.html", "utf8")]) {
       expect(page).not.toMatch(/<script(?![^>]*\ssrc=)[^>]*>/i);
       expect(page).not.toMatch(/\son[a-z]+=/i);
     }
@@ -104,11 +109,14 @@ describe("World Series OTS board", () => {
   // Daktronics web page playback renders with a Chromium 66 build: no ?? or ?. and no flexbox gap.
   it("stays inside what the Daktronics player's Chromium 66 can run", () => {
     expect(board).not.toMatch(/\?\?|\?\.[A-Za-z_$]/);
-    expect(html).not.toMatch(/[{;]\s*gap:/);
+    for (const page of [html, readFileSync("public/ots/chip.html", "utf8"), readFileSync("public/ots/output.html", "utf8")]) {
+      expect(page).not.toMatch(/[{;]\s*gap:/);
+    }
+    expect(readFileSync("public/ots/output.js", "utf8")).not.toMatch(/\?\?|\?\.[A-Za-z_$]/);
   });
 
   it("keeps the board folder to its own files", () => {
-    expect(readdirSync("public/ots").sort()).toEqual(["board.js", "control.html", "control.js", "index.html", "logos", "scenarios.html", "scenarios.js"]);
+    expect(readdirSync("public/ots").sort()).toEqual(["board.js", "chip.html", "control.html", "control.js", "index.html", "logos", "output.html", "output.js", "scenarios.html", "scenarios.js"]);
     expect(readdirSync("public/ots/logos").sort()).toEqual(["CLE.svg", "MIL.svg", "TB.svg"]);
   });
 });
