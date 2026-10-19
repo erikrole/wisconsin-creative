@@ -117,7 +117,7 @@ Implementation: `src/lib/checkout-escalation-policy.ts`, `src/lib/services/notif
 | Manual badge awarded by admin | `badge_awarded` | Awarded user | In-app |
 
 - Persistent inbox only. No toast fanout, email, APNs, or push in this slice.
-- Link target comes from `payload.href` and points to `/users/{userId}?tab=badges`.
+- Link target comes from `payload.href` and points to `/staff/{userId}?tab=badges`.
 - Delivery respects `User.notificationPrefs.badges`; missing or old preference shapes default to enabled.
 - Implementation: `POST /api/badges/award` and `awardBadgeManually` in `src/lib/badges/queries.ts`.
 
@@ -170,6 +170,11 @@ Implementation: `src/lib/checkout-escalation-policy.ts`, `src/lib/services/notif
 - **In-app**: `Notification` records are durable for the requester and configured operational recipients
 - **Browser push**: Web Push for enrolled browsers when the recipient's push channel, pause state, and notification category allow delivery
 - **Email**: Via Resend (`RESEND_API_KEY` env var). Falls back to `console.log` in dev. Non-fatal on failure.
+<<<<<<< HEAD
+- **Email template** (`src/lib/email-template.ts`): every email the app sends renders through `renderEmail`: the Wisconsin logo header, an optional eyebrow, one headline, plain paragraphs, an optional numbered list or label/value facts card, one red button, and a quiet footer. It is table-based with inline styles so it holds up in Gmail and Outlook, ships a plain-text alternative, and builds links and the logo URL from `APP_URL`. Notification emails go through `buildNotificationEmail({ kind })` (`checkout`, `schedule`, `item`), which picks the eyebrow, fact labels, and button destination; spread its result into `sendEmail`. `EMAIL_REPLY_TO` sets the reply-to header. Colors live in `EMAIL_THEME` and are held to WCAG AA by `tests/email-color-contract.test.ts`.
+=======
+>>>>>>> origin/main
+- **Invite email** (`src/lib/services/invite-email.ts`): creating a hire invite (`POST /api/hiring/applications/[id]/invite`) emails the student a sign-in link with their address prefilled, and `POST /api/allowed-emails/[id]/resend` sends a reminder for any unclaimed invite (3 per invite per hour, audited as `invite_resent` without the address). Both report `emailStatus`: `sent`, `failed`, or `not_configured` (no `RESEND_API_KEY`, so nothing was sent). The invite is committed first; delivery never rolls it back. Setup: verify the sending domain in Resend, set `RESEND_API_KEY`, `EMAIL_FROM`, and `APP_URL` in Production, then redeploy.
 - **Admin escalation**: +24h notifies all active visible admins by in-app + email; push is reserved for configured or fallback location responders
 - **Preferences**: requester, responder, and admin outbound delivery all use the checkout due/overdue category plus the recipient's channel and pause preferences
 - **Preference writes**: `PATCH /api/me/notification-preferences` merges only the supplied fields over the stored record. `PUT` is kept for shipped iOS builds and uses the same merge, so a client that omits `badges` or a newer category never resets it.
@@ -358,6 +363,7 @@ Current behavior:
 | `CRON_SECRET` | Yes (prod) | Bearer token for Vercel Cron → `/api/cron/notifications` |
 | `RESEND_API_KEY` | No (optional) | Enables email delivery via Resend. Falls back to console.log |
 | `EMAIL_FROM` | No | From address for transactional email. Default: `Wisconsin Creative <noreply@wisconsincreative.com>` |
+| `EMAIL_REPLY_TO` | No | Reply-to address on transactional email, so "reply to this email" reaches a real inbox. Default: none. |
 | `WEB_PUSH_VAPID_PUBLIC_KEY` | Yes for browser push | Public VAPID key returned to authenticated browsers |
 | `WEB_PUSH_VAPID_PRIVATE_KEY` | Yes for browser push | Server-only VAPID signing key |
 | `WEB_PUSH_SUBJECT` | Yes for browser push | VAPID contact URL or `mailto:` subject |

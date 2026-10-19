@@ -81,7 +81,7 @@ describe("Schedule stress-test hardening", () => {
     expect(source("src/app/api/users/[id]/route.ts")).not.toContain("icsToken: isSelf ? (target.icsToken");
     expect(source("src/lib/services/user-deactivation.ts")).toContain(": { active: false, deactivatedAt: new Date(), icsToken: null },");
     expect(source("src/app/api/users/[id]/role/route.ts")).toContain('...(body.role === "COLLABORATOR" ? { icsToken: null } : {}),');
-    expect(source("src/app/(app)/users/[id]/UserInfoTab.tsx")).toContain('title: "Reset private link?"');
+    expect(source("src/app/(app)/staff/[id]/UserInfoTab.tsx")).toContain('title: "Reset private link?"');
     expect(source("ios/Wisconsin/Shared/AppEnvironment.swift")).toContain('webcal://\\(activeAPIHost)');
     expect(source("src/app/api/my-shifts/route.ts")).toContain('status: { not: "CANCELLED" },');
   });

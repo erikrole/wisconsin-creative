@@ -420,7 +420,8 @@ async function persistCheckoutEscalation(args: {
       to: args.recipient.email,
       // Email has no subtitle line, so the subject names the checkout.
       subject: `${args.title}: ${args.checkout.title}`,
-      html: buildNotificationEmail({
+      ...buildNotificationEmail({
+        kind: "checkout",
         title: args.title,
         body: args.body,
         bookingTitle: args.checkout.title,
@@ -794,7 +795,8 @@ export async function createShiftGearUpNotification(
       await sendEmailToUser(assignment.userId, {
         to: assignment.user.email,
         subject: title,
-        html: buildNotificationEmail({
+        ...buildNotificationEmail({
+          kind: "schedule",
           title,
           body,
           bookingTitle: event.summary,
@@ -1071,7 +1073,8 @@ export async function createShiftScheduleNotificationFromSnapshot(
       await sendEmailToUser(assignment.userId, {
         to: assignment.userEmail,
         subject: copy.title,
-        html: buildNotificationEmail({
+        ...buildNotificationEmail({
+          kind: "schedule",
           title: copy.title,
           body: copy.body,
           bookingTitle: calendarEvent.summary,
@@ -1279,7 +1282,8 @@ export async function createPublishedShiftGroupNotifications(shiftGroupId: strin
         await sendEmailToUser(userId, {
           to: assignment.email,
           subject: title,
-          html: buildNotificationEmail({
+          ...buildNotificationEmail({
+            kind: "schedule",
             title,
             body,
             bookingTitle: group.event.summary,
@@ -1397,7 +1401,8 @@ export async function createBulkScheduleAssignmentNotifications(batchId: string)
       await sendEmailToUser(userId, {
         to: assignment.email,
         subject: title,
-        html: buildNotificationEmail({
+        ...buildNotificationEmail({
+          kind: "schedule",
           title,
           body,
           bookingTitle: batch.sportCode ? `${batch.sportCode} schedule` : "Upcoming shifts",
@@ -1525,7 +1530,8 @@ export async function notifyPublishedShiftGroupWorkers(
       await sendEmailToUser(user.id, {
         to: user.email,
         subject: title,
-        html: buildNotificationEmail({
+        ...buildNotificationEmail({
+          kind: "schedule",
           title,
           body,
           bookingTitle: group.event.summary,
@@ -1611,7 +1617,8 @@ export async function notifyPublishedScheduleFollowers(shiftGroupId: string): Pr
       await sendEmailToUser(user.id, {
         to: user.email,
         subject: title,
-        html: buildNotificationEmail({
+        ...buildNotificationEmail({
+          kind: "schedule",
           title,
           body,
           bookingTitle: group.event.summary,
@@ -1782,7 +1789,8 @@ export async function notifyItemReport(args: {
       sendEmailToUser(s.id, {
         to: s.email!,
         subject: title,
-        html: buildNotificationEmail({
+        ...buildNotificationEmail({
+          kind: "item",
           title,
           body,
           bookingTitle: args.bookingTitle,

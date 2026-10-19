@@ -14,10 +14,13 @@ type AnnouncementMediaProps = {
  * Banner across the top of the splash. One image is a plain banner; several
  * become a swipeable strip with dots. Scroll snapping does the swiping, so it
  * works with touch, trackpad, and keyboard without a carousel library.
+ * An image that fails to load drops out rather than showing a broken icon.
  */
-export function AnnouncementMedia({ images, alt, inert = false }: AnnouncementMediaProps) {
+export function AnnouncementMedia({ images: allImages, alt, inert = false }: AnnouncementMediaProps) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [index, setIndex] = useState(0);
+  const [failed, setFailed] = useState<ReadonlySet<string>>(() => new Set());
+  const images = allImages.filter((src) => !failed.has(src));
   if (images.length === 0) return null;
 
   const multiple = images.length > 1;
@@ -41,7 +44,7 @@ export function AnnouncementMedia({ images, alt, inert = false }: AnnouncementMe
           const el = e.currentTarget;
           setIndex(Math.round(el.scrollLeft / Math.max(1, el.clientWidth)));
         }}
-        className="flex aspect-[2/1] snap-x snap-mandatory overflow-x-auto overscroll-x-contain outline-none [scrollbar-width:none] focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ring/50 [&::-webkit-scrollbar]:hidden"
+        className="flex aspect-[2/1] max-h-[40dvh] w-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain outline-none [scrollbar-width:none] focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ring/50 [&::-webkit-scrollbar]:hidden"
       >
         {images.map((src, i) => (
           <div key={`${src}-${i}`} className="relative h-full w-full shrink-0 snap-center">
@@ -53,6 +56,7 @@ export function AnnouncementMedia({ images, alt, inert = false }: AnnouncementMe
               priority={i === 0}
               className="object-cover"
               draggable={false}
+              onError={() => setFailed((prev) => new Set(prev).add(src))}
             />
           </div>
         ))}

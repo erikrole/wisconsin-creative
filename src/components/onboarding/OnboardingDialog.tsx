@@ -740,7 +740,7 @@ export default function OnboardingDialog({
                 Add another
               </Button>
               <Button asChild variant="outline" className="h-10" onClick={() => onOpenChange(false)}>
-                <Link href="/users/onboarding-status">View status</Link>
+                <Link href="/staff/onboarding-status">View status</Link>
               </Button>
               <Button type="button" className="h-10" onClick={() => onOpenChange(false)}>
                 Done

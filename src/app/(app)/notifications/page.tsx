@@ -714,7 +714,7 @@ function getNotificationActionLabel(notification: Notification) {
   if (href.startsWith("/events/") || href.startsWith("/schedule")) return "Open event";
   if (href.startsWith("/settings/")) return "Open settings";
   if (href.startsWith("/items")) return "Open items";
-  if (href.startsWith("/users/")) return "Open profile";
+  if (href.startsWith("/staff/")) return "Open profile";
   if (href.startsWith("/licenses")) return "Open licenses";
 
   return "Open details";

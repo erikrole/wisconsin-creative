@@ -111,3 +111,45 @@ export type ActiveAnnouncement = {
   /** How many more unseen announcements wait behind this one. */
   remaining: number;
 };
+
+export type AnnouncementDraftFields = {
+  title: string;
+  body: string;
+  ctaLabel: string;
+  ctaUrl: string;
+  showOnWeb: boolean;
+  showOnIos: boolean;
+  /** `datetime-local` wall time, or "" for none. */
+  endsAt: string;
+};
+
+export type AnnouncementDraftErrors = Partial<
+  Record<"title" | "body" | "ctaLabel" | "ctaUrl" | "platforms" | "endsAt", string>
+>;
+
+/**
+ * The same rules the API enforces, run in the editor so a mistake is caught beside
+ * the field before anything is sent. The server still validates; this only explains.
+ */
+export function validateAnnouncementDraft(d: AnnouncementDraftFields, now = new Date()): AnnouncementDraftErrors {
+  const errors: AnnouncementDraftErrors = {};
+  if (!d.title.trim()) errors.title = "Add a title";
+  else if (d.title.trim().length > 80) errors.title = "Keep the title to 80 characters";
+  if (!d.body.trim()) errors.body = "Add a message";
+  else if (d.body.trim().length > 1200) errors.body = "Keep the message to 1,200 characters";
+
+  const label = d.ctaLabel.trim();
+  const url = d.ctaUrl.trim();
+  if (label && !url) errors.ctaUrl = "Add a link for the button, or clear its label";
+  else if (url && !label) errors.ctaLabel = "Add a label for the button, or clear its link";
+  else if (url && !isSafeAnnouncementUrl(url)) errors.ctaUrl = "Use a path like /releases or an https link";
+
+  if (!d.showOnWeb && !d.showOnIos) errors.platforms = "Show it on web, the iPhone app, or both";
+
+  if (d.endsAt) {
+    const ends = new Date(d.endsAt);
+    if (Number.isNaN(ends.getTime())) errors.endsAt = "Pick a valid date and time";
+    else if (ends <= now) errors.endsAt = "Pick a time in the future, or clear it";
+  }
+  return errors;
+}

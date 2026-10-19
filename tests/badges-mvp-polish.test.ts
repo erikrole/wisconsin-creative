@@ -47,8 +47,8 @@ describe("badge MVP polish", () => {
   });
 
   it("hides the student Award badge action and shows the on-time streak", () => {
-    const page = source("src/app/(app)/users/[id]/page.tsx");
-    const tab = source("src/app/(app)/users/[id]/UserBadgesTab.tsx");
+    const page = source("src/app/(app)/staff/[id]/page.tsx");
+    const tab = source("src/app/(app)/staff/[id]/UserBadgesTab.tsx");
     const awardItem = page.slice(
       Math.max(0, page.indexOf("Award badge") - 280),
       page.indexOf("Award badge"),
@@ -64,6 +64,6 @@ describe("badge MVP polish", () => {
     const shell = source("src/components/AppShell.tsx");
     expect(celebration).toContain("See on shelf");
     expect(celebration).toContain("onViewShelf");
-    expect(shell).toContain("/users/${rewardUserId}?tab=badges");
+    expect(shell).toContain("/staff/${rewardUserId}?tab=badges");
   });
 });

@@ -26,6 +26,12 @@ const fields = {
   endsAt: z.coerce.date().nullable().optional(),
 };
 
+function futureEnd(v: { endsAt?: Date | null }, ctx: z.RefinementCtx) {
+  if (v.endsAt && v.endsAt <= new Date()) {
+    ctx.addIssue({ code: "custom", path: ["endsAt"], message: "Pick a time in the future, or clear it" });
+  }
+}
+
 function ctaPair(v: { ctaLabel?: string | null; ctaUrl?: string | null }, ctx: z.RefinementCtx) {
   if (Boolean(v.ctaLabel) !== Boolean(v.ctaUrl)) {
     ctx.addIssue({ code: "custom", path: ["ctaUrl"], message: "Add both a button label and a link, or neither" });
@@ -37,6 +43,7 @@ function ctaPair(v: { ctaLabel?: string | null; ctaUrl?: string | null }, ctx: z
 export const announcementCreateBody = z
   .object({ ...fields, imageUrls: fields.imageUrls.default([]), publish: z.boolean().default(false) })
   .superRefine(ctaPair)
+  .superRefine(futureEnd)
   .refine((v) => v.showOnWeb || v.showOnIos, { message: "Show it on web, iOS, or both", path: ["showOnWeb"] });
 
 export const announcementPatchBody = z
@@ -50,6 +57,10 @@ export const announcementPatchBody = z
   })
   .superRefine((v, ctx) => {
     if (v.ctaLabel !== undefined || v.ctaUrl !== undefined) ctaPair(v, ctx);
+    futureEnd(v, ctx);
+    if (v.showOnWeb === false && v.showOnIos === false) {
+      ctx.addIssue({ code: "custom", path: ["showOnWeb"], message: "Show it on web, iOS, or both" });
+    }
   });
 
 export type AnnouncementCreateInput = z.infer<typeof announcementCreateBody>;

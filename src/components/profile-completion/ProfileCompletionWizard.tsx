@@ -40,7 +40,7 @@ import {
   visibleProfileSteps,
   type ProfileCompletionStep,
 } from "@/lib/profile-completion";
-import { AvatarCropDialog } from "@/app/(app)/users/[id]/AvatarCropDialog";
+import { AvatarCropDialog } from "@/app/(app)/staff/[id]/AvatarCropDialog";
 import { formatPhoneInput } from "@/lib/profile-phone";
 import { MENS_SHOE_SIZE_OPTIONS, TOP_SIZE_OPTIONS, WOMENS_SHOE_SIZE_OPTIONS } from "@/lib/profile-sizing";
 import {
