@@ -79,7 +79,7 @@ private struct KioskEventRow: View {
         if event.displayAllDay {
             return "All day"
         }
-        if Calendar.current.dayOffset(of: event.startsAt, from: today) == 0 {
+        if KioskTime.calendar.dayOffset(of: event.startsAt, from: today) == 0 {
             return event.startsAt.formatted(.dateTime.hour().minute())
         }
         return event.startsAt.formatted(.dateTime.weekday(.abbreviated).hour().minute())
@@ -259,10 +259,10 @@ struct KioskEventDetailSheet: View {
 
     private var eventDayLabel: String {
         let displayDay = event.kioskDisplayStartDay
-        if Calendar.current.dayOffset(of: displayDay, from: today) == 0 {
+        if KioskTime.calendar.dayOffset(of: displayDay, from: today) == 0 {
             return "Today"
         }
-        if Calendar.current.dayOffset(of: displayDay, from: today) == 1 {
+        if KioskTime.calendar.dayOffset(of: displayDay, from: today) == 1 {
             return "Tomorrow"
         }
         return displayDay.formatted(.dateTime.weekday(.wide).month().day())
@@ -290,7 +290,7 @@ struct KioskEventDetailSheet: View {
     private var allDayDateLabel: String {
         let start = event.kioskDisplayStartDay
         let end = event.kioskDisplayEndDay
-        if Calendar.current.isDate(start, inSameDayAs: end) {
+        if KioskTime.calendar.isDate(start, inSameDayAs: end) {
             return start.formatted(.dateTime.month(.abbreviated).day())
         }
         return "\(start.formatted(.dateTime.month(.abbreviated).day())) - \(end.formatted(.dateTime.month(.abbreviated).day()))"

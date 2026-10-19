@@ -1,0 +1,23 @@
+{
+  "sourceRevision": "f022d861139949ef8409ab8cbaf009b9701254bf",
+  "sourcePatchSha256": "63f152ad671bb6f4e40b28971511cabfce77b1904a725755a2b0be4f7608b693",
+  "settings": {
+    "device": "iPhone 18 Pro Max \u00b7 iOS 27.0 (24A5390f)",
+    "viewport": [
+      440,
+      956
+    ],
+    "fixture": "latest-browse 662c7f8c9b6e2075d44758365adffae1ceeefdbb6a6c93a1ae7e77d6e33aa4e1 online",
+    "role": "STAFF",
+    "route": "Browse/kits",
+    "appearance": "light",
+    "textSize": "large (default)",
+    "locale": "en_US (AppleLanguages: en)",
+    "timezone": "America/Los_Angeles",
+    "clock": "9:41 status bar; 2026-10-17 capture day",
+    "scroll": [
+      0,
+      0
+    ]
+  }
+}

@@ -1,5 +1,522 @@
 [
   {
+    "date": "2026-10-19",
+    "title": "Announcements on iPhone",
+    "type": "feature",
+    "summary": "Announcements posted from Settings now also appear in the iPhone app as a sheet the first time you open it.",
+    "details": [
+      "Banner or swipeable images, a short message, and an optional button.",
+      "Closing it in any way marks it as seen, and the next one appears if more are waiting.",
+      "It checks when the app opens or returns to the foreground, never in the background."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 517
+  },
+  {
+    "date": "2026-10-19",
+    "title": "Budget imports from the department workbook",
+    "type": "improvement",
+    "summary": "Admins can import a budget straight from the department spreadsheet, one tab at a time, and check it before anything is saved.",
+    "details": [
+      "Pick the tab; the one for the budget's year (and Football) is suggested.",
+      "Statuses, supplier, price, budget, spent and month are read from the sheet's own columns.",
+      "Bought rows with no budget come in as Unplanned, and Dropped rows stay Dropped.",
+      "Running it again updates lines instead of adding copies."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 520
+  },
+  {
+    "date": "2026-10-19",
+    "title": "Emails have a new look",
+    "type": "improvement",
+    "summary": "Every email from the app now uses the same Wisconsin Creative design, with the logo, one clear button, and a plain-text version.",
+    "details": [
+      "Invites, password resets, shift trades, and reminders all share the new layout.",
+      "Overdue gear and damage reports use a red label so they stand out.",
+      "Replies can go to a staff inbox once one is set up."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 518
+  },
+  {
+    "date": "2026-10-19",
+    "title": "Hiring invites are emailed",
+    "type": "improvement",
+    "summary": "New students now get an email with a sign-in link when you invite them, and you can resend it from Onboarding.",
+    "details": [
+      "The link opens the login page with the invited address already filled in.",
+      "If email is not set up or a send fails, the invite is still created and the page tells you so.",
+      "Resend is limited to three per person per hour."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 515
+  },
+  {
+    "date": "2026-10-19",
+    "title": "Booking activity on iPhone",
+    "type": "feature",
+    "summary": "A reservation or checkout on iPhone shows what changed, including gear that was added or removed. Collaborators do not see this history.",
+    "details": [
+      "Open Activity on a reservation or checkout to read the same history as the website.",
+      "Filter the list to booking changes or equipment changes.",
+      "A failed refresh keeps the history already on screen.",
+      "The newest 50 entries are shown. Older history stays on the website.",
+      "Collaborators do not see Activity."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 513
+  },
+  {
+    "date": "2026-10-18",
+    "title": "Staff on iPhone",
+    "type": "improvement",
+    "summary": "The iPhone app now calls the people directory Staff and lets you filter it by role with one tap.",
+    "details": [
+      "Users is now Staff in the tab bar and Browse.",
+      "Role tabs show how many students, staff, and admins there are.",
+      "The role option in the filter menu is gone, since the tabs replace it."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 497
+  },
+  {
+    "date": "2026-10-18",
+    "title": "In-app announcements",
+    "type": "feature",
+    "summary": "Quick news now appears as a short message the next time you open the app, so new features and updates reach everyone without waiting on a release.",
+    "details": [
+      "Read it once, then it is gone for you.",
+      "Some come with pictures you can swipe through.",
+      "Some messages have a button that takes you straight to the new feature.",
+      "Admins write and publish them from Settings, no release needed."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 516
+  },
+  {
+    "date": "2026-10-18",
+    "title": "Hours on your profile",
+    "type": "feature",
+    "summary": "Your profile on iPhone shows the hours you worked this week and this month, using the same Monday-to-Sunday count as the website.",
+    "details": [
+      "Open your profile to see this week and this month, with the number of shifts in each.",
+      "The week runs Monday through Sunday, Central time, including a Sunday evening shift.",
+      "If hours fail to load, the rest of your profile stays up and Try again is available.",
+      "A later refresh that fails keeps the hours already on screen.",
+      "Collaborators do not see hours."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 512
+  },
+  {
+    "date": "2026-10-18",
+    "title": "Safer kiosk scans",
+    "type": "fixes",
+    "summary": "A second scan at the kiosk no longer creates another custody record, and due today follows the Chicago day.",
+    "details": [
+      "Scanning an item that was already picked up or returned does not create a second custody record.",
+      "Returning a counted quantity that was already returned does not count it twice.",
+      "Due today, day chips, and night hours follow the Chicago day.",
+      "If a scan response is lost, the pickup or return list reloads from the server.",
+      "Staff need a staff card to add, remove, or swap gear on someone else's checkout."
+    ],
+    "platforms": [
+      "Kiosk"
+    ],
+    "pr": 511
+  },
+  {
+    "date": "2026-10-18",
+    "title": "Clearer status and recovery",
+    "type": "improvement",
+    "summary": "Reservations, checkouts, items, schedule, and kiosk stay understandable from the keyboard, and a failed list says so instead of looking empty.",
+    "details": [
+      "Calendar and week events name home, away, or neutral in the control, not only by color.",
+      "A failed schedule, reservation check, parent search, gap count, or attachment search offers Try again.",
+      "Closing a confirmation, retire prompt, or kiosk activation dialog returns focus to the control that opened it.",
+      "Row menus, favorites, filters, and the item-type toggle keep the keyboard instead of paging or opening the row."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 509
+  },
+  {
+    "date": "2026-10-18",
+    "title": "Item activity on iPhone",
+    "type": "feature",
+    "summary": "Staff can read an item's history on iPhone, filtered to all activity, item updates, or bookings.",
+    "details": [
+      "Open Activity on an item to see who changed it and when.",
+      "Filter to all activity, item updates, or bookings, and load older pages.",
+      "A booking row opens that booking.",
+      "A failed refresh keeps the history already on screen.",
+      "Students and collaborators do not see Activity. Previous bookings stay on the item."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 508
+  },
+  {
+    "date": "2026-10-18",
+    "title": "Budget, kits and students for UA gear",
+    "type": "feature",
+    "summary": "Admins see the Under Armour budget, what the department covers for each person, and a student list with sizes on the gear results.",
+    "details": [
+      "Edit the total budget and student kit price, and mark it confirmed. Until then it carries a Placeholder tag. The budget and totals are visible to admins only.",
+      "Record the order the Equipment department places (PO, order number, dates), check gear in as it arrives, and mark pieces handed out person by person.",
+      "An Order table rolls staff kits, student kits and picks up into one quantity per item and size. Student shoes join once their style is chosen.",
+      "Each person shows Standard issue (covered by the department), Core kit where their fit has one, and the number of pieces they picked.",
+      "Add students to the list, see who is missing a top or shoe size, and fill sizes in for them. Sizes are saved to the student's profile.",
+      "Tabs for Overview, People, Order, Receiving, Handout and History keep the page easy to follow, and a Needs attention list shows what to fix next. History opens last year with its budget, items and people, and Save this year to History keeps a read-only copy of the current year."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 514
+  },
+  {
+    "date": "2026-10-18",
+    "title": "Checkout days and kit privacy",
+    "type": "fixes",
+    "summary": "The checkout activity chart keeps every Madison day when the clocks change. A collaborator opening a kit no longer sees who currently has each piece.",
+    "details": [
+      "Checkout activity includes the Madison day the clocks spring forward, and does not repeat the day they fall back.",
+      "A collaborator can still see whether a kit item is out and when that hold ends.",
+      "The person's name and the booking title stay off the collaborator kit response.",
+      "Staff and admin kit detail still names who has the gear."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 507
+  },
+  {
+    "date": "2026-10-18",
+    "title": "Away game travel list",
+    "type": "feature",
+    "summary": "An away game on iPhone lists who is traveling. Adding or removing someone stays on the website.",
+    "details": [
+      "Open an away game in Schedule to see who is traveling.",
+      "Each person shows their name and area. Tap a person to open their profile.",
+      "A failed refresh keeps the travelers already on screen.",
+      "Home games do not show a travel section.",
+      "Adding and removing travelers stays on the website."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 506
+  },
+  {
+    "date": "2026-10-18",
+    "title": "A fresher Staff section",
+    "type": "improvement",
+    "summary": "Staff, Workforce, Hiring and Onboarding have a new look, and Staff now shows who is working today.",
+    "details": [
+      "Lato type, a calm blue accent, softer cards, and a colored dot for each area.",
+      "The org chart is a real chart with cards and connectors, plus a Not placed yet section.",
+      "Profiles get Email and Call buttons, an area chip, and an At a glance card.",
+      "Roster rows show an area dot and a Graduating chip, and hide the role column when a role tab already says it.",
+      "The roster shows an On shift now strip, and a new Today tab lists who is working which event now, later, and tomorrow.",
+      "Hiring and Onboarding Status get the same look: a targets strip, calmer board cards, one onboarding list, and an application sheet with a progress track, average rating, Watch interview card, and Pass and Hire buttons that stay in view."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 486
+  },
+  {
+    "date": "2026-10-17",
+    "title": "Clearer, more reliable iPhone workflows",
+    "type": "improvement",
+    "summary": "The iPhone app groups secondary tools in Browse and makes gear choices easier to review. Schedule is now the single destination for events.",
+    "details": [
+      "Browse groups tools into Work, Equipment, Resources, and Team, with Events removed in favor of Schedule.",
+      "UA Gear uses catalog size pickers on item and review screens, with separate controls for quantity, color, and size.",
+      "Gear drafts and reservation edits recover more reliably when loading or saving fails.",
+      "Accountability, Kits, Reports, Brand assets, Badges, Blasts, and Battery Ops have clearer layouts and improved large-text support.",
+      "Offline status leaves navigation buttons accessible, and inventory details load when first opened.",
+      "Reports keep pagination consistent, and Brand assets opens the file version shown in the list."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 504
+  },
+  {
+    "date": "2026-10-17",
+    "title": "Condition reports on iPhone",
+    "type": "feature",
+    "summary": "Staff can read damage and missing-item reports on an item, including the photo and the checkout they came from. Clearing maintenance stays in the item menu.",
+    "details": [
+      "Open an item to see the five most recent condition reports, the same record as the website.",
+      "Damage is marked in orange and a missing item in red.",
+      "A photo opens full screen, and the checkout row opens that checkout.",
+      "Reports stay after maintenance is cleared. Students do not see this record."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 505
+  },
+  {
+    "date": "2026-10-17",
+    "title": "Shared logins on iPhone",
+    "type": "feature",
+    "summary": "Staff, students, and collaborators can copy a department login from the iPhone. Adding and archiving those logins stays on the website.",
+    "details": [
+      "Browse includes Shared logins next to Photo Mechanic licenses.",
+      "Each login shows the account email. The password stays hidden until you show or copy it.",
+      "A shown password hides again after 30 seconds, and a copied password stays on this iPhone for 2 minutes.",
+      "Collaborators see the row only when shared software access is turned on.",
+      "Creating, editing, and archiving logins stays on the website."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 502
+  },
+  {
+    "date": "2026-10-17",
+    "title": "Fetch and Offload app pages",
+    "type": "feature",
+    "summary": "Fetch and Offload each have a dedicated page with features, Mac requirements, and download links. Open either page from Learn more on its app card.",
+    "details": [
+      "See what each app does and how to get started before downloading it.",
+      "Find the Mac requirements, version, and download link together on each page.",
+      "Use Learn more on the Fetch and Offload cards to open their product pages."
+    ],
+    "platforms": [
+      "Web",
+      "macOS"
+    ],
+    "pr": 483
+  },
+  {
+    "date": "2026-10-17",
+    "title": "Madison hours, charts, and exports",
+    "type": "fixes",
+    "summary": "Profile hours, staffing workload, item insight charts, and the default schedule export follow the Madison day. Catalog attachments stay with the items a collaborator can open.",
+    "details": [
+      "Profile hours and staffing suggestions count the Madison week and month, including Sunday evening and a week that crosses the month.",
+      "Item insight charts file an evening checkout on the Madison day.",
+      "A schedule export with no end date includes an evening event on the last day.",
+      "The calendar source list is limited to people who can view sources.",
+      "A collaborator who can browse the catalog sees an item's attachments, without serial numbers.",
+      "Filling open shifts and copying a previous crew read each person once for the whole preview."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 503
+  },
+  {
+    "date": "2026-10-17",
+    "title": "Safer due dates and scans",
+    "type": "fixes",
+    "summary": "Due today follows the Madison day. Pickup scans stay with the person at the kiosk, and scan codes stay on the checkouts people are allowed to see.",
+    "details": [
+      "Due today on checkouts, reservations, and the combined list uses the Madison day, including the evening before midnight.",
+      "A start date range stays inside the reservation due-today queue.",
+      "A personal pickup scan has to be the requester or a staff member at the kiosk.",
+      "Checkout scan progress, including item codes, is limited to people who can view that checkout.",
+      "Item family units and products use the same catalog permission as the family."
+    ],
+    "platforms": [
+      "Web",
+      "Kiosk"
+    ],
+    "pr": 501
+  },
+  {
+    "date": "2026-10-16",
+    "title": "Team badges on iPhone",
+    "type": "feature",
+    "summary": "Staff can read the badge catalog on iPhone. Awarding a group of people still happens on the website.",
+    "details": [
+      "Browse includes Badges for staff and admins.",
+      "The list shows the manual badges that can be awarded, with the same names and descriptions as the website.",
+      "View report opens the existing read-only badge report.",
+      "Awarding a badge to several people stays on the website."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 500
+  },
+  {
+    "date": "2026-10-16",
+    "title": "Faster search and item lists",
+    "type": "improvement",
+    "summary": "Searching the catalog and opening item families reads less from the database, and the family photo control shows when it has keyboard focus.",
+    "details": [
+      "Command search and scans skip the six catalog-wide status counts the Items page still uses.",
+      "Item families count units in the database instead of loading every unit onto the list.",
+      "Guide search still finds a word split across a markdown link, and skips bodies that cannot contain the phrase.",
+      "Print Labels reads every alphabetical page and skips the catalog status counts.",
+      "The item-family photo button shows its Edit label and a focus ring from the keyboard."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 499
+  },
+  {
+    "date": "2026-10-16",
+    "title": "UA gear picks on iPhone",
+    "type": "feature",
+    "summary": "People on this year's Under Armour list can choose their gear on iPhone, up to their allowance, and submit it.",
+    "details": [
+      "Browse includes UA Gear for students, staff, and admins.",
+      "The list is the fit you were given, with prices and sizes from this year's catalog.",
+      "Save a draft or submit. You can still change a submitted list until the deadline.",
+      "After the deadline the saved list stays visible and locked.",
+      "The roster, deadline, and equipment spreadsheet stay on the web."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 498
+  },
+  {
+    "date": "2026-10-16",
+    "title": "Brand assets on iPhone",
+    "type": "feature",
+    "summary": "The iPhone app can open logos and PDFs from Brand assets. Adding files stays on the web.",
+    "details": [
+      "Browse includes Brand assets for anyone who can read Resources.",
+      "Open a folder, or search the library by name.",
+      "A logo or PDF opens on the phone. Other files can be shared to another app.",
+      "Adding folders, uploading, and restoring an older version stay on the web."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 496
+  },
+  {
+    "date": "2026-10-16",
+    "title": "Late returns on iPhone",
+    "type": "feature",
+    "summary": "Students and staff can open the late-return list on iPhone and go from a person to the checkout.",
+    "details": [
+      "Browse includes Accountability for students, staff, and admins.",
+      "The list covers this academic year or all time, sorted by late returns, late time, or most recent.",
+      "Your own place on the list stays at the top. Search looks through the names already loaded.",
+      "A person shows each late checkout, and opening one shows the gear.",
+      "Spreadsheets and taking a checkout off the list stay on the website."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 495
+  },
+  {
+    "date": "2026-10-16",
+    "title": "Edit reservations on iPhone",
+    "type": "feature",
+    "summary": "Reservations on iPhone can be updated the same way as on the web. Checkout screens also pick up the extra actions staff already have there.",
+    "details": [
+      "Change a reservation's name, notes, pickup, dates, remaining gear, and linked events.",
+      "Save waits until that gear is available for the new window.",
+      "Gear that was already picked up stays on the checkout.",
+      "Checkouts can nudge, close without a scan, transfer, or switch between shared and personal when those actions are allowed.",
+      "Extend stays the main action on a checkout. Gear on an active checkout still changes at a kiosk."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 493
+  },
+  {
+    "date": "2026-10-16",
+    "title": "Kits and batteries on iPhone",
+    "type": "feature",
+    "summary": "Staff and students can read kits and item families on iPhone. Staff can also open Battery Ops to see what is low and who has batteries out.",
+    "details": [
+      "Kits show whether the gear is ready, who has something out, and when it is due.",
+      "Item families show how many are available and which units are checked out.",
+      "Battery Ops lists low camera pairings and the batteries that are out.",
+      "Reserve is the action on a kit or family. Editing, receiving, labels, and repairs stay on the web."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 492
+  },
+  {
+    "date": "2026-10-16",
+    "title": "Faster lists and reports",
+    "type": "improvement",
+    "summary": "Items, Battery Ops, and condition flags read less from the database, and several staff pages show their own loading state while they open.",
+    "details": [
+      "Most popular still ranks the same way, and it totals recent use in the database instead of loading every booking and scan.",
+      "Battery Ops looks at battery-like families and camera-like gear first, then keeps the same families as before.",
+      "Scan history, open unit checkouts, and recent condition flags show up faster.",
+      "Reports, Settings, Resources, UA staff gear, signatures, YouTube, Blasts, Operations, Scoreboard, and Software show a page skeleton while they load.",
+      "Add item, Fill gaps, and Cleanup load separately from the Items list."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 491
+  },
+  {
+    "date": "2026-10-16",
+    "title": "Budget tracking for admins",
+    "type": "feature",
+    "summary": "Admins can now track planned and actual spending by fiscal year on a new Budget page, with separate budgets for Creative and Football. Staff and admins also get a Wish list.",
+    "details": [
+      "Create a budget for a fiscal year, add lines with category, supplier, quantity, and cost, and record the PO and order numbers once something is bought.",
+      "See spent, planned but not bought, and remaining at a glance, with an Insights view of spend by month, suppliers, and year over year, and a CSV download. Dropped lines stay in the fixed submitted plan, and lines added later are marked Unplanned.",
+      "Fiscal years read as FY26 · Jul 2025 – Jun 2026, matching the July 1 start.",
+      "Link a purchase to the items it bought, with suggested matches, and fill an item's purchase details from the order without overwriting anything already there. Every line keeps a history, refunds and credits count against its cost, and you can drop or recategorize many lines at once with an undo.",
+      "A new Wish list lets staff and admins paste a link or type what they need. Admins approve, decline, or move a wish into the budget as a line, and past years can be imported from a spreadsheet.",
+      "Only admins can see or change the budget, and every change is logged."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 494
+  },
+  {
+    "date": "2026-10-16",
+    "title": "Full reports on iPhone",
+    "type": "feature",
+    "summary": "Staff can open the rest of the reports from the iPhone Reports screen. Spreadsheets still download on the web.",
+    "details": [
+      "Utilization, Checkouts, Scans, Missing Units, and Badges are read-only on the phone.",
+      "Checkouts and utilization keep a simple chart for the period you pick.",
+      "Scans can be limited to checkout or check-in, and Missing Units can be limited to a location or category.",
+      "Usage appears only for the account allowed to see those counts.",
+      "CSV downloads stay on the web."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 490
+  },
+  {
     "date": "2026-10-16",
     "title": "Redesigned Photo Mechanic licenses",
     "type": "improvement",
@@ -46,6 +563,70 @@
       "iOS"
     ],
     "pr": 487
+  },
+  {
+    "date": "2026-10-16",
+    "title": "Clearer Workforce overview",
+    "type": "improvement",
+    "summary": "The Workforce overview now shows, area by area, who stays and who graduates, so gaps are visible before they happen.",
+    "details": [
+      "A new Coverage by area list shows each area's full-time staff and how many students stay or graduate.",
+      "Areas that lose half or more of their students, or all of them, are flagged and listed first.",
+      "The top tiles add context, such as the share of students graduating.",
+      "Select an area in the list to jump to its people."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 486
+  },
+  {
+    "date": "2026-10-16",
+    "title": "Cleaner Staff roster",
+    "type": "improvement",
+    "summary": "The Staff page now filters by role with one tap, and you can switch the roster between a table and a photo grid.",
+    "details": [
+      "Role tabs at the top show how many students, staff, admins, and collaborators match your search and filters.",
+      "The role dropdown and the separate breakdown cards are gone, so there is one place to look.",
+      "A new photo grid view shows everyone as headshot cards. Your choice stays in the page link.",
+      "Group by area splits the whole list under Photo, Video, and the other areas, with each area's full headcount, even across pages.",
+      "Hover a name in the table to see a quick card with title, location, and contact details.",
+      "Year and sport filters only appear when they apply to students."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 486
+  },
+  {
+    "date": "2026-10-16",
+    "title": "Workforce moves under Staff",
+    "type": "improvement",
+    "summary": "Workforce is now a tab on the Staff page instead of its own menu item. It is still visible to admins only.",
+    "details": [
+      "Admins see Roster and Workforce tabs at the top of Staff.",
+      "Hiring and Planning sit inside the Workforce tab.",
+      "Old Workforce links redirect to the new location."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 485
+  },
+  {
+    "date": "2026-10-16",
+    "title": "Users is now Staff",
+    "type": "improvement",
+    "summary": "The Users page and menu item are now called Staff. Old Users links and bookmarks still take you to the right place.",
+    "details": [
+      "The sidebar, page title, search results, and breadcrumbs say Staff.",
+      "Profile links now live under /staff, and old /users links redirect automatically.",
+      "Nothing about who can see the page or what it shows has changed."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 484
   },
   {
     "date": "2026-10-15",
@@ -118,7 +699,9 @@
       "Guide SVG and Guide PNG download at that board's exact pixel size.",
       "Open questions stay on the board, including Kohl Center frame rates and the unconfirmed Goodman board."
     ],
-    "platforms": ["Web"],
+    "platforms": [
+      "Web"
+    ],
     "pr": 473
   },
   {
@@ -148,7 +731,9 @@
       "Light and dark appearance, following your system by default, with a picker at the top.",
       "The page opens without signing in."
     ],
-    "platforms": ["Web"],
+    "platforms": [
+      "Web"
+    ],
     "pr": 471
   },
   {
@@ -162,7 +747,9 @@
       "Radio Clip no longer shows a version that was never published.",
       "The page opens without signing in. It is still left out of search."
     ],
-    "platforms": ["Web"],
+    "platforms": [
+      "Web"
+    ],
     "pr": 472
   },
   {
@@ -175,7 +762,10 @@
       "Requests still go to an Admin for approval, and you can withdraw one while it waits.",
       "Staff edits in progress still pause requests until they are released."
     ],
-    "platforms": ["Web", "iOS"],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
     "pr": 468
   },
   {
@@ -188,7 +778,10 @@
       "If you are already scheduled for the event, the booking still links to your slot.",
       "Staff can now unassign someone a past gear booking placed on the schedule; the booking keeps its gear and event."
     ],
-    "platforms": ["Web", "iOS"],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
     "pr": 467
   },
   {
@@ -277,7 +870,9 @@
       "The kit loaded into the reservation includes who has each piece and when that hold ends.",
       "Every piece in the kit is still added for review."
     ],
-    "platforms": ["Web"],
+    "platforms": [
+      "Web"
+    ],
     "pr": 463
   },
   {
@@ -305,7 +900,9 @@
       "A kit whose serialized pieces are all unavailable says Out.",
       "Item families stay in the contents count and do not change that badge."
     ],
-    "platforms": ["Web"],
+    "platforms": [
+      "Web"
+    ],
     "pr": 464
   },
   {
@@ -317,7 +914,9 @@
       "Changing or clearing filters no longer leaves a blank gap under Load older records.",
       "A day header no longer sticks mid-page and hides the first event of that day."
     ],
-    "platforms": ["Web"],
+    "platforms": [
+      "Web"
+    ],
     "pr": 433
   },
   {
@@ -330,7 +929,10 @@
       "Maintenance and retired pieces keep those labels.",
       "The kiosk kit checklist receives the same status and name."
     ],
-    "platforms": ["Web", "Kiosk"],
+    "platforms": [
+      "Web",
+      "Kiosk"
+    ],
     "pr": 462
   },
   {
@@ -343,7 +945,10 @@
       "At the kiosk, scanning a battery or counted bin that is not on the reservation now offers Add instead of an error.",
       "Items already picked up stay on their checkout."
     ],
-    "platforms": ["Web", "Kiosk"],
+    "platforms": [
+      "Web",
+      "Kiosk"
+    ],
     "pr": 466
   },
   {
@@ -372,7 +977,9 @@
       "Works even when the person who reserved the case is not on the kiosk roster.",
       "A shared case for a later day, like an away game, can be picked up early."
     ],
-    "platforms": ["Kiosk"],
+    "platforms": [
+      "Kiosk"
+    ],
     "pr": 465
   },
   {
@@ -396,7 +1003,7 @@
     "summary": "A signature saved on the wrong roster spot can be moved to the right person, and the signer's name shows on the line before you save.",
     "details": [
       "The capture screen shows the person's name and number on the signature line so a wrong slot is obvious before Save.",
-      "Move signature to\u2026 sends the saved signature and its history to a blank person. Creative Staff signatures stay put.",
+      "Move signature to… sends the saved signature and its history to a blank person. Creative Staff signatures stay put.",
       "Team rosters can add an unofficial player, marked Unofficial, until the official roster includes them.",
       "Applying an official roster keeps staff-added players and adopts them when the same name appears officially."
     ],
@@ -477,7 +1084,7 @@
     "details": [
       "Each flagged item appears once on the dashboard, most serious first.",
       "Click a damaged or lost item to review the report and photo, as before.",
-      "The \u00d7 beside a damage flag hides it from the dashboard; the report stays in the item's history.",
+      "The × beside a damage flag hides it from the dashboard; the report stays in the item's history.",
       "Item Info lists the five most recent condition reports with their photos."
     ],
     "platforms": [

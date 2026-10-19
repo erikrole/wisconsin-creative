@@ -468,6 +468,14 @@ export async function kioskCheckinAsset(
     return { ok: false, reason: "already_returned" };
   }
 
+  // Claim the row only while it is still out. A double-tap that loses the
+  // race returns already-returned and does not move location or finish custody.
+  const claimed = await tx.bookingSerializedItem.updateMany({
+    where: { id: item.id, allocationStatus: "active" },
+    data: { allocationStatus: "returned" },
+  });
+  if (claimed.count !== 1) return { ok: false, reason: "already_returned" };
+
   const booking = await tx.booking.findUnique({
     where: { id: args.bookingId },
     select: { locationId: true, requesterUserId: true, custodyScope: true, endsAt: true },
@@ -480,10 +488,6 @@ export async function kioskCheckinAsset(
       })
     : undefined;
 
-  await tx.bookingSerializedItem.update({
-    where: { id: item.id },
-    data: { allocationStatus: "returned" },
-  });
   await tx.assetAllocation.updateMany({
     where: {
       bookingId: args.bookingId,

@@ -72,3 +72,29 @@ function countUnits<TUnit extends UnitLike>(
 ) {
   return units.filter((unit) => unit.status === status).length;
 }
+
+/**
+ * Same totals as `summarizeItemFamilyState` for a numbered family, from
+ * grouped counts instead of one row per unit. A stored CHECKED_OUT unit with
+ * no active allocation stays available. Lost and retired units are never
+ * counted as held.
+ */
+export function summarizeNumberedFamilyCounts(
+  statusCounts: Partial<Record<BulkUnitStatus, number>>,
+  activelyHeld: number,
+) {
+  const availableStored = statusCounts.AVAILABLE ?? 0;
+  const checkedOutStored = statusCounts.CHECKED_OUT ?? 0;
+  const lostQuantity = statusCounts.LOST ?? 0;
+  const retiredQuantity = statusCounts.RETIRED ?? 0;
+  const claimable = availableStored + checkedOutStored;
+  const held = Math.min(Math.max(0, activelyHeld), claimable);
+
+  return {
+    onHandQuantity: claimable + lostQuantity,
+    availableQuantity: claimable - held,
+    checkedOutQuantity: held,
+    lostQuantity,
+    retiredQuantity,
+  };
+}

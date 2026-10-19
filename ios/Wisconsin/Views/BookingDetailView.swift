@@ -12,6 +12,15 @@ struct BookingDetailView: View {
     @State private var showCancelConfirm = false
     @State private var showExtend = AppRuntimeMode.CaptureSeed.bookingExtend
     @State private var showEdit = AppRuntimeMode.CaptureSeed.bookingEdit
+    @State private var showReservationEdit = false
+    @State private var showTransferOwner = false
+    @State private var showForceComplete = false
+    @State private var showForceCheckout = false
+    @State private var showCloseRemaining = false
+    @State private var showEvents = false
+    @State private var showNudgeConfirm = false
+    @State private var showCustodyConfirm = false
+    @State private var notice: String?
     @State private var isActioning = false
     /// Web guards this call with an AbortController. Without an equivalent, a
     /// pull-to-refresh mid-flight lets the older availability answer land last
@@ -79,6 +88,62 @@ struct BookingDetailView: View {
         booking?.allows("duplicate") == true
     }
 
+    private var canNudgeBooking: Bool {
+        booking?.allows("nudge") == true
+    }
+
+    private var canForceComplete: Bool {
+        booking?.kind == .checkout && booking?.allows("force-complete") == true
+    }
+
+    private var canForceCheckout: Bool {
+        booking?.kind == .reservation && booking?.allows("force-checkout") == true
+    }
+
+    private var pickupHasStarted: Bool {
+        guard let booking, booking.kind == .reservation, booking.status == .booked else { return false }
+        if booking.serializedItems.contains(where: { $0.allocationStatus?.lowercased() == "picked_up" }) {
+            return true
+        }
+        if booking.bulkItems.contains(where: { $0.checkedOutQuantity > 0 }) { return true }
+        return booking.derivedCheckouts?.isEmpty == false
+    }
+
+    private var canCloseRemaining: Bool {
+        booking?.allows("close-remaining") == true && pickupHasStarted
+    }
+
+    private var canTransferOwner: Bool {
+        guard let booking else { return false }
+        if let allowed = booking.allows("transfer-owner") { return allowed }
+        guard let user = session.currentUser, user.role != "COLLABORATOR" else { return false }
+        if booking.custodyScope == "SHARED" { return false }
+        let canOwn = user.role == "STAFF" || user.role == "ADMIN" || booking.requester.id == user.id
+        return canOwn && [.draft, .booked, .pendingPickup, .open].contains(booking.status)
+    }
+
+    private var canManageCustody: Bool {
+        booking?.kind == .checkout && booking?.allows("manage-custody") == true
+    }
+
+    private var canEditLinkedEvents: Bool {
+        canEditBooking && booking?.kind == .checkout
+    }
+
+    private var usesActionMenu: Bool {
+        [
+            canEditBooking,
+            canReuseReservationGear,
+            canNudgeBooking,
+            canForceComplete,
+            canForceCheckout,
+            canCloseRemaining,
+            canTransferOwner,
+            canManageCustody,
+            canEditLinkedEvents,
+        ].filter { $0 }.count > 1
+    }
+
     var body: some View {
         Group {
             if isLoading && booking == nil {
@@ -118,6 +183,34 @@ struct BookingDetailView: View {
                                 )
                             }
                         }
+                        if BookingActivityAccess.canRead(role: session.currentUser?.role) {
+                            FormCard {
+                                NavigationLink {
+                                    BookingActivityView(bookingId: booking.id)
+                                } label: {
+                                    HStack(spacing: Brand.Space.sm) {
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text("Activity")
+                                                .font(.body.weight(.semibold))
+                                                .foregroundStyle(.primary)
+                                            Text("What changed on this booking.")
+                                                .font(.subheadline)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                        Spacer(minLength: Brand.Space.sm)
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundStyle(.tertiary)
+                                            .accessibilityHidden(true)
+                                    }
+                                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                                    .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel("Activity")
+                                .accessibilityHint("Shows what changed on this booking")
+                            }
+                        }
                         if canCancelBooking {
                             ActionsSection(
                                 isActioning: isActioning,
@@ -128,6 +221,12 @@ struct BookingDetailView: View {
                             Text(errorMsg)
                                 .font(.footnote)
                                 .foregroundStyle(Color.statusText(.red))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        if let notice {
+                            Text(notice)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                     }
@@ -141,15 +240,10 @@ struct BookingDetailView: View {
         .navigationTitle(booking?.title ?? "Booking")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            if canEditBooking && canReuseReservationGear {
+            if usesActionMenu {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
-                        Button { showEdit = true } label: {
-                            Label("Edit Details", systemImage: "pencil")
-                        }
-                        Button { reuseReservationGear() } label: {
-                            Label("Re-reserve for Another Event", systemImage: "arrow.trianglehead.2.clockwise.rotate.90")
-                        }
+                        bookingActionMenu
                     } label: {
                         Image(systemName: "ellipsis.circle")
                             .frame(minWidth: 44, minHeight: 44)
@@ -158,7 +252,7 @@ struct BookingDetailView: View {
                 }
             } else if canEditBooking {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button { showEdit = true } label: {
+                    Button { beginEdit() } label: {
                         Label("Edit Details", systemImage: "pencil")
                             .frame(minHeight: 44)
                     }
@@ -204,6 +298,61 @@ struct BookingDetailView: View {
                 }
             }
         }
+        .sheet(isPresented: $showReservationEdit) {
+            if let booking {
+                ReservationEditFlow(booking: booking) { updatedBooking in
+                    install(updatedBooking)
+                }
+            }
+        }
+        .sheet(isPresented: $showTransferOwner) {
+            if let booking {
+                TransferBookingOwnerSheet(booking: booking) { updatedBooking in
+                    install(updatedBooking)
+                }
+            }
+        }
+        .sheet(isPresented: $showForceComplete) {
+            if let booking {
+                BookingReasonSheet(
+                    title: "Close without scan?",
+                    message: "Use this only when an admin has physically verified every item is back. The checkout will close and the exception will be recorded in history.",
+                    confirmTitle: "Close checkout",
+                    placeholder: "Example: Scanner offline. All gear was verified on the shelf."
+                ) { reason in
+                    let updated = try await APIClient.shared.forceCompleteCheckout(id: booking.id, reason: reason)
+                    install(updated)
+                }
+            }
+        }
+        .sheet(isPresented: $showForceCheckout) {
+            if let booking {
+                BookingReasonSheet(
+                    title: "Force checkout?",
+                    message: "Use this only when an admin has physically verified the handoff. This bypasses kiosk scan verification, opens checkout custody for the remaining gear, and records the exception in history.",
+                    confirmTitle: "Force checkout",
+                    placeholder: "Example: Kiosk unavailable. The handoff was verified by an admin."
+                ) { reason in
+                    let updated = try await APIClient.shared.forceCheckoutReservation(id: booking.id, reason: reason)
+                    install(updated)
+                }
+            }
+        }
+        .sheet(isPresented: $showCloseRemaining) {
+            if let booking {
+                CloseRemainingSheet(booking: booking) { note in
+                    let updated = try await APIClient.shared.closeReservationRemaining(id: booking.id, reason: note)
+                    install(updated)
+                }
+            }
+        }
+        .sheet(isPresented: $showEvents) {
+            if let booking {
+                BookingEventsSheet(booking: booking) { updatedBooking in
+                    install(updatedBooking)
+                }
+            }
+        }
         .confirmationDialog("Cancel Booking", isPresented: $showCancelConfirm, titleVisibility: .visible) {
             Button("Cancel Booking", role: .destructive) {
                 Task { await cancelBooking() }
@@ -212,11 +361,103 @@ struct BookingDetailView: View {
         } message: {
             Text("This cannot be undone.")
         }
+        .confirmationDialog("Nudge borrower?", isPresented: $showNudgeConfirm, titleVisibility: .visible) {
+            Button("Send nudge") { Task { await nudgeBorrower() } }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Send a reminder about this overdue checkout.")
+        }
+        .confirmationDialog(
+            booking?.custodyScope == "SHARED" ? "Make this a personal checkout?" : "Make this a shared checkout?",
+            isPresented: $showCustodyConfirm,
+            titleVisibility: .visible
+        ) {
+            Button(booking?.custodyScope == "SHARED" ? "Make personal" : "Make shared") {
+                Task { await toggleCustody() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text(booking?.custodyScope == "SHARED"
+                 ? "This checkout will belong to its requester again."
+                 : "Shared checkouts belong to the travel case, not one person.")
+        }
+    }
+
+    @ViewBuilder
+    private var bookingActionMenu: some View {
+        if canEditBooking {
+            Button { beginEdit() } label: {
+                Label("Edit Details", systemImage: "pencil")
+            }
+            .accessibilityLabel("Edit booking details")
+            .disabled(isActioning)
+        }
+        if canNudgeBooking {
+            Button { showNudgeConfirm = true } label: {
+                Label("Nudge borrower", systemImage: "bell")
+            }
+            .disabled(isActioning)
+        }
+        if canForceComplete {
+            Button { showForceComplete = true } label: {
+                Label("Close without scan", systemImage: "checkmark.shield")
+            }
+            .disabled(isActioning)
+        }
+        if canForceCheckout {
+            Button { showForceCheckout = true } label: {
+                Label("Force checkout", systemImage: "exclamationmark.arrow.triangle.2.circlepath")
+            }
+            .disabled(isActioning)
+        }
+        if canCloseRemaining {
+            Button { showCloseRemaining = true } label: {
+                Label("Close without remaining gear", systemImage: "archivebox")
+            }
+            .disabled(isActioning)
+        }
+        if canTransferOwner {
+            Button { showTransferOwner = true } label: {
+                Label("Transfer Ownership", systemImage: "person.2")
+            }
+            .disabled(isActioning)
+        }
+        if canManageCustody {
+            Button { showCustodyConfirm = true } label: {
+                Label(
+                    booking?.custodyScope == "SHARED" ? "Make personal checkout" : "Make shared checkout",
+                    systemImage: "person.2.badge.gearshape"
+                )
+            }
+            .disabled(isActioning)
+        }
+        if canEditLinkedEvents {
+            Button { showEvents = true } label: {
+                Label("Edit linked events", systemImage: "calendar")
+            }
+            .disabled(isActioning)
+        }
+        if canReuseReservationGear {
+            Button { reuseReservationGear() } label: {
+                Label("Re-reserve for Another Event", systemImage: "arrow.trianglehead.2.clockwise.rotate.90")
+            }
+            .disabled(isActioning)
+        }
+    }
+
+    private func beginEdit() {
+        guard let booking else { return }
+        if booking.kind == .reservation {
+            showReservationEdit = true
+        } else {
+            showEdit = true
+        }
     }
 
     private func loadBooking() async {
         isLoading = true
         error = nil
+        notice = nil
         do {
             let loaded = try await APIClient.shared.booking(id: bookingId)
             booking = loaded
@@ -328,6 +569,45 @@ struct BookingDetailView: View {
                 Haptics.warning()
             }
             isActioning = false
+        }
+    }
+
+    private func nudgeBorrower() async {
+        if isActioning { return }
+        isActioning = true
+        defer { isActioning = false }
+        do {
+            let alreadyNudged = try await APIClient.shared.nudgeCheckout(id: bookingId)
+            notice = alreadyNudged ? "Already nudged this hour." : "Reminder sent."
+            error = nil
+            Haptics.success()
+        } catch {
+            self.error = error.localizedDescription
+            notice = nil
+            Haptics.warning()
+        }
+    }
+
+    private func toggleCustody() async {
+        guard let booking, let updatedAt = booking.updatedAt else {
+            error = "Refresh this checkout before changing custody."
+            return
+        }
+        if isActioning { return }
+        isActioning = true
+        defer { isActioning = false }
+        do {
+            let next = booking.custodyScope == "SHARED" ? "PERSON" : "SHARED"
+            let updated = try await APIClient.shared.updateCheckoutCustody(
+                id: booking.id,
+                custodyScope: next,
+                updatedAt: updatedAt
+            )
+            install(updated)
+            Haptics.success()
+        } catch {
+            self.error = error.localizedDescription
+            Haptics.warning()
         }
     }
 

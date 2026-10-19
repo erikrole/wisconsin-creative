@@ -39,7 +39,7 @@ export function BulkSkuHeader({
             type="button"
             onClick={() => canEdit && setImageModalOpen(true)}
             className={canEdit
-              ? "group relative shrink-0 cursor-pointer rounded-lg active:scale-[0.96] transition-transform"
+              ? "group relative shrink-0 cursor-pointer rounded-lg outline-none transition-transform focus-visible:ring-[3px] focus-visible:ring-ring/50 active:scale-[0.96]"
               : "relative shrink-0 cursor-default rounded-lg"}
             aria-label={canEdit ? "Change image" : undefined}
             tabIndex={canEdit ? 0 : -1}
@@ -51,7 +51,7 @@ export function BulkSkuHeader({
               className={canEdit ? "outline outline-1 outline-black/10 dark:outline-white/10 group-hover:opacity-70 transition-opacity" : "outline outline-1 outline-black/10 dark:outline-white/10"}
             />
             {canEdit && (
-              <span className="absolute inset-0 rounded-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-medium text-white bg-black/40">
+              <span className="absolute inset-0 flex items-center justify-center rounded-md bg-black/40 text-[10px] font-medium text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
                 Edit
               </span>
             )}

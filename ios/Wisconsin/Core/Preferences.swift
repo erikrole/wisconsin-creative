@@ -53,7 +53,7 @@ final class NotificationPrefsViewModel {
     var supportsLevels: Bool { !catalog.isEmpty }
 
     /// Quiet hours and levels are evaluated in the app timezone, not the device's.
-    static let appTimeZone = TimeZone(identifier: "America/Chicago") ?? .current
+    nonisolated static let appTimeZone = TimeZone(identifier: "America/Chicago") ?? .current
 
     private static let isoWithFractional: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()

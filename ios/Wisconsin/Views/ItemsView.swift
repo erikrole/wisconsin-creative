@@ -277,6 +277,9 @@ struct ItemsView: View {
             .navigationDestination(for: Asset.self) { asset in
                 ItemDetailView(assetId: asset.id)
             }
+            .navigationDestination(for: BulkSkuRoute.self) { route in
+                BulkInventoryDetailView(skuId: route.id)
+            }
             .navigationDestination(for: BookingRouteId.self) { route in
                 BookingDetailView(bookingId: route.id)
             }
@@ -512,7 +515,10 @@ struct ItemsView: View {
                 }
             }
         case .family(let family):
-            ItemFamilyListRow(family: family)
+            ZStack {
+                NavigationLink(value: BulkSkuRoute(id: family.id)) { EmptyView() }.opacity(0)
+                ItemFamilyListRow(family: family)
+            }
                 .listRowSeparator(.hidden)
                 .listRowBackground(Color.clear)
                 .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))

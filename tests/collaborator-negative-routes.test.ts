@@ -56,6 +56,8 @@ import { GET as getMyHours } from "@/app/api/shifts/my-hours/route";
 import { GET as getIcsToken } from "@/app/api/shifts/ics-token/route";
 import { GET as getItemsPageInit } from "@/app/api/items-page-init/route";
 import { GET as getAssetBrands } from "@/app/api/assets/brands/route";
+import { GET as getAccessories } from "@/app/api/assets/[id]/accessories/route";
+import { GET as getCalendarSources } from "@/app/api/calendar-sources/route";
 import { GET as getFormOptions } from "@/app/api/form-options/route";
 
 const collaborator = {
@@ -121,6 +123,14 @@ describe("collaborator default-deny route matrix", () => {
       "the event command center",
       () => getCommandCenter(request("/api/calendar-events/event-1/command-center"), { params: Promise.resolve({ id: "event-1" }) }),
     ],
+    [
+      "calendar feed URLs",
+      () => getCalendarSources(request("/api/calendar-sources"), { params: Promise.resolve({}) }),
+    ],
+    [
+      "item serial numbers on attachments",
+      () => getAccessories(request("/api/assets/asset-1/accessories"), { params: Promise.resolve({ id: "asset-1" }) }),
+    ],
   ])("denies %s", async (_label, invoke) => {
     const response = await invoke();
     expect(response.status).toBe(403);
@@ -162,6 +172,14 @@ describe("collaborator default-deny route matrix", () => {
     [
       "asset insights",
       () => getAssetInsights(request("/api/assets/asset-1/insights"), { params: Promise.resolve({ id: "asset-1" }) }),
+    ],
+    [
+      "calendar sources",
+      () => getCalendarSources(request("/api/calendar-sources"), { params: Promise.resolve({}) }),
+    ],
+    [
+      "item attachments",
+      () => getAccessories(request("/api/assets/asset-1/accessories"), { params: Promise.resolve({ id: "asset-1" }) }),
     ],
   ])("still admits a student to %s", async (_label, invoke) => {
     vi.mocked(requireAuth).mockResolvedValue({ ...collaborator, role: Role.STUDENT, capabilities: [] });

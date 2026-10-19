@@ -387,6 +387,7 @@ struct RootView: View {
             }
         }
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: session.isRestoring)
+        .announcementSplash(eligibilityKey: announcementEligibilityKey)
         .task(id: session.currentUser?.shellIdentity) {
             guard let user = session.currentUser,
                   !user.forcePasswordChange,
@@ -444,6 +445,20 @@ struct RootView: View {
             .opacity(0.01)
             .accessibilityHidden(true)
         }
+    }
+
+    /// Who may see the announcement splash: a signed-in staff or student past
+    /// profile setup. Collaborators and role previews never do.
+    private var announcementEligibilityKey: String? {
+        guard let user = session.currentUser,
+              !user.forcePasswordChange,
+              !user.isReadOnlyRolePreview,
+              user.role != "COLLABORATOR" else { return nil }
+        guard case .app = profileCompletion.route(
+            for: user,
+            optimisticSession: session.usedOptimisticSessionSnapshot
+        ) else { return nil }
+        return user.shellIdentity
     }
 
     @MainActor

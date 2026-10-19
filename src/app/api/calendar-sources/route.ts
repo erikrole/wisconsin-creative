@@ -11,7 +11,8 @@ const createSourceSchema = z.object({
   url: z.string().url()
 });
 
-export const GET = withAuth(async () => {
+export const GET = withAuth(async (_req, { user }) => {
+  requirePermission(user.role, "calendar_source", "view");
   const sources = await db.calendarSource.findMany({
     orderBy: { name: "asc" },
     take: 100,

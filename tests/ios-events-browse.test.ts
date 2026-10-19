@@ -8,18 +8,19 @@ const models = () => source("ios/Wisconsin/Models/EventCatalogModels.swift");
 const client = () => source("ios/Wisconsin/Core/APIClient.swift");
 
 describe("iOS Events browse", () => {
-  it("adds a read-only Events row for internal roles and keeps collaborators off it", () => {
+  it("keeps event discovery in Schedule instead of a second Browse destination", () => {
     const menu = browse();
     const internalRows = menu.slice(
       menu.indexOf('guard session.currentUser?.role == "COLLABORATOR" else {'),
       menu.indexOf("let capabilities"),
     );
 
-    expect(internalRows).toContain("[.scoreboard, .events, .items, .guides, .blasts, .licenses, .users]");
-    expect(menu).toContain('case .events: "Events"');
-    expect(menu).toContain("Event details, linked gear, and bookings.");
-    expect(menu).toContain("EventsView(wrapsInNavigationStack: false)");
-    expect(menu).toContain('case .users: "Users"');
+    expect(internalRows).not.toContain(".events");
+    expect(menu).not.toContain('case events');
+    expect(menu).not.toContain("EventsView(wrapsInNavigationStack: false)");
+    expect(menu).toContain('if rawValue == "events"');
+    expect(menu).toContain("appState.selectedTab = 1");
+    expect(menu).toContain('case .users: "Staff"');
 
     const collaboratorRows = menu.slice(
       menu.indexOf("let capabilities"),
@@ -29,7 +30,7 @@ describe("iOS Events browse", () => {
     expect(collaboratorRows).toContain(".scoreboard");
   });
 
-  it("lists calendar events inside the Browse navigation stack", () => {
+  it("keeps retained catalog reads bounded and read-only", () => {
     const events = list();
 
     expect(events).toContain("var wrapsInNavigationStack = true");

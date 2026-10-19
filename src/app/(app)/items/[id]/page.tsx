@@ -23,6 +23,7 @@ import { useItemChangeSync } from "@/hooks/use-item-change-sync";
 import { parseDetailTab, serializeDetailTab, useUrlState } from "@/hooks/use-url-state";
 import { ItemConditionReports } from "./_components/ItemConditionReports";
 import { ItemHeader } from "./_components/ItemHeader";
+import { ItemPurchasePanel } from "./_components/ItemPurchasePanel";
 import { BulkSkuDetailExperience } from "../../bulk-inventory/[id]/BulkSkuDetailExperience";
 import { BULK_ID_PREFIX } from "../lib/item-href";
 import type { AssetDetail } from "./types";
@@ -311,6 +312,7 @@ function SerializedItemDetailsPage({ id }: { id: string }) {
               onCategoriesChanged={loadCategories}
             />
           </div>
+          {currentUserRole === "ADMIN" && <ItemPurchasePanel assetId={asset.id} />}
         </>
       )}
 

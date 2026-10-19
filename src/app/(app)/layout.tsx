@@ -12,6 +12,7 @@ import { HttpError } from "@/lib/http";
 import { loginPathWithReturnTo } from "@/lib/return-to";
 import { ProductUsageTracker } from "@/components/ProductUsageTracker";
 import { canViewUsageAnalytics } from "@/lib/usage-analytics";
+import { AnnouncementSplash } from "@/components/announcements/AnnouncementSplash";
 import WebMCPProvider from "@/components/WebMCPProvider";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -37,6 +38,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <TooltipProvider>
             {!user.preview && <ProductUsageTracker />}
             <OfflineBanner />
+            <AnnouncementSplash enabled={!user.preview && user.role !== "COLLABORATOR"} />
             <AppShell
               initialUser={{ ...user, canViewUsageAnalytics: canViewUsageAnalytics(user) }}
               defaultSidebarOpen={defaultSidebarOpen}

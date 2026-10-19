@@ -1,4 +1,4 @@
-import type { GearPickFitKey } from "./catalog";
+import type { GearPickFitKey, GearPickPhoneCatalog } from "./catalog";
 
 /** Client-safe response shapes for /api/gear-picks/*. Dates are ISO strings. */
 
@@ -50,6 +50,8 @@ export type GearPicksMeResponse = {
     shoeSizeSystem: "US_WOMENS" | "US_MENS" | null;
   };
   isAdmin: boolean;
+  /** Present only when the caller asks for it. The website already bundles the catalog. */
+  catalog?: GearPickPhoneCatalog;
 };
 
 export type GearPickSubmissionStatus = "NOT_STARTED" | "DRAFT" | "SUBMITTED";
@@ -81,4 +83,83 @@ export type GearPicksAdminResponse = {
     totalCents: number;
   };
   candidates: { id: string; name: string; role: string }[];
+  students: GearPickAdminStudent[];
+  studentCandidates: { id: string; name: string }[];
+  /** Admin-only budget view. `committedCents` counts staff picks only for now. */
+  budget: GearPickBudgetDto;
+  order: GearPickOrderDto;
+  receipts: GearPickReceiptDto[];
+  handouts: GearPickHandoutDto[];
+};
+
+/** The order record. The Equipment department places the order; the site only records it. */
+export type GearPickOrderDto = {
+  placedAt: string | null;
+  poNumber: string | null;
+  orderNumber: string | null;
+  expectedAt: string | null;
+};
+
+export type GearPickReceiptDto = {
+  id: string;
+  sku: string;
+  size: string | null;
+  quantity: number;
+  receivedAt: string;
+  note: string | null;
+  receivedBy: string | null;
+};
+
+export type GearPickBudgetDto = {
+  budgetCents: number;
+  confirmed: boolean;
+  /** Dollar total of every saved pick list, drafts included. */
+  picksCents: number;
+  /** Student kit price times the students on the roster. */
+  studentKitsCents: number;
+  studentKitCents: number;
+  committedCents: number;
+  remainingCents: number;
+};
+
+export type GearPickAdminStudent = {
+  id: string;
+  user: { id: string; name: string; active: boolean };
+  topSize: string | null;
+  topSizeFit: "UNISEX" | "WOMENS" | "MENS" | null;
+  shoeSize: string | null;
+  needsSize: boolean;
+};
+
+/** A piece handed out to a person. The key is the person, SKU, size and source. */
+export type GearPickHandoutDto = {
+  userId: string;
+  sku: string;
+  size: string;
+  source: "STANDARD_ISSUE" | "CORE_KIT" | "STUDENT_KIT" | "PICK";
+  quantity: number;
+  handedOutAt: string;
+};
+
+/** A finished year, read-only. Money is in whole cents. */
+export type GearPastCycleDto = {
+  id: string;
+  title: string;
+  budgetCents: number;
+  /** Spend the old sheet counted against the budget. */
+  budgetedSpendCents: number;
+  otherSpendCents: number;
+  /** Budget minus budgeted spend. Negative means over budget. */
+  remainingCents: number;
+  note: string | null;
+  items: {
+    sku: string;
+    itemName: string;
+    colorLabel: string;
+    unitPriceCents: number;
+    plannedQty: number;
+    orderedQty: number;
+    receivedQty: number;
+  }[];
+  people: { name: string; groupLabel: string; fit: string; topSize: string | null; shoeSize: string | null }[];
 };

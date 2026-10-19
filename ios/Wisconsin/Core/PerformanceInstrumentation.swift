@@ -17,6 +17,8 @@ enum AppRuntimeMode {
         /// The signed Student preview shell, used to compare the persistent
         /// preview marker without real credentials or production data.
         case previewChrome = "preview-chrome"
+        /// Latest Browse screens with representative, offline API responses.
+        case latestBrowse = "latest-browse"
         case resourcesUsers
         case resourcesLicenses
         /// Licenses with nothing claimed by the viewer and a code inside the
@@ -98,6 +100,27 @@ enum AppRuntimeMode {
         /// Search with two of its four sources deliberately failing, so the
         /// partial-result notice can be seen rather than reasoned about.
         case searchPartial = "search-partial"
+        /// The announcement splash over the real app shell, served canned
+        /// announcements: a banner image with another waiting behind it,
+        /// a swipeable set of images, and a text-only notice.
+        case announcement
+        case announcementImages = "announcement-images"
+        case announcementPlain = "announcement-plain"
+        /// Worst-case content: a long title, four images, many bullets, a block
+        /// type the app does not know, and an https button.
+        case announcementStress = "announcement-stress"
+        /// The server has nothing for this person (`data: null`).
+        case announcementNone = "announcement-none"
+        /// The announcements request fails; the app must show nothing and stay usable.
+        case announcementError = "announcement-error"
+        /// An 80-character title, a ~1200-character body, and 8 bullets.
+        case announcementLong = "announcement-long"
+        /// Three waiting, so "N more" counts down 2, 1, then gone.
+        case announcementQueue = "announcement-queue"
+        /// One image that cannot load, to see the failure placeholder.
+        case announcementBrokenImage = "announcement-broken-image"
+        /// A button whose in-app link opens its native screen.
+        case announcementCtaRoute = "announcement-cta-route"
 
         /// The booking scenarios share one fixture and differ only in which
         /// sheet is seeded open.
@@ -161,13 +184,16 @@ enum AppRuntimeMode {
     static var usesFixtureAPI: Bool {
 #if DEBUG
         switch performanceScenario {
-        case .resourcesGuides, .previewChrome, .resourcesUsers, .resourcesLicenses, .resourcesLicensesOpen,
+        case .resourcesGuides, .previewChrome, .latestBrowse, .resourcesUsers, .resourcesLicenses, .resourcesLicensesOpen,
              .schedule, .tradeBoardStaff, .tradeBoardStudent,
              .home, .homeAllClear, .scoreboard, .profile,
              .studentBookings,
              .bookingDetail, .bookingExtend, .bookingEdit, .bookingCancel,
              .itemEdit, .createBookingScanner, .createBookingEvents, .search, .searchPartial,
-             .itemsList, .reports, .accountSecurity, .notifications, .login:
+             .itemsList, .reports, .accountSecurity, .notifications, .login,
+             .announcement, .announcementImages, .announcementPlain,
+             .announcementStress, .announcementNone, .announcementError,
+             .announcementLong, .announcementQueue, .announcementBrokenImage, .announcementCtaRoute:
             return true
         default:
             return false

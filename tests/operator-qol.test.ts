@@ -5,7 +5,7 @@ import { source } from "./_helpers/source";
 const clipboardConsumers = [
   "src/app/(app)/settings/kiosk-devices/page.tsx",
   "src/components/resources/MarkdownReader.tsx",
-  "src/app/(app)/users/[id]/UserInfoTab.tsx",
+  "src/app/(app)/staff/[id]/UserInfoTab.tsx",
   "src/app/(app)/items/[id]/ItemInfoTab.tsx",
 ];
 
@@ -61,7 +61,7 @@ describe("operator clipboard feedback", () => {
 
 describe("user deactivation confirmation", () => {
   it("confirms the consequence before the optimistic status update", () => {
-    const page = source("src/app/(app)/users/[id]/page.tsx");
+    const page = source("src/app/(app)/staff/[id]/page.tsx");
     const start = page.indexOf("async function toggleActive");
     const end = page.indexOf("async function handlePasswordReset", start);
     const toggle = page.slice(start, end);

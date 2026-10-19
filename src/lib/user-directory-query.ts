@@ -47,10 +47,6 @@ export function buildUserDirectoryQuery(
     });
   }
 
-  if (filters.role && DIRECTORY_ROLES.has(filters.role)) {
-    conditions.push({ role: filters.role as Role });
-  }
-
   if (!isCollaboratorDirectory && filters.locationId?.trim()) {
     conditions.push({ locationId: filters.locationId.trim() });
   }
@@ -90,6 +86,12 @@ export function buildUserDirectoryQuery(
     });
   }
 
+  // Role-tab counts must ignore the selected role, or picking a tab zeroes the others.
+  const roleCountsWhere: Prisma.UserWhereInput = { AND: [...conditions] };
+  if (filters.role && DIRECTORY_ROLES.has(filters.role)) {
+    conditions.push({ role: filters.role as Role });
+  }
+
   const summaryWhere: Prisma.UserWhereInput = { AND: [...conditions] };
   const active = filters.active ?? "active";
 
@@ -101,6 +103,7 @@ export function buildUserDirectoryQuery(
   return {
     isCollaboratorDirectory,
     summaryWhere,
+    roleCountsWhere,
     where: conditions.length > 0 ? { AND: conditions } : {},
   };
 }

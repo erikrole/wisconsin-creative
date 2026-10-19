@@ -30,6 +30,17 @@ export const PERMISSIONS: Record<string, Record<string, Role[]>> = {
     submit: ["ADMIN", "STAFF", "STUDENT"],
     manage: ["ADMIN"],
   },
+  // Department budgets and purchases: admin only (the people who plan the spend).
+  budget: {
+    view: ["ADMIN"],
+    manage: ["ADMIN"],
+  },
+  // Wish list: staff and admins add and see everything; admins review and move wishes into the budget.
+  wish: {
+    view: ["ADMIN", "STAFF"],
+    create: ["ADMIN", "STAFF"],
+    manage: ["ADMIN"],
+  },
   user: {
     view: ["ADMIN", "STAFF", "STUDENT"],
     edit_self: ["ADMIN", "STAFF", "STUDENT", "COLLABORATOR"],
@@ -196,6 +207,10 @@ export const PERMISSIONS: Record<string, Record<string, Role[]>> = {
     create: ["ADMIN", "STAFF"],
     edit: ["ADMIN", "STAFF"],
     delete: ["ADMIN"],
+  },
+  announcement: {
+    view: ["ADMIN", "STAFF", "STUDENT"],
+    manage: ["ADMIN"],
   },
   kiosk_device: {
     view: ["ADMIN"],

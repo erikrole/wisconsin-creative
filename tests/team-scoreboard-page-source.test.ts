@@ -50,14 +50,14 @@ describe("team Scoreboard page source contract", () => {
 
     expect(client).toContain("personScoreboardPath(userId, filters, sort)");
     expect(client).toContain("href={hrefForPerson(person.userId)}");
-    expect(client).not.toContain('href={`/users/${person.userId}');
+    expect(client).not.toContain('href={`/staff/${person.userId}');
     expect(client).not.toContain("email");
     expect(client).not.toContain("primaryArea");
   });
 
   it("loads only minimal identity for cross-user detail and suppresses protected event links", () => {
     const detail = source("src/app/(app)/scoreboard/[id]/page.tsx");
-    const tab = source("src/app/(app)/users/[id]/UserScoreboardTab.tsx");
+    const tab = source("src/app/(app)/staff/[id]/UserScoreboardTab.tsx");
 
     expect(detail).toContain("canReadSharedScoreboard");
     expect(detail).toContain("id: true");

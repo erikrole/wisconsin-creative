@@ -223,7 +223,7 @@ export default function AllowedEmailsPage() {
               Add users
             </Button>
             <Button asChild variant="outline" className="min-h-10">
-              <Link href="/users/onboarding-status">
+              <Link href="/staff/onboarding-status">
                 <ClipboardList data-icon="inline-start" />
                 Status
               </Link>

@@ -1250,16 +1250,31 @@ final class CreateBookingViewModel {
     /// a scanned battery unit). Seeds one unit of the SKU; the equipment step
     /// resolves the SKU details once form options load.
     func prefillReservation(forFamily family: AssetFamilySearchResult) {
+        prefillReservation(bulkSkuId: family.id, name: family.name, locationId: family.locationId)
+    }
+
+    /// Prefills one unit of an item family opened from inventory detail.
+    func prefillReservation(bulkSkuId: String, name: String, locationId: String) {
         usesEventLinkedSetup = false
         if title.isEmpty {
-            title = "Reservation: \(family.name)"
+            title = "Reservation: \(name)"
         }
-        if (selectedBulkQuantities[family.id] ?? 0) == 0 {
-            selectedBulkQuantities[family.id] = 1
+        if (selectedBulkQuantities[bulkSkuId] ?? 0) == 0 {
+            selectedBulkQuantities[bulkSkuId] = 1
         }
         if selectedLocationId.isEmpty {
-            selectedLocationId = family.locationId
+            selectedLocationId = locationId
         }
+    }
+
+    /// Opens event-linked reservation setup with this kit already chosen.
+    /// The event still names the booking. Gear expands once kits load.
+    func prefillCalledKit(id: String, locationId: String) {
+        usesEventLinkedSetup = true
+        selectedLocationId = locationId
+        userEditedLocation = true
+        selectedKitId = id
+        didApplySuggestedKit = true
     }
 
     /// Starts a fresh event plan from a past booking. Person, pickup, notes,

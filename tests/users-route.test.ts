@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
 vi.mock("@/lib/auth", () => ({
   requireAuth: vi.fn(),
@@ -252,6 +252,43 @@ describe("GET /api/users", () => {
       }),
     );
     expect(body.data[0].lastActiveAt).toBe("2026-05-13T14:00:00.000Z");
+  });
+
+  it("sorts by area and returns true area counts for grouped headings", async () => {
+    (vi.mocked(db.user.groupBy) as unknown as Mock).mockImplementation(async (args: { by: string[] }) =>
+      args.by[0] === "primaryArea"
+        ? [
+            { primaryArea: "PHOTO", _count: { _all: 7 } },
+            { primaryArea: null, _count: { _all: 2 } },
+          ]
+        : []);
+
+    const res = await GET(
+      new Request("https://app.example.com/api/users?sort=area"),
+      { params: Promise.resolve({}) },
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(db.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: [{ primaryArea: { sort: "asc", nulls: "last" } }, { name: "asc" }, { id: "asc" }],
+      }),
+    );
+    expect(body.stats.areaCounts).toEqual({ PHOTO: 7, NONE: 2 });
+  });
+
+  it("keeps role tab counts independent of the selected role", async () => {
+    await GET(
+      new Request("https://app.example.com/api/users?role=STUDENT"),
+      { params: Promise.resolve({}) },
+    );
+
+    const calls = vi.mocked(db.user.groupBy).mock.calls.map((c) => c[0] as { by: string[]; where: { AND: unknown[] } });
+    const roleCall = calls.find((c) => c.by[0] === "role");
+    const areaCall = calls.find((c) => c.by[0] === "primaryArea");
+    expect(roleCall?.where.AND).not.toContainEqual({ role: "STUDENT" });
+    expect(areaCall?.where.AND).toContainEqual({ role: "STUDENT" });
   });
 
   it.each(["name", "name_desc", "role", "created"])("uses a unique directory tiebreaker for %s", async (sort) => {

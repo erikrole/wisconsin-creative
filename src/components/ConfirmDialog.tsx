@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useRef, useState } from "react";
+import { restoreDialogFocus } from "@/lib/a11y-resilience";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,50 +36,67 @@ export function useConfirm() {
 }
 
 export function ConfirmProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<ConfirmOptions | null>(null);
+  const [options, setOptions] = useState<ConfirmOptions | null>(null);
+  const [open, setOpen] = useState(false);
   const resolveRef = useRef<((value: boolean) => void) | null>(null);
+  const openerRef = useRef<HTMLElement | null>(null);
+  const requestRef = useRef(0);
 
-  const confirm = useCallback((options: ConfirmOptions): Promise<boolean> => {
-    setState(options);
+  const confirm = useCallback((next: ConfirmOptions): Promise<boolean> => {
+    const request = ++requestRef.current;
     return new Promise<boolean>((resolve) => {
       resolveRef.current = resolve;
+      // Wait until a menu that opened this confirm has returned focus to its
+      // trigger. Capturing the menu item itself loses focus when that item unmounts.
+      requestAnimationFrame(() => {
+        if (request !== requestRef.current) return;
+        const active = document.activeElement;
+        openerRef.current = active instanceof HTMLElement && active !== document.body ? active : null;
+        setOptions(next);
+        setOpen(true);
+      });
     });
   }, []);
 
-  function handleResult(result: boolean) {
-    setState(null);
-    resolveRef.current?.(result);
+  function finish(result: boolean) {
+    setOpen(false);
+    const resolve = resolveRef.current;
     resolveRef.current = null;
+    resolve?.(result);
   }
 
   return (
     <ConfirmContext.Provider value={{ confirm }}>
       {children}
       <AlertDialog
-        open={!!state}
-        onOpenChange={(open) => {
-          if (!open) handleResult(false);
+        open={open}
+        onOpenChange={(next) => {
+          if (!next) finish(false);
         }}
       >
-        {state && (
-          <AlertDialogContent>
+        {options && (
+          <AlertDialogContent
+            onCloseAutoFocus={(event) => {
+              restoreDialogFocus(openerRef.current, event);
+            }}
+          >
             <AlertDialogHeader>
-              <AlertDialogTitle>{state.title}</AlertDialogTitle>
-              <AlertDialogDescription>{state.message}</AlertDialogDescription>
+              <AlertDialogTitle>{options.title}</AlertDialogTitle>
+              <AlertDialogDescription>{options.message}</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => handleResult(false)}>
-                {state.cancelLabel || "Cancel"}
+              <AlertDialogCancel onClick={() => finish(false)}>
+                {options.cancelLabel || "Cancel"}
               </AlertDialogCancel>
               <AlertDialogAction
                 className={cn(
-                  state.variant === "danger"
+                  options.variant === "danger"
                     ? buttonVariants({ variant: "destructive" })
                     : buttonVariants({ variant: "default" }),
                 )}
-                onClick={() => handleResult(true)}
+                onClick={() => finish(true)}
               >
-                {state.confirmLabel || "Confirm"}
+                {options.confirmLabel || "Confirm"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

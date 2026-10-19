@@ -71,9 +71,26 @@ struct ItemDetailView: View {
                                 startReservation(for: asset.asAsset)
                             }
                         }
+                        if canEditAsset, !asset.checkinReports.isEmpty {
+                            ItemConditionReportsCard(
+                                reports: asset.checkinReports,
+                                heldForStaff: asset.computedStatus == .maintenance
+                            )
+                        }
                         UpcomingReservationsCard(reservations: asset.upcomingReservations)
                         ItemDetailsCard(asset: asset, canSeeProcurement: canEditAsset)
+                        ItemRelatedInventoryCard(
+                            asset: asset,
+                            role: session.currentUser?.role ?? "",
+                            capabilities: session.currentUser?.capabilities
+                        )
                         ItemBookingsLinkCard(history: asset.history)
+                        if canEditAsset {
+                            ItemActivityLink(
+                                assetId: asset.id,
+                                assetName: asset.name.nonBlankText ?? asset.itemListPrimaryTitle
+                            )
+                        }
                         if let notes = asset.notes, !notes.isEmpty {
                             NotesCard(notes: notes)
                         }
@@ -801,6 +818,186 @@ private struct ItemAvailabilityCard: View {
     }
 }
 
+// MARK: - Condition reports
+
+private struct ConditionReportPhoto: Identifiable {
+    let id: String
+    let url: URL
+    let label: String
+}
+
+/// The same five-report record the website shows on item Info. Reserve stays
+/// the screen's action. Opening a checkout is the row action. Clearing
+/// maintenance stays in the toolbar menu.
+private struct ItemConditionReportsCard: View {
+    let reports: [AssetConditionReport]
+    let heldForStaff: Bool
+    @State private var photo: ConditionReportPhoto?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Condition reports")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+                    .tracking(0.04)
+                summary()
+            }
+            ForEach(Array(reports.enumerated()), id: \.element.id) { index, report in
+                reportSeparator(show: index > 0)
+                reportRow(report)
+            }
+            olderNote()
+        }
+        .brandCard()
+        .fullScreenCover(item: $photo) { photo in
+            ZoomableImageViewer(url: photo.url, photoLabel: photo.label)
+        }
+    }
+
+    @ViewBuilder
+    private func summary() -> some View {
+        if heldForStaff {
+            Text("Held for staff. Inspect the item and review the evidence before clearing maintenance.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        } else {
+            Text("Recent reports remain here as a record. The item's current status is shown above.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    @ViewBuilder
+    private func reportSeparator(show: Bool) -> some View {
+        if show {
+            Divider()
+        } else {
+            EmptyView()
+        }
+    }
+
+    @ViewBuilder
+    private func olderNote() -> some View {
+        if reports.count == 5 {
+            Text("Showing the five most recent reports.")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+        } else {
+            EmptyView()
+        }
+    }
+
+    private func reportRow(_ report: AssetConditionReport) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            statusLabel(for: report)
+            Text("\(report.reporterName) · \(reportDate(report.reportedAt))")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            descriptionText(report.note)
+            evidence(for: report)
+            checkoutLink(for: report)
+        }
+    }
+
+    @ViewBuilder
+    private func statusLabel(for report: AssetConditionReport) -> some View {
+        if report.isMissing {
+            Text("Reported missing")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Color.statusText(.red))
+        } else if report.isDamaged {
+            Text("Damage reported")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Color.statusText(.orange))
+        } else {
+            Text("Condition report")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private func descriptionText(_ text: String) -> some View {
+        if text.isEmpty {
+            Text("No description was provided.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        } else {
+            Text(text)
+                .font(.subheadline)
+                .foregroundStyle(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    @ViewBuilder
+    private func evidence(for report: AssetConditionReport) -> some View {
+        if let url = report.photoURL {
+            Button {
+                photo = ConditionReportPhoto(id: report.id, url: url, label: report.photoAccessibilityLabel)
+            } label: {
+                CachedThumbnail(url: url, size: 88, contentMode: .fill)
+                    .frame(width: 88, height: 66)
+                    .clipped()
+                    .clipShape(RoundedRectangle(cornerRadius: Brand.Radius.sm, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .frame(minWidth: 44, minHeight: 44, alignment: .leading)
+            .accessibilityLabel(report.photoAccessibilityLabel)
+        } else {
+            Text("No photo attached")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func checkoutLink(for report: AssetConditionReport) -> some View {
+        NavigationLink(destination: BookingDetailView(bookingId: report.bookingId)) {
+            HStack(spacing: 8) {
+                Text(checkoutTitle(report.bookingTitle))
+                    .font(.subheadline)
+                    .foregroundStyle(.primary)
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(2)
+                Spacer(minLength: 8)
+                Image(systemName: "chevron.right")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+                    .accessibilityHidden(true)
+            }
+            .frame(minHeight: 44)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("View checkout, \(checkoutTitle(report.bookingTitle))")
+    }
+
+    private func checkoutTitle(_ title: String) -> String {
+        title.isEmpty ? "View checkout" : "View checkout · \(title)"
+    }
+
+    private func reportDate(_ date: Date) -> String {
+        date.formatted(
+            Date.FormatStyle(
+                date: .abbreviated,
+                time: .omitted,
+                locale: Locale(identifier: "en_US"),
+                timeZone: NotificationPrefsViewModel.appTimeZone
+            )
+        )
+    }
+}
+
+private extension AssetConditionReport {
+    var note: String {
+        description?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    }
+}
+
 // MARK: - Item bookings
 
 private struct UpcomingReservationsCard: View {
@@ -862,6 +1059,76 @@ private struct UpcomingReservationsCard: View {
             }
         }
         .brandCard()
+    }
+}
+
+private struct ItemRelatedInventoryCard: View {
+    let asset: AssetDetail
+    let role: String
+    let capabilities: [String]?
+
+    private var showsKits: Bool {
+        InventoryReadAccess.canViewKits(role: role, capabilities: capabilities)
+            && InventoryReadAccess.categoryBelongsInKits(asset.category?.name)
+    }
+
+    private var showsBatteryOps: Bool {
+        InventoryReadAccess.canOpenBatteryOps(role: role)
+            && InventoryReadAccess.isBatteryFamily(name: asset.displayName, category: asset.category?.name)
+    }
+
+    var body: some View {
+        if showsKits || showsBatteryOps {
+            VStack(spacing: 0) {
+                if showsKits {
+                    NavigationLink {
+                        KitsView(
+                            locationId: asset.location.id.isEmpty ? nil : asset.location.id,
+                            locationName: asset.location.name,
+                            wrapsInNavigationStack: false
+                        )
+                    } label: {
+                        relatedRow(
+                            title: asset.location.name.isEmpty ? "Kits" : "Kits at \(asset.location.name)",
+                            systemImage: "square.stack.3d.up"
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+                if showsKits && showsBatteryOps {
+                    Divider()
+                }
+                if showsBatteryOps {
+                    NavigationLink {
+                        BatteryOpsView(wrapsInNavigationStack: false)
+                    } label: {
+                        relatedRow(title: "Battery Ops", systemImage: "battery.100")
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .brandCard(padding: 0)
+        }
+    }
+
+    private func relatedRow(title: String, systemImage: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: systemImage)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: 24)
+                .accessibilityHidden(true)
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.primary)
+            Spacer(minLength: 8)
+            Image(systemName: "chevron.right")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.tertiary)
+                .accessibilityHidden(true)
+        }
+        .padding(Brand.Space.md)
+        .contentShape(Rectangle())
     }
 }
 

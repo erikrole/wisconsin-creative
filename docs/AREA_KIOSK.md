@@ -4,7 +4,7 @@
 - Owner: Erik Role (Wisconsin Athletics Creative)
 - Status: Shipped — iOS canonical (web kiosk deprecated 2026-04-24)
 - Created: 2026-04-07
-- Last Updated: 2026-10-01
+- Last Updated: 2026-10-18
 - Brief: `BRIEF_KIOSK.md`
 - Decision Refs: D-030, D-032, D-040, D-064
 
@@ -65,7 +65,7 @@ Files under `ios/Wisconsin/Kiosk/`:
   - `GET /dashboard` — live stats (active checkouts, today's events, team status) with partial-result fallbacks so one failed read does not blank the idle screen
   - `GET /events` — visible upcoming events for checkout context, capped to the next 7 days
   - `GET /kits`, `GET /kits/[id]` — active kits at this kiosk pickup (Camp Randall aliases included) for checkout setup
-  - `GET /users` — global roster of active, visible internal users plus policy-eligible collaborators
+  - `GET /staff` — global roster of active, visible internal users plus policy-eligible collaborators
   - `POST /identify` — resolves a scanned Wiscard value to an active, visible kiosk user regardless of saved profile location
   - `GET /student/[userId]` — global person context with active checkouts, pending pickups, reservations, and `checkoutAllowance`
   - `POST /checkout/scan`, `POST /checkout/complete`, `GET/PATCH/POST/DELETE /checkout/[id]`
@@ -136,7 +136,7 @@ Files under `ios/Wisconsin/Kiosk/`:
 | AC-35 | Anyone at the kiosk can nudge an overdue checkout from home, once per booking per local day (D-064) | ⏳ Source/test/simulator on branch (2026-09-28); live-server proof pending |
 | AC-36 | A missing item reported at a return is accounted for like web LOST, so the return can finish; a damaged item counts as returned and is held for staff (D-064) | ⏳ Source/test/simulator on branch (2026-09-28); live-server and managed-iPad camera proof pending |
 | AC-37 | Changing what's reserved (H5) stages every change and applies them in order only on Save, reporting any change that fails | ⏳ Source/simulator on branch (2026-09-28); live-server proof pending |
-| AC-38 | C5 Staff actions open only after a staff ID card scan the server accepts; staff changes to someone else's checkout (due back, whole transfer) are refused without that unexpired, kiosk-bound proof | ⏳ Source/test/build on branch (2026-10-01); deploy and managed-iPad proof pending |
+| AC-38 | C5 Staff actions open only after a staff ID card scan the server accepts; staff changes to someone else's personal checkout (due back, add, remove, swap, whole transfer) are refused without that unexpired, kiosk-bound proof | ⏳ Source/test on branch (2026-10-18); Mac build, deploy, and managed-iPad proof pending |
 
 ## Known Gaps
 
@@ -152,6 +152,8 @@ Files under `ios/Wisconsin/Kiosk/`:
 - Badge reward presentation has generic iOS Simulator compile proof, but the iPad-only target excludes the standard iPhone 16 Pro simulator destination and the reward state has not yet been rendered on the managed landscape iPad. Custody remains complete even if reward lookup fails.
 
 ## Change Log
+| 2026-10-18 | **Kiosk scans and due days hold up under a double tap.** A second pickup scan of the same item no longer writes another custody event. A repeated serialized, numbered, or counted return that loses the race does not restock or count the item twice. Adding a numbered unit to a reservation no longer hides a failed undo of the reserved slot. Pickup and return screens reload after a scan error or a duplicate so the list matches the server. Due today, day chips, and night hours follow the Chicago day, including on the operator hub. Staff add, remove, and swap on someone else's personal checkout need the same staff card as a due-back change. The holder and shared custody are unchanged. |
+| 2026-10-18 | **Activation code returns focus to Add kiosk (local).** Creating a kiosk hides the form that opened the code, so closing the code dialog focuses Add kiosk instead of leaving focus on the page body. Source contract only; authenticated browser proof is still open. |
 | 2026-10-16 | **Incomplete handoff requests throw instead of crashing (local).** Checkout and pickup completion no longer force-unwrap the request URL or body, and no longer force-cast the JSON object. A missing address, a missing body, or a body that is not an object throws the existing `APIError` before anything is saved or sent. A saved retry body is still reused as-is. `WisconsinKioskTests` covers those cases. Xcode on a Mac still has to run them. |
 | 2026-10-02 | **Kiosk relative-day checks follow the current day across midnight.** Today/Tomorrow event sections, due-today custody grouping and tones, due copy, and day pickers now read the shared `\.today` environment value from `providesCurrentDay()` on the kiosk root instead of the wall clock, so a kiosk left running overnight re-buckets at midnight. `KioskStatus.custody` and `KioskExtendScreen.dayTitle` take `today` explicitly. |
 | 2026-10-01 | **Report a problem covers all gear: batteries and counted stock** (branch `claude/kiosk-keyboard-field`, not deployed; needs migration `0162_checkin_reports_bulk_targets`). Erik: batteries are often lost. `CheckinItemReport` now targets exactly one of `assetId`, `bulkSkuUnitId` (battery #7), or `bulkSkuId` + `quantity` (counted stock); a CHECK constraint enforces one target and a positive quantity only for counted stock. The kiosk and web report routes share `submitBulkCheckinReport` (SERIALIZABLE, state re-read in the transaction, before/after audit). Battery unit missing: unit → `LOST` (the same status the completion auto-LOST uses), custody episode closed, never restocked, and the return can finish without it. Battery unit damaged: must be scanned back; there is no maintenance status for bulk units, so it stays in stock with an audited "Reported damaged" note on the unit, and staff are notified. Counted missing reduces what is owed (also in the counted-return route) and is never restocked; counted damaged counts as returned through the same ledger return as the quantity route and is flagged for staff. Both completion paths (`maybeAutoComplete`, `markCheckoutCompleted`) treat reported-missing bulk as accounted for and exclude it from the ledger settle. `GET /api/kiosk/checkout/[id]` adds `report`, `reportedMissingQuantity`, `reportedDamagedQuantity`, and reports a missing unit as not returned. iOS: the chooser lists every item (battery photo + number circle + family name, counted stock with a quantity stepper) and the "Batteries and counted supplies aren't listed" note is gone. "It's damaged" is always tappable: an item not yet back is scanned on the damaged page (hidden HID field or iPad camera, same return scan endpoint; a different item says "That's not …"), then the describe/photo step opens. The damaged and missing cards lead with a 96pt photo and tag and size to their content. The return list notes battery units missing or held for staff and counted quantities reported; the G6 receipt includes them. Evidence: vitest (full), tsc, migration prefix check, WisconsinKiosk device build. **Open:** merge, apply `0162_checkin_reports_bulk_targets` before deploy, and live/on-iPad proof (GAP-87). |
