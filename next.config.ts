@@ -129,6 +129,7 @@ const baseConfig: NextConfig = {
       { source: "/golden-hour", destination: "/golden-hour/index.html", permanent: false },
       { source: "/timelapse", destination: "/timelapse/index.html", permanent: false },
       { source: "/board-sizes", destination: "/board-sizes/index.html", permanent: false },
+      { source: "/frame", destination: "/frame/index.html", permanent: false },
     ];
   },
 };
