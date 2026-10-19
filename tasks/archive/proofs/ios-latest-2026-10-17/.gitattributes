@@ -1,2 +1,0 @@
-# Source diffs are byte-exact evidence. Their context prefixes are patch syntax.
-*.patch -whitespace

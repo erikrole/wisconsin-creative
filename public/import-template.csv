@@ -1,4 +1,0 @@
-Name,Category,Brand,Model,Serial Number,Location,Department,Purchase Date,Purchase Price,Warranty Date,Residual Value,UW Asset Tag,Link,Description
-CAM-001,Camera,Sony,FX3,SN12345678,Main Equipment Room,Creative,2024-01-15,3899.99,2027-01-15,1500.00,UW-2024-001,https://example.com/manual,Primary production camera
-MIC-001,Audio,Sennheiser,MKH 416,SN87654321,Main Equipment Room,Creative,2024-03-01,999.99,2026-03-01,,,,Shotgun microphone for field recording
-LENS-001,Lens,Canon,RF 24-70mm f/2.8,,,Studio B,Football,2023-11-20,2299.00,2028-11-20,800.00,UW-2023-042,,Standard zoom lens

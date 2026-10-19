@@ -1,1 +1,0 @@
-Fixture presentation of the kit status copy, captured 2026-10-12 from a local HTML stand-in. The left column is the previous stored-status copy. The right column is the derived custody copy. This environment has no preview database, so this is not an authenticated `/kits` capture.

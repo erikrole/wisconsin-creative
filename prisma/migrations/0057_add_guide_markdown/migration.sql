@@ -1,1 +1,0 @@
-ALTER TABLE "guides" ADD COLUMN IF NOT EXISTS "markdown" TEXT;
