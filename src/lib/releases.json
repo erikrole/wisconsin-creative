@@ -1,20 +1,5 @@
 [
   {
-    "date": "2026-10-18",
-    "title": "Staff on iPhone",
-    "type": "improvement",
-    "summary": "The iPhone app now calls the people directory Staff and lets you filter it by role with one tap.",
-    "details": [
-      "Users is now Staff in the tab bar and Browse.",
-      "Role tabs show how many students, staff, and admins there are.",
-      "The role option in the filter menu is gone, since the tabs replace it."
-    ],
-    "platforms": [
-      "iOS"
-    ],
-    "pr": 497
-  },
-  {
     "date": "2026-10-19",
     "title": "Budget imports from the department workbook",
     "type": "improvement",
@@ -76,6 +61,21 @@
       "iOS"
     ],
     "pr": 513
+  },
+  {
+    "date": "2026-10-18",
+    "title": "Staff on iPhone",
+    "type": "improvement",
+    "summary": "The iPhone app now calls the people directory Staff and lets you filter it by role with one tap.",
+    "details": [
+      "Users is now Staff in the tab bar and Browse.",
+      "Role tabs show how many students, staff, and admins there are.",
+      "The role option in the filter menu is gone, since the tabs replace it."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 497
   },
   {
     "date": "2026-10-18",
