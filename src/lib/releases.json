@@ -1,6 +1,20 @@
 [
   {
     "date": "2026-10-19",
+    "title": "Schedule notices read properly again",
+    "type": "fixes",
+    "summary": "The \"Schedule changes\" notice on an event's crew no longer squeezes its message into a narrow column.",
+    "details": [
+      "Messages in notices with an icon and a title now use the full width.",
+      "Other notices of the same shape are fixed too."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 529
+  },
+  {
+    "date": "2026-10-19",
     "title": "World Series out-of-town scoreboard",
     "type": "feature",
     "summary": "A live scoreboard for World Series Game 2 at wisconsincreative.com/ots, built for the out-of-town strip on Camp Randall's south end zone fascia.",
