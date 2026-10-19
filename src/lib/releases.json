@@ -1,6 +1,22 @@
 [
   {
     "date": "2026-10-19",
+    "title": "Controller for the out-of-town scoreboard",
+    "type": "feature",
+    "summary": "Staff can switch the Camp Randall out-of-town scoreboard between live, a demo and a frozen frame from wisconsincreative.com/ots/control, on any device.",
+    "details": [
+      "Live follows the MLB game feed, and can be pointed at a different game.",
+      "Demo plays a sample scenario, like a walk-off or a grand slam, for testing on the board.",
+      "Hold freezes whatever is on screen.",
+      "The board picks up a change within about five seconds without reloading, and runs live if nothing is set."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 527
+  },
+  {
+    "date": "2026-10-19",
     "title": "World Series out-of-town scoreboard",
     "type": "feature",
     "summary": "A live scoreboard for World Series Game 2 at wisconsincreative.com/ots, built for the out-of-town strip on Camp Randall's south end zone fascia.",
