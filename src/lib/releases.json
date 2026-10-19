@@ -6,12 +6,13 @@
     "summary": "Staff can now tag each person on an event's crew with a position label, like SLOW1, and say which half they cover.",
     "details": [
       "Add a label and choose Full game, 1st half, or 2nd half from the crew editor.",
-      "The tag shows next to the name on the Schedule list and the event page, including for students.",
+      "The tag shows next to the name on the Schedule list and the event page, including for students, and on the iPhone event crew.",
       "Labels go out with the rest of the schedule and don't send a new notification by themselves.",
       "Replacing someone clears the label for that spot."
     ],
     "platforms": [
-      "Web"
+      "Web",
+      "iOS"
     ],
     "pr": 523
   },

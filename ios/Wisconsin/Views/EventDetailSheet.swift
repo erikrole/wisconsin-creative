@@ -2217,6 +2217,9 @@ struct ShiftRow: View {
                 if assignment.isOnTradeBoard {
                     return "\(assignment.user.name), on the Trade Board"
                 }
+                if let tag = assignment.crewTagText {
+                    return "\(assignment.user.name), \(tag)"
+                }
                 return assignment.user.name
             }.joined(separator: ", ")
             parts.append("Assigned: \(names)")
@@ -2502,6 +2505,19 @@ struct ShiftRow: View {
                     if assignment.status == "REQUESTED" {
                         CrewSlotStatusLabel(state: .requested, requestCount: 1)
                     }
+                }
+                if let tag = assignment.crewTagText {
+                    // Position tag on its own line, like the Trade Board cue,
+                    // so a long label never squeezes the name column.
+                    Text(tag)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color(.secondarySystemFill))
+                        .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+                        .lineLimit(1)
+                        .accessibilityLabel("Position \(tag)")
                 }
                 if assignment.isOnTradeBoard {
                     // On-the-board cue, matching the Schedule legend's trade

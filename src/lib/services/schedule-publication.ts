@@ -759,8 +759,8 @@ export async function publishShiftGroup(
               callNote: workingAssignment.callNote,
             } : {}),
             ...(crewTagChanged ? {
-              crewLabel: workingAssignment.crewLabel,
-              crewHalf: workingAssignment.crewHalf,
+              crewLabel: workingAssignment.crewLabel ?? null,
+              crewHalf: workingAssignment.crewHalf ?? null,
             } : {}),
             ...(workerVisibleChange ? {
               acknowledgedAt: null,
@@ -971,8 +971,8 @@ export async function publishShiftGroup(
               callStartsAt: slot.workerType === "ST" && assignment.callStartsAt ? new Date(assignment.callStartsAt) : null,
               callEndsAt: slot.workerType === "ST" && assignment.callEndsAt ? new Date(assignment.callEndsAt) : null,
               callNote: assignment.callNote,
-              crewLabel: assignment.crewLabel,
-              crewHalf: assignment.crewHalf,
+              crewLabel: assignment.crewLabel ?? null,
+              crewHalf: assignment.crewHalf ?? null,
             },
             ...(echoNeeded ? { include: timeConflictCandidateInclude } : {}),
           });
