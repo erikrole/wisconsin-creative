@@ -208,6 +208,10 @@ export const PERMISSIONS: Record<string, Record<string, Role[]>> = {
     edit: ["ADMIN", "STAFF"],
     delete: ["ADMIN"],
   },
+  announcement: {
+    view: ["ADMIN", "STAFF", "STUDENT"],
+    manage: ["ADMIN"],
+  },
   kiosk_device: {
     view: ["ADMIN"],
     create: ["ADMIN"],

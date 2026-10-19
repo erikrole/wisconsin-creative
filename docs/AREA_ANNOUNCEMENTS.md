@@ -1,0 +1,39 @@
+# Announcements Area Scope (V1 Web Implemented, iOS Specified)
+
+## Document Control
+- Area: Announcements
+- Owner: Wisconsin Athletics Creative Product
+- Last Updated: 2026-10-18
+- Status: Web built on a draft PR; iOS not started
+- Version: V1.0
+
+## Direction
+Admins post a short splash ("new feature", "update", "heads up") from Settings and people see it once, with no deploy. It is for quick blasts, not a notification inbox (see Blasts for crew-targeted acknowledged messages).
+
+## Core Rules
+1. Admin only to write (`announcement.manage`); admins, staff, and students can read what is meant for them (collaborators never see it).
+2. An announcement is live when it is published, not ended, matches the viewer's role and platform, and the viewer has not dismissed it. An empty role list means everyone.
+3. One announcement shows at a time, newest first. Dismissing (Got it, Not now, close, or the button) records a dismissal; the next unseen one then loads.
+4. Body is plain text: blank line = paragraph, `- ` = bullet. No HTML or markdown.
+5. The button link is an app path (`/releases`) or `https`. Anything else is rejected.
+6. "Show to everyone again" deletes the dismissals; "End now" sets `endsAt`.
+7. No polling. The web client reads on page load and again only when someone returns to a tab after 30 minutes away; iOS reads on launch and when the app returns to the foreground (same rule as the badge fetch in #458). After a dismiss it refetches only when `remaining` says more are waiting.
+9. Up to 4 banner images, uploaded to Blob through `POST /api/announcements/images` (raster types checked by their bytes). Only Blob URLs are accepted, since next/image optimizes only that host. One image is a banner; several swipe.
+10. Publishing asks for confirmation naming the audience. Editing a live announcement saves in place; people who already closed it see the edit only after Show to everyone again.
+11. Long messages scroll inside the splash while its buttons stay pinned, on any screen down to 320px wide or 390px tall. An image that fails to load drops out instead of showing a broken icon.
+12. The editor checks the same rules as the API beside each field after the first save attempt (`validateAnnouncementDraft`), asks before discarding unsaved edits, waits for image uploads before saving, and checks image type and size before uploading. An edit leaves an untouched end date alone, so an ended announcement can still be corrected; publishing needs a future end date or none.
+13. Announcements and Blasts stay separate (decided 2026-10-18): Blasts are targeted, pushed, and acknowledged; announcements are role-wide, shown once on open, and never pushed. Each composer links to the other so admins pick the right one.
+8. Role preview and a dismiss that fails offline both fail safe: the splash shows again later.
+
+## API
+- `GET /api/announcements/active?platform=web|ios` returns `{ data: ActiveAnnouncement | null }` (`src/lib/announcements.ts`).
+- `POST /api/announcements/{id}/dismiss` is idempotent.
+- Admin: `GET/POST /api/announcements`, `PATCH/DELETE /api/announcements/{id}` (`state: draft|live|ended`, `showAgain`). All writes are audited and rate limited.
+
+## iOS spec (not built)
+Decode `ActiveAnnouncement` (`id`, `kind`, `kindLabel`, `title`, `blocks` as `paragraph{text}` or `list{items}`, optional `ctaLabel`/`ctaUrl`, `imageUrls`, optional `imageAlt`, `publishedAt`, `remaining`), tolerating unknown block types by skipping them. Fetch with `platform=ios` on launch and on foreground, present as a sheet using the web card layout (banner or paged images, kind icon, kind label and date, title, body, check bullets, primary button, Close), then POST dismiss. A `ctaUrl` starting with `/` maps to an in-app destination or the website; unknown paths open the website. Needs an Xcode build and the web-side source-contract test before merge.
+
+## Changelog
+- 2026-10-18: Editor hardening: inline checks, discard guard, upload race fix, image reorder, duplicate, Cmd/Ctrl+Enter to save, one-row footer on phones. The API rejects a past end date.
+- 2026-10-18: Stress pass and design pass: pinned buttons with a fade for long messages, long words wrap, broken images drop out, white sheet surface, kind pill, brighter red for small text in dark mode.
+- 2026-10-18: V1 web (migration 0187, Settings > Announcements, splash in the app layout), with banner images, phone bottom sheet, editor preview-as-splash, publish confirmation, and seen-by reach.

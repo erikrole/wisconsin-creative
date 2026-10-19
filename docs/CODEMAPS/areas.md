@@ -3,6 +3,14 @@
 
 This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, services, and tests by area keywords. Treat it as a navigation aid, not an authorization or ownership source of truth.
 
+## announcements
+
+- Doc: `docs/AREA_ANNOUNCEMENTS.md`
+- Pages: `/settings/announcements`
+- APIs: `/api/announcements/[id]/dismiss`, `/api/announcements/[id]`, `/api/announcements/active`, `/api/announcements/images`, `/api/announcements`
+- Services: _none matched_
+- Tests: `tests/announcements.test.ts`
+
 ## badges
 
 - Doc: `docs/AREA_BADGES.md`
@@ -174,7 +182,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 ## settings
 
 - Doc: `docs/AREA_SETTINGS.md`
-- Pages: `/settings/allowed-emails`, `/settings/app-activity`, `/settings/appearance`, `/settings/audit`, `/settings/bookings`, `/settings/calendar-sources`, `/settings/categories`, `/settings/checkout-policies`
+- Pages: `/settings/allowed-emails`, `/settings/announcements`, `/settings/app-activity`, `/settings/appearance`, `/settings/audit`, `/settings/bookings`, `/settings/calendar-sources`, `/settings/categories`
 - APIs: `/api/settings/app-activity`, `/api/settings/checkout-policies`, `/api/settings/escalation`, `/api/settings/extend-presets`, `/api/settings/non-game-schedule`, `/api/settings/reservation-rules`
 - Services: _none matched_
 - Tests: `tests/ios-settings-detail-menus.test.ts`, `tests/ios-settings-first-class.test.ts`, `tests/settings-allowed-emails-display.test.ts`, `tests/settings-audit-command-surface-source.test.ts`, `tests/settings-audit-filters.test.ts`, `tests/settings-audit-pagination.test.ts`, `tests/settings-calendar-sources-load-state.test.ts`, `tests/settings-kiosk-devices-location-state.test.ts`

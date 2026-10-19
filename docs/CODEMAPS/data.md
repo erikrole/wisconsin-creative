@@ -11,7 +11,7 @@
 
 | Model | Fields | Model-level indexes/constraints |
 |---|---:|---:|
-| `User` | 135 | 5 |
+| `User` | 137 | 5 |
 | `Session` | 7 | 2 |
 | `PasswordResetToken` | 6 | 2 |
 | `PasskeyCredential` | 12 | 2 |
@@ -131,7 +131,9 @@
 | `Budget` | 8 | 3 |
 | `BudgetLine` | 26 | 5 |
 | `BudgetLineItem` | 10 | 5 |
-| `WishItem` | 15 | 3 |
+| `WishItem` | 19 | 3 |
+| `Announcement` | 18 | 3 |
+| `AnnouncementDismissal` | 6 | 3 |
 
 ## Enums
 

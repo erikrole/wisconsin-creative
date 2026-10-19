@@ -56,6 +56,7 @@
 | `/scoreboard` | `src/app/(app)/scoreboard/page.tsx` |
 | `/search` | `src/app/(app)/search/page.tsx` |
 | `/settings/allowed-emails` | `src/app/(app)/settings/allowed-emails/page.tsx` |
+| `/settings/announcements` | `src/app/(app)/settings/announcements/page.tsx` |
 | `/settings/app-activity` | `src/app/(app)/settings/app-activity/page.tsx` |
 | `/settings/appearance` | `src/app/(app)/settings/appearance/page.tsx` |
 | `/settings/audit` | `src/app/(app)/settings/audit/page.tsx` |

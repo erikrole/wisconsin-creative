@@ -264,6 +264,8 @@ model User {
   liveActivityStartTokens       LiveActivityStartToken[]
   liveActivityStarts            LiveActivityStart[]
   blastsAuthored                Blast[]                          @relation("BlastAuthor")
+  announcementsAuthored         Announcement[]                   @relation("AnnouncementAuthor")
+  announcementDismissals        AnnouncementDismissal[]
   blastsCancelled               Blast[]                          @relation("BlastCanceller")
   blastsReceived                BlastRecipient[]                 @relation("BlastRecipient")
   bookingPhotos                 BookingPhoto[]                   @relation("BookingPhotoActor")
@@ -3221,4 +3223,58 @@ model WishItem {
   @@index([status, createdAt])
   @@index([requestedById])
   @@map("wish_items")
+}
+
+// ── Announcements ───────────────────────────────────────
+
+enum AnnouncementKind {
+  FEATURE
+  UPDATE
+  NOTICE
+}
+
+/// A splash shown once per person in the web and iOS apps, edited by admins in
+/// Settings with no deploy. Live means published, not ended, and not dismissed
+/// by the viewer. An empty `roles` list means everyone.
+model Announcement {
+  id          String                  @id @default(cuid())
+  kind        AnnouncementKind        @default(UPDATE)
+  title       String
+  /// Plain text. Blank lines split paragraphs; lines starting with "- " are bullets.
+  body        String
+  ctaLabel    String?                 @map("cta_label")
+  /// App path ("/releases") or an https URL.
+  ctaUrl      String?                 @map("cta_url")
+  /// Banner images, shown as a swipeable strip above the title. Uploaded to Blob; at most 4.
+  imageUrls   String[]                @default([]) @map("image_urls")
+  /// One description read for the banner by screen readers.
+  imageAlt    String?                 @map("image_alt")
+  roles       Role[]
+  showOnWeb   Boolean                 @default(true) @map("show_on_web")
+  showOnIos   Boolean                 @default(true) @map("show_on_ios")
+  /// Null while a draft.
+  publishedAt DateTime?               @map("published_at")
+  endsAt      DateTime?               @map("ends_at")
+  createdById String                  @map("created_by_id")
+  createdAt   DateTime                @default(now()) @map("created_at")
+  updatedAt   DateTime                @updatedAt @map("updated_at")
+  createdBy   User                    @relation("AnnouncementAuthor", fields: [createdById], references: [id], onDelete: Restrict)
+  dismissals  AnnouncementDismissal[]
+
+  @@index([publishedAt, endsAt])
+  @@index([createdById])
+  @@map("announcements")
+}
+
+model AnnouncementDismissal {
+  id             String       @id @default(cuid())
+  announcementId String       @map("announcement_id")
+  userId         String       @map("user_id")
+  dismissedAt    DateTime     @default(now()) @map("dismissed_at")
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([announcementId, userId])
+  @@index([userId])
+  @@map("announcement_dismissals")
 }

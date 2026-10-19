@@ -121,6 +121,7 @@
 | `src/lib/a11y-resilience.ts` | 116 |
 | `src/lib/accountability-jeers.ts` | 121 |
 | `src/lib/admin-fix-today.ts` | 408 |
+| `src/lib/announcements.ts` | 156 |
 | `src/lib/api-dates.ts` | 38 |
 | `src/lib/api-handler.ts` | 63 |
 | `src/lib/api.ts` | 143 |
@@ -149,7 +150,7 @@
 | `src/lib/booking-display-title.ts` | 14 |
 | `src/lib/booking-status-display.ts` | 170 |
 | `src/lib/booking-statuses.ts` | 9 |
-| `src/lib/breadcrumbs.ts` | 180 |
+| `src/lib/breadcrumbs.ts` | 181 |
 | `src/lib/brother-label-csv.ts` | 134 |
 | `src/lib/bulk-batteries.ts` | 49 |
 | `src/lib/bulk-schedule-assignment-types.ts` | 213 |
@@ -209,7 +210,7 @@
 | `src/lib/live-activity-workflow.ts` | 34 |
 | `src/lib/local-traces.ts` | 28 |
 | `src/lib/media-embed.ts` | 68 |
-| `src/lib/nav-sections.ts` | 317 |
+| `src/lib/nav-sections.ts` | 326 |
 | `src/lib/notification-catalog.ts` | 322 |
 | `src/lib/notification-count-sync.ts` | 9 |
 | `src/lib/notification-destination.ts` | 85 |
@@ -219,7 +220,7 @@
 | `src/lib/passkey-client.ts` | 126 |
 | `src/lib/passkey.ts` | 388 |
 | `src/lib/password-rules.ts` | 16 |
-| `src/lib/permissions.ts` | 269 |
+| `src/lib/permissions.ts` | 273 |
 | `src/lib/preview-activity.ts` | 23 |
 | `src/lib/prisma-errors.ts` | 38 |
 | `src/lib/profile-completion-events.ts` | 6 |
@@ -337,6 +338,14 @@
 - `/api/allowed-emails/[id]`
 - `/api/allowed-emails/preview`
 - `/api/allowed-emails`
+
+### `/api/announcements`
+
+- `/api/announcements/[id]/dismiss`
+- `/api/announcements/[id]`
+- `/api/announcements/active`
+- `/api/announcements/images`
+- `/api/announcements`
 
 ### `/api/assets`
 
