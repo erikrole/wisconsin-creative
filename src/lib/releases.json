@@ -1,6 +1,21 @@
 [
   {
     "date": "2026-10-19",
+    "title": "Announcements on iPhone",
+    "type": "feature",
+    "summary": "Announcements posted from Settings now also appear in the iPhone app as a sheet the first time you open it.",
+    "details": [
+      "Banner or swipeable images, a short message, and an optional button.",
+      "Closing it in any way marks it as seen, and the next one appears if more are waiting.",
+      "It checks when the app opens or returns to the foreground, never in the background."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 517
+  },
+  {
+    "date": "2026-10-19",
     "title": "Budget imports from the department workbook",
     "type": "improvement",
     "summary": "Admins can import a budget straight from the department spreadsheet, one tab at a time, and check it before anything is saved.",
