@@ -1,6 +1,22 @@
 [
   {
     "date": "2026-10-19",
+    "title": "Budget imports from the department workbook",
+    "type": "improvement",
+    "summary": "Admins can import a budget straight from the department spreadsheet, one tab at a time, and check it before anything is saved.",
+    "details": [
+      "Pick the tab; the one for the budget's year (and Football) is suggested.",
+      "Statuses, supplier, price, budget, spent and month are read from the sheet's own columns.",
+      "Bought rows with no budget come in as Unplanned, and Dropped rows stay Dropped.",
+      "Running it again updates lines instead of adding copies."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 520
+  },
+  {
+    "date": "2026-10-19",
     "title": "Emails have a new look",
     "type": "improvement",
     "summary": "Every email from the app now uses the same Wisconsin Creative design, with the logo, one clear button, and a plain-text version.",
