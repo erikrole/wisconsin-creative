@@ -18,6 +18,7 @@ const PUBLIC_HANDLER_ROUTES: Record<string, string[]> = {
   "src/app/api/companion/projection/route.ts": ["GET"],
   "src/app/api/companion/session/route.ts": ["POST"],
   "src/app/api/kiosk/activate/route.ts": ["POST"],
+  "src/app/api/ots/control/route.ts": ["GET"],
   "src/app/api/seed/route.ts": ["POST"],
   "src/app/api/shifts/ics/[token]/route.ts": ["GET"],
 };
@@ -73,6 +74,11 @@ const PUBLIC_ROUTE_SAFETY: Record<string, RegExp[]> = {
     /\bgetClientIp\s*\(/,
   ],
   "src/app/api/kiosk/activate/route.ts": [
+    /\b(?:checkRateLimit|enforceRateLimit)\s*\(/,
+    /\bgetClientIp\s*\(/,
+  ],
+  // The /ots board on the Daktronics player reads its mode without signing in; writes stay withAuth.
+  "src/app/api/ots/control/route.ts": [
     /\b(?:checkRateLimit|enforceRateLimit)\s*\(/,
     /\bgetClientIp\s*\(/,
   ],

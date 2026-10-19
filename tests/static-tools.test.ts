@@ -91,7 +91,11 @@ describe("World Series OTS board", () => {
     expect(html).toContain("default-src 'none'; script-src 'self';");
     expect(html).toContain("connect-src 'self' https://statsapi.mlb.com;");
     expect(html).toContain("img-src 'self' data: https://www.mlbstatic.com;");
-    for (const page of [html, readFileSync("public/ots/scenarios.html", "utf8")]) {
+    const control = readFileSync("public/ots/control.html", "utf8");
+    expect(control).toContain("default-src 'none'; script-src 'self';");
+    expect(control).toContain("connect-src 'self';");
+    expect(nextConfigSource).toContain('{ source: "/ots/control", destination: "/ots/control.html", permanent: false }');
+    for (const page of [html, control, readFileSync("public/ots/scenarios.html", "utf8")]) {
       expect(page).not.toMatch(/<script(?![^>]*\ssrc=)[^>]*>/i);
       expect(page).not.toMatch(/\son[a-z]+=/i);
     }
@@ -104,7 +108,7 @@ describe("World Series OTS board", () => {
   });
 
   it("keeps the board folder to its own files", () => {
-    expect(readdirSync("public/ots").sort()).toEqual(["board.js", "index.html", "logos", "scenarios.html", "scenarios.js"]);
+    expect(readdirSync("public/ots").sort()).toEqual(["board.js", "control.html", "control.js", "index.html", "logos", "scenarios.html", "scenarios.js"]);
     expect(readdirSync("public/ots/logos").sort()).toEqual(["CLE.svg", "MIL.svg", "TB.svg"]);
   });
 });

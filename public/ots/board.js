@@ -1,10 +1,11 @@
 // World Series OTS board logic. See index.html for URL options.
 (() => {
   const qs = new URLSearchParams(location.search);
-  const GAME_PK = qs.get('game') || '849802';
+  const DEFAULT_GAME_PK = qs.get('game') || '849802';
+  let gamePk = DEFAULT_GAME_PK;                      // the controller can point the board at another game
   const POLL_LIVE_MS = Math.max(3, Number(qs.get('poll')) || 5) * 1000;
   const POLL_PRE_MS = 30000, POLL_FINAL_MS = 300000;
-  const FETCH_TIMEOUT_MS = 8000, MAX_RETRY_MS = 60000;
+  const FETCH_TIMEOUT_MS = 8000, MAX_RETRY_MS = 60000, CONTROL_POLL_MS = 5000;
   const API = 'https://statsapi.mlb.com';
 
   // Teams we expect. Logos are local files cropped to their artwork, sized to equal visual area
@@ -186,7 +187,7 @@
   async function loadGameNo() {
     if (gameNo) return;
     try {
-      const s = await fetchJSON(`${API}/api/v1/schedule?gamePk=${GAME_PK}`);
+      const s = await fetchJSON(`${API}/api/v1/schedule?gamePk=${gamePk}`);
       gameNo = s.dates[0].games[0].seriesGameNumber || '';
     } catch (e) { /* try again next tick */ }
   }
@@ -198,11 +199,12 @@
       .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .finally(() => clearTimeout(t));
   }
-  async function tick() {
+  async function tick(myGen) {
     let delay = POLL_LIVE_MS;
     try {
       if (!qs.get('feed')) await loadGameNo();
-      const d = await fetchJSON(qs.get('feed') || `${API}/api/v1.1/game/${GAME_PK}/feed/live`);
+      const d = await fetchJSON(qs.get('feed') || `${API}/api/v1.1/game/${gamePk}/feed/live`);
+      if (myGen !== gen) return;                 // the controller switched modes mid-request
       const m = fromFeed(d);
       render(m);
       delay = m.status === 'pre' ? POLL_PRE_MS : m.status === 'final' ? POLL_FINAL_MS : POLL_LIVE_MS;
@@ -214,8 +216,9 @@
       if (retry >= 3) $('board').classList.add('stale');
       console.warn('OTS feed error', e);
     }
+    if (myGen !== gen) return;
     clearTimeout(timer);
-    timer = setTimeout(tick, delay);
+    timer = setTimeout(() => tick(myGen), delay);
   }
 
   // ---------- demo: every scenario, in game order (Brewers ahead or winning throughout) ----------
@@ -314,24 +317,48 @@
   };
   function playScript(frames) {
     let i = 0;
-    const step = () => { render(frames[i].m); const t = frames[i].t; i = (i + 1) % frames.length; setTimeout(step, t); };
+    const step = () => { render(frames[i].m); const t = frames[i].t; i = (i + 1) % frames.length; timer = setTimeout(step, t); };
     step();
   }
 
-  const demo = qs.get('demo');
-  if (demo) {
+  // ---------- what to show: live feed, a demo scenario, or hold the current frame ----------
+  let gen = 0;                                        // bumps on every mode change; stale loops check it and stop
+  function stopAll() { gen++; clearTimeout(timer); clearInterval(timer); timer = null; retry = 0; }
+  function playDemo(name) {
     const names = Object.keys(DEMO);
-    if (GAMES[demo]) playScript(GAMES[demo]);
-    else if (demo === 'sim') { let i = 0; const step = () => { render(SIM[i]); i = (i + 1) % SIM.length; }; step(); setInterval(step, 1500); }
-    else if (DEMO[demo]) render(DEMO[demo]);
-    else {
-      let i = 0;
-      const step = () => { render(DEMO[names[i]]); document.title = 'OTS demo: ' + names[i]; i = (i + 1) % names.length; };
-      step();
-      setInterval(step, 3000);
-    }
-  } else {
-    tick();
+    if (GAMES[name]) return playScript(GAMES[name]);
+    if (name === 'sim') return playScript(SIM.map((m) => ({ m, t: 1500 })));
+    if (DEMO[name]) return render(DEMO[name]);
+    playScript(names.map((n) => ({ m: DEMO[n], t: 3000 })));            // 'cycle': every state in game order
   }
+  function apply(c) {
+    stopAll();
+    if (c.mode === 'hold') return;                    // leave the last frame on screen
+    if (c.mode === 'demo') return playDemo(c.scenario || 'cycle');
+    const pk = c.gamePk || DEFAULT_GAME_PK;
+    if (pk !== gamePk) { gamePk = pk; if (!qs.get('gameno')) gameNo = ''; }
+    tick(gen);
+  }
+
+  // Remote control: the board asks the site what to show every few seconds (staff change it at /ots/control.html).
+  // A ?demo= or ?feed= URL, or ?control=0, is a manual test and ignores the controller.
+  const demo = qs.get('demo');
+  const controlled = !demo && !qs.get('feed') && qs.get('control') !== '0';
+  let controlKey = null;
+  async function pollControl() {
+    try {
+      const r = await fetchJSON('/api/ots/control');
+      const c = r.data || {};
+      const key = [c.mode, c.scenario, c.gamePk].join('|');
+      if (key !== controlKey) { controlKey = key; apply(c); }
+    } catch (e) {
+      if (controlKey === null) { controlKey = 'live||'; apply({ mode: 'live' }); }   // site unreachable: run live
+    }
+    setTimeout(pollControl, CONTROL_POLL_MS);
+  }
+
+  if (demo) playDemo(demo === '1' ? 'cycle' : demo);
+  else if (controlled) pollControl();
+  else apply({ mode: 'live' });
   window.OTS = { render, fromFeed, DEMO, GAMES };      // for testing from the console
 })();
