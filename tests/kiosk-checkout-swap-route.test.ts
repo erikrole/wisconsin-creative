@@ -35,6 +35,7 @@ vi.mock("@/lib/services/kiosk-active-checkout-items", async (importOriginal) => 
 
 import { POST } from "@/app/api/kiosk/checkout/[id]/swap/route";
 import { isSameAssetModel } from "@/lib/services/kiosk-active-checkout-items";
+import { issueKioskStaffToken } from "@/lib/kiosk-staff-token";
 
 const run = POST as unknown as (req: Request, ctx: { params: Promise<{ id: string }> }) => Promise<Response>;
 
@@ -117,6 +118,33 @@ describe("POST /api/kiosk/checkout/[id]/swap", () => {
     mocks.findUnit.mockResolvedValue({ id: "unit-3", bulkSkuId: "sku-2", unitNumber: 3, name: "Other #3" });
     const other = await (await swap({ scanValue: "OTHER-3", remove: { bulkSkuId: "sku-1", unitNumber: 12 } })).json();
     expect(other.success).toBe(false);
+  });
+
+  it("refuses a staff swap on someone else's checkout without a staff card", async () => {
+    mocks.userFindFirst.mockResolvedValue({ id: "staff-1", role: "STAFF" });
+    mocks.requireEditableCheckout.mockResolvedValue({ ...booking, requesterUserId: "owner-1" });
+
+    await expect(swap({ actorId: "staff-1", remove: { assetId: "asset-1" } })).rejects.toMatchObject({
+      status: 403,
+      message: "Scan your staff ID card to do this.",
+    });
+    expect(mocks.remove).not.toHaveBeenCalled();
+    expect(mocks.add).not.toHaveBeenCalled();
+  });
+
+  it("swaps someone else's checkout after the staff card scan", async () => {
+    vi.stubEnv("SESSION_SECRET", "test-session-secret-at-least-32-characters-long");
+    mocks.userFindFirst.mockResolvedValue({ id: "staff-1", role: "STAFF" });
+    mocks.requireEditableCheckout.mockResolvedValue({ ...booking, requesterUserId: "owner-1" });
+    const { token } = issueKioskStaffToken({ userId: "staff-1", kioskId: "kiosk-1" });
+
+    const response = await run(new Request("http://test", {
+      method: "POST",
+      headers: { "X-Kiosk-Staff-Token": token },
+      body: JSON.stringify({ actorId: "staff-1", scanValue: "CAM-2", remove: { assetId: "asset-1" } }),
+    }), { params: Promise.resolve({ id: "co-1" }) });
+
+    expect(await response.json()).toMatchObject({ success: true, message: "Swapped CAM-1 for CAM-2" });
   });
 
   it("uses the same editor rule as add and remove", async () => {

@@ -15,12 +15,7 @@ import {
 } from "@/components/ui/table";
 import { FadeUp } from "@/components/ui/motion";
 import { useFetch } from "@/hooks/use-fetch";
-import { BarChart, Bar, Cell, XAxis, YAxis } from "recharts";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
+import dynamic from "next/dynamic";
 import {
   ReportDataRegion,
   ReportEmptyState,
@@ -30,8 +25,6 @@ import {
   ReportMetaLine,
   ReportMetricGrid,
   ReportMobileCard,
-  REPORT_OVERDUE_CHART_COLORS,
-  REPORT_SEMANTIC_CHART_COLORS,
   ReportSectionCard,
   ReportSelectControl,
   ReportTableLink,
@@ -48,6 +41,11 @@ import {
   getReportExportFilename,
   readReportExportFailureMessage,
 } from "../report-export";
+
+const LazyOverdueHoursChart = dynamic(
+  () => import("./charts").then((m) => ({ default: m.OverdueHoursChart })),
+  { ssr: false },
+);
 
 type OverdueBooking = {
   id: string;
@@ -298,24 +296,17 @@ export default function OverdueLeaderboardPage() {
           tooltip="Checkouts currently past their return date"
           href="/checkouts?filter=overdue"
         />
-        <MetricCard value={leaderboard.length} label="People with overdue gear" tooltip="Number of people with at least one overdue checkout" href="/users" />
+        <MetricCard value={leaderboard.length} label="People with overdue gear" tooltip="Number of people with at least one overdue checkout" href="/staff" />
       </ReportMetricGrid>
 
-      {/* Overdue hours bar chart */}
       {leaderboard.length > 0 && (
         <ReportSectionCard title="Overdue hours by person" className="mb-4">
-          <ChartContainer config={{ hours: { label: "Overdue hours", color: REPORT_SEMANTIC_CHART_COLORS.problem } }} className="w-full" style={{ height: Math.max(150, leaderboard.length * 36) }}>
-            <BarChart data={leaderboard.slice(0, 10).map((e) => ({ name: e.name, hours: e.totalOverdueHours }))} layout="vertical" margin={{ left: 0, right: 12 }}>
-              <YAxis dataKey="name" type="category" width={100} tickLine={false} axisLine={false} className="text-xs" />
-              <XAxis type="number" hide />
-              <ChartTooltip content={<ChartTooltipContent />} />
-              <Bar dataKey="hours" name="Overdue hours" radius={[0, 4, 4, 0]}>
-                {leaderboard.slice(0, 10).map((_, i) => (
-                  <Cell key={i} fill={REPORT_OVERDUE_CHART_COLORS[i]} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ChartContainer>
+          <div style={{ height: Math.max(150, leaderboard.length * 36) }}>
+            <LazyOverdueHoursChart
+              rows={leaderboard.slice(0, 10).map((entry) => ({ name: entry.name, hours: entry.totalOverdueHours }))}
+              height={Math.max(150, leaderboard.length * 36)}
+            />
+          </div>
         </ReportSectionCard>
       )}
 

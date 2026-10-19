@@ -26,7 +26,7 @@ const STAFF_SEARCH_PAGES: PageSearchResult[] = [
   { type: "page", id: "kits", title: "Kits", subtitle: "Reusable gear bundles and member availability", href: "/kits", keywords: ["bundles", "kit members", "interview kit"] },
   { type: "page", id: "operations", title: "Operations", subtitle: "Daily queue for operational exceptions and inventory cleanup", href: "/operations", keywords: ["fix today", "hygiene", "cleanup", "queue", "problems", "repair", "ops"] },
   { type: "page", id: "battery-ops", title: "Battery Ops", subtitle: "Battery family counts, missing units, and unit status", href: "/bulk-inventory/batteries", keywords: ["batteries", "units", "missing", "bulk"] },
-  { type: "page", id: "users", title: "Users", subtitle: "Roster, roles, assignments, and profile records", href: "/users", keywords: ["people", "roster", "students", "staff", "profiles"] },
+  { type: "page", id: "users", title: "Staff", subtitle: "Roster, roles, assignments, and profile records", href: "/staff", keywords: ["people", "roster", "students", "staff", "profiles"] },
   { type: "page", id: "reports", title: "Reports", subtitle: "Utilization, checkout, overdue, scan, and audit analytics", href: "/reports", keywords: ["analytics", "metrics", "charts", "audit"] },
   { type: "page", id: "settings", title: "Settings", subtitle: "Personal preferences and operational configuration", href: "/settings", keywords: ["configuration", "admin", "preferences"] },
 ];

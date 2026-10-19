@@ -82,6 +82,7 @@ vi.mock("@/lib/services/live-activities", () => ({
 }));
 
 import { POST as addActiveCheckoutItem, DELETE as removeActiveCheckoutItem } from "@/app/api/kiosk/checkout/[id]/route";
+import { issueKioskStaffToken } from "@/lib/kiosk-staff-token";
 
 function routeContext(id: string) {
   return { params: Promise.resolve({ id }) };
@@ -140,7 +141,8 @@ beforeEach(() => {
     endsAt: new Date(Date.now() + 24 * 60 * 60_000),
     locationId: "loc-field-house",
     location: { name: "Field House" },
-    requesterUserId: "user-1",
+    requesterUserId: "actor-1",
+    custodyScope: "PERSON",
   });
   mocks.findBulkUnitByScanValue.mockResolvedValue({
     id: "unit-21",
@@ -471,6 +473,44 @@ describe("kiosk active checkout add item", () => {
       expect(mocks.userFindFirst).toHaveBeenCalledWith(expect.objectContaining({
         where: expect.objectContaining({ id: "actor-1", hiddenFromRoster: false }),
       }));
+    });
+
+    it("refuses staff removing gear from someone else's checkout without a staff card", async () => {
+      mocks.userFindFirst.mockResolvedValue({ id: "actor-1", role: "STAFF" });
+      mocks.bookingFindFirst.mockResolvedValue({
+        id: "checkout-1", title: "VB", startsAt: new Date(), endsAt: new Date(Date.now() + 3_600_000),
+        locationId: "loc-1", requesterUserId: "user-1", custodyScope: "PERSON",
+      });
+      mocks.bookingSerializedItemFindUnique.mockResolvedValue({
+        id: "item-1", allocationStatus: "active", asset: { assetTag: "CAM-014", name: "FX3 2" },
+      });
+
+      await expect(removeSerialized()).rejects.toMatchObject({
+        status: 403,
+        message: "Scan your staff ID card to do this.",
+      });
+      expect(mocks.bookingSerializedItemUpdate).not.toHaveBeenCalled();
+    });
+
+    it("lets staff remove gear from someone else's checkout after a staff card scan", async () => {
+      vi.stubEnv("SESSION_SECRET", "test-session-secret-at-least-32-characters-long");
+      mocks.userFindFirst.mockResolvedValue({ id: "actor-1", role: "STAFF" });
+      mocks.bookingFindFirst.mockResolvedValue({
+        id: "checkout-1", title: "VB", startsAt: new Date(), endsAt: new Date(Date.now() + 3_600_000),
+        locationId: "loc-1", requesterUserId: "user-1", custodyScope: "PERSON",
+      });
+      mocks.bookingSerializedItemFindUnique.mockResolvedValue({
+        id: "item-1", allocationStatus: "active", asset: { assetTag: "CAM-014", name: "FX3 2" },
+      });
+      const { token } = issueKioskStaffToken({ userId: "actor-1", kioskId: "kiosk-1" });
+
+      const response = await removeActiveCheckoutItem(new Request("http://test/api/kiosk/checkout/checkout-1", {
+        method: "DELETE",
+        headers: { "X-Kiosk-Staff-Token": token },
+        body: JSON.stringify({ actorId: "actor-1", assetId: "asset-1" }),
+      }), routeContext("checkout-1"));
+
+      expect(await response.json()).toEqual({ success: true, message: "FX3 2 removed" });
     });
   });
 });

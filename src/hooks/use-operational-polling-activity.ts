@@ -1,13 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { isOvernightQuietHours } from "@/lib/app-time";
 
 export const OPERATIONAL_POLLING_IDLE_MS = 2 * 60_000;
+/** Recheck the 10 PM–6 AM window so a tab left open resumes after quiet hours without a refresh. */
+export const QUIET_HOURS_RECHECK_MS = 60_000;
 
 const ACTIVITY_RECORD_THROTTLE_MS = 15_000;
 const ACTIVITY_EVENTS = ["pointerdown", "pointermove", "keydown", "touchstart", "wheel"] as const;
 
-type OperationalPollingState = "active" | "idle" | "hidden" | "offline" | "disabled";
+type OperationalPollingState = "active" | "idle" | "hidden" | "offline" | "disabled" | "quiet";
 
 type PollingStateInput = {
   enabled: boolean;
@@ -16,7 +19,20 @@ type PollingStateInput = {
   lastActivityAt: number;
   now: number;
   idleMs?: number;
+  quietHours?: boolean;
 };
+
+/**
+ * Shared gate for database polling. Hidden tabs and overnight quiet hours
+ * (10 PM–6 AM in the app timezone) must not keep Neon compute awake.
+ * Pass `hidden` explicitly when the caller already knows visibility.
+ */
+export function isBackgroundPollingPaused(
+  hidden: boolean = typeof document !== "undefined" && document.hidden,
+  now: Date = new Date(),
+): boolean {
+  return hidden || isOvernightQuietHours(now);
+}
 
 export function getOperationalPollingState({
   enabled,
@@ -25,9 +41,11 @@ export function getOperationalPollingState({
   lastActivityAt,
   now,
   idleMs = OPERATIONAL_POLLING_IDLE_MS,
+  quietHours = false,
 }: PollingStateInput): OperationalPollingState {
   if (!enabled) return "disabled";
   if (!visible) return "hidden";
+  if (quietHours) return "quiet";
   if (!online) return "offline";
   if (now - lastActivityAt >= idleMs) return "idle";
   return "active";
@@ -39,7 +57,9 @@ export function useOperationalPollingActivity(
 ): OperationalPollingState {
   const lastActivityAtRef = useRef(Date.now());
   const lastRecordedAtRef = useRef(0);
-  const stateRef = useRef<OperationalPollingState>(enabled ? "active" : "disabled");
+  const stateRef = useRef<OperationalPollingState>(
+    !enabled ? "disabled" : isOvernightQuietHours() ? "quiet" : "active",
+  );
   const [state, setState] = useState<OperationalPollingState>(stateRef.current);
 
   useEffect(() => {
@@ -68,19 +88,23 @@ export function useOperationalPollingActivity(
     const syncState = () => {
       clearIdleTimer();
       const now = Date.now();
+      const visible = document.visibilityState === "visible";
       const nextState = getOperationalPollingState({
         enabled,
-        visible: document.visibilityState === "visible",
+        visible,
         online: navigator.onLine,
         lastActivityAt: lastActivityAtRef.current,
         now,
         idleMs,
+        quietHours: isBackgroundPollingPaused(false, new Date(now)),
       });
       updateState(nextState);
 
       if (nextState === "active") {
         const remaining = Math.max(0, idleMs - (now - lastActivityAtRef.current));
         idleTimer = setTimeout(syncState, remaining);
+      } else if (nextState === "quiet") {
+        idleTimer = setTimeout(syncState, QUIET_HOURS_RECHECK_MS);
       }
     };
 

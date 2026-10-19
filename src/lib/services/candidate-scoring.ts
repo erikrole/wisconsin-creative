@@ -4,6 +4,7 @@ import { HttpError } from "@/lib/http";
 import { ACTIVE_ASSIGNMENT_STATUSES, allowsOverlappingShifts } from "@/lib/shift-constants";
 import { evaluateAvailabilityPreferences, type AvailabilityBlockLike } from "@/lib/student-availability";
 import { shiftWorkerTypeForProfile } from "@/lib/shift-display";
+import { endOfAppMonth, endOfAppWeek, startOfAppMonth, startOfAppWeek } from "@/lib/app-time";
 import { visibleActiveUserWhere } from "@/lib/user-visibility";
 import type {
   CandidateRecommendation,
@@ -94,26 +95,19 @@ function hoursBetween(startsAt: Date, endsAt: Date) {
 }
 
 function startOfWeek(value: Date) {
-  const start = new Date(value);
-  start.setUTCHours(0, 0, 0, 0);
-  const day = start.getUTCDay();
-  const daysSinceMonday = (day + 6) % 7;
-  start.setUTCDate(start.getUTCDate() - daysSinceMonday);
-  return start;
+  return startOfAppWeek(value);
 }
 
 function endOfWeek(value: Date) {
-  const end = startOfWeek(value);
-  end.setUTCDate(end.getUTCDate() + 7);
-  return end;
+  return endOfAppWeek(value);
 }
 
 function startOfMonth(value: Date) {
-  return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), 1));
+  return startOfAppMonth(value);
 }
 
 function endOfMonth(value: Date) {
-  return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth() + 1, 1));
+  return endOfAppMonth(value);
 }
 
 function addDays(value: Date, days: number) {
@@ -314,6 +308,84 @@ export async function getCandidateScoresForShift(shiftId: string, opts: { now?: 
   if (!shift) throw new HttpError(404, "Shift not found");
 
   return getCandidateScoresForTarget(loadedShiftToInput(shift), opts);
+}
+
+function rangesOverlap(
+  start: Date | null | undefined,
+  end: Date | null | undefined,
+  recentStart: Date,
+  futureEnd: Date,
+) {
+  return Boolean(start && end && start < futureEnd && end > recentStart);
+}
+
+/** Same window the per-shift loader uses, so a shared snapshot does not change scores. */
+function assignmentInScoringWindow(
+  assignment: CandidateScoringAssignment,
+  recentStart: Date,
+  futureEnd: Date,
+) {
+  return rangesOverlap(assignment.shift.startsAt, assignment.shift.endsAt, recentStart, futureEnd)
+    || rangesOverlap(assignment.callStartsAt, assignment.callEndsAt, recentStart, futureEnd)
+    || rangesOverlap(assignment.shift.callStartsAt, assignment.shift.callEndsAt, recentStart, futureEnd);
+}
+
+/**
+ * Score several shifts from one candidate snapshot. Calling
+ * `getCandidateScoresForShift` once per open slot reloads every person and
+ * their assignments for each slot.
+ */
+export async function getCandidateScoresForShiftIds(
+  shiftIds: string[],
+  opts: { now?: Date } = {},
+) {
+  const uniqueIds = [...new Set(shiftIds)];
+  const scores = new Map<string, CandidateRecommendation[]>();
+  if (uniqueIds.length === 0) return scores;
+
+  const shifts = await db.shift.findMany({
+    where: { id: { in: uniqueIds } },
+    select: {
+      id: true,
+      area: true,
+      workerType: true,
+      startsAt: true,
+      endsAt: true,
+      callStartsAt: true,
+      callEndsAt: true,
+      shiftGroup: {
+        select: {
+          event: { select: { sportCode: true } },
+        },
+      },
+    },
+  });
+  const inputs = shifts.map(loadedShiftToInput);
+  if (inputs.length === 0) return scores;
+
+  const windows = inputs.map(effectiveWindow);
+  const candidates = await loadCandidateScoringUsersForRange({
+    startsAt: new Date(Math.min(...windows.map((window) => window.startsAt.getTime()))),
+    endsAt: new Date(Math.max(...windows.map((window) => window.endsAt.getTime()))),
+  });
+
+  for (const shift of inputs) {
+    const window = effectiveWindow(shift);
+    const recentStart = addDays(window.startsAt, -RECENT_LOOKBACK_DAYS);
+    const futureEnd = addDays(window.endsAt, FUTURE_LOOKAHEAD_DAYS);
+    scores.set(shift.id, scoreCandidatesForShift({
+      shift,
+      now: opts.now,
+      candidates: candidates.map((candidate) => ({
+        ...candidate,
+        assignments: candidate.assignments.filter((assignment) =>
+          assignmentInScoringWindow(assignment, recentStart, futureEnd),
+        ),
+      })),
+    }));
+  }
+
+  return scores;
 }
 
 export async function getCandidateScoresForTarget(

@@ -11,7 +11,7 @@
 
 | Model | Fields | Model-level indexes/constraints |
 |---|---:|---:|
-| `User` | 130 | 5 |
+| `User` | 137 | 5 |
 | `Session` | 7 | 2 |
 | `PasswordResetToken` | 6 | 2 |
 | `PasskeyCredential` | 12 | 2 |
@@ -19,7 +19,7 @@
 | `Location` | 17 | 1 |
 | `Department` | 7 | 1 |
 | `Category` | 9 | 3 |
-| `Asset` | 42 | 8 |
+| `Asset` | 43 | 8 |
 | `FirmwareWatchTarget` | 17 | 3 |
 | `Booking` | 44 | 15 |
 | `BookingAccountabilityExclusion` | 11 | 4 |
@@ -27,13 +27,13 @@
 | `BookingSerializedItem` | 10 | 4 |
 | `BookingBulkItem` | 10 | 3 |
 | `AssetAllocation` | 11 | 4 |
-| `BulkSku` | 30 | 5 |
+| `BulkSku` | 31 | 5 |
 | `BulkSkuProduct` | 11 | 3 |
 | `BulkStockBalance` | 7 | 4 |
 | `BulkStockMovement` | 13 | 4 |
 | `BulkSkuUnit` | 15 | 5 |
-| `BookingBulkUnitAllocation` | 8 | 3 |
-| `ScanEvent` | 19 | 4 |
+| `BookingBulkUnitAllocation` | 8 | 4 |
+| `ScanEvent` | 19 | 7 |
 | `ScanSession` | 9 | 2 |
 | `OverrideEvent` | 8 | 4 |
 | `AuditLog` | 9 | 4 |
@@ -94,7 +94,7 @@
 | `ShiftTrade` | 14 | 4 |
 | `StudentAvailabilityBlock` | 22 | 7 |
 | `BookingPhoto` | 8 | 2 |
-| `CheckinItemReport` | 20 | 5 |
+| `CheckinItemReport` | 20 | 7 |
 | `KioskDevice` | 19 | 3 |
 | `Resource` | 20 | 7 |
 | `ResourceAssetFolder` | 12 | 2 |
@@ -118,10 +118,22 @@
 | `YouTubeLibraryState` | 8 | 1 |
 | `YouTubePublishRecord` | 15 | 2 |
 | `YouTubePlaylistAddition` | 11 | 2 |
-| `GearPickCycle` | 7 | 1 |
+| `GearPickCycle` | 17 | 1 |
+| `GearPickHandout` | 11 | 3 |
+| `GearPickReceipt` | 11 | 2 |
+| `GearPastCycle` | 9 | 1 |
+| `GearPastItem` | 10 | 2 |
+| `GearPastPerson` | 8 | 2 |
+| `GearPickStudent` | 6 | 3 |
 | `GearPickParticipant` | 10 | 3 |
 | `GearPickSubmission` | 9 | 1 |
 | `GearPickLine` | 9 | 2 |
+| `Budget` | 8 | 3 |
+| `BudgetLine` | 26 | 5 |
+| `BudgetLineItem` | 10 | 5 |
+| `WishItem` | 15 | 3 |
+| `Announcement` | 18 | 3 |
+| `AnnouncementDismissal` | 6 | 3 |
 
 ## Enums
 
@@ -540,3 +552,37 @@
 
 - `MEN`
 - `WOMEN`
+
+### `BudgetLineStatus`
+
+- `PLANNED`
+- `ORDERED`
+- `PURCHASED`
+- `CANCELLED`
+
+### `BudgetCategory`
+
+- `AWARDS_PRIZES`
+- `BUSINESS_TRAVEL`
+- `EQUIPMENT`
+- `IT_SERVICES`
+- `LEASES`
+- `MAINTENANCE_REPAIRS`
+- `MATERIALS_SUPPLIES`
+- `RENTALS`
+- `SERVICES`
+- `SUBSCRIPTIONS_DUES`
+- `TELECOMMUNICATIONS`
+
+### `WishStatus`
+
+- `OPEN`
+- `APPROVED`
+- `IN_BUDGET`
+- `DECLINED`
+
+### `AnnouncementKind`
+
+- `FEATURE`
+- `UPDATE`
+- `NOTICE`

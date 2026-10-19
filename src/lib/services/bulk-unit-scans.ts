@@ -588,10 +588,13 @@ export async function scanKioskCheckinBulkUnit(
   }
 
   const now = new Date();
-  await tx.bookingBulkUnitAllocation.update({
-    where: { id: allocation.id },
+  const claimed = await tx.bookingBulkUnitAllocation.updateMany({
+    where: { id: allocation.id, checkedInAt: null },
     data: { checkedInAt: now },
   });
+  if (claimed.count !== 1) {
+    return { handled: true, success: false, error: `${bulkItem.bulkSku.name} #${unit.unitNumber} already returned`, errorCode: "already_returned" };
+  }
   await tx.bulkSkuUnit.update({
     where: { id: unit.id },
     data: { status: BulkUnitStatus.AVAILABLE },

@@ -16,6 +16,11 @@ extension Color {
             : UIColor(red: 0.627, green: 0, blue: 0, alpha: 1)
     }))
 
+    /// Wisconsin red `#C80000`, the same in light and dark. Unlike `brandPrimary`
+    /// it does not adapt: use it where the brand red must read as the brand red
+    /// on any surface (the announcement splash).
+    static let wisconsinRed = Color(red: 200.0 / 255.0, green: 0, blue: 0)
+
     /// Top stop of the sign-in splash scene — `#140B10`.
     static let brandSplashTop = Color(red: 0.078, green: 0.043, blue: 0.063)
 

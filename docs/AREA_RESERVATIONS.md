@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Reservations
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-09-25
+- Last Updated: 2026-10-18
 - Status: Active — V1 Shipped (2026-03-10)
 - Version: V1
 
@@ -287,6 +287,8 @@ The access labels below describe state-machine actions, not list/detail reads. I
 
 ## Change Log
 
+- 2026-10-18: **Reservation lists and plans recover from the keyboard (local).** A booking row opens only when Enter or Space lands on the row itself. A failed existing-plan check says it could not check and offers Try again instead of looking like there is no reservation. The edit shortcut stays off while a dialog, menu, or field has focus. Shared confirm dialogs return focus to the control that opened them. Source tests cover the helpers; authenticated browser proof is still open.
+- 2026-10-16: **Native reservation edit matches the web plan sheet (local/source only).** iPhone can edit a reservation's name, notes, Camp Randall or Kohl Center pickup, window, remaining gear, and linked events. Picked-up lines stay on the checkout. A failed availability check blocks Save. Checkout gear edits stay at the kiosk. iPhone 18 Pro Max and authenticated device proof remain open.
 - 2026-09-25: **Native reservation search keeps gear that is out now.** Searching or browsing for a Sony a1 II or 70-200 includes it while it is checked out, awaiting pickup, or on an active reservation. It can be added when pickup is at least 60 minutes after that hold ends, and a tighter handoff stays blocked with the holder and return time. Scan uses the same rule. Maintenance and retired gear stay out of the picker. Source contracts updated; iPhone runtime proof remains open.
 - 2026-09-18: **Native reservation Review and availability copy (local).** Gear names the person on a hold: reserved-for copy is purple, currently-out copy is red, and the cart stays purple with a red count badge. Counted quantities use a system stepper with the count beside the control. Power cards sit above the selected-gear toolbar. Review is a grouped form with a matchup-only title and native Schedule rows, and it no longer calls timing notices gear conflicts. Source/test complete; iPhone 16 Pro fixture capture is in `tasks/archive/proofs/ios-reservation-review-2026-09-18/review.html`. Authenticated device proof remains open.
 - 2026-09-18: **Native reservation Gear uses system search, toolbar, and swipe (local).** Search is `.searchable` in the navigation bar. Category lives next to Scan. Selected gear and Review are the bottom toolbar. Rows swipe to add/remove and long-press to view the item. Conflicts keep a red alert in the add slot. Tapping a row does not steal search focus, and the plus stays gray unless the row is selected. Source/test complete; iPhone 16 Pro fixture capture is in `tasks/archive/proofs/ios-reservation-gear-system-2026-09-18/review.html`. Authenticated device proof remains open.

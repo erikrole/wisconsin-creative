@@ -10,6 +10,8 @@ struct UserDetailView: View {
     @State private var reservations: [Booking] = []
     @State private var checkouts: [Booking] = []
     @State private var shifts: [MyShift] = []
+    @State private var ownHours: MyHours?
+    @State private var hoursLoading = true
     @State private var pushedBookingId: String?
     @State private var selectedShift: MyShift?
     @State private var isLoading = true
@@ -46,6 +48,13 @@ struct UserDetailView: View {
                                 openBooking: { pushedBookingId = $0 },
                                 openShift: { selectedShift = $0 }
                             )
+                            if isViewingSelf && MyHoursAccess.canRead(role: session.currentUser?.role) {
+                                MyHoursCard(
+                                    hours: ownHours,
+                                    isLoading: hoursLoading,
+                                    retry: { Task { await loadHours() } }
+                                )
+                            }
                             ScoreboardLinkCard(userId: detail.id)
                             badgesSection
                         }
@@ -59,7 +68,12 @@ struct UserDetailView: View {
         .navigationTitle(detail?.name ?? "Profile")
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }
-        .refreshable { await load() }
+        .task { await loadHoursIfNeeded() }
+        .refreshable {
+            async let profile: Void = load()
+            async let hours: Void = loadHoursIfNeeded()
+            _ = await (profile, hours)
+        }
         .navigationDestination(for: String.self) { bookingId in
             BookingDetailView(bookingId: bookingId)
         }
@@ -193,6 +207,10 @@ struct UserDetailView: View {
         return "Joined \(date.formatted(.dateTime.month(.abbreviated).year()))"
     }
 
+    private var isViewingSelf: Bool {
+        session.currentUser?.id == userId
+    }
+
     private func load() async {
         isLoading = true
         error = nil
@@ -224,6 +242,17 @@ struct UserDetailView: View {
         } catch {
             self.error = error.localizedDescription
         }
+    }
+
+    /// Only your own profile. The hours route returns the signed-in person,
+    /// so a teammate's screen never requests it.
+    private func loadHoursIfNeeded() async {
+        guard isViewingSelf, MyHoursAccess.canRead(role: session.currentUser?.role) else { return }
+        await loadHours()
+    }
+
+    private func loadHours() async {
+        await MyHoursAccess.load($ownHours, loading: $hoursLoading)
     }
 
     private func loadBadgeProfileSafely() async -> BadgeProfile? {

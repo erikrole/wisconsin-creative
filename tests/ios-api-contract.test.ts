@@ -269,7 +269,8 @@ describe("iOS API contracts — asset lookup item families", () => {
     expect(searchService).toContain("normalized == \"accessories\"");
     expect(searchService).toContain("normalized.hasSuffix(\"/accessories\")");
     expect(searchService).toContain("itemFamilies.isEmpty");
-    expect(globalSearch).toContain("ItemFamilyResultRow(family: family, showsReserveAction: true)");
+    expect(globalSearch).toContain("navigationPath.append(BulkSkuRoute(id: family.id))");
+    expect(globalSearch).toContain("ItemFamilyResultRow(family: family, showsReserveAction: false)");
     expect(scanner).toContain("case itemFamily(AssetFamilySearchResult)");
     // The resolve-based scanner still surfaces bulk families as matches.
     expect(scanner).toContain("match = .itemFamily(family)");

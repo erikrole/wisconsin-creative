@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Checkouts
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-10-07
+- Last Updated: 2026-10-18
 - Status: Active — V1 Shipped
 - Version: V1
 
@@ -339,6 +339,8 @@ The checkout detail page (`/checkouts/[id]`) uses the shared `BookingDetailPage`
 
 ## Change Log
 
+- 2026-10-18: **Checkout rows and confirms keep the keyboard (local).** Checkout rows share the reservation list, so Enter and Space open the checkout only from the row itself. The detail edit shortcut stays off inside a dialog, menu, or field. Shared confirm dialogs return focus when they close. Source tests cover the helpers; authenticated browser proof is still open.
+- 2026-10-16: **Native checkout detail offers the web exception actions (local/source only).** When the server allows them, iPhone can nudge, close without a scan, transfer ownership, switch shared or personal custody, and edit linked events. Extend stays the only bottom action. Gear on an active checkout still changes only at a kiosk. iPhone 18 Pro Max and authenticated device proof remain open.
 - 2026-10-07: **Removed dead app/web partial check-in service helpers.** `checkinItems` and `checkinBulkItem` had no product API callers under D-040; kiosk return paths, `maybeAutoComplete`, `markCheckoutCompleted`, and `forceCompleteCheckout` remain. The `/api/checkouts/[id]/checkin-*` routes still 403 so old clients get the kiosk-only message.
 - 2026-10-03: **Damage report evidence and custody hardening (local implementation; authenticated acceptance pending).** Both web and kiosk reports now save report, maintenance hold, and audit in one serializable transaction. Damage requires a description or photo (existing evidence can be retained), preserving the current kiosk no-camera fallback. Reports changed while a submission is in flight return a conflict; failed uploads are cleaned up, while replaced evidence remains available to before/after audit history. New evidence invalidates an already-open item-detail maintenance release. Existing missing-item completion behavior stays unchanged. Staff follow-up is on item Info; see [implementation ledger](../tasks/damaged-item-hardening-2026-10-03.md). No migration or live data correction was performed.
 - 2026-09-20: **Removed the unused `getActiveGuidance()` helper.** Per-section context hints were never wired into the booking wizard; only `getUnsatisfiedRequirements()` consumes `EQUIPMENT_GUIDANCE_RULES`. The rules table is unchanged.

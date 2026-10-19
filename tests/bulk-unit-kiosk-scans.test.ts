@@ -10,7 +10,12 @@ function makeTx(overrides: Partial<Record<string, unknown>> = {}) {
     booking: { findUnique: vi.fn(), update: vi.fn() },
     bulkSku: { findMany: vi.fn() },
     bulkSkuUnit: { findUnique: vi.fn(), update: vi.fn() },
-    bookingBulkUnitAllocation: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
+    bookingBulkUnitAllocation: {
+      findUnique: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+    },
     checkinItemReport: { findMany: vi.fn(async () => []) },
     bookingBulkItem: { update: vi.fn(), findMany: vi.fn() },
     bookingSerializedItem: { count: vi.fn().mockResolvedValue(0) },
@@ -485,8 +490,8 @@ describe("scanKioskCheckinBulkUnit", () => {
       completed: false,
       badgeEvent: null,
     }));
-    expect(tx.bookingBulkUnitAllocation.update).toHaveBeenCalledWith({
-      where: { id: "allocation-1" },
+    expect(tx.bookingBulkUnitAllocation.updateMany).toHaveBeenCalledWith({
+      where: { id: "allocation-1", checkedInAt: null },
       data: expect.objectContaining({ checkedInAt: expect.any(Date) }),
     });
     // The unit is physically back — the ledger restock happens at the scan,
@@ -503,6 +508,50 @@ describe("scanKioskCheckinBulkUnit", () => {
       data: { checkedInQuantity: { increment: 1 } },
     });
     expect(tx.booking.update).not.toHaveBeenCalled();
+  });
+
+  it("does not restock or record a scan when another return already claimed the unit", async () => {
+    const tx = makeTx();
+    tx.bookingBulkUnitAllocation.updateMany.mockResolvedValue({ count: 0 });
+    tx.booking.findUnique.mockResolvedValue({
+      ...pickupBooking,
+      status: "OPEN",
+      locationId: "loc-1",
+      requesterUserId: "user-1",
+      bulkItems: [{
+        ...pickupBooking.bulkItems[0],
+        checkedOutQuantity: 5,
+        checkedInQuantity: 0,
+      }],
+    });
+    tx.bulkSkuUnit.findUnique.mockResolvedValue({
+      id: "unit-7",
+      bulkSkuId: "sku-1",
+      unitNumber: 7,
+      status: "CHECKED_OUT",
+    });
+    tx.bookingBulkUnitAllocation.findUnique.mockResolvedValue({
+      id: "allocation-1",
+      checkedOutAt: new Date(),
+      checkedInAt: null,
+    });
+
+    const result = await scanKioskCheckinBulkUnit(tx, {
+      bookingId: "booking-1",
+      scanValue: "94e068d1-7",
+      kioskLocationId: "loc-return",
+      actorUserId: "user-1",
+    });
+
+    expect(result).toEqual(expect.objectContaining({
+      handled: true,
+      success: false,
+      errorCode: "already_returned",
+    }));
+    expect(tx.bookingBulkItem.update).not.toHaveBeenCalled();
+    expect(tx.bulkSkuUnit.update).not.toHaveBeenCalled();
+    expect(tx.bulkStockMovement.createMany).not.toHaveBeenCalled();
+    expect(tx.scanEvent.create).not.toHaveBeenCalled();
   });
 
   it("auto-completes the checkout when this scan returns the last outstanding battery", async () => {

@@ -35,6 +35,7 @@ import { assetSearchTitle } from "@/lib/search-result-title";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { BOOKING_CHANGE_SYNC_EVENT } from "@/hooks/use-booking-change-sync";
+import { isBackgroundPollingPaused } from "@/hooks/use-operational-polling-activity";
 import { NOTIFICATION_COUNT_CHANGED_EVENT } from "@/lib/notification-count-sync";
 import { ProfileCompletionWizard } from "@/components/profile-completion/ProfileCompletionWizard";
 import { hasDashboardCountFailure } from "@/app/(app)/dashboard-types";
@@ -123,7 +124,7 @@ const SEARCH_RESULT_SOURCES = {
   items: "Items",
   checkouts: "Checkouts",
   reservations: "Reservations",
-  users: "Users",
+  users: "Staff",
   guides: "Guides",
 } as const;
 
@@ -146,7 +147,7 @@ const collaboratorBottomNavItems: BottomNavItem[] = [
   { label: "Schedule", href: "/schedule", icon: CalendarCheckIcon },
   { label: "My Gear", href: "/bookings", icon: BookOpenIcon, badge: "overdue" as const },
   { label: "Items", href: "/items", icon: LayersIcon },
-  { label: "People", href: "/users", icon: UserIcon },
+  { label: "People", href: "/staff", icon: UserIcon },
 ];
 
 const COLLABORATOR_ROUTE_CAPABILITY: Array<{ matches: (pathname: string) => boolean; capability: string }> = [
@@ -154,7 +155,7 @@ const COLLABORATOR_ROUTE_CAPABILITY: Array<{ matches: (pathname: string) => bool
   { matches: (value) => value === "/items" || (value.startsWith("/items/") && value !== "/items/new"), capability: "GEAR_CATALOG_VIEW" },
   { matches: (value) => value === "/bookings" || value.startsWith("/bookings/"), capability: "MY_GEAR_VIEW" },
   { matches: (value) => value === "/reservations/new", capability: "RESERVATION_CREATE" },
-  { matches: (value) => value === "/users" || value.startsWith("/users/"), capability: "PEOPLE_DIRECTORY_VIEW" },
+  { matches: (value) => value === "/staff" || value.startsWith("/staff/"), capability: "PEOPLE_DIRECTORY_VIEW" },
 ];
 
 function collaboratorCanVisit(pathname: string, user: CurrentUser): boolean {
@@ -168,7 +169,7 @@ function collaboratorCanVisit(pathname: string, user: CurrentUser): boolean {
     || pathname === "/settings/security"
     || pathname === "/settings/notifications"
     || pathname === "/settings/appearance"
-    || pathname === `/users/${user.id}`
+    || pathname === `/staff/${user.id}`
     || pathname === "/notifications"
     || pathname.startsWith("/notifications/");
   if (alwaysAllowed) return true;
@@ -348,7 +349,7 @@ export default function AppShell({
     }
 
     async function loadEarnedBadges() {
-      if (loading || document.visibilityState === "hidden") return;
+      if (loading || isBackgroundPollingPaused()) return;
       loading = true;
 
       try {
@@ -403,6 +404,8 @@ export default function AppShell({
     }
 
     async function refreshBadgeRewards() {
+      // Overnight and background tabs must not mint an app-open award or read badges.
+      if (isBackgroundPollingPaused()) return;
       // Establish the no-replay cursor before a foreground easter egg can
       // create an award, then immediately read again so the reward cannot be
       // skipped by first-load cursor initialization.
@@ -424,6 +427,9 @@ export default function AppShell({
     void refreshBadgeRewards().then(startSteadyPolling);
     const onVisibilityChange = () => {
       if (document.visibilityState !== "visible") return;
+      // Coming back during the day refreshes immediately. Quiet hours stay paused
+      // until the steady timer notices morning.
+      if (isBackgroundPollingPaused(false)) return;
       // A refocus is a fresh signal that the user is here: drop back to the
       // fast cadence before re-reading.
       resetPollDelay();
@@ -648,7 +654,7 @@ export default function AppShell({
           const data = json?.data;
           if (!data) failures.push(SEARCH_RESULT_SOURCES.users);
           for (const u of (data ?? []).slice(0, 5)) {
-            merged.push({ type: "user", id: u.id, title: u.name ?? "Unnamed user", subtitle: u.email || "", href: `/users/${u.id}` });
+            merged.push({ type: "user", id: u.id, title: u.name ?? "Unnamed user", subtitle: u.email || "", href: `/staff/${u.id}` });
           }
         } else {
           failures.push(SEARCH_RESULT_SOURCES.users);
@@ -762,7 +768,7 @@ export default function AppShell({
           reward={earnedBadgeQueue[0]}
           remaining={earnedBadgeQueue.length - 1}
           onDismiss={() => setEarnedBadgeQueue((current) => current.slice(1))}
-          onViewShelf={rewardUserId ? () => router.push(`/users/${rewardUserId}?tab=badges`) : undefined}
+          onViewShelf={rewardUserId ? () => router.push(`/staff/${rewardUserId}?tab=badges`) : undefined}
         />
       )}
 
@@ -918,7 +924,7 @@ export default function AppShell({
           {cmdGroups.user.length > 0 && (
             <>
               <CommandSeparator />
-              <CommandGroup heading="Users">
+              <CommandGroup heading="Staff">
                 {cmdGroups.user.map((r) => (
                   <CommandItem key={r.id} value={`${r.title} ${r.subtitle}`} onSelect={() => handleCmdSelect(r.href)}>
                     <UserIcon className="mr-2 size-4 shrink-0 text-muted-foreground" />

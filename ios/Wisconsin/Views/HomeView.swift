@@ -38,9 +38,12 @@ final class HomeViewModel {
 
     /// Deliberately outside the freshness window and outside `load()`: a blast has
     /// to be current, and a dashboard failure must never be able to hide one.
-    func loadBlasts() async {
+    func loadBlasts(userId: String?) async {
         await retryPendingAcks()
         if let latest = try? await APIClient.shared.activeBlasts() {
+            if let userId {
+                BlastArchive.recordActive(latest, userId: userId)
+            }
             blasts = latest.filter { !pendingAcks.contains($0.id) }
         }
     }
@@ -525,7 +528,7 @@ struct HomeView: View {
             .refreshable {
                 // Concurrent, not sequential: the blast banner must not wait on the
                 // dashboard query, and must not be suppressed if it fails.
-                async let blasts: Void = vm.loadBlasts()
+                async let blasts: Void = vm.loadBlasts(userId: session.currentUser?.id)
                 await vm.load(appState: appState, requesterId: session.currentUser?.id, forceRefresh: true)
                 await blasts
             }
@@ -533,14 +536,14 @@ struct HomeView: View {
                 if firstUsefulRenderSignpost == nil, !didLogFirstUsefulRender {
                     firstUsefulRenderSignpost = AppPerformanceSignposts.begin("FirstUsefulHome")
                 }
-                async let blasts: Void = vm.loadBlasts()
+                async let blasts: Void = vm.loadBlasts(userId: session.currentUser?.id)
                 await vm.load(appState: appState, requesterId: session.currentUser?.id)
                 await blasts
             }
             .onChange(of: appState.pendingPushBlastId) { _, id in
                 if id != nil {
                     appState.pendingPushBlastId = nil
-                    Task { await vm.loadBlasts() }
+                    Task { await vm.loadBlasts(userId: session.currentUser?.id) }
                 }
             }
             .onChange(of: appState.pendingPushBookingId) { _, id in

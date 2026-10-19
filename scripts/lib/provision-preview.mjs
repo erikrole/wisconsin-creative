@@ -9,6 +9,14 @@ import { assertFallbackHistory } from "../prisma-migrate-deploy.mjs";
 import { NeonPreviewApi } from "./neon-preview-api.mjs";
 import { provisionPreviewStorage } from "./provision-preview-storage.mjs";
 import { publishPreviewHandoff } from "./preview-handoff.mjs";
+import { previewDatabaseDecision } from "./preview-change-scope.mjs";
+
+/** Neon bills every branch past the plan's included ten. Refuse a new child at the budget instead of creating one that bills hourly. */
+export function assertPreviewBranchCapacity(existingCount, limit) {
+  if (existingCount >= limit) {
+    throw new Error(`Refusing to create a preview branch: ${existingCount} preview branches already exist (limit ${limit}). Merge or close old PRs, or run Preview cleanup, then retry.`);
+  }
+}
 
 export function assertProviderLineage(branch, gitBranch, config = readInfrastructureConfig()) {
   if (branch.project_id !== config.preview.projectId || branch.parent_id !== config.preview.templateBranchId
@@ -65,14 +73,22 @@ export async function initializePreviewChild({ branch, gitBranch, pooledUrl, dir
   return state;
 }
 
-export async function provisionPreview(gitBranch, { api = new NeonPreviewApi(), config = readInfrastructureConfig(), root = process.cwd() } = {}) {
+export async function provisionPreview(gitBranch, options = {}) {
+  const change = options.change ?? {};
+  const decision = previewDatabaseDecision({ files: change.files, author: change.author, branch: change.branch ?? gitBranch });
+  if (decision.skip) {
+    console.log(decision.reason);
+    return { skipped: true, gitBranch, reason: decision.reason };
+  }
+  const api = options.api ?? new NeonPreviewApi();
+  const config = options.config ?? readInfrastructureConfig();
+  const root = options.root ?? process.cwd();
   const key = branchKey(gitBranch), name = `${config.preview.branchPrefix}${key}`;
   const existing = await api.branches(config.preview.projectId);
   let branch = existing.find((b) => b.name === name);
   if (!branch) {
-    // Neon bills every branch past the plan's included ten, each hour. Warn loudly; cleanup and the expiry below remove the old ones.
     const children = existing.filter((b) => b.name?.startsWith(config.preview.branchPrefix)).length;
-    if (children >= config.preview.maxPreviewBranches) console.warn(`::warning title=Neon preview branches over budget::${children} preview branches exist (budget ${config.preview.maxPreviewBranches}). Each extra branch bills hourly; merge or close old PRs or run Preview cleanup.`);
+    assertPreviewBranchCapacity(children, config.preview.maxPreviewBranches);
     if (!process.env.PREVIEW_SIGNING_KEY) throw new Error("New previews require the trusted provisioner's PREVIEW_SIGNING_KEY.");
     const result = await api.request(`/projects/${config.preview.projectId}/branches`, { method: "POST", body: {
       branch: { parent_id: config.preview.templateBranchId, name, expires_at: NeonPreviewApi.expiry(config.preview.branchTtlDays) },

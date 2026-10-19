@@ -9,7 +9,17 @@ import { validateResourceManifest } from "./lib/provision-preview-storage.mjs";
 import { previewRetentionDecision } from "./lib/preview-retention.mjs";
 import { assertProviderLineage } from "./lib/provision-preview.mjs";
 import { handoffVariable } from "./lib/preview-handoff.mjs";
-import { claimPreviewCleanupSql } from "./lib/preview-lifecycle.mjs";
+import { claimPreviewCleanupSql, previewCleanupRuntimeSql } from "./lib/preview-lifecycle.mjs";
+import {
+  endpointsByBranchId,
+  endpointsInspectionWouldStart,
+  isEndpointLimitError,
+  openPreviewNames,
+  partitionPreviewCleanup,
+  rotateCleanupBranches,
+  takeCleanupBatch,
+  CLEANUP_TIME_BUDGET_MS,
+} from "./lib/preview-cleanup-plan.mjs";
 import { neon } from "@neondatabase/serverless";
 
 const apply = process.argv.includes("--apply"), config = readInfrastructureConfig();
@@ -31,61 +41,76 @@ async function references() {
   const prs = await all("pulls?state=open");
   return { prs: new Set(prs.filter((p) => p.head.repo?.full_name === config.repository).map((p) => p.head.ref)) };
 }
-// Neon answers 402 "concurrently active endpoints" when a sweep wakes a child while many
-// others are still awake. Wait for them to suspend instead of aborting the whole sweep.
-async function whenCapacity(action) {
-  for (let attempt = 1; ; attempt++) {
-    try { return await action(); } catch (error) {
-      if (!String(error?.message).includes("concurrently active endpoints") || attempt >= 6) throw error;
-      await new Promise((resolve) => setTimeout(resolve, 30_000));
-    }
-  }
-}
 let failures = 0, refs = await references();
-for (const branch of await provider.branches(config.preview.projectId)) {
-  if (branch.id === config.preview.templateBranchId || branch.protected || branch.default || branch.primary || branch.parent_id !== config.preview.templateBranchId || !/^wc-preview-[a-f0-9]{20}$/.test(branch.name)) continue;
-  const inspection = { startedAt: new Date() };
-  const woken = await provider.idleEndpoints(config.preview.projectId, branch.id);
-  try {
-    try { await review(branch, inspection); } finally {
-      if (inspection.removed) { /* branch and its computes are gone */ }
-      else if (await usedDuringReview(inspection)) console.log({ branch: branch.id, status: "in-use-left-active" });
-      else await provider.suspendEndpoints(config.preview.projectId, woken);
-    }
-  } catch (error) {
-    // One stuck branch must not stop the sweep from reaching the rest.
-    failures++;
-    console.log({ branch: branch.id, status: "error", message: String(error?.message).slice(0, 200) });
+const projectId = config.preview.projectId;
+const [branches, endpoints] = await Promise.all([provider.branches(projectId), provider.endpoints(projectId)]);
+const endpointsByBranch = endpointsByBranchId(endpoints);
+const candidates = branches.filter((branch) => branch.id !== config.preview.templateBranchId && !branch.protected && !branch.default && !branch.primary && branch.parent_id === config.preview.templateBranchId && /^wc-preview-[a-f0-9]{20}$/.test(branch.name));
+const openNames = openPreviewNames(refs.prs, { branchPrefix: config.preview.branchPrefix });
+const { metadata, database } = partitionPreviewCleanup(candidates, openNames);
+const startedRun = Date.now();
+for (const { branch, gitBranch } of metadata) {
+  // Name match is enough to keep an open PR. Do not start its compute to read the runtime row.
+  console.log({ gitBranch, branch: branch.id, status: "referenced", via: "metadata", apply });
+  if (!apply) continue;
+  try { await provider.setExpiry(projectId, branch.id, NeonPreviewApi.expiry(config.preview.branchTtlDays)); }
+  catch (error) { noteBranchError(branch.id, error); }
+}
+let pending = rotateCleanupBranches(database);
+while (pending.length) {
+  const { batch, deferred, reason } = takeCleanupBatch(pending, { elapsedMs: Date.now() - startedRun, budgetMs: CLEANUP_TIME_BUDGET_MS });
+  if (reason) {
+    for (const branch of pending) console.log({ branch: branch.id, status: "retry-later", reason });
+    break;
   }
+  const results = await Promise.all(batch.map((branch) => inspectDatabaseBranch(branch)));
+  if (results.includes("endpoint-limit")) {
+    for (const branch of deferred) console.log({ branch: branch.id, status: "retry-later", reason: "endpoint-limit" });
+    break;
+  }
+  pending = deferred;
 }
 if (failures) process.exitCode = 1;
-// Leave the compute running if anything else may be using it: another session of the
-// preview's role (catches requests inside the app's heartbeat throttle), or a
-// last_seen_at bump since this branch's inspection began (taken before the idle
-// snapshot, less a margin for clock skew). Unattested children have no runtime row, so
-// only the session check applies. Cleanup's HTTP queries hold no session and never
-// bump last_seen_at. No SQL handle or a failed check fails closed.
-async function usedDuringReview({ sql, startedAt, unattested }) {
-  if (!sql) return true;
-  try {
-    const [{ busy }] = await sql.query("SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE datname=current_database() AND usename=current_user AND backend_type='client backend' AND pid<>pg_backend_pid()) AS busy");
-    if (busy !== false) return true;
-    if (unattested) return false;
-    const [row] = await sql.query("SELECT last_seen_at >= $1::timestamptz - interval '2 minutes' AS used FROM wc_preview_meta.runtime WHERE id=true", [startedAt.toISOString()]);
-    return row?.used !== false;
-  } catch { return true; }
+function noteBranchError(branchId, error) {
+  if (isEndpointLimitError(error)) { console.log({ branch: branchId, status: "retry-later", reason: "endpoint-limit" }); return "endpoint-limit"; }
+  failures++;
+  console.log({ branch: branchId, status: "error", message: String(error?.message).slice(0, 200) });
+  return "error";
+}
+// Suspend only endpoints that were idle before this inspection. A failure to suspend
+// something that never left idle is not a leaked compute; anything else is.
+async function suspendStarted(branchId, endpointIds) {
+  try { await provider.suspendEndpoints(projectId, endpointIds); }
+  catch (error) {
+    if (isEndpointLimitError(error) || [400, 404, 409, 422].includes(error?.status)) {
+      console.log({ branch: branchId, status: isEndpointLimitError(error) ? "retry-later" : "suspend-skipped", reason: error?.status ?? "endpoint-limit" });
+      return;
+    }
+    noteBranchError(branchId, error);
+  }
+}
+async function inspectDatabaseBranch(branch) {
+  const inspection = {};
+  const branchEndpoints = endpointsByBranch.get(branch.id) ?? [];
+  if (!branchEndpoints.length) { console.log({ branch: branch.id, status: "retry-later", reason: "no-endpoint" }); return; }
+  const started = endpointsInspectionWouldStart(branchEndpoints);
+  let reason = null;
+  try { await review(branch, inspection); }
+  catch (error) { reason = noteBranchError(branch.id, error); }
+  finally { if (!inspection.removed && started.length) await suspendStarted(branch.id, started); }
+  return reason;
 }
 async function review(branch, inspection) {
   const pooled = await provider.connection(config.preview.projectId, branch.id, config.preview.database, config.preview.ownerRole, true);
   const direct = await provider.connection(config.preview.projectId, branch.id, config.preview.database, config.preview.ownerRole, false);
-  const sql = neon(direct); inspection.sql = sql;
-  const baseline = await whenCapacity(() => loadMigrationBaseline(sql, localChecksums()));
-  if (!baseline || baseline.approval?.kind !== "sanitized-child") { inspection.unattested = true; console.log({ branch: branch.id, status: "unattested-retained" }); return; }
+  const sql = neon(direct);
+  const baseline = await loadMigrationBaseline(sql, localChecksums());
+  if (!baseline || baseline.approval?.kind !== "sanitized-child") { console.log({ branch: branch.id, status: "unattested-retained" }); return; }
   const gitBranch = baseline.approval.gitBranch;
   assertProviderLineage(branch, gitBranch, config);
   const state = { projectId: config.preview.projectId, branchId: branch.id, endpointId: baseline.target.endpoint, gitBranch, key: branchKey(gitBranch), environment: { DATABASE_URL: pooled, DIRECT_URL: direct, DATABASE_URL_UNPOOLED: direct } };
   await verifyPreviewState(state, localChecksums(), config, { allowCleanup: true });
-  const [runtime] = await sql.query("SELECT pinned,git_deleted_at,last_seen_at FROM wc_preview_meta.runtime WHERE id=true");
+  const [runtime] = await sql.query(previewCleanupRuntimeSql);
   const decision = previewRetentionDecision({ exists: false, openPullRequest: refs.prs.has(gitBranch), pinned: runtime.pinned, deletedAt: runtime.git_deleted_at, lastSeenAt: runtime.last_seen_at, graceDays: config.preview.cleanupGraceDays });
   console.log({ gitBranch, branch: branch.id, status: decision, apply });
   if (!apply) return;
@@ -106,7 +131,7 @@ async function review(branch, inspection) {
   refs = await references();
   const { branch: currentBranch } = await provider.request(`/projects/${config.preview.projectId}/branches/${branch.id}`);
   assertProviderLineage(currentBranch, gitBranch, config);
-  const [current] = await sql.query("SELECT pinned,git_deleted_at,last_seen_at FROM wc_preview_meta.runtime WHERE id=true");
+  const [current] = await sql.query(previewCleanupRuntimeSql);
   if (previewRetentionDecision({ exists: false, openPullRequest: refs.prs.has(gitBranch), pinned: current.pinned, deletedAt: current.git_deleted_at, lastSeenAt: current.last_seen_at, graceDays: config.preview.cleanupGraceDays }) !== "eligible") return;
   const inventory = (await vercel.request("/v1/storage/stores")).stores;
   const present = resources.stores.filter((s) => inventory.some((i) => i.id === s.id));

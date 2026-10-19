@@ -8,7 +8,7 @@ import { useFetch } from "@/hooks/use-fetch";
 type MeData = { user: { id: string } };
 
 /**
- * /profile redirects to /users/{currentUserId}.
+ * /profile redirects to /staff/{currentUserId}.
  * Profile is now the user detail page for the current user.
  */
 export default function ProfileRedirect() {
@@ -22,7 +22,7 @@ export default function ProfileRedirect() {
   useEffect(() => {
     if (data?.user?.id) {
       // Keep deep links like /profile?tab=gear pointed at the same tab.
-      router.replace(`/users/${data.user.id}${window.location.search}`);
+      router.replace(`/staff/${data.user.id}${window.location.search}`);
     } else if (error) {
       router.replace("/login");
     }

@@ -65,6 +65,48 @@ describe("listBookings status filters", () => {
     );
   });
 
+  it("keeps the reservation due-today window when a start range is also set", async () => {
+    const todayStart = new Date("2026-10-17T05:00:00.000Z");
+    const todayEnd = new Date("2026-10-18T05:00:00.000Z");
+    const from = new Date("2020-01-01T00:00:00.000Z");
+
+    await listBookings(
+      BookingKind.RESERVATION,
+      new URLSearchParams(`filter=due-today&from=${from.toISOString()}`),
+      {
+        status: BookingStatus.BOOKED,
+        startsAt: { gte: todayStart, lt: todayEnd },
+      },
+    );
+
+    expect(db.booking.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          status: BookingStatus.BOOKED,
+          startsAt: { gte: todayStart, lt: todayEnd },
+          AND: [{ startsAt: { gte: from } }],
+        }),
+      }),
+    );
+  });
+
+  it("still applies a start range directly when the special filter does not set one", async () => {
+    const from = new Date("2026-10-01T00:00:00.000Z");
+    await listBookings(
+      BookingKind.CHECKOUT,
+      new URLSearchParams(`from=${from.toISOString()}`),
+      { status: BookingStatus.OPEN, endsAt: { gte: from } },
+    );
+
+    const where = vi.mocked(db.booking.findMany).mock.calls[0]?.[0]?.where;
+    expect(where).toMatchObject({
+      status: BookingStatus.OPEN,
+      endsAt: { gte: from },
+      startsAt: { gte: from },
+    });
+    expect(where?.AND).toBeUndefined();
+  });
+
   it("rejects invalid statuses inside multi-status filters", async () => {
     await expect(
       listBookings(BookingKind.CHECKOUT, new URLSearchParams("status_in=OPEN,NOPE")),

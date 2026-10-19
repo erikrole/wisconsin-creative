@@ -93,6 +93,7 @@ struct ScanAssetHeroCard: View {
 
 struct ScanFamilyHeroCard: View {
     let family: AssetFamilySearchResult
+    var onViewFamily: () -> Void
     var onReserve: () -> Void
     var onOpenBooking: ((String) -> Void)? = nil
 
@@ -145,16 +146,24 @@ struct ScanFamilyHeroCard: View {
                 )
             }
 
-            // No bulk-SKU detail screen exists on iOS, so there's no View
-            // item tap-through — Reserve is the one action that makes sense.
-            Button(action: onReserve) {
-                Label("Reserve", systemImage: "calendar.badge.plus")
-                    .foregroundStyle(Color(.systemBackground))
-                    .frame(maxWidth: .infinity)
+            HStack(spacing: 10) {
+                Button(action: onReserve) {
+                    Label("Reserve", systemImage: "calendar.badge.plus")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.large)
+                .tint(.primary)
+
+                Button(action: onViewFamily) {
+                    Label("View family", systemImage: "arrow.right.circle.fill")
+                        .foregroundStyle(Color(.systemBackground))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .tint(Color(.label))
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .tint(Color(.label))
         }
         .padding(.horizontal, 20)
         .padding(.top, 20)

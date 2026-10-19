@@ -7,6 +7,7 @@ import { normalizeEmail } from "@/lib/hiring/contract";
 import { mapArea } from "@/lib/hiring/import";
 import { HttpError, ok } from "@/lib/http";
 import { enforceRateLimit, SETTINGS_MUTATION_LIMIT } from "@/lib/rate-limit";
+import { sendInviteEmail } from "@/lib/services/invite-email";
 import { requirePermission } from "@/lib/rbac";
 
 const inviteSchema = z.object({
@@ -217,5 +218,7 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
     throw error;
   }
 
-  return ok({ data: { status: "invited", allowedEmailId: inviteId } }, 201);
+  // The invite is already committed and audited; delivery is best-effort and reported, never fatal.
+  const emailStatus = await sendInviteEmail({ email, name: application.applicant.name });
+  return ok({ data: { status: "invited", allowedEmailId: inviteId, emailStatus } }, 201);
 });

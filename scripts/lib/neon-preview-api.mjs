@@ -27,6 +27,16 @@ export class NeonPreviewApi {
     } while (cursor);
     return branches;
   }
+  // Control-plane list. Does not start compute. Cleanup uses it instead of connecting.
+  // Omit limit: this route rejects unknown query params, and a project returns its endpoints in one page.
+  async endpoints(project) {
+    const endpoints = []; let cursor;
+    do {
+      const page = await this.request(`/projects/${encodeURIComponent(project)}/endpoints${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`);
+      endpoints.push(...(page.endpoints ?? [])); cursor = page.pagination?.cursor;
+    } while (cursor);
+    return endpoints;
+  }
   async readyBranch(project, branchId) {
     for (let attempt = 0; attempt < 30; attempt += 1) {
       const { branch } = await this.request(`/projects/${project}/branches/${branchId}`);

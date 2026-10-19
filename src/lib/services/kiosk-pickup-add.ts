@@ -420,8 +420,9 @@ export async function addAndStageReservationPickupBulk(args: {
   if (staged.handled && staged.success) {
     return { success: true, addedToPlan: true, item: staged.item as PickupBulkAddTarget["item"] };
   }
-  // The unit could not be staged: give the reserved slot back.
-  await updateReservation(args.bookingId, args.actorUserId, planFor(0)).catch(() => undefined);
+  // The unit could not be staged: give the reserved slot back. If that undo
+  // fails, surface it — the reservation still has the extra quantity.
+  await updateReservation(args.bookingId, args.actorUserId, planFor(0));
   return {
     success: false,
     error: staged.handled && !staged.success ? staged.error : `${args.target.item.name} could not be added`,

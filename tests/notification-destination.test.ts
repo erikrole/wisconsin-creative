@@ -31,7 +31,7 @@ describe("notificationDestinationPath", () => {
     expect(notificationDestinationPath({ assetId: "ast_1" }, "checkin_item_damaged"))
       .toBe("/items/ast_1");
     expect(notificationDestinationPath({ userId: "usr_1" }, "badge_awarded"))
-      .toBe("/users/usr_1?tab=badges");
+      .toBe("/staff/usr_1?tab=badges");
     expect(notificationDestinationPath({ type: "license_expiry" })).toBe("/licenses");
     expect(notificationDestinationPath({ skuName: "Sony Battery" }, "low_stock"))
       .toBe("/items?search=Sony%20Battery");

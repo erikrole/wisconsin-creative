@@ -747,7 +747,7 @@ These are non-negotiable integrity constraints. Every feature must preserve them
   - Badge definition `key` values are immutable. Rename display fields in place; retire bad keys with `active=false` and seed replacement keys.
   - `onCheckoutReturned` and `onTradeCompleted` must be emitted from single status-flip helpers so competing call paths do not double-award.
   - Peer badge visibility defaults to true via `SystemConfig["badges.peerVisible"]`; staff/admin can always see user badges.
-  - The primary user UI is a `Badges` tab on `/users/{id}` for students, staff, and admins. No top-level nav item and no badge chrome in the profile hero.
+  - The primary user UI is a `Badges` tab on `/staff/{id}` for students, staff, and admins. No top-level nav item and no badge chrome in the profile hero.
   - The legacy `StudentBadge` model/table name remains in place until a dedicated cleanup migration. Product language and UI should say user awards or badge awards.
   - Badge progress is displayed only when it is backed by real counters or streak rows. Manual badges must not show invented progress.
   - Checkout-open credit is immutable. A transfer before the checkout opens moves the future earning opportunity; a transfer after opening does not move the original opener's checkout count or category breadth. The current custodian receives the eventual return, on-time, and damage-free outcome.
@@ -1555,6 +1555,7 @@ These are non-negotiable integrity constraints. Every feature must preserve them
 - Decision: Claude, Cursor and Codex share a sanitized database and isolated file stores per named Git branch. Trusted main-branch CI owns provisioning keys and signed provenance; app builds receive only branch credentials. Encrypted development settings in the no-deploy resource project provide authenticated cross-machine handoff.
 - Guardrails: Existing plans, production/review data and historical migration receipts are preserved. No production PII enters the template. Outbound delivery is disabled in previews. Cleanup requires confirmed branch absence, no open PR or pin, seven days without use, signed ownership and an atomic claim coordinated with local agents.
 - Consequences: Separate local outputs and process locks prevent build/dev corruption; actual-port authentication prevents stale-cookie handoffs. Preview Redis-dependent Companion features remain unavailable until isolated Redis is configured. Production pooling changes require source deployment.
+- Amendment (2026-10-15): Dependabot pull requests, and pull requests that do not change `prisma/`, `src/`, or `scripts/`, do not get a Neon preview branch or a managed deployment. The workflow logs the skip and succeeds. Required checks `validate` and `postgres-integrity` still report on docs-only pull requests; their install, test, build, and database work is skipped. Do not put `paths-ignore` on the CI workflow.
 - Reference: [Preview environments](PREVIEW_ENVIRONMENTS.md), [Prisma + Neon runbook](PRISMA_NEON_RUNBOOK.md), and [implementation ledger](../tasks/infrastructure-hardening-plan-2026-09-22.md).
 
 ## D-064: Kiosk Peer Transfer, Anyone-Nudge, and Missing Items Follow the Redesign

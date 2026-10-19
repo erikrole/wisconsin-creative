@@ -54,7 +54,7 @@ function entityHref(
     case "asset":
       return `/items/${entityId}`;
     case "user":
-      return `/users/${entityId}`;
+      return `/staff/${entityId}`;
     case "bulk_sku":
       return `/bulk-inventory/${entityId}`;
     case "kit":
