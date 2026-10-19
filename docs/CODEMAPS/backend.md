@@ -88,14 +88,14 @@
 | `src/lib/services/scans.ts` | 168 |
 | `src/lib/services/schedule-automation.ts` | 336 |
 | `src/lib/services/schedule-call-time-sync.ts` | 470 |
-| `src/lib/services/schedule-change-history.ts` | 538 |
+| `src/lib/services/schedule-change-history.ts` | 540 |
 | `src/lib/services/schedule-exports.ts` | 522 |
 | `src/lib/services/schedule-health.ts` | 383 |
 | `src/lib/services/schedule-notification-policy.ts` | 95 |
 | `src/lib/services/schedule-open-work.ts` | 597 |
-| `src/lib/services/schedule-publication.ts` | 1119 |
+| `src/lib/services/schedule-publication.ts` | 1133 |
 | `src/lib/services/schedule-template-review.ts` | 549 |
-| `src/lib/services/schedule-working-copy.ts` | 1202 |
+| `src/lib/services/schedule-working-copy.ts` | 1206 |
 | `src/lib/services/scoreboard.ts` | 282 |
 | `src/lib/services/shift-assignment-conflicts.ts` | 43 |
 | `src/lib/services/shift-assignments.ts` | 727 |
@@ -170,6 +170,7 @@
 | `src/lib/combined-schedule-event-suggestions.ts` | 93 |
 | `src/lib/companion-projection-contract.ts` | 71 |
 | `src/lib/companion-store.ts` | 302 |
+| `src/lib/crew-label.ts` | 26 |
 | `src/lib/crew-pending-review.ts` | 44 |
 | `src/lib/cron.ts` | 35 |
 | `src/lib/crypto.ts` | 17 |
@@ -269,7 +270,7 @@
 | `src/lib/schedule-timeline-window.ts` | 88 |
 | `src/lib/schedule-window.ts` | 152 |
 | `src/lib/schedule-working-copy-guard.ts` | 24 |
-| `src/lib/schedule-working-copy.ts` | 532 |
+| `src/lib/schedule-working-copy.ts` | 558 |
 | `src/lib/scoreboard-digest.ts` | 172 |
 | `src/lib/scoreboard-display.ts` | 27 |
 | `src/lib/scoreboard-explorer.ts` | 152 |

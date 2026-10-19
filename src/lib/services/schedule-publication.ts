@@ -253,6 +253,8 @@ async function findGroupForPublication(shiftGroupId: string, tx: Prisma.Transact
               callStartsAt: true,
               callEndsAt: true,
               callNote: true,
+              crewLabel: true,
+              crewHalf: true,
               acknowledgedAt: true,
               trades: {
                 where: { status: { in: ["OPEN", "CLAIMED"] } },
@@ -663,7 +665,11 @@ export async function publishShiftGroup(
         const assignmentFieldsChanged = iso(assignment.callStartsAt) !== workingAssignment.callStartsAt
           || iso(assignment.callEndsAt) !== workingAssignment.callEndsAt
           || (assignment.callNote ?? null) !== workingAssignment.callNote;
-        if (!windowChanged && !assignmentFieldsChanged) return [];
+        // A position tag is bookkeeping, not a schedule change: it never
+        // re-opens acknowledgement or notifies the worker.
+        const crewTagChanged = (assignment.crewLabel ?? null) !== (workingAssignment.crewLabel ?? null)
+          || (assignment.crewHalf ?? null) !== (workingAssignment.crewHalf ?? null);
+        if (!windowChanged && !assignmentFieldsChanged && !crewTagChanged) return [];
         return [{
           slot,
           assignment,
@@ -671,6 +677,7 @@ export async function publishShiftGroup(
           afterWindow,
           windowChanged,
           assignmentFieldsChanged,
+          crewTagChanged,
           workerVisibleWindowChanged: slot.workerType === "ST" && windowChanged,
         }];
       });
@@ -723,6 +730,7 @@ export async function publishShiftGroup(
           afterWindow,
           windowChanged,
           assignmentFieldsChanged,
+          crewTagChanged,
           workerVisibleWindowChanged,
         } of changedAssignedWindows) {
           const user = userById.get(assignment.userId);
@@ -749,6 +757,10 @@ export async function publishShiftGroup(
               callStartsAt: workingAssignment.callStartsAt ? new Date(workingAssignment.callStartsAt) : null,
               callEndsAt: workingAssignment.callEndsAt ? new Date(workingAssignment.callEndsAt) : null,
               callNote: workingAssignment.callNote,
+            } : {}),
+            ...(crewTagChanged ? {
+              crewLabel: workingAssignment.crewLabel,
+              crewHalf: workingAssignment.crewHalf,
             } : {}),
             ...(workerVisibleChange ? {
               acknowledgedAt: null,
@@ -959,6 +971,8 @@ export async function publishShiftGroup(
               callStartsAt: slot.workerType === "ST" && assignment.callStartsAt ? new Date(assignment.callStartsAt) : null,
               callEndsAt: slot.workerType === "ST" && assignment.callEndsAt ? new Date(assignment.callEndsAt) : null,
               callNote: assignment.callNote,
+              crewLabel: assignment.crewLabel,
+              crewHalf: assignment.crewHalf,
             },
             ...(echoNeeded ? { include: timeConflictCandidateInclude } : {}),
           });

@@ -88,7 +88,7 @@
 | `ScheduleBulkAssignment` | 13 | 3 |
 | `ScheduleBulkAssignmentItem` | 12 | 3 |
 | `Shift` | 14 | 4 |
-| `ShiftAssignment` | 26 | 5 |
+| `ShiftAssignment` | 28 | 5 |
 | `StudentSportAssignment` | 6 | 3 |
 | `StudentAreaAssignment` | 6 | 3 |
 | `ShiftTrade` | 14 | 4 |
@@ -457,6 +457,11 @@
 - `MANUAL`
 - `RESERVATION`
 - `AUTO_FILL`
+
+### `ShiftAssignmentHalf`
+
+- `FIRST`
+- `SECOND`
 
 ### `SportAutoAssignPolicy`
 

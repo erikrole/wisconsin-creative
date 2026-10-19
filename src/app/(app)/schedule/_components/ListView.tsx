@@ -35,6 +35,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { UserAvatarGroup } from "@/components/UserAvatarGroup";
 import { ClaimShiftAction, ClaimsPausedNotice } from "@/components/ClaimShiftAction";
 import { CallWindowEditor } from "@/components/shift-detail/CallWindowEditor";
+import { CrewTag } from "@/components/shift-detail/CrewTag";
 import { cn } from "@/lib/utils";
 import { handleAuthRedirect, parseErrorMessage } from "@/lib/errors";
 import { VENUE_TONES, venueToneFromEvent } from "@/lib/venue-tone";
@@ -455,6 +456,7 @@ function ShiftRowList({
                       <UserAvatar name={user.name} avatarUrl={user.avatarUrl} size="sm" />
                     </span>
                     <span className="min-w-0 truncate text-sm font-medium">{user.name}</span>
+                    <CrewTag label={activeAssignment?.crewLabel} half={activeAssignment?.crewHalf} />
                     {compact && assignedClassDiffersFromSlot && (
                       <span className="ml-auto shrink-0 text-xs font-medium text-muted-foreground">
                         {assignedClassLabel}

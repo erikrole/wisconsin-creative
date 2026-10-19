@@ -127,6 +127,8 @@ const groupEditorSelect = {
           callStartsAt: true,
           callEndsAt: true,
           callNote: true,
+          crewLabel: true,
+          crewHalf: true,
           trades: {
             where: { status: { in: ["OPEN", "CLAIMED"] } },
             select: { id: true },
@@ -299,6 +301,8 @@ export function buildWorkingSchedulePayload(group: EditorGroup): WorkingSchedule
           callStartsAt: shift.workerType === "FT" ? null : iso(assignment.callStartsAt),
           callEndsAt: shift.workerType === "FT" ? null : iso(assignment.callEndsAt),
           callNote: assignment.callNote,
+          crewLabel: assignment.crewLabel,
+          crewHalf: assignment.crewHalf,
           activeTradeId: assignment.trades[0]?.id ?? null,
           bookingCount: blockingBookingCount(assignment),
         } : null,

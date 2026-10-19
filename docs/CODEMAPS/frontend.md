@@ -138,7 +138,7 @@
 | `src/components/profile-completion/ProfileCompletionWizard.tsx` | 935 |
 | `src/components/BookingListPage.tsx` | 921 |
 | `src/components/EquipmentPicker.tsx` | 898 |
-| `src/components/ShiftDetailPanel.tsx` | 795 |
+| `src/components/ShiftDetailPanel.tsx` | 797 |
 | `src/components/ChooseImageModal.tsx` | 769 |
 | `src/components/BookingDetailsSheet.tsx` | 728 |
 | `src/components/ui/sidebar.tsx` | 710 |
@@ -152,7 +152,7 @@
 | `src/components/resources/MarkdownReader.tsx` | 378 |
 | `src/components/booking-details/BookingInfoCard.tsx` | 358 |
 | `src/components/FormCombobox.tsx` | 352 |
-| `src/components/shift-detail/ShiftSlotCard.tsx` | 345 |
+| `src/components/shift-detail/ShiftSlotCard.tsx` | 349 |
 | `src/components/booking-details/EditBookingEventsDialog.tsx` | 342 |
 | `src/components/shift-detail/crew-row.tsx` | 334 |
 | `src/components/public-showroom/ReleasesFeed.tsx` | 314 |

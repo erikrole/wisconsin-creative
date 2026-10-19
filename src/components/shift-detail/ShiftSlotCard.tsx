@@ -16,6 +16,7 @@ import {
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { AlertTriangle, XIcon } from "lucide-react";
 import { CallWindowEditor } from "./CallWindowEditor";
+import { CrewTag } from "./CrewTag";
 import { UserAvatarPicker, type PickerUser } from "./UserAvatarPicker";
 import { effectiveCallWindow, isInheritedFullDayCallWindow } from "@/lib/shift-call-windows";
 import { shiftWorkerLabelForProfile, shiftWorkerSlotLabel } from "@/lib/shift-display";
@@ -45,6 +46,8 @@ type ShiftAssignment = {
   callStartsAt?: string | null;
   callEndsAt?: string | null;
   callNote?: string | null;
+  crewLabel?: string | null;
+  crewHalf?: "FIRST" | "SECOND" | null;
   user: ShiftUser;
 };
 
@@ -212,6 +215,7 @@ export function ShiftSlotCard({
                     size="default"
                   />
                   {activeAssignment.user.name}
+                  <CrewTag label={activeAssignment.crewLabel} half={activeAssignment.crewHalf} />
                   {activeAssignment.hasConflict && (
                     <Tooltip>
                       <TooltipTrigger asChild>
