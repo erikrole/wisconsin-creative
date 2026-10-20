@@ -140,21 +140,28 @@ struct BookingGlanceCard: View {
                 StatusRail(tone: tone)
                 UserAvatarView(name: avatarName, avatarUrl: avatarUrl, size: 40)
                 VStack(alignment: .leading, spacing: 4) {
+                    // Event titles run long ("Men's Soccer vs Evansville");
+                    // two lines read better than a cut-off name.
                     Text(title)
-                        .font(.system(size: 16, weight: .bold))
-                        .lineLimit(1)
+                        .font(.system(size: 15, weight: .semibold))
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                     Text(timing)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(Color.statusText(tone))
                         .lineLimit(1)
+                    // Who has it matters more than where, so the location
+                    // truncates before the borrower's name does.
                     HStack(spacing: 4) {
                         Text(requester)
+                            .layoutPriority(2)
                         Text("·")
                         Text(location)
                         if let itemCount, itemCount > 0 {
                             Text("·")
                             Text("\(itemCount) item\(itemCount == 1 ? "" : "s")")
                                 .monospacedDigit()
+                                .layoutPriority(1)
                         }
                     }
                     .font(.caption)
@@ -233,7 +240,7 @@ struct ExtraBookingDetail: View {
                 UserAvatarView(name: requester.name, avatarUrl: requester.avatarUrl, size: 40)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
-                        .font(.system(size: 16, weight: .bold))
+                        .font(.system(size: 15, weight: .semibold))
                         .fixedSize(horizontal: false, vertical: true)
                     Text(timing)
                         .font(.caption.weight(.semibold))

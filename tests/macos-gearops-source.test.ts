@@ -584,7 +584,8 @@ describe("GearOps macOS menu bar contracts", () => {
     expect(view).toContain("WisconsinCreativeIcon(size: 30)");
     expect(view).toContain("Label(model.healthLabel(at: now), systemImage: model.healthSeverity(at: now).symbol)");
     expect(view).toContain('title: model.kioskAccess == .available ? "Kiosks" : "Kiosk access"');
-    expect(view).toContain('return "\\(device.location.name) · Last seen');
+    expect(view).toContain('return locationPrefix + "Last seen');
+    expect(view).toContain("device.name.localizedCaseInsensitiveContains(location)");
     expect(view).toContain("device.pendingPickupCount");
     expect(view).toContain("device.openCheckoutCount");
     expect(view).toContain("freshnessLabel(at: now)");
