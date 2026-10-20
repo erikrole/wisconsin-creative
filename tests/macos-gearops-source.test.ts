@@ -226,6 +226,10 @@ describe("GearOps macOS menu bar contracts", () => {
     expect(login).toContain("securePassword.contentType = .password");
     expect(login).toContain("email.nextKeyView = securePassword");
     expect(login).toContain("fields.clearPassword()");
+    // AutoFill fills one field per pick: move to the password suggestion,
+    // then sign in once a picked password lands.
+    expect(login).toContain("if wasEmpty, control.stringValue.count > 1 { parent.onBulkFill() }");
+    expect(login).toContain("if currentPassword.isEmpty { fields.focus(.password) }");
     expect(login).toContain('Text(primaryTitle)');
     expect(login).toContain('showPassword ? "eye.slash" : "eye"');
 

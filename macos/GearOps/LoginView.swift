@@ -93,6 +93,11 @@ struct GearOpsLoginView: View {
                     text: $email,
                     focusedField: $focusedField,
                     isEnabled: !authBusy,
+                    // macOS AutoFill fills only the field it was picked in.
+                    // Move on so its password suggestion opens right away.
+                    onBulkFill: {
+                        if currentPassword.isEmpty { fields.focus(.password) }
+                    },
                     onSubmit: { fields.focus(.password) }
                 )
                 .modifier(BrandFieldChrome(isFocused: focusedField == .email))
@@ -108,6 +113,14 @@ struct GearOpsLoginView: View {
                         focusedField: $focusedField,
                         isEnabled: !authBusy,
                         revealsPassword: showPassword,
+                        // A picked login is complete; sign in without a
+                        // third step.
+                        onBulkFill: {
+                            // After the field's own change handling finishes.
+                            if trimmedEmail.contains("@") {
+                                DispatchQueue.main.async { submit() }
+                            }
+                        },
                         onSubmit: submit
                     )
 
@@ -337,6 +350,9 @@ private struct CredentialFieldView: NSViewRepresentable {
     @Binding var focusedField: CredentialField?
     var isEnabled: Bool
     var revealsPassword = false
+    /// A change that turned an empty field into a whole value at once: an
+    /// AutoFill pick or a paste, never typing.
+    var onBulkFill: () -> Void = {}
     var onSubmit: () -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
@@ -391,7 +407,9 @@ private struct CredentialFieldView: NSViewRepresentable {
 
         func controlTextDidChange(_ notification: Notification) {
             guard let control = notification.object as? NSTextField else { return }
+            let wasEmpty = parent.text.isEmpty
             parent.text = control.stringValue
+            if wasEmpty, control.stringValue.count > 1 { parent.onBulkFill() }
         }
 
         func controlTextDidBeginEditing(_ notification: Notification) {
