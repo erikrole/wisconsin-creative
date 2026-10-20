@@ -5,7 +5,8 @@
     "type": "fixes",
     "summary": "Password managers like 1Password can fill the sign-in form in the Mac menu bar app.",
     "details": [
-      "The menu bar app now comes to the front when you open it signed out, so 1Password's fill shortcut reaches its email and password fields.",
+      "The menu bar app now comes to the front when you open it signed out, so 1Password and Apple Passwords can offer your saved login.",
+      "Picking your login fills the email and password together.",
       "If your password manager's picker closes the menu, choose Sign in in a window to sign in from a window that stays open.",
       "The message after the server ends your session now just says you were signed out."
     ],

@@ -12,15 +12,19 @@ struct GearOpsLoginView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var showPassword = false
-    @FocusState private var focusedField: Field?
+    @State private var fields = CredentialFieldPair()
+    @State private var focusedField: CredentialField?
 
-    private enum Field: Hashable {
-        case email
-        case password
+    // Read the controls, not only the bindings: AutoFill can fill the field
+    // that is not being edited without sending it a change notification.
+    private var trimmedEmail: String {
+        let value = fields.email.stringValue.isEmpty ? email : fields.email.stringValue
+        return value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     }
 
-    private var trimmedEmail: String {
-        email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    private var currentPassword: String {
+        let value = fields.field(for: .password).stringValue
+        return value.isEmpty ? password : value
     }
 
     private var authBusy: Bool {
@@ -28,7 +32,7 @@ struct GearOpsLoginView: View {
     }
 
     private var canSubmit: Bool {
-        trimmedEmail.contains("@") && !password.isEmpty && !authBusy
+        trimmedEmail.contains("@") && !currentPassword.isEmpty && !authBusy
     }
 
     var body: some View {
@@ -62,52 +66,54 @@ struct GearOpsLoginView: View {
             .padding(.vertical, 22)
         }
         .frame(width: GearOpsLayout.popoverWidth)
-        .onAppear { focusedField = .email }
+        .onAppear { fields.focus(.email) }
         .onDisappear {
             // Menu-bar content can be torn down whenever the popover closes.
             // Never retain a password or a revealed-password state across that
             // boundary, even if authentication was interrupted.
             password = ""
             showPassword = false
+            fields.clearPassword()
             focusedField = nil
         }
     }
 
-    // Password managers identify a native credential form most reliably when
-    // the semantic username and password controls coexist in one view. Keep
-    // both standard SwiftUI fields mounted so 1Password Universal Autofill can
-    // discover and fill the pair in one action.
+    // macOS AutoFill (Apple Passwords or 1Password) fills the username and
+    // password together only when it finds them as a real AppKit pair: an
+    // NSTextField with the username content type whose next key view is an
+    // NSSecureTextField with the password content type. SwiftUI's fields
+    // were each filled on their own, so both are AppKit controls here.
     private var credentialFields: some View {
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 5) {
                 fieldLabel("Email")
-                TextField("you@wisc.edu", text: $email)
-                    .textContentType(.username)
-                    .textFieldStyle(.plain)
-                    .modifier(BrandFieldChrome(isFocused: focusedField == .email))
-                    .focused($focusedField, equals: .email)
-                    .disabled(authBusy)
-                    .onSubmit { focusedField = .password }
+                CredentialFieldView(
+                    pair: fields,
+                    field: .email,
+                    text: $email,
+                    focusedField: $focusedField,
+                    isEnabled: !authBusy,
+                    onSubmit: { fields.focus(.password) }
+                )
+                .modifier(BrandFieldChrome(isFocused: focusedField == .email))
             }
 
             VStack(alignment: .leading, spacing: 5) {
                 fieldLabel("Password")
                 HStack(spacing: 6) {
-                    Group {
-                        if showPassword {
-                            TextField("Enter your password", text: $password)
-                        } else {
-                            SecureField("Enter your password", text: $password)
-                        }
-                    }
-                    .textContentType(.password)
-                    .textFieldStyle(.plain)
-                    .focused($focusedField, equals: .password)
-                    .onSubmit(submit)
+                    CredentialFieldView(
+                        pair: fields,
+                        field: .password,
+                        text: $password,
+                        focusedField: $focusedField,
+                        isEnabled: !authBusy,
+                        revealsPassword: showPassword,
+                        onSubmit: submit
+                    )
 
                     Button {
                         showPassword.toggle()
-                        focusedField = .password
+                        fields.focus(.password)
                     } label: {
                         Image(systemName: showPassword ? "eye.slash" : "eye")
                             .foregroundStyle(.secondary)
@@ -212,15 +218,15 @@ struct GearOpsLoginView: View {
 
     private func submit() {
         guard canSubmit else { return }
-        focusedField = nil
         let submittedEmail = trimmedEmail
-        let submittedPassword = password
+        let submittedPassword = currentPassword
         password = ""
         showPassword = false
+        fields.clearPassword()
         Task {
             await model.signIn(email: submittedEmail, password: submittedPassword)
             if model.user == nil {
-                focusedField = .password
+                fields.focus(.password)
             }
         }
     }
@@ -247,5 +253,163 @@ private struct BrandFieldChrome: ViewModifier {
                 color: isFocused ? BrandPalette.accent.opacity(0.18) : .clear,
                 radius: 3
             )
+    }
+}
+
+enum CredentialField: Hashable {
+    case email
+    case password
+}
+
+/// The AppKit controls behind the sign-in form, owned together so the
+/// username field's next key view is the password field AutoFill pairs it with.
+@MainActor
+final class CredentialFieldPair {
+    let email: NSTextField
+    let securePassword: NSSecureTextField
+    let plainPassword: NSTextField
+
+    init() {
+        email = NSTextField()
+        securePassword = NSSecureTextField()
+        plainPassword = NSTextField()
+
+        Self.style(email, placeholder: "you@wisc.edu")
+        Self.style(securePassword, placeholder: "Enter your password")
+        Self.style(plainPassword, placeholder: "Enter your password")
+        email.contentType = .username
+        securePassword.contentType = .password
+        plainPassword.contentType = .password
+        plainPassword.isHidden = true
+        email.nextKeyView = securePassword
+    }
+
+    func field(for kind: CredentialField) -> NSTextField {
+        switch kind {
+        case .email: email
+        case .password: securePassword.isHidden ? plainPassword : securePassword
+        }
+    }
+
+    func reveal(_ revealed: Bool) {
+        guard plainPassword.isHidden == revealed else { return }
+        plainPassword.isHidden = !revealed
+        securePassword.isHidden = revealed
+        email.nextKeyView = revealed ? plainPassword : securePassword
+    }
+
+    func focus(_ kind: CredentialField) {
+        // The window may not exist yet on first appearance.
+        DispatchQueue.main.async { [self] in
+            let target = field(for: kind)
+            target.window?.makeFirstResponder(target)
+        }
+    }
+
+    func clearPassword() {
+        securePassword.stringValue = ""
+        plainPassword.stringValue = ""
+        reveal(false)
+    }
+
+    private static func style(_ field: NSTextField, placeholder: String) {
+        field.placeholderString = placeholder
+        field.isBordered = false
+        field.isBezeled = false
+        field.drawsBackground = false
+        field.focusRingType = .none
+        field.font = .systemFont(ofSize: NSFont.systemFontSize)
+        field.textColor = .black
+        field.usesSingleLineMode = true
+        field.lineBreakMode = .byTruncatingTail
+        field.cell?.isScrollable = true
+        field.cell?.wraps = false
+        field.setContentHuggingPriority(.defaultLow, for: .horizontal)
+    }
+}
+
+/// Hosts one field of a `CredentialFieldPair`. The password view holds both
+/// the secure and the revealed control and shows one at a time.
+private struct CredentialFieldView: NSViewRepresentable {
+    let pair: CredentialFieldPair
+    let field: CredentialField
+    @Binding var text: String
+    @Binding var focusedField: CredentialField?
+    var isEnabled: Bool
+    var revealsPassword = false
+    var onSubmit: () -> Void
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    func makeNSView(context: Context) -> NSView {
+        let container = NSView()
+        let controls: [NSTextField] = switch field {
+        case .email: [pair.email]
+        case .password: [pair.securePassword, pair.plainPassword]
+        }
+        for control in controls {
+            control.delegate = context.coordinator
+            control.translatesAutoresizingMaskIntoConstraints = false
+            container.addSubview(control)
+            NSLayoutConstraint.activate([
+                control.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+                control.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+                control.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+                container.heightAnchor.constraint(greaterThanOrEqualTo: control.heightAnchor),
+            ])
+        }
+        return container
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        context.coordinator.parent = self
+        if field == .password {
+            let wasRevealed = !pair.plainPassword.isHidden
+            if wasRevealed != revealsPassword {
+                // Carry the typed or filled value across the swap.
+                let current = pair.field(for: .password).stringValue
+                pair.reveal(revealsPassword)
+                pair.field(for: .password).stringValue = current
+            }
+        }
+        // Values flow only from the controls to SwiftUI. Pushing state back
+        // here could overwrite a value AutoFill set without a notification.
+        pair.email.isEnabled = isEnabled
+        pair.securePassword.isEnabled = isEnabled
+        pair.plainPassword.isEnabled = isEnabled
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, nsView: NSView, context: Context) -> CGSize? {
+        CGSize(width: proposal.width ?? 200, height: pair.email.intrinsicContentSize.height)
+    }
+
+    @MainActor
+    final class Coordinator: NSObject, NSTextFieldDelegate {
+        var parent: CredentialFieldView
+
+        init(_ parent: CredentialFieldView) { self.parent = parent }
+
+        func controlTextDidChange(_ notification: Notification) {
+            guard let control = notification.object as? NSTextField else { return }
+            parent.text = control.stringValue
+        }
+
+        func controlTextDidBeginEditing(_ notification: Notification) {
+            parent.focusedField = parent.field
+        }
+
+        func controlTextDidEndEditing(_ notification: Notification) {
+            guard let control = notification.object as? NSTextField else { return }
+            // AutoFill can set the value without a change notification.
+            parent.text = control.stringValue
+            if parent.focusedField == parent.field { parent.focusedField = nil }
+        }
+
+        func control(_ control: NSControl, textView: NSTextView, doCommandBy selector: Selector) -> Bool {
+            guard selector == #selector(NSResponder.insertNewline(_:)) else { return false }
+            parent.text = (control as? NSTextField)?.stringValue ?? parent.text
+            parent.onSubmit()
+            return true
+        }
     }
 }
