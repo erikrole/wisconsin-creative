@@ -661,7 +661,7 @@ describe("GearOps macOS menu bar contracts", () => {
     expect(model).toContain("KioskAccessState(rawValue:");
     expect(health).toContain("if age <= 5 * 60 { return .online }");
     expect(health).toContain("if age <= 24 * 60 * 60 { return .stale }");
-    expect(health).toContain('.caseInsensitiveCompare("Sim iPad")');
+    expect(health).toContain('["test", "testing", "sim", "simulator", "demo"]');
     expect(model).toContain(".filter(\\.isIncludedInMonitoring)");
     expect(model).toContain("cached.isTrustworthy");
     expect(model).toContain("try projection.validate()");
