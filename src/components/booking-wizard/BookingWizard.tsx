@@ -610,7 +610,7 @@ export function BookingWizard() {
     } else {
       setCreateError("");
     }
-  // Selection is read once when a kit first applies; re-running on every pick would be wrong.
+  // Intentional: the selection is read once when a kit first applies; re-running on every pick would reset hand-picked gear.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.title, kitId, selectedKitDetail, selectedKitError]);
 
