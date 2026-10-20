@@ -913,6 +913,7 @@ export default function AppShell({
         isLoggingOut={loggingOut}
         overdueBadgeCount={overdueBadgeCount}
         dueTodayBadgeCount={dueTodayBadgeCount}
+        onSearch={isCollaborator ? undefined : () => setCmdOpen(true)}
       />
 
       <div className="flex flex-1 flex-col min-w-0 max-md:pl-[env(safe-area-inset-left,0px)] max-md:pr-[env(safe-area-inset-right,0px)] print:ml-0">

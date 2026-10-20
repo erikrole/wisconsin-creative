@@ -1,13 +1,15 @@
 [
   {
     "date": "2026-10-20",
-    "title": "A calmer, consistent sidebar",
+    "title": "A calmer, easier sidebar",
     "type": "improvement",
-    "summary": "The sidebar now looks the same on every page and has a lighter, cleaner design.",
+    "summary": "The sidebar now looks the same on every page, with search, pinned pages and collapsible sections.",
     "details": [
       "Fixed the sidebar switching fonts and styling when you opened Staff, Budget or Wish list.",
-      "New light and dark look with quieter section labels, a soft highlight on the page you're on, and a tidier account row.",
-      "Works the same on phones and when collapsed."
+      "New light and dark look with a soft highlight on the page you're on.",
+      "Pin any page with the star that appears on hover; pinned pages sit at the top.",
+      "Collapse Team, Library or Staff tools; the sidebar remembers your choice.",
+      "A Search row at the top opens search, and the Operations group is now called Staff tools."
     ],
     "platforms": [
       "Web"

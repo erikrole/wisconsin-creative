@@ -43,6 +43,9 @@ import {
   ChevronsUpDownIcon,
   UserIcon,
   MonitorPlayIcon,
+  SearchIcon,
+  StarIcon,
+  ChevronRightIcon,
 } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
@@ -61,6 +64,7 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuAction,
   SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -137,7 +141,7 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    label: "Operations",
+    label: "Staff tools",
     staffOnly: true,
     items: [
       { label: "Operations", href: "/operations", icon: WrenchIcon },
@@ -169,6 +173,7 @@ type AppSidebarProps = {
   isLoggingOut?: boolean;
   overdueBadgeCount?: number;
   dueTodayBadgeCount?: number;
+  onSearch?: () => void;
 };
 
 function useTheme() {
@@ -194,6 +199,37 @@ function useTheme() {
   return { theme, setTheme };
 }
 
+const COLLAPSED_GROUPS_KEY = "sidebar:collapsed-groups";
+const PINNED_KEY = "sidebar:pinned";
+
+/** A per-browser string list (collapsed groups, pinned pages). Storage can be blocked, so it degrades to memory. */
+function useStoredList(key: string) {
+  const [list, setList] = useState<string[]>([]);
+
+  useEffect(() => {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(key) ?? "[]");
+      if (Array.isArray(parsed)) setList(parsed.filter((v): v is string => typeof v === "string"));
+    } catch {
+      // ignore unreadable storage
+    }
+  }, [key]);
+
+  function toggle(value: string) {
+    setList((current) => {
+      const next = current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
+      try {
+        localStorage.setItem(key, JSON.stringify(next));
+      } catch {
+        // ignore quota / privacy-mode failures
+      }
+      return next;
+    });
+  }
+
+  return [list, toggle] as const;
+}
+
 const navButtonClass = (isActive: boolean) =>
   cn(
     "h-9 gap-2.5 rounded-lg px-2.5 text-[14px] tracking-[-0.005em] transition-[background-color,color,scale] duration-150 active:scale-[0.97] group-data-[collapsible=icon]:rounded-lg",
@@ -208,6 +244,7 @@ export default function AppSidebar({
   isLoggingOut = false,
   overdueBadgeCount = 0,
   dueTodayBadgeCount = 0,
+  onSearch,
 }: AppSidebarProps) {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
@@ -237,6 +274,19 @@ export default function AppSidebar({
         }),
     }))
     .filter((group) => group.items.length > 0);
+
+  const [collapsedGroups, toggleGroup] = useStoredList(COLLAPSED_GROUPS_KEY);
+  const [pinnedHrefs, togglePin] = useStoredList(PINNED_KEY);
+  const allVisibleItems = visibleGroups.flatMap((group) => group.items);
+  const pinnedItems = pinnedHrefs
+    .map((href) => allVisibleItems.find((item) => item.href === href))
+    .filter((item): item is NavItem => Boolean(item));
+  const displayGroups: NavGroup[] = [
+    ...(pinnedItems.length > 0 ? [{ label: "Pinned", items: pinnedItems }] : []),
+    ...visibleGroups
+      .map((group) => ({ ...group, items: group.items.filter((item) => !pinnedHrefs.includes(item.href)) }))
+      .filter((group) => group.items.length > 0),
+  ];
 
   const activeHref = resolveActiveShellHref(
     pathname,
@@ -290,25 +340,51 @@ export default function AppSidebar({
         </SidebarHeader>
       )}
 
+      {user && onSearch && (
+        <div className="px-3 pb-1 group-data-[collapsible=icon]:px-1">
+          <button
+            type="button"
+            onClick={onSearch}
+            aria-label="Search"
+            aria-keyshortcuts="Meta+K Control+K"
+            className="flex h-9 w-full items-center gap-2.5 rounded-lg border border-[var(--sidebar-border)] bg-transparent px-2.5 text-[14px] text-[var(--sidebar-muted)] outline-none transition-colors hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-text-active)] focus-visible:ring-2 focus-visible:ring-[var(--sidebar-ring)] group-data-[collapsible=icon]:size-10 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
+          >
+            <SearchIcon className="size-[17px] shrink-0 stroke-[1.75]" />
+            <span className="flex-1 text-left group-data-[collapsible=icon]:hidden">Search</span>
+          </button>
+        </div>
+      )}
+
       <SidebarContent className="px-1 py-1">
         <nav aria-label="Workspace navigation">
-          {visibleGroups.map((group, groupIdx) => (
+          {displayGroups.map((group, groupIdx) => (
             <div key={group.label ?? group.items.map((item) => item.href).join("-")}>
               {!group.label && groupIdx > 0 && (
                 <SidebarSeparator className="mx-3 my-2 bg-[var(--sidebar-border)] group-data-[collapsible=icon]:mx-2" />
               )}
               <SidebarGroup className="px-2 py-1 group-data-[collapsible=icon]:px-1">
                 {group.label && (
-                  <SidebarGroupLabel
-                    className="mt-1 h-7 px-2.5 text-[12px] font-bold tracking-normal text-[var(--sidebar-muted)] group-data-[collapsible=icon]:hidden"
-                  >
-                    {group.label}
+                  <SidebarGroupLabel asChild>
+                    <button
+                      type="button"
+                      onClick={() => toggleGroup(group.label!)}
+                      aria-expanded={!collapsedGroups.includes(group.label)}
+                      className="group/label mt-1 h-7 w-full gap-1 px-2.5 text-[12px] font-bold tracking-normal text-[var(--sidebar-muted)] hover:text-[var(--sidebar-text-active)] group-data-[collapsible=icon]:hidden"
+                    >
+                      <ChevronRightIcon
+                        className={cn("size-3 shrink-0 transition-transform", !collapsedGroups.includes(group.label) && "rotate-90")}
+                      />
+                      {group.label}
+                    </button>
                   </SidebarGroupLabel>
                 )}
                 <SidebarMenu className="gap-0.5">
                   {group.items.map((item) => {
                     const href = item.href;
                     const isActive = activeHref === href;
+                    const isPinned = pinnedHrefs.includes(href);
+                    // A collapsed group still shows the page you're on, so the rail never hides where you are.
+                    if (group.label && collapsedGroups.includes(group.label) && !isActive && state !== "collapsed") return null;
                     const Icon = item.icon;
                     const badgeCfg =
                       href === "/bookings" && overdueBadgeCount > 0
@@ -355,6 +431,15 @@ export default function AppSidebar({
                             {badgeLabel}
                           </SidebarMenuBadge>
                         )}
+                        <SidebarMenuAction
+                          showOnHover
+                          onClick={() => togglePin(href)}
+                          aria-label={isPinned ? `Unpin ${item.label}` : `Pin ${item.label}`}
+                          aria-pressed={isPinned}
+                          className="top-0.5 size-8 text-[var(--sidebar-muted)] hover:bg-transparent hover:text-[var(--sidebar-text-active)] max-md:opacity-100"
+                        >
+                          <StarIcon className={cn("size-3.5!", isPinned && "fill-current text-[var(--sidebar-icon-active)]")} />
+                        </SidebarMenuAction>
                       </SidebarMenuItem>
                     );
                   })}
