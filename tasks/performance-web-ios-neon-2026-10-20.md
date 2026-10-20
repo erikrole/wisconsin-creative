@@ -65,7 +65,7 @@ Web responsiveness and memory, native iOS CPU/memory/network/battery work, and l
 
 ## Delivery and remaining acceptance
 
-All local applicable gates passed. Hosted checks, authenticated preview, and rollout remain pending. No changes have been deployed; no compute settings or user data have changed.
+All local applicable gates passed. Implementation commit: `bec9b5ad`. Review: [PR #534](https://github.com/erikrole/wisconsin-creative/pull/534). Hosted checks, authenticated preview, and rollout remain pending. No changes have been deployed; no compute settings or user data have changed.
 
 1. Verify hosted CI and the branch's own managed authenticated preview. Fixture proof is not authenticated application proof; do not borrow another branch's environment.
 2. Compare physical-device memory/energy and stable-runtime launch/scroll metrics. The available required simulator uses iOS 27.0; do not record it as a stable baseline or claim battery percentages.
