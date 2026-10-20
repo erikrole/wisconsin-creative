@@ -1,7 +1,6 @@
 import CoreSpotlight
 import Foundation
 import SwiftUI
-import SwiftData
 import TipKit
 import UIKit
 import UserNotifications
@@ -14,6 +13,8 @@ struct WisconsinApp: App {
     @State private var appState = AppState()
     @State private var drafts = ReservationDraftStore()
     @State private var network = NetworkMonitor()
+    @State private var foregroundRefreshTask: Task<Void, Never>?
+    @State private var foregroundRefreshGeneration = UUID()
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("WisconsinThemeChoice") private var themeChoice: ThemeChoice = .system
 
@@ -71,7 +72,6 @@ struct WisconsinApp: App {
                 }
                 .tint(.brandPrimary)
         }
-        .modelContainer(GearStore.shared.container)
     }
 
     @ViewBuilder
@@ -90,6 +90,7 @@ struct WisconsinApp: App {
     private func handleCurrentUserChange(from oldUser: CurrentUser?, to user: CurrentUser?) {
         let authenticatedIdentityChanged = oldUser != nil && oldUser?.id != user?.id
         if user == nil || authenticatedIdentityChanged {
+            cancelForegroundRefresh()
             // Keep this synchronous and first: no previous-user counts, routes,
             // or navigation state may survive into a signed-out or replacement
             // account shell.
@@ -148,6 +149,7 @@ struct WisconsinApp: App {
         // Leaving the foreground is where an unfinished reservation is most
         // likely to be lost to a task kill, so persist it and keep composing.
         if phase == .background {
+            cancelForegroundRefresh()
             Task { await drafts.autosave() }
             return
         }
@@ -158,18 +160,34 @@ struct WisconsinApp: App {
               !session.isInitialSessionValidationInFlight else {
             return
         }
-        Task { await refreshForegroundState() }
+        guard foregroundRefreshTask == nil else { return }
+        let generation = UUID()
+        foregroundRefreshGeneration = generation
+        foregroundRefreshTask = Task {
+            await refreshForegroundState()
+            if foregroundRefreshGeneration == generation {
+                foregroundRefreshTask = nil
+            }
+        }
+    }
+
+    private func cancelForegroundRefresh() {
+        foregroundRefreshGeneration = UUID()
+        foregroundRefreshTask?.cancel()
+        foregroundRefreshTask = nil
     }
 
     private func refreshForegroundState() async {
         await session.refreshCurrentUser()
-        guard let user = session.currentUser, !user.forcePasswordChange else { return }
+        guard !Task.isCancelled, let user = session.currentUser, !user.forcePasswordChange else { return }
 
         async let badgeRefresh: Void = appState.refresh()
         async let profileRefresh: Void = profileCompletion.load(for: user, force: true)
         if !user.isReadOnlyRolePreview {
             await CheckoutReturnLiveActivityManager.shared.prepareRemoteStartRegistration()
-            await CheckoutReturnLiveActivityManager.shared.reconcileCurrentUserCheckouts(requesterId: user.id)
+            if !Task.isCancelled {
+                await CheckoutReturnLiveActivityManager.shared.reconcileCurrentUserCheckouts(requesterId: user.id)
+            }
         }
         await badgeRefresh
         await profileRefresh

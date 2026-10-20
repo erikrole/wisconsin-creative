@@ -89,6 +89,7 @@ If a conflict could change behavior, reconcile it using the current request and 
 | --- | --- |
 | Docs or task structure | `git diff --check`, link/reference sweep, and the repository docs verification command when affected |
 | Web or TypeScript | focused tests, `npx tsc --noEmit --pretty false`, lint, and `npm run build:app` |
+| Browser cache/provider or polling lifecycle | `npm run test:performance:web` (local Chromium fixtures); authenticated route proof remains separate |
 | API or schema | service/route tests, migration checks, `npm run build:app`, and full deploy-shaped build only in a controlled migration-safe environment |
 | Native iOS | `xcodebuild` for the affected target, plus affected source-contract tests and any required generic-device build |
 | macOS menu bar app | `xcodebuild -project macos/GearOps.xcodeproj -scheme GearOps build` (and `test` when behavior changes), plus `tests/macos-gearops-*.test.ts` and affected `tests/companion-*.test.ts` |

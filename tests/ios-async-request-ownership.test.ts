@@ -8,7 +8,7 @@ describe("iOS asynchronous request ownership", () => {
     expect(session).toContain("private var authRequests = LatestRequestGeneration()");
     expect(session).toContain("private let authMutations = AuthMutationQueue()");
     expect(session).toContain("restoreSession(requestToken: restoreToken)");
-    expect(session).toContain("guard authRequests.owns(requestToken) else { return }");
+    expect(session).toContain("guard authRequests.owns(requestToken), !Task.isCancelled else { return }");
     expect(session).toContain("let requestBoundary = notification.object as? UUID");
     expect(session).toMatch(
       /guard let self,\s*let requestBoundary,\s*authSessionBoundary\.owns\(requestBoundary\),\s*self\.currentUser != nil else \{ return \}/,

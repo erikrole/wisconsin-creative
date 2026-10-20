@@ -1,4 +1,4 @@
-import { ApplicantStanding, ApplicationStage, GraduationTerm, ShiftArea } from "@prisma/client";
+import { ApplicantStanding, ApplicationStage, GraduationTerm, ShiftArea } from "@/lib/client-enums";
 import { z } from "zod";
 
 /** Stages in board order. Reviewed is a flag, not a stage (D-065). */

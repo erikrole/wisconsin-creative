@@ -1,4 +1,4 @@
-import { ApplicantDocumentKind } from "@prisma/client";
+import type { ApplicantDocumentKind } from "@prisma/client";
 
 export const MAX_APPLICANT_FILE_BYTES = 4 * 1024 * 1024; // under the 4.5 MB serverless body limit
 

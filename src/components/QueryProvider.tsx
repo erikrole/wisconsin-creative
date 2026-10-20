@@ -1,7 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { createContext, useContext, useState } from "react";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { getQueryClient, getQueryPersistOptions } from "@/lib/query-client";
 
@@ -19,30 +18,13 @@ export function QueryProvider({
   userId: string;
 }) {
   const [queryClient] = useState(() => getQueryClient());
-  const [queryPersistOptions, setQueryPersistOptions] = useState<ReturnType<typeof getQueryPersistOptions>>(null);
-
-  useEffect(() => {
-    setQueryPersistOptions(getQueryPersistOptions());
-  }, []);
-
-  if (queryPersistOptions) {
-    return (
-      <PersistQueryClientProvider
-        client={queryClient}
-        persistOptions={queryPersistOptions}
-      >
-        <AuthenticatedQueryUserContext.Provider value={userId}>
-          {children}
-        </AuthenticatedQueryUserContext.Provider>
-      </PersistQueryClientProvider>
-    );
-  }
+  const [queryPersistOptions] = useState(getQueryPersistOptions);
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider client={queryClient} persistOptions={queryPersistOptions}>
       <AuthenticatedQueryUserContext.Provider value={userId}>
         {children}
       </AuthenticatedQueryUserContext.Provider>
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
 }
