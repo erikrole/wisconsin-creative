@@ -348,6 +348,7 @@
 - `/api/licenses/[id]/history` -> `src/app/api/licenses/[id]/history/route.ts`
 - `/api/licenses/[id]/occupy` -> `src/app/api/licenses/[id]/occupy/route.ts`
 - `/api/licenses/[id]/release` -> `src/app/api/licenses/[id]/release/route.ts`
+- `/api/licenses/[id]/report-broken` -> `src/app/api/licenses/[id]/report-broken/route.ts`
 - `/api/licenses/[id]` -> `src/app/api/licenses/[id]/route.ts`
 - `/api/licenses/bulk` -> `src/app/api/licenses/bulk/route.ts`
 - `/api/licenses/export` -> `src/app/api/licenses/export/route.ts`

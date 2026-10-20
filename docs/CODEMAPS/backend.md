@@ -69,7 +69,7 @@
 | `src/lib/services/kit-list-availability.ts` | 35 |
 | `src/lib/services/kit-member-availability.ts` | 96 |
 | `src/lib/services/kits.ts` | 836 |
-| `src/lib/services/licenses.ts` | 603 |
+| `src/lib/services/licenses.ts` | 684 |
 | `src/lib/services/live-activities.ts` | 629 |
 | `src/lib/services/manual-event-time.ts` | 304 |
 | `src/lib/services/non-game-schedule-defaults.ts` | 49 |
@@ -661,6 +661,7 @@
 - `/api/licenses/[id]/history`
 - `/api/licenses/[id]/occupy`
 - `/api/licenses/[id]/release`
+- `/api/licenses/[id]/report-broken`
 - `/api/licenses/[id]`
 - `/api/licenses/bulk`
 - `/api/licenses/export`
