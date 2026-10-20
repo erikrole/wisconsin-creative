@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ChevronDownIcon } from "lucide-react";
-import { ResourceType, Role, ShiftArea } from "@prisma/client";
+import { ResourceType, Role, ShiftArea } from "@/lib/client-enums";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

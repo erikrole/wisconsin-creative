@@ -6,7 +6,7 @@
 - Owner: Erik Role (Wisconsin Athletics Creative)
 - Status: Shipped
 - Created: 2026-04-14
-- Last Updated: 2026-10-16
+- Last Updated: 2026-10-20
 - Brief: `tasks/guides-plan.md` (archived)
 
 ## Description
@@ -140,6 +140,7 @@ Rollout status: local hardening only. Preview `preview-default` is missing `0146
 | AC-29 | Native iOS Browse includes a read-only Brand assets library for roles that can view Resources. Folder create, upload, and version restore stay on the web | Source-complete locally on 2026-10-16. Authenticated iPhone proof and the Xcode build remain open |
 
 ## Change Log
+- 2026-10-20: **Smaller client downloads (local, rollout pending).** Resource type and asset-kind values come from a dependency-free browser module instead of loading the generated database client. Shared enum values and ordering are checked against generated Prisma values. Matching locked builds reduce first-load JavaScript from 343 to 318 kB for Resources, 274 to 248 kB for a guide, and 220–221 to 195 kB for guide authoring. Form values, validation, and ordering stay the same. These are build bundle sizes, not measured page latency; authenticated branch-owned preview proof remains blocked by capacity in `tasks/performance-web-ios-neon-2026-10-20.md`.
 - 2026-10-16: **Guide search matches in the database before loading bodies.** `listGuides` requires the phrase in the title, category, markdown, or author name, and still loads legacy rows whose markdown is empty so their stored content can match. A query of two or more characters also keeps guides that contain a markdown link, because flattening `[cam](url)era` produces `camera` and that word is not in the stored markdown. The in-memory filter remains the exact match, including summary text derived from the body.
 - 2026-10-16: Native iOS Browse gains a read-only Brand assets library for internal roles. It lists folders and the current file from `GET /api/resources/assets`, opens a logo, SVG, or PDF on the phone, and shares other files from the authenticated download. Collaborators do not see the row. Folder create, upload, favorites, and version restore stay on the web. Source contracts pass locally; the Xcode build and authenticated iPhone 18 Pro Max proof remain open.
 - 2026-09-19: App-wide ⌘K and `/search` now include Guides from `GET /api/resources?q=`, matching title, category, author, summary, and body. Resources Quick find remains an in-page button and no longer captures Cmd/Ctrl+K. Featured, card, and list surfaces show the existing one-line `summary` as purpose; author, date, and audience stay off the library tiles. Native iOS Guides remains title-first without summary.
