@@ -1,39 +1,75 @@
 import SwiftUI
 
 /// Loads and dismisses the announcement splash. One request on launch and one
-/// on each foreground; no timers (same rule as the badge fetch). A dismiss that
-/// fails to reach the server is fine: the splash simply shows again later.
+/// on each foreground; no timers (same rule as the badge fetch). A dismissal is
+/// remembered on this phone the moment the person closes the sheet, so a POST
+/// that fails to reach the server is retried on the next load instead of the
+/// same splash rising again.
 @MainActor
 @Observable
 final class AnnouncementSplashStore {
     private(set) var current: ActiveAnnouncement?
     private var loading = false
+    /// Who the remembered dismissals belong to (the eligibility key).
+    private var scope: String?
 
-    func reset() {
+    func reset(scope: String?) {
         current = nil
+        self.scope = scope
     }
 
     func load() async {
-        guard current == nil, !loading else { return }
+        guard current == nil, !loading, let scope else { return }
         loading = true
         defer { loading = false }
-        // Splash chrome is additive: a failed read just means no splash this time.
-        guard let next = try? await APIClient.shared.activeAnnouncement() else { return }
-        guard current == nil else { return }
-        current = next
+        await retryPendingDismissals(scope: scope)
+        // The server can hand back an announcement this phone already dismissed
+        // when that dismissal never landed. Skip it, send the dismissal again,
+        // and look once more; bounded so a stubborn server cannot loop forever.
+        for _ in 0..<3 {
+            // Splash chrome is additive: a failed read just means no splash this time.
+            guard let next = try? await APIClient.shared.activeAnnouncement() else { return }
+            guard current == nil, self.scope == scope else { return }
+            if AnnouncementDismissalMemory.isDismissed(next.id, scope: scope) {
+                await sendDismissal(id: next.id, scope: scope)
+                guard next.remaining > 0 else { return }
+                continue
+            }
+            current = next
+            return
+        }
     }
 
     /// Any close (button, CTA, swipe down) lands here. Records the dismissal,
     /// then pulls the next unseen announcement only when one is waiting.
     func dismissCurrent() {
-        guard let announcement = current else { return }
+        guard let announcement = current, let scope else { return }
         current = nil
+        AnnouncementDismissalMemory.recordDismissed(announcement.id, scope: scope)
         Task {
-            try? await APIClient.shared.dismissAnnouncement(id: announcement.id)
+            await sendDismissal(id: announcement.id, scope: scope)
             guard announcement.remaining > 0 else { return }
             // Let the sheet finish leaving before the next one rises.
             try? await Task.sleep(for: .milliseconds(450))
             await load()
+        }
+    }
+
+    private func sendDismissal(id: String, scope: String) async {
+        do {
+            try await APIClient.shared.dismissAnnouncement(id: id)
+            AnnouncementDismissalMemory.clearPending(id, scope: scope)
+        } catch APIError.notFound {
+            // Deleted on the server; nothing left to record.
+            AnnouncementDismissalMemory.clearPending(id, scope: scope)
+        } catch {
+            AnnouncementDismissalMemory.markPending(id, scope: scope)
+        }
+    }
+
+    private func retryPendingDismissals(scope: String) async {
+        for id in AnnouncementDismissalMemory.pending(scope: scope) {
+            await sendDismissal(id: id, scope: scope)
         }
     }
 }
@@ -58,7 +94,7 @@ private struct AnnouncementSplashModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .task(id: eligibilityKey) {
-                store.reset()
+                store.reset(scope: eligibilityKey)
                 guard eligibilityKey != nil else { return }
                 await store.load()
             }
@@ -83,22 +119,28 @@ private struct AnnouncementSplashModifier: ViewModifier {
 
     private func performPrimary(for announcement: ActiveAnnouncement) {
         store.dismissCurrent()
-        guard announcement.hasCta, let target = announcement.ctaUrl else { return }
-        if target.hasPrefix("/") {
-            // An app path goes to its native screen when the shared parser knows
-            // it; anything else opens the same page on the website.
-            let components = URLComponents(string: target)
-            if let route = GearTrackerRouteParser.parsePath(
-                components?.path ?? target,
-                query: components?.queryItems ?? []
-            ) {
-                appState.apply(route)
-            } else if let url = URL(string: target, relativeTo: AppEnvironment.baseURL)?.absoluteURL {
-                openURL(url)
-            }
-        } else if let url = URL(string: target), url.scheme?.lowercased() == "https" {
+        openAnnouncementTarget(of: announcement, appState: appState, openURL: openURL)
+    }
+}
+
+/// Follows an announcement's button. An app path goes to its native screen
+/// when the shared parser knows it; anything else opens the same page on the
+/// website. Shared by the splash and the "What's new" list.
+@MainActor
+func openAnnouncementTarget(of announcement: ActiveAnnouncement, appState: AppState, openURL: OpenURLAction) {
+    guard announcement.hasCta, let target = announcement.ctaUrl else { return }
+    if target.hasPrefix("/") {
+        let components = URLComponents(string: target)
+        if let route = GearTrackerRouteParser.parsePath(
+            components?.path ?? target,
+            query: components?.queryItems ?? []
+        ) {
+            appState.apply(route)
+        } else if let url = URL(string: target, relativeTo: AppEnvironment.baseURL)?.absoluteURL {
             openURL(url)
         }
+    } else if let url = URL(string: target), url.scheme?.lowercased() == "https" {
+        openURL(url)
     }
 }
 

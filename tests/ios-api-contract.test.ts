@@ -45,6 +45,24 @@ describe("iOS API contracts — form options", () => {
   });
 });
 
+describe("iOS API contracts — reservation pickup counters", () => {
+  it("iOS reads the server's reservationPickup flag instead of hard-coding counter names", () => {
+    const route = source("src/app/api/form-options/route.ts");
+    const models = source("ios/Wisconsin/Models/FormModels.swift");
+    const createVm = source("ios/Wisconsin/Views/CreateBooking/CreateBookingViewModel.swift");
+    const editFlow = source("ios/Wisconsin/Views/Booking/ReservationEditFlow.swift");
+
+    expect(route).toContain("reservationPickup: isSupportedReservationPickupLocationName(location.name)");
+    // Optional so a build that ships before the server deploys still decodes.
+    expect(models).toContain("let reservationPickup: Bool?");
+    expect(models).toContain("var isReservationPickupCounter: Bool");
+    expect(createVm).toContain("filter(\\.isReservationPickupCounter)");
+    expect(editFlow).toContain("filter(\\.isReservationPickupCounter)");
+    expect(createVm).not.toContain('["Camp Randall", "Kohl Center"]');
+    expect(editFlow).not.toContain('name.contains("camp randall")');
+  });
+});
+
 describe("iOS API contracts — reservation create payload", () => {
   it("iOS sends typed bulk items to the existing reservation schema", () => {
     const validation = source("src/lib/validation.ts");
