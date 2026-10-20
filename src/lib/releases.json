@@ -1,6 +1,20 @@
 [
   {
     "date": "2026-10-20",
+    "title": "Keep non-game titles when adding an event",
+    "type": "fixes",
+    "summary": "Adding a visit or other non-game now points you to Non-game, so the title stays as you typed it instead of showing as Sport vs Opponent.",
+    "details": [
+      "If a Home, Away, or Neutral event has a title without vs or at, Add event offers a one-tap switch to Non-game.",
+      "Game events still read as sport, vs or at, and opponent."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 0
+  },
+  {
+    "date": "2026-10-20",
     "title": "Less repeated work across devices",
     "type": "improvement",
     "summary": "The web and iPhone apps do less repeated loading and background work while keeping gear counts, schedules, and unfinished work current.",
@@ -11,7 +25,10 @@
       "Schedule, Resources, Sports settings, and hiring pages download less code on their first visit.",
       "The iPhone app prepares list responses and brand previews away from interface updates, avoids duplicate saves, and skips return checks that are too early to be useful."
     ],
-    "platforms": ["Web", "iOS"],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
     "pr": 534
   },
   {

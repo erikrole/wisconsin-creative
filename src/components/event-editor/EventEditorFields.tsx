@@ -18,6 +18,7 @@ import {
   NONE_SPORT_VALUE,
   QUARTER_HOUR_MINUTES,
   buildEventDraftDateTime,
+  gameTitleIsNotMatchup,
   type EventEditorDraft,
   type EventTypeDraft,
 } from "@/lib/event-editor";
@@ -177,7 +178,24 @@ export function EventEditorFields({
           maxLength={200}
           disabled={disabled}
         />
-        {isCreate && isGame ? (
+        {isCreate && gameTitleIsNotMatchup(draft) ? (
+          <div className="flex flex-col items-start gap-1 text-xs text-muted-foreground">
+            <p>
+              Game events show on the schedule as sport, vs or at, and opponent. For a visit, meeting, or
+              other non-game, keep this title as typed.
+            </p>
+            <Button
+              type="button"
+              variant="link"
+              size="sm"
+              className="h-auto p-0 text-xs"
+              disabled={disabled}
+              onClick={() => onChange({ eventType: "non-game", opponent: "" })}
+            >
+              Switch to non-game
+            </Button>
+          </div>
+        ) : isCreate && isGame ? (
           <p className="text-xs text-muted-foreground">
             Fills from sport and opponent until you edit it.
           </p>
