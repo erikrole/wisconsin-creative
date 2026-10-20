@@ -231,6 +231,11 @@ describe("GearOps macOS menu bar contracts", () => {
     // then sign in once a picked password lands.
     expect(login).toContain("if old.isEmpty, new.count > 1, password.isEmpty { focusedField = .password }");
     expect(login).toContain("DispatchQueue.main.async { submit() }");
+    // Each AutoFill pick asks for Touch ID, so a return sign-in starts in the
+    // password field with the last email filled.
+    expect(login).toContain('@AppStorage("GearOps.lastSignInEmail") private var rememberedEmail = ""');
+    expect(login).toContain("focusedField = email.isEmpty ? .email : .password");
+    expect(login).toContain("if model.user != nil { rememberedEmail = submittedEmail }");
     expect(login).toContain('Text(primaryTitle)');
     expect(login).toContain('showPassword ? "eye.slash" : "eye"');
 

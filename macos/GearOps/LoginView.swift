@@ -12,6 +12,10 @@ struct GearOpsLoginView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var showPassword = false
+    /// The last email that signed in. macOS AutoFill asks for Touch ID per
+    /// field, so starting in the password field makes a return sign-in one
+    /// pick and one approval instead of two. Not a secret; never the password.
+    @AppStorage("GearOps.lastSignInEmail") private var rememberedEmail = ""
     @FocusState private var focusedField: Field?
 
     private enum Field: Hashable {
@@ -62,7 +66,10 @@ struct GearOpsLoginView: View {
             .padding(.vertical, 22)
         }
         .frame(width: GearOpsLayout.popoverWidth)
-        .onAppear { focusedField = .email }
+        .onAppear {
+            if email.isEmpty { email = rememberedEmail }
+            focusedField = email.isEmpty ? .email : .password
+        }
         .onDisappear {
             // Menu-bar content can be torn down whenever the popover closes.
             // Never retain a password or a revealed-password state across that
@@ -230,6 +237,7 @@ struct GearOpsLoginView: View {
         showPassword = false
         Task {
             await model.signIn(email: submittedEmail, password: submittedPassword)
+            if model.user != nil { rememberedEmail = submittedEmail }
             if model.user == nil {
                 focusedField = .password
             }
