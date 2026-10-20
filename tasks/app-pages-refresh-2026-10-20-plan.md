@@ -24,3 +24,5 @@ No authenticated product or production database is needed for these static publi
 The primary checkout continued changing in parallel: 13 initially dirty paths had different hashes at final comparison. This task edited only its isolated worktree and did not restore or stage those changes. Initial and final hash manifests remain in private recovery evidence.
 
 Rebased onto main c71954b before push. Its email changes do not change the app page sources. The original initial baseline d396910 is retained in private recovery evidence; final receipts identify the ready production revision actually present at capture time.
+
+Shipping PR: https://github.com/erikrole/wisconsin-creative/pull/539. The `no-preview` label avoids provisioning a managed database preview for static public content; normal required validate/postgres checks still run. Final CI and live acceptance will be recorded in the PR handoff.
