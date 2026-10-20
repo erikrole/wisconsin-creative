@@ -26,3 +26,5 @@ The primary checkout continued changing in parallel: 13 initially dirty paths ha
 Rebased onto main c71954b before push. Its email changes do not change the app page sources. The original initial baseline d396910 is retained in private recovery evidence; final receipts identify the ready production revision actually present at capture time.
 
 Shipping PR: https://github.com/erikrole/wisconsin-creative/pull/539. The `no-preview` label avoids provisioning a managed database preview for static public content; normal required validate/postgres checks still run. Final CI and live acceptance will be recorded in the PR handoff.
+
+Full CI found one stale static-assets allowlist: `public/apps/shots` is an intentional part of this change. Updated the assertion to include that folder; 6,124 other tests passed on the first complete run. Required CI is rerunning before merge.
