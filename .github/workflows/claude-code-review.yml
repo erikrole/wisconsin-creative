@@ -87,6 +87,11 @@ jobs:
               result = {}
           error_text = str(result.get('result', result.get('errors', ''))).lower()
           signals = ('invalid_request_error', 'permission_error', 'not_found_error', 'api_error', 'overloaded_error', 'oauth', 'expired', 'revoked', 'scopes', 'forbidden', 'unauthorized', 'unsupported', 'not allowed', 'subscription', 'capacity', 'usage', 'limit', 'quota', 'exceeded', 'reached', 'resets', 'extra', 'credit', 'model', 'invalid', 'login', 'authenticate', 'unavailable', 'denied', 'organization', 'account', 'spend', 'terms of service', 'unknown option')
+          clean_error = re.sub(r'\x1b\[[0-?]*[ -/]*[@-~]', '', error_text)
+          reset_time = re.search(r'resets?\s+(?:at\s+)?(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)(?:\s*\((utc|america/chicago)\))?', clean_error)
+          if reset_time:
+              print('Claude limit reset time=' + reset_time.group(1) + '; zone=' + (reset_time.group(2) or 'not specified'))
+          print('Claude limit window=' + ','.join(window for window in ('5-hour', 'weekly', 'daily', 'session') if window in clean_error))
           print('Claude startup diagnostic: error signals=' + ','.join(signal for signal in signals if signal in error_text))
           subtypes = ('success', 'error_during_execution', 'error_max_turns', 'error_max_budget_usd', 'error_max_structured_output_retries')
           print('Claude startup diagnostic: subtype=' + (result.get('subtype') if result.get('subtype') in subtypes else 'unknown'))
