@@ -1,5 +1,21 @@
 [
   {
+    "date": "2026-10-20",
+    "title": "Choosing no kit clears kit gear",
+    "type": "fixes",
+    "summary": "When a reservation auto-picks a kit and you switch it to None, the kit's gear no longer stays selected on the next step.",
+    "details": [
+      "Choosing None removes only the gear the kit added; anything you picked yourself stays.",
+      "Switching to a different kit swaps the gear the same way.",
+      "Fixed on the web and in the iOS app."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 0
+  },
+  {
     "date": "2026-10-19",
     "title": "Out-of-town scoreboard has its own site",
     "type": "improvement",
