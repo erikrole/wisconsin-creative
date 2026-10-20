@@ -1,6 +1,20 @@
 [
   {
     "date": "2026-10-20",
+    "title": "A calmer, consistent sidebar",
+    "type": "improvement",
+    "summary": "The sidebar now looks the same on every page and has a lighter, cleaner design.",
+    "details": [
+      "Fixed the sidebar switching fonts and styling when you opened Staff, Budget or Wish list.",
+      "New light and dark look with quieter section labels, a soft highlight on the page you're on, and a tidier account row.",
+      "Works the same on phones and when collapsed."
+    ],
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
+    "date": "2026-10-20",
     "title": "Swap a Photo Mechanic code",
     "type": "feature",
     "summary": "If your Photo Mechanic code won't activate, you can now get a different one without asking staff.",

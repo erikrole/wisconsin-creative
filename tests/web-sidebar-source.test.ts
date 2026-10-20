@@ -178,13 +178,15 @@ describe("web sidebar source contract", () => {
     expect(sidebar).toContain('"External collaborator"');
   });
 
-  it("sets sidebar identity type with Gotham via brand-identity, not inline heading families", () => {
+  it("owns its typeface and tokens so page-scoped themes cannot restyle it", () => {
     const sidebar = source("src/components/Sidebar.tsx");
+    const css = source("src/app/globals.css");
 
-    expect(sidebar).toContain("brand-identity");
-    expect(sidebar).toContain("font-[800]");
-    expect(sidebar).toContain("font-bold");
+    expect(sidebar).toContain('import { Lato } from "next/font/google"');
+    expect(sidebar).toContain("lato.className");
+    expect(sidebar).not.toContain("brand-identity");
     expect(sidebar).not.toContain('fontFamily: "var(--font-heading)"');
-    expect(sidebar).not.toContain("fontWeight: isActive ? 600");
+    expect(css).toContain("--color-sidebar-border: var(--sidebar-border)");
+    expect(css).toContain("--color-sidebar-ring: var(--sidebar-ring)");
   });
 });

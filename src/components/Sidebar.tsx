@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { Lato } from "next/font/google";
 import {
   applyThemeChoice,
   readStoredThemeChoice,
@@ -68,6 +69,9 @@ import {
 } from "@/components/ui/sidebar";
 import { resolveActiveShellHref } from "@/lib/shell-navigation";
 import { cn } from "@/lib/utils";
+
+// Loaded here, not inherited from a page wrapper, so the rail keeps one typeface on every route.
+const lato = Lato({ subsets: ["latin"], weight: ["400", "700", "900"], display: "swap" });
 
 type NavItem = {
   label: string;
@@ -192,10 +196,10 @@ function useTheme() {
 
 const navButtonClass = (isActive: boolean) =>
   cn(
-    "brand-identity rounded-md border-l-0 pl-2 font-medium tracking-[-0.01em] transition-[background-color,color,scale] duration-150 active:scale-[0.96] group-data-[collapsible=icon]:rounded-md group-data-[collapsible=icon]:pl-2!",
+    "h-9 gap-2.5 rounded-lg px-2.5 text-[14px] tracking-[-0.005em] transition-[background-color,color,scale] duration-150 active:scale-[0.97] group-data-[collapsible=icon]:rounded-lg",
     isActive
-      ? "bg-white/[0.10] font-bold text-white hover:bg-white/[0.12] hover:text-white data-[active=true]:bg-white/[0.10] data-[active=true]:font-bold data-[active=true]:text-white"
-      : "text-white/55 hover:bg-white/[0.06] hover:text-white/90",
+      ? "bg-[var(--sidebar-active)] font-bold text-[var(--sidebar-text-active)] hover:bg-[var(--sidebar-active)] hover:text-[var(--sidebar-text-active)] data-[active=true]:bg-[var(--sidebar-active)] data-[active=true]:font-bold data-[active=true]:text-[var(--sidebar-text-active)]"
+      : "font-normal text-[var(--sidebar-text)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-text-active)]",
   );
 
 export default function AppSidebar({
@@ -255,50 +259,53 @@ export default function AppSidebar({
 
   return (
     <Sidebar collapsible="icon">
+      <div className={cn(lato.className, "flex min-h-0 flex-1 flex-col")}>
       {user && (
-        <SidebarHeader className="pb-1 pt-3">
+        <SidebarHeader className="px-3 pb-2 pt-4 group-data-[collapsible=icon]:px-1">
           <Link
             prefetch={false}
             href="/"
             aria-label="Wisconsin Creative home"
-            className="flex items-center gap-2.5 rounded-md px-3 py-1.5 no-underline outline-none transition-colors hover:bg-white/[0.05] focus-visible:ring-2 focus-visible:ring-white/30 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
+            className="flex items-center gap-2.5 rounded-lg px-1.5 py-1 no-underline outline-none transition-colors hover:bg-[var(--sidebar-hover)] focus-visible:ring-2 focus-visible:ring-[var(--sidebar-ring)] group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
           >
-            <Image
-              src="/Badgers.png"
-              alt=""
-              width={28}
-              height={28}
-              className="size-7 shrink-0 object-contain"
-              priority
-            />
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white shadow-[0_0_0_1px_var(--sidebar-border)]">
+              <Image
+                src="/Badgers.png"
+                alt=""
+                width={22}
+                height={22}
+                className="size-[22px] object-contain"
+                priority
+              />
+            </span>
             <div className="min-w-0 group-data-[collapsible=icon]:hidden">
-              <p className="brand-identity mb-[3px] text-[10px] font-medium leading-none tracking-[0.16em] text-white/50 uppercase">
-                UW Athletics
-              </p>
-              <p className="brand-identity text-[13px] font-[800] leading-none tracking-[-0.02em] text-white">
+              <p className="text-[14px] font-black leading-tight tracking-[-0.015em] text-[var(--sidebar-text-active)]">
                 Wisconsin Creative
+              </p>
+              <p className="mt-px text-[12px] font-normal leading-tight text-[var(--sidebar-muted)]">
+                UW Athletics
               </p>
             </div>
           </Link>
         </SidebarHeader>
       )}
 
-      <SidebarContent className="py-1">
+      <SidebarContent className="px-1 py-1">
         <nav aria-label="Workspace navigation">
           {visibleGroups.map((group, groupIdx) => (
             <div key={group.label ?? group.items.map((item) => item.href).join("-")}>
               {!group.label && groupIdx > 0 && (
-                <SidebarSeparator className="mx-3 my-2 bg-white/[0.08] group-data-[collapsible=icon]:mx-2" />
+                <SidebarSeparator className="mx-3 my-2 bg-[var(--sidebar-border)] group-data-[collapsible=icon]:mx-2" />
               )}
-              <SidebarGroup className="px-2 py-0.5 group-data-[collapsible=icon]:px-1">
+              <SidebarGroup className="px-2 py-1 group-data-[collapsible=icon]:px-1">
                 {group.label && (
                   <SidebarGroupLabel
-                    className="brand-identity h-8 px-2 text-[11px] font-medium tracking-[0.14em] text-white/45 uppercase group-data-[collapsible=icon]:hidden"
+                    className="mt-1 h-7 px-2.5 text-[12px] font-bold tracking-normal text-[var(--sidebar-muted)] group-data-[collapsible=icon]:hidden"
                   >
                     {group.label}
                   </SidebarGroupLabel>
                 )}
-                <SidebarMenu className="gap-px">
+                <SidebarMenu className="gap-0.5">
                   {group.items.map((item) => {
                     const href = item.href;
                     const isActive = activeHref === href;
@@ -324,7 +331,7 @@ export default function AppSidebar({
                           className={navButtonClass(isActive)}
                         >
                           <Link prefetch={false} href={href} aria-current={isActive ? "page" : undefined}>
-                            <Icon className={isActive ? "text-white" : "text-white/55 group-hover/menu-item:text-white/80"} />
+                            <Icon className={cn("size-[17px] stroke-[1.75]", isActive ? "text-[var(--sidebar-icon-active)]" : "text-[var(--sidebar-muted)] group-hover/menu-item:text-[var(--sidebar-text-active)]")} />
                             <span>{item.label}</span>
                           </Link>
                         </SidebarMenuButton>
@@ -344,7 +351,7 @@ export default function AppSidebar({
                           </SidebarMenuBadge>
                         )}
                         {!badgeCount && badgeLabel && (
-                          <SidebarMenuBadge className="bg-white/[0.08] text-white/40 text-[9px] font-medium h-[16px] flex items-center justify-center rounded px-1 tracking-wide">
+                          <SidebarMenuBadge className="bg-[var(--sidebar-hover)] text-[var(--sidebar-muted)] text-[10px] font-medium h-[16px] flex items-center justify-center rounded px-1 tracking-wide">
                             {badgeLabel}
                           </SidebarMenuBadge>
                         )}
@@ -359,7 +366,7 @@ export default function AppSidebar({
       </SidebarContent>
 
       {user && (
-        <SidebarFooter className="border-t border-white/[0.07] p-2">
+        <SidebarFooter className="border-t border-[var(--sidebar-border)] p-2">
           <SidebarMenu>
             <SidebarMenuItem>
               <DropdownMenu>
@@ -368,25 +375,22 @@ export default function AppSidebar({
                     size="lg"
                     tooltip={user.name}
                     aria-label="Account menu"
-                    className="h-12 text-white/90 hover:bg-white/[0.06] hover:text-white data-[state=open]:bg-white/[0.08] group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:rounded-full"
+                    className="h-12 rounded-lg text-[var(--sidebar-text-active)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-text-active)] data-[state=open]:bg-[var(--sidebar-active)] group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:rounded-full"
                   >
                     <UserAvatar
                       name={user.name}
                       avatarUrl={user.avatarUrl}
-                      className="ring-1 ring-white/15"
+                      className="ring-1 ring-[var(--sidebar-border)]"
                     />
                     <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
-                      <p className="brand-identity truncate text-[12px] font-bold leading-tight tracking-[-0.01em] text-white">
+                      <p className="truncate text-[13px] font-bold leading-tight tracking-[-0.005em] text-[var(--sidebar-text-active)]">
                         {user.name}
                       </p>
-                      <p
-                        className="mt-[2px] truncate text-[11px] leading-tight tracking-[0.02em] text-white/50"
-                        style={{ fontFamily: "var(--font-mono)" }}
-                      >
+                      <p className="mt-[2px] truncate text-[12px] leading-tight text-[var(--sidebar-muted)]">
                         {roleCaption}
                       </p>
                     </div>
-                    <ChevronsUpDownIcon className="ml-auto size-4 text-white/35 group-data-[collapsible=icon]:hidden" />
+                    <ChevronsUpDownIcon className="ml-auto size-4 text-[var(--sidebar-muted)] group-data-[collapsible=icon]:hidden" />
                   </SidebarMenuButton>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
@@ -396,7 +400,7 @@ export default function AppSidebar({
                   className="w-64"
                 >
                   <DropdownMenuLabel className="font-normal">
-                    <p className="brand-identity truncate font-bold text-foreground">{user.name}</p>
+                    <p className="truncate font-bold text-foreground">{user.name}</p>
                     <p className="truncate text-xs font-normal text-muted-foreground">{user.email}</p>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
@@ -451,6 +455,7 @@ export default function AppSidebar({
           </SidebarMenu>
         </SidebarFooter>
       )}
+      </div>
     </Sidebar>
   );
 }

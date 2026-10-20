@@ -47,8 +47,8 @@
   --color-sidebar-primary-foreground: var(--sidebar-bg);
   --color-sidebar-accent: var(--sidebar-hover);
   --color-sidebar-accent-foreground: var(--sidebar-text-active);
-  --color-sidebar-border: var(--border);
-  --color-sidebar-ring: var(--ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
   --color-heatmap-zero: var(--heatmap-zero);
 }
 
@@ -116,12 +116,17 @@
 
   color-scheme: light;
 
-  /* Sidebar — deep Wisconsin dark */
-  --sidebar-bg: #1a1017;
-  --sidebar-hover: rgba(160, 0, 0, 0.14);
-  --sidebar-active: rgba(160, 0, 0, 0.22);
-  --sidebar-text: rgba(255, 255, 255, 0.60);
-  --sidebar-text-active: #ffffff;
+  /* Sidebar — quiet neutral rail. Own tokens (never --border/--ring/--accent) so scoped
+     themes such as .wc-fresh, which is mirrored onto <body>, cannot restyle it per page. */
+  --sidebar-bg: #f6f7f9;
+  --sidebar-hover: rgba(28, 32, 36, 0.055);
+  --sidebar-active: rgba(28, 32, 36, 0.08);
+  --sidebar-text: #60646c;
+  --sidebar-text-active: #1c2024;
+  --sidebar-muted: #8b8d98;
+  --sidebar-border: #e8e8ec;
+  --sidebar-ring: #3e63dd;
+  --sidebar-icon-active: #3e63dd;
   --sidebar-width: 240px;
 
   /* Surfaces — clean gray with subtle depth layering */
@@ -441,7 +446,15 @@
   --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.6), 0 8px 16px rgba(0, 0, 0, 0.4);
 
   /* Sidebar */
-  --sidebar-bg: #0d0b0e;
+  --sidebar-bg: #131416;
+  --sidebar-hover: rgba(255, 255, 255, 0.06);
+  --sidebar-active: rgba(255, 255, 255, 0.10);
+  --sidebar-text: #a8aab2;
+  --sidebar-text-active: #ececef;
+  --sidebar-muted: #7b7d86;
+  --sidebar-border: #26282d;
+  --sidebar-ring: #8da4ef;
+  --sidebar-icon-active: #8da4ef;
 
   /* Brand — official Wisconsin RGB red */
   --wi-red: #c80000;
