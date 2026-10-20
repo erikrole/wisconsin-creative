@@ -218,18 +218,19 @@ describe("GearOps macOS menu bar contracts", () => {
     expect(scene).toContain("static let crimson = Color(red: 0.769, green: 0.071, blue: 0.188)");
     expect(scene).toContain("environment(\\.colorScheme, .light)");
 
-    // macOS AutoFill fills the pair in one pick only from AppKit controls:
-    // a username NSTextField whose next key view is the password field.
+    // Native password managers need the semantic username and password fields
+    // mounted together so one Universal Autofill action can populate the pair.
     expect(login).toContain("private var credentialFields");
-    expect(login).toContain("final class CredentialFieldPair");
-    expect(login).toContain("email.contentType = .username");
-    expect(login).toContain("securePassword.contentType = .password");
-    expect(login).toContain("email.nextKeyView = securePassword");
-    expect(login).toContain("fields.clearPassword()");
+    expect(login).toContain("TextField(\"you@wisc.edu\", text: $email)");
+    expect(login).toContain("SecureField(\"Enter your password\", text: $password)");
+    expect(login).toContain(".textContentType(.username)");
+    expect(login).toContain(".textContentType(.password)");
+    expect(login.indexOf("TextField(\"you@wisc.edu\", text: $email)"))
+      .toBeLessThan(login.indexOf("SecureField(\"Enter your password\", text: $password)"));
     // AutoFill fills one field per pick: move to the password suggestion,
     // then sign in once a picked password lands.
-    expect(login).toContain("if wasEmpty, control.stringValue.count > 1 { parent.onBulkFill() }");
-    expect(login).toContain("if currentPassword.isEmpty { fields.focus(.password) }");
+    expect(login).toContain("if old.isEmpty, new.count > 1, password.isEmpty { focusedField = .password }");
+    expect(login).toContain("DispatchQueue.main.async { submit() }");
     expect(login).toContain('Text(primaryTitle)');
     expect(login).toContain('showPassword ? "eye.slash" : "eye"');
 
