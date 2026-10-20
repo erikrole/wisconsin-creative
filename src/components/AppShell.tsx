@@ -39,6 +39,7 @@ import { isBackgroundPollingPaused } from "@/hooks/use-operational-polling-activ
 import { NOTIFICATION_COUNT_CHANGED_EVENT } from "@/lib/notification-count-sync";
 import { ProfileCompletionWizard } from "@/components/profile-completion/ProfileCompletionWizard";
 import { dashboardStatsQueryOptions, dashboardStatsQueryKey, useDashboardStats } from "@/hooks/use-dashboard-data";
+import { useSidebarCounts } from "@/hooks/use-sidebar-counts";
 import {
   BadgeEarnedCelebration,
   type EarnedBadgeReward,
@@ -279,6 +280,7 @@ export default function AppShell({
   const { data: dashboardStats } = useDashboardStats();
   const overdueBadgeCount = dashboardStats?.myOverdueCount ?? 0;
   const dueTodayBadgeCount = dashboardStats?.myDueTodayCount ?? 0;
+  const { data: sidebarCounts } = useSidebarCounts(user?.role === "ADMIN" || user?.role === "STAFF");
   const [earnedBadgeQueue, setEarnedBadgeQueue] = useState<EarnedBadgeReward[]>([]);
   // The reward poll needs the current path only to build an auth return URL. Held
   // in a ref so it cannot sit in the effect's dependency list: `pathname` there
@@ -914,6 +916,10 @@ export default function AppShell({
         overdueBadgeCount={overdueBadgeCount}
         dueTodayBadgeCount={dueTodayBadgeCount}
         onSearch={isCollaborator ? undefined : () => setCmdOpen(true)}
+        attentionCounts={{
+          "/wishlist": { count: sidebarCounts?.openWishes ?? 0, suffix: "waiting on a decision" },
+          "/licenses": { count: sidebarCounts?.reportedLicenses ?? 0, suffix: "reported codes" },
+        }}
       />
 
       <div className="flex flex-1 flex-col min-w-0 max-md:pl-[env(safe-area-inset-left,0px)] max-md:pr-[env(safe-area-inset-right,0px)] print:ml-0">

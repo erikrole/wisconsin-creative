@@ -17,6 +17,14 @@ function Lab() {
         <AppSidebar
           user={{ id: "dev", name: "Erik Role", email: "dev@example.com", role }}
           overdueBadgeCount={3}
+          attentionCounts={
+            role === "ADMIN" || role === "STAFF"
+              ? {
+                  "/wishlist": { count: role === "ADMIN" ? 4 : 0, suffix: "waiting on a decision" },
+                  "/licenses": { count: 2, suffix: "reported codes" },
+                }
+              : undefined
+          }
           onSearch={role === "COLLABORATOR" ? undefined : () => window.alert("Search opens here")}
         />
         <div className="min-w-0 flex-1 bg-background">

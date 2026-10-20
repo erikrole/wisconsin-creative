@@ -172,6 +172,8 @@ type AppSidebarProps = {
   overdueBadgeCount?: number;
   dueTodayBadgeCount?: number;
   onSearch?: () => void;
+  /** Quiet counts of things to act on, keyed by nav href. */
+  attentionCounts?: Partial<Record<string, { count: number; suffix: string }>>;
 };
 
 function useTheme() {
@@ -244,6 +246,7 @@ export default function AppSidebar({
   overdueBadgeCount = 0,
   dueTodayBadgeCount = 0,
   onSearch,
+  attentionCounts,
 }: AppSidebarProps) {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
@@ -353,6 +356,8 @@ export default function AppSidebar({
         ? { count: overdueBadgeCount, suffix: "overdue", tone: "red" as const }
         : href === "/bookings" && dueTodayBadgeCount > 0
         ? { count: dueTodayBadgeCount, suffix: "due today", tone: "orange" as const }
+        : attentionCounts?.[href]?.count
+        ? { count: attentionCounts[href]!.count, suffix: attentionCounts[href]!.suffix, tone: "quiet" as const }
         : null;
     const badgeCount = badgeCfg?.count ?? 0;
     const badgeLabel = item.badge;
@@ -384,7 +389,9 @@ export default function AppSidebar({
               badgeCount > 9 ? "px-1.5" : "w-[18px] px-0",
               badgeCfg?.tone === "orange"
                 ? "bg-[var(--orange-bg)] text-[color:var(--orange-text)]"
-                : "bg-[var(--wi-red)] text-white",
+                : badgeCfg?.tone === "quiet"
+                  ? "bg-[var(--sidebar-active)] font-semibold text-[color:var(--sidebar-text)] group-data-[collapsible=icon]:bg-[var(--sidebar-muted)]"
+                  : "bg-[var(--wi-red)] text-white",
               yieldsToStar,
             )}
           >

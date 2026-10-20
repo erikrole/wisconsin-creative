@@ -9,7 +9,8 @@
       "New light and dark look with tighter rows, so the full list fits on a laptop screen.",
       "Pin any page with the star that appears on hover; pinned pages sit at the top.",
       "Collapse Team, Library or Staff tools; the sidebar remembers your choice and still shows the page you're on.",
-      "A Search row at the top opens search, Settings sits at the bottom, and the Operations group is now called Staff tools."
+      "A Search row at the top opens search, Settings sits at the bottom, and the Operations group is now called Staff tools.",
+      "Quiet counts show open wishes waiting on a decision (admins) and Software codes reported as not working (staff and admins)."
     ],
     "platforms": [
       "Web"
