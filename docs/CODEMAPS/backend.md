@@ -74,7 +74,7 @@
 | `src/lib/services/manual-event-time.ts` | 304 |
 | `src/lib/services/non-game-schedule-defaults.ts` | 49 |
 | `src/lib/services/notification-deliveries.ts` | 59 |
-| `src/lib/services/notification-prefs.ts` | 348 |
+| `src/lib/services/notification-prefs.ts` | 350 |
 | `src/lib/services/notifications.ts` | 1974 |
 | `src/lib/services/onboarding-lifecycle.ts` | 546 |
 | `src/lib/services/pending-pickup-expiry.ts` | 370 |
