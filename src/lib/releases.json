@@ -1,16 +1,19 @@
 [
   {
     "date": "2026-10-20",
-    "title": "Staff links open in the iPhone app",
+    "title": "iPhone release 1.3 fixes and a What's new list",
     "type": "fixes",
-    "summary": "Tapping a link to someone's staff page now opens their profile in the iPhone app instead of landing on an empty screen.",
+    "summary": "Staff links open in the iPhone app, past announcements have a home under Browse, dismissed announcements stay dismissed offline, and pickup desks come from the server.",
     "details": [
-      "Links in notifications and email that point at a person's page open the profile in the app.",
-      "Older links that use the previous web address keep working too.",
+      "Tapping a link to someone's staff page opens their profile in the app instead of an empty screen. Older web addresses keep working too.",
+      "Browse has a new What's new row that lists every app announcement you were shown, so you can reopen one after closing the splash.",
+      "Closing an announcement with no signal no longer brings it back on the next open. The app remembers and tells the server when it can.",
+      "The reservation pickup desk list now follows the server's list instead of names built into the app.",
       "This is part of the next iPhone update on TestFlight."
     ],
     "platforms": [
-      "iOS"
+      "iOS",
+      "Web"
     ],
     "pr": 532
   },

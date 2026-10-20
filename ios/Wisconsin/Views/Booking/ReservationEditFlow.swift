@@ -122,10 +122,7 @@ struct ReservationEditFlow: View {
     }
 
     private var locationChoices: [FormOption] {
-        let supported = (options?.locations ?? []).filter { location in
-            let name = location.name.lowercased()
-            return name.contains("camp randall") || name.contains("kohl center")
-        }
+        let supported = (options?.locations ?? []).filter(\.isReservationPickupCounter)
         if supported.contains(where: { $0.id == locationId }) {
             return supported
         }

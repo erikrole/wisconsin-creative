@@ -85,3 +85,24 @@ extension ActiveAnnouncement: Decodable {
         remaining = try container.decodeIfPresent(Int.self, forKey: .remaining) ?? 0
     }
 }
+
+/// One row of `GET /api/announcements/history?platform=ios`: the same payload
+/// the splash shows, plus whether this person already dismissed it. Decoded
+/// from the one container so the splash decoder stays the single parser.
+struct AnnouncementHistoryEntry: Identifiable, Equatable, Sendable, Decodable {
+    let announcement: ActiveAnnouncement
+    let endsAt: String?
+    let seenAt: String?
+
+    var id: String { announcement.id }
+    var isUnseen: Bool { seenAt == nil }
+
+    private enum CodingKeys: String, CodingKey { case endsAt, seenAt }
+
+    init(from decoder: Decoder) throws {
+        announcement = try ActiveAnnouncement(from: decoder)
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        endsAt = try container.decodeIfPresent(String.self, forKey: .endsAt)
+        seenAt = try container.decodeIfPresent(String.self, forKey: .seenAt)
+    }
+}

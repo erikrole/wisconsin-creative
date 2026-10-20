@@ -1871,6 +1871,18 @@ final class APIClient {
         return response.data
     }
 
+    /// Every announcement this person could have been shown, newest first,
+    /// for the Browse "What's new" list. Read on appear and pull-to-refresh.
+    func announcementHistory() async throws -> [AnnouncementHistoryEntry] {
+        let response: DataWrapper<[AnnouncementHistoryEntry]> = try await perform(
+            request(
+                path: "/api/announcements/history",
+                queryItems: [URLQueryItem(name: "platform", value: "ios")]
+            )
+        )
+        return response.data
+    }
+
     /// Records that this person has seen the announcement. Idempotent server-side.
     func dismissAnnouncement(id: String) async throws {
         struct Dismissed: Decodable { let dismissed: Bool }

@@ -138,6 +138,7 @@
 - `/api/announcements/[id]/dismiss` -> `src/app/api/announcements/[id]/dismiss/route.ts`
 - `/api/announcements/[id]` -> `src/app/api/announcements/[id]/route.ts`
 - `/api/announcements/active` -> `src/app/api/announcements/active/route.ts`
+- `/api/announcements/history` -> `src/app/api/announcements/history/route.ts`
 - `/api/announcements/images` -> `src/app/api/announcements/images/route.ts`
 - `/api/announcements` -> `src/app/api/announcements/route.ts`
 - `/api/assets/[id]/accessories` -> `src/app/api/assets/[id]/accessories/route.ts`
