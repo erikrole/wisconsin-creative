@@ -49,7 +49,7 @@ describe("iOS reservation edit", () => {
     expect(reservationEdit).toContain("APIClient.shared.updateBookingEvents(");
     expect(reservationEdit).toContain("excludeBookingId: baseline.id");
     expect(reservationEdit).toContain("bookingKind: .reservation");
-    expect(reservationEdit).toContain('name.contains("camp randall") || name.contains("kohl center")');
+    expect(reservationEdit).toContain("filter(\\.isReservationPickupCounter)");
     expect(reservationEdit).toContain('allocationStatus?.lowercased() == "picked_up"');
     expect(reservationEdit).toContain("var canRemove: Bool { !isPickedUp && checkedOutQuantity == 0 }");
     expect(reservationEdit).toContain("if needsAvailability { return availability == .clear }");
