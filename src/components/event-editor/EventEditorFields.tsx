@@ -187,8 +187,7 @@ export function EventEditorFields({
             <Button
               type="button"
               variant="link"
-              size="sm"
-              className="h-auto p-0 text-xs"
+              className="h-10 px-0 text-xs"
               disabled={disabled}
               onClick={() => onChange({ eventType: "non-game", opponent: "" })}
             >
