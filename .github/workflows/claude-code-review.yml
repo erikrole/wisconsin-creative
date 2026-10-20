@@ -70,21 +70,25 @@ jobs:
             --strict-mcp-config --mcp-config '{"mcpServers":{}}' \
             > result.json 2> error.txt || true
           python3 - <<'PYTHON'
-          import json
+          import json, re
           from pathlib import Path
           raw = Path('result.json').read_text() + Path('error.txt').read_text()
           categories = {
-              'authentication': ('invalid api key', 'invalid token', 'authentication_error', 'oauth token has expired', 'token expired'),
+              'authentication': ('invalid api key', 'invalid token', 'authentication_error', 'oauth token has expired', 'token expired', 'not logged in', 'required scopes', 're-authenticate', 'oauth authentication'),
               'usage limit': ('rate_limit', 'rate limit', 'hit your limit', 'usage limit'),
-              'billing': ('credit balance', 'billing', 'payment required'),
+              'billing': ('credit balance', 'billing', 'payment required', 'organization has been disabled'),
               'model access': ('model_not_found', 'model not found', 'not have access to'),
-              'unknown command': ('unknown skill', 'unknown slash command', 'unknown command'),
-              'connection': ('econnrefused', 'etimedout', 'connection error', 'fetch failed'),
+              'unknown command': ('unknown skill', 'unknown slash command', 'unknown command', 'unknown option', 'requires an argument', 'invalid argument'),
+              'connection': ('econnrefused', 'etimedout', 'connection error', 'fetch failed', 'enotfound', 'could not resolve'),
           }
+          codes = sorted(set(re.findall(r'(?i)(?:api error|http(?: status)?|status(?: code)?)[ :]+([45]\d{2})\b', raw)))
+          signals = ('invalid_request_error', 'permission_error', 'not_found_error', 'api_error', 'overloaded_error', 'oauth', 'expired', 'revoked', 'scopes', 'forbidden', 'unauthorized', 'unsupported', 'not allowed', 'subscription', 'capacity', 'usage', 'limit', 'npm error', 'enoent', 'eacces', 'not installed', 'failed to install', 'enablement', 'terms of service')
+          print('Claude startup diagnostic: HTTP=' + ','.join(codes) + '; signals=' + ','.join(signal for signal in signals if signal in raw.lower()))
           try:
               result = json.loads(Path('result.json').read_text())
           except (ValueError, OSError):
               result = {}
+          print('Claude startup diagnostic: result object=' + str(isinstance(result, dict) and result.get('type') == 'result'))
           if result.get('type') == 'result' and result.get('is_error') is False:
               print('Claude startup probe: model request succeeded.')
           else:
