@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "sourceRevision": "d39691003a1830476dde6ab5970c1e5ac93975e2",
-  "sourcePatchSha256": null,
+  "sourceRevision": "ddf57b4b13983290dd94f8c79aeacd2881774b2c",
+  "sourcePatchSha256": "d59d69cf2c237b88b1f8af1d0f780a8defb463f7b4ffb936fb8c9b0e16d5cbc1",
   "settings": {
     "device": "Codex in-app browser",
     "viewport": [
@@ -10,7 +10,7 @@
     ],
     "fixture": "public app facts 2026-10-20: Fetch 1.5.4, Offload 1.5.3, Wisconsin Creative 1.2",
     "role": "public signed-out",
-    "route": "/apps/offload",
+    "route": "/apps",
     "appearance": "light",
     "textSize": "default",
     "locale": "en",
@@ -21,7 +21,7 @@
       0
     ]
   },
-  "imageSha256": "7b290cd315e5c719da613a50e1c202eaf4d9cdec82de536d268cb86c8989a8cd",
+  "imageSha256": "c7179792e0adef6ad79b788e12b2875a2d764104db92109c65f0c208ef00b873",
   "dimensions": [
     807,
     970

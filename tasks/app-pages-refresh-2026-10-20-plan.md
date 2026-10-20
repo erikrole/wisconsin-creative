@@ -17,8 +17,10 @@ Scope: refresh `/apps/fetch`, then include the other four listed apps before pus
 
 ## Evidence boundaries
 
-Production baseline: `d39691003a1830476dde6ab5970c1e5ac93975e2`, Vercel deployment `dpl_7DE1cUFhiBGsKByBUfYpTYrYy3xC`, confirmed ready and aliased to wisconsincreative.com. Native source screenshots prove presentation; this task does not claim new camera-card, authenticated-data, transcription-accuracy or archive-transfer verification. See screenshot provenance in `public/apps/shots/README.md`.
+Paired-capture production baseline: `c71954b56c7ae767dd5f5bbcfdbed0274bc368c5`, Vercel deployment `dpl_42N3EDKqotgytTdVy3HDxAE7pisA`, confirmed ready and aliased to wisconsincreative.com. Native source screenshots prove presentation; this task does not claim new camera-card, authenticated-data, transcription-accuracy or archive-transfer verification. See screenshot provenance in `public/apps/shots/README.md`.
 
 No authenticated product or production database is needed for these static public pages. Existing public release lookups remain read-only. The new product route returns 404 for unknown app slugs.
 
 The primary checkout continued changing in parallel: 13 initially dirty paths had different hashes at final comparison. This task edited only its isolated worktree and did not restore or stage those changes. Initial and final hash manifests remain in private recovery evidence.
+
+Rebased onto main c71954b before push. Its email changes do not change the app page sources. The original initial baseline d396910 is retained in private recovery evidence; final receipts identify the ready production revision actually present at capture time.

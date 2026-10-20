@@ -22,14 +22,14 @@
   "sections": [
     {
       "heading": "Existing pages, matched comparison",
-      "note": "Same 822 \u00d7 988 viewport, light appearance, public facts and top scroll position. Before is production revision d396910; after is the retained source snapshot. JPEG browser captures were decoded losslessly to PNG for the receipt builder; original JPEGs are retained privately.",
+      "note": "Same 822 \u00d7 988 viewport, light appearance, public facts and top scroll position. Before is production revision c71954b; after is the retained source snapshot. JPEG browser captures were decoded losslessly to PNG for the receipt builder; original JPEGs are retained privately.",
       "pairs": [
         {
           "title": "Fetch",
           "before": "before-fetch.png",
           "after": "after-fetch.png",
-          "beforeEvidence": "before-fetch-evidence.json",
-          "afterEvidence": "after-fetch-evidence.json",
+          "beforeEvidence": "before-fetch-verified-evidence.json",
+          "afterEvidence": "after-fetch-verified-evidence.json",
           "beforeCap": "Link-only copy and no rendered screenshots.",
           "afterCap": "Download and conversion overview with the real 1.5.4 opening window."
         },
@@ -37,8 +37,8 @@
           "title": "Offload",
           "before": "before-offload.png",
           "after": "after-offload.png",
-          "beforeEvidence": "before-offload-evidence.json",
-          "afterEvidence": "after-offload-evidence.json",
+          "beforeEvidence": "before-offload-verified-evidence.json",
+          "afterEvidence": "after-offload-verified-evidence.json",
           "beforeCap": "Older feature copy and no rendered screenshots.",
           "afterCap": "Public 1.5.3 preview, verified-copy workflow and accurate archive handoff."
         },
@@ -46,8 +46,8 @@
           "title": "Apps directory",
           "before": "before-apps.png",
           "after": "after-apps.png",
-          "beforeEvidence": "before-apps-evidence.json",
-          "afterEvidence": "after-apps-evidence.json",
+          "beforeEvidence": "before-apps-verified-evidence.json",
+          "afterEvidence": "after-apps-verified-evidence.json",
           "beforeCap": "Three apps had no detail-page link.",
           "afterCap": "Every app has a feature page, with current version fallbacks and supported download links."
         }
