@@ -1,6 +1,22 @@
 [
   {
     "date": "2026-10-20",
+    "title": "Choosing no kit clears kit gear",
+    "type": "fixes",
+    "summary": "When a reservation auto-picks a kit and you switch it to None, the kit's gear no longer stays selected on the next step.",
+    "details": [
+      "Choosing None removes only the gear the kit added; anything you picked yourself stays.",
+      "Switching to a different kit swaps the gear the same way.",
+      "Fixed on the web and in the iOS app."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 538
+  },
+  {
+    "date": "2026-10-20",
     "title": "iPhone 1.3 fixes and What's new",
     "type": "fixes",
     "summary": "Staff links open in the iPhone app, past announcements have a home under Browse, dismissed announcements stay dismissed offline, and pickup desks come from the server.",
