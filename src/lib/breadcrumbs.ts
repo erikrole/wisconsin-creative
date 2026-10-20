@@ -27,6 +27,16 @@ const SEGMENT_OVERRIDE: Record<string, { label: string; href?: string }> = {
   gear: { label: "UA gear" },
 };
 
+// First-segment labels that match the sidebar. SEGMENT_OVERRIDE is written for nested settings
+// pages (`/settings/bookings` is "Booking extensions"), so it must not rename a top-level section.
+const TOP_LEVEL_LABEL: Record<string, string> = {
+  bookings: "Bookings",
+  gear: "UA Gear Picks",
+  wishlist: "Wish list",
+  licenses: "Software",
+  youtube: "YouTube Studio Lite",
+};
+
 export type SiblingItem = {
   href: string;
   label: string;
@@ -161,7 +171,8 @@ export function buildBreadcrumbItems(
     const seg = segments[i]!; // in-bounds by loop condition
     if (isDynamicSegment(seg)) continue;
     const href = SEGMENT_OVERRIDE[seg]?.href ?? "/" + segments.slice(0, i + 1).join("/");
-    crumbs.push({ href, label: formatSegment(seg) });
+    const label = (i === 0 ? TOP_LEVEL_LABEL[seg] : undefined) ?? formatSegment(seg);
+    crumbs.push({ href, label });
   }
 
   const items: BreadcrumbItemData[] = [

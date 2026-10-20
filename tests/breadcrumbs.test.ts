@@ -78,6 +78,12 @@ describe("formatSegment", () => {
 });
 
 describe("buildBreadcrumbItems", () => {
+  it("names top-level sections as the sidebar does, keeping nested overrides", () => {
+    expect(buildBreadcrumbItems("/bookings", null).items[1]?.label).toBe("Bookings");
+    expect(buildBreadcrumbItems("/licenses", null).items[1]?.label).toBe("Software");
+    expect(buildBreadcrumbItems("/settings/bookings", null).items[2]?.label).toBe("Booking extensions");
+  });
+
   it("appends the entity label as the current page on detail routes", () => {
     const { items, onDetailPage } = buildBreadcrumbItems(
       "/items/cmf0abcdefghijklmnop1234",

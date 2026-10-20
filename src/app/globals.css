@@ -660,15 +660,19 @@ a, button, [role="button"], [tabindex], label, summary, select {
   -webkit-tap-highlight-color: transparent;
 }
 
-button {
-  cursor: pointer;
-  font-family: inherit;
-  font-size: inherit;
-}
+/* Layered so a text-size or font utility on a button or field wins. Unlayered, these rules
+   silently beat every Tailwind class (text-xs, font-mono, ...) on those elements. */
+@layer base {
+  button {
+    cursor: pointer;
+    font-family: inherit;
+    font-size: inherit;
+  }
 
-input, select, textarea {
-  font-family: inherit;
-  font-size: inherit;
+  input, select, textarea {
+    font-family: inherit;
+    font-size: inherit;
+  }
 }
 
 /* Links inside buttons inherit the button's text color */

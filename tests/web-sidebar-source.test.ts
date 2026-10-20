@@ -137,7 +137,7 @@ describe("web sidebar source contract", () => {
 
     expect(sidebar).toMatch(/<Link\s+prefetch=\{false\}\s+href=\{`\/staff\/\$\{user\.id\}`\}/);
     expect(sidebar).toMatch(/<Link prefetch=\{false\} href=\{href\}/);
-    expect(appShell).toContain('<Link prefetch={false} href="/notifications"');
+    expect(source("src/components/AppTopBar.tsx")).toContain('<Link prefetch={false} href="/notifications"');
     expect(sectionNav).toMatch(/<Link\s+prefetch=\{false\}\s+href=\{href\}/);
   });
 
@@ -168,8 +168,10 @@ describe("web sidebar source contract", () => {
     expect(sidebar).toContain('label: "Library"');
     expect(sidebar).not.toContain('{ label: "Notifications"');
     expect(sidebar).not.toContain("unreadNotifications");
-    expect(appShell).toContain('href="/notifications"');
-    expect(appShell).toContain("Search items, bookings, people, pages, and guides");
+    const topBar = source("src/components/AppTopBar.tsx");
+    expect(appShell).toContain("<AppTopBar");
+    expect(topBar).toContain('href="/notifications"');
+    expect(topBar).toContain("Search items, bookings, people, pages, and guides");
   });
 
   it("uses collaborator affiliation identity instead of a generic external label", () => {
@@ -183,8 +185,8 @@ describe("web sidebar source contract", () => {
     const sidebar = source("src/components/Sidebar.tsx");
     const css = source("src/app/globals.css");
 
-    expect(sidebar).toContain('import { Lato } from "next/font/google"');
-    expect(sidebar).toContain("lato.className");
+    expect(source("src/lib/chrome-font.ts")).toContain('import { Lato } from "next/font/google"');
+    expect(sidebar).toContain("chromeFont.className");
     expect(sidebar).not.toContain("brand-identity");
     expect(sidebar).not.toContain('fontFamily: "var(--font-heading)"');
     expect(css).toContain("--color-sidebar-border: var(--sidebar-border)");

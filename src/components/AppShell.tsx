@@ -1,19 +1,17 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { SearchIcon, ClipboardCheckIcon, CalendarCheckIcon, CalendarDaysIcon, BellIcon, UserIcon, HouseIcon, CameraIcon, ClipboardListIcon, BookOpenIcon, ArrowRightIcon } from "lucide-react";
+import { SearchIcon, ClipboardCheckIcon, CalendarCheckIcon, CalendarDaysIcon, UserIcon, HouseIcon, CameraIcon, ClipboardListIcon, BookOpenIcon, ArrowRightIcon } from "lucide-react";
 import AppSidebar from "./Sidebar";
 import { AssetImage } from "@/components/AssetImage";
 import { OperationalPartialResultsAlert } from "@/components/OperationalFeedback";
 import { OperationalLoadingState } from "@/components/OperationalLoadingState";
 import { UserAvatar } from "@/components/UserAvatar";
-import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import PageBreadcrumb from "@/components/PageBreadcrumb";
+import { AppTopBar } from "@/components/AppTopBar";
+import { MobileTabBar, type MobileTabItem } from "@/components/MobileTabBar";
 import { BreadcrumbProvider } from "@/components/BreadcrumbContext";
-import { SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import {
   CommandDialog,
   CommandInput,
@@ -32,7 +30,6 @@ import { handleAuthRedirect, parseJsonSafely } from "@/lib/errors";
 import { mapGuideSearchResult, type GuideSearchHit } from "@/lib/guide-search-result";
 import { getVisiblePageSearchResults, type PageSearchResult } from "@/lib/search-pages";
 import { assetSearchTitle } from "@/lib/search-result-title";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { BOOKING_CHANGE_SYNC_EVENT } from "@/hooks/use-booking-change-sync";
 import { isBackgroundPollingPaused } from "@/hooks/use-operational-polling-activity";
@@ -44,7 +41,7 @@ import {
   BadgeEarnedCelebration,
   type EarnedBadgeReward,
 } from "@/components/badges/BadgeEarnedCelebration";
-import { RolePreviewBanner, RolePreviewControl } from "@/components/RolePreviewControl";
+import { RolePreviewBanner } from "@/components/RolePreviewControl";
 
 type EntitySearchResult = {
   type: "item" | "checkout" | "reservation" | "user" | "guide";
@@ -114,21 +111,14 @@ const SEARCH_RESULT_SOURCES = {
   guides: "Guides",
 } as const;
 
-type BottomNavItem = {
-  label: string;
-  href: string;
-  icon: React.ElementType;
-  badge?: "overdue";
-};
-
-const bottomNavItems: BottomNavItem[] = [
+const bottomNavItems: MobileTabItem[] = [
   { label: "Home", href: "/", icon: HouseIcon },
   { label: "Schedule", href: "/schedule", icon: CalendarDaysIcon },
   { label: "Bookings", href: "/bookings", icon: ClipboardListIcon, badge: "overdue" as const },
   { label: "Items", href: "/items", icon: CameraIcon },
 ];
 
-const collaboratorBottomNavItems: BottomNavItem[] = [
+const collaboratorBottomNavItems: MobileTabItem[] = [
   { label: "Home", href: "/", icon: HouseIcon },
   { label: "Schedule", href: "/schedule", icon: CalendarDaysIcon },
   { label: "My Gear", href: "/bookings", icon: ClipboardListIcon, badge: "overdue" as const },
@@ -161,96 +151,6 @@ function collaboratorCanVisit(pathname: string, user: CurrentUser): boolean {
   if (alwaysAllowed) return true;
   const route = COLLABORATOR_ROUTE_CAPABILITY.find((entry) => entry.matches(pathname));
   return Boolean(route && user.capabilities?.includes(route.capability));
-}
-
-function AppTopBar({
-  isCollaborator,
-  onSearch,
-  unreadNotifications,
-  user,
-}: {
-  isCollaborator: boolean;
-  onSearch: () => void;
-  unreadNotifications: number;
-  user: CurrentUser;
-}) {
-  const { isMobile, open, openMobile } = useSidebar();
-  const sidebarLabel = isMobile
-    ? (openMobile ? "Close navigation" : "Open navigation")
-    : (open ? "Collapse sidebar" : "Expand sidebar");
-  const notificationLabel = unreadNotifications > 0
-    ? `Notifications (${unreadNotifications} unread)`
-    : "Notifications";
-
-  return (
-    <header
-      data-app-shell-header
-      className="flex h-12 items-center gap-2 overflow-visible border-b border-border/70 bg-card/90 px-3 backdrop-blur-md supports-[backdrop-filter]:bg-card/80 max-md:gap-1.5 max-md:px-2 md:px-4"
-    >
-      <SidebarTrigger
-        aria-label={sidebarLabel}
-        title={sidebarLabel}
-        className="shrink-0 text-foreground hover:bg-muted hover:text-foreground max-md:size-11"
-      />
-      {!isCollaborator && (
-        <button
-          className="flex h-10 min-h-10 max-w-2xl flex-1 items-center gap-2 rounded-md border border-border/80 bg-background px-3 text-[13px] text-muted-foreground transition-[border-color,background-color,color,box-shadow] duration-150 hover:border-foreground/25 hover:text-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 max-md:hidden [&_svg]:shrink-0"
-          onClick={onSearch}
-          type="button"
-          aria-keyshortcuts="Meta+K Control+K"
-          aria-label="Search items, bookings, people, pages, and guides (⌘K)"
-        >
-          <SearchIcon className="size-4" />
-          <span className="min-w-0 flex-1 truncate text-left">Search items, bookings, people, pages, and guides</span>
-          <kbd className="pointer-events-none ml-auto hidden h-5 items-center rounded border border-border bg-muted/80 px-1.5 font-sans text-[10px] font-medium text-muted-foreground sm:inline-flex">
-            ⌘K
-          </kbd>
-        </button>
-      )}
-      <div className="ml-auto flex items-center gap-0.5">
-        {!isCollaborator && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="hidden size-10 text-muted-foreground hover:text-foreground max-md:inline-flex max-md:size-11"
-                onClick={onSearch}
-                aria-label="Search items, bookings, people, pages, and guides"
-              >
-                <SearchIcon className="size-5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Search (⌘K)</TooltipContent>
-          </Tooltip>
-        )}
-        <RolePreviewControl user={user} />
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="relative size-10 overflow-visible text-muted-foreground hover:text-foreground max-md:size-11 [&_a]:no-underline"
-              asChild
-            >
-              <Link prefetch={false} href="/notifications" aria-label={notificationLabel}>
-                <BellIcon className="size-[18px]" />
-                {unreadNotifications > 0 && (
-                  <span
-                    className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[length:var(--text-2xs)] font-bold leading-4 text-destructive-foreground tabular-nums ring-2 ring-card"
-                    aria-hidden="true"
-                  >
-                    {unreadNotifications > 99 ? "99+" : unreadNotifications}
-                  </span>
-                )}
-              </Link>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>{notificationLabel}</TooltipContent>
-        </Tooltip>
-      </div>
-    </header>
-  );
 }
 
 export default function AppShell({
@@ -928,70 +828,23 @@ export default function AppShell({
             You&apos;re offline. Changes will sync when connected.
           </div>
         )}
-        <div className="sticky top-0 z-40 print:hidden">
-          <RolePreviewBanner user={user} />
-          <AppTopBar
-            isCollaborator={isCollaborator}
-            onSearch={() => setCmdOpen(true)}
-            unreadNotifications={unreadNotifications}
-            user={user}
-          />
-        </div>
         <BreadcrumbProvider>
+          <div className="sticky top-0 z-40 print:hidden">
+            <RolePreviewBanner user={user} />
+            <AppTopBar
+              isCollaborator={isCollaborator}
+              onSearch={() => setCmdOpen(true)}
+              unreadNotifications={unreadNotifications}
+              user={user}
+            />
+          </div>
           <main id="main-content" className="flex-1 px-8 py-5 max-md:p-4 max-md:pb-[calc(96px+env(safe-area-inset-bottom,0px))] print:pb-0">
-            <div data-app-shell-breadcrumb-frame={pathname === "/schedule" ? "" : undefined}>
-              <PageBreadcrumb />
-            </div>
             {children}
           </main>
         </BreadcrumbProvider>
       </div>
 
-      {/* Mobile bottom nav */}
-      <nav aria-label="Mobile navigation" className="hidden max-md:block fixed inset-x-0 bottom-0 z-[var(--z-overlay)] border-t border-border/70 bg-card/95 px-2 pb-[calc(6px+env(safe-area-inset-bottom,0px))] pt-1.5 shadow-[0_-10px_28px_rgba(15,23,42,0.10)] backdrop-blur supports-[backdrop-filter]:bg-card/90 print:hidden">
-        <div className="mx-auto grid max-w-[460px] gap-1" style={{ gridTemplateColumns: `repeat(${visibleBottomNavItems.length}, minmax(0, 1fr))` }}>
-          {visibleBottomNavItems.map((item) => {
-            const isActive =
-              item.href === "/"
-                ? pathname === "/"
-                : pathname.startsWith(item.href);
-            const badgeCount = item.badge === "overdue" ? overdueBadgeCount : 0;
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-current={isActive ? "page" : undefined}
-                aria-label={badgeCount > 0 ? `${item.label}, ${badgeCount} overdue` : item.label}
-                className={cn(
-                  "group relative flex min-h-[52px] min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-1 py-1 text-[11px] font-medium leading-none text-muted-foreground no-underline outline-none transition-[background-color,color,box-shadow,scale] duration-150 [-webkit-tap-highlight-color:transparent] hover:bg-muted/70 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card active:scale-[0.96]",
-                  isActive && "bg-muted text-foreground",
-                )}
-              >
-                <span
-                  className={cn(
-                    "relative flex size-7 items-center justify-center rounded-full transition-[background-color,color] duration-150",
-                    isActive
-                      ? "bg-[var(--wi-red)]/10 text-[var(--wi-red)]"
-                      : "text-muted-foreground group-hover:text-foreground",
-                  )}
-                  aria-hidden="true"
-                >
-                  <Icon className="size-[18px]" />
-                  {badgeCount > 0 && (
-                    <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[9px] font-bold leading-4 text-destructive-foreground tabular-nums">
-                      {badgeCount > 99 ? "99+" : badgeCount}
-                    </span>
-                  )}
-                </span>
-                <span className={cn("max-w-full truncate tracking-normal", isActive && "text-foreground")}>
-                  {item.label}
-                </span>
-              </Link>
-            );
-          })}
-        </div>
-      </nav>
+      <MobileTabBar items={visibleBottomNavItems} pathname={pathname} overdueCount={overdueBadgeCount} />
     </SidebarProvider>
   );
 }

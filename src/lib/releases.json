@@ -1,16 +1,16 @@
 [
   {
     "date": "2026-10-20",
-    "title": "A calmer, easier sidebar",
+    "title": "A calmer sidebar and top bar",
     "type": "improvement",
-    "summary": "The sidebar looks the same on every page, with clearer groups, fresh icons, search, pinned pages and a new account menu.",
+    "summary": "The sidebar and top bar look the same on every page, with clearer groups, fresh icons, pinned pages, a new account menu and the page path up top.",
     "details": [
       "Fixed the sidebar switching fonts and styling when you opened Staff, Budget or Wish list.",
       "New light and dark look with tighter rows, clearer icons and groups for People, Purchasing, Library and Staff tools.",
       "Pin your most-used pages and drag them into order from Customize sidebar in the account menu.",
-      "The account menu now holds Settings, Profile, appearance and help.",
+      "The account menu now holds Settings, Profile, appearance and help. Collapse any sidebar group and it stays that way.",
       "Quiet counts show open wishes waiting on a decision (admins) and Software codes reported as not working (staff and admins).",
-      "Collapse any group; the sidebar remembers your choice and still shows the page you're on."
+      "The top bar now shows where you are, and the phone tab bar matches the new look."
     ],
     "platforms": [
       "Web"

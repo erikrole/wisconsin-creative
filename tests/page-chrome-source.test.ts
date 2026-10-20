@@ -17,10 +17,11 @@ describe("shared page chrome", () => {
     expect(header).not.toContain("shadow-xs");
   });
 
-  it("hides top-level breadcrumbs and sets the current crumb in Gotham", () => {
+  it("shows the trail in the top bar without the Home root, in the chrome typeface", () => {
     const crumb = source("src/components/PageBreadcrumb.tsx");
-    expect(crumb).toContain("shouldShowBreadcrumbs");
-    expect(crumb).toContain("brand-identity relative inline-flex min-h-10");
+    expect(crumb).toContain("allItems.slice(1)");
+    expect(crumb).toContain("chromeFont.className");
+    expect(crumb).not.toContain("brand-identity");
     expect(crumb).not.toContain("backdrop-blur");
     expect(crumb).not.toContain("after:bg-primary/55");
   });

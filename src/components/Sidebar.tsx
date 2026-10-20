@@ -4,7 +4,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Lato } from "next/font/google";
 import {
   applyThemeChoice,
   readStoredThemeChoice,
@@ -69,10 +68,8 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { resolveActiveShellHref } from "@/lib/shell-navigation";
+import { chromeFont } from "@/lib/chrome-font";
 import { cn } from "@/lib/utils";
-
-// Loaded here, not inherited from a page wrapper, so the rail keeps one typeface on every route.
-const lato = Lato({ subsets: ["latin"], weight: ["400", "700", "900"], display: "swap" });
 
 type NavItem = {
   label: string;
@@ -412,7 +409,7 @@ export default function AppSidebar({
 
   return (
     <Sidebar collapsible="icon">
-      <div className={cn(lato.className, "flex min-h-0 flex-1 flex-col")}>
+      <div className={cn(chromeFont.className, "flex min-h-0 flex-1 flex-col")}>
       {user && (
         <SidebarHeader className="px-3 pb-3 pt-4 max-md:pr-12 group-data-[collapsible=icon]:px-2">
           <Link
@@ -500,7 +497,7 @@ export default function AppSidebar({
                   side={isMobile ? "top" : "right"}
                   align="end"
                   sideOffset={8}
-                  className={cn(lato.className, "w-[17rem] rounded-xl p-1.5")}
+                  className={cn(chromeFont.className, "w-[17rem] rounded-xl p-1.5")}
                 >
                   <DropdownMenuLabel className="flex items-center gap-2.5 px-2 py-2 font-normal">
                     <UserAvatar name={user.name} avatarUrl={user.avatarUrl} className="size-9" />
@@ -577,7 +574,7 @@ export default function AppSidebar({
             groups={visibleGroups}
             pinnedHrefs={pinnedHrefs}
             onPinnedChange={setPinnedHrefs}
-            className={lato.className}
+            className={chromeFont.className}
           />
         </SidebarFooter>
       )}
