@@ -130,6 +130,11 @@ const baseConfig: NextConfig = {
       { source: "/timelapse", destination: "/timelapse/index.html", permanent: false },
       { source: "/board-sizes", destination: "/board-sizes/index.html", permanent: false },
       { source: "/frame", destination: "/frame/index.html", permanent: false },
+      // The out-of-town scoreboard moved to its own Cloudflare Worker; old links and .uri files keep working.
+      { source: "/ots", destination: "https://ots.wisconsincreative.com/", permanent: false },
+      { source: "/ots/index.html", destination: "https://ots.wisconsincreative.com/", permanent: false },
+      { source: "/ots/:page(control|chip|output|scenarios).html", destination: "https://ots.wisconsincreative.com/:page", permanent: false },
+      { source: "/ots/:path*", destination: "https://ots.wisconsincreative.com/:path*", permanent: false },
     ];
   },
 };

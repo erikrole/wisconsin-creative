@@ -3,6 +3,12 @@ import { posix } from "node:path";
 /** A Neon preview child exists to run app, schema, and provisioning changes. */
 export const PREVIEW_APP_PREFIXES = ["prisma/", "src/", "scripts/"];
 
+/** Content-only files under src/ that every PR edits but no preview can exercise. */
+export const PREVIEW_CONTENT_FILES = ["src/lib/releases.json"];
+
+/** PR label that opts a pull request out of a managed preview (simple, low-risk changes). */
+export const NO_PREVIEW_LABEL = "no-preview";
+
 /**
  * Paths that cannot affect the app build, the test suite, or the database.
  * Workflow files stay heavy: a required check has to run the workflow it changed.
@@ -31,6 +37,7 @@ function matchesPrefix(path, prefixes) {
 export function pathNeedsPreviewDatabase(file) {
   const path = normalizeRepoPath(file);
   if (!path) return true;
+  if (PREVIEW_CONTENT_FILES.includes(path)) return false;
   return matchesPrefix(path, PREVIEW_APP_PREFIXES);
 }
 
@@ -50,9 +57,12 @@ export function pathsFromPullRequestFiles(files) {
  * Skip only when we positively know the pull request cannot need a database.
  * A missing file list does not skip, except for Dependabot, which never does.
  */
-export function previewDatabaseDecision({ files, author, branch } = {}) {
+export function previewDatabaseDecision({ files, author, branch, labels } = {}) {
   if (isDependabotPullRequest({ author, branch })) {
     return { skip: true, reason: "Dependabot pull requests do not get a Neon preview branch." };
+  }
+  if (hasNoPreviewLabel(labels)) {
+    return { skip: true, reason: `This pull request is labeled ${NO_PREVIEW_LABEL}, so no Neon preview branch was created.` };
   }
   const paths = pathsFromPullRequestFiles(files);
   if (!paths) return { skip: false, reason: "" };
@@ -61,6 +71,12 @@ export function previewDatabaseDecision({ files, author, branch } = {}) {
     skip: true,
     reason: "This pull request does not change prisma/, src/, or scripts/, so no Neon preview branch was created.",
   };
+}
+
+/** Labels as GitHub returns them ({ name }) or plain strings. */
+export function hasNoPreviewLabel(labels) {
+  if (!Array.isArray(labels)) return false;
+  return labels.some((label) => (typeof label === "string" ? label : label?.name) === NO_PREVIEW_LABEL);
 }
 
 /** True for docs, markdown, task notes, and .github files that are not workflows. */

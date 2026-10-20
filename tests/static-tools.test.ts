@@ -78,6 +78,13 @@ describe("static tools: routing, headers, and page contracts", () => {
   });
 });
 
+describe("out-of-town scoreboard redirect", () => {
+  it("sends every old /ots link to the standalone site", () => {
+    expect(nextConfigSource).toContain('{ source: "/ots", destination: "https://ots.wisconsincreative.com/", permanent: false }');
+    expect(nextConfigSource).toContain('{ source: "/ots/:path*", destination: "https://ots.wisconsincreative.com/:path*", permanent: false }');
+  });
+});
+
 describe("Golden Hour core", () => {
   const gh = loadCore("public/golden-hour/core.js", "GoldenHourCore");
   const minutesIn = (date: Date, tz: string) => {

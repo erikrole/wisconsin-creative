@@ -4,7 +4,7 @@
 - Area: Public Showroom
 - Owner: Wisconsin Athletics Creative Product
 - Created: 2026-07-01
-- Last Updated: 2026-10-14
+- Last Updated: 2026-10-19
 - Status: Active
 - Version: V1
 
@@ -32,6 +32,7 @@ Make `/about` a shareable public overview for Wisconsin Creative. It should expl
 - `/tools` - redirects to `/apps`, which now lists the tools (the old standalone hub was removed).
 - `/board-sizes` - Board Sizes for creative video staff: exact pixel sizes at Camp Randall, the Kohl Center, the Field House, LaBahn, and Goodman. `public/board-sizes/boards.json` is the only hand-edited size source. `node scripts/build-board-sizes.mjs` regenerates `data.js`, `index.json`, `boards.csv`, `llms.txt`, and `design/*.md`, and `--check` fails when those files drift. The page copies a board's size, aspect ratio, and recorded safe area, and downloads an SVG or PNG guide at that exact resolution. Open questions stay on the board; the page does not fill in a missing size. The apps page links here, and this page links back to `/apps`.
 - `/golden-hour` - Golden Hour: golden and blue hour for UW venues and every Big Ten road venue, in the venue's own time zone, plus opt-in GPS. `public/golden-hour/` is the canonical source (sun and time-zone maths in `core.js`, page wiring in `app.js`).
+- `/ots` - redirects to `https://ots.wisconsincreative.com`, the World Series out-of-town scoreboard. It now lives in its own repo (`erikrole/ots`) as a Cloudflare Worker with a password-gated controller; nothing for it remains in this app.
 - `/timelapse` - Timelapse: S&Q, in-camera Time-lapse and interval-stills plans for the FX3, A1, A1 II, A7 V and A9 III, with limits from Sony's Help Guides. `public/timelapse/` is the canonical source (`core.js` holds the maths and camera data).
 
 ## Acceptance Criteria
@@ -58,6 +59,10 @@ Make `/about` a shareable public overview for Wisconsin Creative. It should expl
 - Browser smoke `/about`, `/about/features`, `/about/tech-stack`, `/about/security`, `/about/field-work`, `/releases`, `/login`, and protected `/`.
 
 ## Change Log
+- 2026-10-19: Moved the out-of-town scoreboard to `ots.wisconsincreative.com` (repo `erikrole/ots`, Cloudflare Worker). Removed `public/ots/`, `/api/ots/control`, the `ots_board` permission and their tests; `/ots/*` now redirects there. The `ots_control` SystemConfig row is unused.
+- 2026-10-19: Added `/ots/chip` (main-board corner chip, logos only, inning and outs) and `/ots/output`, a 1920×1080 router frame that carries both boards at native pixels for a laptop over HDMI → SDI, as Daktronics suggested when web page playback doesn't scale reliably. Both follow `/ots/control`. `board.js` gains `?square=1` and size-aware `?scale=`.
+- 2026-10-19: Added the `/ots` board controller. Staff and admins switch the fascia board between Live, a demo scenario, and Hold (freeze the frame), or point Live at another MLB game, from `/ots/control` on any device; the board picks it up within about 5 s with no reload or blank zone. New `ots_board.control` permission (ADMIN, STAFF), `GET`/`PUT /api/ots/control` and `GET /api/ots/control/staff`, stored in `SystemConfig` with an audit entry per change. `tests/ots-control.test.ts` keeps the scenario list in sync with the board.
+- 2026-10-19: Added `/ots`, a live World Series out-of-town scoreboard for the Camp Randall south end zone fascia angle (825×60): Rays or Guardians at Brewers, inning, bases, count and outs from MLB's Stats API, with pregame, between-innings and final states, quiet transitions, local cropped team logos, and scripted demo games at `/ots/scenarios.html`. Its own strict CSP allows only `statsapi.mlb.com`, `mlbstatic.com` logos and Google Fonts; `/ots/*` allows same-origin framing for the review page. `tests/static-tools.test.ts` guards the CSP, script hashes and Chromium 66 compatibility.
 - 2026-10-14: Added `/apps`, a public directory of the team's apps and browser tools, rendered by `src/app/apps/route.ts`. The page opens without signing in and is `noindex`. Golden Hour, Timelapse, Board Sizes, and QR Studio are listed with the apps.
 - 2026-10-14: `/apps` cards now show sourced facts: the App Store version and iOS requirement for Wisconsin Creative, plus its home-screen screenshot, and Offload 1.2.0 with the macOS 15.0 requirement and versioned download from its public release. Radio Clip no longer shows an unsourced version number. The page opens without signing in and stays `noindex`.
 - 2026-10-08: Added `/releases`, a public release-notes page backfilled with per-feature releases (mapped to merged PRs where they exist), grouped by date, from the first build (2026-02-27) through 2026-10-08. Entries are static JSON with a content test for date order, unique anchors, and public-safe copy. The showroom nav and footer gain a Releases link, and the about and releases layouts share one footer component. Backfilled dates are when work landed on `main`, not announcement dates. From now on every PR to `main` must add or update a release entry, enforced in the required CI `validate` job (opt out with the `no-release-note` label), with a PR template checkbox to match. Design pass: recent-first view with earlier history behind a button, app and type filters, sticky month headers, collapsed fix roundups, neutral platform tags (red reserved for New), summary text darker than detail bullets, PR numbers kept in data but not shown, a Latest line, and an RSS feed.
