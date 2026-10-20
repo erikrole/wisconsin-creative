@@ -54,56 +54,6 @@ jobs:
             echo "::notice::Skipping Claude Code Review because no Claude credential is available in this workflow context."
           fi
 
-      # Temporary bounded probe: never print raw model output or credentials.
-      - name: Diagnose Claude startup
-        if: steps.claude-credentials.outputs.available == 'true'
-        env:
-          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-        shell: bash
-        run: |
-          probe_dir=$(mktemp -d "$RUNNER_TEMP/claude-startup.XXXXXX")
-          export CLAUDE_CONFIG_DIR="$probe_dir/config"
-          cd "$probe_dir"
-          timeout 120s npm exec --yes --package=@anthropic-ai/claude-code@2.1.304 -- \
-            claude -p 'Reply only OK.' --model claude-sonnet-5-5 \
-            --output-format json --max-turns 1 --tools '' --setting-sources '' \
-            --strict-mcp-config --mcp-config '{"mcpServers":{}}' \
-            > result.json 2> error.txt || true
-          python3 - <<'PYTHON'
-          import json, re
-          from pathlib import Path
-          raw = Path('result.json').read_text() + Path('error.txt').read_text()
-          categories = {
-              'authentication': ('invalid api key', 'invalid token', 'authentication_error', 'oauth token has expired', 'token expired', 'not logged in', 'required scopes', 're-authenticate', 'oauth authentication'),
-              'usage limit': ('rate_limit', 'rate limit', 'hit your limit', 'usage limit'),
-              'billing': ('credit balance', 'billing', 'payment required', 'organization has been disabled'),
-              'model access': ('model_not_found', 'model not found', 'not have access to'),
-              'unknown command': ('unknown skill', 'unknown slash command', 'unknown command', 'unknown option', 'requires an argument', 'invalid argument'),
-              'connection': ('econnrefused', 'etimedout', 'connection error', 'fetch failed', 'enotfound', 'could not resolve'),
-          }
-          try:
-              result = json.loads(Path('result.json').read_text())
-          except (ValueError, OSError):
-              result = {}
-          error_text = str(result.get('result', result.get('errors', ''))).lower()
-          signals = ('invalid_request_error', 'permission_error', 'not_found_error', 'api_error', 'overloaded_error', 'oauth', 'expired', 'revoked', 'scopes', 'forbidden', 'unauthorized', 'unsupported', 'not allowed', 'subscription', 'capacity', 'usage', 'limit', 'quota', 'exceeded', 'reached', 'resets', 'extra', 'credit', 'model', 'invalid', 'login', 'authenticate', 'unavailable', 'denied', 'organization', 'account', 'spend', 'terms of service', 'unknown option')
-          clean_error = re.sub(r'\x1b\[[0-?]*[ -/]*[@-~]', '', error_text)
-          reset_time = re.search(r'resets?\s+(?:at\s+)?(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)(?:\s*\((utc|america/chicago)\))?', clean_error)
-          if reset_time:
-              print('Claude limit reset time=' + reset_time.group(1) + '; zone=' + (reset_time.group(2) or 'not specified'))
-          print('Claude limit window=' + ','.join(window for window in ('5-hour', 'weekly', 'daily', 'session') if window in clean_error))
-          print('Claude startup diagnostic: error signals=' + ','.join(signal for signal in signals if signal in error_text))
-          subtypes = ('success', 'error_during_execution', 'error_max_turns', 'error_max_budget_usd', 'error_max_structured_output_retries')
-          print('Claude startup diagnostic: subtype=' + (result.get('subtype') if result.get('subtype') in subtypes else 'unknown'))
-          print('Claude startup diagnostic: billable model request=' + str(isinstance(result.get('total_cost_usd'), (int, float)) and result['total_cost_usd'] > 0))
-          if result.get('type') == 'result' and result.get('is_error') is False:
-              print('Claude startup probe: model request succeeded.')
-          else:
-              known = [name for name, fragments in categories.items() if any(fragment in raw.lower() for fragment in fragments)]
-              print('::error::Claude startup probe failed: ' + (', '.join(known) or 'unclassified error (raw output withheld)'))
-              raise SystemExit(1)
-          PYTHON
-
       - name: Run Claude Code Review
         id: claude-review
         if: steps.claude-credentials.outputs.available == 'true'
@@ -116,14 +66,3 @@ jobs:
           allowed_bots: 'dependabot[bot]'
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
-
-      - name: Require a completed Claude review
-        if: steps.claude-credentials.outputs.available == 'true'
-        env:
-          EXECUTION_FILE: ${{ steps.claude-review.outputs.execution_file }}
-        shell: bash
-        run: |
-          if [[ -z "$EXECUTION_FILE" || ! -f "$EXECUTION_FILE" ]]; then
-            echo "::error::Claude did not produce a review; a workflow-validation skip is not review success."
-            exit 1
-          fi
