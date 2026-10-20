@@ -379,7 +379,9 @@ export default function AppSidebar({
         {badgeCount > 0 && (
           <SidebarMenuBadge
             className={cn(
-              "top-1/2! right-1.5 h-[18px] min-w-[18px] -translate-y-1/2 rounded-full px-1.5 text-[11px] font-bold leading-none tabular-nums group-data-[collapsible=icon]:top-1! group-data-[collapsible=icon]:right-1 group-data-[collapsible=icon]:size-2 group-data-[collapsible=icon]:min-w-0 group-data-[collapsible=icon]:translate-y-0 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:text-transparent",
+              "top-1/2! right-1.5 h-[18px] min-w-[18px] -translate-y-1/2 rounded-full pb-px text-[11px] font-bold leading-none tabular-nums group-data-[collapsible=icon]:top-1! group-data-[collapsible=icon]:right-1 group-data-[collapsible=icon]:size-2 group-data-[collapsible=icon]:min-w-0 group-data-[collapsible=icon]:translate-y-0 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:text-transparent",
+              // Lato's digits sit low in their line box; pb-px centers them. One digit gets a true circle.
+              badgeCount > 9 ? "px-1.5" : "w-[18px] px-0",
               badgeCfg?.tone === "orange"
                 ? "bg-[var(--orange-bg)] text-[color:var(--orange-text)]"
                 : "bg-[var(--wi-red)] text-white",
