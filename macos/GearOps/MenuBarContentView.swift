@@ -26,6 +26,8 @@ extension BookingSearchResult {
 
 struct MenuBarContentView: View {
     let model: GearOpsModel
+    /// False when the same content is hosted in the Status window.
+    var isMenuBarExtra = true
 
     @Environment(\.openWindow) private var openWindow
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -77,7 +79,7 @@ struct MenuBarContentView: View {
             if model.isRestoring, model.user == nil {
                 restoringView
             } else if model.user == nil {
-                GearOpsLoginView(model: model)
+                GearOpsLoginView(model: model, isMenuBarExtra: isMenuBarExtra)
             } else {
                 operationsView
             }
@@ -87,6 +89,10 @@ struct MenuBarContentView: View {
         // snapshot that push may have missed (bounded inside the model).
         .background(ExtraWindowEvents(
             onBecomeKey: {
+                // Signed out, make this the frontmost app on every
+                // presentation so a password manager's fill shortcut targets
+                // the sign-in fields, not the app that was in front before.
+                if model.user == nil { NSApplication.shared.activate() }
                 Task { await model.refreshOnPresentation() }
                 if selectedRoute == nil, model.user != nil { searchIsFocused = true }
             },

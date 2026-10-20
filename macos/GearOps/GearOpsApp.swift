@@ -51,7 +51,7 @@ struct GearOpsApp: App {
         // global shortcut and Dock reopen use it when the extra is hidden or
         // macOS has tucked it away for space; capture fixtures present it.
         Window(GearOpsApp.statusWindowTitle, id: GearOpsWindow.status) {
-            MenuBarContentView(model: model)
+            MenuBarContentView(model: model, isMenuBarExtra: false)
         }
         .windowResizability(.contentSize)
         .defaultLaunchBehavior(GearOpsApp.presentsStatusAtLaunch ? .presented : .suppressed)

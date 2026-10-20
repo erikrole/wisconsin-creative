@@ -230,6 +230,18 @@ describe("GearOps macOS menu bar contracts", () => {
     expect(login).toContain('Text(primaryTitle)');
     expect(login).toContain('showPassword ? "eye.slash" : "eye"');
 
+    // 1Password Universal Autofill fills the frontmost app, and its picker
+    // closes the extra. Signed out, the extra activates the app on each
+    // presentation and offers the Status window, which stays open.
+    const view = popover();
+    const app = source("macos/GearOps/GearOpsApp.swift");
+    expect(view).toContain("if model.user == nil { NSApplication.shared.activate() }");
+    expect(view).toContain("GearOpsLoginView(model: model, isMenuBarExtra: isMenuBarExtra)");
+    expect(app).toContain("MenuBarContentView(model: model, isMenuBarExtra: false)");
+    expect(login).toContain("if isMenuBarExtra {");
+    expect(login).toContain("openWindow(id: GearOpsWindow.status)");
+    expect(login).toContain("Sign in in a window");
+
     // Enrollment stays the only Neon-backed call.
     expect(login).not.toContain("discoverAuth");
     expect(login).not.toContain("/api/");

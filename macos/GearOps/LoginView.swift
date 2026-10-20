@@ -3,6 +3,10 @@ import SwiftUI
 
 struct GearOpsLoginView: View {
     let model: GearOpsModel
+    /// The menu bar extra closes as soon as another app takes focus, which is
+    /// what a password manager's item picker does. Only there does the form
+    /// offer to move into the Status window, which stays open.
+    var isMenuBarExtra = true
 
     @Environment(\.openWindow) private var openWindow
     @State private var email = ""
@@ -44,6 +48,10 @@ struct GearOpsLoginView: View {
                         }
 
                         primaryButton
+
+                        if isMenuBarExtra {
+                            windowFallback
+                        }
                     }
                 }
 
@@ -159,6 +167,21 @@ struct GearOpsLoginView: View {
         .foregroundStyle(.white)
         .background(fill, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
         .contentShape(.rect)
+    }
+
+    private var windowFallback: some View {
+        Button {
+            NSApplication.shared.activate()
+            openWindow(id: GearOpsWindow.status)
+        } label: {
+            Text("Using a password manager? Sign in in a window")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity)
+                .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .help("Opens sign-in in a window that stays open while your password manager fills it")
     }
 
     private var primaryEnabled: Bool {

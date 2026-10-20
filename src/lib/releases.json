@@ -1,6 +1,20 @@
 [
   {
     "date": "2026-10-20",
+    "title": "Mac app sign-in with 1Password",
+    "type": "fixes",
+    "summary": "Password managers like 1Password can fill the sign-in form in the Mac menu bar app.",
+    "details": [
+      "The menu bar app now comes to the front when you open it signed out, so 1Password's fill shortcut reaches its email and password fields.",
+      "If your password manager's picker closes the menu, choose Sign in in a window to sign in from a window that stays open.",
+      "The message after the server ends your session now just says you were signed out."
+    ],
+    "platforms": [
+      "macOS"
+    ]
+  },
+  {
+    "date": "2026-10-20",
     "title": "Swap a Photo Mechanic code",
     "type": "feature",
     "summary": "If your Photo Mechanic code won't activate, you can now get a different one without asking staff.",
