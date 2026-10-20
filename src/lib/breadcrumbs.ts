@@ -87,6 +87,19 @@ export function getRecentEntities(section: string): RecentEntity[] {
   }
 }
 
+/** Most recently viewed detail pages across every section, newest first. */
+export function getAllRecentEntities(limit: number): RecentEntity[] {
+  try {
+    const raw = localStorage.getItem(RECENT_STORAGE_KEY);
+    if (!raw) return [];
+    const all: unknown = JSON.parse(raw);
+    if (!Array.isArray(all)) return [];
+    return all.filter(isRecentEntity).slice(0, limit);
+  } catch {
+    return [];
+  }
+}
+
 export function saveRecentEntity(entity: RecentEntity) {
   try {
     const raw = localStorage.getItem(RECENT_STORAGE_KEY);

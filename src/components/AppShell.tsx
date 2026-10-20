@@ -1,35 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { SearchIcon, ClipboardCheckIcon, CalendarCheckIcon, CalendarDaysIcon, UserIcon, HouseIcon, CameraIcon, ClipboardListIcon, BookOpenIcon, ArrowRightIcon } from "lucide-react";
+import { CalendarDaysIcon, UserIcon, HouseIcon, CameraIcon, ClipboardListIcon } from "lucide-react";
 import AppSidebar from "./Sidebar";
-import { AssetImage } from "@/components/AssetImage";
-import { OperationalPartialResultsAlert } from "@/components/OperationalFeedback";
 import { OperationalLoadingState } from "@/components/OperationalLoadingState";
-import { UserAvatar } from "@/components/UserAvatar";
 import { AppTopBar } from "@/components/AppTopBar";
+import { CommandPalette } from "@/components/CommandPalette";
 import { MobileTabBar, type MobileTabItem } from "@/components/MobileTabBar";
 import { BreadcrumbProvider } from "@/components/BreadcrumbContext";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import {
-  CommandDialog,
-  CommandInput,
-  CommandList,
-  CommandEmpty,
-  CommandGroup,
-  CommandItem,
-  CommandSeparator,
-} from "@/components/ui/command";
-import { Badge } from "@/components/ui/badge";
-import { STATUS_STYLES } from "@/lib/status-styles";
 import { useIsRestoring, useQueryClient } from "@tanstack/react-query";
 import { type CurrentUser, useCurrentUser } from "@/hooks/use-current-user";
-import { RECENT_SEARCHES_STORAGE_KEY, clearLocalTraces } from "@/lib/local-traces";
+import { clearLocalTraces } from "@/lib/local-traces";
 import { handleAuthRedirect, parseJsonSafely } from "@/lib/errors";
-import { mapGuideSearchResult, type GuideSearchHit } from "@/lib/guide-search-result";
-import { getVisiblePageSearchResults, type PageSearchResult } from "@/lib/search-pages";
-import { assetSearchTitle } from "@/lib/search-result-title";
 import { toast } from "sonner";
 import { BOOKING_CHANGE_SYNC_EVENT } from "@/hooks/use-booking-change-sync";
 import { isBackgroundPollingPaused } from "@/hooks/use-operational-polling-activity";
@@ -43,55 +27,6 @@ import {
 } from "@/components/badges/BadgeEarnedCelebration";
 import { RolePreviewBanner } from "@/components/RolePreviewControl";
 
-type EntitySearchResult = {
-  type: "item" | "checkout" | "reservation" | "user" | "guide";
-  id: string;
-  title: string;
-  subtitle: string;
-  href: string;
-  imageUrl?: string | null;
-  // Item-specific fields for status display
-  computedStatus?: string;
-  activeBooking?: { requesterName: string; requesterAvatarUrl?: string | null; isOverdue: boolean; endsAt?: string } | null;
-  status?: string;
-  searchText?: string;
-};
-
-type SearchResult = EntitySearchResult | PageSearchResult;
-
-type ApiSearchList<T> = {
-  data?: T[];
-};
-
-type AssetSearchItem = {
-  id: string;
-  assetTag?: string | null;
-  name?: string | null;
-  brand?: string | null;
-  model?: string | null;
-  type?: string | null;
-  imageUrl?: string | null;
-  computedStatus?: string | null;
-  activeBooking?: {
-    requesterName?: string | null;
-    requesterAvatarUrl?: string | null;
-    isOverdue?: boolean | null;
-    endsAt?: string | null;
-  } | null;
-};
-
-type BookingSearchItem = {
-  id: string;
-  title?: string | null;
-  requester?: { name?: string | null } | null;
-};
-
-type UserSearchItem = {
-  id: string;
-  name?: string | null;
-  email?: string | null;
-};
-
 type NotificationCountResponse = {
   unreadCount?: unknown;
 };
@@ -102,14 +37,6 @@ type RecentBadgeAwardsResponse = {
     nextCursor?: string;
   };
 };
-
-const SEARCH_RESULT_SOURCES = {
-  items: "Items",
-  checkouts: "Checkouts",
-  reservations: "Reservations",
-  users: "Staff",
-  guides: "Guides",
-} as const;
 
 const bottomNavItems: MobileTabItem[] = [
   { label: "Home", href: "/", icon: HouseIcon },
@@ -392,20 +319,6 @@ export default function AppShell({
 
   // Command palette state
   const [cmdOpen, setCmdOpen] = useState(false);
-  const [cmdQuery, setCmdQuery] = useState("");
-  const [cmdResults, setCmdResults] = useState<SearchResult[]>([]);
-  const cmdGroups = useMemo(() => {
-    const groups = { page: [] as PageSearchResult[], guide: [] as EntitySearchResult[], item: [] as EntitySearchResult[], checkout: [] as EntitySearchResult[], reservation: [] as EntitySearchResult[], user: [] as EntitySearchResult[] };
-    for (const result of cmdResults) {
-      if (result.type === "page") groups.page.push(result);
-      else if (result.type in groups) groups[result.type as Exclude<keyof typeof groups, "page">].push(result);
-    }
-    return groups;
-  }, [cmdResults]);
-  const [cmdLoading, setCmdLoading] = useState(false);
-  const [cmdError, setCmdError] = useState<"network" | "server" | null>(null);
-  const [cmdPartialFailures, setCmdPartialFailures] = useState<string[]>([]);
-  const cmdAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (isCollaborator) return;
@@ -420,159 +333,6 @@ export default function AppShell({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isCollaborator, pathname]);
-
-  // Live search when query changes
-  useEffect(() => {
-    if (isCollaborator) {
-      setCmdResults([]);
-      setCmdLoading(false);
-      setCmdError(null);
-      setCmdPartialFailures([]);
-      return;
-    }
-    const q = cmdQuery.trim();
-    if (!q) { setCmdResults([]); setCmdLoading(false); setCmdError(null); setCmdPartialFailures([]); return; }
-
-    setCmdLoading(true);
-    setCmdError(null);
-    setCmdPartialFailures([]);
-    cmdAbortRef.current?.abort();
-    const controller = new AbortController();
-    cmdAbortRef.current = controller;
-
-    const timer = setTimeout(async () => {
-      const encoded = encodeURIComponent(q);
-      try {
-        const [itemsRes, checkoutsRes, reservationsRes, usersRes, guidesRes] = await Promise.allSettled([
-          fetch(`/api/assets?q=${encoded}&limit=8`, { signal: controller.signal }),
-          fetch(`/api/checkouts?q=${encoded}&status_in=OPEN,PENDING_PICKUP&limit=8`, { signal: controller.signal }),
-          fetch(`/api/reservations?q=${encoded}&status=BOOKED&limit=8`, { signal: controller.signal }),
-          fetch(`/api/users?q=${encoded}&limit=5`, { signal: controller.signal }),
-          fetch(`/api/resources?q=${encoded}`, { signal: controller.signal }),
-        ]);
-        if (controller.signal.aborted) return;
-        const merged: SearchResult[] = getVisiblePageSearchResults(
-          user?.role,
-          q,
-          8,
-          user?.canViewUsageAnalytics === true,
-        );
-        const failures: string[] = [];
-        if (itemsRes.status === "fulfilled" && handleAuthRedirect(itemsRes.value, pathname)) return;
-        if (checkoutsRes.status === "fulfilled" && handleAuthRedirect(checkoutsRes.value, pathname)) return;
-        if (reservationsRes.status === "fulfilled" && handleAuthRedirect(reservationsRes.value, pathname)) return;
-        if (usersRes.status === "fulfilled" && handleAuthRedirect(usersRes.value, pathname)) return;
-        if (guidesRes.status === "fulfilled" && handleAuthRedirect(guidesRes.value, pathname)) return;
-
-        if (itemsRes.status === "fulfilled" && itemsRes.value.ok) {
-          const json = await parseJsonSafely<ApiSearchList<AssetSearchItem>>(itemsRes.value);
-          const data = json?.data;
-          if (!data) failures.push(SEARCH_RESULT_SOURCES.items);
-          for (const item of (data ?? []).slice(0, 8)) {
-            merged.push({
-              type: "item", id: item.id,
-              title: assetSearchTitle(item),
-              subtitle: "",
-              href: `/items/${item.id}`,
-              imageUrl: item.imageUrl ?? null,
-              computedStatus: item.computedStatus ?? undefined,
-              activeBooking: item.activeBooking ? {
-                requesterName: item.activeBooking.requesterName ?? "",
-                requesterAvatarUrl: item.activeBooking.requesterAvatarUrl ?? null,
-                isOverdue: !!item.activeBooking.isOverdue,
-                endsAt: item.activeBooking.endsAt ?? undefined,
-              } : null,
-            });
-          }
-        } else {
-          failures.push(SEARCH_RESULT_SOURCES.items);
-        }
-        if (checkoutsRes.status === "fulfilled" && checkoutsRes.value.ok) {
-          const json = await parseJsonSafely<ApiSearchList<BookingSearchItem>>(checkoutsRes.value);
-          const data = json?.data;
-          if (!data) failures.push(SEARCH_RESULT_SOURCES.checkouts);
-          for (const b of (data ?? []).slice(0, 8)) {
-            merged.push({ type: "checkout", id: b.id, title: b.title ?? "Untitled checkout", subtitle: b.requester?.name || "", href: `/checkouts/${b.id}` });
-          }
-        } else {
-          failures.push(SEARCH_RESULT_SOURCES.checkouts);
-        }
-        if (reservationsRes.status === "fulfilled" && reservationsRes.value.ok) {
-          const json = await parseJsonSafely<ApiSearchList<BookingSearchItem>>(reservationsRes.value);
-          const data = json?.data;
-          if (!data) failures.push(SEARCH_RESULT_SOURCES.reservations);
-          for (const b of (data ?? []).slice(0, 8)) {
-            merged.push({ type: "reservation", id: b.id, title: b.title ?? "Untitled reservation", subtitle: b.requester?.name || "", href: `/reservations/${b.id}` });
-          }
-        } else {
-          failures.push(SEARCH_RESULT_SOURCES.reservations);
-        }
-        if (usersRes.status === "fulfilled" && usersRes.value.ok) {
-          const json = await parseJsonSafely<ApiSearchList<UserSearchItem>>(usersRes.value);
-          const data = json?.data;
-          if (!data) failures.push(SEARCH_RESULT_SOURCES.users);
-          for (const u of (data ?? []).slice(0, 5)) {
-            merged.push({ type: "user", id: u.id, title: u.name ?? "Unnamed user", subtitle: u.email || "", href: `/staff/${u.id}` });
-          }
-        } else {
-          failures.push(SEARCH_RESULT_SOURCES.users);
-        }
-        if (guidesRes.status === "fulfilled" && guidesRes.value.ok) {
-          const json = await parseJsonSafely<ApiSearchList<GuideSearchHit>>(guidesRes.value);
-          const data = json?.data;
-          if (!data) failures.push(SEARCH_RESULT_SOURCES.guides);
-          let guideCount = 0;
-          for (const guide of (data ?? [])) {
-            const mapped = mapGuideSearchResult(guide);
-            if (!mapped) continue;
-            merged.push(mapped);
-            guideCount += 1;
-            if (guideCount >= 8) break;
-          }
-        } else {
-          failures.push(SEARCH_RESULT_SOURCES.guides);
-        }
-        if (!controller.signal.aborted) {
-          setCmdResults(merged);
-          setCmdPartialFailures(failures);
-          setCmdError(failures.length === Object.keys(SEARCH_RESULT_SOURCES).length && merged.length === 0 ? "server" : null);
-          setCmdLoading(false);
-        }
-      } catch (err) {
-        if (err instanceof DOMException && err.name === "AbortError") return;
-        if (!controller.signal.aborted) { setCmdResults([]); setCmdError("network"); setCmdLoading(false); }
-      }
-    }, 200);
-
-    return () => { clearTimeout(timer); controller.abort(); };
-  }, [cmdQuery, isCollaborator, pathname, user?.canViewUsageAnalytics, user?.role]);
-
-  // Recent searches (localStorage)
-  const [recentSearches, setRecentSearches] = useState<string[]>([]);
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(RECENT_SEARCHES_STORAGE_KEY);
-      if (stored) setRecentSearches(JSON.parse(stored));
-    } catch { /* ignore */ }
-  }, []);
-
-  function addRecentSearch(q: string) {
-    const trimmed = q.trim();
-    if (!trimmed) return;
-    const updated = [trimmed, ...recentSearches.filter((s) => s !== trimmed)].slice(0, 5);
-    setRecentSearches(updated);
-    try {
-      localStorage.setItem(RECENT_SEARCHES_STORAGE_KEY, JSON.stringify(updated));
-    } catch { /* ignore */ }
-  }
-
-  function handleCmdSelect(href: string) {
-    if (cmdQuery.trim()) addRecentSearch(cmdQuery.trim());
-    setCmdOpen(false);
-    setCmdQuery("");
-    setCmdResults([]);
-    router.push(href);
-  }
 
   // Offline detection
   const [online, setOnline] = useState(true);
@@ -592,7 +352,6 @@ export default function AppShell({
       // Shared-machine hygiene: drop persisted history and cached entity data
       // so the next person can't read the previous user's traces.
       clearLocalTraces();
-      setRecentSearches([]);
       queryClient.clear();
       router.replace("/login");
     } catch {
@@ -630,184 +389,10 @@ export default function AppShell({
         />
       )}
 
-      {!isCollaborator && <CommandDialog open={cmdOpen} onOpenChange={(open) => { setCmdOpen(open); if (!open) { setCmdQuery(""); setCmdResults([]); setCmdError(null); setCmdPartialFailures([]); } }}>
-        <CommandInput placeholder="Search tag, borrower, guide, page, setting, report..." value={cmdQuery} onValueChange={setCmdQuery} />
-        <CommandList>
-          {!cmdQuery.trim() && recentSearches.length > 0 && (
-            <CommandGroup heading="Recent searches">
-              {recentSearches.map((q) => (
-                <CommandItem key={q} value={q} onSelect={() => { setCmdQuery(q); }}>
-                  <SearchIcon className="mr-2 size-4 shrink-0 text-muted-foreground" />
-                  {q}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          )}
-          {cmdLoading && (
-            <OperationalLoadingState
-              variant="command"
-              title="Searching Wisconsin Creative"
-              rows={3}
-            />
-          )}
-          {!cmdLoading && cmdError && cmdQuery.trim() && (
-            <CommandEmpty>{cmdError === "network" ? "Search is offline. Check your connection and try again." : "Search is temporarily unavailable. Try the page shortcut or search again."}</CommandEmpty>
-          )}
-          {!cmdLoading && !cmdError && cmdQuery.trim() && cmdResults.length === 0 && (
-            <CommandEmpty>No matches. Try a tag, borrower, guide, page name, setting, or report.</CommandEmpty>
-          )}
-          {!cmdLoading && !cmdError && cmdPartialFailures.length > 0 && cmdResults.length > 0 && (
-            <OperationalPartialResultsAlert
-              className="mx-2 mb-2 text-xs"
-              failureLabel="Unavailable result types"
-              failures={cmdPartialFailures}
-              noun="result type"
-              recoveryCopy="Showing available matches. Refresh before treating this search as complete."
-              title="Some result types did not load"
-            />
-          )}
-          {cmdGroups.page.length > 0 && (
-            <CommandGroup heading="Go to">
-              {cmdGroups.page.map((r) => (
-                <CommandItem key={r.id} value={`${r.title} ${r.subtitle} ${r.href} ${r.keywords.join(" ")}`} onSelect={() => handleCmdSelect(r.href)} className="gap-3">
-                  <ArrowRightIcon className="size-4 shrink-0 text-muted-foreground" />
-                  <div className="min-w-0">
-                    <div className="truncate font-medium">{r.title}</div>
-                    <div className="truncate text-xs text-muted-foreground">{r.subtitle}</div>
-                  </div>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          )}
-          {cmdGroups.guide.length > 0 && (
-            <CommandGroup heading="Guides">
-              {cmdGroups.guide.map((r) => {
-                const subtitle = [r.subtitle, r.status === "DRAFT" ? "Draft" : null].filter(Boolean).join(" · ");
-                return (
-                  <CommandItem
-                    key={r.id}
-                    value={`${r.title} ${subtitle} ${r.searchText ?? ""} ${r.href}`}
-                    onSelect={() => handleCmdSelect(r.href)}
-                    className="gap-3"
-                  >
-                    <BookOpenIcon className="size-4 shrink-0 text-muted-foreground" />
-                    <div className="min-w-0">
-                      <div className="truncate font-medium">{r.title}</div>
-                      {subtitle && <div className="truncate text-xs text-muted-foreground">{subtitle}</div>}
-                    </div>
-                  </CommandItem>
-                );
-              })}
-            </CommandGroup>
-          )}
-          {cmdGroups.item.length > 0 && (
-            <CommandGroup heading="Items">
-              {cmdGroups.item.map((r) => {
-                const status = r.computedStatus ?? "AVAILABLE";
-                const isOverdue = r.activeBooking?.isOverdue ?? false;
-                const badgeStyle = isOverdue ? STATUS_STYLES.red.badge
-                  : status === "CHECKED_OUT" ? STATUS_STYLES.blue.badge
-                  : status === "PENDING_PICKUP" ? STATUS_STYLES.orange.badge
-                  : status === "RESERVED" ? STATUS_STYLES.purple.badge
-                  : status === "MAINTENANCE" ? STATUS_STYLES.orange.badge
-                  : status === "RETIRED" ? STATUS_STYLES.gray.badge
-                  : STATUS_STYLES.green.badge;
-                const statusLabel = isOverdue ? "Overdue"
-                  : status === "CHECKED_OUT" ? "Checked out"
-                  : status === "PENDING_PICKUP" ? "Pending pickup"
-                  : status === "RESERVED" ? "Reserved"
-                  : status === "MAINTENANCE" ? "Maintenance"
-                  : status === "RETIRED" ? "Retired"
-                  : "Available";
-                const showHolder = !!r.activeBooking && (isOverdue || status === "CHECKED_OUT" || status === "RESERVED");
-                return (
-                  <CommandItem key={r.id} value={r.title} onSelect={() => handleCmdSelect(r.href)} className="gap-3">
-                    <AssetImage src={r.imageUrl} alt={r.title} size={32} className="rounded" />
-                    <div className="min-w-0">
-                      <div className="truncate font-medium">{r.title}</div>
-                      <div className="mt-0.5">
-                        <Badge
-                          className={badgeStyle}
-                          size="sm"
-                          title={showHolder ? `${statusLabel} by ${r.activeBooking?.requesterName}` : statusLabel}
-                        >
-                          {showHolder && (
-                            <UserAvatar
-                              name={r.activeBooking?.requesterName ?? "Unknown"}
-                              avatarUrl={r.activeBooking?.requesterAvatarUrl}
-                              size="xs"
-                            />
-                          )}
-                          {statusLabel}
-                        </Badge>
-                      </div>
-                    </div>
-                  </CommandItem>
-                );
-              })}
-            </CommandGroup>
-          )}
-          {cmdGroups.checkout.length > 0 && (
-            <>
-              <CommandSeparator />
-              <CommandGroup heading="Checkouts">
-                {cmdGroups.checkout.map((r) => (
-                  <CommandItem key={r.id} value={`${r.title} ${r.subtitle}`} onSelect={() => handleCmdSelect(r.href)}>
-                    <ClipboardCheckIcon className="mr-2 size-4 shrink-0 text-muted-foreground" />
-                    <div className="min-w-0">
-                      <div className="truncate font-medium">{r.title}</div>
-                      {r.subtitle && <div className="truncate text-xs text-muted-foreground">{r.subtitle}</div>}
-                    </div>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </>
-          )}
-          {cmdGroups.reservation.length > 0 && (
-            <>
-              <CommandSeparator />
-              <CommandGroup heading="Reservations">
-                {cmdGroups.reservation.map((r) => (
-                  <CommandItem key={r.id} value={`${r.title} ${r.subtitle}`} onSelect={() => handleCmdSelect(r.href)}>
-                    <CalendarCheckIcon className="mr-2 size-4 shrink-0 text-muted-foreground" />
-                    <div className="min-w-0">
-                      <div className="truncate font-medium">{r.title}</div>
-                      {r.subtitle && <div className="truncate text-xs text-muted-foreground">{r.subtitle}</div>}
-                    </div>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </>
-          )}
-          {cmdGroups.user.length > 0 && (
-            <>
-              <CommandSeparator />
-              <CommandGroup heading="Staff">
-                {cmdGroups.user.map((r) => (
-                  <CommandItem key={r.id} value={`${r.title} ${r.subtitle}`} onSelect={() => handleCmdSelect(r.href)}>
-                    <UserIcon className="mr-2 size-4 shrink-0 text-muted-foreground" />
-                    <div className="min-w-0">
-                      <div className="truncate font-medium">{r.title}</div>
-                      {r.subtitle && <div className="truncate text-xs text-muted-foreground">{r.subtitle}</div>}
-                    </div>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </>
-          )}
-          {cmdQuery.trim() && cmdResults.length > 0 && (
-            <>
-              <CommandSeparator />
-              <CommandGroup>
-                <CommandItem onSelect={() => handleCmdSelect(`/search?q=${encodeURIComponent(cmdQuery.trim())}`)}>
-                  <SearchIcon className="mr-2 size-4 shrink-0 text-muted-foreground" />
-                  See all results for &ldquo;{cmdQuery.trim()}&rdquo;
-                </CommandItem>
-              </CommandGroup>
-            </>
-          )}
-        </CommandList>
-      </CommandDialog>}
+
+      {!isCollaborator && (
+        <CommandPalette open={cmdOpen} onOpenChange={setCmdOpen} user={user} pathname={pathname} />
+      )}
 
       <AppSidebar
         user={user}
@@ -844,7 +429,7 @@ export default function AppShell({
         </BreadcrumbProvider>
       </div>
 
-      <MobileTabBar items={visibleBottomNavItems} pathname={pathname} overdueCount={overdueBadgeCount} />
+      <MobileTabBar items={visibleBottomNavItems} pathname={pathname} overdueCount={overdueBadgeCount} showMore={!isCollaborator} />
     </SidebarProvider>
   );
 }

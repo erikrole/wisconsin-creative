@@ -1,11 +1,10 @@
 "use client";
 
-import Link from "next/link";
-import { BellIcon, SearchIcon } from "lucide-react";
+import { SearchIcon } from "lucide-react";
+import { NotificationsPopover } from "@/components/NotificationsPopover";
 import PageBreadcrumb from "@/components/PageBreadcrumb";
 import { RolePreviewControl } from "@/components/RolePreviewControl";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { type CurrentUser } from "@/hooks/use-current-user";
 import { chromeFont } from "@/lib/chrome-font";
 import { cn } from "@/lib/utils";
@@ -39,9 +38,6 @@ export function AppTopBar({
   const sidebarLabel = isMobile
     ? (openMobile ? "Close navigation" : "Open navigation")
     : (open ? "Collapse sidebar" : "Expand sidebar");
-  const notificationLabel = unreadNotifications > 0
-    ? `Notifications (${unreadNotifications} unread)`
-    : "Notifications";
 
   return (
     <header
@@ -52,7 +48,12 @@ export function AppTopBar({
         "bg-[var(--sidebar-bg)]",
       )}
     >
-      <SidebarTrigger aria-label={sidebarLabel} title={sidebarLabel} className={topBarButtonClass} />
+      <SidebarTrigger
+        aria-label={sidebarLabel}
+        aria-keyshortcuts={isMobile ? undefined : "["}
+        title={isMobile ? sidebarLabel : `${sidebarLabel} ( [ )`}
+        className={topBarButtonClass}
+      />
       <span aria-hidden="true" className="mx-1.5 h-4 w-px shrink-0 bg-[var(--sidebar-border)] max-md:hidden" />
 
       <div className="flex min-w-0 flex-1 items-center">
@@ -72,26 +73,7 @@ export function AppTopBar({
           </button>
         )}
         <RolePreviewControl user={user} className={topBarButtonClass} />
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Link prefetch={false} href="/notifications" aria-label={notificationLabel} className={topBarButtonClass}>
-              <BellIcon aria-hidden="true" />
-              {unreadNotifications > 0 && (
-                <span
-                  aria-hidden="true"
-                  className={cn(
-                    // Same pill as the sidebar badges; pb-px centers Lato's low-sitting digits.
-                    "absolute -top-0.5 -right-0.5 flex h-4 items-center justify-center rounded-full bg-[var(--wi-red)] pb-px text-[10px] font-bold leading-none text-white tabular-nums ring-2 ring-[var(--sidebar-bg)]",
-                    unreadNotifications > 9 ? "px-1" : "w-4",
-                  )}
-                >
-                  {unreadNotifications > 99 ? "99+" : unreadNotifications}
-                </span>
-              )}
-            </Link>
-          </TooltipTrigger>
-          <TooltipContent>{notificationLabel}</TooltipContent>
-        </Tooltip>
+        <NotificationsPopover unreadCount={unreadNotifications} triggerClassName={topBarButtonClass} />
       </div>
     </header>
   );

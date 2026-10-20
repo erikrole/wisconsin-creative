@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { CalendarDaysIcon, CameraIcon, ClipboardListIcon, HouseIcon } from "lucide-react";
 import { AppTopBar } from "@/components/AppTopBar";
 import { BreadcrumbProvider } from "@/components/BreadcrumbContext";
+import { CommandPalette } from "@/components/CommandPalette";
 import { MobileTabBar } from "@/components/MobileTabBar";
 import AppSidebar from "@/components/Sidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -18,6 +19,7 @@ function Lab() {
   const params = useSearchParams();
   const pathname = usePathname();
   const [role, setRole] = useState(params.get("role") ?? "ADMIN");
+  const [searchOpen, setSearchOpen] = useState(false);
   const user = { id: "dev", name: "Erik Role", email: "dev@example.com", role } as CurrentUser;
   return (
     <TooltipProvider>
@@ -33,13 +35,14 @@ function Lab() {
                 }
               : undefined
           }
-          onSearch={role === "COLLABORATOR" ? undefined : () => window.alert("Search opens here")}
+          onSearch={role === "COLLABORATOR" ? undefined : () => setSearchOpen(true)}
         />
+        <CommandPalette open={searchOpen} onOpenChange={setSearchOpen} user={user} pathname={pathname} />
         <BreadcrumbProvider>
           <div className="min-w-0 flex-1 bg-background">
             <AppTopBar
               isCollaborator={role === "COLLABORATOR"}
-              onSearch={() => window.alert("Search opens here")}
+              onSearch={() => setSearchOpen(true)}
               unreadNotifications={5}
               user={user}
             />
@@ -68,6 +71,7 @@ function Lab() {
           ]}
           pathname={pathname}
           overdueCount={3}
+          showMore={role !== "COLLABORATOR"}
         />
       </SidebarProvider>
     </TooltipProvider>

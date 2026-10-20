@@ -137,7 +137,7 @@ describe("web sidebar source contract", () => {
 
     expect(sidebar).toMatch(/<Link\s+prefetch=\{false\}\s+href=\{`\/staff\/\$\{user\.id\}`\}/);
     expect(sidebar).toMatch(/<Link prefetch=\{false\} href=\{href\}/);
-    expect(source("src/components/AppTopBar.tsx")).toContain('<Link prefetch={false} href="/notifications"');
+    expect(source("src/components/NotificationsPopover.tsx")).toMatch(/<Link\s+prefetch=\{false\}\s+href="\/notifications"/);
     expect(sectionNav).toMatch(/<Link\s+prefetch=\{false\}\s+href=\{href\}/);
   });
 
@@ -170,7 +170,8 @@ describe("web sidebar source contract", () => {
     expect(sidebar).not.toContain("unreadNotifications");
     const topBar = source("src/components/AppTopBar.tsx");
     expect(appShell).toContain("<AppTopBar");
-    expect(topBar).toContain('href="/notifications"');
+    expect(topBar).toContain("<NotificationsPopover");
+    expect(source("src/components/NotificationsPopover.tsx")).toContain('href="/notifications"');
     expect(topBar).toContain("Search items, bookings, people, pages, and guides");
   });
 

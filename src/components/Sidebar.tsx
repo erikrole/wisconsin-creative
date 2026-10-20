@@ -231,6 +231,9 @@ function useStoredList(key: string) {
 
 const menuItemClass = "min-h-9 gap-2.5 rounded-md px-2 text-[13.5px] [&_svg]:size-4 [&_svg]:stroke-[1.75] [&_svg]:text-muted-foreground";
 
+// Collapsed-rail labels: portalled, so they carry the chrome typeface themselves.
+const railTooltipClass = cn(chromeFont.className, "rounded-md px-2 py-1 text-[12.5px] font-bold");
+
 const navButtonClass = (isActive: boolean) =>
   cn(
     // 32px rows on desktop keep the full list on one laptop screen; phones keep the 40px touch floor.
@@ -251,7 +254,20 @@ export default function AppSidebar({
 }: AppSidebarProps) {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
-  const { isMobile, setOpenMobile, state } = useSidebar();
+  const { isMobile, setOpenMobile, state, toggleSidebar } = useSidebar();
+
+  // "[" collapses or expands the rail (Linear and Notion use the same key). Ignored while typing.
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== "[" || event.metaKey || event.ctrlKey || event.altKey || event.defaultPrevented) return;
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("input, textarea, select, [contenteditable=''], [contenteditable='true'], [role='textbox']")) return;
+      event.preventDefault();
+      toggleSidebar();
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [toggleSidebar]);
   const canUseAdminNav = user?.role === "ADMIN" || user?.role === "STAFF";
   const isCollaborator = user?.role === "COLLABORATOR";
   const collaboratorCapabilities = new Set(user?.capabilities ?? []);
@@ -370,7 +386,7 @@ export default function AppSidebar({
         <SidebarMenuButton
           asChild
           isActive={isActive}
-          tooltip={tooltipBase}
+          tooltip={{ children: tooltipBase, className: railTooltipClass }}
           className={navButtonClass(isActive)}
         >
           <Link prefetch={false} href={href} aria-current={isActive ? "page" : undefined}>
@@ -382,14 +398,14 @@ export default function AppSidebar({
         {badgeCount > 0 && (
           <SidebarMenuBadge
             className={cn(
-              "top-1/2! right-1.5 h-[18px] min-w-[18px] -translate-y-1/2 rounded-full pb-px text-[11px] font-bold leading-none tabular-nums group-data-[collapsible=icon]:top-1! group-data-[collapsible=icon]:right-1 group-data-[collapsible=icon]:size-2 group-data-[collapsible=icon]:min-w-0 group-data-[collapsible=icon]:translate-y-0 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:text-transparent",
+              "top-1/2! right-1.5 h-[18px] min-w-[18px] -translate-y-1/2 rounded-full pb-px text-[11px] font-bold leading-none tabular-nums group-data-[collapsible=icon]:top-1! group-data-[collapsible=icon]:right-1 group-data-[collapsible=icon]:size-2 group-data-[collapsible=icon]:min-w-0 group-data-[collapsible=icon]:translate-y-0 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:text-transparent!",
               // Lato's digits sit low in their line box; pb-px centers them. One digit gets a true circle.
               badgeCount > 9 ? "px-1.5" : "w-[18px] px-0",
               badgeCfg?.tone === "orange"
-                ? "bg-[var(--orange-bg)] text-[color:var(--orange-text)]"
+                ? "bg-[var(--orange-bg)] text-[color:var(--orange-text)]!"
                 : badgeCfg?.tone === "quiet"
-                  ? "bg-[var(--sidebar-active)] font-semibold text-[color:var(--sidebar-text)] group-data-[collapsible=icon]:bg-[var(--sidebar-muted)]"
-                  : "bg-[var(--wi-red)] text-white",
+                  ? "bg-[var(--sidebar-active)] font-semibold text-[color:var(--sidebar-text)]! group-data-[collapsible=icon]:bg-[var(--sidebar-muted)]"
+                  : "bg-[var(--wi-red)] text-white!",
             )}
           >
             <span className="sr-only">
@@ -469,7 +485,7 @@ export default function AppSidebar({
                 <DropdownMenuTrigger asChild>
                   <SidebarMenuButton
                     size="lg"
-                    tooltip={user.name}
+                    tooltip={{ children: user.name, className: railTooltipClass }}
                     aria-label="Account menu"
                     isActive={isOnAccountPage}
                     className={cn(
