@@ -118,7 +118,8 @@
 
   /* Sidebar — quiet neutral rail. Own tokens (never --border/--ring/--accent) so scoped
      themes such as .wc-fresh, which is mirrored onto <body>, cannot restyle it per page. */
-  --sidebar-bg: #f6f7f9;
+  --sidebar-bg: #f7f7f8;
+  --sidebar-input: #ffffff;
   --sidebar-hover: rgba(28, 32, 36, 0.055);
   --sidebar-active: rgba(28, 32, 36, 0.08);
   --sidebar-text: #60646c;
@@ -447,6 +448,7 @@
 
   /* Sidebar */
   --sidebar-bg: #131416;
+  --sidebar-input: rgba(255, 255, 255, 0.04);
   --sidebar-hover: rgba(255, 255, 255, 0.06);
   --sidebar-active: rgba(255, 255, 255, 0.10);
   --sidebar-text: #a8aab2;

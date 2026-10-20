@@ -30,6 +30,7 @@ function Lab() {
                 key={r}
                 type="button"
                 onClick={() => setRole(r)}
+                aria-pressed={role === r}
                 className={`rounded-md border px-3 py-1.5 text-sm ${role === r ? "bg-muted font-bold" : ""}`}
               >
                 {r}

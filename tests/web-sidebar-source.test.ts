@@ -63,7 +63,7 @@ describe("web sidebar source contract", () => {
       sidebar.indexOf("dueTodayBadgeCount > 0"),
     );
     expect(sidebar).toContain('suffix: "due today"');
-    expect(sidebar).toContain("bg-[var(--orange-bg)] text-[var(--orange-text)]");
+    expect(sidebar).toContain("bg-[var(--orange-bg)] text-[color:var(--orange-text)]");
   });
 
   it("does not replace ambient counts with partial dashboard fallbacks", () => {

@@ -61,14 +61,12 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuAction,
   SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { resolveActiveShellHref } from "@/lib/shell-navigation";
@@ -232,10 +230,11 @@ function useStoredList(key: string) {
 
 const navButtonClass = (isActive: boolean) =>
   cn(
-    "h-9 gap-2.5 rounded-lg px-2.5 text-[14px] tracking-[-0.005em] transition-[background-color,color,scale] duration-150 active:scale-[0.97] group-data-[collapsible=icon]:rounded-lg",
+    // 32px rows on desktop keep the full list on one laptop screen; phones keep the 40px touch floor.
+    "h-8 gap-2.5 rounded-md px-2 text-[13.5px] leading-none no-underline outline-none hover:no-underline focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--sidebar-ring)] transition-[background-color,color] duration-100 max-md:h-10 max-md:text-[15px] group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-md",
     isActive
-      ? "bg-[var(--sidebar-active)] font-bold text-[var(--sidebar-text-active)] hover:bg-[var(--sidebar-active)] hover:text-[var(--sidebar-text-active)] data-[active=true]:bg-[var(--sidebar-active)] data-[active=true]:font-bold data-[active=true]:text-[var(--sidebar-text-active)]"
-      : "font-normal text-[var(--sidebar-text)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-text-active)]",
+      ? "bg-[var(--sidebar-active)] font-bold text-[color:var(--sidebar-text-active)] hover:bg-[var(--sidebar-active)] hover:text-[color:var(--sidebar-text-active)] data-[active=true]:bg-[var(--sidebar-active)] data-[active=true]:font-bold data-[active=true]:text-[color:var(--sidebar-text-active)]"
+      : "font-normal text-[color:var(--sidebar-text)] hover:bg-[var(--sidebar-hover)] hover:text-[color:var(--sidebar-text-active)]",
   );
 
 export default function AppSidebar({
@@ -281,12 +280,15 @@ export default function AppSidebar({
   const pinnedItems = pinnedHrefs
     .map((href) => allVisibleItems.find((item) => item.href === href))
     .filter((item): item is NavItem => Boolean(item));
-  const displayGroups: NavGroup[] = [
+  const groupsWithPins: NavGroup[] = [
     ...(pinnedItems.length > 0 ? [{ label: "Pinned", items: pinnedItems }] : []),
     ...visibleGroups
       .map((group) => ({ ...group, items: group.items.filter((item) => !pinnedHrefs.includes(item.href)) }))
       .filter((group) => group.items.length > 0),
   ];
+  // Settings sits at the foot of the rail, apart from the places you work in.
+  const footerGroup = groupsWithPins.find((group) => group.items.some((item) => item.href === "/settings") && !group.label);
+  const displayGroups = groupsWithPins.filter((group) => group !== footerGroup);
 
   const activeHref = resolveActiveShellHref(
     pathname,
@@ -307,18 +309,120 @@ export default function AppSidebar({
           ? "Student"
           : "Student";
 
+  function renderGroup(group: NavGroup, groupIdx: number) {
+    const isCollapsed = Boolean(group.label && collapsedGroups.includes(group.label));
+    return (
+      <SidebarGroup
+        key={group.label ?? group.items.map((item) => item.href).join("-")}
+        className={cn("px-2 py-0 group-data-[collapsible=icon]:px-1", groupIdx > 0 && "mt-4 group-data-[collapsible=icon]:mt-2")}
+      >
+        {group.label && (
+            <button
+              type="button"
+              onClick={() => toggleGroup(group.label!)}
+              aria-expanded={!isCollapsed}
+              className="group/label flex h-6 w-full shrink-0 items-center justify-start gap-1 rounded-md px-2 font-bold tracking-[0.01em] text-[color:var(--sidebar-muted)] outline-none transition-colors hover:text-[color:var(--sidebar-text-active)] focus-visible:ring-2 focus-visible:ring-[var(--sidebar-ring)] max-md:h-8 group-data-[collapsible=icon]:hidden"
+            >
+              {/* Global `button { font-size: inherit }` is unlayered and beats utilities on the button itself. */}
+              <span className="text-[11.5px] max-md:text-[13px]">{group.label}</span>
+              <ChevronRightIcon
+                aria-hidden="true"
+                className={cn(
+                  "size-3! shrink-0 transition-[transform,opacity] duration-150",
+                  isCollapsed ? "opacity-100" : "rotate-90 opacity-0 group-hover/label:opacity-100 group-focus-visible/label:opacity-100 max-md:opacity-100",
+                )}
+              />
+            </button>
+        )}
+        <SidebarMenu className={cn("gap-px", group.label && "mt-0.5")}>
+          {group.items.map((item) => renderItem(item, isCollapsed))}
+        </SidebarMenu>
+      </SidebarGroup>
+    );
+  }
+
+  function renderItem(item: NavItem, inCollapsedGroup: boolean) {
+    const href = item.href;
+    const isActive = activeHref === href;
+    const isPinned = pinnedHrefs.includes(href);
+    // A collapsed group still shows the page you're on, so the rail never hides where you are.
+    if (inCollapsedGroup && !isActive && state !== "collapsed") return null;
+    const Icon = item.icon;
+    const badgeCfg =
+      href === "/bookings" && overdueBadgeCount > 0
+        ? { count: overdueBadgeCount, suffix: "overdue", tone: "red" as const }
+        : href === "/bookings" && dueTodayBadgeCount > 0
+        ? { count: dueTodayBadgeCount, suffix: "due today", tone: "orange" as const }
+        : null;
+    const badgeCount = badgeCfg?.count ?? 0;
+    const badgeLabel = item.badge;
+    const tooltipBase = badgeCfg
+      ? `${item.label} · ${badgeCfg.count} ${badgeCfg.suffix}`
+      : item.label;
+    // Badges and the pin star share the row's right edge; the star takes over on hover.
+    const yieldsToStar = "transition-opacity duration-100 md:group-hover/menu-item:opacity-0 md:group-focus-within/menu-item:opacity-0";
+
+    return (
+      <SidebarMenuItem key={item.href}>
+        <SidebarMenuButton
+          asChild
+          isActive={isActive}
+          tooltip={tooltipBase}
+          className={navButtonClass(isActive)}
+        >
+          <Link prefetch={false} href={href} aria-current={isActive ? "page" : undefined}>
+            <Icon className={cn("size-4 stroke-[1.75] transition-colors duration-100", isActive ? "text-[color:var(--sidebar-icon-active)]" : "text-[color:var(--sidebar-muted)] group-hover/menu-item:text-[color:var(--sidebar-text-active)]")} />
+            <span className="truncate group-data-[collapsible=icon]:hidden">{item.label}</span>
+          </Link>
+        </SidebarMenuButton>
+
+        {badgeCount > 0 && (
+          <SidebarMenuBadge
+            className={cn(
+              "top-1/2! right-1.5 h-[18px] min-w-[18px] -translate-y-1/2 rounded-full px-1.5 text-[11px] font-bold leading-none tabular-nums group-data-[collapsible=icon]:top-1! group-data-[collapsible=icon]:right-1 group-data-[collapsible=icon]:size-2 group-data-[collapsible=icon]:min-w-0 group-data-[collapsible=icon]:translate-y-0 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:text-transparent",
+              badgeCfg?.tone === "orange"
+                ? "bg-[var(--orange-bg)] text-[color:var(--orange-text)]"
+                : "bg-[var(--wi-red)] text-white",
+              yieldsToStar,
+            )}
+          >
+            <span className="sr-only">
+              {badgeCfg!.count} {badgeCfg!.suffix}
+            </span>
+            <span aria-hidden="true">{badgeCount > 99 ? "99+" : badgeCount}</span>
+          </SidebarMenuBadge>
+        )}
+        {!badgeCount && badgeLabel && (
+          <SidebarMenuBadge className={cn("top-1/2! h-4 -translate-y-1/2 rounded bg-[var(--sidebar-hover)] px-1 text-[10px] font-medium text-[color:var(--sidebar-muted)]", yieldsToStar)}>
+            {badgeLabel}
+          </SidebarMenuBadge>
+        )}
+        <SidebarMenuAction
+          showOnHover
+          onClick={() => togglePin(href)}
+          aria-label={isPinned ? `Unpin ${item.label}` : `Pin ${item.label}`}
+          aria-pressed={isPinned}
+          title={isPinned ? "Unpin" : "Pin to top"}
+          className="top-1/2! right-1 size-6 -translate-y-1/2 rounded text-[color:var(--sidebar-muted)] hover:bg-[var(--sidebar-hover)] hover:text-[color:var(--sidebar-text-active)] focus-visible:ring-[var(--sidebar-ring)] max-md:hidden"
+        >
+          <StarIcon className={cn("size-3.5!", isPinned && "fill-current text-[color:var(--sidebar-icon-active)]")} />
+        </SidebarMenuAction>
+      </SidebarMenuItem>
+    );
+  }
+
   return (
     <Sidebar collapsible="icon">
       <div className={cn(lato.className, "flex min-h-0 flex-1 flex-col")}>
       {user && (
-        <SidebarHeader className="px-3 pb-2 pt-4 group-data-[collapsible=icon]:px-1">
+        <SidebarHeader className="px-3 pb-3 pt-4 max-md:pr-12 group-data-[collapsible=icon]:px-2">
           <Link
             prefetch={false}
             href="/"
             aria-label="Wisconsin Creative home"
-            className="flex items-center gap-2.5 rounded-lg px-1.5 py-1 no-underline outline-none transition-colors hover:bg-[var(--sidebar-hover)] focus-visible:ring-2 focus-visible:ring-[var(--sidebar-ring)] group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
+            className="flex items-center gap-2.5 rounded-md no-underline outline-none hover:no-underline focus-visible:ring-2 focus-visible:ring-[var(--sidebar-ring)] group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
           >
-            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white shadow-[0_0_0_1px_var(--sidebar-border)]">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-[9px] bg-white shadow-[0_0_0_1px_var(--sidebar-border),0_1px_2px_rgba(0,0,0,0.06)]">
               <Image
                 src="/Badgers.png"
                 alt=""
@@ -329,10 +433,10 @@ export default function AppSidebar({
               />
             </span>
             <div className="min-w-0 group-data-[collapsible=icon]:hidden">
-              <p className="text-[14px] font-black leading-tight tracking-[-0.015em] text-[var(--sidebar-text-active)]">
+              <p className="truncate text-[14px] font-black leading-[1.15] tracking-[-0.015em] text-[color:var(--sidebar-text-active)]">
                 Wisconsin Creative
               </p>
-              <p className="mt-px text-[12px] font-normal leading-tight text-[var(--sidebar-muted)]">
+              <p className="mt-0.5 truncate text-[12px] font-normal leading-[1.15] text-[color:var(--sidebar-muted)]">
                 UW Athletics
               </p>
             </div>
@@ -341,117 +445,29 @@ export default function AppSidebar({
       )}
 
       {user && onSearch && (
-        <div className="px-3 pb-1 group-data-[collapsible=icon]:px-1">
+        <div className="px-3 pb-2 group-data-[collapsible=icon]:px-2">
           <button
             type="button"
             onClick={onSearch}
             aria-label="Search"
             aria-keyshortcuts="Meta+K Control+K"
-            className="flex h-9 w-full items-center gap-2.5 rounded-lg border border-[var(--sidebar-border)] bg-transparent px-2.5 text-[14px] text-[var(--sidebar-muted)] outline-none transition-colors hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-text-active)] focus-visible:ring-2 focus-visible:ring-[var(--sidebar-ring)] group-data-[collapsible=icon]:size-10 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
+            className="flex h-8 w-full items-center gap-2.5 rounded-md bg-[var(--sidebar-input)] px-2 text-[13.5px] text-[color:var(--sidebar-muted)] shadow-[0_0_0_1px_var(--sidebar-border)] outline-none transition-colors hover:text-[color:var(--sidebar-text-active)] focus-visible:ring-2 focus-visible:ring-[var(--sidebar-ring)] max-md:h-10 max-md:text-[15px] group-data-[collapsible=icon]:size-10 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:shadow-none group-data-[collapsible=icon]:hover:bg-[var(--sidebar-hover)]"
           >
-            <SearchIcon className="size-[17px] shrink-0 stroke-[1.75]" />
-            <span className="flex-1 text-left group-data-[collapsible=icon]:hidden">Search</span>
+            <SearchIcon className="size-4 shrink-0 stroke-[1.75]" />
+            <span className="flex-1 text-left text-[13.5px] max-md:text-[15px] group-data-[collapsible=icon]:hidden">Search</span>
           </button>
         </div>
       )}
 
-      <SidebarContent className="px-1 py-1">
-        <nav aria-label="Workspace navigation">
-          {displayGroups.map((group, groupIdx) => (
-            <div key={group.label ?? group.items.map((item) => item.href).join("-")}>
-              {!group.label && groupIdx > 0 && (
-                <SidebarSeparator className="mx-3 my-2 bg-[var(--sidebar-border)] group-data-[collapsible=icon]:mx-2" />
-              )}
-              <SidebarGroup className="px-2 py-1 group-data-[collapsible=icon]:px-1">
-                {group.label && (
-                  <SidebarGroupLabel asChild>
-                    <button
-                      type="button"
-                      onClick={() => toggleGroup(group.label!)}
-                      aria-expanded={!collapsedGroups.includes(group.label)}
-                      className="group/label mt-1 h-7 w-full gap-1 px-2.5 text-[12px] font-bold tracking-normal text-[var(--sidebar-muted)] hover:text-[var(--sidebar-text-active)] group-data-[collapsible=icon]:hidden"
-                    >
-                      <ChevronRightIcon
-                        className={cn("size-3 shrink-0 transition-transform", !collapsedGroups.includes(group.label) && "rotate-90")}
-                      />
-                      {group.label}
-                    </button>
-                  </SidebarGroupLabel>
-                )}
-                <SidebarMenu className="gap-0.5">
-                  {group.items.map((item) => {
-                    const href = item.href;
-                    const isActive = activeHref === href;
-                    const isPinned = pinnedHrefs.includes(href);
-                    // A collapsed group still shows the page you're on, so the rail never hides where you are.
-                    if (group.label && collapsedGroups.includes(group.label) && !isActive && state !== "collapsed") return null;
-                    const Icon = item.icon;
-                    const badgeCfg =
-                      href === "/bookings" && overdueBadgeCount > 0
-                        ? { count: overdueBadgeCount, suffix: "overdue", tone: "red" as const }
-                        : href === "/bookings" && dueTodayBadgeCount > 0
-                        ? { count: dueTodayBadgeCount, suffix: "due today", tone: "orange" as const }
-                        : null;
-                    const badgeCount = badgeCfg?.count ?? 0;
-                    const badgeLabel = item.badge;
-                    const tooltipBase = badgeCfg
-                      ? `${item.label} · ${badgeCfg.count} ${badgeCfg.suffix}`
-                      : item.label;
-
-                    return (
-                      <SidebarMenuItem key={item.label}>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={isActive}
-                          tooltip={tooltipBase}
-                          className={navButtonClass(isActive)}
-                        >
-                          <Link prefetch={false} href={href} aria-current={isActive ? "page" : undefined}>
-                            <Icon className={cn("size-[17px] stroke-[1.75]", isActive ? "text-[var(--sidebar-icon-active)]" : "text-[var(--sidebar-muted)] group-hover/menu-item:text-[var(--sidebar-text-active)]")} />
-                            <span>{item.label}</span>
-                          </Link>
-                        </SidebarMenuButton>
-
-                        {badgeCount > 0 && (
-                          <SidebarMenuBadge
-                            className={
-                              badgeCfg?.tone === "orange"
-                                ? "bg-[var(--orange-bg)] text-[var(--orange-text)] text-[length:var(--text-2xs)] font-semibold min-w-[18px] h-[18px] flex items-center justify-center rounded-full px-1"
-                                : "bg-[var(--wi-red)] text-white text-[length:var(--text-2xs)] font-semibold min-w-[18px] h-[18px] flex items-center justify-center rounded-full px-1"
-                            }
-                          >
-                            <span className="sr-only">
-                              {badgeCfg!.count} {badgeCfg!.suffix}
-                            </span>
-                            <span aria-hidden="true">{badgeCount > 99 ? "99+" : badgeCount}</span>
-                          </SidebarMenuBadge>
-                        )}
-                        {!badgeCount && badgeLabel && (
-                          <SidebarMenuBadge className="bg-[var(--sidebar-hover)] text-[var(--sidebar-muted)] text-[10px] font-medium h-[16px] flex items-center justify-center rounded px-1 tracking-wide">
-                            {badgeLabel}
-                          </SidebarMenuBadge>
-                        )}
-                        <SidebarMenuAction
-                          showOnHover
-                          onClick={() => togglePin(href)}
-                          aria-label={isPinned ? `Unpin ${item.label}` : `Pin ${item.label}`}
-                          aria-pressed={isPinned}
-                          className="top-0.5 size-8 text-[var(--sidebar-muted)] hover:bg-transparent hover:text-[var(--sidebar-text-active)] max-md:opacity-100"
-                        >
-                          <StarIcon className={cn("size-3.5!", isPinned && "fill-current text-[var(--sidebar-icon-active)]")} />
-                        </SidebarMenuAction>
-                      </SidebarMenuItem>
-                    );
-                  })}
-                </SidebarMenu>
-              </SidebarGroup>
-            </div>
-          ))}
+      <SidebarContent className="gap-0 px-1 pb-2 pt-1">
+        <nav aria-label="Workspace navigation" className="flex min-h-full flex-1 flex-col">
+          {displayGroups.map((group, groupIdx) => renderGroup(group, groupIdx))}
+          {footerGroup && <div className="mt-auto pt-3">{renderGroup(footerGroup, -1)}</div>}
         </nav>
       </SidebarContent>
 
       {user && (
-        <SidebarFooter className="border-t border-[var(--sidebar-border)] p-2">
+        <SidebarFooter className="border-t border-[var(--sidebar-border)] p-2 group-data-[collapsible=icon]:items-center">
           <SidebarMenu>
             <SidebarMenuItem>
               <DropdownMenu>
@@ -460,22 +476,22 @@ export default function AppSidebar({
                     size="lg"
                     tooltip={user.name}
                     aria-label="Account menu"
-                    className="h-12 rounded-lg text-[var(--sidebar-text-active)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-text-active)] data-[state=open]:bg-[var(--sidebar-active)] group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:rounded-full"
+                    className="h-11 gap-2.5 rounded-md px-1.5 text-[color:var(--sidebar-text-active)] hover:bg-[var(--sidebar-hover)] hover:text-[color:var(--sidebar-text-active)] data-[state=open]:bg-[var(--sidebar-active)] data-[state=open]:hover:bg-[var(--sidebar-active)] data-[state=open]:hover:text-[color:var(--sidebar-text-active)] group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-full"
                   >
                     <UserAvatar
                       name={user.name}
                       avatarUrl={user.avatarUrl}
-                      className="ring-1 ring-[var(--sidebar-border)]"
+                      className="size-8 ring-1 ring-[var(--sidebar-border)]"
                     />
                     <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
-                      <p className="truncate text-[13px] font-bold leading-tight tracking-[-0.005em] text-[var(--sidebar-text-active)]">
+                      <p className="truncate text-[13.5px] font-bold leading-[1.15] text-[color:var(--sidebar-text-active)]">
                         {user.name}
                       </p>
-                      <p className="mt-[2px] truncate text-[12px] leading-tight text-[var(--sidebar-muted)]">
+                      <p className="mt-0.5 truncate text-[12px] leading-[1.15] text-[color:var(--sidebar-muted)]">
                         {roleCaption}
                       </p>
                     </div>
-                    <ChevronsUpDownIcon className="ml-auto size-4 text-[var(--sidebar-muted)] group-data-[collapsible=icon]:hidden" />
+                    <ChevronsUpDownIcon className="ml-auto size-3.5 text-[color:var(--sidebar-muted)] group-data-[collapsible=icon]:hidden" />
                   </SidebarMenuButton>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
