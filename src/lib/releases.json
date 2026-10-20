@@ -1,5 +1,20 @@
 [
   {
+    "date": "2026-10-20",
+    "title": "Staff links open in the iPhone app",
+    "type": "fixes",
+    "summary": "Tapping a link to someone's staff page now opens their profile in the iPhone app instead of landing on an empty screen.",
+    "details": [
+      "Links in notifications and email that point at a person's page open the profile in the app.",
+      "Older links that use the previous web address keep working too.",
+      "This is part of the next iPhone update on TestFlight."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 532
+  },
+  {
     "date": "2026-10-19",
     "title": "Out-of-town scoreboard has its own site",
     "type": "improvement",
