@@ -1,7 +1,7 @@
 [
   {
     "date": "2026-10-20",
-    "title": "Email logo fix and emails off by default",
+    "title": "Email logo fix, emails opt-in",
     "type": "fixes",
     "summary": "The logo in our emails now loads in Outlook, and notification emails are off unless you turn them on.",
     "details": [
