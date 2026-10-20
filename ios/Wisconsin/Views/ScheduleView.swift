@@ -1277,8 +1277,7 @@ private struct InternalScheduleView: View {
                 .contentMargins(.bottom, 24, for: .scrollContent)
                 .background(Color(.systemGroupedBackground))
                 .onScrollGeometryChange(for: Bool.self) { geometry in
-                    geometry.contentOffset.y + geometry.containerSize.height
-                        >= geometry.contentSize.height - 8
+                    ScheduleScrollTracker.isScrolledToBottom(geometry)
                 } action: { _, atBottom in
                     scrollTracker.setAtBottom(atBottom)
                 }

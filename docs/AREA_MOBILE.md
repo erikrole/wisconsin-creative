@@ -105,6 +105,8 @@ Cheqroom mobile patterns show useful primitives but too much menu depth and too 
 - [x] AC-15: A long-press action can never reveal data the row it sits on is deliberately hiding.
 - [x] AC-16: Latest Browse screens have local Simulator presentation proof, including native size pickers, large-text layouts, and offline navigation. This does not accept authenticated feature mutations or external sharing; see the 2026-10-17 evidence below.
 
+- [x] AC-17 (local): Schedule keeps the first visible day selected when its rows fit in the viewport, including rubber-banding and a return to Today. A genuinely scrolled long list still follows its last visible day at the bottom. Native regression and iPhone 18 Pro Max visual proof are recorded under `tasks/archive/proofs/ios-schedule-week-selection-2026-10-20/`; inclusion in a distributed build remains pending.
+
 ## Dependencies
 - `AREA_DASHBOARD.md`
 - `AREA_CHECKOUTS.md`
@@ -145,6 +147,8 @@ Navigation shell versioned roadmap: `tasks/sidebar-roadmap.md` (revised 2026-03-
 - **V3 (later)**: Bottom nav badge counts via live `/api/nav-counts` polling, game-day/shift context cards
 
 ## Change Log
+
+- 2026-10-20: **Schedule week selection stays with the visible day (local, next build pending).** A short list previously counted as being at the bottom while today was still at the top, selecting a later empty week and leaving Today visible after tapping it. The bottom override now requires scrollable content and an offset beyond the top inset; long-list end navigation remains intact. The native regression fails on the pre-fix behavior. All 235 native tests, simulator and generic-device builds, and 59 Schedule source contracts pass. Matched iPhone 18 Pro Max fixture captures: [review](../tasks/archive/proofs/ios-schedule-week-selection-2026-10-20/review.html). App Review build 34 remains unchanged.
 
 - 2026-10-20: **Less main-actor and background work (local, rollout pending).** Successful API response decoding and Brand asset image/SVG preparation move to concurrent workers with cancellation and account/request ownership checks before publication. Foreground refresh has one cancellable owner; App Intents reuse the validated identity. Checkout Live Activities skip availability reads until a checkout is within the existing maximum 60-minute lead window. Removed unused SwiftData seeding and launch container initialization after confirming no active read consumers; ScheduleWindowCache, drafts, widget snapshots, and legacy sign-out cleanup remain. Schedule saves its fetched window once. Native unit tests cover off-main decoding, cancellation, date/key/null compatibility, preview limits, and the Live Activity cutoff. Simulator tests and generic-device compilation pass; stable-runtime comparison and physical-device battery/memory acceptance remain open in `tasks/performance-web-ios-neon-2026-10-20.md`.
 
