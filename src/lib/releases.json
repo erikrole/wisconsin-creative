@@ -1,6 +1,6 @@
 [
   {
-    "date": "2026-10-19",
+    "date": "2026-10-20",
     "title": "Swap a Photo Mechanic code",
     "type": "feature",
     "summary": "If your Photo Mechanic code won't activate, you can now get a different one without asking staff.",
@@ -14,6 +14,9 @@
       "iOS"
     ],
     "pr": 525
+  },
+  {
+    "date": "2026-10-19",
     "title": "Out-of-town scoreboard has its own site",
     "type": "improvement",
     "summary": "The World Series out-of-town scoreboard, chip, router output and controller now live at ots.wisconsincreative.com, and old wisconsincreative.com/ots links redirect there.",
