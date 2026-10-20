@@ -68,7 +68,7 @@ describe("apps live versions", () => {
     expect(moved).not.toContain("macOS 15.0");
     const html = renderAppsPage("n", { "wisconsin-creative": { version: "8.8", released: "2026-11-01", requires: "iOS 27.0 or later" } });
     expect(html).toContain("<span>Version 8.8</span><span>Requires iOS 27.0 or later</span>");
-    expect(html).toContain("<span>Version 1.2.0</span><span>Requires macOS 15.0 or later</span>");
+    expect(html).toContain("<span>Version 1.5.3</span><span>Requires macOS 15.0 or later</span>");
     expect(renderAppsPage("n")).toContain("<span>Version 1.2</span><span>Requires iOS 26.0 or later</span>");
     const fetchLive = renderAppsPage("n", { fetch: { version: "2.0.0" } });
     expect(fetchLive).toContain("Version 2.0.0");

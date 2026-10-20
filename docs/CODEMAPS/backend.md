@@ -74,7 +74,7 @@
 | `src/lib/services/manual-event-time.ts` | 304 |
 | `src/lib/services/non-game-schedule-defaults.ts` | 49 |
 | `src/lib/services/notification-deliveries.ts` | 59 |
-| `src/lib/services/notification-prefs.ts` | 348 |
+| `src/lib/services/notification-prefs.ts` | 350 |
 | `src/lib/services/notifications.ts` | 1974 |
 | `src/lib/services/onboarding-lifecycle.ts` | 546 |
 | `src/lib/services/pending-pickup-expiry.ts` | 370 |
@@ -121,22 +121,22 @@
 | `src/lib/a11y-resilience.ts` | 116 |
 | `src/lib/accountability-jeers.ts` | 121 |
 | `src/lib/admin-fix-today.ts` | 408 |
-| `src/lib/announcements.ts` | 156 |
+| `src/lib/announcements.ts` | 163 |
 | `src/lib/api-dates.ts` | 38 |
 | `src/lib/api-handler.ts` | 63 |
 | `src/lib/api.ts` | 143 |
-| `src/lib/app-product-page.ts` | 151 |
-| `src/lib/app-product-pages.ts` | 71 |
+| `src/lib/app-product-page.ts` | 183 |
+| `src/lib/app-product-pages.ts` | 170 |
 | `src/lib/app-time.ts` | 257 |
 | `src/lib/apps-live-versions.ts` | 195 |
-| `src/lib/apps-page.ts` | 418 |
+| `src/lib/apps-page.ts` | 419 |
 | `src/lib/asset-attachments.ts` | 166 |
 | `src/lib/asset-image.ts` | 26 |
 | `src/lib/asset-qr-code.ts` | 9 |
 | `src/lib/assignment-conflict-review.ts` | 97 |
 | `src/lib/audit.ts` | 168 |
 | `src/lib/auth-email-guidance.ts` | 7 |
-| `src/lib/auth.ts` | 436 |
+| `src/lib/auth.ts` | 454 |
 | `src/lib/auto-fill-preview-types.ts` | 61 |
 | `src/lib/availability-copy.ts` | 343 |
 | `src/lib/avatar.ts` | 44 |
@@ -164,6 +164,7 @@
 | `src/lib/checkout-notification-workflow.ts` | 24 |
 | `src/lib/claim-review-deadlines.ts` | 52 |
 | `src/lib/claim-review-workflow.ts` | 48 |
+| `src/lib/client-enums.ts` | 85 |
 | `src/lib/clipboard.ts` | 19 |
 | `src/lib/collaborator-access.ts` | 164 |
 | `src/lib/collaborator-gear.ts` | 175 |
@@ -230,7 +231,7 @@
 | `src/lib/profile-sizing.ts` | 24 |
 | `src/lib/public-showroom.ts` | 454 |
 | `src/lib/quarter-hour.ts` | 27 |
-| `src/lib/query-client.ts` | 56 |
+| `src/lib/query-client.ts` | 66 |
 | `src/lib/rate-limit.ts` | 238 |
 | `src/lib/rbac.ts` | 59 |
 | `src/lib/releases.ts` | 104 |
@@ -345,6 +346,7 @@
 - `/api/announcements/[id]/dismiss`
 - `/api/announcements/[id]`
 - `/api/announcements/active`
+- `/api/announcements/history`
 - `/api/announcements/images`
 - `/api/announcements`
 
@@ -928,6 +930,10 @@
 ### `/apps`
 
 - `/apps`
+
+### `/apps/[slug]`
+
+- `/apps/[slug]`
 
 ### `/apps/fetch`
 

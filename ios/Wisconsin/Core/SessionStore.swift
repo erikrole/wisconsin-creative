@@ -407,19 +407,19 @@ final class SessionStore {
         let requestToken = authRequests.begin()
         do {
             let user = try await APIClient.shared.me()
-            guard authRequests.owns(requestToken) else { return }
+            guard authRequests.owns(requestToken), !Task.isCancelled else { return }
             publishCurrentUserIfChanged(user)
             isOffline = false
             error = nil
         } catch APIError.unauthorized {
-            guard authRequests.owns(requestToken) else { return }
+            guard authRequests.owns(requestToken), !Task.isCancelled else { return }
             authSessionBoundary.advance()
             BrandAssetDownload.removeTemporaryFiles()
             authRequests.invalidate()
             SessionSnapshot.clear()
             currentUser = nil
         } catch {
-            guard authRequests.owns(requestToken) else { return }
+            guard authRequests.owns(requestToken), !Task.isCancelled else { return }
             self.error = error.localizedDescription
         }
     }

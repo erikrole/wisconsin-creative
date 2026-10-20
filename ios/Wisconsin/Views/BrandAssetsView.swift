@@ -104,8 +104,12 @@ final class BrandAssetFileModel {
                 fallbackName: version.originalName
             )
             guard loads.owns(token), !Task.isCancelled else { return }
+            let preview = try await BrandAssetPreparedPreview.prepare(version: version, at: download.fileURL)
+            guard loads.owns(token), !Task.isCancelled else { return }
             downloadedFile = download
-            preparePreview(at: download.fileURL)
+            canPreview = preview.canPreview
+            previewImage = preview.image
+            svgHTML = preview.svgHTML
             error = nil
         } catch is CancellationError {
             return
@@ -115,21 +119,6 @@ final class BrandAssetFileModel {
         }
     }
 
-    private func preparePreview(at url: URL) {
-        guard let version = asset.currentVersion else { return }
-        canPreview = brandAssetCanPreview(version: version, at: url)
-        guard canPreview else { return }
-        switch brandAssetPreviewKind(version.contentType) {
-        case .image:
-            previewImage = brandAssetPreviewImage(at: url)
-        case .svg:
-            if let data = try? Data(contentsOf: url) {
-                svgHTML = brandAssetSVGDocument(from: data)
-            }
-        case .pdf, .other:
-            break
-        }
-    }
 }
 
 struct BrandAssetsView: View {

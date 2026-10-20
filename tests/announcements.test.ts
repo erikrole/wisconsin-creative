@@ -11,6 +11,7 @@ import { announcementCreateBody, announcementPatchBody } from "@/lib/schemas/ann
 
 const mocks = vi.hoisted(() => ({
   findFirst: vi.fn(),
+  findMany: vi.fn(),
   count: vi.fn(),
   findUnique: vi.fn(),
   upsert: vi.fn(),
@@ -19,7 +20,12 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@/lib/db", () => ({
   db: {
-    announcement: { findFirst: mocks.findFirst, findUnique: mocks.findUnique, count: mocks.count },
+    announcement: {
+      findFirst: mocks.findFirst,
+      findMany: mocks.findMany,
+      findUnique: mocks.findUnique,
+      count: mocks.count,
+    },
     announcementDismissal: { upsert: mocks.upsert },
   },
 }));
@@ -33,6 +39,7 @@ vi.mock("@/lib/rbac", () => ({ requirePermission: vi.fn() }));
 
 import { GET as getActive } from "@/app/api/announcements/active/route";
 import { POST as dismiss } from "@/app/api/announcements/[id]/dismiss/route";
+import { GET as getHistory } from "@/app/api/announcements/history/route";
 
 describe("parseAnnouncementBody", () => {
   it("splits paragraphs and bullets and drops empty lines", () => {
@@ -209,5 +216,81 @@ describe("announcement schema end time", () => {
     const future = new Date(Date.now() + 3_600_000).toISOString();
     expect(announcementCreateBody.parse({ ...base, endsAt: future }).endsAt).toBeInstanceOf(Date);
     expect(announcementCreateBody.parse({ ...base, endsAt: null }).endsAt).toBeNull();
+  });
+});
+
+describe("announcement history route", () => {
+  beforeEach(() => {
+    mocks.findMany.mockReset();
+    mocks.user.role = "STUDENT";
+  });
+
+  it("lists every published announcement for this role and platform, newest first, with seen state", async () => {
+    mocks.findMany.mockResolvedValue([
+      {
+        id: "a2",
+        kind: "NOTICE",
+        title: "Ended one",
+        body: "Gone now",
+        ctaLabel: null,
+        ctaUrl: null,
+        imageUrls: [],
+        imageAlt: null,
+        publishedAt: new Date("2026-10-10T00:00:00Z"),
+        endsAt: new Date("2026-10-12T00:00:00Z"),
+        dismissals: [{ dismissedAt: new Date("2026-10-11T00:00:00Z") }],
+      },
+      {
+        id: "a1",
+        kind: "FEATURE",
+        title: "Fresh one",
+        body: "Hello\n\n- A",
+        ctaLabel: "Open",
+        ctaUrl: "/releases",
+        imageUrls: ["https://blob.example/x.jpg"],
+        imageAlt: "Alt",
+        publishedAt: new Date("2026-10-09T00:00:00Z"),
+        endsAt: null,
+        dismissals: [],
+      },
+    ]);
+
+    const res = await getHistory(new Request("https://app.example.com/api/announcements/history?platform=ios"), {
+      params: Promise.resolve({}),
+    });
+    const body = await res.json();
+
+    const call = mocks.findMany.mock.calls[0]?.[0];
+    const where = call?.where;
+    expect(where.showOnIos).toBe(true);
+    expect(where.publishedAt.lte).toBeInstanceOf(Date);
+    expect(where.OR).toEqual([{ roles: { isEmpty: true } }, { roles: { has: "STUDENT" } }]);
+    // No dismissal filter: history keeps what the splash already showed.
+    expect(where.dismissals).toBeUndefined();
+    expect(call?.include.dismissals.where).toEqual({ userId: "user-1" });
+
+    expect(body.data).toEqual([
+      expect.objectContaining({
+        id: "a2",
+        kindLabel: "Heads up",
+        blocks: [{ type: "paragraph", text: "Gone now" }],
+        endsAt: "2026-10-12T00:00:00.000Z",
+        seenAt: "2026-10-11T00:00:00.000Z",
+      }),
+      expect.objectContaining({
+        id: "a1",
+        kindLabel: "New",
+        blocks: [
+          { type: "paragraph", text: "Hello" },
+          { type: "list", items: ["A"] },
+        ],
+        ctaLabel: "Open",
+        ctaUrl: "/releases",
+        imageUrls: ["https://blob.example/x.jpg"],
+        endsAt: null,
+        seenAt: null,
+      }),
+    ]);
+    expect(body.data[0]).not.toHaveProperty("remaining");
   });
 });

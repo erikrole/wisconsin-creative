@@ -92,10 +92,8 @@ describe("iOS bookings power filters", () => {
     expect(load).toContain("applyServerOrderIfNeeded()");
   });
 
-  it("caches only the unfiltered default list for offline use", () => {
-    expect(bookingsView).toContain(
-      'if reset && searchText.isEmpty && scope == .all && statusFilter == .active {',
-    );
+  it("does not write an unused secondary cache from filtered pages", () => {
+    expect(bookingsView).not.toContain("GearStore.shared.seed");
   });
 
   it("persists scope, status, and sort across launches", () => {

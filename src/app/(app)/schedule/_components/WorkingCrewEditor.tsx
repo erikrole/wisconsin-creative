@@ -759,7 +759,9 @@ export function WorkingCrewEditor({
 
   useEffect(() => {
     if (!data?.hasWorkingCopy || !data.autoReleaseAt) return;
-    const timer = window.setInterval(() => setClock(Date.now()), 15_000);
+    const timer = window.setInterval(() => {
+      if (!document.hidden) setClock(Date.now());
+    }, 15_000);
     return () => window.clearInterval(timer);
   }, [data?.autoReleaseAt, data?.hasWorkingCopy]);
 
@@ -772,7 +774,7 @@ export function WorkingCrewEditor({
     if (!data?.hasWorkingCopy) return;
     let polling = false;
     const timer = window.setInterval(() => {
-      if (actingRef.current || polling) return;
+      if (document.hidden || !navigator.onLine || actingRef.current || polling) return;
       polling = true;
       void (async () => {
         try {

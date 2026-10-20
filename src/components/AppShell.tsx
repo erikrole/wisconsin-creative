@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 import { STATUS_STYLES } from "@/lib/status-styles";
-import { useQueryClient } from "@tanstack/react-query";
+import { useIsRestoring, useQueryClient } from "@tanstack/react-query";
 import { type CurrentUser, useCurrentUser } from "@/hooks/use-current-user";
 import { RECENT_SEARCHES_STORAGE_KEY, clearLocalTraces } from "@/lib/local-traces";
 import { handleAuthRedirect, parseJsonSafely } from "@/lib/errors";
@@ -38,7 +38,7 @@ import { BOOKING_CHANGE_SYNC_EVENT } from "@/hooks/use-booking-change-sync";
 import { isBackgroundPollingPaused } from "@/hooks/use-operational-polling-activity";
 import { NOTIFICATION_COUNT_CHANGED_EVENT } from "@/lib/notification-count-sync";
 import { ProfileCompletionWizard } from "@/components/profile-completion/ProfileCompletionWizard";
-import { hasDashboardCountFailure } from "@/app/(app)/dashboard-types";
+import { dashboardStatsQueryOptions, dashboardStatsQueryKey, useDashboardStats } from "@/hooks/use-dashboard-data";
 import {
   BadgeEarnedCelebration,
   type EarnedBadgeReward,
@@ -98,27 +98,12 @@ type NotificationCountResponse = {
   unreadCount?: unknown;
 };
 
-type DashboardStatsBadgeResponse = {
-  data?: {
-    myOverdueCount?: unknown;
-    myDueTodayCount?: unknown;
-  };
-  partialFailures?: unknown[];
-};
-
 type RecentBadgeAwardsResponse = {
   data?: {
     awards?: EarnedBadgeReward[];
     nextCursor?: string;
   };
 };
-
-function dashboardBadgeCountsAreTrusted(response: DashboardStatsBadgeResponse | null) {
-  const partialFailures = Array.isArray(response?.partialFailures)
-    ? response.partialFailures.filter((failure): failure is string => typeof failure === "string")
-    : [];
-  return !hasDashboardCountFailure(partialFailures);
-}
 
 const SEARCH_RESULT_SOURCES = {
   items: "Items",
@@ -279,6 +264,7 @@ export default function AppShell({
   const router = useRouter();
   const pathname = usePathname();
   const queryClient = useQueryClient();
+  const isRestoring = useIsRestoring();
   const { data: user, isLoading } = useCurrentUser(initialUser);
   const isCollaborator = user?.role === "COLLABORATOR";
   const isRolePreview = Boolean(user?.preview?.readOnly);
@@ -290,8 +276,9 @@ export default function AppShell({
     : bottomNavItems;
   const [loggingOut, setLoggingOut] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
-  const [overdueBadgeCount, setOverdueBadgeCount] = useState(0);
-  const [dueTodayBadgeCount, setDueTodayBadgeCount] = useState(0);
+  const { data: dashboardStats } = useDashboardStats();
+  const overdueBadgeCount = dashboardStats?.myOverdueCount ?? 0;
+  const dueTodayBadgeCount = dashboardStats?.myDueTodayCount ?? 0;
   const [earnedBadgeQueue, setEarnedBadgeQueue] = useState<EarnedBadgeReward[]>([]);
   // The reward poll needs the current path only to build an auth return URL. Held
   // in a ref so it cannot sit in the effect's dependency list: `pathname` there
@@ -447,78 +434,47 @@ export default function AppShell({
     // not a navigation, and this effect owns a POST with a durable side effect.
   }, [isRolePreview, rewardUserId]);
 
-  // Badge counts — refresh on navigation so counts stay fresh after user actions
+  // Navigation shares the same fresh stats read as Home; simultaneous consumers
+  // and booking invalidations join one request instead of hitting Neon twice.
+  const badgeUserId = user?.id;
   useEffect(() => {
-    if (!user) return;
-
+    if (!badgeUserId || isRestoring) return;
     const controller = new AbortController();
-    async function loadBadgeCounts() {
+    void queryClient.fetchQuery({
+      ...dashboardStatsQueryOptions(badgeUserId),
+      // Mutations on another route may have changed custody since the last read.
+      // Preserve navigation freshness while joining any request already in flight.
+      staleTime: 0,
+    }).catch(() => {
+      // The shared query retains the last trusted counts on failure.
+    });
+    async function loadNotifications() {
       try {
-        const [notificationsResult, dashboardResult] = await Promise.allSettled([
-          fetch("/api/notifications/count", { signal: controller.signal }),
-          fetch("/api/dashboard/stats", { signal: controller.signal }),
-        ]);
-        if (controller.signal.aborted) return;
-
-        if (notificationsResult.status === "fulfilled") {
-          if (handleAuthRedirect(notificationsResult.value, pathname)) return;
-          if (notificationsResult.value.ok) {
-            const json = await parseJsonSafely<NotificationCountResponse>(notificationsResult.value);
-            if (typeof json?.unreadCount === "number") {
-              setUnreadNotifications(json.unreadCount);
-            }
-          }
-        }
-
-        if (dashboardResult.status === "fulfilled") {
-          if (handleAuthRedirect(dashboardResult.value, pathname)) return;
-          if (dashboardResult.value.ok) {
-            const json = await parseJsonSafely<DashboardStatsBadgeResponse>(dashboardResult.value);
-            if (dashboardBadgeCountsAreTrusted(json)) {
-              const count = json?.data?.myOverdueCount;
-              const dueToday = json?.data?.myDueTodayCount;
-              // User-scoped overdue count so STUDENT sees only their own overdue
-              if (typeof count === "number") {
-                setOverdueBadgeCount(count);
-              }
-              if (typeof dueToday === "number") {
-                setDueTodayBadgeCount(dueToday);
-              }
-            }
-          }
+        const response = await fetch("/api/notifications/count", { signal: controller.signal });
+        if (controller.signal.aborted || handleAuthRedirect(response, pathname) || !response.ok) return;
+        const json = await parseJsonSafely<NotificationCountResponse>(response);
+        if (!controller.signal.aborted && typeof json?.unreadCount === "number") {
+          setUnreadNotifications(json.unreadCount);
         }
       } catch {
-        // Badge counts are ambient chrome; keep the last known values on failure.
+        // Keep the last known count on failure.
       }
     }
-
-    loadBadgeCounts();
-
+    void loadNotifications();
     return () => { controller.abort(); };
-  }, [pathname, user]);
+  }, [pathname, badgeUserId, isRestoring, queryClient]);
 
   useEffect(() => {
-    if (!user) return;
-
-    const refreshBookingBadges = async () => {
-      try {
-        const response = await fetch("/api/dashboard/stats");
-        if (handleAuthRedirect(response, pathname) || !response.ok) return;
-        const json = await parseJsonSafely<DashboardStatsBadgeResponse>(response);
-        if (dashboardBadgeCountsAreTrusted(json)) {
-          const overdue = json?.data?.myOverdueCount;
-          const dueToday = json?.data?.myDueTodayCount;
-          if (typeof overdue === "number") setOverdueBadgeCount(overdue);
-          if (typeof dueToday === "number") setDueTodayBadgeCount(dueToday);
-        }
-      } catch {
-        // Keep the last known chrome counts until the next sync/navigation refresh.
-      }
+    if (!badgeUserId) return;
+    const refreshBookingBadges = () => {
+      void queryClient.invalidateQueries(
+        { queryKey: dashboardStatsQueryKey(badgeUserId) },
+        { cancelRefetch: false },
+      );
     };
-
     window.addEventListener(BOOKING_CHANGE_SYNC_EVENT, refreshBookingBadges);
     return () => window.removeEventListener(BOOKING_CHANGE_SYNC_EVENT, refreshBookingBadges);
-  }, [pathname, user]);
+  }, [badgeUserId, queryClient]);
 
   useEffect(() => {
     function handleNotificationCountChanged(event: Event) {

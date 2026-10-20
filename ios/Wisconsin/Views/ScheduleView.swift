@@ -232,8 +232,6 @@ final class ScheduleViewModel {
             hasLoaded = true
             lastLoadedAt = .now
             error = nil
-            saveCachedWindow()
-            GearStore.shared.seedScheduleEvents(fetchedEvents)
         } catch APIError.unauthorized {
             // SessionStore listens for the global notification and routes the
             // user to login; nothing to do here besides cleaning up loading state.
@@ -381,7 +379,6 @@ final class ScheduleViewModel {
         shiftsById = shiftsById.filter { !overlaps($0.value.event.startsAt, $0.value.event.endsAt) }
         for event in result.0 { rawEventsById[event.id] = event }
         for shift in result.1 { shiftsById[shift.id] = shift }
-        GearStore.shared.seedScheduleEvents(result.0)
         saveCachedWindow()
     }
 

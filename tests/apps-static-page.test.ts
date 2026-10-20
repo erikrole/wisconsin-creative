@@ -33,16 +33,16 @@ describe("apps page", () => {
       expect(existsSync(`public/apps/icons/${app.icon}.png`)).toBe(true);
       if (app.version) expect(html).toContain(`Version ${app.version}`);
     }
-    expect(html).toContain("<span>Version 1.2.0</span><span>Requires macOS 15.0 or later</span>");
+    expect(html).toContain("<span>Version 1.5.3</span><span>Requires macOS 15.0 or later</span>");
     expect(html).not.toContain("Developer ID");
     expect(html).not.toContain("Pro Video Formats");
-    expect(html).toContain("https://github.com/erikrole/offload-releases/releases/download/v1.2.0/Offload-1.2.0.dmg");
+    expect(html).toContain("https://github.com/erikrole/offload-releases/releases/download/v1.5.3/Offload-1.5.3.dmg");
     expect(html).not.toContain("release notes");
     expect(html).toContain("Sony FX6 and FX3");
     expect(html).toContain("<span>Version 1.2</span><span>Requires iOS 26.0 or later</span>");
     expect(html).not.toContain("wisconsin-creative-home");
     expect(html).not.toContain('class="shot"');
-    expect(html).toContain("<span>Version 1.1.0</span><span>Requires macOS 27 or later</span>");
+    expect(html).toContain("<span>Version 1.5.4</span><span>Requires macOS 27 or later</span>");
     expect(html).toContain("https://github.com/erikrole/fetch-releases/releases/latest/download/Fetch.dmg");
     expect(html).not.toContain("Version 0.1.0");
     expect(html).not.toContain("Notarized");

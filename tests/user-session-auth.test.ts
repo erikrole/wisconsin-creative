@@ -225,6 +225,13 @@ describe("session activity", () => {
     await requireAuth();
 
     expect(db.session.updateMany).not.toHaveBeenCalled();
+    const query = vi.mocked(db.session.findUnique).mock.calls[0]?.[0];
+    expect(query?.select?.user).toMatchObject({
+      select: { active: true, role: true, forcePasswordChange: true, collaboratorPolicy: expect.any(Object) },
+    });
+    expect(query?.select).not.toHaveProperty("tokenHash");
+    expect(query?.select?.user).not.toHaveProperty("select.passwordHash");
+    expect(query?.select?.user).not.toHaveProperty("select.notificationPrefs");
   });
 
   it("issues a remembered cookie to the 90-day cap and an unremembered one for the browser session", async () => {

@@ -184,7 +184,7 @@ enum GearTrackerRouteParser {
             return .createReservation
         case "licenses":
             return .licenses
-        case "user", "users":
+        case "user", "users", "staff":
             return remainder.isEmpty ? nil : .user(remainder)
         case "notifications":
             return .inbox
@@ -223,7 +223,8 @@ enum GearTrackerRouteParser {
                 return .search
             }
             return .item(id)
-        case "users":
+        case "users", "staff":
+            // The website renamed /users to /staff; both still open a person.
             return id.isEmpty ? nil : .user(id)
         case "licenses":
             return .licenses

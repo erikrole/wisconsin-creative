@@ -524,11 +524,10 @@ final class CreateBookingViewModel {
 
     var selectedUser: FormUser? { options?.users.first(where: { $0.id == selectedUserId }) }
     var selectedLocation: FormOption? { options?.locations.first(where: { $0.id == selectedLocationId }) }
+    /// Pickup counters the server marks as reservation-capable, in the
+    /// server's order. Matches the web wizard, which filters the same way.
     var primaryPickupLocations: [FormOption] {
-        let preferredNames = ["Camp Randall", "Kohl Center"]
-        return preferredNames.compactMap { preferred in
-            options?.locations.first { $0.name.localizedCaseInsensitiveContains(preferred) }
-        }
+        (options?.locations ?? []).filter(\.isReservationPickupCounter)
     }
     var selectedEvents: [ScheduleEvent] {
         let byId = Dictionary(uniqueKeysWithValues: events.map { ($0.id, $0) })

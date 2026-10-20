@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Dashboard
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-10-16
+- Last Updated: 2026-10-20
 - Status: Active — V3 shipped, reliability + UX polish complete
 - Version: V3
 
@@ -186,6 +186,8 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 7. Add regression tests for permissions, window filtering (7 days), and overdue consistency.
 
 ## Change Log
+
+- 2026-10-20: **Shared counts and bounded browser retention (local, rollout pending).** Home and navigation share one user-scoped dashboard-stats query and join concurrent reads. Navigation still requests fresh custody counts; booking invalidations retain trusted values during failures, and expired sessions preserve the current return path. QueryProvider keeps the same provider tree through persistence restoration, preserving drafts and component state. Inactive transient queries expire after five minutes; persisted dashboard and booking-detail roots keep their existing 24-hour retention. Authenticated session reads select only identity/authorization fields. Chromium fixtures verify one shared read, one provider mount, retained draft text, paused hidden-tab polling, and resumed freshness. Production authentication and deployment remain separate gates in `tasks/performance-web-ios-neon-2026-10-20.md`.
 
 - 2026-10-16: **Recent condition flags can use a dismissed-and-reported index (local).** Dashboard flagged reports and item condition history keep the same filters and order. Migration `0175_scan_checkin_and_bulk_allocation_indexes` adds `checkin_item_reports` indexes on `dismissedAt, lastReportedAt` and `assetId, lastReportedAt`. The migration is not applied, and the dashboard read itself is unchanged.
 - 2026-10-07: **macOS companion flags stale data and gains search and shortcuts (local).** Data not confirmed by a successful read for 15 minutes turns Companion data to Needs attention ("Unconfirmed for 40m"), and "Last synced" reads from that confirmation, not the server's generation time. Presenting the extra re-reads the projection at most once a minute and never beside an in-flight restore. The extra adds projection search with arrow-key row navigation while search has focus, an overdue-only count mode (hidden at zero), booking cards, and a health panel. The menu bar count has no timer (D-047): it updates on refresh, presentation, and confirmed projections. ⌃⌥⌘G opens a Status window when macOS hides the extra. Installed shortcut, real status-item interaction, APNs, and notarization remain separate gates. Review: `tasks/archive/proofs/gearops-menu-bar-improvements-2026-10-07/review.html`.

@@ -95,6 +95,7 @@
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "test:e2e:smoke": "playwright test",
+    "test:performance:web": "node scripts/check-web-performance.mjs",
     "smoke:deploy": "node scripts/deploy-smoke.mjs",
     "smoke:collaborator": "node scripts/collaborator-deploy-smoke.mjs",
     "import:cheqroom": "node scripts/import-cheqroom-items.mjs",

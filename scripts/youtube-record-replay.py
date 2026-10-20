@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 OUT = Path(sys.argv[1])
-TOKEN_FILE = Path.home() / "Code/Certificates/yt-audit-token_readonly.json"
+TOKEN_FILE = Path.home() / "Code Support/Certificates/yt-audit-token_readonly.json"
 API = "https://www.googleapis.com/youtube/v3/"
 CHANNEL = "UCwGvYcF_PDvOvvADzEbrT0A"
 

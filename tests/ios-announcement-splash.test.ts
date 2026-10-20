@@ -50,4 +50,19 @@ describe("iOS announcement splash", () => {
     const harness = source("ios/Wisconsin/App/AnnouncementHarness.swift");
     expect(harness.startsWith("#if DEBUG")).toBe(true);
   });
+
+  it("remembers a dismissal on the phone and retries one the server never received", () => {
+    const sheet = source("ios/Wisconsin/Views/Announcements/AnnouncementSplashSheet.swift");
+    const memory = source("ios/Wisconsin/Core/AnnouncementDismissalMemory.swift");
+    const app = source("ios/Wisconsin/App/WisconsinApp.swift");
+    // Recorded before the request, so a failed POST cannot bring the splash back.
+    expect(sheet).toContain("AnnouncementDismissalMemory.recordDismissed(announcement.id, scope: scope)");
+    expect(sheet).toContain("await retryPendingDismissals(scope: scope)");
+    expect(sheet).toContain("AnnouncementDismissalMemory.isDismissed(next.id, scope: scope)");
+    expect(sheet).toContain("catch APIError.notFound");
+    expect(memory).toContain("static func markPending(");
+    expect(memory).toContain("stored.scope == scope");
+    // Per-account memory leaves with the account.
+    expect(app).toContain("AnnouncementDismissalMemory.clear()");
+  });
 });
