@@ -1,0 +1,7 @@
+# Public app page visual evidence
+
+`review.html` is self-contained. `spec.json` and the repository gt-ui-review builder produce the three matched PNG comparisons; the saved review also includes an appended after-only gallery of the three new product pages, using the original JPEG captures alongside this file.
+
+Each paired image has metadata and a hash-bound evidence receipt. Before is ready production deployment dpl_7DE1cUFhiBGsKByBUfYpTYrYy3xC at d39691003a1830476dde6ab5970c1e5ac93975e2. After references the retained UI source snapshot SHA-256 in the metadata. The original JPEGs and exact source archive are retained outside the repository in the task evidence folder. PNG comparisons are lossless encodings of the decoded JPEG screenshot pixels; product screenshots were never retouched.
+
+Source product screenshot provenance: `public/apps/shots/README.md`. These are public, static-content presentation checks, not authenticated or physical-device acceptance.

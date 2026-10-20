@@ -1,0 +1,86 @@
+{
+  "title": "App pages with screenshots and features",
+  "eyebrow": "Wisconsin Creative \u00b7 Public apps",
+  "lede": "Five product pages show the actual apps, the work they support and whether they are released or in development.",
+  "stats": [
+    {
+      "k": "Product pages",
+      "v": "5",
+      "n": "All five directory listings have a detail page."
+    },
+    {
+      "k": "Product screenshots",
+      "v": "10",
+      "n": "Real captures and published artwork; generated test media is labeled."
+    },
+    {
+      "k": "Focused tests",
+      "v": "39 passed",
+      "n": "Public routes, versions, download guards, image format and dimensions."
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Existing pages, matched comparison",
+      "note": "Same 822 \u00d7 988 viewport, light appearance, public facts and top scroll position. Before is production revision d396910; after is the retained source snapshot. JPEG browser captures were decoded losslessly to PNG for the receipt builder; original JPEGs are retained privately.",
+      "pairs": [
+        {
+          "title": "Fetch",
+          "before": "before-fetch.png",
+          "after": "after-fetch.png",
+          "beforeEvidence": "before-fetch-evidence.json",
+          "afterEvidence": "after-fetch-evidence.json",
+          "beforeCap": "Link-only copy and no rendered screenshots.",
+          "afterCap": "Download and conversion overview with the real 1.5.4 opening window."
+        },
+        {
+          "title": "Offload",
+          "before": "before-offload.png",
+          "after": "after-offload.png",
+          "beforeEvidence": "before-offload-evidence.json",
+          "afterEvidence": "after-offload-evidence.json",
+          "beforeCap": "Older feature copy and no rendered screenshots.",
+          "afterCap": "Public 1.5.3 preview, verified-copy workflow and accurate archive handoff."
+        },
+        {
+          "title": "Apps directory",
+          "before": "before-apps.png",
+          "after": "after-apps.png",
+          "beforeEvidence": "before-apps-evidence.json",
+          "afterEvidence": "after-apps-evidence.json",
+          "beforeCap": "Three apps had no detail-page link.",
+          "afterCap": "Every app has a feature page, with current version fallbacks and supported download links."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Show the app before the details",
+      "was": "Product pages opened with text and missing screenshot slots.",
+      "now": "Each page opens with a real screenshot and gives access to the original image."
+    },
+    {
+      "h": "Keep release status clear",
+      "was": "Unreleased app listings had no useful feature overview.",
+      "now": "Radio Clip and Media Lab explain the development workflow and use explicitly labeled sample-data previews without download buttons."
+    },
+    {
+      "h": "Keep downloads tied to versions",
+      "was": "Offload could reuse an old requirement or download fallback when live metadata changed.",
+      "now": "Known requirements belong to the matching version; missing release assets do not produce a download action."
+    }
+  ],
+  "verification": [
+    "39 focused tests passed on Node 22.23.3.",
+    "Production-shaped application build passed; TypeScript passed after build-generated files settled.",
+    "Repository lint: 0 errors, 43 pre-existing warnings. Documentation maps and git diff checks passed.",
+    "All five pages checked at 1280 \u00d7 720 and 390 \u00d7 844 without page overflow. Fetch workflow and original-image links work from the keyboard.",
+    "Light and dark appearance controls persist across reload. Phone screenshots stack vertically; the focused image fits fully within the viewport."
+  ],
+  "notes": [
+    "The three new pages have after-only evidence; there was no previous product page to compare.",
+    "The preview uses static public content with no authenticated team or archive data. It does not prove native ingest, transcription accuracy or physical-device behavior.",
+    "Production publication and CI are pending at the time this review was prepared."
+  ]
+}

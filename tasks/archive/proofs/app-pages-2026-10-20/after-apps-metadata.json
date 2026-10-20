@@ -1,0 +1,23 @@
+{
+  "sourceRevision": "d39691003a1830476dde6ab5970c1e5ac93975e2",
+  "sourcePatchSha256": "d59d69cf2c237b88b1f8af1d0f780a8defb463f7b4ffb936fb8c9b0e16d5cbc1",
+  "settings": {
+    "device": "Codex in-app browser",
+    "viewport": [
+      822,
+      988
+    ],
+    "fixture": "public app facts 2026-10-20: Fetch 1.5.4, Offload 1.5.3, Wisconsin Creative 1.2",
+    "role": "public signed-out",
+    "route": "/apps",
+    "appearance": "light",
+    "textSize": "default",
+    "locale": "en",
+    "timezone": "not displayed; static product content",
+    "clock": "not displayed; static product content",
+    "scroll": [
+      0,
+      0
+    ]
+  }
+}
