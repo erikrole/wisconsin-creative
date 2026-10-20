@@ -43,5 +43,8 @@ describe("iOS What's new (announcement history)", () => {
     expect(splash).toContain("func openAnnouncementTarget(of announcement: ActiveAnnouncement");
     expect(view).toContain(".refreshable { await vm.load(forceRefresh: true) }");
     expect(view).not.toContain("Timer");
+    // A server without the route yet reads as "nothing yet", not an error.
+    expect(view).toContain("catch APIError.notFound");
+    expect(view).toContain("catch APIError.httpError(statusCode: 405, _)");
   });
 });

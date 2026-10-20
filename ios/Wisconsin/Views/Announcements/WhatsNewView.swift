@@ -25,6 +25,18 @@ final class WhatsNewViewModel {
             isLoading = false
         } catch is CancellationError {
             if generation == loadGeneration { isLoading = false }
+        } catch APIError.notFound {
+            // The website has not shipped the history route yet (a 404, or a
+            // 405 from the sibling PATCH-only route). Nothing to show, not a fault.
+            guard generation == loadGeneration else { return }
+            entries = []
+            error = nil
+            isLoading = false
+        } catch APIError.httpError(statusCode: 405, _) {
+            guard generation == loadGeneration else { return }
+            entries = []
+            error = nil
+            isLoading = false
         } catch {
             guard generation == loadGeneration else { return }
             self.error = (error as? APIError)?.errorDescription ?? error.localizedDescription
