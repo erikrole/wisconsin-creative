@@ -1158,7 +1158,7 @@ final class CreateBookingViewModel {
         if selectedLocationId != value {
             removeKitGear()
             selectedKitId = ""
-            appliedKitId = """"
+            appliedKitId = ""
             didApplySuggestedKit = false
         }
         selectedLocationId = value
@@ -1188,7 +1188,6 @@ final class CreateBookingViewModel {
         for id in kitAddedBulkIds { selectedBulkQuantities.removeValue(forKey: id) }
         kitAddedAssetIds = []
         kitAddedBulkIds = []
-        error = nil
         scheduleConflictCheck()
     }
 
@@ -1409,6 +1408,7 @@ final class CreateBookingViewModel {
                 }
             kitsLoading = false
             if !selectedKitId.isEmpty, !kits.contains(where: { $0.id == selectedKitId }) {
+                removeKitGear()
                 selectedKitId = ""
                 appliedKitId = ""
             } else if selectedKitId.isEmpty,
@@ -1440,8 +1440,10 @@ final class CreateBookingViewModel {
             // Swap out a previous kit's gear; keep anything picked by hand.
             removeKitGear()
             let memberIds = detail.members.map(\.asset.id)
-            kitAddedAssetIds = Set(memberIds)
+            // Gear already picked by hand is not the kit's to take back.
+            kitAddedAssetIds = Set(memberIds).subtracting(selectedAssetIds)
             kitAddedBulkIds = Set(detail.bulkMembers.map(\.bulkSku.id))
+                .filter { (selectedBulkQuantities[$0] ?? 0) == 0 }
             selectedAssetIds.formUnion(memberIds)
             for id in memberIds where !selectedAssetOrder.contains(id) { selectedAssetOrder.append(id) }
             for member in detail.bulkMembers {

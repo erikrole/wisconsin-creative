@@ -585,19 +585,24 @@ export function BookingWizard() {
       bulkSkuId: member.bulkSku.id,
       quantity: member.quantity,
     }));
-    kitAddedAssetIdsRef.current = new Set(snapshots.map((asset) => asset.id));
-    kitAddedBulkIdsRef.current = new Set(kitBulk.map((item) => item.bulkSkuId));
+    // Gear already picked by hand is not the kit's to take back on None.
+    const handAssets = new Set(selectedAssetIds.filter((id) => !prevAssets.has(id)));
+    const handBulk = new Set(selectedBulkItems.filter((item) => !prevBulk.has(item.bulkSkuId)).map((item) => item.bulkSkuId));
+    const kitAssetIds = new Set(snapshots.map((asset) => asset.id));
+    const kitBulkIds = new Set(kitBulk.map((item) => item.bulkSkuId));
+    kitAddedAssetIdsRef.current = new Set([...kitAssetIds].filter((id) => !handAssets.has(id)));
+    kitAddedBulkIdsRef.current = new Set([...kitBulkIds].filter((id) => !handBulk.has(id)));
     // Swap out gear from a previously picked kit; keep anything chosen by hand.
     setSelectedAssetDetails((details) => [
-      ...details.filter((asset) => !prevAssets.has(asset.id) && !kitAddedAssetIdsRef.current.has(asset.id)),
+      ...details.filter((asset) => !prevAssets.has(asset.id) && !kitAssetIds.has(asset.id)),
       ...snapshots,
     ]);
     setSelectedAssetIds((ids) => [
-      ...ids.filter((id) => !prevAssets.has(id) && !kitAddedAssetIdsRef.current.has(id)),
+      ...ids.filter((id) => !prevAssets.has(id) && !kitAssetIds.has(id)),
       ...snapshots.map((asset) => asset.id),
     ]);
     setSelectedBulkItems((items) => [
-      ...items.filter((item) => !prevBulk.has(item.bulkSkuId) && !kitAddedBulkIdsRef.current.has(item.bulkSkuId)),
+      ...items.filter((item) => !prevBulk.has(item.bulkSkuId) && !kitBulkIds.has(item.bulkSkuId)),
       ...kitBulk,
     ]);
     if (snapshots.length === 0 && selectedKitDetail.bulkMembers.length === 0) {
@@ -605,6 +610,8 @@ export function BookingWizard() {
     } else {
       setCreateError("");
     }
+  // Selection is read once when a kit first applies; re-running on every pick would be wrong.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.title, kitId, selectedKitDetail, selectedKitError]);
 
   // Clears the error banner whenever the user edits any step-1 field.
