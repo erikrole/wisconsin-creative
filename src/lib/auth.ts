@@ -220,9 +220,27 @@ async function loadAuthenticatedUser(): Promise<AuthUser> {
   const hashed = await tokenHash(token);
   const session = await db.session.findUnique({
     where: { tokenHash: hashed },
-    include: {
+    // Session validation needs identity and policy, not the full staff profile
+    // (password hash, contact details, clothing sizes, notification prefs, etc.).
+    select: {
+      id: true,
+      expiresAt: true,
+      createdAt: true,
+      persistent: true,
       user: {
-        include: {
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          active: true,
+          affiliation: true,
+          collaboratorProfile: true,
+          collaboratorPolicyId: true,
+          staffingType: true,
+          avatarUrl: true,
+          forcePasswordChange: true,
+          lastActiveAt: true,
           collaboratorPolicy: { select: collaboratorPolicyActorSelect },
         },
       },

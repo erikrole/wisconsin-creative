@@ -2961,7 +2961,7 @@ final class APIClient {
         )
     }
 
-    private func perform<T: Decodable>(
+    private func perform<T: Decodable & Sendable>(
         _ request: URLRequest,
         broadcastsSessionExpiry: Bool = true
     ) async throws -> T {
@@ -2982,11 +2982,21 @@ final class APIClient {
 
         switch http.statusCode {
         case 200...299:
+            let decoded: T
             do {
-                return try decoder.decode(T.self, from: data)
+                decoded = try await APIResponseDecoder.decode(T.self, from: data)
+            } catch is CancellationError {
+                throw CancellationError()
             } catch {
                 throw APIError.decodingError(error)
             }
+            // Decoding now suspends the main actor. An account change during
+            // that work must not publish the previous account's response.
+            try Task.checkCancellation()
+            guard authSessionBoundary.owns(requestBoundary) else {
+                throw APIError.sessionChanged
+            }
+            return decoded
         case 401:
             if broadcastsSessionExpiry {
                 // Authenticated requests broadcast globally so SessionStore can
@@ -3087,9 +3097,24 @@ final class APIClient {
 
 extension APIClient: ReservationDraftPersistence {}
 
+/// A request-local decoder on the concurrent executor. Large list responses
+/// must not occupy the main actor while SwiftUI is rendering or scrolling.
+enum APIResponseDecoder {
+    @concurrent
+    static func decode<T: Decodable & Sendable>(_ type: T.Type, from data: Data) async throws -> T {
+        try Task.checkCancellation()
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        decoder.dateDecodingStrategy = .iso8601
+        let value = try decoder.decode(type, from: data)
+        try Task.checkCancellation()
+        return value
+    }
+}
+
 // MARK: - Private response shapes
 
-private struct DataWrapper<T: Decodable>: Decodable {
+private struct DataWrapper<T: Decodable & Sendable>: Decodable, Sendable {
     let data: T
 }
 
@@ -3128,7 +3153,7 @@ private struct LoginResponse: Decodable {
     let user: CurrentUser
 }
 
-private struct PasskeyOptionsResponse<T: Decodable>: Decodable {
+private struct PasskeyOptionsResponse<T: Decodable & Sendable>: Decodable, Sendable {
     let options: T
 }
 

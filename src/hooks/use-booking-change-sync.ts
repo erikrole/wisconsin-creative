@@ -57,8 +57,11 @@ export function useBookingChangeSync(enabled = true) {
   const userId = useAuthenticatedQueryUserId();
   const pollingState = useOperationalPollingActivity(enabled && Boolean(userId));
   const cursorRef = useRef<string | null>(null);
-  const inFlightRef = useRef(false);
   const [status, setStatus] = useState<BookingChangeSyncStatus>(initialSyncStatus);
+
+  useEffect(() => {
+    cursorRef.current = null;
+  }, [userId]);
 
   useEffect(() => {
     if (!enabled || !userId) {
@@ -88,6 +91,7 @@ export function useBookingChangeSync(enabled = true) {
     }
 
     let stopped = false;
+    let inFlight = false;
     let timeout: ReturnType<typeof setTimeout> | null = null;
     let controller: AbortController | null = null;
 
@@ -121,12 +125,13 @@ export function useBookingChangeSync(enabled = true) {
 
     const poll = async () => {
       if (stopped) return;
-      if (inFlightRef.current) return;
+      if (inFlight) return;
 
-      inFlightRef.current = true;
+      inFlight = true;
       controller = new AbortController();
       try {
         const result = await fetchBookingChanges(cursorRef.current, controller.signal);
+        if (stopped) return;
         cursorRef.current = result.cursor;
         invalidateBookingCaches(result.changedBookingIds);
         const checkedAt = new Date();
@@ -139,7 +144,7 @@ export function useBookingChangeSync(enabled = true) {
           lastCheckedAt: checkedAt,
         });
       } catch (error) {
-        if (!(error instanceof DOMException && error.name === "AbortError")) {
+        if (!stopped && !(error instanceof DOMException && error.name === "AbortError")) {
           // Keep the current cursor and retry on the next scheduled tick.
           setStatus((prev) => ({
             state: "fixing",
@@ -149,7 +154,7 @@ export function useBookingChangeSync(enabled = true) {
           }));
         }
       } finally {
-        inFlightRef.current = false;
+        inFlight = false;
         controller = null;
         schedule(BOOKING_CHANGE_SYNC_INTERVAL_MS);
       }

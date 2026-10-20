@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { BellRingIcon } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -22,16 +22,49 @@ export function ScheduleReleaseNotice({
   onRefresh,
 }: ScheduleReleaseNoticeProps) {
   const [clock, setClock] = useState(() => Date.now());
+  const refreshRef = useRef(onRefresh);
+  refreshRef.current = onRefresh;
   const eventHasEnded = eventEndsAt ? new Date(eventEndsAt).getTime() <= clock : false;
 
   useEffect(() => {
     if (!hasWorkingCopy || eventHasEnded) return;
-    const timer = window.setInterval(() => {
+    let stopped = false;
+    let refreshing = false;
+    let timer: ReturnType<typeof setInterval> | undefined;
+    const refresh = async () => {
+      if (stopped || refreshing || document.hidden || !navigator.onLine) return;
       setClock(Date.now());
-      void onRefresh?.();
-    }, 15_000);
-    return () => window.clearInterval(timer);
-  }, [eventHasEnded, hasWorkingCopy, onRefresh]);
+      refreshing = true;
+      try {
+        await refreshRef.current?.();
+      } catch {
+        // Keep the current notice; the next active tick can retry.
+      } finally {
+        refreshing = false;
+      }
+    };
+    const updateActivity = () => {
+      clearInterval(timer);
+      timer = undefined;
+      if (document.hidden || !navigator.onLine) return;
+      // Refresh on the cadence: some parents replace this notice with a loading
+      // state during a refresh, so an immediate mount read would loop forever.
+      // Active schedule editing keeps its cadence even late at night.
+      setClock(Date.now());
+      timer = setInterval(() => { void refresh(); }, 15_000);
+    };
+    updateActivity();
+    document.addEventListener("visibilitychange", updateActivity);
+    window.addEventListener("online", updateActivity);
+    window.addEventListener("offline", updateActivity);
+    return () => {
+      stopped = true;
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", updateActivity);
+      window.removeEventListener("online", updateActivity);
+      window.removeEventListener("offline", updateActivity);
+    };
+  }, [eventHasEnded, hasWorkingCopy]);
 
   if (!hasWorkingCopy || eventHasEnded) return null;
 

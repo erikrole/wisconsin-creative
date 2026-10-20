@@ -12,7 +12,7 @@ describe("booking real-time sync source contract", () => {
   it("forces the dashboard stats overlay to refetch on mount", () => {
     const hook = source("src/hooks/use-dashboard-data.ts");
 
-    expect(hook).toMatch(/queryKey:\s*statsKey,[\s\S]*?refetchOnMount:\s*"always"/);
+    expect(hook).toMatch(/\.\.\.dashboardStatsQueryOptions\(userId\),[\s\S]*?refetchOnMount:\s*"always"/);
   });
 
   it("forces booking detail cache to verify server truth on mount", () => {

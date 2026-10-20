@@ -6,6 +6,7 @@ import { hasDashboardCountFailure } from "@/app/(app)/dashboard-types";
 import {
   dashboardQueryKey,
   dashboardStatsQueryKey,
+  dashboardStatsQueryOptions,
   fetchDashboardStats,
   getDashboardStatsSyncIssue,
 } from "@/hooks/use-dashboard-data";
@@ -37,9 +38,35 @@ function response(body: DashboardStatsResponse) {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 describe("dashboard fast-count trust boundary", () => {
+  it("shares concurrent reads while allowing navigation to request fresh custody counts", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const fetch = vi.spyOn(globalThis, "fetch").mockImplementation(async () => response({ data: stats(3), partialFailures: [] }));
+    const [home, shell] = await Promise.all([
+      client.fetchQuery(dashboardStatsQueryOptions("user-a")),
+      client.fetchQuery(dashboardStatsQueryOptions("user-a")),
+    ]);
+    expect(home).toEqual(shell);
+    await client.fetchQuery(dashboardStatsQueryOptions("user-a"));
+    expect(fetch).toHaveBeenCalledTimes(1);
+    await client.fetchQuery({ ...dashboardStatsQueryOptions("user-a"), staleTime: 0 });
+    expect(fetch).toHaveBeenCalledTimes(2);
+    await client.invalidateQueries({ queryKey: dashboardStatsQueryKey("user-a") });
+    await client.fetchQuery(dashboardStatsQueryOptions("user-a"));
+    expect(fetch).toHaveBeenCalledTimes(3);
+    client.clear();
+  });
+
+  it("keeps the current route and search when a shared stats read expires", async () => {
+    const location = { pathname: "/schedule", search: "?view=week", href: "" };
+    vi.stubGlobal("window", { location });
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 401 }));
+    await expect(fetchDashboardStats()).rejects.toMatchObject({ name: "AbortError" });
+    expect(location.href).toBe("/login?returnTo=%2Fschedule%3Fview%3Dweek");
+  });
   it("classifies aggregate and future failures as unsafe but shift-only failures as safe", () => {
     expect(hasDashboardCountFailure(["counts"])).toBe(true);
     expect(hasDashboardCountFailure(["futureOperationalCount"])).toBe(true);

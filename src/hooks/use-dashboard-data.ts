@@ -62,7 +62,7 @@ async function fetchDashboard(signal?: AbortSignal): Promise<DashboardData> {
 
 export async function fetchDashboardStats(signal?: AbortSignal): Promise<DashboardStats> {
   const res = await fetch("/api/dashboard/stats", { signal });
-  if (handleAuthRedirect(res, "/")) {
+  if (handleAuthRedirect(res)) {
     throw new DOMException("Auth redirect", "AbortError");
   }
   if (!res.ok) throw new Error("server");
@@ -75,6 +75,24 @@ export async function fetchDashboardStats(signal?: AbortSignal): Promise<Dashboa
     throw new Error("counts");
   }
   return json.data;
+}
+
+export function dashboardStatsQueryOptions(userId: string | null) {
+  return {
+    queryKey: dashboardStatsQueryKey(userId),
+    queryFn: ({ signal }: { signal: AbortSignal }) => fetchDashboardStats(signal),
+    staleTime: 60_000,
+  };
+}
+
+export function useDashboardStats() {
+  const userId = useAuthenticatedQueryUserId();
+  return useQuery({
+    ...dashboardStatsQueryOptions(userId),
+    enabled: Boolean(userId),
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+  });
 }
 
 type UseDashboardDataResult = {
@@ -111,7 +129,6 @@ export function useDashboardData(): UseDashboardDataResult {
   const queryClient = useQueryClient();
   const userId = useAuthenticatedQueryUserId();
   const dashboardKey = useMemo(() => dashboardQueryKey(userId), [userId]);
-  const statsKey = useMemo(() => dashboardStatsQueryKey(userId), [userId]);
 
   // Full payload — heavy queries, 5-minute stale time
   const {
@@ -136,14 +153,7 @@ export function useDashboardData(): UseDashboardDataResult {
     isFetching: isStatsFetching,
     dataUpdatedAt: statsUpdatedAt,
     refetch: refetchStats,
-  } = useQuery<DashboardStats>({
-    queryKey: statsKey,
-    queryFn: ({ signal }) => fetchDashboardStats(signal),
-    enabled: Boolean(userId),
-    staleTime: 60_000,
-    refetchOnMount: "always",
-    refetchOnWindowFocus: true,
-  });
+  } = useDashboardStats();
 
   // Toast on background refresh failure (full payload only)
   const prevFetchingRef = useRef(false);
