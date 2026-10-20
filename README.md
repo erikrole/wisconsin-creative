@@ -11,7 +11,7 @@ through return.
 
 The repository is public for review, but the production application is
 invite-only. The public `/about` route set is a static stakeholder overview;
-operational routes require an authenticated account.
+operational routes require an authenticated account. The public [apps directory](https://wisconsincreative.com/apps) links to screenshot and feature overviews for Wisconsin Creative, Offload, Fetch, Radio Clip and Media Lab; unreleased apps are labeled as development previews.
 
 ## The product
 

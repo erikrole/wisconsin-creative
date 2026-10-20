@@ -19,6 +19,22 @@
   },
   {
     "date": "2026-10-20",
+    "title": "Screenshots and guides for every app",
+    "type": "improvement",
+    "summary": "Every app in the directory now has a page with screenshots, features and workflow steps. Released apps show current download details, while apps in development are clearly labeled.",
+    "details": [
+      "Fetch shows the 1.5.4 opening window, download preview, conversion preview and finished results.",
+      "Offload explains verified copying and the archive handoff using its public 1.5.3 interface.",
+      "Wisconsin Creative uses published App Store images, and Radio Clip and Media Lab show sample-data development previews.",
+      "All five listings link to their detail pages, with full-size screenshots and layouts for desktop and phone."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 539
+  },
+  {
+    "date": "2026-10-20",
     "title": "Email logo fix, emails opt-in",
     "type": "fixes",
     "summary": "The logo in our emails now loads in Outlook, and notification emails are off unless you turn them on.",

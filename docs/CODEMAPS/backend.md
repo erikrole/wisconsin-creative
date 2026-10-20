@@ -125,11 +125,11 @@
 | `src/lib/api-dates.ts` | 38 |
 | `src/lib/api-handler.ts` | 63 |
 | `src/lib/api.ts` | 143 |
-| `src/lib/app-product-page.ts` | 151 |
-| `src/lib/app-product-pages.ts` | 71 |
+| `src/lib/app-product-page.ts` | 183 |
+| `src/lib/app-product-pages.ts` | 170 |
 | `src/lib/app-time.ts` | 257 |
 | `src/lib/apps-live-versions.ts` | 195 |
-| `src/lib/apps-page.ts` | 418 |
+| `src/lib/apps-page.ts` | 419 |
 | `src/lib/asset-attachments.ts` | 166 |
 | `src/lib/asset-image.ts` | 26 |
 | `src/lib/asset-qr-code.ts` | 9 |
@@ -930,6 +930,10 @@
 ### `/apps`
 
 - `/apps`
+
+### `/apps/[slug]`
+
+- `/apps/[slug]`
 
 ### `/apps/fetch`
 
