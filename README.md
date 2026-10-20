@@ -131,3 +131,9 @@ npm run codemap:check
 
 Read [`docs/AI_COLLABORATION.md`](docs/AI_COLLABORATION.md) for the Codex +
 Claude workflow and handoff conventions.
+
+## Local YouTube audit credentials
+
+`scripts/youtube-record-replay.py` reads its existing read-only grant from
+`$HOME/Code Support/Certificates/yt-audit-token_readonly.json`. Credentials and
+the private response recordings remain outside Git.
