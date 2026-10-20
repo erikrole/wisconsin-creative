@@ -20,6 +20,9 @@ describe("iOS entry-point routing", () => {
     expect(router).toContain("case \"reservations\":");
     expect(router).toContain("case \"checkouts\":");
     expect(router).toContain("case \"scan\":");
+    // The website moved people pages to /staff; the AASA claims both paths.
+    expect(router).toContain("case \"users\", \"staff\":");
+    expect(router).toContain("case \"user\", \"users\", \"staff\":");
     expect(router).toContain("case licenses");
     expect(app).toContain("GearTrackerRouteParser.parse(url)");
     expect(app).toContain("appState.apply(route)");

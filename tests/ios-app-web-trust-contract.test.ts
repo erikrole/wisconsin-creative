@@ -93,7 +93,7 @@ describe("native app and web trust contracts", () => {
     const liveBuild = liveActivitiesTarget.match(/CURRENT_PROJECT_VERSION: "([^"]+)"/)?.[1];
     expect(mainVersion).toBe("1.3");
     expect(liveVersion).toBe(mainVersion);
-    expect(mainBuild).toBe("33");
+    expect(mainBuild).toBe("34");
     expect(liveBuild).toBe(mainBuild);
     expect(mainTarget).not.toContain('MARKETING_VERSION: "1.0"');
     expect(mainTarget).not.toContain('CURRENT_PROJECT_VERSION: "27"');

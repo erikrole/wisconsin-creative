@@ -29,6 +29,16 @@ final class GearTrackerRouteTests: XCTestCase {
             GearTrackerRouteParser.parse(URL(string: "https://wisconsincreative.com/items?search=Sony%20Battery")!),
             .itemsSearch("Sony Battery")
         )
+        XCTAssertEqual(
+            GearTrackerRouteParser.parse(URL(string: "https://wisconsincreative.com/staff/usr_1?tab=availability")!),
+            .user("usr_1")
+        )
+        XCTAssertEqual(
+            GearTrackerRouteParser.parse(URL(string: "https://wisconsincreative.com/users/usr_1")!),
+            .user("usr_1")
+        )
+        XCTAssertEqual(GearTrackerRouteParser.parse(URL(string: "wisconsin://staff/usr_1")!), .user("usr_1"))
+        XCTAssertNil(GearTrackerRouteParser.parse(URL(string: "https://wisconsincreative.com/staff")!))
         XCTAssertNil(GearTrackerRouteParser.parse(URL(string: "https://evil.example/events/evt_1")!))
         XCTAssertNil(GearTrackerRouteParser.parse(URL(string: "https://wisconsincreative.com/settings/calendar-sources")!))
     }
