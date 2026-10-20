@@ -1941,7 +1941,7 @@ Values: `AVAILABLE`, `PARTIAL`, `CLAIMED`, `RETIRED`
 
 ## Model `LicenseCode`
 
-Fields: 15
+Fields: 17
 
 - `id           String             @id @default(cuid())`
 - `code         String             @unique`
@@ -1952,6 +1952,8 @@ Fields: 15
 - `claimedById  String?            @map("claimed_by_id")`
 - `claimedAt    DateTime?          @map("claimed_at")`
 - `nagSentAt    DateTime?          @map("nag_sent_at")`
+- `reportedBrokenAt DateTime?      @map("reported_broken_at")`
+- `reportedBrokenById String?      @map("reported_broken_by_id")`
 - `createdAt    DateTime           @default(now()) @map("created_at")`
 - `updatedAt    DateTime           @updatedAt @map("updated_at")`
 - `createdById  String?            @map("created_by_id")`

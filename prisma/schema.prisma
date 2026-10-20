@@ -1882,6 +1882,9 @@ model LicenseCode {
   claimedById  String?            @map("claimed_by_id")
   claimedAt    DateTime?          @map("claimed_at")
   nagSentAt    DateTime?          @map("nag_sent_at")
+  // Set when a holder reports the code won't activate; the code is retired so no one else is handed it.
+  reportedBrokenAt DateTime?      @map("reported_broken_at")
+  reportedBrokenById String?      @map("reported_broken_by_id")
   createdAt    DateTime           @default(now()) @map("created_at")
   updatedAt    DateTime           @updatedAt @map("updated_at")
   createdById  String?            @map("created_by_id")

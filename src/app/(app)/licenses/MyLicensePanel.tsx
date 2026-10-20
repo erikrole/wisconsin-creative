@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Copy, Check, Clock3, LogOut, Monitor } from "lucide-react";
+import { Copy, Check, Clock3, LogOut, Monitor, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { formatRelativeTime } from "@/lib/format";
 import { formatLicenseExpiryDate, isLicenseExpired, licenseDaysUntilExpiry } from "@/lib/license-dates";
 import type { MyLicense } from "./types";
 import { ReleaseDialog } from "./ReleaseDialog";
+import { ReportBrokenDialog } from "./ReportBrokenDialog";
 import { MyLicenseHistoryDialog } from "./MyLicenseHistoryDialog";
 
 type Props = {
@@ -21,6 +22,7 @@ export function MyLicensePanel({ license, isStaff, onReleased }: Props) {
   const [copied, setCopied] = useState(false);
   const [showRelease, setShowRelease] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showReport, setShowReport] = useState(false);
 
   async function handleCopy() {
     try {
@@ -93,6 +95,10 @@ export function MyLicensePanel({ license, isStaff, onReleased }: Props) {
             <Clock3 data-icon="inline-start" />
             History
           </Button>
+          <Button type="button" variant="ghost" className="h-10 text-muted-foreground" onClick={() => setShowReport(true)}>
+            <RefreshCw data-icon="inline-start" />
+            Code not working?
+          </Button>
           <Button
             type="button"
             variant="ghost"
@@ -110,6 +116,12 @@ export function MyLicensePanel({ license, isStaff, onReleased }: Props) {
         onOpenChange={setShowRelease}
         licenseId={license.id}
         onReleased={onReleased}
+      />
+      <ReportBrokenDialog
+        open={showReport}
+        onOpenChange={setShowReport}
+        licenseId={license.id}
+        onSwapped={onReleased}
       />
       <MyLicenseHistoryDialog open={showHistory} onOpenChange={setShowHistory} />
     </>

@@ -1,6 +1,22 @@
 [
   {
     "date": "2026-10-20",
+    "title": "Swap a Photo Mechanic code",
+    "type": "feature",
+    "summary": "If your Photo Mechanic code won't activate, you can now get a different one without asking staff.",
+    "details": [
+      "Tap Code not working? on your license, confirm, and a new open code appears right away.",
+      "The bad code is flagged for staff to check and isn't handed to anyone else.",
+      "If no open codes are left, staff can see the flagged code in the license list and replace it."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 525
+  },
+  {
+    "date": "2026-10-20",
     "title": "Choosing no kit clears kit gear",
     "type": "fixes",
     "summary": "When a reservation auto-picks a kit and you switch it to None, the kit's gear no longer stays selected on the next step.",

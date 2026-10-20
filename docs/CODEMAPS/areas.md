@@ -111,9 +111,9 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 
 - Doc: `docs/AREA_LICENSES.md`
 - Pages: `/licenses`
-- APIs: `/api/licenses/[id]/claim`, `/api/licenses/[id]/history`, `/api/licenses/[id]/occupy`, `/api/licenses/[id]/release`, `/api/licenses/[id]`, `/api/licenses/bulk`, `/api/licenses/export`, `/api/licenses/my/history`, `/api/licenses/my`, `/api/licenses`
+- APIs: `/api/licenses/[id]/claim`, `/api/licenses/[id]/history`, `/api/licenses/[id]/occupy`, `/api/licenses/[id]/release`, `/api/licenses/[id]/report-broken`, `/api/licenses/[id]`, `/api/licenses/bulk`, `/api/licenses/export`, `/api/licenses/my/history`, `/api/licenses/my`
 - Services: `src/lib/services/licenses.ts`
-- Tests: `tests/ios-licenses-native-page.test.ts`, `tests/licenses-export-route.test.ts`, `tests/licenses-history-route.test.ts`, `tests/licenses-release-concurrency.test.ts`, `tests/licenses-ui-privacy-contract.test.ts`
+- Tests: `tests/ios-licenses-native-page.test.ts`, `tests/licenses-export-route.test.ts`, `tests/licenses-history-route.test.ts`, `tests/licenses-release-concurrency.test.ts`, `tests/licenses-report-broken.test.ts`, `tests/licenses-ui-privacy-contract.test.ts`
 
 ## mobile
 

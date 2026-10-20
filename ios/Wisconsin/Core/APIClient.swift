@@ -1517,6 +1517,13 @@ final class APIClient {
         return resp.data
     }
 
+    func reportBrokenLicense(id: String) async throws -> LicenseReportBrokenResult {
+        var req = request(path: "/api/licenses/\(id)/report-broken", method: "POST")
+        req.httpBody = Data()
+        let resp: DataWrapper<LicenseReportBrokenResult> = try await perform(req)
+        return resp.data
+    }
+
     // MARK: - Shared logins
 
     /// Active department logins this person may see. The payload has emails, never passwords.

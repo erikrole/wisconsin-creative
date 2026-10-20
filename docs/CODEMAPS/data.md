@@ -78,7 +78,7 @@
 | `StudentBadge` | 10 | 5 |
 | `BadgeStreak` | 8 | 3 |
 | `BadgeEventReceipt` | 6 | 3 |
-| `LicenseCode` | 15 | 4 |
+| `LicenseCode` | 17 | 4 |
 | `LicenseCodeClaim` | 10 | 3 |
 | `SoftwareCredential` | 10 | 2 |
 | `SportConfig` | 9 | 1 |
