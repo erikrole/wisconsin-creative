@@ -113,3 +113,45 @@ describe("form-options bulk count freshness", () => {
     ]);
   });
 });
+
+describe("form-options reservation pickup flag", () => {
+  it("marks which locations can be a reservation pickup counter", async () => {
+    vi.mocked(db.location.findMany).mockResolvedValue([
+      { id: "loc-cr", name: "Camp Randall" },
+      { id: "loc-kc", name: "Kohl Center" },
+      { id: "loc-fh", name: "Field House" },
+    ] as Awaited<ReturnType<typeof db.location.findMany>>);
+    vi.mocked(db.bulkSku.findMany).mockResolvedValue(bulkSkus([]));
+
+    const res = await getFormOptions(makeGetRequest("/api/form-options"), noParams);
+    const body = await res.json();
+
+    expect(body.data.locations).toEqual([
+      { id: "loc-cr", name: "Camp Randall", reservationPickup: true },
+      { id: "loc-kc", name: "Kohl Center", reservationPickup: true },
+      { id: "loc-fh", name: "Field House", reservationPickup: false },
+    ]);
+  });
+
+  it("flags collaborator locations the same way", async () => {
+    vi.mocked(requireAuth).mockResolvedValue({
+      id: "collab-1",
+      name: "Collab",
+      email: "collab@example.com",
+      role: Role.COLLABORATOR,
+      avatarUrl: null,
+      affiliation: "BIG_TEN_NETWORK",
+      collaboratorProfile: "BTN_STANDARD",
+      capabilities: ["GEAR_CATALOG_VIEW"],
+    } as never);
+    vi.mocked(db.location.findMany).mockResolvedValue([
+      { id: "loc-kc", name: "Kohl Center" },
+      { id: "loc-fh", name: "Field House" },
+    ] as Awaited<ReturnType<typeof db.location.findMany>>);
+
+    const res = await getFormOptions(makeGetRequest("/api/form-options"), noParams);
+    const body = await res.json();
+
+    expect(body.data.locations.map((l: { reservationPickup: boolean }) => l.reservationPickup)).toEqual([true, false]);
+  });
+});

@@ -1,6 +1,6 @@
 "use client";
 
-import { Role, ShiftArea } from "@prisma/client";
+import { Role, ShiftArea } from "@/lib/client-enums";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";

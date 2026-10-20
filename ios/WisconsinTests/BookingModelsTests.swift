@@ -1,7 +1,58 @@
 import XCTest
 @testable import Wisconsin
 
+private struct ResponseDecodeProbe: Decodable, Sendable {
+    let onMainThread: Bool
+    let endsAt: Date
+    let optionalName: String?
+    enum CodingKeys: String, CodingKey { case endsAt, optionalName }
+
+    init(from decoder: Decoder) throws {
+        onMainThread = Thread.isMainThread
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        endsAt = try values.decode(Date.self, forKey: .endsAt)
+        optionalName = try values.decodeIfPresent(String.self, forKey: .optionalName)
+    }
+}
+
 final class BookingModelsTests: XCTestCase {
+    @MainActor
+    func testResponseDecodingLeavesMainThreadAndPreservesWireFormat() async throws {
+        let data = Data(#"{"ends_at":"2026-10-20T18:00:00Z","optional_name":null}"#.utf8)
+        let result = try await APIResponseDecoder.decode(ResponseDecodeProbe.self, from: data)
+        XCTAssertFalse(result.onMainThread)
+        XCTAssertEqual(result.endsAt, ISO8601DateFormatter().date(from: "2026-10-20T18:00:00Z"))
+        XCTAssertNil(result.optionalName)
+    }
+
+    @MainActor
+    func testCancelledResponseDoesNotDecodeOrPublish() async {
+        let task = Task {
+            try await APIResponseDecoder.decode(ResponseDecodeProbe.self, from: Data())
+        }
+        task.cancel()
+        do {
+            _ = try await task.value
+            XCTFail("Cancelled decode must not return a response")
+        } catch is CancellationError {
+            // Cancellation wins even over invalid JSON.
+        } catch {
+            XCTFail("Expected cancellation, received \(error)")
+        }
+    }
+
+    @MainActor
+    func testReturnInsightsOnlyLoadWithinTheLongestDisplayWindow() {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let manager = CheckoutReturnLiveActivityManager.shared
+        XCTAssertFalse(manager.needsReturnInsight(endsAt: now.addingTimeInterval(3601), now: now))
+        XCTAssertFalse(manager.needsReturnInsight(endsAt: now.addingTimeInterval(86400), now: now))
+        XCTAssertTrue(manager.needsReturnInsight(endsAt: now.addingTimeInterval(3600), now: now))
+        XCTAssertTrue(manager.needsReturnInsight(endsAt: now.addingTimeInterval(1800), now: now))
+        XCTAssertTrue(manager.needsReturnInsight(endsAt: now, now: now))
+        XCTAssertTrue(manager.needsReturnInsight(endsAt: now.addingTimeInterval(-3600), now: now))
+    }
+
     func testCheckedOutGearCanBeReservedAfterTheTurnaroundBuffer() {
         let dueBack = Date(timeIntervalSince1970: 1_800_000_000)
         let pickup = dueBack.addingTimeInterval(60 * 60)

@@ -26,26 +26,28 @@ export function useItemChangeSync() {
   const queryClient = useQueryClient();
   const pollingState = useOperationalPollingActivity();
   const cursorRef = useRef<string | null>(null);
-  const inFlightRef = useRef(false);
 
   useEffect(() => {
     // Paused while hidden, idle, offline, or overnight. Becoming active polls immediately.
     if (pollingState !== "active") return;
 
     let cancelled = false;
+    let inFlight = false;
+    const controller = new AbortController();
 
     async function checkForChanges() {
-      if (cancelled || inFlightRef.current) return;
+      if (cancelled || inFlight) return;
 
-      inFlightRef.current = true;
+      inFlight = true;
       try {
         const url = cursorRef.current
           ? `/api/items/changes?since=${encodeURIComponent(cursorRef.current)}`
           : "/api/items/changes";
-        const res = await fetch(url, { cache: "no-store" });
+        const res = await fetch(url, { cache: "no-store", signal: controller.signal });
         if (!res.ok) return;
 
         const json = (await res.json()) as ItemChangeResponse;
+        if (cancelled) return;
         const data = json.data;
         if (!data?.cursor) return;
 
@@ -71,7 +73,7 @@ export function useItemChangeSync() {
       } catch {
         // The next interval will retry. Visible data should remain usable.
       } finally {
-        inFlightRef.current = false;
+        inFlight = false;
       }
     }
 
@@ -80,6 +82,7 @@ export function useItemChangeSync() {
 
     return () => {
       cancelled = true;
+      controller.abort();
       window.clearInterval(interval);
     };
   }, [pollingState, queryClient]);

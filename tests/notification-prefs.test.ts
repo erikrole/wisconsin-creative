@@ -43,6 +43,7 @@ import {
   normalizePrefs,
   resolvePushPresentation,
   shouldDeliverCategory,
+  shouldDeliverEmail,
 } from "@/lib/services/notification-prefs";
 import { NOTIFICATION_CATALOG } from "@/lib/notification-catalog";
 import { PATCH, PUT } from "@/app/api/me/notification-preferences/route";
@@ -112,6 +113,21 @@ describe("normalizePrefs", () => {
     });
     expect(prefs.push.trade).toBe("standard");
     expect(prefs.quietHours).toMatchObject({ enabled: true, start: "22:00", days: [1] });
+  });
+});
+
+describe("email channel", () => {
+  it("is off by default and for a record that never chose it", () => {
+    expect(normalizePrefs(null).channels.email).toBe(false);
+    expect(normalizePrefs({}).channels.email).toBe(false);
+    expect(normalizePrefs({ channels: { push: true } }).channels.email).toBe(false);
+    expect(shouldDeliverEmail(normalizePrefs(null))).toBe(false);
+  });
+
+  it("stays on for someone who turned it on", () => {
+    const prefs = normalizePrefs({ channels: { email: true, push: true } });
+    expect(prefs.channels.email).toBe(true);
+    expect(shouldDeliverEmail(prefs)).toBe(true);
   });
 });
 

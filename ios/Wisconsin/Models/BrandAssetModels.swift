@@ -302,3 +302,28 @@ func brandAssetPreviewImage(at url: URL, maxPixel: CGFloat = 2048) -> UIImage? {
     guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options) else { return nil }
     return UIImage(cgImage: image)
 }
+
+struct BrandAssetPreparedPreview: Sendable {
+    var canPreview = false
+    var image: UIImage?
+    var svgHTML: String?
+
+    @concurrent
+    static func prepare(version: BrandAssetVersion, at url: URL) async throws -> Self {
+        try Task.checkCancellation()
+        guard brandAssetCanPreview(version: version, at: url) else { return Self() }
+        var result = Self(canPreview: true)
+        switch brandAssetPreviewKind(version.contentType) {
+        case .image:
+            result.image = brandAssetPreviewImage(at: url)
+        case .svg:
+            if let data = try? Data(contentsOf: url) {
+                result.svgHTML = brandAssetSVGDocument(from: data)
+            }
+        case .pdf, .other:
+            break
+        }
+        try Task.checkCancellation()
+        return result
+    }
+}

@@ -47,7 +47,7 @@ if [ "$TOTAL_FILES" = "0" ]; then
 fi
 
 violations=0
-report_file=$(mktemp -t ios-drift-check)
+report_file=$(mktemp "${TMPDIR:-/tmp}/ios-drift-check.XXXXXX")
 trap 'rm -f "$report_file"' EXIT
 
 # rule(<id>, <description>, <ERE pattern>, [exclude_path_substr…])

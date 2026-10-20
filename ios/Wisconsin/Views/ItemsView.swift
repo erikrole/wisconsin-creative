@@ -115,9 +115,6 @@ final class ItemsViewModel {
             offset = requestOffset + resultRows.count
             hasMore = !resultRows.isEmpty && offset < result.total
             pageError = nil
-            if reset && offset == resultRows.count && searchText.isEmpty && selectedStatuses.isEmpty && !favoritesOnly {
-                GearStore.shared.seedAssets(result.data)
-            }
         } catch is CancellationError {
             // Superseded by a newer load.
         } catch {

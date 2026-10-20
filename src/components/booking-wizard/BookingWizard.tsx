@@ -332,6 +332,9 @@ export function BookingWizard() {
     open: true,
   });
   const appliedKitIdRef = useRef<string>("");
+  // Gear the kit added, so choosing None (or another kit) removes only that gear.
+  const kitAddedAssetIdsRef = useRef<Set<string>>(new Set());
+  const kitAddedBulkIdsRef = useRef<Set<string>>(new Set());
   const reusePreserveKitRef = useRef(false);
   const lastLocationIdRef = useRef(form.locationId);
   const lastRequesterRef = useRef(requesterUserId);
@@ -536,7 +539,19 @@ export function BookingWizard() {
 
   useEffect(() => {
     if (!kitId) {
-      if (!reusePreserveKitRef.current) appliedKitIdRef.current = "";
+      if (!reusePreserveKitRef.current) {
+        const addedAssets = kitAddedAssetIdsRef.current;
+        const addedBulk = kitAddedBulkIdsRef.current;
+        if (addedAssets.size > 0 || addedBulk.size > 0) {
+          setSelectedAssetIds((ids) => ids.filter((id) => !addedAssets.has(id)));
+          setSelectedAssetDetails((details) => details.filter((asset) => !addedAssets.has(asset.id)));
+          setSelectedBulkItems((items) => items.filter((item) => !addedBulk.has(item.bulkSkuId)));
+          kitAddedAssetIdsRef.current = new Set();
+          kitAddedBulkIdsRef.current = new Set();
+          setCreateError("");
+        }
+        appliedKitIdRef.current = "";
+      }
       return;
     }
     if (selectedKitError) {
@@ -564,17 +579,39 @@ export function BookingWizard() {
       categoryName: member.asset.category?.name ?? null,
       location: selectedKitDetail.location,
     }));
-    setSelectedAssetIds(snapshots.map((asset) => asset.id));
-    setSelectedAssetDetails(snapshots);
-    setSelectedBulkItems(selectedKitDetail.bulkMembers.map((member) => ({
+    const prevAssets = kitAddedAssetIdsRef.current;
+    const prevBulk = kitAddedBulkIdsRef.current;
+    const kitBulk = selectedKitDetail.bulkMembers.map((member) => ({
       bulkSkuId: member.bulkSku.id,
       quantity: member.quantity,
-    })));
+    }));
+    // Gear already picked by hand is not the kit's to take back on None.
+    const handAssets = new Set(selectedAssetIds.filter((id) => !prevAssets.has(id)));
+    const handBulk = new Set(selectedBulkItems.filter((item) => !prevBulk.has(item.bulkSkuId)).map((item) => item.bulkSkuId));
+    const kitAssetIds = new Set(snapshots.map((asset) => asset.id));
+    const kitBulkIds = new Set(kitBulk.map((item) => item.bulkSkuId));
+    kitAddedAssetIdsRef.current = new Set([...kitAssetIds].filter((id) => !handAssets.has(id)));
+    kitAddedBulkIdsRef.current = new Set([...kitBulkIds].filter((id) => !handBulk.has(id)));
+    // Swap out gear from a previously picked kit; keep anything chosen by hand.
+    setSelectedAssetDetails((details) => [
+      ...details.filter((asset) => !prevAssets.has(asset.id) && !kitAssetIds.has(asset.id)),
+      ...snapshots,
+    ]);
+    setSelectedAssetIds((ids) => [
+      ...ids.filter((id) => !prevAssets.has(id) && !kitAssetIds.has(id)),
+      ...snapshots.map((asset) => asset.id),
+    ]);
+    setSelectedBulkItems((items) => [
+      ...items.filter((item) => !prevBulk.has(item.bulkSkuId) && !kitBulkIds.has(item.bulkSkuId)),
+      ...kitBulk,
+    ]);
     if (snapshots.length === 0 && selectedKitDetail.bulkMembers.length === 0) {
       setCreateError(`${selectedKitDetail.name} has no cameras, lenses, or batteries yet. Add gear on the kit page first.`);
     } else {
       setCreateError("");
     }
+  // Intentional: the selection is read once when a kit first applies; re-running on every pick would reset hand-picked gear.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.title, kitId, selectedKitDetail, selectedKitError]);
 
   // Clears the error banner whenever the user edits any step-1 field.

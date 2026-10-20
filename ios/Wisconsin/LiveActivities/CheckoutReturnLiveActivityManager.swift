@@ -116,11 +116,19 @@ final class CheckoutReturnLiveActivityManager {
         }
     }
 
+    func needsReturnInsight(endsAt: Date, now: Date) -> Bool {
+        endsAt <= now.addingTimeInterval(maxNextNeedLeadTime)
+    }
+
     private func buildCandidates(from bookings: [Booking]) async -> [CheckoutReturnCandidate] {
         var output: [CheckoutReturnCandidate] = []
         let now = Date()
 
         for booking in bookings {
+            guard !Task.isCancelled else { return [] }
+            // Even the longest smart lead cannot display this checkout yet.
+            // Avoid an availability query for gear due hours or days from now.
+            guard needsReturnInsight(endsAt: booking.endsAt, now: now) else { continue }
             let insight = await APIClient.shared.checkoutReturnInsight(for: booking)
             let nextNeedAt = insight.nextNeedAt
             let nextNeedGap = nextNeedAt.map { $0.timeIntervalSince(booking.endsAt) }

@@ -4,7 +4,7 @@
 - Area: Public Showroom
 - Owner: Wisconsin Athletics Creative Product
 - Created: 2026-07-01
-- Last Updated: 2026-10-19
+- Last Updated: 2026-10-20
 - Status: Active
 - Version: V1
 
@@ -26,7 +26,7 @@ Make `/about` a shareable public overview for Wisconsin Creative. It should expl
 - `/about/security` - trust model, access control, auditability, and reliability controls.
 - `/about/field-work` - native iOS, kiosk, scanner, and game-day handoffs.
 - `/releases` - public release notes. Releases live in `src/lib/releases.json` (newest first); `src/lib/releases.ts` owns the types and the public-safe term list. The page opens on the last eight weeks with a "Show earlier releases" control, platform and type filters, a sticky month header, and weekly fix roundups collapsed into one expandable line; deep links to older releases expand the history. `/releases/feed.xml` is a static RSS feed of the latest 50 releases. Every PR to `main` must add or update an entry (AGENTS.md); the required CI `validate` job runs `scripts/check-release-note.mjs` and fails the PR unless a changed entry carries the PR's number, the PR is labeled `no-release-note` (re-run CI after labeling), or Dependabot opened it.
-- `/apps` - public directory of the team's apps and browser tools, rendered by `src/app/apps/route.ts` at `wisconsincreative.com/apps`. It opens without signing in. The page is `noindex`. Wisconsin Creative (iPhone and iPad), Offload (macOS beta), Fetch, Radio Clip (coming soon), and Media Lab (coming late 2026) are listed above Golden Hour, Timelapse, Board Sizes, and QR Studio. Versions and downloads that can be checked come from the App Store lookup and the public release repos, and the values written in `src/lib/apps-page.ts` are the fallback. Icons live in `public/apps/icons/`. The Wisconsin Creative card uses the App Store home screenshot. The Board Sizes card links to `/board-sizes`. Missing screenshots, notarization, and unpublished versions stay as source TODOs instead of guessed facts.
+- `/apps` - public directory of the team's apps and browser tools, rendered by `src/app/apps/route.ts` at `wisconsincreative.com/apps`. It opens without signing in. The page is `noindex`. Wisconsin Creative (iPhone and iPad), Offload (macOS beta), Fetch, Radio Clip (coming soon), and Media Lab (coming late 2026) are listed above Golden Hour, Timelapse, Board Sizes, and QR Studio. Versions and downloads that can be checked come from the App Store lookup and the public release repos, and the values written in `src/lib/apps-page.ts` are the fallback. Icons live in `public/apps/icons/`. Each app links to its own product page under `/apps/<slug>`, with public-safe screenshots, features, workflow steps and availability. Wisconsin Creative uses published App Store images; Fetch shows 1.5.4, Offload shows 1.5.3, and Radio Clip and Media Lab use explicitly labeled development previews with generated data. Product images open at full resolution. A newer release with unknown requirements omits the old requirement, and release-bound downloads are hidden when no matching live asset is available. The Board Sizes card links to `/board-sizes`. Missing screenshots, notarization, and unpublished versions stay as source TODOs instead of guessed facts.
 - `/privacy` - public privacy policy for App Store Connect and stakeholder review.
 - `/qrcode` - QR Studio, a static client-only QR code generator. Redirects to `/qrcode/index.html` in `public/qrcode/`, which is generated from the QR Studio source by its `scripts/export-web.js`; do not edit the copy here.
 - `/tools` - redirects to `/apps`, which now lists the tools (the old standalone hub was removed).
@@ -34,6 +34,8 @@ Make `/about` a shareable public overview for Wisconsin Creative. It should expl
 - `/golden-hour` - Golden Hour: golden and blue hour for UW venues and every Big Ten road venue, in the venue's own time zone, plus opt-in GPS. `public/golden-hour/` is the canonical source (sun and time-zone maths in `core.js`, page wiring in `app.js`).
 - `/ots` - redirects to `https://ots.wisconsincreative.com`, the World Series out-of-town scoreboard. It now lives in its own repo (`erikrole/ots`) as a Cloudflare Worker with a password-gated controller; nothing for it remains in this app.
 - `/timelapse` - Timelapse: S&Q, in-camera Time-lapse and interval-stills plans for the FX3, A1, A1 II, A7 V and A9 III, with limits from Sony's Help Guides. `public/timelapse/` is the canonical source (`core.js` holds the maths and camera data).
+
+- `/apps/fetch`, `/apps/offload`, `/apps/wisconsin-creative`, `/apps/radio-clip`, `/apps/media-lab` - public noindex product overviews. Only released apps have download actions; invitation-only access remains explicit for Wisconsin Creative. Screenshot provenance is recorded in `public/apps/shots/README.md`.
 
 ## Acceptance Criteria
 - [x] AC-1: `/about` and all public subpages render without authentication.
@@ -47,6 +49,8 @@ Make `/about` a shareable public overview for Wisconsin Creative. It should expl
 - [ ] AC-9: `/releases` renders static, public-safe release notes grouped by date (no people's names, emails, or security specifics), newest first with stable date anchors. Pending deploy proof.
 - [ ] AC-10: `/golden-hour`, `/timelapse` and `/board-sizes` open without authentication through the same dotted-path redirect pattern, each under its own `default-src 'none'` / `connect-src 'none'` policy with content-hashed scripts (`node scripts/hash-static-tools.mjs`). Only `/golden-hour/*` receives `Permissions-Policy: geolocation=(self)`; every other route keeps `geolocation=()`. Shared Golden Hour links carry a venue id or typed coordinates and a date, never a GPS fix. Pending deploy proof.
 - [ ] AC-11: `/board-sizes` copies a board's recorded size, aspect ratio, and safe area, and does not invent a missing size. Pending deploy proof.
+
+- [x] AC-12: All five app listings have static-content feature and screenshot pages with no authenticated data reads, development status separated from release downloads, and original images reachable by keyboard. Local and production checks passed on October 20, 2026 (PR #539, commit `5d8467d3`, Vercel `dpl_6qgLguCVCB5RrnP75LXCodi3cMyg` READY). Anonymous pages, all ten image assets, matching release downloads, appearance persistence and keyboard navigation were verified. Evidence: `tasks/archive/completed-2026-10-20/app-pages-refresh-plan.md`.
 
 ## Verification
 - `npx vitest run tests/public-showroom-content.test.ts tests/public-releases-content.test.ts tests/qrcode-static-tool.test.ts tests/static-tools.test.ts tests/apps-static-page.test.ts tests/board-sizes.test.ts`

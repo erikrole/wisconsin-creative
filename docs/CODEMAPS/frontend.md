@@ -131,9 +131,9 @@
 | `src/components/TradeBoard.tsx` | 1853 |
 | `src/components/resources/BrandAssetLibrary.tsx` | 1827 |
 | `src/components/ActivityTimeline.tsx` | 1387 |
-| `src/components/booking-wizard/BookingWizard.tsx` | 1136 |
-| `src/components/AppShell.tsx` | 1035 |
+| `src/components/booking-wizard/BookingWizard.tsx` | 1173 |
 | `src/components/onboarding/OnboardingDialog.tsx` | 996 |
+| `src/components/AppShell.tsx` | 991 |
 | `src/components/schedule/AutoAssignDialog.tsx` | 966 |
 | `src/components/profile-completion/ProfileCompletionWizard.tsx` | 935 |
 | `src/components/BookingListPage.tsx` | 921 |
@@ -165,17 +165,17 @@
 |---|---:|
 | `src/hooks/booking-action-copy.ts` | 22 |
 | `src/hooks/use-assignment-grid.ts` | 226 |
-| `src/hooks/use-booking-change-sync.ts` | 169 |
+| `src/hooks/use-booking-change-sync.ts` | 174 |
 | `src/hooks/use-copy-feedback.ts` | 62 |
 | `src/hooks/use-current-user.ts` | 53 |
-| `src/hooks/use-dashboard-data.ts` | 234 |
+| `src/hooks/use-dashboard-data.ts` | 244 |
 | `src/hooks/use-dashboard-filters.ts` | 146 |
 | `src/hooks/use-fetch.ts` | 113 |
 | `src/hooks/use-form-options.ts` | 32 |
 | `src/hooks/use-form-submit.ts` | 188 |
 | `src/hooks/use-gear-picks.ts` | 47 |
 | `src/hooks/use-item-cache-invalidation.ts` | 18 |
-| `src/hooks/use-item-change-sync.ts` | 87 |
+| `src/hooks/use-item-change-sync.ts` | 90 |
 | `src/hooks/use-last-audit.ts` | 77 |
 | `src/hooks/use-mobile.ts` | 20 |
 | `src/hooks/use-operational-polling-activity.ts` | 155 |

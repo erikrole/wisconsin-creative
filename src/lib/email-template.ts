@@ -109,7 +109,7 @@ function buttonHtml(action: NonNullable<EmailContent["action"]>): string {
  * to the system sans elsewhere.
  */
 export function renderEmail(content: EmailContent): RenderedEmail {
-  const logoUrl = `${env.appUrl}/icon-192.png`;
+  const logoUrl = `${env.appUrl}/email/logo.png`;
   const settingsUrl = `${env.appUrl}/settings/notifications`;
   const eyebrowColor = content.urgent ? EMAIL_THEME.danger : EMAIL_THEME.muted;
 

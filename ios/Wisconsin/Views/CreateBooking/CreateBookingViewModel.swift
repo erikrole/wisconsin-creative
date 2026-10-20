@@ -196,6 +196,9 @@ final class CreateBookingViewModel {
     var kitsLoading = false
     var kitsLoadError: String?
     private var appliedKitId = ""
+    /// Gear the kit added, so choosing None removes only that gear.
+    private var kitAddedAssetIds: Set<String> = []
+    private var kitAddedBulkIds: Set<String> = []
     private var didApplySuggestedKit = false
     var startsAt = nextCleanHour(addingHours: 0)
     var endsAt = nextCleanHour(addingHours: 1)
@@ -521,11 +524,10 @@ final class CreateBookingViewModel {
 
     var selectedUser: FormUser? { options?.users.first(where: { $0.id == selectedUserId }) }
     var selectedLocation: FormOption? { options?.locations.first(where: { $0.id == selectedLocationId }) }
+    /// Pickup counters the server marks as reservation-capable, in the
+    /// server's order. Matches the web wizard, which filters the same way.
     var primaryPickupLocations: [FormOption] {
-        let preferredNames = ["Camp Randall", "Kohl Center"]
-        return preferredNames.compactMap { preferred in
-            options?.locations.first { $0.name.localizedCaseInsensitiveContains(preferred) }
-        }
+        (options?.locations ?? []).filter(\.isReservationPickupCounter)
     }
     var selectedEvents: [ScheduleEvent] {
         let byId = Dictionary(uniqueKeysWithValues: events.map { ($0.id, $0) })
@@ -1153,6 +1155,7 @@ final class CreateBookingViewModel {
         submissionConflict = nil
         userEditedLocation = true
         if selectedLocationId != value {
+            removeKitGear()
             selectedKitId = ""
             appliedKitId = ""
             didApplySuggestedKit = false
@@ -1166,12 +1169,25 @@ final class CreateBookingViewModel {
     func selectKit(_ id: String) {
         selectedKitId = id
         if id.isEmpty {
+            removeKitGear()
             appliedKitId = ""
             didApplySuggestedKit = true
             return
         }
         didApplySuggestedKit = true
         Task { await applySelectedKit() }
+    }
+
+    /// Drops the gear a kit added and keeps anything picked by hand.
+    private func removeKitGear() {
+        guard !kitAddedAssetIds.isEmpty || !kitAddedBulkIds.isEmpty else { return }
+        selectedAssetIds.subtract(kitAddedAssetIds)
+        selectedAssetOrder.removeAll { kitAddedAssetIds.contains($0) }
+        selectedAssetSnapshots = selectedAssetSnapshots.filter { !kitAddedAssetIds.contains($0.key) }
+        for id in kitAddedBulkIds { selectedBulkQuantities.removeValue(forKey: id) }
+        kitAddedAssetIds = []
+        kitAddedBulkIds = []
+        scheduleConflictCheck()
     }
 
     func kitPickerLabel(_ kit: BookingKitOption) -> String {
@@ -1391,6 +1407,7 @@ final class CreateBookingViewModel {
                 }
             kitsLoading = false
             if !selectedKitId.isEmpty, !kits.contains(where: { $0.id == selectedKitId }) {
+                removeKitGear()
                 selectedKitId = ""
                 appliedKitId = ""
             } else if selectedKitId.isEmpty,
@@ -1419,13 +1436,18 @@ final class CreateBookingViewModel {
             let detail = try await APIClient.shared.reservationKitDetail(id: kitId)
             guard selectedKitId == kitId else { return }
             appliedKitId = kitId
-            selectedAssetIds = Set(detail.members.map(\.asset.id))
-            selectedAssetOrder = detail.members.map(\.asset.id)
-            selectedAssetSnapshots = selectedAssetSnapshots.filter { selectedAssetIds.contains($0.key) }
-            selectedBulkQuantities = Dictionary(
-                detail.bulkMembers.map { ($0.bulkSku.id, $0.quantity) },
-                uniquingKeysWith: { _, later in later }
-            )
+            // Swap out a previous kit's gear; keep anything picked by hand.
+            removeKitGear()
+            let memberIds = detail.members.map(\.asset.id)
+            // Gear already picked by hand is not the kit's to take back.
+            kitAddedAssetIds = Set(memberIds).subtracting(selectedAssetIds)
+            kitAddedBulkIds = Set(detail.bulkMembers.map(\.bulkSku.id))
+                .filter { (selectedBulkQuantities[$0] ?? 0) == 0 }
+            selectedAssetIds.formUnion(memberIds)
+            for id in memberIds where !selectedAssetOrder.contains(id) { selectedAssetOrder.append(id) }
+            for member in detail.bulkMembers {
+                selectedBulkQuantities[member.bulkSku.id] = member.quantity
+            }
             if detail.members.isEmpty && detail.bulkMembers.isEmpty {
                 error = "\(detail.name) has no cameras, lenses, or batteries yet. Add gear on the kit page first."
             }

@@ -17,7 +17,7 @@ describe("renderEmail", () => {
       action: { label: "View your schedule", url: "https://creative.example.test/schedule" },
       manageNotifications: true,
     });
-    expect(html).toContain('src="https://creative.example.test/icon-192.png"');
+    expect(html).toContain('src="https://creative.example.test/email/logo.png"');
     expect(html).toContain("Wisconsin Creative");
     expect(html).toContain("Preview line");
     expect(html).toContain('name="color-scheme" content="light"');

@@ -44,17 +44,17 @@ npm run ios:xcode:verify
 
 ## Performance regression tests
 
-The performance harness is DEBUG-only and is not present in TestFlight or App Store Release builds. Run its dedicated scheme on the default stable simulator runtime:
+The performance harness is DEBUG-only and is not present in TestFlight or App Store Release builds. Use the repository's default iPhone 18 Pro Max simulator and verify its available runtime before running:
 
 ```bash
 xcodebuild \
   -project ios/Wisconsin.xcodeproj \
   -scheme WisconsinPerformance \
-  -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=26.5' \
+  -destination 'platform=iOS Simulator,name=iPhone 18 Pro Max' \
   test CODE_SIGNING_ALLOWED=NO
 ```
 
-Do not substitute an iOS beta runtime when capturing or committing baselines.
+Only capture or commit comparison baselines on a stable runtime. If the required device only has a beta runtime, label any run as a smoke check and leave stable performance and physical-device energy acceptance pending.
 
 ## TestFlight
 

@@ -228,7 +228,7 @@ export default function NotificationsSettingsPage() {
             <SettingsPrefRow
               icon={<Mail className="size-4" />}
               label="Email"
-              description="Send notifications to your registered email address."
+              description="Off unless you turn it on. Sign-in invites and password resets are always emailed."
               checked={prefs.channels.email}
               onChange={(v) => setChannel("email", v)}
               disabled={saving || isPaused}

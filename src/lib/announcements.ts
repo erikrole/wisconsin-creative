@@ -112,6 +112,13 @@ export type ActiveAnnouncement = {
   remaining: number;
 };
 
+/** One row of `GET /api/announcements/history`: the splash payload plus seen state. */
+export type AnnouncementHistoryEntry = Omit<ActiveAnnouncement, "remaining"> & {
+  endsAt: string | null;
+  /** When this person dismissed it, or null while it is still unseen. */
+  seenAt: string | null;
+};
+
 export type AnnouncementDraftFields = {
   title: string;
   body: string;

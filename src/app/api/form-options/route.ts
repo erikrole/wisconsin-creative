@@ -5,6 +5,19 @@ import { visibleUserWhere } from "@/lib/user-visibility";
 import { buildActiveBulkUnitAllocationMap } from "@/lib/bulk-unit-status";
 import { summarizeItemFamilyState } from "@/lib/item-family-state";
 import { hasCollaboratorCapability } from "@/lib/collaborator-access";
+import { isSupportedReservationPickupLocationName } from "@/lib/reservation-pickup-locations";
+
+/**
+ * Locations double as event venues, inventory homes, and kiosk sites, so
+ * clients need a server-owned flag to know which ones can be a reservation
+ * pickup counter. Native apps hard-coded the names before this existed.
+ */
+function withReservationPickupFlag<T extends { name: string }>(locations: readonly T[]) {
+  return locations.map((location) => ({
+    ...location,
+    reservationPickup: isSupportedReservationPickupLocationName(location.name),
+  }));
+}
 
 export const GET = withAuth(async (_req, { user }) => {
   if (user.role === "COLLABORATOR") {
@@ -16,7 +29,7 @@ export const GET = withAuth(async (_req, { user }) => {
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     });
-    return ok({ data: { locations, departments: [], users: [], bulkSkus: [] } });
+    return ok({ data: { locations: withReservationPickupFlag(locations), departments: [], users: [], bulkSkus: [] } });
   }
 
   const [locations, departments, users, bulkSkus] = await Promise.all([
@@ -72,5 +85,5 @@ export const GET = withAuth(async (_req, { user }) => {
     };
   });
 
-  return ok({ data: { locations, departments, users, bulkSkus: bulkSkusFlat } });
+  return ok({ data: { locations: withReservationPickupFlag(locations), departments, users, bulkSkus: bulkSkusFlat } });
 });

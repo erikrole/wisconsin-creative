@@ -1,4 +1,4 @@
-import { ShiftArea } from "@prisma/client";
+import { ShiftArea } from "@/lib/client-enums";
 import { z } from "zod";
 import type { CandidateRecommendation, CandidateScoreSignal } from "@/lib/candidate-scoring-types";
 import { ASSIGNMENT_PERIOD_VALUES } from "@/lib/schedule-assignment-window";
