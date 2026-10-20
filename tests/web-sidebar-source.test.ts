@@ -56,8 +56,8 @@ describe("web sidebar source contract", () => {
     const appShell = source("src/components/AppShell.tsx");
     const sidebar = source("src/components/Sidebar.tsx");
 
-    expect(appShell).toContain("myDueTodayCount?: unknown");
-    expect(appShell).toContain("setDueTodayBadgeCount(dueToday)");
+    expect(appShell).toContain("useDashboardStats()");
+    expect(appShell).toContain("dashboardStats?.myDueTodayCount ?? 0");
     expect(sidebar).toContain("dueTodayBadgeCount?: number");
     expect(sidebar.indexOf("overdueBadgeCount > 0")).toBeLessThan(
       sidebar.indexOf("dueTodayBadgeCount > 0"),
@@ -69,9 +69,10 @@ describe("web sidebar source contract", () => {
   it("does not replace ambient counts with partial dashboard fallbacks", () => {
     const appShell = source("src/components/AppShell.tsx");
 
-    expect(appShell).toContain("hasDashboardCountFailure");
-    expect(appShell).toContain("dashboardBadgeCountsAreTrusted");
-    expect(appShell).toContain("partialFailures?: unknown[]");
+    expect(appShell).toContain("useDashboardStats()");
+    expect(source("src/hooks/use-dashboard-data.ts")).toContain("hasDashboardCountFailure(partialFailures)");
+    expect(appShell).not.toContain('fetch("/api/dashboard/stats"');
+    expect(appShell).toMatch(/fetchQuery\(\{\s*\.\.\.dashboardStatsQueryOptions\(badgeUserId\),[\s\S]*?staleTime: 0,/);
   });
 
   it("does not wire sidebar keyboard shortcuts that conflict with browser shortcuts", () => {

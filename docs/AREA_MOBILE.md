@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Mobile Operations
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-10-18
+- Last Updated: 2026-10-20
 - Status: Active
 - Version: V1
 
@@ -145,6 +145,8 @@ Navigation shell versioned roadmap: `tasks/sidebar-roadmap.md` (revised 2026-03-
 - **V3 (later)**: Bottom nav badge counts via live `/api/nav-counts` polling, game-day/shift context cards
 
 ## Change Log
+
+- 2026-10-20: **Less main-actor and background work (local, rollout pending).** Successful API response decoding and Brand asset image/SVG preparation move to concurrent workers with cancellation and account/request ownership checks before publication. Foreground refresh has one cancellable owner; App Intents reuse the validated identity. Checkout Live Activities skip availability reads until a checkout is within the existing maximum 60-minute lead window. Removed unused SwiftData seeding and launch container initialization after confirming no active read consumers; ScheduleWindowCache, drafts, widget snapshots, and legacy sign-out cleanup remain. Schedule saves its fetched window once. Native unit tests cover off-main decoding, cancellation, date/key/null compatibility, preview limits, and the Live Activity cutoff. Simulator tests and generic-device compilation pass; stable-runtime comparison and physical-device battery/memory acceptance remain open in `tasks/performance-web-ios-neon-2026-10-20.md`.
 
 - 2026-10-18: **Native booking activity (local, read-only).** A reservation or checkout on iPhone opens Activity for students, staff, and admins. It reads `auditLogs` on `GET /api/bookings/:id`, the same history as the website, filtered to all activity, booking changes, or equipment changes. The newest 50 entries are shown. A failed refresh keeps the list. Collaborators do not see Activity. Extend stays the booking's main action. Source contracts pass. An Xcode build on a Mac is still required.
 - 2026-10-18: **Native profile hours (local, read-only).** Your profile shows this week and this month from `GET /api/shifts/my-hours`, the same Monday–Sunday and calendar-month totals the website shows, counted in Central time. Students, staff, and admins see the card on Profile and when they open their own person screen. Collaborators do not. Try again appears when the first load fails. A later failure keeps the totals already on screen. Source contracts pass. An Xcode build on a Mac is still required.

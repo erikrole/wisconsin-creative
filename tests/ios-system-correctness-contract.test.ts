@@ -135,9 +135,7 @@ describe("iOS system correctness request ownership", () => {
     expect(performLoad.indexOf(publishGuard)).toBeLessThan(
       performLoad.indexOf("replace(window, with: (fetchedEvents, fetchedShifts))"),
     );
-    expect(performLoad.indexOf(publishGuard)).toBeLessThan(
-      performLoad.indexOf("GearStore.shared.seedScheduleEvents(fetchedEvents)"),
-    );
+    expect(performLoad).not.toContain("GearStore.shared.seedScheduleEvents");
 
     expect(schedule).toContain(".onDisappear { vm.cancelLoad() }");
     expect(schedule).toMatch(

@@ -31,7 +31,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useFetch } from "@/hooks/use-fetch";
-import { ResourceType, Role, ShiftArea } from "@prisma/client";
+import { ResourceType, Role, ShiftArea } from "@/lib/client-enums";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import {
   defaultCategoryForResourceType,

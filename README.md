@@ -91,6 +91,15 @@ identity. Public/deployment checks use `npm run smoke:deploy`. The complete
 closeout matrix lives in
 [`docs/RELEASE_VERIFICATION.md`](docs/RELEASE_VERIFICATION.md).
 
+For cache identity, shared dashboard reads, hidden-tab polling, and schedule
+refresh regressions, run `npm run test:performance:web`. It uses the real
+components in headless Chrome with local fixture APIs and writes results under
+`.tmp/performance/`; it does not verify production authentication. Set
+`PERFORMANCE_BROWSER_CHANNEL` to select another installed Chromium channel.
+Native performance tests and runtime requirements are in [ios/README.md](ios/README.md).
+The current [web, iOS, and Neon performance ledger](tasks/performance-web-ios-neon-2026-10-20.md)
+separates local evidence from rollout and physical-device acceptance.
+
 ## Deployment and releases
 
 Vercel deploys `main` to production. The review site refreshes manually. Managed
@@ -131,3 +140,9 @@ npm run codemap:check
 
 Read [`docs/AI_COLLABORATION.md`](docs/AI_COLLABORATION.md) for the Codex +
 Claude workflow and handoff conventions.
+
+## Local YouTube audit credentials
+
+`scripts/youtube-record-replay.py` reads its existing read-only grant from
+`$HOME/Code Support/Certificates/yt-audit-token_readonly.json`. Credentials and
+the private response recordings remain outside Git.

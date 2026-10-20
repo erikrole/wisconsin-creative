@@ -27,22 +27,23 @@ private func mapIntentError(_ error: Error) -> Error {
 /// action verifies the signed-in role before it creates an app handoff. This
 /// turns a stale or role-inapplicable shortcut into a spoken, actionable result
 /// instead of leaving a pending destination that the app cannot open.
-func requireIntentCapability(_ capability: String) async throws {
+@discardableResult
+func requireIntentCapability(_ capability: String) async throws -> CurrentUser {
     do {
         let user = try await APIClient.shared.me()
         guard user.role != "COLLABORATOR"
                 || (user.capabilities ?? []).contains(capability) else {
             throw GearIntentError.unavailable
         }
+        return user
     } catch {
         throw mapIntentError(error)
     }
 }
 
 private func checkedOutSummaries() async throws -> [CheckoutIntentSummary] {
-    try await requireIntentCapability("MY_GEAR_VIEW")
+    let me = try await requireIntentCapability("MY_GEAR_VIEW")
     do {
-        let me = try await APIClient.shared.me()
         // `sort: endsAt` means the limited response still contains the
         // soonest due checkouts — exactly the rows a compact snippet should
         // prioritize.

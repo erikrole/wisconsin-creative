@@ -31,7 +31,9 @@ describe("iOS launch lifecycle performance", () => {
 
     expect(app).toContain("handleScenePhaseChange(phase)");
     expect(app).toContain("!session.isInitialSessionValidationInFlight");
-    expect(app).toContain("Task { await refreshForegroundState() }");
+    expect(app).toContain("guard foregroundRefreshTask == nil else { return }");
+    expect(app).toContain("await refreshForegroundState()");
+    expect(app).toContain("foregroundRefreshTask?.cancel()");
     expect(app).toContain("await session.refreshCurrentUser()");
     expect(tabs).not.toContain("@Environment(\\.scenePhase)");
     expect(tabs).not.toContain("session.refreshCurrentUser()");

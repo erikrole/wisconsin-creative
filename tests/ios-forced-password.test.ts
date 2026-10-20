@@ -19,7 +19,7 @@ describe("iOS forced password setup", () => {
     expect(sessionStore).toContain("func completeForcedPasswordChange(currentPassword: String, newPassword: String) async");
     expect(sessionStore).toContain("try await APIClient.shared.changePassword");
     expect(sessionStore).toContain("let user = try await APIClient.shared.me()");
-    expect(sessionStore).toContain("guard authRequests.owns(requestToken) else { return }");
+    expect(sessionStore).toContain("guard authRequests.owns(requestToken), !Task.isCancelled else { return }");
     expect(sessionStore).toContain("currentUser = user");
   });
 

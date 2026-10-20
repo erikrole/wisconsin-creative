@@ -5,7 +5,7 @@ import Foundation
 /// Staff and admin only. The website History tab uses the same route, with
 /// `scope` of `all`, `asset` (item updates), or `booking`. A row that cannot
 /// be read is skipped so one odd audit payload does not blank the screen.
-struct AssetActivityPage: Decodable {
+struct AssetActivityPage: Decodable, Sendable {
     let entries: [AssetActivityEntry]
     let nextCursor: String?
 
@@ -38,7 +38,7 @@ enum AssetActivityScope: String, CaseIterable, Identifiable {
     }
 }
 
-struct AssetActivityEntry: Identifiable, Equatable {
+struct AssetActivityEntry: Identifiable, Equatable, Sendable {
     let id: String
     let action: String
     let entityType: String
@@ -125,7 +125,7 @@ private struct LenientAssetActivityRow: Decodable {
     }
 }
 
-indirect enum AuditJSON: Decodable, Equatable {
+indirect enum AuditJSON: Decodable, Equatable, Sendable {
     case string(String)
     case number(Double)
     case bool(Bool)

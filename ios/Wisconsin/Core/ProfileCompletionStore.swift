@@ -85,7 +85,7 @@ final class ProfileCompletionStore {
         defer { isLoading = false }
         do {
             let next = try await APIClient.shared.profileCompletion()
-            guard activeUserId == user.id else { return }
+            guard activeUserId == user.id, !Task.isCancelled else { return }
             response = next
             ProfileCompletionHint.save(next)
             if next.completion.profileComplete {
@@ -94,7 +94,7 @@ final class ProfileCompletionStore {
         } catch APIError.unauthorized {
             return
         } catch {
-            guard activeUserId == user.id else { return }
+            guard activeUserId == user.id, !Task.isCancelled else { return }
             self.error = error.localizedDescription
         }
     }

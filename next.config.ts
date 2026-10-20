@@ -96,6 +96,16 @@ const baseConfig: NextConfig = {
           { key: "X-DNS-Prefetch-Control", value: "on" },
         ].filter((header): header is { key: string; value: string } => Boolean(header)),
       },
+      // Email clients load these images from another origin. The site-wide
+      // same-origin resource policy above makes Outlook and other webview-based
+      // clients drop them as broken images, so the email assets opt out.
+      {
+        source: "/email/:path*",
+        headers: [
+          { key: "Cross-Origin-Resource-Policy", value: "cross-origin" },
+          { key: "Cache-Control", value: "public, max-age=86400" },
+        ],
+      },
       // Auth pages: never cache — prevents BFCache from replaying the form
       // after sign-out and avoids any shared-cache leakage.
       {
