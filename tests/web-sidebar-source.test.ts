@@ -11,12 +11,12 @@ describe("web sidebar source contract", () => {
     expect(sidebar).not.toContain("/scan?checkout");
   });
 
-  it("keeps personal Settings reachable outside admin-only navigation", () => {
+  it("keeps personal Settings reachable for every role from the account menu", () => {
     const sidebar = source("src/components/Sidebar.tsx");
-    const settingsEntry = '{ label: "Settings", href: "/settings", icon: SettingsIcon }';
     const staffItems = sidebar.match(/staffOnly: true,\s*items: \[([\s\S]*?)\],\s*\},/);
 
-    expect(sidebar).toContain(settingsEntry);
+    expect(sidebar).toContain('const SETTINGS_HREF = "/settings"');
+    expect(sidebar).toContain("href={SETTINGS_HREF}");
     expect(staffItems?.[1]).toContain("Kits");
     expect(staffItems?.[1]).not.toContain("Settings");
   });
@@ -104,7 +104,7 @@ describe("web sidebar source contract", () => {
     const sidebar = source("src/components/Sidebar.tsx");
     const primitive = source("src/components/ui/sidebar.tsx");
 
-    expect(appShell).toContain('{ label: "Bookings", href: "/bookings", icon: BookOpenIcon');
+    expect(appShell).toContain('{ label: "Bookings", href: "/bookings", icon: ClipboardListIcon');
     expect(appShell).not.toContain('{ label: "Reservations", href: "/reservations"');
     expect(appShell).not.toContain('{ label: "Checkouts", href: "/checkouts"');
     expect(sidebar).toContain("setOpenMobile(false)");
@@ -163,7 +163,8 @@ describe("web sidebar source contract", () => {
     const sidebar = source("src/components/Sidebar.tsx");
     const appShell = source("src/components/AppShell.tsx");
 
-    expect(sidebar).toContain('label: "Team"');
+    expect(sidebar).toContain('label: "People"');
+    expect(sidebar).toContain('label: "Purchasing"');
     expect(sidebar).toContain('label: "Library"');
     expect(sidebar).not.toContain('{ label: "Notifications"');
     expect(sidebar).not.toContain("unreadNotifications");

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { SearchIcon, ClipboardCheckIcon, CalendarCheckIcon, BellIcon, UserIcon, LayoutGridIcon, LayersIcon, BookOpenIcon, ArrowRightIcon } from "lucide-react";
+import { SearchIcon, ClipboardCheckIcon, CalendarCheckIcon, CalendarDaysIcon, BellIcon, UserIcon, HouseIcon, CameraIcon, ClipboardListIcon, BookOpenIcon, ArrowRightIcon } from "lucide-react";
 import AppSidebar from "./Sidebar";
 import { AssetImage } from "@/components/AssetImage";
 import { OperationalPartialResultsAlert } from "@/components/OperationalFeedback";
@@ -122,17 +122,17 @@ type BottomNavItem = {
 };
 
 const bottomNavItems: BottomNavItem[] = [
-  { label: "Home", href: "/", icon: LayoutGridIcon },
-  { label: "Schedule", href: "/schedule", icon: CalendarCheckIcon },
-  { label: "Bookings", href: "/bookings", icon: BookOpenIcon, badge: "overdue" as const },
-  { label: "Items", href: "/items", icon: LayersIcon },
+  { label: "Home", href: "/", icon: HouseIcon },
+  { label: "Schedule", href: "/schedule", icon: CalendarDaysIcon },
+  { label: "Bookings", href: "/bookings", icon: ClipboardListIcon, badge: "overdue" as const },
+  { label: "Items", href: "/items", icon: CameraIcon },
 ];
 
 const collaboratorBottomNavItems: BottomNavItem[] = [
-  { label: "Home", href: "/", icon: LayoutGridIcon },
-  { label: "Schedule", href: "/schedule", icon: CalendarCheckIcon },
-  { label: "My Gear", href: "/bookings", icon: BookOpenIcon, badge: "overdue" as const },
-  { label: "Items", href: "/items", icon: LayersIcon },
+  { label: "Home", href: "/", icon: HouseIcon },
+  { label: "Schedule", href: "/schedule", icon: CalendarDaysIcon },
+  { label: "My Gear", href: "/bookings", icon: ClipboardListIcon, badge: "overdue" as const },
+  { label: "Items", href: "/items", icon: CameraIcon },
   { label: "People", href: "/staff", icon: UserIcon },
 ];
 

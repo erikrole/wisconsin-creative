@@ -19,35 +19,35 @@ import {
   SunIcon,
   MoonIcon,
   MonitorIcon,
-  LayoutGridIcon,
-  CalendarIcon,
-  LayersIcon,
-  BoxIcon,
+  HouseIcon,
+  CalendarDaysIcon,
+  CameraIcon,
+  ClipboardListIcon,
+  BackpackIcon,
   UsersIcon,
-  BookOpenIcon,
-  ScrollTextIcon,
+  BookMarkedIcon,
   ShirtIcon,
   WalletIcon,
   GiftIcon,
-  BarChart3Icon,
+  ChartColumnIcon,
   SettingsIcon,
-  HelpCircleIcon,
+  LifeBuoyIcon,
   LogOutIcon,
-  KeyIcon,
+  KeyRoundIcon,
   WrenchIcon,
   ShieldAlertIcon,
   MegaphoneIcon,
-  PenToolIcon,
-  AwardIcon,
+  SignatureIcon,
+  MedalIcon,
   TrophyIcon,
   ChevronsUpDownIcon,
   UserIcon,
-  MonitorPlayIcon,
+  SquarePlayIcon,
   SearchIcon,
-  StarIcon,
   ChevronRightIcon,
+  PinIcon,
 } from "lucide-react";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { SidebarCustomizeDialog } from "@/components/SidebarCustomizeDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -63,7 +63,6 @@ import {
   SidebarGroup,
   SidebarHeader,
   SidebarMenu,
-  SidebarMenuAction,
   SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -101,7 +100,6 @@ const COLLABORATOR_NAV_HREFS = [
   "/bookings",
   "/staff",
   "/licenses",
-  "/settings",
 ] as const;
 
 type NavGroup = {
@@ -113,18 +111,23 @@ type NavGroup = {
 const navGroups: NavGroup[] = [
   {
     items: [
-      { label: "Dashboard", href: "/", icon: LayoutGridIcon },
-      { label: "Schedule", href: "/schedule", icon: CalendarIcon },
-      { label: "Items", href: "/items", icon: LayersIcon },
-      { label: "Bookings", href: "/bookings", icon: BookOpenIcon },
+      { label: "Dashboard", href: "/", icon: HouseIcon },
+      { label: "Schedule", href: "/schedule", icon: CalendarDaysIcon },
+      { label: "Bookings", href: "/bookings", icon: ClipboardListIcon },
+      { label: "Items", href: "/items", icon: CameraIcon },
     ],
   },
   {
-    label: "Team",
+    label: "People",
     items: [
+      { label: "Staff", href: "/staff", icon: UsersIcon },
       { label: "Scoreboard", href: "/scoreboard", icon: TrophyIcon },
       { label: "Accountability", href: "/accountability", icon: ShieldAlertIcon },
-      { label: "Staff", href: "/staff", icon: UsersIcon },
+    ],
+  },
+  {
+    label: "Purchasing",
+    items: [
       { label: "Budget", href: "/budget", icon: WalletIcon, requiredRole: "ADMIN" },
       { label: "Wish list", href: "/wishlist", icon: GiftIcon, staffOrAdmin: true },
       { label: "UA Gear Picks", href: "/gear/admin", icon: ShirtIcon, requiredRole: "ADMIN" },
@@ -133,9 +136,8 @@ const navGroups: NavGroup[] = [
   {
     label: "Library",
     items: [
-      { label: "Resources", href: "/resources", icon: ScrollTextIcon },
-      { label: "Software", href: "/licenses", icon: KeyIcon },
-      { label: "YouTube Studio Lite", href: "/youtube", icon: MonitorPlayIcon, requiredRole: "ADMIN" },
+      { label: "Resources", href: "/resources", icon: BookMarkedIcon },
+      { label: "Software", href: "/licenses", icon: KeyRoundIcon },
     ],
   },
   {
@@ -143,19 +145,18 @@ const navGroups: NavGroup[] = [
     staffOnly: true,
     items: [
       { label: "Operations", href: "/operations", icon: WrenchIcon },
-      { label: "Badges", href: "/badges", icon: AwardIcon },
-      { label: "Signatures", href: "/signatures", icon: PenToolIcon },
+      { label: "Kits", href: "/kits", icon: BackpackIcon },
+      { label: "Badges", href: "/badges", icon: MedalIcon },
+      { label: "Signatures", href: "/signatures", icon: SignatureIcon },
       { label: "Blasts", href: "/blasts", icon: MegaphoneIcon },
-      { label: "Kits", href: "/kits", icon: BoxIcon },
-      { label: "Reports", href: "/reports", icon: BarChart3Icon },
-    ],
-  },
-  {
-    items: [
-      { label: "Settings", href: "/settings", icon: SettingsIcon },
+      { label: "YouTube Studio Lite", href: "/youtube", icon: SquarePlayIcon, requiredRole: "ADMIN" },
+      { label: "Reports", href: "/reports", icon: ChartColumnIcon },
     ],
   },
 ];
+
+// Settings lives in the account menu at the foot of the rail, not in the page list.
+const SETTINGS_HREF = "/settings";
 
 type AppSidebarProps = {
   user: {
@@ -215,20 +216,23 @@ function useStoredList(key: string) {
     }
   }, [key]);
 
-  function toggle(value: string) {
-    setList((current) => {
-      const next = current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
-      try {
-        localStorage.setItem(key, JSON.stringify(next));
-      } catch {
-        // ignore quota / privacy-mode failures
-      }
-      return next;
-    });
+  function save(next: string[]) {
+    setList(next);
+    try {
+      localStorage.setItem(key, JSON.stringify(next));
+    } catch {
+      // ignore quota / privacy-mode failures
+    }
   }
 
-  return [list, toggle] as const;
+  function toggle(value: string) {
+    save(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
+  }
+
+  return [list, toggle, save] as const;
 }
+
+const menuItemClass = "min-h-9 gap-2.5 rounded-md px-2 text-[13.5px] [&_svg]:size-4 [&_svg]:stroke-[1.75] [&_svg]:text-muted-foreground";
 
 const navButtonClass = (isActive: boolean) =>
   cn(
@@ -278,7 +282,7 @@ export default function AppSidebar({
     .filter((group) => group.items.length > 0);
 
   const [collapsedGroups, toggleGroup] = useStoredList(COLLAPSED_GROUPS_KEY);
-  const [pinnedHrefs, togglePin] = useStoredList(PINNED_KEY);
+  const [pinnedHrefs, , setPinnedHrefs] = useStoredList(PINNED_KEY);
   const allVisibleItems = visibleGroups.flatMap((group) => group.items);
   const pinnedItems = pinnedHrefs
     .map((href) => allVisibleItems.find((item) => item.href === href))
@@ -289,9 +293,9 @@ export default function AppSidebar({
       .map((group) => ({ ...group, items: group.items.filter((item) => !pinnedHrefs.includes(item.href)) }))
       .filter((group) => group.items.length > 0),
   ];
-  // Settings sits at the foot of the rail, apart from the places you work in.
-  const footerGroup = groupsWithPins.find((group) => group.items.some((item) => item.href === "/settings") && !group.label);
-  const displayGroups = groupsWithPins.filter((group) => group !== footerGroup);
+  const displayGroups = groupsWithPins;
+  const isOnAccountPage = pathname === SETTINGS_HREF || pathname.startsWith(`${SETTINGS_HREF}/`) || pathname === `/staff/${user?.id}`;
+  const [customizeOpen, setCustomizeOpen] = useState(false);
 
   const activeHref = resolveActiveShellHref(
     pathname,
@@ -347,7 +351,6 @@ export default function AppSidebar({
   function renderItem(item: NavItem, inCollapsedGroup: boolean) {
     const href = item.href;
     const isActive = activeHref === href;
-    const isPinned = pinnedHrefs.includes(href);
     // A collapsed group still shows the page you're on, so the rail never hides where you are.
     if (inCollapsedGroup && !isActive && state !== "collapsed") return null;
     const Icon = item.icon;
@@ -364,8 +367,6 @@ export default function AppSidebar({
     const tooltipBase = badgeCfg
       ? `${item.label} · ${badgeCfg.count} ${badgeCfg.suffix}`
       : item.label;
-    // Badges and the pin star share the row's right edge; the star takes over on hover.
-    const yieldsToStar = "transition-opacity duration-100 md:group-hover/menu-item:opacity-0 md:group-focus-within/menu-item:opacity-0";
 
     return (
       <SidebarMenuItem key={item.href}>
@@ -392,7 +393,6 @@ export default function AppSidebar({
                 : badgeCfg?.tone === "quiet"
                   ? "bg-[var(--sidebar-active)] font-semibold text-[color:var(--sidebar-text)] group-data-[collapsible=icon]:bg-[var(--sidebar-muted)]"
                   : "bg-[var(--wi-red)] text-white",
-              yieldsToStar,
             )}
           >
             <span className="sr-only">
@@ -402,20 +402,10 @@ export default function AppSidebar({
           </SidebarMenuBadge>
         )}
         {!badgeCount && badgeLabel && (
-          <SidebarMenuBadge className={cn("top-1/2! h-4 -translate-y-1/2 rounded bg-[var(--sidebar-hover)] px-1 text-[10px] font-medium text-[color:var(--sidebar-muted)]", yieldsToStar)}>
+          <SidebarMenuBadge className={cn("top-1/2! h-4 -translate-y-1/2 rounded bg-[var(--sidebar-hover)] px-1 text-[10px] font-medium text-[color:var(--sidebar-muted)]")}>
             {badgeLabel}
           </SidebarMenuBadge>
         )}
-        <SidebarMenuAction
-          showOnHover
-          onClick={() => togglePin(href)}
-          aria-label={isPinned ? `Unpin ${item.label}` : `Pin ${item.label}`}
-          aria-pressed={isPinned}
-          title={isPinned ? "Unpin" : "Pin to top"}
-          className="top-1/2! right-1 size-6 -translate-y-1/2 rounded text-[color:var(--sidebar-muted)] hover:bg-[var(--sidebar-hover)] hover:text-[color:var(--sidebar-text-active)] focus-visible:ring-[var(--sidebar-ring)] max-md:hidden"
-        >
-          <StarIcon className={cn("size-3.5!", isPinned && "fill-current text-[color:var(--sidebar-icon-active)]")} />
-        </SidebarMenuAction>
       </SidebarMenuItem>
     );
   }
@@ -471,7 +461,6 @@ export default function AppSidebar({
       <SidebarContent className="gap-0 px-1 pb-2 pt-1">
         <nav aria-label="Workspace navigation" className="flex min-h-full flex-1 flex-col">
           {displayGroups.map((group, groupIdx) => renderGroup(group, groupIdx))}
-          {footerGroup && <div className="mt-auto pt-3">{renderGroup(footerGroup, -1)}</div>}
         </nav>
       </SidebarContent>
 
@@ -485,7 +474,11 @@ export default function AppSidebar({
                     size="lg"
                     tooltip={user.name}
                     aria-label="Account menu"
-                    className="h-11 gap-2.5 rounded-md px-1.5 text-[color:var(--sidebar-text-active)] hover:bg-[var(--sidebar-hover)] hover:text-[color:var(--sidebar-text-active)] data-[state=open]:bg-[var(--sidebar-active)] data-[state=open]:hover:bg-[var(--sidebar-active)] data-[state=open]:hover:text-[color:var(--sidebar-text-active)] group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-full"
+                    isActive={isOnAccountPage}
+                    className={cn(
+                      "h-11 gap-2.5 rounded-md px-1.5 text-[color:var(--sidebar-text-active)] hover:bg-[var(--sidebar-hover)] hover:text-[color:var(--sidebar-text-active)] data-[state=open]:bg-[var(--sidebar-active)] data-[state=open]:hover:bg-[var(--sidebar-active)] data-[state=open]:hover:text-[color:var(--sidebar-text-active)] group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-full",
+                      "data-[active=true]:bg-[var(--sidebar-active)] data-[active=true]:font-normal data-[active=true]:text-[color:var(--sidebar-text-active)]",
+                    )}
                   >
                     <UserAvatar
                       name={user.name}
@@ -504,55 +497,70 @@ export default function AppSidebar({
                   </SidebarMenuButton>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
-                  side="right"
+                  side={isMobile ? "top" : "right"}
                   align="end"
                   sideOffset={8}
-                  className="w-64"
+                  className={cn(lato.className, "w-[17rem] rounded-xl p-1.5")}
                 >
-                  <DropdownMenuLabel className="font-normal">
-                    <p className="truncate font-bold text-foreground">{user.name}</p>
-                    <p className="truncate text-xs font-normal text-muted-foreground">{user.email}</p>
+                  <DropdownMenuLabel className="flex items-center gap-2.5 px-2 py-2 font-normal">
+                    <UserAvatar name={user.name} avatarUrl={user.avatarUrl} className="size-9" />
+                    <div className="min-w-0">
+                      <p className="truncate text-[14px] font-bold leading-tight text-foreground">{user.name}</p>
+                      <p className="mt-0.5 truncate text-[12px] leading-tight text-muted-foreground">{user.email}</p>
+                    </div>
                   </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild className="min-h-10">
+                  <DropdownMenuSeparator className="my-1.5" />
+                  <DropdownMenuItem asChild className={menuItemClass}>
+                    <Link prefetch={false} href={SETTINGS_HREF}>
+                      <SettingsIcon />
+                      Settings
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild className={menuItemClass}>
                     <Link prefetch={false} href={`/staff/${user.id}`}>
                       <UserIcon />
                       Profile
                     </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild className="min-h-10">
+                  <DropdownMenuItem className={menuItemClass} onSelect={() => setCustomizeOpen(true)}>
+                    <PinIcon />
+                    Customize sidebar
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="my-1.5" />
+                  <div className="px-2 pb-1.5 pt-1" onPointerDown={(event) => event.preventDefault()}>
+                    <p className="mb-1.5 text-[12px] font-bold text-muted-foreground">Appearance</p>
+                    <div role="radiogroup" aria-label="Theme" className="grid grid-cols-3 gap-0.5 rounded-lg bg-muted p-0.5">
+                      {THEME_CHOICES.map((choice) => {
+                        const ThemeIcon = choice === "light" ? SunIcon : choice === "dark" ? MoonIcon : MonitorIcon;
+                        const selected = theme === choice;
+                        return (
+                          <button
+                            key={choice}
+                            type="button"
+                            role="radio"
+                            aria-checked={selected}
+                            onClick={() => setTheme(choice)}
+                            className={cn(
+                              "flex h-8 items-center justify-center gap-1.5 rounded-md text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
+                              selected && "bg-card text-foreground shadow-xs",
+                            )}
+                          >
+                            <ThemeIcon className="size-3.5" aria-hidden="true" />
+                            <span className="text-[12.5px] capitalize">{choice}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <DropdownMenuSeparator className="my-1.5" />
+                  <DropdownMenuItem asChild className={menuItemClass}>
                     <a href="mailto:erole@athletics.wisc.edu?subject=Wisconsin%20Creative%20help">
-                      <HelpCircleIcon />
-                      Help
+                      <LifeBuoyIcon />
+                      Help and feedback
                     </a>
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <div className="px-2 py-1.5" onPointerDown={(event) => event.preventDefault()}>
-                    <p className="mb-1.5 text-xs font-medium text-muted-foreground">Theme</p>
-                    <ToggleGroup
-                      type="single"
-                      value={theme}
-                      onValueChange={(value) => {
-                        if (value) setTheme(value as ThemeChoice);
-                      }}
-                      className="w-full rounded-md border border-border bg-muted/40 p-0.5"
-                    >
-                      {THEME_CHOICES.map((val, i) => (
-                        <ToggleGroupItem
-                          key={val}
-                          value={val}
-                          aria-label={`${val.charAt(0).toUpperCase() + val.slice(1)} theme`}
-                          className="min-h-10 min-w-10 flex-1 px-2 text-xs"
-                        >
-                          {i === 0 ? <SunIcon className="size-3.5" /> : i === 1 ? <MoonIcon className="size-3.5" /> : <MonitorIcon className="size-3.5" />}
-                        </ToggleGroupItem>
-                      ))}
-                    </ToggleGroup>
-                  </div>
-                  <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    variant="destructive"
-                    className="min-h-10 cursor-pointer"
+                    className={cn(menuItemClass, "cursor-pointer")}
                     disabled={isLoggingOut}
                     onSelect={() => onSignOut?.()}
                   >
@@ -563,6 +571,14 @@ export default function AppSidebar({
               </DropdownMenu>
             </SidebarMenuItem>
           </SidebarMenu>
+          <SidebarCustomizeDialog
+            open={customizeOpen}
+            onOpenChange={setCustomizeOpen}
+            groups={visibleGroups}
+            pinnedHrefs={pinnedHrefs}
+            onPinnedChange={setPinnedHrefs}
+            className={lato.className}
+          />
         </SidebarFooter>
       )}
       </div>

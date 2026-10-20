@@ -3,14 +3,15 @@
     "date": "2026-10-20",
     "title": "A calmer, easier sidebar",
     "type": "improvement",
-    "summary": "The sidebar now looks the same on every page, with search, pinned pages and collapsible sections.",
+    "summary": "The sidebar looks the same on every page, with clearer groups, fresh icons, search, pinned pages and a new account menu.",
     "details": [
       "Fixed the sidebar switching fonts and styling when you opened Staff, Budget or Wish list.",
-      "New light and dark look with tighter rows, so the full list fits on a laptop screen.",
-      "Pin any page with the star that appears on hover; pinned pages sit at the top.",
-      "Collapse Team, Library or Staff tools; the sidebar remembers your choice and still shows the page you're on.",
-      "A Search row at the top opens search, Settings sits at the bottom, and the Operations group is now called Staff tools.",
-      "Quiet counts show open wishes waiting on a decision (admins) and Software codes reported as not working (staff and admins)."
+      "New light and dark look with tighter rows and clearer icons.",
+      "Pages are grouped as People, Purchasing, Library and Staff tools.",
+      "Pin your most-used pages and drag them into order from Customize sidebar in the account menu.",
+      "The account menu now holds Settings, Profile, appearance and help.",
+      "Quiet counts show open wishes waiting on a decision (admins) and Software codes reported as not working (staff and admins).",
+      "Collapse any group; the sidebar remembers your choice and still shows the page you're on."
     ],
     "platforms": [
       "Web"
