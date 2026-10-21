@@ -77,7 +77,7 @@
 | `src/lib/services/notification-deliveries.ts` | 59 |
 | `src/lib/services/notification-prefs.ts` | 350 |
 | `src/lib/services/notification-resolution.ts` | 143 |
-| `src/lib/services/notifications.ts` | 2031 |
+| `src/lib/services/notifications.ts` | 2045 |
 | `src/lib/services/onboarding-lifecycle.ts` | 546 |
 | `src/lib/services/onboarding-readiness.ts` | 24 |
 | `src/lib/services/pending-pickup-expiry.ts` | 370 |

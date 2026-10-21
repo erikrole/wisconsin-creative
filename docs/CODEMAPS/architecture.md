@@ -24,7 +24,7 @@ Informational only. These are the largest TypeScript and TSX files under `src/`;
 |---|---:|
 | `src/lib/services/bookings-lifecycle.ts` | 3386 |
 | `src/lib/services/signatures.ts` | 2366 |
-| `src/lib/services/notifications.ts` | 2031 |
+| `src/lib/services/notifications.ts` | 2045 |
 | `src/app/(app)/schedule/_components/ListView.tsx` | 2013 |
 | `src/lib/services/reports.ts` | 1938 |
 | `src/components/TradeBoard.tsx` | 1853 |
