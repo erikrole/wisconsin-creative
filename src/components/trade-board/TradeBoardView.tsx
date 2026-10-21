@@ -152,8 +152,8 @@ function Row({ row }: { row: BoardRow }) {
           {row.actions.map((action) => (
             <Button
               key={action.label}
-              className="h-10 gap-1.5 rounded-full px-4"
-              variant={action.variant === "primary" ? "default" : "outline"}
+              className={cn("h-10 gap-1.5 rounded-full px-4", action.variant === "primary" && "bg-foreground/[0.07] font-semibold text-foreground hover:bg-foreground/[0.11] dark:bg-foreground/[0.12] dark:hover:bg-foreground/[0.16]")}
+              variant={action.variant === "primary" ? "secondary" : "outline"}
               disabled={action.disabled}
               onClick={action.onClick}
             >
