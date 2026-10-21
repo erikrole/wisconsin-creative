@@ -272,7 +272,7 @@ struct ExtendBookingSheet: View {
            let tomorrow = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: tomorrowDay) {
             out.append(ReturnOption(kind: .tomorrow, title: "Tomorrow", date: QuarterHour.roundedUp(tomorrow)))
         }
-        var valid = out.filter { $0.date > base && (latestEndsAt.map { limit in $0.date <= limit } ?? true) }
+        var valid = out.filter { option in option.date > base && (latestEndsAt.map { option.date <= $0 } ?? true) }
         if let latestEndsAt, latestEndsAt >= earliestCustom {
             valid.removeAll { $0.date == latestEndsAt }
             valid.append(ReturnOption(kind: .latest, title: "As late as possible", date: latestEndsAt))
