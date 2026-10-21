@@ -17,7 +17,7 @@
 | `src/lib/services/booking-custody.ts` | 82 |
 | `src/lib/services/booking-item-holder.ts` | 174 |
 | `src/lib/services/booking-ref.ts` | 26 |
-| `src/lib/services/booking-reuse.ts` | 219 |
+| `src/lib/services/booking-reuse.ts` | 220 |
 | `src/lib/services/booking-rules.ts` | 135 |
 | `src/lib/services/bookings-checkin.ts` | 738 |
 | `src/lib/services/bookings-helpers.ts` | 310 |
@@ -27,7 +27,7 @@
 | `src/lib/services/budget.ts` | 938 |
 | `src/lib/services/bulk-assignment-batches.ts` | 253 |
 | `src/lib/services/bulk-schedule-assignment.ts` | 971 |
-| `src/lib/services/bulk-unit-scans.ts` | 721 |
+| `src/lib/services/bulk-unit-scans.ts` | 722 |
 | `src/lib/services/calendar-sync-health.ts` | 165 |
 | `src/lib/services/calendar-sync.ts` | 754 |
 | `src/lib/services/candidate-scoring.ts` | 509 |
@@ -67,19 +67,19 @@
 | `src/lib/services/kiosk-pickup-substitute.ts` | 300 |
 | `src/lib/services/kiosk-scan.ts` | 44 |
 | `src/lib/services/kit-list-availability.ts` | 35 |
-| `src/lib/services/kit-member-availability.ts` | 96 |
+| `src/lib/services/kit-member-availability.ts` | 97 |
 | `src/lib/services/kits.ts` | 836 |
 | `src/lib/services/licenses.ts` | 684 |
-| `src/lib/services/live-activities.ts` | 629 |
+| `src/lib/services/live-activities.ts` | 630 |
 | `src/lib/services/manual-event-time.ts` | 304 |
 | `src/lib/services/non-game-schedule-defaults.ts` | 49 |
 | `src/lib/services/notification-deliveries.ts` | 59 |
 | `src/lib/services/notification-prefs.ts` | 350 |
-| `src/lib/services/notifications.ts` | 1974 |
+| `src/lib/services/notifications.ts` | 1975 |
 | `src/lib/services/onboarding-lifecycle.ts` | 546 |
 | `src/lib/services/pending-pickup-expiry.ts` | 370 |
 | `src/lib/services/product-event-log.ts` | 43 |
-| `src/lib/services/reports.ts` | 1937 |
+| `src/lib/services/reports.ts` | 1938 |
 | `src/lib/services/reservation-consolidation.ts` | 240 |
 | `src/lib/services/reservation-pickup-guard.ts` | 71 |
 | `src/lib/services/reservation-pickup-location.ts` | 34 |
@@ -147,10 +147,10 @@
 | `src/lib/booking-actions.ts` | 14 |
 | `src/lib/booking-availability-window.ts` | 31 |
 | `src/lib/booking-concurrency.ts` | 39 |
-| `src/lib/booking-display-title.ts` | 14 |
+| `src/lib/booking-display-title.ts` | 41 |
 | `src/lib/booking-status-display.ts` | 170 |
 | `src/lib/booking-statuses.ts` | 9 |
-| `src/lib/breadcrumbs.ts` | 181 |
+| `src/lib/breadcrumbs.ts` | 228 |
 | `src/lib/brother-label-csv.ts` | 134 |
 | `src/lib/bulk-batteries.ts` | 49 |
 | `src/lib/bulk-schedule-assignment-types.ts` | 213 |
@@ -162,12 +162,13 @@
 | `src/lib/category-options.ts` | 34 |
 | `src/lib/checkout-escalation-policy.ts` | 117 |
 | `src/lib/checkout-notification-workflow.ts` | 24 |
+| `src/lib/chrome-font.ts` | 13 |
 | `src/lib/claim-review-deadlines.ts` | 52 |
 | `src/lib/claim-review-workflow.ts` | 48 |
 | `src/lib/client-enums.ts` | 85 |
 | `src/lib/clipboard.ts` | 19 |
 | `src/lib/collaborator-access.ts` | 164 |
-| `src/lib/collaborator-gear.ts` | 175 |
+| `src/lib/collaborator-gear.ts` | 177 |
 | `src/lib/combined-schedule-event-suggestions.ts` | 93 |
 | `src/lib/companion-projection-contract.ts` | 71 |
 | `src/lib/companion-store.ts` | 302 |
@@ -216,6 +217,7 @@
 | `src/lib/notification-catalog.ts` | 322 |
 | `src/lib/notification-count-sync.ts` | 9 |
 | `src/lib/notification-destination.ts` | 85 |
+| `src/lib/notification-meta.ts` | 120 |
 | `src/lib/observability.ts` | 19 |
 | `src/lib/operational-health.ts` | 2 |
 | `src/lib/ops-checks.ts` | 212 |
@@ -238,7 +240,7 @@
 | `src/lib/remark-callouts.ts` | 77 |
 | `src/lib/request-limits.ts` | 17 |
 | `src/lib/reservation-pickup-locations.ts` | 68 |
-| `src/lib/reservation-reuse.ts` | 88 |
+| `src/lib/reservation-reuse.ts` | 95 |
 | `src/lib/resource-assets-client.ts` | 20 |
 | `src/lib/resource-assets-storage.ts` | 71 |
 | `src/lib/resource-assets.ts` | 848 |
@@ -289,7 +291,7 @@
 | `src/lib/software-vault-crypto.ts` | 11 |
 | `src/lib/software-vault-validation.ts` | 39 |
 | `src/lib/sport-auto-assign-policy.ts` | 60 |
-| `src/lib/sports.ts` | 100 |
+| `src/lib/sports.ts` | 99 |
 | `src/lib/status-colors.ts` | 49 |
 | `src/lib/status-styles.ts` | 19 |
 | `src/lib/student-availability.ts` | 209 |
@@ -845,6 +847,10 @@
 - `/api/shifts/ics/[token]`
 - `/api/shifts/my-hours`
 - `/api/shifts`
+
+### `/api/sidebar`
+
+- `/api/sidebar/counts`
 
 ### `/api/signatures`
 
