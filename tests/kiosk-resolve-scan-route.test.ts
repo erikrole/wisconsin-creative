@@ -78,7 +78,7 @@ describe("POST /api/kiosk/resolve-scan", () => {
 
     expect(json).toMatchObject({
       kind: "pending_identity",
-      booking: { title: "Volleyball vs. TCU" },
+      booking: { title: "Volleyball vs TCU" },
     });
   });
 
