@@ -845,7 +845,7 @@ a[data-slot="button"]:hover {
 }
 
 .resource-row + .resource-row {
-  border-top: 1px solid var(--border-light, var(--border));
+  border-top: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
 }
 
 .resource-row:hover {
@@ -853,7 +853,6 @@ a[data-slot="button"]:hover {
 }
 
 .resource-row-title {
-  display: block;
   font-size: 1rem;
   font-weight: 700;
   line-height: 1.35;
@@ -861,7 +860,6 @@ a[data-slot="button"]:hover {
 }
 
 .resource-row-summary {
-  display: block;
   margin-top: 0.15rem;
   font-size: 0.875rem;
   line-height: 1.45;
@@ -875,13 +873,23 @@ a[data-slot="button"]:hover {
 }
 
 .resource-row-fresh {
-  text-align: right;
   white-space: nowrap;
+}
+
+/* Phones stack the freshness under the title so the title keeps the width. */
+@media (max-width: 767px) {
+  .resource-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 @media (min-width: 768px) {
   .resource-row {
     grid-template-columns: minmax(0, 1fr) 9rem 10.5rem;
+  }
+
+  .resource-row-fresh {
+    text-align: right;
   }
 
   .resource-row-type {
@@ -908,10 +916,18 @@ a[data-slot="button"]:hover {
   padding: 0.25rem 1.25rem;
 }
 
+.resource-topic:last-child {
+  border-bottom: 0;
+}
+
 @media (min-width: 768px) {
   .resource-topics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     column-gap: 2.5rem;
+  }
+
+  .resource-topic:nth-last-child(2):nth-child(odd) {
+    border-bottom: 0;
   }
 }
 
@@ -920,7 +936,7 @@ a[data-slot="button"]:hover {
   min-height: 4rem;
   align-items: center;
   gap: 0.85rem;
-  border-bottom: 1px solid var(--border-light, var(--border));
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
   padding: 0.75rem 0;
   text-align: left;
   color: inherit;
@@ -1023,14 +1039,6 @@ a[data-slot="button"]:hover {
   text-wrap: balance;
 }
 
-.guide-reader-summary {
-  margin: 0;
-  max-width: 40rem;
-  font-size: 1.125rem;
-  line-height: 1.55;
-  color: var(--muted-foreground);
-  text-wrap: pretty;
-}
 
 .guide-reader-grid {
   align-items: stretch;
@@ -1185,6 +1193,7 @@ a[data-slot="button"]:hover {
 }
 
 .brand-tile {
+  position: relative;
   display: flex;
   min-width: 0;
   flex-direction: column;
@@ -1198,6 +1207,36 @@ a[data-slot="button"]:hover {
 .brand-tile:hover {
   border-color: color-mix(in srgb, var(--border) 60%, var(--foreground));
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* Star and menu float over the preview so the name gets the full width.
+   They appear on hover or keyboard focus, and stay put on touch screens or
+   when the file is starred. */
+.brand-tile-actions {
+  position: absolute;
+  top: 0.375rem;
+  right: 0.375rem;
+  z-index: 1;
+  display: flex;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--card) 88%, transparent);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(6px);
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+
+.brand-tile:hover .brand-tile-actions,
+.brand-tile:focus-within .brand-tile-actions,
+.brand-tile-actions[data-favorite],
+.brand-tile-actions:has([data-state="open"]) {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .brand-tile-actions {
+    opacity: 1;
+  }
 }
 
 .brand-tile-preview {
@@ -1344,6 +1383,33 @@ a[data-slot="button"]:hover {
   font-size: 1.0625rem;
   line-height: 1.7;
 }
+
+/* Write in the same shape the reader shows: real headings and list markers. */
+.guide-editor-body .mdxeditor-root-contenteditable h1,
+.guide-editor-body .mdxeditor-root-contenteditable h2,
+.guide-editor-body .mdxeditor-root-contenteditable h3 {
+  margin: 1.6em 0 0.4em;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+}
+
+.guide-editor-body .mdxeditor-root-contenteditable h1 { font-size: 1.75rem; }
+.guide-editor-body .mdxeditor-root-contenteditable h2 { font-size: 1.45rem; }
+.guide-editor-body .mdxeditor-root-contenteditable h3 { font-size: 1.15rem; }
+
+.guide-editor-body .mdxeditor-root-contenteditable p {
+  margin: 0.6em 0;
+}
+
+.guide-editor-body .mdxeditor-root-contenteditable ul,
+.guide-editor-body .mdxeditor-root-contenteditable ol {
+  margin: 0.6em 0;
+  padding-left: 1.5rem;
+}
+
+.guide-editor-body .mdxeditor-root-contenteditable ul { list-style: disc; }
+.guide-editor-body .mdxeditor-root-contenteditable ol { list-style: decimal; }
 
 .guide-markdown {
   font-size: clamp(1rem, 1.4vw, 1.125rem);

@@ -7,7 +7,6 @@ import {
   ArrowDownUpIcon,
   ArrowUpIcon,
   CheckCircle2Icon,
-  ChevronDownIcon,
   ChevronRightIcon,
   Clock3Icon,
   DownloadIcon,
@@ -1296,6 +1295,10 @@ function AssetTile({
   const open = () => { handlers.onUse(); handlers.onPreview(); };
   return (
     <li className="brand-tile group">
+      <div className="brand-tile-actions" data-favorite={favorite || undefined}>
+        <FavoriteButton asset={asset} favorite={favorite} onToggle={handlers.onToggleFavorite} />
+        <AssetActions asset={asset} canManage={canManage} {...handlers} />
+      </div>
       <button
         type="button"
         onClick={open}
@@ -1304,11 +1307,11 @@ function AssetTile({
       >
         <AssetThumb asset={asset} />
       </button>
-      <div className="flex min-w-0 items-start gap-1 px-3 pb-2 pt-2.5">
+      <div className="min-w-0 px-3 pb-3 pt-2.5">
         <button
           type="button"
           onClick={open}
-          className="min-w-0 flex-1 rounded-md text-left focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          className="block w-full min-w-0 rounded-md text-left focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
           aria-label={`Open ${asset.name}`}
         >
           <span className="block truncate text-sm font-bold text-foreground">{asset.name}</span>
@@ -1318,10 +1321,6 @@ function AssetTile({
             {showLocation && ` · ${folderDisplayPath(asset.folder.path)}`}
           </span>
         </button>
-        <div className="-mr-1.5 -mt-1.5 flex shrink-0 items-center">
-          <FavoriteButton asset={asset} favorite={favorite} onToggle={handlers.onToggleFavorite} />
-          <AssetActions asset={asset} canManage={canManage} {...handlers} />
-        </div>
       </div>
     </li>
   );
@@ -1858,8 +1857,7 @@ export function BrandAssetLibrary({ canManage }: { canManage: boolean }) {
           {showFolders && (
             <section className="flex flex-col gap-3" aria-labelledby="brand-asset-folder-heading">
               <div className="flex items-center gap-2">
-                <ChevronDownIcon className="size-4 text-muted-foreground" aria-hidden="true" />
-                <h2 id="brand-asset-folder-heading" className="text-sm font-semibold tracking-tight">{folderId ? "Folders" : "Suggested folders"}</h2>
+                <h2 id="brand-asset-folder-heading" className="resource-kicker">{folderId ? "Folders" : "Suggested folders"}</h2>
               </div>
               <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                 {libraryData.folders.map((folder) => (
@@ -1872,8 +1870,7 @@ export function BrandAssetLibrary({ canManage }: { canManage: boolean }) {
           <section className="flex flex-col gap-3" aria-labelledby="brand-asset-file-heading">
             <div className="flex items-center justify-between gap-3">
               <div className="flex min-w-0 items-baseline gap-2">
-                <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                <h2 id="brand-asset-file-heading" className="text-sm font-semibold tracking-tight">{fileHeading}</h2>
+                <h2 id="brand-asset-file-heading" className="resource-kicker">{fileHeading}</h2>
                 <span className="text-xs text-muted-foreground">{fileCountLabel}</span>
               </div>
               {library.refreshing && <RefreshCwIcon className="size-4 animate-spin text-muted-foreground" aria-label="Refreshing files" />}

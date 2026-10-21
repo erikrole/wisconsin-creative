@@ -262,7 +262,7 @@ function GuideRow({ guide, showType = true }: { guide: GuideListItem; showType?:
       className="resource-row group no-underline hover:no-underline transition-[background-color,scale] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 active:scale-[0.96]"
     >
       <span className="min-w-0">
-        <span className="resource-row-title line-clamp-1">
+        <span className="resource-row-title line-clamp-2">
           {guide.title}
           {!guide.published && <span className="resource-pill resource-pill-draft ml-2 align-middle">Draft</span>}
         </span>

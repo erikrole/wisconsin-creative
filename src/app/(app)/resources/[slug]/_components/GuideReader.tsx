@@ -275,7 +275,6 @@ export function GuideReader({ guide, canEdit, slug }: Props) {
     () => buildSectionNav(guideList ?? [], guide.id),
     [guideList, guide.id],
   );
-  const summary = guideList?.find((item) => item.id === guide.id)?.summary ?? null;
 
   useEffect(() => {
     if (headings.length === 0) return;
@@ -344,7 +343,6 @@ export function GuideReader({ guide, canEdit, slug }: Props) {
               </span>
             </div>
             <h1 className="guide-reader-title">{guide.title}</h1>
-            {summary && <p className="guide-reader-summary">{summary}</p>}
             <div className="xl:hidden">
               <GuideActions guideId={guide.id} slug={slug} canEdit={canEdit} />
             </div>
