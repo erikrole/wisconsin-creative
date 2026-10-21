@@ -100,7 +100,7 @@ describe("sidebar account sync", () => {
     expect(sidebar).toContain('const SIDEBAR_PREFS_URL = "/api/me/sidebar-prefs";');
     expect(sidebar).toContain("onPinnedChange={accountPrefs.setPinned}");
     expect(sidebar).toContain("onHiddenChange={accountPrefs.setHidden}");
-    const migration = source("prisma/migrations/0192_user_sidebar_prefs/migration.sql");
+    const migration = source("prisma/migrations/0194_user_sidebar_prefs/migration.sql");
     expect(migration).toContain('ADD COLUMN "sidebar_prefs" JSONB');
   });
 });
