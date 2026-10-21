@@ -1,6 +1,21 @@
 [
   {
     "date": "2026-10-21",
+    "title": "Nudge people who haven't finished setup",
+    "type": "improvement",
+    "summary": "Onboarding Status can now email a reminder to someone who signed in but has not finished their profile.",
+    "details": [
+      "People marked Setup needed get a Nudge button next to Open.",
+      "It asks once, then emails them a reminder to sign in and finish setup.",
+      "Each person can be nudged once a day, and people who finished setup don't show the button."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 553
+  },
+  {
+    "date": "2026-10-21",
     "title": "Remind everyone waiting",
     "type": "improvement",
     "summary": "Onboarding Status can now email the login link to everyone who has not signed in yet.",
