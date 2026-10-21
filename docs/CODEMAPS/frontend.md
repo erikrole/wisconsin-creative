@@ -139,8 +139,8 @@
 | `src/components/resources/BrandAssetLibrary.tsx` | 1827 |
 | `src/components/ActivityTimeline.tsx` | 1387 |
 | `src/components/booking-wizard/BookingWizard.tsx` | 1173 |
+| `src/components/schedule/AutoAssignDialog.tsx` | 1057 |
 | `src/components/onboarding/OnboardingDialog.tsx` | 1042 |
-| `src/components/schedule/AutoAssignDialog.tsx` | 1023 |
 | `src/components/profile-completion/ProfileCompletionWizard.tsx` | 935 |
 | `src/components/BookingListPage.tsx` | 921 |
 | `src/components/EquipmentPicker.tsx` | 898 |

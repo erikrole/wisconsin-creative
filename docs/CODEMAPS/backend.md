@@ -26,11 +26,11 @@
 | `src/lib/services/bookings.ts` | 9 |
 | `src/lib/services/budget.ts` | 938 |
 | `src/lib/services/bulk-assignment-batches.ts` | 253 |
-| `src/lib/services/bulk-schedule-assignment.ts` | 971 |
+| `src/lib/services/bulk-schedule-assignment.ts` | 973 |
 | `src/lib/services/bulk-unit-scans.ts` | 722 |
 | `src/lib/services/calendar-sync-health.ts` | 165 |
 | `src/lib/services/calendar-sync.ts` | 754 |
-| `src/lib/services/candidate-scoring.ts` | 587 |
+| `src/lib/services/candidate-scoring.ts` | 591 |
 | `src/lib/services/category-mutations.ts` | 168 |
 | `src/lib/services/checkin-item-reports.ts` | 618 |
 | `src/lib/services/checkout-consolidation.ts` | 596 |
@@ -155,7 +155,7 @@
 | `src/lib/breadcrumbs.ts` | 229 |
 | `src/lib/brother-label-csv.ts` | 134 |
 | `src/lib/bulk-batteries.ts` | 49 |
-| `src/lib/bulk-schedule-assignment-types.ts` | 213 |
+| `src/lib/bulk-schedule-assignment-types.ts` | 221 |
 | `src/lib/bulk-unit-qr.ts` | 111 |
 | `src/lib/bulk-unit-status.ts` | 52 |
 | `src/lib/calendar-event-dates.ts` | 191 |

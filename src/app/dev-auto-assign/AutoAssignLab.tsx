@@ -74,6 +74,7 @@ const PREVIEW: BulkAssignmentPreviewResponse = {
     area: null,
     workerScope: "ALL",
     requireFullCrew: false,
+    eventIds: [],
     period: "week",
   },
   fingerprint: "a".repeat(64),
@@ -89,8 +90,23 @@ function json(data: unknown) {
   return Promise.resolve(new Response(JSON.stringify({ data }), { status: 200, headers: { "Content-Type": "application/json" } }));
 }
 
+const EVENT_PREVIEW: BulkAssignmentPreviewResponse = {
+  ...PREVIEW,
+  scope: { ...PREVIEW.scope, eventIds: ["e3"], period: "custom" },
+  events: [EVENTS[2]!],
+  summary: { ...PREVIEW.summary, eventsMatched: 1, eventsReady: 1, openSlots: 3, proposed: 2, skipped: 0, warnings: 0, peopleAffected: 2, eventsFullyCrewed: 0, eventsPartiallyCrewed: 1 },
+};
+
+const LAB_EVENT = {
+  id: "e3",
+  summary: "Men's Hockey vs. Minnesota",
+  startsAt: "2026-10-27T00:00:00.000Z",
+  endsAt: "2026-10-27T03:00:00.000Z",
+};
+
 function Lab() {
   const params = useSearchParams();
+  const eventMode = params.get("mode") === "event";
   const [ready, setReady] = useState(false);
   useEffect(() => {
     document.documentElement.dataset.theme = params.get("theme") === "dark" ? "dark" : "light";
@@ -98,15 +114,15 @@ function Lab() {
     window.fetch = (input, init) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
       if (url.includes("/bulk-assignment/batches")) return json({ batches: [] });
-      if (url.includes("/bulk-assignment/preview")) return json(PREVIEW);
+      if (url.includes("/bulk-assignment/preview")) return json(eventMode ? EVENT_PREVIEW : PREVIEW);
       if (url.includes("/sport-roster")) return json({ sports: [] });
       return original(input, init);
     };
     setReady(true);
     return () => { window.fetch = original; };
-  }, [params]);
+  }, [eventMode, params]);
   if (!ready) return null;
-  return <AutoAssignDialog open onOpenChange={() => {}} onApplied={() => {}} />;
+  return <AutoAssignDialog open onOpenChange={() => {}} onApplied={() => {}} event={eventMode ? LAB_EVENT : null} />;
 }
 
 export default function AutoAssignLab() {

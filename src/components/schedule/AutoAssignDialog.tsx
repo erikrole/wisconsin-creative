@@ -73,6 +73,14 @@ export type AutoAssignCustomWindow = {
   label: string;
 };
 
+/** Event detail's Auto assign: the scope is pinned to this one event. */
+export type AutoAssignEvent = {
+  id: string;
+  summary: string;
+  startsAt: string;
+  endsAt: string;
+};
+
 export type AutoAssignDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -81,6 +89,7 @@ export type AutoAssignDialogProps = {
   initialArea?: Area | null;
   initialPeriod?: AssignmentPeriodValue;
   customWindow?: AutoAssignCustomWindow | null;
+  event?: AutoAssignEvent | null;
 };
 
 type Step = "scope" | "review";
@@ -242,12 +251,16 @@ export function AutoAssignDialog({
   initialArea,
   initialPeriod,
   customWindow,
+  event,
 }: AutoAssignDialogProps) {
+  // One event is usually filled partway (a slot nobody fits stays open), so
+  // the single-event default lets the rest stage instead of holding it all.
+  const defaultRequireFullCrew = !event;
   const [step, setStep] = useState<Step>("scope");
   const [sportCodes, setSportCodes] = useState<string[]>(initialSportCodes ?? []);
   const [area, setArea] = useState<Area | null>(initialArea ?? null);
   const [workerScope, setWorkerScope] = useState<BulkAssignmentWorkerScope>("ALL");
-  const [requireFullCrew, setRequireFullCrew] = useState(true);
+  const [requireFullCrew, setRequireFullCrew] = useState(defaultRequireFullCrew);
   const [period, setPeriod] = useState<AssignmentPeriodValue>(
     initialPeriod ?? (customWindow ? "custom" : "week"),
   );
@@ -279,7 +292,7 @@ export function AutoAssignDialog({
     setSportCodes(initialSportCodes ?? []);
     setArea(initialArea ?? null);
     setWorkerScope("ALL");
-    setRequireFullCrew(true);
+    setRequireFullCrew(defaultRequireFullCrew);
     setPeriod(initialPeriod ?? (customWindow ? "custom" : "week"));
     setPreview(null);
     setSelectedProposalIds(new Set());
@@ -299,6 +312,15 @@ export function AutoAssignDialog({
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const activeWindow = useMemo(() => {
+    if (event) {
+      const startsAt = new Date(event.startsAt);
+      const endsAt = new Date(Math.max(new Date(event.endsAt).getTime(), startsAt.getTime() + 60_000));
+      return {
+        rangeStartsAt: startsAt.toISOString(),
+        rangeEndsAt: endsAt.toISOString(),
+        detail: formatEventDate(event.startsAt),
+      };
+    }
     if (period === "custom" && customWindow) {
       return {
         rangeStartsAt: customWindow.rangeStartsAt,
@@ -312,17 +334,18 @@ export function AutoAssignDialog({
       rangeEndsAt: resolved.rangeEndsAt,
       detail: resolved.detail,
     };
-  }, [customWindow, period, windows]);
+  }, [customWindow, event, period, windows]);
 
   const scope = useMemo<BulkAssignmentScope>(() => ({
-    sportCodes: [...sportCodes].sort(),
+    sportCodes: event ? [] : [...sportCodes].sort(),
+    eventIds: event ? [event.id] : [],
     rangeStartsAt: activeWindow.rangeStartsAt,
     rangeEndsAt: activeWindow.rangeEndsAt,
     area,
     workerScope,
     requireFullCrew,
-    period,
-  }), [activeWindow, area, period, requireFullCrew, sportCodes, workerScope]);
+    period: event ? "custom" : period,
+  }), [activeWindow, area, event, period, requireFullCrew, sportCodes, workerScope]);
 
   useEffect(() => {
     if (skipScopeResetRef.current) {
@@ -338,7 +361,7 @@ export function AutoAssignDialog({
   }, [scope]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (!open || sportCodes.length === 0) {
+    if (!open || event || sportCodes.length === 0) {
       setRoster(null);
       setRosterError(null);
       return;
@@ -370,7 +393,7 @@ export function AutoAssignDialog({
     return () => {
       cancelled = true;
     };
-  }, [open, sportCodes, rosterToken]);
+  }, [open, event, sportCodes, rosterToken]);
 
   const buildPreview = useCallback(async (nextScope: BulkAssignmentScope = scope) => {
     setLoading(true);
@@ -542,10 +565,12 @@ export function AutoAssignDialog({
       <DialogContent className={cn(FRESH_SCOPE_CLASS, "grid max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden bg-[var(--background)] sm:max-w-3xl")}>
         <DialogHeader className="pr-16">
           <div>
-            <DialogTitle>Auto assign crew</DialogTitle>
+            <DialogTitle>{event ? "Fill open slots" : "Auto assign crew"}</DialogTitle>
             <DialogDescription className="mt-1">
               {step === "scope"
-                ? "Pick the window, then preview who gets staged. Workers are notified after a ten-minute cancel window."
+                ? event
+                  ? "Suggest people for this event's open slots, then review before anything is staged."
+                  : "Pick the window, then preview who gets staged. Workers are notified after a ten-minute cancel window."
                 : loading
                   ? "Building a preview of who can be staged."
                   : readyEvents.length > 0
@@ -566,6 +591,12 @@ export function AutoAssignDialog({
               <PendingAssignmentBatches batches={pendingBatches} onChanged={() => { void refreshBatches(); onApplied(); }} />
 
               <div className="divide-y divide-[var(--border)] overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--background)]">
+                {event ? (
+                  <ScopeRow label="Event" hint={activeWindow.detail}>
+                    <span className="truncate text-sm font-bold">{event.summary}</span>
+                  </ScopeRow>
+                ) : null}
+                {event ? null : (
                 <ScopeRow label="Sports" hint={sportCodes.length > 0 ? null : "Every sport in the window is included."}>
                   <div className="flex flex-wrap items-center gap-2">
                   <Popover open={sportPickerOpen} onOpenChange={setSportPickerOpen}>
@@ -632,6 +663,7 @@ export function AutoAssignDialog({
                     </div>
                   ) : null}
                 </ScopeRow>
+                )}
 
                 <ScopeRow label="Area">
                   <Select value={area ?? "_all"} onValueChange={(value) => setArea(value === "_all" ? null : value as Area)}>
@@ -647,6 +679,7 @@ export function AutoAssignDialog({
                   </Select>
                 </ScopeRow>
 
+                {event ? null : (
                 <ScopeRow label="Period" hint={activeWindow.detail}>
                   <ToggleGroup
                     type="single"
@@ -669,6 +702,7 @@ export function AutoAssignDialog({
                     ) : null}
                   </ToggleGroup>
                 </ScopeRow>
+                )}
 
                 <ScopeRow label="Assign">
                   <ToggleGroup
