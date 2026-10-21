@@ -67,6 +67,11 @@ enum AppRuntimeMode {
         /// delivery truth and recovery controls can be reviewed without a
         /// signed-in session or live APNs state.
         case notifications
+        /// Starts a real checkout-return Live Activity in the simulator, in the
+        /// state named by `GT_LIVE_ACTIVITY` (normal, warning, critical,
+        /// overdue, returned), so the lock screen and Dynamic Island can be
+        /// captured without a signed-in session or a push.
+        case liveActivity = "live-activity"
         /// Writes a canned Home Screen widget snapshot (shifts and gear due)
         /// into the App Group and reloads the timelines, so placed widgets
         /// show populated lists instead of their "Open Creative" state.
