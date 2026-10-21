@@ -1646,7 +1646,8 @@ export async function createReservationLifecycleNotification(args: {
   event: ReservationLifecycleEvent;
   version?: Date;
 }): Promise<void> {
-  const { bookingId, bookingTitle, requesterUserId, actorUserId, event, version } = args;
+  const { bookingId, requesterUserId, actorUserId, event, version } = args;
+  const bookingTitle = displayBookingTitle(args.bookingTitle);
 
   // Don't notify users when they cancel their own reservation
   if (event === "cancelled" && requesterUserId === actorUserId) return;
@@ -1738,12 +1739,13 @@ export async function notifyItemReport(args: {
   });
 
   const now = new Date();
+  const bookingTitle = displayBookingTitle(args.bookingTitle);
   const typeLower = args.reportType.toLowerCase();
   const notifType = `checkin_item_${typeLower}`;
   const title = `Item reported ${typeLower}: ${args.assetTag}`;
   const body = args.reportType === "DAMAGED"
-    ? `${args.reporterName} reported ${args.itemDescription} (${args.assetTag}) as damaged during check-in of "${args.bookingTitle}".${args.damageDescription ? ` Description: ${args.damageDescription}` : ""}`
-    : `${args.reporterName} reported ${args.itemDescription} (${args.assetTag}) as lost during check-in of "${args.bookingTitle}".`;
+    ? `${args.reporterName} reported ${args.itemDescription} (${args.assetTag}) as damaged during check-in of "${bookingTitle}".${args.damageDescription ? ` Description: ${args.damageDescription}` : ""}`
+    : `${args.reporterName} reported ${args.itemDescription} (${args.assetTag}) as lost during check-in of "${bookingTitle}".`;
 
   // Batch-create all notifications in one INSERT
   const notifData = supervisors.map((s) => ({
@@ -1754,7 +1756,7 @@ export async function notifyItemReport(args: {
     body,
     payload: {
       bookingId: args.bookingId,
-      bookingTitle: args.bookingTitle,
+      bookingTitle,
       assetId: args.assetId,
       assetTag: args.assetTag,
       reportType: args.reportType,
@@ -1794,7 +1796,7 @@ export async function notifyItemReport(args: {
           kind: "item",
           title,
           body,
-          bookingTitle: args.bookingTitle,
+          bookingTitle,
           dueAt: now.toISOString(),
         }),
       }, "itemReports").catch((err) =>

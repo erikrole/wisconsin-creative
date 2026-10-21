@@ -1,5 +1,21 @@
 [
   {
+    "date": "2026-10-20",
+    "title": "Kiosk checkouts use clean titles",
+    "type": "improvement",
+    "summary": "Checkouts started at the kiosk for a game now get the same title as everywhere else, like \"Men's Soccer vs Evansville\".",
+    "details": [
+      "Kiosk checkouts for a game are titled with the sport name and opponent instead of the calendar's raw event name.",
+      "Reservation and damage or loss alerts show the clean booking title.",
+      "The kiosk's \"needed next\" card no longer cuts typed titles at a dash."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 0
+  },
+  {
     "date": "2026-10-21",
     "title": "Nudge people who haven't finished setup",
     "type": "improvement",
