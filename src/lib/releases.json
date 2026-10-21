@@ -1,6 +1,21 @@
 [
   {
     "date": "2026-10-21",
+    "title": "A cleaner Trade Board",
+    "type": "improvement",
+    "summary": "The Trade Board is easier to scan, and students now hear when a shift they could take is posted.",
+    "details": [
+      "Tabs for Review, Available, Mine, and History, with shifts grouped by day, soonest first.",
+      "Open shifts and trades from other students sit in one list with a single Claim button.",
+      "When someone posts a shift to trade, eligible students in the same area get a notification."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 577
+  },
+  {
+    "date": "2026-10-21",
     "title": "Quicker reviews of upcoming changes",
     "type": "improvement",
     "summary": "Upcoming changes can be tried out on a computer with one step before they go live, so updates get checked sooner.",
