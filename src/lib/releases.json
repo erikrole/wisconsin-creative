@@ -8,7 +8,8 @@
       "Open UA gear to see every piece in your kit with its size.",
       "Each piece shows Planned, On order with the expected date, In hand with the date, or Add your size.",
       "Students on the student list see their kit there too.",
-      "Your kit stays hidden until gear picks are opened to everyone."
+      "Your kit stays hidden until gear picks are opened to everyone.",
+      "Admins see order follow-ups under Needs attention, like late arrivals and people waiting on gear."
     ],
     "platforms": [
       "Web"
