@@ -53,6 +53,8 @@ export type Asset = {
   serialNumber: string;
   status: string;
   computedStatus: string;
+  /** Held as an open missing-item case. */
+  missing?: boolean;
   createdAt: string;
   location: { id: string; name: string };
   category: { id: string; name: string } | null;
@@ -191,9 +193,9 @@ export function statusBadge(asset: Asset) {
     }
     case "MAINTENANCE":
       return (
-        <Badge className={STATUS_STYLES.orange.badge}>
-          <StatusDot color="orange" />
-          Maintenance
+        <Badge className={STATUS_STYLES[asset.missing ? "red" : "orange"].badge}>
+          <StatusDot color={asset.missing ? "red" : "orange"} />
+          {asset.missing ? "Missing" : "Maintenance"}
         </Badge>
       );
     case "RETIRED":

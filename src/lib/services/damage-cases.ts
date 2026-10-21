@@ -107,6 +107,16 @@ export async function listDamageCases(view: "open" | "closed") {
   };
 }
 
+/** Which of these held items are open missing-item cases, so the catalog can say "Missing" instead of "Maintenance". */
+export async function missingAssetIds(assetIds: string[]): Promise<Set<string>> {
+  if (assetIds.length === 0) return new Set();
+  const rows = await db.checkinItemReport.findMany({
+    where: { assetId: { in: assetIds }, type: "LOST", resolution: null },
+    select: { assetId: true },
+  });
+  return new Set(rows.flatMap((r) => (r.assetId ? [r.assetId] : [])));
+}
+
 /** Open serialized cases, for the sidebar badge. */
 export function countOpenDamageCases() {
   return db.checkinItemReport.count({ where: { assetId: { not: null }, resolution: null } });

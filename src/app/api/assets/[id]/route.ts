@@ -1,3 +1,4 @@
+import { missingAssetIds } from "@/lib/services/damage-cases";
 import { z } from "zod";
 import { withAuth } from "@/lib/api";
 import { db } from "@/lib/db";
@@ -293,6 +294,7 @@ export const GET = withAuth<{ id: string }>(async (req, { user, params }) => {
       // The structured metadata is exposed via the `metadata` field instead.
       notes: parsedMeta ? null : asset.notes,
       computedStatus,
+      missing: computedStatus === "MAINTENANCE" && (await missingAssetIds([asset.id])).has(asset.id),
       isFavorited: !!favoriteRow,
       metadata: parsedMeta,
       activeBooking,

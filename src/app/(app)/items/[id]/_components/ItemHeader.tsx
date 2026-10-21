@@ -61,7 +61,9 @@ function StatusLine({ asset }: { asset: AssetDetail }) {
       </Badge>
     );
   }
-  if (s === "MAINTENANCE") return <Badge variant="orange" className="px-2.5 py-1 text-xs">Maintenance</Badge>;
+  if (s === "MAINTENANCE") return asset.missing
+    ? <Badge variant="red" className="px-2.5 py-1 text-xs">Missing</Badge>
+    : <Badge variant="orange" className="px-2.5 py-1 text-xs">Maintenance</Badge>;
   if (s === "RETIRED") return <Badge variant="gray" className="px-2.5 py-1 text-xs">Retired</Badge>;
   return <Badge variant="gray" className="px-2.5 py-1 text-xs">{s}</Badge>;
 }

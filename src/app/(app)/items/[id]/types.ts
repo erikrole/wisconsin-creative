@@ -36,6 +36,8 @@ export type AssetDetail = {
   residualValue: string | number | null;
   status: string;
   computedStatus: string;
+  /** Held as an open missing-item case. */
+  missing?: boolean;
   isFavorited: boolean;
   checkinReports?: Array<{
     id: string;
