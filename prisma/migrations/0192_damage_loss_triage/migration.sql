@@ -12,6 +12,9 @@ ALTER TABLE "checkin_item_reports"
   ADD COLUMN "resolved_by_id" TEXT,
   ADD COLUMN "resolution_note" TEXT;
 
+-- A report can now be filed from the item page, outside any checkout.
+ALTER TABLE "checkin_item_reports" ALTER COLUMN "booking_id" DROP NOT NULL;
+
 -- AddForeignKey
 ALTER TABLE "checkin_item_reports"
   ADD CONSTRAINT "checkin_item_reports_resolved_by_id_fkey"

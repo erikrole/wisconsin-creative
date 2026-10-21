@@ -3,6 +3,10 @@ import { db } from "@/lib/db";
 import { createAuditEntryTx } from "@/lib/audit";
 import { HttpError } from "@/lib/http";
 import { displayBookingTitle } from "@/lib/booking-display-title";
+import { put } from "@vercel/blob";
+import { deleteImage, imageExtensionForType, isBlobUrl, publicBlobAuth, validateImage } from "@/lib/blob";
+import { deferPush, notifyItemReport } from "@/lib/services/notifications";
+import { deriveAssetStatus } from "@/lib/services/status";
 
 /** Outcomes staff can pick, by what was reported. */
 export const RESOLUTIONS_BY_TYPE: Record<CheckinReportType, ReportResolution[]> = {
@@ -46,9 +50,10 @@ export type DamageCase = {
   imageUrl: string | null;
   reportedAt: string;
   asset: { id: string; assetTag: string; name: string | null; brand: string; model: string; imageUrl: string | null; status: AssetStatus };
-  booking: { id: string; title: string };
+  /** Null when the report was filed from the item page. */
+  booking: { id: string; title: string } | null;
   /** The borrower on the checkout, who had the item when it was reported. */
-  responsible: { id: string; name: string };
+  responsible: { id: string; name: string } | null;
   reportedBy: string;
   /** A missing item that is still listed as available can be booked again. */
   stillBookable: boolean;
@@ -68,8 +73,8 @@ function toCase(row: CaseRow): DamageCase | null {
     imageUrl: row.imageUrl,
     reportedAt: row.lastReportedAt.toISOString(),
     asset: row.asset,
-    booking: { id: row.booking.id, title: displayBookingTitle(row.booking.title) },
-    responsible: row.booking.requester,
+    booking: row.booking ? { id: row.booking.id, title: displayBookingTitle(row.booking.title) } : null,
+    responsible: row.booking?.requester ?? null,
     reportedBy: row.reportedBy.name,
     stillBookable: row.type === "LOST" && !row.resolution && row.asset.status === "AVAILABLE",
     resolution: row.resolution,
@@ -160,4 +165,88 @@ export async function resolveDamageCase(args: {
     },
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
   );
+}
+
+/**
+ * A report filed from the item page, outside any return: "this is damaged" or
+ * "I can't find it". It opens a case on the Damage and loss page. The item is
+ * held right away unless it is out or reserved, so a borrower's report never
+ * pulls gear out from under a booking; staff see it in the queue either way.
+ */
+export async function reportAssetProblem(args: {
+  assetId: string;
+  type: CheckinReportType;
+  description?: string;
+  file: File | null;
+  reporter: { id: string; role: Role; name: string };
+}) {
+  const description = args.description?.trim() || undefined;
+  if (args.type === "DAMAGED" && !description && !args.file) {
+    throw new HttpError(400, "Describe the damage or add a photo.");
+  }
+  const asset = await db.asset.findUnique({
+    where: { id: args.assetId },
+    select: { id: true, assetTag: true, brand: true, model: true, status: true },
+  });
+  if (!asset) throw new HttpError(404, "Item not found");
+  if (asset.status === AssetStatus.RETIRED) throw new HttpError(409, "This item is retired.");
+
+  let imageUrl: string | null = null;
+  if (args.file) {
+    const invalid = await validateImage(args.file);
+    if (invalid) throw new HttpError(400, invalid);
+    const blob = await put(
+      `checkin-reports/item/${asset.id}/${Date.now()}.${imageExtensionForType(args.file.type)}`,
+      args.file.stream(),
+      { ...publicBlobAuth(), access: "public", contentType: args.file.type },
+    );
+    imageUrl = blob.url;
+  }
+
+  let report;
+  try {
+    report = await db.$transaction(
+      async (tx) => {
+        const duplicate = await tx.checkinItemReport.findFirst({
+          where: { assetId: asset.id, bookingId: null, resolution: null, reportedById: args.reporter.id, type: args.type },
+          select: { id: true },
+        });
+        if (duplicate) throw new HttpError(409, "You already reported this item. Staff will follow up.");
+        const saved = await tx.checkinItemReport.create({
+          data: { assetId: asset.id, type: args.type, description, imageUrl, reportedById: args.reporter.id },
+        });
+        const derived = await deriveAssetStatus(asset.id, tx);
+        const held = derived === "AVAILABLE" && asset.status === AssetStatus.AVAILABLE;
+        if (held) await tx.asset.update({ where: { id: asset.id }, data: { status: AssetStatus.MAINTENANCE } });
+        await createAuditEntryTx(tx, {
+          actorId: args.reporter.id,
+          actorRole: args.reporter.role,
+          entityType: "asset",
+          entityId: asset.id,
+          action: args.type === "DAMAGED" ? "item_damage_reported" : "item_missing_reported",
+          before: { status: asset.status },
+          after: { status: held ? AssetStatus.MAINTENANCE : asset.status, reportId: saved.id, description, imageUrl, source: "ITEM_PAGE" },
+        });
+        return saved;
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+  } catch (err) {
+    if (imageUrl && isBlobUrl(imageUrl)) await deleteImage(imageUrl).catch(() => {});
+    throw err;
+  }
+
+  deferPush(
+    notifyItemReport({
+      reportId: report.id,
+      assetId: asset.id,
+      assetTag: asset.assetTag,
+      itemDescription: `${asset.brand} ${asset.model}`,
+      reportType: args.type,
+      damageDescription: description,
+      evidenceImageUrl: imageUrl ?? undefined,
+      reporterName: args.reporter.name,
+    }).catch((err) => console.error("[REPORT] Failed to send supervisor notifications:", err)),
+  );
+  return report;
 }

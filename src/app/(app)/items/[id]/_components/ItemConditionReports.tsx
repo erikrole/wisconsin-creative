@@ -62,9 +62,13 @@ export function ItemConditionReports({ asset, busy, onClearHold, onSelectBooking
                 </p>
               )}
               {!report.imageUrl && <p className="text-xs text-muted-foreground">No photo attached</p>}
-              <Button variant="link" className="h-auto max-w-full justify-start whitespace-normal px-0 text-left" onClick={() => onSelectBooking(report.booking.id)}>
-                View checkout · {displayBookingTitle(report.booking.title)}
-              </Button>
+              {report.booking ? (
+                <Button variant="link" className="h-auto max-w-full justify-start whitespace-normal px-0 text-left" onClick={() => onSelectBooking(report.booking!.id)}>
+                  View checkout · {displayBookingTitle(report.booking.title)}
+                </Button>
+              ) : (
+                <p className="text-xs text-muted-foreground">Reported from the item page</p>
+              )}
             </div>
           </article>
         ))}

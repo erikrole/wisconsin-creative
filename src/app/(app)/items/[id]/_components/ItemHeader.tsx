@@ -121,6 +121,7 @@ type ItemHeaderProps = {
   onSaveHeaderField: (field: string, value: string) => Promise<void>;
   onAction: (action: string) => void;
   onImageModalOpen: () => void;
+  onReportProblem: () => void;
 };
 
 export function ItemHeader({
@@ -134,6 +135,7 @@ export function ItemHeader({
   onSaveHeaderField,
   onAction,
   onImageModalOpen,
+  onReportProblem,
 }: ItemHeaderProps) {
   const attachmentKind = asset.parentAsset ? getAttachmentKind(asset) : null;
   const slotLabel = asset.parentAsset ? getSdCardSlotLabel(asset, asset.parentAsset.assetTag) : null;
@@ -308,6 +310,9 @@ export function ItemHeader({
                 <Button variant="outline" className="h-10" disabled title={reserveDisabledTitle}>
                   Reserve
                 </Button>
+              )}
+              {currentUser != null && currentUser.role !== "COLLABORATOR" && asset.computedStatus !== "RETIRED" && (
+                <Button variant="outline" className="h-10" onClick={onReportProblem}>Report a problem</Button>
               )}
               {canEdit && <ActionsMenu asset={asset} disabled={actionBusy} onAction={onAction} />}
             </div>

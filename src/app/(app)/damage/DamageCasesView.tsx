@@ -23,8 +23,8 @@ type DamageCase = {
   imageUrl: string | null;
   reportedAt: string;
   asset: { id: string; assetTag: string; name: string | null; brand: string; model: string; imageUrl: string | null; status: string };
-  booking: { id: string; title: string };
-  responsible: { id: string; name: string };
+  booking: { id: string; title: string } | null;
+  responsible: { id: string; name: string } | null;
   reportedBy: string;
   stillBookable: boolean;
   resolution: Resolution | null;
@@ -123,7 +123,7 @@ function CaseRow({ item, open, onToggle }: { item: DamageCase; open: boolean; on
             <span className="text-[12.5px] text-muted-foreground">{item.asset.assetTag}</span>
           </div>
           <p className="m-0 mt-0.5 truncate text-[12.5px] text-muted-foreground">
-            {item.responsible.name} · {formatRelativeTime(item.reportedAt, new Date())}
+            {(item.responsible?.name ?? item.reportedBy)} · {formatRelativeTime(item.reportedAt, new Date())}
           </p>
         </div>
         <div className="flex flex-col items-end gap-1">
@@ -174,16 +174,20 @@ function CaseDetail({ item }: { item: DamageCase }) {
       <div className="flex min-w-0 flex-col gap-3">
         <p className="m-0 whitespace-pre-wrap break-words text-sm">{item.description || "No description was provided."}</p>
         <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-[13px]">
-          <dt className="text-muted-foreground">Had the item</dt>
-          <dd className="m-0">{item.responsible.name}</dd>
+          {item.responsible && (
+            <>
+              <dt className="text-muted-foreground">Had the item</dt>
+              <dd className="m-0">{item.responsible.name}</dd>
+            </>
+          )}
           <dt className="text-muted-foreground">Reported by</dt>
           <dd className="m-0">{item.reportedBy}</dd>
-          <dt className="text-muted-foreground">Checkout</dt>
-          <dd className="m-0 min-w-0 truncate">{item.booking.title}</dd>
+          <dt className="text-muted-foreground">{item.booking ? "Checkout" : "Source"}</dt>
+          <dd className="m-0 min-w-0 truncate">{item.booking ? item.booking.title : "Reported from the item page"}</dd>
         </dl>
         <div className="flex flex-wrap gap-3 text-[13px] font-bold">
           <Link href={`/items/${item.asset.id}`} className="text-foreground underline-offset-4 hover:underline">Open item</Link>
-          <Link href={`/checkouts/${item.booking.id}`} className="text-foreground underline-offset-4 hover:underline">Open checkout</Link>
+          {item.booking && <Link href={`/checkouts/${item.booking.id}`} className="text-foreground underline-offset-4 hover:underline">Open checkout</Link>}
         </div>
 
         {item.resolution ? (

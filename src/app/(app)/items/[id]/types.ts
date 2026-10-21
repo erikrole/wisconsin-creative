@@ -50,7 +50,7 @@ export type AssetDetail = {
     resolutionNote?: string | null;
     resolvedBy?: { name: string } | null;
     reportedBy: { name: string };
-    booking: { id: string; title: string };
+    booking: { id: string; title: string } | null;
   }>;
   notes: string | null;
   linkUrl: string | null;

@@ -2416,7 +2416,8 @@ model BookingPhoto {
 
 model CheckinItemReport {
   id             String            @id @default(cuid())
-  bookingId      String            @map("booking_id")
+  /// Null for a report filed from the item page instead of at a return.
+  bookingId      String?           @map("booking_id")
   /// Exactly one target is set (CHECK in migration 0156): a serialized asset,
   /// a numbered bulk unit (battery #7), or counted bulk stock by SKU.
   assetId        String?           @map("asset_id")
@@ -2442,7 +2443,7 @@ model CheckinItemReport {
   resolvedById   String?           @map("resolved_by_id")
   resolutionNote String?           @map("resolution_note")
 
-  booking     Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  booking     Booking?     @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   asset       Asset?       @relation(fields: [assetId], references: [id], onDelete: Restrict)
   bulkSkuUnit BulkSkuUnit? @relation(fields: [bulkSkuUnitId], references: [id], onDelete: Cascade)
   bulkSku     BulkSku?     @relation(fields: [bulkSkuId], references: [id], onDelete: Cascade)
