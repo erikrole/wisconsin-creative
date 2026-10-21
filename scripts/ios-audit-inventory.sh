@@ -76,6 +76,7 @@ EventTravelSection.swift               |                             | exempt-sh
 EventsView.swift                       | events                      | audit
 EventCatalogDetailView.swift           | events                      | audit
 AccountabilityView.swift               | accountability              | audit
+DamageCasesView.swift                  | damage-cases                | audit
 AccountabilityPersonView.swift         | accountability              | audit
 NotificationsSheet.swift               | notifications-sheet         | audit
 OverdueReportView.swift                | overdue-report              | audit

@@ -161,6 +161,7 @@
 		96DAC20EB887DA3916DEE474 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38065600FA5A1C1AC4C8CC2F /* AppState.swift */; };
 		9920100D23D0FF37F2528340 /* KioskBarcodeCameraView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06C085E7CDEC3CCE6DFDD630 /* KioskBarcodeCameraView.swift */; };
 		9939B52822812D9C7B8CF92B /* ScannerDebuggerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6B542F56A00A8C2FEB2078C /* ScannerDebuggerView.swift */; };
+		9BC82BABC3994046A594234F /* DamageCasesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B52F6EC97DF1D83B6D0E37F /* DamageCasesView.swift */; };
 		9C1F8CA16FA839FC47132297 /* ReportSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C450858455B38900B99D9C1 /* ReportSession.swift */; };
 		9C5BEA921A15CE17B5A5B15D /* GearControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70435C0EDE51880CDE9D6BA1 /* GearControls.swift */; };
 		9CF45F32E90F4C03DDE548AB /* KioskShellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E5A80EBE9AE9D0094E70FBB /* KioskShellView.swift */; };
@@ -200,6 +201,7 @@
 		BC65F462F70527063603B045 /* GearWidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = D49E4A7AC5C05860AAB8EBE5 /* GearWidgetSnapshot.swift */; };
 		BC6EB10D11084CD15ABC7C72 /* BlastsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D81B8CCF65841AC7E7668763 /* BlastsView.swift */; };
 		BC815AF152ACBF9E704B2BA5 /* AnnouncementSplashSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89F3793202C8507234E6488F /* AnnouncementSplashSheet.swift */; };
+		BE116399C9F398E683E5BF14 /* DamageCaseModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D01A74B3493AEA820E5EA67 /* DamageCaseModels.swift */; };
 		BF476A31687D54A1DB40F63B /* BadgeReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D2BEE3AD98754BF8D799A18 /* BadgeReportView.swift */; };
 		C102925440D4EB154CF681D1 /* LicenseExpiryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68542663977099AEC90AAFE5 /* LicenseExpiryTests.swift */; };
 		C3ADFDC332E02AC83743947D /* BookingActionSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD1E235656D8727D0F626EBA /* BookingActionSheets.swift */; };
@@ -328,6 +330,7 @@
 		1770023701735D8701DCAA5B /* OverdueReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverdueReportView.swift; sourceTree = "<group>"; };
 		180AF28376E70B61036C413D /* BrandAssetModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrandAssetModels.swift; sourceTree = "<group>"; };
 		1B440FC4AD4F07C1163F8856 /* CheckoutReturnLiveActivityWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckoutReturnLiveActivityWidget.swift; sourceTree = "<group>"; };
+		1D01A74B3493AEA820E5EA67 /* DamageCaseModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DamageCaseModels.swift; sourceTree = "<group>"; };
 		1EA7A7E4A31E909C59D8B15F /* EventTravelModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventTravelModels.swift; sourceTree = "<group>"; };
 		21093FA38C7231AD95DA04B0 /* GearTrackerRouteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GearTrackerRouteTests.swift; sourceTree = "<group>"; };
 		2228A84C3CCBC90ABF9103F1 /* BookingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingsView.swift; sourceTree = "<group>"; };
@@ -343,6 +346,7 @@
 		294553EF02A8AC64D71ED849 /* Wisconsin.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Wisconsin.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2A73B2A1C9B274552CBA7C8B /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
 		2B0058FB3644F501479BA0D5 /* ExtendBookingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtendBookingSheet.swift; sourceTree = "<group>"; };
+		2B52F6EC97DF1D83B6D0E37F /* DamageCasesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DamageCasesView.swift; sourceTree = "<group>"; };
 		2BD749C0D91CAF1E8784E04F /* ProfilePhotoCropView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilePhotoCropView.swift; sourceTree = "<group>"; };
 		2DCFCD62823EAF922978F5E0 /* PasswordSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasswordSetupView.swift; sourceTree = "<group>"; };
 		2F4FFF38CD734CA5656C8878 /* KioskIdleRoster.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskIdleRoster.swift; sourceTree = "<group>"; };
@@ -740,6 +744,7 @@
 				A5827A13830B73BC3EB57808 /* BlastModels.swift */,
 				5BF2723F39EDA8F73473EB8E /* BookingActivityModels.swift */,
 				180AF28376E70B61036C413D /* BrandAssetModels.swift */,
+				1D01A74B3493AEA820E5EA67 /* DamageCaseModels.swift */,
 				BB8C14E1F7005B408A6A4CCD /* DashboardModels.swift */,
 				9DAF420E532759A9116D675B /* DraftModels.swift */,
 				0E6123A836C8A0D47EA24AA1 /* EventCatalogModels.swift */,
@@ -919,6 +924,7 @@
 				58ABE954706326D6137979FB /* BrowseView.swift */,
 				C47A1F9B414D1FC2CEA2AD4C /* BulkInventoryDetailView.swift */,
 				F1F3FA2D4C06E966E6BA030B /* CreateBookingSheet.swift */,
+				2B52F6EC97DF1D83B6D0E37F /* DamageCasesView.swift */,
 				05EDCE16A6E704EDF55C5198 /* EventCatalogDetailView.swift */,
 				5FB4AEDFE7F83CC6E155C12D /* EventDetailSheet.swift */,
 				379F929043CF47B63E8FD5E6 /* EventsView.swift */,
@@ -1388,6 +1394,8 @@
 				2A37E7B9C1A68005651FAC4A /* CreateBookingViewModel.swift in Sources */,
 				8AF1D9B30757EC04020B0A22 /* CrewRow.swift in Sources */,
 				942FA5C930D79B2ACBF6B94F /* CurrentDay.swift in Sources */,
+				BE116399C9F398E683E5BF14 /* DamageCaseModels.swift in Sources */,
+				9BC82BABC3994046A594234F /* DamageCasesView.swift in Sources */,
 				CE860A32B56D88E0802D8EFE /* DashboardModels.swift in Sources */,
 				7507BE07B0E40EAA31B9DBE9 /* DateFormats.swift in Sources */,
 				46010B21A5285A7396574B59 /* DayTimeChipPicker.swift in Sources */,

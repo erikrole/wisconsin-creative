@@ -91,6 +91,13 @@ enum AppRuntimeMode {
         case damageRecordOutcome = "damage-record-outcome"
         case damageReportProblem = "damage-report-problem"
         case damageItemsMissing = "damage-items-missing"
+        /// The staff Damage and loss queue: open list, closed list, empty, one
+        /// case's detail, and the Record outcome sheet over the queue.
+        case damageQueueOpen = "damage-queue-open"
+        case damageQueueClosed = "damage-queue-closed"
+        case damageQueueEmpty = "damage-queue-empty"
+        case damageQueueDetail = "damage-queue-detail"
+        case damageQueueRecord = "damage-queue-record"
         /// The reservation composer with its QR cover open. A simulator has no
         /// camera, so this captures the permission priming a first-time user
         /// actually meets, not a live viewfinder.
@@ -168,6 +175,9 @@ enum AppRuntimeMode {
         static var itemEdit: Bool { matches(.itemEdit) }
         static var damageRecordOutcome: Bool { matches(.damageRecordOutcome) }
         static var damageReportProblem: Bool { matches(.damageReportProblem) }
+        static var damageQueueClosed: Bool { matches(.damageQueueClosed) }
+        static var damageQueueDetail: Bool { matches(.damageQueueDetail) }
+        static var damageQueueRecord: Bool { matches(.damageQueueRecord) }
         static var createBookingScanner: Bool { matches(.createBookingScanner) }
         static var search: Bool { matches(.search) || matches(.searchPartial) }
 
@@ -202,7 +212,8 @@ enum AppRuntimeMode {
              .studentBookings,
              .bookingDetail, .bookingExtend, .bookingEdit, .bookingCancel,
              .itemEdit, .damageMissing, .damageDamaged, .damageClosed, .damageRecordOutcome,
-             .damageReportProblem, .damageItemsMissing, .createBookingScanner, .createBookingEvents, .search, .searchPartial,
+             .damageReportProblem, .damageItemsMissing, .damageQueueOpen, .damageQueueClosed, .damageQueueEmpty,
+             .damageQueueDetail, .damageQueueRecord, .createBookingScanner, .createBookingEvents, .search, .searchPartial,
              .itemsList, .reports, .accountSecurity, .notifications, .login,
              .announcement, .announcementImages, .announcementPlain,
              .announcementStress, .announcementNone, .announcementError,

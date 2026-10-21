@@ -2353,6 +2353,13 @@ final class APIClient {
         let _: DataWrapper<DamageCaseAck> = try await perform(req)
     }
 
+    /// The staff triage queue. `view` is `open` or `closed`.
+    func damageCases(view: DamageCaseView) async throws -> DamageCaseList {
+        let req = request(path: "/api/damage-cases", queryItems: [.init(name: "view", value: view.rawValue)])
+        let resp: DataWrapper<DamageCaseList> = try await perform(req)
+        return resp.data
+    }
+
     /// Files a damage or missing report from the item page (multipart, optional JPEG).
     func reportAssetProblem(assetId: String, isMissing: Bool, description: String, jpegData: Data?) async throws {
         let boundary = "WisconsinReport-\(UUID().uuidString)"

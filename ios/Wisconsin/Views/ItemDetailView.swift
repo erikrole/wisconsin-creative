@@ -896,7 +896,7 @@ private struct ItemConditionReportsCard: View {
             ZoomableImageViewer(url: photo.url, photoLabel: photo.label)
         }
         .sheet(item: $resolving) { report in
-            RecordOutcomeSheet(report: report, onResolved: onResolved)
+            RecordOutcomeSheet(reportId: report.id, isMissing: report.isMissing, onResolved: onResolved)
         }
     }
 
@@ -1099,8 +1099,9 @@ private struct ReportProblemButton: View {
 }
 
 /// Staff closing a case: pick the outcome, optionally add a note, then close.
-private struct RecordOutcomeSheet: View {
-    let report: AssetConditionReport
+struct RecordOutcomeSheet: View {
+    let reportId: String
+    let isMissing: Bool
     let onResolved: (String) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var choice: DamageResolution?
@@ -1108,7 +1109,7 @@ private struct RecordOutcomeSheet: View {
     @State private var isSaving = false
     @State private var error: String?
 
-    private var options: [DamageResolution] { DamageResolution.options(forMissing: report.isMissing) }
+    private var options: [DamageResolution] { DamageResolution.options(forMissing: isMissing) }
 
     var body: some View {
         NavigationStack {
@@ -1167,7 +1168,7 @@ private struct RecordOutcomeSheet: View {
         error = nil
         defer { isSaving = false }
         do {
-            try await APIClient.shared.resolveDamageCase(reportId: report.id, resolution: choice, note: note)
+            try await APIClient.shared.resolveDamageCase(reportId: reportId, resolution: choice, note: note)
             Haptics.success()
             dismiss()
             onResolved("Case closed · \(choice.label)")
