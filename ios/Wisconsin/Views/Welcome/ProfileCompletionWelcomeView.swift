@@ -36,7 +36,14 @@ struct ProfileCompletionWelcomeView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if let data, currentStep != .unknown {
+                if let finish = completionStore.finish, finish.userId == user?.id {
+                    WelcomeFinishView(
+                        firstName: firstName(from: profile?.name ?? user?.name),
+                        outcome: finish.outcome,
+                        showsNextSteps: (profile?.role ?? user?.role) != "COLLABORATOR",
+                        onContinue: leaveFinish
+                    )
+                } else if let data, currentStep != .unknown {
                     wizard(data)
                 } else if let error = completionStore.error {
                     WelcomeFailureView(
@@ -261,7 +268,7 @@ struct ProfileCompletionWelcomeView: View {
     private func continueFromCurrentStep() {
         guard canContinue, let user, let profile else { return }
         if currentStep == .photo {
-            completionStore.continueForSession(for: user.id)
+            completionStore.finishSetup(for: user.id)
             Haptics.success()
             return
         }
@@ -294,7 +301,7 @@ struct ProfileCompletionWelcomeView: View {
         guard isOptionalStep else { return }
         if currentStep == .photo {
             guard let user else { return }
-            completionStore.continueForSession(for: user.id)
+            completionStore.finishSetup(for: user.id)
             Haptics.success()
         } else if let next = visibleSteps[safe: stepIndex + 1] {
             move(to: next, direction: 1)
@@ -310,6 +317,15 @@ struct ProfileCompletionWelcomeView: View {
                 Haptics.error()
             }
         }
+    }
+
+    private func firstName(from name: String?) -> String {
+        name?.split(separator: " ").first.map(String.init) ?? "there"
+    }
+
+    private func leaveFinish() {
+        guard let user else { return }
+        completionStore.dismissFinish(for: user.id)
     }
 
     private func retryLoad() {

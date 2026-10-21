@@ -110,12 +110,43 @@ describe("native iOS Welcome flow", () => {
     expect(crop).toContain('Text("Save").fontWeight(.semibold)');
   });
 
-  it("keeps a final photo skip local to the current session", () => {
+  it("keeps a final photo skip local to the current session and ends on the finish screen", () => {
     const welcome = source("ios/Wisconsin/Views/Welcome/ProfileCompletionWelcomeView.swift");
+    const store = source("ios/Wisconsin/Core/ProfileCompletionStore.swift");
     const skip = welcome.slice(welcome.indexOf("private func skipOptionalStep"), welcome.indexOf("private func snooze"));
 
-    expect(skip).toContain("continueForSession(for: user.id)");
+    expect(skip).toContain("finishSetup(for: user.id)");
     expect(skip).not.toContain("snooze()");
+    // The finish screen holds the Welcome route and only Continue hands off to the app.
+    expect(store).toContain("if finish?.userId == user.id { return .welcome }");
+    expect(store).toMatch(/func dismissFinish[\s\S]*continueForSession/);
+  });
+
+  it("does not require graduation and sends it only when a term is chosen", () => {
+    const draft = source("ios/Wisconsin/Views/Welcome/ProfileCompletionDraft.swift");
+    const models = source("ios/Wisconsin/Models/ProfileCompletionModels.swift");
+    const components = source("ios/Wisconsin/Views/Welcome/ProfileCompletionWelcomeComponents.swift");
+
+    expect(draft).toContain("return !studentYear.isEmpty\n");
+    expect(draft).not.toContain("!graduationTerm.isEmpty\n        case .apparel");
+    expect(draft).toContain("graduationTerm: hasTerm ? graduationTerm : nil");
+    expect(models).toContain("case student(year: String, graduationTerm: String?, gradYear: Int?)");
+    expect(models).toContain("encodeIfPresent(graduationTerm");
+    expect(components).toContain('WelcomeFieldLabel(title: "Anticipated graduation")');
+    expect(components).not.toMatch(/Anticipated graduation[^"]*optional/i);
+  });
+
+  it("closes Welcome with the native finish screen that matches the web copy", () => {
+    const finish = source("ios/Wisconsin/Views/Welcome/WelcomeFinishView.swift");
+
+    expect(finish).toContain("You’re all set, \\(firstName)");
+    expect(finish).toContain("Welcome, \\(firstName)");
+    expect(finish).toContain("We’ll remind you tomorrow to finish your profile");
+    for (const title of ["Check the schedule", "Find your gear", "Read the guides"]) {
+      expect(finish).toContain(title);
+    }
+    expect(finish).toContain("showsNextSteps");
+    expect(finish).toContain("Text(\"Continue\")");
   });
 
   it("manages field focus, the number-pad keyboard, and deterministic preview states", () => {
