@@ -5,7 +5,8 @@
     "type": "improvement",
     "summary": "Documented why screenshot branches still created preview databases and how to stop it.",
     "details": [
-      "Screenshot-only branches now need a copy of the deploy settings file so they do not create deployments."
+      "Screenshot-only branches now carry a copy of the deploy settings file, so pushing to them no longer creates a deployment.",
+      "Stray preview databases from those pushes stop appearing."
     ],
     "platforms": [
       "Web"
