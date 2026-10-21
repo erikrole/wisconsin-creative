@@ -4,9 +4,9 @@ import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { markGettingStartedDone } from "@/app/(app)/_home/GettingStartedCard";
-import { ClassTimesSetup } from "./ClassTimesSetup";
+import { AvailabilitySetup } from "./AvailabilitySetup";
 
-export default function ClassTimesPage() {
+export default function AvailabilitySetupPage() {
   const router = useRouter();
   const { data: user } = useCurrentUser();
 
@@ -20,7 +20,7 @@ export default function ClassTimesPage() {
   }
 
   return (
-    <ClassTimesSetup
+    <AvailabilitySetup
       userId={user.id}
       onDone={() => {
         // Skipping counts as looked-at, so the Home card stops asking.

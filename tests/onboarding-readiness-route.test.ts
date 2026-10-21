@@ -57,7 +57,7 @@ beforeEach(() => {
 });
 
 describe("GET /api/users/onboarding-readiness", () => {
-  it("adds account age and, for students only, whether class times exist", async () => {
+  it("adds account age and, for students only, whether they have said when they can't work", async () => {
     dbMock.user.findMany.mockResolvedValue([
       account(),
       account({ id: "user-2", name: "Has Classes" }),
@@ -66,9 +66,9 @@ describe("GET /api/users/onboarding-readiness", () => {
     dbMock.studentAvailabilityBlock.groupBy.mockResolvedValue([{ userId: "user-2", _count: { _all: 3 } }]);
     const body = await (await GET(new Request("https://app.example.com/api/users/onboarding-readiness"), noParams)).json();
     const byId = Object.fromEntries(body.data.accounts.map((a: { id: string }) => [a.id, a]));
-    expect(byId["user-1"]).toEqual(expect.objectContaining({ hasClassTimes: false, createdAt: "2026-10-19T12:00:00.000Z" }));
-    expect(byId["user-2"].hasClassTimes).toBe(true);
-    expect(byId["staff-1"].hasClassTimes).toBeNull();
+    expect(byId["user-1"]).toEqual(expect.objectContaining({ hasUnavailableTimes: false, createdAt: "2026-10-19T12:00:00.000Z" }));
+    expect(byId["user-2"].hasUnavailableTimes).toBe(true);
+    expect(byId["staff-1"].hasUnavailableTimes).toBeNull();
   });
 
   it("returns derived readiness without exposing private profile values", async () => {

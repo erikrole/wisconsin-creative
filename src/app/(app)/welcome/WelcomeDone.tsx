@@ -28,7 +28,7 @@ export function welcomeNextSteps(role: Role): NextStep[] {
   const guides: NextStep = { href: "/resources", title: "Read the guides", detail: "How we shoot, where gear lives, and who to ask.", icon: BookOpenIcon };
   if (role === "STUDENT") {
     return [
-      { href: "/welcome/classes", title: "Add your class times", detail: "So you’re not scheduled while you’re in class.", icon: ClockIcon },
+      { href: "/welcome/availability", title: "Add when you can’t work", detail: "Classes, a job, or days away, so you’re not scheduled then.", icon: ClockIcon },
       { href: "/schedule", title: "Check the schedule", detail: "See the events you’re on and the ones that need crew.", icon: CalendarDaysIcon },
       gear,
       guides,

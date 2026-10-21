@@ -42,14 +42,14 @@ export const GET = withAuth(async (_req, { user }) => {
       orderBy: { name: "asc" },
       select: { ...readinessProfileSelect, createdAt: true },
     }),
-    // Students with at least one weekly class block, so staff can see who hasn't added class times.
+    // Students who have said when they can't work (weekly or dated), so staff can see who hasn't.
     db.studentAvailabilityBlock.groupBy({
       by: ["userId"],
-      where: { kind: "WEEKLY", intent: "CANNOT_WORK" },
+      where: { intent: "CANNOT_WORK" },
       _count: { _all: true },
     }),
   ]);
-  const withClassTimes = new Set(classBlocks.map((row) => row.userId));
+  const withUnavailable = new Set(classBlocks.map((row) => row.userId));
 
   return ok({
     data: {
@@ -77,7 +77,7 @@ export const GET = withAuth(async (_req, { user }) => {
           completedCount: completion.completedCount,
           totalCount: completion.totalCount,
           createdAt: account.createdAt,
-          hasClassTimes: account.role === "STUDENT" ? withClassTimes.has(account.id) : null,
+          hasUnavailableTimes: account.role === "STUDENT" ? withUnavailable.has(account.id) : null,
         };
       }),
     },

@@ -69,8 +69,8 @@ type ReadinessAccount = {
   completedCount: number;
   totalCount: number;
   createdAt: string;
-  /** Students only: whether any weekly class times exist. Null for other roles. */
-  hasClassTimes: boolean | null;
+  /** Students only: whether they have said when they can't work. Null for other roles. */
+  hasUnavailableTimes: boolean | null;
 };
 
 /** A new person who hasn't signed in, or hasn't finished setup, after this many days needs a nudge. */
@@ -667,7 +667,7 @@ function AccountRow({ account, now, nudging, onNudge }: { account: ReadinessAcco
       </div>
       <div className="text-sm text-muted-foreground">
         <div>{missing.length ? `Missing ${missing.join(", ")}` : "Everything done"}</div>
-        {account.hasClassTimes === false && <div className="text-xs">No class times yet</div>}
+        {account.hasUnavailableTimes === false && <div className="text-xs">Hasn’t added when they can’t work</div>}
       </div>
       <div className="flex items-center gap-1 md:justify-end">
         {!account.profileComplete && (

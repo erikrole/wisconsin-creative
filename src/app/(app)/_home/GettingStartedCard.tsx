@@ -7,7 +7,7 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { useProfileCompletion } from "@/hooks/use-profile-completion";
 import { useFetch } from "@/hooks/use-fetch";
 import { openProfileCompletion } from "@/lib/profile-completion-events";
-import { isClassBlock, type WeeklyBlock } from "@/lib/class-times";
+import { isUnavailableBlock, type AvailabilityBlockLite } from "@/lib/unavailable-times";
 import { APP_STORE_URL } from "../welcome/WelcomeDone";
 
 const STORAGE_KEY = "wc-getting-started";
@@ -36,7 +36,7 @@ function save(next: Saved) {
   }
 }
 
-/** Records a row as handled from elsewhere, e.g. skipping class times. */
+/** Records a row as handled from elsewhere, e.g. skipping "when can’t you work". */
 export function markGettingStartedDone(id: string) {
   const current = load();
   if (!current.done.includes(id)) save({ ...current, done: [...current.done, id] });
@@ -50,10 +50,10 @@ export function GettingStartedCard() {
 
   useEffect(() => setSaved(load()), []);
   const isStudent = user?.role === "STUDENT";
-  // Class times count as done once any class is saved, on any device.
-  const { data: blocks } = useFetch<WeeklyBlock[]>({
+  // "When can't you work" counts as done once anything is saved, on any device.
+  const { data: blocks } = useFetch<AvailabilityBlockLite[]>({
     url: `/api/users/${user?.id ?? ""}/availability`,
-    transform: (json) => ((json as { data?: WeeklyBlock[] }).data ?? []),
+    transform: (json) => ((json as { data?: AvailabilityBlockLite[] }).data ?? []),
     enabled: Boolean(isStudent && user?.id && saved && !saved.dismissed),
     refetchOnFocus: false,
   });
@@ -74,10 +74,10 @@ export function GettingStartedCard() {
     save(next);
   };
 
-  const hasClasses = (blocks ?? []).some(isClassBlock);
+  const hasUnavailable = (blocks ?? []).some(isUnavailableBlock);
   const items: Array<{ id: string; label: string; done: boolean; href?: string; external?: boolean; markOnClick?: boolean; onClick?: () => void }> = [
     { id: "profile", label: "Finish your profile", done: profileDone, onClick: openProfileCompletion },
-    { id: "availability", label: "Add your class times", done: hasClasses || saved.done.includes("availability"), href: "/welcome/classes", markOnClick: false },
+    { id: "availability", label: "Add when you can’t work", done: hasUnavailable || saved.done.includes("availability"), href: "/welcome/availability", markOnClick: false },
     { id: "schedule", label: "Check the schedule", done: saved.done.includes("schedule"), href: "/schedule" },
     { id: "guides", label: "Read the guides", done: saved.done.includes("guides"), href: "/resources" },
     { id: "app", label: "Get the iPhone app", done: saved.done.includes("app"), href: APP_STORE_URL, external: true },

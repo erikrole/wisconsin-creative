@@ -169,7 +169,6 @@
 | `src/lib/chrome-font.ts` | 13 |
 | `src/lib/claim-review-deadlines.ts` | 52 |
 | `src/lib/claim-review-workflow.ts` | 48 |
-| `src/lib/class-times.ts` | 89 |
 | `src/lib/client-enums.ts` | 85 |
 | `src/lib/clipboard.ts` | 19 |
 | `src/lib/collaborator-access.ts` | 175 |
@@ -305,6 +304,7 @@
 | `src/lib/theme.ts` | 145 |
 | `src/lib/time.ts` | 28 |
 | `src/lib/title-normalization.ts` | 101 |
+| `src/lib/unavailable-times.ts` | 133 |
 | `src/lib/url-sync.ts` | 16 |
 | `src/lib/usage-analytics.ts` | 105 |
 | `src/lib/user-directory-query.ts` | 110 |

@@ -7,10 +7,10 @@
     "details": [
       "The sign-in and create-password pages now match the iPhone app: a calm dark surface with a single light button.",
       "The Welcome setup now shows a simple step bar, one question at a time, and works comfortably on a phone.",
-      "When setup ends, a short list points to where to start. Onboarding Status now flags anyone who hasn't signed in or finished setup after three days, and students with no class times, so staff know who to nudge.",
+      "When setup ends, a short list points to where to start. Onboarding Status now flags anyone who hasn't signed in or finished setup after three days, and students who haven't said when they can't work, so staff know who to nudge.",
       "The invite email now spells out what happens next, including installing the app, and how to reset a forgotten password.",
       "New students see a Getting started card on Home for their first two weeks.",
-      "Students can add their class times so they aren't scheduled during class. It's optional and offered on the Getting started card."
+      "Students can add when they can't work, like classes, another job or days out of town, so they aren't scheduled then. It's optional and offered on the Getting started card."
     ],
     "platforms": [
       "Web"

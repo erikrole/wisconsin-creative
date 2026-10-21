@@ -36,13 +36,13 @@ describe("onboarding status page source wiring", () => {
     expect(source).toContain("Nudge to finish setup");
   });
 
-  it("flags setup stalled past the window and students without class times, without sending anything on its own", () => {
+  it("flags setup stalled past the window and students who have not said when they can't work, without sending anything on its own", () => {
     const source = readFileSync("src/app/(app)/staff/onboarding-status/page.tsx", "utf8");
 
     expect(source).toContain("Stalled setup");
     expect(source).toContain("Nudge everyone stalled");
     expect(source).toContain('setStatusFilter("stalled")');
-    expect(source).toContain("No class times yet");
+    expect(source).toContain("Hasn’t added when they can’t work");
     // Nudges only go out when staff press a button.
     expect(source).not.toContain("useEffect");
   });
