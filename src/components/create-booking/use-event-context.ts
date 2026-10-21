@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type Dispatch } from "react";
 import { generateEventTitle } from "@/lib/sports";
+import { displayBookingTitle } from "@/lib/booking-display-title";
 import { toast } from "sonner";
 import {
   toLocalDateTimeValue,
@@ -24,7 +25,7 @@ type EventTitleSource = {
 
 function eventDerivedTitle(event: EventTitleSource, sport: string) {
   return event.opponent && (event.sportCode || sport)
-    ? generateEventTitle(event.sportCode || sport, event.opponent, event.isHome)
+    ? displayBookingTitle(generateEventTitle(event.sportCode || sport, event.opponent, event.isHome))
     : event.summary;
 }
 

@@ -39,3 +39,15 @@ describe("displayBookingTitle", () => {
     expect(displayBookingTitle("WSOC")).toBe("Women's Soccer");
   });
 });
+
+describe("new event-derived booking titles", () => {
+  it("store the clean scheme", async () => {
+    const { generateEventTitle } = await import("../src/lib/sports");
+    expect(displayBookingTitle(generateEventTitle("FB", "#4 Michigan State - Homecoming / Red Out", true))).toBe(
+      "Football vs Michigan State",
+    );
+    expect(displayBookingTitle(generateEventTitle("WSWIM", "University of Notre Dame", false))).toBe(
+      "Women's Swimming & Diving at Notre Dame",
+    );
+  });
+});

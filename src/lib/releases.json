@@ -8,7 +8,7 @@
       "Older bookings that showed codes like \"MSOC vs Evansville\" now show \"Men's Soccer vs Evansville\" on the web, in notifications, reports, the iOS app and the menu bar.",
       "Promotions (\"- Homecoming\"), rankings and \"(Neutral)\" no longer clutter booking titles.",
       "Titles you type yourself, like \"Media Day - Kohl Center\", keep their dashes.",
-      "New game bookings use the full sport name from the start."
+      "New game bookings are saved with the full sport name and a clean opponent from the start."
     ],
     "platforms": [
       "Web",
