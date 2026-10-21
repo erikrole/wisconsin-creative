@@ -1,6 +1,23 @@
 [
   {
     "date": "2026-10-21",
+    "title": "Post trades from Schedule again",
+    "type": "fixes",
+    "summary": "On iPhone, posting a shift to the Trade Board works again, and Schedule recovers cleanly when a load fails.",
+    "details": [
+      "Swipe a shift in Schedule, or tap Post on the Trade Board, to post it. Both were hidden by a status mix-up.",
+      "Shifts you already posted no longer show up to post twice.",
+      "If later or earlier weeks can't load, Schedule says so and offers Try Again instead of spinning.",
+      "Claiming a shift now says it was requested, since an Admin approves it, and Schedule updates when you close the Trade Board.",
+      "Larger text sizes keep event names, dates, and filters readable."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 567
+  },
+  {
+    "date": "2026-10-21",
     "title": "Name and area when adding one student",
     "type": "improvement",
     "summary": "The Add users dialog now opens on Add one person and can start a student's profile with their name and primary area.",
