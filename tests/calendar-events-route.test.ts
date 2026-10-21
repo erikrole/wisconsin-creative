@@ -188,6 +188,31 @@ beforeEach(() => {
   } as unknown as Awaited<ReturnType<typeof db.calendarEvent.update>>);
 });
 
+describe("GET /api/calendar-events search", () => {
+  it("matches title, opponent, and location with q, without widening visibility", async () => {
+    const response = await GET(get("/api/calendar-events?q=%20Notre%20&limit=10"), { params: Promise.resolve({}) });
+    expect(response.status).toBe(200);
+    const where = vi.mocked(db.calendarEvent.findMany).mock.calls[0]?.[0]?.where as Record<string, unknown>;
+    expect(where.AND).toEqual([
+      {
+        OR: [
+          { summary: { contains: "Notre", mode: "insensitive" } },
+          { opponent: { contains: "Notre", mode: "insensitive" } },
+          { location: { name: { contains: "Notre", mode: "insensitive" } } },
+        ],
+      },
+    ]);
+    expect(where.isHidden).toBe(false);
+    expect(where.archivedAt).toBeNull();
+  });
+
+  it("adds nothing when q is blank", async () => {
+    await GET(get("/api/calendar-events?q=%20%20"), { params: Promise.resolve({}) });
+    const where = vi.mocked(db.calendarEvent.findMany).mock.calls[0]?.[0]?.where as Record<string, unknown>;
+    expect(where.AND).toBeUndefined();
+  });
+});
+
 describe("GET /api/calendar-events", () => {
   it("excludes hidden and archived events by default", async () => {
     const res = await GET(

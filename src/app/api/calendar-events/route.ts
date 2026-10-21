@@ -89,6 +89,7 @@ export const GET = withAuth(async (req, { user }) => {
     throw new HttpError(403, "Only staff and admins can include hidden events");
   }
   const includeArchived = searchParams.get("includeArchived") === "true";
+  const search = searchParams.get("q")?.trim().slice(0, 100) || null;
   const parsedStartDate = parseOptionalDate(startDate, "startDate");
   const parsedEndDate = parseOptionalDate(endDate, "endDate");
   assertDateOrder(parsedStartDate, parsedEndDate);
@@ -111,6 +112,7 @@ export const GET = withAuth(async (req, { user }) => {
       includeArchived,
       unmappedOnly,
       sportCode,
+      search,
     }),
     combinedIntoId: null,
     ...(eventId

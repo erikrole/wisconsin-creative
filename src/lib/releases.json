@@ -1,6 +1,21 @@
 [
   {
     "date": "2026-10-21",
+    "title": "Search kits, events and guides",
+    "type": "improvement",
+    "summary": "Search in the iPhone app now also finds kits, upcoming events and guides, each with its own filter.",
+    "details": [
+      "New Kits, Events and Guides filters sit beside Gear and People.",
+      "Events search matches the title, opponent or location of upcoming events.",
+      "Results open the kit, event or guide directly."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 0
+  },
+  {
+    "date": "2026-10-21",
     "title": "More widgets, smarter search",
     "type": "improvement",
     "summary": "The iPhone app adds Lock Screen and larger widgets, filtered search, a scan history, and easier inbox swipes.",
