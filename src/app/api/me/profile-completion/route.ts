@@ -8,6 +8,7 @@ import { getProfileCompletion, isCampusLoginEmail } from "@/lib/profile-completi
 import { profilePhoneSchema } from "@/lib/profile-phone";
 import { enforceRateLimit, SETTINGS_MUTATION_LIMIT } from "@/lib/rate-limit";
 import { requirePermission } from "@/lib/rbac";
+import { sendWelcomeEmailIfDone } from "@/lib/services/welcome-email";
 
 const currentYear = new Date().getFullYear();
 
@@ -256,6 +257,8 @@ export const PATCH = withAuth(async (req, { user }) => {
     }
     throw error;
   }
+
+  if (body.step !== "SNOOZE") await sendWelcomeEmailIfDone(user.id);
 
   return ok({ data: responseData(updated) });
 });

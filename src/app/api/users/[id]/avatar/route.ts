@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { createAuditEntry } from "@/lib/audit";
 import { enforceRateLimit, getClientIp } from "@/lib/rate-limit";
 import { deferCompanionProjectionRefreshForCommittedMutation } from "@/lib/services/companion-projection-publisher";
+import { sendWelcomeEmailIfDone } from "@/lib/services/welcome-email";
 
 function assertCanManage(actorId: string, actorRole: string, targetId: string) {
   if (actorId === targetId) return;
@@ -72,6 +73,8 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
     action: "avatar_uploaded",
     after: { avatarUrl: updated.avatarUrl },
   });
+
+  if (id === user.id) await sendWelcomeEmailIfDone(id);
 
   return ok({ data: { avatarUrl: updated.avatarUrl } });
 });

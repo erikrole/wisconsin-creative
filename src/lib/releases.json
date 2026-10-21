@@ -8,7 +8,8 @@
       "The Welcome setup now shows a simple step bar, one question at a time, and works comfortably on a phone.",
       "When setup ends, a short list points to the schedule, your gear, the guides, and the iPhone app.",
       "Stopping early is fine: it says so and reminds you tomorrow.",
-      "The invite email now spells out what happens next, including installing the app."
+      "The invite email now spells out what happens next, including installing the app.",
+      "New students see a Getting started card on Home for their first two weeks, and get one welcome email when setup is done."
     ],
     "platforms": [
       "Web"
