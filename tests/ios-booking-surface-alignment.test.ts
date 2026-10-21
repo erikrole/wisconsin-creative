@@ -48,4 +48,17 @@ describe("iOS booking surface alignment", () => {
     expect(timing).not.toContain("Label {");
     expect(timing).not.toContain("Image(systemName:");
   });
+
+  it("names the booked gear on the row and keeps orange for missed pickups only", () => {
+    expect(bookingRow).toContain('return rest > 0 ? "\\(first) + \\(rest) more" : first');
+    expect(bookingRow).toContain("parts.append(gearSummary ?? booking.location.name)");
+    expect(bookingRow).toContain("case .pendingPickup: return booking.startsAt < now ? .orange : .purple");
+  });
+
+  it("names the booking that needs the gear next on detail", () => {
+    const detail = readFileSync("ios/Wisconsin/Views/BookingDetailView.swift", "utf8");
+    const api = readFileSync("ios/Wisconsin/Core/APIClient.swift", "utf8");
+    expect(api).toContain("nextNeedTitle: next?.bookingTitle?.nonBlankText");
+    expect(detail).toContain('let who = returnInsight.nextNeedTitle.map { " for \\($0)" } ?? ""');
+  });
 });

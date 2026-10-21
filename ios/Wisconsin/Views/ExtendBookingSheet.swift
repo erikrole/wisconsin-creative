@@ -53,80 +53,63 @@ struct ExtendBookingSheet: View {
         return currentEndsAt < Date() ? "OVERDUE · \(text.uppercased())" : "DUE \(text.uppercased())"
     }
 
-    private func neededNextCard(_ needAt: Date) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: "clock.badge.exclamationmark")
-                .font(.title3)
-                .foregroundStyle(Color.statusText(.orange))
-            VStack(alignment: .leading, spacing: 2) {
-                Text("NEEDED NEXT")
-                    .font(.caption2.weight(.bold))
-                    .tracking(0.8)
-                    .foregroundStyle(.secondary)
-                Text(dayTime(needAt))
-                    .font(.headline)
-            }
-            Spacer(minLength: 0)
+    private func neededNextRow(_ needAt: Date) -> some View {
+        LabeledContent("Needed next") {
+            Text(dayTime(needAt))
+                .multilineTextAlignment(.trailing)
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.statusBackground(.orange), in: RoundedRectangle(cornerRadius: 14))
-    }
-
-    private func sectionHeading(_ text: String) -> some View {
-        Text(text)
-            .font(.title3.weight(.heavy))
-            .padding(.top, 4)
     }
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 14) {
+            List {
+                Section {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(dueOverline)
-                            .font(.caption2.weight(.bold))
-                            .tracking(0.8)
-                            .foregroundStyle(currentEndsAt < Date() ? Color.statusText(.red) : Color.statusText(.blue))
                         Text(booking.title)
-                            .font(.title.weight(.heavy))
+                            .font(.gothamBold(size: 24))
                             .lineLimit(2)
+                        Text(dueOverline)
+                            .font(.headline)
+                            .foregroundStyle(currentEndsAt < Date() ? Color.statusText(.red) : Color(.secondaryLabel))
                         Text("\(booking.requester.name) · ends \(dayTime(currentEndsAt))")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets(top: 8, leading: 4, bottom: 4, trailing: 4))
 
+                Section {
                     if let latestEndsAt, latestEndsAt > currentEndsAt {
-                        Text("Can go until \(dayTime(latestEndsAt))")
-                            .font(.title3.weight(.heavy))
-                            .padding(.top, 6)
-                        if let nextNeedAt {
-                            neededNextCard(nextNeedAt)
+                        LabeledContent("Can go until") {
+                            Text(dayTime(latestEndsAt))
+                                .multilineTextAlignment(.trailing)
                         }
-                    } else if nextNeedAt != nil {
-                        Text("This can't be extended")
-                            .font(.title3.weight(.heavy))
+                        if let nextNeedAt { neededNextRow(nextNeedAt) }
+                    } else if let nextNeedAt {
+                        Label("This can't be extended", systemImage: "xmark.circle")
                             .foregroundStyle(Color.statusText(.red))
-                            .padding(.top, 6)
-                        if let nextNeedAt { neededNextCard(nextNeedAt) }
+                        neededNextRow(nextNeedAt)
                     } else {
                         Text("Nothing else needs this gear, so pick any time.")
-                            .font(.subheadline)
                             .foregroundStyle(.secondary)
-                            .padding(.top, 6)
                     }
+                } header: {
+                    Text("Availability")
+                }
 
-                    sectionHeading("Extend until")
+                Section {
                     DayTimeChipPicker(selection: $newEndsAt, minimum: currentEndsAt, latest: latestEndsAt)
+                } header: {
+                    Text("Extend until")
+                }
 
-                    if hasChanges {
+                if hasChanges {
+                    Section {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("NEW DUE TIME")
-                                .font(.caption2.weight(.bold))
-                                .tracking(0.8)
-                                .foregroundStyle(.secondary)
                             Text(dayTime(newEndsAt))
-                                .font(.title2.weight(.heavy))
+                                .font(.title3.weight(.semibold))
                             Text(moreTime)
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
@@ -137,18 +120,14 @@ struct ExtendBookingSheet: View {
                                     .padding(.top, 4)
                             }
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(16)
-                        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
                         .accessibilityElement(children: .combine)
+                    } header: {
+                        Text("New due time")
                     }
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
-                .padding(.bottom, 24)
-                .disabled(isLoading)
             }
-            .background(Color(.systemGroupedBackground))
+            .listStyle(.insetGrouped)
+            .disabled(isLoading)
             .safeAreaInset(edge: .bottom) {
                 Button {
                     Task { await extend() }
@@ -160,15 +139,12 @@ struct ExtendBookingSheet: View {
                             Text(canSubmit ? "Extend to \(dayTime(newEndsAt))" : "Pick a new time")
                         }
                     }
-                    .font(.headline)
-                    .frame(maxWidth: .infinity, minHeight: 56)
+                    .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.plain)
-                .foregroundStyle(canSubmit ? Color.white : Color.secondary)
-                .background(
-                    canSubmit ? Color.statusText(.blue) : Color(.tertiarySystemFill),
-                    in: RoundedRectangle(cornerRadius: 16)
-                )
+                .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.capsule)
+                .controlSize(.large)
+                .tint(.green)
                 .disabled(!canSubmit || isLoading)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)

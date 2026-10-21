@@ -18,8 +18,8 @@ function sliceBetween(source: string, start: string, end: string) {
 describe("iOS reservation edit", () => {
   it("keeps the checkout editor narrow and routes reservations to their own flow", () => {
     const checkoutEditor = sliceBetween(detail, "struct EditBookingSheet", "struct TransferBookingOwnerSheet");
-    expect(checkoutEditor).toContain('BrandSectionHeader("Booking Name")');
-    expect(checkoutEditor).toContain('Text("Due back")');
+    expect(checkoutEditor).toContain('Text("Booking name")');
+    expect(checkoutEditor).toContain('LabeledContent("Due back")');
     expect(checkoutEditor).toContain("DayTimeChipPicker(");
     expect(checkoutEditor).not.toContain("ReservationEditFlow");
     expect(checkoutEditor).not.toContain("serializedAssetIds");

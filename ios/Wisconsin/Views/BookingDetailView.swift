@@ -658,129 +658,71 @@ struct EditBookingSheet: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: Brand.Space.md) {
-                    HStack(spacing: Brand.Space.sm) {
-                        StatusRail(tone: booking.kind == .reservation ? .purple : .blue)
-                        UserAvatarView(name: ownerName, avatarUrl: ownerAvatarURL, size: 46)
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(trimmedTitle.isEmpty ? "Untitled booking" : trimmedTitle)
-                                .font(.gothamBold(size: 20))
-                                .lineLimit(2)
-                            Text(ownerName)
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-                        Spacer(minLength: 0)
+            List {
+                Section {
+                    TextField("Booking name", text: $title)
+                        .textInputAutocapitalization(.words)
+                        .submitLabel(.done)
+                        .accessibilityLabel("Booking name")
+                } header: {
+                    Text("Booking name")
+                }
+
+                Section {
+                    LabeledContent("Pickup") {
+                        Text(booking.startsAt.operationalDateTimeLabel(now: today))
+                            .multilineTextAlignment(.trailing)
                     }
-                    .brandCard()
-
-                    FormCard {
-                        VStack(alignment: .leading, spacing: Brand.Space.sm) {
-                            BrandSectionHeader("Booking Name")
-                            TextField("Booking name", text: $title)
-                                .font(.title3.weight(.semibold))
-                                .textInputAutocapitalization(.words)
-                                .submitLabel(.done)
-                                .accessibilityLabel("Booking name")
+                    VStack(alignment: .leading, spacing: 10) {
+                        LabeledContent("Due back") {
+                            Text(chipDayTime(endsAt))
                         }
+                        DayTimeChipPicker(
+                            selection: $endsAt,
+                            minimum: booking.startsAt,
+                            tint: Color.accentColor
+                        )
+                        availabilityMessage
+                            .font(.footnote)
                     }
+                } header: {
+                    Text("Return")
+                } footer: {
+                    Text("Gear and pickup details stay read-only on your phone. Physical handoff and returns remain kiosk workflows.")
+                }
 
-                    FormCard {
-                        VStack(alignment: .leading, spacing: 0) {
-                            BrandSectionHeader("Return")
-                                .padding(.bottom, Brand.Space.xs)
-                            HStack(spacing: Brand.Space.sm) {
-                                Image(systemName: "arrow.right")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(.secondary)
-                                    .frame(width: 30, height: 30)
-                                    .background(Color(.tertiarySystemFill), in: Circle())
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("Pickup")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                    Text(booking.startsAt.operationalDateTimeLabel(now: today))
-                                        .font(.subheadline.weight(.medium))
-                                }
-                                Spacer()
-                            }
-                            .padding(.vertical, 8)
-
-                            Divider().padding(.leading, 42)
-
-                            VStack(alignment: .leading, spacing: 10) {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "arrow.left")
-                                        .font(.caption.weight(.semibold))
-                                        .foregroundStyle(Color.statusText(.purple))
-                                        .frame(width: 30, height: 30)
-                                        .background(Color.statusBackground(.purple), in: Circle())
-                                    Text("Due back")
-                                        .font(.subheadline.weight(.semibold))
-                                    Text(chipDayTime(endsAt))
-                                        .font(.caption.weight(.semibold))
-                                        .foregroundStyle(Color.statusText(.purple))
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 3)
-                                        .background(Color.statusBackground(.purple), in: Capsule())
-                                    Spacer(minLength: 0)
-                                }
-                                DayTimeChipPicker(
-                                    selection: $endsAt,
-                                    minimum: booking.startsAt,
-                                    tint: Color.statusText(.purple)
-                                )
-                            }
-                            .padding(.vertical, 8)
-
-                            availabilityMessage
-                        }
-                    }
-
-                    if canTransfer {
+                if canTransfer {
+                    Section {
                         Button { showTransfer = true } label: {
                             HStack(spacing: Brand.Space.sm) {
-                                Image(systemName: "person.2")
-                                    .font(.body.weight(.semibold))
-                                    .foregroundStyle(Color.statusText(.blue))
-                                    .frame(width: 36, height: 36)
-                                    .background(Color.statusBackground(.blue), in: Circle())
+                                UserAvatarView(name: ownerName, avatarUrl: ownerAvatarURL, size: 32)
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("Transfer Ownership")
-                                        .font(.subheadline.weight(.semibold))
                                         .foregroundStyle(.primary)
-                                    Text("Move this booking to another person")
-                                        .font(.caption)
+                                    Text("Now with \(ownerName)")
+                                        .font(.footnote)
                                         .foregroundStyle(.secondary)
                                 }
                                 Spacer()
                                 Image(systemName: "chevron.right")
-                                    .font(.caption.weight(.semibold))
+                                    .font(.footnote.weight(.semibold))
                                     .foregroundStyle(.tertiary)
                             }
-                            .brandCard()
+                            .frame(minHeight: 44)
                         }
-                        .buttonStyle(.plain)
                     }
+                }
 
-                    Text("Gear and pickup details stay read-only on your phone. Physical handoff and returns remain kiosk workflows.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, Brand.Space.xs)
-
-                    if let error {
+                if let error {
+                    Section {
                         Label(error, systemImage: "exclamationmark.triangle.fill")
                             .font(.footnote)
                             .foregroundStyle(Color.statusText(.red))
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, Brand.Space.xs)
                     }
+                    .listRowBackground(Color.clear)
                 }
-                .padding(Brand.Space.md)
             }
-            .background(Color(.systemGroupedBackground))
+            .listStyle(.insetGrouped)
             .navigationTitle("Edit Booking")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -923,60 +865,43 @@ struct TransferBookingOwnerSheet: View {
     }
 
     private var transferContent: some View {
-            ScrollView {
-                VStack(spacing: Brand.Space.md) {
-                    VStack(spacing: Brand.Space.sm) {
-                        Image(systemName: "person.2.fill")
-                            .font(.title2.weight(.semibold))
-                            .foregroundStyle(Color.statusText(.blue))
-                            .frame(width: 54, height: 54)
-                            .background(Color.statusBackground(.blue), in: Circle())
-                        Text("Choose a new owner")
-                            .font(.title3.weight(.bold))
-                        Text("They'll become responsible for \(booking.title) and receive its booking updates.")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .brandCard()
-
-                    FormCard {
-                        VStack(spacing: 0) {
-                            ownerRow(label: "Current", name: booking.requester.name, avatarURL: booking.requester.avatarUrl)
-                            Divider().padding(.leading, 48)
-                            if isLoading {
-                                HStack { ProgressView(); Text("Loading people…").foregroundStyle(.secondary); Spacer() }
-                                    .padding(.vertical, 12)
-                            } else {
-                                NavigationLink {
-                                    RequesterPickerView(
-                                        users: eligibleUsers,
-                                        currentUserId: session.currentUser?.id,
-                                        selection: $selectedUserId
-                                    )
-                                } label: {
-                                    ownerRow(
-                                        label: "New Owner",
-                                        name: selectedUser?.name ?? "Select person",
-                                        avatarURL: selectedUser?.avatarUrl
-                                    )
-                                }
-                                .buttonStyle(.plain)
-                            }
+            List {
+                Section {
+                    ownerRow(label: "Current", name: booking.requester.name, avatarURL: booking.requester.avatarUrl)
+                    if isLoading {
+                        HStack { ProgressView(); Text("Loading people…").foregroundStyle(.secondary); Spacer() }
+                            .padding(.vertical, 12)
+                    } else {
+                        NavigationLink {
+                            RequesterPickerView(
+                                users: eligibleUsers,
+                                currentUserId: session.currentUser?.id,
+                                selection: $selectedUserId
+                            )
+                        } label: {
+                            ownerRow(
+                                label: "New Owner",
+                                name: selectedUser?.name ?? "Select person",
+                                avatarURL: selectedUser?.avatarUrl
+                            )
                         }
                     }
+                } header: {
+                    Text("Choose a new owner")
+                } footer: {
+                    Text("They'll become responsible for \(booking.title) and receive its booking updates.")
+                }
 
-                    if let error {
+                if let error {
+                    Section {
                         Label(error, systemImage: "exclamationmark.triangle.fill")
                             .font(.footnote)
                             .foregroundStyle(Color.statusText(.red))
-                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
+                    .listRowBackground(Color.clear)
                 }
-                .padding(Brand.Space.md)
             }
-            .background(Color(.systemGroupedBackground))
+            .listStyle(.insetGrouped)
             .navigationTitle("Transfer Ownership")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -1003,11 +928,8 @@ struct TransferBookingOwnerSheet: View {
                 Text(name).font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
             }
             Spacer()
-            if label == "New Owner" {
-                Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.tertiary)
-            }
         }
-        .padding(.vertical, 10)
+        .padding(.vertical, 6)
         .contentShape(Rectangle())
     }
 
@@ -1156,10 +1078,15 @@ private struct BookingOverviewSection: View {
                         .multilineTextAlignment(.trailing)
                 }
                 if returnInsight.hasUpcomingNeed {
-                    Text(returnInsight.nextNeedAt.map { "Needed again \($0.gearShort). Extend only to a return time by then." } ?? "Needed again soon. Choose an earlier return time when extending.")
-                        .font(.footnote)
-                        .foregroundStyle(Color.statusText(.orange))
-                        .fixedSize(horizontal: false, vertical: true)
+                    Label {
+                        Text(nextNeedMessage)
+                            .fixedSize(horizontal: false, vertical: true)
+                    } icon: {
+                        Image(systemName: "clock.badge.exclamationmark")
+                    }
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(Color.statusText(.orange))
+                    .padding(.top, 2)
                 }
             }
 
@@ -1178,6 +1105,16 @@ private struct BookingOverviewSection: View {
                 }
             }
         }
+    }
+
+    /// Names the booking waiting on this gear when the server says which one,
+    /// so the warning reads as a person's plan rather than a vague limit.
+    private var nextNeedMessage: String {
+        guard let nextNeedAt = returnInsight.nextNeedAt else {
+            return "Needed again soon. Choose an earlier return time when extending."
+        }
+        let who = returnInsight.nextNeedTitle.map { " for \($0)" } ?? ""
+        return "Needed again \(nextNeedAt.gearShort)\(who). Extend only to a return time by then."
     }
 
     private var pickupKioskLabel: String {

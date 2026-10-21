@@ -321,8 +321,8 @@ describe("student field mobile contracts", () => {
     expect(detail).toContain(".accessibilityLabel(\"Edit booking details\")");
     expect(editor).toContain(".navigationTitle(\"Edit Booking\")");
     expect(editor).toContain("Gear and pickup details stay read-only on your phone.");
-    expect(editor).toContain('BrandSectionHeader("Booking Name")');
-    expect(editor).toContain('Text("Due back")');
+    expect(editor).toContain('Text("Booking name")');
+    expect(editor).toContain('LabeledContent("Due back")');
     expect(editor).toContain("DayTimeChipPicker(");
     expect(editor).toContain("APIClient.shared.bookingAvailability");
     expect(editor).not.toContain("OptionPickerView(");

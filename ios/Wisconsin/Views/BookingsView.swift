@@ -604,7 +604,17 @@ struct BookingsView: View {
             }
             .pickerStyle(.inline)
         } label: {
-            Text(vm.statusFilter.label)
+            HStack(spacing: 5) {
+                Text(vm.statusFilter.label)
+                // A dot when a non-default sort is on, so the label never
+                // hides a setting.
+                if vm.sortOption != .operational {
+                    Circle()
+                        .fill(Color.accentColor)
+                        .frame(width: 6, height: 6)
+                        .accessibilityHidden(true)
+                }
+            }
         }
         .accessibilityLabel("Filter and sort bookings")
         .accessibilityValue("\(vm.statusFilter.label), sorted by \(vm.sortOption.label)")
@@ -1046,16 +1056,27 @@ struct BookingRow: View {
         switch booking.status {
         case .open: return .blue
         case .booked: return .purple
-        case .pendingPickup: return .orange
+        // Orange means a missed pickup and nothing else; a pickup still
+        // ahead reads as reserved.
+        case .pendingPickup: return booking.startsAt < now ? .orange : .purple
         default: return .gray
         }
     }
 
+    /// What is booked, then who has it. The product name beats the asset tag
+    /// for recognition; the location lives on the detail screen.
+    private var gearSummary: String? {
+        let first = booking.serializedItems.first.map { $0.asset.itemListSecondaryTitle ?? $0.asset.itemListPrimaryTitle }
+            ?? booking.bulkItems.first?.bulkSku.name
+        guard let first else { return nil }
+        let rest = itemCount - 1
+        return rest > 0 ? "\(first) + \(rest) more" : first
+    }
+
     private var metadata: String {
         var parts: [String] = []
+        parts.append(gearSummary ?? booking.location.name)
         if showsRequester { parts.append(booking.requester.name) }
-        parts.append(booking.location.name)
-        if itemCount > 0 { parts.append("\(itemCount) item\(itemCount == 1 ? "" : "s")") }
         return parts.joined(separator: " · ")
     }
 
@@ -1091,9 +1112,8 @@ struct BookingRow: View {
         if booking.isWaitingOnPickup(now: now) { parts.append("Waiting on pickup") }
         parts.append(booking.title)
         parts.append(timing(now: now).text)
+        if let gearSummary { parts.append(gearSummary) } else { parts.append(booking.location.name) }
         if showsRequester { parts.append(booking.requester.name) }
-        parts.append(booking.location.name)
-        if itemCount > 0 { parts.append("\(itemCount) item\(itemCount == 1 ? "" : "s")") }
         return parts.joined(separator: ", ")
     }
 }
