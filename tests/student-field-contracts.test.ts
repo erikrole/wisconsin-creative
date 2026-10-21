@@ -76,7 +76,7 @@ describe("student field mobile contracts", () => {
     expect(statsRoute).toContain('const isPersonalOnly = new URL(req.url).searchParams.get("scope") === "ios-home"');
     expect(statsRoute).toContain("|| isCollaborator;");
     expect(statsRoute).not.toContain('user.role === "STUDENT"');
-    expect(page).toContain("coverage: pending(() => coverageRows(data!, now)),");
+    expect(page).toContain("crew: slotOf({ data: crew.data ? crewRows(crew.data) : undefined");
     expect(page).toContain("teamGear: pending(() => ({ rows: gearRows(data!.teamCheckouts.items");
   });
 

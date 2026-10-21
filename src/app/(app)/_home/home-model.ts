@@ -465,3 +465,70 @@ export function tradeRows(trades: HomeTrade[], now: Date): TradeRow[] {
     };
   });
 }
+
+/* ── Today ──────────────────────────────────────────────── */
+
+/** "now", "in 45m", "in 5h", "in 2d": how soon an Up next row starts. */
+export function startsIn(iso: string, now: Date) {
+  const diff = new Date(iso).getTime() - now.getTime();
+  if (diff <= 0) return "now";
+  const minutes = Math.round(diff / 60_000);
+  if (minutes < 60) return `in ${minutes}m`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `in ${hours}h`;
+  return `in ${Math.round(hours / 24)}d`;
+}
+
+/**
+ * One sentence under the greeting that says what today holds, so the page
+ * answers "what do I have to do today" before anyone reads a card.
+ */
+export function daySummary(role: HomeRole, data: DashboardData, now: Date): string {
+  const sentences: string[] = [];
+  const next = buildUpNext(data, now)
+    .find((r) => r.kind === "shift" && dayHeading(r.startsAt, now, r.allDay) === "Today");
+  if (next) {
+    sentences.push(next.allDay ? `You\u2019re on ${next.title} today.` : `You\u2019re on ${next.title} at ${next.time}.`);
+  }
+  const team = isTeamRole(role);
+  const overdue = team ? data.stats.overdue : data.myCheckouts.items.filter((b) => b.isOverdue).length;
+  const due = team
+    ? data.stats.dueToday
+    : data.myCheckouts.items.filter((b) => !b.isOverdue && isDueToday(b.endsAt, now)).length;
+  const gear = [overdue > 0 ? `${overdue} overdue` : null, due > 0 ? `${due} due back today` : null].filter(Boolean);
+  if (gear.length > 0) {
+    const noun = team ? "Team gear" : "Your gear";
+    sentences.push(`${noun}: ${gear.join(", ")}.`);
+  }
+  return sentences.length > 0 ? sentences.join(" ") : "Nothing due today. You\u2019re clear.";
+}
+
+export type TodayCrewEvent = {
+  id: string;
+  summary: string;
+  startsAt: string;
+  endsAt: string;
+  when: "now" | "later" | "tomorrow";
+  people: Array<{ id: string; name: string; avatarUrl: string | null; area: string }>;
+};
+
+export type CrewRow = {
+  id: string;
+  title: string;
+  when: string;
+  live: boolean;
+  people: TodayCrewEvent["people"];
+};
+
+/** Today's crewed events from the Staff Today feed; tomorrow waits for tomorrow. */
+export function crewRows(events: TodayCrewEvent[]): CrewRow[] {
+  return events
+    .filter((e) => e.when !== "tomorrow")
+    .map((e) => ({
+      id: e.id,
+      title: e.summary,
+      when: e.when === "now" ? `On now · until ${formatClock(e.endsAt)}` : `${formatClock(e.startsAt)} – ${formatClock(e.endsAt)}`,
+      live: e.when === "now",
+      people: e.people,
+    }));
+}

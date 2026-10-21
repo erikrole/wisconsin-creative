@@ -18,11 +18,13 @@ import {
   buildSummary,
   buildUpNext,
   coverageRows,
+  crewRows,
+  daySummary,
   gearRows,
   tradeRows,
   type HomeRole,
 } from "@/app/(app)/_home/home-model";
-import { emptyDashboard, sampleDashboard, sampleStats, sampleTrades } from "@/app/(app)/_home/home-fixtures";
+import { emptyDashboard, sampleCrew, sampleDashboard, sampleStats, sampleTrades } from "@/app/(app)/_home/home-fixtures";
 
 const ROLES: HomeRole[] = ["STUDENT", "STAFF", "ADMIN", "COLLABORATOR"];
 const STATES = ["ready", "empty", "loading", "partial", "error"] as const;
@@ -66,7 +68,7 @@ function buildProps(role: HomeRole, state: LabState, now: Date): Omit<HomeViewPr
 
   const sync = { label: "Live sync", live: true };
   if (state === "loading") {
-    return { ...base, sync, summary: loading, attention: loading, upNext: loading, myGear: loading, coverage: loading, teamGear: loading, trades: role === "STUDENT" ? loading : undefined };
+    return { ...base, sync, dayLine: null, summary: loading, attention: loading, upNext: loading, myGear: loading, coverage: role === "STUDENT" ? undefined : loading, crew: loading, teamGear: loading, trades: role === "STUDENT" ? loading : undefined };
   }
   if (state === "error") return { ...base, pageError: "server" };
 
@@ -86,7 +88,9 @@ function buildProps(role: HomeRole, state: LabState, now: Date): Omit<HomeViewPr
       ? { title: "No shifts yet", description: "Pick up an open shift from a teammate on the Trade Board.", href: TRADE_BOARD_HREF, action: "Open Trade Board" }
       : undefined,
     myGear: ready(gearRows(data.myCheckouts.items, now, false)),
-    coverage: partial ? error : ready(coverageRows(data, now)),
+    dayLine: daySummary(role, data, now),
+    coverage: role === "STUDENT" ? undefined : ready(coverageRows(data, now)),
+    crew: partial ? error : ready(state === "empty" ? [] : crewRows(sampleCrew(now))),
     teamGear: ready({ rows: gearRows(data.teamCheckouts.items.slice(0, 5), now, true), total: data.teamCheckouts.total }),
     trades: role === "STUDENT" ? (partial ? error : ready(tradeRows(claimable.slice(0, 3), now))) : undefined,
     tradesHref: TRADE_BOARD_HREF,

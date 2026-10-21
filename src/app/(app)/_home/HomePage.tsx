@@ -20,6 +20,8 @@ import {
   buildSummary,
   buildUpNext,
   coverageRows,
+  crewRows,
+  daySummary,
   formatClock,
   gearRows,
   homeRole,
@@ -29,6 +31,7 @@ import {
   type AttentionTarget,
   type GearRow,
   type HomeTrade,
+  type TodayCrewEvent,
   type UpNextItem,
 } from "./home-model";
 
@@ -104,6 +107,24 @@ function useTrades(status: "OPEN" | "CLAIMED", enabled: boolean) {
   });
 }
 
+/** Who is working which event today: the same feed as Staff › Today. */
+function useTodayCrew(enabled: boolean) {
+  const userId = useAuthenticatedQueryUserId();
+  return useQuery<TodayCrewEvent[]>({
+    queryKey: ["home-today-crew", userId ?? "unresolved"],
+    queryFn: async ({ signal }) => {
+      const res = await fetch("/api/users/today", { signal });
+      if (handleAuthRedirect(res, "/")) throw new DOMException("Auth redirect", "AbortError");
+      if (!res.ok) throw new Error("server");
+      const json = await parseJsonSafely<{ data?: { events?: TodayCrewEvent[] } }>(res);
+      return Array.isArray(json?.data?.events) ? json.data.events : [];
+    },
+    enabled: enabled && Boolean(userId),
+    staleTime: 60_000,
+    refetchOnWindowFocus: true,
+  });
+}
+
 function slotOf<T>(query: { data?: T; isError: boolean; refetch: () => unknown }): Slot<T> {
   if (query.data !== undefined) return { state: "ready", rows: query.data };
   if (query.isError) return { state: "error", onRetry: () => void query.refetch() };
@@ -134,6 +155,7 @@ function InternalHome({ name, readOnly }: { name: string | null; readOnly: boole
   const team = isTeamRole(role);
   const openTrades = useTrades("OPEN", role === "STUDENT");
   const claimedTrades = useTrades("CLAIMED", role === "ADMIN");
+  const crew = useTodayCrew(role !== null);
 
   const claimable = useMemo(
     () => (openTrades.data ?? []).filter((t) => t.viewerCanClaim),
@@ -156,15 +178,18 @@ function InternalHome({ name, readOnly }: { name: string | null; readOnly: boole
       attention: pending(() => buildAttention({ role, data: data!, claimedTrades: claimedTrades.data ?? [], now })),
       upNext: pending(() => buildUpNext(data!, now)),
       myGear: pending(() => gearRows(data!.myCheckouts.items, now, false)),
+      dayLine: data ? daySummary(role, data, now) : fetchError ? undefined : null,
       // The web home stays team-visible for every internal role, students
-      // included; only iOS Home and collaborators are personal-only.
-      coverage: pending(() => coverageRows(data!, now)),
+      // included; only iOS Home and collaborators are personal-only. Crew
+      // coverage is a staffing question, so it stays with staff and admins.
+      coverage: team ? pending(() => coverageRows(data!, now)) : undefined,
+      crew: slotOf({ data: crew.data ? crewRows(crew.data) : undefined, isError: crew.isError, refetch: crew.refetch }),
       teamGear: pending(() => ({ rows: gearRows(data!.teamCheckouts.items.slice(0, 5), now, true), total: data!.teamCheckouts.total })),
       trades: role === "STUDENT"
         ? slotOf({ data: openTrades.data ? tradeRows(claimable.slice(0, 3), now) : undefined, isError: openTrades.isError, refetch: openTrades.refetch })
         : undefined,
     };
-  }, [role, data, fastStats, fetchError, loadData, now, claimedTrades.data, openTrades.data, openTrades.isError, openTrades.refetch, claimable]);
+  }, [role, team, crew.data, crew.isError, crew.refetch, data, fastStats, fetchError, loadData, now, claimedTrades.data, openTrades.data, openTrades.isError, openTrades.refetch, claimable]);
 
   if (!role && !fetchError) return <HomeSkeleton />;
 
@@ -184,6 +209,7 @@ function InternalHome({ name, readOnly }: { name: string | null; readOnly: boole
         pageError={!data && !fastStats ? fetchError === "network" ? "network" : fetchError ? "server" : false : false}
         onRetry={() => loadData()}
         banners={<><ProfileCompletionBanner /><GearPicksBanner /></>}
+        dayLine={view?.dayLine}
         summary={view?.summary}
         attention={view?.attention}
         upNext={view?.upNext}
@@ -194,6 +220,7 @@ function InternalHome({ name, readOnly }: { name: string | null; readOnly: boole
         coverage={view?.coverage}
         teamGear={view?.teamGear}
         trades={view?.trades}
+        crew={view?.crew}
         tradesHref={TRADE_BOARD_HREF}
         onTarget={onTarget}
         onSelectBooking={setSelectedBookingId}

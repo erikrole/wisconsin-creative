@@ -5,9 +5,11 @@
     "type": "improvement",
     "summary": "Home was rebuilt around what you need first: what needs attention, what is up next, and the gear you have out.",
     "details": [
-      "A greeting and four quick counts sit at the top. Students see their own gear, shifts and open trades. Staff and admins see overdue, due today, pending pickup and checked out.",
+      "A greeting and one line about your day sit at the top, for example your call time and what gear is due back.",
+      "Four quick counts follow. Students see their own gear, shifts and open trades. Staff and admins see overdue, due today, pending pickup and checked out.",
       "Needs attention gathers overdue gear, missed pickups, damage and loss reports to review, shifts that still need gear, unfinished drafts, and (for admins) trade claims waiting on approval.",
-      "Up next lists your shifts and gear pickups by day, with Student call times.",
+      "Up next spotlights your next shift or pickup with how soon it starts, then lists the rest by day, with Student call times.",
+      "Working today shows who is on each of today's events, with who is on right now.",
       "Students get an Open trades card that goes straight to the Trade Board.",
       "Each card loads, fails and retries on its own, so one slow part no longer blanks the page.",
       "Partner staff get the same layout with just their gear and the published schedule."

@@ -117,3 +117,23 @@ describe("Home page contracts", () => {
     expect(source("src/hooks/use-schedule-data.ts")).toContain('useState(() => searchParams.get("trades") === "open")');
   });
 });
+
+describe("Home day line and crew", () => {
+  it("says what today holds in one line", async () => {
+    const { daySummary } = await import("@/app/(app)/_home/home-model");
+    const line = daySummary("STUDENT", sampleDashboard("STUDENT", NOW), NOW);
+    expect(line).toMatch(/^You’re on .+ at \d/);
+    expect(line).toContain("Your gear: 1 overdue, 1 due back today.");
+    expect(daySummary("STAFF", sampleDashboard("STAFF", NOW), NOW)).toContain("Team gear: 1 overdue, 3 due back today.");
+    expect(daySummary("ADMIN", emptyDashboard("ADMIN"), NOW)).toBe("Nothing due today. You’re clear.");
+  });
+
+  it("lists today's crewed events and leaves tomorrow out", async () => {
+    const { crewRows } = await import("@/app/(app)/_home/home-model");
+    const { sampleCrew } = await import("@/app/(app)/_home/home-fixtures");
+    const rows = crewRows(sampleCrew(NOW));
+    expect(rows.map((r) => r.id)).toEqual(["g-mhk", "g-vb"]);
+    expect(rows[0]?.live).toBe(true);
+    expect(rows[0]?.when).toContain("On now");
+  });
+});

@@ -21,14 +21,17 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { UserAvatar } from "@/components/UserAvatar";
 import { cn } from "@/lib/utils";
 import {
   dayHeading,
   greeting,
+  startsIn,
   todayLabel,
   type AttentionItem,
   type AttentionTarget,
   type CoverageRow,
+  type CrewRow,
   type GearRow,
   type HomeRole,
   type HomeTone,
@@ -50,6 +53,8 @@ export type HomeViewProps = {
   name: string | null;
   now: Date;
   canReserve: boolean;
+  /** One sentence under the greeting about today. Null while loading. */
+  dayLine?: string | null;
   sync?: HomeSync | null;
   updatedLabel?: string | null;
   refreshing?: boolean;
@@ -67,6 +72,7 @@ export type HomeViewProps = {
   coverage?: Slot<CoverageRow[]>;
   teamGear?: Slot<{ rows: GearRow[]; total: number }>;
   trades?: Slot<TradeRow[]>;
+  crew?: Slot<CrewRow[]>;
   tradesHref?: string;
   notice?: ReactNode;
   onTarget: (target: AttentionTarget) => void;
@@ -150,6 +156,7 @@ export function HomeView(props: HomeViewProps) {
                 />
               )}
               {props.trades && <TradesSection slot={props.trades} href={props.tradesHref ?? "/schedule"} />}
+              {props.crew && <CrewSection slot={props.crew} />}
               {props.coverage && <CoverageSection slot={props.coverage} />}
               {props.teamGear && (
                 <TeamGearSection slot={props.teamGear} onSelectBooking={props.onSelectBooking} />
@@ -164,7 +171,7 @@ export function HomeView(props: HomeViewProps) {
 
 /* ── Header ─────────────────────────────────────────────── */
 
-function HomeHeader({ name, now, canReserve, sync, updatedLabel, refreshing, onRefresh }: HomeViewProps) {
+function HomeHeader({ name, now, canReserve, dayLine, sync, updatedLabel, refreshing, onRefresh }: HomeViewProps) {
   return (
     <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 pt-1">
       <div className="min-w-0">
@@ -172,6 +179,11 @@ function HomeHeader({ name, now, canReserve, sync, updatedLabel, refreshing, onR
         <h1 className="mt-0.5 text-[28px]! leading-tight text-foreground max-md:text-[24px]!">
           {greeting(now, name)}
         </h1>
+        {dayLine !== undefined && (
+          dayLine === null
+            ? <Skeleton className="mt-2 h-4 w-72 max-w-full bg-muted" aria-hidden="true" />
+            : <p className="mt-1 text-[15px] text-muted-foreground" data-day-line>{dayLine}</p>
+        )}
       </div>
       <div className="flex flex-wrap items-center gap-2">
         {(sync || updatedLabel) && (
@@ -417,8 +429,13 @@ function UpNextSection({ slot, now, empty, onTarget }: {
   onTarget: (t: AttentionTarget) => void;
 }) {
   const groups: Array<{ day: string; rows: UpNextItem[] }> = [];
+  // The first commitment in the next two days gets the spotlight, like a
+  // calendar's "Up next"; the rest stay a plain list.
+  const first = slot.state === "ready" ? slot.rows[0] : undefined;
+  const featured = first && new Date(first.startsAt).getTime() - now.getTime() < 48 * 3_600_000 ? first : null;
   if (slot.state === "ready") {
     for (const row of slot.rows) {
+      if (row === featured) continue;
       const day = dayHeading(row.startsAt, now, row.allDay);
       const last = groups[groups.length - 1];
       if (last?.day === day) last.rows.push(row);
@@ -432,7 +449,7 @@ function UpNextSection({ slot, now, empty, onTarget }: {
         <RowsSkeleton rows={3} />
       ) : slot.state === "error" ? (
         <SectionError what="your schedule" onRetry={slot.onRetry} />
-      ) : groups.length === 0 ? (
+      ) : groups.length === 0 && !featured ? (
         <StateBlock
           icon={CalendarDaysIcon}
           title={empty?.title ?? "Nothing on your calendar"}
@@ -443,6 +460,7 @@ function UpNextSection({ slot, now, empty, onTarget }: {
         />
       ) : (
         <div className="flex flex-col pb-1.5">
+          {featured && <FeaturedNext row={featured} now={now} onTarget={onTarget} />}
           {groups.map((group) => (
             <div key={group.day} className="flex flex-col">
               <p className="px-4 pt-2.5 pb-1 text-xs font-bold text-muted-foreground">{group.day}</p>
@@ -456,6 +474,38 @@ function UpNextSection({ slot, now, empty, onTarget }: {
         </div>
       )}
     </HomeCard>
+  );
+}
+
+function FeaturedNext({ row, now, onTarget }: { row: UpNextItem; now: Date; onTarget: (t: AttentionTarget) => void }) {
+  const day = dayHeading(row.startsAt, now, row.allDay);
+  const soon = startsIn(row.startsAt, now);
+  const target = row.target;
+  const action = row.kind === "pickup" ? "View pickup" : row.kind === "shift" ? "Open event" : "Open";
+  return (
+    <div className="mx-3 mt-1 mb-2 flex flex-wrap items-center gap-x-4 gap-y-3 rounded-lg bg-[var(--accent-soft)] px-4 py-3.5" data-featured-next>
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <p className="text-xs font-bold text-[var(--blue-text)]">
+          {row.kind === "pickup" ? "Next pickup" : "Next up"} · {soon === "now" ? "happening now" : soon}
+        </p>
+        <p className="truncate text-base font-black text-foreground">{row.title}</p>
+        <p className="truncate text-[13px] text-muted-foreground">
+          {[`${day}${row.allDay ? "" : `, ${row.time}`}`, row.detail].filter(Boolean).join(" · ")}
+        </p>
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        {row.badge && (
+          <span className={cn("rounded-full px-2 py-0.5 text-xs font-bold", TONE_TILE[row.badge.tone])}>{row.badge.label}</span>
+        )}
+        {target.kind === "link" ? (
+          <Button asChild variant="outline" className="h-10 bg-card">
+            <Link href={target.href}>{action}</Link>
+          </Button>
+        ) : (
+          <Button variant="outline" className="h-10 bg-card" onClick={() => onTarget(target)}>{action}</Button>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -571,6 +621,51 @@ function TradesSection({ slot, href }: { slot: Slot<TradeRow[]>; href: string })
         </ul>
       )}
     </HomeCard>
+  );
+}
+
+function CrewSection({ slot }: { slot: Slot<CrewRow[]> }) {
+  return (
+    <HomeCard aria-labelledby="home-crew">
+      <SectionHeader id="home-crew" title="Working today" href="/staff/today" linkLabel="Today" />
+      {slot.state === "loading" ? (
+        <RowsSkeleton rows={2} />
+      ) : slot.state === "error" ? (
+        <SectionError what="today’s crew" onRetry={slot.onRetry} />
+      ) : slot.rows.length === 0 ? (
+        <StateBlock icon={CalendarDaysIcon} title="No one is on today" description="Published shifts for today show here with who’s working." />
+      ) : (
+        <ul className="flex flex-col pb-1.5">
+          {slot.rows.map((row) => (
+            <li key={row.id}>
+              <Link href="/staff/today" className={ROW}>
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate text-sm font-bold text-foreground">{row.title}</span>
+                  <span className="flex items-center gap-1.5 truncate text-[13px] text-muted-foreground">
+                    {row.live && <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-[var(--green)]" />}
+                    {row.when}
+                  </span>
+                </span>
+                <AvatarStack people={row.people} />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </HomeCard>
+  );
+}
+
+function AvatarStack({ people }: { people: CrewRow["people"] }) {
+  const shown = people.slice(0, 4);
+  const extra = people.length - shown.length;
+  return (
+    <span className="flex shrink-0 items-center" title={people.map((p) => p.name).join(", ")} aria-label={`${people.length} working`}>
+      {shown.map((p) => (
+        <UserAvatar key={p.id} name={p.name} avatarUrl={p.avatarUrl} size="default" className="-ml-1 ring-2 ring-card first:ml-0" />
+      ))}
+      {extra > 0 && <span className="ml-1.5 text-xs font-bold tabular-nums text-muted-foreground">+{extra}</span>}
+    </span>
   );
 }
 

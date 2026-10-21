@@ -2,7 +2,7 @@
    Times are relative to `now` so the rows always read as today and this week. */
 
 import type { BookingSummary, DashboardData, DashboardStats } from "../dashboard-types";
-import type { HomeTrade } from "./home-model";
+import type { HomeTrade, TodayCrewEvent } from "./home-model";
 
 const H = 3_600_000;
 const D = 24 * H;
@@ -184,4 +184,25 @@ export function sampleTrades(now: Date): { open: HomeTrade[]; claimed: HomeTrade
       trade("t-9", "CLAIMED", "VIDEO", event(now, "e-mhk", "Hockey vs Minnesota", D + 2 * H, { sportCode: "MHKY", opponent: "Minnesota", isHome: true }), "Sam Okafor", "Maya Chen", false),
     ],
   };
+}
+
+export function sampleCrew(now: Date): TodayCrewEvent[] {
+  const person = (id: string, name: string, area: string) => ({ id, name, avatarUrl: null, area });
+  return [
+    {
+      id: "g-mhk", summary: "Hockey practice media", startsAt: at(now, -H), endsAt: at(now, 2 * H), when: "now",
+      people: [person("u1", "Ava Patel", "PHOTO"), person("u2", "Sam Okafor", "VIDEO")],
+    },
+    {
+      id: "g-vb", summary: "Volleyball vs Purdue", startsAt: at(now, 5 * H), endsAt: at(now, 9 * H), when: "later",
+      people: [
+        person("u3", "Maya Chen", "PHOTO"), person("u4", "Jordan Ruiz", "VIDEO"), person("u5", "Lena Brooks", "SOCIAL"),
+        person("u6", "Chris Lund", "GRAPHICS"), person("u7", "Taylor Kim", "VIDEO"), person("u8", "Noah Fields", "LIVE_PRODUCTION"),
+      ],
+    },
+    {
+      id: "g-fb", summary: "Football walkthrough", startsAt: at(now, D), endsAt: at(now, D + 2 * H), when: "tomorrow",
+      people: [person("u4", "Jordan Ruiz", "VIDEO")],
+    },
+  ];
 }
