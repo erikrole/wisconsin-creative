@@ -493,7 +493,7 @@ export default function AccountabilityClient({
             </div>
             <Button
               variant="ghost"
-              size="sm"
+              className="h-10"
               onClick={() => setShowMore((open) => !open)}
               aria-expanded={showMore}
             >
@@ -606,7 +606,7 @@ export default function AccountabilityClient({
               {you.onTimeRate !== null ? `, ${you.onTimeRate}% on time` : ""}
             </span>
           </p>
-          <Button variant="ghost" size="sm" onClick={() => revealYou(you.userId)}>
+          <Button variant="ghost" className="h-10" onClick={() => revealYou(you.userId)}>
             Show me in the list
           </Button>
         </div>
@@ -694,14 +694,14 @@ export default function AccountabilityClient({
             </div>
             {!normalizedQuery && repeatPeople.length > 0 && hiddenCount > 0 ? (
               <div className="border-t p-3">
-                <Button variant="ghost" size="sm" onClick={() => setShowAll(true)}>
+                <Button variant="ghost" className="h-10" onClick={() => setShowAll(true)}>
                   Show {pluralize(hiddenCount, "person", "people")} late once
                 </Button>
               </div>
             ) : null}
             {!normalizedQuery && showAll && repeatPeople.length > 0 ? (
               <div className="border-t p-3">
-                <Button variant="ghost" size="sm" onClick={() => setShowAll(false)}>
+                <Button variant="ghost" className="h-10" onClick={() => setShowAll(false)}>
                   Show repeat late returns only
                 </Button>
               </div>
