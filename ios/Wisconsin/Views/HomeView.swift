@@ -362,6 +362,7 @@ struct HomeView: View {
                     RefreshFailurePill(message: vm.error ?? "")
                 }
                 GettingStartedCard(model: gettingStarted)
+                CantWorkCard()
                 StatStrip(
                     stats: dash.stats,
                     pendingPickupCount: dash.pendingPickups.total,

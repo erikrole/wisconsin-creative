@@ -17,6 +17,7 @@
 		045D72067A5662DABE89377E /* NativeAuthViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 050BCD6259A4475915E97169 /* NativeAuthViews.swift */; };
 		0530FB6892E8A44F4C8F967C /* AppIntentsData.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9D82991FC6AE45A56917938 /* AppIntentsData.swift */; };
 		06BF3BC1B205C3B9E8B1C155 /* AnnouncementHarness.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFFC2DEAFF4B4E5054970B25 /* AnnouncementHarness.swift */; };
+		085A92CD04D5E9E0DE23ADBB /* CantWorkCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48CBAE7E4E14C58184AF3307 /* CantWorkCard.swift */; };
 		085E8467FC2D0385A67DD157 /* QRScannerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44E5D1DB0C8CBAD5E452E807 /* QRScannerSheet.swift */; };
 		089493883612791C05515FAE /* LicensesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B3D4226E94BA750868A4D0B /* LicensesView.swift */; };
 		0A7B733B24619FD907F15B4A /* QuickActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC8192CC2274AB7D7E83D4FD /* QuickActions.swift */; };
@@ -372,6 +373,7 @@
 		45271B9687525AA0016BAAC6 /* NativeChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeChrome.swift; sourceTree = "<group>"; };
 		4654A0A61430D64DD8A38F71 /* ScheduleQuickFilterBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleQuickFilterBar.swift; sourceTree = "<group>"; };
 		468E248680EC5A61BEC1EE38 /* Skeleton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Skeleton.swift; sourceTree = "<group>"; };
+		48CBAE7E4E14C58184AF3307 /* CantWorkCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CantWorkCard.swift; sourceTree = "<group>"; };
 		4A9DAB950F60885A23620BEC /* Brand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Brand.swift; sourceTree = "<group>"; };
 		4E70592C49A02FCFFAB9105A /* AccountabilityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountabilityView.swift; sourceTree = "<group>"; };
 		50023637E6B61A75BF40891B /* CrewRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrewRow.swift; sourceTree = "<group>"; };
@@ -923,6 +925,7 @@
 				6AF2795089BD5B00BFA48D63 /* BrandAssetsView.swift */,
 				58ABE954706326D6137979FB /* BrowseView.swift */,
 				C47A1F9B414D1FC2CEA2AD4C /* BulkInventoryDetailView.swift */,
+				48CBAE7E4E14C58184AF3307 /* CantWorkCard.swift */,
 				F1F3FA2D4C06E966E6BA030B /* CreateBookingSheet.swift */,
 				05EDCE16A6E704EDF55C5198 /* EventCatalogDetailView.swift */,
 				5FB4AEDFE7F83CC6E155C12D /* EventDetailSheet.swift */,
@@ -1390,6 +1393,7 @@
 				3C75E1BEF022199B034CAACC /* BrandAssetsView.swift in Sources */,
 				71675D3559403AAD9354C225 /* BrowseView.swift in Sources */,
 				784E7CA7101AF7458D03D926 /* BulkInventoryDetailView.swift in Sources */,
+				085A92CD04D5E9E0DE23ADBB /* CantWorkCard.swift in Sources */,
 				27CB9D802700C529953BDEE1 /* CheckoutReportView.swift in Sources */,
 				41B304E3F5ABE1BF6F9B94BB /* CheckoutReturnActivityAttributes.swift in Sources */,
 				D1BE91AB2F76BE372F49B448 /* CheckoutReturnLiveActivityManager.swift in Sources */,

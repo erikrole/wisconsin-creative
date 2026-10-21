@@ -204,4 +204,26 @@ describe("native iOS Welcome flow", () => {
     // The finish screen and the card open the same screens.
     expect(welcome).toContain("StarterDestination.schedule.open(in: appState)");
   });
+
+  it("keeps days a student can't work one tap away on Home and Schedule", () => {
+    const card = source("ios/Wisconsin/Views/CantWorkCard.swift");
+    const home = source("ios/Wisconsin/Views/HomeView.swift");
+    const schedule = source("ios/Wisconsin/Views/ScheduleView.swift");
+
+    // Student workers only, matching the web gate and Schedule's availability gate.
+    expect(card).toContain('user.role == "STUDENT" && user.staffingType == "ST" && !user.isReadOnlyRolePreview');
+    // One dated "cannot work" block through the existing availability API.
+    expect(card).toContain('kind: "AD_HOC"');
+    expect(card).toContain('intent: "CANNOT_WORK"');
+    expect(card).toContain("createAvailabilityBlock(");
+    // Upcoming-only summary with the same copy as the web card.
+    expect(card).toContain("through >= startOfToday");
+    expect(card).toContain("Every week: ");
+    expect(card).toContain("Add days you can’t work");
+    expect(home).toContain("CantWorkCard()");
+    // Schedule gets a labelled toolbar action for the same sheet, starting on the focused day.
+    expect(schedule).toContain('Label("Can’t work", systemImage: "calendar.badge.minus")');
+    expect(schedule).toContain("CantWorkQuickSheet(userId:");
+    expect(schedule).toContain("scrollTracker.topDay ?? today");
+  });
 });
