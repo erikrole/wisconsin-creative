@@ -23,6 +23,8 @@
 | `/gear/admin` | `src/app/(app)/gear/admin/page.tsx` |
 | `/gear` | `src/app/(app)/gear/page.tsx` |
 | `/import` | `src/app/(app)/import/page.tsx` |
+| `/issues/[id]` | `src/app/(app)/issues/[id]/page.tsx` |
+| `/issues` | `src/app/(app)/issues/page.tsx` |
 | `/items/[id]` | `src/app/(app)/items/[id]/page.tsx` |
 | `/items/hygiene` | `src/app/(app)/items/hygiene/page.tsx` |
 | `/items` | `src/app/(app)/items/page.tsx` |
@@ -99,6 +101,7 @@
 | `/about/tech-stack` | `src/app/(public)/about/tech-stack/page.tsx` |
 | `/releases` | `src/app/(public)/releases/page.tsx` |
 | `/change-password` | `src/app/change-password/page.tsx` |
+| `/dev-sidebar` | `src/app/dev-sidebar/page.tsx` |
 | `/forgot-password` | `src/app/forgot-password/page.tsx` |
 | `/login` | `src/app/login/page.tsx` |
 | `/privacy` | `src/app/privacy/page.tsx` |
@@ -111,6 +114,7 @@
 | Route | File |
 |---|---|
 | `/budget` | `src/app/(app)/budget/layout.tsx` |
+| `/issues` | `src/app/(app)/issues/layout.tsx` |
 | `/kits` | `src/app/(app)/kits/layout.tsx` |
 | `/` | `src/app/(app)/layout.tsx` |
 | `/reports` | `src/app/(app)/reports/layout.tsx` |
@@ -133,7 +137,6 @@
 | `src/components/ActivityTimeline.tsx` | 1387 |
 | `src/components/booking-wizard/BookingWizard.tsx` | 1173 |
 | `src/components/onboarding/OnboardingDialog.tsx` | 996 |
-| `src/components/AppShell.tsx` | 991 |
 | `src/components/schedule/AutoAssignDialog.tsx` | 966 |
 | `src/components/profile-completion/ProfileCompletionWizard.tsx` | 935 |
 | `src/components/BookingListPage.tsx` | 921 |
@@ -143,9 +146,11 @@
 | `src/components/BookingDetailsSheet.tsx` | 728 |
 | `src/components/ui/sidebar.tsx` | 710 |
 | `src/components/schedule/SportSetupWizard.tsx` | 675 |
+| `src/components/Sidebar.tsx` | 621 |
 | `src/components/booking-wizard/WizardStep1.tsx` | 599 |
+| `src/components/CommandPalette.tsx` | 588 |
 | `src/components/booking-details/BookingHeader.tsx` | 472 |
-| `src/components/Sidebar.tsx` | 457 |
+| `src/components/AppShell.tsx` | 437 |
 | `src/components/event-editor/EventEditorFields.tsx` | 435 |
 | `src/components/ui/heatmap.tsx` | 434 |
 | `src/components/ui/chart.tsx` | 387 |
@@ -156,8 +161,7 @@
 | `src/components/booking-details/EditBookingEventsDialog.tsx` | 342 |
 | `src/components/shift-detail/crew-row.tsx` | 334 |
 | `src/components/public-showroom/ReleasesFeed.tsx` | 314 |
-| `src/components/public-showroom/showroom-blocks.tsx` | 290 |
-| `src/components/CheckoutMergeDialog.tsx` | 286 |
+| `src/components/NotificationsPopover.tsx` | 304 |
 
 ## Hooks
 
@@ -181,6 +185,7 @@
 | `src/hooks/use-operational-polling-activity.ts` | 155 |
 | `src/hooks/use-profile-completion.ts` | 65 |
 | `src/hooks/use-schedule-data.ts` | 1269 |
+| `src/hooks/use-sidebar-counts.ts` | 23 |
 | `src/hooks/use-url-state.ts` | 129 |
 | `src/hooks/useBookingActions.ts` | 297 |
 | `src/hooks/useBookingDetail.ts` | 70 |

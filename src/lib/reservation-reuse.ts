@@ -1,3 +1,4 @@
+import { displayBookingTitle } from "@/lib/booking-display-title";
 export type ReuseSerializedAsset = {
   id: string;
   assetTag: string;
@@ -83,5 +84,11 @@ export function isEventDerivedTitle(
   const normalized = title.trim();
   if (!normalized || events.length === 0) return false;
   const primary = events[0]!;
-  return normalized === primary.summary.trim() || (generatedTitle != null && normalized === generatedTitle.trim());
+  // Compare as displayed so legacy code-style titles ("MSOC vs X") still count as derived.
+  const shown = displayBookingTitle(normalized);
+  return (
+    normalized === primary.summary.trim() ||
+    (generatedTitle != null &&
+      (normalized === generatedTitle.trim() || shown === displayBookingTitle(generatedTitle.trim())))
+  );
 }

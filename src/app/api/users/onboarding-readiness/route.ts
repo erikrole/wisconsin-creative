@@ -4,29 +4,7 @@ import { ok } from "@/lib/http";
 import { getProfileCompletion } from "@/lib/profile-completion";
 import { excludeHiringInvites } from "@/lib/hiring/invite-scope";
 import { requirePermission } from "@/lib/rbac";
-
-const readinessProfileSelect = {
-  id: true,
-  name: true,
-  role: true,
-  email: true,
-  athleticsEmail: true,
-  phone: true,
-  personalPhone: true,
-  workPhone: true,
-  workPhoneNotApplicable: true,
-  wiscardCardNumber: true,
-  wiscardIssueCode: true,
-  studentYearOverride: true,
-  gradYear: true,
-  graduationTerm: true,
-  topSizeFit: true,
-  topSize: true,
-  shoeSizeSystem: true,
-  shoeSize: true,
-  avatarUrl: true,
-  profilePromptSnoozedUntil: true,
-} as const;
+import { readinessProfileSelect } from "@/lib/services/onboarding-readiness";
 
 export const GET = withAuth(async (_req, { user }) => {
   requirePermission(user.role, "allowed_email", "view");

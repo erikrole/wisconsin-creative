@@ -15,6 +15,8 @@ const mocks = vi.hoisted(() => {
     liveActivityStart: { count: vi.fn(), deleteMany },
     webPushSubscription: { deleteMany },
     userAppInstallation: { deleteMany },
+    errorEvent: { updateMany: vi.fn() },
+    supportReport: { deleteMany },
     notification: { deleteMany },
     favoriteItem: { deleteMany },
     favoriteItemFamily: { deleteMany },
@@ -97,6 +99,7 @@ beforeEach(() => {
     mocks.tx.liveActivityStart,
     mocks.tx.webPushSubscription,
     mocks.tx.userAppInstallation,
+    mocks.tx.supportReport,
     mocks.tx.notification,
     mocks.tx.favoriteItem,
     mocks.tx.favoriteItemFamily,
@@ -111,6 +114,7 @@ beforeEach(() => {
   ]) {
     model.deleteMany.mockResolvedValue({ count: 1 });
   }
+  mocks.tx.errorEvent.updateMany.mockResolvedValue({ count: 1 });
   mocks.tx.allowedEmail.updateMany.mockResolvedValue({ count: 1 });
   mocks.tx.licenseCodeClaim.updateMany.mockResolvedValue({ count: 1 });
   mocks.tx.user.updateMany.mockResolvedValue({ count: 0 });
@@ -146,6 +150,11 @@ describe("self-service account erasure", () => {
     expect(mocks.tx.notification.deleteMany).toHaveBeenCalledWith({ where: { userId: "user-1" } });
     expect(mocks.tx.webPushSubscription.deleteMany).toHaveBeenCalledWith({ where: { userId: "user-1" } });
     expect(mocks.tx.studentTermPlacement.deleteMany).toHaveBeenCalledWith({ where: { userId: "user-1" } });
+    expect(mocks.tx.supportReport.deleteMany).toHaveBeenCalledWith({ where: { userId: "user-1" } });
+    expect(mocks.tx.errorEvent.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { userId: "user-1" },
+      data: expect.objectContaining({ userId: null, role: null }),
+    }));
     expect(mocks.tx.user.update).toHaveBeenCalledWith(expect.objectContaining({
       where: { id: "user-1" },
       data: expect.objectContaining({

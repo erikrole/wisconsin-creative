@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { FadeUp } from "@/components/ui/motion";
+import { chromeFont } from "@/lib/chrome-font";
 import { findSettingsSection } from "@/lib/nav-sections";
 import { cn } from "@/lib/utils";
 import { SettingsRelatedLinks } from "./_components/SettingsRelatedLinks";
@@ -32,7 +33,7 @@ export function SettingsPageShell({
   return (
     <FadeUp>
       <div className="flex min-w-0 flex-col gap-4">
-        <header className="flex flex-wrap items-start justify-between gap-3">
+        <header data-page-header className={cn(chromeFont.variable, "flex flex-wrap items-start justify-between gap-3")}>
           <div className="min-w-0 max-w-3xl">
             <h2 className="mb-1 text-balance">{resolvedTitle}</h2>
             {resolvedDescription ? (

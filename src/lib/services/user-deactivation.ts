@@ -343,6 +343,14 @@ export async function deactivateUserWithCleanup(args: {
     const appInstallationCleanup = erasePersonalData
       ? await tx.userAppInstallation.deleteMany({ where: { userId: targetUserId } })
       : { count: 0 };
+    // Error reports keep the failure but lose who hit it; the person's own
+    // problem reports are their words, so they go entirely.
+    const errorReportCleanup = erasePersonalData
+      ? await tx.errorEvent.updateMany({ where: { userId: targetUserId }, data: { userId: null, role: null, breadcrumbs: Prisma.DbNull } })
+      : { count: 0 };
+    const supportReportCleanup = erasePersonalData
+      ? await tx.supportReport.deleteMany({ where: { userId: targetUserId } })
+      : { count: 0 };
     const favoriteItemCleanup = erasePersonalData
       ? await tx.favoriteItem.deleteMany({ where: { userId: targetUserId } })
       : { count: 0 };
@@ -475,6 +483,8 @@ export async function deactivateUserWithCleanup(args: {
           notifications: notificationCleanup.count,
           webPushSubscriptions: webPushSubscriptionCleanup.count,
           appInstallations: appInstallationCleanup.count,
+          errorReports: errorReportCleanup.count,
+          supportReports: supportReportCleanup.count,
           favorites: favoriteItemCleanup.count + favoriteFamilyCleanup.count,
           scheduleFollows: scheduleFollowCleanup.count,
           availabilityBlocks: availabilityCleanup.count,

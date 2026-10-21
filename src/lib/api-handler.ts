@@ -1,5 +1,6 @@
 import type { NextResponse } from "next/server";
 import { fail, HttpError } from "@/lib/http";
+import { captureServerError } from "@/lib/error-reporting/server";
 import { isRolePreviewBlockedRequest, readRolePreviewFromRequest } from "@/lib/role-preview";
 
 type HandlerCtx<P extends Record<string, string> = Record<string, string>> = {
@@ -31,13 +32,25 @@ export function tagRequestJsonParseErrors(req: Request) {
   return req;
 }
 
-export function failRequest(error: unknown) {
+export function failRequest(error: unknown, req?: Request, user?: { id: string; role: string } | null) {
   // Only errors tagged at the actual Request.json() boundary are malformed
   // input. A SyntaxError thrown later by handler code remains a server error.
   if (error instanceof MalformedRequestJsonError) {
     return fail(new HttpError(400, "Request body must be valid JSON"));
   }
-  return fail(error);
+  const response = fail(error);
+  // Anything `fail` could not classify as an expected outcome is a server
+  // failure: group it into an issue with the request and person attached.
+  if (response.status >= 500 && req) {
+    captureServerError(error, {
+      kind: "api_error",
+      method: req.method,
+      path: new URL(req.url).pathname,
+      headers: req.headers,
+      user,
+    });
+  }
+  return response;
 }
 
 /**
@@ -56,7 +69,7 @@ export function withHandler<P extends Record<string, string> = Record<string, st
       const params = (context?.params ? await context.params : {}) as P;
       return await handler(tagRequestJsonParseErrors(req), { params });
     } catch (error) {
-      return failRequest(error);
+      return failRequest(error, req);
     }
   };
 }

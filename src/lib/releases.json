@@ -1,5 +1,137 @@
 [
   {
+    "date": "2026-10-21",
+    "title": "Fewer wasted deploys",
+    "type": "improvement",
+    "summary": "Updates to the site now go live more reliably, because work-in-progress branches no longer use up the daily deploy allowance.",
+    "details": [
+      "Only merged changes start a production deploy, so a day of many small updates no longer blocks the next release.",
+      "Review previews for in-progress work are unchanged."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 556
+  },
+  {
+    "date": "2026-10-21",
+    "title": "Nudge people who haven't finished setup",
+    "type": "improvement",
+    "summary": "Onboarding Status can now email a reminder to someone who signed in but has not finished their profile.",
+    "details": [
+      "People marked Setup needed get a Nudge button next to Open.",
+      "It asks once, then emails them a reminder to sign in and finish setup.",
+      "Each person can be nudged once a day, and people who finished setup don't show the button."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 553
+  },
+  {
+    "date": "2026-10-21",
+    "title": "Remind everyone waiting",
+    "type": "improvement",
+    "summary": "Onboarding Status can now email the login link to everyone who has not signed in yet.",
+    "details": [
+      "A Remind everyone waiting button sits next to the filters and asks once before sending.",
+      "It shows how many people were reminded and how many were skipped.",
+      "Each invitation can be emailed 3 times an hour, so a second tap soon after skips people already reminded.",
+      "If email isn't set up on the site yet, it says so and sends nothing."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 550
+  },
+  {
+    "date": "2026-10-21",
+    "title": "A Right now row on profiles",
+    "type": "improvement",
+    "summary": "Profiles now open with what is happening with that person right now.",
+    "details": [
+      "Next shift shows their next confirmed event, with the time and place. Holding lists gear they have checked out and flags overdue gear.",
+      "Almost there shows the badge they are closest to earning, and Badges shows the four most recently earned.",
+      "This week lists their confirmed shifts for the next seven days, colored by area.",
+      "Performance shows on-time returns, checkouts and badges earned. On-time means returned by the due time, and checkouts with no recorded return time are left out of the rate.",
+      "The Info tab cards now match: softer corners and bolder titles.",
+      "Students see this on their own profile, and staff and admins see it on anyone's. A tile only shows when there is something to say."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 549
+  },
+  {
+    "date": "2026-10-21",
+    "title": "Report a problem, and faster fixes",
+    "type": "feature",
+    "summary": "Report a problem from the account menu, and crashes and errors now reach the team with what they need to find and fix them.",
+    "details": [
+      "Report a problem in the account menu sends your note with the page you're on, your app version and browser, and your last few clicks, so you don't have to explain the steps.",
+      "If a page crashes, you can add what you were doing in one tap. The crash itself is already reported.",
+      "Crashes and errors from the web, iPhone app and server are grouped by cause, so a repeat problem is fixed once.",
+      "Nothing you type into fields, and no passwords, is ever included. Reports are deleted after 90 days."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 547
+  },
+  {
+    "date": "2026-10-21",
+    "title": "App activity redesign",
+    "type": "feature",
+    "summary": "The owner-only App activity page now shows at a glance which app versions people run and how they use the site, the iPhone app, and the menu bar.",
+    "details": [
+      "A Needs attention list shows who is behind, who is on an old TestFlight build, who can't get notifications, which version crashed most, and any kiosk that stopped checking in.",
+      "Charts show daily active people by platform, release adoption by version, the most-used screens, first opens by week, and crashes and hangs by version.",
+      "The current iPhone build now comes from the App Store listing automatically. Local Xcode builds and phones not seen in 60 days no longer count as behind.",
+      "The people list is one clean row per person with filters, sorting, and a link to each profile. It shows the menu bar app and which browser and device people use on the web."
+    ],
+    "platforms": [
+      "Web",
+      "macOS"
+    ],
+    "pr": 546
+  },
+  {
+    "date": "2026-10-20",
+    "title": "Consistent booking titles",
+    "type": "improvement",
+    "summary": "Bookings now read the same everywhere: sport name, vs or at, then the opponent.",
+    "details": [
+      "Older bookings that showed codes like \"MSOC vs Evansville\" now show \"Men's Soccer vs Evansville\" on the web, in notifications, reports, the iOS app and the menu bar.",
+      "Promotions (\"- Homecoming\"), rankings and \"(Neutral)\" no longer clutter booking titles.",
+      "Titles you type yourself, like \"Media Day - Kohl Center\", keep their dashes.",
+      "New game bookings are saved with the full sport name and a clean opponent from the start."
+    ],
+    "platforms": [
+      "Web",
+      "iOS",
+      "macOS"
+    ],
+    "pr": 544
+  },
+  {
+    "date": "2026-10-20",
+    "title": "A calmer sidebar and top bar",
+    "type": "improvement",
+    "summary": "The sidebar and top bar look the same on every page, with clearer groups, fresh icons, pinned pages, a new account menu and the page path up top.",
+    "details": [
+      "Fixed the sidebar switching fonts and styling when you opened Staff, Budget or Wish list.",
+      "New light and dark look with clearer icons and groups for People, Purchasing, Library and Staff tools. Press [ to collapse the sidebar.",
+      "Pin your most-used pages, drag them into order, or hide pages you never use from Customize sidebar in the account menu.",
+      "Search (Ctrl or Cmd+K) opens with recently viewed pages and quick actions. The account menu holds Settings, Profile, appearance and help.",
+      "Quiet counts show open wishes waiting on a decision (admins) and Software codes reported as not working (staff and admins).",
+      "The top bar shows where you are, including the name of the item you're viewing, the bell opens your latest notifications in place with an Unread view, and the phone tab bar adds a More tab. Page titles match the new look."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 541
+  },
+  {
     "date": "2026-10-20",
     "title": "Mac app: 1Password sign-in and cleaner glance",
     "type": "fixes",

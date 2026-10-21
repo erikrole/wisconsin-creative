@@ -20,7 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
-import { Check, ChevronDown, Clock3, HomeIcon } from "lucide-react";
+import { Check, ChevronDown, Clock3 } from "lucide-react";
 import { useBreadcrumbLabel } from "@/components/BreadcrumbContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -29,28 +29,30 @@ import {
   getRecentEntities,
   isQuietBreadcrumbRoute,
   saveRecentEntity,
-  shouldShowBreadcrumbs,
   visibleSiblingsForRole,
   type RecentEntity,
   type SiblingItem,
 } from "@/lib/breadcrumbs";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { chromeFont } from "@/lib/chrome-font";
 import { cn } from "@/lib/utils";
 
-const COLLAPSE_THRESHOLD = 3;
-const CRUMB_MAX_WIDTH = "max-w-[min(240px,58vw)] sm:max-w-[240px]";
-const HOME_CRUMB_COMPACT_THRESHOLD = 3;
+// The trail lives in the app top bar, so it drops the "Home" root (the sidebar already offers it)
+// and keeps at most the last two crumbs visible behind an ellipsis.
+const COLLAPSE_THRESHOLD = 2;
+const CRUMB_MAX_WIDTH = "max-w-[42vw] md:max-w-[260px]";
 const breadcrumbItemClass = "min-w-0";
-const separatorClass = "text-muted-foreground/35 [&>svg]:size-3";
+const separatorClass = "px-0.5 text-[13.5px] text-[color:var(--sidebar-border)] dark:text-[color:var(--sidebar-muted)]";
 const crumbControlClass = cn(
-  "group relative inline-flex min-h-10 min-w-0 items-center gap-1 rounded-md px-1.5 py-1 text-sm font-medium text-muted-foreground no-underline outline-none",
-  "transition-[background-color,color,box-shadow,scale] duration-150 hover:bg-foreground/[0.04] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.96]",
-  "max-md:min-h-11 max-md:px-2 [&_svg]:size-3.5 [&_svg]:shrink-0",
+  "group relative inline-flex h-8 min-w-0 items-center gap-1 rounded-md px-1.5 text-[13.5px] text-[color:var(--sidebar-text)] no-underline outline-none",
+  "transition-colors duration-150 hover:bg-[var(--sidebar-hover)] hover:text-[color:var(--sidebar-text-active)] hover:no-underline focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--sidebar-ring)]",
+  "max-md:h-10 max-md:text-[15px] [&_svg]:size-3.5 [&_svg]:shrink-0",
 );
 const crumbPageClass = cn(
-  "brand-identity relative inline-flex min-h-10 min-w-0 items-center rounded-md px-1.5 py-1 text-sm font-medium text-foreground outline-none",
-  "max-md:min-h-11 max-md:px-2 [&_svg]:size-3.5 [&_svg]:shrink-0",
+  "relative inline-flex h-8 min-w-0 items-center rounded-md px-1.5 text-[13.5px] font-bold text-[color:var(--sidebar-text-active)] outline-none",
+  "max-md:h-10 max-md:text-[15px] [&_svg]:size-3.5 [&_svg]:shrink-0",
 );
+const menuContentClass = cn(chromeFont.className, "w-72 rounded-xl p-1.5");
 
 export default function PageBreadcrumb() {
   const pathname = usePathname();
@@ -83,19 +85,33 @@ export default function PageBreadcrumb() {
     }
   }, [entityLabel, pathname, firstSegment, hasDynamicSegment]);
 
-  if (!shouldShowBreadcrumbs(allItems, onDetailPage)) return null;
+  // On the dashboard the trail is just the page itself, named as the sidebar names it; everywhere
+  // else the root is implied.
+  const trail = allItems.length > 1 ? allItems.slice(1) : [{ href: "/", label: "Dashboard", isPage: true }];
+  if (trail.length === 0) return null;
 
-  const shouldCollapse = !expanded && allItems.length > COLLAPSE_THRESHOLD;
-  const visibleItems: typeof allItems = shouldCollapse
-    ? [...allItems.slice(0, 1), ...allItems.slice(-2)]
-    : allItems;
-
+  const shouldCollapse = !expanded && trail.length > COLLAPSE_THRESHOLD;
+  const visibleItems: typeof trail = shouldCollapse ? trail.slice(-COLLAPSE_THRESHOLD) : trail;
   const showSkeleton = onDetailPage && !entityLabel;
-  const compactHome = visibleItems.length >= HOME_CRUMB_COMPACT_THRESHOLD;
 
   return (
-    <Breadcrumb className={cn("flex min-w-0 items-center print:hidden", isQuietRoute ? "mb-0" : "mb-3")}>
-      <BreadcrumbList className="min-w-0 gap-0 px-0 py-0 sm:gap-0.5">
+    <Breadcrumb className={cn(chromeFont.className, "flex min-w-0 items-center print:hidden")}>
+      <BreadcrumbList className="min-w-0 flex-nowrap gap-0 sm:gap-0">
+        {shouldCollapse && (
+          <>
+            <BreadcrumbItem className={breadcrumbItemClass}>
+              <button
+                type="button"
+                onClick={() => setExpanded(true)}
+                className={cn(crumbControlClass, "px-1")}
+                aria-label="Show full breadcrumb path"
+              >
+                <BreadcrumbEllipsis className="size-6" />
+              </button>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator className={separatorClass}>/</BreadcrumbSeparator>
+          </>
+        )}
         {visibleItems.map((item, i) => {
           const siblingItems = SIBLING_MAP[item.href];
           const visibleSiblings = siblingItems
@@ -103,35 +119,15 @@ export default function PageBreadcrumb() {
             : [];
           const hasSiblings = !item.isPage && visibleSiblings.length > 0;
           const hasRecent = item.isPage && onDetailPage && recentEntities.length > 1;
-          const isHomeItem = item.href === "/";
+          // Ancestors give way first on a phone, so the current page keeps its room.
+          const isAncestor = i < visibleItems.length - 1 || showSkeleton;
 
           return (
             <Fragment key={item.href}>
-              {i > 0 && <BreadcrumbSeparator className={separatorClass} />}
-              {shouldCollapse && i === 1 && (
-                <>
-                  <BreadcrumbItem className={breadcrumbItemClass}>
-                    <button
-                      type="button"
-                      onClick={() => setExpanded(true)}
-                      className={cn(crumbControlClass, "px-2")}
-                      aria-label="Show full breadcrumb path"
-                    >
-                      <BreadcrumbEllipsis />
-                    </button>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator className={separatorClass} />
-                </>
-              )}
-              <BreadcrumbItem className={breadcrumbItemClass}>
+              {i > 0 && <BreadcrumbSeparator className={separatorClass}>/</BreadcrumbSeparator>}
+              <BreadcrumbItem className={cn(breadcrumbItemClass, isAncestor && "shrink-[2]")}>
                 {item.isPage && !hasRecent ? (
-                  <BreadcrumbPage
-                    className={cn(
-                      crumbPageClass,
-                      CRUMB_MAX_WIDTH,
-                      isQuietRoute && "px-1",
-                    )}
-                  >
+                  <BreadcrumbPage className={cn(crumbPageClass, CRUMB_MAX_WIDTH, isQuietRoute && "px-1")}>
                     <span className="truncate">{item.label}</span>
                   </BreadcrumbPage>
                 ) : hasSiblings ? (
@@ -148,19 +144,8 @@ export default function PageBreadcrumb() {
                   />
                 ) : (
                   <BreadcrumbLink asChild>
-                    <Link
-                      href={item.href}
-                      className={cn(
-                        crumbControlClass,
-                        CRUMB_MAX_WIDTH,
-                        isQuietRoute && "px-1 hover:bg-foreground/[0.04]",
-                        isHomeItem && compactHome && "max-md:size-11 max-md:justify-center max-md:px-0",
-                      )}
-                    >
-                      {isHomeItem && compactHome && <HomeIcon className="hidden max-md:block" />}
-                      <span className={cn("truncate", isHomeItem && compactHome && "max-md:sr-only")}>
-                        {item.label}
-                      </span>
+                    <Link href={item.href} className={cn(crumbControlClass, CRUMB_MAX_WIDTH)}>
+                      <span className="truncate">{item.label}</span>
                     </Link>
                   </BreadcrumbLink>
                 )}
@@ -170,9 +155,9 @@ export default function PageBreadcrumb() {
         })}
         {showSkeleton && (
           <>
-            <BreadcrumbSeparator className={separatorClass} />
+            <BreadcrumbSeparator className={separatorClass}>/</BreadcrumbSeparator>
             <BreadcrumbItem className={breadcrumbItemClass}>
-              <Skeleton className="h-10 w-32 rounded-md bg-muted/55 max-md:h-11" />
+              <Skeleton className="h-5 w-28 rounded bg-[var(--sidebar-active)]" />
             </BreadcrumbItem>
           </>
         )}
@@ -199,8 +184,8 @@ function SiblingDropdown({
         <span className="truncate">{label}</span>
         <ChevronDown className="opacity-60 transition-transform duration-150 group-data-[state=open]:rotate-180" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-72">
-        <DropdownMenuLabel className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      <DropdownMenuContent align="start" className={menuContentClass}>
+        <DropdownMenuLabel className="text-[12px] font-bold text-muted-foreground">
           {menuLabel}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
@@ -254,8 +239,8 @@ function RecentDropdown({
         <span className="truncate">{currentLabel}</span>
         <ChevronDown className="opacity-60 transition-transform duration-150 group-data-[state=open]:rotate-180" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-72">
-        <DropdownMenuLabel className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground [&_svg]:size-3.5">
+      <DropdownMenuContent align="start" className={menuContentClass}>
+        <DropdownMenuLabel className="flex items-center gap-2 text-[12px] font-bold text-muted-foreground [&_svg]:size-3.5">
           <Clock3 />
           Recently visited
         </DropdownMenuLabel>

@@ -1,13 +1,40 @@
-import { cleanSourceSummary } from "@/lib/schedule-event-identity";
+import { cleanSourceSummary, normalizeOpponentName } from "@/lib/schedule-event-identity";
 import { normalizeTeamAbbreviations } from "@/lib/title-normalization";
+import { SPORT_CODE_SET, sportLabel } from "@/lib/sports";
+
+/** A legacy "(Neutral)" tag; the neutral site belongs in the event detail, not the title. */
+const NEUTRAL_SUFFIX = /\s*\(neutral\)\s*$/i;
 
 /**
- * Display-only booking title. Strips imported UW prefixes and dash
- * qualifiers the same way Schedule does, and corrects team abbreviations,
- * without rewriting stored or audit values.
+ * The one booking-title scheme: "<Sport name> vs|at <Opponent>".
+ *
+ * Older bookings stored the short sport code ("MSOC vs Evansville") while
+ * Schedule shows the sport name ("Men's Soccer vs Evansville"). A leading
+ * sport code is expanded so every surface reads the same.
+ */
+function expandLeadingSportCode(title: string): string {
+  return SPORT_CODE_SET.has(title) ? sportLabel(title) : title;
+}
+
+/**
+ * Display-only booking title. Strips imported UW prefixes, expands sport codes
+ * to sport names, and for game titles ("<sport> vs|at <opponent>") cleans the
+ * opponent the way Schedule does: no ranking, no "University of", no promotion
+ * qualifier ("- Homecoming"), no legacy "(Neutral)" tag. Titles that are not
+ * games keep their dashes ("Media Day - Kohl Center"), and nothing here
+ * rewrites stored or audit values.
  */
 export function displayBookingTitle(title: string): string {
   const cleaned = cleanSourceSummary(title);
-  const [primary = cleaned] = cleaned.split(/\s*[-–—]\s+/);
-  return normalizeTeamAbbreviations(primary.trim() || cleaned);
+  const game = cleaned.match(/^(.+?)\s+(vs\.?|at)\s+(.+)$/i);
+  if (game) {
+    const [, sport = "", word = "vs", rawOpponent = ""] = game;
+    const opponent = (normalizeOpponentName(rawOpponent.replace(NEUTRAL_SUFFIX, "")) ?? "").split(" - ")[0]?.trim();
+    if (opponent) {
+      return normalizeTeamAbbreviations(
+        `${expandLeadingSportCode(sport)} ${word.toLowerCase().replace(".", "")} ${opponent}`,
+      );
+    }
+  }
+  return normalizeTeamAbbreviations(expandLeadingSportCode(cleaned.replace(NEUTRAL_SUFFIX, "")));
 }

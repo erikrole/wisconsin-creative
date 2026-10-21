@@ -5,11 +5,13 @@ import {
   type SettingsRole,
 } from "@/lib/nav-sections";
 
-// Only segments where the label diverges from default title-casing.
-// Anything else falls through to formatSegment().
-const SEGMENT_OVERRIDE: Record<string, { label: string; href?: string }> = {
+// Only segments where the label diverges from default sentence-casing.
+// Anything else falls through to formatSegment(). `parentHref` links the crumb to the page above it,
+// for segments that have no page of their own.
+const SEGMENT_OVERRIDE: Record<string, { label: string; href?: string; parentHref?: boolean }> = {
   events: { label: "Schedule", href: "/schedule" },
-  "bulk-inventory": { label: "Item family operations", href: "/items" },
+  "bulk-inventory": { label: "Items", href: "/items" },
+  capture: { label: "Collection", parentHref: true },
   "allowed-emails": { label: "Registration access" },
   "collaborator-access": { label: "Collaborator access" },
   "checkout-policies": { label: "Checkout policies" },
@@ -25,6 +27,19 @@ const SEGMENT_OVERRIDE: Record<string, { label: string; href?: string }> = {
   announcements: { label: "Announcements" },
   audit: { label: "Audit log" },
   gear: { label: "UA gear" },
+};
+
+// First-segment labels that match the sidebar. SEGMENT_OVERRIDE is written for nested settings
+// pages (`/settings/bookings` is "Booking extensions"), so it must not rename a top-level section.
+const TOP_LEVEL_LABEL: Record<string, string> = {
+  bookings: "Bookings",
+  checkouts: "Bookings",
+  reservations: "Bookings",
+  gear: "UA gear",
+  wishlist: "Wish list",
+  issues: "Issues",
+  licenses: "Software",
+  youtube: "YouTube Studio Lite",
 };
 
 export type SiblingItem = {
@@ -77,6 +92,19 @@ export function getRecentEntities(section: string): RecentEntity[] {
   }
 }
 
+/** Most recently viewed detail pages across every section, newest first. */
+export function getAllRecentEntities(limit: number): RecentEntity[] {
+  try {
+    const raw = localStorage.getItem(RECENT_STORAGE_KEY);
+    if (!raw) return [];
+    const all: unknown = JSON.parse(raw);
+    if (!Array.isArray(all)) return [];
+    return all.filter(isRecentEntity).slice(0, limit);
+  } catch {
+    return [];
+  }
+}
+
 export function saveRecentEntity(entity: RecentEntity) {
   try {
     const raw = localStorage.getItem(RECENT_STORAGE_KEY);
@@ -98,9 +126,22 @@ export function saveRecentEntity(entity: RecentEntity) {
   }
 }
 
+// Whole-path labels for pages whose title is not just their last segment.
+const PATH_LABEL: Record<string, string> = {
+  "/reservations/new": "New booking",
+  "/checkouts/new": "New booking",
+  "/resources/new": "New guide",
+  "/schedule/assign": "Assign shifts",
+  "/gear/admin": "Pick results",
+  "/bulk-inventory/batteries": "Battery Ops",
+  "/import": "Import items",
+  "/labels": "Print labels",
+};
+
 export function formatSegment(segment: string): string {
-  return SEGMENT_OVERRIDE[segment]?.label
-    ?? segment.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  if (SEGMENT_OVERRIDE[segment]) return SEGMENT_OVERRIDE[segment].label;
+  const words = segment.replace(/-/g, " ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
 export function isDynamicSegment(segment: string): boolean {
@@ -160,15 +201,22 @@ export function buildBreadcrumbItems(
   for (let i = 0; i < segments.length; i++) {
     const seg = segments[i]!; // in-bounds by loop condition
     if (isDynamicSegment(seg)) continue;
-    const href = SEGMENT_OVERRIDE[seg]?.href ?? "/" + segments.slice(0, i + 1).join("/");
-    crumbs.push({ href, label: formatSegment(seg) });
+    const ownPath = "/" + segments.slice(0, i + 1).join("/");
+    const override = SEGMENT_OVERRIDE[seg];
+    const href = override?.href ?? (override?.parentHref ? "/" + segments.slice(0, i).join("/") : ownPath);
+    const label = PATH_LABEL[ownPath] ?? (i === 0 ? TOP_LEVEL_LABEL[seg] : undefined) ?? formatSegment(seg);
+    crumbs.push({ href, label });
   }
+
+  // A slug route (a guide) is not a detail route by URL shape, so its label names the last crumb.
+  const last = crumbs[crumbs.length - 1];
+  if (!onDetailPage && entityLabel && last) last.label = entityLabel;
 
   const items: BreadcrumbItemData[] = [
     { href: "/", label: "Home", isPage: false },
     ...crumbs.map((crumb, i) => ({
       ...crumb,
-      isPage: i === crumbs.length - 1 && !onDetailPage && !entityLabel,
+      isPage: i === crumbs.length - 1 && !onDetailPage,
     })),
   ];
 
