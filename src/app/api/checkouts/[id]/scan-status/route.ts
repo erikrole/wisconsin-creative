@@ -3,6 +3,7 @@ import { withAuth } from "@/lib/api";
 import { db } from "@/lib/db";
 import { HttpError, ok } from "@/lib/http";
 import { requirePermission, requirePermissionOrCollaboratorCapability } from "@/lib/rbac";
+import { displayBookingTitle } from "@/lib/booking-display-title";
 
 /**
  * GET /api/checkouts/[id]/scan-status?phase=CHECKOUT|CHECKIN
@@ -147,7 +148,7 @@ export const GET = withAuth<{ id: string }>(async (req, { user, params }) => {
   return ok({
     data: {
       checkoutId: id,
-      title: booking.title,
+      title: displayBookingTitle(booking.title),
       status: booking.status,
       phase,
       requester: booking.requester,

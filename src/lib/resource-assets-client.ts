@@ -1,4 +1,4 @@
-import { ResourceAssetKind } from "@prisma/client";
+import { ResourceAssetKind } from "@/lib/client-enums";
 
 export const RESOURCE_ASSET_KIND_LABELS: Record<ResourceAssetKind, string> = {
   [ResourceAssetKind.LOGO]: "Logo",

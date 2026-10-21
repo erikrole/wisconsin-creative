@@ -1497,6 +1497,12 @@ final class APIClient {
         return resp.data
     }
 
+    func myLicenseHistory() async throws -> [LicenseHistoryEntry] {
+        let req = request(path: "/api/licenses/my/history")
+        let resp: DataWrapper<[LicenseHistoryEntry]> = try await perform(req)
+        return resp.data
+    }
+
     func claimLicense(id: String) async throws -> LicenseClaimResult {
         let req = request(path: "/api/licenses/\(id)/claim", method: "POST")
         let resp: DataWrapper<LicenseClaimResult> = try await perform(req)
@@ -1508,6 +1514,13 @@ final class APIClient {
         var req = request(path: "/api/licenses/\(id)/release", method: "POST")
         req.httpBody = Data()
         let resp: DataWrapper<LicenseCode> = try await perform(req)
+        return resp.data
+    }
+
+    func reportBrokenLicense(id: String) async throws -> LicenseReportBrokenResult {
+        var req = request(path: "/api/licenses/\(id)/report-broken", method: "POST")
+        req.httpBody = Data()
+        let resp: DataWrapper<LicenseReportBrokenResult> = try await perform(req)
         return resp.data
     }
 
@@ -1735,7 +1748,7 @@ final class APIClient {
         includeInactive: Bool = false,
         limit: Int = 50,
         offset: Int = 0
-    ) async throws -> PaginatedResponse<AppUser> {
+    ) async throws -> UserListResponse {
         var items: [URLQueryItem] = [
             .init(name: "limit", value: "\(limit)"),
             .init(name: "offset", value: "\(offset)"),
@@ -1851,6 +1864,38 @@ final class APIClient {
         )
         guard let awards = response.data.awards, let nextCursor = response.data.nextCursor else { return nil }
         return RecentBadgeRewards(awards: awards, nextCursor: nextCursor)
+    }
+
+    /// The one announcement this person should see now, or nil. Read on launch
+    /// and on foreground only; there is no polling behind it.
+    func activeAnnouncement() async throws -> ActiveAnnouncement? {
+        let response: DataWrapper<ActiveAnnouncement?> = try await perform(
+            request(
+                path: "/api/announcements/active",
+                queryItems: [URLQueryItem(name: "platform", value: "ios")]
+            )
+        )
+        return response.data
+    }
+
+    /// Every announcement this person could have been shown, newest first,
+    /// for the Browse "What's new" list. Read on appear and pull-to-refresh.
+    func announcementHistory() async throws -> [AnnouncementHistoryEntry] {
+        let response: DataWrapper<[AnnouncementHistoryEntry]> = try await perform(
+            request(
+                path: "/api/announcements/history",
+                queryItems: [URLQueryItem(name: "platform", value: "ios")]
+            )
+        )
+        return response.data
+    }
+
+    /// Records that this person has seen the announcement. Idempotent server-side.
+    func dismissAnnouncement(id: String) async throws {
+        struct Dismissed: Decodable { let dismissed: Bool }
+        let _: DataWrapper<Dismissed> = try await perform(
+            request(path: "/api/announcements/\(id)/dismiss", method: "POST")
+        )
     }
 
     /// Uploads one MetricKit diagnostic payload (crashes, hangs, resource
@@ -2935,7 +2980,7 @@ final class APIClient {
         )
     }
 
-    private func perform<T: Decodable>(
+    private func perform<T: Decodable & Sendable>(
         _ request: URLRequest,
         broadcastsSessionExpiry: Bool = true
     ) async throws -> T {
@@ -2956,11 +3001,21 @@ final class APIClient {
 
         switch http.statusCode {
         case 200...299:
+            let decoded: T
             do {
-                return try decoder.decode(T.self, from: data)
+                decoded = try await APIResponseDecoder.decode(T.self, from: data)
+            } catch is CancellationError {
+                throw CancellationError()
             } catch {
                 throw APIError.decodingError(error)
             }
+            // Decoding now suspends the main actor. An account change during
+            // that work must not publish the previous account's response.
+            try Task.checkCancellation()
+            guard authSessionBoundary.owns(requestBoundary) else {
+                throw APIError.sessionChanged
+            }
+            return decoded
         case 401:
             if broadcastsSessionExpiry {
                 // Authenticated requests broadcast globally so SessionStore can
@@ -3061,9 +3116,24 @@ final class APIClient {
 
 extension APIClient: ReservationDraftPersistence {}
 
+/// A request-local decoder on the concurrent executor. Large list responses
+/// must not occupy the main actor while SwiftUI is rendering or scrolling.
+enum APIResponseDecoder {
+    @concurrent
+    static func decode<T: Decodable & Sendable>(_ type: T.Type, from data: Data) async throws -> T {
+        try Task.checkCancellation()
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        decoder.dateDecodingStrategy = .iso8601
+        let value = try decoder.decode(type, from: data)
+        try Task.checkCancellation()
+        return value
+    }
+}
+
 // MARK: - Private response shapes
 
-private struct DataWrapper<T: Decodable>: Decodable {
+private struct DataWrapper<T: Decodable & Sendable>: Decodable, Sendable {
     let data: T
 }
 
@@ -3102,7 +3172,7 @@ private struct LoginResponse: Decodable {
     let user: CurrentUser
 }
 
-private struct PasskeyOptionsResponse<T: Decodable>: Decodable {
+private struct PasskeyOptionsResponse<T: Decodable & Sendable>: Decodable, Sendable {
     let options: T
 }
 

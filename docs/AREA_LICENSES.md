@@ -63,13 +63,18 @@ The `/licenses` route is presented as **Software** in the sidebar. Photo Mechani
 - Photo Mechanic section: `src/app/(app)/licenses/PhotoMechanicLicenses.tsx`
 - Native iOS page: `ios/Wisconsin/Views/LicensesView.swift`
   - Every authenticated role can open Licenses from Browse or Settings > Directory, view the license pool, claim one open slot, copy their active code, and return their own slot.
-  - Student pool rows hide code strings unless the row is their active claim; staff/admin rows can reveal pool codes.
+  - The page was rebuilt (2026-10-16) to mirror the web redesign. A student without a license sees a "Get a license code" hero with a slot meter ("N of M slots open") and one "Claim a code" button. It auto-picks the code (half-used first, then available, latest expiry breaking ties, no expiry counting as latest), confirms, claims through the existing route, and copies the code. Below it, "In use now · N" lists holders (avatar, name, claim age) with no code strings, per-code cards, filters, or expiry.
+  - A holder sees a hero license card first (large tap-to-copy code, claimed and expiry facts, expiry badge, Copy Code as the one strong button, quiet History and Return/Release) and the same "In use now" list.
+  - Staff/admin keep a status summary (slots open, expiring), filter chips (All, Has open slot, Full, Expiring), and a dense one-row-per-code list (code, label and holder names, two seat avatars with dashed rings for open seats, expiry chip, chevron). A row opens a detail sheet (copy code, seats, Manage on web); "Claim for me" appears when they hold nothing.
+  - History opens a sheet backed by the existing `/api/licenses/my/history` route.
   - Staff/admin users get a web-management link for create, bulk create, renew, retire, export, unknown occupants, and full history workflows.
+- Role focus (web, rebuilt 2026-10-16): students without a license get one "Claim a code" button (the app picks the best open slot: half-used codes first) and an "In use now" holder list with names only, never code strings; students with a license get the license card plus the same list; staff/admins get the status rail, filters, a dense one-row-per-code list with two seat avatars and expiry, and a "Claim for me" button.
 - Components:
-  - `PhotoMechanicLicenses.tsx` — default Software panel: holder/claim hero first, then capacity rail, pool toolbar (staff add/renew/export), and pool table
-  - `MyLicensePanel.tsx` — student banner showing their active code with copy + return
+  - `PhotoMechanicLicenses.tsx` — default Software panel: holder/claim hero first, then capacity rail, pool toolbar (staff add/renew/export), filter chips (All, Has open slot, Full, Expiring), and the card grid
+  - `MyLicensePanel.tsx` — hero license card: large tap-to-copy code, claimed/expiry/activation facts, copy, history, and return
   - `MyLicenseHistoryDialog.tsx` — user-visible recent claim/return history from the active-license banner
-  - `LicenseTable.tsx` — main table with masked codes, safe linked-holder identities for students, staff/admin-only management actions, and expiry tooltips
+  - `LicenseTable.tsx` — staff-only dense code list (one row per code, two seat avatars, expiry chip, Inspect)
+  - `LicenseHolders.tsx` — student-facing "In use now" list (names and claim age only)
   - `ConfirmClaimDialog.tsx` — student claim confirmation, copies code on success
   - `ReleaseDialog.tsx` — student return confirmation
   - `AdminClaimSheet.tsx` — admin detail sheet (slots, self-claim of an open slot, occupant, editable label/account/expiry, danger zone, history)
@@ -77,7 +82,7 @@ The `/licenses` route is presented as **Software** in the sidebar. Photo Mechani
   - `BulkAddSheet.tsx` — paste many codes at once
   - `BulkRenewDialog.tsx` — admin renewal dialog for expiring/expired visible codes or all visible active codes
 
-The Photo Mechanic tab also renders a responsive mobile card/list view so capacity, holders, expiry, and Claim/Inspect actions remain visible without horizontal table scrolling.
+The pool is one card grid at every width (1 column on phones, 2 on tablets, 3 on wide screens), so there is no horizontal scrolling.
 
 ### Visual states
 - AVAILABLE row: tinted green, `cursor-pointer` if user has no claim
@@ -139,6 +144,9 @@ Implementation: `processLicenseNags` and `processExpiryWarnings` in `src/lib/ser
 
 - 2026-08-23: Redesigned the Photo Mechanic landing so the holder's activation code (or the claim prompt) is the first thing on the page. Staff add actions moved into the pool toolbar and no longer sit above the hero. `/licenses` still opens Photo Mechanic by default; Shared logins is `?tab=shared-logins`. Claim, masking, two-slot, and expiry contracts are unchanged.
 - 2026-08-19: Added the shared Software Vault above the Photo Mechanic pool. The sidebar and route copy now say Software, while the existing two-slot license workflow remains compatible at `/licenses`. See `docs/AREA_SOFTWARE.md` for the encrypted credential contract and rollout gates.
+- 2026-10-16: **Native iOS Licenses row and rhythm refinement.** Staff code rows now give the code and subtitle a full line (holder names when seats are filled, otherwise label · Open), with spaced seat avatars and the expiry chip on a second line that stacks at accessibility sizes. "Claim for me" is a green prominent 44pt button. Tighter hero-to-list spacing, a spoken value on the slot meter, explicit VoiceOver labels on rows and holders, and capped avatar scaling. No API or behavior changes.
+- 2026-10-16: **Native iOS Licenses rebuilt for PR 488.** `LicensesView.swift` was rebuilt (not reskinned) around one job per role: students get a single "Claim a code" button (auto-picked code, copied on success) plus an "In use now" holder list; holders get the license card; staff get the summary, filters, and a dense code list with a detail sheet. Claim, return, masking, and API contracts are unchanged.
+- 2026-10-16: **Native iOS Licenses redesign.** `LicensesView.swift` now mirrors the web redesign in PR 488: hero license card for holders, a single claim prompt otherwise, two-seat cards per code with holder avatars and names, status chips, staff-only filter and expiry chips, and a History sheet. Claim, return, masking, and API contracts are unchanged; the only new client call is the existing `/api/licenses/my/history`.
 - 2026-08-18: Fixed native iOS license expiry rendering a day early. Expiry values are annual calendar dates encoded at UTC midnight (`src/lib/license-dates.ts`), but iOS formatted the encoded instant in the device timezone, so anywhere west of UTC a 31 Dec license read "Expires Dec 30", and both the "Expired" copy and the amber/red urgency tone flipped a full day before the license lapsed. `LicenseExpiry.calendarDay(from:)` / `.daysUntil(_:)` now read the UTC date parts and compare whole calendar days, mirroring `licenseExpiryAsLocalDate` and `licenseDaysUntilExpiry` on the web. Claim timestamps are real instants and still render in local time. Pinned by `ios/WisconsinTests/LicenseExpiryTests.swift`.
 - 2026-08-18: **Local calendar dates for annual expiry.** Date-only renewal values such as `2027-08-18` now display as August 18 in Central/local browser time instead of shifting to August 17 through UTC-midnight conversion. Expired, expiring-soon, renewal-scope, admin-sheet, and CSV filename calculations use the same local calendar-day contract; storage encoding, claim eligibility, and notification policy are unchanged.
 - 2026-07-29: **Staff assignment.** Staff and admins can assign an open Photo Mechanic slot to an active internal user from the license detail sheet. The audited management route rejects retired or full licenses and users who already hold an active slot. Unknown-occupant recording remains available as a separate fallback.

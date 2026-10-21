@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { chromeFont } from "@/lib/chrome-font";
 import { cn } from "@/lib/utils";
 
 interface DetailPageHeaderProps {
@@ -63,7 +64,9 @@ export function DetailPageHeader({
 }: DetailPageHeaderProps) {
   return (
     <header
+      data-page-header
       className={cn(
+        chromeFont.variable,
         "mb-5 border-b border-border/50 pb-5",
         className
       )}

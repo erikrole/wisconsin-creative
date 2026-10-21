@@ -201,6 +201,8 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
             callStartsAt: (activeAssignment.callStartsAt ?? shift.callStartsAt ?? shift.startsAt).toISOString(),
             callEndsAt: (activeAssignment.callEndsAt ?? shift.callEndsAt ?? shift.endsAt).toISOString(),
             callNote: activeAssignment.callNote,
+            crewLabel: activeAssignment.crewLabel,
+            crewHalf: activeAssignment.crewHalf,
             linkedBookingId: linkedBooking?.id ?? null,
             linkedBookingStatus: linkedBooking?.status ?? null,
           }

@@ -85,12 +85,13 @@ export function withAuth<P extends Record<string, string> = Record<string, strin
   handler: (req: Request, ctx: AuthCtx<P>) => Promise<NextResponse>
 ) {
   return async (req: Request, context: { params: Promise<P> }): Promise<NextResponse> => {
+    let user: AuthUser | null = null;
     try {
       // CSRF: validate Origin header on mutating requests
       if (req.method !== "GET" && req.method !== "HEAD") {
         assertSameOrigin(req);
       }
-      const user = await requireAuth();
+      user = await requireAuth();
       await recordPreviewActivity();
       if (user.forcePasswordChange && !isForcePasswordAllowed(req)) {
         throw new HttpError(403, "Password change required before continuing");
@@ -103,7 +104,7 @@ export function withAuth<P extends Record<string, string> = Record<string, strin
       deferCompanionProjectionRefresh(req, response);
       return response;
     } catch (error) {
-      return failRequest(error);
+      return failRequest(error, req, user);
     }
   };
 }
@@ -136,7 +137,7 @@ export function withKiosk<P extends Record<string, string> = Record<string, stri
       deferCompanionProjectionRefresh(req, response);
       return response;
     } catch (error) {
-      return failRequest(error);
+      return failRequest(error, req);
     }
   };
 }

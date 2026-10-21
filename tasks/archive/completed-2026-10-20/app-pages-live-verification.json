@@ -1,0 +1,118 @@
+{
+  "verifiedDate": "2026-10-20",
+  "sourceCommit": "5d8467d347039f7e5ec989bf2faf5e62a9ef246c",
+  "deploymentId": "dpl_6qgLguCVCB5RrnP75LXCodi3cMyg",
+  "deploymentState": "READY",
+  "productionOrigin": "https://wisconsincreative.com",
+  "pages": [
+    {
+      "path": "/apps",
+      "status": 200,
+      "detail_links": 5
+    },
+    {
+      "path": "/apps/fetch",
+      "status": 200,
+      "screenshots": 4,
+      "nonce_csp": true,
+      "download_links": [
+        "https://github.com/erikrole/fetch-releases/releases/latest/download/Fetch.dmg"
+      ]
+    },
+    {
+      "path": "/apps/offload",
+      "status": 200,
+      "screenshots": 1,
+      "nonce_csp": true,
+      "download_links": [
+        "https://github.com/erikrole/offload-releases/releases/download/v1.5.3/Offload-1.5.3.dmg"
+      ]
+    },
+    {
+      "path": "/apps/wisconsin-creative",
+      "status": 200,
+      "screenshots": 3,
+      "nonce_csp": true,
+      "download_links": [
+        "https://apps.apple.com/us/app/wisconsin-creative/id6763456945"
+      ]
+    },
+    {
+      "path": "/apps/radio-clip",
+      "status": 200,
+      "screenshots": 1,
+      "nonce_csp": true,
+      "download_links": []
+    },
+    {
+      "path": "/apps/media-lab",
+      "status": 200,
+      "screenshots": 1,
+      "nonce_csp": true,
+      "download_links": []
+    }
+  ],
+  "assets": [
+    {
+      "path": "/apps/shots/fetch-convert.jpg",
+      "status": 200,
+      "mime": "image/jpeg",
+      "sha256": "c6c083ff36362f3f9608295cd4e9e434b3476fc4622d3441938d31ea6130f8f7"
+    },
+    {
+      "path": "/apps/shots/fetch-done.jpg",
+      "status": 200,
+      "mime": "image/jpeg",
+      "sha256": "f27dcac1248eee48e1fcf8c6dc40b6dd4b9a658f4b23d9abb150afcce3c41ffb"
+    },
+    {
+      "path": "/apps/shots/fetch-download.jpg",
+      "status": 200,
+      "mime": "image/jpeg",
+      "sha256": "1359d7273f2835246ba589ec74d957d82ea0179bc82411b17f2e595a088cb9c0"
+    },
+    {
+      "path": "/apps/shots/fetch-home.jpg",
+      "status": 200,
+      "mime": "image/jpeg",
+      "sha256": "4b9ce89e7f5c89c9df8acf8fb9b388737e6c921a03e462b67f7530302fbcb63b"
+    },
+    {
+      "path": "/apps/shots/media-lab-preview.png",
+      "status": 200,
+      "mime": "image/png",
+      "sha256": "0eefe3e52995be4dc0aa451b9d49d9d0270ba07aadad382d38f77f3a2c301be8"
+    },
+    {
+      "path": "/apps/shots/offload-ingest.jpg",
+      "status": 200,
+      "mime": "image/jpeg",
+      "sha256": "9587c97b7421c33907cdd2296541eec2e06976bbf0920fab6eb27d0381338880"
+    },
+    {
+      "path": "/apps/shots/radio-clip-preview.jpg",
+      "status": 200,
+      "mime": "image/jpeg",
+      "sha256": "81e6c40379de83f7cd3bf533e65593b988b093ba7fe1d125a063df467e72d92c"
+    },
+    {
+      "path": "/apps/shots/wisconsin-equipment.jpg",
+      "status": 200,
+      "mime": "image/jpeg",
+      "sha256": "6222deb62223e7fdb6e28b422e58b6227a6ebb15214e4f2a575632942ec76b36"
+    },
+    {
+      "path": "/apps/shots/wisconsin-home.jpg",
+      "status": 200,
+      "mime": "image/jpeg",
+      "sha256": "97b6a3807cdb9a89557ccdee70f0a2e7e1f2e40b2875e2c3dcc5decacf458d8a"
+    },
+    {
+      "path": "/apps/shots/wisconsin-schedule.jpg",
+      "status": 200,
+      "mime": "image/jpeg",
+      "sha256": "6ce7c24359916cd7960efe3980bee7192122694569da9692487483a7708d1ff6"
+    }
+  ],
+  "unknown_app_status": 404
+}

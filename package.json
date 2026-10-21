@@ -23,6 +23,7 @@
   },
   "overrides": {
     "esbuild": "0.28.1",
+    "vite": "7.3.7",
     "fast-uri": "3.1.8",
     "http-cache-semantics": "4.3.0",
     "js-yaml": "4.3.2",
@@ -95,6 +96,7 @@
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "test:e2e:smoke": "playwright test",
+    "test:performance:web": "node scripts/check-web-performance.mjs",
     "smoke:deploy": "node scripts/deploy-smoke.mjs",
     "smoke:collaborator": "node scripts/collaborator-deploy-smoke.mjs",
     "import:cheqroom": "node scripts/import-cheqroom-items.mjs",

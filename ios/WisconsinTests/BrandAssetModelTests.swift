@@ -2,6 +2,23 @@ import XCTest
 @testable import Wisconsin
 
 final class BrandAssetModelTests: XCTestCase {
+    @MainActor
+    func testConcurrentPreviewKeepsSVGSafetyAndRejectsOversizedFiles() async throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".svg")
+        defer { try? FileManager.default.removeItem(at: url) }
+        let data = Data(#"<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script><rect width="10" height="10"/></svg>"#.utf8)
+        try data.write(to: url)
+        let version = try XCTUnwrap(summary(kind: "LOGO", contentType: "image/svg+xml", sizeBytes: data.count).currentVersion)
+        let preview = try await BrandAssetPreparedPreview.prepare(version: version, at: url)
+        XCTAssertTrue(preview.canPreview)
+        XCTAssertFalse(try XCTUnwrap(preview.svgHTML).contains("<script>"))
+
+        try Data(repeating: 0, count: brandAssetSVGByteLimit + 1).write(to: url)
+        let oversized = try await BrandAssetPreparedPreview.prepare(version: version, at: url)
+        XCTAssertFalse(oversized.canPreview)
+        XCTAssertNil(oversized.svgHTML)
+    }
+
     func testLibraryPageDecodesTheListEnvelopeAndUnknownKinds() throws {
         let page = try decodePage("""
         {

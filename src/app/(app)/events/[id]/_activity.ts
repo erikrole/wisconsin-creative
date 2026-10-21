@@ -122,7 +122,9 @@ export function describeScheduleChange(
       case "assignment_updated":
         return {
           ...item,
-          headline: target?.includes(" to ") ? `Updated ${target}` : "Updated a call time",
+          headline: target?.includes(" to ")
+            ? `Updated ${target}`
+            : item.label === "Updated position label" ? "Updated a position label" : "Updated a call time",
           supporting: field && field !== target ? field : null,
           actorLabel: item.actorName,
           draft,

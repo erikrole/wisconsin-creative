@@ -243,13 +243,6 @@ final class BookingsViewModel {
             offset += result.data.count
             hasMore = offset < result.total
             pageError = nil
-            // Only the unfiltered default list seeds the offline cache. A
-            // "Cancelled" or "Mine" page is a slice, and caching it would let
-            // the next cold launch open on a subset that looks like the whole
-            // list.
-            if reset && searchText.isEmpty && scope == .all && statusFilter == .active {
-                GearStore.shared.seedBookings(result.data)
-            }
             await CheckoutReturnLiveActivityManager.shared.reconcileCurrentUserCheckouts(
                 requesterId: currentUserId
             )

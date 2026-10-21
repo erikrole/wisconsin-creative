@@ -62,6 +62,7 @@ CreateBookingSheet.swift               | create-booking              | audit
 ExtendBookingSheet.swift               | extend-booking              | audit
 BrowseView.swift                       | browse                      | audit
 BlastsView.swift                       | blasts                      | audit
+Announcements/WhatsNewView.swift          | whats-new                   | audit
 ItemsView.swift                        | items                       | audit
 ItemDetailView.swift                   | item-detail                 | audit
 ItemActivityView.swift                 | item-detail                 | audit
@@ -110,6 +111,7 @@ GuidesView.swift                       | resources                   | audit
 BrandAssetsView.swift                  | brand-assets                | audit
 GearPicksView.swift                    | gear-picks                  | audit
 GuideMarkdown.swift                    |                             | exempt-infra
+Announcements/AnnouncementSplashSheet.swift |                          | exempt-shared
 SidebarWebDestinationView.swift        |                             | exempt-tiny
 NotificationSettingsView.swift         | profile                     | audit
 AccountSecuritySettingsView.swift      | profile                     | audit

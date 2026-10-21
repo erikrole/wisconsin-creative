@@ -1,6 +1,6 @@
 import ExcelJS from "exceljs";
 import { withAuth } from "@/lib/api";
-import { parseBudgetSheet } from "@/lib/budget/import";
+import { findHeaderRow, parseBudgetSheet, suggestSheet } from "@/lib/budget/import";
 import { importLinesSchema } from "@/lib/budget/schemas";
 import { HttpError, ok } from "@/lib/http";
 import { enforceRateLimit, SETTINGS_MUTATION_LIMIT } from "@/lib/rate-limit";
@@ -23,7 +23,9 @@ function cellText(value: ExcelJS.CellValue): string {
   return String(value);
 }
 
-async function readRows(file: File): Promise<string[][]> {
+type Sheet = { name: string; rows: string[][] };
+
+async function readWorkbook(file: File): Promise<Sheet[]> {
   const name = file.name.toLowerCase();
   const buffer = Buffer.from(await file.arrayBuffer());
   const workbook = new ExcelJS.Workbook();
@@ -35,21 +37,28 @@ async function readRows(file: File): Promise<string[][]> {
   } else {
     throw new HttpError(400, "Upload an .xlsx or .csv file.");
   }
-  const sheet = workbook.worksheets[0];
-  if (!sheet) throw new HttpError(400, "That file has no sheets.");
-  if (sheet.rowCount > MAX_ROWS) throw new HttpError(400, `That sheet has more than ${MAX_ROWS} rows. Import one year at a time.`);
-  const rows: string[][] = [];
-  sheet.eachRow({ includeEmpty: true }, (row, rowNumber) => {
-    const cells: string[] = [];
-    row.eachCell({ includeEmpty: true }, (cell, col) => {
-      cells[col - 1] = cellText(cell.value);
+  if (workbook.worksheets.length === 0) throw new HttpError(400, "That file has no sheets.");
+  return workbook.worksheets
+    .filter((sheet) => sheet.state === "visible")
+    .map((sheet) => {
+      const rows: string[][] = [];
+      if (sheet.rowCount <= MAX_ROWS) {
+        sheet.eachRow({ includeEmpty: true }, (row, rowNumber) => {
+          const cells: string[] = [];
+          row.eachCell({ includeEmpty: true }, (cell, col) => {
+            cells[col - 1] = cellText(cell.value);
+          });
+          rows[rowNumber - 1] = Array.from(cells, (value) => value ?? "");
+        });
+      }
+      return { name: sheet.name, rows: Array.from(rows, (row) => row ?? []) };
     });
-    rows[rowNumber - 1] = Array.from(cells, (value) => value ?? "");
-  });
-  return Array.from(rows, (row) => row ?? []);
 }
 
-/** Preview: upload a sheet (multipart `file`, optional `unboughtAs`) and get candidate lines back. Saves nothing. */
+/**
+ * Preview: upload a sheet (multipart `file`, optional `sheet` tab name and `unboughtAs`) and get candidate lines back.
+ * A workbook with several tabs answers with the tab list and a suggested tab. Saves nothing.
+ */
 export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
   requirePermission(user.role, "budget", "manage");
   await enforceRateLimit(`budget:mutate:${user.id}`, SETTINGS_MUTATION_LIMIT);
@@ -57,12 +66,21 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
   const file = form.get("file");
   if (!(file instanceof File)) throw new HttpError(400, "Choose a file to import.");
   if (file.size > MAX_BYTES) throw new HttpError(400, "That file is over 2 MB.");
-  const unboughtAs = form.get("unboughtAs") === "PLANNED" ? "PLANNED" : "CANCELLED";
+  const unboughtRaw = form.get("unboughtAs");
+  const unboughtAs = unboughtRaw === "PLANNED" || unboughtRaw === "PURCHASED" ? unboughtRaw : "CANCELLED";
   const { budget } = await getBudgetDetail(params.id);
-  const rows = await readRows(file);
-  const { candidates, problem } = parseBudgetSheet(rows, { fiscalYear: budget.fiscalYear, unboughtAs });
+  const sheets = await readWorkbook(file);
+  const summaries = sheets.map((sheet) => ({ name: sheet.name, usable: findHeaderRow(sheet.rows) >= 0 }));
+  const requested = form.get("sheet");
+  const chosen =
+    typeof requested === "string" && summaries.some((sheet) => sheet.name === requested)
+      ? requested
+      : suggestSheet(summaries, budget.name, budget.fiscalYear);
+  const sheet = sheets.find((candidate) => candidate.name === chosen);
+  if (!sheet) throw new HttpError(400, "Couldn't find a tab with a header row. The sheet needs a Line (or Item) column and a Budgeted, Each, or Spent column.");
+  const { candidates, problem } = parseBudgetSheet(sheet.rows, { fiscalYear: budget.fiscalYear, unboughtAs });
   if (problem) throw new HttpError(400, problem);
-  return ok({ data: { fileName: file.name, candidates } });
+  return ok({ data: { fileName: file.name, sheet: sheet.name, sheets: summaries, candidates } });
 });
 
 /** Commit: save the lines the person reviewed. */

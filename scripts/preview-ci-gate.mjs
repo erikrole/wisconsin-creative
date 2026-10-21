@@ -14,7 +14,7 @@ export async function decidePreviewGate(run, { repository, token, fetcher } = {}
   }
   const pr = await findValidatedPullRequest(run, { repository, token, fetcher });
   const files = await listPullRequestFiles(repository, pr.number, { token, fetcher });
-  const decision = previewDatabaseDecision({ files, author: pr.user?.login ?? pr.user, branch: pr.head?.ref });
+  const decision = previewDatabaseDecision({ files, author: pr.user?.login ?? pr.user, branch: pr.head?.ref, labels: pr.labels });
   return {
     needed: !decision.skip,
     reason: decision.reason || "This pull request changes prisma/, src/, or scripts/.",

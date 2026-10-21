@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Mobile Operations
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-10-18
+- Last Updated: 2026-10-20
 - Status: Active
 - Version: V1
 
@@ -146,8 +146,11 @@ Navigation shell versioned roadmap: `tasks/sidebar-roadmap.md` (revised 2026-03-
 
 ## Change Log
 
+- 2026-10-20: **Less main-actor and background work (local, rollout pending).** Successful API response decoding and Brand asset image/SVG preparation move to concurrent workers with cancellation and account/request ownership checks before publication. Foreground refresh has one cancellable owner; App Intents reuse the validated identity. Checkout Live Activities skip availability reads until a checkout is within the existing maximum 60-minute lead window. Removed unused SwiftData seeding and launch container initialization after confirming no active read consumers; ScheduleWindowCache, drafts, widget snapshots, and legacy sign-out cleanup remain. Schedule saves its fetched window once. Native unit tests cover off-main decoding, cancellation, date/key/null compatibility, preview limits, and the Live Activity cutoff. Simulator tests and generic-device compilation pass; stable-runtime comparison and physical-device battery/memory acceptance remain open in `tasks/performance-web-ios-neon-2026-10-20.md`.
+
 - 2026-10-18: **Native booking activity (local, read-only).** A reservation or checkout on iPhone opens Activity for students, staff, and admins. It reads `auditLogs` on `GET /api/bookings/:id`, the same history as the website, filtered to all activity, booking changes, or equipment changes. The newest 50 entries are shown. A failed refresh keeps the list. Collaborators do not see Activity. Extend stays the booking's main action. Source contracts pass. An Xcode build on a Mac is still required.
 - 2026-10-18: **Native profile hours (local, read-only).** Your profile shows this week and this month from `GET /api/shifts/my-hours`, the same Monday–Sunday and calendar-month totals the website shows, counted in Central time. Students, staff, and admins see the card on Profile and when they open their own person screen. Collaborators do not. Try again appears when the first load fails. A later failure keeps the totals already on screen. Source contracts pass. An Xcode build on a Mac is still required.
+- 2026-10-18: **Native kit rows keep the return time when the holder name is hidden (local).** A collaborator kit detail omits who has each piece and still sends when the hold ends. The row says Back plus that time. Staff and admin still see With plus the name. Source contracts pass. An Xcode build on a Mac is still required.
 - 2026-10-18: **Native item activity (local, read-only).** Staff and admin open Activity on an item and read `GET /api/assets/:id/activity`, the same History feed as the website. The screen can show all activity, item updates, or bookings, and can load older pages. A booking row opens that booking. Cancelled and maintenance rows use the quiet status colors. Students and collaborators do not see Activity. Previous bookings stay on the item. Source contracts pass. An Xcode build on a Mac is still required.
 - 2026-10-18: **Native travel roster on away games (local, read-only).** Schedule event detail lists who is traveling for an away game that has a sport. Students, staff, and admins read `GET /api/calendar-events/:id/travel`. A row opens that person's profile. Home games and collaborators do not show the section. Adding and removing travelers stays on the website. Source contracts pass. An Xcode build on a Mac is still required.
 - 2026-10-17: **Native item detail shows condition reports (local).** Staff and admin see the five most recent damage and missing-item reports on an item, from the `checkinReports` already returned by `GET /api/assets/:id`. A photo opens full screen. The row opens the checkout. Reserve stays the screen action, and clearing maintenance stays in the item menu. Students and collaborators do not get the list. Source contracts pass. An Xcode build on a Mac and an authenticated iPhone walkthrough remain open.

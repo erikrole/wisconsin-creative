@@ -929,9 +929,26 @@ struct ActiveLicenseClaim: Codable, Identifiable, Equatable {
     let claimId: String
 }
 
+struct LicenseHistoryEntry: Codable, Identifiable, Equatable {
+    struct Code: Codable, Equatable {
+        let id: String
+        let label: String?
+        let expiresAt: String?
+    }
+
+    let id: String
+    let claimedAt: String?
+    let releasedAt: String?
+    let licenseCode: Code
+}
+
 struct LicenseClaimResult: Codable, Equatable {
     let id: String
     let code: String
+}
+
+struct LicenseReportBrokenResult: Codable, Equatable {
+    let replacement: LicenseClaimResult?
 }
 
 // MARK: - Resources
@@ -1158,6 +1175,20 @@ struct PaginatedResponse<T: Codable & Sendable>: Codable, Sendable {
     let total: Int
     let limit: Int
     let offset: Int
+}
+
+/// `/api/users` page plus the roster summary the web role tabs use. `stats`
+/// is optional so an older server keeps decoding.
+struct UserListResponse: Codable, Sendable {
+    struct Stats: Codable, Sendable {
+        let byRole: [String: Int]
+    }
+
+    let data: [AppUser]
+    let total: Int
+    let limit: Int
+    let offset: Int
+    let stats: Stats?
 }
 
 struct APIResponse<T: Codable>: Codable {

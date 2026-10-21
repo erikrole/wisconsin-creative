@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Role } from "@prisma/client";
+import ExcelJS from "exceljs";
 
 vi.mock("@/lib/auth", () => ({ requireAuth: vi.fn() }));
 vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
@@ -422,6 +423,45 @@ describe("spreadsheet import", () => {
     ]);
     expect(data.candidates[0].purchasedOn).toBe("2026-05-28");
     expect(tx.budgetLine!.create!).not.toHaveBeenCalled();
+  });
+
+  it("offers the tabs of a workbook and previews the one for the budget's year", async () => {
+    (requireAuth as unknown as MockFn).mockResolvedValue(admin);
+    (db.budget.findUnique as unknown as MockFn).mockResolvedValue({ id: "budget-2", name: "Football", fiscalYear: "2026-27", allocationCents: null, notes: null, lines: [] });
+    const workbook = new ExcelJS.Workbook();
+    workbook.addWorksheet("27-28").addRow(["G/S pass"]);
+    const creative = workbook.addWorksheet("26-27");
+    creative.addRows([["Category", "Status", "Description", "Price Per Unit", "Quantity", "Total Budgeted", "Total Spent"], ["Equipment Expense", "Purchased", "Creative camera", 100, 1, 100, 100]]);
+    const football = workbook.addWorksheet("FB 26-27");
+    football.addRows([["Expense Category", "Description", "Price Per Unit", "Quantity", "Total Budgeted"], ["Services", "Shoot Budget", 20000, 1, 20000]]);
+    const buffer = await workbook.xlsx.writeBuffer();
+    const form = new FormData();
+    form.set("file", new File([buffer], "budget.xlsx"));
+    const res = await previewImport(new Request(`${ORIGIN}/api/budget/budget-2/import`, { method: "POST", headers: { origin: ORIGIN }, body: form }), idContext);
+    expect(res.status).toBe(200);
+    const { data } = await res.json();
+    expect(data.sheet).toBe("FB 26-27");
+    expect(data.sheets).toEqual([
+      { name: "27-28", usable: false },
+      { name: "26-27", usable: true },
+      { name: "FB 26-27", usable: true },
+    ]);
+    expect(data.candidates.map((c: { description: string }) => c.description)).toEqual(["Shoot Budget"]);
+
+    form.set("sheet", "26-27");
+    const other = await previewImport(new Request(`${ORIGIN}/api/budget/budget-2/import`, { method: "POST", headers: { origin: ORIGIN }, body: form }), idContext);
+    expect((await other.json()).data.candidates.map((c: { description: string }) => c.description)).toEqual(["Creative camera"]);
+  });
+
+  it("keeps two lines that share a name instead of folding them into one", async () => {
+    (requireAuth as unknown as MockFn).mockResolvedValue(admin);
+    tx.budget!.findUnique!.mockResolvedValue({ id: "budget-1" });
+    tx.budgetLine!.findMany!.mockResolvedValue([]);
+    tx.budgetLine!.create!.mockResolvedValue({ id: "line-x" });
+    const base = { category: "MATERIALS_SUPPLIES", status: "PURCHASED", supplier: null, unitCostCents: 100, quantity: 1, spentCents: 100, purchasedOn: null, poNumber: null, orderNumber: null, unplanned: false, description: "SD card" };
+    const res = await commitImport(json("PUT", "/api/budget/budget-1/import", { lines: [base, base] }), idContext);
+    expect((await res.json()).data).toEqual({ created: 2, updated: 0 });
+    expect(tx.budgetLine!.update!).not.toHaveBeenCalled();
   });
 
   it("rejects other file types and keeps import admin only", async () => {

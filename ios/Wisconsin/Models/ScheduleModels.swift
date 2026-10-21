@@ -491,9 +491,14 @@ struct ShiftAssignmentRecord: Codable, Identifiable {
     /// OPEN/CLAIMED trade on this assignment, when one exists. Optional so
     /// older payloads (and the create-group response) still decode.
     let activeTrade: ActiveTradeRef?
+    /// Position tag staff set on the web ("SLOW1") and the half it covers
+    /// ("FIRST" / "SECOND"; nil means the whole event). Both optional so older
+    /// payloads decode.
+    let crewLabel: String?
+    let crewHalf: String?
 
     enum CodingKeys: String, CodingKey {
-        case id, status, user, activeTrade
+        case id, status, user, activeTrade, crewLabel, crewHalf
     }
 
     init(from decoder: Decoder) throws {
@@ -502,16 +507,39 @@ struct ShiftAssignmentRecord: Codable, Identifiable {
         status = try c.decode(String.self, forKey: .status)
         user = try c.decode(ShiftWorker.self, forKey: .user)
         activeTrade = try c.decodeIfPresent(ActiveTradeRef.self, forKey: .activeTrade)
+        crewLabel = try c.decodeIfPresent(String.self, forKey: .crewLabel)
+        crewHalf = try c.decodeIfPresent(String.self, forKey: .crewHalf)
     }
 
-    init(id: String, status: String, user: ShiftWorker, activeTrade: ActiveTradeRef? = nil) {
+    init(
+        id: String,
+        status: String,
+        user: ShiftWorker,
+        activeTrade: ActiveTradeRef? = nil,
+        crewLabel: String? = nil,
+        crewHalf: String? = nil
+    ) {
         self.id = id
         self.status = status
         self.user = user
         self.activeTrade = activeTrade
+        self.crewLabel = crewLabel
+        self.crewHalf = crewHalf
     }
 
     var isOnTradeBoard: Bool { activeTrade != nil }
+
+    /// "SLOW1 · 1st half", or whichever part is set; nil when neither is.
+    var crewTagText: String? {
+        let label = crewLabel?.trimmingCharacters(in: .whitespaces)
+        let half: String? = switch crewHalf {
+        case "FIRST": "1st half"
+        case "SECOND": "2nd half"
+        default: nil
+        }
+        let parts = [label, half].compactMap { $0 }.filter { !$0.isEmpty }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
 }
 
 /// Minimal reference to an open Trade Board post attached to an assignment.
@@ -557,6 +585,8 @@ struct WorkingScheduleAssignment: Codable {
     let callStartsAt: Date?
     let callEndsAt: Date?
     let callNote: String?
+    let crewLabel: String?
+    let crewHalf: String?
     let activeTradeId: String?
     let bookingCount: Int
 }
@@ -651,7 +681,9 @@ struct WorkingScheduleEditor: Codable, Identifiable {
                     id: draftAssignment.sourceAssignmentId ?? "working:\(slot.key)",
                     status: draftAssignment.status,
                     user: worker,
-                    activeTrade: trade
+                    activeTrade: trade,
+                    crewLabel: draftAssignment.crewLabel,
+                    crewHalf: draftAssignment.crewHalf
                 )
             }
             return EventShift(

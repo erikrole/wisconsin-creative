@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ResourceType } from "@prisma/client";
+import { ResourceType } from "@/lib/client-enums";
 import { ArrowLeftIcon, ArrowRightIcon, PencilIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

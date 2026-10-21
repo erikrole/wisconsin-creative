@@ -12,6 +12,7 @@ import {
 } from "@/lib/services/kiosk-pickup-add";
 import { kioskRosterUserWhere } from "@/lib/user-visibility";
 import { MAX_EQUIPMENT_SELECTIONS_PER_REQUEST } from "@/lib/request-limits";
+import { displayBookingTitle } from "@/lib/booking-display-title";
 
 const bodySchema = z.object({
   actorId: z.string().min(1), expectedUpdatedAt: z.string().datetime({ offset: true }),
@@ -43,7 +44,7 @@ async function context(id: string, actorId: string) {
 }
 
 function manifest(booking: Awaited<ReturnType<typeof context>>["booking"]) {
-  return { id: booking.id, title: booking.title, updatedAt: booking.updatedAt, items: [
+  return { id: booking.id, title: displayBookingTitle(booking.title), updatedAt: booking.updatedAt, items: [
     ...booking.serializedItems.map((item) => ({ id: item.id, assetId: item.assetId, name: item.asset.name || item.asset.assetTag, quantity: item.allocationStatus === "picked_up" ? 0 : 1, pickedQuantity: item.allocationStatus === "picked_up" ? 1 : 0 })),
     ...booking.bulkItems.map((item) => ({ id: item.id, bulkSkuId: item.bulkSkuId, name: item.bulkSku.name, quantity: Math.max(0, item.plannedQuantity - item.checkedOutQuantity), pickedQuantity: item.checkedOutQuantity })),
   ] };

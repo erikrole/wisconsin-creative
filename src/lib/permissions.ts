@@ -154,6 +154,7 @@ export const PERMISSIONS: Record<string, Record<string, Role[]>> = {
   },
   diagnostics: {
     view: ["ADMIN"],
+    manage: ["ADMIN"],
   },
   shift: {
     view: ["ADMIN", "STAFF", "STUDENT"],
@@ -207,6 +208,10 @@ export const PERMISSIONS: Record<string, Record<string, Role[]>> = {
     create: ["ADMIN", "STAFF"],
     edit: ["ADMIN", "STAFF"],
     delete: ["ADMIN"],
+  },
+  announcement: {
+    view: ["ADMIN", "STAFF", "STUDENT"],
+    manage: ["ADMIN"],
   },
   kiosk_device: {
     view: ["ADMIN"],

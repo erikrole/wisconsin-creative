@@ -1,5 +1,6 @@
 import { ShiftArea, ShiftAssignmentSource, ShiftWorkerType } from "@prisma/client";
 import { z } from "zod";
+import { CREW_HALVES, CREW_LABEL_MAX_LENGTH, normalizeCrewLabel } from "@/lib/crew-label";
 
 const isoDate = z.string().datetime({ offset: true });
 
@@ -11,6 +12,9 @@ const workingAssignmentSchema = z.object({
   callStartsAt: isoDate.nullable(),
   callEndsAt: isoDate.nullable(),
   callNote: z.string().max(5000).nullable(),
+  // Drafts saved before labels existed omit these.
+  crewLabel: z.string().max(CREW_LABEL_MAX_LENGTH).nullable().optional(),
+  crewHalf: z.enum(CREW_HALVES).nullable().optional(),
   activeTradeId: z.string().min(1).nullable(),
   bookingCount: z.number().int().min(0),
 });
@@ -222,6 +226,10 @@ export function workingScheduleCommandLabel(
     }
     case "setCallWindowForAll":
       return "Set all Student call windows";
+    case "setCrewLabel": {
+      const slot = slotFor(command.slotKey);
+      return `Set ${slot ? titleCaseScheduleWord(slot.area) : "crew"} position label`;
+    }
   }
 }
 
@@ -312,6 +320,12 @@ export const workingScheduleCommandSchema = z.discriminatedUnion("type", [
     callEndsAt: isoDate.nullable(),
   }),
   z.object({
+    type: z.literal("setCrewLabel"),
+    slotKey: z.string().min(1),
+    label: z.string().max(CREW_LABEL_MAX_LENGTH * 2).nullable(),
+    half: z.enum(CREW_HALVES).nullable(),
+  }),
+  z.object({
     type: z.literal("setCallWindowForAll"),
     callStartsAt: isoDate.nullable(),
     callEndsAt: isoDate.nullable(),
@@ -374,6 +388,8 @@ export function summarizeWorkingScheduleChanges(
     if (
       previous.assignment?.userId !== slot.assignment?.userId
       || previous.assignment?.callNote !== slot.assignment?.callNote
+      || (previous.assignment?.crewLabel ?? null) !== (slot.assignment?.crewLabel ?? null)
+      || (previous.assignment?.crewHalf ?? null) !== (slot.assignment?.crewHalf ?? null)
     ) {
       assignmentChanges += 1;
     }
@@ -472,6 +488,8 @@ export function applyWorkingScheduleCommand(
       callStartsAt: null,
       callEndsAt: null,
       callNote: null,
+      crewLabel: null,
+      crewHalf: null,
       activeTradeId: null,
       bookingCount: 0,
     };
@@ -486,6 +504,8 @@ export function applyWorkingScheduleCommand(
       callStartsAt: null,
       callEndsAt: null,
       callNote: null,
+      crewLabel: null,
+      crewHalf: null,
       activeTradeId: null,
       bookingCount: 0,
     };
@@ -504,6 +524,12 @@ export function applyWorkingScheduleCommand(
       throw new Error("UNASSIGN_BEFORE_REDUCING");
     }
     next.slots.splice(slotIndex, 1);
+  } else if (command.type === "setCrewLabel") {
+    const slot = next.slots.find((candidate) => candidate.key === command.slotKey);
+    if (!slot) throw new Error("WORKING_SLOT_NOT_FOUND");
+    if (!slot.assignment) throw new Error("WORKING_SLOT_NOT_ASSIGNED");
+    slot.assignment.crewLabel = normalizeCrewLabel(command.label);
+    slot.assignment.crewHalf = command.half;
   } else if (command.type === "setCallWindow") {
     const slot = next.slots.find((candidate) => candidate.key === command.slotKey);
     if (!slot) throw new Error("WORKING_SLOT_NOT_FOUND");

@@ -12,6 +12,11 @@ const isVercelDeployment = process.env.VERCEL === "1";
 const baseConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // Error reports from the browser carry the deploy they came from.
+  env: {
+    NEXT_PUBLIC_BUILD_SHA: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? "",
+    NEXT_PUBLIC_DEPLOY_ENV: process.env.VERCEL_ENV ?? "",
+  },
   compress: true,
   // GitHub CI owns lint and TypeScript verification. Vercel's build container
   // has repeatedly exhausted its memory during the duplicate checks after
@@ -96,6 +101,16 @@ const baseConfig: NextConfig = {
           { key: "X-DNS-Prefetch-Control", value: "on" },
         ].filter((header): header is { key: string; value: string } => Boolean(header)),
       },
+      // Email clients load these images from another origin. The site-wide
+      // same-origin resource policy above makes Outlook and other webview-based
+      // clients drop them as broken images, so the email assets opt out.
+      {
+        source: "/email/:path*",
+        headers: [
+          { key: "Cross-Origin-Resource-Policy", value: "cross-origin" },
+          { key: "Cache-Control", value: "public, max-age=86400" },
+        ],
+      },
       // Auth pages: never cache — prevents BFCache from replaying the form
       // after sign-out and avoids any shared-cache leakage.
       {
@@ -129,6 +144,12 @@ const baseConfig: NextConfig = {
       { source: "/golden-hour", destination: "/golden-hour/index.html", permanent: false },
       { source: "/timelapse", destination: "/timelapse/index.html", permanent: false },
       { source: "/board-sizes", destination: "/board-sizes/index.html", permanent: false },
+      { source: "/frame", destination: "/frame/index.html", permanent: false },
+      // The out-of-town scoreboard moved to its own Cloudflare Worker; old links and .uri files keep working.
+      { source: "/ots", destination: "https://ots.wisconsincreative.com/", permanent: false },
+      { source: "/ots/index.html", destination: "https://ots.wisconsincreative.com/", permanent: false },
+      { source: "/ots/:page(control|chip|output|scenarios).html", destination: "https://ots.wisconsincreative.com/:page", permanent: false },
+      { source: "/ots/:path*", destination: "https://ots.wisconsincreative.com/:path*", permanent: false },
     ];
   },
 };

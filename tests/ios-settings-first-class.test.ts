@@ -44,7 +44,7 @@ describe("iOS Settings hub", () => {
 
     expect(appTab).toContain("TabSection(\"Resources\")");
     expect(appTab).toContain('Tab("Guides", systemImage: "book.closed", value: 6)');
-    expect(appTab).toContain('Tab("Users", systemImage: "person.2", value: 5)');
+    expect(appTab).toContain('Tab("Staff", systemImage: "person.2", value: 5)');
     expect(appTab).toContain('Tab("Licenses", systemImage: "key", value: 7)');
     expect(browse).toContain("GuidesView(wrapsInNavigationStack: false)");
     expect(browse).toContain("LicensesView(wrapsInNavigationStack: false)");

@@ -18,7 +18,7 @@ describe("first-class Software page", () => {
     const licenses = source("src/app/(app)/licenses/PhotoMechanicLicenses.tsx");
     expect(licenses).toContain('url: "/api/licenses"');
     expect(licenses).toContain('url: "/api/licenses/my"');
-    expect(licenses).toContain("Claim any Open or 1/2 code below.");
+    expect(licenses).toContain("We pick an open slot for you");
   });
 
   it("keeps collaborator access on shared logins and explains role-load failures", () => {

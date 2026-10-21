@@ -13,6 +13,9 @@ const USER_EPOCH_PREFIX = cacheNamespace("gear-tracker:companion:user-epoch:v1:"
 const DEVICE_HASH_KEY = cacheNamespace("gear-tracker:companion:devices:v1");
 const PROJECTION_KEY = cacheNamespace("gear-tracker:companion:projection:v1");
 const PROJECTION_REVISION_KEY = cacheNamespace("gear-tracker:companion:projection-revision:v1");
+const PRESENCE_HASH_KEY = cacheNamespace("gear-tracker:companion:presence:v1");
+const PRESENCE_DAYS_KEPT = 90;
+const PRESENCE_WRITE_INTERVAL_MS = 15 * 60_000;
 
 type CompanionTokenPayload = {
   version: 1;
@@ -150,6 +153,10 @@ export async function issueCompanionSession(user: {
  */
 export async function renewCompanionSession(req: Request): Promise<string> {
   const payload = await requireCompanion(req);
+  // Renewal runs whenever the popover refreshes, so it doubles as the menu
+  // bar's "opened" signal for the owner app activity report. Kept in Redis so
+  // the companion still never wakes Neon.
+  await recordCompanionPresence(payload.userId, req.headers.get("user-agent"));
   return issueCompanionSession(
     { id: payload.userId, role: payload.role },
     payload.epoch,
@@ -294,6 +301,72 @@ export async function nextCompanionProjectionRevision(): Promise<number> {
 
 export async function readCompanionProjection<T>(): Promise<T | null> {
   return getCompanionRedis().get<T>(PROJECTION_KEY);
+}
+
+/** Menu bar presence per person, for the owner app activity report. */
+export type CompanionPresence = {
+  appVersion: string | null;
+  osVersion: string | null;
+  firstSeenAt: string;
+  lastSeenAt: string;
+  /** Local (app timezone) days the menu bar was used, newest last, at most 90. */
+  days: string[];
+};
+
+const GEAROPS_VERSION = /GearOps\/([0-9][0-9A-Za-z.]{0,15})/;
+const MACOS_VERSION = /macOS\/([0-9][0-9.]{0,15})/;
+
+function parsePresence(value: unknown): CompanionPresence | null {
+  // Upstash returns parsed JSON; a raw string means an older or hand-written value.
+  try {
+    const record = (typeof value === "string" ? JSON.parse(value) : value) as CompanionPresence | null;
+    return record?.lastSeenAt && Array.isArray(record.days) ? record : null;
+  } catch {
+    return null;
+  }
+}
+
+function presenceDay(date: Date): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: env.appTimezone }).format(date);
+}
+
+/** Best effort: a Redis hiccup must never block a credential renewal. */
+async function recordCompanionPresence(userId: string, userAgent: string | null): Promise<void> {
+  try {
+    const client = getCompanionRedis();
+    const now = new Date();
+    const today = presenceDay(now);
+    const all = await client.hgetall<Record<string, unknown>>(PRESENCE_HASH_KEY);
+    const existing = parsePresence(all?.[userId]);
+    if (
+      existing &&
+      existing.days.at(-1) === today &&
+      now.getTime() - new Date(existing.lastSeenAt).getTime() < PRESENCE_WRITE_INTERVAL_MS
+    ) {
+      return;
+    }
+    const days = existing?.days.at(-1) === today ? existing.days : [...(existing?.days ?? []), today];
+    const record: CompanionPresence = {
+      appVersion: userAgent?.match(GEAROPS_VERSION)?.[1] ?? existing?.appVersion ?? null,
+      osVersion: userAgent?.match(MACOS_VERSION)?.[1] ?? existing?.osVersion ?? null,
+      firstSeenAt: existing?.firstSeenAt ?? now.toISOString(),
+      lastSeenAt: now.toISOString(),
+      days: days.slice(-PRESENCE_DAYS_KEPT),
+    };
+    await client.hset(PRESENCE_HASH_KEY, { [userId]: JSON.stringify(record) });
+  } catch (error) {
+    console.error("Failed to record menu bar presence", error);
+  }
+}
+
+export async function readCompanionPresence(): Promise<Map<string, CompanionPresence>> {
+  const all = await getCompanionRedis().hgetall<Record<string, unknown>>(PRESENCE_HASH_KEY);
+  const result = new Map<string, CompanionPresence>();
+  for (const [userId, value] of Object.entries(all ?? {})) {
+    const record = parsePresence(value);
+    if (record) result.set(userId, record);
+  }
+  return result;
 }
 
 export function resetCompanionRedisForTests(): void {

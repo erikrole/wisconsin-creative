@@ -132,7 +132,9 @@ function toStored(raw: unknown): StoredPrefs {
     version: 2,
     pausedUntil: typeof r.pausedUntil === "string" ? r.pausedUntil : null,
     channels: {
-      email: channels.email === false ? false : true,
+      // Email is opt-in. Only invites and password resets are sent regardless,
+      // and those never go through these preferences.
+      email: channels.email === true,
       push: channels.push === false ? false : true,
     },
     badges: r.badges === false ? false : true,

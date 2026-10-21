@@ -138,17 +138,15 @@ describe("schedule timeline", () => {
   });
 
   it("keeps the Schedule frame below the app-shell header", () => {
-    expect(appShell).toContain("data-app-shell-header");
+    expect(source("src/components/AppTopBar.tsx")).toContain("data-app-shell-header");
     expect(appShell).toContain("sticky top-0 z-40");
-    expect(appShell).toContain('data-app-shell-breadcrumb-frame={pathname === "/schedule" ? "" : undefined}');
-    // Top-level Schedule hides breadcrumbs, so the command bar sits under the
-    // 48px app header. The empty frame still exists for height measurement.
+    // Breadcrumbs live inside the 48px app header, so the header alone sets the offset.
+    expect(appShell).not.toContain("data-app-shell-breadcrumb-frame");
     expect(appShell).not.toContain('"sticky z-[35]');
     expect(page).toContain("sticky z-30");
     expect(listView).toContain("sticky z-10");
     expect(page).toContain('[data-app-shell-header]');
-    expect(page).toContain('[data-app-shell-breadcrumb-frame]');
-    expect(page).toContain("+ Math.round(appShellBreadcrumb?.getBoundingClientRect().height ?? 0);");
+    expect(page).not.toContain("[data-app-shell-breadcrumb-frame]");
     expect(page).toContain('document.documentElement.style.setProperty("--schedule-sticky-top"');
   });
 

@@ -22,16 +22,14 @@ export type AppEntry = {
 };
 
 // Written values are the fallback when the App Store or GitHub lookup fails.
-// Checked 2026-10-14:
+// Checked 2026-10-20:
 // - Wisconsin Creative: iTunes lookup id 6763456945, version 1.2,
 //   currentVersionReleaseDate 2026-09-14T12:29:37Z, minimumOsVersion 26.0.
 //   The blurb is the App Store description's first sentence. Counter checkout
 //   stays on the kiosk.
-// - Offload: github.com/erikrole/offload-releases README and release v1.2.0.
-//   Offload-1.2.0.dmg matches the published SHA-256. Info.plist in that disk
-//   image has CFBundleShortVersionString 1.2.0 and LSMinimumSystemVersion 15.0.
-//   published_at 2026-10-14T03:27:05Z is
-//   Oct 13 in Madison.
+// - Offload: release v1.5.3, published Oct 18 Madison; verified release DMG
+//   metadata is 1.5.3 (81), macOS 15.0. Fetch: notarized 1.5.4 (11), macOS 27.
+// - Radio Clip and Media Lab pages describe development previews, not releases.
 // TODO(apps): Radio Clip has no public README, release, Info.plist, or download
 // (erikrole public repos checked 2026-10-14). Do not show a version until one
 // is published. The blurb is this page's existing description, not a README.
@@ -50,6 +48,7 @@ export const appEntries: AppEntry[] = [
     requires: "iOS 26.0 or later",
     href: "https://apps.apple.com/us/app/wisconsin-creative/id6763456945",
     cta: "View on the App Store",
+    page: "/apps/wisconsin-creative",
   },
   {
     name: "Offload",
@@ -60,10 +59,10 @@ export const appEntries: AppEntry[] = [
     status: "Beta",
     statusKind: "beta",
     blurb:
-      "Gets Sony FX6 and FX3 clips off the card, names them from the play-by-play, and files them in the archive.",
-    version: "1.2.0",
+      "Copies Sony FX6 and FX3 clips with verification, matches them to plays, and prepares named footage for your archive.",
+    version: "1.5.3",
     requires: "macOS 15.0 or later",
-    href: "https://github.com/erikrole/offload-releases/releases/download/v1.2.0/Offload-1.2.0.dmg",
+    href: "https://github.com/erikrole/offload-releases/releases/download/v1.5.3/Offload-1.5.3.dmg",
     cta: "Download for macOS",
     page: "/apps/offload",
   },
@@ -74,8 +73,8 @@ export const appEntries: AppEntry[] = [
     platform: "macOS",
     status: "",
     statusKind: "live",
-    blurb: "Saves videos and audio from a link: YouTube, Instagram, X, podcasts and more, as MP4 or MP3.",
-    version: "1.1.0",
+    blurb: "Downloads video and audio from links, and converts local files to formats that play and edit easily.",
+    version: "1.5.4",
     requires: "macOS 27 or later",
     href: "https://github.com/erikrole/fetch-releases/releases/latest/download/Fetch.dmg",
     cta: "Download for macOS",
@@ -87,7 +86,8 @@ export const appEntries: AppEntry[] = [
     platform: "macOS",
     status: "Coming soon",
     statusKind: "soon",
-    blurb: "Cuts highlight clips from radio broadcasts and exports them as MP3.",
+    blurb: "A broadcast-editing workflow in development: locate calls, review cut points, and export MP3 highlights.",
+    page: "/apps/radio-clip",
   },
   {
     name: "Media Lab",
@@ -97,6 +97,7 @@ export const appEntries: AppEntry[] = [
     statusKind: "soon",
     blurb:
       "Media asset management on top of our existing media drive. Metadata, search, and quick viewing without moving files.",
+    page: "/apps/media-lab",
   },
 ];
 
@@ -249,6 +250,10 @@ export function renderAppsPage(nonce?: string, live: LiveVersions = {}) {
       background-size: 22px 22px; }
     .bs .copy p { color: #b7cdec; }
 
+
+    .pf { background: #0b0c0e; color: #f2f2ef; }
+    .pf .copy p { color: #b9b9b3; }
+
     .qr { background: #a00000; color: #fff; }
     .qr .copy p { color: rgba(255, 255, 255, 0.86); }
     .qr .code { position: absolute; left: 50%; top: 50%; width: 128px; height: 128px; margin: -64px 0 0 -64px; padding: 12px; border-radius: 18px; background: #fff; box-shadow: 0 18px 34px -14px rgba(0,0,0,.65); transform: rotate(-4deg); transition: transform 260ms var(--ease); }
@@ -378,6 +383,28 @@ export function renderAppsPage(nonce?: string, live: LiveVersions = {}) {
           <div class="copy">
             <h3>QR Studio</h3>
             <p>Branded QR codes for links, Wi-Fi, and contacts, checked for scannability before export.</p>
+            <span class="go">Open <i>→</i></span>
+          </div>
+        </a>
+      </li>
+      <li>
+        <a class="tool pf" href="/frame">
+          <div class="art" aria-hidden="true">
+            <svg viewBox="0 0 200 188" preserveAspectRatio="xMidYMid meet" fill="none">
+              <rect x="30" y="26" width="140" height="136" fill="#000" stroke="#34353c"/>
+              <rect x="40" y="36" width="120" height="82" fill="#1d2050"/>
+              <path d="M40 118V92l30-22 26 18 24-30 40 32v28z" fill="#46407a"/>
+              <circle cx="128" cy="58" r="9" fill="#e8795a"/>
+              <rect x="40" y="130" width="18" height="2.4" fill="#85857f"/>
+              <rect x="40" y="136" width="34" height="4" rx="1" fill="#f2f2ef"/>
+              <g fill="#f2f2ef"><rect x="104" y="136" width="14" height="4" rx="1"/><rect x="124" y="136" width="10" height="4" rx="1"/><rect x="140" y="136" width="20" height="4" rx="1"/></g>
+              <g fill="#85857f"><rect x="104" y="130" width="14" height="2.4"/><rect x="124" y="130" width="10" height="2.4"/><rect x="140" y="130" width="20" height="2.4"/></g>
+              <rect x="40" y="146" width="20" height="3" fill="#a00000"/>
+            </svg>
+          </div>
+          <div class="copy">
+            <h3>Photo Frame</h3>
+            <p>Drop in a photo and get a clean frame with its camera settings and credit, exported as a full-size PNG.</p>
             <span class="go">Open <i>→</i></span>
           </div>
         </a>

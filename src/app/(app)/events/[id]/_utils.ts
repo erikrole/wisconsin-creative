@@ -67,6 +67,8 @@ export type ShiftGroupSummary = {
       callStartsAt?: string | null;
       callEndsAt?: string | null;
       callNote?: string | null;
+      crewLabel?: string | null;
+      crewHalf?: "FIRST" | "SECOND" | null;
       hasConflict?: boolean;
       conflictNote?: string | null;
       acknowledgedAt?: string | null;
@@ -94,6 +96,8 @@ export type CommandCenterData = {
       callStartsAt: string;
       callEndsAt: string;
       callNote: string | null;
+      crewLabel: string | null;
+      crewHalf: "FIRST" | "SECOND" | null;
       linkedBookingId: string | null;
       linkedBookingStatus: string | null;
     } | null;

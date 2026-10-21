@@ -9,12 +9,12 @@ Wisconsin Creative is a Next.js App Router application with a companion native i
 
 | Surface | Count |
 |---|---:|
-| App pages | 99 |
-| App layouts | 13 |
-| API route handlers | 404 |
-| Service files | 108 |
-| Component files | 166 |
-| Test files | 813 |
+| App pages | 103 |
+| App layouts | 14 |
+| API route handlers | 420 |
+| Service files | 110 |
+| Component files | 178 |
+| Test files | 830 |
 
 ## Oversized Source Watchlist
 
@@ -24,9 +24,9 @@ Informational only. These are the largest TypeScript and TSX files under `src/`;
 |---|---:|
 | `src/lib/services/bookings-lifecycle.ts` | 3386 |
 | `src/lib/services/signatures.ts` | 2366 |
-| `src/app/(app)/schedule/_components/ListView.tsx` | 2011 |
-| `src/lib/services/notifications.ts` | 1974 |
-| `src/lib/services/reports.ts` | 1937 |
+| `src/app/(app)/schedule/_components/ListView.tsx` | 2013 |
+| `src/lib/services/notifications.ts` | 1975 |
+| `src/lib/services/reports.ts` | 1938 |
 | `src/components/TradeBoard.tsx` | 1853 |
 | `src/components/resources/BrandAssetLibrary.tsx` | 1827 |
 | `src/app/(app)/items/[id]/ItemInfoTab.tsx` | 1582 |
@@ -35,7 +35,7 @@ Informational only. These are the largest TypeScript and TSX files under `src/`;
 | `src/lib/services/shift-trades.ts` | 1560 |
 | `src/app/(app)/bulk-inventory/batteries/page.tsx` | 1554 |
 | `src/components/ActivityTimeline.tsx` | 1387 |
-| `src/app/(app)/schedule/_components/WorkingCrewEditor.tsx` | 1356 |
+| `src/app/(app)/schedule/_components/WorkingCrewEditor.tsx` | 1371 |
 | `src/app/(app)/budget/BudgetView.tsx` | 1329 |
 | `src/app/api/assets/route.ts` | 1311 |
 | `src/app/(app)/items/new-item-sheet/SerializedItemForm.tsx` | 1272 |

@@ -3,7 +3,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ResourceType, Role, ShiftArea } from "@prisma/client";
+import { ResourceType, Role, ShiftArea } from "@/lib/client-enums";
 import type { LucideIcon } from "lucide-react";
 import {
   BookOpenIcon,

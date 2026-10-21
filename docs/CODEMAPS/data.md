@@ -11,7 +11,7 @@
 
 | Model | Fields | Model-level indexes/constraints |
 |---|---:|---:|
-| `User` | 135 | 5 |
+| `User` | 139 | 5 |
 | `Session` | 7 | 2 |
 | `PasswordResetToken` | 6 | 2 |
 | `PasskeyCredential` | 12 | 2 |
@@ -62,6 +62,9 @@
 | `Notification` | 14 | 6 |
 | `NotificationDelivery` | 9 | 5 |
 | `AppDiagnostic` | 9 | 3 |
+| `ErrorIssue` | 17 | 3 |
+| `ErrorEvent` | 21 | 5 |
+| `SupportReport` | 18 | 3 |
 | `JobRun` | 6 | 3 |
 | `EscalationRule` | 10 | 1 |
 | `Blast` | 22 | 5 |
@@ -78,7 +81,7 @@
 | `StudentBadge` | 10 | 5 |
 | `BadgeStreak` | 8 | 3 |
 | `BadgeEventReceipt` | 6 | 3 |
-| `LicenseCode` | 15 | 4 |
+| `LicenseCode` | 17 | 4 |
 | `LicenseCodeClaim` | 10 | 3 |
 | `SoftwareCredential` | 10 | 2 |
 | `SportConfig` | 9 | 1 |
@@ -88,7 +91,7 @@
 | `ScheduleBulkAssignment` | 13 | 3 |
 | `ScheduleBulkAssignmentItem` | 12 | 3 |
 | `Shift` | 14 | 4 |
-| `ShiftAssignment` | 26 | 5 |
+| `ShiftAssignment` | 28 | 5 |
 | `StudentSportAssignment` | 6 | 3 |
 | `StudentAreaAssignment` | 6 | 3 |
 | `ShiftTrade` | 14 | 4 |
@@ -132,6 +135,8 @@
 | `BudgetLine` | 26 | 5 |
 | `BudgetLineItem` | 10 | 5 |
 | `WishItem` | 15 | 3 |
+| `Announcement` | 18 | 3 |
+| `AnnouncementDismissal` | 6 | 3 |
 
 ## Enums
 
@@ -456,6 +461,11 @@
 - `RESERVATION`
 - `AUTO_FILL`
 
+### `ShiftAssignmentHalf`
+
+- `FIRST`
+- `SECOND`
+
 ### `SportAutoAssignPolicy`
 
 - `FULL_CREW`
@@ -578,3 +588,9 @@
 - `APPROVED`
 - `IN_BUDGET`
 - `DECLINED`
+
+### `AnnouncementKind`
+
+- `FEATURE`
+- `UPDATE`
+- `NOTICE`

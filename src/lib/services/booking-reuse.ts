@@ -2,6 +2,7 @@ import { BookingKind } from "@prisma/client";
 import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
 import { generateEventTitle } from "@/lib/sports";
+import { displayBookingTitle } from "@/lib/booking-display-title";
 import {
   isEventDerivedTitle,
   mergeReuseEquipment,
@@ -192,7 +193,7 @@ export async function getBookingReusePlan(bookingId: string): Promise<BookingReu
   const primaryEvent = linkedEvents[0];
   const generatedTitle = primaryEvent
     ? (primaryEvent.opponent && (primaryEvent.sportCode || booking.sportCode)
-      ? generateEventTitle(primaryEvent.sportCode || booking.sportCode || "", primaryEvent.opponent, primaryEvent.isHome)
+      ? displayBookingTitle(generateEventTitle(primaryEvent.sportCode || booking.sportCode || "", primaryEvent.opponent, primaryEvent.isHome))
       : primaryEvent.summary)
     : null;
 

@@ -132,6 +132,7 @@
 - `test`: `vitest run`
 - `test:coverage`: `vitest run --coverage`
 - `test:e2e:smoke`: `playwright test`
+- `test:performance:web`: `node scripts/check-web-performance.mjs`
 - `test:watch`: `vitest`
 - `verify:docs`: `npm run codemap:check`
 - `verify:skills`: `python3 -B scripts/verify-skills.py`

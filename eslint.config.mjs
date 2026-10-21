@@ -30,6 +30,8 @@ export default defineConfig([
     "build/**",
     "coverage/**",
     "next-env.d.ts",
+    // Third-party distribution bundles retain their upstream module wrappers.
+    "public/qrcode/vendor/**",
     "src/app/.well-known/**",
     "docs/**",
     "tasks/**",

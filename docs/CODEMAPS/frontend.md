@@ -23,6 +23,8 @@
 | `/gear/admin` | `src/app/(app)/gear/admin/page.tsx` |
 | `/gear` | `src/app/(app)/gear/page.tsx` |
 | `/import` | `src/app/(app)/import/page.tsx` |
+| `/issues/[id]` | `src/app/(app)/issues/[id]/page.tsx` |
+| `/issues` | `src/app/(app)/issues/page.tsx` |
 | `/items/[id]` | `src/app/(app)/items/[id]/page.tsx` |
 | `/items/hygiene` | `src/app/(app)/items/hygiene/page.tsx` |
 | `/items` | `src/app/(app)/items/page.tsx` |
@@ -56,6 +58,7 @@
 | `/scoreboard` | `src/app/(app)/scoreboard/page.tsx` |
 | `/search` | `src/app/(app)/search/page.tsx` |
 | `/settings/allowed-emails` | `src/app/(app)/settings/allowed-emails/page.tsx` |
+| `/settings/announcements` | `src/app/(app)/settings/announcements/page.tsx` |
 | `/settings/app-activity` | `src/app/(app)/settings/app-activity/page.tsx` |
 | `/settings/appearance` | `src/app/(app)/settings/appearance/page.tsx` |
 | `/settings/audit` | `src/app/(app)/settings/audit/page.tsx` |
@@ -98,6 +101,7 @@
 | `/about/tech-stack` | `src/app/(public)/about/tech-stack/page.tsx` |
 | `/releases` | `src/app/(public)/releases/page.tsx` |
 | `/change-password` | `src/app/change-password/page.tsx` |
+| `/dev-sidebar` | `src/app/dev-sidebar/page.tsx` |
 | `/forgot-password` | `src/app/forgot-password/page.tsx` |
 | `/login` | `src/app/login/page.tsx` |
 | `/privacy` | `src/app/privacy/page.tsx` |
@@ -110,6 +114,7 @@
 | Route | File |
 |---|---|
 | `/budget` | `src/app/(app)/budget/layout.tsx` |
+| `/issues` | `src/app/(app)/issues/layout.tsx` |
 | `/kits` | `src/app/(app)/kits/layout.tsx` |
 | `/` | `src/app/(app)/layout.tsx` |
 | `/reports` | `src/app/(app)/reports/layout.tsx` |
@@ -130,33 +135,33 @@
 | `src/components/TradeBoard.tsx` | 1853 |
 | `src/components/resources/BrandAssetLibrary.tsx` | 1827 |
 | `src/components/ActivityTimeline.tsx` | 1387 |
-| `src/components/booking-wizard/BookingWizard.tsx` | 1136 |
-| `src/components/AppShell.tsx` | 1035 |
+| `src/components/booking-wizard/BookingWizard.tsx` | 1173 |
 | `src/components/onboarding/OnboardingDialog.tsx` | 996 |
 | `src/components/schedule/AutoAssignDialog.tsx` | 966 |
 | `src/components/profile-completion/ProfileCompletionWizard.tsx` | 935 |
 | `src/components/BookingListPage.tsx` | 921 |
 | `src/components/EquipmentPicker.tsx` | 898 |
-| `src/components/ShiftDetailPanel.tsx` | 795 |
+| `src/components/ShiftDetailPanel.tsx` | 797 |
 | `src/components/ChooseImageModal.tsx` | 769 |
 | `src/components/BookingDetailsSheet.tsx` | 728 |
 | `src/components/ui/sidebar.tsx` | 710 |
 | `src/components/schedule/SportSetupWizard.tsx` | 675 |
+| `src/components/Sidebar.tsx` | 621 |
 | `src/components/booking-wizard/WizardStep1.tsx` | 599 |
+| `src/components/CommandPalette.tsx` | 588 |
 | `src/components/booking-details/BookingHeader.tsx` | 472 |
-| `src/components/Sidebar.tsx` | 457 |
+| `src/components/AppShell.tsx` | 437 |
 | `src/components/event-editor/EventEditorFields.tsx` | 435 |
 | `src/components/ui/heatmap.tsx` | 434 |
 | `src/components/ui/chart.tsx` | 387 |
 | `src/components/resources/MarkdownReader.tsx` | 378 |
 | `src/components/booking-details/BookingInfoCard.tsx` | 358 |
 | `src/components/FormCombobox.tsx` | 352 |
-| `src/components/shift-detail/ShiftSlotCard.tsx` | 345 |
+| `src/components/shift-detail/ShiftSlotCard.tsx` | 349 |
 | `src/components/booking-details/EditBookingEventsDialog.tsx` | 342 |
 | `src/components/shift-detail/crew-row.tsx` | 334 |
 | `src/components/public-showroom/ReleasesFeed.tsx` | 314 |
-| `src/components/public-showroom/showroom-blocks.tsx` | 290 |
-| `src/components/CheckoutMergeDialog.tsx` | 286 |
+| `src/components/NotificationsPopover.tsx` | 304 |
 
 ## Hooks
 
@@ -164,22 +169,23 @@
 |---|---:|
 | `src/hooks/booking-action-copy.ts` | 22 |
 | `src/hooks/use-assignment-grid.ts` | 226 |
-| `src/hooks/use-booking-change-sync.ts` | 169 |
+| `src/hooks/use-booking-change-sync.ts` | 174 |
 | `src/hooks/use-copy-feedback.ts` | 62 |
 | `src/hooks/use-current-user.ts` | 53 |
-| `src/hooks/use-dashboard-data.ts` | 234 |
+| `src/hooks/use-dashboard-data.ts` | 244 |
 | `src/hooks/use-dashboard-filters.ts` | 146 |
 | `src/hooks/use-fetch.ts` | 113 |
 | `src/hooks/use-form-options.ts` | 32 |
 | `src/hooks/use-form-submit.ts` | 188 |
 | `src/hooks/use-gear-picks.ts` | 47 |
 | `src/hooks/use-item-cache-invalidation.ts` | 18 |
-| `src/hooks/use-item-change-sync.ts` | 87 |
+| `src/hooks/use-item-change-sync.ts` | 90 |
 | `src/hooks/use-last-audit.ts` | 77 |
 | `src/hooks/use-mobile.ts` | 20 |
 | `src/hooks/use-operational-polling-activity.ts` | 155 |
 | `src/hooks/use-profile-completion.ts` | 65 |
 | `src/hooks/use-schedule-data.ts` | 1269 |
+| `src/hooks/use-sidebar-counts.ts` | 23 |
 | `src/hooks/use-url-state.ts` | 129 |
 | `src/hooks/useBookingActions.ts` | 297 |
 | `src/hooks/useBookingDetail.ts` | 70 |

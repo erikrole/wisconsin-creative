@@ -1,109 +1,34 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { SearchIcon, ClipboardCheckIcon, CalendarCheckIcon, BellIcon, UserIcon, LayoutGridIcon, LayersIcon, BookOpenIcon, ArrowRightIcon } from "lucide-react";
+import { CalendarDaysIcon, UserIcon, HouseIcon, CameraIcon, ClipboardListIcon } from "lucide-react";
 import AppSidebar from "./Sidebar";
-import { AssetImage } from "@/components/AssetImage";
-import { OperationalPartialResultsAlert } from "@/components/OperationalFeedback";
 import { OperationalLoadingState } from "@/components/OperationalLoadingState";
-import { UserAvatar } from "@/components/UserAvatar";
-import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import PageBreadcrumb from "@/components/PageBreadcrumb";
+import { AppTopBar } from "@/components/AppTopBar";
+import { CommandPalette } from "@/components/CommandPalette";
+import { MobileTabBar, type MobileTabItem } from "@/components/MobileTabBar";
 import { BreadcrumbProvider } from "@/components/BreadcrumbContext";
-import { SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
-import {
-  CommandDialog,
-  CommandInput,
-  CommandList,
-  CommandEmpty,
-  CommandGroup,
-  CommandItem,
-  CommandSeparator,
-} from "@/components/ui/command";
-import { Badge } from "@/components/ui/badge";
-import { STATUS_STYLES } from "@/lib/status-styles";
-import { useQueryClient } from "@tanstack/react-query";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { useIsRestoring, useQueryClient } from "@tanstack/react-query";
 import { type CurrentUser, useCurrentUser } from "@/hooks/use-current-user";
-import { RECENT_SEARCHES_STORAGE_KEY, clearLocalTraces } from "@/lib/local-traces";
+import { clearLocalTraces } from "@/lib/local-traces";
 import { handleAuthRedirect, parseJsonSafely } from "@/lib/errors";
-import { mapGuideSearchResult, type GuideSearchHit } from "@/lib/guide-search-result";
-import { getVisiblePageSearchResults, type PageSearchResult } from "@/lib/search-pages";
-import { assetSearchTitle } from "@/lib/search-result-title";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { BOOKING_CHANGE_SYNC_EVENT } from "@/hooks/use-booking-change-sync";
 import { isBackgroundPollingPaused } from "@/hooks/use-operational-polling-activity";
 import { NOTIFICATION_COUNT_CHANGED_EVENT } from "@/lib/notification-count-sync";
 import { ProfileCompletionWizard } from "@/components/profile-completion/ProfileCompletionWizard";
-import { hasDashboardCountFailure } from "@/app/(app)/dashboard-types";
+import { dashboardStatsQueryOptions, dashboardStatsQueryKey, useDashboardStats } from "@/hooks/use-dashboard-data";
+import { useSidebarCounts } from "@/hooks/use-sidebar-counts";
 import {
   BadgeEarnedCelebration,
   type EarnedBadgeReward,
 } from "@/components/badges/BadgeEarnedCelebration";
-import { RolePreviewBanner, RolePreviewControl } from "@/components/RolePreviewControl";
-
-type EntitySearchResult = {
-  type: "item" | "checkout" | "reservation" | "user" | "guide";
-  id: string;
-  title: string;
-  subtitle: string;
-  href: string;
-  imageUrl?: string | null;
-  // Item-specific fields for status display
-  computedStatus?: string;
-  activeBooking?: { requesterName: string; requesterAvatarUrl?: string | null; isOverdue: boolean; endsAt?: string } | null;
-  status?: string;
-  searchText?: string;
-};
-
-type SearchResult = EntitySearchResult | PageSearchResult;
-
-type ApiSearchList<T> = {
-  data?: T[];
-};
-
-type AssetSearchItem = {
-  id: string;
-  assetTag?: string | null;
-  name?: string | null;
-  brand?: string | null;
-  model?: string | null;
-  type?: string | null;
-  imageUrl?: string | null;
-  computedStatus?: string | null;
-  activeBooking?: {
-    requesterName?: string | null;
-    requesterAvatarUrl?: string | null;
-    isOverdue?: boolean | null;
-    endsAt?: string | null;
-  } | null;
-};
-
-type BookingSearchItem = {
-  id: string;
-  title?: string | null;
-  requester?: { name?: string | null } | null;
-};
-
-type UserSearchItem = {
-  id: string;
-  name?: string | null;
-  email?: string | null;
-};
+import { RolePreviewBanner } from "@/components/RolePreviewControl";
 
 type NotificationCountResponse = {
   unreadCount?: unknown;
-};
-
-type DashboardStatsBadgeResponse = {
-  data?: {
-    myOverdueCount?: unknown;
-    myDueTodayCount?: unknown;
-  };
-  partialFailures?: unknown[];
 };
 
 type RecentBadgeAwardsResponse = {
@@ -113,40 +38,18 @@ type RecentBadgeAwardsResponse = {
   };
 };
 
-function dashboardBadgeCountsAreTrusted(response: DashboardStatsBadgeResponse | null) {
-  const partialFailures = Array.isArray(response?.partialFailures)
-    ? response.partialFailures.filter((failure): failure is string => typeof failure === "string")
-    : [];
-  return !hasDashboardCountFailure(partialFailures);
-}
-
-const SEARCH_RESULT_SOURCES = {
-  items: "Items",
-  checkouts: "Checkouts",
-  reservations: "Reservations",
-  users: "Staff",
-  guides: "Guides",
-} as const;
-
-type BottomNavItem = {
-  label: string;
-  href: string;
-  icon: React.ElementType;
-  badge?: "overdue";
-};
-
-const bottomNavItems: BottomNavItem[] = [
-  { label: "Home", href: "/", icon: LayoutGridIcon },
-  { label: "Schedule", href: "/schedule", icon: CalendarCheckIcon },
-  { label: "Bookings", href: "/bookings", icon: BookOpenIcon, badge: "overdue" as const },
-  { label: "Items", href: "/items", icon: LayersIcon },
+const bottomNavItems: MobileTabItem[] = [
+  { label: "Home", href: "/", icon: HouseIcon },
+  { label: "Schedule", href: "/schedule", icon: CalendarDaysIcon },
+  { label: "Bookings", href: "/bookings", icon: ClipboardListIcon, badge: "overdue" as const },
+  { label: "Items", href: "/items", icon: CameraIcon },
 ];
 
-const collaboratorBottomNavItems: BottomNavItem[] = [
-  { label: "Home", href: "/", icon: LayoutGridIcon },
-  { label: "Schedule", href: "/schedule", icon: CalendarCheckIcon },
-  { label: "My Gear", href: "/bookings", icon: BookOpenIcon, badge: "overdue" as const },
-  { label: "Items", href: "/items", icon: LayersIcon },
+const collaboratorBottomNavItems: MobileTabItem[] = [
+  { label: "Home", href: "/", icon: HouseIcon },
+  { label: "Schedule", href: "/schedule", icon: CalendarDaysIcon },
+  { label: "My Gear", href: "/bookings", icon: ClipboardListIcon, badge: "overdue" as const },
+  { label: "Items", href: "/items", icon: CameraIcon },
   { label: "People", href: "/staff", icon: UserIcon },
 ];
 
@@ -177,96 +80,6 @@ function collaboratorCanVisit(pathname: string, user: CurrentUser): boolean {
   return Boolean(route && user.capabilities?.includes(route.capability));
 }
 
-function AppTopBar({
-  isCollaborator,
-  onSearch,
-  unreadNotifications,
-  user,
-}: {
-  isCollaborator: boolean;
-  onSearch: () => void;
-  unreadNotifications: number;
-  user: CurrentUser;
-}) {
-  const { isMobile, open, openMobile } = useSidebar();
-  const sidebarLabel = isMobile
-    ? (openMobile ? "Close navigation" : "Open navigation")
-    : (open ? "Collapse sidebar" : "Expand sidebar");
-  const notificationLabel = unreadNotifications > 0
-    ? `Notifications (${unreadNotifications} unread)`
-    : "Notifications";
-
-  return (
-    <header
-      data-app-shell-header
-      className="flex h-12 items-center gap-2 overflow-visible border-b border-border/70 bg-card/90 px-3 backdrop-blur-md supports-[backdrop-filter]:bg-card/80 max-md:gap-1.5 max-md:px-2 md:px-4"
-    >
-      <SidebarTrigger
-        aria-label={sidebarLabel}
-        title={sidebarLabel}
-        className="shrink-0 text-foreground hover:bg-muted hover:text-foreground max-md:size-11"
-      />
-      {!isCollaborator && (
-        <button
-          className="flex h-10 min-h-10 max-w-2xl flex-1 items-center gap-2 rounded-md border border-border/80 bg-background px-3 text-[13px] text-muted-foreground transition-[border-color,background-color,color,box-shadow] duration-150 hover:border-foreground/25 hover:text-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 max-md:hidden [&_svg]:shrink-0"
-          onClick={onSearch}
-          type="button"
-          aria-keyshortcuts="Meta+K Control+K"
-          aria-label="Search items, bookings, people, pages, and guides (⌘K)"
-        >
-          <SearchIcon className="size-4" />
-          <span className="min-w-0 flex-1 truncate text-left">Search items, bookings, people, pages, and guides</span>
-          <kbd className="pointer-events-none ml-auto hidden h-5 items-center rounded border border-border bg-muted/80 px-1.5 font-sans text-[10px] font-medium text-muted-foreground sm:inline-flex">
-            ⌘K
-          </kbd>
-        </button>
-      )}
-      <div className="ml-auto flex items-center gap-0.5">
-        {!isCollaborator && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="hidden size-10 text-muted-foreground hover:text-foreground max-md:inline-flex max-md:size-11"
-                onClick={onSearch}
-                aria-label="Search items, bookings, people, pages, and guides"
-              >
-                <SearchIcon className="size-5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Search (⌘K)</TooltipContent>
-          </Tooltip>
-        )}
-        <RolePreviewControl user={user} />
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="relative size-10 overflow-visible text-muted-foreground hover:text-foreground max-md:size-11 [&_a]:no-underline"
-              asChild
-            >
-              <Link prefetch={false} href="/notifications" aria-label={notificationLabel}>
-                <BellIcon className="size-[18px]" />
-                {unreadNotifications > 0 && (
-                  <span
-                    className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[length:var(--text-2xs)] font-bold leading-4 text-destructive-foreground tabular-nums ring-2 ring-card"
-                    aria-hidden="true"
-                  >
-                    {unreadNotifications > 99 ? "99+" : unreadNotifications}
-                  </span>
-                )}
-              </Link>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>{notificationLabel}</TooltipContent>
-        </Tooltip>
-      </div>
-    </header>
-  );
-}
-
 export default function AppShell({
   children,
   initialUser,
@@ -279,6 +92,7 @@ export default function AppShell({
   const router = useRouter();
   const pathname = usePathname();
   const queryClient = useQueryClient();
+  const isRestoring = useIsRestoring();
   const { data: user, isLoading } = useCurrentUser(initialUser);
   const isCollaborator = user?.role === "COLLABORATOR";
   const isRolePreview = Boolean(user?.preview?.readOnly);
@@ -290,8 +104,10 @@ export default function AppShell({
     : bottomNavItems;
   const [loggingOut, setLoggingOut] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
-  const [overdueBadgeCount, setOverdueBadgeCount] = useState(0);
-  const [dueTodayBadgeCount, setDueTodayBadgeCount] = useState(0);
+  const { data: dashboardStats } = useDashboardStats();
+  const overdueBadgeCount = dashboardStats?.myOverdueCount ?? 0;
+  const dueTodayBadgeCount = dashboardStats?.myDueTodayCount ?? 0;
+  const { data: sidebarCounts } = useSidebarCounts(user?.role === "ADMIN" || user?.role === "STAFF");
   const [earnedBadgeQueue, setEarnedBadgeQueue] = useState<EarnedBadgeReward[]>([]);
   // The reward poll needs the current path only to build an auth return URL. Held
   // in a ref so it cannot sit in the effect's dependency list: `pathname` there
@@ -447,78 +263,47 @@ export default function AppShell({
     // not a navigation, and this effect owns a POST with a durable side effect.
   }, [isRolePreview, rewardUserId]);
 
-  // Badge counts — refresh on navigation so counts stay fresh after user actions
+  // Navigation shares the same fresh stats read as Home; simultaneous consumers
+  // and booking invalidations join one request instead of hitting Neon twice.
+  const badgeUserId = user?.id;
   useEffect(() => {
-    if (!user) return;
-
+    if (!badgeUserId || isRestoring) return;
     const controller = new AbortController();
-    async function loadBadgeCounts() {
+    void queryClient.fetchQuery({
+      ...dashboardStatsQueryOptions(badgeUserId),
+      // Mutations on another route may have changed custody since the last read.
+      // Preserve navigation freshness while joining any request already in flight.
+      staleTime: 0,
+    }).catch(() => {
+      // The shared query retains the last trusted counts on failure.
+    });
+    async function loadNotifications() {
       try {
-        const [notificationsResult, dashboardResult] = await Promise.allSettled([
-          fetch("/api/notifications/count", { signal: controller.signal }),
-          fetch("/api/dashboard/stats", { signal: controller.signal }),
-        ]);
-        if (controller.signal.aborted) return;
-
-        if (notificationsResult.status === "fulfilled") {
-          if (handleAuthRedirect(notificationsResult.value, pathname)) return;
-          if (notificationsResult.value.ok) {
-            const json = await parseJsonSafely<NotificationCountResponse>(notificationsResult.value);
-            if (typeof json?.unreadCount === "number") {
-              setUnreadNotifications(json.unreadCount);
-            }
-          }
-        }
-
-        if (dashboardResult.status === "fulfilled") {
-          if (handleAuthRedirect(dashboardResult.value, pathname)) return;
-          if (dashboardResult.value.ok) {
-            const json = await parseJsonSafely<DashboardStatsBadgeResponse>(dashboardResult.value);
-            if (dashboardBadgeCountsAreTrusted(json)) {
-              const count = json?.data?.myOverdueCount;
-              const dueToday = json?.data?.myDueTodayCount;
-              // User-scoped overdue count so STUDENT sees only their own overdue
-              if (typeof count === "number") {
-                setOverdueBadgeCount(count);
-              }
-              if (typeof dueToday === "number") {
-                setDueTodayBadgeCount(dueToday);
-              }
-            }
-          }
+        const response = await fetch("/api/notifications/count", { signal: controller.signal });
+        if (controller.signal.aborted || handleAuthRedirect(response, pathname) || !response.ok) return;
+        const json = await parseJsonSafely<NotificationCountResponse>(response);
+        if (!controller.signal.aborted && typeof json?.unreadCount === "number") {
+          setUnreadNotifications(json.unreadCount);
         }
       } catch {
-        // Badge counts are ambient chrome; keep the last known values on failure.
+        // Keep the last known count on failure.
       }
     }
-
-    loadBadgeCounts();
-
+    void loadNotifications();
     return () => { controller.abort(); };
-  }, [pathname, user]);
+  }, [pathname, badgeUserId, isRestoring, queryClient]);
 
   useEffect(() => {
-    if (!user) return;
-
-    const refreshBookingBadges = async () => {
-      try {
-        const response = await fetch("/api/dashboard/stats");
-        if (handleAuthRedirect(response, pathname) || !response.ok) return;
-        const json = await parseJsonSafely<DashboardStatsBadgeResponse>(response);
-        if (dashboardBadgeCountsAreTrusted(json)) {
-          const overdue = json?.data?.myOverdueCount;
-          const dueToday = json?.data?.myDueTodayCount;
-          if (typeof overdue === "number") setOverdueBadgeCount(overdue);
-          if (typeof dueToday === "number") setDueTodayBadgeCount(dueToday);
-        }
-      } catch {
-        // Keep the last known chrome counts until the next sync/navigation refresh.
-      }
+    if (!badgeUserId) return;
+    const refreshBookingBadges = () => {
+      void queryClient.invalidateQueries(
+        { queryKey: dashboardStatsQueryKey(badgeUserId) },
+        { cancelRefetch: false },
+      );
     };
-
     window.addEventListener(BOOKING_CHANGE_SYNC_EVENT, refreshBookingBadges);
     return () => window.removeEventListener(BOOKING_CHANGE_SYNC_EVENT, refreshBookingBadges);
-  }, [pathname, user]);
+  }, [badgeUserId, queryClient]);
 
   useEffect(() => {
     function handleNotificationCountChanged(event: Event) {
@@ -534,20 +319,6 @@ export default function AppShell({
 
   // Command palette state
   const [cmdOpen, setCmdOpen] = useState(false);
-  const [cmdQuery, setCmdQuery] = useState("");
-  const [cmdResults, setCmdResults] = useState<SearchResult[]>([]);
-  const cmdGroups = useMemo(() => {
-    const groups = { page: [] as PageSearchResult[], guide: [] as EntitySearchResult[], item: [] as EntitySearchResult[], checkout: [] as EntitySearchResult[], reservation: [] as EntitySearchResult[], user: [] as EntitySearchResult[] };
-    for (const result of cmdResults) {
-      if (result.type === "page") groups.page.push(result);
-      else if (result.type in groups) groups[result.type as Exclude<keyof typeof groups, "page">].push(result);
-    }
-    return groups;
-  }, [cmdResults]);
-  const [cmdLoading, setCmdLoading] = useState(false);
-  const [cmdError, setCmdError] = useState<"network" | "server" | null>(null);
-  const [cmdPartialFailures, setCmdPartialFailures] = useState<string[]>([]);
-  const cmdAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (isCollaborator) return;
@@ -562,159 +333,6 @@ export default function AppShell({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isCollaborator, pathname]);
-
-  // Live search when query changes
-  useEffect(() => {
-    if (isCollaborator) {
-      setCmdResults([]);
-      setCmdLoading(false);
-      setCmdError(null);
-      setCmdPartialFailures([]);
-      return;
-    }
-    const q = cmdQuery.trim();
-    if (!q) { setCmdResults([]); setCmdLoading(false); setCmdError(null); setCmdPartialFailures([]); return; }
-
-    setCmdLoading(true);
-    setCmdError(null);
-    setCmdPartialFailures([]);
-    cmdAbortRef.current?.abort();
-    const controller = new AbortController();
-    cmdAbortRef.current = controller;
-
-    const timer = setTimeout(async () => {
-      const encoded = encodeURIComponent(q);
-      try {
-        const [itemsRes, checkoutsRes, reservationsRes, usersRes, guidesRes] = await Promise.allSettled([
-          fetch(`/api/assets?q=${encoded}&limit=8`, { signal: controller.signal }),
-          fetch(`/api/checkouts?q=${encoded}&status_in=OPEN,PENDING_PICKUP&limit=8`, { signal: controller.signal }),
-          fetch(`/api/reservations?q=${encoded}&status=BOOKED&limit=8`, { signal: controller.signal }),
-          fetch(`/api/users?q=${encoded}&limit=5`, { signal: controller.signal }),
-          fetch(`/api/resources?q=${encoded}`, { signal: controller.signal }),
-        ]);
-        if (controller.signal.aborted) return;
-        const merged: SearchResult[] = getVisiblePageSearchResults(
-          user?.role,
-          q,
-          8,
-          user?.canViewUsageAnalytics === true,
-        );
-        const failures: string[] = [];
-        if (itemsRes.status === "fulfilled" && handleAuthRedirect(itemsRes.value, pathname)) return;
-        if (checkoutsRes.status === "fulfilled" && handleAuthRedirect(checkoutsRes.value, pathname)) return;
-        if (reservationsRes.status === "fulfilled" && handleAuthRedirect(reservationsRes.value, pathname)) return;
-        if (usersRes.status === "fulfilled" && handleAuthRedirect(usersRes.value, pathname)) return;
-        if (guidesRes.status === "fulfilled" && handleAuthRedirect(guidesRes.value, pathname)) return;
-
-        if (itemsRes.status === "fulfilled" && itemsRes.value.ok) {
-          const json = await parseJsonSafely<ApiSearchList<AssetSearchItem>>(itemsRes.value);
-          const data = json?.data;
-          if (!data) failures.push(SEARCH_RESULT_SOURCES.items);
-          for (const item of (data ?? []).slice(0, 8)) {
-            merged.push({
-              type: "item", id: item.id,
-              title: assetSearchTitle(item),
-              subtitle: "",
-              href: `/items/${item.id}`,
-              imageUrl: item.imageUrl ?? null,
-              computedStatus: item.computedStatus ?? undefined,
-              activeBooking: item.activeBooking ? {
-                requesterName: item.activeBooking.requesterName ?? "",
-                requesterAvatarUrl: item.activeBooking.requesterAvatarUrl ?? null,
-                isOverdue: !!item.activeBooking.isOverdue,
-                endsAt: item.activeBooking.endsAt ?? undefined,
-              } : null,
-            });
-          }
-        } else {
-          failures.push(SEARCH_RESULT_SOURCES.items);
-        }
-        if (checkoutsRes.status === "fulfilled" && checkoutsRes.value.ok) {
-          const json = await parseJsonSafely<ApiSearchList<BookingSearchItem>>(checkoutsRes.value);
-          const data = json?.data;
-          if (!data) failures.push(SEARCH_RESULT_SOURCES.checkouts);
-          for (const b of (data ?? []).slice(0, 8)) {
-            merged.push({ type: "checkout", id: b.id, title: b.title ?? "Untitled checkout", subtitle: b.requester?.name || "", href: `/checkouts/${b.id}` });
-          }
-        } else {
-          failures.push(SEARCH_RESULT_SOURCES.checkouts);
-        }
-        if (reservationsRes.status === "fulfilled" && reservationsRes.value.ok) {
-          const json = await parseJsonSafely<ApiSearchList<BookingSearchItem>>(reservationsRes.value);
-          const data = json?.data;
-          if (!data) failures.push(SEARCH_RESULT_SOURCES.reservations);
-          for (const b of (data ?? []).slice(0, 8)) {
-            merged.push({ type: "reservation", id: b.id, title: b.title ?? "Untitled reservation", subtitle: b.requester?.name || "", href: `/reservations/${b.id}` });
-          }
-        } else {
-          failures.push(SEARCH_RESULT_SOURCES.reservations);
-        }
-        if (usersRes.status === "fulfilled" && usersRes.value.ok) {
-          const json = await parseJsonSafely<ApiSearchList<UserSearchItem>>(usersRes.value);
-          const data = json?.data;
-          if (!data) failures.push(SEARCH_RESULT_SOURCES.users);
-          for (const u of (data ?? []).slice(0, 5)) {
-            merged.push({ type: "user", id: u.id, title: u.name ?? "Unnamed user", subtitle: u.email || "", href: `/staff/${u.id}` });
-          }
-        } else {
-          failures.push(SEARCH_RESULT_SOURCES.users);
-        }
-        if (guidesRes.status === "fulfilled" && guidesRes.value.ok) {
-          const json = await parseJsonSafely<ApiSearchList<GuideSearchHit>>(guidesRes.value);
-          const data = json?.data;
-          if (!data) failures.push(SEARCH_RESULT_SOURCES.guides);
-          let guideCount = 0;
-          for (const guide of (data ?? [])) {
-            const mapped = mapGuideSearchResult(guide);
-            if (!mapped) continue;
-            merged.push(mapped);
-            guideCount += 1;
-            if (guideCount >= 8) break;
-          }
-        } else {
-          failures.push(SEARCH_RESULT_SOURCES.guides);
-        }
-        if (!controller.signal.aborted) {
-          setCmdResults(merged);
-          setCmdPartialFailures(failures);
-          setCmdError(failures.length === Object.keys(SEARCH_RESULT_SOURCES).length && merged.length === 0 ? "server" : null);
-          setCmdLoading(false);
-        }
-      } catch (err) {
-        if (err instanceof DOMException && err.name === "AbortError") return;
-        if (!controller.signal.aborted) { setCmdResults([]); setCmdError("network"); setCmdLoading(false); }
-      }
-    }, 200);
-
-    return () => { clearTimeout(timer); controller.abort(); };
-  }, [cmdQuery, isCollaborator, pathname, user?.canViewUsageAnalytics, user?.role]);
-
-  // Recent searches (localStorage)
-  const [recentSearches, setRecentSearches] = useState<string[]>([]);
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(RECENT_SEARCHES_STORAGE_KEY);
-      if (stored) setRecentSearches(JSON.parse(stored));
-    } catch { /* ignore */ }
-  }, []);
-
-  function addRecentSearch(q: string) {
-    const trimmed = q.trim();
-    if (!trimmed) return;
-    const updated = [trimmed, ...recentSearches.filter((s) => s !== trimmed)].slice(0, 5);
-    setRecentSearches(updated);
-    try {
-      localStorage.setItem(RECENT_SEARCHES_STORAGE_KEY, JSON.stringify(updated));
-    } catch { /* ignore */ }
-  }
-
-  function handleCmdSelect(href: string) {
-    if (cmdQuery.trim()) addRecentSearch(cmdQuery.trim());
-    setCmdOpen(false);
-    setCmdQuery("");
-    setCmdResults([]);
-    router.push(href);
-  }
 
   // Offline detection
   const [online, setOnline] = useState(true);
@@ -734,7 +352,6 @@ export default function AppShell({
       // Shared-machine hygiene: drop persisted history and cached entity data
       // so the next person can't read the previous user's traces.
       clearLocalTraces();
-      setRecentSearches([]);
       queryClient.clear();
       router.replace("/login");
     } catch {
@@ -772,184 +389,10 @@ export default function AppShell({
         />
       )}
 
-      {!isCollaborator && <CommandDialog open={cmdOpen} onOpenChange={(open) => { setCmdOpen(open); if (!open) { setCmdQuery(""); setCmdResults([]); setCmdError(null); setCmdPartialFailures([]); } }}>
-        <CommandInput placeholder="Search tag, borrower, guide, page, setting, report..." value={cmdQuery} onValueChange={setCmdQuery} />
-        <CommandList>
-          {!cmdQuery.trim() && recentSearches.length > 0 && (
-            <CommandGroup heading="Recent searches">
-              {recentSearches.map((q) => (
-                <CommandItem key={q} value={q} onSelect={() => { setCmdQuery(q); }}>
-                  <SearchIcon className="mr-2 size-4 shrink-0 text-muted-foreground" />
-                  {q}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          )}
-          {cmdLoading && (
-            <OperationalLoadingState
-              variant="command"
-              title="Searching Wisconsin Creative"
-              rows={3}
-            />
-          )}
-          {!cmdLoading && cmdError && cmdQuery.trim() && (
-            <CommandEmpty>{cmdError === "network" ? "Search is offline. Check your connection and try again." : "Search is temporarily unavailable. Try the page shortcut or search again."}</CommandEmpty>
-          )}
-          {!cmdLoading && !cmdError && cmdQuery.trim() && cmdResults.length === 0 && (
-            <CommandEmpty>No matches. Try a tag, borrower, guide, page name, setting, or report.</CommandEmpty>
-          )}
-          {!cmdLoading && !cmdError && cmdPartialFailures.length > 0 && cmdResults.length > 0 && (
-            <OperationalPartialResultsAlert
-              className="mx-2 mb-2 text-xs"
-              failureLabel="Unavailable result types"
-              failures={cmdPartialFailures}
-              noun="result type"
-              recoveryCopy="Showing available matches. Refresh before treating this search as complete."
-              title="Some result types did not load"
-            />
-          )}
-          {cmdGroups.page.length > 0 && (
-            <CommandGroup heading="Go to">
-              {cmdGroups.page.map((r) => (
-                <CommandItem key={r.id} value={`${r.title} ${r.subtitle} ${r.href} ${r.keywords.join(" ")}`} onSelect={() => handleCmdSelect(r.href)} className="gap-3">
-                  <ArrowRightIcon className="size-4 shrink-0 text-muted-foreground" />
-                  <div className="min-w-0">
-                    <div className="truncate font-medium">{r.title}</div>
-                    <div className="truncate text-xs text-muted-foreground">{r.subtitle}</div>
-                  </div>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          )}
-          {cmdGroups.guide.length > 0 && (
-            <CommandGroup heading="Guides">
-              {cmdGroups.guide.map((r) => {
-                const subtitle = [r.subtitle, r.status === "DRAFT" ? "Draft" : null].filter(Boolean).join(" · ");
-                return (
-                  <CommandItem
-                    key={r.id}
-                    value={`${r.title} ${subtitle} ${r.searchText ?? ""} ${r.href}`}
-                    onSelect={() => handleCmdSelect(r.href)}
-                    className="gap-3"
-                  >
-                    <BookOpenIcon className="size-4 shrink-0 text-muted-foreground" />
-                    <div className="min-w-0">
-                      <div className="truncate font-medium">{r.title}</div>
-                      {subtitle && <div className="truncate text-xs text-muted-foreground">{subtitle}</div>}
-                    </div>
-                  </CommandItem>
-                );
-              })}
-            </CommandGroup>
-          )}
-          {cmdGroups.item.length > 0 && (
-            <CommandGroup heading="Items">
-              {cmdGroups.item.map((r) => {
-                const status = r.computedStatus ?? "AVAILABLE";
-                const isOverdue = r.activeBooking?.isOverdue ?? false;
-                const badgeStyle = isOverdue ? STATUS_STYLES.red.badge
-                  : status === "CHECKED_OUT" ? STATUS_STYLES.blue.badge
-                  : status === "PENDING_PICKUP" ? STATUS_STYLES.orange.badge
-                  : status === "RESERVED" ? STATUS_STYLES.purple.badge
-                  : status === "MAINTENANCE" ? STATUS_STYLES.orange.badge
-                  : status === "RETIRED" ? STATUS_STYLES.gray.badge
-                  : STATUS_STYLES.green.badge;
-                const statusLabel = isOverdue ? "Overdue"
-                  : status === "CHECKED_OUT" ? "Checked out"
-                  : status === "PENDING_PICKUP" ? "Pending pickup"
-                  : status === "RESERVED" ? "Reserved"
-                  : status === "MAINTENANCE" ? "Maintenance"
-                  : status === "RETIRED" ? "Retired"
-                  : "Available";
-                const showHolder = !!r.activeBooking && (isOverdue || status === "CHECKED_OUT" || status === "RESERVED");
-                return (
-                  <CommandItem key={r.id} value={r.title} onSelect={() => handleCmdSelect(r.href)} className="gap-3">
-                    <AssetImage src={r.imageUrl} alt={r.title} size={32} className="rounded" />
-                    <div className="min-w-0">
-                      <div className="truncate font-medium">{r.title}</div>
-                      <div className="mt-0.5">
-                        <Badge
-                          className={badgeStyle}
-                          size="sm"
-                          title={showHolder ? `${statusLabel} by ${r.activeBooking?.requesterName}` : statusLabel}
-                        >
-                          {showHolder && (
-                            <UserAvatar
-                              name={r.activeBooking?.requesterName ?? "Unknown"}
-                              avatarUrl={r.activeBooking?.requesterAvatarUrl}
-                              size="xs"
-                            />
-                          )}
-                          {statusLabel}
-                        </Badge>
-                      </div>
-                    </div>
-                  </CommandItem>
-                );
-              })}
-            </CommandGroup>
-          )}
-          {cmdGroups.checkout.length > 0 && (
-            <>
-              <CommandSeparator />
-              <CommandGroup heading="Checkouts">
-                {cmdGroups.checkout.map((r) => (
-                  <CommandItem key={r.id} value={`${r.title} ${r.subtitle}`} onSelect={() => handleCmdSelect(r.href)}>
-                    <ClipboardCheckIcon className="mr-2 size-4 shrink-0 text-muted-foreground" />
-                    <div className="min-w-0">
-                      <div className="truncate font-medium">{r.title}</div>
-                      {r.subtitle && <div className="truncate text-xs text-muted-foreground">{r.subtitle}</div>}
-                    </div>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </>
-          )}
-          {cmdGroups.reservation.length > 0 && (
-            <>
-              <CommandSeparator />
-              <CommandGroup heading="Reservations">
-                {cmdGroups.reservation.map((r) => (
-                  <CommandItem key={r.id} value={`${r.title} ${r.subtitle}`} onSelect={() => handleCmdSelect(r.href)}>
-                    <CalendarCheckIcon className="mr-2 size-4 shrink-0 text-muted-foreground" />
-                    <div className="min-w-0">
-                      <div className="truncate font-medium">{r.title}</div>
-                      {r.subtitle && <div className="truncate text-xs text-muted-foreground">{r.subtitle}</div>}
-                    </div>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </>
-          )}
-          {cmdGroups.user.length > 0 && (
-            <>
-              <CommandSeparator />
-              <CommandGroup heading="Staff">
-                {cmdGroups.user.map((r) => (
-                  <CommandItem key={r.id} value={`${r.title} ${r.subtitle}`} onSelect={() => handleCmdSelect(r.href)}>
-                    <UserIcon className="mr-2 size-4 shrink-0 text-muted-foreground" />
-                    <div className="min-w-0">
-                      <div className="truncate font-medium">{r.title}</div>
-                      {r.subtitle && <div className="truncate text-xs text-muted-foreground">{r.subtitle}</div>}
-                    </div>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </>
-          )}
-          {cmdQuery.trim() && cmdResults.length > 0 && (
-            <>
-              <CommandSeparator />
-              <CommandGroup>
-                <CommandItem onSelect={() => handleCmdSelect(`/search?q=${encodeURIComponent(cmdQuery.trim())}`)}>
-                  <SearchIcon className="mr-2 size-4 shrink-0 text-muted-foreground" />
-                  See all results for &ldquo;{cmdQuery.trim()}&rdquo;
-                </CommandItem>
-              </CommandGroup>
-            </>
-          )}
-        </CommandList>
-      </CommandDialog>}
+
+      {!isCollaborator && (
+        <CommandPalette open={cmdOpen} onOpenChange={setCmdOpen} user={user} pathname={pathname} />
+      )}
 
       <AppSidebar
         user={user}
@@ -957,6 +400,12 @@ export default function AppShell({
         isLoggingOut={loggingOut}
         overdueBadgeCount={overdueBadgeCount}
         dueTodayBadgeCount={dueTodayBadgeCount}
+        onSearch={isCollaborator ? undefined : () => setCmdOpen(true)}
+        attentionCounts={{
+          "/wishlist": { count: sidebarCounts?.openWishes ?? 0, suffix: "waiting on a decision" },
+          "/licenses": { count: sidebarCounts?.reportedLicenses ?? 0, suffix: "reported codes" },
+          "/issues": { count: sidebarCounts?.openProblems ?? 0, suffix: "open problems" },
+        }}
       />
 
       <div className="flex flex-1 flex-col min-w-0 max-md:pl-[env(safe-area-inset-left,0px)] max-md:pr-[env(safe-area-inset-right,0px)] print:ml-0">
@@ -965,70 +414,23 @@ export default function AppShell({
             You&apos;re offline. Changes will sync when connected.
           </div>
         )}
-        <div className="sticky top-0 z-40 print:hidden">
-          <RolePreviewBanner user={user} />
-          <AppTopBar
-            isCollaborator={isCollaborator}
-            onSearch={() => setCmdOpen(true)}
-            unreadNotifications={unreadNotifications}
-            user={user}
-          />
-        </div>
         <BreadcrumbProvider>
+          <div className="sticky top-0 z-40 print:hidden">
+            <RolePreviewBanner user={user} />
+            <AppTopBar
+              isCollaborator={isCollaborator}
+              onSearch={() => setCmdOpen(true)}
+              unreadNotifications={unreadNotifications}
+              user={user}
+            />
+          </div>
           <main id="main-content" className="flex-1 px-8 py-5 max-md:p-4 max-md:pb-[calc(96px+env(safe-area-inset-bottom,0px))] print:pb-0">
-            <div data-app-shell-breadcrumb-frame={pathname === "/schedule" ? "" : undefined}>
-              <PageBreadcrumb />
-            </div>
             {children}
           </main>
         </BreadcrumbProvider>
       </div>
 
-      {/* Mobile bottom nav */}
-      <nav aria-label="Mobile navigation" className="hidden max-md:block fixed inset-x-0 bottom-0 z-[var(--z-overlay)] border-t border-border/70 bg-card/95 px-2 pb-[calc(6px+env(safe-area-inset-bottom,0px))] pt-1.5 shadow-[0_-10px_28px_rgba(15,23,42,0.10)] backdrop-blur supports-[backdrop-filter]:bg-card/90 print:hidden">
-        <div className="mx-auto grid max-w-[460px] gap-1" style={{ gridTemplateColumns: `repeat(${visibleBottomNavItems.length}, minmax(0, 1fr))` }}>
-          {visibleBottomNavItems.map((item) => {
-            const isActive =
-              item.href === "/"
-                ? pathname === "/"
-                : pathname.startsWith(item.href);
-            const badgeCount = item.badge === "overdue" ? overdueBadgeCount : 0;
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-current={isActive ? "page" : undefined}
-                aria-label={badgeCount > 0 ? `${item.label}, ${badgeCount} overdue` : item.label}
-                className={cn(
-                  "group relative flex min-h-[52px] min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-1 py-1 text-[11px] font-medium leading-none text-muted-foreground no-underline outline-none transition-[background-color,color,box-shadow,scale] duration-150 [-webkit-tap-highlight-color:transparent] hover:bg-muted/70 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card active:scale-[0.96]",
-                  isActive && "bg-muted text-foreground",
-                )}
-              >
-                <span
-                  className={cn(
-                    "relative flex size-7 items-center justify-center rounded-full transition-[background-color,color] duration-150",
-                    isActive
-                      ? "bg-[var(--wi-red)]/10 text-[var(--wi-red)]"
-                      : "text-muted-foreground group-hover:text-foreground",
-                  )}
-                  aria-hidden="true"
-                >
-                  <Icon className="size-[18px]" />
-                  {badgeCount > 0 && (
-                    <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[9px] font-bold leading-4 text-destructive-foreground tabular-nums">
-                      {badgeCount > 99 ? "99+" : badgeCount}
-                    </span>
-                  )}
-                </span>
-                <span className={cn("max-w-full truncate tracking-normal", isActive && "text-foreground")}>
-                  {item.label}
-                </span>
-              </Link>
-            );
-          })}
-        </div>
-      </nav>
+      <MobileTabBar items={visibleBottomNavItems} pathname={pathname} overdueCount={overdueBadgeCount} showMore={!isCollaborator} />
     </SidebarProvider>
   );
 }

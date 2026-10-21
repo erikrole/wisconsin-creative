@@ -14,7 +14,7 @@
  * policy meant to leave open is fully crewed as far as this run is concerned.
  */
 
-import { SportAutoAssignPolicy } from "@prisma/client";
+import { SportAutoAssignPolicy } from "@/lib/client-enums";
 
 export { SportAutoAssignPolicy };
 

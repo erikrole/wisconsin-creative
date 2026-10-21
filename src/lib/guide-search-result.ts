@@ -1,4 +1,4 @@
-import { ResourceType } from "@prisma/client";
+import type { ResourceType } from "@prisma/client";
 import { RESOURCE_TYPE_LABELS } from "@/lib/guide-categories";
 
 export type GuideSearchHit = {

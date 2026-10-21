@@ -3,6 +3,24 @@ import Foundation
 struct FormOption: Codable, Identifiable, Hashable, Equatable {
     let id: String
     let name: String
+    /// Server-owned flag (`/api/form-options`) saying this location can be a
+    /// reservation pickup counter. Optional so older servers still decode;
+    /// callers fall back to the historical name match when it is missing.
+    let reservationPickup: Bool?
+
+    init(id: String, name: String, reservationPickup: Bool? = nil) {
+        self.id = id
+        self.name = name
+        self.reservationPickup = reservationPickup
+    }
+
+    /// Mirrors `isSupportedReservationPickupLocationName` on the server,
+    /// preferring the flag and falling back to the legacy name match.
+    var isReservationPickupCounter: Bool {
+        if let reservationPickup { return reservationPickup }
+        let lowered = name.lowercased()
+        return lowered.contains("camp randall") || lowered.contains("kohl center")
+    }
 }
 
 // Matches /api/form-options users payload. `email` was removed from the

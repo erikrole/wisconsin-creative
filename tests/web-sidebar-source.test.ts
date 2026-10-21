@@ -11,12 +11,12 @@ describe("web sidebar source contract", () => {
     expect(sidebar).not.toContain("/scan?checkout");
   });
 
-  it("keeps personal Settings reachable outside admin-only navigation", () => {
+  it("keeps personal Settings reachable for every role from the account menu", () => {
     const sidebar = source("src/components/Sidebar.tsx");
-    const settingsEntry = '{ label: "Settings", href: "/settings", icon: SettingsIcon }';
     const staffItems = sidebar.match(/staffOnly: true,\s*items: \[([\s\S]*?)\],\s*\},/);
 
-    expect(sidebar).toContain(settingsEntry);
+    expect(sidebar).toContain('const SETTINGS_HREF = "/settings"');
+    expect(sidebar).toContain("href={SETTINGS_HREF}");
     expect(staffItems?.[1]).toContain("Kits");
     expect(staffItems?.[1]).not.toContain("Settings");
   });
@@ -56,22 +56,23 @@ describe("web sidebar source contract", () => {
     const appShell = source("src/components/AppShell.tsx");
     const sidebar = source("src/components/Sidebar.tsx");
 
-    expect(appShell).toContain("myDueTodayCount?: unknown");
-    expect(appShell).toContain("setDueTodayBadgeCount(dueToday)");
+    expect(appShell).toContain("useDashboardStats()");
+    expect(appShell).toContain("dashboardStats?.myDueTodayCount ?? 0");
     expect(sidebar).toContain("dueTodayBadgeCount?: number");
     expect(sidebar.indexOf("overdueBadgeCount > 0")).toBeLessThan(
       sidebar.indexOf("dueTodayBadgeCount > 0"),
     );
     expect(sidebar).toContain('suffix: "due today"');
-    expect(sidebar).toContain("bg-[var(--orange-bg)] text-[var(--orange-text)]");
+    expect(sidebar).toContain("bg-[var(--orange-bg)] text-[color:var(--orange-text)]");
   });
 
   it("does not replace ambient counts with partial dashboard fallbacks", () => {
     const appShell = source("src/components/AppShell.tsx");
 
-    expect(appShell).toContain("hasDashboardCountFailure");
-    expect(appShell).toContain("dashboardBadgeCountsAreTrusted");
-    expect(appShell).toContain("partialFailures?: unknown[]");
+    expect(appShell).toContain("useDashboardStats()");
+    expect(source("src/hooks/use-dashboard-data.ts")).toContain("hasDashboardCountFailure(partialFailures)");
+    expect(appShell).not.toContain('fetch("/api/dashboard/stats"');
+    expect(appShell).toMatch(/fetchQuery\(\{\s*\.\.\.dashboardStatsQueryOptions\(badgeUserId\),[\s\S]*?staleTime: 0,/);
   });
 
   it("does not wire sidebar keyboard shortcuts that conflict with browser shortcuts", () => {
@@ -103,7 +104,7 @@ describe("web sidebar source contract", () => {
     const sidebar = source("src/components/Sidebar.tsx");
     const primitive = source("src/components/ui/sidebar.tsx");
 
-    expect(appShell).toContain('{ label: "Bookings", href: "/bookings", icon: BookOpenIcon');
+    expect(appShell).toContain('{ label: "Bookings", href: "/bookings", icon: ClipboardListIcon');
     expect(appShell).not.toContain('{ label: "Reservations", href: "/reservations"');
     expect(appShell).not.toContain('{ label: "Checkouts", href: "/checkouts"');
     expect(sidebar).toContain("setOpenMobile(false)");
@@ -136,7 +137,7 @@ describe("web sidebar source contract", () => {
 
     expect(sidebar).toMatch(/<Link\s+prefetch=\{false\}\s+href=\{`\/staff\/\$\{user\.id\}`\}/);
     expect(sidebar).toMatch(/<Link prefetch=\{false\} href=\{href\}/);
-    expect(appShell).toContain('<Link prefetch={false} href="/notifications"');
+    expect(source("src/components/NotificationsPopover.tsx")).toMatch(/<Link\s+prefetch=\{false\}\s+href="\/notifications"/);
     expect(sectionNav).toMatch(/<Link\s+prefetch=\{false\}\s+href=\{href\}/);
   });
 
@@ -162,12 +163,16 @@ describe("web sidebar source contract", () => {
     const sidebar = source("src/components/Sidebar.tsx");
     const appShell = source("src/components/AppShell.tsx");
 
-    expect(sidebar).toContain('label: "Team"');
+    expect(sidebar).toContain('label: "People"');
+    expect(sidebar).toContain('label: "Purchasing"');
     expect(sidebar).toContain('label: "Library"');
     expect(sidebar).not.toContain('{ label: "Notifications"');
     expect(sidebar).not.toContain("unreadNotifications");
-    expect(appShell).toContain('href="/notifications"');
-    expect(appShell).toContain("Search items, bookings, people, pages, and guides");
+    const topBar = source("src/components/AppTopBar.tsx");
+    expect(appShell).toContain("<AppTopBar");
+    expect(topBar).toContain("<NotificationsPopover");
+    expect(source("src/components/NotificationsPopover.tsx")).toContain('href="/notifications"');
+    expect(topBar).toContain("Search items, bookings, people, pages, and guides");
   });
 
   it("uses collaborator affiliation identity instead of a generic external label", () => {
@@ -177,13 +182,15 @@ describe("web sidebar source contract", () => {
     expect(sidebar).toContain('"External collaborator"');
   });
 
-  it("sets sidebar identity type with Gotham via brand-identity, not inline heading families", () => {
+  it("owns its typeface and tokens so page-scoped themes cannot restyle it", () => {
     const sidebar = source("src/components/Sidebar.tsx");
+    const css = source("src/app/globals.css");
 
-    expect(sidebar).toContain("brand-identity");
-    expect(sidebar).toContain("font-[800]");
-    expect(sidebar).toContain("font-bold");
+    expect(source("src/lib/chrome-font.ts")).toContain('import { Lato } from "next/font/google"');
+    expect(sidebar).toContain("chromeFont.className");
+    expect(sidebar).not.toContain("brand-identity");
     expect(sidebar).not.toContain('fontFamily: "var(--font-heading)"');
-    expect(sidebar).not.toContain("fontWeight: isActive ? 600");
+    expect(css).toContain("--color-sidebar-border: var(--sidebar-border)");
+    expect(css).toContain("--color-sidebar-ring: var(--sidebar-ring)");
   });
 });

@@ -38,9 +38,9 @@ function SelectTrigger({
       data-slot="select-trigger"
       className={cn(
         fieldChrome,
-        "data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground flex w-full cursor-pointer items-center justify-between gap-2 rounded-md border px-3 py-2 text-base md:text-sm *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2",
+        "data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground flex w-full cursor-pointer items-center justify-between gap-2 rounded-md border px-3 py-2 text-base *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2",
         size === "default" && "h-10",
-        size === "sm" && "h-8 text-sm",
+        size === "sm" && "h-8",
         className
       )}
       {...props}

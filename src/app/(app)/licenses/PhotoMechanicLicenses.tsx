@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import { AlertTriangle, Archive, CalendarClock, Download, KeyRound, Plus, RefreshCw } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { OperationalMetricCard } from "@/components/OperationalFeedback";
@@ -15,6 +14,7 @@ import { useFetch } from "@/hooks/use-fetch";
 import { formatRelativeTime } from "@/lib/format";
 import { handleAuthRedirect, parseErrorMessage } from "@/lib/errors";
 import { licenseDaysUntilExpiry, localDateKey } from "@/lib/license-dates";
+import { LicenseHolders } from "./LicenseHolders";
 import { LicenseTable } from "./LicenseTable";
 import { MyLicensePanel } from "./MyLicensePanel";
 import { ConfirmClaimDialog } from "./ConfirmClaimDialog";
@@ -25,6 +25,23 @@ import { BulkRenewDialog } from "./BulkRenewDialog";
 import type { LicenseCode, MyLicense } from "./types";
 
 const MAX_SLOTS = 2;
+
+function SlotMeter({ usedSlots, totalSlots }: { usedSlots: number; totalSlots: number }) {
+  return (
+    <div
+      role="img"
+      aria-label={`${usedSlots} of ${totalSlots} slots in use`}
+      className="mt-4 flex h-2.5 gap-0.5 overflow-hidden rounded-full"
+    >
+      {Array.from({ length: totalSlots }, (_, i) => (
+        <span
+          key={i}
+          className={i < usedSlots ? "flex-1 bg-[var(--blue)]" : "flex-1 bg-[var(--green)]/35"}
+        />
+      ))}
+    </div>
+  );
+}
 
 function LicenseSummary({
   activeCodes,
@@ -73,6 +90,8 @@ function LicenseSummary({
       allClearLabel={railItems.length === 0 ? "License capacity is healthy" : undefined}
       notice={myLicense ? <p className="text-xs text-muted-foreground">You hold one slot.</p> : undefined}
       details={(
+        <div className="space-y-3">
+        <SlotMeter usedSlots={usedSlots} totalSlots={totalSlots} />
         <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-5">
           <OperationalMetricCard label="Active codes" value={activeCodes} helper="Usable license codes" />
           <OperationalMetricCard label="Slots in use" value={`${usedSlots}/${totalSlots}`} helper="Two slots per code" tone={usedSlots > 0 ? "blue" : "muted"} />
@@ -80,31 +99,59 @@ function LicenseSummary({
           <OperationalMetricCard label="Expiring soon" value={expiringCount} helper="Within 30 days" tone={expiringCount > 0 ? "orange" : "muted"} onClick={onRenew} />
           <OperationalMetricCard label="Retired" value={retiredCount} helper="Hidden by default" />
         </div>
+        </div>
       )}
     />
   );
 }
 
 
-function ClaimLicensePrompt() {
+function ClaimLicenseHero({
+  openSlots,
+  totalSlots,
+  onClaim,
+}: {
+  openSlots: number;
+  totalSlots: number;
+  onClaim: () => void;
+}) {
   return (
-    <Card elevation="flat" className="border-[var(--green)]/35 bg-[var(--green-bg)]">
-      <CardContent className="flex items-start gap-3 p-4">
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-md border border-[var(--green)]/25 bg-background text-[var(--green-text)]">
-          <KeyRound className="size-5" aria-hidden="true" />
-        </div>
+    <section
+      aria-label="Claim a Photo Mechanic license"
+      className="rounded-2xl border border-[var(--green)]/30 bg-gradient-to-br from-[var(--green-bg)] to-background p-6 sm:p-8"
+    >
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
-          <p className="text-xs font-medium uppercase tracking-[0.14em] text-[var(--green-text)]">
-            Claim a Photo Mechanic license
+          <p className="text-2xl font-semibold leading-tight" style={{ fontFamily: "var(--font-heading)" }}>
+            Get a license code
           </p>
-          <p className="mt-1 text-sm text-foreground">
-            Each code activates two machines. Claim any Open or 1/2 code below.
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            One license code works on two machines. We pick an open slot for you and copy the code.
+          </p>
+          <SlotMeter usedSlots={totalSlots - openSlots} totalSlots={totalSlots} />
+          <p className="mt-1.5 flex items-center gap-3 text-xs text-muted-foreground">
+            <span>{openSlots} of {totalSlots} slots open</span>
+            <span className="flex items-center gap-1"><span className="size-2 rounded-full bg-[var(--blue)]" />In use</span>
+            <span className="flex items-center gap-1"><span className="size-2 rounded-full bg-[var(--green)]/35" />Open</span>
           </p>
         </div>
-      </CardContent>
-    </Card>
+        <Button type="button" size="lg" className="h-12 shrink-0 px-6 text-base" onClick={onClaim}>
+          <KeyRound data-icon="inline-start" />
+          Claim a code
+        </Button>
+      </div>
+    </section>
   );
 }
+
+type PoolFilter = "all" | "available" | "full" | "expiring";
+
+const FILTERS: { id: PoolFilter; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "available", label: "Has open slot" },
+  { id: "full", label: "Full" },
+  { id: "expiring", label: "Expiring" },
+];
 
 export function PhotoMechanicLicenses({
   isAdmin,
@@ -120,6 +167,7 @@ export function PhotoMechanicLicenses({
   const [showRenew, setShowRenew] = useState(false);
   const [showRetired, setShowRetired] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [filter, setFilter] = useState<PoolFilter>("all");
 
   const {
     data: codesData,
@@ -156,16 +204,26 @@ export function PhotoMechanicLicenses({
     if (!code.expiresAt) return false;
     return licenseDaysUntilExpiry(code.expiresAt) <= 30;
   }).length;
+  const filteredCodes = visibleCodes.filter((code) => {
+    if (filter === "available") return code.status === "AVAILABLE" || code.status === "PARTIAL";
+    if (filter === "full") return code.status === "CLAIMED";
+    if (filter === "expiring") return !!code.expiresAt && licenseDaysUntilExpiry(code.expiresAt) <= 30;
+    return true;
+  });
   const hasRetired = allCodes.some((code) => code.status === "RETIRED");
-  const hasExpiry = allCodes.some((code) => code.expiresAt);
 
-  function handleClickAvailable(code: LicenseCode) {
+  // Fill half-used codes first so whole codes stay free; longest-lived expiry breaks ties.
+  function handleClaimBest() {
     if (myLicense) return;
-    setClaimTarget(code);
+    const rank = (code: LicenseCode) => (code.status === "PARTIAL" ? 0 : 1);
+    const expiry = (code: LicenseCode) => (code.expiresAt ? code.expiresAt : "9999-12-31");
+    const best = activeCodes
+      .filter((code) => code.status === "AVAILABLE" || code.status === "PARTIAL")
+      .sort((a, b) => rank(a) - rank(b) || expiry(b).localeCompare(expiry(a)))[0];
+    if (best) setClaimTarget(best);
   }
 
-  function handleClickClaimed(code: LicenseCode) {
-    // Students without admin rights get their own view via MyLicensePanel — skip the sheet.
+  function handleInspect(code: LicenseCode) {
     if (!isAdmin) return;
     setAdminTarget(code);
   }
@@ -203,15 +261,15 @@ export function PhotoMechanicLicenses({
         <MyLicensePanel license={myLicense} isStaff={isAdmin} onReleased={reloadAll} />
       ) : codesLoading ? (
         <Skeleton className="h-28 w-full rounded-lg" />
-      ) : allCodes.length > 0 && openSlots > 0 ? (
-        <ClaimLicensePrompt />
-      ) : allCodes.length > 0 ? (
+      ) : allCodes.length > 0 && openSlots > 0 && !isAdmin ? (
+        <ClaimLicenseHero openSlots={openSlots} totalSlots={totalSlots} onClaim={handleClaimBest} />
+      ) : allCodes.length > 0 && !isAdmin ? (
         <p className="rounded-md border bg-muted/30 px-3 py-2.5 text-sm text-muted-foreground">
           Every Photo Mechanic slot is in use. Return a code or ask staff to add one.
         </p>
       ) : null}
 
-      {!codesLoading && allCodes.length > 0 && (
+      {isAdmin && !codesLoading && allCodes.length > 0 && (
         <LicenseSummary
           activeCodes={activeCodes.length}
           usedSlots={usedSlots}
@@ -262,6 +320,12 @@ export function PhotoMechanicLicenses({
               <Button type="button" variant="outline" size="sm" className="h-10" onClick={() => setShowBulk(true)}>
                 Bulk add codes
               </Button>
+              {!myLicense && openSlots > 0 && (
+                <Button type="button" variant="outline" size="sm" className="h-10" onClick={handleClaimBest}>
+                  <KeyRound data-icon="inline-start" />
+                  Claim for me
+                </Button>
+              )}
               <Button type="button" size="sm" className="h-10" onClick={() => setShowAdd(true)}>
                 <Plus data-icon="inline-start" />
                 Add license code
@@ -295,17 +359,37 @@ export function PhotoMechanicLicenses({
           actionLabel={isAdmin ? "Show retired" : undefined}
           onAction={isAdmin ? () => setShowRetired(true) : undefined}
         />
+      ) : !isAdmin ? (
+        <LicenseHolders codes={allCodes} currentUserId={currentUserId} />
       ) : (
+        <>
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Filter license codes">
+            {FILTERS.map((item) => (
+              <Button
+                key={item.id}
+                type="button"
+                size="sm"
+                variant={filter === item.id ? "secondary" : "outline"}
+                className="h-10 rounded-full"
+                aria-pressed={filter === item.id}
+                onClick={() => setFilter(item.id)}
+              >
+                {item.label}
+              </Button>
+            ))}
+          </div>
+          {filteredCodes.length === 0 && !codesLoading ? (
+            <p className="rounded-xl border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
+              No codes match this filter.
+            </p>
+          ) : (
         <LicenseTable
-          codes={visibleCodes}
+          codes={filteredCodes}
           loading={codesLoading}
-          currentUserId={currentUserId}
-          isAdmin={isAdmin}
-          hasMyLicense={!!myLicense}
-          onClickAvailable={handleClickAvailable}
-          onClickClaimed={handleClickClaimed}
-          showExpiry={hasExpiry}
+          onInspect={handleInspect}
         />
+          )}
+        </>
       )}
 
       <ConfirmClaimDialog

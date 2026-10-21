@@ -18,6 +18,9 @@ final class UsersViewModel {
     var selectedRole: String? = nil // "ADMIN" | "STAFF" | "STUDENT" | nil
     var includeInactive = false
     var hasMore = true
+    /// Active head-count per role for the tab strip; nil until the first page
+    /// lands (or when the server predates `stats`).
+    var roleCounts: [String: Int]?
 
     private var offset = 0
     private let limit = 50
@@ -53,6 +56,7 @@ final class UsersViewModel {
             )
             if Task.isCancelled { isLoading = false; return }
             if reset { users = result.data } else { users += result.data }
+            if let byRole = result.stats?.byRole { roleCounts = byRole }
             offset += result.data.count
             hasMore = offset < result.total
             pageError = nil
@@ -128,7 +132,7 @@ struct UsersView: View {
 
     private var configuredContent: some View {
         content
-                .navigationTitle(isCollaboratorDirectory ? "People" : "Users")
+                .navigationTitle(isCollaboratorDirectory ? "People" : "Staff")
                 .searchable(
                     text: $vm.searchText,
                     placement: .navigationBarDrawer(displayMode: .always),
@@ -161,9 +165,66 @@ struct UsersView: View {
 
     @ViewBuilder
     private var content: some View {
+        VStack(spacing: 0) {
+            if !isCollaboratorDirectory {
+                roleTabs
+            }
+            listContent
+        }
+    }
+
+    private static let roleTabItems: [(role: String?, label: String)] = [
+        (nil, "All"),
+        ("STUDENT", "Students"),
+        ("STAFF", "Staff"),
+        ("ADMIN", "Admins"),
+    ]
+
+    /// Mirrors the web roster's role tabs. Counts are active people, so they
+    /// stay put while search narrows the list below.
+    private var roleTabs: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(Self.roleTabItems, id: \.label) { item in
+                    let selected = vm.selectedRole == item.role
+                    Button {
+                        vm.selectedRole = item.role
+                    } label: {
+                        HStack(spacing: 6) {
+                            Text(item.label)
+                            if let count = roleTabCount(item.role) {
+                                Text("\(count)")
+                                    .monospacedDigit()
+                                    .foregroundStyle(selected ? Color.white.opacity(0.85) : Color.secondary)
+                            }
+                        }
+                        .font(.subheadline.weight(.medium))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
+                        .background(selected ? Color.accentColor : Color(.secondarySystemFill), in: Capsule())
+                        .foregroundStyle(selected ? Color.white : Color.primary)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(selected ? .isSelected : [])
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+        }
+        .background(Color(.systemGroupedBackground))
+    }
+
+    private func roleTabCount(_ role: String?) -> Int? {
+        guard let counts = vm.roleCounts else { return nil }
+        guard let role else { return counts.values.reduce(0, +) }
+        return counts[role] ?? 0
+    }
+
+    @ViewBuilder
+    private var listContent: some View {
         if let error = vm.error, vm.users.isEmpty {
             ContentUnavailableView {
-                Label("Couldn't load users", systemImage: "exclamationmark.triangle")
+                Label("Couldn't load staff", systemImage: "exclamationmark.triangle")
             } description: {
                 Text(error)
             } actions: {
@@ -190,7 +251,7 @@ struct UsersView: View {
             }
         } else if vm.users.isEmpty {
             ContentUnavailableView {
-                Label(isCollaboratorDirectory ? "No people" : "No users", systemImage: "person.2")
+                Label(isCollaboratorDirectory ? "No people" : "No staff", systemImage: "person.2")
             } description: {
                 Text(emptyDescription)
             } actions: {
@@ -259,7 +320,7 @@ struct UsersView: View {
 
     private var emptyDescription: String {
         let query = vm.searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        let noun = isCollaboratorDirectory ? "people" : "users"
+        let noun = isCollaboratorDirectory ? "people" : "staff"
         switch (query.isEmpty, hasFilter) {
         case (false, true):
             return "Nothing matches \"\(query)\" with these filters."
@@ -280,16 +341,6 @@ struct UsersView: View {
 
     private var filterMenu: some View {
         Menu {
-            // Picker inside Menu renders the checkmark for the selected tag
-            // automatically — no `systemImage: cond ? "checkmark" : ""` hack
-            // (which logs "No symbol named ''" warnings every render).
-            Picker("Role", selection: $vm.selectedRole) {
-                Text("All roles").tag(String?.none)
-                ForEach(["ADMIN", "STAFF", "STUDENT"], id: \.self) { role in
-                    Text(role.capitalized).tag(String?.some(role))
-                }
-            }
-
             if !isCollaboratorDirectory {
                 Section {
                     Button {

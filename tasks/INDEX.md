@@ -1,6 +1,6 @@
 # Tasks Index
 
-Last updated: 2026-10-07
+Last updated: 2026-10-20
 
 ## Start Here
 
@@ -38,6 +38,8 @@ As of the 2026-10-07 hygiene pass, root `tasks/` contains:
 Audit files intentionally remain at root for now because the repo audit skills read and write `tasks/audit-*.md` paths directly.
 
 ## Active Follow-up Ledgers
+
+- `performance-web-ios-neon-2026-10-20.md` — browser cache/request lifecycle, native decode/persistence/network work, and production Neon diagnostics; tracks rollout and physical-device energy proof separately.
 
 - `infrastructure-hardening-plan-2026-09-22.md` - Vercel/Neon repairs, branch previews, cross-agent handoff and pending source/cutover gates.
 

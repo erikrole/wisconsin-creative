@@ -15,7 +15,7 @@ import {
 import Link from "next/link";
 import type { ComponentType } from "react";
 import type { MDXEditorMethods } from "@mdxeditor/editor";
-import { ResourceType, Role, ShiftArea } from "@prisma/client";
+import { ResourceType, Role, ShiftArea } from "@/lib/client-enums";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

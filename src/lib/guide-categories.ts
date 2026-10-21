@@ -1,4 +1,4 @@
-import { ResourceType } from "@prisma/client";
+import { ResourceType } from "@/lib/client-enums";
 
 export const RESOURCE_TYPE_LABELS: Record<ResourceType, string> = {
   CONTACTS: "Contacts",
