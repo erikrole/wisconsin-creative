@@ -190,7 +190,7 @@ enum AppRuntimeMode {
         switch performanceScenario {
         case .resourcesGuides, .previewChrome, .latestBrowse, .resourcesUsers, .resourcesLicenses, .resourcesLicensesOpen,
              .schedule, .tradeBoardStaff, .tradeBoardStudent,
-             .home, .homeAllClear, .scoreboard, .profile,
+             .home, .homeAllClear, .scoreboard, .teamScoreboard, .profile,
              .studentBookings,
              .bookingDetail, .bookingExtend, .bookingEdit, .bookingCancel,
              .itemEdit, .createBookingScanner, .createBookingEvents, .search, .searchPartial,
