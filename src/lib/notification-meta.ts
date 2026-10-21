@@ -39,6 +39,7 @@ export function notificationMeta(type: string): NotificationMeta {
         label: "Shift",
         toneClass: "bg-[var(--green-bg)] text-[var(--green-text)]",
       };
+    case "trade_available":
     case "trade_claimed":
     case "trade_approved":
     case "trade_completed":

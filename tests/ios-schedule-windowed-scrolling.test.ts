@@ -112,7 +112,9 @@ describe("iOS Schedule follow-ups", () => {
     const published = source("ios/Wisconsin/Views/Schedule/PublishedScheduleView.swift");
     const detail = source("ios/Wisconsin/Views/EventDetailSheet.swift");
     expect(row).toContain("struct VenueDot: View");
-    expect(tradeBoard.match(/VenueDot\(color: shift\.classificationColor\)/g)?.length).toBe(3);
+    // The Trade Board leads with the time column; the day is the section header.
+    expect(tradeBoard).toContain("venueColor: shift.classificationColor");
+    expect(tradeBoard).not.toContain("TradeBoardDateTile");
     expect(tradeBoard).not.toContain(".frame(width: 4, height: 76)");
     expect(published).toContain("VenueDot(color: publishedEventRailColor(event.event))");
     expect(published).not.toContain("StatusRail(");
