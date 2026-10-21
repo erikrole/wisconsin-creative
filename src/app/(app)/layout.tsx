@@ -14,6 +14,8 @@ import { ProductUsageTracker } from "@/components/ProductUsageTracker";
 import { canViewUsageAnalytics } from "@/lib/usage-analytics";
 import { AnnouncementSplash } from "@/components/announcements/AnnouncementSplash";
 import WebMCPProvider from "@/components/WebMCPProvider";
+import { ErrorReporter } from "@/components/error-reporting/ErrorReporter";
+import { ReportProblemProvider } from "@/components/error-reporting/ReportProblemDialog";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   let user;
@@ -36,16 +38,19 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <QueryProvider userId={user.id}>
         <ConfirmProvider>
           <TooltipProvider>
-            {!user.preview && <ProductUsageTracker />}
-            <OfflineBanner />
-            <AnnouncementSplash enabled={!user.preview && user.role !== "COLLABORATOR"} />
-            <AppShell
-              initialUser={{ ...user, canViewUsageAnalytics: canViewUsageAnalytics(user) }}
-              defaultSidebarOpen={defaultSidebarOpen}
-            >
-              <WebMCPProvider initialUser={{ ...user, canViewUsageAnalytics: canViewUsageAnalytics(user) }} />
-              {children}
-            </AppShell>
+            <ReportProblemProvider>
+              {!user.preview && <ProductUsageTracker />}
+              {!user.preview && <ErrorReporter />}
+              <OfflineBanner />
+              <AnnouncementSplash enabled={!user.preview && user.role !== "COLLABORATOR"} />
+              <AppShell
+                initialUser={{ ...user, canViewUsageAnalytics: canViewUsageAnalytics(user) }}
+                defaultSidebarOpen={defaultSidebarOpen}
+              >
+                <WebMCPProvider initialUser={{ ...user, canViewUsageAnalytics: canViewUsageAnalytics(user) }} />
+                {children}
+              </AppShell>
+            </ReportProblemProvider>
           </TooltipProvider>
           <Toaster position="top-right" duration={4000} />
         </ConfirmProvider>

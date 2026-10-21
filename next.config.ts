@@ -12,6 +12,11 @@ const isVercelDeployment = process.env.VERCEL === "1";
 const baseConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // Error reports from the browser carry the deploy they came from.
+  env: {
+    NEXT_PUBLIC_BUILD_SHA: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? "",
+    NEXT_PUBLIC_DEPLOY_ENV: process.env.VERCEL_ENV ?? "",
+  },
   compress: true,
   // GitHub CI owns lint and TypeScript verification. Vercel's build container
   // has repeatedly exhausted its memory during the duplicate checks after

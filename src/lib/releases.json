@@ -1,6 +1,22 @@
 [
   {
     "date": "2026-10-21",
+    "title": "Report a problem, and faster fixes",
+    "type": "feature",
+    "summary": "Report a problem from the account menu, and crashes and errors now reach the team with what they need to find and fix them.",
+    "details": [
+      "Report a problem in the account menu sends your note with the page you're on, your app version and browser, and your last few clicks, so you don't have to explain the steps.",
+      "If a page crashes, you can add what you were doing in one tap. The crash itself is already reported.",
+      "Crashes and errors from the web, iPhone app and server are grouped by cause, so a repeat problem is fixed once.",
+      "Nothing you type into fields, and no passwords, is ever included. Reports are deleted after 90 days."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 547
+  },
+  {
+    "date": "2026-10-21",
     "title": "App activity redesign",
     "type": "feature",
     "summary": "The owner-only App activity page now shows at a glance which app versions people run and how they use the site, the iPhone app, and the menu bar.",

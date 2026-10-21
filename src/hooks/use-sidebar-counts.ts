@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { parseJsonSafely } from "@/lib/errors";
 
-export type SidebarCounts = { openWishes: number; reportedLicenses: number };
+export type SidebarCounts = { openWishes: number; reportedLicenses: number; openProblems?: number };
 
 /** Quiet "needs attention" counts for the sidebar. Only staff and admins have anything to act on. */
 export function useSidebarCounts(enabled: boolean) {

@@ -318,4 +318,6 @@ export const NOTIFICATION_TYPE_CATEGORY: Record<string, NotificationCategory | n
   collaborator_policy_reduced: null,
   blast: null,
   low_stock: null,
+  error_issue: null,
+  support_report: null,
 };
