@@ -41,7 +41,7 @@ Informational only. These are the largest TypeScript and TSX files under `src/`;
 | `src/app/(app)/items/new-item-sheet/SerializedItemForm.tsx` | 1272 |
 | `src/hooks/use-schedule-data.ts` | 1269 |
 | `src/app/(app)/accountability/AccountabilityClient.tsx` | 1260 |
-| `src/app/(app)/items/new-item-sheet.tsx` | 1222 |
+| `src/app/(app)/settings/app-activity/page.tsx` | 1234 |
 
 ## High-Level Data Flow
 

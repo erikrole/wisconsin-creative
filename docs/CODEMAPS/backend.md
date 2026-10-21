@@ -6,7 +6,7 @@
 | File | Lines |
 |---|---:|
 | `src/lib/services/accountability.ts` | 655 |
-| `src/lib/services/app-activity-report.ts` | 498 |
+| `src/lib/services/app-activity-report.ts` | 508 |
 | `src/lib/services/app-diagnostics.ts` | 47 |
 | `src/lib/services/auto-assign.ts` | 92 |
 | `src/lib/services/auto-fill-preview.ts` | 322 |
