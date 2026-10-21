@@ -153,6 +153,34 @@ private struct StaleFooter: View {
     }
 }
 
+/// Compact one-line empty state for the Lock Screen and inline families,
+/// which have no room for the Home Screen placeholder's icon-and-sentence.
+private struct AccessoryEmpty: View {
+    let systemImage: String
+    let text: String
+
+    var body: some View {
+        Label(text, systemImage: systemImage)
+            .lineLimit(1)
+    }
+}
+
+/// A single tap target into Scan, offered where there is room for a footer.
+/// A `Link` rather than an intent button: Scan only opens the app's lookup
+/// screen (see `ScanGearControl`), so there is nothing to run in the widget
+/// process and the capability gate stays in `GearTrackerRouteParser`.
+private struct ScanLink: View {
+    var body: some View {
+        Link(destination: URL(string: "wisconsin://scan")!) {
+            Label("Scan gear", systemImage: "barcode.viewfinder")
+                .font(.caption.weight(.semibold))
+                .padding(.vertical, 6)
+                .padding(.horizontal, 10)
+                .background(.fill.tertiary, in: Capsule())
+        }
+    }
+}
+
 // MARK: - Next Shift
 
 private struct NextShiftWidgetView: View {
@@ -161,28 +189,154 @@ private struct NextShiftWidgetView: View {
     @Environment(\.showsWidgetContainerBackground) private var showsWidgetContainerBackground
     let entry: GearWidgetEntry
 
+    private var upcoming: [GearWidgetSnapshot.Shift] {
+        (entry.snapshot?.upcomingShifts ?? [])
+            .filter { $0.endsAt > entry.date }
+            .sorted { $0.startsAt < $1.startsAt }
+    }
+
     var body: some View {
         Group {
-            if let shift = entry.snapshot?.nextShift {
-                switch family {
-                case .accessoryRectangular: accessoryBody(shift)
-                case .systemSmall where !showsWidgetContainerBackground: backgroundRemovedBody(shift)
-                default: cardBody(shift)
-                }
-            } else if entry.snapshot == nil {
-                WidgetPlaceholder(
-                    systemImage: "person.crop.circle.badge.questionmark",
-                    message: "Open Creative to see your next shift."
-                )
-            } else {
-                WidgetPlaceholder(
-                    systemImage: "checkmark.seal",
-                    message: "No upcoming shifts."
-                )
+            switch family {
+            case .accessoryCircular: circularBody
+            case .accessoryInline: inlineBody
+            default: homeBody
             }
         }
         .containerBackground(.fill.tertiary, for: .widget)
         .widgetURL(scheduleURL(for: entry.snapshot?.nextShift))
+    }
+
+    @ViewBuilder
+    private var homeBody: some View {
+        if let shift = entry.snapshot?.nextShift {
+            switch family {
+            case .accessoryRectangular: accessoryBody(shift)
+            case .systemMedium: listBody(rows: 3, showsScan: false)
+            case .systemLarge: listBody(rows: 6, showsScan: true)
+            case .systemSmall where !showsWidgetContainerBackground: backgroundRemovedBody(shift)
+            default: cardBody(shift)
+            }
+        } else if entry.snapshot == nil {
+            WidgetPlaceholder(
+                systemImage: "person.crop.circle.badge.questionmark",
+                message: "Open Creative to see your next shift."
+            )
+        } else {
+            WidgetPlaceholder(
+                systemImage: "checkmark.seal",
+                message: "No upcoming shifts."
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var circularBody: some View {
+        if let shift = entry.snapshot?.nextShift {
+            ZStack {
+                AccessoryWidgetBackground()
+                VStack(spacing: 0) {
+                    Image(systemName: "calendar")
+                        .font(.caption2.weight(.bold))
+                    Text(shift.startsAt, format: .dateTime.hour().minute())
+                        .font(.caption.weight(.semibold))
+                        .minimumScaleFactor(0.6)
+                        .lineLimit(1)
+                }
+                .widgetAccentable()
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Next shift \(shift.title)")
+            .accessibilityValue(Text(shift.startsAt, format: .dateTime.weekday().hour().minute()))
+        } else {
+            ZStack {
+                AccessoryWidgetBackground()
+                Image(systemName: entry.snapshot == nil ? "calendar.badge.questionmark" : "checkmark")
+                    .font(.title3)
+            }
+            .accessibilityLabel(entry.snapshot == nil ? "Open Creative to see your next shift" : "No upcoming shifts")
+        }
+    }
+
+    @ViewBuilder
+    private var inlineBody: some View {
+        if let shift = entry.snapshot?.nextShift {
+            Label {
+                Text("\(shift.title) \(shift.startsAt, format: .dateTime.hour().minute())")
+            } icon: {
+                Image(systemName: "calendar")
+            }
+        } else {
+            AccessoryEmpty(
+                systemImage: "calendar",
+                text: entry.snapshot == nil ? "Open Creative for shifts" : "No upcoming shifts"
+            )
+        }
+    }
+
+    /// The agenda layout: when on the left, what and where on the right, the
+    /// first row carrying the live countdown. Rows are capped by height, not
+    /// by data, so Medium shows three and Large six.
+    private func listBody(rows: Int, showsScan: Bool) -> some View {
+        let shifts = Array(upcoming.prefix(rows))
+        return VStack(alignment: .leading, spacing: 8) {
+            WidgetHeader(
+                title: "Shifts",
+                systemImage: "calendar",
+                tint: widgetDisplayColor(.widgetPurple, renderingMode: renderingMode)
+            )
+            VStack(alignment: .leading, spacing: family == .systemLarge ? 12 : 8) {
+                ForEach(Array(shifts.enumerated()), id: \.element.id) { index, shift in
+                    shiftRow(shift, isNext: index == 0)
+                }
+            }
+            Spacer(minLength: 0)
+            HStack {
+                if entry.isStale, let generatedAt = entry.snapshot?.generatedAt {
+                    StaleFooter(generatedAt: generatedAt)
+                }
+                Spacer(minLength: 0)
+                if showsScan { ScanLink() }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private func shiftRow(_ shift: GearWidgetSnapshot.Shift, isNext: Bool) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            VStack(alignment: .leading, spacing: 0) {
+                Text(shift.startsAt, format: .dateTime.weekday(.abbreviated))
+                    .font(.caption2.weight(.semibold))
+                    .textCase(.uppercase)
+                    .foregroundStyle(.secondary)
+                Text(shift.startsAt, format: .dateTime.hour().minute())
+                    .font(.subheadline.weight(.semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(isNext ? widgetDisplayColor(.widgetPurple, renderingMode: renderingMode) : .primary)
+            }
+            .frame(width: 58, alignment: .leading)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(shift.title)
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
+                let parts = [shift.area, shift.locationName].compactMap { $0 }.filter { !$0.isEmpty }
+                if !parts.isEmpty {
+                    Text(parts.joined(separator: " · "))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+            Spacer(minLength: 0)
+            if isNext {
+                Text(shift.startsAt, style: .relative)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .frame(maxWidth: 64, alignment: .trailing)
+            }
+        }
     }
 
     private func cardBody(_ shift: GearWidgetSnapshot.Shift) -> some View {
@@ -291,7 +445,7 @@ struct NextShiftWidget: Widget {
         }
         .configurationDisplayName("Next Shift")
         .description("See your next assigned shift, call window, and gear readiness.")
-        .supportedFamilies([.systemSmall, .systemMedium, .accessoryRectangular])
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge, .accessoryCircular, .accessoryRectangular, .accessoryInline])
     }
 }
 
@@ -316,23 +470,190 @@ private struct GearDueWidgetView: View {
         return widgetDisplayColor(.widgetBlue, renderingMode: renderingMode)
     }
 
+    private var outNow: [GearWidgetSnapshot.DueBooking] {
+        (entry.snapshot?.dueBookings ?? []).sorted { $0.endsAt < $1.endsAt }
+    }
+
     var body: some View {
         Group {
-            if let snapshot = entry.snapshot {
-                if family == .systemSmall, !showsWidgetContainerBackground {
-                    backgroundRemovedBody(snapshot)
-                } else {
-                    cardBody(snapshot)
-                }
-            } else {
-                WidgetPlaceholder(
-                    systemImage: "bag.badge.questionmark",
-                    message: "Open Creative to see gear you have out."
-                )
+            switch family {
+            case .accessoryCircular: circularBody
+            case .accessoryInline: inlineBody
+            case .accessoryRectangular: rectangularBody
+            default: homeBody
             }
         }
         .containerBackground(.fill.tertiary, for: .widget)
         .widgetURL(bookingURL(for: entry.snapshot))
+    }
+
+    @ViewBuilder
+    private var homeBody: some View {
+        if let snapshot = entry.snapshot {
+            switch family {
+            case .systemMedium: mediumBody(snapshot)
+            case .systemLarge: largeBody(snapshot)
+            case .systemSmall where !showsWidgetContainerBackground: backgroundRemovedBody(snapshot)
+            default: cardBody(snapshot)
+            }
+        } else {
+            WidgetPlaceholder(
+                systemImage: "bag.badge.questionmark",
+                message: "Open Creative to see gear you have out."
+            )
+        }
+    }
+
+    /// The number that matters most right now: overdue beats due-today beats
+    /// simply out, the same precedence as `headline`.
+    private func lead(_ snapshot: GearWidgetSnapshot) -> (count: Int, noun: String) {
+        if snapshot.overdueCount > 0 { return (snapshot.overdueCount, "overdue") }
+        if snapshot.dueTodayCount > 0 { return (snapshot.dueTodayCount, "due today") }
+        return (snapshot.dueBookings.count, "out")
+    }
+
+    @ViewBuilder
+    private var circularBody: some View {
+        if let snapshot = entry.snapshot {
+            let lead = lead(snapshot)
+            ZStack {
+                AccessoryWidgetBackground()
+                VStack(spacing: 0) {
+                    Image(systemName: snapshot.overdueCount > 0 ? "exclamationmark.circle" : "bag")
+                        .font(.caption2.weight(.bold))
+                    Text("\(lead.count)")
+                        .font(.title3.weight(.bold))
+                        .monospacedDigit()
+                }
+                .widgetAccentable()
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("\(lead.count) \(lead.noun)")
+        } else {
+            ZStack {
+                AccessoryWidgetBackground()
+                Image(systemName: "bag.badge.questionmark").font(.title3)
+            }
+            .accessibilityLabel("Open Creative to see gear you have out")
+        }
+    }
+
+    @ViewBuilder
+    private var inlineBody: some View {
+        if let snapshot = entry.snapshot {
+            let lead = lead(snapshot)
+            if snapshot.dueBookings.isEmpty {
+                AccessoryEmpty(systemImage: "bag", text: "All gear returned")
+            } else {
+                Label("\(lead.count) \(lead.noun)", systemImage: snapshot.overdueCount > 0 ? "exclamationmark.circle" : "bag")
+            }
+        } else {
+            AccessoryEmpty(systemImage: "bag", text: "Open Creative for gear")
+        }
+    }
+
+    @ViewBuilder
+    private var rectangularBody: some View {
+        if let snapshot = entry.snapshot {
+            VStack(alignment: .leading, spacing: 1) {
+                Text("MY GEAR")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(.secondary)
+                    .widgetAccentable()
+                if let next = outNow.first {
+                    let lead = lead(snapshot)
+                    Text("\(lead.count) \(lead.noun)")
+                        .font(.headline)
+                        .lineLimit(1)
+                    Text("\(next.title) · due \(next.endsAt, style: .relative)")
+                        .font(.caption)
+                        .monospacedDigit()
+                        .lineLimit(1)
+                } else {
+                    Text("All clear")
+                        .font(.headline)
+                    Text("No gear out")
+                        .font(.caption)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            AccessoryEmpty(systemImage: "bag", text: "Open Creative for gear")
+        }
+    }
+
+    /// Summary on the left, the soonest-due rows on the right. Medium has no
+    /// room for a footer, so Scan stays on the large layout.
+    private func mediumBody(_ snapshot: GearWidgetSnapshot) -> some View {
+        HStack(alignment: .top, spacing: 14) {
+            VStack(alignment: .leading, spacing: 4) {
+                WidgetHeader(title: "My Gear", systemImage: "bag", tint: accent)
+                headline(snapshot)
+                Spacer(minLength: 0)
+                if entry.isStale { StaleFooter(generatedAt: snapshot.generatedAt) }
+            }
+            .frame(width: 110, alignment: .leading)
+            Divider()
+            bookingRows(limit: 3, spacing: 8)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private func largeBody(_ snapshot: GearWidgetSnapshot) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            WidgetHeader(title: "My Gear", systemImage: "bag", tint: accent)
+            headline(snapshot)
+            bookingRows(limit: 5, spacing: 12)
+            Spacer(minLength: 0)
+            HStack {
+                if entry.isStale { StaleFooter(generatedAt: snapshot.generatedAt) }
+                Spacer(minLength: 0)
+                ScanLink()
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    @ViewBuilder
+    private func bookingRows(limit: Int, spacing: CGFloat) -> some View {
+        let rows = Array(outNow.prefix(limit))
+        if rows.isEmpty {
+            VStack(alignment: .leading, spacing: 4) {
+                Image(systemName: "checkmark.seal").foregroundStyle(.secondary)
+                Text("Nothing is due back.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        } else {
+            VStack(alignment: .leading, spacing: spacing) {
+                ForEach(rows, id: \.id) { booking in
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(booking.title)
+                            .font(.subheadline.weight(.semibold))
+                            .lineLimit(1)
+                        HStack(spacing: 4) {
+                            Text(booking.isOverdue ? "Overdue" : "Due")
+                            Text(booking.endsAt, style: .relative).monospacedDigit()
+                            Text("· \(booking.itemCount) \(booking.itemCount == 1 ? "item" : "items")")
+                        }
+                        .font(.caption)
+                        .foregroundStyle(
+                            booking.isOverdue
+                                ? widgetDisplayColor(.widgetRed, renderingMode: renderingMode)
+                                : .secondary
+                        )
+                        .lineLimit(1)
+                    }
+                }
+                if outNow.count > limit {
+                    Text("\(outNow.count - limit) more out")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 
     private func cardBody(_ snapshot: GearWidgetSnapshot) -> some View {
@@ -448,6 +769,6 @@ struct GearDueWidget: Widget {
         }
         .configurationDisplayName("My Gear")
         .description("Check what you have out, including overdue and due-today gear.")
-        .supportedFamilies([.systemSmall, .systemMedium])
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge, .accessoryCircular, .accessoryRectangular, .accessoryInline])
     }
 }

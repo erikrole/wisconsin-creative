@@ -93,6 +93,8 @@ struct PerformanceTestRootView: View {
             AccountSecurityHarnessView()
         case .notifications:
             NotificationSettingsHarnessView()
+        case .notificationsInbox:
+            NotificationsInboxHarnessView()
         case .announcement, .announcementImages, .announcementPlain,
              .announcementStress, .announcementNone, .announcementError,
              .announcementLong, .announcementQueue, .announcementBrokenImage, .announcementCtaRoute:
@@ -165,7 +167,43 @@ struct NotificationSettingsHarnessView: View {
     }
 }
 
+/// The real inbox sheet against `NotificationFixtureAPI.inbox`.
+struct NotificationsInboxHarnessView: View {
+    @Environment(SessionStore.self) private var session
+
+    var body: some View {
+        NotificationsSheet()
+            .onAppear { session.currentUser = ScheduleFixtures.staffUser }
+    }
+}
+
 enum NotificationFixtureAPI {
+    /// Rows spread over several days, mixed read and unread, so every section
+    /// style (Today, Yesterday, weekday, dated) and both swipe states appear.
+    static var inbox: Data {
+        func iso(_ daysAgo: Int, _ hour: Int, _ minute: Int = 0) -> String {
+            let calendar = Calendar.current
+            let day = calendar.date(byAdding: .day, value: -daysAgo, to: .now) ?? .now
+            let date = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: day) ?? day
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime]
+            return formatter.string(from: min(date, .now))
+        }
+        func row(_ id: String, _ type: String, _ title: String, _ body: String, _ daysAgo: Int, _ hour: Int, unread: Bool) -> String {
+            let when = iso(daysAgo, hour)
+            return #"{"id":"\#(id)","type":"\#(type)","title":"\#(title)","body":"\#(body)","readAt":\#(unread ? "null" : "\"\#(when)\""),"createdAt":"\#(when)","payload":null}"#
+        }
+        let rows = [
+            row("n1", "checkout_overdue", "Sideline kit is overdue", "Due back yesterday at 6:00 PM.", 0, 9, unread: true),
+            row("n2", "shift_gear_up", "Gear is ready for Volleyball", "Your shift starts tomorrow at 5:30 PM.", 0, 8, unread: true),
+            row("n3", "trade_approved", "Your shift trade was approved", "Jordan Lee will cover Saturday's football shift.", 1, 15, unread: false),
+            row("n4", "shift_assigned", "New shift: Women's Hockey", "Video · Kohl Center · Friday 7:00 PM.", 3, 11, unread: true),
+            row("n5", "reservation_pickup_ready", "Reservation ready for pickup", "Studio camera package is at the desk.", 3, 9, unread: false),
+            row("n6", "badge_awarded", "You earned a badge", "Early Bird: five on-time pickups.", 9, 14, unread: false),
+        ]
+        return Data(#"{"data":[\#(rows.joined(separator: ","))],"total":\#(rows.count),"limit":20,"offset":0,"unreadCount":3}"#.utf8)
+    }
+
     static var pausedPreferences: NotificationPreferences {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -509,6 +547,10 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
         if AppRuntimeMode.performanceScenario == .latestBrowse,
            let body = LatestBrowseFixtureAPI.body(path: path) { return body }
         switch path {
+        case "/api/notifications":
+            guard AppRuntimeMode.performanceScenario == .notificationsInbox else { return nil }
+            if request.httpMethod == "PATCH" { return Data(#"{"success":true,"ids":[]}"#.utf8) }
+            return NotificationFixtureAPI.inbox
         case "/api/resources": return FixtureAPI.guides
         case let path where path.hasPrefix("/api/resources/"):
             let slug = String(path.dropFirst("/api/resources/".count))

@@ -331,3 +331,106 @@ struct NextShiftSnippetView: View {
         .accessibilityElement(children: .combine)
     }
 }
+
+// MARK: - Search Gear
+
+/// "Search gear <name>": looks the phrase up in the item catalog and answers
+/// with what it found and whether it is available, spoken and as a short list.
+/// Read-only; opening an item stays in the app.
+struct SearchGearIntent: AppIntent {
+    static let title: LocalizedStringResource = "Search Gear"
+    static let description = IntentDescription("Find gear by name, tag, or model and see whether it's available.")
+
+    @Parameter(title: "Gear", requestValueDialog: "What gear are you looking for?")
+    var query: String
+
+    static var parameterSummary: some ParameterSummary {
+        Summary("Search gear for \(\.$query)")
+    }
+
+    @MainActor
+    func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView {
+        try await requireIntentCapability("GEAR_CATALOG_VIEW")
+        let term = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !term.isEmpty else {
+            return .result(dialog: "Tell me what gear to look for.", view: GearSearchSnippetView(query: "", matches: [], total: 0))
+        }
+        let response: AssetsResponse
+        do {
+            response = try await APIClient.shared.assets(search: term, limit: 5)
+        } catch {
+            throw mapIntentError(error)
+        }
+        let matches = response.data.map(GearSearchMatch.init)
+        let total = response.total
+        let dialog: IntentDialog
+        if total == 0 {
+            dialog = IntentDialog("I didn't find any gear matching \(term).")
+        } else if let first = matches.first, total == 1 {
+            dialog = IntentDialog("Found \(first.title). It's \(first.status.lowercased()).")
+        } else {
+            let available = matches.filter { $0.isAvailable }.count
+            dialog = IntentDialog("Found \(total) matches for \(term). \(available) of the top \(matches.count) are available.")
+        }
+        return .result(dialog: dialog, view: GearSearchSnippetView(query: term, matches: matches, total: total))
+    }
+}
+
+struct GearSearchMatch: Identifiable, Sendable {
+    let id: String
+    let title: String
+    let detail: String
+    let status: String
+    let isAvailable: Bool
+
+    init(_ asset: Asset) {
+        id = asset.id
+        title = asset.itemListPrimaryTitle
+        detail = asset.displayName
+        status = asset.computedStatus.label
+        isAvailable = asset.computedStatus == .available
+    }
+}
+
+struct GearSearchSnippetView: View {
+    let query: String
+    let matches: [GearSearchMatch]
+    let total: Int
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if matches.isEmpty {
+                Label(query.isEmpty ? "Nothing to search for" : "No gear matches \"\(query)\"", systemImage: "magnifyingglass")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(matches.prefix(3)) { match in
+                    HStack(alignment: .firstTextBaseline, spacing: 10) {
+                        Circle()
+                            .fill(match.isAvailable ? Color.statusText(.green) : Color.statusText(.orange))
+                            .frame(width: 8, height: 8)
+                            .accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(match.title)
+                                .font(.subheadline.weight(.semibold))
+                                .lineLimit(1)
+                            Text("\(match.detail) · \(match.status)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .accessibilityElement(children: .combine)
+                }
+                if total > 3 {
+                    Text("+\(total - 3) more in Search")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+    }
+}

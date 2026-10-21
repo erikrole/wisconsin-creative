@@ -67,6 +67,10 @@ enum AppRuntimeMode {
         /// delivery truth and recovery controls can be reviewed without a
         /// signed-in session or live APNs state.
         case notifications
+        /// The notifications inbox against a canned week of rows, so the
+        /// per-day sections and the read/unread swipe actions can be reviewed
+        /// without a signed-in session.
+        case notificationsInbox = "notifications-inbox"
         case passwordSetup = "password-setup"
         /// The real Bookings tab as an internal Student, with the fixture
         /// changing from one own row to the shared team list when the request
@@ -190,7 +194,7 @@ enum AppRuntimeMode {
              .studentBookings,
              .bookingDetail, .bookingExtend, .bookingEdit, .bookingCancel,
              .itemEdit, .createBookingScanner, .createBookingEvents, .search, .searchPartial,
-             .itemsList, .reports, .accountSecurity, .notifications, .login,
+             .itemsList, .reports, .accountSecurity, .notifications, .notificationsInbox, .login,
              .announcement, .announcementImages, .announcementPlain,
              .announcementStress, .announcementNone, .announcementError,
              .announcementLong, .announcementQueue, .announcementBrokenImage, .announcementCtaRoute:
