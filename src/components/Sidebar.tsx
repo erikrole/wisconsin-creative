@@ -14,6 +14,7 @@ import {
   type ThemeChoice,
 } from "@/lib/theme";
 import { UserAvatar } from "@/components/UserAvatar";
+import { useReportProblem } from "@/components/error-reporting/ReportProblemDialog";
 import {
   SunIcon,
   MoonIcon,
@@ -28,6 +29,7 @@ import {
   ShirtIcon,
   WalletIcon,
   GiftIcon,
+  BugIcon,
   ChartColumnIcon,
   SettingsIcon,
   LifeBuoyIcon,
@@ -150,6 +152,7 @@ const navGroups: NavGroup[] = [
       { label: "Blasts", href: "/blasts", icon: MegaphoneIcon },
       { label: "YouTube Studio Lite", href: "/youtube", icon: SquarePlayIcon, requiredRole: "ADMIN" },
       { label: "Reports", href: "/reports", icon: ChartColumnIcon },
+      { label: "Issues", href: "/issues", icon: BugIcon, requiredRole: "ADMIN" },
     ],
   },
 ];
@@ -324,6 +327,7 @@ export default function AppSidebar({
   const displayGroups = groupsWithPins;
   const isOnAccountPage = pathname === SETTINGS_HREF || pathname.startsWith(`${SETTINGS_HREF}/`) || pathname === `/staff/${user?.id}`;
   const [customizeOpen, setCustomizeOpen] = useState(false);
+  const reportProblem = useReportProblem();
 
   useEffect(() => {
     if (isMobile) setOpenMobile(false);
@@ -576,12 +580,19 @@ export default function AppSidebar({
                     </div>
                   </div>
                   <DropdownMenuSeparator className="my-1.5" />
-                  <DropdownMenuItem asChild className={menuItemClass}>
-                    <a href="mailto:erole@athletics.wisc.edu?subject=Wisconsin%20Creative%20help">
+                  {reportProblem ? (
+                    <DropdownMenuItem className={cn(menuItemClass, "cursor-pointer")} onSelect={() => reportProblem.open()}>
                       <LifeBuoyIcon />
-                      Help and feedback
-                    </a>
-                  </DropdownMenuItem>
+                      Report a problem
+                    </DropdownMenuItem>
+                  ) : (
+                    <DropdownMenuItem asChild className={menuItemClass}>
+                      <a href="mailto:erole@athletics.wisc.edu?subject=Wisconsin%20Creative%20help">
+                        <LifeBuoyIcon />
+                        Help and feedback
+                      </a>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem
                     className={cn(menuItemClass, "cursor-pointer")}
                     disabled={isLoggingOut}

@@ -125,6 +125,8 @@ export default function OnboardingStatusPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [emailingId, setEmailingId] = useState<string | null>(null);
+  const [nudgingId, setNudgingId] = useState<string | null>(null);
+  const [remindingAll, setRemindingAll] = useState(false);
   const now = useMemo(() => new Date(), []);
 
   const {
@@ -274,6 +276,77 @@ export default function OnboardingStatusPage() {
     }
   }
 
+  /** Remind someone who signed in but has not finished Welcome setup. */
+  async function nudgeAccount(account: ReadinessAccount) {
+    const ok = await confirm({
+      title: "Nudge to finish setup",
+      message: `Email ${account.name} a reminder to finish setting up their profile?`,
+      confirmLabel: "Send nudge",
+    });
+    if (!ok) return;
+    setNudgingId(account.id);
+    try {
+      const response = await fetch(`/api/users/${account.id}/setup-reminder`, { method: "POST" });
+      if (handleAuthRedirect(response, "/staff/onboarding-status")) return;
+      if (!response.ok) {
+        toast.error(await parseErrorMessage(response, "Could not send the nudge"));
+        return;
+      }
+      const json = (await response.json().catch(() => null)) as { data?: { emailStatus?: string } } | null;
+      if (json?.data?.emailStatus === "not_configured") {
+        toast.warning("Email isn't set up on this site yet, so nothing was sent.");
+        return;
+      }
+      toast.success(`Nudge emailed to ${account.name}`);
+    } catch (error) {
+      if (isAbortError(error)) return;
+      toast.error(classifyError(error) === "network" ? "You\u2019re offline. Check your connection." : "Could not send the nudge");
+    } finally {
+      setNudgingId(null);
+    }
+  }
+
+  /** One email per unclaimed invitation, sent one after another through the single-invite route. */
+  async function remindEveryoneWaiting() {
+    const waiting = rows.filter((row) => !row.claimedAt);
+    if (waiting.length === 0) return;
+    const ok = await confirm({
+      title: "Remind everyone waiting",
+      message: `Email the app login link to ${waiting.length} ${waiting.length === 1 ? "person" : "people"} who have not signed in yet?`,
+      confirmLabel: "Send reminders",
+    });
+    if (!ok) return;
+    setRemindingAll(true);
+    let sent = 0;
+    let skipped = 0;
+    try {
+      for (const row of waiting) {
+        const response = await fetch(`/api/allowed-emails/${row.id}/resend`, { method: "POST" });
+        if (handleAuthRedirect(response, "/staff/onboarding-status")) return;
+        if (!response.ok) {
+          skipped += 1;
+          continue;
+        }
+        const json = (await response.json().catch(() => null)) as { data?: { emailStatus?: string } } | null;
+        if (json?.data?.emailStatus === "not_configured") {
+          toast.warning("Email isn't set up on this site yet. Copy the login link and send it yourself.");
+          return;
+        }
+        sent += 1;
+      }
+      if (sent > 0) {
+        toast.success(`Reminded ${sent} ${sent === 1 ? "person" : "people"}${skipped ? `. ${skipped} could not be emailed (sent too recently, or failed).` : ""}`);
+      } else {
+        toast.error("No reminders went out. Invites can be emailed 3 times an hour, so try again later.");
+      }
+    } catch (error) {
+      if (isAbortError(error)) return;
+      toast.error(classifyError(error) === "network" ? "You\u2019re offline. Check your connection." : "Could not send the reminders");
+    } finally {
+      setRemindingAll(false);
+    }
+  }
+
   async function removeInvite(row: AllowedEmail) {
     const ok = await confirm({
       title: "Remove pending invite",
@@ -365,6 +438,12 @@ export default function OnboardingStatusPage() {
             <SelectItem value="claimed">Claimed</SelectItem>
           </SelectContent>
         </Select>
+        {rows.some((row) => !row.claimedAt) && (
+          <Button type="button" variant="outline" className="h-10 px-3 text-sm" onClick={remindEveryoneWaiting} disabled={remindingAll}>
+            <Send data-icon="inline-start" />
+            {remindingAll ? "Sending..." : "Remind everyone waiting"}
+          </Button>
+        )}
         {lastRefreshed && (
           <p className="ml-auto text-xs text-muted-foreground">Updated {formatRelativeTime(lastRefreshed.toISOString(), new Date())}</p>
         )}
@@ -419,7 +498,7 @@ export default function OnboardingStatusPage() {
                   loginHref={loginPath()}
                 />
               ) : (
-                <AccountRow key={row.key} account={row.account} />
+                <AccountRow key={row.key} account={row.account} nudging={nudgingId === row.account.id} onNudge={() => nudgeAccount(row.account)} />
               ),
             )}
           </ul>
@@ -496,7 +575,7 @@ function InviteRow({
   );
 }
 
-function AccountRow({ account }: { account: ReadinessAccount }) {
+function AccountRow({ account, nudging, onNudge }: { account: ReadinessAccount; nudging: boolean; onNudge: () => void }) {
   const percent = account.totalCount > 0 ? Math.round((account.completedCount / account.totalCount) * 100) : 0;
   const missing = account.missingFields.map((field) => READINESS_FIELD_LABELS[field] ?? field);
   return (
@@ -518,7 +597,12 @@ function AccountRow({ account }: { account: ReadinessAccount }) {
         <span className="tabular-nums">{account.completedCount}/{account.totalCount}</span>
       </div>
       <div className="text-sm text-muted-foreground">{missing.length ? `Missing ${missing.join(", ")}` : "Everything done"}</div>
-      <div className="md:text-right">
+      <div className="flex items-center gap-1 md:justify-end">
+        {!account.profileComplete && (
+          <Button type="button" variant="ghost" className="h-10 px-3 text-sm" onClick={onNudge} disabled={nudging} aria-label={`Nudge ${account.name} to finish setup`}>
+            {nudging ? "Sending..." : "Nudge"}
+          </Button>
+        )}
         <Button asChild variant="ghost" className="h-10 px-3 text-sm">
           <Link href={`/staff/${account.id}`} aria-label={`Open ${account.name}`}>Open</Link>
         </Button>

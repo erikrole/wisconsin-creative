@@ -33,6 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
+import { AREAS, AREA_LABELS } from "@/types/areas";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { classifyError, handleAuthRedirect, isAbortError, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
@@ -305,9 +306,11 @@ export default function OnboardingDialog({
   currentUserRole,
   onInvitesChanged,
 }: OnboardingDialogProps) {
-  const [inviteMode, setInviteMode] = useState<InviteMode>("bulk");
+  const [inviteMode, setInviteMode] = useState<InviteMode>("single");
   const [inviteRole, setInviteRole] = useState<InviteRole>("STUDENT");
   const [singleEmail, setSingleEmail] = useState("");
+  const [singleName, setSingleName] = useState("");
+  const [singleArea, setSingleArea] = useState<(typeof AREAS)[number] | "">("");
   const [bulkEmails, setBulkEmails] = useState("");
   const [bulkFileName, setBulkFileName] = useState("");
   const [inviteError, setInviteError] = useState("");
@@ -385,8 +388,10 @@ export default function OnboardingDialog({
     if (!open) return;
     const inviteOptions = inviteRoleOptionsFor(currentUserRole);
     setInviteRole(inviteOptions.some((option) => option.value === "STUDENT") ? "STUDENT" : inviteOptions[0]?.value ?? "STUDENT");
-    setInviteMode("bulk");
+    setInviteMode("single");
     setSingleEmail("");
+    setSingleName("");
+    setSingleArea("");
     setBulkEmails("");
     setBulkFileName("");
     setInviteError("");
@@ -597,7 +602,14 @@ export default function OnboardingDialog({
     setInviting(true);
     try {
       const body = inviteMode === "single"
-        ? { email: emails[0], role: inviteRole, ...inviteProfileFields(inviteRole, selectedPolicyId) }
+        ? {
+            email: emails[0],
+            role: inviteRole,
+            ...inviteProfileFields(inviteRole, selectedPolicyId),
+            // Only student invitations can carry a preloaded name and area.
+            ...(inviteRole === "STUDENT" && singleName.trim() ? { preloadedName: singleName.trim() } : {}),
+            ...(inviteRole === "STUDENT" && singleArea ? { preloadedPrimaryArea: singleArea } : {}),
+          }
         : {
             emails: finalReadyPreviewRows.map((row) => ({
               email: row.email,
@@ -697,7 +709,7 @@ export default function OnboardingDialog({
               <Alert className={completion.failed > 0 ? "border-[var(--orange)]/50 bg-[var(--orange-bg)]" : "border-[var(--green)]/40 bg-[var(--green-bg)]"}>
                 {completion.failed > 0 ? <AlertCircle className="size-4 text-[var(--orange-text)]" /> : <CheckCircle2 className="size-4 text-[var(--green-text)]" />}
                 <AlertTitle>{completion.failed > 0 ? "Some invitations need attention" : "Invitations saved"}</AlertTitle>
-                <AlertDescription className="text-muted-foreground">
+                <AlertDescription className="col-start-2 text-muted-foreground">
                   {completion.failed > 0
                     ? "These rows were not confirmed by the server. Retry them below; existing rows are safe to retry because the server skips duplicates."
                     : "Send users to the app login page. They enter their invited email and are routed to password setup automatically. No shared first-login password is created."}
@@ -753,15 +765,15 @@ export default function OnboardingDialog({
               <Alert>
                 <ShieldCheck aria-hidden="true" />
                 <AlertTitle>Invite-only access</AlertTitle>
-                <AlertDescription>
+                <AlertDescription className="col-start-2">
                   Users set their own password the first time they sign in. Existing registered or already-invited addresses are skipped without exposing private account details.
                 </AlertDescription>
               </Alert>
 
               <Tabs value={inviteMode} onValueChange={(value) => { setInviteMode(value as InviteMode); setInviteError(""); }} className="grid gap-4">
                 <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="bulk">Paste a roster</TabsTrigger>
                   <TabsTrigger value="single">Add one person</TabsTrigger>
+                  <TabsTrigger value="bulk">Paste a roster</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="bulk" className="m-0">
@@ -839,7 +851,7 @@ export default function OnboardingDialog({
                   {overBulkLimit && (
                     <Alert variant="destructive" className="mt-3">
                       <AlertCircle className="size-4" />
-                      <AlertDescription>Reduce the batch to 50 ready invitations before saving.</AlertDescription>
+                      <AlertDescription className="col-start-2">Reduce the batch to 50 ready invitations before saving.</AlertDescription>
                     </Alert>
                   )}
 
@@ -856,7 +868,7 @@ export default function OnboardingDialog({
                       {previewError ? (
                         <Alert variant="destructive">
                           <AlertCircle className="size-4" />
-                          <AlertDescription>{previewError}</AlertDescription>
+                          <AlertDescription className="col-start-2">{previewError}</AlertDescription>
                         </Alert>
                       ) : serverPreviewComplete ? (
                         <>
@@ -892,7 +904,23 @@ export default function OnboardingDialog({
                   )}
                 </TabsContent>
 
-                <TabsContent value="single" className="m-0">
+                <TabsContent value="single" className="m-0 grid gap-3">
+                  {inviteRole === "STUDENT" && (
+                    <div className="grid gap-1.5">
+                      <Label htmlFor="onboard-single-name">Name <span className="font-normal text-muted-foreground">(optional)</span></Label>
+                      <Input
+                        id="onboard-single-name"
+                        name="singleInvitationName"
+                        value={singleName}
+                        onChange={(event) => setSingleName(event.target.value)}
+                        placeholder="Jordan Pike"
+                        maxLength={100}
+                        disabled={inviting}
+                        autoComplete="off"
+                        className="h-10"
+                      />
+                    </div>
+                  )}
                   <div className="grid grid-cols-[minmax(0,1fr)_160px] gap-3 max-sm:grid-cols-1">
                     <div className="grid gap-1.5">
                       <Label htmlFor="onboard-single-email">Email address</Label>
@@ -924,6 +952,24 @@ export default function OnboardingDialog({
                       </Select>
                     </div>
                   </div>
+                  {inviteRole === "STUDENT" && (
+                    <div className="grid gap-1.5">
+                      <Label htmlFor="onboard-single-area">Primary area <span className="font-normal text-muted-foreground">(optional)</span></Label>
+                      <Select name="singleInvitationArea" value={singleArea || "none"} onValueChange={(value) => setSingleArea(value === "none" ? "" : (value as (typeof AREAS)[number]))} disabled={inviting}>
+                        <SelectTrigger id="onboard-single-area" className="h-10">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectItem value="none">Not assigned</SelectItem>
+                            {AREAS.map((area) => (
+                              <SelectItem key={area} value={area}>{AREA_LABELS[area]}</SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                 </TabsContent>
               </Tabs>
 
@@ -957,7 +1003,7 @@ export default function OnboardingDialog({
               {inviteError && (
                 <Alert variant="destructive">
                   <AlertCircle className="size-4" />
-                  <AlertDescription>{inviteError}</AlertDescription>
+                  <AlertDescription className="col-start-2">{inviteError}</AlertDescription>
                 </Alert>
               )}
             </DialogBody>

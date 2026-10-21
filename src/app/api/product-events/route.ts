@@ -10,6 +10,7 @@ import {
   PRODUCT_EVENT_PLATFORMS,
   PRODUCT_EVENT_SURFACES,
   PRODUCT_RELEASE_CHANNELS,
+  coarseWebClient,
   pseudonymousAnalyticsKey,
   pseudonymousInstallationKey,
 } from "@/lib/usage-analytics";
@@ -57,6 +58,9 @@ export const POST = withAuth(async (req, { user }) => {
     },
   });
 
+  // Web clients can't name their device in the body; read the family from the request.
+  const deviceModel = body.platform === "web" ? coarseWebClient(req.headers.get("user-agent")) ?? undefined : body.deviceModel;
+
   if (body.installationKey) {
     const installationHash = pseudonymousInstallationKey(body.installationKey);
     if (installationHash) {
@@ -76,7 +80,7 @@ export const POST = withAuth(async (req, { user }) => {
             appVersion: body.appVersion,
             appBuild: body.appBuild,
             osVersion: body.osVersion,
-            deviceModel: body.deviceModel,
+            deviceModel,
             releaseChannel: body.releaseChannel,
             firstSeenAt: occurredAt,
             lastSeenAt: occurredAt,
@@ -86,7 +90,7 @@ export const POST = withAuth(async (req, { user }) => {
             appVersion: body.appVersion,
             appBuild: body.appBuild,
             osVersion: body.osVersion,
-            deviceModel: body.deviceModel,
+            deviceModel,
             releaseChannel: body.releaseChannel,
             lastSeenAt: occurredAt,
             ...(body.eventName === "app_opened" ? { lastOpenedAt: occurredAt } : {}),

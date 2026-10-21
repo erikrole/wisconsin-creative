@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { ErrorRecoveryPanel } from "@/components/ErrorRecoveryPanel";
+import { reportClientError } from "@/lib/error-reporting/client";
 
 export default function RootError({
   error,
@@ -12,6 +13,7 @@ export default function RootError({
 }) {
   useEffect(() => {
     console.error("Root error boundary caught:", error);
+    reportClientError(error, { kind: "render_error", digest: error.digest });
   }, [error]);
 
   return (

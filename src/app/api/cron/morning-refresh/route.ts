@@ -13,7 +13,8 @@ import { refreshCompanionProjection } from "@/lib/services/companion-projection"
 import { cleanupPendingSignatureArtifacts } from "@/lib/services/signatures";
 import { pruneNotificationDeliveries } from "@/lib/services/notification-deliveries";
 import { runApplicantRetention, type RetentionRunResult } from "@/lib/hiring/retention";
-import { pruneAppDiagnostics } from "@/lib/services/app-diagnostics";
+import { migrateLegacyAppDiagnostics } from "@/lib/services/app-diagnostics";
+import { pruneErrorReports } from "@/lib/services/error-reports";
 import { pruneJobRuns, recordJobRun } from "@/lib/services/job-runs";
 import { badges, badgesEnabled } from "@/lib/badges";
 import { recentlyWorkedEventUsers } from "@/lib/badges/worked-evidence";
@@ -206,7 +207,7 @@ export const GET = withCron(async () => {
     Promise.resolve().then(() => db.productEvent.deleteMany({ where: { occurredAt: { lt: productEventCutoff } } })),
     cleanupPendingSignatureArtifacts(),
     pruneNotificationDeliveries(now),
-    Promise.all([pruneAppDiagnostics(now), pruneJobRuns(now)]),
+    Promise.all([migrateLegacyAppDiagnostics().then(() => pruneErrorReports(now)), pruneJobRuns(now)]),
   ]);
   const maintenanceFailures: string[] = [];
   const { expired: tradesExpired } = maintenanceValue(
@@ -261,7 +262,7 @@ export const GET = withCron(async () => {
     "notificationDeliveryRetention",
     maintenanceFailures,
   );
-  maintenanceValue(telemetryRetentionResult, [0, 0], "telemetryRetention", maintenanceFailures);
+  maintenanceValue(telemetryRetentionResult, [{ events: 0, issues: 0, supportReports: 0 }, 0], "telemetryRetention", maintenanceFailures);
   const signatureCleanup = maintenanceValue(
     signatureCleanupResult,
     { abandoned: 0, attempted: 0, deleted: 0 },

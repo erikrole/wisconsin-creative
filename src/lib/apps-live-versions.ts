@@ -165,6 +165,15 @@ export function parseGithubRelease(body: unknown): LiveVersion | undefined {
   });
 }
 
+/** Just the App Store listing, for callers that only need the iPhone app's version. */
+export async function loadAppStoreVersion(): Promise<LiveVersion | undefined> {
+  try {
+    return parseAppStore(await getJson(`https://itunes.apple.com/lookup?id=${APP_STORE_ID}&country=us`));
+  } catch {
+    return undefined;
+  }
+}
+
 export async function loadLiveVersions(): Promise<LiveVersions> {
   const [store, offload, fetchApp] = await Promise.allSettled([
     getJson(`https://itunes.apple.com/lookup?id=${APP_STORE_ID}&country=us`),
