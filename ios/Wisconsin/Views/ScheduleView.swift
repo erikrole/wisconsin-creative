@@ -8,16 +8,30 @@ struct ScheduleEventRoute: Hashable {
 
 // MARK: - View Model
 
+/// The assignment statuses `/api/my-shifts` sends. Only an assigned or
+/// approved shift is yours to work, and the trade route accepts exactly those
+/// two (`ACTIVE_ASSIGNMENT_STATUSES`). The old `ACTIVE` case matched nothing
+/// the server sends, which hid every Post trade entry point.
 enum MyShiftStatus: String {
-    case active = "ACTIVE"
-    case cancelled = "CANCELLED"
-    case completed = "COMPLETED"
+    case directAssigned = "DIRECT_ASSIGNED"
+    case approved = "APPROVED"
+    case requested = "REQUESTED"
+    case declined = "DECLINED"
+    case swapped = "SWAPPED"
     case unknown
+
+    var isActive: Bool { self == .directAssigned || self == .approved }
 }
 
 extension MyShift {
     var statusValue: MyShiftStatus {
         MyShiftStatus(rawValue: status) ?? .unknown
+    }
+
+    /// Yours, still assigned, and its call has not started: the server takes
+    /// a trade post for it.
+    var isPostableForTrade: Bool {
+        statusValue.isActive && (callStartsAt ?? startsAt) > Date()
     }
 }
 
@@ -68,6 +82,10 @@ final class ScheduleViewModel {
     private(set) var isLoadingLater = false
     private(set) var reachedEarliest = false
     private(set) var reachedLatest = false
+    /// The last attempt to load later weeks failed. The end row stops
+    /// spinning and offers Retry instead of waiting on a load that already
+    /// gave up.
+    private(set) var laterLoadFailed = false
 
     /// Whose Schedule this is, for the on-disk snapshot. Nil skips caching.
     @ObservationIgnored var cacheOwnerId: String?
@@ -232,6 +250,8 @@ final class ScheduleViewModel {
             hasLoaded = true
             lastLoadedAt = .now
             error = nil
+            // The connection is back, so the end row may try again.
+            laterLoadFailed = false
         } catch APIError.unauthorized {
             // SessionStore listens for the global notification and routes the
             // user to login; nothing to do here besides cleaning up loading state.
@@ -286,6 +306,7 @@ final class ScheduleViewModel {
             return
         }
         isLoadingLater = true
+        laterLoadFailed = false
         defer { isLoadingLater = false }
         let generation = windowGeneration
         do {
@@ -296,15 +317,28 @@ final class ScheduleViewModel {
             loadedEnd = max(loadedEnd, newEnd)
             reachedLatest = newEnd >= latestAllowed
             publish()
-        } catch {
+        } catch is CancellationError {
             return
+        } catch {
+            guard windowGeneration == generation, !Task.isCancelled else { return }
+            laterLoadFailed = true
+        }
+    }
+
+    /// The end row's Retry. Before the first load has landed (a saved window
+    /// is showing and the network read failed) only a full load can help.
+    func retryLater() async {
+        if hasLoaded {
+            await loadLater()
+        } else {
+            await load(forceRefresh: true)
         }
     }
 
     /// Starts the next future load once a visible day is within a few weeks of
     /// the loaded end.
     func prefetchLater(near day: Date) {
-        guard hasLoaded, !isLoadingLater, !reachedLatest,
+        guard hasLoaded, !isLoadingLater, !reachedLatest, !laterLoadFailed,
               day >= Self.adding(weeks: -schedulePrefetchWeeksAhead, to: loadedEnd) else { return }
         Task { await loadLater() }
     }
@@ -342,15 +376,16 @@ final class ScheduleViewModel {
 
     /// Finds an event for a push or deep link. One outside the loaded weeks is
     /// read by id, then its weeks are loaded so the detail screen and the list
-    /// both have it.
-    func event(forLink id: String) async -> ScheduleEvent? {
+    /// both have it. Nil means the server has no such event for this person;
+    /// a thrown error means it could not be asked.
+    func event(forLink id: String) async throws -> ScheduleEvent? {
         // Wait out an in-flight first load, so it cannot land afterwards and
         // replace the event this link just resolved.
         if let loadTask { await loadTask.value }
         if let loaded = events.first(where: { $0.id == id || ($0.combinedEvents ?? []).contains { $0.id == id } }) {
             return loaded
         }
-        guard let fetched = try? await APIClient.shared.scheduleEvent(id: id) else { return nil }
+        guard let fetched = try await APIClient.shared.scheduleEvent(id: id) else { return nil }
         await ensureLoaded(fetched.startsAt)
         if let loaded = events.first(where: { $0.id == fetched.id }) { return loaded }
         // Beyond the scrollable range (or its weeks failed to load): still
@@ -585,44 +620,119 @@ private struct ScheduleCalendarPrompt: View {
     let onSetUp: () -> Void
     let onDismiss: () -> Void
 
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "calendar.badge.plus")
-                .font(.title3)
+        if dynamicTypeSize.isAccessibilitySize {
+            // One row squeezed the copy to a word per line; stack it and keep
+            // both buttons full size underneath.
+            VStack(alignment: .leading, spacing: 10) {
+                copy
+                HStack(spacing: 4) {
+                    setUpButton
+                    Spacer(minLength: 0)
+                    dismissButton
+                }
+            }
+            .padding(.leading, 14)
+            .padding(.trailing, 4)
+            .padding(.vertical, 12)
+            .promptSurface()
+        } else {
+            HStack(spacing: 12) {
+                Image(systemName: "calendar.badge.plus")
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
+                copy
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                setUpButton
+                dismissButton
+            }
+            .padding(.leading, 14)
+            .padding(.trailing, 4)
+            .padding(.vertical, 6)
+            .promptSurface()
+        }
+    }
+
+    private var copy: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("Add your shifts to Calendar")
+                .font(.subheadline.weight(.bold))
+            Text("Call times stay current.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var setUpButton: some View {
+        Button(action: onSetUp) {
+            Text("Set up")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Color(.systemBackground))
+                .padding(.horizontal, 14)
+                .frame(minHeight: 36)
+                .background(Color(.label), in: Capsule())
+                // The capsule stays compact; the tap target is full height.
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var dismissButton: some View {
+        Button(action: onDismiss) {
+            Image(systemName: "xmark")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.secondary)
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Dismiss Calendar suggestion")
+    }
+}
+
+private extension View {
+    func promptSurface() -> some View {
+        flatCard(padding: 0, radius: Brand.Radius.md)
+            .accessibilityElement(children: .contain)
+    }
+}
+
+/// A refresh failed while older data is on screen. It names what you are
+/// looking at (the last loaded Schedule) and offers one retry.
+private struct ScheduleRefreshFailedBanner: View {
+    let message: String
+    let onRetry: () -> Void
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            Image(systemName: "wifi.exclamationmark")
+                .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
-                Text("Add your shifts to Calendar")
-                    .font(.subheadline.weight(.bold))
-                Text("Call times stay current.")
-                    .font(.caption)
+                Text("Showing the last loaded Schedule")
+                    .font(.subheadline.weight(.semibold))
+                Text(message)
+                    .font(.footnote)
                     .foregroundStyle(.secondary)
+                    .lineLimit(2)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            Button(action: onSetUp) {
-                Text("Set up")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color(.systemBackground))
-                    .padding(.horizontal, 14)
-                    .frame(minHeight: 36)
-                    .background(Color(.label), in: Capsule())
-            }
-            .buttonStyle(.plain)
-            Button(action: onDismiss) {
-                Image(systemName: "xmark")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 36, height: 44)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Dismiss")
+            // A retry clears the banner at once and brings it back only if
+            // the read fails again.
+            Button("Retry", action: onRetry)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Color.primary)
+                .frame(minWidth: 44, minHeight: 44)
         }
         .padding(.leading, 14)
-        .padding(.trailing, 4)
-        .padding(.vertical, 6)
-        .background(Color.flatCard, in: RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous).strokeBorder(Color.flatStroke, lineWidth: 1))
+        .padding(.trailing, 6)
+        .padding(.vertical, 4)
+        .flatCard(padding: 0, radius: Brand.Radius.md)
         .accessibilityElement(children: .contain)
     }
 }
@@ -837,7 +947,11 @@ private struct InternalScheduleView: View {
         }
         guard target >= vm.loadedStart, target < vm.loadedEnd else {
             Task {
-                if await vm.ensureLoaded(target) { jump(to: target, animated: animated) }
+                if await vm.ensureLoaded(target) {
+                    jump(to: target, animated: animated)
+                } else {
+                    showLoadFailure("Couldn't load that week. Try again.")
+                }
             }
             return
         }
@@ -910,7 +1024,14 @@ private struct InternalScheduleView: View {
         pastRevealSteps += 1
         let lowerBound = visibleLowerBound
         Task {
-            await vm.ensureLoaded(lowerBound)
+            guard await vm.ensureLoaded(lowerBound) else {
+                // Showing the weeks anyway would draw them as "Nothing
+                // scheduled" when they were never read. Fold the step back.
+                pastRevealSteps = max(0, pastRevealSteps - 1)
+                revealSettlingCount -= 1
+                showLoadFailure("Couldn't load earlier weeks. Try again.")
+                return
+            }
             if let anchor {
                 jumpRequest = ScheduleJumpRequest(anchor: anchor, animated: false)
             }
@@ -1003,27 +1124,6 @@ private struct InternalScheduleView: View {
                     .background(Color(.systemGroupedBackground))
                 }
             }
-            .overlay(alignment: .top) {
-                // Non-blocking refresh-failed banner — lets the user keep using stale data.
-                if !vm.events.isEmpty, let refreshError = vm.refreshError {
-                    HStack(spacing: 8) {
-                        Image(systemName: "wifi.exclamationmark")
-                        Text(refreshError)
-                            .font(.footnote)
-                            .lineLimit(2)
-                        Spacer(minLength: 8)
-                        Button("Retry") { Task { await vm.load(forceRefresh: true) } }
-                            .font(.footnote.weight(.semibold))
-                    }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .background(Color.flatCard, in: RoundedRectangle(cornerRadius: Brand.Radius.sm, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: Brand.Radius.sm, style: .continuous).strokeBorder(Color.flatStroke, lineWidth: 1))
-                    .padding(.horizontal, 12)
-                    .padding(.top, 4)
-                    .transition(.move(edge: .top).combined(with: .opacity))
-                }
-            }
             .toast($toast)
             .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: vm.refreshError)
             .navigationTitle("Schedule")
@@ -1108,22 +1208,20 @@ private struct InternalScheduleView: View {
             }
             .sheet(isPresented: $showTradeBoard, onDismiss: {
                 Task { await appState.refresh(forceRefresh: true) }
+                // Approvals, cancelled posts, and claims change who works
+                // what. Without this the list kept the old tint until the
+                // five-minute staleness refresh.
+                Task { await vm.load(forceRefresh: true) }
             }) {
                 TradeBoardSheet(
                     myShifts: vm.myShifts,
                     currentUserId: session.currentUser?.id ?? "",
-                    currentUserRole: session.currentUser?.role ?? "",
-                    onTradePosted: { area in
-                        toast = Toast(message: "Posted \(area) shift to the trade board", icon: "checkmark.circle.fill", role: .success)
-                    },
-                    onTradeClaimed: { area, when in
-                        toast = Toast(message: "You picked up \(area) on \(when)", icon: "hand.thumbsup.fill", role: .success)
-                    }
+                    currentUserRole: session.currentUser?.role ?? ""
                 )
             }
             .sheet(item: $shiftToPost) { candidate in
                 PostTradeSheet(candidate: candidate) { posted in
-                    toast = Toast(message: "Posted \(posted.area) shift to the trade board", icon: "checkmark.circle.fill", role: .success)
+                    toast = Toast(message: "Posted your \(posted.area.shiftAreaLabel) shift to the Trade Board", icon: "checkmark.circle.fill", role: .success)
                     Task { await vm.load(forceRefresh: true) }
                 }
             }
@@ -1135,19 +1233,34 @@ private struct InternalScheduleView: View {
     private func routePendingPush(_ eventId: String) {
         appState.pendingPushEventId = nil
         Task {
-            if let event = await vm.event(forLink: eventId) {
-                navigationPath.append(ScheduleEventRoute(id: event.id))
+            do {
+                if let event = try await vm.event(forLink: eventId) {
+                    navigationPath.append(ScheduleEventRoute(id: event.id))
+                } else {
+                    // Deleted, cancelled, or no longer visible to you: say so
+                    // rather than leaving the tap with no answer.
+                    showLoadFailure("That event is no longer on the Schedule.", icon: "calendar.badge.exclamationmark")
+                }
+            } catch APIError.unauthorized {
+                // SessionStore routes to sign-in.
+            } catch is CancellationError {
+                // The view went away; nothing to report.
+            } catch {
+                showLoadFailure("Couldn't open that event. Check your connection and try again.")
             }
         }
+    }
+
+    private func showLoadFailure(_ message: String, icon: String = "wifi.exclamationmark") {
+        toast = Toast(message: message, icon: icon, role: .error)
+        Haptics.warning()
     }
 
     /// Your own future, still-active shift on this event, if you have one. A
     /// started or already-ended shift cannot be traded and the server says so
     /// too, so the action simply is not offered.
     private func postableCandidate(forEvent eventId: String) -> TradePostCandidate? {
-        guard let shift = vm.shiftsByEventId[eventId],
-              shift.statusValue == .active,
-              (shift.callStartsAt ?? shift.startsAt) > Date() else { return nil }
+        guard let shift = vm.shiftsByEventId[eventId], shift.isPostableForTrade else { return nil }
         return TradePostCandidate(shift: shift)
     }
 
@@ -1161,6 +1274,17 @@ private struct InternalScheduleView: View {
     /// master list; neither replaces it.
     private func scheduleHeader(groups: [(date: Date, events: [ScheduleEvent])]) -> some View {
         VStack(spacing: 2) {
+            // Inline, not an overlay: the overlay sat on the month title and
+            // the Today button, the two controls someone offline still needs.
+            if !vm.events.isEmpty, let refreshError = vm.refreshError {
+                ScheduleRefreshFailedBanner(
+                    message: refreshError,
+                    onRetry: { Task { await vm.load(forceRefresh: true) } }
+                )
+                .padding(.horizontal, 16)
+                .padding(.bottom, 6)
+                .transition(.move(edge: .top).combined(with: .opacity))
+            }
             ScheduleWeekStrip(
                 marksByDay: dayMarks(for: groups),
                 weeks: vm.loadedWeeks,
@@ -1258,6 +1382,8 @@ private struct InternalScheduleView: View {
                             .padding(.vertical, 20)
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
+                    } else if vm.laterLoadFailed || (!vm.hasLoaded && vm.refreshError != nil && !vm.isLoading) {
+                        laterLoadFailedRow
                     } else {
                         edgeLoadingRow("Loading later weeks")
                             .onAppear { Task { await vm.loadLater() } }
@@ -1383,6 +1509,33 @@ private struct InternalScheduleView: View {
     private func trackedDay(forWeek start: Date) -> Date {
         let today = self.today
         return ScheduleViewModel.weekStart(of: today) == start ? today : start
+    }
+
+    /// The end of the list when later weeks could not be read: say so and
+    /// offer one retry, instead of a spinner that never resolves.
+    private var laterLoadFailedRow: some View {
+        VStack(spacing: 10) {
+            Text("Couldn't load later weeks")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            Button {
+                Haptics.selection()
+                Task { await vm.retryLater() }
+            } label: {
+                Label("Try Again", systemImage: "arrow.clockwise")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.primary)
+                    .padding(.horizontal, 14)
+                    .frame(minHeight: 44)
+                    .background(Color.flatRaised, in: Capsule())
+                    .overlay(Capsule().strokeBorder(Color.flatStroke, lineWidth: 1))
+            }
+            .buttonStyle(.plain)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 16)
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
     }
 
     private func edgeLoadingRow(_ label: String) -> some View {

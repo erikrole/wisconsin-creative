@@ -29,6 +29,9 @@ enum AppRuntimeMode {
         /// rows, headers, and control strip can be rendered and screenshotted
         /// without a signed-in session.
         case schedule
+        /// The same Schedule with every read past the first window failing,
+        /// so the later-weeks retry row can be seen rather than reasoned about.
+        case scheduleLaterFailure = "schedule-later-failure"
         /// The Trade Board as staff see it: claims owed a decision. Exercises
         /// the review queue, which only has rows to show once claims stop
         /// resolving themselves.
@@ -185,7 +188,7 @@ enum AppRuntimeMode {
 #if DEBUG
         switch performanceScenario {
         case .resourcesGuides, .previewChrome, .latestBrowse, .resourcesUsers, .resourcesLicenses, .resourcesLicensesOpen,
-             .schedule, .tradeBoardStaff, .tradeBoardStudent,
+             .schedule, .scheduleLaterFailure, .tradeBoardStaff, .tradeBoardStudent,
              .home, .homeAllClear, .scoreboard, .profile,
              .studentBookings,
              .bookingDetail, .bookingExtend, .bookingEdit, .bookingCancel,

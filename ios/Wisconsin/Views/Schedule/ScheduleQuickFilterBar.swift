@@ -12,9 +12,24 @@ struct ScheduleQuickFilterBar: View {
 
     private static let allSports = "__all_sports__"
 
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     private var showsSportMenu: Bool { availableSportCodes.count > 1 }
 
     var body: some View {
+        Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                accessibilityLayout
+            } else {
+                standardLayout
+            }
+        }
+        // The filters sit above the list, not in it. Past this size they take
+        // the screen and leave the list a sliver.
+        .dynamicTypeSize(...DynamicTypeSize.accessibility2)
+    }
+
+    private var standardLayout: some View {
         VStack(spacing: 8) {
             HStack(spacing: 8) {
                 scopeControl
@@ -22,27 +37,79 @@ struct ScheduleQuickFilterBar: View {
             }
             .padding(.horizontal, 16)
 
-            // One flat segmented control, not a row of outlined chips.
-            HStack(spacing: 2) {
-                ForEach(HomeAwayFilter.allCases, id: \.self) { filter in
-                    ScheduleFilterChip(
-                        title: filter.rawValue,
-                        isOn: homeAwayFilter == filter,
-                        fillsWidth: true,
-                        compact: true
-                    ) {
-                        homeAwayFilter = filter
-                        Haptics.selection()
-                    }
+            typeSegments
+        }
+    }
+
+    /// At accessibility sizes five segments shrink "Non-game" to an
+    /// unreadable sliver, so sport and type become two labelled menus, each
+    /// on its own row.
+    private var accessibilityLayout: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            scopeControl
+            if showsSportMenu { sportMenu }
+            typeMenu
+        }
+        .padding(.horizontal, 16)
+    }
+
+    private var typeSegments: some View {
+        // One flat segmented control, not a row of outlined chips.
+        HStack(spacing: 2) {
+            ForEach(HomeAwayFilter.allCases, id: \.self) { filter in
+                ScheduleFilterChip(
+                    title: filter.rawValue,
+                    isOn: homeAwayFilter == filter,
+                    fillsWidth: true,
+                    compact: true
+                ) {
+                    homeAwayFilter = filter
+                    Haptics.selection()
                 }
             }
-            .padding(3)
-            .background(Capsule().fill(Color.flatRaised))
-            .overlay(Capsule().strokeBorder(Color.flatStroke, lineWidth: 1))
-            .padding(.horizontal, 16)
-            .accessibilityElement(children: .contain)
-            .accessibilityLabel("Event type")
         }
+        .padding(3)
+        .background(Capsule().fill(Color.flatRaised))
+        .overlay(Capsule().strokeBorder(Color.flatStroke, lineWidth: 1))
+        .padding(.horizontal, 16)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Event type")
+    }
+
+    private var typeMenu: some View {
+        Menu {
+            Picker("Event type", selection: $homeAwayFilter) {
+                ForEach(HomeAwayFilter.allCases, id: \.self) { filter in
+                    Text(filter == .all ? "All events" : filter.rawValue).tag(filter)
+                }
+            }
+        } label: {
+            menuLabel(
+                homeAwayFilter == .all ? "All events" : homeAwayFilter.rawValue,
+                isFiltered: homeAwayFilter != .all
+            )
+        }
+        .accessibilityLabel("Event type, " + (homeAwayFilter == .all ? "all events" : homeAwayFilter.rawValue))
+    }
+
+    /// The capsule both filter menus draw: quiet when unfiltered, outlined
+    /// when it narrows the list.
+    private func menuLabel(_ title: String, isFiltered: Bool) -> some View {
+        HStack(spacing: 5) {
+            Text(title)
+                .font(.subheadline.weight(isFiltered ? .semibold : .regular))
+            Image(systemName: "chevron.down")
+                .font(.caption2.weight(.bold))
+                .accessibilityHidden(true)
+        }
+        .foregroundStyle(Color.primary)
+        .padding(.horizontal, 14)
+        .frame(minHeight: 44)
+        .background(Capsule().fill(isFiltered ? Color.flatCard : Color.flatRaised))
+        .overlay(
+            Capsule().strokeBorder(isFiltered ? Color.primary : Color.flatStroke, lineWidth: isFiltered ? 1.5 : 1)
+        )
+        .contentShape(Capsule())
     }
 
     /// Everyone's events, or only the ones you work: the question most people
@@ -82,21 +149,8 @@ struct ScheduleQuickFilterBar: View {
                 }
             }
         } label: {
-            HStack(spacing: 5) {
-                Text(sportFilter.map(scheduleSportLabel) ?? "All sports")
-                    .font(.subheadline.weight(sportFilter == nil ? .regular : .semibold))
-                Image(systemName: "chevron.down")
-                    .font(.caption2.weight(.bold))
-                    .accessibilityHidden(true)
-            }
-            .foregroundStyle(Color.primary)
-            .padding(.horizontal, 14)
-            .frame(minHeight: 44)
-            .background(Capsule().fill(sportFilter == nil ? Color.flatRaised : Color.flatCard))
-            .overlay(
-                Capsule().strokeBorder(sportFilter == nil ? Color.flatStroke : Color.primary, lineWidth: sportFilter == nil ? 1 : 1.5)
-            )
-            .contentShape(Capsule())
+            menuLabel(sportFilter.map(scheduleSportLabel) ?? "All sports", isFiltered: sportFilter != nil)
+                .lineLimit(1)
         }
         .accessibilityLabel(sportFilter.map { "Sport, " + scheduleSportLabel($0) } ?? "Sport, all sports")
     }

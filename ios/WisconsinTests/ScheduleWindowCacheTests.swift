@@ -31,7 +31,7 @@ struct ScheduleWindowCacheTests {
     private func sampleShift() throws -> MyShift {
         let json = """
         { "id": "s1", "area": "CAMERA", "workerType": "ST", "startsAt": "2026-09-23T14:30:00Z",
-          "endsAt": "2026-09-23T19:30:00Z", "status": "ACTIVE",
+          "endsAt": "2026-09-23T19:30:00Z", "status": "DIRECT_ASSIGNED",
           "event": { "id": "e1", "summary": "Volleyball vs Nebraska", "startsAt": "2026-09-23T16:00:00Z",
                      "endsAt": "2026-09-23T19:00:00Z", "sportCode": "VB", "isHome": true,
                      "opponent": "Nebraska", "locationId": "loc-fh", "locationName": "UW Field House" },
@@ -71,5 +71,38 @@ struct ScheduleWindowCacheTests {
         let data = try ScheduleWindowCache.encode(.init(userId: "u1", savedAt: savedAt, events: [], shifts: []))
         let later = savedAt.addingTimeInterval(ScheduleWindowCache.maxAge + 1)
         #expect(ScheduleWindowCache.usableSnapshot(from: data, userId: "u1", now: later) == nil)
+    }
+}
+
+/// Post trade is offered for exactly the shifts the trade route accepts: the
+/// two active assignment statuses `/api/my-shifts` sends, before the call.
+/// The app used to look for an `ACTIVE` status the server never sends, which
+/// hid the swipe action and emptied the Trade Board's post picker.
+struct MyShiftTradeEligibilityTests {
+    private func shift(status: String, startsAt: String) throws -> MyShift {
+        let json = """
+        { "id": "s1", "area": "PHOTO", "workerType": "ST", "startsAt": "\(startsAt)",
+          "endsAt": "\(startsAt)", "status": "\(status)",
+          "event": { "id": "e1", "summary": "Volleyball vs Nebraska", "startsAt": "\(startsAt)",
+                     "endsAt": "\(startsAt)" },
+          "gear": { "status": "none", "bookings": [] } }
+        """
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return try decoder.decode(MyShift.self, from: Data(json.utf8))
+    }
+
+    @Test(arguments: ["DIRECT_ASSIGNED", "APPROVED"])
+    func upcomingActiveShiftIsPostable(status: String) throws {
+        #expect(try shift(status: status, startsAt: "2099-09-23T16:00:00Z").isPostableForTrade)
+    }
+
+    @Test(arguments: ["REQUESTED", "DECLINED", "SWAPPED", "ACTIVE"])
+    func inactiveShiftIsNotPostable(status: String) throws {
+        #expect(try !shift(status: status, startsAt: "2099-09-23T16:00:00Z").isPostableForTrade)
+    }
+
+    @Test func startedShiftIsNotPostable() throws {
+        #expect(try !shift(status: "DIRECT_ASSIGNED", startsAt: "2020-09-23T16:00:00Z").isPostableForTrade)
     }
 }
