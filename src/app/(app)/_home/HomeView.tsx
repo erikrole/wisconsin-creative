@@ -148,8 +148,8 @@ export function HomeView(props: HomeViewProps) {
           {props.summary && <SummaryStrip slot={props.summary} />}
           <div className={cn(
             "grid items-start gap-5",
-            splitColumns && "lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)]",
-            splitColumns && hasPrimary && hasSecondary && "lg:grid-rows-[min-content_1fr]",
+            splitColumns && "xl:grid-cols-[minmax(0,1fr)_minmax(0,380px)]",
+            splitColumns && hasPrimary && hasSecondary && "xl:grid-rows-[min-content_1fr]",
           )}>
             {hasPrimary && <div className="flex min-w-0 flex-col gap-5">
               {props.attention && (
@@ -169,7 +169,7 @@ export function HomeView(props: HomeViewProps) {
             </div>}
             {hasAside && <div className={cn(
               "flex min-w-0 flex-col gap-5",
-              splitColumns && hasPrimary && hasSecondary && "lg:col-start-2 lg:row-start-1 lg:row-span-2",
+              splitColumns && hasPrimary && hasSecondary && "xl:col-start-2 xl:row-start-1 xl:row-span-2",
             )}>
               {props.myGear && (
                 <GearSection
@@ -195,7 +195,7 @@ export function HomeView(props: HomeViewProps) {
             </div>}
             {hasSecondary && <div className={cn(
               "flex min-w-0 flex-col gap-5",
-              splitColumns && hasPrimary && "lg:col-start-1 lg:row-start-2",
+              splitColumns && hasPrimary && "xl:col-start-1 xl:row-start-2",
             )}>
               {props.activity && <ActivitySection slot={props.activity} onSelectBooking={props.onSelectBooking} />}
               {teamGearInMain && props.teamGear && <TeamGearSection slot={props.teamGear} onSelectBooking={props.onSelectBooking} />}
@@ -503,7 +503,7 @@ function AttentionRow({ item, onTarget }: { item: AttentionItem; onTarget: (t: A
         <span className="truncate text-[13px] text-muted-foreground">{item.detail}</span>
       </span>
       <span className="flex shrink-0 items-center gap-0.5 text-[13px] font-bold text-muted-foreground transition-colors group-hover:text-foreground">
-        <span className="max-sm:sr-only">{item.action}</span>
+        <span className={item.quick || item.remind ? "sr-only" : "max-sm:sr-only"}>{item.action}</span>
         <ChevronRightIcon className="size-4" aria-hidden="true" />
       </span>
     </>
@@ -580,7 +580,7 @@ function FeaturedNext({ row, now, onTarget }: { row: UpNextItem; now: Date; onTa
   const action = row.kind === "pickup" ? "View pickup" : row.kind === "shift" ? "Open event" : "Open";
   return (
     <div className="mx-3 mt-1 mb-2 flex flex-wrap items-center gap-x-4 gap-y-3 rounded-lg bg-[var(--accent-soft)] px-4 py-3.5" data-featured-next>
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+      <div className="flex min-w-[min(100%,220px)] flex-1 basis-[220px] flex-col gap-0.5">
         <p className="text-xs font-bold text-[var(--blue-text)]">
           {row.kind === "pickup" ? "Next pickup" : "Next up"} · {soon === "now" ? "happening now" : soon}
         </p>
@@ -886,7 +886,7 @@ export function HomeSkeleton() {
         <Skeleton className="h-7 w-64 bg-muted" />
       </div>
       <SummaryStrip slot={{ state: "loading" }} />
-      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)]">
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,380px)]">
         <HomeCard><RowsSkeleton rows={4} /></HomeCard>
         <HomeCard><RowsSkeleton rows={3} /></HomeCard>
       </div>
