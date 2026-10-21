@@ -104,6 +104,8 @@ enum AppRuntimeMode {
         /// Search with two of its four sources deliberately failing, so the
         /// partial-result notice can be seen rather than reasoned about.
         case searchPartial = "search-partial"
+        /// Search before anything is typed: quick jumps and recents.
+        case searchIdle = "search-idle"
         /// The announcement splash over the real app shell, served canned
         /// announcements: a banner image with another waiting behind it,
         /// a swipeable set of images, and a text-only notice.
@@ -193,7 +195,7 @@ enum AppRuntimeMode {
              .home, .homeAllClear, .scoreboard, .profile,
              .studentBookings,
              .bookingDetail, .bookingExtend, .bookingEdit, .bookingCancel,
-             .itemEdit, .createBookingScanner, .createBookingEvents, .search, .searchPartial,
+             .itemEdit, .createBookingScanner, .createBookingEvents, .search, .searchPartial, .searchIdle,
              .itemsList, .reports, .accountSecurity, .notifications, .notificationsInbox, .login,
              .announcement, .announcementImages, .announcementPlain,
              .announcementStress, .announcementNone, .announcementError,

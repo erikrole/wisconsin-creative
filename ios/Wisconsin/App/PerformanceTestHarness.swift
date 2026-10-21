@@ -83,7 +83,7 @@ struct PerformanceTestRootView: View {
             ItemDetailHarnessView()
         case .createBookingScanner, .createBookingEvents:
             CreateBookingScannerHarnessView()
-        case .search, .searchPartial:
+        case .search, .searchPartial, .searchIdle:
             GlobalSearchHarnessView()
         case .itemsList:
             ItemsListHarnessView()
@@ -187,11 +187,12 @@ enum NotificationFixtureAPI {
             let date = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: day) ?? day
             let formatter = ISO8601DateFormatter()
             formatter.formatOptions = [.withInternetDateTime]
-            return formatter.string(from: min(date, .now))
+            return formatter.string(from: min(date, Date.now.addingTimeInterval(-600)))
         }
         func row(_ id: String, _ type: String, _ title: String, _ body: String, _ daysAgo: Int, _ hour: Int, unread: Bool) -> String {
             let when = iso(daysAgo, hour)
-            return #"{"id":"\#(id)","type":"\#(type)","title":"\#(title)","body":"\#(body)","readAt":\#(unread ? "null" : "\"\#(when)\""),"createdAt":"\#(when)","payload":null}"#
+            let readAt = unread ? "null" : "\"" + when + "\""
+            return #"{"id":"\#(id)","type":"\#(type)","title":"\#(title)","body":"\#(body)","readAt":\#(readAt),"createdAt":"\#(when)","payload":null}"#
         }
         let rows = [
             row("n1", "checkout_overdue", "Sideline kit is overdue", "Due back yesterday at 6:00 PM.", 0, 9, unread: true),

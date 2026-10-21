@@ -349,20 +349,12 @@ struct SearchGearIntent: AppIntent {
     }
 
     @MainActor
-    func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView {
-        try await requireIntentCapability("GEAR_CATALOG_VIEW")
+    func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetIntent {
         let term = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !term.isEmpty else {
-            return .result(dialog: "Tell me what gear to look for.", view: GearSearchSnippetView(query: "", matches: [], total: 0))
+            return .result(dialog: "Tell me what gear to look for.", snippetIntent: GearSearchSnippetIntent(query: ""))
         }
-        let response: AssetsResponse
-        do {
-            response = try await APIClient.shared.assets(search: term, limit: 5)
-        } catch {
-            throw mapIntentError(error)
-        }
-        let matches = response.data.map(GearSearchMatch.init)
-        let total = response.total
+        let (matches, total) = try await searchGearMatches(term)
         let dialog: IntentDialog
         if total == 0 {
             dialog = IntentDialog("I didn't find any gear matching \(term).")
@@ -372,7 +364,39 @@ struct SearchGearIntent: AppIntent {
             let available = matches.filter { $0.isAvailable }.count
             dialog = IntentDialog("Found \(total) matches for \(term). \(available) of the top \(matches.count) are available.")
         }
-        return .result(dialog: dialog, view: GearSearchSnippetView(query: term, matches: matches, total: total))
+        return .result(dialog: dialog, snippetIntent: GearSearchSnippetIntent(query: term))
+    }
+}
+
+@MainActor
+private func searchGearMatches(_ term: String) async throws -> ([GearSearchMatch], Int) {
+    try await requireIntentCapability("GEAR_CATALOG_VIEW")
+    do {
+        let response = try await APIClient.shared.assets(search: term, limit: 5)
+        return (response.data.map(GearSearchMatch.init), response.total)
+    } catch {
+        throw mapIntentError(error)
+    }
+}
+
+/// The visual half of Search Gear, kept separate from the spoken answer like
+/// the other snippet intents so the system can refresh it on its own.
+struct GearSearchSnippetIntent: SnippetIntent {
+    static let title: LocalizedStringResource = "Show Gear Results"
+    static let authenticationPolicy: IntentAuthenticationPolicy = .requiresLocalDeviceAuthentication
+
+    @Parameter(title: "Gear")
+    var query: String
+
+    init() { query = "" }
+    init(query: String) { self.query = query }
+
+    func perform() async throws -> some IntentResult & ShowsSnippetView {
+        guard !query.isEmpty else {
+            return .result(view: GearSearchSnippetView(query: "", matches: [], total: 0))
+        }
+        let (matches, total) = try await searchGearMatches(query)
+        return .result(view: GearSearchSnippetView(query: query, matches: matches, total: total))
     }
 }
 

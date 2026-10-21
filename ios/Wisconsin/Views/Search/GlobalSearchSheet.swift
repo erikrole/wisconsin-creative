@@ -268,6 +268,7 @@ struct GlobalSearchSheet: View {
                             Label(term, systemImage: "clock")
                                 .foregroundStyle(.primary)
                         }
+                        .buttonStyle(.plain)
                         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                             Button(role: .destructive) {
                                 removeRecent(term)
@@ -312,6 +313,7 @@ struct GlobalSearchSheet: View {
                     .foregroundStyle(.tertiary)
             }
         }
+        .buttonStyle(.plain)
         .accessibilityHint(hint)
     }
 
