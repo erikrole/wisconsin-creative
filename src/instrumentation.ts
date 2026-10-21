@@ -23,17 +23,21 @@ export async function register() {
  */
 export const onRequestError: Instrumentation.onRequestError = async (error, request, context) => {
   Sentry.captureRequestError(error, request, context);
-  if (process.env.NEXT_RUNTIME !== "nodejs" || context.routeType === "route") return;
-  const { captureServerError } = await import("@/lib/error-reporting/server");
-  const headers = new Headers();
-  for (const [key, value] of Object.entries(request.headers)) {
-    if (typeof value === "string") headers.set(key, value);
+  // The runtime check must wrap the import so the edge bundle drops it:
+  // error reporting uses Node crypto and the database.
+  if (process.env.NEXT_RUNTIME === "nodejs") {
+    if (context.routeType === "route") return;
+    const { captureServerError } = await import("@/lib/error-reporting/server");
+    const headers = new Headers();
+    for (const [key, value] of Object.entries(request.headers)) {
+      if (typeof value === "string") headers.set(key, value);
+    }
+    captureServerError(error, {
+      kind: "render_error",
+      method: request.method,
+      path: request.path,
+      routePath: context.routePath,
+      headers,
+    });
   }
-  captureServerError(error, {
-    kind: "render_error",
-    method: request.method,
-    path: request.path,
-    routePath: context.routePath,
-    headers,
-  });
 };
