@@ -2,6 +2,7 @@ import { GearPickFit, Prisma, Role } from "@prisma/client";
 import { createAuditEntryTx } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
+import { formatCentsCompact } from "@/lib/budget/contract";
 import { withSerializationRetry } from "@/lib/serialization";
 import {
   defaultAllowanceCents,
@@ -20,6 +21,7 @@ import type {
   GearPickAggregateRow,
   GearPickAdminStudent,
   GearPickBudgetDto,
+  GearPickTopUpDto,
   GearPastCycleDto,
   GearPickCycleDto,
   GearPickHandoutDto,
@@ -362,23 +364,52 @@ export function gearPickBudget(params: {
   picksCents: number;
   studentKitCents: number;
   studentCount: number;
+  topUps?: GearPickTopUpDto[];
 }): GearPickBudgetDto {
+  const topUps = params.topUps ?? [];
+  const topUpCents = topUps.reduce((sum, topUp) => sum + topUp.amountCents, 0);
+  const availableCents = params.budgetCents + topUpCents;
   const studentKitsCents = params.studentKitCents * params.studentCount;
   const committedCents = params.picksCents + studentKitsCents;
   return {
     budgetCents: params.budgetCents,
     confirmed: params.confirmed,
+    topUps,
+    topUpCents,
+    availableCents,
     picksCents: params.picksCents,
     studentKitsCents,
     studentKitCents: params.studentKitCents,
     committedCents,
-    remainingCents: params.budgetCents - committedCents,
+    remainingCents: availableCents - committedCents,
   };
+}
+
+/** Creative budget lines that top up the cycle; a line counts at its planned amount until it's cancelled. */
+async function loadGearPickTopUps(cycleId: string): Promise<GearPickTopUpDto[]> {
+  const lines = await db.budgetLine.findMany({
+    where: { gearPickCycleId: cycleId, status: { not: "CANCELLED" } },
+    select: {
+      id: true,
+      description: true,
+      unitCostCents: true,
+      quantity: true,
+      budget: { select: { id: true, name: true, fiscalYear: true } },
+    },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+  });
+  return lines.map((line) => ({
+    lineId: line.id,
+    budgetId: line.budget.id,
+    budgetLabel: `${line.budget.name} ${line.budget.fiscalYear}`,
+    description: line.description,
+    amountCents: line.unitCostCents * line.quantity,
+  }));
 }
 
 export async function getGearPicksAdmin(now: Date = new Date()): Promise<GearPicksAdminResponse> {
   const cycle = await loadCycleOrThrow(db);
-  const [participants, users, studentRows, studentUsers, receiptRows, handoutRows] = await Promise.all([
+  const [participants, users, studentRows, studentUsers, receiptRows, handoutRows, topUps] = await Promise.all([
     db.gearPickParticipant.findMany({
       where: { cycleId: cycle.id },
       select: {
@@ -434,6 +465,7 @@ export async function getGearPicksAdmin(now: Date = new Date()): Promise<GearPic
       where: { cycleId: cycle.id },
       select: { userId: true, sku: true, size: true, source: true, quantity: true, handedOutAt: true },
     }),
+    loadGearPickTopUps(cycle.id),
   ]);
 
   const handouts = handoutRows.map((row) => ({
@@ -500,6 +532,7 @@ export async function getGearPicksAdmin(now: Date = new Date()): Promise<GearPic
       picksCents: committedCents,
       studentKitCents: cycle.studentKitCents,
       studentCount: students.length,
+      topUps,
     }),
     order: {
       placedAt: cycle.orderPlacedAt?.toISOString() ?? null,
@@ -1042,10 +1075,16 @@ export async function archiveCurrentGearCycle(actor: Actor) {
         data: {
           id: data.cycle.id,
           title: data.cycle.title,
-          budgetCents: data.budget.budgetCents,
+          // History keeps one budget number per year: the allotment plus any Creative top-up.
+          budgetCents: data.budget.availableCents,
           budgetedSpendCents: data.budget.committedCents,
           otherSpendCents: 0,
-          note: `Saved from the live year. ${data.budget.confirmed ? "" : "The budget was still a placeholder. "}Student shoes are not included.`.trim(),
+          note: [
+            "Saved from the live year.",
+            data.budget.confirmed ? null : "The budget was still a placeholder.",
+            data.budget.topUpCents > 0 ? `Budget includes ${formatCentsCompact(data.budget.topUpCents)} from the Creative budget.` : null,
+            "Student shoes are not included.",
+          ].filter(Boolean).join(" "),
           items: {
             create: [...items.values()].map((item) => ({
               ...item,

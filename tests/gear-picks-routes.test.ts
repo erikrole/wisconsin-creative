@@ -32,6 +32,7 @@ vi.mock("@/lib/db", () => {
       gearPickReceipt: { findMany: vi.fn() },
       gearPickHandout: { findMany: vi.fn() },
       gearPastCycle: { findMany: vi.fn() },
+      budgetLine: { findMany: vi.fn() },
       user: { findUnique: vi.fn(), findMany: vi.fn() },
       $transaction: vi.fn(),
       _mockTx: tx,
@@ -103,6 +104,7 @@ beforeEach(() => {
   vi.mocked(db.gearPickStudent.findMany).mockResolvedValue([]);
   vi.mocked(db.gearPickReceipt.findMany).mockResolvedValue([]);
   vi.mocked(db.gearPickHandout.findMany).mockResolvedValue([]);
+  vi.mocked(db.budgetLine.findMany).mockResolvedValue([]);
   tx.gearPickCycle!.findUnique!.mockResolvedValue(openCycle);
   tx.gearPickParticipant!.findUnique!.mockResolvedValue(participant);
   tx.gearPickSubmission!.create!.mockResolvedValue({ id: "submission-1" });
@@ -773,6 +775,30 @@ describe("admin routes", () => {
     expect(response.status).toBe(200);
     expect(data.students.map((student: { needsSize: boolean }) => student.needsSize)).toEqual([false, true]);
     expect(data.budget).toMatchObject({ studentKitsCents: 28_500, committedCents: 28_500, remainingCents: 521_500 });
+  });
+
+  it("adds Creative budget lines marked for the year on top of the allotment, leaving cancelled ones out", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(admin);
+    vi.mocked(db.gearPickCycle.findUnique).mockResolvedValue({ ...openCycle, budgetCents: 550_000, budgetConfirmed: true, studentKitCents: 0 } as never);
+    vi.mocked(db.gearPickParticipant.findMany).mockResolvedValue([]);
+    vi.mocked(db.user.findMany).mockResolvedValue([]);
+    vi.mocked(db.budgetLine.findMany).mockResolvedValue([
+      { id: "line-1", description: "Student UA top-up", unitCostCents: 25_000, quantity: 2, budget: { id: "b1", name: "Creative", fiscalYear: "2026-27" } },
+    ] as never);
+
+    const response = await getAdmin(new Request(`${ORIGIN}/api/gear-picks/admin`), context);
+    const { data } = await response.json();
+
+    expect(vi.mocked(db.budgetLine.findMany).mock.calls[0]![0]).toMatchObject({
+      where: { gearPickCycleId: openCycle.id, status: { not: "CANCELLED" } },
+    });
+    expect(data.budget).toMatchObject({
+      budgetCents: 550_000,
+      topUpCents: 50_000,
+      availableCents: 600_000,
+      remainingCents: 600_000,
+      topUps: [{ lineId: "line-1", budgetId: "b1", budgetLabel: "Creative 2026-27", description: "Student UA top-up", amountCents: 50_000 }],
+    });
   });
 
   it("exports one CSV row per line with the sheet's columns", async () => {

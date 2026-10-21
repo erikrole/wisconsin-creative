@@ -18,7 +18,7 @@ describe("iOS native control cleanup", () => {
     expect(search).toContain("if showsCancelButton");
     expect(search).toContain("text: $query");
     expect(search).toContain("placement: .navigationBarDrawer(displayMode: .always)");
-    expect(search).toContain('prompt: Text(isCollaborator ? "Search reservable gear" : "Search items, bookings, people")');
+    expect(search).toContain('prompt: Text(isCollaborator ? "Search reservable gear" : "Search gear, kits, events, people")');
     expect(search).toContain("if !isCollaborator");
     expect(search).toContain("SearchService.shared.search(query: query, gearOnly: isCollaborator)");
     expect(search).toContain(".onSubmit(of: .search) { commitSearch() }");

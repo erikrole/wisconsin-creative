@@ -88,7 +88,7 @@ export const wisconsinCreativePage: ProductPage = {
   slug: "wisconsin-creative", name: "Wisconsin Creative", icon: "wisconsin-creative", platform: "iPhone and iPad", shotLayout: "phones",
   tagline: "Your gear and game day, together.",
   intro: "Reserve equipment, see event and shift schedules, and look up the gear you need from your iPhone or iPad.",
-  version: "1.2", requires: "iOS 26.0 or later",
+  version: "1.3", requires: "iOS 26.0 or later",
   download: "https://apps.apple.com/us/app/wisconsin-creative/id6763456945", downloadLabel: "View on the App Store",
   availability: "Access is invitation-only for the Wisconsin Creative team. Downloading the app does not create an account.",
   features: [
@@ -108,7 +108,7 @@ export const wisconsinCreativePage: ProductPage = {
     { file: "wisconsin-equipment.jpg", alt: "Published Wisconsin Creative App Store screenshot of equipment lookup", caption: "Equipment. Published App Store screenshot.", width: 1279, height: 2778 },
   ],
   notes: [
-    "The App Store release is version 1.2 and requires iOS 26.0 or later on iPhone or iPad.",
+    "The App Store release is version 1.3 and requires iOS 26.0 or later on iPhone or iPad.",
     "Screenshots on this page come from the published App Store listing. Features and appearance may change in later versions.",
     "An invitation is required to use the team’s workspace. The public app page never displays live reservations, people or schedules.",
   ],

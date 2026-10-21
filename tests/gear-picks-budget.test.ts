@@ -22,6 +22,9 @@ describe("gearPickBudget", () => {
     expect(gearPickBudget(base)).toEqual({
       budgetCents: 550000,
       confirmed: false,
+      topUps: [],
+      topUpCents: 0,
+      availableCents: 550000,
       picksCents: 100000,
       studentKitsCents: 228000,
       studentKitCents: 14250,
@@ -29,6 +32,15 @@ describe("gearPickBudget", () => {
       remainingCents: 222000,
     });
     expect(gearPickBudget({ ...base, budgetCents: 1000, studentCount: 0, picksCents: 1500 }).remainingCents).toBe(-500);
+  });
+
+  it("adds Creative top-ups to what the year can spend without changing the allotment", () => {
+    const topUp = { lineId: "l1", budgetId: "b1", budgetLabel: "Creative 2026-27", description: "Student UA top-up", amountCents: 50000 };
+    const result = gearPickBudget({ budgetCents: 550000, confirmed: true, picksCents: 580000, studentKitCents: 0, studentCount: 0, topUps: [topUp] });
+    expect(result.budgetCents).toBe(550000);
+    expect(result.topUpCents).toBe(50000);
+    expect(result.availableCents).toBe(600000);
+    expect(result.remainingCents).toBe(20000);
   });
 });
 

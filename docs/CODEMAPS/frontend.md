@@ -137,8 +137,8 @@
 | `src/components/ActivityTimeline.tsx` | 1387 |
 | `src/components/booking-wizard/BookingWizard.tsx` | 1173 |
 | `src/components/onboarding/OnboardingDialog.tsx` | 1042 |
+| `src/components/TradeBoard.tsx` | 974 |
 | `src/components/schedule/AutoAssignDialog.tsx` | 966 |
-| `src/components/TradeBoard.tsx` | 961 |
 | `src/components/profile-completion/ProfileCompletionWizard.tsx` | 935 |
 | `src/components/BookingListPage.tsx` | 921 |
 | `src/components/EquipmentPicker.tsx` | 898 |
@@ -162,7 +162,7 @@
 | `src/components/booking-details/EditBookingEventsDialog.tsx` | 342 |
 | `src/components/shift-detail/crew-row.tsx` | 334 |
 | `src/components/public-showroom/ReleasesFeed.tsx` | 314 |
-| `src/components/trade-board/TradeBoardView.tsx` | 309 |
+| `src/components/NotificationsPopover.tsx` | 304 |
 
 ## Hooks
 
