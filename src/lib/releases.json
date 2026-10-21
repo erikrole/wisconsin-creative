@@ -1,6 +1,21 @@
 [
   {
     "date": "2026-10-21",
+    "title": "Clearer gear return countdown",
+    "type": "improvement",
+    "summary": "The gear return Live Activity on iPhone now shows a large countdown and a track that drains toward the return time.",
+    "details": [
+      "The lock screen and Dynamic Island show the time left as one large figure, in hours and minutes once it is over an hour.",
+      "A thin track shows how much of the last two hours remains.",
+      "Overdue, returned and not-updating states keep their own colors and wording."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 574
+  },
+  {
+    "date": "2026-10-21",
     "title": "More widgets, smarter search",
     "type": "improvement",
     "summary": "The iPhone app adds Lock Screen and larger widgets, filtered search, a scan history, and easier inbox swipes.",
