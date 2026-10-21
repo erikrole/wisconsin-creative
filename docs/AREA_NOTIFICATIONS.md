@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Notifications
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-10-11
+- Last Updated: 2026-10-21
 - Status: Active; browser push is deployed to Production, with physical Android acceptance still open
 - Version: V1.9
 
@@ -60,6 +60,7 @@ Implementation: `src/lib/checkout-escalation-policy.ts`, `src/lib/services/notif
 - Deduplication: `${bookingId}:reservation_${event}` — idempotent on retry
 - Channel: IN_APP only (email deferred)
 - Self-cancel: requester is not notified when they cancel their own reservation
+- Self-made: a reservation the requester created or merged themselves writes a read receipt (`readAt` set) and sends no push
 - Implementation: `createReservationLifecycleNotification` in `src/lib/services/notifications.ts`
 
 ## Shift Trade Triggers (Implemented 2026-05-05)
@@ -200,6 +201,7 @@ Implementation: `src/lib/checkout-escalation-policy.ts`, `src/lib/services/notif
 - Empty state: "All caught up" with `bell.slash` icon
 - Deep links: row actions navigate through `notificationDestinationPath` to the related booking, reservation, event, item, user, license, schedule, or explicit `payload.href`
 - Unread badge: `GET /api/notifications/count` returns `{ unreadCount }` — lightweight, no data fetch
+- Settled rows (2026-10-21): `resolveSettledNotifications` (`src/lib/services/notification-resolution.ts`) marks a row read once its action is done: its checkout or reservation is no longer active, its event has ended or been cancelled, the request or trade claim it is about is no longer pending, a newer schedule row for the same event replaced it, a gear-up nudge whose person now has gear for that shift, a bulk-shifts row whose range is over, or a badge row older than 14 days. It runs per person before the unread count, the inbox list, and the APNs badge count, and for everyone in `morning-refresh`. Item reports, license, firmware, calendar-health, blast, and error rows are never settled automatically.
 - Foreground refresh: iOS app re-fetches unread count on every foreground return (scenePhase hook)
 
 ## Dashboard Integration
@@ -410,6 +412,7 @@ renders a tap-only alert. Neither side needs to ship first.
 - Source/build, isolated native behavior tests, fixture captures, and physical-device delivery are separate gates. See `tasks/ios-notifications-polish-plan-2026-09-07.md` for evidence and limitations.
 
 ## Change Log
+- 2026-10-21: **Inbox counts open work, and self-made actions stop pinging (local).** Production showed 40–50 unread rows per staff member and student, about 85% of them settled (gear already returned, requests another Admin decided, events already over, months-old badges), so the bell and iOS icon badge meant nothing. Settled rows are now marked read automatically (see Notification Center). A reservation the requester created or merged themselves, the owner's side of a kiosk handover, and a shift someone put themselves on by linking their own reservation or checkout to an event are written as read receipts with no push or email. The gear-up nudge is skipped when the assignment came from the person's own reservation or they already have an active booking for the shift or event (29% of nudges in the prior 60 days went to people who had just reserved). Notification email buttons open the exact checkout or event instead of the list page. Source and focused tests pass; production read-back after deploy remains open.
 - 2026-10-16: **Native blast history is the messages this phone already fetched (local).** Browse → Blasts lists and opens them with the existing `/api/me/blasts` client. Acknowledging removes the home banner and keeps the message in the on-device list. The list is cleared at sign-out. It is not a second copy of the web staff tracker, and it cannot recover a blast this install never downloaded. Xcode and authenticated phone proof remain open.
 - 2026-10-11: **Blasts web recovery and acknowledgment polish (local).** `/blasts` and `/blasts/[id]` now surface load failures with retry instead of an empty history or a false "not found", keep a Refresh action, and summarize people still waiting to acknowledge. Detail filters use the shared ToggleGroup, recipients stack as cards on narrow widths, and compose recovers when event or people lookups fail. Source contracts and focused tests cover the recovery paths; authenticated browser proof remains open.
 
