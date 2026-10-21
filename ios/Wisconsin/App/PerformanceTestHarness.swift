@@ -79,13 +79,13 @@ struct PerformanceTestRootView: View {
             StudentBookingsHarnessView()
         case .bookingDetail, .bookingExtend, .bookingEdit, .bookingCancel:
             BookingDetailHarnessView()
-        case .itemEdit:
+        case .itemEdit, .damageMissing, .damageDamaged, .damageClosed, .damageRecordOutcome, .damageReportProblem:
             ItemDetailHarnessView()
         case .createBookingScanner, .createBookingEvents:
             CreateBookingScannerHarnessView()
         case .search, .searchPartial:
             GlobalSearchHarnessView()
-        case .itemsList:
+        case .itemsList, .damageItemsMissing:
             ItemsListHarnessView()
         case .reports:
             ReportsHarnessView()
@@ -285,7 +285,11 @@ struct ItemDetailHarnessView: View {
         NavigationStack {
             ItemDetailView(assetId: AssetFixtureAPI.assetId)
         }
-        .onAppear { session.currentUser = ScheduleFixtures.staffUser }
+        .onAppear {
+            session.currentUser = AppRuntimeMode.performanceScenario == .damageReportProblem
+                ? ScheduleFixtures.studentUser
+                : ScheduleFixtures.staffUser
+        }
     }
 }
 
@@ -722,7 +726,8 @@ enum SearchFixtureAPI {
         departmentId: String,
         department: String,
         status: String,
-        favorited: Bool = false
+        favorited: Bool = false,
+        missing: Bool = false
     ) -> String {
         """
         {"id":"\(id)","assetTag":"\(tag)","name":"\(name)","brand":"Sony","model":"FX3",
@@ -730,7 +735,7 @@ enum SearchFixtureAPI {
          "location":{"id":"loc-1","name":"Camp Randall Creative Desk"},
          "category":{"id":"\(categoryId)","name":"\(category)"},"department":{"id":"\(departmentId)","name":"\(department)"},
          "activeBooking":null,"purchaseDate":"2025-03-14","purchasePrice":"3899.00",
-         "residualValue":"2100.00","isFavorited":\(favorited ? "true" : "false")}
+         "residualValue":"2100.00","isFavorited":\(favorited ? "true" : "false"),"missing":\(missing ? "true" : "false")}
         """
     }
 
@@ -749,10 +754,11 @@ enum SearchFixtureAPI {
         let queryItems = URLComponents(url: request.url ?? URL(fileURLWithPath: "/"), resolvingAgainstBaseURL: false)?.queryItems ?? []
         let requestedLimit = Int(queryItems.first(where: { $0.name == "limit" })?.value ?? "10") ?? 10
         let requestedOffset = Int(queryItems.first(where: { $0.name == "offset" })?.value ?? "0") ?? 0
+        let damageList = AppRuntimeMode.performanceScenario == .damageItemsMissing
         let rows: [(id: String, kind: String, payload: String)] = [
             ("a-1", "asset", asset(id: "a-1", tag: "CAM-014", name: "A-cam body", categoryId: "cat-camera", category: "Cameras", departmentId: "dep-video", department: "Video", status: "CHECKED_OUT")),
             ("a-5", "asset", asset(id: "a-5", tag: "LENS-032", name: "Football 70–200mm", categoryId: "cat-lens", category: "Lenses", departmentId: "dep-photo", department: "Photo", status: "AVAILABLE", favorited: true)),
-            ("a-2", "asset", asset(id: "a-2", tag: "CAM-015", name: "Football camera 02", categoryId: "cat-camera", category: "Cameras", departmentId: "dep-video", department: "Video", status: "AVAILABLE")),
+            ("a-2", "asset", asset(id: "a-2", tag: "CAM-015", name: "Football camera 02", categoryId: "cat-camera", category: "Cameras", departmentId: "dep-video", department: "Video", status: damageList ? "MAINTENANCE" : "AVAILABLE", missing: damageList)),
             ("a-3", "asset", asset(id: "a-3", tag: "CAM-016", name: "Football camera 03", categoryId: "cat-camera", category: "Cameras", departmentId: "dep-video", department: "Video", status: "AVAILABLE")),
             ("a-4", "asset", asset(id: "a-4", tag: "CAM-017", name: "Football camera 04", categoryId: "cat-camera", category: "Cameras", departmentId: "dep-video", department: "Video", status: "AVAILABLE")),
             ("a-6", "asset", asset(id: "a-6", tag: "LENS-033", name: "Football 24–70mm", categoryId: "cat-lens", category: "Lenses", departmentId: "dep-photo", department: "Photo", status: "AVAILABLE")),
@@ -820,8 +826,38 @@ enum AssetFixtureAPI {
         "a-12": ("CAM-019", "Football camera 12"),
     ]
 
+    private static func damageReport(
+        id: String, type: String, note: String, booking: Bool, resolution: String? = nil
+    ) -> String {
+        let bookingJSON = booking ? #"{"id":"bk-fixture-1","title":"Football vs Ohio State — photo"}"# : "null"
+        let outcome = resolution.map {
+            #","resolution":"\#($0)","resolvedAt":"2026-10-21T15:00:00.000Z","resolutionNote":"Replaced the cracked screen.","resolvedBy":{"name":"Riley Chen"}"#
+        } ?? ""
+        return #"{"id":"\#(id)","type":"\#(type)","description":"\#(note)","imageUrl":null,"createdAt":"2026-10-20T15:00:00.000Z","lastReportedAt":null,"reportedBy":{"name":"Sam Okonkwo"},"booking":\#(bookingJSON)\#(outcome)}"#
+    }
+
+    /// The Damage and loss scenarios reshape the one canned asset.
+    private static var damageVariant: Data? {
+        let missingReport = damageReport(id: "r-lost", type: "LOST", note: "Not in the case after the Ohio State game.", booking: true)
+        let damageReportOpen = damageReport(id: "r-dmg", type: "DAMAGED", note: "Cracked LCD screen, still records.", booking: false)
+        let closedReport = damageReport(id: "r-closed", type: "DAMAGED", note: "Cracked LCD screen, still records.", booking: false, resolution: "REPAIRED")
+        let state: (status: String, missing: Bool, reports: String)
+        switch AppRuntimeMode.performanceScenario {
+        case .damageMissing: state = ("MAINTENANCE", true, missingReport)
+        case .damageDamaged, .damageRecordOutcome: state = ("MAINTENANCE", false, damageReportOpen)
+        case .damageClosed: state = ("AVAILABLE", false, closedReport)
+        case .damageReportProblem: state = ("AVAILABLE", false, "")
+        default: return nil
+        }
+        var payload = String(decoding: asset, as: UTF8.self)
+        payload = payload.replacingOccurrences(of: "\"computedStatus\":\"AVAILABLE\"", with: "\"computedStatus\":\"\(state.status)\"")
+        payload = payload.replacingOccurrences(of: "\"isFavorited\":false", with: "\"isFavorited\":false,\"missing\":\(state.missing),\"checkinReports\":[\(state.reports)]")
+        return Data(payload.utf8)
+    }
+
     static func asset(for id: String) -> Data? {
         guard id == assetId || linkedSearchAssets[id] != nil else { return nil }
+        if id == assetId, let variant = damageVariant { return variant }
         guard let detail = linkedSearchAssets[id] else { return asset }
 
         var payload = String(decoding: asset, as: UTF8.self)
@@ -1751,6 +1787,20 @@ private enum PreviewChromeFixtures {
 }
 
 enum ScheduleFixtures {
+    static let studentUser = CurrentUser(
+        id: "fixture-student",
+        name: "Sam Okonkwo",
+        email: "sam.okonkwo@wisc.edu",
+        role: "STUDENT",
+        affiliation: nil,
+        collaboratorProfile: nil,
+        capabilities: [],
+        collaboratorPolicy: nil,
+        staffingType: nil,
+        avatarUrl: nil,
+        forcePasswordChange: false
+    )
+
     static let staffUser = CurrentUser(
         id: "fixture-staff",
         name: "Bucky Badger",

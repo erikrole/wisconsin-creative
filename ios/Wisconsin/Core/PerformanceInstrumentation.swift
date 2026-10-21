@@ -81,6 +81,16 @@ enum AppRuntimeMode {
         case bookingCancel = "booking-cancel"
         /// Item detail with its edit sheet open, against a canned asset.
         case itemEdit = "item-edit"
+        /// Item detail for the Damage and loss states: staff with an open missing
+        /// case, an open damage case, a closed case, the Record outcome sheet
+        /// open, a student with the Report a problem sheet open, and the Items
+        /// list with a missing row. All served from canned payloads.
+        case damageMissing = "damage-missing"
+        case damageDamaged = "damage-damaged"
+        case damageClosed = "damage-closed"
+        case damageRecordOutcome = "damage-record-outcome"
+        case damageReportProblem = "damage-report-problem"
+        case damageItemsMissing = "damage-items-missing"
         /// The reservation composer with its QR cover open. A simulator has no
         /// camera, so this captures the permission priming a first-time user
         /// actually meets, not a live viewfinder.
@@ -156,6 +166,8 @@ enum AppRuntimeMode {
         static var bookingEdit: Bool { matches(.bookingEdit) }
         static var bookingCancel: Bool { matches(.bookingCancel) }
         static var itemEdit: Bool { matches(.itemEdit) }
+        static var damageRecordOutcome: Bool { matches(.damageRecordOutcome) }
+        static var damageReportProblem: Bool { matches(.damageReportProblem) }
         static var createBookingScanner: Bool { matches(.createBookingScanner) }
         static var search: Bool { matches(.search) || matches(.searchPartial) }
 
@@ -189,7 +201,8 @@ enum AppRuntimeMode {
              .home, .homeAllClear, .scoreboard, .profile,
              .studentBookings,
              .bookingDetail, .bookingExtend, .bookingEdit, .bookingCancel,
-             .itemEdit, .createBookingScanner, .createBookingEvents, .search, .searchPartial,
+             .itemEdit, .damageMissing, .damageDamaged, .damageClosed, .damageRecordOutcome,
+             .damageReportProblem, .damageItemsMissing, .createBookingScanner, .createBookingEvents, .search, .searchPartial,
              .itemsList, .reports, .accountSecurity, .notifications, .login,
              .announcement, .announcementImages, .announcementPlain,
              .announcementStress, .announcementNone, .announcementError,

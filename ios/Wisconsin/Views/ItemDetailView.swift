@@ -12,7 +12,7 @@ struct ItemDetailView: View {
     @State private var favoriteToggleCount = 0  // user-action ticks; isolates haptic from initial load
     @State private var toast: Toast?
     @State private var isTogglingMaintenance = false
-    @State private var showReport = false
+    @State private var showReport = AppRuntimeMode.CaptureSeed.damageReportProblem
     @Environment(SessionStore.self) private var session
     @Environment(ReservationDraftStore.self) private var drafts
 
@@ -885,6 +885,11 @@ private struct ItemConditionReportsCard: View {
             olderNote()
         }
         .brandCard()
+        .onAppear {
+            if AppRuntimeMode.CaptureSeed.damageRecordOutcome, resolving == nil {
+                resolving = reports.first(where: \.isOpen)
+            }
+        }
         .fullScreenCover(item: $photo) { photo in
             ZoomableImageViewer(url: photo.url, photoLabel: photo.label)
         }
@@ -1082,10 +1087,11 @@ private struct ReportProblemButton: View {
         Button(action: action) {
             Label("Report a problem", systemImage: "exclamationmark.bubble")
                 .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.primary)
                 .frame(maxWidth: .infinity, minHeight: 44)
+                .background(Color(.secondarySystemFill), in: Capsule())
         }
-        .buttonStyle(.bordered)
-        .controlSize(.large)
+        .buttonStyle(.plain)
         .accessibilityHint("Report this item as damaged or missing")
     }
 }
@@ -1105,7 +1111,7 @@ private struct RecordOutcomeSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Outcome") {
+                Section("What happened to it?") {
                     ForEach(options) { option in
                         Button {
                             choice = option
@@ -1125,6 +1131,7 @@ private struct RecordOutcomeSheet: View {
                             }
                             .frame(minHeight: 44)
                         }
+                        .buttonStyle(.plain)
                         .accessibilityAddTraits(choice == option ? .isSelected : [])
                     }
                 }
@@ -1136,7 +1143,7 @@ private struct RecordOutcomeSheet: View {
                     Section { Text(error).foregroundStyle(Color.statusText(.red)) }
                 }
             }
-            .navigationTitle("Record outcome")
+            .navigationTitle("Outcome")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

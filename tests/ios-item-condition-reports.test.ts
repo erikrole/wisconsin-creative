@@ -89,4 +89,14 @@ describe("iOS item condition reports", () => {
     expect(apiClient).toContain('isMissing ? "LOST" : "DAMAGED"');
     expect(reportRoute).toContain('user.role === "COLLABORATOR"');
   });
+
+  it("asks for the camera for damage photos and keeps the capture fixtures debug-only", () => {
+    for (const path of ["ios/project.yml", "ios/Wisconsin/Supporting/Info.plist", "ios/Wisconsin/KioskOnly/Info.plist"]) {
+      expect(source(path)).toContain("to take photos of damaged gear");
+    }
+    const instrumentation = source("ios/Wisconsin/Core/PerformanceInstrumentation.swift");
+    expect(instrumentation).toContain('case damageMissing = "damage-missing"');
+    expect(instrumentation).toContain("static var damageRecordOutcome: Bool { matches(.damageRecordOutcome) }");
+    expect(source("ios/Wisconsin/App/PerformanceTestHarness.swift")).toContain("private static var damageVariant: Data?");
+  });
 });

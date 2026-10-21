@@ -56,7 +56,7 @@ targets:
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
           - UIInterfaceOrientationPortraitUpsideDown
-        NSCameraUsageDescription: "Wisconsin Creative uses the camera to scan gear barcodes and QR codes."
+        NSCameraUsageDescription: "Wisconsin Creative uses the camera to scan gear barcodes and QR codes and to take photos of damaged gear."
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: false
         NSSupportsLiveActivities: true
@@ -129,7 +129,7 @@ targets:
         UISupportedInterfaceOrientations~ipad:
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
-        NSCameraUsageDescription: "Wisconsin Creative uses the camera to scan gear barcodes and QR codes."
+        NSCameraUsageDescription: "Wisconsin Creative uses the camera to scan gear barcodes and QR codes and to take photos of damaged gear."
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: false
     settings:
