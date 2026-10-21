@@ -150,7 +150,7 @@
 | `src/lib/booking-display-title.ts` | 14 |
 | `src/lib/booking-status-display.ts` | 170 |
 | `src/lib/booking-statuses.ts` | 9 |
-| `src/lib/breadcrumbs.ts` | 181 |
+| `src/lib/breadcrumbs.ts` | 228 |
 | `src/lib/brother-label-csv.ts` | 134 |
 | `src/lib/bulk-batteries.ts` | 49 |
 | `src/lib/bulk-schedule-assignment-types.ts` | 213 |
@@ -162,6 +162,7 @@
 | `src/lib/category-options.ts` | 34 |
 | `src/lib/checkout-escalation-policy.ts` | 117 |
 | `src/lib/checkout-notification-workflow.ts` | 24 |
+| `src/lib/chrome-font.ts` | 13 |
 | `src/lib/claim-review-deadlines.ts` | 52 |
 | `src/lib/claim-review-workflow.ts` | 48 |
 | `src/lib/client-enums.ts` | 85 |
@@ -216,6 +217,7 @@
 | `src/lib/notification-catalog.ts` | 322 |
 | `src/lib/notification-count-sync.ts` | 9 |
 | `src/lib/notification-destination.ts` | 85 |
+| `src/lib/notification-meta.ts` | 120 |
 | `src/lib/observability.ts` | 19 |
 | `src/lib/operational-health.ts` | 2 |
 | `src/lib/ops-checks.ts` | 212 |
@@ -846,6 +848,10 @@
 - `/api/shifts/my-hours`
 - `/api/shifts`
 
+### `/api/sidebar`
+
+- `/api/sidebar/counts`
+
 ### `/api/signatures`
 
 - `/api/signatures/artifacts/[revisionId]/[kind]`
@@ -889,6 +895,7 @@
 - `/api/users/[id]/availability`
 - `/api/users/[id]/avatar`
 - `/api/users/[id]/reset-password`
+- `/api/users/[id]/right-now`
 - `/api/users/[id]/role`
 - `/api/users/[id]`
 - `/api/users/[id]/scoreboard`
