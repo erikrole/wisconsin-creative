@@ -1,6 +1,21 @@
 [
   {
     "date": "2026-10-21",
+    "title": "Badge celebrations show once",
+    "type": "fix",
+    "summary": "A badge you earn is now celebrated one time, no matter how many phones, browsers or kiosks you use.",
+    "details": [
+      "Before, each device remembered on its own what it had shown you, so a phone or browser you hadn't opened in a while could pop up badges you'd already seen, and two open devices could show the same one.",
+      "Now the app remembers it once for your account, and badges you've already earned won't come back."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 0
+  },
+  {
+    "date": "2026-10-21",
     "title": "App activity redesign",
     "type": "feature",
     "summary": "The owner-only App activity page now shows at a glance which app versions people run and how they use the site, the iPhone app, and the menu bar.",
