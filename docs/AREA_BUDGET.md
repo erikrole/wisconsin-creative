@@ -34,6 +34,8 @@ The team's budget lives in a Google Sheet with one tab per fiscal year plus a fo
 
 ## Data Model
 
+Migration `0192_budget_line_ua_topup` adds nullable `budget_lines.gear_pick_cycle_id` (`SetNull` on cycle delete): the Under Armour year this Creative line tops up. The UA allotment stays on `gear_pick_cycles.budget_cents`; the top-up amount lives only on the line. Each dollar lives in one place, so a top-up is never typed into the allotment too.
+
 Migration `0180_budget_line_refund_recurring` adds `budget_lines.refund_cents` (a refund or credit; the real cost is spent minus refund, never below zero) and `recurring` (copied into next year's budget when it is created).
 
 Migration `0179_wish_items` adds enum `WishStatus` and `wish_items` (title, link_url, estimate_cents, quantity, needed_by, reason, status, status_note, requested_by_id, budget_line_id unique). The requester link and the budget line link are `SetNull`.
@@ -91,3 +93,4 @@ Migration `0176_budget`: enums `BudgetLineStatus` and `BudgetCategory`; `budgets
 - 2026-10-18: Insights view (needs attention, spend by month, categories, forecast, suppliers, year over year) and CSV download.
 - 2026-10-18: Import from .xlsx/.csv with a preview (ready, check, skipped), dropped-or-planned choice for unbought lines, and no duplicates on re-run.
 - 2026-10-18: Import run against the department's real workbook (13 tabs). Reads its columns (Status, Price Per Unit, Total Budgeted, Total Spent, Month Purchased), offers the tabs and suggests the one for the budget's year and Football, treats bought rows with no budget as Unplanned, ignores the category summary under the purchases, and keeps same-name lines. 26-27 spend matches the sheet's own total to the cent.
+- 2026-10-21: A line can count toward a year of Under Armour gear. `/gear/admin` adds non-cancelled linked lines on top of the allotment at their planned amount and lists them; the line shows a UA tag here. Prod had no budget rows yet, so nothing moved.

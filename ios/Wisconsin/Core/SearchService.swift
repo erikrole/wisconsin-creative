@@ -7,6 +7,9 @@ enum SearchSource: String, CaseIterable {
     case reservations
     case checkouts
     case people
+    case kits
+    case events
+    case guides
 
     var label: String {
         switch self {
@@ -14,6 +17,9 @@ enum SearchSource: String, CaseIterable {
         case .reservations: return "Reservations"
         case .checkouts: return "Check-outs"
         case .people: return "People"
+        case .kits: return "Kits"
+        case .events: return "Events"
+        case .guides: return "Guides"
         }
     }
 }
@@ -23,6 +29,9 @@ struct SearchPage {
     var itemFamilies: [AssetFamilySearchResult] = []
     var bookings: [Booking] = []
     var users: [AppUser] = []
+    var kits: [KitListItem] = []
+    var events: [ScheduleEvent] = []
+    var guides: [GuideListItem] = []
     let total: Int
     let nextOffset: Int
 }
@@ -33,6 +42,9 @@ struct SearchResults {
     var reservations: [Booking] = []
     var checkouts: [Booking] = []
     var users: [AppUser] = []
+    var kits: [KitListItem] = []
+    var events: [ScheduleEvent] = []
+    var guides: [GuideListItem] = []
     /// Sources that failed while others answered. Empty on a clean search.
     var unavailableSources: Set<SearchSource> = []
     /// Server totals and cursors let the UI distinguish a complete short list
@@ -42,6 +54,7 @@ struct SearchResults {
 
     var isEmpty: Bool {
         items.isEmpty && itemFamilies.isEmpty && reservations.isEmpty && checkouts.isEmpty && users.isEmpty
+            && kits.isEmpty && events.isEmpty && guides.isEmpty
     }
 
     /// True when at least one source has confirmed a match. A fully answered
@@ -56,6 +69,9 @@ struct SearchResults {
         case .reservations: return reservations.count
         case .checkouts: return checkouts.count
         case .people: return users.count
+        case .kits: return kits.count
+        case .events: return events.count
+        case .guides: return guides.count
         }
     }
 
@@ -91,6 +107,15 @@ struct SearchResults {
         case .people:
             if appending { users.append(contentsOf: page.users) }
             else { users = page.users }
+        case .kits:
+            if appending { kits.append(contentsOf: page.kits) }
+            else { kits = page.kits }
+        case .events:
+            if appending { events.append(contentsOf: page.events) }
+            else { events = page.events }
+        case .guides:
+            if appending { guides.append(contentsOf: page.guides) }
+            else { guides = page.guides }
         }
         sourceTotals[source] = page.total
         sourceNextOffsets[source] = page.nextOffset
@@ -118,7 +143,10 @@ struct SearchResults {
               itemFamilies.isEmpty,
               reservations.isEmpty,
               checkouts.isEmpty,
-              users.isEmpty
+              users.isEmpty,
+              kits.isEmpty,
+              events.isEmpty,
+              guides.isEmpty
         else { return nil }
         return items.first
     }
@@ -130,7 +158,10 @@ struct SearchResults {
               items.isEmpty,
               reservations.isEmpty,
               checkouts.isEmpty,
-              users.isEmpty
+              users.isEmpty,
+              kits.isEmpty,
+              events.isEmpty,
+              guides.isEmpty
         else { return nil }
         return itemFamilies.first
     }
@@ -162,16 +193,28 @@ final class SearchService {
         async let checkoutsTask = fetchPage(source: .checkouts, query: q, offset: 0)
         async let usersTask = fetchPage(source: .people, query: q, offset: 0)
 
+        async let kitsTask = Self.optionalPage { try await self.fetchPage(source: .kits, query: q, offset: 0) }
+        async let eventsTask = Self.optionalPage { try await self.fetchPage(source: .events, query: q, offset: 0) }
+        async let guidesTask = Self.optionalPage { try await self.fetchPage(source: .guides, query: q, offset: 0) }
+
         let itemsPage = try? await itemsTask
         let reservationsPage = try? await reservationsTask
         let checkoutsPage = try? await checkoutsTask
         let usersPage = try? await usersTask
+        // Kits, Events and Guides are extras: a role without access to one
+        // answers 403/404, which means "nothing to show here", not a failure.
+        let kitsPage = await kitsTask
+        let eventsPage = await eventsTask
+        let guidesPage = await guidesTask
 
         var unavailable: Set<SearchSource> = []
         if itemsPage == nil { unavailable.insert(.items) }
         if reservationsPage == nil { unavailable.insert(.reservations) }
         if checkoutsPage == nil { unavailable.insert(.checkouts) }
         if usersPage == nil { unavailable.insert(.people) }
+        if kitsPage.failed { unavailable.insert(.kits) }
+        if eventsPage.failed { unavailable.insert(.events) }
+        if guidesPage.failed { unavailable.insert(.guides) }
 
         // Every source failing is not a partial result, it is an outage, and
         // it should read as one rather than as "no matches".
@@ -184,7 +227,24 @@ final class SearchService {
         if let reservationsPage { results.apply(reservationsPage, for: .reservations, appending: false) }
         if let checkoutsPage { results.apply(checkoutsPage, for: .checkouts, appending: false) }
         if let usersPage { results.apply(usersPage, for: .people, appending: false) }
+        if let page = kitsPage.page { results.apply(page, for: .kits, appending: false) }
+        if let page = eventsPage.page { results.apply(page, for: .events, appending: false) }
+        if let page = guidesPage.page { results.apply(page, for: .guides, appending: false) }
         return results
+    }
+
+    /// `page` is nil when the source is simply not available to this role;
+    /// `failed` is true only for a real error worth telling the user about.
+    private static func optionalPage(_ task: @MainActor () async throws -> SearchPage) async -> (page: SearchPage?, failed: Bool) {
+        do {
+            return (try await task(), false)
+        } catch APIError.notFound {
+            return (nil, false)
+        } catch APIError.httpError(let status, _) where status == 403 {
+            return (nil, false)
+        } catch {
+            return (nil, true)
+        }
     }
 
     func loadMore(query: String, source: SearchSource, offset: Int, gearOnly: Bool = false) async throws -> SearchPage {
@@ -224,6 +284,20 @@ final class SearchService {
         case .people:
             let response = try await api.users(search: query, limit: pageSize, offset: offset)
             return SearchPage(users: response.data, total: response.total, nextOffset: response.offset + response.data.count)
+        case .kits:
+            let response = try await api.kitList(search: query, locationId: nil, includeArchived: false, limit: pageSize, offset: offset)
+            return SearchPage(kits: response.data, total: response.total, nextOffset: offset + response.data.count)
+        case .events:
+            // Upcoming and in-progress events only: the list is ordered by
+            // start time, so including the past would bury what is next.
+            let response = try await api.searchCalendarEvents(query: query, limit: pageSize, offset: offset)
+            return SearchPage(events: response.data, total: response.total, nextOffset: offset + response.data.count)
+        case .guides:
+            // `/api/resources` has no paging, so the first fetch returns every
+            // match; slice it here to keep the section the same size as the rest.
+            let all = try await api.guides(search: query)
+            let slice = Array(all.dropFirst(offset).prefix(pageSize))
+            return SearchPage(guides: slice, total: all.count, nextOffset: offset + slice.count)
         }
     }
 

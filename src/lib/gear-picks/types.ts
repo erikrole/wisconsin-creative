@@ -110,9 +110,24 @@ export type GearPickReceiptDto = {
   receivedBy: string | null;
 };
 
+/** A Creative budget line that tops up the allotment. The amount lives only on the line. */
+export type GearPickTopUpDto = {
+  lineId: string;
+  budgetId: string;
+  budgetLabel: string;
+  description: string;
+  amountCents: number;
+};
+
 export type GearPickBudgetDto = {
+  /** The Under Armour allotment for the year. */
   budgetCents: number;
   confirmed: boolean;
+  /** Creative budget lines marked as counting toward this year, cancelled lines left out. */
+  topUps: GearPickTopUpDto[];
+  topUpCents: number;
+  /** Allotment plus Creative top-ups: what the year can spend. */
+  availableCents: number;
   /** Dollar total of every saved pick list, drafts included. */
   picksCents: number;
   /** Student kit price times the students on the roster. */
