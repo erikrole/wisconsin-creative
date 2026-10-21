@@ -100,7 +100,8 @@ function InternalSchedulePage() {
   const isStaff = data.currentUserRole === "STAFF" || data.currentUserRole === "ADMIN";
   const canReviewClaims = data.currentUserRole === "ADMIN";
   const { loadData, setExpandedRowId, setTradeSheetOpen } = data;
-  // A "shift is up for trade" notification lands here with ?tradeBoard=1.
+  // ?trades=open (Home, trade notifications) opens the board in use-schedule-data.
+  // ?tradeBoard=1 is kept for notifications sent before that link existed.
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get("tradeBoard") === "1") setTradeSheetOpen(true);
   }, [setTradeSheetOpen]);

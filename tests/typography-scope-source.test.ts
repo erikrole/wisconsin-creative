@@ -35,9 +35,8 @@ describe("Typography scope contracts", () => {
     const cases: Array<[string, string]> = [
       ["src/app/(app)/schedule/_components/ScheduleAutomationDigest.tsx", 'text-sm! font-semibold!'],
       ["src/app/(app)/schedule/_components/ListView.tsx", 'text-sm! font-semibold!'],
-      ["src/app/(app)/page.tsx", 'text-[20px]! font-black!'],
+      ["src/app/(app)/_home/HomeView.tsx", 'text-[28px]! leading-tight'],
       ["src/app/(app)/schedule/_components/CalendarView.tsx", 'text-sm font-bold'],
-      ["src/app/(app)/dashboard/section-header.tsx", 'text-sm! font-semibold!'],
     ];
 
     for (const [path, expected] of cases) {
@@ -47,9 +46,7 @@ describe("Typography scope contracts", () => {
 
   it("leaves no inert heading utilities on the two highest-traffic surfaces", () => {
     const files = [
-      "src/app/(app)/page.tsx",
-      "src/app/(app)/dashboard/section-header.tsx",
-      "src/app/(app)/dashboard/collaborator-home.tsx",
+      "src/app/(app)/_home/HomeView.tsx",
       "src/app/(app)/schedule/_components/ListView.tsx",
       "src/app/(app)/schedule/_components/CalendarView.tsx",
       "src/app/(app)/schedule/_components/ScheduleAutomationDigest.tsx",

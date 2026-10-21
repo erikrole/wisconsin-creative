@@ -78,7 +78,7 @@ export async function notifyEligibleStudentsOfTradePost(tradeId: string): Promis
       tradeId: trade.id,
       shiftId: shift.id,
       eventId: event.id,
-      extra: { href: "/schedule?tradeBoard=1" },
+      extra: { href: "/schedule?trades=open" },
     });
 
     const created = await db.notification.createManyAndReturn({
