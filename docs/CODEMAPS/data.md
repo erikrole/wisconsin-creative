@@ -11,7 +11,7 @@
 
 | Model | Fields | Model-level indexes/constraints |
 |---|---:|---:|
-| `User` | 139 | 5 |
+| `User` | 140 | 5 |
 | `Session` | 7 | 2 |
 | `PasswordResetToken` | 6 | 2 |
 | `PasskeyCredential` | 12 | 2 |
@@ -97,7 +97,7 @@
 | `ShiftTrade` | 14 | 4 |
 | `StudentAvailabilityBlock` | 22 | 7 |
 | `BookingPhoto` | 8 | 2 |
-| `CheckinItemReport` | 20 | 7 |
+| `CheckinItemReport` | 25 | 8 |
 | `KioskDevice` | 19 | 3 |
 | `Resource` | 20 | 7 |
 | `ResourceAssetFolder` | 12 | 2 |
@@ -263,6 +263,14 @@
 
 - `DAMAGED`
 - `LOST`
+
+### `ReportResolution`
+
+- `REPAIRED`
+- `REPLACED`
+- `WRITTEN_OFF`
+- `FOUND`
+- `NO_ISSUE`
 
 ### `BadgeCategory`
 

@@ -87,7 +87,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 
 - Doc: `docs/AREA_ITEMS.md`
 - Pages: `/items/[id]`, `/items/hygiene`, `/items`
-- APIs: `/api/assets/[id]/accessories`, `/api/assets/[id]/activity`, `/api/assets/[id]/duplicate`, `/api/assets/[id]/favorite`, `/api/assets/[id]/generate-qr`, `/api/assets/[id]/image`, `/api/assets/[id]/insights`, `/api/assets/[id]/maintenance`, `/api/assets/[id]/retire`, `/api/assets/[id]`
+- APIs: `/api/assets/[id]/accessories`, `/api/assets/[id]/activity`, `/api/assets/[id]/duplicate`, `/api/assets/[id]/favorite`, `/api/assets/[id]/generate-qr`, `/api/assets/[id]/image`, `/api/assets/[id]/insights`, `/api/assets/[id]/maintenance`, `/api/assets/[id]/report`, `/api/assets/[id]/retire`
 - Services: `src/lib/services/kiosk-active-checkout-items.ts`
 - Tests: `tests/api-assets-item-families.test.ts`, `tests/assets-missing-gaps-route.test.ts`, `tests/ios-brand-assets-browse.test.ts`, `tests/ios-items-empty-state-recovery.test.ts`, `tests/ios-items-error-copy.test.ts`, `tests/ios-items-favorite-recovery.test.ts`, `tests/ios-items-retired-reserve-gating.test.ts`, `tests/ios-items-row-accessibility.test.ts`
 
@@ -143,15 +143,15 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 
 - Doc: `docs/AREA_REPORTS.md`
 - Pages: `/reports/audit`, `/reports/badges`, `/reports/bulk-losses`, `/reports/checkouts`, `/reports/overdue`, `/reports`, `/reports/scans`, `/reports/usage`
-- APIs: `/api/audit/export`, `/api/audit/last`, `/api/audit`, `/api/bookings/[id]/audit-logs`, `/api/checkin-reports/[id]/dismiss`, `/api/cron/audit-archive`, `/api/location-mappings/audit`, `/api/reports/audit`, `/api/reports/badges`, `/api/reports/bulk-losses`
+- APIs: `/api/audit/export`, `/api/audit/last`, `/api/audit`, `/api/bookings/[id]/audit-logs`, `/api/bookings/[id]/reports`, `/api/checkin-reports/[id]/dismiss`, `/api/cron/audit-archive`, `/api/location-mappings/audit`, `/api/reports/audit`, `/api/reports/badges`
 - Services: `src/lib/services/checkin-item-reports.ts`, `src/lib/services/error-reports.ts`, `src/lib/services/reports.ts`
-- Tests: `tests/asset-condition-reports.test.ts`, `tests/audit-archive-cron.test.ts`, `tests/audit-export-route.test.ts`, `tests/audit-helper.test.ts`, `tests/audit-last-route.test.ts`, `tests/booking-audit-history-recovery.test.ts`, `tests/calendar-sync-audit.test.ts`, `tests/ios-audit-inventory.test.ts`
+- Tests: `tests/asset-condition-reports.test.ts`, `tests/audit-archive-cron.test.ts`, `tests/audit-export-route.test.ts`, `tests/audit-helper.test.ts`, `tests/audit-last-route.test.ts`, `tests/booking-audit-history-recovery.test.ts`, `tests/booking-reports-route.test.ts`, `tests/calendar-sync-audit.test.ts`
 
 ## reservations
 
 - Doc: `docs/AREA_RESERVATIONS.md`
 - Pages: `/bookings`, `/reservations/[id]`, `/reservations/new`, `/reservations`, `/settings/bookings`
-- APIs: `/api/bookings/[id]/audit-logs`, `/api/bookings/[id]/cancel`, `/api/bookings/[id]/custody-scope`, `/api/bookings/[id]/events`, `/api/bookings/[id]/extend`, `/api/bookings/[id]/force-complete`, `/api/bookings/[id]/nudge`, `/api/bookings/[id]/reuse-plan`, `/api/bookings/[id]`, `/api/bookings/[id]/serialized-items/[itemId]/holder`
+- APIs: `/api/bookings/[id]/audit-logs`, `/api/bookings/[id]/cancel`, `/api/bookings/[id]/custody-scope`, `/api/bookings/[id]/events`, `/api/bookings/[id]/extend`, `/api/bookings/[id]/force-complete`, `/api/bookings/[id]/nudge`, `/api/bookings/[id]/reports`, `/api/bookings/[id]/reuse-plan`, `/api/bookings/[id]`
 - Services: `src/lib/services/bookings-checkin.ts`, `src/lib/services/bookings-helpers.ts`, `src/lib/services/bookings-lifecycle.ts`, `src/lib/services/bookings-queries.ts`, `src/lib/services/bookings.ts`
 - Tests: `tests/bookings-ui-polish-source.test.ts`, `tests/ios-bookings-empty-state.test.ts`, `tests/ios-bookings-power-filters.test.ts`
 

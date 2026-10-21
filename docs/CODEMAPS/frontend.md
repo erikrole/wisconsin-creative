@@ -18,6 +18,7 @@
 | `/checkouts/[id]` | `src/app/(app)/checkouts/[id]/page.tsx` |
 | `/checkouts/new` | `src/app/(app)/checkouts/new/page.tsx` |
 | `/checkouts` | `src/app/(app)/checkouts/page.tsx` |
+| `/damage` | `src/app/(app)/damage/page.tsx` |
 | `/events/[id]` | `src/app/(app)/events/[id]/page.tsx` |
 | `/events` | `src/app/(app)/events/page.tsx` |
 | `/gear/admin` | `src/app/(app)/gear/admin/page.tsx` |
@@ -114,6 +115,7 @@
 | Route | File |
 |---|---|
 | `/budget` | `src/app/(app)/budget/layout.tsx` |
+| `/damage` | `src/app/(app)/damage/layout.tsx` |
 | `/issues` | `src/app/(app)/issues/layout.tsx` |
 | `/kits` | `src/app/(app)/kits/layout.tsx` |
 | `/` | `src/app/(app)/layout.tsx` |
@@ -146,11 +148,11 @@
 | `src/components/BookingDetailsSheet.tsx` | 728 |
 | `src/components/ui/sidebar.tsx` | 710 |
 | `src/components/schedule/SportSetupWizard.tsx` | 675 |
-| `src/components/Sidebar.tsx` | 621 |
+| `src/components/Sidebar.tsx` | 623 |
 | `src/components/booking-wizard/WizardStep1.tsx` | 599 |
 | `src/components/CommandPalette.tsx` | 588 |
 | `src/components/booking-details/BookingHeader.tsx` | 472 |
-| `src/components/AppShell.tsx` | 437 |
+| `src/components/AppShell.tsx` | 438 |
 | `src/components/event-editor/EventEditorFields.tsx` | 435 |
 | `src/components/ui/heatmap.tsx` | 434 |
 | `src/components/ui/chart.tsx` | 387 |
