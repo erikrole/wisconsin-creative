@@ -6,7 +6,7 @@
     "summary": "Report a problem with any item, any time, and staff get one page to follow every damaged or missing item through to an outcome.",
     "details": [
       "Report a problem on any item page, on the web or iPhone: say it's damaged or can't be found, with a note and a photo.",
-      "A new Damage and loss page lists every open case with the photo, the note, who had the item, and the checkout. Closed cases stay on file.",
+      "A new Damage and loss page lists every open case with the photo, the note, who had the item, and the checkout, including lost batteries and supplies. Closed cases stay on file.",
       "Staff close a case as repaired, replaced, written off, found, or no issue. Repaired, found and no issue put the item back in service. Replaced and written off retire it.",
       "An item reported missing, or reported damaged while idle, is held right away so it can't be booked again, and shows as Missing in the catalog. A checked-out or reserved item stays in service until staff review it.",
       "The dashboard flags stay until a case is closed and link to the new page, and the sidebar shows how many cases are open.",

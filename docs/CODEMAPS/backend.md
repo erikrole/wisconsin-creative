@@ -42,7 +42,7 @@
 | `src/lib/services/companion-projection-publisher.ts` | 57 |
 | `src/lib/services/companion-projection.ts` | 251 |
 | `src/lib/services/consolidation-shared.ts` | 21 |
-| `src/lib/services/damage-cases.ts` | 305 |
+| `src/lib/services/damage-cases.ts` | 364 |
 | `src/lib/services/dashboard-counts.ts` | 119 |
 | `src/lib/services/error-reports.ts` | 530 |
 | `src/lib/services/event-travel.ts` | 32 |

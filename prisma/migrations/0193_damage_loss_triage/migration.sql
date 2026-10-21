@@ -37,3 +37,22 @@ WHERE r."asset_id" = a."id"
     a."status" = 'RETIRED'
     OR (r."type" = 'DAMAGED' AND (a."status" <> 'MAINTENANCE' OR r."dismissed_at" IS NOT NULL))
   );
+
+-- Batteries and counted stock join the queue. A numbered-unit report stays open
+-- only while that unit is still marked LOST; everything else is closed as handled.
+-- Counted-stock reports older than 30 days are closed so the queue starts current.
+UPDATE "checkin_item_reports" r
+SET "resolution" = 'NO_ISSUE'::"ReportResolution",
+    "resolved_at" = r."last_reported_at"
+FROM "bulk_sku_units" u
+WHERE r."bulk_sku_unit_id" = u."id"
+  AND r."resolution" IS NULL
+  AND NOT (r."type" = 'LOST' AND u."status" = 'LOST');
+
+UPDATE "checkin_item_reports"
+SET "resolution" = 'NO_ISSUE'::"ReportResolution",
+    "resolved_at" = "last_reported_at"
+WHERE "bulk_sku_id" IS NOT NULL
+  AND "bulk_sku_unit_id" IS NULL
+  AND "resolution" IS NULL
+  AND "last_reported_at" < now() - interval '30 days';

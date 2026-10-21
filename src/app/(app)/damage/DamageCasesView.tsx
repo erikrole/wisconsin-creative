@@ -22,7 +22,7 @@ type DamageCase = {
   description: string | null;
   imageUrl: string | null;
   reportedAt: string;
-  asset: { id: string; assetTag: string; name: string | null; brand: string; model: string; imageUrl: string | null; status: string };
+  item: { kind: "asset" | "unit" | "counted"; id: string; label: string; tag: string; imageUrl: string | null; href: string; status: string | null };
   booking: { id: string; title: string } | null;
   responsible: { id: string; name: string } | null;
   reportedBy: string;
@@ -106,7 +106,6 @@ export function DamageCasesView() {
 }
 
 function CaseRow({ item, open, onToggle }: { item: DamageCase; open: boolean; onToggle: () => void }) {
-  const title = item.asset.name || `${item.asset.brand} ${item.asset.model}`;
   const closed = item.resolution !== null;
   return (
     <li>
@@ -116,11 +115,11 @@ function CaseRow({ item, open, onToggle }: { item: DamageCase; open: boolean; on
         aria-expanded={open}
         className="grid w-full grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-3.5 text-left outline-none transition-colors hover:bg-muted/50 focus-visible:bg-muted/60 sm:px-5"
       >
-        <Thumb src={item.asset.imageUrl} />
+        <Thumb src={item.item.imageUrl} />
         <div className="min-w-0">
           <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-            <p className="m-0 truncate text-[14px] font-bold">{title}</p>
-            <span className="text-[12.5px] text-muted-foreground">{item.asset.assetTag}</span>
+            <p className="m-0 truncate text-[14px] font-bold">{item.item.label}</p>
+            <span className="text-[12.5px] text-muted-foreground">{item.item.tag}</span>
           </div>
           <p className="m-0 mt-0.5 truncate text-[12.5px] text-muted-foreground">
             {(item.responsible?.name ?? item.reportedBy)} · {formatRelativeTime(item.reportedAt, new Date())}
@@ -152,7 +151,7 @@ function CaseDetail({ item }: { item: DamageCase }) {
         body: JSON.stringify({ resolution: choice, note: note.trim() || undefined }),
       });
       if (!res.ok) throw new Error(await parseErrorMessage(res, "Couldn't close this case"));
-      toast.success(`${item.asset.assetTag}: ${LABELS[choice].toLowerCase()}`);
+      toast.success(`${item.item.label} ${item.item.tag}: ${LABELS[choice].toLowerCase()}`);
       await queryClient.invalidateQueries({ queryKey: ["damage-cases"] });
       void queryClient.invalidateQueries({ queryKey: ["sidebar-counts"] });
     } catch (err) {
@@ -186,7 +185,7 @@ function CaseDetail({ item }: { item: DamageCase }) {
           <dd className="m-0 min-w-0 truncate">{item.booking ? item.booking.title : "Reported from the item page"}</dd>
         </dl>
         <div className="flex flex-wrap gap-3 text-[13px] font-bold">
-          <Link href={`/items/${item.asset.id}`} className="text-foreground underline-offset-4 hover:underline">Open item</Link>
+          <Link href={item.item.href} className="text-foreground underline-offset-4 hover:underline">{item.item.kind === "asset" ? "Open item" : "Open in Battery inventory"}</Link>
           {item.booking && <Link href={`/checkouts/${item.booking.id}`} className="text-foreground underline-offset-4 hover:underline">Open checkout</Link>}
         </div>
 
@@ -218,7 +217,7 @@ function CaseDetail({ item }: { item: DamageCase }) {
                 </button>
               ))}
             </div>
-            {choice && <p className="m-0 text-[12.5px] text-muted-foreground">{HINTS[choice]}</p>}
+            {choice && <p className="m-0 text-[12.5px] text-muted-foreground">{item.item.kind === "asset" ? HINTS[choice] : "Recorded on the case only. Update the unit or stock count in Battery inventory."}</p>}
             <Textarea aria-label="Note" placeholder="Note (optional): repair shop, cost, replacement tag" value={note} onChange={(e) => setNote(e.target.value)} maxLength={1000} rows={2} />
             <Button className="self-start" disabled={!choice || busy} onClick={() => void submit()}>{busy ? "Saving…" : "Close case"}</Button>
           </div>

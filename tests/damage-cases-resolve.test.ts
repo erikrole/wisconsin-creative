@@ -61,4 +61,16 @@ describe("resolveDamageCase", () => {
     tx.checkinItemReport.findUnique.mockResolvedValue({ id: "r1", assetId: "a1", type: "DAMAGED", resolution: "REPAIRED", bookingId: "b1" });
     await expect(resolveDamageCase({ reportId: "r1", resolution: "NO_ISSUE", actor })).rejects.toMatchObject({ status: 409 });
   });
+
+  it("records a battery outcome on the case only and never touches inventory", async () => {
+    tx.checkinItemReport.findUnique.mockResolvedValue({ id: "r9", assetId: null, bulkSkuUnitId: "u7", bulkSkuId: null, type: "LOST", resolution: null, bookingId: "b1" });
+    tx.checkinItemReport.findMany.mockResolvedValue([{ id: "r9" }]);
+    await resolveDamageCase({ reportId: "r9", resolution: "FOUND", actor });
+    expect(tx.checkinItemReport.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: { in: ["r9"] } },
+      data: expect.objectContaining({ resolution: "FOUND" }),
+    }));
+    expect(tx.asset.update).not.toHaveBeenCalled();
+    expect(createAuditEntryTx).toHaveBeenCalledWith(tx, expect.objectContaining({ entityType: "bulk_sku_unit", entityId: "u7" }));
+  });
 });

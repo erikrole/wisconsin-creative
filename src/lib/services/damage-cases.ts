@@ -25,6 +25,11 @@ export const RESOLUTION_LABELS: Record<ReportResolution, string> = {
   NO_ISSUE: "No issue found",
 };
 
+/** A report targets a serialized asset, a numbered unit, or counted stock. */
+const ANY_TARGET: Prisma.CheckinItemReportWhereInput = {
+  OR: [{ assetId: { not: null } }, { bulkSkuUnitId: { not: null } }, { bulkSkuId: { not: null } }],
+};
+
 const caseSelect = {
   id: true,
   type: true,
@@ -35,7 +40,10 @@ const caseSelect = {
   resolution: true,
   resolvedAt: true,
   resolutionNote: true,
+  quantity: true,
   asset: { select: { id: true, assetTag: true, name: true, brand: true, model: true, status: true, imageUrl: true } },
+  bulkSkuUnit: { select: { id: true, unitNumber: true, status: true, bulkSku: { select: { id: true, name: true, imageUrl: true } } } },
+  bulkSku: { select: { id: true, name: true, imageUrl: true } },
   booking: { select: { id: true, title: true, requester: { select: { id: true, name: true } } } },
   reportedBy: { select: { id: true, name: true } },
   resolvedBy: { select: { id: true, name: true } },
@@ -49,7 +57,19 @@ export type DamageCase = {
   description: string | null;
   imageUrl: string | null;
   reportedAt: string;
-  asset: { id: string; assetTag: string; name: string | null; brand: string; model: string; imageUrl: string | null; status: AssetStatus };
+  /** What the report is about. Serialized items link to their page; batteries and counted stock to their family. */
+  item: {
+    kind: "asset" | "unit" | "counted";
+    id: string;
+    /** Title line: the item's name or the family name. */
+    label: string;
+    /** Tag line: asset tag, unit number, or quantity. */
+    tag: string;
+    imageUrl: string | null;
+    href: string;
+    /** Stored status, serialized items only. */
+    status: AssetStatus | null;
+  };
   /** Null when the report was filed from the item page. */
   booking: { id: string; title: string } | null;
   /** The borrower on the checkout, who had the item when it was reported. */
@@ -64,19 +84,36 @@ export type DamageCase = {
   allowedResolutions: ReportResolution[];
 };
 
+function toItem(row: CaseRow): DamageCase["item"] | null {
+  if (row.asset) {
+    const a = row.asset;
+    return { kind: "asset", id: a.id, label: a.name || `${a.brand} ${a.model}`, tag: a.assetTag, imageUrl: a.imageUrl, href: `/items/${a.id}`, status: a.status };
+  }
+  if (row.bulkSkuUnit) {
+    const u = row.bulkSkuUnit;
+    return { kind: "unit", id: u.id, label: u.bulkSku.name, tag: `#${u.unitNumber}`, imageUrl: u.bulkSku.imageUrl, href: `/bulk-inventory/${u.bulkSku.id}`, status: null };
+  }
+  if (row.bulkSku) {
+    const s = row.bulkSku;
+    return { kind: "counted", id: s.id, label: s.name, tag: `× ${row.quantity ?? 1}`, imageUrl: s.imageUrl, href: `/bulk-inventory/${s.id}`, status: null };
+  }
+  return null;
+}
+
 function toCase(row: CaseRow): DamageCase | null {
-  if (!row.asset) return null;
+  const item = toItem(row);
+  if (!item) return null;
   return {
     id: row.id,
     type: row.type,
     description: row.description,
     imageUrl: row.imageUrl,
     reportedAt: row.lastReportedAt.toISOString(),
-    asset: row.asset,
+    item,
     booking: row.booking ? { id: row.booking.id, title: displayBookingTitle(row.booking.title) } : null,
     responsible: row.booking?.requester ?? null,
     reportedBy: row.reportedBy.name,
-    stillBookable: row.type === "LOST" && !row.resolution && row.asset.status === "AVAILABLE",
+    stillBookable: item.kind === "asset" && row.type === "LOST" && !row.resolution && item.status === "AVAILABLE",
     resolution: row.resolution,
     resolvedAt: row.resolvedAt?.toISOString() ?? null,
     resolvedBy: row.resolvedBy?.name ?? null,
@@ -87,7 +124,7 @@ function toCase(row: CaseRow): DamageCase | null {
 
 export async function listDamageCases(view: "open" | "closed") {
   const where: Prisma.CheckinItemReportWhereInput = {
-    assetId: { not: null },
+    ...ANY_TARGET,
     resolution: view === "open" ? null : { not: null },
   };
   const [rows, openCount, missingCount, closedCount] = await Promise.all([
@@ -97,9 +134,9 @@ export async function listDamageCases(view: "open" | "closed") {
       take: 200,
       select: caseSelect,
     }),
-    db.checkinItemReport.count({ where: { assetId: { not: null }, resolution: null } }),
-    db.checkinItemReport.count({ where: { assetId: { not: null }, resolution: null, type: "LOST" } }),
-    db.checkinItemReport.count({ where: { assetId: { not: null }, resolution: { not: null } } }),
+    db.checkinItemReport.count({ where: { ...ANY_TARGET, resolution: null } }),
+    db.checkinItemReport.count({ where: { ...ANY_TARGET, resolution: null, type: "LOST" } }),
+    db.checkinItemReport.count({ where: { ...ANY_TARGET, resolution: { not: null } } }),
   ]);
   return {
     counts: { open: openCount, missing: missingCount, closed: closedCount },
@@ -117,9 +154,9 @@ export async function missingAssetIds(assetIds: string[]): Promise<Set<string>> 
   return new Set(rows.flatMap((r) => (r.assetId ? [r.assetId] : [])));
 }
 
-/** Open serialized cases, for the sidebar badge. */
+/** Open cases, for the sidebar badge. */
 export function countOpenDamageCases() {
-  return db.checkinItemReport.count({ where: { assetId: { not: null }, resolution: null } });
+  return db.checkinItemReport.count({ where: { ...ANY_TARGET, resolution: null } });
 }
 
 export async function resolveDamageCase(args: {
@@ -133,15 +170,41 @@ export async function resolveDamageCase(args: {
     async (tx) => {
       const report = await tx.checkinItemReport.findUnique({
         where: { id: args.reportId },
-        select: { id: true, assetId: true, type: true, resolution: true, bookingId: true },
+        select: { id: true, assetId: true, bulkSkuUnitId: true, bulkSkuId: true, type: true, resolution: true, bookingId: true },
       });
-      if (!report || !report.assetId) throw new HttpError(404, "Report not found");
+      if (!report || !(report.assetId || report.bulkSkuUnitId || report.bulkSkuId)) throw new HttpError(404, "Report not found");
       if (report.resolution) throw new HttpError(409, "This case was already closed. Refresh to see the outcome.");
       if (!RESOLUTIONS_BY_TYPE[report.type].includes(args.resolution)) {
         throw new HttpError(400, "That outcome doesn't fit this kind of report.");
       }
 
       const now = new Date();
+      const closeData = { resolution: args.resolution, resolvedAt: now, resolvedById: args.actor.id, resolutionNote: note };
+
+      if (!report.assetId) {
+        // Batteries and counted stock: the outcome is recorded on the case only.
+        // Unit status and stock balances keep their existing, audited paths
+        // (Battery inventory), so closing a case never moves inventory counts.
+        const siblings = await tx.checkinItemReport.findMany({
+          where: report.bulkSkuUnitId
+            ? { bulkSkuUnitId: report.bulkSkuUnitId, resolution: null }
+            : { id: report.id },
+          select: { id: true },
+        });
+        const bulkIds = siblings.map((r) => r.id);
+        await tx.checkinItemReport.updateMany({ where: { id: { in: bulkIds } }, data: closeData });
+        await createAuditEntryTx(tx, {
+          actorId: args.actor.id,
+          actorRole: args.actor.role,
+          entityType: report.bulkSkuUnitId ? "bulk_sku_unit" : "bulk_sku",
+          entityId: (report.bulkSkuUnitId ?? report.bulkSkuId)!,
+          action: `damage_case_${args.resolution.toLowerCase()}`,
+          before: { reportIds: bulkIds },
+          after: { reportIds: bulkIds, resolution: args.resolution, note },
+        });
+        return { reportIds: bulkIds, assetStatus: null };
+      }
+
       // Closing a case closes every other open report on the same item with
       // the same outcome: one repair settles them all.
       const open = await tx.checkinItemReport.findMany({
@@ -149,10 +212,7 @@ export async function resolveDamageCase(args: {
         select: { id: true },
       });
       const ids = open.map((r) => r.id);
-      await tx.checkinItemReport.updateMany({
-        where: { id: { in: ids } },
-        data: { resolution: args.resolution, resolvedAt: now, resolvedById: args.actor.id, resolutionNote: note },
-      });
+      await tx.checkinItemReport.updateMany({ where: { id: { in: ids } }, data: closeData });
 
       const asset = await tx.asset.findUnique({ where: { id: report.assetId }, select: { status: true } });
       let nextStatus = asset?.status;
@@ -266,7 +326,7 @@ export type BookingReport = {
   type: CheckinReportType;
   /** What the report is about: an item tag, a numbered unit, or a counted quantity. */
   label: string;
-  /** Staff outcome for a serialized item; null while the case is open or for bulk gear. */
+  /** Staff outcome; null while the case is open. */
   resolution: ReportResolution | null;
   open: boolean;
   reportedAt: string;
@@ -297,8 +357,7 @@ export async function listBookingReports(bookingId: string): Promise<BookingRepo
         ? `${r.bulkSkuUnit.bulkSku.name} #${r.bulkSkuUnit.unitNumber}`
         : `${r.bulkSku?.name ?? "Supplies"} × ${r.quantity ?? 1}`,
     resolution: r.resolution,
-    // Bulk gear has no staff outcome yet, so it never reads as "being looked into".
-    open: Boolean(r.asset) && !r.resolution,
+    open: !r.resolution,
     reportedAt: r.lastReportedAt.toISOString(),
   }));
 }
