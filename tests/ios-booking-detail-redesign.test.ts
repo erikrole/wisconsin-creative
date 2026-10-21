@@ -15,16 +15,16 @@ const dates = source("ios/Wisconsin/Core/DateFormats.swift");
 describe("iOS Booking Detail Item Detail alignment", () => {
   it("uses the holder-led Item Detail header without status or internal reference chrome", () => {
     const header = sliceBetween(detail, "private struct BookingDetailsSection", "private struct BookingOverviewSection");
-    const rail = header.indexOf("StatusRail(tone:");
-    const avatar = header.indexOf("UserAvatarView(");
     const title = header.indexOf("Text(booking.title)");
     const timing = header.indexOf("Text(timingLabel(now:");
+    const avatar = header.indexOf("UserAvatarView(");
 
-    expect(rail).toBeLessThan(avatar);
-    expect(avatar).toBeLessThan(title);
+    // Title first, then timing, then who has it: no rail, no big avatar.
+    expect(header).not.toContain("StatusRail");
     expect(title).toBeLessThan(timing);
+    expect(timing).toBeLessThan(avatar);
     expect(header).toContain('return "Due in \\(label.dropFirst("DUE BACK IN ".count))"');
-    expect(header).toContain("Text(booking.requester.name)");
+    expect(header).toContain("booking.requester.name");
     expect(header).not.toContain("StatusBadge(");
     expect(header).not.toContain("booking.refNumber");
   });
@@ -35,7 +35,7 @@ describe("iOS Booking Detail Item Detail alignment", () => {
     expect(detail).toContain("BookingExtendBar(");
     expect(detail).toContain(".background(.ultraThinMaterial)");
     expect(detail).toContain('Label("Extend Return Date", systemImage: "clock.arrow.circlepath")');
-    expect(detail).toMatch(/Label\("Extend Return Date"[\s\S]*?\.buttonStyle\(\.bordered\)/);
+    expect(detail).toMatch(/Label\("Extend Return Date"[\s\S]*?\.buttonStyle\(\.borderedProminent\)/);
     expect(detail).toContain("if canCancelBooking");
     expect(detail).toContain('Label("Cancel Booking", systemImage: "xmark.circle")');
   });
@@ -51,16 +51,16 @@ describe("iOS Booking Detail Item Detail alignment", () => {
   it("keeps operational details compact and removes duplicate identity and location", () => {
     const overview = sliceBetween(detail, "private struct BookingOverviewSection", "private struct EquipmentSection");
 
-    expect(overview).toContain('BrandSectionHeader("Schedule")');
+    expect(overview).toContain('Section("Schedule")');
     expect(overview).not.toContain('title: "Requester"');
     expect(overview).not.toContain("UserAvatarView(");
     expect(overview).not.toContain("booking.requester.email");
-    expect(overview).toContain('overviewRow(icon: "arrow.right", tone: .gray, title: "Pickup Time")');
-    expect(overview).toContain('overviewRow(icon: "arrow.left", tone: .gray, title: "Return Time")');
+    expect(overview).toContain('LabeledContent("Pickup")');
+    expect(overview).toContain('LabeledContent("Return")');
     expect(overview).not.toContain('arrow.up.right');
     expect(overview).not.toContain('arrow.down.left');
     expect(overview).not.toContain('title: "Pickup Location"');
-    expect(overview).toContain('overviewRow(icon: "barcode.viewfinder", tone: .gray, title: "Pickup Kiosk")');
+    expect(overview).toContain('LabeledContent("Pickup kiosk")');
     expect(overview).toContain("date.operationalDateTimeLabel(now: today)");
     expect(dates).toContain("let dayDistance = Calendar.current.dayOffset(of: self, from: now)");
     expect(dates).toContain('case 0: return "Today"');
@@ -70,10 +70,8 @@ describe("iOS Booking Detail Item Detail alignment", () => {
     expect(dates).toContain('parts.joined(separator: ", ")');
     expect(overview).not.toContain(".year(");
     expect(overview).not.toContain("gearLong");
-    expect(overview).toContain("Color.statusBackground(tone), in: Circle()");
-    expect(overview).toContain(".font(.subheadline.weight(.medium))");
-    expect(overview).toContain(".frame(width: 30, height: 30)");
-    expect(overview).toContain(".padding(.vertical, 9)");
+    // Native grouped rows: no tinted icon circles.
+    expect(overview).not.toContain("Circle()");
     expect(detail).toContain('"Needed again soon. Choose an earlier return time when extending."');
     expect(detail).toContain('"Recorded when gear is picked up"');
   });
@@ -81,11 +79,11 @@ describe("iOS Booking Detail Item Detail alignment", () => {
   it("keeps Gear clean and gives returned rows a non-color cue", () => {
     const gear = sliceBetween(detail, "private struct EquipmentSection", "private struct ActionsSection");
 
-    expect(gear).toContain('BrandSectionHeader(title: "Gear")');
+    expect(gear).toContain('Text("Gear · ');
     expect(gear).not.toContain("equipmentItemPill");
     expect(gear).toContain('item.allocationStatus?.lowercased() == "returned"');
     expect(gear).toContain('Image(systemName: "checkmark.circle.fill")');
-    expect(gear).toContain("Color.statusBackground(.green)");
+    expect(gear).not.toContain("Color.statusBackground(.green)");
     expect(gear).toContain(".opacity(isReturned ? 0.55 : 1)");
     expect(gear).toContain('parts.append("Returned")');
   });

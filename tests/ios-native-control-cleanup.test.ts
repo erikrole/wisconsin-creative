@@ -86,9 +86,12 @@ describe("iOS native control cleanup", () => {
     );
 
     expect(actions).not.toContain(".buttonStyle(.glass)");
-    expect(actions).toMatch(/Label\("Cancel Booking"[\s\S]*?\.buttonStyle\(\.bordered\)[\s\S]*?\.buttonBorderShape\(\.capsule\)[\s\S]*?\.controlSize\(\.large\)/);
+    // Cancel is a plain destructive row in the grouped list, not a bordered button.
+    expect(actions).toContain("Button(role: .destructive)");
+    expect(actions).not.toContain(".buttonStyle(.bordered)");
     expect(extendBar).not.toContain(".buttonStyle(.glass)");
-    expect(extendBar).toMatch(/Label\("Extend Return Date"[\s\S]*?\.buttonStyle\(\.bordered\)[\s\S]*?\.buttonBorderShape\(\.capsule\)[\s\S]*?\.controlSize\(\.large\)/);
+    // The one primary action: prominent capsule in the Claim green.
+    expect(extendBar).toMatch(/Label\("Extend Return Date"[\s\S]*?\.buttonStyle\(\.borderedProminent\)[\s\S]*?\.buttonBorderShape\(\.capsule\)[\s\S]*?\.controlSize\(\.large\)[\s\S]*?\.tint\(\.green\)/);
     expect(extendBar).toContain(".background(.ultraThinMaterial)");
     expect(extendBar).not.toContain("Divider()");
   });

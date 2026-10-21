@@ -1168,7 +1168,29 @@ enum BookingFixtureAPI {
                 sportCode: "SOC"
             ),
         ]
-        let visibleRows = ownOnly ? [rows[0]] : rows
+        // Capture-only variety so the day grouping has something to group:
+        // late gear, a missed pickup, and a day further out.
+        let extraRows = [
+            listBooking(
+                id: "bk-team-overdue", kind: "CHECKOUT", title: "Hockey road audio kit", status: "OPEN",
+                requesterId: "u-jordan", requesterName: "Jordan Lee", startsIn: -26 * 60, endsIn: -90,
+                sportCode: "MHKY"
+            ),
+            listBooking(
+                id: "bk-team-missed", kind: "RESERVATION", title: "Women's soccer portraits", status: "BOOKED",
+                requesterId: "u-avery", requesterName: "Avery Nakamura", startsIn: -50, endsIn: 200,
+                sportCode: "WSOC"
+            ),
+            listBooking(
+                id: "bk-team-tomorrow", kind: "RESERVATION", title: "Football vs Ohio State", status: "BOOKED",
+                requesterId: "u-jordan", requesterName: "Jordan Lee", startsIn: 28 * 60, endsIn: 36 * 60,
+                sportCode: "FB"
+            ),
+        ]
+        if ProcessInfo.processInfo.environment["GT_BOOKINGS_FIXTURE"] == "empty" {
+            return Data("{\"data\":[],\"total\":0,\"limit\":30,\"offset\":0}".utf8)
+        }
+        let visibleRows = ownOnly ? [rows[0]] : rows + extraRows
         return Data("{\"data\":[\(visibleRows.joined(separator: ","))],\"total\":\(visibleRows.count),\"limit\":30,\"offset\":0}".utf8)
     }
 }

@@ -329,7 +329,7 @@ describe("student field mobile contracts", () => {
     expect(editor).not.toContain("TextEditor(");
     expect(apiClient).toContain("let locationId: String?");
     expect(apiClient).toContain("locationId: locationId");
-    expect(detail).toContain('BrandSectionHeader(title: "Gear")');
+    expect(detail).toContain('Text("Gear · ');
     expect(detail).toContain("if canExtendBooking");
     expect(detail).toContain("if canCancelBooking");
     expect(detail).toContain("BookingExtendBar");

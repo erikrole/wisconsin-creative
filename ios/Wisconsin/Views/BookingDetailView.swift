@@ -158,83 +158,67 @@ struct BookingDetailView: View {
                         .buttonStyle(.borderedProminent)
                 }
             } else if let booking {
-                ScrollView {
-                    LazyVStack(spacing: Brand.Space.md) {
-                        BookingDetailsSection(booking: booking)
+                List {
+                    BookingDetailsSection(booking: booking)
 
-                        FormCard {
-                            BookingOverviewSection(
-                                booking: booking,
-                                returnInsight: returnInsight
-                            )
-                        }
+                    BookingOverviewSection(
+                        booking: booking,
+                        returnInsight: returnInsight
+                    )
 
-                        if !booking.serializedItems.isEmpty || !booking.bulkItems.isEmpty {
-                            FormCard {
-                                EquipmentSection(
-                                    serializedItems: booking.serializedItems,
-                                    bulkItems: booking.bulkItems,
-                                    conflicts: conflicts,
-                                    bookingStatus: booking.status,
-                                    availabilityError: availabilityError,
-                                    bookingStartsAt: booking.startsAt,
-                                    bookingEndsAt: booking.endsAt,
-                                    onRetryAvailability: { Task { await loadConflicts(for: booking) } }
-                                )
-                            }
-                        }
-                        if BookingActivityAccess.canRead(role: session.currentUser?.role) {
-                            FormCard {
-                                NavigationLink {
-                                    BookingActivityView(bookingId: booking.id)
-                                } label: {
-                                    HStack(spacing: Brand.Space.sm) {
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text("Activity")
-                                                .font(.body.weight(.semibold))
-                                                .foregroundStyle(.primary)
-                                            Text("What changed on this booking.")
-                                                .font(.subheadline)
-                                                .foregroundStyle(.secondary)
-                                        }
-                                        Spacer(minLength: Brand.Space.sm)
-                                        Image(systemName: "chevron.right")
-                                            .font(.caption.weight(.semibold))
-                                            .foregroundStyle(.tertiary)
-                                            .accessibilityHidden(true)
-                                    }
-                                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                                    .contentShape(Rectangle())
+                    if !booking.serializedItems.isEmpty || !booking.bulkItems.isEmpty {
+                        EquipmentSection(
+                            serializedItems: booking.serializedItems,
+                            bulkItems: booking.bulkItems,
+                            conflicts: conflicts,
+                            bookingStatus: booking.status,
+                            availabilityError: availabilityError,
+                            bookingStartsAt: booking.startsAt,
+                            bookingEndsAt: booking.endsAt,
+                            onRetryAvailability: { Task { await loadConflicts(for: booking) } }
+                        )
+                    }
+                    if BookingActivityAccess.canRead(role: session.currentUser?.role) {
+                        Section {
+                            NavigationLink {
+                                BookingActivityView(bookingId: booking.id)
+                            } label: {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Activity")
+                                        .foregroundStyle(.primary)
+                                    Text("What changed on this booking.")
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
                                 }
-                                .buttonStyle(.plain)
-                                .accessibilityLabel("Activity")
-                                .accessibilityHint("Shows what changed on this booking")
+                                .frame(minHeight: 44, alignment: .leading)
                             }
-                        }
-                        if canCancelBooking {
-                            ActionsSection(
-                                isActioning: isActioning,
-                                onCancel: { showCancelConfirm = true }
-                            )
-                        }
-                        if let errorMsg = error {
-                            Text(errorMsg)
-                                .font(.footnote)
-                                .foregroundStyle(Color.statusText(.red))
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        if let notice {
-                            Text(notice)
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                            .accessibilityLabel("Activity")
+                            .accessibilityHint("Shows what changed on this booking")
                         }
                     }
-                    .padding(.horizontal, Brand.Space.md)
-                    .padding(.top, Brand.Space.sm)
-                    .padding(.bottom, Brand.Space.lg)
+                    if canCancelBooking {
+                        ActionsSection(
+                            isActioning: isActioning,
+                            onCancel: { showCancelConfirm = true }
+                        )
+                    }
+                    if error != nil || notice != nil {
+                        Section {
+                            if let errorMsg = error {
+                                Text(errorMsg)
+                                    .font(.footnote)
+                                    .foregroundStyle(Color.statusText(.red))
+                            }
+                            if let notice {
+                                Text(notice)
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .listRowBackground(Color.clear)
+                    }
                 }
-                .background(Color(.systemGroupedBackground))
+                .listStyle(.insetGrouped)
             }
         }
         .navigationTitle(booking?.title ?? "Booking")
@@ -1064,34 +1048,36 @@ private struct BookingDetailsSection: View {
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 30)) { context in
-            HStack(alignment: .center, spacing: 12) {
-                StatusRail(tone: tone(now: context.date))
-                UserAvatarView(
-                    name: booking.requester.name,
-                    avatarUrl: booking.requester.avatarUrl,
-                    size: 52
-                )
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(booking.title)
-                        .font(.gothamBold(size: 24))
-                        .foregroundStyle(.primary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .accessibilityAddTraits(.isHeader)
-                    Text(booking.requester.name)
-                        .font(.subheadline.weight(.medium))
+            let now = context.date
+            VStack(alignment: .leading, spacing: 6) {
+                Text(booking.title)
+                    .font(.gothamBold(size: 26))
+                    .foregroundStyle(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityAddTraits(.isHeader)
+                Text(timingLabel(now: now))
+                    .font(.headline)
+                    .foregroundStyle(tone(now: now) == .red ? Color.statusText(.red) : Color(.secondaryLabel))
+                    .contentTransition(.numericText())
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 8) {
+                    UserAvatarView(
+                        name: booking.requester.name,
+                        avatarUrl: booking.requester.avatarUrl,
+                        size: 24
+                    )
+                    Text("\(booking.requester.name) · \(booking.location.name)")
+                        .font(.subheadline)
                         .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                    Text(timingLabel(now: context.date))
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Color.statusText(tone(now: context.date)))
-                        .contentTransition(.numericText())
-                        .fixedSize(horizontal: false, vertical: true)
+                        .lineLimit(2)
                 }
-                Spacer(minLength: 0)
+                .padding(.top, 4)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityElement(children: .contain)
         }
-        .brandCard()
+        .listRowBackground(Color.clear)
+        .listRowInsets(EdgeInsets(top: 8, leading: 4, bottom: 4, trailing: 4))
     }
 
     private func tone(now: Date) -> StatusTone {
@@ -1146,60 +1132,48 @@ private struct BookingOverviewSection: View {
     let returnInsight: CheckoutReturnInsight
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            BrandSectionHeader("Schedule")
-                .padding(.bottom, Brand.Space.xs)
-
+        Section("Schedule") {
             let eventSummaries = booking.linkedEvents.compactMap { $0.summary?.nonBlankText }
             if !eventSummaries.isEmpty {
-                overviewRow(
-                    icon: "calendar.badge.clock",
-                    tone: .orange,
-                    title: eventSummaries.count == 1 ? "Event" : "Events"
-                ) {
-                    VStack(alignment: .leading, spacing: 4) {
+                LabeledContent(eventSummaries.count == 1 ? "Event" : "Events") {
+                    VStack(alignment: .trailing, spacing: 4) {
                         ForEach(Array(eventSummaries.enumerated()), id: \.offset) { _, summary in
                             Text(summary)
-                                .font(.subheadline.weight(.medium))
                         }
                     }
+                    .multilineTextAlignment(.trailing)
                 }
-                rowDivider
             }
 
-            overviewRow(icon: "arrow.right", tone: .gray, title: "Pickup Time") {
+            LabeledContent("Pickup") {
                 Text(detailDate(booking.startsAt))
-                    .font(.subheadline.weight(.medium))
+                    .multilineTextAlignment(.trailing)
             }
 
-            rowDivider
-
-            overviewRow(icon: "arrow.left", tone: .gray, title: "Return Time") {
-                VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 4) {
+                LabeledContent("Return") {
                     Text(detailDate(booking.endsAt))
-                        .font(.subheadline.weight(.medium))
-                    if returnInsight.hasUpcomingNeed {
-                        Text(returnInsight.nextNeedAt.map { "Needed again \($0.gearShort). Extend only to a return time by then." } ?? "Needed again soon. Choose an earlier return time when extending.")
-                            .font(.caption)
-                            .foregroundStyle(Color.statusText(.orange))
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+                        .multilineTextAlignment(.trailing)
+                }
+                if returnInsight.hasUpcomingNeed {
+                    Text(returnInsight.nextNeedAt.map { "Needed again \($0.gearShort). Extend only to a return time by then." } ?? "Needed again soon. Choose an earlier return time when extending.")
+                        .font(.footnote)
+                        .foregroundStyle(Color.statusText(.orange))
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
 
-            rowDivider
-
-            overviewRow(icon: "barcode.viewfinder", tone: .gray, title: "Pickup Kiosk") {
+            LabeledContent("Pickup kiosk") {
                 Text(pickupKioskLabel)
-                    .font(.subheadline.weight(.medium))
                     .foregroundStyle(booking.pickupKioskDevice == nil ? .secondary : .primary)
+                    .multilineTextAlignment(.trailing)
             }
 
             if let notes = booking.notes?.nonBlankText {
-                rowDivider
-                overviewRow(icon: "note.text", tone: .gray, title: "Notes") {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Notes")
+                        .foregroundStyle(.secondary)
                     Text(notes)
-                        .font(.subheadline)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -1213,35 +1187,6 @@ private struct BookingOverviewSection: View {
         return booking.status == .booked || booking.status == .pendingPickup
             ? "Recorded when gear is picked up"
             : "Not recorded"
-    }
-
-    private func overviewRow<Content: View>(
-        icon: String,
-        tone: StatusTone,
-        title: String,
-        @ViewBuilder content: () -> Content
-    ) -> some View {
-        HStack(alignment: .top, spacing: Brand.Space.sm) {
-            Image(systemName: icon)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(Color.statusText(tone))
-                .frame(width: 30, height: 30)
-                .background(Color.statusBackground(tone), in: Circle())
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(.secondary)
-                content()
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(.vertical, 9)
-        .accessibilityElement(children: .combine)
-    }
-
-    private var rowDivider: some View {
-        Divider().padding(.leading, 42)
     }
 
     private func detailDate(_ date: Date) -> String {
@@ -1262,27 +1207,21 @@ private struct EquipmentSection: View {
     let onRetryAvailability: (() -> Void)?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Brand.Space.xs) {
-            BrandSectionHeader(title: "Gear") {
-                Text("\(serializedItems.count + bulkItems.count)")
-                    .font(.subheadline.monospacedDigit())
-                    .foregroundStyle(.secondary)
-            }
+        Section {
             if let availabilityError {
                 HStack(alignment: .top, spacing: 8) {
                     Label(availabilityError, systemImage: "wifi.exclamationmark")
-                        .font(.caption)
+                        .font(.footnote)
                         .foregroundStyle(Color.statusText(.orange))
                         .fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 0)
                     if let onRetryAvailability {
                         Button("Retry", action: onRetryAvailability)
-                            .font(.caption.weight(.semibold))
+                            .font(.footnote.weight(.semibold))
                             .buttonStyle(.bordered)
                             .controlSize(.small)
                     }
                 }
-                .padding(.vertical, 4)
             }
             ForEach(serializedItems) { item in
                 serializedRow(item)
@@ -1290,6 +1229,8 @@ private struct EquipmentSection: View {
             ForEach(bulkItems) { item in
                 bulkRow(item)
             }
+        } header: {
+            Text("Gear · \(serializedItems.count + bulkItems.count)")
         }
     }
 
@@ -1319,18 +1260,12 @@ private struct EquipmentSection: View {
             }
             .opacity(isReturned ? 0.55 : 1)
             Spacer()
-            if conflict != nil {
-                StatusPill(label: "Conflict", tone: .red, emphasized: true)
-            }
             if isReturned {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(Color.statusText(.green))
                     .accessibilityHidden(true)
             }
         }
-        .padding(.horizontal, Brand.Space.xs)
-        .padding(.vertical, Brand.Space.sm)
-        .background(isReturned ? Color.statusBackground(.green) : Color.clear, in: RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous))
         .accessibilityElement(children: .combine)
         .accessibilityLabel(rowAccessibilityLabel(item: item, conflict: conflict, isReturned: isReturned))
     }
@@ -1367,9 +1302,6 @@ private struct EquipmentSection: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .padding(.horizontal, Brand.Space.xs)
-        .padding(.vertical, Brand.Space.sm)
-        .background(isReturned ? Color.statusBackground(.green) : Color.clear, in: RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous))
         .accessibilityElement(children: .combine)
         .accessibilityLabel(bulkRowAccessibilityLabel(item: item, quantity: item.plannedQuantity, units: units, isReturned: isReturned))
     }
@@ -1420,27 +1352,26 @@ private struct ActionsSection: View {
     let onCancel: () -> Void
 
     var body: some View {
-        Button(role: .destructive) {
-            onCancel()
-        } label: {
-            Group {
-                if isActioning {
-                    ProgressView()
-                } else {
-                    Label("Cancel Booking", systemImage: "xmark.circle")
+        Section {
+            Button(role: .destructive) {
+                onCancel()
+            } label: {
+                Group {
+                    if isActioning {
+                        ProgressView()
+                    } else {
+                        Label("Cancel Booking", systemImage: "xmark.circle")
+                    }
                 }
+                .frame(maxWidth: .infinity, minHeight: 44)
             }
-            .frame(maxWidth: .infinity)
+            .disabled(isActioning)
+            .accessibilityLabel(isActioning ? "Cancelling booking" : "Cancel Booking")
         }
-        .buttonStyle(.bordered)
-        .buttonBorderShape(.capsule)
-        .controlSize(.large)
-        .tint(Color.statusText(.red))
-        .disabled(isActioning)
-        .accessibilityLabel(isActioning ? "Cancelling booking" : "Cancel Booking")
     }
 }
 
+/// The one primary action on the screen, in the same green as Claim.
 private struct BookingExtendBar: View {
     let isActioning: Bool
     let onExtend: () -> Void
@@ -1452,10 +1383,10 @@ private struct BookingExtendBar: View {
             Label("Extend Return Date", systemImage: "clock.arrow.circlepath")
                 .frame(maxWidth: .infinity)
         }
-        .buttonStyle(.bordered)
+        .buttonStyle(.borderedProminent)
         .buttonBorderShape(.capsule)
         .controlSize(.large)
-        .tint(Color.statusText(.blue))
+        .tint(.green)
         .disabled(isActioning)
         .accessibilityLabel("Extend Return Date")
         .padding(.horizontal, Brand.Space.md)

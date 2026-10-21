@@ -51,13 +51,13 @@ describe("iOS accessibility-size layout hardening", () => {
     expect(notifications).not.toContain("Pause Alerts");
   });
 
-  it("uses a dedicated accessibility-size booking card composition", () => {
+  it("keeps the booking row a single flowing column that reflows at any size", () => {
     const bookings = source("ios/Wisconsin/Views/BookingsView.swift");
+    const row = bookings.slice(bookings.indexOf("struct BookingRow: View"));
 
-    expect(bookings).toContain("private func accessibilityRow(now: Date) -> some View");
-    expect(bookings).toContain("private func compactRow(now: Date) -> some View");
-    expect(bookings).toContain("timingLine(now: now, lineLimit: nil)");
-    expect(bookings).toContain("metadataLine(lineLimit: nil)");
+    expect(row).toContain("VStack(alignment: .leading, spacing: 3)");
+    expect(row).toContain(".frame(maxWidth: .infinity, alignment: .leading)");
+    expect(row).not.toMatch(/\.frame\(width:/);
   });
 
   it("keeps item identity ahead of status badges at accessibility sizes", () => {

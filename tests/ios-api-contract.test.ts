@@ -84,12 +84,12 @@ describe("iOS API contracts — booking list avatars", () => {
     const listQueries = source("src/lib/services/bookings-queries.ts");
     const combinedRoute = source("src/app/api/bookings/route.ts");
     const models = source("ios/Wisconsin/Models/Models.swift");
-    const bookingsView = source("ios/Wisconsin/Views/BookingsView.swift");
+    const bookingDetail = source("ios/Wisconsin/Views/BookingDetailView.swift");
 
     expect(listQueries).toContain("requester: { select: { id: true, name: true, email: true, avatarUrl: true } }");
     expect(combinedRoute).toContain("requester: { select: { id: true, name: true, email: true, avatarUrl: true } }");
     expect(models).toContain("let avatarUrl: String?");
-    expect(bookingsView).toContain("UserAvatarView(name: booking.requester.name, avatarUrl: booking.requester.avatarUrl");
+    expect(bookingDetail).toContain("avatarUrl: booking.requester.avatarUrl");
   });
 });
 
