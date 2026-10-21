@@ -124,7 +124,13 @@ function SettingsGroupList({
   const meta = SETTINGS_GROUP_META[group];
 
   return (
-    <SettingsGroupCard title={group} description={meta.description}>
+    <SettingsGroupCard
+      title={group}
+      description={meta.description}
+      footer={group === "System" ? (
+        <>The audit log lives in <Link href="/reports/audit" className="underline">Reports</Link>.</>
+      ) : undefined}
+    >
       {sections.map((section) => {
         const SectionIcon = settingsSectionIcon(section.href);
         return (

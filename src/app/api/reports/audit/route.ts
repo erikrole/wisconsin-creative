@@ -27,6 +27,7 @@ export const GET = withAuth(async (req, { user }) => {
   const startDate = parseOptionalDateParam(searchParams, "startDate");
   const endDate = parseOptionalDateParam(searchParams, "endDate");
   const action = searchParams.get("action");
+  const entityType = searchParams.get("entityType");
 
   if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
     throw new HttpError(400, "startDate must be before endDate");
@@ -34,7 +35,7 @@ export const GET = withAuth(async (req, { user }) => {
 
   if (searchParams.get("format") === "csv") {
     await enforceRateLimit(`report:export:${user.id}`, REPORT_EXPORT_LIMIT);
-    const exportData = await getAuditReportExport(startDate, endDate, action);
+    const exportData = await getAuditReportExport(startDate, endDate, action, entityType);
     const date = new Date().toISOString().slice(0, 10);
     return new NextResponse(`${buildAuditReportCsv(exportData.data)}\n`, {
       headers: {
@@ -50,5 +51,5 @@ export const GET = withAuth(async (req, { user }) => {
     });
   }
 
-  return ok(await getAuditReport(limit, offset, startDate, endDate, action));
+  return ok(await getAuditReport(limit, offset, startDate, endDate, action, entityType));
 });

@@ -55,9 +55,9 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 
 - Doc: `docs/AREA_DASHBOARD.md`
 - Pages: _none matched_
-- APIs: `/api/dashboard`, `/api/dashboard/stats`, `/api/kiosk/dashboard`
+- APIs: `/api/dashboard/activity`, `/api/dashboard`, `/api/dashboard/stats`, `/api/kiosk/dashboard`
 - Services: `src/lib/services/dashboard-counts.ts`, `src/lib/services/kiosk-dashboard-home.ts`
-- Tests: `tests/dashboard-accessibility.test.ts`, `tests/dashboard-event-title.test.ts`, `tests/dashboard-fast-count-truth.test.ts`, `tests/dashboard-motion-source.test.ts`, `tests/dashboard-overflow-filter-aware.test.ts`, `tests/dashboard-pending-pickup-link.test.ts`, `tests/dashboard-stats-transient-lanes.test.ts`, `tests/dashboard-ui-polish.test.ts`
+- Tests: `tests/dashboard-activity-route.test.ts`, `tests/dashboard-event-title.test.ts`, `tests/dashboard-fast-count-truth.test.ts`, `tests/dashboard-pending-pickup-link.test.ts`, `tests/dashboard-stats-transient-lanes.test.ts`, `tests/kiosk-dashboard-home.test.ts`, `tests/kiosk-dashboard-route.test.ts`
 
 ## events
 
@@ -89,7 +89,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/items/[id]`, `/items/hygiene`, `/items`
 - APIs: `/api/assets/[id]/accessories`, `/api/assets/[id]/activity`, `/api/assets/[id]/duplicate`, `/api/assets/[id]/favorite`, `/api/assets/[id]/generate-qr`, `/api/assets/[id]/image`, `/api/assets/[id]/insights`, `/api/assets/[id]/maintenance`, `/api/assets/[id]/retire`, `/api/assets/[id]`
 - Services: `src/lib/services/kiosk-active-checkout-items.ts`
-- Tests: `tests/api-assets-item-families.test.ts`, `tests/assets-missing-gaps-route.test.ts`, `tests/ios-brand-assets-browse.test.ts`, `tests/ios-items-empty-state-recovery.test.ts`, `tests/ios-items-error-copy.test.ts`, `tests/ios-items-favorite-recovery.test.ts`, `tests/ios-items-retired-reserve-gating.test.ts`, `tests/ios-items-row-accessibility.test.ts`
+- Tests: `tests/api-assets-item-families.test.ts`, `tests/assets-missing-gaps-route.test.ts`, `tests/collaborator-visible-assets.test.ts`, `tests/ios-brand-assets-browse.test.ts`, `tests/ios-items-empty-state-recovery.test.ts`, `tests/ios-items-error-copy.test.ts`, `tests/ios-items-favorite-recovery.test.ts`, `tests/ios-items-retired-reserve-gating.test.ts`
 
 ## kiosk
 
@@ -185,7 +185,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/settings/allowed-emails`, `/settings/announcements`, `/settings/app-activity`, `/settings/appearance`, `/settings/audit`, `/settings/bookings`, `/settings/calendar-sources`, `/settings/categories`
 - APIs: `/api/settings/app-activity`, `/api/settings/checkout-policies`, `/api/settings/escalation`, `/api/settings/extend-presets`, `/api/settings/non-game-schedule`, `/api/settings/reservation-rules`
 - Services: _none matched_
-- Tests: `tests/ios-settings-detail-menus.test.ts`, `tests/ios-settings-first-class.test.ts`, `tests/settings-allowed-emails-display.test.ts`, `tests/settings-audit-command-surface-source.test.ts`, `tests/settings-audit-filters.test.ts`, `tests/settings-audit-pagination.test.ts`, `tests/settings-calendar-sources-load-state.test.ts`, `tests/settings-kiosk-devices-location-state.test.ts`
+- Tests: `tests/ios-settings-detail-menus.test.ts`, `tests/ios-settings-first-class.test.ts`, `tests/settings-allowed-emails-display.test.ts`, `tests/settings-calendar-sources-load-state.test.ts`, `tests/settings-kiosk-devices-location-state.test.ts`, `tests/settings-locations-accessibility.test.ts`, `tests/settings-route-role-gate.test.ts`, `tests/settings-routes.test.ts`
 
 ## shifts
 

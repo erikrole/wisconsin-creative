@@ -81,7 +81,7 @@ describe("buildBreadcrumbItems", () => {
   it("names top-level sections as the sidebar does, keeping nested overrides", () => {
     expect(buildBreadcrumbItems("/bookings", null).items[1]?.label).toBe("Bookings");
     expect(buildBreadcrumbItems("/licenses", null).items[1]?.label).toBe("Software");
-    expect(buildBreadcrumbItems("/settings/bookings", null).items[2]?.label).toBe("Booking extensions");
+    expect(buildBreadcrumbItems("/settings/data-export", null).items[2]?.label).toBe("Data exports");
     expect(buildBreadcrumbItems("/checkouts/cmf0abcdefghijklmnop1234", null).items[1]?.label).toBe("Bookings");
   });
 

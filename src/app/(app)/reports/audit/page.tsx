@@ -8,6 +8,7 @@ import { handleAuthRedirect, isAbortError } from "@/lib/errors";
 import { syncUrl } from "@/lib/url-sync";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { NativeSelect } from "@/components/ui/native-select";
 import { FadeUp } from "@/components/ui/motion";
 import dynamic from "next/dynamic";
 import MetricCard from "../MetricCard";
@@ -95,8 +96,22 @@ function periodStartDate(periodDays: number) {
     : null;
 }
 
-function buildAuditReportParams(periodDays: number, paging?: { limit: number; offset: number }) {
+type AuditFilters = { entityType: string; action: string };
+
+/** "checkin_completed" -> "Checkin completed", "kioskDevice" -> "Kiosk device". */
+function humanize(value: string) {
+  const spaced = value.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/[_-]+/g, " ").toLowerCase().trim();
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
+function buildAuditReportParams(
+  periodDays: number,
+  filters: AuditFilters,
+  paging?: { limit: number; offset: number },
+) {
   const params = new URLSearchParams();
+  if (filters.entityType) params.set("entityType", filters.entityType);
+  if (filters.action) params.set("action", filters.action);
   if (paging) {
     params.set("limit", String(paging.limit));
     params.set("offset", String(paging.offset));
@@ -106,8 +121,8 @@ function buildAuditReportParams(periodDays: number, paging?: { limit: number; of
   return params;
 }
 
-async function downloadAuditCsv(periodDays: number) {
-  const params = buildAuditReportParams(periodDays);
+async function downloadAuditCsv(periodDays: number, filters: AuditFilters) {
+  const params = buildAuditReportParams(periodDays, filters);
   params.set("format", "csv");
 
   try {
@@ -164,6 +179,16 @@ export default function AuditReportPage() {
   const periodDays = period.days;
   const [now, setNow] = useState(() => new Date());
   const limit = 25;
+  const [filters, setFilters] = useState<AuditFilters>(() => ({
+    entityType: searchParams.get("entityType") ?? "",
+    action: searchParams.get("action") ?? "",
+  }));
+
+  function changeFilter(key: keyof AuditFilters, value: string) {
+    setFilters((current) => ({ ...current, [key]: value }));
+    setPage(0);
+    syncUrl({ [key]: value, page: "" });
+  }
 
   // Changing the window invalidates the current offset.
   function changePeriod(nextPeriod: number) {
@@ -191,12 +216,12 @@ export default function AuditReportPage() {
   }, [searchParams]);
 
   const fetchUrl = useMemo(() => {
-    const params = buildAuditReportParams(periodDays, {
+    const params = buildAuditReportParams(periodDays, filters, {
       limit,
       offset: page * limit,
     });
     return `/api/reports/audit?${params}`;
-  }, [page, periodDays]);
+  }, [filters, page, periodDays]);
 
   const { data, loading, refreshing, error, lastRefreshed, reload: loadData } = useFetch<AuditData>({
     url: fetchUrl,
@@ -240,13 +265,20 @@ export default function AuditReportPage() {
   if (!data) return null;
 
   const entries = data.data ?? [];
-  const activeFilters = periodDays > 0
-    ? [{
-        key: "period",
-        label: `Period: ${periodDays}d`,
-        onRemove: () => changePeriod(0),
-      }]
-    : [];
+  const activeFilters = [
+    ...(periodDays > 0
+      ? [{ key: "period", label: `Period: ${periodDays}d`, onRemove: () => changePeriod(0) }]
+      : []),
+    ...(filters.entityType
+      ? [{ key: "entityType", label: humanize(filters.entityType), onRemove: () => changeFilter("entityType", "") }]
+      : []),
+    ...(filters.action
+      ? [{ key: "action", label: humanize(filters.action), onRemove: () => changeFilter("action", "") }]
+      : []),
+  ];
+  // The breakdowns describe the current results, so keep a chosen value listed even when it narrows them away.
+  const entityOptions = withSelected(data.byEntityType?.map((row) => row.entityType) ?? [], filters.entityType);
+  const actionOptions = withSelected(data.byAction?.map((row) => row.action) ?? [], filters.action);
 
   return (
     <FadeUp>
@@ -266,7 +298,7 @@ export default function AuditReportPage() {
           <ReportExportButton
             ariaLabel="Export matching audit entries CSV"
             label="Export matching rows"
-            onClick={() => downloadAuditCsv(periodDays)}
+            onClick={() => downloadAuditCsv(periodDays, filters)}
           />
         ) : null}
       >
@@ -282,6 +314,32 @@ export default function AuditReportPage() {
             ]}
             onChange={changePeriod}
           />
+        </ReportToolbarGroup>
+        <ReportToolbarGroup label="Record">
+          <NativeSelect
+            aria-label="Filter by record type"
+            value={filters.entityType}
+            onChange={(event) => changeFilter("entityType", event.target.value)}
+            className="w-auto min-w-36 text-sm"
+          >
+            <option value="">All records</option>
+            {entityOptions.map((value) => (
+              <option key={value} value={value}>{humanize(value)}</option>
+            ))}
+          </NativeSelect>
+        </ReportToolbarGroup>
+        <ReportToolbarGroup label="Action">
+          <NativeSelect
+            aria-label="Filter by action"
+            value={filters.action}
+            onChange={(event) => changeFilter("action", event.target.value)}
+            className="w-auto min-w-36 text-sm"
+          >
+            <option value="">All actions</option>
+            {actionOptions.map((value) => (
+              <option key={value} value={value}>{humanize(value)}</option>
+            ))}
+          </NativeSelect>
         </ReportToolbarGroup>
       </ReportToolbar>
 
@@ -313,7 +371,7 @@ export default function AuditReportPage() {
           <ReportEmptyState
             icon="clipboard"
             title="No audit log entries"
-            description="Try a wider period to inspect older retained activity."
+            description={activeFilters.length > 0 ? "Try clearing a filter or widening the period." : "Try a wider period to inspect older retained activity."}
           />
         ) : (
           <>
@@ -346,4 +404,8 @@ export default function AuditReportPage() {
       </ReportDataRegion>
     </FadeUp>
   );
+}
+
+function withSelected(values: string[], selected: string) {
+  return selected && !values.includes(selected) ? [selected, ...values] : values;
 }

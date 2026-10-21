@@ -3,12 +3,14 @@ import { cn } from "@/lib/utils";
 
 /** A titled block of related rows: heading above, one soft card below with hairline dividers. */
 export function SettingsGroup({
+  id,
   title,
   description,
   children,
   footer,
   className,
 }: {
+  id?: string;
   title?: string;
   description?: ReactNode;
   children: ReactNode;
@@ -16,7 +18,7 @@ export function SettingsGroup({
   className?: string;
 }) {
   return (
-    <section className={cn("flex flex-col gap-2.5", className)}>
+    <section id={id} className={cn("flex flex-col gap-2.5 scroll-mt-24", className)}>
       {title || description ? (
         <div className="px-1">
           {title ? <h3 className="m-0 text-sm">{title}</h3> : null}

@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import EmptyState from "@/components/EmptyState";
 import { useFetch } from "@/hooks/use-fetch";
 import { handleAuthRedirect, isAbortError, parseErrorMessage } from "@/lib/errors";
+import { ExtendPresetsSection } from "./ExtendPresets";
 import { SettingsGroup, SettingsRow } from "../_components/SettingsGroup";
 import { SettingsPageShell } from "../SettingsPageShell";
 import { SettingsSaveBar } from "../_components/SettingsSaveBar";
@@ -163,9 +164,9 @@ export default function CheckoutPoliciesPage() {
   }
 
   return (
-    <SettingsPageShell href="/settings/checkout-policies">
+    <SettingsPageShell href="/settings/checkout-policies" mainClassName="flex flex-col gap-7">
       {error && (
-        <Alert className="mb-4">
+        <Alert>
           <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
             <span>Could not refresh settings. Your values are still shown.</span>
             <Button type="button" variant="outline" className="h-10" onClick={reload}>Retry refresh</Button>
@@ -248,6 +249,7 @@ export default function CheckoutPoliciesPage() {
         <SettingsSaveBar dirty={dirty} saving={saving} onReset={resetChanges} />
         </div>
       </form>
+      <ExtendPresetsSection />
     </SettingsPageShell>
   );
 }

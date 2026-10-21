@@ -21,11 +21,15 @@ const PAGES = {
   security: dynamic(() => import("@/app/(app)/settings/security/page")),
   notifications: dynamic(() => import("@/app/(app)/settings/notifications/page")),
   appearance: dynamic(() => import("@/app/(app)/settings/appearance/page")),
-  bookings: dynamic(() => import("@/app/(app)/settings/bookings/page")),
   "reservation-rules": dynamic(() => import("@/app/(app)/settings/reservation-rules/page")),
   "checkout-policies": dynamic(() => import("@/app/(app)/settings/checkout-policies/page")),
+  "kiosk-devices": dynamic(() => import("@/app/(app)/settings/kiosk-devices/page")),
+  "collaborator-access": dynamic(() => import("@/app/(app)/settings/collaborator-access/page")),
+  announcements: dynamic(() => import("@/app/(app)/settings/announcements/page")),
   departments: dynamic(() => import("@/app/(app)/settings/departments/page")),
   escalation: dynamic(() => import("@/app/(app)/settings/escalation/page")),
+  locations: dynamic(() => import("@/app/(app)/settings/locations/page")),
+  "reports-audit": dynamic(() => import("@/app/(app)/reports/audit/page")),
 } as const;
 
 type PageKey = keyof typeof PAGES | "overview";
@@ -52,12 +56,14 @@ function Lab({ fontClass }: { fontClass: string }) {
             <div className="min-w-0 flex-1 bg-background">
               <AppTopBar isCollaborator={false} onSearch={() => {}} unreadNotifications={0} user={user} />
               <main className="px-8 py-5 max-md:p-4">
+                {page === "reports-audit" && Page ? <Page /> : (
                 <div data-settings className={`wc-fresh ${fontClass}`}>
                   <SettingsTheme classNames={`wc-fresh ${fontClass}`} />
                   <SettingsShell pathnameOverride={page === "overview" ? "/settings" : `/settings/${page}`}>
                     {Page ? <Page /> : <SettingsDirectory role={role} canViewUsageAnalytics />}
                   </SettingsShell>
                 </div>
+                )}
               </main>
             </div>
           </BreadcrumbProvider>

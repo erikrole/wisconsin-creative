@@ -19,7 +19,7 @@ describe("Settings sweeping UI contracts", () => {
     expect(nav).toContain('label: "Registration access"');
     expect(nav).toContain('href: "/settings/collaborator-access"');
     expect(nav).toContain('label: "Collaborator access"');
-    expect(nav).toContain('label: "Booking extensions"');
+    expect(nav).not.toContain('href: "/settings/bookings"');
     expect(nav).toContain('label: "Overdue escalation"');
     expect(nav).toContain('label: "Database diagnostics"');
     expect(nav).toContain('group: "Booking"');
@@ -35,7 +35,7 @@ describe("Settings sweeping UI contracts", () => {
     const area = source("docs/AREA_SETTINGS.md");
 
     expect(nav).toMatch(
-      /href: "\/settings\/calendar-sources"[\s\S]*?relatedHrefs: \["\/settings\/sports", "\/settings\/locations", "\/settings\/venue-mappings"\]/
+      /href: "\/settings\/calendar-sources"[\s\S]*?relatedHrefs: \["\/settings\/sports", "\/settings\/locations"\]/
     );
     expect(nav).toMatch(
       /href: "\/settings\/sports"[\s\S]*?relatedHrefs: \["\/settings\/calendar-sources"\]/
@@ -44,27 +44,25 @@ describe("Settings sweeping UI contracts", () => {
       /href: "\/settings\/escalation"[\s\S]*?relatedHrefs: \["\/settings\/checkout-policies", "\/settings\/reservation-rules"\]/
     );
     expect(nav).toMatch(
-      /href: "\/settings\/reservation-rules"[\s\S]*?relatedHrefs: \["\/settings\/checkout-policies", "\/settings\/bookings", "\/settings\/escalation"\]/
+      /href: "\/settings\/reservation-rules"[\s\S]*?relatedHrefs: \["\/settings\/checkout-policies", "\/settings\/escalation"\]/
+    );
+    // The audit log lives in Reports; Settings keeps no duplicate page.
+    expect(nav).not.toContain('href: "/settings/audit"');
+    expect(nav).toMatch(
+      /href: "\/settings\/data-export"[\s\S]*?relatedHrefs: \["\/settings\/database"\]/
     );
     expect(nav).toMatch(
-      /href: "\/settings\/audit"[\s\S]*?relatedHrefs: \["\/settings\/data-export", "\/settings\/database"\]/
-    );
-    expect(nav).toMatch(
-      /href: "\/settings\/data-export"[\s\S]*?relatedHrefs: \["\/settings\/audit", "\/settings\/database"\]/
-    );
-    expect(nav).toMatch(
-      /href: "\/settings\/database"[\s\S]*?relatedHrefs: \["\/settings\/audit", "\/settings\/data-export"\]/
+      /href: "\/settings\/database"[\s\S]*?ownerOnly: true[\s\S]*?relatedHrefs: \["\/settings\/data-export"\]/
     );
     expect(nav).toMatch(
       /href: "\/settings\/app-activity"[\s\S]*?keywords: \[[\s\S]*?\]\s*,?\s*\n\s*\}/
     );
-    expect(nav).not.toMatch(
-      /href: "\/settings\/app-activity"[\s\S]*?relatedHrefs:/
-    );
+    const appActivity = nav.match(/href: "\/settings\/app-activity"[\s\S]*?\n  \}/)?.[0] ?? "";
+    expect(appActivity).not.toContain("relatedHrefs:");
 
     expect(area).toContain("### Registration access (`/settings/allowed-emails`)");
     expect(area).toContain("### Collaborator access (`/settings/collaborator-access`)");
-    expect(area).toContain("### Booking extensions (`/settings/bookings`)");
+    expect(area).toContain("Extend presets (`/settings/checkout-policies#extend-presets`)");
     expect(area).toContain("### Overdue escalation (`/settings/escalation`)");
     expect(area).toContain("### Kiosks (`/settings/kiosk-devices`)");
     expect(area).toContain("### Data exports (`/settings/data-export`)");
@@ -72,7 +70,7 @@ describe("Settings sweeping UI contracts", () => {
   });
 
   it("does not render failed extension loads as an empty configuration", () => {
-    const bookings = source("src/app/(app)/settings/bookings/page.tsx");
+    const bookings = source("src/app/(app)/settings/checkout-policies/ExtendPresets.tsx");
 
     expect(bookings).toContain("error && !settingsData");
     expect(bookings).toContain("Could not load booking extensions");

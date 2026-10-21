@@ -28,6 +28,7 @@ import { AREA_OPTIONS } from "@/app/(app)/staff/types";
 import { PROFILE_COMPLETION_QUERY_KEY } from "@/hooks/use-profile-completion";
 import { SettingsPageShell } from "../SettingsPageShell";
 import { SettingsGroup, SettingsRow } from "../_components/SettingsGroup";
+import { ShiftCalendarFeed } from "../_components/ShiftCalendarFeed";
 import { SettingsSaveBar } from "../_components/SettingsSaveBar";
 import { formatPhoneInput } from "@/lib/profile-phone";
 import { syncCachedUserLists } from "@/lib/user-list-cache";
@@ -266,7 +267,7 @@ export default function ProfileSettingsPage() {
             <p className="m-0 mt-0.5 text-[13px] text-muted-foreground">JPG, PNG, or WebP up to 4.5 MB.</p>
             <div className="mt-2.5 flex gap-2">
               <Button
-                className="h-9"
+                className="h-10"
                 variant="outline"
                 disabled={uploadingAvatar || saving}
                 onClick={() => fileInputRef.current?.click()}
@@ -276,7 +277,7 @@ export default function ProfileSettingsPage() {
               </Button>
               {effectiveAvatarUrl && (
                 <Button
-                  className="h-9"
+                  className="h-10"
                   variant="ghost"
                   disabled={uploadingAvatar || saving}
                   onClick={handleAvatarRemove}
@@ -430,6 +431,8 @@ export default function ProfileSettingsPage() {
         onReset={() => { setLocal(null); setNameError(null); }}
         onSave={() => { void handleSave(); }}
       />
+
+      {!isCollaborator && <ShiftCalendarFeed />}
     </SettingsPageShell>
   );
 }

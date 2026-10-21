@@ -3,10 +3,14 @@
     "date": "2026-10-21",
     "title": "A calmer Settings",
     "type": "improvement",
-    "summary": "Settings has a new look, starting with the overview, Profile, Notifications, Security, Appearance, Checkout policies and Reservation rules; the other pages pick up the new type and softer cards.",
+    "summary": "Settings has a new look and fewer pages. Notifications on the web now match the iPhone app, and your shift calendar link lives on Profile.",
     "details": [
       "Related options are grouped into clean rows, with a visible preview for light, dark and system themes.",
-      "Notifications are sorted into Pause, Where to reach you, Gear and Schedule."
+      "Notifications on the web cover every type, with Off, Silent or Alert for each, quiet hours, and a badge awards switch.",
+      "Profile has a Shift calendar section to subscribe to your shifts in Apple or Google Calendar.",
+      "Extend presets moved into Checkout policies, and calendar venue matching moved into Locations with plainer wording.",
+      "The audit log lives only in Reports, now with Record and Action filters.",
+      "Kiosks, Collaborator access and Announcements were rebuilt to be easier to scan."
     ],
     "platforms": [
       "Web"
