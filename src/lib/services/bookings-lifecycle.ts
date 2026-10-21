@@ -645,6 +645,7 @@ export async function createBooking(input: CreateBookingInput) {
               bulkItems: combinedBulkItems,
               excludeBookingId: consolidationTarget.id,
               bookingKind: input.kind,
+              forCollaborator: requester.role === Role.COLLABORATOR,
             });
             if (
               availability.conflicts.length > 0
@@ -771,6 +772,7 @@ export async function createBooking(input: CreateBookingInput) {
             bulkItems: resolvedBulkItems,
             excludeBookingId: input.sourceReservationId,
             bookingKind: input.kind,
+            forCollaborator: requester.role === Role.COLLABORATOR,
           });
 
           if (availability.conflicts.length > 0 || availability.shortages.length > 0 || availability.unavailableAssets.length > 0) {
@@ -2074,6 +2076,7 @@ export async function updateReservation(
           bulkItems: remainingBulkItems,
           excludeBookingId: bookingId,
           bookingKind: "RESERVATION",
+          forCollaborator: nextRequester?.role === Role.COLLABORATOR,
         });
 
         if (availability.conflicts.length > 0 || availability.shortages.length > 0 || availability.unavailableAssets.length > 0) {

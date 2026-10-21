@@ -36,6 +36,7 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
         id,
         parentAssetId: null,
         availableForReservation: true,
+        collaboratorVisible: true,
         status: { not: "RETIRED" },
       },
       select: { id: true },

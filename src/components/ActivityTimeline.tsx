@@ -187,6 +187,7 @@ const FIELD_LABELS: Record<string, string> = {
   availableForReservation: "Reservation availability",
   availableForCheckout: "Checkout availability",
   availableForCustody: "Custody availability",
+  collaboratorVisible: "Collaborator visibility",
   imageUrl: "Image",
   // User profile fields
   email: "Email",

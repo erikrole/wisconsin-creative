@@ -1,6 +1,21 @@
 [
   {
     "date": "2026-10-21",
+    "title": "Hide gear from partners",
+    "type": "feature",
+    "summary": "Admins and staff can now keep individual items out of the Big Ten Network and Learfield catalog.",
+    "details": [
+      "Each item has a new Visible to collaborators switch under Workflow Eligibility, on by default.",
+      "Turned off, the item disappears from collaborators' catalog and they can't reserve it, including through a kit.",
+      "Staff and students are unaffected."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 552
+  },
+  {
+    "date": "2026-10-21",
     "title": "Brand assets for partners",
     "type": "feature",
     "summary": "Big Ten Network and Learfield collaborators can now browse and download the brand asset library.",

@@ -49,8 +49,8 @@ describe("Brand asset library source contracts", () => {
     const storage = source("src/lib/resource-assets-storage.ts");
     const env = source("src/lib/env.ts");
 
-    expect(listRoute).toContain('requirePermission(user.role, "resource", "view")');
-    expect(downloadRoute).toContain('requirePermission(user.role, "resource", "view")');
+    expect(listRoute).toContain('requirePermissionOrCollaboratorCapability(user, "resource", "view", "BRAND_ASSETS_VIEW")');
+    expect(downloadRoute).toContain('requirePermissionOrCollaboratorCapability(user, "resource", "view", "BRAND_ASSETS_VIEW")');
     expect(downloadRoute).toContain('"Content-Disposition"');
     expect(downloadRoute).toContain('"X-Content-Type-Options": "nosniff"');
     expect(downloadRoute).not.toContain("blob.url");
