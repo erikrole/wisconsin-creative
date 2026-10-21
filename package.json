@@ -120,6 +120,7 @@
     "preview:pin": "node scripts/preview.mjs pin",
     "preview:unpin": "node scripts/preview.mjs unpin",
     "preview:cleanup": "node scripts/cleanup-previews.mjs",
+    "review": "node scripts/review-pr.mjs",
     "review:refresh": "node scripts/refresh-review.mjs"
   },
   "dependencies": {
