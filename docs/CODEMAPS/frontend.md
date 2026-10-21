@@ -104,6 +104,7 @@
 | `/dev-assign-grid` | `src/app/dev-assign-grid/page.tsx` |
 | `/dev-assign-picker` | `src/app/dev-assign-picker/page.tsx` |
 | `/dev-auto-assign` | `src/app/dev-auto-assign/page.tsx` |
+| `/dev-crew-size` | `src/app/dev-crew-size/page.tsx` |
 | `/dev-sidebar` | `src/app/dev-sidebar/page.tsx` |
 | `/forgot-password` | `src/app/forgot-password/page.tsx` |
 | `/login` | `src/app/login/page.tsx` |
