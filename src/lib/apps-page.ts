@@ -22,9 +22,9 @@ export type AppEntry = {
 };
 
 // Written values are the fallback when the App Store or GitHub lookup fails.
-// Checked 2026-10-20:
-// - Wisconsin Creative: iTunes lookup id 6763456945, version 1.2,
-//   currentVersionReleaseDate 2026-09-14T12:29:37Z, minimumOsVersion 26.0.
+// Checked 2026-10-20 (Wisconsin Creative rechecked 2026-10-21):
+// - Wisconsin Creative: iTunes lookup id 6763456945, version 1.3,
+//   currentVersionReleaseDate 2026-10-21T01:59:41Z, minimumOsVersion 26.0.
 //   The blurb is the App Store description's first sentence. Counter checkout
 //   stays on the kiosk.
 // - Offload: release v1.5.3, published Oct 18 Madison; verified release DMG
@@ -44,7 +44,7 @@ export const appEntries: AppEntry[] = [
     statusKind: "live",
     blurb:
       "Connects gear reservations, event and shift schedules, and equipment lookup.",
-    version: "1.2",
+    version: "1.3",
     requires: "iOS 26.0 or later",
     href: "https://apps.apple.com/us/app/wisconsin-creative/id6763456945",
     cta: "View on the App Store",

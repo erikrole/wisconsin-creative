@@ -121,7 +121,7 @@
 | `YouTubeLibraryState` | 8 | 1 |
 | `YouTubePublishRecord` | 15 | 2 |
 | `YouTubePlaylistAddition` | 11 | 2 |
-| `GearPickCycle` | 17 | 1 |
+| `GearPickCycle` | 18 | 1 |
 | `GearPickHandout` | 11 | 3 |
 | `GearPickReceipt` | 11 | 2 |
 | `GearPastCycle` | 9 | 1 |
@@ -132,7 +132,7 @@
 | `GearPickSubmission` | 9 | 1 |
 | `GearPickLine` | 9 | 2 |
 | `Budget` | 8 | 3 |
-| `BudgetLine` | 26 | 5 |
+| `BudgetLine` | 28 | 6 |
 | `BudgetLineItem` | 10 | 5 |
 | `WishItem` | 15 | 3 |
 | `Announcement` | 18 | 3 |
