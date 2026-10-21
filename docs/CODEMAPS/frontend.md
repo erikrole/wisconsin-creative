@@ -133,7 +133,7 @@
 
 | File | Lines |
 |---|---:|
-| `src/components/resources/BrandAssetLibrary.tsx` | 1980 |
+| `src/components/resources/BrandAssetLibrary.tsx` | 1977 |
 | `src/components/TradeBoard.tsx` | 1853 |
 | `src/components/ActivityTimeline.tsx` | 1387 |
 | `src/components/booking-wizard/BookingWizard.tsx` | 1173 |

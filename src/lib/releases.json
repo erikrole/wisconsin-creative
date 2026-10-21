@@ -9,10 +9,12 @@
       "Every guide shows how fresh it is. Editors can mark a guide verified, and guides untouched for six months say Needs review.",
       "Reading a guide keeps related guides on the left and the contents on the right, with Edit, Copy link and Mark verified close at hand.",
       "Writing a guide now feels like a document: a big title, the editor, and a quiet settings panel for type, audience and featuring.",
-      "Brand assets opens as a grid of previews, with one-tap file-kind filters and a list view if you prefer it."
+      "Brand assets opens as a grid of previews, with one-tap file-kind filters and a list view if you prefer it.",
+      "On iPhone, Guides opens with For you and Recently updated, and every guide shows the same freshness as the web."
     ],
     "platforms": [
-      "Web"
+      "Web",
+      "iOS"
     ],
     "pr": 568
   },

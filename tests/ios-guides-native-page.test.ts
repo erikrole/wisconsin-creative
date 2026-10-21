@@ -70,7 +70,8 @@ describe("iOS native Guides page", () => {
     expect(view).toContain("GuideReaderHeader(");
     expect(view).toContain(".font(.title.weight(.bold))");
     expect(view).toContain(".navigationTitle(displayedGuide.title)");
-    expect(view).toContain('Text("Updated \\(guide.updatedSummary) by \\(guide.author.name)")');
+    expect(view).toContain("Text(freshnessLine)");
+    expect(view).toContain('return "\\(freshness.label) by \\(verifier.name)"');
     expect(view).not.toContain("let summary: String");
     expect(view).toContain("if case .rule = block.kind { return true }");
     expect(view).toContain("GuideBlockView(block: block, isFirst: index == 0)");
