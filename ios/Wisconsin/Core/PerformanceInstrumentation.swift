@@ -68,6 +68,9 @@ enum AppRuntimeMode {
         /// signed-in session or live APNs state.
         case notifications
         case passwordSetup = "password-setup"
+        /// Settings > Report a Problem with a few recent actions seeded, so
+        /// the attachment list can be reviewed without a real session.
+        case reportProblem = "report-problem"
         /// The real Bookings tab as an internal Student, with the fixture
         /// changing from one own row to the shared team list when the request
         /// drops its requester filter.

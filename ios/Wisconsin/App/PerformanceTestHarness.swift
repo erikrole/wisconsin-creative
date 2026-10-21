@@ -93,6 +93,8 @@ struct PerformanceTestRootView: View {
             AccountSecurityHarnessView()
         case .notifications:
             NotificationSettingsHarnessView()
+        case .reportProblem:
+            ReportProblemHarnessView()
         case .announcement, .announcementImages, .announcementPlain,
              .announcementStress, .announcementNone, .announcementError,
              .announcementLong, .announcementQueue, .announcementBrokenImage, .announcementCtaRoute:
@@ -134,6 +136,33 @@ struct AccountSecurityHarnessView: View {
 /// Renders the real notification settings screen with an account-wide pause
 /// already active. The view model is seeded before the child appears so its
 /// `.task` does not race the fixture setup or reach a live host.
+/// The Report a Problem sheet with representative recent actions, written
+/// with the attachments disclosure open so a capture shows what is sent.
+struct ReportProblemHarnessView: View {
+    @State private var seeded = false
+
+    var body: some View {
+        ZStack {
+            Color(.systemGroupedBackground).ignoresSafeArea()
+            if seeded {
+                ReportProblemSheet(
+                    supportURL: URL(string: "mailto:support@example.com")!,
+                    initialMessage: "Adding the FX6 kit to the Basketball booking showed an error and nothing was added.",
+                    showsAttachmentsInitially: true
+                )
+            }
+        }
+        .onAppear {
+            let crumbs = DiagnosticBreadcrumbs.shared
+            crumbs.setScreen("Gear")
+            crumbs.record(.api, "GET /api/bookings → 200")
+            crumbs.record(.api, "GET /api/bookings/[id] → 200")
+            crumbs.record(.api, "POST /api/bookings/[id]/items → 500", data: ["requestId": "iad1::kz8m2-1792545761186"])
+            seeded = true
+        }
+    }
+}
+
 struct NotificationSettingsHarnessView: View {
     @Environment(SessionStore.self) private var session
     @Environment(AppState.self) private var appState

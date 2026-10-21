@@ -7,6 +7,12 @@ import UIKit
 struct ReportProblemSheet: View {
     let supportURL: URL
 
+    init(supportURL: URL, initialMessage: String = "", showsAttachmentsInitially: Bool = false) {
+        self.supportURL = supportURL
+        _message = State(initialValue: initialMessage)
+        _showsAttachments = State(initialValue: showsAttachmentsInitially)
+    }
+
     @Environment(\.dismiss) private var dismiss
     @State private var message = ""
     @State private var isSending = false
@@ -101,7 +107,7 @@ struct ReportProblemSheet: View {
                 }
             }
         }
-        .onAppear { editorFocused = true }
+        .onAppear { if message.isEmpty { editorFocused = true } }
     }
 
     private var sentConfirmation: some View {
