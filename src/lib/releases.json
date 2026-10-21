@@ -10,7 +10,7 @@
       "If your password manager's picker closes the menu, choose Sign in in a window to sign in from a window that stays open.",
       "The message after the server ends your session now just says you were signed out.",
       "Test, demo and simulator iPads no longer appear in System Health or turn it Critical.",
-      "Long booking titles wrap to two lines, borrower names stay whole, and kiosk rows skip a location their name already says."
+      "Long booking titles wrap to two lines, borrower names stay whole, kiosk rows skip a location their name already says, and search waits for Command-F instead of grabbing focus on open."
     ],
     "platforms": [
       "macOS"

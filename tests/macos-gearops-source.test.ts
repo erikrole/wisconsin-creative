@@ -706,6 +706,9 @@ describe("GearOps macOS menu bar contracts", () => {
     expect(model).toMatch(/guard !restoreInFlight else \{ return \}\s*\n\s*if shouldRetryCredentialRestore/);
     expect(model).toContain("if !isRefreshing { await refresh() }");
     expect(view).toContain("guard model.user != nil, searchIsFocused else { return false }");
+    // Opening the extra must not park a caret in search; ⌘F focuses it.
+    expect(view).not.toContain("if selectedRoute == nil, model.user != nil { searchIsFocused = true }");
+    expect(view).toContain("DispatchQueue.main.async { searchIsFocused = false }");
     expect(model).toContain("if let lastConfirmedAt, now.timeIntervalSince(lastConfirmedAt) < interval { return }");
     expect(model).toContain("now.timeIntervalSince(lastConfirmedAt ?? snapshot.receivedAt) > Self.staleSnapshotAge");
     expect(model).toContain("static let presentationRefreshInterval: TimeInterval = 60");

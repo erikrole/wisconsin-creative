@@ -94,7 +94,13 @@ struct MenuBarContentView: View {
                 // the sign-in fields, not the app that was in front before.
                 if model.user == nil { NSApplication.shared.activate() }
                 Task { await model.refreshOnPresentation() }
-                if selectedRoute == nil, model.user != nil { searchIsFocused = true }
+                // Search waits for ⌘F or a click. Focusing it on every open
+                // put a caret (and AutoFill's suggestion panel) over the glance.
+                // AppKit hands a new key window's first text field focus on its
+                // own, so take it back once that has happened.
+                if model.user != nil, searchText.isEmpty {
+                    DispatchQueue.main.async { searchIsFocused = false }
+                }
             },
             onKey: handleKey
         ))
