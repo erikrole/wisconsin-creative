@@ -248,7 +248,7 @@ struct ExtendBookingSheet: View {
     }
 
     private struct ReturnOption: Identifiable {
-        enum Kind: Hashable { case moreHours, tonight, tomorrow, latest }
+        enum Kind: Hashable { case oneHour, moreHours, tonight, tomorrow, latest }
         let kind: Kind
         let title: String
         let date: Date
@@ -260,6 +260,7 @@ struct ExtendBookingSheet: View {
     private var options: [ReturnOption] {
         let now = Date()
         var out: [ReturnOption] = []
+        out.append(ReturnOption(kind: .oneHour, title: "1 more hour", date: QuarterHour.roundedUp(base.addingTimeInterval(60 * 60))))
         out.append(ReturnOption(kind: .moreHours, title: "2 more hours", date: QuarterHour.roundedUp(base.addingTimeInterval(2 * 60 * 60))))
         if let tonight = calendar.date(bySettingHour: 22, minute: 0, second: 0, of: now),
            tonight > base.addingTimeInterval(3 * 60 * 60) {

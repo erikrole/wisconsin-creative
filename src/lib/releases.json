@@ -9,7 +9,7 @@
       "Each row shows who has it and a colored time: red overdue, orange missed pickup, blue checked out, purple reserved.",
       "Switch between Everyone and Mine at the top, and the filter button now says what you are looking at.",
       "Booking details are redesigned: a status line, pickup and return side by side with a progress bar while gear is out, and the owner with their photo.",
-      "Extend shows the current and new return side by side with quick picks like Tomorrow, and Edit opens a calendar when you tap Due back.",
+      "Extend shows the current and new return side by side with quick picks like 1 more hour or Tomorrow, and picking a time is one tap. Booking notes are gone from iPhone.",
       "When gear is needed again, the booking says which booking needs it next."
     ],
     "platforms": [

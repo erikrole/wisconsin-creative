@@ -229,6 +229,7 @@ struct ReturnTimeCalendar: View {
             HStack {
                 Text("Time")
                 Spacer()
+                // Fallback for any quarter hour the shortcuts below don't cover.
                 QuarterHourTimePicker(
                     selection: timeBinding,
                     minimumDate: minimum,
@@ -236,8 +237,56 @@ struct ReturnTimeCalendar: View {
                     accessibilityLabel: "Return time, 15-minute increments"
                 )
             }
-            .padding(.vertical, 6)
+            .padding(.top, 6)
+            if !quickTimes.isEmpty {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
+                    ForEach(quickTimes, id: \.self) { time in
+                        quickTimeButton(time)
+                    }
+                }
+                .padding(.vertical, 8)
+            }
         }
         .tint(tint)
+    }
+
+    private static let quickHours: [(hour: Int, minute: Int)] = [
+        (9, 0), (12, 0), (15, 0), (17, 0), (20, 0), (22, 0),
+    ]
+
+    /// One-tap times on the picked day: the usual handoff hours, plus the
+    /// latest allowed time when it falls on that day. Times outside the
+    /// window are left out.
+    private var quickTimes: [Date] {
+        let day = calendar.startOfDay(for: selection)
+        var times = Self.quickHours.compactMap {
+            calendar.date(bySettingHour: $0.hour, minute: $0.minute, second: 0, of: day)
+        }
+        if let latest, calendar.isDate(latest, inSameDayAs: day) { times.append(latest) }
+        let valid = times.filter { $0 >= QuarterHour.roundedUp(minimum) && (latest.map { limit in $0 <= limit } ?? true) }
+        return Array(Set(valid)).sorted()
+    }
+
+    @ViewBuilder
+    private func quickTimeButton(_ time: Date) -> some View {
+        let isSelected = selection == time
+        let title = time.formatted(.dateTime.hour().minute())
+        if isSelected {
+            Button(title) { selection = time }
+                .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.capsule)
+                .controlSize(.regular)
+                .frame(maxWidth: .infinity)
+                .accessibilityAddTraits(.isSelected)
+        } else {
+            Button(title) {
+                selection = time
+                Haptics.selection()
+            }
+            .buttonStyle(.bordered)
+            .buttonBorderShape(.capsule)
+            .controlSize(.regular)
+            .frame(maxWidth: .infinity)
+        }
     }
 }

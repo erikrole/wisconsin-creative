@@ -1064,7 +1064,7 @@ enum BookingFixtureAPI {
         {"data":{
           "id":"\(bookingId)","kind":"CHECKOUT","title":"Volleyball vs Nebraska","status":"OPEN",
           "startsAt":"\(iso(-120))","endsAt":"\(iso(180))",
-          "notes":"Two bodies on the baseline, one roaming. Return through the gear room, not the loading dock.",
+          "notes":null,
           "refNumber":"CO-2418",
           "requester":{"id":"u-avery","name":"Avery Nakamura","email":"avery.nakamura@wisc.edu","avatarUrl":null},
           "location":{"id":"loc-1","name":"Camp Randall Creative Desk"},

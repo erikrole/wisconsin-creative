@@ -1209,15 +1209,6 @@ private struct BookingAboutSection: View {
             if let kiosk = booking.pickupKioskDevice {
                 Label("Picked up at \(kiosk.name)", systemImage: "qrcode.viewfinder")
             }
-
-            if let notes = booking.notes?.nonBlankText {
-                Label {
-                    Text(notes)
-                        .fixedSize(horizontal: false, vertical: true)
-                } icon: {
-                    Image(systemName: "text.alignleft")
-                }
-            }
         }
     }
 }
