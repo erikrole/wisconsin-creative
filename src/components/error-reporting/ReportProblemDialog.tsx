@@ -79,7 +79,7 @@ export function ReportProblemProvider({ children }: { children: ReactNode }) {
       {children}
       <Dialog open={snapshot !== null} onOpenChange={(next) => !next && !sending && setSnapshot(null)}>
         <DialogContent className="sm:max-w-[520px]">
-          <DialogHeader>
+          <DialogHeader className="flex-col items-start justify-start gap-1">
             <DialogTitle>Report a problem</DialogTitle>
             <DialogDescription>
               Tell us what happened. The details below are attached so we can find it quickly.

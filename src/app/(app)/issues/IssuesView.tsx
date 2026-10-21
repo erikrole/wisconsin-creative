@@ -189,12 +189,12 @@ function IssueList() {
             <li key={issue.id}>
               <Link
                 href={`/issues/${issue.id}`}
-                className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-3.5 outline-none transition-colors hover:bg-muted/50 focus-visible:bg-muted/60 sm:grid-cols-[auto_1fr_auto_auto_auto] sm:gap-5 sm:px-5"
+                className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-3.5 text-foreground no-underline outline-none transition-colors hover:bg-muted/50 focus-visible:bg-muted/60 sm:grid-cols-[auto_1fr_auto_auto_auto] sm:gap-5 sm:px-5"
               >
                 <PlatformBadge platform={issue.platform} />
                 <div className="min-w-0">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <p className="m-0 truncate text-[14px] font-bold">{issue.title}</p>
+                  <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 sm:flex-nowrap">
+                    <p className="m-0 min-w-0 break-words text-[14px] font-bold sm:truncate">{issue.title}</p>
                     {issue.regressedAt && issue.status === "open" ? <StatusPill status="regressed" /> : null}
                   </div>
                   <p className="m-0 mt-0.5 truncate text-[12.5px] text-muted-foreground">
@@ -338,7 +338,7 @@ function ReportCard({ report, now, busy, onStatus }: { report: ReportRow; now: D
         <div className="flex flex-col gap-1.5">
           <p className="m-0 text-[11px] font-bold uppercase tracking-[0.09em] text-muted-foreground">Errors they hit just before</p>
           {report.relatedIssues.map((issue) => (
-            <Link key={issue.id} href={`/issues/${issue.id}`} className="flex items-center gap-2 rounded-lg bg-muted/60 px-3 py-2 text-[13px] hover:bg-muted">
+            <Link key={issue.id} href={`/issues/${issue.id}`} className="flex items-center gap-2 rounded-lg bg-muted/60 px-3 py-2 text-[13px] text-foreground no-underline hover:bg-muted">
               <span className="min-w-0 flex-1 truncate font-bold">{issue.title}</span>
               <StatusPill status={issue.status} />
               <ChevronRightIcon className="size-4 text-muted-foreground" aria-hidden="true" />

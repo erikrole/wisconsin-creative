@@ -165,7 +165,7 @@ export function IssueDetailView({ id }: { id: string }) {
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <Link href="/issues" className="inline-flex items-center gap-1 text-[13px] font-bold text-muted-foreground hover:text-foreground">
+        <Link href="/issues" className="inline-flex items-center gap-1 text-[13px] font-bold text-muted-foreground no-underline hover:text-foreground">
           <ArrowLeftIcon className="size-3.5" aria-hidden="true" />
           Issues
         </Link>
@@ -261,7 +261,7 @@ export function IssueDetailView({ id }: { id: string }) {
               <ul className="m-0 flex list-none flex-col gap-1.5 p-0 text-[13px]">
                 {people.map((person) => (
                   <li key={person.id} className="flex items-center justify-between gap-2">
-                    <Link href={`/staff/${person.id}`} className="min-w-0 truncate hover:underline">
+                    <Link href={`/staff/${person.id}`} className="min-w-0 truncate text-foreground no-underline hover:underline">
                       {person.name}
                     </Link>
                     <span className="tabular-nums text-muted-foreground">{person.count}×</span>
@@ -313,7 +313,7 @@ function EventPanel({ event, index, total, onIndex, now }: { event: EventRow; in
     [
       "Person",
       event.user ? (
-        <Link href={`/staff/${event.user.id}`} className="hover:underline">
+        <Link href={`/staff/${event.user.id}`} className="text-foreground no-underline hover:underline">
           {event.user.name}
           {event.role ? <span className="text-muted-foreground"> · {event.role.toLowerCase()}</span> : null}
         </Link>
