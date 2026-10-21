@@ -37,6 +37,7 @@ const TOP_LEVEL_LABEL: Record<string, string> = {
   reservations: "Bookings",
   gear: "UA gear",
   wishlist: "Wish list",
+  issues: "Issues",
   licenses: "Software",
   youtube: "YouTube Studio Lite",
 };
