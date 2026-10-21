@@ -124,7 +124,6 @@ function makeUser(overrides: Partial<User> = {}): User {
     wiscardCardNumber: null,
     wiscardIssueCode: null,
     profilePromptSnoozedUntil: null,
-    welcomeEmailSentAt: null,
     topSizeFit: null,
     shoeSizeSystem: null,
     birthdayMonth: null,
