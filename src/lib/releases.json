@@ -16,6 +16,36 @@
   },
   {
     "date": "2026-10-21",
+    "title": "Name and area when adding one student",
+    "type": "improvement",
+    "summary": "The Add users dialog now opens on Add one person and can start a student's profile with their name and primary area.",
+    "details": [
+      "Add one person is now the first tab, and the dialog opens on it.",
+      "For a student, you can enter an optional name and primary area, so their profile starts filled in.",
+      "Pasting a roster or uploading a CSV works as before.",
+      "The Invite-only access notice no longer wraps one word per line."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 551
+  },
+  {
+    "date": "2026-10-21",
+    "title": "Fewer wasted deploys",
+    "type": "improvement",
+    "summary": "Updates to the site now go live more reliably, because work-in-progress branches no longer use up the daily deploy allowance.",
+    "details": [
+      "Only merged changes start a production deploy, so a day of many small updates no longer blocks the next release.",
+      "Review previews for in-progress work are unchanged."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 556
+  },
+  {
+    "date": "2026-10-21",
     "title": "Nudge people who haven't finished setup",
     "type": "improvement",
     "summary": "Onboarding Status can now email a reminder to someone who signed in but has not finished their profile.",
