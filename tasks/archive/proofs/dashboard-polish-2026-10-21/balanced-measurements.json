@@ -1,0 +1,104 @@
+{
+  "fixture": "ADMIN ready, existing home-fixtures.ts, 1440x1100, fixed 2026-10-21T11:55:00-05:00",
+  "before": {
+    "documentHeight": 1618,
+    "comingUpTop": 1011.59375,
+    "teamGearTop": 1269.78125,
+    "primaryBottom": 1021.03125,
+    "asideBottom": 1566.03125
+  },
+  "after": {
+    "height": 1389,
+    "sections": [
+      {
+        "name": "Needs attention8",
+        "top": 295.09375,
+        "left": 288,
+        "height": 395.3125
+      },
+      {
+        "name": "Up next",
+        "top": 710.40625,
+        "left": 288,
+        "height": 310.625
+      },
+      {
+        "name": "Checked out to you2",
+        "top": 295.09375,
+        "left": 1013,
+        "height": 180.125
+      },
+      {
+        "name": "Working today",
+        "top": 495.21875,
+        "left": 1013,
+        "height": 180.125
+      },
+      {
+        "name": "Coming up",
+        "top": 695.34375,
+        "left": 1013,
+        "height": 238.1875
+      },
+      {
+        "name": "Team gear out14",
+        "top": 953.53125,
+        "left": 1013,
+        "height": 296.25
+      },
+      {
+        "name": "Recent activity",
+        "top": 1041.03125,
+        "left": 288,
+        "height": 296.25
+      }
+    ]
+  },
+  "emptyAfter": {
+    "height": 1100,
+    "sections": [
+      {
+        "name": "Needs attention",
+        "top": 295.09375,
+        "left": 288,
+        "height": 120.0625
+      },
+      {
+        "name": "Up next",
+        "top": 435.15625,
+        "left": 288,
+        "height": 128.0625
+      },
+      {
+        "name": "Checked out to you",
+        "top": 295.09375,
+        "left": 1028,
+        "height": 176.0625
+      },
+      {
+        "name": "Working today",
+        "top": 491.15625,
+        "left": 1028,
+        "height": 147.5625
+      },
+      {
+        "name": "Coming up",
+        "top": 658.71875,
+        "left": 1028,
+        "height": 147.5625
+      },
+      {
+        "name": "Team gear out",
+        "top": 826.28125,
+        "left": 1028,
+        "height": 128.0625
+      },
+      {
+        "name": "Recent activity",
+        "top": 583.21875,
+        "left": 288,
+        "height": 128.0625
+      }
+    ]
+  }
+}
