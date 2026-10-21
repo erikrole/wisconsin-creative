@@ -1,5 +1,21 @@
 [
   {
+    "date": "2026-10-21",
+    "title": "My kit for UA gear",
+    "type": "feature",
+    "summary": "Under Armour gear now has a My kit card showing what you are getting and what has been handed to you.",
+    "details": [
+      "Open UA gear to see every piece in your kit with its size.",
+      "Each piece shows Planned, On order with the expected date, In hand with the date, or Add your size.",
+      "Students on the student list see their kit there too.",
+      "Your kit stays hidden until gear picks are opened to everyone."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 548
+  },
+  {
     "date": "2026-10-20",
     "title": "A calmer sidebar and top bar",
     "type": "improvement",
