@@ -194,7 +194,7 @@ describe("native iOS Welcome flow", () => {
     expect(card).toContain("Hide getting started");
     expect(card).toContain("pendingSettingsDestination = .notifications");
     expect(card).not.toMatch(/requestAuthorization|registerForRemoteNotifications|PushPrePromptView/);
-    // Class times count as done from the API, matching the web isClassBlock rule.
+    // Any "cannot work" block counts as done from the API, matching the web isUnavailableBlock rule.
     expect(card).toContain("availabilityBlocks(userId:");
     expect(card).toContain('($0.intent ?? "CANNOT_WORK") == "CANNOT_WORK"');
     // Stores row ids and a dismissed flag only, per user.

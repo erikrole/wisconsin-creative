@@ -63,9 +63,9 @@ struct GettingStartedProgress: Codable, Equatable {
         return fractional.date(from: value) ?? ISO8601DateFormatter().date(from: value)
     }
 
-    /// A weekly "cannot work" block with a weekday is a class time, matching `isClassBlock` on the web.
-    static func hasClassTime(in blocks: [AvailabilityBlock]) -> Bool {
-        blocks.contains { ($0.kind ?? "WEEKLY") == "WEEKLY" && ($0.intent ?? "CANNOT_WORK") == "CANNOT_WORK" && $0.dayOfWeek != nil }
+    /// Any "cannot work" block, weekly (class, job) or dated (days away), matching `isUnavailableBlock` on the web.
+    static func hasUnavailableTime(in blocks: [AvailabilityBlock]) -> Bool {
+        blocks.contains { ($0.intent ?? "CANNOT_WORK") == "CANNOT_WORK" }
     }
 }
 
@@ -75,7 +75,7 @@ struct GettingStartedProgress: Codable, Equatable {
 @Observable
 final class GettingStartedModel {
     private(set) var progress: GettingStartedProgress?
-    private(set) var hasClassTime = false
+    private(set) var hasUnavailableTime = false
     private var userId: String?
 
     func load(for user: CurrentUser, completionStore: ProfileCompletionStore) async {
@@ -89,13 +89,13 @@ final class GettingStartedModel {
         progress = GettingStartedProgress.load(for: user.id)
         guard progress?.dismissed == false else { return }
         await completionStore.load(for: user)
-        await reloadClassTimes()
+        await reloadAvailability()
     }
 
-    func reloadClassTimes() async {
+    func reloadAvailability() async {
         guard let userId, progress?.dismissed == false else { return }
         if let blocks = try? await APIClient.shared.availabilityBlocks(userId: userId) {
-            hasClassTime = GettingStartedProgress.hasClassTime(in: blocks)
+            hasUnavailableTime = GettingStartedProgress.hasUnavailableTime(in: blocks)
         }
     }
 
@@ -122,7 +122,7 @@ struct GettingStartedCard: View {
     @Environment(ProfileCompletionStore.self) private var completionStore
 
     let model: GettingStartedModel
-    @State private var showClassTimes = false
+    @State private var showAvailability = false
 
     private struct Row: Identifiable {
         let id: String
@@ -139,8 +139,8 @@ struct GettingStartedCard: View {
             Row(id: "profile", title: "Finish your profile", done: profileDone) {
                 completionStore.presentManually(for: user.id)
             },
-            Row(id: "availability", title: "Add your class times", done: model.hasClassTime || progress.done.contains("availability")) {
-                showClassTimes = true
+            Row(id: "availability", title: "Add when you can’t work", done: model.hasUnavailableTime || progress.done.contains("availability")) {
+                showAvailability = true
             },
             Row(id: "schedule", title: "Check the schedule", done: progress.done.contains("schedule")) {
                 handled("schedule", then: .schedule)
@@ -158,12 +158,12 @@ struct GettingStartedCard: View {
         let rows = rows
         if let progress = model.progress, !progress.dismissed, !rows.allSatisfy(\.done) {
             card(rows)
-                .sheet(isPresented: $showClassTimes, onDismiss: { Task { await model.reloadClassTimes() } }) {
+                .sheet(isPresented: $showAvailability, onDismiss: { Task { await model.reloadAvailability() } }) {
                     NavigationStack {
                         AvailabilityView(userId: session.currentUser?.id ?? "")
                             .toolbar {
                                 ToolbarItem(placement: .confirmationAction) {
-                                    Button("Done") { showClassTimes = false }
+                                    Button("Done") { showAvailability = false }
                                 }
                             }
                     }

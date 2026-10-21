@@ -20,6 +20,7 @@ Web (wc-fresh theme, Lato):
 iOS (SwiftUI):
 - Student step Continue needs only the year; graduation sent only when a term is chosen (ProfileCompletionDraft.swift).
 - New `WelcomeFinishView.swift` after the last step, after skipping the photo, and after Remind me tomorrow. Rows open Schedule, Gear, Guides. No iPhone-app row on iOS. Registered in scripts/ios-audit-inventory.sh.
+- Home Getting started card (`GettingStartedCard.swift`), students only, first 14 days (`accountCreatedAt` decoded from /api/me): Finish your profile, Add when you can't work (opens the existing Availability screen in a sheet; done once any CANNOT_WORK block exists, same rule as web), Check the schedule, Read the guides, Turn on shift reminders (opens Profile > Notifications, never prompts). Progress per device in UserDefaults; X hides it. DEBUG scenario `GT_PERFORMANCE_SCENARIO=home-getting-started`.
 
 ## Migration
 None. (0199 was dropped with the welcome email.)
@@ -47,11 +48,12 @@ None. (0199 was dropped with the welcome email.)
 - [ ] No email is sent when setup finishes.
 - [ ] Auth pages (/login invite and password steps, /forgot-password, /reset-password, /change-password): labels, email row and placeholders readable on the dark surface; focus ring visible on fields and the pill button; Tab order works; passkey button and "Keep me signed in" checkbox look right; errors still show; 390px has no horizontal scroll.
 - [ ] 390px width: no horizontal scroll, footer buttons full width. Dark mode readable. Keyboard focus on step bar and finish rows.
+- [ ] iOS Getting started card: shows for a new student only; each row opens the right screen; the availability row checks off after adding a weekly item or days away; X hides it.
 - [ ] iOS: year-only Continue; finish screen after last step, after skipping photo, after Remind me tomorrow; rows open Schedule, Gear, Guides; Continue enters the app; collaborator sees Continue only.
 
 ## Verified vs not
 Verified: tsc, eslint on touched files, vitest (unavailable-times, invite email, profile-completion, route, Swift source contracts, ios-audit-inventory), db:migrate:check, Postgres integrity run, Xcode build, Playwright screenshots of the lab pages, iOS finish-screen screenshots.
-Not verified: the real signup-to-Home flow in a browser, the availability page against a real API, iOS row navigation and the Welcome route hold at runtime, the Home card against a real account's accountCreatedAt. `verify:docs` shows codemap drift that already exists on main.
+Not verified: the real signup-to-Home flow in a browser, iOS card row taps in the simulator (iOS card wording was changed after its Xcode build; string and identifier renames only), the availability page against a real API, iOS row navigation and the Welcome route hold at runtime, the Home card against a real account's accountCreatedAt. `verify:docs` shows codemap drift that already exists on main.
 
 ## Constraints
 - Never create a Neon branch or Vercel preview; never touch production data or credentials. Only main deploys (PR #556).
