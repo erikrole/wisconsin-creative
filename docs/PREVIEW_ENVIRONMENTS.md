@@ -1,10 +1,22 @@
 # Preview environments and agent handoffs
 
-Owner: infrastructure. Updated 2026-10-15. Accepted architecture: [D-063](DECISIONS.md#d-063-branch-owned-previews-and-one-automatic-production-build).
+Owner: infrastructure. Updated 2026-10-21. Accepted architecture: [D-063](DECISIONS.md#d-063-branch-owned-previews-and-one-automatic-production-build).
 
 ## Current rollout boundary
 
 The review site's Git connection is removed, so a main push no longer starts its duplicate build. Production and review remain online. Main requires a PR and passing `validate` and `postgres-integrity`, with no mandatory human reviewer. As of 2026-10-01 managed previews are live: `MANAGED_PREVIEWS_ENABLED=true`, the hosted workflow reached Ready for PR #410, local `preview:setup` → `dev:preview` → `auth:local` worked from the handed-off state, and native Git preview builds are skipped by the project's Ignored Build Step. Scheduled cleanup (`PREVIEW_CLEANUP_ENABLED`) stays off until a dry run is reviewed.
+
+## Review a pull request in one command
+
+```sh
+npm run review 543
+```
+
+Run it from any checkout. It never edits that checkout's files: it fetches the PR's branch and creates a worktree beside the main checkout at `../<repo>-review/pr-543` (override the parent with `WC_REVIEW_DIR`). It installs with the repository's npm version, starts a dev server on a free loopback port, and opens the browser at the first page the PR changes.
+
+If the PR already has a managed preview database, it attaches to it the same way `preview:setup` does, signs in the hidden smoke admin through `auth:local`, and prints the email and password (on macOS the password is also copied to the clipboard). It never provisions a database: operator keys are removed before setup runs. Without a preview (static tools, docs, `no-preview` PRs, or a missing handoff) it serves DB-free, with no database URL and no outside credentials. Static tools, the sign-in page, and dev-only labs such as `/dev-sidebar` work there; pages that read data error.
+
+Options go after `--`: `npm run review -- 543 --no-db --no-open --port 3200`, and `--branch NAME` when the PR head cannot be matched to one branch. A rerun fast-forwards a clean worktree and skips the install when the lockfile is unchanged. `npm run review -- --remove 543` deletes the worktree and leaves the branch and its preview alone. A branch already checked out in another worktree is reviewed there; a branch checked out in the main checkout is refused.
 
 ## Start or resume a branch
 

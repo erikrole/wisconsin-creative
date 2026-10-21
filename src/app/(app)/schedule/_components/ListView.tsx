@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect, useLayoutEffect, useSyncExternalStore, type ReactNode } from "react";
+import { useState, useCallback, useRef, useMemo, useEffect, useLayoutEffect, useSyncExternalStore, type ReactNode } from "react";
 import Link from "next/link";
 import { ArchiveIcon, ArrowDownIcon, ArrowUpIcon, ChevronDownIcon, ChevronRightIcon, EyeOffIcon, LoaderCircleIcon, UserIcon, UsersRoundIcon, XIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -21,17 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { OperationalRowActions } from "@/components/OperationalRowActions";
 import { useConfirm } from "@/components/ConfirmDialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { PostTradeDialog, type PostTradeShiftSummary } from "@/components/trade-board/PostTradeDialog";
 import { UserAvatarGroup } from "@/components/UserAvatarGroup";
 import { ClaimShiftAction, ClaimsPausedNotice } from "@/components/ClaimShiftAction";
 import { CallWindowEditor } from "@/components/shift-detail/CallWindowEditor";
@@ -1246,6 +1236,24 @@ export function ListView({
   const [tradeNotes, setTradeNotes] = useState("");
   const [tradeError, setTradeError] = useState<string | null>(null);
 
+  const tradeDialogShift = useMemo<PostTradeShiftSummary | null>(() => {
+    if (!tradeDialogAssignmentId) return null;
+    for (const entry of entries) {
+      for (const shift of entry.shifts) {
+        const assignment = shift.assignments.find((item) => item.id === tradeDialogAssignmentId);
+        if (!assignment) continue;
+        const start = assignment.callStartsAt ?? shift.callStartsAt ?? shift.startsAt;
+        const parts = scheduleEventTitleParts(entry);
+        return {
+          title: parts.detail ? `${parts.title} · ${parts.detail}` : parts.title,
+          when: `${formatDateShort(start)}, ${formatTimeShort(start)}`,
+          area: AREA_LABELS[shift.area] ?? shift.area,
+        };
+      }
+    }
+    return null;
+  }, [entries, tradeDialogAssignmentId]);
+
   const openTradeDialog = useCallback((assignmentId: string) => {
     if (postingTradeRef.current) return;
     setTradeDialogAssignmentId(assignmentId);
@@ -1749,59 +1757,21 @@ export function ListView({
         )}
       </div>
 
-      <Dialog
+      <PostTradeDialog
         open={Boolean(tradeDialogAssignmentId)}
-        onOpenChange={(open) => {
-          if (!open) closeTradeDialog();
+        shift={tradeDialogShift}
+        notes={tradeNotes}
+        error={tradeError}
+        posting={Boolean(postingTradeId)}
+        onNotes={(value) => {
+          setTradeNotes(value);
+          if (tradeError) setTradeError(null);
         }}
-      >
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <div className="flex flex-col gap-1">
-              <DialogTitle>Post shift for trade</DialogTitle>
-              <DialogDescription>
-                Eligible teammates can claim it. You stay scheduled until an admin approves a claim.
-              </DialogDescription>
-            </div>
-          </DialogHeader>
-          <div className="flex flex-col gap-3 px-6 py-1">
-            {tradeError && (
-              <Alert variant="destructive" className="py-2.5">
-                <AlertDescription>{tradeError}</AlertDescription>
-              </Alert>
-            )}
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="schedule-trade-notes" className="text-xs font-medium">
-                Notes <span className="font-normal text-muted-foreground">(optional)</span>
-              </Label>
-              <Textarea
-                id="schedule-trade-notes"
-                placeholder="e.g. Conflict with class, available all week"
-                value={tradeNotes}
-                onChange={(event) => {
-                  setTradeNotes(event.target.value);
-                  if (tradeError) setTradeError(null);
-                }}
-                className="min-h-24 resize-none text-sm"
-                maxLength={5000}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={closeTradeDialog} disabled={Boolean(postingTradeId)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                if (tradeDialogAssignmentId) void handlePostTrade(tradeDialogAssignmentId, tradeNotes);
-              }}
-              disabled={Boolean(postingTradeId)}
-            >
-              {postingTradeId ? "Posting..." : "Post trade"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        onClose={closeTradeDialog}
+        onPost={() => {
+          if (tradeDialogAssignmentId) void handlePostTrade(tradeDialogAssignmentId, tradeNotes);
+        }}
+      />
 
       {/*
         Today is the timeline's home position, so there is always a way back to

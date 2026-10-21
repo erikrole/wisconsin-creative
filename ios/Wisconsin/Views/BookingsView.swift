@@ -935,6 +935,7 @@ private struct BookingRowLink: View {
             }
             if canExtend {
                 Button {
+                    Haptics.selection()
                     onExtend()
                 } label: {
                     Label("Extend", systemImage: "clock.arrow.circlepath")
@@ -945,6 +946,7 @@ private struct BookingRowLink: View {
         .swipeActions(edge: .leading, allowsFullSwipe: false) {
             if canEdit {
                 Button {
+                    Haptics.selection()
                     onEdit()
                 } label: {
                     Label("Edit", systemImage: "pencil")
@@ -953,6 +955,7 @@ private struct BookingRowLink: View {
             }
             if canTransfer {
                 Button {
+                    Haptics.selection()
                     onTransfer()
                 } label: {
                     Label("Transfer", systemImage: "person.2")

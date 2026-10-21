@@ -148,7 +148,7 @@ export function kioskHandoverCopy(args: {
   };
 }
 
-/** Owner-to-peer handovers tell both people. Delivery never fails the transfer. */
+/** Owner-to-peer handovers tell the new holder and leave the owner a receipt. Delivery never fails the transfer. */
 async function notifyKioskHandover(h: {
   sourceId: string; receivingId: string; stamp: number; title: string; endsAt: Date;
   owner: { id: string; name: string }; target: { id: string; name: string };
@@ -158,10 +158,13 @@ async function notifyKioskHandover(h: {
     title: h.title, endsAt: h.endsAt, ownerName: h.owner.name, targetName: h.target.name,
     itemCount: h.itemCount, sourceClosed: h.sourceClosed,
   });
+  // The owner just did this at the kiosk, so theirs is a read receipt with no
+  // push. Only the person now holding the gear is told.
   const messages = [
-    { userId: h.target.id, bookingId: h.receivingId, key: "in", ...copy.toNewHolder },
-    { userId: h.owner.id, bookingId: h.sourceId, key: "out", ...copy.toOldHolder },
+    { userId: h.target.id, bookingId: h.receivingId, key: "in", receipt: false, ...copy.toNewHolder },
+    { userId: h.owner.id, bookingId: h.sourceId, key: "out", receipt: true, ...copy.toOldHolder },
   ];
+  const now = new Date();
   try {
     const rows = await db.notification.createManyAndReturn({
       data: messages.map((m) => ({
@@ -172,7 +175,8 @@ async function notifyKioskHandover(h: {
         body: m.body,
         payload: { bookingId: m.bookingId, href: `/checkouts/${m.bookingId}` },
         channel: "IN_APP" as const,
-        sentAt: new Date(),
+        sentAt: now,
+        readAt: m.receipt ? now : null,
         dedupeKey: `kiosk-handover-${h.sourceId}-${h.receivingId}-${h.stamp}-${m.key}`,
       })),
       skipDuplicates: true,
@@ -180,7 +184,7 @@ async function notifyKioskHandover(h: {
     });
     for (const row of rows) {
       const message = messages.find((m) => m.userId === row.userId);
-      if (!message) continue;
+      if (!message || message.receipt) continue;
       deferPush(sendPushToUser(message.userId, {
         title: message.title,
         body: message.body,

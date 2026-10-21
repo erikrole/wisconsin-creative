@@ -220,3 +220,102 @@ extension String {
         return String(self.prefix(2)).uppercased()
     }
 }
+
+// MARK: - Kit row
+
+struct KitResultRow: View {
+    let kit: KitListItem
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "shippingbox")
+                .font(.system(size: 18, weight: .medium))
+                .foregroundStyle(.secondary)
+                .frame(width: 44, height: 44)
+                .background(Color(.secondarySystemFill), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(kit.name)
+                    .font(.gothamBold(size: 16))
+                    .lineLimit(1)
+                Text(kit.subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            Spacer()
+        }
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Kit, \(kit.name), \(kit.subtitle)")
+        .accessibilityHint("Opens kit details")
+    }
+}
+
+// MARK: - Event row
+
+struct EventResultRow: View {
+    let event: ScheduleEvent
+
+    private var when: String {
+        event.allDay
+            ? event.startsAt.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
+            : event.startsAt.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day().hour().minute())
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "calendar")
+                .font(.system(size: 18, weight: .medium))
+                .foregroundStyle(.secondary)
+                .frame(width: 44, height: 44)
+                .background(Color(.secondarySystemFill), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(event.summary)
+                    .font(.gothamBold(size: 16))
+                    .lineLimit(1)
+                Text(when)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            Spacer()
+        }
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Event, \(event.summary), \(when)")
+        .accessibilityHint("Opens event details")
+    }
+}
+
+// MARK: - Guide row
+
+struct GuideResultRow: View {
+    let guide: GuideListItem
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "book")
+                .font(.system(size: 18, weight: .medium))
+                .foregroundStyle(.secondary)
+                .frame(width: 44, height: 44)
+                .background(Color(.secondarySystemFill), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(guide.title)
+                    .font(.gothamBold(size: 16))
+                    .lineLimit(1)
+                Text(guide.summary.isEmpty ? guide.category : guide.summary)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+            Spacer()
+        }
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Guide, \(guide.title), \(guide.category)")
+        .accessibilityHint("Opens the guide")
+    }
+}

@@ -102,6 +102,7 @@
 | `/releases` | `src/app/(public)/releases/page.tsx` |
 | `/change-password` | `src/app/change-password/page.tsx` |
 | `/dev-sidebar` | `src/app/dev-sidebar/page.tsx` |
+| `/dev-trade-board` | `src/app/dev-trade-board/page.tsx` |
 | `/forgot-password` | `src/app/forgot-password/page.tsx` |
 | `/login` | `src/app/login/page.tsx` |
 | `/privacy` | `src/app/privacy/page.tsx` |
@@ -132,11 +133,11 @@
 
 | File | Lines |
 |---|---:|
-| `src/components/TradeBoard.tsx` | 1853 |
 | `src/components/resources/BrandAssetLibrary.tsx` | 1827 |
 | `src/components/ActivityTimeline.tsx` | 1387 |
 | `src/components/booking-wizard/BookingWizard.tsx` | 1173 |
 | `src/components/onboarding/OnboardingDialog.tsx` | 1042 |
+| `src/components/TradeBoard.tsx` | 974 |
 | `src/components/schedule/AutoAssignDialog.tsx` | 966 |
 | `src/components/profile-completion/ProfileCompletionWizard.tsx` | 935 |
 | `src/components/BookingListPage.tsx` | 921 |

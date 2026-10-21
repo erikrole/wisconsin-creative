@@ -6,7 +6,7 @@
 | File | Lines |
 |---|---:|
 | `src/lib/services/accountability.ts` | 655 |
-| `src/lib/services/app-activity-report.ts` | 498 |
+| `src/lib/services/app-activity-report.ts` | 508 |
 | `src/lib/services/app-diagnostics.ts` | 47 |
 | `src/lib/services/auto-assign.ts` | 92 |
 | `src/lib/services/auto-fill-preview.ts` | 322 |
@@ -24,7 +24,7 @@
 | `src/lib/services/bookings-lifecycle.ts` | 3386 |
 | `src/lib/services/bookings-queries.ts` | 322 |
 | `src/lib/services/bookings.ts` | 9 |
-| `src/lib/services/budget.ts` | 938 |
+| `src/lib/services/budget.ts` | 950 |
 | `src/lib/services/bulk-assignment-batches.ts` | 253 |
 | `src/lib/services/bulk-schedule-assignment.ts` | 971 |
 | `src/lib/services/bulk-unit-scans.ts` | 722 |
@@ -48,7 +48,7 @@
 | `src/lib/services/event-worker.ts` | 125 |
 | `src/lib/services/firmware-watch.ts` | 329 |
 | `src/lib/services/game-record.ts` | 169 |
-| `src/lib/services/gear-picks.ts` | 1070 |
+| `src/lib/services/gear-picks.ts` | 1109 |
 | `src/lib/services/hidden-users-cleanup.ts` | 122 |
 | `src/lib/services/invite-email.ts` | 78 |
 | `src/lib/services/item-cleanup-wizard.ts` | 762 |
@@ -60,7 +60,7 @@
 | `src/lib/services/kiosk-checkout-complete.ts` | 90 |
 | `src/lib/services/kiosk-dashboard-home.ts` | 267 |
 | `src/lib/services/kiosk-extend-window.ts` | 168 |
-| `src/lib/services/kiosk-item-transfer.ts` | 196 |
+| `src/lib/services/kiosk-item-transfer.ts` | 200 |
 | `src/lib/services/kiosk-location.ts` | 72 |
 | `src/lib/services/kiosk-nudge.ts` | 118 |
 | `src/lib/services/kiosk-operation-receipts.ts` | 128 |
@@ -76,7 +76,8 @@
 | `src/lib/services/non-game-schedule-defaults.ts` | 49 |
 | `src/lib/services/notification-deliveries.ts` | 59 |
 | `src/lib/services/notification-prefs.ts` | 350 |
-| `src/lib/services/notifications.ts` | 1975 |
+| `src/lib/services/notification-resolution.ts` | 143 |
+| `src/lib/services/notifications.ts` | 2045 |
 | `src/lib/services/onboarding-lifecycle.ts` | 546 |
 | `src/lib/services/onboarding-readiness.ts` | 24 |
 | `src/lib/services/pending-pickup-expiry.ts` | 370 |
@@ -102,8 +103,8 @@
 | `src/lib/services/shift-assignment-conflicts.ts` | 43 |
 | `src/lib/services/shift-assignments.ts` | 727 |
 | `src/lib/services/shift-generation.ts` | 629 |
-| `src/lib/services/shift-trade-emails.ts` | 62 |
-| `src/lib/services/shift-trades.ts` | 1560 |
+| `src/lib/services/shift-trade-emails.ts` | 70 |
+| `src/lib/services/shift-trades.ts` | 1567 |
 | `src/lib/services/signatures.ts` | 2366 |
 | `src/lib/services/software.ts` | 272 |
 | `src/lib/services/sport-auto-assign-policies.ts` | 46 |
@@ -112,6 +113,7 @@
 | `src/lib/services/sport-setup.ts` | 210 |
 | `src/lib/services/status.ts` | 444 |
 | `src/lib/services/team-scoreboard.ts` | 598 |
+| `src/lib/services/trade-post-notifications.ts` | 115 |
 | `src/lib/services/usage-analytics-report.ts` | 114 |
 | `src/lib/services/user-deactivation.ts` | 589 |
 | `src/lib/services/wishlist.ts` | 193 |
@@ -182,7 +184,7 @@
 | `src/lib/db.ts` | 32 |
 | `src/lib/editor-snippets.ts` | 52 |
 | `src/lib/email-template.ts` | 202 |
-| `src/lib/email.ts` | 130 |
+| `src/lib/email.ts` | 147 |
 | `src/lib/env.ts` | 144 |
 | `src/lib/environment-safety.ts` | 17 |
 | `src/lib/equipment-guidance.ts` | 127 |
@@ -216,10 +218,10 @@
 | `src/lib/local-traces.ts` | 28 |
 | `src/lib/media-embed.ts` | 68 |
 | `src/lib/nav-sections.ts` | 326 |
-| `src/lib/notification-catalog.ts` | 324 |
+| `src/lib/notification-catalog.ts` | 325 |
 | `src/lib/notification-count-sync.ts` | 9 |
 | `src/lib/notification-destination.ts` | 85 |
-| `src/lib/notification-meta.ts` | 120 |
+| `src/lib/notification-meta.ts` | 121 |
 | `src/lib/observability.ts` | 19 |
 | `src/lib/operational-health.ts` | 2 |
 | `src/lib/ops-checks.ts` | 212 |
@@ -263,7 +265,7 @@
 | `src/lib/schedule-defaults.ts` | 33 |
 | `src/lib/schedule-event-identity.ts` | 369 |
 | `src/lib/schedule-event-keyset.ts` | 66 |
-| `src/lib/schedule-event-where.ts` | 46 |
+| `src/lib/schedule-event-where.ts` | 63 |
 | `src/lib/schedule-health-types.ts` | 83 |
 | `src/lib/schedule-publication-types.ts` | 62 |
 | `src/lib/schedule-queues.ts` | 185 |

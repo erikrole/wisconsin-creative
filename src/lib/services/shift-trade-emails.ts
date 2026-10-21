@@ -9,6 +9,8 @@ export type ShiftTradeEmail = {
   body: string;
   eventSummary: string;
   area: string;
+  /** The event page; the button opens it instead of the whole schedule. */
+  href?: string;
 };
 
 export async function sendShiftTradeEmail({
@@ -17,6 +19,7 @@ export async function sendShiftTradeEmail({
   body,
   eventSummary,
   area,
+  href,
 }: ShiftTradeEmail): Promise<boolean> {
   const user = await db.user.findUnique({
     where: { id: userId },
@@ -31,7 +34,7 @@ export async function sendShiftTradeEmail({
   return sendEmail({
     to: user.email,
     subject: title,
-    ...buildShiftTradeEmail({ title, body, eventSummary, area }),
+    ...buildShiftTradeEmail({ title, body, eventSummary, area, href }),
   });
 }
 
@@ -40,12 +43,15 @@ function buildShiftTradeEmail({
   body,
   eventSummary,
   area,
+  href,
 }: {
   title: string;
   body: string;
   eventSummary: string;
   area: string;
+  href?: string;
 }) {
+  const eventPath = href && href.startsWith("/events/") ? href : null;
   return renderEmail({
     preheader: body,
     eyebrow: "Shift trade",
@@ -55,7 +61,9 @@ function buildShiftTradeEmail({
       { label: "Event", value: eventSummary },
       { label: "Area", value: area },
     ],
-    action: { label: "Open your schedule", url: `${env.appUrl}/schedule` },
+    action: eventPath
+      ? { label: "View event", url: `${env.appUrl}${eventPath}` }
+      : { label: "Open your schedule", url: `${env.appUrl}/schedule` },
     manageNotifications: true,
   });
 }
