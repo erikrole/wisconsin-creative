@@ -8,6 +8,8 @@
       "Next shift shows their next confirmed event, with the time and place.",
       "Holding lists gear they have checked out and when it is due, and flags overdue gear.",
       "Almost there shows the badge they are closest to earning.",
+      "This week lists their confirmed shifts for the next seven days, colored by area.",
+      "Performance shows on-time returns, checkouts and badges earned. On-time means returned by the due time, and checkouts with no recorded return time are left out of the rate.",
       "Students see this on their own profile, and staff and admins see it on anyone's. A tile only shows when there is something to say."
     ],
     "platforms": [

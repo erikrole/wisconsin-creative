@@ -14,7 +14,12 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
     throw new HttpError(403, "Forbidden");
 
   const now = new Date();
-  const [assignment, bookings] = await Promise.all([
+  const weekEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const confirmed = [
+    ShiftAssignmentStatus.DIRECT_ASSIGNED,
+    ShiftAssignmentStatus.APPROVED,
+  ];
+  const [assignment, bookings, weekShifts, completed] = await Promise.all([
     db.shiftAssignment.findFirst({
       where: {
         userId: params.id,
@@ -56,7 +61,39 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
       take: 3,
       select: { id: true, title: true, endsAt: true },
     }),
+    db.shiftAssignment.findMany({
+      where: {
+        userId: params.id,
+        status: { in: confirmed },
+        shift: {
+          endsAt: { gte: now },
+          startsAt: { lte: weekEnd },
+          shiftGroup: { publishedAt: { not: null }, archivedAt: null },
+        },
+      },
+      orderBy: { shift: { startsAt: "asc" } },
+      take: 10,
+      select: {
+        shift: {
+          select: {
+            area: true,
+            startsAt: true,
+            endsAt: true,
+            shiftGroup: { select: { event: { select: { summary: true } } } },
+          },
+        },
+      },
+    }),
+    db.booking.findMany({
+      where: { requesterUserId: params.id, status: BookingStatus.COMPLETED },
+      select: { endsAt: true, completedAt: true },
+    }),
   ]);
+
+  // On time = returned at or before the due time. Bookings with no recorded return time are
+  // counted as checkouts but left out of the rate.
+  const returned = completed.filter((b) => b.completedAt);
+  const onTime = returned.filter((b) => b.completedAt! <= b.endsAt).length;
 
   const shift = assignment?.shift ?? null;
   return ok({
@@ -71,6 +108,18 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
             live: shift.startsAt <= now,
           }
         : null,
+      week: weekShifts.map((a) => ({
+        summary: a.shift.shiftGroup.event.summary,
+        area: a.shift.area,
+        startsAt: a.shift.startsAt.toISOString(),
+        endsAt: a.shift.endsAt.toISOString(),
+      })),
+      performance: {
+        checkouts: completed.length,
+        onTimeRate: returned.length
+          ? Math.round((onTime / returned.length) * 100)
+          : null,
+      },
       holding: bookings.map((b) => ({
         id: b.id,
         title: b.title,
