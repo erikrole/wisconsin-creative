@@ -37,9 +37,10 @@ describe("native Schedule availability and Trade Board redesign", () => {
     // Four tabs (Review is Admin-only), one list per tab, grouped by day.
     expect(board).toContain("@State private var selectedTab: BoardTab?");
     expect(board).toContain("(vm.canReview ? [.review] : []) + [.available, .mine, .history]");
-    expect(board).toContain("TradeBoardTabBar(");
+    expect(board).toContain('Picker("Trade Board", selection: tabSelection)');
+    expect(board).toContain(".pickerStyle(.segmented)");
     expect(board).toContain("private func dayGroups(_ rows: [BoardRowModel]) -> [BoardDayGroup]");
-    expect(board).toContain('return "Today · \\(base)"');
+    expect(board).toContain('case 0: return "Today · \\(base)"');
     // One Available list holds both kinds, soonest first.
     expect(board).toContain("case trade(ShiftTrade)");
     expect(board).toContain("case open(OpenWorkShift)");
@@ -47,8 +48,9 @@ describe("native Schedule availability and Trade Board redesign", () => {
     expect(board).not.toContain('title: "Available Now"');
     expect(board).toContain("timesLine");
     expect(board).toContain("classificationColor");
-    expect(board).toContain(".modifier(BoardButtonStyle(style: action.style))");
-    expect(board).toContain("picker.pickerStyle(.segmented)");
+    expect(board).toContain(".swipeActions(edge: .leading");
+    expect(board).toContain(".contextMenu");
+    expect(board).toContain("@Environment(\\.today)");
     expect(board).not.toContain("mineOnly");
     expect(board).not.toContain("TradeBoardSummaryCard");
     expect(models).toContain("let viewerAvailabilityContext: ShiftAvailabilityContext?");
