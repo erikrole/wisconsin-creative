@@ -100,7 +100,11 @@ describe("kiosk peer transfer", () => {
     ]);
     expect(notes[0].body).toMatch(/^It's on your record now\. It's due .+\.$/);
     expect(notes[1].body).toBe("1 item is off your record now. The rest is still with you.");
-    expect(mocks.deferPush).toHaveBeenCalledTimes(2);
+    // The owner did this themselves: a read receipt, and only the new holder is pushed.
+    expect(notes[0].readAt).toBeNull();
+    expect(notes[1].readAt).toBeInstanceOf(Date);
+    expect(mocks.deferPush).toHaveBeenCalledTimes(1);
+    expect(mocks.sendPushToUser).toHaveBeenCalledWith("peer-1", expect.objectContaining({ category: "checkoutDue" }));
   });
 
   it("lets the owner hand over the whole checkout", async () => {

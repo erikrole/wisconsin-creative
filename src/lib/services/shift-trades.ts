@@ -395,6 +395,7 @@ export async function postTrade(
           body,
           eventSummary,
           area: assignment.shift.area,
+          href: payload.href,
         });
       }
     }
@@ -560,6 +561,7 @@ export async function claimTrade(tradeId: string, userId: string) {
         body: posterBody,
         eventSummary,
         area: shift.area,
+        href: payload.href,
       });
     }
 
@@ -841,6 +843,7 @@ export async function approveTrade(
         body,
         eventSummary,
         area,
+        href: payload.href,
       });
     }
 
@@ -872,6 +875,7 @@ export async function approveTrade(
         body: posterBody,
         eventSummary,
         area,
+        href: payload.href,
       });
     }
 
@@ -981,6 +985,7 @@ export async function declineTrade(tradeId: string, actor: TradeApprovalActor = 
           body,
           eventSummary,
           area,
+          href: payload.href,
         });
       }
     }
@@ -1061,6 +1066,7 @@ export async function cancelTrade(tradeId: string, actor: TradeActor) {
           body,
           eventSummary,
           area: shift.area,
+          href: payload.href,
         });
       }
     }
@@ -1105,6 +1111,7 @@ export async function cancelTrade(tradeId: string, actor: TradeActor) {
           body,
           eventSummary,
           area: shift.area,
+          href: payload.href,
         });
       }
     }
