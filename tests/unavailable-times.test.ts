@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import {
+  blockedWindow,
+  shiftsDuring,
   defaultWeeklyEndsOn,
   formatAwayDates,
   formatWeekDays,
@@ -99,5 +101,40 @@ describe("when a student can't work", () => {
     expect(schedule).toContain("<CantWorkDialog");
     expect(view).toContain("Add days you can’t work");
     expect(view).toContain('href="/welcome/availability"');
+  });
+});
+
+describe("shiftsDuring", () => {
+  const shift = (id: string, startsAt: Date, endsAt: Date, allDay = false, eventDay = "") => ({
+    id,
+    startsAt: startsAt.toISOString(),
+    endsAt: endsAt.toISOString(),
+    event: { summary: id, allDay, startsAt: allDay ? `${eventDay}T00:00:00.000Z` : startsAt.toISOString() },
+  });
+  const game = shift("game", new Date(2026, 10, 27, 18, 0), new Date(2026, 10, 27, 21, 0));
+  const morning = shift("morning", new Date(2026, 10, 27, 8, 0), new Date(2026, 10, 27, 10, 0));
+  const after = shift("after", new Date(2026, 10, 30, 18, 0), new Date(2026, 10, 30, 21, 0));
+  const mediaDay = shift("media", new Date(Date.UTC(2026, 10, 26)), new Date(Date.UTC(2026, 10, 27)), true, "2026-11-26");
+
+  it("finds every shift inside an all-day range, including all-day events by date", () => {
+    const range = { from: "2026-11-25", through: "2026-11-29", allDay: true, startsAt: "00:00", endsAt: "23:59" };
+    expect(shiftsDuring([game, morning, after, mediaDay], range).map((s) => s.id)).toEqual(["game", "morning", "media"]);
+  });
+
+  it("only matches the blocked hours for a part-day range", () => {
+    const range = { from: "2026-11-27", through: "2026-11-27", allDay: false, startsAt: "17:00", endsAt: "19:00" };
+    expect(shiftsDuring([game, morning], range).map((s) => s.id)).toEqual(["game"]);
+  });
+
+  it("repeats part-day hours on each day of the range", () => {
+    const range = { from: "2026-11-27", through: "2026-11-30", allDay: false, startsAt: "19:30", endsAt: "22:00" };
+    expect(shiftsDuring([game, morning, after], range).map((s) => s.id)).toEqual(["game", "after"]);
+  });
+
+  it("builds a local query window for the whole range", () => {
+    const { start, end } = blockedWindow({ from: "2026-11-25", through: "2026-11-29", allDay: true, startsAt: "00:00", endsAt: "23:59" });
+    expect(start.getDate()).toBe(25);
+    expect(end.getDate()).toBe(29);
+    expect(end.getHours()).toBe(23);
   });
 });

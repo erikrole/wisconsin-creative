@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { handleAuthRedirect, parseErrorMessage } from "@/lib/errors";
 import { cn } from "@/lib/utils";
-import { WEEK_DAYS, defaultWeeklyEndsOn, localToday } from "@/lib/unavailable-times";
+import { WEEK_DAYS, defaultWeeklyEndsOn, localToday, type BlockedRange } from "@/lib/unavailable-times";
 
 /**
  * The two student-shaped "can't work" forms: something that repeats weekly,
@@ -182,7 +182,8 @@ export function WeeklyForm({ userId, onSaved, onCancel }: { userId: string; onSa
 
 type AwayFormProps = {
   userId: string;
-  onSaved: () => void;
+  /** Gets the stretch that was blocked, so callers can check shifts in it. */
+  onSaved: (range: BlockedRange) => void;
   onCancel: () => void;
   /** Prefill the first day, e.g. the day picked on the schedule. */
   initialFrom?: string;
@@ -210,18 +211,25 @@ export function AwayForm({ userId, onSaved, onCancel, initialFrom, bare }: AwayF
     if (!canSave) return;
     setSaving(true);
     try {
-      const ok = await postUnavailable(userId, {
-        kind: "AD_HOC",
-        date: from,
-        dateEndsOn: through || from,
+      const range: BlockedRange = {
+        from,
+        through: through || from,
         allDay,
         startsAt: allDay ? "00:00" : startsAt,
         endsAt: allDay ? "23:59" : endsAt,
+      };
+      const ok = await postUnavailable(userId, {
+        kind: "AD_HOC",
+        date: range.from,
+        dateEndsOn: range.through,
+        allDay,
+        startsAt: range.startsAt,
+        endsAt: range.endsAt,
         label: label.trim() || undefined,
       });
       if (!ok) return;
       toast.success(`Added ${label.trim() || "days away"}`);
-      onSaved();
+      onSaved(range);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not save that");
     } finally {

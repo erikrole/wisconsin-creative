@@ -130,3 +130,52 @@ export function defaultWeeklyEndsOn(today = new Date()): string {
   if (month <= 5) return iso(year, 5, 17);
   return iso(year, 8, 15);
 }
+
+/** A newly blocked stretch, as the "can't work" form saved it. */
+export type BlockedRange = { from: string; through: string; allDay: boolean; startsAt: string; endsAt: string };
+
+/** The fields of a /api/my-shifts row this check needs. */
+export type ShiftLite = {
+  id: string;
+  startsAt: string;
+  endsAt: string;
+  event: { summary: string; allDay: boolean; startsAt: string };
+};
+
+function localInstant(day: string, hhmm: string): number {
+  const [y = 0, m = 1, d = 1] = day.split("-").map(Number);
+  const [h = 0, min = 0] = hhmm.split(":").map(Number);
+  return new Date(y, m - 1, d, h, min).getTime();
+}
+
+/** The local-time query window for /api/my-shifts covering a blocked range. */
+export function blockedWindow(range: BlockedRange): { start: Date; end: Date } {
+  return { start: new Date(localInstant(range.from, "00:00")), end: new Date(localInstant(range.through, "23:59")) };
+}
+
+/**
+ * Shifts the student is already on during a stretch they just blocked. Part-day
+ * blocks repeat their hours on every day of the range. All-day events are
+ * stored as UTC-midnight dates, so they match by calendar day, not instant.
+ */
+export function shiftsDuring<T extends ShiftLite>(shifts: T[], range: BlockedRange): T[] {
+  return shifts.filter((shift) => {
+    if (shift.event.allDay) {
+      const day = shift.event.startsAt.slice(0, 10);
+      return day >= range.from && day <= range.through;
+    }
+    const start = new Date(shift.startsAt).getTime();
+    const end = new Date(shift.endsAt).getTime();
+    if (range.allDay) return start < localInstant(range.through, "23:59") + 60_000 && end > localInstant(range.from, "00:00");
+    for (let day = range.from; day <= range.through; day = nextDay(day)) {
+      if (start < localInstant(day, range.endsAt) && end > localInstant(day, range.startsAt)) return true;
+    }
+    return false;
+  });
+}
+
+function nextDay(day: string): string {
+  const [y = 0, m = 1, d = 1] = day.split("-").map(Number);
+  const next = new Date(y, m - 1, d + 1);
+  return iso(next.getFullYear(), next.getMonth() + 1, next.getDate());
+}
