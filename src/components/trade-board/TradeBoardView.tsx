@@ -169,8 +169,7 @@ function Row({ row }: { row: BoardRow }) {
             {row.actions.map((action) => (
               <Button
                 key={action.label}
-                size="sm"
-                className="h-9 gap-1.5"
+                className="h-10 gap-1.5"
                 variant={action.variant === "primary" ? "default" : "outline"}
                 disabled={action.disabled}
                 onClick={action.onClick}
@@ -181,9 +180,8 @@ function Row({ row }: { row: BoardRow }) {
             ))}
             {row.menuAction && (
               <Button
-                size="sm"
                 variant="ghost"
-                className="-ml-2 h-9 text-muted-foreground hover:text-destructive"
+                className="-ml-2 h-10 text-muted-foreground hover:text-destructive"
                 disabled={row.menuAction.disabled}
                 onClick={row.menuAction.onClick}
               >
@@ -279,7 +277,7 @@ export function TradeBoardView({ tabs, tab, onTab, loading, errors, needsReview,
             <AlertTriangleIcon className="size-4 shrink-0" />
             <span>{error.text}</span>
           </span>
-          <Button className="h-9" variant="outline" disabled={error.busy} onClick={error.onRetry}>
+          <Button className="h-10" variant="outline" disabled={error.busy} onClick={error.onRetry}>
             {error.busy ? "Retrying..." : error.retryLabel}
           </Button>
         </div>
