@@ -50,7 +50,7 @@
 | `src/lib/services/game-record.ts` | 169 |
 | `src/lib/services/gear-picks.ts` | 1109 |
 | `src/lib/services/hidden-users-cleanup.ts` | 122 |
-| `src/lib/services/invite-email.ts` | 79 |
+| `src/lib/services/invite-email.ts` | 82 |
 | `src/lib/services/item-cleanup-wizard.ts` | 762 |
 | `src/lib/services/job-runs.ts` | 52 |
 | `src/lib/services/kiosk-active-checkout-items.ts` | 492 |
@@ -116,7 +116,6 @@
 | `src/lib/services/trade-post-notifications.ts` | 115 |
 | `src/lib/services/usage-analytics-report.ts` | 114 |
 | `src/lib/services/user-deactivation.ts` | 589 |
-| `src/lib/services/welcome-email.ts` | 64 |
 | `src/lib/services/wishlist.ts` | 193 |
 
 ## Key Library Files
@@ -170,6 +169,7 @@
 | `src/lib/chrome-font.ts` | 13 |
 | `src/lib/claim-review-deadlines.ts` | 52 |
 | `src/lib/claim-review-workflow.ts` | 48 |
+| `src/lib/class-times.ts` | 89 |
 | `src/lib/client-enums.ts` | 85 |
 | `src/lib/clipboard.ts` | 19 |
 | `src/lib/collaborator-access.ts` | 175 |

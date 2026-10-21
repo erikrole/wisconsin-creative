@@ -5,7 +5,9 @@ import Link from "next/link";
 import { CheckIcon, XIcon } from "lucide-react";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useProfileCompletion } from "@/hooks/use-profile-completion";
+import { useFetch } from "@/hooks/use-fetch";
 import { openProfileCompletion } from "@/lib/profile-completion-events";
+import { isClassBlock, type WeeklyBlock } from "@/lib/class-times";
 import { APP_STORE_URL } from "../welcome/WelcomeDone";
 
 const STORAGE_KEY = "wc-getting-started";
@@ -34,6 +36,12 @@ function save(next: Saved) {
   }
 }
 
+/** Records a row as handled from elsewhere, e.g. skipping class times. */
+export function markGettingStartedDone(id: string) {
+  const current = load();
+  if (!current.done.includes(id)) save({ ...current, done: [...current.done, id] });
+}
+
 /** Fourteen quiet days of "where do I start" for a new student, then it goes away on its own. */
 export function GettingStartedCard() {
   const { data: user } = useCurrentUser();
@@ -41,6 +49,14 @@ export function GettingStartedCard() {
   const [saved, setSaved] = useState<Saved | null>(null);
 
   useEffect(() => setSaved(load()), []);
+  const isStudent = user?.role === "STUDENT";
+  // Class times count as done once any class is saved, on any device.
+  const { data: blocks } = useFetch<WeeklyBlock[]>({
+    url: `/api/users/${user?.id ?? ""}/availability`,
+    transform: (json) => ((json as { data?: WeeklyBlock[] }).data ?? []),
+    enabled: Boolean(isStudent && user?.id && saved && !saved.dismissed),
+    refetchOnFocus: false,
+  });
 
   if (!saved || saved.dismissed || user?.role !== "STUDENT" || !user.accountCreatedAt) return null;
   const ageDays = (Date.now() - new Date(user.accountCreatedAt).getTime()) / 86_400_000;
@@ -58,8 +74,10 @@ export function GettingStartedCard() {
     save(next);
   };
 
-  const items: Array<{ id: string; label: string; done: boolean; href?: string; external?: boolean; onClick?: () => void }> = [
+  const hasClasses = (blocks ?? []).some(isClassBlock);
+  const items: Array<{ id: string; label: string; done: boolean; href?: string; external?: boolean; markOnClick?: boolean; onClick?: () => void }> = [
     { id: "profile", label: "Finish your profile", done: profileDone, onClick: openProfileCompletion },
+    { id: "availability", label: "Add your class times", done: hasClasses || saved.done.includes("availability"), href: "/welcome/classes", markOnClick: false },
     { id: "schedule", label: "Check the schedule", done: saved.done.includes("schedule"), href: "/schedule" },
     { id: "guides", label: "Read the guides", done: saved.done.includes("guides"), href: "/resources" },
     { id: "app", label: "Get the iPhone app", done: saved.done.includes("app"), href: APP_STORE_URL, external: true },
@@ -109,7 +127,7 @@ export function GettingStartedCard() {
                 <Link
                   href={item.href}
                   {...(item.external ? { target: "_blank", rel: "noreferrer" } : {})}
-                  onClick={() => mark(item.id)}
+                  onClick={() => item.markOnClick !== false && mark(item.id)}
                   className={cls}
                 >
                   {body}

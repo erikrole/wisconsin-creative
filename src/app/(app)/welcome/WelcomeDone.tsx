@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BookOpenIcon, CalendarDaysIcon, ChevronRightIcon, PackageIcon, SmartphoneIcon } from "lucide-react";
+import { BookOpenIcon, CalendarDaysIcon, ChevronRightIcon, ClockIcon, PackageIcon, SmartphoneIcon, UsersIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type Role = "ADMIN" | "STAFF" | "STUDENT" | "COLLABORATOR";
@@ -24,10 +24,22 @@ export function welcomeNextSteps(role: Role): NextStep[] {
     external: true,
   };
   if (role === "COLLABORATOR") return [app];
+  const gear: NextStep = { href: "/bookings", title: "Find your gear", detail: "Anything you check out shows up here, with its return time.", icon: PackageIcon };
+  const guides: NextStep = { href: "/resources", title: "Read the guides", detail: "How we shoot, where gear lives, and who to ask.", icon: BookOpenIcon };
+  if (role === "STUDENT") {
+    return [
+      { href: "/welcome/classes", title: "Add your class times", detail: "So you’re not scheduled while you’re in class.", icon: ClockIcon },
+      { href: "/schedule", title: "Check the schedule", detail: "See the events you’re on and the ones that need crew.", icon: CalendarDaysIcon },
+      gear,
+      guides,
+      app,
+    ];
+  }
   return [
-    { href: "/schedule", title: "Check the schedule", detail: "See the events you’re on and the ones that need crew.", icon: CalendarDaysIcon },
-    { href: "/bookings", title: "Find your gear", detail: "Anything you check out shows up here, with its return time.", icon: PackageIcon },
-    { href: "/resources", title: "Read the guides", detail: "How we shoot, where gear lives, and who to ask.", icon: BookOpenIcon },
+    { href: "/schedule", title: "Check the schedule", detail: "Build crews and see which events still need people.", icon: CalendarDaysIcon },
+    { href: "/staff/onboarding-status", title: "See who’s set up", detail: "Track invites and nudge anyone who hasn’t finished.", icon: UsersIcon },
+    gear,
+    guides,
     app,
   ];
 }

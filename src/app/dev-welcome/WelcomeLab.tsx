@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 import WelcomePage from "@/app/(app)/welcome/page";
 import { WelcomeDone } from "@/app/(app)/welcome/WelcomeDone";
+import { ClassTimesSetup } from "@/app/(app)/welcome/classes/ClassTimesSetup";
 import { PROFILE_COMPLETION_QUERY_KEY, type ProfileCompletionResponse } from "@/hooks/use-profile-completion";
 import { getProfileCompletion } from "@/lib/profile-completion";
 
@@ -48,7 +49,7 @@ function sample(role: Role, filled: number): ProfileCompletionResponse {
   return { profile, completion: getProfileCompletion(profile) as ProfileCompletionResponse["completion"] };
 }
 
-/** `?role=STUDENT&view=setup&filled=0|1|2|3` or `?view=done|later`. */
+/** `?role=STUDENT&view=setup&filled=0|1|2|3`, `?view=done|later`, or `?view=classes` (availability API mocked by the caller). */
 function Lab() {
   const params = useSearchParams();
   const role = (ROLES.find((r) => r === params.get("role")) ?? "STUDENT") as Role;
@@ -68,6 +69,8 @@ function Lab() {
     <QueryClientProvider client={client}>
       {view === "setup" ? (
         <WelcomePage />
+      ) : view === "classes" ? (
+        <ClassTimesSetup userId="dev-welcome" onDone={() => {}} />
       ) : (
         <WelcomeDone firstName={first} role={role} outcome={view === "later" ? "later" : "complete"} onContinue={() => {}} />
       )}

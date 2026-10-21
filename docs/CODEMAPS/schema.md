@@ -131,7 +131,7 @@ Values: `UPLOADING`, `FINALIZING`, `COMMITTED`, `FAILED`
 
 ## Model `User`
 
-Fields: 140
+Fields: 139
 
 - `id                            String                           @id @default(cuid())`
 - `name                          String`
@@ -153,7 +153,6 @@ Fields: 140
 - `wiscardCardNumber             String?                          @unique @map("wiscard_card_number")`
 - `wiscardIssueCode              String?                          @map("wiscard_issue_code")`
 - `profilePromptSnoozedUntil     DateTime?                        @map("profile_prompt_snoozed_until")`
-- `welcomeEmailSentAt            DateTime?                        @map("welcome_email_sent_at")`
 - `slackHandle                   String?                          @map("slack_handle")`
 - `slackProfileUrl               String?                          @map("slack_profile_url")`
 - `avatarUrl                     String?                          @map("avatar_url")`

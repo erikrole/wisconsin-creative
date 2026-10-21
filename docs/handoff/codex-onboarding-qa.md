@@ -9,7 +9,10 @@ Web (wc-fresh theme, Lato):
 - Anticipated graduation is no longer required (completion math in src/lib/profile-completion.ts, PATCH /api/me/profile-completion accepts year alone). Label unchanged, not marked optional. Students now have 7 required details.
 - Home "Getting started" card for STUDENT accounts for 14 days (`GettingStartedCard.tsx`, `accountCreatedAt` added to GET /api/me; checklist state is per browser in localStorage).
 - Invite email lists what happens next; login invite notice reworded.
-- One-time welcome email when a student/staff finishes setup (src/lib/services/welcome-email.ts). Sent from the PATCH route and the self avatar upload. Not for collaborators or hidden users. Claim is atomic on `users.welcome_email_sent_at`; a failed send releases it.
+- No welcome email after setup (Erik dropped it to avoid email fatigue). Students get one email: the invite. The finish screen and Home card cover next steps.
+- Optional class times: `/welcome/classes` ("When are you in class?"): class name, day circles, from/to, last day of classes (defaults to an end-of-term guess, editable). Each day saves as a weekly CANNOT_WORK availability block via the existing `/api/users/[id]/availability`, so scheduling and the staff Availability tab read them unchanged. Never required; "Skip for now" marks the Home row handled. Helpers in src/lib/class-times.ts.
+- Getting started card has an "Add your class times" row, checked off once any class block exists (any device). The student finish screen lists it first.
+- Staff/admin finish screen: Schedule (crews), See who's set up (/staff/onboarding-status), Gear, Guides, app.
 - Invite create-password page (and every `AuthScreen` page: login, forgot, reset, change password) restyled to match the native iPhone sign-in: flat ink background, dark field wells, 52px light pill button, no crimson card (src/components/auth/AuthScreen.tsx, `.login-*` in globals.css, LoginForm.tsx). Behavior unchanged.
 - Release note added to src/lib/releases.json (pr 584).
 
@@ -18,11 +21,11 @@ iOS (SwiftUI):
 - New `WelcomeFinishView.swift` after the last step, after skipping the photo, and after Remind me tomorrow. Rows open Schedule, Gear, Guides. No iPhone-app row on iOS. Registered in scripts/ios-audit-inventory.sh.
 
 ## Migration
-`0199_user_welcome_email`: adds `users.welcome_email_sent_at` and backfills every existing user to NOW() so nobody is emailed at rollout. Main ended at 0191 earlier; 0192-0198 are reserved by open PRs. Recheck for a collision before merging. Apply 0199 before deploy. `npm run db:migrate:check` passes; the migrations applied cleanly on a local Postgres 16 through scripts/check-postgres-integrity.mjs.
+None. (0199 was dropped with the welcome email.)
 
 ## How to run it
 - No database needed: `npm run review 584` (worktree beside the checkout; DB-free because the branch has no preview database, and none will be created). DB-free pages:
-  - `/dev-welcome?role=STUDENT|STAFF|COLLABORATOR&view=setup|done|later&filled=0..3&theme=dark`
+  - `/dev-welcome?role=STUDENT|STAFF|COLLABORATOR&view=setup|done|later|classes&filled=0..3&theme=dark` (`view=classes` calls `/api/users/dev-welcome/availability`; mock it, as the screenshots did)
   - `/dev-home?role=STUDENT&firstrun=1`
   - `/login`
 - Real invite -> password -> Welcome -> Home flow needs a database. Local option only: Postgres 17 on loopback, apply migrations the way scripts/check-postgres-integrity.mjs does, add an unclaimed AllowedEmail (STUDENT), and run the app against it. The app uses the Neon websocket adapter (src/lib/db.ts), so a plain local Postgres also needs a Neon wsproxy plus a local-only loopback tweak to db.ts that must never be committed. Erik found this too heavy, so skip it unless you must. Otherwise rely on tests and the lab pages.
@@ -37,14 +40,16 @@ iOS (SwiftUI):
 - [ ] Remind me tomorrow or skipping the photo shows "Setup paused"; Home still shows the profile banner.
 - [ ] Reload mid-setup resumes at the first incomplete step.
 - [ ] Home, new student under 14 days: Getting started card; Finish profile opens the wizard; other rows check off after a click; X hides it; never shown to staff or accounts older than 14 days.
-- [ ] Welcome email: arrives once after finishing (last step or photo upload), not for collaborators, not on later edits, not for pre-0199 accounts.
+- [ ] Class times (`/welcome/classes`, student): add a class on several days, it shows as one row (e.g. "M W F · 9:30 AM – 10:45 AM"); remove deletes every day; To before From shows an inline error and disables Add class; Skip for now and Done go Home; Home row checks off after a class exists; the staff Availability tab on the student's profile shows the same blocks with the term end; a shift during class shows the usual advisory conflict. Watch for a one-off "Unexpected end of JSON input" dev overlay seen once in the mocked lab and not reproduced.
+- [ ] Staff/admin finish screen shows Schedule, See who's set up, Gear, Guides, app; links work.
+- [ ] No email is sent when setup finishes.
 - [ ] Auth pages (/login invite and password steps, /forgot-password, /reset-password, /change-password): labels, email row and placeholders readable on the dark surface; focus ring visible on fields and the pill button; Tab order works; passkey button and "Keep me signed in" checkbox look right; errors still show; 390px has no horizontal scroll.
 - [ ] 390px width: no horizontal scroll, footer buttons full width. Dark mode readable. Keyboard focus on step bar and finish rows.
 - [ ] iOS: year-only Continue; finish screen after last step, after skipping photo, after Remind me tomorrow; rows open Schedule, Gear, Guides; Continue enters the app; collaborator sees Continue only.
 
 ## Verified vs not
-Verified: tsc, eslint on touched files, vitest (welcome-email incl. send/skip/retry paths, profile-completion, route, Swift source contracts, ios-audit-inventory), db:migrate:check, Postgres integrity run, Xcode build, Playwright screenshots of the lab pages, iOS finish-screen screenshots.
-Not verified: the real signup-to-Home flow in a browser, the welcome email actually sending, iOS row navigation and the Welcome route hold at runtime, the Home card against a real account's accountCreatedAt. `verify:docs` shows codemap drift that already exists on main.
+Verified: tsc, eslint on touched files, vitest (class-times, invite email, profile-completion, route, Swift source contracts, ios-audit-inventory), db:migrate:check, Postgres integrity run, Xcode build, Playwright screenshots of the lab pages, iOS finish-screen screenshots.
+Not verified: the real signup-to-Home flow in a browser, the class-times page against a real API, iOS row navigation and the Welcome route hold at runtime, the Home card against a real account's accountCreatedAt. `verify:docs` shows codemap drift that already exists on main.
 
 ## Constraints
 - Never create a Neon branch or Vercel preview; never touch production data or credentials. Only main deploys (PR #556).

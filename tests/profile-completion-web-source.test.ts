@@ -117,5 +117,8 @@ describe("profile completion web wiring", () => {
     expect(done).toContain('"/bookings"');
     expect(done).toContain('"/resources"');
     expect(done).toContain("role === \"COLLABORATOR\"");
+    // Students are pointed at class times; staff at onboarding status.
+    expect(done).toContain('"/welcome/classes"');
+    expect(done).toContain('"/staff/onboarding-status"');
   });
 });
