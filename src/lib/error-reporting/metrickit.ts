@@ -15,7 +15,7 @@ export type MetricKitSession = {
  */
 
 const MAX_DIAGNOSTICS_PER_UPLOAD = 20;
-const MAX_CALL_STACK_BYTES = 200_000;
+const MAX_CALL_STACK_BYTES = 64_000;
 const MAX_FRAMES = 16;
 
 const DIAGNOSTIC_KINDS = {
@@ -103,6 +103,19 @@ export function attributedFrames(callStackTree: unknown): StackFrame[] {
   return frames;
 }
 
+/**
+ * The crashing thread's part of a call stack tree. The other threads are
+ * rarely needed and make up most of the size, and up to 50 occurrences are
+ * kept per issue.
+ */
+function attributedCallStackTree(callStackTree: unknown): unknown {
+  const tree = record(callStackTree);
+  const stacks = Array.isArray(tree.callStacks) ? (tree.callStacks as unknown[]).map(record) : [];
+  const stack = stacks.find((entry) => entry.threadAttributed === true) ?? stacks[0];
+  if (!stack) return callStackTree;
+  return { ...tree, callStacks: [stack] };
+}
+
 /** `com.erikrole.Wisconsin.LiveActivities` → `LiveActivities`; the main app → `App`. */
 function targetLabel(bundleId: string | null): string | null {
   if (!bundleId) return null;
@@ -174,9 +187,9 @@ export function metricKitDiagnosticToReport(
   occurredAt?: Date,
 ): ErrorReportInput {
   const meta = record(diagnostic.diagnosticMetaData);
-  const stack = diagnostic.callStackTree;
+  const frames = attributedFrames(diagnostic.callStackTree);
+  const stack = diagnostic.callStackTree === undefined ? undefined : attributedCallStackTree(diagnostic.callStackTree);
   const stackJson = stack === undefined ? "" : JSON.stringify(stack);
-  const frames = attributedFrames(stack);
   const topAppFrame = frames.find((frame) => isAppBinary(frame.binaryName));
   const bundleId = text(meta.bundleIdentifier, 120);
   const target = targetLabel(bundleId);

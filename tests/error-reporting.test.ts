@@ -201,3 +201,67 @@ describe("MetricKit sessions", () => {
     expect(reports[1]?.breadcrumbs).toBeUndefined();
   });
 });
+
+describe("intake hardening", () => {
+  it("scrubs tokens, secret pairs, query strings, and emails before storing", async () => {
+    const { scrubSecrets } = await import("@/lib/error-reporting/grouping");
+    expect(
+      scrubSecrets(
+        "fetch https://x.test/api/a?token=abc123 failed for a@b.com with Bearer abcdefghijk and password=hunter22 jwt eyJhbGciOiJIUzI1.eyJzdWIiOiIxMjM0.SflKxwRJSMeKKF2QT4",
+      ),
+    ).toBe("fetch https://x.test/api/a?<query> failed for <email> with Bearer <token> and password=<redacted> jwt <token>");
+    // Ordinary diagnostic text survives.
+    expect(scrubSecrets("SIGABRT: Namespace SIGNAL, Code 0x6")).toBe("SIGABRT: Namespace SIGNAL, Code 0x6");
+  });
+
+  it("rejects an oversized body even without a content-length", async () => {
+    const { readBoundedJson } = await import("@/lib/error-reporting/request-body");
+    const big = new ReadableStream({
+      start(controller) {
+        for (let i = 0; i < 4; i++) controller.enqueue(new TextEncoder().encode("x".repeat(1_000)));
+        controller.close();
+      },
+    });
+    const req = new Request("https://app.example.com/api/errors", { method: "POST", body: big, duplex: "half" } as RequestInit);
+    await expect(readBoundedJson(req, 2_000)).rejects.toMatchObject({ status: 413 });
+    const small = new Request("https://app.example.com/api/errors", { method: "POST", body: '{"a":1}' });
+    await expect(readBoundedJson(small, 2_000)).resolves.toEqual({ a: 1 });
+  });
+
+  it("only joins a browser report to an unclaimed server event or the same person's", async () => {
+    mocks.db.errorEvent.findFirst.mockResolvedValue(null);
+    mocks.db.errorIssue.upsert.mockResolvedValue({ id: "issue-2", status: "open", eventCount: 2, resolvedAt: null });
+    mocks.db.errorEvent.count.mockResolvedValue(0);
+    mocks.db.errorEvent.create.mockResolvedValue({});
+    await recordErrorReport(
+      { platform: "web", kind: "render_error", name: "Error", message: "boom", digest: "777" },
+      { id: "user-2", role: "STUDENT" },
+    );
+    expect(mocks.db.errorEvent.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ OR: [{ userId: null }, { userId: "user-2" }] }),
+      }),
+    );
+    // No claimable event: it is stored as this person's own occurrence.
+    expect(mocks.db.errorEvent.create).toHaveBeenCalledWith({ data: expect.objectContaining({ userId: "user-2" }) });
+  });
+
+  it("keeps only the crashing thread of a MetricKit call stack", async () => {
+    const { metricKitDiagnosticToReport } = await import("@/lib/error-reporting/metrickit");
+    const report = metricKitDiagnosticToReport(
+      {
+        diagnosticMetaData: { signal: 11 },
+        callStackTree: {
+          callStacks: [
+            { threadAttributed: false, callStackRootFrames: [{ binaryName: "libsystem_kernel.dylib" }] },
+            { threadAttributed: true, callStackRootFrames: [{ binaryName: "Wisconsin", offsetIntoBinaryTextSegment: 12 }] },
+          ],
+        },
+      },
+      "crash",
+      "ios",
+    );
+    expect((report.callStack as { callStacks: unknown[] }).callStacks).toHaveLength(1);
+    expect(report.culprit).toBe("Wisconsin");
+  });
+});

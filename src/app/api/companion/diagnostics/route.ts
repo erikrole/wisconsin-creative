@@ -2,6 +2,7 @@ import { withHandler } from "@/lib/api";
 import { requireCompanion } from "@/lib/companion-store";
 import { HttpError, ok } from "@/lib/http";
 import { checkRateLimit, enforceRateLimit, getClientIp } from "@/lib/rate-limit";
+import { readBoundedJson } from "@/lib/error-reporting/request-body";
 import { diagnosticUploadSchema } from "@/lib/schemas/error-reports";
 import { storeMetricKitPayload } from "@/lib/services/app-diagnostics";
 
@@ -18,10 +19,8 @@ export const POST = withHandler(async (req) => {
   const companion = await requireCompanion(req);
   const limit = await checkRateLimit(`diagnostics:${companion.userId}`, { max: 30, windowMs: 24 * 60 * 60_000 });
   if (!limit.allowed) throw new HttpError(429, "Too many diagnostic uploads");
-  const length = Number(req.headers.get("content-length") ?? "0");
-  if (length > MAX_BODY_BYTES) throw new HttpError(413, "Diagnostic payload too large");
 
-  const body = diagnosticUploadSchema.parse(await req.json());
+  const body = diagnosticUploadSchema.parse(await readBoundedJson(req, MAX_BODY_BYTES, "Diagnostic payload"));
   if (body.platform !== "macos") throw new HttpError(400, "Only the Mac app uploads here");
   const stored = await storeMetricKitPayload(body.payload, "macos", { id: companion.userId, role: companion.role }, body.sessions);
   return ok({ data: { stored } });
