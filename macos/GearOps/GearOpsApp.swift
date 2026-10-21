@@ -41,8 +41,9 @@ struct GearOpsApp: App {
         }
         .onChange(of: preferences.usesGlobalShortcut, initial: true) { _, enabled in
             #if DEBUG
-            // Capture fixtures run beside the installed app; never take its key.
-            if GearOpsFixture.isActive { return }
+            // Capture fixtures and the test host run beside the installed
+            // app; never take its key.
+            if GearOpsFixture.isActive || GearOpsTestHost.isActive { return }
             #endif
             GlobalShortcut.shared.setEnabled(enabled)
         }
@@ -107,6 +108,7 @@ struct GearOpsApp: App {
     private static func makeModel() -> GearOpsModel {
         #if DEBUG
         if GearOpsFixture.isActive { return GearOpsFixture.makeModel() }
+        if GearOpsTestHost.isActive { return GearOpsTestHost.makeModel() }
         #endif
         return GearOpsModel()
     }

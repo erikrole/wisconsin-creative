@@ -762,7 +762,7 @@ describe("GearOps macOS menu bar contracts", () => {
     expect(shortcut).toContain("button.performClick(nil)");
     expect(app).toContain("Window(GearOpsApp.statusWindowTitle, id: GearOpsWindow.status)");
     expect(app).toContain("GlobalShortcut.shared.setEnabled(enabled)");
-    expect(app).toContain("if GearOpsFixture.isActive { return }");
+    expect(app).toContain("if GearOpsFixture.isActive || GearOpsTestHost.isActive { return }");
     // A TimelineView inside the MenuBarExtra label re-renders the status
     // button endlessly and hangs launch.
     const label = app.slice(app.indexOf("} label: {"), app.indexOf(".menuBarExtraStyle"));
