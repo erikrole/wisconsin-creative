@@ -131,7 +131,7 @@ Values: `UPLOADING`, `FINALIZING`, `COMMITTED`, `FAILED`
 
 ## Model `User`
 
-Fields: 137
+Fields: 139
 
 - `id                            String                           @id @default(cuid())`
 - `name                          String`
@@ -189,6 +189,8 @@ Fields: 137
 - `deviceTokens                  DeviceToken[]`
 - `webPushSubscriptions          WebPushSubscription[]`
 - `appInstallations              UserAppInstallation[]`
+- `errorEvents                   ErrorEvent[]`
+- `supportReports                SupportReport[]`
 - `liveActivityTokens            LiveActivityToken[]`
 - `liveActivityStartTokens       LiveActivityStartToken[]`
 - `liveActivityStarts            LiveActivityStart[]`
@@ -1588,6 +1590,97 @@ Indexes and constraints:
 - `@@index([kind, receivedAt])`
 - `@@map("app_diagnostics")`
 
+## Model `ErrorIssue`
+
+Fields: 17
+
+- `id           String       @id @default(cuid())`
+- `fingerprint  String       @unique`
+- `platform     String`
+- `kind         String`
+- `title        String`
+- `culprit      String?`
+- `status       String       @default("open")`
+- `eventCount   Int          @default(0) @map("event_count")`
+- `firstSeenAt  DateTime     @default(now()) @map("first_seen_at")`
+- `lastSeenAt   DateTime     @default(now()) @map("last_seen_at")`
+- `firstVersion String?      @map("first_version")`
+- `lastVersion  String?      @map("last_version")`
+- `resolvedAt   DateTime?    @map("resolved_at")`
+- `resolvedById String?      @map("resolved_by_id")`
+- `regressedAt  DateTime?    @map("regressed_at")`
+- `note         String?`
+- `events       ErrorEvent[]`
+
+Indexes and constraints:
+
+- `@@index([status, lastSeenAt])`
+- `@@index([lastSeenAt])`
+- `@@map("error_issues")`
+
+## Model `ErrorEvent`
+
+Fields: 21
+
+- `id             String     @id @default(cuid())`
+- `issueId        String     @map("issue_id")`
+- `occurredAt     DateTime   @default(now()) @map("occurred_at")`
+- `platform       String`
+- `appVersion     String?    @map("app_version")`
+- `appBuild       String?    @map("app_build")`
+- `releaseChannel String?    @map("release_channel")`
+- `osVersion      String?    @map("os_version")`
+- `deviceModel    String?    @map("device_model")`
+- `userId         String?    @map("user_id")`
+- `role           String?`
+- `screen         String?`
+- `requestId      String?    @map("request_id")`
+- `digest         String?`
+- `message        String`
+- `stack          String?`
+- `breadcrumbs    Json?`
+- `context        Json?`
+- `callStack      Json?      @map("call_stack")`
+- `issue          ErrorIssue @relation(fields: [issueId], references: [id], onDelete: Cascade)`
+- `user           User?      @relation(fields: [userId], references: [id], onDelete: SetNull)`
+
+Indexes and constraints:
+
+- `@@index([issueId, occurredAt])`
+- `@@index([occurredAt])`
+- `@@index([userId, occurredAt])`
+- `@@index([digest])`
+- `@@map("error_events")`
+
+## Model `SupportReport`
+
+Fields: 18
+
+- `id              String    @id @default(cuid())`
+- `userId          String?   @map("user_id")`
+- `message         String`
+- `status          String    @default("open")`
+- `platform        String`
+- `appVersion      String?   @map("app_version")`
+- `appBuild        String?   @map("app_build")`
+- `releaseChannel  String?   @map("release_channel")`
+- `osVersion       String?   @map("os_version")`
+- `deviceModel     String?   @map("device_model")`
+- `role            String?`
+- `screen          String?`
+- `breadcrumbs     Json?`
+- `relatedIssueIds String[]  @default([]) @map("related_issue_ids")`
+- `createdAt       DateTime  @default(now()) @map("created_at")`
+- `closedAt        DateTime? @map("closed_at")`
+- `closedById      String?   @map("closed_by_id")`
+- `user            User?     @relation(fields: [userId], references: [id], onDelete: SetNull)`
+
+Indexes and constraints:
+
+- `@@index([status, createdAt])`
+- `@@index([createdAt])`
+- `@@map("support_reports")`
+
 ## Model `JobRun`
 
 Fields: 6
@@ -1943,23 +2036,23 @@ Values: `AVAILABLE`, `PARTIAL`, `CLAIMED`, `RETIRED`
 
 Fields: 17
 
-- `id           String             @id @default(cuid())`
-- `code         String             @unique`
-- `label        String?`
-- `accountEmail String?            @map("account_email")`
-- `expiresAt    DateTime?          @map("expires_at")`
-- `status       LicenseCodeStatus  @default(AVAILABLE)`
-- `claimedById  String?            @map("claimed_by_id")`
-- `claimedAt    DateTime?          @map("claimed_at")`
-- `nagSentAt    DateTime?          @map("nag_sent_at")`
-- `reportedBrokenAt DateTime?      @map("reported_broken_at")`
-- `reportedBrokenById String?      @map("reported_broken_by_id")`
-- `createdAt    DateTime           @default(now()) @map("created_at")`
-- `updatedAt    DateTime           @updatedAt @map("updated_at")`
-- `createdById  String?            @map("created_by_id")`
-- `claimedBy    User?              @relation("LicenseClaimedBy", fields: [claimedById], references: [id], onDelete: SetNull)`
-- `createdBy    User?              @relation("LicenseCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)`
-- `claims       LicenseCodeClaim[]`
+- `id                 String             @id @default(cuid())`
+- `code               String             @unique`
+- `label              String?`
+- `accountEmail       String?            @map("account_email")`
+- `expiresAt          DateTime?          @map("expires_at")`
+- `status             LicenseCodeStatus  @default(AVAILABLE)`
+- `claimedById        String?            @map("claimed_by_id")`
+- `claimedAt          DateTime?          @map("claimed_at")`
+- `nagSentAt          DateTime?          @map("nag_sent_at")`
+- `reportedBrokenAt   DateTime?          @map("reported_broken_at")`
+- `reportedBrokenById String?            @map("reported_broken_by_id")`
+- `createdAt          DateTime           @default(now()) @map("created_at")`
+- `updatedAt          DateTime           @updatedAt @map("updated_at")`
+- `createdById        String?            @map("created_by_id")`
+- `claimedBy          User?              @relation("LicenseClaimedBy", fields: [claimedById], references: [id], onDelete: SetNull)`
+- `createdBy          User?              @relation("LicenseCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)`
+- `claims             LicenseCodeClaim[]`
 
 Indexes and constraints:
 
@@ -2994,23 +3087,23 @@ Values: `MEN`, `WOMEN`
 
 Fields: 17
 
-- `id           String                @id`
-- `title        String`
-- `deadline     DateTime?`
-- `launchedAt   DateTime?             @map("launched_at")`
-- `budgetCents      Int               @default(0) @map("budget_cents")`
-- `budgetConfirmed  Boolean           @default(false) @map("budget_confirmed")`
-- `studentKitCents  Int               @default(0) @map("student_kit_cents")`
-- `orderPlacedAt DateTime?            @map("order_placed_at")`
-- `poNumber      String?              @map("po_number")`
-- `orderNumber   String?              @map("order_number")`
-- `expectedAt    DateTime?            @map("expected_at")`
-- `createdAt    DateTime              @default(now()) @map("created_at")`
-- `updatedAt    DateTime              @updatedAt @map("updated_at")`
-- `participants GearPickParticipant[]`
-- `students     GearPickStudent[]`
-- `receipts     GearPickReceipt[]`
-- `handouts     GearPickHandout[]`
+- `id              String                @id`
+- `title           String`
+- `deadline        DateTime?`
+- `launchedAt      DateTime?             @map("launched_at")`
+- `budgetCents     Int                   @default(0) @map("budget_cents")`
+- `budgetConfirmed Boolean               @default(false) @map("budget_confirmed")`
+- `studentKitCents Int                   @default(0) @map("student_kit_cents")`
+- `orderPlacedAt   DateTime?             @map("order_placed_at")`
+- `poNumber        String?               @map("po_number")`
+- `orderNumber     String?               @map("order_number")`
+- `expectedAt      DateTime?             @map("expected_at")`
+- `createdAt       DateTime              @default(now()) @map("created_at")`
+- `updatedAt       DateTime              @updatedAt @map("updated_at")`
+- `participants    GearPickParticipant[]`
+- `students        GearPickStudent[]`
+- `receipts        GearPickReceipt[]`
+- `handouts        GearPickHandout[]`
 
 Indexes and constraints:
 
@@ -3063,13 +3156,13 @@ Indexes and constraints:
 
 Fields: 9
 
-- `id                 String          @id`
+- `id                 String           @id`
 - `title              String`
-- `budgetCents        Int             @map("budget_cents")`
-- `budgetedSpendCents Int             @map("budgeted_spend_cents")`
-- `otherSpendCents    Int             @default(0) @map("other_spend_cents")`
+- `budgetCents        Int              @map("budget_cents")`
+- `budgetedSpendCents Int              @map("budgeted_spend_cents")`
+- `otherSpendCents    Int              @default(0) @map("other_spend_cents")`
 - `note               String?`
-- `createdAt          DateTime        @default(now()) @map("created_at")`
+- `createdAt          DateTime         @default(now()) @map("created_at")`
 - `items              GearPastItem[]`
 - `people             GearPastPerson[]`
 
@@ -3287,21 +3380,21 @@ Values: `OPEN`, `APPROVED`, `IN_BUDGET`, `DECLINED`
 
 Fields: 15
 
-- `id             String     @id @default(cuid())`
-- `title          String`
-- `linkUrl        String?    @map("link_url")`
-- `estimateCents  Int?       @map("estimate_cents")`
-- `quantity       Int        @default(1)`
-- `neededBy       DateTime?  @map("needed_by") @db.Date`
-- `reason         String?`
-- `status         WishStatus @default(OPEN)`
-- `statusNote     String?    @map("status_note")`
-- `requestedById  String?    @map("requested_by_id")`
-- `budgetLineId   String?    @unique @map("budget_line_id")`
-- `createdAt      DateTime   @default(now()) @map("created_at")`
-- `updatedAt      DateTime   @updatedAt @map("updated_at")`
-- `requestedBy    User?      @relation("WishRequester", fields: [requestedById], references: [id], onDelete: SetNull)`
-- `budgetLine     BudgetLine? @relation(fields: [budgetLineId], references: [id], onDelete: SetNull)`
+- `id            String      @id @default(cuid())`
+- `title         String`
+- `linkUrl       String?     @map("link_url")`
+- `estimateCents Int?        @map("estimate_cents")`
+- `quantity      Int         @default(1)`
+- `neededBy      DateTime?   @map("needed_by") @db.Date`
+- `reason        String?`
+- `status        WishStatus  @default(OPEN)`
+- `statusNote    String?     @map("status_note")`
+- `requestedById String?     @map("requested_by_id")`
+- `budgetLineId  String?     @unique @map("budget_line_id")`
+- `createdAt     DateTime    @default(now()) @map("created_at")`
+- `updatedAt     DateTime    @updatedAt @map("updated_at")`
+- `requestedBy   User?       @relation("WishRequester", fields: [requestedById], references: [id], onDelete: SetNull)`
+- `budgetLine    BudgetLine? @relation(fields: [budgetLineId], references: [id], onDelete: SetNull)`
 
 Indexes and constraints:
 
