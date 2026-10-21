@@ -19,6 +19,12 @@ describe("iOS checkout-return Live Activity redesign", () => {
     expect(widget).toContain(".accessibilityHidden(true)");
   });
 
+  it("keeps the due time inside the expanded bottom region so the island corner cannot clip it", () => {
+    expect(widget).not.toContain("DynamicIslandExpandedRegion(.trailing)");
+    expect(widget).toContain('Text("Due \\(context.state.endsAt, style: .time)")');
+    expect(widget).toContain(".padding(.horizontal, 6)");
+  });
+
   it("keeps the wire contract and the earlier privacy decisions", () => {
     expect(attributes).toContain("var allowsExtend: Bool");
     expect(widget).not.toContain("context.attributes.requesterName");

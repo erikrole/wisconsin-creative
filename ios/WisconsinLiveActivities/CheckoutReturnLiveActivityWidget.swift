@@ -186,13 +186,6 @@ struct CheckoutReturnLiveActivityWidget: Widget {
                     }
                 }
 
-                DynamicIslandExpandedRegion(.trailing) {
-                    Text(context.state.endsAt, style: .time)
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                        .accessibilityLabel("Due at \(context.state.endsAt.formatted(date: .omitted, time: .shortened))")
-                }
-
                 DynamicIslandExpandedRegion(.bottom) {
                     TimelineView(.periodic(from: context.state.minuteBoundaryAnchor(at: .now), by: 60)) { timeline in
                         ExpandedReturnStatus(context: context, now: timeline.date)
@@ -454,25 +447,33 @@ private struct ExpandedReturnStatus: View {
                         figure: .system(size: 30, weight: .bold, design: .rounded)
                     )
                     Spacer(minLength: 8)
-                    if presentation.isUnconfirmed {
-                        Text("Open Wisconsin to confirm")
-                            .font(.caption.weight(.medium))
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                    } else if let nextNeedAt = context.state.nextNeedAt {
-                        Text("Needed again \(nextNeedAt, style: .time)")
-                            .font(.caption.weight(.medium))
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                    }
+                    Text("Due \(context.state.endsAt, style: .time)")
+                        .font(.caption.weight(.medium).monospacedDigit())
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
                 }
                 ReturnTrack(
                     fraction: presentation.isUnconfirmed ? 0 : context.state.remainingFraction(at: now),
                     accent: presentation.accent
                 )
+                if presentation.isUnconfirmed {
+                    Text("Open Wisconsin to confirm")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                } else if let nextNeedAt = context.state.nextNeedAt {
+                    Text("Needed again \(nextNeedAt, style: .time)")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        // The island's lower corners are tightly curved; without inset the
+        // first and last glyphs of the bottom line clip against them.
+        .padding(.horizontal, 6)
+        .padding(.bottom, 4)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(returnAccessibilityLabel(context: context, presentation: presentation, now: now))
     }
