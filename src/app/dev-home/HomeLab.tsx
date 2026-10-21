@@ -11,6 +11,7 @@ import AppSidebar from "@/components/Sidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { CurrentUser } from "@/hooks/use-current-user";
+import { GettingStartedCard } from "@/app/(app)/_home/GettingStartedCard";
 import { HomeSkeleton, HomeView, type HomeViewProps, type Slot } from "@/app/(app)/_home/HomeView";
 import {
   TRADE_BOARD_HREF,
@@ -148,7 +149,7 @@ function Lab({ fontClass }: { fontClass: string }) {
               {state === "loading" && params.get("skeleton") === "route" ? (
                 <HomeSkeleton />
               ) : (
-                <HomeView {...buildProps(role, state, now)} onTarget={() => {}} onSelectBooking={() => {}} onQuick={() => {}} onRemind={(id) => setReminded((prev) => new Set(prev).add(id))} remindedIds={reminded} />
+                <HomeView {...buildProps(role, state, now)} banners={params.get("firstrun") === "1" ? <GettingStartedCard /> : undefined} onTarget={() => {}} onSelectBooking={() => {}} onQuick={() => {}} onRemind={(id) => setReminded((prev) => new Set(prev).add(id))} remindedIds={reminded} />
               )}
             </main>
           </div>
@@ -172,7 +173,9 @@ function Lab({ fontClass }: { fontClass: string }) {
 export default function HomeLab({ fontClass }: { fontClass: string }) {
   const [queryClient] = useState(() => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
-    client.setQueryData(["me"], null);
+    // `?firstrun=1` shows the new-student Getting started card for a 3-day-old student account.
+    client.setQueryData(["me"], { id: "dev", name: "Maya Chen", email: "maya@wisc.edu", role: "STUDENT", accountCreatedAt: new Date(Date.now() - 3 * 86_400_000).toISOString() });
+    client.setQueryData(["profile-completion"], { profile: { role: "STUDENT" }, completion: { profileComplete: false } });
     return client;
   });
   return (

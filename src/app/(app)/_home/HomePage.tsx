@@ -16,6 +16,7 @@ import type { CreateBookingContext } from "../dashboard-types";
 import { FlaggedReportDialog } from "../dashboard/flagged-items-banner";
 import { GearPicksBanner } from "../dashboard/gear-picks-banner";
 import { ProfileCompletionBanner } from "../dashboard/profile-completion-banner";
+import { GettingStartedCard } from "./GettingStartedCard";
 import { HomeSkeleton, HomeView, type Slot } from "./HomeView";
 import {
   TRADE_BOARD_HREF,
@@ -310,7 +311,7 @@ function InternalHome({ name, readOnly }: { name: string | null; readOnly: boole
         onRefresh={() => loadData()}
         pageError={!data && !fastStats ? fetchError === "network" ? "network" : fetchError ? "server" : false : false}
         onRetry={() => loadData()}
-        banners={<><ProfileCompletionBanner /><GearPicksBanner /></>}
+        banners={<><GettingStartedCard /><ProfileCompletionBanner /><GearPicksBanner /></>}
         dayLine={view?.dayLine}
         summary={view?.summary}
         attention={view?.attention}

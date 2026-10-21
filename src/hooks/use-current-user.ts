@@ -21,6 +21,7 @@ export type CurrentUser = {
   capabilities?: string[];
   avatarUrl?: string | null;
   forcePasswordChange?: boolean;
+  accountCreatedAt?: string | null;
   preview?: {
     actualRole: "ADMIN";
     role: "STAFF" | "STUDENT" | "COLLABORATOR";
