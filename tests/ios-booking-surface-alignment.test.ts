@@ -9,10 +9,11 @@ describe("iOS booking surface alignment", () => {
     bookings.indexOf("struct StatusBadge: View"),
   );
 
-  it("reads title, then timing, then requester and location", () => {
+  it("reads title, then timing, then requester, with no location or gear on the row", () => {
     expect(bookingRow.indexOf("Text(booking.title)")).toBeLessThan(bookingRow.indexOf("Text(info.text)"));
-    expect(bookingRow.indexOf("Text(info.text)")).toBeLessThan(bookingRow.indexOf("Text(metadata)"));
-    expect(bookingRow).toContain("parts.append(booking.requester.name)");
+    expect(bookingRow.indexOf("Text(info.text)")).toBeLessThan(bookingRow.indexOf("Text(booking.requester.name)"));
+    expect(bookingRow).not.toContain("booking.location.name");
+    expect(bookingRow).not.toContain("gearSummary");
 
     const activeItemCard = itemDetail.slice(
       itemDetail.indexOf("private struct ActiveBookingCard"),
@@ -49,9 +50,7 @@ describe("iOS booking surface alignment", () => {
     expect(timing).not.toContain("Image(systemName:");
   });
 
-  it("names the booked gear on the row and keeps orange for missed pickups only", () => {
-    expect(bookingRow).toContain('return rest > 0 ? "\\(first) + \\(rest) more" : first');
-    expect(bookingRow).toContain("parts.append(gearSummary ?? booking.location.name)");
+  it("keeps orange for missed pickups only", () => {
     expect(bookingRow).toContain("case .pendingPickup: return booking.startsAt < now ? .orange : .purple");
   });
 

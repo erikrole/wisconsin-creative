@@ -1017,8 +1017,6 @@ struct BookingRow: View {
     var showsRequester = true
     var showsDay = true
 
-    private var itemCount: Int {
-        booking.serializedItems.count + booking.bulkItems.reduce(0) { $0 + $1.plannedQuantity }
     }
 
     var body: some View {
@@ -1036,10 +1034,13 @@ struct BookingRow: View {
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(Color.statusText(tone(now: now)))
                         .lineLimit(2)
-                    Text(metadata)
-                        .font(.footnote)
-                        .foregroundStyle(Color(.secondaryLabel))
-                        .lineLimit(1)
+                    // Who has it. On Mine that is always you, so the line goes.
+                    if showsRequester {
+                        Text(booking.requester.name)
+                            .font(.footnote)
+                            .foregroundStyle(Color(.secondaryLabel))
+                            .lineLimit(1)
+                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -1061,23 +1062,6 @@ struct BookingRow: View {
         case .pendingPickup: return booking.startsAt < now ? .orange : .purple
         default: return .gray
         }
-    }
-
-    /// What is booked, then who has it. The product name beats the asset tag
-    /// for recognition; the location lives on the detail screen.
-    private var gearSummary: String? {
-        let first = booking.serializedItems.first.map { $0.asset.itemListSecondaryTitle ?? $0.asset.itemListPrimaryTitle }
-            ?? booking.bulkItems.first?.bulkSku.name
-        guard let first else { return nil }
-        let rest = itemCount - 1
-        return rest > 0 ? "\(first) + \(rest) more" : first
-    }
-
-    private var metadata: String {
-        var parts: [String] = []
-        parts.append(gearSummary ?? booking.location.name)
-        if showsRequester { parts.append(booking.requester.name) }
-        return parts.joined(separator: " · ")
     }
 
     private func when(_ date: Date, now: Date) -> String {
@@ -1112,7 +1096,6 @@ struct BookingRow: View {
         if booking.isWaitingOnPickup(now: now) { parts.append("Waiting on pickup") }
         parts.append(booking.title)
         parts.append(timing(now: now).text)
-        if let gearSummary { parts.append(gearSummary) } else { parts.append(booking.location.name) }
         if showsRequester { parts.append(booking.requester.name) }
         return parts.joined(separator: ", ")
     }
