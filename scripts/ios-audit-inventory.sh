@@ -104,6 +104,7 @@ ProfileView.swift                      | profile                     | audit
 ProfileNextUp.swift                    | profile                     | audit
 ScoreboardView.swift                   | profile                     | audit
 TeamScoreboardView.swift               | team-scoreboard              | audit
+WrappedView.swift                      | team-scoreboard              | audit
 SettingsView.swift                     | profile                     | audit
 LicensesView.swift                     | licenses                    | audit
 SharedLoginsView.swift                 | shared-logins               | audit

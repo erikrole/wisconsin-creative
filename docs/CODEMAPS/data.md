@@ -50,6 +50,8 @@
 | `KitBulkMembership` | 7 | 3 |
 | `CalendarSource` | 11 | 2 |
 | `CalendarEvent` | 42 | 7 |
+| `GameSnapshot` | 21 | 2 |
+| `WrappedRecap` | 6 | 2 |
 | `EventWorker` | 10 | 4 |
 | `ScheduleEventFollow` | 9 | 3 |
 | `BookingEvent` | 7 | 4 |

@@ -195,9 +195,10 @@ describe("client-safe Wrapped dates", () => {
   it("unlock in the client matches the server's app-timezone unlock", async () => {
     const { WRAPPED_UNLOCK_ISO, wrappedPromoState } = await import("@/lib/wrapped/dates");
     expect(WRAPPED_UNLOCK_ISO).toBe(WRAPPED_UNLOCK_AT.toISOString());
-    expect(wrappedPromoState(new Date("2026-11-20T12:00:00Z"), false)).toBe("hidden");
-    expect(wrappedPromoState(new Date("2026-11-20T12:00:00Z"), true)).toBe("preview");
-    expect(wrappedPromoState(new Date("2026-12-01T06:00:00Z"), false)).toBe("open");
-    expect(wrappedPromoState(new Date("2027-01-20T12:00:00Z"), true)).toBe("hidden");
+    expect(wrappedPromoState(new Date("2026-11-20T12:00:00Z"), "STUDENT")).toBe("hidden");
+    expect(wrappedPromoState(new Date("2026-11-20T12:00:00Z"), "ADMIN")).toBe("preview");
+    expect(wrappedPromoState(new Date("2026-12-01T06:00:00Z"), "STUDENT")).toBe("open");
+    expect(wrappedPromoState(new Date("2026-12-05T12:00:00Z"), "COLLABORATOR")).toBe("hidden");
+    expect(wrappedPromoState(new Date("2027-01-20T12:00:00Z"), "ADMIN")).toBe("hidden");
   });
 });

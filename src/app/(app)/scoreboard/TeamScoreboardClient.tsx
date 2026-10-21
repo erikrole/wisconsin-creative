@@ -511,7 +511,7 @@ function TeamScoreboardExplorer() {
               </dl>
             </section>
 
-            <WrappedBanner now={clock} isAdmin={currentUser?.role === "ADMIN"} />
+            <WrappedBanner now={clock} role={currentUser?.role} />
 
             <ScoreboardFunFacts facts={facts} onExplore={exploreFact} />
 

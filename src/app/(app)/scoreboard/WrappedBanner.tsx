@@ -5,8 +5,8 @@ import { ArrowRight, Gift } from "lucide-react";
 import { wrappedPromoState } from "@/lib/wrapped/dates";
 
 /** The Scoreboard's door into Creative Wrapped, from Dec 1 to mid-January. */
-export function WrappedBanner({ now, isAdmin }: { now: Date; isAdmin: boolean }) {
-  const state = wrappedPromoState(now, isAdmin);
+export function WrappedBanner({ now, role }: { now: Date; role: string | null | undefined }) {
+  const state = wrappedPromoState(now, role);
   if (state === "hidden") return null;
   return (
     <Link

@@ -130,6 +130,7 @@ struct TeamScoreboardView: View {
     @State private var explore: TeamScoreboardFilterDimension = .sport
     @State private var factPage = 0
     @State private var showsMoreFilters = false
+    @State private var showsWrapped = false
 
     var body: some View {
         Group {
@@ -186,6 +187,9 @@ struct TeamScoreboardView: View {
                     .presentationDetents([.medium, .large])
             }
         }
+        .fullScreenCover(isPresented: $showsWrapped) {
+            WrappedView()
+        }
         .nativeScrollBarMinimization()
         .task(id: filters) {
             await load(for: filters)
@@ -228,6 +232,12 @@ struct TeamScoreboardView: View {
                     methodology: scoreboard.methodology
                 )
                 .padding(.horizontal)
+
+                let wrappedState = WrappedPromo.state(role: session.currentUser?.role)
+                if wrappedState != .hidden {
+                    WrappedBanner(state: wrappedState) { showsWrapped = true }
+                        .padding(.horizontal)
+                }
 
                 if !facts.isEmpty {
                     factsSection(facts, scoreboard: scoreboard)

@@ -147,3 +147,9 @@ Card types:
 - Shipped: Plan only. No implementation or data collection shipped yet.
 - Verified: Source checks confirm most candidate metrics already have durable source tables. The biggest gaps are durable scan method/session telemetry and future roadmap facts such as custody assignment, guest request conversion, football-owned warning acknowledgement, and graduation/offboarding events.
 - Deferred: Schema decision for `WrappedSnapshot` and optional `WrappedFact`, recap player UI, staff/admin preview, and publish flow.
+
+## Fall 2026 slice (2026-10-21)
+- Erik chose a Dec 1 fall recap (Jul 1 to Nov 30) ahead of the June season recap. The plan lives at `/mnt/project-files/wrapped/creative-wrapped-plan-2026-10-21.md`.
+- Shipped with the Scoreboard redesign: `src/lib/wrapped/recap.ts` (pure card builders), `src/lib/services/wrapped.ts` (reads `game_snapshots` merged with live events, plus assignments, checkouts, trades and badges), `wrapped_recaps` (frozen on first open after unlock), `/api/wrapped`, `/api/wrapped/card` (share PNG), the `/wrapped` web player, and the native `WrappedView`.
+- Collaborators stay out (default-deny). No late, overdue, damage or loss facts appear on any card.
+- Still open: the iOS first-launch sheet, Erik's real-data preview around Nov 15, and the June season recap built on the same service.

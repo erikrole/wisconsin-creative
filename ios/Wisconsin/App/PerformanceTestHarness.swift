@@ -69,6 +69,8 @@ struct PerformanceTestRootView: View {
             ScoreboardHarnessView()
         case .teamScoreboard:
             TeamScoreboardHarnessView()
+        case .wrapped:
+            WrappedHarnessView()
         case .profile:
             ProfileHarnessView()
         case .login:
@@ -544,6 +546,7 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
                 ? HomeFixtureAPI.allClearDashboard
                 : HomeFixtureAPI.dashboard
         case "/api/scoreboard": return TeamScoreboardFixtureAPI.scoreboard
+        case "/api/wrapped": return WrappedFixtureAPI.recap
         case "/api/users/\(ScoreboardFixtureAPI.userId)/scoreboard":
             return ScoreboardFixtureAPI.scoreboard(for: request)
         case "/api/users/\(ScoreboardFixtureAPI.userId)":
@@ -1302,6 +1305,293 @@ struct TeamScoreboardHarnessView: View {
         TeamScoreboardView()
             .onAppear { session.currentUser = ScheduleFixtures.staffUser }
     }
+}
+
+/// Creative Wrapped against a canned fall: every card type, then the team
+/// recap. `GT_WRAPPED_CARD` opens on a given card for captures.
+struct WrappedHarnessView: View {
+    @Environment(SessionStore.self) private var session
+
+    var body: some View {
+        WrappedView(
+            initialIndex: Int(ProcessInfo.processInfo.environment["GT_WRAPPED_CARD"] ?? "") ?? 0,
+            allowsAutoPlay: false
+        )
+        .onAppear { session.currentUser = ScheduleFixtures.staffUser }
+    }
+}
+
+/// Generated from the web recap builder (`buildPersonCards`/`buildTeamCards`),
+/// so the native player renders exactly what the API would send.
+enum WrappedFixtureAPI {
+    static let recap = Data(#"""
+{
+ "data": {
+  "status": "ready",
+  "preview": true,
+  "frozen": false,
+  "recap": {
+   "version": 1,
+   "seasonKey": "2026-fall",
+   "windowLabel": "July to November 2026",
+   "generatedAt": "2026-11-15T12:00:00.000Z",
+   "person": {
+    "userId": "fixture-staff",
+    "name": "Bucky Badger",
+    "avatarUrl": null
+   },
+   "cards": [
+    {
+     "id": "cover",
+     "layout": "cover",
+     "tone": "red",
+     "eyebrow": "July to November 2026",
+     "value": "Bucky's fall in Creative",
+     "sentence": "Photo crew. Let's look back."
+    },
+    {
+     "id": "events",
+     "layout": "stat",
+     "tone": "blue",
+     "eyebrow": "Events worked",
+     "value": "21",
+     "countTo": 21,
+     "sentence": "It started with Football vs. Western Michigan on Aug 29."
+    },
+    {
+     "id": "hours",
+     "layout": "stat",
+     "tone": "gold",
+     "eyebrow": "Hours on the clock",
+     "value": "87",
+     "countTo": 87,
+     "sentence": "That's more than 3 full days of call time."
+    },
+    {
+     "id": "sport",
+     "layout": "list",
+     "tone": "green",
+     "eyebrow": "Your sport",
+     "value": "Football",
+     "sentence": "12 events, more than any other sport you worked.",
+     "items": [
+      {
+       "label": "Football",
+       "value": "12 events",
+       "share": 1
+      },
+      {
+       "label": "Volleyball",
+       "value": "6 events",
+       "share": 0.5
+      },
+      {
+       "label": "Men's Hockey",
+       "value": "2 events",
+       "share": 0.16666666666666666
+      }
+     ]
+    },
+    {
+     "id": "crew",
+     "layout": "people",
+     "tone": "violet",
+     "eyebrow": "Your crew",
+     "value": "Jordan",
+     "sentence": "You and Jordan worked 21 events together.",
+     "items": [
+      {
+       "label": "Jordan Lee",
+       "value": "21 together",
+       "userId": "jo",
+       "avatarUrl": null
+      },
+      {
+       "label": "Sam Ortiz",
+       "value": "12 together",
+       "userId": "sam",
+       "avatarUrl": null
+      },
+      {
+       "label": "Ava Stone",
+       "value": "5 together",
+       "userId": "ava",
+       "avatarUrl": null
+      }
+     ]
+    },
+    {
+     "id": "road",
+     "layout": "list",
+     "tone": "ink",
+     "eyebrow": "On the road",
+     "value": "4 away games",
+     "sentence": "Camp Randall Stadium saw you 9 times.",
+     "items": [
+      {
+       "label": "Away games",
+       "value": "4"
+      },
+      {
+       "label": "Trips",
+       "value": "3"
+      },
+      {
+       "label": "Most-worked venue",
+       "value": "Camp Randall Stadium"
+      }
+     ]
+    },
+    {
+     "id": "busiest-week",
+     "layout": "stat",
+     "tone": "gold",
+     "eyebrow": "Your busiest week",
+     "value": "Sep 7 to Sep 13",
+     "sentence": "3 events in 7 days. You earned that weekend."
+    },
+    {
+     "id": "gear",
+     "layout": "list",
+     "tone": "blue",
+     "eyebrow": "Gear",
+     "value": "9 checkouts",
+     "countTo": 9,
+     "sentence": "Your ride or die: Rode NTG, 9 times.",
+     "items": [
+      {
+       "label": "Most borrowed",
+       "value": "Rode NTG"
+      },
+      {
+       "label": "Top category",
+       "value": "Audio"
+      },
+      {
+       "label": "Items handled",
+       "value": "18"
+      }
+     ]
+    },
+    {
+     "id": "handoffs",
+     "layout": "stat",
+     "tone": "green",
+     "eyebrow": "Clean handoffs",
+     "value": "8",
+     "countTo": 8,
+     "sentence": "On-time returns, with a best streak of 8 in a row."
+    },
+    {
+     "id": "teammate",
+     "layout": "list",
+     "tone": "violet",
+     "eyebrow": "Good teammate",
+     "value": "2 shifts",
+     "sentence": "Picked up for a teammate who needed it, plus 2 badges earned.",
+     "items": [
+      {
+       "label": "First Shift",
+       "value": "Aug 29"
+      },
+      {
+       "label": "Clean Handoff",
+       "value": "Sep 20"
+      }
+     ]
+    },
+    {
+     "id": "style",
+     "layout": "stat",
+     "tone": "red",
+     "eyebrow": "Your style",
+     "value": "Utility Player",
+     "sentence": "4 sports and you made it look easy."
+    },
+    {
+     "id": "summary",
+     "layout": "summary",
+     "tone": "ink",
+     "eyebrow": "My fall in Creative",
+     "value": "Utility Player",
+     "sentence": "As of Nov 30, 2026",
+     "items": [
+      {
+       "label": "Events",
+       "value": "21"
+      },
+      {
+       "label": "Top sport",
+       "value": "Football"
+      },
+      {
+       "label": "Hours",
+       "value": "87"
+      },
+      {
+       "label": "Checkouts",
+       "value": "9"
+      }
+     ]
+    }
+   ],
+   "team": [
+    {
+     "id": "team-events",
+     "layout": "stat",
+     "tone": "red",
+     "eyebrow": "The team's fall",
+     "value": "24",
+     "countTo": 24,
+     "sentence": "Events covered by 4 people."
+    },
+    {
+     "id": "team-record",
+     "layout": "stat",
+     "tone": "blue",
+     "eyebrow": "Record with our crew there",
+     "value": "19–5",
+     "sentence": "Every official game somebody from Creative worked."
+    },
+    {
+     "id": "team-biggest",
+     "layout": "stat",
+     "tone": "violet",
+     "eyebrow": "Biggest crew",
+     "value": "4 people",
+     "sentence": "Game 2 on Sep 6."
+    },
+    {
+     "id": "team-numbers",
+     "layout": "list",
+     "tone": "ink",
+     "eyebrow": "By the numbers",
+     "value": "Fall 2026",
+     "sentence": "See you in the spring.",
+     "items": [
+      {
+       "label": "Most-worked venue",
+       "value": "Camp Randall Stadium"
+      },
+      {
+       "label": "Busiest week",
+       "value": "Sep 7 to Sep 13, 3 events"
+      },
+      {
+       "label": "Checkouts",
+       "value": "412"
+      },
+      {
+       "label": "Badges earned",
+       "value": "37"
+      }
+     ]
+    }
+   ]
+  }
+ }
+}
+"""#.utf8)
 }
 
 enum TeamScoreboardFixtureAPI {

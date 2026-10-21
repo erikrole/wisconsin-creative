@@ -486,4 +486,35 @@ final class ScoreboardModelsTests: XCTestCase {
       "nextCursor":"25"
     }
     """
+
+    func testWrappedPromoOpensDecemberFirstAndSkipsCollaborators() {
+        let before = ISO8601DateFormatter().date(from: "2026-11-20T12:00:00Z")!
+        let after = ISO8601DateFormatter().date(from: "2026-12-01T06:00:00Z")!
+        let late = ISO8601DateFormatter().date(from: "2027-01-20T12:00:00Z")!
+        XCTAssertEqual(WrappedPromo.state(now: before, role: "STUDENT"), .hidden)
+        XCTAssertEqual(WrappedPromo.state(now: before, role: "ADMIN"), .preview)
+        XCTAssertEqual(WrappedPromo.state(now: after, role: "STUDENT"), .open)
+        XCTAssertEqual(WrappedPromo.state(now: after, role: "COLLABORATOR"), .hidden)
+        XCTAssertEqual(WrappedPromo.state(now: late, role: "ADMIN"), .hidden)
+    }
+
+    func testWrappedResponseDecodesLockedAndReady() throws {
+        let locked = try JSONDecoder().decode(WrappedResponse.self, from: Data(#"{"status":"locked","unlockAt":"2026-12-01T06:00:00.000Z"}"#.utf8))
+        XCTAssertEqual(locked.status, "locked")
+        XCTAssertNil(locked.recap)
+
+        let ready = try JSONDecoder().decode(WrappedResponse.self, from: Data(#"""
+        {"status":"ready","preview":false,"frozen":true,"recap":{
+          "version":1,"seasonKey":"2026-fall","windowLabel":"July to November 2026","generatedAt":"2026-12-01T07:00:00.000Z",
+          "person":{"userId":"u1","name":"Bucky Badger","avatarUrl":null},
+          "cards":[{"id":"events","layout":"stat","tone":"blue","eyebrow":"Events worked","value":"21","countTo":21,"sentence":"It started with Game 1 on Aug 29."},
+                   {"id":"crew","layout":"people","tone":"violet","eyebrow":"Your crew","value":"Jordan","sentence":"You and Jordan worked 3 events together.",
+                    "items":[{"label":"Jordan Lee","value":"3 together","userId":"jo","avatarUrl":null}]}],
+          "team":[]}}
+        """#.utf8))
+        XCTAssertEqual(ready.recap?.cards.map(\.id), ["events", "crew"])
+        XCTAssertEqual(ready.recap?.cards.first?.countTo, 21)
+        XCTAssertEqual(ready.recap?.cards.last?.items?.first?.userId, "jo")
+    }
+
 }
