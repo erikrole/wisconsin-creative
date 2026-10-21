@@ -7,7 +7,8 @@
     "details": [
       "Each window reads the forecast for its middle hour at that venue, in the venue's own time zone.",
       "A short line says what to expect, from clear and clean to heavy cloud and flat.",
-      "Past dates and the next two weeks are covered. If the weather is unavailable, the sun times still show."
+      "Past dates and the next two weeks are covered. If the weather is unavailable, the sun times still show.",
+      "On phones, the countdown line wraps cleanly instead of starting a new line with a dot or a lone AM."
     ],
     "platforms": [
       "Web"

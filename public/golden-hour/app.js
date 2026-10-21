@@ -382,7 +382,9 @@
     parts.forEach(function (part, i) {
       if (!part) return;
       var node = i % 2 ? document.createElement('b') : document.createElement('span');
-      node.textContent = part;
+      // When the line wraps, keep a separator dot with the words before it
+      // and a time with its AM or PM.
+      node.textContent = part.replace(/ · /g, '\u00a0· ').replace(/ (AM|PM)\b/g, '\u00a0$1');
       el['hero-sub'].appendChild(node);
     });
   }

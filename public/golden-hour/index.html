@@ -165,8 +165,10 @@
       text-shadow: 0 2px 34px rgba(10, 6, 40, 0.22);
     }
     body[data-sky="day"] .hero-title { text-shadow: none; }
+    /* Inline text, not a wrapping flex row: a flex row broke "in 8h 22m"
+       from "· starts tomorrow…" on phones, leaving a line that began with "·". */
     .hero-sub {
-      margin: 16px 0 0; display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 12px;
+      margin: 16px 0 0;
       font-size: clamp(22px, 5.6vw, 36px); font-weight: 400; letter-spacing: -0.01em; color: var(--ink-2); font-variant-numeric: tabular-nums;
     }
     .hero-sub b { font-weight: 800; color: var(--ink); }
@@ -363,6 +365,6 @@
   </main>
 
   <script src="core.js?v=63094b582722"></script>
-  <script src="app.js?v=e3c1260fb150"></script>
+  <script src="app.js?v=9ce12114091d"></script>
 </body>
 </html>
