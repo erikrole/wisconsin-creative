@@ -57,6 +57,7 @@ export type AssetDetail = {
   availableForReservation: boolean;
   availableForCheckout: boolean;
   availableForCustody: boolean;
+  collaboratorVisible: boolean;
   metadata: Record<string, string> | null;
   activeBooking: ActiveBookingDetail | null;
   hasBookingHistory: boolean;

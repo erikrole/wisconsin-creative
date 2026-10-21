@@ -172,6 +172,8 @@ export async function checkAssetStatuses(
   args: {
     serializedAssetIds: string[];
     bookingKind?: BookingKind;
+    /** Reservation is for a collaborator, who cannot reserve items hidden from partners. */
+    forCollaborator?: boolean;
   }
 ): Promise<AvailabilityResult["unavailableAssets"]> {
   if (args.serializedAssetIds.length === 0) {
@@ -185,6 +187,7 @@ export async function checkAssetStatuses(
       status: true,
       availableForCheckout: true,
       availableForReservation: true,
+      collaboratorVisible: true,
     }
   });
 
@@ -200,6 +203,8 @@ export async function checkAssetStatuses(
       unavailable.push({ assetId: a.id, status: "NOT_AVAILABLE_FOR_CHECKOUT" });
     } else if (args.bookingKind === BookingKind.RESERVATION && !a.availableForReservation) {
       unavailable.push({ assetId: a.id, status: "NOT_AVAILABLE_FOR_RESERVATION" });
+    } else if (args.forCollaborator && !a.collaboratorVisible) {
+      unavailable.push({ assetId: a.id, status: "NOT_AVAILABLE_FOR_COLLABORATORS" });
     }
   }
 
@@ -609,6 +614,7 @@ export async function checkAvailability(
     bookingKind?: BookingKind;
     includeBulkTurnaroundRisks?: boolean;
     enforceSerializedTurnaroundBuffer?: boolean;
+    forCollaborator?: boolean;
   }
 ): Promise<AvailabilityResult> {
   const [conflicts, shortages, unavailableAssets, upcomingCommitments, bulkTurnaroundRisks] = await Promise.all([
@@ -629,6 +635,7 @@ export async function checkAvailability(
     checkAssetStatuses(tx, {
       serializedAssetIds: args.serializedAssetIds,
       bookingKind: args.bookingKind,
+      forCollaborator: args.forCollaborator,
     }),
     checkUpcomingSerializedCommitments(tx, {
       serializedAssetIds: args.serializedAssetIds,

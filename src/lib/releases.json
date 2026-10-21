@@ -1,6 +1,55 @@
 [
   {
     "date": "2026-10-21",
+    "title": "Hide gear from partners",
+    "type": "feature",
+    "summary": "Admins and staff can now keep individual items out of the Big Ten Network and Learfield catalog.",
+    "details": [
+      "Each item has a new Visible to collaborators switch under Workflow Eligibility, on by default.",
+      "Turned off, the item disappears from collaborators' catalog and they can't reserve it, including through a kit.",
+      "Staff and students are unaffected."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 552
+  },
+  {
+    "date": "2026-10-21",
+    "title": "Brand assets for partners",
+    "type": "feature",
+    "summary": "Big Ten Network and Learfield collaborators can now browse and download the brand asset library.",
+    "details": [
+      "Logos, fonts and brand files are available from a new Brand assets link in the sidebar.",
+      "Internal guides and the contacts list stay hidden from collaborators.",
+      "Admins can switch this off per organization in Settings, Collaborator access."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 552
+  },
+  {
+    "date": "2026-10-21",
+    "title": "Partners see team gear activity",
+    "type": "improvement",
+    "summary": "Big Ten Network and Learfield collaborators can now see what gear is booked and who has it, not just their own bookings.",
+    "details": [
+      "Bookings and Checkouts show everyone's reservations and checkouts, with full names.",
+      "The Items list shows who currently has a piece of gear and when it is due back.",
+      "Brand now shows in the gear catalog for collaborators.",
+      "View only: collaborators still can only change their own reservations, and pickups and returns still happen at the kiosk.",
+      "Admins can switch this off per organization in Settings, Collaborator access."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 552
+  },
+  {
+    "date": "2026-10-21",
     "title": "A new Home page",
     "type": "improvement",
     "summary": "Home was rebuilt around what you need first: what needs attention, what is up next, and the gear you have out.",

@@ -89,6 +89,7 @@ const COLLABORATOR_NAV_CAPABILITY: Partial<Record<string, string>> = {
   "/bookings": "MY_GEAR_VIEW",
   "/staff": "PEOPLE_DIRECTORY_VIEW",
   "/licenses": "SOFTWARE_VAULT_VIEW",
+  "/resources": "BRAND_ASSETS_VIEW",
 };
 
 const COLLABORATOR_NAV_HREFS = [
@@ -99,6 +100,7 @@ const COLLABORATOR_NAV_HREFS = [
   "/bookings",
   "/staff",
   "/licenses",
+  "/resources",
 ] as const;
 
 type NavGroup = {
@@ -293,6 +295,7 @@ export default function AppSidebar({
           if (!isCollaborator) return item;
           if (item.href === "/bookings") return { ...item, label: "My Gear" };
           if (item.href === "/staff") return { ...item, label: "People" };
+          if (item.href === "/resources") return { ...item, label: "Brand assets" };
           return item;
         }),
     }))
