@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import {
   applyThemeChoice,
@@ -233,6 +233,79 @@ function useStoredList(key: string) {
   return [list, toggle, save] as const;
 }
 
+const SIDEBAR_PREFS_URL = "/api/me/sidebar-prefs";
+
+/**
+ * Pinned and hidden pages follow the account across devices. The browser copy stays the instant
+ * source (no flash on load); the account copy wins once it arrives. A browser that customized the
+ * sidebar before the account copy existed sends its pages up once. Saves are debounced so a
+ * drag or a hide-and-unpin lands as one request. Failures leave the browser copy in place.
+ */
+function useAccountSidebarPrefs(
+  userId: string | undefined,
+  pinned: string[],
+  hidden: string[],
+  setPinned: (next: string[]) => void,
+  setHidden: (next: string[]) => void,
+) {
+  const latest = useRef({ pinned, hidden });
+  latest.current = { pinned, hidden };
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function scheduleSave() {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      saveTimer.current = null;
+      void fetch(SIDEBAR_PREFS_URL, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(latest.current),
+      }).catch(() => {});
+    }, 600);
+  }
+
+  useEffect(() => {
+    if (!userId) return;
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const res = await fetch(SIDEBAR_PREFS_URL, { signal: controller.signal });
+        if (!res.ok) return;
+        const json = (await res.json()) as { data?: { pinned: string[]; hidden: string[] } | null };
+        if (controller.signal.aborted) return;
+        if (json.data) {
+          setPinned(json.data.pinned);
+          setHidden(json.data.hidden);
+        } else if (latest.current.pinned.length > 0 || latest.current.hidden.length > 0) {
+          scheduleSave();
+        }
+      } catch {
+        // offline or signed out: keep the browser copy
+      }
+    })();
+    return () => controller.abort();
+    // Load once per signed-in user; the setters are stable enough for that.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
+  useEffect(() => () => {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+  }, []);
+
+  return {
+    setPinned: (next: string[]) => {
+      latest.current = { ...latest.current, pinned: next };
+      setPinned(next);
+      scheduleSave();
+    },
+    setHidden: (next: string[]) => {
+      latest.current = { ...latest.current, hidden: next };
+      setHidden(next);
+      scheduleSave();
+    },
+  };
+}
+
 const menuItemClass = "min-h-9 gap-2.5 rounded-md px-2 text-[13.5px] [&_svg]:size-4 [&_svg]:stroke-[1.75] [&_svg]:text-muted-foreground";
 
 // Collapsed-rail labels: portalled, so they carry the chrome typeface themselves.
@@ -301,6 +374,7 @@ export default function AppSidebar({
   const [collapsedGroups, toggleGroup] = useStoredList(COLLAPSED_GROUPS_KEY);
   const [pinnedHrefs, , setPinnedHrefs] = useStoredList(PINNED_KEY);
   const [hiddenHrefs, , setHiddenHrefs] = useStoredList(HIDDEN_KEY);
+  const accountPrefs = useAccountSidebarPrefs(user?.id, pinnedHrefs, hiddenHrefs, setPinnedHrefs, setHiddenHrefs);
   const activeHref = resolveActiveShellHref(
     pathname,
     visibleGroups.flatMap((group) => group.items.map((item) => item.href)),
@@ -607,9 +681,9 @@ export default function AppSidebar({
             onOpenChange={setCustomizeOpen}
             groups={visibleGroups}
             pinnedHrefs={pinnedHrefs}
-            onPinnedChange={setPinnedHrefs}
+            onPinnedChange={accountPrefs.setPinned}
             hiddenHrefs={hiddenHrefs}
-            onHiddenChange={setHiddenHrefs}
+            onHiddenChange={accountPrefs.setHidden}
             className={chromeFont.className}
           />
         </SidebarFooter>
