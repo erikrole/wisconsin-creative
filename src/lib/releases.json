@@ -17,6 +17,20 @@
   },
   {
     "date": "2026-10-21",
+    "title": "Fewer wasted deploys",
+    "type": "improvement",
+    "summary": "Updates to the site now go live more reliably, because work-in-progress branches no longer use up the daily deploy allowance.",
+    "details": [
+      "Only merged changes start a production deploy, so a day of many small updates no longer blocks the next release.",
+      "Review previews for in-progress work are unchanged."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 556
+  },
+  {
+    "date": "2026-10-21",
     "title": "Nudge people who haven't finished setup",
     "type": "improvement",
     "summary": "Onboarding Status can now email a reminder to someone who signed in but has not finished their profile.",
