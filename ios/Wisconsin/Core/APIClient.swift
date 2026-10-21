@@ -2337,6 +2337,44 @@ final class APIClient {
         return resp.data.status == "MAINTENANCE"
     }
 
+    /// The body is not read; success is the 2xx.
+    private struct DamageCaseAck: Decodable, Sendable {}
+
+    /// Closes a damage or missing-item case. Repaired, found and no issue release
+    /// the item; replaced and written off retire it. Staff and admin only.
+    func resolveDamageCase(reportId: String, resolution: DamageResolution, note: String) async throws {
+        struct Body: Encodable {
+            let resolution: String
+            let note: String?
+        }
+        let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)
+        var req = request(path: "/api/damage-cases/\(reportId)/resolve", method: "POST")
+        req.httpBody = try JSONEncoder().encode(Body(resolution: resolution.rawValue, note: trimmed.isEmpty ? nil : trimmed))
+        let _: DataWrapper<DamageCaseAck> = try await perform(req)
+    }
+
+    /// Files a damage or missing report from the item page (multipart, optional JPEG).
+    func reportAssetProblem(assetId: String, isMissing: Bool, description: String, jpegData: Data?) async throws {
+        let boundary = "WisconsinReport-\(UUID().uuidString)"
+        var body = Data()
+        func field(_ name: String, _ value: String) {
+            body.append(Data("--\(boundary)\r\nContent-Disposition: form-data; name=\"\(name)\"\r\n\r\n\(value)\r\n".utf8))
+        }
+        field("type", isMissing ? "LOST" : "DAMAGED")
+        field("description", description)
+        if let jpegData {
+            body.append(Data("--\(boundary)\r\nContent-Disposition: form-data; name=\"file\"; filename=\"report.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n".utf8))
+            body.append(jpegData)
+            body.append(Data("\r\n".utf8))
+        }
+        body.append(Data("--\(boundary)--\r\n".utf8))
+
+        var req = request(path: "/api/assets/\(assetId)/report", method: "POST")
+        req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        req.httpBody = body
+        let _: DataWrapper<DamageCaseAck> = try await perform(req)
+    }
+
     // MARK: - Notifications
 
     func notifications(unreadOnly: Bool = false, limit: Int = 20, offset: Int = 0) async throws -> NotificationsResponse {
