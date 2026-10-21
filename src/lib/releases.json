@@ -1,5 +1,21 @@
 [
   {
+    "date": "2026-10-21",
+    "title": "App activity redesign",
+    "type": "feature",
+    "summary": "The owner-only App activity page now shows at a glance which app versions people run and how they use the site, the iPhone app, and the menu bar.",
+    "details": [
+      "A Needs attention list shows who is behind, who is on an old TestFlight build, who can't get notifications, and which version crashed most.",
+      "Charts show daily active people by platform, the most-used screens, first opens by week, and crashes and hangs by version.",
+      "The current iPhone build now comes from the App Store listing automatically, and local Xcode builds no longer count as behind.",
+      "The people list is one clean row per person with filters, and the menu bar app and kiosk builds now show up too."
+    ],
+    "platforms": [
+      "Web",
+      "macOS"
+    ]
+  },
+  {
     "date": "2026-10-20",
     "title": "Swap a Photo Mechanic code",
     "type": "feature",

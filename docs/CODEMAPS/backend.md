@@ -6,7 +6,7 @@
 | File | Lines |
 |---|---:|
 | `src/lib/services/accountability.ts` | 655 |
-| `src/lib/services/app-activity-report.ts` | 137 |
+| `src/lib/services/app-activity-report.ts` | 467 |
 | `src/lib/services/app-diagnostics.ts` | 91 |
 | `src/lib/services/auto-assign.ts` | 92 |
 | `src/lib/services/auto-fill-preview.ts` | 322 |
@@ -128,7 +128,7 @@
 | `src/lib/app-product-page.ts` | 183 |
 | `src/lib/app-product-pages.ts` | 170 |
 | `src/lib/app-time.ts` | 257 |
-| `src/lib/apps-live-versions.ts` | 195 |
+| `src/lib/apps-live-versions.ts` | 204 |
 | `src/lib/apps-page.ts` | 419 |
 | `src/lib/asset-attachments.ts` | 166 |
 | `src/lib/asset-image.ts` | 26 |
@@ -170,7 +170,7 @@
 | `src/lib/collaborator-gear.ts` | 175 |
 | `src/lib/combined-schedule-event-suggestions.ts` | 93 |
 | `src/lib/companion-projection-contract.ts` | 71 |
-| `src/lib/companion-store.ts` | 302 |
+| `src/lib/companion-store.ts` | 375 |
 | `src/lib/crew-label.ts` | 26 |
 | `src/lib/crew-pending-review.ts` | 44 |
 | `src/lib/cron.ts` | 35 |
