@@ -784,7 +784,7 @@ struct TradeBoardSheet: View {
             .swipeActions(edge: .leading, allowsFullSwipe: false) {
                 if let yes = row.yesAction {
                     Button(action: yes.run) { Text(yes.label) }
-                        .tint(row.trailing == .review ? .green : Color(.systemGray))
+                        .tint(.green)
                         .disabled(pendingActionIds.contains(yes.id))
                 }
             }
@@ -1335,12 +1335,11 @@ private struct TradeBoardRow: View {
                     .padding(.vertical, 6)
                     .padding(.horizontal, 2)
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.borderedProminent)
                 .buttonBorderShape(.capsule)
                 .controlSize(.small)
-                // Neutral, like Decline: the red tint read as a warning.
-                .tint(.primary)
-                .foregroundStyle(Color.primary)
+                // Green like Approve: claiming is the action this row exists for.
+                .tint(.green)
                 .disabled(isBusy)
                 .accessibilityLabel(claim.accessibilityLabel ?? claim.label)
             }
@@ -1553,7 +1552,7 @@ private struct TradeBoardDetailSheet: View {
     private func actionButton(_ action: BoardAction, bordered: Bool) -> some View {
         let isBusy = busyIds.contains(action.id)
         let tint: Color = action.style == .primary
-            ? (row.trailing == .review ? .green : Color.primary)
+            ? Color.green
             : (action.style == .destructive && row.trailing != .review ? .red : Color(.systemGray))
         let button = Button(role: action.style == .destructive ? .destructive : nil) {
             onAction(action)
