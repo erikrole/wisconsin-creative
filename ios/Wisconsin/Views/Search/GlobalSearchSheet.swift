@@ -134,7 +134,7 @@ struct GlobalSearchSheet: View {
                 text: $query,
                 isPresented: $isSearchPresented,
                 placement: .navigationBarDrawer(displayMode: .always),
-                prompt: Text(isCollaborator ? "Search reservable gear" : "Search items, bookings, people")
+                prompt: Text(isCollaborator ? "Search reservable gear" : "Search gear, kits, events, people")
             )
             .autocorrectionDisabled()
             .textInputAutocapitalization(.never)
@@ -283,7 +283,7 @@ struct GlobalSearchSheet: View {
             }
             if recentSearches.isEmpty {
                 Section {
-                    Text(isCollaborator ? "Search reservable gear." : "Search gear, bookings, and people.")
+                    Text(isCollaborator ? "Search reservable gear." : "Search gear, kits, events, and people.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .listRowBackground(Color.clear)
