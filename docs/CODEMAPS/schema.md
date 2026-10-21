@@ -131,7 +131,7 @@ Values: `UPLOADING`, `FINALIZING`, `COMMITTED`, `FAILED`
 
 ## Model `User`
 
-Fields: 139
+Fields: 140
 
 - `id                            String                           @id @default(cuid())`
 - `name                          String`
@@ -153,6 +153,7 @@ Fields: 139
 - `wiscardCardNumber             String?                          @unique @map("wiscard_card_number")`
 - `wiscardIssueCode              String?                          @map("wiscard_issue_code")`
 - `profilePromptSnoozedUntil     DateTime?                        @map("profile_prompt_snoozed_until")`
+- `welcomeEmailSentAt            DateTime?                        @map("welcome_email_sent_at")`
 - `slackHandle                   String?                          @map("slack_handle")`
 - `slackProfileUrl               String?                          @map("slack_profile_url")`
 - `avatarUrl                     String?                          @map("avatar_url")`
@@ -425,7 +426,7 @@ Indexes and constraints:
 
 ## Model `Asset`
 
-Fields: 43
+Fields: 44
 
 - `id                      String                  @id @default(cuid())`
 - `assetTag                String                  @unique @map("asset_tag")`
@@ -449,6 +450,7 @@ Fields: 43
 - `availableForReservation Boolean                 @default(true) @map("available_for_reservation")`
 - `availableForCheckout    Boolean                 @default(true) @map("available_for_checkout")`
 - `availableForCustody     Boolean                 @default(true) @map("available_for_custody")`
+- `collaboratorVisible     Boolean                 @default(true) @map("collaborator_visible")`
 - `linkUrl                 String?                 @map("link_url")`
 - `imageUrl                String?                 @map("image_url")`
 - `imageRehostAttempts     Int                     @default(0) @map("image_rehost_attempts")`
