@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/nextjs";
+import type { Instrumentation } from "next";
 
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs" && process.env.SENTRY_DSN) {
@@ -16,4 +17,23 @@ export async function register() {
   }
 }
 
-export const onRequestError = Sentry.captureRequestError;
+/**
+ * Render and server-action failures that escape to Next. API routes catch
+ * their own errors in `failRequest`, so they are not counted twice here.
+ */
+export const onRequestError: Instrumentation.onRequestError = async (error, request, context) => {
+  Sentry.captureRequestError(error, request, context);
+  if (process.env.NEXT_RUNTIME !== "nodejs" || context.routeType === "route") return;
+  const { captureServerError } = await import("@/lib/error-reporting/server");
+  const headers = new Headers();
+  for (const [key, value] of Object.entries(request.headers)) {
+    if (typeof value === "string") headers.set(key, value);
+  }
+  captureServerError(error, {
+    kind: "render_error",
+    method: request.method,
+    path: request.path,
+    routePath: context.routePath,
+    headers,
+  });
+};

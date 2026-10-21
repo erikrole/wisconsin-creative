@@ -2,6 +2,8 @@
 
 import { useEffect } from "react";
 import { ErrorRecoveryPanel } from "@/components/ErrorRecoveryPanel";
+import { useReportProblem } from "@/components/error-reporting/ReportProblemDialog";
+import { reportClientError } from "@/lib/error-reporting/client";
 
 export default function AppError({
   error,
@@ -10,8 +12,10 @@ export default function AppError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const reportProblem = useReportProblem();
   useEffect(() => {
     console.error("App error boundary caught:", error);
+    reportClientError(error, { kind: "render_error", digest: error.digest });
   }, [error]);
 
   return (
@@ -24,6 +28,7 @@ export default function AppError({
       secondaryLabel="Sign in"
       secondaryIcon="login"
       digest={error.digest}
+      onReport={reportProblem ? () => reportProblem.open() : undefined}
     />
   );
 }
