@@ -12,6 +12,7 @@ import { getScheduleAutomationDigest } from "@/lib/services/schedule-automation"
 import { refreshCompanionProjection } from "@/lib/services/companion-projection";
 import { cleanupPendingSignatureArtifacts } from "@/lib/services/signatures";
 import { pruneNotificationDeliveries } from "@/lib/services/notification-deliveries";
+import { resolveSettledNotifications } from "@/lib/services/notification-resolution";
 import { runApplicantRetention, type RetentionRunResult } from "@/lib/hiring/retention";
 import { migrateLegacyAppDiagnostics } from "@/lib/services/app-diagnostics";
 import { pruneErrorReports } from "@/lib/services/error-reports";
@@ -200,7 +201,7 @@ export const GET = withCron(async () => {
 
   // ── 4. Expire stale open/claimed trades and pickup no-shows ─────────
   const productEventCutoff = new Date(now.getTime() - PRODUCT_EVENT_RETENTION_DAYS * 86_400_000);
-  const [tradeResult, pendingPickupResult, firmwareWatchResult, productEventRetentionResult, signatureCleanupResult, deliveryRetentionResult, telemetryRetentionResult] = await Promise.allSettled([
+  const [tradeResult, pendingPickupResult, firmwareWatchResult, productEventRetentionResult, signatureCleanupResult, deliveryRetentionResult, telemetryRetentionResult, settledNotificationsResult] = await Promise.allSettled([
     expireOpenTrades(),
     expirePickupNoShows(now),
     pollFirmwareWatchTargets({ now }),
@@ -208,6 +209,8 @@ export const GET = withCron(async () => {
     cleanupPendingSignatureArtifacts(),
     pruneNotificationDeliveries(now),
     Promise.all([migrateLegacyAppDiagnostics().then(() => pruneErrorReports(now)), pruneJobRuns(now)]),
+    // Read paths settle one person at a time; this catches everyone else.
+    resolveSettledNotifications({ now }),
   ]);
   const maintenanceFailures: string[] = [];
   const { expired: tradesExpired } = maintenanceValue(
@@ -260,6 +263,12 @@ export const GET = withCron(async () => {
     deliveryRetentionResult,
     0,
     "notificationDeliveryRetention",
+    maintenanceFailures,
+  );
+  const notificationsSettled = maintenanceValue(
+    settledNotificationsResult,
+    0,
+    "notificationsSettled",
     maintenanceFailures,
   );
   maintenanceValue(telemetryRetentionResult, [{ events: 0, issues: 0, supportReports: 0 }, 0], "telemetryRetention", maintenanceFailures);
@@ -330,6 +339,7 @@ export const GET = withCron(async () => {
     firmwareWatch,
     productEventsDeleted,
     notificationDeliveriesDeleted,
+    notificationsSettled,
     signatureCleanup,
     scheduleAutomation: automationDigest,
     applicantRetention,

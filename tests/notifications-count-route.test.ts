@@ -16,6 +16,10 @@ vi.mock("@/lib/rate-limit", () => ({
   enforceRateLimit: vi.fn(),
 }));
 
+vi.mock("@/lib/services/notification-resolution", () => ({
+  resolveSettledNotificationsForUser: vi.fn(),
+}));
+
 vi.mock("@sentry/nextjs", () => ({
   captureException: vi.fn(),
 }));
@@ -23,6 +27,7 @@ vi.mock("@sentry/nextjs", () => ({
 import { requireAuth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { enforceRateLimit } from "@/lib/rate-limit";
+import { resolveSettledNotificationsForUser } from "@/lib/services/notification-resolution";
 import { GET } from "@/app/api/notifications/count/route";
 
 const user = {
@@ -60,5 +65,9 @@ describe("GET /api/notifications/count", () => {
     expect(db.notification.count).toHaveBeenCalledWith({
       where: { userId: user.id, readAt: null },
     });
+    // Settled rows are cleared before counting, so the badge counts open work.
+    expect(resolveSettledNotificationsForUser).toHaveBeenCalledWith(user.id);
+    expect(vi.mocked(resolveSettledNotificationsForUser).mock.invocationCallOrder[0])
+      .toBeLessThan(vi.mocked(db.notification.count).mock.invocationCallOrder[0]!);
   });
 });

@@ -60,7 +60,7 @@
 | `src/lib/services/kiosk-checkout-complete.ts` | 90 |
 | `src/lib/services/kiosk-dashboard-home.ts` | 267 |
 | `src/lib/services/kiosk-extend-window.ts` | 168 |
-| `src/lib/services/kiosk-item-transfer.ts` | 196 |
+| `src/lib/services/kiosk-item-transfer.ts` | 200 |
 | `src/lib/services/kiosk-location.ts` | 72 |
 | `src/lib/services/kiosk-nudge.ts` | 118 |
 | `src/lib/services/kiosk-operation-receipts.ts` | 128 |
@@ -76,7 +76,8 @@
 | `src/lib/services/non-game-schedule-defaults.ts` | 49 |
 | `src/lib/services/notification-deliveries.ts` | 59 |
 | `src/lib/services/notification-prefs.ts` | 350 |
-| `src/lib/services/notifications.ts` | 1975 |
+| `src/lib/services/notification-resolution.ts` | 143 |
+| `src/lib/services/notifications.ts` | 2045 |
 | `src/lib/services/onboarding-lifecycle.ts` | 546 |
 | `src/lib/services/onboarding-readiness.ts` | 24 |
 | `src/lib/services/pending-pickup-expiry.ts` | 370 |
@@ -102,8 +103,8 @@
 | `src/lib/services/shift-assignment-conflicts.ts` | 43 |
 | `src/lib/services/shift-assignments.ts` | 727 |
 | `src/lib/services/shift-generation.ts` | 629 |
-| `src/lib/services/shift-trade-emails.ts` | 62 |
-| `src/lib/services/shift-trades.ts` | 1560 |
+| `src/lib/services/shift-trade-emails.ts` | 70 |
+| `src/lib/services/shift-trades.ts` | 1567 |
 | `src/lib/services/signatures.ts` | 2366 |
 | `src/lib/services/software.ts` | 272 |
 | `src/lib/services/sport-auto-assign-policies.ts` | 46 |
@@ -182,7 +183,7 @@
 | `src/lib/db.ts` | 32 |
 | `src/lib/editor-snippets.ts` | 52 |
 | `src/lib/email-template.ts` | 202 |
-| `src/lib/email.ts` | 130 |
+| `src/lib/email.ts` | 147 |
 | `src/lib/env.ts` | 144 |
 | `src/lib/environment-safety.ts` | 17 |
 | `src/lib/equipment-guidance.ts` | 127 |
@@ -263,7 +264,7 @@
 | `src/lib/schedule-defaults.ts` | 33 |
 | `src/lib/schedule-event-identity.ts` | 369 |
 | `src/lib/schedule-event-keyset.ts` | 66 |
-| `src/lib/schedule-event-where.ts` | 46 |
+| `src/lib/schedule-event-where.ts` | 63 |
 | `src/lib/schedule-health-types.ts` | 83 |
 | `src/lib/schedule-publication-types.ts` | 62 |
 | `src/lib/schedule-queues.ts` | 185 |

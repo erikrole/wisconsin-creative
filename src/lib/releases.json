@@ -19,6 +19,25 @@
   },
   {
     "date": "2026-10-21",
+    "title": "Quieter, more accurate notifications",
+    "type": "improvement",
+    "summary": "Your unread count now shows what still needs you, and the app stops notifying you about things you just did yourself.",
+    "details": [
+      "Notifications clear on their own once they're settled: gear returned, a request decided, an event over, or a newer schedule update for the same event.",
+      "Badge notifications clear after two weeks, so they no longer pile up in the count.",
+      "Reserving gear, merging your own reservations, or handing gear to someone at the kiosk no longer sends you a push about it.",
+      "\"Gear up for your shift\" is skipped when you already have gear booked for that shift or event.",
+      "Buttons in notification emails open the exact checkout or event.",
+      "Staff follow-ups about overdue gear arrive silently overnight, from 10 PM to 7 AM. The person who has the gear is still alerted."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 570
+  },
+  {
+    "date": "2026-10-21",
     "title": "Search kits, events and guides",
     "type": "improvement",
     "summary": "Search in the iPhone app now also finds kits, upcoming events and guides, each with its own filter.",
