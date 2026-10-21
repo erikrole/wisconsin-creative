@@ -85,6 +85,8 @@ struct PerformanceTestRootView: View {
             CreateBookingScannerHarnessView()
         case .search, .searchPartial:
             GlobalSearchHarnessView()
+        case .damageQueueOpen, .damageQueueClosed, .damageQueueEmpty, .damageQueueDetail, .damageQueueRecord:
+            DamageQueueHarnessView()
         case .itemsList, .damageItemsMissing:
             ItemsListHarnessView()
         case .reports:
@@ -273,6 +275,48 @@ struct ReportsHarnessView: View {
             ReportsView()
         }
         .onAppear { session.currentUser = ScheduleFixtures.staffUser }
+    }
+}
+
+/// The real Damage and loss queue against canned cases.
+struct DamageQueueHarnessView: View {
+    @Environment(SessionStore.self) private var session
+
+    var body: some View {
+        NavigationStack {
+            DamageCasesView(wrapsInNavigationStack: false)
+        }
+        .onAppear { session.currentUser = ScheduleFixtures.staffUser }
+    }
+}
+
+/// Open, closed and empty queues, with a missing and a damaged case each so the
+/// pills, the "had it" line and the still-bookable warning all have a row.
+enum DamageQueueFixtureAPI {
+    private static func iso(_ hoursAgo: Double) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.string(from: Date().addingTimeInterval(-hoursAgo * 3600))
+    }
+
+    static func list(for request: URLRequest) -> Data {
+        let wantsClosed = request.url.flatMap { URLComponents(url: $0, resolvingAgainstBaseURL: false) }?
+            .queryItems?.first(where: { $0.name == "view" })?.value == "closed"
+        let scenario = AppRuntimeMode.performanceScenario
+        if scenario == .damageQueueEmpty {
+            return Data(#"{"data":{"counts":{"open":0,"missing":0,"closed":0},"cases":[]}}"#.utf8)
+        }
+        let open = [
+            #"{"id":"c1","type":"LOST","description":"Not in the case after the Ohio State game.","imageUrl":null,"reportedAt":"\#(iso(5))","item":{"kind":"asset","id":"a-1","label":"A-cam body","tag":"CAM-014","imageUrl":null,"status":"AVAILABLE"},"booking":{"id":"bk-fixture-1","title":"Football vs Ohio State — photo"},"responsible":{"id":"u-priya","name":"Priya Ramachandran"},"reportedBy":"Riley Chen","stillBookable":true,"resolution":null,"resolvedAt":null,"resolvedBy":null,"resolutionNote":null}"#,
+            #"{"id":"c2","type":"DAMAGED","description":"Cracked LCD screen, still records.","imageUrl":null,"reportedAt":"\#(iso(30))","item":{"kind":"asset","id":"a-5","label":"Football 70–200mm","tag":"LENS-032","imageUrl":null,"status":"MAINTENANCE"},"booking":null,"responsible":null,"reportedBy":"Sam Okonkwo","stillBookable":false,"resolution":null,"resolvedAt":null,"resolvedBy":null,"resolutionNote":null}"#,
+            #"{"id":"c3","type":"DAMAGED","description":"Two battery doors will not latch.","imageUrl":null,"reportedAt":"\#(iso(77))","item":{"kind":"unit","id":"u-9","label":"Football battery","tag":"Unit 9","imageUrl":null,"status":null},"booking":{"id":"bk-fixture-1","title":"Volleyball baseline kit"},"responsible":{"id":"u-marcus","name":"Marcus Webb"},"reportedBy":"Marcus Webb","stillBookable":false,"resolution":null,"resolvedAt":null,"resolvedBy":null,"resolutionNote":null}"#,
+        ]
+        let closed = [
+            #"{"id":"c4","type":"DAMAGED","description":"Cracked LCD screen.","imageUrl":null,"reportedAt":"\#(iso(200))","item":{"kind":"asset","id":"a-2","label":"Football camera 02","tag":"CAM-015","imageUrl":null,"status":"AVAILABLE"},"booking":null,"responsible":null,"reportedBy":"Sam Okonkwo","stillBookable":false,"resolution":"REPAIRED","resolvedAt":"\#(iso(150))","resolvedBy":"Riley Chen","resolutionNote":"Replaced the screen."}"#,
+            #"{"id":"c5","type":"LOST","description":"Missing from the sideline bag.","imageUrl":null,"reportedAt":"\#(iso(400))","item":{"kind":"asset","id":"a-7","label":"Football field recorder","tag":"AUD-007","imageUrl":null,"status":"AVAILABLE"},"booking":null,"responsible":null,"reportedBy":"Priya Ramachandran","stillBookable":false,"resolution":"FOUND","resolvedAt":"\#(iso(380))","resolvedBy":"Riley Chen","resolutionNote":null}"#,
+        ]
+        let rows = wantsClosed || scenario == .damageQueueClosed ? closed : open
+        return Data(#"{"data":{"counts":{"open":\#(open.count),"missing":1,"closed":\#(closed.count)},"cases":[\#(rows.joined(separator: ","))]}}"#.utf8)
     }
 }
 
@@ -565,6 +609,7 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
             let assetId = String(path.dropFirst("/api/assets/".count))
             return AssetFixtureAPI.asset(for: assetId)
         case "/api/assets": return SearchFixtureAPI.assets(for: request)
+        case "/api/damage-cases": return DamageQueueFixtureAPI.list(for: request)
         case "/api/reports/utilization": return ReportsFixtureAPI.utilization
         case "/api/reports/checkouts": return ReportsFixtureAPI.checkouts
         case "/api/reservations": return SearchFixtureAPI.reservations

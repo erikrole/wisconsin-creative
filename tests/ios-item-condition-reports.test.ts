@@ -70,7 +70,7 @@ describe("iOS item condition reports", () => {
 
   it("records outcomes through the case and hides Clear Maintenance while one is open", () => {
     expect(card).toContain('Label("Record outcome"');
-    expect(card).toContain("RecordOutcomeSheet(report: report, onResolved: onResolved)");
+    expect(card).toContain("RecordOutcomeSheet(reportId: report.id, isMissing: report.isMissing, onResolved: onResolved)");
     expect(card).toContain('Text("Reported from the item page")');
     expect(itemDetail).toContain("if !(asset.computedStatus == .maintenance && asset.hasOpenCase)");
     expect(models).toContain("isMissing ? [.found, .replaced, .writtenOff] : [.repaired, .replaced, .writtenOff, .noIssue]");
