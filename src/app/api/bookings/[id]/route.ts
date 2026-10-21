@@ -8,7 +8,7 @@ import {
 import { getAllowedBookingActions, requireBookingAction } from "@/lib/services/booking-rules";
 import { updateBookingSchema, sanitizeBookingFields } from "@/lib/validation";
 import type { z } from "zod";
-import { requireCollaboratorCapability } from "@/lib/collaborator-access";
+import { requireCollaboratorCapability, seesTeamGear } from "@/lib/collaborator-access";
 import { collaboratorBookingResponse } from "@/lib/collaborator-gear";
 import {
   bookingSnapshotMatches,
@@ -59,7 +59,7 @@ function isIdempotentStalePatch(body: BookingPatchBody, detail: Awaited<ReturnTy
 }
 
 export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
-  const collaboratorPreview = user.role === "COLLABORATOR" && user.preview?.role === "COLLABORATOR";
+  const teamGear = seesTeamGear(user);
   if (user.role === "COLLABORATOR") {
     requireCollaboratorCapability(user, "MY_GEAR_VIEW");
   }
@@ -71,7 +71,7 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
   // authority; this read does not grant edit, transfer, or custody rights.
   if (
     user.role === "COLLABORATOR" &&
-    !collaboratorPreview &&
+    !teamGear &&
     detail.requesterUserId !== user.id &&
     detail.createdBy !== user.id
   ) {

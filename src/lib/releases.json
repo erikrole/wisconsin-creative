@@ -1,5 +1,22 @@
 [
   {
+    "date": "2026-10-21",
+    "title": "Partners see team gear activity",
+    "type": "improvement",
+    "summary": "Big Ten Network and Learfield collaborators can now see what gear is booked and who has it, not just their own bookings.",
+    "details": [
+      "Bookings and Checkouts show everyone's reservations and checkouts, with full names.",
+      "The Items list shows who currently has a piece of gear and when it is due back.",
+      "Brand now shows in the gear catalog for collaborators.",
+      "View only: collaborators still can only change their own reservations, and pickups and returns still happen at the kiosk.",
+      "Admins can switch this off per organization in Settings, Collaborator access."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 0
+  },
+  {
     "date": "2026-10-20",
     "title": "Consistent booking titles",
     "type": "improvement",

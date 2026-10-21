@@ -4,6 +4,7 @@ import { withAuth } from "@/lib/api";
 import { createAuditEntry } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { HttpError, ok, parsePagination } from "@/lib/http";
+import { seesTeamGear } from "@/lib/collaborator-access";
 import { requirePermission, requirePermissionOrCollaboratorCapability } from "@/lib/rbac";
 import { buildDerivedStatusWhere, enrichAssetsWithStatusFromLoaded } from "@/lib/services/status";
 import { ACTIVE_BULK_UNIT_ALLOCATION_WHERE, buildActiveBulkUnitAllocationMap } from "@/lib/bulk-unit-status";
@@ -962,7 +963,7 @@ export const GET = withAuth(async (req, { user }) => {
   const data = await enrichAssetsWithStatusFromLoaded(rawData);
 
   const [enrichedWithBookings, favoriteItems, favoriteItemFamilies] = await Promise.all([
-    user.role === "COLLABORATOR"
+    user.role === "COLLABORATOR" && !seesTeamGear(user)
       ? Promise.resolve(data.map((asset) => ({ ...asset, activeBooking: null })))
       : attachActiveBookings(data),
     db.favoriteItem.findMany({

@@ -13,6 +13,7 @@ export const COLLABORATOR_CAPABILITIES = [
   "SOFTWARE_VAULT_VIEW",
   "SCHEDULE_FOLLOW",
   "KIOSK_ROSTER_ELIGIBLE",
+  "TEAM_GEAR_VIEW",
 ] as const;
 
 export type CollaboratorCapability = (typeof COLLABORATOR_CAPABILITIES)[number];
@@ -28,6 +29,7 @@ export const COLLABORATOR_CAPABILITY_CATALOG: ReadonlyArray<{
   { key: "PUBLISHED_SCHEDULE_VIEW", label: "Published Schedule", group: "SEE", description: "See snapshot-backed published events and crew." },
   { key: "PEOPLE_DIRECTORY_VIEW", label: "People directory", group: "SEE", description: "See active teammates and minimized work profiles." },
   { key: "SOFTWARE_VAULT_VIEW", label: "Shared software", group: "SEE", description: "See software logins explicitly shared with collaborators." },
+  { key: "TEAM_GEAR_VIEW", label: "Team gear activity", group: "SEE", description: "See everyone's reservations and checkouts, and who has each item, by full name. View only." },
   { key: "RESERVATION_CREATE", label: "Create reservations", group: "DO", description: "Reserve gear for the collaborator's own use." },
   { key: "RESERVATION_EDIT_OWN", label: "Edit own reservations", group: "DO", description: "Change eligible owned reservations." },
   { key: "RESERVATION_CANCEL_OWN", label: "Cancel own reservations", group: "DO", description: "Cancel eligible owned reservations." },
@@ -45,6 +47,7 @@ const CAPABILITY_DEPENDENCIES: Partial<Record<CollaboratorCapability, readonly C
   RESERVATION_EXTEND_OWN: ["MY_GEAR_VIEW"],
   SCHEDULE_FOLLOW: ["PUBLISHED_SCHEDULE_VIEW"],
   KIOSK_ROSTER_ELIGIBLE: ["MY_GEAR_VIEW"],
+  TEAM_GEAR_VIEW: ["GEAR_CATALOG_VIEW", "MY_GEAR_VIEW"],
 };
 
 type PolicyLike = {
@@ -160,4 +163,10 @@ export function requireActiveCollaboratorPolicy(actor: CollaboratorActor) {
 
 export function isGlobalKioskCollaborator(actor: CollaboratorActor) {
   return actor.role === Role.COLLABORATOR && hasCollaboratorCapability(actor, "KIOSK_ROSTER_ELIGIBLE");
+}
+
+/** Read-only team-wide gear visibility: the signed admin preview, or the TEAM_GEAR_VIEW grant. */
+export function seesTeamGear(actor: CollaboratorActor & { preview?: { role?: string } | null }) {
+  if (actor.role !== Role.COLLABORATOR) return true;
+  return actor.preview?.role === "COLLABORATOR" || hasCollaboratorCapability(actor, "TEAM_GEAR_VIEW");
 }
