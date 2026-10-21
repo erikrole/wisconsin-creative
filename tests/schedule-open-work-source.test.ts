@@ -13,7 +13,7 @@ describe("schedule open work source contracts", () => {
     expect(tradeBoard).toContain('label: "Mine"');
     expect(tradeBoard).toContain('label: "History"');
     expect(tradeBoard).toContain("Cancel post");
-    expect(tradeBoard).toContain("Waiting on admin");
+    expect(tradeBoard).toContain("Waiting on an admin");
     expect(tradeBoard).toContain("An admin approves every change before it reaches the schedule.");
     expect(tradeBoard).toContain("availabilityNotice");
     expect(tradeBoard).toContain("viewerAvailabilityContext");

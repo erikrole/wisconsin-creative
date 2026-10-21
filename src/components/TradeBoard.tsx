@@ -806,7 +806,7 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
         ...common,
         person: poster,
         summary: `Your claim on ${trade.postedBy.name}'s shift`,
-        status: { label: "Waiting on admin", variant: "orange" },
+        status: { label: "Pending", variant: "orange" },
         notices: deadline ? [{ tone: "info", text: deadline }] : [],
         actions: [action(`withdraw-claim:${trade.id}`, "Withdraw claim", "Withdrawing…", "outline", () => void handleWithdrawClaim(trade))],
       };
@@ -880,7 +880,7 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
       muted: false,
       status: mode === "review"
         ? { label: "Needs review", variant: "orange" }
-        : { label: "Waiting on admin", variant: "orange" },
+        : { label: "Pending", variant: "orange" },
       notices,
       actions: mode === "review"
         ? [
@@ -912,10 +912,23 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
   );
   const historyRows = resolvedTrades.map((trade) => tradeToRow(trade, "done")).sort((a, b) => b.startsAt.localeCompare(a.startsAt));
 
+  const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
   const tabs: BoardTabSpec[] = [
-    ...(canReview ? [{ id: "review" as const, label: "Review", count: reviewRows.length, rows: reviewRows }] : []),
-    { id: "available", label: "Available", count: availableRows.length, rows: [...availableRows, ...unavailableRows] },
-    { id: "mine", label: "Mine", count: mineRows.length, rows: mineRows },
+    ...(canReview ? [{
+      id: "review" as const,
+      label: "Review",
+      count: reviewRows.length,
+      rows: reviewRows,
+      summary: reviewRows.length ? `${reviewRows.length} waiting on you` : null,
+    }] : []),
+    {
+      id: "available",
+      label: "Available",
+      count: availableRows.length,
+      rows: [...availableRows, ...unavailableRows],
+      summary: availableRows.length ? plural(availableRows.length, "shift you can pick up", "shifts you can pick up") : null,
+    },
+    { id: "mine", label: "Mine", count: mineRows.length, rows: mineRows, summary: mineRows.length ? `${mineRows.length} in motion` : null },
     { id: "history", label: "History", count: 0, rows: historyRows },
   ];
   const defaultTab: BoardTab = initialStatusFilter === "CLAIMED" && canReview

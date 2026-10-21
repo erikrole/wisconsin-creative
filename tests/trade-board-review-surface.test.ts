@@ -100,7 +100,7 @@ describe("trade board review surface", () => {
     const sheet = source("ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift");
 
     expect(web).toContain('label: "Review"');
-    expect(web).toContain('"Waiting on admin"');
+    expect(web).toContain('"Pending"');
     expect(sheet).toContain('case .review: "Review"');
     expect(sheet).toContain('("Waiting on admin", .orange)');
     expect(web).not.toMatch(/staff (review|approval)|waiting on staff/i);

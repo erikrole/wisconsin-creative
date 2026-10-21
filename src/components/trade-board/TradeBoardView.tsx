@@ -2,7 +2,6 @@
 
 import { AlertTriangleIcon, CheckIcon, InfoIcon } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
-import { UserAvatar } from "@/components/UserAvatar";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -44,7 +43,7 @@ export type BoardRow = {
   menuAction?: BoardAction;
 };
 
-export type BoardTabSpec = { id: BoardTab; label: string; count: number; rows: BoardRow[] };
+export type BoardTabSpec = { id: BoardTab; label: string; count: number; rows: BoardRow[]; summary?: string | null };
 
 type Props = {
   tabs: BoardTabSpec[];
@@ -92,101 +91,88 @@ function dayLabel(iso: string, now: Date) {
   return base;
 }
 
-function DateTile({ iso, muted }: { iso: string; muted?: boolean }) {
-  const date = new Date(iso);
-  return (
-    <div
-      className={cn(
-        "flex size-11 shrink-0 flex-col items-center justify-center rounded-lg border border-border/60 bg-muted/40 leading-none",
-        muted && "opacity-60",
-      )}
-      aria-hidden
-    >
-      <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-        {date.toLocaleDateString("en-US", { weekday: "short" })}
-      </span>
-      <span className="mt-1 text-base font-semibold tabular-nums">{date.getDate()}</span>
-    </div>
-  );
-}
-
 const NOTICE_STYLE: Record<BoardNotice["tone"], string> = {
   warn: "text-[var(--orange-text)]",
   block: "text-destructive",
   info: "text-muted-foreground",
 };
 
+function splitTimes(times: string): [string, string | null] {
+  const [start, ...rest] = times.split(" – ");
+  return [start ?? times, rest.length > 0 ? rest.join(" – ") : null];
+}
+
 function Row({ row }: { row: BoardRow }) {
+  const [start, end] = splitTimes(row.times);
+  const hasControls = row.actions.length > 0 || row.menuAction;
   return (
-    <article className={cn("flex gap-3 px-4 py-3.5 transition-colors hover:bg-muted/25", row.muted && "bg-muted/10")}>
-      <DateTile iso={row.startsAt} muted={row.muted} />
-      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-        <div className="flex min-w-0 items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h3 className={cn("truncate text-sm font-semibold leading-tight", row.muted && "text-muted-foreground")}>
-              {row.title}
-              {row.detail && <span className="font-normal text-muted-foreground"> · {row.detail}</span>}
-            </h3>
-            <p className="mt-0.5 truncate text-xs tabular-nums text-muted-foreground">
-              {row.times} · {row.area}
-            </p>
-          </div>
-          {row.status && (
-            <Badge variant={row.status.variant} size="sm" className="shrink-0">
-              {row.status.label}
-            </Badge>
-          )}
-        </div>
+    <article
+      className={cn(
+        "grid grid-cols-[4.75rem_minmax(0,1fr)] gap-x-3 gap-y-2 px-4 py-3 transition-colors hover:bg-muted/30 sm:grid-cols-[4.75rem_minmax(0,1fr)_auto]",
+        row.muted && "opacity-60",
+      )}
+    >
+      <div className="pt-px tabular-nums leading-tight">
+        <p className="text-sm font-semibold">{start}</p>
+        {end && <p className="mt-0.5 text-xs text-muted-foreground">{end}</p>}
+      </div>
 
-        <div className="flex min-w-0 items-start gap-2 text-xs text-muted-foreground">
-          {row.person && <UserAvatar name={row.person.name} avatarUrl={row.person.avatarUrl} size="xs" />}
-          <span className="min-w-0">{row.summary}</span>
-        </div>
-
-        {row.note && (
-          <p className="rounded-md bg-muted/50 px-2.5 py-1.5 text-xs leading-relaxed text-muted-foreground">
-            “{row.note}”
-          </p>
-        )}
-
+      <div className="flex min-w-0 flex-col gap-1">
+        <h3 className="truncate text-sm font-semibold leading-tight">
+          {row.title}
+          {row.detail && <span className="font-normal text-muted-foreground"> · {row.detail}</span>}
+        </h3>
+        <p className="line-clamp-2 text-xs leading-snug text-muted-foreground">
+          <span className="font-medium text-foreground/70">{row.area}</span> · {row.summary}
+        </p>
         {row.notices.map((notice) => (
-          <p key={notice.text} className={cn("flex items-start gap-1.5 text-xs leading-relaxed", NOTICE_STYLE[notice.tone])}>
+          <p key={notice.text} className={cn("flex items-start gap-1.5 text-xs leading-snug", NOTICE_STYLE[notice.tone])}>
             {notice.tone === "info" ? (
-              <InfoIcon className="mt-0.5 size-3.5 shrink-0" />
+              <InfoIcon className="mt-px size-3.5 shrink-0" />
             ) : (
-              <AlertTriangleIcon className="mt-0.5 size-3.5 shrink-0" />
+              <AlertTriangleIcon className="mt-px size-3.5 shrink-0" />
             )}
             <span>{notice.text}</span>
           </p>
         ))}
-
-        {(row.actions.length > 0 || row.menuAction) && (
-          <div className="flex flex-wrap items-center gap-2 pt-1">
-            {row.actions.map((action) => (
-              <Button
-                key={action.label}
-                className="h-10 gap-1.5"
-                variant={action.variant === "primary" ? "default" : "outline"}
-                disabled={action.disabled}
-                onClick={action.onClick}
-              >
-                {action.variant === "primary" && !action.busy && <CheckIcon className="size-3.5" />}
-                {action.busy ? action.busyLabel : action.label}
-              </Button>
-            ))}
-            {row.menuAction && (
-              <Button
-                variant="ghost"
-                className="-ml-2 h-10 text-muted-foreground hover:text-destructive"
-                disabled={row.menuAction.disabled}
-                onClick={row.menuAction.onClick}
-              >
-                {row.menuAction.busy ? row.menuAction.busyLabel : row.menuAction.label}
-              </Button>
-            )}
-          </div>
+        {row.note && (
+          <p className="mt-0.5 border-l-2 border-border pl-2.5 text-xs italic leading-relaxed text-muted-foreground">
+            {row.note}
+          </p>
         )}
       </div>
+
+      {(hasControls || row.status) && (
+        <div className="col-start-2 flex flex-wrap items-center gap-2 sm:col-start-3 sm:row-start-1 sm:justify-end sm:self-start">
+          {row.status && !row.actions.length && (
+            <Badge variant={row.status.variant} size="sm" className="shrink-0">
+              {row.status.label}
+            </Badge>
+          )}
+          {row.actions.map((action) => (
+            <Button
+              key={action.label}
+              className="h-10 gap-1.5 rounded-full px-4"
+              variant={action.variant === "primary" ? "default" : "outline"}
+              disabled={action.disabled}
+              onClick={action.onClick}
+            >
+              {action.variant === "primary" && !action.busy && <CheckIcon className="size-3.5" />}
+              {action.busy ? action.busyLabel : action.label}
+            </Button>
+          ))}
+          {row.menuAction && (
+            <Button
+              variant="ghost"
+              className="h-10 rounded-full px-3 text-muted-foreground hover:text-destructive"
+              disabled={row.menuAction.disabled}
+              onClick={row.menuAction.onClick}
+            >
+              {row.menuAction.busy ? row.menuAction.busyLabel : row.menuAction.label}
+            </Button>
+          )}
+        </div>
+      )}
     </article>
   );
 }
@@ -196,7 +182,7 @@ function Skeletons() {
     <div className="divide-y divide-border/50">
       {Array.from({ length: 4 }).map((_, index) => (
         <div key={index} className="flex gap-3 px-4 py-3.5">
-          <Skeleton className="size-11 shrink-0 rounded-lg" />
+          <Skeleton className="h-4 w-16 shrink-0" />
           <div className="flex min-w-0 flex-1 flex-col gap-2">
             <Skeleton className="h-4 w-2/3" />
             <Skeleton className="h-3 w-1/2" />
@@ -231,8 +217,6 @@ export function TradeBoardView({ tabs, tab, onTab, loading, errors, needsReview,
           </Button>
         </div>
       )}
-      {intro && <p className="px-0.5 text-sm leading-snug text-muted-foreground">{intro}</p>}
-
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div role="tablist" aria-label="Trade Board" className="inline-flex rounded-lg bg-muted p-0.5">
           {tabs.map((item) => (
@@ -248,11 +232,11 @@ export function TradeBoardView({ tabs, tab, onTab, loading, errors, needsReview,
               )}
             >
               {item.label}
-              {item.count > 0 && (
+              {item.id === "review" && item.count > 0 && (
                 <span
                   className={cn(
                     "min-w-5 rounded-full px-1.5 text-center text-[11px] font-semibold tabular-nums",
-                    item.id === "review" ? "bg-[var(--orange-bg)] text-[var(--orange-text)]" : "bg-foreground/10",
+                    "bg-[var(--orange-bg)] text-[var(--orange-text)]",
                   )}
                 >
                   {item.count}
@@ -263,6 +247,13 @@ export function TradeBoardView({ tabs, tab, onTab, loading, errors, needsReview,
         </div>
         {toolbar}
       </div>
+
+      {(active?.summary || (intro && tab === "available")) && (
+        <div className="-mt-1 px-0.5">
+          {active?.summary && <p className="text-sm font-medium">{active.summary}</p>}
+          {intro && tab === "available" && <p className="text-xs leading-snug text-muted-foreground">{intro}</p>}
+        </div>
+      )}
 
       {errors.map((error) => (
         <div
@@ -287,7 +278,7 @@ export function TradeBoardView({ tabs, tab, onTab, loading, errors, needsReview,
         ) : (
           groups.map((group) => (
             <section key={group.label} className="border-b border-border/50 last:border-b-0">
-              <p className="bg-muted/30 px-4 py-1.5 font-sans text-xs font-medium tracking-normal text-muted-foreground">{group.label}</p>
+              <p className="sticky top-0 z-10 border-b border-border/40 bg-muted/80 px-4 py-1.5 font-sans text-xs font-medium tracking-normal text-muted-foreground backdrop-blur">{group.label}</p>
               <div className="divide-y divide-border/50">
                 {group.rows.map((row) => (
                   <Row key={row.key} row={row} />

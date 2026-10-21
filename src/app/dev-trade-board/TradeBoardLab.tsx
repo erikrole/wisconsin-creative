@@ -55,7 +55,7 @@ const mine: BoardRow[] = [
     times: "12:00 PM – 4:00 PM", area: "Photo", person: { name: "Taylor Reed" },
     summary: "Your claim on Taylor Reed's shift", note: null,
     notices: [{ tone: "info", text: "Auto-approval check by Oct 28, 12:00 PM. You are not on the schedule until a decision lands." }],
-    status: { label: "Waiting on admin", variant: "orange" }, actions: [act("Withdraw claim", "Withdrawing…", "outline")],
+    status: { label: "Pending", variant: "orange" }, actions: [act("Withdraw claim", "Withdrawing…", "outline")],
   },
 ];
 
@@ -99,9 +99,9 @@ export default function TradeBoardLab() {
     if (params.get("post") === "1") setPostOpen(true);
   }, []);
   const tabs: BoardTabSpec[] = [
-    ...(admin ? [{ id: "review" as const, label: "Review", count: review.length, rows: review }] : []),
-    { id: "available", label: "Available", count: available.length, rows: available },
-    { id: "mine", label: "Mine", count: mine.length, rows: mine },
+    ...(admin ? [{ id: "review" as const, label: "Review", count: review.length, rows: review, summary: `${review.length} waiting on you` }] : []),
+    { id: "available", label: "Available", count: 3, rows: available, summary: "3 shifts you can pick up" },
+    { id: "mine", label: "Mine", count: mine.length, rows: mine, summary: `${mine.length} in motion` },
     { id: "history", label: "History", count: 0, rows: history },
   ];
   return (
