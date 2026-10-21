@@ -29,7 +29,7 @@ iOS (SwiftUI):
 - Screenshots: the project files folder student-onboarding/ (web; not visible from the Mac, ask Erik if needed). iOS finish-screen shots are on Erik's Mac in /Users/role/Code/welcome-finish-shots/.
 
 ## QA checklist
-- [ ] Invite email (Settings > Allowed Emails > resend): steps list, button opens /login?email=... prefilled. Needs RESEND_API_KEY and EMAIL_REPLY_TO in Vercel (Erik has not confirmed).
+- [ ] Invite email (Settings > Allowed Emails > resend): steps list, forgot-password line in the footer, button opens /login?email=... prefilled. Needs RESEND_API_KEY and EMAIL_REPLY_TO in Vercel (Erik has not confirmed).
 - [ ] Login with an invited email shows the invite notice, name + password + confirm, then /welcome.
 - [ ] Student steps: Phone, Wiscard, Student, Apparel, Photo (no email step). Student step continues with year alone; graduation can stay blank. Back and the step bar navigate; Apparel and Photo can be skipped.
 - [ ] Staff/admin also see the Email step. Collaborator: photo only.

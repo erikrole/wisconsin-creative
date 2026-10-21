@@ -58,7 +58,10 @@ export function buildInviteEmail({
         },
     action: { label: reminder ? "Finish setting up" : "Set up your account", url: loginUrl },
     note: `Sign in with ${email}. Use this exact address so we can find your invite.`,
-    footer: ["Questions? Reply to this email. Wasn't expecting this? You can ignore it, nothing happens until you sign in."],
+    footer: [
+      "Forget your password later? Choose Forgot password on the sign-in page and we'll email you a reset link.",
+      "Questions? Reply to this email. Wasn't expecting this? You can ignore it, nothing happens until you sign in.",
+    ],
     showFallbackLink: true,
   });
 
