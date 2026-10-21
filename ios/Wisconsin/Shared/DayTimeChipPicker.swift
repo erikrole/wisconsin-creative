@@ -169,3 +169,67 @@ struct DayTimeChipPicker: View {
         selection = max(moved, QuarterHour.roundedUp(minimum.addingTimeInterval(60)))
     }
 }
+
+/// Inline month calendar plus a 15-minute time row, the way Calendar expands
+/// an event's Ends row. Days outside `minimum...latest` can't be picked, and
+/// the time is clamped into the same window.
+struct ReturnTimeCalendar: View {
+    @Binding var selection: Date
+    let minimum: Date
+    var latest: Date? = nil
+    var tint: Color = Color.statusText(.blue)
+
+    private var calendar: Calendar { .current }
+
+    private var dayRange: ClosedRange<Date> {
+        let lower = calendar.startOfDay(for: minimum)
+        return lower...max(latest ?? .distantFuture, lower)
+    }
+
+    private var dayBinding: Binding<Date> {
+        Binding(
+            get: { selection },
+            set: { newDay in
+                let time = calendar.dateComponents([.hour, .minute], from: selection)
+                guard let moved = calendar.date(
+                    bySettingHour: time.hour ?? 0,
+                    minute: time.minute ?? 0,
+                    second: 0,
+                    of: calendar.startOfDay(for: newDay)
+                ) else { return }
+                selection = clamped(moved)
+            }
+        )
+    }
+
+    private var timeBinding: Binding<Date> {
+        Binding(get: { selection }, set: { selection = clamped($0) })
+    }
+
+    private func clamped(_ date: Date) -> Date {
+        let value = QuarterHour.clamped(date, minimum: minimum)
+        guard let latest else { return value }
+        return min(value, latest)
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            DatePicker("Return day", selection: dayBinding, in: dayRange, displayedComponents: .date)
+                .datePickerStyle(.graphical)
+                .labelsHidden()
+            Divider()
+            HStack {
+                Text("Time")
+                Spacer()
+                QuarterHourTimePicker(
+                    selection: timeBinding,
+                    minimumDate: minimum,
+                    tint: tint,
+                    accessibilityLabel: "Return time, 15-minute increments"
+                )
+            }
+            .padding(.vertical, 6)
+        }
+        .tint(tint)
+    }
+}

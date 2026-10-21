@@ -8,7 +8,9 @@
       "The list is grouped by day, with anything overdue or waiting on pickup first.",
       "Each row shows who has it and a colored time: red overdue, orange missed pickup, blue checked out, purple reserved.",
       "Switch between Everyone and Mine at the top, and the filter button now says what you are looking at.",
-      "Booking details, Edit, Extend and Transfer use plain iPhone lists, with Extend as the one green button.",
+      "Booking details are redesigned: a status line, pickup and return side by side with a progress bar while gear is out, and the owner with their photo.",
+      "Extend shows the current and new return side by side, offers quick picks like Tomorrow or As late as possible, and has a calendar for anything else.",
+      "Edit opens a calendar when you tap Due back, and says why Save is off when it is.",
       "When gear is needed again, the booking says which booking needs it next."
     ],
     "platforms": [

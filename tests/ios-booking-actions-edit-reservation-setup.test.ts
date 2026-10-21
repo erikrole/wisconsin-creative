@@ -50,12 +50,15 @@ describe("iOS focused booking edit and transfer", () => {
       detail.indexOf("struct EditBookingSheet"),
       detail.indexOf("struct TransferBookingOwnerSheet"),
     );
-    expect(editor).toContain('Text("Booking name")');
+    expect(editor).toContain('TextField("Booking name"');
     expect(editor).toContain('LabeledContent("Due back")');
-    expect(editor).toContain("DayTimeChipPicker(");
+    // Tapping Due back opens an inline calendar, like Calendar's Ends row.
+    expect(editor).toContain("ReturnTimeCalendar(");
+    expect(editor).toContain("showsReturnCalendar.toggle()");
     expect(editor).toContain("APIClient.shared.bookingAvailability");
     expect(editor).toContain('Label("This return time works"');
-    expect(editor).toContain('Text("Transfer Ownership")');
+    expect(editor).toContain('Text("Owner")');
+    expect(editor).toContain("Transfer Ownership");
     expect(editor).not.toContain("TextEditor(");
     expect(editor).not.toContain("OptionPickerView(");
     expect(editor).not.toContain('DatePicker("From"');

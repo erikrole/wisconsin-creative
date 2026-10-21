@@ -316,14 +316,14 @@ describe("student field mobile contracts", () => {
       detail.indexOf("struct TransferBookingOwnerSheet"),
     );
 
-    expect(detail).toContain("BookingDetailsSection(");
+    expect(detail).toContain("BookingHeroSection(");
     expect(detail).toContain("Label(\"Edit Details\", systemImage: \"pencil\")");
     expect(detail).toContain(".accessibilityLabel(\"Edit booking details\")");
     expect(editor).toContain(".navigationTitle(\"Edit Booking\")");
-    expect(editor).toContain("Gear and pickup details stay read-only on your phone.");
-    expect(editor).toContain('Text("Booking name")');
+    expect(editor).toContain("private var saveBlocker: String?");
+    expect(editor).toContain('TextField("Booking name"');
     expect(editor).toContain('LabeledContent("Due back")');
-    expect(editor).toContain("DayTimeChipPicker(");
+    expect(editor).toContain("ReturnTimeCalendar(");
     expect(editor).toContain("APIClient.shared.bookingAvailability");
     expect(editor).not.toContain("OptionPickerView(");
     expect(editor).not.toContain("TextEditor(");

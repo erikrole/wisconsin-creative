@@ -58,6 +58,10 @@ describe("iOS booking surface alignment", () => {
     const detail = readFileSync("ios/Wisconsin/Views/BookingDetailView.swift", "utf8");
     const api = readFileSync("ios/Wisconsin/Core/APIClient.swift", "utf8");
     expect(api).toContain("nextNeedTitle: next?.bookingTitle?.nonBlankText");
-    expect(detail).toContain('let who = returnInsight.nextNeedTitle.map { " for \\($0)" } ?? ""');
+    expect(detail).toContain("if let title = returnInsight.nextNeedTitle");
+    expect(detail).toContain('return "\\(title) needs this gear \\(when). Extend only to a return time by then."');
+    // Relative day, never the full year.
+    expect(detail).toContain("nextNeedAt.operationalDateTimeLabel(now: today, capitalizesRelativeDay: false)");
+    expect(detail).not.toContain("nextNeedAt.gearShort");
   });
 });
