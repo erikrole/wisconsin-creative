@@ -1,4 +1,5 @@
 #if DEBUG
+import ActivityKit
 import SwiftUI
 import WidgetKit
 import UserNotifications
@@ -94,6 +95,8 @@ struct PerformanceTestRootView: View {
             AccountSecurityHarnessView()
         case .notifications:
             NotificationSettingsHarnessView()
+        case .liveActivity:
+            LiveActivityHarnessView()
         case .widgetSeed:
             WidgetSeedHarnessView()
         case .notificationsInbox:
@@ -166,6 +169,64 @@ struct NotificationSettingsHarnessView: View {
             prefsVM.catalog = NotificationFixtureAPI.staffCatalog
             appState.pushRegistrationState = .failed
             seeded = true
+        }
+    }
+}
+
+/// Requests the real activity locally (no push token) and leaves a calm
+/// backdrop so the island and lock screen are the subject of the capture.
+struct LiveActivityHarnessView: View {
+    var body: some View {
+        ZStack {
+            Color(.systemGroupedBackground).ignoresSafeArea()
+            Text("Live Activity running")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+        .task { await Self.start() }
+    }
+
+    @MainActor
+    private static func start() async {
+        for activity in Activity<CheckoutReturnActivityAttributes>.activities {
+            await activity.end(nil, dismissalPolicy: .immediate)
+        }
+        let name = ProcessInfo.processInfo.environment["GT_LIVE_ACTIVITY"] ?? "normal"
+        let now = Date()
+        let (urgency, offset, needed): (CheckoutReturnActivityAttributes.ContentState.Urgency, TimeInterval, TimeInterval?) = {
+            switch name {
+            case "warning": return (.warning, 24 * 60, 50 * 60)
+            case "critical": return (.critical, 6 * 60 + 30, nil)
+            case "overdue": return (.overdue, -12 * 60, nil)
+            case "returned": return (.returned, -90, nil)
+            case "long": return (.normal, 95 * 60, nil)
+            default: return (.normal, 70 * 60, nil)
+            }
+        }()
+        let attributes = CheckoutReturnActivityAttributes(
+            bookingId: "fixture-booking",
+            bookingTitle: "Sony FX6 kit",
+            requesterName: "Jordan Lee",
+            requesterInitials: "JL",
+            requesterAvatarUrl: nil,
+            returnTimeText: "Return"
+        )
+        let state = CheckoutReturnActivityAttributes.ContentState(
+            endsAt: now.addingTimeInterval(offset),
+            now: now,
+            nextNeedAt: needed.map { now.addingTimeInterval($0) },
+            allowsExtend: false,
+            urgency: urgency
+        )
+        do {
+            let activity = try Activity.request(
+                attributes: attributes,
+                content: ActivityContent(state: state, staleDate: now.addingTimeInterval(6 * 3600)),
+                pushType: nil
+            )
+            NSLog("LA-HARNESS started %@ enabled=%d", activity.id, ActivityAuthorizationInfo().areActivitiesEnabled)
+        } catch {
+            NSLog("LA-HARNESS failed %@ enabled=%d", String(describing: error), ActivityAuthorizationInfo().areActivitiesEnabled)
         }
     }
 }
