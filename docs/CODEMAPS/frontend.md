@@ -119,6 +119,7 @@
 | `/` | `src/app/(app)/layout.tsx` |
 | `/reports` | `src/app/(app)/reports/layout.tsx` |
 | `/reports/usage` | `src/app/(app)/reports/usage/layout.tsx` |
+| `/resources` | `src/app/(app)/resources/layout.tsx` |
 | `/settings/app-activity` | `src/app/(app)/settings/app-activity/layout.tsx` |
 | `/settings` | `src/app/(app)/settings/layout.tsx` |
 | `/staff` | `src/app/(app)/staff/layout.tsx` |
@@ -132,8 +133,8 @@
 
 | File | Lines |
 |---|---:|
+| `src/components/resources/BrandAssetLibrary.tsx` | 1980 |
 | `src/components/TradeBoard.tsx` | 1853 |
-| `src/components/resources/BrandAssetLibrary.tsx` | 1827 |
 | `src/components/ActivityTimeline.tsx` | 1387 |
 | `src/components/booking-wizard/BookingWizard.tsx` | 1173 |
 | `src/components/onboarding/OnboardingDialog.tsx` | 996 |

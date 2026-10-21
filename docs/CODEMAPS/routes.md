@@ -115,6 +115,7 @@
 - `/` -> `src/app/(app)/layout.tsx`
 - `/reports` -> `src/app/(app)/reports/layout.tsx`
 - `/reports/usage` -> `src/app/(app)/reports/usage/layout.tsx`
+- `/resources` -> `src/app/(app)/resources/layout.tsx`
 - `/settings/app-activity` -> `src/app/(app)/settings/app-activity/layout.tsx`
 - `/settings` -> `src/app/(app)/settings/layout.tsx`
 - `/staff` -> `src/app/(app)/staff/layout.tsx`

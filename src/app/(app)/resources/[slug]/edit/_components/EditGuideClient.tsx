@@ -1,22 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeftIcon, Trash2Icon } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,15 +24,12 @@ import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/er
 import {
   defaultCategoryForResourceType,
   GUIDE_CATEGORY_SUGGESTIONS,
-  RESOURCE_TYPE_DESCRIPTIONS,
-  RESOURCE_TYPE_LABELS,
-  RESOURCE_TYPE_OPTIONS,
 } from "@/lib/guide-categories";
 import { legacyGuideMarkdown } from "@/lib/guide-content";
-import { GuideTargetingControls } from "@/components/resources/GuideTargetingControls";
+import { GuideEditorLayout } from "@/components/resources/GuideEditorLayout";
+import { GuideSettingsPanel } from "@/components/resources/GuideSettingsPanel";
 import { MarkdownEditor } from "@/components/resources/MarkdownEditor";
 import EmptyState from "@/components/EmptyState";
-import { PageHeader } from "@/components/PageHeader";
 
 type Guide = {
   id: string;
@@ -142,6 +127,7 @@ export function EditGuideClient({ slug, userRole, userId }: Props) {
 
   const canDelete = userRole === Role.ADMIN;
   const canEditGuide = userRole === Role.ADMIN || guide?.author.id === userId;
+  const categorySuggestions = useMemo(() => [...GUIDE_CATEGORY_SUGGESTIONS], []);
 
   function updateType(nextType: ResourceType) {
     setCategory((current) => {
@@ -248,135 +234,74 @@ export function EditGuideClient({ slug, userRole, userId }: Props) {
 
   if (loading || !ready) {
     return (
-      <div className="flex flex-col gap-6 p-6 max-w-5xl mx-auto">
-        <Skeleton className="h-5 w-20" />
-        <Skeleton className="h-8 w-48" />
+      <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-10">
         <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-64 w-full rounded-lg" />
+        <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_300px]">
+          <div className="flex flex-col gap-5">
+            <Skeleton className="h-12 w-2/3" />
+            <Skeleton className="h-96 w-full rounded-xl" />
+          </div>
+          <Skeleton className="h-80 w-full rounded-xl" />
+        </div>
       </div>
     );
   }
 
+  const discardDialog = (trigger: React.ReactNode) => (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
+          <AlertDialogDescription>
+            You have unsaved edits. Leaving now will lose them.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Keep editing</AlertDialogCancel>
+          <AlertDialogAction onClick={() => router.push(`/resources/${slug}`)}>
+            Discard
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+
+  const backLabel = (
+    <>
+      <ArrowLeftIcon data-icon="inline-start" />
+      Back to guide
+    </>
+  );
+
   return (
-    <div className="flex flex-col gap-6 p-6 max-w-5xl mx-auto">
-      <div>
-        {dirty ? (
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <button
-                type="button"
-                className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <ArrowLeftIcon className="size-3.5" />
-                Back to guide
-              </button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  You have unsaved edits. Leaving now will lose them.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Keep editing</AlertDialogCancel>
-                <AlertDialogAction onClick={() => router.push(`/resources/${slug}`)}>
-                  Discard
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        ) : (
-          <Link
-            href={`/resources/${slug}`}
-            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeftIcon className="size-3.5" />
-            Back to guide
-          </Link>
+    <GuideEditorLayout
+      back={dirty
+        ? discardDialog(<Button variant="ghost" size="sm" className="h-10 px-2">{backLabel}</Button>)
+        : (
+          <Button asChild variant="ghost" size="sm" className="h-10 px-2">
+            <Link href={`/resources/${slug}`}>{backLabel}</Link>
+          </Button>
         )}
-      </div>
-
-      <PageHeader title="Edit guide" description={`Update ${title} without changing its publication or audience contract.`} />
-
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="title">Title</Label>
-          <Input
-            id="title"
-            value={title}
-            onChange={(e) => { setTitle(e.target.value); setDirty(true); }}
-            disabled={submitting}
-          />
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="guide-type">Guide focus</Label>
-            <Select value={type} onValueChange={(value) => updateType(value as ResourceType)} disabled={submitting}>
-              <SelectTrigger id="guide-type" className="h-10">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectLabel>Guide focus</SelectLabel>
-                  {RESOURCE_TYPE_OPTIONS.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {RESOURCE_TYPE_LABELS[option]}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground text-pretty">
-              {RESOURCE_TYPE_DESCRIPTIONS[type]}
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="category">Category</Label>
-            <Input
-              id="category"
-              value={category}
-              onChange={(e) => { setCategory(e.target.value); setDirty(true); }}
-              list="guide-category-suggestions"
-              disabled={submitting}
-            />
-            <datalist id="guide-category-suggestions">
-              {GUIDE_CATEGORY_SUGGESTIONS.map((cat) => (
-                <option key={cat} value={cat} />
-              ))}
-            </datalist>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <Switch
-            id="published"
-            checked={published}
-            onCheckedChange={(v) => { setPublished(v); setDirty(true); }}
-            disabled={submitting}
-          />
-          <Label htmlFor="published" className="cursor-pointer">
-            {published ? "Published" : "Draft"}
-          </Label>
-        </div>
-      </div>
-
-      <GuideTargetingControls
-        featured={featured}
-        featuredRank={featuredRank}
-        targetRoles={targetRoles}
-        targetAreas={targetAreas}
-        disabled={submitting}
-        onFeaturedChange={(value) => { setFeatured(value); setDirty(true); }}
-        onFeaturedRankChange={(value) => { setFeaturedRank(value); setDirty(true); }}
-        onTargetRolesChange={(value) => { setTargetRoles(value); setDirty(true); }}
-        onTargetAreasChange={(value) => { setTargetAreas(value); setDirty(true); }}
-      />
-
-      <div className="min-h-[600px] overflow-hidden rounded-lg border">
+      status={dirty ? "Unsaved changes" : published ? "Published" : "Draft"}
+      actions={(
+        <>
+          {dirty
+            ? discardDialog(<Button variant="outline" className="h-10" disabled={submitting}>Cancel</Button>)
+            : (
+              <Button variant="outline" className="h-10" asChild disabled={submitting}>
+                <Link href={`/resources/${slug}`}>Cancel</Link>
+              </Button>
+            )}
+          <Button className="h-10" onClick={submit} disabled={submitting} loading={submitting}>
+            Save changes
+          </Button>
+        </>
+      )}
+      title={title}
+      onTitleChange={(value) => { setTitle(value); setDirty(true); }}
+      disabled={submitting}
+      editor={(
         <MarkdownEditor
           markdown={markdown}
           onChange={(value, initialMarkdownNormalize) => {
@@ -385,52 +310,38 @@ export function EditGuideClient({ slug, userRole, userId }: Props) {
             setDirty(true);
           }}
           imageUploadHandler={uploadFile}
-          contentEditableClassName="min-h-[560px] px-6 py-5 focus:outline-none"
+          contentEditableClassName="min-h-[520px] py-5 focus:outline-none"
           className="guide-mdx-editor"
           readOnly={submitting}
         />
-      </div>
-
-      <div className="sticky bottom-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-background/95 p-3 shadow-lg backdrop-blur">
-        <div className="flex items-center gap-3">
-          <Button onClick={submit} disabled={submitting} loading={submitting}>
-            Save changes
-          </Button>
-          {dirty ? (
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="outline" disabled={submitting}>
-                  Cancel
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    You have unsaved edits. Leaving now will lose them.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Keep editing</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => router.push(`/resources/${slug}`)}>
-                    Discard
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          ) : (
-            <Button variant="outline" asChild disabled={submitting}>
-              <Link href={`/resources/${slug}`}>Cancel</Link>
-            </Button>
-          )}
-        </div>
-
-        {canDelete && (
+      )}
+      settings={(
+        <GuideSettingsPanel
+          type={type}
+          category={category}
+          categorySuggestions={categorySuggestions}
+          featured={featured}
+          featuredRank={featuredRank}
+          targetRoles={targetRoles}
+          targetAreas={targetAreas}
+          published={published}
+          disabled={submitting}
+          onTypeChange={updateType}
+          onCategoryChange={(value) => { setCategory(value); setDirty(true); }}
+          onFeaturedChange={(value) => { setFeatured(value); setDirty(true); }}
+          onFeaturedRankChange={(value) => { setFeaturedRank(value); setDirty(true); }}
+          onTargetRolesChange={(value) => { setTargetRoles(value); setDirty(true); }}
+          onTargetAreasChange={(value) => { setTargetAreas(value); setDirty(true); }}
+          onPublishedChange={(value) => { setPublished(value); setDirty(true); }}
+        />
+      )}
+      footer={canDelete ? (
+        <div className="mt-8 border-t border-border pt-6">
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button className="h-10" variant="destructive" disabled={submitting}>
+              <Button className="h-10" variant="ghost" disabled={submitting}>
                 <Trash2Icon data-icon="inline-start" />
-                Delete
+                Delete guide
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
@@ -446,8 +357,8 @@ export function EditGuideClient({ slug, userRole, userId }: Props) {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-        )}
-      </div>
-    </div>
+        </div>
+      ) : null}
+    />
   );
 }

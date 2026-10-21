@@ -196,10 +196,11 @@
 | `src/lib/format.ts` | 320 |
 | `src/lib/guide-categories.ts` | 140 |
 | `src/lib/guide-content.ts` | 280 |
+| `src/lib/guide-freshness.ts` | 44 |
 | `src/lib/guide-keyboard.ts` | 139 |
 | `src/lib/guide-ranking.ts` | 80 |
 | `src/lib/guide-search-result.ts` | 49 |
-| `src/lib/guides.ts` | 366 |
+| `src/lib/guides.ts` | 369 |
 | `src/lib/http.ts` | 130 |
 | `src/lib/ics-token.ts` | 26 |
 | `src/lib/image-search-modal.ts` | 59 |

@@ -90,3 +90,22 @@ export function parseResourceLayout(value: string | null): ResourceLayoutKey {
     ? (normalized as ResourceLayoutKey)
     : "cards";
 }
+
+const RESOURCE_TYPE_FILTER_KEYS: Record<string, ResourceFilterKey> = {
+  CONTACTS: "contacts",
+  BUILDING_NUMBERS: "building-numbers",
+  MEDIA_DRIVE: "media-drive",
+  SERVER_PATHS: "server-paths",
+  SOP: "sop",
+  HOW_TO: "how-to",
+  TROUBLESHOOTING: "troubleshooting",
+  ACCOUNT_NOTE: "account-note",
+  EVENT_OPS: "event-ops",
+  GENERAL: "general",
+};
+
+/** Library URL that lists every guide of one type, for reader breadcrumbs. */
+export function resourceTypeHref(type: string): string {
+  const key = RESOURCE_TYPE_FILTER_KEYS[type];
+  return key ? `/resources?filter=${key}` : "/resources";
+}
