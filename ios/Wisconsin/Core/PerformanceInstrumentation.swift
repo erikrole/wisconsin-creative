@@ -67,6 +67,11 @@ enum AppRuntimeMode {
         /// delivery truth and recovery controls can be reviewed without a
         /// signed-in session or live APNs state.
         case notifications
+        /// Starts a real checkout-return Live Activity in the simulator, in the
+        /// state named by `GT_LIVE_ACTIVITY` (normal, warning, critical,
+        /// overdue, returned), so the lock screen and Dynamic Island can be
+        /// captured without a signed-in session or a push.
+        case liveActivity = "live-activity"
         case passwordSetup = "password-setup"
         /// The real Bookings tab as an internal Student, with the fixture
         /// changing from one own row to the shared team list when the request
