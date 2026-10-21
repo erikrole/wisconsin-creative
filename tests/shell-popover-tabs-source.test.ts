@@ -31,7 +31,8 @@ describe("app shell bell popover and phone tabs", () => {
 
   it("filters the bell between All and Unread through the API", () => {
     const popover = source("src/components/NotificationsPopover.tsx");
-    expect(popover).toContain('role="tablist"');
+    expect(popover).toContain('aria-label="Filter notifications"');
+    expect(popover).toContain("aria-pressed={selected}");
     expect(popover).toContain('"&unread=true"');
     expect(popover).toContain("}, [open, view]);");
     expect(popover).toContain("Nothing unread");
@@ -46,5 +47,7 @@ describe("app shell bell popover and phone tabs", () => {
     expect(dialog).toContain("if (hidden && pinnedHrefs.includes(href)) togglePinned(href, false);");
     expect(dialog).toContain("Restore defaults");
     expect(dialog).not.toContain("Unpin all");
+    expect(dialog).toContain("grid-rows-[auto_minmax(0,1fr)_auto]");
+    expect(dialog).toContain("!allItems.some((item) => hiddenHrefs.includes(item.href))");
   });
 });

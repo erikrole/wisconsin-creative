@@ -60,7 +60,8 @@ export function SidebarCustomizeDialog({
     if (hidden && pinnedHrefs.includes(href)) togglePinned(href, false);
   }
 
-  const isDefault = pinnedItems.length === 0 && hiddenHrefs.length === 0;
+  // Saved entries can outlive a page or a role change; only count the ones this list can show.
+  const isDefault = pinnedItems.length === 0 && !allItems.some((item) => hiddenHrefs.includes(item.href));
 
   function restoreDefaults() {
     onPinnedChange([]);
@@ -79,7 +80,11 @@ export function SidebarCustomizeDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className={cn("max-h-[min(720px,90dvh)] gap-0 bg-card p-0 sm:max-w-md", className)}
+        // Header and footer stay put while only the page list scrolls.
+        className={cn(
+          "max-h-[min(720px,90dvh)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden bg-card p-0 sm:max-w-md",
+          className,
+        )}
         // Opening on a focused arrow button reads as a selection; focus the dialog itself instead.
         onOpenAutoFocus={(event) => event.preventDefault()}
       >
@@ -151,7 +156,7 @@ export function SidebarCustomizeDialog({
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="size-8 shrink-0 text-muted-foreground"
+                          className="size-8 shrink-0 text-muted-foreground max-md:size-10"
                           aria-pressed={hidden}
                           aria-label={hidden ? `Show ${item.label}` : `Hide ${item.label}`}
                           title={hidden ? "Show in sidebar" : "Hide from sidebar"}
@@ -214,7 +219,7 @@ function PinnedRow({
       value={item.href}
       dragListener={false}
       dragControls={controls}
-      className="flex h-10 select-none items-center gap-1.5 rounded-md border border-border bg-background pl-1 pr-1 text-[14px]"
+      className="flex h-10 select-none items-center max-md:h-12 gap-1.5 rounded-md border border-border bg-background pl-1 pr-1 text-[14px]"
     >
       <button
         type="button"
@@ -231,7 +236,7 @@ function PinnedRow({
         type="button"
         variant="ghost"
         size="icon"
-        className="size-8 text-muted-foreground"
+        className="size-8 text-muted-foreground max-md:size-10"
         disabled={isFirst}
         onClick={() => onMove(-1)}
         aria-label={`Move ${item.label} up`}
@@ -242,7 +247,7 @@ function PinnedRow({
         type="button"
         variant="ghost"
         size="icon"
-        className="size-8 text-muted-foreground"
+        className="size-8 text-muted-foreground max-md:size-10"
         disabled={isLast}
         onClick={() => onMove(1)}
         aria-label={`Move ${item.label} down`}
@@ -253,7 +258,7 @@ function PinnedRow({
         type="button"
         variant="ghost"
         size="icon"
-        className="size-8 text-muted-foreground"
+        className="size-8 text-muted-foreground max-md:size-10"
         onClick={onUnpin}
         aria-label={`Unpin ${item.label}`}
       >

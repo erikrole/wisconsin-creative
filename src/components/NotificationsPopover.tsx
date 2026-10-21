@@ -196,15 +196,14 @@ export function NotificationsPopover({
           </Link>
         </div>
 
-        <div role="tablist" aria-label="Show" className="flex gap-1 border-b border-[var(--sidebar-border)] px-3 py-2">
+        <div role="group" aria-label="Filter notifications" className="flex gap-1 border-b border-[var(--sidebar-border)] px-3 py-2">
           {VIEWS.map((option) => {
             const selected = view === option.value;
             return (
               <button
                 key={option.value}
                 type="button"
-                role="tab"
-                aria-selected={selected}
+                aria-pressed={selected}
                 onClick={() => setView(option.value)}
                 className={cn(
                   "inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-[13px] outline-none transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--sidebar-ring)]",
@@ -222,7 +221,7 @@ export function NotificationsPopover({
           })}
         </div>
 
-        <div role="tabpanel" className="max-h-[min(440px,60vh)] overflow-y-auto p-1.5">
+        <div className="max-h-[min(440px,60vh)] overflow-y-auto p-1.5">
           {items === null && !failed && (
             <div className="flex flex-col gap-1 p-1" aria-busy="true" aria-label="Loading notifications">
               {Array.from({ length: 3 }, (_, i) => (
