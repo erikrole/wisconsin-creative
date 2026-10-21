@@ -68,3 +68,37 @@ export function pseudonymousInstallationKey(value: string): string | null {
   if (!secret) return null;
   return createHmac("sha256", secret).update(`installation:${value}`).digest("hex");
 }
+
+/**
+ * Browser and device family for a web client, such as "Safari · iPhone". Derived
+ * server-side from the User-Agent; nothing finer than the family is kept.
+ */
+export function coarseWebClient(userAgent: string | null): string | null {
+  if (!userAgent) return null;
+  const device = /iPad/.test(userAgent)
+    ? "iPad"
+    : /iPhone/.test(userAgent)
+      ? "iPhone"
+      : /Android/.test(userAgent)
+        ? "Android"
+        : /Macintosh|Mac OS X/.test(userAgent)
+          ? "Mac"
+          : /Windows/.test(userAgent)
+            ? "Windows"
+            : /CrOS/.test(userAgent)
+              ? "Chromebook"
+              : /Linux/.test(userAgent)
+                ? "Linux"
+                : null;
+  const browser = /Edg\//.test(userAgent)
+    ? "Edge"
+    : /Firefox\/|FxiOS\//.test(userAgent)
+      ? "Firefox"
+      : /Chrome\/|CriOS\//.test(userAgent)
+        ? "Chrome"
+        : /Safari\//.test(userAgent)
+          ? "Safari"
+          : null;
+  if (!device && !browser) return null;
+  return [browser, device].filter(Boolean).join(" · ");
+}

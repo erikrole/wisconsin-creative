@@ -6,7 +6,7 @@
 | File | Lines |
 |---|---:|
 | `src/lib/services/accountability.ts` | 655 |
-| `src/lib/services/app-activity-report.ts` | 467 |
+| `src/lib/services/app-activity-report.ts` | 511 |
 | `src/lib/services/app-diagnostics.ts` | 91 |
 | `src/lib/services/auto-assign.ts` | 92 |
 | `src/lib/services/auto-fill-preview.ts` | 322 |
@@ -298,7 +298,7 @@
 | `src/lib/time.ts` | 28 |
 | `src/lib/title-normalization.ts` | 101 |
 | `src/lib/url-sync.ts` | 16 |
-| `src/lib/usage-analytics.ts` | 71 |
+| `src/lib/usage-analytics.ts` | 105 |
 | `src/lib/user-directory-query.ts` | 110 |
 | `src/lib/user-list-cache.ts` | 73 |
 | `src/lib/user-visibility.ts` | 86 |

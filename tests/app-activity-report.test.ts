@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Role } from "@prisma/client";
 
 const dbMock = vi.hoisted(() => ({
@@ -52,8 +52,15 @@ function request() {
   });
 }
 
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 beforeEach(() => {
   vi.clearAllMocks();
+  // Fixture clients were seen in late August; keep them inside the 60-day window.
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-08-22T15:00:00.000Z"));
   process.env.USAGE_ANALYTICS_OWNER_EMAILS = "owner@example.com";
   process.env.USAGE_ANALYTICS_HASH_SECRET = "a-private-test-secret-with-more-than-32-characters";
   process.env.IOS_LATEST_APP_VERSION = "1.0";
@@ -226,6 +233,34 @@ describe("owner app activity report", () => {
     expect(report.crashes).toEqual([{ platform: "ios", appVersion: "1.0", appBuild: null, kind: "crash", count: 2 }]);
     expect(report.kiosks[0]).toMatchObject({ name: "Video Office iPad", appBuild: "2" });
     expect(report.firstOpens.weeks).toHaveLength(12);
+  });
+
+  it("leaves phones not seen in 60 days out of version stats", async () => {
+    vi.setSystemTime(new Date("2026-10-20T15:00:00.000Z"));
+    const report = await getAppActivityReport();
+    expect(report.summary).toMatchObject({ iosInstallations: 1, dormantIosInstallations: 1, staleIosInstallations: 0 });
+    const erik = report.users.find((user) => user.email === "erik@example.com");
+    expect(erik?.clients[0]).toMatchObject({ dormant: true });
+    expect(report.versions.map((row) => row.build)).toEqual(["27"]);
+  });
+
+  it("splits daily iPhone users by app version for the adoption curve", async () => {
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Chicago" }).format(new Date());
+    dbMock.$queryRaw
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ people: 0 }])
+      .mockResolvedValueOnce([
+        { day: today, version: "1.3", people: 2 },
+        { day: today, version: "1.2", people: 5 },
+        { day: today, version: "1.1", people: 1 },
+        { day: today, version: "1.0", people: 1 },
+      ]);
+
+    const report = await getAppActivityReport(7);
+
+    expect(report.activity?.adoption.versions).toEqual(["1.3", "1.2", "1.1", "Older"]);
+    expect(report.activity?.adoption.daily.at(-1)?.counts).toEqual({ "1.3": 2, "1.2": 5, "1.1": 1, Older: 1 });
   });
 
   it("allows the report only to the configured owner", async () => {

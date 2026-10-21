@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { BellOff, Globe, Laptop, Monitor, RefreshCw, Search, ShieldCheck, Smartphone } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
@@ -36,9 +37,12 @@ type AppClient = {
   lastSeenAt: string;
   lastOpenedAt: string | null;
   buildStatus: BuildStatus;
+  /** Not heard from in 60 days: shown, but left out of version stats. */
+  dormant: boolean;
 };
 
 type AppActivityUser = {
+  id: string;
   name: string;
   email: string;
   role: string;
@@ -70,6 +74,7 @@ type AppActivityReport = {
     staleIosInstallations: number;
     developmentIosInstallations: number;
     oldTestflightInstallations: number;
+    dormantIosInstallations: number;
     iosPushOffUsers: number;
     unclassifiedIosInstallations: number;
     testflightInstallations: number;
@@ -91,6 +96,7 @@ type AppActivityReport = {
     daily: DailyActivity[];
     platforms: Array<{ platform: ClientPlatform; people: number; events: number }>;
     surfaces: Array<{ surface: string; web: number; ios: number; total: number }>;
+    adoption: { versions: string[]; daily: Array<{ date: string; counts: Record<string, number> }> };
   } | null;
   firstOpens: {
     weeks: Array<{ weekStart: string; students: number; others: number }>;
@@ -116,7 +122,11 @@ const eyebrow = "text-[11px] font-bold uppercase tracking-[0.09em] text-muted-fo
 // Platform hues from format.ts as theme-aware custom properties.
 const paletteVars =
   "[--aa-web:#3E63DD] [--aa-ios:#12A594] [--aa-macos:#8E4EC6] [--aa-kiosk:#F76B15] " +
-  "dark:[--aa-web:#5F7FE6] dark:[--aa-ios:#139E85] dark:[--aa-macos:#9D6BD6] dark:[--aa-kiosk:#D66A22]";
+  "dark:[--aa-web:#5F7FE6] dark:[--aa-ios:#139E85] dark:[--aa-macos:#9D6BD6] dark:[--aa-kiosk:#D66A22] " +
+  // Sequential teal for versions, newest darkest; "Older" is neutral.
+  "[--aa-v0:#0B6E62] [--aa-v1:#12A594] [--aa-v2:#7FD3C6] [--aa-older:#C4C6CE] " +
+  "dark:[--aa-v0:#3FD0B8] dark:[--aa-v1:#18917F] dark:[--aa-v2:#13574E] dark:[--aa-older:#45474D]";
+const VERSION_FILLS = ["var(--aa-v0)", "var(--aa-v1)", "var(--aa-v2)"];
 
 const DESCRIPTION = "Which versions people run and how they use the site, the iPhone app, and the menu bar.";
 
@@ -231,8 +241,13 @@ function AppActivityBody({ data, days }: { data: AppActivityReport; days: number
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
-        <FirstOpensCard firstOpens={data.firstOpens} />
+        <AdoptionCard activity={data.activity} days={days} />
         <CrashesCard crashes={data.crashes} days={days} />
+      </div>
+
+      <div className={cn("grid gap-4", data.kiosks.length > 0 && "lg:grid-cols-[1.6fr_1fr]")}>
+        <FirstOpensCard firstOpens={data.firstOpens} />
+        {data.kiosks.length > 0 && <KiosksCard kiosks={data.kiosks} now={now} />}
       </div>
 
       <PeopleCard users={data.users} now={now} filter={filter} onFilter={setFilter} />
@@ -507,27 +522,15 @@ function VersionsCard({ data }: { data: AppActivityReport }) {
           })}
         </div>
       )}
-      {data.kiosks.length > 0 && (
-        <div className="mt-4 border-t pt-3">
-          <div className={eyebrow}>Kiosks</div>
-          <div className="mt-2 flex flex-col gap-1.5">
-            {data.kiosks.map((kiosk) => (
-              <div key={kiosk.name} className="flex items-center gap-2 text-sm">
-                <Monitor className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
-                <span className="min-w-0 flex-1 truncate">{kiosk.name}</span>
-                <span className="font-bold tabular-nums">{versionLabel(kiosk.appVersion, kiosk.appBuild)}</span>
-                <span className="w-20 text-right text-xs text-muted-foreground">
-                  {kiosk.lastSeenAt ? formatRelativeTime(kiosk.lastSeenAt, new Date()) : "Never"}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
       <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
         <span>{summary.appStoreInstallations} App Store</span>
         <span>{summary.testflightInstallations} TestFlight</span>
         <span>{summary.developmentIosInstallations} Xcode</span>
+        {summary.dormantIosInstallations > 0 && (
+          <span title="Phones not seen in 60 days are left out of these counts">
+            {summary.dormantIosInstallations} not seen in 60 days
+          </span>
+        )}
         {osVersions.length > 0 && (
           <span className="ml-auto">
             {osVersions.map((row) => `${row.label}: ${row.installs}`).join(" · ")}
@@ -590,11 +593,13 @@ function AttentionCard({
   days: number;
   onShow: (filter: PeopleFilter) => void;
 }) {
-  const oldBeta = data.users.filter((user) => user.clients.some(isOldTestflight));
-  const behindStore = data.users.filter((user) =>
-    user.clients.some((client) => client.buildStatus === "stale" && client.releaseChannel !== "testflight"),
+  const people = data.users.filter((user) => user.active);
+  const oldBeta = people.filter((user) => user.clients.some(isOldTestflight));
+  const behindStore = people.filter((user) =>
+    user.clients.some((client) => !client.dormant && client.buildStatus === "stale" && client.releaseChannel !== "testflight"),
   );
-  const pushOff = data.users.filter((user) => !user.iosPush && user.clients.some((client) => client.platform === "ios"));
+  const pushOff = people.filter((user) => !user.iosPush && hasLiveIos(user));
+  const quietKiosks = data.kiosks.filter((kiosk) => isQuietKiosk(kiosk, new Date(data.generatedAt)));
   const neverOpened = data.users.filter((user) => user.active && !user.used);
   const crashTotals = new Map<string, number>();
   for (const row of data.crashes ?? []) {
@@ -622,6 +627,11 @@ function AttentionCard({
       tone: "var(--orange-text)",
       text: `${pushOff.length} with the iPhone app can't get notifications (${namesOf(pushOff)}).`,
       filter: "pushoff",
+    },
+    quietKiosks.length > 0 && {
+      key: "kiosk",
+      tone: "var(--orange-text)",
+      text: `${quietKiosks.map((kiosk) => kiosk.name).join(", ")} ${quietKiosks.length === 1 ? "hasn't" : "haven't"} checked in for over an hour.`,
     },
     worstCrash && {
       key: "crash",
@@ -755,6 +765,129 @@ function CrashesCard({ crashes, days }: { crashes: AppActivityReport["crashes"];
   );
 }
 
+function versionFill(version: string, index: number): string {
+  return version === "Older" ? "var(--aa-older)" : VERSION_FILLS[index] ?? "var(--aa-older)";
+}
+
+/** Share of daily iPhone users on each version: how fast a release takes over. */
+function AdoptionCard({ activity, days }: { activity: AppActivityReport["activity"]; days: number }) {
+  const [hovered, setHovered] = useState<number | null>(null);
+  const adoption = activity?.adoption;
+  const totals = adoption?.daily.map((day) => Object.values(day.counts).reduce((sum, value) => sum + value, 0)) ?? [];
+  const hasData = totals.some((total) => total > 0);
+  const lastWithData = totals.reduce((last, total, index) => (total > 0 ? index : last), -1);
+  const focus = hovered ?? lastWithData;
+  const focusDay = adoption && focus >= 0 ? adoption.daily[focus] : undefined;
+  const focusTotal = focus >= 0 ? totals[focus] ?? 0 : 0;
+  const height = 120;
+
+  return (
+    <section className={card} aria-label="Release adoption">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className={eyebrow}>Release adoption</div>
+        {adoption && adoption.versions.length > 0 && (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            {adoption.versions.map((version, index) => (
+              <span key={version} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span className="size-2 rounded-full" style={{ background: versionFill(version, index) }} aria-hidden="true" />
+                {version}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+      {!adoption || !hasData ? (
+        <p className="mt-3 text-sm text-muted-foreground">No iPhone activity in the last {days} days.</p>
+      ) : (
+        <>
+          <div className="mt-3 min-h-[20px] text-xs" aria-live="polite">
+            {focusDay && focusTotal > 0 && (
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span className="font-bold text-foreground">{shortDay(focusDay.date)}</span>
+                {adoption.versions.map((version, index) => {
+                  const count = focusDay.counts[version] ?? 0;
+                  return (
+                    <span key={version} className="flex items-center gap-1 text-muted-foreground">
+                      <span className="size-1.5 rounded-full" style={{ background: versionFill(version, index) }} aria-hidden="true" />
+                      {version} <span className="font-bold tabular-nums text-foreground">{Math.round((count / focusTotal) * 100)}%</span>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          <div
+            className="mt-2 flex items-end gap-[2px]"
+            style={{ height }}
+            role="img"
+            aria-label={`Share of daily iPhone users on each app version over the last ${days} days`}
+            onMouseLeave={() => setHovered(null)}
+          >
+            {adoption.daily.map((day, index) => {
+              const total = totals[index] ?? 0;
+              return (
+                <div
+                  key={day.date}
+                  className={cn(
+                    "flex h-full min-w-0 flex-1 flex-col-reverse justify-start gap-[2px] overflow-hidden rounded-[3px] transition-opacity",
+                    hovered !== null && hovered !== index && "opacity-45",
+                  )}
+                  onMouseEnter={() => setHovered(index)}
+                >
+                  {total === 0 ? (
+                    <div className="h-[2px] rounded-full bg-muted" />
+                  ) : (
+                    adoption.versions.map((version, layer) => {
+                      const count = day.counts[version] ?? 0;
+                      if (count === 0) return null;
+                      return (
+                        <div key={version} style={{ flex: count, background: versionFill(version, layer) }} />
+                      );
+                    })
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <div className="mt-2 flex justify-between border-t pt-1.5 text-[10px] text-muted-foreground" aria-hidden="true">
+            <span>{shortDay(adoption.daily[0]!.date)}</span>
+            <span>Today</span>
+          </div>
+        </>
+      )}
+      <p className="mt-3 text-xs text-muted-foreground">Each day&apos;s iPhone users split by the app version they opened.</p>
+    </section>
+  );
+}
+
+function KiosksCard({ kiosks, now }: { kiosks: AppActivityReport["kiosks"]; now: Date }) {
+  return (
+    <section className={card} aria-label="Kiosks">
+      <div className={eyebrow}>Kiosks</div>
+      <div className="mt-3 flex flex-col">
+        {kiosks.map((kiosk) => {
+          const quiet = isQuietKiosk(kiosk, now);
+          return (
+            <div key={kiosk.name} className="flex items-center gap-2 border-b py-2.5 text-sm last:border-b-0">
+              <Monitor className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+              <span className="min-w-0 flex-1 truncate">{kiosk.name}</span>
+              <span className="font-bold tabular-nums">{versionLabel(kiosk.appVersion, kiosk.appBuild)}</span>
+              <span
+                className={cn("flex w-24 items-center justify-end gap-1.5 text-xs", quiet ? "font-bold text-[var(--orange-text)]" : "text-muted-foreground")}
+                title={kiosk.lastSeenAt ? formatDateTime(kiosk.lastSeenAt) : undefined}
+              >
+                {quiet && <span className="size-1.5 rounded-full bg-[var(--orange-text)]" aria-hidden="true" />}
+                {kiosk.lastSeenAt ? formatRelativeTime(kiosk.lastSeenAt, now) : "Never"}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      <p className="mt-3 text-xs text-muted-foreground">A kiosk turns amber when it hasn&apos;t checked in for an hour.</p>
+    </section>
+  );
+}
+
 function PlatformIcon({ platform, className }: { platform: string; className?: string }) {
   if (platform === "ios") return <Smartphone className={className} aria-hidden="true" />;
   if (platform === "macos") return <Laptop className={className} aria-hidden="true" />;
@@ -764,9 +897,9 @@ function PlatformIcon({ platform, className }: { platform: string; className?: s
 function matchesFilter(user: AppActivityUser, filter: PeopleFilter): boolean {
   const has = (platform: string) => user.clients.some((client) => client.platform === platform);
   switch (filter) {
-    case "behind": return user.clients.some((client) => client.buildStatus === "stale");
+    case "behind": return user.clients.some((client) => !client.dormant && client.buildStatus === "stale");
     case "oldbeta": return user.clients.some(isOldTestflight);
-    case "pushoff": return has("ios") && !user.iosPush;
+    case "pushoff": return hasLiveIos(user) && !user.iosPush;
     case "ios": return has("ios");
     case "web": return has("web") && !has("ios");
     case "macos": return has("macos");
@@ -776,7 +909,23 @@ function matchesFilter(user: AppActivityUser, filter: PeopleFilter): boolean {
 }
 
 function isOldTestflight(client: AppClient): boolean {
-  return client.releaseChannel === "testflight" && client.buildStatus === "stale";
+  return !client.dormant && client.releaseChannel === "testflight" && client.buildStatus === "stale";
+}
+
+function hasLiveIos(user: AppActivityUser): boolean {
+  return user.clients.some((client) => client.platform === "ios" && !client.dormant);
+}
+
+const KIOSK_QUIET_MS = 60 * 60_000;
+
+function isQuietKiosk(kiosk: AppActivityReport["kiosks"][number], now: Date): boolean {
+  return !kiosk.lastSeenAt || now.getTime() - new Date(kiosk.lastSeenAt).getTime() > KIOSK_QUIET_MS;
+}
+
+type PeopleSort = "recent" | "version" | "name";
+
+function newestBuild(user: AppActivityUser): number {
+  return Math.max(-1, ...user.clients.filter((client) => client.platform === "ios" && !client.dormant).map((client) => Number(client.appBuild ?? -1)));
 }
 
 function PeopleCard({
@@ -791,22 +940,32 @@ function PeopleCard({
   onFilter: (filter: PeopleFilter) => void;
 }) {
   const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<PeopleSort>("recent");
+  const [showInactive, setShowInactive] = useState(false);
+  const inactiveCount = users.filter((user) => !user.active).length;
+  const pool = useMemo(() => (showInactive ? users : users.filter((user) => user.active)), [users, showInactive]);
 
-  const sorted = useMemo(
-    () => [...users].sort((a, b) => {
-      const at = a.lastSeenAt ? new Date(a.lastSeenAt).getTime() : 0;
-      const bt = b.lastSeenAt ? new Date(b.lastSeenAt).getTime() : 0;
-      return bt - at || a.name.localeCompare(b.name);
-    }),
-    [users],
-  );
+  const sorted = useMemo(() => {
+    const seen = (user: AppActivityUser) => (user.lastSeenAt ? new Date(user.lastSeenAt).getTime() : 0);
+    return [...pool].sort((a, b) => {
+      if (sort === "name") return a.name.localeCompare(b.name);
+      // Oldest build first, so whoever needs an update is at the top.
+      if (sort === "version") {
+        const ab = newestBuild(a);
+        const bb = newestBuild(b);
+        if ((ab < 0) !== (bb < 0)) return ab < 0 ? 1 : -1;
+        return ab - bb || a.name.localeCompare(b.name);
+      }
+      return seen(b) - seen(a) || a.name.localeCompare(b.name);
+    });
+  }, [pool, sort]);
   const counts = useMemo(() => {
     const result = {} as Record<PeopleFilter, number>;
     for (const key of PEOPLE_FILTERS) {
-      result[key] = users.filter((user) => matchesFilter(user, key)).length;
+      result[key] = pool.filter((user) => matchesFilter(user, key)).length;
     }
     return result;
-  }, [users]);
+  }, [pool]);
 
   const needle = query.trim().toLowerCase();
   const visible = sorted.filter(
@@ -829,7 +988,32 @@ function PeopleCard({
       <div className="flex flex-col gap-3 border-b p-4 sm:p-5">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <div className={eyebrow}>People</div>
-          <span className="text-xs text-muted-foreground">Most recently active first</span>
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            {inactiveCount > 0 && (
+              <label className="flex cursor-pointer items-center gap-1.5">
+                <input
+                  type="checkbox"
+                  className="size-3.5 accent-[var(--accent)]"
+                  checked={showInactive}
+                  onChange={(event) => setShowInactive(event.target.checked)}
+                />
+                Show {inactiveCount} inactive
+              </label>
+            )}
+            <label className="flex items-center gap-1.5">
+              Sort
+              <select
+                className="h-8 rounded-md border bg-background px-2 text-xs text-foreground"
+                value={sort}
+                onChange={(event) => setSort(event.target.value as PeopleSort)}
+                aria-label="Sort people"
+              >
+                <option value="recent">Last active</option>
+                <option value="version">Oldest version first</option>
+                <option value="name">Name</option>
+              </select>
+            </label>
+          </div>
         </div>
         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div className="-mx-1 overflow-x-auto px-1">
@@ -888,6 +1072,13 @@ function PersonRow({ user, now }: { user: AppActivityUser; now: Date }) {
   const webClients = clients.filter((client) => client.platform === "web");
   const macClients = clients.filter((client) => client.platform === "macos");
   const latestWeb = webClients[0];
+  const lastActive = user.lastSeenAt ? (
+    <span title={formatDateTime(user.lastSeenAt)} className="font-medium text-foreground">
+      {formatRelativeTime(user.lastSeenAt, now)}
+    </span>
+  ) : (
+    <span>Never</span>
+  );
 
   return (
     <li className="grid gap-x-4 gap-y-2 px-4 py-3 sm:px-5 md:grid-cols-[minmax(0,15rem)_minmax(0,1fr)_7rem] md:items-center">
@@ -898,12 +1089,13 @@ function PersonRow({ user, now }: { user: AppActivityUser; now: Date }) {
         >
           {initials(user.name)}
         </span>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <span className="min-w-0 truncate">
+            <Link href={`/staff/${user.id}`} className="min-w-0 truncate hover:underline">
               <span className="brand-identity font-medium text-foreground">{user.name}</span>
-            </span>
+            </Link>
             {!user.active && <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Inactive</span>}
+            <span className="ml-auto shrink-0 pl-2 text-xs text-muted-foreground md:hidden">{lastActive}</span>
           </div>
           <div className="truncate text-xs text-muted-foreground">{user.email} · {user.role.toLowerCase()}</div>
         </div>
@@ -919,7 +1111,7 @@ function PersonRow({ user, now }: { user: AppActivityUser; now: Date }) {
             Menu bar{client.appVersion ? ` ${client.appVersion}` : ""}
           </ClientChip>
         ))}
-        {iosClients.length > 0 && !user.iosPush && (
+        {hasLiveIos(user) && !user.iosPush && (
           <span
             className="inline-flex items-center gap-1.5 rounded-full border border-dashed px-2.5 py-1 text-xs text-muted-foreground"
             title="This iPhone has no push token, so shift and booking alerts can't reach it"
@@ -930,21 +1122,13 @@ function PersonRow({ user, now }: { user: AppActivityUser; now: Date }) {
         )}
         {latestWeb && (
           <ClientChip platform="web" title={`Last on the web ${formatDateTime(latestWeb.lastSeenAt)}`}>
-            Web
+            {latestWeb.deviceModel ? `Web · ${latestWeb.deviceModel}` : "Web"}
             {webClients.length > 1 && <span className="text-muted-foreground"> · {webClients.length} browsers</span>}
           </ClientChip>
         )}
       </div>
 
-      <div className="pl-11 text-xs text-muted-foreground md:pl-0 md:text-right">
-        {user.lastSeenAt ? (
-          <span title={formatDateTime(user.lastSeenAt)}>
-            <span className="font-medium text-foreground">{formatRelativeTime(user.lastSeenAt, now)}</span>
-          </span>
-        ) : (
-          <span>Never</span>
-        )}
-      </div>
+      <div className="hidden text-right text-xs text-muted-foreground md:block">{lastActive}</div>
     </li>
   );
 }
@@ -970,6 +1154,18 @@ function ClientChip({
 }
 
 function IosChip({ client }: { client: AppClient }) {
+  if (client.dormant) {
+    return (
+      <span
+        className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-dashed px-2.5 py-1 text-xs text-muted-foreground"
+        title={`${deviceName(client.deviceModel) ?? "iPhone"} not seen in 60 days, so it's left out of version stats`}
+      >
+        <Smartphone className="size-3 shrink-0" aria-hidden="true" />
+        <span className="tabular-nums">{versionLabel(client.appVersion, client.appBuild)}</span>
+        <span>· Not seen since {new Date(client.lastSeenAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+      </span>
+    );
+  }
   const tone = buildStatusTone(client.buildStatus);
   const device = deviceName(client.deviceModel);
   const detail = [device, client.osVersion ? `iOS ${client.osVersion}` : null, channelLabel(client.releaseChannel)]

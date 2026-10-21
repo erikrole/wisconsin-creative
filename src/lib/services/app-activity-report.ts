@@ -33,6 +33,9 @@ export type LatestIosBuild = {
 
 const APP_ACTIVITY_PERIODS = [7, 30, 90] as const;
 const ACTIVE_WINDOW_MS = 7 * 86_400_000;
+// A phone not heard from in this long was most likely replaced or had the app
+// deleted; it stays visible but stops counting toward version stats.
+const DORMANT_AFTER_MS = 60 * 86_400_000;
 const ACTIVITY_PLATFORMS = ["web", "ios", "macos", "kiosk"] as const;
 type ActivityPlatform = (typeof ACTIVITY_PLATFORMS)[number];
 
@@ -110,6 +113,17 @@ function isActivityPlatform(value: string): value is ActivityPlatform {
 }
 
 type DailyRow = { day: string; platform: string; people: number };
+type VersionDayRow = { day: string; version: string; people: number };
+
+function compareVersions(a: string, b: string): number {
+  const left = a.split(".").map(Number);
+  const right = b.split(".").map(Number);
+  for (let index = 0; index < Math.max(left.length, right.length); index += 1) {
+    const diff = (left[index] ?? 0) - (right[index] ?? 0);
+    if (diff !== 0) return diff;
+  }
+  return 0;
+}
 type PlatformRow = { platform: string; people: number; events: number };
 
 /**
@@ -119,7 +133,7 @@ type PlatformRow = { platform: string; people: number; events: number };
  */
 async function activitySection(days: number, timeZone: string) {
   const since = new Date(Date.now() - days * 86_400_000);
-  const [daily, platforms, overall, surfaces] = await Promise.all([
+  const [daily, platforms, overall, surfaces, versionDays] = await Promise.all([
     db.$queryRaw<DailyRow[]>(Prisma.sql`
       SELECT to_char((occurred_at AT TIME ZONE ${timeZone})::date, 'YYYY-MM-DD') AS day,
              platform,
@@ -146,6 +160,15 @@ async function activitySection(days: number, timeZone: string) {
       where: { occurredAt: { gte: since }, eventName: "surface_viewed" },
       _count: { _all: true },
     }),
+    // iPhone people per app version per day, for the release adoption curve.
+    db.$queryRaw<VersionDayRow[]>(Prisma.sql`
+      SELECT to_char((occurred_at AT TIME ZONE ${timeZone})::date, 'YYYY-MM-DD') AS day,
+             app_version AS version,
+             COUNT(DISTINCT actor_hash)::int AS people
+      FROM product_events
+      WHERE occurred_at >= ${since} AND platform = 'ios' AND app_version IS NOT NULL
+      GROUP BY 1, 2
+    `),
   ]);
 
   const dayKey = (date: Date) => new Intl.DateTimeFormat("en-CA", { timeZone }).format(date);
@@ -167,9 +190,24 @@ async function activitySection(days: number, timeZone: string) {
     surfaceTotals.set(row.surface, entry);
   }
 
+  // Newest three versions by name; everything older folds into "Older".
+  const versionNames = [...new Set((versionDays ?? []).map((row) => row.version))].sort((a, b) => compareVersions(b, a));
+  const named = versionNames.slice(0, 3);
+  const adoptionDays = [...series.keys()].map((date) => ({ date, counts: {} as Record<string, number> }));
+  const adoptionIndex = new Map(adoptionDays.map((day, index) => [day.date, index]));
+  for (const row of versionDays ?? []) {
+    const position = adoptionIndex.get(row.day);
+    if (position === undefined) continue;
+    const key = named.includes(row.version) ? row.version : "Older";
+    const counts = adoptionDays[position]!.counts;
+    counts[key] = (counts[key] ?? 0) + Number(row.people);
+  }
+  const adoptionVersions = versionNames.length > named.length ? [...named, "Older"] : named;
+
   return {
     days,
     people: Number(overall[0]?.people ?? 0),
+    adoption: { versions: adoptionVersions, daily: adoptionDays },
     daily: [...series.entries()].map(([date, counts]) => ({ date, ...counts })),
     platforms: ACTIVITY_PLATFORMS.map((platform) => {
       const row = platforms.find((candidate) => candidate.platform === platform);
@@ -360,6 +398,7 @@ export async function getAppActivityReport(days = 30) {
     );
 
     return {
+      id: user.id,
       name: user.name,
       email: user.email,
       role: user.role,
@@ -382,12 +421,16 @@ export async function getAppActivityReport(days = 30) {
         lastSeenAt: client.lastSeenAt.toISOString(),
         lastOpenedAt: iso(client.lastOpenedAt),
         buildStatus: iosBuildStatus(client, latestIosBuild),
+        dormant: now - client.lastSeenAt.getTime() > DORMANT_AFTER_MS,
       })),
     };
   });
 
   const clients = reportUsers.flatMap((user) => user.clients);
-  const iosClients = clients.filter((client) => client.platform === "ios");
+  const allIosClients = clients.filter((client) => client.platform === "ios");
+  const iosClients = allIosClients.filter((client) => !client.dormant);
+  const hasLiveIos = (user: (typeof reportUsers)[number]) =>
+    user.clients.some((client) => client.platform === "ios" && !client.dormant);
   const usersWith = (predicate: (user: (typeof reportUsers)[number]) => boolean) =>
     reportUsers.filter(predicate).length;
   const seenSince = (client: (typeof clients)[number], windowMs: number) =>
@@ -427,7 +470,7 @@ export async function getAppActivityReport(days = 30) {
       usedUsers: usersWith((user) => user.used),
       neverUsedUsers: usersWith((user) => !user.used),
       activeUsers: usersWith((user) => user.clients.some((client) => seenSince(client, ACTIVE_WINDOW_MS))),
-      iosUsers: usersWith((user) => user.clients.some((client) => client.platform === "ios")),
+      iosUsers: usersWith(hasLiveIos),
       webUsers: usersWith((user) => user.clients.some((client) => client.platform === "web")),
       macosUsers: usersWith((user) => user.clients.some((client) => client.platform === "macos")),
       iosInstallations: iosClients.length,
@@ -438,10 +481,11 @@ export async function getAppActivityReport(days = 30) {
         (client) => client.releaseChannel === "testflight" && client.buildStatus === "stale",
       ).length,
       // Someone with the iPhone app but no live push token can't be reached by a shift alert.
-      iosPushOffUsers: usersWith((user) => !user.iosPush && user.clients.some((client) => client.platform === "ios")),
+      iosPushOffUsers: usersWith((user) => !user.iosPush && hasLiveIos(user)),
+      dormantIosInstallations: allIosClients.length - iosClients.length,
       unclassifiedIosInstallations: iosClients.filter((client) => client.buildStatus === "unknown").length,
-      testflightInstallations: clients.filter((client) => client.releaseChannel === "testflight").length,
-      appStoreInstallations: clients.filter((client) => client.releaseChannel === "app_store").length,
+      testflightInstallations: iosClients.filter((client) => client.releaseChannel === "testflight").length,
+      appStoreInstallations: iosClients.filter((client) => client.releaseChannel === "app_store").length,
       webInstallations: clients.filter((client) => client.platform === "web").length,
     },
     latestIosBuild,
