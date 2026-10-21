@@ -1,6 +1,21 @@
 [
   {
     "date": "2026-10-21",
+    "title": "Clearer crew picker",
+    "type": "improvement",
+    "summary": "Choosing someone for a shift now shows who fits best, who needs a second look, and who can't take it, in plain words.",
+    "details": [
+      "Each person shows why they fit and how many shifts they already have this week.",
+      "People who are off or blocked are listed last and can't be picked.",
+      "The numeric scores are gone."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 0
+  },
+  {
+    "date": "2026-10-21",
     "title": "Quicker reviews of upcoming changes",
     "type": "improvement",
     "summary": "Upcoming changes can be tried out on a computer with one step before they go live, so updates get checked sooner.",

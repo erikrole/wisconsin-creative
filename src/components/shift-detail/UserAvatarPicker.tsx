@@ -1,18 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { SearchIcon } from "lucide-react";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import {
-  filterCandidatesByConflict,
-  type CandidateConflictFilter,
-} from "@/lib/assignment-conflict-review";
-import type { CandidateRecommendation, CandidateScoreBucket } from "@/lib/candidate-scoring-types";
+import type { CandidateRecommendation } from "@/lib/candidate-scoring-types";
 import { shiftWorkerLabelForProfile, shiftWorkerSlotLabel, shiftWorkerTypeForProfile } from "@/lib/shift-display";
 import { cn } from "@/lib/utils";
 import { AREA_LABELS } from "@/types/areas";
@@ -39,30 +34,36 @@ type Props = {
   onSearchChange: (value: string) => void;
   onSelect: (userId: string) => void;
   disabled: boolean;
-  /** Map of userId to conflict note for users with scheduling conflicts */
-  conflictMap?: Record<string, string>;
-  conflictsLoading?: boolean;
   candidateScores?: Record<string, CandidateRecommendation>;
   scoresLoading?: boolean;
   scoresLoadError?: boolean;
   slotWorkerType?: string | null;
 };
 
-const SCORE_BUCKET_LABELS: Record<CandidateScoreBucket, string> = {
-  recommended: "Recommended",
-  good_fit: "Good fit",
-  warning: "Warning",
-  overloaded: "Overloaded",
+type Tone = "good" | "check" | "blocked" | "none";
+type Group = { key: string; label: string | null; users: PickerUser[] };
+
+const TONE_DOT: Record<Tone, string> = {
+  good: "bg-[var(--green)]",
+  check: "bg-[var(--orange)]",
+  blocked: "bg-destructive",
+  none: "bg-transparent",
 };
 
-const SCORE_BUCKET_ORDER: CandidateScoreBucket[] = ["recommended", "good_fit", "warning", "overloaded"];
+function toneFor(score: CandidateRecommendation | undefined): Tone {
+  if (!score) return "none";
+  if (score.blockingConflict) return "blocked";
+  if (score.bucket === "recommended" || score.bucket === "good_fit") {
+    return score.advisoryConflict ? "check" : "good";
+  }
+  return "check";
+}
 
-const SCORE_BUCKET_BADGE: Record<CandidateScoreBucket, "default" | "secondary" | "orange" | "destructive"> = {
-  recommended: "default",
-  good_fit: "secondary",
-  warning: "orange",
-  overloaded: "destructive",
-};
+function workloadLabel(score: CandidateRecommendation | undefined): string | null {
+  if (!score) return null;
+  const count = score.workload.weekAssignments;
+  return count === 0 ? "Free this week" : `${count} this week`;
+}
 
 export function UserAvatarPicker({
   users,
@@ -73,163 +74,117 @@ export function UserAvatarPicker({
   onSearchChange,
   onSelect,
   disabled,
-  conflictMap,
-  conflictsLoading,
   candidateScores,
   scoresLoading,
   scoresLoadError = false,
   slotWorkerType,
 }: Props) {
-  const [conflictFilter, setConflictFilter] = useState<CandidateConflictFilter>("all");
-  const canFilterConflicts = Boolean(conflictMap);
-  const filteredUsers = useMemo(
-    () => filterCandidatesByConflict(users, conflictMap, conflictFilter),
-    [conflictFilter, conflictMap, users],
-  );
-  const groupedUsers = useMemo(() => {
-    if (!candidateScores) return [{ key: "all", label: null, users: filteredUsers }];
-    const rankedUsers = [...filteredUsers].sort((a, b) =>
+  const groups = useMemo<Group[]>(() => {
+    const query = search.trim().toLowerCase();
+    const matching = users.filter((user) => !query || user.name.toLowerCase().includes(query));
+    if (!candidateScores) return [{ key: "all", label: null, users: matching }];
+    const ranked = [...matching].sort((a, b) =>
       (candidateScores[b.id]?.score ?? -1) - (candidateScores[a.id]?.score ?? -1)
       || a.name.localeCompare(b.name),
     );
-    const groups: Array<{ key: string; label: string | null; users: PickerUser[] }> = SCORE_BUCKET_ORDER.map((bucket) => ({
-      key: bucket,
-      label: SCORE_BUCKET_LABELS[bucket],
-      users: rankedUsers.filter((user) => candidateScores[user.id]?.bucket === bucket),
-    })).filter((group) => group.users.length > 0);
-    const unscored = rankedUsers.filter((user) => !candidateScores[user.id]);
-    if (unscored.length > 0) groups.push({ key: "unscored", label: "Other", users: unscored });
-    return groups;
-  }, [candidateScores, filteredUsers]);
+    const tone = (user: PickerUser) => toneFor(candidateScores[user.id]);
+    const best = ranked.filter((user) => tone(user) === "good");
+    const check = ranked.filter((user) => tone(user) === "check" || tone(user) === "none");
+    const blocked = ranked.filter((user) => tone(user) === "blocked");
+    return [
+      { key: "best", label: "Best fit", users: best },
+      { key: "check", label: "Worth a look", users: check },
+      { key: "blocked", label: "Can't take this shift", users: blocked },
+    ].filter((group) => group.users.length > 0);
+  }, [candidateScores, search, users]);
+
+  const matchCount = groups.reduce((total, group) => total + group.users.length, 0);
+
   return (
-    <>
-      <div className="mb-3 flex items-center gap-2">
+    <div className="flex flex-col">
+      <div className="relative mb-2">
+        <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
         <Input
           id="user-avatar-picker-search"
           name="user-avatar-picker-search"
           type="text"
-          className="h-10 text-sm"
-          placeholder="Search by name"
+          className="h-10 pl-9 text-sm"
+          placeholder="Search people"
+          aria-label="Search people"
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
           autoFocus
         />
-        <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">
-          {filteredUsers.length} available
-        </span>
       </div>
-      {canFilterConflicts && (
-        <div className="mb-3 border-b border-border/50 pb-2">
-          <ToggleGroup
-            type="single"
-            value={conflictFilter}
-            onValueChange={(value) => {
-              if (value) setConflictFilter(value as CandidateConflictFilter);
-            }}
-            className="grid w-full grid-cols-3 gap-1"
-            aria-label="Filter assignment candidates by conflict state"
-          >
-            <ToggleGroupItem value="all" className="h-8 px-2 text-[11px]">
-              All
-            </ToggleGroupItem>
-            <ToggleGroupItem value="conflicts" className="h-8 px-2 text-[11px]">
-              Conflicts
-            </ToggleGroupItem>
-            <ToggleGroupItem value="clean" className="h-8 px-2 text-[11px]">
-              Clean
-            </ToggleGroupItem>
-          </ToggleGroup>
-        </div>
-      )}
       {loading ? (
-        <p className="text-xs text-muted-foreground p-2">Loading users...</p>
-      ) : scoresLoading && !candidateScores ? (
-        <p className="text-xs text-muted-foreground p-2">Ranking candidates...</p>
+        <p className="p-2 text-sm text-muted-foreground">Loading people…</p>
       ) : loadError ? (
         <Alert variant="destructive" className="p-3">
-          <AlertDescription className="flex flex-col gap-2 text-xs">
+          <AlertDescription className="flex flex-col gap-2 text-sm">
             <span className="block">
               {loadError === "network"
                 ? "Could not reach the server. Retry before assigning this slot."
-                : "Could not load assignable users. Retry before assigning this slot."}
+                : "Could not load people. Retry before assigning this slot."}
             </span>
             {onRetry && (
               <Button type="button" variant="outline" size="sm" className="min-h-10" onClick={onRetry}>
-                Retry users
+                Retry
               </Button>
             )}
           </AlertDescription>
         </Alert>
-      ) : filteredUsers.length === 0 ? (
-        <p className="text-xs text-muted-foreground p-2">
-          {search
-            ? "No matching users."
-            : conflictFilter === "conflicts"
-              ? "No conflicted candidates for this slot."
-              : conflictFilter === "clean"
-                ? "No clean candidates for this slot."
-                : "No active users found."}
+      ) : matchCount === 0 ? (
+        <p className="p-2 text-sm text-muted-foreground">
+          {search ? "No one matches that name." : "No active people found."}
         </p>
       ) : (
         <ScrollArea className="h-72 max-h-[var(--radix-popover-content-available-height)]">
-          <div className="flex flex-col gap-1 pr-2">
-            {groupedUsers.map((group) => (
-              <div key={group.key} className="flex flex-col gap-1">
+          <div className="flex flex-col gap-3 pr-2">
+            {groups.map((group) => (
+              <div key={group.key} className="flex flex-col gap-0.5">
                 {group.label && (
-                  <div className="flex items-center justify-between px-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                    <span>{group.label}</span>
-                    <span className="tabular-nums">{group.users.length}</span>
-                  </div>
+                  <div className="px-2 pb-1 text-xs font-medium text-muted-foreground">{group.label}</div>
                 )}
                 {group.users.map((u) => {
-                  const conflict = conflictMap?.[u.id];
                   const score = candidateScores?.[u.id];
-                  const topReason = score?.warnings[0]?.label ?? score?.reasons[0]?.label;
+                  const tone = toneFor(score);
+                  const blocked = tone === "blocked";
                   const candidateWorkerType = shiftWorkerTypeForProfile(u);
                   const candidateWorkerLabel = shiftWorkerLabelForProfile(u) ?? "Worker";
                   const roleSlotNote = slotWorkerType && candidateWorkerType && candidateWorkerType !== slotWorkerType
-                    ? `Will use ${shiftWorkerSlotLabel(candidateWorkerType).toLowerCase()} and leave ${shiftWorkerSlotLabel(slotWorkerType).toLowerCase()} open.`
+                    ? `Fills a ${shiftWorkerSlotLabel(candidateWorkerType).toLowerCase()} instead`
                     : null;
+                  const detail = blocked
+                    ? score?.advisoryConflictNote ?? score?.warnings[0]?.label ?? "Unavailable"
+                    : score?.warnings[0]?.label
+                      ?? score?.advisoryConflictNote
+                      ?? roleSlotNote
+                      ?? score?.reasons[0]?.label
+                      ?? `${candidateWorkerLabel}${u.primaryArea ? ` · ${AREA_LABELS[u.primaryArea] ?? u.primaryArea}` : ""}`;
+                  const workload = workloadLabel(score);
                   return (
                     <Button
                       key={u.id}
                       type="button"
                       variant="ghost"
-                      className="min-h-12 w-full justify-start gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-[background-color,color,scale] hover:bg-accent active:scale-[0.96] disabled:opacity-50"
+                      className={cn(
+                        "h-auto min-h-12 w-full justify-start gap-3 rounded-md px-2 py-1.5 text-left font-normal hover:bg-accent focus-visible:bg-accent",
+                        blocked && "opacity-60",
+                      )}
                       onClick={() => onSelect(u.id)}
-                      disabled={disabled}
-                      title={topReason ?? roleSlotNote ?? conflict ?? undefined}
+                      disabled={disabled || blocked}
                     >
-                      <div className="relative shrink-0">
-                        <UserAvatar name={u.name} avatarUrl={u.avatarUrl} size="sm" />
-                        {conflict && (
-                          <span className="absolute -top-0.5 -right-0.5 size-2.5 rounded-full border border-background bg-[var(--orange)]" />
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm font-medium">{u.name}</div>
-                        <div className="truncate text-[11px] text-muted-foreground">
-                          {candidateWorkerLabel}
-                          {u.primaryArea ? ` · ${AREA_LABELS[u.primaryArea] ?? u.primaryArea}` : ""}
-                        </div>
-                      </div>
-                      <div className="ml-auto flex shrink-0 items-center gap-1">
-                        {conflict && (
-                          <Badge variant="orange" size="sm" className="px-1.5 py-0 text-[9px]">Conflict</Badge>
-                        )}
-                        {score && (
-                          <Badge
-                            variant={SCORE_BUCKET_BADGE[score.bucket]}
-                            size="sm"
-                            className={cn(
-                              "px-1.5 py-0 text-[9px] tabular-nums",
-                              score.bucket === "recommended" && "bg-[var(--green)] text-white hover:bg-[var(--green)]",
-                            )}
-                          >
-                            {score.score}
-                          </Badge>
-                        )}
-                      </div>
+                      <UserAvatar name={u.name} avatarUrl={u.avatarUrl} size="sm" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium">{u.name}</span>
+                        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          {tone !== "none" && <span className={cn("size-1.5 shrink-0 rounded-full", TONE_DOT[tone])} aria-hidden="true" />}
+                          <span className="truncate">{detail}</span>
+                        </span>
+                      </span>
+                      {workload && !blocked && (
+                        <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{workload}</span>
+                      )}
                     </Button>
                   );
                 })}
@@ -238,16 +193,14 @@ export function UserAvatarPicker({
           </div>
         </ScrollArea>
       )}
-      {(conflictsLoading || scoresLoading) && (
-        <p className="mt-1 px-1.5 text-[10px] text-muted-foreground">
-          {scoresLoading ? "Scoring candidates..." : "Checking availability..."}
-        </p>
+      {scoresLoading && !loading && (
+        <p className="mt-1 px-2 text-xs text-muted-foreground">Checking availability…</p>
       )}
       {scoresLoadError && (
-        <p className="mt-1 px-1.5 text-[10px] text-[var(--orange-text)]">
-          Ranking unavailable. Candidates are shown alphabetically.
+        <p className="mt-1 px-2 text-xs text-[var(--orange-text)]">
+          Availability unavailable. People are shown alphabetically.
         </p>
       )}
-    </>
+    </div>
   );
 }
