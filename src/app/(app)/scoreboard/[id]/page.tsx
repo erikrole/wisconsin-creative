@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import { BreadcrumbLabel } from "@/components/BreadcrumbContext";
 import { DetailPageHeader } from "@/components/DetailPageHeader";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +47,7 @@ export default async function PersonScoreboardPage({
 
   return (
     <>
+      <BreadcrumbLabel label={subject.name} />
       <DetailPageHeader
         title={subject.name}
         subtitle="Season Scoreboard shared with everyone signed in."

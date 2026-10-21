@@ -1,5 +1,6 @@
 "use client";
 
+import { chromeFont } from "@/lib/chrome-font";
 import { cn } from "@/lib/utils";
 
 interface PageHeaderProps {
@@ -12,7 +13,8 @@ interface PageHeaderProps {
 
 /**
  * Standardized page header for all routes.
- * Gotham Black title via the global h1 scale, optional description, right-aligned actions.
+ * Title in the chrome typeface (see `[data-page-header]` in globals.css), optional description,
+ * right-aligned actions.
  */
 export function PageHeader({
   title,
@@ -23,7 +25,9 @@ export function PageHeader({
 }: PageHeaderProps) {
   return (
     <header
+      data-page-header
       className={cn(
+        chromeFont.variable,
         "mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between",
         className
       )}

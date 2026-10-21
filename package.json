@@ -23,6 +23,7 @@
   },
   "overrides": {
     "esbuild": "0.28.1",
+    "vite": "7.3.7",
     "fast-uri": "3.1.8",
     "http-cache-semantics": "4.3.0",
     "js-yaml": "4.3.2",

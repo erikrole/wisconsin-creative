@@ -3,19 +3,19 @@ import { generateEventTitle, sportColumnLabel, sportLabel, sportProgram, sportsG
 
 describe("generateEventTitle", () => {
   it("generates home title", () => {
-    expect(generateEventTitle("MBB", "Michigan State", true)).toBe("MBB vs Michigan State");
+    expect(generateEventTitle("MBB", "Michigan State", true)).toBe("Men's Basketball vs Michigan State");
   });
 
   it("generates away title", () => {
-    expect(generateEventTitle("FB", "Ohio State", false)).toBe("FB at Ohio State");
+    expect(generateEventTitle("FB", "Ohio State", false)).toBe("Football at Ohio State");
   });
 
   it("generates neutral title", () => {
-    expect(generateEventTitle("WBB", "Iowa", null)).toBe("WBB vs Iowa (Neutral)");
+    expect(generateEventTitle("WBB", "Iowa", null)).toBe("Women's Basketball vs Iowa");
   });
 
   it("handles missing opponent", () => {
-    expect(generateEventTitle("VB", null, true)).toBe("VB vs TBD");
+    expect(generateEventTitle("VB", null, true)).toBe("Volleyball vs TBD");
   });
 });
 

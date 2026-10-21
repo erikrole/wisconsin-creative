@@ -1,5 +1,6 @@
 "use client";
 
+import { displayBookingTitle } from "@/lib/booking-display-title";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -91,7 +92,7 @@ export default function BookingDetailPage({
   const [closeRemainingReason, setCloseRemainingReason] = useState("");
 
   useEffect(() => {
-    if (booking?.title) setBreadcrumbLabel(booking.title);
+    if (booking?.title) setBreadcrumbLabel(displayBookingTitle(booking.title));
   }, [booking?.title, setBreadcrumbLabel]);
 
   // Live countdown tick — faster for urgent/overdue bookings

@@ -2,11 +2,10 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, List, Network } from "lucide-react";
+import { List, Network } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
@@ -288,13 +287,7 @@ export default function OrgChartPage() {
 
   return (
     <>
-      <PageHeader title="Org chart" description="Reporting relationships for active staff and students.">
-        <Button className="h-10" asChild variant="outline">
-          <Link href="/staff">
-            <ArrowLeft data-icon="inline-start" /> Back to staff
-          </Link>
-        </Button>
-      </PageHeader>
+      <PageHeader title="Org chart" description="Reporting relationships for active staff and students." />
 
       {!loading && !error && nameOnlyManagers > 0 && (
         <div role="status" className="mb-4 flex items-center gap-3 rounded-xl border border-[#f5e29a] bg-[#fff8e1] px-4 py-3 text-sm text-[#5c4400]">

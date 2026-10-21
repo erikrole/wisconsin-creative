@@ -14,7 +14,7 @@ describe("notifications support hardening contracts", () => {
   });
 
   it("styles all checkout due and overdue escalation notification types as urgent rows", () => {
-    const page = source("src/app/(app)/notifications/page.tsx");
+    const page = source("src/lib/notification-meta.ts");
 
     expect(page).toContain('type.startsWith("checkout_due")');
     expect(page).toContain('type.startsWith("checkout_overdue")');

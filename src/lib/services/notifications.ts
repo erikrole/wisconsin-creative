@@ -38,6 +38,7 @@ import {
   type CheckoutEscalationStageType,
 } from "@/lib/checkout-escalation-policy";
 import { unique } from "@/lib/utils";
+import { displayBookingTitle } from "@/lib/booking-display-title";
 
 /**
  * Defers a push send past the response without letting the serverless
@@ -376,7 +377,7 @@ async function persistCheckoutEscalation(args: {
         body: args.body,
         payload: {
           bookingId: args.checkout.id,
-          bookingTitle: args.checkout.title,
+          bookingTitle: displayBookingTitle(args.checkout.title),
           requesterName: args.checkout.custodyScope === "SHARED"
             ? "Shared checkout"
             : args.checkout.requester.name,
@@ -424,7 +425,7 @@ async function persistCheckoutEscalation(args: {
         kind: "checkout",
         title: args.title,
         body: args.body,
-        bookingTitle: args.checkout.title,
+        bookingTitle: displayBookingTitle(args.checkout.title),
         dueAt: args.checkout.endsAt.toISOString(),
       }),
     }, category);
@@ -450,7 +451,7 @@ async function deliverCheckoutEscalation(args: {
   if (args.checkout.custodyScope !== "SHARED" && args.rule.notifyRequester && counts.requester < args.config.maxRequesterNotificationsPerDueDate) {
     const body = requesterEscalationBody({
       type: args.rule.type,
-      checkoutTitle: args.checkout.title,
+      checkoutTitle: displayBookingTitle(args.checkout.title),
       dueAt: args.checkout.endsAt,
       gracePeriodHours: args.gracePeriodHours,
       now: args.now,

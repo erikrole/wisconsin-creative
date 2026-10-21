@@ -3,19 +3,11 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  AlertTriangle,
-  ArrowLeftRightIcon,
   Bell,
-  CalendarDaysIcon,
   CheckCircle2,
-  CircleIcon,
   ExternalLink,
-  KeyRoundIcon,
-  PackageSearchIcon,
   RefreshCw,
   Settings2Icon,
-  ShirtIcon,
-  UserRoundIcon,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -35,6 +27,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Spinner } from "@/components/ui/spinner";
 import { dispatchNotificationCountChanged } from "@/lib/notification-count-sync";
 import { notificationDestinationPath } from "@/lib/notification-destination";
+import { formatNotificationTime as formatTime, notificationMeta } from "@/lib/notification-meta";
 import { cn } from "@/lib/utils";
 
 type Notification = {
@@ -61,114 +54,8 @@ type MeData = {
   role: string;
 };
 
-type NotificationMeta = {
-  icon: typeof AlertTriangle;
-  label: string;
-  toneClass: string;
-};
-
-function notificationMeta(type: string): NotificationMeta {
-  if (type.startsWith("checkout_due") || type.startsWith("checkout_overdue")) {
-    return {
-      icon: AlertTriangle,
-      label: "Overdue",
-      toneClass: "bg-[var(--orange-bg)] text-[var(--orange-text)]",
-    };
-  }
-
-  switch (type) {
-    case "overdue_nudge":
-      return {
-        icon: AlertTriangle,
-        label: "Overdue",
-        toneClass: "bg-[var(--orange-bg)] text-[var(--orange-text)]",
-      };
-    case "shift_gear_up":
-      return {
-        icon: ShirtIcon,
-        label: "Shift",
-        toneClass: "bg-[var(--green-bg)] text-[var(--green-text)]",
-      };
-    case "trade_claimed":
-    case "trade_approved":
-    case "trade_completed":
-      return {
-        icon: ArrowLeftRightIcon,
-        label: "Trade",
-        toneClass: "bg-[var(--blue-bg)] text-[var(--blue-text)]",
-      };
-    case "trade_declined":
-    case "trade_expired":
-      return {
-        icon: ArrowLeftRightIcon,
-        label: "Trade",
-        toneClass: "bg-[var(--red-bg)] text-[var(--red-text)]",
-      };
-    case "badge_awarded":
-      return {
-        icon: UserRoundIcon,
-        label: "Recognition",
-        toneClass: "bg-[var(--purple-bg)] text-[var(--purple-text)]",
-      };
-    case "calendar_sync_failure":
-      return {
-        icon: CalendarDaysIcon,
-        label: "Calendar",
-        toneClass: "bg-[var(--red-bg)] text-[var(--red-text)]",
-      };
-    case "firmware_update_released":
-    case "low_stock":
-      return {
-        icon: PackageSearchIcon,
-        label: "Inventory",
-        toneClass: "bg-[var(--orange-bg)] text-[var(--orange-text)]",
-      };
-    default:
-      if (type.startsWith("reservation_")) {
-        return {
-          icon: Bell,
-          label: "Reservation",
-          toneClass: "bg-[var(--purple-bg)] text-[var(--purple-text)]",
-        };
-      }
-      if (type.startsWith("shift_") || type.startsWith("time_off_")) {
-        return {
-          icon: CalendarDaysIcon,
-          label: "Schedule",
-          toneClass: "bg-[var(--blue-bg)] text-[var(--blue-text)]",
-        };
-      }
-      if (type.startsWith("license_")) {
-        return {
-          icon: KeyRoundIcon,
-          label: "License",
-          toneClass: "bg-[var(--orange-bg)] text-[var(--orange-text)]",
-        };
-      }
-      return {
-        icon: CircleIcon,
-        label: "Notice",
-        toneClass: "bg-muted text-muted-foreground",
-      };
-  }
-}
-
 function canProcessNotifications(role: string | undefined) {
   return role === "ADMIN" || role === "STAFF";
-}
-
-function formatTime(dateStr: string) {
-  const d = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - d.getTime();
-  const mins = Math.floor(diffMs / 60_000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d ago`;
-  return d.toLocaleDateString();
 }
 
 function notificationDate(notification: Notification) {

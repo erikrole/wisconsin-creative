@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/auth";
 import { getGuideBySlug } from "@/lib/guides";
 import { HttpError } from "@/lib/http";
 import { Role } from "@prisma/client";
+import { BreadcrumbLabel } from "@/components/BreadcrumbContext";
 import { GuideReader } from "./_components/GuideReader";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -30,10 +31,13 @@ export default async function GuideReaderPage({ params }: Props) {
     (user.role === Role.STAFF && guide.authorId === user.id);
 
   return (
-    <GuideReader
-      guide={guide}
-      canEdit={canEdit}
-      slug={slug}
-    />
+    <>
+      <BreadcrumbLabel label={guide.title} />
+      <GuideReader
+        guide={guide}
+        canEdit={canEdit}
+        slug={slug}
+      />
+    </>
   );
 }
