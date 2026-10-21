@@ -5,9 +5,10 @@ import { sendPush } from "@/lib/push/apns";
 import { sendWebPushToUsers } from "@/lib/push/web";
 import { withNotificationHref } from "@/lib/notification-destination";
 import { ACTIVE_ASSIGNMENT_STATUSES } from "@/lib/shift-constants";
-import { isInQuietHours, loadUserPrefs, normalizePrefs, pushSuppressionReason, resolvePushPresentation, shouldDeliverEmail, shouldDeliverCategory, type NotificationCategory } from "@/lib/services/notification-prefs";
+import { isInQuietHours, loadUserPrefs, normalizePrefs, pushSuppressionReason, resolvePushPresentation, shouldDeliverEmail, shouldDeliverCategory, type NotificationCategory, type QuietHours } from "@/lib/services/notification-prefs";
 import { latencyBucket, recordDeliveries, type DeliveryRecord } from "@/lib/services/notification-deliveries";
 import { analyticsTag } from "@/lib/services/product-event-log";
+import { resolveSettledNotificationsForUser } from "@/lib/services/notification-resolution";
 import { catalogEntry } from "@/lib/notification-catalog";
 import { loadCheckoutPolicies } from "@/lib/services/checkout-policies";
 import { shiftWorkerLabel } from "@/lib/shift-display";
@@ -77,7 +78,16 @@ export type PushMessage = {
   collapseId?: string;
   /** Overrides the category's action set, e.g. no Approve on a decided review. */
   apnsCategory?: string;
+  /**
+   * Deliver silently overnight (see `OVERNIGHT`) whatever the recipient's
+   * settings. For staff follow-ups nobody can act on at 3 AM; the person
+   * holding the gear is never sent this flag.
+   */
+  quietOvernight?: boolean;
 };
+
+/** 10 PM to 7 AM Central, every night. */
+const OVERNIGHT: QuietHours = { enabled: true, start: "22:00", end: "07:00", days: [0, 1, 2, 3, 4, 5, 6], allowUrgent: false };
 
 /** One Notification Center stack per checkout or event; otherwise per category. */
 function pushThreadId(payload: Record<string, unknown> | undefined, category: NotificationCategory | undefined): string {
@@ -101,14 +111,16 @@ export async function sendPushToUser(userId: string, opts: PushMessage): Promise
   try {
     const prefs = await loadUserPrefs(userId);
     const now = new Date();
-    const presentation = resolvePushPresentation(prefs, opts.category, now);
+    let presentation = resolvePushPresentation(prefs, opts.category, now);
     if (!presentation) {
       record({ channel: "apns", outcome: "suppressed", reason: pushSuppressionReason(prefs, opts.category, now) });
       return;
     }
+    const overnight = Boolean(opts.quietOvernight) && presentation.sound && isInQuietHours(OVERNIGHT, now);
+    if (overnight) presentation = { interruptionLevel: "passive", sound: false };
     const silentReason = presentation.sound
       ? null
-      : isInQuietHours(prefs.quietHours, now) ? "quiet_hours" : "level_silent";
+      : overnight ? "overnight" : isInQuietHours(prefs.quietHours, now) ? "quiet_hours" : "level_silent";
 
     // Keep native APNs tokens and browser subscriptions on their own delivery
     // paths. The web sender is best-effort and has its own failure boundary, so
@@ -156,6 +168,8 @@ export async function sendPushToUser(userId: string, opts: PushMessage): Promise
     }
 
     // Producers write the inbox row before pushing, so this count includes it.
+    // The icon badge is this number, so settled rows must not inflate it.
+    await resolveSettledNotificationsForUser(userId);
     const unreadCount = await db.notification.count({ where: { userId, readAt: null } });
     const entry = opts.category ? catalogEntry(opts.category) : null;
 
@@ -414,6 +428,9 @@ async function persistCheckoutEscalation(args: {
       collapseId: args.recipientKind === "requester"
         ? `checkout-${args.checkout.id}`
         : `checkout-${args.checkout.id}-followup`,
+      // Gear due after a night event crosses +4h around 2-4 AM. The holder
+      // still hears it; staff follow-ups wait silently for the morning.
+      quietOvernight: args.recipientKind !== "requester",
     }));
   }
   if (channels.email && args.recipient.email) {
@@ -427,6 +444,7 @@ async function persistCheckoutEscalation(args: {
         body: args.body,
         bookingTitle: displayBookingTitle(args.checkout.title),
         dueAt: args.checkout.endsAt.toISOString(),
+        href: `/checkouts/${args.checkout.id}`,
       }),
     }, category);
   }
@@ -744,6 +762,14 @@ export async function createShiftGearUpNotification(
   const event = assignment.shift.shiftGroup.event;
   const source = opts.source ?? "manual_nudge";
   if (!shouldNotifyGearPrep({ source, publishedAt: assignment.shift.shiftGroup.publishedAt })) return;
+  // "Reserve your gear now" is wrong for someone who already has it: the
+  // assignment came from their own reservation, or they already reserved or
+  // checked out gear for this event. A staff nudge is a deliberate choice and
+  // still goes out.
+  if (source === "assignment" && (
+    assignment.source === "RESERVATION"
+    || await hasGearForEvent(assignment.userId, event.id, assignment.id)
+  )) return;
 
   const dedupeKey = `shift:${assignmentId}:gear_up`;
 
@@ -802,12 +828,30 @@ export async function createShiftGearUpNotification(
           body,
           bookingTitle: event.summary,
           dueAt: assignment.shift.startsAt.toISOString(),
+          href: `/events/${event.id}`,
         }),
       }, categoryForScheduleNotificationType("shift_gear_up") ?? undefined);
     }
   } catch (err) {
     console.error(`[NOTIFY] Failed to create shift gear-up notification for assignment ${assignmentId}:`, err);
   }
+}
+
+const ACTIVE_BOOKING_STATUSES = ["BOOKED", "PENDING_PICKUP", "OPEN"] as const;
+
+async function hasGearForEvent(userId: string, eventId: string, assignmentId: string): Promise<boolean> {
+  const booking = await db.booking.findFirst({
+    where: {
+      requesterUserId: userId,
+      status: { in: [...ACTIVE_BOOKING_STATUSES] },
+      OR: [
+        { shiftAssignmentId: assignmentId },
+        { events: { some: { eventId } } },
+      ],
+    },
+    select: { id: true },
+  });
+  return Boolean(booking);
 }
 
 type ShiftScheduleEvent =
@@ -939,9 +983,19 @@ export type ShiftScheduleNotificationSnapshot = {
   };
 };
 
+type ShiftScheduleNotificationOptions = {
+  /**
+   * Who caused the change. When it's the worker themselves (linking their own
+   * reservation or checkout to an event puts them on its crew), the row is a
+   * read receipt with no push or email.
+   */
+  actorUserId?: string | null;
+};
+
 export async function createShiftScheduleNotification(
   assignmentId: string,
   event: ShiftScheduleEvent,
+  opts: ShiftScheduleNotificationOptions = {},
 ): Promise<void> {
   const assignment = await db.shiftAssignment.findUnique({
     where: { id: assignmentId },
@@ -987,14 +1041,16 @@ export async function createShiftScheduleNotification(
     callEndsAt: assignment.callEndsAt ?? assignment.shift.callEndsAt ?? assignment.shift.endsAt,
     callNote: assignment.callNote,
     calendarEvent: assignment.shift.shiftGroup.event,
-  }, event);
+  }, event, opts);
 }
 
 export async function createShiftScheduleNotificationFromSnapshot(
   assignment: ShiftScheduleNotificationSnapshot,
   event: ShiftScheduleEvent,
+  opts: ShiftScheduleNotificationOptions = {},
 ): Promise<void> {
   const assignmentId = assignment.assignmentId;
+  const selfMade = Boolean(opts.actorUserId) && opts.actorUserId === assignment.userId;
   if (!assignment.userActive) return;
   if (!shouldNotifyWorkerForScheduleEvent({
     event,
@@ -1036,6 +1092,7 @@ export async function createShiftScheduleNotificationFromSnapshot(
   if (existing) return;
 
   try {
+    const now = new Date();
     const row = await db.notification.create({
       data: {
         userId: assignment.userId,
@@ -1056,10 +1113,12 @@ export async function createShiftScheduleNotificationFromSnapshot(
           locationId: calendarEvent.locationId,
         },
         channel: "IN_APP",
-        sentAt: new Date(),
+        sentAt: now,
+        readAt: selfMade ? now : null,
         dedupeKey,
       },
     });
+    if (selfMade) return;
 
     deferPush(sendPushToUser(assignment.userId, {
       title: copy.title,
@@ -1080,6 +1139,7 @@ export async function createShiftScheduleNotificationFromSnapshot(
           body: copy.body,
           bookingTitle: calendarEvent.summary,
           dueAt: callStartsAt?.toISOString(),
+          href: `/events/${calendarEvent.id}`,
         }),
       }, category);
     }
@@ -1091,6 +1151,7 @@ export async function createShiftScheduleNotificationFromSnapshot(
 export async function dispatchScheduleAssignmentNotifications(
   assignmentId: string,
   event: ShiftScheduleEvent,
+  opts: ShiftScheduleNotificationOptions = {},
 ): Promise<void> {
   await Promise.allSettled([
     // A pending request holds no slot, so telling the student to prep gear for
@@ -1099,7 +1160,7 @@ export async function dispatchScheduleAssignmentNotifications(
     ...(event === "requested" || event === "declined"
       ? []
       : [createShiftGearUpNotification(assignmentId, { source: "assignment" })]),
-    createShiftScheduleNotification(assignmentId, event),
+    createShiftScheduleNotification(assignmentId, event, opts),
   ]);
 }
 
@@ -1289,6 +1350,7 @@ export async function createPublishedShiftGroupNotifications(shiftGroupId: strin
             body,
             bookingTitle: group.event.summary,
             dueAt: assignment.studentCallStartsAt?.toISOString(),
+            href: `/events/${group.event.id}`,
           }),
         }, "schedule");
       }
@@ -1407,6 +1469,7 @@ export async function createBulkScheduleAssignmentNotifications(batchId: string)
           title,
           body,
           bookingTitle: batch.sportCode ? `${batch.sportCode} schedule` : "Upcoming shifts",
+          href: payload.href,
         }),
       }, "schedule");
     }
@@ -1537,6 +1600,7 @@ export async function notifyPublishedShiftGroupWorkers(
           body,
           bookingTitle: group.event.summary,
           dueAt: assignment?.studentCallStartsAt?.toISOString(),
+          href: `/events/${group.event.id}`,
         }),
       }, "schedule");
     }
@@ -1623,6 +1687,7 @@ export async function notifyPublishedScheduleFollowers(shiftGroupId: string): Pr
           title,
           body,
           bookingTitle: group.event.summary,
+          href: `/events/${group.event.id}`,
         }),
       }, "schedule");
     }
@@ -1634,7 +1699,7 @@ type ReservationLifecycleEvent = "booked" | "updated" | "pickup_ready" | "cancel
 /**
  * Sends an in-app notification to the requester for reservation lifecycle events.
  * For "cancelled", skips the notification if the actor is the requester (self-cancel).
- * For "booked" by the requester, the inbox row is the receipt; no push.
+ * When the requester did it themselves, the row is a read receipt and nothing is pushed.
  * "updated" can happen many times, so callers pass the booking's `updatedAt`
  * as `version` to give each update its own row.
  */
@@ -1683,6 +1748,10 @@ export async function createReservationLifecycleNotification(args: {
   };
 
   const { type, title, body, pushBody } = configs[event];
+  // Something the person just did themselves is a receipt, not news: keep the
+  // row for their history, but don't count it as unread or ping their phone.
+  const selfMade = requesterUserId === actorUserId;
+  const now = new Date();
 
   try {
     const [row] = await db.notification.createManyAndReturn({
@@ -1694,14 +1763,14 @@ export async function createReservationLifecycleNotification(args: {
         body,
         payload: { bookingId, href: `/reservations/${bookingId}` },
         channel: "IN_APP",
-        sentAt: new Date(),
+        sentAt: now,
+        readAt: selfMade ? now : null,
         dedupeKey,
       }],
       skipDuplicates: true,
       select: { id: true },
     });
-    if (!row) return;
-    if (event === "booked" && requesterUserId === actorUserId) return;
+    if (!row || selfMade) return;
 
     deferPush(sendPushToUser(requesterUserId, {
       title,
@@ -1796,6 +1865,7 @@ export async function notifyItemReport(args: {
           body,
           bookingTitle: args.bookingTitle,
           dueAt: now.toISOString(),
+          href: `/checkouts/${args.bookingId}`,
         }),
       }, "itemReports").catch((err) =>
         console.error(`[NOTIFY] Failed to send item report email to ${s.email}:`, err)
