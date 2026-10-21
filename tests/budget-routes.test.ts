@@ -18,10 +18,12 @@ vi.mock("@/lib/db", () => {
     asset: { findUnique: vi.fn(), update: vi.fn() },
     bulkSku: { findUnique: vi.fn() },
     user: { findUnique: vi.fn() },
+    gearPickCycle: { findUnique: vi.fn() },
   };
   return {
     db: {
       budget: { findMany: vi.fn(), findUnique: vi.fn() },
+      gearPickCycle: { findMany: vi.fn() },
       auditLog: { findMany: vi.fn() },
       $transaction: vi.fn(),
       _mockTx: tx,
@@ -91,6 +93,7 @@ beforeEach(() => {
   vi.mocked(db.$transaction).mockImplementation((async (fn: (client: typeof tx) => Promise<unknown>) => fn(tx)) as never);
   vi.mocked(requireAuth).mockResolvedValue(admin);
   vi.mocked(enforceRateLimit).mockResolvedValue(undefined);
+  vi.mocked(db.gearPickCycle.findMany).mockResolvedValue([{ id: "2027-28", title: "2027-28" }] as never);
 });
 
 describe("budget access", () => {
@@ -159,6 +162,20 @@ describe("budget routes", () => {
       status: "PLANNED",
     });
     expect(createAuditEntryTx).toHaveBeenCalledWith(tx, expect.objectContaining({ entityType: "budget_line", action: "create" }));
+  });
+
+  it("marks a line as topping up a UA year, and refuses a year that doesn't exist", async () => {
+    tx.budget!.findUnique!.mockResolvedValue({ id: "budget-1" });
+    tx.budgetLine!.create!.mockResolvedValue({ ...lineRow, gearPickCycleId: "2027-28" });
+    tx.gearPickCycle!.findUnique!.mockResolvedValue({ id: "2027-28" });
+    const body = { category: "MATERIALS_SUPPLIES", description: "Student UA top-up", supplier: "Under Armour", unitCostCents: 50_000, gearPickCycleId: "2027-28" };
+    const response = await createLine(json("POST", "/api/budget/budget-1/lines", body), idContext);
+    expect(response.status).toBe(201);
+    expect(tx.budgetLine!.create!.mock.calls[0]![0].data).toMatchObject({ gearPickCycleId: "2027-28" });
+
+    tx.gearPickCycle!.findUnique!.mockResolvedValue(null);
+    const missing = await createLine(json("POST", "/api/budget/budget-1/lines", { ...body, gearPickCycleId: "1999-00" }), idContext);
+    expect(missing.status).toBe(404);
   });
 
   it("rejects dates that look right but don't exist", async () => {

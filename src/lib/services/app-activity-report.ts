@@ -28,7 +28,8 @@ type BuildStatus = "latest" | "stale" | "ahead" | "development" | "unknown";
  */
 export type LatestIosBuild = {
   version: string | null;
-  build: string;
+  /** Null right after an App Store release, until a phone on that version reports its build. */
+  build: string | null;
   source: "configured" | "app_store" | "observed";
 };
 
@@ -75,8 +76,11 @@ async function resolveLatestIosBuild(clients: InstallationRecord[]): Promise<Lat
 
   const store = await loadAppStoreVersion();
   if (store) {
-    const match = newest(shipped.filter((client) => client.appVersion === store.version));
-    if (match?.appBuild) return { version: store.version, build: match.appBuild, source: "app_store" };
+    const onStoreVersion = shipped.filter((client) => client.appVersion === store.version);
+    // An App Store phone names the release build; a TestFlight build of the same version may be newer than it.
+    const match = newest(onStoreVersion.filter((client) => client.releaseChannel === "app_store")) ?? newest(onStoreVersion);
+    // Right after a release nobody has reported the new build yet; the listing's version still decides who is behind.
+    return { version: store.version, build: match?.appBuild ?? null, source: "app_store" };
   }
 
   const observed = newest(shipped.filter((client) => client.releaseChannel === "app_store"));
@@ -87,7 +91,13 @@ function iosBuildStatus(client: InstallationRecord, latest: LatestIosBuild | nul
   if (client.platform !== "ios") return null;
   // Local Xcode builds are never "behind"; they are whatever is on the desk.
   if (client.releaseChannel === "development") return "development";
-  if (!latest || !client.appBuild) return "unknown";
+  if (!latest) return "unknown";
+  if (latest.build === null) {
+    if (!client.appVersion || !latest.version) return "unknown";
+    const order = compareVersions(client.appVersion, latest.version);
+    return order === 0 ? "latest" : order < 0 ? "stale" : "ahead";
+  }
+  if (!client.appBuild) return "unknown";
   if (client.appBuild === latest.build) return "latest";
 
   // Build numbers only ever go up across versions, so the build alone orders them.
