@@ -49,6 +49,7 @@ import { cn } from "@/lib/utils";
 import { ScoreboardCompare } from "./ScoreboardCompare";
 import { ScoreboardExplore } from "./ScoreboardExplore";
 import { ScoreboardFunFacts } from "./ScoreboardFunFacts";
+import { WrappedBanner } from "./WrappedBanner";
 import { ScoreboardLeaderboard, type RankedPerson } from "./ScoreboardLeaderboard";
 
 type SortKey = TeamScoreboardSortKey;
@@ -509,6 +510,8 @@ function TeamScoreboardExplorer() {
                 </div>
               </dl>
             </section>
+
+            <WrappedBanner now={clock} isAdmin={currentUser?.role === "ADMIN"} />
 
             <ScoreboardFunFacts facts={facts} onExplore={exploreFact} />
 

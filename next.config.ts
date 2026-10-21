@@ -51,9 +51,11 @@ const baseConfig: NextConfig = {
   },
   transpilePackages: ["@mdxeditor/editor"],
   serverExternalPackages: ["web-push"],
-  // The equipment sheet route reads the department's workbook template at runtime.
+  // These routes read files at runtime: the department's workbook template and
+  // the Wrapped share image's fonts.
   outputFileTracingIncludes: {
     "/api/gear-picks/admin/export.xlsx": ["./src/lib/gear-picks/templates/**"],
+    "/api/wrapped/card": ["./src/lib/wrapped/fonts/**"],
   },
   images: {
     remotePatterns: [
