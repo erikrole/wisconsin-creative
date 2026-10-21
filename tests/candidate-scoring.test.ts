@@ -299,5 +299,7 @@ describe("scoreCandidatesForShift", () => {
     expect(score?.reasons.map((reason) => reason.label)).toEqual(
       expect.arrayContaining(["Video is their main area", "Nothing else this week"]),
     );
+    expect(score?.reasons[0]?.code).not.toBe("role_fit");
+    expect(score?.reasons.at(-1)?.code).toBe("role_fit");
   });
 });

@@ -133,7 +133,11 @@ function bucketFor(score: number, warnings: CandidateScoreSignal[], workloadOver
 }
 
 function sortSignals(a: CandidateScoreSignal, b: CandidateScoreSignal) {
-  return Math.abs(b.weight ?? 0) - Math.abs(a.weight ?? 0);
+  // Slot-type fit is implied by the list a person appears in, so it never leads:
+  // clients that show the first reason (iOS, the legacy shift panel) then say
+  // something useful, like the person's area or roster.
+  const implied = Number(a.code === "role_fit") - Number(b.code === "role_fit");
+  return implied || Math.abs(b.weight ?? 0) - Math.abs(a.weight ?? 0);
 }
 
 // A typical strong fit lands near 120 raw points; scaling into 0-100 keeps
