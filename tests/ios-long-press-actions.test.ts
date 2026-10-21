@@ -125,7 +125,7 @@ describe("iOS in-app long press", () => {
    * to distrust both gestures. Where a surface has one, it has the other.
    */
   it("keeps swipe and long press in agreement on notification rows", () => {
-    expect(notificationsSheet).toContain(".swipeActions(edge: .leading)");
+    expect(notificationsSheet).toContain(".swipeActions(edge: .leading, allowsFullSwipe: true)");
     expect(notificationsSheet).toContain(".contextMenu {");
     const menu = notificationsSheet.slice(notificationsSheet.indexOf(".contextMenu {"));
     expect(menu).toContain('Label("Mark Read", systemImage: "checkmark")');
