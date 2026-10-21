@@ -111,6 +111,7 @@ vi.mock("@upstash/redis", () => {
 import {
   getCompanionUserEpoch,
   issueCompanionSession,
+  readCompanionPresence,
   listCompanionDevices,
   readCompanionProjection,
   registerCompanionDevice,
@@ -201,6 +202,23 @@ describe("companion store", () => {
       role: "ADMIN",
       epoch: 0,
     });
+  });
+
+  it("records menu bar presence in Redis on renewal, at most once per quarter hour", async () => {
+    const token = await issueCompanionSession({ id: "user-1", role: "ADMIN" }, 0);
+    const request = new Request("https://wisconsincreative.com/api/companion/session", {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "user-agent": "GearOps/1.4 macOS/26.1.0" },
+    });
+
+    const renewed = await renewCompanionSession(request);
+    const presence = await readCompanionPresence();
+    const record = presence.get("user-1");
+    expect(record).toMatchObject({ appVersion: "1.4", osVersion: "26.1.0" });
+    expect(record?.days).toHaveLength(1);
+
+    await renewCompanionSession(requestFor(renewed));
+    expect((await readCompanionPresence()).get("user-1")?.lastSeenAt).toBe(record?.lastSeenAt);
   });
 
   it("invalidates every prior credential before cleanup and rejects stale enrollment", async () => {
