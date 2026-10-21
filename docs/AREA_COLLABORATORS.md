@@ -103,6 +103,8 @@ Collaborator gear responses remain sanitized and own-booking scoped. Published S
 
 ## Change Log
 
+- 2026-10-21: **iOS follows the new grants (source only).** Browse shows Brand assets with `BRAND_ASSETS_VIEW`; My Gear shows the Mine toggle and team-wide bookings with `TEAM_GEAR_VIEW` while edit, extend and cancel stay owner-scoped. Xcode build and on-device proof remain open; the cloud env cannot build iOS.
+
 - 2026-10-21: **Per-item collaborator visibility.** `Asset.collaboratorVisible` (migration `0193`, default true) is a staff/admin switch on the item's Workflow Eligibility card. When off, the item is dropped from collaborator catalog, detail and accessories reads, and a reservation that includes it (directly or through a kit) for a collaborator is rejected with `NOT_AVAILABLE_FOR_COLLABORATORS`. Staff and student flows are unchanged.
 
 - 2026-10-21: **Brand library for collaborators.** New `BRAND_ASSETS_VIEW` grant (no dependencies) opens only the Brand assets tab of Resources: list, view, download and favorite. Guides (including internal SOPs and server paths) and the Contacts list stay internal, and the page hides those tabs for collaborators. Migration `0192` grants it to BTN and Learfield. Announcements stay internal because their audience is not role-filtered.

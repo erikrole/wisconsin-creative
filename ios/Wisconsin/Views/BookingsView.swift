@@ -158,6 +158,10 @@ final class BookingsViewModel {
     var sortOption: BookingSortOption = .operational
     var currentUserId: String?
     var currentUserRole = ""
+    /// Collaborators granted TEAM_GEAR_VIEW can read everyone's bookings.
+    var seesTeamGear = false
+    /// A private collaborator is pinned to their own gear with no Mine toggle.
+    var pinsToOwnGear: Bool { currentUserRole == "COLLABORATOR" && !seesTeamGear }
 
     var mineOnly: Bool {
         get { scope == .mine }
@@ -184,10 +188,12 @@ final class BookingsViewModel {
         role: String?,
         restoredScope: BookingScope = .all,
         restoredStatusFilter: BookingStatusFilter = .active,
-        restoredSortOption: BookingSortOption = .operational
+        restoredSortOption: BookingSortOption = .operational,
+        seesTeamGear: Bool = false
     ) {
         currentUserId = id
         currentUserRole = role ?? ""
+        self.seesTeamGear = seesTeamGear
         guard !didApplyUserDefault else { return }
         scope = currentUserRole == "COLLABORATOR" ? .mine : restoredScope
         statusFilter = restoredStatusFilter
@@ -553,7 +559,7 @@ struct BookingsView: View {
                     bookingsFilterMenu
                 }
                 if #available(iOS 27.0, *) {
-                    if !isCollaborator {
+                    if !vm.pinsToOwnGear {
                         ToolbarItem(placement: .topBarTrailing) {
                             bookingsMineToggle
                         }
@@ -566,7 +572,7 @@ struct BookingsView: View {
                     }
                 } else {
                     ToolbarItemGroup(placement: .topBarTrailing) {
-                        if !isCollaborator { bookingsMineToggle }
+                        if !vm.pinsToOwnGear { bookingsMineToggle }
                         if canCreate && !showsEmptyCreateAction { bookingsNewReservationButton }
                     }
                 }
@@ -619,7 +625,8 @@ struct BookingsView: View {
                     role: session.currentUser?.role,
                     restoredScope: storedScope,
                     restoredStatusFilter: storedStatusFilter,
-                    restoredSortOption: storedSortOption
+                    restoredSortOption: storedSortOption,
+                    seesTeamGear: (session.currentUser?.capabilities ?? []).contains("TEAM_GEAR_VIEW")
                 )
                 consumePendingScope()
                 consumePendingAppIntent()

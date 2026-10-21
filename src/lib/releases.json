@@ -25,7 +25,8 @@
       "Admins can switch this off per organization in Settings, Collaborator access."
     ],
     "platforms": [
-      "Web"
+      "Web",
+      "iOS"
     ],
     "pr": 552
   },
@@ -42,7 +43,8 @@
       "Admins can switch this off per organization in Settings, Collaborator access."
     ],
     "platforms": [
-      "Web"
+      "Web",
+      "iOS"
     ],
     "pr": 552
   },
