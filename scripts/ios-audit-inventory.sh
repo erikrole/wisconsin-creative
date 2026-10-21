@@ -95,6 +95,7 @@ PasswordSetupView.swift                | login                       | audit
 LaunchView.swift                       |                             | exempt-tiny
 Welcome/ProfileCompletionWelcomeView.swift | welcome                  | audit
 Welcome/ProfilePhotoCropView.swift     | welcome                     | audit
+Welcome/WelcomeFinishView.swift        | welcome                     | audit
 Welcome/ProfileCompletionDraft.swift   |                             | exempt-infra
 Welcome/ProfileCompletionWelcomeComponents.swift |                   | exempt-shared
 UsersView.swift                        | users                       | audit
