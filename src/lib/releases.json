@@ -10,7 +10,8 @@
       "Staff close a case as repaired, replaced, written off, found, or no issue. Repaired, found and no issue put the item back in service. Replaced and written off retire it.",
       "An item reported missing, or reported damaged while idle, is held right away so it can't be booked again. An item that is checked out or reserved stays in service until staff review it.",
       "Items held because they are missing show as Missing in the catalog and on the item page, not Maintenance.",
-      "The dashboard flags stay until a case is closed and link to the new page, and the sidebar shows how many cases are open."
+      "The dashboard flags stay until a case is closed and link to the new page, and the sidebar shows how many cases are open.",
+      "A checkout now shows what was reported at return and where it stands, to the person it's for and to staff."
     ],
     "platforms": [
       "Web"

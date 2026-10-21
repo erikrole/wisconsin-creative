@@ -49,6 +49,7 @@ import { formatCountdownCompact, formatDateTime, getUrgency } from "@/lib/format
 import { nextQuarterHourAfter } from "@/lib/quarter-hour";
 
 import BookingEquipmentTab from "./BookingEquipmentTab";
+import BookingReportsCard from "./BookingReportsCard";
 import BookingHistoryTab from "./BookingHistoryTab";
 
 /* ── Main Component ── */
@@ -435,6 +436,8 @@ export default function BookingDetailPage({
           </AlertDescription>
         </Alert>
       )}
+
+      {kind === "CHECKOUT" && booking && <div className="mb-6"><BookingReportsCard bookingId={booking.id} /></div>}
 
       {/* ── Two-column layout: Equipment + Info ── */}
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_420px]">

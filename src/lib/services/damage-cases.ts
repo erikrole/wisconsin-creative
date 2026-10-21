@@ -260,3 +260,45 @@ export async function reportAssetProblem(args: {
   );
   return report;
 }
+
+export type BookingReport = {
+  id: string;
+  type: CheckinReportType;
+  /** What the report is about: an item tag, a numbered unit, or a counted quantity. */
+  label: string;
+  /** Staff outcome for a serialized item; null while the case is open or for bulk gear. */
+  resolution: ReportResolution | null;
+  open: boolean;
+  reportedAt: string;
+};
+
+/** Reports filed on one checkout, for the borrower and staff. */
+export async function listBookingReports(bookingId: string): Promise<BookingReport[]> {
+  const rows = await db.checkinItemReport.findMany({
+    where: { bookingId },
+    orderBy: { lastReportedAt: "desc" },
+    select: {
+      id: true,
+      type: true,
+      quantity: true,
+      resolution: true,
+      lastReportedAt: true,
+      asset: { select: { assetTag: true, name: true } },
+      bulkSkuUnit: { select: { unitNumber: true, bulkSku: { select: { name: true } } } },
+      bulkSku: { select: { name: true } },
+    },
+  });
+  return rows.map((r) => ({
+    id: r.id,
+    type: r.type,
+    label: r.asset
+      ? r.asset.name ? `${r.asset.name} (${r.asset.assetTag})` : r.asset.assetTag
+      : r.bulkSkuUnit
+        ? `${r.bulkSkuUnit.bulkSku.name} #${r.bulkSkuUnit.unitNumber}`
+        : `${r.bulkSku?.name ?? "Supplies"} × ${r.quantity ?? 1}`,
+    resolution: r.resolution,
+    // Bulk gear has no staff outcome yet, so it never reads as "being looked into".
+    open: Boolean(r.asset) && !r.resolution,
+    reportedAt: r.lastReportedAt.toISOString(),
+  }));
+}
