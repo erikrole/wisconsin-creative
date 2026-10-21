@@ -444,6 +444,14 @@ private struct NextShiftWidgetView: View {
         }
     }
 
+    /// "in 1h 34m", the same compact form as the Next Shift numeral. Computed
+    /// from the entry date, which the timeline advances every five minutes.
+    private func headerCountdown(to date: Date) -> String {
+        let parts = countdownParts(until: date, from: entry.date)
+        if parts.value == "Now" { return "starting now" }
+        return "in \(parts.value)\(parts.unit.isEmpty ? "" : " \(parts.unit)")"
+    }
+
     /// The agenda layout: a sport tile, the event, and when. Rows are capped by
     /// height, not by data, so Medium shows three and Large six.
     private func listBody(rows: Int, showsScan: Bool) -> some View {
@@ -455,7 +463,7 @@ private struct NextShiftWidgetView: View {
                 WidgetHeader(title: "Shifts", systemImage: "calendar", tint: accent)
                 Spacer(minLength: 8)
                 if let next = shifts.first {
-                    Text("in \(next.startsAt, style: .relative)")
+                    Text(headerCountdown(to: next.startsAt))
                         .font(.gothamBold(10, relativeTo: .caption2))
                         .foregroundStyle(Color.freshSecondary)
                         .monospacedDigit()
