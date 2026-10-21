@@ -2,7 +2,7 @@
    Times are relative to `now` so the rows always read as today and this week. */
 
 import type { BookingSummary, DashboardData, DashboardStats } from "../dashboard-types";
-import type { HomeTrade, TodayCrewEvent } from "./home-model";
+import type { HomeActivity, HomeTrade, TodayCrewEvent } from "./home-model";
 
 const H = 3_600_000;
 const D = 24 * H;
@@ -204,5 +204,16 @@ export function sampleCrew(now: Date): TodayCrewEvent[] {
       id: "g-fb", summary: "Football walkthrough", startsAt: at(now, D), endsAt: at(now, D + 2 * H), when: "tomorrow",
       people: [person("u4", "Jordan Ruiz", "VIDEO")],
     },
+  ];
+}
+
+export function sampleActivity(now: Date): HomeActivity[] {
+  const ago = (m: number) => new Date(now.getTime() - m * 60_000).toISOString();
+  const person = (id: string, name: string) => ({ id, name, avatarUrl: null });
+  return [
+    { id: "a-1", kind: "returned", bookingId: "b-ret-1", title: "Volleyball practice B-roll", person: person("u3", "Maya Chen"), at: ago(8) },
+    { id: "a-2", kind: "out", bookingId: "b-out-1", title: "Hockey practice media", person: person("u1", "Ava Patel"), at: ago(52) },
+    { id: "a-3", kind: "out", bookingId: "b-out-2", title: "Hockey practice media", person: person("u2", "Sam Okafor"), at: ago(64) },
+    { id: "a-4", kind: "returned", bookingId: "b-ret-2", title: "Softball headshots", person: person("u4", "Ben Ortiz"), at: ago(190) },
   ];
 }

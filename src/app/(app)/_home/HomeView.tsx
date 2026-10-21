@@ -28,6 +28,7 @@ import {
   greeting,
   startsIn,
   todayLabel,
+  type ActivityRow,
   type AttentionItem,
   type AttentionTarget,
   type CoverageRow,
@@ -74,6 +75,8 @@ export type HomeViewProps = {
   teamGear?: Slot<{ rows: GearRow[]; total: number }>;
   trades?: Slot<TradeRow[]>;
   crew?: Slot<CrewRow[]>;
+  /** Latest kiosk pickups and returns; staff and admins only. */
+  activity?: Slot<ActivityRow[]>;
   tradesHref?: string;
   notice?: ReactNode;
   onTarget: (target: AttentionTarget) => void;
@@ -175,6 +178,7 @@ export function HomeView(props: HomeViewProps) {
                 <TradesSection slot={props.trades} href={props.tradesHref ?? "/schedule"} onQuick={props.onQuick} busyTradeId={props.busyTradeId} />
               )}
               {props.crew && <CrewSection slot={props.crew} />}
+              {props.activity && <ActivitySection slot={props.activity} onSelectBooking={props.onSelectBooking} />}
               {props.coverage && <CoverageSection slot={props.coverage} />}
               {props.teamGear && (
                 <TeamGearSection slot={props.teamGear} onSelectBooking={props.onSelectBooking} />
@@ -723,6 +727,39 @@ function CrewSection({ slot }: { slot: Slot<CrewRow[]> }) {
                 </span>
                 <AvatarStack people={row.people} />
               </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </HomeCard>
+  );
+}
+
+function ActivitySection({ slot, onSelectBooking }: { slot: Slot<ActivityRow[]>; onSelectBooking: (id: string) => void }) {
+  return (
+    <HomeCard aria-labelledby="home-activity">
+      <SectionHeader id="home-activity" title="Recent activity" href="/bookings?tab=checkouts" linkLabel="Bookings" />
+      {slot.state === "loading" ? (
+        <RowsSkeleton rows={3} />
+      ) : slot.state === "error" ? (
+        <SectionError what="recent activity" onRetry={slot.onRetry} />
+      ) : slot.rows.length === 0 ? (
+        <StateBlock icon={ClockIcon} title="Quiet so far" description="Kiosk pickups and returns from the last day show here." />
+      ) : (
+        <ul className="flex flex-col pb-1.5">
+          {slot.rows.map((row) => (
+            <li key={row.id}>
+              <button type="button" className={cn(ROW, "cursor-pointer")} onClick={() => onSelectBooking(row.bookingId)}>
+                <UserAvatar name={row.who} avatarUrl={row.person?.avatarUrl ?? null} size="default" />
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate text-sm text-foreground">
+                    <span className="font-bold">{row.who}</span>{" "}
+                    <span className={row.kind === "returned" ? "text-[var(--green-text)]" : "text-muted-foreground"}>{row.verb}</span>
+                  </span>
+                  <span className="truncate text-[13px] text-muted-foreground">{row.title}</span>
+                </span>
+                <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{row.ago}</span>
+              </button>
             </li>
           ))}
         </ul>

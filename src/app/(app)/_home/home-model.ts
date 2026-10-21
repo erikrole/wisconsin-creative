@@ -582,3 +582,45 @@ export function crewRows(events: TodayCrewEvent[]): CrewRow[] {
       people: e.people,
     }));
 }
+
+/** One custody move from /api/dashboard/activity. */
+export type HomeActivity = {
+  id: string;
+  kind: "out" | "returned";
+  bookingId: string;
+  title: string;
+  person: { id: string; name: string; avatarUrl: string | null } | null;
+  at: string;
+};
+
+export type ActivityRow = {
+  id: string;
+  bookingId: string;
+  kind: "out" | "returned";
+  who: string;
+  verb: string;
+  title: string;
+  ago: string;
+  person: HomeActivity["person"];
+};
+
+export function agoLabel(iso: string, now: Date): string {
+  const minutes = Math.max(0, Math.round((now.getTime() - new Date(iso).getTime()) / 60_000));
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  return hours < 24 ? `${hours}h ago` : `${Math.floor(hours / 24)}d ago`;
+}
+
+export function activityRows(rows: HomeActivity[], now: Date): ActivityRow[] {
+  return rows.map((r) => ({
+    id: r.id,
+    bookingId: r.bookingId,
+    kind: r.kind,
+    who: r.person?.name ?? "Someone",
+    verb: r.kind === "out" ? "took out" : "returned",
+    title: r.title,
+    ago: agoLabel(r.at, now),
+    person: r.person,
+  }));
+}

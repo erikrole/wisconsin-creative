@@ -19,6 +19,7 @@ import { ProfileCompletionBanner } from "../dashboard/profile-completion-banner"
 import { HomeSkeleton, HomeView, type Slot } from "./HomeView";
 import {
   TRADE_BOARD_HREF,
+  activityRows,
   buildAttention,
   buildSummary,
   buildUpNext,
@@ -35,6 +36,7 @@ import {
   tradeRows,
   type AttentionTarget,
   type GearRow,
+  type HomeActivity,
   type HomeTrade,
   type QuickAction,
   type TodayCrewEvent,
@@ -177,6 +179,25 @@ function useTodayCrew(enabled: boolean) {
   });
 }
 
+/** Latest kiosk pickups and returns. Staff and admins only; fails on its own. */
+function useRecentActivity(enabled: boolean) {
+  const userId = useAuthenticatedQueryUserId();
+  return useQuery<HomeActivity[]>({
+    queryKey: ["home-activity", userId ?? "unresolved"],
+    queryFn: async ({ signal }) => {
+      const res = await fetch("/api/dashboard/activity", { signal });
+      if (handleAuthRedirect(res, "/")) throw new DOMException("Auth redirect", "AbortError");
+      if (!res.ok) throw new Error("server");
+      const json = await parseJsonSafely<{ data?: HomeActivity[] }>(res);
+      return Array.isArray(json?.data) ? json.data : [];
+    },
+    enabled: enabled && Boolean(userId),
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
+  });
+}
+
 function slotOf<T>(query: { data?: T; isError: boolean; refetch: () => unknown }): Slot<T> {
   if (query.data !== undefined) return { state: "ready", rows: query.data };
   if (query.isError) return { state: "error", onRetry: () => void query.refetch() };
@@ -208,6 +229,7 @@ function InternalHome({ name, readOnly }: { name: string | null; readOnly: boole
   const openTrades = useTrades("OPEN", role === "STUDENT");
   const claimedTrades = useTrades("CLAIMED", role === "ADMIN");
   const crew = useTodayCrew(role !== null);
+  const activity = useRecentActivity(team);
   const confirm = useConfirm();
   const reminders = useOverdueReminders();
   useDayRollover(now, loadData);
@@ -261,12 +283,15 @@ function InternalHome({ name, readOnly }: { name: string | null; readOnly: boole
       // coverage is a staffing question, so it stays with staff and admins.
       coverage: team ? pending(() => coverageRows(data!, now)) : undefined,
       crew: slotOf({ data: crew.data ? crewRows(crew.data) : undefined, isError: crew.isError, refetch: crew.refetch }),
+      activity: team
+        ? slotOf({ data: activity.data ? activityRows(activity.data, now) : undefined, isError: activity.isError, refetch: activity.refetch })
+        : undefined,
       teamGear: pending(() => ({ rows: gearRows(data!.teamCheckouts.items.slice(0, 5), now, true), total: data!.teamCheckouts.total })),
       trades: role === "STUDENT"
         ? slotOf({ data: openTrades.data ? tradeRows(claimable.slice(0, 3), now) : undefined, isError: openTrades.isError, refetch: openTrades.refetch })
         : undefined,
     };
-  }, [role, team, crew.data, crew.isError, crew.refetch, data, fastStats, fetchError, loadData, now, claimedTrades.data, openTrades.data, openTrades.isError, openTrades.refetch, claimable]);
+  }, [role, team, crew.data, crew.isError, crew.refetch, activity.data, activity.isError, activity.refetch, data, fastStats, fetchError, loadData, now, claimedTrades.data, openTrades.data, openTrades.isError, openTrades.refetch, claimable]);
 
   if (!role && !fetchError) return <HomeSkeleton />;
 
@@ -298,6 +323,7 @@ function InternalHome({ name, readOnly }: { name: string | null; readOnly: boole
         teamGear={view?.teamGear}
         trades={view?.trades}
         crew={view?.crew}
+        activity={view?.activity}
         tradesHref={TRADE_BOARD_HREF}
         onTarget={onTarget}
         onSelectBooking={setSelectedBookingId}

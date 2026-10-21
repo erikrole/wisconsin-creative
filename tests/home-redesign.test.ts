@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
-import { buildAttention, buildSummary, buildUpNext, greeting, homeTabTitle, overdueForViewer } from "@/app/(app)/_home/home-model";
-import { emptyDashboard, sampleDashboard, sampleStats, sampleTrades } from "@/app/(app)/_home/home-fixtures";
+import { activityRows, agoLabel, buildAttention, buildSummary, buildUpNext, greeting, homeTabTitle, overdueForViewer } from "@/app/(app)/_home/home-model";
+import { emptyDashboard, sampleActivity, sampleDashboard, sampleStats, sampleTrades } from "@/app/(app)/_home/home-fixtures";
 
 const NOW = new Date("2026-10-21T13:00:00");
 
@@ -185,5 +185,21 @@ describe("Home quality of life", () => {
     expect(home).toContain("/api/bookings/${bookingId}/nudge");
     expect(home).toContain("useDayRollover(now, loadData)");
     expect(home).toContain("onRemind={readOnly ? undefined");
+  });
+});
+
+describe("Home recent activity", () => {
+  it("phrases custody moves and ages them", () => {
+    const rows = activityRows(sampleActivity(NOW), NOW);
+    expect(rows[0]).toMatchObject({ who: "Maya Chen", verb: "returned", ago: "8m ago" });
+    expect(rows[1]?.verb).toBe("took out");
+    expect(agoLabel(NOW.toISOString(), NOW)).toBe("Just now");
+    expect(agoLabel(new Date(NOW.getTime() - 3 * 3_600_000).toISOString(), NOW)).toBe("3h ago");
+  });
+
+  it("only staff and admins load the card", () => {
+    const home = source("src/app/(app)/_home/HomePage.tsx");
+    expect(home).toContain("const activity = useRecentActivity(team);");
+    expect(home).toMatch(/activity: team\s*\?/);
   });
 });
