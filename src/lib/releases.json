@@ -1,6 +1,21 @@
 [
   {
     "date": "2026-10-21",
+    "title": "Right now on iPhone staff profiles",
+    "type": "improvement",
+    "summary": "Staff profiles in the iPhone app now open with what someone is doing right now, followed by their week and how they're performing.",
+    "details": [
+      "A new top section shows the next shift or on-shift status, what they are holding, and a badge they're close to earning.",
+      "A This week card lists their shifts with area-colored dots, and a Performance card shows on-time returns, checkouts and badges earned.",
+      "The staff list has blue role tabs, an area dot beside each person, and softer cards."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 558
+  },
+  {
+    "date": "2026-10-21",
     "title": "Name and area when adding one student",
     "type": "improvement",
     "summary": "The Add users dialog now opens on Add one person and can start a student's profile with their name and primary area.",
