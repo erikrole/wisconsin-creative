@@ -1,6 +1,6 @@
 [
   {
-    "date": "2026-10-20",
+    "date": "2026-10-21",
     "title": "Kiosk checkouts use clean titles",
     "type": "improvement",
     "summary": "Checkouts started at the kiosk for a game now get the same title as everywhere else, like \"Men's Soccer vs Evansville\".",
