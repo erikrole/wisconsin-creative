@@ -13,15 +13,36 @@ describe("iOS widgets: Lock Screen and larger families", () => {
   it("gives each accessory family an empty state instead of a Home Screen placeholder", () => {
     expect(widgets).toContain("AccessoryWidgetBackground()");
     expect(widgets).toContain("AccessoryEmpty(");
-    expect(widgets).toContain("No upcoming shifts");
+    expect(widgets).toContain("No shifts this week");
     expect(widgets).toContain("All gear returned");
   });
 
   it("lists shifts and gear from the cached snapshot only", () => {
-    expect(widgets).toContain("listBody(rows: 3, showsScan: false)");
-    expect(widgets).toContain("listBody(rows: 6, showsScan: true)");
+    expect(widgets).toContain("listBody(rows: 2, showsScan: false)");
+    expect(widgets).toContain("listBody(rows: 4, showsScan: true)");
     expect(widgets).toContain(".filter { $0.endsAt > entry.date }");
     expect(widgets).toContain("bookingRows(limit:");
+  });
+
+  it("never ticks seconds on gear and keeps the countdown in the list header", () => {
+    expect(widgets).not.toContain('Overdue" : "Due") \\(next.endsAt, style: .relative)');
+    expect(widgets).toContain("format: .dateTime.hour().minute()");
+    expect(widgets).toContain("private var gearSummary: AnyView?");
+  });
+
+  it("wears the wc-fresh theme: blue accent, cool surfaces, Gotham numerals, sport glyphs", () => {
+    expect(widgets).toContain("static let freshAccent = fresh(0x3E63DD, dark: 0x8DA4EF)");
+    expect(widgets).toContain("static let freshSurface = fresh(0xFBFBFC, dark: 0x111214)");
+    expect(widgets).toContain(".containerBackground(for: .widget) { FreshBackground() }");
+    expect(widgets).toContain('"Gotham-Black"');
+    expect(widgets).toContain('("hockey", "hockey.puck.fill")');
+    expect(widgets).toContain("private struct DayChip: View");
+    expect(widgets).toContain("private func countdownParts(until date: Date, from now: Date)");
+    // Red is for late gear only: the default gear accent is the blue.
+    expect(widgets).toContain("return widgetDisplayColor(.freshAccent, renderingMode: renderingMode)");
+    expect(widgets).not.toContain("widgetPurple");
+    const yml = source("ios/project.yml");
+    expect(yml).toContain("- path: Wisconsin/Resources/Fonts");
   });
 
   it("opens Scan through the capability-gated route, not a widget-side action", () => {

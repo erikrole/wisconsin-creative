@@ -1,5 +1,6 @@
 #if DEBUG
 import SwiftUI
+import WidgetKit
 import UserNotifications
 
 @MainActor
@@ -93,6 +94,8 @@ struct PerformanceTestRootView: View {
             AccountSecurityHarnessView()
         case .notifications:
             NotificationSettingsHarnessView()
+        case .widgetSeed:
+            WidgetSeedHarnessView()
         case .notificationsInbox:
             NotificationsInboxHarnessView()
         case .announcement, .announcementImages, .announcementPlain,
@@ -174,6 +177,57 @@ struct NotificationsInboxHarnessView: View {
     var body: some View {
         NotificationsSheet()
             .onAppear { session.currentUser = ScheduleFixtures.staffUser }
+    }
+}
+
+/// Seeds the widget snapshot with a believable week so the placed widgets can
+/// be captured populated. Never shipped: the whole file is DEBUG-only.
+struct WidgetSeedHarnessView: View {
+    var body: some View {
+        ZStack {
+            Color(.systemGroupedBackground).ignoresSafeArea()
+            Text("Widget data seeded")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+        .task { Self.seed() }
+    }
+
+    @MainActor
+    private static func seed() {
+        let now = Date()
+        func shift(_ id: String, _ title: String, _ area: String, _ startMin: Int, _ lenMin: Int, _ place: String, _ gear: String?) -> GearWidgetSnapshot.Shift {
+            GearWidgetSnapshot.Shift(
+                id: id,
+                title: title,
+                area: area,
+                startsAt: now.addingTimeInterval(TimeInterval(startMin * 60)),
+                endsAt: now.addingTimeInterval(TimeInterval((startMin + lenMin) * 60)),
+                locationName: place,
+                gearLabel: gear
+            )
+        }
+        let shifts = [
+            shift("s1", "Volleyball vs. Nebraska", "Video", 95, 240, "UW Field House", "Gear ready"),
+            shift("s2", "Men's Hockey vs. Michigan", "Photo", 26 * 60, 200, "Kohl Center", "Gear not picked up"),
+            shift("s3", "Football vs. Iowa", "Video", 3 * 24 * 60, 300, "Camp Randall", nil),
+            shift("s4", "Women's Basketball vs. Iowa", "Graphics", 4 * 24 * 60, 180, "Kohl Center", nil),
+        ]
+        let due = [
+            GearWidgetSnapshot.DueBooking(id: "b1", title: "Sideline kit", endsAt: now.addingTimeInterval(-40 * 60), itemCount: 4, isOverdue: true),
+            GearWidgetSnapshot.DueBooking(id: "b2", title: "Sony FX6 package", endsAt: now.addingTimeInterval(3 * 3600), itemCount: 6, isOverdue: false),
+            GearWidgetSnapshot.DueBooking(id: "b3", title: "Audio recorder set", endsAt: now.addingTimeInterval(26 * 3600), itemCount: 3, isOverdue: false),
+        ]
+        GearWidgetStore.write(GearWidgetSnapshot(
+            generatedAt: now,
+            nextShift: shifts.first,
+            dueBookings: due,
+            overdueCount: 1,
+            dueTodayCount: 1,
+            upcomingShifts: shifts
+        ))
+        WidgetCenter.shared.reloadAllTimelines()
+        NSLog("WIDGET-SEED written")
     }
 }
 
