@@ -20,6 +20,10 @@ struct AssignStudentSheet: View {
     /// failing the same way on every Retry.
     var refreshWorkingVersion: (() async -> Int?)?
     @State private var workingVersionOverride: Int?
+#if DEBUG
+    /// Review-capture data (`GT_ASSIGN_PICKER_FIXTURE`); skips the network.
+    var fixture: (users: [AppUser], recommendations: [CandidateRecommendation])?
+#endif
 
     init(
         shiftId: String,
@@ -97,20 +101,14 @@ struct AssignStudentSheet: View {
         }
     }
 
-    private var recommendedUsers: [AppUser] {
-        guard !recommendations.isEmpty else { return rankedUsers }
-        return rankedUsers.filter { user in
-            guard let recommendation = recommendations[user.id] else { return false }
-            return !recommendation.blockingConflict
-                && (recommendation.bucket == "recommended" || recommendation.bucket == "good_fit")
-        }
+    private func users(in fit: CandidateFit) -> [AppUser] {
+        guard !recommendations.isEmpty else { return fit == .suggested ? rankedUsers : [] }
+        return rankedUsers.filter { CandidateFit(recommendations[$0.id]) == fit }
     }
 
-    private var reviewUsers: [AppUser] {
-        guard !recommendations.isEmpty else { return [] }
-        let recommendedIds = Set(recommendedUsers.map(\.id))
-        return rankedUsers.filter { !recommendedIds.contains($0.id) }
-    }
+    private var suggestedUsers: [AppUser] { users(in: .suggested) }
+    private var checkFirstUsers: [AppUser] { users(in: .checkFirst) }
+    private var unavailableUsers: [AppUser] { users(in: .unavailable) }
 
     var body: some View {
         NavigationStack {
@@ -211,30 +209,49 @@ struct AssignStudentSheet: View {
                 }
             }
 
-            if !recommendedUsers.isEmpty {
-                Section(recommendations.isEmpty ? "People" : "Best Fits") {
-                    ForEach(recommendedUsers) { candidateRow($0) }
+            if !suggestedUsers.isEmpty {
+                Section(recommendations.isEmpty ? "People" : "Suggested") {
+                    ForEach(suggestedUsers) { candidateRow($0) }
                 }
             }
 
-            if !reviewUsers.isEmpty {
+            if !checkFirstUsers.isEmpty {
                 Section {
-                    ForEach(reviewUsers) { candidateRow($0) }
+                    ForEach(checkFirstUsers) { candidateRow($0) }
                 } header: {
-                    Text("Review Before Assigning")
+                    Text("Check first")
                 } footer: {
-                    Text("Unavailable people cannot be selected. Advisory conflicts can still be assigned after confirmation.")
+                    if unavailableUsers.isEmpty { unavailableFooter }
+                }
+            }
+
+            if !unavailableUsers.isEmpty {
+                Section {
+                    ForEach(unavailableUsers) { candidateRow($0) }
+                } header: {
+                    Text("Unavailable")
+                } footer: {
+                    unavailableFooter
                 }
             }
 
             if hasMore {
                 ProgressView()
                     .frame(maxWidth: .infinity)
-                    .task(id: users.count) { await loadPage(reset: false) }
+                    .task(id: users.count) {
+#if DEBUG
+                        if fixture != nil { return }
+#endif
+                        await loadPage(reset: false)
+                    }
             }
         }
         .listStyle(.insetGrouped)
         .refreshable { await load() }
+    }
+
+    private var unavailableFooter: some View {
+        Text("Unavailable people cannot be selected. Advisory conflicts can still be assigned after confirmation.")
     }
 
     private var assignmentContextCard: some View {
@@ -326,6 +343,16 @@ struct AssignStudentSheet: View {
     }
 
     private func load() async {
+#if DEBUG
+        if let fixture {
+            users = fixture.users
+            recommendations = Dictionary(uniqueKeysWithValues: fixture.recommendations.map { ($0.userId, $0) })
+            hasMore = false
+            scoresLoading = false
+            isLoading = false
+            return
+        }
+#endif
         isLoading = true
         loadError = nil
         scoresLoading = true
@@ -453,19 +480,27 @@ struct AssignStudentSheet: View {
     }
 }
 
-private struct AssignmentCandidateRow: View {
+struct AssignmentCandidateRow: View {
     let user: AppUser
     let recommendation: CandidateRecommendation?
     let fallbackConflict: String?
     let isAssigning: Bool
     let shiftArea: String
 
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    private var fit: CandidateFit { CandidateFit(recommendation) }
+
     private var isPrimaryAreaMatch: Bool {
         user.primaryArea == shiftArea
     }
 
-    private var warningText: String? {
-        recommendation?.warningContext ?? fallbackConflict
+    private var dotColor: Color {
+        switch fit {
+        case .suggested: Color.statusText(.green)
+        case .checkFirst: Color.statusText(.orange)
+        case .unavailable: Color(.systemGray3)
+        }
     }
 
     var body: some View {
@@ -478,28 +513,31 @@ private struct AssignmentCandidateRow: View {
                 fallbackForeground: Color.secondary,
                 showsBorder: false
             )
+            .overlay(alignment: .bottomTrailing) {
+                if recommendation != nil {
+                    Circle()
+                        .fill(dotColor)
+                        .frame(width: 11, height: 11)
+                        .overlay(Circle().stroke(Color(.secondarySystemGroupedBackground), lineWidth: 2))
+                        .offset(x: 2, y: 2)
+                }
+            }
             .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 6) {
-                    Text(user.name)
-                        .font(.subheadline.weight(.semibold))
-                        .lineLimit(1)
-                    if let recommendation {
-                        fitPill(recommendation)
-                    }
-                }
+            VStack(alignment: .leading, spacing: 3) {
+                Text(user.name)
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? 2 : 1)
 
-                Text(primaryContext)
+                Text(secondaryLine)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                    .foregroundStyle(fit == .checkFirst ? Color.statusText(.orange) : Color.secondary)
+                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? 4 : 2)
 
-                if let warningText {
-                    Label(warningText, systemImage: "exclamationmark.triangle.fill")
-                        .font(.caption2)
-                        .foregroundStyle(Color.statusText(recommendation?.blockingConflict == true ? .red : .orange))
-                        .lineLimit(2)
+                // Large accessibility sizes stack the capsule under the text
+                // so the name keeps its width.
+                if dynamicTypeSize.isAccessibilitySize, !isAssigning {
+                    capsuleView
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -508,15 +546,20 @@ private struct AssignmentCandidateRow: View {
                 ProgressView()
                     .controlSize(.small)
                     .accessibilityLabel("Assigning \(user.name)")
-            } else if recommendation?.blockingConflict != true {
-                Image(systemName: "plus.circle.fill")
-                    .font(.title3)
-                    .foregroundStyle(Color.statusText(.purple))
-                    .accessibilityHidden(true)
             } else {
-                Image(systemName: "nosign")
-                    .foregroundStyle(Color.statusText(.red))
-                    .accessibilityHidden(true)
+                if !dynamicTypeSize.isAccessibilitySize {
+                    capsuleView
+                }
+                if fit == .unavailable {
+                    Image(systemName: "nosign")
+                        .foregroundStyle(Color.statusText(.red))
+                        .accessibilityHidden(true)
+                } else {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.title3)
+                        .foregroundStyle(Color.statusText(.purple))
+                        .accessibilityHidden(true)
+                }
             }
         }
         .padding(.vertical, 6)
@@ -525,35 +568,52 @@ private struct AssignmentCandidateRow: View {
         .accessibilityLabel(accessibilityLabel)
     }
 
-    private var primaryContext: String {
-        if let context = recommendation?.primaryContext { return context }
+    @ViewBuilder
+    private var capsuleView: some View {
+        if let capsule {
+            Text(capsule.text)
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(capsule.warn ? Color.statusText(.orange) : Color.secondary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(
+                    capsule.warn ? Color.statusText(.orange).opacity(0.12) : Color(.tertiarySystemFill),
+                    in: Capsule()
+                )
+                .lineLimit(1)
+                .fixedSize()
+        }
+    }
+
+    private var secondaryLine: String {
+        if let summary = recommendation?.pickerSummary { return summary }
+        if let fallbackConflict { return fallbackConflict }
         if let primaryArea = user.primaryArea, !primaryArea.isEmpty {
             return isPrimaryAreaMatch ? "Primary \(primaryArea.shiftAreaLabel)" : primaryArea.shiftAreaLabel
         }
         return user.email
     }
 
-    @ViewBuilder
-    private func fitPill(_ recommendation: CandidateRecommendation) -> some View {
-        let tone: StatusTone = if recommendation.blockingConflict {
-            .red
-        } else if recommendation.bucket == "recommended" {
-            .purple
-        } else if recommendation.bucket == "good_fit" {
-            .blue
-        } else {
-            .orange
+    private var capsule: (text: String, warn: Bool)? {
+        guard let recommendation else { return nil }
+        if recommendation.blockingConflict { return ("Unavailable", false) }
+        guard let label = recommendation.workloadLabel else { return nil }
+        let warn = recommendation.advisoryConflict || recommendation.bucket == "overloaded"
+        return (label, warn)
+    }
+
+    private var statusText: String {
+        switch fit {
+        case .suggested: "Suggested"
+        case .checkFirst: "Check first"
+        case .unavailable: "Unavailable"
         }
-        StatusPill(
-            label: recommendation.blockingConflict ? "Unavailable" : recommendation.fitLabel,
-            tone: tone
-        )
     }
 
     private var accessibilityLabel: String {
-        var parts = [user.name, primaryContext]
-        if let recommendation { parts.append(recommendation.fitLabel) }
-        if let warningText { parts.append(warningText) }
+        var parts = [user.name, secondaryLine]
+        if recommendation != nil { parts.append(statusText) }
+        if let label = recommendation?.workloadLabel, fit != .unavailable { parts.append(label) }
         if isAssigning { parts.append("Assigning") }
         return parts.joined(separator: ", ")
     }
@@ -588,3 +648,51 @@ private struct AssignPeopleLoadingState: View {
         .accessibilityLabel("Loading assignment candidates")
     }
 }
+
+#if DEBUG
+extension AssignStudentSheet {
+    /// Deterministic picker for light/dark/Dynamic Type captures.
+    static func reviewFixture() -> AssignStudentSheet {
+        func person(_ id: String, _ name: String) -> AppUser {
+            AppUser(id: id, name: name, email: "\(id)@example.edu", role: "STUDENT", staffingType: "ST",
+                    location: nil, avatarUrl: nil, primaryArea: "VIDEO", title: nil, active: true,
+                    gradYear: 2027, studentYearOverride: nil, collaboratorPolicy: nil)
+        }
+        let users = [
+            person("a", "Maya Johnson"), person("b", "Devon Park"), person("c", "Priya Nair"),
+            person("d", "Jordan Ellis"), person("e", "Sam Okafor"), person("f", "Riley Chen"),
+        ]
+        func signal(_ code: String, _ label: String) -> CandidateScoreSignal { .init(code: code, label: label) }
+        let recs = [
+            CandidateRecommendation(userId: "a", bucket: "recommended", score: 92,
+                reasons: [signal("area_match", "Primary video"), signal("history", "Worked 6 football games"), signal("role_fit", "Student slot")],
+                workload: .init(weekAssignments: 0)),
+            CandidateRecommendation(userId: "b", bucket: "good_fit", score: 81,
+                reasons: [signal("availability", "Free all afternoon"), signal("role_fit", "Student slot")],
+                workload: .init(weekAssignments: 2)),
+            CandidateRecommendation(userId: "c", bucket: "warning", score: 55,
+                warnings: [signal("class_overlap", "Class ends 30 min before call")],
+                workload: .init(weekAssignments: 1)),
+            CandidateRecommendation(userId: "d", bucket: "good_fit", score: 60,
+                advisoryConflict: true, advisoryConflictNote: "Also on Women's Hockey the same evening",
+                workload: .init(weekAssignments: 3)),
+            CandidateRecommendation(userId: "e", bucket: "overloaded", score: 40,
+                warnings: [signal("workload", "5 shifts already this week")],
+                workload: .init(weekAssignments: 5)),
+            CandidateRecommendation(userId: "f", bucket: "good_fit", score: 70,
+                warnings: [signal("overlap", "Assigned to Camp Randall at the same time")],
+                blockingConflict: true,
+                workload: .init(weekAssignments: 2)),
+        ]
+        var sheet = AssignStudentSheet(
+            shiftId: "fixture", workingCopyShiftGroupId: "fixture", expectedWorkingVersion: 1,
+            shiftArea: "VIDEO", shiftWorkerType: "ST",
+            shiftStartsAt: Date(timeIntervalSince1970: 1_792_000_000),
+            shiftEndsAt: Date(timeIntervalSince1970: 1_792_014_400),
+            eventTitle: "Wisconsin vs Minnesota", sportCode: "FB", onAssigned: { _ in }
+        )
+        sheet.fixture = (users, recs)
+        return sheet
+    }
+}
+#endif
