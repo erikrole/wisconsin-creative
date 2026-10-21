@@ -104,15 +104,14 @@ describe("schedule open work source contracts", () => {
     expect(sheet).toContain("func loadMoreTrades()");
     expect(sheet).toContain("shiftTrades(area: areaFilter, limit: pageSize)");
     // One "Available to Pick Up" list holds both kinds, soonest first.
-    expect(sheet).toContain('title: "Available to Pick Up"');
     expect(sheet).toContain("case trade(ShiftTrade)");
     expect(sheet).toContain("case open(OpenWorkShift)");
     expect(sheet).not.toContain('title: "Available Now"');
-    expect(sheet).toContain("My Posts");
-    expect(sheet).toContain("Waiting or Blocked");
+    expect(sheet).toContain('case review, available, mine, history');
+    expect(sheet).toContain('case .mine: "Mine"');
+    expect(sheet).toContain("Waiting on admin");
     expect(sheet).toContain("An admin reviews this before you're on the schedule.");
-    expect(sheet).toContain("Admin Review");
-    expect(sheet).toContain("Waiting on Admin");
+    expect(sheet).toContain('case .review: "Review"');
     expect(sheet).toContain("Canceling removes the post; the shift stays assigned to you.");
     expect(sheet).toContain("trade.viewerCanClaim ?? (!isStaff && trade.viewerAvailabilityContext?.blocking != true)");
     expect(sheet).toContain('var canReview: Bool { currentUserRole == "ADMIN" }');

@@ -311,6 +311,63 @@ final class TradeBoardViewModel {
     }
 }
 
+/// The four tabs of the board. Review is Admin-only, matching the web board.
+private enum BoardTab: String, Identifiable {
+    case review, available, mine, history
+
+    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .review: "Review"
+        case .available: "Available"
+        case .mine: "Mine"
+        case .history: "History"
+        }
+    }
+}
+
+private struct BoardNotice: Identifiable {
+    enum Tone { case warn, block, info }
+    let tone: Tone
+    let text: String
+    var id: String { text }
+}
+
+private struct BoardAction: Identifiable {
+    enum Style { case primary, secondary, destructive }
+    let id: String
+    let label: String
+    let busyLabel: String
+    let style: Style
+    let isBusy: Bool
+    var accessibilityLabel: String?
+    let run: () -> Void
+}
+
+/// One shift or trade reduced to what a row shows, the same shape the web
+/// board's `BoardRow` uses, so both clients read the same sentence.
+private struct BoardRowModel: Identifiable {
+    let id: String
+    let startsAt: Date
+    let title: String
+    let times: String
+    let area: String
+    let venueColor: Color
+    var person: ShiftTradeUser?
+    var summary: String
+    var note: String?
+    var notices: [BoardNotice] = []
+    var status: (label: String, tone: StatusTone)?
+    var muted = false
+    var actions: [BoardAction] = []
+    /// A quiet destructive action, such as cancelling your own post.
+    var menuAction: BoardAction?
+}
+
+private enum TradeRowMode {
+    case claim, blocked, mine, watch, waiting, review, done
+}
+
 struct TradeBoardSheet: View {
     /// Same six areas the web board filters on.
     static let areas = ["VIDEO", "PHOTO", "GRAPHICS", "SOCIAL", "COMMS", "LIVE_PRODUCTION"]
@@ -331,9 +388,7 @@ struct TradeBoardSheet: View {
     /// takes a second tap; approve stays one tap.
     @State private var pendingDecline: PendingDecline?
     @State private var openShiftToPickup: OpenWorkShift?
-    @State private var mineOnly = false
-    @State private var showBlocked = false
-    @State private var showHistory = false
+    @State private var selectedTab: BoardTab?
     /// Rows with an action in flight. A set, so finishing one row cannot
     /// re-enable another row's buttons while its request is still running.
     @State private var pendingActionIds: Set<String> = []
@@ -355,7 +410,7 @@ struct TradeBoardSheet: View {
                             .frame(maxWidth: 240)
                     }
                 } else {
-                    tradeList
+                    board
                 }
             }
             .navigationTitle("Trade Board")
@@ -392,18 +447,11 @@ struct TradeBoardSheet: View {
                                 Text(area.shiftAreaLabel).tag(area)
                             }
                         }
-                        Divider()
-                        Toggle(isOn: Binding(
-                            get: { mineOnly },
-                            set: { mineOnly = $0 }
-                        )) {
-                            Label("My posts only", systemImage: "person.crop.circle")
-                        }
                     } label: {
                         // Text, not a Label: the toolbar drops a Label's title,
                         // which left two unlabelled icons.
-                        Text((vm.areaFilter == nil && !mineOnly) ? "Filter" : "Filtered")
-                            .fontWeight((vm.areaFilter == nil && !mineOnly) ? .regular : .semibold)
+                        Text(vm.areaFilter == nil ? "Filter" : "Filtered")
+                            .fontWeight(vm.areaFilter == nil ? .regular : .semibold)
                     }
                     .foregroundStyle(Color.primary)
                     .accessibilityLabel(vm.areaFilter.map { "Filtering by \($0.shiftAreaLabel)" } ?? "Filter")
@@ -428,7 +476,7 @@ struct TradeBoardSheet: View {
                     Task { await vm.load() }
                 }
             }
-            .confirmationDialog(claimDialogTitle, isPresented: Binding(
+            .confirmationDialog("Claim shift?", isPresented: Binding(
                 get: { tradeToConfirm != nil },
                 set: { if !$0 { tradeToConfirm = nil } }
             ), titleVisibility: .visible) {
@@ -437,7 +485,7 @@ struct TradeBoardSheet: View {
             } message: {
                 Text("An admin reviews this before you're on the schedule.")
             }
-            .confirmationDialog(pickupDialogTitle, isPresented: Binding(
+            .confirmationDialog("Claim shift?", isPresented: Binding(
                 get: { openShiftToPickup != nil },
                 set: { if !$0 { openShiftToPickup = nil } }
             ), titleVisibility: .visible) {
@@ -446,7 +494,7 @@ struct TradeBoardSheet: View {
             } message: {
                 Text("An admin reviews this before you're on the schedule.")
             }
-            .confirmationDialog(cancelDialogTitle, isPresented: Binding(
+            .confirmationDialog("Remove trade post?", isPresented: Binding(
                 get: { tradeToCancel != nil },
                 set: { if !$0 { tradeToCancel = nil } }
             ), titleVisibility: .visible) {
@@ -455,7 +503,7 @@ struct TradeBoardSheet: View {
             } message: {
                 Text(cancelDialogMessage)
             }
-            .confirmationDialog(withdrawClaimDialogTitle, isPresented: Binding(
+            .confirmationDialog("Withdraw claim?", isPresented: Binding(
                 get: { tradeClaimToWithdraw != nil },
                 set: { if !$0 { tradeClaimToWithdraw = nil } }
             ), titleVisibility: .visible) {
@@ -464,7 +512,7 @@ struct TradeBoardSheet: View {
             } message: {
                 Text("This removes your pending claim and returns the post to the Trade Board.")
             }
-            .confirmationDialog(withdrawRequestDialogTitle, isPresented: Binding(
+            .confirmationDialog("Withdraw request?", isPresented: Binding(
                 get: { requestToWithdraw != nil },
                 set: { if !$0 { requestToWithdraw = nil } }
             ), titleVisibility: .visible) {
@@ -490,10 +538,6 @@ struct TradeBoardSheet: View {
         }
     }
 
-    private var cancelDialogTitle: String {
-        "Remove trade post?"
-    }
-
     /// Cancelling a claimed post drops someone else's pending claim. Saying only
     /// that the shift stays yours hides the half of this that lands on another
     /// person.
@@ -504,41 +548,52 @@ struct TradeBoardSheet: View {
         return "\(base) \(claimer)'s pending claim is cancelled too."
     }
 
-    private var claimDialogTitle: String {
-        "Claim shift?"
+    // MARK: Tabs
+
+    /// Review is Admin-only: it is the one tab that lets a person decide on
+    /// someone else's claim.
+    private var tabs: [BoardTab] {
+        (vm.canReview ? [.review] : []) + [.available, .mine, .history]
     }
 
-    private var pickupDialogTitle: String {
-        "Claim shift?"
+    private var activeTab: BoardTab {
+        let fallback: BoardTab = vm.canReview && vm.reviewCount > 0 ? .review : .available
+        guard let selectedTab, tabs.contains(selectedTab) else { return fallback }
+        return selectedTab
     }
 
-    private var withdrawClaimDialogTitle: String {
-        "Withdraw claim?"
+    private func count(for tab: BoardTab) -> Int {
+        switch tab {
+        case .review: vm.reviewCount
+        case .available: availableItems.count + (vm.isStaff ? vm.postedTrades.count : 0)
+        case .mine: vm.myTrades.count + vm.myPendingCount
+        case .history: 0
+        }
     }
 
-    private var withdrawRequestDialogTitle: String {
-        "Withdraw request?"
+    private var board: some View {
+        VStack(spacing: 0) {
+            TradeBoardTabBar(
+                tabs: tabs.map { ($0.id, $0.label, count(for: $0), $0 == .review) },
+                selected: activeTab.id,
+                onSelect: { id in selectedTab = BoardTab(rawValue: id) }
+            )
+            if activeTab == .available, !vm.isStaff {
+                Text("Claim open shifts and trades in your area. An admin approves every change before it reaches the schedule.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 6)
+            }
+            tradeList
+        }
+        .background(Color(.systemGroupedBackground))
     }
 
     private var tradeList: some View {
-        List {
-            Section {
-                TradeBoardSummaryCard(
-                    actionableCount: vm.actionableCount,
-                    myPostCount: vm.myTrades.count,
-                    mineOnly: mineOnly,
-                    isComplete: !vm.hasSourceFailure,
-                    isStaff: vm.isStaff,
-                    isReviewer: vm.canReview,
-                    onToggleMine: {
-                        mineOnly.toggle()
-                    }
-                )
-            }
-            .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 8, trailing: 16))
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
-
+        let rows = rows(for: activeTab)
+        return List {
             if let tradeLoadError = vm.tradeLoadError {
                 Section {
                     TradeBoardSourceErrorRow(
@@ -547,7 +602,7 @@ struct TradeBoardSheet: View {
                         retry: { Task { await vm.loadTrades() } }
                     )
                 }
-                .tradeBoardCardRow()
+                .listRowBackground(Color.clear)
             }
 
             if let openWorkLoadError = vm.openWorkLoadError {
@@ -558,16 +613,39 @@ struct TradeBoardSheet: View {
                         retry: { Task { await vm.loadOpenWork() } }
                     )
                 }
-                .tradeBoardCardRow()
+                .listRowBackground(Color.clear)
             }
 
-            if mineOnly {
-                myPostsContent
+            if rows.isEmpty {
+                if !vm.hasSourceFailure {
+                    Section { emptyState(for: activeTab) }
+                        .listRowBackground(Color.clear)
+                }
             } else {
-                availableContent
+                ForEach(dayGroups(rows)) { group in
+                    Section {
+                        ForEach(group.rows) { row in
+                            TradeBoardRow(
+                                row: row,
+                                busyIds: pendingActionIds
+                            )
+                        }
+                    } header: {
+                        Text(group.label)
+                            .font(.subheadline.weight(.semibold))
+                            .textCase(nil)
+                    }
+                }
             }
 
-            if vm.canLoadMore && !mineOnly {
+            if activeTab == .available, vm.openWork.openShiftsTruncated || vm.openWork.pickupRequestsTruncated {
+                Text("Showing the first 100 open slots. Narrow by area to see the rest.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .listRowBackground(Color.clear)
+            }
+
+            if vm.canLoadMore {
                 Section {
                     Button {
                         Task { await vm.loadMoreTrades() }
@@ -582,26 +660,48 @@ struct TradeBoardSheet: View {
                     .buttonStyle(.bordered)
                     .disabled(vm.isLoadingMore)
                 }
-                .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 12, trailing: 16))
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-            }
-
-            if vm.visibleCount == 0 && !vm.hasSourceFailure {
-                Section {
-                    ContentUnavailableView(
-                        "No open shifts",
-                        systemImage: "arrow.triangle.2.circlepath",
-                        description: Text("Open shifts and trade posts will appear here when coverage changes.")
-                    )
-                }
                 .listRowBackground(Color.clear)
             }
         }
-        .listStyle(.plain)
+        .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
-        .background(Color(.systemGroupedBackground))
     }
+
+    @ViewBuilder
+    private func emptyState(for tab: BoardTab) -> some View {
+        switch tab {
+        case .review:
+            ContentUnavailableView(
+                "All caught up",
+                systemImage: "checkmark.circle",
+                description: Text("Claims and requests that need a decision land here, soonest shift first.")
+            )
+        case .available:
+            ContentUnavailableView(
+                "Nothing to pick up",
+                systemImage: "arrow.triangle.2.circlepath",
+                description: Text("Open shifts and trades from your area show up here the moment they are posted.")
+            )
+        case .mine:
+            ContentUnavailableView {
+                Label("Nothing in motion", systemImage: "person.crop.circle.badge.checkmark")
+            } description: {
+                Text("Shifts you post, and claims you are waiting on, are tracked here.")
+            } actions: {
+                Button("Post a Shift") { showPostSheet = true }
+                    .authButton(.primary, adaptive: true)
+                    .frame(maxWidth: 240)
+            }
+        case .history:
+            ContentUnavailableView(
+                "No history yet",
+                systemImage: "clock.arrow.circlepath",
+                description: Text("Completed and cancelled trades appear here.")
+            )
+        }
+    }
+
+    // MARK: Rows
 
     /// Trade posts and unassigned slots answer the same question for a student
     /// ("what could I pick up?"), so they share one list ordered by start time.
@@ -629,208 +729,233 @@ struct TradeBoardSheet: View {
             .sorted { $0.startsAt < $1.startsAt }
     }
 
-    @ViewBuilder
-    private var availableContent: some View {
-            if vm.canReview, vm.reviewCount > 0 {
-                Section {
-                    ForEach(vm.reviewQueue) { item in
-                        switch item {
-                        case .request(let request):
-                            PickupRequestRow(
-                                request: request,
-                                isReview: true,
-                                isActioning: pendingActionIds.contains(request.id),
-                                approveAction: { review(id: request.id) { try await vm.approveRequest(id: request.id) } },
-                                declineAction: {
-                                    pendingDecline = PendingDecline(id: request.id, who: request.user.name) {
-                                        try await vm.declineRequest(id: request.id)
-                                    }
-                                }
-                            )
-                            .tradeBoardCardRow()
-                        case .trade(let trade):
-                            TradeRow(
-                                trade: trade,
-                                context: .review,
-                                isActioning: pendingActionIds.contains(trade.id),
-                                action: nil,
-                                cancelAction: nil,
-                                approveAction: { review(id: trade.id) { try await vm.approveTrade(id: trade.id) } },
-                                declineAction: {
-                                    pendingDecline = PendingDecline(id: trade.id, who: trade.claimedBy?.name) {
-                                        try await vm.declineTrade(id: trade.id)
-                                    }
-                                }
-                            )
-                            .tradeBoardCardRow()
-                        }
-                    }
-                } header: {
-                    TradeSectionHeader(
-                        title: "Admin Review",
-                        subtitle: "Students are waiting. Nothing moves until you decide."
-                    )
+    private func rows(for tab: BoardTab) -> [BoardRowModel] {
+        switch tab {
+        case .review:
+            // Already interleaved and ordered by shift start in the model.
+            return vm.reviewQueue.map { item in
+                switch item {
+                case .request(let request): requestRow(request, review: true)
+                case .trade(let trade): tradeRow(trade, .review)
                 }
             }
-
-            if vm.myPendingCount > 0 {
-                Section {
-                    ForEach(vm.myPendingRequests) { request in
-                        PickupRequestRow(
-                            request: request,
-                            isReview: false,
-                            isActioning: pendingActionIds.contains("withdraw-request:\(request.id)"),
-                            withdrawAction: { requestToWithdraw = request }
-                        )
-                            .tradeBoardCardRow()
-                    }
-                    ForEach(vm.myPendingClaims) { trade in
-                        TradeRow(
-                            trade: trade,
-                            context: .waitingOnAdmin,
-                            isActioning: pendingActionIds.contains("withdraw-claim:\(trade.id)"),
-                            action: nil,
-                            cancelAction: nil,
-                            withdrawAction: { tradeClaimToWithdraw = trade }
-                        )
-                        .tradeBoardCardRow()
-                    }
-                } header: {
-                    TradeSectionHeader(
-                        title: "Waiting on Admin",
-                        subtitle: "You're not on the schedule until these are approved."
-                    )
+        case .available:
+            var all: [BoardRowModel] = []
+            for item in availableItems {
+                switch item {
+                case .trade(let trade): all.append(tradeRow(trade, .claim))
+                case .open(let open): all.append(openShiftRow(open))
                 }
             }
-
-            if !availableItems.isEmpty {
-                Section {
-                    ForEach(availableItems) { item in
-                        switch item {
-                        case .trade(let trade):
-                            TradeRow(
-                                trade: trade,
-                                context: .availableNow,
-                                isActioning: pendingActionIds.contains(trade.id),
-                                action: { tradeToConfirm = trade },
-                                cancelAction: nil
-                            )
-                            .tradeBoardCardRow()
-                        case .open(let openShift):
-                            OpenWorkShiftRow(
-                                item: openShift,
-                                context: .availableNow,
-                                isActioning: pendingActionIds.contains(openShift.id)
-                            ) {
-                                openShiftToPickup = openShift
-                            }
-                            .tradeBoardCardRow()
-                        }
-                    }
-                    if vm.openWork.openShiftsTruncated || vm.openWork.pickupRequestsTruncated {
-                        Text("Showing the first 100 open slots. Narrow by area to see the rest.")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .tradeBoardCardRow()
-                    }
-                } header: {
-                    TradeSectionHeader(
-                        title: "Available to Pick Up",
-                        subtitle: "Shifts other students posted and unassigned slots, soonest first. Claiming sends a request to an admin."
-                    )
-                }
+            all += vm.waitingOpenShifts.map(openShiftRow)
+            all += vm.blockedTrades.map { tradeRow($0, .blocked) }
+            if vm.isStaff {
+                all += vm.postedTrades.map { tradeRow($0, .watch) }
             }
-
-            if !vm.waitingOpenShifts.isEmpty || !vm.blockedTrades.isEmpty {
-                Section {
-                    DisclosureGroup(isExpanded: $showBlocked) {
-                        VStack(spacing: 10) {
-                            ForEach(vm.waitingOpenShifts) { item in
-                                OpenWorkShiftRow(item: item, context: .waiting, isActioning: false, action: nil)
-                            }
-                            ForEach(vm.blockedTrades) { trade in
-                                TradeRow(trade: trade, context: .blocked, isActioning: false, action: nil, cancelAction: nil)
-                            }
-                        }
-                        .padding(.top, 10)
-                    } label: {
-                        Label("Waiting or Blocked", systemImage: "clock.badge.exclamationmark")
-                            .font(.subheadline.weight(.semibold))
-                    }
-                }
-                .tradeBoardCardRow()
-            }
-
-            if vm.isStaff, !vm.postedTrades.isEmpty {
-                Section {
-                    ForEach(vm.postedTrades) { trade in
-                        TradeRow(trade: trade, context: .posted, isActioning: false, action: nil, cancelAction: nil)
-                            .tradeBoardCardRow()
-                    }
-                } header: {
-                    TradeSectionHeader(title: "Posted Trades", subtitle: "Coverage context across the team.")
-                }
-            }
-
-            if !vm.resolvedTrades.isEmpty {
-                Section {
-                    DisclosureGroup(isExpanded: $showHistory) {
-                        VStack(spacing: 10) {
-                            ForEach(vm.resolvedTrades) { trade in
-                                TradeRow(trade: trade, context: .resolved, isActioning: false, action: nil, cancelAction: nil)
-                            }
-                        }
-                        .padding(.top, 10)
-                    } label: {
-                        Label("Resolved", systemImage: "clock.arrow.circlepath")
-                            .font(.subheadline.weight(.semibold))
-                    }
-                }
-                .tradeBoardCardRow()
-            }
-    }
-
-    @ViewBuilder
-    private var myPostsContent: some View {
-        if vm.myTrades.isEmpty {
-            Section {
-                ContentUnavailableView {
-                    Label("No shifts posted", systemImage: "person.crop.circle.badge.checkmark")
-                } description: {
-                    Text("Post one of your upcoming shifts when you need someone else to cover it.")
-                } actions: {
-                    Button("Post a Shift") { showPostSheet = true }
-                        .authButton(.primary, adaptive: true)
-                        .frame(maxWidth: 240)
-                }
-            }
-            .listRowBackground(Color.clear)
-        } else {
-            Section {
-                ForEach(vm.myTrades) { trade in
-                    TradeRow(
-                        trade: trade,
-                        context: .myPost,
-                        isActioning: pendingActionIds.contains(trade.id),
-                        action: nil,
-                        cancelAction: { tradeToCancel = trade }
-                    )
-                    .tradeBoardCardRow()
-                    .swipeActions(edge: .trailing) {
-                        Button(role: .destructive) {
-                            tradeToCancel = trade
-                        } label: {
-                            Label("Cancel Trade", systemImage: "xmark")
-                        }
-                        .accessibilityLabel("Cancel trade")
-                    }
-                }
-            } header: {
-                TradeSectionHeader(title: "My Posts", subtitle: "Canceling a post keeps the shift assigned to you.")
-            }
+            return all.sorted { $0.startsAt < $1.startsAt }
+        case .mine:
+            let all = vm.myTrades.map { tradeRow($0, .mine) }
+                + vm.myPendingClaims.map { tradeRow($0, .waiting) }
+                + vm.myPendingRequests.map { requestRow($0, review: false) }
+            return all.sorted { $0.startsAt < $1.startsAt }
+        case .history:
+            return vm.resolvedTrades.map { tradeRow($0, .done) }
+                .sorted { $0.startsAt > $1.startsAt }
         }
     }
+
+    private func action(
+        _ id: String,
+        _ label: String,
+        _ busyLabel: String,
+        _ style: BoardAction.Style,
+        accessibilityLabel: String? = nil,
+        run: @escaping () -> Void
+    ) -> BoardAction {
+        BoardAction(
+            id: id,
+            label: label,
+            busyLabel: busyLabel,
+            style: style,
+            isBusy: pendingActionIds.contains(id),
+            accessibilityLabel: accessibilityLabel,
+            run: run
+        )
+    }
+
+    private func availabilityNotices(_ context: ShiftAvailabilityContext?) -> [BoardNotice] {
+        guard let context else { return [] }
+        return [BoardNotice(tone: context.blocking ? .block : .warn, text: "\(context.label). \(context.detail)")]
+    }
+
+    private func deadlineNotices(_ deadline: Date?) -> [BoardNotice] {
+        guard let deadline else { return [] }
+        return [BoardNotice(
+            tone: .info,
+            text: "Auto-approval check by \(deadline.formatted(date: .abbreviated, time: .shortened))."
+        )]
+    }
+
+    private func tradeRow(_ trade: ShiftTrade, _ mode: TradeRowMode) -> BoardRowModel {
+        let shift = trade.shiftAssignment.shift
+        let assignment = trade.shiftAssignment
+        var row = BoardRowModel(
+            id: "trade:\(trade.id):\(mode)",
+            startsAt: shift.boardStart(personalStartsAt: assignment.callStartsAt, personalEndsAt: assignment.callEndsAt),
+            title: shift.displayTitle,
+            times: shift.timesLine(personalStartsAt: assignment.callStartsAt, personalEndsAt: assignment.callEndsAt),
+            area: "\(shift.area.shiftAreaLabel) · \(shift.classificationLabel)",
+            venueColor: shift.classificationColor,
+            person: trade.postedBy,
+            summary: ""
+        )
+        row.note = trade.notes.flatMap { $0.isEmpty ? nil : $0 }
+        let poster = trade.postedBy.name
+        switch mode {
+        case .claim:
+            row.summary = "\(poster) can't work this"
+            row.notices = availabilityNotices(trade.viewerAvailabilityContext)
+            row.actions = [action(trade.id, "Claim", "Claiming…", .primary,
+                                  accessibilityLabel: "Claim \(poster)'s shift") { tradeToConfirm = trade }]
+        case .blocked:
+            row.summary = "\(poster) can't work this"
+            row.muted = true
+            row.status = ("Can't claim", .gray)
+            if trade.viewerAvailabilityContext != nil {
+                row.notices = availabilityNotices(trade.viewerAvailabilityContext)
+            } else if let reason = trade.viewerClaimReason {
+                row.notices = [BoardNotice(tone: .info, text: reason)]
+            }
+        case .mine:
+            let claimed = trade.status == .claimed
+            row.person = trade.claimedBy ?? trade.postedBy
+            row.summary = claimed
+                ? "\(trade.claimedBy?.name ?? "Someone") claimed it. Waiting on an admin"
+                : "Posted. You keep the shift until someone claims it and an admin approves"
+            row.status = claimed ? ("Claimed", .orange) : ("Open", .green)
+            row.menuAction = action(trade.id, "Cancel post", "Cancelling…", .destructive,
+                                    accessibilityLabel: "Cancel post") { tradeToCancel = trade }
+        case .watch:
+            row.summary = trade.claimedBy.map { "\(poster) → \($0.name)" } ?? "Posted by \(poster)"
+            row.status = (trade.status.label, trade.status.tone)
+            row.notices = availabilityNotices(trade.claimedByAvailabilityContext)
+        case .waiting:
+            row.summary = "Your claim on \(poster)'s shift"
+            row.status = ("Waiting on admin", .orange)
+            row.notices = deadlineNotices(trade.reviewAutoApprovesAt)
+            row.actions = [action("withdraw-claim:\(trade.id)", "Withdraw claim", "Withdrawing…", .secondary) {
+                tradeClaimToWithdraw = trade
+            }]
+        case .review:
+            let claimer = trade.claimedBy?.name ?? "Someone"
+            row.person = trade.claimedBy ?? trade.postedBy
+            row.summary = "\(claimer) wants \(poster)'s shift"
+            row.status = ("Needs review", .orange)
+            row.notices = availabilityNotices(trade.claimedByAvailabilityContext) + deadlineNotices(trade.reviewAutoApprovesAt)
+            row.actions = [
+                action(trade.id, "Approve", "Approving…", .primary,
+                       accessibilityLabel: "Approve trade for \(trade.claimedBy?.name ?? "the claimer")") {
+                    review(id: trade.id) { try await vm.approveTrade(id: trade.id) }
+                },
+                action("decline:\(trade.id)", "Decline", "Declining…", .secondary,
+                       accessibilityLabel: "Decline trade for \(trade.claimedBy?.name ?? "the claimer")") {
+                    pendingDecline = PendingDecline(id: trade.id, who: trade.claimedBy?.name) {
+                        try await vm.declineTrade(id: trade.id)
+                    }
+                },
+            ]
+        case .done:
+            row.summary = trade.claimedBy.map { "\(poster) → \($0.name)" } ?? "Posted by \(poster)"
+            row.status = (trade.status.label, trade.status.tone)
+            row.muted = true
+        }
+        return row
+    }
+
+    private func openShiftRow(_ item: OpenWorkShift) -> BoardRowModel {
+        let shift = item.shift
+        let claimable = item.action == "claim"
+        let warning = claimable
+            ? (item.availabilityContext == nil ? item.advisoryConflictNote ?? item.warnings.first?.label : nil)
+            : (item.reason.isEmpty ? item.advisoryConflictNote ?? item.warnings.first?.label : item.reason)
+        var row = BoardRowModel(
+            id: "open:\(item.id)",
+            startsAt: shift.boardStart(personalStartsAt: nil, personalEndsAt: nil),
+            title: shift.displayTitle,
+            times: shift.timesLine(personalStartsAt: nil, personalEndsAt: nil),
+            area: "\(shift.area.shiftAreaLabel) · \(shift.classificationLabel)",
+            venueColor: shift.classificationColor,
+            person: nil,
+            summary: item.requestCount > 0
+                ? "Open slot · \(item.requestCount) \(item.requestCount == 1 ? "request" : "requests") so far"
+                : "Open slot nobody holds yet"
+        )
+        row.muted = !claimable
+        row.status = claimable ? ("Open", .green) : ("Can't claim", .gray)
+        if let warning {
+            row.notices.append(BoardNotice(tone: claimable ? .warn : .info, text: warning))
+        }
+        if claimable {
+            row.notices += availabilityNotices(item.availabilityContext)
+            row.actions = [action(item.id, "Claim", "Claiming…", .primary) { openShiftToPickup = item }]
+        }
+        return row
+    }
+
+    private func requestRow(_ request: OpenWorkPickupRequest, review: Bool) -> BoardRowModel {
+        let shift = request.shift
+        var row = BoardRowModel(
+            id: "request:\(request.id):\(review ? "review" : "waiting")",
+            startsAt: shift.boardStart(personalStartsAt: nil, personalEndsAt: nil),
+            title: shift.displayTitle,
+            times: shift.timesLine(personalStartsAt: nil, personalEndsAt: nil),
+            area: "\(shift.area.shiftAreaLabel) · \(shift.classificationLabel)",
+            venueColor: shift.classificationColor,
+            person: request.user,
+            summary: review ? "\(request.user.name) wants this open slot" : "Your request for this open slot"
+        )
+        row.status = review ? ("Needs review", .orange) : ("Waiting on admin", .orange)
+        if let note = request.conflictNote, !note.isEmpty {
+            row.notices.append(BoardNotice(tone: .warn, text: note))
+        }
+        row.notices += deadlineNotices(request.reviewAutoApprovesAt)
+        if review {
+            row.actions = [
+                action(request.id, "Approve", "Approving…", .primary,
+                       accessibilityLabel: "Approve request from \(request.user.name)") {
+                    self.review(id: request.id) { try await vm.approveRequest(id: request.id) }
+                },
+                action("decline:\(request.id)", "Decline", "Declining…", .secondary,
+                       accessibilityLabel: "Decline request from \(request.user.name)") {
+                    pendingDecline = PendingDecline(id: request.id, who: request.user.name) {
+                        try await vm.declineRequest(id: request.id)
+                    }
+                },
+            ]
+        } else {
+            row.actions = [action("withdraw-request:\(request.id)", "Withdraw request", "Withdrawing…", .secondary) {
+                requestToWithdraw = request
+            }]
+        }
+        return row
+    }
+
+    /// Rows are already in order, so a new day starts a new group.
+    private func dayGroups(_ rows: [BoardRowModel]) -> [BoardDayGroup] {
+        let calendar = Calendar.current
+        var groups: [BoardDayGroup] = []
+        for row in rows {
+            let day = calendar.startOfDay(for: row.startsAt)
+            if let last = groups.last, last.day == day {
+                groups[groups.count - 1].rows.append(row)
+            } else {
+                groups.append(BoardDayGroup(day: day, rows: [row]))
+            }
+        }
+        return groups
+    }
+
+    // MARK: Actions
 
     /// One executor for every board action. The row is busy only while its
     /// own request runs, and the board reloads afterwards whether the action
@@ -899,7 +1024,6 @@ struct TradeBoardSheet: View {
         guard let request = requestToWithdraw else { return }
         runAction("withdraw-request:\(request.id)", { try await vm.withdrawRequest(id: request.id) }, finally: { requestToWithdraw = nil })
     }
-
 }
 
 private struct PendingDecline {
@@ -913,512 +1037,274 @@ private struct PendingDecline {
     }
 }
 
-private struct TradeSectionHeader: View {
-    let title: String
-    let subtitle: String
+private struct BoardDayGroup: Identifiable {
+    let day: Date
+    var rows: [BoardRowModel]
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title)
-                .font(.title3)
-                .fontWeight(.heavy)
-                .foregroundColor(.primary)
-                .textCase(nil)
-            Text(subtitle)
-                .font(.caption)
-                .fontWeight(.regular)
-                .textCase(nil)
-                .foregroundStyle(.secondary)
-        }
+    var id: Date { day }
+
+    /// "Today", "Tomorrow", then the weekday and date, like the web board.
+    var label: String {
+        let calendar = Calendar.current
+        let base = day.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
+        if calendar.isDateInToday(day) { return "Today · \(base)" }
+        if calendar.isDateInTomorrow(day) { return "Tomorrow · \(base)" }
+        return base
     }
 }
 
-private struct TradeBoardSummaryCard: View {
-    let actionableCount: Int
-    let myPostCount: Int
-    let mineOnly: Bool
-    let isComplete: Bool
-    /// Reviewers and students are counting different things. For Admin the
-    /// number is claims owed a decision; describing those as shifts they can claim was
-    /// worse than saying nothing, because the words contradicted the buttons
-    /// directly below them.
-    let isStaff: Bool
-    let isReviewer: Bool
-    let onToggleMine: () -> Void
+// MARK: Views
 
-    private var summaryTone: StatusTone {
-        if !isComplete { return .orange }
-        return actionableCount > 0 ? .purple : .green
-    }
-
-    private var summaryIcon: String {
-        if !isComplete { return "exclamationmark.triangle.fill" }
-        if actionableCount == 0 { return "checkmark" }
-        return isReviewer ? "checklist" : "arrow.left.arrow.right"
-    }
-
-    private var summaryTitle: String {
-        if mineOnly { return "Your trade posts" }
-        if !isComplete { return "Coverage is incomplete" }
-        if actionableCount == 0 {
-            if isReviewer { return "Nothing to review" }
-            return isStaff ? "Trade Board overview" : "Coverage is clear"
-        }
-        if isReviewer {
-            return "\(actionableCount) \(actionableCount == 1 ? "claim" : "claims") to review"
-        }
-        return "\(actionableCount) \(actionableCount == 1 ? "opportunity" : "opportunities") available"
-    }
-
-    private var summaryDetail: String {
-        if mineOnly { return "\(myPostCount) active \(myPostCount == 1 ? "post" : "posts")" }
-        if !isComplete { return "Refresh the unavailable source before relying on this board" }
-        if actionableCount == 0 {
-            if isReviewer { return "No claims are waiting on you" }
-            return isStaff ? "Open shifts and trade posts across the team" : "Posted trades and open slots are listed together below"
-        }
-        return isReviewer
-            ? "Students are waiting on your decision"
-            : "Posted trades and open slots are listed together below"
-    }
+/// Segmented tabs with counts. A custom control rather than a segmented
+/// Picker, which cannot show a count badge; it scrolls instead of truncating
+/// when large text no longer fits four segments.
+private struct TradeBoardTabBar: View {
+    /// id, label, count, isAttention
+    let tabs: [(String, String, Int, Bool)]
+    let selected: String
+    let onSelect: (String) -> Void
 
     var body: some View {
-        HStack(spacing: 14) {
-            Image(systemName: summaryIcon)
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(summaryTone == .orange ? Color.statusText(.orange) : Color.secondary)
-                .frame(width: 28)
-                .accessibilityHidden(true)
+        ViewThatFits(in: .horizontal) {
+            track
+            ScrollView(.horizontal, showsIndicators: false) { track }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+    }
 
-            VStack(alignment: .leading, spacing: 3) {
-                Text(summaryTitle)
-                    .font(.system(size: 17, weight: .heavy))
-                Text(summaryDetail)
-                    .font(.subheadline)
+    private var track: some View {
+        HStack(spacing: 2) {
+            ForEach(tabs, id: \.0) { tab in
+                let isSelected = tab.0 == selected
+                Button { onSelect(tab.0) } label: {
+                    HStack(spacing: 6) {
+                        Text(tab.1)
+                            .font(.subheadline.weight(isSelected ? .semibold : .medium))
+                            .lineLimit(1)
+                            .fixedSize(horizontal: true, vertical: false)
+                        if tab.2 > 0 {
+                            Text("\(tab.2)")
+                                .font(.caption2.weight(.bold))
+                                .monospacedDigit()
+                                .padding(.horizontal, 6)
+                                .frame(minWidth: 20, minHeight: 20)
+                                .foregroundStyle(tab.3 ? Color.statusText(.orange) : Color.primary)
+                                .background(
+                                    tab.3 ? Color.statusBackground(.orange) : Color.primary.opacity(0.1),
+                                    in: Capsule()
+                                )
+                        }
+                    }
+                    .foregroundStyle(isSelected ? Color.primary : Color.secondary)
+                    .padding(.horizontal, 12)
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .background {
+                        if isSelected {
+                            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                                .fill(Color(.systemBackground))
+                                .shadow(color: .black.opacity(0.08), radius: 2, y: 1)
+                        }
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(isSelected ? .isSelected : [])
+                .accessibilityLabel(tab.2 > 0 ? "\(tab.1), \(tab.2)" : tab.1)
+            }
+        }
+        .padding(2)
+        .background(Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+    }
+}
+
+private struct TradeBoardDateTile: View {
+    let date: Date
+    let tint: Color
+    let muted: Bool
+    @ScaledMetric(relativeTo: .body) private var side: CGFloat = 48
+
+    var body: some View {
+        VStack(spacing: 1) {
+            Text(date.formatted(.dateTime.weekday(.abbreviated)).uppercased())
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.secondary)
+            Text(date.formatted(.dateTime.day()))
+                .font(.gothamBold(size: 18))
+                .monospacedDigit()
+        }
+        .frame(width: side, height: side)
+        .background(Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .overlay(alignment: .topTrailing) {
+            Circle().fill(tint).frame(width: 7, height: 7).padding(5)
+        }
+        .opacity(muted ? 0.6 : 1)
+        .accessibilityHidden(true)
+    }
+}
+
+private struct TradeBoardRow: View {
+    let row: BoardRowModel
+    let busyIds: Set<String>
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if dynamicTypeSize.isAccessibilitySize {
+                // No room beside a tile at accessibility sizes: stack it all.
+                VStack(alignment: .leading, spacing: 8) {
+                    TradeBoardDateTile(date: row.startsAt, tint: row.venueColor, muted: row.muted)
+                        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+                    heading
+                }
+            } else {
+                HStack(alignment: .top, spacing: 12) {
+                    TradeBoardDateTile(date: row.startsAt, tint: row.venueColor, muted: row.muted)
+                    heading
+                }
+            }
+
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                if let person = row.person {
+                    UserAvatarView(name: person.name, avatarUrl: person.avatarUrl, size: 22)
+                        .accessibilityHidden(true)
+                }
+                Text(row.summary)
+                    .font(.footnote)
                     .foregroundStyle(.secondary)
             }
 
-            Spacer(minLength: 8)
+            if let note = row.note {
+                Text("“\(note)”")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 7)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            }
 
-            Button(action: onToggleMine) {
-                Text(mineOnly ? "All shifts" : "My posts")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color.primary)
-                    .padding(.horizontal, 14)
-                    .frame(minHeight: 44)
+            ForEach(row.notices) { notice in
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Image(systemName: notice.tone == .info ? "info.circle" : "exclamationmark.triangle.fill")
+                        .accessibilityHidden(true)
+                    Text(notice.text)
+                }
+                .font(.footnote)
+                .foregroundStyle(notice.tone == .block ? Color.statusText(.red)
+                    : notice.tone == .warn ? Color.statusText(.orange) : Color.secondary)
+            }
+
+            if !row.actions.isEmpty || row.menuAction != nil {
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 8) { actionButtons }
+                    VStack(spacing: 8) { actionButtons }
+                }
+                .padding(.top, 2)
+            }
+        }
+        .padding(.vertical, 6)
+        .accessibilityElement(children: .contain)
+    }
+
+    private var statusChip: some View {
+        Group {
+            if let status = row.status {
+                Text(status.label)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(status.tone == .orange || status.tone == .red
+                        ? Color.statusText(status.tone) : Color.secondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
                     .background(Color.flatRaised, in: Capsule())
                     .overlay(Capsule().strokeBorder(Color.flatStroke, lineWidth: 1))
-                    .contentShape(Capsule())
+                    .fixedSize()
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(mineOnly ? "Show available shifts" : "Show my trade posts")
-        }
-        .padding(16)
-        .background(Color.flatCard, in: RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous).strokeBorder(Color.flatStroke, lineWidth: 1))
-    }
-}
-
-private enum OpenWorkRowContext: Equatable {
-    case availableNow
-    case waiting
-
-    var badge: String {
-        switch self {
-        case .availableNow: "Open"
-        case .waiting: "Not available"
         }
     }
 
-    var tone: StatusTone {
-        switch self {
-        case .availableNow:
-            return StatusTone.green
-        case .waiting:
-            return StatusTone.gray
-        }
-    }
-}
-
-private struct OpenWorkShiftRow: View {
-    let item: OpenWorkShift
-    let context: OpenWorkRowContext
-    let isActioning: Bool
-    var action: (() -> Void)?
-
-    private var shift: ShiftTradeShift { item.shift }
-    private var consequence: String {
-        switch item.action {
-        case "claim": "An admin reviews this before you're on the schedule."
-        default: item.reason
-        }
-    }
-    private var warning: String? {
-        item.availabilityContext == nil ? item.advisoryConflictNote ?? item.warnings.first?.label : nil
-    }
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            VenueDot(color: shift.classificationColor)
-
-            VStack(alignment: .leading, spacing: 7) {
-                rowHeader(title: shift.displayTitle, badge: context.badge, tone: context.tone)
-
-                Text(shift.dateTimeLine)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color.primary)
-
-                HStack(spacing: 6) {
-                    Text(shift.area.shiftAreaLabel)
-                    Text("·")
-                    Text(shift.classificationLabel)
-                    Text("·")
-                    Text("Open slot")
+    private var heading: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            if dynamicTypeSize.isAccessibilitySize {
+                statusChip
+                title
+            } else {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    title.layoutPriority(1)
+                    Spacer(minLength: 4)
+                    statusChip
                 }
-                .font(.caption)
+            }
+            Text("\(row.times) · \(row.area)")
+                .font(.subheadline)
+                .monospacedDigit()
                 .foregroundStyle(.secondary)
-
-                if let warning {
-                    Label(warning, systemImage: "exclamationmark.triangle.fill")
-                        .font(.caption)
-                        .foregroundStyle(Color.statusText(.orange))
-                } else if context == .waiting {
-                    Text(consequence)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                if let availabilityContext = item.availabilityContext {
-                    ShiftAvailabilityContextNote(context: availabilityContext)
-                }
-
-                if let action {
-                    Button(action: action) {
-                        HStack(spacing: 7) {
-                            if isActioning { ProgressView().controlSize(.small) }
-                            Text("Claim shift")
-                                .font(.subheadline.weight(.semibold))
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                    .authButton(.primary, adaptive: true)
-                    .disabled(isActioning)
-                }
-            }
-        }
-        .padding(14)
-        .background(Color.flatCard, in: RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous).strokeBorder(Color.flatStroke, lineWidth: 1))
-        .accessibilityElement(children: .contain)
-    }
-}
-
-private enum TradeRowContext: Equatable {
-    case availableNow
-    case blocked
-    case myPost
-    case posted
-    case resolved
-    /// Admins owe this claim a decision.
-    case review
-    /// The viewer claimed it and is waiting.
-    case waitingOnAdmin
-
-    func consequence(for trade: ShiftTrade) -> String {
-        switch self {
-        case .availableNow:
-            return "Claiming sends this to an admin; the shift stays with its owner until approval."
-        case .review:
-            return "Nothing changes on the schedule until you approve or decline."
-        case .waitingOnAdmin:
-            return "Waiting for an admin to approve your claim."
-        case .blocked:
-            return trade.viewerAvailabilityContext?.detail ?? "This shift is not available with your current schedule."
-        case .myPost:
-            return "Canceling removes the post; the shift stays assigned to you."
-        case .posted:
-            return trade.status.label
-        case .resolved:
-            return trade.status.label
         }
     }
-}
 
-private struct TradeRow: View {
-    let trade: ShiftTrade
-    let context: TradeRowContext
-    let isActioning: Bool
-    var action: (() -> Void)?
-    var cancelAction: (() -> Void)?
-    var withdrawAction: (() -> Void)?
-    var approveAction: (() -> Void)?
-    var declineAction: (() -> Void)?
-
-    private var shift: ShiftTradeShift { trade.shiftAssignment.shift }
-    private var badge: String {
-        switch context {
-        case .blocked: "Blocked"
-        case .review: "Needs review"
-        case .waitingOnAdmin: "Waiting"
-        default: trade.status.label
-        }
-    }
-    private var tone: StatusTone {
-        switch context {
-        case .blocked: return StatusTone.red
-        case .review, .waitingOnAdmin: return StatusTone.orange
-        default: return trade.status.tone
-        }
-    }
-    private var availabilityContext: ShiftAvailabilityContext? {
-        if context == .blocked { return trade.viewerAvailabilityContext }
-        if context == .review { return trade.claimedByAvailabilityContext }
-        if context == .posted, trade.status == .claimed { return trade.claimedByAvailabilityContext }
-        return nil
-    }
-
-    private var reviewDeadlineLine: String? {
-        guard context == .review || context == .waitingOnAdmin,
-              let deadline = trade.reviewAutoApprovesAt else { return nil }
-        return "Auto-approval check by \(deadline.formatted(date: .abbreviated, time: .shortened))."
-    }
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            VenueDot(color: shift.classificationColor)
-
-            VStack(alignment: .leading, spacing: 7) {
-                rowHeader(title: shift.displayTitle, badge: badge, tone: tone)
-
-                Text(shift.dateTimeLine(
-                    personalStartsAt: trade.shiftAssignment.callStartsAt,
-                    personalEndsAt: trade.shiftAssignment.callEndsAt
-                ))
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color.primary)
-
-                Text("\(shift.area.shiftAreaLabel) · \(shift.classificationLabel) · Posted by \(trade.postedBy.name)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                if let claimedBy = trade.claimedBy {
-                    Text("Claimed by \(claimedBy.name)")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Color.primary)
-                }
-
-                if let notes = trade.notes, !notes.isEmpty {
-                    Text(notes)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                }
-
-                if let availabilityContext {
-                    ShiftAvailabilityContextNote(context: availabilityContext)
-                } else if context == .blocked, let reason = trade.viewerClaimReason {
-                    Label(reason, systemImage: "exclamationmark.triangle.fill")
-                        .font(.caption)
-                        .foregroundStyle(Color.statusText(.orange))
-                }
-
-                if context == .waitingOnAdmin {
-                    Text(context.consequence(for: trade))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                if let reviewDeadlineLine {
-                    Text(reviewDeadlineLine)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                HStack(spacing: 8) {
-                    if let action {
-                        Button(action: action) {
-                            HStack(spacing: 7) {
-                                if isActioning { ProgressView().controlSize(.small) }
-                                Text("Claim this shift")
-                                    .font(.subheadline.weight(.semibold))
-                            }
-                            .frame(maxWidth: .infinity)
-                        }
-                        .authButton(.primary, adaptive: true)
-                        .disabled(isActioning)
-                    }
-
-                    if let approveAction {
-                        Button(action: approveAction) {
-                            HStack(spacing: 7) {
-                                if isActioning { ProgressView().controlSize(.small) }
-                                Text("Approve")
-                                    .font(.subheadline.weight(.semibold))
-                            }
-                            .frame(maxWidth: .infinity)
-                        }
-                        .authButton(.primary, adaptive: true)
-                        .disabled(isActioning)
-                        .accessibilityLabel("Approve trade for \(trade.claimedBy?.name ?? "the claimer")")
-                    }
-
-                    if let declineAction {
-                        Button(action: declineAction) {
-                            Text("Decline")
-                                .font(.subheadline.weight(.medium))
-                                .frame(maxWidth: .infinity)
-                        }
-                        .authButton(.secondary, adaptive: true)
-                        .disabled(isActioning)
-                        .accessibilityLabel("Decline trade for \(trade.claimedBy?.name ?? "the claimer")")
-                    }
-
-                    if let cancelAction {
-                        Button(role: .destructive, action: cancelAction) {
-                            Text("Cancel post")
-                                .font(.subheadline.weight(.medium))
-                                .frame(maxWidth: .infinity)
-                        }
-                        .authButton(.secondary, adaptive: true)
-                        .disabled(isActioning)
-                    }
-
-                    if let withdrawAction {
-                        Button(role: .destructive, action: withdrawAction) {
-                            Text("Withdraw claim")
-                                .font(.subheadline.weight(.medium))
-                                .frame(maxWidth: .infinity)
-                        }
-                        .authButton(.secondary, adaptive: true)
-                        .disabled(isActioning)
-                    }
-                }
-            }
-        }
-        .padding(14)
-        .background(Color.flatCard, in: RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous).strokeBorder(Color.flatStroke, lineWidth: 1))
-        .accessibilityElement(children: .contain)
-    }
-}
-
-/// A student's claim on an open slot, shown to Admin as work and to the student
-/// as something they are waiting on.
-private struct PickupRequestRow: View {
-    let request: OpenWorkPickupRequest
-    let isReview: Bool
-    let isActioning: Bool
-    var approveAction: (() -> Void)?
-    var declineAction: (() -> Void)?
-    var withdrawAction: (() -> Void)?
-
-    private var shift: ShiftTradeShift { request.shift }
-    private var reviewDeadlineLine: String? {
-        guard let deadline = request.reviewAutoApprovesAt else { return nil }
-        return "Auto-approval check by \(deadline.formatted(date: .abbreviated, time: .shortened))."
-    }
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            VenueDot(color: shift.classificationColor)
-
-            VStack(alignment: .leading, spacing: 7) {
-                rowHeader(
-                    title: shift.displayTitle,
-                    badge: isReview ? "Needs review" : "Waiting",
-                    tone: .orange
-                )
-
-                Text(shift.dateTimeLine)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color.primary)
-
-                Text(isReview
-                    ? "\(shift.area.shiftAreaLabel) · \(request.user.name) wants this slot"
-                    : "\(shift.area.shiftAreaLabel) · \(shift.classificationLabel)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                if let note = request.conflictNote, !note.isEmpty {
-                    Label(note, systemImage: "exclamationmark.triangle.fill")
-                        .font(.caption)
-                        .foregroundStyle(Color.statusText(.orange))
-                }
-
-                if !isReview {
-                    Text("Waiting for an admin to approve your request.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-
-                    if let reviewDeadlineLine {
-                        Text(reviewDeadlineLine)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    if let withdrawAction {
-                        Button(role: .destructive, action: withdrawAction) {
-                            HStack(spacing: 7) {
-                                if isActioning { ProgressView().controlSize(.small) }
-                                Text("Withdraw request")
-                                    .font(.subheadline.weight(.medium))
-                            }
-                            .frame(maxWidth: .infinity)
-                        }
-                        .authButton(.secondary, adaptive: true)
-                        .disabled(isActioning)
-                    }
-                }
-
-                if isReview {
-                    HStack(spacing: 8) {
-                        if let approveAction {
-                            Button(action: approveAction) {
-                                HStack(spacing: 7) {
-                                    if isActioning { ProgressView().controlSize(.small) }
-                                    Text("Approve")
-                                        .font(.subheadline.weight(.semibold))
-                                }
-                                .frame(maxWidth: .infinity)
-                            }
-                            .authButton(.primary, adaptive: true)
-                            .disabled(isActioning)
-                            .accessibilityLabel("Approve request from \(request.user.name)")
-                        }
-                        if let declineAction {
-                            Button(action: declineAction) {
-                                Text("Decline")
-                                    .font(.subheadline.weight(.medium))
-                                    .frame(maxWidth: .infinity)
-                            }
-                            .authButton(.secondary, adaptive: true)
-                            .disabled(isActioning)
-                            .accessibilityLabel("Decline request from \(request.user.name)")
-                        }
-                    }
-                }
-            }
-        }
-        .padding(14)
-        .background(Color.flatCard, in: RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous).strokeBorder(Color.flatStroke, lineWidth: 1))
-        .accessibilityElement(children: .contain)
-    }
-}
-
-private func rowHeader(title: String, badge: String, tone: StatusTone) -> some View {
-    HStack(alignment: .top) {
-        Text(title)
+    private var title: some View {
+        Text(row.title)
             .font(.gothamBold(size: 16))
-            .lineLimit(2)
-        Spacer(minLength: 8)
-        Text(badge)
-            .font(.caption2.weight(.semibold))
-            .foregroundStyle(tone == .red || tone == .orange ? Color.statusText(tone) : Color.secondary)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3)
-            .background(Color.flatRaised, in: Capsule())
-            .overlay(Capsule().strokeBorder(Color.flatStroke, lineWidth: 1))
+            .foregroundStyle(row.muted ? Color.secondary : Color.primary)
+            .lineLimit(3)
+    }
+
+    @ViewBuilder
+    private var actionButtons: some View {
+        ForEach(row.actions) { action in
+            actionButton(action)
+        }
+        if let menuAction = row.menuAction {
+            actionButton(menuAction)
+        }
+    }
+
+    private func actionButton(_ action: BoardAction) -> some View {
+        let isBusy = busyIds.contains(action.id)
+        return Button(action: action.run) {
+            HStack(spacing: 6) {
+                if isBusy { ProgressView().controlSize(.small) }
+                Text(isBusy ? action.busyLabel : action.label)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+            }
+            .frame(maxWidth: .infinity, minHeight: 44)
+        }
+        .buttonStyle(TradeBoardActionStyle(style: action.style))
+        .disabled(isBusy)
+        .accessibilityLabel(action.accessibilityLabel ?? action.label)
+    }
+}
+
+private struct TradeBoardActionStyle: ButtonStyle {
+    let style: BoardAction.Style
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(foreground)
+            .padding(.horizontal, 16)
+            .background(fill, in: Capsule())
+            .overlay(Capsule().strokeBorder(style == .secondary ? Color(.separator) : .clear, lineWidth: 1))
+            .contentShape(Capsule())
+            .opacity(isEnabled ? (configuration.isPressed ? 0.75 : 1) : 0.45)
+    }
+
+    private var foreground: Color {
+        switch style {
+        case .primary: Color(.systemBackground)
+        case .secondary: Color.primary
+        case .destructive: Color.statusText(.red)
+        }
+    }
+
+    private var fill: Color {
+        switch style {
+        case .primary: Color(.label)
+        case .secondary: Color(.secondarySystemFill)
+        case .destructive: Color.clear
+        }
     }
 }
 
@@ -1491,65 +1377,47 @@ private struct TradeBoardSourceErrorRow: View {
     }
 }
 
-private struct ShiftAvailabilityContextNote: View {
-    let context: ShiftAvailabilityContext
-
-    private var tone: StatusTone {
-        switch context.state {
-        case "blocked": .red
-        case "preferred": .green
-        default: .orange
-        }
-    }
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 7) {
-            Image(systemName: context.blocking ? "exclamationmark.triangle.fill" : "calendar.badge.clock")
-                .font(.caption)
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(context.label)
-                    .font(.caption.weight(.semibold))
-                Text(context.detail)
-                    .font(.caption)
-            }
-        }
-        .foregroundStyle(Color.statusText(tone))
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .background(Color.statusBackground(tone), in: RoundedRectangle(cornerRadius: 10))
-    }
-}
-
 private extension ShiftTradeShift {
-    var timeRange: String {
-        "\(displayStartsAt.formatted(date: .abbreviated, time: .shortened)) - \(displayEndsAt.formatted(date: .omitted, time: .shortened))"
-    }
     var displayTitle: String {
         shiftGroup?.event?.compactTitle ?? "Open Shift"
     }
-    var dateTimeLine: String { dateTimeLine(personalStartsAt: nil, personalEndsAt: nil) }
 
-    /// The row's date and time. A poster's personal call window beats the
-    /// slot's, as it does everywhere the server decides; away and neutral
-    /// Student rows still show the event window. An all-day event is a date:
-    /// it is stored at UTC midnight, so it is read in UTC, not shifted a day.
-    func dateTimeLine(personalStartsAt: Date?, personalEndsAt: Date?) -> String {
-        if let event = shiftGroup?.event, event.allDay == true, let startsAt = event.startsAt {
-            var utc = Calendar(identifier: .gregorian)
-            utc.timeZone = TimeZone(identifier: "UTC") ?? .gmt
-            var style = Date.FormatStyle.dateTime.weekday(.abbreviated).month(.abbreviated).day()
-            style.timeZone = utc.timeZone
-            return "\(startsAt.formatted(style)) · All day"
-        }
+    /// A poster's personal call window beats the slot's, as it does everywhere
+    /// the server decides; away and neutral Student rows still show the event
+    /// window.
+    private func window(personalStartsAt: Date?, personalEndsAt: Date?) -> (Date, Date) {
         let usesEventWindow = displayStartsAt != effectiveStartsAt
         let startsAt = usesEventWindow ? displayStartsAt : (personalStartsAt ?? displayStartsAt)
         let endsAt = usesEventWindow ? displayEndsAt : (personalEndsAt ?? displayEndsAt)
-        let day = startsAt.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
+        return (startsAt, endsAt)
+    }
+
+    private var allDayStartsAt: Date? {
+        guard let event = shiftGroup?.event, event.allDay == true else { return nil }
+        return event.startsAt
+    }
+
+    /// The date the row is filed under. An all-day event is a date: it is
+    /// stored at UTC midnight, so it is read in UTC, not shifted a day.
+    func boardStart(personalStartsAt: Date?, personalEndsAt: Date?) -> Date {
+        if let allDay = allDayStartsAt {
+            var utc = Calendar(identifier: .gregorian)
+            utc.timeZone = TimeZone(identifier: "UTC") ?? .gmt
+            let parts = utc.dateComponents([.year, .month, .day], from: allDay)
+            return Calendar.current.date(from: parts) ?? allDay
+        }
+        return window(personalStartsAt: personalStartsAt, personalEndsAt: personalEndsAt).0
+    }
+
+    /// Just the times: the day is the row's date tile and group header.
+    func timesLine(personalStartsAt: Date?, personalEndsAt: Date?) -> String {
+        if allDayStartsAt != nil { return "All day" }
+        let (startsAt, endsAt) = window(personalStartsAt: personalStartsAt, personalEndsAt: personalEndsAt)
         let start = startsAt.formatted(date: .omitted, time: .shortened)
         let end = endsAt.formatted(date: .omitted, time: .shortened)
-        return "\(day) · \(start) to \(end)"
+        return "\(start) to \(end)"
     }
+
     var classificationLabel: String {
         guard let event = shiftGroup?.event else { return "Neutral or non-game" }
         switch event.venue {
@@ -1562,14 +1430,6 @@ private extension ShiftTradeShift {
     var classificationColor: Color {
         guard let event = shiftGroup?.event else { return venueRailColor(isHome: nil) }
         return Color.statusText(venueTone(event.venue))
-    }
-}
-
-private extension View {
-    func tradeBoardCardRow() -> some View {
-        listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
     }
 }
 

@@ -34,29 +34,29 @@ describe("native Schedule availability and Trade Board redesign", () => {
     const board = source("ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift");
     const models = source("ios/Wisconsin/Models/ShiftTradeModels.swift");
 
-    expect(board).toContain("@State private var mineOnly = false");
-    expect(board).toContain("TradeBoardSummaryCard(");
-    expect(board).toContain("Show my trade posts");
-    expect(board).toContain("private var availableContent");
-    expect(board).toContain("private var myPostsContent");
-    // One "Available to Pick Up" list holds both kinds, soonest first.
-    expect(board).toContain('title: "Available to Pick Up"');
+    // Four tabs (Review is Admin-only), one list per tab, grouped by day.
+    expect(board).toContain("@State private var selectedTab: BoardTab?");
+    expect(board).toContain("(vm.canReview ? [.review] : []) + [.available, .mine, .history]");
+    expect(board).toContain("TradeBoardTabBar(");
+    expect(board).toContain("private func dayGroups(_ rows: [BoardRowModel]) -> [BoardDayGroup]");
+    expect(board).toContain('return "Today · \\(base)"');
+    // One Available list holds both kinds, soonest first.
     expect(board).toContain("case trade(ShiftTrade)");
     expect(board).toContain("case open(OpenWorkShift)");
-    expect(board).toContain("Shifts other students posted and unassigned slots, soonest first.");
+    expect(board).toContain(".sorted { $0.startsAt < $1.startsAt }");
     expect(board).not.toContain('title: "Available Now"');
-    expect(board).toContain("dateTimeLine");
+    expect(board).toContain("timesLine");
     expect(board).toContain("classificationColor");
-    expect(board).toContain(".authButton(.primary, adaptive: true)");
-    expect(board).toContain("cancelAction: nil");
-    expect(board).not.toContain("} cancelAction: {}");
+    expect(board).toContain("TradeBoardActionStyle(style: action.style)");
+    expect(board).not.toContain("mineOnly");
+    expect(board).not.toContain("TradeBoardSummaryCard");
     expect(models).toContain("let viewerAvailabilityContext: ShiftAvailabilityContext?");
     expect(models).toContain("let claimedByAvailabilityContext: ShiftAvailabilityContext?");
     expect(models).toContain("let availabilityContext: ShiftAvailabilityContext?");
     expect(models).toContain("let viewerCanClaim: Bool?");
     expect(board).toContain("var blockedTrades: [ShiftTrade]");
     expect(board).toContain("trade.viewerCanClaim ?? (!isStaff && trade.viewerAvailabilityContext?.blocking != true)");
-    expect(board).toContain("ShiftAvailabilityContextNote(");
+    expect(board).toContain("availabilityNotices(trade.viewerAvailabilityContext)");
   });
 
   it("prevents duplicate trade mutations and preserves recovery", () => {
@@ -66,13 +66,13 @@ describe("native Schedule availability and Trade Board redesign", () => {
     expect(board).toContain("@State private var pendingActionIds: Set<String> = []");
     expect(board).toContain("guard pendingActionIds.insert(actionId).inserted else { return }");
     expect(board).toContain("await vm.load(forceRefresh: true)");
-    expect(board).toContain(".disabled(isActioning)");
+    expect(board).toContain(".disabled(isBusy)");
     expect(board).toContain("TradeBoardActionErrorBanner(");
     expect(board).toContain("var tradeLoadError: String?");
     expect(board).toContain("var openWorkLoadError: String?");
     expect(board).toContain("func loadTrades(forceRefresh: Bool = false) async");
     expect(board).toContain("func loadOpenWork(forceRefresh: Bool = false) async");
     expect(board).toContain("TradeBoardSourceErrorRow(");
-    expect(board).toContain("isComplete: !vm.hasSourceFailure");
+    expect(board).toContain("if !vm.hasSourceFailure {");
   });
 });
