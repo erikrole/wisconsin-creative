@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, RotateCcw, SearchIcon } from "lucide-react";
+import { ChevronRight, RotateCcw, SearchIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { FadeUp } from "@/components/ui/motion";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import {
   type SettingsGroup,
   type SettingsSection,
 } from "@/lib/nav-sections";
+import { SettingsGroup as SettingsGroupCard } from "./_components/SettingsGroup";
 import { SETTINGS_GROUP_META, settingsSectionIcon } from "./_components/settings-meta";
 
 const STORAGE_KEY = "settings:last-tab";
@@ -65,7 +66,7 @@ export function SettingsDirectory({
     : null;
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-7">
       <FadeUp>
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative min-w-0 flex-1">
@@ -101,7 +102,7 @@ export function SettingsDirectory({
           compact
         />
       ) : (
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <div className="flex flex-col gap-7">
           {groupedSections.map(({ group, sections }, index) => (
             <FadeUp key={group} className="min-w-0" delay={index * 0.05}>
               <SettingsGroupList group={group} sections={sections} />
@@ -121,40 +122,26 @@ function SettingsGroupList({
   sections: SettingsSection[];
 }) {
   const meta = SETTINGS_GROUP_META[group];
-  const Icon = meta.icon;
 
   return (
-    <section className="min-w-0">
-      <div className="mb-2 flex items-start gap-2.5 px-1">
-        <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-        <div className="min-w-0">
-          <h2 className="text-sm font-semibold">{group}</h2>
-          <p className="m-0 text-xs text-muted-foreground text-pretty">{meta.description}</p>
-        </div>
-      </div>
-      <div className="overflow-hidden rounded-lg border bg-card shadow-xs">
-        <div className="divide-y">
-          {sections.map((section) => {
-            const SectionIcon = settingsSectionIcon(section.href);
-            return (
-              <Link
-                key={section.href}
-                href={section.href}
-                className="group flex min-h-16 items-center gap-3 px-3 py-3 no-underline transition-[background-color,scale] hover:bg-muted/50 active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
-              >
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted/60 text-muted-foreground">
-                  <SectionIcon className="size-4" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="font-medium text-foreground">{section.label}</div>
-                  <div className="mt-0.5 text-sm text-muted-foreground text-pretty">{section.description}</div>
-                </div>
-                <ArrowRight className="size-4 shrink-0 text-muted-foreground opacity-60 transition-[color,opacity,translate] group-hover:translate-x-0.5 group-hover:text-foreground group-hover:opacity-100" />
-              </Link>
-            );
-          })}
-        </div>
-      </div>
-    </section>
+    <SettingsGroupCard title={group} description={meta.description}>
+      {sections.map((section) => {
+        const SectionIcon = settingsSectionIcon(section.href);
+        return (
+          <Link
+            key={section.href}
+            href={section.href}
+            className="group flex items-center gap-3.5 px-4 py-3.5 no-underline transition-[background-color] hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+          >
+            <SectionIcon className="size-[18px] shrink-0 text-muted-foreground" />
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-bold text-foreground">{section.label}</div>
+              <div className="mt-0.5 text-[13px] leading-snug text-muted-foreground text-pretty">{section.description}</div>
+            </div>
+            <ChevronRight className="size-4 shrink-0 text-muted-foreground/60 transition-[color,translate] group-hover:translate-x-0.5 group-hover:text-foreground" />
+          </Link>
+        );
+      })}
+    </SettingsGroupCard>
   );
 }

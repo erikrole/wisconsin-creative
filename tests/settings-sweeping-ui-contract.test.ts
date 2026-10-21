@@ -3,7 +3,7 @@ import { source } from "./_helpers/source";
 
 describe("Settings sweeping UI contracts", () => {
   it("uses one content rail and grouped mobile page discovery", () => {
-    const layout = source("src/app/(app)/settings/layout.tsx");
+    const layout = source("src/app/(app)/settings/SettingsShell.tsx");
     const shell = source("src/app/(app)/settings/SettingsPageShell.tsx");
 
     expect(layout).toContain("<SettingsMobilePicker");

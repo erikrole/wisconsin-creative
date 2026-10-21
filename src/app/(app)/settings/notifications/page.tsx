@@ -2,8 +2,6 @@
 
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { BellOff, CalendarClock, Mail, PackageCheck, Repeat2, ShoppingBag, Smartphone, Tag } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
@@ -15,6 +13,7 @@ import {
   parseErrorMessage,
 } from "@/lib/errors";
 import { SettingsPageShell } from "../SettingsPageShell";
+import { SettingsGroup } from "../_components/SettingsGroup";
 import { SettingsPrefRow } from "../_components/SettingsPrefRow";
 import EmptyState from "@/components/EmptyState";
 import { WebPushSettings } from "@/components/notifications/WebPushSettings";
@@ -151,8 +150,8 @@ export default function NotificationsSettingsPage() {
   if (loading) {
     return (
       <SettingsPageShell href="/settings/notifications" description={description} mainClassName="flex flex-col gap-3">
-            <Skeleton className="h-32 w-full rounded-md" />
-            <Skeleton className="h-44 w-full rounded-md" />
+            <Skeleton className="h-24 w-full rounded-xl" />
+            <Skeleton className="h-44 w-full rounded-xl" />
       </SettingsPageShell>
     );
   }
@@ -176,159 +175,121 @@ export default function NotificationsSettingsPage() {
   const isPaused = !!pausedLabel;
 
   return (
-    <SettingsPageShell href="/settings/notifications" description={description} mainClassName="flex flex-col gap-4">
-        {/* Pause */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <BellOff className="size-4" />
-              Quiet hours
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            {isPaused ? (
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-md bg-muted/40 p-3">
-                <div className="text-sm">
-                  <span className="font-medium">Paused</span>
-                  <span className="text-muted-foreground"> until {pausedLabel}</span>
-                </div>
-                <Button className="h-10" variant="outline" onClick={resumeNow} disabled={saving}>
-                  {saving ? <Spinner /> : "Resume now"}
-                </Button>
-              </div>
-            ) : (
-              <>
-                <p className="text-sm text-muted-foreground m-0">
-                  Pause email and push delivery for a stretch — useful during
-                  breaks or weekends. The in-app inbox keeps recording everything.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {PAUSE_OPTIONS.map((opt) => (
-                    <Button className="h-10"
-                      key={opt.id}
-                      variant="outline"
-                      onClick={() => pauseFor(opt.ms)}
-                      disabled={saving}
-                    >
-                      Pause {opt.label}
-                    </Button>
-                  ))}
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Channels */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Delivery channels</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-1">
-            <SettingsPrefRow
-              icon={<Mail className="size-4" />}
-              label="Email"
-              description="Off unless you turn it on. Sign-in invites and password resets are always emailed."
-              checked={prefs.channels.email}
-              onChange={(v) => setChannel("email", v)}
-              disabled={saving || isPaused}
-            />
-            <div className="border-t border-border my-1" />
-            <SettingsPrefRow
-              icon={<Smartphone className="size-4" />}
-              label="Push"
-              description="Send push notifications to the iOS app or an enrolled browser."
-              checked={prefs.channels.push}
-              onChange={(v) => setChannel("push", v)}
-              disabled={saving || isPaused}
-            />
-            <WebPushSettings pushEnabled={prefs.channels.push} disabled={saving || isPaused} />
-            {isPaused && (
-              <p className="text-xs text-muted-foreground pt-2 m-0">
-                Channels are temporarily overridden by your active pause.
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Notification types */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Notification types</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-1">
-            <SettingsPrefRow
-              icon={<ShoppingBag className="size-4" />}
-              label="Checkout due reminders"
-              description="Notified before a checkout is due back."
-              checked={(prefs.categories ?? DEFAULT_CATEGORIES).checkoutDue}
-              onChange={(v) => setCategory("checkoutDue", v)}
-              disabled={saving}
-            />
-            <div className="border-t border-border my-1" />
-            <SettingsPrefRow
-              icon={<ShoppingBag className="size-4" />}
-              label="Checkout overdue alerts"
-              description="Notified when a checkout is past its due date."
-              checked={(prefs.categories ?? DEFAULT_CATEGORIES).checkoutOverdue}
-              onChange={(v) => setCategory("checkoutOverdue", v)}
-              disabled={saving}
-            />
-            <div className="border-t border-border my-1" />
-            <SettingsPrefRow
-              icon={<Tag className="size-4" />}
-              label="Reservation updates"
-              description="Confirmation, pickup-ready, and cancellation notices for your reservations."
-              checked={(prefs.categories ?? DEFAULT_CATEGORIES).reservation}
-              onChange={(v) => setCategory("reservation", v)}
-              disabled={saving}
-            />
-            <div className="border-t border-border my-1" />
-            <SettingsPrefRow
-              icon={<Tag className="size-4" />}
-              label="License expiry reminders"
-              description="Notified when a license you hold is approaching expiry."
-              checked={(prefs.categories ?? DEFAULT_CATEGORIES).licenseExpiry}
-              onChange={(v) => setCategory("licenseExpiry", v)}
-              disabled={saving}
-            />
-            <div className="border-t border-border my-1" />
-            <SettingsPrefRow
-              icon={<CalendarClock className="size-4" />}
-              label="Schedule updates"
-              description="Published shift assignments, approvals, removals, and call-time changes."
-              checked={(prefs.categories ?? DEFAULT_CATEGORIES).schedule}
-              onChange={(v) => setCategory("schedule", v)}
-              disabled={saving}
-            />
-            <div className="border-t border-border my-1" />
-            <SettingsPrefRow
-              icon={<Repeat2 className="size-4" />}
-              label="Trade updates"
-              description="Claimed, approved, declined, completed, and expired shift trades."
-              checked={(prefs.categories ?? DEFAULT_CATEGORIES).trade}
-              onChange={(v) => setCategory("trade", v)}
-              disabled={saving}
-            />
-            <div className="border-t border-border my-1" />
-            <SettingsPrefRow
-              icon={<PackageCheck className="size-4" />}
-              label="Gear prep nudges"
-              description="Staff-triggered reminders to reserve or prepare gear for an assigned shift."
-              checked={(prefs.categories ?? DEFAULT_CATEGORIES).gearPrep}
-              onChange={(v) => setCategory("gearPrep", v)}
-              disabled={saving}
-            />
-            <p className="text-xs text-muted-foreground pt-2 m-0">
-              In-app notifications always appear regardless of these toggles.
+    <SettingsPageShell href="/settings/notifications" description={description} mainClassName="flex flex-col gap-7">
+      <SettingsGroup
+        title="Pause"
+        description="Hold email and push for a while, like over a break. The in-app inbox keeps recording everything."
+      >
+        {isPaused ? (
+          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5">
+            <p className="m-0 text-sm">
+              <span className="font-bold">Paused</span>
+              <span className="text-muted-foreground"> until {pausedLabel}</span>
             </p>
-          </CardContent>
-        </Card>
+            <Button className="h-10" variant="outline" onClick={resumeNow} disabled={saving}>
+              {saving ? <Spinner /> : "Resume now"}
+            </Button>
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-2 px-4 py-3.5">
+            {PAUSE_OPTIONS.map((opt) => (
+              <Button
+                className="h-10"
+                key={opt.id}
+                variant="outline"
+                onClick={() => pauseFor(opt.ms)}
+                disabled={saving}
+              >
+                Pause for {opt.label}
+              </Button>
+            ))}
+          </div>
+        )}
+      </SettingsGroup>
 
-        <p className="text-xs text-muted-foreground m-0">
-          Note: in-app notifications always fire and appear in your{" "}
-          <a href="/notifications" className="underline">notifications inbox</a>.
-        </p>
+      <SettingsGroup
+        title="Where to reach you"
+        footer={isPaused ? "Your pause is overriding these channels for now." : undefined}
+      >
+        <SettingsPrefRow
+          label="Email"
+          description="Off unless you turn it on. Sign-in invites and password resets are always emailed."
+          checked={prefs.channels.email}
+          onChange={(v) => setChannel("email", v)}
+          disabled={saving || isPaused}
+        />
+        <SettingsPrefRow
+          label="Push"
+          description="The iOS app or an enrolled browser."
+          checked={prefs.channels.push}
+          onChange={(v) => setChannel("push", v)}
+          disabled={saving || isPaused}
+        />
+        <WebPushSettings pushEnabled={prefs.channels.push} disabled={saving || isPaused} />
+      </SettingsGroup>
+
+      <SettingsGroup title="Gear">
+        <SettingsPrefRow
+          label="Checkout due reminders"
+          description="Before a checkout is due back."
+          checked={(prefs.categories ?? DEFAULT_CATEGORIES).checkoutDue}
+          onChange={(v) => setCategory("checkoutDue", v)}
+          disabled={saving}
+        />
+        <SettingsPrefRow
+          label="Checkout overdue alerts"
+          description="When a checkout is past its due date."
+          checked={(prefs.categories ?? DEFAULT_CATEGORIES).checkoutOverdue}
+          onChange={(v) => setCategory("checkoutOverdue", v)}
+          disabled={saving}
+        />
+        <SettingsPrefRow
+          label="Reservation updates"
+          description="Confirmation, pickup-ready, and cancellation notices."
+          checked={(prefs.categories ?? DEFAULT_CATEGORIES).reservation}
+          onChange={(v) => setCategory("reservation", v)}
+          disabled={saving}
+        />
+        <SettingsPrefRow
+          label="License expiry reminders"
+          description="When a license you hold is close to expiring."
+          checked={(prefs.categories ?? DEFAULT_CATEGORIES).licenseExpiry}
+          onChange={(v) => setCategory("licenseExpiry", v)}
+          disabled={saving}
+        />
+        <SettingsPrefRow
+          label="Gear prep nudges"
+          description="Reminders to reserve or prepare gear for a shift."
+          checked={(prefs.categories ?? DEFAULT_CATEGORIES).gearPrep}
+          onChange={(v) => setCategory("gearPrep", v)}
+          disabled={saving}
+        />
+      </SettingsGroup>
+
+      <SettingsGroup
+        title="Schedule"
+        footer={
+          <>
+            Everything always appears in your <a href="/notifications" className="underline">notifications inbox</a>,
+            whatever you choose here.
+          </>
+        }
+      >
+        <SettingsPrefRow
+          label="Schedule updates"
+          description="Shift assignments, approvals, removals, and call-time changes."
+          checked={(prefs.categories ?? DEFAULT_CATEGORIES).schedule}
+          onChange={(v) => setCategory("schedule", v)}
+          disabled={saving}
+        />
+        <SettingsPrefRow
+          label="Trade updates"
+          description="Claimed, approved, declined, completed, and expired shift trades."
+          checked={(prefs.categories ?? DEFAULT_CATEGORIES).trade}
+          onChange={(v) => setCategory("trade", v)}
+          disabled={saving}
+        />
+      </SettingsGroup>
     </SettingsPageShell>
   );
 }

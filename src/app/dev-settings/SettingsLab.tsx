@@ -1,0 +1,75 @@
+"use client";
+
+import dynamic from "next/dynamic";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { AppTopBar } from "@/components/AppTopBar";
+import { BreadcrumbProvider } from "@/components/BreadcrumbContext";
+import AppSidebar from "@/components/Sidebar";
+import { ConfirmProvider } from "@/components/ConfirmDialog";
+import { Toaster } from "@/components/ui/sonner";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import type { CurrentUser } from "@/hooks/use-current-user";
+import SettingsShell from "@/app/(app)/settings/SettingsShell";
+import SettingsTheme from "@/app/(app)/settings/SettingsTheme";
+import { SettingsDirectory } from "@/app/(app)/settings/SettingsDirectory";
+
+const PAGES = {
+  profile: dynamic(() => import("@/app/(app)/settings/profile/page")),
+  security: dynamic(() => import("@/app/(app)/settings/security/page")),
+  notifications: dynamic(() => import("@/app/(app)/settings/notifications/page")),
+  appearance: dynamic(() => import("@/app/(app)/settings/appearance/page")),
+} as const;
+
+type PageKey = keyof typeof PAGES | "overview";
+
+function Lab({ fontClass }: { fontClass: string }) {
+  const params = useSearchParams();
+  const raw = params.get("page") ?? "overview";
+  const page: PageKey = raw === "overview" || raw in PAGES ? (raw as PageKey) : "overview";
+  const role = params.get("role") ?? "ADMIN";
+  const user = { id: "dev", name: "Erik Role", email: "dev@example.com", role } as CurrentUser;
+
+  useEffect(() => {
+    const theme = params.get("theme");
+    if (theme) document.documentElement.dataset.theme = theme;
+  }, [params]);
+
+  const Page = page === "overview" ? null : PAGES[page];
+  return (
+    <TooltipProvider>
+      <ConfirmProvider>
+        <SidebarProvider>
+          <AppSidebar user={user} overdueBadgeCount={0} />
+          <BreadcrumbProvider>
+            <div className="min-w-0 flex-1 bg-background">
+              <AppTopBar isCollaborator={false} onSearch={() => {}} unreadNotifications={0} user={user} />
+              <main className="px-8 py-5 max-md:p-4">
+                <div className={`wc-fresh ${fontClass}`}>
+                  <SettingsTheme classNames={`wc-fresh ${fontClass}`} />
+                  <SettingsShell pathnameOverride={page === "overview" ? "/settings" : `/settings/${page}`}>
+                    {Page ? <Page /> : <SettingsDirectory role={role} canViewUsageAnalytics />}
+                  </SettingsShell>
+                </div>
+              </main>
+            </div>
+          </BreadcrumbProvider>
+        </SidebarProvider>
+        <Toaster position="top-right" duration={4000} />
+      </ConfirmProvider>
+    </TooltipProvider>
+  );
+}
+
+export default function SettingsLab({ fontClass }: { fontClass: string }) {
+  const [queryClient] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false } } }));
+  return (
+    <QueryClientProvider client={queryClient}>
+      <Suspense>
+        <Lab fontClass={fontClass} />
+      </Suspense>
+    </QueryClientProvider>
+  );
+}
