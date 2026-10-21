@@ -1,6 +1,20 @@
 [
   {
     "date": "2026-10-21",
+    "title": "A calmer Settings",
+    "type": "improvement",
+    "summary": "Settings has a new look, starting with Profile, Notifications, Security, Appearance and the overview.",
+    "details": [
+      "Related options are grouped into clean rows, with a visible preview for light, dark and system themes.",
+      "Notifications are sorted into Pause, Where to reach you, Gear and Schedule."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 585
+  },
+  {
+    "date": "2026-10-21",
     "title": "Hide gear from partners",
     "type": "feature",
     "summary": "Admins and staff can now keep individual items out of the Big Ten Network and Learfield catalog.",
