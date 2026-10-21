@@ -47,7 +47,8 @@ describe("native Schedule availability and Trade Board redesign", () => {
     expect(board).not.toContain('title: "Available Now"');
     expect(board).toContain("timesLine");
     expect(board).toContain("classificationColor");
-    expect(board).toContain("TradeBoardActionStyle(style: action.style)");
+    expect(board).toContain(".modifier(BoardButtonStyle(style: action.style))");
+    expect(board).toContain("picker.pickerStyle(.segmented)");
     expect(board).not.toContain("mineOnly");
     expect(board).not.toContain("TradeBoardSummaryCard");
     expect(models).toContain("let viewerAvailabilityContext: ShiftAvailabilityContext?");

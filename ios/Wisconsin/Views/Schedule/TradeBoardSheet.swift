@@ -1055,66 +1055,38 @@ private struct BoardDayGroup: Identifiable {
 
 // MARK: Views
 
-/// Segmented tabs with counts. A custom control rather than a segmented
-/// Picker, which cannot show a count badge; it scrolls instead of truncating
-/// when large text no longer fits four segments.
+/// The system segmented control, with the count in each title. At
+/// accessibility sizes four segments cannot fit, so it becomes a menu picker.
 private struct TradeBoardTabBar: View {
     /// id, label, count, isAttention
     let tabs: [(String, String, Int, Bool)]
     let selected: String
     let onSelect: (String) -> Void
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
-    var body: some View {
-        ViewThatFits(in: .horizontal) {
-            track
-            ScrollView(.horizontal, showsIndicators: false) { track }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+    private var selection: Binding<String> {
+        Binding(get: { selected }, set: onSelect)
     }
 
-    private var track: some View {
-        HStack(spacing: 2) {
+    private var picker: some View {
+        Picker("Trade Board", selection: selection) {
             ForEach(tabs, id: \.0) { tab in
-                let isSelected = tab.0 == selected
-                Button { onSelect(tab.0) } label: {
-                    HStack(spacing: 6) {
-                        Text(tab.1)
-                            .font(.subheadline.weight(isSelected ? .semibold : .medium))
-                            .lineLimit(1)
-                            .fixedSize(horizontal: true, vertical: false)
-                        if tab.2 > 0 {
-                            Text("\(tab.2)")
-                                .font(.caption2.weight(.bold))
-                                .monospacedDigit()
-                                .padding(.horizontal, 6)
-                                .frame(minWidth: 20, minHeight: 20)
-                                .foregroundStyle(tab.3 ? Color.statusText(.orange) : Color.primary)
-                                .background(
-                                    tab.3 ? Color.statusBackground(.orange) : Color.primary.opacity(0.1),
-                                    in: Capsule()
-                                )
-                        }
-                    }
-                    .foregroundStyle(isSelected ? Color.primary : Color.secondary)
-                    .padding(.horizontal, 12)
-                    .frame(maxWidth: .infinity, minHeight: 44)
-                    .background {
-                        if isSelected {
-                            RoundedRectangle(cornerRadius: 9, style: .continuous)
-                                .fill(Color(.systemBackground))
-                                .shadow(color: .black.opacity(0.08), radius: 2, y: 1)
-                        }
-                    }
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityAddTraits(isSelected ? .isSelected : [])
-                .accessibilityLabel(tab.2 > 0 ? "\(tab.1), \(tab.2)" : tab.1)
+                Text(tab.2 > 0 ? "\(tab.1) \(tab.2)" : tab.1).tag(tab.0)
             }
         }
-        .padding(2)
-        .background(Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+    }
+
+    var body: some View {
+        Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                picker.pickerStyle(.menu)
+            } else {
+                picker.pickerStyle(.segmented)
+            }
+        }
+        .frame(minHeight: 44)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 6)
     }
 }
 
@@ -1212,12 +1184,10 @@ private struct TradeBoardRow: View {
             if let status = row.status {
                 Text(status.label)
                     .font(.caption2.weight(.semibold))
-                    .foregroundStyle(status.tone == .orange || status.tone == .red
-                        ? Color.statusText(status.tone) : Color.secondary)
+                    .foregroundStyle(Color.statusText(status.tone))
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
-                    .background(Color.flatRaised, in: Capsule())
-                    .overlay(Capsule().strokeBorder(Color.flatStroke, lineWidth: 1))
+                    .background(Color.statusBackground(status.tone), in: Capsule())
                     .fixedSize()
             }
         }
@@ -1268,43 +1238,13 @@ private struct TradeBoardRow: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.85)
             }
-            .frame(maxWidth: .infinity, minHeight: 44)
+            .frame(maxWidth: .infinity, minHeight: 28)
         }
-        .buttonStyle(TradeBoardActionStyle(style: action.style))
+        .controlSize(.large)
+        .buttonBorderShape(.capsule)
+        .modifier(BoardButtonStyle(style: action.style))
         .disabled(isBusy)
         .accessibilityLabel(action.accessibilityLabel ?? action.label)
-    }
-}
-
-private struct TradeBoardActionStyle: ButtonStyle {
-    let style: BoardAction.Style
-    @Environment(\.isEnabled) private var isEnabled
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(foreground)
-            .padding(.horizontal, 16)
-            .background(fill, in: Capsule())
-            .overlay(Capsule().strokeBorder(style == .secondary ? Color(.separator) : .clear, lineWidth: 1))
-            .contentShape(Capsule())
-            .opacity(isEnabled ? (configuration.isPressed ? 0.75 : 1) : 0.45)
-    }
-
-    private var foreground: Color {
-        switch style {
-        case .primary: Color(.systemBackground)
-        case .secondary: Color.primary
-        case .destructive: Color.statusText(.red)
-        }
-    }
-
-    private var fill: Color {
-        switch style {
-        case .primary: Color(.label)
-        case .secondary: Color(.secondarySystemFill)
-        case .destructive: Color.clear
-        }
     }
 }
 
@@ -1446,6 +1386,24 @@ private extension ShiftTradeStatus {
             return StatusTone.gray
         case .cancelled, .expired, .unknown:
             return StatusTone.gray
+        }
+    }
+}
+
+/// System button styles: prominent for the main action, bordered for the
+/// rest, a destructive role for cancelling.
+private struct BoardButtonStyle: ViewModifier {
+    let style: BoardAction.Style
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        switch style {
+        case .primary:
+            content.buttonStyle(.borderedProminent).tint(.primary)
+        case .secondary:
+            content.buttonStyle(.bordered).tint(.primary)
+        case .destructive:
+            content.buttonStyle(.bordered).tint(.red)
         }
     }
 }
