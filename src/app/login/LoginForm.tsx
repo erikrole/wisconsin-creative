@@ -377,7 +377,7 @@ export default function LoginForm() {
     <AuthScreen
       subtitle={
         isOnboarding
-          ? "Create your password to join Wisconsin Creative"
+          ? "Create your password"
           : isPassword
             ? "Enter your password"
             : "Sign in to your account"
@@ -435,12 +435,9 @@ export default function LoginForm() {
 
               {isOnboarding && (
                 <>
-                  <Alert role="status" aria-live="polite" className="bg-muted/40">
-                    <AlertCircle className="size-4" />
-                    <AlertDescription>
-                      You’re invited. Choose a password to create your account. A short setup (about three minutes) follows, and you can pause it any time.
-                    </AlertDescription>
-                  </Alert>
+                  <p role="status" aria-live="polite" className="text-sm text-[#a6a6ae]">
+                    You’re invited. Choose a password to create your account. A short setup (about three minutes) follows, and you can pause it any time.
+                  </p>
 
                   <div className="flex flex-col gap-1.5">
                     <Label htmlFor="name">Name</Label>
@@ -555,7 +552,7 @@ export default function LoginForm() {
                 </div>
               </div>
 
-              <Button type="submit" className="login-cta login-rise login-press w-full h-11 text-base font-semibold" style={{ "--rise-index": 5 } as React.CSSProperties} disabled={authBusy}>
+              <Button type="submit" className="login-cta login-rise login-press w-full h-[52px] text-base font-semibold" style={{ "--rise-index": 5 } as React.CSSProperties} disabled={authBusy}>
                 {authBusy && !passkeyLoading ? <Spinner data-icon="inline-start" /> : null}
                 {primaryButtonLabel}
               </Button>

@@ -10,6 +10,7 @@ Web (wc-fresh theme, Lato):
 - Home "Getting started" card for STUDENT accounts for 14 days (`GettingStartedCard.tsx`, `accountCreatedAt` added to GET /api/me; checklist state is per browser in localStorage).
 - Invite email lists what happens next; login invite notice reworded.
 - One-time welcome email when a student/staff finishes setup (src/lib/services/welcome-email.ts). Sent from the PATCH route and the self avatar upload. Not for collaborators or hidden users. Claim is atomic on `users.welcome_email_sent_at`; a failed send releases it.
+- Invite create-password page (and every `AuthScreen` page: login, forgot, reset, change password) restyled to match the native iPhone sign-in: flat ink background, dark field wells, 52px light pill button, no crimson card (src/components/auth/AuthScreen.tsx, `.login-*` in globals.css, LoginForm.tsx). Behavior unchanged.
 - Release note added to src/lib/releases.json (pr 584).
 
 iOS (SwiftUI):
@@ -37,6 +38,7 @@ iOS (SwiftUI):
 - [ ] Reload mid-setup resumes at the first incomplete step.
 - [ ] Home, new student under 14 days: Getting started card; Finish profile opens the wizard; other rows check off after a click; X hides it; never shown to staff or accounts older than 14 days.
 - [ ] Welcome email: arrives once after finishing (last step or photo upload), not for collaborators, not on later edits, not for pre-0199 accounts.
+- [ ] Auth pages (/login invite and password steps, /forgot-password, /reset-password, /change-password): labels, email row and placeholders readable on the dark surface; focus ring visible on fields and the pill button; Tab order works; passkey button and "Keep me signed in" checkbox look right; errors still show; 390px has no horizontal scroll.
 - [ ] 390px width: no horizontal scroll, footer buttons full width. Dark mode readable. Keyboard focus on step bar and finish rows.
 - [ ] iOS: year-only Continue; finish screen after last step, after skipping photo, after Remind me tomorrow; rows open Schedule, Gear, Guides; Continue enters the app; collaborator sees Continue only.
 
