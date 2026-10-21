@@ -41,6 +41,7 @@ The editable catalog is limited to:
 - `SCHEDULE_FOLLOW`
 - `KIOSK_ROSTER_ELIGIBLE`
 - `TEAM_GEAR_VIEW`
+- `BRAND_ASSETS_VIEW`
 
 Dependencies normalize automatically: reservation creation adds catalog and My Gear; own edit/cancel/extend add My Gear; follow adds published Schedule; kiosk eligibility adds My Gear. Removing a prerequisite removes its dependents.
 
@@ -88,7 +89,7 @@ Collaborator gear responses remain sanitized and own-booking scoped. Published S
 ## Acceptance Criteria
 
 - [x] Database-backed affiliation policies, grants, revisions, BTN backfill, and suspended Learfield seed exist.
-- [x] The eleven-key catalog normalizes dependencies and rejects unknown keys.
+- [x] The twelve-key catalog normalizes dependencies and rejects unknown keys.
 - [x] Current policy status and grants govern every authenticated request.
 - [x] Admin APIs and Collaborator Access Settings support create, edit, preview, suspend/reactivate, history, restore, and constrained archive.
 - [x] Invitations, registration, People management, auth payloads, web, iOS, and kiosk use the assigned policy.
@@ -101,6 +102,8 @@ Collaborator gear responses remain sanitized and own-booking scoped. Published S
 - [ ] Authenticated BTN/Learfield People-directory smoke is complete.
 
 ## Change Log
+
+- 2026-10-21: **Brand library for collaborators.** New `BRAND_ASSETS_VIEW` grant (no dependencies) opens only the Brand assets tab of Resources: list, view, download and favorite. Guides (including internal SOPs and server paths) and the Contacts list stay internal, and the page hides those tabs for collaborators. Migration `0192` grants it to BTN and Learfield. Announcements stay internal because their audience is not role-filtered.
 
 - 2026-10-21: **Collaborators move closer to student-level read access.** New `TEAM_GEAR_VIEW` grant (depends on catalog and My Gear) lifts the own-bookings-only read limit: Bookings, Checkouts, reservations and the Items list show everyone's activity and the current holder by full name. Reads only; edit, cancel, extend and custody stay owner-scoped, and brand now appears in the catalog. Migration `0191` grants it to BTN and Learfield, per Erik's approval. iOS still pins My Gear to own bookings; native follow-up pending.
 

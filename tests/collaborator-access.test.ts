@@ -216,6 +216,11 @@ describe("BTN response minimization", () => {
     ]);
   });
 
+  it("scopes BRAND_ASSETS_VIEW to the brand library without adding guides or contacts", () => {
+    expect(normalizeCollaboratorCapabilities(["BRAND_ASSETS_VIEW"])).toEqual(["BRAND_ASSETS_VIEW"]);
+    expect(PERMISSIONS.resource?.view).not.toContain(Role.COLLABORATOR);
+  });
+
   it("keeps own booking details usable without asset serials or requester email", () => {
     const result = sanitizeCollaboratorBooking({
       id: "booking-1",

@@ -14,6 +14,7 @@ export const COLLABORATOR_CAPABILITIES = [
   "SCHEDULE_FOLLOW",
   "KIOSK_ROSTER_ELIGIBLE",
   "TEAM_GEAR_VIEW",
+  "BRAND_ASSETS_VIEW",
 ] as const;
 
 export type CollaboratorCapability = (typeof COLLABORATOR_CAPABILITIES)[number];
@@ -30,6 +31,7 @@ export const COLLABORATOR_CAPABILITY_CATALOG: ReadonlyArray<{
   { key: "PEOPLE_DIRECTORY_VIEW", label: "People directory", group: "SEE", description: "See active teammates and minimized work profiles." },
   { key: "SOFTWARE_VAULT_VIEW", label: "Shared software", group: "SEE", description: "See software logins explicitly shared with collaborators." },
   { key: "TEAM_GEAR_VIEW", label: "Team gear activity", group: "SEE", description: "See everyone's reservations and checkouts, and who has each item, by full name. View only." },
+  { key: "BRAND_ASSETS_VIEW", label: "Brand assets", group: "SEE", description: "Browse and download logos, fonts and brand files. Internal guides and contacts stay hidden." },
   { key: "RESERVATION_CREATE", label: "Create reservations", group: "DO", description: "Reserve gear for the collaborator's own use." },
   { key: "RESERVATION_EDIT_OWN", label: "Edit own reservations", group: "DO", description: "Change eligible owned reservations." },
   { key: "RESERVATION_CANCEL_OWN", label: "Cancel own reservations", group: "DO", description: "Cancel eligible owned reservations." },

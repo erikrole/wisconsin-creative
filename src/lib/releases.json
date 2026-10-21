@@ -1,6 +1,21 @@
 [
   {
     "date": "2026-10-21",
+    "title": "Brand assets for partners",
+    "type": "feature",
+    "summary": "Big Ten Network and Learfield collaborators can now browse and download the brand asset library.",
+    "details": [
+      "Logos, fonts and brand files are available from a new Brand assets link in the sidebar.",
+      "Internal guides and the contacts list stay hidden from collaborators.",
+      "Admins can switch this off per organization in Settings, Collaborator access."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 552
+  },
+  {
+    "date": "2026-10-21",
     "title": "Partners see team gear activity",
     "type": "improvement",
     "summary": "Big Ten Network and Learfield collaborators can now see what gear is booked and who has it, not just their own bookings.",

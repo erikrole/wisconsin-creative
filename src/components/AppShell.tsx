@@ -57,6 +57,7 @@ const COLLABORATOR_ROUTE_CAPABILITY: Array<{ matches: (pathname: string) => bool
   { matches: (value) => value === "/schedule" || value.startsWith("/schedule/"), capability: "PUBLISHED_SCHEDULE_VIEW" },
   { matches: (value) => value === "/items" || (value.startsWith("/items/") && value !== "/items/new"), capability: "GEAR_CATALOG_VIEW" },
   { matches: (value) => value === "/bookings" || value.startsWith("/bookings/"), capability: "MY_GEAR_VIEW" },
+  { matches: (value) => value === "/resources" || value === "/resources/", capability: "BRAND_ASSETS_VIEW" },
   { matches: (value) => value === "/reservations/new", capability: "RESERVATION_CREATE" },
   { matches: (value) => value === "/staff" || value.startsWith("/staff/"), capability: "PEOPLE_DIRECTORY_VIEW" },
 ];
