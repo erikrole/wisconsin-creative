@@ -274,15 +274,12 @@ describe("student field mobile contracts", () => {
     expect(tradeBoard).toContain(".accessibilityLabel(\"Post trade\")");
     expect(tradeBoard).toContain(".navigationTitle(\"Trade Board\")");
     expect(tradeBoard).toContain("APIClient.shared.scheduleOpenWork(area: areaFilter)");
-    // One "Available to Pick Up" list holds both kinds, soonest first.
-    expect(tradeBoard).toContain('title: "Available to Pick Up"');
+    // One Available list holds both kinds, soonest first.
     expect(tradeBoard).toContain("case trade(ShiftTrade)");
     expect(tradeBoard).toContain("case open(OpenWorkShift)");
-    expect(tradeBoard).toContain("My Posts");
-    expect(tradeBoard).toContain("Waiting or Blocked");
-    expect(tradeBoard).toContain("Text(\"Claim shift\")");
-    expect(tradeBoard).toContain("Text(\"Claim this shift\")");
-    expect(tradeBoard).toContain("Text(\"Cancel post\")");
+    expect(tradeBoard).toContain('case .mine: "Mine"');
+    expect(tradeBoard).toContain('"Claim", "Claiming…"');
+    expect(tradeBoard).toContain('"Cancel post", "Cancelling…"');
     expect(tradeBoard).toContain("Canceling removes the post; the shift stays assigned to you.");
     expect(tradeBoard).toContain("An admin reviews this before you're on the schedule.");
     expect(postTrade).toContain("Text(\"Choose a Shift\")");

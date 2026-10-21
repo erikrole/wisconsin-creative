@@ -2243,19 +2243,30 @@ enum ScheduleFixtureAPI {
 /// Both scenarios render the same real sheet; only the fixture role differs.
 struct TradeBoardHarnessView: View {
     @Environment(SessionStore.self) private var session
+    /// The sheet loads as soon as it appears. Signing the fixture user in
+    /// afterwards cancelled that first load as "a previous sign-in", so the
+    /// board opened on an error instead of rows.
+    @State private var isSignedIn = false
 
     private var isStaff: Bool { AppRuntimeMode.performanceScenario == .tradeBoardStaff }
 
     var body: some View {
-        TradeBoardSheet(
-            myShifts: [],
-            currentUserId: isStaff ? TradeBoardFixtures.staff.id : TradeBoardFixtures.student.id,
-            // Claim review is Admin-only, so the review-queue scenario signs
-            // in as an Admin.
-            currentUserRole: isStaff ? "ADMIN" : "STUDENT"
-        )
+        Group {
+            if isSignedIn {
+                TradeBoardSheet(
+                    myShifts: [],
+                    currentUserId: isStaff ? TradeBoardFixtures.staff.id : TradeBoardFixtures.student.id,
+                    // Claim review is Admin-only, so the review-queue scenario signs
+                    // in as an Admin.
+                    currentUserRole: isStaff ? "ADMIN" : "STUDENT"
+                )
+            } else {
+                Color.clear
+            }
+        }
         .onAppear {
             session.currentUser = isStaff ? TradeBoardFixtures.staff : TradeBoardFixtures.student
+            isSignedIn = true
         }
     }
 }

@@ -293,6 +293,7 @@ export const NOTIFICATION_TYPE_CATEGORY: Record<string, NotificationCategory | n
   claim_review_auto_approved: "reviewQueue",
   trade_review_required: "reviewQueue",
   trade_posted: "trade",
+  trade_available: "trade",
   trade_claimed: "trade",
   trade_claim_pending: "trade",
   trade_claim_withdrawn: "trade",

@@ -19,6 +19,23 @@
   },
   {
     "date": "2026-10-21",
+    "title": "A cleaner Trade Board",
+    "type": "improvement",
+    "summary": "The Trade Board is easier to scan, and students now hear when a shift they could take is posted.",
+    "details": [
+      "Tabs for Review, Available, Mine, and History, with shifts grouped by day, soonest first.",
+      "Open shifts and trades from other students sit in one list with a single Claim button.",
+      "When someone posts a shift to trade, eligible students in the same area get a notification.",
+      "The iPhone app's Trade Board has the same tabs and day grouping."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 577
+  },
+  {
+    "date": "2026-10-21",
     "title": "Quieter, more accurate notifications",
     "type": "improvement",
     "summary": "Your unread count now shows what still needs you, and the app stops notifying you about things you just did yourself.",
