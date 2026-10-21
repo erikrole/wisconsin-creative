@@ -7,6 +7,35 @@ enum SearchDestination: Hashable {
     case user(String)
 }
 
+/// Narrows the result list to one of the sources `SearchService` already
+/// fans out to. Filtering is display-only: the four requests still run, so
+/// switching chips never refetches and the counts on the chips stay honest.
+enum SearchScope: String, CaseIterable, Identifiable {
+    case all, gear, reservations, checkouts, people
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .all: "All"
+        case .gear: "Gear"
+        case .reservations: "Reservations"
+        case .checkouts: "Check-outs"
+        case .people: "People"
+        }
+    }
+
+    var source: SearchSource? {
+        switch self {
+        case .all: nil
+        case .gear: .items
+        case .reservations: .reservations
+        case .checkouts: .checkouts
+        case .people: .people
+        }
+    }
+}
+
 enum SearchRecentsStorage {
     private static let key = "recentSearches"
 
@@ -64,10 +93,14 @@ struct GlobalSearchSheet: View {
     @State private var loadMoreErrors: [SearchSource: String] = [:]
 
     @State private var recentSearches = SearchRecentsStorage.load()
+    @State private var scope: SearchScope = .all
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
             VStack(spacing: 0) {
+                if !trimmedQuery.isEmpty, !isCollaborator, results.hasKnownMatches {
+                    scopeStrip
+                }
                 Group {
                     if trimmedQuery.isEmpty {
                         recentsView
@@ -200,50 +233,123 @@ struct GlobalSearchSheet: View {
         .accessibilityHint("Opens the camera scanner.")
     }
 
+    /// What to offer before anything is typed: the two places people go most
+    /// (Scan and their own gear), then their recent searches. Rows, not
+    /// buttons-in-a-void, so the screen reads as a short menu instead of an
+    /// empty state.
     private var recentsView: some View {
-        Group {
-            if recentSearches.isEmpty {
-                VStack(spacing: 12) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 40))
-                        .foregroundStyle(.quaternary)
-                    Text(isCollaborator ? "Search reservable gear" : "Search gear, bookings, people")
-                        .foregroundStyle(.secondary)
-                        .font(.subheadline)
-                    if !isCollaborator {
-                        Button {
-                            presentScanner()
-                        } label: {
-                            Label("Scan a code", systemImage: "qrcode.viewfinder")
-                        }
-                        .buttonStyle(.bordered)
+        List {
+            if !isCollaborator {
+                Section {
+                    quickRow("Scan a code", systemImage: "qrcode.viewfinder", hint: "Opens the camera scanner.") {
+                        presentScanner()
+                    }
+                    quickRow("My gear", systemImage: "bag", hint: "Opens your active bookings.") {
+                        Haptics.selection()
+                        appState.apply(.myGear)
+                        dismiss()
                     }
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.top, 60)
+            }
+            if recentSearches.isEmpty {
+                Section {
+                    Text(isCollaborator ? "Search reservable gear." : "Search gear, bookings, and people.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .listRowBackground(Color.clear)
+                }
             } else {
-                List {
-                    Section("Recent") {
-                        ForEach(recentSearches, id: \.self) { term in
-                            Button {
-                                query = term
-                            } label: {
-                                Label(term, systemImage: "clock")
-                                    .foregroundStyle(.primary)
-                            }
-                            .accessibilityLabel("Recent search: \(term)")
+                Section {
+                    ForEach(recentSearches, id: \.self) { term in
+                        Button {
+                            Haptics.selection()
+                            query = term
+                        } label: {
+                            Label(term, systemImage: "clock")
+                                .foregroundStyle(.primary)
                         }
-                        Button("Clear Recents") {
+                        .buttonStyle(.plain)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                removeRecent(term)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                        .accessibilityLabel("Recent search: \(term)")
+                    }
+                } header: {
+                    HStack {
+                        Text("Recent")
+                        Spacer()
+                        Button("Clear") {
+                            Haptics.selection()
                             recentSearches = []
                             SearchRecentsStorage.clear()
                         }
-                        .foregroundStyle(Color.statusText(.red))
-                        .font(.subheadline)
+                        .font(.caption.weight(.semibold))
+                        .textCase(nil)
+                        .accessibilityLabel("Clear recent searches")
                     }
                 }
-                .listStyle(.plain)
             }
         }
+        .listStyle(.insetGrouped)
+        .scrollDismissesKeyboard(.immediately)
+    }
+
+    private func quickRow(_ title: String, systemImage: String, hint: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: systemImage)
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(Color.brandPrimary)
+                    .frame(width: 28)
+                Text(title)
+                    .foregroundStyle(.primary)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint(hint)
+    }
+
+    private func removeRecent(_ term: String) {
+        recentSearches.removeAll { $0 == term }
+        SearchRecentsStorage.save(recentSearches)
+    }
+
+    /// One chip per source, each carrying the server-backed match count so the
+    /// strip doubles as a summary of where the answer is.
+    private var scopeStrip: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: Brand.Space.sm) {
+                ForEach(SearchScope.allCases) { option in
+                    FilterChip(label: chipLabel(option), isOn: scope == option) {
+                        guard scope != option else { return }
+                        Haptics.selection()
+                        scope = option
+                    }
+                }
+            }
+            .padding(.horizontal, Brand.Space.md)
+            .padding(.vertical, Brand.Space.xs)
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Result type")
+    }
+
+    private func chipLabel(_ option: SearchScope) -> String {
+        guard let source = option.source else { return option.label }
+        let total = results.total(for: source)
+        return total > 0 ? "\(option.label) \(total)" : option.label
+    }
+
+    private func shows(_ source: SearchSource) -> Bool {
+        scope.source == nil || scope.source == source
     }
 
     private var searchingView: some View {
@@ -309,7 +415,16 @@ struct GlobalSearchSheet: View {
                 }
             }
 
-            if !results.items.isEmpty || !results.itemFamilies.isEmpty {
+            if let source = scope.source, results.loadedCount(for: source) == 0 {
+                Section {
+                    Text("No \(scope.label.lowercased()) match \"\(trimmedQuery)\".")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .listRowBackground(Color.clear)
+                }
+            }
+
+            if shows(.items), !results.items.isEmpty || !results.itemFamilies.isEmpty {
                 Section(header: sectionHeader("Items", source: .items)) {
                     ForEach(results.items) { asset in
                         Button {
@@ -373,7 +488,7 @@ struct GlobalSearchSheet: View {
                 }
             }
 
-            if !results.reservations.isEmpty {
+            if shows(.reservations), !results.reservations.isEmpty {
                 Section(header: sectionHeader("Reservations", source: .reservations)) {
                     ForEach(results.reservations) { booking in
                         Button {
@@ -390,7 +505,7 @@ struct GlobalSearchSheet: View {
                 }
             }
 
-            if !results.checkouts.isEmpty {
+            if shows(.checkouts), !results.checkouts.isEmpty {
                 Section(header: sectionHeader("Checkouts", source: .checkouts)) {
                     ForEach(results.checkouts) { booking in
                         Button {
@@ -407,7 +522,7 @@ struct GlobalSearchSheet: View {
                 }
             }
 
-            if !results.users.isEmpty {
+            if shows(.people), !results.users.isEmpty {
                 Section(header: sectionHeader("People", source: .people)) {
                     ForEach(results.users) { user in
                         Button {
@@ -496,6 +611,7 @@ struct GlobalSearchSheet: View {
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !q.isEmpty else {
             results = SearchResults()
+            scope = .all
             searchError = nil
             loadMoreErrors.removeAll()
             return

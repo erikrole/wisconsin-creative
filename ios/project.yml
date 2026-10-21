@@ -202,6 +202,8 @@ targets:
       # what it is allowed to know. Shared, not duplicated, so the two
       # processes can never disagree about the payload shape.
       - path: Wisconsin/Widgets/GearWidgetSnapshot.swift
+      # The widgets set their numbers in Gotham, the same faces as the app.
+      - path: Wisconsin/Resources/Fonts
     entitlements:
       path: WisconsinLiveActivities/WisconsinLiveActivities.entitlements
       properties:
@@ -213,6 +215,9 @@ targets:
         CFBundleDisplayName: "Wisconsin Creative Live Activities"
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        UIAppFonts:
+          - Gotham-Black.ttf
+          - Gotham-Bold.ttf
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:
