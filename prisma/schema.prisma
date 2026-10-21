@@ -260,6 +260,8 @@ model User {
   deviceTokens                  DeviceToken[]
   webPushSubscriptions          WebPushSubscription[]
   appInstallations              UserAppInstallation[]
+  errorEvents                   ErrorEvent[]
+  supportReports                SupportReport[]
   liveActivityTokens            LiveActivityToken[]
   liveActivityStartTokens       LiveActivityStartToken[]
   liveActivityStarts            LiveActivityStart[]
@@ -1521,6 +1523,8 @@ model NotificationDelivery {
 /// A crash, hang, or resource exception reported by Apple's MetricKit on an
 /// iOS install. No user identity: app and OS version, the diagnostic's own
 /// metadata, and a size-capped call stack. Pruned after 90 days.
+/// Superseded by ErrorIssue/ErrorEvent (0191): no longer written, rows were
+/// copied into error_events, and the table empties itself through retention.
 model AppDiagnostic {
   id         String   @id @default(cuid())
   platform   String
@@ -1537,6 +1541,109 @@ model AppDiagnostic {
   @@index([receivedAt])
   @@index([kind, receivedAt])
   @@map("app_diagnostics")
+}
+
+/// One grouped problem: every report whose fingerprint matches lands here, so
+/// a crash that hits fifty times is one row to triage. Counts are lifetime;
+/// stored occurrences are capped per issue and pruned after 90 days, and an
+/// issue with no occurrence in that window is pruned with them.
+model ErrorIssue {
+  id           String       @id @default(cuid())
+  /// sha256 of platform, kind, and the normalized grouping parts.
+  fingerprint  String       @unique
+  /// web | server | ios | kiosk | macos
+  platform     String
+  /// error | render_error | unhandled_rejection | api_error | crash | hang | cpu_exception | disk_write_exception | app_launch
+  kind         String
+  /// Normalized one-line title (ids, numbers and quoted values stripped).
+  title        String
+  /// Where it happens: a route template, screen, or top stack frame.
+  culprit      String?
+  /// open | resolved | ignored
+  status       String       @default("open")
+  eventCount   Int          @default(0) @map("event_count")
+  firstSeenAt  DateTime     @default(now()) @map("first_seen_at")
+  lastSeenAt   DateTime     @default(now()) @map("last_seen_at")
+  firstVersion String?      @map("first_version")
+  lastVersion  String?      @map("last_version")
+  resolvedAt   DateTime?    @map("resolved_at")
+  resolvedById String?      @map("resolved_by_id")
+  /// Set when a resolved issue is seen again.
+  regressedAt  DateTime?    @map("regressed_at")
+  note         String?
+  events       ErrorEvent[]
+
+  @@index([status, lastSeenAt])
+  @@index([lastSeenAt])
+  @@map("error_issues")
+}
+
+/// One occurrence of an issue with the context needed to reproduce it.
+model ErrorEvent {
+  id             String     @id @default(cuid())
+  issueId        String     @map("issue_id")
+  occurredAt     DateTime   @default(now()) @map("occurred_at")
+  platform       String
+  appVersion     String?    @map("app_version")
+  appBuild       String?    @map("app_build")
+  /// app_store | testflight | development | web | production | preview
+  releaseChannel String?    @map("release_channel")
+  osVersion      String?    @map("os_version")
+  deviceModel    String?    @map("device_model")
+  /// Null for anonymous reports and after the person's data is erased.
+  userId         String?    @map("user_id")
+  role           String?
+  /// Path or screen name the report came from.
+  screen         String?
+  /// Vercel request id (x-vercel-id), to find the matching server log line.
+  requestId      String?    @map("request_id")
+  /// Next.js error digest; joins a browser report to its server render error.
+  digest         String?
+  message        String
+  stack          String?
+  /// Up to 30 recent actions: { at, type, message, data? }
+  breadcrumbs    Json?
+  /// Small extras: MetricKit metadata, HTTP method, bundle id, etc.
+  context        Json?
+  /// MetricKit call stack tree, kept for symbolication.
+  callStack      Json?      @map("call_stack")
+  issue          ErrorIssue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  user           User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([issueId, occurredAt])
+  @@index([occurredAt])
+  @@index([userId, occurredAt])
+  @@index([digest])
+  @@map("error_events")
+}
+
+/// "Report a problem" from a signed-in person, with the app context captured
+/// at the moment they opened the form. Pruned after 365 days.
+model SupportReport {
+  id              String    @id @default(cuid())
+  userId          String?   @map("user_id")
+  message         String
+  /// open | closed
+  status          String    @default("open")
+  platform        String
+  appVersion      String?   @map("app_version")
+  appBuild        String?   @map("app_build")
+  releaseChannel  String?   @map("release_channel")
+  osVersion       String?   @map("os_version")
+  deviceModel     String?   @map("device_model")
+  role            String?
+  screen          String?
+  breadcrumbs     Json?
+  /// Issue ids this person hit in the 30 minutes before reporting.
+  relatedIssueIds String[]  @default([]) @map("related_issue_ids")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  closedAt        DateTime? @map("closed_at")
+  closedById      String?   @map("closed_by_id")
+  user            User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([createdAt])
+  @@map("support_reports")
 }
 
 /// One run of a background job (a workflow step or a cron sub-job): how late
@@ -1873,24 +1980,24 @@ enum LicenseCodeStatus {
 }
 
 model LicenseCode {
-  id           String             @id @default(cuid())
-  code         String             @unique
-  label        String?
-  accountEmail String?            @map("account_email")
-  expiresAt    DateTime?          @map("expires_at")
-  status       LicenseCodeStatus  @default(AVAILABLE)
-  claimedById  String?            @map("claimed_by_id")
-  claimedAt    DateTime?          @map("claimed_at")
-  nagSentAt    DateTime?          @map("nag_sent_at")
+  id                 String             @id @default(cuid())
+  code               String             @unique
+  label              String?
+  accountEmail       String?            @map("account_email")
+  expiresAt          DateTime?          @map("expires_at")
+  status             LicenseCodeStatus  @default(AVAILABLE)
+  claimedById        String?            @map("claimed_by_id")
+  claimedAt          DateTime?          @map("claimed_at")
+  nagSentAt          DateTime?          @map("nag_sent_at")
   // Set when a holder reports the code won't activate; the code is retired so no one else is handed it.
-  reportedBrokenAt DateTime?      @map("reported_broken_at")
-  reportedBrokenById String?      @map("reported_broken_by_id")
-  createdAt    DateTime           @default(now()) @map("created_at")
-  updatedAt    DateTime           @updatedAt @map("updated_at")
-  createdById  String?            @map("created_by_id")
-  claimedBy    User?              @relation("LicenseClaimedBy", fields: [claimedById], references: [id], onDelete: SetNull)
-  createdBy    User?              @relation("LicenseCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
-  claims       LicenseCodeClaim[]
+  reportedBrokenAt   DateTime?          @map("reported_broken_at")
+  reportedBrokenById String?            @map("reported_broken_by_id")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+  createdById        String?            @map("created_by_id")
+  claimedBy          User?              @relation("LicenseClaimedBy", fields: [claimedById], references: [id], onDelete: SetNull)
+  createdBy          User?              @relation("LicenseCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  claims             LicenseCodeClaim[]
 
   @@index([status])
   @@index([claimedById])
@@ -2924,28 +3031,28 @@ enum GearPickFit {
 /// One yearly Under Armour staff pick window. The catalog itself is static JSON
 /// keyed by `id` (src/lib/gear-picks); the row owns the admin-set deadline.
 model GearPickCycle {
-  id           String                @id
-  title        String
+  id              String                @id
+  title           String
   /// Picks are editable until this instant; null keeps the cycle open.
-  deadline     DateTime?
+  deadline        DateTime?
   /// When admins opened picks to everyone on the list; until then only admins see them.
-  launchedAt   DateTime?             @map("launched_at")
+  launchedAt      DateTime?             @map("launched_at")
   /// Total UA budget in cents. Admin-only; a placeholder until `budgetConfirmed`.
-  budgetCents      Int               @default(0) @map("budget_cents")
-  budgetConfirmed  Boolean           @default(false) @map("budget_confirmed")
+  budgetCents     Int                   @default(0) @map("budget_cents")
+  budgetConfirmed Boolean               @default(false) @map("budget_confirmed")
   /// Per-student kit price in cents (zip, polo, shoe budget); every student on the roster counts against the budget.
-  studentKitCents  Int               @default(0) @map("student_kit_cents")
+  studentKitCents Int                   @default(0) @map("student_kit_cents")
   /// The order record. The Equipment department places the order; the site only records it.
-  orderPlacedAt DateTime?            @map("order_placed_at")
-  poNumber      String?              @map("po_number")
-  orderNumber   String?              @map("order_number")
-  expectedAt    DateTime?            @map("expected_at")
-  createdAt    DateTime              @default(now()) @map("created_at")
-  updatedAt    DateTime              @updatedAt @map("updated_at")
-  participants GearPickParticipant[]
-  students     GearPickStudent[]
-  receipts     GearPickReceipt[]
-  handouts     GearPickHandout[]
+  orderPlacedAt   DateTime?             @map("order_placed_at")
+  poNumber        String?               @map("po_number")
+  orderNumber     String?               @map("order_number")
+  expectedAt      DateTime?             @map("expected_at")
+  createdAt       DateTime              @default(now()) @map("created_at")
+  updatedAt       DateTime              @updatedAt @map("updated_at")
+  participants    GearPickParticipant[]
+  students        GearPickStudent[]
+  receipts        GearPickReceipt[]
+  handouts        GearPickHandout[]
 
   @@map("gear_pick_cycles")
 }
@@ -2990,13 +3097,13 @@ model GearPickReceipt {
 
 /// A finished year of UA gear, kept read-only and separate from the live pick cycle.
 model GearPastCycle {
-  id                 String          @id
+  id                 String           @id
   title              String
-  budgetCents        Int             @map("budget_cents")
-  budgetedSpendCents Int             @map("budgeted_spend_cents")
-  otherSpendCents    Int             @default(0) @map("other_spend_cents")
+  budgetCents        Int              @map("budget_cents")
+  budgetedSpendCents Int              @map("budgeted_spend_cents")
+  otherSpendCents    Int              @default(0) @map("other_spend_cents")
   note               String?
-  createdAt          DateTime        @default(now()) @map("created_at")
+  createdAt          DateTime         @default(now()) @map("created_at")
   items              GearPastItem[]
   people             GearPastPerson[]
 
@@ -3214,23 +3321,23 @@ enum WishStatus {
 /// Something staff would like the department to buy. It does not touch the budget until an admin
 /// moves it there, which creates a budget line and links it back here. Staff and admins see every wish.
 model WishItem {
-  id             String     @id @default(cuid())
-  title          String
-  linkUrl        String?    @map("link_url")
+  id            String      @id @default(cuid())
+  title         String
+  linkUrl       String?     @map("link_url")
   /// Rough unit price in cents; null when unknown.
-  estimateCents  Int?       @map("estimate_cents")
-  quantity       Int        @default(1)
-  neededBy       DateTime?  @map("needed_by") @db.Date
-  reason         String?
-  status         WishStatus @default(OPEN)
+  estimateCents Int?        @map("estimate_cents")
+  quantity      Int         @default(1)
+  neededBy      DateTime?   @map("needed_by") @db.Date
+  reason        String?
+  status        WishStatus  @default(OPEN)
   /// Why it was declined, shown on the list.
-  statusNote     String?    @map("status_note")
-  requestedById  String?    @map("requested_by_id")
-  budgetLineId   String?    @unique @map("budget_line_id")
-  createdAt      DateTime   @default(now()) @map("created_at")
-  updatedAt      DateTime   @updatedAt @map("updated_at")
-  requestedBy    User?      @relation("WishRequester", fields: [requestedById], references: [id], onDelete: SetNull)
-  budgetLine     BudgetLine? @relation(fields: [budgetLineId], references: [id], onDelete: SetNull)
+  statusNote    String?     @map("status_note")
+  requestedById String?     @map("requested_by_id")
+  budgetLineId  String?     @unique @map("budget_line_id")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+  requestedBy   User?       @relation("WishRequester", fields: [requestedById], references: [id], onDelete: SetNull)
+  budgetLine    BudgetLine? @relation(fields: [budgetLineId], references: [id], onDelete: SetNull)
 
   @@index([status, createdAt])
   @@index([requestedById])
