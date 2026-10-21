@@ -3,6 +3,9 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Award, CalendarDays, Camera } from "lucide-react";
+import { BadgeMedallion } from "@/components/badges/BadgeMedallion";
+import { badgeIcon } from "@/components/badges/badge-artwork";
+import { getBadgeRarity, type BadgeRarity } from "@/lib/badges/display";
 import { useFetch } from "@/hooks/use-fetch";
 import { formatDateTime } from "@/lib/format";
 
@@ -50,6 +53,9 @@ type BadgeProgress = {
   earned: boolean;
   active: boolean;
   name: string;
+  icon?: string;
+  awardedAt?: string | null;
+  rarity?: BadgeRarity;
   progressCurrent: number | null;
   progressTarget: number | null;
 };
@@ -150,7 +156,11 @@ export default function RightNow({
   const badge = nearestBadge(badges.data ?? []);
   const week = data?.week ?? [];
   const performance = data?.performance ?? EMPTY.performance;
-  const earned = (badges.data ?? []).filter((b) => b.earned).length;
+  const earnedBadges = (badges.data ?? []).filter((b) => b.earned);
+  const earned = earnedBadges.length;
+  const recent = [...earnedBadges]
+    .sort((x, y) => (y.awardedAt ?? "").localeCompare(x.awardedAt ?? ""))
+    .slice(0, 4);
   const showCards = week.length > 0 || performance.checkouts > 0 || earned > 0;
   if (!shift && holding.length === 0 && !badge && !showCards) return null;
 
@@ -202,7 +212,7 @@ export default function RightNow({
       {showCards && (
         <section
           aria-label="This week and performance"
-          className="grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(14rem,1fr)]"
+          className="grid items-start gap-4 md:grid-cols-[minmax(0,2fr)_minmax(14rem,1fr)]"
         >
           <div className="rounded-xl border bg-card p-4 shadow-xs">
             <div className="flex items-center justify-between">
@@ -245,30 +255,70 @@ export default function RightNow({
               </ul>
             )}
           </div>
-          <div className="rounded-xl border bg-card p-4 shadow-xs">
-            <h3 className="text-base font-black tracking-tight">Performance</h3>
-            <dl className="mt-3 grid grid-cols-3 gap-2 text-center md:grid-cols-1 md:text-left">
-              <div>
-                <dd className="text-2xl font-black tracking-tight">
-                  {performance.onTimeRate === null
-                    ? "—"
-                    : `${performance.onTimeRate}%`}
-                </dd>
-                <dt className="text-xs text-muted-foreground">
-                  On-time returns
-                </dt>
+          <div className="flex flex-col gap-4">
+            <div className="rounded-xl border bg-card p-4 shadow-xs">
+              <h3 className="text-base font-black tracking-tight">
+                Performance
+              </h3>
+              <dl className="mt-3 grid grid-cols-3 gap-2 text-center md:grid-cols-1 md:text-left">
+                <div>
+                  <dd className="text-2xl font-black tracking-tight">
+                    {performance.onTimeRate === null
+                      ? "—"
+                      : `${performance.onTimeRate}%`}
+                  </dd>
+                  <dt className="text-xs text-muted-foreground">
+                    On-time returns
+                  </dt>
+                </div>
+                <div>
+                  <dd className="text-2xl font-black tracking-tight">
+                    {performance.checkouts}
+                  </dd>
+                  <dt className="text-xs text-muted-foreground">Checkouts</dt>
+                </div>
+                <div>
+                  <dd className="text-2xl font-black tracking-tight">
+                    {earned}
+                  </dd>
+                  <dt className="text-xs text-muted-foreground">
+                    Badges earned
+                  </dt>
+                </div>
+              </dl>
+            </div>
+            {recent.length > 0 && (
+              <div className="rounded-xl border bg-card p-4 shadow-xs">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-black tracking-tight">
+                    Badges
+                  </h3>
+                  <Link
+                    href="?tab=badges"
+                    scroll={false}
+                    className="text-[13px] font-bold text-[#2f4bb0] no-underline"
+                  >
+                    See all
+                  </Link>
+                </div>
+                <ul className="mt-3 flex flex-wrap gap-3">
+                  {recent.map((badge) => (
+                    <li key={badge.name} className="w-16 text-center">
+                      <BadgeMedallion
+                        icon={badgeIcon(badge.icon)}
+                        earned
+                        rarity={badge.rarity ?? getBadgeRarity(badge as never)}
+                        className="mx-auto size-12"
+                        iconClassName="size-5"
+                      />
+                      <div className="mt-1.5 line-clamp-2 text-xs font-bold text-muted-foreground">
+                        {badge.name}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
               </div>
-              <div>
-                <dd className="text-2xl font-black tracking-tight">
-                  {performance.checkouts}
-                </dd>
-                <dt className="text-xs text-muted-foreground">Checkouts</dt>
-              </div>
-              <div>
-                <dd className="text-2xl font-black tracking-tight">{earned}</dd>
-                <dt className="text-xs text-muted-foreground">Badges earned</dt>
-              </div>
-            </dl>
+            )}
           </div>
         </section>
       )}
