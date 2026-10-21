@@ -20,6 +20,23 @@
   },
   {
     "date": "2026-10-21",
+    "title": "More widgets, smarter search",
+    "type": "improvement",
+    "summary": "The iPhone app adds Lock Screen and larger widgets, filtered search, a scan history, and easier inbox swipes.",
+    "details": [
+      "Next Shift and My Gear widgets now fit the Lock Screen and come in Medium and Large lists.",
+      "Search has filters for gear, reservations, check-outs and people, with quick jumps to Scan and My gear.",
+      "The scanner keeps a short list of recent scans and hints when it can't see a code.",
+      "Notifications are grouped by day, and you can swipe to mark one read or unread.",
+      "Ask Siri to search gear by name."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 573
+  },
+  {
+    "date": "2026-10-21",
     "title": "Quicker reviews of upcoming changes",
     "type": "improvement",
     "summary": "Upcoming changes can be tried out on a computer with one step before they go live, so updates get checked sooner.",
