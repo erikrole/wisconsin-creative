@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangleIcon, HomeIcon, LogInIcon, RotateCcwIcon } from "lucide-react";
+import { AlertTriangleIcon, HomeIcon, LifeBuoyIcon, LogInIcon, RotateCcwIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Empty,
@@ -19,6 +19,8 @@ type ErrorRecoveryPanelProps = {
   secondaryLabel?: string;
   secondaryIcon?: "home" | "login";
   digest?: string;
+  /** Opens "Report a problem"; the failure itself is already reported automatically. */
+  onReport?: () => void;
 };
 
 export function ErrorRecoveryPanel({
@@ -30,6 +32,7 @@ export function ErrorRecoveryPanel({
   secondaryLabel,
   secondaryIcon = "home",
   digest,
+  onReport,
 }: ErrorRecoveryPanelProps) {
   const SecondaryIcon = secondaryIcon === "login" ? LogInIcon : HomeIcon;
 
@@ -62,6 +65,12 @@ export function ErrorRecoveryPanel({
             </Button>
           ) : null}
         </div>
+        {onReport ? (
+          <Button type="button" variant="link" className="text-muted-foreground" onClick={onReport}>
+            <LifeBuoyIcon data-icon="inline-start" />
+            Tell us what you were doing
+          </Button>
+        ) : null}
       </Empty>
     </main>
   );

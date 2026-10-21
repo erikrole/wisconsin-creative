@@ -15,7 +15,7 @@
 | Contacts | No Contacts entitlement or usage description | Do not disclose contacts collection |
 | Photos | Main App Store target has no Photos permission; profile images are read from service URLs | Do not disclose photos/videos as native collection |
 | Tracking/ads | No ATT request, advertising SDK, tracking domain, or ad dependency | Tracking: No |
-| Crash/performance SDK | No native Sentry, Firebase, MetricKit upload, replay, analytics, or crash-reporting package. Launch timings use local `Logger` only | Do not declare native Crash Data, Performance Data, or Product Interaction analytics |
+| Crash/performance | No third-party crash SDK. Apple MetricKit crash, hang, and resource-exception diagnostics upload to the first-party `/api/diagnostics` (since 1.3) and are grouped into Issues with the signed-in account (2026-10-21) | Declare Crash Data, linked, App Functionality. No Performance Data or Product Interaction analytics |
 | Required-reason APIs | UserDefaults used for device-local preferences | Keep `NSPrivacyAccessedAPICategoryUserDefaults` reason `CA92.1` |
 
 ## Data Flow Inventory
@@ -28,14 +28,15 @@
 | User ID | First-party database/session identifier | Yes | App Functionality | Historical foreign-key attribution may remain |
 | Device ID | APNs and ActivityKit device-scoped tokens | Yes | App Functionality | Revoked/replaced on sign-out, permission/device changes, expiry, or account deletion |
 | Other Usage Data | Reservations, custody context, scans, favorites, schedules, availability, notification preferences, and audit actions | Yes | App Functionality | Future work is cancelled on deletion; custody/audit history may remain |
-| Other Diagnostic Data | Authenticated API/server error and request diagnostics from native traffic | Yes | App Functionality | Used for security, reliability, and support; no advertising use |
+| Crash Data | MetricKit crash and hang reports, app errors with version, device model, OS, screen, and the last in-app actions | Yes | App Functionality | Grouped into Issues; deleted after 90 days; account erasure removes the link |
+| Other Diagnostic Data | Authenticated API/server error and request diagnostics from native traffic; Report a problem context | Yes | App Functionality | Used for security, reliability, and support; problem reports deleted after 365 days or on account erasure |
 
 ## Explicit Non-Collection For This Build
 - No precise or coarse location.
 - No Contacts data.
 - No payment, financial, health, fitness, browsing-history, search-history, advertising, or cross-app tracking data.
 - No camera frames, photos, videos, or audio uploaded by the main iOS target.
-- No native crash reports, device-performance metrics, session replay, or generic tap/click analytics.
+- No device-performance metrics, session replay, or generic tap/click analytics. Recent in-app actions stay on device unless a crash, error, or problem report sends them.
 - No third-party/social login. The app uses the organization's first-party invitation and password system.
 
 ## Service Providers And Sharing
@@ -54,7 +55,7 @@
 - Analytics: **No** for the native App Store target. Server reliability traces are classified as Other Diagnostic Data used for App Functionality.
 
 ## Reverification Triggers
-- Adding a native crash/analytics/replay SDK.
+- Adding a third-party crash/analytics/replay SDK, or widening what the first-party error reports carry.
 - Uploading profile images, booking media, audio, or camera frames from the main iOS target.
 - Adding location, Contacts, Photos, microphone, advertising, ATT, or third-party login.
 - Changing Sentry PII/replay settings or adding user identity to Sentry events.

@@ -3,6 +3,7 @@
 import * as Sentry from "@sentry/nextjs";
 import { useEffect } from "react";
 import { ErrorRecoveryPanel } from "@/components/ErrorRecoveryPanel";
+import { reportClientError } from "@/lib/error-reporting/client";
 
 export default function GlobalError({
   error,
@@ -13,6 +14,7 @@ export default function GlobalError({
 }) {
   useEffect(() => {
     Sentry.captureException(error);
+    reportClientError(error, { kind: "render_error", digest: error.digest });
   }, [error]);
 
   return (

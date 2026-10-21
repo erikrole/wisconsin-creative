@@ -17,6 +17,56 @@
   },
   {
     "date": "2026-10-21",
+    "title": "Remind everyone waiting",
+    "type": "improvement",
+    "summary": "Onboarding Status can now email the login link to everyone who has not signed in yet.",
+    "details": [
+      "A Remind everyone waiting button sits next to the filters and asks once before sending.",
+      "It shows how many people were reminded and how many were skipped.",
+      "Each invitation can be emailed 3 times an hour, so a second tap soon after skips people already reminded.",
+      "If email isn't set up on the site yet, it says so and sends nothing."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 550
+  },
+  {
+    "date": "2026-10-21",
+    "title": "A Right now row on profiles",
+    "type": "improvement",
+    "summary": "Profiles now open with what is happening with that person right now.",
+    "details": [
+      "Next shift shows their next confirmed event, with the time and place. Holding lists gear they have checked out and flags overdue gear.",
+      "Almost there shows the badge they are closest to earning, and Badges shows the four most recently earned.",
+      "This week lists their confirmed shifts for the next seven days, colored by area.",
+      "Performance shows on-time returns, checkouts and badges earned. On-time means returned by the due time, and checkouts with no recorded return time are left out of the rate.",
+      "The Info tab cards now match: softer corners and bolder titles.",
+      "Students see this on their own profile, and staff and admins see it on anyone's. A tile only shows when there is something to say."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 549
+  },
+  {
+    "date": "2026-10-21",
+    "title": "Report a problem, and faster fixes",
+    "type": "feature",
+    "summary": "Report a problem from the account menu, and crashes and errors now reach the team with what they need to find and fix them.",
+    "details": [
+      "Report a problem in the account menu sends your note with the page you're on, your app version and browser, and your last few clicks, so you don't have to explain the steps.",
+      "If a page crashes, you can add what you were doing in one tap. The crash itself is already reported.",
+      "Crashes and errors from the web, iPhone app and server are grouped by cause, so a repeat problem is fixed once.",
+      "Nothing you type into fields, and no passwords, is ever included. Reports are deleted after 90 days."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 547
+  },
+  {
+    "date": "2026-10-21",
     "title": "App activity redesign",
     "type": "feature",
     "summary": "The owner-only App activity page now shows at a glance which app versions people run and how they use the site, the iPhone app, and the menu bar.",

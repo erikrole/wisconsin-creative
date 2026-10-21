@@ -23,7 +23,8 @@ vi.mock("@/lib/hiring/retention", () => ({
 vi.mock("@/lib/services/notification-deliveries", () => ({
   pruneNotificationDeliveries: vi.fn(async () => 0),
 }));
-vi.mock("@/lib/services/app-diagnostics", () => ({ pruneAppDiagnostics: vi.fn(async () => 0) }));
+vi.mock("@/lib/services/app-diagnostics", () => ({ migrateLegacyAppDiagnostics: vi.fn(async () => 0) }));
+vi.mock("@/lib/services/error-reports", () => ({ pruneErrorReports: vi.fn(async () => ({ events: 0, issues: 0, supportReports: 0 })) }));
 vi.mock("@/lib/services/job-runs", () => ({
   pruneJobRuns: vi.fn(async () => 0),
   recordJobRun: vi.fn(async () => undefined),

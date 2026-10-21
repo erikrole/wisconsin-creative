@@ -8,20 +8,19 @@ const dbMock = vi.hoisted(() => ({
   productEvent: {
     groupBy: vi.fn(),
   },
-  appDiagnostic: {
-    groupBy: vi.fn(),
-  },
   kioskDevice: {
     findMany: vi.fn(),
   },
   $queryRaw: vi.fn(),
 }));
+const crashMock = vi.hoisted(() => ({ getCrashCountsByVersion: vi.fn() }));
 const presenceMock = vi.hoisted(() => ({ readCompanionPresence: vi.fn() }));
 const storeMock = vi.hoisted(() => ({ loadAppStoreVersion: vi.fn() }));
 
 vi.mock("@/lib/db", () => ({ db: dbMock }));
 vi.mock("@/lib/companion-store", () => presenceMock);
 vi.mock("@/lib/apps-live-versions", () => storeMock);
+vi.mock("@/lib/services/app-diagnostics", () => crashMock);
 vi.mock("@/lib/auth", () => ({ requireAuth: vi.fn() }));
 
 import { requireAuth } from "@/lib/auth";
@@ -68,7 +67,7 @@ beforeEach(() => {
   vi.mocked(requireAuth).mockResolvedValue(owner);
   dbMock.$queryRaw.mockResolvedValue([]);
   dbMock.productEvent.groupBy.mockResolvedValue([]);
-  dbMock.appDiagnostic.groupBy.mockResolvedValue([]);
+  crashMock.getCrashCountsByVersion.mockResolvedValue([]);
   dbMock.kioskDevice.findMany.mockResolvedValue([]);
   presenceMock.readCompanionPresence.mockResolvedValue(new Map());
   storeMock.loadAppStoreVersion.mockResolvedValue(undefined);
@@ -219,8 +218,9 @@ describe("owner app activity report", () => {
   });
 
   it("flags old TestFlight builds, unreachable iPhones, crashes by version, and kiosk builds", async () => {
-    dbMock.appDiagnostic.groupBy.mockResolvedValue([
-      { platform: "ios", appVersion: "1.0", kind: "crash", _count: { _all: 2 } },
+    crashMock.getCrashCountsByVersion.mockResolvedValue([
+      { platform: "ios", appVersion: "1.0", appBuild: "26", kind: "crash", count: 2 },
+      { platform: "web", appVersion: null, appBuild: "abc1234", kind: "error", count: 9 },
     ]);
     dbMock.kioskDevice.findMany.mockResolvedValue([
       { name: "Video Office iPad", appVersion: "1.0", appBuild: "2", osVersion: "26.6", lastSeenAt: latestSeenAt },
@@ -230,7 +230,7 @@ describe("owner app activity report", () => {
 
     expect(report.summary).toMatchObject({ oldTestflightInstallations: 1, iosPushOffUsers: 1 });
     expect(report.users.find((user) => user.email === "erik@example.com")).toMatchObject({ iosPush: false });
-    expect(report.crashes).toEqual([{ platform: "ios", appVersion: "1.0", appBuild: null, kind: "crash", count: 2 }]);
+    expect(report.crashes).toEqual([{ platform: "ios", appVersion: "1.0", appBuild: "26", kind: "crash", count: 2 }]);
     expect(report.kiosks[0]).toMatchObject({ name: "Video Office iPad", appBuild: "2" });
     expect(report.firstOpens.weeks).toHaveLength(12);
   });
