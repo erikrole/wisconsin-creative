@@ -203,3 +203,11 @@ describe("Home recent activity", () => {
     expect(home).toMatch(/activity: team\s*\?/);
   });
 });
+
+describe("Trade Board deep link", () => {
+  it("uses ?trades=open everywhere and still honors the older ?tradeBoard=1", () => {
+    expect(source("src/lib/services/trade-post-notifications.ts")).toContain('href: "/schedule?trades=open"');
+    expect(source("src/hooks/use-schedule-data.ts")).toContain('searchParams.get("trades") === "open"');
+    expect(source("src/app/(app)/schedule/page.tsx")).toContain('get("tradeBoard") === "1"');
+  });
+});
