@@ -48,6 +48,10 @@ enum AppRuntimeMode {
         /// its summary, filters, breakdowns, and event history can be reviewed
         /// without a signed-in session or live network.
         case scoreboard
+        /// The shared team Scoreboard against a canned season: fact cards,
+        /// leaderboard, head to head and the explorer, with the signed-in
+        /// fixture user on the board so the "You" row shows.
+        case teamScoreboard = "team-scoreboard"
         /// The current user's Profile against canned identity, badge, and shift
         /// payloads. The Scoreboard entry lives between Next Up and the badge
         /// shelf, and a row's treatment can only be judged beside its neighbours.

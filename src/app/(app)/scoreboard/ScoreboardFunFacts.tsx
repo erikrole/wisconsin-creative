@@ -26,7 +26,7 @@ export function ScoreboardFunFacts({
       <div className="mb-2 flex items-center justify-between gap-2">
         <h2 id="scoreboard-facts-title" className="text-base font-black tracking-tight">Did you know</h2>
         {canShuffle ? (
-          <Button variant="ghost" size="sm" onClick={() => setPage((current) => current + 1)}>
+          <Button variant="ghost" size="sm" className="h-10" onClick={() => setPage((current) => current + 1)}>
             <Shuffle className="size-3.5" aria-hidden="true" />
             More facts
           </Button>

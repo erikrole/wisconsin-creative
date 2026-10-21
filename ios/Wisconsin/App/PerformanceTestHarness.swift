@@ -67,6 +67,8 @@ struct PerformanceTestRootView: View {
             HomeHarnessView()
         case .scoreboard:
             ScoreboardHarnessView()
+        case .teamScoreboard:
+            TeamScoreboardHarnessView()
         case .profile:
             ProfileHarnessView()
         case .login:
@@ -541,6 +543,7 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
             return AppRuntimeMode.performanceScenario == .homeAllClear
                 ? HomeFixtureAPI.allClearDashboard
                 : HomeFixtureAPI.dashboard
+        case "/api/scoreboard": return TeamScoreboardFixtureAPI.scoreboard
         case "/api/users/\(ScoreboardFixtureAPI.userId)/scoreboard":
             return ScoreboardFixtureAPI.scoreboard(for: request)
         case "/api/users/\(ScoreboardFixtureAPI.userId)":
@@ -1288,6 +1291,1207 @@ struct HomeHarnessView: View {
         HomeView()
             .onAppear { session.currentUser = ScheduleFixtures.staffUser }
     }
+}
+
+/// The shared team Scoreboard against a canned season. The signed-in fixture
+/// user is on the board, so the tinted "You" row and "Your spot" fact show.
+struct TeamScoreboardHarnessView: View {
+    @Environment(SessionStore.self) private var session
+
+    var body: some View {
+        TeamScoreboardView()
+            .onAppear { session.currentUser = ScheduleFixtures.staffUser }
+    }
+}
+
+enum TeamScoreboardFixtureAPI {
+    static let scoreboard = Data(#"""
+{
+ "data": {
+  "generatedAt": "2026-11-02T12:00:00.000Z",
+  "scope": {
+   "key": "2026-27",
+   "label": "2026–27 season",
+   "startsAt": "2026-07-01T05:00:00.000Z",
+   "endsAt": "2027-07-01T05:00:00.000Z",
+   "timeZone": "America/Chicago"
+  },
+  "methodology": {
+   "eventsCovered": "Unique completed, confirmed Schedule events worked by at least one visible active person, by assignment or admin-added worker.",
+   "eventCredits": "One credit per person per completed event, even when that person worked multiple shifts.",
+   "record": "Unique resolved games (wins, losses, or ties) after the official exhibition, scrimmage, and alumni-match exclusions.",
+   "gameCredits": "One record credit per person per resolved game, even when that person worked multiple shifts.",
+   "minimumGamesForWinRate": 3
+  },
+  "filters": {
+   "sportCode": null,
+   "venue": null,
+   "opponent": null,
+   "site": null
+  },
+  "facets": {
+   "sports": [
+    {
+     "key": "FB",
+     "label": "Football"
+    },
+    {
+     "key": "VB",
+     "label": "Volleyball"
+    },
+    {
+     "key": "MSOC",
+     "label": "Men's Soccer"
+    },
+    {
+     "key": "WSOC",
+     "label": "Women's Soccer"
+    },
+    {
+     "key": "MHKY",
+     "label": "Men's Hockey"
+    },
+    {
+     "key": "WHKY",
+     "label": "Women's Hockey"
+    }
+   ],
+   "venues": [
+    {
+     "key": "Camp Randall Stadium",
+     "label": "Camp Randall Stadium"
+    },
+    {
+     "key": "Kohl Center",
+     "label": "Kohl Center"
+    },
+    {
+     "key": "McClimon Complex",
+     "label": "McClimon Complex"
+    },
+    {
+     "key": "UW Field House",
+     "label": "UW Field House"
+    }
+   ],
+   "opponents": [
+    {
+     "key": "Iowa",
+     "label": "Iowa"
+    },
+    {
+     "key": "Michigan",
+     "label": "Michigan"
+    },
+    {
+     "key": "Minnesota",
+     "label": "Minnesota"
+    },
+    {
+     "key": "Ohio State",
+     "label": "Ohio State"
+    }
+   ],
+   "sites": [
+    {
+     "key": "HOME",
+     "label": "Home"
+    },
+    {
+     "key": "AWAY",
+     "label": "Away"
+    },
+    {
+     "key": "NEUTRAL",
+     "label": "Neutral"
+    }
+   ]
+  },
+  "summary": {
+   "contributors": 16,
+   "eventsCovered": 41,
+   "eventCredits": 118,
+   "wins": 24,
+   "losses": 11,
+   "ties": 2,
+   "games": 37,
+   "winRate": 67.6,
+   "gameCredits": 104
+  },
+  "bySport": [
+   {
+    "key": "FB",
+    "label": "Football",
+    "contributors": 10,
+    "eventsCovered": 8,
+    "eventCredits": 24,
+    "wins": 6,
+    "losses": 2,
+    "ties": 0,
+    "games": 8,
+    "winRate": 75.0,
+    "gameCredits": 24
+   },
+   {
+    "key": "VB",
+    "label": "Volleyball",
+    "contributors": 12,
+    "eventsCovered": 11,
+    "eventCredits": 33,
+    "wins": 9,
+    "losses": 2,
+    "ties": 0,
+    "games": 11,
+    "winRate": 81.8,
+    "gameCredits": 33
+   },
+   {
+    "key": "MSOC",
+    "label": "Men's Soccer",
+    "contributors": 8,
+    "eventsCovered": 6,
+    "eventCredits": 18,
+    "wins": 2,
+    "losses": 3,
+    "ties": 1,
+    "games": 6,
+    "winRate": 41.7,
+    "gameCredits": 18
+   },
+   {
+    "key": "WSOC",
+    "label": "Women's Soccer",
+    "contributors": 9,
+    "eventsCovered": 7,
+    "eventCredits": 21,
+    "wins": 4,
+    "losses": 2,
+    "ties": 1,
+    "games": 7,
+    "winRate": 64.3,
+    "gameCredits": 21
+   },
+   {
+    "key": "MHKY",
+    "label": "Men's Hockey",
+    "contributors": 7,
+    "eventsCovered": 5,
+    "eventCredits": 15,
+    "wins": 2,
+    "losses": 2,
+    "ties": 0,
+    "games": 4,
+    "winRate": 50.0,
+    "gameCredits": 12
+   },
+   {
+    "key": "WHKY",
+    "label": "Women's Hockey",
+    "contributors": 6,
+    "eventsCovered": 4,
+    "eventCredits": 12,
+    "wins": 1,
+    "losses": 0,
+    "ties": 0,
+    "games": 1,
+    "winRate": 100.0,
+    "gameCredits": 3
+   }
+  ],
+  "byVenue": [
+   {
+    "key": "UW Field House",
+    "label": "UW Field House",
+    "contributors": 12,
+    "eventsCovered": 11,
+    "eventCredits": 33,
+    "wins": 9,
+    "losses": 2,
+    "ties": 0,
+    "games": 11,
+    "winRate": 81.8,
+    "gameCredits": 33
+   },
+   {
+    "key": "Camp Randall Stadium",
+    "label": "Camp Randall Stadium",
+    "contributors": 8,
+    "eventsCovered": 6,
+    "eventCredits": 18,
+    "wins": 5,
+    "losses": 1,
+    "ties": 0,
+    "games": 6,
+    "winRate": 83.3,
+    "gameCredits": 18
+   },
+   {
+    "key": "McClimon Complex",
+    "label": "McClimon Complex",
+    "contributors": 11,
+    "eventsCovered": 9,
+    "eventCredits": 27,
+    "wins": 4,
+    "losses": 3,
+    "ties": 2,
+    "games": 9,
+    "winRate": 55.6,
+    "gameCredits": 27
+   },
+   {
+    "key": "Kohl Center",
+    "label": "Kohl Center",
+    "contributors": 8,
+    "eventsCovered": 6,
+    "eventCredits": 18,
+    "wins": 3,
+    "losses": 1,
+    "ties": 0,
+    "games": 4,
+    "winRate": 75.0,
+    "gameCredits": 12
+   }
+  ],
+  "byOpponent": [
+   {
+    "key": "Minnesota",
+    "label": "Minnesota",
+    "contributors": 7,
+    "eventsCovered": 5,
+    "eventCredits": 15,
+    "wins": 4,
+    "losses": 1,
+    "ties": 0,
+    "games": 5,
+    "winRate": 80.0,
+    "gameCredits": 15
+   },
+   {
+    "key": "Iowa",
+    "label": "Iowa",
+    "contributors": 6,
+    "eventsCovered": 4,
+    "eventCredits": 12,
+    "wins": 3,
+    "losses": 1,
+    "ties": 0,
+    "games": 4,
+    "winRate": 75.0,
+    "gameCredits": 12
+   },
+   {
+    "key": "Ohio State",
+    "label": "Ohio State",
+    "contributors": 5,
+    "eventsCovered": 3,
+    "eventCredits": 9,
+    "wins": 1,
+    "losses": 2,
+    "ties": 0,
+    "games": 3,
+    "winRate": 33.3,
+    "gameCredits": 9
+   },
+   {
+    "key": "Michigan",
+    "label": "Michigan",
+    "contributors": 5,
+    "eventsCovered": 3,
+    "eventCredits": 9,
+    "wins": 2,
+    "losses": 1,
+    "ties": 0,
+    "games": 3,
+    "winRate": 66.7,
+    "gameCredits": 9
+   }
+  ],
+  "bySite": [
+   {
+    "key": "HOME",
+    "label": "Home",
+    "contributors": 12,
+    "eventsCovered": 29,
+    "eventCredits": 87,
+    "wins": 20,
+    "losses": 6,
+    "ties": 2,
+    "games": 28,
+    "winRate": 75.0,
+    "gameCredits": 84
+   },
+   {
+    "key": "AWAY",
+    "label": "Away",
+    "contributors": 12,
+    "eventsCovered": 10,
+    "eventCredits": 30,
+    "wins": 3,
+    "losses": 5,
+    "ties": 0,
+    "games": 8,
+    "winRate": 37.5,
+    "gameCredits": 24
+   },
+   {
+    "key": "NEUTRAL",
+    "label": "Neutral",
+    "contributors": 4,
+    "eventsCovered": 2,
+    "eventCredits": 6,
+    "wins": 1,
+    "losses": 0,
+    "ties": 0,
+    "games": 1,
+    "winRate": 100.0,
+    "gameCredits": 3
+   }
+  ],
+  "leaderboard": [
+   {
+    "userId": "fixture-person-0",
+    "name": "Ava Stone",
+    "avatarUrl": null,
+    "summary": {
+     "eventsWorked": 23,
+     "wins": 15,
+     "losses": 4,
+     "ties": 0,
+     "games": 19,
+     "winRate": 78.9
+    },
+    "bySport": [
+     {
+      "key": "VB",
+      "label": "Volleyball",
+      "eventsWorked": 6,
+      "wins": 5,
+      "losses": 0,
+      "ties": 0,
+      "games": 5,
+      "winRate": 100.0
+     },
+     {
+      "key": "WSOC",
+      "label": "Women's Soccer",
+      "eventsWorked": 6,
+      "wins": 5,
+      "losses": 0,
+      "ties": 0,
+      "games": 5,
+      "winRate": 100.0
+     },
+     {
+      "key": "MHKY",
+      "label": "Men's Hockey",
+      "eventsWorked": 5,
+      "wins": 2,
+      "losses": 2,
+      "ties": 0,
+      "games": 4,
+      "winRate": 50.0
+     },
+     {
+      "key": "WHKY",
+      "label": "Women's Hockey",
+      "eventsWorked": 6,
+      "wins": 3,
+      "losses": 2,
+      "ties": 0,
+      "games": 5,
+      "winRate": 60.0
+     }
+    ]
+   },
+   {
+    "userId": "fixture-person-1",
+    "name": "Ben Ruiz",
+    "avatarUrl": null,
+    "summary": {
+     "eventsWorked": 12,
+     "wins": 8,
+     "losses": 1,
+     "ties": 0,
+     "games": 9,
+     "winRate": 88.9
+    },
+    "bySport": [
+     {
+      "key": "FB",
+      "label": "Football",
+      "eventsWorked": 6,
+      "wins": 5,
+      "losses": 0,
+      "ties": 0,
+      "games": 5,
+      "winRate": 100.0
+     },
+     {
+      "key": "VB",
+      "label": "Volleyball",
+      "eventsWorked": 2,
+      "wins": 1,
+      "losses": 0,
+      "ties": 0,
+      "games": 1,
+      "winRate": 100.0
+     },
+     {
+      "key": "MSOC",
+      "label": "Men's Soccer",
+      "eventsWorked": 4,
+      "wins": 2,
+      "losses": 1,
+      "ties": 0,
+      "games": 3,
+      "winRate": 66.7
+     }
+    ]
+   },
+   {
+    "userId": "fixture-person-2",
+    "name": "Cal Nguyen",
+    "avatarUrl": null,
+    "summary": {
+     "eventsWorked": 14,
+     "wins": 6,
+     "losses": 4,
+     "ties": 2,
+     "games": 12,
+     "winRate": 58.3
+    },
+    "bySport": [
+     {
+      "key": "VB",
+      "label": "Volleyball",
+      "eventsWorked": 6,
+      "wins": 5,
+      "losses": 0,
+      "ties": 0,
+      "games": 5,
+      "winRate": 100.0
+     },
+     {
+      "key": "MSOC",
+      "label": "Men's Soccer",
+      "eventsWorked": 2,
+      "wins": 1,
+      "losses": 0,
+      "ties": 1,
+      "games": 2,
+      "winRate": 75.0
+     },
+     {
+      "key": "WSOC",
+      "label": "Women's Soccer",
+      "eventsWorked": 5,
+      "wins": 0,
+      "losses": 4,
+      "ties": 0,
+      "games": 4,
+      "winRate": 0.0
+     },
+     {
+      "key": "MHKY",
+      "label": "Men's Hockey",
+      "eventsWorked": 1,
+      "wins": 0,
+      "losses": 0,
+      "ties": 1,
+      "games": 1,
+      "winRate": 50.0
+     }
+    ]
+   },
+   {
+    "userId": "fixture-person-3",
+    "name": "Dani Okafor",
+    "avatarUrl": null,
+    "summary": {
+     "eventsWorked": 24,
+     "wins": 12,
+     "losses": 6,
+     "ties": 1,
+     "games": 19,
+     "winRate": 65.8
+    },
+    "bySport": [
+     {
+      "key": "FB",
+      "label": "Football",
+      "eventsWorked": 5,
+      "wins": 4,
+      "losses": 0,
+      "ties": 0,
+      "games": 4,
+      "winRate": 100.0
+     },
+     {
+      "key": "VB",
+      "label": "Volleyball",
+      "eventsWorked": 3,
+      "wins": 0,
+      "losses": 2,
+      "ties": 0,
+      "games": 2,
+      "winRate": 0.0
+     },
+     {
+      "key": "MSOC",
+      "label": "Men's Soccer",
+      "eventsWorked": 4,
+      "wins": 3,
+      "losses": 0,
+      "ties": 0,
+      "games": 3,
+      "winRate": 100.0
+     },
+     {
+      "key": "WSOC",
+      "label": "Women's Soccer",
+      "eventsWorked": 6,
+      "wins": 2,
+      "losses": 3,
+      "ties": 0,
+      "games": 5,
+      "winRate": 40.0
+     },
+     {
+      "key": "MHKY",
+      "label": "Men's Hockey",
+      "eventsWorked": 3,
+      "wins": 1,
+      "losses": 1,
+      "ties": 1,
+      "games": 3,
+      "winRate": 50.0
+     },
+     {
+      "key": "WHKY",
+      "label": "Women's Hockey",
+      "eventsWorked": 3,
+      "wins": 2,
+      "losses": 0,
+      "ties": 0,
+      "games": 2,
+      "winRate": 100.0
+     }
+    ]
+   },
+   {
+    "userId": "fixture-person-4",
+    "name": "Eli Brandt",
+    "avatarUrl": null,
+    "summary": {
+     "eventsWorked": 7,
+     "wins": 3,
+     "losses": 2,
+     "ties": 2,
+     "games": 7,
+     "winRate": 57.1
+    },
+    "bySport": [
+     {
+      "key": "VB",
+      "label": "Volleyball",
+      "eventsWorked": 5,
+      "wins": 2,
+      "losses": 2,
+      "ties": 1,
+      "games": 5,
+      "winRate": 50.0
+     },
+     {
+      "key": "MHKY",
+      "label": "Men's Hockey",
+      "eventsWorked": 2,
+      "wins": 1,
+      "losses": 0,
+      "ties": 1,
+      "games": 2,
+      "winRate": 75.0
+     }
+    ]
+   },
+   {
+    "userId": "fixture-person-5",
+    "name": "Fran Ito",
+    "avatarUrl": null,
+    "summary": {
+     "eventsWorked": 8,
+     "wins": 5,
+     "losses": 0,
+     "ties": 0,
+     "games": 5,
+     "winRate": 100.0
+    },
+    "bySport": [
+     {
+      "key": "FB",
+      "label": "Football",
+      "eventsWorked": 3,
+      "wins": 2,
+      "losses": 0,
+      "ties": 0,
+      "games": 2,
+      "winRate": 100.0
+     },
+     {
+      "key": "VB",
+      "label": "Volleyball",
+      "eventsWorked": 3,
+      "wins": 2,
+      "losses": 0,
+      "ties": 0,
+      "games": 2,
+      "winRate": 100.0
+     },
+     {
+      "key": "MHKY",
+      "label": "Men's Hockey",
+      "eventsWorked": 2,
+      "wins": 1,
+      "losses": 0,
+      "ties": 0,
+      "games": 1,
+      "winRate": 100.0
+     }
+    ]
+   },
+   {
+    "userId": "fixture-person-6",
+    "name": "Gabe Lund",
+    "avatarUrl": null,
+    "summary": {
+     "eventsWorked": 11,
+     "wins": 5,
+     "losses": 3,
+     "ties": 0,
+     "games": 8,
+     "winRate": 62.5
+    },
+    "bySport": [
+     {
+      "key": "FB",
+      "label": "Football",
+      "eventsWorked": 3,
+      "wins": 0,
+      "losses": 2,
+      "ties": 0,
+      "games": 2,
+      "winRate": 0.0
+     },
+     {
+      "key": "MHKY",
+      "label": "Men's Hockey",
+      "eventsWorked": 5,
+      "wins": 3,
+      "losses": 1,
+      "ties": 0,
+      "games": 4,
+      "winRate": 75.0
+     },
+     {
+      "key": "WHKY",
+      "label": "Women's Hockey",
+      "eventsWorked": 3,
+      "wins": 2,
+      "losses": 0,
+      "ties": 0,
+      "games": 2,
+      "winRate": 100.0
+     }
+    ]
+   },
+   {
+    "userId": "fixture-staff",
+    "name": "Bucky Badger",
+    "avatarUrl": null,
+    "summary": {
+     "eventsWorked": 16,
+     "wins": 5,
+     "losses": 7,
+     "ties": 0,
+     "games": 12,
+     "winRate": 41.7
+    },
+    "bySport": [
+     {
+      "key": "FB",
+      "label": "Football",
+      "eventsWorked": 1,
+      "wins": 0,
+      "losses": 0,
+      "ties": 0,
+      "games": 0,
+      "winRate": null
+     },
+     {
+      "key": "VB",
+      "label": "Volleyball",
+      "eventsWorked": 5,
+      "wins": 0,
+      "losses": 4,
+      "ties": 0,
+      "games": 4,
+      "winRate": 0.0
+     },
+     {
+      "key": "MSOC",
+      "label": "Men's Soccer",
+      "eventsWorked": 5,
+      "wins": 4,
+      "losses": 0,
+      "ties": 0,
+      "games": 4,
+      "winRate": 100.0
+     },
+     {
+      "key": "MHKY",
+      "label": "Men's Hockey",
+      "eventsWorked": 5,
+      "wins": 1,
+      "losses": 3,
+      "ties": 0,
+      "games": 4,
+      "winRate": 25.0
+     }
+    ]
+   },
+   {
+    "userId": "fixture-person-8",
+    "name": "Ivy Marsh",
+    "avatarUrl": null,
+    "summary": {
+     "eventsWorked": 9,
+     "wins": 4,
+     "losses": 3,
+     "ties": 0,
+     "games": 7,
+     "winRate": 57.1
+    },
+    "bySport": [
+     {
+      "key": "MHKY",
+      "label": "Men's Hockey",
+      "eventsWorked": 5,
+      "wins": 1,
+      "losses": 3,
+      "ties": 0,
+      "games": 4,
+      "winRate": 25.0
+     },
+     {
+      "key": "WHKY",
+      "label": "Women's Hockey",
+      "eventsWorked": 4,
+      "wins": 3,
+      "losses": 0,
+      "ties": 0,
+      "games": 3,
+      "winRate": 100.0
+     }
+    ]
+   },
+   {
+    "userId": "fixture-person-9",
+    "name": "Jonah Reyes",
+    "avatarUrl": null,
+    "summary": {
+     "eventsWorked": 6,
+     "wins": 2,
+     "losses": 2,
+     "ties": 1,
+     "games": 5,
+     "winRate": 50.0
+    },
+    "bySport": [
+     {
+      "key": "VB",
+      "label": "Volleyball",
+      "eventsWorked": 2,
+      "wins": 0,
+      "losses": 1,
+      "ties": 0,
+      "games": 1,
+      "winRate": 0.0
+     },
+     {
+      "key": "MSOC",
+      "label": "Men's Soccer",
+      "eventsWorked": 4,
+      "wins": 2,
+      "losses": 1,
+      "ties": 1,
+      "games": 4,
+      "winRate": 62.5
+     }
+    ]
+   },
+   {
+    "userId": "fixture-person-10",
+    "name": "Kira Holt",
+    "avatarUrl": null,
+    "summary": {
+     "eventsWorked": 14,
+     "wins": 6,
+     "losses": 4,
+     "ties": 0,
+     "games": 10,
+     "winRate": 60.0
+    },
+    "bySport": [
+     {
+      "key": "FB",
+      "label": "Football",
+      "eventsWorked": 2,
+      "wins": 0,
+      "losses": 1,
+      "ties": 0,
+      "games": 1,
+      "winRate": 0.0
+     },
+     {
+      "key": "VB",
+      "label": "Volleyball",
+      "eventsWorked": 6,
+      "wins": 5,
+      "losses": 0,
+      "ties": 0,
+      "games": 5,
+      "winRate": 100.0
+     },
+     {
+      "key": "WSOC",
+      "label": "Women's Soccer",
+      "eventsWorked": 3,
+      "wins": 0,
+      "losses": 2,
+      "ties": 0,
+      "games": 2,
+      "winRate": 0.0
+     },
+     {
+      "key": "MHKY",
+      "label": "Men's Hockey",
+      "eventsWorked": 3,
+      "wins": 1,
+      "losses": 1,
+      "ties": 0,
+      "games": 2,
+      "winRate": 50.0
+     }
+    ]
+   },
+   {
+    "userId": "fixture-person-11",
+    "name": "Leo Banks",
+    "avatarUrl": null,
+    "summary": {
+     "eventsWorked": 16,
+     "wins": 6,
+     "losses": 6,
+     "ties": 1,
+     "games": 13,
+     "winRate": 50.0
+    },
+    "bySport": [
+     {
+      "key": "FB",
+      "label": "Football",
+      "eventsWorked": 3,
+      "wins": 0,
+      "losses": 2,
+      "ties": 0,
+      "games": 2,
+      "winRate": 0.0
+     },
+     {
+      "key": "MSOC",
+      "label": "Men's Soccer",
+      "eventsWorked": 6,
+      "wins": 5,
+      "losses": 0,
+      "ties": 1,
+      "games": 6,
+      "winRate": 91.7
+     },
+     {
+      "key": "WSOC",
+      "label": "Women's Soccer",
+      "eventsWorked": 6,
+      "wins": 1,
+      "losses": 4,
+      "ties": 0,
+      "games": 5,
+      "winRate": 20.0
+     },
+     {
+      "key": "WHKY",
+      "label": "Women's Hockey",
+      "eventsWorked": 1,
+      "wins": 0,
+      "losses": 0,
+      "ties": 0,
+      "games": 0,
+      "winRate": null
+     }
+    ]
+   },
+   {
+    "userId": "fixture-person-12",
+    "name": "Mia Chen",
+    "avatarUrl": null,
+    "summary": {
+     "eventsWorked": 12,
+     "wins": 6,
+     "losses": 1,
+     "ties": 1,
+     "games": 8,
+     "winRate": 81.2
+    },
+    "bySport": [
+     {
+      "key": "VB",
+      "label": "Volleyball",
+      "eventsWorked": 1,
+      "wins": 0,
+      "losses": 0,
+      "ties": 1,
+      "games": 1,
+      "winRate": 50.0
+     },
+     {
+      "key": "MSOC",
+      "label": "Men's Soccer",
+      "eventsWorked": 1,
+      "wins": 0,
+      "losses": 0,
+      "ties": 0,
+      "games": 0,
+      "winRate": null
+     },
+     {
+      "key": "WSOC",
+      "label": "Women's Soccer",
+      "eventsWorked": 1,
+      "wins": 0,
+      "losses": 0,
+      "ties": 0,
+      "games": 0,
+      "winRate": null
+     },
+     {
+      "key": "MHKY",
+      "label": "Men's Hockey",
+      "eventsWorked": 6,
+      "wins": 4,
+      "losses": 1,
+      "ties": 0,
+      "games": 5,
+      "winRate": 80.0
+     },
+     {
+      "key": "WHKY",
+      "label": "Women's Hockey",
+      "eventsWorked": 3,
+      "wins": 2,
+      "losses": 0,
+      "ties": 0,
+      "games": 2,
+      "winRate": 100.0
+     }
+    ]
+   },
+   {
+    "userId": "fixture-person-13",
+    "name": "Noah Feld",
+    "avatarUrl": null,
+    "summary": {
+     "eventsWorked": 22,
+     "wins": 7,
+     "losses": 10,
+     "ties": 0,
+     "games": 17,
+     "winRate": 41.2
+    },
+    "bySport": [
+     {
+      "key": "VB",
+      "label": "Volleyball",
+      "eventsWorked": 5,
+      "wins": 3,
+      "losses": 1,
+      "ties": 0,
+      "games": 4,
+      "winRate": 75.0
+     },
+     {
+      "key": "MSOC",
+      "label": "Men's Soccer",
+      "eventsWorked": 6,
+      "wins": 1,
+      "losses": 4,
+      "ties": 0,
+      "games": 5,
+      "winRate": 20.0
+     },
+     {
+      "key": "WSOC",
+      "label": "Women's Soccer",
+      "eventsWorked": 1,
+      "wins": 0,
+      "losses": 0,
+      "ties": 0,
+      "games": 0,
+      "winRate": null
+     },
+     {
+      "key": "MHKY",
+      "label": "Men's Hockey",
+      "eventsWorked": 6,
+      "wins": 3,
+      "losses": 2,
+      "ties": 0,
+      "games": 5,
+      "winRate": 60.0
+     },
+     {
+      "key": "WHKY",
+      "label": "Women's Hockey",
+      "eventsWorked": 4,
+      "wins": 0,
+      "losses": 3,
+      "ties": 0,
+      "games": 3,
+      "winRate": 0.0
+     }
+    ]
+   },
+   {
+    "userId": "fixture-person-14",
+    "name": "Oli Park",
+    "avatarUrl": null,
+    "summary": {
+     "eventsWorked": 6,
+     "wins": 1,
+     "losses": 1,
+     "ties": 0,
+     "games": 2,
+     "winRate": 50.0
+    },
+    "bySport": [
+     {
+      "key": "VB",
+      "label": "Volleyball",
+      "eventsWorked": 2,
+      "wins": 1,
+      "losses": 0,
+      "ties": 0,
+      "games": 1,
+      "winRate": 100.0
+     },
+     {
+      "key": "MSOC",
+      "label": "Men's Soccer",
+      "eventsWorked": 2,
+      "wins": 0,
+      "losses": 1,
+      "ties": 0,
+      "games": 1,
+      "winRate": 0.0
+     },
+     {
+      "key": "WSOC",
+      "label": "Women's Soccer",
+      "eventsWorked": 1,
+      "wins": 0,
+      "losses": 0,
+      "ties": 0,
+      "games": 0,
+      "winRate": null
+     },
+     {
+      "key": "WHKY",
+      "label": "Women's Hockey",
+      "eventsWorked": 1,
+      "wins": 0,
+      "losses": 0,
+      "ties": 0,
+      "games": 0,
+      "winRate": null
+     }
+    ]
+   },
+   {
+    "userId": "fixture-person-15",
+    "name": "Priya Rao",
+    "avatarUrl": null,
+    "summary": {
+     "eventsWorked": 17,
+     "wins": 9,
+     "losses": 3,
+     "ties": 0,
+     "games": 12,
+     "winRate": 75.0
+    },
+    "bySport": [
+     {
+      "key": "FB",
+      "label": "Football",
+      "eventsWorked": 5,
+      "wins": 2,
+      "losses": 2,
+      "ties": 0,
+      "games": 4,
+      "winRate": 50.0
+     },
+     {
+      "key": "VB",
+      "label": "Volleyball",
+      "eventsWorked": 5,
+      "wins": 3,
+      "losses": 1,
+      "ties": 0,
+      "games": 4,
+      "winRate": 75.0
+     },
+     {
+      "key": "MSOC",
+      "label": "Men's Soccer",
+      "eventsWorked": 3,
+      "wins": 2,
+      "losses": 0,
+      "ties": 0,
+      "games": 2,
+      "winRate": 100.0
+     },
+     {
+      "key": "WSOC",
+      "label": "Women's Soccer",
+      "eventsWorked": 3,
+      "wins": 2,
+      "losses": 0,
+      "ties": 0,
+      "games": 2,
+      "winRate": 100.0
+     },
+     {
+      "key": "MHKY",
+      "label": "Men's Hockey",
+      "eventsWorked": 1,
+      "wins": 0,
+      "losses": 0,
+      "ties": 0,
+      "games": 0,
+      "winRate": null
+     }
+    ]
+   }
+  ]
+ }
+}
+"""#.utf8)
 }
 
 /// Renders the native profile Scoreboard against a canned season payload. The

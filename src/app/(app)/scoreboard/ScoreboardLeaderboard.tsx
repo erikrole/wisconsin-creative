@@ -115,13 +115,14 @@ function PersonDetail({
         <Button
           variant={comparing ? "secondary" : "outline"}
           size="sm"
+          className="h-10"
           onClick={onCompare}
           aria-pressed={comparing}
         >
           <GitCompareArrows className="size-3.5" aria-hidden="true" />
           {comparing ? "Comparing" : "Compare"}
         </Button>
-        <Button variant="ghost" size="sm" asChild>
+        <Button variant="ghost" size="sm" className="h-10" asChild>
           <Link prefetch={false} href={href} className="no-underline">
             Full page
             <ArrowUpRight className="size-3.5" aria-hidden="true" />

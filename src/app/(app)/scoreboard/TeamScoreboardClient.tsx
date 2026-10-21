@@ -225,7 +225,7 @@ function SportChips({
             aria-pressed={selected}
             onClick={() => onChange(chip.key)}
             className={cn(
-              "h-9 shrink-0 rounded-full border px-3.5 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              "h-10 shrink-0 rounded-full border px-3.5 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               selected
                 ? "border-foreground bg-foreground text-background"
                 : "bg-card text-muted-foreground hover:border-foreground/30 hover:text-foreground",
@@ -399,7 +399,7 @@ function TeamScoreboardExplorer() {
             <div className="flex items-center gap-2">
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-9">
+                  <Button variant="outline" size="sm" className="h-10">
                     <SlidersHorizontal className="size-3.5" aria-hidden="true" />
                     More filters
                     {moreFilterCount > 0 ? (
@@ -426,7 +426,7 @@ function TeamScoreboardExplorer() {
                 </PopoverContent>
               </Popover>
               {activeFilterCount > 0 ? (
-                <Button variant="ghost" size="sm" className="h-9" onClick={() => setFilters({ ...EMPTY_FILTERS })}>
+                <Button variant="ghost" size="sm" className="h-10" onClick={() => setFilters({ ...EMPTY_FILTERS })}>
                   Clear filters
                 </Button>
               ) : null}
@@ -528,7 +528,7 @@ function TeamScoreboardExplorer() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-9 font-bold text-[var(--accent)]"
+                        className="h-10 font-bold text-[var(--accent)]"
                         onClick={() => revealPerson(yourStanding.person.userId)}
                         aria-label={`Jump to your Scoreboard standing, ${ordinal(yourStanding.rank)}`}
                       >
