@@ -263,7 +263,7 @@ struct ReturnTimeCalendar: View {
             calendar.date(bySettingHour: $0.hour, minute: $0.minute, second: 0, of: day)
         }
         if let latest, calendar.isDate(latest, inSameDayAs: day) { times.append(latest) }
-        let valid = times.filter { $0 >= QuarterHour.roundedUp(minimum) && (latest.map { limit in $0 <= limit } ?? true) }
+        let valid = times.filter { time in time >= QuarterHour.roundedUp(minimum) && (latest.map { time <= $0 } ?? true) }
         return Array(Set(valid)).sorted()
     }
 
