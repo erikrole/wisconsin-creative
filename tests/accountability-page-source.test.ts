@@ -2,35 +2,16 @@ import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
 
 describe("Accountability dashboard source contract", () => {
-  it("frames the page as the leaderboard people should avoid", () => {
+  it("uses plain wording with no joke labels or podium", () => {
     const page = source("src/app/(app)/accountability/page.tsx");
-    const spotlight = source("src/app/(app)/accountability/AccountabilitySpotlight.tsx");
-
-    expect(page).toContain("The leaderboard nobody wants to join");
-    expect(spotlight).toContain("The leaderboard nobody wants to lead");
-    expect(spotlight).toContain("Wrong leaderboard");
-    expect(spotlight).toContain("No one made the board. Beautifully boring.");
-  });
-
-  it("uses people-first podium cards and reduced-motion-safe state changes", () => {
-    const spotlight = source("src/app/(app)/accountability/AccountabilitySpotlight.tsx");
     const client = source("src/app/(app)/accountability/AccountabilityClient.tsx");
-
-    expect(spotlight).toContain("<UserAvatar");
-    expect(spotlight).toContain("<AnimatePresence");
-    expect(spotlight).toContain("useReducedMotion()");
-    expect(spotlight).toContain('aria-live="polite"');
-    expect(spotlight).toContain("reduceMotion ? false");
-    expect(spotlight).toContain("data-accountability-jeer");
-    expect(spotlight).not.toContain("podiumCopy");
-    expect(client).toContain("jeers={data.spotlightJeers}");
-  });
-
-  it("serves one shared jeer draw from stable leaderboard state", () => {
     const route = source("src/app/api/accountability/route.ts");
 
-    expect(route).toContain("selectAccountabilityJeers(report.leaderboard)");
-    expect(route).toContain("spotlightJeers,");
+    expect(page).toContain("Who returned gear late, and how often");
+    expect(client).not.toContain("AccountabilitySpotlight");
+    expect(client).not.toContain("spotlightJeers");
+    expect(route).not.toContain("Jeers");
+    expect(client).not.toMatch(/nobody wants|escape route|receipts|Fine print/);
   });
 
   it("keeps the leaderboard summary readable before revealing incident history", () => {
@@ -38,10 +19,9 @@ describe("Accountability dashboard source contract", () => {
 
     expect(client).toContain('className="hidden xl:block"');
     expect(client).toContain('className="xl:hidden"');
-    expect(client).toContain("Late-time pattern");
-    expect(client).toContain("Return record");
-    expect(client).toContain("The return record is the escape route");
-    expect(client).toContain('"text-lg font-semibold tabular-nums"');
+    expect(client).toContain("Time late");
+    expect(client).toContain("On time");
+        expect(client).toContain('"text-lg font-semibold tabular-nums"');
     expect(client).toContain("function returnRateBarColor(rate: number)");
     expect(client).toContain("Math.min(100, Math.max(50, rate))");
     expect(client).toContain("color-mix(in oklab, var(--red)");
@@ -65,7 +45,7 @@ describe("Accountability dashboard source contract", () => {
     expect(client).toContain("You’re #");
     expect(client).toContain("syncUrl(");
     expect(client).toContain("currently overdue checkouts");
-    expect(client).toContain('label: "Events"');
+    expect(client).toContain('label: "Times late"');
     expect(client).not.toContain("<BarChart");
   });
 });

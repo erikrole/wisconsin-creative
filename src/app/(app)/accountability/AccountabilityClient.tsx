@@ -26,7 +26,6 @@ import {
   getReportExportFilename,
   readReportExportFailureMessage,
 } from "../reports/report-export";
-import { AccountabilitySpotlight } from "./AccountabilitySpotlight";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -127,7 +126,6 @@ type AccountabilityReport = {
     canExport: boolean;
     canManageExclusions: boolean;
   };
-  spotlightJeers: string[];
   locations: Array<{ id: string; name: string }>;
   leaderboard: Person[];
   excluded?: Array<{
@@ -432,7 +430,7 @@ export default function AccountabilityClient({
       <ReportErrorState
         error={error}
         onRetry={reload}
-        title="Failed to load accountability report"
+        title="Couldn’t load accountability"
       />
     );
   }
@@ -525,9 +523,9 @@ export default function AccountabilityClient({
             ariaLabel="Accountability ranking"
             value={sort}
             options={[
-              { value: "events", label: "Events" },
-              { value: "time", label: "Time" },
-              { value: "recent", label: "Latest" },
+              { value: "events", label: "Times late" },
+              { value: "time", label: "Time late" },
+              { value: "recent", label: "Most recent" },
             ]}
             onChange={(next) => changeSort(next as SortKey)}
           />
@@ -592,29 +590,20 @@ export default function AccountabilityClient({
       </ReportToolbar>
 
       <ReportDataRegion refreshing={refreshing}>
-        <AccountabilitySpotlight
-          people={leaderboard}
-          sort={sort}
-          scopeLabel={scopeLabel}
-          now={clock}
-          jeers={data.spotlightJeers}
-          currentUserId={currentUserId}
-        />
-
       <ReportMetricGrid>
         <MetricCard
           value={data.metrics.peopleNeedingAttention}
-          label="People on the board"
+          label="People with late returns"
           tooltip={`People with at least one late event in ${scopeLabel.toLowerCase()}`}
         />
         <MetricCard
           value={data.metrics.lateEvents}
-          label="Late events"
+          label="Times late"
           tooltip="Late returns, checkouts still overdue, and extensions made after the prior due time"
         />
         <MetricCard
           value={formatHours(data.metrics.totalLateHours)}
-          label="Total late time"
+          label="Time late"
           tooltip="Combined hours past due across every late event in this view"
         />
         <MetricCard
@@ -643,8 +632,8 @@ export default function AccountabilityClient({
       ) : null}
 
       <ReportSectionCard
-        title="Full leaderboard"
-        description="Open history for the receipts. The return record is the escape route."
+        title="Ranking"
+        description={`${scopeLabel}. Open a row to see each late checkout.`}
         className="mb-4"
         contentClassName="p-0"
       >
@@ -652,11 +641,11 @@ export default function AccountabilityClient({
           <div className="p-4">
             <ReportEmptyState
               icon={hasScopeFilters ? "search" : "check"}
-              title={hasScopeFilters ? "No one matches these filters" : "No one made the board. Nice work."}
+              title={hasScopeFilters ? "No one matches these filters" : "No late returns"}
               description={
                 hasScopeFilters
                   ? "Broaden the year, location, incident, or user filters to look through more history."
-                  : "Keep returning gear on time and this ranking stays empty."
+                  : "Everything in this period came back on time."
               }
             />
           </div>
@@ -678,15 +667,15 @@ export default function AccountabilityClient({
                     <TableHead
                       className={cn("w-[16%] text-right", !rankByTime && "text-foreground")}
                     >
-                      Late events
+                      Times late
                     </TableHead>
                     <TableHead
                       className={cn("w-[24%] text-right", rankByTime && "text-foreground")}
                     >
-                      Late-time pattern
+                      Time late
                     </TableHead>
-                    <TableHead className="w-[14%] text-right">Return record</TableHead>
-                    <TableHead className="w-[12%] text-right">History</TableHead>
+                    <TableHead className="w-[14%] text-right">On time</TableHead>
+                    <TableHead className="w-[12%] text-right"><span className="sr-only">Checkouts</span></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -773,7 +762,7 @@ export default function AccountabilityClient({
       <Collapsible>
         <CollapsibleTrigger asChild>
           <Button variant="ghost" className="h-10 text-muted-foreground">
-            Fine print: how the ranking works
+            How this is calculated
           </Button>
         </CollapsibleTrigger>
         <CollapsibleContent>
@@ -803,7 +792,7 @@ export default function AccountabilityClient({
           <DialogContent>
             <DialogHeader>
               <div>
-                <DialogTitle>Exclude checkout from accountability</DialogTitle>
+                <DialogTitle>Exclude checkout from this ranking</DialogTitle>
                 <DialogDescription>
                   {excludeTarget
                     ? `${excludeTarget.title} stays in custody history. This only removes it from the leaderboard.`
@@ -865,7 +854,7 @@ function PersonSubline({ person, now }: { person: Person; now: Date }) {
       className="text-xs"
       items={[
         areaLabel(person.primaryArea),
-        `Last incident ${formatRelativeTime(person.lastIncidentAt, now)}`,
+        `Last late ${formatRelativeTime(person.lastIncidentAt, now)}`,
         !person.active && "Inactive",
       ]}
     />
@@ -887,9 +876,7 @@ function LateEventsSummary({
 }) {
   return (
     <div className={cn("flex flex-col items-end gap-1", className)}>
-      <Badge variant={person.activeOverdueCount > 0 ? "red" : "secondary"}>
-        {person.lateEventCount}
-      </Badge>
+      <span className="text-base font-semibold tabular-nums">{person.lateEventCount}</span>
       <span
         className={cn(
           "text-xs",
@@ -923,7 +910,7 @@ function LateTimeSummary({
           rankByTime && "font-semibold text-[var(--red-text)]",
         )}
       >
-        {formatHours(person.totalLateHours)} total
+        {formatHours(person.totalLateHours)}
       </div>
       <ReportMetaLine
         className="mt-1 justify-end text-xs"
@@ -1006,13 +993,13 @@ function IncidentHistory({
     <div
       id={historyId}
       role="region"
-      aria-label={`Incident history for ${person.name}`}
+      aria-label={`Late checkouts for ${person.name}`}
       className="overflow-hidden rounded-md border bg-background"
     >
       <div className="flex items-center justify-between gap-3 border-b bg-muted/30 px-4 py-2">
-        <span className="text-xs font-medium text-foreground">Incident history</span>
+        <span className="text-xs font-medium text-foreground">Late checkouts</span>
         <span className="text-xs text-muted-foreground tabular-nums">
-          {pluralize(person.incidents.length, "receipt")}
+          {pluralize(person.incidents.length, "checkout")}
         </span>
       </div>
       <div className="divide-y">
@@ -1123,10 +1110,10 @@ function PersonRows({
             onClick={onToggle}
             aria-expanded={expanded}
             aria-controls={historyId}
-            aria-label={`${expanded ? "Hide" : "Show"} ${pluralize(person.incidents.length, "receipt")} for ${person.name}`}
+            aria-label={`${expanded ? "Hide" : "Show"} ${pluralize(person.incidents.length, "checkout")} for ${person.name}`}
           >
             <span className="tabular-nums">{person.incidents.length}</span>
-            <span className="hidden xl:inline">receipts</span>
+            <span className="hidden xl:inline">{person.incidents.length === 1 ? "checkout" : "checkouts"}</span>
             <ChevronIcon className="size-4" aria-hidden="true" />
           </Button>
         </TableCell>
@@ -1206,7 +1193,7 @@ function PersonMobileCard({
       </div>
       <div className="grid grid-cols-3 overflow-hidden rounded-md border bg-muted/20">
         <div className="min-w-0 px-3 py-2.5">
-          <div className="text-xs text-muted-foreground">Late events</div>
+          <div className="text-xs text-muted-foreground">Times late</div>
           <div className="mt-1 font-semibold tabular-nums">{person.lateEventCount}</div>
           <div
             className={cn(
@@ -1222,7 +1209,7 @@ function PersonMobileCard({
           </div>
         </div>
         <div className="min-w-0 border-l px-3 py-2.5">
-          <div className="text-xs text-muted-foreground">Late time</div>
+          <div className="text-xs text-muted-foreground">Time late</div>
           <div
             className={cn(
               "mt-1 font-semibold tabular-nums",
@@ -1246,9 +1233,9 @@ function PersonMobileCard({
         onClick={onToggle}
         aria-expanded={expanded}
         aria-controls={historyId}
-        aria-label={`${expanded ? "Hide" : "Show"} ${pluralize(person.incidents.length, "receipt")} for ${person.name}`}
+        aria-label={`${expanded ? "Hide" : "Show"} ${pluralize(person.incidents.length, "checkout")} for ${person.name}`}
       >
-        <span>{expanded ? "Hide" : "Show"} {pluralize(person.incidents.length, "receipt")}</span>
+        <span>{expanded ? "Hide" : "Show"} {pluralize(person.incidents.length, "checkout")}</span>
         <ChevronIcon className="size-4" aria-hidden="true" />
       </Button>
       {expanded ? (
