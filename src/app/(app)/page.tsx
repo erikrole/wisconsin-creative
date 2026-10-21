@@ -27,6 +27,7 @@ import { OverdueBanner } from "./dashboard/overdue-banner";
 import { FlaggedItemsBanner } from "./dashboard/flagged-items-banner";
 import { ProfileCompletionBanner } from "./dashboard/profile-completion-banner";
 import { GearPicksBanner } from "./dashboard/gear-picks-banner";
+import { WrappedBanner } from "@/components/wrapped/WrappedBanner";
 import { LostBulkUnitsCard } from "./dashboard/lost-bulk-units-card";
 import { MyGearColumn } from "./dashboard/my-gear-column";
 import { TeamActivityColumn } from "./dashboard/team-activity-column";
@@ -229,6 +230,7 @@ function InternalDashboardPage() {
     <PageTransition>
       <ProfileCompletionBanner />
       <GearPicksBanner />
+      <WrappedBanner />
       {/* ══════ Page Header + Quick Actions ══════ */}
       <PageHeader
         title="Dashboard"

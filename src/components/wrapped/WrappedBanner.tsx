@@ -1,12 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Gift } from "lucide-react";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import { wrappedPromoState } from "@/lib/wrapped/dates";
 
-/** The Scoreboard's door into Creative Wrapped, from Dec 1 to mid-January. */
-export function WrappedBanner({ now, role }: { now: Date; role: string | null | undefined }) {
-  const state = wrappedPromoState(now, role);
+/** The door into Creative Wrapped on Home and the Scoreboard, Dec 1 to mid-January. */
+export function WrappedBanner() {
+  const { data: user } = useCurrentUser();
+  const [now] = useState(() => new Date());
+  const state = wrappedPromoState(now, user?.role);
   if (state === "hidden") return null;
   return (
     <Link

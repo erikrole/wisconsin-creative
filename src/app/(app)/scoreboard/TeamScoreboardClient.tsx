@@ -24,6 +24,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { CountUp } from "@/components/scoreboard/CountUp";
+import { WrappedBanner } from "@/components/wrapped/WrappedBanner";
 import { RecordMeter, ScoreboardDataRegion } from "@/components/scoreboard/ScoreboardVisuals";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useFetch } from "@/hooks/use-fetch";
@@ -49,7 +50,6 @@ import { cn } from "@/lib/utils";
 import { ScoreboardCompare } from "./ScoreboardCompare";
 import { ScoreboardExplore } from "./ScoreboardExplore";
 import { ScoreboardFunFacts } from "./ScoreboardFunFacts";
-import { WrappedBanner } from "./WrappedBanner";
 import { ScoreboardLeaderboard, type RankedPerson } from "./ScoreboardLeaderboard";
 
 type SortKey = TeamScoreboardSortKey;
@@ -511,7 +511,7 @@ function TeamScoreboardExplorer() {
               </dl>
             </section>
 
-            <WrappedBanner now={clock} role={currentUser?.role} />
+            <WrappedBanner />
 
             <ScoreboardFunFacts facts={facts} onExplore={exploreFact} />
 

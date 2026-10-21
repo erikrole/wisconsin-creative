@@ -140,6 +140,65 @@ struct WrappedBanner: View {
     }
 }
 
+/// Shown once, on the first launch after unlock: a small sheet that invites
+/// people in, like the year-in-review prompts in Duolingo and Spotify.
+struct WrappedInvitation: ViewModifier {
+    let role: String?
+    let isEnabled: Bool
+
+    @AppStorage("wrapped.2026-fall.invited") private var invited = false
+    @State private var showsInvite = false
+    @State private var showsWrapped = false
+
+    func body(content: Content) -> some View {
+        content
+            .task(id: role) {
+                guard isEnabled, !invited, WrappedPromo.state(role: role) == .open else { return }
+                // Let the app settle before asking for attention.
+                try? await Task.sleep(for: .seconds(1.5))
+                guard !Task.isCancelled else { return }
+                invited = true
+                showsInvite = true
+            }
+            .sheet(isPresented: $showsInvite) {
+                VStack(spacing: 14) {
+                    Image(systemName: "gift.fill")
+                        .font(.largeTitle)
+                        .foregroundStyle(.white)
+                        .frame(width: 76, height: 76)
+                        .background(Color(wrappedHex: 0xC5050C), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                        .accessibilityHidden(true)
+                    Text("Your fall in Creative is here")
+                        .font(.title2.weight(.black))
+                        .multilineTextAlignment(.center)
+                    Text("Events, crew, gear and your style, July to November.")
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                    Button {
+                        showsInvite = false
+                        showsWrapped = true
+                    } label: {
+                        Text("See my Wrapped")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity, minHeight: 50)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color(wrappedHex: 0xC5050C))
+                    .padding(.top, 6)
+                    Button("Not now") { showsInvite = false }
+                        .font(.subheadline.weight(.semibold))
+                        .frame(minHeight: 44)
+                }
+                .padding(24)
+                .presentationDetents([.height(400)])
+                .presentationDragIndicator(.visible)
+            }
+            .fullScreenCover(isPresented: $showsWrapped) {
+                WrappedView()
+            }
+    }
+}
+
 // MARK: - Player
 
 struct WrappedView: View {
@@ -306,7 +365,6 @@ struct WrappedPlayerView: View {
                     @unknown default: break
                     }
                 }
-                .ignoresSafeArea()
 
             chrome
 
@@ -453,37 +511,40 @@ struct WrappedCardView: View {
     private var tone: WrappedTone { .named(card.tone) }
 
     var body: some View {
-        ZStack(alignment: .topLeading) {
-            tone.background
-            Circle()
-                .fill(tone.glow.opacity(0.45))
-                .frame(width: 300, height: 300)
-                .blur(radius: 60)
-                .offset(x: 200, y: -90)
-                .scaleEffect(appeared || reduceMotion ? 1 : 0.6)
-                .accessibilityHidden(true)
-            Circle()
-                .fill(tone.glow.opacity(0.25))
-                .frame(width: 320, height: 320)
-                .blur(radius: 80)
-                .offset(x: -110, y: 560)
-                .accessibilityHidden(true)
-
-            VStack(alignment: .leading, spacing: 18) {
-                Text(((isTeam && card.layout != "summary") ? "The team · " : "") + card.eyebrow)
-                    .font(.footnote.weight(.bold))
-                    .tracking(1.6)
-                    .textCase(.uppercase)
-                    .foregroundStyle(tone.soft)
-                    .padding(.top, 96)
-                Spacer(minLength: 0)
-                content
-                Spacer(minLength: 0)
+        // Content stays inside the safe area so it clears the player chrome;
+        // only the color and glows bleed to the screen edges.
+        VStack(alignment: .leading, spacing: 18) {
+            Text(((isTeam && card.layout != "summary") ? "The team · " : "") + card.eyebrow)
+                .font(.footnote.weight(.bold))
+                .tracking(1.6)
+                .textCase(.uppercase)
+                .foregroundStyle(tone.soft)
+                .padding(.top, 64)
+            Spacer(minLength: 0)
+            content
+            Spacer(minLength: 0)
+        }
+        .foregroundStyle(tone.foreground)
+        .padding(.horizontal, 28)
+        .padding(.bottom, 76)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .background {
+            ZStack {
+                tone.background
+                Circle()
+                    .fill(tone.glow.opacity(0.45))
+                    .frame(width: 300, height: 300)
+                    .blur(radius: 60)
+                    .offset(x: 160, y: -300)
+                    .scaleEffect(appeared || reduceMotion ? 1 : 0.6)
+                Circle()
+                    .fill(tone.glow.opacity(0.25))
+                    .frame(width: 320, height: 320)
+                    .blur(radius: 80)
+                    .offset(x: -150, y: 300)
             }
-            .foregroundStyle(tone.foreground)
-            .padding(.horizontal, 28)
-            .padding(.bottom, 90)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .ignoresSafeArea()
+            .accessibilityHidden(true)
         }
         .onAppear {
             if reduceMotion {
@@ -503,8 +564,14 @@ struct WrappedCardView: View {
         switch card.layout {
         case "cover":
             VStack(alignment: .leading, spacing: 22) {
-                UserAvatarView(name: person.name, avatarUrl: person.avatarUrl, size: 92)
-                    .overlay(Circle().strokeBorder(.white.opacity(0.3), lineWidth: 4))
+                UserAvatarView(
+                    name: person.name,
+                    avatarUrl: person.avatarUrl,
+                    size: 92,
+                    fallbackBackground: tone.foreground,
+                    fallbackForeground: tone.background
+                )
+                .overlay(Circle().strokeBorder(tone.foreground.opacity(0.3), lineWidth: 4))
                 Text(card.value)
                     .font(.system(size: 54, weight: .black))
                     .minimumScaleFactor(0.6)
@@ -556,7 +623,13 @@ struct WrappedCardView: View {
         VStack(alignment: .leading, spacing: 12) {
             ForEach(items, id: \.self) { item in
                 HStack(spacing: 12) {
-                    UserAvatarView(name: item.label, avatarUrl: item.avatarUrl, size: 40)
+                    UserAvatarView(
+                        name: item.label,
+                        avatarUrl: item.avatarUrl,
+                        size: 40,
+                        fallbackBackground: tone.foreground,
+                        fallbackForeground: tone.background
+                    )
                     Text(item.label).font(.body.weight(.bold)).lineLimit(1)
                     Spacer(minLength: 8)
                     Text(item.value).font(.subheadline.monospacedDigit()).foregroundStyle(tone.soft)

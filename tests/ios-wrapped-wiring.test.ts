@@ -16,6 +16,14 @@ describe("native Creative Wrapped wiring", () => {
     expect(wrapped).toContain('guard let role, role != "COLLABORATOR" else { return .hidden }');
   });
 
+  it("invites people in once after unlock from the app shell", () => {
+    const appTabs = source("ios/Wisconsin/Views/AppTabView.swift");
+    const wrapped = source("ios/Wisconsin/Views/WrappedView.swift");
+    expect(appTabs).toContain(".modifier(WrappedInvitation(role: session.currentUser?.role, isEnabled: !isReadOnlyPreview))");
+    expect(wrapped).toContain('@AppStorage("wrapped.2026-fall.invited") private var invited = false');
+    expect(wrapped).toContain("guard isEnabled, !invited, WrappedPromo.state(role: role) == .open else { return }");
+  });
+
   it("plays as accessible stories that respect Reduce Motion", () => {
     const wrapped = source("ios/Wisconsin/Views/WrappedView.swift");
     expect(wrapped).toContain("private var autoPlay: Bool { allowsAutoPlay && !reduceMotion }");
