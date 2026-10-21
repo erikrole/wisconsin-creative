@@ -14,7 +14,6 @@ import { loginPathWithReturnTo } from "@/lib/return-to";
 import { ProductUsageTracker } from "@/components/ProductUsageTracker";
 import { canViewUsageAnalytics } from "@/lib/usage-analytics";
 import { AnnouncementSplash } from "@/components/announcements/AnnouncementSplash";
-import { InstallAppPrompt } from "@/components/InstallAppPrompt";
 import WebMCPProvider from "@/components/WebMCPProvider";
 
 // Safari's native Smart App Banner on iPhone, signed-in pages only (login and kiosk stay clean).
@@ -46,7 +45,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <TooltipProvider>
             {!user.preview && <ProductUsageTracker />}
             <OfflineBanner />
-            {!user.preview && <InstallAppPrompt />}
             <AnnouncementSplash enabled={!user.preview && user.role !== "COLLABORATOR"} />
             <AppShell
               initialUser={{ ...user, canViewUsageAnalytics: canViewUsageAnalytics(user) }}
