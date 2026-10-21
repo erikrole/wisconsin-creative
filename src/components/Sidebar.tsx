@@ -199,8 +199,9 @@ function useTheme() {
 
 const COLLAPSED_GROUPS_KEY = "sidebar:collapsed-groups";
 const PINNED_KEY = "sidebar:pinned";
+const HIDDEN_KEY = "sidebar:hidden";
 
-/** A per-browser string list (collapsed groups, pinned pages). Storage can be blocked, so it degrades to memory. */
+/** A per-browser string list (collapsed groups, pinned and hidden pages). Storage can be blocked, so it degrades to memory. */
 function useStoredList(key: string) {
   const [list, setList] = useState<string[]>([]);
 
@@ -296,24 +297,30 @@ export default function AppSidebar({
 
   const [collapsedGroups, toggleGroup] = useStoredList(COLLAPSED_GROUPS_KEY);
   const [pinnedHrefs, , setPinnedHrefs] = useStoredList(PINNED_KEY);
+  const [hiddenHrefs, , setHiddenHrefs] = useStoredList(HIDDEN_KEY);
+  const activeHref = resolveActiveShellHref(
+    pathname,
+    visibleGroups.flatMap((group) => group.items.map((item) => item.href)),
+  );
+  // A hidden page still shows while you're on it, so the rail never loses your place.
+  const isShown = (item: NavItem) => !hiddenHrefs.includes(item.href) || item.href === activeHref;
   const allVisibleItems = visibleGroups.flatMap((group) => group.items);
   const pinnedItems = pinnedHrefs
     .map((href) => allVisibleItems.find((item) => item.href === href))
-    .filter((item): item is NavItem => Boolean(item));
+    .filter((item): item is NavItem => Boolean(item))
+    .filter(isShown);
   const groupsWithPins: NavGroup[] = [
     ...(pinnedItems.length > 0 ? [{ label: "Pinned", items: pinnedItems }] : []),
     ...visibleGroups
-      .map((group) => ({ ...group, items: group.items.filter((item) => !pinnedHrefs.includes(item.href)) }))
+      .map((group) => ({
+        ...group,
+        items: group.items.filter((item) => !pinnedHrefs.includes(item.href) && isShown(item)),
+      }))
       .filter((group) => group.items.length > 0),
   ];
   const displayGroups = groupsWithPins;
   const isOnAccountPage = pathname === SETTINGS_HREF || pathname.startsWith(`${SETTINGS_HREF}/`) || pathname === `/staff/${user?.id}`;
   const [customizeOpen, setCustomizeOpen] = useState(false);
-
-  const activeHref = resolveActiveShellHref(
-    pathname,
-    visibleGroups.flatMap((group) => group.items.map((item) => item.href)),
-  );
 
   useEffect(() => {
     if (isMobile) setOpenMobile(false);
@@ -590,6 +597,8 @@ export default function AppSidebar({
             groups={visibleGroups}
             pinnedHrefs={pinnedHrefs}
             onPinnedChange={setPinnedHrefs}
+            hiddenHrefs={hiddenHrefs}
+            onHiddenChange={setHiddenHrefs}
             className={chromeFont.className}
           />
         </SidebarFooter>

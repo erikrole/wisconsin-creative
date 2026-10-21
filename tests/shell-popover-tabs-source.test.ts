@@ -28,4 +28,23 @@ describe("app shell bell popover and phone tabs", () => {
     expect(sidebar).toContain('event.key !== "["');
     expect(sidebar).toContain('target?.closest("input, textarea, select');
   });
+
+  it("filters the bell between All and Unread through the API", () => {
+    const popover = source("src/components/NotificationsPopover.tsx");
+    expect(popover).toContain('role="tablist"');
+    expect(popover).toContain('"&unread=true"');
+    expect(popover).toContain("}, [open, view]);");
+    expect(popover).toContain("Nothing unread");
+  });
+
+  it("lets people hide sidebar pages and restore defaults, without losing the current page", () => {
+    const sidebar = source("src/components/Sidebar.tsx");
+    const dialog = source("src/components/SidebarCustomizeDialog.tsx");
+    expect(sidebar).toContain('const HIDDEN_KEY = "sidebar:hidden";');
+    expect(sidebar).toContain("!hiddenHrefs.includes(item.href) || item.href === activeHref");
+    expect(dialog).toContain("aria-label={hidden ? `Show ${item.label}` : `Hide ${item.label}`}");
+    expect(dialog).toContain("if (hidden && pinnedHrefs.includes(href)) togglePinned(href, false);");
+    expect(dialog).toContain("Restore defaults");
+    expect(dialog).not.toContain("Unpin all");
+  });
 });

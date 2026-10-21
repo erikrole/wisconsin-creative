@@ -1,7 +1,7 @@
 "use client";
 
 import { Reorder, useDragControls } from "motion/react";
-import { ChevronDownIcon, ChevronUpIcon, GripVerticalIcon, PinOffIcon } from "lucide-react";
+import { ChevronDownIcon, ChevronUpIcon, EyeIcon, EyeOffIcon, GripVerticalIcon, PinOffIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -24,12 +24,15 @@ type SidebarCustomizeDialogProps = {
   groups: CustomizableNavGroup[];
   pinnedHrefs: string[];
   onPinnedChange: (hrefs: string[]) => void;
+  hiddenHrefs: string[];
+  onHiddenChange: (hrefs: string[]) => void;
   className?: string;
 };
 
 /**
- * Pin pages to the top of the sidebar and set their order. Replaces per-row pin stars so the
- * rail stays quiet; dragging uses a handle, and the arrow buttons give the same control by keyboard.
+ * Pin pages to the top of the sidebar, set their order, and hide pages you never use. Replaces
+ * per-row pin stars so the rail stays quiet; dragging uses a handle, and the arrow buttons give
+ * the same control by keyboard. Hidden pages stay reachable from search.
  */
 export function SidebarCustomizeDialog({
   open,
@@ -37,6 +40,8 @@ export function SidebarCustomizeDialog({
   groups,
   pinnedHrefs,
   onPinnedChange,
+  hiddenHrefs,
+  onHiddenChange,
   className,
 }: SidebarCustomizeDialogProps) {
   const allItems = groups.flatMap((group) => group.items);
@@ -47,6 +52,19 @@ export function SidebarCustomizeDialog({
   function togglePinned(href: string, pinned: boolean) {
     const current = pinnedItems.map((item) => item.href);
     onPinnedChange(pinned ? [...current, href] : current.filter((h) => h !== href));
+  }
+
+  // Hiding a pinned page unpins it, so the two states never fight.
+  function toggleHidden(href: string, hidden: boolean) {
+    onHiddenChange(hidden ? [...hiddenHrefs, href] : hiddenHrefs.filter((h) => h !== href));
+    if (hidden && pinnedHrefs.includes(href)) togglePinned(href, false);
+  }
+
+  const isDefault = pinnedItems.length === 0 && hiddenHrefs.length === 0;
+
+  function restoreDefaults() {
+    onPinnedChange([]);
+    onHiddenChange([]);
   }
 
   function move(index: number, delta: number) {
@@ -68,7 +86,7 @@ export function SidebarCustomizeDialog({
         <DialogHeader className="flex-col items-start gap-1 border-b border-border px-5 pb-4 pr-12 pt-5 text-left">
           <DialogTitle className="text-[17px] font-black tracking-[-0.01em]">Customize sidebar</DialogTitle>
           <DialogDescription className="text-[13.5px]">
-            Pin the pages you use most. They sit at the top of the sidebar, in the order you set here.
+            Pin the pages you use most and hide the ones you don&apos;t. Hidden pages are still in search.
           </DialogDescription>
         </DialogHeader>
 
@@ -114,23 +132,41 @@ export function SidebarCustomizeDialog({
                   {group.items.map((item) => {
                     const Icon = item.icon;
                     const pinned = pinnedHrefs.includes(item.href);
+                    const hidden = hiddenHrefs.includes(item.href);
                     const switchId = `pin-${item.href.replace(/\W+/g, "-")}`;
                     return (
-                      <li key={item.href}>
+                      <li key={item.href} className="flex h-10 items-center gap-1 rounded-md hover:bg-muted/60">
                         <label
                           htmlFor={switchId}
-                          className="flex h-10 cursor-pointer items-center gap-2.5 rounded-md px-1 text-[14px] hover:bg-muted/60"
+                          className={cn(
+                            "flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 self-stretch px-1 text-[14px]",
+                            hidden && "cursor-default text-muted-foreground",
+                          )}
                         >
                           <Icon className="size-4 shrink-0 stroke-[1.75] text-muted-foreground" aria-hidden="true" />
                           <span className="flex-1 truncate">{item.label}</span>
-                          <Switch
-                            id={switchId}
-                            checked={pinned}
-                            onCheckedChange={(checked) => togglePinned(item.href, checked)}
-                            aria-label={`Pin ${item.label}`}
-                            className="data-[state=checked]:bg-[var(--sidebar-icon-active)]"
-                          />
+                          {hidden && <span className="shrink-0 text-[12px] text-muted-foreground">Hidden</span>}
                         </label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="size-8 shrink-0 text-muted-foreground"
+                          aria-pressed={hidden}
+                          aria-label={hidden ? `Show ${item.label}` : `Hide ${item.label}`}
+                          title={hidden ? "Show in sidebar" : "Hide from sidebar"}
+                          onClick={() => toggleHidden(item.href, !hidden)}
+                        >
+                          {hidden ? <EyeOffIcon /> : <EyeIcon />}
+                        </Button>
+                        <Switch
+                          id={switchId}
+                          checked={pinned}
+                          disabled={hidden}
+                          onCheckedChange={(checked) => togglePinned(item.href, checked)}
+                          aria-label={`Pin ${item.label}`}
+                          className="mr-1 data-[state=checked]:bg-[var(--sidebar-icon-active)]"
+                        />
                       </li>
                     );
                   })}
@@ -144,10 +180,10 @@ export function SidebarCustomizeDialog({
           <Button
             type="button"
             variant="ghost"
-            disabled={pinnedItems.length === 0}
-            onClick={() => onPinnedChange([])}
+            disabled={isDefault}
+            onClick={restoreDefaults}
           >
-            Unpin all
+            Restore defaults
           </Button>
           <Button type="button" onClick={() => onOpenChange(false)}>
             Done

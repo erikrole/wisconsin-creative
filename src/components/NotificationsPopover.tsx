@@ -33,9 +33,16 @@ type NotificationsResponse = {
 
 const POPOVER_LIMIT = 8;
 
+type InboxView = "all" | "unread";
+const VIEWS: { value: InboxView; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "unread", label: "Unread" },
+];
+
 /**
  * Bell in the top bar. Opens a short inbox in place (latest notifications, mark one or all read,
  * jump to the related page) so checking alerts no longer means leaving the page you're on.
+ * All / Unread narrows the list; rows marked read stay put until the next open so nothing jumps.
  * The full history and filters stay on /notifications.
  */
 export function NotificationsPopover({
@@ -48,6 +55,7 @@ export function NotificationsPopover({
   const router = useRouter();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [view, setView] = useState<InboxView>("all");
   const [items, setItems] = useState<PopoverNotification[] | null>(null);
   const [failed, setFailed] = useState(false);
   const unreadRef = useRef(unreadCount);
@@ -59,9 +67,13 @@ export function NotificationsPopover({
     if (!open) return;
     const controller = new AbortController();
     setFailed(false);
+    setItems(null);
     (async () => {
       try {
-        const res = await fetch(`/api/notifications?limit=${POPOVER_LIMIT}`, { signal: controller.signal });
+        const res = await fetch(
+          `/api/notifications?limit=${POPOVER_LIMIT}${view === "unread" ? "&unread=true" : ""}`,
+          { signal: controller.signal },
+        );
         if (handleAuthRedirect(res)) return;
         const json = res.ok ? await parseJsonSafely<NotificationsResponse>(res) : null;
         if (controller.signal.aborted) return;
@@ -74,7 +86,7 @@ export function NotificationsPopover({
       }
     })();
     return () => controller.abort();
-  }, [open]);
+  }, [open, view]);
 
   // Keep the inbox page in step when it is cached behind this popover.
   const invalidateInbox = useCallback(() => queryClient.invalidateQueries({
@@ -184,7 +196,33 @@ export function NotificationsPopover({
           </Link>
         </div>
 
-        <div className="max-h-[min(440px,60vh)] overflow-y-auto p-1.5">
+        <div role="tablist" aria-label="Show" className="flex gap-1 border-b border-[var(--sidebar-border)] px-3 py-2">
+          {VIEWS.map((option) => {
+            const selected = view === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                onClick={() => setView(option.value)}
+                className={cn(
+                  "inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-[13px] outline-none transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--sidebar-ring)]",
+                  selected
+                    ? "bg-[var(--sidebar-active)] font-bold text-[color:var(--sidebar-text-active)]"
+                    : "text-[color:var(--sidebar-text)] hover:bg-[var(--sidebar-hover)] hover:text-[color:var(--sidebar-text-active)]",
+                )}
+              >
+                {option.label}
+                {option.value === "unread" && unreadCount > 0 && (
+                  <span className="text-[12px] font-normal tabular-nums text-[color:var(--sidebar-muted)]">{unreadCount > 99 ? "99+" : unreadCount}</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        <div role="tabpanel" className="max-h-[min(440px,60vh)] overflow-y-auto p-1.5">
           {items === null && !failed && (
             <div className="flex flex-col gap-1 p-1" aria-busy="true" aria-label="Loading notifications">
               {Array.from({ length: 3 }, (_, i) => (
@@ -206,8 +244,10 @@ export function NotificationsPopover({
           {items?.length === 0 && (
             <div className="flex flex-col items-center gap-1 px-3 py-10 text-center">
               <BellIcon className="mb-1 size-5 stroke-[1.75] text-[color:var(--sidebar-muted)]" aria-hidden="true" />
-              <p className="text-[14px] font-bold">You&apos;re all caught up</p>
-              <p className="text-[13px] text-muted-foreground">New alerts about your gear and shifts show up here.</p>
+              <p className="text-[14px] font-bold">{view === "unread" ? "Nothing unread" : "You’re all caught up"}</p>
+              <p className="text-[13px] text-muted-foreground">
+                {view === "unread" ? "You’ve seen everything. Older alerts are under All." : "New alerts about your gear and shifts show up here."}
+              </p>
             </div>
           )}
           {items && items.length > 0 && (
