@@ -334,6 +334,8 @@ private struct BoardNotice: Identifiable {
     enum Tone { case warn, block, info }
     let tone: Tone
     let text: String
+    /// The row's one-line version; the detail sheet shows `text` in full.
+    var short: String?
     var id: String { text }
 }
 
@@ -370,9 +372,11 @@ private struct BoardRowModel: Identifiable {
     var endText: String?
     let fullWhen: String
     let area: String
+    let venueLabel: String
     let venueColor: Color
     let eventId: String?
     var person: ShiftTradeUser?
+    var personLabel = "Posted by"
     var summary: String
     var note: String?
     var notices: [BoardNotice] = []
@@ -391,11 +395,16 @@ private struct BoardRowModel: Identifiable {
     }
     var allActions: [BoardAction] { actions + (menuAction.map { [$0] } ?? []) }
 
-    var hasNotice: Bool { !notices.isEmpty }
-    var noticeTone: BoardNotice.Tone? {
-        if notices.contains(where: { $0.tone == .block }) { return .block }
-        if notices.contains(where: { $0.tone == .warn }) { return .warn }
-        return nil
+    /// The one notice worth a third line on the row: something that could
+    /// change the decision. Deadlines stay in the detail sheet.
+    var rowNotice: BoardNotice? {
+        notices.first { $0.tone == .block } ?? notices.first { $0.tone == .warn }
+    }
+
+    /// Row chips are short; the sheet keeps the full wording.
+    var chipText: String? {
+        guard let label = status?.label else { return nil }
+        return label == "Waiting on admin" ? "Pending" : label
     }
 }
 
@@ -682,14 +691,28 @@ struct TradeBoardSheet: View {
                         .listRowBackground(Color.clear)
                 }
             } else {
-                ForEach(dayGroups(rows)) { group in
+                ForEach(Array(dayGroups(rows).enumerated()), id: \.element.id) { index, group in
                     Section {
                         ForEach(group.rows) { row in
                             boardRow(row)
                         }
                     } header: {
-                        Text(group.label(today: today))
-                            .textCase(nil)
+                        VStack(alignment: .leading, spacing: 10) {
+                            if index == 0, let summary = summaryLine(for: activeTab, rowCount: rows.count) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(summary)
+                                        .font(.subheadline)
+                                        .foregroundStyle(Color(.secondaryLabel))
+                                    if activeTab == .available, !vm.isStaff {
+                                        Text("An admin approves every change before it reaches the schedule.")
+                                            .font(.footnote)
+                                            .foregroundStyle(Color(.secondaryLabel))
+                                    }
+                                }
+                            }
+                            Text(group.label(today: today))
+                        }
+                        .textCase(nil)
                     }
                 }
             }
@@ -717,29 +740,17 @@ struct TradeBoardSheet: View {
             }
         }
         .listStyle(.insetGrouped)
+        .listSectionSpacing(.compact)
+        .sensoryFeedback(.selection, trigger: activeTab)
         .safeAreaInset(edge: .top, spacing: 0) {
-            VStack(alignment: .leading, spacing: 8) {
-                tabPicker
-
-                if !isPlaceholder, let summary = summaryLine(for: activeTab, rowCount: rows.count) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(summary)
-                            .font(.subheadline.weight(.semibold))
-                        if activeTab == .available, !vm.isStaff {
-                            Text("An admin approves every change before it reaches the schedule.")
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .padding(.horizontal, 4)
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            // The pinned header must not eat the screen at accessibility sizes.
-            .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
-            .background(.bar)
+            // The list's own background, so the picker sits on the page
+            // rather than on a band of its own.
+            tabPicker
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+                .background(Color(.systemGroupedBackground))
         }
     }
 
@@ -765,6 +776,7 @@ struct TradeBoardSheet: View {
     /// the places iOS people already look for them.
     private func boardRow(_ row: BoardRowModel) -> some View {
         TradeBoardRow(row: row, busyIds: pendingActionIds)
+            .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
             .contentShape(Rectangle())
             .onTapGesture { detailRowId = row.id }
             .accessibilityAddTraits(.isButton)
@@ -838,6 +850,7 @@ struct TradeBoardSheet: View {
             endText: "10:00 PM",
             fullWhen: "",
             area: "Video",
+            venueLabel: "Home",
             venueColor: .gray,
             eventId: nil,
             person: nil,
@@ -930,7 +943,7 @@ struct TradeBoardSheet: View {
 
     private func availabilityNotices(_ context: ShiftAvailabilityContext?) -> [BoardNotice] {
         guard let context else { return [] }
-        return [BoardNotice(tone: context.blocking ? .block : .warn, text: "\(context.label). \(context.detail)")]
+        return [BoardNotice(tone: context.blocking ? .block : .warn, text: "\(context.label). \(context.detail)", short: context.label)]
     }
 
     private func deadlineNotices(_ deadline: Date?) -> [BoardNotice] {
@@ -958,6 +971,7 @@ struct TradeBoardSheet: View {
             endText: parts.end,
             fullWhen: shift.fullWhen(personalStartsAt: personalStartsAt, personalEndsAt: personalEndsAt),
             area: shift.area.shiftAreaLabel,
+            venueLabel: shift.classificationLabel,
             venueColor: shift.classificationColor,
             eventId: shift.shiftGroup?.event?.id,
             person: person,
@@ -998,6 +1012,7 @@ struct TradeBoardSheet: View {
         case .mine:
             let claimed = trade.status == .claimed
             row.person = trade.claimedBy ?? trade.postedBy
+            row.personLabel = claimed ? "Claimed by" : "Posted by"
             row.summary = claimed
                 ? "\(trade.claimedBy?.name ?? "Someone") claimed it. Waiting on an admin"
                 : "Posted. You keep the shift until someone claims it and an admin approves"
@@ -1021,6 +1036,7 @@ struct TradeBoardSheet: View {
         case .review:
             let claimer = trade.claimedBy?.name ?? "Someone"
             row.person = trade.claimedBy ?? trade.postedBy
+            row.personLabel = "Requested by"
             row.summary = "\(claimer) wants \(poster)'s shift"
             row.trailing = .review
             row.notices = availabilityNotices(trade.claimedByAvailabilityContext) + deadlineNotices(trade.reviewAutoApprovesAt)
@@ -1083,6 +1099,7 @@ struct TradeBoardSheet: View {
             person: request.user,
             summary: review ? "\(request.user.name) wants this open slot" : "Your request for this open slot"
         )
+        row.personLabel = review ? "Requested by" : "Requested by"
         row.trailing = review ? .review : .chip
         row.status = review ? nil : ("Waiting on admin", .orange)
         if let note = request.conflictNote, !note.isEmpty {
@@ -1228,36 +1245,38 @@ private struct BoardDayGroup: Identifiable {
 
 // MARK: Views
 
-/// One row, built like the Schedule rows it sits beside: a fixed time column,
-/// the event and one secondary line, and a single compact control at the
-/// trailing edge. The day is the section header, so the row does not repeat it.
+/// One row, built like the Schedule rows it sits beside: a fixed time column
+/// aligned to the title's first line, the event and one clean secondary line,
+/// an optional notice line, and a single compact control at the trailing edge.
+/// The day is the section header, so the row does not repeat it.
 private struct TradeBoardRow: View {
     let row: BoardRowModel
     let busyIds: Set<String>
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @ScaledMetric(relativeTo: .subheadline) private var timeColumn: CGFloat = 60
+    @ScaledMetric(relativeTo: .subheadline) private var timeColumn: CGFloat = 62
 
-    private var isDimmed: Bool { row.muted }
+    private var isAX: Bool { dynamicTypeSize.isAccessibilitySize }
 
     var body: some View {
-        if dynamicTypeSize.isAccessibilitySize {
-            VStack(alignment: .leading, spacing: 8) {
-                timeStack
-                details
-                trailing
+        Group {
+            if isAX {
+                VStack(alignment: .leading, spacing: 8) {
+                    timeStack
+                    details
+                    trailing
+                }
+            } else {
+                HStack(alignment: .center, spacing: 10) {
+                    HStack(alignment: .firstTextBaseline, spacing: 10) {
+                        timeStack
+                            .frame(width: timeColumn, alignment: .leading)
+                        details
+                    }
+                    trailing
+                }
             }
-            .padding(.vertical, 4)
-            .opacity(isDimmed ? 0.6 : 1)
-        } else {
-            HStack(alignment: .center, spacing: 10) {
-                timeStack
-                    .frame(width: timeColumn, alignment: .leading)
-                details
-                trailing
-            }
-            .padding(.vertical, 2)
-            .opacity(isDimmed ? 0.6 : 1)
         }
+        .opacity(row.muted ? 0.6 : 1)
     }
 
     private var timeStack: some View {
@@ -1277,19 +1296,23 @@ private struct TradeBoardRow: View {
     private var details: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(row.title)
-                .font(.gothamBold(size: 16))
-                .lineLimit(dynamicTypeSize.isAccessibilitySize ? 3 : 2)
-            HStack(alignment: .firstTextBaseline, spacing: 4) {
-                if let tone = row.noticeTone {
+                .font(.headline)
+                .lineLimit(isAX ? 3 : 1)
+                .truncationMode(.tail)
+            Text("\(row.area) \u{00B7} \(row.summary)")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .lineLimit(isAX ? 4 : 2)
+            if let notice = row.rowNotice {
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.caption2)
-                        .foregroundStyle(tone == .block ? Color.statusText(.red) : Color.statusText(.orange))
                         .accessibilityHidden(true)
+                    Text(notice.short ?? notice.text)
+                        .lineLimit(isAX ? 3 : 2)
                 }
-                Text("\(row.area) \u{00B7} \(row.summary)")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
+                .font(.caption)
+                .foregroundStyle(notice.tone == .block ? Color.statusText(.red) : Color.statusText(.orange))
+                .padding(.top, 2)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -1318,23 +1341,28 @@ private struct TradeBoardRow: View {
                 .accessibilityLabel(claim.accessibilityLabel ?? claim.label)
             }
         case .review:
-            HStack(spacing: 4) {
+            HStack(spacing: 0) {
                 ForEach(row.noActions) { decline in
-                    iconButton(decline, symbol: "xmark", prominent: false)
+                    RoundIconButton(action: decline, symbol: "xmark", isApprove: false, isBusy: busyIds.contains(decline.id))
                 }
                 if let approve = row.yesAction {
-                    iconButton(approve, symbol: "checkmark", prominent: true)
+                    RoundIconButton(action: approve, symbol: "checkmark", isApprove: true, isBusy: busyIds.contains(approve.id))
                 }
             }
         case .chip:
-            if let status = row.status {
-                Text(status.label)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color.statusText(status.tone))
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 4)
-                    .background(Color.statusBackground(status.tone), in: Capsule())
-                    .fixedSize()
+            if let text = row.chipText, let status = row.status {
+                Label {
+                    Text(text)
+                } icon: {
+                    if text == "Pending" { Image(systemName: "clock.fill") }
+                }
+                .labelStyle(ChipLabelStyle())
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Color.statusText(status.tone))
+                .padding(.horizontal, 9)
+                .padding(.vertical, 4)
+                .background(Color.statusBackground(status.tone), in: Capsule())
+                .fixedSize()
             }
         case .text:
             if let status = row.status {
@@ -1345,27 +1373,54 @@ private struct TradeBoardRow: View {
             }
         }
     }
+}
 
-    private func iconButton(_ action: BoardAction, symbol: String, prominent: Bool) -> some View {
-        let isBusy = busyIds.contains(action.id)
-        return Button(action: action.run) {
-            Group {
-                if isBusy { ProgressView().controlSize(.small) } else { Image(systemName: symbol).font(.body.weight(.semibold)) }
-            }
-            .frame(width: 28, height: 28)
+private struct ChipLabelStyle: LabelStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: 4) {
+            configuration.icon.imageScale(.small)
+            configuration.title
         }
-        .buttonStyle(.borderedProminent)
-        .buttonBorderShape(.circle)
-        .tint(prominent ? .green : Color(.secondarySystemFill))
-        .foregroundStyle(prominent ? Color.white : Color.primary)
-        .frame(minWidth: 44, minHeight: 44)
+    }
+}
+
+/// 34pt on screen, 44pt to hit, 10pt between the two.
+private struct RoundIconButton: View {
+    let action: BoardAction
+    let symbol: String
+    let isApprove: Bool
+    let isBusy: Bool
+
+    var body: some View {
+        Button(action: action.run) {
+            ZStack {
+                Circle().fill(isApprove ? Color.green : Color(.tertiarySystemFill))
+                if isBusy {
+                    ProgressView().controlSize(.small)
+                } else {
+                    Image(systemName: symbol)
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(isApprove ? Color.white : Color.secondary)
+                }
+            }
+            .frame(width: 34, height: 34)
+            .frame(width: 44, height: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PressableStyle())
         .disabled(isBusy)
         .accessibilityLabel(action.accessibilityLabel ?? action.label)
     }
 }
 
-/// The full story for one row, with full-width actions at the bottom, the
-/// place a thumb already is.
+private struct PressableStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label.opacity(configuration.isPressed ? 0.6 : 1)
+    }
+}
+
+/// The full story for one row as a native grouped list, with the actions in a
+/// bar at the bottom, where a thumb already is.
 private struct TradeBoardDetailSheet: View {
     let row: BoardRowModel
     let busyIds: Set<String>
@@ -1375,110 +1430,139 @@ private struct TradeBoardDetailSheet: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 14) {
+            List {
+                Section {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(row.title)
                             .font(.gothamBold(size: 22))
                         Text(row.fullWhen)
-                            .font(.subheadline.weight(.semibold))
-                        Text(row.area)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
-
-                    HStack(alignment: .firstTextBaseline, spacing: 10) {
-                        if let person = row.person {
-                            UserAvatarView(name: person.name, avatarUrl: person.avatarUrl, size: 28)
-                                .accessibilityHidden(true)
-                        }
-                        Text(row.summary)
-                            .font(.body)
-                    }
-
-                    if let status = row.status {
-                        Text(status.label)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(Color.statusText(status.tone))
-                            .padding(.horizontal, 9)
-                            .padding(.vertical, 4)
-                            .background(Color.statusBackground(status.tone), in: Capsule())
-                    }
-
-                    if let note = row.note {
-                        Text("\u{201C}\(note)\u{201D}")
-                            .font(.callout)
-                            .foregroundStyle(.secondary)
-                            .padding(12)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(Color(.secondarySystemFill), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    }
-
-                    ForEach(row.notices) { notice in
-                        HStack(alignment: .firstTextBaseline, spacing: 8) {
-                            Image(systemName: notice.tone == .info ? "info.circle" : "exclamationmark.triangle.fill")
-                                .accessibilityHidden(true)
-                            Text(notice.text)
-                        }
-                        .font(.subheadline)
-                        .foregroundStyle(notice.tone == .block ? Color.statusText(.red)
-                            : notice.tone == .warn ? Color.statusText(.orange) : Color.secondary)
-                    }
-
-                    if let onOpenEvent {
-                        Button("Open event", action: onOpenEvent)
-                            .font(.subheadline.weight(.semibold))
-                            .frame(minHeight: 44)
-                    }
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: 8, leading: 4, bottom: 4, trailing: 4))
                 }
-                .padding(20)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .navigationBarTitleDisplayMode(.inline)
-            .safeAreaInset(edge: .bottom) {
-                if !row.allActions.isEmpty {
-                    VStack(spacing: 10) {
-                        if showsAdminNote, row.trailing == .claim {
-                            Text("An admin reviews this before you're on the schedule.")
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
+
+                Section {
+                    LabeledContent("Area") {
+                        HStack(spacing: 6) {
+                            Circle().fill(row.venueColor).frame(width: 8, height: 8)
+                                .accessibilityHidden(true)
+                            Text("\(row.area) \u{00B7} \(row.venueLabel)")
                         }
-                        ForEach(orderedActions) { action in
-                            let isBusy = busyIds.contains(action.id)
-                            Button(role: action.style == .destructive ? .destructive : nil) {
-                                onAction(action)
-                            } label: {
-                                HStack(spacing: 6) {
-                                    if isBusy { ProgressView().controlSize(.small) }
-                                    Text(isBusy ? action.busyLabel : action.label)
-                                }
-                                .frame(maxWidth: .infinity, minHeight: 28)
+                    }
+                    if let person = row.person {
+                        LabeledContent(row.personLabel) {
+                            HStack(spacing: 8) {
+                                UserAvatarView(name: person.name, avatarUrl: person.avatarUrl, size: 24)
+                                    .accessibilityHidden(true)
+                                Text(person.name)
                             }
-                            .buttonStyle(.borderedProminent)
-                            .buttonBorderShape(.capsule)
-                            .controlSize(.large)
-                            .tint(tint(for: action))
-                            .disabled(isBusy)
                         }
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 12)
-                    .background(.bar)
+                    if let status = row.status {
+                        LabeledContent("Status") {
+                            Text(status.label)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Color.statusText(status.tone))
+                        }
+                    }
+                    if let note = row.note {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Note")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                            Text("\u{201C}\(note)\u{201D}")
+                        }
+                    }
+                    if let onOpenEvent {
+                        Button(action: onOpenEvent) {
+                            HStack {
+                                Text("Open event")
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundStyle(.tertiary)
+                            }
+                            .frame(minHeight: 32)
+                        }
+                        .tint(.primary)
+                    }
+                } footer: {
+                    Text(row.summary)
+                }
+
+                if !row.notices.isEmpty {
+                    Section {
+                        ForEach(row.notices) { notice in
+                            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                Image(systemName: notice.tone == .info ? "info.circle" : "exclamationmark.triangle.fill")
+                                    .accessibilityHidden(true)
+                                Text(notice.text)
+                            }
+                            .font(.subheadline)
+                            .foregroundStyle(notice.tone == .block ? Color.statusText(.red)
+                                : notice.tone == .warn ? Color.statusText(.orange) : Color.secondary)
+                        }
+                    }
+                }
+
+            }
+            .listSectionSpacing(.compact)
+            .navigationBarTitleDisplayMode(.inline)
+            .safeAreaInset(edge: .bottom) { actionBar }
+        }
+        // Opaque, so nothing from the board bleeds through the glass.
+        .presentationBackground(Color(.systemGroupedBackground))
+    }
+
+    @ViewBuilder
+    private var actionBar: some View {
+        if !row.allActions.isEmpty {
+            VStack(spacing: 8) {
+                if showsAdminNote, row.trailing == .claim {
+                    Text("An admin reviews this before you're on the schedule.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+                if row.trailing == .review {
+                    HStack(spacing: 10) {
+                        ForEach(row.noActions) { actionButton($0, bordered: true) }
+                        if let yes = row.yesAction { actionButton(yes, bordered: false) }
+                    }
+                } else {
+                    ForEach(row.allActions.filter { $0.style == .primary } + row.allActions.filter { $0.style != .primary }) {
+                        actionButton($0, bordered: $0.style != .primary)
+                    }
                 }
             }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            .background(Color(.systemGroupedBackground))
         }
     }
 
-    /// Primary on top, the no-actions below.
-    private var orderedActions: [BoardAction] {
-        row.allActions.filter { $0.style == .primary } + row.allActions.filter { $0.style != .primary }
-    }
-
-    private func tint(for action: BoardAction) -> Color {
-        switch action.style {
-        case .primary: row.trailing == .review ? .green : Color.brandPrimary
-        case .secondary: Color(.systemGray)
-        case .destructive: .red
+    @ViewBuilder
+    private func actionButton(_ action: BoardAction, bordered: Bool) -> some View {
+        let isBusy = busyIds.contains(action.id)
+        let tint: Color = action.style == .primary
+            ? (row.trailing == .review ? .green : Color.brandPrimary)
+            : (action.style == .destructive ? .red : Color.primary)
+        let button = Button(role: action.style == .destructive ? .destructive : nil) {
+            onAction(action)
+        } label: {
+            HStack(spacing: 6) {
+                if isBusy { ProgressView().controlSize(.small) }
+                Text(isBusy ? action.busyLabel : action.label)
+            }
+            .frame(maxWidth: .infinity, minHeight: 28)
+        }
+        if bordered {
+            button.buttonStyle(.bordered).buttonBorderShape(.capsule).controlSize(.large)
+                .tint(tint).disabled(isBusy)
+        } else {
+            button.buttonStyle(.borderedProminent).buttonBorderShape(.capsule).controlSize(.large)
+                .tint(tint).disabled(isBusy)
         }
     }
 }
@@ -1600,13 +1684,28 @@ private extension ShiftTradeShift {
         return (startsAt.formatted(date: .omitted, time: .shortened), endsAt.formatted(date: .omitted, time: .shortened))
     }
 
-    /// "Friday, Oct 23 \u{00B7} 6:00 PM to 10:00 PM" for the detail sheet.
+    /// "Friday, Oct 23 \u{00B7} 6:00 \u{2013} 10:00 PM" for the detail sheet, the shared
+    /// AM/PM said once.
     func fullWhen(personalStartsAt: Date?, personalEndsAt: Date?) -> String {
         let day = boardStart(personalStartsAt: personalStartsAt, personalEndsAt: personalEndsAt)
             .formatted(.dateTime.weekday(.wide).month(.abbreviated).day())
         let parts = timeParts(personalStartsAt: personalStartsAt, personalEndsAt: personalEndsAt)
         guard let end = parts.end else { return "\(day) \u{00B7} All day" }
-        return "\(day) \u{00B7} \(parts.start) to \(end)"
+        return "\(day) \u{00B7} \(Self.timeRange(parts.start, end))"
+    }
+
+    /// "7:00 PM", "11:00 PM" becomes "7:00 \u{2013} 11:00 PM"; mixed meridiems keep both.
+    static func timeRange(_ start: String, _ end: String) -> String {
+        func split(_ text: String) -> (String, String) {
+            guard let index = text.lastIndex(where: { $0 == " " || $0 == "\u{202F}" }) else { return (text, "") }
+            return (String(text[..<index]), String(text[text.index(after: index)...]))
+        }
+        let (startClock, startSuffix) = split(start)
+        let (endClock, endSuffix) = split(end)
+        if !startSuffix.isEmpty, startSuffix == endSuffix {
+            return "\(startClock) \u{2013} \(endClock) \(endSuffix)"
+        }
+        return "\(start) \u{2013} \(end)"
     }
 
     var classificationLabel: String {
