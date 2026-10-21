@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import { Lato } from "next/font/google";
 import { Command as CommandPrimitive } from "cmdk";
 import { SearchIcon } from "lucide-react";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -10,8 +9,7 @@ import type { CandidateRecommendation } from "@/lib/candidate-scoring-types";
 import { shiftWorkerLabelForProfile, shiftWorkerSlotLabel, shiftWorkerTypeForProfile } from "@/lib/shift-display";
 import { cn } from "@/lib/utils";
 import { AREA_LABELS } from "@/types/areas";
-
-const lato = Lato({ subsets: ["latin"], weight: ["400", "700", "900"], variable: "--font-lato", display: "swap" });
+import { FRESH_SCOPE_CLASS } from "@/lib/fonts/fresh";
 
 export type PickerUser = {
   id: string;
@@ -122,8 +120,8 @@ export function UserAvatarPicker({
       shouldFilter={false}
       loop
       className={cn(
-        "wc-fresh flex w-full flex-col overflow-hidden rounded-[inherit] bg-[var(--background)] text-[var(--text)]",
-        lato.variable,
+        FRESH_SCOPE_CLASS,
+        "flex w-full flex-col overflow-hidden rounded-[inherit] bg-[var(--background)] text-[var(--text)]",
       )}
     >
       {heading && (
