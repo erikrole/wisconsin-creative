@@ -6,7 +6,7 @@ const lato = Lato({ subsets: ["latin"], weight: ["400", "700", "900"], variable:
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className={`wc-fresh ${lato.variable}`}>
+    <div data-settings className={`wc-fresh ${lato.variable}`}>
       <SettingsTheme classNames={`wc-fresh ${lato.variable}`} />
       <SettingsShell>{children}</SettingsShell>
     </div>

@@ -3,7 +3,7 @@
     "date": "2026-10-21",
     "title": "A calmer Settings",
     "type": "improvement",
-    "summary": "Settings has a new look, starting with Profile, Notifications, Security, Appearance and the overview.",
+    "summary": "Settings has a new look, starting with the overview, Profile, Notifications, Security, Appearance, Checkout policies and Reservation rules; the other pages pick up the new type and softer cards.",
     "details": [
       "Related options are grouped into clean rows, with a visible preview for light, dark and system themes.",
       "Notifications are sorted into Pause, Where to reach you, Gear and Schedule."

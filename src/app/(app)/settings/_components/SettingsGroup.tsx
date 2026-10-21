@@ -38,6 +38,8 @@ export function SettingsRow({
   label,
   htmlFor,
   description,
+  descriptionId,
+  invalid,
   children,
   stacked,
   className,
@@ -45,6 +47,10 @@ export function SettingsRow({
   label: ReactNode;
   htmlFor?: string;
   description?: ReactNode;
+  /** Id for the help line, so a control can point aria-describedby at it. */
+  descriptionId?: string;
+  /** Shows the help line as an error message. */
+  invalid?: boolean;
   children?: ReactNode;
   /** Put the control under the label at every width (long inputs, button sets). */
   stacked?: boolean;
@@ -63,7 +69,13 @@ export function SettingsRow({
           {label}
         </label>
         {description ? (
-          <p className="m-0 mt-0.5 text-[13px] leading-snug text-muted-foreground text-pretty">{description}</p>
+          <p
+            id={descriptionId}
+            aria-live={descriptionId ? "polite" : undefined}
+            className={cn("m-0 mt-0.5 text-[13px] leading-snug text-pretty", invalid ? "text-destructive" : "text-muted-foreground")}
+          >
+            {description}
+          </p>
         ) : null}
       </div>
       {children ? <div className={cn("min-w-0", stacked ? "w-full" : "sm:w-64 sm:shrink-0")}>{children}</div> : null}
