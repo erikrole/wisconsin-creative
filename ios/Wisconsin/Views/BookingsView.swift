@@ -1089,7 +1089,7 @@ struct BookingRow: View {
             let late = booking.endsAt < now
             return ("\(late ? "Was due" : "Due") \(when(booking.endsAt, now: now))", late)
         case .pendingPickup, .booked, .unknown:
-            if booking.isWaitingOnPickup(now: now) {
+            if booking.isWaitingOnPickup(now: now) || booking.startsAt < now {
                 return ("Pickup was due \(when(booking.startsAt, now: now))", false)
             }
             return ("Pickup \(when(booking.startsAt, now: now))", false)
