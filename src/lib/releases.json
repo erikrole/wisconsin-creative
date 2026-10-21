@@ -1,6 +1,22 @@
 [
   {
     "date": "2026-10-21",
+    "title": "Damage and loss page",
+    "type": "feature",
+    "summary": "Staff now have one place to see gear reported damaged or missing and record what happened to it.",
+    "details": [
+      "A new Damage and loss page lists every open case with the photo, the note, who had the item, and the checkout. Closed cases stay on file.",
+      "Close a case as repaired, replaced, written off, found, or no issue. Repaired, found and no issue put the item back in service. Replaced and written off retire it.",
+      "An item reported missing at return is now held right away, so it can't be booked again until staff find it or write it off.",
+      "The item page shows each report's outcome and a Record outcome button, and the sidebar shows how many cases are open."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 0
+  },
+  {
+    "date": "2026-10-21",
     "title": "A Right now row on profiles",
     "type": "improvement",
     "summary": "Profiles now open with what is happening with that person right now.",

@@ -1,11 +1,20 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { displayBookingTitle } from "@/lib/booking-display-title";
 import type { AssetDetail } from "../types";
+
+const OUTCOME_LABELS = {
+  REPAIRED: "Repaired",
+  REPLACED: "Replaced",
+  WRITTEN_OFF: "Written off",
+  FOUND: "Found",
+  NO_ISSUE: "No issue found",
+} as const;
 
 export function ItemConditionReports({ asset, busy, onClearHold, onSelectBooking }: {
   asset: AssetDetail;
@@ -16,6 +25,8 @@ export function ItemConditionReports({ asset, busy, onClearHold, onSelectBooking
   const reports = asset.checkinReports ?? [];
   if (reports.length === 0) return null;
   const held = asset.status === "MAINTENANCE";
+  const hasOpenCase = reports.some((r) => !r.resolution);
+  const openMissing = reports.some((r) => !r.resolution && r.type === "LOST");
 
   return (
     <Card className="mt-3.5 border-border/60 shadow-none">
@@ -23,10 +34,12 @@ export function ItemConditionReports({ asset, busy, onClearHold, onSelectBooking
         <div className="space-y-1.5">
           <CardTitle>Condition reports</CardTitle>
           <CardDescription>
-            {held ? "Held for staff. Inspect the item and review the evidence before clearing maintenance." : "Recent reports remain here as a record. The item's current status is shown above."}
+            {hasOpenCase ? (openMissing ? "Reported missing. The item can't be booked until staff find it or write it off." : "Held for staff. Record what happened to release or retire the item.") : held ? "Held for staff. Inspect the item and review the evidence before clearing maintenance." : "Recent reports remain here as a record. The item's current status is shown above."}
           </CardDescription>
         </div>
-        {held && <Button variant="outline" disabled={busy} onClick={onClearHold}>Clear maintenance hold</Button>}
+        {hasOpenCase ? (
+          <Button asChild variant="outline"><Link href="/damage">Record outcome</Link></Button>
+        ) : held && <Button variant="outline" disabled={busy} onClick={onClearHold}>Clear maintenance hold</Button>}
       </CardHeader>
       <CardContent className="divide-y divide-border/60">
         {reports.map((report) => (
@@ -39,9 +52,15 @@ export function ItemConditionReports({ asset, busy, onClearHold, onSelectBooking
             <div className="min-w-0 flex-1 space-y-2">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant={report.type === "DAMAGED" ? "orange" : "red"}>{report.type === "DAMAGED" ? "Damage reported" : "Reported missing"}</Badge>
+                {report.resolution && <Badge variant="outline">{OUTCOME_LABELS[report.resolution]}</Badge>}
                 <span className="text-xs text-muted-foreground">{report.reportedBy.name} · {new Date(report.lastReportedAt ?? report.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "America/Chicago" })}</span>
               </div>
               <p className="whitespace-pre-wrap break-words text-sm">{report.description || "No description was provided."}</p>
+              {report.resolution && (
+                <p className="text-xs text-muted-foreground">
+                  {OUTCOME_LABELS[report.resolution]}{report.resolvedBy ? ` by ${report.resolvedBy.name}` : ""}{report.resolutionNote ? `: ${report.resolutionNote}` : ""}
+                </p>
+              )}
               {!report.imageUrl && <p className="text-xs text-muted-foreground">No photo attached</p>}
               <Button variant="link" className="h-auto max-w-full justify-start whitespace-normal px-0 text-left" onClick={() => onSelectBooking(report.booking.id)}>
                 View checkout · {displayBookingTitle(report.booking.title)}

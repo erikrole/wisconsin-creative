@@ -158,6 +158,7 @@ export const GET = withAuth<{ id: string }>(async (req, { user, params }) => {
         checkinReports: user.role === "ADMIN" || user.role === "STAFF" ? {
           select: {
             id: true, type: true, description: true, imageUrl: true, createdAt: true, lastReportedAt: true,
+            resolution: true, resolvedAt: true, resolutionNote: true, resolvedBy: { select: { name: true } },
             reportedBy: { select: { name: true } },
             booking: { select: { id: true, title: true } },
           },

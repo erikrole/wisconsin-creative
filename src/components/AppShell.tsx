@@ -404,6 +404,7 @@ export default function AppShell({
         attentionCounts={{
           "/wishlist": { count: sidebarCounts?.openWishes ?? 0, suffix: "waiting on a decision" },
           "/licenses": { count: sidebarCounts?.reportedLicenses ?? 0, suffix: "reported codes" },
+          "/damage": { count: sidebarCounts?.openDamageCases ?? 0, suffix: "open damage and loss cases" },
           "/issues": { count: sidebarCounts?.openProblems ?? 0, suffix: "open problems" },
         }}
       />

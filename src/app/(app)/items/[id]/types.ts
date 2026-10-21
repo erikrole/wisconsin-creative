@@ -45,6 +45,10 @@ export type AssetDetail = {
     createdAt: string;
     /** When the evidence last changed; a kiosk update moves it past createdAt. */
     lastReportedAt?: string;
+    resolution?: "REPAIRED" | "REPLACED" | "WRITTEN_OFF" | "FOUND" | "NO_ISSUE" | null;
+    resolvedAt?: string | null;
+    resolutionNote?: string | null;
+    resolvedBy?: { name: string } | null;
     reportedBy: { name: string };
     booking: { id: string; title: string };
   }>;
