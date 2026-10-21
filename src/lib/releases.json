@@ -16,6 +16,38 @@
   },
   {
     "date": "2026-10-21",
+    "title": "Tidier App activity people list",
+    "type": "improvement",
+    "summary": "Settings > App activity now shows each person's devices in a few clear chips and knows about iPhone 1.3.",
+    "details": [
+      "Xcode and simulator builds fold into one quiet chip with the newest build and a count; hover for the full list.",
+      "The same phone on the same version shows once.",
+      "The web chip names the latest browser and counts the others instead of every browser profile.",
+      "On release day, phones on an older version show as Behind as soon as the App Store lists the new one.",
+      "The Apps page and the Wisconsin Creative app page list version 1.3."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 565
+  },
+  {
+    "date": "2026-10-21",
+    "title": "Creative money for UA gear",
+    "type": "improvement",
+    "summary": "A Budget line can now count toward a year of Under Armour gear, so the UA page shows it without typing the amount twice.",
+    "details": [
+      "Edit a Budget line and pick the UA year under Counts toward UA gear.",
+      "The UA gear Budget card adds it on top of the allotment and lists where it came from.",
+      "Cancelled lines stop counting. The line also gets a UA tag on the Budget page."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 565
+  },
+  {
+    "date": "2026-10-21",
     "title": "Clearer gear return countdown",
     "type": "improvement",
     "summary": "The gear return Live Activity on iPhone now shows a large countdown and a track that drains toward the return time.",

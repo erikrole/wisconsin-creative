@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { BellOff, Globe, Laptop, Monitor, RefreshCw, Search, ShieldCheck, Smartphone } from "lucide-react";
+import { BellOff, Globe, Hammer, Laptop, Monitor, RefreshCw, Search, ShieldCheck, Smartphone } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,8 @@ import {
   buildStatusTone,
   channelLabel,
   deviceName,
+  distinctWebClients,
+  groupIosClients,
   initials,
   shortDay,
   versionLabel,
@@ -81,7 +83,7 @@ type AppActivityReport = {
     appStoreInstallations: number;
     webInstallations: number;
   };
-  latestIosBuild: { version: string | null; build: string; source: "configured" | "app_store" | "observed" } | null;
+  latestIosBuild: { version: string | null; build: string | null; source: "configured" | "app_store" | "observed" } | null;
   versions: Array<{
     version: string | null;
     build: string | null;
@@ -1068,10 +1070,11 @@ function PersonRow({ user, now }: { user: AppActivityUser; now: Date }) {
     const order = (platform: string) => ["ios", "macos", "web", "kiosk"].indexOf(platform);
     return order(a.platform) - order(b.platform) || new Date(b.lastSeenAt).getTime() - new Date(a.lastSeenAt).getTime();
   });
-  const iosClients = clients.filter((client) => client.platform === "ios");
+  const { phones, testBuilds } = groupIosClients(clients.filter((client) => client.platform === "ios"));
   const webClients = clients.filter((client) => client.platform === "web");
   const macClients = clients.filter((client) => client.platform === "macos");
   const latestWeb = webClients[0];
+  const browsers = distinctWebClients(webClients);
   const lastActive = user.lastSeenAt ? (
     <span title={formatDateTime(user.lastSeenAt)} className="font-medium text-foreground">
       {formatRelativeTime(user.lastSeenAt, now)}
@@ -1103,9 +1106,10 @@ function PersonRow({ user, now }: { user: AppActivityUser; now: Date }) {
 
       <div className="flex min-w-0 flex-wrap gap-1.5 pl-11 md:pl-0">
         {clients.length === 0 && <span className="text-sm text-muted-foreground">Hasn&apos;t opened the site or app</span>}
-        {iosClients.map((client, index) => (
+        {phones.map((client, index) => (
           <IosChip key={`ios:${client.firstSeenAt}:${index}`} client={client} />
         ))}
+        {testBuilds.length > 0 && <TestBuildsChip builds={testBuilds} />}
         {macClients.map((client, index) => (
           <ClientChip key={`mac:${client.firstSeenAt}:${index}`} platform="macos" title={client.osVersion ? `macOS ${client.osVersion}` : undefined}>
             Menu bar{client.appVersion ? ` ${client.appVersion}` : ""}
@@ -1121,9 +1125,15 @@ function PersonRow({ user, now }: { user: AppActivityUser; now: Date }) {
           </span>
         )}
         {latestWeb && (
-          <ClientChip platform="web" title={`Last on the web ${formatDateTime(latestWeb.lastSeenAt)}`}>
-            {latestWeb.deviceModel ? `Web · ${latestWeb.deviceModel}` : "Web"}
-            {webClients.length > 1 && <span className="text-muted-foreground"> · {webClients.length} browsers</span>}
+          <ClientChip
+            platform="web"
+            title={[
+              `Last on the web ${formatDateTime(latestWeb.lastSeenAt)}`,
+              browsers.length > 1 ? `Also: ${browsers.slice(1).join(", ")}` : null,
+            ].filter(Boolean).join("\n")}
+          >
+            {latestWeb.deviceModel ?? "Web"}
+            {browsers.length > 1 && <span className="text-muted-foreground"> +{browsers.length - 1}</span>}
           </ClientChip>
         )}
       </div>
@@ -1149,6 +1159,24 @@ function ClientChip({
     >
       <PlatformIcon platform={platform} className="size-3 shrink-0 text-muted-foreground" />
       <span className="truncate">{children}</span>
+    </span>
+  );
+}
+
+/** Every Xcode and simulator build one person has run, folded into one quiet chip. */
+function TestBuildsChip({ builds }: { builds: AppClient[] }) {
+  const newest = builds[0]!;
+  const list = builds
+    .map((build) => `${versionLabel(build.appVersion, build.appBuild)} · ${deviceName(build.deviceModel) ?? "iPhone"} · last seen ${formatDateTime(build.lastSeenAt)}`)
+    .join("\n");
+  return (
+    <span
+      className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-dashed px-2.5 py-1 text-xs text-muted-foreground"
+      title={`Xcode and simulator builds, left out of version stats:\n${list}`}
+    >
+      <Hammer className="size-3 shrink-0" aria-hidden="true" />
+      <span className="tabular-nums">{versionLabel(newest.appVersion, newest.appBuild)}</span>
+      <span>· {builds.length === 1 ? "Test build" : `${builds.length} test builds`}</span>
     </span>
   );
 }
