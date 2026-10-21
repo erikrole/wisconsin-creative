@@ -6,8 +6,8 @@
 | File | Lines |
 |---|---:|
 | `src/lib/services/accountability.ts` | 655 |
-| `src/lib/services/app-activity-report.ts` | 511 |
-| `src/lib/services/app-diagnostics.ts` | 91 |
+| `src/lib/services/app-activity-report.ts` | 498 |
+| `src/lib/services/app-diagnostics.ts` | 56 |
 | `src/lib/services/auto-assign.ts` | 92 |
 | `src/lib/services/auto-fill-preview.ts` | 322 |
 | `src/lib/services/availability-conflict-recompute.ts` | 130 |
@@ -43,6 +43,7 @@
 | `src/lib/services/companion-projection.ts` | 251 |
 | `src/lib/services/consolidation-shared.ts` | 21 |
 | `src/lib/services/dashboard-counts.ts` | 119 |
+| `src/lib/services/error-reports.ts` | 530 |
 | `src/lib/services/event-travel.ts` | 32 |
 | `src/lib/services/event-worker.ts` | 125 |
 | `src/lib/services/firmware-watch.ts` | 329 |
@@ -111,7 +112,7 @@
 | `src/lib/services/status.ts` | 444 |
 | `src/lib/services/team-scoreboard.ts` | 598 |
 | `src/lib/services/usage-analytics-report.ts` | 114 |
-| `src/lib/services/user-deactivation.ts` | 579 |
+| `src/lib/services/user-deactivation.ts` | 589 |
 | `src/lib/services/wishlist.ts` | 193 |
 
 ## Key Library Files
@@ -123,8 +124,8 @@
 | `src/lib/admin-fix-today.ts` | 408 |
 | `src/lib/announcements.ts` | 163 |
 | `src/lib/api-dates.ts` | 38 |
-| `src/lib/api-handler.ts` | 63 |
-| `src/lib/api.ts` | 143 |
+| `src/lib/api-handler.ts` | 76 |
+| `src/lib/api.ts` | 144 |
 | `src/lib/app-product-page.ts` | 183 |
 | `src/lib/app-product-pages.ts` | 170 |
 | `src/lib/app-time.ts` | 257 |
@@ -150,7 +151,7 @@
 | `src/lib/booking-display-title.ts` | 41 |
 | `src/lib/booking-status-display.ts` | 170 |
 | `src/lib/booking-statuses.ts` | 9 |
-| `src/lib/breadcrumbs.ts` | 228 |
+| `src/lib/breadcrumbs.ts` | 229 |
 | `src/lib/brother-label-csv.ts` | 134 |
 | `src/lib/bulk-batteries.ts` | 49 |
 | `src/lib/bulk-schedule-assignment-types.ts` | 213 |
@@ -214,7 +215,7 @@
 | `src/lib/local-traces.ts` | 28 |
 | `src/lib/media-embed.ts` | 68 |
 | `src/lib/nav-sections.ts` | 326 |
-| `src/lib/notification-catalog.ts` | 322 |
+| `src/lib/notification-catalog.ts` | 324 |
 | `src/lib/notification-count-sync.ts` | 9 |
 | `src/lib/notification-destination.ts` | 85 |
 | `src/lib/notification-meta.ts` | 120 |
@@ -224,7 +225,7 @@
 | `src/lib/passkey-client.ts` | 126 |
 | `src/lib/passkey.ts` | 388 |
 | `src/lib/password-rules.ts` | 16 |
-| `src/lib/permissions.ts` | 273 |
+| `src/lib/permissions.ts` | 274 |
 | `src/lib/preview-activity.ts` | 23 |
 | `src/lib/prisma-errors.ts` | 38 |
 | `src/lib/profile-completion-events.ts` | 6 |
@@ -526,6 +527,7 @@
 ### `/api/companion`
 
 - `/api/companion/devices`
+- `/api/companion/diagnostics`
 - `/api/companion/projection`
 - `/api/companion/session`
 
@@ -566,6 +568,10 @@
 - `/api/drafts/[id]`
 - `/api/drafts`
 
+### `/api/errors`
+
+- `/api/errors`
+
 ### `/api/form-options`
 
 - `/api/form-options`
@@ -599,6 +605,11 @@
 
 - `/api/inventory-hygiene`
 
+### `/api/issues`
+
+- `/api/issues/[id]`
+- `/api/issues`
+
 ### `/api/items`
 
 - `/api/items/changes`
@@ -624,6 +635,7 @@
 - `/api/kiosk/checkout/complete`
 - `/api/kiosk/checkout/scan`
 - `/api/kiosk/dashboard`
+- `/api/kiosk/diagnostics`
 - `/api/kiosk/events/[id]/crew-request`
 - `/api/kiosk/events`
 - `/api/kiosk/heartbeat`
@@ -887,6 +899,11 @@
 ### `/api/student-areas`
 
 - `/api/student-areas`
+
+### `/api/support-reports`
+
+- `/api/support-reports/[id]`
+- `/api/support-reports`
 
 ### `/api/users`
 

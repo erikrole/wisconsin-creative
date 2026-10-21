@@ -11,7 +11,7 @@
 
 | Model | Fields | Model-level indexes/constraints |
 |---|---:|---:|
-| `User` | 137 | 5 |
+| `User` | 139 | 5 |
 | `Session` | 7 | 2 |
 | `PasswordResetToken` | 6 | 2 |
 | `PasskeyCredential` | 12 | 2 |
@@ -62,6 +62,9 @@
 | `Notification` | 14 | 6 |
 | `NotificationDelivery` | 9 | 5 |
 | `AppDiagnostic` | 9 | 3 |
+| `ErrorIssue` | 17 | 3 |
+| `ErrorEvent` | 21 | 5 |
+| `SupportReport` | 18 | 3 |
 | `JobRun` | 6 | 3 |
 | `EscalationRule` | 10 | 1 |
 | `Blast` | 22 | 5 |
