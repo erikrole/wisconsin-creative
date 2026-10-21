@@ -27,6 +27,16 @@ describe("onboarding dialog source wiring", () => {
     expect(source).not.toContain('url: "/api/users"');
   });
 
+  it("lets a single student invitation carry a name and primary area", () => {
+    const source = readFileSync("src/components/onboarding/OnboardingDialog.tsx", "utf8");
+
+    expect(source).toContain('name="singleInvitationName"');
+    expect(source).toContain('name="singleInvitationArea"');
+    expect(source).toContain('inviteRole === "STUDENT" && singleName.trim() ? { preloadedName: singleName.trim() }');
+    expect(source).toContain('inviteRole === "STUDENT" && singleArea ? { preloadedPrimaryArea: singleArea }');
+    expect(source).toContain('useState<InviteMode>("single")');
+  });
+
   it("previews bulk paste and CSV rows before saving invitations", () => {
     const source = readFileSync("src/components/onboarding/OnboardingDialog.tsx", "utf8");
 

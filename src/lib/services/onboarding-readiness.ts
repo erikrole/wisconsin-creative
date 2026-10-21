@@ -1,0 +1,23 @@
+/** The profile fields `getProfileCompletion` reads, shared by every route that scores account readiness. */
+export const readinessProfileSelect = {
+  id: true,
+  name: true,
+  role: true,
+  email: true,
+  athleticsEmail: true,
+  phone: true,
+  personalPhone: true,
+  workPhone: true,
+  workPhoneNotApplicable: true,
+  wiscardCardNumber: true,
+  wiscardIssueCode: true,
+  studentYearOverride: true,
+  gradYear: true,
+  graduationTerm: true,
+  topSizeFit: true,
+  topSize: true,
+  shoeSizeSystem: true,
+  shoeSize: true,
+  avatarUrl: true,
+  profilePromptSnoozedUntil: true,
+} as const;
