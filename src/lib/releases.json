@@ -1,6 +1,21 @@
 [
   {
     "date": "2026-10-21",
+    "title": "Staff looks right in dark mode",
+    "type": "fix",
+    "summary": "Staff tiles, notices and the hiring sheet now use dark-friendly colors instead of light pastels.",
+    "details": [
+      "The Right now tiles, Open schedule and See all links use softer tints and brighter text in dark mode.",
+      "The org chart notice and the hiring sheet banners no longer glow against the dark page.",
+      "Light mode looks the same as before."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 561
+  },
+  {
+    "date": "2026-10-21",
     "title": "Nudge people who haven't finished setup",
     "type": "improvement",
     "summary": "Onboarding Status can now email a reminder to someone who signed in but has not finished their profile.",
