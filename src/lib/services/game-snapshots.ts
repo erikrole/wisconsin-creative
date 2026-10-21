@@ -74,7 +74,7 @@ export function nextResultHistory(
   return { history: [...history, { result, at: now.toISOString() }], changed: true };
 }
 
-function liveCrew(event: CapturedEvent): Omit<GameSnapshotCrewMember, "leftAt">[] {
+export function liveCrew(event: CapturedEvent): Omit<GameSnapshotCrewMember, "leftAt">[] {
   const byUser = new Map<string, Omit<GameSnapshotCrewMember, "leftAt">>();
   for (const shift of event.shiftGroup?.shifts ?? []) {
     for (const assignment of shift.assignments) {
@@ -103,7 +103,7 @@ function liveCrew(event: CapturedEvent): Omit<GameSnapshotCrewMember, "leftAt">[
   return [...byUser.values()];
 }
 
-const CAPTURE_SELECT = {
+export const CAPTURE_SELECT = {
   id: true,
   summary: true,
   rawSummary: true,
@@ -137,7 +137,7 @@ const CAPTURE_SELECT = {
   workers: { select: { user: { select: { id: true, name: true } } } },
 } satisfies Prisma.CalendarEventSelect;
 
-type CapturedEvent = Prisma.CalendarEventGetPayload<{ select: typeof CAPTURE_SELECT }>;
+export type CapturedEvent = Prisma.CalendarEventGetPayload<{ select: typeof CAPTURE_SELECT }>;
 
 export type GameSnapshotRunResult = {
   captured: number;

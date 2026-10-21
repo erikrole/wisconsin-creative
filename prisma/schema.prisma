@@ -1344,6 +1344,20 @@ model GameSnapshot {
   @@map("game_snapshots")
 }
 
+/// One person's Creative Wrapped, frozen the first time they open it after
+/// unlock so later corrections don't rewrite a story they already saw.
+model WrappedRecap {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  seasonKey   String   @map("season_key")
+  version     Int
+  payload     Json
+  generatedAt DateTime @default(now()) @map("generated_at")
+
+  @@unique([userId, seasonKey])
+  @@map("wrapped_recaps")
+}
+
 model EventWorker {
   id        String        @id @default(cuid())
   eventId   String        @map("event_id")
