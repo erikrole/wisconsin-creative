@@ -264,7 +264,6 @@ export function ProfileCompletionWizard({
     shoeSizeSystem,
     step,
     studentYear,
-    anticipatedGraduation,
     topSizeChoice,
     topSizeFit,
     topSizeOther,
