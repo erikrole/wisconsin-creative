@@ -70,15 +70,14 @@ describe("student field mobile contracts", () => {
   it("keeps the regular web Student dashboard team-visible while iOS Home stays personal", () => {
     const route = source("src/app/api/dashboard/route.ts");
     const statsRoute = source("src/app/api/dashboard/stats/route.ts");
-    const page = source("src/app/(app)/page.tsx");
+    const page = source("src/app/(app)/_home/HomePage.tsx");
 
     expect(route).toContain("const isPersonalOnly = isIosHomeScope || isCollaborator;");
     expect(statsRoute).toContain('const isPersonalOnly = new URL(req.url).searchParams.get("scope") === "ios-home"');
     expect(statsRoute).toContain("|| isCollaborator;");
     expect(statsRoute).not.toContain('user.role === "STUDENT"');
-    expect(page).toContain('className="grid grid-cols-1 items-start gap-4 md:grid-cols-2 md:gap-6"');
-    expect(page).toContain("<TeamActivityColumn");
-    expect(page).not.toContain("{!isStudent && (");
+    expect(page).toContain("coverage: pending(() => coverageRows(data!, now)),");
+    expect(page).toContain("teamGear: pending(() => ({ rows: gearRows(data!.teamCheckouts.items");
   });
 
   it("keeps iOS booking edits on the optimistic-lock contract", () => {
