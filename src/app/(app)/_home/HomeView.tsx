@@ -35,6 +35,7 @@ import {
   type GearRow,
   type HomeRole,
   type HomeTone,
+  type QuickAction,
   type SummaryMetric,
   type TradeRow,
   type UpNextItem,
@@ -77,6 +78,9 @@ export type HomeViewProps = {
   notice?: ReactNode;
   onTarget: (target: AttentionTarget) => void;
   onSelectBooking: (bookingId: string) => void;
+  /** One-tap trade decisions; rows hide the button when this is absent. */
+  onQuick?: (quick: QuickAction) => void;
+  busyTradeId?: string | null;
 };
 
 const TONE_TILE: Record<HomeTone, string> = {
@@ -133,7 +137,7 @@ export function HomeView(props: HomeViewProps) {
           <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)]">
             <div className="flex min-w-0 flex-col gap-5">
               {props.attention && (
-                <AttentionSection slot={props.attention} onTarget={props.onTarget} />
+                <AttentionSection slot={props.attention} onTarget={props.onTarget} onQuick={props.onQuick} busyTradeId={props.busyTradeId} />
               )}
               {props.upNext && (
                 <UpNextSection slot={props.upNext} now={now} empty={props.upNextEmpty} onTarget={props.onTarget} />
@@ -155,7 +159,9 @@ export function HomeView(props: HomeViewProps) {
                   onSelectBooking={props.onSelectBooking}
                 />
               )}
-              {props.trades && <TradesSection slot={props.trades} href={props.tradesHref ?? "/schedule"} />}
+              {props.trades && (
+                <TradesSection slot={props.trades} href={props.tradesHref ?? "/schedule"} onQuick={props.onQuick} busyTradeId={props.busyTradeId} />
+              )}
               {props.crew && <CrewSection slot={props.crew} />}
               {props.coverage && <CoverageSection slot={props.coverage} />}
               {props.teamGear && (
@@ -350,7 +356,27 @@ function SummaryStrip({ slot }: { slot: Slot<SummaryMetric[]> }) {
 
 /* ── Needs attention ────────────────────────────────────── */
 
-function AttentionSection({ slot, onTarget }: { slot: Slot<AttentionItem[]>; onTarget: (t: AttentionTarget) => void }) {
+function QuickButton({ quick, onQuick, busy }: { quick?: QuickAction; onQuick?: (q: QuickAction) => void; busy: boolean }) {
+  if (!quick || !onQuick) return null;
+  return (
+    <Button
+      variant="outline"
+      className="mr-3 h-10 shrink-0"
+      disabled={busy}
+      onClick={() => onQuick(quick)}
+      aria-label={`${quick.label}: ${quick.confirmTitle.replace(/\?$/, "")}`}
+    >
+      {busy ? "Working\u2026" : quick.label}
+    </Button>
+  );
+}
+
+function AttentionSection({ slot, onTarget, onQuick, busyTradeId }: {
+  slot: Slot<AttentionItem[]>;
+  onTarget: (t: AttentionTarget) => void;
+  onQuick?: (q: QuickAction) => void;
+  busyTradeId?: string | null;
+}) {
   const [expanded, setExpanded] = useState(false);
   const rows = slot.state === "ready" ? slot.rows : [];
   const visible = expanded ? rows : rows.slice(0, ATTENTION_PREVIEW);
@@ -373,8 +399,9 @@ function AttentionSection({ slot, onTarget }: { slot: Slot<AttentionItem[]>; onT
         <>
           <ul className="flex flex-col pb-1.5">
             {visible.map((item) => (
-              <li key={item.id}>
+              <li key={item.id} className="flex items-center">
                 <AttentionRow item={item} onTarget={onTarget} />
+                <QuickButton quick={item.quick} onQuick={onQuick} busy={busyTradeId === item.quick?.tradeId} />
               </li>
             ))}
           </ul>
@@ -414,10 +441,10 @@ function AttentionRow({ item, onTarget }: { item: AttentionItem; onTarget: (t: A
     </>
   );
   if (item.target.kind === "link") {
-    return <Link href={item.target.href} className={ROW}>{body}</Link>;
+    return <Link href={item.target.href} className={cn(ROW, "min-w-0 flex-1")}>{body}</Link>;
   }
   const target = item.target;
-  return <button type="button" className={cn(ROW, "cursor-pointer")} onClick={() => onTarget(target)}>{body}</button>;
+  return <button type="button" className={cn(ROW, "min-w-0 flex-1 cursor-pointer")} onClick={() => onTarget(target)}>{body}</button>;
 }
 
 /* ── Up next ────────────────────────────────────────────── */
@@ -587,7 +614,12 @@ function GearList({ rows, onSelectBooking }: { rows: GearRow[]; onSelectBooking:
   );
 }
 
-function TradesSection({ slot, href }: { slot: Slot<TradeRow[]>; href: string }) {
+function TradesSection({ slot, href, onQuick, busyTradeId }: {
+  slot: Slot<TradeRow[]>;
+  href: string;
+  onQuick?: (q: QuickAction) => void;
+  busyTradeId?: string | null;
+}) {
   return (
     <HomeCard aria-labelledby="home-trades">
       <SectionHeader
@@ -606,8 +638,8 @@ function TradesSection({ slot, href }: { slot: Slot<TradeRow[]>; href: string })
       ) : (
         <ul className="flex flex-col pb-1.5">
           {slot.rows.map((row) => (
-            <li key={row.id}>
-              <Link href={href} className={ROW}>
+            <li key={row.id} className="flex items-center">
+              <Link href={href} className={cn(ROW, "min-w-0 flex-1")}>
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--blue-bg)] text-[var(--blue-text)]">
                   <ArrowLeftRightIcon className="size-4" aria-hidden="true" />
                 </span>
@@ -616,6 +648,7 @@ function TradesSection({ slot, href }: { slot: Slot<TradeRow[]>; href: string })
                   <span className="truncate text-[13px] text-muted-foreground">{row.detail}</span>
                 </span>
               </Link>
+              <QuickButton quick={row.quick} onQuick={onQuick} busy={busyTradeId === row.quick?.tradeId} />
             </li>
           ))}
         </ul>

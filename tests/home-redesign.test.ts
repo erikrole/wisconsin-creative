@@ -137,3 +137,28 @@ describe("Home day line and crew", () => {
     expect(rows[0]?.when).toContain("On now");
   });
 });
+
+describe("Home trade decisions", () => {
+  it("offers Approve on admin trade rows and Claim only where the board allows it", async () => {
+    const { tradeRows } = await import("@/app/(app)/_home/home-model");
+    const admin = buildAttention({ role: "ADMIN", data: emptyDashboard("ADMIN"), claimedTrades: sampleTrades(NOW).claimed, now: NOW });
+    expect(admin[0]?.quick).toMatchObject({ action: "approve", tradeId: "t-9", label: "Approve" });
+    expect(admin[0]?.quick?.confirmMessage).toContain("Maya Chen takes Sam Okafor");
+
+    const rows = tradeRows(sampleTrades(NOW).open, NOW);
+    expect(rows.find((r) => r.id === "t-1")?.quick).toMatchObject({ action: "claim", confirmLabel: "Claim shift" });
+    expect(rows.find((r) => r.id === "t-3")?.quick).toBeUndefined();
+  });
+
+  it("sends decisions through the Trade Board endpoints and reloads after every outcome", () => {
+    const actions = source("src/lib/shift-trade-actions.ts");
+    const home = source("src/app/(app)/_home/HomePage.tsx");
+    expect(actions).toContain("claim: \"POST\"");
+    expect(actions).toContain("approve: \"PATCH\"");
+    expect(actions).toContain("/api/shift-trades/${tradeId}/${action}");
+    expect(home).toContain("const ok = await confirm({ title: quick.confirmTitle");
+    expect(home).toContain("await Promise.all([openTrades.refetch(), claimedTrades.refetch()]);");
+    // Read-only admin previews never get the buttons.
+    expect(home).toContain("onQuick={readOnly ? undefined");
+  });
+});

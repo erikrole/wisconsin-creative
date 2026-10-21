@@ -3,11 +3,14 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { useAuthenticatedQueryUserId } from "@/components/QueryProvider";
 import { useBookingChangeSync } from "@/hooks/use-booking-change-sync";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { handleAuthRedirect, parseJsonSafely } from "@/lib/errors";
+import { sendShiftTradeAction } from "@/lib/shift-trade-actions";
 import { formatOperationalDateTime, formatRelativeTime } from "@/lib/format";
 import type { CreateBookingContext } from "../dashboard-types";
 import { FlaggedReportDialog } from "../dashboard/flagged-items-banner";
@@ -31,6 +34,7 @@ import {
   type AttentionTarget,
   type GearRow,
   type HomeTrade,
+  type QuickAction,
   type TodayCrewEvent,
   type UpNextItem,
 } from "./home-model";
@@ -156,6 +160,28 @@ function InternalHome({ name, readOnly }: { name: string | null; readOnly: boole
   const openTrades = useTrades("OPEN", role === "STUDENT");
   const claimedTrades = useTrades("CLAIMED", role === "ADMIN");
   const crew = useTodayCrew(role !== null);
+  const confirm = useConfirm();
+  const [busyTradeId, setBusyTradeId] = useState<string | null>(null);
+
+  // Claims and approvals go through the Trade Board's own endpoints and copy.
+  // Every outcome reloads both trade lists and Home, settled or not, because a
+  // lost response leaves the real state unknown.
+  const onQuick = useCallback(async (quick: QuickAction) => {
+    if (busyTradeId) return;
+    const ok = await confirm({ title: quick.confirmTitle, message: quick.confirmMessage, confirmLabel: quick.confirmLabel });
+    if (!ok) return;
+    setBusyTradeId(quick.tradeId);
+    try {
+      const result = await sendShiftTradeAction(quick.tradeId, quick.action);
+      if ("redirected" in result) return;
+      if (result.ok) toast.success(result.message);
+      else toast.error(result.message);
+      await Promise.all([openTrades.refetch(), claimedTrades.refetch()]);
+      if (result.ok || result.stale) loadData();
+    } finally {
+      setBusyTradeId(null);
+    }
+  }, [busyTradeId, confirm, openTrades, claimedTrades, loadData]);
 
   const claimable = useMemo(
     () => (openTrades.data ?? []).filter((t) => t.viewerCanClaim),
@@ -224,6 +250,8 @@ function InternalHome({ name, readOnly }: { name: string | null; readOnly: boole
         tradesHref={TRADE_BOARD_HREF}
         onTarget={onTarget}
         onSelectBooking={setSelectedBookingId}
+        onQuick={readOnly ? undefined : (quick) => void onQuick(quick)}
+        busyTradeId={busyTradeId}
       />
       {selectedBookingId && (
         <Suspense>

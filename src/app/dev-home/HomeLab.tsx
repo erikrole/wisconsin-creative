@@ -145,7 +145,7 @@ function Lab({ fontClass }: { fontClass: string }) {
               {state === "loading" && params.get("skeleton") === "route" ? (
                 <HomeSkeleton />
               ) : (
-                <HomeView {...buildProps(role, state, now)} onTarget={() => {}} onSelectBooking={() => {}} />
+                <HomeView {...buildProps(role, state, now)} onTarget={() => {}} onSelectBooking={() => {}} onQuick={() => {}} />
               )}
             </main>
           </div>

@@ -3,6 +3,7 @@
 
 import { formatCountdownCompact, formatDueLabel, formatOperationalDateTime, isDueToday } from "@/lib/format";
 import { isFullDayBoundaryWindow } from "@/lib/shift-call-windows";
+import type { ShiftTradeAction } from "@/lib/shift-trade-actions";
 import { AREA_LABELS } from "@/types/areas";
 import type { BookingSummary, DashboardData, DashboardStats, CreateBookingContext } from "../dashboard-types";
 import { dashboardEventTitle } from "../dashboard/event-title";
@@ -41,6 +42,16 @@ export type AttentionTarget =
   | { kind: "report"; reportId: string }
   | { kind: "create"; context: CreateBookingContext };
 
+/** A one-tap decision a row can offer, confirmed before it is sent. */
+export type QuickAction = {
+  label: string;
+  tradeId: string;
+  action: ShiftTradeAction;
+  confirmTitle: string;
+  confirmMessage: string;
+  confirmLabel: string;
+};
+
 export type AttentionItem = {
   id: string;
   tone: HomeTone;
@@ -49,6 +60,7 @@ export type AttentionItem = {
   detail: string;
   action: string;
   target: AttentionTarget;
+  quick?: QuickAction;
 };
 
 export type SummaryMetric = {
@@ -93,6 +105,7 @@ export type TradeRow = {
   id: string;
   title: string;
   detail: string;
+  quick?: QuickAction;
 };
 
 export const PENDING_PICKUP_HREF = "/bookings?tab=checkouts&status=PENDING_PICKUP";
@@ -233,6 +246,9 @@ export function buildAttention(input: {
   if (role === "ADMIN") {
     for (const t of claimedTrades) {
       const event = t.shiftAssignment.shift.shiftGroup.event;
+      const when = formatOperationalDateTime(event.startsAt, now, { month: "short" });
+      const from = t.postedBy?.name ?? "Someone";
+      const to = t.claimedBy?.name ?? "the claimer";
       items.push({
         id: `trade-${t.id}`,
         tone: "warning",
@@ -241,6 +257,14 @@ export function buildAttention(input: {
         detail: `${t.postedBy?.name ?? "Someone"} to ${t.claimedBy?.name ?? "a claimer"} · ${areaLabel(t.shiftAssignment.shift.area)} · ${formatOperationalDateTime(event.startsAt, now, { month: "short" })}`,
         action: "Review",
         target: { kind: "link", href: TRADE_APPROVAL_HREF },
+        quick: {
+          label: "Approve",
+          tradeId: t.id,
+          action: "approve",
+          confirmTitle: "Approve this trade?",
+          confirmMessage: `${to} takes ${from}\u2019s ${areaLabel(t.shiftAssignment.shift.area)} shift for ${eventTitle(event)} on ${when}. Review the full queue to check availability first.`,
+          confirmLabel: "Approve trade",
+        },
       });
     }
   }
@@ -458,10 +482,21 @@ export function coverageRows(data: DashboardData, now: Date): CoverageRow[] {
 export function tradeRows(trades: HomeTrade[], now: Date): TradeRow[] {
   return trades.map((t) => {
     const event = t.shiftAssignment.shift.shiftGroup.event;
+    const when = formatOperationalDateTime(event.startsAt, now, { month: "short" });
     return {
       id: t.id,
       title: eventTitle(event),
-      detail: `${areaLabel(t.shiftAssignment.shift.area)} · ${formatOperationalDateTime(event.startsAt, now, { month: "short" })} · from ${t.postedBy?.name ?? "a teammate"}`,
+      detail: `${areaLabel(t.shiftAssignment.shift.area)} · ${when} · from ${t.postedBy?.name ?? "a teammate"}`,
+      quick: t.viewerCanClaim
+        ? {
+          label: "Claim",
+          tradeId: t.id,
+          action: "claim",
+          confirmTitle: "Claim this shift?",
+          confirmMessage: `Claim ${eventTitle(event)} on ${when}? An admin reviews this before you\u2019re on the schedule.`,
+          confirmLabel: "Claim shift",
+        }
+        : undefined,
     };
   });
 }
