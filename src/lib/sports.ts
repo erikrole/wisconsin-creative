@@ -83,9 +83,9 @@ export function sportsGroupedByProgram(allowedCodes?: ReadonlySet<string>) {
 
 /**
  * Generate a checkout title from an event.
- * - Home: "{sportCode} vs {opponent}"
- * - Away: "{sportCode} at {opponent}"
- * - Neutral/unknown: "{sportCode} vs {opponent} (Neutral)"
+ * - Home and neutral: "{sport name} vs {opponent}"
+ * - Away: "{sport name} at {opponent}"
+ * Callers pass the result through displayBookingTitle to clean the opponent.
  */
 export function generateEventTitle(
   sportCode: string,
@@ -93,7 +93,6 @@ export function generateEventTitle(
   isHome: boolean | null | undefined
 ): string {
   const opp = opponent || "TBD";
-  if (isHome === true) return `${sportCode} vs ${opp}`;
-  if (isHome === false) return `${sportCode} at ${opp}`;
-  return `${sportCode} vs ${opp} (Neutral)`;
+  const sport = sportLabel(sportCode);
+  return `${sport} ${isHome === false ? "at" : "vs"} ${opp}`;
 }

@@ -1,6 +1,24 @@
 [
   {
     "date": "2026-10-20",
+    "title": "Consistent booking titles",
+    "type": "improvement",
+    "summary": "Bookings now read the same everywhere: sport name, vs or at, then the opponent.",
+    "details": [
+      "Older bookings that showed codes like \"MSOC vs Evansville\" now show \"Men's Soccer vs Evansville\" on the web, in notifications, reports, the iOS app and the menu bar.",
+      "Promotions (\"- Homecoming\"), rankings and \"(Neutral)\" no longer clutter booking titles.",
+      "Titles you type yourself, like \"Media Day - Kohl Center\", keep their dashes.",
+      "New game bookings are saved with the full sport name and a clean opponent from the start."
+    ],
+    "platforms": [
+      "Web",
+      "iOS",
+      "macOS"
+    ],
+    "pr": 544
+  },
+  {
+    "date": "2026-10-20",
     "title": "A calmer sidebar and top bar",
     "type": "improvement",
     "summary": "The sidebar and top bar look the same on every page, with clearer groups, fresh icons, pinned pages, a new account menu and the page path up top.",

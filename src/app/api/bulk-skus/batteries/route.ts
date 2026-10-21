@@ -7,6 +7,7 @@ import { ok } from "@/lib/http";
 import { requirePermission } from "@/lib/rbac";
 import { getBatteryOpsFixture } from "@/lib/fixtures/battery-ops";
 import { Prisma } from "@prisma/client";
+import { displayBookingTitle } from "@/lib/booking-display-title";
 
 function daysSince(value: Date | null | undefined, now: Date) {
   if (!value) return null;
@@ -149,7 +150,7 @@ export const GET = withAuth(async (req, { user }) => {
         booking: booking
           ? {
               id: booking.id,
-              title: booking.title,
+              title: displayBookingTitle(booking.title),
               refNumber: booking.refNumber,
               endsAt: booking.endsAt.toISOString(),
               requesterName: booking.requester.name,
