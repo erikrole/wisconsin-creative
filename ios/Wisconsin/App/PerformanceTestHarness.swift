@@ -69,6 +69,8 @@ struct PerformanceTestRootView: View {
             ScoreboardHarnessView()
         case .profile:
             ProfileHarnessView()
+        case .staffProfile:
+            StaffProfileHarnessView()
         case .login:
             LoginView()
         case .launchView:
@@ -545,6 +547,8 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
             return ScoreboardFixtureAPI.scoreboard(for: request)
         case "/api/users/\(ScoreboardFixtureAPI.userId)":
             return ProfileFixtureAPI.userDetail
+        case "/api/users/\(ScoreboardFixtureAPI.userId)/right-now":
+            return ProfileFixtureAPI.rightNow
         case "/api/badges/user/\(ScoreboardFixtureAPI.userId)":
             return ProfileFixtureAPI.badgeProfile
         case "/api/shift-trades": return TradeBoardFixtureAPI.trades
@@ -1639,6 +1643,25 @@ enum ScoreboardFixtureAPI {
 /// The current user's Profile against canned payloads. The Scoreboard entry is
 /// a row in a stack of cards, so it can only be reviewed next to the Next Up
 /// card above it and the badge shelf below it.
+/// A teammate's profile as Staff see it, seeded as the signed-in staff user.
+struct StaffProfileHarnessView: View {
+    @Environment(SessionStore.self) private var session
+    @State private var seeded = false
+
+    var body: some View {
+        ZStack {
+            Color(.systemGroupedBackground).ignoresSafeArea()
+            if seeded {
+                NavigationStack { UserDetailView(userId: ScoreboardFixtureAPI.userId) }
+            }
+        }
+        .task {
+            session.currentUser = ScheduleFixtures.staffUser
+            seeded = true
+        }
+    }
+}
+
 struct ProfileHarnessView: View {
     @Environment(SessionStore.self) private var session
     @State private var seeded = false
@@ -1661,6 +1684,29 @@ struct ProfileHarnessView: View {
 }
 
 enum ProfileFixtureAPI {
+    static let rightNow = Data("""
+    { "data": {
+      "nextShift": {
+        "summary": "Football vs. Michigan",
+        "location": "Camp Randall Stadium",
+        "area": "LIVE_PRODUCTION",
+        "startsAt": "2026-10-24T15:00:00.000Z",
+        "endsAt": "2026-10-24T23:30:00.000Z",
+        "live": false
+      },
+      "holding": [
+        { "id": "co-1", "title": "Camp Randall camera kit", "dueAt": "2026-10-25T01:00:00.000Z", "overdue": false },
+        { "id": "co-2", "title": "Wireless mic pack", "dueAt": "2026-10-25T01:00:00.000Z", "overdue": false }
+      ],
+      "week": [
+        { "summary": "Football vs. Michigan", "area": "LIVE_PRODUCTION", "startsAt": "2026-10-24T15:00:00.000Z", "endsAt": "2026-10-24T23:30:00.000Z" },
+        { "summary": "Volleyball vs. Iowa", "area": "VIDEO", "startsAt": "2026-10-26T00:00:00.000Z", "endsAt": "2026-10-26T03:00:00.000Z" },
+        { "summary": "Hockey photo call", "area": "PHOTO", "startsAt": "2026-10-27T22:00:00.000Z", "endsAt": "2026-10-28T01:00:00.000Z" }
+      ],
+      "performance": { "checkouts": 42, "onTimeRate": 95 }
+    } }
+    """.utf8)
+
     static let userDetail = Data("""
     { "data": {
       "id": "\(ScoreboardFixtureAPI.userId)",
