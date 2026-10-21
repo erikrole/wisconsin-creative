@@ -186,6 +186,10 @@ struct ReturnTimeCalendar: View {
         return lower...max(latest ?? .distantFuture, lower)
     }
 
+    private var isSingleDay: Bool {
+        latest.map { calendar.isDate($0, inSameDayAs: minimum) } ?? false
+    }
+
     private var dayBinding: Binding<Date> {
         Binding(
             get: { selection },
@@ -214,10 +218,14 @@ struct ReturnTimeCalendar: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            DatePicker("Return day", selection: dayBinding, in: dayRange, displayedComponents: .date)
-                .datePickerStyle(.graphical)
-                .labelsHidden()
-            Divider()
+            // When the window closes the same day, a month grid only shows
+            // one tappable date, so just the time row is offered.
+            if !isSingleDay {
+                DatePicker("Return day", selection: dayBinding, in: dayRange, displayedComponents: .date)
+                    .datePickerStyle(.graphical)
+                    .labelsHidden()
+                Divider()
+            }
             HStack {
                 Text("Time")
                 Spacer()
