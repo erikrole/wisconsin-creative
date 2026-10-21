@@ -67,6 +67,8 @@ struct PerformanceTestRootView: View {
             TradeBoardHarnessView()
         case .home, .homeAllClear:
             HomeHarnessView()
+        case .homeGettingStarted:
+            HomeStudentHarnessView()
         case .scoreboard:
             ScoreboardHarnessView()
         case .profile:
@@ -686,6 +688,10 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
                 : FixtureAPI.myLicense
         case "/api/licenses/my/history": return FixtureAPI.licenseHistory
         case "/api/me":
+            if AppRuntimeMode.performanceScenario == .homeGettingStarted {
+                let created = ISO8601DateFormatter().string(from: Date().addingTimeInterval(-3 * 86_400))
+                return Data(#"{"user":{"id":"fixture-student","name":"Avery Nakamura","email":"avery.nakamura@wisc.edu","role":"STUDENT","avatarUrl":null,"forcePasswordChange":false,"accountCreatedAt":"\#(created)"}}"#.utf8)
+            }
             return AppRuntimeMode.performanceScenario == .previewChrome
                 ? PreviewChromeFixtures.me
                 : ScheduleFixtureAPI.me
@@ -695,6 +701,7 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
         case "/api/announcements/active": return AnnouncementFixtureAPI.active()
         case let path where path.hasPrefix("/api/announcements/") && path.hasSuffix("/dismiss"):
             return AnnouncementFixtureAPI.dismiss(path: path)
+        case "/api/users/fixture-student/availability": return Data(#"{"data":[]}"#.utf8)
         case "/api/dashboard":
             return AppRuntimeMode.performanceScenario == .homeAllClear
                 ? HomeFixtureAPI.allClearDashboard
@@ -1445,6 +1452,25 @@ struct HomeHarnessView: View {
     var body: some View {
         HomeView()
             .onAppear { session.currentUser = ScheduleFixtures.staffUser }
+    }
+}
+
+/// Home for a student three days into the account, so the first-weeks card shows.
+struct HomeStudentHarnessView: View {
+    @Environment(SessionStore.self) private var session
+
+    var body: some View {
+        HomeView()
+            .onAppear {
+                session.currentUser = CurrentUser(
+                    id: "fixture-student",
+                    name: "Avery Nakamura",
+                    email: "avery.nakamura@wisc.edu",
+                    role: "STUDENT",
+                    avatarUrl: nil,
+                    accountCreatedAt: ISO8601DateFormatter().string(from: Date().addingTimeInterval(-3 * 86_400))
+                )
+            }
     }
 }
 

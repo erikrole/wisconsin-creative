@@ -129,13 +129,9 @@ struct WelcomeFinishView: View {
 
     private func open(_ step: WelcomeNextStep) {
         switch step {
-        case .schedule:
-            appState.selectedTab = 4
-        case .gear:
-            appState.selectedTab = 1
-        case .guides:
-            appState.pendingBrowseDestination = "guides"
-            appState.selectedTab = 2
+        case .schedule: StarterDestination.schedule.open(in: appState)
+        case .gear: StarterDestination.gear.open(in: appState)
+        case .guides: StarterDestination.guides.open(in: appState)
         }
         onContinue()
     }

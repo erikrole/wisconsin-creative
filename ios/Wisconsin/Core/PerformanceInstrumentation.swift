@@ -44,6 +44,9 @@ enum AppRuntimeMode {
         /// the shape where "You're all set" used to render directly above a
         /// populated Drafts card.
         case homeAllClear
+        /// Home as a student in their first weeks, so the Getting started
+        /// checklist can be rendered and screenshotted without a session.
+        case homeGettingStarted = "home-getting-started"
         /// The native profile Scoreboard against a canned season payload, so
         /// its summary, filters, breakdowns, and event history can be reviewed
         /// without a signed-in session or live network.
@@ -201,7 +204,7 @@ enum AppRuntimeMode {
         switch performanceScenario {
         case .resourcesGuides, .previewChrome, .latestBrowse, .resourcesUsers, .resourcesLicenses, .resourcesLicensesOpen,
              .schedule, .tradeBoardStaff, .tradeBoardStudent,
-             .home, .homeAllClear, .scoreboard, .profile,
+             .home, .homeAllClear, .homeGettingStarted, .scoreboard, .profile,
              .studentBookings,
              .bookingDetail, .bookingExtend, .bookingEdit, .bookingCancel,
              .itemEdit, .createBookingScanner, .createBookingEvents, .search, .searchPartial, .searchIdle,

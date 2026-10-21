@@ -155,6 +155,8 @@ final class HomeViewModel {
 }
 
 struct HomeView: View {
+    @State private var gettingStarted = GettingStartedModel()
+    @Environment(ProfileCompletionStore.self) private var profileCompletion
     @State private var vm = HomeViewModel()
     @State private var showNotifications = false
     @State private var showTrades = false
@@ -359,6 +361,7 @@ struct HomeView: View {
                 if vm.error != nil {
                     RefreshFailurePill(message: vm.error ?? "")
                 }
+                GettingStartedCard(model: gettingStarted)
                 StatStrip(
                     stats: dash.stats,
                     pendingPickupCount: dash.pendingPickups.total,
@@ -539,6 +542,10 @@ struct HomeView: View {
                 async let blasts: Void = vm.loadBlasts(userId: session.currentUser?.id)
                 await vm.load(appState: appState, requesterId: session.currentUser?.id)
                 await blasts
+            }
+            .task(id: "\(session.currentUser?.id ?? "")-\(session.currentUser?.accountCreatedAt ?? "")") {
+                guard let user = session.currentUser else { return }
+                await gettingStarted.load(for: user, completionStore: profileCompletion)
             }
             .onChange(of: appState.pendingPushBlastId) { _, id in
                 if id != nil {

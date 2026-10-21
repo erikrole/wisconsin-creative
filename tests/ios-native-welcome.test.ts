@@ -179,4 +179,29 @@ describe("native iOS Welcome flow", () => {
     expect(profile).toContain('title: "Complete profile"');
     expect(profile).toContain("profileCompletion.presentManually(for: user.id)");
   });
+
+  it("offers an optional first-weeks checklist on Home for new students", () => {
+    const card = source("ios/Wisconsin/Views/GettingStartedCard.swift");
+    const home = source("ios/Wisconsin/Views/HomeView.swift");
+    const models = source("ios/Wisconsin/Models/Models.swift");
+    const welcome = source("ios/Wisconsin/Views/Welcome/WelcomeFinishView.swift");
+
+    // Students only, inside the same 14-day window as the web card.
+    expect(card).toContain('role == "STUDENT"');
+    expect(card).toContain("static let windowDays = 14");
+    expect(models).toContain("accountCreatedAt = try container.decodeIfPresent(String.self");
+    // Optional offer: dismissible, and notifications only navigate, never prompt.
+    expect(card).toContain("Hide getting started");
+    expect(card).toContain("pendingSettingsDestination = .notifications");
+    expect(card).not.toMatch(/requestAuthorization|registerForRemoteNotifications|PushPrePromptView/);
+    // Class times count as done from the API, matching the web isClassBlock rule.
+    expect(card).toContain("availabilityBlocks(userId:");
+    expect(card).toContain('($0.intent ?? "CANNOT_WORK") == "CANNOT_WORK"');
+    // Stores row ids and a dismissed flag only, per user.
+    expect(card).toContain('"WisconsinGettingStarted.\\(userId)"');
+    expect(card).not.toMatch(/phone|wiscard|topSize|shoeSize|avatarUrl/i);
+    expect(home).toContain("GettingStartedCard(model: gettingStarted)");
+    // The finish screen and the card open the same screens.
+    expect(welcome).toContain("StarterDestination.schedule.open(in: appState)");
+  });
 });
