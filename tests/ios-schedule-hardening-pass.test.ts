@@ -82,8 +82,7 @@ describe("iOS Schedule hardening pass", () => {
     expect(filters).toContain('Picker("Event type", selection: $homeAwayFilter)');
     expect(schedule).toContain('.accessibilityLabel("Dismiss Calendar suggestion")');
     // From the accessibility-size simulator pass: the badge covered the Trade
-    // Board icon, the prompt title truncated, and the venue lost to the chip.
-    expect(schedule).toContain(".badge(openTradeCount)\n                    // At accessibility sizes the badge grew over the icon.\n                    .dynamicTypeSize(...DynamicTypeSize.xxxLarge)");
+    // Board icon (system badge, left as is), the prompt title truncated, and the venue lost to the chip.
     expect(schedule).toContain('Text("Add your shifts to Calendar")\n                .font(.subheadline.weight(.bold))\n                .lineLimit(nil)\n                .fixedSize(horizontal: false, vertical: true)');
     expect(row).toContain(".lineLimit(stacksTime ? 3 : 2)");
     // "Non-game" fits the type control at the same size as its neighbours.

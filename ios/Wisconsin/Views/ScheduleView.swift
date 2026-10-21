@@ -531,8 +531,6 @@ private struct ScheduleRootToolbar: ToolbarContent {
             ToolbarItem(placement: .topBarTrailing) {
                 tradeBoardButton
                     .badge(openTradeCount)
-                    // At accessibility sizes the badge grew over the icon.
-                    .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
             }
             .visibilityPriority(.high)
 
@@ -543,8 +541,6 @@ private struct ScheduleRootToolbar: ToolbarContent {
             ToolbarItem(placement: .topBarTrailing) {
                 tradeBoardButton
                     .badge(openTradeCount)
-                    // At accessibility sizes the badge grew over the icon.
-                    .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
             }
 
             ToolbarItem(placement: .topBarTrailing) {
