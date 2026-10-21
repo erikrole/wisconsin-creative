@@ -1,3 +1,5 @@
+import { displayBookingTitle } from "@/lib/booking-display-title";
+
 type BookingListItem = {
   id: string;
   refNumber: string | null;
@@ -44,7 +46,7 @@ export function sanitizeCollaboratorBooking<T extends BookingListItem>(booking: 
     refNumber: booking.refNumber,
     kind: booking.kind,
     status: booking.status,
-    title: booking.title,
+    title: displayBookingTitle(booking.title),
     requesterUserId: booking.requesterUserId,
     createdBy: booking.createdBy,
     locationId: booking.locationId,

@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { summarizeItemFamilyState } from "@/lib/item-family-state";
 import { countAssetsByEffectiveStatus, deriveAssetStatusesFromLoaded } from "@/lib/services/status";
+import { displayBookingTitle } from "@/lib/booking-display-title";
 
 const AUDIT_REPORT_EXPORT_LIMIT = 5000;
 const CHECKOUT_REPORT_EXPORT_LIMIT = 5000;
@@ -637,7 +638,7 @@ function mapCheckoutReportEntry(checkout: Prisma.BookingGetPayload<{
 }>, now: Date) {
   return {
     id: checkout.id,
-    title: checkout.title,
+    title: displayBookingTitle(checkout.title),
     status: checkout.status,
     startsAt: checkout.startsAt,
     endsAt: checkout.endsAt,
@@ -797,7 +798,7 @@ function mapOverdueReportBooking(
 
   return {
     id: booking.id,
-    title: booking.title,
+    title: displayBookingTitle(booking.title),
     endsAt: booking.endsAt.toISOString(),
     overdueHours: hours,
     location: booking.location.name,
@@ -997,7 +998,7 @@ function mapScanReportEntry(scan: Prisma.ScanEventGetPayload<{
         ? scan.bulkSku.name
         : scan.scanValue,
     bookingId: scan.booking.id,
-    bookingTitle: scan.booking.title,
+    bookingTitle: displayBookingTitle(scan.booking.title),
     createdAt: scan.createdAt,
   };
 }
@@ -1340,7 +1341,7 @@ async function getBatteryAuditReport(filters: BulkLossReportFilters = {}) {
           lastRequesterName: booking?.requester.name ?? null,
           lastBookingId: booking?.id ?? null,
           lastBookingRef: booking?.refNumber ?? null,
-          lastBookingTitle: booking?.title ?? null,
+          lastBookingTitle: (booking ? displayBookingTitle(booking.title) : null),
         };
       }),
   ).sort((a, b) => b.markedMissingAt.localeCompare(a.markedMissingAt));
@@ -1399,7 +1400,7 @@ async function getBatteryAuditReport(filters: BulkLossReportFilters = {}) {
         durationDays: daysBetween(checkedOutAt, checkedInAt ?? now),
         bookingId: booking.id,
         bookingRef: booking.refNumber,
-        bookingTitle: booking.title,
+        bookingTitle: displayBookingTitle(booking.title),
         requesterId: booking.requester.id,
         requesterName: booking.requester.name,
       };

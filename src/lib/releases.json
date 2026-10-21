@@ -18,6 +18,41 @@
     "pr": 549
   },
   {
+    "date": "2026-10-21",
+    "title": "App activity redesign",
+    "type": "feature",
+    "summary": "The owner-only App activity page now shows at a glance which app versions people run and how they use the site, the iPhone app, and the menu bar.",
+    "details": [
+      "A Needs attention list shows who is behind, who is on an old TestFlight build, who can't get notifications, which version crashed most, and any kiosk that stopped checking in.",
+      "Charts show daily active people by platform, release adoption by version, the most-used screens, first opens by week, and crashes and hangs by version.",
+      "The current iPhone build now comes from the App Store listing automatically. Local Xcode builds and phones not seen in 60 days no longer count as behind.",
+      "The people list is one clean row per person with filters, sorting, and a link to each profile. It shows the menu bar app and which browser and device people use on the web."
+    ],
+    "platforms": [
+      "Web",
+      "macOS"
+    ],
+    "pr": 546
+  },
+  {
+    "date": "2026-10-20",
+    "title": "Consistent booking titles",
+    "type": "improvement",
+    "summary": "Bookings now read the same everywhere: sport name, vs or at, then the opponent.",
+    "details": [
+      "Older bookings that showed codes like \"MSOC vs Evansville\" now show \"Men's Soccer vs Evansville\" on the web, in notifications, reports, the iOS app and the menu bar.",
+      "Promotions (\"- Homecoming\"), rankings and \"(Neutral)\" no longer clutter booking titles.",
+      "Titles you type yourself, like \"Media Day - Kohl Center\", keep their dashes.",
+      "New game bookings are saved with the full sport name and a clean opponent from the start."
+    ],
+    "platforms": [
+      "Web",
+      "iOS",
+      "macOS"
+    ],
+    "pr": 544
+  },
+  {
     "date": "2026-10-20",
     "title": "A calmer sidebar and top bar",
     "type": "improvement",

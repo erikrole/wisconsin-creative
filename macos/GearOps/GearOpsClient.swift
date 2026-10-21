@@ -114,6 +114,14 @@ actor GearOpsClient: GearOpsServing {
         guard response.success else { throw GearOpsClientError.invalidResponse }
     }
 
+    /// Carries the real app and macOS versions so the owner app activity
+    /// report can show which menu bar build each person runs.
+    private static let userAgent: String = {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+        let os = ProcessInfo.processInfo.operatingSystemVersion
+        return "GearOps/\(version) macOS/\(os.majorVersion).\(os.minorVersion).\(os.patchVersion)"
+    }()
+
     private func makeRequest(
         path: String,
         method: String = "GET",
@@ -126,7 +134,7 @@ actor GearOpsClient: GearOpsServing {
         request.cachePolicy = .reloadIgnoringLocalCacheData
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("no-store", forHTTPHeaderField: "Cache-Control")
-        request.setValue("GearOps/1.0 macOS", forHTTPHeaderField: "User-Agent")
+        request.setValue(Self.userAgent, forHTTPHeaderField: "User-Agent")
         request.setValue(baseURL.absoluteString, forHTTPHeaderField: "Origin")
         return request
     }
