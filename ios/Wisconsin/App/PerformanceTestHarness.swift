@@ -1,6 +1,7 @@
 #if DEBUG
 import ActivityKit
 import SwiftUI
+import WidgetKit
 import UserNotifications
 
 @MainActor
@@ -84,7 +85,7 @@ struct PerformanceTestRootView: View {
             ItemDetailHarnessView()
         case .createBookingScanner, .createBookingEvents:
             CreateBookingScannerHarnessView()
-        case .search, .searchPartial:
+        case .search, .searchPartial, .searchIdle:
             GlobalSearchHarnessView()
         case .itemsList:
             ItemsListHarnessView()
@@ -96,6 +97,10 @@ struct PerformanceTestRootView: View {
             NotificationSettingsHarnessView()
         case .liveActivity:
             LiveActivityHarnessView()
+        case .widgetSeed:
+            WidgetSeedHarnessView()
+        case .notificationsInbox:
+            NotificationsInboxHarnessView()
         case .announcement, .announcementImages, .announcementPlain,
              .announcementStress, .announcementNone, .announcementError,
              .announcementLong, .announcementQueue, .announcementBrokenImage, .announcementCtaRoute:
@@ -226,7 +231,95 @@ struct LiveActivityHarnessView: View {
     }
 }
 
+/// The real inbox sheet against `NotificationFixtureAPI.inbox`.
+struct NotificationsInboxHarnessView: View {
+    @Environment(SessionStore.self) private var session
+
+    var body: some View {
+        NotificationsSheet()
+            .onAppear { session.currentUser = ScheduleFixtures.staffUser }
+    }
+}
+
+/// Seeds the widget snapshot with a believable week so the placed widgets can
+/// be captured populated. Never shipped: the whole file is DEBUG-only.
+struct WidgetSeedHarnessView: View {
+    var body: some View {
+        ZStack {
+            Color(.systemGroupedBackground).ignoresSafeArea()
+            Text("Widget data seeded")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+        .task { Self.seed() }
+    }
+
+    @MainActor
+    private static func seed() {
+        let now = Date()
+        func shift(_ id: String, _ title: String, _ area: String, _ startMin: Int, _ lenMin: Int, _ place: String, _ gear: String?) -> GearWidgetSnapshot.Shift {
+            GearWidgetSnapshot.Shift(
+                id: id,
+                title: title,
+                area: area,
+                startsAt: now.addingTimeInterval(TimeInterval(startMin * 60)),
+                endsAt: now.addingTimeInterval(TimeInterval((startMin + lenMin) * 60)),
+                locationName: place,
+                gearLabel: gear
+            )
+        }
+        let shifts = [
+            shift("s1", "Volleyball vs. Nebraska", "Video", 95, 240, "UW Field House", "Gear ready"),
+            shift("s2", "Men's Hockey vs. Michigan", "Photo", 26 * 60, 200, "Kohl Center", "Gear not picked up"),
+            shift("s3", "Football vs. Iowa", "Video", 3 * 24 * 60, 300, "Camp Randall", nil),
+            shift("s4", "Women's Basketball vs. Iowa", "Graphics", 4 * 24 * 60, 180, "Kohl Center", nil),
+        ]
+        let due = [
+            GearWidgetSnapshot.DueBooking(id: "b1", title: "Sideline kit", endsAt: now.addingTimeInterval(-40 * 60), itemCount: 4, isOverdue: true),
+            GearWidgetSnapshot.DueBooking(id: "b2", title: "Sony FX6 package", endsAt: now.addingTimeInterval(3 * 3600), itemCount: 6, isOverdue: false),
+            GearWidgetSnapshot.DueBooking(id: "b3", title: "Audio recorder set", endsAt: now.addingTimeInterval(26 * 3600), itemCount: 3, isOverdue: false),
+        ]
+        GearWidgetStore.write(GearWidgetSnapshot(
+            generatedAt: now,
+            nextShift: shifts.first,
+            dueBookings: due,
+            overdueCount: 1,
+            dueTodayCount: 1,
+            upcomingShifts: shifts
+        ))
+        WidgetCenter.shared.reloadAllTimelines()
+        NSLog("WIDGET-SEED written")
+    }
+}
+
 enum NotificationFixtureAPI {
+    /// Rows spread over several days, mixed read and unread, so every section
+    /// style (Today, Yesterday, weekday, dated) and both swipe states appear.
+    static var inbox: Data {
+        func iso(_ daysAgo: Int, _ hour: Int, _ minute: Int = 0) -> String {
+            let calendar = Calendar.current
+            let day = calendar.date(byAdding: .day, value: -daysAgo, to: .now) ?? .now
+            let date = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: day) ?? day
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime]
+            return formatter.string(from: min(date, Date.now.addingTimeInterval(-600)))
+        }
+        func row(_ id: String, _ type: String, _ title: String, _ body: String, _ daysAgo: Int, _ hour: Int, unread: Bool) -> String {
+            let when = iso(daysAgo, hour)
+            let readAt = unread ? "null" : "\"" + when + "\""
+            return #"{"id":"\#(id)","type":"\#(type)","title":"\#(title)","body":"\#(body)","readAt":\#(readAt),"createdAt":"\#(when)","payload":null}"#
+        }
+        let rows = [
+            row("n1", "checkout_overdue", "Sideline kit is overdue", "Due back yesterday at 6:00 PM.", 0, 9, unread: true),
+            row("n2", "shift_gear_up", "Gear is ready for Volleyball", "Your shift starts tomorrow at 5:30 PM.", 0, 8, unread: true),
+            row("n3", "trade_approved", "Your shift trade was approved", "Jordan Lee will cover Saturday's football shift.", 1, 15, unread: false),
+            row("n4", "shift_assigned", "New shift: Women's Hockey", "Video · Kohl Center · Friday 7:00 PM.", 3, 11, unread: true),
+            row("n5", "reservation_pickup_ready", "Reservation ready for pickup", "Studio camera package is at the desk.", 3, 9, unread: false),
+            row("n6", "badge_awarded", "You earned a badge", "Early Bird: five on-time pickups.", 9, 14, unread: false),
+        ]
+        return Data(#"{"data":[\#(rows.joined(separator: ","))],"total":\#(rows.count),"limit":20,"offset":0,"unreadCount":3}"#.utf8)
+    }
+
     static var pausedPreferences: NotificationPreferences {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -570,6 +663,10 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
         if AppRuntimeMode.performanceScenario == .latestBrowse,
            let body = LatestBrowseFixtureAPI.body(path: path) { return body }
         switch path {
+        case "/api/notifications":
+            guard AppRuntimeMode.performanceScenario == .notificationsInbox else { return nil }
+            if request.httpMethod == "PATCH" { return Data(#"{"success":true,"ids":[]}"#.utf8) }
+            return NotificationFixtureAPI.inbox
         case "/api/resources": return FixtureAPI.guides
         case let path where path.hasPrefix("/api/resources/"):
             let slug = String(path.dropFirst("/api/resources/".count))
