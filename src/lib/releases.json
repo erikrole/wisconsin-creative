@@ -1,6 +1,22 @@
 [
   {
     "date": "2026-10-21",
+    "title": "Remind everyone waiting",
+    "type": "improvement",
+    "summary": "Onboarding Status can now email the login link to everyone who has not signed in yet.",
+    "details": [
+      "A Remind everyone waiting button sits next to the filters and asks once before sending.",
+      "It shows how many people were reminded and how many were skipped.",
+      "Each invitation can be emailed 3 times an hour, so a second tap soon after skips people already reminded.",
+      "If email isn't set up on the site yet, it says so and sends nothing."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 550
+  },
+  {
+    "date": "2026-10-21",
     "title": "A Right now row on profiles",
     "type": "improvement",
     "summary": "Profiles now open with what is happening with that person right now.",
