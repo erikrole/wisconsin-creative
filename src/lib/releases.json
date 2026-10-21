@@ -1,6 +1,21 @@
 [
   {
     "date": "2026-10-21",
+    "title": "Search kits, events and guides",
+    "type": "improvement",
+    "summary": "Search in the iPhone app now also finds kits, upcoming events and guides, each with its own filter.",
+    "details": [
+      "New Kits, Events and Guides filters sit beside Gear and People.",
+      "Events search matches the title, opponent or location of upcoming events.",
+      "Results open the kit, event or guide directly."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 576
+  },
+  {
+    "date": "2026-10-21",
     "title": "Tidier App activity people list",
     "type": "improvement",
     "summary": "Settings > App activity now shows each person's devices in a few clear chips and knows about iPhone 1.3.",

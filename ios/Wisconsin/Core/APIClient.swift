@@ -2039,6 +2039,16 @@ final class APIClient {
         ]
     }
 
+    /// Upcoming events matching a title, opponent, or location, for global search.
+    func searchCalendarEvents(query: String, limit: Int, offset: Int) async throws -> ScheduleEventsResponse {
+        let items: [URLQueryItem] = [
+            .init(name: "q", value: query),
+            .init(name: "limit", value: "\(limit)"),
+            .init(name: "offset", value: "\(offset)"),
+        ]
+        return try await perform(request(path: "/api/calendar-events", queryItems: items))
+    }
+
     func calendarEvents(
         includePast: Bool = false,
         limit: Int = 60

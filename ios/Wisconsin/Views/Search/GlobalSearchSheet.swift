@@ -5,13 +5,16 @@ enum SearchDestination: Hashable {
     case asset(String)
     case booking(String)
     case user(String)
+    case kit(String)
+    case event(String)
+    case guide(String)
 }
 
 /// Narrows the result list to one of the sources `SearchService` already
 /// fans out to. Filtering is display-only: the four requests still run, so
 /// switching chips never refetches and the counts on the chips stay honest.
 enum SearchScope: String, CaseIterable, Identifiable {
-    case all, gear, reservations, checkouts, people
+    case all, gear, kits, reservations, checkouts, people, events, guides
 
     var id: String { rawValue }
 
@@ -19,6 +22,9 @@ enum SearchScope: String, CaseIterable, Identifiable {
         switch self {
         case .all: "All"
         case .gear: "Gear"
+        case .kits: "Kits"
+        case .events: "Events"
+        case .guides: "Guides"
         case .reservations: "Reservations"
         case .checkouts: "Check-outs"
         case .people: "People"
@@ -29,6 +35,9 @@ enum SearchScope: String, CaseIterable, Identifiable {
         switch self {
         case .all: nil
         case .gear: .items
+        case .kits: .kits
+        case .events: .events
+        case .guides: .guides
         case .reservations: .reservations
         case .checkouts: .checkouts
         case .people: .people
@@ -125,7 +134,7 @@ struct GlobalSearchSheet: View {
                 text: $query,
                 isPresented: $isSearchPresented,
                 placement: .navigationBarDrawer(displayMode: .always),
-                prompt: Text(isCollaborator ? "Search reservable gear" : "Search items, bookings, people")
+                prompt: Text(isCollaborator ? "Search reservable gear" : "Search gear, kits, events, people")
             )
             .autocorrectionDisabled()
             .textInputAutocapitalization(.never)
@@ -154,6 +163,20 @@ struct GlobalSearchSheet: View {
                     BookingDetailView(bookingId: id)
                 case .user(let id):
                     UserDetailView(userId: id)
+                case .kit(let id):
+                    KitDetailView(kitId: id)
+                case .event(let id):
+                    if let event = results.events.first(where: { $0.id == id }) {
+                        EventDetailView(event: event, myShifts: [])
+                    } else {
+                        ContentUnavailableView("Event unavailable", systemImage: "calendar.badge.exclamationmark")
+                    }
+                case .guide(let id):
+                    if let guide = results.guides.first(where: { $0.id == id }) {
+                        GuideReaderView(guide: guide)
+                    } else {
+                        ContentUnavailableView("Guide unavailable", systemImage: "book")
+                    }
                 }
             }
             .navigationDestination(for: BulkSkuRoute.self) { route in
@@ -187,6 +210,13 @@ struct GlobalSearchSheet: View {
         .onAppear {
             guard let seeded = AppRuntimeMode.CaptureSeed.searchQuery, query.isEmpty else { return }
             query = seeded
+#if DEBUG
+            // Lets a capture land on one scope without a tap.
+            if let raw = ProcessInfo.processInfo.environment["GT_SEARCH_SCOPE"],
+               let seededScope = SearchScope(rawValue: raw) {
+                scope = seededScope
+            }
+#endif
             // Let the debounce and the four searches finish, then drop focus so
             // the keyboard stops covering the destinations this capture is of.
             Task { @MainActor in
@@ -253,7 +283,7 @@ struct GlobalSearchSheet: View {
             }
             if recentSearches.isEmpty {
                 Section {
-                    Text(isCollaborator ? "Search reservable gear." : "Search gear, bookings, and people.")
+                    Text(isCollaborator ? "Search reservable gear." : "Search gear, kits, events, and people.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .listRowBackground(Color.clear)
@@ -535,6 +565,57 @@ struct GlobalSearchSheet: View {
                     }
                     if results.hasMore(for: .people) {
                         moreResultsRow(for: .people)
+                    }
+                }
+            }
+
+            if shows(.kits), !results.kits.isEmpty {
+                Section(header: sectionHeader("Kits", source: .kits)) {
+                    ForEach(results.kits) { kit in
+                        Button {
+                            rememberActiveQuery()
+                            navigationPath.append(SearchDestination.kit(kit.id))
+                        } label: {
+                            KitResultRow(kit: kit)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    if results.hasMore(for: .kits) {
+                        moreResultsRow(for: .kits)
+                    }
+                }
+            }
+
+            if shows(.events), !results.events.isEmpty {
+                Section(header: sectionHeader("Events", source: .events)) {
+                    ForEach(results.events) { event in
+                        Button {
+                            rememberActiveQuery()
+                            navigationPath.append(SearchDestination.event(event.id))
+                        } label: {
+                            EventResultRow(event: event)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    if results.hasMore(for: .events) {
+                        moreResultsRow(for: .events)
+                    }
+                }
+            }
+
+            if shows(.guides), !results.guides.isEmpty {
+                Section(header: sectionHeader("Guides", source: .guides)) {
+                    ForEach(results.guides) { guide in
+                        Button {
+                            rememberActiveQuery()
+                            navigationPath.append(SearchDestination.guide(guide.id))
+                        } label: {
+                            GuideResultRow(guide: guide)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    if results.hasMore(for: .guides) {
+                        moreResultsRow(for: .guides)
                     }
                 }
             }
