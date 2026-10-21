@@ -47,7 +47,7 @@
 | `src/lib/services/event-worker.ts` | 125 |
 | `src/lib/services/firmware-watch.ts` | 329 |
 | `src/lib/services/game-record.ts` | 169 |
-| `src/lib/services/gear-picks.ts` | 1070 |
+| `src/lib/services/gear-picks.ts` | 1153 |
 | `src/lib/services/hidden-users-cleanup.ts` | 122 |
 | `src/lib/services/invite-email.ts` | 78 |
 | `src/lib/services/item-cleanup-wizard.ts` | 762 |
@@ -150,7 +150,7 @@
 | `src/lib/booking-display-title.ts` | 14 |
 | `src/lib/booking-status-display.ts` | 170 |
 | `src/lib/booking-statuses.ts` | 9 |
-| `src/lib/breadcrumbs.ts` | 181 |
+| `src/lib/breadcrumbs.ts` | 228 |
 | `src/lib/brother-label-csv.ts` | 134 |
 | `src/lib/bulk-batteries.ts` | 49 |
 | `src/lib/bulk-schedule-assignment-types.ts` | 213 |
@@ -162,6 +162,7 @@
 | `src/lib/category-options.ts` | 34 |
 | `src/lib/checkout-escalation-policy.ts` | 117 |
 | `src/lib/checkout-notification-workflow.ts` | 24 |
+| `src/lib/chrome-font.ts` | 13 |
 | `src/lib/claim-review-deadlines.ts` | 52 |
 | `src/lib/claim-review-workflow.ts` | 48 |
 | `src/lib/client-enums.ts` | 85 |
@@ -216,6 +217,7 @@
 | `src/lib/notification-catalog.ts` | 322 |
 | `src/lib/notification-count-sync.ts` | 9 |
 | `src/lib/notification-destination.ts` | 85 |
+| `src/lib/notification-meta.ts` | 120 |
 | `src/lib/observability.ts` | 19 |
 | `src/lib/operational-health.ts` | 2 |
 | `src/lib/ops-checks.ts` | 212 |
@@ -574,6 +576,7 @@
 - `/api/gear-picks/admin/export.xlsx`
 - `/api/gear-picks/admin/history`
 - `/api/gear-picks/admin`
+- `/api/gear-picks/me/kit`
 - `/api/gear-picks/me`
 - `/api/gear-picks/users/[userId]`
 
@@ -845,6 +848,10 @@
 - `/api/shifts/ics/[token]`
 - `/api/shifts/my-hours`
 - `/api/shifts`
+
+### `/api/sidebar`
+
+- `/api/sidebar/counts`
 
 ### `/api/signatures`
 
