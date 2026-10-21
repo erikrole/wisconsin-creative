@@ -9,7 +9,7 @@ import { useAuthenticatedQueryUserId } from "@/components/QueryProvider";
 import { useBookingChangeSync } from "@/hooks/use-booking-change-sync";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
-import { handleAuthRedirect, parseJsonSafely } from "@/lib/errors";
+import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { sendShiftTradeAction } from "@/lib/shift-trade-actions";
 import { formatOperationalDateTime, formatRelativeTime } from "@/lib/format";
 import type { CreateBookingContext } from "../dashboard-types";
@@ -28,7 +28,9 @@ import {
   formatClock,
   gearRows,
   homeRole,
+  homeTabTitle,
   isTeamRole,
+  overdueForViewer,
   shortDue,
   tradeRows,
   type AttentionTarget,
@@ -91,6 +93,52 @@ function reservationHref(ctx: CreateBookingContext) {
   if (ctx.sportCode) params.set("sportCode", ctx.sportCode);
   const qs = params.toString();
   return qs ? `/reservations/new?${qs}` : "/reservations/new";
+}
+
+/** Re-pull Home when the date rolls over, so a tab left open overnight shows today. */
+function useDayRollover(now: Date, reload: () => void) {
+  const day = now.toDateString();
+  const [seen, setSeen] = useState(day);
+  useEffect(() => {
+    if (day === seen) return;
+    setSeen(day);
+    reload();
+  }, [day, seen, reload]);
+}
+
+/** "(3) Wisconsin Creative" while gear the viewer answers for is overdue. */
+function useOverdueTabBadge(count: number | null) {
+  useEffect(() => {
+    if (count === null) return;
+    const base = document.title.replace(/^\(\d+\) /, "");
+    document.title = homeTabTitle(base, count);
+    return () => { document.title = base; };
+  }, [count]);
+}
+
+/** Overdue reminders: one per booking per hour server-side, so a sent row stays sent. */
+function useOverdueReminders() {
+  const [remindingId, setRemindingId] = useState<string | null>(null);
+  const [remindedIds, setRemindedIds] = useState<ReadonlySet<string>>(() => new Set());
+  const onRemind = useCallback(async (bookingId: string) => {
+    if (remindingId) return;
+    setRemindingId(bookingId);
+    try {
+      const res = await fetch(`/api/bookings/${bookingId}/nudge`, { method: "POST" });
+      if (handleAuthRedirect(res, "/")) return;
+      if (!res.ok) {
+        toast.error(await parseErrorMessage(res, "Couldn\u2019t send the reminder"));
+        return;
+      }
+      setRemindedIds((prev) => new Set(prev).add(bookingId));
+      toast.success("Reminder sent");
+    } catch {
+      toast.error("Network error. Couldn\u2019t send the reminder.");
+    } finally {
+      setRemindingId(null);
+    }
+  }, [remindingId]);
+  return { remindingId, remindedIds, onRemind };
 }
 
 /** Trade Board rows for one status. Each list fails on its own, never the page. */
@@ -161,6 +209,9 @@ function InternalHome({ name, readOnly }: { name: string | null; readOnly: boole
   const claimedTrades = useTrades("CLAIMED", role === "ADMIN");
   const crew = useTodayCrew(role !== null);
   const confirm = useConfirm();
+  const reminders = useOverdueReminders();
+  useDayRollover(now, loadData);
+  useOverdueTabBadge(role && data ? overdueForViewer(role, data) : null);
   const [busyTradeId, setBusyTradeId] = useState<string | null>(null);
 
   // Claims and approvals go through the Trade Board's own endpoints and copy.
@@ -252,6 +303,9 @@ function InternalHome({ name, readOnly }: { name: string | null; readOnly: boole
         onSelectBooking={setSelectedBookingId}
         onQuick={readOnly ? undefined : (quick) => void onQuick(quick)}
         busyTradeId={busyTradeId}
+        onRemind={readOnly ? undefined : (id) => void reminders.onRemind(id)}
+        remindingId={reminders.remindingId}
+        remindedIds={reminders.remindedIds}
       />
       {selectedBookingId && (
         <Suspense>

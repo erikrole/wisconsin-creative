@@ -81,6 +81,10 @@ export type HomeViewProps = {
   /** One-tap trade decisions; rows hide the button when this is absent. */
   onQuick?: (quick: QuickAction) => void;
   busyTradeId?: string | null;
+  /** Overdue reminders; rows hide the button when this is absent. */
+  onRemind?: (bookingId: string) => void;
+  remindingId?: string | null;
+  remindedIds?: ReadonlySet<string>;
 };
 
 const TONE_TILE: Record<HomeTone, string> = {
@@ -137,7 +141,15 @@ export function HomeView(props: HomeViewProps) {
           <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)]">
             <div className="flex min-w-0 flex-col gap-5">
               {props.attention && (
-                <AttentionSection slot={props.attention} onTarget={props.onTarget} onQuick={props.onQuick} busyTradeId={props.busyTradeId} />
+                <AttentionSection
+                  slot={props.attention}
+                  onTarget={props.onTarget}
+                  onQuick={props.onQuick}
+                  busyTradeId={props.busyTradeId}
+                  onRemind={props.onRemind}
+                  remindingId={props.remindingId}
+                  remindedIds={props.remindedIds}
+                />
               )}
               {props.upNext && (
                 <UpNextSection slot={props.upNext} now={now} empty={props.upNextEmpty} onTarget={props.onTarget} />
@@ -371,11 +383,35 @@ function QuickButton({ quick, onQuick, busy }: { quick?: QuickAction; onQuick?: 
   );
 }
 
-function AttentionSection({ slot, onTarget, onQuick, busyTradeId }: {
+function RemindButton({ remind, onRemind, busy, sent }: {
+  remind?: AttentionItem["remind"];
+  onRemind?: (bookingId: string) => void;
+  busy: boolean;
+  sent: boolean;
+}) {
+  if (!remind || !onRemind) return null;
+  return (
+    <Button
+      variant="outline"
+      className="mr-3 h-10 shrink-0"
+      disabled={busy || sent}
+      onClick={() => onRemind(remind.bookingId)}
+      aria-label={sent ? `Reminder sent to ${remind.person}` : `Remind ${remind.person} to return it`}
+      title={sent ? "Reminder sent" : `Send ${remind.person} a return reminder`}
+    >
+      {sent ? <><CheckIcon data-icon="inline-start" className="text-[var(--green-text)]" />Reminded</> : busy ? "Sending\u2026" : "Remind"}
+    </Button>
+  );
+}
+
+function AttentionSection({ slot, onTarget, onQuick, busyTradeId, onRemind, remindingId, remindedIds }: {
   slot: Slot<AttentionItem[]>;
   onTarget: (t: AttentionTarget) => void;
   onQuick?: (q: QuickAction) => void;
   busyTradeId?: string | null;
+  onRemind?: (bookingId: string) => void;
+  remindingId?: string | null;
+  remindedIds?: ReadonlySet<string>;
 }) {
   const [expanded, setExpanded] = useState(false);
   const rows = slot.state === "ready" ? slot.rows : [];
@@ -402,6 +438,12 @@ function AttentionSection({ slot, onTarget, onQuick, busyTradeId }: {
               <li key={item.id} className="flex items-center">
                 <AttentionRow item={item} onTarget={onTarget} />
                 <QuickButton quick={item.quick} onQuick={onQuick} busy={busyTradeId === item.quick?.tradeId} />
+                <RemindButton
+                  remind={item.remind}
+                  onRemind={onRemind}
+                  busy={remindingId === item.remind?.bookingId}
+                  sent={Boolean(item.remind && remindedIds?.has(item.remind.bookingId))}
+                />
               </li>
             ))}
           </ul>

@@ -61,6 +61,8 @@ export type AttentionItem = {
   action: string;
   target: AttentionTarget;
   quick?: QuickAction;
+  /** Staff can send the borrower an overdue reminder from the row. */
+  remind?: { bookingId: string; person: string };
 };
 
 export type SummaryMetric = {
@@ -214,6 +216,7 @@ export function buildAttention(input: {
         detail: `${o.requesterName} · ${formatDueLabel(o.endsAt, now)}`,
         action: "Open",
         target: { kind: "booking", bookingId: o.bookingId },
+        remind: { bookingId: o.bookingId, person: o.requesterName },
       });
     }
     const hidden = data.overdueCount - data.overdueItems.length;
@@ -512,6 +515,18 @@ export function startsIn(iso: string, now: Date) {
   const hours = Math.round(minutes / 60);
   if (hours < 24) return `in ${hours}h`;
   return `in ${Math.round(hours / 24)}d`;
+}
+
+/**
+ * Overdue checkouts the viewer is on the hook for: the team's for staff and
+ * admins, their own for everyone else. Drives the browser tab badge.
+ */
+export function overdueForViewer(role: HomeRole, data: DashboardData): number {
+  return isTeamRole(role) ? data.overdueCount : data.myCheckouts.items.filter((c) => c.isOverdue).length;
+}
+
+export function homeTabTitle(base: string, overdue: number): string {
+  return overdue > 0 ? `(${overdue}) ${base}` : base;
 }
 
 /**

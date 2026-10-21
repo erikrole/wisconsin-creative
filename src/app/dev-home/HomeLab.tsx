@@ -105,6 +105,7 @@ function Lab({ fontClass }: { fontClass: string }) {
   const state = (STATES.includes(params.get("state") as LabState) ? params.get("state") : "ready") as LabState;
   const at = params.get("at");
   const [now] = useState(() => (at ? new Date(at) : new Date()));
+  const [reminded, setReminded] = useState<ReadonlySet<string>>(() => new Set());
   const user = { id: "dev", name: NAMES[role], email: "dev@example.com", role } as CurrentUser;
 
   useEffect(() => {
@@ -145,7 +146,7 @@ function Lab({ fontClass }: { fontClass: string }) {
               {state === "loading" && params.get("skeleton") === "route" ? (
                 <HomeSkeleton />
               ) : (
-                <HomeView {...buildProps(role, state, now)} onTarget={() => {}} onSelectBooking={() => {}} onQuick={() => {}} />
+                <HomeView {...buildProps(role, state, now)} onTarget={() => {}} onSelectBooking={() => {}} onQuick={() => {}} onRemind={(id) => setReminded((prev) => new Set(prev).add(id))} remindedIds={reminded} />
               )}
             </main>
           </div>

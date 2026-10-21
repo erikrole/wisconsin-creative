@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
-import { buildAttention, buildSummary, buildUpNext, greeting } from "@/app/(app)/_home/home-model";
+import { buildAttention, buildSummary, buildUpNext, greeting, homeTabTitle, overdueForViewer } from "@/app/(app)/_home/home-model";
 import { emptyDashboard, sampleDashboard, sampleStats, sampleTrades } from "@/app/(app)/_home/home-fixtures";
 
 const NOW = new Date("2026-10-21T13:00:00");
@@ -160,5 +160,30 @@ describe("Home trade decisions", () => {
     expect(home).toContain("await Promise.all([openTrades.refetch(), claimedTrades.refetch()]);");
     // Read-only admin previews never get the buttons.
     expect(home).toContain("onQuick={readOnly ? undefined");
+  });
+});
+
+describe("Home quality of life", () => {
+  it("offers staff a Remind button on team overdue rows only", () => {
+    const staff = buildAttention({ role: "STAFF", data: sampleDashboard("STAFF", NOW), claimedTrades: [], now: NOW });
+    const overdue = staff.filter((i) => i.id.startsWith("overdue-") && i.id !== "overdue-more");
+    expect(overdue.length).toBeGreaterThan(0);
+    expect(overdue.every((i) => i.remind?.bookingId)).toBe(true);
+    const student = buildAttention({ role: "STUDENT", data: sampleDashboard("STUDENT", NOW), claimedTrades: [], now: NOW });
+    expect(student.some((i) => i.remind)).toBe(false);
+  });
+
+  it("badges the tab with overdue gear the viewer answers for", () => {
+    expect(overdueForViewer("STAFF", sampleDashboard("STAFF", NOW))).toBe(sampleDashboard("STAFF", NOW).overdueCount);
+    expect(overdueForViewer("STUDENT", emptyDashboard("STUDENT"))).toBe(0);
+    expect(homeTabTitle("Wisconsin Creative", 3)).toBe("(3) Wisconsin Creative");
+    expect(homeTabTitle("Wisconsin Creative", 0)).toBe("Wisconsin Creative");
+  });
+
+  it("sends reminders through the nudge route, refreshes at midnight, and hides actions in read-only previews", () => {
+    const home = source("src/app/(app)/_home/HomePage.tsx");
+    expect(home).toContain("/api/bookings/${bookingId}/nudge");
+    expect(home).toContain("useDayRollover(now, loadData)");
+    expect(home).toContain("onRemind={readOnly ? undefined");
   });
 });
