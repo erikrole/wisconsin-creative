@@ -9,7 +9,7 @@ Wisconsin Creative is a Next.js App Router application with a companion native i
 
 | Surface | Count |
 |---|---:|
-| App pages | 105 |
+| App pages | 106 |
 | App layouts | 14 |
 | API route handlers | 420 |
 | Service files | 110 |

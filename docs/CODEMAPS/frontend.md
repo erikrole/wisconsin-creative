@@ -101,6 +101,7 @@
 | `/about/tech-stack` | `src/app/(public)/about/tech-stack/page.tsx` |
 | `/releases` | `src/app/(public)/releases/page.tsx` |
 | `/change-password` | `src/app/change-password/page.tsx` |
+| `/dev-assign-grid` | `src/app/dev-assign-grid/page.tsx` |
 | `/dev-assign-picker` | `src/app/dev-assign-picker/page.tsx` |
 | `/dev-auto-assign` | `src/app/dev-auto-assign/page.tsx` |
 | `/dev-sidebar` | `src/app/dev-sidebar/page.tsx` |
