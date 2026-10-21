@@ -101,6 +101,7 @@
 | `/about/tech-stack` | `src/app/(public)/about/tech-stack/page.tsx` |
 | `/releases` | `src/app/(public)/releases/page.tsx` |
 | `/change-password` | `src/app/change-password/page.tsx` |
+| `/dev-home` | `src/app/dev-home/page.tsx` |
 | `/dev-sidebar` | `src/app/dev-sidebar/page.tsx` |
 | `/forgot-password` | `src/app/forgot-password/page.tsx` |
 | `/login` | `src/app/login/page.tsx` |
@@ -173,7 +174,6 @@
 | `src/hooks/use-copy-feedback.ts` | 62 |
 | `src/hooks/use-current-user.ts` | 53 |
 | `src/hooks/use-dashboard-data.ts` | 244 |
-| `src/hooks/use-dashboard-filters.ts` | 146 |
 | `src/hooks/use-fetch.ts` | 113 |
 | `src/hooks/use-form-options.ts` | 32 |
 | `src/hooks/use-form-submit.ts` | 188 |
@@ -184,7 +184,7 @@
 | `src/hooks/use-mobile.ts` | 20 |
 | `src/hooks/use-operational-polling-activity.ts` | 155 |
 | `src/hooks/use-profile-completion.ts` | 65 |
-| `src/hooks/use-schedule-data.ts` | 1269 |
+| `src/hooks/use-schedule-data.ts` | 1270 |
 | `src/hooks/use-sidebar-counts.ts` | 23 |
 | `src/hooks/use-url-state.ts` | 129 |
 | `src/hooks/useBookingActions.ts` | 297 |

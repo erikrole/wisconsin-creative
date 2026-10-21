@@ -55,9 +55,9 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 
 - Doc: `docs/AREA_DASHBOARD.md`
 - Pages: _none matched_
-- APIs: `/api/dashboard`, `/api/dashboard/stats`, `/api/kiosk/dashboard`
+- APIs: `/api/dashboard/activity`, `/api/dashboard`, `/api/dashboard/stats`, `/api/kiosk/dashboard`
 - Services: `src/lib/services/dashboard-counts.ts`, `src/lib/services/kiosk-dashboard-home.ts`
-- Tests: `tests/dashboard-accessibility.test.ts`, `tests/dashboard-event-title.test.ts`, `tests/dashboard-fast-count-truth.test.ts`, `tests/dashboard-motion-source.test.ts`, `tests/dashboard-overflow-filter-aware.test.ts`, `tests/dashboard-pending-pickup-link.test.ts`, `tests/dashboard-stats-transient-lanes.test.ts`, `tests/dashboard-ui-polish.test.ts`
+- Tests: `tests/dashboard-activity-route.test.ts`, `tests/dashboard-event-title.test.ts`, `tests/dashboard-fast-count-truth.test.ts`, `tests/dashboard-pending-pickup-link.test.ts`, `tests/dashboard-stats-transient-lanes.test.ts`, `tests/kiosk-dashboard-home.test.ts`, `tests/kiosk-dashboard-route.test.ts`
 
 ## events
 
@@ -177,7 +177,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/search`
 - APIs: `/api/assets/picker-search`, `/api/budget/item-search`, `/api/image-search`
 - Services: _none matched_
-- Tests: `tests/api-image-search.test.ts`, `tests/app-shell-search-source.test.ts`, `tests/equipment-picker-search-route.test.ts`, `tests/guide-search-result.test.ts`, `tests/image-search.test.ts`, `tests/ios-search-hig-remediation.test.ts`, `tests/ios-search-partial-results.test.ts`, `tests/resource-search.test.ts`
+- Tests: `tests/api-image-search.test.ts`, `tests/app-shell-search-source.test.ts`, `tests/equipment-picker-search-route.test.ts`, `tests/guide-search-result.test.ts`, `tests/image-search.test.ts`, `tests/ios-search-coverage.test.ts`, `tests/ios-search-hig-remediation.test.ts`, `tests/ios-search-partial-results.test.ts`
 
 ## settings
 

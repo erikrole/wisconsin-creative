@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Dashboard
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-10-20
+- Last Updated: 2026-10-21
 - Status: Active — V3 shipped, reliability + UX polish complete
 - Version: V3
 
@@ -28,15 +28,15 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 13. Shared travel-case checkouts remain visible in team operational lanes, but never appear in personal My Gear or personal pending-pickup projections even when a retained requester ID matches the viewer.
 
 ## Information Architecture (Top to Bottom)
-1. Overdue Banner (global)
-2. Action Lanes
-   - Check-outs needing action
-   - Pending pickup handoffs
-   - Stale reservations needing cleanup
-   - Reservations needing action
-3. My Gear in Custody cards
-4. Drafts section (recover in-progress reservation/checkout drafts)
-5. Sport filter chips shipped (V4). Location filter deferred.
+The current Home rework supersedes the older lane layout described in the V1 section specs below.
+
+1. Greeting, today's summary, sync freshness, refresh and permitted reservation entry.
+2. The original grouped role-scoped count strip.
+3. The original wider primary column keeps Needs attention and Up next together. Recent activity sits below Up next for Staff/Admin, filling the space that previously remained empty. Personal gear, today's crew, Coming up and Team gear remain in the right column. Cards use natural content heights.
+4. Students keep their existing personal work and trade cards; Team gear uses the space below Up next because they do not receive Recent activity. Collaborators receive only their permitted personal modules. A single permitted column takes the full width. At narrow widths, personal gear and crew remain ahead of secondary activity/team cards in the reading order. No new collapsible group or card visibility control is introduced.
+5. Quiet attention, gear, trade, crew and team cards use compact inline empty states while retaining their existing actions. Initial loading and section failures retain their individual skeletons and Retry controls.
+
+The layout polish is local. Authenticated branch-preview and production acceptance remain pending; sample-data captures do not establish server behavior.
 
 ## Section Specs
 
@@ -186,6 +186,8 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 7. Add regression tests for permissions, window filtering (7 days), and overdue consistency.
 
 ## Change Log
+
+- 2026-10-21: **Original Home structure with balanced columns (local).** Builds on the latest Home rework at `f1501f9c6`, keeping its grouped count strip, wider primary column, theme and action handlers. Recent activity moves below Up next so Coming up and Team gear do not queue behind it in the right rail. Students place Team gear below Up next. Quiet cards use compact inline states. In the same populated 1440×1100 Admin fixture, Coming up and Team gear appear 316px earlier and the difference between column endpoints drops from 545px to 88px; document height falls from 1618px to 1389px. The empty fixture fits the 1100px viewport instead of extending to 1555px. Checks cover every role and ready/empty/loading/partial/error state, desktop/tablet/phone web, light/dark appearance, keyboard expansion and fixture reminder feedback. Native clients and API payloads are unchanged. Review and verification boundaries: `tasks/archive/proofs/dashboard-polish-2026-10-21/review.html`.
 
 - 2026-10-20: **Shared counts and bounded browser retention (local, rollout pending).** Home and navigation share one user-scoped dashboard-stats query and join concurrent reads. Navigation still requests fresh custody counts; booking invalidations retain trusted values during failures, and expired sessions preserve the current return path. QueryProvider keeps the same provider tree through persistence restoration, preserving drafts and component state. Inactive transient queries expire after five minutes; persisted dashboard and booking-detail roots keep their existing 24-hour retention. Authenticated session reads select only identity/authorization fields. Chromium fixtures verify one shared read, one provider mount, retained draft text, paused hidden-tab polling, and resumed freshness. Production authentication and deployment remain separate gates in `tasks/performance-web-ios-neon-2026-10-20.md`.
 

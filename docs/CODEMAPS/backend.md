@@ -263,7 +263,7 @@
 | `src/lib/schedule-defaults.ts` | 33 |
 | `src/lib/schedule-event-identity.ts` | 369 |
 | `src/lib/schedule-event-keyset.ts` | 66 |
-| `src/lib/schedule-event-where.ts` | 46 |
+| `src/lib/schedule-event-where.ts` | 63 |
 | `src/lib/schedule-health-types.ts` | 83 |
 | `src/lib/schedule-publication-types.ts` | 62 |
 | `src/lib/schedule-queues.ts` | 185 |
@@ -289,6 +289,7 @@
 | `src/lib/shift-constants.ts` | 13 |
 | `src/lib/shift-display.ts` | 71 |
 | `src/lib/shift-reminder-workflow.ts` | 26 |
+| `src/lib/shift-trade-actions.ts` | 60 |
 | `src/lib/software-vault-access.ts` | 20 |
 | `src/lib/software-vault-crypto.ts` | 11 |
 | `src/lib/software-vault-validation.ts` | 39 |
@@ -542,6 +543,7 @@
 
 ### `/api/dashboard`
 
+- `/api/dashboard/activity`
 - `/api/dashboard`
 - `/api/dashboard/stats`
 
