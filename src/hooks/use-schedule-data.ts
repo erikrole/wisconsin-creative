@@ -579,7 +579,8 @@ export function useScheduleData(): UseScheduleDataResult {
 
   // UI state
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
-  const [tradeSheetOpen, setTradeSheetOpen] = useState(false);
+  // Home links straight to the board with ?trades=open.
+  const [tradeSheetOpen, setTradeSheetOpen] = useState(() => searchParams.get("trades") === "open");
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const searchParamsString = searchParams.toString();
   const scheduleSearchSignatureRef = useRef(searchParamsString);

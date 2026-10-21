@@ -23,7 +23,7 @@ describe("profile completion web wiring", () => {
   });
 
   it("uses a quiet Home banner as the returning-user entry point", () => {
-    const dashboardPage = readFileSync("src/app/(app)/page.tsx", "utf8");
+    const dashboardPage = readFileSync("src/app/(app)/_home/HomePage.tsx", "utf8");
 
     expect(dashboardPage).toContain("<ProfileCompletionBanner />");
     expect(banner).toContain("useProfileCompletion");

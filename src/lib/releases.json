@@ -50,6 +50,24 @@
   },
   {
     "date": "2026-10-21",
+    "title": "A new Home page",
+    "type": "improvement",
+    "summary": "Home was rebuilt around what you need first: what needs attention, what is up next, and the gear you have out.",
+    "details": [
+      "A greeting and one line about your day sit at the top, like your call time and what gear is due back, followed by four quick counts for your role.",
+      "Needs attention gathers overdue gear, missed pickups, damage and loss reports, shifts that still need gear, drafts, and (for admins) trade claims waiting on approval. Staff can send an overdue reminder right from the row, and the browser tab shows how much gear is overdue.",
+      "Up next spotlights your next shift or pickup with how soon it starts, then lists the rest by day.",
+      "Working today shows who is on each of today's events, and staff see Recent activity: the latest kiosk pickups and returns. Students can claim open trades, and admins can approve trade claims, right from Home after a confirm.",
+      "Each card loads, fails and retries on its own, so one slow part no longer blanks the page.",
+      "Partner staff get the same layout with just their gear and the published schedule."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 578
+  },
+  {
+    "date": "2026-10-21",
     "title": "A cleaner Trade Board",
     "type": "improvement",
     "summary": "The Trade Board is easier to scan, and students now hear when a shift they could take is posted.",
