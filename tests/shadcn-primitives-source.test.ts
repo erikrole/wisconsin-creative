@@ -40,7 +40,7 @@ describe("High-use shadcn primitive contracts", () => {
     expect(input).toContain("h-10");
     expect(nativeSelect).toContain("h-10");
     expect(select).toContain('size === "default" && "h-10"');
-    expect(select).toContain('size === "sm" && "h-8 text-sm"');
+    expect(select).toContain('size === "sm" && "h-8"');
     expect(button).toContain('default: "h-10 px-4 py-2');
     expect(button).toContain('lg: "h-11 rounded-md px-6');
   });

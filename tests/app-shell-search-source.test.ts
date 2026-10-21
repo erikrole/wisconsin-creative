@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 describe("app shell quick search source", () => {
   it("uses the shared item-title fallback for quick search results", () => {
-    const source = readFileSync("src/components/AppShell.tsx", "utf8");
+    const source = readFileSync("src/components/CommandPalette.tsx", "utf8");
 
     expect(source).toContain('import { assetSearchTitle } from "@/lib/search-result-title";');
     expect(source).toContain("name?: string | null;");
@@ -26,7 +26,7 @@ describe("app shell quick search source", () => {
   });
 
   it("uses shared named partial-results visibility for degraded quick search sources", () => {
-    const source = readFileSync("src/components/AppShell.tsx", "utf8");
+    const source = readFileSync("src/components/CommandPalette.tsx", "utf8");
 
     expect(source).toContain('import { OperationalPartialResultsAlert } from "@/components/OperationalFeedback";');
     expect(source).toContain("const [cmdPartialFailures, setCmdPartialFailures] = useState<string[]>([]);");
@@ -40,5 +40,15 @@ describe("app shell quick search source", () => {
     expect(source).toContain("<OperationalPartialResultsAlert");
     expect(source).toContain('failureLabel="Unavailable result types"');
     expect(source).not.toContain("Some result types could not load. Showing available matches.");
+  });
+
+  it("opens as a launcher with recent pages and actions before any query", () => {
+    const source = readFileSync("src/components/CommandPalette.tsx", "utf8");
+
+    expect(source).toContain("getAllRecentEntities(5)");
+    expect(source).toContain('heading="Recently viewed"');
+    expect(source).toContain('heading="Actions"');
+    expect(source).toContain('handleCmdSelect("/reservations/new")');
+    expect(source).toContain("chromeFont.className");
   });
 });

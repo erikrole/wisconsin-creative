@@ -15,7 +15,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { type CurrentUser } from "@/hooks/use-current-user";
+import { chromeFont } from "@/lib/chrome-font";
 import { parseJsonSafely } from "@/lib/errors";
+import { cn } from "@/lib/utils";
 
 type PreviewRole = "STAFF" | "STUDENT" | "COLLABORATOR";
 type CollaboratorAffiliation = "BIG_TEN_NETWORK" | "LEARFIELD";
@@ -124,7 +126,7 @@ export function RolePreviewBanner({ user }: { user: CurrentUser }) {
   );
 }
 
-export function RolePreviewControl({ user }: { user: CurrentUser }) {
+export function RolePreviewControl({ user, className }: { user: CurrentUser; className?: string }) {
   const { pending, startPreview } = useRolePreviewActions();
   const canManage = user.role === "ADMIN" || user.preview?.actualRole === "ADMIN";
   if (!canManage) return null;
@@ -135,17 +137,17 @@ export function RolePreviewControl({ user }: { user: CurrentUser }) {
         <Button
           type="button"
           variant="ghost"
-          size="sm"
-          className="h-10 gap-1.5 text-xs text-muted-foreground hover:text-foreground max-md:px-2"
+          size="icon"
+          className={className}
           aria-label="Preview as another role"
+          title="Preview as another role"
           disabled={pending}
         >
-          <EyeIcon className="size-3.5" aria-hidden="true" />
-          <span className="max-md:hidden">Preview as</span>
+          <EyeIcon aria-hidden="true" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-64">
-        <DropdownMenuLabel>Preview as</DropdownMenuLabel>
+      <DropdownMenuContent align="end" className={cn(chromeFont.className, "w-64 rounded-xl p-1.5")}>
+        <DropdownMenuLabel className="text-[12px] font-bold text-muted-foreground">Preview as</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {PREVIEW_OPTIONS.map((entry) => (
           <DropdownMenuItem

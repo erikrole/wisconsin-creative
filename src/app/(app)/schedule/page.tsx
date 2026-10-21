@@ -330,9 +330,7 @@ function InternalSchedulePage() {
 
   const appShellStickyTop = useCallback(() => {
     const header = document.querySelector<HTMLElement>("[data-app-shell-header]");
-    const breadcrumb = document.querySelector<HTMLElement>("[data-app-shell-breadcrumb-frame]");
-    return Math.round(header?.getBoundingClientRect().height ?? 0)
-      + Math.round(breadcrumb?.getBoundingClientRect().height ?? 0);
+    return Math.round(header?.getBoundingClientRect().height ?? 0);
   }, []);
 
   useEffect(() => {
@@ -349,10 +347,8 @@ function InternalSchedulePage() {
     };
     connect();
     const header = document.querySelector<HTMLElement>("[data-app-shell-header]");
-    const breadcrumb = document.querySelector<HTMLElement>("[data-app-shell-breadcrumb-frame]");
     const resizeObserver = new ResizeObserver(connect);
     if (header) resizeObserver.observe(header);
-    if (breadcrumb) resizeObserver.observe(breadcrumb);
     window.addEventListener("resize", connect);
     return () => {
       observer?.disconnect();
@@ -365,10 +361,8 @@ function InternalSchedulePage() {
     const el = stickyRef.current;
     if (!el) return;
     const appShellHeader = document.querySelector<HTMLElement>("[data-app-shell-header]");
-    const appShellBreadcrumb = document.querySelector<HTMLElement>("[data-app-shell-breadcrumb-frame]");
     const publish = () => {
-      const top = Math.round(appShellHeader?.getBoundingClientRect().height ?? 0)
-        + Math.round(appShellBreadcrumb?.getBoundingClientRect().height ?? 0);
+      const top = Math.round(appShellHeader?.getBoundingClientRect().height ?? 0);
       // Sticky top plus the frame's own height. The frame's viewport rect
       // bottom would also move with scroll position: a publish that ran while
       // the frame sat unpinned (filter chips wrapping, a clear-all) stuck the
@@ -381,7 +375,6 @@ function InternalSchedulePage() {
     const observer = new ResizeObserver(publish);
     observer.observe(el);
     if (appShellHeader) observer.observe(appShellHeader);
-    if (appShellBreadcrumb) observer.observe(appShellBreadcrumb);
     return () => {
       observer.disconnect();
       document.documentElement.style.removeProperty("--schedule-sticky-top");
