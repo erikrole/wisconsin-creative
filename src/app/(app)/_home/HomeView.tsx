@@ -6,6 +6,8 @@ import {
   AlertCircleIcon,
   ArrowLeftRightIcon,
   CalendarDaysIcon,
+  CalendarOffIcon,
+  CalendarPlusIcon,
   CheckIcon,
   ChevronRightIcon,
   ClockIcon,
@@ -48,6 +50,10 @@ export type Slot<T> =
   | { state: "error"; onRetry: () => void }
   | { state: "ready"; rows: T };
 
+/** Students' upcoming dated "can't work" entries, plus the names of weekly ones. */
+export type CantWorkSlot = Slot<{ away: CantWorkRow[]; weekly: string[] }>;
+export type CantWorkRow = { id: string; title: string; when: string };
+
 export type HomeSync = { label: string; live: boolean; description?: string };
 
 export type HomeViewProps = {
@@ -69,6 +75,9 @@ export type HomeViewProps = {
   attention?: Slot<AttentionItem[]>;
   upNext?: Slot<UpNextItem[]>;
   upNextEmpty?: { title: string; description: string; href: string; action: string };
+  /** Students only: days they can't work, kept one tap away every day. */
+  cantWork?: CantWorkSlot;
+  onAddCantWork?: () => void;
   myGear?: Slot<GearRow[]>;
   myGearHref?: string;
   coverage?: Slot<CoverageRow[]>;
@@ -157,6 +166,7 @@ export function HomeView(props: HomeViewProps) {
               {props.upNext && (
                 <UpNextSection slot={props.upNext} now={now} empty={props.upNextEmpty} onTarget={props.onTarget} />
               )}
+              {props.cantWork && <CantWorkSection slot={props.cantWork} onAdd={props.onAddCantWork} />}
             </div>
             <div className="flex min-w-0 flex-col gap-5">
               {props.myGear && (
@@ -604,6 +614,65 @@ function UpNextRow({ row, onTarget }: { row: UpNextItem; onTarget: (t: Attention
   if (row.target.kind === "link") return <Link href={row.target.href} className={ROW}>{body}</Link>;
   const target = row.target;
   return <button type="button" className={cn(ROW, "cursor-pointer")} onClick={() => onTarget(target)}>{body}</button>;
+}
+
+const CANT_WORK_PREVIEW = 3;
+
+function CantWorkSection({ slot, onAdd }: { slot: CantWorkSlot; onAdd?: () => void }) {
+  const away = slot.state === "ready" ? slot.rows.away : [];
+  const weekly = slot.state === "ready" ? slot.rows.weekly : [];
+  const empty = slot.state === "ready" && away.length === 0;
+  return (
+    <HomeCard aria-labelledby="home-cant-work" data-cant-work>
+      <SectionHeader id="home-cant-work" title="Can’t work" count={away.length} href="/welcome/availability" linkLabel="All times" />
+      {slot.state === "loading" ? (
+        <RowsSkeleton rows={2} />
+      ) : slot.state === "error" ? (
+        <SectionError what="the days you can’t work" onRetry={slot.onRetry} />
+      ) : (
+        <div className="flex flex-col pb-1.5">
+          {empty ? (
+            <div className="flex items-start gap-3 px-4 py-2.5">
+              <span aria-hidden="true" className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                <CalendarOffIcon className="size-4" />
+              </span>
+              <p className="text-[13px] text-muted-foreground">
+                Away for a trip, an exam or another job? Add it so you aren’t scheduled then.
+              </p>
+            </div>
+          ) : (
+            <ul className="flex flex-col">
+              {away.slice(0, CANT_WORK_PREVIEW).map((row) => (
+                <li key={row.id} className="flex min-h-12 items-center gap-3 px-4 py-2">
+                  <span aria-hidden="true" className="w-[3px] self-stretch rounded-full bg-[var(--orange)]" />
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate text-sm font-bold text-foreground">{row.title}</span>
+                    <span className="truncate text-[13px] tabular-nums text-muted-foreground">{row.when}</span>
+                  </span>
+                </li>
+              ))}
+              {away.length > CANT_WORK_PREVIEW && (
+                <li className="px-4 pb-1 text-[13px] text-muted-foreground">+{away.length - CANT_WORK_PREVIEW} more</li>
+              )}
+            </ul>
+          )}
+          {weekly.length > 0 && (
+            <p className="truncate px-4 pt-1 text-[13px] text-muted-foreground" data-cant-work-weekly>
+              Every week: {weekly.join(", ")}
+            </p>
+          )}
+          {onAdd && (
+            <div className="px-4 pt-2 pb-2">
+              <Button variant="outline" className="h-10" onClick={onAdd}>
+                <CalendarPlusIcon data-icon="inline-start" />
+                Add days you can’t work
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+    </HomeCard>
+  );
 }
 
 /* ── Right rail ─────────────────────────────────────────── */

@@ -176,7 +176,7 @@
 | `src/hooks/use-assignment-grid.ts` | 226 |
 | `src/hooks/use-booking-change-sync.ts` | 174 |
 | `src/hooks/use-copy-feedback.ts` | 62 |
-| `src/hooks/use-current-user.ts` | 54 |
+| `src/hooks/use-current-user.ts` | 56 |
 | `src/hooks/use-dashboard-data.ts` | 244 |
 | `src/hooks/use-fetch.ts` | 113 |
 | `src/hooks/use-form-options.ts` | 32 |

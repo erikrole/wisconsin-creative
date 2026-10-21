@@ -79,11 +79,25 @@ describe("when a student can't work", () => {
   it("is offered on the checklist and finish screen, never required", () => {
     const card = readFileSync("src/app/(app)/_home/GettingStartedCard.tsx", "utf8");
     const setup = readFileSync("src/app/(app)/welcome/availability/AvailabilitySetup.tsx", "utf8");
+    const forms = readFileSync("src/components/availability/cant-work-forms.tsx", "utf8");
     const completion = readFileSync("src/lib/profile-completion.ts", "utf8");
     expect(card).toContain('href: "/welcome/availability"');
     expect(setup).toContain("Skip for now");
-    expect(setup).toContain('intent: "CANNOT_WORK"');
-    expect(setup).toContain('kind: "AD_HOC"');
+    expect(forms).toContain('intent: "CANNOT_WORK"');
+    expect(forms).toContain('kind: "AD_HOC"');
     expect(completion).not.toContain("availability");
+  });
+
+  it("keeps days off one tap away on Home and Schedule for student workers", () => {
+    const home = readFileSync("src/app/(app)/_home/HomePage.tsx", "utf8");
+    const view = readFileSync("src/app/(app)/_home/HomeView.tsx", "utf8");
+    const schedule = readFileSync("src/app/(app)/schedule/page.tsx", "utf8");
+    // Only student workers can edit their own availability, so only they see it.
+    expect(home).toContain('role === "STUDENT" && me?.staffingType === "ST" && !readOnly');
+    expect(schedule).toContain('!isStaff && me?.staffingType === "ST"');
+    expect(home).toContain("<CantWorkDialog");
+    expect(schedule).toContain("<CantWorkDialog");
+    expect(view).toContain("Add days you can’t work");
+    expect(view).toContain('href="/welcome/availability"');
   });
 });

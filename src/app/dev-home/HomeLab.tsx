@@ -12,6 +12,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { CurrentUser } from "@/hooks/use-current-user";
 import { GettingStartedCard } from "@/app/(app)/_home/GettingStartedCard";
+import { CantWorkDialog } from "@/components/availability/CantWorkDialog";
 import { HomeSkeleton, HomeView, type HomeViewProps, type Slot } from "@/app/(app)/_home/HomeView";
 import {
   TRADE_BOARD_HREF,
@@ -97,6 +98,15 @@ function buildProps(role: HomeRole, state: LabState, now: Date): Omit<HomeViewPr
     teamGear: ready({ rows: gearRows(data.teamCheckouts.items.slice(0, 5), now, true), total: data.teamCheckouts.total }),
     trades: role === "STUDENT" ? (partial ? error : ready(tradeRows(claimable.slice(0, 3), now))) : undefined,
     tradesHref: TRADE_BOARD_HREF,
+    cantWork: role === "STUDENT"
+      ? ready(state === "empty" ? { away: [], weekly: [] } : {
+        away: [
+          { id: "a1", title: "Trip home", when: "Wed, Nov 25 – Sun, Nov 29" },
+          { id: "a2", title: "Chem midterm", when: "Tue, Dec 8 · 6 PM – 9 PM" },
+        ],
+        weekly: ["COMM 201", "Job at the Union"],
+      })
+      : undefined,
   };
 }
 
@@ -108,6 +118,7 @@ function Lab({ fontClass }: { fontClass: string }) {
   const state = (STATES.includes(params.get("state") as LabState) ? params.get("state") : "ready") as LabState;
   const at = params.get("at");
   const [now] = useState(() => (at ? new Date(at) : new Date()));
+  const [cantWorkOpen, setCantWorkOpen] = useState(false);
   const [reminded, setReminded] = useState<ReadonlySet<string>>(() => new Set());
   const user = { id: "dev", name: NAMES[role], email: "dev@example.com", role } as CurrentUser;
 
@@ -149,8 +160,9 @@ function Lab({ fontClass }: { fontClass: string }) {
               {state === "loading" && params.get("skeleton") === "route" ? (
                 <HomeSkeleton />
               ) : (
-                <HomeView {...buildProps(role, state, now)} banners={params.get("firstrun") === "1" ? <GettingStartedCard /> : undefined} onTarget={() => {}} onSelectBooking={() => {}} onQuick={() => {}} onRemind={(id) => setReminded((prev) => new Set(prev).add(id))} remindedIds={reminded} />
+                <HomeView {...buildProps(role, state, now)} onAddCantWork={() => setCantWorkOpen(true)} banners={params.get("firstrun") === "1" ? <GettingStartedCard /> : undefined} onTarget={() => {}} onSelectBooking={() => {}} onQuick={() => {}} onRemind={(id) => setReminded((prev) => new Set(prev).add(id))} remindedIds={reminded} />
               )}
+              <CantWorkDialog userId="dev" open={cantWorkOpen} onOpenChange={setCantWorkOpen} />
             </main>
           </div>
         </BreadcrumbProvider>
