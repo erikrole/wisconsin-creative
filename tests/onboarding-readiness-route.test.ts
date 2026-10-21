@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const dbMock = vi.hoisted(() => ({
   allowedEmail: { findMany: vi.fn() },
   user: { findMany: vi.fn() },
+  studentAvailabilityBlock: { groupBy: vi.fn() },
 }));
 
 vi.mock("@/lib/db", () => ({ db: dbMock }));
@@ -36,6 +37,7 @@ function account(overrides: Record<string, unknown> = {}) {
     shoeSize: null,
     avatarUrl: null,
     profilePromptSnoozedUntil: null,
+    createdAt: new Date("2026-10-19T12:00:00.000Z"),
     ...overrides,
   };
 }
@@ -51,9 +53,24 @@ beforeEach(() => {
   });
   dbMock.allowedEmail.findMany.mockResolvedValue([]);
   dbMock.user.findMany.mockResolvedValue([account()]);
+  dbMock.studentAvailabilityBlock.groupBy.mockResolvedValue([]);
 });
 
 describe("GET /api/users/onboarding-readiness", () => {
+  it("adds account age and, for students only, whether class times exist", async () => {
+    dbMock.user.findMany.mockResolvedValue([
+      account(),
+      account({ id: "user-2", name: "Has Classes" }),
+      account({ id: "staff-1", name: "Staff Person", role: "STAFF" }),
+    ]);
+    dbMock.studentAvailabilityBlock.groupBy.mockResolvedValue([{ userId: "user-2", _count: { _all: 3 } }]);
+    const body = await (await GET(new Request("https://app.example.com/api/users/onboarding-readiness"), noParams)).json();
+    const byId = Object.fromEntries(body.data.accounts.map((a: { id: string }) => [a.id, a]));
+    expect(byId["user-1"]).toEqual(expect.objectContaining({ hasClassTimes: false, createdAt: "2026-10-19T12:00:00.000Z" }));
+    expect(byId["user-2"].hasClassTimes).toBe(true);
+    expect(byId["staff-1"].hasClassTimes).toBeNull();
+  });
+
   it("returns derived readiness without exposing private profile values", async () => {
     const response = await GET(new Request("https://app.example.com/api/users/onboarding-readiness"), noParams);
     const body = await response.json();
