@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   description: "Privacy policy for the Wisconsin Creative iOS app and Wisconsin Creative service.",
 };
 
-const updatedAt = "August 21, 2026";
+const updatedAt = "October 21, 2026";
 
 const sections = [
   {
@@ -16,7 +16,8 @@ const sections = [
       "Operational records such as gear checkouts, reservations, returns, favorites, schedule assignments, availability, notifications, and audit history.",
       "Device information needed for iOS features, including push notification tokens, Live Activity tokens, app version, and basic session state. For the configured product owner’s support/adoption report, the app may also report a coarse device model, OS version, marketing/build version, and a best-effort distribution-channel signal.",
       "Camera access only when you choose to scan a barcode or QR code. Camera frames are used on device for scanning and are not stored by the app.",
-      "Authenticated API diagnostics and server logs used to keep the service reliable, secure, and supportable. We also count a small allowlisted set of product events such as app opens and normalized area views using rotating pseudonymous identifiers. The native iOS app does not embed a third-party crash-reporting, session-replay, or advertising analytics SDK.",
+      "Authenticated API diagnostics and server logs used to keep the service reliable, secure, and supportable. We also count a small allowlisted set of product events such as app opens and normalized area views using rotating pseudonymous identifiers.",
+      "Crash and error reports, linked to your account so we can follow up: the app version and build, device model and OS version (or browser), the page or screen, a request reference, and your last few in-app actions (pages opened, buttons pressed, and app requests with their result). On iPhone these come from Apple's on-device crash diagnostics. Reports never include what you type into fields, passwords, search text, or request contents. The same details are attached when you use Report a problem, along with your message. The apps do not embed a third-party crash-reporting, session-replay, or advertising analytics SDK.",
     ],
   },
   {
@@ -26,7 +27,7 @@ const sections = [
       "We do not track users across third-party apps or websites.",
       "We do not collect precise device location for the iOS app.",
       "We do not use booking photo uploads in the iOS launch scope.",
-      "We do not collect native app crash reports, device-performance metrics, UDIDs, hardware serial numbers, advertising IDs, raw App Store receipts, free-form tap or click streams, page URLs containing record identifiers, search text, scanned values, or session replay in the iOS app.",
+      "We do not collect device-performance metrics, UDIDs, hardware serial numbers, advertising IDs, raw App Store receipts, search text, scanned values, or session replay. Recent in-app actions are kept only on your device unless a crash, error, or problem report sends them.",
     ],
   },
   {
@@ -42,7 +43,7 @@ const sections = [
   {
     title: "Sharing",
     body: [
-      "Information is used within Wisconsin Creative operations and by service providers needed to run the app: Vercel for hosting and platform logs, Neon for database storage, Sentry for web/server error diagnostics, Resend for service email, Upstash for rate limiting, Vercel Blob for stored media, and Apple for push notifications and Live Activities.",
+      "Information is used within Wisconsin Creative operations and by service providers needed to run the app: Vercel for hosting and platform logs, Neon for database storage, Sentry for web/server error diagnostics when enabled, Resend for service email, Upstash for rate limiting, Vercel Blob for stored media, and Apple for push notifications and Live Activities.",
       "We do not share user information for advertising.",
       "We may disclose information when required to comply with legal obligations, security needs, or institutional policy.",
     ],
@@ -53,6 +54,7 @@ const sections = [
       "Operational records are retained while they are needed for gear custody, scheduling, audit, reporting, and support.",
       "Accounts can be deactivated when access is no longer needed. Some historical records may remain to preserve audit and custody history.",
       "Push and Live Activity tokens are revoked or replaced as devices change, permissions are removed, or sessions end.",
+      "Crash and error reports are deleted after 90 days and problem reports after one year. Deleting your account removes your name from error reports and deletes your problem reports.",
     ],
   },
   {

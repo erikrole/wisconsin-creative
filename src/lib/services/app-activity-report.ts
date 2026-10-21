@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { loadAppStoreVersion } from "@/lib/apps-live-versions";
 import { readCompanionPresence, type CompanionPresence } from "@/lib/companion-store";
 import { db } from "@/lib/db";
+import { getCrashCountsByVersion as getGroupedCrashCounts } from "@/lib/services/app-diagnostics";
 import { env } from "@/lib/env";
 
 type InstallationRecord = {
@@ -225,24 +226,10 @@ export type CrashCount = {
   count: number;
 };
 
-/**
- * Crash and hang counts per app version. The crash reporting work will export a
- * richer version of this (with build numbers) from app-diagnostics; until then it
- * groups app_diagnostics by version, and swapping the call is the only change.
- */
+/** Crash and hang counts per app version and build, from the grouped error reports. */
 async function getCrashCountsByVersion(days: number): Promise<CrashCount[]> {
-  const rows = await db.appDiagnostic.groupBy({
-    by: ["platform", "appVersion", "kind"],
-    where: { receivedAt: { gte: new Date(Date.now() - days * 86_400_000) }, kind: { in: ["crash", "hang"] } },
-    _count: { _all: true },
-  });
-  return rows.map((row) => ({
-    platform: row.platform,
-    appVersion: row.appVersion,
-    appBuild: null,
-    kind: row.kind,
-    count: row._count._all,
-  }));
+  const rows = await getGroupedCrashCounts(days);
+  return rows.filter((row) => row.kind === "crash" || row.kind === "hang");
 }
 
 const FIRST_OPEN_WEEKS = 12;
