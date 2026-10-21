@@ -531,6 +531,8 @@ private struct ScheduleRootToolbar: ToolbarContent {
             ToolbarItem(placement: .topBarTrailing) {
                 tradeBoardButton
                     .badge(openTradeCount)
+                    // At accessibility sizes the badge grew over the icon.
+                    .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
             }
             .visibilityPriority(.high)
 
@@ -541,6 +543,8 @@ private struct ScheduleRootToolbar: ToolbarContent {
             ToolbarItem(placement: .topBarTrailing) {
                 tradeBoardButton
                     .badge(openTradeCount)
+                    // At accessibility sizes the badge grew over the icon.
+                    .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
             }
 
             ToolbarItem(placement: .topBarTrailing) {
@@ -658,11 +662,15 @@ private struct ScheduleCalendarPrompt: View {
 
     private var copy: some View {
         VStack(alignment: .leading, spacing: 2) {
+            // The header proposes a tight height; wrap rather than truncate.
             Text("Add your shifts to Calendar")
                 .font(.subheadline.weight(.bold))
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
             Text("Call times stay current.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 

@@ -160,11 +160,16 @@ struct EventRow: View {
 
     // MARK: Meta
 
+    /// At accessibility sizes the coverage chip drops under the venue, which
+    /// otherwise shares a line with it and truncates to a few letters.
     private var metaLine: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 6) {
+        let layout = stacksTime
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2))
+            : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: 6))
+        return layout {
             if let metaText {
                 Text(metaText)
-                    .lineLimit(2)
+                    .lineLimit(stacksTime ? 3 : 2)
             }
             if let cov = event.coverage, cov.total > 0 {
                 coverageChip(cov)
