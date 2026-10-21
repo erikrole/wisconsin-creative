@@ -1,6 +1,21 @@
 [
   {
     "date": "2026-10-21",
+    "title": "Get the app prompts",
+    "type": "improvement",
+    "summary": "On iPhone, Safari now offers the Wisconsin Creative app from the App Store. On Android, Chrome offers to add the site to your home screen.",
+    "details": [
+      "iPhone: Safari shows its standard App Store banner at the top of signed-in pages. Close it and Safari remembers.",
+      "Android: a small card offers Install once. Tap the X and it won't come back on that phone.",
+      "Neither prompt appears inside the installed app or on the sign-in page."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 0
+  },
+  {
+    "date": "2026-10-21",
     "title": "App activity redesign",
     "type": "feature",
     "summary": "The owner-only App activity page now shows at a glance which app versions people run and how they use the site, the iPhone app, and the menu bar.",
