@@ -431,10 +431,6 @@ struct BookingsView: View {
         vm.statusFilter == .active ? "Active" : vm.statusFilter.label
     }
 
-    private var isDefaultFiltering: Bool {
-        vm.statusFilter == .active && vm.sortOption == .operational
-    }
-
     private var showsSearch: Bool {
         if !vm.searchText.isEmpty { return true }
         let visibleCount = vm.bookings.count
@@ -608,13 +604,7 @@ struct BookingsView: View {
             }
             .pickerStyle(.inline)
         } label: {
-            Label {
-                Text(vm.statusFilter.label)
-            } icon: {
-                Image(systemName: isDefaultFiltering
-                    ? "line.3.horizontal.decrease"
-                    : "line.3.horizontal.decrease.circle.fill")
-            }
+            Text(vm.statusFilter.label)
         }
         .accessibilityLabel("Filter and sort bookings")
         .accessibilityValue("\(vm.statusFilter.label), sorted by \(vm.sortOption.label)")
@@ -675,15 +665,7 @@ struct BookingsView: View {
     private var bookingList: some View {
         let now = Date()
         let groups = bookingGroups(now: now)
-        let overdueCount = vm.sortedBookings.filter { $0.isOverdue(now: now) }.count
         return List {
-            if overdueCount > 0 && vm.statusFilter != .overdue {
-                Text("\(overdueCount) overdue")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color.statusText(.red))
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 16))
-            }
             ForEach(groups) { group in
                 BookingListSection(title: group.title, isUrgent: group.isUrgent) {
                     ForEach(group.bookings) { booking in
@@ -1045,7 +1027,7 @@ struct BookingRow: View {
                     .lineLimit(2)
                 Text(metadata)
                     .font(.footnote)
-                    .foregroundStyle(Color(.tertiaryLabel))
+                    .foregroundStyle(Color(.secondaryLabel))
                     .lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -1084,7 +1066,7 @@ struct BookingRow: View {
             if booking.isWaitingOnPickup(now: now) {
                 return ("Pickup was due \(when(booking.startsAt, now: now))", false)
             }
-            return ("Pickup \(when(booking.startsAt, now: now))", booking.kind == .checkout && booking.startsAt < now)
+            return ("Pickup \(when(booking.startsAt, now: now))", false)
         }
     }
 
