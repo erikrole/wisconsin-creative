@@ -247,4 +247,57 @@ describe("scoreCandidatesForShift", () => {
     expect(score?.workload.weekHours).toBe(4);
     expect(score?.workload.monthAssignments).toBe(1);
   });
+
+  it("spreads equal candidates by this week's load instead of stacking one person", () => {
+    const scores = scoreCandidatesForShift({
+      shift,
+      candidates: [
+        candidate({ id: "a-busy", assignments: [assignment("mon", "2026-10-05T18:00:00.000Z", "2026-10-05T20:00:00.000Z")] }),
+        candidate({ id: "b-free" }),
+      ],
+      now: new Date("2026-10-01T12:00:00.000Z"),
+    });
+
+    expect(scores[0]?.userId).toBe("b-free");
+    expect(scores[0]!.score).toBeGreaterThan(scores[1]!.score);
+  });
+
+  it("favors people below the pool's typical season load", () => {
+    const past = (id: string, day: number) => assignment(id, `2026-09-${String(day).padStart(2, "0")}T18:00:00.000Z`, `2026-09-${String(day).padStart(2, "0")}T20:00:00.000Z`, "MBB");
+    const scores = scoreCandidatesForShift({
+      shift,
+      candidates: [
+        candidate({ id: "veteran", assignments: [past("p1", 1), past("p2", 3), past("p3", 5), past("p4", 8), past("p5", 10), past("p6", 12)] }),
+        candidate({ id: "middle-1", assignments: [past("m1", 2), past("m2", 4), past("m3", 6)] }),
+        candidate({ id: "middle-2", assignments: [past("n1", 2), past("n2", 4), past("n3", 6)] }),
+        candidate({ id: "newcomer" }),
+      ],
+      now: new Date("2026-10-01T12:00:00.000Z"),
+    });
+
+    expect(scores[0]?.userId).toBe("newcomer");
+    expect(scores[0]?.reasons.map((reason) => reason.code)).toContain("season_balance");
+    expect(scores.at(-1)?.userId).toBe("veteran");
+  });
+
+  it("rotates exact ties by slot instead of always picking the lowest id", () => {
+    const people = ["p1", "p2", "p3", "p4", "p5", "p6"].map((id) => candidate({ id }));
+    const winners = new Set(["s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8"].map((id) =>
+      scoreCandidatesForShift({ shift: { ...shift, id }, candidates: people, now: new Date("2026-10-01T12:00:00.000Z") })[0]?.userId,
+    ));
+
+    expect(winners.size).toBeGreaterThan(1);
+  });
+
+  it("explains fit in plain words", () => {
+    const [score] = scoreCandidatesForShift({
+      shift,
+      candidates: [candidate({ id: "fit" })],
+      now: new Date("2026-10-01T12:00:00.000Z"),
+    });
+
+    expect(score?.reasons.map((reason) => reason.label)).toEqual(
+      expect.arrayContaining(["Video is their main area", "Nothing else this week"]),
+    );
+  });
 });

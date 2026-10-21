@@ -1,13 +1,14 @@
 [
   {
     "date": "2026-10-21",
-    "title": "A faster, clearer crew picker",
+    "title": "A clearer crew picker and fairer auto assign",
     "type": "improvement",
-    "summary": "Choosing someone for a shift now opens a cleaner picker that suggests the best fits first and explains each person in plain words.",
+    "summary": "Choosing someone for a shift now suggests the best fits first and explains each person in plain words, and auto assign spreads shifts more evenly.",
     "details": [
       "Suggested people come first, then people to check first, then anyone who can't take the shift.",
       "Each person shows why they fit and how busy they are this week.",
-      "Use the arrow keys and Return to assign without the mouse."
+      "Use the arrow keys and Return to assign without the mouse.",
+      "Auto assign now favors people with a lighter week and fewer shifts this season, instead of giving every tie to the same person."
     ],
     "platforms": [
       "Web"

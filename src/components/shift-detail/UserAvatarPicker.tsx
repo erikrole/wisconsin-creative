@@ -72,14 +72,16 @@ function statusLabel(fit: Fit, score: CandidateRecommendation | undefined): stri
 function detailFor(user: PickerUser, score: CandidateRecommendation | undefined, slotWorkerType: string | null | undefined) {
   const candidateWorkerType = shiftWorkerTypeForProfile(user);
   if (slotWorkerType && candidateWorkerType && candidateWorkerType !== slotWorkerType) {
-    return `Fills a ${shiftWorkerSlotLabel(candidateWorkerType).toLowerCase()} instead`;
+    return `Will use ${shiftWorkerSlotLabel(candidateWorkerType).toLowerCase()} and leave ${shiftWorkerSlotLabel(slotWorkerType).toLowerCase()} open`;
   }
   const fallback = [shiftWorkerLabelForProfile(user) ?? "Worker", user.primaryArea ? AREA_LABELS[user.primaryArea] ?? user.primaryArea : null]
     .filter(Boolean)
     .join(" · ");
   if (!score) return fallback;
   if (score.blockingConflict) return score.advisoryConflictNote ?? score.warnings[0]?.label ?? "Can't take this shift";
-  return score.advisoryConflictNote ?? score.warnings[0]?.label ?? score.reasons[0]?.label ?? fallback;
+  // "Student" or "Staff" slot fit is implied by the list, so lead with the next reason.
+  const reason = score.reasons.filter((signal) => signal.code !== "role_fit").slice(0, 2).map((signal) => signal.label).join(" · ");
+  return score.advisoryConflictNote ?? score.warnings[0]?.label ?? (reason || fallback);
 }
 
 export function UserAvatarPicker({
