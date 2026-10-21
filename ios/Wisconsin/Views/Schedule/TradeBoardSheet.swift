@@ -1297,7 +1297,9 @@ private struct TradeBoardRow: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(row.title)
                 .font(.headline)
-                .lineLimit(isAX ? 3 : 1)
+                // Review rows share their width with two round buttons, so a
+                // long event name wraps rather than losing its ending.
+                .lineLimit(isAX ? 3 : (row.trailing == .review ? 2 : 1))
                 .truncationMode(.tail)
             Text("\(row.area) \u{00B7} \(row.summary)")
                 .font(.subheadline)
@@ -1440,7 +1442,7 @@ private struct TradeBoardDetailSheet: View {
                             .foregroundStyle(.secondary)
                     }
                     .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets(top: 8, leading: 4, bottom: 4, trailing: 4))
+                    .listRowInsets(EdgeInsets(top: 4, leading: 4, bottom: 0, trailing: 4))
                 }
 
                 Section {
@@ -1484,7 +1486,7 @@ private struct TradeBoardDetailSheet: View {
                                     .font(.footnote.weight(.semibold))
                                     .foregroundStyle(.tertiary)
                             }
-                            .frame(minHeight: 32)
+                            .frame(minHeight: 28)
                         }
                         .tint(.primary)
                     }
@@ -1509,6 +1511,9 @@ private struct TradeBoardDetailSheet: View {
 
             }
             .listSectionSpacing(.compact)
+            // Room under the last row, so "Open event" can scroll clear of
+            // the action bar at the medium detent.
+            .contentMargins(.bottom, 12, for: .scrollContent)
             .navigationBarTitleDisplayMode(.inline)
             .safeAreaInset(edge: .bottom) { actionBar }
         }
@@ -1547,7 +1552,7 @@ private struct TradeBoardDetailSheet: View {
         let isBusy = busyIds.contains(action.id)
         let tint: Color = action.style == .primary
             ? (row.trailing == .review ? .green : Color.brandPrimary)
-            : (action.style == .destructive ? .red : Color.primary)
+            : (action.style == .destructive && row.trailing != .review ? .red : Color(.systemGray))
         let button = Button(role: action.style == .destructive ? .destructive : nil) {
             onAction(action)
         } label: {
@@ -1559,7 +1564,9 @@ private struct TradeBoardDetailSheet: View {
         }
         if bordered {
             button.buttonStyle(.bordered).buttonBorderShape(.capsule).controlSize(.large)
-                .tint(tint).disabled(isBusy)
+                .tint(tint)
+                .foregroundStyle(row.trailing == .review ? Color.primary : tint)
+                .disabled(isBusy)
         } else {
             button.buttonStyle(.borderedProminent).buttonBorderShape(.capsule).controlSize(.large)
                 .tint(tint).disabled(isBusy)
