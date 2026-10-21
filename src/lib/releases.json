@@ -1,14 +1,15 @@
 [
   {
     "date": "2026-10-21",
-    "title": "Cleaner Accountability page",
+    "title": "Simpler Accountability page",
     "type": "improvement",
-    "summary": "Accountability is now a plain, easy-to-scan ranked list of late returns.",
+    "summary": "Accountability now leads with what matters: gear still out, your own record, and people who are repeatedly late.",
     "details": [
-      "The podium and joke captions are gone; wording is now simple and neutral.",
-      "Each row shows how many times someone was late, total time late, and their on-time rate.",
-      "Open a row to see each late checkout.",
-      "The page uses the newer look and Lato font."
+      "Overdue now sits at the top with who has what and how long it is overdue.",
+      "A Your record line shows your late returns and on-time rate.",
+      "The list shows people late 2 or more times; one-time late returns are a click away.",
+      "Location, status and sort options moved into More filters.",
+      "The podium and joke captions are gone."
     ],
     "platforms": [
       "Web",
