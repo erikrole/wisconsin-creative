@@ -61,6 +61,7 @@ struct AssignStudentSheet: View {
     @State private var conflicts: [String: String] = [:]
     @State private var isLoading = true
     @State private var scoresLoading = false
+    @State private var scoresFailed = false
     @State private var loadError: String?
     @State private var search = ""
     @State private var assigningUserId: String?
@@ -198,6 +199,23 @@ struct AssignStudentSheet: View {
                 }
             }
 
+            if scoresFailed && !scoresLoading {
+                Section {
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.circle")
+                            .foregroundStyle(Color.statusText(.orange))
+                            .accessibilityHidden(true)
+                        Text("Couldn't rank, showing everyone")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Button("Retry") { Task { await load() } }
+                            .font(.caption.weight(.semibold))
+                    }
+                    .accessibilityElement(children: .combine)
+                }
+            }
+
             if scoresLoading {
                 Section {
                     HStack(spacing: 8) {
@@ -324,10 +342,18 @@ struct AssignStudentSheet: View {
         guard let user = confirmationUser else { return "Review the scheduling warning before assigning." }
         let action = replacingUserName.map { "Replace \($0) with \(user.name)." }
             ?? "Assign \(user.name) to this shift."
-        let warning = recommendations[user.id]?.warningContext
-            ?? conflicts[user.id]
-            ?? "This person has a scheduling warning. The assignment will still be checked by the server."
-        return "\(action) \(warning)"
+        var notes: [String] = []
+        if let recommendation = recommendations[user.id] {
+            if let note = recommendation.advisoryConflictNote, !note.isEmpty { notes.append(note) }
+            for warning in recommendation.warnings where !notes.contains(warning.label) {
+                notes.append(warning.label)
+            }
+        }
+        if notes.isEmpty, let fallback = conflicts[user.id] { notes.append(fallback) }
+        if notes.isEmpty {
+            notes.append("This person has a scheduling warning. The assignment will still be checked by the server.")
+        }
+        return ([action] + notes.map { "• \($0)" }).joined(separator: "\n")
     }
 
     private func select(_ user: AppUser) {
@@ -346,7 +372,13 @@ struct AssignStudentSheet: View {
 #if DEBUG
         if let fixture {
             users = fixture.users
-            recommendations = Dictionary(uniqueKeysWithValues: fixture.recommendations.map { ($0.userId, $0) })
+            let mode = ProcessInfo.processInfo.environment["GT_ASSIGN_PICKER_FIXTURE"]
+            if mode == "failed" {
+                scoresFailed = true
+            } else {
+                recommendations = Dictionary(uniqueKeysWithValues: fixture.recommendations.map { ($0.userId, $0) })
+            }
+            if mode == "confirm" { confirmationUser = fixture.users.first { $0.id == "d" } }
             hasMore = false
             scoresLoading = false
             isLoading = false
@@ -359,19 +391,28 @@ struct AssignStudentSheet: View {
 
         let loadedRecommendations: [CandidateRecommendation]
         let fallbackConflicts: [String: String]
+        var failed = false
         if let workingCopyShiftGroupId {
-            loadedRecommendations = (try? await APIClient.shared.workingScheduleCandidateScores(
-                shiftGroupId: workingCopyShiftGroupId,
-                slotKey: shiftId,
-                workerType: targetWorkerType
-            )) ?? []
+            do {
+                loadedRecommendations = try await APIClient.shared.workingScheduleCandidateScores(
+                    shiftGroupId: workingCopyShiftGroupId,
+                    slotKey: shiftId,
+                    workerType: targetWorkerType
+                )
+            } catch {
+                loadedRecommendations = []
+                failed = true
+            }
             fallbackConflicts = [:]
         } else {
             async let scoresTask = try? APIClient.shared.shiftCandidateScores(shiftId: shiftId)
             async let conflictsTask = APIClient.shared.shiftConflicts(shiftId: shiftId)
-            loadedRecommendations = (await scoresTask) ?? []
+            let scored = await scoresTask
+            failed = scored == nil
+            loadedRecommendations = scored ?? []
             fallbackConflicts = await conflictsTask
         }
+        scoresFailed = failed
         await loadPage(reset: true)
 
         recommendations = Dictionary(uniqueKeysWithValues: loadedRecommendations.map { ($0.userId, $0) })
@@ -381,6 +422,16 @@ struct AssignStudentSheet: View {
             }),
             uniquingKeysWith: { _, scored in scored }
         )
+        // Scores cover everyone, but people page in 50 at a time. Pull the
+        // rest in (bounded) so a strong fit on a later page is ranked into
+        // Suggested instead of waiting for a scroll.
+        if !loadedRecommendations.isEmpty && search.isEmpty {
+            var extraPages = 0
+            while hasMore && extraPages < 10 {
+                await loadPage(reset: false)
+                extraPages += 1
+            }
+        }
         scoresLoading = false
         isLoading = false
     }
@@ -531,7 +582,7 @@ struct AssignmentCandidateRow: View {
 
                 Text(secondaryLine)
                     .font(.caption)
-                    .foregroundStyle(fit == .checkFirst ? Color.statusText(.orange) : Color.secondary)
+                    .foregroundStyle(recommendation != nil && fit == .checkFirst ? Color.statusText(.orange) : Color.secondary)
                     .lineLimit(dynamicTypeSize.isAccessibilitySize ? 4 : 2)
 
                 // Large accessibility sizes stack the capsule under the text
