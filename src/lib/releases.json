@@ -20,6 +20,20 @@
   },
   {
     "date": "2026-10-21",
+    "title": "Quicker reviews of upcoming changes",
+    "type": "improvement",
+    "summary": "Upcoming changes can be tried out on a computer with one step before they go live, so updates get checked sooner.",
+    "details": [
+      "One command sets up a private copy of a proposed change and opens it in the browser.",
+      "It uses test data only and never touches the live site."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 566
+  },
+  {
+    "date": "2026-10-21",
     "title": "Name and area when adding one student",
     "type": "improvement",
     "summary": "The Add users dialog now opens on Add one person and can start a student's profile with their name and primary area.",
