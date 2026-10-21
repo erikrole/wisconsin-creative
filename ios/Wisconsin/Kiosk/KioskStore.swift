@@ -100,7 +100,13 @@ struct KioskCheckoutDraft: Equatable {
 final class KioskStore {
     var info: KioskInfo?
     var screen: KioskScreen = .activation {
-        didSet { if screen != oldValue { flowGeneration = UUID() } }
+        didSet {
+            guard screen != oldValue else { return }
+            flowGeneration = UUID()
+            // The case name only: associated values can carry a person.
+            let name = String(describing: screen).prefix { $0 != "(" }
+            DiagnosticBreadcrumbs.shared.setScreen(String(name))
+        }
     }
     private(set) var flowGeneration = UUID()
     private var handoffOwner: UUID?

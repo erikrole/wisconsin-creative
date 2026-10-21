@@ -179,3 +179,25 @@ describe("failRequest", () => {
     }));
   });
 });
+
+describe("MetricKit sessions", () => {
+  it("pairs a crash with the recent actions of the run that crashed, by pid", async () => {
+    const { parseMetricKitPayload } = await import("@/lib/error-reporting/metrickit");
+    const crash = (pid: number) => ({
+      diagnosticMetaData: { pid, signal: 6, exceptionType: 10, bundleIdentifier: "com.erikrole.Wisconsin", appVersion: "1.3" },
+    });
+    const reports = parseMetricKitPayload({ crashDiagnostics: [crash(411), crash(999)] }, "ios", [
+      {
+        pid: 411,
+        screen: "Gear",
+        breadcrumbs: [{ at: "2026-10-21T02:00:00Z", type: "api", message: "POST /api/bookings/[id]/items → 500" }],
+      },
+    ]);
+    expect(reports[0]?.breadcrumbs).toEqual([
+      { at: "2026-10-21T02:00:00Z", type: "api", message: "POST /api/bookings/[id]/items → 500" },
+    ]);
+    expect(reports[0]?.context).toEqual(expect.objectContaining({ lastScreen: "Gear" }));
+    // Another run's crash gets nothing rather than the wrong run's actions.
+    expect(reports[1]?.breadcrumbs).toBeUndefined();
+  });
+});

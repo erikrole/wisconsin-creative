@@ -1,4 +1,11 @@
-import type { ErrorPlatform, ErrorReportInput } from "./grouping";
+import { boundBreadcrumbs, type Breadcrumb, type ErrorPlatform, type ErrorReportInput } from "./grouping";
+
+/** One recent run of the app, as the app remembers it. */
+export type MetricKitSession = {
+  pid: number;
+  screen?: string | null;
+  breadcrumbs: Breadcrumb[];
+};
 
 /**
  * Turns Apple MetricKit diagnostic payloads (crashes, hangs, CPU and disk
@@ -133,15 +140,28 @@ function channelFrom(meta: Record<string, unknown>): string | null {
 }
 
 /** Turns one MetricKit `MXDiagnosticPayload` JSON into bounded reports. */
-export function parseMetricKitPayload(payload: unknown, platform: ErrorPlatform = "ios"): ErrorReportInput[] {
+export function parseMetricKitPayload(
+  payload: unknown,
+  platform: ErrorPlatform = "ios",
+  sessions: MetricKitSession[] = [],
+): ErrorReportInput[] {
   const root = record(payload);
   const occurredAt = payloadTime(root);
+  const byPid = new Map(sessions.map((session) => [session.pid, session]));
   const reports: ErrorReportInput[] = [];
   for (const [key, kind] of Object.entries(DIAGNOSTIC_KINDS)) {
     const entries = Array.isArray(root[key]) ? (root[key] as unknown[]) : [];
     for (const entry of entries) {
       if (reports.length >= MAX_DIAGNOSTICS_PER_UPLOAD) return reports;
-      reports.push(metricKitDiagnosticToReport(record(entry), kind, platform, occurredAt));
+      const diagnostic = record(entry);
+      const report = metricKitDiagnosticToReport(diagnostic, kind, platform, occurredAt);
+      const pid = num(record(diagnostic.diagnosticMetaData).pid);
+      const session = pid !== null ? byPid.get(pid) : undefined;
+      if (session) {
+        report.breadcrumbs = boundBreadcrumbs(session.breadcrumbs);
+        if (session.screen) report.context = { ...report.context, lastScreen: session.screen };
+      }
+      reports.push(report);
     }
   }
   return reports;

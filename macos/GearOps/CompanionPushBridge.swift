@@ -113,6 +113,7 @@ final class GearOpsAppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         GearOpsActivation.applyFromDefaults()
+        GearOpsMetricMonitor.shared.start()
         CompanionBookingNotification.register()
         NSApplication.shared.registerForRemoteNotifications()
         NSWorkspace.shared.notificationCenter.addObserver(

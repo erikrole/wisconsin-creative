@@ -141,6 +141,28 @@ struct KioskAPI {
         let _: Response = try await perform(req)
     }
 
+    // MARK: - Diagnostics
+
+    /// Uploads one MetricKit diagnostic payload with the kiosk's recent
+    /// screens and API calls. Best-effort; the server ties it to this kiosk.
+    func kioskUploadDiagnostics(_ payload: Data) async {
+        guard let body = DiagnosticUpload.body(platform: "kiosk", payload: payload) else { return }
+        struct Stored: Decodable { let stored: Int }
+        var req = request(path: "/api/kiosk/diagnostics", method: "POST")
+        req.httpBody = body
+        let _: (DataWrapper<Stored>, HTTPURLResponse)? = try? await performWithResponse(req, broadcastsUnauthorizedSession: false)
+    }
+
+    private static func recordBreadcrumb(_ request: URLRequest, response: HTTPURLResponse) {
+        let path = DiagnosticBreadcrumbs.pathTemplate(request.url?.path ?? "")
+        guard path != "/api/kiosk/diagnostics", path != "/api/kiosk/heartbeat" else { return }
+        var data: [String: String]?
+        if response.statusCode >= 400, let id = response.value(forHTTPHeaderField: "x-vercel-id") {
+            data = ["requestId": String(id.prefix(120))]
+        }
+        DiagnosticBreadcrumbs.shared.record(.api, "\(request.httpMethod ?? "GET") \(path) → \(response.statusCode)", data: data)
+    }
+
     // MARK: - Nudge
 
     /// Anyone at the kiosk may nudge an overdue checkout once per day. A
@@ -906,6 +928,7 @@ struct KioskAPI {
         guard let http = response as? HTTPURLResponse else {
             throw APIError.serverError("Invalid response")
         }
+        Self.recordBreadcrumb(request, response: http)
         switch http.statusCode {
         case 200...299:
             let decoded: T
