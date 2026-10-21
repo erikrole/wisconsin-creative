@@ -160,3 +160,22 @@ describe("recordErrorReport", () => {
     });
   });
 });
+
+describe("failRequest", () => {
+  it("records only failures it answers with a 5xx", async () => {
+    const { failRequest } = await import("@/lib/api-handler");
+    const { captureServerError } = await import("@/lib/error-reporting/server");
+    const req = new Request("https://app.example.com/api/items/1", { method: "PATCH" });
+
+    expect(failRequest(new HttpError(404, "Not found"), req).status).toBe(404);
+    expect(captureServerError).not.toHaveBeenCalled();
+
+    expect(failRequest(new Error("db down"), req, { id: "user-1", role: "ADMIN" }).status).toBe(500);
+    expect(captureServerError).toHaveBeenCalledWith(expect.any(Error), expect.objectContaining({
+      kind: "api_error",
+      method: "PATCH",
+      path: "/api/items/1",
+      user: { id: "user-1", role: "ADMIN" },
+    }));
+  });
+});
