@@ -93,6 +93,8 @@ struct PerformanceTestRootView: View {
             AccountSecurityHarnessView()
         case .notifications:
             NotificationSettingsHarnessView()
+        case .gearKit:
+            GearKitHarnessView()
         case .announcement, .announcementImages, .announcementPlain,
              .announcementStress, .announcementNone, .announcementError,
              .announcementLong, .announcementQueue, .announcementBrokenImage, .announcementCtaRoute:
@@ -162,6 +164,48 @@ struct NotificationSettingsHarnessView: View {
             appState.pushRegistrationState = .failed
             seeded = true
         }
+    }
+}
+
+/// The real UA Gear screen against canned `/api/gear-picks/me` and
+/// `/api/gear-picks/me/kit` payloads.
+struct GearKitHarnessView: View {
+    @Environment(SessionStore.self) private var session
+
+    var body: some View {
+        GearPicksView()
+            .onAppear { session.currentUser = ScheduleFixtures.staffUser }
+    }
+}
+
+enum GearKitFixtureAPI {
+    static var me: Data {
+        Data(#"""
+        {"data":{
+          "cycle":{"id":"c1","title":"2027-28 UA gear","deadline":"2027-02-01T18:00:00Z","isOpen":true,"launchedAt":"2026-10-01T12:00:00Z"},
+          "participant":{"id":"p1","fit":"MENS","allowanceCents":50000},
+          "submission":null,
+          "catalog":{"maxQuantity":5,"categories":["Tops"],"items":[
+            {"style":"1","name":"Team hoodie","fit":"MENS","category":"Tops","priceCents":6500,"sizeLabel":"Size","sizes":["S","M","L","XL"],"sizesAreExact":true,"oneSize":false,"defaultSize":"L","kit":null,"colors":[{"code":"001","label":"Black","swatch":"#111111","image":""}]}
+          ]}
+        }}
+        """#.utf8)
+    }
+
+    static func kit(stage: String) -> Data {
+        let placed = stage == "planned" ? "null" : "\"2026-10-14T15:00:00Z\""
+        let expected = stage == "planned" ? "null" : "\"2026-11-04T15:00:00Z\""
+        return Data(#"""
+        {"data":{"kit":{"cycleTitle":"2027-28 UA gear","group":"Staff",
+          "order":{"placedAt":\#(placed),"poNumber":null,"orderNumber":null,"expectedAt":\#(expected)},
+          "pieces":[
+            {"sku":"a","itemName":"Team hoodie","colorLabel":"Black","source":"STANDARD_ISSUE","size":"L","quantity":1,"handed":true,"handedOutAt":"2026-10-18T15:00:00Z"},
+            {"sku":"b","itemName":"Performance polo","colorLabel":"Red","source":"CORE_KIT","size":"L","quantity":2,"handed":false,"handedOutAt":null},
+            {"sku":"c","itemName":"Training short","colorLabel":"Black","source":"PICK","size":"Size needed","quantity":1,"handed":false,"handedOutAt":null},
+            {"sku":"d","itemName":"Quarter-zip","colorLabel":"Grey","source":"PICK","size":"XL","quantity":1,"handed":false,"handedOutAt":null},
+            {"sku":"e","itemName":"Beanie","colorLabel":"","source":"CORE_KIT","size":"OSFA","quantity":1,"handed":false,"handedOutAt":null}
+          ]}}}
+        """#.utf8)
     }
 }
 
@@ -509,6 +553,12 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
         if AppRuntimeMode.performanceScenario == .latestBrowse,
            let body = LatestBrowseFixtureAPI.body(path: path) { return body }
         switch path {
+        case "/api/gear-picks/me":
+            guard AppRuntimeMode.performanceScenario == .gearKit else { return nil }
+            return GearKitFixtureAPI.me
+        case "/api/gear-picks/me/kit":
+            guard AppRuntimeMode.performanceScenario == .gearKit else { return nil }
+            return GearKitFixtureAPI.kit(stage: ProcessInfo.processInfo.environment["GT_KIT_STAGE"] ?? "ordered")
         case "/api/resources": return FixtureAPI.guides
         case let path where path.hasPrefix("/api/resources/"):
             let slug = String(path.dropFirst("/api/resources/".count))

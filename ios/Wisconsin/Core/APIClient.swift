@@ -2882,6 +2882,23 @@ final class APIClient {
         return resp.data
     }
 
+    /// The signed-in person's own kit with handout state. Nil when they are not
+    /// on this year's list or the cycle is not launched. A server without the
+    /// route answers 404 and a role without gear access 403; both mean "no
+    /// kit to show", not a failure, so the card simply stays hidden.
+    func myGearKit() async throws -> GearMyKit? {
+        struct Envelope: Decodable, Sendable { let kit: GearMyKit? }
+        let req = request(path: "/api/gear-picks/me/kit")
+        do {
+            let resp: DataWrapper<Envelope> = try await perform(req)
+            return resp.data.kit
+        } catch APIError.notFound {
+            return nil
+        } catch APIError.httpError(let status, _) where status == 403 {
+            return nil
+        }
+    }
+
     /// Replace the participant's whole list. The server prices every line and checks the allowance.
     func saveMyGearPicks(lines: [GearPickSaveLine], submit: Bool, version: Int) async throws -> GearPickSubmission {
         struct Body: Encodable {

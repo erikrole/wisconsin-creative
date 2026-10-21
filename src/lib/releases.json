@@ -1,6 +1,22 @@
 [
   {
     "date": "2026-10-21",
+    "title": "My kit for UA gear on iPhone",
+    "type": "feature",
+    "summary": "UA gear in the iPhone app now shows your kit and where each piece stands.",
+    "details": [
+      "Each piece lists its size and whether it is planned, on order with a due date, or in your hands.",
+      "A piece with no size says Add your size and takes you to your profile.",
+      "Students on the student list see their kit there too.",
+      "Your kit stays hidden until gear picks are opened to everyone."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 0
+  },
+  {
+    "date": "2026-10-21",
     "title": "Quicker reviews of upcoming changes",
     "type": "improvement",
     "summary": "Upcoming changes can be tried out on a computer with one step before they go live, so updates get checked sooner.",
