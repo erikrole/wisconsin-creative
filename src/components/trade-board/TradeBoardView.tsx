@@ -1,6 +1,5 @@
 "use client";
 
-import { Lato } from "next/font/google";
 import { AlertTriangleIcon, CheckIcon, InfoIcon } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -8,10 +7,7 @@ import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-
-// The board renders inside a Sheet portal, outside any page layout, so it carries
-// the wc-fresh theme itself.
-const lato = Lato({ subsets: ["latin"], weight: ["400", "700", "900"], variable: "--font-lato", display: "swap" });
+import { FRESH_THEME_CLASS } from "./fresh-theme";
 
 export type BoardTab = "available" | "mine" | "review" | "history";
 
@@ -226,7 +222,7 @@ export function TradeBoardView({ tabs, tab, onTab, loading, errors, needsReview,
   }
 
   return (
-    <div className={cn("wc-fresh flex flex-col gap-3 bg-transparent", lato.variable)}>
+    <div className={cn(FRESH_THEME_CLASS, "flex flex-col gap-3 bg-transparent")}>
       {needsReview && (
         <div role="alert" className="rounded-lg border border-border bg-muted/30 p-3 text-sm">
           <p>The last action could not be confirmed. It may already have completed. Review the refreshed work before another action.</p>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { PostTradeDialog } from "@/components/trade-board/PostTradeDialog";
 import { TradeBoardView, type BoardRow, type BoardTab, type BoardTabSpec } from "@/components/trade-board/TradeBoardView";
 
 const NOW = new Date("2026-10-21T15:00:00-05:00");
@@ -87,12 +88,15 @@ export default function TradeBoardLab() {
   const [admin, setAdmin] = useState(false);
   const [emptyAll, setEmptyAll] = useState(false);
   const [tab, setTab] = useState<BoardTab>("available");
+  const [postOpen, setPostOpen] = useState(false);
+  const [notes, setNotes] = useState("");
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const isAdmin = params.get("role") === "admin";
     setAdmin(isAdmin);
     setEmptyAll(params.get("empty") === "1");
     if (isAdmin) setTab("review");
+    if (params.get("post") === "1") setPostOpen(true);
   }, []);
   const tabs: BoardTabSpec[] = [
     ...(admin ? [{ id: "review" as const, label: "Review", count: review.length, rows: review }] : []),
@@ -112,6 +116,16 @@ export default function TradeBoardLab() {
         needsReview={null}
         intro={admin ? null : "Claim open shifts and trades in your area. An admin approves every change before it reaches the schedule."}
         toolbar={<span className="text-xs text-muted-foreground">Area: all</span>}
+      />
+      <PostTradeDialog
+        open={postOpen}
+        shift={{ title: "Men's Hockey vs Minnesota · Border Battle", when: "Thu, Oct 22, 4:00 PM", area: "Photo" }}
+        notes={notes}
+        error={null}
+        posting={false}
+        onNotes={setNotes}
+        onClose={() => setPostOpen(false)}
+        onPost={() => setPostOpen(false)}
       />
     </div>
   );
