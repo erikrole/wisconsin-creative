@@ -1,6 +1,23 @@
 [
   {
     "date": "2026-10-21",
+    "title": "Report a Problem in the iPhone app",
+    "type": "feature",
+    "summary": "Settings in the iPhone app now has Report a Problem, and crashes in the iPhone app, kiosks and the Mac menu bar app reach the team with what led up to them.",
+    "details": [
+      "Report a Problem in Settings sends your note with the screen you're on, your app version and device, and your last few actions. Contact Support is still there if you'd rather email.",
+      "When the iPhone app, a kiosk or the Mac menu bar app crashes, the report now includes the screens and requests just before it, so problems can be fixed without asking you to retrace your steps.",
+      "Nothing you type, and no passwords, is ever included."
+    ],
+    "platforms": [
+      "iOS",
+      "Kiosk",
+      "macOS"
+    ],
+    "pr": 557
+  },
+  {
+    "date": "2026-10-21",
     "title": "Report a problem, and faster fixes",
     "type": "feature",
     "summary": "Report a problem from the account menu, and crashes and errors now reach the team with what they need to find and fix them.",
