@@ -38,7 +38,7 @@
 ### Contracts
 - Add a durable `UserAppInstallation` record keyed by a secret-scoped server-HMAC of a client-generated installation key; never store UDID, serial number, IDFA, receipt contents, or raw installation keys. Keep it stable across annual event-identity rotation so one installation does not become duplicate rows every January.
 - Store only allowlisted app identity fields: platform, marketing version, build, OS version, coarse hardware model, release channel, and first/last/last-opened timestamps.
-- Compare iOS freshness only against explicitly configured `IOS_LATEST_APP_VERSION` / `IOS_LATEST_APP_BUILD`; an absent target must render as unclassified rather than silently treating a build as current.
+- Compare iOS freshness against `IOS_LATEST_APP_VERSION` / `IOS_LATEST_APP_BUILD` when set; otherwise use the live App Store version and the newest build reported for it, then the newest App Store build seen. The page labels which source it used. Xcode (development) builds are never "behind". (Updated 2026-10-21.)
 - Owner access remains the separate `USAGE_ANALYTICS_OWNER_EMAILS` allowlist. Role, `ADMIN` status, and hidden-user access must not grant this report.
 - Telemetry remains best effort: an app-activity write failure must not block the existing product event or signed-in workflow. Channel classification may be `unknown` when the receipt signal is unavailable.
 

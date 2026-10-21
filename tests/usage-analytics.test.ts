@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Role } from "@prisma/client";
+import { coarseWebClient } from "@/lib/usage-analytics";
 
 const dbMock = vi.hoisted(() => ({
   productEvent: {
@@ -179,6 +180,13 @@ describe("private usage analytics", () => {
     const response = await getAppActivityReport(request("/api/settings/app-activity"), { params: Promise.resolve({}) });
     expect(response.status).toBe(403);
     expect(dbMock.user.findMany).not.toHaveBeenCalled();
+  });
+
+  it("names a web client's browser and device family from the User-Agent, nothing finer", () => {
+    expect(coarseWebClient("Mozilla/5.0 (iPhone; CPU iPhone OS 26_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.1 Mobile/15E148 Safari/604.1")).toBe("Safari · iPhone");
+    expect(coarseWebClient("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36")).toBe("Chrome · Mac");
+    expect(coarseWebClient("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0")).toBe("Edge · Windows");
+    expect(coarseWebClient(null)).toBeNull();
   });
 
   it("rejects free-form properties and record identifiers", async () => {

@@ -6,6 +6,7 @@ import { parseDerivedBulkUnitQr } from "@/lib/bulk-unit-qr";
 import { HttpError } from "@/lib/http";
 import { maybeAutoComplete, wasReturnedOnTime } from "@/lib/services/bookings-checkin";
 import { kioskHeldItemMessage } from "@/lib/availability-copy";
+import { displayBookingTitle } from "@/lib/booking-display-title";
 
 type TxClient = Prisma.TransactionClient;
 
@@ -715,6 +716,6 @@ export async function findBulkUnitByScanValue(scanValue: string) {
     unitNumber: unit.unitNumber,
     holder: disclosedHolderName(booking),
     dueAt: booking?.endsAt.toISOString(),
-    bookingTitle: booking?.title,
+    bookingTitle: booking ? displayBookingTitle(booking.title) : undefined,
   };
 }
