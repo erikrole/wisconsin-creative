@@ -56,6 +56,7 @@ describe("iOS accessibility-size layout hardening", () => {
     const row = bookings.slice(bookings.indexOf("struct BookingRow: View"));
 
     expect(row).toContain("VStack(alignment: .leading, spacing: 3)");
+    expect(row).toContain("HStack(alignment: .center, spacing: 12)");
     expect(row).toContain(".frame(maxWidth: .infinity, alignment: .leading)");
     expect(row).not.toMatch(/\.frame\(width:/);
   });

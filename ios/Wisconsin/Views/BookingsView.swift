@@ -1000,9 +1000,8 @@ private struct BookingsSearchModifier: ViewModifier {
     }
 }
 
-/// One quiet row: what it is, when it moves next, and who has it. Red is
-/// reserved for gear that is late; every other state is plain text, because
-/// the day heading above the row already says where it sits.
+/// One quiet row: who has it, what it is, and when it moves next. The timing
+/// line carries the state colour; nothing else on the row is tinted.
 struct BookingRow: View {
     let booking: Booking
     var showsRequester = true
@@ -1017,22 +1016,38 @@ struct BookingRow: View {
         TimelineView(.periodic(from: .now, by: 60)) { context in
             let now = context.date
             let info = timing(now: now)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(booking.title)
-                    .font(.gothamBold(size: 16))
-                    .lineLimit(2)
-                Text(info.text)
-                    .font(.subheadline)
-                    .foregroundStyle(info.urgent ? AnyShapeStyle(Color.statusText(.red)) : AnyShapeStyle(Color(.secondaryLabel)))
-                    .lineLimit(2)
-                Text(metadata)
-                    .font(.footnote)
-                    .foregroundStyle(Color(.secondaryLabel))
-                    .lineLimit(1)
+            HStack(alignment: .center, spacing: 12) {
+                UserAvatarView(name: booking.requester.name, avatarUrl: booking.requester.avatarUrl, size: 40)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(booking.title)
+                        .font(.gothamBold(size: 16))
+                        .lineLimit(2)
+                    Text(info.text)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(Color.statusText(tone(now: now)))
+                        .lineLimit(2)
+                    Text(metadata)
+                        .font(.footnote)
+                        .foregroundStyle(Color(.secondaryLabel))
+                        .lineLimit(1)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityElement(children: .combine)
             .accessibilityLabel(rowAccessibilityLabel(now: now))
+        }
+    }
+
+    /// The tone that carries the booking's state: late red, missed pickup
+    /// orange, checked out blue, reserved purple, finished gray.
+    private func tone(now: Date) -> StatusTone {
+        if booking.isOverdue(now: now) { return .red }
+        if booking.isWaitingOnPickup(now: now) { return .orange }
+        switch booking.status {
+        case .open: return .blue
+        case .booked: return .purple
+        case .pendingPickup: return .orange
+        default: return .gray
         }
     }
 

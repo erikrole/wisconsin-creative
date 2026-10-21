@@ -29,13 +29,14 @@ describe("iOS booking surface alignment", () => {
     );
   });
 
-  it("keeps the row quiet: no rail, avatar, badge, or card chrome, and red only for late gear", () => {
+  it("keeps the row quiet: requester avatar and a status-coloured timing line, no rail, badge, or card chrome", () => {
     expect(bookingRow).not.toContain("StatusRail");
     expect(bookingRow).not.toContain("StatusBadge");
-    expect(bookingRow).not.toContain("UserAvatarView");
+    expect(bookingRow).toContain("UserAvatarView(name: booking.requester.name, avatarUrl: booking.requester.avatarUrl");
     expect(bookingRow).not.toContain(".shadow(");
     expect(bookingRow).toContain("capitalizesRelativeDay: false");
-    expect(bookingRow).toContain("info.urgent ? AnyShapeStyle(Color.statusText(.red))");
+    expect(bookingRow).toContain("Color.statusText(tone(now: now))");
+    expect(bookingRow).toContain("if booking.isOverdue(now: now) { return .red }");
     expect(bookingRow).not.toContain("compactMagnitude(now:");
   });
 
