@@ -2,7 +2,7 @@
   {
     "date": "2026-10-21",
     "title": "Staff looks right in dark mode",
-    "type": "fix",
+    "type": "fixes",
     "summary": "Staff tiles, notices and the hiring sheet now use dark-friendly colors instead of light pastels.",
     "details": [
       "The Right now tiles, Open schedule and See all links use softer tints and brighter text in dark mode.",
