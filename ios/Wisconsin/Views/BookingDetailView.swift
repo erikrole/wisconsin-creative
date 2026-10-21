@@ -680,7 +680,7 @@ struct EditBookingSheet: View {
                         DayTimeChipPicker(
                             selection: $endsAt,
                             minimum: booking.startsAt,
-                            tint: Color.accentColor
+                            tint: Color.statusText(.blue)
                         )
                         availabilityMessage
                             .font(.footnote)
@@ -709,7 +709,10 @@ struct EditBookingSheet: View {
                                     .foregroundStyle(.tertiary)
                             }
                             .frame(minHeight: 44)
+                            .contentShape(Rectangle())
                         }
+                        // Plain so the row reads as a row, not red link text.
+                        .buttonStyle(.plain)
                     }
                 }
 
@@ -905,8 +908,12 @@ struct TransferBookingOwnerSheet: View {
             .navigationTitle("Transfer Ownership")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }.disabled(isSaving)
+                // Pushed from Edit, the back button already leaves; a second
+                // Cancel crowded the bar and squeezed the title.
+                if wrapsInNavigationStack {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") { dismiss() }.disabled(isSaving)
+                    }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button { Task { await transfer() } } label: {

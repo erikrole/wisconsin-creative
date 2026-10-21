@@ -712,6 +712,14 @@ struct BookingsView: View {
     /// is due when" the way a calendar does. Anything late sits first under
     /// its own heading. An explicit sort or a closed scope is one plain
     /// section, because day headings over a title sort would lie.
+    /// A checkout whose pickup time has passed sits with missed reservation
+    /// pickups, so orange rows always live under the same heading.
+    private func missedCheckoutPickup(_ booking: Booking, now: Date) -> Bool {
+        booking.kind == .checkout
+            && (booking.status == .booked || booking.status == .pendingPickup)
+            && booking.startsAt < now
+    }
+
     private func bookingGroups(now: Date) -> [BookingGroup] {
         let rows = vm.sortedBookings
         let closed = vm.statusFilter == .completed || vm.statusFilter == .cancelled
@@ -724,7 +732,7 @@ struct BookingsView: View {
         for booking in rows {
             if booking.isOverdue(now: now) {
                 late.append(booking)
-            } else if booking.isWaitingOnPickup(now: now) {
+            } else if booking.isWaitingOnPickup(now: now) || missedCheckoutPickup(booking, now: now) {
                 waiting.append(booking)
             } else {
                 let time = booking.kind == .reservation ? booking.startsAt : booking.endsAt
