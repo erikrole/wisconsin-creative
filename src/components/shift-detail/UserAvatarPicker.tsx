@@ -1,16 +1,17 @@
 "use client";
 
 import { useMemo } from "react";
+import { Lato } from "next/font/google";
+import { Command as CommandPrimitive } from "cmdk";
 import { SearchIcon } from "lucide-react";
 import { UserAvatar } from "@/components/UserAvatar";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import type { CandidateRecommendation } from "@/lib/candidate-scoring-types";
 import { shiftWorkerLabelForProfile, shiftWorkerSlotLabel, shiftWorkerTypeForProfile } from "@/lib/shift-display";
 import { cn } from "@/lib/utils";
 import { AREA_LABELS } from "@/types/areas";
+
+const lato = Lato({ subsets: ["latin"], weight: ["400", "700", "900"], variable: "--font-lato", display: "swap" });
 
 export type PickerUser = {
   id: string;
@@ -38,31 +39,47 @@ type Props = {
   scoresLoading?: boolean;
   scoresLoadError?: boolean;
   slotWorkerType?: string | null;
+  /** Short context line above the list, such as "Student slot · Video". */
+  heading?: string;
 };
 
-type Tone = "good" | "check" | "blocked" | "none";
-type Group = { key: string; label: string | null; users: PickerUser[] };
+type Fit = "best" | "check" | "blocked" | "unknown";
 
-const TONE_DOT: Record<Tone, string> = {
-  good: "bg-[var(--green)]",
-  check: "bg-[var(--orange)]",
-  blocked: "bg-destructive",
-  none: "bg-transparent",
+// The panel carries the fresh theme itself because it portals out of the page
+// wrapper; restating the scope here keeps Schedule and Event detail consistent.
+const FIT_STATUS: Record<Fit, { dot: string; pill: string }> = {
+  best: { dot: "bg-[#30a46c]", pill: "bg-[var(--bg-surface)] text-[var(--text-secondary)]" },
+  check: { dot: "bg-[#f76b15]", pill: "bg-[#fff1e7] text-[#bd4b00] dark:bg-[rgba(247,107,21,0.16)] dark:text-[#ff9b55]" },
+  blocked: { dot: "bg-[#b9bbc6]", pill: "bg-[var(--bg-surface)] text-[var(--text-muted)]" },
+  unknown: { dot: "bg-transparent", pill: "bg-[var(--bg-surface)] text-[var(--text-secondary)]" },
 };
 
-function toneFor(score: CandidateRecommendation | undefined): Tone {
-  if (!score) return "none";
+function fitFor(score: CandidateRecommendation | undefined): Fit {
+  if (!score) return "unknown";
   if (score.blockingConflict) return "blocked";
-  if (score.bucket === "recommended" || score.bucket === "good_fit") {
-    return score.advisoryConflict ? "check" : "good";
-  }
+  if ((score.bucket === "recommended" || score.bucket === "good_fit") && !score.advisoryConflict) return "best";
   return "check";
 }
 
-function workloadLabel(score: CandidateRecommendation | undefined): string | null {
+function statusLabel(fit: Fit, score: CandidateRecommendation | undefined): string | null {
   if (!score) return null;
-  const count = score.workload.weekAssignments;
-  return count === 0 ? "Free this week" : `${count} this week`;
+  if (fit === "blocked") return "Unavailable";
+  if (score.advisoryConflict) return "Conflict";
+  const week = score.workload.weekAssignments;
+  return week === 0 ? "Free this week" : `${week} this week`;
+}
+
+function detailFor(user: PickerUser, score: CandidateRecommendation | undefined, slotWorkerType: string | null | undefined) {
+  const candidateWorkerType = shiftWorkerTypeForProfile(user);
+  if (slotWorkerType && candidateWorkerType && candidateWorkerType !== slotWorkerType) {
+    return `Fills a ${shiftWorkerSlotLabel(candidateWorkerType).toLowerCase()} instead`;
+  }
+  const fallback = [shiftWorkerLabelForProfile(user) ?? "Worker", user.primaryArea ? AREA_LABELS[user.primaryArea] ?? user.primaryArea : null]
+    .filter(Boolean)
+    .join(" · ");
+  if (!score) return fallback;
+  if (score.blockingConflict) return score.advisoryConflictNote ?? score.warnings[0]?.label ?? "Can't take this shift";
+  return score.advisoryConflictNote ?? score.warnings[0]?.label ?? score.reasons[0]?.label ?? fallback;
 }
 
 export function UserAvatarPicker({
@@ -78,129 +95,149 @@ export function UserAvatarPicker({
   scoresLoading,
   scoresLoadError = false,
   slotWorkerType,
+  heading,
 }: Props) {
-  const groups = useMemo<Group[]>(() => {
+  const groups = useMemo(() => {
     const query = search.trim().toLowerCase();
     const matching = users.filter((user) => !query || user.name.toLowerCase().includes(query));
-    if (!candidateScores) return [{ key: "all", label: null, users: matching }];
+    if (!candidateScores) return [{ key: "all", label: "People", users: [...matching].sort((a, b) => a.name.localeCompare(b.name)) }];
     const ranked = [...matching].sort((a, b) =>
       (candidateScores[b.id]?.score ?? -1) - (candidateScores[a.id]?.score ?? -1)
       || a.name.localeCompare(b.name),
     );
-    const tone = (user: PickerUser) => toneFor(candidateScores[user.id]);
-    const best = ranked.filter((user) => tone(user) === "good");
-    const check = ranked.filter((user) => tone(user) === "check" || tone(user) === "none");
-    const blocked = ranked.filter((user) => tone(user) === "blocked");
+    const byFit = (fit: Fit) => ranked.filter((user) => fitFor(candidateScores[user.id]) === fit);
     return [
-      { key: "best", label: "Best fit", users: best },
-      { key: "check", label: "Worth a look", users: check },
-      { key: "blocked", label: "Can't take this shift", users: blocked },
+      { key: "best", label: "Suggested", users: byFit("best") },
+      { key: "check", label: "Check first", users: [...byFit("check"), ...byFit("unknown")] },
+      { key: "blocked", label: "Unavailable", users: byFit("blocked") },
     ].filter((group) => group.users.length > 0);
   }, [candidateScores, search, users]);
 
   const matchCount = groups.reduce((total, group) => total + group.users.length, 0);
 
   return (
-    <div className="flex flex-col">
-      <div className="relative mb-2">
-        <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-        <Input
+    <CommandPrimitive
+      shouldFilter={false}
+      loop
+      className={cn(
+        "wc-fresh flex w-full flex-col overflow-hidden rounded-[inherit] bg-[var(--background)] text-[var(--text)]",
+        lato.variable,
+      )}
+    >
+      {heading && (
+        <div className="px-3.5 pt-3 text-xs font-bold text-[var(--text-muted)]">{heading}</div>
+      )}
+      <div className="flex items-center gap-2 border-b border-[var(--border)] px-3.5">
+        <SearchIcon className="size-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
+        <CommandPrimitive.Input
           id="user-avatar-picker-search"
           name="user-avatar-picker-search"
-          type="text"
-          className="h-10 pl-9 text-sm"
-          placeholder="Search people"
-          aria-label="Search people"
           value={search}
-          onChange={(e) => onSearchChange(e.target.value)}
+          onValueChange={onSearchChange}
+          placeholder="Assign to…"
+          aria-label="Search people"
           autoFocus
+          className="h-11 w-full bg-transparent text-[15px] outline-none placeholder:text-[var(--text-muted)]"
         />
+        {scoresLoading && !loading && (
+          <span className="shrink-0 text-xs text-[var(--text-muted)]">Checking availability…</span>
+        )}
       </div>
+
       {loading ? (
-        <p className="p-2 text-sm text-muted-foreground">Loading people…</p>
-      ) : loadError ? (
-        <Alert variant="destructive" className="p-3">
-          <AlertDescription className="flex flex-col gap-2 text-sm">
-            <span className="block">
-              {loadError === "network"
-                ? "Could not reach the server. Retry before assigning this slot."
-                : "Could not load people. Retry before assigning this slot."}
-            </span>
-            {onRetry && (
-              <Button type="button" variant="outline" size="sm" className="min-h-10" onClick={onRetry}>
-                Retry
-              </Button>
-            )}
-          </AlertDescription>
-        </Alert>
-      ) : matchCount === 0 ? (
-        <p className="p-2 text-sm text-muted-foreground">
-          {search ? "No one matches that name." : "No active people found."}
-        </p>
-      ) : (
-        <ScrollArea className="h-72 max-h-[var(--radix-popover-content-available-height)]">
-          <div className="flex flex-col gap-3 pr-2">
-            {groups.map((group) => (
-              <div key={group.key} className="flex flex-col gap-0.5">
-                {group.label && (
-                  <div className="px-2 pb-1 text-xs font-medium text-muted-foreground">{group.label}</div>
-                )}
-                {group.users.map((u) => {
-                  const score = candidateScores?.[u.id];
-                  const tone = toneFor(score);
-                  const blocked = tone === "blocked";
-                  const candidateWorkerType = shiftWorkerTypeForProfile(u);
-                  const candidateWorkerLabel = shiftWorkerLabelForProfile(u) ?? "Worker";
-                  const roleSlotNote = slotWorkerType && candidateWorkerType && candidateWorkerType !== slotWorkerType
-                    ? `Fills a ${shiftWorkerSlotLabel(candidateWorkerType).toLowerCase()} instead`
-                    : null;
-                  const detail = blocked
-                    ? score?.advisoryConflictNote ?? score?.warnings[0]?.label ?? "Unavailable"
-                    : score?.warnings[0]?.label
-                      ?? score?.advisoryConflictNote
-                      ?? roleSlotNote
-                      ?? score?.reasons[0]?.label
-                      ?? `${candidateWorkerLabel}${u.primaryArea ? ` · ${AREA_LABELS[u.primaryArea] ?? u.primaryArea}` : ""}`;
-                  const workload = workloadLabel(score);
-                  return (
-                    <Button
-                      key={u.id}
-                      type="button"
-                      variant="ghost"
-                      className={cn(
-                        "h-auto min-h-12 w-full justify-start gap-3 rounded-md px-2 py-1.5 text-left font-normal hover:bg-accent focus-visible:bg-accent",
-                        blocked && "opacity-60",
-                      )}
-                      onClick={() => onSelect(u.id)}
-                      disabled={disabled || blocked}
-                    >
-                      <UserAvatar name={u.name} avatarUrl={u.avatarUrl} size="sm" />
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium">{u.name}</span>
-                        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                          {tone !== "none" && <span className={cn("size-1.5 shrink-0 rounded-full", TONE_DOT[tone])} aria-hidden="true" />}
-                          <span className="truncate">{detail}</span>
-                        </span>
-                      </span>
-                      {workload && !blocked && (
-                        <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{workload}</span>
-                      )}
-                    </Button>
-                  );
-                })}
+        <div className="flex flex-col gap-1 p-1.5" aria-label="Loading people">
+          {[0, 1, 2, 3].map((row) => (
+            <div key={row} className="flex items-center gap-3 px-2 py-2">
+              <div className="size-8 animate-pulse rounded-full bg-[var(--bg-surface)]" />
+              <div className="flex-1 space-y-1.5">
+                <div className="h-3 w-32 animate-pulse rounded bg-[var(--bg-surface)]" />
+                <div className="h-2.5 w-44 animate-pulse rounded bg-[var(--bg-surface)]" />
               </div>
-            ))}
-          </div>
-        </ScrollArea>
+            </div>
+          ))}
+        </div>
+      ) : loadError ? (
+        <div className="flex flex-col items-start gap-3 p-4 text-sm">
+          <p className="text-[var(--text-secondary)]">
+            {loadError === "network"
+              ? "Couldn't reach the server. Try again before assigning this slot."
+              : "Couldn't load people. Try again before assigning this slot."}
+          </p>
+          {onRetry && (
+            <Button type="button" variant="outline" size="sm" className="min-h-10" onClick={onRetry}>
+              Try again
+            </Button>
+          )}
+        </div>
+      ) : (
+        <CommandPrimitive.List className="max-h-[min(22rem,var(--radix-popover-content-available-height,22rem))] overflow-y-auto overscroll-contain p-1.5">
+          {matchCount === 0 && (
+            <div className="px-3 py-8 text-center text-sm text-[var(--text-secondary)]">
+              {search ? `No one named "${search.trim()}"` : "No active people to assign"}
+            </div>
+          )}
+          {groups.map((group) => (
+            <CommandPrimitive.Group
+              key={group.key}
+              heading={group.label}
+              className="[&:not(:first-child)]:mt-1.5 [&_[cmdk-group-heading]]:flex [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:pt-2 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-bold [&_[cmdk-group-heading]]:text-[var(--text-muted)]"
+            >
+              {group.users.map((u) => {
+                const score = candidateScores?.[u.id];
+                const fit = fitFor(score);
+                const blocked = fit === "blocked";
+                const status = statusLabel(fit, score);
+                return (
+                  <CommandPrimitive.Item
+                    key={u.id}
+                    value={u.id}
+                    disabled={disabled || blocked}
+                    onSelect={() => onSelect(u.id)}
+                    className={cn(
+                      "group flex min-h-12 cursor-pointer select-none items-center gap-3 rounded-lg px-2 py-1.5 outline-none transition-colors",
+                      "data-[selected=true]:bg-[var(--accent-soft)]",
+                      "data-[disabled=true]:cursor-default data-[disabled=true]:opacity-55",
+                    )}
+                  >
+                    <span className="relative shrink-0">
+                      <UserAvatar name={u.name} avatarUrl={u.avatarUrl} size="default" className={cn(blocked && "grayscale")} />
+                      {fit !== "unknown" && (
+                        <span
+                          className={cn("absolute -bottom-px -right-px size-2.5 rounded-full ring-2 ring-[var(--background)]", FIT_STATUS[fit].dot)}
+                          aria-hidden="true"
+                        />
+                      )}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-bold leading-5">{u.name}</span>
+                      <span className="block truncate text-[13px] leading-[18px] text-[var(--text-secondary)]">
+                        {detailFor(u, score, slotWorkerType)}
+                      </span>
+                    </span>
+                    {status && (
+                      <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-xs font-bold tabular-nums", FIT_STATUS[fit].pill)}>
+                        {status}
+                      </span>
+                    )}
+                  </CommandPrimitive.Item>
+                );
+              })}
+            </CommandPrimitive.Group>
+          ))}
+        </CommandPrimitive.List>
       )}
-      {scoresLoading && !loading && (
-        <p className="mt-1 px-2 text-xs text-muted-foreground">Checking availability…</p>
-      )}
-      {scoresLoadError && (
-        <p className="mt-1 px-2 text-xs text-[var(--orange-text)]">
-          Availability unavailable. People are shown alphabetically.
-        </p>
-      )}
-    </div>
+
+      <div className="hidden items-center justify-between gap-3 border-t border-[var(--border)] px-3.5 py-2 text-xs text-[var(--text-muted)] sm:flex">
+        <span>
+          {scoresLoadError ? "Availability unavailable, sorted by name" : candidateScores ? "Sorted by fit" : "Sorted by name"}
+        </span>
+        <span className="flex items-center gap-1.5">
+          <kbd className="rounded border border-[var(--border)] px-1 font-sans">↑↓</kbd>
+          <span>move</span>
+          <kbd className="ml-1 rounded border border-[var(--border)] px-1 font-sans">↵</kbd>
+          <span>assign</span>
+        </span>
+      </div>
+    </CommandPrimitive>
   );
 }

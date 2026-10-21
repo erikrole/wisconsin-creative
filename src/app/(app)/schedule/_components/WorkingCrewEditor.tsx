@@ -1010,8 +1010,9 @@ export function WorkingCrewEditor({
                               Replace
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent className="w-80 max-w-[calc(100vw-2rem)] p-2 sm:w-96" align="end">
+                          <PopoverContent className="w-[25rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl p-0" align="end">
                             <UserAvatarPicker
+                              heading={`Replace ${user?.name ?? "assigned worker"} · ${AREA_LABELS[slot.area] ?? slot.area}`}
                               users={eligibleUsers}
                               loading={usersLoading}
                               loadError={usersLoadError}
@@ -1108,8 +1109,9 @@ export function WorkingCrewEditor({
                                 aria-label={`Assign ${roleLabel.toLowerCase()} slot`}
                               />
                             </PopoverTrigger>
-                            <PopoverContent className="w-80 max-w-[calc(100vw-2rem)] p-2 sm:w-96" align="start">
+                            <PopoverContent className="w-[25rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl p-0" align="start">
                               <UserAvatarPicker
+                                heading={`${roleLabel} slot · ${AREA_LABELS[slot.area] ?? slot.area}`}
                                 users={eligibleUsers}
                                 loading={usersLoading}
                                 loadError={usersLoadError}

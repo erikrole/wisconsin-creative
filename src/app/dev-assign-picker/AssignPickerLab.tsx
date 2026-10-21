@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { UserAvatarPicker, type PickerUser } from "@/components/shift-detail/UserAvatarPicker";
 import type { CandidateRecommendation } from "@/lib/candidate-scoring-types";
 
@@ -37,16 +38,22 @@ const SCORES: Record<string, CandidateRecommendation> = {
   "6": rec("6", { bucket: "warning", score: 0, blockingConflict: true, advisoryConflictNote: "Time off approved" }),
 };
 
-export default function AssignPickerLab() {
+function Lab() {
   const [search, setSearch] = useState("");
   const [picked, setPicked] = useState<string | null>(null);
+  const params = useSearchParams();
+  const theme = params.get("theme");
+  const state = params.get("state");
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme === "dark" ? "dark" : "light";
+  }, [theme]);
   return (
-    <div className="mx-auto flex min-h-screen max-w-sm flex-col gap-3 bg-background p-6 text-foreground">
-      <p className="text-sm text-muted-foreground">Assign Student slot · Video · Football vs. Iowa</p>
-      <div className="rounded-lg border bg-popover p-2 shadow-md">
+    <div className="flex min-h-screen justify-center bg-background p-6 text-foreground">
+      <div className="w-[25rem] max-w-full self-start overflow-hidden rounded-xl border bg-popover shadow-lg">
         <UserAvatarPicker
+          heading="Student slot · Video"
           users={PEOPLE}
-          loading={false}
+          loading={state === "loading"}
           search={search}
           onSearchChange={setSearch}
           onSelect={setPicked}
@@ -55,7 +62,15 @@ export default function AssignPickerLab() {
           slotWorkerType="ST"
         />
       </div>
-      {picked && <p className="text-sm">Picked {PEOPLE.find((p) => p.id === picked)?.name}</p>}
+      {picked && <p className="sr-only">Picked {PEOPLE.find((p) => p.id === picked)?.name}</p>}
     </div>
+  );
+}
+
+export default function AssignPickerLab() {
+  return (
+    <Suspense>
+      <Lab />
+    </Suspense>
   );
 }

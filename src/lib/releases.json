@@ -1,13 +1,13 @@
 [
   {
     "date": "2026-10-21",
-    "title": "Clearer crew picker",
+    "title": "A faster, clearer crew picker",
     "type": "improvement",
-    "summary": "Choosing someone for a shift now shows who fits best, who needs a second look, and who can't take it, in plain words.",
+    "summary": "Choosing someone for a shift now opens a cleaner picker that suggests the best fits first and explains each person in plain words.",
     "details": [
-      "Each person shows why they fit and how many shifts they already have this week.",
-      "People who are off or blocked are listed last and can't be picked.",
-      "The numeric scores are gone."
+      "Suggested people come first, then people to check first, then anyone who can't take the shift.",
+      "Each person shows why they fit and how busy they are this week.",
+      "Use the arrow keys and Return to assign without the mouse."
     ],
     "platforms": [
       "Web"
