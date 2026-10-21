@@ -1,6 +1,20 @@
 [
   {
     "date": "2026-10-21",
+    "title": "Sidebar letters no longer cut off",
+    "type": "fixes",
+    "summary": "Sidebar page names show the full tails of letters like g, y and p.",
+    "details": [
+      "Fixed the bottom of letters such as the g in Badges and Signatures being clipped in the sidebar.",
+      "The workspace name and your name in the account menu get the same extra room."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 559
+  },
+  {
+    "date": "2026-10-21",
     "title": "A Right now row on profiles",
     "type": "improvement",
     "summary": "Profiles now open with what is happening with that person right now.",

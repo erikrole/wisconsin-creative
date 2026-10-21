@@ -241,7 +241,7 @@ const railTooltipClass = cn(chromeFont.className, "rounded-md px-2 py-1 text-[12
 const navButtonClass = (isActive: boolean) =>
   cn(
     // 32px rows on desktop keep the full list on one laptop screen; phones keep the 40px touch floor.
-    "h-8 gap-2.5 rounded-md px-2 text-[13.5px] leading-none no-underline outline-none hover:no-underline focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--sidebar-ring)] transition-[background-color,color] duration-100 max-md:h-10 max-md:text-[15px] group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-md",
+    "h-8 gap-2.5 rounded-md px-2 text-[13.5px] leading-5 no-underline outline-none hover:no-underline focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--sidebar-ring)] transition-[background-color,color] duration-100 max-md:h-10 max-md:text-[15px] group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-md",
     isActive
       ? "bg-[var(--sidebar-active)] font-bold text-[color:var(--sidebar-text-active)] hover:bg-[var(--sidebar-active)] hover:text-[color:var(--sidebar-text-active)] data-[active=true]:bg-[var(--sidebar-active)] data-[active=true]:font-bold data-[active=true]:text-[color:var(--sidebar-text-active)]"
       : "font-normal text-[color:var(--sidebar-text)] hover:bg-[var(--sidebar-hover)] hover:text-[color:var(--sidebar-text-active)]",
@@ -456,10 +456,10 @@ export default function AppSidebar({
               />
             </span>
             <div className="min-w-0 group-data-[collapsible=icon]:hidden">
-              <p className="truncate text-[14px] font-black leading-[1.15] tracking-[-0.015em] text-[color:var(--sidebar-text-active)]">
+              <p className="truncate text-[14px] font-black leading-[1.3] tracking-[-0.015em] text-[color:var(--sidebar-text-active)]">
                 Wisconsin Creative
               </p>
-              <p className="mt-0.5 truncate text-[12px] font-normal leading-[1.15] text-[color:var(--sidebar-muted)]">
+              <p className="mt-0.5 truncate text-[12px] font-normal leading-[1.3] text-[color:var(--sidebar-muted)]">
                 UW Athletics
               </p>
             </div>
@@ -510,10 +510,10 @@ export default function AppSidebar({
                       className="size-8 ring-1 ring-[var(--sidebar-border)]"
                     />
                     <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
-                      <p className="truncate text-[13.5px] font-bold leading-[1.15] text-[color:var(--sidebar-text-active)]">
+                      <p className="truncate text-[13.5px] font-bold leading-[1.3] text-[color:var(--sidebar-text-active)]">
                         {user.name}
                       </p>
-                      <p className="mt-0.5 truncate text-[12px] leading-[1.15] text-[color:var(--sidebar-muted)]">
+                      <p className="mt-0.5 truncate text-[12px] leading-[1.3] text-[color:var(--sidebar-muted)]">
                         {roleCaption}
                       </p>
                     </div>
@@ -529,8 +529,8 @@ export default function AppSidebar({
                   <DropdownMenuLabel className="flex items-center gap-2.5 px-2 py-2 font-normal">
                     <UserAvatar name={user.name} avatarUrl={user.avatarUrl} className="size-9" />
                     <div className="min-w-0">
-                      <p className="truncate text-[14px] font-bold leading-tight text-foreground">{user.name}</p>
-                      <p className="mt-0.5 truncate text-[12px] leading-tight text-muted-foreground">{user.email}</p>
+                      <p className="truncate text-[14px] font-bold leading-snug text-foreground">{user.name}</p>
+                      <p className="mt-0.5 truncate text-[12px] leading-snug text-muted-foreground">{user.email}</p>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator className="my-1.5" />
