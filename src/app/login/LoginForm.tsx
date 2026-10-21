@@ -438,7 +438,7 @@ export default function LoginForm() {
                   <Alert role="status" aria-live="polite" className="bg-muted/40">
                     <AlertCircle className="size-4" />
                     <AlertDescription>
-                      You’re invited. Choose a password to create your account, then a short welcome setup collects the details the team needs for work.
+                      You’re invited. Choose a password to create your account. A short setup (about three minutes) follows, and you can pause it any time.
                     </AlertDescription>
                   </Alert>
 

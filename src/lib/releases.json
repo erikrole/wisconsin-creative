@@ -1,6 +1,22 @@
 [
   {
     "date": "2026-10-21",
+    "title": "A friendlier first-day setup",
+    "type": "improvement",
+    "summary": "New students get a calmer setup after they accept their invite, and a clear place to start when it's done.",
+    "details": [
+      "The Welcome setup now shows a simple step bar, one question at a time, and works comfortably on a phone.",
+      "When setup ends, a short list points to the schedule, your gear, the guides, and the iPhone app.",
+      "Stopping early is fine: it says so and reminds you tomorrow.",
+      "The invite email now spells out what happens next, including installing the app."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 0
+  },
+  {
+    "date": "2026-10-21",
     "title": "Hide gear from partners",
     "type": "feature",
     "summary": "Admins and staff can now keep individual items out of the Big Ten Network and Learfield catalog.",
