@@ -1,20 +1,97 @@
 import SwiftUI
+import UIKit
 import WidgetKit
+
+// MARK: - wc-fresh tokens
 
 // The widget extension compiles only its own sources plus the two shared
 // contract files, so `Brand.swift` and `Color.statusText` are out of reach.
-// These mirror the same taxonomy the app uses: red overdue, orange due soon,
-// blue active, purple reserved. In accented and vibrant modes the system owns
-// the palette, so the views fall back to a high-contrast primary foreground.
+// These mirror the web `.wc-fresh` theme (`src/app/globals.css`): a calm blue
+// accent, cool surfaces, and red / orange reserved for gear that is late or
+// due. In accented and vibrant modes the system owns the palette, so the
+// views fall back to a high-contrast primary foreground.
 private extension Color {
-    static let widgetRed = Color(red: 0.78, green: 0.11, blue: 0.18)
-    static let widgetOrange = Color(red: 0.85, green: 0.47, blue: 0.06)
-    static let widgetBlue = Color(red: 0.11, green: 0.42, blue: 0.78)
-    static let widgetPurple = Color(red: 0.42, green: 0.25, blue: 0.71)
+    /// One token, two appearances. The widget process follows the system trait
+    /// collection, so a dynamic `UIColor` is all light and dark mode needs.
+    static func fresh(_ light: UInt32, dark: UInt32, darkAlpha: CGFloat = 1) -> Color {
+        Color(UIColor { traits in
+            let isDark = traits.userInterfaceStyle == .dark
+            let value = isDark ? dark : light
+            return UIColor(
+                red: CGFloat((value >> 16) & 0xFF) / 255,
+                green: CGFloat((value >> 8) & 0xFF) / 255,
+                blue: CGFloat(value & 0xFF) / 255,
+                alpha: isDark ? darkAlpha : 1
+            )
+        })
+    }
+
+    static let freshAccent = fresh(0x3E63DD, dark: 0x8DA4EF)
+    static let freshAccentSoft = fresh(0xEEF2FF, dark: 0x8DA4EF, darkAlpha: 0.14)
+    static let freshSurface = fresh(0xFBFBFC, dark: 0x111214)
+    static let freshRaised = fresh(0xF4F5F7, dark: 0x1A1B1E)
+    static let freshText = fresh(0x1C2024, dark: 0xECECEF)
+    static let freshSecondary = fresh(0x60646C, dark: 0xA8AAB2)
+    static let widgetRed = fresh(0xC71C2E, dark: 0xFF7A85)
+    static let widgetOrange = fresh(0xB8610A, dark: 0xF5A94A)
+}
+
+/// Gotham, as the app uses it. `Font.custom` falls back to the system face if
+/// the font is missing from the bundle, so a build without it still renders.
+private extension Font {
+    static func gothamBlack(_ size: CGFloat, relativeTo style: Font.TextStyle = .body) -> Font {
+        .custom("Gotham-Black", size: size, relativeTo: style)
+    }
+
+    static func gothamBold(_ size: CGFloat, relativeTo style: Font.TextStyle = .body) -> Font {
+        .custom("Gotham-Bold", size: size, relativeTo: style)
+    }
 }
 
 private func widgetDisplayColor(_ fullColor: Color, renderingMode: WidgetRenderingMode) -> Color {
     renderingMode == .fullColor ? fullColor : .primary
+}
+
+/// The per-sport glyph for a shift, read from the event title the snapshot
+/// already carries. Unknown sports fall back to a calendar, so a new sport is
+/// never blank or wrong, only plainer.
+private func sportGlyph(for title: String) -> String {
+    let text = title.lowercased()
+    let table: [(String, String)] = [
+        ("football", "football.fill"),
+        ("hockey", "hockey.puck.fill"),
+        ("volleyball", "volleyball.fill"),
+        ("basketball", "basketball.fill"),
+        ("soccer", "soccerball"),
+        ("baseball", "baseball.fill"),
+        ("softball", "baseball.fill"),
+        ("wrestling", "figure.wrestling"),
+        ("swim", "figure.pool.swim"),
+        ("diving", "figure.pool.swim"),
+        ("tennis", "tennis.racket"),
+        ("golf", "figure.golf"),
+        ("rowing", "figure.rower"),
+        ("crew", "figure.rower"),
+        ("cross country", "figure.run"),
+        ("track", "figure.run"),
+        ("gymnastics", "figure.gymnastics"),
+    ]
+    return table.first { text.contains($0.0) }?.1 ?? "calendar"
+}
+
+/// The countdown as a loud numeral and a quiet unit, the same split the
+/// gear-return Live Activity uses ("24" then "min left"), so the Lock Screen,
+/// the Dynamic Island and the Home Screen read as one family.
+private func countdownParts(until date: Date, from now: Date) -> (value: String, unit: String) {
+    let minutes = max(0, Int(date.timeIntervalSince(now) / 60))
+    if minutes < 1 { return ("Now", "") }
+    if minutes < 60 { return ("\(minutes)", "min") }
+    let hours = minutes / 60
+    if hours < 24 {
+        let rest = minutes % 60
+        return (rest == 0 ? "\(hours)h" : "\(hours)h \(rest)m", "")
+    }
+    return ("\(hours / 24)d", "")
 }
 
 /// A snapshot older than this stops being presented as current. The app
@@ -46,18 +123,25 @@ private struct GearWidgetProvider: TimelineProvider {
         completion(GearWidgetEntry(date: .now, snapshot: snapshot?.resolved(at: .now)))
     }
 
+    /// Entries every five minutes for the next two hours, so the countdown
+    /// numeral (which is text, not a live timer) is never more than five
+    /// minutes behind. Past that the timeline asks to be rebuilt, or sooner if
+    /// a shift or booking crosses a boundary.
     func getTimeline(in context: Context, completion: @escaping (Timeline<GearWidgetEntry>) -> Void) {
         let now = Date()
         let snapshot = GearWidgetStore.read()
-        let entry = GearWidgetEntry(date: now, snapshot: snapshot?.resolved(at: now))
-        completion(Timeline(entries: [entry], policy: .after(Self.nextRefresh(after: now, snapshot: snapshot))))
+        let entries = stride(from: 0, through: 120, by: 5).map { minutes -> GearWidgetEntry in
+            let date = now.addingTimeInterval(TimeInterval(minutes * 60))
+            return GearWidgetEntry(date: date, snapshot: snapshot?.resolved(at: date))
+        }
+        let horizon = entries.last?.date ?? now
+        let next = Self.nextRefresh(after: now, snapshot: snapshot)
+        completion(Timeline(entries: entries, policy: .after(max(horizon, min(next, horizon)))))
     }
 
     /// Refresh when something on the card would actually change wording — a
     /// shift starting or ending, a booking coming due — and otherwise on a
-    /// slow heartbeat. Relative times inside the card update on their own via
-    /// `Text(_:style:)`, so this is only about the parts text style can't
-    /// re-derive.
+    /// slow heartbeat.
     private static func nextRefresh(after now: Date, snapshot: GearWidgetSnapshot?) -> Date {
         let heartbeat = now.addingTimeInterval(60 * 30)
         guard let snapshot else { return heartbeat }
@@ -102,21 +186,54 @@ private extension GearWidgetSnapshot {
 
 // MARK: - Shared chrome
 
-/// Shown whenever there is no snapshot to read: a fresh install, a signed-out
-/// phone, or a build whose profile has no App Group. All three want the same
-/// thing from the user, so they get one honest message instead of three.
+/// The cool surface behind every widget. In accented and vibrant modes the
+/// system draws its own material instead.
+private struct FreshBackground: View {
+    @Environment(\.widgetRenderingMode) private var renderingMode
+
+    var body: some View {
+        if renderingMode == .fullColor {
+            Color.freshSurface
+        } else {
+            Color.clear
+        }
+    }
+}
+
+/// A small rounded tile holding an accent glyph, the same soft-accent chip the
+/// web uses for icons.
+private struct SoftTile: View {
+    @Environment(\.widgetRenderingMode) private var renderingMode
+    let systemImage: String
+    var size: CGFloat = 30
+    var tint: Color = .freshAccent
+
+    var body: some View {
+        Image(systemName: systemImage)
+            .font(.system(size: size * 0.46, weight: .bold))
+            .foregroundStyle(renderingMode == .fullColor ? tint : .primary)
+            .frame(width: size, height: size)
+            .background(
+                renderingMode == .fullColor ? Color.freshAccentSoft : Color.primary.opacity(0.12),
+                in: RoundedRectangle(cornerRadius: size * 0.3, style: .continuous)
+            )
+            .accessibilityHidden(true)
+    }
+}
+
+/// Shown whenever there is no snapshot to read, or nothing to show: a fresh
+/// install, a signed-out phone, a quiet week. Calm and plain, one soft glyph
+/// and one honest sentence.
 private struct WidgetPlaceholder: View {
     let systemImage: String
     let message: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Image(systemName: systemImage)
-                .font(.title3)
-                .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 8) {
+            SoftTile(systemImage: systemImage, size: 32)
             Text(message)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .font(.gothamBold(13, relativeTo: .footnote))
+                .foregroundStyle(Color.freshSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
@@ -127,13 +244,18 @@ private struct WidgetHeader: View {
     let title: String
     let systemImage: String
     let tint: Color
+    /// Off where a `SoftTile` already carries the glyph beside it.
+    var showsIcon = true
 
     var body: some View {
         HStack(spacing: 5) {
-            Image(systemName: systemImage)
-                .font(.caption2.weight(.bold))
+            if showsIcon {
+                Image(systemName: systemImage)
+                    .font(.caption2.weight(.bold))
+            }
             Text(title)
-                .font(.caption2.weight(.bold))
+                .font(.gothamBlack(10, relativeTo: .caption2))
+                .tracking(0.6)
                 .textCase(.uppercase)
         }
         .foregroundStyle(tint)
@@ -170,13 +292,52 @@ private struct AccessoryEmpty: View {
 /// screen (see `ScanGearControl`), so there is nothing to run in the widget
 /// process and the capability gate stays in `GearTrackerRouteParser`.
 private struct ScanLink: View {
+    @Environment(\.widgetRenderingMode) private var renderingMode
+
     var body: some View {
         Link(destination: URL(string: "wisconsin://scan")!) {
             Label("Scan gear", systemImage: "barcode.viewfinder")
-                .font(.caption.weight(.semibold))
+                .font(.gothamBold(12, relativeTo: .caption))
+                .foregroundStyle(renderingMode == .fullColor ? Color.freshAccent : .primary)
                 .padding(.vertical, 6)
                 .padding(.horizontal, 10)
-                .background(.fill.tertiary, in: Capsule())
+                .background(
+                    renderingMode == .fullColor ? Color.freshAccentSoft : Color.primary.opacity(0.12),
+                    in: Capsule()
+                )
+        }
+    }
+}
+
+/// "Today" and "Tomorrow" as a soft pill, since those are the days that matter
+/// at a glance; any other day is a plain weekday.
+private struct DayChip: View {
+    @Environment(\.widgetRenderingMode) private var renderingMode
+    let date: Date
+
+    private var phrase: (text: String, isNear: Bool) {
+        let calendar = Calendar.current
+        if calendar.isDateInToday(date) { return ("Today", true) }
+        if calendar.isDateInTomorrow(date) { return ("Tomorrow", true) }
+        return (date.formatted(.dateTime.weekday(.abbreviated)).uppercased(), false)
+    }
+
+    var body: some View {
+        let phrase = phrase
+        if phrase.isNear {
+            Text(phrase.text)
+                .font(.gothamBlack(9, relativeTo: .caption2))
+                .foregroundStyle(renderingMode == .fullColor ? Color.freshAccent : .primary)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(
+                    renderingMode == .fullColor ? Color.freshAccentSoft : Color.primary.opacity(0.12),
+                    in: Capsule()
+                )
+        } else {
+            Text(phrase.text)
+                .font(.gothamBold(9, relativeTo: .caption2))
+                .foregroundStyle(Color.freshSecondary)
         }
     }
 }
@@ -188,6 +349,10 @@ private struct NextShiftWidgetView: View {
     @Environment(\.widgetRenderingMode) private var renderingMode
     @Environment(\.showsWidgetContainerBackground) private var showsWidgetContainerBackground
     let entry: GearWidgetEntry
+
+    private var accent: Color {
+        widgetDisplayColor(.freshAccent, renderingMode: renderingMode)
+    }
 
     private var upcoming: [GearWidgetSnapshot.Shift] {
         (entry.snapshot?.upcomingShifts ?? [])
@@ -203,7 +368,7 @@ private struct NextShiftWidgetView: View {
             default: homeBody
             }
         }
-        .containerBackground(.fill.tertiary, for: .widget)
+        .containerBackground(for: .widget) { FreshBackground() }
         .widgetURL(scheduleURL(for: entry.snapshot?.nextShift))
     }
 
@@ -224,8 +389,8 @@ private struct NextShiftWidgetView: View {
             )
         } else {
             WidgetPlaceholder(
-                systemImage: "checkmark.seal",
-                message: "No upcoming shifts."
+                systemImage: "calendar.badge.checkmark",
+                message: "No shifts this week. Enjoy the breather."
             )
         }
     }
@@ -233,15 +398,20 @@ private struct NextShiftWidgetView: View {
     @ViewBuilder
     private var circularBody: some View {
         if let shift = entry.snapshot?.nextShift {
+            let parts = countdownParts(until: shift.startsAt, from: entry.date)
             ZStack {
                 AccessoryWidgetBackground()
                 VStack(spacing: 0) {
-                    Image(systemName: "calendar")
-                        .font(.caption2.weight(.bold))
-                    Text(shift.startsAt, format: .dateTime.hour().minute())
-                        .font(.caption.weight(.semibold))
+                    Image(systemName: sportGlyph(for: shift.title))
+                        .font(.system(size: 11, weight: .bold))
+                    Text(parts.value)
+                        .font(.gothamBlack(16, relativeTo: .headline))
                         .minimumScaleFactor(0.6)
                         .lineLimit(1)
+                    if !parts.unit.isEmpty {
+                        Text(parts.unit)
+                            .font(.system(size: 9, weight: .semibold))
+                    }
                 }
                 .widgetAccentable()
             }
@@ -254,7 +424,7 @@ private struct NextShiftWidgetView: View {
                 Image(systemName: entry.snapshot == nil ? "calendar.badge.questionmark" : "checkmark")
                     .font(.title3)
             }
-            .accessibilityLabel(entry.snapshot == nil ? "Open Creative to see your next shift" : "No upcoming shifts")
+            .accessibilityLabel(entry.snapshot == nil ? "Open Creative to see your next shift" : "No shifts this week")
         }
     }
 
@@ -264,35 +434,30 @@ private struct NextShiftWidgetView: View {
             Label {
                 Text("\(shift.title) \(shift.startsAt, format: .dateTime.hour().minute())")
             } icon: {
-                Image(systemName: "calendar")
+                Image(systemName: sportGlyph(for: shift.title))
             }
         } else {
             AccessoryEmpty(
                 systemImage: "calendar",
-                text: entry.snapshot == nil ? "Open Creative for shifts" : "No upcoming shifts"
+                text: entry.snapshot == nil ? "Open Creative for shifts" : "No shifts this week"
             )
         }
     }
 
-    /// The agenda layout: when on the left, what and where on the right, the
-    /// first row carrying the live countdown. Rows are capped by height, not
-    /// by data, so Medium shows three and Large six.
+    /// The agenda layout: a sport tile, the event, and when. Rows are capped by
+    /// height, not by data, so Medium shows three and Large six.
     private func listBody(rows: Int, showsScan: Bool) -> some View {
         let shifts = Array(upcoming.prefix(rows))
         let compact = family == .systemMedium
         return VStack(alignment: .leading, spacing: compact ? 6 : 10) {
             // The countdown rides the header so every title gets the full row.
             HStack(alignment: .firstTextBaseline) {
-                WidgetHeader(
-                    title: "Shifts",
-                    systemImage: "calendar",
-                    tint: widgetDisplayColor(.widgetPurple, renderingMode: renderingMode)
-                )
+                WidgetHeader(title: "Shifts", systemImage: "calendar", tint: accent)
                 Spacer(minLength: 8)
                 if let next = shifts.first {
                     Text("in \(next.startsAt, style: .relative)")
-                        .font(.caption2.weight(.medium))
-                        .foregroundStyle(.secondary)
+                        .font(.gothamBold(10, relativeTo: .caption2))
+                        .foregroundStyle(Color.freshSecondary)
                         .monospacedDigit()
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
@@ -321,6 +486,37 @@ private struct NextShiftWidgetView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
+    private func shiftRow(_ shift: GearWidgetSnapshot.Shift, isNext: Bool) -> some View {
+        HStack(spacing: 10) {
+            SoftTile(systemImage: sportGlyph(for: shift.title), size: 30)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(shift.title)
+                    .font(.gothamBold(13, relativeTo: .subheadline))
+                    .foregroundStyle(Color.freshText)
+                    .lineLimit(1)
+                let parts = [shift.area, shift.locationName].compactMap { $0 }.filter { !$0.isEmpty }
+                if !parts.isEmpty {
+                    Text(parts.joined(separator: " · "))
+                        .font(.caption2)
+                        .foregroundStyle(Color.freshSecondary)
+                        .lineLimit(1)
+                }
+            }
+            Spacer(minLength: 4)
+            VStack(alignment: .trailing, spacing: 2) {
+                DayChip(date: shift.startsAt)
+                Text(shift.startsAt, format: .dateTime.hour().minute())
+                    .font(.gothamBold(13, relativeTo: .subheadline))
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .foregroundStyle(isNext ? accent : Color.freshText)
+            }
+            // Fixed to the time's own width: a "7:30 PM" that wraps onto two
+            // lines is worse than a title that truncates a character sooner.
+            .fixedSize(horizontal: true, vertical: false)
+        }
+    }
+
     /// One compact line of gear state for the Large layout's spare room, in
     /// place of a blank band. Nothing at all when the person has no gear out.
     private var gearSummary: AnyView? {
@@ -328,88 +524,60 @@ private struct NextShiftWidgetView: View {
         let (count, noun, tint): (Int, String, Color) = {
             if snapshot.overdueCount > 0 { return (snapshot.overdueCount, "overdue", .widgetRed) }
             if snapshot.dueTodayCount > 0 { return (snapshot.dueTodayCount, "due today", .widgetOrange) }
-            return (snapshot.dueBookings.count, "out", .widgetBlue)
+            return (snapshot.dueBookings.count, "out", .freshAccent)
         }()
         return AnyView(
             Link(destination: URL(string: "wisconsin://bookings")!) {
-                HStack(spacing: 6) {
-                    Image(systemName: "bag")
-                        .font(.caption.weight(.bold))
+                HStack(spacing: 8) {
+                    SoftTile(systemImage: "bag", size: 24)
                     Text("My gear")
-                        .font(.caption.weight(.semibold))
+                        .font(.gothamBold(12, relativeTo: .caption))
+                        .foregroundStyle(Color.freshText)
                     Spacer(minLength: 8)
                     Text("\(count) \(noun)")
-                        .font(.caption.weight(.semibold))
+                        .font(.gothamBlack(12, relativeTo: .caption))
                         .foregroundStyle(widgetDisplayColor(tint, renderingMode: renderingMode))
                 }
                 .padding(.horizontal, 10)
-                .padding(.vertical, 8)
-                .background(.fill.tertiary, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .padding(.vertical, 7)
+                .background(
+                    renderingMode == .fullColor ? Color.freshRaised : Color.primary.opacity(0.08),
+                    in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                )
             }
-            .foregroundStyle(.primary)
         )
     }
 
-    private func shiftRow(_ shift: GearWidgetSnapshot.Shift, isNext: Bool) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 10) {
-            VStack(alignment: .leading, spacing: 0) {
-                Text(shift.startsAt, format: .dateTime.weekday(.abbreviated))
-                    .font(.caption2.weight(.semibold))
-                    .textCase(.uppercase)
-                    .foregroundStyle(.secondary)
-                Text(shift.startsAt, format: .dateTime.hour().minute())
-                    .font(.subheadline.weight(.semibold))
-                    .monospacedDigit()
-                    .lineLimit(1)
-                    .foregroundStyle(isNext ? widgetDisplayColor(.widgetPurple, renderingMode: renderingMode) : .primary)
-            }
-            // Fixed to the time's own width: a "7:30 PM" that wraps onto two
-            // lines is worse than a title that truncates a character sooner.
-            .fixedSize(horizontal: true, vertical: false)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(shift.title)
-                    .font(.subheadline.weight(.semibold))
-                    .lineLimit(1)
-                let parts = [shift.area, shift.locationName].compactMap { $0 }.filter { !$0.isEmpty }
-                if !parts.isEmpty {
-                    Text(parts.joined(separator: " · "))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-            }
-            Spacer(minLength: 0)
-        }
-    }
-
     private func cardBody(_ shift: GearWidgetSnapshot.Shift) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            WidgetHeader(
-                title: "Next Shift",
-                systemImage: "calendar",
-                tint: widgetDisplayColor(.widgetPurple, renderingMode: renderingMode)
-            )
+        let parts = countdownParts(until: shift.startsAt, from: entry.date)
+        return VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 7) {
+                SoftTile(systemImage: sportGlyph(for: shift.title), size: 24)
+                WidgetHeader(title: "Next shift", systemImage: "calendar", tint: accent, showsIcon: false)
+            }
 
             Text(shift.title)
-                .font(.headline)
-                .lineLimit(family == .systemSmall ? 2 : 1)
+                .font(.gothamBold(14, relativeTo: .subheadline))
+                .foregroundStyle(Color.freshText)
+                .lineLimit(2)
                 // Wrap to a second line instead of shrinking or truncating.
                 .fixedSize(horizontal: false, vertical: family == .systemSmall)
 
-            // The relative form keeps counting down without another timeline
-            // entry, which is what makes a shift widget worth glancing at.
-            Text(shift.startsAt, style: .relative)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(widgetDisplayColor(.widgetPurple, renderingMode: renderingMode))
-                .monospacedDigit()
-                .lineLimit(1)
-
-            Text(shift.startsAt, format: .dateTime.weekday(.abbreviated).hour().minute())
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-
             Spacer(minLength: 0)
+
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text(parts.value)
+                    .font(.gothamBlack(28, relativeTo: .title))
+                    .foregroundStyle(accent)
+                    .minimumScaleFactor(0.7)
+                    .lineLimit(1)
+                if !parts.unit.isEmpty {
+                    Text(parts.unit)
+                        .font(.gothamBold(12, relativeTo: .caption))
+                        .foregroundStyle(Color.freshSecondary)
+                }
+            }
+            .widgetAccentable()
 
             detailLine(shift)
         }
@@ -420,34 +588,37 @@ private struct NextShiftWidgetView: View {
     /// fact and one supporting line at those distances instead of squeezing
     /// the handheld card's secondary metadata into the same space.
     private func backgroundRemovedBody(_ shift: GearWidgetSnapshot.Shift) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            WidgetHeader(
-                title: "Next Shift",
-                systemImage: "calendar",
-                tint: widgetDisplayColor(.widgetPurple, renderingMode: renderingMode)
-            )
+        let parts = countdownParts(until: shift.startsAt, from: entry.date)
+        return VStack(alignment: .leading, spacing: 2) {
+            WidgetHeader(title: "Next shift", systemImage: sportGlyph(for: shift.title), tint: accent)
             Text(shift.title)
-                .font(.headline)
+                .font(.gothamBold(14, relativeTo: .headline))
                 .lineLimit(1)
-            Text(shift.startsAt, style: .relative)
-                .font(.title3.weight(.bold))
-                .foregroundStyle(widgetDisplayColor(.widgetPurple, renderingMode: renderingMode))
-                .monospacedDigit()
-                .lineLimit(1)
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text(parts.value)
+                    .font(.gothamBlack(26, relativeTo: .title))
+                    .foregroundStyle(accent)
+                    .lineLimit(1)
+                Text(parts.unit)
+                    .font(.gothamBold(12, relativeTo: .caption))
+                    .foregroundStyle(.secondary)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
 
     @ViewBuilder
     private func detailLine(_ shift: GearWidgetSnapshot.Shift) -> some View {
-        let parts = [shift.area, shift.locationName, shift.gearLabel]
-            .compactMap { $0 }
-            .filter { !$0.isEmpty }
-        if !parts.isEmpty {
-            Text(parts.joined(separator: " · "))
+        let when = shift.startsAt.formatted(.dateTime.weekday(.abbreviated).hour().minute())
+        Text(when)
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(Color.freshSecondary)
+            .lineLimit(1)
+        if let place = shift.locationName, !place.isEmpty {
+            Text(place)
                 .font(.caption2)
-                .foregroundStyle(.secondary)
-                .lineLimit(family == .systemSmall ? 2 : 1)
+                .foregroundStyle(Color.freshSecondary)
+                .lineLimit(1)
         }
         if entry.isStale, let generatedAt = entry.snapshot?.generatedAt {
             StaleFooter(generatedAt: generatedAt)
@@ -455,17 +626,25 @@ private struct NextShiftWidgetView: View {
     }
 
     private func accessoryBody(_ shift: GearWidgetSnapshot.Shift) -> some View {
-        VStack(alignment: .leading, spacing: 1) {
-            Text("NEXT SHIFT")
-                .font(.caption2.weight(.bold))
+        let parts = countdownParts(until: shift.startsAt, from: entry.date)
+        return VStack(alignment: .leading, spacing: 1) {
+            Label("NEXT SHIFT", systemImage: sportGlyph(for: shift.title))
+                .font(.gothamBlack(10, relativeTo: .caption2))
                 .foregroundStyle(.secondary)
+                .widgetAccentable()
             Text(shift.title)
-                .font(.headline)
+                .font(.gothamBold(14, relativeTo: .headline))
                 .lineLimit(1)
-            Text(shift.startsAt, style: .relative)
-                .font(.caption)
-                .monospacedDigit()
-                .lineLimit(1)
+            HStack(alignment: .firstTextBaseline, spacing: 3) {
+                Text(parts.value)
+                    .font(.gothamBlack(15, relativeTo: .headline))
+                    .monospacedDigit()
+                if !parts.unit.isEmpty {
+                    Text(parts.unit)
+                        .font(.caption2.weight(.semibold))
+                }
+            }
+            .lineLimit(1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -501,9 +680,11 @@ private struct GearDueWidgetView: View {
     @Environment(\.showsWidgetContainerBackground) private var showsWidgetContainerBackground
     let entry: GearWidgetEntry
 
+    /// Red only when something is late, orange when something is due today,
+    /// and the calm accent blue the rest of the time. Never red by default.
     private var accent: Color {
         guard let snapshot = entry.snapshot else {
-            return widgetDisplayColor(.widgetBlue, renderingMode: renderingMode)
+            return widgetDisplayColor(.freshAccent, renderingMode: renderingMode)
         }
         if snapshot.overdueCount > 0 {
             return widgetDisplayColor(.widgetRed, renderingMode: renderingMode)
@@ -511,7 +692,7 @@ private struct GearDueWidgetView: View {
         if snapshot.dueTodayCount > 0 {
             return widgetDisplayColor(.widgetOrange, renderingMode: renderingMode)
         }
-        return widgetDisplayColor(.widgetBlue, renderingMode: renderingMode)
+        return widgetDisplayColor(.freshAccent, renderingMode: renderingMode)
     }
 
     private var outNow: [GearWidgetSnapshot.DueBooking] {
@@ -527,7 +708,7 @@ private struct GearDueWidgetView: View {
             default: homeBody
             }
         }
-        .containerBackground(.fill.tertiary, for: .widget)
+        .containerBackground(for: .widget) { FreshBackground() }
         .widgetURL(bookingURL(for: entry.snapshot))
     }
 
@@ -564,9 +745,9 @@ private struct GearDueWidgetView: View {
                 AccessoryWidgetBackground()
                 VStack(spacing: 0) {
                     Image(systemName: snapshot.overdueCount > 0 ? "exclamationmark.circle" : "bag")
-                        .font(.caption2.weight(.bold))
+                        .font(.system(size: 11, weight: .bold))
                     Text("\(lead.count)")
-                        .font(.title3.weight(.bold))
+                        .font(.gothamBlack(20, relativeTo: .title3))
                         .monospacedDigit()
                 }
                 .widgetAccentable()
@@ -587,7 +768,7 @@ private struct GearDueWidgetView: View {
         if let snapshot = entry.snapshot {
             let lead = lead(snapshot)
             if snapshot.dueBookings.isEmpty {
-                AccessoryEmpty(systemImage: "bag", text: "All gear returned")
+                AccessoryEmpty(systemImage: "checkmark.circle", text: "All gear returned")
             } else {
                 Label("\(lead.count) \(lead.noun)", systemImage: snapshot.overdueCount > 0 ? "exclamationmark.circle" : "bag")
             }
@@ -600,23 +781,23 @@ private struct GearDueWidgetView: View {
     private var rectangularBody: some View {
         if let snapshot = entry.snapshot {
             VStack(alignment: .leading, spacing: 1) {
-                Text("MY GEAR")
-                    .font(.caption2.weight(.bold))
+                Label("MY GEAR", systemImage: "bag")
+                    .font(.gothamBlack(10, relativeTo: .caption2))
                     .foregroundStyle(.secondary)
                     .widgetAccentable()
                 if let next = outNow.first {
                     let lead = lead(snapshot)
                     Text("\(lead.count) \(lead.noun)")
-                        .font(.headline)
+                        .font(.gothamBold(15, relativeTo: .headline))
                         .lineLimit(1)
-                    Text("\(next.title) · due \(next.endsAt, style: .relative)")
+                    Text("\(next.title) · \(next.isOverdue ? "was due" : "due") \(next.endsAt, format: .dateTime.hour().minute())")
                         .font(.caption)
                         .monospacedDigit()
                         .lineLimit(1)
                 } else {
-                    Text("All clear")
-                        .font(.headline)
-                    Text("No gear out")
+                    Text("All gear's back")
+                        .font(.gothamBold(15, relativeTo: .headline))
+                    Text("Nothing out")
                         .font(.caption)
                 }
             }
@@ -631,7 +812,7 @@ private struct GearDueWidgetView: View {
     private func mediumBody(_ snapshot: GearWidgetSnapshot) -> some View {
         HStack(alignment: .top, spacing: 14) {
             VStack(alignment: .leading, spacing: 4) {
-                WidgetHeader(title: "My Gear", systemImage: "bag", tint: accent)
+                WidgetHeader(title: "My gear", systemImage: "bag", tint: widgetDisplayColor(.freshAccent, renderingMode: renderingMode))
                 headline(snapshot)
                 Spacer(minLength: 0)
                 if entry.isStale { StaleFooter(generatedAt: snapshot.generatedAt) }
@@ -645,7 +826,7 @@ private struct GearDueWidgetView: View {
 
     private func largeBody(_ snapshot: GearWidgetSnapshot) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            WidgetHeader(title: "My Gear", systemImage: "bag", tint: accent)
+            WidgetHeader(title: "My gear", systemImage: "bag", tint: widgetDisplayColor(.freshAccent, renderingMode: renderingMode))
             headline(snapshot)
             bookingRows(limit: 5, spacing: 12)
             Spacer(minLength: 0)
@@ -662,11 +843,11 @@ private struct GearDueWidgetView: View {
     private func bookingRows(limit: Int, spacing: CGFloat) -> some View {
         let rows = Array(outNow.prefix(limit))
         if rows.isEmpty {
-            VStack(alignment: .leading, spacing: 4) {
-                Image(systemName: "checkmark.seal").foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 6) {
+                SoftTile(systemImage: "checkmark", size: 28)
                 Text("Nothing is due back.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.gothamBold(12, relativeTo: .caption))
+                    .foregroundStyle(Color.freshSecondary)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         } else {
@@ -674,7 +855,8 @@ private struct GearDueWidgetView: View {
                 ForEach(rows, id: \.id) { booking in
                     VStack(alignment: .leading, spacing: 1) {
                         Text(booking.title)
-                            .font(.subheadline.weight(.semibold))
+                            .font(.gothamBold(13, relativeTo: .subheadline))
+                            .foregroundStyle(Color.freshText)
                             .lineLimit(1)
                         // A clock time, not a ticking relative one: the row
                         // is rarely re-rendered, and "41 min, 43 sec" both
@@ -689,7 +871,7 @@ private struct GearDueWidgetView: View {
                         .foregroundStyle(
                             booking.isOverdue
                                 ? widgetDisplayColor(.widgetRed, renderingMode: renderingMode)
-                                : .secondary
+                                : Color.freshSecondary
                         )
                         .lineLimit(1)
                     }
@@ -697,7 +879,7 @@ private struct GearDueWidgetView: View {
                 if outNow.count > limit {
                     Text("\(outNow.count - limit) more out")
                         .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.freshSecondary)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -706,31 +888,28 @@ private struct GearDueWidgetView: View {
 
     private func cardBody(_ snapshot: GearWidgetSnapshot) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            WidgetHeader(title: "My Gear", systemImage: "bag", tint: accent)
+            HStack(spacing: 7) {
+                SoftTile(systemImage: "bag", size: 24)
+                WidgetHeader(title: "My gear", systemImage: "bag", tint: widgetDisplayColor(.freshAccent, renderingMode: renderingMode), showsIcon: false)
+            }
 
             headline(snapshot)
 
             if let next = snapshot.dueBookings.first {
                 Text(next.title)
-                    .font(.subheadline.weight(.semibold))
+                    .font(.gothamBold(13, relativeTo: .subheadline))
+                    .foregroundStyle(Color.freshText)
                     .lineLimit(1)
                 Text("\(next.isOverdue ? "Overdue since" : "Due") \(next.endsAt, format: .dateTime.hour().minute())")
                     .font(.caption)
                     .foregroundStyle(
                         next.isOverdue
                             ? widgetDisplayColor(.widgetRed, renderingMode: renderingMode)
-                            : .secondary
+                            : Color.freshSecondary
                     )
                     .monospacedDigit()
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
-            }
-
-            if family == .systemMedium, snapshot.dueBookings.count > 1 {
-                Text("\(snapshot.dueBookings.count - 1) more out")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
             }
 
             Spacer(minLength: 0)
@@ -744,13 +923,13 @@ private struct GearDueWidgetView: View {
 
     private func backgroundRemovedBody(_ snapshot: GearWidgetSnapshot) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            WidgetHeader(title: "My Gear", systemImage: "bag", tint: accent)
+            WidgetHeader(title: "My gear", systemImage: "bag", tint: accent)
 
             headline(snapshot)
 
             if let next = snapshot.dueBookings.first {
                 Text(next.title)
-                    .font(.caption.weight(.semibold))
+                    .font(.gothamBold(12, relativeTo: .caption))
                     .lineLimit(1)
                 Text("\(next.isOverdue ? "Overdue since" : "Due") \(next.endsAt, format: .dateTime.hour().minute())")
                     .font(.caption2)
@@ -773,23 +952,26 @@ private struct GearDueWidgetView: View {
         } else if snapshot.dueTodayCount > 0 {
             countLine(snapshot.dueTodayCount, noun: "due today", tint: .widgetOrange)
         } else if snapshot.dueBookings.isEmpty {
-            Text("All clear")
-                .font(.headline)
-                .foregroundStyle(widgetDisplayColor(.widgetBlue, renderingMode: renderingMode))
+            Label("All gear's back", systemImage: "checkmark.circle.fill")
+                .font(.gothamBold(14, relativeTo: .headline))
+                .foregroundStyle(widgetDisplayColor(.freshAccent, renderingMode: renderingMode))
         } else {
-            countLine(snapshot.dueBookings.count, noun: "out", tint: .widgetBlue)
+            countLine(snapshot.dueBookings.count, noun: "out", tint: .freshAccent)
         }
     }
 
+    /// A loud numeral and a quiet noun, the same split as the Next Shift
+    /// countdown and the Live Activity.
     private func countLine(_ count: Int, noun: String, tint: Color) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 4) {
             Text("\(count)")
-                .font(.title.weight(.bold))
+                .font(.gothamBlack(30, relativeTo: .title))
                 .monospacedDigit()
+                .foregroundStyle(widgetDisplayColor(tint, renderingMode: renderingMode))
             Text(noun)
-                .font(.subheadline.weight(.semibold))
+                .font(.gothamBold(12, relativeTo: .caption))
+                .foregroundStyle(Color.freshSecondary)
         }
-        .foregroundStyle(widgetDisplayColor(tint, renderingMode: renderingMode))
         .lineLimit(1)
         .minimumScaleFactor(0.8)
         .widgetAccentable()
