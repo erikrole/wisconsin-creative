@@ -1017,8 +1017,6 @@ struct BookingRow: View {
     var showsRequester = true
     var showsDay = true
 
-    }
-
     var body: some View {
         // Re-evaluates on the minute so "Due" flips to overdue without a refresh.
         TimelineView(.periodic(from: .now, by: 60)) { context in
