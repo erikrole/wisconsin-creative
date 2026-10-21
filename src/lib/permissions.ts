@@ -154,6 +154,7 @@ export const PERMISSIONS: Record<string, Record<string, Role[]>> = {
   },
   diagnostics: {
     view: ["ADMIN"],
+    manage: ["ADMIN"],
   },
   shift: {
     view: ["ADMIN", "STAFF", "STUDENT"],
