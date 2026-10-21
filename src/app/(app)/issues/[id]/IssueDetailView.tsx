@@ -4,11 +4,13 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowLeftIcon, CheckIcon, ChevronLeftIcon, ChevronRightIcon, CopyIcon, EyeOffIcon, RotateCcwIcon } from "lucide-react";
+import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, CopyIcon, EyeOffIcon, RotateCcwIcon } from "lucide-react";
+import { BreadcrumbLabel } from "@/components/BreadcrumbContext";
 import EmptyState from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { chromeFont } from "@/lib/chrome-font";
 import { copyTextToClipboard } from "@/lib/clipboard";
 import { formatDateTime, formatRelativeTime, pluralize } from "@/lib/format";
 import type { Breadcrumb } from "@/lib/error-reporting/grouping";
@@ -164,14 +166,8 @@ export function IssueDetailView({ id }: { id: string }) {
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <Link href="/issues" className="inline-flex items-center gap-1 text-[13px] font-bold text-muted-foreground no-underline hover:text-foreground">
-          <ArrowLeftIcon className="size-3.5" aria-hidden="true" />
-          Issues
-        </Link>
-      </div>
-
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-start">
+      <BreadcrumbLabel label={issue.title} />
+      <header data-page-header className={cn(chromeFont.variable, "flex flex-col gap-4 sm:flex-row sm:items-start")}>
         <PlatformBadge platform={issue.platform} className="size-10 rounded-xl" />
         <div className="min-w-0 flex-1">
           <div className="mb-1 flex flex-wrap items-center gap-2 text-[12.5px] text-muted-foreground">
@@ -180,7 +176,7 @@ export function IssueDetailView({ id }: { id: string }) {
             <span>{kind}</span>
             <StatusPill status={issue.regressedAt && issue.status === "open" ? "regressed" : issue.status} />
           </div>
-          <h1 className="m-0 break-words text-[24px] leading-tight sm:text-[28px]">{issue.title}</h1>
+          <h1 className="m-0 break-words">{issue.title}</h1>
           {issue.culprit ? <p className="m-0 mt-1.5 break-all font-mono text-[12.5px] text-muted-foreground">{issue.culprit}</p> : null}
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
