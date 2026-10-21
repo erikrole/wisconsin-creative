@@ -660,9 +660,12 @@ private struct ScheduleCalendarPrompt: View {
         VStack(alignment: .leading, spacing: 2) {
             Text("Add your shifts to Calendar")
                 .font(.subheadline.weight(.bold))
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
             Text("Call times stay current.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 

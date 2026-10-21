@@ -172,7 +172,9 @@ private struct ScheduleFilterChip: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
                 .foregroundStyle(isOn ? Color(.systemBackground) : Color.primary)
-                .padding(.horizontal, 14)
+                // Compact chips trim padding so "Non-game" fits at the same
+                // size as its neighbours instead of scaling down alone.
+                .padding(.horizontal, compact ? 8 : 14)
                 .frame(maxWidth: fillsWidth ? .infinity : nil, minHeight: 32)
                 .background {
                     if isOn {
