@@ -279,27 +279,75 @@ private struct NextShiftWidgetView: View {
     /// by data, so Medium shows three and Large six.
     private func listBody(rows: Int, showsScan: Bool) -> some View {
         let shifts = Array(upcoming.prefix(rows))
-        return VStack(alignment: .leading, spacing: 8) {
-            WidgetHeader(
-                title: "Shifts",
-                systemImage: "calendar",
-                tint: widgetDisplayColor(.widgetPurple, renderingMode: renderingMode)
-            )
-            VStack(alignment: .leading, spacing: family == .systemLarge ? 12 : 8) {
+        let compact = family == .systemMedium
+        return VStack(alignment: .leading, spacing: compact ? 6 : 10) {
+            // The countdown rides the header so every title gets the full row.
+            HStack(alignment: .firstTextBaseline) {
+                WidgetHeader(
+                    title: "Shifts",
+                    systemImage: "calendar",
+                    tint: widgetDisplayColor(.widgetPurple, renderingMode: renderingMode)
+                )
+                Spacer(minLength: 8)
+                if let next = shifts.first {
+                    Text("in \(next.startsAt, style: .relative)")
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            VStack(alignment: .leading, spacing: compact ? 6 : 12) {
                 ForEach(Array(shifts.enumerated()), id: \.element.id) { index, shift in
                     shiftRow(shift, isNext: index == 0)
                 }
             }
             Spacer(minLength: 0)
-            HStack {
-                if entry.isStale, let generatedAt = entry.snapshot?.generatedAt {
-                    StaleFooter(generatedAt: generatedAt)
+            if family == .systemLarge, shifts.count < 6, let gear = gearSummary {
+                gear
+            }
+            if (entry.isStale && entry.snapshot != nil) || showsScan {
+                HStack {
+                    if entry.isStale, let generatedAt = entry.snapshot?.generatedAt {
+                        StaleFooter(generatedAt: generatedAt)
+                    }
+                    Spacer(minLength: 0)
+                    if showsScan { ScanLink() }
                 }
-                Spacer(minLength: 0)
-                if showsScan { ScanLink() }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    /// One compact line of gear state for the Large layout's spare room, in
+    /// place of a blank band. Nothing at all when the person has no gear out.
+    private var gearSummary: AnyView? {
+        guard let snapshot = entry.snapshot, !snapshot.dueBookings.isEmpty else { return nil }
+        let (count, noun, tint): (Int, String, Color) = {
+            if snapshot.overdueCount > 0 { return (snapshot.overdueCount, "overdue", .widgetRed) }
+            if snapshot.dueTodayCount > 0 { return (snapshot.dueTodayCount, "due today", .widgetOrange) }
+            return (snapshot.dueBookings.count, "out", .widgetBlue)
+        }()
+        return AnyView(
+            Link(destination: URL(string: "wisconsin://bookings")!) {
+                HStack(spacing: 6) {
+                    Image(systemName: "bag")
+                        .font(.caption.weight(.bold))
+                    Text("My gear")
+                        .font(.caption.weight(.semibold))
+                    Spacer(minLength: 8)
+                    Text("\(count) \(noun)")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(widgetDisplayColor(tint, renderingMode: renderingMode))
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .background(.fill.tertiary, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            }
+            .foregroundStyle(.primary)
+        )
     }
 
     private func shiftRow(_ shift: GearWidgetSnapshot.Shift, isNext: Bool) -> some View {
@@ -312,9 +360,12 @@ private struct NextShiftWidgetView: View {
                 Text(shift.startsAt, format: .dateTime.hour().minute())
                     .font(.subheadline.weight(.semibold))
                     .monospacedDigit()
+                    .lineLimit(1)
                     .foregroundStyle(isNext ? widgetDisplayColor(.widgetPurple, renderingMode: renderingMode) : .primary)
             }
-            .frame(width: 58, alignment: .leading)
+            // Fixed to the time's own width: a "7:30 PM" that wraps onto two
+            // lines is worse than a title that truncates a character sooner.
+            .fixedSize(horizontal: true, vertical: false)
             VStack(alignment: .leading, spacing: 1) {
                 Text(shift.title)
                     .font(.subheadline.weight(.semibold))
@@ -328,14 +379,6 @@ private struct NextShiftWidgetView: View {
                 }
             }
             Spacer(minLength: 0)
-            if isNext {
-                Text(shift.startsAt, style: .relative)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
-                    .lineLimit(1)
-                    .frame(maxWidth: 64, alignment: .trailing)
-            }
         }
     }
 
@@ -350,7 +393,8 @@ private struct NextShiftWidgetView: View {
             Text(shift.title)
                 .font(.headline)
                 .lineLimit(family == .systemSmall ? 2 : 1)
-                .minimumScaleFactor(0.85)
+                // Wrap to a second line instead of shrinking or truncating.
+                .fixedSize(horizontal: false, vertical: family == .systemSmall)
 
             // The relative form keeps counting down without another timeline
             // entry, which is what makes a shift widget worth glancing at.
@@ -632,10 +676,14 @@ private struct GearDueWidgetView: View {
                         Text(booking.title)
                             .font(.subheadline.weight(.semibold))
                             .lineLimit(1)
+                        // A clock time, not a ticking relative one: the row
+                        // is rarely re-rendered, and "41 min, 43 sec" both
+                        // truncates and is stale a second later.
                         HStack(spacing: 4) {
-                            Text(booking.isOverdue ? "Overdue" : "Due")
-                            Text(booking.endsAt, style: .relative).monospacedDigit()
-                            Text("· \(booking.itemCount) \(booking.itemCount == 1 ? "item" : "items")")
+                            Text("Due")
+                            Text(booking.endsAt, format: .dateTime.hour().minute()).monospacedDigit()
+                            Spacer(minLength: 4)
+                            Text("\(booking.itemCount) \(booking.itemCount == 1 ? "item" : "items")")
                         }
                         .font(.caption)
                         .foregroundStyle(
@@ -666,7 +714,7 @@ private struct GearDueWidgetView: View {
                 Text(next.title)
                     .font(.subheadline.weight(.semibold))
                     .lineLimit(1)
-                Text("Due \(next.endsAt, style: .relative)")
+                Text("\(next.isOverdue ? "Overdue since" : "Due") \(next.endsAt, format: .dateTime.hour().minute())")
                     .font(.caption)
                     .foregroundStyle(
                         next.isOverdue
@@ -675,6 +723,7 @@ private struct GearDueWidgetView: View {
                     )
                     .monospacedDigit()
                     .lineLimit(1)
+                    .minimumScaleFactor(0.75)
             }
 
             if family == .systemMedium, snapshot.dueBookings.count > 1 {
@@ -703,7 +752,7 @@ private struct GearDueWidgetView: View {
                 Text(next.title)
                     .font(.caption.weight(.semibold))
                     .lineLimit(1)
-                Text("Due \(next.endsAt, style: .relative)")
+                Text("\(next.isOverdue ? "Overdue since" : "Due") \(next.endsAt, format: .dateTime.hour().minute())")
                     .font(.caption2)
                     .foregroundStyle(
                         next.isOverdue

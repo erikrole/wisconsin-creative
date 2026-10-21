@@ -24,6 +24,13 @@ describe("iOS widgets: Lock Screen and larger families", () => {
     expect(widgets).toContain("bookingRows(limit:");
   });
 
+  it("never ticks seconds on gear and keeps the countdown in the list header", () => {
+    expect(widgets).not.toContain('Overdue" : "Due") \\(next.endsAt, style: .relative)');
+    expect(widgets).toContain("format: .dateTime.hour().minute()");
+    expect(widgets).toContain('Text("in \\(next.startsAt, style: .relative)")');
+    expect(widgets).toContain("private var gearSummary: AnyView?");
+  });
+
   it("opens Scan through the capability-gated route, not a widget-side action", () => {
     expect(widgets).toContain('URL(string: "wisconsin://scan")');
   });

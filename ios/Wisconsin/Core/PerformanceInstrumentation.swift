@@ -67,6 +67,10 @@ enum AppRuntimeMode {
         /// delivery truth and recovery controls can be reviewed without a
         /// signed-in session or live APNs state.
         case notifications
+        /// Writes a canned Home Screen widget snapshot (shifts and gear due)
+        /// into the App Group and reloads the timelines, so placed widgets
+        /// show populated lists instead of their "Open Creative" state.
+        case widgetSeed = "widget-seed"
         /// The notifications inbox against a canned week of rows, so the
         /// per-day sections and the read/unread swipe actions can be reviewed
         /// without a signed-in session.
