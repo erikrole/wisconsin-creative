@@ -7,6 +7,7 @@ import {
 } from "@/lib/push/apns";
 import { BookingKind, BookingStatus } from "@prisma/client";
 import { unique } from "@/lib/utils";
+import { displayBookingTitle } from "@/lib/booking-display-title";
 
 const CHECKOUT_RETURN_ACTIVITY = "checkout_return";
 const DEFAULT_LEAD_MS = 30 * 60_000;
@@ -339,7 +340,7 @@ export async function startDueCheckoutReturnLiveActivities(args: {
       tokens,
       {
         bookingId: booking.id,
-        bookingTitle: booking.title,
+        bookingTitle: displayBookingTitle(booking.title),
         requesterName: booking.requester.name,
         requesterInitials: initialsFor(booking.requester.name),
         requesterAvatarUrl: booking.requester.avatarUrl,
@@ -447,7 +448,7 @@ export async function startCheckoutReturnLiveActivityForBooking(args: {
     tokens,
     {
       bookingId: booking.id,
-      bookingTitle: booking.title,
+      bookingTitle: displayBookingTitle(booking.title),
       requesterName: booking.requester.name,
       requesterInitials: initialsFor(booking.requester.name),
       requesterAvatarUrl: booking.requester.avatarUrl,

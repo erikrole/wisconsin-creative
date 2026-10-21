@@ -93,7 +93,6 @@ export function generateEventTitle(
   isHome: boolean | null | undefined
 ): string {
   const opp = opponent || "TBD";
-  if (isHome === true) return `${sportCode} vs ${opp}`;
-  if (isHome === false) return `${sportCode} at ${opp}`;
-  return `${sportCode} vs ${opp} (Neutral)`;
+  const sport = sportLabel(sportCode);
+  return `${sport} ${isHome === false ? "at" : "vs"} ${opp}`;
 }

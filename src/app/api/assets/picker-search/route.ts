@@ -15,6 +15,7 @@ import type { EquipmentSectionKey } from "@/lib/equipment-sections";
 import { compareItemAssetTags, getAssetTagSearchAliases } from "@/lib/item-asset-tag-sort";
 import { requirePermissionOrCollaboratorCapability } from "@/lib/rbac";
 import { sanitizeCollaboratorPickerAsset } from "@/lib/collaborator-gear";
+import { displayBookingTitle } from "@/lib/booking-display-title";
 
 const VALID_SECTIONS = new Set<string>(ALL_SECTION_KEYS);
 const MAX_PICKER_LIMIT = 100;
@@ -204,7 +205,7 @@ export const GET = withAuth(async (req, { user }) => {
       if (!holderMap.has(alloc.assetId)) {
         holderMap.set(alloc.assetId, {
           bookingId: alloc.booking.id,
-          bookingTitle: alloc.booking.title,
+          bookingTitle: displayBookingTitle(alloc.booking.title),
           holderName: alloc.booking.requester.name,
           endsAt: alloc.booking.endsAt.toISOString(),
         });

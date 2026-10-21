@@ -1,6 +1,7 @@
 import type { AssetStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 import { enrichAssetsWithStatusFromLoaded } from "@/lib/services/status";
+import { displayBookingTitle } from "@/lib/booking-display-title";
 
 export type KitMemberHolder = {
   bookingId: string;
@@ -85,7 +86,7 @@ async function loadKitMemberHolders(assetIds: string[]) {
     if (holders.has(allocation.assetId)) continue;
     holders.set(allocation.assetId, {
       bookingId: allocation.booking.id,
-      bookingTitle: allocation.booking.title,
+      bookingTitle: displayBookingTitle(allocation.booking.title),
       holderName: allocation.booking.requester.name,
       endsAt: allocation.booking.endsAt.toISOString(),
     });

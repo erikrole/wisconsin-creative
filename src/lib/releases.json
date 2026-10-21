@@ -1,6 +1,24 @@
 [
   {
     "date": "2026-10-20",
+    "title": "Consistent booking titles",
+    "type": "improvement",
+    "summary": "Bookings now read the same everywhere: sport name, vs or at, then the opponent.",
+    "details": [
+      "Older bookings that showed codes like \"MSOC vs Evansville\" now show \"Men's Soccer vs Evansville\" on the web, in notifications, reports, the iOS app and the menu bar.",
+      "Promotions (\"- Homecoming\"), rankings and \"(Neutral)\" no longer clutter booking titles.",
+      "Titles you type yourself, like \"Media Day - Kohl Center\", keep their dashes.",
+      "New game bookings use the full sport name from the start."
+    ],
+    "platforms": [
+      "Web",
+      "iOS",
+      "macOS"
+    ],
+    "pr": 0
+  },
+  {
+    "date": "2026-10-20",
     "title": "Swap a Photo Mechanic code",
     "type": "feature",
     "summary": "If your Photo Mechanic code won't activate, you can now get a different one without asking staff.",

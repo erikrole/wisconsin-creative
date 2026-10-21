@@ -8,6 +8,7 @@ import { enforceRateLimit, SETTINGS_MUTATION_LIMIT } from "@/lib/rate-limit";
 import { generateActivationCode } from "@/lib/kiosk-activation";
 import { unique } from "@/lib/utils";
 import { kioskDeviceCreateBody } from "@/lib/schemas/kiosk";
+import { displayBookingTitle } from "@/lib/booking-display-title";
 
 /** List kiosk devices with health stats (ADMIN only) */
 export const GET = withAuth(async (req, { user }) => {
@@ -106,7 +107,7 @@ export const GET = withAuth(async (req, { user }) => {
       openCheckoutCount: stats.open,
       pendingPickups: pickups.map((b) => ({
         id: b.id,
-        title: b.title,
+        title: displayBookingTitle(b.title),
         requesterName: b.requester.name,
         startsAt: b.startsAt,
         endsAt: b.endsAt,
