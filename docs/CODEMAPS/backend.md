@@ -112,6 +112,7 @@
 | `src/lib/services/sport-setup.ts` | 210 |
 | `src/lib/services/status.ts` | 444 |
 | `src/lib/services/team-scoreboard.ts` | 598 |
+| `src/lib/services/trade-post-notifications.ts` | 115 |
 | `src/lib/services/usage-analytics-report.ts` | 114 |
 | `src/lib/services/user-deactivation.ts` | 589 |
 | `src/lib/services/wishlist.ts` | 193 |
@@ -216,10 +217,10 @@
 | `src/lib/local-traces.ts` | 28 |
 | `src/lib/media-embed.ts` | 68 |
 | `src/lib/nav-sections.ts` | 326 |
-| `src/lib/notification-catalog.ts` | 324 |
+| `src/lib/notification-catalog.ts` | 325 |
 | `src/lib/notification-count-sync.ts` | 9 |
 | `src/lib/notification-destination.ts` | 85 |
-| `src/lib/notification-meta.ts` | 120 |
+| `src/lib/notification-meta.ts` | 121 |
 | `src/lib/observability.ts` | 19 |
 | `src/lib/operational-health.ts` | 2 |
 | `src/lib/ops-checks.ts` | 212 |

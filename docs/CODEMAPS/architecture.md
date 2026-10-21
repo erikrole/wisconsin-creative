@@ -9,12 +9,12 @@ Wisconsin Creative is a Next.js App Router application with a companion native i
 
 | Surface | Count |
 |---|---:|
-| App pages | 103 |
+| App pages | 104 |
 | App layouts | 14 |
 | API route handlers | 420 |
-| Service files | 110 |
-| Component files | 178 |
-| Test files | 830 |
+| Service files | 111 |
+| Component files | 179 |
+| Test files | 831 |
 
 ## Oversized Source Watchlist
 
@@ -27,7 +27,6 @@ Informational only. These are the largest TypeScript and TSX files under `src/`;
 | `src/app/(app)/schedule/_components/ListView.tsx` | 2013 |
 | `src/lib/services/notifications.ts` | 1975 |
 | `src/lib/services/reports.ts` | 1938 |
-| `src/components/TradeBoard.tsx` | 1853 |
 | `src/components/resources/BrandAssetLibrary.tsx` | 1827 |
 | `src/app/(app)/items/[id]/ItemInfoTab.tsx` | 1582 |
 | `src/app/(app)/staff/[id]/UserInfoTab.tsx` | 1581 |
@@ -42,6 +41,7 @@ Informational only. These are the largest TypeScript and TSX files under `src/`;
 | `src/hooks/use-schedule-data.ts` | 1269 |
 | `src/app/(app)/accountability/AccountabilityClient.tsx` | 1260 |
 | `src/app/(app)/items/new-item-sheet.tsx` | 1222 |
+| `src/app/(app)/settings/app-activity/page.tsx` | 1206 |
 
 ## High-Level Data Flow
 

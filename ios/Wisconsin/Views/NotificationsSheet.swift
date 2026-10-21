@@ -538,7 +538,7 @@ private extension String {
         if hasPrefix("checkout_overdue") { return .red }
         if hasPrefix("checkout_due") { return .orange }
         if hasPrefix("checkin_item_damaged") || hasPrefix("checkin_item_lost") { return .red }
-        if self == "trade_claimed" || self == "trade_approved" { return .blue }
+        if self == "trade_available" || self == "trade_claimed" || self == "trade_approved" { return .blue }
         if self == "trade_declined" || self == "trade_expired" { return .red }
         if hasPrefix("shift_gear_up") { return .green }
         if hasPrefix("shift_") { return .blue }

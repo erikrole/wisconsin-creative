@@ -33,7 +33,7 @@ describe("trade board review surface", () => {
 
     expect(web).toContain("const reviewQueue: ReviewQueueItem[] = [");
     expect(web).toContain("].sort((a, b) => a.startsAtMs - b.startsAtMs);");
-    expect(web).toContain("{reviewQueue.map((item) => (");
+    expect(web).toContain("reviewQueue.map((item) =>");
     expect(web).not.toContain("{requestsAwaitingReview.map((request) => {");
     expect(web).not.toContain("{tradesAwaitingReview.map((trade) => {");
 
@@ -99,8 +99,8 @@ describe("trade board review surface", () => {
     const web = source("src/components/TradeBoard.tsx");
     const sheet = source("ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift");
 
-    expect(web).toContain('title="Admin Review"');
-    expect(web).toContain('title="Waiting on Admin"');
+    expect(web).toContain('label: "Review"');
+    expect(web).toContain('"Waiting on admin"');
     expect(sheet).toContain('title: "Admin Review"');
     expect(sheet).toContain('title: "Waiting on Admin"');
     expect(web).not.toMatch(/staff (review|approval)|waiting on staff/i);

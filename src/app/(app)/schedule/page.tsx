@@ -100,6 +100,10 @@ function InternalSchedulePage() {
   const isStaff = data.currentUserRole === "STAFF" || data.currentUserRole === "ADMIN";
   const canReviewClaims = data.currentUserRole === "ADMIN";
   const { loadData, setExpandedRowId, setTradeSheetOpen } = data;
+  // A "shift is up for trade" notification lands here with ?tradeBoard=1.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("tradeBoard") === "1") setTradeSheetOpen(true);
+  }, [setTradeSheetOpen]);
   const { queue, setQueue } = data.filters;
   const queueUnavailable = data.healthUnavailable && queue !== null
     && !["my-calls-today", "stale-source", "trade-approval"].includes(queue);
