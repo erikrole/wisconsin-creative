@@ -2310,6 +2310,18 @@ tr.cursor-pointer td {
   letter-spacing: -0.01em;
 }
 
+/* Page titles share the Lato chrome face with the sidebar and top bar, so the
+   header reads as one system on every page, fresh or legacy. */
+[data-page-header] h1,
+[data-page-header] h2 {
+  font-family: var(--font-chrome), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+[data-page-header] h1 {
+  font-size: calc(26px * var(--text-scale));
+}
+
 [data-theme="dark"] .wc-fresh {
   --accent: #8da4ef;
   --accent-hover: #aebdf5;

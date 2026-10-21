@@ -5,9 +5,12 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { CalendarDaysIcon, CameraIcon, ClipboardListIcon, HouseIcon } from "lucide-react";
 import { AppTopBar } from "@/components/AppTopBar";
-import { BreadcrumbProvider } from "@/components/BreadcrumbContext";
+import { BreadcrumbLabel, BreadcrumbProvider } from "@/components/BreadcrumbContext";
 import { CommandPalette } from "@/components/CommandPalette";
+import { DetailPageHeader } from "@/components/DetailPageHeader";
 import { MobileTabBar } from "@/components/MobileTabBar";
+import { PageHeader } from "@/components/PageHeader";
+import { Button } from "@/components/ui/button";
 import AppSidebar from "@/components/Sidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { type CurrentUser } from "@/hooks/use-current-user";
@@ -46,8 +49,23 @@ function Lab() {
               unreadNotifications={5}
               user={user}
             />
-            <p className="px-8 pt-6 text-sm text-muted-foreground">Shell lab (dev only). Use the theme control in the account menu.</p>
-            <main className="flex flex-wrap gap-2 p-8">
+            <div className="px-8 pt-6">
+              {params.get("view") === "detail" ? (
+                <>
+                  <BreadcrumbLabel label="Sony FX6 Cinema Camera" />
+                  <DetailPageHeader
+                    title="Sony FX6 Cinema Camera"
+                    subtitle="Kit B · Camp Randall cage"
+                    actions={<Button variant="outline">Edit</Button>}
+                  />
+                </>
+              ) : (
+                <PageHeader title="Bookings" description="Shell lab (dev only). Use the theme control in the account menu.">
+                  <Button>New booking</Button>
+                </PageHeader>
+              )}
+            </div>
+            <main className="flex flex-wrap gap-2 px-8 pb-8">
               {ROLES.map((r) => (
                 <button
                   key={r}

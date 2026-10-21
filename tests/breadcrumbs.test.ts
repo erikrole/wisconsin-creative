@@ -65,15 +65,15 @@ describe("isDynamicSegment", () => {
 describe("formatSegment", () => {
   it("uses overrides where the label diverges from title-casing", () => {
     expect(formatSegment("events")).toBe("Schedule");
-    expect(formatSegment("bulk-inventory")).toBe("Item family operations");
+    expect(formatSegment("bulk-inventory")).toBe("Items");
     expect(formatSegment("allowed-emails")).toBe("Registration access");
     expect(formatSegment("kiosk-devices")).toBe("Kiosks");
     expect(formatSegment("scan")).toBe("Scan");
   });
 
-  it("title-cases hyphenated segments by default", () => {
+  it("sentence-cases hyphenated segments by default", () => {
     expect(formatSegment("checkout-policies")).toBe("Checkout policies");
-    expect(formatSegment("onboarding-status")).toBe("Onboarding Status");
+    expect(formatSegment("onboarding-status")).toBe("Onboarding status");
   });
 });
 
@@ -82,6 +82,14 @@ describe("buildBreadcrumbItems", () => {
     expect(buildBreadcrumbItems("/bookings", null).items[1]?.label).toBe("Bookings");
     expect(buildBreadcrumbItems("/licenses", null).items[1]?.label).toBe("Software");
     expect(buildBreadcrumbItems("/settings/bookings", null).items[2]?.label).toBe("Booking extensions");
+    expect(buildBreadcrumbItems("/checkouts/cmf0abcdefghijklmnop1234", null).items[1]?.label).toBe("Bookings");
+  });
+
+  it("names create and tool pages by their title, and never links a crumb to a missing page", () => {
+    expect(buildBreadcrumbItems("/reservations/new", null).items.map((i) => i.label)).toEqual(["Home", "Bookings", "New booking"]);
+    expect(buildBreadcrumbItems("/gear/admin", null).items.map((i) => i.label)).toEqual(["Home", "UA gear", "Pick results"]);
+    const capture = buildBreadcrumbItems("/signatures/cmf0abcdefghijklmnop1234/capture/cmf0abcdefghijklmnop5678", "Jordan Lee").items;
+    expect(capture[2]).toEqual({ href: "/signatures/cmf0abcdefghijklmnop1234", label: "Collection", isPage: false });
   });
 
   it("appends the entity label as the current page on detail routes", () => {
@@ -137,8 +145,8 @@ describe("buildBreadcrumbItems", () => {
 
     expect(items).toEqual([
       { href: "/", label: "Home", isPage: false },
-      { href: "/items", label: "Item family operations", isPage: false },
-      { href: "/bulk-inventory/batteries", label: "Batteries", isPage: true },
+      { href: "/items", label: "Items", isPage: false },
+      { href: "/bulk-inventory/batteries", label: "Battery Ops", isPage: true },
     ]);
   });
 });

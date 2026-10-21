@@ -4,6 +4,7 @@ import { use, useMemo, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { ArrowLeftIcon, BanIcon, RefreshCwIcon } from "lucide-react";
+import { BreadcrumbLabel } from "@/components/BreadcrumbContext";
 import { PageHeader } from "@/components/PageHeader";
 import EmptyState from "@/components/EmptyState";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -290,15 +291,7 @@ export default function BlastDetailPage({ params }: { params: Promise<{ id: stri
 
   return (
     <>
-      <div className="mb-3">
-        <Button asChild variant="ghost" className="h-10 px-2 -ml-2">
-          <Link href="/blasts">
-            <ArrowLeftIcon aria-hidden="true" />
-            Back to blasts
-          </Link>
-        </Button>
-      </div>
-
+      <BreadcrumbLabel label={data.title} />
       <PageHeader
         title={data.title}
         description={data.targetSummary}

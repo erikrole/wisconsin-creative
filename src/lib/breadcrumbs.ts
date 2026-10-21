@@ -5,11 +5,13 @@ import {
   type SettingsRole,
 } from "@/lib/nav-sections";
 
-// Only segments where the label diverges from default title-casing.
-// Anything else falls through to formatSegment().
-const SEGMENT_OVERRIDE: Record<string, { label: string; href?: string }> = {
+// Only segments where the label diverges from default sentence-casing.
+// Anything else falls through to formatSegment(). `parentHref` links the crumb to the page above it,
+// for segments that have no page of their own.
+const SEGMENT_OVERRIDE: Record<string, { label: string; href?: string; parentHref?: boolean }> = {
   events: { label: "Schedule", href: "/schedule" },
-  "bulk-inventory": { label: "Item family operations", href: "/items" },
+  "bulk-inventory": { label: "Items", href: "/items" },
+  capture: { label: "Collection", parentHref: true },
   "allowed-emails": { label: "Registration access" },
   "collaborator-access": { label: "Collaborator access" },
   "checkout-policies": { label: "Checkout policies" },
@@ -31,7 +33,9 @@ const SEGMENT_OVERRIDE: Record<string, { label: string; href?: string }> = {
 // pages (`/settings/bookings` is "Booking extensions"), so it must not rename a top-level section.
 const TOP_LEVEL_LABEL: Record<string, string> = {
   bookings: "Bookings",
-  gear: "UA Gear Picks",
+  checkouts: "Bookings",
+  reservations: "Bookings",
+  gear: "UA gear",
   wishlist: "Wish list",
   licenses: "Software",
   youtube: "YouTube Studio Lite",
@@ -121,9 +125,22 @@ export function saveRecentEntity(entity: RecentEntity) {
   }
 }
 
+// Whole-path labels for pages whose title is not just their last segment.
+const PATH_LABEL: Record<string, string> = {
+  "/reservations/new": "New booking",
+  "/checkouts/new": "New booking",
+  "/resources/new": "New guide",
+  "/schedule/assign": "Assign shifts",
+  "/gear/admin": "Pick results",
+  "/bulk-inventory/batteries": "Battery Ops",
+  "/import": "Import items",
+  "/labels": "Print labels",
+};
+
 export function formatSegment(segment: string): string {
-  return SEGMENT_OVERRIDE[segment]?.label
-    ?? segment.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  if (SEGMENT_OVERRIDE[segment]) return SEGMENT_OVERRIDE[segment].label;
+  const words = segment.replace(/-/g, " ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
 export function isDynamicSegment(segment: string): boolean {
@@ -183,16 +200,22 @@ export function buildBreadcrumbItems(
   for (let i = 0; i < segments.length; i++) {
     const seg = segments[i]!; // in-bounds by loop condition
     if (isDynamicSegment(seg)) continue;
-    const href = SEGMENT_OVERRIDE[seg]?.href ?? "/" + segments.slice(0, i + 1).join("/");
-    const label = (i === 0 ? TOP_LEVEL_LABEL[seg] : undefined) ?? formatSegment(seg);
+    const ownPath = "/" + segments.slice(0, i + 1).join("/");
+    const override = SEGMENT_OVERRIDE[seg];
+    const href = override?.href ?? (override?.parentHref ? "/" + segments.slice(0, i).join("/") : ownPath);
+    const label = PATH_LABEL[ownPath] ?? (i === 0 ? TOP_LEVEL_LABEL[seg] : undefined) ?? formatSegment(seg);
     crumbs.push({ href, label });
   }
+
+  // A slug route (a guide) is not a detail route by URL shape, so its label names the last crumb.
+  const last = crumbs[crumbs.length - 1];
+  if (!onDetailPage && entityLabel && last) last.label = entityLabel;
 
   const items: BreadcrumbItemData[] = [
     { href: "/", label: "Home", isPage: false },
     ...crumbs.map((crumb, i) => ({
       ...crumb,
-      isPage: i === crumbs.length - 1 && !onDetailPage && !entityLabel,
+      isPage: i === crumbs.length - 1 && !onDetailPage,
     })),
   ];
 
