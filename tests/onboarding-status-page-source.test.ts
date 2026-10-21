@@ -28,6 +28,14 @@ describe("onboarding status page source wiring", () => {
     expect(source).toContain("fetch(`/api/allowed-emails/${row.id}`, { method: \"DELETE\" })");
   });
 
+  it("lets staff nudge signed-in accounts that have not finished setup", () => {
+    const source = readFileSync("src/app/(app)/staff/onboarding-status/page.tsx", "utf8");
+
+    expect(source).toContain("`/api/users/${account.id}/setup-reminder`");
+    expect(source).toContain("!account.profileComplete");
+    expect(source).toContain("Nudge to finish setup");
+  });
+
   it("keeps old invitation links as a compatibility redirect into app login", () => {
     const source = readFileSync("src/app/register/page.tsx", "utf8");
 

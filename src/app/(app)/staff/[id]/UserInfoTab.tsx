@@ -911,9 +911,9 @@ export default function UserInfoTab({
     <div className="mt-3.5 flex flex-col gap-4">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(16rem,1fr)]">
       <div className="flex flex-col gap-4">
-        <Card id="contact" className="scroll-mt-16">
+        <Card id="contact" className="scroll-mt-16 rounded-xl shadow-xs">
         <CardHeader>
-          <CardTitle>Contact</CardTitle>
+          <CardTitle className="text-base font-black tracking-tight">Contact</CardTitle>
         </CardHeader>
         <CardContent className="p-0 py-1">
           <TextInputField
@@ -964,9 +964,9 @@ export default function UserInfoTab({
         </CardContent>
       </Card>
 
-      <Card id="work" className="scroll-mt-16">
+      <Card id="work" className="scroll-mt-16 rounded-xl shadow-xs">
         <CardHeader>
-          <CardTitle>Work</CardTitle>
+          <CardTitle className="text-base font-black tracking-tight">Work</CardTitle>
         </CardHeader>
         <CardContent className="p-0 py-1">
           <SelectInputField
@@ -1127,9 +1127,9 @@ export default function UserInfoTab({
 
       <div className="flex flex-col gap-4">
       <ProfileGlanceCard user={user} />
-      <Card id="assignments" className="scroll-mt-16">
+      <Card id="assignments" className="scroll-mt-16 rounded-xl shadow-xs">
         <CardHeader>
-          <CardTitle>Assignments</CardTitle>
+          <CardTitle className="text-base font-black tracking-tight">Assignments</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <div className="py-1">
@@ -1326,9 +1326,9 @@ export default function UserInfoTab({
 function ProfileGlanceCard({ user }: { user: UserDetail }) {
   const manager = user.directReport;
   return (
-    <Card className="rounded-xl">
+    <Card className="rounded-xl shadow-xs">
       <CardHeader>
-        <CardTitle>At a glance</CardTitle>
+        <CardTitle className="text-base font-black tracking-tight">At a glance</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-4 pb-5 text-sm">
         <div>
@@ -1381,7 +1381,7 @@ function MyHoursCard() {
   });
 
   return (
-    <Card id="hours" className="scroll-mt-16">
+    <Card id="hours" className="scroll-mt-16 rounded-xl shadow-xs">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <ClockIcon className="size-4" />
@@ -1510,9 +1510,9 @@ function CalendarSubscriptionCard({
   }
 
   return (
-    <Card id="calendar" className="scroll-mt-16">
+    <Card id="calendar" className="scroll-mt-16 rounded-xl shadow-xs">
       <CardHeader>
-        <CardTitle>Calendar subscription</CardTitle>
+        <CardTitle className="text-base font-black tracking-tight">Calendar subscription</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         {feedUrl ? (

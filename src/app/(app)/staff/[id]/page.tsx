@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState, type ComponentType } from "react";
 import type { UserDetail, Location, Role } from "../types";
+import RightNow from "./RightNow";
 import { AREA_COLORS, AREA_LABELS, deriveStudentYear, STUDENT_YEAR_OPTIONS } from "../types";
 import { useFetch } from "@/hooks/use-fetch";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -1065,6 +1066,8 @@ export default function UserDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <RightNow userId={user.id} enabled={isSelf || isStaffOrAdmin} />
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => switchTab(v as TabKey)}>

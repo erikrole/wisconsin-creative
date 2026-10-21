@@ -78,6 +78,7 @@
 | `src/lib/services/notification-prefs.ts` | 350 |
 | `src/lib/services/notifications.ts` | 1975 |
 | `src/lib/services/onboarding-lifecycle.ts` | 546 |
+| `src/lib/services/onboarding-readiness.ts` | 24 |
 | `src/lib/services/pending-pickup-expiry.ts` | 370 |
 | `src/lib/services/product-event-log.ts` | 43 |
 | `src/lib/services/reports.ts` | 1938 |
@@ -912,9 +913,11 @@
 - `/api/users/[id]/availability`
 - `/api/users/[id]/avatar`
 - `/api/users/[id]/reset-password`
+- `/api/users/[id]/right-now`
 - `/api/users/[id]/role`
 - `/api/users/[id]`
 - `/api/users/[id]/scoreboard`
+- `/api/users/[id]/setup-reminder`
 - `/api/users/bulk-create`
 - `/api/users/export`
 - `/api/users/hidden-cleanup`
