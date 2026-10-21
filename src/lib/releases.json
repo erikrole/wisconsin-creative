@@ -9,7 +9,8 @@
       "Badge notifications clear after two weeks, so they no longer pile up in the count.",
       "Reserving gear, merging your own reservations, or handing gear to someone at the kiosk no longer sends you a push about it.",
       "\"Gear up for your shift\" is skipped when you already have gear booked for that shift or event.",
-      "Buttons in notification emails open the exact checkout or event."
+      "Buttons in notification emails open the exact checkout or event.",
+      "Staff follow-ups about overdue gear arrive silently overnight, from 10 PM to 7 AM. The person who has the gear is still alerted."
     ],
     "platforms": [
       "Web",

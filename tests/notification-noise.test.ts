@@ -31,6 +31,7 @@ import {
   createReservationLifecycleNotification,
   createShiftGearUpNotification,
   createShiftScheduleNotificationFromSnapshot,
+  sendPushToUser,
 } from "@/lib/services/notifications";
 import { resolveSettledNotifications } from "@/lib/services/notification-resolution";
 
@@ -105,7 +106,7 @@ describe("receipts for things people did themselves", () => {
     });
     await flush();
 
-    const row = vi.mocked(db.notification.createManyAndReturn).mock.calls[0]![0].data as Array<{ readAt: Date | null }>;
+    const row = vi.mocked(db.notification.createManyAndReturn).mock.calls[0]![0]!.data as Array<{ readAt: Date | null }>;
     expect(row[0]!.readAt).toBeInstanceOf(Date);
     expect(sendPush).not.toHaveBeenCalled();
   });
@@ -120,7 +121,7 @@ describe("receipts for things people did themselves", () => {
     });
     await flush();
 
-    const row = vi.mocked(db.notification.createManyAndReturn).mock.calls[0]![0].data as Array<{ readAt: Date | null }>;
+    const row = vi.mocked(db.notification.createManyAndReturn).mock.calls[0]![0]!.data as Array<{ readAt: Date | null }>;
     expect(row[0]!.readAt).toBeNull();
     expect(sendPush).toHaveBeenCalledTimes(1);
   });
@@ -222,5 +223,33 @@ describe("settling resolved notifications", () => {
       return sql && typeof sql === "object" && Array.isArray(sql.values) ? sql.values : [value];
     });
     expect(values).toContain("student-1");
+  });
+});
+
+describe("overnight staff follow-ups", () => {
+  async function pushAt(iso: string, quietOvernight: boolean) {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(iso));
+    try {
+      await sendPushToUser("staff-1", { title: "Checkout 4 hours overdue", category: "checkoutOverdue", quietOvernight });
+    } finally {
+      vi.useRealTimers();
+    }
+    return vi.mocked(sendPush).mock.calls.at(-1)![1] as { sound: boolean; interruptionLevel: string };
+  }
+
+  it("arrives silently at 3 AM Central", async () => {
+    const sent = await pushAt("2026-10-21T08:00:00Z", true);
+    expect(sent).toMatchObject({ sound: false, interruptionLevel: "passive" });
+  });
+
+  it("alerts normally in the daytime", async () => {
+    const sent = await pushAt("2026-10-21T15:00:00Z", true);
+    expect(sent).toMatchObject({ sound: true, interruptionLevel: "time-sensitive" });
+  });
+
+  it("never quiets the person holding the gear", async () => {
+    const sent = await pushAt("2026-10-21T08:00:00Z", false);
+    expect(sent).toMatchObject({ sound: true, interruptionLevel: "time-sensitive" });
   });
 });

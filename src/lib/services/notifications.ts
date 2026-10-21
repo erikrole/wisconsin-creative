@@ -5,7 +5,7 @@ import { sendPush } from "@/lib/push/apns";
 import { sendWebPushToUsers } from "@/lib/push/web";
 import { withNotificationHref } from "@/lib/notification-destination";
 import { ACTIVE_ASSIGNMENT_STATUSES } from "@/lib/shift-constants";
-import { isInQuietHours, loadUserPrefs, normalizePrefs, pushSuppressionReason, resolvePushPresentation, shouldDeliverEmail, shouldDeliverCategory, type NotificationCategory } from "@/lib/services/notification-prefs";
+import { isInQuietHours, loadUserPrefs, normalizePrefs, pushSuppressionReason, resolvePushPresentation, shouldDeliverEmail, shouldDeliverCategory, type NotificationCategory, type QuietHours } from "@/lib/services/notification-prefs";
 import { latencyBucket, recordDeliveries, type DeliveryRecord } from "@/lib/services/notification-deliveries";
 import { analyticsTag } from "@/lib/services/product-event-log";
 import { resolveSettledNotificationsForUser } from "@/lib/services/notification-resolution";
@@ -78,7 +78,16 @@ export type PushMessage = {
   collapseId?: string;
   /** Overrides the category's action set, e.g. no Approve on a decided review. */
   apnsCategory?: string;
+  /**
+   * Deliver silently overnight (see `OVERNIGHT`) whatever the recipient's
+   * settings. For staff follow-ups nobody can act on at 3 AM; the person
+   * holding the gear is never sent this flag.
+   */
+  quietOvernight?: boolean;
 };
+
+/** 10 PM to 7 AM Central, every night. */
+const OVERNIGHT: QuietHours = { enabled: true, start: "22:00", end: "07:00", days: [0, 1, 2, 3, 4, 5, 6], allowUrgent: false };
 
 /** One Notification Center stack per checkout or event; otherwise per category. */
 function pushThreadId(payload: Record<string, unknown> | undefined, category: NotificationCategory | undefined): string {
@@ -102,14 +111,16 @@ export async function sendPushToUser(userId: string, opts: PushMessage): Promise
   try {
     const prefs = await loadUserPrefs(userId);
     const now = new Date();
-    const presentation = resolvePushPresentation(prefs, opts.category, now);
+    let presentation = resolvePushPresentation(prefs, opts.category, now);
     if (!presentation) {
       record({ channel: "apns", outcome: "suppressed", reason: pushSuppressionReason(prefs, opts.category, now) });
       return;
     }
+    const overnight = Boolean(opts.quietOvernight) && presentation.sound && isInQuietHours(OVERNIGHT, now);
+    if (overnight) presentation = { interruptionLevel: "passive", sound: false };
     const silentReason = presentation.sound
       ? null
-      : isInQuietHours(prefs.quietHours, now) ? "quiet_hours" : "level_silent";
+      : overnight ? "overnight" : isInQuietHours(prefs.quietHours, now) ? "quiet_hours" : "level_silent";
 
     // Keep native APNs tokens and browser subscriptions on their own delivery
     // paths. The web sender is best-effort and has its own failure boundary, so
@@ -417,6 +428,9 @@ async function persistCheckoutEscalation(args: {
       collapseId: args.recipientKind === "requester"
         ? `checkout-${args.checkout.id}`
         : `checkout-${args.checkout.id}-followup`,
+      // Gear due after a night event crosses +4h around 2-4 AM. The holder
+      // still hears it; staff follow-ups wait silently for the morning.
+      quietOvernight: args.recipientKind !== "requester",
     }));
   }
   if (channels.email && args.recipient.email) {
