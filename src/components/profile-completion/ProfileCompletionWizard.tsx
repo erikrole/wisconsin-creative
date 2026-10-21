@@ -245,7 +245,7 @@ export function ProfileCompletionWizard({
       return /^\d{4,32}$/.test(wiscardCardNumber.trim()) && /^\d{1,8}$/.test(wiscardIssueCode.trim());
     }
     if (step === "STUDENT") {
-      return Boolean(studentYear && parseAnticipatedGraduation(anticipatedGraduation));
+      return Boolean(studentYear);
     }
     if (step === "PHOTO") return Boolean(data.profile.avatarUrl);
     const topSize = topSizeChoice === "OTHER" ? topSizeOther.trim() : topSizeChoice;
@@ -316,12 +316,11 @@ export function ProfileCompletionWizard({
                 wiscardCardNumber: wiscardCardNumber.trim(),
                 wiscardIssueCode: wiscardIssueCode.trim(),
               }
-            : step === "STUDENT" && graduation && studentYear
+            : step === "STUDENT" && studentYear
               ? {
                   step,
                   studentYearOverride: studentYear,
-                  graduationTerm: graduation.term,
-                  gradYear: graduation.year,
+                  ...(graduation ? { graduationTerm: graduation.term, gradYear: graduation.year } : {}),
                 }
               : {
                   step,
