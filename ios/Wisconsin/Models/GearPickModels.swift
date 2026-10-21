@@ -151,14 +151,16 @@ struct GearMyKit: Decodable, Sendable {
 
     private enum CodingKeys: String, CodingKey { case group, order, pieces }
 
-    var totalPieces: Int { pieces.reduce(0) { $0 + $1.quantity } }
-    var handedPieces: Int { pieces.filter(\.handed).reduce(0) { $0 + $1.quantity } }
+    /// Counted by line, the same unit the list shows ("Show all 5"), so the
+    /// summary and the list never disagree about a ×2 piece.
+    var totalPieces: Int { pieces.count }
+    var handedPieces: Int { pieces.filter(\.handed).count }
     var needsSize: Bool { pieces.contains { $0.needsSize } }
 
     /// Where the whole kit stands, as one sentence.
     var headline: String {
         if totalPieces > 0, handedPieces >= totalPieces { return "Everything is in your hands." }
-        if handedPieces > 0 { return "\(handedPieces) of \(totalPieces) in your hands." }
+        if handedPieces > 0 { return "\(handedPieces) of \(totalPieces) in hand." }
         if let placed = GearPickDate.shortDay(order.placedAt) {
             if let expected = GearPickDate.shortDay(order.expectedAt) {
                 return "Ordered \(placed). Expected around \(expected)."

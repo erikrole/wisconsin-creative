@@ -26,6 +26,12 @@ describe("iOS UA Gear: My kit", () => {
     expect(status.indexOf("if needsSize")).toBeLessThan(status.indexOf("onOrder"));
   });
 
+  it("counts by line so the summary matches the list", () => {
+    expect(models).toContain("var totalPieces: Int { pieces.count }");
+    expect(models).toContain("var handedPieces: Int { pieces.filter(\\.handed).count }");
+    expect(models).toContain("of \\(totalPieces) in hand.");
+  });
+
   it("shows few rows, one detail line each, and status as plain text with a glyph", () => {
     expect(view).toContain("private let glance = 4");
     for (const label of ["Add your size", "Planned", "On order", "In hand"]) expect(view).toContain(label);
