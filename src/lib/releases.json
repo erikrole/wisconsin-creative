@@ -2,7 +2,7 @@
   {
     "date": "2026-10-21",
     "title": "Badge celebrations show once",
-    "type": "fix",
+    "type": "fixes",
     "summary": "A badge you earn is now celebrated one time, no matter how many phones, browsers or kiosks you use.",
     "details": [
       "Before, each device remembered on its own what it had shown you, so a phone or browser you hadn't opened in a while could pop up badges you'd already seen, and two open devices could show the same one.",
