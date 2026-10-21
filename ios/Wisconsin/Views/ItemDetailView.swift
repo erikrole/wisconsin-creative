@@ -76,7 +76,9 @@ struct ItemDetailView: View {
                                 nextReservation: asset.upcomingReservations.min(by: { $0.startsAt < $1.startsAt })
                             )
                         }
-                        if asset.computedStatus != .retired {
+                        // Held (maintenance, retired, missing): the status card above
+                        // says why, and the server would reject a booking.
+                        if !asset.isHeld {
                             ReserveButton(title: asset.computedStatus == .available ? "Reserve Equipment" : "Reserve for Later") {
                                 startReservation(for: asset.asAsset)
                             }
@@ -1156,7 +1158,7 @@ private struct RecordOutcomeSheet: View {
             }
             .interactiveDismissDisabled(isSaving)
         }
-        .presentationDetents([.medium, .large])
+        .presentationDetents([.large])
     }
 
     private func save() async {

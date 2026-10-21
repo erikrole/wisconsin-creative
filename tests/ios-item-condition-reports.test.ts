@@ -99,4 +99,10 @@ describe("iOS item condition reports", () => {
     expect(instrumentation).toContain("static var damageRecordOutcome: Bool { matches(.damageRecordOutcome) }");
     expect(source("ios/Wisconsin/App/PerformanceTestHarness.swift")).toContain("private static var damageVariant: Data?");
   });
+
+  it("hides new-booking actions for held items and opens the sheets full height", () => {
+    expect(models).toContain("var isHeld: Bool { missing || computedStatus == .maintenance || computedStatus == .retired }");
+    expect(itemDetail).toContain("if !asset.isHeld {");
+    expect(itemDetail).not.toContain(".presentationDetents([.medium");
+  });
 });

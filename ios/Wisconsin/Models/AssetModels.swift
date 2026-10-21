@@ -115,6 +115,9 @@ struct Asset: Codable, Identifiable, Hashable {
         )
     }
 
+    /// Held for staff or out of service: the server won't take a new booking.
+    var isHeld: Bool { missing || computedStatus == .maintenance || computedStatus == .retired }
+
     /// Status shown to people: a held missing item reads Missing, not Maintenance.
     var statusLabel: String { missing && computedStatus == .maintenance ? "Missing" : computedStatus.label }
 }
@@ -581,6 +584,7 @@ struct AssetDetail: Codable, Identifiable, Hashable {
     var missing: Bool = false
 
     /// An open case holds the item; outcomes go through the case, not the maintenance toggle.
+    var isHeld: Bool { missing || computedStatus == .maintenance || computedStatus == .retired }
     var hasOpenCase: Bool { checkinReports.contains(where: \.isOpen) }
     var statusLabel: String { missing && computedStatus == .maintenance ? "Missing" : computedStatus.label }
 

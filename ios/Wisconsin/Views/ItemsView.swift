@@ -476,7 +476,7 @@ struct ItemsView: View {
                 }
             }
             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                if asset.computedStatus != .retired {
+                if !asset.isHeld {
                     Button {
                         startReservation(for: asset)
                     } label: {
@@ -495,7 +495,7 @@ struct ItemsView: View {
                     )
                 }
 
-                if asset.computedStatus != .retired {
+                if !asset.isHeld {
                     Button {
                         startReservation(for: asset)
                     } label: {
