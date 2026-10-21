@@ -33,7 +33,7 @@ function ToggleGroupItem({
     <ToggleGroupPrimitive.Item
       data-slot="toggle-group-item"
       className={cn(
-        "inline-flex min-h-10 cursor-pointer items-center justify-center rounded-sm px-2.5 py-1.5 text-sm font-medium transition-[background-color,color,box-shadow,scale] duration-150 active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100",
+        "inline-flex min-h-10 cursor-pointer items-center justify-center rounded-sm px-2.5 py-1.5 text-base font-medium transition-[background-color,color,box-shadow,scale] duration-150 active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100",
         "text-muted-foreground hover:text-foreground",
         "data-[state=on]:bg-background data-[state=on]:text-foreground data-[state=on]:shadow-sm",
         "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",

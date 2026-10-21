@@ -24,6 +24,7 @@ import { acceptsSignaturePointer, appendCoalescedPointerEvents } from "@/lib/sig
 import { buildSignatureDraft, deleteSignatureDraftsForMember, loadSignatureDraft, saveSignatureDraft, signatureDraftKey, type SignatureDraftStroke } from "@/lib/signatures/drafts";
 import { signatureSaveRequestIdSchema } from "@/lib/signatures/types";
 import { cn } from "@/lib/utils";
+import { useBreadcrumbLabel } from "@/components/BreadcrumbContext";
 
 type PenSettings = { strokeColor: string; strokeWidth: number; cropPadding: number; maxWidth: number; maxHeight: number };
 type Member = { id: string; name: string; jerseyNumber: number | null; title: string | null; roleGroup: string; active: boolean; captureVersion: number; settingsVersion: number; captureSettings?: PenSettings; artifact: { id: string } | null };
@@ -105,6 +106,10 @@ export default function SignatureCapturePage({ collectionId, memberId, userId }:
   }, [error, isIpad, latestBootstrap, refreshing]);
   const collection = bootstrap?.collection ?? null;
   const member = bootstrap?.member ?? null;
+  const { setBreadcrumbLabel } = useBreadcrumbLabel();
+  useEffect(() => {
+    if (member?.name) setBreadcrumbLabel(member.name);
+  }, [member?.name, setBreadcrumbLabel]);
   const settings = member?.captureSettings;
   const draftKey = useMemo(
     () => collection && member

@@ -18,7 +18,7 @@ describe("operational loading states", () => {
 
     expect(appShell).toContain('import { OperationalLoadingState } from "@/components/OperationalLoadingState"');
     expect(appShell).toContain('title="Loading workspace"');
-    expect(appShell).toContain('title="Searching Wisconsin Creative"');
+    expect(source("src/components/CommandPalette.tsx")).toContain('title="Searching Wisconsin Creative"');
     expect(appShell).not.toContain("Searching...");
     expect(appShell).not.toContain('import { Spinner } from "@/components/ui/spinner"');
 

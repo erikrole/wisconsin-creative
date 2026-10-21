@@ -15,11 +15,12 @@ const BreadcrumbContext = createContext<BreadcrumbContextValue>({
 
 export function BreadcrumbProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const [label, setLabel] = useState<string | null>(null);
-  const setBreadcrumbLabel = useCallback((l: string | null) => setLabel(l), []);
-
-  // Reset label on navigation instead of remounting the tree via key={pathname}
-  useEffect(() => { setLabel(null); }, [pathname]);
+  // The label belongs to the path it was set on, so it drops on navigation without a reset
+  // effect. A reset effect would run after a new page's own effects (parents run last) and wipe
+  // a label the page set on mount.
+  const [entry, setEntry] = useState<{ path: string; label: string | null } | null>(null);
+  const setBreadcrumbLabel = useCallback((l: string | null) => setEntry({ path: pathname, label: l }), [pathname]);
+  const label = entry?.path === pathname ? entry.label : null;
 
   return (
     <BreadcrumbContext.Provider value={{ label, setBreadcrumbLabel }}>
@@ -30,4 +31,16 @@ export function BreadcrumbProvider({ children }: { children: ReactNode }) {
 
 export function useBreadcrumbLabel() {
   return useContext(BreadcrumbContext);
+}
+
+/**
+ * Names the current page in the top bar trail from data a page already has, for routes whose URL
+ * is an id or slug. Server pages can render it directly: `<BreadcrumbLabel label={guide.title} />`.
+ */
+export function BreadcrumbLabel({ label }: { label: string | null | undefined }) {
+  const { setBreadcrumbLabel } = useBreadcrumbLabel();
+  useEffect(() => {
+    if (label) setBreadcrumbLabel(label);
+  }, [label, setBreadcrumbLabel]);
+  return null;
 }

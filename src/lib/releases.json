@@ -19,6 +19,24 @@
   },
   {
     "date": "2026-10-20",
+    "title": "A calmer sidebar and top bar",
+    "type": "improvement",
+    "summary": "The sidebar and top bar look the same on every page, with clearer groups, fresh icons, pinned pages, a new account menu and the page path up top.",
+    "details": [
+      "Fixed the sidebar switching fonts and styling when you opened Staff, Budget or Wish list.",
+      "New light and dark look with clearer icons and groups for People, Purchasing, Library and Staff tools. Press [ to collapse the sidebar.",
+      "Pin your most-used pages, drag them into order, or hide pages you never use from Customize sidebar in the account menu.",
+      "Search (Ctrl or Cmd+K) opens with recently viewed pages and quick actions. The account menu holds Settings, Profile, appearance and help.",
+      "Quiet counts show open wishes waiting on a decision (admins) and Software codes reported as not working (staff and admins).",
+      "The top bar shows where you are, including the name of the item you're viewing, the bell opens your latest notifications in place with an Unread view, and the phone tab bar adds a More tab. Page titles match the new look."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 541
+  },
+  {
+    "date": "2026-10-20",
     "title": "Swap a Photo Mechanic code",
     "type": "feature",
     "summary": "If your Photo Mechanic code won't activate, you can now get a different one without asking staff.",

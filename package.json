@@ -23,6 +23,7 @@
   },
   "overrides": {
     "esbuild": "0.28.1",
+    "vite": "7.3.7",
     "fast-uri": "3.1.8",
     "http-cache-semantics": "4.3.0",
     "js-yaml": "4.3.2",
@@ -46,7 +47,6 @@
     "sharp": "0.35.5",
     "source-map-js": "1.2.2",
     "undici": "7.29.1",
-    "vite": "7.3.7",
     "@workflow/core": {
       "nanoid": "5.1.16"
     },

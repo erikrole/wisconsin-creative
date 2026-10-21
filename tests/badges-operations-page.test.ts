@@ -4,8 +4,8 @@ import { source } from "./_helpers/source";
 describe("Badges Operations surface", () => {
   it("places Badges inside the staff Operations sidebar group", () => {
     const sidebar = source("src/components/Sidebar.tsx");
-    const operationsIndex = sidebar.indexOf('label: "Operations"');
-    const badgesEntry = '{ label: "Badges", href: "/badges", icon: AwardIcon }';
+    const operationsIndex = sidebar.indexOf('label: "Staff tools"');
+    const badgesEntry = '{ label: "Badges", href: "/badges", icon: MedalIcon }';
 
     expect(sidebar).toContain(badgesEntry);
     expect(sidebar.indexOf(badgesEntry)).toBeGreaterThan(operationsIndex);
