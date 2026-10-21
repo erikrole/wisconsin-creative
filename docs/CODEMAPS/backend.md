@@ -24,7 +24,7 @@
 | `src/lib/services/bookings-lifecycle.ts` | 3386 |
 | `src/lib/services/bookings-queries.ts` | 322 |
 | `src/lib/services/bookings.ts` | 9 |
-| `src/lib/services/budget.ts` | 938 |
+| `src/lib/services/budget.ts` | 950 |
 | `src/lib/services/bulk-assignment-batches.ts` | 253 |
 | `src/lib/services/bulk-schedule-assignment.ts` | 971 |
 | `src/lib/services/bulk-unit-scans.ts` | 722 |
@@ -48,7 +48,7 @@
 | `src/lib/services/event-worker.ts` | 125 |
 | `src/lib/services/firmware-watch.ts` | 329 |
 | `src/lib/services/game-record.ts` | 169 |
-| `src/lib/services/gear-picks.ts` | 1070 |
+| `src/lib/services/gear-picks.ts` | 1109 |
 | `src/lib/services/hidden-users-cleanup.ts` | 122 |
 | `src/lib/services/invite-email.ts` | 78 |
 | `src/lib/services/item-cleanup-wizard.ts` | 762 |

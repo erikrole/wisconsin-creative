@@ -1,6 +1,21 @@
 [
   {
     "date": "2026-10-21",
+    "title": "Creative money for UA gear",
+    "type": "improvement",
+    "summary": "A Budget line can now count toward a year of Under Armour gear, so the UA page shows it without typing the amount twice.",
+    "details": [
+      "Edit a Budget line and pick the UA year under Counts toward UA gear.",
+      "The UA gear Budget card adds it on top of the allotment and lists where it came from.",
+      "Cancelled lines stop counting. The line also gets a UA tag on the Budget page."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 0
+  },
+  {
+    "date": "2026-10-21",
     "title": "Nudge people who haven't finished setup",
     "type": "improvement",
     "summary": "Onboarding Status can now email a reminder to someone who signed in but has not finished their profile.",
