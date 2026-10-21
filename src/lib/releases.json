@@ -7,10 +7,12 @@
     "details": [
       "Tabs for Review, Available, Mine, and History, with shifts grouped by day, soonest first.",
       "Open shifts and trades from other students sit in one list with a single Claim button.",
-      "When someone posts a shift to trade, eligible students in the same area get a notification."
+      "When someone posts a shift to trade, eligible students in the same area get a notification.",
+      "The iPhone app's Trade Board has the same tabs and day grouping."
     ],
     "platforms": [
-      "Web"
+      "Web",
+      "iOS"
     ],
     "pr": 577
   },
