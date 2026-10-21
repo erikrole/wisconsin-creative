@@ -9,13 +9,14 @@ type Props = {
   shifts: GridShift[];
   /** All-day events have no call time, so their rows state none. */
   allDay?: boolean;
+  focusUserId?: string | null;
 };
 
 function firstName(name: string) {
   return name.split(" ")[0] ?? name;
 }
 
-export function AssignmentCell({ shifts, allDay = false }: Props) {
+export function AssignmentCell({ shifts, allDay = false, focusUserId = null }: Props) {
   const assignedShifts = shifts
     .map((shift) => ({
       shift,
@@ -34,8 +35,10 @@ export function AssignmentCell({ shifts, allDay = false }: Props) {
               <TooltipTrigger asChild>
                 <span
                   className={cn(
-                    "flex min-w-0 items-center gap-2 rounded-md px-1 py-0.5",
+                    "flex min-w-0 items-center gap-2 rounded-md px-1 py-0.5 transition-opacity",
                     assignment.hasConflict && "bg-[var(--orange-bg)]",
+                    focusUserId && assignment.user.id !== focusUserId && "opacity-25",
+                    focusUserId === assignment.user.id && "bg-[var(--bg-surface)] ring-1 ring-[var(--border)]",
                   )}
                 >
                   <UserAvatar

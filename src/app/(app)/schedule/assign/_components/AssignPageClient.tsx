@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -15,6 +15,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { FadeUp } from "@/components/ui/motion";
 import { useAssignmentGrid } from "@/hooks/use-assignment-grid";
 import { AssignmentGrid } from "./AssignmentGrid";
+import { WorkloadPanel } from "./WorkloadPanel";
 import { AutoAssignDialog, type AutoAssignCustomWindow } from "@/components/schedule/AutoAssignDialog";
 import { SPORT_CODES } from "@/lib/sports";
 import { AREAS, AREA_LABELS, type Area } from "@/types/areas";
@@ -32,6 +33,9 @@ export function AssignPageClient() {
   const grid = useAssignmentGrid();
   const [reviewFilter, setReviewFilter] = useState<ReviewFilter>("all");
   const [autoAssignOpen, setAutoAssignOpen] = useState(false);
+  const [focusUserId, setFocusUserId] = useState<string | null>(null);
+  // A focused person may not work the next month; start each month unfocused.
+  useEffect(() => setFocusUserId(null), [grid.month]);
 
   const reviewSummary = useMemo(() => summarizeAssignmentReview(grid.events), [grid.events]);
   const reviewEvents = useMemo(
@@ -219,8 +223,17 @@ export function AssignPageClient() {
         </div>
       )}
 
+      <WorkloadPanel
+        events={grid.events}
+        loading={grid.loading}
+        monthLabel={grid.month.toLocaleDateString("en-US", { month: "long" })}
+        focusUserId={focusUserId}
+        onFocusUser={setFocusUserId}
+      />
+
       <AssignmentGrid
         events={reviewEvents}
+        focusUserId={focusUserId}
         columns={grid.columns}
         hasFilters={Boolean(grid.sportFilter || grid.areaFilter || reviewFilter !== "all")}
         onClearFilters={() => {

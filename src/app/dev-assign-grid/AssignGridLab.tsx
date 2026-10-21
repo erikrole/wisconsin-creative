@@ -44,6 +44,10 @@ const shiftGroups = EVENTS.map((e) => ({
   })),
 }));
 
+const ROSTER = [
+  "Maya Brooks", "Jonah Reyes", "Priya Nair", "Theo Marsh", "Ana Lindqvist", "Cole Hendricks", "Lena Park", "Diego Alvarez", "Rory Quinn",
+].map((name) => ({ id: name, name, avatarUrl: null }));
+
 function json(data: unknown) {
   return Promise.resolve(new Response(JSON.stringify({ data }), { status: 200, headers: { "Content-Type": "application/json" } }));
 }
@@ -60,6 +64,7 @@ function Lab() {
       if (url.startsWith("/api/calendar-events")) return json(calendarEvents);
       if (url.startsWith("/api/shift-groups")) return json(shiftGroups);
       if (url.includes("/bulk-assignment/batches")) return json({ batches: [] });
+      if (url.startsWith("/api/users")) return json(ROSTER);
       return original(input, init);
     };
     setReady(true);

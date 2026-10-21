@@ -8,7 +8,7 @@
       "The crew picker suggests the best fits first and shows why each person fits and how busy their week is. Arrow keys and Return assign without the mouse.",
       "Auto assign favors people with a lighter week and fewer shifts this season, instead of giving every tie to the same person.",
       "The Auto assign review shows who goes where and why, and lets you leave single slots open when partial crews are allowed.",
-      "Assign shifts has a calmer month grid with a fill bar per event, first names with call times, and Open, Conflicts and Clean counts in one filter.",
+      "Assign shifts has a calmer month grid and a Student workload panel that shows who is busiest, who has no shifts yet, and highlights one person's shifts when you tap them.",
       "Event pages have a Fill open slots button that suggests people for that event, with the same review before anything is staged.",
       "On iPhone, the crew picker matches the web: Suggested, Check first and Unavailable, with each person's week at a glance."
     ],

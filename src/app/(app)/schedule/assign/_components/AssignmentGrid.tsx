@@ -16,6 +16,8 @@ type Props = {
   onClearFilters: () => void;
   monthLabel: string;
   onViewSchedule: () => void;
+  /** Workload panel focus: this person's cells stay bright, the rest dim. */
+  focusUserId?: string | null;
 };
 
 export function AssignmentGrid({
@@ -25,6 +27,7 @@ export function AssignmentGrid({
   onClearFilters,
   monthLabel,
   onViewSchedule,
+  focusUserId = null,
 }: Props) {
   if (events.length === 0) {
     return (
@@ -140,6 +143,7 @@ export function AssignmentGrid({
                       key={col.key}
                       shifts={matchingShifts}
                       allDay={ev.allDay}
+                      focusUserId={focusUserId}
                     />
                   );
                 })}

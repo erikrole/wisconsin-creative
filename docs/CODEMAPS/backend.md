@@ -136,6 +136,7 @@
 | `src/lib/asset-image.ts` | 26 |
 | `src/lib/asset-qr-code.ts` | 9 |
 | `src/lib/assignment-conflict-review.ts` | 97 |
+| `src/lib/assignment-workload.ts` | 83 |
 | `src/lib/audit.ts` | 168 |
 | `src/lib/auth-email-guidance.ts` | 7 |
 | `src/lib/auth.ts` | 454 |
