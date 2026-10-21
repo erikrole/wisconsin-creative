@@ -1,6 +1,19 @@
 [
   {
     "date": "2026-10-21",
+    "title": "Fewer unused preview databases",
+    "type": "improvement",
+    "summary": "Documented why screenshot branches still created preview databases and how to stop it.",
+    "details": [
+      "Screenshot-only branches now need a copy of the deploy settings file so they do not create deployments."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 0
+  },
+  {
+    "date": "2026-10-21",
     "title": "Search kits, events and guides",
     "type": "improvement",
     "summary": "Search in the iPhone app now also finds kits, upcoming events and guides, each with its own filter.",
