@@ -41,7 +41,7 @@
 | `src/lib/services/collaborator-schedule.ts` | 228 |
 | `src/lib/services/combined-schedule-events.ts` | 295 |
 | `src/lib/services/companion-projection-publisher.ts` | 57 |
-| `src/lib/services/companion-projection.ts` | 251 |
+| `src/lib/services/companion-projection.ts` | 254 |
 | `src/lib/services/consolidation-shared.ts` | 21 |
 | `src/lib/services/damage-cases.ts` | 364 |
 | `src/lib/services/dashboard-counts.ts` | 119 |
@@ -133,7 +133,7 @@
 | `src/lib/announcements.ts` | 163 |
 | `src/lib/api-dates.ts` | 38 |
 | `src/lib/api-handler.ts` | 76 |
-| `src/lib/api.ts` | 144 |
+| `src/lib/api.ts` | 154 |
 | `src/lib/app-product-page.ts` | 183 |
 | `src/lib/app-product-pages.ts` | 170 |
 | `src/lib/app-time.ts` | 257 |
@@ -147,7 +147,7 @@
 | `src/lib/audit-retention.ts` | 8 |
 | `src/lib/audit.ts` | 163 |
 | `src/lib/auth-email-guidance.ts` | 7 |
-| `src/lib/auth.ts` | 454 |
+| `src/lib/auth.ts` | 455 |
 | `src/lib/auto-fill-preview-types.ts` | 61 |
 | `src/lib/availability-copy.ts` | 345 |
 | `src/lib/avatar.ts` | 44 |
@@ -219,6 +219,7 @@
 | `src/lib/item-family-state.ts` | 101 |
 | `src/lib/item-image-draft.ts` | 88 |
 | `src/lib/kiosk-activation.ts` | 8 |
+| `src/lib/kiosk-heartbeat-cache.ts` | 165 |
 | `src/lib/kiosk-staff-token.ts` | 79 |
 | `src/lib/license-dates.ts` | 56 |
 | `src/lib/live-activity-workflow.ts` | 34 |
