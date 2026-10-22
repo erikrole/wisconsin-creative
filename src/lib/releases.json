@@ -10,14 +10,13 @@
       "New Event type: scan the code to add a game or shoot to your phone's calendar.",
       "Add an optional caption like \"Scan for tickets\" under the code, in PNG and SVG, without affecting scanning.",
       "Deleting a saved code, or clearing the library, can now be undone.",
-      "Cleaner logo backings, no hairline seams, and a Wisconsin Creative badge that links back to all the apps."
+      "Cleaner logo backings, no hairline seams, and the Wisconsin Creative badge with an Apps button in the top bar."
     ],
     "platforms": [
       "Web"
     ],
     "pr": 594
   },
-
   {
     "date": "2026-10-21",
     "title": "A calmer Bookings screen on iPhone",

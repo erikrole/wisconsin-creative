@@ -174,20 +174,23 @@
     }
 
     /* ---- Wisconsin Creative badge: shared byte-for-byte by every public tool.
-       The Motion W and wordmark sit first in the top bar, top left, in the
-       page's own text colour. Phones keep just the W. ---- */
-    .wc-badge {
-      display: inline-flex; align-items: center; gap: 8px; flex: none; border-radius: 8px;
-      color: inherit; text-decoration: none; font-size: 14px; font-weight: 900; letter-spacing: -0.005em; line-height: 1;
-      transition: opacity 150ms ease;
-    }
-    .wc-badge:hover { opacity: 0.8; }
+       An Apps button and the Motion W, last in the top bar (top right, W in
+       the corner), in the page's own text colour. The tool's name is top left. ---- */
+    .wc-brand { display: inline-flex; align-items: center; gap: 12px; flex: none; margin-left: auto; color: inherit; }
+    .wc-badge { display: block; width: 30px; height: 30px; flex: none; }
     .wc-badge-w {
-      width: 28px; height: 28px; flex: none; background: currentColor;
+      display: block; width: 100%; height: 100%; background: currentColor;
       -webkit-mask: url("/brand/wc-badge.svg") center / contain no-repeat; mask: url("/brand/wc-badge.svg") center / contain no-repeat;
     }
-    @media (max-width: 479px) { .wc-badge-name { display: none; } }
-    .brand-name { margin-right: auto; padding-left: 12px; border-left: 1px solid var(--line-2); font-weight: 900; font-size: 15px; line-height: 20px; letter-spacing: -0.01em; white-space: nowrap; }
+    .wc-apps {
+      display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 11px; border-radius: 8px;
+      color: inherit; text-decoration: none; font-size: 13px; font-weight: 700; line-height: 1;
+      background: color-mix(in srgb, currentColor 8%, transparent); border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
+      transition: background 150ms ease;
+    }
+    .wc-apps:hover { background: color-mix(in srgb, currentColor 15%, transparent); }
+    .wc-apps svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.6; opacity: 0.8; }
+    .brand-name { flex: 1; min-width: 0; font-weight: 900; font-size: 16px; letter-spacing: -0.01em; white-space: nowrap; }
 
     .icon-btn, .ghost-btn {
       height: 34px;
@@ -699,6 +702,8 @@
       .kbd-hint { display: none; }
     }
 
+    @media (max-width: 479px) { .lib-label { display: none; } }
+
     @media (max-width: 400px) {
       .tiles { grid-template-columns: repeat(3, 1fr); }
     }
@@ -711,17 +716,20 @@
 <body>
   <div class="app">
     <header class="topbar">
-      <a class="wc-badge" href="/apps" aria-label="Wisconsin Creative apps"><span class="wc-badge-w" aria-hidden="true"></span><span class="wc-badge-name">Wisconsin Creative</span></a>
       <span class="brand-name">QR Studio</span>
-      <button class="ghost-btn" id="open-library" type="button" aria-haspopup="dialog" aria-controls="library">
-        <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>
-        Library <span class="count" id="library-count">0</span>
+      <button class="ghost-btn" id="open-library" type="button" aria-haspopup="dialog" aria-controls="library" aria-label="Library">
+        <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.5h7a1 1 0 0 1 1 1v10l-4.5-3-4.5 3v-10a1 1 0 0 1 1-1z"/></svg>
+        <span class="lib-label">Library</span> <span class="count" id="library-count">0</span>
       </button>
       <button class="icon-btn" id="theme-toggle" type="button" aria-label="Theme: automatic" title="Theme: automatic">
         <svg class="icon theme-icon" data-theme-icon="system" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/><path d="M8 2.5v11" /><path d="M8 2.5a5.5 5.5 0 0 1 0 11z" fill="currentColor" stroke="none"/></svg>
         <svg class="icon theme-icon" data-theme-icon="light" viewBox="0 0 16 16" aria-hidden="true" hidden><circle cx="8" cy="8" r="2.8"/><path d="M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1"/></svg>
         <svg class="icon theme-icon" data-theme-icon="dark" viewBox="0 0 16 16" aria-hidden="true" hidden><path d="M13 9.6A5.5 5.5 0 0 1 6.4 3a5.5 5.5 0 1 0 6.6 6.6z"/></svg>
       </button>
+      <div class="wc-brand">
+        <a class="wc-apps" href="/apps"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="5" height="5" rx="1.2"/><rect x="9" y="2" width="5" height="5" rx="1.2"/><rect x="2" y="9" width="5" height="5" rx="1.2"/><rect x="9" y="9" width="5" height="5" rx="1.2"/></svg>Apps</a>
+        <span class="wc-badge" role="img" aria-label="Wisconsin Creative"><span class="wc-badge-w"></span></span>
+      </div>
     </header>
 
     <!-- ============ canvas ============ -->

@@ -58,11 +58,8 @@ describe("QR Studio static tool at /qrcode", () => {
     expect(html).toContain("Canonical source: edit here.");
   });
 
-  it("opens the top bar with the shared Wisconsin Creative badge", () => {
-    const bar = html.slice(html.indexOf('<header class="topbar">'), html.indexOf("</header>"));
-    expect(bar.trim().split("\n")[1].trim()).toBe(
-      '<a class="wc-badge" href="/apps" aria-label="Wisconsin Creative apps"><span class="wc-badge-w" aria-hidden="true"></span><span class="wc-badge-name">Wisconsin Creative</span></a>',
-    );
+  it("ends the top bar with the shared Wisconsin Creative badge", () => {
+    expect(html).toMatch(/<div class="wc-brand">\s*<a class="wc-apps" href="\/apps">[\s\S]*?<span class="wc-badge" role="img" aria-label="Wisconsin Creative"><span class="wc-badge-w"><\/span><\/span>\s*<\/div>\s*<\/header>/);
     expect(html).toContain('mask: url("/brand/wc-badge.svg")');
     expect(existsSync("public/brand/wc-badge.svg")).toBe(true);
   });
