@@ -1,5 +1,21 @@
 [
   {
+    "date": "2026-10-22",
+    "title": "Steadier battery counts",
+    "type": "fixes",
+    "summary": "Battery stock and low-battery alerts are now more accurate.",
+    "details": [
+      "Force-completing a checkout no longer puts a battery that was reported missing back into stock.",
+      "The Fix Today low-battery card now uses the same rule as Battery Ops, so the two always agree.",
+      "Battery suggestions for cameras no longer mix up similar models like the R5 and R50.",
+      "Adding battery units to an archived item is now blocked."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 591
+  },
+  {
     "date": "2026-10-21",
     "title": "A calmer Bookings screen on iPhone",
     "type": "improvement",
@@ -17,7 +33,7 @@
     ],
     "pr": 586
   },
- {
+  {
     "date": "2026-10-21",
     "title": "Hide gear from partners",
     "type": "feature",
