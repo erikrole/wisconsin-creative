@@ -1,3 +1,4 @@
+import BackgroundTasks
 import CoreSpotlight
 import Foundation
 import SwiftUI
@@ -65,6 +66,13 @@ struct WisconsinApp: App {
                     guard let route = GearTrackerRouteParser.parse(url) else { return }
                     appState.apply(route)
                 }
+                .onContinueUserActivity(BookingHandoff.activityType) { activity in
+                    // Handoff from another device carries the web URL, which
+                    // the universal-link parser already routes.
+                    guard let url = activity.webpageURL,
+                          let route = GearTrackerRouteParser.parse(url) else { return }
+                    appState.apply(route)
+                }
                 .onContinueUserActivity(CSSearchableItemActionType) { activity in
                     // A Spotlight hit carries the booking id, which the push
                     // router already knows how to open — same destination, one
@@ -73,6 +81,9 @@ struct WisconsinApp: App {
                     appState.pendingPushBookingId = bookingId
                 }
                 .tint(.brandPrimary)
+        }
+        .backgroundTask(.appRefresh(GearBackgroundRefresh.identifier)) {
+            await GearBackgroundRefresh.run()
         }
     }
 
@@ -110,6 +121,7 @@ struct WisconsinApp: App {
             // previous account's shift and gear cannot outlive their session.
             GearWidgetPublisher.clear()
             SpotlightIndexer.clear()
+            BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: GearBackgroundRefresh.identifier)
             ThumbnailCache.shared.clearForSignOut()
 
             if oldUser != nil {
@@ -156,6 +168,7 @@ struct WisconsinApp: App {
         // likely to be lost to a task kill, so persist it and keep composing.
         if phase == .background {
             cancelForegroundRefresh()
+            if session.currentUser != nil { GearBackgroundRefresh.schedule() }
             Task { await drafts.autosave() }
             return
         }

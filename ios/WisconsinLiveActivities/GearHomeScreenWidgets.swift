@@ -128,6 +128,7 @@ private let stalenessWindow: TimeInterval = 60 * 60 * 12
 private struct GearWidgetEntry: TimelineEntry {
     let date: Date
     let snapshot: GearWidgetSnapshot?
+    var relevance: TimelineEntryRelevance? = nil
 
     var isStale: Bool {
         guard let snapshot else { return true }
@@ -139,6 +140,9 @@ private struct GearWidgetEntry: TimelineEntry {
 /// same refresh boundaries, so splitting them would only let the two drift out
 /// of sync on screen.
 private struct GearWidgetProvider: TimelineProvider {
+    /// Drives Smart Stack relevance only; both widgets render the same snapshot.
+    let focus: GearWidgetFocus
+
     func placeholder(in context: Context) -> GearWidgetEntry {
         GearWidgetEntry(date: .now, snapshot: .preview)
     }
@@ -157,7 +161,13 @@ private struct GearWidgetProvider: TimelineProvider {
         let snapshot = GearWidgetStore.read()
         let entries = stride(from: 0, through: 120, by: 5).map { minutes -> GearWidgetEntry in
             let date = now.addingTimeInterval(TimeInterval(minutes * 60))
-            return GearWidgetEntry(date: date, snapshot: snapshot?.resolved(at: date))
+            let resolved = snapshot?.resolved(at: date)
+            let score = resolved?.relevanceScore(for: focus, at: date) ?? 0
+            return GearWidgetEntry(
+                date: date,
+                snapshot: resolved,
+                relevance: TimelineEntryRelevance(score: score, duration: 5 * 60)
+            )
         }
         let horizon = entries.last?.date ?? now
         let next = Self.nextRefresh(after: now, snapshot: snapshot)
@@ -655,7 +665,7 @@ private struct NextShiftWidgetView: View {
 
 struct NextShiftWidget: Widget {
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: "NextShiftWidget", provider: GearWidgetProvider()) { entry in
+        StaticConfiguration(kind: "NextShiftWidget", provider: GearWidgetProvider(focus: .shift)) { entry in
             NextShiftWidgetView(entry: entry)
         }
         .configurationDisplayName("Next Shift")
@@ -984,7 +994,7 @@ private struct GearDueWidgetView: View {
 
 struct GearDueWidget: Widget {
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: "GearDueWidget", provider: GearWidgetProvider()) { entry in
+        StaticConfiguration(kind: "GearDueWidget", provider: GearWidgetProvider(focus: .gear)) { entry in
             GearDueWidgetView(entry: entry)
         }
         .configurationDisplayName("My Gear")

@@ -1,6 +1,23 @@
 [
   {
     "date": "2026-10-22",
+    "title": "Extend gear with Siri",
+    "type": "feature",
+    "summary": "On iPhone, overdue alerts now come through Focus, and you can extend a checkout by asking Siri.",
+    "details": [
+      "Overdue gear alerts are now Time Sensitive, so Focus and Scheduled Summary no longer hold them.",
+      "Say \"Extend my checkout in Creative\" to add 1 or 2 hours. Siri tells you the new return time and asks before changing anything, and it never goes past the next booking that needs the gear.",
+      "Widgets in a Smart Stack move to the top when gear is due soon or a shift is about to start, and they stay up to date even when you haven't opened the app.",
+      "An open booking can continue on your iPad or Mac with Handoff.",
+      "Choose which Creative alerts come through during a Focus in Settings > Focus > Focus Filters."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 603
+  },
+  {
+    "date": "2026-10-22",
     "title": "A cleaner Board Sizes",
     "type": "improvement",
     "summary": "Board Sizes makes it easier to find what a piece needs, has a calmer look with the Badger red kept, lets you preview your art on any board, and builds After Effects comps for a whole board.",
