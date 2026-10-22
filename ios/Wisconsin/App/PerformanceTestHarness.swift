@@ -872,9 +872,6 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
         }
         if AppRuntimeMode.performanceScenario == .latestBrowse,
            let body = LatestBrowseFixtureAPI.body(path: path) { return body }
-        if AppRuntimeMode.performanceScenario == .onboarding || AppRuntimeMode.performanceScenario == .registration {
-            return OnboardingFixtureAPI.body(for: request)
-        }
         switch path {
         case "/api/blasts" where AppRuntimeMode.performanceScenario == .blastStaff:
             return BlastStaffFixtureAPI.list
@@ -940,10 +937,6 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
             ]}
             """#.utf8)
         case "/api/dashboard":
-            return AppRuntimeMode.performanceScenario == .homeAllClear
-                ? HomeFixtureAPI.allClearDashboard
-                : HomeFixtureAPI.dashboard
-        case "/api/scoreboard": return TeamScoreboardFixtureAPI.scoreboard
             switch AppRuntimeMode.performanceScenario {
             case .homeAllClear: return HomeFixtureAPI.allClearDashboard
             case .homeStudent: return HomeFixtureAPI.studentDashboard
@@ -980,7 +973,6 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
         case let path where path.hasPrefix("/api/assets/"):
             let assetId = String(path.dropFirst("/api/assets/".count))
             return AssetFixtureAPI.asset(for: assetId)
-        case "/api/assets": return SearchFixtureAPI.assets(for: request)
         case "/api/damage-cases": return DamageQueueFixtureAPI.list(for: request)
         case "/api/assets":
             if let url = request.url, URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.contains(where: { $0.name == "qr" && $0.value == "BIN-REVIEW-1" }) == true {
@@ -1789,17 +1781,6 @@ struct HomeHarnessView: View {
                     ? ScheduleFixtures.studentUser
                     : ScheduleFixtures.staffUser
             }
-    }
-}
-
-/// The shared team Scoreboard against a canned season. The signed-in fixture
-/// user is on the board, so the tinted "You" row and "Your spot" fact show.
-struct TeamScoreboardHarnessView: View {
-    @Environment(SessionStore.self) private var session
-
-    var body: some View {
-        TeamScoreboardView()
-            .onAppear { session.currentUser = ScheduleFixtures.staffUser }
     }
 }
 
@@ -3947,20 +3928,6 @@ private enum PreviewChromeFixtures {
 }
 
 enum ScheduleFixtures {
-    static let studentUser = CurrentUser(
-        id: "fixture-student",
-        name: "Sam Okonkwo",
-        email: "sam.okonkwo@wisc.edu",
-        role: "STUDENT",
-        affiliation: nil,
-        collaboratorProfile: nil,
-        capabilities: [],
-        collaboratorPolicy: nil,
-        staffingType: nil,
-        avatarUrl: nil,
-        forcePasswordChange: false
-    )
-
     static let staffUser = CurrentUser(
         id: "fixture-staff",
         name: "Bucky Badger",

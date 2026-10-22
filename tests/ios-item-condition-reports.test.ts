@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 describe("iOS item condition reports", () => {
   const itemDetail = source("ios/Wisconsin/Views/ItemDetailView.swift");
@@ -47,7 +48,7 @@ describe("iOS item condition reports", () => {
     expect(card).toContain("} else if report.isDamaged {");
   });
 
-  const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+  const apiClient = apiClientSource();
   const items = source("ios/Wisconsin/Views/ItemsView.swift");
   const resolveRoute = source("src/app/api/damage-cases/[id]/resolve/route.ts");
   const reportRoute = source("src/app/api/assets/[id]/report/route.ts");
