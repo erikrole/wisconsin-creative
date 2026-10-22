@@ -53,6 +53,7 @@ private final class StubURLProtocol: URLProtocol, @unchecked Sendable {
     override func stopLoading() {}
 }
 
+@MainActor
 final class APIClientRetryTests: XCTestCase {
     private let fastPolicy = RequestRetryPolicy(maxAttempts: 3, baseDelay: 0.001, maxDelay: 0.01)
 
