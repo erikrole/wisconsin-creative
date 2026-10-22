@@ -1,5 +1,20 @@
 [
   {
+    "date": "2026-10-22",
+    "title": "Tools in the sidebar",
+    "type": "feature",
+    "summary": "A new Tools item in the sidebar opens QR Studio, Board Sizes, Golden Hour, Timelapse, and Photo Frame in one click.",
+    "details": [
+      "Hover Tools at the bottom of the sidebar, or click or tap it, to see each tool.",
+      "It works from the collapsed sidebar and on your phone, and with the keyboard.",
+      "All apps and tools at the bottom of the list opens the full page."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 589
+  },
+  {
     "date": "2026-10-21",
     "title": "A friendlier first-day setup",
     "type": "improvement",
