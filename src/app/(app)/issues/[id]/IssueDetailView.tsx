@@ -307,6 +307,12 @@ function EventPanel({ event, index, total, onIndex, now }: { event: EventRow; in
     : build ?? "Unknown";
   const channel = event.releaseChannel ? CHANNEL_LABELS[event.releaseChannel] ?? event.releaseChannel : null;
   const device = [event.deviceModel, event.osVersion].filter(Boolean).join(" · ");
+  // Kiosk crashes have no person; the kiosk and its location stand in.
+  const kiosk = typeof context.kiosk === "string"
+    ? [context.kiosk, typeof context.location === "string" ? context.location : null].filter(Boolean).join(" · ") + " (kiosk)"
+    : null;
+  // Native crashes report a code location as "Where"; the screen comes from the run's recent actions.
+  const lastScreen = typeof context.lastScreen === "string" ? context.lastScreen : null;
 
   const rows: Array<[string, React.ReactNode]> = [
     ["When", `${formatDateTime(event.occurredAt)} (${formatRelativeTime(event.occurredAt, now)})`],
@@ -317,11 +323,14 @@ function EventPanel({ event, index, total, onIndex, now }: { event: EventRow; in
           {event.user.name}
           {event.role ? <span className="text-muted-foreground"> · {event.role.toLowerCase()}</span> : null}
         </Link>
+      ) : kiosk ? (
+        <span>{kiosk}</span>
       ) : (
         <span className="text-muted-foreground">Not signed in or unknown</span>
       ),
     ],
     [event.platform === "web" || event.platform === "server" ? "Page" : "Where", event.screen ? <span className="break-all font-mono text-[12px]">{event.screen}</span> : "Unknown"],
+    ...(lastScreen ? ([["Last screen", lastScreen]] as Array<[string, React.ReactNode]>) : []),
     ["Version", [version, channel].filter(Boolean).join(" · ")],
     ...(device ? ([["Device", device]] as Array<[string, React.ReactNode]>) : []),
     ...(event.requestId ? ([["Request", <CopyValue key="r" value={event.requestId} label="Request ID" />]] as Array<[string, React.ReactNode]>) : []),

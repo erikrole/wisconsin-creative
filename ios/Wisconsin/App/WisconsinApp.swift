@@ -20,6 +20,7 @@ struct WisconsinApp: App {
 
     init() {
         AppMetricMonitor.shared.start()
+        DiagnosticBreadcrumbs.shared.record(.lifecycle, "App launched")
         try? Tips.configure([.displayFrequency(.daily)])
 #if DEBUG
         // Harness screenshots must be deterministic: a first-run tip popover
@@ -51,6 +52,7 @@ struct WisconsinApp: App {
                     handleScenePhaseChange(phase)
                 }
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.didReceiveMemoryWarningNotification)) { _ in
+                    DiagnosticBreadcrumbs.shared.record(.lifecycle, "Memory warning")
                     Task { @MainActor in
                         ThumbnailCache.shared.evictAll()
                         URLCache.shared.removeAllCachedResponses()
@@ -149,6 +151,7 @@ struct WisconsinApp: App {
     }
 
     private func handleScenePhaseChange(_ phase: ScenePhase) {
+        DiagnosticBreadcrumbs.shared.record(.lifecycle, "App \(phase == .active ? "active" : phase == .background ? "in background" : "inactive")")
         // Leaving the foreground is where an unfinished reservation is most
         // likely to be lost to a task kill, so persist it and keep composing.
         if phase == .background {

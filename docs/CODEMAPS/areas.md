@@ -59,6 +59,14 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Services: `src/lib/services/dashboard-counts.ts`, `src/lib/services/kiosk-dashboard-home.ts`
 - Tests: `tests/dashboard-activity-route.test.ts`, `tests/dashboard-event-title.test.ts`, `tests/dashboard-fast-count-truth.test.ts`, `tests/dashboard-pending-pickup-link.test.ts`, `tests/dashboard-stats-transient-lanes.test.ts`, `tests/kiosk-dashboard-home.test.ts`, `tests/kiosk-dashboard-route.test.ts`
 
+## error-reporting
+
+- Doc: `docs/AREA_ERROR_REPORTING.md`
+- Pages: _none matched_
+- APIs: _none matched_
+- Services: _none matched_
+- Tests: `tests/error-reporting.test.ts`
+
 ## events
 
 - Doc: `docs/AREA_EVENTS.md`
