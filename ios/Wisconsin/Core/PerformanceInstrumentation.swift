@@ -36,14 +36,16 @@ enum AppRuntimeMode {
         /// The Trade Board as a student sees it: what they can claim, and what
         /// they have already claimed and are waiting on.
         case tradeBoardStudent
-        /// The Home dashboard, served a canned payload so the action queue,
-        /// its truncation, and the staff follow-up section can be rendered
-        /// without a signed-in session.
+        /// The Home dashboard as an admin sees it, served canned payloads so
+        /// every lane (needs attention, up next, gear, the collapsed team
+        /// sections) can be rendered without a signed-in session.
         case home
-        /// Home with nothing personal outstanding but a staff draft waiting --
-        /// the shape where "You're all set" used to render directly above a
-        /// populated Drafts card.
+        /// Home with nothing overdue, due, or waiting: the all-clear state,
+        /// which has to say what is next.
         case homeAllClear
+        /// Home as a student sees it: their own gear, a shift today with a
+        /// call time, a pickup, and an open trade they can claim.
+        case homeStudent
         /// The native profile Scoreboard against a canned season payload, so
         /// its summary, filters, breakdowns, and event history can be reviewed
         /// without a signed-in session or live network.
@@ -208,7 +210,7 @@ enum AppRuntimeMode {
         switch performanceScenario {
         case .resourcesGuides, .previewChrome, .latestBrowse, .resourcesUsers, .resourcesLicenses, .resourcesLicensesOpen,
              .schedule, .tradeBoardStaff, .tradeBoardStudent,
-             .home, .homeAllClear, .scoreboard, .profile,
+             .home, .homeAllClear, .homeStudent, .scoreboard, .profile,
              .studentBookings,
              .bookingDetail, .bookingExtend, .bookingEdit, .bookingCancel,
              .itemEdit, .createBookingScanner, .createBookingEvents, .search, .searchPartial, .searchIdle,

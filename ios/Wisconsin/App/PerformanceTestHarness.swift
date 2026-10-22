@@ -65,7 +65,7 @@ struct PerformanceTestRootView: View {
             ScheduleHarnessView()
         case .tradeBoardStaff, .tradeBoardStudent:
             TradeBoardHarnessView()
-        case .home, .homeAllClear:
+        case .home, .homeAllClear, .homeStudent:
             HomeHarnessView()
         case .scoreboard:
             ScoreboardHarnessView()
@@ -731,6 +731,7 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
                 : FixtureAPI.myLicense
         case "/api/licenses/my/history": return FixtureAPI.licenseHistory
         case "/api/me":
+            if AppRuntimeMode.performanceScenario == .homeStudent { return HomeFixtureAPI.studentMe }
             return AppRuntimeMode.performanceScenario == .previewChrome
                 ? PreviewChromeFixtures.me
                 : ScheduleFixtureAPI.me
@@ -741,9 +742,13 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
         case let path where path.hasPrefix("/api/announcements/") && path.hasSuffix("/dismiss"):
             return AnnouncementFixtureAPI.dismiss(path: path)
         case "/api/dashboard":
-            return AppRuntimeMode.performanceScenario == .homeAllClear
-                ? HomeFixtureAPI.allClearDashboard
-                : HomeFixtureAPI.dashboard
+            switch AppRuntimeMode.performanceScenario {
+            case .homeAllClear: return HomeFixtureAPI.allClearDashboard
+            case .homeStudent: return HomeFixtureAPI.studentDashboard
+            default: return HomeFixtureAPI.dashboard
+            }
+        case "/api/users/today": return HomeFixtureAPI.todayCrew
+        case "/api/dashboard/activity": return HomeFixtureAPI.activity
         case "/api/users/\(ScoreboardFixtureAPI.userId)/scoreboard":
             return ScoreboardFixtureAPI.scoreboard(for: request)
         case "/api/users/\(ScoreboardFixtureAPI.userId)":
@@ -1529,7 +1534,11 @@ struct HomeHarnessView: View {
 
     var body: some View {
         HomeView()
-            .onAppear { session.currentUser = ScheduleFixtures.staffUser }
+            .onAppear {
+                session.currentUser = AppRuntimeMode.performanceScenario == .homeStudent
+                    ? ScheduleFixtures.studentUser
+                    : ScheduleFixtures.staffUser
+            }
     }
 }
 
@@ -1564,38 +1573,87 @@ enum HomeFixtureAPI {
 
     private static func booking(
         _ id: String, _ title: String, _ status: String, _ kind: String,
-        startsIn: Int, endsIn: Int, items: Int, overdue: Bool = false
+        startsIn: Int, endsIn: Int, items: Int, overdue: Bool = false,
+        requester: (id: String, name: String, initials: String) = ("fixture-staff", "Bucky Badger", "BB")
     ) -> String {
         """
         { "id": "\(id)", "kind": "\(kind)", "title": "\(title)", "refNumber": null,
           "eventId": null, "eventIds": [], "linkedEventId": null, "sportCode": null,
-          "requesterUserId": "fixture-staff", "requesterName": "Bucky Badger",
-          "requesterInitials": "BB", "requesterAvatarUrl": null,
+          "requesterUserId": "\(requester.id)", "requesterName": "\(requester.name)",
+          "requesterInitials": "\(requester.initials)", "requesterAvatarUrl": null,
           "locationName": "Media Ops Cage", "startsAt": "\(iso(startsIn))",
           "endsAt": "\(iso(endsIn))", "itemCount": \(items),
           "status": "\(status)", "isOverdue": \(overdue) }
         """
     }
 
-    /// Nothing personal outstanding, one staff draft waiting.
+    private static func shift(
+        _ id: String, area: String, worker: String, summary: String, opponent: String, code: String,
+        startsIn: Int, venue: String, location: String, gear: String, call: Int? = nil
+    ) -> String {
+        """
+        { "id": "\(id)", "area": "\(area)", "workerType": "\(worker)",
+          "startsAt": "\(iso(startsIn))", "endsAt": "\(iso(startsIn + 240))",
+          "callStartsAt": \(call.map { "\"\(iso($0))\"" } ?? "null"),
+          "callEndsAt": \(call.map { "\"\(iso($0 + 60))\"" } ?? "null"),
+          "event": { "id": "ev-\(id)", "summary": "\(summary)", "startsAt": "\(iso(startsIn))",
+                     "allDay": false, "sportCode": "\(code)", "opponent": "\(opponent)",
+                     "isHome": \(venue == "HOME"), "site": "\(venue)", "locationName": "\(location)" },
+          "gearStatus": "\(gear)", "gearItemCount": \(gear == "none" ? 0 : 4) }
+        """
+    }
+
+    private static func upcoming(
+        _ id: String, _ title: String, code: String, opponent: String, startsIn: Int,
+        allDay: Bool = false, location: String, slots: Int, filled: Int
+    ) -> String {
+        """
+        { "id": "\(id)", "title": "\(title)", "sportCode": "\(code)",
+          "startsAt": "\(iso(startsIn))", "endsAt": "\(iso(startsIn + 180))", "allDay": \(allDay),
+          "location": "\(location)", "locationId": null, "opponent": "\(opponent)",
+          "isHome": true, "site": "HOME", "totalShiftSlots": \(slots), "filledShiftSlots": \(filled) }
+        """
+    }
+
+    private static func eventWork(_ id: String, startsIn: Int, needsGear: Bool) -> String {
+        """
+        { "id": "ew-\(id)",
+          "event": { "id": "ev-\(id)", "summary": "Men's Hockey vs Michigan", "startsAt": "\(iso(startsIn))",
+                     "endsAt": "\(iso(startsIn + 180))", "allDay": false, "sportCode": "MHKY",
+                     "opponent": "Michigan", "isHome": true, "site": "HOME", "locationId": null,
+                     "locationName": "Kohl Center" },
+          "shift": { "id": "ews-\(id)", "area": "PHOTO", "workerType": "ST",
+                     "startsAt": "\(iso(startsIn))", "endsAt": "\(iso(startsIn + 180))",
+                     "callStartsAt": "\(iso(startsIn - 60))", "callEndsAt": "\(iso(startsIn))" },
+          "gearStatus": "\(needsGear ? "none" : "reserved")", "gearBookings": [], "needsGear": \(needsGear) }
+        """
+    }
+
+    private static let emptyGroups = """
+    "teamCheckouts": { "total": 0, "overdue": 0, "items": [] },
+    "teamReservations": { "total": 0, "items": [] },
+    "pendingPickups": { "total": 0, "items": [] },
+    """
+
+    /// Nothing personal outstanding and nothing waiting for staff: the state
+    /// that has to say what is next instead of only what is not.
     static var allClearDashboard: Data {
         Data("""
         { "data": {
           "role": "STAFF",
           "stats": { "checkedOut": 0, "overdue": 0, "reserved": 0, "dueToday": 0 },
           "myCheckouts": { "total": 0, "overdue": 0, "items": [] },
-          "teamCheckouts": { "total": 0, "overdue": 0, "items": [] },
-          "teamReservations": { "total": 0, "items": [] },
-          "pendingPickups": { "total": 0, "items": [] },
+          \(emptyGroups)
           "myReservations": [], "overdueCount": 0, "overdueItems": [],
-          "myShifts": [], "upcomingEvents": [],
-          "drafts": [ { "id": "d1", "kind": "RESERVATION", "title": "Hockey B-roll kit",
-                        "itemCount": 6, "updatedAt": "\(iso(-90))" } ],
-          "flaggedItems": [], "lostBulkUnits": [], "myEventWork": []
+          "myShifts": [],
+          "upcomingEvents": [ \(upcoming("ue1", "Men's Hockey vs Minnesota", code: "MHKY", opponent: "Minnesota", startsIn: 1_500, location: "Kohl Center", slots: 5, filled: 5)) ],
+          "drafts": [], "flaggedItems": [], "lostBulkUnits": [], "myEventWork": []
         } }
         """.utf8)
     }
 
+    /// An admin's Home with every lane populated: a shift today for the
+    /// featured card, team custody problems, review queues, and a crew.
     static var dashboard: Data {
         let overdue = [
             booking("od1", "Volleyball baseline kit", "OPEN", "CHECKOUT",
@@ -1604,46 +1662,144 @@ enum HomeFixtureAPI {
         let dueToday = [
             booking("dt1", "Football fall camp — video", "OPEN", "CHECKOUT",
                     startsIn: -120, endsIn: 45, items: 6),
-            booking("dt2", "Women’s soccer portraits", "OPEN", "CHECKOUT",
-                    startsIn: -90, endsIn: 120, items: 3),
         ]
-        let upcoming = [
+        let upcomingGear = [
             booking("up1", "Ohio State photo kit", "BOOKED", "RESERVATION",
                     startsIn: 1_440, endsIn: 1_680, items: 5),
-            booking("up2", "Hockey road audio kit", "BOOKED", "RESERVATION",
-                    startsIn: 2_880, endsIn: 3_240, items: 4),
-            booking("up3", "Kohl Center studio shoot", "BOOKED", "RESERVATION",
-                    startsIn: 4_320, endsIn: 4_500, items: 7),
         ]
-        let checkouts = (overdue + dueToday + upcoming).joined(separator: ",")
+        let mine = (overdue + dueToday + upcomingGear).joined(separator: ",")
+        let team = [
+            booking("tc1", "Soccer sideline kit", "OPEN", "CHECKOUT", startsIn: -600, endsIn: 300, items: 5,
+                    requester: ("u-avery", "Avery Nakamura", "AN")),
+            booking("tc2", "Hockey locker room audio", "OPEN", "CHECKOUT", startsIn: -200, endsIn: 1_200, items: 3,
+                    requester: ("u-priya", "Priya Raman", "PR")),
+            booking("tc3", "Basketball hype video", "OPEN", "CHECKOUT", startsIn: -90, endsIn: 2_800, items: 8,
+                    requester: ("u-marcus", "Marcus Bell", "MB")),
+        ].joined(separator: ",")
+        let pickup = booking("pp1", "Volleyball photo kit", "PENDING_PICKUP", "RESERVATION",
+                             startsIn: -180, endsIn: 600, items: 3, requester: ("u-sam", "Sam Whitfield", "SW"))
+        let shifts = [
+            shift("s1", area: "VIDEO", worker: "SD", summary: "Volleyball vs Nebraska", opponent: "Nebraska",
+                  code: "VB", startsIn: 150, venue: "HOME", location: "UW Field House", gear: "checked_out"),
+            shift("s2", area: "VIDEO", worker: "SD", summary: "Men's Hockey vs Minnesota", opponent: "Minnesota",
+                  code: "MHKY", startsIn: 1_500, venue: "HOME", location: "Kohl Center", gear: "reserved"),
+        ].joined(separator: ",")
+        let events = [
+            upcoming("ue1", "Men's Hockey vs Minnesota", code: "MHKY", opponent: "Minnesota", startsIn: 1_500,
+                     location: "Kohl Center", slots: 5, filled: 3),
+            upcoming("ue2", "Football vs USC - Family Weekend", code: "FB", opponent: "USC - Family Weekend",
+                     startsIn: 5_760, allDay: true, location: "Camp Randall", slots: 8, filled: 8),
+        ].joined(separator: ",")
         return Data("""
         { "data": {
-          "role": "STAFF",
-          "stats": { "checkedOut": 3, "overdue": 1, "reserved": 3, "dueToday": 2 },
-          "myCheckouts": { "total": 6, "overdue": 1, "items": [\(checkouts)] },
-          "teamCheckouts": { "total": 0, "overdue": 0, "items": [] },
+          "role": "ADMIN",
+          "stats": { "checkedOut": 3, "overdue": 1, "reserved": 3, "dueToday": 1 },
+          "myCheckouts": { "total": 3, "overdue": 1, "items": [\(mine)] },
+          "teamCheckouts": { "total": 7, "overdue": 2, "items": [\(team)] },
           "teamReservations": { "total": 0, "items": [] },
-          "pendingPickups": { "total": 0, "items": [] },
+          "pendingPickups": { "total": 1, "items": [\(pickup)] },
           "myReservations": [],
-          "overdueCount": 1,
-          "overdueItems": [],
-          "myShifts": [],
-          "upcomingEvents": [
-            { "id": "ue1", "title": "Men's Hockey vs Minnesota", "sportCode": "MHKY",
-              "startsAt": "\(iso(1_500))", "endsAt": "\(iso(1_680))", "allDay": false,
-              "location": "Kohl Center", "locationId": null, "opponent": "Minnesota",
-              "isHome": true, "site": null, "totalShiftSlots": 5, "filledShiftSlots": 3 },
-            { "id": "ue2", "title": "Football vs USC - Family Weekend", "sportCode": "FB",
-              "startsAt": "\(iso(5_760))", "endsAt": "\(iso(5_760))", "allDay": true,
-              "location": "Camp Randall", "locationId": null, "opponent": "USC - Family Weekend",
-              "isHome": true, "site": null, "totalShiftSlots": 8, "filledShiftSlots": 8 }
+          "overdueCount": 2,
+          "overdueItems": [
+            { "bookingId": "tc0", "bookingTitle": "Soccer media day kit", "requesterName": "Avery Nakamura",
+              "requesterInitials": "AN", "requesterAvatarUrl": null, "endsAt": "\(iso(-180))" }
           ],
+          "myShifts": [\(shifts)],
+          "upcomingEvents": [\(events)],
           "drafts": [ { "id": "d1", "kind": "RESERVATION", "title": "Hockey B-roll kit",
                         "itemCount": 6, "updatedAt": "\(iso(-90))" } ],
-          "flaggedItems": [],
-          "lostBulkUnits": [],
-          "myEventWork": []
+          "flaggedItems": [
+            { "id": "f1", "assetId": "a1", "assetTag": "CAM-014", "assetName": "Sony FX3", "type": "DAMAGED",
+              "bookingTitle": "Football fall camp — video", "reportedBy": "Priya Raman",
+              "description": "Cracked LCD hood.", "imageUrl": null, "assetStatus": "AVAILABLE",
+              "createdAt": "\(iso(-120))" }
+          ],
+          "lostBulkUnits": [ { "skuName": "AA batteries", "count": 4 } ],
+          "myEventWork": [\(eventWork("h1", startsIn: 2_880, needsGear: true))]
         } }
+        """.utf8)
+    }
+
+    /// A student's Home: their own gear, a shift today with a call time, and
+    /// a pickup waiting.
+    static var studentDashboard: Data {
+        let mine = [
+            booking("od1", "Volleyball baseline kit", "OPEN", "CHECKOUT",
+                    startsIn: -300, endsIn: -60, items: 4, overdue: true,
+                    requester: ("fixture-student", "Rowan Diaz", "RD")),
+            booking("dt1", "Women’s soccer portraits", "OPEN", "CHECKOUT",
+                    startsIn: -90, endsIn: 120, items: 3,
+                    requester: ("fixture-student", "Rowan Diaz", "RD")),
+            booking("up1", "Hockey road audio kit", "BOOKED", "RESERVATION",
+                    startsIn: 2_880, endsIn: 3_240, items: 4,
+                    requester: ("fixture-student", "Rowan Diaz", "RD")),
+        ].joined(separator: ",")
+        let reservation = booking("rs1", "Ohio State photo kit", "BOOKED", "RESERVATION",
+                                  startsIn: 1_440, endsIn: 1_680, items: 5,
+                                  requester: ("fixture-student", "Rowan Diaz", "RD"))
+        let shifts = [
+            shift("s1", area: "PHOTO", worker: "ST", summary: "Volleyball vs Nebraska", opponent: "Nebraska",
+                  code: "VB", startsIn: 210, venue: "HOME", location: "UW Field House", gear: "pickup_ready", call: 150),
+            shift("s2", area: "VIDEO", worker: "ST", summary: "Men's Hockey vs Michigan", opponent: "Michigan",
+                  code: "MHKY", startsIn: 2_880, venue: "HOME", location: "Kohl Center", gear: "none", call: 2_820),
+        ].joined(separator: ",")
+        return Data("""
+        { "data": {
+          "role": "STUDENT",
+          "stats": { "checkedOut": 2, "overdue": 1, "reserved": 1, "dueToday": 1 },
+          "myCheckouts": { "total": 2, "overdue": 1, "items": [\(mine)] },
+          \(emptyGroups)
+          "myReservations": [\(reservation)],
+          "overdueCount": 1, "overdueItems": [],
+          "myShifts": [\(shifts)],
+          "upcomingEvents": [],
+          "drafts": [], "flaggedItems": [], "lostBulkUnits": [],
+          "myEventWork": [\(eventWork("h1", startsIn: 2_880, needsGear: true))]
+        } }
+        """.utf8)
+    }
+
+    static var studentMe: Data {
+        Data("""
+        { "user": { "id": "fixture-student", "name": "Rowan Diaz",
+                    "email": "rowan.diaz@wisc.edu", "role": "STUDENT",
+                    "affiliation": null, "collaboratorProfile": null,
+                    "capabilities": [], "collaboratorPolicy": null,
+                    "staffingType": "ST", "avatarUrl": null,
+                    "forcePasswordChange": false } }
+        """.utf8)
+    }
+
+    /// Who is working today, for the staff crew section.
+    static var todayCrew: Data {
+        Data("""
+        { "data": { "events": [
+          { "id": "g1", "summary": "Volleyball vs Nebraska", "startsAt": "\(iso(-30))", "endsAt": "\(iso(150))",
+            "when": "now",
+            "people": [
+              { "id": "u-avery", "name": "Avery Nakamura", "avatarUrl": null, "area": "VIDEO" },
+              { "id": "u-priya", "name": "Priya Raman", "avatarUrl": null, "area": "PHOTO" },
+              { "id": "u-marcus", "name": "Marcus Bell", "avatarUrl": null, "area": "GRAPHICS" }
+            ] },
+          { "id": "g2", "summary": "Women's Soccer Media Day", "startsAt": "\(iso(300))", "endsAt": "\(iso(420))",
+            "when": "later",
+            "people": [
+              { "id": "u-sam", "name": "Sam Whitfield", "avatarUrl": null, "area": "PHOTO" },
+              { "id": "u-rowan", "name": "Rowan Diaz", "avatarUrl": null, "area": "VIDEO" }
+            ] }
+        ] } }
+        """.utf8)
+    }
+
+    /// Latest kiosk pickups and returns, for the staff activity section.
+    static var activity: Data {
+        Data("""
+        { "data": [
+          { "id": "l1", "kind": "returned", "bookingId": "tc1", "title": "Soccer sideline kit",
+            "person": { "id": "u-avery", "name": "Avery Nakamura", "avatarUrl": null }, "at": "\(iso(-20))" },
+          { "id": "l2", "kind": "out", "bookingId": "tc2", "title": "Hockey locker room audio",
+            "person": { "id": "u-priya", "name": "Priya Raman", "avatarUrl": null }, "at": "\(iso(-75))" }
+        ] }
         """.utf8)
     }
 }
@@ -1999,6 +2155,20 @@ enum ScheduleFixtures {
         name: "Bucky Badger",
         email: "bucky.badger@wisc.edu",
         role: "STAFF",
+        affiliation: nil,
+        collaboratorProfile: nil,
+        capabilities: [],
+        collaboratorPolicy: nil,
+        staffingType: "ST",
+        avatarUrl: nil,
+        forcePasswordChange: false
+    )
+
+    static let studentUser = CurrentUser(
+        id: "fixture-student",
+        name: "Rowan Diaz",
+        email: "rowan.diaz@wisc.edu",
+        role: "STUDENT",
         affiliation: nil,
         collaboratorProfile: nil,
         capabilities: [],
@@ -2463,6 +2633,7 @@ enum TradeBoardFixtureAPI {
 
     static var trades: Data? {
         let isStaff = AppRuntimeMode.performanceScenario == .tradeBoardStaff
+            || AppRuntimeMode.performanceScenario == .home
         var rows: [String] = []
 
         // Two claims owed a decision. Staff see both; the student sees only the

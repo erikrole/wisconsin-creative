@@ -47,6 +47,7 @@
 		237DD2AF7BCC2631721C737C /* CreateBookingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1F3FA2D4C06E966E6BA030B /* CreateBookingSheet.swift */; };
 		2516A89A0CD4284023B38A28 /* ScheduleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74157D1DF3F4EF9F53F70494 /* ScheduleView.swift */; };
 		2643D99B273EB3DA3E3D35A7 /* QuarterHourTimePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98F3B72469F3E6BFC5B50CE5 /* QuarterHourTimePicker.swift */; };
+		2720E80DD49E1A5126D0C026 /* HomeSections.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7E986374624152FF265E9CB /* HomeSections.swift */; };
 		27614B86498B5D98CC600630 /* CreateBookingFormRows.swift in Sources */ = {isa = PBXBuildFile; fileRef = 089FAA6DDBB831B89ED4E5F5 /* CreateBookingFormRows.swift */; };
 		27CB9D802700C529953BDEE1 /* CheckoutReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB5357BF3B4A2D7DA30AB258 /* CheckoutReportView.swift */; };
 		27D9158F06A8D80D8B7C5B53 /* ReportsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4321D991D40907BB2A1819C1 /* ReportsView.swift */; };
@@ -113,6 +114,7 @@
 		617342117832FB9352D3188A /* SpotlightIndexer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07B3B943DF177C91612E3BB7 /* SpotlightIndexer.swift */; };
 		64AE61C02FDEA2B00F655B4F /* SoftwareLoginModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71BC538ACF5211A8F3BFEAE6 /* SoftwareLoginModels.swift */; };
 		654893DACB94A0EDA73141DF /* KioskAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA5C2531E017BDBDE5EFDDFE /* KioskAPIClient.swift */; };
+		65581EBFA1F56505CC2D7468 /* HomeModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B11E486136C505560EC92194 /* HomeModel.swift */; };
 		6634743A4A38550DD5933AFD /* KitDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5447D133A30CB4437C234F83 /* KitDetailView.swift */; };
 		6717F1F3A66106F5F83D2160 /* BrandAssetModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 180AF28376E70B61036C413D /* BrandAssetModels.swift */; };
 		69DD68092CDC35D6924052DF /* BookingDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA04562F7C424114F304B494 /* BookingDetailView.swift */; };
@@ -460,6 +462,7 @@
 		B00CA85202DF85A1C1962FD2 /* ReservationEditFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReservationEditFlow.swift; sourceTree = "<group>"; };
 		B037789B5F94297AC27AA18B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		B04517A8131BAA862DB3FF5E /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
+		B11E486136C505560EC92194 /* HomeModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeModel.swift; sourceTree = "<group>"; };
 		B208F1EB8DD4DA49DADC1CAB /* AppTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTabView.swift; sourceTree = "<group>"; };
 		B24728E65A42F40EDB0BBCF8 /* KioskOnlyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskOnlyApp.swift; sourceTree = "<group>"; };
 		B697AC8644C31499AB3D7408 /* ReportsScreenshotUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportsScreenshotUITests.swift; sourceTree = "<group>"; };
@@ -537,6 +540,7 @@
 		F52833BE41AB34A8FFA43FE2 /* TradeBoardSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TradeBoardSheet.swift; sourceTree = "<group>"; };
 		F79BD5C4616572A064F43254 /* Gotham-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Gotham-Bold.ttf"; sourceTree = "<group>"; };
 		F7E2243115099DA4F3973F11 /* LatestRequestGenerationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LatestRequestGenerationTests.swift; sourceTree = "<group>"; };
+		F7E986374624152FF265E9CB /* HomeSections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeSections.swift; sourceTree = "<group>"; };
 		F7F97C3C6D850E4FB17D6F8F /* ScheduleEventRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleEventRow.swift; sourceTree = "<group>"; };
 		F9B8707A6B2439C7C0E585A5 /* WisconsinLiveActivities.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = WisconsinLiveActivities.entitlements; sourceTree = "<group>"; };
 		FA38BB094C95612DBF9F1C24 /* KioskStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskStore.swift; sourceTree = "<group>"; };
@@ -681,6 +685,15 @@
 				E4C0BE70BBCA61E06847F9A5 /* WisconsinUITests */,
 				FAC33595C52A409299C15513 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		6EFF29C92CEF204C1480E160 /* Home */ = {
+			isa = PBXGroup;
+			children = (
+				B11E486136C505560EC92194 /* HomeModel.swift */,
+				F7E986374624152FF265E9CB /* HomeSections.swift */,
+			);
+			path = Home;
 			sourceTree = "<group>";
 		};
 		7185FFCB990BED0343A334A5 /* LiveActivities */ = {
@@ -960,6 +973,7 @@
 				4E310D05AC0591B9C424B405 /* Components */,
 				EC8F8121B14F9F92C8A25372 /* CreateBooking */,
 				7F8F46234DBAD63AE7CDEB70 /* DevTools */,
+				6EFF29C92CEF204C1480E160 /* Home */,
 				58E0A019951DDD62EB2B75B4 /* Reports */,
 				CD10799A1237302B1D05E01C /* Schedule */,
 				8FCC7C40A7D74BEFD82F01B5 /* Search */,
@@ -1421,6 +1435,8 @@
 				27ECC333F667B220F460C700 /* GuidesView.swift in Sources */,
 				01166B5C08621BBC2D8218F6 /* HIDScannerField.swift in Sources */,
 				6B9E7D074E50DBAB24DAC522 /* Haptics.swift in Sources */,
+				65581EBFA1F56505CC2D7468 /* HomeModel.swift in Sources */,
+				2720E80DD49E1A5126D0C026 /* HomeSections.swift in Sources */,
 				B1DDE3C06BD40F1F8615A227 /* HomeView.swift in Sources */,
 				59047C1F15964210773081BC /* InventoryReadModels.swift in Sources */,
 				D403B2F000A63EC5E1F72819 /* ItemActivityModels.swift in Sources */,
