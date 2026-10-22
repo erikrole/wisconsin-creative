@@ -42,10 +42,12 @@ beforeEach(() => {
 describe("Admin Fix Today low batteries", () => {
   it("uses the shared battery detection and the Battery Ops low-stock rule", async () => {
     mockedDb.bulkSku.findMany.mockResolvedValueOnce([
-      // 8 on hand is under the 10 floor, so it is low even with no minimum set.
-      family({ id: "gold", name: "Gold Mount Battery", available: 8 }),
-      family({ id: "fz100", name: "NP-FZ100 spare", available: 3 }),
-      family({ id: "plenty", name: "Sony Battery", available: 40 }),
+      // Counted families only go low against their configured minimum.
+      family({ id: "gold", name: "Gold Mount Battery", minThreshold: 10, available: 8 }),
+      family({ id: "fz100", name: "NP-FZ100 spare", minThreshold: 5, available: 3 }),
+      family({ id: "plenty", name: "Sony Battery", minThreshold: 5, available: 40 }),
+      // No minimum set and a handful on hand: routine, not low.
+      family({ id: "few", name: "Canon Battery", available: 2 }),
       // Substring false positive from the database prefilter is dropped.
       family({ id: "batteryless", name: "Batterysaver mat", category: "Mats", available: 0 }),
     ]);

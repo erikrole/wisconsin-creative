@@ -167,7 +167,8 @@ export const GET = withAuth(async (req, { user }) => {
     const lost = sku.trackByNumber ? units.filter((unit) => unit.status === "LOST").length : 0;
     const retired = sku.trackByNumber ? units.filter((unit) => unit.status === "RETIRED").length : 0;
     const total = sku.trackByNumber ? units.length : available;
-    const threshold = batteryLowThreshold(sku.minThreshold);
+    const owned = sku.trackByNumber ? total - retired : available;
+    const threshold = batteryLowThreshold(sku.minThreshold, owned);
     const labelPrintedCount = sku.trackByNumber
       ? units.filter((unit) => unit.labelPrintedAt !== null).length
       : 0;
@@ -234,6 +235,7 @@ export const GET = withAuth(async (req, { user }) => {
       category: sku.category,
       availableQuantity: sku.counts.available,
       minThreshold: sku.minThreshold,
+      ownedQuantity: sku.trackByNumber ? sku.counts.total - sku.counts.retired : sku.counts.available,
     })),
   })
     .filter((summary) => summary.isLow)

@@ -29,6 +29,7 @@ describe("getBatteryCompatibilitySummaries", () => {
           name: "Sony Battery",
           category: "Batteries",
           availableQuantity: 7,
+          ownedQuantity: 40,
           minThreshold: 4,
         },
       ],
@@ -38,7 +39,7 @@ describe("getBatteryCompatibilitySummaries", () => {
       expect.objectContaining({
         ruleId: "sony-np-fz100",
         availableQuantity: 7,
-        threshold: 10,
+        threshold: 8,
         isLow: true,
         batterySkuIds: ["sony-battery"],
       }),
@@ -98,12 +99,14 @@ describe("getBatteryCompatibilitySummaries", () => {
           name: "Sony BP-U35 Battery",
           category: "Batteries",
           availableQuantity: 4,
+          ownedQuantity: 20,
         },
         {
           id: "sony-bp-u70",
           name: "Sony BP-U70 Battery",
           category: "Batteries",
           availableQuantity: 3,
+          ownedQuantity: 20,
         },
       ],
     });
@@ -112,7 +115,7 @@ describe("getBatteryCompatibilitySummaries", () => {
       ruleId: "sony-bp-u",
       batterySkuIds: ["sony-bp-u35", "sony-bp-u70"],
       availableQuantity: 7,
-      threshold: 10,
+      threshold: 8,
       isLow: true,
     }));
   });
@@ -130,6 +133,7 @@ describe("getBatteryCompatibilitySummaries", () => {
           name: "Sony NP-FZ100 Battery",
           category: "Batteries",
           availableQuantity: 6,
+          ownedQuantity: 40,
         },
         {
           id: "bp-u",
@@ -146,7 +150,7 @@ describe("getBatteryCompatibilitySummaries", () => {
         cameraCount: 2,
         batterySkuNames: ["Sony NP-FZ100 Battery"],
         availableQuantity: 6,
-        threshold: 10,
+        threshold: 8,
         isLow: true,
       }),
       expect.objectContaining({
@@ -182,5 +186,15 @@ describe("camera model matching", () => {
     expect(ruleIds("EOS R5 C", "Canon")).toContain("canon-lp-e6");
     expect(ruleIds("A7IV", "Sony")).toContain("sony-np-fz100");
     expect(ruleIds("ILME-FX3", "Sony")).toContain("sony-np-fz100");
+  });
+});
+
+describe("relative low-stock line", () => {
+  it("does not flag a small family that is merely running down", () => {
+    const [summary] = getBatteryCompatibilitySummaries({
+      cameraAssets: [{ brand: "Sony", model: "FX3", type: "Camera" }],
+      bulkSkus: [{ id: "s", name: "Sony Battery", availableQuantity: 3, ownedQuantity: 12 }],
+    });
+    expect(summary).toEqual(expect.objectContaining({ threshold: 3, isLow: false }));
   });
 });

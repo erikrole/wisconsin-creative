@@ -19,15 +19,35 @@ const BATTERY_TERM_PATTERNS = BATTERY_TERMS.map((term) =>
   new RegExp(`(^|[^a-z0-9])${term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^a-z0-9]|$)`, "i"),
 );
 
-/**
- * Battery families count as low below max(configured minimum, this floor).
- * Battery Ops, compatibility lows, and Fix Today all use it, so the three
- * surfaces never disagree about which families need attention.
- */
-export const BATTERY_LOW_STOCK_FLOOR = 10;
+/** A family is low when under this share of the units the shop owns. */
+export const BATTERY_LOW_STOCK_SHARE = 0.2;
 
-export function batteryLowThreshold(minThreshold: number | null | undefined) {
-  return Math.max(BATTERY_LOW_STOCK_FLOOR, minThreshold ?? 0);
+/**
+ * Only families at least this big raise a low-stock notification. A family of
+ * a handful of batteries running down is routine; a large one (the Sony pool)
+ * running low is worth interrupting someone for.
+ */
+export const BATTERY_NOTIFY_MIN_FAMILY = 20;
+
+/**
+ * Low-stock line, relative to family size: the larger of the configured
+ * minimum and 20% of owned (non-retired) units. Battery Ops, compatibility
+ * lows, Fix Today and the low-stock notification all use it, so they never
+ * disagree about which families need attention.
+ */
+export function batteryLowThreshold(minThreshold: number | null | undefined, ownedQuantity: number) {
+  return Math.max(minThreshold ?? 0, Math.ceil(Math.max(0, ownedQuantity) * BATTERY_LOW_STOCK_SHARE));
+}
+
+export function shouldNotifyBatteryLow(args: {
+  minThreshold: number | null | undefined;
+  ownedQuantity: number;
+  availableQuantity: number;
+}) {
+  return (
+    args.ownedQuantity >= BATTERY_NOTIFY_MIN_FAMILY &&
+    args.availableQuantity < batteryLowThreshold(args.minThreshold, args.ownedQuantity)
+  );
 }
 
 export function isBatterySku(sku: {

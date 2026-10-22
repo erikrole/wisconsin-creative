@@ -1,5 +1,5 @@
 import { unique } from "@/lib/utils";
-import { BATTERY_LOW_STOCK_FLOOR } from "@/lib/bulk-batteries";
+import { batteryLowThreshold } from "@/lib/bulk-batteries";
 
 type BatteryCameraLike = {
   brand?: string | null;
@@ -14,6 +14,8 @@ type BatterySkuLike = {
   category?: string | null;
   categoryName?: string | null;
   availableQuantity?: number | null;
+  /** Units owned (not retired); sets the relative low-stock line. */
+  ownedQuantity?: number | null;
   currentQuantity?: number | null;
   minThreshold?: number | null;
 };
@@ -127,10 +129,8 @@ function quantityForSku(sku: BatterySkuLike) {
 }
 
 function thresholdForSkus(skus: BatterySkuLike[]) {
-  return Math.max(
-    BATTERY_LOW_STOCK_FLOOR,
-    ...skus.map((sku) => sku.minThreshold ?? 0),
-  );
+  const owned = skus.reduce((sum, sku) => sum + (sku.ownedQuantity ?? quantityForSku(sku)), 0);
+  return batteryLowThreshold(Math.max(0, ...skus.map((sku) => sku.minThreshold ?? 0)), owned);
 }
 
 export function getBatteryCompatibilitySummaries(args: {

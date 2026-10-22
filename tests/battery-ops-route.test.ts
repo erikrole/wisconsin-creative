@@ -213,7 +213,7 @@ describe("battery ops live counts", () => {
         retired: 1,
       },
       isLow: true,
-      threshold: 10,
+      threshold: 4,
       labelPrintedCount: 1,
       labelNeededCount: 2,
     }));
@@ -240,7 +240,7 @@ describe("battery ops live counts", () => {
     expect(body.data.compatibility[0]).toEqual(expect.objectContaining({
       ruleId: "sony-np-fz100",
       availableQuantity: 1,
-      threshold: 10,
+      threshold: 4,
       isLow: true,
     }));
   });
@@ -272,7 +272,7 @@ describe("battery ops live counts", () => {
       checkedOut: 0,
       lost: 0,
       retired: 0,
-      lowSkus: 1,
+      lowSkus: 0,
       agingCheckedOut: 0,
     });
     expect(body.data.skus[0]).toEqual(expect.objectContaining({

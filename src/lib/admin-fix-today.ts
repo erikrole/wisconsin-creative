@@ -105,7 +105,7 @@ function batteryAvailability(sku: BatterySkuRow) {
     sku.units.flatMap((unit) => (unit.allocations ?? []).map((allocation) => [unit.id, allocation] as const)),
   );
   const state = summarizeItemFamilyState(sku, activeAllocationByUnitId);
-  const threshold = batteryLowThreshold(sku.minThreshold);
+  const threshold = batteryLowThreshold(sku.minThreshold, state.onHandQuantity);
   return { available: state.availableQuantity, threshold };
 }
 
