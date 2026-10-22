@@ -1,5 +1,21 @@
 [
   {
+    "date": "2026-10-22",
+    "title": "Everyone hears about gear transfers",
+    "type": "improvement",
+    "summary": "When gear changes hands, both people now get told, whoever made the change.",
+    "details": [
+      "The new holder gets a notification with the due time.",
+      "The old holder sees it come off their record, and gets a notification if staff moved it.",
+      "Transferring a checkout is held while a return is in progress."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 588
+  },
+  {
     "date": "2026-10-21",
     "title": "A calmer Bookings screen on iPhone",
     "type": "improvement",
