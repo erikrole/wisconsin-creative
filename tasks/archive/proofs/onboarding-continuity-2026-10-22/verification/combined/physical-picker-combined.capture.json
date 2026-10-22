@@ -1,0 +1,20 @@
+{
+  "sourceRevision": "84586e71f11548b83b119588bbdf7dd7f59025b7",
+  "imageSHA256": "73d9254f283d208ede38c178f8c5e80f506d99708151b5b7a5d15b44356dec52",
+  "resultBundle": "/private/tmp/wc-combined-physical-picker-fresh-20261022.xcresult",
+  "settings": "Physical iPhone18 Pro Max; real PhotosPicker; marked technical image only; cancel passed",
+  "baseline": "After-only; no trustworthy baseline",
+  "capture": {
+    "capture": "physical-sample-selected-and-decoded",
+    "capturedAt": "2026-10-22T18:56:14Z",
+    "fixtureScenario": "onboarding",
+    "locale": "en_US",
+    "screenPoints": [
+      440,
+      956
+    ],
+    "screenScale": 3,
+    "systemVersion": "27.2",
+    "timezone": "America/Chicago"
+  }
+}

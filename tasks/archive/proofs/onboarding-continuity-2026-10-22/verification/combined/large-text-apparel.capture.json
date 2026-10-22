@@ -1,0 +1,16 @@
+{
+  "sourceRevision": "ede6f8adf2b51eda7300f66533a7ee6608831459",
+  "imageSHA256": "929aa1e17b5dab134de65600cd01f5a904da5bd7de6f295b786e835b6750a7ae",
+  "resultBundle": "/private/tmp/wc-combined-onboarding-home-built-20261022.xcresult",
+  "settings": "Fixture UI; large text; light; scrolled within apparel",
+  "baseline": "After-only; no trustworthy baseline",
+  "attachment": {
+    "configurationName": "Test Scheme Action",
+    "deviceId": "795AB4E9-3E4A-4C13-9D4F-27FD822C190B",
+    "deviceName": "iPhone 18 Pro Max",
+    "exportedFileName": "BCF53197-09B0-4ACC-9C55-A9D4D6A4EBE1.png",
+    "isAssociatedWithFailure": false,
+    "suggestedHumanReadableName": "large-text-apparel-reachable_0_871A78C4-F8BC-446A-92D2-67F6099C17C6.png",
+    "timestamp": 1792694848.806
+  }
+}

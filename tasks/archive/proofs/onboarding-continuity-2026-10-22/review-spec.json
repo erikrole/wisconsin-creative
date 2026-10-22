@@ -1,25 +1,122 @@
 {
   "title": "Onboarding that continues with you",
   "eyebrow": "Wisconsin Creative · Web + iOS · October 22, 2026",
-  "lede": "Account-backed setup, optional photo completion, and direct photo gestures. Current local evidence for the six-student onboarding rollout.",
+  "lede": "Required setup saves to the account across web and iPhone. Real two-way handoff, photo-free completion and physical photo upload evidence for the Monday student rollout.",
   "stats": [
     {
-      "k": "Browser recovery",
-      "v": "7 passed",
-      "n": "Real component interactions with fixture APIs."
+      "k": "Cross-device continuation",
+      "v": "Both ways passed",
+      "n": "Real invited synthetic students; physical iPhone 18 Pro Max."
     },
     {
-      "k": "Database continuity",
-      "v": "8 passed",
-      "n": "Disposable PostgreSQL; no hosted student account."
+      "k": "Physical photo upload",
+      "v": "512px WebP verified",
+      "n": "PhotosPicker, pan/pinch, Save, server object and real web profile."
     },
     {
-      "k": "Native runtime",
-      "v": "10 + 2 passed",
-      "n": "Model/image XCTest plus two iPhone 18 Pro Max UI scenarios."
+      "k": "Combined native candidate",
+      "v": "273 tests passed",
+      "n": "Claude’s reviewed Home, API, style and Accountability work included."
     }
   ],
   "sections": [
+    {
+      "heading": "Final hosted regression passed",
+      "note": "Exact source 09561456e, required CI 39843245683 and Managed previews 39844352154. Real invited synthetic accounts in the owned preview; no fixture API. Native source is identical to the signed and physically tested 84586e71f candidate.",
+      "shots": [
+        {
+          "image": "verification/final/single-continue-waits-for-latest-answer.png",
+          "title": "One Continue reaches Photo",
+          "cap": "The real first save response is held after committing. A newer typed apparel answer is saved, and one Continue advances only after that newer answer is acknowledged. Photo-free Finish then succeeds.",
+          "tag": "Web · final hosted source",
+          "wide": true
+        },
+        {
+          "image": "verification/final/physical-photo-on-final-web.png",
+          "title": "The physical upload survives the final deployment",
+          "cap": "Normal web sign-in renders the same photo saved from the physical iPhone. The actual object is still 512×512 WebP with both technical-image colors.",
+          "tag": "Web · actual physical upload",
+          "wide": true
+        },
+        {
+          "image": "verification/final/native-finish-stays-complete.png",
+          "title": "Native Finish remains complete on the final server",
+          "cap": "The student who finished on iPhone without a photo remains complete, with the saved apparel answers preserved.",
+          "tag": "Web · persisted native Finish",
+          "wide": true
+        }
+      ]
+    },
+    {
+      "heading": "Real answers continue on either device",
+      "note": "Authenticated after-only evidence from the branch-owned Managed preview at 84586e71f. New synthetic students; no fixture API. Web → physical iPhone resumes a partial Wiscard. iPhone → web resumes the saved phone, Wiscard and year at Apparel. Finishing without a photo survives relaunch.",
+      "shots": [
+        {
+          "image": "verification/live/physical-native-to-web-paused.png",
+          "title": "Leave iPhone at Apparel",
+          "cap": "Phone, Wiscard and Sophomore are confirmed before the app terminates. Clothing and shoe choices remain independent.",
+          "tag": "Physical iPhone · real account"
+        },
+        {
+          "image": "verification/live/web-resumes-native-and-completes-apparel.png",
+          "title": "Resume the native draft on web",
+          "cap": "Normal web sign-in resumes at Apparel with the native contact, Wiscard and year already saved.",
+          "tag": "Web · real backend",
+          "wide": true
+        },
+        {
+          "image": "verification/live/web-sees-native-photo-free-completion.png",
+          "title": "Web sees the native Finish",
+          "cap": "The student who finished on iPhone without a photo stays complete when signing into web.",
+          "tag": "Web · photo-free completion",
+          "wide": true
+        }
+      ]
+    },
+    {
+      "heading": "The physical photo is saved and visible on web",
+      "note": "Physical iPhone 18 Pro Max, iOS 27.2, isolated Creative Preview app. Only the marked orange/teal test image is selected, with a color guard before Save. The stored public object is fetched without preview authorization headers and verified as 512×512 WebP.",
+      "shots": [
+        {
+          "image": "verification/live/physical-photos-picker-crop.png",
+          "title": "Real PhotosPicker and gestures",
+          "cap": "A fresh marked sample is selected through the system picker, pinched and panned before Save.",
+          "tag": "Physical iPhone · actual library"
+        },
+        {
+          "image": "verification/live/physical-photo-uploaded.png",
+          "title": "Native profile after Save",
+          "cap": "The confirmed photo is visible in Profile; Change photo appears and the crop sheet has dismissed.",
+          "tag": "Physical iPhone · actual upload"
+        },
+        {
+          "image": "verification/live/web-after-physical-photo-upload.png",
+          "title": "The same image on web",
+          "cap": "Real profile render plus stored-image format, dimensions and distinctive pixel checks pass.",
+          "tag": "Web · actual saved image",
+          "wide": true
+        }
+      ]
+    },
+    {
+      "heading": "Interrupted saves retain the answer",
+      "note": "Authenticated two-browser recovery passes against the same preview: a committed save whose response was dropped, independent group edits, both conflict decisions, and offline retention with automatic reconnect.",
+      "shots": [
+        {
+          "image": "verification/live/web-offline-answer-retained.png",
+          "title": "Offline input remains visibly unsaved",
+          "cap": "The typed answer remains in memory with an offline banner and Retry save. Reconnect persists it without losing the independently saved Wiscard.",
+          "tag": "Web · real network disabled",
+          "wide": true
+        },
+        {
+          "image": "verification/combined/large-text-apparel.png",
+          "title": "Native apparel at accessibility size",
+          "cap": "The current native controls remain reachable while scrolling, and one Continue reaches the optional photo. Fixture UI evidence.",
+          "tag": "iOS · large text fixture"
+        }
+      ]
+    },
     {
       "heading": "Move the photo itself",
       "note": "After-only evidence. No sliders. A circular guide preserves photo context; iOS uses native pan/pinch and web supports drag, pinch, scroll and keyboard controls. Technical fixture images are used instead of student photos.",
@@ -65,8 +162,8 @@
       ]
     },
     {
-      "heading": "Verified on the physical iPhone",
-      "note": "After-only physical iPhone 18 Pro Max evidence, iOS 27.2. This test exposed and fixed a stale SwiftUI gesture echo. Drag preserves the pinched zoom; an unconfirmed save preserves the exact crop pixels, and Reset restores the original zoom. Synthetic fixture; successful server upload remains a separate gate.",
+      "heading": "Earlier physical crop recovery regression",
+      "note": "Earlier synthetic fixture evidence found and fixed stale SwiftUI gesture feedback. Drag retains pinch zoom, failed Save preserves the exact crop pixels, and Reset restores the original. Actual shared-backend upload evidence is shown above.",
       "shots": [
         {
           "image": "ios-physical-avatar-crop.png",
@@ -83,7 +180,7 @@
         {
           "image": "ios-physical-photos-picker.png",
           "title": "A real system photo selection",
-          "cap": "The physical phone added and selected the marked technical sample through PhotosPicker, verified its decoded colors and cancelled cleanly. The personal photo-library grid is excluded. Successful upload is still pending the hosted backend.",
+          "cap": "The physical phone added and selected the marked technical sample through PhotosPicker, verified its decoded colors and cancelled cleanly. The personal photo-library grid is excluded. Successful shared-backend upload is recorded above.",
           "tag": "Physical iPhone · PhotosPicker"
         }
       ]
@@ -163,21 +260,22 @@
     }
   ],
   "verification": [
-    "TypeScript and app build pass. Lint reports 0 errors; existing repository warnings remain. The crop editor and changed browser test lint cleanly.",
-    "Focused API, profile, avatar, image and audit-inventory tests pass. Disposable PostgreSQL covers partial saves, contention, replay, rollback, legacy compatibility and photo-free FINISH.",
-    "All 780 native source-contract tests pass across 148 files. Native target build and 10 model/image XCTest cases pass, including distinctive off-center crop pixels.",
-    "Both final iPhone 18 Pro Max UI scenarios pass: actual pinch/drag with retained crop on failure, and the required student sequence through photo skip and Finish.",
-    "Xcode project registration, schema validation, 201 migration-prefix checks, docs/codemaps and diff whitespace checks pass.",
-    "Mobbin MCP connected and queried successfully. WHOOP, Me+ and Tripadvisor references informed the circular guide, image context and brief guidance. Their stills establish layout/copy, not live gesture behavior.",
-    "Physical iPhone 18 Pro Max: crop pan/pinch, exact preview preservation after unconfirmed save, and Reset passed. PhotosPicker selection and real shared-backend upload/handoff are tracked separately.",
-    "Physical PhotosPicker sample selection/decoding/cancellation passed. Add-only permission belongs to the isolated UI test runner; the app uses the system picker. A marked technical sample was added to the phone library."
+    "6,571 source/service tests pass, one existing skip. TypeScript, app build, migration prefixes and docs checks pass. Lint has zero errors and 55 existing warnings.",
+    "All seven real-browser component cases pass. The in-flight edit case clicks Continue once before releasing the response; it fails on the old hook. The same delayed-save regression passes against the final hosted server at 09561456e.",
+    "Final source 09561456e passes required CI and Managed previews. Authenticated handoff-data preservation, real photo read-back, one-click Continue, photo-free Finish and lost-response/conflict/offline recovery pass on that deployment.",
+    "273 native unit tests pass on iPhone 18 Pro Max. Five combined simulator UI cases cover required setup, photo skip, direct crop/retry, large-text apparel and Home interaction. The isolated physical runner builds and the live handoff/photo cases pass.",
+    "WisconsinKiosk compiles at a generic simulator destination. The required iPadOS 26.5 runtime is unavailable; no kiosk runtime claim is made.",
+    "Two independent source reviews found no remaining native integration or required-setup/privacy/migration defects. Wrapped frozen identity redaction and the exact applied migration-name exception have focused coverage.",
+    "Signed/exported 1.4 build 36 passes deep strict signature verification and App Store publish dry run. Native source is unchanged by the final web-only save fix. No IPA bytes were uploaded and nothing was submitted or distributed.",
+    "Mobbin MCP references informed the circular crop guide, image context and brief guidance. Still images establish presentation; our runtime tests exercise the gestures."
   ],
   "notes": [
-    "These are current fixture captures with no trustworthy matched pre-change baseline; no before/after size or performance measurement is claimed. Older slider captures in this folder are superseded.",
-    "Authenticated web-to-iOS and iOS-to-web handoff remains pending. D-063 requires this branch’s own Managed preview, obtained after an authorized scoped commit, push and draft PR. No branch environment is currently available.",
-    "Physical iPhone photo-library/permission behavior and shared-backend avatar display remain pending. Simulator and fixture proof do not establish those device/backend outcomes.",
-    "Migration 0200 has not been deployed. No commit, push, PR, production mutation, deployment, email or distribution has occurred.",
-    "Source snapshot, per-file hashes, capture hashes and passing logs are retained alongside this page. Native Swift source in the installed private test snapshot was verified byte-identical; only bundle/app-group identity differs intentionally.",
-    "The browser refused the local file protocol, so the review page was not browser-rendered here. Its HTML structure, embedded images, alt text and every selected source image were inspected directly; Codex queued the local file for viewing."
+    "All captures are labeled after-only; no trustworthy matched pre-change baseline or measured visual/performance improvement is claimed. Component fixtures and authenticated backend evidence are identified separately.",
+    "The physical handoff/upload source is 84586e71f. The final web/server source 09561456e confirms the Continue fix and preserved physical results. Main’s subsequent backend extraction and tokenless source-map build repair leave the native tree unchanged.",
+    "The account-completion migration is applied only in the branch-owned preview. Production migration/deployment and App Store/native distribution require the release step. Synthetic preview students were created without email.",
+    "Claude’s reviewed #605, remaining #601 logging/build changes and #610 Accountability are included, alongside current main. Required onboarding, diagnostic, damage-report and avatar recovery contracts are retained.",
+    "The original dirty checkout is preserved. The physical test app has separate bundle and app-group identities; no personal photo grid is included in selected evidence.",
+    "Xcode’s local App Store export validation registered an AWAITING_UPLOAD record; the exact ID was confirmed in its distribution log. This is distinct from uploading the IPA or distributing an app.",
+    "The browser refused the local file protocol. HTML structure, embedded image references, alt text and selected source images were inspected directly; no alternate protocol workaround was used."
   ]
 }

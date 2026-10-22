@@ -29,13 +29,13 @@ Owner: this chat. Target: Monday, October 26, 2026.
 
 ## Acceptance
 
-Implemented locally; authenticated handoff and release remain open. Fixture/source proof, authenticated shared-backend handoff, installed/physical-device behavior and production rollout are distinct gates.
+Implemented and verified through authenticated shared-backend handoff, physical-device photo upload and the final hosted Continue regression at `09561456e`. Production rollout remains open. Fixture/source proof, authenticated handoff, physical-device behavior and production rollout are distinct gates.
 
 - Web: validated group autosave, preserved unsaved input, explicit conflict recovery, read ordering, optional-photo FINISH and account-scoped checklist retries. Settings, onboarding and roster share photo cropping/upload/removal and account-avatar cache refresh.
 - iOS: account save versions, durable FINISH, foreground resume, field-owned selections, shared checklist progress, native Profile photo editing and honest error/retry states.
 - Photos: owner-scoped receipt reads, frozen account/photo versions, idempotent upload IDs, decoded-image limits, orientation/metadata normalization, transactional audit/pointer replacement and delayed old-blob deletion. Crop preview/export alignment receives distinctive off-center pixel checks.
-- Verification: schema validation and migration-prefix checks; focused service/API/image tests; 8 disposable-PostgreSQL integration cases; 7 Chromium component cases; 780 Swift source-contract tests in 148 files; 10 native model/image XCTest cases and 2 iPhone 18 Pro Max UI scenarios; TypeScript, lint (0 errors; pre-existing warnings), app build and native target build. Exact logs and visual evidence live in [the local proof folder](archive/proofs/onboarding-continuity-2026-10-22/).
-- Review: [current UI evidence](archive/proofs/onboarding-continuity-2026-10-22/review.html). After-only fixture evidence; no trustworthy matched pre-change baseline. Earlier slider captures in the folder are superseded and excluded from this review.
+- Verification: 6,571 source/service tests (one existing skip), 7 Chromium component cases, 273 native unit cases and 5 combined simulator UI cases pass. Schema/migration prefixes, project parity, docs, TypeScript, lint (zero errors, 55 existing warnings), app build and both native target builds pass. Actual web↔physical-iPhone handoff, photo-free completion/relaunch, conflict/lost-response/offline recovery and physical photo upload with web read-back pass. Exact source revisions and boundaries are recorded below.
+- Review: [current UI evidence](archive/proofs/onboarding-continuity-2026-10-22/review.html). After-only authenticated and fixture evidence are labeled separately; no trustworthy matched pre-change baseline. Earlier slider captures in the folder are superseded and excluded from this review.
 - Review rendering boundary: Codex queued the local review file, but browser rendering was blocked by its HTTP/HTTPS-only URL policy. The generated self-contained HTML and every selected source image were inspected directly. No alternate browser or protocol workaround was attempted.
 
 ## Mobbin references
@@ -47,9 +47,9 @@ Implemented locally; authenticated handoff and release remain open. Fixture/sour
 ## Remaining acceptance and rollout
 
 - [x] Commit and push the scoped work and open [draft PR #606](https://github.com/erikrole/wisconsin-creative/pull/606).
-- [ ] Obtain this branch’s hosted Managed preview after the current integration passes CI. D-063 prohibits borrowing another branch’s environment or production credentials.
-- [ ] Seed one student in that sanitized preview, authenticate web and native to that same backend, verify web→iOS and iOS→web continuation, concurrent edits, relaunch, lost-response recovery, and photo-free completion. Local fixture/API tests do not substitute for these handoffs.
-- [ ] Verify real PhotosPicker/photo-library behavior on the user-selected physical iPhone 18 Pro Max, including permission/selection recovery and the chosen photo appearing on both clients. The separate Creative Preview app is signed and installed. Gesture/retry proof and successful shared-backend upload are recorded separately below.
+- [x] Obtain this branch’s hosted Managed preview after required CI passes. Final source `09561456e` passes CI 39843245683 and Managed previews 39844352154; deployment `dpl_CgYFMPPg8zzPhQszCdqwcGxucTfW` is Ready on `br-icy-rain-au18ehyu`. D-063 ownership is preserved.
+- [x] Seed synthetic invited students in the owned sanitized preview, authenticate web and physical native to the same backend, and verify both handoffs, concurrent edits, relaunch, lost-response recovery and photo-free completion.
+- [x] Verify real PhotosPicker/photo-library behavior on the user-selected physical iPhone 18 Pro Max, including selection/cancellation, crop recovery, actual Save and the chosen technical image appearing on both clients. The separate Creative Preview app preserves the installed production app.
 - [ ] Apply migration `0200` and ship/distribute the verified server/native slice only with explicit release authorization. Existing accounts remain outside the new required gate.
 
 No production mutation, merge, deployment, external email or App Store distribution has occurred in this task.
@@ -102,3 +102,13 @@ Candidate `61112d3db` passes required CI 39840163903 and authenticated local rea
 Current Sentry source confirms that its default webpack integration generates server/client source maps even without an upload token; `silent` suppresses logs and does not disable generation. Managed previews deliberately clear `SENTRY_AUTH_TOKEN`. Configure `sourcemaps.disable` only when that token is absent, preserving configured release uploads and runtime instrumentation. Verify the compile and actual hosted redeployment before declaring the memory failure resolved.
 
 The tokenless app build completed with the same 5 GiB Node heap limit as Managed previews, and emitted no unused static JavaScript source maps. The two deployment-memory checks, config lint, sequential TypeScript check and diff check pass. This is local compile evidence; the hosted retry remains the acceptance gate.
+
+## Final hosted acceptance
+
+Source `09561456e64fade677afc6c03552537c158e2f8f` passes required CI 39843245683 (6,571 tests, one existing skip, plus database integrity) and Managed previews 39844352154. The hosted build completed successfully after the source-map change. The deployment is `dpl_CgYFMPPg8zzPhQszCdqwcGxucTfW`, <https://wisconsin-creative-m19fb6rew-erikrole.vercel.app>, on the same owned sanitized database branch. Preview setup and doctor pass.
+
+The fixture-free final browser run attests the exact CI SHA and Managed deployment, signs in normally, verifies both physical handoff accounts and the persisted 512×512 WebP, and renders the real uploaded photo. A fresh invited student enters a newer apparel answer while the first real committed save response is held: one Continue waits for the latest answer and reaches Photo; Finish without a photo completes setup. Final receipts and inspected captures are in `verification/final/`. The entire native Git tree remains identical to the signed `84586e71f` archive, and all 225 production Swift files match the isolated app tested on the phone.
+
+The evidence/docs commit following this source changes no app, server, migration or native behavior. Production merge/migration/deployment and App Store/TestFlight upload, submission or distribution remain the release boundary. Xcode export validation’s unfinished upload record is retained; no IPA bytes have been uploaded.
+
+Lost-response reconciliation, independent groups, both conflict choices and offline retention/reconnect also pass again against final source `09561456e`; the new receipt is retained in `verification/final/web-recovery-result.json`.
