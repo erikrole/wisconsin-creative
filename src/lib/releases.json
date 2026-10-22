@@ -245,6 +245,22 @@
   },
   {
     "date": "2026-10-21",
+    "title": "Kiosk checkouts use clean titles",
+    "type": "improvement",
+    "summary": "Checkouts started at the kiosk for a game now get the same title as everywhere else, like \"Men's Soccer vs Evansville\".",
+    "details": [
+      "Kiosk checkouts for a game are titled with the sport name and opponent instead of the calendar's raw event name.",
+      "Reservation and damage or loss alerts show the clean booking title.",
+      "The kiosk's \"needed next\" card no longer cuts typed titles at a dash."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 562
+  },
+  {
+    "date": "2026-10-21",
     "title": "Name and area when adding one student",
     "type": "improvement",
     "summary": "The Add users dialog now opens on Add one person and can start a student's profile with their name and primary area.",
