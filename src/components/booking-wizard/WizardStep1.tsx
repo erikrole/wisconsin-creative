@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import { MAX_LINKED_EVENTS_PER_BOOKING } from "@/lib/request-limits";
 import { minimumBookingEndDate } from "@/lib/quarter-hour";
 import { eventSummaryLabel } from "./flow-summary";
+import { sportDotColor } from "@/lib/sport-color";
 import { VENUE_TONES, venueBadgeVariant, venueToneFromIsHome } from "@/lib/venue-tone";
 import {
   toLocalDateTimeValue,
@@ -325,6 +326,11 @@ export function WizardStep1({
                                   "text-muted-foreground",
                                 )}
                               >
+                                <span
+                                  aria-hidden="true"
+                                  className="mr-1.5 inline-block size-2 rounded-full align-middle"
+                                  style={{ backgroundColor: sportDotColor(ev.sportCode) ?? undefined }}
+                                />
                                 {sportLabel(ev.sportCode)}
                                 {ev.opponent ? " \u00b7 " : ""}
                               </span>

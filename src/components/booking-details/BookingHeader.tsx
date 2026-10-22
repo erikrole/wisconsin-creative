@@ -455,9 +455,23 @@ export function BookingHeader({
       }
       footer={
         <div
-          className={`grid gap-x-5 gap-y-3 sm:grid-cols-2 ${context ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}
+          className={`grid gap-x-5 gap-y-3 sm:grid-cols-2 ${context ? "xl:grid-cols-5" : "xl:grid-cols-4"}`}
           aria-label="Booking summary"
         >
+          <div className="flex min-w-0 items-start gap-2.5 py-1">
+            <UserAvatar
+              name={booking.requester?.name ?? "Unknown"}
+              avatarUrl={booking.requester?.avatarUrl}
+              size="sm"
+              className="mt-0.5"
+            />
+            <div className="min-w-0">
+              <div className="text-xs font-medium text-muted-foreground">Who</div>
+              <div className="mt-0.5 truncate text-[15px] font-semibold text-foreground">
+                {booking.custodyScope === "SHARED" ? "Shared" : booking.requester?.name ?? "Unknown"}
+              </div>
+            </div>
+          </div>
           <SummaryFact icon={CalendarClock} label={schedule.label} value={schedule.value} />
           <SummaryFact
             icon={MapPin}
