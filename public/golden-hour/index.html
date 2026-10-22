@@ -282,10 +282,20 @@
     .footnote { margin: 28px auto 0; max-width: 560px; text-align: center; font-size: 13px; line-height: 1.6; color: var(--ink-3); }
     .footnote kbd { font: inherit; font-size: 12px; padding: 1px 6px; border: 1px solid var(--glass-line); border-radius: 5px; }
     @media (hover: none) { .keys { display: none; } }
-    .made-by { display: inline-flex; align-items: center; gap: 8px; margin-top: 16px; color: var(--ink-2); font-size: 12px; font-weight: 700; text-decoration: none; }
-    .made-by:hover { color: var(--ink); }
-    .made-by span { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; background: var(--red); }
-    .made-by img { width: 15px; height: 15px; }
+    /* ---- Wisconsin Creative badge: shared byte-for-byte by every public tool ---- */
+    .wc-badge {
+      position: fixed; z-index: 20; right: max(16px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom));
+      display: inline-flex; align-items: center; gap: 7px; padding: 6px 11px 6px 9px; border-radius: 999px;
+      color: inherit; opacity: 0.78; text-decoration: none; font-size: 12px; font-weight: 700; letter-spacing: 0.01em; line-height: 1;
+      background: color-mix(in srgb, currentColor 9%, transparent); border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); transition: opacity 150ms ease;
+    }
+    .wc-badge:hover { opacity: 1; }
+    .wc-badge-w {
+      width: 16px; height: 15px; flex: none; background: currentColor;
+      -webkit-mask: url("/brand/wc-badge.svg") center / contain no-repeat; mask: url("/brand/wc-badge.svg") center / contain no-repeat;
+    }
+    @media (max-width: 1023px) { .wc-badge { position: relative; right: auto; bottom: auto; display: flex; width: max-content; margin: 0 auto calc(20px + env(safe-area-inset-bottom)); } }
 
     /* ---- entrance ---- */
     .rise { opacity: 0; transform: translateY(8px); animation: rise 650ms var(--ease) forwards; }
@@ -420,9 +430,10 @@
     <p class="footnote">
       Golden hour is the sun between 6° and −4°; blue hour, −4° to −6°. Assumes a flat horizon, so hills, buildings and stadium rims shift things. Scout to confirm.
       <span class="keys"><br><kbd>←</kbd> <kbd>→</kbd> change day · <kbd>T</kbd> today</span>
-      <br><a class="made-by" href="/apps"><span><img src="/apps/motion-w.svg" alt=""></span>Wisconsin Creative</a>
     </p>
   </main>
+
+  <a class="wc-badge" href="/apps"><span class="wc-badge-w" aria-hidden="true"></span>Wisconsin Creative</a>
 
   <script src="core.js?v=3d7a89c51959"></script>
   <script src="app.js?v=b277fd713d43"></script>

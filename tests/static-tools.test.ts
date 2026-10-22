@@ -66,6 +66,13 @@ describe("static tools: routing, headers, and page contracts", () => {
     }
   });
 
+  it("ships the Wisconsin Creative badge as a single-colour Motion W", () => {
+    const svg = readFileSync("public/brand/wc-badge.svg", "utf8");
+    expect(svg).toContain('fill="currentColor"');
+    expect(svg).not.toMatch(/#[0-9a-f]{3,6}|<script|href=/i);
+    expect(readFileSync("public/golden-hour/index.html", "utf8")).toContain('<a class="wc-badge" href="/apps">');
+  });
+
   it("sends the old /tools URL to the apps page", () => {
     expect(nextConfigSource).toContain('{ source: "/tools", destination: "/apps", permanent: false }');
   });
