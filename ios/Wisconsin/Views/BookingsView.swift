@@ -397,13 +397,7 @@ struct BookingsView: View {
     private var emptyIcon: String {
         guard vm.searchText.isEmpty else { return "magnifyingglass" }
         if vm.statusFilter != .active { return vm.statusFilter.systemImage }
-        return vm.scope == .mine ? "checkmark.seal.fill" : "calendar.badge.plus"
-    }
-
-    private var emptyTone: StatusTone {
-        guard vm.searchText.isEmpty else { return .gray }
-        if vm.statusFilter != .active { return vm.statusFilter.tone }
-        return vm.scope == .mine ? .green : .purple
+        return vm.scope == .mine ? "checkmark.circle" : "calendar.badge.plus"
     }
 
     private var emptyDescription: String {
@@ -437,10 +431,6 @@ struct BookingsView: View {
         vm.statusFilter == .active ? "Active" : vm.statusFilter.label
     }
 
-    private var isDefaultFiltering: Bool {
-        vm.statusFilter == .active && vm.sortOption == .operational
-    }
-
     private var showsSearch: Bool {
         if !vm.searchText.isEmpty { return true }
         let visibleCount = vm.bookings.count
@@ -451,85 +441,27 @@ struct BookingsView: View {
         // Apple's recommended pattern for binding to an @Observable model.
         @Bindable var vm = vm
         return NavigationStack(path: $navigationPath) {
-            VStack(spacing: 0) {
-                Group {
-                    if let error = vm.error, vm.isEmpty {
-                        ContentUnavailableView {
-                            Label("Couldn't load bookings", systemImage: "exclamationmark.triangle")
-                        } description: {
-                            Text(error)
-                        } actions: {
-                            Button("Retry") { Task { await vm.load(reset: true, clearExistingRows: true) } }
-                                .buttonStyle(.borderedProminent)
-                        }
-                    } else if vm.isEmpty && vm.isLoading {
-                        VStack(spacing: 8) {
-                            ProgressView("Loading bookings")
-                                .padding(.top, 12)
-                            List {
-                                ForEach(0..<8, id: \.self) { _ in
-                                    BookingRowSkeleton()
-                                        .listRowSeparator(.hidden)
-                                        .listRowBackground(Color.clear)
-                                        .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
-                                }
-                            }
-                            .listStyle(.plain)
-                            .scrollContentBackground(.hidden)
-                            .background(Color(.systemGroupedBackground))
-                            .allowsHitTesting(false)
-                            .accessibilityHidden(true)  // Placeholder shapes stay decorative.
-                        }
-                    } else if vm.isEmpty {
-                        ScrollView {
-                            BookingEmptyState(
-                                icon: emptyIcon,
-                                tone: emptyTone,
-                                title: emptyTitle,
-                                description: emptyDescription
-                            ) {
-                                emptyStateActions
-                            }
-                            .frame(maxWidth: 520)
-                            .padding(.horizontal, Brand.Space.md)
-                            .padding(.top, Brand.Space.lg)
-                            .frame(maxWidth: .infinity)
-                        }
-                    } else {
-                        List {
-                            BookingListSection(title: sectionTitle, count: vm.sortedBookings.count) {
-                                ForEach(vm.sortedBookings) { booking in
-                                    bookingRowLink(booking)
-                                }
-                            }
-                            if let pageError = vm.pageError {
-                                VStack(spacing: 8) {
-                                    Text(pageError)
-                                        .font(.footnote)
-                                        .foregroundStyle(.secondary)
-                                        .multilineTextAlignment(.center)
-                                    Button("Retry") { Task { await vm.retryPage() } }
-                                        .buttonStyle(.bordered)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 8)
-                                .listRowSeparator(.hidden)
-                                .listRowBackground(Color.clear)
-                            } else if vm.hasMore {
-                                ProgressView()
-                                    .frame(maxWidth: .infinity)
-                                    .listRowSeparator(.hidden)
-                                    .listRowBackground(Color.clear)
-                                    .task(id: "\(vm.scope.rawValue)-\(vm.bookings.count)") {
-                                        await vm.load()
-                                    }
-                            }
-                        }
-                        .listStyle(.plain)
-                        .scrollContentBackground(.hidden)
-                        .background(Color(.systemGroupedBackground))
+            Group {
+                if let error = vm.error, vm.isEmpty {
+                    ContentUnavailableView {
+                        Label("Couldn't load bookings", systemImage: "exclamationmark.triangle")
+                    } description: {
+                        Text(error)
+                    } actions: {
+                        Button("Retry") { Task { await vm.load(reset: true, clearExistingRows: true) } }
+                            .buttonStyle(.borderedProminent)
+                            .tint(.green)
                     }
+                } else if vm.isEmpty && vm.isLoading {
+                    loadingList
+                } else if vm.isEmpty {
+                    emptyState
+                } else {
+                    bookingList
                 }
+            }
+            .safeAreaInset(edge: .top, spacing: 0) {
+                if !vm.pinsToOwnGear { scopePicker }
             }
             .background(Color(.systemGroupedBackground))
             .navigationTitle(isCollaborator ? "My Gear" : "Bookings")
@@ -552,28 +484,19 @@ struct BookingsView: View {
                 Task { await vm.load(reset: true, clearExistingRows: true) }
             }
             .toolbar {
-                // Leading edge: the root of a NavigationStack has no back
-                // button, so the filter sits opposite the create action
-                // instead of crowding three icons against the inline title.
                 ToolbarItem(placement: .topBarLeading) {
                     bookingsFilterMenu
                 }
-                if #available(iOS 27.0, *) {
-                    if !vm.pinsToOwnGear {
-                        ToolbarItem(placement: .topBarTrailing) {
-                            bookingsMineToggle
-                        }
-                        .visibilityPriority(.high)
-                    }
-                    if canCreate && !showsEmptyCreateAction {
+                if canCreate && !showsEmptyCreateAction {
+                    if #available(iOS 27.0, *) {
                         ToolbarItem(placement: .topBarPinnedTrailing) {
                             bookingsNewReservationButton
                         }
-                    }
-                } else {
-                    ToolbarItemGroup(placement: .topBarTrailing) {
-                        if !vm.pinsToOwnGear { bookingsMineToggle }
-                        if canCreate && !showsEmptyCreateAction { bookingsNewReservationButton }
+                        .visibilityPriority(.high)
+                    } else {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            bookingsNewReservationButton
+                        }
                     }
                 }
             }
@@ -662,6 +585,8 @@ struct BookingsView: View {
         return user.role != "COLLABORATOR" || (user.capabilities ?? []).contains(capability)
     }
 
+    /// The scope the list is showing, in words. A bare icon hid the filter
+    /// entirely; the current status reads as the title of the menu instead.
     private var bookingsFilterMenu: some View {
         Menu {
             Picker("Show", selection: $vm.statusFilter) {
@@ -679,27 +604,35 @@ struct BookingsView: View {
             }
             .pickerStyle(.inline)
         } label: {
-            Image(systemName: isDefaultFiltering
-                ? "line.3.horizontal.decrease.circle"
-                : "line.3.horizontal.decrease.circle.fill")
+            HStack(spacing: 5) {
+                Text(vm.statusFilter.label)
+                // A dot when a non-default sort is on, so the label never
+                // hides a setting.
+                if vm.sortOption != .operational {
+                    Circle()
+                        .fill(Color.accentColor)
+                        .frame(width: 6, height: 6)
+                        .accessibilityHidden(true)
+                }
+            }
         }
-        .tint(isDefaultFiltering ? Color.primary : Color.statusText(vm.statusFilter.tone))
         .accessibilityLabel("Filter and sort bookings")
         .accessibilityValue("\(vm.statusFilter.label), sorted by \(vm.sortOption.label)")
     }
 
-    private var bookingsMineToggle: some View {
-        Button {
-            vm.scope = vm.mineOnly ? .all : .mine
-        } label: {
-            Image(systemName: vm.mineOnly ? "person.crop.circle.fill" : "person.crop.circle")
+    /// Everyone's bookings or just yours, as a system segmented control at the
+    /// top of the page.
+    private var scopePicker: some View {
+        Picker("Bookings", selection: $vm.scope) {
+            Text("Everyone").tag(BookingScope.all)
+            Text("Mine").tag(BookingScope.mine)
         }
-        // Blue for the active filter rather than brand red —
-        // red is reserved for overdue, and this toggle sits
-        // directly above rows that use it.
-        .tint(vm.mineOnly ? Color.statusText(.blue) : Color.primary)
-        .accessibilityLabel(vm.mineOnly ? "Showing my bookings. Show all bookings" : "Show my bookings")
-        .accessibilityValue(vm.mineOnly ? "Mine" : "All")
+        .pickerStyle(.segmented)
+        .padding(.horizontal, Brand.Space.md)
+        .padding(.vertical, Brand.Space.xs)
+        .frame(maxWidth: .infinity)
+        .background(Color(.systemGroupedBackground))
+        .sensoryFeedback(.selection, trigger: vm.scope)
     }
 
     private var bookingsNewReservationButton: some View {
@@ -710,10 +643,115 @@ struct BookingsView: View {
             Image(systemName: "plus")
                 .popoverTip(newReservationTip, arrowEdge: .top)
         }
-        // Purple: this creates a reservation, so it carries the
-        // colour of what it produces.
-        .tint(Color.statusText(.purple))
         .accessibilityLabel("New Reservation")
+    }
+
+    // MARK: List states
+
+    private var loadingList: some View {
+        List {
+            Section {
+                ForEach(0..<6, id: \.self) { _ in
+                    BookingRowSkeleton()
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .allowsHitTesting(false)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Loading bookings")
+    }
+
+    private var emptyState: some View {
+        ContentUnavailableView {
+            Label(emptyTitle, systemImage: emptyIcon)
+        } description: {
+            Text(emptyDescription)
+        } actions: {
+            emptyStateActions
+        }
+    }
+
+    private var bookingList: some View {
+        let now = Date()
+        let groups = bookingGroups(now: now)
+        return List {
+            ForEach(groups) { group in
+                BookingListSection(title: group.title, isUrgent: group.isUrgent) {
+                    ForEach(group.bookings) { booking in
+                        bookingRowLink(booking, showsDay: group.showsDay)
+                    }
+                }
+            }
+            if let pageError = vm.pageError {
+                VStack(spacing: 8) {
+                    Text(pageError)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                    Button("Retry") { Task { await vm.retryPage() } }
+                        .buttonStyle(.bordered)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .listRowBackground(Color.clear)
+            } else if vm.hasMore {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+                    .listRowBackground(Color.clear)
+                    .task(id: "\(vm.scope.rawValue)-\(vm.bookings.count)") {
+                        await vm.load()
+                    }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .listSectionSpacing(.compact)
+    }
+
+    /// Day sections for the default handoff order, so the list answers "what
+    /// is due when" the way a calendar does. Anything late sits first under
+    /// its own heading. An explicit sort or a closed scope is one plain
+    /// section, because day headings over a title sort would lie.
+    /// A checkout whose pickup time has passed sits with missed reservation
+    /// pickups, so orange rows always live under the same heading.
+    private func missedCheckoutPickup(_ booking: Booking, now: Date) -> Bool {
+        booking.kind == .checkout
+            && (booking.status == .booked || booking.status == .pendingPickup)
+            && booking.startsAt < now
+    }
+
+    private func bookingGroups(now: Date) -> [BookingGroup] {
+        let rows = vm.sortedBookings
+        let closed = vm.statusFilter == .completed || vm.statusFilter == .cancelled
+        guard vm.sortOption == .operational, !closed else {
+            return [BookingGroup(id: "all", title: sectionTitle, isUrgent: false, showsDay: true, bookings: rows)]
+        }
+        var late: [Booking] = []
+        var waiting: [Booking] = []
+        var days: [BookingGroup] = []
+        for booking in rows {
+            if booking.isOverdue(now: now) {
+                late.append(booking)
+            } else if booking.isWaitingOnPickup(now: now) || missedCheckoutPickup(booking, now: now) {
+                waiting.append(booking)
+            } else {
+                let time = booking.kind == .reservation ? booking.startsAt : booking.endsAt
+                let title = time.operationalDayLabel(now: now)
+                if let last = days.last, last.title == title {
+                    days[days.count - 1].bookings.append(booking)
+                } else {
+                    days.append(BookingGroup(id: "day-\(days.count)-\(title)", title: title, isUrgent: false, showsDay: false, bookings: [booking]))
+                }
+            }
+        }
+        var groups: [BookingGroup] = []
+        if !late.isEmpty {
+            groups.append(BookingGroup(id: "overdue", title: "Overdue", isUrgent: true, showsDay: true, bookings: late))
+        }
+        if !waiting.isEmpty {
+            groups.append(BookingGroup(id: "waiting", title: "Waiting on pickup", isUrgent: false, showsDay: true, bookings: waiting))
+        }
+        return groups + days
     }
 
     private func ownsOrManages(_ booking: Booking) -> Bool {
@@ -753,9 +791,11 @@ struct BookingsView: View {
         return !isCollaborator || hasCapability("RESERVATION_CANCEL_OWN")
     }
 
-    private func bookingRowLink(_ booking: Booking) -> some View {
+    private func bookingRowLink(_ booking: Booking, showsDay: Bool) -> some View {
         BookingRowLink(
             booking: booking,
+            showsRequester: vm.scope == .all,
+            showsDay: showsDay,
             canEdit: canEdit(booking),
             canTransfer: canTransfer(booking),
             canExtend: booking.kind == .checkout && canExtend(booking),
@@ -788,8 +828,6 @@ struct BookingsView: View {
                 Label("Clear Search", systemImage: "xmark.circle")
             }
             .buttonStyle(.bordered)
-            .buttonBorderShape(.capsule)
-            .controlSize(.regular)
         } else if vm.statusFilter != .active {
             Button {
                 vm.statusFilter = .active
@@ -798,9 +836,6 @@ struct BookingsView: View {
                 Label("Show Active Bookings", systemImage: "tray.full")
             }
             .buttonStyle(.bordered)
-            .buttonBorderShape(.capsule)
-            .controlSize(.regular)
-            .tint(Color.statusText(.blue))
         } else if vm.scope != .all {
             Button {
                 vm.scope = .all
@@ -809,9 +844,6 @@ struct BookingsView: View {
                 Label("View All Bookings", systemImage: "person.2")
             }
             .buttonStyle(.bordered)
-            .buttonBorderShape(.capsule)
-            .controlSize(.regular)
-            .tint(Color.statusText(.blue))
         } else if canCreate {
             Button {
                 newReservationTip.invalidate(reason: .actionPerformed)
@@ -820,10 +852,8 @@ struct BookingsView: View {
                 Label("New Reservation", systemImage: "plus")
                     .popoverTip(newReservationTip, arrowEdge: .top)
             }
-            .buttonStyle(.bordered)
-            .buttonBorderShape(.capsule)
-            .controlSize(.regular)
-            .tint(Color.statusText(.purple))
+            .buttonStyle(.borderedProminent)
+            .tint(.green)
         }
     }
 
@@ -848,64 +878,48 @@ struct BookingsView: View {
     }
 }
 
-private struct BookingEmptyState<Actions: View>: View {
-    let icon: String
-    let tone: StatusTone
+struct BookingGroup: Identifiable {
+    let id: String
     let title: String
-    let description: String
-    @ViewBuilder let actions: () -> Actions
+    let isUrgent: Bool
+    /// Rows under a day heading drop the day from their own line.
+    let showsDay: Bool
+    var bookings: [Booking]
+}
 
-    var body: some View {
-        VStack(spacing: Brand.Space.md) {
-            Image(systemName: icon)
-                .font(.system(size: 24, weight: .semibold))
-                .foregroundStyle(Color.statusText(tone))
-                .frame(width: 52, height: 52)
-                .background(Color.statusBackground(tone), in: Circle())
-                .accessibilityHidden(true)
+extension Booking {
+    func isOverdue(now: Date) -> Bool {
+        status == .open && endsAt < now
+    }
 
-            VStack(spacing: Brand.Space.xs) {
-                Text(title)
-                    .font(.title3.weight(.bold))
-                    .multilineTextAlignment(.center)
-                Text(description)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            actions()
-        }
-        .brandCard(padding: Brand.Space.xl, radius: Brand.Radius.card, alignment: .center)
-        .accessibilityElement(children: .contain)
+    /// Pending Pickup is the operational phase of a booked reservation after
+    /// its scheduled kiosk handoff time. Custody still starts only at pickup.
+    func isWaitingOnPickup(now: Date) -> Bool {
+        kind == .reservation && status == .booked && startsAt < now
     }
 }
 
 private struct BookingListSection<Content: View>: View {
     let title: String
-    let count: Int
+    let isUrgent: Bool
     @ViewBuilder let content: () -> Content
 
     var body: some View {
         Section {
             content()
         } header: {
-            HStack(spacing: 6) {
-                Text(title)
-                Text("\(count)")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.secondary)
-            }
-            .textCase(.none)
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(.secondary)
+            Text(title)
+                .textCase(nil)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(isUrgent ? Color.statusText(.red) : Color(.secondaryLabel))
         }
     }
 }
 
 private struct BookingRowLink: View {
     let booking: Booking
+    let showsRequester: Bool
+    let showsDay: Bool
     let canEdit: Bool
     let canTransfer: Bool
     let canExtend: Bool
@@ -916,9 +930,8 @@ private struct BookingRowLink: View {
     let onCancel: () -> Void
 
     var body: some View {
-        ZStack {
-            NavigationLink(value: booking) { EmptyView() }.opacity(0)
-            BookingRow(booking: booking)
+        NavigationLink(value: booking) {
+            BookingRow(booking: booking, showsRequester: showsRequester, showsDay: showsDay)
         }
         // The same actions the context menu carries, one swipe away. Long-press
         // is discoverable only once you know it is there; a swipe is the list
@@ -940,7 +953,7 @@ private struct BookingRowLink: View {
                 } label: {
                     Label("Extend", systemImage: "clock.arrow.circlepath")
                 }
-                .tint(Color.statusText(.blue))
+                .tint(.green)
             }
         }
         .swipeActions(edge: .leading, allowsFullSwipe: false) {
@@ -951,7 +964,7 @@ private struct BookingRowLink: View {
                 } label: {
                     Label("Edit", systemImage: "pencil")
                 }
-                .tint(Color.statusText(.purple))
+                .tint(.gray)
             }
             if canTransfer {
                 Button {
@@ -960,7 +973,7 @@ private struct BookingRowLink: View {
                 } label: {
                     Label("Transfer", systemImage: "person.2")
                 }
-                .tint(Color.statusText(.orange))
+                .tint(.gray)
             }
         }
         .contextMenu {
@@ -986,9 +999,7 @@ private struct BookingRowLink: View {
                 }
             }
         }
-        .listRowSeparator(.hidden)
-        .listRowBackground(Color.clear)
-        .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
+        .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 12))
     }
 }
 
@@ -1007,195 +1018,94 @@ private struct BookingsSearchModifier: ViewModifier {
     }
 }
 
+/// One quiet row: who has it, what it is, and when it moves next. The timing
+/// line carries the state colour; nothing else on the row is tinted.
 struct BookingRow: View {
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-
     let booking: Booking
+    var showsRequester = true
+    var showsDay = true
 
-    private func isOverdue(now: Date) -> Bool {
-        booking.status == .open && booking.endsAt < now
-    }
-
-    /// Pending Pickup is the operational phase of a booked reservation after
-    /// its scheduled kiosk handoff time. Custody still starts only at pickup.
-    private func isPendingPickup(now: Date) -> Bool {
-        booking.kind == .reservation
-            && booking.status == .booked
-            && booking.startsAt < now
-    }
-
-    private var itemCount: Int {
-        booking.serializedItems.count + booking.bulkItems.reduce(0) { $0 + $1.plannedQuantity }
-    }
-
-    /// The rail and timing color carry the state on their own: blue rail plus
-    /// "Due" reads as out, purple rail plus "Pickup" reads as reserved. A
-    /// badge restating either is noise, so only the odder statuses get one.
-    private func showsStatusBadge(now: Date) -> Bool {
-        switch booking.status {
-        case .open: booking.kind != .checkout
-        case .booked: false
-        default: true
+    var body: some View {
+        // Re-evaluates on the minute so "Due" flips to overdue without a refresh.
+        TimelineView(.periodic(from: .now, by: 60)) { context in
+            let now = context.date
+            let info = timing(now: now)
+            HStack(alignment: .center, spacing: 12) {
+                UserAvatarView(name: booking.requester.name, avatarUrl: booking.requester.avatarUrl, size: 40)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(booking.title)
+                        .font(.gothamBold(size: 16))
+                        .lineLimit(2)
+                    Text(info.text)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(Color.statusText(tone(now: now)))
+                        .lineLimit(2)
+                    // Who has it. On Mine that is always you, so the line goes.
+                    if showsRequester {
+                        Text(booking.requester.name)
+                            .font(.footnote)
+                            .foregroundStyle(Color(.secondaryLabel))
+                            .lineLimit(1)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(rowAccessibilityLabel(now: now))
         }
     }
 
-    /// Accent tone for the leading bar — overdue shouts red, otherwise the
-    /// status' own tone (reservation purple, checkout blue, pickup orange).
-    private func accentTone(now: Date) -> StatusTone {
-        if isOverdue(now: now) { return .red }
-        if isPendingPickup(now: now) { return .orange }
+    /// The tone that carries the booking's state: late red, missed pickup
+    /// orange, checked out blue, reserved purple, finished gray.
+    private func tone(now: Date) -> StatusTone {
+        if booking.isOverdue(now: now) { return .red }
+        if booking.isWaitingOnPickup(now: now) { return .orange }
         switch booking.status {
-        case .booked: return booking.kind == .reservation ? .purple : .blue
-        case .pendingPickup: return .orange
         case .open: return .blue
+        case .booked: return .purple
+        // Orange means a missed pickup and nothing else; a pickup still
+        // ahead reads as reserved.
+        case .pendingPickup: return booking.startsAt < now ? .orange : .purple
         default: return .gray
         }
     }
 
-    var body: some View {
-        TimelineView(.periodic(from: .now, by: 60)) { context in
-            Group {
-                if dynamicTypeSize.isAccessibilitySize {
-                    accessibilityRow(now: context.date)
-                } else {
-                    compactRow(now: context.date)
-                }
-            }
-            .padding(.vertical, 12)
-            .padding(.horizontal, 14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            // Faint red wash so an overdue row reads as different at a glance,
-            // rather than only by the hue of its rail and timing text. Deliberately
-            // light: a bad week can put several of these on screen at once.
-            .background(isOverdue(now: context.date) ? Color.statusBackground(.red) : Color.cardSurface)
-            .clipShape(RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous)
-                    .strokeBorder(Color.hairline, lineWidth: 0.5)
-            )
-            .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 3)
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel(rowAccessibilityLabel(now: context.date))
-        }
+    private func when(_ date: Date, now: Date) -> String {
+        showsDay
+            ? date.operationalDateTimeLabel(now: now, capitalizesRelativeDay: false)
+            : date.gearTime
     }
 
-    private func compactRow(now: Date) -> some View {
-        HStack(spacing: 12) {
-            StatusRail(tone: accentTone(now: now))
-            UserAvatarView(name: booking.requester.name, avatarUrl: booking.requester.avatarUrl, size: 40)
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    bookingTitle.lineLimit(1)
-                    Spacer(minLength: 8)
-                    if showsStatusBadge(now: now) {
-                        statusBadge(now: now)
-                    }
-                }
-                timingLine(now: now, lineLimit: 1)
-                metadataLine(lineLimit: 1)
-            }
-            disclosureIndicator
-        }
-    }
-
-    private func accessibilityRow(now: Date) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            StatusRail(tone: accentTone(now: now))
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .top, spacing: 10) {
-                    UserAvatarView(name: booking.requester.name, avatarUrl: booking.requester.avatarUrl, size: 40)
-                    bookingTitle
-                        .fixedSize(horizontal: false, vertical: true)
-                    Spacer(minLength: 4)
-                    disclosureIndicator
-                }
-                if showsStatusBadge(now: now) {
-                    statusBadge(now: now)
-                }
-                timingLine(now: now, lineLimit: nil)
-                metadataLine(lineLimit: nil)
-            }
-        }
-    }
-
-    private var bookingTitle: some View {
-        Text(booking.title)
-            .font(.gothamBold(size: 16))
-    }
-
-    private func statusBadge(now: Date) -> some View {
-        StatusBadge(status: booking.status, kind: booking.kind, isOverdue: isOverdue(now: now))
-    }
-
-    private var disclosureIndicator: some View {
-        Image(systemName: "chevron.right")
-            .font(.caption2.weight(.semibold))
-            .foregroundStyle(.tertiary)
-            .accessibilityHidden(true)
-    }
-
-    private func timingLine(now: Date, lineLimit: Int?) -> some View {
-        let info = timing(now: now)
-        return Text(info.text)
-            .font(.caption.weight(.semibold))
-            .lineLimit(lineLimit)
-            .fixedSize(horizontal: false, vertical: true)
-            .foregroundStyle(info.urgent ? AnyShapeStyle(Color.statusText(.red)) : AnyShapeStyle(Color.statusText(accentTone(now: now))))
-    }
-
-    private func metadataLine(lineLimit: Int?) -> some View {
-        HStack(spacing: 4) {
-            Text(booking.requester.name)
-            Text("·")
-            Text(booking.location.name)
-            if itemCount > 0 {
-                Text("·")
-                Text("\(itemCount) item\(itemCount == 1 ? "" : "s")")
-                    .monospacedDigit()
-            }
-        }
-        .font(.caption)
-        .foregroundStyle(.secondary)
-        .lineLimit(lineLimit)
-        .fixedSize(horizontal: false, vertical: true)
-    }
-
-    /// Shared relative-day wording. Urgency lives in the rail and text color,
-    /// not a repeated overdue badge or duration.
+    /// "Pickup", not "Starts": the row's job is to name the next action.
     private func timing(now: Date) -> (text: String, urgent: Bool) {
-        if booking.kind == .checkout {
-            switch booking.status {
-            case .open:
-                return ("Due \(booking.endsAt.operationalDateTimeLabel(now: now, capitalizesRelativeDay: false))", booking.endsAt < now)
-            case .pendingPickup, .booked:
-                return ("Pickup \(booking.startsAt.operationalDateTimeLabel(now: now, capitalizesRelativeDay: false))", booking.startsAt < now)
-            default:
-                return ("Due \(booking.endsAt.operationalDateTimeLabel(now: now, capitalizesRelativeDay: false))", false)
+        switch booking.status {
+        case .completed:
+            return ("Returned \(when(booking.endsAt, now: now))", false)
+        case .cancelled:
+            return ("Cancelled", false)
+        case .draft:
+            return ("Draft for \(when(booking.startsAt, now: now))", false)
+        case .open:
+            let late = booking.endsAt < now
+            return ("\(late ? "Was due" : "Due") \(when(booking.endsAt, now: now))", late)
+        case .pendingPickup, .booked, .unknown:
+            if booking.isWaitingOnPickup(now: now) || booking.startsAt < now {
+                return ("Pickup was due \(when(booking.startsAt, now: now))", false)
             }
+            return ("Pickup \(when(booking.startsAt, now: now))", false)
         }
-        // "Pickup", not "Starts" — the row's job is to name the next action.
-        if isPendingPickup(now: now) {
-            return ("Pickup was due \(booking.startsAt.operationalDateTimeLabel(now: now, capitalizesRelativeDay: false))", false)
-        }
-        return ("Pickup \(booking.startsAt.operationalDateTimeLabel(now: now, capitalizesRelativeDay: false))", false)
     }
 
     private func rowAccessibilityLabel(now: Date) -> String {
         var parts: [String] = []
-        if isOverdue(now: now) { parts.append("Overdue") }
-        if isPendingPickup(now: now) { parts.append("Pending pickup") }
+        if booking.isOverdue(now: now) { parts.append("Overdue") }
+        if booking.isWaitingOnPickup(now: now) { parts.append("Waiting on pickup") }
         parts.append(booking.title)
-        parts.append(booking.requester.name)
-        parts.append(booking.location.name)
-        if itemCount > 0 { parts.append("\(itemCount) item\(itemCount == 1 ? "" : "s")") }
-        if showsStatusBadge(now: now) {
-            parts.append(StatusBadge.label(for: booking.status, kind: booking.kind, isOverdue: isOverdue(now: now)))
-        }
         parts.append(timing(now: now).text)
+        if showsRequester { parts.append(booking.requester.name) }
         return parts.joined(separator: ", ")
     }
 }
-
 
 struct StatusBadge: View {
     let status: BookingStatus

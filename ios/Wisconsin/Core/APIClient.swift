@@ -130,6 +130,8 @@ struct AvailabilityCheckOutcome {
 struct CheckoutReturnInsight {
     let nextNeedAt: Date?
     let hasUpcomingNeed: Bool
+    /// Title of the booking that needs the gear next, when the server names it.
+    var nextNeedTitle: String? = nil
 }
 
 struct TestPushResult: Decodable {
@@ -1100,6 +1102,7 @@ final class APIClient {
         }
         struct UpcomingCommitment: Decodable {
             let startsAt: Date
+            let bookingTitle: String?
         }
         struct CheckResponse: Decodable {
             let upcomingCommitments: [UpcomingCommitment]?
@@ -1129,8 +1132,12 @@ final class APIClient {
               let resp = try? decoder.decode(CheckResponse.self, from: data) else {
             return CheckoutReturnInsight(nextNeedAt: nil, hasUpcomingNeed: false)
         }
-        let nextNeedAt = resp.upcomingCommitments?.map(\.startsAt).min()
-        return CheckoutReturnInsight(nextNeedAt: nextNeedAt, hasUpcomingNeed: nextNeedAt != nil)
+        let next = resp.upcomingCommitments?.min { $0.startsAt < $1.startsAt }
+        return CheckoutReturnInsight(
+            nextNeedAt: next?.startsAt,
+            hasUpcomingNeed: next != nil,
+            nextNeedTitle: next?.bookingTitle?.nonBlankText
+        )
     }
 
     /// Availability conflicts for a shift, keyed by userId → human note (e.g.

@@ -1081,7 +1081,7 @@ enum BookingFixtureAPI {
         {"data":{
           "id":"\(bookingId)","kind":"CHECKOUT","title":"Volleyball vs Nebraska","status":"OPEN",
           "startsAt":"\(iso(-120))","endsAt":"\(iso(180))",
-          "notes":"Two bodies on the baseline, one roaming. Return through the gear room, not the loading dock.",
+          "notes":null,
           "refNumber":"CO-2418",
           "requester":{"id":"u-avery","name":"Avery Nakamura","email":"avery.nakamura@wisc.edu","avatarUrl":null},
           "location":{"id":"loc-1","name":"Camp Randall Creative Desk"},
@@ -1147,16 +1147,23 @@ enum BookingFixtureAPI {
         // Server-owned row actions. Defaults to none so team rows keep showing
         // a student what they may not do; the student's own OPEN checkout gets
         // the pair the checkout matrix in `booking-rules.ts` actually grants.
-        allowedActions: [String] = []
+        allowedActions: [String] = [],
+        gear: [(tag: String, name: String)] = []
     ) -> String {
         let sportJSON = sportCode.map { "\"\($0)\"" } ?? "null"
+        let gearJSON = gear.enumerated().map { index, item in
+            """
+            {"id":"si-\(id)-\(index)","assetId":"a-\(id)-\(index)","allocationStatus":null,
+             "asset":{"id":"a-\(id)-\(index)","assetTag":"\(item.tag)","name":"\(item.name)","brand":null,"model":null,"serialNumber":null,"imageUrl":null}}
+            """
+        }.joined(separator: ",")
         let actionsJSON = allowedActions.map { "\"\($0)\"" }.joined(separator: ",")
         return """
         {"id":"\(id)","kind":"\(kind)","title":"\(title)","status":"\(status)",
          "startsAt":"\(studentISO(startsIn))","endsAt":"\(studentISO(endsIn))","notes":null,"refNumber":null,
          "requester":{"id":"\(requesterId)","name":"\(requesterName)","email":null,"avatarUrl":null},
          "location":{"id":"loc-1","name":"Camp Randall Creative Desk"},
-         "serializedItems":[],"bulkItems":[],
+         "serializedItems":[\(gearJSON)],"bulkItems":[],
          "event":{"id":"event-\(id)","summary":"\(title)","sportCode":\(sportJSON),"opponent":null,"isHome":null},
          "allowedActions":[\(actionsJSON)],"updatedAt":"\(studentISO(-15))","pickupKioskDevice":null}
         """
@@ -1172,12 +1179,14 @@ enum BookingFixtureAPI {
                 // OPEN checkout, owned by the caller: edit and extend, no
                 // cancel. Matches the checkout state x action matrix in
                 // `src/lib/services/booking-rules.ts`.
-                allowedActions: ["edit", "extend"]
+                allowedActions: ["edit", "extend"],
+                gear: [("CAM-014", "Sony FX3"), ("AUD-007", "Sennheiser MKE 600")]
             ),
             listBooking(
                 id: "bk-team-reservation", kind: "RESERVATION", title: "Volleyball photo package", status: "BOOKED",
                 requesterId: "u-avery", requesterName: "Avery Nakamura", startsIn: 120, endsIn: 420,
-                sportCode: "VB"
+                sportCode: "VB",
+                gear: [("CAM-021", "Canon R5"), ("LEN-040", "Canon RF 70-200mm"), ("LEN-012", "Canon RF 24-70mm")]
             ),
             listBooking(
                 id: "bk-team-pickup", kind: "CHECKOUT", title: "Field audio pickup", status: "PENDING_PICKUP",
@@ -1185,7 +1194,30 @@ enum BookingFixtureAPI {
                 sportCode: "SOC"
             ),
         ]
-        let visibleRows = ownOnly ? [rows[0]] : rows
+        // Capture-only variety so the day grouping has something to group:
+        // late gear, a missed pickup, and a day further out.
+        let extraRows = [
+            listBooking(
+                id: "bk-team-overdue", kind: "CHECKOUT", title: "Hockey road audio kit", status: "OPEN",
+                requesterId: "u-jordan", requesterName: "Jordan Lee", startsIn: -26 * 60, endsIn: -90,
+                sportCode: "MHKY",
+                gear: [("AUD-019", "Zoom F6 recorder"), ("AUD-020", "Sennheiser AVX kit")]
+            ),
+            listBooking(
+                id: "bk-team-missed", kind: "RESERVATION", title: "Women's soccer portraits", status: "BOOKED",
+                requesterId: "u-avery", requesterName: "Avery Nakamura", startsIn: -50, endsIn: 200,
+                sportCode: "WSOC"
+            ),
+            listBooking(
+                id: "bk-team-tomorrow", kind: "RESERVATION", title: "Football vs Ohio State", status: "BOOKED",
+                requesterId: "u-jordan", requesterName: "Jordan Lee", startsIn: 28 * 60, endsIn: 36 * 60,
+                sportCode: "FB"
+            ),
+        ]
+        if ProcessInfo.processInfo.environment["GT_BOOKINGS_FIXTURE"] == "empty" {
+            return Data("{\"data\":[],\"total\":0,\"limit\":30,\"offset\":0}".utf8)
+        }
+        let visibleRows = ownOnly ? [rows[0]] : rows + extraRows
         return Data("{\"data\":[\(visibleRows.joined(separator: ","))],\"total\":\(visibleRows.count),\"limit\":30,\"offset\":0}".utf8)
     }
 }
