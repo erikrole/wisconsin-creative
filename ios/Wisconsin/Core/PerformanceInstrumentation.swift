@@ -84,6 +84,10 @@ enum AppRuntimeMode {
         /// delivery truth and recovery controls can be reviewed without a
         /// signed-in session or live APNs state.
         case notifications
+        /// Staff blast surfaces against canned `/api/blasts` responses. The
+        /// screen is chosen by `GT_BLAST_VIEW`: blasts, sent, detail,
+        /// compose-crew, compose-groups, safari.
+        case blastStaff = "blast-staff"
         /// UA Gear with a launched cycle, a submitted list and a "My kit"
         /// card mixing In hand, On order, Planned and Add your size.
         case gearKit = "gear-kit"
@@ -252,7 +256,7 @@ enum AppRuntimeMode {
              .itemEdit, .damageMissing, .damageDamaged, .damageClosed, .damageRecordOutcome,
              .damageReportProblem, .damageItemsMissing, .damageQueueOpen, .damageQueueClosed, .damageQueueEmpty,
              .damageQueueDetail, .damageQueueRecord, .createBookingScanner, .createBookingEvents, .search, .searchPartial, .searchIdle,
-             .itemsList, .reports, .accountSecurity, .notifications, .notificationsInbox, .gearKit, .login,
+             .itemsList, .reports, .accountSecurity, .notifications, .notificationsInbox, .gearKit, .blastStaff, .login,
              .announcement, .announcementImages, .announcementPlain,
              .announcementStress, .announcementNone, .announcementError,
              .announcementLong, .announcementQueue, .announcementBrokenImage, .announcementCtaRoute:

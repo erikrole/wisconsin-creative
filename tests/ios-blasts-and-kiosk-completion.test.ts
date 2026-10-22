@@ -24,7 +24,7 @@ describe("kiosk handoff completion", () => {
 });
 
 describe("native Blasts list", () => {
-  it("reaches a read-only list and detail from Browse with the existing me/blasts client", () => {
+  it("reaches the received list and detail from Browse with the existing me/blasts client", () => {
     const browse = source("ios/Wisconsin/Views/BrowseView.swift");
     const view = source("ios/Wisconsin/Views/BlastsView.swift");
     const api = source("ios/Wisconsin/Core/APIClient.swift");
@@ -41,7 +41,6 @@ describe("native Blasts list", () => {
     expect(api).toContain('request(path: "/api/me/blasts/\\(id)/read"');
     expect(api).toContain('request(path: "/api/me/blasts/\\(id)/ack"');
     expect(api).toContain("BlastArchive.markAcknowledged(id)");
-    expect(api).not.toContain('request(path: "/api/blasts"');
 
     expect(view).toContain("APIClient.shared.activeBlasts()");
     expect(view).toContain("APIClient.shared.markBlastRead(id: id)");
@@ -53,9 +52,6 @@ describe("native Blasts list", () => {
     expect(view).toContain('Text("Acknowledged")');
     expect(view).toContain(".listStyle(.insetGrouped)");
     expect(view).toContain('Label("Couldn\'t load blasts", systemImage: "wifi.exclamationmark")');
-    expect(view).not.toContain("New blast");
-    expect(view).not.toContain("Cancel blast");
-    expect(view).not.toContain("/api/blasts");
 
     expect(home).toContain("BlastArchive.recordActive(latest, userId: userId)");
     expect(app).toContain("BlastArchive.clear()");

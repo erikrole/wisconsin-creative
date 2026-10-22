@@ -105,6 +105,8 @@ struct PerformanceTestRootView: View {
             AccountSecurityHarnessView()
         case .notifications:
             NotificationSettingsHarnessView()
+        case .blastStaff:
+            BlastStaffHarnessView()
         case .gearKit:
             GearKitHarnessView()
         case .reportProblem:
@@ -330,6 +332,75 @@ struct WidgetSeedHarnessView: View {
         ))
         WidgetCenter.shared.reloadAllTimelines()
         NSLog("WIDGET-SEED written")
+    }
+}
+
+/// One staff blast screen per launch, chosen by `GT_BLAST_VIEW`.
+struct BlastStaffHarnessView: View {
+    @Environment(SessionStore.self) private var session
+
+    var body: some View {
+        Group {
+            switch ProcessInfo.processInfo.environment["GT_BLAST_VIEW"] ?? "blasts" {
+            case "sent":
+                NavigationStack { SentBlastsView() }
+            case "detail":
+                NavigationStack { SentBlastDetailView(id: "sent-1") }
+            case "compose-crew", "compose-groups":
+                ComposeBlastSheet()
+            case "safari":
+                InAppSafariView(url: AppEnvironment.activeAPIBaseURL.appendingPathComponent("/golden-hour")).ignoresSafeArea()
+            default:
+                BlastsView()
+            }
+        }
+        .onAppear { session.currentUser = ScheduleFixtures.staffUser }
+    }
+}
+
+enum BlastStaffFixtureAPI {
+    private static let people = #"[{"id":"u1","name":"Jordan Lee"},{"id":"u2","name":"Casey Moreno"},{"id":"u3","name":"Riley Chen"},{"id":"u4","name":"Sam Patel"}]"#
+
+    static var list: Data {
+        Data(#"""
+        {"data":[
+          {"id":"sent-1","title":"Call time moved to 4:00","body":"Be at gate 3 by 4:00 instead of 4:30.","severity":"WARNING","status":"SENT","targetSummary":"Football vs. Iowa crew","recipientCount":12,"acknowledgedCount":8,"requiresAck":true,"sentAt":"2026-10-17T15:00:00Z","createdBy":{"id":"s","name":"Bucky Badger"}},
+          {"id":"sent-2","title":"Batteries back on the shelf","body":"Return numbered batteries after your shoot.","severity":"INFO","status":"SENT","targetSummary":"Video and Photo, students","recipientCount":9,"acknowledgedCount":9,"requiresAck":true,"sentAt":"2026-10-16T15:00:00Z","createdBy":{"id":"s","name":"Bucky Badger"}},
+          {"id":"sent-3","title":"Hockey call cancelled","body":"Friday's call is off.","severity":"URGENT","status":"CANCELLED","targetSummary":"Hockey vs. Michigan crew","recipientCount":6,"acknowledgedCount":2,"requiresAck":true,"sentAt":"2026-10-15T15:00:00Z","cancelledAt":"2026-10-15T16:00:00Z","createdBy":{"id":"s","name":"Bucky Badger"}}
+        ]}
+        """#.utf8)
+    }
+
+    static var detail: Data {
+        Data(#"""
+        {"data":{"id":"sent-1","title":"Call time moved to 4:00","body":"Be at gate 3 by 4:00 instead of 4:30.","severity":"WARNING","status":"SENT","targetSummary":"Football vs. Iowa crew","recipientCount":4,"acknowledgedCount":2,"requiresAck":true,"sentAt":"2026-10-17T15:00:00Z","createdBy":{"id":"s","name":"Bucky Badger"},
+          "recipients":[
+            {"userId":"u1","readAt":"2026-10-17T15:02:00Z","acknowledgedAt":"2026-10-17T15:03:00Z","user":{"id":"u1","name":"Jordan Lee"}},
+            {"userId":"u2","readAt":"2026-10-17T15:10:00Z","acknowledgedAt":"2026-10-17T15:11:00Z","user":{"id":"u2","name":"Casey Moreno"}},
+            {"userId":"u3","readAt":"2026-10-17T15:20:00Z","acknowledgedAt":null,"user":{"id":"u3","name":"Riley Chen"}},
+            {"userId":"u4","readAt":null,"acknowledgedAt":null,"user":{"id":"u4","name":"Sam Patel"}}
+          ],"addedSinceSend":[]}}
+        """#.utf8)
+    }
+
+    static func preview(for request: URLRequest) -> Data {
+        // URLProtocol sees the body as a stream, not `httpBody`.
+        var data = request.httpBody ?? Data()
+        if data.isEmpty, let stream = request.httpBodyStream {
+            stream.open()
+            var buffer = [UInt8](repeating: 0, count: 4096)
+            while stream.hasBytesAvailable {
+                let read = stream.read(&buffer, maxLength: buffer.count)
+                if read <= 0 { break }
+                data.append(buffer, count: read)
+            }
+            stream.close()
+        }
+        let body = String(data: data, encoding: .utf8) ?? ""
+        if body.contains("DYNAMIC") {
+            return Data(#"{"data":{"count":4,"summary":"Video and Photo, students","users":\#(people)}}"#.utf8)
+        }
+        return Data(#"{"data":{"count":4,"summary":"Football vs. Iowa crew","users":\#(people)}}"#.utf8)
     }
 }
 
@@ -792,6 +863,14 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
         if AppRuntimeMode.performanceScenario == .latestBrowse,
            let body = LatestBrowseFixtureAPI.body(path: path) { return body }
         switch path {
+        case "/api/blasts" where AppRuntimeMode.performanceScenario == .blastStaff:
+            return BlastStaffFixtureAPI.list
+        case "/api/blasts/preview" where AppRuntimeMode.performanceScenario == .blastStaff:
+            return BlastStaffFixtureAPI.preview(for: request)
+        case "/api/blasts/sent-1" where AppRuntimeMode.performanceScenario == .blastStaff:
+            return BlastStaffFixtureAPI.detail
+        case "/api/me/blasts" where AppRuntimeMode.performanceScenario == .blastStaff:
+            return Data(#"{"data":[{"id":"r1","title":"Saturday production briefing","body":"Crew check-in opens at 9:30 a.m.","severity":"INFO","sentAt":"2026-10-17T15:00:00Z","senderName":"Creative team","requiresAck":true,"readAt":null}]}"#.utf8)
         case "/api/gear-picks/me":
             guard AppRuntimeMode.performanceScenario == .gearKit else { return nil }
             return GearKitFixtureAPI.me

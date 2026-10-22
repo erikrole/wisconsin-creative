@@ -325,6 +325,7 @@ struct EventDetailView: View {
     @State private var slotsInFlight: Set<String> = []
     @State private var confirmation: EventConfirmation?
     @State private var showAllCallTimes = false
+    @State private var showMessageCrew = false
     @State private var showAddShift = false
     @State private var showTradeBoard = false
     @State private var isCreatingGroup = false
@@ -487,6 +488,11 @@ struct EventDetailView: View {
                 ) { newStart, newEnd in
                     await updateShiftTimes(shift, startsAt: newStart, endsAt: newEnd)
                 }
+            }
+            // A blast to everyone on this event's published crew: a push plus
+            // a banner they acknowledge, for game-day changes.
+            .sheet(isPresented: $showMessageCrew) {
+                ComposeBlastSheet(lockedEvent: BlastEventChoice(event: event))
             }
             .sheet(isPresented: $showAllCallTimes) {
                 if let shift = vm.displayedShifts.first(where: { $0.workerType == "ST" }), let editor = vm.workingEditor {
@@ -1175,6 +1181,15 @@ struct EventDetailView: View {
                     Haptics.success()
                 } label: {
                     Label("Copy Event Details", systemImage: "doc.on.doc")
+                }
+            }
+            if canManageShifts {
+                Section {
+                    Button {
+                        showMessageCrew = true
+                    } label: {
+                        Label("Message Crew…", systemImage: "megaphone")
+                    }
                 }
             }
             if canEditCallWindow {
