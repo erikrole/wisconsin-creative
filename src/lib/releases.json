@@ -1,6 +1,23 @@
 [
   {
     "date": "2026-10-22",
+    "title": "Print labels sheet fixes",
+    "type": "fixes",
+    "summary": "The print sheet keeps its template headings in view while you scroll, and the P-touch CSV export no longer waits on the USB checks.",
+    "details": [
+      "Camera bodies, Lenses, Batteries and other headings stay visible under the Print sheet header as you scroll.",
+      "Export CSV for P-touch Editor works whenever the sheet's selections are valid, even if the USB font or QR check is still running or unavailable.",
+      "Unplugging a scanner or another USB device no longer drops the printer connection.",
+      "Importing an older browser sheet is offered once instead of on every visit, and recovering an unreadable saved sheet works on the first retry.",
+      "Batch receipt downloads work in Safari and Firefox, and the label count is announced to screen readers."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 619
+  },
+  {
+    "date": "2026-10-22",
     "title": "Print labels straight to USB",
     "type": "feature",
     "summary": "QR Print sends centered Gotham labels directly to the Brother printer, with larger previews and less tape waste. Print history records who printed each label and supports careful recovery after an interruption.",
