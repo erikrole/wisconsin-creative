@@ -3,8 +3,7 @@
 import Link from "next/link";
 import type { GridEvent, GridColumn } from "@/hooks/use-assignment-grid";
 import EmptyState from "@/components/EmptyState";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { sportDotColor } from "@/lib/sport-color";
 import { AssignmentCell } from "./AssignmentCell";
 import { scheduleEventTitleParts } from "../../_components/types";
 import { VENUE_TONES, venueToneFromEvent } from "@/lib/venue-tone";
@@ -60,105 +59,87 @@ export function AssignmentGrid({
     );
   }
 
+  const days: { key: string; label: string; events: GridEvent[] }[] = [];
+  for (const ev of events) {
+    const date = new Date(ev.startsAt);
+    const key = date.toDateString();
+    let day = days.find((d) => d.key === key);
+    if (!day) {
+      day = {
+        key,
+        label: date.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" }),
+        events: [],
+      };
+      days.push(day);
+    }
+    day.events.push(ev);
+  }
+
   return (
-    <div className="overflow-x-auto rounded-lg border border-border/60 bg-card shadow-sm">
-      <table className="w-full min-w-[760px] border-collapse text-sm">
-        <thead>
-          <tr className="border-b border-border/60">
-            <th className="sticky left-0 z-10 w-64 min-w-[16rem] bg-card px-3 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Event
-            </th>
-            {columns.map((col) => (
-              <th
-                key={col.key}
-                className="border-l border-border/60 px-2 py-2 text-center text-xs font-bold uppercase tracking-wider text-muted-foreground"
-              >
-                {AREA_LABELS[col.area] ?? col.area}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {events.map((ev, i) => {
-            const date = new Date(ev.startsAt);
-            const titleParts = scheduleEventTitleParts(ev);
-            const venueTone = VENUE_TONES[venueToneFromEvent(ev)];
-            const dateStr = date.toLocaleDateString("en-US", {
-              weekday: "short",
-              month: "short",
-              day: "numeric",
-            });
-            const timeStr = ev.allDay
-              ? "All day"
-              : date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-            const activeAssignments = ev.shifts.reduce((sum, shift) => sum + shift.assignments.length, 0);
-            const openSlots = ev.shifts.filter((shift) => shift.assignments.length === 0).length;
+    <div className="flex flex-col gap-6">
+      {days.map((day) => (
+        <section key={day.key} aria-label={day.label}>
+          <h2 className="mb-2 px-1 text-sm font-semibold text-foreground">{day.label}</h2>
+          <div className="divide-y divide-border/50 rounded-xl border border-border/60 bg-card shadow-xs">
+            {day.events.map((ev) => {
+              const date = new Date(ev.startsAt);
+              const titleParts = scheduleEventTitleParts(ev);
+              const venueTone = VENUE_TONES[venueToneFromEvent(ev)];
+              const timeStr = ev.allDay
+                ? "All day"
+                : date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+              const openSlots = ev.shifts.filter((shift) => shift.assignments.length === 0).length;
+              const sportColor = sportDotColor(ev.sportCode);
 
-            return (
-              <tr
-                key={ev.id}
-                className={cn(
-                  "group/assign-row border-b border-border/40 transition-colors hover:bg-muted/20",
-                  i % 2 !== 0 && "bg-muted/10",
-                )}
-              >
-                {/* Event name cell */}
-                <td
-                  className={cn(
-                    "sticky left-0 z-10 min-w-[16rem] max-w-[18rem] border-l-[3px] bg-card px-3 py-2 transition-colors group-hover/assign-row:bg-muted/20",
-                    i % 2 !== 0 && "bg-muted/10",
-                    venueTone.railClass,
-                  )}
+              return (
+                <div
+                  key={ev.id}
+                  className={cn("flex flex-col gap-3 border-l-[3px] px-4 py-3 lg:flex-row lg:items-start lg:gap-6", venueTone.railClass)}
                 >
-                  <Button
-                    variant="ghost"
-                    className="h-auto w-full justify-start px-0 py-1 text-left hover:bg-transparent"
-                    asChild
-                  >
-                    <Link href={`/events/${ev.id}`}>
-                      <span className="block min-w-0">
-                        <span className="block truncate text-sm font-semibold leading-tight">{titleParts.title}</span>
-                        {titleParts.detail && (
-                          <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
-                            {titleParts.detail}
-                          </span>
-                        )}
-                        <span className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground">
-                          <span className="tabular-nums">{dateStr} · {timeStr}</span>
-                          <Badge variant={venueTone.badgeVariant} size="sm">
-                            {venueTone.label}
-                          </Badge>
-                          {ev.shifts.length > 0 && (
-                            <span className="tabular-nums text-muted-foreground/75">
-                              {activeAssignments}/{ev.shifts.length}
-                              {openSlots > 0 ? ` · ${openSlots} open` : ""}
-                            </span>
-                          )}
-                          <span className="font-medium text-primary">Manage crew</span>
-                        </span>
-                      </span>
+                  <div className="min-w-0 lg:w-72 lg:shrink-0">
+                    <Link
+                      href={`/events/${ev.id}`}
+                      className="block truncate text-sm font-semibold leading-tight hover:underline"
+                    >
+                      {titleParts.title}
                     </Link>
-                  </Button>
-                </td>
+                    <div className="mt-1 flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
+                      {sportColor ? (
+                        <span aria-hidden="true" className="inline-block size-2 shrink-0 rounded-full" style={{ backgroundColor: sportColor }} />
+                      ) : null}
+                      <span className="tabular-nums">{timeStr}</span>
+                      <span>{venueTone.label}</span>
+                      {ev.shifts.length > 0 ? (
+                        <span className={cn("tabular-nums", openSlots > 0 ? "font-medium text-foreground" : "")}>
+                          {openSlots > 0 ? `${openSlots} open` : "Covered"}
+                        </span>
+                      ) : null}
+                    </div>
+                    <Link href={`/events/${ev.id}`} className="mt-1 inline-block text-xs font-medium text-primary hover:underline">
+                      Manage crew
+                    </Link>
+                  </div>
 
-                {/* Shift assignment cells */}
-                {columns.map((col) => {
-                  const matchingShifts = ev.shifts.filter(
-                    (s) => s.area === col.area,
-                  );
-                  return (
-                    <AssignmentCell
-                      key={col.key}
-                      shifts={matchingShifts}
-                      allDay={ev.allDay}
-                    />
-                  );
-                })}
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                  <div className="flex min-w-0 flex-1 flex-wrap gap-x-8 gap-y-3">
+                    {columns.map((col) => {
+                      const matchingShifts = ev.shifts.filter((s) => s.area === col.area);
+                      if (matchingShifts.length === 0) return null;
+                      return (
+                        <div key={col.key} className="min-w-[10rem]">
+                          <div className="mb-1 text-xs font-medium text-muted-foreground">
+                            {AREA_LABELS[col.area] ?? col.area}
+                          </div>
+                          <AssignmentCell shifts={matchingShifts} allDay={ev.allDay} />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      ))}
     </div>
   );
 }

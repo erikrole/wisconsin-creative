@@ -91,11 +91,11 @@ export function AssignPageClient() {
         </Button>
       </PageHeader>
 
-      <div className="mb-4 rounded-lg border border-border/60 bg-muted/25 px-3 py-2 text-sm text-muted-foreground">
+      <p className="mb-4 text-sm text-muted-foreground">
         Review coverage and conflicts here. Open an event to manage its crew in the private working schedule; changes release together after review.
-      </div>
+      </p>
 
-      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-border/60 bg-card/80 p-2 shadow-sm">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
         <div className="flex min-h-10 items-center overflow-hidden rounded-md border border-border bg-muted/30">
           <Button
             variant="outline"
@@ -190,43 +190,34 @@ export function AssignPageClient() {
         )}
       </div>
 
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/60 bg-card/80 p-2 shadow-sm">
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <span className="px-1 text-xs font-medium text-muted-foreground">Review</span>
-          <ToggleGroup
-            type="single"
-            value={reviewFilter}
-            onValueChange={(value) => {
-              if (value) setReviewFilter(value as ReviewFilter);
-            }}
-            className="gap-1"
-            aria-label="Filter assignment review state"
-          >
-            <ToggleGroupItem value="all" className="h-10 px-2.5 text-xs">
-              All
-            </ToggleGroupItem>
-            <ToggleGroupItem value="conflicts" className="h-10 px-2.5 text-xs">
-              Conflicts
-            </ToggleGroupItem>
-            <ToggleGroupItem value="open" className="h-10 px-2.5 text-xs">
-              Open
-            </ToggleGroupItem>
-            <ToggleGroupItem value="clean" className="h-10 px-2.5 text-xs">
-              Clean
-            </ToggleGroupItem>
-          </ToggleGroup>
-        </div>
-        <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground tabular-nums">
-          <Badge variant={reviewSummary.conflicts > 0 ? "orange" : "outline"} size="sm">
-            {reviewSummary.conflicts} conflict{reviewSummary.conflicts === 1 ? "" : "s"}
-          </Badge>
-          <Badge variant="outline" size="sm">
-            {reviewSummary.open} open
-          </Badge>
-          <Badge variant="outline" size="sm">
-            {reviewSummary.cleanAssignments} clean
-          </Badge>
-        </div>
+      <div className="mb-5 flex flex-wrap items-center gap-2 border-b border-border/60 pb-3">
+        <ToggleGroup
+          type="single"
+          value={reviewFilter}
+          onValueChange={(value) => {
+            if (value) setReviewFilter(value as ReviewFilter);
+          }}
+          className="gap-1"
+          aria-label="Filter assignment review state"
+        >
+          <ToggleGroupItem value="all" className="h-10 px-3 text-sm">
+            All
+          </ToggleGroupItem>
+          <ToggleGroupItem value="conflicts" className="h-10 gap-1.5 px-3 text-sm">
+            Conflicts
+            <span className={cn("tabular-nums", reviewSummary.conflicts > 0 ? "text-[var(--orange-text)]" : "text-muted-foreground")}>
+              {reviewSummary.conflicts}
+            </span>
+          </ToggleGroupItem>
+          <ToggleGroupItem value="open" className="h-10 gap-1.5 px-3 text-sm">
+            Open
+            <span className="tabular-nums text-muted-foreground">{reviewSummary.open}</span>
+          </ToggleGroupItem>
+          <ToggleGroupItem value="clean" className="h-10 gap-1.5 px-3 text-sm">
+            Clean
+            <span className="tabular-nums text-muted-foreground">{reviewSummary.cleanAssignments}</span>
+          </ToggleGroupItem>
+        </ToggleGroup>
       </div>
 
       {grid.error && (
