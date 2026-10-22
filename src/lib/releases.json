@@ -309,6 +309,20 @@
   },
   {
     "date": "2026-10-21",
+    "title": "Get the iPhone app banner",
+    "type": "improvement",
+    "summary": "On iPhone, Safari now offers the Wisconsin Creative app from the App Store.",
+    "details": [
+      "Safari shows its standard App Store banner at the top of signed-in pages. Close it and Safari remembers.",
+      "It doesn't appear on the sign-in page or once the app is installed."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 555
+  },
+  {
+    "date": "2026-10-21",
     "title": "Report a problem, and faster fixes",
     "type": "feature",
     "summary": "Report a problem from the account menu, and crashes and errors now reach the team with what they need to find and fix them.",
