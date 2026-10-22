@@ -8,6 +8,7 @@ import {
   BulkUnitStatus,
   Prisma,
   Role,
+  ScanPhase,
   ScanSessionStatus
 } from "@prisma/client";
 import { db } from "@/lib/db";
@@ -2974,6 +2975,22 @@ export async function transferBookingOwner(
         }
         if (existing.custodyScope === BookingCustodyScope.SHARED) {
           throw new HttpError(400, "Shared travel-case bookings do not have a personal owner");
+        }
+
+        if (existing.kind === BookingKind.CHECKOUT && existing.status === BookingStatus.OPEN) {
+          // Same guards as handing items over at the kiosk: a half-finished
+          // return or an accountability hold must settle before custody moves.
+          const [returnSession, exclusion] = await Promise.all([
+            tx.scanSession.findFirst({
+              where: { bookingId, phase: ScanPhase.CHECKIN, status: ScanSessionStatus.OPEN },
+              select: { id: true },
+            }),
+            tx.bookingAccountabilityExclusion.findUnique({ where: { bookingId }, select: { restoredAt: true } }),
+          ]);
+          if (returnSession) throw new HttpError(409, "Finish the in-progress return before transferring this checkout");
+          if (exclusion && !exclusion.restoredAt) {
+            throw new HttpError(409, "Resolve the checkout accountability exclusion before transferring it");
+          }
         }
 
         const actor = await tx.user.findUnique({

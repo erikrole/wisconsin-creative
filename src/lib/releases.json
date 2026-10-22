@@ -1,6 +1,23 @@
 [
   {
     "date": "2026-10-22",
+    "title": "Everyone hears about gear transfers",
+    "type": "improvement",
+    "summary": "When gear changes hands, both people now get told, whoever made the change.",
+    "details": [
+      "The new holder gets a notification with the due time.",
+      "The old holder sees it come off their record, and gets a notification if staff moved it.",
+      "Transferring a checkout is held while a return is in progress.",
+      "The transfer windows on the web are redesigned: a searchable list of people, a clear from and to, and a note of what each person will see."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 588
+  },
+  {
+    "date": "2026-10-22",
     "title": "Smarter low-battery alerts",
     "type": "fixes",
     "summary": "Battery stock and low-battery alerts are now more accurate, and big battery pools get an inbox alert when they run low.",

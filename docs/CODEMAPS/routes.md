@@ -110,6 +110,7 @@
 - `/dev-settings` -> `src/app/dev-settings/page.tsx`
 - `/dev-sidebar` -> `src/app/dev-sidebar/page.tsx`
 - `/dev-trade-board` -> `src/app/dev-trade-board/page.tsx`
+- `/dev-transfer` -> `src/app/dev-transfer/page.tsx`
 - `/forgot-password` -> `src/app/forgot-password/page.tsx`
 - `/login` -> `src/app/login/page.tsx`
 - `/privacy` -> `src/app/privacy/page.tsx`

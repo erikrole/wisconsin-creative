@@ -12,16 +12,17 @@
 | `src/lib/services/auto-fill-preview.ts` | 322 |
 | `src/lib/services/availability-conflict-recompute.ts` | 130 |
 | `src/lib/services/availability.ts` | 700 |
+| `src/lib/services/battery-low-stock.ts` | 89 |
 | `src/lib/services/blast-targeting.ts` | 166 |
 | `src/lib/services/blasts.ts` | 359 |
 | `src/lib/services/booking-custody.ts` | 82 |
-| `src/lib/services/booking-item-holder.ts` | 174 |
+| `src/lib/services/booking-item-holder.ts` | 194 |
 | `src/lib/services/booking-ref.ts` | 26 |
 | `src/lib/services/booking-reuse.ts` | 215 |
 | `src/lib/services/booking-rules.ts` | 135 |
-| `src/lib/services/bookings-checkin.ts` | 738 |
+| `src/lib/services/bookings-checkin.ts` | 743 |
 | `src/lib/services/bookings-helpers.ts` | 310 |
-| `src/lib/services/bookings-lifecycle.ts` | 3392 |
+| `src/lib/services/bookings-lifecycle.ts` | 3409 |
 | `src/lib/services/bookings-queries.ts` | 322 |
 | `src/lib/services/bookings.ts` | 9 |
 | `src/lib/services/budget.ts` | 950 |
@@ -50,6 +51,7 @@
 | `src/lib/services/firmware-watch.ts` | 329 |
 | `src/lib/services/game-record.ts` | 171 |
 | `src/lib/services/game-snapshots.ts` | 253 |
+| `src/lib/services/gear-handover-notify.ts` | 97 |
 | `src/lib/services/gear-picks.ts` | 1192 |
 | `src/lib/services/hidden-users-cleanup.ts` | 122 |
 | `src/lib/services/invite-email.ts` | 78 |
@@ -62,7 +64,7 @@
 | `src/lib/services/kiosk-checkout-complete.ts` | 90 |
 | `src/lib/services/kiosk-dashboard-home.ts` | 267 |
 | `src/lib/services/kiosk-extend-window.ts` | 168 |
-| `src/lib/services/kiosk-item-transfer.ts` | 200 |
+| `src/lib/services/kiosk-item-transfer.ts` | 136 |
 | `src/lib/services/kiosk-location.ts` | 72 |
 | `src/lib/services/kiosk-nudge.ts` | 118 |
 | `src/lib/services/kiosk-operation-receipts.ts` | 128 |
@@ -126,7 +128,7 @@
 | File | Lines |
 |---|---:|
 | `src/lib/a11y-resilience.ts` | 116 |
-| `src/lib/admin-fix-today.ts` | 408 |
+| `src/lib/admin-fix-today.ts` | 407 |
 | `src/lib/announcements.ts` | 163 |
 | `src/lib/api-dates.ts` | 38 |
 | `src/lib/api-handler.ts` | 76 |
@@ -148,7 +150,7 @@
 | `src/lib/auto-fill-preview-types.ts` | 61 |
 | `src/lib/availability-copy.ts` | 345 |
 | `src/lib/avatar.ts` | 44 |
-| `src/lib/battery-compatibility.ts` | 158 |
+| `src/lib/battery-compatibility.ts` | 175 |
 | `src/lib/bhphoto-image.ts` | 67 |
 | `src/lib/blob.ts` | 168 |
 | `src/lib/booking-action-policy.ts` | 216 |
@@ -160,7 +162,7 @@
 | `src/lib/booking-statuses.ts` | 9 |
 | `src/lib/breadcrumbs.ts` | 229 |
 | `src/lib/brother-label-csv.ts` | 170 |
-| `src/lib/bulk-batteries.ts` | 49 |
+| `src/lib/bulk-batteries.ts` | 80 |
 | `src/lib/bulk-schedule-assignment-types.ts` | 221 |
 | `src/lib/bulk-unit-qr.ts` | 111 |
 | `src/lib/bulk-unit-status.ts` | 52 |
