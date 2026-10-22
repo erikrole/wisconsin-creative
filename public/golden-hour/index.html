@@ -282,10 +282,12 @@
     .footnote { margin: 28px auto 0; max-width: 560px; text-align: center; font-size: 13px; line-height: 1.6; color: var(--ink-3); }
     .footnote kbd { font: inherit; font-size: 12px; padding: 1px 6px; border: 1px solid var(--glass-line); border-radius: 5px; }
     @media (hover: none) { .keys { display: none; } }
-    /* ---- Wisconsin Creative badge: shared byte-for-byte by every public tool ---- */
+    /* ---- Wisconsin Creative badge: shared byte-for-byte by every public tool.
+       It sits in the page flow after the content, so it never covers anything:
+       bottom-right on wide screens, centred on phones. ---- */
     .wc-badge {
-      position: fixed; z-index: 20; right: max(16px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom));
-      display: inline-flex; align-items: center; gap: 7px; padding: 6px 11px 6px 9px; border-radius: 999px;
+      position: relative; z-index: 20; display: flex; align-items: center; gap: 7px; width: max-content;
+      margin: 8px max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) auto; padding: 6px 11px 6px 9px; border-radius: 999px;
       color: inherit; opacity: 0.78; text-decoration: none; font-size: 12px; font-weight: 700; letter-spacing: 0.01em; line-height: 1;
       background: color-mix(in srgb, currentColor 9%, transparent); border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
       backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); transition: opacity 150ms ease;
@@ -295,7 +297,7 @@
       width: 16px; height: 15px; flex: none; background: currentColor;
       -webkit-mask: url("/brand/wc-badge.svg") center / contain no-repeat; mask: url("/brand/wc-badge.svg") center / contain no-repeat;
     }
-    @media (max-width: 1023px) { .wc-badge { position: relative; right: auto; bottom: auto; display: flex; width: max-content; margin: 0 auto calc(20px + env(safe-area-inset-bottom)); } }
+    @media (max-width: 699px) { .wc-badge { margin-left: auto; margin-right: auto; } }
 
     /* ---- entrance ---- */
     .rise { opacity: 0; transform: translateY(8px); animation: rise 650ms var(--ease) forwards; }
