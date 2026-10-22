@@ -1601,8 +1601,7 @@ export function ListView({
                         )
                       )}
                       <span
-                        className="text-[10px] text-muted-foreground/60 tabular-nums font-normal shrink-0"
-                        style={{ fontFamily: entry.allDay ? "var(--font-heading)" : "var(--font-mono)" }}
+                        className="text-[12px] text-muted-foreground tabular-nums font-medium shrink-0"
                       >
                         {eventStartLabel(entry)}
                       </span>
@@ -1884,8 +1883,7 @@ function EventRows({
               ) : null,
               time: (
                 <span
-                  className="block shrink-0 text-[11px] tabular-nums text-muted-foreground"
-                  style={{ fontFamily: entry.allDay ? "var(--font-heading)" : "var(--font-mono)" }}
+                  className="block shrink-0 text-[13px] font-medium tabular-nums text-muted-foreground"
                 >
                   {eventStartLabel(entry)}
                 </span>

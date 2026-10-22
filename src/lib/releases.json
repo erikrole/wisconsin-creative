@@ -1,6 +1,21 @@
 [
   {
     "date": "2026-10-22",
+    "title": "A calmer feel across Schedule, Reports and Notifications",
+    "type": "improvement",
+    "summary": "Schedule, Reports, Notifications, Operations, Blasts, Search, Badges, Signatures and Profile now share the fresh look.",
+    "details": [
+      "Schedule keeps Auto assign up front and tucks Add event into More. Event times are easier to read.",
+      "Notifications moves Refresh, Check overdue and Preferences into a More menu, and Open details is a quiet link.",
+      "Report bar charts use one accent color instead of a rainbow."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 587
+  },
+  {
+    "date": "2026-10-22",
     "title": "Easier-to-read Bookings",
     "type": "improvement",
     "summary": "Booking cards on the Bookings page are larger and clearer, in the fresh look.",
