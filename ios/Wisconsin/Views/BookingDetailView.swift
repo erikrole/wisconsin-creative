@@ -227,6 +227,10 @@ struct BookingDetailView: View {
             }
         }
         .navigationTitle(booking?.title ?? "Booking")
+        .userActivity(BookingHandoff.activityType, isActive: booking != nil) { activity in
+            guard let booking else { return }
+            BookingHandoff.configure(activity, for: booking)
+        }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {

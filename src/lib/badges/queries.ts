@@ -74,16 +74,33 @@ export async function listActiveBadgeDefinitions(where?: { trigger?: string }) {
   });
 }
 
+/**
+ * Awards earned in (after, through] that this person has not been shown yet.
+ *
+ * "Shown" is server state (`celebratedAt`), claimed atomically here, so the
+ * celebration happens once per award no matter how many phones, browser tabs or
+ * kiosks ask. A per-device cursor alone replayed everything since its last
+ * value on any device that had been closed for a while, and two open devices
+ * raced to show the same award.
+ */
 export async function listEarnedBadgesSince(args: {
   userId: string;
   after: Date;
   through: Date;
 }): Promise<EarnedBadge[]> {
+  const claimed = await db.$queryRaw<Array<{ id: string }>>`
+    UPDATE "student_badges"
+    SET "celebrated_at" = now()
+    WHERE "user_id" = ${args.userId}
+      AND "celebrated_at" IS NULL
+      AND "awarded_at" > ${args.after}
+      AND "awarded_at" <= ${args.through}
+    RETURNING "id"
+  `;
+  if (claimed.length === 0) return [];
+
   const awards = await db.studentBadge.findMany({
-    where: {
-      userId: args.userId,
-      awardedAt: { gt: args.after, lte: args.through },
-    },
+    where: { id: { in: claimed.map((row) => row.id) } },
     orderBy: [{ awardedAt: "asc" }, { id: "asc" }],
     select: {
       id: true,

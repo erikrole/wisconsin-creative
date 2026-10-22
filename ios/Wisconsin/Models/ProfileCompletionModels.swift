@@ -138,7 +138,7 @@ enum ProfileCompletionUpdate: Encodable {
     case email(athleticsEmail: String)
     case phones(personalPhone: String, workPhone: String?, workPhoneNotApplicable: Bool?)
     case wiscard(cardNumber: String, issueCode: String)
-    case student(year: String, graduationTerm: String, gradYear: Int)
+    case student(year: String, graduationTerm: String?, gradYear: Int?)
     case apparel(topSizeFit: String, topSize: String, shoeSizeSystem: String, shoeSize: String)
     case snooze
 
@@ -166,8 +166,9 @@ enum ProfileCompletionUpdate: Encodable {
         case .student(let year, let graduationTerm, let gradYear):
             try container.encode("STUDENT", forKey: .step)
             try container.encode(year, forKey: .studentYearOverride)
-            try container.encode(graduationTerm, forKey: .graduationTerm)
-            try container.encode(gradYear, forKey: .gradYear)
+            // Graduation is never required; the server saves it only when both arrive.
+            try container.encodeIfPresent(graduationTerm, forKey: .graduationTerm)
+            try container.encodeIfPresent(gradYear, forKey: .gradYear)
         case .apparel(let topSizeFit, let topSize, let shoeSizeSystem, let shoeSize):
             try container.encode("APPAREL", forKey: .step)
             try container.encode(topSizeFit, forKey: .topSizeFit)

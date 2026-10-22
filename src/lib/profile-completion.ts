@@ -142,7 +142,6 @@ function applicableProfileFields(role: ProfileCompletionProfile["role"]): Profil
       "personalPhone",
       "wiscard",
       "studentYear",
-      "anticipatedGraduation",
       "clothingSize",
       "shoeSize",
       "photo",
@@ -190,7 +189,7 @@ export function getProfileCompletion(profile: ProfileCompletionProfile, now = ne
   const operationalFields = profile.role === "COLLABORATOR"
     ? [] as ProfileCompletionField[]
     : profile.role === "STUDENT"
-      ? INTERNAL_OPERATIONAL_FIELDS.filter((field) => field !== "workPhone" && field !== "athleticsEmail").concat("studentYear", "anticipatedGraduation")
+      ? INTERNAL_OPERATIONAL_FIELDS.filter((field) => field !== "workPhone" && field !== "athleticsEmail").concat("studentYear")
       : INTERNAL_OPERATIONAL_FIELDS;
   const missingFields = applicableFields
     .filter((field) => !completeByField[field]);

@@ -17,7 +17,7 @@ const sections = [
       "Device information needed for iOS features, including push notification tokens, Live Activity tokens, app version, and basic session state. For the configured product owner’s support/adoption report, the app may also report a coarse device model, OS version, marketing/build version, and a best-effort distribution-channel signal.",
       "Camera access only when you choose to scan a barcode or QR code. Camera frames are used on device for scanning and are not stored by the app.",
       "Authenticated API diagnostics and server logs used to keep the service reliable, secure, and supportable. We also count a small allowlisted set of product events such as app opens and normalized area views using rotating pseudonymous identifiers.",
-      "Crash and error reports, linked to your account so we can follow up: the app version and build, device model and OS version (or browser), the page or screen, a request reference, and your last few in-app actions (pages opened, buttons pressed, and app requests with their result). On iPhone these come from Apple's on-device crash diagnostics. Reports never include what you type into fields, passwords, search text, or request contents. The same details are attached when you use Report a problem, along with your message. The apps do not embed a third-party crash-reporting, session-replay, or advertising analytics SDK.",
+      "Crash and error reports, linked to your account so we can follow up: the app version and build, device model and OS version (or browser), the page or screen, a request reference, and your last few in-app actions (pages opened, buttons pressed, and app requests with their result). On iPhone and Mac these come from Apple's on-device crash and hang diagnostics. Kiosk reports are tied to the kiosk, not a person. Reports never include what you type into fields, passwords, search text, or request contents. The same details are attached when you use Report a problem, along with your message. The apps do not embed a third-party crash-reporting, session-replay, or advertising analytics SDK.",
     ],
   },
   {
@@ -27,7 +27,7 @@ const sections = [
       "We do not track users across third-party apps or websites.",
       "We do not collect precise device location for the iOS app.",
       "We do not use booking photo uploads in the iOS launch scope.",
-      "We do not collect device-performance metrics, UDIDs, hardware serial numbers, advertising IDs, raw App Store receipts, search text, scanned values, or session replay. Recent in-app actions are kept only on your device unless a crash, error, or problem report sends them.",
+      "We do not collect ongoing device-performance metrics (a hang or slow launch is reported only when it happens, like a crash), UDIDs, hardware serial numbers, advertising IDs, raw App Store receipts, search text, scanned values, or session replay. Recent in-app actions are kept only on your device unless a crash, error, or problem report sends them.",
     ],
   },
   {

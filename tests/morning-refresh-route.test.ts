@@ -23,6 +23,9 @@ vi.mock("@/lib/hiring/retention", () => ({
 vi.mock("@/lib/services/notification-deliveries", () => ({
   pruneNotificationDeliveries: vi.fn(async () => 0),
 }));
+vi.mock("@/lib/services/game-snapshots", () => ({
+  captureGameSnapshots: vi.fn(async () => ({ captured: 0, remaining: 0, deletedMarked: 0 })),
+}));
 vi.mock("@/lib/services/notification-resolution", () => ({ resolveSettledNotifications: vi.fn(async () => 0) }));
 vi.mock("@/lib/services/app-diagnostics", () => ({ migrateLegacyAppDiagnostics: vi.fn(async () => 0) }));
 vi.mock("@/lib/services/error-reports", () => ({ pruneErrorReports: vi.fn(async () => ({ events: 0, issues: 0, supportReports: 0 })) }));

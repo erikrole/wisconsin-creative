@@ -9,6 +9,11 @@ vi.mock("@/lib/services/licenses", () => ({
   processExpiryWarnings: vi.fn(),
 }));
 
+vi.mock("@/lib/services/battery-low-stock", () => ({
+  processBatteryLowStock: vi.fn(),
+}));
+
+import { processBatteryLowStock } from "@/lib/services/battery-low-stock";
 import { processOverdueNotifications } from "@/lib/services/notifications";
 import { processLicenseNags, processExpiryWarnings } from "@/lib/services/licenses";
 import { GET } from "@/app/api/cron/notifications/route";
@@ -39,6 +44,7 @@ describe("notification cron route", () => {
     });
     vi.mocked(processLicenseNags).mockResolvedValue({ nagged: 1 });
     vi.mocked(processExpiryWarnings).mockResolvedValue({ warned: 3 });
+    vi.mocked(processBatteryLowStock).mockResolvedValue({ families: 1, created: 2 });
 
     const res = await GET(cronRequest(), { params: Promise.resolve({}) });
     const body = await res.json();
@@ -52,6 +58,7 @@ describe("notification cron route", () => {
       truncated: false,
       licenseNags: { nagged: 1 },
       licenseExpiry: { warned: 3 },
+      batteryLowStock: { families: 1, created: 2 },
     });
   });
 
@@ -64,6 +71,7 @@ describe("notification cron route", () => {
     });
     vi.mocked(processLicenseNags).mockRejectedValue(new Error("license nag failed"));
     vi.mocked(processExpiryWarnings).mockResolvedValue({ warned: 3 });
+    vi.mocked(processBatteryLowStock).mockResolvedValue({ families: 1, created: 2 });
 
     const res = await GET(cronRequest(), { params: Promise.resolve({}) });
     const body = await res.json();
@@ -77,6 +85,7 @@ describe("notification cron route", () => {
       truncated: false,
       licenseNags: { nagged: 0 },
       licenseExpiry: { warned: 3 },
+      batteryLowStock: { families: 1, created: 2 },
       partialFailures: ["licenseNags"],
       errors: { licenseNags: "license nag failed" },
     });
@@ -91,6 +100,7 @@ describe("notification cron route", () => {
     });
     vi.mocked(processLicenseNags).mockResolvedValue({ nagged: 0 });
     vi.mocked(processExpiryWarnings).mockResolvedValue({ warned: 0 });
+    vi.mocked(processBatteryLowStock).mockResolvedValue({ families: 1, created: 2 });
 
     const res = await GET(cronRequest(), { params: Promise.resolve({}) });
     const body = await res.json();
@@ -104,6 +114,7 @@ describe("notification cron route", () => {
       truncated: true,
       licenseNags: { nagged: 0 },
       licenseExpiry: { warned: 0 },
+      batteryLowStock: { families: 1, created: 2 },
     });
   });
 });

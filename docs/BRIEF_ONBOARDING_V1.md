@@ -5,7 +5,7 @@
 - Owner: Wisconsin Athletics Creative Product
 - Status: Active - invite-first V1 shipped and launch-smoked
 - Version: V1
-- Last Updated: 2026-08-17
+- Last Updated: 2026-10-21
 - Decision Reference: D-037, D-051
 
 ## Problem
@@ -88,8 +88,8 @@ Public registration and login responses must stay generic where membership discl
 - [x] Docs, task plan, web tests, API tests, and iOS verification are updated before shipping.
 - [x] New web registrations enter role-aware setup, and active-account readiness remains derived from canonical profile fields.
 - [x] Native iOS mirrors the role-aware setup contract without caching private profile values on device.
-- [ ] Web and native iOS discover an unclaimed allowed email from the normal login surface and complete password setup through the existing registration transaction.
-- [ ] Legacy `/register` links redirect to `/login`, and onboarding-status operators copy the generic app login link.
+- [x] Web and native iOS discover an unclaimed allowed email from the normal login surface and complete password setup through the existing registration transaction. (Web `LoginForm`, iOS `APIClient` discover call, `tests/auth-discovery-route.test.ts`, `tests/register-route.test.ts`; an authenticated rollout smoke is still outstanding.)
+- [x] Legacy `/register` links redirect to `/login`, and onboarding-status operators copy the generic app login link. (`src/app/register/page.tsx`; the Onboarding Status "copy login link" action.)
 
 ## Launch Notes
 1. Native iOS owns invite-gated registration and password-recovery requests through the existing APIs, while reset-link completion remains web-owned. Native also owns the authenticated profile-completion experience.

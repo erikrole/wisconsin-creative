@@ -16,25 +16,32 @@
   var DATA = window.BOARD_DATA;
   var VENUE_KEY = 'boards.venue.v1';
   var el = {};
-  ['search', 'nav-venues', 'nav-ref', 'tools-link', 'side-foot',
+  ['search', 'nav-venues', 'nav-ref', 'menu-toggle', 'top-links',
    'crumbs', 'title', 'actions', 'subtitle', 'props', 'summary', 'view', 'empty', 'footnote', 'toast'
   ].forEach(function (id) { el[id] = document.getElementById(id); });
 
   function storageGet(k) { try { return window.localStorage.getItem(k); } catch (e) { return null; } }
   function storageSet(k, v) { try { window.localStorage.setItem(k, v); } catch (e) { /* private mode */ } }
+  // A hand-typed or truncated link can carry a bad escape like %E0; read it
+  // as typed instead of throwing and leaving the page blank.
+  function safeDecode(s) { try { return decodeURIComponent(s); } catch (e) { return s; } }
 
   var VENUES = DATA.venues;
-  var venueById = {};
+  // Lookups keyed by URL and search text have no prototype, so ?d=constructor
+  // and friends miss instead of throwing.
+  function dict() { return Object.create(null); }
+  function own(o, k) { return Object.prototype.hasOwnProperty.call(o, k); }
+  var venueById = dict();
   VENUES.forEach(function (v) { venueById[v.id] = v; });
   // Stable ids → where they live, and the production canvas keys built from them.
-  var BY_ID = {};
+  var BY_ID = dict();
   VENUES.forEach(function (v) {
     v.displays.forEach(function (d) {
       BY_ID[d.id] = { v: v, d: d };
       d.zones.forEach(function (z) { BY_ID[z.id] = { v: v, d: d, z: z }; });
     });
   });
-  var KEYS = {};
+  var KEYS = dict();
   DATA.canvases.forEach(function (c) {
     var v = venueById[c.venue];
     var d = v && v.displays.filter(function (x) { return x.name === c.display; })[0];
@@ -43,7 +50,7 @@
     var id = z ? z.id : d.id;
     (KEYS[id] = KEYS[id] || []).push(c.key);
   });
-  var KEY_ID = {};
+  var KEY_ID = dict();
   Object.keys(KEYS).forEach(function (id) { KEYS[id].forEach(function (k) { KEY_ID[k] = id; }); });
   var ISSUE_LABEL = { conflict: 'Sources disagree', tbd: 'Not final', unconfirmed: 'Unconfirmed', naming: 'Names may change' };
   var OPEN_ISSUES = [];
@@ -53,8 +60,43 @@
       d.zones.forEach(function (z) { (z.issues || []).forEach(function (i) { OPEN_ISSUES.push({ v: v, d: d, z: z, issue: i }); }); });
     });
   });
-  var PAGES = { agents: 1, issues: 1 };
-  var CONTENT = {};
+  var PAGES = { agents: 1, issues: 1, terms: 1 };
+
+  // Plain-English meanings for the words the boards use, for people new to
+  // them. Shown on the Board terms page and as hover hints where they appear.
+  var TERMS = [
+    ['FG / BG', 'fgbg', 'Foreground and background: two layers of the same window in the board’s control system. One asset usually fills both.'],
+    ['GIP', 'gip', 'Game in progress: the strip where the live score, clock and game info sit.'],
+    ['Fascia (ribbon)', 'fascia', 'The long, short LED boards that run around the seating bowl. Very wide, very short, and they often scroll.'],
+    ['Speaker scrim', 'scrim', 'Speakers hang in front of part of the board. Content behind the scrim is hard to see, so keep it plain.'],
+    ['Pad', 'pad', 'Keep anything important this many pixels inside every edge.'],
+    ['IPTV / StadiumVision', 'iptv', 'The concourse and suite TVs at Camp Randall, not the LED boards.'],
+    ['Id and canvas key', 'ids', 'Stable names for scripts and production tools like the After Effects Board Builder. Turn on Technical details to see them.']
+  ];
+  var TERM = dict();
+  TERMS.forEach(function (t) { TERM[t[1]] = t[2]; });
+  // Hover hint for a zone or display name, from the first term it uses.
+  function termFor(name) {
+    var n = name.toLowerCase();
+    if (/\bgip\b/.test(n)) return TERM.gip;
+    if (/fascia|ribbon|\bring\b/.test(n)) return TERM.fascia;
+    if (/iptv/.test(n)) return TERM.iptv;
+    return null;
+  }
+
+  // Everyday words people search with, mapped to the words the boards use.
+  var SYNONYMS = {
+    ribbon: ['fascia', 'ring'], ribbons: ['fascia', 'ring'], ticker: ['fascia', 'ring'], halo: ['ring'],
+    tv: ['iptv'], tvs: ['iptv'], television: ['iptv'], concourse: ['iptv'], suite: ['iptv'], stadiumvision: ['iptv'],
+    score: ['gip'], clock: ['gip'], bug: ['gip'],
+    ad: ['ad', 'sponsor'], ads: ['ad', 'sponsor'], sponsor: ['sponsor', 'ad'], commercial: ['ad', 'sponsor'],
+    football: ['camp randall'], basketball: ['kohl center'], hockey: ['kohl center', 'labahn'], volleyball: ['field house'], softball: ['goodman'],
+    stadium: ['camp randall'], arena: ['kohl center', 'labahn']
+  };
+  var TECH_KEY = 'boards.tech.v1';
+  var showTech = storageGet(TECH_KEY) === '1';
+
+  var CONTENT = dict();
   DATA.content.broad.forEach(function (c) { c.kind = 'broad'; CONTENT[c.id] = c; });
   DATA.content.gameDay.forEach(function (g) { g.items.forEach(function (c) { c.kind = 'gameDay'; c.group = g.name; CONTENT[c.id] = c; }); });
 
@@ -68,7 +110,7 @@
     state.filter = 'all';
     state.venue = d ? BY_ID[d].v.id : venueById[params.get('v')] ? params.get('v') : (venueById[storageGet(VENUE_KEY)] ? storageGet(VENUE_KEY) : VENUES[0].id);
     state.content = CONTENT[params.get('c')] ? params.get('c') : null;
-    state.page = PAGES[params.get('p')] ? params.get('p') : null;
+    state.page = own(PAGES, params.get('p')) ? params.get('p') : null;
     state.query = params.get('q') || '';
     state.narrow = params.get('n') || '';
     state.venueFilter = params.get('f') === 'issues' ? 'issues' : 'all';
@@ -77,7 +119,9 @@
   readParams();
   if (state.share) {
     document.body.classList.add('is-share');
-    el['side-foot'].hidden = true;
+    // Shared links keep the tool's name but drop the way back to the site.
+    var apps = document.querySelector('.wc-apps');
+    if (apps) apps.hidden = true;
   }
 
   /* ---------------- helpers ---------------- */
@@ -116,7 +160,19 @@
     image: '<rect x="2.5" y="3.5" width="11" height="9" rx="1"/><path d="m4.5 10.5 2.5-2.5 2 2 1.5-1.5 1.5 1.5"/>',
     arrow: '<path d="M6 3.5 10.5 8 6 12.5"/>',
     json: '<path d="M5.5 2.5c-1.5 0-2 .7-2 2v1.6c0 .9-.5 1.4-1.3 1.9.8.5 1.3 1 1.3 1.9v1.6c0 1.3.5 2 2 2M10.5 2.5c1.5 0 2 .7 2 2v1.6c0 .9.5 1.4 1.3 1.9-.8.5-1.3 1-1.3 1.9v1.6c0 1.3-.5 2-2 2"/>',
-    warn: '<path d="M8 2.2 14.3 13H1.7z"/><path d="M8 6.5v3.2M8 11.4v.1"/>'
+    warn: '<path d="M8 2.2 14.3 13H1.7z"/><path d="M8 6.5v3.2M8 11.4v.1"/>',
+    more: '<circle cx="3.5" cy="8" r=".9" fill="currentColor" stroke="none"/><circle cx="8" cy="8" r=".9" fill="currentColor" stroke="none"/><circle cx="12.5" cy="8" r=".9" fill="currentColor" stroke="none"/>',
+    prev: '<path d="M10 3.5 5.5 8l4.5 4.5"/>',
+    next: '<path d="M6 3.5 10.5 8 6 12.5"/>',
+    share: '<path d="M8 10V2.5M5 5.5l3-3 3 3"/><path d="M3.5 8.5v4a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1v-4"/>',
+    plus: '<path d="M8 3v10M3 8h10"/>',
+    folder: '<path d="M2 4.5A1.5 1.5 0 0 1 3.5 3h2.6l1.4 1.5h5A1.5 1.5 0 0 1 14 6v5.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5z"/>',
+    play: '<path d="M5 3.5v9l7-4.5z"/>',
+    pause: '<path d="M5.5 3.5v9M10.5 3.5v9"/>',
+    sound: '<path d="M2.5 6h2.5L8.5 3v10L5 10H2.5z"/><path d="M11 5.5a3.5 3.5 0 0 1 0 5M12.8 3.8a6 6 0 0 1 0 8.4"/>',
+    mute: '<path d="M2.5 6h2.5L8.5 3v10L5 10H2.5z"/><path d="m11 6 3.5 4M14.5 6 11 10"/>',
+    restart: '<path d="M3.5 8a4.5 4.5 0 1 0 1.3-3.2"/><path d="M3.5 2.5v2.8h2.8"/>',
+    close: '<path d="m4 4 8 8M12 4l-8 8"/>'
   };
   function slug(s) { return s.replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
 
@@ -132,8 +188,25 @@
       toast(done);
       if (button) { button.classList.add('is-copied'); setTimeout(function () { button.classList.remove('is-copied'); }, 1200); }
     }
-    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(ok, function () { toast('This browser blocked copying.'); });
-    else toast('Copying needs a secure (https) page.');
+    function fallback() { if (legacyCopy(text)) ok(); else toast('This browser blocked copying.'); }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(ok, fallback);
+    else fallback();
+  }
+  // For browsers without the async clipboard (plain http, older Safari, some
+  // embedded views): select a hidden textarea and use the old copy command.
+  function legacyCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;';
+    var active = document.activeElement;
+    document.body.appendChild(ta);
+    ta.select();
+    var done = false;
+    try { done = document.execCommand('copy'); } catch (e) { done = false; }
+    ta.remove();
+    if (active && active.focus) active.focus({ preventScroll: true });
+    return done;
   }
   function download(filename, text, type) {
     var url = URL.createObjectURL(new Blob([text], { type: type }));
@@ -233,23 +306,54 @@
   function closeMenus(except) {
     Array.prototype.forEach.call(document.querySelectorAll('details.menu[open]'), function (d) { if (d !== except) d.removeAttribute('open'); });
   }
-  function moreMenu(items, name) {
+  // A small menu on <details>. compact draws it as a ⋯ icon (zone rows).
+  // Opening from the keyboard focuses the first item; arrows move, Escape
+  // closes and returns focus to the button.
+  function moreMenu(items, name, compact) {
     var det = node('details', 'menu');
-    var sum = node('summary', 'btn');
+    var sum = node('summary', 'btn' + (compact ? ' dots' : ''));
     sum.setAttribute('aria-label', 'More actions' + (name ? ' for ' + name : ''));
-    sum.appendChild(document.createTextNode('More'));
+    sum.setAttribute('aria-haspopup', 'menu');
+    if (compact) { sum.appendChild(icon(ICONS.more)); sum.title = 'More'; }
+    else sum.appendChild(document.createTextNode('More'));
     det.appendChild(sum);
     var pop = node('div', 'menu-pop');
+    pop.setAttribute('role', 'menu');
     items.forEach(function (item) {
-      var b = node('button', 'menu-item', item.label);
+      var b = node('button', 'menu-item');
       b.type = 'button';
-      b.addEventListener('click', function () { det.removeAttribute('open'); item.onClick(); });
+      b.setAttribute('role', 'menuitem');
+      if (item.icon && ICONS[item.icon]) b.appendChild(icon(ICONS[item.icon]));
+      b.appendChild(document.createTextNode(item.label));
+      b.addEventListener('click', function () { det.removeAttribute('open'); sum.focus({ preventScroll: true }); item.onClick(); });
       pop.appendChild(b);
     });
     det.appendChild(pop);
+    var byKey = false;
+    sum.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') byKey = true;
+      else if (e.key === 'ArrowDown' && !det.open) { e.preventDefault(); byKey = true; det.open = true; }
+    });
     det.addEventListener('click', function (e) { e.stopPropagation(); });
+    pop.addEventListener('keydown', function (e) {
+      var list = Array.prototype.slice.call(pop.querySelectorAll('.menu-item'));
+      var i = list.indexOf(document.activeElement);
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        list[(i + (e.key === 'ArrowDown' ? 1 : -1) + list.length) % list.length].focus();
+      } else if (e.key === 'Home' || e.key === 'End') {
+        e.preventDefault();
+        list[e.key === 'Home' ? 0 : list.length - 1].focus();
+      } else if (e.key === 'Escape') {
+        e.preventDefault(); e.stopPropagation();
+        det.removeAttribute('open'); sum.focus();
+      } else if (e.key === 'Tab') {
+        det.removeAttribute('open');
+      }
+    });
     det.addEventListener('toggle', function () {
-      if (!det.open) return;
+      sum.setAttribute('aria-expanded', String(det.open));
+      if (!det.open) { byKey = false; return; }
       closeMenus(det);
       var r = sum.getBoundingClientRect();
       pop.style.position = 'fixed';
@@ -260,15 +364,17 @@
         var top = r.bottom + 4;
         if (top + pop.offsetHeight > window.innerHeight - 8) top = Math.max(8, r.top - pop.offsetHeight - 4);
         pop.style.top = top + 'px';
+        if (byKey) { var first = pop.querySelector('.menu-item'); if (first) first.focus(); }
       });
     });
+    sum.setAttribute('aria-expanded', 'false');
     return det;
   }
   function shareItem() {
-    return { label: 'Share link', onClick: function () { copy(shareUrl(), 'Link copied'); } };
+    return { label: 'Copy share link', icon: 'link', onClick: function () { copy(shareUrl(), 'Link copied'); } };
   }
   function withShare(items) {
-    if (DATA.links && DATA.links.aeTemplate) items.push({ label: 'AE template', onClick: function () { window.open(DATA.links.aeTemplate, '_blank', 'noopener'); } });
+    if (DATA.links && DATA.links.aeTemplate) items.push({ label: 'AE template', icon: 'ae', onClick: function () { window.open(DATA.links.aeTemplate, '_blank', 'noopener'); } });
     items.push(shareItem());
     return items;
   }
@@ -308,7 +414,12 @@
       return { zone: function (z) { return size(z.w, z.h) === want; }, display: function (d) { return size(d.w, d.h) === want; } };
     }
     var words = q.split(/\s+/);
-    function has(hay) { hay = hay.toLowerCase(); return words.every(function (w) { return hay.indexOf(w) !== -1; }); }
+    function has(hay) {
+      hay = hay.toLowerCase();
+      return words.every(function (w) {
+        return hay.indexOf(w) !== -1 || (own(SYNONYMS, w) ? SYNONYMS[w] : []).some(function (alt) { return hay.indexOf(alt) !== -1; });
+      });
+    }
     return {
       zone: function (z, d, v) { return has([z.name, z.id, (KEYS[z.id] || []).join(' '), d.name, d.sheetName || '', d.group || '', d.processor || '', v.name, size(z.w, z.h)].join(' ')); },
       display: function (d, v) { return has([d.name, d.id, (KEYS[d.id] || []).join(' '), d.sheetName || '', d.group || '', d.processor || '', v.name, size(d.w, d.h)].join(' ')); }
@@ -317,14 +428,13 @@
 
   /* ---------------- sidebar ---------------- */
 
-  function navButton(label, count, current, onClick) {
+  function navButton(label, count, current, onClick, warn) {
     var li = node('li');
     var b = node('button');
     b.type = 'button';
     b.setAttribute('aria-current', String(!!current));
-    b.appendChild(node('i', 'dot'));
     b.appendChild(node('span', '', label));
-    if (count != null) b.appendChild(node('span', 'count', String(count)));
+    if (count != null) b.appendChild(node('span', 'count' + (warn ? ' is-warn' : ''), String(count)));
     b.addEventListener('click', onClick);
     li.appendChild(b);
     return li;
@@ -339,9 +449,11 @@
       }));
     });
     el['nav-ref'].textContent = '';
-    [['agents', 'For agents & tools', null], ['issues', 'Open issues', OPEN_ISSUES.length]].forEach(function (pg) {
-      el['nav-ref'].appendChild(navButton(pg[1], pg[2], !searching && state.page === pg[0], function () { openPage(pg[0]); }));
+    [['terms', 'Board terms', null], ['agents', 'For agents & tools', null], ['issues', 'Open issues', OPEN_ISSUES.length]].forEach(function (pg) {
+      el['nav-ref'].appendChild(navButton(pg[1], pg[2], !searching && state.page === pg[0], function () { closeTopMenu(); openPage(pg[0]); }, pg[0] === 'issues' && pg[2] > 0));
     });
+    el['nav-ref'].appendChild(techToggle());
+    applyTech();
   }
 
   // Every move between views goes through here: reset the view, apply the
@@ -353,6 +465,9 @@
     if (state.display) state.venue = BY_ID[state.display].v.id;
     storageSet(VENUE_KEY, state.venue);
     render(true, true);
+    // Move focus to the new view's heading so keyboard and screen reader users land on it.
+    el.title.setAttribute('tabindex', '-1');
+    el.title.focus({ preventScroll: true });
   }
   function openContent(id) { go({ content: id }); }
   function openPage(id) { go({ page: id }); }
@@ -382,10 +497,44 @@
     defs.innerHTML = '<pattern id="' + id + '" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="10" height="10" fill="currentColor" fill-opacity=".1"/><line x1="0" y1="0" x2="0" y2="10" stroke="currentColor" stroke-width="2.5" stroke-opacity=".7"/></pattern>';
     svg.appendChild(defs);
     svg.appendChild(svgNode('rect', { class: 'canvas', x: 0, y: 0, width: d.w, height: d.h, 'vector-effect': 'non-scaling-stroke' }));
+    // Previewed art sits on the board's canvas, under the crops, scrims and
+    // seams, so you see what the board will hide.
+    // Videos play muted on a loop inside a foreignObject, so they stack in
+    // the same order as images.
+    (opts.art || []).forEach(function (piece) {
+      if (piece.hidden) return;
+      piece.places.forEach(function (p, i) {
+        if (!piece.art.video) {
+          svg.appendChild(svgNode('image', { class: 'art', href: piece.art.url, x: p.x, y: p.y, width: p.w, height: p.h, preserveAspectRatio: 'none' }));
+          return;
+        }
+        var fo = svgNode('foreignObject', { class: 'art', x: p.x, y: p.y, width: p.w, height: p.h });
+        // The same element is reused across redraws, so toggling zones or
+        // pinning a piece doesn't reload or restart the clip.
+        var vkey = piece.art.id + ':' + i;
+        var vid = artVideos[vkey];
+        if (vid) { vid.muted = !(artAudio === piece.art.id && i === 0); fo.appendChild(vid); svg.appendChild(fo); return; }
+        vid = artVideos[vkey] = document.createElement('video');
+        artResync = true;
+        // Only the chosen sound source is heard, once, from its first placement.
+        vid.muted = !(artAudio === piece.art.id && i === 0);
+        vid.loop = true; vid.playsInline = true; vid.preload = 'auto';
+        vid.setAttribute('playsinline', '');
+        vid.className = 'art-video';
+        vid.setAttribute('data-piece', String(piece.art.id));
+        vid.setAttribute('data-first', i === 0 ? '1' : '0');
+        vid.src = piece.art.url;
+        fo.appendChild(vid);
+        svg.appendChild(fo);
+      });
+    });
+    var hasArt = !!(opts.art && opts.art.length);
     var used = {}, placed = 0;
     (d.overlays || []).forEach(function (o) {
       if (o.kind === 'crop' || o.kind === 'scrim') {
         var g = svgNode('g', { class: 'ov-' + o.kind });
+        // Over previewed art, dim what the board hides so the cut reads.
+        if (hasArt) g.appendChild(svgNode('rect', { x: o.x, y: o.y, width: o.w, height: o.h, fill: '#000', 'fill-opacity': '0.5' }));
         g.appendChild(svgNode('rect', { x: o.x, y: o.y, width: o.w, height: o.h, fill: 'url(#' + id + ')' }));
         svg.appendChild(g);
         used[o.kind] = true;
@@ -448,6 +597,7 @@
       b.type = 'button';
       b.setAttribute('data-zone', d.name + '|' + z.n);
       b.setAttribute('data-area', String(rc.w * rc.h));
+      b.setAttribute('data-row', row.first.id);
       b.style.left = (rc.x / d.w * 100) + '%';
       b.style.top = (rc.y / d.h * 100) + '%';
       b.style.width = (rc.w / d.w * 100) + '%';
@@ -568,6 +718,8 @@
       var li = node('li');
       li.appendChild(node('i', 'key key-' + k));
       li.appendChild(document.createTextNode(LEGEND[k]));
+      var hint = { scrim: TERM.scrim }[k];
+      if (hint) { li.title = hint; li.classList.add('has-term'); }
       list.appendChild(li);
     });
     return list;
@@ -644,14 +796,16 @@
     var head = node('div', 'card-head');
     var title = node('div', 'card-title');
     var h2 = node('h2');
-    h2.appendChild(boardLink(d.id, d.name, 'board-link'));
+    var dl = boardLink(d.id, d.name, 'board-link');
+    if (termFor(d.name)) dl.title = termFor(d.name);
+    h2.appendChild(dl);
     title.appendChild(h2);
     if (showVenue) title.appendChild(node('span', 'venue-of', v.name));
+    title.appendChild(node('span', 'card-meta', ratio(d.w, d.h) + (d.zones.length ? ' · ' + d.zones.length + ' zone' + (d.zones.length === 1 ? '' : 's') : '')));
     if (d.processor) title.appendChild(node('span', 'processor', d.processor));
     head.appendChild(title);
     var dims = node('div', 'dims');
     dims.appendChild(sizeButton(d.w, d.h, d.name, specText(v, d, null)));
-    dims.appendChild(node('small', '', ratio(d.w, d.h) + (d.zones.length ? ' · ' + d.zones.length + ' zone' + (d.zones.length === 1 ? '' : 's') : '')));
     head.appendChild(dims);
     if (!opts.board) card.appendChild(head);
 
@@ -660,10 +814,11 @@
     card.appendChild(props);
 
     var drawing = node('div', 'drawing');
-    var fig = renderFigure(v, d, zoneMatch, card, { big: opts.board, show: opts.show });
+    var fig = renderFigure(v, d, zoneMatch, card, { big: opts.board, show: opts.show, art: opts.art });
     if (fig.ribbon) {
       drawing.classList.add('is-scroll');
       drawing.tabIndex = 0;
+      drawing.setAttribute('role', 'region');
       drawing.setAttribute('aria-label', d.name + ', scroll sideways for the full width');
     }
     // Pin the drawing while the list scrolls, but only when it shows zones.
@@ -675,6 +830,14 @@
     drawing.appendChild(fig.el);
     var legend = renderLegend(fig.used);
     if (legend) drawing.appendChild(legend);
+    if (opts.board) {
+      drawing.classList.add('art-target');
+      drawing.setAttribute('data-drop', 'Drop on a zone to pin it there, or anywhere to place by size');
+      var withArt = !!(opts.art && opts.art.length);
+      if (withArt) drawing.classList.add('has-art');
+      if (withArt && !artZones) drawing.classList.add('hide-zones');
+      if (!withArt) drawing.appendChild(node('p', 'fig-note art-hint', 'Drop an export folder or files here to preview them on the board. Each file goes to the zone its size and name match. They stay on this device.'));
+    }
     if (!fig.placed && d.zones.length) {
       drawing.appendChild(node('p', 'fig-note', 'The sources give sizes for this display, not zone positions.'));
       if (opts.board) {
@@ -710,9 +873,9 @@
       var acts = node('div', 'foot-actions');
       foot.appendChild(acts);
       acts.appendChild(moreMenu([
-        { label: 'Guide SVG', onClick: function () { downloadSvg(Object.assign({}, guideOpts(v, d, null), { filename: guideName(v, d, null, 'svg') })); } },
-        { label: 'Guide PNG', onClick: function () { downloadGuide(guideOpts(v, d, null)); } }
-      ], d.name));
+        { label: 'Guide SVG', icon: 'image', onClick: function () { downloadSvg(Object.assign({}, guideOpts(v, d, null), { filename: guideName(v, d, null, 'svg') })); } },
+        { label: 'Guide PNG', icon: 'image', onClick: function () { downloadGuide(guideOpts(v, d, null)); } }
+      ], d.name, true));
     }
     if (foot.childNodes.length) card.appendChild(foot);
     return { el: card, zones: zones.length };
@@ -758,7 +921,7 @@
 
   function specTags(z) {
     var tags = node('span', 'tags');
-    if (z.stillOnly) tags.appendChild(node('span', 'tag', 'Stills only'));
+    if (z.stillOnly) { var so = node('span', 'tag', 'Stills only'); tags.appendChild(so); }
     if (z.duration) tags.appendChild(node('span', 'tag', z.duration));
     if (z.pad) { var t = node('span', 'tag warn', z.pad + ' px pad'); t.title = 'Keep content ' + z.pad + ' px inside every edge.'; tags.appendChild(t); }
     (z.issues || []).forEach(function (i) { var it = node('span', 'tag warn', ISSUE_LABEL[i.kind] || i.kind); it.title = i.text; tags.appendChild(it); });
@@ -805,11 +968,14 @@
 
     var name = node('span', 'zone-name');
     var line = node('span', 'zone-line');
-    line.appendChild(node('b', '', row.base));
+    var nb = node('b', '', row.base);
+    var hint = termFor(row.base);
+    if (hint) { nb.title = hint; nb.classList.add('has-term'); }
+    line.appendChild(nb);
     var tags = specTags(z);
     if (row.layers.length) {
       var lt = node('span', 'tag layers', row.layers.join(' + '));
-      lt.title = row.layers.length > 1 ? 'Two processor layers of one window: one asset fills both unless the content needs them separately.' : 'Processor layer';
+      lt.title = row.layers.length > 1 ? TERM.fgbg : 'One layer (' + row.layers[0] + ') of a window in the board’s control system.';
       tags.insertBefore(lt, tags.firstChild);
     }
     if (tags.childNodes.length) line.appendChild(tags);
@@ -838,10 +1004,10 @@
     var pngOpts = guideOpts(v, d, row);
     pngOpts.filename = guideName(v, d, row, 'png');
     r.appendChild(moreMenu([
-      { label: 'Copy JSON', onClick: function () { copy(zoneJson(v, d, z, row), 'Copied JSON for ' + z.id); } },
-      { label: 'Guide SVG', onClick: function () { downloadSvg(Object.assign({}, pngOpts, { filename: guideName(v, d, row, 'svg') })); } },
-      { label: 'Guide PNG', onClick: function () { downloadGuide(pngOpts); } }
-    ], row.base));
+      { label: 'Copy JSON', icon: 'json', onClick: function () { copy(zoneJson(v, d, z, row), 'Copied JSON for ' + z.id); } },
+      { label: 'Guide SVG', icon: 'image', onClick: function () { downloadSvg(Object.assign({}, pngOpts, { filename: guideName(v, d, row, 'svg') })); } },
+      { label: 'Guide PNG', icon: 'image', onClick: function () { downloadGuide(pngOpts); } }
+    ], row.base, true));
     return r;
   }
 
@@ -930,10 +1096,14 @@
     var specs = rows.map(function (r) {
       return [r.v.code + ' | ' + r.label.replace(' › ', ' – ') + (r.count > 1 ? ' (×' + r.count + ')' : '') + ' | ' + size(r.w, r.h), r.w, r.h, fpsFor(r.d), dur];
     });
-    return [
+    var unsure = [];
+    rows.forEach(function (r) { if (fpsConflict(r.d) && unsure.indexOf(r.d) === -1) unsure.push(r.d); });
+    // The BOM makes After Effects read the file as UTF-8, so ·, – and × survive in names.
+    return '\uFEFF' + [
       '// Board Sizes · ' + c.name,
-      '// ' + specs.length + ' comps, one per distinct canvas this content needs (×N = placed N times on that board), in a new project folder.',
-      '// Frame rates follow the venue guide where it states one; otherwise 59.94.',
+      '// ' + specs.length + ' comps, ' + (c.board ? 'one for the whole board and one per distinct zone size' : 'one per distinct canvas this content needs (×N = placed N times on that board)') + ', in a new project folder.',
+      '// Frame rates follow the venue guide where it states one; otherwise 59.94.'
+    ].concat(unsure.map(function (d) { return '// Check the frame rate for ' + d.name + ': sources disagree, so this uses ' + fpsFor(d) + '.'; }), [
       '// Duration ' + dur + ' s' + (c.duration ? ' (from Colosseum’s deliverables sheet)' : ' (placeholder)') + '. Run from File › Scripts › Run Script File.',
       '(function () {',
       '  if (!app.project) app.newProject();',
@@ -949,12 +1119,17 @@
       '  alert(specs.length + " comps created in " + folder.name + ".");',
       '})();',
       ''
-    ].join('\n');
+    ]).join('\n');
   }
 
   function renderContent(c) {
     var rows = contentRows(c);
-    el.crumbs.textContent = c.kind === 'broad' ? 'Content types' : 'Game day · ' + c.group;
+    el.crumbs.textContent = '';
+    var back = node('a', 'crumb-link', 'What are you making?');
+    back.href = '?v=' + state.venue + (state.share ? '&share=1' : '');
+    back.addEventListener('click', function (e) { if (e.metaKey || e.ctrlKey) return; e.preventDefault(); go({ venue: state.venue }); });
+    el.crumbs.appendChild(back);
+    el.crumbs.appendChild(document.createTextNode(c.kind === 'broad' ? '' : ' · Game day · ' + c.group));
     el.title.textContent = c.name;
     el.subtitle.textContent = c.about || 'The boards Colosseum builds this for, across every venue.';
 
@@ -983,12 +1158,12 @@
         }).join('\n\n'), 'Copied ' + rows.length + ' specs');
       }, 'primary'),
       moreMenu(withShare([
-        { label: 'AE comps', onClick: function () {
+        { label: 'AE comps script', icon: 'ae', onClick: function () {
           var name = 'board-sizes_' + slug(c.name).toLowerCase() + '.jsx';
           download(name, aeScript(c, rows), 'text/plain');
           toast('Downloaded ' + name + ' (' + rows.length + ' comps)');
         } },
-        { label: 'CSV', onClick: function () {
+        { label: 'Download CSV', icon: 'download', onClick: function () {
           var filename = 'board-sizes_' + slug(c.name).toLowerCase() + '.csv';
           var table = contentCsv(c, rows);
           download(filename, toCsv(table), 'text/csv');
@@ -998,14 +1173,16 @@
     ]);
 
     el.view.textContent = '';
-    var box = node('div', 'targets');
+    el.view.appendChild(exportsTray(rows));
+    var box = node('div', 'targets art-target');
+    box.setAttribute('data-drop', 'Drop exports to check them against every canvas');
     unique(rows.map(function (r) { return r.v.id; })).forEach(function (vid) {
       var mine = rows.filter(function (r) { return r.v.id === vid; });
       var h = node('h2', '', venueById[vid].name);
       h.appendChild(node('small', '', mine.length + ' canvas' + (mine.length === 1 ? '' : 'es')));
       box.appendChild(h);
       mine.forEach(function (r) {
-        var row = node('div', 't-row');
+        var row = node('div', 't-row' + (arts.length ? ' has-art' : ''));
         row.appendChild(miniMap(r.d, r.z.at ? r.z : null, r.w, r.h));
         var nm = node('span', 't-name');
         var a = node('a', '', r.label);
@@ -1019,12 +1196,14 @@
         if (tags.childNodes.length) nm.appendChild(tags);
         row.appendChild(nm);
         row.appendChild(sizeButton(r.w, r.h, r.label, specText(r.v, r.d, r.names && r.names.length ? r.z : null)));
+        if (arts.length) row.appendChild(exportStatus(r, rows));
         var open = node('a', 'mini');
         open.href = a.href;
-        open.title = 'Open ' + r.d.name;
+        open.title = arts.length ? 'Preview on ' + r.d.name : 'Open ' + r.d.name;
         open.setAttribute('aria-label', 'Open ' + r.d.name + ' at ' + r.v.name);
         open.appendChild(icon(ICONS.arrow));
-        open.addEventListener('click', function (e) { e.preventDefault(); goTo(target); });
+        // With exports loaded, the arrow opens the board itself with them on it.
+        open.addEventListener('click', function (e) { e.preventDefault(); if (arts.length) openBoard(r.d.id); else goTo(target); });
         row.appendChild(open);
         box.appendChild(row);
       });
@@ -1040,7 +1219,7 @@
   function goTo(id, smooth, push) {
     var hit = BY_ID[id];
     if (!hit) return false;
-    if (!(hit.z && state.display === hit.d.id && !state.query)) {
+    if (!(state.display === hit.d.id && !state.query && el.view.childNodes.length)) {
       state.venue = hit.v.id; state.content = null; state.page = null; state.display = null; clearSearch();
       storageSet(VENUE_KEY, hit.v.id);
       render(false, push !== false);
@@ -1311,6 +1490,810 @@
     return b;
   }
 
+  /* ---------------- newcomers: technical details, terms, guided start ---------------- */
+
+  // Ids, canvas keys and processor names are for scripts and production
+  // tools; most people only need sizes, so they stay hidden until asked for.
+  function applyTech() {
+    document.body.classList.toggle('hide-tech', !showTech);
+    var b = document.getElementById('tech-toggle');
+    if (b) b.setAttribute('aria-pressed', String(showTech));
+  }
+  function techToggle() {
+    var li = node('li');
+    var b = node('button');
+    b.type = 'button';
+    b.id = 'tech-toggle';
+    b.className = 'tech-toggle';
+    b.title = 'Show ids, canvas keys and processor names';
+    b.appendChild(node('span', '', 'Technical details'));
+    b.appendChild(node('span', 'switch'));
+    b.addEventListener('click', function () {
+      showTech = !showTech;
+      storageSet(TECH_KEY, showTech ? '1' : '0');
+      applyTech();
+    });
+    li.appendChild(b);
+    return li;
+  }
+
+  function renderTerms() {
+    pageHead('Reference', 'Board terms', 'Venue words used across these boards.');
+    setActions([moreMenu(withShare([]), 'board terms')]);
+    var box = section('Terms');
+    var list = node('dl', 'terms');
+    TERMS.forEach(function (t) {
+      list.appendChild(node('dt', '', t[0]));
+      list.appendChild(node('dd', '', t[2]));
+    });
+    box.appendChild(list);
+  }
+
+  // "What are you making?": the mapped content types, as a start for people
+  // who know what they're building but not which boards it needs.
+  function renderStart(v) {
+    var box = node('section', 'start');
+    box.setAttribute('aria-label', 'What are you making?');
+    var head = node('div', 'start-head');
+    head.appendChild(node('h2', '', 'What are you making?'));
+    var sub = node('p', '', 'Pick one to see every board and size it needs. ');
+    var tl = node('a', '', 'Board terms');
+    tl.href = '?p=terms' + (state.share ? '&share=1' : '');
+    tl.addEventListener('click', function (e) { if (e.metaKey || e.ctrlKey) return; e.preventDefault(); openPage('terms'); });
+    sub.appendChild(tl);
+    head.appendChild(sub);
+    box.appendChild(head);
+    var row = node('div', 'start-row');
+    function startLink(c, cls) {
+      var a = node('a', 'start-item' + (cls ? ' ' + cls : ''));
+      a.href = '?c=' + encodeURIComponent(c.id) + (state.share ? '&share=1' : '');
+      a.appendChild(node('b', '', c.name));
+      var n = canvasCount(c);
+      a.appendChild(node('i', '', n + ' canvas' + (n === 1 ? '' : 'es')));
+      a.addEventListener('click', function (e) { if (e.metaKey || e.ctrlKey) return; e.preventDefault(); openContent(c.id); });
+      return a;
+    }
+    DATA.content.broad.forEach(function (c) {
+      if (contentRows(c).some(function (r) { return r.v.id === v.id; })) row.appendChild(startLink(c));
+    });
+    var games = DATA.content.gameDay.filter(function (g) {
+      return g.items.some(function (c) { return contentRows(c).some(function (r) { return r.v.id === v.id; }); });
+    });
+    if (games.length) {
+      var det = node('details', 'start-more');
+      var sum = node('summary', 'start-item');
+      sum.appendChild(node('b', '', 'Game day pieces'));
+      var count = games.reduce(function (n, g) { return n + g.items.length; }, 0);
+      sum.appendChild(node('i', '', count + ' pieces'));
+      det.appendChild(sum);
+      var pop = node('div', 'start-games');
+      games.forEach(function (g) {
+        var grp = node('div', 'start-group');
+        grp.appendChild(node('h3', '', g.name));
+        g.items.forEach(function (c) { grp.appendChild(startLink(c, 'is-small')); });
+        pop.appendChild(grp);
+      });
+      det.appendChild(pop);
+      row.appendChild(det);
+    }
+    if (!row.childNodes.length) return null;
+    box.appendChild(row);
+    return box;
+  }
+  // Content types whose name has every search word, shown above the boards.
+  function contentHits(query) {
+    var words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    if (!words.length || /^\d/.test(words[0])) return [];
+    return Object.keys(CONTENT).map(function (id) { return CONTENT[id]; }).filter(function (c) {
+      var name = c.name.toLowerCase();
+      return words.every(function (w) { return name.indexOf(w) !== -1; });
+    }).slice(0, 6);
+  }
+
+  /* ---------------- art preview ---------------- */
+
+  // Images and videos dropped, pasted or picked in the board view, drawn on
+  // the board at true scale. Several pieces can sit on one board at once (a
+  // main video, wings and ads), each placed by its size or pinned to a zone.
+  // Nothing leaves the browser: each piece is a blob: URL, revoked when it is
+  // removed, and the set stays while you move between boards.
+  var arts = [];
+  var artSeq = 0;
+  var artZones = true;
+  var artPlaying = true;
+  var artVideos = {};   // piece id:placement -> its <video>, kept across redraws
+  var artResync = false; // a new clip appeared, so restart them all together
+  var artAudio = null; // the id of the video whose sound plays; the rest stay muted
+  // Clips of the same length are pulled back into step with the sound source
+  // (or the first clip) twice a second; aux loops of other lengths run free,
+  // as they do on the boards.
+  setInterval(function () {
+    if (!artPlaying) return;
+    var vids = Array.prototype.slice.call(document.querySelectorAll('svg .art-video')).filter(function (v) { return !v.paused && v.readyState >= 3 && isFinite(v.duration); });
+    if (vids.length < 2) return;
+    var ref = vids.filter(function (v) { return !v.muted; })[0] || vids[0];
+    vids.forEach(function (v) {
+      if (v === ref || Math.abs(v.duration - ref.duration) > 0.05) return;
+      if (Math.abs(v.currentTime - ref.currentTime) > 0.12) v.currentTime = ref.currentTime;
+    });
+  }, 500);
+  // Starts every video on the page from the same frame once all can play,
+  // or pauses them all.
+  function syncVideos(fromStart) {
+    var vids = Array.prototype.slice.call(document.querySelectorAll('svg .art-video'));
+    if (!vids.length) return;
+    if (!artPlaying) { vids.forEach(function (v) { v.pause(); }); return; }
+    var waiting = vids.filter(function (v) { return v.readyState < 3; });
+    function go() {
+      vids.forEach(function (v) { if (fromStart) v.currentTime = 0; });
+      vids.forEach(function (v) {
+        var pr = v.play();
+        // A browser that blocks sound without a click still plays it muted.
+        if (pr && pr.catch) pr.catch(function () { if (!v.muted) { v.muted = true; var again = v.play(); if (again && again.catch) again.catch(function () {}); } });
+      });
+    }
+    if (!waiting.length) { go(); return; }
+    var left = waiting.length;
+    waiting.forEach(function (v) {
+      var once = function () { v.removeEventListener('canplay', once); if (--left === 0) go(); };
+      v.addEventListener('canplay', once);
+    });
+  }
+  var MAX_ART = 40;
+  var MAX_IMAGE_BYTES = 80 * 1024 * 1024;
+  var artInput = document.createElement('input');
+  artInput.type = 'file';
+  artInput.accept = 'image/*,video/mp4,video/webm,video/quicktime';
+  artInput.multiple = true;
+  artInput.hidden = true;
+  artInput.addEventListener('change', function () { if (artInput.files) addArt(artInput.files); artInput.value = ''; });
+  document.body.appendChild(artInput);
+  function pickArt() { artInput.click(); }
+  // A whole export folder at once (subfolders included).
+  var folderInput = document.createElement('input');
+  folderInput.type = 'file';
+  folderInput.multiple = true;
+  folderInput.setAttribute('webkitdirectory', '');
+  folderInput.hidden = true;
+  folderInput.addEventListener('change', function () { if (folderInput.files) addArt(folderInput.files); folderInput.value = ''; });
+  document.body.appendChild(folderInput);
+  function pickFolder() { folderInput.click(); }
+  // Files from a drop, walking into any dropped folders.
+  function droppedFiles(dt, done) {
+    var items = Array.prototype.slice.call(dt.items || []);
+    var entries = items.map(function (it) { return it.webkitGetAsEntry ? it.webkitGetAsEntry() : null; });
+    if (!entries.some(function (en) { return en && en.isDirectory; })) { done(Array.prototype.slice.call(dt.files)); return; }
+    var files = [], pending = 0;
+    function finish() { if (!pending) done(files); }
+    function walk(en) {
+      if (!en) return;
+      pending++;
+      if (en.isFile) { en.file(function (f) { files.push(f); pending--; finish(); }, function () { pending--; finish(); }); return; }
+      var reader = en.createReader();
+      (function more() {
+        reader.readEntries(function (list) {
+          if (!list.length) { pending--; finish(); return; }
+          list.forEach(walk);
+          more();
+        }, function () { pending--; finish(); });
+      })();
+    }
+    entries.forEach(walk);
+  }
+  // Filenames help when sizes repeat: a file named for a zone, canvas key or
+  // board (Wing-Left, TOP_AD_LEFT, Kellner) goes there before size decides.
+  // Export names follow the comps, not the manifest ("Honorary Captain -
+  // Wagner - Short Wing Left.mp4", "Run Out_SECTION A_FINAL_1", "Upper Left
+  // Full", "South Lower AD Windows Left"). Names are compared as word sets
+  // with the house shorthands spelled out; the score is how many words a
+  // file shares with a board or zone, and a file naming the opposite side
+  // (left for a right zone, south for the North Board) never matches.
+  var NAME_SYN = { sez: 'south', full: 'fullscreen', fs: 'fullscreen', l: 'left', r: 'right', lt: 'left', rt: 'right', ads: 'ad', mainboard: 'main', jumbo: 'main' };
+  var NAME_STOP = { fg: 1, bg: 1, the: 1, and: 1, of: 1, board: 1, boards: 1, window: 1, windows: 1, final: 1, export: 1, render: 1, comp: 1, cr: 1, kc: 1, fh: 1 };
+  var SIDE_PAIRS = [['left', 'right'], ['east', 'west'], ['north', 'south'], ['upper', 'lower'], ['top', 'bottom']];
+  var wordCache = {};
+  function wordSet(sv) {
+    sv = String(sv);
+    if (wordCache[sv]) return wordCache[sv];
+    var set = {};
+    sv.replace(/\.[a-z0-9]{2,4}$/i, '').replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase().split(/[^a-z0-9]+/).forEach(function (w) {
+      w = NAME_SYN[w] || w;
+      if (!w || NAME_STOP[w] || /^\d+$/.test(w) || /^v\d+$/.test(w) || /^\d+x\d+$/.test(w)) return;
+      set[w] = true;
+    });
+    return (wordCache[sv] = set);
+  }
+  function nameScore(file, labels) {
+    var fw = wordSet(file), lw = {};
+    labels.forEach(function (l) { Object.keys(wordSet(l)).forEach(function (w) { lw[w] = true; }); });
+    for (var i = 0; i < SIDE_PAIRS.length; i++) {
+      var a = SIDE_PAIRS[i][0], b = SIDE_PAIRS[i][1];
+      if ((fw[a] && lw[b] && !lw[a]) || (fw[b] && lw[a] && !lw[b])) return 0;
+    }
+    return Object.keys(fw).filter(function (w) { return lw[w]; }).length;
+  }
+  // H.264 can't hold an odd width or height, so 1725 renders as 1724: a file
+  // one pixel short of an odd size still counts as that size.
+  function sizeFits(a, w, h) { return (a.w === w || (w % 2 === 1 && a.w === w - 1)) && (a.h === h || (h % 2 === 1 && a.h === h - 1)); }
+  function oddNote(a, w, h) { return a.w === w && a.h === h ? '' : ' (H.264 drops the odd pixel)'; }
+  // The rendered full-system sheet (•TEMPLATE - CR - All) is a picture of
+  // every board, not a board; it's kept for reference, not placed.
+  function isSheet(a) { return /full[\s_-]*system|(^|[\s_-])all([\s_.-]|$)/i.test(a.name); }
+  function rowLabels(row) {
+    var out = [row.base];
+    row.zones.forEach(function (z) { out.push(z.name); (KEYS[z.id] || []).forEach(function (k) { out.push(k); }); });
+    return out;
+  }
+  // Art goes on a board view, or is checked against a content type's canvases.
+  function artView() { return !!((state.display || state.content) && !state.query && !state.page); }
+  function isVideo(file) { return /^video\//.test(file.type || '') || /\.(mp4|m4v|webm|mov)$/i.test(file.name || ''); }
+  // Adds files in the order given; pin (optional) is a zone row on the open
+  // board, for a piece dropped onto that zone.
+  // Adds files from a pick, drop, paste or folder. Hidden files and anything
+  // that isn't an image or video are skipped, a file already loaded is not
+  // added twice, an image sequence (name_00001.png …) counts as one piece
+  // (its first frame), and files load four at a time with one summary of
+  // anything that couldn't be read.
+  var SEQ = /^(.*?)(\d{3,})\.(png|jpe?g|webp|tiff?|exr|dpx)$/i;
+  function fileKey(f) { return [f.name, f.size, f.lastModified || 0].join('|'); }
+  function addArt(files, pin) {
+    files = Array.prototype.slice.call(files).filter(function (f) { return f && f.name.charAt(0) !== '.'; });
+    var usable = files.filter(function (f) { return /^image\//.test(f.type || '') || isVideo(f) || SEQ.test(f.name); });
+    if (!usable.length) { toast(files.length > 1 ? 'No images or videos in there. Try PNG, JPEG, WebP, MP4 or WebM.' : 'That isn’t an image or video. Try a PNG, JPEG, WebP or MP4.'); return; }
+    // Image sequences: keep the first frame of each run of three or more.
+    var runs = {};
+    usable.forEach(function (f) { var m = SEQ.exec(f.name); if (m) (runs[m[1] + '|' + m[3].toLowerCase()] = runs[m[1] + '|' + m[3].toLowerCase()] || []).push(f); });
+    var frames = {};
+    Object.keys(runs).forEach(function (k) {
+      var run = runs[k];
+      if (run.length < 3) return;
+      run.sort(function (x, y) { return x.name < y.name ? -1 : 1; });
+      run.forEach(function (f, i) { frames[fileKey(f)] = i === 0 ? run.length : -1; });
+    });
+    var have = {};
+    arts.forEach(function (x) { if (x.file) have[fileKey(x.file)] = true; });
+    var dupes = 0;
+    usable = usable.filter(function (f) {
+      var k = fileKey(f);
+      if (frames[k] === -1) return false;
+      if (have[k]) { dupes++; return false; }
+      have[k] = true;
+      return true;
+    });
+    var room = Math.max(0, MAX_ART - arts.length - artQueue.length);
+    var over = Math.max(0, usable.length - room);
+    usable = usable.slice(0, room);
+    var notes = [];
+    if (dupes) notes.push(dupes + ' already loaded');
+    if (over) notes.push(over + ' over the limit of ' + MAX_ART);
+    if (notes.length) toast((usable.length ? 'Adding ' + usable.length + '. ' : '') + 'Skipped ' + notes.join(' and ') + '.');
+    else if (usable.length > 4) toast('Adding ' + usable.length + ' files…');
+    var batch = { left: usable.length, failed: [] };
+    usable.forEach(function (file) {
+      var seqCount = frames[fileKey(file)] > 0 ? frames[fileKey(file)] : 0;
+      artQueue.push(function (next) { loadArt(file, usable.length === 1 ? pin : null, null, seqCount, function (ok) {
+        if (!ok) batch.failed.push(file.name);
+        if (--batch.left === 0 && batch.failed.length) {
+          var video = batch.failed.some(function (n) { return /\.(mov|mp4|m4v|webm)$/i.test(n); });
+          toast('Couldn’t read ' + (batch.failed.length === 1 ? batch.failed[0] : batch.failed.length + ' files (' + batch.failed.slice(0, 3).join(', ') + (batch.failed.length > 3 ? '…' : '') + ')') + '.' + (video ? ' This browser can’t play that format; H.264 MP4 or WebM always work.' : ' Use PNG, JPEG or WebP.'));
+        }
+        next();
+      }); });
+    });
+    pumpArt();
+  }
+  var artQueue = [], artActive = 0;
+  function pumpArt() {
+    while (artActive < 4 && artQueue.length) {
+      artActive++;
+      artQueue.shift()(function () { artActive--; pumpArt(); });
+    }
+  }
+  // One redraw per frame however many pieces finish loading.
+  var artFrame = 0;
+  function artRender() {
+    if (artFrame) return;
+    artFrame = requestAnimationFrame(function () { artFrame = 0; if (artView()) render(false); });
+  }
+  // saved is the stored record when a piece comes back after a reload;
+  // frames > 0 marks the first frame of an image sequence.
+  function loadArt(file, pin, saved, frames, finished) {
+    finished = finished || function () {};
+    var seq = saved ? saved.order : ++artSeq;
+    var video = isVideo(file);
+    if (!video && file.size > MAX_IMAGE_BYTES) { toast(file.name + ' is over 80 MB.'); finished(true); return; }
+    var url = URL.createObjectURL(file);
+    var name = file.name || (video ? 'Pasted video' : 'Pasted image');
+    if (frames) name = name.replace(/(\d{3,})(\.[a-z0-9]+)$/i, function (m, dgt, ext) { return new Array(dgt.length + 1).join('#') + ext; }) + ' (' + frames + ' frames)';
+    if (saved && saved.label) name = saved.label;
+    function fail() { URL.revokeObjectURL(url); finished(false); }
+    function done(media, w, h) {
+      if (!w || !h) { fail(); return; }
+      // A piece pinned to a zone replaces whatever was pinned there before.
+      if (pin) arts.filter(function (a) { return a.pin && a.pin.d === pin.d && a.pin.row === pin.row; }).forEach(function (a) { dropArt(a, true); });
+      var a = { id: seq, key: saved ? saved.id : seq + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8), url: url, name: name, w: w, h: h, video: video, media: media, pin: pin || null, file: file };
+      arts.push(a);
+      // Files load at different speeds; keep the order they were added in.
+      arts.sort(function (x, y) { return x.id - y.id; });
+      if (!saved) saveArt(a);
+      artRender();
+      finished(true);
+    }
+    if (video) {
+      var v = document.createElement('video');
+      v.muted = true; v.preload = 'auto'; v.playsInline = true;
+      v.onloadeddata = function () { done(v, v.videoWidth, v.videoHeight); };
+      v.onerror = fail;
+      v.src = url;
+    } else {
+      var img = new Image();
+      img.onload = function () { done(img, img.naturalWidth, img.naturalHeight); };
+      img.onerror = fail;
+      img.src = url;
+    }
+  }
+  function forgetVideos(a) {
+    Object.keys(artVideos).forEach(function (k) {
+      if (a && k.split(':')[0] !== String(a.id)) return;
+      artVideos[k].pause(); artVideos[k].removeAttribute('src'); artVideos[k].load();
+      delete artVideos[k];
+    });
+  }
+  function dropArt(a, quiet) {
+    if (artAudio === a.id) artAudio = null;
+    forgetVideos(a);
+    URL.revokeObjectURL(a.url);
+    forgetArt(a);
+    arts = arts.filter(function (x) { return x !== a; });
+    if (!quiet && artView()) render(false);
+  }
+  function clearArt() {
+    artAudio = null;
+    forgetVideos(null);
+    arts.forEach(function (a) { URL.revokeObjectURL(a.url); forgetArt(a); });
+    arts = [];
+    if (artView()) render(false);
+  }
+  // Pieces are kept in this browser's IndexedDB (never sent anywhere), so
+  // they're still there after a reload or a new visit; Remove and Clear
+  // delete them. Files over 250 MB stay for this visit only. Any storage
+  // failure (private windows, blocked storage) just means nothing is kept.
+  var ART_DB = 'board-sizes-art';
+  var MAX_SAVED_BYTES = 250 * 1024 * 1024;
+  function artStore(mode, fn) {
+    try {
+      var req = indexedDB.open(ART_DB, 1);
+      req.onupgradeneeded = function () { req.result.createObjectStore('pieces', { keyPath: 'id' }); };
+      req.onsuccess = function () {
+        var db = req.result;
+        try { var tx = db.transaction('pieces', mode); fn(tx.objectStore('pieces')); tx.oncomplete = tx.onerror = tx.onabort = function () { db.close(); }; } catch (e) { db.close(); }
+      };
+    } catch (e) { /* no IndexedDB here */ }
+  }
+  function saveArt(a) {
+    if (!a.file || a.file.size > MAX_SAVED_BYTES) return;
+    artStore('readwrite', function (st) { st.put({ id: a.key, order: a.id, name: a.file.name || a.name, label: a.name, type: a.file.type || '', blob: a.file, pin: a.pin }); });
+  }
+  function forgetArt(a) { artStore('readwrite', function (st) { st['delete'](a.key); }); }
+  function restoreArts() {
+    artStore('readonly', function (st) {
+      var req = st.getAll();
+      req.onsuccess = function () {
+        (req.result || []).sort(function (x, y) { return x.order - y.order; }).slice(0, MAX_ART).forEach(function (rec) {
+          if (!rec.blob) return;
+          artSeq = Math.max(artSeq, rec.order);
+          var file = rec.blob instanceof File ? rec.blob : new File([rec.blob], rec.name, { type: rec.type });
+          loadArt(file, rec.pin, rec, 0);
+        });
+      };
+    });
+  }
+  function sameShape(aw, ah, bw, bh) { return aw * bh === ah * bw; }
+  function artRows(d) { return groupZones(d.zones).filter(function (r) { return !(r.w === d.w && r.h === d.h); }); }
+  // Where every piece goes on this board, in drawing order (whole-board
+  // pieces first, zone pieces over them):
+  // 1. a piece pinned to a zone goes there, stretched if it's the wrong size;
+  // 2. a piece at a zone's exact size takes every free zone of that size, and
+  //    pieces of the same size share them in turn (left wing, right wing);
+  // 3. then the whole board at its exact size, the same shape as the board or
+  //    a zone at another scale, or scaled to fit and flagged.
+  // When two pieces claim the same spot the later one is drawn and the
+  // earlier one says so.
+  function placeArts(d) {
+    var rows = artRows(d);
+    function hasAt(row) { return !!(row.first.at && row.first.at.length); }
+    function fit(a) {
+      var sc = Math.min(d.w / a.w, d.h / a.h), w = Math.round(a.w * sc), h = Math.round(a.h * sc);
+      return [{ x: Math.round((d.w - w) / 2), y: Math.round((d.h - h) / 2), w: w, h: h }];
+    }
+    // Zones with no position on file (most indoor boards) still match by size;
+    // the art is drawn fit to the board and the note says why.
+    function at(a, list) {
+      if (!list.every(hasAt)) return fit(a);
+      return [].concat.apply([], list.map(function (row) { return row.first.at.map(function (p) { return { x: p.x, y: p.y, w: row.w, h: row.h }; }); }));
+    }
+    function names(list) {
+      var n = list.map(function (r) { return r.base; });
+      var s = n.length > 2 ? n.slice(0, -1).join(', ') + ' and ' + n[n.length - 1] : n.join(' and ');
+      var count = list.reduce(function (k, r) { return k + (hasAt(r) ? r.first.at.length : 1); }, 0);
+      if (!list.every(hasAt)) return s + ' (no position on file, shown fit to the board)';
+      return s + (count > list.length ? ' (' + count + ' placements)' : '');
+    }
+    var out = arts.map(function (a) { return { art: a }; });
+    var taken = {};
+    out.forEach(function (p) {
+      var a = p.art;
+      var row = a.pin && a.pin.d === d.id && rows.filter(function (r) { return r.first.id === a.pin.row; })[0];
+      if (!row) return;
+      var exact = a.w === row.w && a.h === row.h;
+      p.rows = [row]; p.zone = true; p.ok = exact;
+      p.note = exact ? 'Exact size for ' + names([row]) + '.' : 'Stretched onto ' + names([row]) + '. Build at ' + pretty(row.w, row.h) + '.';
+      taken[row.first.id] = p;
+    });
+    var bySize = {};
+    out.forEach(function (p) {
+      if (p.rows) return;
+      var a = p.art;
+      if (!rows.some(function (r) { return sizeFits(a, r.w, r.h); })) return;
+      var fit = rows.filter(function (r) { return sizeFits(a, r.w, r.h); })[0];
+      (bySize[fit.w + 'x' + fit.h] = bySize[fit.w + 'x' + fit.h] || []).push(p);
+    });
+    Object.keys(bySize).forEach(function (k) {
+      var group = bySize[k], a0 = group[0].art;
+      var free = rows.filter(function (r) { return sizeFits(a0, r.w, r.h) && !taken[r.first.id]; });
+      // Named pieces take the zones their filenames name; the rest share
+      // what's left in turn.
+      var named = [];
+      group.forEach(function (p) {
+        var best = 0, hits = [];
+        free.forEach(function (r) {
+          var sc = nameScore(p.art.name, rowLabels(r));
+          if (sc > best) { best = sc; hits = [r]; } else if (sc && sc === best) hits.push(r);
+        });
+        hits = hits.filter(function (r) { return !taken[r.first.id]; });
+        if (!hits.length) return;
+        named.push(p);
+        p.zone = true; p.rows = hits; p.ok = true; p.note = 'Exact size and name match for ' + names(hits) + oddNote(p.art, hits[0].w, hits[0].h) + '.';
+        hits.forEach(function (r) { taken[r.first.id] = p; });
+      });
+      free = free.filter(function (r) { return !taken[r.first.id]; });
+      var rest = group.filter(function (p) { return named.indexOf(p) === -1; });
+      rest.forEach(function (p, i) {
+        var mine = free.filter(function (r, j) { return j % rest.length === i; });
+        p.zone = true;
+        if (!mine.length) { p.rows = []; p.hidden = true; p.ok = false; p.note = 'Every ' + pretty(a0.w, a0.h) + ' zone already has a piece. Name the file for its zone to place it.'; return; }
+        p.rows = mine; p.ok = true; p.note = 'Exact size for ' + names(mine) + oddNote(p.art, mine[0].w, mine[0].h) + '.';
+        mine.forEach(function (r) { taken[r.first.id] = p; });
+      });
+    });
+    var boardPiece = null;
+    out.forEach(function (p) {
+      if (p.rows) return;
+      var a = p.art;
+      if (sizeFits(a, d.w, d.h)) {
+        if (boardPiece) { boardPiece.hidden = true; boardPiece.ok = false; boardPiece.note = 'Covered by ' + a.name + '.'; }
+        boardPiece = p; p.places = [{ x: 0, y: 0, w: d.w, h: d.h }]; p.ok = true; p.note = 'Exact size for this board' + oddNote(a, d.w, d.h) + '.'; return;
+      }
+      if (isSheet(a)) { p.places = []; p.hidden = true; p.away = true; p.ok = true; p.note = 'Full-system sheet, kept for reference.'; return; }
+      // With a folder loaded, a file for another board stays off this one and
+      // says where it goes.
+      var home = arts.length > 1 && homeFor(a, d);
+      if (home) { p.places = []; p.hidden = true; p.away = true; p.ok = true; p.home = home; p.note = 'For ' + home.label + '.'; return; }
+      // Named for a zone here but the wrong size: shown there, flagged.
+      var best = 0, named = [];
+      rows.forEach(function (r) { var sc = nameScore(a.name, rowLabels(r)); if (sc > best) { best = sc; named = [r]; } else if (sc && sc === best) named.push(r); });
+      if (best >= 2 && named.length === 1 && !taken[named[0].first.id]) {
+        var nr = named[0];
+        p.rows = [nr]; p.zone = true; p.ok = false; taken[nr.first.id] = p;
+        p.note = 'Named for ' + names([nr]) + ' but ' + pretty(a.w, a.h) + '. Build at ' + pretty(nr.w, nr.h) + '.';
+        return;
+      }
+      if (sameShape(a.w, a.h, d.w, d.h)) { p.places = [{ x: 0, y: 0, w: d.w, h: d.h }]; p.ok = false; p.note = 'Same shape as the board at ' + Math.round(a.w / d.w * 100) + '% size. Build at ' + pretty(d.w, d.h) + '.'; return; }
+      var shape = rows.filter(function (r) { return sameShape(a.w, a.h, r.w, r.h) && !taken[r.first.id]; })[0];
+      if (shape) { p.rows = [shape]; p.zone = true; p.ok = false; p.note = 'Same shape as ' + names([shape]) + ' at ' + Math.round(a.w / shape.w * 100) + '% size. Build at ' + pretty(shape.w, shape.h) + '.'; taken[shape.first.id] = p; return; }
+      if (arts.length > 1) { p.places = []; p.hidden = true; p.ok = false; p.note = 'Not a size on any board (' + pretty(a.w, a.h) + ').'; return; }
+      p.places = fit(a); p.ok = false; p.note = 'Not a size on this board, so it’s scaled to fit. Build at ' + pretty(d.w, d.h) + '.';
+    });
+    out.forEach(function (p) { if (!p.places) p.places = p.rows && p.rows.length ? at(p.art, p.rows) : []; });
+    // Larger zones first, so an ad over a wing (the same space in another
+    // layout) is drawn on top, as the hit areas are.
+    function area(p) { return p.places.reduce(function (n, r) { return Math.max(n, r.w * r.h); }, 0); }
+    var zoned = out.filter(function (p) { return p.zone; }).sort(function (a, b) { return area(b) - area(a); });
+    return out.filter(function (p) { return !p.zone; }).concat(zoned);
+  }
+  // Another board (this venue first) with a display or zone at this piece's
+  // size, preferring one the filename names.
+  function homeFor(a, not) {
+    var best = null;
+    var order = [venueById[state.venue]].concat(VENUES.filter(function (v) { return v.id !== state.venue; }));
+    order.forEach(function (v) {
+      v.displays.forEach(function (d) {
+        if (d === not) return;
+        var hits = sizeFits(a, d.w, d.h) ? [{ d: d, label: d.name, labels: [d.name] }] : [];
+        groupZones(d.zones).forEach(function (r) { if (!(r.w === d.w && r.h === d.h) && sizeFits(a, r.w, r.h)) hits.push({ d: d, label: d.name + ' › ' + r.base, labels: [d.name].concat(rowLabels(r)) }); });
+        hits.forEach(function (h) {
+          // The venue you're on wins a tie-ish call (Main 1920x1080 at Camp
+          // Randall is the North Board HD feed, not Kohl's 16:9 feed).
+          h.v = v; h.score = nameScore(a.name, h.labels) + (v.id === state.venue ? 2 : 0);
+          if (!best || h.score > best.score) best = h;
+        });
+      });
+    });
+    return best;
+  }
+  // Exports share a long prefix ("Honorary Captain - Wagner - "); cards show
+  // what's left, so Main and Short Wing Left read at a glance.
+  function shortName(a) {
+    var n = a.name.replace(/\.[a-z0-9]{2,4}$/i, '');
+    var cut = n.lastIndexOf(' - ');
+    if (cut <= 0) return n;
+    var pre = n.slice(0, cut);
+    var shared = arts.some(function (x) { return x !== a && x.name.indexOf(pre + ' - ') === 0; });
+    return shared ? n.slice(cut + 3) : n;
+  }
+  function artThumb(a) {
+    var t = node('span', 'art-thumb');
+    if (a.video) {
+      var v = document.createElement('video');
+      v.muted = true; v.preload = 'metadata'; v.src = a.url + '#t=0.1';
+      v.setAttribute('aria-hidden', 'true');
+      t.appendChild(v);
+      t.appendChild(node('span', 'art-kind', 'Video'));
+    } else {
+      t.style.backgroundImage = 'url("' + a.url + '")';
+    }
+    return t;
+  }
+  function artTray(v, d, placed) {
+    var box = node('section', 'art-tray');
+    box.setAttribute('aria-label', 'Preview art');
+    var head = node('div', 'art-head');
+    var off = placed.filter(function (p) { return !p.ok; }).length;
+    var here = placed.filter(function (p) { return !p.away; }).length;
+    var away = placed.length - here;
+    var title = node('span', 'art-title');
+    title.appendChild(node('b', '', 'Preview art'));
+    title.appendChild(node('span', 'art-sum', here + ' on this board' + (away ? ' · ' + away + ' for other boards' : '') + (off ? ' · ' + off + ' to check' : here ? ' · all exact' : '')));
+    head.appendChild(title);
+    var tools = node('span', 'art-tools');
+    // Videos on the board play together: one play/pause and a restart that
+    // puts every clip back to its first frame at once.
+    if (placed.some(function (p) { return p.art.video && !p.hidden && p.places.length; })) {
+      var pb = node('button', 'btn ghost');
+      pb.type = 'button';
+      var paint = function () { pb.textContent = ''; pb.appendChild(icon(ICONS[artPlaying ? 'pause' : 'play'])); pb.appendChild(document.createTextNode(artPlaying ? 'Pause' : 'Play')); };
+      paint();
+      // The first play takes the sound from the main: the biggest video on the
+      // board (aux boards are silent loops). Pick another with its speaker.
+      var mainSound = function () {
+        if (artAudio != null) return false;
+        var vids = placed.filter(function (p) { return p.art.video && !p.hidden && p.places.length; });
+        vids.sort(function (x, y) { return y.places[0].w * y.places[0].h - x.places[0].w * x.places[0].h; });
+        if (!vids.length) return false;
+        artAudio = vids[0].art.id;
+        return true;
+      };
+      pb.addEventListener('click', function () { artPlaying = !artPlaying; if (artPlaying && mainSound()) { render(false); return; } syncVideos(false); paint(); });
+      tools.appendChild(pb);
+      var rs = button('Restart', 'restart', function () { artPlaying = true; artResync = true; if (mainSound()) { render(false); return; } syncVideos(true); artResync = false; paint(); }); rs.classList.add('ghost'); rs.setAttribute('aria-label', 'Restart every video'); tools.appendChild(rs);
+    }
+    tools.appendChild(chip('Zones', artZones, function () { artZones = !artZones; render(false); }));
+    var add = button('Add', 'plus', pickArt); add.classList.add('ghost'); tools.appendChild(add);
+    var fold = button('Folder', 'folder', pickFolder); fold.classList.add('ghost'); fold.title = 'Add every image and video in a folder'; tools.appendChild(fold);
+    var mk = button('Mockup PNG', 'download', function () { downloadMockup(v, d, placed); }); mk.classList.add('ghost'); tools.appendChild(mk);
+    var xb = button('Clear', null, clearArt); xb.classList.add('ghost'); xb.title = 'Remove every piece from this browser'; tools.appendChild(xb);
+    head.appendChild(tools);
+    box.appendChild(head);
+    var list = node('ul', 'art-list');
+    var rows = artRows(d);
+    // This board's pieces first, then the rest, each in the order added.
+    function info(a) { return placed.filter(function (x) { return x.art === a; })[0]; }
+    arts.filter(function (a) { return !info(a).away; }).concat(arts.filter(function (a) { return info(a).away; })).forEach(function (a) {
+      var p = info(a);
+      var li = node('li', 'art-item' + (p.ok ? '' : ' is-off') + (p.away ? ' is-away' : ''));
+      li.appendChild(artThumb(a));
+      var text = node('span', 'art-text');
+      var nm = node('b', '', shortName(a));
+      nm.title = a.name;
+      text.appendChild(nm);
+      text.appendChild(node('i', '', pretty(a.w, a.h)));
+      var noteEl = node('span', 'art-note', p.note);
+      if (p.home) {
+        var go2 = node('a', 'art-go', 'Open');
+        go2.href = '?d=' + encodeURIComponent(p.home.d.id) + (state.share ? '&share=1' : '');
+        go2.addEventListener('click', function (e) { if (e.metaKey || e.ctrlKey) return; e.preventDefault(); openBoard(p.home.d.id); });
+        noteEl.appendChild(document.createTextNode(' '));
+        noteEl.appendChild(go2);
+      }
+      text.appendChild(noteEl);
+      li.appendChild(text);
+      // Place on: automatic by size, or pinned to one of this board's zones.
+      var sel = node('select', 'art-place');
+      sel.setAttribute('aria-label', 'Place ' + a.name);
+      sel.appendChild(new Option('By size', ''));
+      rows.forEach(function (r) { sel.appendChild(new Option(r.base + ' · ' + size(r.w, r.h), r.first.id)); });
+      sel.value = a.pin && a.pin.d === d.id ? a.pin.row : '';
+      sel.addEventListener('change', function () { a.pin = sel.value ? { d: d.id, row: sel.value } : null; saveArt(a); render(false); });
+      var placeRow = node('div', 'art-row');
+      placeRow.appendChild(sel);
+      li.appendChild(placeRow);
+      if (a.video) {
+        // Sound: one video at a time is the audio source for the board.
+        var snd = node('button', 'btn icon-only ghost art-sound' + (artAudio === a.id ? ' is-on' : ''));
+        snd.type = 'button';
+        snd.setAttribute('aria-pressed', String(artAudio === a.id));
+        snd.setAttribute('data-piece', String(a.id));
+        snd.setAttribute('aria-label', 'Use ' + a.name + ' for sound');
+        snd.title = artAudio === a.id ? 'Sound on (from this video)' : 'Use this video for sound';
+        snd.appendChild(icon(ICONS[artAudio === a.id ? 'sound' : 'mute']));
+        // Redrawing inside the click unmutes within the gesture, so the
+        // browser allows the sound; clips are reused, so nothing restarts.
+        snd.addEventListener('click', function () { artAudio = artAudio === a.id ? null : a.id; render(false); });
+        placeRow.appendChild(snd);
+      }
+      var rm = node('button', 'btn icon-only ghost art-rm');
+      rm.type = 'button';
+      rm.setAttribute('aria-label', 'Remove ' + a.name);
+      rm.title = 'Remove';
+      rm.appendChild(icon(ICONS.close));
+      rm.addEventListener('click', function () { dropArt(a); });
+      li.appendChild(rm);
+      list.appendChild(li);
+    });
+    box.appendChild(list);
+    return box;
+  }
+  // On a content type's page the same pieces become an exports check: each
+  // canvas is covered by a piece at its exact size or still missing, and a
+  // piece that fits nothing here says so.
+  function contentLabels(r) {
+    var out = [r.d.name];
+    (r.names || []).forEach(function (n) { out.push(n); });
+    (r.ids || [r.d.id]).forEach(function (id) { (KEYS[id] || []).forEach(function (k) { out.push(k); }); });
+    return out;
+  }
+  // The piece for one canvas: same size, and when several are that size the
+  // one whose filename names this canvas (board, zone or key) wins.
+  function exportFor(r, rows) {
+    var same = arts.filter(function (a) { return sizeFits(a, r.w, r.h); });
+    if (same.length < 2) return same[0] || null;
+    var scored = same.map(function (a) { return { a: a, s: nameScore(a.name, contentLabels(r)) }; }).sort(function (x, y) { return y.s - x.s; });
+    if (scored[0].s) return scored[0].a;
+    // Otherwise a piece no other same-size canvas claims by name.
+    var others = (rows || []).filter(function (o) { return o !== r && o.w === r.w && o.h === r.h; });
+    var free = same.filter(function (a) { return !others.some(function (o) { return nameScore(a.name, contentLabels(o)); }); });
+    return (free.length ? free : same).pop();
+  }
+  function exportsTray(rows) {
+    if (!arts.length) {
+      var hint = node('div', 'art-empty');
+      hint.appendChild(icon(ICONS.image));
+      var t = node('span', 'art-empty-text');
+      t.appendChild(node('b', '', 'Check your exports'));
+      t.appendChild(node('span', '', 'Drop your export folder or files to see which canvases are covered and which are still missing. Files named for a board or zone go there first. They stay on this device.'));
+      hint.appendChild(t);
+      var hb = node('span', 'art-empty-actions');
+      hb.appendChild(button('Pick folder', 'folder', pickFolder));
+      var pf = button('Files', null, pickArt); pf.classList.add('ghost'); hb.appendChild(pf);
+      hint.appendChild(hb);
+      return hint;
+    }
+    var covered = rows.filter(function (r) { return exportFor(r, rows); }).length;
+    // To check: files that fit no board anywhere. A file for a board this
+    // piece doesn't use, or the full-system sheet, is just noted.
+    var stray = arts.filter(function (a) { return !isSheet(a) && !rows.some(function (r) { return sizeFits(a, r.w, r.h); }) && !homeFor(a, null); }).length;
+    var box = node('section', 'art-tray');
+    box.setAttribute('aria-label', 'Your exports');
+    var head = node('div', 'art-head');
+    var title = node('span', 'art-title');
+    title.appendChild(node('b', '', 'Your exports'));
+    title.appendChild(node('span', 'art-sum', covered + ' of ' + rows.length + ' canvases covered' + (stray ? ' · ' + stray + ' to check' : '')));
+    head.appendChild(title);
+    var tools = node('span', 'art-tools');
+    var add = button('Add', 'plus', pickArt); add.classList.add('ghost'); tools.appendChild(add);
+    var fold = button('Folder', 'folder', pickFolder); fold.classList.add('ghost'); fold.title = 'Add every image and video in a folder'; tools.appendChild(fold);
+    var xb = button('Clear', null, clearArt); xb.classList.add('ghost'); xb.title = 'Remove every piece from this browser'; tools.appendChild(xb);
+    head.appendChild(tools);
+    box.appendChild(head);
+    var meter = node('div', 'art-meter' + (covered === rows.length ? ' is-done' : ''));
+    meter.setAttribute('role', 'progressbar');
+    meter.setAttribute('aria-label', 'Canvases covered');
+    meter.setAttribute('aria-valuemin', '0');
+    meter.setAttribute('aria-valuemax', String(rows.length));
+    meter.setAttribute('aria-valuenow', String(covered));
+    var fill = node('span');
+    fill.style.width = (rows.length ? covered / rows.length * 100 : 0) + '%';
+    meter.appendChild(fill);
+    box.appendChild(meter);
+    var list = node('ul', 'art-list');
+    arts.forEach(function (a) {
+      var fits = rows.filter(function (r) { return exportFor(r, rows) === a; });
+      var same = rows.filter(function (r) { return sizeFits(a, r.w, r.h); });
+      var shape = rows.filter(function (r) { return sameShape(a.w, a.h, r.w, r.h); })[0];
+      var home = !fits.length && !same.length && !isSheet(a) ? homeFor(a, null) : null;
+      var neutral = !fits.length && (isSheet(a) || home);
+      var note = fits.length ? 'Covers ' + fits[0].label + (fits.length > 1 ? ' and ' + (fits.length - 1) + ' more' : '') + '.'
+        : same.length ? 'Same size as another file, which is used instead.'
+        : isSheet(a) ? 'Full-system sheet, kept for reference.'
+        : home ? 'Not part of this piece. It fits ' + home.label + '.'
+        : shape ? 'Not a size on any board. Same shape as ' + shape.label + ': build at ' + pretty(shape.w, shape.h) + '.'
+        : 'Not a size on any board.';
+      var li = node('li', 'art-item is-compact' + (fits.length ? '' : neutral ? ' is-away' : ' is-off'));
+      li.appendChild(artThumb(a));
+      var text = node('span', 'art-text');
+      var nm = node('b', '', shortName(a));
+      nm.title = a.name;
+      text.appendChild(nm);
+      text.appendChild(node('i', '', pretty(a.w, a.h)));
+      text.appendChild(node('span', 'art-note', note));
+      li.appendChild(text);
+      var rm = node('button', 'btn icon-only ghost art-rm');
+      rm.type = 'button';
+      rm.setAttribute('aria-label', 'Remove ' + a.name);
+      rm.title = 'Remove';
+      rm.appendChild(icon(ICONS.close));
+      rm.addEventListener('click', function () { dropArt(a); });
+      li.appendChild(rm);
+      list.appendChild(li);
+    });
+    box.appendChild(list);
+    return box;
+  }
+  function exportStatus(r, rows) {
+    var a = exportFor(r, rows);
+    var s = node('span', 't-art' + (a ? ' is-ok' : ' is-missing'));
+    if (a) {
+      var th = artThumb(a);
+      th.classList.add('is-tiny');
+      s.appendChild(th);
+      var nm = node('span', 't-art-name', shortName(a));
+      s.title = a.name;
+      s.appendChild(nm);
+    } else {
+      s.appendChild(node('span', '', 'Missing'));
+    }
+    return s;
+  }
+  // The board with every piece on it, as the board shows it (crops and
+  // scrims blacked out), for sending round before a render. Videos give the
+  // frame they're on.
+  function downloadMockup(v, d, placed) {
+    var sc = Math.min(1, 4096 / d.w, 4096 / d.h);
+    var cv = document.createElement('canvas');
+    cv.width = Math.max(1, Math.round(d.w * sc)); cv.height = Math.max(1, Math.round(d.h * sc));
+    var ctx = cv.getContext('2d');
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.scale(sc, sc);
+    placed.forEach(function (p) {
+      if (p.hidden) return;
+      p.places.forEach(function (r) { try { ctx.drawImage(p.art.media, r.x, r.y, r.w, r.h); } catch (e) { /* a video with no frame yet */ } });
+    });
+    (d.overlays || []).forEach(function (o) {
+      if (o.kind !== 'crop' && o.kind !== 'scrim') return;
+      ctx.fillStyle = o.kind === 'crop' ? '#000' : 'rgba(0,0,0,.6)';
+      ctx.fillRect(o.x, o.y, o.w, o.h);
+    });
+    var name = 'board-sizes_' + d.id.replace(/\//g, '_') + '_mockup.png';
+    cv.toBlob(function (blob) {
+      if (!blob) { toast('Couldn’t make the mockup.'); return; }
+      download(name, blob, 'image/png');
+      toast('Downloaded ' + name);
+    }, 'image/png');
+  }
+  function boardComps(v, d) {
+    var rows = [{ v: v, d: d, label: d.name, w: d.w, h: d.h, count: 1 }];
+    groupZones(d.zones).forEach(function (row) {
+      if (rows.some(function (r) { return r.w === row.w && r.h === row.h; })) {
+        var same = rows.filter(function (r) { return r.w === row.w && r.h === row.h && r !== rows[0]; })[0];
+        if (same) same.label += ' / ' + row.base;
+        return;
+      }
+      rows.push({ v: v, d: d, label: d.name + ' › ' + row.base, w: row.w, h: row.h, count: 1 });
+    });
+    return rows;
+  }
+
   function renderBoard(v, d) {
     el.crumbs.textContent = '';
     var back = node('a', 'crumb-link', v.name);
@@ -1328,27 +2311,37 @@
     var prev = neighbor(d.id, -1), next = neighbor(d.id, 1);
     var acts = [];
     var pager = node('span', 'pager');
-    [[prev, '‹', 'Previous board'], [next, '›', 'Next board']].forEach(function (x) {
-      var b = node('button', 'btn pager-btn', x[1]);
+    [[prev, 'prev', 'Previous board', '←'], [next, 'next', 'Next board', '→']].forEach(function (x) {
+      var b = node('button', 'btn pager-btn');
       b.type = 'button';
+      b.appendChild(icon(ICONS[x[1]]));
       b.disabled = !x[0];
-      b.title = x[0] ? x[2] + ': ' + x[0].name + ' (' + (x[1] === '‹' ? '←' : '→') + ')' : x[2];
+      b.title = x[0] ? x[2] + ': ' + x[0].name + ' (' + x[3] + ')' : x[2];
       b.setAttribute('aria-label', b.title);
       if (x[0]) b.addEventListener('click', function () { openBoard(x[0].id); });
       pager.appendChild(b);
     });
     acts.push(pager);
+    var ab = button('Preview art', 'image', pickArt, 'art-btn');
+    ab.title = 'Preview images or videos on this board. They stay on this device.';
+    acts.push(ab);
     acts.push(button('Copy spec', 'copy', function () { copy(specText(v, d, null), 'Copied ' + d.name); }, 'primary'));
     acts.push(moreMenu(withShare([
-      { label: 'Guide SVG', onClick: function () { downloadSvg(Object.assign({}, guideOpts(v, d, null), { filename: guideName(v, d, null, 'svg') })); } },
-      { label: 'Guide PNG', onClick: function () { downloadGuide(guideOpts(v, d, null)); } },
-      { label: 'CSV', onClick: function () {
+      { label: 'Guide SVG', icon: 'image', onClick: function () { downloadSvg(Object.assign({}, guideOpts(v, d, null), { filename: guideName(v, d, null, 'svg') })); } },
+      { label: 'Guide PNG', icon: 'image', onClick: function () { downloadGuide(guideOpts(v, d, null)); } },
+      { label: 'Download CSV', icon: 'download', onClick: function () {
         var filename = 'board-sizes_' + d.id.replace(/\//g, '_') + '.csv';
         var table = displaysCsv(null, d);
         download(filename, toCsv(table), 'text/csv');
         toast('Downloaded ' + filename + ' (' + (table.length - 1) + ' rows)');
       } },
-      { label: 'Copy id', onClick: function () { copy(d.id, 'Copied ' + d.id); } }
+      { label: 'AE comps script', icon: 'ae', onClick: function () {
+        var rows = boardComps(v, d);
+        var name = 'board-sizes_' + d.id.replace(/\//g, '_') + '.jsx';
+        download(name, aeScript({ name: v.name + ' ' + d.name, board: true }, rows), 'text/plain');
+        toast('Downloaded ' + name + ' (' + rows.length + ' comps)');
+      } },
+      { label: 'Copy id', icon: 'copy', onClick: function () { copy(d.id, 'Copied ' + d.id); } }
     ]), d.name));
     setActions(acts);
 
@@ -1391,8 +2384,11 @@
       fg.appendChild(chip(f[1], filter === f, function () { state.filter = f[0]; render(false); }, n));
     });
     if (fg.querySelectorAll('.chip').length > 1) bar.appendChild(fg);
+    var placed = arts.length ? placeArts(d) : null;
     if (bar.childNodes.length) el.view.appendChild(bar);
-    el.view.appendChild(renderDisplay(v, d, null, false, { board: true, show: show }).el);
+    if (placed) el.view.appendChild(artTray(v, d, placed));
+    el.view.appendChild(renderDisplay(v, d, null, false, { board: true, show: show, art: placed }).el);
+    if (placed) { syncVideos(artResync); artResync = false; }
   }
 
   /* ---------------- venue + search views ---------------- */
@@ -1405,7 +2401,7 @@
     el.title.textContent = match ? '“' + state.query.trim() + '”' : v.name;
     el.subtitle.textContent = match ? 'Matches across every venue.' : v.displays.length + ' display' + (v.displays.length === 1 ? '' : 's') + ' · ' + zones + ' zone' + (zones === 1 ? '' : 's');
     setActions([moreMenu(withShare([
-      { label: 'CSV', onClick: function () {
+      { label: 'Download CSV', icon: 'download', onClick: function () {
         var filename = match ? 'board-sizes_search.csv' : 'board-sizes_' + v.id + '.csv';
         var table = displaysCsv(match);
         download(filename, toCsv(table), 'text/csv');
@@ -1440,6 +2436,23 @@
       filters.appendChild(chip('All displays', state.venueFilter !== 'issues', function () { state.venueFilter = 'all'; render(false); }, v.displays.length));
       filters.appendChild(chip('Open issues', state.venueFilter === 'issues', function () { state.venueFilter = 'issues'; render(false); }, v.displays.filter(hasIssue).length));
       el.view.appendChild(filters);
+    }
+    if (!match && state.venueFilter !== 'issues') { var start = renderStart(v); if (start) el.view.appendChild(start); }
+    if (match) {
+      var made = contentHits(state.query);
+      if (made.length) {
+        var mk = node('div', 'chips made');
+        mk.setAttribute('role', 'group');
+        mk.setAttribute('aria-label', 'Content that matches');
+        mk.appendChild(node('span', 'chips-label', 'Making'));
+        made.forEach(function (c) {
+          var a = node('a', 'chip', c.name);
+          a.href = '?c=' + encodeURIComponent(c.id);
+          a.addEventListener('click', function (e) { if (e.metaKey || e.ctrlKey) return; e.preventDefault(); openContent(c.id); });
+          mk.appendChild(a);
+        });
+        el.view.appendChild(mk);
+      }
     }
     if (!match && v.displays.length > 1 && state.venueFilter !== 'issues') el.view.appendChild(renderOverview(v));
     var shownDisplays = 0, shownZones = 0;
@@ -1496,18 +2509,13 @@
     if (!match && state.display) renderBoard(BY_ID[state.display].v, BY_ID[state.display].d);
     else if (!match && state.page === 'agents') renderAgents();
     else if (!match && state.page === 'issues') renderIssues();
+    else if (!match && state.page === 'terms') renderTerms();
     else if (!match && state.content && CONTENT[state.content]) renderContent(CONTENT[state.content]);
     else renderVenue(venueById[state.venue], match);
     document.body.classList.toggle('is-board-view', !match && !!state.display);
     document.title = el.title.textContent + ' · Board Sizes';
     syncUrl(push);
     if (scrollTop) window.scrollTo(0, 0);
-    requestAnimationFrame(function () {
-      var sideEl = document.getElementById('side');
-      if (!sideEl) return;
-      if (sideEl.scrollHeight > sideEl.clientHeight + 2) sideEl.tabIndex = 0;
-      else sideEl.removeAttribute('tabindex');
-    });
   }
 
   el.footnote.textContent = 'Manifest ' + DATA.version + ' (updated ' + DATA.updated + '). Copy spec includes the size, aspect ratio, and any safe area the manifest records. Red notes are open questions.';
@@ -1528,7 +2536,29 @@
     if (isDisplay(id)) openBoard(id);
     else { openBoard(BY_ID[id].d.id); goTo(id, true, false); }
   });
-  document.addEventListener('click', function (e) { if (!e.target.closest || !e.target.closest('details.menu')) closeMenus(); });
+  // Phones fold the reference links into a menu beside the brand.
+  function closeTopMenu(focusToggle) {
+    if (!el['top-links'].classList.contains('is-open')) return false;
+    el['top-links'].classList.remove('is-open');
+    el['menu-toggle'].setAttribute('aria-expanded', 'false');
+    if (focusToggle) el['menu-toggle'].focus();
+    return true;
+  }
+  el['menu-toggle'].addEventListener('click', function (e) {
+    e.stopPropagation();
+    var open = !el['top-links'].classList.contains('is-open');
+    el['top-links'].classList.toggle('is-open', open);
+    el['menu-toggle'].setAttribute('aria-expanded', String(open));
+    if (open) { var first = el['top-links'].querySelector('button, a'); if (first) first.focus(); }
+  });
+  // Tabbing out of the phone menu closes it, like a click outside does.
+  el['top-links'].addEventListener('focusout', function (e) {
+    if (e.relatedTarget && !el['top-links'].contains(e.relatedTarget) && e.relatedTarget !== el['menu-toggle']) closeTopMenu();
+  });
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest || !e.target.closest('details.menu')) closeMenus();
+    if (!e.target.closest || !e.target.closest('#top-links')) closeTopMenu();
+  });
   window.addEventListener('scroll', function () { closeMenus(); }, true);
   document.addEventListener('keydown', function (event) {
     var typing = /^(input|textarea|select)$/i.test((event.target.tagName || ''));
@@ -1538,19 +2568,58 @@
       if (nb) { event.preventDefault(); openBoard(nb.id); }
     }
     else if (event.key === 'Escape') {
+      if (closeTopMenu(true)) return;
       if (document.querySelector('details.menu[open]')) closeMenus();
       else if (document.querySelector('.is-picked') && document.activeElement !== el.search) clearPicks();
       else if (document.activeElement === el.search && el.search.value) { clearSearch(); render(false); }
     }
   });
 
-  var initialHash = decodeURIComponent(window.location.hash.slice(1));
-  if (!(initialHash && !state.query && !state.content && !state.page && goTo(initialHash, false, false))) render(false);
+  // Drop an image anywhere in the board view (the drawing lights up), or
+  // paste one. Outside the board view a dropped file is ignored rather than
+  // letting the browser navigate away to it.
+  function hasFiles(e) { return !!(e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], 'Files') !== -1); }
+  var dragDepth = 0;
+  document.addEventListener('dragenter', function (e) { if (!hasFiles(e)) return; dragDepth++; if (artView()) document.body.classList.add('is-dragging'); });
+  document.addEventListener('dragleave', function (e) { if (!hasFiles(e)) return; dragDepth = Math.max(0, dragDepth - 1); if (!dragDepth) { document.body.classList.remove('is-dragging'); clearDropZone(); } });
+  document.addEventListener('dragover', function (e) {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = artView() ? 'copy' : 'none';
+    var hit = e.target.closest && e.target.closest('.is-board-view .zone-hit');
+    if (hit && hit.classList.contains('is-drop')) return;
+    clearDropZone();
+    if (hit) hit.classList.add('is-drop');
+  });
+  document.addEventListener('drop', function (e) {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    dragDepth = 0;
+    document.body.classList.remove('is-dragging');
+    clearDropZone();
+    if (!artView() || !e.dataTransfer.files.length) return;
+    var hit = e.target.closest && e.target.closest('.is-board-view .zone-hit');
+    var pin = hit && state.display ? { d: state.display, row: hit.getAttribute('data-row') } : null;
+    droppedFiles(e.dataTransfer, function (files) { addArt(files, pin); });
+  });
+  // While dragging, light up the zone a drop would pin to.
+  function clearDropZone() { var o = document.querySelector('.zone-hit.is-drop'); if (o) o.classList.remove('is-drop'); }
+  document.addEventListener('paste', function (e) {
+    if (!artView() || /^(input|textarea)$/i.test(e.target.tagName || '')) return;
+    var items = Array.prototype.slice.call((e.clipboardData && e.clipboardData.files) || []).filter(function (f) { return /^image\//.test(f.type) || isVideo(f); });
+    if (items.length) { e.preventDefault(); addArt(items); }
+  });
+
+  var initialHash = safeDecode(window.location.hash.slice(1));
+  // Draw the requested view first, so a #zone on the open board only scrolls to it.
+  render(false);
+  restoreArts();
+  if (initialHash && !state.query && !state.content && !state.page) goTo(initialHash, false, false);
   window.addEventListener('popstate', function () {
     readParams();
     el.search.value = state.query;
-    var hash = decodeURIComponent(window.location.hash.slice(1));
+    var hash = safeDecode(window.location.hash.slice(1));
     if (!(hash && !state.query && !state.content && !state.page && goTo(hash, false, false))) render(true);
   });
-  window.addEventListener('hashchange', function () { goTo(decodeURIComponent(window.location.hash.slice(1)), true, false); });
+  window.addEventListener('hashchange', function () { goTo(safeDecode(window.location.hash.slice(1)), true, false); });
 })();
