@@ -1,5 +1,6 @@
 /* Timelapse core — setting, roll time and clip length for the team's Sony bodies.
-   Client-only: no network requests. Settings and theme live in localStorage.
+   Client-only: no network requests. The last plan lives in localStorage, and
+   a shared plan lives in the page's own query string.
 
    Every limit below is from Sony's Help Guides (helpguide.sony.net, NTSC):
    - S&Q Settings: quick-motion rates 240/120/60/30/15/8/4/2/1 fps against a
@@ -24,6 +25,8 @@
   var TL_INTERVALS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 30, 40, 50, 60];
   var TL_4K_MAX = 5;
   var MAX_SHOTS = 9999;
+  var MAX_ROLL = 99 * 3600 + 59 * 60 + 59;
+  var MAX_CLIP = 3600;
 
   // Movie Settings bitrates (Mbps) per record frame rate. k4 marks 4K formats.
   var MOVIE_FORMATS = {
@@ -130,7 +133,8 @@
   }
   function fmtClip(seconds) {
     if (!isFinite(seconds) || seconds <= 0) return '—';
-    if (seconds < 60) return (seconds < 10 ? Math.round(seconds * 10) / 10 : Math.round(seconds)) + 's';
+    var shown = seconds < 10 ? Math.round(seconds * 10) / 10 : Math.round(seconds);
+    if (shown < 60) return shown + 's';
     return fmtClock(seconds);
   }
   function fmtInterval(seconds) {
@@ -260,7 +264,7 @@
         }
         if (ideal < fastestInterval / 1.5) {
           out.valid = false;
-          if (state.method === 'sq') error('That clip is longer than the roll at normal speed. Roll for longer or pick a shorter clip.');
+          if (state.method === 'sq') error('That needs ' + Math.round(1 / ideal) + ' fps or more, and S&Q tops out at ' + usable[0].value + ' fps at ' + fpsLabel() + '. Roll for longer or pick a shorter clip.');
           else error('That needs a frame every ' + fmtInterval(ideal) + ', faster than 1 s. Use S&Q, roll for longer, or pick a shorter clip.');
           return out;
         }
@@ -330,6 +334,16 @@
       return delta < Math.log(1.6) ? best.label : '';
     }
 
+    // Why a cadence can't be dialled in with the current body, method and format.
+    function limitReason(interval) {
+      var list = usableSettings();
+      if (interval < list[0].interval - 1e-9) return state.method === 'sq' ? 'Faster than S&Q allows here' : 'Faster than 1 s: use S&Q';
+      if (interval <= list[list.length - 1].interval + 1e-9) return '';
+      if (state.method === 'sq') return 'Slower than 1 fps: use ' + (body().methods.indexOf('tl') !== -1 ? 'Time-lapse or ' : '') + 'Interval';
+      if (state.method === 'tl' && tlMax() === TL_4K_MAX && interval <= 60) return 'Over 5 s needs an HD format';
+      return 'Past 60 s: needs an external intervalometer';
+    }
+
     return {
       body: body,
       isMovie: isMovie,
@@ -347,8 +361,89 @@
       compute: compute,
       blocked: blocked,
       menuRows: menuRows,
-      subjectFor: subjectFor
+      subjectFor: subjectFor,
+      limitReason: limitReason
     };
+  }
+
+  /* ---------------- saved and shared plans ----------------
+     A plan is a handful of small numbers and ids. Anything read back from
+     storage or a link is checked against these lists and ranges, so a
+     tampered value can only fall back to a default. */
+
+  var DEFAULTS = {
+    body: 'fx3', method: 'sq', mode: 'settings',
+    sqRate: 1, tlInterval: 4, ivInterval: 4,
+    fps: 30, rollSeconds: 600, clipSeconds: 20,
+    movieFormat: 's4k-100', photoFormat: 'craw'
+  };
+  var QUERY_KEYS = {
+    body: 'cam', method: 'm', mode: 'solve', sqRate: 'sq', tlInterval: 'tl', ivInterval: 'iv',
+    fps: 'fps', rollSeconds: 'roll', clipSeconds: 'clip', movieFormat: 'fmt', photoFormat: 'file'
+  };
+  var FORMAT_IDS = (function () {
+    var ids = {};
+    Object.keys(MOVIE_FORMATS).forEach(function (k) { MOVIE_FORMATS[k].forEach(function (f) { ids[f.id] = 'movie'; }); });
+    Object.keys(BODIES).forEach(function (k) { BODIES[k].photos.forEach(function (f) { ids[f.id] = 'photo'; }); });
+    return ids;
+  })();
+
+  // Non-numbers and anything at or below zero are dropped; the rest is clamped.
+  function clampNumber(value, min, max) {
+    var n = typeof value === 'number' ? value : Number(value);
+    if (!isFinite(n) || n <= 0) return null;
+    return Math.max(min, Math.min(max, n));
+  }
+
+  // Returns a fresh, fully valid plan built on top of `base` from untrusted input.
+  function sanitize(input, base) {
+    var out = {};
+    Object.keys(DEFAULTS).forEach(function (k) { out[k] = (base || DEFAULTS)[k]; });
+    if (!input || typeof input !== 'object') return out;
+    if (typeof input.body === 'string' && Object.prototype.hasOwnProperty.call(BODIES, input.body)) out.body = input.body;
+    if (typeof input.method === 'string' && Object.prototype.hasOwnProperty.call(METHODS, input.method)) out.method = input.method;
+    if (input.mode === 'settings' || input.mode === 'clip') out.mode = input.mode;
+    var sq = clampNumber(input.sqRate, 1, 240);
+    if (sq !== null && SQ_RATES.indexOf(sq) !== -1) out.sqRate = sq;
+    var tl = clampNumber(input.tlInterval, 1, 60);
+    if (tl !== null && TL_INTERVALS.indexOf(tl) !== -1) out.tlInterval = tl;
+    var iv = clampNumber(input.ivInterval, 1, 60);
+    if (iv !== null) out.ivInterval = Math.round(iv);
+    var fps = clampNumber(input.fps, 24, 120);
+    if (fps !== null && [24, 30, 60, 120].indexOf(fps) !== -1) out.fps = fps;
+    var roll = clampNumber(input.rollSeconds, 1, MAX_ROLL);
+    if (roll !== null) out.rollSeconds = Math.round(roll);
+    var clip = clampNumber(input.clipSeconds, 0.1, MAX_CLIP);
+    if (clip !== null) out.clipSeconds = Math.round(clip * 10) / 10;
+    if (FORMAT_IDS[input.movieFormat] === 'movie') out.movieFormat = input.movieFormat;
+    if (FORMAT_IDS[input.photoFormat] === 'photo') out.photoFormat = input.photoFormat;
+    return out;
+  }
+
+  // Only the values the current method uses go in the link, so it stays short.
+  function toQuery(state) {
+    var keys = ['body', 'method', 'mode', 'fps', 'rollSeconds'];
+    keys.push(state.method === 'sq' ? 'sqRate' : state.method === 'tl' ? 'tlInterval' : 'ivInterval');
+    keys.push(state.method === 'iv' ? 'photoFormat' : 'movieFormat');
+    if (state.mode === 'clip') keys.push('clipSeconds');
+    return keys.map(function (k) { return QUERY_KEYS[k] + '=' + encodeURIComponent(String(state[k])); }).join('&');
+  }
+
+  // Reads a query string (with or without "?"). Returns null when it holds no plan.
+  function fromQuery(search, base) {
+    var raw = {}, found = false;
+    var lookup = {};
+    Object.keys(QUERY_KEYS).forEach(function (k) { lookup[QUERY_KEYS[k]] = k; });
+    String(search || '').replace(/^\?/, '').split('&').forEach(function (pair) {
+      if (!pair || pair.length > 64) return;
+      var i = pair.indexOf('='), key = i === -1 ? pair : pair.slice(0, i), value = i === -1 ? '' : pair.slice(i + 1);
+      var field;
+      try { field = lookup[decodeURIComponent(key)]; value = decodeURIComponent(value.replace(/\+/g, ' ')); } catch (e) { return; }
+      if (!field) return;
+      found = true;
+      raw[field] = /^(body|method|mode|movieFormat|photoFormat)$/.test(field) ? value : Number(value);
+    });
+    return found ? sanitize(raw, base) : null;
   }
 
   var api = {
@@ -359,6 +454,12 @@
     TL_INTERVALS: TL_INTERVALS,
     TL_4K_MAX: TL_4K_MAX,
     MAX_SHOTS: MAX_SHOTS,
+    MAX_ROLL: MAX_ROLL,
+    MAX_CLIP: MAX_CLIP,
+    DEFAULTS: DEFAULTS,
+    sanitize: sanitize,
+    toQuery: toQuery,
+    fromQuery: fromQuery,
     MOVIE_FORMATS: MOVIE_FORMATS,
     BODIES: BODIES,
     BODY_ORDER: BODY_ORDER,

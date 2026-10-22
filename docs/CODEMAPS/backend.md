@@ -132,7 +132,7 @@
 | `src/lib/app-product-pages.ts` | 170 |
 | `src/lib/app-time.ts` | 257 |
 | `src/lib/apps-live-versions.ts` | 204 |
-| `src/lib/apps-page.ts` | 419 |
+| `src/lib/apps-page.ts` | 421 |
 | `src/lib/asset-attachments.ts` | 166 |
 | `src/lib/asset-image.ts` | 26 |
 | `src/lib/asset-qr-code.ts` | 9 |
