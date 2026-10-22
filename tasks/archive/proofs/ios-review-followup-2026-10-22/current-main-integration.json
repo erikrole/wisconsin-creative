@@ -58,5 +58,11 @@
     "Fixture simulator evidence does not establish authenticated onboarding rollout or hardware-only behavior.",
     "Pre-existing Wrapped UIScreen.main deprecation remains.",
     "Inherited main proof-artifact whitespace is excluded by checking the feature diff against current main."
-  ]
+  ],
+  "infrastructureMain": "5c30cf0f6a86b1f5b9ca0a6e27521cc70aea1ad9",
+  "verifiedNativeCommit": "8c3a666bfd1e15897694b0263d7705b4bd96c3ea",
+  "additionalGates": {
+    "typescript": "passed",
+    "focusedIntegrationLint": "passed"
+  }
 }
