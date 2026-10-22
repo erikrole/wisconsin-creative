@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "f705184d0ccbf53f3a9f31551e00ba6dcb7d5726",
+  "sourcePatchSha256": null,
+  "settings": {
+    "device": "iPhone 18 Pro Max / iOS 27.0 / 795AB4E9-3E4A-4C13-9D4F-27FD822C190B",
+    "viewport": [
+      440,
+      956
+    ],
+    "fixture": "item DEBUG fixture",
+    "role": "STAFF",
+    "route": "item-detail/CAM-014",
+    "appearance": "light",
+    "textSize": "default",
+    "locale": "en_US",
+    "timezone": "America/Chicago",
+    "clock": "9:41 status override",
+    "scroll": [
+      0,
+      0
+    ]
+  },
+  "imageSha256": "4c3ece2aaa9a779a913a507cd114563d618e14a5c1c714e10b952d6cf98d5ca2",
+  "dimensions": [
+    1320,
+    2868
+  ]
+}

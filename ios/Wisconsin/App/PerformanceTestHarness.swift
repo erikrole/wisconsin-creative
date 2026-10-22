@@ -65,7 +65,7 @@ struct PerformanceTestRootView: View {
             ScheduleHarnessView()
         case .tradeBoardStaff, .tradeBoardStudent:
             TradeBoardHarnessView()
-        case .home, .homeAllClear:
+        case .home, .homeAllClear, .homeStudent:
             HomeHarnessView()
         case .homeGettingStarted:
             HomeStudentHarnessView()
@@ -111,6 +111,20 @@ struct PerformanceTestRootView: View {
             NotificationSettingsHarnessView()
         case .reportProblem:
             ReportProblemHarnessView()
+        case .eventDetail:
+            EventDetailHarnessView()
+        case .itemDetail:
+            ItemDetailHarnessView()
+        case .userDetail:
+            NavigationStack { UserDetailHarnessBody() }
+        case .availability:
+            NavigationStack { AvailabilityHarnessBody() }
+        case .gearPicks:
+            GearPicksView()
+        case .sharedLogins:
+            SharedLoginsView()
+        case .blastStaff:
+            BlastStaffHarnessView()
         case .liveActivity:
             LiveActivityHarnessView()
         case .widgetSeed:
@@ -208,10 +222,32 @@ struct NotificationSettingsHarnessView: View {
         }
         .onAppear {
             session.currentUser = ScheduleFixtures.staffUser
-            prefsVM.prefs = NotificationFixtureAPI.pausedPreferences
+            // `GT_NOTIF_STATE`: `healthy` (default: registered, not paused) or
+            // `attention` (paused alerts and a failed registration).
+            let attention = ProcessInfo.processInfo.environment["GT_NOTIF_STATE"] == "attention"
+            prefsVM.prefs = NotificationFixtureAPI.preferences(paused: attention)
             prefsVM.catalog = NotificationFixtureAPI.staffCatalog
-            appState.pushRegistrationState = .failed
+            applyRegistrationState(attention: attention)
             seeded = true
+        }
+        // App launch resets the registration state once it has read the real
+        // permission, so seed it again after that settles.
+        .task {
+            try? await Task.sleep(for: .seconds(1.5))
+            applyRegistrationState(
+                attention: ProcessInfo.processInfo.environment["GT_NOTIF_STATE"] == "attention"
+            )
+        }
+    }
+}
+
+extension NotificationSettingsHarnessView {
+    fileprivate func applyRegistrationState(attention: Bool) {
+        if attention {
+            appState.pushRegistrationState = .failed
+        } else {
+            UserDefaults.standard.set("fixture-apns-token", forKey: PushTokenStorage.currentTokenKey)
+            appState.pushRegistrationState = .registered
         }
     }
 }
@@ -335,6 +371,75 @@ struct WidgetSeedHarnessView: View {
     }
 }
 
+/// One staff blast screen per launch, chosen by `GT_BLAST_VIEW`.
+struct BlastStaffHarnessView: View {
+    @Environment(SessionStore.self) private var session
+
+    var body: some View {
+        Group {
+            switch ProcessInfo.processInfo.environment["GT_BLAST_VIEW"] ?? "blasts" {
+            case "sent":
+                NavigationStack { SentBlastsView() }
+            case "detail":
+                NavigationStack { SentBlastDetailView(id: "sent-1") }
+            case "compose-crew", "compose-groups":
+                ComposeBlastSheet()
+            case "safari":
+                InAppSafariView(url: AppEnvironment.activeAPIBaseURL.appendingPathComponent("/golden-hour")).ignoresSafeArea()
+            default:
+                BlastsView()
+            }
+        }
+        .onAppear { session.currentUser = ScheduleFixtures.staffUser }
+    }
+}
+
+enum BlastStaffFixtureAPI {
+    private static let people = #"[{"id":"u1","name":"Jordan Lee"},{"id":"u2","name":"Casey Moreno"},{"id":"u3","name":"Riley Chen"},{"id":"u4","name":"Sam Patel"}]"#
+
+    static var list: Data {
+        Data(#"""
+        {"data":[
+          {"id":"sent-1","title":"Call time moved to 4:00","body":"Be at gate 3 by 4:00 instead of 4:30.","severity":"WARNING","status":"SENT","targetSummary":"Football vs. Iowa crew","recipientCount":12,"acknowledgedCount":8,"requiresAck":true,"sentAt":"2026-10-17T15:00:00Z","createdBy":{"id":"s","name":"Bucky Badger"}},
+          {"id":"sent-2","title":"Batteries back on the shelf","body":"Return numbered batteries after your shoot.","severity":"INFO","status":"SENT","targetSummary":"Video and Photo, students","recipientCount":9,"acknowledgedCount":9,"requiresAck":true,"sentAt":"2026-10-16T15:00:00Z","createdBy":{"id":"s","name":"Bucky Badger"}},
+          {"id":"sent-3","title":"Hockey call cancelled","body":"Friday's call is off.","severity":"URGENT","status":"CANCELLED","targetSummary":"Hockey vs. Michigan crew","recipientCount":6,"acknowledgedCount":2,"requiresAck":true,"sentAt":"2026-10-15T15:00:00Z","cancelledAt":"2026-10-15T16:00:00Z","createdBy":{"id":"s","name":"Bucky Badger"}}
+        ]}
+        """#.utf8)
+    }
+
+    static var detail: Data {
+        Data(#"""
+        {"data":{"id":"sent-1","title":"Call time moved to 4:00","body":"Be at gate 3 by 4:00 instead of 4:30.","severity":"WARNING","status":"SENT","targetSummary":"Football vs. Iowa crew","recipientCount":4,"acknowledgedCount":2,"requiresAck":true,"sentAt":"2026-10-17T15:00:00Z","createdBy":{"id":"s","name":"Bucky Badger"},
+          "recipients":[
+            {"userId":"u1","readAt":"2026-10-17T15:02:00Z","acknowledgedAt":"2026-10-17T15:03:00Z","user":{"id":"u1","name":"Jordan Lee"}},
+            {"userId":"u2","readAt":"2026-10-17T15:10:00Z","acknowledgedAt":"2026-10-17T15:11:00Z","user":{"id":"u2","name":"Casey Moreno"}},
+            {"userId":"u3","readAt":"2026-10-17T15:20:00Z","acknowledgedAt":null,"user":{"id":"u3","name":"Riley Chen"}},
+            {"userId":"u4","readAt":null,"acknowledgedAt":null,"user":{"id":"u4","name":"Sam Patel"}}
+          ],"addedSinceSend":[]}}
+        """#.utf8)
+    }
+
+    static func preview(for request: URLRequest) -> Data {
+        // URLProtocol sees the body as a stream, not `httpBody`.
+        var data = request.httpBody ?? Data()
+        if data.isEmpty, let stream = request.httpBodyStream {
+            stream.open()
+            var buffer = [UInt8](repeating: 0, count: 4096)
+            while stream.hasBytesAvailable {
+                let read = stream.read(&buffer, maxLength: buffer.count)
+                if read <= 0 { break }
+                data.append(buffer, count: read)
+            }
+            stream.close()
+        }
+        let body = String(data: data, encoding: .utf8) ?? ""
+        if body.contains("DYNAMIC") {
+            return Data(#"{"data":{"count":4,"summary":"Video and Photo, students","users":\#(people)}}"#.utf8)
+        }
+        return Data(#"{"data":{"count":4,"summary":"Football vs. Iowa crew","users":\#(people)}}"#.utf8)
+    }
+}
+
 enum NotificationFixtureAPI {
     /// Rows spread over several days, mixed read and unread, so every section
     /// style (Today, Yesterday, weekday, dated) and both swipe states appear.
@@ -363,11 +468,24 @@ enum NotificationFixtureAPI {
         return Data(#"{"data":[\#(rows.joined(separator: ","))],"total":\#(rows.count),"limit":20,"offset":0,"unreadCount":3}"#.utf8)
     }
 
-    static var pausedPreferences: NotificationPreferences {
+    static var pausedPreferences: NotificationPreferences { preferences(paused: true) }
+
+    /// The `/api/me/notification-preferences` answer, so the screen's own
+    /// reloads (scene activation, retry) succeed instead of 404ing.
+    static func preferencesPayload() -> Data {
+        struct Payload: Encodable {
+            let data: NotificationPreferences
+            let catalog: [NotificationCategoryEntry]
+        }
+        let attention = ProcessInfo.processInfo.environment["GT_NOTIF_STATE"] == "attention"
+        return (try? JSONEncoder().encode(Payload(data: preferences(paused: attention), catalog: staffCatalog))) ?? Data()
+    }
+
+    static func preferences(paused: Bool) -> NotificationPreferences {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return NotificationPreferences(
-            pausedUntil: formatter.string(from: Date.now.addingTimeInterval(60 * 60)),
+            pausedUntil: paused ? formatter.string(from: Date.now.addingTimeInterval(60 * 60)) : nil,
             channels: NotificationPreferences.Channels(email: true, push: true),
             badges: true,
             categories: NotificationPreferences.Categories(
@@ -525,7 +643,7 @@ struct ItemDetailHarnessView: View {
             ItemDetailView(assetId: AssetFixtureAPI.assetId)
         }
         .onAppear {
-            session.currentUser = AppRuntimeMode.performanceScenario == .damageReportProblem
+            session.currentUser = AppRuntimeMode.performanceScenario == .damageReportProblem || ProcessInfo.processInfo.environment["GT_ITEM_ROLE"] == "student"
                 ? ScheduleFixtures.studentUser
                 : ScheduleFixtures.staffUser
         }
@@ -745,6 +863,9 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
     }
 
     private static func body(for request: URLRequest) -> Data? {
+        if AppRuntimeMode.performanceScenario == .onboarding || AppRuntimeMode.performanceScenario == .registration {
+            return OnboardingFixtureAPI.body(for: request)
+        }
         guard let path = request.url?.path else { return nil }
         if AppRuntimeMode.performanceScenario == .latestBrowse, path == "/api/calendar-events" {
             return LatestBrowseFixtureAPI.calendarEvents(for: request)
@@ -755,6 +876,14 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
             return OnboardingFixtureAPI.body(for: request)
         }
         switch path {
+        case "/api/blasts" where AppRuntimeMode.performanceScenario == .blastStaff:
+            return BlastStaffFixtureAPI.list
+        case "/api/blasts/preview" where AppRuntimeMode.performanceScenario == .blastStaff:
+            return BlastStaffFixtureAPI.preview(for: request)
+        case "/api/blasts/sent-1" where AppRuntimeMode.performanceScenario == .blastStaff:
+            return BlastStaffFixtureAPI.detail
+        case "/api/me/blasts" where AppRuntimeMode.performanceScenario == .blastStaff:
+            return Data(#"{"data":[{"id":"r1","title":"Saturday production briefing","body":"Crew check-in opens at 9:30 a.m.","severity":"INFO","sentAt":"2026-10-17T15:00:00Z","senderName":"Creative team","requiresAck":true,"readAt":null}]}"#.utf8)
         case "/api/notifications":
             guard AppRuntimeMode.performanceScenario == .notificationsInbox else { return nil }
             if request.httpMethod == "PATCH" { return Data(#"{"success":true,"ids":[]}"#.utf8) }
@@ -768,7 +897,10 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
             return AppRuntimeMode.performanceScenario == .search
                 ? SearchFixtureAPI.people
                 : FixtureAPI.users
+        case "/api/software": return RecentIOSReviewFixtures.software
+        case "/api/software/review-login/secret": return RecentIOSReviewFixtures.secret
         case "/api/licenses":
+            if ProcessInfo.processInfo.environment["GT_LICENSE_POOL_EMPTY"] == "1" { return Data(#"{"data":[]}"#.utf8) }
             return AppRuntimeMode.performanceScenario == .resourcesLicensesOpen
                 ? FixtureAPI.openLicenses
                 : FixtureAPI.licenses
@@ -781,6 +913,11 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
             if AppRuntimeMode.performanceScenario == .homeGettingStarted {
                 let created = ISO8601DateFormatter().string(from: Date().addingTimeInterval(-3 * 86_400))
                 return Data(#"{"user":{"id":"fixture-student","name":"Avery Nakamura","email":"avery.nakamura@wisc.edu","role":"STUDENT","staffingType":"ST","avatarUrl":null,"forcePasswordChange":false,"accountCreatedAt":"\#(created)"}}"#.utf8)
+            }
+            if AppRuntimeMode.performanceScenario == .homeStudent { return HomeFixtureAPI.studentMe }
+            if AppRuntimeMode.performanceScenario == .itemDetail,
+               ProcessInfo.processInfo.environment["GT_ITEM_ROLE"] == "student" {
+                return HomeFixtureAPI.studentMe
             }
             return AppRuntimeMode.performanceScenario == .previewChrome
                 ? PreviewChromeFixtures.me
@@ -807,6 +944,14 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
                 ? HomeFixtureAPI.allClearDashboard
                 : HomeFixtureAPI.dashboard
         case "/api/scoreboard": return TeamScoreboardFixtureAPI.scoreboard
+            switch AppRuntimeMode.performanceScenario {
+            case .homeAllClear: return HomeFixtureAPI.allClearDashboard
+            case .homeStudent: return HomeFixtureAPI.studentDashboard
+            default: return HomeFixtureAPI.dashboard
+            }
+        case "/api/users/today": return HomeFixtureAPI.todayCrew
+        case "/api/dashboard/activity": return HomeFixtureAPI.activity
+        case "/api/scoreboard": return RecentIOSReviewFixtures.scoreboard(TeamScoreboardFixtureAPI.scoreboard)
         case "/api/wrapped": return WrappedFixtureAPI.recap
         case "/api/users/\(ScoreboardFixtureAPI.userId)/scoreboard":
             return ScoreboardFixtureAPI.scoreboard(for: request)
@@ -837,6 +982,19 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
             return AssetFixtureAPI.asset(for: assetId)
         case "/api/assets": return SearchFixtureAPI.assets(for: request)
         case "/api/damage-cases": return DamageQueueFixtureAPI.list(for: request)
+        case "/api/assets":
+            if let url = request.url, URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.contains(where: { $0.name == "qr" && $0.value == "BIN-REVIEW-1" }) == true {
+                return RecentIOSReviewFixtures.family
+            }
+            return SearchFixtureAPI.assets(for: request)
+        case let path where path.hasPrefix("/api/shift-groups/") && path.hasSuffix("/working-copy")
+            && request.httpMethod == "GET":
+            let groupId = path.dropFirst("/api/shift-groups/".count).dropLast("/working-copy".count)
+            return ScheduleFixtureAPI.workingCopy(shiftGroupId: String(groupId))
+        case "/api/me/notification-preferences": return NotificationFixtureAPI.preferencesPayload()
+        case "/api/gear-picks/me": return UIReviewFixtureAPI.gearPicks
+        case let path where path.hasSuffix("/availability") && path.hasPrefix("/api/users/"):
+            return UIReviewFixtureAPI.availability
         case "/api/reports/utilization": return ReportsFixtureAPI.utilization
         case "/api/reports/checkouts": return ReportsFixtureAPI.checkouts
         case "/api/reservations": return SearchFixtureAPI.reservations
@@ -1626,6 +1784,21 @@ struct HomeHarnessView: View {
 
     var body: some View {
         HomeView()
+            .onAppear {
+                session.currentUser = AppRuntimeMode.performanceScenario == .homeStudent
+                    ? ScheduleFixtures.studentUser
+                    : ScheduleFixtures.staffUser
+            }
+    }
+}
+
+/// The shared team Scoreboard against a canned season. The signed-in fixture
+/// user is on the board, so the tinted "You" row and "Your spot" fact show.
+struct TeamScoreboardHarnessView: View {
+    @Environment(SessionStore.self) private var session
+
+    var body: some View {
+        TeamScoreboardView()
             .onAppear { session.currentUser = ScheduleFixtures.staffUser }
     }
 }
@@ -3159,7 +3332,11 @@ enum HomeFixtureAPI {
     // Keep paired captures stable within the hour, matching the Bookings
     // fixture. Normal launches still follow the current day rather than an
     // authored date that eventually becomes historical data.
-    private static let referenceDate = Calendar.current.dateInterval(of: .hour, for: .now)?.start ?? .now
+    private static let referenceDate: Date = {
+        if let value = ProcessInfo.processInfo.environment["GT_FIXTURE_NOW"],
+           let date = ISO8601DateFormatter().date(from: value) { return date }
+        return Calendar.current.dateInterval(of: .hour, for: .now)?.start ?? .now
+    }()
 
     private static func iso(_ minutes: Int) -> String {
         let formatter = ISO8601DateFormatter()
@@ -3169,38 +3346,87 @@ enum HomeFixtureAPI {
 
     private static func booking(
         _ id: String, _ title: String, _ status: String, _ kind: String,
-        startsIn: Int, endsIn: Int, items: Int, overdue: Bool = false
+        startsIn: Int, endsIn: Int, items: Int, overdue: Bool = false,
+        requester: (id: String, name: String, initials: String) = ("fixture-staff", "Bucky Badger", "BB")
     ) -> String {
         """
         { "id": "\(id)", "kind": "\(kind)", "title": "\(title)", "refNumber": null,
           "eventId": null, "eventIds": [], "linkedEventId": null, "sportCode": null,
-          "requesterUserId": "fixture-staff", "requesterName": "Bucky Badger",
-          "requesterInitials": "BB", "requesterAvatarUrl": null,
+          "requesterUserId": "\(requester.id)", "requesterName": "\(requester.name)",
+          "requesterInitials": "\(requester.initials)", "requesterAvatarUrl": null,
           "locationName": "Media Ops Cage", "startsAt": "\(iso(startsIn))",
           "endsAt": "\(iso(endsIn))", "itemCount": \(items),
           "status": "\(status)", "isOverdue": \(overdue) }
         """
     }
 
-    /// Nothing personal outstanding, one staff draft waiting.
+    private static func shift(
+        _ id: String, area: String, worker: String, summary: String, opponent: String, code: String,
+        startsIn: Int, venue: String, location: String, gear: String, call: Int? = nil
+    ) -> String {
+        """
+        { "id": "\(id)", "area": "\(area)", "workerType": "\(worker)",
+          "startsAt": "\(iso(startsIn))", "endsAt": "\(iso(startsIn + 240))",
+          "callStartsAt": \(call.map { "\"\(iso($0))\"" } ?? "null"),
+          "callEndsAt": \(call.map { "\"\(iso($0 + 60))\"" } ?? "null"),
+          "event": { "id": "ev-\(id)", "summary": "\(summary)", "startsAt": "\(iso(startsIn))",
+                     "allDay": false, "sportCode": "\(code)", "opponent": "\(opponent)",
+                     "isHome": \(venue == "HOME"), "site": "\(venue)", "locationName": "\(location)" },
+          "gearStatus": "\(gear)", "gearItemCount": \(gear == "none" ? 0 : 4) }
+        """
+    }
+
+    private static func upcoming(
+        _ id: String, _ title: String, code: String, opponent: String, startsIn: Int,
+        allDay: Bool = false, location: String, slots: Int, filled: Int
+    ) -> String {
+        """
+        { "id": "\(id)", "title": "\(title)", "sportCode": "\(code)",
+          "startsAt": "\(iso(startsIn))", "endsAt": "\(iso(startsIn + 180))", "allDay": \(allDay),
+          "location": "\(location)", "locationId": null, "opponent": "\(opponent)",
+          "isHome": true, "site": "HOME", "totalShiftSlots": \(slots), "filledShiftSlots": \(filled) }
+        """
+    }
+
+    private static func eventWork(_ id: String, startsIn: Int, needsGear: Bool) -> String {
+        """
+        { "id": "ew-\(id)",
+          "event": { "id": "ev-\(id)", "summary": "Men's Hockey vs Michigan", "startsAt": "\(iso(startsIn))",
+                     "endsAt": "\(iso(startsIn + 180))", "allDay": false, "sportCode": "MHKY",
+                     "opponent": "Michigan", "isHome": true, "site": "HOME", "locationId": null,
+                     "locationName": "Kohl Center" },
+          "shift": { "id": "ews-\(id)", "area": "PHOTO", "workerType": "ST",
+                     "startsAt": "\(iso(startsIn))", "endsAt": "\(iso(startsIn + 180))",
+                     "callStartsAt": "\(iso(startsIn - 60))", "callEndsAt": "\(iso(startsIn))" },
+          "gearStatus": "\(needsGear ? "none" : "reserved")", "gearBookings": [], "needsGear": \(needsGear) }
+        """
+    }
+
+    private static let emptyGroups = """
+    "teamCheckouts": { "total": 0, "overdue": 0, "items": [] },
+    "teamReservations": { "total": 0, "items": [] },
+    "pendingPickups": { "total": 0, "items": [] },
+    """
+
+    /// Nothing personal outstanding and nothing waiting for staff: the state
+    /// that has to say what is next instead of only what is not.
     static var allClearDashboard: Data {
         Data("""
         { "data": {
           "role": "STAFF",
           "stats": { "checkedOut": 0, "overdue": 0, "reserved": 0, "dueToday": 0 },
           "myCheckouts": { "total": 0, "overdue": 0, "items": [] },
-          "teamCheckouts": { "total": 0, "overdue": 0, "items": [] },
-          "teamReservations": { "total": 0, "items": [] },
-          "pendingPickups": { "total": 0, "items": [] },
+          \(emptyGroups)
           "myReservations": [], "overdueCount": 0, "overdueItems": [],
-          "myShifts": [], "upcomingEvents": [],
-          "drafts": [ { "id": "d1", "kind": "RESERVATION", "title": "Hockey B-roll kit",
-                        "itemCount": 6, "updatedAt": "\(iso(-90))" } ],
-          "flaggedItems": [], "lostBulkUnits": [], "myEventWork": []
+          "myShifts": [],
+          "upcomingEvents": [],
+          "drafts": [], "flaggedItems": [], "lostBulkUnits": [], "myEventWork": []
         } }
         """.utf8)
     }
 
+    /// An admin's Home with every lane populated: a shift today for the
+    /// featured card, team custody problems, review queues, and a crew.
     static var dashboard: Data {
         let overdue = [
             booking("od1", "Volleyball baseline kit", "OPEN", "CHECKOUT",
@@ -3209,46 +3435,126 @@ enum HomeFixtureAPI {
         let dueToday = [
             booking("dt1", "Football fall camp — video", "OPEN", "CHECKOUT",
                     startsIn: -120, endsIn: 45, items: 6),
-            booking("dt2", "Women’s soccer portraits", "OPEN", "CHECKOUT",
-                    startsIn: -90, endsIn: 120, items: 3),
         ]
-        let upcoming = [
+        let upcomingGear = [
             booking("up1", "Ohio State photo kit", "BOOKED", "RESERVATION",
                     startsIn: 1_440, endsIn: 1_680, items: 5),
-            booking("up2", "Hockey road audio kit", "BOOKED", "RESERVATION",
-                    startsIn: 2_880, endsIn: 3_240, items: 4),
-            booking("up3", "Kohl Center studio shoot", "BOOKED", "RESERVATION",
-                    startsIn: 4_320, endsIn: 4_500, items: 7),
         ]
-        let checkouts = (overdue + dueToday + upcoming).joined(separator: ",")
+        let mine = (overdue + dueToday + upcomingGear).joined(separator: ",")
+        let pickup = booking("pp1", "Volleyball photo kit", "PENDING_PICKUP", "RESERVATION",
+                             startsIn: -180, endsIn: 600, items: 3)
+        let shifts = [
+            shift("s1", area: "VIDEO", worker: "SD", summary: "Volleyball vs Nebraska", opponent: "Nebraska",
+                  code: "VB", startsIn: 150, venue: "HOME", location: "UW Field House", gear: "checked_out"),
+            shift("s2", area: "VIDEO", worker: "SD", summary: "Men's Hockey vs Minnesota", opponent: "Minnesota",
+                  code: "MHKY", startsIn: 1_500, venue: "HOME", location: "Kohl Center", gear: "reserved"),
+        ].joined(separator: ",")
         return Data("""
         { "data": {
-          "role": "STAFF",
-          "stats": { "checkedOut": 3, "overdue": 1, "reserved": 3, "dueToday": 2 },
-          "myCheckouts": { "total": 6, "overdue": 1, "items": [\(checkouts)] },
+          "role": "ADMIN",
+          "stats": { "checkedOut": 3, "overdue": 1, "reserved": 3, "dueToday": 1 },
+          "myCheckouts": { "total": 3, "overdue": 1, "items": [\(mine)] },
           "teamCheckouts": { "total": 0, "overdue": 0, "items": [] },
           "teamReservations": { "total": 0, "items": [] },
-          "pendingPickups": { "total": 0, "items": [] },
+          "pendingPickups": { "total": 1, "items": [\(pickup)] },
           "myReservations": [],
-          "overdueCount": 1,
-          "overdueItems": [],
-          "myShifts": [],
-          "upcomingEvents": [
-            { "id": "ue1", "title": "Men's Hockey vs Minnesota", "sportCode": "MHKY",
-              "startsAt": "\(iso(1_500))", "endsAt": "\(iso(1_680))", "allDay": false,
-              "location": "Kohl Center", "locationId": null, "opponent": "Minnesota",
-              "isHome": true, "site": null, "totalShiftSlots": 5, "filledShiftSlots": 3 },
-            { "id": "ue2", "title": "Football vs USC - Family Weekend", "sportCode": "FB",
-              "startsAt": "\(iso(5_760))", "endsAt": "\(iso(5_760))", "allDay": true,
-              "location": "Camp Randall", "locationId": null, "opponent": "USC - Family Weekend",
-              "isHome": true, "site": null, "totalShiftSlots": 8, "filledShiftSlots": 8 }
-          ],
+          "overdueCount": 1, "overdueItems": [],
+          "myShifts": [\(shifts)],
+          "upcomingEvents": [],
           "drafts": [ { "id": "d1", "kind": "RESERVATION", "title": "Hockey B-roll kit",
                         "itemCount": 6, "updatedAt": "\(iso(-90))" } ],
-          "flaggedItems": [],
-          "lostBulkUnits": [],
-          "myEventWork": []
+          "flaggedItems": [
+            { "id": "f1", "assetId": "a1", "assetTag": "CAM-014", "assetName": "Sony FX3", "type": "DAMAGED",
+              "bookingTitle": "Football fall camp — video", "reportedBy": "Priya Raman",
+              "description": "Cracked LCD hood.", "imageUrl": null, "assetStatus": "AVAILABLE",
+              "createdAt": "\(iso(-120))" }
+          ],
+          "lostBulkUnits": [ { "skuName": "AA batteries", "count": 4 } ],
+          "myEventWork": [\(eventWork("h1", startsIn: 2_880, needsGear: true))]
         } }
+        """.utf8)
+    }
+
+    /// A student's Home: their own gear, a shift today with a call time, and
+    /// a pickup waiting.
+    static var studentDashboard: Data {
+        let mine = [
+            booking("od1", "Volleyball baseline kit", "OPEN", "CHECKOUT",
+                    startsIn: -300, endsIn: -60, items: 4, overdue: true,
+                    requester: ("fixture-student", "Rowan Diaz", "RD")),
+            booking("dt1", "Women’s soccer portraits", "OPEN", "CHECKOUT",
+                    startsIn: -90, endsIn: 120, items: 3,
+                    requester: ("fixture-student", "Rowan Diaz", "RD")),
+            booking("up1", "Hockey road audio kit", "BOOKED", "RESERVATION",
+                    startsIn: 2_880, endsIn: 3_240, items: 4,
+                    requester: ("fixture-student", "Rowan Diaz", "RD")),
+        ].joined(separator: ",")
+        let reservation = booking("rs1", "Ohio State photo kit", "BOOKED", "RESERVATION",
+                                  startsIn: 1_440, endsIn: 1_680, items: 5,
+                                  requester: ("fixture-student", "Rowan Diaz", "RD"))
+        let shifts = [
+            shift("s1", area: "PHOTO", worker: "ST", summary: "Volleyball vs Nebraska", opponent: "Nebraska",
+                  code: "VB", startsIn: 210, venue: "HOME", location: "UW Field House", gear: "pickup_ready", call: 150),
+            shift("s2", area: "VIDEO", worker: "ST", summary: "Men's Hockey vs Michigan", opponent: "Michigan",
+                  code: "MHKY", startsIn: 2_880, venue: "HOME", location: "Kohl Center", gear: "none", call: 2_820),
+        ].joined(separator: ",")
+        return Data("""
+        { "data": {
+          "role": "STUDENT",
+          "stats": { "checkedOut": 2, "overdue": 1, "reserved": 1, "dueToday": 1 },
+          "myCheckouts": { "total": 2, "overdue": 1, "items": [\(mine)] },
+          \(emptyGroups)
+          "myReservations": [\(reservation)],
+          "overdueCount": 1, "overdueItems": [],
+          "myShifts": [\(shifts)],
+          "upcomingEvents": [],
+          "drafts": [], "flaggedItems": [], "lostBulkUnits": [],
+          "myEventWork": [\(eventWork("h1", startsIn: 2_880, needsGear: true))]
+        } }
+        """.utf8)
+    }
+
+    static var studentMe: Data {
+        Data("""
+        { "user": { "id": "fixture-student", "name": "Rowan Diaz",
+                    "email": "rowan.diaz@wisc.edu", "role": "STUDENT",
+                    "affiliation": null, "collaboratorProfile": null,
+                    "capabilities": [], "collaboratorPolicy": null,
+                    "staffingType": "ST", "avatarUrl": null,
+                    "forcePasswordChange": false } }
+        """.utf8)
+    }
+
+    /// Who is working today, for the staff crew section.
+    static var todayCrew: Data {
+        Data("""
+        { "data": { "events": [
+          { "id": "g1", "summary": "Volleyball vs Nebraska", "startsAt": "\(iso(-30))", "endsAt": "\(iso(150))",
+            "when": "now",
+            "people": [
+              { "id": "u-avery", "name": "Avery Nakamura", "avatarUrl": null, "area": "VIDEO" },
+              { "id": "u-priya", "name": "Priya Raman", "avatarUrl": null, "area": "PHOTO" },
+              { "id": "u-marcus", "name": "Marcus Bell", "avatarUrl": null, "area": "GRAPHICS" }
+            ] },
+          { "id": "g2", "summary": "Women's Soccer Media Day", "startsAt": "\(iso(300))", "endsAt": "\(iso(420))",
+            "when": "later",
+            "people": [
+              { "id": "u-sam", "name": "Sam Whitfield", "avatarUrl": null, "area": "PHOTO" },
+              { "id": "u-rowan", "name": "Rowan Diaz", "avatarUrl": null, "area": "VIDEO" }
+            ] }
+        ] } }
+        """.utf8)
+    }
+
+    /// Latest kiosk pickups and returns, for the staff activity section.
+    static var activity: Data {
+        Data("""
+        { "data": [
+          { "id": "l1", "kind": "returned", "bookingId": "tc1", "title": "Soccer sideline kit",
+            "person": { "id": "u-avery", "name": "Avery Nakamura", "avatarUrl": null }, "at": "\(iso(-20))" },
+          { "id": "l2", "kind": "out", "bookingId": "tc2", "title": "Hockey locker room audio",
+            "person": { "id": "u-priya", "name": "Priya Raman", "avatarUrl": null }, "at": "\(iso(-75))" }
+        ] }
         """.utf8)
     }
 }
@@ -3660,6 +3966,20 @@ enum ScheduleFixtures {
         name: "Bucky Badger",
         email: "bucky.badger@wisc.edu",
         role: "STAFF",
+        affiliation: nil,
+        collaboratorProfile: nil,
+        capabilities: [],
+        collaboratorPolicy: nil,
+        staffingType: "ST",
+        avatarUrl: nil,
+        forcePasswordChange: false
+    )
+
+    static let studentUser = CurrentUser(
+        id: "fixture-student",
+        name: "Rowan Diaz",
+        email: "rowan.diaz@wisc.edu",
+        role: "STUDENT",
         affiliation: nil,
         collaboratorProfile: nil,
         capabilities: [],
@@ -4134,6 +4454,7 @@ enum TradeBoardFixtureAPI {
 
     static var trades: Data? {
         let isStaff = AppRuntimeMode.performanceScenario == .tradeBoardStaff
+            || AppRuntimeMode.performanceScenario == .home
         var rows: [String] = []
 
         // Two claims owed a decision. Staff see both; the student sees only the
@@ -4230,3 +4551,128 @@ private extension Calendar {
 }
 
 #endif
+
+
+/// Seeds the staff session, then renders a fixture event's detail.
+struct EventDetailHarnessView: View {
+    @Environment(SessionStore.self) private var session
+    @State private var event: ScheduleEvent?
+
+    var body: some View {
+        NavigationStack {
+            if let event {
+                EventDetailView(event: event, myShift: nil)
+            } else {
+                ProgressView()
+            }
+        }
+        .task {
+            session.currentUser = ScheduleFixtures.staffUser
+            let events = (try? await APIClient.shared.calendarEvents()) ?? []
+            // `e1` is the fixture event that has a crew plan (filled and open slots).
+            event = events.first { $0.id == "e1" } ?? events.first
+        }
+    }
+}
+
+struct UserDetailHarnessBody: View {
+    @Environment(SessionStore.self) private var session
+    @State private var seeded = false
+
+    var body: some View {
+        Group {
+            if seeded { UserDetailView(userId: ScoreboardFixtureAPI.userId) } else { Color.clear }
+        }
+        .onAppear {
+            session.currentUser = ScheduleFixtures.staffUser
+            seeded = true
+        }
+    }
+}
+
+struct AvailabilityHarnessBody: View {
+    @Environment(SessionStore.self) private var session
+    @State private var seeded = false
+
+    var body: some View {
+        Group {
+            if seeded { AvailabilityView(userId: ScheduleFixtures.staffUser.id) } else { Color.clear }
+        }
+        .onAppear {
+            session.currentUser = ScheduleFixtures.staffUser
+            seeded = true
+        }
+    }
+}
+
+/// Canned payloads for the UI-review detail captures.
+enum UIReviewFixtureAPI {
+    static var availability: Data {
+        let fmt = DateFormatter()
+        fmt.locale = Locale(identifier: "en_US_POSIX")
+        fmt.dateFormat = "yyyy-MM-dd"
+        func day(_ offset: Int) -> String {
+            fmt.string(from: Calendar.current.date(byAdding: .day, value: offset, to: .now) ?? .now)
+        }
+        return Data("""
+        {"data":[
+          {"id":"a1","kind":"WEEKLY","intent":"CANNOT_WORK","status":"APPROVED","dayOfWeek":1,"date":null,"dateEndsOn":null,"allDay":false,"startsAt":"09:00","endsAt":"11:30","label":"CHEM 101","semesterLabel":"Fall 2026","semesterStartsOn":null,"semesterEndsOn":null,"reviewNote":null},
+          {"id":"a2","kind":"WEEKLY","intent":"CANNOT_WORK","status":"APPROVED","dayOfWeek":3,"date":null,"dateEndsOn":null,"allDay":false,"startsAt":"13:00","endsAt":"15:00","label":"Lab","semesterLabel":"Fall 2026","semesterStartsOn":null,"semesterEndsOn":null,"reviewNote":null},
+          {"id":"a3","kind":"WEEKLY","intent":"PREFER","status":"APPROVED","dayOfWeek":3,"date":null,"dateEndsOn":null,"allDay":false,"startsAt":"16:00","endsAt":"21:00","label":"Prefer photo shifts","semesterLabel":null,"semesterStartsOn":null,"semesterEndsOn":null,"reviewNote":null},
+          {"id":"a5","kind":"WEEKLY","intent":"DISLIKE","status":"APPROVED","dayOfWeek":5,"date":null,"dateEndsOn":null,"allDay":false,"startsAt":"17:00","endsAt":"20:00","label":null,"semesterLabel":null,"semesterStartsOn":null,"semesterEndsOn":null,"reviewNote":null},
+          {"id":"a4","kind":"AD_HOC","intent":"TIME_OFF","status":"APPROVED","dayOfWeek":null,"date":"\(day(12))","dateEndsOn":"\(day(15))","allDay":true,"startsAt":"00:00","endsAt":"23:59","label":"Family trip","semesterLabel":null,"semesterStartsOn":null,"semesterEndsOn":null,"reviewNote":null},
+          {"id":"a6","kind":"AD_HOC","intent":"TIME_OFF","status":"PENDING","dayOfWeek":null,"date":"\(day(30))","dateEndsOn":"\(day(30))","allDay":true,"startsAt":"00:00","endsAt":"23:59","label":null,"semesterLabel":null,"semesterStartsOn":null,"semesterEndsOn":null,"reviewNote":null}
+        ]}
+        """.utf8)
+    }
+
+    static var gearPicks: Data {
+        // `GT_GEAR_PICKS=picked` seeds a saved draft so the review bar shows.
+        let submission = ProcessInfo.processInfo.environment["GT_GEAR_PICKS"] == "picked"
+            ? #"{"version":1,"totalCents":9300,"submittedAt":null,"updatedAt":"2026-10-20T15:00:00Z","lines":[{"sku":"BP-1-RED-M","style":"BP-1","colorCode":"RED","size":"M","quantity":1,"unitPriceCents":6500,"lineTotalCents":6500,"itemName":"Pullover hoodie","colorLabel":"Cardinal","category":"Tops"},{"sku":"BP-3-RED-OSFA","style":"BP-3","colorCode":"RED","size":"OSFA","quantity":1,"unitPriceCents":2800,"lineTotalCents":2800,"itemName":"Staff cap","colorLabel":"Cardinal","category":"Accessories"}]}"#
+            : "null"
+        return Data("""
+        {"data":{
+          "cycle":{"id":"c1","title":"Fall 2026 gear","deadline":"2026-11-15T05:00:00Z","isOpen":true,"launchedAt":"2026-10-01T05:00:00Z"},
+          "participant":{"id":"p1","fit":"MENS","allowanceCents":30000},
+          "submission":\(submission),
+          "catalog":{"maxQuantity":4,"categories":["Tops","Bottoms","Accessories"],"items":[
+            {"style":"BP-1","name":"Pullover hoodie","fit":"MENS","category":"Tops","priceCents":6500,"sizeLabel":"Size","sizes":["S","M","L","XL"],"sizesAreExact":true,"oneSize":false,"defaultSize":null,"kit":null,"colors":[{"code":"RED","label":"Cardinal","swatch":"#A00000","image":""},{"code":"BLK","label":"Black","swatch":"#111111","image":""}]},
+            {"style":"BP-2","name":"Quarter zip","fit":"MENS","category":"Tops","priceCents":7500,"sizeLabel":"Size","sizes":["S","M","L","XL"],"sizesAreExact":true,"oneSize":false,"defaultSize":null,"kit":null,"colors":[{"code":"RED","label":"Cardinal","swatch":"#A00000","image":""}]},
+            {"style":"BP-3","name":"Staff cap","fit":"MENS","category":"Accessories","priceCents":2800,"sizeLabel":"Size","sizes":["OSFA"],"sizesAreExact":true,"oneSize":true,"defaultSize":"OSFA","kit":{"kind":"CORE_KIT","colorCode":"RED"},"colors":[{"code":"RED","label":"Cardinal","swatch":"#A00000","image":""}]}
+          ]}
+        }}
+        """.utf8)
+    }
+}
+
+
+extension ScheduleFixtureAPI {
+    /// The staff working-copy editor for a crew plan, published and unchanged,
+    /// so Event detail loads its crew the way a real session does instead of
+    /// falling back to "Showing the published crew" on a 404.
+    static func workingCopy(shiftGroupId: String) -> Data? {
+        let eventId = shiftGroupId.hasPrefix("sg-") ? String(shiftGroupId.dropFirst(3)) : shiftGroupId
+        guard let plan = crewPlans[eventId] else { return nil }
+        let users = plan.shifts.enumerated().compactMap { index, shift -> String? in
+            guard let worker = shift.worker else { return nil }
+            return #"{"id":"u-\#(index)","name":"\#(worker)","role":"STUDENT","staffingType":"ST","primaryArea":"\#(shift.area)","avatarUrl":null}"#
+        }.joined(separator: ",")
+        let slots = plan.shifts.enumerated().map { index, shift -> String in
+            let assignment = shift.worker == nil
+                ? "null"
+                : #"{"sourceAssignmentId":"a-\#(eventId)-\#(index)","userId":"u-\#(index)","status":"CONFIRMED","callStartsAt":null,"callEndsAt":null,"callNote":null,"crewLabel":null,"crewHalf":null,"activeTradeId":null,"bookingCount":0}"#
+            return #"{"key":"s-\#(eventId)-\#(index)","sourceShiftId":"s-\#(eventId)-\#(index)","area":"\#(shift.area)","workerType":"ST","startsAt":"\#(plan.startsAt)","endsAt":"\#(plan.endsAt)","callStartsAt":"\#(plan.callStartsAt)","callEndsAt":null,"notes":null,"assignmentHistoryCount":0,"assignment":\#(assignment)}"#
+        }.joined(separator: ",")
+        return Data("""
+        {"data":{"shiftGroupId":"\(shiftGroupId)","publicationState":"PUBLISHED","publishedAt":"\(plan.startsAt)",
+          "publishedVersion":1,"workingVersion":1,"basePublishedVersion":1,"hasWorkingCopy":false,
+          "updatedAt":null,"updatedById":null,"autoReleaseAt":null,"autoReleaseRunId":null,"autoReleaseError":null,
+          "canUndo":false,"canRedo":false,
+          "changes":{"addedSlots":0,"removedSlots":0,"convertedSlots":0,"assignmentChanges":0,"callWindowChanges":0,"total":0},
+          "affectedWorkerCount":0,"assignedUsers":[\(users)],"defaultWindow":null,
+          "schedule":{"eventStartsAt":"\(plan.startsAt)","eventEndsAt":"\(plan.endsAt)","slots":[\(slots)]},
+          "draftId":null,"pendingClaims":[]}}
+        """.utf8)
+    }
+}

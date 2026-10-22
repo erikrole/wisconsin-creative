@@ -115,6 +115,7 @@ describe("iOS Siri and Shortcuts", () => {
 
   it("searches gear read-only with a spoken and visual answer", () => {
     expect(data).toContain("struct SearchGearIntent: AppIntent");
+    expect(data).toContain("response.orderedRows.map(GearSearchMatch.init)");
     expect(data).toContain('requireIntentCapability("GEAR_CATALOG_VIEW")');
     expect(data).toContain("struct GearSearchSnippetIntent: SnippetIntent");
     expect(data).toContain("snippetIntent: GearSearchSnippetIntent(query: term)");

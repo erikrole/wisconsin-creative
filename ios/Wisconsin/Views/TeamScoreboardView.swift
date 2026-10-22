@@ -1359,7 +1359,7 @@ private struct TeamScoreboardCompareSheet: View {
                             MirroredStat(label: "Events", left: Double(left.summary.eventsWorked), right: Double(right.summary.eventsWorked), format: { "\(Int($0))" })
                             MirroredStat(label: "Wins", left: Double(left.summary.wins), right: Double(right.summary.wins), format: { "\(Int($0))" })
                             MirroredStat(label: "Games", left: Double(left.summary.games), right: Double(right.summary.games), format: { "\(Int($0))" })
-                            MirroredStat(label: "Win rate", left: left.summary.winRate ?? 0, right: right.summary.winRate ?? 0, format: { $0 > 0 ? ScoreboardFormat.winRate($0) : "—" })
+                            MirroredStat(label: "Win rate", left: left.summary.winRate ?? 0, right: right.summary.winRate ?? 0, format: { ScoreboardFormat.winRate($0) }, leftLabel: left.summary.winRateLabel, rightLabel: right.summary.winRateLabel)
                         }
                         sharedSports(left, right)
                     } else {
@@ -1450,16 +1450,18 @@ private struct MirroredStat: View {
     let left: Double
     let right: Double
     let format: (Double) -> String
+    var leftLabel: String? = nil
+    var rightLabel: String? = nil
 
     var body: some View {
         let top = max(left, right, 1)
         VStack(spacing: 4) {
             HStack {
-                Text(format(left)).fontWeight(left > right ? .heavy : .regular)
+                Text(leftLabel ?? format(left)).fontWeight(left > right ? .heavy : .regular)
                 Spacer()
                 Text(label).font(.caption).foregroundStyle(.secondary)
                 Spacer()
-                Text(format(right)).fontWeight(right > left ? .heavy : .regular)
+                Text(rightLabel ?? format(right)).fontWeight(right > left ? .heavy : .regular)
             }
             .monospacedDigit()
             HStack(spacing: 4) {
@@ -1478,7 +1480,7 @@ private struct MirroredStat: View {
             .frame(height: 6)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(label): \(format(left)) versus \(format(right))")
+        .accessibilityLabel("\(label): \(leftLabel ?? format(left)) versus \(rightLabel ?? format(right))")
     }
 }
 

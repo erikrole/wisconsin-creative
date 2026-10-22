@@ -84,6 +84,14 @@ struct BlastsView: View {
     @Environment(SessionStore.self) private var session
     @State private var vm = BlastsViewModel()
     @State private var navigationPath = NavigationPath()
+    @State private var showCompose = false
+    @State private var sentConfirmation: String?
+
+    /// Staff and admins send blasts and track them; everyone else only receives.
+    private var canSend: Bool {
+        let role = session.currentUser?.role ?? ""
+        return role == "STAFF" || role == "ADMIN"
+    }
 
     var body: some View {
         if wrapsInNavigationStack {
@@ -104,6 +112,28 @@ struct BlastsView: View {
             .task {
                 guard let userId = session.currentUser?.id else { return }
                 await vm.load(userId: userId)
+            }
+            .toolbar {
+                if canSend {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            showCompose = true
+                        } label: {
+                            Label("New Blast", systemImage: "square.and.pencil")
+                        }
+                    }
+                }
+            }
+            .sheet(isPresented: $showCompose) {
+                ComposeBlastSheet { receipt in
+                    sentConfirmation = "Sent to \(receipt.recipientCount) \(receipt.recipientCount == 1 ? "person" : "people")."
+                }
+            }
+            .navigationDestination(for: SentBlastsRoute.self) { _ in
+                SentBlastsView()
+            }
+            .navigationDestination(for: SentBlastRoute.self) { route in
+                SentBlastDetailView(id: route.id)
             }
             .navigationDestination(for: BlastRoute.self) { route in
                 if let entry = vm.entry(id: route.id) {
@@ -126,6 +156,55 @@ struct BlastsView: View {
 
     @ViewBuilder
     private var content: some View {
+        if canSend {
+            staffList
+        } else {
+            receivedContent
+        }
+    }
+
+    /// Staff always get the list, so Sent and the compose result are reachable
+    /// even before this phone has received anything.
+    private var staffList: some View {
+        List {
+            if let sentConfirmation {
+                Section {
+                    Label(sentConfirmation, systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(Color.statusText(.green))
+                }
+            }
+            Section {
+                NavigationLink(value: SentBlastsRoute()) {
+                    Label("Sent", systemImage: "paperplane")
+                }
+            } footer: {
+                Text("Blasts the team has sent, with who has acknowledged them.")
+            }
+            if let error = vm.error {
+                Section {
+                    Text(error)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Section("Received") {
+                if vm.entries.isEmpty {
+                    Text(vm.isLoading ? "Loading…" : "Nothing received on this phone yet.")
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(vm.entries) { entry in
+                        NavigationLink(value: BlastRoute(id: entry.id)) {
+                            BlastListRow(entry: entry)
+                        }
+                    }
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+    }
+
+    @ViewBuilder
+    private var receivedContent: some View {
         if vm.entries.isEmpty && vm.isLoading {
             ProgressView("Loading blasts")
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -280,7 +359,7 @@ private struct BlastDetailView: View {
     }
 }
 
-private extension BlastSeverity {
+extension BlastSeverity {
     var blastLabel: String {
         switch self {
         case .info: "Info"

@@ -49,6 +49,12 @@ struct WrappedSlide: Identifiable {
     let card: WrappedCard
     let isTeam: Bool
     var id: String { (isTeam ? "team-" : "you-") + card.id }
+
+    var accessibilityLabel: String {
+        let heading = "\(isTeam ? "The team. " : "")\(card.eyebrow): \(card.value). \(card.sentence)"
+        let details = (card.items ?? []).map { "\($0.label): \($0.value)." }
+        return ([heading] + details).joined(separator: " ")
+    }
 }
 
 /// Mirrors `src/lib/wrapped/dates.ts`: the Scoreboard invites people in from
@@ -356,7 +362,7 @@ struct WrappedPlayerView: View {
                 .gesture(tapGesture)
                 .simultaneousGesture(holdGesture)
                 .accessibilityElement(children: .combine)
-                .accessibilityLabel("\(slide.isTeam ? "The team. " : "")\(slide.card.eyebrow): \(slide.card.value). \(slide.card.sentence)")
+                .accessibilityLabel(slide.accessibilityLabel)
                 .accessibilityHint("Swipe up or down to change cards.")
                 .accessibilityAdjustableAction { direction in
                     switch direction {

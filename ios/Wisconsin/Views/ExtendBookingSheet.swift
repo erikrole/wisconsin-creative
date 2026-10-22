@@ -155,7 +155,7 @@ struct ExtendBookingSheet: View {
                 .buttonStyle(.borderedProminent)
                 .buttonBorderShape(.capsule)
                 .controlSize(.large)
-                .tint(.green)
+                .tint(Color.statusText(.green))
                 .disabled(!canSubmit || isLoading)
                 .accessibilityLabel(isLoading ? "Extending booking" : "Extend booking")
                 .padding(.horizontal, Brand.Space.md)

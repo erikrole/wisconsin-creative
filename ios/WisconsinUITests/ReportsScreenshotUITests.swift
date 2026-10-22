@@ -270,7 +270,7 @@ final class HomeScreenshotUITests: XCTestCase {
         app.launch()
 
         // Wait on fixture content, not chrome.
-        XCTAssertTrue(app.staticTexts["Overdue"].waitForExistence(timeout: 20),
+        XCTAssertTrue(app.staticTexts["Needs attention"].waitForExistence(timeout: 20),
                       "Home never loaded the dashboard fixture")
         attach(app, name: "home-top")
 
@@ -281,13 +281,25 @@ final class HomeScreenshotUITests: XCTestCase {
         attach(app, name: "home-bottom")
     }
 
-    func testHomeAllClearWithStaffDraft() throws {
+    func testHomeStudent() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "homeStudent"
+        app.launch()
+
+        XCTAssertTrue(app.staticTexts["Up next"].waitForExistence(timeout: 20),
+                      "Student Home never loaded the dashboard fixture")
+        attach(app, name: "home-student-top")
+        app.swipeUp(velocity: .slow)
+        attach(app, name: "home-student-queue")
+    }
+
+    func testHomeAllClear() throws {
         let app = XCUIApplication()
         app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "homeAllClear"
         app.launch()
 
-        XCTAssertTrue(app.staticTexts["Hockey B-roll kit"].waitForExistence(timeout: 20),
-                      "Staff draft never rendered")
+        XCTAssertTrue(app.staticTexts["You\u{2019}re all caught up"].waitForExistence(timeout: 20),
+                      "All-clear state never rendered")
         attach(app, name: "home-all-clear")
     }
 
@@ -300,7 +312,7 @@ final class HomeScreenshotUITests: XCTestCase {
         ]
         app.launch()
 
-        XCTAssertTrue(app.staticTexts["Overdue"].waitForExistence(timeout: 20),
+        XCTAssertTrue(app.staticTexts["Needs attention"].waitForExistence(timeout: 20),
                       "Home never loaded at accessibility size")
         attach(app, name: "home-accessibility-top")
         app.swipeUp(velocity: .slow)
@@ -674,9 +686,9 @@ final class TradeBoardReviewScreenshotUITests: XCTestCase {
                       "Trade Board never rendered")
         // Wait on fixture rows, not the section chrome: the queue header renders
         // before the trades arrive.
-        XCTAssertTrue(app.staticTexts["Admin Review"].waitForExistence(timeout: 15),
+        XCTAssertTrue(app.buttons["Approve trade for Marcus Bell"].waitForExistence(timeout: 15),
                       "Review queue never appeared")
-        XCTAssertTrue(app.staticTexts["football vs Minnesota"].waitForExistence(timeout: 15),
+        XCTAssertTrue(app.staticTexts["Football vs Minnesota"].waitForExistence(timeout: 15),
                       "Fixture claims never loaded")
 
         attach(app, name: "trade-board-staff-review")
@@ -689,7 +701,8 @@ final class TradeBoardReviewScreenshotUITests: XCTestCase {
 
         XCTAssertTrue(app.navigationBars["Trade Board"].waitForExistence(timeout: 20),
                       "Trade Board never rendered")
-        XCTAssertTrue(app.staticTexts["Waiting on Admin"].waitForExistence(timeout: 15),
+        app.buttons["Mine"].tap()
+        XCTAssertTrue(app.staticTexts["Pending"].waitForExistence(timeout: 15),
                       "Waiting section never appeared")
 
         attach(app, name: "trade-board-student-waiting")
@@ -707,7 +720,7 @@ final class TradeBoardReviewScreenshotUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Trade Board"].waitForExistence(timeout: 20),
                       "Trade Board never rendered")
 
-        let trade = app.staticTexts["football vs Michigan"]
+        let trade = app.staticTexts["Football vs Michigan"]
         for _ in 0..<5 where !trade.exists || !trade.isHittable {
             app.swipeUp(velocity: .slow)
         }
@@ -1058,8 +1071,8 @@ final class ActionErrorRecoveryUITests: XCTestCase {
         app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "booking-extend"
         app.launchArguments += ["-WisconsinThemeChoice", "light"]
         app.launch()
-        XCTAssertTrue(app.navigationBars["Extend Booking"].waitForExistence(timeout: 20))
-        let preset = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Extend by 1 day")).firstMatch
+        XCTAssertTrue(app.navigationBars["Extend Return"].waitForExistence(timeout: 20))
+        let preset = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "1 more hour")).firstMatch
         XCTAssertTrue(preset.waitForExistence(timeout: 10))
         preset.tap()
         app.buttons["Extend booking"].tap()
@@ -1068,7 +1081,7 @@ final class ActionErrorRecoveryUITests: XCTestCase {
         let dismiss = app.buttons["Dismiss"]
         XCTAssertTrue(dismiss.isHittable, "Failure recovery must be visible without scrolling")
         dismiss.tap()
-        XCTAssertTrue(app.navigationBars["Extend Booking"].exists)
+        XCTAssertTrue(app.navigationBars["Extend Return"].exists)
         XCTAssertTrue(app.buttons["Extend booking"].isEnabled, "Selected extension must survive dismissal")
         app.buttons["Extend booking"].tap()
         XCTAssertTrue(app.buttons["Dismiss"].waitForExistence(timeout: 10), "Repeated failure must be presented again")

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 describe("student shift claim surfaces", () => {
   it("keeps one approval-aware action in Schedule disclosure and Event detail", () => {
@@ -42,7 +43,7 @@ describe("student shift claim surfaces", () => {
   });
 
   it("loads the complete native schedule window through total-aware pages", () => {
-    const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+    const apiClient = apiClientSource();
     const schedule = source("ios/Wisconsin/Views/ScheduleView.swift");
     const models = source("ios/Wisconsin/Models/ScheduleModels.swift");
     const eventDetail = source("ios/Wisconsin/Views/EventDetailSheet.swift");

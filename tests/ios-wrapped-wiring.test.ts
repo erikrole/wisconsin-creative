@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 describe("native Creative Wrapped wiring", () => {
   it("loads the same recap route and opens from the Scoreboard", () => {
-    const client = source("ios/Wisconsin/Core/APIClient.swift");
+    const client = apiClientSource();
     const teamView = source("ios/Wisconsin/Views/TeamScoreboardView.swift");
     const wrapped = source("ios/Wisconsin/Views/WrappedView.swift");
 

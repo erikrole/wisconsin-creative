@@ -22,6 +22,7 @@ struct OnboardingHarnessView: View {
                 }
             }
         }
+        .dynamicTypeSize(ProcessInfo.processInfo.environment["GT_FIXTURE_LARGE_TEXT"] == "1" ? .accessibility3 : .large)
         .onAppear {
             session.currentUser = OnboardingFixtureAPI.user
             seeded = true
@@ -44,9 +45,12 @@ enum OnboardingFixtureAPI {
 
     private static var initialProfile: [String: Any] {
         var profile: [String: Any] = ["id": user.id, "name": user.name, "email": user.email, "role": user.role, "workPhoneNotApplicable": false, "onboardingRequired": true]
-        if ProcessInfo.processInfo.environment["GT_FIXTURE_WELCOME_STEP"] == "APPAREL" {
-            profile.merge(["personalPhone": "(608) 555-0123", "wiscardCardNumber": "1234567890", "wiscardIssueCode": "1", "studentYearOverride": "FRESHMAN", "graduationTerm": "SPRING", "gradYear": 2030]) { _, next in next }
-        }
+        let steps = ["PHONES", "WISCARD", "STUDENT", "APPAREL", "PHOTO"]
+        let index = steps.firstIndex(of: ProcessInfo.processInfo.environment["GT_FIXTURE_WELCOME_STEP"] ?? "PHONES") ?? 0
+        if index > 0 { profile["personalPhone"] = "(608) 555-0123" }
+        if index > 1 { profile.merge(["wiscardCardNumber": "1234567890", "wiscardIssueCode": "1"]) { _, next in next } }
+        if index > 2 { profile.merge(["studentYearOverride": "FRESHMAN", "graduationTerm": "SPRING", "gradYear": 2030]) { _, next in next } }
+        if index > 3 { profile.merge(["topSizeFit": "MENS", "topSize": "M", "shoeSizeSystem": "US_MENS", "shoeSize": "10"]) { _, next in next } }
         return profile
     }
 

@@ -194,6 +194,7 @@ struct GlobalSearchSheet: View {
                 case .asset(let assetId):
                     pendingScannerDestination = .asset(assetId)
                 case .itemFamily(let family):
+                    scope = .gear
                     suppressNextQuerySearch = true
                     query = family.name
                     results = SearchResults(itemFamilies: [family])

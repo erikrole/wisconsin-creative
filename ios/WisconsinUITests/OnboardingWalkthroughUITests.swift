@@ -94,6 +94,28 @@ final class OnboardingWalkthroughUITests: XCTestCase {
         attach(app, "photo-skipped-setup-complete")
     }
 
+    func testLargeTextApparelChoicesRemainReachable() throws {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchEnvironment = ["GT_PERFORMANCE_SCENARIO": "onboarding", "GT_FIXTURE_WELCOME_STEP": "APPAREL", "GT_FIXTURE_LARGE_TEXT": "1"]
+        app.launchArguments += ["-WisconsinThemeChoice", "light"]
+        app.launch()
+        XCTAssertTrue(app.staticTexts["Add your apparel sizes"].waitForExistence(timeout: 15))
+        choose(app, field: "Clothing sizing", value: "Men’s")
+        for (field, value) in [("Top size", "M"), ("US shoe sizing", "Men’s"), ("Shoe size", "10")] {
+            let control = app.buttons[field]
+            for _ in 0..<6 {
+                if control.exists && control.isHittable { break }
+                app.swipeUp()
+            }
+            choose(app, field: field, value: value)
+        }
+        XCTAssertTrue(app.buttons["Continue"].isEnabled)
+        attach(app, "large-text-apparel-reachable")
+        app.buttons["Continue"].tap()
+        XCTAssertTrue(app.staticTexts["Add a profile photo"].waitForExistence(timeout: 10))
+    }
+
     private func choose(_ app: XCUIApplication, field: String, value: String) {
         app.buttons[field].tap()
         let option = app.buttons[value]

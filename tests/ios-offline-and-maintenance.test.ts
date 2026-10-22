@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 describe("iOS reconnect refresh", () => {
   const monitor = source("ios/Wisconsin/Core/NetworkMonitor.swift");
@@ -56,7 +57,7 @@ describe("iOS reconnect refresh", () => {
 });
 
 describe("iOS item maintenance flag (GAP-36, field-work slice)", () => {
-  const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+  const apiClient = apiClientSource();
   const itemDetail = source("ios/Wisconsin/Views/ItemDetailView.swift");
   const route = source("src/app/api/assets/[id]/maintenance/route.ts");
   const permissions = source("src/lib/permissions.ts");

@@ -122,7 +122,7 @@
 | `src/lib/services/usage-analytics-report.ts` | 114 |
 | `src/lib/services/user-deactivation.ts` | 589 |
 | `src/lib/services/wishlist.ts` | 193 |
-| `src/lib/services/wrapped.ts` | 249 |
+| `src/lib/services/wrapped.ts` | 278 |
 
 ## Key Library Files
 

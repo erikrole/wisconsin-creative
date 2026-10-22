@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 function bodyBetween(text: string, startNeedle: string, endNeedle: string) {
   const start = text.indexOf(startNeedle);
@@ -85,7 +86,7 @@ describe("iOS Settings detail menus", () => {
 
   it("adds a native Account & Security password workflow backed by the existing API", () => {
     const accountDetail = source("ios/Wisconsin/Views/AccountSecuritySettingsView.swift");
-    const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+    const apiClient = apiClientSource();
     const route = source("src/app/api/me/change-password/route.ts");
 
     expect(accountDetail).toContain(".navigationTitle(\"Account & Security\")");
@@ -113,7 +114,7 @@ describe("iOS Settings detail menus", () => {
 
   it("uses the authenticated APNs self-test contract", () => {
     const detail = source("ios/Wisconsin/Views/NotificationSettingsView.swift");
-    const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+    const apiClient = apiClientSource();
     const route = source("src/app/api/devices/test/route.ts");
 
     expect(detail).toContain("await APIClient.shared.sendTestPush(deviceToken: currentPushToken)");
@@ -129,7 +130,7 @@ describe("iOS Settings detail menus", () => {
   it("exposes App Review privacy, support, and self-service deletion controls", () => {
     const settings = source("ios/Wisconsin/Views/SettingsView.swift");
     const accountDetail = source("ios/Wisconsin/Views/AccountSecuritySettingsView.swift");
-    const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+    const apiClient = apiClientSource();
     const route = source("src/app/api/me/account/route.ts");
 
     expect(settings).toContain("SettingsRow(title: \"Privacy Policy\"");

@@ -402,7 +402,7 @@ struct ProfileCompletionWelcomeView: View {
     }
 
     private func skipOptionalStep() {
-        guard isOptionalStep else { return }
+        guard isOptionalStep, !(currentStep == .photo && requiresSetup) else { return }
         if currentStep == .photo {
             finishSetup()
         } else if let next = visibleSteps[safe: stepIndex + 1] {

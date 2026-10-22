@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 describe("usage analytics source contract", () => {
   it("keeps report access owner-specific and separate from role", () => {
@@ -15,7 +16,7 @@ describe("usage analytics source contract", () => {
     const access = source("src/lib/usage-analytics.ts");
     const web = source("src/components/ProductUsageTracker.tsx");
     const api = source("src/app/api/product-events/route.ts");
-    const native = source("ios/Wisconsin/Core/APIClient.swift");
+    const native = apiClientSource();
     const report = source("src/lib/services/app-activity-report.ts");
     expect(web).toContain('platform: "web"');
     expect(web).toContain("installationKey");

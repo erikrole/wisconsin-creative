@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 /**
  * GAP-34: the native Bookings list had no status scope or ordering control,
@@ -10,7 +11,7 @@ import { source } from "./_helpers/source";
  */
 describe("iOS bookings power filters", () => {
   const bookingsView = source("ios/Wisconsin/Views/BookingsView.swift");
-  const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+  const apiClient = apiClientSource();
   const route = source("src/app/api/bookings/route.ts");
   const queries = source("src/lib/services/bookings-queries.ts");
 

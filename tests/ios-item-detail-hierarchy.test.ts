@@ -18,7 +18,7 @@ describe("iOS Item Detail hierarchy", () => {
     expect(details).toBeGreaterThan(reserve);
     expect(itemDetail).toContain('asset.computedStatus == .available ? "Reserve Equipment" : "Reserve for Later"');
     expect(itemDetail).toContain("ItemAvailabilityCard(");
-    expect(itemDetail).toContain(".tint(Color.statusText(.purple))");
+    expect(itemDetail).toContain(".tint(Color.statusText(.green))");
   });
 
   it("uses a compact branded hero without duplicate identity or status chrome", () => {
@@ -49,7 +49,7 @@ describe("iOS Item Detail hierarchy", () => {
     expect(itemDetail).toContain("DisclosureGroup(isExpanded: $isExpanded)");
     expect(itemDetail).toContain("Text(asset.location.name)");
     expect(itemDetail).not.toContain('Text("Current Location")');
-    expect(itemDetail).toContain(".font(.caption)\n                    .foregroundStyle(.tertiary)");
+    expect(itemDetail).toContain(".font(.subheadline)\n                    .foregroundStyle(.secondary)");
     expect(itemDetail).toContain(".font(.caption.weight(.medium))\n                .foregroundStyle(.secondary)");
     expect(itemDetail).toContain("DisclosureGroup(isExpanded: $attachmentsExpanded)");
     expect(itemDetail).toContain('Label("Attachments", systemImage: "shippingbox")');

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 describe("native iOS Welcome flow", () => {
   it("routes forced-password users before Welcome and Welcome before the tab shell", () => {
@@ -67,7 +68,7 @@ describe("native iOS Welcome flow", () => {
   });
 
   it("uses the existing completion and multipart avatar contracts", () => {
-    const api = source("ios/Wisconsin/Core/APIClient.swift");
+    const api = apiClientSource();
 
     expect(api).toContain('request(path: "/api/me/profile-completion")');
     expect(api).toContain('request(path: "/api/me/profile-completion", method: "PATCH")');

@@ -37,7 +37,7 @@ function input(overrides: Partial<WrappedPersonInput> = {}): WrappedPersonInput 
   return {
     user: { id: "me", name: "Bucky Badger", avatarUrl: null, primaryArea: "PHOTO", role: "STUDENT" },
     games: [],
-    avatars: new Map(),
+    avatars: new Map([["jo", null], ["sam", null]]),
     shiftHours: 0,
     travelTrips: 0,
     checkouts: [],

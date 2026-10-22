@@ -849,7 +849,7 @@ const blastTargetSchema = z.discriminatedUnion("kind", [
   }),
   z.object({
     kind: z.literal("DYNAMIC"),
-    areas: z.array(z.nativeEnum(ShiftArea)).max(5).optional(),
+    areas: z.array(z.nativeEnum(ShiftArea)).max(Object.values(ShiftArea).length).optional(),
     workerTypes: z.array(z.nativeEnum(ShiftWorkerType)).max(2).optional(),
     sportCodes: z.array(sportCodeSchema).max(30).optional(),
   }),

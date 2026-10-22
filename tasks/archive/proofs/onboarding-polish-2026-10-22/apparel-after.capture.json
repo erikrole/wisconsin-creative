@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "ecc399c3c222fa767b477f585ee391382d645ffe",
+  "sourcePatchSha256": "01c40dfed1745aa02c86dac67071675714424256a54175ba7ee4d41c8df67d19",
+  "settings": {
+    "device": "iPhone 18 Pro Max, iOS 27.0",
+    "viewport": [
+      440,
+      956
+    ],
+    "role": "synthetic student",
+    "appearance": "light",
+    "textSize": "large (default)",
+    "locale": "English",
+    "timezone": "America/Chicago",
+    "clock": "09:41 status bar; fixture dates fixed",
+    "scroll": [
+      0,
+      0
+    ],
+    "fixture": "current required-onboarding snapshot; start=APPAREL",
+    "route": "onboarding"
+  },
+  "imageSha256": "882a009991de0d9af49eaa62b7166e8134f48d4a717fa62534d2397201be1bb6",
+  "dimensions": [
+    1320,
+    2868
+  ]
+}

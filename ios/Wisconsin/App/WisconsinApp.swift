@@ -22,6 +22,7 @@ struct WisconsinApp: App {
     init() {
         AppMetricMonitor.shared.start()
         DiagnosticBreadcrumbs.shared.record(.lifecycle, "App launched")
+        LegacyGearCache.purgeIfNeeded()
         try? Tips.configure([.displayFrequency(.daily)])
 #if DEBUG
         // Harness screenshots must be deterministic: a first-run tip popover
@@ -125,7 +126,6 @@ struct WisconsinApp: App {
             ThumbnailCache.shared.clearForSignOut()
 
             if oldUser != nil {
-                GearStore.shared.clearAll()
                 profileCompletion.resetSession()
                 // A parked reservation belongs to the person who started it.
                 drafts.clearForSignOut()
