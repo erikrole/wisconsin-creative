@@ -89,23 +89,20 @@ export function SidebarToolsFlyout({ tools, icon: Icon, buttonClassName, iconCla
         }}
         onPointerEnter={openFromHover}
         onPointerLeave={closeFromHover}
-        className={cn(chromeFont.className, "w-[19rem] max-w-[calc(100vw-1.5rem)] rounded-xl p-1.5")}
+        className={cn(chromeFont.className, "w-60 max-w-[calc(100vw-1.5rem)] rounded-xl p-1.5")}
       >
         <p className="px-2 pb-1 pt-1.5 text-[11.5px] font-bold tracking-[0.01em] text-muted-foreground">Tools</p>
         <ul className="m-0 list-none p-0">
-          {tools.map(({ label, href, icon: ToolIcon, description }) => (
+          {tools.map(({ label, href, icon: ToolIcon }) => (
             <li key={href}>
               <a
                 href={href}
-                className="flex items-start gap-2.5 rounded-lg px-2 py-2 text-foreground no-underline outline-none transition-colors hover:bg-muted hover:no-underline focus-visible:bg-muted focus-visible:ring-2 focus-visible:ring-ring max-md:py-2.5"
+                className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-foreground no-underline outline-none transition-colors hover:bg-muted hover:no-underline focus-visible:bg-muted focus-visible:ring-2 focus-visible:ring-ring max-md:py-2"
               >
-                <span className="mt-px flex size-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
                   <ToolIcon className="size-4 stroke-[1.75]" aria-hidden="true" />
                 </span>
-                <span className="min-w-0">
-                  <span className="block text-[13.5px] font-bold leading-tight">{label}</span>
-                  <span className="mt-0.5 block text-[12px] font-normal leading-snug text-muted-foreground">{description}</span>
-                </span>
+                <span className="min-w-0 truncate text-[13.5px] font-bold leading-tight">{label}</span>
               </a>
             </li>
           ))}

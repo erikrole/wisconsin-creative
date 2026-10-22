@@ -11,7 +11,7 @@ describe("sidebar web tools", () => {
   });
 
   it("filters a role-restricted tool", () => {
-    const internal: WebTool = { label: "Internal", href: "/internal", icon: WEB_TOOLS[0]!.icon, description: "x", roles: ["ADMIN"] };
+    const internal: WebTool = { label: "Internal", href: "/internal", icon: WEB_TOOLS[0]!.icon, roles: ["ADMIN"] };
     expect(toolsForRole("ADMIN", [internal])).toHaveLength(1);
     expect(toolsForRole("COLLABORATOR", [internal])).toHaveLength(0);
   });
