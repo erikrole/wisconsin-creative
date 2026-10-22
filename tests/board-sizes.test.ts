@@ -57,7 +57,7 @@ describe("Board Sizes routing and page contract", () => {
     expect(app).toContain("image/svg+xml");
     expect(app).toContain("width=\"' + w + '\" height=\"' + h + '\"");
     expect(app).toMatch(/share(:| =) params\.get\('share'\) === '1'/);
-    expect(app).toMatch(/if \(state\.share\) \{[^}]*el\['side-foot'\]\.hidden = true;/);
+    expect(app).toMatch(/if \(state\.share\) \{[^}]*apps\.hidden = true;/);
     expect(app).toContain("if (DATA.links && DATA.links.aeTemplate)");
     expect(html).toContain('href="#content"');
     expect(html).toContain('id="content"');
@@ -100,7 +100,7 @@ describe("Board Sizes art preview and board comps", () => {
     expect(preview).toContain("URL.createObjectURL(file)");
     expect(preview).toContain("URL.revokeObjectURL");
     expect(preview).not.toMatch(/fetch\(|XMLHttpRequest|sendBeacon/);
-    expect(html).toMatch(/img-src data: blob:/);
+    expect(html).toMatch(/img-src 'self' data: blob:/);
     expect(html).toMatch(/connect-src 'none'/);
   });
 
@@ -115,6 +115,40 @@ describe("Board Sizes art preview and board comps", () => {
   it("downloads an After Effects comps script for a whole board", () => {
     expect(app).toContain("aeScript({ name: v.name + ' ' + d.name, board: true }, rows)");
     expect(app).toContain("one for the whole board and one per distinct zone size");
+  });
+});
+
+describe("Board Sizes Wisconsin Creative badge", () => {
+  it("ends the top bar with the shared Apps button and Motion W, with the mask allowed by CSP", () => {
+    expect(html).toMatch(/<div class="wc-brand">\s*<a class="wc-apps" href="\/apps">[\s\S]*?<span class="wc-badge" role="img" aria-label="Wisconsin Creative"><span class="wc-badge-w"><\/span><\/span>\s*<\/div>\s*<\/div>\s*<nav class="venue-tabs"/);
+    expect(html).toContain('mask: url("/brand/wc-badge.svg")');
+    expect(html).toMatch(/img-src 'self'/);
+    expect(readFileSync("public/brand/wc-badge.svg", "utf8")).toContain('fill="currentColor"');
+  });
+});
+
+describe("Board Sizes for people new to the boards", () => {
+  it("explains the board terms on their own page", () => {
+    expect(app).toContain("var PAGES = { agents: 1, issues: 1, terms: 1 };");
+    for (const term of ["'FG / BG'", "'GIP'", "'Speaker scrim'", "'Stills only'", "'Pad'"]) expect(app).toContain(term);
+    expect(app).toContain("['terms', 'Board terms', null]");
+  });
+
+  it("understands everyday search words without matching every board", () => {
+    expect(app).toContain("jumbotron: ['~main-board~']");
+    expect(app).toContain("var MAIN_BOARDS = { 'North Board': 1, 'Centerhung Main': 1, 'Main': 1 };");
+    expect(app).toContain("ribbon: ['fascia', 'ring']");
+  });
+
+  it("hides ids and canvas keys until Technical details is on, and remembers the choice", () => {
+    expect(app).toContain("var showTech = storageGet(TECH_KEY) === '1';");
+    expect(app).toContain("document.body.classList.toggle('hide-tech', !showTech);");
+    expect(html).toContain(".hide-tech .card-props");
+  });
+
+  it("starts the venue page with what you're making", () => {
+    expect(app).toContain("head.appendChild(node('h2', '', 'What are you making?'));");
+    expect(app).toMatch(/if \(!match && state\.venueFilter !== 'issues'\) \{ var start = renderStart\(v\);/);
   });
 });
 

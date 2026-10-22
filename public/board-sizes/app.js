@@ -16,7 +16,7 @@
   var DATA = window.BOARD_DATA;
   var VENUE_KEY = 'boards.venue.v1';
   var el = {};
-  ['search', 'nav-venues', 'nav-ref', 'tools-link', 'side-foot', 'menu-toggle', 'top-links',
+  ['search', 'nav-venues', 'nav-ref', 'menu-toggle', 'top-links',
    'crumbs', 'title', 'actions', 'subtitle', 'props', 'summary', 'view', 'empty', 'footnote', 'toast'
   ].forEach(function (id) { el[id] = document.getElementById(id); });
 
@@ -56,7 +56,57 @@
       d.zones.forEach(function (z) { (z.issues || []).forEach(function (i) { OPEN_ISSUES.push({ v: v, d: d, z: z, issue: i }); }); });
     });
   });
-  var PAGES = { agents: 1, issues: 1 };
+  var PAGES = { agents: 1, issues: 1, terms: 1 };
+
+  // Plain-English meanings for the words the boards use, for people new to
+  // them. Shown on the Board terms page and as hover hints where they appear.
+  var TERMS = [
+    ['Zone', 'zone', 'A rectangle on a board that takes its own piece of content. Build each zone at its exact size.'],
+    ['FG / BG', 'fgbg', 'Foreground and background: two layers of the same window in the board’s control system. One asset usually fills both.'],
+    ['GIP', 'gip', 'Game in progress: the strip where the live score, clock and game info sit.'],
+    ['Fascia (ribbon)', 'fascia', 'The long, short LED boards that run around the seating bowl. Very wide, very short, and they often scroll.'],
+    ['Centerhung', 'centerhung', 'The board that hangs over the middle of the court or rink.'],
+    ['Wing, frame, stat box', 'wing', 'Smaller zones beside the main video, used for ads, stats and framing art.'],
+    ['Speaker scrim', 'scrim', 'Speakers hang in front of part of the board. Content behind the scrim is hard to see, so keep it plain.'],
+    ['Cropped', 'crop', 'Part of the canvas the board doesn’t show. Keep text and logos out of it.'],
+    ['Seam', 'seam', 'Where two TVs meet in a video wall, or where a ribbon turns a corner. Keep faces and text off it.'],
+    ['Pad', 'pad', 'Keep anything important this many pixels inside every edge.'],
+    ['Safe area', 'safe', 'The part of the canvas that’s safe from crops and edges. Copy spec includes it when one is on file.'],
+    ['Stills only', 'stills', 'The zone takes a still image (PNG), not video.'],
+    ['Aspect ratio', 'ratio', 'Width compared with height, like 16:9. Art made at another shape will stretch or crop.'],
+    ['IPTV / StadiumVision', 'iptv', 'The concourse and suite TVs at Camp Randall, not the LED boards.'],
+    ['Copy spec', 'spec', 'Copies the exact size, aspect ratio, position and any safe area, ready to paste into a project or message.'],
+    ['Id and canvas key', 'ids', 'Stable names for scripts and production tools like the After Effects Board Builder. Turn on Technical details to see them.']
+  ];
+  var TERM = {};
+  TERMS.forEach(function (t) { TERM[t[1]] = t[2]; });
+  // Hover hint for a zone or display name, from the first term it uses.
+  function termFor(name) {
+    var n = name.toLowerCase();
+    if (/\bgip\b/.test(n)) return TERM.gip;
+    if (/fascia|ribbon|\bring\b/.test(n)) return TERM.fascia;
+    if (/centerhung/.test(n)) return TERM.centerhung;
+    if (/wing|frame|stat box/.test(n)) return TERM.wing;
+    if (/iptv/.test(n)) return TERM.iptv;
+    return null;
+  }
+
+  // Everyday words people search with, mapped to the words the boards use.
+  var SYNONYMS = {
+    jumbotron: ['~main-board~'], videoboard: ['~main-board~'], scoreboard: ['~main-board~'], megatron: ['~main-board~'],
+    ribbon: ['fascia', 'ring'], ribbons: ['fascia', 'ring'], ticker: ['fascia', 'ring'], halo: ['ring'],
+    tv: ['iptv'], tvs: ['iptv'], television: ['iptv'], concourse: ['iptv'], suite: ['iptv'], stadiumvision: ['iptv'],
+    score: ['gip'], clock: ['gip'], bug: ['gip'],
+    ad: ['ad', 'sponsor'], ads: ['ad', 'sponsor'], sponsor: ['sponsor', 'ad'], commercial: ['ad', 'sponsor'],
+    football: ['camp randall'], basketball: ['kohl center'], hockey: ['kohl center', 'labahn'], volleyball: ['field house'], softball: ['goodman'],
+    stadium: ['camp randall'], arena: ['kohl center', 'labahn']
+  };
+  // Each venue's main video board, for "jumbotron" and friends.
+  var MAIN_BOARDS = { 'North Board': 1, 'Centerhung Main': 1, 'Main': 1 };
+  function mainTag(d) { return MAIN_BOARDS[d.name] ? ' ~main-board~' : ''; }
+  var TECH_KEY = 'boards.tech.v1';
+  var showTech = storageGet(TECH_KEY) === '1';
+
   var CONTENT = {};
   DATA.content.broad.forEach(function (c) { c.kind = 'broad'; CONTENT[c.id] = c; });
   DATA.content.gameDay.forEach(function (g) { g.items.forEach(function (c) { c.kind = 'gameDay'; c.group = g.name; CONTENT[c.id] = c; }); });
@@ -80,7 +130,9 @@
   readParams();
   if (state.share) {
     document.body.classList.add('is-share');
-    el['side-foot'].hidden = true;
+    // Shared links keep the Motion W as branding but drop the way back to the site.
+    var apps = document.querySelector('.wc-apps');
+    if (apps) apps.hidden = true;
   }
 
   /* ---------------- helpers ---------------- */
@@ -365,10 +417,15 @@
       return { zone: function (z) { return size(z.w, z.h) === want; }, display: function (d) { return size(d.w, d.h) === want; } };
     }
     var words = q.split(/\s+/);
-    function has(hay) { hay = hay.toLowerCase(); return words.every(function (w) { return hay.indexOf(w) !== -1; }); }
+    function has(hay) {
+      hay = hay.toLowerCase();
+      return words.every(function (w) {
+        return hay.indexOf(w) !== -1 || (SYNONYMS[w] || []).some(function (alt) { return hay.indexOf(alt) !== -1; });
+      });
+    }
     return {
-      zone: function (z, d, v) { return has([z.name, z.id, (KEYS[z.id] || []).join(' '), d.name, d.sheetName || '', d.group || '', d.processor || '', v.name, size(z.w, z.h)].join(' ')); },
-      display: function (d, v) { return has([d.name, d.id, (KEYS[d.id] || []).join(' '), d.sheetName || '', d.group || '', d.processor || '', v.name, size(d.w, d.h)].join(' ')); }
+      zone: function (z, d, v) { return has([z.name, z.id, (KEYS[z.id] || []).join(' '), d.name, d.sheetName || '', d.group || '', d.processor || '', v.name, size(z.w, z.h)].join(' ') + mainTag(d)); },
+      display: function (d, v) { return has([d.name, d.id, (KEYS[d.id] || []).join(' '), d.sheetName || '', d.group || '', d.processor || '', v.name, size(d.w, d.h)].join(' ') + mainTag(d)); }
     };
   }
 
@@ -395,9 +452,11 @@
       }));
     });
     el['nav-ref'].textContent = '';
-    [['agents', 'For agents & tools', null], ['issues', 'Open issues', OPEN_ISSUES.length]].forEach(function (pg) {
+    [['terms', 'Board terms', null], ['agents', 'For agents & tools', null], ['issues', 'Open issues', OPEN_ISSUES.length]].forEach(function (pg) {
       el['nav-ref'].appendChild(navButton(pg[1], pg[2], !searching && state.page === pg[0], function () { closeTopMenu(); openPage(pg[0]); }, pg[0] === 'issues' && pg[2] > 0));
     });
+    el['nav-ref'].appendChild(techToggle());
+    applyTech();
   }
 
   // Every move between views goes through here: reset the view, apply the
@@ -633,6 +692,8 @@
       var li = node('li');
       li.appendChild(node('i', 'key key-' + k));
       li.appendChild(document.createTextNode(LEGEND[k]));
+      var hint = { scrim: TERM.scrim, crop: TERM.crop, seam: TERM.seam, stated: TERM.zone }[k];
+      if (hint) { li.title = hint; li.classList.add('has-term'); }
       list.appendChild(li);
     });
     return list;
@@ -709,7 +770,9 @@
     var head = node('div', 'card-head');
     var title = node('div', 'card-title');
     var h2 = node('h2');
-    h2.appendChild(boardLink(d.id, d.name, 'board-link'));
+    var dl = boardLink(d.id, d.name, 'board-link');
+    if (termFor(d.name)) dl.title = termFor(d.name);
+    h2.appendChild(dl);
     title.appendChild(h2);
     if (showVenue) title.appendChild(node('span', 'venue-of', v.name));
     title.appendChild(node('span', 'card-meta', ratio(d.w, d.h) + (d.zones.length ? ' · ' + d.zones.length + ' zone' + (d.zones.length === 1 ? '' : 's') : '')));
@@ -830,7 +893,7 @@
 
   function specTags(z) {
     var tags = node('span', 'tags');
-    if (z.stillOnly) tags.appendChild(node('span', 'tag', 'Stills only'));
+    if (z.stillOnly) { var so = node('span', 'tag', 'Stills only'); so.title = TERM.stills; tags.appendChild(so); }
     if (z.duration) tags.appendChild(node('span', 'tag', z.duration));
     if (z.pad) { var t = node('span', 'tag warn', z.pad + ' px pad'); t.title = 'Keep content ' + z.pad + ' px inside every edge.'; tags.appendChild(t); }
     (z.issues || []).forEach(function (i) { var it = node('span', 'tag warn', ISSUE_LABEL[i.kind] || i.kind); it.title = i.text; tags.appendChild(it); });
@@ -877,11 +940,14 @@
 
     var name = node('span', 'zone-name');
     var line = node('span', 'zone-line');
-    line.appendChild(node('b', '', row.base));
+    var nb = node('b', '', row.base);
+    var hint = termFor(row.base);
+    if (hint) { nb.title = hint; nb.classList.add('has-term'); }
+    line.appendChild(nb);
     var tags = specTags(z);
     if (row.layers.length) {
       var lt = node('span', 'tag layers', row.layers.join(' + '));
-      lt.title = row.layers.length > 1 ? 'Two processor layers of one window: one asset fills both unless the content needs them separately.' : 'Processor layer';
+      lt.title = row.layers.length > 1 ? TERM.fgbg : 'One layer (' + row.layers[0] + ') of a window in the board’s control system.';
       tags.insertBefore(lt, tags.firstChild);
     }
     if (tags.childNodes.length) line.appendChild(tags);
@@ -1026,7 +1092,12 @@
 
   function renderContent(c) {
     var rows = contentRows(c);
-    el.crumbs.textContent = c.kind === 'broad' ? 'Content types' : 'Game day · ' + c.group;
+    el.crumbs.textContent = '';
+    var back = node('a', 'crumb-link', 'What are you making?');
+    back.href = '?v=' + state.venue + (state.share ? '&share=1' : '');
+    back.addEventListener('click', function (e) { if (e.metaKey || e.ctrlKey) return; e.preventDefault(); go({ venue: state.venue }); });
+    el.crumbs.appendChild(back);
+    el.crumbs.appendChild(document.createTextNode(c.kind === 'broad' ? '' : ' · Game day · ' + c.group));
     el.title.textContent = c.name;
     el.subtitle.textContent = c.about || 'The boards Colosseum builds this for, across every venue.';
 
@@ -1383,6 +1454,115 @@
     return b;
   }
 
+  /* ---------------- newcomers: technical details, terms, guided start ---------------- */
+
+  // Ids, canvas keys and processor names are for scripts and production
+  // tools; most people only need sizes, so they stay hidden until asked for.
+  function applyTech() {
+    document.body.classList.toggle('hide-tech', !showTech);
+    var b = document.getElementById('tech-toggle');
+    if (b) b.setAttribute('aria-pressed', String(showTech));
+  }
+  function techToggle() {
+    var li = node('li');
+    var b = node('button');
+    b.type = 'button';
+    b.id = 'tech-toggle';
+    b.className = 'tech-toggle';
+    b.title = 'Show ids, canvas keys and processor names';
+    b.appendChild(node('span', '', 'Technical details'));
+    b.appendChild(node('span', 'switch'));
+    b.addEventListener('click', function () {
+      showTech = !showTech;
+      storageSet(TECH_KEY, showTech ? '1' : '0');
+      applyTech();
+    });
+    li.appendChild(b);
+    return li;
+  }
+
+  function renderTerms() {
+    pageHead('Reference', 'Board terms', 'The words you’ll see on these boards, in plain English.');
+    setActions([moreMenu(withShare([]), 'board terms')]);
+    var box = section('Terms');
+    var list = node('dl', 'terms');
+    TERMS.forEach(function (t) {
+      list.appendChild(node('dt', '', t[0]));
+      list.appendChild(node('dd', '', t[2]));
+    });
+    box.appendChild(list);
+    var how = section('Finding a size');
+    var ol = node('ol', 'doc-list');
+    [
+      'Pick the venue in the tabs across the top, or search for a board, a zone, a size like 1920x1080, or an everyday word like jumbotron or ribbon.',
+      'Open a board to see it drawn to scale. Each zone is a separate canvas, so build each one at the size shown.',
+      'Copy spec copies the exact size and any safe area. Preview art lets you drop your image on the board to check it before you render.',
+      'Red notes are open questions. Ask before you build if one touches your zone.'
+    ].forEach(function (t) { ol.appendChild(node('li', '', t)); });
+    how.appendChild(ol);
+  }
+
+  // "What are you making?": the mapped content types, as a start for people
+  // who know what they're building but not which boards it needs.
+  function renderStart(v) {
+    var box = node('section', 'start');
+    box.setAttribute('aria-label', 'What are you making?');
+    var head = node('div', 'start-head');
+    head.appendChild(node('h2', '', 'What are you making?'));
+    var sub = node('p', '', 'Pick one to see every board and size it needs. ');
+    var tl = node('a', '', 'New to the boards?');
+    tl.href = '?p=terms' + (state.share ? '&share=1' : '');
+    tl.addEventListener('click', function (e) { if (e.metaKey || e.ctrlKey) return; e.preventDefault(); openPage('terms'); });
+    sub.appendChild(tl);
+    head.appendChild(sub);
+    box.appendChild(head);
+    var row = node('div', 'start-row');
+    function startLink(c, cls) {
+      var a = node('a', 'start-item' + (cls ? ' ' + cls : ''));
+      a.href = '?c=' + encodeURIComponent(c.id) + (state.share ? '&share=1' : '');
+      a.appendChild(node('b', '', c.name));
+      var n = canvasCount(c);
+      a.appendChild(node('i', '', n + ' canvas' + (n === 1 ? '' : 'es')));
+      a.addEventListener('click', function (e) { if (e.metaKey || e.ctrlKey) return; e.preventDefault(); openContent(c.id); });
+      return a;
+    }
+    DATA.content.broad.forEach(function (c) {
+      if (contentRows(c).some(function (r) { return r.v.id === v.id; })) row.appendChild(startLink(c));
+    });
+    var games = DATA.content.gameDay.filter(function (g) {
+      return g.items.some(function (c) { return contentRows(c).some(function (r) { return r.v.id === v.id; }); });
+    });
+    if (games.length) {
+      var det = node('details', 'start-more');
+      var sum = node('summary', 'start-item');
+      sum.appendChild(node('b', '', 'Game day pieces'));
+      var count = games.reduce(function (n, g) { return n + g.items.length; }, 0);
+      sum.appendChild(node('i', '', count + ' pieces'));
+      det.appendChild(sum);
+      var pop = node('div', 'start-games');
+      games.forEach(function (g) {
+        var grp = node('div', 'start-group');
+        grp.appendChild(node('h3', '', g.name));
+        g.items.forEach(function (c) { grp.appendChild(startLink(c, 'is-small')); });
+        pop.appendChild(grp);
+      });
+      det.appendChild(pop);
+      row.appendChild(det);
+    }
+    if (!row.childNodes.length) return null;
+    box.appendChild(row);
+    return box;
+  }
+  // Content types whose name has every search word, shown above the boards.
+  function contentHits(query) {
+    var words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    if (!words.length || /^\d/.test(words[0])) return [];
+    return Object.keys(CONTENT).map(function (id) { return CONTENT[id]; }).filter(function (c) {
+      var name = c.name.toLowerCase();
+      return words.every(function (w) { return name.indexOf(w) !== -1; });
+    }).slice(0, 6);
+  }
+
   /* ---------------- art preview ---------------- */
 
   // An image dropped, pasted or picked in the board view, drawn on the board
@@ -1611,6 +1791,23 @@
       filters.appendChild(chip('Open issues', state.venueFilter === 'issues', function () { state.venueFilter = 'issues'; render(false); }, v.displays.filter(hasIssue).length));
       el.view.appendChild(filters);
     }
+    if (!match && state.venueFilter !== 'issues') { var start = renderStart(v); if (start) el.view.appendChild(start); }
+    if (match) {
+      var made = contentHits(state.query);
+      if (made.length) {
+        var mk = node('div', 'chips made');
+        mk.setAttribute('role', 'group');
+        mk.setAttribute('aria-label', 'Content that matches');
+        mk.appendChild(node('span', 'chips-label', 'Making'));
+        made.forEach(function (c) {
+          var a = node('a', 'chip', c.name);
+          a.href = '?c=' + encodeURIComponent(c.id);
+          a.addEventListener('click', function (e) { if (e.metaKey || e.ctrlKey) return; e.preventDefault(); openContent(c.id); });
+          mk.appendChild(a);
+        });
+        el.view.appendChild(mk);
+      }
+    }
     if (!match && v.displays.length > 1 && state.venueFilter !== 'issues') el.view.appendChild(renderOverview(v));
     var shownDisplays = 0, shownZones = 0;
     (match ? VENUES : [v]).forEach(function (venue) {
@@ -1628,7 +1825,7 @@
         shownDisplays++; shownZones += out.zones;
       });
     });
-    el.empty.textContent = match ? 'Nothing matches that. Try a board name like “Fascia” or a size like 1920x1080.' : 'No displays with open issues at this venue.';
+    el.empty.textContent = match ? 'Nothing matches that. Try a board name like “Fascia”, a size like 1920x1080, or a word like jumbotron or ribbon.' : 'No displays with open issues at this venue.';
     el.empty.hidden = shownDisplays > 0;
     el.summary.textContent = match ? shownDisplays + ' display' + (shownDisplays === 1 ? '' : 's') + ', ' + shownZones + ' zone' + (shownZones === 1 ? '' : 's') : '';
   }
@@ -1666,6 +1863,7 @@
     if (!match && state.display) renderBoard(BY_ID[state.display].v, BY_ID[state.display].d);
     else if (!match && state.page === 'agents') renderAgents();
     else if (!match && state.page === 'issues') renderIssues();
+    else if (!match && state.page === 'terms') renderTerms();
     else if (!match && state.content && CONTENT[state.content]) renderContent(CONTENT[state.content]);
     else renderVenue(venueById[state.venue], match);
     document.body.classList.toggle('is-board-view', !match && !!state.display);
