@@ -412,19 +412,29 @@
     .art-note::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 6px; border-radius: 50%; background: #2e9e5b; vertical-align: 1px; }
     .art-item.is-off { border-color: color-mix(in srgb, var(--hot) 35%, var(--line)); }
     .art-item.is-off .art-note::before { background: var(--hot); }
-    .art-place { grid-column: 1 / -1; min-height: 32px; width: 100%; padding: 0 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink); font: inherit; font-size: 13px; }
+    .art-item.is-away { background: var(--well); }
+    .art-item.is-away .art-note::before { background: var(--ink-3); }
+    .art-item.is-away .art-thumb { opacity: 0.7; }
+    .art-go { color: var(--accent-ink); font-weight: 700; text-decoration: none; }
+    .art-go:hover { text-decoration: underline; text-underline-offset: 3px; }
+    .art-place { min-height: 32px; width: 100%; padding: 0 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink); font: inherit; font-size: 13px; }
     .art-place:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+    .art-row { grid-column: 1 / -1; display: flex; gap: 6px; margin-right: -24px; }
+    .art-row .art-place { flex: 1; min-width: 0; }
+    .art-sound { flex: none; width: 32px; min-height: 32px; padding: 0; border: 1px solid var(--line); }
+    .art-sound .icon { width: 14px; height: 14px; }
+    .art-sound.is-on { background: var(--accent-soft); color: var(--accent-ink); }
     .art-rm { position: absolute; top: 6px; right: 6px; width: 26px; min-height: 26px; padding: 0; }
     .art-rm .icon { width: 13px; height: 13px; }
     .art-item.is-compact { grid-template-rows: auto; }
     .art-meter { height: 6px; overflow: hidden; border-radius: 999px; background: var(--well); }
     .art-meter > span { display: block; height: 100%; border-radius: inherit; background: var(--accent); transition: width 240ms var(--ease); }
     .art-meter.is-done > span { background: #2e9e5b; }
-    .art-empty { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 16px; border: 1.5px dashed var(--line-2); border-radius: 14px; background: transparent; color: var(--ink-2); font: inherit; text-align: left; cursor: pointer; transition: border-color 120ms var(--ease), background-color 120ms var(--ease); }
-    .art-empty:hover { border-color: color-mix(in srgb, var(--accent) 45%, transparent); background: var(--accent-soft); }
-    .art-empty .icon { width: 20px; height: 20px; flex: none; color: var(--accent-ink); }
-    .art-empty span { display: grid; gap: 2px; font-size: 13px; }
+    .art-empty { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 14px; padding: 14px 16px; border: 1.5px dashed var(--line-2); border-radius: 14px; color: var(--ink-2); }
+    .art-empty > .icon { width: 20px; height: 20px; flex: none; color: var(--accent-ink); }
+    .art-empty-text { display: grid; gap: 2px; flex: 1 1 320px; font-size: 13px; }
     .art-empty b { color: var(--ink); font-size: 14px; }
+    .art-empty-actions { display: flex; gap: 6px; }
     .t-row.has-art { grid-template-columns: 52px minmax(0, 1fr) auto 170px auto; }
     .t-art { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 12.5px; }
     .t-art.is-missing span { padding: 3px 8px; border-radius: 999px; background: var(--hot-soft); color: color-mix(in srgb, var(--hot) 70%, var(--ink)); font-weight: 700; }
@@ -566,6 +576,6 @@
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script src="data.js?v=13aaf0ce7b9d"></script>
-  <script src="app.js?v=0a5540bfa703"></script>
+  <script src="app.js?v=38ededfc8ea1"></script>
 </body>
 </html>

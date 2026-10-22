@@ -106,12 +106,14 @@ describe("Board Sizes art preview and board comps", () => {
 
   it("places pinned pieces first, then exact zones, the exact board, the same shape, else fits and flags", () => {
     const place = app.slice(app.indexOf("function placeArts"), app.indexOf("function artThumb"));
-    const order = ["'Stretched onto '", "'Exact size for ' + names(mine)", "'Exact size for this board.'", "'Same shape as the board at '", "'Same shape as ' + names([shape])", "Not a size on this board"];
+    const order = ["'Stretched onto '", "'Exact size for ' + names(mine)", "'Exact size for this board' + oddNote", "'For ' + home.label", "'Same shape as the board at '", "'Same shape as ' + names([shape])", "Not a size on this board"];
     const at = order.map((t) => place.indexOf(t));
     expect(at.every((i) => i >= 0)).toBe(true);
     expect([...at].sort((a, b) => a - b)).toEqual(at);
     // Same-size pieces share the zones in turn (left wing, right wing).
-    expect(place).toContain("j % group.length === i");
+    expect(place).toContain("j % rest.length === i");
+    // A filename that names a zone or canvas key wins among same-size zones.
+    expect(place).toContain("nameScore(p.art.name, rowLabels(r))");
   });
 
   it("takes several pieces, videos included, and makes a mockup without uploading anything", () => {
@@ -130,9 +132,40 @@ describe("Board Sizes art preview and board comps", () => {
 
   it("keeps pieces through a reload in IndexedDB only, and forgets them on remove", () => {
     expect(app).toContain("var ART_DB = 'board-sizes-art';");
-    expect(app).toContain("st.put({ id: a.key, order: a.id, name: a.name, type: a.file.type || '', blob: a.file, pin: a.pin });");
-    expect(app).toMatch(/function dropArt\(a, quiet\) \{\n    URL\.revokeObjectURL\(a\.url\);\n    forgetArt\(a\);/);
+    expect(app).toContain("st.put({ id: a.key, order: a.id, name: a.file.name || a.name, label: a.name, type: a.file.type || '', blob: a.file, pin: a.pin });");
+    expect(app.slice(app.indexOf("function dropArt"), app.indexOf("function clearArt"))).toContain("forgetArt(a);");
     expect(app).toContain("render(false);\n  restoreArts();");
+  });
+
+  it("takes whole export folders and plays board videos together", () => {
+    expect(app).toContain("folderInput.setAttribute('webkitdirectory', '');");
+    expect(app).toContain("droppedFiles(e.dataTransfer, function (files) { addArt(files, pin); });");
+    expect(app).toContain("function syncVideos(fromStart) {");
+    expect(app).toContain("var MAX_ART = 40;");
+  });
+
+  it("matches real export names to zones and forgives H.264's odd-pixel crop", () => {
+    const src = app.slice(app.indexOf("var NAME_SYN"), app.indexOf("function oddNote"));
+    const ctx: Record<string, unknown> = {};
+    runInNewContext(src + "; this.nameScore = nameScore; this.sizeFits = sizeFits;", ctx);
+    const score = ctx.nameScore as (f: string, l: string[]) => number;
+    const fits = ctx.sizeFits as (a: { w: number; h: number }, w: number, h: number) => boolean;
+    // Word order and house shorthand: "Short Wing Left" is Wing Short-Left; SEZ is south.
+    expect(score("Honorary Captain - Wagner - Short Wing Left.mp4", ["North Board", "Wing Short-Left"])).toBeGreaterThan(score("Honorary Captain - Wagner - Short Wing Left.mp4", ["North Board", "Wing Short-Right"]));
+    expect(score("Honorary Captain - Wagner - Short Wing Left.mp4", ["North Board", "Wing Short-Right"])).toBe(0);
+    expect(score("Run Out_Upper Left Full_FINAL_1.mp4", ["South Upper Fascia", "Fullscreen-Left"])).toBeGreaterThan(1);
+    expect(score("South Lower AD Windows Left.mp4", ["North Board", "Ad-Bottom Left"])).toBe(0);
+    expect(score("TOP_AD_LEFT_v02.mov", ["North Board", "Ad-Top Left", "TOP_AD_LEFT"])).toBeGreaterThan(2);
+    expect(fits({ w: 1724, h: 60 }, 1725, 60)).toBe(true);
+    expect(fits({ w: 1724, h: 60 }, 1726, 60)).toBe(false);
+  });
+
+  it("keeps a folder of exports tidy: sequences once, no duplicates, other boards linked, the sheet kept aside", () => {
+    expect(app).toContain("var SEQ = /^(.*?)(\\d{3,})\\.(png|jpe?g|webp|tiff?|exr|dpx)$/i;");
+    expect(app).toContain("if (have[k]) { dupes++; return false; }");
+    expect(app).toContain("p.note = 'For ' + home.label + '.';");
+    expect(app).toContain("'Full-system sheet, kept for reference.'");
+    expect(app).toContain("while (artActive < 4 && artQueue.length)");
   });
 
   it("downloads an After Effects comps script for a whole board", () => {

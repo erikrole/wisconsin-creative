@@ -166,6 +166,12 @@
     next: '<path d="M6 3.5 10.5 8 6 12.5"/>',
     share: '<path d="M8 10V2.5M5 5.5l3-3 3 3"/><path d="M3.5 8.5v4a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1v-4"/>',
     plus: '<path d="M8 3v10M3 8h10"/>',
+    folder: '<path d="M2 4.5A1.5 1.5 0 0 1 3.5 3h2.6l1.4 1.5h5A1.5 1.5 0 0 1 14 6v5.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5z"/>',
+    play: '<path d="M5 3.5v9l7-4.5z"/>',
+    pause: '<path d="M5.5 3.5v9M10.5 3.5v9"/>',
+    sound: '<path d="M2.5 6h2.5L8.5 3v10L5 10H2.5z"/><path d="M11 5.5a3.5 3.5 0 0 1 0 5M12.8 3.8a6 6 0 0 1 0 8.4"/>',
+    mute: '<path d="M2.5 6h2.5L8.5 3v10L5 10H2.5z"/><path d="m11 6 3.5 4M14.5 6 11 10"/>',
+    restart: '<path d="M3.5 8a4.5 4.5 0 1 0 1.3-3.2"/><path d="M3.5 2.5v2.8h2.8"/>',
     close: '<path d="m4 4 8 8M12 4l-8 8"/>'
   };
   function slug(s) { return s.replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
@@ -497,16 +503,26 @@
     // the same order as images.
     (opts.art || []).forEach(function (piece) {
       if (piece.hidden) return;
-      piece.places.forEach(function (p) {
+      piece.places.forEach(function (p, i) {
         if (!piece.art.video) {
           svg.appendChild(svgNode('image', { class: 'art', href: piece.art.url, x: p.x, y: p.y, width: p.w, height: p.h, preserveAspectRatio: 'none' }));
           return;
         }
         var fo = svgNode('foreignObject', { class: 'art', x: p.x, y: p.y, width: p.w, height: p.h });
-        var vid = document.createElement('video');
-        vid.muted = true; vid.loop = true; vid.autoplay = true; vid.playsInline = true;
-        vid.setAttribute('muted', ''); vid.setAttribute('playsinline', '');
+        // The same element is reused across redraws, so toggling zones or
+        // pinning a piece doesn't reload or restart the clip.
+        var vkey = piece.art.id + ':' + i;
+        var vid = artVideos[vkey];
+        if (vid) { vid.muted = !(artAudio === piece.art.id && i === 0); fo.appendChild(vid); svg.appendChild(fo); return; }
+        vid = artVideos[vkey] = document.createElement('video');
+        artResync = true;
+        // Only the chosen sound source is heard, once, from its first placement.
+        vid.muted = !(artAudio === piece.art.id && i === 0);
+        vid.loop = true; vid.playsInline = true; vid.preload = 'auto';
+        vid.setAttribute('playsinline', '');
         vid.className = 'art-video';
+        vid.setAttribute('data-piece', String(piece.art.id));
+        vid.setAttribute('data-first', i === 0 ? '1' : '0');
         vid.src = piece.art.url;
         fo.appendChild(vid);
         svg.appendChild(fo);
@@ -820,7 +836,7 @@
       var withArt = !!(opts.art && opts.art.length);
       if (withArt) drawing.classList.add('has-art');
       if (withArt && !artZones) drawing.classList.add('hide-zones');
-      if (!withArt) drawing.appendChild(node('p', 'fig-note art-hint', 'Drop, paste or pick images or videos to preview them on the board. Several pieces can go on at once, and they stay on this device.'));
+      if (!withArt) drawing.appendChild(node('p', 'fig-note art-hint', 'Drop an export folder or files here to preview them on the board. Each file goes to the zone its size and name match. They stay on this device.'));
     }
     if (!fig.placed && d.zones.length) {
       drawing.appendChild(node('p', 'fig-note', 'The sources give sizes for this display, not zone positions.'));
@@ -1180,7 +1196,7 @@
         if (tags.childNodes.length) nm.appendChild(tags);
         row.appendChild(nm);
         row.appendChild(sizeButton(r.w, r.h, r.label, specText(r.v, r.d, r.names && r.names.length ? r.z : null)));
-        if (arts.length) row.appendChild(exportStatus(r));
+        if (arts.length) row.appendChild(exportStatus(r, rows));
         var open = node('a', 'mini');
         open.href = a.href;
         open.title = arts.length ? 'Preview on ' + r.d.name : 'Open ' + r.d.name;
@@ -1584,7 +1600,46 @@
   var arts = [];
   var artSeq = 0;
   var artZones = true;
-  var MAX_ART = 12;
+  var artPlaying = true;
+  var artVideos = {};   // piece id:placement -> its <video>, kept across redraws
+  var artResync = false; // a new clip appeared, so restart them all together
+  var artAudio = null; // the id of the video whose sound plays; the rest stay muted
+  // Clips of the same length are pulled back into step with the sound source
+  // (or the first clip) twice a second; aux loops of other lengths run free,
+  // as they do on the boards.
+  setInterval(function () {
+    if (!artPlaying) return;
+    var vids = Array.prototype.slice.call(document.querySelectorAll('svg .art-video')).filter(function (v) { return !v.paused && v.readyState >= 3 && isFinite(v.duration); });
+    if (vids.length < 2) return;
+    var ref = vids.filter(function (v) { return !v.muted; })[0] || vids[0];
+    vids.forEach(function (v) {
+      if (v === ref || Math.abs(v.duration - ref.duration) > 0.05) return;
+      if (Math.abs(v.currentTime - ref.currentTime) > 0.12) v.currentTime = ref.currentTime;
+    });
+  }, 500);
+  // Starts every video on the page from the same frame once all can play,
+  // or pauses them all.
+  function syncVideos(fromStart) {
+    var vids = Array.prototype.slice.call(document.querySelectorAll('svg .art-video'));
+    if (!vids.length) return;
+    if (!artPlaying) { vids.forEach(function (v) { v.pause(); }); return; }
+    var waiting = vids.filter(function (v) { return v.readyState < 3; });
+    function go() {
+      vids.forEach(function (v) { if (fromStart) v.currentTime = 0; });
+      vids.forEach(function (v) {
+        var pr = v.play();
+        // A browser that blocks sound without a click still plays it muted.
+        if (pr && pr.catch) pr.catch(function () { if (!v.muted) { v.muted = true; var again = v.play(); if (again && again.catch) again.catch(function () {}); } });
+      });
+    }
+    if (!waiting.length) { go(); return; }
+    var left = waiting.length;
+    waiting.forEach(function (v) {
+      var once = function () { v.removeEventListener('canplay', once); if (--left === 0) go(); };
+      v.addEventListener('canplay', once);
+    });
+  }
+  var MAX_ART = 40;
   var MAX_IMAGE_BYTES = 80 * 1024 * 1024;
   var artInput = document.createElement('input');
   artInput.type = 'file';
@@ -1594,26 +1649,164 @@
   artInput.addEventListener('change', function () { if (artInput.files) addArt(artInput.files); artInput.value = ''; });
   document.body.appendChild(artInput);
   function pickArt() { artInput.click(); }
+  // A whole export folder at once (subfolders included).
+  var folderInput = document.createElement('input');
+  folderInput.type = 'file';
+  folderInput.multiple = true;
+  folderInput.setAttribute('webkitdirectory', '');
+  folderInput.hidden = true;
+  folderInput.addEventListener('change', function () { if (folderInput.files) addArt(folderInput.files); folderInput.value = ''; });
+  document.body.appendChild(folderInput);
+  function pickFolder() { folderInput.click(); }
+  // Files from a drop, walking into any dropped folders.
+  function droppedFiles(dt, done) {
+    var items = Array.prototype.slice.call(dt.items || []);
+    var entries = items.map(function (it) { return it.webkitGetAsEntry ? it.webkitGetAsEntry() : null; });
+    if (!entries.some(function (en) { return en && en.isDirectory; })) { done(Array.prototype.slice.call(dt.files)); return; }
+    var files = [], pending = 0;
+    function finish() { if (!pending) done(files); }
+    function walk(en) {
+      if (!en) return;
+      pending++;
+      if (en.isFile) { en.file(function (f) { files.push(f); pending--; finish(); }, function () { pending--; finish(); }); return; }
+      var reader = en.createReader();
+      (function more() {
+        reader.readEntries(function (list) {
+          if (!list.length) { pending--; finish(); return; }
+          list.forEach(walk);
+          more();
+        }, function () { pending--; finish(); });
+      })();
+    }
+    entries.forEach(walk);
+  }
+  // Filenames help when sizes repeat: a file named for a zone, canvas key or
+  // board (Wing-Left, TOP_AD_LEFT, Kellner) goes there before size decides.
+  // Export names follow the comps, not the manifest ("Honorary Captain -
+  // Wagner - Short Wing Left.mp4", "Run Out_SECTION A_FINAL_1", "Upper Left
+  // Full", "South Lower AD Windows Left"). Names are compared as word sets
+  // with the house shorthands spelled out; the score is how many words a
+  // file shares with a board or zone, and a file naming the opposite side
+  // (left for a right zone, south for the North Board) never matches.
+  var NAME_SYN = { sez: 'south', full: 'fullscreen', fs: 'fullscreen', l: 'left', r: 'right', lt: 'left', rt: 'right', ads: 'ad', mainboard: 'main', jumbo: 'main' };
+  var NAME_STOP = { fg: 1, bg: 1, the: 1, and: 1, of: 1, board: 1, boards: 1, window: 1, windows: 1, final: 1, export: 1, render: 1, comp: 1, cr: 1, kc: 1, fh: 1 };
+  var SIDE_PAIRS = [['left', 'right'], ['east', 'west'], ['north', 'south'], ['upper', 'lower'], ['top', 'bottom']];
+  var wordCache = {};
+  function wordSet(sv) {
+    sv = String(sv);
+    if (wordCache[sv]) return wordCache[sv];
+    var set = {};
+    sv.replace(/\.[a-z0-9]{2,4}$/i, '').replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase().split(/[^a-z0-9]+/).forEach(function (w) {
+      w = NAME_SYN[w] || w;
+      if (!w || NAME_STOP[w] || /^\d+$/.test(w) || /^v\d+$/.test(w) || /^\d+x\d+$/.test(w)) return;
+      set[w] = true;
+    });
+    return (wordCache[sv] = set);
+  }
+  function nameScore(file, labels) {
+    var fw = wordSet(file), lw = {};
+    labels.forEach(function (l) { Object.keys(wordSet(l)).forEach(function (w) { lw[w] = true; }); });
+    for (var i = 0; i < SIDE_PAIRS.length; i++) {
+      var a = SIDE_PAIRS[i][0], b = SIDE_PAIRS[i][1];
+      if ((fw[a] && lw[b] && !lw[a]) || (fw[b] && lw[a] && !lw[b])) return 0;
+    }
+    return Object.keys(fw).filter(function (w) { return lw[w]; }).length;
+  }
+  // H.264 can't hold an odd width or height, so 1725 renders as 1724: a file
+  // one pixel short of an odd size still counts as that size.
+  function sizeFits(a, w, h) { return (a.w === w || (w % 2 === 1 && a.w === w - 1)) && (a.h === h || (h % 2 === 1 && a.h === h - 1)); }
+  function oddNote(a, w, h) { return a.w === w && a.h === h ? '' : ' (H.264 drops the odd pixel)'; }
+  // The rendered full-system sheet (•TEMPLATE - CR - All) is a picture of
+  // every board, not a board; it's kept for reference, not placed.
+  function isSheet(a) { return /full[\s_-]*system|(^|[\s_-])all([\s_.-]|$)/i.test(a.name); }
+  function rowLabels(row) {
+    var out = [row.base];
+    row.zones.forEach(function (z) { out.push(z.name); (KEYS[z.id] || []).forEach(function (k) { out.push(k); }); });
+    return out;
+  }
   // Art goes on a board view, or is checked against a content type's canvases.
   function artView() { return !!((state.display || state.content) && !state.query && !state.page); }
   function isVideo(file) { return /^video\//.test(file.type || '') || /\.(mp4|m4v|webm|mov)$/i.test(file.name || ''); }
   // Adds files in the order given; pin (optional) is a zone row on the open
   // board, for a piece dropped onto that zone.
+  // Adds files from a pick, drop, paste or folder. Hidden files and anything
+  // that isn't an image or video are skipped, a file already loaded is not
+  // added twice, an image sequence (name_00001.png …) counts as one piece
+  // (its first frame), and files load four at a time with one summary of
+  // anything that couldn't be read.
+  var SEQ = /^(.*?)(\d{3,})\.(png|jpe?g|webp|tiff?|exr|dpx)$/i;
+  function fileKey(f) { return [f.name, f.size, f.lastModified || 0].join('|'); }
   function addArt(files, pin) {
-    files = Array.prototype.slice.call(files);
-    var usable = files.filter(function (f) { return /^image\//.test(f.type || '') || isVideo(f); });
-    if (!usable.length) { toast('That isn’t an image or video. Try a PNG, JPEG, WebP or MP4.'); return; }
-    if (arts.length + usable.length > MAX_ART) { toast('Up to ' + MAX_ART + ' pieces at once. Remove some first.'); usable = usable.slice(0, Math.max(0, MAX_ART - arts.length)); }
-    usable.forEach(function (file) { loadArt(file, usable.length === 1 ? pin : null); });
+    files = Array.prototype.slice.call(files).filter(function (f) { return f && f.name.charAt(0) !== '.'; });
+    var usable = files.filter(function (f) { return /^image\//.test(f.type || '') || isVideo(f) || SEQ.test(f.name); });
+    if (!usable.length) { toast(files.length > 1 ? 'No images or videos in there. Try PNG, JPEG, WebP, MP4 or WebM.' : 'That isn’t an image or video. Try a PNG, JPEG, WebP or MP4.'); return; }
+    // Image sequences: keep the first frame of each run of three or more.
+    var runs = {};
+    usable.forEach(function (f) { var m = SEQ.exec(f.name); if (m) (runs[m[1] + '|' + m[3].toLowerCase()] = runs[m[1] + '|' + m[3].toLowerCase()] || []).push(f); });
+    var frames = {};
+    Object.keys(runs).forEach(function (k) {
+      var run = runs[k];
+      if (run.length < 3) return;
+      run.sort(function (x, y) { return x.name < y.name ? -1 : 1; });
+      run.forEach(function (f, i) { frames[fileKey(f)] = i === 0 ? run.length : -1; });
+    });
+    var have = {};
+    arts.forEach(function (x) { if (x.file) have[fileKey(x.file)] = true; });
+    var dupes = 0;
+    usable = usable.filter(function (f) {
+      var k = fileKey(f);
+      if (frames[k] === -1) return false;
+      if (have[k]) { dupes++; return false; }
+      have[k] = true;
+      return true;
+    });
+    var room = Math.max(0, MAX_ART - arts.length - artQueue.length);
+    var over = Math.max(0, usable.length - room);
+    usable = usable.slice(0, room);
+    var notes = [];
+    if (dupes) notes.push(dupes + ' already loaded');
+    if (over) notes.push(over + ' over the limit of ' + MAX_ART);
+    if (notes.length) toast((usable.length ? 'Adding ' + usable.length + '. ' : '') + 'Skipped ' + notes.join(' and ') + '.');
+    else if (usable.length > 4) toast('Adding ' + usable.length + ' files…');
+    var batch = { left: usable.length, failed: [] };
+    usable.forEach(function (file) {
+      var seqCount = frames[fileKey(file)] > 0 ? frames[fileKey(file)] : 0;
+      artQueue.push(function (next) { loadArt(file, usable.length === 1 ? pin : null, null, seqCount, function (ok) {
+        if (!ok) batch.failed.push(file.name);
+        if (--batch.left === 0 && batch.failed.length) {
+          var video = batch.failed.some(function (n) { return /\.(mov|mp4|m4v|webm)$/i.test(n); });
+          toast('Couldn’t read ' + (batch.failed.length === 1 ? batch.failed[0] : batch.failed.length + ' files (' + batch.failed.slice(0, 3).join(', ') + (batch.failed.length > 3 ? '…' : '') + ')') + '.' + (video ? ' This browser can’t play that format; H.264 MP4 or WebM always work.' : ' Use PNG, JPEG or WebP.'));
+        }
+        next();
+      }); });
+    });
+    pumpArt();
   }
-  // saved is the stored record when a piece comes back after a reload.
-  function loadArt(file, pin, saved) {
+  var artQueue = [], artActive = 0;
+  function pumpArt() {
+    while (artActive < 4 && artQueue.length) {
+      artActive++;
+      artQueue.shift()(function () { artActive--; pumpArt(); });
+    }
+  }
+  // One redraw per frame however many pieces finish loading.
+  var artFrame = 0;
+  function artRender() {
+    if (artFrame) return;
+    artFrame = requestAnimationFrame(function () { artFrame = 0; if (artView()) render(false); });
+  }
+  // saved is the stored record when a piece comes back after a reload;
+  // frames > 0 marks the first frame of an image sequence.
+  function loadArt(file, pin, saved, frames, finished) {
+    finished = finished || function () {};
     var seq = saved ? saved.order : ++artSeq;
     var video = isVideo(file);
-    if (!video && file.size > MAX_IMAGE_BYTES) { toast(file.name + ' is over 80 MB.'); return; }
+    if (!video && file.size > MAX_IMAGE_BYTES) { toast(file.name + ' is over 80 MB.'); finished(true); return; }
     var url = URL.createObjectURL(file);
     var name = file.name || (video ? 'Pasted video' : 'Pasted image');
-    function fail() { URL.revokeObjectURL(url); toast(video ? 'This browser can’t play ' + name + '. Try an H.264 MP4 or WebM.' : 'Couldn’t read ' + name + '.'); }
+    if (frames) name = name.replace(/(\d{3,})(\.[a-z0-9]+)$/i, function (m, dgt, ext) { return new Array(dgt.length + 1).join('#') + ext; }) + ' (' + frames + ' frames)';
+    if (saved && saved.label) name = saved.label;
+    function fail() { URL.revokeObjectURL(url); finished(false); }
     function done(media, w, h) {
       if (!w || !h) { fail(); return; }
       // A piece pinned to a zone replaces whatever was pinned there before.
@@ -1623,7 +1816,8 @@
       // Files load at different speeds; keep the order they were added in.
       arts.sort(function (x, y) { return x.id - y.id; });
       if (!saved) saveArt(a);
-      if (artView()) render(false);
+      artRender();
+      finished(true);
     }
     if (video) {
       var v = document.createElement('video');
@@ -1638,13 +1832,24 @@
       img.src = url;
     }
   }
+  function forgetVideos(a) {
+    Object.keys(artVideos).forEach(function (k) {
+      if (a && k.split(':')[0] !== String(a.id)) return;
+      artVideos[k].pause(); artVideos[k].removeAttribute('src'); artVideos[k].load();
+      delete artVideos[k];
+    });
+  }
   function dropArt(a, quiet) {
+    if (artAudio === a.id) artAudio = null;
+    forgetVideos(a);
     URL.revokeObjectURL(a.url);
     forgetArt(a);
     arts = arts.filter(function (x) { return x !== a; });
     if (!quiet && artView()) render(false);
   }
   function clearArt() {
+    artAudio = null;
+    forgetVideos(null);
     arts.forEach(function (a) { URL.revokeObjectURL(a.url); forgetArt(a); });
     arts = [];
     if (artView()) render(false);
@@ -1667,7 +1872,7 @@
   }
   function saveArt(a) {
     if (!a.file || a.file.size > MAX_SAVED_BYTES) return;
-    artStore('readwrite', function (st) { st.put({ id: a.key, order: a.id, name: a.name, type: a.file.type || '', blob: a.file, pin: a.pin }); });
+    artStore('readwrite', function (st) { st.put({ id: a.key, order: a.id, name: a.file.name || a.name, label: a.name, type: a.file.type || '', blob: a.file, pin: a.pin }); });
   }
   function forgetArt(a) { artStore('readwrite', function (st) { st['delete'](a.key); }); }
   function restoreArts() {
@@ -1678,7 +1883,7 @@
           if (!rec.blob) return;
           artSeq = Math.max(artSeq, rec.order);
           var file = rec.blob instanceof File ? rec.blob : new File([rec.blob], rec.name, { type: rec.type });
-          loadArt(file, rec.pin, rec);
+          loadArt(file, rec.pin, rec, 0);
         });
       };
     });
@@ -1729,17 +1934,35 @@
     out.forEach(function (p) {
       if (p.rows) return;
       var a = p.art;
-      if (!rows.some(function (r) { return r.w === a.w && r.h === a.h; })) return;
-      (bySize[a.w + 'x' + a.h] = bySize[a.w + 'x' + a.h] || []).push(p);
+      if (!rows.some(function (r) { return sizeFits(a, r.w, r.h); })) return;
+      var fit = rows.filter(function (r) { return sizeFits(a, r.w, r.h); })[0];
+      (bySize[fit.w + 'x' + fit.h] = bySize[fit.w + 'x' + fit.h] || []).push(p);
     });
     Object.keys(bySize).forEach(function (k) {
       var group = bySize[k], a0 = group[0].art;
-      var free = rows.filter(function (r) { return r.w === a0.w && r.h === a0.h && !taken[r.first.id]; });
-      group.forEach(function (p, i) {
-        var mine = free.filter(function (r, j) { return j % group.length === i; });
+      var free = rows.filter(function (r) { return sizeFits(a0, r.w, r.h) && !taken[r.first.id]; });
+      // Named pieces take the zones their filenames name; the rest share
+      // what's left in turn.
+      var named = [];
+      group.forEach(function (p) {
+        var best = 0, hits = [];
+        free.forEach(function (r) {
+          var sc = nameScore(p.art.name, rowLabels(r));
+          if (sc > best) { best = sc; hits = [r]; } else if (sc && sc === best) hits.push(r);
+        });
+        hits = hits.filter(function (r) { return !taken[r.first.id]; });
+        if (!hits.length) return;
+        named.push(p);
+        p.zone = true; p.rows = hits; p.ok = true; p.note = 'Exact size and name match for ' + names(hits) + oddNote(p.art, hits[0].w, hits[0].h) + '.';
+        hits.forEach(function (r) { taken[r.first.id] = p; });
+      });
+      free = free.filter(function (r) { return !taken[r.first.id]; });
+      var rest = group.filter(function (p) { return named.indexOf(p) === -1; });
+      rest.forEach(function (p, i) {
+        var mine = free.filter(function (r, j) { return j % rest.length === i; });
         p.zone = true;
-        if (!mine.length) { p.rows = []; p.hidden = true; p.ok = false; p.note = 'Every ' + pretty(a0.w, a0.h) + ' zone already has a piece.'; return; }
-        p.rows = mine; p.ok = true; p.note = 'Exact size for ' + names(mine) + '.';
+        if (!mine.length) { p.rows = []; p.hidden = true; p.ok = false; p.note = 'Every ' + pretty(a0.w, a0.h) + ' zone already has a piece. Name the file for its zone to place it.'; return; }
+        p.rows = mine; p.ok = true; p.note = 'Exact size for ' + names(mine) + oddNote(p.art, mine[0].w, mine[0].h) + '.';
         mine.forEach(function (r) { taken[r.first.id] = p; });
       });
     });
@@ -1747,13 +1970,28 @@
     out.forEach(function (p) {
       if (p.rows) return;
       var a = p.art;
-      if (a.w === d.w && a.h === d.h) {
+      if (sizeFits(a, d.w, d.h)) {
         if (boardPiece) { boardPiece.hidden = true; boardPiece.ok = false; boardPiece.note = 'Covered by ' + a.name + '.'; }
-        boardPiece = p; p.places = [{ x: 0, y: 0, w: d.w, h: d.h }]; p.ok = true; p.note = 'Exact size for this board.'; return;
+        boardPiece = p; p.places = [{ x: 0, y: 0, w: d.w, h: d.h }]; p.ok = true; p.note = 'Exact size for this board' + oddNote(a, d.w, d.h) + '.'; return;
+      }
+      if (isSheet(a)) { p.places = []; p.hidden = true; p.away = true; p.ok = true; p.note = 'Full-system sheet, kept for reference.'; return; }
+      // With a folder loaded, a file for another board stays off this one and
+      // says where it goes.
+      var home = arts.length > 1 && homeFor(a, d);
+      if (home) { p.places = []; p.hidden = true; p.away = true; p.ok = true; p.home = home; p.note = 'For ' + home.label + '.'; return; }
+      // Named for a zone here but the wrong size: shown there, flagged.
+      var best = 0, named = [];
+      rows.forEach(function (r) { var sc = nameScore(a.name, rowLabels(r)); if (sc > best) { best = sc; named = [r]; } else if (sc && sc === best) named.push(r); });
+      if (best >= 2 && named.length === 1 && !taken[named[0].first.id]) {
+        var nr = named[0];
+        p.rows = [nr]; p.zone = true; p.ok = false; taken[nr.first.id] = p;
+        p.note = 'Named for ' + names([nr]) + ' but ' + pretty(a.w, a.h) + '. Build at ' + pretty(nr.w, nr.h) + '.';
+        return;
       }
       if (sameShape(a.w, a.h, d.w, d.h)) { p.places = [{ x: 0, y: 0, w: d.w, h: d.h }]; p.ok = false; p.note = 'Same shape as the board at ' + Math.round(a.w / d.w * 100) + '% size. Build at ' + pretty(d.w, d.h) + '.'; return; }
       var shape = rows.filter(function (r) { return sameShape(a.w, a.h, r.w, r.h) && !taken[r.first.id]; })[0];
       if (shape) { p.rows = [shape]; p.zone = true; p.ok = false; p.note = 'Same shape as ' + names([shape]) + ' at ' + Math.round(a.w / shape.w * 100) + '% size. Build at ' + pretty(shape.w, shape.h) + '.'; taken[shape.first.id] = p; return; }
+      if (arts.length > 1) { p.places = []; p.hidden = true; p.ok = false; p.note = 'Not a size on any board (' + pretty(a.w, a.h) + ').'; return; }
       p.places = fit(a); p.ok = false; p.note = 'Not a size on this board, so it’s scaled to fit. Build at ' + pretty(d.w, d.h) + '.';
     });
     out.forEach(function (p) { if (!p.places) p.places = p.rows && p.rows.length ? at(p.art, p.rows) : []; });
@@ -1762,6 +2000,36 @@
     function area(p) { return p.places.reduce(function (n, r) { return Math.max(n, r.w * r.h); }, 0); }
     var zoned = out.filter(function (p) { return p.zone; }).sort(function (a, b) { return area(b) - area(a); });
     return out.filter(function (p) { return !p.zone; }).concat(zoned);
+  }
+  // Another board (this venue first) with a display or zone at this piece's
+  // size, preferring one the filename names.
+  function homeFor(a, not) {
+    var best = null;
+    var order = [venueById[state.venue]].concat(VENUES.filter(function (v) { return v.id !== state.venue; }));
+    order.forEach(function (v) {
+      v.displays.forEach(function (d) {
+        if (d === not) return;
+        var hits = sizeFits(a, d.w, d.h) ? [{ d: d, label: d.name, labels: [d.name] }] : [];
+        groupZones(d.zones).forEach(function (r) { if (!(r.w === d.w && r.h === d.h) && sizeFits(a, r.w, r.h)) hits.push({ d: d, label: d.name + ' › ' + r.base, labels: [d.name].concat(rowLabels(r)) }); });
+        hits.forEach(function (h) {
+          // The venue you're on wins a tie-ish call (Main 1920x1080 at Camp
+          // Randall is the North Board HD feed, not Kohl's 16:9 feed).
+          h.v = v; h.score = nameScore(a.name, h.labels) + (v.id === state.venue ? 2 : 0);
+          if (!best || h.score > best.score) best = h;
+        });
+      });
+    });
+    return best;
+  }
+  // Exports share a long prefix ("Honorary Captain - Wagner - "); cards show
+  // what's left, so Main and Short Wing Left read at a glance.
+  function shortName(a) {
+    var n = a.name.replace(/\.[a-z0-9]{2,4}$/i, '');
+    var cut = n.lastIndexOf(' - ');
+    if (cut <= 0) return n;
+    var pre = n.slice(0, cut);
+    var shared = arts.some(function (x) { return x !== a && x.name.indexOf(pre + ' - ') === 0; });
+    return shared ? n.slice(cut + 3) : n;
   }
   function artThumb(a) {
     var t = node('span', 'art-thumb');
@@ -1781,30 +2049,63 @@
     box.setAttribute('aria-label', 'Preview art');
     var head = node('div', 'art-head');
     var off = placed.filter(function (p) { return !p.ok; }).length;
+    var here = placed.filter(function (p) { return !p.away; }).length;
+    var away = placed.length - here;
     var title = node('span', 'art-title');
     title.appendChild(node('b', '', 'Preview art'));
-    title.appendChild(node('span', 'art-sum', placed.length + (placed.length === 1 ? ' piece' : ' pieces') + (off ? ' · ' + off + ' to check' : ' · all exact')));
+    title.appendChild(node('span', 'art-sum', here + ' on this board' + (away ? ' · ' + away + ' for other boards' : '') + (off ? ' · ' + off + ' to check' : here ? ' · all exact' : '')));
     head.appendChild(title);
     var tools = node('span', 'art-tools');
+    // Videos on the board play together: one play/pause and a restart that
+    // puts every clip back to its first frame at once.
+    if (placed.some(function (p) { return p.art.video && !p.hidden && p.places.length; })) {
+      var pb = node('button', 'btn ghost');
+      pb.type = 'button';
+      var paint = function () { pb.textContent = ''; pb.appendChild(icon(ICONS[artPlaying ? 'pause' : 'play'])); pb.appendChild(document.createTextNode(artPlaying ? 'Pause' : 'Play')); };
+      paint();
+      // The first play takes the sound from the main: the biggest video on the
+      // board (aux boards are silent loops). Pick another with its speaker.
+      var mainSound = function () {
+        if (artAudio != null) return false;
+        var vids = placed.filter(function (p) { return p.art.video && !p.hidden && p.places.length; });
+        vids.sort(function (x, y) { return y.places[0].w * y.places[0].h - x.places[0].w * x.places[0].h; });
+        if (!vids.length) return false;
+        artAudio = vids[0].art.id;
+        return true;
+      };
+      pb.addEventListener('click', function () { artPlaying = !artPlaying; if (artPlaying && mainSound()) { render(false); return; } syncVideos(false); paint(); });
+      tools.appendChild(pb);
+      var rs = button('Restart', 'restart', function () { artPlaying = true; artResync = true; if (mainSound()) { render(false); return; } syncVideos(true); artResync = false; paint(); }); rs.classList.add('ghost'); rs.setAttribute('aria-label', 'Restart every video'); tools.appendChild(rs);
+    }
     tools.appendChild(chip('Zones', artZones, function () { artZones = !artZones; render(false); }));
     var add = button('Add', 'plus', pickArt); add.classList.add('ghost'); tools.appendChild(add);
+    var fold = button('Folder', 'folder', pickFolder); fold.classList.add('ghost'); fold.title = 'Add every image and video in a folder'; tools.appendChild(fold);
     var mk = button('Mockup PNG', 'download', function () { downloadMockup(v, d, placed); }); mk.classList.add('ghost'); tools.appendChild(mk);
     var xb = button('Clear', null, clearArt); xb.classList.add('ghost'); xb.title = 'Remove every piece from this browser'; tools.appendChild(xb);
     head.appendChild(tools);
     box.appendChild(head);
     var list = node('ul', 'art-list');
     var rows = artRows(d);
-    // Listed in the order they were added, not the drawing order.
-    arts.forEach(function (a) {
-      var p = placed.filter(function (x) { return x.art === a; })[0];
-      var li = node('li', 'art-item' + (p.ok ? '' : ' is-off'));
+    // This board's pieces first, then the rest, each in the order added.
+    function info(a) { return placed.filter(function (x) { return x.art === a; })[0]; }
+    arts.filter(function (a) { return !info(a).away; }).concat(arts.filter(function (a) { return info(a).away; })).forEach(function (a) {
+      var p = info(a);
+      var li = node('li', 'art-item' + (p.ok ? '' : ' is-off') + (p.away ? ' is-away' : ''));
       li.appendChild(artThumb(a));
       var text = node('span', 'art-text');
-      var nm = node('b', '', a.name);
+      var nm = node('b', '', shortName(a));
       nm.title = a.name;
       text.appendChild(nm);
       text.appendChild(node('i', '', pretty(a.w, a.h)));
-      text.appendChild(node('span', 'art-note', p.note));
+      var noteEl = node('span', 'art-note', p.note);
+      if (p.home) {
+        var go2 = node('a', 'art-go', 'Open');
+        go2.href = '?d=' + encodeURIComponent(p.home.d.id) + (state.share ? '&share=1' : '');
+        go2.addEventListener('click', function (e) { if (e.metaKey || e.ctrlKey) return; e.preventDefault(); openBoard(p.home.d.id); });
+        noteEl.appendChild(document.createTextNode(' '));
+        noteEl.appendChild(go2);
+      }
+      text.appendChild(noteEl);
       li.appendChild(text);
       // Place on: automatic by size, or pinned to one of this board's zones.
       var sel = node('select', 'art-place');
@@ -1813,7 +2114,23 @@
       rows.forEach(function (r) { sel.appendChild(new Option(r.base + ' · ' + size(r.w, r.h), r.first.id)); });
       sel.value = a.pin && a.pin.d === d.id ? a.pin.row : '';
       sel.addEventListener('change', function () { a.pin = sel.value ? { d: d.id, row: sel.value } : null; saveArt(a); render(false); });
-      li.appendChild(sel);
+      var placeRow = node('div', 'art-row');
+      placeRow.appendChild(sel);
+      li.appendChild(placeRow);
+      if (a.video) {
+        // Sound: one video at a time is the audio source for the board.
+        var snd = node('button', 'btn icon-only ghost art-sound' + (artAudio === a.id ? ' is-on' : ''));
+        snd.type = 'button';
+        snd.setAttribute('aria-pressed', String(artAudio === a.id));
+        snd.setAttribute('data-piece', String(a.id));
+        snd.setAttribute('aria-label', 'Use ' + a.name + ' for sound');
+        snd.title = artAudio === a.id ? 'Sound on (from this video)' : 'Use this video for sound';
+        snd.appendChild(icon(ICONS[artAudio === a.id ? 'sound' : 'mute']));
+        // Redrawing inside the click unmutes within the gesture, so the
+        // browser allows the sound; clips are reused, so nothing restarts.
+        snd.addEventListener('click', function () { artAudio = artAudio === a.id ? null : a.id; render(false); });
+        placeRow.appendChild(snd);
+      }
       var rm = node('button', 'btn icon-only ghost art-rm');
       rm.type = 'button';
       rm.setAttribute('aria-label', 'Remove ' + a.name);
@@ -1829,21 +2146,42 @@
   // On a content type's page the same pieces become an exports check: each
   // canvas is covered by a piece at its exact size or still missing, and a
   // piece that fits nothing here says so.
-  function exportFor(r) { return arts.filter(function (a) { return a.w === r.w && a.h === r.h; }).pop() || null; }
+  function contentLabels(r) {
+    var out = [r.d.name];
+    (r.names || []).forEach(function (n) { out.push(n); });
+    (r.ids || [r.d.id]).forEach(function (id) { (KEYS[id] || []).forEach(function (k) { out.push(k); }); });
+    return out;
+  }
+  // The piece for one canvas: same size, and when several are that size the
+  // one whose filename names this canvas (board, zone or key) wins.
+  function exportFor(r, rows) {
+    var same = arts.filter(function (a) { return sizeFits(a, r.w, r.h); });
+    if (same.length < 2) return same[0] || null;
+    var scored = same.map(function (a) { return { a: a, s: nameScore(a.name, contentLabels(r)) }; }).sort(function (x, y) { return y.s - x.s; });
+    if (scored[0].s) return scored[0].a;
+    // Otherwise a piece no other same-size canvas claims by name.
+    var others = (rows || []).filter(function (o) { return o !== r && o.w === r.w && o.h === r.h; });
+    var free = same.filter(function (a) { return !others.some(function (o) { return nameScore(a.name, contentLabels(o)); }); });
+    return (free.length ? free : same).pop();
+  }
   function exportsTray(rows) {
     if (!arts.length) {
-      var hint = node('button', 'art-empty');
-      hint.type = 'button';
+      var hint = node('div', 'art-empty');
       hint.appendChild(icon(ICONS.image));
-      var t = node('span');
+      var t = node('span', 'art-empty-text');
       t.appendChild(node('b', '', 'Check your exports'));
-      t.appendChild(node('span', '', 'Drop or pick your renders to see which canvases are covered and which are still missing. They stay on this device.'));
+      t.appendChild(node('span', '', 'Drop your export folder or files to see which canvases are covered and which are still missing. Files named for a board or zone go there first. They stay on this device.'));
       hint.appendChild(t);
-      hint.addEventListener('click', pickArt);
+      var hb = node('span', 'art-empty-actions');
+      hb.appendChild(button('Pick folder', 'folder', pickFolder));
+      var pf = button('Files', null, pickArt); pf.classList.add('ghost'); hb.appendChild(pf);
+      hint.appendChild(hb);
       return hint;
     }
-    var covered = rows.filter(exportFor).length;
-    var stray = arts.filter(function (a) { return !rows.some(function (r) { return r.w === a.w && r.h === a.h; }); }).length;
+    var covered = rows.filter(function (r) { return exportFor(r, rows); }).length;
+    // To check: files that fit no board anywhere. A file for a board this
+    // piece doesn't use, or the full-system sheet, is just noted.
+    var stray = arts.filter(function (a) { return !isSheet(a) && !rows.some(function (r) { return sizeFits(a, r.w, r.h); }) && !homeFor(a, null); }).length;
     var box = node('section', 'art-tray');
     box.setAttribute('aria-label', 'Your exports');
     var head = node('div', 'art-head');
@@ -1853,6 +2191,7 @@
     head.appendChild(title);
     var tools = node('span', 'art-tools');
     var add = button('Add', 'plus', pickArt); add.classList.add('ghost'); tools.appendChild(add);
+    var fold = button('Folder', 'folder', pickFolder); fold.classList.add('ghost'); fold.title = 'Add every image and video in a folder'; tools.appendChild(fold);
     var xb = button('Clear', null, clearArt); xb.classList.add('ghost'); xb.title = 'Remove every piece from this browser'; tools.appendChild(xb);
     head.appendChild(tools);
     box.appendChild(head);
@@ -1868,17 +2207,21 @@
     box.appendChild(meter);
     var list = node('ul', 'art-list');
     arts.forEach(function (a) {
-      var fits = rows.filter(function (r) { return exportFor(r) === a; });
-      var same = rows.filter(function (r) { return r.w === a.w && r.h === a.h; });
+      var fits = rows.filter(function (r) { return exportFor(r, rows) === a; });
+      var same = rows.filter(function (r) { return sizeFits(a, r.w, r.h); });
       var shape = rows.filter(function (r) { return sameShape(a.w, a.h, r.w, r.h); })[0];
+      var home = !fits.length && !same.length && !isSheet(a) ? homeFor(a, null) : null;
+      var neutral = !fits.length && (isSheet(a) || home);
       var note = fits.length ? 'Covers ' + fits[0].label + (fits.length > 1 ? ' and ' + (fits.length - 1) + ' more' : '') + '.'
-        : same.length ? 'Same size as a later piece, which is used instead.'
-        : shape ? 'No canvas here is this size. Same shape as ' + shape.label + ': build at ' + pretty(shape.w, shape.h) + '.'
-        : 'No canvas here is this size.';
-      var li = node('li', 'art-item is-compact' + (fits.length ? '' : ' is-off'));
+        : same.length ? 'Same size as another file, which is used instead.'
+        : isSheet(a) ? 'Full-system sheet, kept for reference.'
+        : home ? 'Not part of this piece. It fits ' + home.label + '.'
+        : shape ? 'Not a size on any board. Same shape as ' + shape.label + ': build at ' + pretty(shape.w, shape.h) + '.'
+        : 'Not a size on any board.';
+      var li = node('li', 'art-item is-compact' + (fits.length ? '' : neutral ? ' is-away' : ' is-off'));
       li.appendChild(artThumb(a));
       var text = node('span', 'art-text');
-      var nm = node('b', '', a.name);
+      var nm = node('b', '', shortName(a));
       nm.title = a.name;
       text.appendChild(nm);
       text.appendChild(node('i', '', pretty(a.w, a.h)));
@@ -1896,14 +2239,14 @@
     box.appendChild(list);
     return box;
   }
-  function exportStatus(r) {
-    var a = exportFor(r);
+  function exportStatus(r, rows) {
+    var a = exportFor(r, rows);
     var s = node('span', 't-art' + (a ? ' is-ok' : ' is-missing'));
     if (a) {
       var th = artThumb(a);
       th.classList.add('is-tiny');
       s.appendChild(th);
-      var nm = node('span', 't-art-name', a.name);
+      var nm = node('span', 't-art-name', shortName(a));
       s.title = a.name;
       s.appendChild(nm);
     } else {
@@ -2045,6 +2388,7 @@
     if (bar.childNodes.length) el.view.appendChild(bar);
     if (placed) el.view.appendChild(artTray(v, d, placed));
     el.view.appendChild(renderDisplay(v, d, null, false, { board: true, show: show, art: placed }).el);
+    if (placed) { syncVideos(artResync); artResync = false; }
   }
 
   /* ---------------- venue + search views ---------------- */
@@ -2255,7 +2599,8 @@
     clearDropZone();
     if (!artView() || !e.dataTransfer.files.length) return;
     var hit = e.target.closest && e.target.closest('.is-board-view .zone-hit');
-    addArt(e.dataTransfer.files, hit && state.display ? { d: state.display, row: hit.getAttribute('data-row') } : null);
+    var pin = hit && state.display ? { d: state.display, row: hit.getAttribute('data-row') } : null;
+    droppedFiles(e.dataTransfer, function (files) { addArt(files, pin); });
   });
   // While dragging, light up the zone a drop would pin to.
   function clearDropZone() { var o = document.querySelector('.zone-hit.is-drop'); if (o) o.classList.remove('is-drop'); }
