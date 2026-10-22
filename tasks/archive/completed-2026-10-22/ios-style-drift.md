@@ -1,6 +1,6 @@
 # iOS style-drift cleanup — 2026-10-22
 
-Scope: close the 11 findings left by the recent iOS review in the existing isolated `codex/ios-review-fixes` checkout. Preserve the prior fixes, onboarding refinement, and unrelated root/branch work. The user's subsequent commit, push, and PR requests include this completed cleanup; merge, production migration/deployment, and distribution remain outside scope. Delivery is tracked in PR [#605](https://github.com/erikrole/wisconsin-creative/pull/605).
+Scope: close the 11 findings left by the recent iOS review in the existing isolated `codex/ios-review-fixes` checkout. Preserve the prior fixes, onboarding refinement, and unrelated root/branch work. The user's subsequent commit, push, PR, and conditional merge requests include this completed cleanup. The merge's automatic production deployment is expected; App Store distribution remains outside scope. Delivery is tracked in PR [#605](https://github.com/erikrole/wisconsin-creative/pull/605).
 
 Plan:
 1. Snapshot the current affected sources and built app before editing.

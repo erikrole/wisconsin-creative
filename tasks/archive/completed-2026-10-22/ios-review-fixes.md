@@ -1,6 +1,6 @@
 # Recent iOS review fixes
 
-Scope: close the 11 findings in `/private/tmp/wc-ios-review-20261022/REVIEW.md` on one isolated local checkout. Original feature branches and dirty root files stay untouched. The user subsequently authorized the commit, push, and PR for the fixes and onboarding improvements; merge to main, production migration deployment, and distribution remain outside scope.
+Scope: close the 11 findings in `/private/tmp/wc-ios-review-20261022/REVIEW.md` on one isolated local checkout. Original feature branches and dirty root files stay untouched. The user subsequently authorized the commit, push, PR, CI/review fixes, and merge once everything passes. The merge's automatic production deployment is expected; App Store distribution remains outside scope.
 
 Baseline: main `ecc399c3c`, plus existing feature deltas from #564 `8714da249`, #604/#599 `eaa1fdec1`, #600 `8951d72a0`, #601 `5881ac706`. Exact revision/merge-base manifest is under `tasks/archive/proofs/ios-review-fixes-2026-10-22/baseline-sources.json`. Existing changes were composed without staging or committing; API additions were retained in the extracted domain extensions and generated Xcode membership will be rebuilt.
 
@@ -41,3 +41,9 @@ Concurrent onboarding updates were reconciled before final proof: required setup
 The remaining style-drift follow-up is now closed: see `ios-style-drift.md` and `../proofs/ios-style-drift-2026-10-22/review.html`. The unchanged detector and simulator verification wrapper pass.
 
 Delivery: implementation commit `5881c44c` is pushed on `origin/codex/ios-review-fixes` with PR [#605](https://github.com/erikrole/wisconsin-creative/pull/605) targeting main. The required public release entry identifies this PR. CI and the automatic branch-owned managed preview are separate remote gates; production and App Store distribution are unchanged.
+
+## Authorized CI, review, and merge follow-up
+
+The user authorized fixing CI/review findings and merging #605 once everything passes. On head `3a8cefb7`, the PostgreSQL gate passed. The automated review job reported success but had three tool permission denials, no posted comments, and no exposed result. Its plugin now requires `--comment` to post feedback. The workflow explicitly enables its read/review tools, allows PR feedback, exposes the final report without raw execution logs, and requests review of the current head even after an earlier revision received feedback. App source and simulator evidence are unchanged. Required CI, the completed review result, resolved conversations, current base/head, and the managed preview must be checked again before merging; production deployment will follow the authorized merge automatically.
+
+The full hosted suite found two stale source assertions (6318 cases passed): Home timing logic moved into `Home/HomeModel.swift`, and Availability's redesign replaced three old headings. The assertions now read the owning Home model and current labeled Availability controls/explanation. Independent review confirmed Staff rows never gain Student call-time wording. No app behavior was changed to satisfy obsolete copy.

@@ -381,9 +381,9 @@ describe("student field mobile contracts", () => {
     expect(availability).toContain("AvailabilityEditorKind");
     expect(availability).toContain("case adHoc = \"AD_HOC\"");
     expect(availability).toContain("AvailabilityWeekStrip");
-    expect(availability).toContain("Your schedule signals");
-    expect(availability).toContain("Weekly class schedule");
-    expect(availability).toContain("One-off days and ranges");
+    expect(availability).toContain('Label("Add Class Schedule…", systemImage: "calendar.badge.clock")');
+    expect(availability).toContain('Text("Days away")');
+    expect(availability).toContain("Approved time off blocks shift pickup and trades. Other signals help staff schedule with better context.");
     expect(availability).toContain("Pending staff review");
     expect(availability).toContain("Label(\"Add availability\", systemImage: \"plus\")");
     expect(availability).toContain("Multiple days");
