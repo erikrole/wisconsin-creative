@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { source } from "./_helpers/source";
+import { source, serviceModuleSource } from "./_helpers/source";
 
 describe("schedule staff/student display source contracts", () => {
   it("uses assigned user scheduling-class labels for filled schedule rows", () => {
@@ -95,7 +95,7 @@ describe("schedule staff/student display source contracts", () => {
     const dashboardRoute = source("src/app/api/dashboard/route.ts");
     const myShiftsRoute = source("src/app/api/my-shifts/route.ts");
     const dashboardColumn = source("src/app/(app)/_home/home-model.ts");
-    const notifications = source("src/lib/services/notifications.ts");
+    const notifications = serviceModuleSource("notifications");
     const home = source("ios/Wisconsin/Views/HomeView.swift");
     const profile = source("ios/Wisconsin/Views/ProfileNextUp.swift");
 

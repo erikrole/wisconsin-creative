@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { serviceModuleSource } from "./_helpers/source";
 
 describe("APNs transport contract", () => {
   const source = (relativeFile: string) =>
@@ -64,7 +65,7 @@ describe("APNs transport contract", () => {
 
   it("omits the sound for silent deliveries and takes presentation from prefs", () => {
     const apns = source("src/lib/push/apns.ts");
-    const notifications = source("src/lib/services/notifications.ts");
+    const notifications = serviceModuleSource("notifications");
     expect(apns).toContain('...(opts.sound === false ? {} : { sound: "default" })');
     expect(notifications).toContain("let presentation = resolvePushPresentation(prefs, opts.category, now);");
     // Staff follow-ups can only be made quieter overnight, never louder.
@@ -88,7 +89,7 @@ describe("APNs transport contract", () => {
   });
 
   it("sendPushToUser never throws into fire-and-forget call sites", () => {
-    const notifications = source("src/lib/services/notifications.ts");
+    const notifications = serviceModuleSource("notifications");
     const fnStart = notifications.indexOf("export async function sendPushToUser");
     const fnBody = notifications.slice(fnStart, notifications.indexOf("export", fnStart + 1));
     expect(fnBody).toContain("try {");

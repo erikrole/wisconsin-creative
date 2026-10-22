@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { source } from "./_helpers/source";
+import { source, serviceModuleSource } from "./_helpers/source";
 
 describe("iOS kiosk reservation pickup contract", () => {
   it("routes booked reservations through the native pickup flow before or after their start time", () => {
@@ -41,7 +41,7 @@ describe("iOS kiosk reservation pickup contract", () => {
 
   it("binds numbered bulk units atomically with checkout creation and reservation fulfillment", () => {
     const confirmRoute = source("src/app/api/kiosk/pickup/[id]/confirm/route.ts");
-    const lifecycle = source("src/lib/services/bookings-lifecycle.ts");
+    const lifecycle = serviceModuleSource("bookings-lifecycle");
 
     // The route passes staged units into createBooking instead of binding them
     // in a second transaction after the reservation is already COMPLETED.

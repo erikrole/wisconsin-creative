@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { scheduleSurfaceSource, source } from "./_helpers/source";
+import { scheduleSurfaceSource, source, serviceModuleSource } from "./_helpers/source";
 
 function slice(text: string, start: string, end: string) {
   const startIndex = text.indexOf(start);
@@ -11,7 +11,7 @@ function slice(text: string, start: string, end: string) {
 
 describe("iOS notification tap-through contracts", () => {
   it("sends shift gear-up APNs payloads with event routing context", () => {
-    const notifications = source("src/lib/services/notifications.ts");
+    const notifications = serviceModuleSource("notifications");
     const gearUp = slice(
       notifications,
       "export async function createShiftGearUpNotification",
@@ -26,7 +26,7 @@ describe("iOS notification tap-through contracts", () => {
   });
 
   it("sends shift schedule APNs payloads with event routing context", () => {
-    const notifications = source("src/lib/services/notifications.ts");
+    const notifications = serviceModuleSource("notifications");
     const schedule = slice(
       notifications,
       "export async function createShiftScheduleNotification",

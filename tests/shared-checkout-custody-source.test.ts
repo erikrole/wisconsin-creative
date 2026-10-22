@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { source } from "./_helpers/source";
+import { source, serviceModuleSource } from "./_helpers/source";
 
 describe("shared checkout custody contracts", () => {
   it("lets staff designate an ownerless travel-case reservation at creation", () => {
@@ -15,7 +15,7 @@ describe("shared checkout custody contracts", () => {
   });
 
   it("carries shared reservation custody through kiosk and force checkout", () => {
-    const lifecycle = source("src/lib/services/bookings-lifecycle.ts");
+    const lifecycle = serviceModuleSource("bookings-lifecycle");
     const pickup = source("src/app/api/kiosk/pickup/[id]/confirm/route.ts");
     const scan = source("src/app/api/kiosk/pickup/[id]/scan/route.ts");
 
@@ -41,7 +41,7 @@ describe("shared checkout custody contracts", () => {
     expect(source("src/lib/services/dashboard-counts.ts")).toContain(
       "custody_scope = 'PERSON'",
     );
-    expect(source("src/lib/services/notifications.ts")).toContain(
+    expect(serviceModuleSource("notifications")).toContain(
       'args.checkout.custodyScope !== "SHARED" && args.rule.notifyRequester',
     );
     expect(source("src/components/booking-details/BookingHeader.tsx")).toContain(
