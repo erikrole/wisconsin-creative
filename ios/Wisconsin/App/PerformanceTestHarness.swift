@@ -175,10 +175,32 @@ struct NotificationSettingsHarnessView: View {
         }
         .onAppear {
             session.currentUser = ScheduleFixtures.staffUser
-            prefsVM.prefs = NotificationFixtureAPI.pausedPreferences
+            // `GT_NOTIF_STATE`: `healthy` (default: registered, not paused) or
+            // `attention` (paused alerts and a failed registration).
+            let attention = ProcessInfo.processInfo.environment["GT_NOTIF_STATE"] == "attention"
+            prefsVM.prefs = NotificationFixtureAPI.preferences(paused: attention)
             prefsVM.catalog = NotificationFixtureAPI.staffCatalog
-            appState.pushRegistrationState = .failed
+            applyRegistrationState(attention: attention)
             seeded = true
+        }
+        // App launch resets the registration state once it has read the real
+        // permission, so seed it again after that settles.
+        .task {
+            try? await Task.sleep(for: .seconds(1.5))
+            applyRegistrationState(
+                attention: ProcessInfo.processInfo.environment["GT_NOTIF_STATE"] == "attention"
+            )
+        }
+    }
+}
+
+extension NotificationSettingsHarnessView {
+    fileprivate func applyRegistrationState(attention: Bool) {
+        if attention {
+            appState.pushRegistrationState = .failed
+        } else {
+            UserDefaults.standard.set("fixture-apns-token", forKey: PushTokenStorage.currentTokenKey)
+            appState.pushRegistrationState = .registered
         }
     }
 }
@@ -330,11 +352,24 @@ enum NotificationFixtureAPI {
         return Data(#"{"data":[\#(rows.joined(separator: ","))],"total":\#(rows.count),"limit":20,"offset":0,"unreadCount":3}"#.utf8)
     }
 
-    static var pausedPreferences: NotificationPreferences {
+    static var pausedPreferences: NotificationPreferences { preferences(paused: true) }
+
+    /// The `/api/me/notification-preferences` answer, so the screen's own
+    /// reloads (scene activation, retry) succeed instead of 404ing.
+    static func preferencesPayload() -> Data {
+        struct Payload: Encodable {
+            let data: NotificationPreferences
+            let catalog: [NotificationCategoryEntry]
+        }
+        let attention = ProcessInfo.processInfo.environment["GT_NOTIF_STATE"] == "attention"
+        return (try? JSONEncoder().encode(Payload(data: preferences(paused: attention), catalog: staffCatalog))) ?? Data()
+    }
+
+    static func preferences(paused: Bool) -> NotificationPreferences {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return NotificationPreferences(
-            pausedUntil: formatter.string(from: Date.now.addingTimeInterval(60 * 60)),
+            pausedUntil: paused ? formatter.string(from: Date.now.addingTimeInterval(60 * 60)) : nil,
             channels: NotificationPreferences.Channels(email: true, push: true),
             badges: true,
             categories: NotificationPreferences.Categories(
@@ -729,6 +764,7 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
             let assetId = String(path.dropFirst("/api/assets/".count))
             return AssetFixtureAPI.asset(for: assetId)
         case "/api/assets": return SearchFixtureAPI.assets(for: request)
+        case "/api/me/notification-preferences": return NotificationFixtureAPI.preferencesPayload()
         case "/api/gear-picks/me": return UIReviewFixtureAPI.gearPicks
         case let path where path.hasSuffix("/availability") && path.hasPrefix("/api/users/"):
             return UIReviewFixtureAPI.availability
