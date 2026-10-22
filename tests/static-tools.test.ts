@@ -280,6 +280,13 @@ describe("Timelapse core", () => {
     expect(tl.fromQuery("?utm_source=x")).toBeNull();
   });
 
+  it("carries the shared Wisconsin Creative badge", () => {
+    const html = readFileSync("public/timelapse/index.html", "utf8");
+    expect(html).toContain('<a class="wc-badge" href="/apps">');
+    expect(html).toContain("img-src 'self' data:");
+    expect(readFileSync("public/brand/wc-badge.svg", "utf8")).toContain('fill="currentColor"');
+  });
+
   it("drops or clamps tampered link and storage values", () => {
     const bad = tl.fromQuery("?cam=__proto__&m=evil&solve=x&sq=3&tl=7.5&fps=50&roll=1e99&clip=-4&fmt=%3Cscript%3E&file=s4k-100");
     expect(bad).toEqual({ ...tl.DEFAULTS, rollSeconds: tl.MAX_ROLL });
