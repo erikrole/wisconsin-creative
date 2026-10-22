@@ -20,7 +20,7 @@ describe("QR Studio static tool at /qrcode", () => {
 
   it("ships its own strict CSP with no inline script", () => {
     expect(html).toContain(
-      `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'none';`,
+      `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; font-src 'self'; img-src data: blob:; connect-src 'none';`,
     );
     expect(html).not.toMatch(/<script(?![^>]*\ssrc=)[^>]*>/i);
     expect(html).not.toMatch(/\son[a-z]+=/i);
@@ -58,10 +58,9 @@ describe("QR Studio static tool at /qrcode", () => {
     expect(html).toContain("Canonical source: edit here.");
   });
 
-  it("ends the top bar with the shared Wisconsin Creative badge", () => {
-    expect(html).toMatch(/<div class="wc-brand">\s*<a class="wc-apps" href="\/apps">[\s\S]*?<span class="wc-badge" role="img" aria-label="Wisconsin Creative"><span class="wc-badge-w"><\/span><\/span>\s*<\/div>\s*<\/header>/);
-    expect(html).toContain('mask: url("/brand/wc-badge.svg")');
-    expect(existsSync("public/brand/wc-badge.svg")).toBe(true);
+  it("uses the shared tool header: name top left, Apps top right", () => {
+    expect(html).toMatch(/<header class="topbar">\s*<span class="brand">[\s\S]*?<\/span>\s*<a class="wc-apps" href="\/apps">[\s\S]*?<\/a>\s*<\/header>/);
+    expect(html).not.toContain("wc-badge");
   });
 
   it("only calls a code scannable when every test size decodes", () => {

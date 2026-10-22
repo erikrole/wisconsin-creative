@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; font-src 'self'; img-src data: blob:; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
   <meta name="referrer" content="no-referrer">
   <meta name="color-scheme" content="light dark">
   <meta name="theme-color" content="#fbfbfc" media="(prefers-color-scheme: light)">
@@ -173,24 +173,34 @@
       z-index: 10;
     }
 
-    /* ---- Wisconsin Creative badge: shared byte-for-byte by every public tool.
-       An Apps button and the Motion W, last in the top bar (top right, W in
-       the corner), in the page's own text colour. The tool's name is top left. ---- */
-    .wc-brand { display: inline-flex; align-items: center; gap: 12px; flex: none; margin-left: auto; color: inherit; }
-    .wc-badge { display: block; width: 30px; height: 30px; flex: none; }
-    .wc-badge-w {
-      display: block; width: 100%; height: 100%; background: currentColor;
-      -webkit-mask: url("/brand/wc-badge.svg") center / contain no-repeat; mask: url("/brand/wc-badge.svg") center / contain no-repeat;
-    }
+    /* ---- Shared tool header (v4): the tool's name top left, Apps top right.
+       Shared byte-for-byte by every public tool; colours follow the page's
+       own text colour. ---- */
+    .brand { display: flex; align-items: center; gap: 10px; min-width: 0; color: inherit; }
+    .brand-mark { width: 28px; height: 28px; flex: none; border-radius: 8px; overflow: hidden; box-shadow: 0 0 0 1px color-mix(in srgb, currentColor 18%, transparent); }
+    .brand-mark svg { display: block; width: 28px; height: 28px; }
+    .brand-name { overflow: hidden; text-overflow: ellipsis; font-weight: 900; font-size: 17px; letter-spacing: -0.01em; white-space: nowrap; }
     .wc-apps {
-      display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 11px; border-radius: 8px;
-      color: inherit; text-decoration: none; font-size: 13px; font-weight: 700; line-height: 1;
+      display: inline-flex; align-items: center; gap: 6px; flex: none; margin-left: auto; min-height: 34px; padding: 0 12px; border-radius: 9px;
+      color: inherit; text-decoration: none; font-size: 14px; font-weight: 700; line-height: 1;
       background: color-mix(in srgb, currentColor 8%, transparent); border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
       transition: background 150ms ease;
     }
     .wc-apps:hover { background: color-mix(in srgb, currentColor 15%, transparent); }
     .wc-apps svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.6; opacity: 0.8; }
-    .brand-name { flex: 1; min-width: 0; font-weight: 900; font-size: 16px; letter-spacing: -0.01em; white-space: nowrap; }
+
+    /* QR Studio's own mark, and the Library and theme buttons, which float top right of the canvas. */
+    .brand-mark { background: #a00000; }
+    .canvas-tools {
+      position: absolute; top: 12px; right: 12px; z-index: 2;
+      display: flex; gap: 2px; padding: 3px;
+      background: color-mix(in srgb, var(--surface) 88%, transparent);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+    .canvas-tools .icon-btn, .canvas-tools .ghost-btn { height: 30px; }
+    .canvas-tools .icon-btn { width: 30px; }
 
     .icon-btn, .ghost-btn {
       height: 34px;
@@ -310,8 +320,8 @@
     /* health strip */
 
     .health {
-      position: absolute; left: 16px; right: 16px; top: 14px;
-      display: flex; flex-wrap: wrap; gap: 6px; justify-content: center;
+      position: absolute; left: 16px; right: 156px; top: 16px;
+      display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-start;
       pointer-events: none;
     }
     .chip {
@@ -692,7 +702,8 @@
       .inspector { border-left: 0; border-top: 1px solid var(--line); }
       .inspector-scroll { overflow: visible; }
       .section { padding: 16px; }
-      .health { position: static; padding: 14px 16px 0; }
+      .health { position: static; padding: 16px 150px 0 16px; }
+      .canvas-tools { top: 10px; right: 16px; }
       .stage { padding-top: 12px; }
       .dock { position: sticky; bottom: 0; padding: 10px 16px 12px; }
       .dock-row + .dock-row { margin-top: 8px; }
@@ -716,24 +727,24 @@
 <body>
   <div class="app">
     <header class="topbar">
-      <span class="brand-name">QR Studio</span>
-      <button class="ghost-btn" id="open-library" type="button" aria-haspopup="dialog" aria-controls="library" aria-label="Library">
-        <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.5h7a1 1 0 0 1 1 1v10l-4.5-3-4.5 3v-10a1 1 0 0 1 1-1z"/></svg>
-        <span class="lib-label">Library</span> <span class="count" id="library-count">0</span>
-      </button>
-      <button class="icon-btn" id="theme-toggle" type="button" aria-label="Theme: automatic" title="Theme: automatic">
-        <svg class="icon theme-icon" data-theme-icon="system" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/><path d="M8 2.5v11" /><path d="M8 2.5a5.5 5.5 0 0 1 0 11z" fill="currentColor" stroke="none"/></svg>
-        <svg class="icon theme-icon" data-theme-icon="light" viewBox="0 0 16 16" aria-hidden="true" hidden><circle cx="8" cy="8" r="2.8"/><path d="M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1"/></svg>
-        <svg class="icon theme-icon" data-theme-icon="dark" viewBox="0 0 16 16" aria-hidden="true" hidden><path d="M13 9.6A5.5 5.5 0 0 1 6.4 3a5.5 5.5 0 1 0 6.6 6.6z"/></svg>
-      </button>
-      <div class="wc-brand">
-        <a class="wc-apps" href="/apps"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="5" height="5" rx="1.2"/><rect x="9" y="2" width="5" height="5" rx="1.2"/><rect x="2" y="9" width="5" height="5" rx="1.2"/><rect x="9" y="9" width="5" height="5" rx="1.2"/></svg>Apps</a>
-        <span class="wc-badge" role="img" aria-label="Wisconsin Creative"><span class="wc-badge-w"></span></span>
-      </div>
+      <span class="brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="-5 -5 28 28"><path fill="#fff" d="M2 2h6v6H2zm2 2v2h2V4zM10 2h6v6h-6zm2 2v2h2V4zM2 10h6v6H2zm2 2v2h2v-2zM10 10h2v2h-2zM14 10h2v2h-2zM12 12h2v2h-2zM10 14h2v2h-2zM14 14h2v2h-2z"/></svg></span><span class="brand-name">QR Studio</span></span>
+      <a class="wc-apps" href="/apps"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="5" height="5" rx="1.2"/><rect x="9" y="2" width="5" height="5" rx="1.2"/><rect x="2" y="9" width="5" height="5" rx="1.2"/><rect x="9" y="9" width="5" height="5" rx="1.2"/></svg>Apps</a>
     </header>
 
     <!-- ============ canvas ============ -->
     <main class="canvas" id="canvas" aria-label="Preview">
+      <div class="canvas-tools" role="toolbar" aria-label="Library and theme">
+        <button class="ghost-btn" id="open-library" type="button" aria-haspopup="dialog" aria-controls="library" aria-label="Library">
+          <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.5h7a1 1 0 0 1 1 1v10l-4.5-3-4.5 3v-10a1 1 0 0 1 1-1z"/></svg>
+          <span class="lib-label">Library</span> <span class="count" id="library-count">0</span>
+        </button>
+        <button class="icon-btn" id="theme-toggle" type="button" aria-label="Theme: automatic" title="Theme: automatic">
+          <svg class="icon theme-icon" data-theme-icon="system" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/><path d="M8 2.5v11" /><path d="M8 2.5a5.5 5.5 0 0 1 0 11z" fill="currentColor" stroke="none"/></svg>
+          <svg class="icon theme-icon" data-theme-icon="light" viewBox="0 0 16 16" aria-hidden="true" hidden><circle cx="8" cy="8" r="2.8"/><path d="M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1"/></svg>
+          <svg class="icon theme-icon" data-theme-icon="dark" viewBox="0 0 16 16" aria-hidden="true" hidden><path d="M13 9.6A5.5 5.5 0 0 1 6.4 3a5.5 5.5 0 1 0 6.6 6.6z"/></svg>
+        </button>
+      </div>
+
       <div class="health" id="health" aria-live="polite">
         <span class="chip" id="chip-scan"><span class="dot"></span><span>Checking…</span></span>
         <span class="chip" id="chip-size" hidden></span>
