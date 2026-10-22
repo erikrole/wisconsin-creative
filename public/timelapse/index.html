@@ -93,10 +93,10 @@
       padding: env(safe-area-inset-top) clamp(16px, 4vw, 32px) 0; border-bottom: 1px solid var(--border);
       background: var(--bg);
     }
-    .brand { display: flex; align-items: center; gap: 10px; margin-right: auto; color: inherit; text-decoration: none; }
-    .brand-mark { width: 28px; height: 28px; flex: none; display: grid; place-items: center; border-radius: 8px; background: #0d0e10; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08); }
-    .brand-mark svg { width: 18px; height: 18px; }
-    .brand-name { font-weight: 900; font-size: 16px; letter-spacing: -0.01em; }
+    .brand { display: flex; align-items: center; gap: 8px; min-width: 0; margin-right: auto; padding-left: 12px; border-left: 1px solid var(--border-strong); }
+    .brand-mark { width: 22px; height: 22px; flex: none; display: grid; place-items: center; border-radius: 6px; background: #0d0e10; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08); }
+    .brand-mark svg { width: 15px; height: 15px; }
+    .brand-name { font-weight: 900; font-size: 15px; letter-spacing: -0.01em; }
     .link-button {
       display: inline-flex; align-items: center; gap: 7px; min-height: 36px; padding: 0 12px; border-radius: 9px;
       color: var(--text-2); text-decoration: none; font-size: 14px; font-weight: 700;
@@ -297,21 +297,19 @@
     @media (min-width: 881px) { .mini { display: none; } }
 
     /* ---- Wisconsin Creative badge: shared byte-for-byte by every public tool.
-       It sits in the page flow after the content, so it never covers anything:
-       bottom-right on wide screens, centred on phones. ---- */
+       The Motion W and wordmark sit first in the top bar, top left, in the
+       page's own text colour. Phones keep just the W. ---- */
     .wc-badge {
-      position: relative; z-index: 20; display: flex; align-items: center; gap: 7px; width: max-content;
-      margin: 8px max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) auto; padding: 6px 11px 6px 9px; border-radius: 999px;
-      color: inherit; opacity: 0.78; text-decoration: none; font-size: 12px; font-weight: 700; letter-spacing: 0.01em; line-height: 1;
-      background: color-mix(in srgb, currentColor 9%, transparent); border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
-      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); transition: opacity 150ms ease;
+      display: inline-flex; align-items: center; gap: 8px; flex: none; border-radius: 8px;
+      color: inherit; text-decoration: none; font-size: 14px; font-weight: 900; letter-spacing: -0.005em; line-height: 1;
+      transition: opacity 150ms ease;
     }
-    .wc-badge:hover { opacity: 1; }
+    .wc-badge:hover { opacity: 0.8; }
     .wc-badge-w {
-      width: 16px; height: 15px; flex: none; background: currentColor;
+      width: 28px; height: 28px; flex: none; background: currentColor;
       -webkit-mask: url("/brand/wc-badge.svg") center / contain no-repeat; mask: url("/brand/wc-badge.svg") center / contain no-repeat;
     }
-    @media (max-width: 699px) { .wc-badge { margin-left: auto; margin-right: auto; } }
+    @media (max-width: 479px) { .wc-badge-name { display: none; } }
 
     .rise { animation: rise 420ms var(--ease) both; }
     .col-out .rise, .result.rise { animation-delay: 60ms; }
@@ -328,6 +326,7 @@
   </div>
 
   <header class="topbar">
+    <a class="wc-badge" href="/apps" aria-label="Wisconsin Creative apps"><span class="wc-badge-w" aria-hidden="true"></span><span class="wc-badge-name">Wisconsin Creative</span></a>
     <span class="brand">
       <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 18 18"><path d="M3.5 6.5V3.5h3M14.5 6.5V3.5h-3M3.5 11.5v3h3M14.5 11.5v3h-3" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><circle cx="9" cy="9" r="2.2" fill="#ff3b3b"/></svg></span>
       <span class="brand-name">Timelapse</span>
@@ -469,8 +468,6 @@
     </div>
     <p class="sr-only" id="announce" aria-live="polite" aria-atomic="true"></p>
   </main>
-
-  <a class="wc-badge" href="/apps"><span class="wc-badge-w" aria-hidden="true"></span>Wisconsin Creative</a>
 
   <script src="core.js?v=ae508f067fc6"></script>
   <script src="app.js?v=dc2528267c8b"></script>

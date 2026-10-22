@@ -282,7 +282,7 @@ describe("Timelapse core", () => {
 
   it("carries the shared Wisconsin Creative badge", () => {
     const html = readFileSync("public/timelapse/index.html", "utf8");
-    expect(html).toContain('<a class="wc-badge" href="/apps">');
+    expect(html).toContain('<header class="topbar">\n    <a class="wc-badge" href="/apps" aria-label="Wisconsin Creative apps">');
     expect(html).toContain("img-src 'self' data:");
     expect(readFileSync("public/brand/wc-badge.svg", "utf8")).toContain('fill="currentColor"');
   });
