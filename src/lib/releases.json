@@ -1,6 +1,22 @@
 [
   {
     "date": "2026-10-22",
+    "title": "Send blasts from your iPhone",
+    "type": "feature",
+    "summary": "Staff and admins can send a blast from the iPhone app and see who has acknowledged it. Browse also gets the team's Tools.",
+    "details": [
+      "Message Crew on an event sends a blast to everyone on its published crew.",
+      "Before you send, you see how many people it reaches and who they are.",
+      "Sent shows who is still waiting, who acknowledged, and lets you cancel the banner.",
+      "Golden Hour, Photo Frame, QR Studio, Board Sizes and Timelapse open from Browse."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 600
+  },
+  {
+    "date": "2026-10-22",
     "title": "Tools in the sidebar",
     "type": "feature",
     "summary": "A new Tools item in the sidebar opens QR Studio, Board Sizes, Golden Hour, Timelapse, and Photo Frame in one click.",
@@ -32,7 +48,7 @@
     ],
     "pr": 586
   },
- {
+  {
     "date": "2026-10-21",
     "title": "Hide gear from partners",
     "type": "feature",
